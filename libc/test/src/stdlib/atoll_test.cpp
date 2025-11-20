@@ -12,4 +12,4 @@
 
 #include "test/UnitTest/Test.h"
 
-ATOI_TEST(Atoll, __llvm_libc::atoll)
+ATOI_TEST(Atoll, LIBC_NAMESPACE::atoll)

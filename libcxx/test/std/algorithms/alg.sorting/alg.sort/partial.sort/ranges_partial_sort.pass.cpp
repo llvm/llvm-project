@@ -28,7 +28,6 @@
 #include <ranges>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 // SFINAE tests.

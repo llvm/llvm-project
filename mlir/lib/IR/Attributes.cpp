@@ -43,7 +43,13 @@ MLIRContext *Attribute::getContext() const { return getDialect().getContext(); }
 NamedAttribute::NamedAttribute(StringAttr name, Attribute value)
     : name(name), value(value) {
   assert(name && value && "expected valid attribute name and value");
-  assert(name.size() != 0 && "expected valid attribute name");
+  assert(!name.empty() && "expected valid attribute name");
+}
+
+NamedAttribute::NamedAttribute(StringRef name, Attribute value) : value(value) {
+  assert(value && "expected valid attribute value");
+  assert(!name.empty() && "expected valid attribute name");
+  this->name = StringAttr::get(value.getContext(), name);
 }
 
 StringAttr NamedAttribute::getName() const {

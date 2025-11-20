@@ -25,10 +25,12 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/Support/DebugLog.h"
+#include "llvm/Support/InterleavedRange.h"
+
+#define DEBUG_TYPE "vector-utils"
 
 using namespace mlir;
 
@@ -87,14 +89,11 @@ mlir::vector::isTranspose2DSlice(vector::TransposeOp op) {
   if (srcGtOneDims.size() != 2)
     return failure();
 
-  SmallVector<int64_t> transp;
-  for (auto attr : op.getTransp())
-    transp.push_back(cast<IntegerAttr>(attr).getInt());
-
   // Check whether the two source vector dimensions that are greater than one
   // must be transposed with each other so that we can apply one of the 2-D
-  // transpose pattens. Otherwise, these patterns are not applicable.
-  if (!areDimsTransposedIn2DSlice(srcGtOneDims[0], srcGtOneDims[1], transp))
+  // transpose patterns. Otherwise, these patterns are not applicable.
+  if (!areDimsTransposedIn2DSlice(srcGtOneDims[0], srcGtOneDims[1],
+                                  op.getPermutation()))
     return failure();
 
   return std::pair<int, int>(srcGtOneDims[0], srcGtOneDims[1]);
@@ -251,4 +250,223 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   // the vector type (but we would have to look at the compute and distinguish
   // between parallel, reduction and possibly other cases.
   return ratio.has_value();
+}
+
+bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
+  if (vectorType.isScalable())
+    return false;
+
+  // Ignore a leading sequence of adjacent unit dimensions in the vector.
+  ArrayRef<int64_t> vectorShape =
+      vectorType.getShape().drop_while([](auto v) { return v == 1; });
+  auto vecRank = vectorShape.size();
+
+  if (!memrefType.areTrailingDimsContiguous(vecRank))
+    return false;
+
+  // Extract the trailing dims of the input memref
+  auto memrefShape = memrefType.getShape().take_back(vecRank);
+
+  // Compare the dims of `vectorType` against `memrefType`.
+  // All of the dimensions, except the first must match.
+  return llvm::equal(vectorShape.drop_front(), memrefShape.drop_front());
+}
+
+std::optional<StaticTileOffsetRange>
+vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
+  if (vType.getRank() <= targetRank)
+    return {};
+  // Attempt to unroll until targetRank or the first scalable dimension (which
+  // cannot be unrolled).
+  auto shapeToUnroll = vType.getShape().drop_back(targetRank);
+  auto inputScalableVecDimsToUnroll =
+      vType.getScalableDims().drop_back(targetRank);
+  const auto *it = llvm::find(inputScalableVecDimsToUnroll, true);
+  auto firstScalableDim = it - inputScalableVecDimsToUnroll.begin();
+  if (firstScalableDim == 0)
+    return {};
+  // All scalable dimensions should be removed now.
+  inputScalableVecDimsToUnroll =
+      inputScalableVecDimsToUnroll.slice(0, firstScalableDim);
+  assert(!llvm::is_contained(inputScalableVecDimsToUnroll, true) &&
+         "unexpected leading scalable dimension");
+  // Create an unroll iterator for leading dimensions.
+  shapeToUnroll = shapeToUnroll.slice(0, firstScalableDim);
+  return StaticTileOffsetRange(shapeToUnroll, /*unrollStep=*/1);
+}
+
+SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
+                                                    Operation *xfer,
+                                                    RewriterBase &rewriter) {
+  auto loc = xfer->getLoc();
+
+  Value base = TypeSwitch<Operation *, Value>(xfer)
+                   .Case<vector::TransferReadOp>(
+                       [&](auto readOp) { return readOp.getBase(); })
+                   .Case<vector::TransferWriteOp>(
+                       [&](auto writeOp) { return writeOp.getOperand(1); });
+
+  SmallVector<OpFoldResult> mixedSourceDims =
+      hasTensorSemantics ? tensor::getMixedSizes(rewriter, loc, base)
+                         : memref::getMixedSizes(rewriter, loc, base);
+  return mixedSourceDims;
+}
+
+bool vector::isLinearizableVector(VectorType type) {
+  return (type.getRank() > 1) && (type.getNumScalableDims() <= 1);
+}
+
+Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
+                                     Value source,
+                                     ArrayRef<int64_t> inputVectorSizes,
+                                     std::optional<Value> padValue,
+                                     bool useInBoundsInsteadOfMasking,
+                                     ArrayRef<bool> inputScalableVecDims) {
+  VectorType vecToReadTy = VectorType::get(
+      inputVectorSizes, cast<ShapedType>(source.getType()).getElementType(),
+      inputScalableVecDims);
+
+  return createReadOrMaskedRead(builder, loc, source, vecToReadTy, padValue,
+                                useInBoundsInsteadOfMasking);
+}
+
+Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
+                                     Value source,
+                                     const VectorType &vecToReadTy,
+                                     std::optional<Value> padValue,
+                                     bool useInBoundsInsteadOfMasking) {
+  assert(!llvm::is_contained(vecToReadTy.getScalableDims(),
+                             ShapedType::kDynamic) &&
+         "invalid input vector sizes");
+  auto sourceShapedType = cast<ShapedType>(source.getType());
+  auto sourceShape = sourceShapedType.getShape();
+
+  int64_t vecToReadRank = vecToReadTy.getRank();
+  auto vecToReadShape = vecToReadTy.getShape();
+
+  assert(sourceShape.size() == static_cast<size_t>(vecToReadRank) &&
+         "expected same ranks.");
+  assert((!padValue.has_value() ||
+          padValue.value().getType() == sourceShapedType.getElementType()) &&
+         "expected same pad element type to match source element type");
+
+  auto zero = arith::ConstantIndexOp::create(builder, loc, 0);
+  SmallVector<bool> inBoundsVal(vecToReadRank, true);
+
+  if (useInBoundsInsteadOfMasking) {
+    // Update the inBounds attribute.
+    // FIXME: This computation is too weak - it ignores the read indices.
+    for (unsigned i = 0; i < vecToReadRank; i++)
+      inBoundsVal[i] = (sourceShape[i] == vecToReadShape[i]) &&
+                       ShapedType::isStatic(sourceShape[i]);
+  }
+  auto transferReadOp = vector::TransferReadOp::create(
+      builder, loc,
+      /*vectorType=*/vecToReadTy,
+      /*source=*/source,
+      /*indices=*/SmallVector<Value>(vecToReadRank, zero),
+      /*padding=*/padValue,
+      /*inBounds=*/inBoundsVal);
+
+  if (llvm::equal(vecToReadTy.getShape(), sourceShape) ||
+      useInBoundsInsteadOfMasking)
+    return transferReadOp;
+  SmallVector<OpFoldResult> mixedSourceDims =
+      isa<MemRefType>(source.getType())
+          ? memref::getMixedSizes(builder, loc, source)
+          : tensor::getMixedSizes(builder, loc, source);
+
+  auto maskType = vecToReadTy.cloneWith(/*shape=*/{}, builder.getI1Type());
+  Value mask =
+      vector::CreateMaskOp::create(builder, loc, maskType, mixedSourceDims);
+  return mlir::vector::maskOperation(builder, transferReadOp, mask)
+      ->getResult(0);
+}
+
+LogicalResult
+vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
+                                 ArrayRef<int64_t> inputVectorSizes) {
+  LDBG() << "Iteration space static sizes:" << llvm::interleaved(shape);
+
+  if (inputVectorSizes.size() != shape.size()) {
+    LDBG() << "Input vector sizes don't match the number of loops";
+    return failure();
+  }
+  if (ShapedType::isDynamicShape(inputVectorSizes)) {
+    LDBG() << "Input vector sizes can't have dynamic dimensions";
+    return failure();
+  }
+  if (!llvm::all_of(llvm::zip(shape, inputVectorSizes),
+                    [](std::tuple<int64_t, int64_t> sizePair) {
+                      int64_t staticSize = std::get<0>(sizePair);
+                      int64_t inputSize = std::get<1>(sizePair);
+                      return ShapedType::isDynamic(staticSize) ||
+                             staticSize <= inputSize;
+                    })) {
+    LDBG() << "Input vector sizes must be greater than or equal to iteration "
+              "space static sizes";
+    return failure();
+  }
+  return success();
+}
+
+/// Takes a 2+ dimensional vector as an input
+/// returns n vector values produced by n vector.extract operations.
+/// I.e. calling unrollVectorValue([[%v]], rewriter) such that
+///
+///   %v : vector<nxaxb...>
+///
+/// will produce the following IR changes
+///
+///   %v0 = vector.extract %v[0] : vector<axbx...> from vector<nxaxb...>
+///   %v1 = vector.extract %v[1] : vector<axbx...> from vector<nxaxb...>
+///   ...
+///   %vnminusone = vector.extract %v[n-1] : vector<axbx...> from ...
+///
+/// and returns SmallVector<Value> r = {[[%v0]], [[%v1]], ..., [[%vnminusone]]}
+FailureOr<SmallVector<Value>>
+vector::unrollVectorValue(TypedValue<VectorType> vector,
+                          RewriterBase &rewriter) {
+  SmallVector<Value> subvectors;
+  VectorType ty = cast<VectorType>(vector.getType());
+  Location loc = vector.getLoc();
+  if (ty.getRank() < 2)
+    return rewriter.notifyMatchFailure(loc, "already 1-D");
+
+  // Unrolling doesn't take vscale into account. Pattern is disabled for
+  // vectors with leading scalable dim(s).
+  if (ty.getScalableDims().front())
+    return rewriter.notifyMatchFailure(loc, "cannot unroll scalable dim");
+
+  for (int64_t i = 0, e = ty.getShape().front(); i < e; ++i) {
+    subvectors.push_back(vector::ExtractOp::create(rewriter, loc, vector, i));
+  }
+
+  return subvectors;
+}
+
+LogicalResult vector::unrollVectorOp(Operation *op, PatternRewriter &rewriter,
+                                     vector::UnrollVectorOpFn unrollFn) {
+  assert(op->getNumResults() == 1 && "expected single result");
+  assert(isa<VectorType>(op->getResult(0).getType()) && "expected vector type");
+  VectorType resultTy = cast<VectorType>(op->getResult(0).getType());
+  if (resultTy.getRank() < 2)
+    return rewriter.notifyMatchFailure(op, "already 1-D");
+
+  // Unrolling doesn't take vscale into account. Pattern is disabled for
+  // vectors with leading scalable dim(s).
+  if (resultTy.getScalableDims().front())
+    return rewriter.notifyMatchFailure(op, "cannot unroll scalable dim");
+
+  Location loc = op->getLoc();
+  Value result = ub::PoisonOp::create(rewriter, loc, resultTy);
+  VectorType subTy = VectorType::Builder(resultTy).dropDim(0);
+
+  for (int64_t i = 0, e = resultTy.getShape().front(); i < e; ++i) {
+    Value subVector = unrollFn(rewriter, loc, subTy, i);
+    result = vector::InsertOp::create(rewriter, loc, subVector, result, i);
+  }
+
+  rewriter.replaceOp(op, result);
+  return success();
 }

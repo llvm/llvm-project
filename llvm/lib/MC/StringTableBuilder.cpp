@@ -138,19 +138,37 @@ void StringTableBuilder::finalizeInOrder() {
 void StringTableBuilder::finalizeStringTable(bool Optimize) {
   Finalized = true;
 
-  if (Optimize) {
+  if (Optimize && StringIndexMap.size()) {
     std::vector<StringPair *> Strings;
     Strings.reserve(StringIndexMap.size());
     for (StringPair &P : StringIndexMap)
       Strings.push_back(&P);
 
-    multikeySort(Strings, 0);
+    size_t RangeBegin = 0;
+    MutableArrayRef<StringPair *> StringsRef(Strings);
+    if (StringPriorityMap.size()) {
+      llvm::sort(Strings,
+                 [&](const StringPair *LHS, const StringPair *RHS) -> bool {
+                   return StringPriorityMap.lookup(LHS->first) >
+                          StringPriorityMap.lookup(RHS->first);
+                 });
+      uint8_t RangePriority = StringPriorityMap.lookup(Strings[0]->first);
+      for (size_t I = 1, E = Strings.size(); I != E && RangePriority; ++I) {
+        uint8_t Priority = StringPriorityMap.lookup(Strings[I]->first);
+        if (Priority != RangePriority) {
+          multikeySort(StringsRef.slice(RangeBegin, I - RangeBegin), 0);
+          RangePriority = Priority;
+          RangeBegin = I;
+        }
+      }
+    }
+    multikeySort(StringsRef.slice(RangeBegin), 0);
     initSize();
 
     StringRef Previous;
     for (StringPair *P : Strings) {
       StringRef S = P->first.val();
-      if (Previous.endswith(S)) {
+      if (Previous.ends_with(S)) {
         size_t Pos = Size - S.size() - (K != RAW);
         if (isAligned(Alignment, Pos)) {
           P->second = Pos;
@@ -199,12 +217,15 @@ size_t StringTableBuilder::getOffset(CachedHashStringRef S) const {
   return I->second;
 }
 
-size_t StringTableBuilder::add(CachedHashStringRef S) {
+size_t StringTableBuilder::add(CachedHashStringRef S, uint8_t Priority) {
   if (K == WinCOFF)
     assert(S.size() > COFF::NameSize && "Short string in COFF string table!");
 
   assert(!isFinalized());
-  auto P = StringIndexMap.insert(std::make_pair(S, 0));
+  if (Priority)
+    StringPriorityMap[S] = std::max(Priority, StringPriorityMap[S]);
+
+  auto P = StringIndexMap.try_emplace(S);
   if (P.second) {
     size_t Start = alignTo(Size, Alignment);
     P.first->second = Start;

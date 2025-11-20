@@ -33,11 +33,31 @@ namespace sys {
 template <typename D = std::chrono::nanoseconds>
 using TimePoint = std::chrono::time_point<std::chrono::system_clock, D>;
 
+// utc_clock and utc_time are only available since C++20. Add enough code to
+// support formatting date/time in UTC.
+class UtcClock : public std::chrono::system_clock {};
+
+template <typename D = std::chrono::nanoseconds>
+using UtcTime = std::chrono::time_point<UtcClock, D>;
+
+/// Convert a std::time_t to a UtcTime
+inline UtcTime<std::chrono::seconds> toUtcTime(std::time_t T) {
+  using namespace std::chrono;
+  return UtcTime<seconds>(seconds(T));
+}
+
 /// Convert a TimePoint to std::time_t
 inline std::time_t toTimeT(TimePoint<> TP) {
   using namespace std::chrono;
   return system_clock::to_time_t(
       time_point_cast<system_clock::time_point::duration>(TP));
+}
+
+/// Convert a UtcTime to std::time_t
+inline std::time_t toTimeT(UtcTime<> TP) {
+  using namespace std::chrono;
+  return system_clock::to_time_t(time_point<system_clock, seconds>(
+      duration_cast<seconds>(TP.time_since_epoch())));
 }
 
 /// Convert a std::time_t to a TimePoint
@@ -57,7 +77,8 @@ toTimePoint(std::time_t T, uint32_t nsec) {
 
 } // namespace sys
 
-raw_ostream &operator<<(raw_ostream &OS, sys::TimePoint<> TP);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, sys::TimePoint<> TP);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, sys::UtcTime<> TP);
 
 /// Format provider for TimePoint<>
 ///
@@ -69,20 +90,37 @@ raw_ostream &operator<<(raw_ostream &OS, sys::TimePoint<> TP);
 /// If no options are given, the default format is "%Y-%m-%d %H:%M:%S.%N".
 template <>
 struct format_provider<sys::TimePoint<>> {
-  static void format(const sys::TimePoint<> &TP, llvm::raw_ostream &OS,
-                     StringRef Style);
+  LLVM_ABI static void format(const sys::TimePoint<> &TP, llvm::raw_ostream &OS,
+                              StringRef Style);
+};
+
+template <> struct format_provider<sys::UtcTime<std::chrono::seconds>> {
+  LLVM_ABI static void format(const sys::UtcTime<std::chrono::seconds> &TP,
+                              llvm::raw_ostream &OS, StringRef Style);
 };
 
 namespace detail {
 template <typename Period> struct unit { static const char value[]; };
 template <typename Period> const char unit<Period>::value[] = "";
 
-template <> struct unit<std::ratio<3600>> { static const char value[]; };
-template <> struct unit<std::ratio<60>> { static const char value[]; };
-template <> struct unit<std::ratio<1>> { static const char value[]; };
-template <> struct unit<std::milli> { static const char value[]; };
-template <> struct unit<std::micro> { static const char value[]; };
-template <> struct unit<std::nano> { static const char value[]; };
+template <> struct unit<std::ratio<3600>> {
+  LLVM_ABI static const char value[];
+};
+template <> struct unit<std::ratio<60>> {
+  LLVM_ABI static const char value[];
+};
+template <> struct unit<std::ratio<1>> {
+  LLVM_ABI static const char value[];
+};
+template <> struct unit<std::milli> {
+  LLVM_ABI static const char value[];
+};
+template <> struct unit<std::micro> {
+  LLVM_ABI static const char value[];
+};
+template <> struct unit<std::nano> {
+  LLVM_ABI static const char value[];
+};
 } // namespace detail
 
 /// Implementation of format_provider<T> for duration types.
@@ -112,10 +150,10 @@ template <> struct unit<std::nano> { static const char value[]; };
 template <typename Rep, typename Period>
 struct format_provider<std::chrono::duration<Rep, Period>> {
 private:
-  typedef std::chrono::duration<Rep, Period> Dur;
-  typedef std::conditional_t<std::chrono::treat_as_floating_point<Rep>::value,
-                             double, intmax_t>
-      InternalRep;
+  using Dur = std::chrono::duration<Rep, Period>;
+  using InternalRep =
+      std::conditional_t<std::chrono::treat_as_floating_point<Rep>::value,
+                         double, intmax_t>;
 
   template <typename AsPeriod> static InternalRep getAs(const Dur &D) {
     using namespace std::chrono;

@@ -14,6 +14,7 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
@@ -24,9 +25,7 @@ using namespace ento;
 using namespace taint;
 
 namespace {
-class DivZeroChecker : public Checker< check::PreStmt<BinaryOperator> > {
-  mutable std::unique_ptr<BugType> BT;
-  mutable std::unique_ptr<BugType> TaintBT;
+class DivZeroChecker : public CheckerFamily<check::PreStmt<BinaryOperator>> {
   void reportBug(StringRef Msg, ProgramStateRef StateZero,
                  CheckerContext &C) const;
   void reportTaintBug(StringRef Msg, ProgramStateRef StateZero,
@@ -34,7 +33,15 @@ class DivZeroChecker : public Checker< check::PreStmt<BinaryOperator> > {
                       llvm::ArrayRef<SymbolRef> TaintedSyms) const;
 
 public:
+  /// This checker family implements two user-facing checker parts.
+  CheckerFrontendWithBugType DivideZeroChecker{"Division by zero"};
+  CheckerFrontendWithBugType TaintedDivChecker{"Division by zero",
+                                               categories::TaintedData};
+
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
+
+  /// Identifies this checker family for debugging purposes.
+  StringRef getDebugTag() const override { return "DivZeroChecker"; }
 };
 } // end anonymous namespace
 
@@ -47,11 +54,11 @@ static const Expr *getDenomExpr(const ExplodedNode *N) {
 
 void DivZeroChecker::reportBug(StringRef Msg, ProgramStateRef StateZero,
                                CheckerContext &C) const {
+  if (!DivideZeroChecker.isEnabled())
+    return;
   if (ExplodedNode *N = C.generateErrorNode(StateZero)) {
-    if (!BT)
-      BT.reset(new BugType(this, "Division by zero", categories::LogicError));
-
-    auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
+    auto R =
+        std::make_unique<PathSensitiveBugReport>(DivideZeroChecker, Msg, N);
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
     C.emitReport(std::move(R));
   }
@@ -60,12 +67,11 @@ void DivZeroChecker::reportBug(StringRef Msg, ProgramStateRef StateZero,
 void DivZeroChecker::reportTaintBug(
     StringRef Msg, ProgramStateRef StateZero, CheckerContext &C,
     llvm::ArrayRef<SymbolRef> TaintedSyms) const {
+  if (!TaintedDivChecker.isEnabled())
+    return;
   if (ExplodedNode *N = C.generateErrorNode(StateZero)) {
-    if (!TaintBT)
-      TaintBT.reset(
-          new BugType(this, "Division by zero", categories::TaintedData));
-
-    auto R = std::make_unique<PathSensitiveBugReport>(*TaintBT, Msg, N);
+    auto R =
+        std::make_unique<PathSensitiveBugReport>(TaintedDivChecker, Msg, N);
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
     for (auto Sym : TaintedSyms)
       R->markInteresting(Sym);
@@ -109,7 +115,7 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
     if (!taintedSyms.empty()) {
       reportTaintBug("Division by a tainted value, possibly zero", stateZero, C,
                      taintedSyms);
-      return;
+      // Fallthrough to continue analysis in case of non-zero denominator.
     }
   }
 
@@ -118,10 +124,16 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
   C.addTransition(stateNotZero);
 }
 
-void ento::registerDivZeroChecker(CheckerManager &mgr) {
-  mgr.registerChecker<DivZeroChecker>();
+void ento::registerDivZeroChecker(CheckerManager &Mgr) {
+  Mgr.getChecker<DivZeroChecker>()->DivideZeroChecker.enable(Mgr);
 }
 
-bool ento::shouldRegisterDivZeroChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterDivZeroChecker(const CheckerManager &) { return true; }
+
+void ento::registerTaintedDivChecker(CheckerManager &Mgr) {
+  Mgr.getChecker<DivZeroChecker>()->TaintedDivChecker.enable(Mgr);
+}
+
+bool ento::shouldRegisterTaintedDivChecker(const CheckerManager &) {
   return true;
 }

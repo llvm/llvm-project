@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -58,7 +57,7 @@ bool GCEmptyBasicBlocks::runOnMachineFunction(MachineFunction &MF) {
     // TODO If a block is an eh pad, or it has address taken, we don't remove
     // it. Removing such blocks is possible, but it probably requires a more
     // complex logic.
-    if (MBB->isEHPad() || MBB->isMachineBlockAddressTaken())
+    if (MBB->isEHPad() || MBB->hasAddressTaken())
       continue;
     // Skip blocks with real code.
     bool HasAnyRealCode = llvm::any_of(*MBB, [](const MachineInstr &MI) {

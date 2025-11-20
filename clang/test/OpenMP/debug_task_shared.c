@@ -13,9 +13,9 @@
 // CHECK-LABEL: define internal i32 @.omp_task_entry.
 
 // CHECK-DAG:  [[CONTEXT:%[0-9]+]] = load ptr, ptr %__context.addr.i, align 8
-// CHECK-DAG:  call void @llvm.dbg.declare(metadata ptr [[CONTEXT]], metadata [[SHARE2:![0-9]+]], metadata !DIExpression(DW_OP_deref))
-// CHECK-DAG:  call void @llvm.dbg.declare(metadata ptr [[CONTEXT]], metadata [[SHARE3:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref))
-// CHECK-DAG:  call void @llvm.dbg.declare(metadata ptr [[CONTEXT]], metadata [[SHARE1:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 16, DW_OP_deref))
+// CHECK-DAG:  #dbg_declare(ptr [[CONTEXT]], [[SHARE2:![0-9]+]], !DIExpression(DW_OP_deref),
+// CHECK-DAG:  #dbg_declare(ptr [[CONTEXT]], [[SHARE3:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref),
+// CHECK-DAG:  #dbg_declare(ptr [[CONTEXT]], [[SHARE1:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 16, DW_OP_deref),
 
 // CHECK-DAG: [[SHARE2]] = !DILocalVariable(name: "share2"
 // CHECK-DAG: [[SHARE3]] = !DILocalVariable(name: "share3"
@@ -23,7 +23,7 @@
 
 // NEG-LABEL: define internal i32 @.omp_task_entry.
 // NEG:  [[CONTEXT:%[0-9]+]] = load ptr, ptr %__context.addr.i, align 8
-// NEG-NOT: call void @llvm.dbg.declare(metadata ptr [[CONTEXT]], metadata {{![0-9]+}}, metadata !DIExpression(DW_OP_deref))
+// NEG-NOT: #dbg_declare(ptr [[CONTEXT]], {{![0-9]+}}, !DIExpression(DW_OP_deref),
 
 extern int printf(const char *, ...);
 

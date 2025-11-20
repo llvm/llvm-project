@@ -12,11 +12,11 @@ define double @postinctodbl(ptr nocapture %llp) #0 {
 ; CHECK-NEXT:    addic 4, 4, 1
 ; CHECK-NEXT:    lwz 5, 0(3)
 ; CHECK-NEXT:    stw 5, 8(1)
-; CHECK-NEXT:    addze 5, 5
 ; CHECK-NEXT:    lfd 0, 8(1)
-; CHECK-NEXT:    stw 5, 0(3)
-; CHECK-NEXT:    fcfid 1, 0
 ; CHECK-NEXT:    stw 4, 4(3)
+; CHECK-NEXT:    addze 4, 5
+; CHECK-NEXT:    fcfid 1, 0
+; CHECK-NEXT:    stw 4, 0(3)
 ; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
 entry:

@@ -124,3 +124,38 @@ namespace PR30738 {
   int test_h3 = h<struct X>(1, 2, 3);
   N::S test_h4 = h<struct X>(N::S(), N::S(), N::S()); // expected-note {{instantiation of}}
 }
+
+namespace GH67395 {
+template <typename>
+bool f();
+
+template <typename... T>
+void g(bool = (f<T>() || ...));
+}
+
+
+namespace comparison_warning {
+  struct S {
+    bool operator<(const S&) const;
+    bool operator<(int) const;
+    bool operator==(const S&) const;
+  };
+
+  template <typename...T>
+  void f(T... ts) {
+    (void)(ts == ...);
+    // expected-error@-1 2{{comparison in fold expression would evaluate to '(X == Y) == Z'}}
+    (void)(ts < ...);
+    // expected-error@-1 2{{comparison in fold expression would evaluate to '(X < Y) < Z'}}
+    (void)(... < ts);
+    // expected-error@-1 2{{comparison in fold expression would evaluate to '(X < Y) < Z'}}
+  }
+
+  void test() {
+    f(0, 1, 2); // expected-note{{in instantiation}}
+    f(0, 1); // expected-note{{in instantiation}}
+    f(S{}, S{});
+    f(0);
+  }
+
+};

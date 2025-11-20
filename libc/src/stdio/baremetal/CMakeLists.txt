@@ -1,0 +1,113 @@
+add_entrypoint_object(
+  getchar
+  SRCS
+    getchar.cpp
+  HDRS
+    ../getchar.h
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.string_view
+)
+
+add_entrypoint_object(
+  remove
+  SRCS
+    remove.cpp
+  HDRS
+    ../remove.h
+  DEPENDS
+    libc.include.stdio
+)
+
+add_entrypoint_object(
+  printf
+  SRCS
+    printf.cpp
+  HDRS
+    ../printf.h
+  DEPENDS
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.error_mapper
+    libc.src.stdio.printf_core.core_structs
+    libc.src.__support.arg_list
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
+)
+
+add_entrypoint_object(
+  putchar
+  SRCS
+    putchar.cpp
+  HDRS
+    ../putchar.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.string_view
+)
+
+add_entrypoint_object(
+  puts
+  SRCS
+    puts.cpp
+  HDRS
+    ../puts.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.string_view
+)
+
+add_header_library(
+  scanf_internal
+  HDRS
+    scanf_internal.h
+  DEPENDS
+    libc.src.stdio.scanf_core.reader
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  scanf
+  SRCS
+    scanf.cpp
+  HDRS
+    ../scanf.h
+  DEPENDS
+    .scanf_internal
+    libc.include.inttypes
+    libc.src.stdio.scanf_core.scanf_main
+    libc.src.__support.arg_list
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  vprintf
+  SRCS
+    vprintf.cpp
+  HDRS
+    ../vprintf.h
+  DEPENDS
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.error_mapper
+    libc.src.stdio.printf_core.core_structs
+    libc.src.__support.arg_list
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
+)
+
+add_entrypoint_object(
+  vscanf
+  SRCS
+    vscanf.cpp
+  HDRS
+    ../vscanf.h
+  DEPENDS
+    .scanf_internal
+    libc.src.stdio.scanf_core.scanf_main
+    libc.src.__support.arg_list
+    libc.src.__support.OSUtil.osutil
+)

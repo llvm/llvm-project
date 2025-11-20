@@ -1,18 +1,22 @@
 set(LLVM_LINK_COMPONENTS
-  AllTargetsDescs
-  AllTargetsDisassemblers
-  AllTargetsInfos
+  ${LLVM_TARGETS_TO_BUILD}
+  AsmPrinter
+  DebugInfoDWARF
   DebugInfoLogicalView
   MC
   MCDisassembler
+  Object
   TargetParser
   )
 
 add_llvm_unittest_with_input_files(DebugInfoLogicalViewTests
+  ../DWARF/DwarfGenerator.cpp
+  ../DWARF/DwarfUtils.cpp
   CodeViewReaderTest.cpp
   CommandLineOptionsTest.cpp
   CompareElementsTest.cpp
-  ELFReaderTest.cpp
+  DWARFGeneratedTest.cpp
+  DWARFReaderTest.cpp
   SelectElementsTest.cpp
   LocationRangesTest.cpp
   LogicalElementsTest.cpp

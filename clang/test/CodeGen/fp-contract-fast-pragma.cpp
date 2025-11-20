@@ -46,7 +46,7 @@ float fp_contract_3(float a, float b, float c) {
   // CHECK: %[[M:.+]] = fmul contract float %a, %b
   // CHECK-NEXT: fadd contract float %[[M]], %c
   // STRICT: %[[M:.+]] = tail call contract float @llvm.experimental.constrained.fmul.f32(float %a, float %b, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // STRICT-NEXT: tail call contract float @llvm.experimental.constrained.fadd.f32(float %[[M]], float %c, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // STRICT-NEXT: tail call contract noundef float @llvm.experimental.constrained.fadd.f32(float %[[M]], float %c, metadata !"round.tonearest", metadata !"fpexcept.strict")
   return template_muladd<float>(a, b, c);
 }
 

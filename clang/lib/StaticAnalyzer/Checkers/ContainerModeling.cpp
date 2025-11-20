@@ -13,7 +13,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -33,11 +32,11 @@ namespace {
 class ContainerModeling
   : public Checker<check::PostCall, check::LiveSymbols, check::DeadSymbols> {
 
-  void handleBegin(CheckerContext &C, const Expr *CE, SVal RetVal,
+  void handleBegin(CheckerContext &C, ConstCFGElementRef Elem, SVal RetVal,
                    SVal Cont) const;
-  void handleEnd(CheckerContext &C, const Expr *CE, SVal RetVal,
+  void handleEnd(CheckerContext &C, ConstCFGElementRef Elem, SVal RetVal,
                  SVal Cont) const;
-  void handleAssignment(CheckerContext &C, SVal Cont, const Expr *CE = nullptr,
+  void handleAssignment(CheckerContext &C, SVal Cont, ConstCFGElementRef Elem,
                         SVal OldCont = UndefinedVal()) const;
   void handleAssign(CheckerContext &C, SVal Cont, const Expr *ContE) const;
   void handleClear(CheckerContext &C, SVal Cont, const Expr *ContE) const;
@@ -72,26 +71,31 @@ public:
                                                    SVal) const;
 
   CallDescriptionMap<NoItParamFn> NoIterParamFunctions = {
-      {{{"clear"}, 0}, &ContainerModeling::handleClear},
-      {{{"assign"}, 2}, &ContainerModeling::handleAssign},
-      {{{"push_back"}, 1}, &ContainerModeling::handlePushBack},
-      {{{"emplace_back"}, 1}, &ContainerModeling::handlePushBack},
-      {{{"pop_back"}, 0}, &ContainerModeling::handlePopBack},
-      {{{"push_front"}, 1}, &ContainerModeling::handlePushFront},
-      {{{"emplace_front"}, 1}, &ContainerModeling::handlePushFront},
-      {{{"pop_front"}, 0}, &ContainerModeling::handlePopFront},
+      {{CDM::CXXMethod, {"clear"}, 0}, &ContainerModeling::handleClear},
+      {{CDM::CXXMethod, {"assign"}, 2}, &ContainerModeling::handleAssign},
+      {{CDM::CXXMethod, {"push_back"}, 1}, &ContainerModeling::handlePushBack},
+      {{CDM::CXXMethod, {"emplace_back"}, 1},
+       &ContainerModeling::handlePushBack},
+      {{CDM::CXXMethod, {"pop_back"}, 0}, &ContainerModeling::handlePopBack},
+      {{CDM::CXXMethod, {"push_front"}, 1},
+       &ContainerModeling::handlePushFront},
+      {{CDM::CXXMethod, {"emplace_front"}, 1},
+       &ContainerModeling::handlePushFront},
+      {{CDM::CXXMethod, {"pop_front"}, 0}, &ContainerModeling::handlePopFront},
   };
 
   CallDescriptionMap<OneItParamFn> OneIterParamFunctions = {
-      {{{"insert"}, 2}, &ContainerModeling::handleInsert},
-      {{{"emplace"}, 2}, &ContainerModeling::handleInsert},
-      {{{"erase"}, 1}, &ContainerModeling::handleErase},
-      {{{"erase_after"}, 1}, &ContainerModeling::handleEraseAfter},
+      {{CDM::CXXMethod, {"insert"}, 2}, &ContainerModeling::handleInsert},
+      {{CDM::CXXMethod, {"emplace"}, 2}, &ContainerModeling::handleInsert},
+      {{CDM::CXXMethod, {"erase"}, 1}, &ContainerModeling::handleErase},
+      {{CDM::CXXMethod, {"erase_after"}, 1},
+       &ContainerModeling::handleEraseAfter},
   };
 
   CallDescriptionMap<TwoItParamFn> TwoIterParamFunctions = {
-      {{{"erase"}, 2}, &ContainerModeling::handleErase},
-      {{{"erase_after"}, 2}, &ContainerModeling::handleEraseAfter},
+      {{CDM::CXXMethod, {"erase"}, 2}, &ContainerModeling::handleErase},
+      {{CDM::CXXMethod, {"erase_after"}, 2},
+       &ContainerModeling::handleEraseAfter},
   };
 };
 
@@ -103,11 +107,12 @@ bool backModifiable(ProgramStateRef State, const MemRegion *Reg);
 SymbolRef getContainerBegin(ProgramStateRef State, const MemRegion *Cont);
 SymbolRef getContainerEnd(ProgramStateRef State, const MemRegion *Cont);
 ProgramStateRef createContainerBegin(ProgramStateRef State,
-                                     const MemRegion *Cont, const Expr *E,
-                                     QualType T, const LocationContext *LCtx,
+                                     const MemRegion *Cont,
+                                     ConstCFGElementRef Elem, QualType T,
+                                     const LocationContext *LCtx,
                                      unsigned BlockCount);
 ProgramStateRef createContainerEnd(ProgramStateRef State, const MemRegion *Cont,
-                                   const Expr *E, QualType T,
+                                   ConstCFGElementRef Elem, QualType T,
                                    const LocationContext *LCtx,
                                    unsigned BlockCount);
 ProgramStateRef setContainerData(ProgramStateRef State, const MemRegion *Cont,
@@ -152,15 +157,18 @@ void ContainerModeling::checkPostCall(const CallEvent &Call,
   if (Func->isOverloadedOperator()) {
     const auto Op = Func->getOverloadedOperator();
     if (Op == OO_Equal) {
-      // Overloaded 'operator=' must be a non-static member function.
-      const auto *InstCall = cast<CXXInstanceCall>(&Call);
+      // Only handle the assignment operator with implicit this
+      const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call);
+      if (!InstCall)
+        return;
+
       if (cast<CXXMethodDecl>(Func)->isMoveAssignmentOperator()) {
-        handleAssignment(C, InstCall->getCXXThisVal(), Call.getOriginExpr(),
-                     Call.getArgSVal(0));
+        handleAssignment(C, InstCall->getCXXThisVal(), Call.getCFGElementRef(),
+                         Call.getArgSVal(0));
         return;
       }
 
-      handleAssignment(C, InstCall->getCXXThisVal());
+      handleAssignment(C, InstCall->getCXXThisVal(), C.getCFGElementRef());
       return;
     }
   } else {
@@ -190,13 +198,13 @@ void ContainerModeling::checkPostCall(const CallEvent &Call,
         return;
 
       if (isBeginCall(Func)) {
-        handleBegin(C, OrigExpr, Call.getReturnValue(),
+        handleBegin(C, Call.getCFGElementRef(), Call.getReturnValue(),
                     InstCall->getCXXThisVal());
         return;
       }
 
       if (isEndCall(Func)) {
-        handleEnd(C, OrigExpr, Call.getReturnValue(),
+        handleEnd(C, Call.getCFGElementRef(), Call.getReturnValue(),
                   InstCall->getCXXThisVal());
         return;
       }
@@ -242,8 +250,8 @@ void ContainerModeling::checkDeadSymbols(SymbolReaper &SR,
   C.addTransition(State);
 }
 
-void ContainerModeling::handleBegin(CheckerContext &C, const Expr *CE,
-                                   SVal RetVal, SVal Cont) const {
+void ContainerModeling::handleBegin(CheckerContext &C, ConstCFGElementRef Elem,
+                                    SVal RetVal, SVal Cont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -255,7 +263,7 @@ void ContainerModeling::handleBegin(CheckerContext &C, const Expr *CE,
   auto State = C.getState();
   auto BeginSym = getContainerBegin(State, ContReg);
   if (!BeginSym) {
-    State = createContainerBegin(State, ContReg, CE, C.getASTContext().LongTy,
+    State = createContainerBegin(State, ContReg, Elem, C.getASTContext().LongTy,
                                  C.getLocationContext(), C.blockCount());
     BeginSym = getContainerBegin(State, ContReg);
   }
@@ -264,8 +272,8 @@ void ContainerModeling::handleBegin(CheckerContext &C, const Expr *CE,
   C.addTransition(State);
 }
 
-void ContainerModeling::handleEnd(CheckerContext &C, const Expr *CE,
-                                 SVal RetVal, SVal Cont) const {
+void ContainerModeling::handleEnd(CheckerContext &C, ConstCFGElementRef Elem,
+                                  SVal RetVal, SVal Cont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -277,7 +285,7 @@ void ContainerModeling::handleEnd(CheckerContext &C, const Expr *CE,
   auto State = C.getState();
   auto EndSym = getContainerEnd(State, ContReg);
   if (!EndSym) {
-    State = createContainerEnd(State, ContReg, CE, C.getASTContext().LongTy,
+    State = createContainerEnd(State, ContReg, Elem, C.getASTContext().LongTy,
                                C.getLocationContext(), C.blockCount());
     EndSym = getContainerEnd(State, ContReg);
   }
@@ -287,7 +295,8 @@ void ContainerModeling::handleEnd(CheckerContext &C, const Expr *CE,
 }
 
 void ContainerModeling::handleAssignment(CheckerContext &C, SVal Cont,
-                                         const Expr *CE, SVal OldCont) const {
+                                         ConstCFGElementRef Elem,
+                                         SVal OldCont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -321,7 +330,7 @@ void ContainerModeling::handleAssignment(CheckerContext &C, SVal Cont,
           auto &SVB = C.getSValBuilder();
           // Then generate and assign a new "end" symbol for the new container.
           auto NewEndSym =
-              SymMgr.conjureSymbol(CE, C.getLocationContext(),
+              SymMgr.conjureSymbol(Elem, C.getLocationContext(),
                                    C.getASTContext().LongTy, C.blockCount());
           State = assumeNoOverflow(State, NewEndSym, 4);
           if (CData) {
@@ -770,6 +779,10 @@ const CXXRecordDecl *getCXXRecordDecl(ProgramStateRef State,
     Type = RefT->getPointeeType();
   }
 
+  if (const auto *PtrT = Type->getAs<PointerType>()) {
+    Type = PtrT->getPointeeType();
+  }
+
   return Type->getUnqualifiedDesugaredType()->getAsCXXRecordDecl();
 }
 
@@ -836,8 +849,9 @@ SymbolRef getContainerEnd(ProgramStateRef State, const MemRegion *Cont) {
 }
 
 ProgramStateRef createContainerBegin(ProgramStateRef State,
-                                     const MemRegion *Cont, const Expr *E,
-                                     QualType T, const LocationContext *LCtx,
+                                     const MemRegion *Cont,
+                                     ConstCFGElementRef Elem, QualType T,
+                                     const LocationContext *LCtx,
                                      unsigned BlockCount) {
   // Only create if it does not exist
   const auto *CDataPtr = getContainerData(State, Cont);
@@ -845,8 +859,8 @@ ProgramStateRef createContainerBegin(ProgramStateRef State,
     return State;
 
   auto &SymMgr = State->getSymbolManager();
-  const SymbolConjured *Sym = SymMgr.conjureSymbol(E, LCtx, T, BlockCount,
-                                                   "begin");
+  const SymbolConjured *Sym =
+      SymMgr.conjureSymbol(Elem, LCtx, T, BlockCount, "begin");
   State = assumeNoOverflow(State, Sym, 4);
 
   if (CDataPtr) {
@@ -859,7 +873,7 @@ ProgramStateRef createContainerBegin(ProgramStateRef State,
 }
 
 ProgramStateRef createContainerEnd(ProgramStateRef State, const MemRegion *Cont,
-                                   const Expr *E, QualType T,
+                                   ConstCFGElementRef Elem, QualType T,
                                    const LocationContext *LCtx,
                                    unsigned BlockCount) {
   // Only create if it does not exist
@@ -868,8 +882,8 @@ ProgramStateRef createContainerEnd(ProgramStateRef State, const MemRegion *Cont,
     return State;
 
   auto &SymMgr = State->getSymbolManager();
-  const SymbolConjured *Sym = SymMgr.conjureSymbol(E, LCtx, T, BlockCount,
-                                                  "end");
+  const SymbolConjured *Sym =
+      SymMgr.conjureSymbol(Elem, LCtx, T, BlockCount, "end");
   State = assumeNoOverflow(State, Sym, 4);
 
   if (CDataPtr) {

@@ -62,7 +62,7 @@ define internal ptr @side_effects(i8 %v) {
 define internal ptr @no_side_effects(i8 %v) readonly nounwind willreturn {
 ; CHECK-LABEL: define {{[^@]+}}@no_side_effects
 ; CHECK-SAME: (i8 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    ret ptr undef
+; CHECK-NEXT:    ret ptr poison
 ;
   ret ptr null
 }
@@ -71,7 +71,7 @@ define internal ptr @no_side_effects(i8 %v) readonly nounwind willreturn {
 ; return value should stay as it is, and should not be zapped.
 define internal ptr @dont_zap_me(i8 %v) {
 ; CHECK-LABEL: define {{[^@]+}}@dont_zap_me
-; CHECK-SAME: (i8 [[V:%.*]]) {
+; CHECK-SAME: (i8 range(i8 2, 0) [[V:%.*]]) {
 ; CHECK-NEXT:    [[I1:%.*]] = call i32 @external()
 ; CHECK-NEXT:    ret ptr null
 ;

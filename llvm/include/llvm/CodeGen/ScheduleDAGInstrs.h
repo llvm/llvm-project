@@ -18,14 +18,14 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
-#include "llvm/ADT/SparseSet.h"
-#include "llvm/ADT/identity.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <list>
@@ -51,15 +51,15 @@ namespace llvm {
 
   /// An individual mapping from virtual register number to SUnit.
   struct VReg2SUnit {
-    unsigned VirtReg;
+    Register VirtReg;
     LaneBitmask LaneMask;
     SUnit *SU;
 
-    VReg2SUnit(unsigned VReg, LaneBitmask LaneMask, SUnit *SU)
+    VReg2SUnit(Register VReg, LaneBitmask LaneMask, SUnit *SU)
       : VirtReg(VReg), LaneMask(LaneMask), SU(SU) {}
 
     unsigned getSparseSetIndex() const {
-      return Register::virtReg2Index(VirtReg);
+      return VirtReg.virtRegIndex();
     }
   };
 
@@ -67,7 +67,7 @@ namespace llvm {
   struct VReg2SUnitOperIdx : public VReg2SUnit {
     unsigned OperandIndex;
 
-    VReg2SUnitOperIdx(unsigned VReg, LaneBitmask LaneMask,
+    VReg2SUnitOperIdx(Register VReg, LaneBitmask LaneMask,
                       unsigned OperandIndex, SUnit *SU)
       : VReg2SUnit(VReg, LaneMask, SU), OperandIndex(OperandIndex) {}
   };
@@ -77,33 +77,30 @@ namespace llvm {
   struct PhysRegSUOper {
     SUnit *SU;
     int OpIdx;
-    unsigned RegUnit;
+    MCRegUnit RegUnit;
 
-    PhysRegSUOper(SUnit *su, int op, unsigned R)
+    PhysRegSUOper(SUnit *su, int op, MCRegUnit R)
         : SU(su), OpIdx(op), RegUnit(R) {}
 
-    unsigned getSparseSetIndex() const { return RegUnit; }
+    unsigned getSparseSetIndex() const {
+      return static_cast<unsigned>(RegUnit);
+    }
   };
 
   /// Use a SparseMultiSet to track physical registers. Storage is only
   /// allocated once for the pass. It can be cleared in constant time and reused
   /// without any frees.
   using RegUnit2SUnitsMap =
-      SparseMultiSet<PhysRegSUOper, identity<unsigned>, uint16_t>;
-
-  /// Use SparseSet as a SparseMap by relying on the fact that it never
-  /// compares ValueT's, only unsigned keys. This allows the set to be cleared
-  /// between scheduling regions in constant time as long as ValueT does not
-  /// require a destructor.
-  using VReg2SUnitMap = SparseSet<VReg2SUnit, VirtReg2IndexFunctor>;
+      SparseMultiSet<PhysRegSUOper, MCRegUnit, MCRegUnitToIndex, uint16_t>;
 
   /// Track local uses of virtual registers. These uses are gathered by the DAG
   /// builder and may be consulted by the scheduler to avoid iterating an entire
   /// vreg use list.
-  using VReg2SUnitMultiMap = SparseMultiSet<VReg2SUnit, VirtReg2IndexFunctor>;
+  using VReg2SUnitMultiMap =
+      SparseMultiSet<VReg2SUnit, Register, VirtReg2IndexFunctor>;
 
   using VReg2SUnitOperIdxMultiMap =
-      SparseMultiSet<VReg2SUnitOperIdx, VirtReg2IndexFunctor>;
+      SparseMultiSet<VReg2SUnitOperIdx, Register, VirtReg2IndexFunctor>;
 
   using ValueType = PointerUnion<const Value *, const PseudoSourceValue *>;
 
@@ -118,7 +115,7 @@ namespace llvm {
   using UnderlyingObjectsVector = SmallVector<UnderlyingObject, 4>;
 
   /// A ScheduleDAG for scheduling lists of MachineInstr.
-  class ScheduleDAGInstrs : public ScheduleDAG {
+  class LLVM_ABI ScheduleDAGInstrs : public ScheduleDAG {
   protected:
     const MachineLoopInfo *MLI = nullptr;
     const MachineFrameInfo &MFI;
@@ -129,6 +126,9 @@ namespace llvm {
     /// True if the DAG builder should remove kill flags (in preparation for
     /// rescheduling).
     bool RemoveKillFlags;
+
+    /// True if regions with a single MI should be scheduled.
+    bool ScheduleSingleMIRegions = false;
 
     /// The standard DAG builder does not normally include terminators as DAG
     /// nodes because it does not create the necessary dependencies to prevent
@@ -176,12 +176,14 @@ namespace llvm {
     /// Tracks the last instructions in this region using each virtual register.
     VReg2SUnitOperIdxMultiMap CurrentVRegUses;
 
-    AAResults *AAForDep = nullptr;
+    mutable std::optional<BatchAAResults> AAForDep;
 
     /// Remember a generic side-effecting instruction as we proceed.
     /// No other SU ever gets scheduled around it (except in the special
     /// case of a huge region that gets reduced).
     SUnit *BarrierChain = nullptr;
+
+    SmallVector<ClusterInfo> Clusters;
 
   public:
     /// A list of SUnits, used in Value2SUsMap, during DAG construction.
@@ -191,10 +193,29 @@ namespace llvm {
     /// applicable).
     using SUList = std::list<SUnit *>;
 
+    /// The direction that should be used to dump the scheduled Sequence.
+    enum DumpDirection {
+      TopDown,
+      BottomUp,
+      Bidirectional,
+      NotSet,
+    };
+
+    void setDumpDirection(DumpDirection D) { DumpDir = D; }
+
   protected:
+    DumpDirection DumpDir = NotSet;
+
     /// A map from ValueType to SUList, used during DAG construction, as
     /// a means of remembering which SUs depend on which memory locations.
     class Value2SUsMap;
+
+    /// Returns a (possibly null) pointer to the current BatchAAResults.
+    BatchAAResults *getAAForDep() const {
+      if (AAForDep.has_value())
+        return &AAForDep.value();
+      return nullptr;
+    }
 
     /// Reduces maps in FIFO order, by N SUs. This is better than turning
     /// every Nth memory SU into BarrierChain in buildSchedGraph(), since
@@ -251,7 +272,7 @@ namespace llvm {
     MachineInstr *FirstDbgValue = nullptr;
 
     /// Set of live physical registers for updating kill flags.
-    LivePhysRegs LiveRegs;
+    LiveRegUnits LiveRegs;
 
   public:
     explicit ScheduleDAGInstrs(MachineFunction &mf,
@@ -273,6 +294,11 @@ namespace llvm {
     /// IsReachable - Checks if SU is reachable from TargetSU.
     bool IsReachable(SUnit *SU, SUnit *TargetSU) {
       return Topo.IsReachable(SU, TargetSU);
+    }
+
+    /// Whether regions with a single MI should be scheduled.
+    bool shouldScheduleSingleMIRegions() const {
+      return ScheduleSingleMIRegions;
     }
 
     /// Returns an iterator to the top of the current scheduling region.
@@ -361,6 +387,14 @@ namespace llvm {
     /// \returns true if the edge may be added without creating a cycle OR if an
     /// equivalent edge already existed (false indicates failure).
     bool addEdge(SUnit *SuccSU, const SDep &PredDep);
+
+    /// Returns the array of the clusters.
+    SmallVector<ClusterInfo> &getClusters() { return Clusters; }
+
+    /// Get the specific cluster, return nullptr for InvalidClusterId.
+    ClusterInfo *getCluster(unsigned Idx) {
+      return Idx != InvalidClusterId ? &Clusters[Idx] : nullptr;
+    }
 
   protected:
     void initSUnits();

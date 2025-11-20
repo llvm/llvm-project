@@ -69,6 +69,46 @@ unsigned llvm::ComputeLinearIndex(Type *Ty,
   return CurIndex + 1;
 }
 
+void llvm::ComputeValueTypes(const DataLayout &DL, Type *Ty,
+                             SmallVectorImpl<Type *> &Types,
+                             SmallVectorImpl<TypeSize> *Offsets,
+                             TypeSize StartingOffset) {
+  assert((Ty->isScalableTy() == StartingOffset.isScalable() ||
+          StartingOffset.isZero()) &&
+         "Offset/TypeSize mismatch!");
+  // Given a struct type, recursively traverse the elements.
+  if (StructType *STy = dyn_cast<StructType>(Ty)) {
+    // If the Offsets aren't needed, don't query the struct layout. This allows
+    // us to support structs with scalable vectors for operations that don't
+    // need offsets.
+    const StructLayout *SL = Offsets ? DL.getStructLayout(STy) : nullptr;
+    for (StructType::element_iterator EB = STy->element_begin(), EI = EB,
+                                      EE = STy->element_end();
+         EI != EE; ++EI) {
+      // Don't compute the element offset if we didn't get a StructLayout above.
+      TypeSize EltOffset =
+          SL ? SL->getElementOffset(EI - EB) : TypeSize::getZero();
+      ComputeValueTypes(DL, *EI, Types, Offsets, StartingOffset + EltOffset);
+    }
+    return;
+  }
+  // Given an array type, recursively traverse the elements.
+  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
+    Type *EltTy = ATy->getElementType();
+    TypeSize EltSize = DL.getTypeAllocSize(EltTy);
+    for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i)
+      ComputeValueTypes(DL, EltTy, Types, Offsets,
+                        StartingOffset + i * EltSize);
+    return;
+  }
+  // Interpret void as zero return values.
+  if (Ty->isVoidTy())
+    return;
+  Types.push_back(Ty);
+  if (Offsets)
+    Offsets->push_back(StartingOffset);
+}
+
 /// ComputeValueVTs - Given an LLVM IR type, compute a sequence of
 /// EVTs that represent all the individual underlying
 /// non-aggregate types that comprise it.
@@ -81,82 +121,13 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                            SmallVectorImpl<EVT> *MemVTs,
                            SmallVectorImpl<TypeSize> *Offsets,
                            TypeSize StartingOffset) {
-  // Given a struct type, recursively traverse the elements.
-  if (StructType *STy = dyn_cast<StructType>(Ty)) {
-    // If the Offsets aren't needed, don't query the struct layout. This allows
-    // us to support structs with scalable vectors for operations that don't
-    // need offsets.
-    const StructLayout *SL = Offsets ? DL.getStructLayout(STy) : nullptr;
-    for (StructType::element_iterator EB = STy->element_begin(),
-                                      EI = EB,
-                                      EE = STy->element_end();
-         EI != EE; ++EI) {
-      // Don't compute the element offset if we didn't get a StructLayout above.
-      TypeSize EltOffset = SL ? SL->getElementOffset(EI - EB)
-                              : TypeSize::get(0, StartingOffset.isScalable());
-      ComputeValueVTs(TLI, DL, *EI, ValueVTs, MemVTs, Offsets,
-                      StartingOffset + EltOffset);
-    }
-    return;
+  SmallVector<Type *> Types;
+  ComputeValueTypes(DL, Ty, Types, Offsets, StartingOffset);
+  for (Type *Ty : Types) {
+    ValueVTs.push_back(TLI.getValueType(DL, Ty));
+    if (MemVTs)
+      MemVTs->push_back(TLI.getMemValueType(DL, Ty));
   }
-  // Given an array type, recursively traverse the elements.
-  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
-    Type *EltTy = ATy->getElementType();
-    TypeSize EltSize = DL.getTypeAllocSize(EltTy);
-    for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i)
-      ComputeValueVTs(TLI, DL, EltTy, ValueVTs, MemVTs, Offsets,
-                      StartingOffset + i * EltSize);
-    return;
-  }
-  // Interpret void as zero return values.
-  if (Ty->isVoidTy())
-    return;
-  // Base case: we can get an EVT for this LLVM IR type.
-  ValueVTs.push_back(TLI.getValueType(DL, Ty));
-  if (MemVTs)
-    MemVTs->push_back(TLI.getMemValueType(DL, Ty));
-  if (Offsets)
-    Offsets->push_back(StartingOffset);
-}
-
-void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
-                           Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
-                           SmallVectorImpl<TypeSize> *Offsets,
-                           TypeSize StartingOffset) {
-  return ComputeValueVTs(TLI, DL, Ty, ValueVTs, /*MemVTs=*/nullptr, Offsets,
-                         StartingOffset);
-}
-
-void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
-                           Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
-                           SmallVectorImpl<TypeSize> *Offsets,
-                           uint64_t StartingOffset) {
-  TypeSize Offset = TypeSize::get(StartingOffset, Ty->isScalableTy());
-  return ComputeValueVTs(TLI, DL, Ty, ValueVTs, Offsets, Offset);
-}
-
-void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
-                           Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
-                           SmallVectorImpl<uint64_t> *FixedOffsets,
-                           uint64_t StartingOffset) {
-  TypeSize Offset = TypeSize::get(StartingOffset, Ty->isScalableTy());
-  if (FixedOffsets) {
-    SmallVector<TypeSize, 4> Offsets;
-    ComputeValueVTs(TLI, DL, Ty, ValueVTs, &Offsets, Offset);
-    for (TypeSize Offset : Offsets)
-      FixedOffsets->push_back(Offset.getFixedValue());
-  } else {
-    ComputeValueVTs(TLI, DL, Ty, ValueVTs, nullptr, Offset);
-  }
-}
-
-void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
-                           Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
-                           SmallVectorImpl<EVT> *MemVTs,
-                           SmallVectorImpl<TypeSize> *Offsets,
-                           uint64_t StartingOffset) {
-  TypeSize Offset = TypeSize::get(StartingOffset, Ty->isScalableTy());
-  return ComputeValueVTs(TLI, DL, Ty, ValueVTs, MemVTs, Offsets, Offset);
 }
 
 void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
@@ -164,7 +135,7 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                            SmallVectorImpl<EVT> *MemVTs,
                            SmallVectorImpl<uint64_t> *FixedOffsets,
                            uint64_t StartingOffset) {
-  TypeSize Offset = TypeSize::get(StartingOffset, Ty->isScalableTy());
+  TypeSize Offset = TypeSize::getFixed(StartingOffset);
   if (FixedOffsets) {
     SmallVector<TypeSize, 4> Offsets;
     ComputeValueVTs(TLI, DL, Ty, ValueVTs, MemVTs, &Offsets, Offset);
@@ -206,8 +177,8 @@ void llvm::computeValueLLTs(const DataLayout &DL, Type &Ty,
     return;
   // Base case: we can get an LLT for this LLVM IR type.
   ValueTys.push_back(getLLTForType(Ty, DL));
-  if (Offsets != nullptr)
-    Offsets->push_back(StartingOffset * 8);
+  if (Offsets)
+    Offsets->push_back(StartingOffset);
 }
 
 /// ExtractTypeInfo - Returns the type info, possibly bitcast, encoded in V.
@@ -569,7 +540,8 @@ static bool nextRealType(SmallVectorImpl<Type *> &SubTypes,
 /// between it and the return.
 ///
 /// This function only tests target-independent requirements.
-bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM) {
+bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM,
+                                bool ReturnsFirstArg) {
   const BasicBlock *ExitBB = Call.getParent();
   const Instruction *Term = ExitBB->getTerminator();
   const ReturnInst *Ret = dyn_cast<ReturnInst>(Term);
@@ -603,7 +575,8 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM) {
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(BBI))
       if (II->getIntrinsicID() == Intrinsic::lifetime_end ||
           II->getIntrinsicID() == Intrinsic::assume ||
-          II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl)
+          II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl ||
+          II->getIntrinsicID() == Intrinsic::fake_use)
         continue;
     if (BBI->mayHaveSideEffects() || BBI->mayReadFromMemory() ||
         !isSafeToSpeculativelyExecute(&*BBI))
@@ -612,7 +585,8 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM) {
 
   const Function *F = ExitBB->getParent();
   return returnTypeIsEligibleForTailCall(
-      F, &Call, Ret, *TM.getSubtargetImpl(*F)->getTargetLowering());
+      F, &Call, Ret, *TM.getSubtargetImpl(*F)->getTargetLowering(),
+      ReturnsFirstArg);
 }
 
 bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
@@ -632,7 +606,8 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
   // goes, they shouldn't affect whether the call is a tail call.
   for (const auto &Attr : {Attribute::Alignment, Attribute::Dereferenceable,
                            Attribute::DereferenceableOrNull, Attribute::NoAlias,
-                           Attribute::NonNull, Attribute::NoUndef}) {
+                           Attribute::NonNull, Attribute::NoUndef,
+                           Attribute::Range, Attribute::NoFPClass}) {
     CallerAttrs.removeAttribute(Attr);
     CalleeAttrs.removeAttribute(Attr);
   }
@@ -674,26 +649,11 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
   return CallerAttrs == CalleeAttrs;
 }
 
-/// Check whether B is a bitcast of a pointer type to another pointer type,
-/// which is equal to A.
-static bool isPointerBitcastEqualTo(const Value *A, const Value *B) {
-  assert(A && B && "Expected non-null inputs!");
-
-  auto *BitCastIn = dyn_cast<BitCastInst>(B);
-
-  if (!BitCastIn)
-    return false;
-
-  if (!A->getType()->isPointerTy() || !B->getType()->isPointerTy())
-    return false;
-
-  return A == BitCastIn->getOperand(0);
-}
-
 bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
                                            const Instruction *I,
                                            const ReturnInst *Ret,
-                                           const TargetLoweringBase &TLI) {
+                                           const TargetLoweringBase &TLI,
+                                           bool ReturnsFirstArg) {
   // If the block ends with a void return or unreachable, it doesn't matter
   // what the call's return type is.
   if (!Ret || Ret->getNumOperands() == 0) return true;
@@ -707,26 +667,11 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
   if (!attributesPermitTailCall(F, I, Ret, TLI, &AllowDifferingSizes))
     return false;
 
-  const Value *RetVal = Ret->getOperand(0), *CallVal = I;
-  // Intrinsic like llvm.memcpy has no return value, but the expanded
-  // libcall may or may not have return value. On most platforms, it
-  // will be expanded as memcpy in libc, which returns the first
-  // argument. On other platforms like arm-none-eabi, memcpy may be
-  // expanded as library call without return value, like __aeabi_memcpy.
-  const CallInst *Call = cast<CallInst>(I);
-  if (Function *F = Call->getCalledFunction()) {
-    Intrinsic::ID IID = F->getIntrinsicID();
-    if (((IID == Intrinsic::memcpy &&
-          TLI.getLibcallName(RTLIB::MEMCPY) == StringRef("memcpy")) ||
-         (IID == Intrinsic::memmove &&
-          TLI.getLibcallName(RTLIB::MEMMOVE) == StringRef("memmove")) ||
-         (IID == Intrinsic::memset &&
-          TLI.getLibcallName(RTLIB::MEMSET) == StringRef("memset"))) &&
-        (RetVal == Call->getArgOperand(0) ||
-         isPointerBitcastEqualTo(RetVal, Call->getArgOperand(0))))
-      return true;
-  }
+  // If the return value is the first argument of the call.
+  if (ReturnsFirstArg)
+    return true;
 
+  const Value *RetVal = Ret->getOperand(0), *CallVal = I;
   SmallVector<unsigned, 4> RetPath, CallPath;
   SmallVector<Type *, 4> RetSubTypes, CallSubTypes;
 
@@ -766,13 +711,22 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
     // index is compatible with the value we return.
     if (!slotOnlyDiscardsData(RetVal, CallVal, TmpRetPath, TmpCallPath,
                               AllowDifferingSizes, TLI,
-                              F->getParent()->getDataLayout()))
+                              F->getDataLayout()))
       return false;
 
     CallEmpty  = !nextRealType(CallSubTypes, CallPath);
   } while(nextRealType(RetSubTypes, RetPath));
 
   return true;
+}
+
+bool llvm::funcReturnsFirstArgOfCall(const CallInst &CI) {
+  const ReturnInst *Ret = dyn_cast<ReturnInst>(CI.getParent()->getTerminator());
+  Value *RetVal = Ret ? Ret->getReturnValue() : nullptr;
+  bool ReturnsFirstArg = false;
+  if (RetVal && ((RetVal == CI.getArgOperand(0))))
+    ReturnsFirstArg = true;
+  return ReturnsFirstArg;
 }
 
 static void collectEHScopeMembers(

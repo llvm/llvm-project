@@ -24,7 +24,7 @@ using namespace ento;
 namespace {
 class FixedAddressChecker
   : public Checker< check::PreStmt<BinaryOperator> > {
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this, "Use fixed address"};
 
 public:
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
@@ -43,19 +43,26 @@ void FixedAddressChecker::checkPreStmt(const BinaryOperator *B,
   if (!T->isPointerType())
     return;
 
+  // Omit warning if the RHS has already pointer type. Without this passing
+  // around one fixed value in several pointer variables would produce several
+  // redundant warnings.
+  if (B->getRHS()->IgnoreParenCasts()->getType()->isPointerType())
+    return;
+
   SVal RV = C.getSVal(B->getRHS());
 
   if (!RV.isConstant() || RV.isZeroConstant())
     return;
 
+  if (C.getSourceManager().isInSystemMacro(B->getRHS()->getBeginLoc()))
+    return;
+
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     // FIXME: improve grammar in the following strings:
-    if (!BT)
-      BT.reset(new BugType(this, "Use fixed address"));
     constexpr llvm::StringLiteral Msg =
         "Using a fixed address is not portable because that address will "
         "probably not be valid in all environments or platforms.";
-    auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
+    auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
     R->addRange(B->getRHS()->getSourceRange());
     C.emitReport(std::move(R));
   }

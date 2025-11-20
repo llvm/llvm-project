@@ -9,11 +9,17 @@
 #ifndef MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 #define MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
 
@@ -41,6 +47,224 @@ Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
 /// Returns two dims that are greater than one if the transposition is applied
 /// on a 2D slice. Otherwise, returns a failure.
 FailureOr<std::pair<int, int>> isTranspose2DSlice(vector::TransposeOp op);
+
+/// Return true if `vectorType` is a contiguous slice of `memrefType`,
+/// in the sense that it can be read/written from/to a contiguous area
+/// of the memref.
+///
+/// The leading unit dimensions of the vector type are ignored as they
+/// are not relevant to the result. Let N be the number of the vector
+/// dimensions after ignoring a leading sequence of unit ones.
+///
+/// For `vectorType` to be a contiguous slice of `memrefType`
+///   a) the N trailing dimensions of `memrefType` must be contiguous, and
+///   b) the N-1 trailing dimensions of `vectorType` and `memrefType`
+///      must match.
+///
+/// Examples:
+///
+///   Ex.1 contiguous slice, perfect match
+///     vector<4x3x2xi32> from memref<5x4x3x2xi32>
+///   Ex.2 contiguous slice, the leading dim does not match (2 != 4)
+///     vector<2x3x2xi32> from memref<5x4x3x2xi32>
+///   Ex.3 non-contiguous slice, 2 != 3
+///     vector<2x2x2xi32> from memref<5x4x3x2xi32>
+///   Ex.4 contiguous slice, leading unit dimension of the vector ignored,
+///        2 != 3 (allowed)
+///     vector<1x2x2xi32> from memref<5x4x3x2xi32>
+///   Ex.5. contiguous slice, leading two unit dims of the vector ignored,
+///         2 != 3 (allowed)
+///     vector<1x1x2x2xi32> from memref<5x4x3x2xi32>
+///   Ex.6. non-contiguous slice, 2 != 3, no leading sequence of unit dims
+///     vector<2x1x2x2xi32> from memref<5x4x3x2xi32>)
+///   Ex.7 contiguous slice, memref needs to be contiguous only in the last
+///        dimension
+///     vector<1x1x2xi32> from memref<2x2x2xi32, strided<[8, 4, 1]>>
+///   Ex.8 non-contiguous slice, memref needs to be contiguous in the last
+///        two dimensions, and it isn't
+///     vector<1x2x2xi32> from memref<2x2x2xi32, strided<[8, 4, 1]>>
+bool isContiguousSlice(MemRefType memrefType, VectorType vectorType);
+
+/// Returns an iterator for all positions in the leading dimensions of `vType`
+/// up to the `targetRank`. If any leading dimension before the `targetRank` is
+/// scalable (so cannot be unrolled), it will return an iterator for positions
+/// up to the first scalable dimension.
+///
+/// If no leading dimensions can be unrolled an empty optional will be returned.
+///
+/// Examples:
+///
+///   For vType = vector<2x3x4> and targetRank = 1
+///
+///   The resulting iterator will yield:
+///     [0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]
+///
+///   For vType = vector<3x[4]x5> and targetRank = 0
+///
+///   The scalable dimension blocks unrolling so the iterator yields only:
+///     [0], [1], [2]
+///
+std::optional<StaticTileOffsetRange>
+createUnrollIterator(VectorType vType, int64_t targetRank = 1);
+
+/// Returns a functor (int64_t -> Value) which returns a constant vscale
+/// multiple.
+///
+/// Example:
+/// ```c++
+/// auto createVscaleMultiple = makeVscaleConstantBuilder(rewriter, loc);
+/// auto c4Vscale = createVscaleMultiple(4); // 4 * vector.vscale
+/// ```
+inline auto makeVscaleConstantBuilder(PatternRewriter &rewriter, Location loc) {
+  Value vscale = nullptr;
+  return [loc, vscale, &rewriter](int64_t multiplier) mutable {
+    if (!vscale)
+      vscale = vector::VectorScaleOp::create(rewriter, loc);
+    return arith::MulIOp::create(
+        rewriter, loc, vscale,
+        arith::ConstantIndexOp::create(rewriter, loc, multiplier));
+  };
+}
+
+/// Returns a range over the dims (size and scalability) of a VectorType.
+inline auto getDims(VectorType vType) {
+  return llvm::zip_equal(vType.getShape(), vType.getScalableDims());
+}
+
+/// A wrapper for getMixedSizes for vector.transfer_read and
+/// vector.transfer_write Ops (for source and destination, respectively).
+///
+/// Tensor and MemRef types implement their own, very similar version of
+/// getMixedSizes. This method will call the appropriate version (depending on
+/// `hasTensorSemantics`). It will also automatically extract the operand for
+/// which to call it on (source for "read" and destination for "write" ops).
+SmallVector<OpFoldResult> getMixedSizesXfer(bool hasTensorSemantics,
+                                            Operation *xfer,
+                                            RewriterBase &rewriter);
+
+/// A pattern for ops that implement `MaskableOpInterface` and that _might_ be
+/// masked (i.e. inside `vector.mask` Op region). In particular:
+///   1. Matches `SourceOp` operation, Op.
+///   2.1. If Op is masked, retrieves the masking Op, maskOp, and updates the
+///     insertion point to avoid inserting new ops into the `vector.mask` Op
+///     region (which only allows one Op).
+///   2.2 If Op is not masked, this step is skipped.
+///   3. Invokes `matchAndRewriteMaskableOp` on Op and optionally maskOp if
+///     found in step 2.1.
+///
+/// This wrapper frees patterns from re-implementing the logic to update the
+/// insertion point when a maskable Op is masked. Such patterns are still
+/// responsible for providing an updated ("rewritten") version of:
+///   a. the source Op when mask _is not_ present,
+///   b. the source Op and the masking Op when mask _is_ present.
+/// To use this pattern, implement `matchAndRewriteMaskableOp`. Note that
+/// the return value will depend on the case above.
+template <class SourceOp>
+struct MaskableOpRewritePattern : OpRewritePattern<SourceOp> {
+  using OpRewritePattern<SourceOp>::OpRewritePattern;
+
+private:
+  LogicalResult matchAndRewrite(SourceOp sourceOp,
+                                PatternRewriter &rewriter) const final {
+    auto maskableOp = dyn_cast<MaskableOpInterface>(sourceOp.getOperation());
+    if (!maskableOp)
+      return failure();
+
+    Operation *rootOp = sourceOp;
+
+    // If this Op is masked, update the insertion point to avoid inserting into
+    // the vector.mask Op region.
+    OpBuilder::InsertionGuard guard(rewriter);
+    MaskingOpInterface maskOp;
+    if (maskableOp.isMasked()) {
+      maskOp = maskableOp.getMaskingOp();
+      rewriter.setInsertionPoint(maskOp);
+      rootOp = maskOp;
+    }
+
+    FailureOr<Value> newOp =
+        matchAndRewriteMaskableOp(sourceOp, maskOp, rewriter);
+    if (failed(newOp))
+      return failure();
+
+    // Rewriting succeeded but there are no values to replace.
+    if (rootOp->getNumResults() == 0) {
+      rewriter.eraseOp(rootOp);
+    } else {
+      assert(*newOp != Value() &&
+             "Cannot replace an op's use with an empty value.");
+      rewriter.replaceOp(rootOp, *newOp);
+    }
+    return success();
+  }
+
+public:
+  // Matches `sourceOp` that can potentially be masked with `maskingOp`. If the
+  // latter is present, returns a replacement for `maskingOp`. Otherwise,
+  // returns a replacement for `sourceOp`.
+  virtual FailureOr<Value>
+  matchAndRewriteMaskableOp(SourceOp sourceOp, MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const = 0;
+};
+
+/// Returns true if the input Vector type can be linearized.
+///
+/// Linearization is meant in the sense of flattening vectors, e.g.:
+///   * vector<NxMxKxi32> -> vector<N*M*Kxi32>
+/// In this sense, Vectors that are either:
+///   * already linearized, or
+///   * contain more than 1 scalable dimensions,
+/// are not linearizable.
+bool isLinearizableVector(VectorType type);
+
+/// Creates a TransferReadOp from `source`.
+///
+/// If the shape of vector to read differs from the shape of the value being
+/// read, masking is used to avoid out-of-bounds accesses. Set
+/// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
+/// instead of explicit masks.
+///
+/// Note: all read offsets are set to 0.
+Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
+                             const VectorType &vecToReadTy,
+                             std::optional<Value> padValue = std::nullopt,
+                             bool useInBoundsInsteadOfMasking = false);
+
+Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
+                             ArrayRef<int64_t> inputVectorSizes,
+                             std::optional<Value> padValue = std::nullopt,
+                             bool useInBoundsInsteadOfMasking = false,
+                             ArrayRef<bool> inputScalableVecDims = {});
+
+/// Returns success if `inputVectorSizes` is a valid masking configuraion for
+/// given `shape`, i.e., it meets:
+///   1. The numbers of elements in both array are equal.
+///   2. `inputVectorSizes` does not have dynamic dimensions.
+///   3. All the values in `inputVectorSizes` are greater than or equal to
+///      static sizes in `shape`.
+LogicalResult isValidMaskedInputVector(ArrayRef<int64_t> shape,
+                                       ArrayRef<int64_t> inputVectorSizes);
+
+/// Generic utility for unrolling n-D vector operations to (n-1)-D operations.
+/// This handles the common pattern of:
+/// 1. Check if already 1-D. If so, return failure.
+/// 2. Check for scalable dimensions. If so, return failure.
+/// 3. Create poison initialized result.
+/// 4. Loop through the outermost dimension, execute the UnrollVectorOpFn to
+/// create sub vectors.
+/// 5. Insert the sub vectors back into the final vector.
+/// 6. Replace the original op with the new result.
+using UnrollVectorOpFn =
+    function_ref<Value(PatternRewriter &, Location, VectorType, int64_t)>;
+
+LogicalResult unrollVectorOp(Operation *op, PatternRewriter &rewriter,
+                             UnrollVectorOpFn unrollFn);
+
+/// Generic utility for unrolling values of type vector<NxAxBx...>
+/// to N values of type vector<AxBx...> using vector.extract. If the input
+/// is rank-1 or has leading scalable dimension, failure is returned.
+FailureOr<SmallVector<Value>> unrollVectorValue(TypedValue<VectorType>,
+                                                RewriterBase &);
 
 } // namespace vector
 

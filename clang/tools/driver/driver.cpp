@@ -18,16 +18,18 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Frontend/ChainedDiagnosticConsumer.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/SerializedDiagnosticPrinter.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
@@ -36,23 +38,23 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <memory>
 #include <optional>
 #include <set>
 #include <system_error>
+
 using namespace clang;
 using namespace clang::driver;
 using namespace llvm::opt;
@@ -65,7 +67,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
       if (llvm::ErrorOr<std::string> P =
               llvm::sys::findProgramByName(ExecutablePath))
         ExecutablePath = *P;
-    return std::string(ExecutablePath.str());
+    return std::string(ExecutablePath);
   }
 
   // This just needs to be some symbol in the binary; C++ doesn't
@@ -74,136 +76,8 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
   return llvm::sys::fs::getMainExecutable(Argv0, P);
 }
 
-static const char *GetStableCStr(std::set<std::string> &SavedStrings,
-                                 StringRef S) {
-  return SavedStrings.insert(std::string(S)).first->c_str();
-}
-
-/// ApplyOneQAOverride - Apply a list of edits to the input argument lists.
-///
-/// The input string is a space separated list of edits to perform,
-/// they are applied in order to the input argument lists. Edits
-/// should be one of the following forms:
-///
-///  '#': Silence information about the changes to the command line arguments.
-///
-///  '^': Add FOO as a new argument at the beginning of the command line.
-///
-///  '+': Add FOO as a new argument at the end of the command line.
-///
-///  's/XXX/YYY/': Substitute the regular expression XXX with YYY in the command
-///  line.
-///
-///  'xOPTION': Removes all instances of the literal argument OPTION.
-///
-///  'XOPTION': Removes all instances of the literal argument OPTION,
-///  and the following argument.
-///
-///  'Ox': Removes all flags matching 'O' or 'O[sz0-9]' and adds 'Ox'
-///  at the end of the command line.
-///
-/// \param OS - The stream to write edit information to.
-/// \param Args - The vector of command line arguments.
-/// \param Edit - The override command to perform.
-/// \param SavedStrings - Set to use for storing string representations.
-static void ApplyOneQAOverride(raw_ostream &OS,
-                               SmallVectorImpl<const char*> &Args,
-                               StringRef Edit,
-                               std::set<std::string> &SavedStrings) {
-  // This does not need to be efficient.
-
-  if (Edit[0] == '^') {
-    const char *Str =
-      GetStableCStr(SavedStrings, Edit.substr(1));
-    OS << "### Adding argument " << Str << " at beginning\n";
-    Args.insert(Args.begin() + 1, Str);
-  } else if (Edit[0] == '+') {
-    const char *Str =
-      GetStableCStr(SavedStrings, Edit.substr(1));
-    OS << "### Adding argument " << Str << " at end\n";
-    Args.push_back(Str);
-  } else if (Edit[0] == 's' && Edit[1] == '/' && Edit.endswith("/") &&
-             Edit.slice(2, Edit.size() - 1).contains('/')) {
-    StringRef MatchPattern = Edit.substr(2).split('/').first;
-    StringRef ReplPattern = Edit.substr(2).split('/').second;
-    ReplPattern = ReplPattern.slice(0, ReplPattern.size()-1);
-
-    for (unsigned i = 1, e = Args.size(); i != e; ++i) {
-      // Ignore end-of-line response file markers
-      if (Args[i] == nullptr)
-        continue;
-      std::string Repl = llvm::Regex(MatchPattern).sub(ReplPattern, Args[i]);
-
-      if (Repl != Args[i]) {
-        OS << "### Replacing '" << Args[i] << "' with '" << Repl << "'\n";
-        Args[i] = GetStableCStr(SavedStrings, Repl);
-      }
-    }
-  } else if (Edit[0] == 'x' || Edit[0] == 'X') {
-    auto Option = Edit.substr(1);
-    for (unsigned i = 1; i < Args.size();) {
-      if (Option == Args[i]) {
-        OS << "### Deleting argument " << Args[i] << '\n';
-        Args.erase(Args.begin() + i);
-        if (Edit[0] == 'X') {
-          if (i < Args.size()) {
-            OS << "### Deleting argument " << Args[i] << '\n';
-            Args.erase(Args.begin() + i);
-          } else
-            OS << "### Invalid X edit, end of command line!\n";
-        }
-      } else
-        ++i;
-    }
-  } else if (Edit[0] == 'O') {
-    for (unsigned i = 1; i < Args.size();) {
-      const char *A = Args[i];
-      // Ignore end-of-line response file markers
-      if (A == nullptr)
-        continue;
-      if (A[0] == '-' && A[1] == 'O' &&
-          (A[2] == '\0' ||
-           (A[3] == '\0' && (A[2] == 's' || A[2] == 'z' ||
-                             ('0' <= A[2] && A[2] <= '9'))))) {
-        OS << "### Deleting argument " << Args[i] << '\n';
-        Args.erase(Args.begin() + i);
-      } else
-        ++i;
-    }
-    OS << "### Adding argument " << Edit << " at end\n";
-    Args.push_back(GetStableCStr(SavedStrings, '-' + Edit.str()));
-  } else {
-    OS << "### Unrecognized edit: " << Edit << "\n";
-  }
-}
-
-/// ApplyQAOverride - Apply a space separated list of edits to the
-/// input argument lists. See ApplyOneQAOverride.
-static void ApplyQAOverride(SmallVectorImpl<const char*> &Args,
-                            const char *OverrideStr,
-                            std::set<std::string> &SavedStrings) {
-  raw_ostream *OS = &llvm::errs();
-
-  if (OverrideStr[0] == '#') {
-    ++OverrideStr;
-    OS = &llvm::nulls();
-  }
-
-  *OS << "### CCC_OVERRIDE_OPTIONS: " << OverrideStr << "\n";
-
-  // This does not need to be efficient.
-
-  const char *S = OverrideStr;
-  while (*S) {
-    const char *End = ::strchr(S, ' ');
-    if (!End)
-      End = S + strlen(S);
-    if (End != S)
-      ApplyOneQAOverride(*OS, Args, std::string(S, End), SavedStrings);
-    S = End;
-    if (*S != '\0')
-      ++S;
-  }
+static const char *GetStableCStr(llvm::StringSet<> &SavedStrings, StringRef S) {
+  return SavedStrings.insert(S).first->getKeyData();
 }
 
 extern int cc1_main(ArrayRef<const char *> Argv, const char *Argv0,
@@ -216,7 +90,7 @@ extern int cc1gen_reproducer_main(ArrayRef<const char *> Argv,
 
 static void insertTargetAndModeArgs(const ParsedClangName &NameParts,
                                     SmallVectorImpl<const char *> &ArgVector,
-                                    std::set<std::string> &SavedStrings) {
+                                    llvm::StringSet<> &SavedStrings) {
   // Put target and mode arguments at the start of argument list so that
   // arguments specified in command line could override them. Avoid putting
   // them at index 0, as an option like '-cc1' must remain the first.
@@ -282,6 +156,11 @@ static bool SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
       }
 
       const char *FilteringStr = ::getenv("CC_PRINT_HEADERS_FILTERING");
+      if (!FilteringStr) {
+        TheDriver.Diag(clang::diag::err_drv_print_header_env_var_invalid_format)
+            << EnvVar;
+        return false;
+      }
       HeaderIncludeFilteringKind Filtering;
       if (!stringToHeaderIncludeFiltering(FilteringStr, Filtering)) {
         TheDriver.Diag(clang::diag::err_drv_print_header_env_var)
@@ -292,7 +171,7 @@ static bool SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
       if ((TheDriver.CCPrintHeadersFormat == HIFMT_Textual &&
            Filtering != HIFIL_None) ||
           (TheDriver.CCPrintHeadersFormat == HIFMT_JSON &&
-           Filtering != HIFIL_Only_Direct_System)) {
+           Filtering == HIFIL_None)) {
         TheDriver.Diag(clang::diag::err_drv_print_header_env_var_combination)
             << EnvVar << FilteringStr;
         return false;
@@ -324,30 +203,9 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
   DiagClient->setPrefix(std::string(ExeBasename));
 }
 
-static void SetInstallDir(SmallVectorImpl<const char *> &argv,
-                          Driver &TheDriver, bool CanonicalPrefixes) {
-  // Attempt to find the original path used to invoke the driver, to determine
-  // the installed path. We do this manually, because we want to support that
-  // path being a symlink.
-  SmallString<128> InstalledPath(argv[0]);
-
-  // Do a PATH lookup, if there are no directory components.
-  if (llvm::sys::path::filename(InstalledPath) == InstalledPath)
-    if (llvm::ErrorOr<std::string> Tmp = llvm::sys::findProgramByName(
-            llvm::sys::path::filename(InstalledPath.str())))
-      InstalledPath = *Tmp;
-
-  // FIXME: We don't actually canonicalize this, we just make it absolute.
-  if (CanonicalPrefixes)
-    llvm::sys::fs::make_absolute(InstalledPath);
-
-  StringRef InstalledPathParent(llvm::sys::path::parent_path(InstalledPath));
-  if (llvm::sys::fs::exists(InstalledPathParent))
-    TheDriver.setInstalledDir(InstalledPathParent);
-}
-
 static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
-                          const llvm::ToolContext &ToolContext) {
+                          const llvm::ToolContext &ToolContext,
+                          IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   // If we call the cc1 tool from the clangDriver library (through
   // Driver::CC1Main), we need to clean up the options usage count. The options
   // are currently global, and they might have been used previously by the
@@ -355,7 +213,8 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   llvm::cl::ResetAllOptionOccurrences();
 
   llvm::BumpPtrAllocator A;
-  llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine);
+  llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine,
+                                  VFS.get());
   if (llvm::Error Err = ECtx.expandResponseFiles(ArgV)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
@@ -370,14 +229,14 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
     return cc1gen_reproducer_main(ArrayRef(ArgV).slice(2), ArgV[0],
                                   GetExecutablePathVP, ToolContext);
   // Reject unknown tools.
-  llvm::errs() << "error: unknown integrated tool '" << Tool << "'. "
-               << "Valid tools include '-cc1' and '-cc1as'.\n";
+  llvm::errs()
+      << "error: unknown integrated tool '" << Tool << "'. "
+      << "Valid tools include '-cc1', '-cc1as' and '-cc1gen-reproducer'.\n";
   return 1;
 }
 
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   noteBottomOfStack();
-  llvm::InitLLVM X(Argc, Argv);
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
                         " and include the crash backtrace, preprocessed "
                         "source, and associated run script.\n");
@@ -397,14 +256,16 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   bool ClangCLMode =
       IsClangCL(getDriverMode(ProgName, llvm::ArrayRef(Args).slice(1)));
 
-  if (llvm::Error Err = expandResponseFiles(Args, ClangCLMode, A)) {
+  auto VFS = llvm::vfs::getRealFileSystem();
+
+  if (llvm::Error Err = expandResponseFiles(Args, ClangCLMode, A, VFS.get())) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
   }
 
   // Handle -cc1 integrated tools.
-  if (Args.size() >= 2 && StringRef(Args[1]).startswith("-cc1"))
-    return ExecuteCC1Tool(Args, ToolContext);
+  if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1"))
+    return ExecuteCC1Tool(Args, ToolContext, VFS);
 
   // Handle options that need handling before the real command line parsing in
   // Driver::BuildCompilation()
@@ -442,12 +303,13 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     }
   }
 
-  std::set<std::string> SavedStrings;
+  llvm::StringSet<> SavedStrings;
   // Handle CCC_OVERRIDE_OPTIONS, used for editing a command line behind the
   // scenes.
   if (const char *OverrideStr = ::getenv("CCC_OVERRIDE_OPTIONS")) {
     // FIXME: Driver shouldn't take extra initial argument.
-    ApplyQAOverride(Args, OverrideStr, SavedStrings);
+    driver::applyOverrideOptions(Args, OverrideStr, SavedStrings,
+                                 "CCC_OVERRIDE_OPTIONS", &llvm::errs());
   }
 
   std::string Path = GetExecutablePath(ToolContext.Path, CanonicalPrefixes);
@@ -463,29 +325,30 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                            .Case("-fintegrated-cc1", false)
                            .Default(UseNewCC1Process);
 
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
-      CreateAndPopulateDiagOpts(Args);
+  std::unique_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(Args);
+  // Driver's diagnostics don't use suppression mappings, so don't bother
+  // parsing them. CC1 still receives full args, so this doesn't impact other
+  // actions.
+  DiagOpts->DiagnosticSuppressionMappingsFile.clear();
 
-  TextDiagnosticPrinter *DiagClient
-    = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
   FixupDiagPrefixExeName(DiagClient, ProgName);
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), *DiagOpts, DiagClient);
 
   if (!DiagOpts->DiagnosticSerializationFile.empty()) {
     auto SerializedConsumer =
         clang::serialized_diags::create(DiagOpts->DiagnosticSerializationFile,
-                                        &*DiagOpts, /*MergeChildRecords=*/true);
+                                        *DiagOpts, /*MergeChildRecords=*/true);
     Diags.setClient(new ChainedDiagnosticConsumer(
         Diags.takeClient(), std::move(SerializedConsumer)));
   }
 
-  ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
+  ProcessWarningOptions(Diags, *DiagOpts, *VFS, /*ReportDiags=*/false);
 
-  Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags);
-  SetInstallDir(Args, TheDriver, CanonicalPrefixes);
+  Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags,
+                   /*Title=*/"clang LLVM compiler", VFS);
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(ProgName);
   TheDriver.setTargetAndMode(TargetAndMode);
   // If -canonical-prefixes is set, GetExecutablePath will have resolved Path
@@ -501,10 +364,12 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!SetBackdoorDriverOutputsFromEnvVars(TheDriver))
     return 1;
 
+  auto ExecuteCC1WithContext = [&ToolContext,
+                                &VFS](SmallVectorImpl<const char *> &ArgV) {
+    return ExecuteCC1Tool(ArgV, ToolContext, VFS);
+  };
   if (!UseNewCC1Process) {
-    TheDriver.CC1Main = [ToolContext](SmallVectorImpl<const char *> &ArgV) {
-      return ExecuteCC1Tool(ArgV, ToolContext);
-    };
+    TheDriver.CC1Main = ExecuteCC1WithContext;
     // Ensure the CC1Command actually catches cc1 crashes
     llvm::CrashRecoveryContext::Enable();
   }
@@ -583,7 +448,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!UseNewCC1Process && IsCrash) {
     // When crashing in -fintegrated-cc1 mode, bury the timer pointers, because
     // the internal linked list might point to already released stack frames.
-    llvm::BuryPointer(llvm::TimerGroup::aquireDefaultGroup());
+    llvm::BuryPointer(llvm::TimerGroup::acquireTimerGlobals());
   } else {
     // If any timers were active but haven't been destroyed yet, print their
     // results now.  This happens in -disable-free mode.

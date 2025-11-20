@@ -166,6 +166,12 @@
 ; OBJ:     DisplayName: baz
 ; OBJ:     LinkageName: ?baz@@YAXXZ
 ; OBJ:   }
+; OBJ:   InlineesSym {
+; OBJ-NEXT:  Kind: S_INLINEES (0x1168)
+; OBJ-NEXT:  Inlinees [
+; OBJ-NEXT:    FuncID: bar (0x1002)
+; OBJ-NEXT:  ]
+; OBJ-NEXT:}
 ; OBJ:   InlineSiteSym {
 ; OBJ:     PtrParent: 0x0
 ; OBJ:     PtrEnd: 0x0
@@ -242,7 +248,7 @@ declare void @llvm.lifetime.start(i64, ptr nocapture) #1
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end(i64, ptr nocapture) #1
 
-attributes #0 = { norecurse nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { norecurse nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }
 attributes #2 = { nounwind }
 

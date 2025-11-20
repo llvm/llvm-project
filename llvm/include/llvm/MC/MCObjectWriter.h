@@ -10,12 +10,12 @@
 #define LLVM_MC_MCOBJECTWRITER_H
 
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 
 namespace llvm {
 
-class MCAsmLayout;
 class MCAssembler;
 class MCFixup;
 class MCFragment;
@@ -31,10 +31,23 @@ class MCValue;
 /// points. Once assembly is complete, the object writer is given the
 /// MCAssembler instance, which contains all the symbol and section data which
 /// should be emitted as part of writeObject().
-class MCObjectWriter {
+class LLVM_ABI MCObjectWriter {
 protected:
+  MCAssembler *Asm = nullptr;
+  /// List of declared file names
+  SmallVector<std::pair<std::string, size_t>, 0> FileNames;
+  // XCOFF specific: Optional compiler version.
+  std::string CompilerVersion;
   std::vector<const MCSymbol *> AddrsigSyms;
   bool EmitAddrsigSection = false;
+  bool SubsectionsViaSymbols = false;
+
+  struct CGProfileEntry {
+    const MCSymbolRefExpr *From;
+    const MCSymbolRefExpr *To;
+    uint64_t Count;
+  };
+  SmallVector<CGProfileEntry, 0> CGProfile;
 
   MCObjectWriter() = default;
 
@@ -43,8 +56,12 @@ public:
   MCObjectWriter &operator=(const MCObjectWriter &) = delete;
   virtual ~MCObjectWriter();
 
+  virtual void setAssembler(MCAssembler *A) { Asm = A; }
+
+  MCContext &getContext() const;
+
   /// lifetime management
-  virtual void reset() {}
+  virtual void reset();
 
   /// \name High-Level API
   /// @{
@@ -54,8 +71,7 @@ public:
   ///
   /// This routine is called by the assembler after layout and relaxation is
   /// complete.
-  virtual void executePostLayoutBinding(MCAssembler &Asm,
-                                        const MCAsmLayout &Layout) = 0;
+  virtual void executePostLayoutBinding() {}
 
   /// Record a relocation entry.
   ///
@@ -63,34 +79,29 @@ public:
   /// post layout binding. The implementation is responsible for storing
   /// information about the relocation so that it can be emitted during
   /// writeObject().
-  virtual void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                                const MCFragment *Fragment,
-                                const MCFixup &Fixup, MCValue Target,
-                                uint64_t &FixedValue) = 0;
+  virtual void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                                MCValue Target, uint64_t &FixedValue);
 
   /// Check whether the difference (A - B) between two symbol references is
   /// fully resolved.
   ///
   /// Clients are not required to answer precisely and may conservatively return
   /// false, even when a difference is fully resolved.
-  bool isSymbolRefDifferenceFullyResolved(const MCAssembler &Asm,
-                                          const MCSymbolRefExpr *A,
-                                          const MCSymbolRefExpr *B,
+  bool isSymbolRefDifferenceFullyResolved(const MCSymbol &A, const MCSymbol &B,
                                           bool InSet) const;
 
-  virtual bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                                      const MCSymbol &A,
-                                                      const MCSymbol &B,
-                                                      bool InSet) const;
-
-  virtual bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                                      const MCSymbol &SymA,
+  virtual bool isSymbolRefDifferenceFullyResolvedImpl(const MCSymbol &SymA,
                                                       const MCFragment &FB,
                                                       bool InSet,
                                                       bool IsPCRel) const;
 
-  /// ELF only. Mark that we have seen GNU ABI usage (e.g. SHF_GNU_RETAIN).
-  virtual void markGnuAbi() {}
+  MutableArrayRef<std::pair<std::string, size_t>> getFileNames() {
+    return FileNames;
+  }
+  void addFileName(StringRef FileName);
+  void setCompilerVersion(StringRef CompilerVers) {
+    CompilerVersion = CompilerVers;
+  }
 
   /// Tell the object writer to emit an address-significance table during
   /// writeObject(). If this function is not called, all symbols are treated as
@@ -104,21 +115,18 @@ public:
   void addAddrsigSymbol(const MCSymbol *Sym) { AddrsigSyms.push_back(Sym); }
 
   std::vector<const MCSymbol *> &getAddrsigSyms() { return AddrsigSyms; }
+  SmallVector<CGProfileEntry, 0> &getCGProfile() { return CGProfile; }
 
-  virtual void addExceptionEntry(const MCSymbol *Symbol, const MCSymbol *Trap,
-                                 unsigned LanguageCode, unsigned ReasonCode,
-                                 unsigned FunctionSize, bool hasDebug) {
-    report_fatal_error("addExceptionEntry is only supported on XCOFF targets");
-  }
-  virtual void addCInfoSymEntry(StringRef Name, StringRef Metadata) {
-    report_fatal_error("addCInfoSymEntry is only supported on XCOFF targets");
-  }
+  // Mach-O specific: Whether .subsections_via_symbols is enabled.
+  bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
+  void setSubsectionsViaSymbols(bool Value) { SubsectionsViaSymbols = Value; }
+
   /// Write the object file and returns the number of bytes written.
   ///
   /// This routine is called by the assembler after layout and relaxation is
   /// complete, fixups have been evaluated and applied, and relocations
   /// generated.
-  virtual uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) = 0;
+  virtual uint64_t writeObject() = 0;
 
   /// @}
 };
@@ -128,7 +136,14 @@ public:
 class MCObjectTargetWriter {
 public:
   virtual ~MCObjectTargetWriter() = default;
+  void setAssembler(MCAssembler *A) { Asm = A; }
   virtual Triple::ObjectFormatType getFormat() const = 0;
+
+protected:
+  LLVM_ABI MCContext &getContext() const;
+  LLVM_ABI void reportError(SMLoc L, const Twine &Msg) const;
+
+  MCAssembler *Asm = nullptr;
 };
 
 } // end namespace llvm

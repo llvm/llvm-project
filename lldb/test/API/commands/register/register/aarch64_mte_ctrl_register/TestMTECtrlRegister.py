@@ -34,17 +34,41 @@ class MTECtrlRegisterTestCase(TestBase):
             substrs=["stop reason = breakpoint 1."],
         )
 
-        # Bit 0 = tagged addressing enabled
-        # Bit 1 = synchronous faults
-        # Bit 2 = asynchronous faults
-        # We start enabled with synchronous faults.
-        self.expect("register read mte_ctrl", substrs=["0x0000000000000003"])
+        has_store_only = self.isAArch64MTEStoreOnly()
 
+        def check_mte_ctrl(async_err, sync_err, store_only):
+            # Bit 0 = tagged addressing enabled
+            # Bit 1 = synchronous faults
+            # Bit 2 = asynchronous faults
+            # Bit 19 = store only checking mode
+            value = "0x{:016x}".format(
+                (store_only << 19) | (async_err << 2) | (sync_err << 1) | 1
+            )
+            expected = [value]
+
+            if self.hasXMLSupport():
+                fields = "("
+                if has_store_only:
+                    fields += f"STORE_ONLY = {store_only}, "
+
+                tfc_modes = ["NONE", "SYNC", "ASYNC", "ASYMM"]
+                fields += f"TAGS = 0, TCF = TCF_{tfc_modes[async_err << 1 | sync_err]}, TAGGED_ADDR_ENABLE = 1)"
+
+                expected.append(fields)
+
+            self.expect("register read mte_ctrl", substrs=expected)
+
+        # We start enabled with synchronous faults.
+        check_mte_ctrl(0, 1, 0)
         # Change to asynchronous faults.
         self.runCmd("register write mte_ctrl 5")
-        self.expect("register read mte_ctrl", substrs=["0x0000000000000005"])
-
+        check_mte_ctrl(1, 0, 0)
         # This would return to synchronous faults if we did not restore the
         # previous value.
         self.expect("expression setup_mte()", substrs=["= 0"])
-        self.expect("register read mte_ctrl", substrs=["0x0000000000000005"])
+        check_mte_ctrl(1, 0, 0)
+
+        # Store only checking requires FEAT_MTE_STORE_ONLY.
+        if has_store_only:
+            self.runCmd(f"register write mte_ctrl {1 | (1 << 19)}")
+            check_mte_ctrl(0, 0, 1)

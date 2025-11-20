@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/signal/raise.h"
 #include "src/stdlib/_Exit.h"
 
 #include "src/stdlib/abort.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, abort, ()) {
   // TODO: When sigprocmask and sigaction land:
@@ -22,9 +23,9 @@ LLVM_LIBC_FUNCTION(void, abort, ()) {
   // Acquire recursive mutex (in case the current signal handler for SIGABRT
   // itself calls abort we don't want to deadlock on the same thread trying
   // to acquire it's own mutex.)
-  __llvm_libc::raise(SIGABRT);
-  __llvm_libc::raise(SIGKILL);
-  __llvm_libc::_Exit(127);
+  LIBC_NAMESPACE::raise(SIGABRT);
+  LIBC_NAMESPACE::raise(SIGKILL);
+  LIBC_NAMESPACE::_Exit(127);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

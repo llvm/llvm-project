@@ -7,6 +7,8 @@ TableGen.
 
 [LLVM_TableGen.ipynb](LLVM_TableGen.ipynb) - A demo of the kernel's capabilities.
 
+[tablegen_tutorial_part_1.ipynb](tablegen_tutorial_part_1.ipynb) - A tutorial on the TableGen language.
+
 [sql_query_backend.ipynb](sql_query_backend.ipynb) - How to write a backend using
 JSON output and Python.
 

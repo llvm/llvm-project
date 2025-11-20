@@ -18,16 +18,44 @@
 #include "llvm/ADT/ilist_node_base.h"
 #include "llvm/ADT/ilist_node_options.h"
 
+#include <type_traits>
+
 namespace llvm {
 
 namespace ilist_detail {
 
 struct NodeAccess;
 
+/// Mixin base class that is used to add \a getParent() and
+/// \a setParent(ParentTy*) methods to \a ilist_node_impl iff \a ilist_parent
+/// has been set in the list options.
+template <class NodeTy, class ParentTy> class node_parent_access {
+public:
+  inline const ParentTy *getParent() const {
+    return static_cast<const NodeTy *>(this)->getNodeBaseParent();
+  }
+  inline ParentTy *getParent() {
+    return static_cast<NodeTy *>(this)->getNodeBaseParent();
+  }
+  void setParent(ParentTy *Parent) {
+    return static_cast<NodeTy *>(this)->setNodeBaseParent(Parent);
+  }
+};
+template <class NodeTy> class node_parent_access<NodeTy, void> {};
+
 } // end namespace ilist_detail
 
 template <class OptionsT, bool IsReverse, bool IsConst> class ilist_iterator;
+template <class OptionsT, bool IsReverse, bool IsConst>
+class ilist_iterator_w_bits;
 template <class OptionsT> class ilist_sentinel;
+
+// Selector for which iterator type to pick given the iterator-bits node option.
+template <class OptionsT, bool IsReverse, bool IsConst>
+using ilist_select_iterator_type =
+    std::conditional_t<OptionsT::has_iterator_bits,
+                       ilist_iterator_w_bits<OptionsT, IsReverse, IsConst>,
+                       ilist_iterator<OptionsT, IsReverse, IsConst>>;
 
 /// Implementation for an ilist node.
 ///
@@ -37,7 +65,11 @@ template <class OptionsT> class ilist_sentinel;
 /// This is a wrapper around \a ilist_node_base whose main purpose is to
 /// provide type safety: you can't insert nodes of \a ilist_node_impl into the
 /// wrong \a simple_ilist or \a iplist.
-template <class OptionsT> class ilist_node_impl : OptionsT::node_base_type {
+template <class OptionsT>
+class ilist_node_impl
+    : OptionsT::node_base_type,
+      public ilist_detail::node_parent_access<ilist_node_impl<OptionsT>,
+                                              typename OptionsT::parent_ty> {
   using value_type = typename OptionsT::value_type;
   using node_base_type = typename OptionsT::node_base_type;
   using list_base_type = typename OptionsT::list_base_type;
@@ -45,16 +77,25 @@ template <class OptionsT> class ilist_node_impl : OptionsT::node_base_type {
   friend typename OptionsT::list_base_type;
   friend struct ilist_detail::NodeAccess;
   friend class ilist_sentinel<OptionsT>;
+
+  friend class ilist_detail::node_parent_access<ilist_node_impl<OptionsT>,
+                                                typename OptionsT::parent_ty>;
   friend class ilist_iterator<OptionsT, false, false>;
   friend class ilist_iterator<OptionsT, false, true>;
   friend class ilist_iterator<OptionsT, true, false>;
   friend class ilist_iterator<OptionsT, true, true>;
+  friend class ilist_iterator_w_bits<OptionsT, false, false>;
+  friend class ilist_iterator_w_bits<OptionsT, false, true>;
+  friend class ilist_iterator_w_bits<OptionsT, true, false>;
+  friend class ilist_iterator_w_bits<OptionsT, true, true>;
 
 protected:
-  using self_iterator = ilist_iterator<OptionsT, false, false>;
-  using const_self_iterator = ilist_iterator<OptionsT, false, true>;
-  using reverse_self_iterator = ilist_iterator<OptionsT, true, false>;
-  using const_reverse_self_iterator = ilist_iterator<OptionsT, true, true>;
+  using self_iterator = ilist_select_iterator_type<OptionsT, false, false>;
+  using const_self_iterator = ilist_select_iterator_type<OptionsT, false, true>;
+  using reverse_self_iterator =
+      ilist_select_iterator_type<OptionsT, true, false>;
+  using const_reverse_self_iterator =
+      ilist_select_iterator_type<OptionsT, true, true>;
 
   ilist_node_impl() = default;
 
@@ -97,9 +138,13 @@ public:
   ///
   /// This requires sentinel tracking to be explicitly enabled.  Use the
   /// ilist_sentinel_tracking<true> option to get this API.
-  bool isSentinel() const {
-    static_assert(OptionsT::is_sentinel_tracking_explicit,
-                  "Use ilist_sentinel_tracking<true> to enable isSentinel()");
+  ///
+  /// Rather than using static_assert to enforce the API is not called when
+  /// configured with is_sentinel_tracking_explicit=false, the method is
+  /// conditionally provided using std::enable_if.  This way, clients of
+  /// ilist_node_impl can be fully instantiated for DLLExport on Windows.
+  template <typename T = OptionsT>
+  std::enable_if_t<T::is_sentinel_tracking_explicit, bool> isSentinel() const {
     return node_base_type::isSentinel();
   }
 };
@@ -143,6 +188,20 @@ public:
 ///   ListB.push_back(N1);
 /// }
 /// \endexample
+///
+/// When the \a ilist_parent<ParentTy> option is passed to an ilist_node and the
+/// owning ilist, each node contains a pointer to the ilist's owner. This adds
+/// \a getParent() and \a setParent(ParentTy*) methods to the ilist_node, which
+/// will be used for node access by the ilist if the node class publicly
+/// inherits from \a ilist_node_with_parent. By default, setParent() is not
+/// automatically called by the ilist; a SymbolTableList will call setParent()
+/// on inserted nodes, but the sentinel must still be manually set after the
+/// list is created (e.g. SymTabList.end()->setParent(Parent)).
+///
+/// The primary benefit of using ilist_parent is that a parent
+/// pointer will be stored in the sentinel, meaning that you can safely use \a
+/// ilist_iterator::getNodeParent() to get the node parent from any valid (i.e.
+/// non-null) iterator, even one that points to a sentinel value.
 ///
 /// See \a is_valid_option for steps on adding a new option.
 template <class T, class... Options>

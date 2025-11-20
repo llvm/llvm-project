@@ -11,10 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
-#include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVCompare.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVCodeViewReader.h"
-#include "llvm/DebugInfo/LogicalView/Readers/LVELFReader.h"
+#include "llvm/DebugInfo/LogicalView/Readers/LVDWARFReader.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/Object/COFF.h"
@@ -48,8 +47,9 @@ Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
         return std::make_unique<LVCodeViewReader>(Filename, FileFormatName,
                                                   *COFF, W, ExePath);
       }
-      if (Obj.isELF() || Obj.isMachO())
-        return std::make_unique<LVELFReader>(Filename, FileFormatName, Obj, W);
+      if (Obj.isELF() || Obj.isMachO() || Obj.isWasm())
+        return std::make_unique<LVDWARFReader>(Filename, FileFormatName, Obj,
+                                               W);
     }
     if (isa<PDBFile *>(Input)) {
       PDBFile &Pdb = *cast<PDBFile *>(Input);
@@ -88,6 +88,9 @@ Error LVReaderHandler::handleArchive(LVReaders &Readers, StringRef Filename,
                                Filename.str().c_str());
   }
 
+  if (Err)
+    return createStringError(errorToErrorCode(std::move(Err)), "%s",
+                             Filename.str().c_str());
   return Error::success();
 }
 

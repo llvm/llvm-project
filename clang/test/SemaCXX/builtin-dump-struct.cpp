@@ -149,7 +149,15 @@ B {
 }
 )"[1]);
 
+class Incomplete; // #incomplete-type
+
+template <class T>
+class Class {
+  T value = {};
+};
+
 void errors(B b) {
+  ConstexprString cs;
   __builtin_dump_struct(); // expected-error {{too few arguments to function call, expected 2, have 0}}
   __builtin_dump_struct(1); // expected-error {{too few arguments to function call, expected 2, have 1}}
   __builtin_dump_struct(1, 2); // expected-error {{expected pointer to struct as 1st argument to '__builtin_dump_struct', found 'int'}}
@@ -157,6 +165,10 @@ void errors(B b) {
   __builtin_dump_struct(&b, Format, 0); // expected-error {{no matching function for call to 'Format'}}
                                         // expected-note@-1 {{in call to printing function with arguments '(0, "%s", "B")' while dumping struct}}
                                         // expected-note@#Format {{no known conversion from 'int' to 'ConstexprString &' for 1st argument}}
+  __builtin_dump_struct((Incomplete *)nullptr, Format, cs); // expected-error {{incomplete type 'Incomplete' where a complete type is required}}
+                                        // expected-note@#incomplete-type {{forward declaration of 'Incomplete'}}
+  // Ensure the Class<int> gets instantiated; otherwise crash happens.
+  __builtin_dump_struct((Class<int> *)nullptr, Format, cs);
 }
 #endif
 

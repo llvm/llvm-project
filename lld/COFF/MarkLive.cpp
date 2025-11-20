@@ -10,8 +10,7 @@
 #include "Chunks.h"
 #include "Symbols.h"
 #include "lld/Common/Timer.h"
-#include "llvm/ADT/STLExtras.h"
-#include <vector>
+#include "llvm/Support/TimeProfiler.h"
 
 namespace lld::coff {
 
@@ -19,6 +18,7 @@ namespace lld::coff {
 // COMDAT chunks will be ignored by Writer, so they will be excluded
 // from the final output.
 void markLive(COFFLinkerContext &ctx) {
+  llvm::TimeTraceScope timeScope("Mark live");
   ScopedTimer t(ctx.gcTimer);
 
   // We build up a worklist of sections which have been marked as live. We only
@@ -29,7 +29,7 @@ void markLive(COFFLinkerContext &ctx) {
   // COMDAT section chunks are dead by default. Add non-COMDAT chunks. Do not
   // traverse DWARF sections. They are live, but they should not keep other
   // sections alive.
-  for (Chunk *c : ctx.symtab.getChunks())
+  for (Chunk *c : ctx.driver.getChunks())
     if (auto *sc = dyn_cast<SectionChunk>(c))
       if (sc->live && !sc->isDWARF())
         worklist.push_back(sc);
@@ -41,13 +41,26 @@ void markLive(COFFLinkerContext &ctx) {
     worklist.push_back(c);
   };
 
-  auto addSym = [&](Symbol *b) {
-    if (auto *sym = dyn_cast<DefinedRegular>(b))
+  std::function<void(Symbol *)> addSym;
+
+  auto addImportFile = [&](ImportFile *file) {
+    file->live = true;
+    if (file->impchkThunk && file->impchkThunk->exitThunk)
+      addSym(file->impchkThunk->exitThunk);
+  };
+
+  addSym = [&](Symbol *s) {
+    Defined *b = s->getDefined();
+    if (!b)
+      return;
+    if (auto *sym = dyn_cast<DefinedRegular>(b)) {
       enqueue(sym->getChunk());
-    else if (auto *sym = dyn_cast<DefinedImportData>(b))
-      sym->file->live = true;
-    else if (auto *sym = dyn_cast<DefinedImportThunk>(b))
-      sym->wrappedSym->file->live = sym->wrappedSym->file->thunkLive = true;
+    } else if (auto *sym = dyn_cast<DefinedImportData>(b)) {
+      addImportFile(sym->file);
+    } else if (auto *sym = dyn_cast<DefinedImportThunk>(b)) {
+      addImportFile(sym->wrappedSym->file);
+      sym->getChunk()->live = true;
+    }
   };
 
   // Add GC root chunks.
@@ -66,6 +79,10 @@ void markLive(COFFLinkerContext &ctx) {
     // Mark associative sections if any.
     for (SectionChunk &c : sc->children())
       enqueue(&c);
+
+    // Mark EC entry thunks.
+    if (Defined *entryThunk = sc->getEntryThunk())
+      addSym(entryThunk);
   }
 }
 }

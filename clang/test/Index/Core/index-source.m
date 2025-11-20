@@ -1,4 +1,3 @@
-// XFAIL: target={{.*}}-aix{{.*}}
 // RUN: c-index-test core -print-source-symbols -- %s -target x86_64-apple-macosx10.7 | FileCheck %s
 // RUN: c-index-test core -print-source-symbols -include-locals -- %s -target x86_64-apple-macosx10.7 | FileCheck -check-prefix=LOCAL %s
 

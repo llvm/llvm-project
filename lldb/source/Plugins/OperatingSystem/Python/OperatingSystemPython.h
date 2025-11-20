@@ -60,9 +60,11 @@ public:
   // Method for lazy creation of threads on demand
   lldb::ThreadSP CreateThread(lldb::tid_t tid, lldb::addr_t context) override;
 
+  bool DoesPluginReportAllThreads() override;
+
 protected:
   bool IsValid() const {
-    return m_python_object_sp && m_python_object_sp->IsValid();
+    return m_script_object_sp && m_script_object_sp->IsValid();
   }
 
   lldb::ThreadSP CreateThreadFromThreadInfo(
@@ -75,8 +77,9 @@ protected:
 
   lldb::ValueObjectSP m_thread_list_valobj_sp;
   std::unique_ptr<lldb_private::DynamicRegisterInfo> m_register_info_up;
-  lldb_private::ScriptInterpreter *m_interpreter;
-  lldb_private::StructuredData::ObjectSP m_python_object_sp;
+  lldb_private::ScriptInterpreter *m_interpreter = nullptr;
+  lldb::OperatingSystemInterfaceSP m_operating_system_interface_sp = nullptr;
+  lldb_private::StructuredData::GenericSP m_script_object_sp = nullptr;
 };
 
 #endif // LLDB_ENABLE_PYTHON

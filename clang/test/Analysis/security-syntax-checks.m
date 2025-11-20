@@ -57,9 +57,9 @@ int test_bcmp(void *a, void *b, size_t n) {
 }
 
 // Obsolete function bcopy
-void bcopy(void *, void *, size_t);
+void bcopy(const void *, void *, size_t);
 
-void test_bcopy(void *a, void *b, size_t n) {
+void test_bcopy(const void *a, void *b, size_t n) {
   bcopy(a, b, n); // expected-warning{{The bcopy() function is obsoleted by memcpy() or memmove(}}
 }
 

@@ -29,5 +29,5 @@ void fiveClauses2(void);
 
 [[clang::external_source_symbol(generated_declaration)]] void oneClause2(void);
 
-[[clang::external_source_symbol]] // expected-error {{'external_source_symbol' attribute takes at least 1 argument}}
+[[clang::external_source_symbol]] // expected-error {{'clang::external_source_symbol' attribute takes at least 1 argument}}
 void noArguments2(void);

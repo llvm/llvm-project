@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -o - -run-pass=machine-cse %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -o - -passes=machine-cse %s | FileCheck %s
 
 # LLVM's current definition of `isConvergent` does not necessarily prove that
 # non-local CSE is illegal. The following test extends the definition of

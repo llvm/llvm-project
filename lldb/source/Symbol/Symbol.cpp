@@ -8,6 +8,8 @@
 
 #include "lldb/Symbol/Symbol.h"
 
+#include "lldb/Core/Address.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Section.h"
@@ -99,18 +101,15 @@ const Symbol &Symbol::operator=(const Symbol &rhs) {
 llvm::Expected<Symbol> Symbol::FromJSON(const JSONSymbol &symbol,
                                         SectionList *section_list) {
   if (!section_list)
-    return llvm::make_error<llvm::StringError>("no section list provided",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("no section list provided");
 
   if (!symbol.value && !symbol.address)
-    return llvm::make_error<llvm::StringError>(
-        "symbol must contain either a value or an address",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "symbol must contain either a value or an address");
 
   if (symbol.value && symbol.address)
-    return llvm::make_error<llvm::StringError>(
-        "symbol cannot contain both a value and an address",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "symbol cannot contain both a value and an address");
 
   const uint64_t size = symbol.size.value_or(0);
   const bool is_artificial = false;
@@ -131,9 +130,8 @@ llvm::Expected<Symbol> Symbol::FromJSON(const JSONSymbol &symbol,
                     AddressRange(section_sp, offset, size), size_is_valid,
                     contains_linker_annotations, flags);
     }
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("no section found for address: {0:x}", *symbol.address),
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        llvm::formatv("no section found for address: {0:x}", *symbol.address));
   }
 
   // Absolute symbols encode the integer value in the m_offset of the
@@ -224,8 +222,9 @@ bool Symbol::IsTrampoline() const { return m_type == eSymbolTypeTrampoline; }
 
 bool Symbol::IsIndirect() const { return m_type == eSymbolTypeResolver; }
 
-void Symbol::GetDescription(Stream *s, lldb::DescriptionLevel level,
-                            Target *target) const {
+void Symbol::GetDescription(
+    Stream *s, lldb::DescriptionLevel level, Target *target,
+    std::optional<Stream::HighlightSettings> settings) const {
   s->Printf("id = {0x%8.8x}", m_uid);
 
   if (m_addr_range.GetBaseAddress().GetSection()) {
@@ -252,11 +251,16 @@ void Symbol::GetDescription(Stream *s, lldb::DescriptionLevel level,
       s->Printf(", value = 0x%16.16" PRIx64,
                 m_addr_range.GetBaseAddress().GetOffset());
   }
-  ConstString demangled = GetMangled().GetDemangledName();
-  if (demangled)
-    s->Printf(", name=\"%s\"", demangled.AsCString());
-  if (m_mangled.GetMangledName())
-    s->Printf(", mangled=\"%s\"", m_mangled.GetMangledName().AsCString());
+  if (ConstString demangled = m_mangled.GetDemangledName()) {
+    s->PutCString(", name=\"");
+    s->PutCStringColorHighlighted(demangled.GetStringRef(), settings);
+    s->PutCString("\"");
+  }
+  if (ConstString mangled_name = m_mangled.GetMangledName()) {
+    s->PutCString(", mangled=\"");
+    s->PutCStringColorHighlighted(mangled_name.GetStringRef(), settings);
+    s->PutCString("\"");
+  }
 }
 
 void Symbol::Dump(Stream *s, Target *target, uint32_t index,
@@ -388,45 +392,8 @@ bool Symbol::Compare(ConstString name, SymbolType type) const {
   return false;
 }
 
-#define ENUM_TO_CSTRING(x)                                                     \
-  case eSymbolType##x:                                                         \
-    return #x;
-
 const char *Symbol::GetTypeAsString() const {
-  switch (m_type) {
-    ENUM_TO_CSTRING(Invalid);
-    ENUM_TO_CSTRING(Absolute);
-    ENUM_TO_CSTRING(Code);
-    ENUM_TO_CSTRING(Resolver);
-    ENUM_TO_CSTRING(Data);
-    ENUM_TO_CSTRING(Trampoline);
-    ENUM_TO_CSTRING(Runtime);
-    ENUM_TO_CSTRING(Exception);
-    ENUM_TO_CSTRING(SourceFile);
-    ENUM_TO_CSTRING(HeaderFile);
-    ENUM_TO_CSTRING(ObjectFile);
-    ENUM_TO_CSTRING(CommonBlock);
-    ENUM_TO_CSTRING(Block);
-    ENUM_TO_CSTRING(Local);
-    ENUM_TO_CSTRING(Param);
-    ENUM_TO_CSTRING(Variable);
-    ENUM_TO_CSTRING(VariableType);
-    ENUM_TO_CSTRING(LineEntry);
-    ENUM_TO_CSTRING(LineHeader);
-    ENUM_TO_CSTRING(ScopeBegin);
-    ENUM_TO_CSTRING(ScopeEnd);
-    ENUM_TO_CSTRING(Additional);
-    ENUM_TO_CSTRING(Compiler);
-    ENUM_TO_CSTRING(Instrumentation);
-    ENUM_TO_CSTRING(Undefined);
-    ENUM_TO_CSTRING(ObjCClass);
-    ENUM_TO_CSTRING(ObjCMetaClass);
-    ENUM_TO_CSTRING(ObjCIVar);
-    ENUM_TO_CSTRING(ReExported);
-  default:
-    break;
-  }
-  return "<unknown SymbolType>";
+  return GetTypeAsString(static_cast<lldb::SymbolType>(m_type));
 }
 
 void Symbol::CalculateSymbolContext(SymbolContext *sc) {
@@ -587,9 +554,9 @@ lldb::DisassemblerSP Symbol::GetInstructions(const ExecutionContext &exe_ctx,
                                              bool prefer_file_cache) {
   ModuleSP module_sp(m_addr_range.GetBaseAddress().GetModule());
   if (module_sp && exe_ctx.HasTargetScope()) {
-    return Disassembler::DisassembleRange(module_sp->GetArchitecture(), nullptr,
-                                          flavor, exe_ctx.GetTargetRef(),
-                                          m_addr_range, !prefer_file_cache);
+    return Disassembler::DisassembleRange(
+        module_sp->GetArchitecture(), nullptr, flavor, nullptr, nullptr,
+        exe_ctx.GetTargetRef(), m_addr_range, !prefer_file_cache);
   }
   return lldb::DisassemblerSP();
 }
@@ -619,7 +586,7 @@ bool Symbol::IsSyntheticWithAutoGeneratedName() const {
   if (!m_mangled)
     return true;
   ConstString demangled = m_mangled.GetDemangledName();
-  return demangled.GetStringRef().startswith(GetSyntheticSymbolPrefix());
+  return demangled.GetStringRef().starts_with(GetSyntheticSymbolPrefix());
 }
 
 void Symbol::SynthesizeNameIfNeeded() const {
@@ -635,7 +602,9 @@ void Symbol::SynthesizeNameIfNeeded() const {
     // breakpoints on them.
     llvm::SmallString<256> name;
     llvm::raw_svector_ostream os(name);
-    os << GetSyntheticSymbolPrefix() << GetID();
+    os << GetSyntheticSymbolPrefix()
+       << llvm::format_hex_no_prefix(
+              m_addr_range.GetBaseAddress().GetFileAddress(), 0);
     m_mangled.SetDemangledName(ConstString(os.str()));
   }
 }
@@ -768,6 +737,79 @@ bool Symbol::operator==(const Symbol &rhs) const {
   return true;
 }
 
+#define ENUM_TO_CSTRING(x)                                                     \
+  case eSymbolType##x:                                                         \
+    return #x;
+
+const char *Symbol::GetTypeAsString(lldb::SymbolType symbol_type) {
+  switch (symbol_type) {
+    ENUM_TO_CSTRING(Invalid);
+    ENUM_TO_CSTRING(Absolute);
+    ENUM_TO_CSTRING(Code);
+    ENUM_TO_CSTRING(Resolver);
+    ENUM_TO_CSTRING(Data);
+    ENUM_TO_CSTRING(Trampoline);
+    ENUM_TO_CSTRING(Runtime);
+    ENUM_TO_CSTRING(Exception);
+    ENUM_TO_CSTRING(SourceFile);
+    ENUM_TO_CSTRING(HeaderFile);
+    ENUM_TO_CSTRING(ObjectFile);
+    ENUM_TO_CSTRING(CommonBlock);
+    ENUM_TO_CSTRING(Block);
+    ENUM_TO_CSTRING(Local);
+    ENUM_TO_CSTRING(Param);
+    ENUM_TO_CSTRING(Variable);
+    ENUM_TO_CSTRING(VariableType);
+    ENUM_TO_CSTRING(LineEntry);
+    ENUM_TO_CSTRING(LineHeader);
+    ENUM_TO_CSTRING(ScopeBegin);
+    ENUM_TO_CSTRING(ScopeEnd);
+    ENUM_TO_CSTRING(Additional);
+    ENUM_TO_CSTRING(Compiler);
+    ENUM_TO_CSTRING(Instrumentation);
+    ENUM_TO_CSTRING(Undefined);
+    ENUM_TO_CSTRING(ObjCClass);
+    ENUM_TO_CSTRING(ObjCMetaClass);
+    ENUM_TO_CSTRING(ObjCIVar);
+    ENUM_TO_CSTRING(ReExported);
+  }
+  return "<unknown SymbolType>";
+}
+
+lldb::SymbolType Symbol::GetTypeFromString(const char *str) {
+  std::string str_lower = llvm::StringRef(str).lower();
+  return llvm::StringSwitch<lldb::SymbolType>(str_lower)
+      .Case("absolute", eSymbolTypeAbsolute)
+      .Case("code", eSymbolTypeCode)
+      .Case("resolver", eSymbolTypeResolver)
+      .Case("data", eSymbolTypeData)
+      .Case("trampoline", eSymbolTypeTrampoline)
+      .Case("runtime", eSymbolTypeRuntime)
+      .Case("exception", eSymbolTypeException)
+      .Case("sourcefile", eSymbolTypeSourceFile)
+      .Case("headerfile", eSymbolTypeHeaderFile)
+      .Case("objectfile", eSymbolTypeObjectFile)
+      .Case("commonblock", eSymbolTypeCommonBlock)
+      .Case("block", eSymbolTypeBlock)
+      .Case("local", eSymbolTypeLocal)
+      .Case("param", eSymbolTypeParam)
+      .Case("variable", eSymbolTypeVariable)
+      .Case("variableType", eSymbolTypeVariableType)
+      .Case("lineentry", eSymbolTypeLineEntry)
+      .Case("lineheader", eSymbolTypeLineHeader)
+      .Case("scopebegin", eSymbolTypeScopeBegin)
+      .Case("scopeend", eSymbolTypeScopeEnd)
+      .Case("additional,", eSymbolTypeAdditional)
+      .Case("compiler", eSymbolTypeCompiler)
+      .Case("instrumentation", eSymbolTypeInstrumentation)
+      .Case("undefined", eSymbolTypeUndefined)
+      .Case("objcclass", eSymbolTypeObjCClass)
+      .Case("objcmetaclass", eSymbolTypeObjCMetaClass)
+      .Case("objcivar", eSymbolTypeObjCIVar)
+      .Case("reexported", eSymbolTypeReExported)
+      .Default(eSymbolTypeInvalid);
+}
+
 namespace llvm {
 namespace json {
 
@@ -798,36 +840,8 @@ bool fromJSON(const llvm::json::Value &value, lldb_private::JSONSymbol &symbol,
 bool fromJSON(const llvm::json::Value &value, lldb::SymbolType &type,
               llvm::json::Path path) {
   if (auto str = value.getAsString()) {
-    type = llvm::StringSwitch<lldb::SymbolType>(*str)
-               .Case("absolute", eSymbolTypeAbsolute)
-               .Case("code", eSymbolTypeCode)
-               .Case("resolver", eSymbolTypeResolver)
-               .Case("data", eSymbolTypeData)
-               .Case("trampoline", eSymbolTypeTrampoline)
-               .Case("runtime", eSymbolTypeRuntime)
-               .Case("exception", eSymbolTypeException)
-               .Case("sourcefile", eSymbolTypeSourceFile)
-               .Case("headerfile", eSymbolTypeHeaderFile)
-               .Case("objectfile", eSymbolTypeObjectFile)
-               .Case("commonblock", eSymbolTypeCommonBlock)
-               .Case("block", eSymbolTypeBlock)
-               .Case("local", eSymbolTypeLocal)
-               .Case("param", eSymbolTypeParam)
-               .Case("variable", eSymbolTypeVariable)
-               .Case("variableType", eSymbolTypeVariableType)
-               .Case("lineentry", eSymbolTypeLineEntry)
-               .Case("lineheader", eSymbolTypeLineHeader)
-               .Case("scopebegin", eSymbolTypeScopeBegin)
-               .Case("scopeend", eSymbolTypeScopeEnd)
-               .Case("additional,", eSymbolTypeAdditional)
-               .Case("compiler", eSymbolTypeCompiler)
-               .Case("instrumentation", eSymbolTypeInstrumentation)
-               .Case("undefined", eSymbolTypeUndefined)
-               .Case("objcclass", eSymbolTypeObjCClass)
-               .Case("objcmetaClass", eSymbolTypeObjCMetaClass)
-               .Case("objcivar", eSymbolTypeObjCIVar)
-               .Case("reexporte", eSymbolTypeReExported)
-               .Default(eSymbolTypeInvalid);
+    llvm::StringRef str_ref = str.value_or("");
+    type = Symbol::GetTypeFromString(str_ref.data());
 
     if (type == eSymbolTypeInvalid) {
       path.report("invalid symbol type");

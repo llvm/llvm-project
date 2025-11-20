@@ -3,14 +3,14 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128-n8:16:32"
 target triple = "i386-apple-macosx10.6.6"
 
-%0 = type { x86_mmx, x86_mmx, x86_mmx, x86_mmx, x86_mmx, x86_mmx, x86_mmx }
+%0 = type { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> }
 
 define i32 @pixman_fill_mmx(ptr nocapture %bits, i32 %stride, i32 %bpp, i32 %x, i32 %y, i32 %width, i32 %height, i32 %xor) nounwind ssp {
 entry:
   %conv = zext i32 %xor to i64
   %shl = shl nuw i64 %conv, 32
   %or = or i64 %shl, %conv
-  %0 = bitcast i64 %or to x86_mmx
+  %0 = bitcast i64 %or to <1 x i64>
 ; CHECK:      movq [[MMXR:%mm[0-7],]] {{%mm[0-7]}}
 ; CHECK-NEXT: movq [[MMXR]] {{%mm[0-7]}}
 ; CHECK-NEXT: movq [[MMXR]] {{%mm[0-7]}}
@@ -18,7 +18,7 @@ entry:
 ; CHECK-NEXT: movq [[MMXR]] {{%mm[0-7]}}
 ; CHECK-NEXT: movq [[MMXR]] {{%mm[0-7]}}
 ; CHECK-NEXT: movq [[MMXR]] {{%mm[0-7]}}
-  %1 = tail call %0 asm "movq\09\09$7,\09$0\0Amovq\09\09$7,\09$1\0Amovq\09\09$7,\09$2\0Amovq\09\09$7,\09$3\0Amovq\09\09$7,\09$4\0Amovq\09\09$7,\09$5\0Amovq\09\09$7,\09$6\0A", "=&y,=&y,=&y,=&y,=&y,=&y,=y,y,~{dirflag},~{fpsr},~{flags}"(x86_mmx %0) nounwind, !srcloc !0
+  %1 = tail call %0 asm "movq\09\09$7,\09$0\0Amovq\09\09$7,\09$1\0Amovq\09\09$7,\09$2\0Amovq\09\09$7,\09$3\0Amovq\09\09$7,\09$4\0Amovq\09\09$7,\09$5\0Amovq\09\09$7,\09$6\0A", "=&y,=&y,=&y,=&y,=&y,=&y,=y,y,~{dirflag},~{fpsr},~{flags}"(<1 x i64> %0) nounwind, !srcloc !0
   %asmresult = extractvalue %0 %1, 0
   %asmresult6 = extractvalue %0 %1, 1
   %asmresult7 = extractvalue %0 %1, 2
@@ -34,7 +34,7 @@ entry:
 ; CHECK-NEXT: movq {{%mm[0-7]}},
 ; CHECK-NEXT: movq {{%mm[0-7]}},
 ; CHECK-NEXT: movq {{%mm[0-7]}},
-  tail call void asm sideeffect "movq\09$1,\09  ($0)\0Amovq\09$2,\09 8($0)\0Amovq\09$3,\0916($0)\0Amovq\09$4,\0924($0)\0Amovq\09$5,\0932($0)\0Amovq\09$6,\0940($0)\0Amovq\09$7,\0948($0)\0Amovq\09$8,\0956($0)\0A", "r,y,y,y,y,y,y,y,y,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr undef, x86_mmx %0, x86_mmx %asmresult, x86_mmx %asmresult6, x86_mmx %asmresult7, x86_mmx %asmresult8, x86_mmx %asmresult9, x86_mmx %asmresult10, x86_mmx %asmresult11) nounwind, !srcloc !1
+  tail call void asm sideeffect "movq\09$1,\09  ($0)\0Amovq\09$2,\09 8($0)\0Amovq\09$3,\0916($0)\0Amovq\09$4,\0924($0)\0Amovq\09$5,\0932($0)\0Amovq\09$6,\0940($0)\0Amovq\09$7,\0948($0)\0Amovq\09$8,\0956($0)\0A", "r,y,y,y,y,y,y,y,y,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr undef, <1 x i64> %0, <1 x i64> %asmresult, <1 x i64> %asmresult6, <1 x i64> %asmresult7, <1 x i64> %asmresult8, <1 x i64> %asmresult9, <1 x i64> %asmresult10, <1 x i64> %asmresult11) nounwind, !srcloc !1
   tail call void @llvm.x86.mmx.emms() nounwind
   ret i32 1
 }

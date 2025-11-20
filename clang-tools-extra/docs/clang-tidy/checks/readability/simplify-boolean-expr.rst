@@ -75,12 +75,18 @@ Examples:
      an implicit conversion of an integer quantity ``i & 1`` to ``bool`` and
      becomes ``return (i & 1) != 0;``
 
-  6. Given ``struct X { explicit operator bool(); };``, and an instance ``x`` of
-     ``struct X``, the conditional return ``if (x) return true; return false;``
+  6. Given ``struct X { explicit operator bool(); };``, and an instance ``x``
+     of ``struct X``, the conditional return
+     ``if (x) return true; return false;``
      becomes ``return static_cast<bool>(x);``
 
 Options
 -------
+
+.. option:: IgnoreMacros
+
+   If `true`, ignore boolean expressions originating from expanded macros.
+   Default is `false`.
 
 .. option:: ChainedConditionalReturn
 
@@ -99,8 +105,8 @@ Options
 
 .. option:: SimplifyDeMorganRelaxed
 
-   If `true`, :option:`SimplifyDeMorgan` will also transform negated 
-   conjunctions and disjunctions where there is no negation on either operand. 
+   If `true`, :option:`SimplifyDeMorgan` will also transform negated
+   conjunctions and disjunctions where there is no negation on either operand.
    This option has no effect if :option:`SimplifyDeMorgan` is `false`.
    Default is `false`.
 

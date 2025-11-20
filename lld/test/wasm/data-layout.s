@@ -63,33 +63,33 @@ local_struct_internal_ptr:
 # CHECK-NEXT:         Mutable:         true
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          [[PTR]]_CONST
-# CHECK-NEXT:           Value:           66624
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Type:            [[PTR]]
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          [[PTR]]_CONST
-# CHECK-NEXT:           Value:           1080
+# CHECK-NEXT:           Value:           65592
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Type:            [[PTR]]
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          [[PTR]]_CONST
-# CHECK-NEXT:           Value:           66624
+# CHECK-NEXT:           Value:           65600
 
 # CHECK:        - Type:            DATA
 # CHECK-NEXT:     Segments:
-# CHECK-NEXT:       - SectionOffset:   7
+# CHECK-NEXT:       - SectionOffset:   8
 # CHECK-NEXT:         InitFlags:       0
 # CHECK-NEXT:         Offset:
 # CHECK-NEXT:           Opcode:          [[PTR]]_CONST
-# CHECK-NEXT:           Value:           1024
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:         Content:         68656C6C6F0A00
-# CHECK-NEXT:       - SectionOffset:   20
+# CHECK-NEXT:       - SectionOffset:   22
 # CHECK-NEXT:         InitFlags:       0
 # CHECK-NEXT:         Offset:
 # CHECK-NEXT:           Opcode:          [[PTR]]_CONST
-# CHECK-NEXT:           Value:           1040
+# CHECK-NEXT:           Value:           65552
 
 
 # RUN: wasm-ld -no-gc-sections --allow-undefined --no-entry \
@@ -102,6 +102,22 @@ local_struct_internal_ptr:
 # CHECK-MAX-NEXT:       - Flags:           [ HAS_MAX ]
 # CHECK-MAX-NEXT:         Minimum:         0x2
 # CHECK-MAX-NEXT:         Maximum:         0x2
+
+# RUN: wasm-ld --no-entry --initial-memory=327680 --no-growable-memory \
+# RUN:     -o %t_max.wasm %t.hello32.o
+# RUN: obj2yaml %t_max.wasm | FileCheck %s -check-prefix=CHECK-NO-GROWTH
+
+# CHECK-NO-GROWTH:        - Type:            MEMORY
+# CHECK-NO-GROWTH-NEXT:     Memories:
+# CHECK-NO-GROWTH-NEXT:       - Flags:           [ HAS_MAX ]
+# CHECK-NO-GROWTH-NEXT:         Minimum:         0x5
+# CHECK-NO-GROWTH-NEXT:         Maximum:         0x5
+
+# RUN: not wasm-ld --max-memory=262144 --no-growable-memory \
+# RUN:     --no-entry -o %t_max.wasm %t.hello32.o 2>&1 \
+# RUN: | FileCheck %s --check-prefix CHECK-NO-GROWTH-COMPAT-ERROR
+
+# CHECK-NO-GROWTH-COMPAT-ERROR: --max-memory is incompatible with --no-growable-memory
 
 # RUN: wasm-ld -no-gc-sections --allow-undefined --no-entry --shared-memory \
 # RUN:     --features=atomics,bulk-memory --initial-memory=131072 \

@@ -1,4 +1,4 @@
-//===--- SuspiciousMemsetUsageCheck.cpp - clang-tidy-----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,8 +21,7 @@ void SuspiciousMemsetUsageCheck::registerMatchers(MatchFinder *Finder) {
   // Match the standard memset:
   // void *memset(void *buffer, int fill_char, size_t byte_count);
   auto MemsetDecl =
-      functionDecl(hasName("::memset"),
-                   parameterCountIs(3),
+      functionDecl(hasName("::memset"), parameterCountIs(3),
                    hasParameter(0, hasType(pointerType(pointee(voidType())))),
                    hasParameter(1, hasType(isInteger())),
                    hasParameter(2, hasType(isInteger())));
@@ -61,7 +60,7 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
     // Case 1: fill_char of memset() is a character '0'. Probably an
     // integer zero was intended.
 
-    SourceRange CharRange = CharZeroFill->getSourceRange();
+    const SourceRange CharRange = CharZeroFill->getSourceRange();
     auto Diag =
         diag(CharZeroFill->getBeginLoc(), "memset fill value is char '0', "
                                           "potentially mistaken for int 0");
@@ -83,7 +82,7 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
     if (!NumFill->EvaluateAsInt(EVResult, *Result.Context))
       return;
 
-    llvm::APSInt NumValue = EVResult.Val.getInt();
+    const llvm::APSInt NumValue = EVResult.Val.getInt();
     if (NumValue >= 0 && NumValue <= UCharMax)
       return;
 
@@ -111,7 +110,7 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
     Expr::EvalResult EVResult;
     if (!FillChar->isValueDependent() &&
         FillChar->EvaluateAsInt(EVResult, *Result.Context)) {
-      llvm::APSInt Value1 = EVResult.Val.getInt();
+      const llvm::APSInt Value1 = EVResult.Val.getInt();
       if (Value1 == 0 || Value1.isNegative())
         return;
     }
@@ -121,8 +120,10 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
     // and fix-its to swap the arguments.
     auto D = diag(Call->getBeginLoc(),
                   "memset of size zero, potentially swapped arguments");
-    StringRef RHSString = tooling::fixit::getText(*ByteCount, *Result.Context);
-    StringRef LHSString = tooling::fixit::getText(*FillChar, *Result.Context);
+    const StringRef RHSString =
+        tooling::fixit::getText(*ByteCount, *Result.Context);
+    const StringRef LHSString =
+        tooling::fixit::getText(*FillChar, *Result.Context);
     if (LHSString.empty() || RHSString.empty())
       return;
 

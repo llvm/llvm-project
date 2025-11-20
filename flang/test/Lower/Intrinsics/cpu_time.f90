@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: cpu_time_test
 subroutine cpu_time_test(t)
@@ -8,4 +8,3 @@ subroutine cpu_time_test(t)
     ! CHECK: fir.store %[[result32]] to %arg0 : !fir.ref<f32>
     call cpu_time(t)
   end subroutine
-  

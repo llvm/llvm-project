@@ -11,6 +11,7 @@
 
 #include <vector>
 
+#include "lldb/Symbol/Type.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
@@ -47,14 +48,20 @@ public:
   explicit operator bool() const { return IsValid(); }
 
   bool operator<(const CompilerDeclContext &rhs) const {
-    if (m_type_system == rhs.m_type_system)
-      return m_opaque_decl_ctx < rhs.m_opaque_decl_ctx;
-    return m_type_system < rhs.m_type_system;
+    return std::tie(m_type_system, m_opaque_decl_ctx) <
+           std::tie(rhs.m_type_system, rhs.m_opaque_decl_ctx);
   }
 
   bool IsValid() const {
     return m_type_system != nullptr && m_opaque_decl_ctx != nullptr;
   }
+
+  /// Populate a valid compiler context from the current decl context.
+  ///
+  /// \returns A valid vector of CompilerContext entries that describes
+  /// this declaration context. The first entry in the vector is the parent of
+  /// the subsequent entry, so the topmost entry is the global namespace.
+  std::vector<lldb_private::CompilerContext> GetCompilerContext() const;
 
   std::vector<CompilerDecl> FindDeclByName(ConstString name,
                                            const bool ignore_using_decls);

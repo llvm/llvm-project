@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Check that we generate integer multiply accumulate.
 
 ; CHECK: r{{[0-9]+}} {{\+|\-}}= mpyi(r{{[0-9]+}},

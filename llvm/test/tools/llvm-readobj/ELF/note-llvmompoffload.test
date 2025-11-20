@@ -13,29 +13,31 @@
 # RUN: llvm-readobj --notes %t.32be | FileCheck %s --match-full-lines --check-prefix=NOTES
 # RUN: llvm-readelf --notes %t.32be | FileCheck %s --match-full-lines --check-prefix=NOTES-GNU
 
-# NOTES:      Notes [
+# NOTES:      NoteSections [
 # NOTES-NEXT:   NoteSection {
 # NOTES-NEXT:     Name: .note.openmp
 # NOTES-NEXT:     Offset: {{.*}}
 # NOTES-NEXT:     Size: {{.*}}
-# NOTES-NEXT:     Note {
-# NOTES-NEXT:       Owner: LLVMOMPOFFLOAD
-# NOTES-NEXT:       Data size: 0x3
-# NOTES-NEXT:       Type: NT_LLVM_OPENMP_OFFLOAD_VERSION (image format version)
-# NOTES-NEXT:       Version: 1.0
-# NOTES-NEXT:     }
-# NOTES-NEXT:     Note {
-# NOTES-NEXT:       Owner: LLVMOMPOFFLOAD
-# NOTES-NEXT:       Data size: 0x4
-# NOTES-NEXT:       Type: NT_LLVM_OPENMP_OFFLOAD_PRODUCER (producing toolchain)
-# NOTES-NEXT:       Producer: LLVM
-# NOTES-NEXT:     }
-# NOTES-NEXT:     Note {
-# NOTES-NEXT:       Owner: LLVMOMPOFFLOAD
-# NOTES-NEXT:       Data size: 0x9
-# NOTES-NEXT:       Type: NT_LLVM_OPENMP_OFFLOAD_PRODUCER_VERSION (producing toolchain version)
-# NOTES-NEXT:       Producer version: 13.0.0git
-# NOTES-NEXT:     }
+# NOTES-NEXT:     Notes [
+# NOTES-NEXT:       {
+# NOTES-NEXT:           Owner: LLVMOMPOFFLOAD
+# NOTES-NEXT:           Data size: 0x3
+# NOTES-NEXT:           Type: NT_LLVM_OPENMP_OFFLOAD_VERSION (image format version)
+# NOTES-NEXT:           Version: 1.0
+# NOTES-NEXT:       }
+# NOTES-NEXT:       {
+# NOTES-NEXT:           Owner: LLVMOMPOFFLOAD
+# NOTES-NEXT:           Data size: 0x4
+# NOTES-NEXT:           Type: NT_LLVM_OPENMP_OFFLOAD_PRODUCER (producing toolchain)
+# NOTES-NEXT:           Producer: LLVM
+# NOTES-NEXT:       }
+# NOTES-NEXT:       {
+# NOTES-NEXT:           Owner: LLVMOMPOFFLOAD
+# NOTES-NEXT:           Data size: 0x9
+# NOTES-NEXT:           Type: NT_LLVM_OPENMP_OFFLOAD_PRODUCER_VERSION (producing toolchain version)
+# NOTES-NEXT:           Producer version: 13.0.0git
+# NOTES-NEXT:       }
+# NOTES-NEXT:    ]
 # NOTES-NEXT:   }
 # NOTES-NEXT: ]
 

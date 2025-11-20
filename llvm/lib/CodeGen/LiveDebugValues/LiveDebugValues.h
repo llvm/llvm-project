@@ -25,7 +25,8 @@ inline namespace SharedLiveDebugValues {
 class LDVImpl {
 public:
   virtual bool ExtendRanges(MachineFunction &MF, MachineDominatorTree *DomTree,
-                            TargetPassConfig *TPC, unsigned InputBBLimit,
+                            bool ShouldEmitDebugEntryValues,
+                            unsigned InputBBLimit,
                             unsigned InputDbgValLimit) = 0;
   virtual ~LDVImpl() = default;
 };

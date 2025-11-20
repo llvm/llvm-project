@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
+#include <optional>
 
 namespace clang {
 namespace targets {
@@ -63,9 +64,11 @@ public:
     // for modeling predicate registers in HVX, and the bool -> byte
     // correspondence matches the HVX architecture.
     BoolWidth = BoolAlign = 8;
+    BFloat16Width = BFloat16Align = 16;
+    BFloat16Format = &llvm::APFloat::BFloat();
   }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override {
@@ -94,6 +97,8 @@ public:
 
   bool hasFeature(StringRef Feature) const override;
 
+  bool hasBFloat16Type() const override;
+
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
@@ -115,6 +120,7 @@ public:
   std::string_view getClobbers() const override { return ""; }
 
   static const char *getHexagonCPUSuffix(StringRef Name);
+  static std::optional<unsigned> getHexagonCPURev(StringRef Name);
 
   bool isValidCPUName(StringRef Name) const override {
     return getHexagonCPUSuffix(Name);
@@ -139,6 +145,14 @@ public:
   }
 
   bool hasBitIntType() const override { return true; }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    std::optional<unsigned> Rev = getHexagonCPURev(CPU);
+
+    // V73 and later have 64-byte cache lines.
+    unsigned CacheLineSizeBytes = Rev >= 73U ? 64 : 32;
+    return std::make_pair(CacheLineSizeBytes, CacheLineSizeBytes);
+  }
 };
 } // namespace targets
 } // namespace clang

@@ -44,6 +44,16 @@ def TestTypeInterface
     InterfaceMethod<"Prints the type name.",
       "void", "printTypeC", (ins "::mlir::Location":$loc)
     >,
+    // Check that we can have multiple method with the same name.
+    InterfaceMethod<"Prints the type name, with a value prefixed.",
+      "void", "printTypeC", (ins "::mlir::Location":$loc, "int":$value)
+    >,
+    InterfaceMethod<"Prints the type name, with a value prefixed.",
+      "void", "printTypeC", (ins "::mlir::Location":$loc, "float":$value),
+      [{}], /*defaultImplementation=*/[{
+        emitRemark(loc) << $_type << " - " << value << " - Float TestC";
+      }]
+    >,
     // It should be possible to use the interface type name as result type
     // as well as in the implementation.
     InterfaceMethod<"Prints the type name and returns the type as interface.",
@@ -127,7 +137,8 @@ def TestEffectOpInterface
 }
 
 class TestEffect<string effectName>
-    : SideEffect<TestEffectOpInterface, effectName, DefaultResource>;
+    : SideEffect<TestEffectOpInterface, effectName, DefaultResource, 0,
+                 PartialEffect>;
 
 class TestEffects<list<TestEffect> effects = []>
    : SideEffectsTraitBase<TestEffectOpInterface, effects>;
@@ -171,6 +182,34 @@ def TestOptionallyImplementedTypeInterface
   let extraClassOf = [{
     return $_type.getImplementsInterface();
   }];
+}
+
+// Dummy type interface "A" that requires type interface "B" to be complete.
+def TestCyclicTypeInterfaceA : TypeInterface<"TestCyclicTypeInterfaceA"> {
+  let cppNamespace = "::mlir";
+  let methods = [
+    InterfaceMethod<"",
+      "::mlir::FailureOr<::mlir::TestCyclicTypeInterfaceB>",
+      /*methodName=*/"returnB",
+      (ins),
+      /*methodBody=*/"",
+      /*defaultImpl=*/"return mlir::failure();"
+    >,
+  ];
+}
+
+// Dummy type interface "B" that requires type interface "A" to be complete.
+def TestCyclicTypeInterfaceB : TypeInterface<"TestCyclicTypeInterfaceB"> {
+  let cppNamespace = "::mlir";
+  let methods = [
+    InterfaceMethod<"",
+      "::mlir::FailureOr<::mlir::TestCyclicTypeInterfaceA>",
+      /*methodName=*/"returnA",
+      (ins),
+      /*methodBody=*/"",
+      /*defaultImpl=*/"return mlir::failure();"
+    >,
+  ];
 }
 
 #endif // MLIR_TEST_DIALECT_TEST_INTERFACES

@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-// UNSUPPORTED: availability-filesystem-missing
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
-#include "filesystem_include.h"
-
+#include <filesystem>
+namespace fs = std::filesystem;
 using namespace fs;
 
 struct ConvToPath {

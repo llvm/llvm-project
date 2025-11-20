@@ -1,15 +1,15 @@
-// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -triple x86_64-gnu-linux -x c -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALLOW
+// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -triple x86_64-gnu-linux -x c -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALLOW
 // RUN: echo "fun:foo" > %t.fun
-// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -fexperimental-sanitize-metadata-ignorelist=%t.fun -triple x86_64-gnu-linux -x c -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=FUN
+// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -fexperimental-sanitize-metadata-ignorelist=%t.fun -triple x86_64-gnu-linux -x c -emit-llvm %s -o - | FileCheck %s --check-prefixes=FUN
 // RUN: echo "src:*sanitize-metadata-ignorelist.c" > %t.src
-// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -fexperimental-sanitize-metadata-ignorelist=%t.src -triple x86_64-gnu-linux -x c -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=SRC
+// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -fexperimental-sanitize-metadata-ignorelist=%t.src -triple x86_64-gnu-linux -x c -emit-llvm %s -o - | FileCheck %s --check-prefixes=SRC
 
 int y;
 
 // ALLOW-LABEL: define {{[^@]+}}@foo
-// ALLOW-SAME: () local_unnamed_addr #[[ATTR0:[0-9]+]] !pcsections !2 {
+// ALLOW-SAME: () local_unnamed_addr #[[ATTR0:[0-9]+]] !pcsections !6 {
 // ALLOW-NEXT:  entry:
-// ALLOW-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr @y, i32 1 monotonic, align 4, !pcsections !4
+// ALLOW-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr @y, i32 1 monotonic, align 4, !pcsections !8
 // ALLOW-NEXT:    ret void
 //
 // FUN-LABEL: define {{[^@]+}}@foo
@@ -29,15 +29,15 @@ void foo() {
 }
 
 // ALLOW-LABEL: define {{[^@]+}}@bar
-// ALLOW-SAME: () local_unnamed_addr #[[ATTR0]] !pcsections !2 {
+// ALLOW-SAME: () local_unnamed_addr #[[ATTR0]] !pcsections !6 {
 // ALLOW-NEXT:  entry:
-// ALLOW-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr @y, i32 2 monotonic, align 4, !pcsections !4
+// ALLOW-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr @y, i32 2 monotonic, align 4, !pcsections !8
 // ALLOW-NEXT:    ret void
 //
 // FUN-LABEL: define {{[^@]+}}@bar
-// FUN-SAME: () local_unnamed_addr #[[ATTR0]] !pcsections !2 {
+// FUN-SAME: () local_unnamed_addr #[[ATTR0]] !pcsections !6 {
 // FUN-NEXT:  entry:
-// FUN-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr @y, i32 2 monotonic, align 4, !pcsections !4
+// FUN-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr @y, i32 2 monotonic, align 4, !pcsections !8
 // FUN-NEXT:    ret void
 //
 // SRC-LABEL: define {{[^@]+}}@bar
@@ -50,6 +50,6 @@ void bar() {
   __atomic_fetch_add(&y, 2, __ATOMIC_RELAXED);
 }
 
-// ALLOW: __sanitizer_metadata_covered.module_ctor
-// FUN: __sanitizer_metadata_covered.module_ctor
-// SRC-NOT: __sanitizer_metadata_covered.module_ctor
+// ALLOW: __sanitizer_metadata_covered2.module_ctor
+// FUN: __sanitizer_metadata_covered2.module_ctor
+// SRC-NOT: __sanitizer_metadata_covered{{.*}}.module_ctor

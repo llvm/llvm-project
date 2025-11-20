@@ -242,6 +242,35 @@ exit:
   ret i32 %iv
 }
 
+define i32 @test_sgt_samesign(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_sgt_samesign(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[INV_1:%.*]], i32 [[INV_2:%.*]])
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp sgt i32 [[IV]], [[INVARIANT_SMAX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp samesign ugt i32 %iv, %inv_1
+  %cmp_2 = icmp sgt i32 %iv, %inv_2
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
 ; turn to %iv >=s smax(inv_1, inv_2) and hoist it out of loop.
 define i32 @test_sge(i32 %start, i32 %inv_1, i32 %inv_2) {
 ; CHECK-LABEL: @test_sge(
@@ -264,6 +293,35 @@ loop:
   %iv = phi i32 [%start, %entry], [%iv.next, %loop]
   %cmp_1 = icmp sge i32 %iv, %inv_1
   %cmp_2 = icmp sge i32 %iv, %inv_2
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+define i32 @test_sge_samesign(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_sge_samesign(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[INV_1:%.*]], i32 [[INV_2:%.*]])
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp sge i32 [[IV]], [[INVARIANT_SMAX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp sge i32 %iv, %inv_1
+  %cmp_2 = icmp samesign uge i32 %iv, %inv_2
   %loop_cond = and i1 %cmp_1, %cmp_2
   %iv.next = add i32 %iv, 1
   br i1 %loop_cond, label %loop, label %exit

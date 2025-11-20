@@ -9,16 +9,23 @@
 #ifndef LLVM_OBJCOPY_ELF_ELFCONFIG_H
 #define LLVM_OBJCOPY_ELF_ELFCONFIG_H
 
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/Object/ELFTypes.h"
-#include <vector>
 
 namespace llvm {
 namespace objcopy {
 
+// Note to remove info specified by --remove-note option.
+struct RemoveNoteInfo {
+  StringRef Name;
+  uint32_t TypeId;
+};
+
 // ELF specific configuration for copying/stripping a single file.
 struct ELFConfig {
   uint8_t NewSymbolVisibility = (uint8_t)ELF::STV_DEFAULT;
+
+  std::vector<std::pair<NameMatcher, uint8_t>> SymbolsToSetVisibility;
 
   // ELF entry point address expression. The input parameter is an entry point
   // address in the input ELF file. The entry address in the output file is
@@ -29,6 +36,10 @@ struct ELFConfig {
   bool AllowBrokenLinks = false;
   bool KeepFileSymbols = false;
   bool LocalizeHidden = false;
+  bool VerifyNoteSections = true;
+
+  // Notes specified by --remove-note option.
+  SmallVector<RemoveNoteInfo, 0> NotesToRemove;
 };
 
 } // namespace objcopy

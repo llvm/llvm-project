@@ -84,12 +84,10 @@ define i128 @bitcast_128(ptr %0, ptr %1) {
 ; Z14-NEXT:    vl %v0, 0(%r3), 3
 ; Z14-NEXT:    vl %v1, 0(%r4), 3
 ; Z14-NEXT:    wfaxb %v0, %v0, %v1
-; Z14-NEXT:    vlgvg %r0, %v0, 1
-; Z14-NEXT:    vlgvg %r1, %v0, 0
-; Z14-NEXT:    oill %r1, 1
-; Z14-NEXT:    oill %r0, 3
-; Z14-NEXT:    stg %r0, 8(%r2)
-; Z14-NEXT:    stg %r1, 0(%r2)
+; Z14-NEXT:    larl %r1, .LCPI2_0
+; Z14-NEXT:    vl %v1, 0(%r1), 3
+; Z14-NEXT:    vo %v0, %v0, %v1
+; Z14-NEXT:    vst %v0, 0(%r2), 3
 ; Z14-NEXT:    br %r14
 entry:
   %x = load fp128, ptr %0

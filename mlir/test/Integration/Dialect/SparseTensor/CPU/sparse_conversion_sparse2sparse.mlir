@@ -5,27 +5,28 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
-// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
+// DEFINE: %{run} = mlir-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
 
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true s2s-strategy=2
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false s2s-strategy=2
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false s2s-strategy=2 vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
@@ -49,13 +50,7 @@
 }>
 
 #SingletonTensor1 = #sparse_tensor.encoding<{
-  map = (d0, d1, d2) -> (d0 : dense, d1 : compressed, d2 : singleton)
-
-}>
-
-// This also checks the compressed->dense conversion (when there are zeros).
-#SingletonTensor2 = #sparse_tensor.encoding<{
-  map = (d0, d1, d2) -> (d0 : dense, d1 : dense, d2 : singleton)
+  map = (d0, d1, d2) -> (d0 : dense, d1 : compressed(nonunique), d2 : singleton)
 
 }>
 
@@ -78,7 +73,7 @@ module {
   }
 
   //
-  // The first test suite (for non-singleton DimLevelTypes).
+  // The first test suite (for non-singleton LevelTypes).
   //
   func.func @testNonSingleton() {
     //
@@ -97,51 +92,43 @@ module {
     // Convert dense tensor directly to various sparse tensors.
     //
     %s1 = sparse_tensor.convert %src : tensor<2x3x4xf64> to tensor<2x3x4xf64, #Tensor1>
-    %s2 = sparse_tensor.convert %src : tensor<2x3x4xf64> to tensor<2x3x4xf64, #Tensor2>
     %s3 = sparse_tensor.convert %src : tensor<2x3x4xf64> to tensor<2x3x4xf64, #Tensor3>
 
     //
     // Convert sparse tensor directly to another sparse format.
     //
     %t13 = sparse_tensor.convert %s1 : tensor<2x3x4xf64, #Tensor1> to tensor<2x3x4xf64, #Tensor3>
-    %t21 = sparse_tensor.convert %s2 : tensor<2x3x4xf64, #Tensor2> to tensor<2x3x4xf64, #Tensor1>
-    %t23 = sparse_tensor.convert %s2 : tensor<2x3x4xf64, #Tensor2> to tensor<2x3x4xf64, #Tensor3>
     %t31 = sparse_tensor.convert %s3 : tensor<2x3x4xf64, #Tensor3> to tensor<2x3x4xf64, #Tensor1>
 
     //
     // Convert sparse tensor back to dense.
     //
     %d13 = sparse_tensor.convert %t13 : tensor<2x3x4xf64, #Tensor3> to tensor<2x3x4xf64>
-    %d21 = sparse_tensor.convert %t21 : tensor<2x3x4xf64, #Tensor1> to tensor<2x3x4xf64>
-    %d23 = sparse_tensor.convert %t23 : tensor<2x3x4xf64, #Tensor3> to tensor<2x3x4xf64>
     %d31 = sparse_tensor.convert %t31 : tensor<2x3x4xf64, #Tensor1> to tensor<2x3x4xf64>
 
     //
     // Check round-trip equality.  And release dense tensors.
     //
-    // CHECK-COUNT-5: ( ( ( 1, 2, 3, 4 ), ( 5, 6, 7, 8 ), ( 9, 10, 11, 12 ) ), ( ( 13, 14, 15, 16 ), ( 17, 18, 19, 20 ), ( 21, 22, 23, 24 ) ) )
+    // CHECK-COUNT-3: ( ( ( 1, 2, 3, 4 ), ( 5, 6, 7, 8 ), ( 9, 10, 11, 12 ) ), ( ( 13, 14, 15, 16 ), ( 17, 18, 19, 20 ), ( 21, 22, 23, 24 ) ) )
     call @dump(%src) : (tensor<2x3x4xf64>) -> ()
     call @dump(%d13) : (tensor<2x3x4xf64>) -> ()
-    call @dump(%d21) : (tensor<2x3x4xf64>) -> ()
-    call @dump(%d23) : (tensor<2x3x4xf64>) -> ()
     call @dump(%d31) : (tensor<2x3x4xf64>) -> ()
 
     //
-    // Release sparse tensors.
+    // Release the resources.
     //
     bufferization.dealloc_tensor %t13 : tensor<2x3x4xf64, #Tensor3>
-    bufferization.dealloc_tensor %t21 : tensor<2x3x4xf64, #Tensor1>
-    bufferization.dealloc_tensor %t23 : tensor<2x3x4xf64, #Tensor3>
     bufferization.dealloc_tensor %t31 : tensor<2x3x4xf64, #Tensor1>
     bufferization.dealloc_tensor %s1 : tensor<2x3x4xf64, #Tensor1>
-    bufferization.dealloc_tensor %s2 : tensor<2x3x4xf64, #Tensor2>
     bufferization.dealloc_tensor %s3 : tensor<2x3x4xf64, #Tensor3>
+    bufferization.dealloc_tensor %d13 : tensor<2x3x4xf64>
+    bufferization.dealloc_tensor %d31 : tensor<2x3x4xf64>
 
     return
   }
 
   //
-  // The second test suite (for singleton DimLevelTypes).
+  // The second test suite (for singleton LevelTypes).
   //
   func.func @testSingleton() {
     //
@@ -160,53 +147,37 @@ module {
     // Convert dense tensor directly to various sparse tensors.
     //
     %s1 = sparse_tensor.convert %src : tensor<2x3x4xf64> to tensor<2x3x4xf64, #SingletonTensor1>
-    %s2 = sparse_tensor.convert %src : tensor<2x3x4xf64> to tensor<2x3x4xf64, #SingletonTensor2>
     %s3 = sparse_tensor.convert %src : tensor<2x3x4xf64> to tensor<2x3x4xf64, #SingletonTensor3>
 
     //
     // Convert sparse tensor directly to another sparse format.
     //
-    %t12 = sparse_tensor.convert %s1 : tensor<2x3x4xf64, #SingletonTensor1> to tensor<2x3x4xf64, #SingletonTensor2>
     %t13 = sparse_tensor.convert %s1 : tensor<2x3x4xf64, #SingletonTensor1> to tensor<2x3x4xf64, #SingletonTensor3>
-    %t21 = sparse_tensor.convert %s2 : tensor<2x3x4xf64, #SingletonTensor2> to tensor<2x3x4xf64, #SingletonTensor1>
-    %t23 = sparse_tensor.convert %s2 : tensor<2x3x4xf64, #SingletonTensor2> to tensor<2x3x4xf64, #SingletonTensor3>
     %t31 = sparse_tensor.convert %s3 : tensor<2x3x4xf64, #SingletonTensor3> to tensor<2x3x4xf64, #SingletonTensor1>
-    %t32 = sparse_tensor.convert %s3 : tensor<2x3x4xf64, #SingletonTensor3> to tensor<2x3x4xf64, #SingletonTensor2>
 
     //
     // Convert sparse tensor back to dense.
     //
-    %d12 = sparse_tensor.convert %t12 : tensor<2x3x4xf64, #SingletonTensor2> to tensor<2x3x4xf64>
     %d13 = sparse_tensor.convert %t13 : tensor<2x3x4xf64, #SingletonTensor3> to tensor<2x3x4xf64>
-    %d21 = sparse_tensor.convert %t21 : tensor<2x3x4xf64, #SingletonTensor1> to tensor<2x3x4xf64>
-    %d23 = sparse_tensor.convert %t23 : tensor<2x3x4xf64, #SingletonTensor3> to tensor<2x3x4xf64>
     %d31 = sparse_tensor.convert %t31 : tensor<2x3x4xf64, #SingletonTensor1> to tensor<2x3x4xf64>
-    %d32 = sparse_tensor.convert %t32 : tensor<2x3x4xf64, #SingletonTensor2> to tensor<2x3x4xf64>
 
     //
     // Check round-trip equality.  And release dense tensors.
     //
-    // CHECK-COUNT-7: ( ( ( 1, 0, 0, 0 ), ( 0, 6, 0, 0 ), ( 0, 0, 11, 0 ) ), ( ( 0, 14, 0, 0 ), ( 0, 0, 0, 20 ), ( 21, 0, 0, 0 ) ) )
+    // CHECK-COUNT-3: ( ( ( 1, 0, 0, 0 ), ( 0, 6, 0, 0 ), ( 0, 0, 11, 0 ) ), ( ( 0, 14, 0, 0 ), ( 0, 0, 0, 20 ), ( 21, 0, 0, 0 ) ) )
     call @dump(%src) : (tensor<2x3x4xf64>) -> ()
-    call @dump(%d12) : (tensor<2x3x4xf64>) -> ()
     call @dump(%d13) : (tensor<2x3x4xf64>) -> ()
-    call @dump(%d21) : (tensor<2x3x4xf64>) -> ()
-    call @dump(%d23) : (tensor<2x3x4xf64>) -> ()
     call @dump(%d31) : (tensor<2x3x4xf64>) -> ()
-    call @dump(%d32) : (tensor<2x3x4xf64>) -> ()
 
     //
-    // Release sparse tensors.
+    // Release the resources.
     //
-    bufferization.dealloc_tensor %t12 : tensor<2x3x4xf64, #SingletonTensor2>
     bufferization.dealloc_tensor %t13 : tensor<2x3x4xf64, #SingletonTensor3>
-    bufferization.dealloc_tensor %t21 : tensor<2x3x4xf64, #SingletonTensor1>
-    bufferization.dealloc_tensor %t23 : tensor<2x3x4xf64, #SingletonTensor3>
     bufferization.dealloc_tensor %t31 : tensor<2x3x4xf64, #SingletonTensor1>
-    bufferization.dealloc_tensor %t32 : tensor<2x3x4xf64, #SingletonTensor2>
     bufferization.dealloc_tensor %s1 : tensor<2x3x4xf64, #SingletonTensor1>
-    bufferization.dealloc_tensor %s2 : tensor<2x3x4xf64, #SingletonTensor2>
     bufferization.dealloc_tensor %s3 : tensor<2x3x4xf64, #SingletonTensor3>
+    bufferization.dealloc_tensor %d13 : tensor<2x3x4xf64>
+    bufferization.dealloc_tensor %d31 : tensor<2x3x4xf64>
 
     return
   }
@@ -214,7 +185,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     call @testNonSingleton() : () -> ()
     call @testSingleton() : () -> ()
     return

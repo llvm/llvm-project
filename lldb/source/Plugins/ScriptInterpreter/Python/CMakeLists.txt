@@ -19,15 +19,15 @@ if (LLDB_ENABLE_LIBEDIT)
   list(APPEND LLDB_LIBEDIT_LIBS LibEdit::LibEdit)
 endif()
 
+add_subdirectory(Interfaces)
+
 add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
   PythonDataObjects.cpp
   PythonReadline.cpp
   ScriptInterpreterPython.cpp
-  ScriptedPythonInterface.cpp
-  ScriptedProcessPythonInterface.cpp
-  ScriptedThreadPythonInterface.cpp
-  ScriptedPlatformPythonInterface.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -35,9 +35,8 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
     lldbHost
     lldbInterpreter
     lldbTarget
+    lldbValueObject
+    lldbPluginScriptInterpreterPythonInterfaces
     ${Python3_LIBRARIES}
     ${LLDB_LIBEDIT_LIBS}
-
-  LINK_COMPONENTS
-    Support
   )

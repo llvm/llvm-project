@@ -14,13 +14,11 @@
 #include "Sparc.h"
 #include "SparcMachineFunctionInfo.h"
 #include "SparcSubtarget.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -39,16 +37,16 @@ static cl::opt<unsigned>
 // Pin the vtable to this file.
 void SparcInstrInfo::anchor() {}
 
-SparcInstrInfo::SparcInstrInfo(SparcSubtarget &ST)
-    : SparcGenInstrInfo(SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP), RI(),
-      Subtarget(ST) {}
+SparcInstrInfo::SparcInstrInfo(const SparcSubtarget &ST)
+    : SparcGenInstrInfo(ST, RI, SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP),
+      RI(ST), Subtarget(ST) {}
 
 /// isLoadFromStackSlot - If the specified machine instruction is a direct
 /// load from a stack slot, return the virtual or physical register number of
 /// the destination along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
-unsigned SparcInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register SparcInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex) const {
   if (MI.getOpcode() == SP::LDri || MI.getOpcode() == SP::LDXri ||
       MI.getOpcode() == SP::LDFri || MI.getOpcode() == SP::LDDFri ||
@@ -67,7 +65,7 @@ unsigned SparcInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 /// the source reg along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than storing to the stack slot.
-unsigned SparcInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register SparcInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                             int &FrameIndex) const {
   if (MI.getOpcode() == SP::STri || MI.getOpcode() == SP::STXri ||
       MI.getOpcode() == SP::STFri || MI.getOpcode() == SP::STDFri ||
@@ -437,8 +435,9 @@ bool SparcInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
 
 void SparcInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
-                                 const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc) const {
+                                 const DebugLoc &DL, Register DestReg,
+                                 Register SrcReg, bool KillSrc,
+                                 bool RenamableDest, bool RenamableSrc) const {
   unsigned numSubRegs = 0;
   unsigned movOpc     = 0;
   const unsigned *subRegIdx = nullptr;
@@ -528,8 +527,8 @@ void SparcInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator I,
                                          Register SrcReg, bool isKill, int FI,
                                          const TargetRegisterClass *RC,
-                                         const TargetRegisterInfo *TRI,
-                                         Register VReg) const {
+                                         Register VReg,
+                                         MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
 
@@ -568,8 +567,8 @@ void SparcInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator I,
                                           Register DestReg, int FI,
                                           const TargetRegisterClass *RC,
-                                          const TargetRegisterInfo *TRI,
-                                          Register VReg) const {
+                                          Register VReg,
+                                          MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
 
@@ -642,10 +641,149 @@ unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   return get(Opcode).getSize();
 }
 
+bool SparcInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                                    Register &SrcReg2, int64_t &CmpMask,
+                                    int64_t &CmpValue) const {
+  Register DstReg;
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  case SP::SUBCCri:
+    DstReg = MI.getOperand(0).getReg();
+    SrcReg = MI.getOperand(1).getReg();
+    SrcReg2 = 0;
+    CmpMask = ~0;
+    CmpValue = MI.getOperand(2).getImm();
+    return DstReg == SP::G0 && CmpValue == 0;
+  case SP::SUBCCrr:
+    DstReg = MI.getOperand(0).getReg();
+    SrcReg = MI.getOperand(1).getReg();
+    SrcReg2 = MI.getOperand(2).getReg();
+    CmpMask = ~0;
+    CmpValue = 0;
+    return DstReg == SP::G0 && SrcReg2 == SP::G0;
+  }
+
+  return false;
+}
+
+bool SparcInstrInfo::optimizeCompareInstr(
+    MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2, int64_t CmpMask,
+    int64_t CmpValue, const MachineRegisterInfo *MRI) const {
+
+  // Get the unique definition of SrcReg.
+  MachineInstr *MI = MRI->getUniqueVRegDef(SrcReg);
+  if (!MI)
+    return false;
+
+  // Only optimize if defining and comparing instruction in same block.
+  if (MI->getParent() != CmpInstr.getParent())
+    return false;
+
+  unsigned NewOpcode;
+  switch (MI->getOpcode()) {
+  case SP::ANDNrr:
+    NewOpcode = SP::ANDNCCrr;
+    break;
+  case SP::ANDNri:
+    NewOpcode = SP::ANDNCCri;
+    break;
+  case SP::ANDrr:
+    NewOpcode = SP::ANDCCrr;
+    break;
+  case SP::ANDri:
+    NewOpcode = SP::ANDCCri;
+    break;
+  case SP::ORrr:
+    NewOpcode = SP::ORCCrr;
+    break;
+  case SP::ORri:
+    NewOpcode = SP::ORCCri;
+    break;
+  case SP::ORNCCrr:
+    NewOpcode = SP::ORNCCrr;
+    break;
+  case SP::ORNri:
+    NewOpcode = SP::ORNCCri;
+    break;
+  case SP::XORrr:
+    NewOpcode = SP::XORCCrr;
+    break;
+  case SP::XNORri:
+    NewOpcode = SP::XNORCCri;
+    break;
+  case SP::XNORrr:
+    NewOpcode = SP::XNORCCrr;
+    break;
+  case SP::ADDrr:
+    NewOpcode = SP::ADDCCrr;
+    break;
+  case SP::ADDri:
+    NewOpcode = SP::ADDCCri;
+    break;
+  case SP::SUBrr:
+    NewOpcode = SP::SUBCCrr;
+    break;
+  case SP::SUBri:
+    NewOpcode = SP::SUBCCri;
+    break;
+  default:
+    return false;
+  }
+
+  bool IsICCModified = false;
+  MachineBasicBlock::iterator I = MI;
+  MachineBasicBlock::iterator C = CmpInstr;
+  MachineBasicBlock::iterator E = CmpInstr.getParent()->end();
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+
+  // If ICC is used or modified between MI and CmpInstr we cannot optimize.
+  while (++I != C) {
+    if (I->modifiesRegister(SP::ICC, TRI) || I->readsRegister(SP::ICC, TRI))
+      return false;
+  }
+
+  while (++I != E) {
+    // Only allow conditionals on equality.
+    if (I->readsRegister(SP::ICC, TRI)) {
+      bool IsICCBranch = I->getOpcode() == SP::BCOND ||
+                         I->getOpcode() == SP::BPICC ||
+                         I->getOpcode() == SP::BPXCC;
+      bool IsICCMove =
+          I->getOpcode() == SP::MOVICCrr || I->getOpcode() == SP::MOVICCri ||
+          I->getOpcode() == SP::MOVXCCrr || I->getOpcode() == SP::MOVXCCri;
+      bool IsICCConditional = IsICCBranch || IsICCMove;
+      if (!IsICCConditional ||
+          (I->getOperand(IsICCBranch ? 1 : 3).getImm() != SPCC::ICC_E &&
+           I->getOperand(IsICCBranch ? 1 : 3).getImm() != SPCC::ICC_NE))
+        return false;
+    } else if (I->modifiesRegister(SP::ICC, TRI)) {
+      IsICCModified = true;
+      break;
+    }
+  }
+
+  if (!IsICCModified) {
+    MachineBasicBlock *MBB = CmpInstr.getParent();
+    if (any_of(MBB->successors(),
+               [](MachineBasicBlock *Succ) { return Succ->isLiveIn(SP::ICC); }))
+      return false;
+  }
+
+  if (MRI->hasOneNonDBGUse(SrcReg))
+    MI->getOperand(0).setReg(SP::G0);
+
+  MI->setDesc(get(NewOpcode));
+  MI->addRegisterDefined(SP::ICC);
+  CmpInstr.eraseFromParent();
+
+  return true;
+}
+
 bool SparcInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case TargetOpcode::LOAD_STACK_GUARD: {
-    assert(Subtarget.isTargetLinux() &&
+    assert(Subtarget.getTargetTriple().isOSLinux() &&
            "Only Linux target is expected to contain LOAD_STACK_GUARD");
     // offsetof(tcbhead_t, stack_guard) from sysdeps/sparc/nptl/tls.h in glibc.
     const int64_t Offset = Subtarget.is64Bit() ? 0x28 : 0x14;
@@ -653,6 +791,23 @@ bool SparcInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
         .addReg(SP::G7)
         .addImm(Offset);
+    return true;
+  }
+  case SP::V8BAR: {
+    assert(!Subtarget.isV9() &&
+           "V8BAR should not be emitted on V9 processors!");
+
+    // Emit stbar; ldstub [%sp-1], %g0
+    // The sequence acts as a full barrier on V8 systems.
+    MachineBasicBlock &MBB = *MI.getParent();
+    MachineInstr &InstSTBAR =
+        *BuildMI(MBB, MI, MI.getDebugLoc(), get(SP::STBAR));
+    MachineInstr &InstLDSTUB =
+        *BuildMI(MBB, MI, MI.getDebugLoc(), get(SP::LDSTUBri), SP::G0)
+             .addReg(SP::O6)
+             .addImm(-1);
+    MIBundleBuilder(MBB, InstSTBAR, InstLDSTUB);
+    MBB.erase(MI);
     return true;
   }
   }

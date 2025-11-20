@@ -95,7 +95,7 @@ define i1 @ule_umax2(i32 %x, i32 %y) {
 define i1 @ule_umax3(i32 %a, i32 %y) {
 ; CHECK-LABEL: @ule_umax3(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -110,7 +110,7 @@ define i1 @ule_umax3(i32 %a, i32 %y) {
 define i1 @ule_umax4(i32 %a, i32 %y) {
 ; CHECK-LABEL: @ule_umax4(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -207,7 +207,7 @@ define i1 @ugt_umax2(i32 %x, i32 %y) {
 define i1 @ugt_umax3(i32 %a, i32 %y) {
 ; CHECK-LABEL: @ugt_umax3(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -222,7 +222,7 @@ define i1 @ugt_umax3(i32 %a, i32 %y) {
 define i1 @ugt_umax4(i32 %a, i32 %y) {
 ; CHECK-LABEL: @ugt_umax4(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -370,9 +370,9 @@ define void @ult_umax_contextual(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    call void @use(i1 [[CMP7]])
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP10]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
@@ -429,9 +429,9 @@ define void @ult_umax_contextual_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    call void @use(i1 [[CMP7]])
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP10]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
@@ -602,10 +602,8 @@ define void @ugt_umax_contextual(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
@@ -657,10 +655,8 @@ define void @ugt_umax_contextual_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
@@ -806,6 +802,30 @@ if:
   ret void
 end:
   ret void
+}
+
+define i1 @pr126974(i8 %x) {
+; CHECK-LABEL: @pr126974(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i8 [[X:%.*]], -2
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond = icmp sgt i8 %x, -2
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %umax = call i8 @llvm.umax.i8(i8 %x, i8 -46)
+  %cmp = icmp samesign ult i8 %umax, -32
+  ret i1 %cmp
+
+if.else:
+  ret i1 false
 }
 
 declare i32 @llvm.umax.i32(i32, i32)

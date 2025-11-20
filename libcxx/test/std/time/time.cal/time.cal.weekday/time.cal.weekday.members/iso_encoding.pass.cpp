@@ -15,34 +15,31 @@
 //    See [time.cal.wd.members]
 
 #include <chrono>
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
-template <typename WD>
-constexpr bool testConstexpr()
-{
-    WD wd{5};
-    return wd.c_encoding() == 5;
+using weekday = std::chrono::weekday;
+
+constexpr bool test() {
+  //  This is different than all the other tests, because the '7' gets converted to
+  //  a zero in the constructor, but then back to '7' by iso_encoding().
+  for (unsigned i = 0; i <= 10; ++i) {
+    weekday wd(i);
+    assert(wd.iso_encoding() == (i == 0 ? 7 : i));
+  }
+
+  return true;
 }
 
-int main(int, char**)
-{
-    using weekday = std::chrono::weekday;
+int main(int, char**) {
+  ASSERT_NOEXCEPT(std::declval<weekday&>().iso_encoding());
+  ASSERT_SAME_TYPE(unsigned, decltype(std::declval<weekday&>().iso_encoding()));
 
-    ASSERT_NOEXCEPT(                    std::declval<weekday&>().iso_encoding());
-    ASSERT_SAME_TYPE(unsigned, decltype(std::declval<weekday&>().iso_encoding()));
+  test();
+  static_assert(test());
 
-    static_assert(testConstexpr<weekday>(), "");
-
-    //  This is different than all the other tests, because the '7' gets converted to
-    //  a zero in the constructor, but then back to '7' by iso_encoding().
-    for (unsigned i = 0; i <= 10; ++i)
-    {
-        weekday wd(i);
-        assert(wd.iso_encoding() == (i == 0 ? 7 : i));
-    }
-
-    return 0;
+  return 0;
 }

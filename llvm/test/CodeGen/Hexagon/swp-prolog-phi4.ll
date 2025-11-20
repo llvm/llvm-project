@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -verify-machineinstrs < %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -verify-machineinstrs < %s
 
 ; Test that the name rewriter code doesn't chase the Phi operands for
 ; Phis that do not occur in the loop that is being pipelined.

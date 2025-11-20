@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_70 \
 // RUN:            -fcuda-is-device -target-feature +ptx60 \
-// RUN:            -S -emit-llvm -o - -x cuda %s \
+// RUN:            -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK %s
 // RUN: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_80 \
 // RUN:            -fcuda-is-device -target-feature +ptx65 \
-// RUN:            -S -emit-llvm -o - -x cuda %s \
+// RUN:            -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK %s
 // RUN: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_80 \
 // RUN:            -fcuda-is-device -target-feature +ptx70 \
-// RUN:            -S -emit-llvm -o - -x cuda %s \
+// RUN:            -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK %s
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_70 \
 // RUN:   -fcuda-is-device -S -o /dev/null -x cuda -verify %s
@@ -32,10 +32,10 @@ __device__ void nvvm_sync(unsigned mask, int i, float f, int a, int b,
   // CHECK: call void @llvm.nvvm.bar.warp.sync(i32
   // expected-error@+1 {{'__nvvm_bar_warp_sync' needs target feature ptx60}}
   __nvvm_bar_warp_sync(mask);
-  // CHECK: call void @llvm.nvvm.barrier.sync(i32
+  // CHECK: call void @llvm.nvvm.barrier.cta.sync.all(i32
   // expected-error@+1 {{'__nvvm_barrier_sync' needs target feature ptx60}}
   __nvvm_barrier_sync(mask);
-  // CHECK: call void @llvm.nvvm.barrier.sync.cnt(i32
+  // CHECK: call void @llvm.nvvm.barrier.cta.sync.count(i32
   // expected-error@+1 {{'__nvvm_barrier_sync_cnt' needs target feature ptx60}}
   __nvvm_barrier_sync_cnt(mask, i);
 

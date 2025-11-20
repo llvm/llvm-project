@@ -9,7 +9,7 @@
 #include "src/__support/CPP/utility.h"
 #include "test/UnitTest/Test.h"
 
-using namespace __llvm_libc::cpp;
+using namespace LIBC_NAMESPACE::cpp;
 
 TEST(LlvmLibcIntegerSequencetTest, Basic) {
   EXPECT_TRUE(
@@ -23,7 +23,8 @@ TEST(LlvmLibcIntegerSequencetTest, Basic) {
       (is_same_v<ULLSeq, make_integer_sequence<unsigned long long, 4>>));
 }
 
-template <typename T, T... Ts> bool checkArray(integer_sequence<T, Ts...> seq) {
+template <typename T, T... Ts>
+bool checkArray([[maybe_unused]] integer_sequence<T, Ts...> seq) {
   T arr[sizeof...(Ts)]{Ts...};
 
   for (T i = 0; i < static_cast<T>(sizeof...(Ts)); i++)

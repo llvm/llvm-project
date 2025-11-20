@@ -355,20 +355,26 @@ ProgramHeaders:
 # RUN: llvm-readobj --dynamic-table %t.aarch64 | FileCheck %s --check-prefix=LLVM-AARCH64
 # RUN: llvm-readelf --dynamic-table %t.aarch64 | FileCheck %s --check-prefix=GNU-AARCH64
 
-# LLVM-AARCH64:     DynamicSection [ (4 entries)
+# LLVM-AARCH64:     DynamicSection [ (7 entries)
 # LLVM-AARCH64-NEXT:  Tag                Type                Name/Value
-# LLVM-AARCH64-NEXT:  0x0000000070000001 AARCH64_BTI_PLT     1
-# LLVM-AARCH64-NEXT:  0x0000000070000003 AARCH64_PAC_PLT     2
-# LLVM-AARCH64-NEXT:  0x0000000070000005 AARCH64_VARIANT_PCS 3
-# LLVM-AARCH64-NEXT:  0x0000000000000000 NULL                0x0
+# LLVM-AARCH64-NEXT:  0x0000000070000001 AARCH64_BTI_PLT      1
+# LLVM-AARCH64-NEXT:  0x0000000070000003 AARCH64_PAC_PLT      2
+# LLVM-AARCH64-NEXT:  0x0000000070000005 AARCH64_VARIANT_PCS  3
+# LLVM-AARCH64-NEXT:  0x0000000070000012 AARCH64_AUTH_RELR    0x4
+# LLVM-AARCH64-NEXT:  0x0000000070000011 AARCH64_AUTH_RELRSZ  5
+# LLVM-AARCH64-NEXT:  0x0000000070000013 AARCH64_AUTH_RELRENT 6
+# LLVM-AARCH64-NEXT:  0x0000000000000000 NULL                 0x0
 # LLVM-AARCH64-NEXT:]
 
-# GNU-AARCH64:      Dynamic section at offset {{.*}} contains 4 entries:
+# GNU-AARCH64:      Dynamic section at offset {{.*}} contains 7 entries:
 # GNU-AARCH64-NEXT:  Tag                Type                  Name/Value
-# GNU-AARCH64-NEXT:  0x0000000070000001 (AARCH64_BTI_PLT)     1
-# GNU-AARCH64-NEXT:  0x0000000070000003 (AARCH64_PAC_PLT)     2
-# GNU-AARCH64-NEXT:  0x0000000070000005 (AARCH64_VARIANT_PCS) 3
-# GNU-AARCH64-NEXT:  0x0000000000000000 (NULL)                0x0
+# GNU-AARCH64-NEXT:  0x0000000070000001 (AARCH64_BTI_PLT)      1
+# GNU-AARCH64-NEXT:  0x0000000070000003 (AARCH64_PAC_PLT)      2
+# GNU-AARCH64-NEXT:  0x0000000070000005 (AARCH64_VARIANT_PCS)  3
+# GNU-AARCH64-NEXT:  0x0000000070000012 (AARCH64_AUTH_RELR)    0x4
+# GNU-AARCH64-NEXT:  0x0000000070000011 (AARCH64_AUTH_RELRSZ)  5
+# GNU-AARCH64-NEXT:  0x0000000070000013 (AARCH64_AUTH_RELRENT) 6
+# GNU-AARCH64-NEXT:  0x0000000000000000 (NULL)                 0x0
 
 --- !ELF
 FileHeader:
@@ -386,6 +392,12 @@ Sections:
         Value: 2
       - Tag:   DT_AARCH64_VARIANT_PCS
         Value: 3
+      - Tag:   DT_AARCH64_AUTH_RELR
+        Value: 4
+      - Tag:   DT_AARCH64_AUTH_RELRSZ
+        Value: 5
+      - Tag:   DT_AARCH64_AUTH_RELRENT
+        Value: 6
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
@@ -424,6 +436,44 @@ Sections:
     Entries:
       - Tag:   DT_RISCV_VARIANT_CC
         Value: 1
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Case 7: Test that SPARCV9 machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=7 %s -o %t.sparcv9
+# RUN: llvm-readobj --dynamic-table %t.sparcv9 | FileCheck %s --check-prefix=LLVM-SPARCV9
+# RUN: llvm-readelf --dynamic-table %t.sparcv9 | FileCheck %s --check-prefix=GNU-SPARCV9
+
+# LLVM-SPARCV9:      DynamicSection [ (2 entries)
+# LLVM-SPARCV9-NEXT:   Tag        Type                      Name/Value
+# LLVM-SPARCV9-NEXT:   0x0000000070000001 SPARC_REGISTER    0x12345
+# LLVM-SPARCV9-NEXT:   0x0000000000000000 NULL              0x0
+# LLVM-SPARCV9-NEXT: ]
+
+# GNU-SPARCV9:      Dynamic section at offset {{.*}} contains 2 entries:
+# GNU-SPARCV9-NEXT:  Tag        Type                       Name/Value
+# GNU-SPARCV9-NEXT:  0x0000000070000001 (SPARC_REGISTER)   0x12345
+# GNU-SPARCV9-NEXT:  0x0000000000000000 (NULL)             0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_EXEC
+  Machine: EM_SPARCV9
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_SPARC_REGISTER
+        Value: 0x12345
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:

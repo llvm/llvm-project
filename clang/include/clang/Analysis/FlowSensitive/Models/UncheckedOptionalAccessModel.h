@@ -17,8 +17,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/CFGMatchSwitch.h"
+#include "clang/Analysis/FlowSensitive/CachedConstAccessorsLattice.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/SmallVector.h"
@@ -36,37 +38,46 @@ struct UncheckedOptionalAccessModelOptions {
   /// can't identify when their results are used safely (across calls),
   /// resulting in false positives in all such cases. Note: this option does not
   /// cover access through `operator[]`.
+  ///
+  /// FIXME: we now cache and equate the result of const accessors
+  /// that look like unique_ptr, have both `->` (returning a pointer type) and
+  /// `*` (returning a reference type). This includes mixing `->` and
+  /// `*` in a sequence of calls as long as the object is not modified. Once we
+  /// are confident in this const accessor caching, we shouldn't need the
+  /// IgnoreSmartPointerDereference option anymore.
   bool IgnoreSmartPointerDereference = false;
+
+  /// In generating diagnostics, ignore calls to `optional::value()`.
+  bool IgnoreValueCalls = false;
 };
+
+using UncheckedOptionalAccessLattice = CachedConstAccessorsLattice<NoopLattice>;
 
 /// Dataflow analysis that models whether optionals hold values or not.
 ///
 /// Models the `std::optional`, `absl::optional`, and `base::Optional` types.
 class UncheckedOptionalAccessModel
-    : public DataflowAnalysis<UncheckedOptionalAccessModel, NoopLattice> {
+    : public DataflowAnalysis<UncheckedOptionalAccessModel,
+                              UncheckedOptionalAccessLattice> {
 public:
-  UncheckedOptionalAccessModel(ASTContext &Ctx);
+  UncheckedOptionalAccessModel(ASTContext &Ctx, dataflow::Environment &Env);
 
   /// Returns a matcher for the optional classes covered by this model.
   static ast_matchers::DeclarationMatcher optionalClassDecl();
 
-  static NoopLattice initialElement() { return {}; }
+  static UncheckedOptionalAccessLattice initialElement() { return {}; }
 
-  void transfer(const CFGElement &Elt, NoopLattice &L, Environment &Env);
-
-  ComparisonResult compare(QualType Type, const Value &Val1,
-                           const Environment &Env1, const Value &Val2,
-                           const Environment &Env2) override;
-
-  bool merge(QualType Type, const Value &Val1, const Environment &Env1,
-             const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) override;
-
-  Value *widen(QualType Type, Value &Prev, const Environment &PrevEnv,
-               Value &Current, Environment &CurrentEnv) override;
+  void transfer(const CFGElement &Elt, UncheckedOptionalAccessLattice &L,
+                Environment &Env);
 
 private:
-  CFGMatchSwitch<TransferState<NoopLattice>> TransferMatchSwitch;
+  CFGMatchSwitch<TransferState<UncheckedOptionalAccessLattice>>
+      TransferMatchSwitch;
+};
+
+/// Diagnostic information for an unchecked optional access.
+struct UncheckedOptionalAccessDiagnostic {
+  CharSourceRange Range;
 };
 
 class UncheckedOptionalAccessDiagnoser {
@@ -74,14 +85,16 @@ public:
   UncheckedOptionalAccessDiagnoser(
       UncheckedOptionalAccessModelOptions Options = {});
 
-  llvm::SmallVector<SourceLocation>
+  llvm::SmallVector<UncheckedOptionalAccessDiagnostic>
   operator()(const CFGElement &Elt, ASTContext &Ctx,
-             const TransferStateForDiagnostics<NoopLattice> &State) {
+             const TransferStateForDiagnostics<UncheckedOptionalAccessLattice>
+                 &State) {
     return DiagnoseMatchSwitch(Elt, Ctx, State.Env);
   }
 
 private:
-  CFGMatchSwitch<const Environment, llvm::SmallVector<SourceLocation>>
+  CFGMatchSwitch<const Environment,
+                 llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>
       DiagnoseMatchSwitch;
 };
 

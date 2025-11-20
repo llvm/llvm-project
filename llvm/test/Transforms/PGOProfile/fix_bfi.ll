@@ -96,4 +96,4 @@ if.end26:
 }
 
 ; CHECK: define dso_local void @sort_basket(i64 %min, i64 %max) #0 !prof [[ENTRY_COUNT:![0-9]+]]
-; CHECK: [[ENTRY_COUNT]] = !{!"function_entry_count", i64 12949310}
+; CHECK: [[ENTRY_COUNT]] = !{!"function_entry_count", i64 13338888}

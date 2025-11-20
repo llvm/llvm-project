@@ -14,49 +14,52 @@
 #include "src/stdio/fopen.h"
 #include "src/stdio/fwrite.h"
 #include "src/stdio/getc.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "src/errno/libc_errno.h"
-#include <stdio.h>
+#include "hdr/stdio_macros.h"
 
-class LlvmLibcGetcTest : public __llvm_libc::testing::Test {
+using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+
+class LlvmLibcGetcTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 public:
   using GetcFunc = int(FILE *);
   void test_with_func(GetcFunc *func, const char *filename) {
-    ::FILE *file = __llvm_libc::fopen(filename, "w");
+    ::FILE *file = LIBC_NAMESPACE::fopen(filename, "w");
     ASSERT_FALSE(file == nullptr);
     constexpr char CONTENT[] = "123456789";
     constexpr size_t WRITE_SIZE = sizeof(CONTENT) - 1;
-    ASSERT_EQ(WRITE_SIZE, __llvm_libc::fwrite(CONTENT, 1, WRITE_SIZE, file));
+    ASSERT_THAT(LIBC_NAMESPACE::fwrite(CONTENT, 1, WRITE_SIZE, file),
+                Succeeds(WRITE_SIZE));
     // This is a write-only file so reads should fail.
-    ASSERT_EQ(func(file), EOF);
+    ASSERT_THAT(func(file), Fails(EBADF, EOF));
     // This is an error and not a real EOF.
-    ASSERT_EQ(__llvm_libc::feof(file), 0);
-    ASSERT_NE(__llvm_libc::ferror(file), 0);
-    libc_errno = 0;
+    ASSERT_EQ(LIBC_NAMESPACE::feof(file), 0);
+    ASSERT_NE(LIBC_NAMESPACE::ferror(file), 0);
 
-    ASSERT_EQ(0, __llvm_libc::fclose(file));
+    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds());
 
-    file = __llvm_libc::fopen(filename, "r");
+    file = LIBC_NAMESPACE::fopen(filename, "r");
     ASSERT_FALSE(file == nullptr);
 
     for (size_t i = 0; i < WRITE_SIZE; ++i) {
-      int c = func(file);
-      ASSERT_EQ(c, int('1' + i));
+      ASSERT_THAT(func(file), Succeeds(int('1' + i)));
     }
     // Reading more should return EOF but not set error.
-    ASSERT_EQ(func(file), EOF);
-    ASSERT_NE(__llvm_libc::feof(file), 0);
-    ASSERT_EQ(__llvm_libc::ferror(file), 0);
+    ASSERT_THAT(func(file), Succeeds(EOF));
+    ASSERT_NE(LIBC_NAMESPACE::feof(file), 0);
+    ASSERT_EQ(LIBC_NAMESPACE::ferror(file), 0);
 
-    ASSERT_EQ(0, __llvm_libc::fclose(file));
+    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds());
   }
 };
 
 TEST_F(LlvmLibcGetcTest, WriteAndReadCharactersWithFgetc) {
-  test_with_func(&__llvm_libc::fgetc, "testdata/fgetc.test");
+  test_with_func(&LIBC_NAMESPACE::fgetc,
+                 APPEND_LIBC_TEST("testdata/fgetc.test"));
 }
 
 TEST_F(LlvmLibcGetcTest, WriteAndReadCharactersWithGetc) {
-  test_with_func(&__llvm_libc::getc, "testdata/getc.test");
+  test_with_func(&LIBC_NAMESPACE::getc, APPEND_LIBC_TEST("testdata/getc.test"));
 }

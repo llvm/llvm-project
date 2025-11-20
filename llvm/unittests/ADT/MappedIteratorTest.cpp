@@ -174,7 +174,7 @@ TYPED_TEST(MappedIteratorTestBasic, MoveAssign) {
 
     I3 = std::move(I2);
 
-    EXPECT_EQ(I2, I1) << "move assigned iterator is a different position";
+    EXPECT_EQ(I3, I1) << "move assigned iterator is a different position";
   }
 }
 

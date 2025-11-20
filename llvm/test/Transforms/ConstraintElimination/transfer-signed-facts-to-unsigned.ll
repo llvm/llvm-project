@@ -114,8 +114,7 @@ define i1 @len_not_known_positive2(i8 %len, i8 %idx) {
 ; CHECK-LABEL: @len_not_known_positive2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_SLT_LEN:%.*]] = icmp slt i8 [[IDX:%.*]], [[LEN:%.*]]
-; CHECK-NEXT:    [[IDX_POS:%.*]] = icmp uge i8 [[IDX]], 0
-; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[IDX_SLT_LEN]], [[IDX_POS]]
+; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[IDX_SLT_LEN]], true
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then.1:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[IDX]], [[LEN]]
@@ -504,11 +503,9 @@ define i32 @sge_2_gep(i32 %idx, ptr %src, i32 %idx.2) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[IDX]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[ADD_PTR_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[IDX_2:%.*]]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult ptr [[SRC]], [[ADD_PTR]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[SRC]], [[ADD_PTR_2]]
-; CHECK-NEXT:    [[X_1:%.*]] = xor i1 [[T_1]], [[C_1]]
-; CHECK-NEXT:    [[F_1:%.*]] = icmp uge ptr [[SRC]], [[ADD_PTR]]
-; CHECK-NEXT:    [[X_2:%.*]] = xor i1 [[X_1]], [[F_1]]
+; CHECK-NEXT:    [[X_1:%.*]] = xor i1 true, [[C_1]]
+; CHECK-NEXT:    [[X_2:%.*]] = xor i1 [[X_1]], false
 ; CHECK-NEXT:    br i1 [[X_2]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i32 0

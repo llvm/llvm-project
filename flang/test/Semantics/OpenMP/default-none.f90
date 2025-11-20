@@ -39,3 +39,37 @@ contains
    print *, x
  end subroutine
 end subroutine
+
+!construct-name inside default(none)
+subroutine sb4
+  !$omp parallel default(none)
+    loop: do i = 1, 10
+    end do loop
+  !$omp end parallel
+end subroutine
+
+! Test that default(none) does not error for assumed-size array
+subroutine sub( aaa)
+  real,dimension(*),intent(in)::aaa
+  integer::ip
+  real::ccc
+!$omp parallel do private(ip,ccc) default(none)
+  do ip = 1, 10
+     ccc= aaa(ip)
+  end do
+end subroutine sub
+
+! Test that threadprivate variables with host association
+! have a predetermined DSA
+subroutine host_assoc()
+  integer, save :: i
+  !$omp threadprivate(i)
+  real, save :: r
+  !$omp threadprivate(r)
+contains
+  subroutine internal()
+!$omp parallel default(none)
+    print *, i, r
+!$omp end parallel
+  end subroutine internal
+end subroutine host_assoc

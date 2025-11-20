@@ -47,7 +47,7 @@ void f7(e7 a0) {
 
 // Test merging/passing of upper eightbyte with X87 class.
 //
-// CHECK-LABEL: define{{.*}} void @f8_1(ptr noalias sret(%union.u8) align 16 %agg.result)
+// CHECK-LABEL: define{{.*}} void @f8_1(ptr dead_on_unwind noalias writable sret(%union.u8) align 16 %agg.result)
 // CHECK-LABEL: define{{.*}} void @f8_2(ptr noundef byval(%union.u8) align 16 %a0)
 union u8 {
   long double a;
@@ -63,7 +63,7 @@ struct s9 { int a; int b; int : 0; } f9(void) { while (1) {} }
 struct s10 { int a; int b; int : 0; };
 void f10(struct s10 a0) {}
 
-// CHECK-LABEL: define{{.*}} void @f11(ptr noalias sret(%union.anon) align 16 %agg.result)
+// CHECK-LABEL: define{{.*}} void @f11(ptr dead_on_unwind noalias writable sret(%union.anon) align 16 %agg.result)
 union { long double a; float b; } f11(void) { while (1) {} }
 
 // CHECK-LABEL: define{{.*}} i32 @f12_0()
@@ -74,7 +74,7 @@ void f12_1(struct s12 a0) {}
 
 // Check that sret parameter is accounted for when checking available integer
 // registers.
-// CHECK: define{{.*}} void @f13(ptr noalias sret(%struct.s13_0) align 8 %agg.result, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, ptr noundef byval({{.*}}) align 8 %e, i32 noundef %f)
+// CHECK: define{{.*}} void @f13(ptr dead_on_unwind noalias writable sret(%struct.s13_0) align 8 %agg.result, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, ptr noundef byval({{.*}}) align 8 %e, i32 noundef %f)
 
 struct s13_0 { long long f0[3]; };
 struct s13_1 { long long f0[2]; };
@@ -531,6 +531,63 @@ typedef float t66 __attribute__((__vector_size__(128), __aligned__(128)));
 
 // AVX512: @f66(ptr noundef byval(<32 x float>) align 128 %0)
 void f66(t66 a0) {
+}
+
+typedef long long t67 __attribute__((aligned (4)));
+struct s67 {
+  int a;
+  t67 b;
+};
+// CHECK-LABEL: define{{.*}} void @f67(ptr noundef byval(%struct.s67) align 8 %x)
+void f67(struct s67 x) {
+}
+
+typedef double t68 __attribute__((aligned (4)));
+struct s68 {
+  int a;
+  t68 b;
+};
+// CHECK-LABEL: define{{.*}} void @f68(ptr noundef byval(%struct.s68) align 8 %x)
+void f68(struct s68 x) {
+}
+
+// CHECK-LABEL: define{{.*}} i128 @f69(i128 noundef %a)
+__int128_t f69(__int128_t a) {
+  return a;
+}
+
+// CHECK-LABEL: define{{.*}} i128 @f70(i128 noundef %a)
+__uint128_t f70(__uint128_t a) {
+  return a;
+}
+
+// check that registers are correctly counted for (u)int128_t arguments
+struct s71 {
+  long long a, b;
+};
+// CHECK-LABEL: define{{.*}} void @f71(i128 noundef %a, i128 noundef %b, i64 noundef %c, ptr noundef byval(%struct.s71) align 8 %d)
+void f71(__int128_t a, __int128_t b, long long c, struct s71 d) {
+}
+// CHECK-LABEL: define{{.*}} void @f72(i128 noundef %a, i128 noundef %b, i64 %d.coerce0, i64 %d.coerce1)
+void f72(__int128_t a, __int128_t b, struct s71 d) {
+}
+
+// check that structs containing (u)int128_t are passed correctly
+struct s73 {
+  struct inner {
+    __uint128_t a;
+  };
+  struct inner in;
+};
+// CHECK-LABEL: define{{.*}} i128 @f73(i128 %a.coerce)
+struct s73 f73(struct s73 a) {
+  return a;
+}
+
+// check that _BitInt(128) is still passed correctly on the stack
+// CHECK-LABEL: define{{.*}} i128 @f74(i128 noundef %b, i128 noundef %c, i128 noundef %d, i64 noundef %e, ptr noundef byval(i128) align 8 %0)
+_BitInt(128) f74(__uint128_t b, __uint128_t c, __uint128_t d, long e, _BitInt(128) a) {
+  return a;
 }
 
 /// The synthesized __va_list_tag does not have file/line fields.

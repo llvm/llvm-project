@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c++2a -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
+// RUN: %clang_cc1 -verify -std=c++2a -fclang-abi-compat=latest -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
 // expected-no-diagnostics
 
 template <typename T, int N> concept SmallerThan = sizeof(T) < N;
@@ -32,3 +32,16 @@ template <typename T> void g(int n) requires requires (T m) {
 } {}
 // CHECK: define {{.*}}@_Z1gIiEviQrQT__XplfL0p_fp_E(
 template void g<int>(int);
+
+
+namespace GH147650 {
+
+template <int> int b;
+template <int b>
+void f()
+    requires requires { [] { (void)b; }; } {}
+void test() {
+    f<42>();
+}
+// CHECK-LABEL:define {{.*}} void @"_ZN8GH1476501fILi42EEEvvQrqXLNS_3$_0EEE"()
+}

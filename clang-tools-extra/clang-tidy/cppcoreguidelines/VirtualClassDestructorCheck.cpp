@@ -1,4 +1,4 @@
-//===--- VirtualClassDestructorCheck.cpp - clang-tidy -----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,6 +18,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
+namespace {
+
 AST_MATCHER(CXXRecordDecl, hasPublicVirtualOrProtectedNonVirtualDestructor) {
   // We need to call Node.getDestructor() instead of matching a
   // CXXDestructorDecl. Otherwise, tests will fail for class templates, since
@@ -32,6 +34,8 @@ AST_MATCHER(CXXRecordDecl, hasPublicVirtualOrProtectedNonVirtualDestructor) {
           ((Destructor->getAccess() == AccessSpecifier::AS_protected) &&
            !Destructor->isVirtual()));
 }
+
+} // namespace
 
 void VirtualClassDestructorCheck::registerMatchers(MatchFinder *Finder) {
   ast_matchers::internal::Matcher<CXXRecordDecl> InheritsVirtualMethod =
@@ -52,10 +56,10 @@ getVirtualKeywordRange(const CXXDestructorDecl &Destructor,
   if (Destructor.getLocation().isMacroID())
     return std::nullopt;
 
-  SourceLocation VirtualBeginLoc = Destructor.getBeginLoc();
-  SourceLocation VirtualBeginSpellingLoc =
+  const SourceLocation VirtualBeginLoc = Destructor.getBeginLoc();
+  const SourceLocation VirtualBeginSpellingLoc =
       SM.getSpellingLoc(Destructor.getBeginLoc());
-  SourceLocation VirtualEndLoc = VirtualBeginSpellingLoc.getLocWithOffset(
+  const SourceLocation VirtualEndLoc = VirtualBeginSpellingLoc.getLocWithOffset(
       Lexer::MeasureTokenLength(VirtualBeginSpellingLoc, SM, LangOpts));
 
   /// Range ends with \c StartOfNextToken so that any whitespace after \c
@@ -64,7 +68,7 @@ getVirtualKeywordRange(const CXXDestructorDecl &Destructor,
       Lexer::findNextToken(VirtualEndLoc, SM, LangOpts);
   if (!NextToken)
     return std::nullopt;
-  SourceLocation StartOfNextToken = NextToken->getLocation();
+  const SourceLocation StartOfNextToken = NextToken->getLocation();
 
   return CharSourceRange::getCharRange(VirtualBeginLoc, StartOfNextToken);
 }
@@ -75,7 +79,7 @@ getPublicASDecl(const CXXRecordDecl &StructOrClass) {
            AS{StructOrClass.decls_begin()},
        ASEnd{StructOrClass.decls_end()};
        AS != ASEnd; ++AS) {
-    AccessSpecDecl *ASDecl = *AS;
+    const AccessSpecDecl *ASDecl = *AS;
     if (ASDecl->getAccess() == AccessSpecifier::AS_public)
       return ASDecl;
   }
@@ -121,7 +125,7 @@ static std::string getSourceText(const CXXDestructorDecl &Destructor) {
 
 static std::string eraseKeyword(std::string &DestructorString,
                                 const std::string &Keyword) {
-  size_t KeywordIndex = DestructorString.find(Keyword);
+  const size_t KeywordIndex = DestructorString.find(Keyword);
   if (KeywordIndex != std::string::npos)
     DestructorString.erase(KeywordIndex, Keyword.length());
   return DestructorString;

@@ -11,7 +11,7 @@
 // template <class T>
 // views::repeat(T &&) requires constructible_from<ranges::repeat_view<T>, T>;
 
-// templaye <class T, class Bound>
+// template <class T, class Bound>
 // views::repeat(T &&, Bound &&) requires constructible_from<ranges::repeat_view<T, Bound>, T, Bound>;
 
 #include <cassert>
@@ -59,6 +59,18 @@ static_assert(!std::is_invocable_v<decltype(std::views::repeat), NonCopyable>);
 
 // Tp is move_constructible
 static_assert(std::is_invocable_v<decltype(std::views::repeat), MoveOnly>);
+
+// Test LWG4054 "Repeating a repeat_view should repeat the view"
+static_assert(std::is_same_v<decltype(std::views::repeat(std::views::repeat(42))),
+                             std::ranges::repeat_view<std::ranges::repeat_view<int>>>);
+
+// These cases are from LWG4053, but they are actually covered by the resolution of LWG4054,
+// and the resolution of LWG4053 only affects CTAD.
+using RPV = std::ranges::repeat_view<const char*>;
+static_assert(std::same_as<decltype(std::views::repeat("foo", std::unreachable_sentinel)), RPV>);  // OK
+static_assert(std::same_as<decltype(std::views::repeat(+"foo", std::unreachable_sentinel)), RPV>); // OK
+static_assert(std::same_as<decltype(std::views::repeat("foo")), RPV>);                             // OK since LWG4054
+static_assert(std::same_as<decltype(std::views::repeat(+"foo")), RPV>);                            // OK
 
 constexpr bool test() {
   assert(*std::views::repeat(33).begin() == 33);

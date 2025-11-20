@@ -1,11 +1,8 @@
 declare_args() {
-  # Whether to use goma (https://chromium.googlesource.com/infra/goma/client/)
-  use_goma = false
+  # If set, this is prepended to compile action command lines (e.g. `"ccache"`).
+  compiler_wrapper = ""
 
   # Set this to a clang build directory. If set, that clang is used as compiler.
-  # goma only works with compiler binaries it knows about, so useful both for
-  # using a goma-approved compiler and for compiling clang with a locally-built
-  # clang in a different build directory.
   # On Windows, setting this also causes lld-link to be used as linker.
   # Example value: getenv("HOME") + "/src/llvm-build/Release+Asserts"
   clang_base_path = ""

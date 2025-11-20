@@ -358,11 +358,11 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackFailureNoCache) {
                                    FileSpec &symbol_file_spec) {
         CheckCallbackArgsWithUUID(module_spec, module_file_spec,
                                   symbol_file_spec, ++callback_call_count);
-        return Status("The locate module callback failed");
+        return Status::FromErrorString("The locate module callback failed");
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   ASSERT_FALSE(m_module_sp);
 }
 
@@ -379,11 +379,11 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackFailureCached) {
                                    FileSpec &symbol_file_spec) {
         CheckCallbackArgsWithUUID(module_spec, module_file_spec,
                                   symbol_file_spec, ++callback_call_count);
-        return Status("The locate module callback failed");
+        return Status::FromErrorString("The locate module callback failed");
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
@@ -409,7 +409,7 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNoFiles) {
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
@@ -435,7 +435,7 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNonExistentModule) {
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
@@ -464,7 +464,7 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNonExistentSymbol) {
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_TRUE(m_module_sp->GetSymbolFileFileSpec().GetPath().empty());
@@ -622,7 +622,7 @@ TEST_F(LocateModuleCallbackTest,
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
@@ -650,7 +650,7 @@ TEST_F(LocateModuleCallbackTest,
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
@@ -682,7 +682,7 @@ TEST_F(LocateModuleCallbackTest,
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
@@ -709,7 +709,7 @@ TEST_F(LocateModuleCallbackTest,
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   ASSERT_FALSE(m_module_sp);
 }
 
@@ -731,7 +731,7 @@ TEST_F(LocateModuleCallbackTest,
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   ASSERT_FALSE(m_module_sp);
 }
 
@@ -755,7 +755,7 @@ TEST_F(LocateModuleCallbackTest,
           // The module_spec does not have UUID on the first call.
           CheckCallbackArgsWithoutUUID(module_spec, module_file_spec,
                                        symbol_file_spec, callback_call_count);
-          return Status("Ignored empty UUID");
+          return Status::FromErrorString("Ignored empty UUID");
         } else {
           // The module_spec has UUID on the second call.
           CheckCallbackArgsWithUUID(module_spec, module_file_spec,
@@ -793,7 +793,7 @@ TEST_F(LocateModuleCallbackTest,
           // The module_spec does not have UUID on the first call.
           CheckCallbackArgsWithoutUUID(module_spec, module_file_spec,
                                        symbol_file_spec, callback_call_count);
-          return Status("Ignored empty UUID");
+          return Status::FromErrorString("Ignored empty UUID");
         } else {
           // The module_spec has UUID on the second call.
           CheckCallbackArgsWithUUID(module_spec, module_file_spec,
@@ -833,7 +833,7 @@ TEST_F(LocateModuleCallbackTest,
           // The module_spec does not have UUID on the first call.
           CheckCallbackArgsWithoutUUID(module_spec, module_file_spec,
                                        symbol_file_spec, callback_call_count);
-          return Status("Ignored empty UUID");
+          return Status::FromErrorString("Ignored empty UUID");
         } else {
           // The module_spec has UUID on the second call.
           CheckCallbackArgsWithUUID(module_spec, module_file_spec,
@@ -876,7 +876,7 @@ TEST_F(LocateModuleCallbackTest,
           // The module_spec does not have UUID on the first call.
           CheckCallbackArgsWithoutUUID(module_spec, module_file_spec,
                                        symbol_file_spec, callback_call_count);
-          return Status("Ignored empty UUID");
+          return Status::FromErrorString("Ignored empty UUID");
         } else {
           // The module_spec has UUID on the second call.
           CheckCallbackArgsWithUUID(module_spec, module_file_spec,

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
 
 ; This test checks a bug in R600TargetLowering::LowerSELECT_CC where the
 ; chance to optimize the fcmp + select instructions to SET* was missed

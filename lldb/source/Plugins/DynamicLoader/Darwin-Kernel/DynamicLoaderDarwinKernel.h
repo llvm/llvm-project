@@ -16,6 +16,7 @@
 
 #include "lldb/Host/SafeMachO.h"
 
+#include "lldb/Core/Progress.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
@@ -137,7 +138,8 @@ protected:
 
     bool LoadImageAtFileAddress(lldb_private::Process *process);
 
-    bool LoadImageUsingMemoryModule(lldb_private::Process *process);
+    bool LoadImageUsingMemoryModule(lldb_private::Process *process,
+                                    lldb_private::Progress *progress = nullptr);
 
     bool IsLoaded() { return m_load_process_stop_id != UINT32_MAX; }
 
@@ -176,7 +178,7 @@ protected:
 
     void SetProcessStopId(uint32_t stop_id);
 
-    bool operator==(const KextImageInfo &rhs);
+    bool operator==(const KextImageInfo &rhs) const;
 
     uint32_t GetAddressByteSize(); // as determined by Mach-O header
 

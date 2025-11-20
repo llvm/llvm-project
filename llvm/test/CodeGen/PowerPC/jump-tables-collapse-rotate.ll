@@ -11,55 +11,54 @@ define dso_local zeroext i32 @test(i32 signext %l) nounwind {
 ; CHECK-NEXT:    addi r3, r3, -1
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    cmplwi r3, 5
-; CHECK-NEXT:    bgt cr0, .LBB0_3
+; CHECK-NEXT:    bgt cr0, .LBB0_9
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    rldic r3, r3, 2, 30
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
-; CHECK-NEXT:    lwax r3, r3, r4
-; CHECK-NEXT:    add r3, r3, r4
+; CHECK-NEXT:    lwax r3, r4, r3
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    bctr
 ; CHECK-NEXT:  .LBB0_2: # %sw.bb
 ; CHECK-NEXT:    li r3, 2
 ; CHECK-NEXT:    bl test1
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    b .LBB0_10
-; CHECK-NEXT:  .LBB0_3: # %sw.default
-; CHECK-NEXT:    li r3, 1
+; CHECK-NEXT:    b .LBB0_11
+; CHECK-NEXT:  .LBB0_3: # %sw.bb10
+; CHECK-NEXT:    li r3, 66
+; CHECK-NEXT:    bl test4
+; CHECK-NEXT:    nop
 ; CHECK-NEXT:    bl test1
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    bl test3
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    b .LBB0_10
-; CHECK-NEXT:  .LBB0_4: # %sw.bb3
-; CHECK-NEXT:    li r3, 3
-; CHECK-NEXT:    b .LBB0_9
-; CHECK-NEXT:  .LBB0_5: # %sw.bb5
+; CHECK-NEXT:    b .LBB0_11
+; CHECK-NEXT:  .LBB0_4: # %sw.bb5
 ; CHECK-NEXT:    li r3, 4
 ; CHECK-NEXT:    bl test2
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    bl test3
-; CHECK-NEXT:    nop
 ; CHECK-NEXT:    b .LBB0_10
-; CHECK-NEXT:  .LBB0_6: # %sw.bb8
+; CHECK-NEXT:  .LBB0_5: # %sw.bb8
 ; CHECK-NEXT:    li r3, 5
 ; CHECK-NEXT:    bl test4
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    b .LBB0_10
-; CHECK-NEXT:  .LBB0_7: # %sw.bb10
+; CHECK-NEXT:    b .LBB0_11
+; CHECK-NEXT:  .LBB0_6: # %sw.bb3
+; CHECK-NEXT:    li r3, 3
+; CHECK-NEXT:    b .LBB0_8
+; CHECK-NEXT:  .LBB0_7: # %sw.bb13
 ; CHECK-NEXT:    li r3, 66
-; CHECK-NEXT:    bl test4
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    bl test1
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    b .LBB0_10
-; CHECK-NEXT:  .LBB0_8: # %sw.bb13
-; CHECK-NEXT:    li r3, 66
-; CHECK-NEXT:  .LBB0_9: # %return
+; CHECK-NEXT:  .LBB0_8: # %return
 ; CHECK-NEXT:    bl test2
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    b .LBB0_11
+; CHECK-NEXT:  .LBB0_9: # %sw.default
+; CHECK-NEXT:    li r3, 1
+; CHECK-NEXT:    bl test1
+; CHECK-NEXT:    nop
 ; CHECK-NEXT:  .LBB0_10: # %return
+; CHECK-NEXT:    bl test3
+; CHECK-NEXT:    nop
+; CHECK-NEXT:  .LBB0_11: # %return
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)

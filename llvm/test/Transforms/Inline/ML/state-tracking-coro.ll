@@ -1,9 +1,10 @@
 ; Based on llvm/test/Transforms/Coroutines/coro-split-02.ll
 ; Corosplit will keep f1 and add 3 more functions.
 ; RUN: opt -passes='default<O1>,print<inline-advisor>' -training-log=/dev/null \
-; RUN:   -S -enable-ml-inliner=development -keep-inline-advisor-for-printing < %s 2>&1 | FileCheck %s
+; RUN:   -S -enable-ml-inliner=development -enable-scc-inline-advisor-printing < %s 2>&1 | FileCheck %s
 ; REQUIRES: have_tflite
 ;
+; CHECK: [MLInlineAdvisor] Nodes: 1 Edges: 0
 ; CHECK: [MLInlineAdvisor] Nodes: 4 Edges: 0
 
 %"struct.std::coroutine_handle" = type { ptr }
@@ -30,14 +31,14 @@ entry:
 await.ready:
   %StrayCoroSave = call token @llvm.coro.save(ptr null)
   %val = load i32, ptr %ref.tmp7
-  call void @llvm.lifetime.start.p0(i64 4, ptr %testval)
+  call void @llvm.lifetime.start.p0(ptr %testval)
   %test = load i32, ptr %testval
   call void @print(i32 %test)
-  call void @llvm.lifetime.end.p0(i64 4, ptr  %testval)
+  call void @llvm.lifetime.end.p0(ptr  %testval)
   call void @print(i32 %val)
   br label %exit
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false)
+  call void @llvm.coro.end(ptr null, i1 false)
   ret void
 }
 
@@ -52,6 +53,6 @@ declare ptr @llvm.coro.frame() #5
 declare i8 @llvm.coro.suspend(token, i1) #3
 declare void @"\01??3@YAXPEAX@Z"(ptr) local_unnamed_addr #10
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #2
-declare i1 @llvm.coro.end(ptr, i1) #3
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #4
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #4
+declare void @llvm.coro.end(ptr, i1) #3
+declare void @llvm.lifetime.start.p0(ptr nocapture) #4
+declare void @llvm.lifetime.end.p0(ptr nocapture) #4

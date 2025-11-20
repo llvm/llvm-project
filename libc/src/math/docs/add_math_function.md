@@ -18,7 +18,7 @@ together with its specifications:
 ```
 - Add function specs to the file:
 ```
-  libc/spec/stdc.td
+  libc/include/math.yaml
 ```
 
 ## Implementation
@@ -30,7 +30,7 @@ added to the following locations:
 ```
   libc/src/math/CMakeLists.txt
 ```
-- Add function declaration (under `__llvm_libc` namespace) to:
+- Add function declaration (under `LIBC_NAMESPACE` namespace) to:
 ```
   libc/src/math/<func>.h
 ```
@@ -56,7 +56,7 @@ located at:
 ```
 - These are preferred to be included as header-only.
 - To manipulate bits of floating point numbers, use the template class
-`__llvm_libc::fputil::FPBits<>` in the header file:
+`LIBC_NAMESPACE::fputil::FPBits<>` in the header file:
 ```
   libc/src/__support/FPUtils/FPBits.h
 ```
@@ -71,7 +71,7 @@ compare your outputs with the corresponding MPFR function.  In
 order for your new function to be supported by these two macros,
 the following files will need to be updated:
 
-- Add the function enum to `__llvm_libc::testing::mpfr::Operation` in the
+- Add the function enum to `LIBC_NAMESPACE::testing::mpfr::Operation` in the
 header file:
 ```
   libc/utils/MPFRWrapper/MPFRUtils.h
@@ -129,11 +129,11 @@ implementation (which is very often glibc).
 
 - Add a performance test to:
 ```
-  libc/test/src/math/differential_testing/<func>_perf.cpp
+  libc/test/src/math/performance_testing/<func>_perf.cpp
 ```
 - Add the corresponding entry point to:
 ```
-  libc/test/src/math/differential_testing/CMakeLists.txt
+  libc/test/src/math/performance_testing/CMakeLists.txt
 ```
 
 ## Build and Run
@@ -177,26 +177,27 @@ implementation (which is very often glibc).
 
 - Build and Run a specific unit test:
 ```
-  $ ninja libc.test.src.math.<func>_test
+  $ ninja libc.test.src.math.<func>_test.__unit__
   $ projects/libc/test/src/math/libc.test.src.math.<func>_test
 ```
 
 - Build and Run exhaustive test (might take hours to run):
 ```
-  $ ninja libc.test.src.math.exhaustive.<func>_test
-  $ projects/libc/test/src/math/exhaustive/libc.test.src.math.exhaustive.<func>_test
+  $ ninja libc.test.src.math.exhaustive.<func>_test.__unit__
+  $ projects/libc/test/src/math/exhaustive/libc.test.src.math.exhaustive.<func>_test.__unit__
 ```
 
 - Build and Run performance test:
 ```
-  $ ninja libc.test.src.math.differential_testing.<func>_perf
-  $ projects/libc/test/src/math/differential_testing/libc.test.src.math.differential_testing.<func>_perf
+  $ ninja libc.test.src.math.performance_testing.<func>_perf
+  $ projects/libc/test/src/math/performance_testing/libc.test.src.math.performance_testing.<func>_perf
   $ cat <func>_perf.log
 ```
 
 ## Code reviews
 
-We follow the code review process of LLVM with Phabricator:
+We use GitHub's inbuilt pull request system for code review:
 ```
-  https://llvm.org/docs/Phabricator.html
+  https://docs.github.com/articles/about-collaborative-development-models
+  https://docs.github.com/articles/about-pull-requests
 ```

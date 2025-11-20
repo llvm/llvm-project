@@ -16,6 +16,7 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
 struct alloc_imp {
@@ -64,16 +65,6 @@ template <typename T, typename U>
 bool operator!=(const poca_alloc<T>& lhs, const poca_alloc<U>& rhs) {
   return lhs.imp != rhs.imp;
 }
-
-template <class S>
-TEST_CONSTEXPR_CXX20 void test_assign(S& s1, const S& s2) {
-  try {
-    s1 = s2;
-  } catch (std::bad_alloc&) {
-    return;
-  }
-  assert(false);
-}
 #endif
 
 template <class S>
@@ -83,25 +74,28 @@ TEST_CONSTEXPR_CXX20 void test(S s1, const typename S::allocator_type& a) {
   assert(s2 == s1);
   assert(s2.capacity() >= s2.size());
   assert(s2.get_allocator() == a);
+  LIBCPP_ASSERT(is_string_asan_correct(s1));
+  LIBCPP_ASSERT(is_string_asan_correct(s2));
+}
+
+template <class Alloc>
+TEST_CONSTEXPR_CXX20 void test_string(const Alloc& a) {
+  typedef std::basic_string<char, std::char_traits<char>, Alloc> S;
+  test(S(), Alloc(a));
+  test(S("1"), Alloc(a));
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), Alloc(a));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef test_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-    test(S(), A(3));
-    test(S("1"), A(5));
-    test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), A(7));
-  }
+  test_string(std::allocator<char>());
+  test_string(test_allocator<char>());
+  test_string(test_allocator<char>(3));
 #if TEST_STD_VER >= 11
-  {
-    typedef min_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-    test(S(), A());
-    test(S("1"), A());
-    test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), A());
-  }
+  test_string(min_allocator<char>());
+  test_string(safe_allocator<char>());
+#endif
 
+#if TEST_STD_VER >= 11
 #  ifndef TEST_HAS_NO_EXCEPTIONS
   if (!TEST_IS_CONSTANT_EVALUATED) {
     typedef poca_alloc<char> A;
@@ -118,7 +112,11 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(s2 == p2);
 
     imp2.deactivate();
-    test_assign(s1, s2);
+    try {
+      s1 = s2;
+      assert(false);
+    } catch (std::bad_alloc&) {
+    }
     assert(s1 == p1);
     assert(s2 == p2);
   }

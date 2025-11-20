@@ -16,7 +16,6 @@
 #include "mlir/IR/AttrTypeSubElements.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Support/InterfaceSupport.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/StorageUniquer.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -175,11 +174,11 @@ public:
   /// function is guaranteed to return a non null object and will assert if
   /// the arguments provided are invalid.
   template <typename... Args>
-  static ConcreteT get(MLIRContext *ctx, Args... args) {
+  static ConcreteT get(MLIRContext *ctx, Args &&...args) {
     // Ensure that the invariants are correct for construction.
-    assert(
-        succeeded(ConcreteT::verify(getDefaultDiagnosticEmitFn(ctx), args...)));
-    return UniquerT::template get<ConcreteT>(ctx, args...);
+    assert(succeeded(
+        ConcreteT::verifyInvariants(getDefaultDiagnosticEmitFn(ctx), args...)));
+    return UniquerT::template get<ConcreteT>(ctx, std::forward<Args>(args)...);
   }
 
   /// Get or create a new ConcreteT instance within the ctx, defined at
@@ -187,8 +186,9 @@ public:
   /// invalid, errors are emitted using the provided location and a null object
   /// is returned.
   template <typename... Args>
-  static ConcreteT getChecked(const Location &loc, Args... args) {
-    return ConcreteT::getChecked(getDefaultDiagnosticEmitFn(loc), args...);
+  static ConcreteT getChecked(const Location &loc, Args &&...args) {
+    return ConcreteT::getChecked(getDefaultDiagnosticEmitFn(loc),
+                                 std::forward<Args>(args)...);
   }
 
   /// Get or create a new ConcreteT instance within the ctx. If the arguments
@@ -198,9 +198,9 @@ public:
   static ConcreteT getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
                               MLIRContext *ctx, Args... args) {
     // If the construction invariants fail then we return a null attribute.
-    if (failed(ConcreteT::verify(emitErrorFn, args...)))
+    if (failed(ConcreteT::verifyInvariants(emitErrorFn, args...)))
       return ConcreteT();
-    return UniquerT::template get<ConcreteT>(ctx, args...);
+    return UniquerT::template get<ConcreteT>(ctx, std::forward<Args>(args)...);
   }
 
   /// Get an instance of the concrete type from a void pointer.
@@ -226,7 +226,7 @@ protected:
 
   /// Default implementation that just returns success.
   template <typename... Args>
-  static LogicalResult verify(Args... args) {
+  static LogicalResult verifyInvariants(Args... args) {
     return success();
   }
 

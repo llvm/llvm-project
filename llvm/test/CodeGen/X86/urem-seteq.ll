@@ -362,7 +362,16 @@ define i32 @test_urem_allones(i32 %X) nounwind {
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=34366
 define void @ossfuzz34366() {
 ; X86-LABEL: ossfuzz34366:
+; X86:       # %bb.0:
+; X86-NEXT:    cmpl $0, (%eax)
+; X86-NEXT:    sete (%eax)
+; X86-NEXT:    retl
+;
 ; X64-LABEL: ossfuzz34366:
+; X64:       # %bb.0:
+; X64-NEXT:    cmpq $0, (%rax)
+; X64-NEXT:    sete (%rax)
+; X64-NEXT:    retq
   %L10 = load i448, ptr undef, align 4
   %B18 = urem i448 %L10, -363419362147803445274661903944002267176820680343659030140745099590319644056698961663095525356881782780381260803133088966767300814307328
   %C13 = icmp ule i448 %B18, 0

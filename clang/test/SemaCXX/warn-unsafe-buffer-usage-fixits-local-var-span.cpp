@@ -7,11 +7,11 @@ typedef int Int_t;
 void local_array_subscript_simple() {
   int tmp;
   int *p = new int[10];
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int> "
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
   const int *q = new int[10];
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:17}:"std::span<int const> q"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::span<int const> "
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:18-[[@LINE-2]]:18}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:29-[[@LINE-3]]:29}:", 10}"
   tmp = p[5];
@@ -24,11 +24,11 @@ void local_array_subscript_simple() {
   Int_ptr_t x = new int[10];
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
   Int_t * z = new int[10];
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::span<Int_t> z"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:10}:"std::span<Int_t>"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:26-[[@LINE-3]]:26}:", 10}"
   Int_t * w = new Int_t[10];
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::span<Int_t> w"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:10}:"std::span<Int_t>"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:28-[[@LINE-3]]:28}:", 10}"
 
@@ -51,29 +51,53 @@ void local_array_subscript_auto() {
 void local_variable_qualifiers_specifiers() {
   int a[10];
   const int * p = a;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:18}:"std::span<int const> p"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:19-[[@LINE-2]]:19}:"{"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:20}:", 10}"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::span<int const>"
   const int * const q = a;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:24}:"std::span<int const> const q"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:25-[[@LINE-2]]:25}:"{"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:26-[[@LINE-3]]:26}:", 10}"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::span<int const>"
   int tmp;
   tmp = p[5];
   tmp = q[5];
+
+  [[deprecated]] const int * x = a;
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:18-[[@LINE-1]]:29}:"std::span<int const>"
+  const int * y [[deprecated]];
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::span<int const>"
+  tmp = x[5];
+  tmp = y[5];
 }
 
+void local_variable_unsupported_specifiers() {
+  int a[10];
+  const int * p [[deprecated]] = a; //  not supported because the attribute overlaps the source range of the declaration
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
+
+  static const int * q = a; //  storage specifier not supported yet
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
+
+  extern int * x; //  storage specifier not supported yet
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
+
+  constexpr int * y = 0; //  `constexpr` specifier not supported yet
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
+
+  int tmp;
+
+  tmp = p[5];
+  tmp = q[5];
+  tmp = x[5];
+  tmp = y[5];
+}
 
 void local_array_subscript_variable_extent() {
   int n = 10;
   int tmp;
   int *p = new int[n];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int> "
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:22-[[@LINE-3]]:22}:", n}"
   // If the extent expression does not have a constant value, we cannot fill the extent for users...
   int *q = new int[n++];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> q"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int> "
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", <# placeholder #>}"
   tmp = p[5];
@@ -87,13 +111,9 @@ void local_ptr_to_array() {
   int a[10];
   int b[n];  // If the extent expression does not have a constant value, we cannot fill the extent for users...
   int *p = a;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:13-[[@LINE-3]]:13}:", 10}"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int> "
   int *q = b;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> q"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:13-[[@LINE-3]]:13}:", <# placeholder #>}"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int> "
   // No way to know if `n` is ever mutated since `int b[n];`, so no way to figure out the extent
   tmp = p[5];
   tmp = q[5];
@@ -102,7 +122,7 @@ void local_ptr_to_array() {
 void local_ptr_addrof_init() {
   int var;
   int * q = &var;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> q"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int>"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:17}:", 1}"
   // This expression involves unsafe buffer accesses, which will crash
@@ -113,10 +133,10 @@ void local_ptr_addrof_init() {
 void decl_without_init() {
   int tmp;
   int * p;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:10}:"std::span<int> p"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int>"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:{{^3}}
   Int_t * q;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<Int_t> q"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:10}:"std::span<Int_t>"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:{{^3}}
   tmp = p[5];
   tmp = q[5];
@@ -127,21 +147,21 @@ void decl_without_init() {
 void explict_cast() {
   int tmp;
   int * p = (int*) new int[10][10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> p"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int>"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:35-[[@LINE-3]]:35}:", <# placeholder #>}"
   tmp = p[5];
 
   int a;
   char * q = (char *)&a;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:13}:"std::span<char> q"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:9}:"std::span<char>"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:14}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", <# placeholder #>}"
   tmp = (int) q[5];
 
   void * r = &a;
   char * s = (char *) r;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:13}:"std::span<char> s"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:9}:"std::span<char>"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:14}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", <# placeholder #>}"
   tmp = (int) s[5];
@@ -152,21 +172,21 @@ void null_init() {
   int tmp;
   int * my_null = 0;
   int * p = 0;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> p"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int>"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:{{^3}}
   int * g = NULL; // cannot handle fix-its involving macros for now
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
   int * f = nullptr;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> f"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int>"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:{{^3}}
 
   // In case of value dependencies, we give up
   int * q = my_null;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> q"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int>"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:20}:", <# placeholder #>}"
   int * r = my_null + 0;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> r"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int>"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", <# placeholder #>}"
 
@@ -194,11 +214,11 @@ void macroVariableIdentifier() {
   // are valid.
 
   int * MY_NAME = new int[10];
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:18}:"std::span<int> MY_NAME"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int>"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:19-[[@LINE-2]]:19}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:30-[[@LINE-3]]:30}:", 10}"
   int * MY_NAME_ARG( 'x' ) = new int[10];
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:29}:"std::span<int> MY_NAME_ARG( 'x' )"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int>"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:30-[[@LINE-2]]:30}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:41-[[@LINE-3]]:41}:", 10}"
   p[5] = 5;
@@ -232,7 +252,7 @@ void unsupported_fixit_overlapping_macro(int * x) {
   // fixits are inserted before and after `new MY_INT[MY_TEN]` below.
 #define MY_TEN 10
   int * g = new MY_INT[MY_TEN];
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> g"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int>"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:31-[[@LINE-3]]:31}:", MY_TEN}"
   tmp = g[5];
@@ -259,7 +279,7 @@ void unsupported_subscript_negative(int i, unsigned j, unsigned long k) {
          // no fix-it emitted.
 
   int * r = new int[10];
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> r"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int>"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
 
@@ -282,7 +302,7 @@ void few_vars_in_macro() {
   int tmp;
   ptr[2] = 30;
   int * p = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> p"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int>"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
   tmp = p[5];

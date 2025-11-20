@@ -9,12 +9,13 @@
 #include "src/math/remainderf.h"
 #include "src/__support/FPUtil/DivisionAndRemainderOperations.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, remainderf, (float x, float y)) {
   int quotient;
   return fputil::remquo(x, y, quotient);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

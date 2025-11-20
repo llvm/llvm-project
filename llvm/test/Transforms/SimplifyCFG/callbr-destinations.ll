@@ -6,7 +6,7 @@ define void @callbr_duplicate_dest() {
 ; CHECK-LABEL: @callbr_duplicate_dest(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm sideeffect "", "!i"()
-; CHECK-NEXT:    to label [[BB:%.*]] [label %bb]
+; CHECK-NEXT:            to label [[BB:%.*]] [label %bb]
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret void
 ;
@@ -22,7 +22,7 @@ define void @callbr_can_fold_to_duplicate_dest1() {
 ; CHECK-LABEL: @callbr_can_fold_to_duplicate_dest1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm sideeffect "", "!i"()
-; CHECK-NEXT:    to label [[COMMON_RET:%.*]] [label %common.ret]
+; CHECK-NEXT:            to label [[COMMON_RET:%.*]] [label %common.ret]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ;
@@ -41,7 +41,7 @@ define void @callbr_can_fold_to_duplicate_dest2() {
 ; CHECK-LABEL: @callbr_can_fold_to_duplicate_dest2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm sideeffect "", "!i,!i"()
-; CHECK-NEXT:    to label [[COMMON_RET:%.*]] [label [[COMMON_RET]], label %common.ret]
+; CHECK-NEXT:            to label [[COMMON_RET:%.*]] [label [[COMMON_RET]], label %common.ret]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ;
@@ -65,13 +65,13 @@ define i32 @callbr_landingpad_nomerge() {
 ; CHECK-LABEL: @callbr_landingpad_nomerge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT:%.*]] = callbr i32 asm "# $0", "=r,!i"()
-; CHECK-NEXT:    to label [[DIRECT:%.*]] [label %entry.indirect_crit_edge]
+; CHECK-NEXT:            to label [[DIRECT:%.*]] [label %entry.indirect_crit_edge]
 ; CHECK:       entry.indirect_crit_edge:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[OUT]])
 ; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       direct:
 ; CHECK-NEXT:    [[OUT2:%.*]] = callbr i32 asm "# $0", "=r,!i"()
-; CHECK-NEXT:    to label [[COMMON_RET]] [label %direct.indirect_crit_edge]
+; CHECK-NEXT:            to label [[COMMON_RET]] [label %direct.indirect_crit_edge]
 ; CHECK:       direct.indirect_crit_edge:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[OUT2]])
 ; CHECK-NEXT:    br label [[COMMON_RET]]

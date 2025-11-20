@@ -1,4 +1,4 @@
-//===--- SuspiciousEnumUsageCheck.cpp - clang-tidy-------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -54,7 +54,7 @@ static int enumLength(const EnumDecl *EnumDec) {
 
 static bool hasDisjointValueRange(const EnumDecl *Enum1,
                                   const EnumDecl *Enum2) {
-  ValueRange Range1(Enum1), Range2(Enum2);
+  const ValueRange Range1(Enum1), Range2(Enum2);
   return llvm::APSInt::compareValues(Range1.MaxVal, Range2.MinVal) < 0 ||
          llvm::APSInt::compareValues(Range2.MaxVal, Range1.MinVal) < 0;
 }
@@ -94,9 +94,9 @@ static int countNonPowOfTwoLiteralNum(const EnumDecl *EnumDec) {
 /// last enumerator is the sum of the lesser values (and initialized by a
 /// literal) or when it could contain consecutive values.
 static bool isPossiblyBitMask(const EnumDecl *EnumDec) {
-  ValueRange VR(EnumDec);
-  int EnumLen = enumLength(EnumDec);
-  int NonPowOfTwoCounter = countNonPowOfTwoLiteralNum(EnumDec);
+  const ValueRange VR(EnumDec);
+  const int EnumLen = enumLength(EnumDec);
+  const int NonPowOfTwoCounter = countNonPowOfTwoLiteralNum(EnumDec);
   return NonPowOfTwoCounter >= 1 && NonPowOfTwoCounter <= 2 &&
          NonPowOfTwoCounter < EnumLen / 2 &&
          (VR.MaxVal - VR.MinVal != EnumLen - 1) &&
@@ -106,7 +106,7 @@ static bool isPossiblyBitMask(const EnumDecl *EnumDec) {
 SuspiciousEnumUsageCheck::SuspiciousEnumUsageCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)) {}
+      StrictMode(Options.get("StrictMode", false)) {}
 
 void SuspiciousEnumUsageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
@@ -171,8 +171,7 @@ void SuspiciousEnumUsageCheck::check(const MatchFinder::MatchResult &Result) {
     // Skip when one of the parameters is an empty enum. The
     // hasDisjointValueRange function could not decide the values properly in
     // case of an empty enum.
-    if (EnumDec->enumerator_begin() == EnumDec->enumerator_end() ||
-        OtherEnumDec->enumerator_begin() == OtherEnumDec->enumerator_end())
+    if (EnumDec->enumerators().empty() || OtherEnumDec->enumerators().empty())
       return;
 
     if (!hasDisjointValueRange(EnumDec, OtherEnumDec))

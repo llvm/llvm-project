@@ -5,7 +5,7 @@
 @_ZL6test1g = internal global i32 42, align 4
 
 ;.
-; CHECK: @[[_ZL6TEST1G:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 42, align 4
+; CHECK: @_ZL6test1g = internal global i32 42, align 4
 ;.
 define void @_Z7test1f1v() nounwind {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)

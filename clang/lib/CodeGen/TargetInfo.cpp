@@ -19,6 +19,7 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -62,6 +63,13 @@ LLVM_DUMP_METHOD void ABIArgInfo::dump() const {
     OS << "CoerceAndExpand Type=";
     getCoerceAndExpandType()->print(OS);
     break;
+  case TargetSpecific:
+    OS << "TargetSpecific Type=";
+    if (llvm::Type *Ty = getCoerceToType())
+      Ty->print(OS);
+    else
+      OS << "null";
+    break;
   }
   OS << ")\n";
 }
@@ -74,6 +82,8 @@ TargetCodeGenInfo::~TargetCodeGenInfo() = default;
 // If someone can figure out a general rule for this, that would be great.
 // It's probably just doomed to be platform-dependent, though.
 unsigned TargetCodeGenInfo::getSizeOfUnwindException() const {
+  if (getABIInfo().getCodeGenOpts().hasSEHExceptions())
+    return getABIInfo().getDataLayout().getPointerSizeInBits() > 32 ? 64 : 48;
   // Verified for:
   //   x86-64     FreeBSD, Linux, Darwin
   //   x86-32     FreeBSD, Linux, Darwin
@@ -102,18 +112,27 @@ TargetCodeGenInfo::getDependentLibraryOption(llvm::StringRef Lib,
   Opt += Lib;
 }
 
-unsigned TargetCodeGenInfo::getOpenCLKernelCallingConv() const {
-  // OpenCL kernels are called via an explicit runtime API with arguments
-  // set with clSetKernelArg(), not as normal sub-functions.
-  // Return SPIR_KERNEL by default as the kernel calling convention to
-  // ensure the fingerprint is fixed such way that each OpenCL argument
-  // gets one matching argument in the produced kernel function argument
-  // list to enable feasible implementation of clSetKernelArg() with
-  // aggregates etc. In case we would use the default C calling conv here,
-  // clSetKernelArg() might break depending on the target-specific
-  // conventions; different targets might split structs passed as values
-  // to multiple function arguments etc.
-  return llvm::CallingConv::SPIR_KERNEL;
+unsigned TargetCodeGenInfo::getDeviceKernelCallingConv() const {
+  if (getABIInfo().getContext().getLangOpts().OpenCL) {
+    // Device kernels are called via an explicit runtime API with arguments,
+    // such as set with clSetKernelArg() for OpenCL, not as normal
+    // sub-functions. Return SPIR_KERNEL by default as the kernel calling
+    // convention to ensure the fingerprint is fixed such way that each kernel
+    // argument gets one matching argument in the produced kernel function
+    // argument list to enable feasible implementation of clSetKernelArg() with
+    // aggregates etc. In case we would use the default C calling conv here,
+    // clSetKernelArg() might break depending on the target-specific
+    // conventions; different targets might split structs passed as values
+    // to multiple function arguments etc.
+    return llvm::CallingConv::SPIR_KERNEL;
+  }
+  llvm_unreachable("Unknown kernel calling convention");
+}
+
+void TargetCodeGenInfo::setOCLKernelStubCallingConvention(
+    const FunctionType *&FT) const {
+  FT = getABIInfo().getContext().adjustFunctionType(
+      FT, FT->getExtInfo().withCallingConv(CC_C));
 }
 
 llvm::Constant *TargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
@@ -131,19 +150,19 @@ LangAS TargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
 
 llvm::Value *TargetCodeGenInfo::performAddrSpaceCast(
     CodeGen::CodeGenFunction &CGF, llvm::Value *Src, LangAS SrcAddr,
-    LangAS DestAddr, llvm::Type *DestTy, bool isNonNull) const {
+    llvm::Type *DestTy, bool isNonNull) const {
   // Since target may map different address spaces in AST to the same address
   // space, an address space conversion may end up as a bitcast.
   if (auto *C = dyn_cast<llvm::Constant>(Src))
-    return performAddrSpaceCast(CGF.CGM, C, SrcAddr, DestAddr, DestTy);
+    return performAddrSpaceCast(CGF.CGM, C, SrcAddr, DestTy);
   // Try to preserve the source's name to make IR more readable.
-  return CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+  return CGF.Builder.CreateAddrSpaceCast(
       Src, DestTy, Src->hasName() ? Src->getName() + ".ascast" : "");
 }
 
 llvm::Constant *
 TargetCodeGenInfo::performAddrSpaceCast(CodeGenModule &CGM, llvm::Constant *Src,
-                                        LangAS SrcAddr, LangAS DestAddr,
+                                        LangAS SrcAddr,
                                         llvm::Type *DestTy) const {
   // Since target may map different address spaces in AST to the same address
   // space, an address space conversion may end up as a bitcast.
@@ -184,7 +203,7 @@ llvm::Value *TargetCodeGenInfo::createEnqueuedBlockKernel(
   auto *F = llvm::Function::Create(FT, llvm::GlobalValue::ExternalLinkage, Name,
                                    &CGF.CGM.getModule());
   llvm::CallingConv::ID KernelCC =
-      CGF.getTypes().ClangCallConvToLLVMCallConv(CallingConv::CC_OpenCLKernel);
+      CGF.getTypes().ClangCallConvToLLVMCallConv(CallingConv::CC_DeviceKernel);
   F->setCallingConv(KernelCC);
 
   llvm::AttrBuilder KernelAttrs(C);
@@ -204,6 +223,80 @@ llvm::Value *TargetCodeGenInfo::createEnqueuedBlockKernel(
   Builder.CreateRetVoid();
   Builder.restoreIP(IP);
   return F;
+}
+
+void TargetCodeGenInfo::setBranchProtectionFnAttributes(
+    const TargetInfo::BranchProtectionInfo &BPI, llvm::Function &F) {
+  // Called on already created and initialized function where attributes already
+  // set from command line attributes but some might need to be removed as the
+  // actual BPI is different.
+  if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
+    F.addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
+    F.addFnAttr("sign-return-address-key", BPI.getSignKeyStr());
+  } else {
+    if (F.hasFnAttribute("sign-return-address"))
+      F.removeFnAttr("sign-return-address");
+    if (F.hasFnAttribute("sign-return-address-key"))
+      F.removeFnAttr("sign-return-address-key");
+  }
+
+  auto AddRemoveAttributeAsSet = [&](bool Set, const StringRef &ModAttr) {
+    if (Set)
+      F.addFnAttr(ModAttr);
+    else if (F.hasFnAttribute(ModAttr))
+      F.removeFnAttr(ModAttr);
+  };
+
+  AddRemoveAttributeAsSet(BPI.BranchTargetEnforcement,
+                          "branch-target-enforcement");
+  AddRemoveAttributeAsSet(BPI.BranchProtectionPAuthLR,
+                          "branch-protection-pauth-lr");
+  AddRemoveAttributeAsSet(BPI.GuardedControlStack, "guarded-control-stack");
+}
+
+void TargetCodeGenInfo::initBranchProtectionFnAttributes(
+    const TargetInfo::BranchProtectionInfo &BPI, llvm::AttrBuilder &FuncAttrs) {
+  // Only used for initializing attributes in the AttrBuilder, which will not
+  // contain any of these attributes so no need to remove anything.
+  if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
+    FuncAttrs.addAttribute("sign-return-address", BPI.getSignReturnAddrStr());
+    FuncAttrs.addAttribute("sign-return-address-key", BPI.getSignKeyStr());
+  }
+  if (BPI.BranchTargetEnforcement)
+    FuncAttrs.addAttribute("branch-target-enforcement");
+  if (BPI.BranchProtectionPAuthLR)
+    FuncAttrs.addAttribute("branch-protection-pauth-lr");
+  if (BPI.GuardedControlStack)
+    FuncAttrs.addAttribute("guarded-control-stack");
+}
+
+void TargetCodeGenInfo::setPointerAuthFnAttributes(
+    const PointerAuthOptions &Opts, llvm::Function &F) {
+  auto UpdateAttr = [&F](bool AttrShouldExist, StringRef AttrName) {
+    if (AttrShouldExist && !F.hasFnAttribute(AttrName))
+      F.addFnAttr(AttrName);
+    if (!AttrShouldExist && F.hasFnAttribute(AttrName))
+      F.removeFnAttr(AttrName);
+  };
+  UpdateAttr(Opts.ReturnAddresses, "ptrauth-returns");
+  UpdateAttr((bool)Opts.FunctionPointers, "ptrauth-calls");
+  UpdateAttr(Opts.AuthTraps, "ptrauth-auth-traps");
+  UpdateAttr(Opts.IndirectGotos, "ptrauth-indirect-gotos");
+  UpdateAttr(Opts.AArch64JumpTableHardening, "aarch64-jump-table-hardening");
+}
+
+void TargetCodeGenInfo::initPointerAuthFnAttributes(
+    const PointerAuthOptions &Opts, llvm::AttrBuilder &FuncAttrs) {
+  if (Opts.ReturnAddresses)
+    FuncAttrs.addAttribute("ptrauth-returns");
+  if (Opts.FunctionPointers)
+    FuncAttrs.addAttribute("ptrauth-calls");
+  if (Opts.AuthTraps)
+    FuncAttrs.addAttribute("ptrauth-auth-traps");
+  if (Opts.IndirectGotos)
+    FuncAttrs.addAttribute("ptrauth-indirect-gotos");
+  if (Opts.AArch64JumpTableHardening)
+    FuncAttrs.addAttribute("aarch64-jump-table-hardening");
 }
 
 namespace {

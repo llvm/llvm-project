@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ObjectFile/Breakpad/BreakpadRecords.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Endian.h"
@@ -69,7 +70,7 @@ llvm::Triple::ArchType stringTo<llvm::Triple::ArchType>(llvm::StringRef Str) {
   using llvm::Triple;
   return llvm::StringSwitch<Triple::ArchType>(Str)
       .Case("arm", Triple::arm)
-      .Cases("arm64", "arm64e", Triple::aarch64)
+      .Cases({"arm64", "arm64e"}, Triple::aarch64)
       .Case("mips", Triple::mips)
       .Case("msp430", Triple::msp430)
       .Case("ppc", Triple::ppc)
@@ -78,7 +79,7 @@ llvm::Triple::ArchType stringTo<llvm::Triple::ArchType>(llvm::StringRef Str) {
       .Case("sparc", Triple::sparc)
       .Case("sparcv9", Triple::sparcv9)
       .Case("x86", Triple::x86)
-      .Cases("x86_64", "x86_64h", Triple::x86_64)
+      .Cases({"x86_64", "x86_64h"}, Triple::x86_64)
       .Default(Triple::UnknownArch);
 }
 
@@ -119,7 +120,7 @@ static UUID parseModuleId(llvm::Triple::OSType os, llvm::StringRef str) {
   uint32_t age;
   bool success = to_integer(age_str, age, 16);
   assert(success);
-  (void)success;
+  UNUSED_IF_ASSERT_DISABLED(success);
   data.age = age;
 
   // On non-windows, the age field should always be zero, so we don't include to

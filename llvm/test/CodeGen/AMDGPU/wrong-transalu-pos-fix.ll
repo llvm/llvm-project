@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=redwood -mtriple=r600-- < %s | FileCheck %s
+; RUN: llc -mtriple=r600-- -mcpu=redwood < %s | FileCheck %s
 
 ; We want all MULLO_INT inst to be last in their instruction group
 ;CHECK: {{^}}fill3d:

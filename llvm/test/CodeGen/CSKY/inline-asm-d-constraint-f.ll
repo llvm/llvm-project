@@ -21,7 +21,7 @@ define double @constraint_f_double(double %a) nounwind {
 ; CSKYF-NEXT:  .LCPI0_0:
 ; CSKYF-NEXT:    .long gd
 
-  %1 = load double, double* @gd
+  %1 = load double, ptr @gd
   %2 = tail call double asm "faddd $0, $1, $2", "=v,v,v"(double %a, double %1)
   ret double %2
 }
@@ -45,7 +45,7 @@ define double @constraint_f_double_abi_name(double %a) nounwind {
 ; CSKYF-NEXT:  .LCPI1_0:
 ; CSKYF-NEXT:    .long gd
 
-  %1 = load double, double* @gd
+  %1 = load double, ptr @gd
   %2 = tail call double asm "faddd $0, $1, $2", "={fr1},{fr2},{fr3}"(double %a, double %1)
   ret double %2
 }

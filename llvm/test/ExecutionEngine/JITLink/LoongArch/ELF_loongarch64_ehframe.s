@@ -1,32 +1,27 @@
 # REQUIRES: asserts
-# RUN: llvm-mc --triple=loongarch64-linux-gnu --filetype=obj -o %t %s
-# RUN: llvm-jitlink --noexec --phony-externals --debug-only=jitlink %t 2>&1 | \
-# RUN:   FileCheck %s
+# RUN: llvm-mc -triple=loongarch64-linux-gnu -filetype=obj -o %t %s
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec \
+# RUN:              -phony-externals %t 2>&1 | FileCheck %s
 
 ## Check that splitting of eh-frame sections works.
 
 # CHECK: DWARFRecordSectionSplitter: Processing .eh_frame...
 # CHECK:  Processing block at
 # CHECK:    Processing CFI record at
-# CHECK:      Extracted {{.*}} section = .eh_frame
 # CHECK:    Processing CFI record at
-# CHECK:      Extracted {{.*}} section = .eh_frame
 # CHECK: EHFrameEdgeFixer: Processing .eh_frame in "{{.*}}"...
 # CHECK:   Processing block at
-# CHECK:     Processing CFI record at
-# CHECK:       Record is CIE
+# CHECK:     Record is CIE
 # CHECK:   Processing block at
-# CHECK:     Processing CFI record at
-# CHECK:       Record is FDE
-# CHECK:         Adding edge at {{.*}} to CIE at: {{.*}}
-# CHECK:         Existing edge at {{.*}} to PC begin at {{.*}}
-# CHECK:         Adding keep-alive edge from target at {{.*}} to FDE at {{.*}}
+# CHECK:     Record is FDE
+# CHECK:       Adding edge at {{.*}} to CIE at: {{.*}}
+# CHECK:       Existing edge at {{.*}} to PC begin at {{.*}}
+# CHECK:       Adding keep-alive edge from target at {{.*}} to FDE at {{.*}}
 # CHECK:   Processing block at
-# CHECK:     Processing CFI record at
-# CHECK:       Record is FDE
-# CHECK:         Adding edge at {{.*}} to CIE at: {{.*}}
-# CHECK:         Existing edge at {{.*}} to PC begin at {{.*}}
-# CHECK:         Adding keep-alive edge from target at {{.*}} to FDE at {{.*}}
+# CHECK:     Record is FDE
+# CHECK:       Adding edge at {{.*}} to CIE at: {{.*}}
+# CHECK:       Existing edge at {{.*}} to PC begin at {{.*}}
+# CHECK:       Adding keep-alive edge from target at {{.*}} to FDE at {{.*}}
 
  .text
  .globl main

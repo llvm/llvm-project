@@ -11,23 +11,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/Simplify.h"
+#include "polly/Options.h"
 #include "polly/ScopInfo.h"
-#include "polly/ScopPass.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLOStream.h"
 #include "polly/Support/ISLTools.h"
 #include "polly/Support/VirtualInstruction.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-simplify"
 
 using namespace llvm;
 using namespace polly;
 
 namespace {
+
+static cl::opt<bool>
+    PollyPrintSimplify("polly-print-simplify",
+                       cl::desc("Polly - Print Simplify actions"),
+                       cl::cat(PollyCategory));
 
 #define TWO_STATISTICS(VARNAME, DESC)                                          \
   static llvm::Statistic VARNAME[2] = {                                        \
@@ -237,8 +242,8 @@ void SimplifyImpl::removeEmptyDomainStmts() {
 
   assert(NumStmtsBefore >= S->getSize());
   EmptyDomainsRemoved = NumStmtsBefore - S->getSize();
-  LLVM_DEBUG(dbgs() << "Removed " << EmptyDomainsRemoved << " (of "
-                    << NumStmtsBefore << ") statements with empty domains \n");
+  POLLY_DEBUG(dbgs() << "Removed " << EmptyDomainsRemoved << " (of "
+                     << NumStmtsBefore << ") statements with empty domains \n");
   TotalEmptyDomainsRemoved[CallNo] += EmptyDomainsRemoved;
 }
 
@@ -280,8 +285,8 @@ void SimplifyImpl::removeOverwrites() {
       // If all of a write's elements are overwritten, remove it.
       isl::union_map AccRelUnion = AccRel;
       if (AccRelUnion.is_subset(WillBeOverwritten)) {
-        LLVM_DEBUG(dbgs() << "Removing " << MA
-                          << " which will be overwritten anyway\n");
+        POLLY_DEBUG(dbgs() << "Removing " << MA
+                           << " which will be overwritten anyway\n");
 
         Stmt.removeSingleMemoryAccess(MA);
         OverwritesRemoved++;
@@ -532,9 +537,9 @@ void SimplifyImpl::removeRedundantWrites() {
           isl::map AccRelStoredVal = isl::map::from_domain_and_range(
               AccRelWrapped, makeValueSet(StoredVal));
           if (isl::union_map(AccRelStoredVal).is_subset(Known)) {
-            LLVM_DEBUG(dbgs() << "Cleanup of " << MA << ":\n");
-            LLVM_DEBUG(dbgs() << "      Scalar: " << *StoredVal << "\n");
-            LLVM_DEBUG(dbgs() << "      AccRel: " << AccRel << "\n");
+            POLLY_DEBUG(dbgs() << "Cleanup of " << MA << ":\n");
+            POLLY_DEBUG(dbgs() << "      Scalar: " << *StoredVal << "\n");
+            POLLY_DEBUG(dbgs() << "      AccRel: " << AccRel << "\n");
 
             Stmt.removeSingleMemoryAccess(MA);
 
@@ -576,8 +581,8 @@ void SimplifyImpl::removeUnnecessaryStmts() {
   S->simplifySCoP(true);
   assert(NumStmtsBefore >= S->getSize());
   StmtsRemoved = NumStmtsBefore - S->getSize();
-  LLVM_DEBUG(dbgs() << "Removed " << StmtsRemoved << " (of " << NumStmtsBefore
-                    << ") statements\n");
+  POLLY_DEBUG(dbgs() << "Removed " << StmtsRemoved << " (of " << NumStmtsBefore
+                     << ") statements\n");
   TotalStmtsRemoved[CallNo] += StmtsRemoved;
 }
 
@@ -595,7 +600,7 @@ void SimplifyImpl::removeEmptyPartialAccesses() {
       if (!AccRel.is_empty().is_true())
         continue;
 
-      LLVM_DEBUG(
+      POLLY_DEBUG(
           dbgs() << "Removing " << MA
                  << " because it's a partial access that never occurs\n");
       DeferredRemove.push_back(MA);
@@ -628,8 +633,8 @@ void SimplifyImpl::markAndSweep(LoopInfo *LI) {
   for (MemoryAccess *MA : AllMAs) {
     if (UsedMA.count(MA))
       continue;
-    LLVM_DEBUG(dbgs() << "Removing " << MA
-                      << " because its value is not used\n");
+    POLLY_DEBUG(dbgs() << "Removing " << MA
+                       << " because its value is not used\n");
     ScopStmt *Stmt = MA->getStatement();
     Stmt->removeSingleMemoryAccess(MA);
 
@@ -650,8 +655,8 @@ void SimplifyImpl::markAndSweep(LoopInfo *LI) {
     for (Instruction *Inst : AllInsts) {
       auto It = UsedInsts.find({&Stmt, Inst});
       if (It == UsedInsts.end()) {
-        LLVM_DEBUG(dbgs() << "Removing "; Inst->print(dbgs());
-                   dbgs() << " because it is not used\n");
+        POLLY_DEBUG(dbgs() << "Removing "; Inst->print(dbgs());
+                    dbgs() << " because it is not used\n");
         DeadInstructionsRemoved++;
         TotalDeadInstructionsRemoved[CallNo]++;
         continue;
@@ -708,31 +713,31 @@ void SimplifyImpl::run(Scop &S, LoopInfo *LI) {
   this->S = &S;
   ScopsProcessed[CallNo]++;
 
-  LLVM_DEBUG(dbgs() << "Removing statements that are never executed...\n");
+  POLLY_DEBUG(dbgs() << "Removing statements that are never executed...\n");
   removeEmptyDomainStmts();
 
-  LLVM_DEBUG(dbgs() << "Removing partial writes that never happen...\n");
+  POLLY_DEBUG(dbgs() << "Removing partial writes that never happen...\n");
   removeEmptyPartialAccesses();
 
-  LLVM_DEBUG(dbgs() << "Removing overwrites...\n");
+  POLLY_DEBUG(dbgs() << "Removing overwrites...\n");
   removeOverwrites();
 
-  LLVM_DEBUG(dbgs() << "Coalesce partial writes...\n");
+  POLLY_DEBUG(dbgs() << "Coalesce partial writes...\n");
   coalesceWrites();
 
-  LLVM_DEBUG(dbgs() << "Removing redundant writes...\n");
+  POLLY_DEBUG(dbgs() << "Removing redundant writes...\n");
   removeRedundantWrites();
 
-  LLVM_DEBUG(dbgs() << "Cleanup unused accesses...\n");
+  POLLY_DEBUG(dbgs() << "Cleanup unused accesses...\n");
   markAndSweep(LI);
 
-  LLVM_DEBUG(dbgs() << "Removing statements without side effects...\n");
+  POLLY_DEBUG(dbgs() << "Removing statements without side effects...\n");
   removeUnnecessaryStmts();
 
   if (isModified())
     ScopsModified[CallNo]++;
-  LLVM_DEBUG(dbgs() << "\nFinal Scop:\n");
-  LLVM_DEBUG(dbgs() << S);
+  POLLY_DEBUG(dbgs() << "\nFinal Scop:\n");
+  POLLY_DEBUG(dbgs() << S);
 
   auto ScopStats = S.getStatistics();
   NumValueWrites[CallNo] += ScopStats.NumValueWrites;
@@ -755,74 +760,7 @@ void SimplifyImpl::printScop(raw_ostream &OS, Scop &S) const {
   printAccesses(OS);
 }
 
-class SimplifyWrapperPass final : public ScopPass {
-public:
-  static char ID;
-  int CallNo;
-  std::optional<SimplifyImpl> Impl;
-
-  explicit SimplifyWrapperPass(int CallNo = 0) : ScopPass(ID), CallNo(CallNo) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequiredTransitive<ScopInfoRegionPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-  bool runOnScop(Scop &S) override {
-    LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-
-    Impl.emplace(CallNo);
-    Impl->run(S, LI);
-
-    return false;
-  }
-
-  void printScop(raw_ostream &OS, Scop &S) const override {
-    if (Impl)
-      Impl->printScop(OS, S);
-  }
-
-  void releaseMemory() override { Impl.reset(); }
-};
-
-char SimplifyWrapperPass::ID;
-
-static llvm::PreservedAnalyses
-runSimplifyUsingNPM(Scop &S, ScopAnalysisManager &SAM,
-                    ScopStandardAnalysisResults &SAR, SPMUpdater &U, int CallNo,
-                    raw_ostream *OS) {
-  SimplifyImpl Impl(CallNo);
-  Impl.run(S, &SAR.LI);
-  if (OS) {
-    *OS << "Printing analysis 'Polly - Simplify' for region: '" << S.getName()
-        << "' in function '" << S.getFunction().getName() << "':\n";
-    Impl.printScop(*OS, S);
-  }
-
-  if (!Impl.isModified())
-    return llvm::PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserveSet<AllAnalysesOn<Module>>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  PA.preserveSet<AllAnalysesOn<Loop>>();
-  return PA;
-}
-
 } // anonymous namespace
-
-llvm::PreservedAnalyses SimplifyPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                          ScopStandardAnalysisResults &SAR,
-                                          SPMUpdater &U) {
-  return runSimplifyUsingNPM(S, SAM, SAR, U, CallNo, nullptr);
-}
-
-llvm::PreservedAnalyses
-SimplifyPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
-                         ScopStandardAnalysisResults &SAR, SPMUpdater &U) {
-  return runSimplifyUsingNPM(S, SAM, SAR, U, CallNo, &OS);
-}
 
 SmallVector<MemoryAccess *, 32> polly::getAccessesInOrder(ScopStmt &Stmt) {
   SmallVector<MemoryAccess *, 32> Accesses;
@@ -842,58 +780,15 @@ SmallVector<MemoryAccess *, 32> polly::getAccessesInOrder(ScopStmt &Stmt) {
   return Accesses;
 }
 
-Pass *polly::createSimplifyWrapperPass(int CallNo) {
-  return new SimplifyWrapperPass(CallNo);
-}
-
-INITIALIZE_PASS_BEGIN(SimplifyWrapperPass, "polly-simplify", "Polly - Simplify",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(SimplifyWrapperPass, "polly-simplify", "Polly - Simplify",
-                    false, false)
-
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Print result from SimplifyWrapperPass.
-class SimplifyPrinterLegacyPass final : public ScopPass {
-public:
-  static char ID;
-
-  SimplifyPrinterLegacyPass() : SimplifyPrinterLegacyPass(outs()) {}
-  explicit SimplifyPrinterLegacyPass(llvm::raw_ostream &OS)
-      : ScopPass(ID), OS(OS) {}
-
-  bool runOnScop(Scop &S) override {
-    SimplifyWrapperPass &P = getAnalysis<SimplifyWrapperPass>();
-
-    OS << "Printing analysis '" << P.getPassName() << "' for region: '"
-       << S.getRegion().getNameStr() << "' in function '"
-       << S.getFunction().getName() << "':\n";
-    P.printScop(OS, S);
-
-    return false;
+bool polly::runSimplify(Scop &S, int CallNo) {
+  SimplifyImpl Impl(CallNo);
+  Impl.run(S, S.getLI());
+  if (PollyPrintSimplify) {
+    outs() << "Printing analysis 'Polly - Simplify' for region: '"
+           << S.getName() << "' in function '" << S.getFunction().getName()
+           << "':\n";
+    Impl.printScop(outs(), S);
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    ScopPass::getAnalysisUsage(AU);
-    AU.addRequired<SimplifyWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-private:
-  llvm::raw_ostream &OS;
-};
-
-char SimplifyPrinterLegacyPass::ID = 0;
-} // namespace
-
-Pass *polly::createSimplifyPrinterLegacyPass(raw_ostream &OS) {
-  return new SimplifyPrinterLegacyPass(OS);
+  return Impl.isModified();
 }
-
-INITIALIZE_PASS_BEGIN(SimplifyPrinterLegacyPass, "polly-print-simplify",
-                      "Polly - Print Simplify actions", false, false)
-INITIALIZE_PASS_DEPENDENCY(SimplifyWrapperPass)
-INITIALIZE_PASS_END(SimplifyPrinterLegacyPass, "polly-print-simplify",
-                    "Polly - Print Simplify actions", false, false)

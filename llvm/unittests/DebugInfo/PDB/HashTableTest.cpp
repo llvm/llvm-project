@@ -147,7 +147,7 @@ TEST(HashTableTest, Serialization) {
   }
 
   std::vector<uint8_t> Buffer(Table.calculateSerializedLength());
-  MutableBinaryByteStream Stream(Buffer, little);
+  MutableBinaryByteStream Stream(Buffer, llvm::endianness::little);
   BinaryStreamWriter Writer(Stream);
   EXPECT_THAT_ERROR(Table.commit(Writer), Succeeded());
   // We should have written precisely the number of bytes we calculated earlier.
@@ -233,7 +233,7 @@ struct FooBarHashTraits {
 
   uint32_t lookupKeyToStorageKey(StringRef S) {
     uint32_t N = Buffer.size();
-    Buffer.insert(Buffer.end(), S.begin(), S.end());
+    llvm::append_range(Buffer, S);
     Buffer.push_back('\0');
     return N;
   }
@@ -251,7 +251,7 @@ TEST(HashTableTest, NonTrivialValueType) {
   }
 
   std::vector<uint8_t> Buffer(Table.calculateSerializedLength());
-  MutableBinaryByteStream Stream(Buffer, little);
+  MutableBinaryByteStream Stream(Buffer, llvm::endianness::little);
   BinaryStreamWriter Writer(Stream);
   EXPECT_THAT_ERROR(Table.commit(Writer), Succeeded());
   // We should have written precisely the number of bytes we calculated earlier.

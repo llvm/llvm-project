@@ -18,9 +18,7 @@ namespace {
 class FormatTestTextProto : public FormatTestBase {
 protected:
   virtual FormatStyle getDefaultStyle() const override {
-    FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
-    Style.ColumnLimit = 60; // To make writing tests easier.
-    return Style;
+    return getTextProtoStyleWithColumns(60);
   }
 };
 
@@ -126,7 +124,8 @@ TEST_F(FormatTestTextProto, ImplicitStringLiteralConcatenation) {
                "         'bbbbb'");
   verifyFormat("field_a: \"aaaaa\"\n"
                "         \"bbbbb\"");
-  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
+
+  auto Style = getDefaultStyle();
   Style.AlwaysBreakBeforeMultilineStrings = true;
   verifyFormat("field_a:\n"
                "    'aaaaa'\n"
@@ -359,46 +358,40 @@ TEST_F(FormatTestTextProto, KeepsCommentsIndentedInList) {
 }
 
 TEST_F(FormatTestTextProto, UnderstandsHashComments) {
-  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
-  Style.ColumnLimit = 60; // To make writing tests easier.
-  EXPECT_EQ("aaa: 100\n"
-            "## this is a double-hash comment.\n"
-            "bb: 100\n"
-            "## another double-hash comment.\n"
-            "### a triple-hash comment\n"
-            "cc: 200\n"
-            "### another triple-hash comment\n"
-            "#### a quadriple-hash comment\n"
-            "dd: 100\n"
-            "#### another quadriple-hash comment\n",
-            format("aaa: 100\n"
-                   "##this is a double-hash comment.\n"
-                   "bb: 100\n"
-                   "## another double-hash comment.\n"
-                   "###a triple-hash comment\n"
-                   "cc: 200\n"
-                   "### another triple-hash comment\n"
-                   "####a quadriple-hash comment\n"
-                   "dd: 100\n"
-                   "#### another quadriple-hash comment\n",
-                   Style));
+  auto Style = getDefaultStyle();
+
+  verifyFormat("aaa: 100\n"
+               "## this is a double-hash comment.\n"
+               "bb: 100\n"
+               "## another double-hash comment.\n"
+               "### a triple-hash comment\n"
+               "cc: 200\n"
+               "### another triple-hash comment\n"
+               "#### a quadriple-hash comment\n"
+               "dd: 100\n"
+               "#### another quadriple-hash comment",
+               "aaa: 100\n"
+               "##this is a double-hash comment.\n"
+               "bb: 100\n"
+               "## another double-hash comment.\n"
+               "###a triple-hash comment\n"
+               "cc: 200\n"
+               "### another triple-hash comment\n"
+               "####a quadriple-hash comment\n"
+               "dd: 100\n"
+               "#### another quadriple-hash comment",
+               Style);
 
   // Ensure we support a common pattern for naming sections.
-  EXPECT_EQ("##############\n"
-            "# section name\n"
-            "##############",
-            format("##############\n"
-                   "# section name\n"
-                   "##############",
-                   Style));
+  verifyFormat("##############\n"
+               "# section name\n"
+               "##############",
+               Style);
 
-  EXPECT_EQ("///////////////\n"
-            "// section name\n"
-            "///////////////",
-            format("///////////////\n"
-                   "// section name\n"
-                   "///////////////",
-                   Style));
+  verifyFormat("///////////////\n"
+               "// section name\n"
+               "///////////////",
+               Style);
 }
 
 TEST_F(FormatTestTextProto, FormatsExtensions) {
@@ -519,9 +512,9 @@ TEST_F(FormatTestTextProto, FormatsRepeatedListInitializers) {
                "  ]\n"
                "}\n"
                "key: value");
-  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
-  Style.ColumnLimit = 60; // To make writing tests easier.
-  Style.Cpp11BracedListStyle = true;
+
+  auto Style = getDefaultStyle();
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_AlignFirstComment;
   verifyFormat("keys: [1]", Style);
 }
 
@@ -540,11 +533,10 @@ TEST_F(FormatTestTextProto, AcceptsOperatorAsKey) {
 
 TEST_F(FormatTestTextProto, BreaksConsecutiveStringLiterals) {
   verifyFormat("ala: \"str1\"\n"
-               "     \"str2\"\n");
+               "     \"str2\"");
 }
 
 TEST_F(FormatTestTextProto, PutsMultipleEntriesInExtensionsOnNewlines) {
-  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
   verifyFormat("pppppppppp: {\n"
                "  ssssss: \"http://example.com/blahblahblah\"\n"
                "  ppppppp: \"sssss/MMMMMMMMMMMM\"\n"
@@ -556,12 +548,10 @@ TEST_F(FormatTestTextProto, PutsMultipleEntriesInExtensionsOnNewlines) {
                "    key: value\n"
                "  }\n"
                "}",
-               Style);
+               getGoogleStyle(FormatStyle::LK_TextProto));
 }
 
 TEST_F(FormatTestTextProto, BreaksAfterBraceFollowedByClosingBraceOnNextLine) {
-  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
-  Style.ColumnLimit = 60;
   verifyFormat("keys: [\n"
                "  data: { item: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }\n"
                "]");
@@ -571,10 +561,6 @@ TEST_F(FormatTestTextProto, BreaksAfterBraceFollowedByClosingBraceOnNextLine) {
 }
 
 TEST_F(FormatTestTextProto, BreaksEntriesOfSubmessagesContainingSubmessages) {
-  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
-  Style.ColumnLimit = 60;
-  // The column limit allows for the keys submessage to be put on 1 line, but we
-  // break it since it contains a submessage an another entry.
   verifyFormat("key: valueeeeeeee\n"
                "keys: {\n"
                "  item: 'aaaaaaaaaaaaaaaa'\n"
@@ -669,7 +655,7 @@ TEST_F(FormatTestTextProto, BreaksEntriesOfSubmessagesContainingSubmessages) {
                "  key: 1\n"
                "  sub: {}\n"
                "}\n"
-               "# comment\n");
+               "# comment");
   verifyFormat("sub: {\n"
                "  key: 1\n"
                "  # comment\n"

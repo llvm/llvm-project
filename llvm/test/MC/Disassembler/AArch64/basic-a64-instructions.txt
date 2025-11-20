@@ -2,7 +2,7 @@
 # RUN: llvm-mc -triple=arm64 -mattr=+v8a,+fp-armv8 -disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple=arm64 -mattr=+v8a,+fp-armv8,+fullfp16 -disassemble < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16
 # RUN: llvm-mc -triple=arm64 -mattr=+v8.2a -disassemble < %s | FileCheck %s --check-prefix=CHECK-V82
-# RUN: llvm-mc -triple=arm64 -mattr=+v8.3a -disassemble < %s | FileCheck %s --check-prefix=CHECK-V83
+# RUN: llvm-mc -triple=arm64 -mattr=+ccidx -disassemble < %s | FileCheck %s --check-prefix=CHECK-V83
 
 #------------------------------------------------------------------------------
 # Add/sub (immediate)
@@ -3245,6 +3245,7 @@
 # CHECK: msr      {{sctlr_el2|SCTLR_EL2}}, x12
 # CHECK: msr      {{sctlr_el3|SCTLR_EL3}}, x12
 # CHECK: msr      {{actlr_el1|ACTLR_EL1}}, x12
+# CHECK: msr      {{actlr_el12|ACTLR_EL12}}, x12
 # CHECK: msr      {{actlr_el2|ACTLR_EL2}}, x12
 # CHECK: msr      {{actlr_el3|ACTLR_EL3}}, x12
 # CHECK: msr      {{cpacr_el1|CPACR_EL1}}, x12
@@ -3559,11 +3560,13 @@
 # CHECK: mrs      x9, {{id_aa64pfr2_el1|ID_AA64PFR2_EL1}}
 # CHECK: mrs      x9, {{id_aa64dfr0_el1|ID_AA64DFR0_EL1}}
 # CHECK: mrs      x9, {{id_aa64dfr1_el1|ID_AA64DFR1_EL1}}
+# CHECK: mrs      x9, {{id_aa64dfr2_el1|ID_AA64DFR2_EL1}}
 # CHECK: mrs      x9, {{id_aa64afr0_el1|ID_AA64AFR0_EL1}}
 # CHECK: mrs      x9, {{id_aa64afr1_el1|ID_AA64AFR1_EL1}}
 # CHECK: mrs      x9, {{id_aa64isar0_el1|ID_AA64ISAR0_EL1}}
 # CHECK: mrs      x9, {{id_aa64isar1_el1|ID_AA64ISAR1_EL1}}
 # CHECK: mrs      x9, {{id_aa64isar2_el1|ID_AA64ISAR2_EL1}}
+# CHECK: mrs      x9, {{id_aa64isar2_el1|ID_AA64ISAR3_EL1}}
 # CHECK: mrs      x9, {{id_aa64mmfr0_el1|ID_AA64MMFR0_EL1}}
 # CHECK: mrs      x9, {{id_aa64mmfr1_el1|ID_AA64MMFR1_EL1}}
 # CHECK: mrs      x9, {{id_aa64mmfr2_el1|ID_AA64MMFR2_EL1}}
@@ -3573,6 +3576,7 @@
 # CHECK: mrs      x9, {{sctlr_el2|SCTLR_EL2}}
 # CHECK: mrs      x9, {{sctlr_el3|SCTLR_EL3}}
 # CHECK: mrs      x9, {{actlr_el1|ACTLR_EL1}}
+# CHECK: mrs      x9, {{actlr_el12|ACTLR_EL12}}
 # CHECK: mrs      x9, {{actlr_el2|ACTLR_EL2}}
 # CHECK: mrs      x9, {{actlr_el3|ACTLR_EL3}}
 # CHECK: mrs      x9, {{cpacr_el1|CPACR_EL1}}
@@ -3865,6 +3869,7 @@
 0xc 0x10 0x1c 0xd5
 0xc 0x10 0x1e 0xd5
 0x2c 0x10 0x18 0xd5
+0x2c 0x10 0x1d 0xd5
 0x2c 0x10 0x1c 0xd5
 0x2c 0x10 0x1e 0xd5
 0x4c 0x10 0x18 0xd5
@@ -4181,11 +4186,13 @@
 0x49 0x4 0x38 0xd5
 0x9 0x5 0x38 0xd5
 0x29 0x5 0x38 0xd5
+0x49 0x5 0x38 0xd5
 0x89 0x5 0x38 0xd5
 0xa9 0x5 0x38 0xd5
 0x9 0x6 0x38 0xd5
 0x29 0x6 0x38 0xd5
 0x49 0x06 0x38 0xd5
+0x69 0x06 0x38 0xd5
 0x9 0x7 0x38 0xd5
 0x29 0x7 0x38 0xd5
 0x49 0x7 0x38 0xd5
@@ -4195,6 +4202,7 @@
 0x9 0x10 0x3c 0xd5
 0x9 0x10 0x3e 0xd5
 0x29 0x10 0x38 0xd5
+0x29 0x10 0x3d 0xd5
 0x29 0x10 0x3c 0xd5
 0x29 0x10 0x3e 0xd5
 0x49 0x10 0x38 0xd5

@@ -14,9 +14,10 @@
 using namespace mlir;
 using namespace presburger;
 
-static DivisionRepr parseDivisionRepr(unsigned numVars, unsigned numDivs,
-                                      ArrayRef<ArrayRef<MPInt>> dividends,
-                                      ArrayRef<MPInt> divisors) {
+static DivisionRepr
+parseDivisionRepr(unsigned numVars, unsigned numDivs,
+                  ArrayRef<ArrayRef<DynamicAPInt>> dividends,
+                  ArrayRef<DynamicAPInt> divisors) {
   DivisionRepr repr(numVars, numDivs);
   for (unsigned i = 0, rows = dividends.size(); i < rows; ++i)
     repr.setDiv(i, dividends[i], divisors[i]);
@@ -37,12 +38,15 @@ static void checkEqual(DivisionRepr &a, DivisionRepr &b) {
 
 TEST(UtilsTest, ParseAndCompareDivisionReprTest) {
   auto merge = [](unsigned i, unsigned j) -> bool { return true; };
-  DivisionRepr a = parseDivisionRepr(1, 1, {{MPInt(1), MPInt(2)}}, {MPInt(2)}),
-               b = parseDivisionRepr(1, 1, {{MPInt(1), MPInt(2)}}, {MPInt(2)}),
-               c = parseDivisionRepr(2, 2,
-                                     {{MPInt(0), MPInt(1), MPInt(2)},
-                                      {MPInt(0), MPInt(1), MPInt(2)}},
-                                     {MPInt(2), MPInt(2)});
+  DivisionRepr a = parseDivisionRepr(1, 1, {{DynamicAPInt(1), DynamicAPInt(2)}},
+                                     {DynamicAPInt(2)}),
+               b = parseDivisionRepr(1, 1, {{DynamicAPInt(1), DynamicAPInt(2)}},
+                                     {DynamicAPInt(2)}),
+               c = parseDivisionRepr(
+                   2, 2,
+                   {{DynamicAPInt(0), DynamicAPInt(1), DynamicAPInt(2)},
+                    {DynamicAPInt(0), DynamicAPInt(1), DynamicAPInt(2)}},
+                   {DynamicAPInt(2), DynamicAPInt(2)});
   c.removeDuplicateDivs(merge);
   checkEqual(a, b);
   checkEqual(a, c);
@@ -50,19 +54,43 @@ TEST(UtilsTest, ParseAndCompareDivisionReprTest) {
 
 TEST(UtilsTest, DivisionReprNormalizeTest) {
   auto merge = [](unsigned i, unsigned j) -> bool { return true; };
-  DivisionRepr a = parseDivisionRepr(2, 1, {{MPInt(1), MPInt(2), MPInt(-1)}},
-                                     {MPInt(2)}),
-               b = parseDivisionRepr(2, 1, {{MPInt(16), MPInt(32), MPInt(-16)}},
-                                     {MPInt(32)}),
-               c = parseDivisionRepr(1, 1, {{MPInt(12), MPInt(-4)}},
-                                     {MPInt(8)}),
-               d = parseDivisionRepr(2, 2,
-                                     {{MPInt(1), MPInt(2), MPInt(-1)},
-                                      {MPInt(4), MPInt(8), MPInt(-4)}},
-                                     {MPInt(2), MPInt(8)});
+  DivisionRepr a = parseDivisionRepr(
+                   2, 1, {{DynamicAPInt(1), DynamicAPInt(2), DynamicAPInt(-1)}},
+                   {DynamicAPInt(2)}),
+               b = parseDivisionRepr(
+                   2, 1,
+                   {{DynamicAPInt(16), DynamicAPInt(32), DynamicAPInt(-16)}},
+                   {DynamicAPInt(32)}),
+               c = parseDivisionRepr(1, 1,
+                                     {{DynamicAPInt(12), DynamicAPInt(-4)}},
+                                     {DynamicAPInt(8)}),
+               d = parseDivisionRepr(
+                   2, 2,
+                   {{DynamicAPInt(1), DynamicAPInt(2), DynamicAPInt(-1)},
+                    {DynamicAPInt(4), DynamicAPInt(8), DynamicAPInt(-4)}},
+                   {DynamicAPInt(2), DynamicAPInt(8)});
   b.removeDuplicateDivs(merge);
   c.removeDuplicateDivs(merge);
   d.removeDuplicateDivs(merge);
   checkEqual(a, b);
   checkEqual(c, d);
+}
+
+TEST(UtilsTest, convolution) {
+  std::vector<Fraction> aVals({1, 2, 3, 4});
+  std::vector<Fraction> bVals({7, 3, 1, 6});
+  ArrayRef<Fraction> a(aVals);
+  ArrayRef<Fraction> b(bVals);
+
+  std::vector<Fraction> conv = multiplyPolynomials(a, b);
+
+  EXPECT_EQ(conv, std::vector<Fraction>({7, 17, 28, 45, 27, 22, 24}));
+
+  aVals = {3, 6, 0, 2, 5};
+  bVals = {2, 0, 6};
+  a = aVals;
+  b = bVals;
+
+  conv = multiplyPolynomials(a, b);
+  EXPECT_EQ(conv, std::vector<Fraction>({6, 12, 18, 40, 10, 12, 30}));
 }

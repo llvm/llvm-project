@@ -46,9 +46,47 @@ def get_include_dirs() -> Sequence[str]:
 #   c. If the module has a 'context_init_hook', it will be added to a list
 #     of callbacks that are invoked as the last step of Context
 #     initialization (and passed the Context under construction).
+#   d. If the module has a 'disable_multithreading' attribute, it will be
+#     taken as a boolean. If it is True for any initializer, then the
+#     default behavior of enabling multithreading on the context
+#     will be suppressed. This complies with the original behavior of all
+#     contexts being created with multithreading enabled while allowing
+#     this behavior to be changed if needed (i.e. if a context_init_hook
+#     explicitly sets up multithreading).
 #
 # This facility allows downstreams to customize Context creation to their
 # needs.
+
+_dialect_registry = None
+_load_on_create_dialects = None
+
+
+def get_dialect_registry():
+    global _dialect_registry
+
+    if _dialect_registry is None:
+        from ._mlir import ir
+
+        _dialect_registry = ir.DialectRegistry()
+
+    return _dialect_registry
+
+
+def append_load_on_create_dialect(dialect: str):
+    global _load_on_create_dialects
+    if _load_on_create_dialects is None:
+        _load_on_create_dialects = [dialect]
+    else:
+        _load_on_create_dialects.append(dialect)
+
+
+def get_load_on_create_dialects():
+    global _load_on_create_dialects
+    if _load_on_create_dialects is None:
+        _load_on_create_dialects = []
+    return _load_on_create_dialects
+
+
 def _site_initialize():
     import importlib
     import itertools
@@ -56,10 +94,18 @@ def _site_initialize():
     from ._mlir import ir
 
     logger = logging.getLogger(__name__)
-    registry = ir.DialectRegistry()
     post_init_hooks = []
+    disable_multithreading = False
+    # This flag disables eagerly loading all dialects. Eagerly loading is often
+    # not the desired behavior (see
+    # https://github.com/llvm/llvm-project/issues/56037), and the logic is that
+    # if any module has this attribute set, then we don't load all (e.g., it's
+    # being used in a solution where the loading is controlled).
+    disable_load_all_available_dialects = False
 
     def process_initializer_module(module_name):
+        nonlocal disable_multithreading
+        nonlocal disable_load_all_available_dialects
         try:
             m = importlib.import_module(f".{module_name}", __name__)
         except ModuleNotFoundError:
@@ -71,19 +117,28 @@ def _site_initialize():
                 "encountered otherwise and the MLIR Python API may not function."
             )
             logger.warning(message, exc_info=True)
+            return False
 
         logger.debug("Initializing MLIR with module: %s", module_name)
         if hasattr(m, "register_dialects"):
             logger.debug("Registering dialects from initializer %r", m)
-            m.register_dialects(registry)
+            m.register_dialects(get_dialect_registry())
         if hasattr(m, "context_init_hook"):
             logger.debug("Adding context init hook from %r", m)
             post_init_hooks.append(m.context_init_hook)
+        if hasattr(m, "disable_multithreading"):
+            if bool(m.disable_multithreading):
+                logger.debug("Disabling multi-threading for context")
+                disable_multithreading = True
+        if hasattr(m, "disable_load_all_available_dialects"):
+            disable_load_all_available_dialects = True
         return True
 
     # If _mlirRegisterEverything is built, then include it as an initializer
     # module.
-    process_initializer_module("_mlirRegisterEverything")
+    init_module = None
+    if process_initializer_module("_mlirRegisterEverything"):
+        init_module = importlib.import_module(f"._mlirRegisterEverything", __name__)
 
     # Load all _site_initialize_{i} modules, where 'i' is a number starting
     # at 0.
@@ -92,16 +147,55 @@ def _site_initialize():
         if not process_initializer_module(module_name):
             break
 
-    class Context(ir._BaseContext):
-        def __init__(self, *args, **kwargs):
+    ir._Context = ir.Context
+
+    class Context(ir._Context):
+        def __init__(
+            self, load_on_create_dialects=None, thread_pool=None, *args, **kwargs
+        ):
             super().__init__(*args, **kwargs)
-            self.append_dialect_registry(registry)
+            self.append_dialect_registry(get_dialect_registry())
             for hook in post_init_hooks:
                 hook(self)
-            # TODO: There is some debate about whether we should eagerly load
-            # all dialects. It is being done here in order to preserve existing
-            # behavior. See: https://github.com/llvm/llvm-project/issues/56037
-            self.load_all_available_dialects()
+            if disable_multithreading and thread_pool is not None:
+                raise ValueError(
+                    "Context constructor has given thread_pool argument, "
+                    "but disable_multithreading flag is True. "
+                    "Please, set thread_pool argument to None or "
+                    "set disable_multithreading flag to False."
+                )
+            if not disable_multithreading:
+                if thread_pool is None:
+                    self.enable_multithreading(True)
+                else:
+                    self.set_thread_pool(thread_pool)
+            if load_on_create_dialects is not None:
+                logger.debug(
+                    "Loading all dialects from load_on_create_dialects arg %r",
+                    load_on_create_dialects,
+                )
+                for dialect in load_on_create_dialects:
+                    # This triggers loading the dialect into the context.
+                    _ = self.dialects[dialect]
+            else:
+                if disable_load_all_available_dialects:
+                    dialects = get_load_on_create_dialects()
+                    if dialects:
+                        logger.debug(
+                            "Loading all dialects from global load_on_create_dialects %r",
+                            dialects,
+                        )
+                        for dialect in dialects:
+                            # This triggers loading the dialect into the context.
+                            _ = self.dialects[dialect]
+                else:
+                    logger.debug("Loading all available dialects")
+                    self.load_all_available_dialects()
+            if init_module:
+                logger.debug(
+                    "Registering translations from initializer %r", init_module
+                )
+                init_module.register_llvm_translations(self)
 
     ir.Context = Context
 

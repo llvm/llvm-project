@@ -77,12 +77,12 @@ void implicit_maps_float_complex (int a){
 // CK12-64: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
 // CK12-64: [[ADDR:%.+]] = alloca i[[sz]],
 // CK12-64: store i[[sz]] [[ARG]], ptr [[ADDR]],
-// CK12-64: {{.+}} = getelementptr inbounds { float, float }, ptr [[ADDR]], i32 0, i32 0
+// CK12-64: {{.+}} = getelementptr inbounds nuw { float, float }, ptr [[ADDR]], i32 0, i32 0
 
 // CK12-32: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
 // CK12-32: [[ADDR:%.+]] = alloca ptr,
 // CK12-32: store ptr [[ARG]], ptr [[ADDR]],
 // CK12-32: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK12-32: {{.+}} = getelementptr inbounds { float, float }, ptr [[REF]], i32 0, i32 0
+// CK12-32: {{.+}} = getelementptr inbounds nuw { float, float }, ptr [[REF]], i32 0, i32 0
 #endif // CK12
 #endif

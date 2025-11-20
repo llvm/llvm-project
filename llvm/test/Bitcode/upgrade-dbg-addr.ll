@@ -7,14 +7,13 @@ define i32 @example(i32 %num) {
 entry:
   %num.addr = alloca i32, align 4
   store i32 %num, ptr %num.addr, align 4
-  ; CHECK-NOT: call void @llvm.dbg.addr
-  ; CHECK: call void @llvm.dbg.value(metadata ptr %num.addr, metadata ![[#]], metadata !DIExpression(DW_OP_plus_uconst, 0, DW_OP_deref))
+  ; CHECK-NOT: #dbg_addr
+  ; CHECK: #dbg_value(ptr %num.addr, ![[#]], !DIExpression(DW_OP_deref), ![[#]])
   call void @llvm.dbg.addr(metadata ptr %num.addr, metadata !16, metadata !DIExpression(DW_OP_plus_uconst, 0)), !dbg !17
   %0 = load i32, ptr %num.addr, align 4
   ret i32 %0
 }
 
-; CHECK: declare void @llvm.dbg.value(metadata, metadata, metadata)
 declare void @llvm.dbg.addr(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

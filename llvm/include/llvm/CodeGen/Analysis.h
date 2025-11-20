@@ -55,6 +55,13 @@ inline unsigned ComputeLinearIndex(Type *Ty,
   return ComputeLinearIndex(Ty, Indices.begin(), Indices.end(), CurIndex);
 }
 
+/// Given an LLVM IR type, compute non-aggregate subtypes. Optionally also
+/// compute their offsets.
+void ComputeValueTypes(const DataLayout &DL, Type *Ty,
+                       SmallVectorImpl<Type *> &Types,
+                       SmallVectorImpl<TypeSize> *Offsets = nullptr,
+                       TypeSize StartingOffset = TypeSize::getZero());
+
 /// ComputeValueVTs - Given an LLVM IR type, compute a sequence of
 /// EVTs that represent all the individual underlying
 /// non-aggregate types that comprise it.
@@ -64,28 +71,9 @@ inline unsigned ComputeLinearIndex(Type *Ty,
 ///
 void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
                      SmallVectorImpl<EVT> &ValueVTs,
-                     SmallVectorImpl<TypeSize> *Offsets,
-                     TypeSize StartingOffset);
-void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
-                     SmallVectorImpl<EVT> &ValueVTs,
+                     SmallVectorImpl<EVT> *MemVTs = nullptr,
                      SmallVectorImpl<TypeSize> *Offsets = nullptr,
-                     uint64_t StartingOffset = 0);
-void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
-                     SmallVectorImpl<EVT> &ValueVTs,
-                     SmallVectorImpl<uint64_t> *FixedOffsets,
-                     uint64_t StartingOffset);
-
-/// Variant of ComputeValueVTs that also produces the memory VTs.
-void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
-                     SmallVectorImpl<EVT> &ValueVTs,
-                     SmallVectorImpl<EVT> *MemVTs,
-                     SmallVectorImpl<TypeSize> *Offsets,
-                     TypeSize StartingOffset);
-void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
-                     SmallVectorImpl<EVT> &ValueVTs,
-                     SmallVectorImpl<EVT> *MemVTs,
-                     SmallVectorImpl<TypeSize> *Offsets = nullptr,
-                     uint64_t StartingOffset = 0);
+                     TypeSize StartingOffset = TypeSize::getZero());
 void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
                      SmallVectorImpl<EVT> &ValueVTs,
                      SmallVectorImpl<EVT> *MemVTs,
@@ -131,7 +119,8 @@ ICmpInst::Predicate getICmpCondCode(ISD::CondCode Pred);
 /// between it and the return.
 ///
 /// This function only tests target-independent requirements.
-bool isInTailCallPosition(const CallBase &Call, const TargetMachine &TM);
+bool isInTailCallPosition(const CallBase &Call, const TargetMachine &TM,
+                          bool ReturnsFirstArg = false);
 
 /// Test if given that the input instruction is in the tail call position, if
 /// there is an attribute mismatch between the caller and the callee that will
@@ -149,7 +138,12 @@ bool attributesPermitTailCall(const Function *F, const Instruction *I,
 /// optimization.
 bool returnTypeIsEligibleForTailCall(const Function *F, const Instruction *I,
                                      const ReturnInst *Ret,
-                                     const TargetLoweringBase &TLI);
+                                     const TargetLoweringBase &TLI,
+                                     bool ReturnsFirstArg = false);
+
+/// Returns true if the parent of \p CI returns CI's first argument after
+/// calling \p CI.
+bool funcReturnsFirstArgOfCall(const CallInst &CI);
 
 DenseMap<const MachineBasicBlock *, int>
 getEHScopeMembership(const MachineFunction &MF);

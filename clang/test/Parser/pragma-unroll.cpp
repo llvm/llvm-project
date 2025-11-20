@@ -40,10 +40,14 @@ void test(int *List, int Length) {
 
 /* expected-error {{expected ')'}} */ #pragma unroll(()
 /* expected-error {{expected expression}} */ #pragma unroll -
-/* expected-error {{invalid value '0'; must be positive}} */ #pragma unroll(0)
-/* expected-error {{invalid value '0'; must be positive}} */ #pragma unroll 0
+/* The values of 0 and 1 block any unrolling of the loop. */ #pragma unroll 0
 /* expected-error {{value '3000000000' is too large}} */ #pragma unroll(3000000000)
 /* expected-error {{value '3000000000' is too large}} */ #pragma unroll 3000000000
+  while (i-8 < Length) {
+    List[i] = i;
+  }
+
+/* The values of 0 and 1 block any unrolling of the loop. */ #pragma unroll(0)
   while (i-8 < Length) {
     List[i] = i;
   }
@@ -120,3 +124,32 @@ void test(int *List, int Length) {
 
 #pragma unroll
 /* expected-error {{expected statement}} */ }
+
+using size_t = unsigned long long;
+
+template <bool Flag>
+int FailToBuild(int n) {
+  constexpr int N = 100;
+  auto init = [=]() { return Flag ? n : 0UL; };
+  auto cond = [=](size_t ix) { return Flag ? ix != 0 : ix < 10; };
+  auto iter = [=](size_t ix) {
+    return Flag ? ix & ~(1ULL << __builtin_clzll(ix)) : ix + 1;
+  };
+#pragma unroll Flag ? 0 : N // Ok, allow 0.
+  for (size_t ix = init(); cond(ix); ix = iter(ix)) {
+    n *= n;
+  }
+#pragma GCC unroll Flag ? 0 : N // Ok, allow 0.
+  for (size_t ix = init(); cond(ix); ix = iter(ix)) {
+    n *= n;
+  }
+  return n;
+}
+
+int foo(int n) {
+    return FailToBuild<true>(n);
+}
+
+int bar(int n) {
+    return FailToBuild<false>(n);
+}

@@ -5,5 +5,6 @@ _BitInt(8) v_401_0() {
     _BitInt(5) y = 0;
     16777215wb ?: ++y;
   });
+  return 0;
 }
-// CHECK-MESSAGES: warning 
+// CHECK-MESSAGES: warning

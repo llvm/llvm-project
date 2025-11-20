@@ -1891,7 +1891,7 @@ drps
 # CHECK-NEXT:  1      2     0.50                        fmov	s0, s1
 # CHECK-NEXT:  1      2     0.50                        fabs	s2, s3
 # CHECK-NEXT:  1      2     0.50                        fneg	s4, s5
-# CHECK-NEXT:  1      9     1.00                        fsqrt	s6, s7
+# CHECK-NEXT:  9      9     9.00                        fsqrt	s6, s7
 # CHECK-NEXT:  1      3     1.00                        fcvt	d8, s9
 # CHECK-NEXT:  1      3     1.00                        fcvt	h10, s11
 # CHECK-NEXT:  1      3     1.00                        frintn	s12, s13
@@ -1904,7 +1904,7 @@ drps
 # CHECK-NEXT:  1      2     0.50                        fmov	d0, d1
 # CHECK-NEXT:  1      2     0.50                        fabs	d2, d3
 # CHECK-NEXT:  1      2     0.50                        fneg	d4, d5
-# CHECK-NEXT:  1      16    1.00                        fsqrt	d6, d7
+# CHECK-NEXT:  16     16    16.00                       fsqrt	d6, d7
 # CHECK-NEXT:  1      3     1.00                        fcvt	s8, d9
 # CHECK-NEXT:  1      3     1.00                        fcvt	h10, d11
 # CHECK-NEXT:  1      3     1.00                        frintn	d12, d13
@@ -1917,7 +1917,7 @@ drps
 # CHECK-NEXT:  1      3     1.00                        fcvt	s26, h27
 # CHECK-NEXT:  1      3     1.00                        fcvt	d28, h29
 # CHECK-NEXT:  1      3     0.50                        fmul	s20, s19, s17
-# CHECK-NEXT:  1      10    1.00                        fdiv	s1, s2, s3
+# CHECK-NEXT:  10     10    10.00                       fdiv	s1, s2, s3
 # CHECK-NEXT:  1      2     0.50                        fadd	s4, s5, s6
 # CHECK-NEXT:  1      2     0.50                        fsub	s7, s8, s9
 # CHECK-NEXT:  1      2     0.50                        fmax	s10, s11, s12
@@ -1926,7 +1926,7 @@ drps
 # CHECK-NEXT:  1      2     0.50                        fminnm	s19, s20, s21
 # CHECK-NEXT:  1      3     0.50                        fnmul	s22, s23, s2
 # CHECK-NEXT:  1      3     0.50                        fmul	d20, d19, d17
-# CHECK-NEXT:  1      15    1.00                        fdiv	d1, d2, d3
+# CHECK-NEXT:  15     15    15.00                       fdiv	d1, d2, d3
 # CHECK-NEXT:  1      2     0.50                        fadd	d4, d5, d6
 # CHECK-NEXT:  1      2     0.50                        fsub	d7, d8, d9
 # CHECK-NEXT:  1      2     0.50                        fmax	d10, d11, d12
@@ -2086,9 +2086,9 @@ drps
 # CHECK-NEXT:  1      3     0.50                        fcvtas	x27, d28
 # CHECK-NEXT:  1      3     0.50                        fcvtau	w29, d30
 # CHECK-NEXT:  1      3     0.50                        fcvtau	xzr, d0
-# CHECK-NEXT:  1      3     3.00                        fmov	w3, s9
+# CHECK-NEXT:  1      2     0.50                        fmov	w3, s9
 # CHECK-NEXT:  1      3     3.00                        fmov	s9, w3
-# CHECK-NEXT:  1      3     3.00                        fmov	x20, d31
+# CHECK-NEXT:  1      2     0.50                        fmov	x20, d31
 # CHECK-NEXT:  1      3     3.00                        fmov	d1, x15
 # CHECK-NEXT:  1      2     0.50                        fmov	x3, v12.d[1]
 # CHECK-NEXT:  2      5     1.00                        fmov	v1.d[1], x19
@@ -2508,14 +2508,14 @@ drps
 # CHECK-NEXT:  1      2     0.50                        bics	x3, xzr, x3, lsl #1
 # CHECK-NEXT:  1      2     0.50                        tst	w3, w7, lsl #31
 # CHECK-NEXT:  1      2     0.50                        tst	x2, x20, asr #2
-# CHECK-NEXT:  1      1     0.25                        mov	x3, x6
-# CHECK-NEXT:  1      1     0.25                        mov	x3, xzr
-# CHECK-NEXT:  1      1     0.25                        mov	wzr, w2
-# CHECK-NEXT:  1      1     0.25                        mov	w3, w5
+# CHECK-NEXT:  1      0     0.20                        mov	x3, x6
+# CHECK-NEXT:  1      0     0.20                        mov	x3, xzr
+# CHECK-NEXT:  1      0     0.20                        mov	wzr, w2
+# CHECK-NEXT:  1      0     0.20                        mov	w3, w5
 # CHECK-NEXT:  1      1     0.25                        movz	w2, #0, lsl #16
 # CHECK-NEXT:  1      1     0.25                        mov	w2, #-1235
 # CHECK-NEXT:  1      1     0.25                        mov	x2, #5299989643264
-# CHECK-NEXT:  1      1     0.25                        mov	x2, #0
+# CHECK-NEXT:  1      0     0.20                        mov	x2, #0
 # CHECK-NEXT:  1      1     0.25                        movk	w3, #0
 # CHECK-NEXT:  1      1     0.25                        movz	x4, #0, lsl #16
 # CHECK-NEXT:  1      1     0.25                        movk	w5, #0, lsl #16
@@ -2557,7 +2557,7 @@ drps
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]
-# CHECK-NEXT: 11.00  11.00  33.00  33.00  87.33  151.33 151.33 517.00 251.00 162.50 162.50 169.50 85.50
+# CHECK-NEXT: 11.00  11.00  33.00  33.00  87.33  151.33 151.33 509.75 249.75 161.25 161.25 216.50 86.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    Instructions:
@@ -3075,7 +3075,7 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	s0, s1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fabs	s2, s3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fneg	s4, s5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fsqrt	s6, s7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     9.00    -     fsqrt	s6, s7
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvt	d8, s9
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvt	h10, s11
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintn	s12, s13
@@ -3088,7 +3088,7 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	d0, d1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fabs	d2, d3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fneg	d4, d5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fsqrt	d6, d7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     16.00   -     fsqrt	d6, d7
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvt	s8, d9
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvt	h10, d11
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintn	d12, d13
@@ -3101,7 +3101,7 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvt	s26, h27
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvt	d28, h29
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmul	s20, s19, s17
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fdiv	s1, s2, s3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     10.00   -     fdiv	s1, s2, s3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fadd	s4, s5, s6
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fsub	s7, s8, s9
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmax	s10, s11, s12
@@ -3110,7 +3110,7 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fminnm	s19, s20, s21
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fnmul	s22, s23, s2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmul	d20, d19, d17
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fdiv	d1, d2, d3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     15.00   -     fdiv	d1, d2, d3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fadd	d4, d5, d6
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fsub	d7, d8, d9
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmax	d10, d11, d12
@@ -3270,9 +3270,9 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtas	x27, d28
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtau	w29, d30
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtau	xzr, d0
-# CHECK-NEXT:  -      -      -      -      -      -      -     3.00    -      -      -      -      -     fmov	w3, s9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	w3, s9
 # CHECK-NEXT:  -      -      -      -      -      -      -     3.00    -      -      -      -      -     fmov	s9, w3
-# CHECK-NEXT:  -      -      -      -      -      -      -     3.00    -      -      -      -      -     fmov	x20, d31
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	x20, d31
 # CHECK-NEXT:  -      -      -      -      -      -      -     3.00    -      -      -      -      -     fmov	d1, x15
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	x3, v12.d[1]
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   fmov	v1.d[1], x19
@@ -3692,14 +3692,14 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     bics	x3, xzr, x3, lsl #1
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     tst	w3, w7, lsl #31
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     tst	x2, x20, asr #2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	x3, x6
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	x3, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	wzr, w2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	w3, w5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x3, x6
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x3, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	wzr, w2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	w3, w5
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     movz	w2, #0, lsl #16
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	w2, #-1235
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	x2, #5299989643264
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	x2, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x2, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     movk	w3, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     movz	x4, #0, lsl #16
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     movk	w5, #0, lsl #16

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64MCINSTLOWER_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MCINSTLOWER_H
 
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -42,6 +43,8 @@ public:
                                    MCSymbol *Sym) const;
   MCOperand LowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
 
+  MCSymbol *GetGlobalValueSymbol(const GlobalValue *GV,
+                                 unsigned TargetFlags) const;
   MCSymbol *GetGlobalAddressSymbol(const MachineOperand &MO) const;
   MCSymbol *GetExternalSymbolSymbol(const MachineOperand &MO) const;
 };

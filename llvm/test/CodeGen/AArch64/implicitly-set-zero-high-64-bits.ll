@@ -134,5 +134,87 @@ entry:
 }
 
 
+define <16 x i8> @insertzero_v8i8(<8 x i8> %a) {
+; CHECK-LABEL: insertzero_v8i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov d0, d0
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <8 x i8> %a, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %shuffle.i
+}
+
+define <8 x i16> @insertzero_v4i16(<4 x i16> %a) {
+; CHECK-LABEL: insertzero_v4i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov d0, d0
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <4 x i16> %a, <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %shuffle.i
+}
+
+define <4 x i32> @insertzero_v2i32(<2 x i32> %a) {
+; CHECK-LABEL: insertzero_v2i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov d0, d0
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x i32> %a, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %shuffle.i
+}
+
+define <2 x i64> @insertzero_v1i64(<1 x i64> %a) {
+; CHECK-LABEL: insertzero_v1i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov d0, d0
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <1 x i64> %a, <1 x i64> zeroinitializer, <2 x i32> <i32 0, i32 1>
+  ret <2 x i64> %shuffle.i
+}
+
+define <8 x half> @insertzero_v4f16(<4 x half> %a) {
+; CHECK-LABEL: insertzero_v4f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov d0, d0
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <4 x half> %a, <4 x half> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x half> %shuffle.i
+}
+
+define <8 x bfloat> @insertzero_v4bf16(<4 x bfloat> %a) {
+; CHECK-LABEL: insertzero_v4bf16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov d0, d0
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <4 x bfloat> %a, <4 x bfloat> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x bfloat> %shuffle.i
+}
+
+define <4 x float> @insertzero_v2f32(<2 x float> %a) {
+; CHECK-LABEL: insertzero_v2f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov d0, d0
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x float> %a, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %shuffle.i
+}
+
+define <2 x double> @insertzero_v1f64(<1 x double> %a) {
+; CHECK-LABEL: insertzero_v1f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov d0, d0
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <1 x double> %a, <1 x double> zeroinitializer, <2 x i32> <i32 0, i32 1>
+  ret <2 x double> %shuffle.i
+}
+
+
+
 declare <8 x i8> @llvm.aarch64.neon.rshrn.v8i8(<8 x i16>, i32)
 declare <4 x i16> @llvm.aarch64.neon.addp.v4i16(<4 x i16>, <4 x i16>)

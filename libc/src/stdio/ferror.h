@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STDIO_FERROR_H
 #define LLVM_LIBC_SRC_STDIO_FERROR_H
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int ferror(::FILE *stream);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_FERROR_H

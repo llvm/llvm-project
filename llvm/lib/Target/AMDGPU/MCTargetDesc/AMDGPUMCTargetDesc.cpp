@@ -19,12 +19,11 @@
 #include "R600InstPrinter.h"
 #include "R600MCTargetDesc.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
-#include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstPrinter.h"
-#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -32,6 +31,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -70,7 +70,7 @@ static MCRegisterInfo *createAMDGPUMCRegisterInfo(const Triple &TT) {
 
 MCRegisterInfo *llvm::createGCNMCRegisterInfo(AMDGPUDwarfFlavour DwarfFlavour) {
   MCRegisterInfo *X = new MCRegisterInfo();
-  InitAMDGPUMCRegisterInfo(X, AMDGPU::PC_REG, DwarfFlavour);
+  InitAMDGPUMCRegisterInfo(X, AMDGPU::PC_REG, DwarfFlavour, DwarfFlavour);
   return X;
 }
 
@@ -78,7 +78,41 @@ static MCSubtargetInfo *
 createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (TT.getArch() == Triple::r600)
     return createR600MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
-  return createAMDGPUMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+
+  MCSubtargetInfo *STI =
+      createAMDGPUMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+
+  bool IsWave64 = STI->hasFeature(AMDGPU::FeatureWavefrontSize64);
+  bool IsWave32 = STI->hasFeature(AMDGPU::FeatureWavefrontSize32);
+
+  // FIXME: We should error for the default target.
+  if (STI->getFeatureBits().none())
+    STI->ToggleFeature(AMDGPU::FeatureSouthernIslands);
+
+  if (!IsWave64 && !IsWave32) {
+    // If there is no default wave size it must be a generation before gfx10,
+    // these have FeatureWavefrontSize64 in their definition already. For gfx10+
+    // set wave32 as a default.
+    STI->ToggleFeature(AMDGPU::isGFX10Plus(*STI)
+                           ? AMDGPU::FeatureWavefrontSize32
+                           : AMDGPU::FeatureWavefrontSize64);
+  } else if (IsWave64 && IsWave32) {
+    // The wave size is mutually exclusive. If both somehow end up set, wave32
+    // wins if supported.
+    STI->ToggleFeature(AMDGPU::supportsWave32(*STI)
+                           ? AMDGPU::FeatureWavefrontSize64
+                           : AMDGPU::FeatureWavefrontSize32);
+
+    // If both wavesizes were manually requested, hack in a feature to permit
+    // assembling modules with mixed wavesizes.
+    STI->ToggleFeature(AMDGPU::FeatureAssemblerPermissiveWavesize);
+  }
+
+  assert((STI->hasFeature(AMDGPU::FeatureWavefrontSize64) !=
+          STI->hasFeature(AMDGPU::FeatureWavefrontSize32)) &&
+         "wavesize features are mutually exclusive");
+
+  return STI;
 }
 
 static MCInstPrinter *createAMDGPUMCInstPrinter(const Triple &T,
@@ -88,14 +122,12 @@ static MCInstPrinter *createAMDGPUMCInstPrinter(const Triple &T,
                                                 const MCRegisterInfo &MRI) {
   if (T.getArch() == Triple::r600)
     return new R600InstPrinter(MAI, MII, MRI);
-  else
-    return new AMDGPUInstPrinter(MAI, MII, MRI);
+  return new AMDGPUInstPrinter(MAI, MII, MRI);
 }
 
-static MCTargetStreamer *createAMDGPUAsmTargetStreamer(MCStreamer &S,
-                                                      formatted_raw_ostream &OS,
-                                                      MCInstPrinter *InstPrint,
-                                                      bool isVerboseAsm) {
+static MCTargetStreamer *
+createAMDGPUAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                              MCInstPrinter *InstPrint) {
   return new AMDGPUTargetAsmStreamer(S, OS);
 }
 
@@ -112,42 +144,44 @@ static MCTargetStreamer *createAMDGPUNullTargetStreamer(MCStreamer &S) {
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
                                     std::unique_ptr<MCObjectWriter> &&OW,
-                                    std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                    bool RelaxAll) {
+                                    std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createAMDGPUELFStreamer(T, Context, std::move(MAB), std::move(OW),
-                                 std::move(Emitter), RelaxAll);
+                                 std::move(Emitter));
 }
 
-namespace {
+namespace llvm {
+namespace AMDGPU {
 
-class AMDGPUMCInstrAnalysis : public MCInstrAnalysis {
-public:
-  explicit AMDGPUMCInstrAnalysis(const MCInstrInfo *Info)
-      : MCInstrAnalysis(Info) {}
+bool AMDGPUMCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
+                                           uint64_t Size,
+                                           uint64_t &Target) const {
+  if (Inst.getNumOperands() == 0 || !Inst.getOperand(0).isImm() ||
+      Info->get(Inst.getOpcode()).operands()[0].OperandType !=
+          MCOI::OPERAND_PCREL)
+    return false;
 
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
-    if (Inst.getNumOperands() == 0 || !Inst.getOperand(0).isImm() ||
-        Info->get(Inst.getOpcode()).operands()[0].OperandType !=
-            MCOI::OPERAND_PCREL)
-      return false;
+  int64_t Imm = Inst.getOperand(0).getImm();
+  // Our branches take a simm16.
+  Target = SignExtend64<16>(Imm) * 4 + Addr + Size;
+  return true;
+}
 
-    int64_t Imm = Inst.getOperand(0).getImm();
-    // Our branches take a simm16, but we need two extra bits to account for
-    // the factor of 4.
-    APInt SignedOffset(18, Imm * 4, true);
-    Target = (SignedOffset.sext(64) + Addr + Size).getZExtValue();
-    return true;
-  }
-};
+void AMDGPUMCInstrAnalysis::updateState(const MCInst &Inst, uint64_t Addr) {
+  if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_MSB_gfx12)
+    VgprMSBs = Inst.getOperand(0).getImm() & 0xff;
+  else if (isTerminator(Inst))
+    VgprMSBs = 0;
+}
 
-} // end anonymous namespace
+} // end namespace AMDGPU
+} // end namespace llvm
 
 static MCInstrAnalysis *createAMDGPUMCInstrAnalysis(const MCInstrInfo *Info) {
-  return new AMDGPUMCInstrAnalysis(Info);
+  return new AMDGPU::AMDGPUMCInstrAnalysis(Info);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAMDGPUTargetMC() {
 
   TargetRegistry::RegisterMCInstrInfo(getTheGCNTarget(), createAMDGPUMCInstrInfo);
   TargetRegistry::RegisterMCInstrInfo(getTheR600Target(),

@@ -1,4 +1,4 @@
-//===--- AvoidThrowingObjCExceptionCheck.cpp - clang-tidy------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidThrowingObjCExceptionCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -41,7 +40,7 @@ void AvoidThrowingObjCExceptionCheck::check(
   // If the match location was in a macro, check if the macro was in a system
   // header.
   if (SourceLoc.isMacroID()) {
-    SourceManager &SM = *Result.SourceManager;
+    const SourceManager &SM = *Result.SourceManager;
     auto MacroLoc = SM.getImmediateMacroCallerLoc(SourceLoc);
 
     // Matches in system header macros should be ignored.

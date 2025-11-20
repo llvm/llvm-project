@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-// UNSUPPORTED: availability-filesystem-missing
+// UNSUPPORTED: c++03, c++11, c++14
 
 // These tests require locale for non-char paths
 // UNSUPPORTED: no-localization
+
+// In MinGW mode, with optimizations enabled with a DLL, the number of counted
+// allocations mismatches, as some ctor/dtor calls are generated in the
+// calling code, and some are called from the DLL.
+// ADDITIONAL_COMPILE_FLAGS: -DALLOW_MISMATCHING_LIBRRARY_INTERNAL_ALLOCATIONS
 
 // <filesystem>
 
@@ -24,11 +28,11 @@
 // template <class InputIterator>
 //      path& append(InputIterator first, InputIterator last);
 
-
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <string_view>
 #include <cassert>
+#include <utility>
 
 // On Windows, the append function converts all inputs (pointers, iterators)
 // to an intermediate path object, causing allocations in cases where no
@@ -39,6 +43,7 @@
 #include "make_string.h"
 #include "test_iterators.h"
 #include "test_macros.h"
+namespace fs = std::filesystem;
 
 struct AppendOperatorTestcase {
   MultiStringType lhs;

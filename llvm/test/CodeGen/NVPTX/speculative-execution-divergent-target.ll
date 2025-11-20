@@ -6,7 +6,12 @@
 ; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda -passes=speculative-execution \
 ; RUN:   -spec-exec-only-if-divergent-target | \
 ; RUN:   FileCheck --check-prefix=ON %s
+; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda \
+; RUN:   -passes='speculative-execution<only-if-divergent-target>' | \
+; RUN:   FileCheck --check-prefix=ON %s
 ; RUN: opt < %s -S -passes=speculative-execution -spec-exec-only-if-divergent-target | \
+; RUN:   FileCheck --check-prefix=OFF %s
+; RUN: opt < %s -S -passes='speculative-execution<only-if-divergent-target>' | \
 ; RUN:   FileCheck --check-prefix=OFF %s
 
 ; Hoist in if-then pattern.

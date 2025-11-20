@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown \
-// RUN: -target-feature +amx-complex -emit-llvm -fsyntax-only -verify
+// RUN: -target-feature +amx-complex -fsyntax-only -verify
 
 #include <immintrin.h>
 #include <stddef.h>

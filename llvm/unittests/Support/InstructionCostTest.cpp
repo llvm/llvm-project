@@ -8,14 +8,13 @@
 
 #include "llvm/Support/InstructionCost.h"
 #include "gtest/gtest.h"
-#include <limits>
 
 using namespace llvm;
 
 namespace {
 
 struct CostTest : public testing::Test {
-  CostTest() {}
+  CostTest() = default;
 };
 
 } // namespace
@@ -24,7 +23,7 @@ TEST_F(CostTest, DefaultCtor) {
   InstructionCost DefaultCost;
 
   ASSERT_TRUE(DefaultCost.isValid());
-  EXPECT_EQ(*(DefaultCost.getValue()), 0);
+  EXPECT_EQ(DefaultCost.getValue(), 0);
 }
 
 TEST_F(CostTest, Operators) {
@@ -71,8 +70,7 @@ TEST_F(CostTest, Operators) {
   EXPECT_FALSE(TmpCost.isValid());
 
   // Test value extraction
-  EXPECT_EQ(*(VThree.getValue()), 3);
-  EXPECT_EQ(IThreeA.getValue(), std::nullopt);
+  EXPECT_EQ(VThree.getValue(), 3);
 
   EXPECT_EQ(std::min(VThree, VNegTwo), -2);
   EXPECT_EQ(std::max(VThree, VSix), 6);

@@ -59,13 +59,23 @@ bb38:                                             ; preds = %bb16
 }
 
 
-define void @hoge() {
-; CHECK-LABEL: define {{[^@]+}}@hoge() {
+define void @hoge(i1 %arg, i16 %arg2) {
+; CHECK-LABEL: define {{[^@]+}}@hoge
+; CHECK-SAME: (i1 [[ARG:%.*]], i16 [[ARG2:%.*]]) {
 ; CHECK-NEXT:  bb:
+; CHECK-NEXT:    switch i16 [[ARG2]], label [[BB1:%.*]] [
+; CHECK-NEXT:      i16 135, label [[BB2:%.*]]
+; CHECK-NEXT:      i16 66, label [[BB2]]
+; CHECK-NEXT:    ]
+; CHECK:       bb1:
+; CHECK-NEXT:    ret void
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb3:
 ; CHECK-NEXT:    unreachable
 ;
 bb:
-  switch i16 undef, label %bb1 [
+  switch i16 %arg2, label %bb1 [
   i16 135, label %bb2
   i16 66, label %bb2
   ]
@@ -89,14 +99,9 @@ bb4:                                              ; preds = %bb2, %bb2, %bb2
 
 ; Test case from PR49573. %default.bb is unfeasible. Make sure it gets replaced
 ; by an unreachable block.
-define void @pr49573_main() {
-; CHECK-LABEL: define {{[^@]+}}@pr49573_main() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TGT:%.*]] = call i16 @pr49573_fn()
-; CHECK-NEXT:    unreachable
-;
+define void @pr49573_main(i1 %arg) {
 entry:
-  %tgt = call i16 @pr49573_fn()
+  %tgt = call i16 @pr49573_fn(i1 %arg)
   switch i16 %tgt, label %default.bb [
   i16 0, label %case.0
   i16 1, label %case.1
@@ -116,7 +121,7 @@ case.2:
   br label %next
 
 next:
-  %tgt.2 = call i16 @pr49573_fn_2()
+  %tgt.2 = call i16 @pr49573_fn_2(i1 %arg)
   switch i16 %tgt.2, label %default.bb [
   i16 0, label %case.0
   i16 2, label %case.2
@@ -124,14 +129,9 @@ next:
 }
 
 ; Make sure a new unreachable BB is created.
-define void @pr49573_main_2() {
-; CHECK-LABEL: define {{[^@]+}}@pr49573_main_2() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TGT:%.*]] = call i16 @pr49573_fn()
-; CHECK-NEXT:    unreachable
-;
+define void @pr49573_main_2(i1 %arg) {
 entry:
-  %tgt = call i16 @pr49573_fn()
+  %tgt = call i16 @pr49573_fn(i1 %arg)
   switch i16 %tgt, label %default.bb [
   i16 0, label %case.0
   i16 1, label %case.1
@@ -151,13 +151,18 @@ case.2:
   ret void
 }
 
-define internal i16 @pr49573_fn() {
-; CHECK-LABEL: define {{[^@]+}}@pr49573_fn() {
+define internal i16 @pr49573_fn(i1 %arg) {
+; CHECK-LABEL: define {{[^@]+}}@pr49573_fn
+; CHECK-SAME: (i1 [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br i1 [[ARG]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i16 0
+; CHECK:       else:
+; CHECK-NEXT:    ret i16 2
 ;
 entry:
-  br i1 undef, label %then, label %else
+  br i1 %arg, label %then, label %else
 
 then:
   ret i16 0
@@ -166,13 +171,18 @@ else:
   ret i16 2
 }
 
-define internal i16 @pr49573_fn_2() {
-; CHECK-LABEL: define {{[^@]+}}@pr49573_fn_2() {
+define internal i16 @pr49573_fn_2(i1 %arg) {
+; CHECK-LABEL: define {{[^@]+}}@pr49573_fn_2
+; CHECK-SAME: (i1 [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br i1 [[ARG]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i16 0
+; CHECK:       else:
+; CHECK-NEXT:    ret i16 2
 ;
 entry:
-  br i1 undef, label %then, label %else
+  br i1 %arg, label %then, label %else
 
 then:
   ret i16 0

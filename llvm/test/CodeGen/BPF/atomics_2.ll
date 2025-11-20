@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpfel -mcpu=v3 -verify-machineinstrs -show-mc-encoding | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel -mcpu=v3 -verify-machineinstrs -show-mc-encoding | FileCheck %s
 ;
 ; Source:
 ;   int test_load_add_32(int *p, int v) {
@@ -214,8 +214,8 @@ entry:
 }
 
 ; CHECK-LABEL: test_atomic_xor_32
-; CHECK: lock *(u32 *)(r1 + 0) ^= w2
-; CHECK: encoding: [0xc3,0x21,0x00,0x00,0xa0,0x00,0x00,0x00]
+; CHECK: w2 = atomic_fetch_xor((u32 *)(r1 + 0), w2)
+; CHECK: encoding: [0xc3,0x21,0x00,0x00,0xa1,0x00,0x00,0x00]
 ; CHECK: w0 = 0
 define dso_local i32 @test_atomic_xor_32(ptr nocapture %p, i32 %v) local_unnamed_addr {
 entry:
@@ -224,8 +224,8 @@ entry:
 }
 
 ; CHECK-LABEL: test_atomic_xor_64
-; CHECK: lock *(u64 *)(r1 + 0) ^= r2
-; CHECK: encoding: [0xdb,0x21,0x00,0x00,0xa0,0x00,0x00,0x00]
+; CHECK: atomic_fetch_xor((u64 *)(r1 + 0), r2)
+; CHECK: encoding: [0xdb,0x21,0x00,0x00,0xa1,0x00,0x00,0x00]
 ; CHECK: w0 = 0
 define dso_local i32 @test_atomic_xor_64(ptr nocapture %p, i64 %v) local_unnamed_addr {
 entry:
@@ -234,8 +234,8 @@ entry:
 }
 
 ; CHECK-LABEL: test_atomic_and_64
-; CHECK: lock *(u64 *)(r1 + 0) &= r2
-; CHECK: encoding: [0xdb,0x21,0x00,0x00,0x50,0x00,0x00,0x00]
+; CHECK: r2 = atomic_fetch_and((u64 *)(r1 + 0), r2)
+; CHECK: encoding: [0xdb,0x21,0x00,0x00,0x51,0x00,0x00,0x00]
 ; CHECK: w0 = 0
 define dso_local i32 @test_atomic_and_64(ptr nocapture %p, i64 %v) local_unnamed_addr {
 entry:
@@ -244,8 +244,8 @@ entry:
 }
 
 ; CHECK-LABEL: test_atomic_or_64
-; CHECK: lock *(u64 *)(r1 + 0) |= r2
-; CHECK: encoding: [0xdb,0x21,0x00,0x00,0x40,0x00,0x00,0x00]
+; CHECK: r2 = atomic_fetch_or((u64 *)(r1 + 0), r2)
+; CHECK: encoding: [0xdb,0x21,0x00,0x00,0x41,0x00,0x00,0x00]
 ; CHECK: w0 = 0
 define dso_local i32 @test_atomic_or_64(ptr nocapture %p, i64 %v) local_unnamed_addr {
 entry:

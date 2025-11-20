@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Mips.h"
-#include "ToolChains/CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 
@@ -50,8 +49,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
     DefMips64CPU = "mips3";
   }
 
-  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ,
-                               options::OPT_mcpu_EQ))
+  if (Arg *A = Args.getLastArg(options::OPT_march_EQ, options::OPT_mcpu_EQ))
     CPUName = A->getValue();
 
   if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
@@ -80,7 +78,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
     }
   }
 
-  if (ABIName.empty() && (Triple.getEnvironment() == llvm::Triple::GNUABIN32))
+  if (ABIName.empty() && Triple.isABIN32())
     ABIName = "n32";
 
   if (ABIName.empty() &&
@@ -104,6 +102,8 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
                   .Case("mips64r6", "n64")
                   .Case("octeon", "n64")
                   .Case("p5600", "o32")
+                  .Case("i6400", "n64")
+                  .Case("i6500", "n64")
                   .Default("");
   }
 
@@ -116,7 +116,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
     // Deduce CPU name from ABI name.
     CPUName = llvm::StringSwitch<const char *>(ABIName)
                   .Case("o32", DefMips32CPU)
-                  .Cases("n32", "n64", DefMips64CPU)
+                  .Cases({"n32", "n64"}, DefMips64CPU)
                   .Default("");
   }
 
@@ -221,6 +221,7 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   bool IsN64 = ABIName == "64";
   bool IsPIC = false;
   bool NonPIC = false;
+  bool HasNaN2008Opt = false;
 
   Arg *LastPICArg = Args.getLastArg(options::OPT_fPIC, options::OPT_fno_PIC,
                                     options::OPT_fpic, options::OPT_fno_pic,
@@ -250,6 +251,12 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
   if (ABICallsArg && !UseAbiCalls && IsPIC) {
     D.Diag(diag::err_drv_unsupported_noabicalls_pic);
+  }
+
+  if (CPUName == "i6500" || CPUName == "i6400") {
+    // MIPS cpu i6400 and i6500 support MSA (Mips SIMD Architecture)
+    // by default.
+    Features.push_back("+msa");
   }
 
   if (!UseAbiCalls)
@@ -285,9 +292,10 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   if (Arg *A = Args.getLastArg(options::OPT_mnan_EQ)) {
     StringRef Val = StringRef(A->getValue());
     if (Val == "2008") {
-      if (mips::getIEEE754Standard(CPUName) & mips::Std2008)
+      if (mips::getIEEE754Standard(CPUName) & mips::Std2008) {
         Features.push_back("+nan2008");
-      else {
+        HasNaN2008Opt = true;
+      } else {
         Features.push_back("-nan2008");
         D.Diag(diag::warn_target_unsupported_nan2008) << CPUName;
       }
@@ -323,6 +331,8 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
     }
+  } else if (HasNaN2008Opt) {
+    Features.push_back("+abs2008");
   }
 
   AddTargetFeature(Args, Features, options::OPT_msingle_float,
@@ -337,6 +347,15 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                    "dspr2");
   AddTargetFeature(Args, Features, options::OPT_mmsa, options::OPT_mno_msa,
                    "msa");
+  if (Arg *A = Args.getLastArg(
+          options::OPT_mstrict_align, options::OPT_mno_strict_align,
+          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
+    if (A->getOption().matches(options::OPT_mstrict_align) ||
+        A->getOption().matches(options::OPT_mno_unaligned_access))
+      Features.push_back(Args.MakeArgString("+strict-align"));
+    else
+      Features.push_back(Args.MakeArgString("-strict-align"));
+  }
 
   // Add the last -mfp32/-mfpxx/-mfp64, if none are given and the ABI is O32
   // pass -mfpxx, or if none are given and fp64a is default, pass fp64 and
@@ -353,9 +372,9 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   } else if (mips::shouldUseFPXX(Args, Triple, CPUName, ABIName, FloatABI)) {
     Features.push_back("+fpxx");
     Features.push_back("+nooddspreg");
-  } else if (mips::isFP64ADefault(Triple, CPUName)) {
-    Features.push_back("+fp64");
-    Features.push_back("+nooddspreg");
+  } else if (Arg *A = Args.getLastArg(options::OPT_mmsa)) {
+    if (A->getOption().matches(options::OPT_mmsa))
+      Features.push_back("+fp64");
   }
 
   AddTargetFeature(Args, Features, options::OPT_mno_odd_spreg,
@@ -422,6 +441,8 @@ bool mips::hasCompactBranches(StringRef &CPU) {
   return llvm::StringSwitch<bool>(CPU)
       .Case("mips32r6", true)
       .Case("mips64r6", true)
+      .Case("i6400", true)
+      .Case("i6500", true)
       .Default(false);
 }
 
@@ -445,17 +466,7 @@ bool mips::isNaN2008(const Driver &D, const ArgList &Args,
 
   // NaN2008 is the default for MIPS32r6/MIPS64r6.
   return llvm::StringSwitch<bool>(getCPUName(D, Args, Triple))
-      .Cases("mips32r6", "mips64r6", true)
-      .Default(false);
-}
-
-bool mips::isFP64ADefault(const llvm::Triple &Triple, StringRef CPUName) {
-  if (!Triple.isAndroid())
-    return false;
-
-  // Android MIPS32R6 defaults to FP64A.
-  return llvm::StringSwitch<bool>(CPUName)
-      .Case("mips32r6", true)
+      .Cases({"mips32r6", "mips64r6"}, true)
       .Default(false);
 }
 
@@ -470,9 +481,9 @@ bool mips::isFPXXDefault(const llvm::Triple &Triple, StringRef CPUName,
     return false;
 
   return llvm::StringSwitch<bool>(CPUName)
-      .Cases("mips2", "mips3", "mips4", "mips5", true)
-      .Cases("mips32", "mips32r2", "mips32r3", "mips32r5", true)
-      .Cases("mips64", "mips64r2", "mips64r3", "mips64r5", true)
+      .Cases({"mips2", "mips3", "mips4", "mips5"}, true)
+      .Cases({"mips32", "mips32r2", "mips32r3", "mips32r5"}, true)
+      .Cases({"mips64", "mips64r2", "mips64r3", "mips64r5"}, true)
       .Default(false);
 }
 
@@ -486,6 +497,13 @@ bool mips::shouldUseFPXX(const ArgList &Args, const llvm::Triple &Triple,
                                options::OPT_mdouble_float))
     if (A->getOption().matches(options::OPT_msingle_float))
       UseFPXX = false;
+  // FP64 should be used for MSA.
+  if (Arg *A = Args.getLastArg(options::OPT_mmsa))
+    if (A->getOption().matches(options::OPT_mmsa))
+      UseFPXX = llvm::StringSwitch<bool>(CPUName)
+                    .Cases({"mips32r2", "mips32r3", "mips32r5"}, false)
+                    .Cases({"mips64r2", "mips64r3", "mips64r5"}, false)
+                    .Default(UseFPXX);
 
   return UseFPXX;
 }
@@ -504,5 +522,7 @@ bool mips::supportsIndirectJumpHazardBarrier(StringRef &CPU) {
       .Case("mips64r6", true)
       .Case("octeon", true)
       .Case("p5600", true)
+      .Case("i6400", true)
+      .Case("i6500", true)
       .Default(false);
 }

@@ -48,7 +48,7 @@ namespace {
 /// until a one-dimensional vector is reached.
 class CreateMaskOpLowering : public OpRewritePattern<vector::CreateMaskOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::CreateMaskOp op,
                                 PatternRewriter &rewriter) const override {
@@ -67,19 +67,20 @@ public:
     Value idx = op.getOperand(0);
 
     VectorType lowType = VectorType::Builder(dstType).dropDim(0);
-    Value trueVal = rewriter.create<vector::CreateMaskOp>(
-        loc, lowType, op.getOperands().drop_front());
-    Value falseVal = rewriter.create<arith::ConstantOp>(
-        loc, lowType, rewriter.getZeroAttr(lowType));
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, dstType, rewriter.getZeroAttr(dstType));
+    Value trueVal = vector::CreateMaskOp::create(rewriter, loc, lowType,
+                                                 op.getOperands().drop_front());
+    Value falseVal = arith::ConstantOp::create(rewriter, loc, lowType,
+                                               rewriter.getZeroAttr(lowType));
+    Value result = arith::ConstantOp::create(rewriter, loc, dstType,
+                                             rewriter.getZeroAttr(dstType));
     for (int64_t d = 0; d < dim; d++) {
       Value bnd =
-          rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(d));
-      Value val = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
-                                                 bnd, idx);
-      Value sel = rewriter.create<arith::SelectOp>(loc, val, trueVal, falseVal);
-      result = rewriter.create<vector::InsertOp>(loc, sel, result, d);
+          arith::ConstantOp::create(rewriter, loc, rewriter.getIndexAttr(d));
+      Value val = arith::CmpIOp::create(rewriter, loc,
+                                        arith::CmpIPredicate::slt, bnd, idx);
+      Value sel =
+          arith::SelectOp::create(rewriter, loc, val, trueVal, falseVal);
+      result = vector::InsertOp::create(rewriter, loc, sel, result, d);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -99,7 +100,7 @@ public:
 /// will be folded at LLVM IR level.
 class ConstantMaskOpLowering : public OpRewritePattern<vector::ConstantMaskOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ConstantMaskOp op,
                                 PatternRewriter &rewriter) const override {
@@ -111,7 +112,7 @@ public:
     if (rank == 0) {
       assert(dimSizes.size() == 1 &&
              "Expected exactly one dim size for a 0-D vector");
-      bool value = cast<IntegerAttr>(dimSizes[0]).getInt() == 1;
+      bool value = dimSizes.front() == 1;
       rewriter.replaceOpWithNewOp<arith::ConstantOp>(
           op, dstType,
           DenseIntElementsAttr::get(VectorType::get({}, rewriter.getI1Type()),
@@ -119,7 +120,7 @@ public:
       return success();
     }
 
-    int64_t trueDimSize = cast<IntegerAttr>(dimSizes[0]).getInt();
+    int64_t trueDimSize = dimSizes.front();
 
     if (rank == 1) {
       if (trueDimSize == 0 || trueDimSize == dstType.getDimSize(0)) {
@@ -146,12 +147,12 @@ public:
           op, "Cannot unroll leading scalable dim in dstType");
 
     VectorType lowType = VectorType::Builder(dstType).dropDim(0);
-    Value trueVal = rewriter.create<vector::ConstantMaskOp>(
-        loc, lowType, rewriter.getArrayAttr(dimSizes.getValue().drop_front()));
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, dstType, rewriter.getZeroAttr(dstType));
+    Value trueVal = vector::ConstantMaskOp::create(rewriter, loc, lowType,
+                                                   dimSizes.drop_front());
+    Value result = arith::ConstantOp::create(rewriter, loc, dstType,
+                                             rewriter.getZeroAttr(dstType));
     for (int64_t d = 0; d < trueDimSize; d++)
-      result = rewriter.create<vector::InsertOp>(loc, trueVal, result, d);
+      result = vector::InsertOp::create(rewriter, loc, trueVal, result, d);
 
     rewriter.replaceOp(op, result);
     return success();
@@ -183,12 +184,14 @@ namespace {
 /// and actually match the traits of its the nested `MaskableOpInterface`.
 template <class SourceOp>
 struct MaskOpRewritePattern : OpRewritePattern<MaskOp> {
-  using OpRewritePattern<MaskOp>::OpRewritePattern;
+  using Base::Base;
 
 private:
   LogicalResult matchAndRewrite(MaskOp maskOp,
                                 PatternRewriter &rewriter) const final {
-    auto maskableOp = cast<MaskableOpInterface>(maskOp.getMaskableOp());
+    auto maskableOp = cast_or_null<MaskableOpInterface>(maskOp.getMaskableOp());
+    if (!maskableOp)
+      return failure();
     SourceOp sourceOp = dyn_cast<SourceOp>(maskableOp.getOperation());
     if (!sourceOp)
       return failure();
@@ -220,9 +223,9 @@ public:
 
     // Replace the `vector.mask` operation.
     rewriter.replaceOpWithNewOp<TransferReadOp>(
-        maskingOp.getOperation(), readOp.getVectorType(), readOp.getSource(),
+        maskingOp.getOperation(), readOp.getVectorType(), readOp.getBase(),
         readOp.getIndices(), readOp.getPermutationMap(), readOp.getPadding(),
-        maskingOp.getMask(), readOp.getInBounds().value_or(ArrayAttr()));
+        maskingOp.getMask(), readOp.getInBounds());
     return success();
   }
 };
@@ -243,8 +246,8 @@ public:
     // Replace the `vector.mask` operation.
     rewriter.replaceOpWithNewOp<TransferWriteOp>(
         maskingOp.getOperation(), resultType, writeOp.getVector(),
-        writeOp.getSource(), writeOp.getIndices(), writeOp.getPermutationMap(),
-        maskingOp.getMask(), writeOp.getInBounds().value_or(ArrayAttr()));
+        writeOp.getBase(), writeOp.getIndices(), writeOp.getPermutationMap(),
+        maskingOp.getMask(), writeOp.getInBounds());
     return success();
   }
 };
@@ -259,14 +262,14 @@ public:
                             PatternRewriter &rewriter) const override {
     Value passthru = maskingOp.hasPassthru()
                          ? maskingOp.getPassthru()
-                         : rewriter.create<arith::ConstantOp>(
-                               gatherOp.getLoc(),
+                         : arith::ConstantOp::create(
+                               rewriter, gatherOp.getLoc(),
                                rewriter.getZeroAttr(gatherOp.getVectorType()));
 
     // Replace the `vector.mask` operation.
     rewriter.replaceOpWithNewOp<GatherOp>(
         maskingOp.getOperation(), gatherOp.getVectorType(), gatherOp.getBase(),
-        gatherOp.getIndices(), gatherOp.getIndexVec(), maskingOp.getMask(),
+        gatherOp.getOffsets(), gatherOp.getIndices(), maskingOp.getMask(),
         passthru);
     return success();
   }
@@ -282,8 +285,9 @@ struct LowerVectorMaskPass
 
     RewritePatternSet loweringPatterns(context);
     populateVectorMaskLoweringPatternsForSideEffectingOps(loweringPatterns);
+    MaskOp::getCanonicalizationPatterns(loweringPatterns, context);
 
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(loweringPatterns))))
+    if (failed(applyPatternsGreedily(op, std::move(loweringPatterns))))
       signalPassFailure();
   }
 

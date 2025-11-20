@@ -10,6 +10,7 @@
 #include "assignment.h"
 #include "definable.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -25,6 +26,10 @@ struct AllocateCheckerInfo {
   std::optional<evaluate::DynamicType> sourceExprType;
   std::optional<parser::CharBlock> sourceExprLoc;
   std::optional<parser::CharBlock> typeSpecLoc;
+  std::optional<parser::CharBlock> statSource;
+  std::optional<parser::CharBlock> msgSource;
+  const SomeExpr *statVar{nullptr};
+  const SomeExpr *msgVar{nullptr};
   int sourceExprRank{0}; // only valid if gotMold || gotSource
   bool gotStat{false};
   bool gotMsg{false};
@@ -33,17 +38,17 @@ struct AllocateCheckerInfo {
   bool gotMold{false};
   bool gotStream{false};
   bool gotPinned{false};
+  std::optional<evaluate::ConstantSubscripts> sourceExprShape;
 };
 
 class AllocationCheckerHelper {
 public:
   AllocationCheckerHelper(
       const parser::Allocation &alloc, AllocateCheckerInfo &info)
-      : allocateInfo_{info}, allocateObject_{std::get<parser::AllocateObject>(
-                                 alloc.t)},
-        allocateShapeSpecRank_{ShapeSpecRank(alloc)}, allocateCoarraySpecRank_{
-                                                          CoarraySpecRank(
-                                                              alloc)} {}
+      : allocateInfo_{info}, allocation_{alloc},
+        allocateObject_{std::get<parser::AllocateObject>(alloc.t)},
+        allocateShapeSpecRank_{ShapeSpecRank(alloc)},
+        allocateCoarraySpecRank_{CoarraySpecRank(alloc)} {}
 
   bool RunChecks(SemanticsContext &context);
 
@@ -84,6 +89,7 @@ private:
   }
 
   AllocateCheckerInfo &allocateInfo_;
+  const parser::Allocation &allocation_;
   const parser::AllocateObject &allocateObject_;
   const int allocateShapeSpecRank_{0};
   const int allocateCoarraySpecRank_{0};
@@ -116,11 +122,17 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
       // C937
       if (auto it{FindCoarrayUltimateComponent(*derived)}) {
         context
-            .Say("Type-spec in ALLOCATE must not specify a type with a coarray"
-                 " ultimate component"_err_en_US)
+            .Say(
+                "Type-spec in ALLOCATE must not specify a type with a coarray ultimate component"_err_en_US)
             .Attach(it->name(),
                 "Type '%s' has coarray ultimate component '%s' declared here"_en_US,
                 info.typeSpec->AsFortran(), it.BuildResultDesignatorName());
+      }
+    }
+    if (auto dyType{evaluate::DynamicType::From(*info.typeSpec)}) {
+      if (dyType->HasDeferredTypeParameter()) {
+        context.Say(
+            "Type-spec in ALLOCATE must not have a deferred type parameter"_err_en_US);
       }
     }
   }
@@ -133,22 +145,30 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
             [&](const parser::StatOrErrmsg &statOrErr) {
               common::visit(
                   common::visitors{
-                      [&](const parser::StatVariable &) {
+                      [&](const parser::StatVariable &var) {
                         if (info.gotStat) { // C943
                           context.Say(
                               "STAT may not be duplicated in a ALLOCATE statement"_err_en_US);
                         }
                         info.gotStat = true;
+                        info.statVar = GetExpr(context, var);
+                        info.statSource =
+                            parser::Unwrap<parser::Variable>(var)->GetSource();
                       },
                       [&](const parser::MsgVariable &var) {
                         WarnOnDeferredLengthCharacterScalar(context,
                             GetExpr(context, var),
-                            var.v.thing.thing.GetSource(), "ERRMSG=");
+                            parser::UnwrapRef<parser::Variable>(var)
+                                .GetSource(),
+                            "ERRMSG=");
                         if (info.gotMsg) { // C943
                           context.Say(
                               "ERRMSG may not be duplicated in a ALLOCATE statement"_err_en_US);
                         }
                         info.gotMsg = true;
+                        info.msgVar = GetExpr(context, var);
+                        info.msgSource =
+                            parser::Unwrap<parser::Variable>(var)->GetSource();
                       },
                   },
                   statOrErr.u);
@@ -253,6 +273,9 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
           CheckCopyabilityInPureScope(messages, *expr, scope);
         }
       }
+      auto maybeShape{evaluate::GetShape(context.foldingContext(), *expr)};
+      info.sourceExprShape =
+          evaluate::AsConstantExtents(context.foldingContext(), maybeShape);
     } else {
       // Error already reported on source expression.
       // Do not continue allocate checks.
@@ -270,11 +293,13 @@ static bool IsTypeCompatible(
     const DeclTypeSpec &type1, const DerivedTypeSpec &derivedType2) {
   if (const DerivedTypeSpec * derivedType1{type1.AsDerived()}) {
     if (type1.category() == DeclTypeSpec::Category::TypeDerived) {
-      return &derivedType1->typeSymbol() == &derivedType2.typeSymbol();
+      return evaluate::AreSameDerivedTypeIgnoringTypeParameters(
+          *derivedType1, derivedType2);
     } else if (type1.category() == DeclTypeSpec::Category::ClassDerived) {
       for (const DerivedTypeSpec *parent{&derivedType2}; parent;
            parent = parent->typeSymbol().GetParentTypeSpec()) {
-        if (&derivedType1->typeSymbol() == &parent->typeSymbol()) {
+        if (evaluate::AreSameDerivedTypeIgnoringTypeParameters(
+                *derivedType1, *parent)) {
           return true;
         }
       }
@@ -426,7 +451,7 @@ static bool HaveCompatibleLengths(
         evaluate::ToInt64(type1.characterTypeSpec().length().GetExplicit())};
     auto v2{
         evaluate::ToInt64(type2.characterTypeSpec().length().GetExplicit())};
-    return !v1 || !v2 || *v1 == *v2;
+    return !v1 || !v2 || (*v1 >= 0 ? *v1 : 0) == (*v2 >= 0 ? *v2 : 0);
   } else {
     return true;
   }
@@ -439,9 +464,19 @@ static bool HaveCompatibleLengths(
     auto v1{
         evaluate::ToInt64(type1.characterTypeSpec().length().GetExplicit())};
     auto v2{type2.knownLength()};
-    return !v1 || !v2 || *v1 == *v2;
+    return !v1 || !v2 || (*v1 >= 0 ? *v1 : 0) == (*v2 >= 0 ? *v2 : 0);
   } else {
     return true;
+  }
+}
+
+bool AreSameAllocation(const SomeExpr *root, const SomeExpr *path) {
+  if (root && path) {
+    // For now we just use equality of expressions. If we implement a more
+    // sophisticated alias analysis we should use it here.
+    return *root == *path;
+  } else {
+    return false;
   }
 }
 
@@ -528,16 +563,16 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     }
     // Character length distinction is allowed, with a warning
     if (!HaveCompatibleLengths(
-            *type_, allocateInfo_.sourceExprType.value())) { // C945
-      context.Say(name_.source,
+            *type_, allocateInfo_.sourceExprType.value())) { // F'2023 C950
+      context.Warn(common::LanguageFeature::AllocateToOtherLength, name_.source,
           "Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD"_port_en_US);
       return false;
     }
   }
   // Shape related checks
-  if (ultimate_ && evaluate::IsAssumedRank(*ultimate_)) {
+  if (ultimate_ && IsAssumedRank(*ultimate_)) {
     context.Say(name_.source,
-        "An assumed-rank object may not appear in an ALLOCATE statement"_err_en_US);
+        "An assumed-rank dummy argument may not appear in an ALLOCATE statement"_err_en_US);
     return false;
   }
   if (ultimate_ && IsAssumedSizeArray(*ultimate_) && context.AnyFatalError()) {
@@ -573,6 +608,53 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             .Attach(
                 ultimate_->name(), "Declared here with rank %d"_en_US, rank_);
         return false;
+      } else if (allocateInfo_.gotSource && allocateInfo_.sourceExprShape &&
+          allocateInfo_.sourceExprShape->size() ==
+              static_cast<std::size_t>(allocateShapeSpecRank_)) {
+        std::size_t j{0};
+        for (const auto &shapeSpec :
+            std::get<std::list<parser::AllocateShapeSpec>>(allocation_.t)) {
+          if (j >= allocateInfo_.sourceExprShape->size()) {
+            break;
+          }
+          std::optional<evaluate::ConstantSubscript> lbound;
+          if (const auto &lb{std::get<0>(shapeSpec.t)}) {
+            lbound.reset();
+            const auto &lbExpr{parser::UnwrapRef<parser::Expr>(lb)};
+            if (const auto *expr{GetExpr(context, lbExpr)}) {
+              auto folded{
+                  evaluate::Fold(context.foldingContext(), SomeExpr(*expr))};
+              lbound = evaluate::ToInt64(folded);
+              evaluate::SetExpr(lbExpr, std::move(folded));
+            }
+          } else {
+            lbound = 1;
+          }
+          if (lbound) {
+            const auto &ubExpr{
+                parser::UnwrapRef<parser::Expr>(std::get<1>(shapeSpec.t))};
+            if (const auto *expr{GetExpr(context, ubExpr)}) {
+              auto folded{
+                  evaluate::Fold(context.foldingContext(), SomeExpr(*expr))};
+              auto ubound{evaluate::ToInt64(folded)};
+              evaluate::SetExpr(ubExpr, std::move(folded));
+              if (ubound) {
+                auto extent{*ubound - *lbound + 1};
+                if (extent < 0) {
+                  extent = 0;
+                }
+                if (extent != allocateInfo_.sourceExprShape->at(j)) {
+                  context.Say(name_.source,
+                      "Allocation has extent %jd on dimension %d, but SOURCE= has extent %jd"_err_en_US,
+                      static_cast<std::intmax_t>(extent), j + 1,
+                      static_cast<std::intmax_t>(
+                          allocateInfo_.sourceExprShape->at(j)));
+                }
+              }
+            }
+          }
+          ++j;
+        }
       }
     }
   } else { // allocating a scalar object
@@ -598,15 +680,45 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   const Scope &subpScope{
       GetProgramUnitContaining(context.FindScope(name_.source))};
   if (allocateObject_.typedExpr && allocateObject_.typedExpr->v) {
-    if (auto whyNot{WhyNotDefinable(name_.source, subpScope,
-            {DefinabilityFlag::PointerDefinition,
-                DefinabilityFlag::AcceptAllocatable},
-            *allocateObject_.typedExpr->v)}) {
+    DefinabilityFlags flags{DefinabilityFlag::PointerDefinition,
+        DefinabilityFlag::AcceptAllocatable};
+    if (allocateInfo_.gotSource) {
+      flags.set(DefinabilityFlag::SourcedAllocation);
+    }
+    if (auto whyNot{WhyNotDefinable(
+            name_.source, subpScope, flags, *allocateObject_.typedExpr->v)}) {
       context
           .Say(name_.source,
               "Name in ALLOCATE statement is not definable"_err_en_US)
-          .Attach(std::move(*whyNot));
+          .Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
       return false;
+    }
+  }
+  if (allocateInfo_.gotPinned) {
+    std::optional<common::CUDADataAttr> cudaAttr{GetCUDADataAttr(ultimate_)};
+    if ((!cudaAttr || *cudaAttr != common::CUDADataAttr::Pinned) &&
+        context.languageFeatures().ShouldWarn(
+            common::UsageWarning::CUDAUsage)) {
+      context.Say(name_.source,
+          "Object in ALLOCATE should have PINNED attribute when PINNED option is specified"_warn_en_US);
+    }
+  }
+  if (allocateInfo_.gotStream) {
+    std::optional<common::CUDADataAttr> cudaAttr{GetCUDADataAttr(ultimate_)};
+    if (!cudaAttr || *cudaAttr != common::CUDADataAttr::Device) {
+      context.Say(name_.source,
+          "Object in ALLOCATE must have DEVICE attribute when STREAM option is specified"_err_en_US);
+    }
+  }
+
+  if (const SomeExpr *allocObj{GetExpr(context, allocateObject_)}) {
+    if (AreSameAllocation(allocObj, allocateInfo_.statVar)) {
+      context.Say(allocateInfo_.statSource.value_or(name_.source),
+          "STAT variable in ALLOCATE must not be the variable being allocated"_err_en_US);
+    }
+    if (AreSameAllocation(allocObj, allocateInfo_.msgVar)) {
+      context.Say(allocateInfo_.msgSource.value_or(name_.source),
+          "ERRMSG variable in ALLOCATE must not be the variable being allocated"_err_en_US);
     }
   }
   return RunCoarrayRelatedChecks(context);
@@ -671,6 +783,31 @@ bool AllocationCheckerHelper::RunCoarrayRelatedChecks(
             .Attach(ultimate_->name(), "Declared here with corank %d"_en_US,
                 corank_);
         return false;
+      }
+      if (const auto &coarraySpec{
+              std::get<std::optional<parser::AllocateCoarraySpec>>(
+                  allocation_.t)}) {
+        int dim{0};
+        for (const auto &spec :
+            std::get<std::list<parser::AllocateCoshapeSpec>>(coarraySpec->t)) {
+          if (auto ubv{evaluate::ToInt64(
+                  GetExpr(context, std::get<parser::BoundExpr>(spec.t)))}) {
+            if (auto *lbx{GetExpr(context,
+                    std::get<std::optional<parser::BoundExpr>>(spec.t))}) {
+              auto lbv{evaluate::ToInt64(*lbx)};
+              if (lbv && *ubv < *lbv) {
+                context.Say(name_.source,
+                    "Upper cobound %jd is less than lower cobound %jd of codimension %d"_err_en_US,
+                    std::intmax_t{*ubv}, std::intmax_t{*lbv}, dim + 1);
+              }
+            } else if (*ubv < 1) {
+              context.Say(name_.source,
+                  "Upper cobound %jd of codimension %d is less than 1"_err_en_US,
+                  std::intmax_t{*ubv}, dim + 1);
+            }
+          }
+          ++dim;
+        }
       }
     }
   } else { // Not a coarray

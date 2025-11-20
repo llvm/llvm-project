@@ -293,7 +293,7 @@ define <2 x i64> @imulq128(<2 x i64> %y, <2 x i64> %x) {
 define <2 x i64> @imulq128_bcast(<2 x i64> %x) {
 ; AVX512F-LABEL: imulq128_bcast:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [8086,8086]
+; AVX512F-NEXT:    vpmovsxwq {{.*#+}} xmm1 = [8086,8086]
 ; AVX512F-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; AVX512F-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
@@ -313,7 +313,7 @@ define <2 x i64> @imulq128_bcast(<2 x i64> %x) {
 ;
 ; AVX512BW-LABEL: imulq128_bcast:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [8086,8086]
+; AVX512BW-NEXT:    vpmovsxwq {{.*#+}} xmm1 = [8086,8086]
 ; AVX512BW-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; AVX512BW-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
@@ -324,7 +324,7 @@ define <2 x i64> @imulq128_bcast(<2 x i64> %x) {
 ; AVX512DQ-LABEL: imulq128_bcast:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512DQ-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [8086,8086]
+; AVX512DQ-NEXT:    vpmovsxwq {{.*#+}} xmm1 = [8086,8086]
 ; AVX512DQ-NEXT:    vpmullq %zmm1, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -1158,7 +1158,7 @@ define <16 x i32> @masked_inc_test(<16 x i32> %i, <16 x i32> %mask1) nounwind re
 ; CHECK-LABEL: masked_inc_test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vptestmd %zmm1, %zmm1, %k1
-; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
@@ -1171,7 +1171,7 @@ define <16 x i32> @masked_dec_test(<16 x i32> %i, <16 x i32> %mask1) nounwind re
 ; CHECK-LABEL: masked_dec_test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vptestmd %zmm1, %zmm1, %k1
-; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer

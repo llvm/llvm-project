@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_CHDIR_H
 #define LLVM_LIBC_SRC_UNISTD_CHDIR_H
 
-namespace __llvm_libc {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 int chdir(const char *path);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_CHDIR_H

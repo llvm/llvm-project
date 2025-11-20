@@ -1,6 +1,8 @@
-; RUN: llc < %s -relocation-model static | FileCheck %s
+; RUN: llc < %s -relocation-model=static | FileCheck %s
+; RUN: llc < %s -relocation-model=pic | FileCheck %s --check-prefix=PIC
+; RUN: llc < %s -relocation-model=pic -code-model=large | FileCheck %s --check-prefix=PIC
 
-; FIXME: Remove '-relocation-model static' when it is no longer necessary to
+; FIXME: Remove '-relocation-model=static' when it is no longer necessary to
 ; trigger the separate .rdata section.
 
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
@@ -43,9 +45,9 @@ declare void @g(i32)
 ; CHECK: .seh_proc f
 ; CHECK: jmpq    *.LJTI0_0
 ; CHECK: .LBB0_{{.*}}: # %sw.bb
-; CHECK: .LBB0_{{.*}}: # %sw.bb1
 ; CHECK: .LBB0_{{.*}}: # %sw.bb2
 ; CHECK: .LBB0_{{.*}}: # %sw.bb3
+; CHECK: .LBB0_{{.*}}: # %sw.bb1
 ; CHECK: callq g
 ; CHECK: jmp g # TAILCALL
 ; CHECK: .section        .rdata,"dr"
@@ -57,3 +59,9 @@ declare void @g(i32)
 ; It's important that we switch back to .text here, not .rdata.
 ; CHECK: .text
 ; CHECK: .seh_endproc
+
+; Windows PIC code should use 32-bit entries
+; PIC: .long .LBB0_2-.LJTI0_0
+; PIC: .long .LBB0_3-.LJTI0_0
+; PIC: .long .LBB0_4-.LJTI0_0
+; PIC: .long .LBB0_5-.LJTI0_0

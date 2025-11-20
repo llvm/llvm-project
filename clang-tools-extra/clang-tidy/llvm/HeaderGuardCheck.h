@@ -1,4 +1,4 @@
-//===--- HeaderGuardCheck.h - clang-tidy ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,14 +15,7 @@ namespace clang::tidy::llvm_check {
 
 /// Finds and fixes header guards that do not adhere to LLVM style.
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvm/header-guard.html
-/// The check supports these options:
-///   - `HeaderFileExtensions`: a semicolon-separated list of filename
-///     extensions of header files (The filename extension should not contain
-///     "." prefix). ";h;hh;hpp;hxx" by default.
-///
-///     For extension-less header files, using an empty string or leaving an
-///     empty string between ";" if there are other filename extensions.
+/// https://clang.llvm.org/extra/clang-tidy/checks/llvm/header-guard.html
 class LLVMHeaderGuardCheck : public utils::HeaderGuardCheck {
 public:
   LLVMHeaderGuardCheck(StringRef Name, ClangTidyContext *Context);

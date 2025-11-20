@@ -1,3 +1,11 @@
+//===- bolt/Passes/FixRISCVCallsPass.cpp ------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "bolt/Passes/FixRISCVCallsPass.h"
 #include "bolt/Core/ParallelUtilities.h"
 
@@ -43,7 +51,12 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
 
         MCInst OldCall = *NextII;
         auto L = BC.scopeLock();
-        MIB->createCall(*II, Target, Ctx);
+
+        if (MIB->isTailCall(*NextII))
+          MIB->createTailCall(*II, Target, Ctx);
+        else
+          MIB->createCall(*II, Target, Ctx);
+
         MIB->moveAnnotations(std::move(OldCall), *II);
 
         // The original offset was set on the jalr of the auipc+jalr pair. Since
@@ -63,9 +76,9 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
   }
 }
 
-void FixRISCVCallsPass::runOnFunctions(BinaryContext &BC) {
+Error FixRISCVCallsPass::runOnFunctions(BinaryContext &BC) {
   if (!BC.isRISCV() || !BC.HasRelocations)
-    return;
+    return Error::success();
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     runOnFunction(BF);
@@ -74,6 +87,8 @@ void FixRISCVCallsPass::runOnFunctions(BinaryContext &BC) {
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun, nullptr,
       "FixRISCVCalls");
+
+  return Error::success();
 }
 
 } // namespace bolt

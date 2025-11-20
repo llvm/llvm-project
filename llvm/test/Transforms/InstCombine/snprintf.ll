@@ -103,7 +103,7 @@ define i32 @test_char_small_size(ptr %buf) #0 {
 define i32 @test_char_ok_size(ptr %buf) #0 {
 ; CHECK-LABEL: @test_char_ok_size(
 ; CHECK-NEXT:    store i8 65, ptr [[BUF:%.*]], align 1
-; CHECK-NEXT:    [[NUL:%.*]] = getelementptr inbounds i8, ptr [[BUF]], i64 1
+; CHECK-NEXT:    [[NUL:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[NUL]], align 1
 ; CHECK-NEXT:    ret i32 1
 ;

@@ -18,6 +18,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
 
 #include <future>
@@ -133,17 +134,6 @@ void SymbolFile::GetMangledNamesForFunction(
     const std::string &scope_qualified_name,
     std::vector<ConstString> &mangled_names) {}
 
-void SymbolFile::FindTypes(
-    ConstString name, const CompilerDeclContext &parent_decl_ctx,
-    uint32_t max_matches,
-    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-    TypeMap &types) {}
-
-void SymbolFile::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                           LanguageSet languages,
-                           llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                           TypeMap &types) {}
-
 void SymbolFile::AssertModuleLock() {
   // The code below is too expensive to leave enabled in release builds. It's
   // enabled in debug builds or when the correct macro is set.
@@ -162,10 +152,10 @@ void SymbolFile::AssertModuleLock() {
 
 SymbolFile::RegisterInfoResolver::~RegisterInfoResolver() = default;
 
-Symtab *SymbolFileCommon::GetSymtab() {
+Symtab *SymbolFileCommon::GetSymtab(bool can_create) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // Fetch the symtab from the main object file.
-  auto *symtab = GetMainObjectFile()->GetSymtab();
+  auto *symtab = GetMainObjectFile()->GetSymtab(can_create);
   if (m_symtab != symtab) {
     m_symtab = symtab;
 
@@ -215,7 +205,7 @@ void SymbolFileCommon::SetCompileUnitAtIndex(uint32_t idx,
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   const size_t num_compile_units = GetNumCompileUnits();
   assert(idx < num_compile_units);
-  (void)num_compile_units;
+  UNUSED_IF_ASSERT_DISABLED(num_compile_units);
 
   // Fire off an assertion if this compile unit already exists for now. The
   // partial parsing should take care of only setting the compile unit
@@ -237,7 +227,7 @@ SymbolFileCommon::GetTypeSystemForLanguage(lldb::LanguageType language) {
   return type_system_or_err;
 }
 
-uint64_t SymbolFileCommon::GetDebugInfoSize() {
+uint64_t SymbolFileCommon::GetDebugInfoSize(bool load_all_debug_info) {
   if (!m_objfile_sp)
     return 0;
   ModuleSP module_sp(m_objfile_sp->GetModule());
@@ -268,4 +258,10 @@ void SymbolFileCommon::Dump(Stream &s) {
 
   if (Symtab *symtab = GetSymtab())
     symtab->Dump(&s, nullptr, eSortOrderNone);
+}
+
+std::string SymbolFile::GetObjectName() const {
+  if (const ObjectFile *object_file = GetObjectFile())
+    return object_file->GetObjectName();
+  return "";
 }

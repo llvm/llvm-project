@@ -71,7 +71,7 @@ inline std::string JsonFormat(StringRef RawSR, bool AddQuotes) {
   }
 
   // Remove new-lines.
-  llvm::erase_value(Str, '\n');
+  llvm::erase(Str, '\n');
 
   if (!AddQuotes)
     return Str;
@@ -106,7 +106,7 @@ inline void printSourceLocationAsJson(raw_ostream &Out, SourceLocation Loc,
         return llvm::is_contained(ForbiddenChars, Char);
       });
       // Handle windows-specific path delimiters.
-      std::replace(filename.begin(), filename.end(), '\\', '/');
+      llvm::replace(filename, '\\', '/');
     }
     Out << "\"line\": " << PLoc.getLine()
         << ", \"column\": " << PLoc.getColumn()

@@ -52,7 +52,20 @@ def GPU_Dialect : Dialect {
     /// Returns the numeric value used to identify the private memory address
     /// space.
     static AddressSpace getPrivateAddressSpace() { return AddressSpace::Private; }
+
+    /// Return true if the given MemRefType has an address space that matches
+    /// with the gpu::AddressSpaceAttr attribute with value 'workgroup`.
+    static bool hasWorkgroupMemoryAddressSpace(MemRefType type);
+
+    /// Return true if the given Attribute is an gpu::AddressSpaceAttr
+    /// attribute with value 'workgroup`.
+    static bool isWorkgroupMemoryAddressSpace(Attribute memorySpace);
   }];
+
+  let discardableAttrs = (ins
+    "::mlir::DenseI32ArrayAttr":$known_block_size,
+    "::mlir::DenseI32ArrayAttr":$known_grid_size
+  );
 
   let dependentDialects = ["arith::ArithDialect"];
   let useDefaultAttributePrinterParser = 1;

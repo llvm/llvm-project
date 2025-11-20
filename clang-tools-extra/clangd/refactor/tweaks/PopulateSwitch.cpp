@@ -113,11 +113,11 @@ bool PopulateSwitch::prepare(const Selection &Sel) {
   // Ignore implicit casts, since enums implicitly cast to integer types.
   Cond = Cond->IgnoreParenImpCasts();
   // Get the canonical type to handle typedefs.
-  EnumT = Cond->getType().getCanonicalType()->getAsAdjusted<EnumType>();
+  EnumT = Cond->getType()->getAsCanonical<EnumType>();
   if (!EnumT)
     return false;
-  EnumD = EnumT->getDecl();
-  if (!EnumD || EnumD->isDependentType())
+  EnumD = EnumT->getDecl()->getDefinitionOrSelf();
+  if (EnumD->isDependentType())
     return false;
 
   // Finally, check which cases exist and which are covered.
@@ -176,7 +176,7 @@ bool PopulateSwitch::prepare(const Selection &Sel) {
 
     // We need a stored value in order to continue; currently both C and ObjC
     // enums won't have one.
-    if (CE->getResultStorageKind() == ConstantExpr::RSK_None)
+    if (CE->getResultStorageKind() == ConstantResultStorageKind::None)
       return false;
     auto Iter = ExpectedCases.find(Normalize(CE->getResultAsAPSInt()));
     if (Iter != ExpectedCases.end())

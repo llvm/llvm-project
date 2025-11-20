@@ -13,11 +13,11 @@ entry:
   br i1 %n, label %flag_true, label %flag_false
 
 flag_true:
-  call void @llvm.lifetime.start.p0(i64 8, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
   br label %merge
 
 flag_false:
-  call void @llvm.lifetime.start.p0(i64 8, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
   br label %merge
 
 merge:
@@ -36,7 +36,7 @@ cleanup:
   br label %suspend
 
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
@@ -49,9 +49,9 @@ declare void @llvm.coro.destroy(ptr)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 declare void @print(ptr)
 declare noalias ptr @malloc(i32)
@@ -66,7 +66,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 48)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%f.Frame]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%f.Frame]], ptr [[HDL]], i32 0, i32 1
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
 ; CHECK-NEXT:    [[X_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 2
 ; CHECK-NEXT:    [[Y_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
@@ -78,7 +78,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[ALIAS_PHI_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 4
 ; CHECK-NEXT:    store ptr [[ALIAS_PHI]], ptr [[ALIAS_PHI_SPILL_ADDR]], align 8
 ; CHECK-NEXT:    store i8 1, ptr [[ALIAS_PHI]], align 1
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 5
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[F_FRAME]], ptr [[HDL]], i32 0, i32 5
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;

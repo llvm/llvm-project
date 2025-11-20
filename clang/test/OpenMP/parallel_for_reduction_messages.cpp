@@ -89,10 +89,12 @@ class S5 {
 public:
   S5(int v) : a(v) {}
   void foo() {
+#if defined(_OPENMP) && (_OPENMP <= 202111)
 #pragma omp parallel private(a) // expected-note {{defined as private}}
 #pragma omp for reduction(+:a) // expected-error {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
     ::foo();
+#endif
 #pragma omp parallel for reduction(inscan, +:a)
   for (int i = 0; i < 10; ++i) {
 #pragma omp scan inclusive(a)
@@ -226,8 +228,95 @@ T tmain(T argc) {
 #pragma omp parallel for reduction(+ : fl)
   for (int i = 0; i < 10; ++i)
     foo();
-
+#if defined(_OPENMP) && (_OPENMP >= 202411)
+#pragma omp parallel private(fl)
+#pragma omp for reduction(original(abcxx),+:fl) // expected-error {{private or shared or default}} expected-warning {{extra tokens at the end of '#pragma omp for'}} 
+for (int i = 1; i <= 10; i++) 
+  foo();
+#endif
   return T();
+}
+namespace private_reduction_test{
+void test_original_modifier(){
+int fl;
+#if defined(_OPENMP) && (_OPENMP >= 202411)
+#pragma omp parallel private(fl)
+#pragma omp for reduction(original(privates),+:fl) // expected-error {{private or shared or default}} expected-warning {{extra tokens at the end of '#pragma omp for'}}
+for (int i = 1; i <= 10; i++)
+  ;
+
+#pragma omp parallel for reduction(original(private)+ : fl) // expected-error {{expected ',' (comma)}} expected-warning {{extra tokens at the end of '#pragma omp parallel for' }}
+for (int i = 0; i < 10; ++i)
+    ;
+
+#pragma omp parallel 
+#pragma omp for reduction(original(shared),+:fl) 
+for( int i = 0; i < 10; i++)
+;
+#pragma omp parallel for reduction(original(private),+: fl // expected-error {{expected ')'}} expected-note {{to match this '('}}
+for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp parallel firstprivate(fl)
+#pragma omp for reduction(+:fl) 
+for( int i = 0; i < 10; i++)
+;
+
+#pragma omp parallel 
+#pragma omp for reduction(original(private),+:fl) 
+for( int i = 0; i < 10; i++)
+;
+
+#endif
+}
+void test_interaction(){
+int x;
+#if defined(_OPENMP) && (_OPENMP >= 202411)
+#pragma omp parallel private(x)
+#pragma omp for reduction(original(private),+:x) nowait 
+for (int i = 0; i < 10; ++i)
+  x += 1;
+#pragma omp parallel
+{
+#pragma omp for reduction(original(private),+:) // expected-error {{expected expression}}
+for( int i = 0; i < 10; ++i)
+;
+}
+#pragma omp parallel private(x)
+#pragma omp for reduction(original(private),+:x) ordered
+for (int i = 0; i < 10; ++i)
+  x += 1;
+#endif
+ }
+template<typename T>
+void test_template_reduction() {
+  T x = T();
+#if defined(_OPENMP) && (_OPENMP >= 202411)  
+  #pragma omp parallel private(x)
+  {
+    #pragma omp for reduction(original(private),+:x) 
+    for (int i = 0; i < 10; ++i) {
+      x += T(1);
+    }
+  }
+#endif
+}
+struct Custom {
+  int value;
+  Custom() : value(0) {}
+  Custom& operator+=(const Custom& other) {
+    value += other.value;
+    return *this;
+  }
+};
+void test_user_defined_type() {
+  Custom c;
+#if defined(_OPENMP) && (_OPENMP >= 202411)  
+  #pragma omp parallel private(c)
+  #pragma omp for reduction(original(private),+:c)
+    for (int i = 0; i < 10; ++i)
+      c.value += 1;
+#endif
+ }
 }
 
 namespace A {

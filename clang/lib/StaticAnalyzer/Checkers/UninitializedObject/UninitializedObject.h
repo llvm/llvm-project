@@ -79,7 +79,7 @@ struct UninitObjCheckerOptions {
 };
 
 /// A lightweight polymorphic wrapper around FieldRegion *. We'll use this
-/// interface to store addinitional information about fields. As described
+/// interface to store additional information about fields. As described
 /// later, a list of these objects (i.e. "fieldchain") will be constructed and
 /// used for printing note messages should an uninitialized value be found.
 class FieldNode {
@@ -299,7 +299,7 @@ private:
   bool isDereferencableUninit(const FieldRegion *FR, FieldChainInfo LocalChain);
 
   /// Returns true if the value of a primitive object is uninitialized.
-  bool isPrimitiveUninit(const SVal &V);
+  bool isPrimitiveUninit(SVal V);
 
   // Note that we don't have a method for arrays -- the elements of an array are
   // often left uninitialized intentionally even when it is of a C++ record

@@ -16,6 +16,9 @@
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
+#include <unordered_set>
+
+static std::unordered_set<std::string> nameObj;
 
 namespace llvm {
 
@@ -77,16 +80,30 @@ protected:
   /// virtual destructor needed. Making this dtor protected stops accidental
   /// invocation when the derived class destructor should have been called.
   /// Those derived classes sould be marked final to avoid the warning.
-  ~DOTGraphTraitsViewer() {}
+  ~DOTGraphTraitsViewer() = default;
 
 private:
   StringRef Name;
 };
 
+static inline void shortenFileName(std::string &FN, unsigned char len = 250) {
+  if (FN.length() > len)
+    FN.resize(len);
+  auto strLen = FN.length();
+  while (strLen > 0) {
+    if (nameObj.insert(FN).second)
+      break;
+    FN.resize(--len);
+    strLen--;
+  }
+}
+
 template <typename GraphT>
 void printGraphForFunction(Function &F, GraphT Graph, StringRef Name,
                            bool IsSimple) {
-  std::string Filename = Name.str() + "." + F.getName().str() + ".dot";
+  std::string Filename = Name.str() + "." + F.getName().str();
+  shortenFileName(Filename);
+  Filename = Filename + ".dot";
   std::error_code EC;
 
   errs() << "Writing '" << Filename << "'...";
@@ -144,7 +161,7 @@ protected:
   /// virtual destructor needed. Making this dtor protected stops accidental
   /// invocation when the derived class destructor should have been called.
   /// Those derived classes sould be marked final to avoid the warning.
-  ~DOTGraphTraitsPrinter() {}
+  ~DOTGraphTraitsPrinter() = default;
 
 private:
   StringRef Name;
@@ -272,6 +289,7 @@ public:
 
   bool runOnModule(Module &M) override {
     GraphT Graph = AnalysisGraphTraitsT::getGraph(&getAnalysis<AnalysisT>());
+    shortenFileName(Name);
     std::string Filename = Name + ".dot";
     std::error_code EC;
 
@@ -301,7 +319,9 @@ private:
 template <typename GraphT>
 void WriteDOTGraphToFile(Function &F, GraphT &&Graph,
                          std::string FileNamePrefix, bool IsSimple) {
-  std::string Filename = FileNamePrefix + "." + F.getName().str() + ".dot";
+  std::string Filename = FileNamePrefix + "." + F.getName().str();
+  shortenFileName(Filename);
+  Filename = Filename + ".dot";
   std::error_code EC;
 
   errs() << "Writing '" << Filename << "'...";

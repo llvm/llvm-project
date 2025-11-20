@@ -8,6 +8,16 @@
 // RUN:         readability-function-size.VariableThreshold: 1 \
 // RUN:     }}'
 
+
+// RUN: %check_clang_tidy -check-suffixes=OPTIONAL %s readability-function-size %t -- \
+// RUN:     -config='{CheckOptions: { \
+// RUN:         readability-function-size.StatementThreshold: "-1", \
+// RUN:         readability-function-size.BranchThreshold: "5", \
+// RUN:         readability-function-size.ParameterThreshold: "none", \
+// RUN:         readability-function-size.NestingThreshold: "", \
+// RUN:         readability-function-size.VariableThreshold: "" \
+// RUN:     }}'
+
 // Bad formatting is intentional, don't run clang-format over the whole file!
 
 void foo1() {
@@ -103,9 +113,11 @@ void baz0() { // 1
 // check that nested if's are not reported. this was broken initially
 void nesting_if() { // 1
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'nesting_if' exceeds recommended size/complexity
-  // CHECK-MESSAGES: :[[@LINE-2]]:6: note: 23 lines including whitespace and comments (threshold 0)
+  // CHECK-MESSAGES: :[[@LINE-2]]:6: note: 25 lines including whitespace and comments (threshold 0)
   // CHECK-MESSAGES: :[[@LINE-3]]:6: note: 18 statements (threshold 0)
   // CHECK-MESSAGES: :[[@LINE-4]]:6: note: 6 branches (threshold 0)
+  // CHECK-MESSAGES-OPTIONAL: :[[@LINE-5]]:6: warning: function 'nesting_if' exceeds recommended size/complexity
+  // CHECK-MESSAGES-OPTIONAL: :[[@LINE-6]]:6: note: 6 branches (threshold 5)
   if (true) { // 2
      int j;
   } else if (true) { // 2
@@ -123,7 +135,7 @@ void nesting_if() { // 1
   } else if (true) { // 2
      int j;
   }
-  // CHECK-MESSAGES: :[[@LINE-22]]:6: note: 6 variables (threshold 1)
+  // CHECK-MESSAGES: :[[@LINE-24]]:6: note: 6 variables (threshold 1)
 }
 
 // however this should warn
@@ -306,4 +318,61 @@ void variables_16() {
 // CHECK-MESSAGES: :[[@LINE-4]]:6: warning: function 'variables_16' exceeds recommended size/complexity thresholds [readability-function-size]
 // CHECK-MESSAGES: :[[@LINE-5]]:6: note: 3 lines including whitespace and comments (threshold 0)
 // CHECK-MESSAGES: :[[@LINE-6]]:6: note: 4 statements (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-7]]:6: note: 2 variables (threshold 1)
+
+struct A {
+  A(int c, int d) : a(0), b(c) { ; }
+  int a;
+  int b;
+};
+// CHECK-MESSAGES: :[[@LINE-4]]:3: warning: function 'A' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-5]]:3: note: 3 statements (threshold 0)
+
+struct B {
+  B(int x, int y, int z) : a(x + y * z), b(), c_a(y, z) {
+    ;
+  }
+  int a;
+  int b;
+  A c_a;
+};
+// CHECK-MESSAGES: :[[@LINE-7]]:3: warning: function 'B' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-8]]:3: note: 2 lines including whitespace and comments (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-9]]:3: note: 4 statements (threshold 0)
+
+struct C : A, B {
+  C() : A(0, 4), B(1, 2, 3) {}
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:3: warning: function 'C' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-3]]:3: note: 2 statements (threshold 0)
+
+template<typename T>
+struct TemplateC {
+  // 0 statements
+  TemplateC() : a(3) {}
+  T a;
+};
+// CHECK-MESSAGES: :[[@LINE-3]]:3: warning: function 'TemplateC<T>' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-4]]:3: note: 1 statements (threshold 0)
+
+template<typename T>
+struct TemplateD {
+  template<typename U>
+  TemplateD(U&& val) : member(val) { 
+    ;
+  }
+  
+  T member;
+};
+// CHECK-MESSAGES: :[[@LINE-6]]:3: warning: function 'TemplateD<T>' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-7]]:3: note: 2 lines including whitespace and comments (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-8]]:3: note: 2 statements (threshold 0)
+
+void instantiate() {
+  TemplateC<int> c;
+  TemplateD<int> d(5);
+}
+// CHECK-MESSAGES: :[[@LINE-4]]:6: warning: function 'instantiate' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-5]]:6: note: 3 lines including whitespace and comments (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-6]]:6: note: 2 statements (threshold 0)
 // CHECK-MESSAGES: :[[@LINE-7]]:6: note: 2 variables (threshold 1)

@@ -3,13 +3,13 @@
 ; RUN: FileCheck --input-file=%t --check-prefix=YAML %s
 
 ; This type is not supported by SLP
-define i1 @test(ptr %i1, ptr %i2) {
+define i1 @test(ptr %i1, ptr %i2, i1 %arg) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I1_0:%.*]] = load x86_fp80, ptr [[I1:%.*]], align 16
 ; CHECK-NEXT:    [[I1_GEP1:%.*]] = getelementptr x86_fp80, ptr [[I1]], i64 1
 ; CHECK-NEXT:    [[I1_1:%.*]] = load x86_fp80, ptr [[I1_GEP1]], align 16
-; CHECK-NEXT:    br i1 undef, label [[THEN:%.*]], label [[END:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[THEN:%.*]], label [[END:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[I2_0:%.*]] = load x86_fp80, ptr [[I2:%.*]], align 16
 ; CHECK-NEXT:    [[I2_GEP1:%.*]] = getelementptr inbounds x86_fp80, ptr [[I2]], i64 1
@@ -25,7 +25,7 @@ entry:
   %i1.0 = load x86_fp80, ptr %i1, align 16
   %i1.gep1 = getelementptr x86_fp80, ptr %i1, i64 1
   %i1.1 = load x86_fp80, ptr %i1.gep1, align 16
-  br i1 undef, label %then, label %end
+  br i1 %arg, label %then, label %end
 then:
   %i2.0 = load x86_fp80, ptr %i2, align 16
   %i2.gep1 = getelementptr inbounds x86_fp80, ptr %i2, i64 1

@@ -43,6 +43,6 @@ One Line To Match
 # LINE: {{o}}ne line
 # LINE-SAME: {{t}}o match
 
-# ERROR: command line:1:{{[0-9]+}}: error: CHECK-NOT: excluded string found in input
+# ERROR: command line:1:{{[0-9]+}}: error: IMPLICIT-CHECK-NOT: excluded string found in input
 # ERROR-NEXT: -implicit-check-not='sTrInG'
 # ERROR: note: found here

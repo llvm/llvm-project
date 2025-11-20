@@ -13,6 +13,8 @@
 
 #include <optional>
 
+#include "test_macros.h"
+
 using std::optional;
 
 struct X
@@ -25,22 +27,26 @@ int main(int, char**)
 {
     using std::optional;
     {
-        // expected-error-re@optional:* 2 {{{{(static_assert|static assertion)}} failed{{.*}}instantiation of optional with a reference type is ill-formed}}
-        optional<int&> opt1;
-        optional<int&&> opt2;
+#if TEST_STD_VER >= 26
+      // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with an rvalue reference type is ill-formed}}
+#else
+      // expected-error-re@optional:* 2 {{static assertion failed{{.*}}instantiation of optional with a reference type is ill-formed}}
+#endif
+      optional<int&> opt1;
+      optional<int&&> opt2;
     }
     {
-        // expected-error-re@optional:* {{{{(static_assert|static assertion)}} failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}
+        // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}
         optional<X> opt3;
     }
     {
-        // expected-error-re@optional:* {{{{(static_assert|static assertion)}} failed{{.*}}instantiation of optional with a non-object type is undefined behavior}}
-        // expected-error-re@optional:* {{{{(static_assert|static assertion)}} failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}
+        // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with a non-object type is undefined behavior}}
+        // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}
         optional<void()> opt4;
     }
     {
-        // expected-error-re@optional:* {{{{(static_assert|static assertion)}} failed{{.*}}instantiation of optional with a non-object type is undefined behavior}}
-        // expected-error-re@optional:* {{{{(static_assert|static assertion)}} failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}
+        // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with a non-object type is undefined behavior}}
+        // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}
         // expected-error@optional:* 1+ {{cannot form a reference to 'void'}}
         optional<const void> opt4;
     }

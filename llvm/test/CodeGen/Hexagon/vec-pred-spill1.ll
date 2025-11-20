@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv60 -O2 -mattr=+hvxv60,hvx-length64b < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv60 -O2 -mattr=+hvxv60,hvx-length64b < %s | FileCheck %s
 
 ; CHECK: vmem(r{{[0-9]+}}+#3) = v{{[0-9]+}}
 ; CHECK: call puts

@@ -1,3 +1,5 @@
+#include <reserved.h>
+
 namespace LongNamespaceName { class NestedClass { long m; }; }
 
 // Defined in other.cpp, we only have a forward declaration here.
@@ -31,5 +33,8 @@ int main()
     some_expr.FooNumbersBar1();
     Expr::StaticMemberMethodBar();
     ForwardDecl *fwd_decl_ptr = &fwd_decl;
+    MyVec myVec;
+    myVec.__func();
+    myVec._Func();
     return 0; // Break here
 }

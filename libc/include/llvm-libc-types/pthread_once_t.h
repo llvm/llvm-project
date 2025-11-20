@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_PTHREAD_ONCE_T_H__
-#define __LLVM_LIBC_TYPES_PTHREAD_ONCE_T_H__
+#ifndef LLVM_LIBC_TYPES_PTHREAD_ONCE_T_H
+#define LLVM_LIBC_TYPES_PTHREAD_ONCE_T_H
 
-#include <llvm-libc-types/__futex_word.h>
+#include "__futex_word.h"
 
 #ifdef __linux__
 typedef __futex_word pthread_once_t;
@@ -17,4 +17,4 @@ typedef __futex_word pthread_once_t;
 #error "Once flag type not defined for the target platform."
 #endif
 
-#endif // __LLVM_LIBC_TYPES_PTHREAD_ONCE_T_H__
+#endif // LLVM_LIBC_TYPES_PTHREAD_ONCE_T_H

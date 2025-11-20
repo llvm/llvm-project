@@ -21,12 +21,12 @@ subroutine pointerTests
   ! CHECK: [[reg2:%[0-9]+]] = fir.convert [[reg1]] : (!fir.ref<none>) -> !fir.ptr<f32>
   ! CHECK: fir.has_value [[reg2]] : !fir.ptr<f32>
 
-  ! CHECK: fir.global internal @_QFpointertestsEptr3 : !fir.ptr<!fir.complex<4>>
+  ! CHECK: fir.global internal @_QFpointertestsEptr3 : !fir.ptr<complex<f32>>
   complex, pointer :: ptr3 => NULL()
   ! CHECK: %[[c0:.*]] = arith.constant 0 : index
   ! CHECK: [[reg1:%[0-9]+]] = fir.convert %[[c0:.*]] : (index) -> !fir.ref<none>
-  ! CHECK: [[reg2:%[0-9]+]] = fir.convert [[reg1]] : (!fir.ref<none>) -> !fir.ptr<!fir.complex<4>>
-  ! CHECK: fir.has_value [[reg2]] : !fir.ptr<!fir.complex<4>>
+  ! CHECK: [[reg2:%[0-9]+]] = fir.convert [[reg1]] : (!fir.ref<none>) -> !fir.ptr<complex<f32>>
+  ! CHECK: fir.has_value [[reg2]] : !fir.ptr<complex<f32>>
 
   ! CHECK: fir.global internal @_QFpointertestsEptr4 : !fir.ptr<!fir.char<1,?>>
   character(:), pointer :: ptr4 => NULL()

@@ -4,10 +4,9 @@
 //        it here to test that we are producing the correct paths/flags.
 //        Ideally, we'd like to have an --llvm-toolchain option similar to
 //        the --gcc-toolchain one.
-// REQUIRES: mips-registered-target
 
 // = Big-endian, mips32r2, hard float
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang -### -no-canonical-prefixes %s 2>&1 \
 // RUN:     --target=mips-mti-linux -mips32r2 -mhard-float -no-pie \
 // RUN:     -rtlib=platform -fuse-ld=ld \
 // RUN:     --sysroot=%S/Inputs/mips_mti_linux/sysroot \
@@ -26,7 +25,7 @@
 // CHECK-BE-HF-32R2-SAME: "[[SYSROOT]]/mips-r2-hard-musl/usr/lib{{/|\\\\}}crtn.o"
 
 // = Little-endian, mips32r2, hard float
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang -### -no-canonical-prefixes %s 2>&1 \
 // RUN:     --target=mips-mti-linux -mips32r2 -EL -mhard-float -no-pie \
 // RUN:     -rtlib=platform -fuse-ld=ld \
 // RUN:     --sysroot=%S/Inputs/mips_mti_linux/sysroot \

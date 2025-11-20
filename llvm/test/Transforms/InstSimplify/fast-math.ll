@@ -18,11 +18,11 @@ define float @mul_zero_2(float %a) {
   ret float %b
 }
 
-define <2 x float> @mul_zero_nsz_nnan_vec_undef(<2 x float> %a) {
-; CHECK-LABEL: @mul_zero_nsz_nnan_vec_undef(
+define <2 x float> @mul_zero_nsz_nnan_vec_poison(<2 x float> %a) {
+; CHECK-LABEL: @mul_zero_nsz_nnan_vec_poison(
 ; CHECK-NEXT:    ret <2 x float> zeroinitializer
 ;
-  %b = fmul nsz nnan <2 x float> %a, <float 0.0, float undef>
+  %b = fmul nsz nnan <2 x float> %a, <float 0.0, float poison>
   ret <2 x float> %b
 }
 
@@ -94,11 +94,11 @@ define <2 x float> @fadd_unary_fnegx_commute_vec(<2 x float> %x) {
   ret <2 x float> %r
 }
 
-define <2 x float> @fadd_fnegx_commute_vec_undef(<2 x float> %x) {
-; CHECK-LABEL: @fadd_fnegx_commute_vec_undef(
+define <2 x float> @fadd_fnegx_commute_vec_poison(<2 x float> %x) {
+; CHECK-LABEL: @fadd_fnegx_commute_vec_poison(
 ; CHECK-NEXT:    ret <2 x float> zeroinitializer
 ;
-  %negx = fsub <2 x float> <float undef, float -0.0>, %x
+  %negx = fsub <2 x float> <float poison, float -0.0>, %x
   %r = fadd nnan <2 x float> %x, %negx
   ret <2 x float> %r
 }
@@ -226,30 +226,30 @@ define float @fneg_x(float %a) {
   ret float %ret
 }
 
-define <2 x float> @fsub_0_0_x_vec_undef1(<2 x float> %a) {
-; CHECK-LABEL: @fsub_0_0_x_vec_undef1(
+define <2 x float> @fsub_0_0_x_vec_poison1(<2 x float> %a) {
+; CHECK-LABEL: @fsub_0_0_x_vec_poison1(
 ; CHECK-NEXT:    ret <2 x float> [[A:%.*]]
 ;
-  %t1 = fsub <2 x float> <float 0.0, float undef>, %a
+  %t1 = fsub <2 x float> <float 0.0, float poison>, %a
   %ret = fsub nsz <2 x float> zeroinitializer, %t1
   ret <2 x float> %ret
 }
 
-define <2 x float> @fneg_x_vec_undef1(<2 x float> %a) {
-; CHECK-LABEL: @fneg_x_vec_undef1(
+define <2 x float> @fneg_x_vec_poison1(<2 x float> %a) {
+; CHECK-LABEL: @fneg_x_vec_poison1(
 ; CHECK-NEXT:    ret <2 x float> [[A:%.*]]
 ;
   %t1 = fneg <2 x float> %a
-  %ret = fsub nsz <2 x float> <float 0.0, float undef>, %t1
+  %ret = fsub nsz <2 x float> <float 0.0, float poison>, %t1
   ret <2 x float> %ret
 }
 
-define <2 x float> @fsub_0_0_x_vec_undef2(<2 x float> %a) {
-; CHECK-LABEL: @fsub_0_0_x_vec_undef2(
+define <2 x float> @fsub_0_0_x_vec_poison2(<2 x float> %a) {
+; CHECK-LABEL: @fsub_0_0_x_vec_poison2(
 ; CHECK-NEXT:    ret <2 x float> [[A:%.*]]
 ;
   %t1 = fsub <2 x float> zeroinitializer, %a
-  %ret = fsub nsz <2 x float> <float undef, float -0.0>, %t1
+  %ret = fsub nsz <2 x float> <float poison, float -0.0>, %t1
   ret <2 x float> %ret
 }
 
@@ -263,11 +263,11 @@ define <2 x float> @fadd_zero_nsz_vec(<2 x float> %x) {
   ret <2 x float> %r
 }
 
-define <2 x float> @fadd_zero_nsz_vec_undef(<2 x float> %x) {
-; CHECK-LABEL: @fadd_zero_nsz_vec_undef(
+define <2 x float> @fadd_zero_nsz_vec_poison(<2 x float> %x) {
+; CHECK-LABEL: @fadd_zero_nsz_vec_poison(
 ; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
 ;
-  %r = fadd nsz <2 x float> %x, <float 0.0, float undef>
+  %r = fadd nsz <2 x float> %x, <float 0.0, float poison>
   ret <2 x float> %r
 }
 
@@ -357,11 +357,11 @@ define double @fdiv_zero_by_x(double %x) {
   ret double %r
 }
 
-define <2 x double> @fdiv_zero_by_x_vec_undef(<2 x double> %x) {
-; CHECK-LABEL: @fdiv_zero_by_x_vec_undef(
+define <2 x double> @fdiv_zero_by_x_vec_poison(<2 x double> %x) {
+; CHECK-LABEL: @fdiv_zero_by_x_vec_poison(
 ; CHECK-NEXT:    ret <2 x double> zeroinitializer
 ;
-  %r = fdiv nnan nsz <2 x double> <double 0.0, double undef>, %x
+  %r = fdiv nnan nsz <2 x double> <double 0.0, double poison>, %x
   ret <2 x double> %r
 }
 
@@ -376,11 +376,11 @@ define double @frem_zero_by_x(double %x) {
   ret double %r
 }
 
-define <2 x double> @frem_poszero_by_x_vec_undef(<2 x double> %x) {
-; CHECK-LABEL: @frem_poszero_by_x_vec_undef(
+define <2 x double> @frem_poszero_by_x_vec_poison(<2 x double> %x) {
+; CHECK-LABEL: @frem_poszero_by_x_vec_poison(
 ; CHECK-NEXT:    ret <2 x double> zeroinitializer
 ;
-  %r = frem nnan <2 x double> <double 0.0, double undef>, %x
+  %r = frem nnan <2 x double> <double 0.0, double poison>, %x
   ret <2 x double> %r
 }
 
@@ -395,11 +395,11 @@ define double @frem_negzero_by_x(double %x) {
   ret double %r
 }
 
-define <2 x double> @frem_negzero_by_x_vec_undef(<2 x double> %x) {
-; CHECK-LABEL: @frem_negzero_by_x_vec_undef(
-; CHECK-NEXT:    ret <2 x double> <double -0.000000e+00, double -0.000000e+00>
+define <2 x double> @frem_negzero_by_x_vec_poison(<2 x double> %x) {
+; CHECK-LABEL: @frem_negzero_by_x_vec_poison(
+; CHECK-NEXT:    ret <2 x double> splat (double -0.000000e+00)
 ;
-  %r = frem nnan <2 x double> <double undef, double -0.0>, %x
+  %r = frem nnan <2 x double> <double poison, double -0.0>, %x
   ret <2 x double> %r
 }
 
@@ -467,11 +467,11 @@ define float @fdiv_neg_swapped2(float %f) {
   ret float %div
 }
 
-define <2 x float> @fdiv_neg_vec_undef_elt(<2 x float> %f) {
-; CHECK-LABEL: @fdiv_neg_vec_undef_elt(
-; CHECK-NEXT:    ret <2 x float> <float -1.000000e+00, float -1.000000e+00>
+define <2 x float> @fdiv_neg_vec_poison_elt(<2 x float> %f) {
+; CHECK-LABEL: @fdiv_neg_vec_poison_elt(
+; CHECK-NEXT:    ret <2 x float> splat (float -1.000000e+00)
 ;
-  %neg = fsub <2 x float> <float 0.0, float undef>, %f
+  %neg = fsub <2 x float> <float 0.0, float poison>, %f
   %div = fdiv nnan <2 x float> %f, %neg
   ret <2 x float> %div
 }

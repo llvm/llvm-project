@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx90a -run-pass=amdgpu-resource-usage -verify-machineinstrs %s -o -
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -run-pass=amdgpu-resource-usage -verify-machineinstrs %s -o -
 
 # Checks that ResourceUsageAnalysis does not assert if it sees agpr_lo16, agpr_hi16 or TTMP regs.
 ---

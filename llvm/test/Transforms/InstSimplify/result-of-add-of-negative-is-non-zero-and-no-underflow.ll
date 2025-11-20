@@ -18,10 +18,7 @@ define i1 @t1(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i8 [[ADJUSTED]], [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp slt i8 %base, 0
   call void @llvm.assume(i1 %cmp)
@@ -39,10 +36,7 @@ define i1 @t2_commutative(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ugt i8 [[BASE]], [[ADJUSTED]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp slt i8 %base, 0
   call void @llvm.assume(i1 %cmp)
@@ -63,10 +57,7 @@ define i1 @t3(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp uge i8 [[ADJUSTED]], [[BASE]]
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp slt i8 %base, 0
   call void @llvm.assume(i1 %cmp)
@@ -84,10 +75,7 @@ define i1 @t4_commutative(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i8 [[BASE]], [[ADJUSTED]]
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp slt i8 %base, 0
   call void @llvm.assume(i1 %cmp)

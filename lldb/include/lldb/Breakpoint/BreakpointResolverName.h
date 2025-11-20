@@ -27,7 +27,7 @@ public:
                          lldb::FunctionNameType name_type_mask,
                          lldb::LanguageType language,
                          Breakpoint::MatchType type, lldb::addr_t offset,
-                         bool skip_prologue);
+                         bool offset_is_insn_count, bool skip_prologue);
 
   // This one takes an array of names.  It is always MatchType = Exact.
   BreakpointResolverName(const lldb::BreakpointSP &bkpt, const char *names[],
@@ -50,9 +50,8 @@ public:
                          lldb::LanguageType language, lldb::addr_t offset,
                          bool skip_prologue);
 
-  static BreakpointResolver *
-  CreateFromStructuredData(const lldb::BreakpointSP &bkpt,
-                           const StructuredData::Dictionary &data_dict,
+  static lldb::BreakpointResolverSP
+  CreateFromStructuredData(const StructuredData::Dictionary &data_dict,
                            Status &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;

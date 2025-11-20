@@ -9,12 +9,14 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_GETPID_H
 #define LLVM_LIBC_SRC_UNISTD_GETPID_H
 
-#include <unistd.h>
+#include "hdr/types/pid_t.h"
+#include "hdr/unistd_macros.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 pid_t getpid();
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_GETPID_H

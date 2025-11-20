@@ -40,13 +40,6 @@ def SPIRV_AddressOfOp : SPIRV_Op<"mlir.addressof",
     type, this op returns a pointer type as well, and the type is the same as
     the variable referenced.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    spv-address-of-op ::= ssa-id `=` `spirv.mlir.addressof` symbol-ref-id
-                                     `:` spirv-pointer-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -108,7 +101,7 @@ def SPIRV_ConstantOp : SPIRV_Op<"Constant",
 
     ```mlir
     %0 = spirv.Constant true
-    %1 = spirv.Constant dense<[2, 3]> : vector<2xf32>
+    %1 = spirv.Constant dense<[2.0, 3.0]> : vector<2xf32>
     %2 = spirv.Constant [dense<3.0> : vector<2xf32>] : !spirv.array<1xvector<2xf32>>
     ```
 
@@ -140,6 +133,47 @@ def SPIRV_ConstantOp : SPIRV_Op<"Constant",
   let hasOpcode = 0;
 
   let autogenSerialization = 0;
+}
+
+
+// -----
+
+def SPIRV_EXTConstantCompositeReplicateOp : SPIRV_ExtVendorOp<"ConstantCompositeReplicate", [Pure]> {
+  let summary = [{
+    Declare a new replicated composite constant op.
+  }];
+
+  let description = [{
+    Represents a splat composite constant i.e., all elements of composite constant
+    have the same value.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<2xi32>
+    %1 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : !spirv.array<2 x vector<2xi32>>
+    %2 = spirv.EXT.ConstantCompositeReplicate [dense<[1, 2]> : vector<2xi32>] : !spirv.array<2 x vector<2xi32>>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_EXT_replicated_composites]>,
+    Capability<[SPIRV_C_ReplicatedCompositesEXT]>
+  ];
+
+  let arguments = (ins
+    AnyAttr:$value
+  );
+
+  let results = (outs
+    SPIRV_Composite:$replicated_constant
+  );
+
+  let autogenSerialization = 0;
+
+  let assemblyFormat = "` ` `[` $value `]` `:` type($replicated_constant) attr-dict";
 }
 
 // -----
@@ -274,6 +308,15 @@ def SPIRV_FuncOp : SPIRV_Op<"func", [
     This op itself takes no operands and generates no results. Its region
     can take zero or more arguments and return zero or one values.
 
+    From `SPV_KHR_physical_storage_buffer`:
+    If a parameter of function is
+    - a pointer (or contains a pointer) in the PhysicalStorageBuffer storage
+      class, the function parameter must be decorated with exactly one of
+      `Aliased` or `Restrict`.
+    - a pointer (or contains a pointer) and the type it points to is a pointer
+      in the PhysicalStorageBuffer storage class, the function parameter must
+      be decorated with exactly one of `AliasedPointer` or `RestrictPointer`.
+
     <!-- End of AutoGen section -->
 
     ```
@@ -287,6 +330,20 @@ def SPIRV_FuncOp : SPIRV_Op<"func", [
     ```mlir
     spirv.func @foo() -> () "None" { ... }
     spirv.func @bar() -> () "Inline|Pure" { ... }
+
+    spirv.func @aliased_pointer(%arg0: !spirv.ptr<i32, PhysicalStorageBuffer>,
+        { spirv.decoration = #spirv.decoration<Aliased> }) -> () "None" { ... }
+
+    spirv.func @restrict_pointer(%arg0: !spirv.ptr<i32, PhysicalStorageBuffer>,
+        { spirv.decoration = #spirv.decoration<Restrict> }) -> () "None" { ... }
+
+    spirv.func @aliased_pointee(%arg0: !spirv.ptr<!spirv.ptr<i32,
+        PhysicalStorageBuffer>, Generic> { spirv.decoration =
+        #spirv.decoration<AliasedPointer> }) -> () "None" { ... }
+
+    spirv.func @restrict_pointee(%arg0: !spirv.ptr<!spirv.ptr<i32,
+        PhysicalStorageBuffer>, Generic> { spirv.decoration =
+        #spirv.decoration<RestrictPointer> }) -> () "None" { ... }
     ```
   }];
 
@@ -394,7 +451,7 @@ def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [InModuleScope, Symbol]>
     OptionalAttr<I32Attr>:$location,
     OptionalAttr<I32Attr>:$binding,
     OptionalAttr<I32Attr>:$descriptor_set,
-    OptionalAttr<StrAttr>:$builtin,
+    OptionalAttr<StrAttr>:$built_in,
     OptionalAttr<SPIRV_LinkageAttributesAttr>:$linkage_attributes
   );
 
@@ -543,13 +600,6 @@ def SPIRV_ReferenceOfOp : SPIRV_Op<"mlir.referenceof", [Pure]> {
     for modelling purpose in the SPIR-V dialect. This op's return type is
     the same as the specialization constant.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    spv-reference-of-op ::= ssa-id `=` `spirv.mlir.referenceof` symbol-ref-id
-                                       `:` spirv-scalar-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -680,6 +730,43 @@ def SPIRV_SpecConstantCompositeOp : SPIRV_Op<"SpecConstantComposite", [
 
 // -----
 
+def SPIRV_EXTSpecConstantCompositeReplicateOp : SPIRV_ExtVendorOp<"SpecConstantCompositeReplicate", [InModuleScope, Symbol]> {
+  let summary = "Declare a new replicated composite specialization constant op.";
+
+  let description = [{
+    Represents a splat spec composite constant i.e., all elements of spec composite
+    constant have the same value. The splat value must come from a symbol reference
+    of spec constant instruction.
+
+    #### Example:
+
+    ```mlir
+    spirv.SpecConstant @sc_i32_1 = 1 : i32
+    spirv.EXT.SpecConstantCompositeReplicate @scc_splat_array_of_i32 (@sc_i32_1) : !spirv.array<3 x i32>
+    spirv.EXT.SpecConstantCompositeReplicate @scc_splat_struct_of_i32 (@sc_i32_1) : !spirv.struct<(i32, i32, i32)>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_EXT_replicated_composites]>,
+    Capability<[SPIRV_C_ReplicatedCompositesEXT]>
+  ];
+
+  let arguments = (ins
+    TypeAttr:$type,
+    StrAttr:$sym_name,
+    SymbolRefAttr:$constituent
+  );
+
+  let results = (outs);
+
+  let autogenSerialization = 0;
+}
+
+// -----
+
 def SPIRV_SpecConstantOperationOp : SPIRV_Op<"SpecConstantOperation", [
        Pure, InFunctionScope,
        SingleBlockImplicitTerminator<"YieldOp">]> {
@@ -785,11 +872,8 @@ def SPIRV_YieldOp : SPIRV_Op<"mlir.yield", [
     in its parent block (see SPIRV_SpecConstantOperation for further
     details). This op has no corresponding SPIR-V instruction.
 
-    ```
-    spirv.mlir.yield ::= `spirv.mlir.yield` ssa-id : spirv-type
-    ```
-
     #### Example:
+
     ```mlir
     %0 = ... (some op supported by SPIR-V OpSpecConstantOp)
     spirv.mlir.yield %0

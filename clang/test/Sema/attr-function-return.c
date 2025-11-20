@@ -13,7 +13,7 @@ __attribute__((function_return("thunk-extern"))) void w(void) {}
 // expected-warning@+1 {{'function_return' attribute argument not supported: invalid}}
 __attribute__((function_return("invalid"))) void v(void) {}
 
-// expected-error@+1 {{'function_return' attribute requires a string}}
+// expected-error@+1 {{expected string literal as argument of 'function_return' attribute}}
 __attribute__((function_return(5))) void a(void) {}
 
 // expected-error@+1 {{'function_return' attribute takes one argument}}

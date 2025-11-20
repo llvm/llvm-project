@@ -12,4 +12,4 @@
 
 #include "StrtolTest.h"
 
-STRTOL_TEST(Strtoul, __llvm_libc::strtoul)
+STRTOL_TEST(Strtoul, LIBC_NAMESPACE::strtoul)

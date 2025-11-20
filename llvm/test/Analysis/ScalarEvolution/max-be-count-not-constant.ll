@@ -21,11 +21,9 @@ define void @pluto(i32 %arg) {
 ; CHECK-NEXT:    --> {(2 + %tmp)<nsw>,+,(2 + %tmp)<nsw>}<nuw><nsw><%bb2> U: [1,5) S: [1,5) Exits: (2 + ((2 + %tmp)<nsw> * (1 /u (2 + %tmp)<nsw>))<nuw> + %tmp) LoopDispositions: { %bb2: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @pluto
 ; CHECK-NEXT:  Loop %bb2: backedge-taken count is (1 /u (2 + %tmp)<nsw>)
-; CHECK-NEXT:  Loop %bb2: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %bb2: constant max backedge-taken count is i32 1
 ; CHECK-NEXT:  Loop %bb2: symbolic max backedge-taken count is (1 /u (2 + %tmp)<nsw>)
-; CHECK-NEXT:  Loop %bb2: Predicated backedge-taken count is (1 /u (2 + %tmp)<nsw>)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb2: Trip multiple is 1
+; CHECK-NEXT:  Loop %bb2: Trip multiple is 1
 ;
 bb:
   %tmp = ashr i32 %arg, 31

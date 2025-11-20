@@ -6,35 +6,57 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
 #include "src/math/asinhf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
-#include <errno.h>
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
-using FPBits_t = __llvm_libc::fputil::FPBits<float>;
+using LlvmLibcAsinhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcAsinhfTest, SpecialNumbers) {
-  libc_errno = 0;
-
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::asinhf(aNaN));
+TEST_F(LlvmLibcAsinhfTest, SpecialNumbers) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::asinhf(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, __llvm_libc::asinhf(0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asinhf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, __llvm_libc::asinhf(-0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::asinhf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(inf, __llvm_libc::asinhf(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, LIBC_NAMESPACE::asinhf(-0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, __llvm_libc::asinhf(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::asinhf(inf));
+  EXPECT_MATH_ERRNO(0);
+
+  EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, LIBC_NAMESPACE::asinhf(neg_inf));
   EXPECT_MATH_ERRNO(0);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcAsinhfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::asinhf(min_denormal));
+}
+
+TEST_F(LlvmLibcAsinhfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::asinhf(min_denormal));
+}
+
+TEST_F(LlvmLibcAsinhfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::asinhf(min_denormal));
+}
+
+#endif

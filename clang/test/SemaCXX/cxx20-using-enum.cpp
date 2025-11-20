@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify %s -fexperimental-new-constant-interpreter
 
 // p1099 'using enum ELABORATED-ENUM-SPECIFIER ;'
 
@@ -147,13 +148,10 @@ template <int I> struct C {
   enum class D { d,
                  e,
                  f };
-  using enum D;
-
-  static constexpr int W = int(f) + I;
+  using enum D; // expected-error {{using-enum cannot name a dependent type}}
 };
 
 static_assert(C<2>::V == 4);
-static_assert(C<20>::W == 22);
 
 } // namespace Seven
 
@@ -240,6 +238,13 @@ TPLa<int> a;
 
 } // namespace Thirteen
 
+namespace Fourteen {
+template<typename T>
+int A = T();
+
+using enum A<int>; // expected-error {{A is not an enumerated type}}
+} // namespace Fourteen
+
 namespace GH58057 {
 struct Wrap {
 enum Things {
@@ -269,4 +274,28 @@ void f(int a) {
 }
 }
 
+namespace GH147495 {
+struct S {
+  enum class E { A };
+  using enum E;
+
+  struct S1 {
+    using enum E;
+  };
+
+  struct S2 {
+    using E::A;
+  };
+};
+}
+
+namespace Redecl {
+  enum class A : int { X };
+  enum class A : int;
+  template <class> struct B {
+    using enum A;
+    using Z = decltype(X);
+  };
+  template struct B<int>;
+} // namespace Redecl
 #endif

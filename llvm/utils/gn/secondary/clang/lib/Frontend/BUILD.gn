@@ -3,11 +3,13 @@ static_library("Frontend") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/include/clang/Config",
+    "//clang/lib/APINotes",
     "//clang/lib/AST",
     "//clang/lib/Basic",
     "//clang/lib/Driver",
     "//clang/lib/Edit",
     "//clang/lib/Lex",
+    "//clang/lib/Options",
     "//clang/lib/Parse",
     "//clang/lib/Sema",
     "//clang/lib/Serialization",

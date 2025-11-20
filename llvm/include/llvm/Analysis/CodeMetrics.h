@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_CODEMETRICS_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
@@ -25,6 +26,8 @@ class Function;
 template <class T> class SmallPtrSetImpl;
 class TargetTransformInfo;
 class Value;
+
+enum struct ConvergenceKind { None, Controlled, ExtendedLoop, Uncontrolled };
 
 /// Utility to calculate the size and a few similar metrics for a set
 /// of basic blocks.
@@ -42,8 +45,8 @@ struct CodeMetrics {
   /// one or more 'noduplicate' instructions.
   bool notDuplicatable = false;
 
-  /// True if this function contains a call to a convergent function.
-  bool convergent = false;
+  /// The kind of convergence specified in this function.
+  ConvergenceKind Convergence = ConvergenceKind::None;
 
   /// True if this function calls alloca (in the C sense).
   bool usesDynamicAlloca = false;
@@ -75,19 +78,22 @@ struct CodeMetrics {
   unsigned NumRets = 0;
 
   /// Add information about a block to the current state.
-  void analyzeBasicBlock(const BasicBlock *BB, const TargetTransformInfo &TTI,
-                         const SmallPtrSetImpl<const Value *> &EphValues,
-                         bool PrepareForLTO = false);
+  LLVM_ABI void
+  analyzeBasicBlock(const BasicBlock *BB, const TargetTransformInfo &TTI,
+                    const SmallPtrSetImpl<const Value *> &EphValues,
+                    bool PrepareForLTO = false, const Loop *L = nullptr);
 
   /// Collect a loop's ephemeral values (those used only by an assume
   /// or similar intrinsics in the loop).
-  static void collectEphemeralValues(const Loop *L, AssumptionCache *AC,
-                                     SmallPtrSetImpl<const Value *> &EphValues);
+  LLVM_ABI static void
+  collectEphemeralValues(const Loop *L, AssumptionCache *AC,
+                         SmallPtrSetImpl<const Value *> &EphValues);
 
   /// Collect a functions's ephemeral values (those used only by an
   /// assume or similar intrinsics in the function).
-  static void collectEphemeralValues(const Function *L, AssumptionCache *AC,
-                                     SmallPtrSetImpl<const Value *> &EphValues);
+  LLVM_ABI static void
+  collectEphemeralValues(const Function *L, AssumptionCache *AC,
+                         SmallPtrSetImpl<const Value *> &EphValues);
 };
 
 }

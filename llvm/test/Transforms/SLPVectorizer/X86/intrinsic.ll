@@ -378,11 +378,35 @@ declare float @llvm.powi.f32.i32(float, i32)
 define void @vec_powi_f32(ptr %a, ptr %b, ptr %c, i32 %P) {
 ; CHECK-LABEL: @vec_powi_f32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP4]], i32 [[P:%.*]])
-; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[C:%.*]], align 4
+; CHECK-NEXT:    [[I0:%.*]] = load float, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[I1:%.*]] = load float, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd float [[I0]], [[I1]]
+; CHECK-NEXT:    [[CALL1:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD1]], i32 [[P:%.*]]) #[[ATTR3]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A]], i32 1
+; CHECK-NEXT:    [[I2:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[B]], i32 1
+; CHECK-NEXT:    [[I3:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ADD2:%.*]] = fadd float [[I2]], [[I3]]
+; CHECK-NEXT:    [[CALL2:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD2]], i32 [[P]]) #[[ATTR3]]
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[A]], i32 2
+; CHECK-NEXT:    [[I4:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[B]], i32 2
+; CHECK-NEXT:    [[I5:%.*]] = load float, ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[ADD3:%.*]] = fadd float [[I4]], [[I5]]
+; CHECK-NEXT:    [[CALL3:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD3]], i32 [[P]]) #[[ATTR3]]
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[A]], i32 3
+; CHECK-NEXT:    [[I6:%.*]] = load float, ptr [[ARRAYIDX6]], align 4
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, ptr [[B]], i32 3
+; CHECK-NEXT:    [[I7:%.*]] = load float, ptr [[ARRAYIDX7]], align 4
+; CHECK-NEXT:    [[ADD4:%.*]] = fadd float [[I6]], [[I7]]
+; CHECK-NEXT:    [[CALL4:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD4]], i32 [[P]]) #[[ATTR3]]
+; CHECK-NEXT:    store float [[CALL1]], ptr [[C:%.*]], align 4
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[C]], i32 1
+; CHECK-NEXT:    store float [[CALL2]], ptr [[ARRAYIDX8]], align 4
+; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr [[C]], i32 2
+; CHECK-NEXT:    store float [[CALL3]], ptr [[ARRAYIDX9]], align 4
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, ptr [[C]], i32 3
+; CHECK-NEXT:    store float [[CALL4]], ptr [[ARRAYIDX10]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

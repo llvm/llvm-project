@@ -16,7 +16,6 @@
 
 #include "PPCISelLowering.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/IR/CallingConv.h"
 
 namespace llvm {
 
@@ -46,10 +45,11 @@ public:
 
 private:
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override;
+                        const CCValAssign &VA) override;
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override;
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override;
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO,

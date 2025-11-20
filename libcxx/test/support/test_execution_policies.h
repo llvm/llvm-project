@@ -58,8 +58,4 @@ struct Bool {
   }
 };
 
-#ifndef TEST_HAS_NO_EXCEPTIONS
-[[noreturn]] inline void terminate_successful() { std::exit(0); }
-#endif
-
 #endif // TEST_SUPPORT_TEST_EXECUTION_POLICIES

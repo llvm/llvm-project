@@ -351,4 +351,4 @@ declare x86_fp80 @log2l(x86_fp80)
 declare x86_fp80 @logbl(x86_fp80)
 declare x86_fp80 @log1pl(x86_fp80)
 
-; CHECK: ![[BRANCH_WEIGHT]] = !{!"branch_weights", i32 1, i32 2000}
+; CHECK: ![[BRANCH_WEIGHT]] = !{!"branch_weights", i32 1, i32 1048575}

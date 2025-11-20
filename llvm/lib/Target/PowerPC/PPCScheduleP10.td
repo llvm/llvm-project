@@ -29,8 +29,8 @@ def P10Model : SchedMachineModel {
   let LoopMicroOpBufferSize = 60;
   let CompleteModel = 1;
 
-  // Do not support SPE (Signal Procesing Engine) on Power 10.
-  let UnsupportedFeatures = [HasSPE, IsE500, IsBookE, IsISAFuture];
+  // Power 10 does not support instructions from SPE, Book E and HTM.
+  let UnsupportedFeatures = [HasSPE, IsE500, IsBookE, IsISAFuture, HasHTM];
 }
 
 let SchedModel = P10Model in {

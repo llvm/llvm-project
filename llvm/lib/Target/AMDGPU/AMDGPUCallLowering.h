@@ -37,6 +37,9 @@ class AMDGPUCallLowering final : public CallLowering {
   bool lowerReturnVal(MachineIRBuilder &B, const Value *Val,
                       ArrayRef<Register> VRegs, MachineInstrBuilder &Ret) const;
 
+  void addOriginalExecToReturn(MachineFunction &MF,
+                               MachineInstrBuilder &Ret) const;
+
 public:
   AMDGPUCallLowering(const AMDGPUTargetLowering &TLI);
 
@@ -75,10 +78,13 @@ public:
   void handleImplicitCallArguments(
       MachineIRBuilder &MIRBuilder, MachineInstrBuilder &CallInst,
       const GCNSubtarget &ST, const SIMachineFunctionInfo &MFI,
+      CallingConv::ID CalleeCC,
       ArrayRef<std::pair<MCRegister, Register>> ImplicitArgRegs) const;
 
   bool lowerTailCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
                      SmallVectorImpl<ArgInfo> &OutArgs) const;
+  bool lowerChainCall(MachineIRBuilder &MIRBuilder,
+                      CallLoweringInfo &Info) const;
   bool lowerCall(MachineIRBuilder &MIRBuilder,
                  CallLoweringInfo &Info) const override;
 

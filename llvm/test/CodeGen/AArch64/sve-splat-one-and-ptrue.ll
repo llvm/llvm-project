@@ -7,58 +7,52 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define <vscale x 16 x i1> @fold_away_ptrue_and_ptrue() #0 {
 ; CHECK-LABEL: fold_away_ptrue_and_ptrue:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ret
-entry:
-  %0 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %0)
-  %2 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %and = and <vscale x 16 x i1> %2, %1
+  %1 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %2 = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %1)
+  %3 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %and = and <vscale x 16 x i1> %3, %2
   ret <vscale x 16 x i1> %and
 }
 
 define <vscale x 16 x i1> @fold_away_ptrue_and_splat_predicate() #0 {
 ; CHECK-LABEL: fold_away_ptrue_and_splat_predicate:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ret
-entry:
-  %ins = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
-  %splat = shufflevector <vscale x 4 x i1> %ins, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
-  %0 = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %splat)
-  %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %and = and <vscale x 16 x i1> %0, %1
+  %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> splat(i1 true))
+  %2 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %and = and <vscale x 16 x i1> %1, %2
   ret <vscale x 16 x i1> %and
 }
 
 ; Ensure that one AND operation remain for inactive lanes zeroing with 2 x i1 type (llvm.aarch64.sve.convert.to.svbool.nxv2i1).
 define <vscale x 16 x i1> @fold_away_ptrue_and_convert_to() #0 {
 ; CHECK-LABEL: fold_away_ptrue_and_convert_to:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    ret
-entry:
-  %0 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %0)
-  %2 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %3 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %2)
-  %4 = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %3)
-  %and = and <vscale x 16 x i1> %4, %1
+  %1 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %2 = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %1)
+  %3 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %4 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %3)
+  %5 = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %4)
+  %and = and <vscale x 16 x i1> %5, %2
   ret <vscale x 16 x i1> %and
 }
 
 define <vscale x 16 x i1> @fold_away_two_similar() #0 {
 ; CHECK-LABEL: fold_away_two_similar:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
-entry:
-  %0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %and = and <vscale x 16 x i1> %0, %1
+  %2 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %and = and <vscale x 16 x i1> %1, %2
   ret <vscale x 16 x i1> %and
 }
 

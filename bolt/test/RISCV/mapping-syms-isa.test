@@ -1,0 +1,18 @@
+# Test that BOLT handles mapping syms that include ISA strings: $x<isa>
+
+RUN: yaml2obj -o %t %p/Inputs/mapping-syms-isa.yaml
+RUN: llvm-bolt --print-cfg --print-only=_start -o %t.bolt %t 2>&1 | FileCheck %s
+RUN: llvm-objdump -d %t.bolt | FileCheck --check-prefix=CHECK-OBJDUMP %s
+
+CHECK-NOT: BOLT-WARNING
+
+# Check that .word is not disassembled by BOLT
+CHECK: 00000000: nop
+CHECK: 00000002: ret
+
+# Check .word is still present in output
+CHECK-OBJDUMP: <_start>:
+CHECK-OBJDUMP-NEXT: nop
+CHECK-OBJDUMP-NEXT: unimp
+CHECK-OBJDUMP-NEXT: unimp
+CHECK-OBJDUMP-NEXT: ret

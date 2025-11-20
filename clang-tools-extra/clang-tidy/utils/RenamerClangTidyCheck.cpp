@@ -1,4 +1,4 @@
-//===--- RenamerClangTidyCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,14 +30,13 @@ template <>
 struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
   using NamingCheckId = clang::tidy::RenamerClangTidyCheck::NamingCheckId;
 
-  static inline NamingCheckId getEmptyKey() {
-    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
-                         "EMPTY"};
+  static NamingCheckId getEmptyKey() {
+    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(), "EMPTY"};
   }
 
-  static inline NamingCheckId getTombstoneKey() {
+  static NamingCheckId getTombstoneKey() {
     return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
-                         "TOMBSTONE"};
+            "TOMBSTONE"};
   }
 
   static unsigned getHashValue(NamingCheckId Val) {
@@ -62,6 +61,7 @@ struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
 namespace clang::tidy {
 
 namespace {
+
 class NameLookup {
   llvm::PointerIntPair<const NamedDecl *, 1, bool> Data;
 
@@ -79,17 +79,59 @@ public:
   operator bool() const { return !hasMultipleResolutions(); }
   const NamedDecl *operator*() const { return getDecl(); }
 };
+
 } // namespace
 
 static const NamedDecl *findDecl(const RecordDecl &RecDecl,
                                  StringRef DeclName) {
   for (const Decl *D : RecDecl.decls()) {
     if (const auto *ND = dyn_cast<NamedDecl>(D)) {
-      if (ND->getDeclName().isIdentifier() && ND->getName().equals(DeclName))
+      if (ND->getDeclName().isIdentifier() && ND->getName() == DeclName)
         return ND;
     }
   }
   return nullptr;
+}
+
+/// Returns the function that \p Method is overriding. If There are none or
+/// multiple overrides it returns nullptr. If the overridden function itself is
+/// overriding then it will recurse up to find the first decl of the function.
+static const CXXMethodDecl *getOverrideMethod(const CXXMethodDecl *Method) {
+  if (Method->size_overridden_methods() != 1)
+    return nullptr;
+
+  while (true) {
+    Method = *Method->begin_overridden_methods();
+    assert(Method && "Overridden method shouldn't be null");
+    const unsigned NumOverrides = Method->size_overridden_methods();
+    if (NumOverrides == 0)
+      return Method;
+    if (NumOverrides > 1)
+      return nullptr;
+  }
+}
+
+static bool hasNoName(const NamedDecl *Decl) {
+  return !Decl->getIdentifier() || Decl->getName().empty();
+}
+
+static const NamedDecl *getFailureForNamedDecl(const NamedDecl *ND) {
+  const auto *Canonical = cast<NamedDecl>(ND->getCanonicalDecl());
+  if (Canonical != ND)
+    return Canonical;
+
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(ND)) {
+    if (const CXXMethodDecl *Overridden = getOverrideMethod(Method))
+      Canonical = cast<NamedDecl>(Overridden->getCanonicalDecl());
+    else if (const FunctionTemplateDecl *Primary = Method->getPrimaryTemplate())
+      if (const FunctionDecl *TemplatedDecl = Primary->getTemplatedDecl())
+        Canonical = cast<NamedDecl>(TemplatedDecl->getCanonicalDecl());
+
+    if (Canonical != ND)
+      return Canonical;
+  }
+
+  return ND;
 }
 
 /// Returns a decl matching the \p DeclName in \p Parent or one of its base
@@ -106,7 +148,7 @@ static NameLookup findDeclInBases(const CXXRecordDecl &Parent,
     return NameLookup(InClassRef);
   const NamedDecl *Found = nullptr;
 
-  for (CXXBaseSpecifier Base : Parent.bases()) {
+  for (const CXXBaseSpecifier Base : Parent.bases()) {
     const auto *Record = Base.getType()->getAsCXXRecordDecl();
     if (!Record && AggressiveTemplateLookup) {
       if (const auto *TST =
@@ -133,24 +175,6 @@ static NameLookup findDeclInBases(const CXXRecordDecl &Parent,
   return NameLookup(Found); // If nullptr, decl wasn't found.
 }
 
-/// Returns the function that \p Method is overridding. If There are none or
-/// multiple overrides it returns nullptr. If the overridden function itself is
-/// overridding then it will recurse up to find the first decl of the function.
-static const CXXMethodDecl *getOverrideMethod(const CXXMethodDecl *Method) {
-  if (Method->size_overridden_methods() != 1)
-    return nullptr;
-
-  while (true) {
-    Method = *Method->begin_overridden_methods();
-    assert(Method && "Overridden method shouldn't be null");
-    unsigned NumOverrides = Method->size_overridden_methods();
-    if (NumOverrides == 0)
-      return Method;
-    if (NumOverrides > 1)
-      return nullptr;
-  }
-}
-
 namespace {
 
 /// Callback supplies macros to RenamerClangTidyCheck::checkMacro
@@ -170,14 +194,16 @@ public:
       return;
     if (SM.isWrittenInCommandLineFile(MacroNameTok.getLocation()))
       return;
-    Check->checkMacro(SM, MacroNameTok, Info);
+    if (SM.isInSystemHeader(MacroNameTok.getLocation()))
+      return;
+    Check->checkMacro(MacroNameTok, Info, SM);
   }
 
   /// MacroExpands calls expandMacro for macros in the main file
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange /*Range*/,
                     const MacroArgs * /*Args*/) override {
-    Check->expandMacro(MacroNameTok, MD.getMacroInfo());
+    Check->expandMacro(MacroNameTok, MD.getMacroInfo(), SM);
   }
 
 private:
@@ -188,14 +214,10 @@ private:
 class RenamerClangTidyVisitor
     : public RecursiveASTVisitor<RenamerClangTidyVisitor> {
 public:
-  RenamerClangTidyVisitor(RenamerClangTidyCheck *Check, const SourceManager *SM,
+  RenamerClangTidyVisitor(RenamerClangTidyCheck *Check, const SourceManager &SM,
                           bool AggressiveDependentMemberLookup)
       : Check(Check), SM(SM),
         AggressiveDependentMemberLookup(AggressiveDependentMemberLookup) {}
-
-  static bool hasNoName(const NamedDecl *Decl) {
-    return !Decl->getIdentifier() || Decl->getName().empty();
-  }
 
   bool shouldVisitTemplateInstantiations() const { return true; }
 
@@ -247,41 +269,24 @@ public:
   }
 
   bool VisitNamedDecl(NamedDecl *Decl) {
-    if (hasNoName(Decl))
-      return true;
-
-    const auto *Canonical = cast<NamedDecl>(Decl->getCanonicalDecl());
-    if (Canonical != Decl) {
-      Check->addUsage(Canonical, Decl->getLocation(), SM);
-      return true;
-    }
-
-    // Fix overridden methods
-    if (const auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
-      if (const CXXMethodDecl *Overridden = getOverrideMethod(Method)) {
-        Check->addUsage(Overridden, Method->getLocation());
-        return true; // Don't try to add the actual decl as a Failure.
-      }
-    }
-
-    // Ignore ClassTemplateSpecializationDecl which are creating duplicate
-    // replacements with CXXRecordDecl.
-    if (isa<ClassTemplateSpecializationDecl>(Decl))
-      return true;
-
-    Check->checkNamedDecl(Decl, *SM);
+    const SourceRange UsageRange =
+        DeclarationNameInfo(Decl->getDeclName(), Decl->getLocation())
+            .getSourceRange();
+    Check->addUsage(Decl, UsageRange, SM);
     return true;
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *DeclRef) {
-    SourceRange Range = DeclRef->getNameInfo().getSourceRange();
+    const SourceRange Range = DeclRef->getNameInfo().getSourceRange();
     Check->addUsage(DeclRef->getDecl(), Range, SM);
     return true;
   }
 
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Loc) {
-    if (const NestedNameSpecifier *Spec = Loc.getNestedNameSpecifier()) {
-      if (const NamespaceDecl *Decl = Spec->getAsNamespace())
+    if (const NestedNameSpecifier Spec = Loc.getNestedNameSpecifier();
+        Spec.getKind() == NestedNameSpecifier::Kind::Namespace) {
+      if (const auto *Decl =
+              dyn_cast<NamespaceDecl>(Spec.getAsNamespaceAndPrefix().Namespace))
         Check->addUsage(Decl, Loc.getLocalSourceRange(), SM);
     }
 
@@ -290,27 +295,28 @@ public:
   }
 
   bool VisitMemberExpr(MemberExpr *MemberRef) {
-    SourceRange Range = MemberRef->getMemberNameInfo().getSourceRange();
+    const SourceRange Range = MemberRef->getMemberNameInfo().getSourceRange();
     Check->addUsage(MemberRef->getMemberDecl(), Range, SM);
     return true;
   }
 
   bool
   VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *DepMemberRef) {
-    QualType BaseType = DepMemberRef->isArrow()
-                            ? DepMemberRef->getBaseType()->getPointeeType()
-                            : DepMemberRef->getBaseType();
+    const QualType BaseType =
+        DepMemberRef->isArrow() ? DepMemberRef->getBaseType()->getPointeeType()
+                                : DepMemberRef->getBaseType();
     if (BaseType.isNull())
       return true;
     const CXXRecordDecl *Base = BaseType.getTypePtr()->getAsCXXRecordDecl();
     if (!Base)
       return true;
-    DeclarationName DeclName = DepMemberRef->getMemberNameInfo().getName();
+    const DeclarationName DeclName =
+        DepMemberRef->getMemberNameInfo().getName();
     if (!DeclName.isIdentifier())
       return true;
-    StringRef DependentName = DeclName.getAsIdentifierInfo()->getName();
+    const StringRef DependentName = DeclName.getAsIdentifierInfo()->getName();
 
-    if (NameLookup Resolved = findDeclInBases(
+    if (const NameLookup Resolved = findDeclInBases(
             *Base, DependentName, AggressiveDependentMemberLookup)) {
       if (*Resolved)
         Check->addUsage(*Resolved,
@@ -321,55 +327,60 @@ public:
   }
 
   bool VisitTypedefTypeLoc(const TypedefTypeLoc &Loc) {
-    Check->addUsage(Loc.getTypedefNameDecl(), Loc.getSourceRange(), SM);
+    Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
   bool VisitTagTypeLoc(const TagTypeLoc &Loc) {
-    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
-    return true;
-  }
-
-  bool VisitInjectedClassNameTypeLoc(const InjectedClassNameTypeLoc &Loc) {
-    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
+    Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
   bool VisitUnresolvedUsingTypeLoc(const UnresolvedUsingTypeLoc &Loc) {
-    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
+    Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
   bool VisitTemplateTypeParmTypeLoc(const TemplateTypeParmTypeLoc &Loc) {
-    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
+    Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
   bool
   VisitTemplateSpecializationTypeLoc(const TemplateSpecializationTypeLoc &Loc) {
     const TemplateDecl *Decl =
-        Loc.getTypePtr()->getTemplateName().getAsTemplateDecl();
+        Loc.getTypePtr()->getTemplateName().getAsTemplateDecl(
+            /*IgnoreDeduced=*/true);
+    if (!Decl)
+      return true;
 
-    SourceRange Range(Loc.getTemplateNameLoc(), Loc.getTemplateNameLoc());
-    if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl)) {
+    if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl))
       if (const NamedDecl *TemplDecl = ClassDecl->getTemplatedDecl())
-        Check->addUsage(TemplDecl, Range, SM);
-    }
+        Check->addUsage(TemplDecl, Loc.getTemplateNameLoc(), SM);
 
     return true;
   }
 
-  bool VisitDependentTemplateSpecializationTypeLoc(
-      const DependentTemplateSpecializationTypeLoc &Loc) {
-    if (const TagDecl *Decl = Loc.getTypePtr()->getAsTagDecl())
-      Check->addUsage(Decl, Loc.getSourceRange(), SM);
+  bool VisitDesignatedInitExpr(DesignatedInitExpr *Expr) {
+    for (const DesignatedInitExpr::Designator &D : Expr->designators()) {
+      if (!D.isFieldDesignator())
+        continue;
+      const FieldDecl *FD = D.getFieldDecl();
+      if (!FD)
+        continue;
+      const IdentifierInfo *II = FD->getIdentifier();
+      if (!II)
+        continue;
+      const SourceRange FixLocation{D.getFieldLoc(), D.getFieldLoc()};
+      Check->addUsage(FD, FixLocation, SM);
+    }
 
     return true;
   }
 
 private:
   RenamerClangTidyCheck *Check;
-  const SourceManager *SM;
+  const SourceManager &SM;
   const bool AggressiveDependentMemberLookup;
 };
 
@@ -379,7 +390,7 @@ RenamerClangTidyCheck::RenamerClangTidyCheck(StringRef CheckName,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(CheckName, Context),
       AggressiveDependentMemberLookup(
-          Options.getLocalOrGlobal("AggressiveDependentMemberLookup", false)) {}
+          Options.get("AggressiveDependentMemberLookup", false)) {}
 RenamerClangTidyCheck::~RenamerClangTidyCheck() = default;
 
 void RenamerClangTidyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -397,122 +408,151 @@ void RenamerClangTidyCheck::registerPPCallbacks(
       std::make_unique<RenamerClangTidyCheckPPCallbacks>(SM, this));
 }
 
-void RenamerClangTidyCheck::addUsage(
-    const RenamerClangTidyCheck::NamingCheckId &Decl, SourceRange Range,
-    const SourceManager *SourceMgr) {
+std::pair<RenamerClangTidyCheck::NamingCheckFailureMap::iterator, bool>
+RenamerClangTidyCheck::addUsage(
+    const RenamerClangTidyCheck::NamingCheckId &FailureId,
+    SourceRange UsageRange, const SourceManager &SourceMgr) {
   // Do nothing if the provided range is invalid.
-  if (Range.isInvalid())
-    return;
+  if (UsageRange.isInvalid())
+    return {NamingCheckFailures.end(), false};
 
-  // If we have a source manager, use it to convert to the spelling location for
-  // performing the fix. This is necessary because macros can map the same
-  // spelling location to different source locations, and we only want to fix
-  // the token once, before it is expanded by the macro.
-  SourceLocation FixLocation = Range.getBegin();
-  if (SourceMgr)
-    FixLocation = SourceMgr->getSpellingLoc(FixLocation);
+  // Get the spelling location for performing the fix. This is necessary because
+  // macros can map the same spelling location to different source locations,
+  // and we only want to fix the token once, before it is expanded by the macro.
+  SourceLocation FixLocation = UsageRange.getBegin();
+  FixLocation = SourceMgr.getSpellingLoc(FixLocation);
   if (FixLocation.isInvalid())
-    return;
+    return {NamingCheckFailures.end(), false};
+
+  // Skip if in system system header
+  if (SourceMgr.isInSystemHeader(FixLocation))
+    return {NamingCheckFailures.end(), false};
+
+  auto EmplaceResult = NamingCheckFailures.try_emplace(FailureId);
+  NamingCheckFailure &Failure = EmplaceResult.first->second;
 
   // Try to insert the identifier location in the Usages map, and bail out if it
   // is already in there
-  RenamerClangTidyCheck::NamingCheckFailure &Failure =
-      NamingCheckFailures[Decl];
   if (!Failure.RawUsageLocs.insert(FixLocation).second)
-    return;
+    return EmplaceResult;
 
-  if (!Failure.shouldFix())
-    return;
+  if (Failure.FixStatus != RenamerClangTidyCheck::ShouldFixStatus::ShouldFix)
+    return EmplaceResult;
 
-  if (SourceMgr && SourceMgr->isWrittenInScratchSpace(FixLocation))
+  if (SourceMgr.isWrittenInScratchSpace(FixLocation))
     Failure.FixStatus = RenamerClangTidyCheck::ShouldFixStatus::InsideMacro;
 
-  if (!utils::rangeCanBeFixed(Range, SourceMgr))
+  if (!utils::rangeCanBeFixed(UsageRange, &SourceMgr))
     Failure.FixStatus = RenamerClangTidyCheck::ShouldFixStatus::InsideMacro;
+
+  return EmplaceResult;
 }
 
-void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl, SourceRange Range,
-                                     const SourceManager *SourceMgr) {
-  // Don't keep track for non-identifier names.
-  auto *II = Decl->getIdentifier();
-  if (!II)
+void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl,
+                                     SourceRange UsageRange,
+                                     const SourceManager &SourceMgr) {
+  if (SourceMgr.isInSystemHeader(Decl->getLocation()))
     return;
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
-    if (const CXXMethodDecl *Overridden = getOverrideMethod(Method))
-      Decl = Overridden;
-  }
-  Decl = cast<NamedDecl>(Decl->getCanonicalDecl());
-  return addUsage(
-      RenamerClangTidyCheck::NamingCheckId(Decl->getLocation(), II->getName()),
-      Range, SourceMgr);
-}
 
-void RenamerClangTidyCheck::checkNamedDecl(const NamedDecl *Decl,
-                                           const SourceManager &SourceMgr) {
-  std::optional<FailureInfo> MaybeFailure = getDeclFailureInfo(Decl, SourceMgr);
+  if (hasNoName(Decl))
+    return;
+
+  // Ignore ClassTemplateSpecializationDecl which are creating duplicate
+  // replacements with CXXRecordDecl.
+  if (isa<ClassTemplateSpecializationDecl>(Decl))
+    return;
+
+  // We don't want to create a failure for every NamedDecl we find. Ideally
+  // there is just one NamedDecl in every group of "related" NamedDecls that
+  // becomes the failure. This NamedDecl and all of its related NamedDecls
+  // become usages. E.g. Since NamedDecls are Redeclarable, only the canonical
+  // NamedDecl becomes the failure and all redeclarations become usages.
+  const NamedDecl *FailureDecl = getFailureForNamedDecl(Decl);
+
+  std::optional<FailureInfo> MaybeFailure =
+      getDeclFailureInfo(FailureDecl, SourceMgr);
   if (!MaybeFailure)
     return;
 
-  FailureInfo &Info = *MaybeFailure;
-  NamingCheckFailure &Failure =
-      NamingCheckFailures[NamingCheckId(Decl->getLocation(), Decl->getName())];
-  SourceRange Range =
-      DeclarationNameInfo(Decl->getDeclName(), Decl->getLocation())
-          .getSourceRange();
+  const NamingCheckId FailureId(FailureDecl->getLocation(),
+                                FailureDecl->getName());
 
-  const IdentifierTable &Idents = Decl->getASTContext().Idents;
-  auto CheckNewIdentifier = Idents.find(Info.Fixup);
+  auto [FailureIter, NewFailure] = addUsage(FailureId, UsageRange, SourceMgr);
+
+  if (FailureIter == NamingCheckFailures.end()) {
+    // Nothing to do if the usage wasn't accepted.
+    return;
+  }
+  if (!NewFailure) {
+    // FailureInfo has already been provided.
+    return;
+  }
+
+  // Update the stored failure with info regarding the FailureDecl.
+  NamingCheckFailure &Failure = FailureIter->second;
+  Failure.Info = std::move(*MaybeFailure);
+
+  // Don't overwrite the failure status if it was already set.
+  if (!Failure.shouldFix()) {
+    return;
+  }
+  const IdentifierTable &Idents = FailureDecl->getASTContext().Idents;
+  auto CheckNewIdentifier = Idents.find(Failure.Info.Fixup);
   if (CheckNewIdentifier != Idents.end()) {
     const IdentifierInfo *Ident = CheckNewIdentifier->second;
     if (Ident->isKeyword(getLangOpts()))
       Failure.FixStatus = ShouldFixStatus::ConflictsWithKeyword;
     else if (Ident->hasMacroDefinition())
       Failure.FixStatus = ShouldFixStatus::ConflictsWithMacroDefinition;
-  } else if (!isValidAsciiIdentifier(Info.Fixup)) {
+  } else if (!isValidAsciiIdentifier(Failure.Info.Fixup)) {
     Failure.FixStatus = ShouldFixStatus::FixInvalidIdentifier;
   }
-
-  Failure.Info = std::move(Info);
-  addUsage(Decl, Range);
 }
 
 void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
-  RenamerClangTidyVisitor Visitor(this, Result.SourceManager,
+  if (!Result.SourceManager) {
+    // In principle SourceManager is not null but going only by the definition
+    // of MatchResult it must be handled. Cannot rename anything without a
+    // SourceManager.
+    return;
+  }
+  RenamerClangTidyVisitor Visitor(this, *Result.SourceManager,
                                   AggressiveDependentMemberLookup);
   Visitor.TraverseAST(*Result.Context);
 }
 
-void RenamerClangTidyCheck::checkMacro(const SourceManager &SourceMgr,
-                                       const Token &MacroNameTok,
-                                       const MacroInfo *MI) {
+void RenamerClangTidyCheck::checkMacro(const Token &MacroNameTok,
+                                       const MacroInfo *MI,
+                                       const SourceManager &SourceMgr) {
   std::optional<FailureInfo> MaybeFailure =
       getMacroFailureInfo(MacroNameTok, SourceMgr);
   if (!MaybeFailure)
     return;
   FailureInfo &Info = *MaybeFailure;
-  StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
-  NamingCheckId ID(MI->getDefinitionLoc(), Name);
+  const StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
+  const NamingCheckId ID(MI->getDefinitionLoc(), Name);
   NamingCheckFailure &Failure = NamingCheckFailures[ID];
-  SourceRange Range(MacroNameTok.getLocation(), MacroNameTok.getEndLoc());
+  const SourceRange Range(MacroNameTok.getLocation(), MacroNameTok.getEndLoc());
 
   if (!isValidAsciiIdentifier(Info.Fixup))
     Failure.FixStatus = ShouldFixStatus::FixInvalidIdentifier;
 
   Failure.Info = std::move(Info);
-  addUsage(ID, Range);
+  addUsage(ID, Range, SourceMgr);
 }
 
 void RenamerClangTidyCheck::expandMacro(const Token &MacroNameTok,
-                                        const MacroInfo *MI) {
-  StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
-  NamingCheckId ID(MI->getDefinitionLoc(), Name);
+                                        const MacroInfo *MI,
+                                        const SourceManager &SourceMgr) {
+  const StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
+  const NamingCheckId ID(MI->getDefinitionLoc(), Name);
 
   auto Failure = NamingCheckFailures.find(ID);
   if (Failure == NamingCheckFailures.end())
     return;
 
-  SourceRange Range(MacroNameTok.getLocation(), MacroNameTok.getEndLoc());
-  addUsage(ID, Range);
+  const SourceRange Range(MacroNameTok.getLocation(), MacroNameTok.getEndLoc());
+  addUsage(ID, Range, SourceMgr);
 }
 
 static std::string

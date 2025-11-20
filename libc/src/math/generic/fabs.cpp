@@ -9,9 +9,16 @@
 #include "src/math/fabs.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(double, fabs, (double x)) { return fputil::abs(x); }
+LLVM_LIBC_FUNCTION(double, fabs, (double x)) {
+#ifdef __LIBC_MISC_MATH_BASIC_OPS_OPT
+  return __builtin_fabs(x);
+#else
+  return fputil::abs(x);
+#endif
+}
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

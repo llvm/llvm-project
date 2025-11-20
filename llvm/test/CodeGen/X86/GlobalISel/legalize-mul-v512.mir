@@ -28,9 +28,9 @@ alignment:       16
 legalized:       false
 regBankSelected: false
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: _, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: _, preferred-register: '' }
-# ALL-NEXT:   - { id: 2, class: _, preferred-register: '' }
+# ALL-NEXT:   - { id: 0, class: _, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 1, class: _, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 2, class: _, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -58,9 +58,9 @@ alignment:       16
 legalized:       false
 regBankSelected: false
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: _, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: _, preferred-register: '' }
-# ALL-NEXT:   - { id: 2, class: _, preferred-register: '' }
+# ALL-NEXT:   - { id: 0, class: _, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 1, class: _, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 2, class: _, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -88,9 +88,9 @@ alignment:       16
 legalized:       false
 regBankSelected: false
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: _, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: _, preferred-register: '' }
-# ALL-NEXT:   - { id: 2, class: _, preferred-register: '' }
+# ALL-NEXT:   - { id: 0, class: _, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 1, class: _, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 2, class: _, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

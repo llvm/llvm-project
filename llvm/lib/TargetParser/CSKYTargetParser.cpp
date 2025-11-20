@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/CSKYTargetParser.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace llvm;
@@ -150,7 +151,7 @@ StringRef CSKY::getArchExtName(uint64_t ArchExtKind) {
 }
 
 static bool stripNegationPrefix(StringRef &Name) {
-  if (Name.startswith("no")) {
+  if (Name.starts_with("no")) {
     Name = Name.substr(2);
     return true;
   }

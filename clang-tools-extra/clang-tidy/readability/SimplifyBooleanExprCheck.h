@@ -1,4 +1,4 @@
-//===--- SimplifyBooleanExpr.h clang-tidy -----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_SIMPLIFY_BOOLEAN_EXPR_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_SIMPLIFY_BOOLEAN_EXPR_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_SIMPLIFYBOOLEANEXPRCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_SIMPLIFYBOOLEANEXPRCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// them to use the appropriate boolean expression directly.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/simplify-boolean-expr.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/simplify-boolean-expr.html
 class SimplifyBooleanExprCheck : public ClangTidyCheck {
 public:
   SimplifyBooleanExprCheck(StringRef Name, ClangTidyContext *Context);
@@ -60,10 +60,13 @@ private:
                       const BinaryOperator *Inner, bool TryOfferFix,
                       const Stmt *Parent, const ParenExpr *Parens);
 
-  void issueDiag(const ASTContext &Context, SourceLocation Loc,
+  bool issueDiag(const ASTContext &Context, SourceLocation Loc,
                  StringRef Description, SourceRange ReplacementRange,
                  StringRef Replacement);
 
+  bool canBeBypassed(const Stmt *S) const;
+
+  const bool IgnoreMacros;
   const bool ChainedConditionalReturn;
   const bool ChainedConditionalAssignment;
   const bool SimplifyDeMorgan;
@@ -72,4 +75,4 @@ private:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_SIMPLIFY_BOOLEAN_EXPR_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_SIMPLIFYBOOLEANEXPRCHECK_H

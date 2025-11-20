@@ -42,8 +42,12 @@ export namespace std {
   using std::iota;
 
   namespace ranges {
-    // using std::ranges::iota_result;
-    // using std::ranges::iota;
+
+#if _LIBCPP_STD_VER >= 23
+    using std::ranges::iota;
+    using std::ranges::iota_result;
+#endif // _LIBCPP_STD_VER >= 23
+
   } // namespace ranges
 
   // [numeric.ops.gcd], greatest common divisor
@@ -54,4 +58,14 @@ export namespace std {
 
   // [numeric.ops.midpoint], midpoint
   using std::midpoint;
+
+#if _LIBCPP_STD_VER >= 26
+  // [numeric.sat], saturation arithmetic
+  using std::add_sat;
+  using std::div_sat;
+  using std::mul_sat;
+  using std::saturate_cast;
+  using std::sub_sat;
+#endif
+
 } // namespace std

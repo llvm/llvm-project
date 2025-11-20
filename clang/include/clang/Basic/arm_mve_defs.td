@@ -102,6 +102,7 @@ def int_min: CGHelperFn<"ARMMVEConstantSplat<1,0>">;
 def int_max: CGHelperFn<"ARMMVEConstantSplat<0,1>">;
 def uint_max: CGHelperFn<"ARMMVEConstantSplat<1,1>">;
 def undef: IRFunction<"UndefValue::get">;
+def poison: IRFunction<"PoisonValue::get">;
 def icmp_eq: IRBuilder<"CreateICmpEQ">;
 def icmp_ne: IRBuilder<"CreateICmpNE">;
 def icmp_ugt: IRBuilder<"CreateICmpUGT">;
@@ -116,8 +117,8 @@ def fcmp_eq: IRBuilder<"CreateFCmpOEQ">;
 def fcmp_ne: IRBuilder<"CreateFCmpUNE">; // not O: it must return true on NaNs
 def fcmp_gt: IRBuilder<"CreateFCmpOGT">;
 def fcmp_ge: IRBuilder<"CreateFCmpOGE">;
-def fcmp_lt: IRBuilder<"CreateFCmpOLT">;
-def fcmp_le: IRBuilder<"CreateFCmpOLE">;
+def fcmp_ult: IRBuilder<"CreateFCmpULT">;
+def fcmp_ule: IRBuilder<"CreateFCmpULE">;
 def splat: CGHelperFn<"ARMMVEVectorSplat">;
 def select: IRBuilder<"CreateSelect">;
 def fneg: IRBuilder<"CreateFNeg">;
@@ -132,6 +133,13 @@ def unzip: CGHelperFn<"VectorUnzip"> {
   let special_params = [IRBuilderIntParam<1, "bool">];
 }
 def zip: CGHelperFn<"VectorZip">;
+
+def masked_load: IRBuilder<"CreateMaskedLoad"> {
+  let special_params = [IRBuilderIntParam<2, "Align">];
+}
+def masked_store: IRBuilder<"CreateMaskedStore"> {
+  let special_params = [IRBuilderIntParam<2, "Align">];
+}
 
 // Trivial 'codegen' function that just returns its argument. Useful
 // for wrapping up a variable name like $foo into a thing you can pass

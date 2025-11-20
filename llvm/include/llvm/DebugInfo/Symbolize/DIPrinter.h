@@ -15,6 +15,7 @@
 #define LLVM_DEBUGINFO_SYMBOLIZE_DIPRINTER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
 #include <vector>
@@ -34,6 +35,7 @@ class SourceCode;
 struct Request {
   StringRef ModuleName;
   std::optional<uint64_t> Address;
+  StringRef Symbol;
 };
 
 class DIPrinter {
@@ -46,6 +48,8 @@ public:
   virtual void print(const Request &Request, const DIGlobal &Global) = 0;
   virtual void print(const Request &Request,
                      const std::vector<DILocal> &Locals) = 0;
+  virtual void print(const Request &Request,
+                     const std::vector<DILineInfo> &Locations) = 0;
 
   virtual bool printError(const Request &Request,
                           const ErrorInfoBase &ErrorInfo) = 0;
@@ -62,9 +66,9 @@ struct PrinterConfig {
   int SourceContextLines;
 };
 
-using ErrorHandler = function_ref<void(const ErrorInfoBase &, StringRef)>;
+using ErrorHandler = std::function<void(const ErrorInfoBase &, StringRef)>;
 
-class PlainPrinterBase : public DIPrinter {
+class LLVM_ABI PlainPrinterBase : public DIPrinter {
 protected:
   raw_ostream &OS;
   ErrorHandler ErrHandler;
@@ -91,6 +95,8 @@ public:
   void print(const Request &Request, const DIGlobal &Global) override;
   void print(const Request &Request,
              const std::vector<DILocal> &Locals) override;
+  void print(const Request &Request,
+             const std::vector<DILineInfo> &Locations) override;
 
   bool printError(const Request &Request,
                   const ErrorInfoBase &ErrorInfo) override;
@@ -99,7 +105,7 @@ public:
   void listEnd() override {}
 };
 
-class LLVMPrinter : public PlainPrinterBase {
+class LLVM_ABI LLVMPrinter : public PlainPrinterBase {
 private:
   void printSimpleLocation(StringRef Filename, const DILineInfo &Info) override;
   void printStartAddress(const DILineInfo &Info) override;
@@ -110,17 +116,16 @@ public:
       : PlainPrinterBase(OS, EH, Config) {}
 };
 
-class GNUPrinter : public PlainPrinterBase {
+class LLVM_ABI GNUPrinter : public PlainPrinterBase {
 private:
   void printSimpleLocation(StringRef Filename, const DILineInfo &Info) override;
 
 public:
   GNUPrinter(raw_ostream &OS, ErrorHandler EH, PrinterConfig &Config)
       : PlainPrinterBase(OS, EH, Config) {}
-
 };
 
-class JSONPrinter : public DIPrinter {
+class LLVM_ABI JSONPrinter : public DIPrinter {
 private:
   raw_ostream &OS;
   PrinterConfig Config;
@@ -141,6 +146,8 @@ public:
   void print(const Request &Request, const DIGlobal &Global) override;
   void print(const Request &Request,
              const std::vector<DILocal> &Locals) override;
+  void print(const Request &Request,
+             const std::vector<DILineInfo> &Locations) override;
 
   bool printError(const Request &Request,
                   const ErrorInfoBase &ErrorInfo) override;

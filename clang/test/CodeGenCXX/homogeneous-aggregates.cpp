@@ -39,10 +39,10 @@ struct I2 : Base2 {};
 struct I3 : Base2 {};
 struct D5 : I1, I2, I3 {}; // homogeneous aggregate
 
-// PPC: define{{.*}} void @_Z7func_D12D1(ptr noalias sret(%struct.D1) align 8 %agg.result, [3 x i64] %x.coerce)
-// ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z7func_D12D1(ptr noalias sret(%struct.D1) align 8 %agg.result, [3 x i64] %x.coerce)
-// ARM64: define{{.*}} void @_Z7func_D12D1(ptr noalias sret(%struct.D1) align 8 %agg.result, ptr noundef %x)
-// X64: define dso_local x86_vectorcallcc void @"\01_Z7func_D12D1@@24"(ptr noalias sret(%struct.D1) align 8 %agg.result, ptr noundef %x)
+// PPC: define{{.*}} void @_Z7func_D12D1(ptr dead_on_unwind noalias writable sret(%struct.D1) align 8 %agg.result, [3 x i64] %x.coerce)
+// ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z7func_D12D1(ptr dead_on_unwind noalias writable sret(%struct.D1) align 8 %agg.result, [3 x i64] %x.coerce)
+// ARM64: define{{.*}} void @_Z7func_D12D1(ptr dead_on_unwind noalias writable sret(%struct.D1) align 8 %agg.result, ptr dead_on_return noundef %x)
+// X64: define dso_local x86_vectorcallcc void @"\01_Z7func_D12D1@@24"(ptr dead_on_unwind noalias writable sret(%struct.D1) align 8 %agg.result, ptr dead_on_return noundef %x)
 D1 CC func_D1(D1 x) { return x; }
 
 // PPC: define{{.*}} [3 x double] @_Z7func_D22D2([3 x double] %x.coerce)
@@ -51,9 +51,9 @@ D1 CC func_D1(D1 x) { return x; }
 // X64: define dso_local x86_vectorcallcc %struct.D2 @"\01_Z7func_D22D2@@24"(%struct.D2 inreg %x.coerce)
 D2 CC func_D2(D2 x) { return x; }
 
-// PPC: define{{.*}} void @_Z7func_D32D3(ptr noalias sret(%struct.D3) align 8 %agg.result, [4 x i64] %x.coerce)
-// ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z7func_D32D3(ptr noalias sret(%struct.D3) align 8 %agg.result, [4 x i64] %x.coerce)
-// ARM64: define{{.*}} void @_Z7func_D32D3(ptr noalias sret(%struct.D3) align 8 %agg.result, ptr noundef %x)
+// PPC: define{{.*}} void @_Z7func_D32D3(ptr dead_on_unwind noalias writable sret(%struct.D3) align 8 %agg.result, [4 x i64] %x.coerce)
+// ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z7func_D32D3(ptr dead_on_unwind noalias writable sret(%struct.D3) align 8 %agg.result, [4 x i64] %x.coerce)
+// ARM64: define{{.*}} void @_Z7func_D32D3(ptr dead_on_unwind noalias writable sret(%struct.D3) align 8 %agg.result, ptr dead_on_return noundef %x)
 D3 CC func_D3(D3 x) { return x; }
 
 // PPC: define{{.*}} [4 x double] @_Z7func_D42D4([4 x double] %x.coerce)
@@ -133,13 +133,13 @@ struct HasEmptyBase : public Empty {
 struct HasPodBase : public Pod {};
 // WOA64-LABEL: define dso_local %"struct.pr47611::Pod" @"?copy@pr47611@@YA?AUPod@1@PEAU21@@Z"(ptr noundef %x)
 Pod copy(Pod *x) { return *x; } // MSVC: ldp d0,d1,[x0], Clang: ldp d0,d1,[x0]
-// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(ptr inreg noalias sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %agg.result, ptr noundef %x)
+// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(ptr dead_on_unwind inreg noalias writable sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %agg.result, ptr noundef %x)
 NotCXX14Aggregate copy(NotCXX14Aggregate *x) { return *x; } // MSVC: stp x8,x9,[x0], Clang: str q0,[x0]
 // WOA64-LABEL: define dso_local [2 x i64] @"?copy@pr47611@@YA?AUNotPod@1@PEAU21@@Z"(ptr noundef %x)
 NotPod copy(NotPod *x) { return *x; }
-// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(ptr inreg noalias sret(%"struct.pr47611::HasEmptyBase") align 8 %agg.result, ptr noundef %x)
+// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(ptr dead_on_unwind inreg noalias writable sret(%"struct.pr47611::HasEmptyBase") align 8 %agg.result, ptr noundef %x)
 HasEmptyBase copy(HasEmptyBase *x) { return *x; }
-// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(ptr inreg noalias sret(%"struct.pr47611::HasPodBase") align 8 %agg.result, ptr noundef %x)
+// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(ptr dead_on_unwind inreg noalias writable sret(%"struct.pr47611::HasPodBase") align 8 %agg.result, ptr noundef %x)
 HasPodBase copy(HasPodBase *x) { return *x; }
 
 void call_copy_pod(Pod *pod) {
@@ -151,7 +151,7 @@ void call_copy_pod(Pod *pod) {
 void call_copy_notcxx14aggregate(NotCXX14Aggregate *notcxx14aggregate) {
   *notcxx14aggregate = copy(notcxx14aggregate);
   // WOA64-LABEL: define dso_local void @"?call_copy_notcxx14aggregate@pr47611@@YAXPEAUNotCXX14Aggregate@1@@Z"
-  // WOA64: call void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(ptr inreg sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %{{.*}}, ptr noundef %{{.*}})
+  // WOA64: call void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(ptr dead_on_unwind inreg writable sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %{{.*}}, ptr noundef %{{.*}})
 }
 
 void call_copy_notpod(NotPod *notPod) {
@@ -163,13 +163,13 @@ void call_copy_notpod(NotPod *notPod) {
 void call_copy_hasemptybase(HasEmptyBase *hasEmptyBase) {
   *hasEmptyBase = copy(hasEmptyBase);
   // WOA64-LABEL: define dso_local void @"?call_copy_hasemptybase@pr47611@@YAXPEAUHasEmptyBase@1@@Z"
-  // WOA64: call void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(ptr inreg sret(%"struct.pr47611::HasEmptyBase") align 8 %{{.*}}, ptr noundef %{{.*}})
+  // WOA64: call void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(ptr dead_on_unwind inreg writable sret(%"struct.pr47611::HasEmptyBase") align 8 %{{.*}}, ptr noundef %{{.*}})
 }
 
 void call_copy_haspodbase(HasPodBase *hasPodBase) {
   *hasPodBase = copy(hasPodBase);
   // WOA64-LABEL: define dso_local void @"?call_copy_haspodbase@pr47611@@YAXPEAUHasPodBase@1@@Z"
-  // WOA64: call void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(ptr inreg sret(%"struct.pr47611::HasPodBase") align 8 %{{.*}}, ptr noundef %{{.*}})
+  // WOA64: call void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(ptr dead_on_unwind inreg writable sret(%"struct.pr47611::HasPodBase") align 8 %{{.*}}, ptr noundef %{{.*}})
 }
 } // namespace pr47611
 
@@ -201,7 +201,7 @@ struct NonHFA {
   virtual void f1();
 };
 double foo(NonHFA v) { return v.x + v.y; }
-// WOA64: define dso_local noundef double @"?foo@polymorphic@@YANUNonHFA@1@@Z"(ptr noundef %{{.*}})
+// WOA64: define dso_local noundef double @"?foo@polymorphic@@YANUNonHFA@1@@Z"(ptr dead_on_return noundef %{{.*}})
 }
 namespace trivial_copy_assignment {
 struct HFA {
@@ -221,7 +221,7 @@ struct NonHFA {
   NonHFA &operator=(const NonHFA&);
 };
 double foo(NonHFA v) { return v.x + v.y; }
-// WOA64: define dso_local noundef double @"?foo@non_trivial_copy_assignment@@YANUNonHFA@1@@Z"(ptr noundef %{{.*}})
+// WOA64: define dso_local noundef double @"?foo@non_trivial_copy_assignment@@YANUNonHFA@1@@Z"(ptr dead_on_return noundef %{{.*}})
 }
 namespace user_provided_ctor {
 struct HFA {
@@ -251,7 +251,7 @@ struct NonHFA {
   ~NonHFA();
 };
 double foo(NonHFA v) { return v.x + v.y; }
-// WOA64: define dso_local noundef double @"?foo@non_trivial_dtor@@YANUNonHFA@1@@Z"(ptr noundef %{{.*}})
+// WOA64: define dso_local noundef double @"?foo@non_trivial_dtor@@YANUNonHFA@1@@Z"(ptr dead_on_return noundef %{{.*}})
 }
 namespace non_empty_base {
 struct non_empty_base { double d; };
@@ -272,7 +272,7 @@ struct NonHFA {
   empty e;
 };
 double foo(NonHFA v) { return v.x + v.y; }
-// WOA64: define dso_local noundef double @"?foo@empty_field@@YANUNonHFA@1@@Z"(ptr noundef %{{.*}})
+// WOA64: define dso_local noundef double @"?foo@empty_field@@YANUNonHFA@1@@Z"(ptr dead_on_return noundef %{{.*}})
 }
 namespace non_empty_field {
 struct non_empty { double d; };
@@ -300,5 +300,5 @@ test f(test *x) { return *x; }
 struct base2 { double v; };
 struct test2 : base2 { test2(double); protected: double v2;};
 test2 f(test2 *x) { return *x; }
-// WOA64: define dso_local void @"?f@pr62223@@YA?AUtest2@1@PEAU21@@Z"(ptr inreg noalias sret(%"struct.pr62223::test2") align 8 %{{.*}}, ptr noundef %{{.*}})
+// WOA64: define dso_local void @"?f@pr62223@@YA?AUtest2@1@PEAU21@@Z"(ptr dead_on_unwind inreg noalias writable sret(%"struct.pr62223::test2") align 8 %{{.*}}, ptr noundef %{{.*}})
 }

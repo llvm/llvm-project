@@ -1,0 +1,30 @@
+# This test checks to make sure that when an instruction (%3 in the test) is 
+# moved due to matching a result of a fold of two other instructions
+# (%1, and %2 in the test) in the legalizer, the DILocation of the 
+# instruction that is moved (%3) is updated appropriately.
+
+# RUN: llc %s -run-pass=legalizer -mtriple=aarch64 -o - | FileCheck %s 
+# CHECK-NOT: %2:_(s32) = G_CONSTANT i32 0, debug-location !DILocation(line: 13
+# CHECK: %2:_(s32) = G_CONSTANT i32 0, debug-location !DILocation(line: 0,
+--- |
+  
+  define i32 @main(i32 %0, ptr %1) #0 !dbg !57 {
+  entry:
+    ret i32 0, !dbg !71
+  }
+  !3 = !DIFile(filename: "main.swift", directory: "/Volumes/Data/swift")
+  !23 = distinct !DICompileUnit(language: DW_LANG_Swift, file: !3, sdk: "blah.sdk")
+  !57 = distinct !DISubprogram(name: "main", unit: !23)
+  !64 = distinct !DILexicalBlock(scope: !57, column: 1)
+  !66 = distinct !DILexicalBlock(scope: !64, column: 1)
+  !68 = !DILocation(line: 12, scope: !66)
+  !70 = distinct !DILexicalBlock(scope: !66, column: 1)
+  !71 = !DILocation(line: 13, scope: !70)
+name:            main
+body:             |
+  bb.0:
+    %1:_(s8) = G_CONSTANT i8 0, debug-location !68
+    %2:_(s32) = G_ANYEXT %1(s8), debug-location !68
+    $w2 = COPY %2(s32), debug-location !68
+    %3:_(s32) = G_CONSTANT i32 0, debug-location !71
+    $w0 = COPY %3(s32), debug-location !71

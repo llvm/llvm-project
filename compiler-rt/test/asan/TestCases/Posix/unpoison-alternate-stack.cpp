@@ -159,6 +159,7 @@ int main() {
   pthread_attr_init(&ThreadAttr);
   pthread_attr_setstack(&ThreadAttr, Mapping, DefaultStackSize);
   pthread_create(&Thread, &ThreadAttr, &threadFun, (void *)&AltStack);
+  pthread_attr_destroy(&ThreadAttr);
 
   pthread_join(Thread, nullptr);
 

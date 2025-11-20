@@ -30,6 +30,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
 
@@ -85,7 +86,8 @@ struct ModuleFunctionSearchOptions {
 ///
 /// The module will parse more detailed information as more queries are made.
 class Module : public std::enable_shared_from_this<Module>,
-               public SymbolContextScope {
+               public SymbolContextScope,
+               public UserID {
 public:
   class LookupInfo;
   // Static functions that can track the lifetime of module objects. This is
@@ -337,6 +339,12 @@ public:
                      const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list);
 
+  /// Find functions by compiler context.
+  void FindFunctions(llvm::ArrayRef<CompilerContext> compiler_ctx,
+                     lldb::FunctionNameType name_type_mask,
+                     const ModuleFunctionSearchOptions &options,
+                     SymbolContextList &sc_list);
+
   /// Find functions by name.
   ///
   /// If the function is an inlined function, it will have a block,
@@ -415,70 +423,19 @@ public:
   void FindGlobalVariables(const RegularExpression &regex, size_t max_matches,
                            VariableList &variable_list);
 
-  /// Find types by name.
+  /// Find types using a type-matching object that contains all search
+  /// parameters.
   ///
-  /// Type lookups in modules go through the SymbolFile. The SymbolFile needs to
-  /// be able to lookup types by basename and not the fully qualified typename.
-  /// This allows the type accelerator tables to stay small, even with heavily
-  /// templatized C++. The type search will then narrow down the search
-  /// results. If "exact_match" is true, then the type search will only match
-  /// exact type name matches. If "exact_match" is false, the type will match
-  /// as long as the base typename matches and as long as any immediate
-  /// containing namespaces/class scopes that are specified match. So to
-  /// search for a type "d" in "b::c", the name "b::c::d" can be specified and
-  /// it will match any class/namespace "b" which contains a class/namespace
-  /// "c" which contains type "d". We do this to allow users to not always
-  /// have to specify complete scoping on all expressions, but it also allows
-  /// for exact matching when required.
+  /// \see lldb_private::TypeQuery
   ///
-  /// \param[in] type_name
-  ///     The name of the type we are looking for that is a fully
-  ///     or partially qualified type name.
+  /// \param[in] query
+  ///     A type matching object that contains all of the details of the type
+  ///     search.
   ///
-  /// \param[in] exact_match
-  ///     If \b true, \a type_name is fully qualified and must match
-  ///     exactly. If \b false, \a type_name is a partially qualified
-  ///     name where the leading namespaces or classes can be
-  ///     omitted to make finding types that a user may type
-  ///     easier.
-  ///
-  /// \param[out] types
-  ///     A type list gets populated with any matches.
-  ///
-  void
-  FindTypes(ConstString type_name, bool exact_match, size_t max_matches,
-            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-            TypeList &types);
-
-  /// Find types by name.
-  ///
-  /// This behaves like the other FindTypes method but allows to
-  /// specify a DeclContext and a language for the type being searched
-  /// for.
-  ///
-  /// \param searched_symbol_files
-  ///     Prevents one file from being visited multiple times.
-  void
-  FindTypes(llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
-            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-            TypeMap &types);
-
-  lldb::TypeSP FindFirstType(const SymbolContext &sc, ConstString type_name,
-                             bool exact_match);
-
-  /// Find types by name that are in a namespace. This function is used by the
-  /// expression parser when searches need to happen in an exact namespace
-  /// scope.
-  ///
-  /// \param[in] type_name
-  ///     The name of a type within a namespace that should not include
-  ///     any qualifying namespaces (just a type basename).
-  ///
-  /// \param[out] type_list
-  ///     A type list gets populated with any matches.
-  void FindTypesInNamespace(ConstString type_name,
-                            const CompilerDeclContext &parent_decl_ctx,
-                            size_t max_matches, TypeList &type_list);
+  /// \param[in] results
+  ///     Any matching types will be populated into the \a results object using
+  ///     TypeMap::InsertUnique(...).
+  void FindTypes(const TypeQuery &query, TypeResults &results);
 
   /// Get const accessor for the module architecture.
   ///
@@ -652,7 +609,11 @@ public:
   virtual SymbolFile *GetSymbolFile(bool can_create = true,
                                     Stream *feedback_strm = nullptr);
 
-  Symtab *GetSymtab();
+  /// Get the module's symbol table
+  ///
+  /// If the symbol table has already been loaded, this function returns it.
+  /// Otherwise, it will only be loaded when can_create is true.
+  Symtab *GetSymtab(bool can_create = true);
 
   /// Get a reference to the UUID value contained in this object.
   ///
@@ -925,6 +886,12 @@ public:
   /// ElapsedTime RAII object.
   StatsDuration &GetSymtabIndexTime() { return m_symtab_index_time; }
 
+  StatisticsMap &GetSymbolLocatorStatistics() {
+    return m_symbol_locator_duration_map;
+  }
+
+  void ResetStatistics();
+
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
   /// A class that encapsulates name lookup information.
   ///
@@ -989,8 +956,8 @@ public:
     /// names we are looking for
     lldb::FunctionNameType m_name_type_mask = lldb::eFunctionNameTypeNone;
 
-    ///< If \b true, then demangled names that match will need to contain
-    ///< "m_name" in order to be considered a match
+    /// If \b true, then demangled names that match will need to contain
+    /// "m_name" in order to be considered a match
     bool m_match_name_after_lookup = false;
   };
 
@@ -1066,9 +1033,9 @@ protected:
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    /// parser for this module as it may or may
                                    /// not be shared with the SymbolFile
-  std::optional<UnwindTable> m_unwind_table; ///< Table of FuncUnwinders
-                                             /// objects created for this
-                                             /// Module's functions
+  UnwindTable m_unwind_table;      ///< Table of FuncUnwinders
+                                   /// objects created for this
+                                   /// Module's functions
   lldb::SymbolVendorUP
       m_symfile_up; ///< A pointer to the symbol vendor for this module.
   std::vector<lldb::SymbolVendorUP>
@@ -1102,8 +1069,13 @@ protected:
   /// time for the symbol tables can be aggregated here.
   StatsDuration m_symtab_index_time;
 
-  std::once_flag m_optimization_warning;
-  std::once_flag m_language_warning;
+  StatisticsMap m_symbol_locator_duration_map;
+
+  /// A set of hashes of all warnings and errors, to avoid reporting them
+  /// multiple times to the same Debugger.
+  llvm::DenseMap<llvm::stable_hash, std::unique_ptr<std::once_flag>>
+      m_shown_diagnostics;
+  std::recursive_mutex m_diagnostic_mutex;
 
   void SymbolIndicesToSymbolContextList(Symtab *symtab,
                                         std::vector<uint32_t> &symbol_indexes,
@@ -1122,12 +1094,6 @@ protected:
 private:
   Module(); // Only used internally by CreateJITModule ()
 
-  void FindTypes_Impl(
-      ConstString name, const CompilerDeclContext &parent_decl_ctx,
-      size_t max_matches,
-      llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-      TypeMap &types);
-
   Module(const Module &) = delete;
   const Module &operator=(const Module &) = delete;
 
@@ -1137,6 +1103,7 @@ private:
   void ReportWarning(const llvm::formatv_object_base &payload);
   void ReportError(const llvm::formatv_object_base &payload);
   void ReportErrorIfModifyDetected(const llvm::formatv_object_base &payload);
+  std::once_flag *GetDiagnosticOnceFlag(llvm::StringRef msg);
 };
 
 } // namespace lldb_private

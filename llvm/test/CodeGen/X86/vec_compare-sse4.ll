@@ -21,7 +21,7 @@ define <2 x i64> @test1(<2 x i64> %A, <2 x i64> %B) nounwind {
 ;
 ; SSE41-LABEL: test1:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm2, %xmm1
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2

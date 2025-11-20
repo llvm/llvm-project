@@ -13,7 +13,7 @@ define ptr @FindChar(ptr %CurPtr) {
 ; CHECK-NEXT:    .cfi_offset %edi, -8
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movzbl (%esi,%edi), %eax

@@ -91,6 +91,12 @@
 // RUN: ld.lld -o %t3 %t.o -L%t.dir -Bstatic -call_shared -lls
 // RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=DYNAMIC %s
 
+/// -r implies -Bstatic and has precedence over -Bdynamic.
+// RUN: ld.lld -r -Bdynamic %t.o -L%t.dir -lls -o %t3.ro
+// RUN: llvm-readelf -s -h %t3.ro | FileCheck --check-prefix=RELOCATABLE %s
+// RELOCATABLE: Type: REL
+// RELOCATABLE: [[#]] _static
+
 // -nostdlib
 // RUN: echo 'SEARCH_DIR("'%t.dir'")' > %t.script
 // RUN: ld.lld -o %t3 %t.o -script %t.script -lls

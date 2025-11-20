@@ -7,7 +7,7 @@
 # END.
 
 
-# CHECK: Testing: 6 tests
+# CHECK: Testing: 8 tests
 
 
 # In the case of the external shell, we check for only RUN lines in stderr in
@@ -17,9 +17,9 @@
 
 #       CHECK: Command Output (stderr)
 #  CHECK-NEXT: --
-#  CHECK-NEXT: {{^}}RUN: at line 4: true{{$}}
+#  CHECK-NEXT: {{^}}true # RUN: at line 4{{$}}
 #  CHECK-NEXT: true
-#  CHECK-NEXT: {{^}}RUN: at line 5: false{{$}}
+#  CHECK-NEXT: {{^}}false # RUN: at line 5{{$}}
 #  CHECK-NEXT: false
 # CHECK-EMPTY:
 #  CHECK-NEXT: --
@@ -29,7 +29,7 @@
 #       CHECK: Command Output (stderr)
 #  CHECK-NEXT: --
 #  CHECK-NEXT: {{^}}RUN: at line 2 has no command after substitutions{{$}}
-#  CHECK-NEXT: {{^}}RUN: at line 3: false{{$}}
+#  CHECK-NEXT: {{^}}false # RUN: at line 3{{$}}
 #  CHECK-NEXT: false
 # CHECK-EMPTY:
 #  CHECK-NEXT: --
@@ -42,11 +42,20 @@
 
 #       CHECK: Command Output (stderr)
 #  CHECK-NEXT: --
-#  CHECK-NEXT: {{^}}RUN: at line 4: echo 'foo bar' | FileCheck
+#  CHECK-NEXT: {{^}}echo 'foo bar' | FileCheck {{.*}} # RUN: at line 4 
 #   CHECK-NOT: RUN
-#       CHECK: {{^}}RUN: at line 6: echo 'foo baz' | FileCheck
+#       CHECK: {{^}}echo 'foo baz' | FileCheck {{.*}} # RUN: at line 6 
 #   CHECK-NOT: RUN
 #       CHECK: --
+
+# CHECK-LABEL: FAIL: shtest-run-at-line :: external-shell/run-line-with-newline.txt
+
+#      CHECK: Command Output (stderr)
+# CHECK-NEXT: --
+# CHECK-NEXT: {{^}}echo abc |
+# CHECK-NEXT: FileCheck {{.*}} &&
+# CHECK-NEXT: false # RUN: at line 1
+#  CHECK-NOT: RUN
 
 
 # CHECK-LABEL: FAIL: shtest-run-at-line :: internal-shell/basic.txt
@@ -87,3 +96,16 @@
 # CHECK-NEXT: # executed command: echo 'foo baz'
 # CHECK-NEXT: # executed command: FileCheck {{.*}}
 # CHECK-NOT:  RUN
+
+# CHECK-LABEL: FAIL: shtest-run-at-line :: internal-shell/run-line-with-newline.txt
+
+#      CHECK: Command Output (stdout)
+# CHECK-NEXT: --
+# CHECK-NEXT: # RUN: at line 1
+# CHECK-NEXT: echo abc |
+# CHECK-NEXT: FileCheck {{.*}} &&
+# CHECK-NEXT: false
+# CHECK-NEXT: # executed command: echo abc
+# CHECK-NEXT: # executed command: FileCheck {{.*}}
+# CHECK-NEXT: # executed command: false
+#  CHECK-NOT: RUN

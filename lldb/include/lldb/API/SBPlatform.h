@@ -10,14 +10,18 @@
 #define LLDB_API_SBPLATFORM_H
 
 #include "lldb/API/SBDefines.h"
+#include "lldb/API/SBProcess.h"
+#include "lldb/API/SBProcessInfoList.h"
 
 #include <functional>
 
 struct PlatformConnectOptions;
 struct PlatformShellCommand;
+class ProcessInstanceInfoMatch;
 
 namespace lldb {
 
+class SBAttachInfo;
 class SBLaunchInfo;
 
 class LLDB_API SBPlatformConnectOptions {
@@ -108,6 +112,9 @@ public:
 
   bool IsValid() const;
 
+  /// Returns true if this platform is the host platform, otherwise false.
+  bool IsHost() const;
+
   void Clear();
 
   const char *GetWorkingDirectory();
@@ -148,6 +155,11 @@ public:
   SBError Run(SBPlatformShellCommand &shell_command);
 
   SBError Launch(SBLaunchInfo &launch_info);
+
+  SBProcess Attach(SBAttachInfo &attach_info, const SBDebugger &debugger,
+                   SBTarget &target, SBError &error);
+
+  SBProcessInfoList GetAllProcesses(SBError &error);
 
   SBError Kill(const lldb::pid_t pid);
 

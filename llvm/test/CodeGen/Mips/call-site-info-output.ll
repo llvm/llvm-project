@@ -1,15 +1,24 @@
+;; TODO: Add -enable-new-pm
 ;; Test mips32:
 ; RUN: llc -mtriple=mips-linux-gnu -emit-call-site-info %s -stop-before=finalize-isel -o -| \
 ; RUN: llc -mtriple=mips-linux-gnu -emit-call-site-info -x='mir' -run-pass=finalize-isel -o -| FileCheck %s
+; RUN: llc -mtriple=mips-linux-gnu -emit-call-site-info %s -stop-before=finalize-isel -o -| \
+; RUN: llc -mtriple=mips-linux-gnu -emit-call-site-info -x='mir' -passes=finalize-isel -o -| FileCheck %s
 ;; Test mips64:
 ; RUN: llc -mtriple=mips64-linux-gnu -emit-call-site-info %s -stop-before=finalize-isel -o -| \
 ; RUN: llc -mtriple=mips64-linux-gnu -emit-call-site-info -x='mir' -run-pass=finalize-isel -o -| FileCheck %s --check-prefix=CHECK64
+; RUN: llc -mtriple=mips64-linux-gnu -emit-call-site-info %s -stop-before=finalize-isel -o -| \
+; RUN: llc -mtriple=mips64-linux-gnu -emit-call-site-info -x='mir' -passes=finalize-isel -o -| FileCheck %s --check-prefix=CHECK64
 ;; Test mipsel:
 ; RUN: llc -mtriple=mipsel-linux-gnu -emit-call-site-info %s -stop-before=finalize-isel -o -| \
 ; RUN: llc -mtriple=mipsel-linux-gnu -emit-call-site-info -x='mir' -run-pass=finalize-isel -o -| FileCheck %s
+; RUN: llc -mtriple=mipsel-linux-gnu -emit-call-site-info %s -stop-before=finalize-isel -o -| \
+; RUN: llc -mtriple=mipsel-linux-gnu -emit-call-site-info -x='mir' -passes=finalize-isel -o -| FileCheck %s
 ;; Test mips64el:
 ; RUN: llc -mtriple=mips64el-linux-gnu -emit-call-site-info %s -stop-before=finalize-isel -o -| \
 ; RUN: llc -mtriple=mips64el-linux-gnu -emit-call-site-info -x='mir' -run-pass=finalize-isel -o -| FileCheck %s --check-prefix=CHECK64
+; RUN: llc -mtriple=mips64el-linux-gnu -emit-call-site-info %s -stop-before=finalize-isel -o -| \
+; RUN: llc -mtriple=mips64el-linux-gnu -emit-call-site-info -x='mir' -passes=finalize-isel -o -| FileCheck %s --check-prefix=CHECK64
 
 ;; Test call site info MIR parser and printer. Parser assertions and machine
 ;; verifier will check the rest.

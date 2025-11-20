@@ -38,14 +38,11 @@ namespace {
 
 class UninitializedObjectChecker
     : public Checker<check::EndFunction, check::DeadSymbols> {
-  std::unique_ptr<BugType> BT_uninitField;
+  const BugType BT_uninitField{this, "Uninitialized fields"};
 
 public:
   // The fields of this struct will be initialized when registering the checker.
   UninitObjCheckerOptions Opts;
-
-  UninitializedObjectChecker()
-      : BT_uninitField(new BugType(this, "Uninitialized fields")) {}
 
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
@@ -186,7 +183,7 @@ void UninitializedObjectChecker::checkEndFunction(
     for (const auto &Pair : UninitFields) {
 
       auto Report = std::make_unique<PathSensitiveBugReport>(
-          *BT_uninitField, Pair.second, Node, LocUsedForUniqueing,
+          BT_uninitField, Pair.second, Node, LocUsedForUniqueing,
           Node->getLocationContext()->getDecl());
       Context.emitReport(std::move(Report));
     }
@@ -200,7 +197,7 @@ void UninitializedObjectChecker::checkEndFunction(
             << " at the end of the constructor call";
 
   auto Report = std::make_unique<PathSensitiveBugReport>(
-      *BT_uninitField, WarningOS.str(), Node, LocUsedForUniqueing,
+      BT_uninitField, WarningOS.str(), Node, LocUsedForUniqueing,
       Node->getLocationContext()->getDecl());
 
   for (const auto &Pair : UninitFields) {
@@ -294,7 +291,9 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
 
   // Are all of this non-union's fields initialized?
   for (const FieldDecl *I : RD->fields()) {
-
+    if (I->isUnnamedBitField()) {
+      continue;
+    }
     const auto FieldVal =
         State->getLValue(I, loc::MemRegionVal(R)).castAs<loc::MemRegionVal>();
     const auto *FR = FieldVal.getRegionAs<FieldRegion>();
@@ -379,7 +378,7 @@ bool FindUninitializedFields::isUnionUninit(const TypedValueRegion *R) {
   return false;
 }
 
-bool FindUninitializedFields::isPrimitiveUninit(const SVal &V) {
+bool FindUninitializedFields::isPrimitiveUninit(SVal V) {
   if (V.isUndef())
     return true;
 

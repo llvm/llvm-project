@@ -9,11 +9,11 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -183,7 +183,7 @@ DecodedCharBuffer GetPrintableImpl<StringElementType::UTF8>(
       &buffer_for_conversion, buffer_end, &codepoint, llvm::strictConversion);
   assert(result == llvm::conversionOK &&
          "Failed to convert legal utf8 sequence");
-  (void)result;
+  UNUSED_IF_ASSERT_DISABLED(result);
 
   // The UTF8 helper always advances by the utf8 encoded length.
   const unsigned utf8_encoded_len = buffer_for_conversion - buffer;

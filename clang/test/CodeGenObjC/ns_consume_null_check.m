@@ -55,9 +55,9 @@ void test1(void) {
 // CHECK-NEXT: [[CALL:%.*]] = invoke <2 x float>
 // CHECK-NEXT:   to label [[INVOKE_CONT:%.*]] unwind label {{%.*}}
 // CHECK: store <2 x float> [[CALL]], ptr [[COERCE:%.*]],
-// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds { float, float }, ptr [[COERCE]], i32 0, i32 0
+// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 0
 // CHECK-NEXT: [[REALCALL:%.*]] = load float, ptr [[T0]]
-// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds { float, float }, ptr [[COERCE]], i32 0, i32 1
+// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 1
 // CHECK-NEXT: [[IMAGCALL:%.*]] = load float, ptr [[T0]]
 // CHECK-NEXT: br label [[CONT:%.*]]{{$}}
 //   Null path.
@@ -66,8 +66,8 @@ void test1(void) {
 //   Join point.
 // CHECK:      [[REAL:%.*]] = phi float [ [[REALCALL]], [[INVOKE_CONT]] ], [ 0.000000e+00, [[FORNULL]] ]
 // CHECK-NEXT: [[IMAG:%.*]] = phi float [ [[IMAGCALL]], [[INVOKE_CONT]] ], [ 0.000000e+00, [[FORNULL]] ]
-// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds { float, float }, ptr [[RESULT]], i32 0, i32 0
-// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds { float, float }, ptr [[RESULT]], i32 0, i32 1
+// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RESULT]], i32 0, i32 0
+// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RESULT]], i32 0, i32 1
 // CHECK-NEXT: store float [[REAL]], ptr [[T0]]
 // CHECK-NEXT: store float [[IMAG]], ptr [[T1]]
 //   Epilogue.

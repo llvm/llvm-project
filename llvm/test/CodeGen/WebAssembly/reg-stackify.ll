@@ -471,8 +471,7 @@ define i32 @commute_to_fix_ordering(i32 %arg) {
 ; CHECK-LABEL: multiple_defs:
 ; CHECK:        f64.add         $push[[NUM0:[0-9]+]]=, ${{[0-9]+}}, $pop{{[0-9]+}}{{$}}
 ; CHECK-NEXT:   local.tee       $push[[NUM1:[0-9]+]]=, $[[NUM2:[0-9]+]]=, $pop[[NUM0]]{{$}}
-; CHECK-NEXT:   f64.select      $push{{[0-9]+}}=, $pop{{[0-9]+}}, $pop[[NUM1]], ${{[0-9]+}}{{$}}
-; CHECK:        $[[NUM2]]=,
+; CHECK-NEXT:   f64.select      ${{[0-9]+}}=, $pop{{[0-9]+}}, $pop[[NUM1]], ${{[0-9]+}}{{$}}
 ; NOREGS-LABEL: multiple_defs:
 ; NOREGS:        f64.add
 ; NOREGS:        local.tee
@@ -650,7 +649,7 @@ define i32 @stackpointer_dependency(ptr readnone) {
 ; NOREGS-NEXT: local.tee 0
 ; NOREGS:      i32.load  0
 ; NOREGS-NEXT: i32.load  0
-; NOREGS-NEXT: call_indirect (i32, i32) -> (i32)
+; NOREGS-NEXT: call_indirect __indirect_function_table, (i32, i32) -> (i32)
 %class.call_indirect = type { ptr }
 define i32 @call_indirect_stackify(ptr %objptr, i32 %arg) {
   %obj = load ptr, ptr %objptr

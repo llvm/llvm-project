@@ -1,4 +1,4 @@
-//===--- AvoidCStyleCastsCheck.cpp - clang-tidy -----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,14 +23,16 @@ void AvoidCStyleCastsCheck::registerMatchers(
           // Filter out (EnumType)IntegerLiteral construct, which is generated
           // for non-type template arguments of enum types.
           // FIXME: Remove this once this is fixed in the AST.
-          unless(hasParent(substNonTypeTemplateParmExpr())),
-          // Avoid matches in template instantiations.
-          unless(isInTemplateInstantiation()))
+          unless(hasParent(substNonTypeTemplateParmExpr())))
           .bind("cast"),
       this);
+
   Finder->addMatcher(
-      cxxFunctionalCastExpr(unless(hasDescendant(cxxConstructExpr())),
-                            unless(hasDescendant(initListExpr())))
+      cxxFunctionalCastExpr(
+          hasDestinationType(hasCanonicalType(anyOf(
+              builtinType(), references(qualType()), pointsTo(qualType())))),
+          unless(
+              hasSourceExpression(anyOf(cxxConstructExpr(), initListExpr()))))
           .bind("cast"),
       this);
 }
@@ -87,6 +89,30 @@ static StringRef getDestTypeString(const SourceManager &SM,
                               SM, LangOpts);
 }
 
+static bool sameTypeAsWritten(QualType X, QualType Y) {
+  if (X.getCanonicalType() != Y.getCanonicalType())
+    return false;
+
+  auto TC = X->getTypeClass();
+  if (TC != Y->getTypeClass())
+    return false;
+
+  switch (TC) {
+  case Type::Typedef:
+    return declaresSameEntity(cast<TypedefType>(X)->getDecl(),
+                              cast<TypedefType>(Y)->getDecl());
+  case Type::Pointer:
+    return sameTypeAsWritten(cast<PointerType>(X)->getPointeeType(),
+                             cast<PointerType>(Y)->getPointeeType());
+  case Type::RValueReference:
+  case Type::LValueReference:
+    return sameTypeAsWritten(cast<ReferenceType>(X)->getPointeeType(),
+                             cast<ReferenceType>(Y)->getPointeeType());
+  default:
+    return true;
+  }
+}
+
 void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CastExpr = Result.Nodes.getNodeAs<ExplicitCastExpr>("cast");
 
@@ -114,24 +140,19 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
 
   CharSourceRange ReplaceRange = getReplaceRange(CastExpr);
 
-  bool FnToFnCast =
+  const bool FnToFnCast =
       IsFunction(SourceTypeAsWritten) && IsFunction(DestTypeAsWritten);
 
   const bool ConstructorCast = !CastExpr->getTypeAsWritten().hasQualifiers() &&
-      DestTypeAsWritten->isRecordType() &&
-      !DestTypeAsWritten->isElaboratedTypeSpecifier();
+                               DestTypeAsWritten->isRecordType() &&
+                               !DestTypeAsWritten->isElaboratedTypeSpecifier();
 
   if (CastExpr->getCastKind() == CK_NoOp && !FnToFnCast) {
     // Function pointer/reference casts may be needed to resolve ambiguities in
     // case of overloaded functions, so detection of redundant casts is trickier
     // in this case. Don't emit "redundant cast" warnings for function
     // pointer/reference types.
-    QualType Src = SourceTypeAsWritten, Dst = DestTypeAsWritten;
-    if (const auto *ElTy = dyn_cast<ElaboratedType>(Src))
-      Src = ElTy->getNamedType();
-    if (const auto *ElTy = dyn_cast<ElaboratedType>(Dst))
-      Dst = ElTy->getNamedType();
-    if (Src == Dst) {
+    if (sameTypeAsWritten(SourceTypeAsWritten, DestTypeAsWritten)) {
       diag(CastExpr->getBeginLoc(), "redundant cast to the same type")
           << FixItHint::CreateRemoval(ReplaceRange);
       return;
@@ -148,14 +169,15 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   // Ignore code in .c files and headers included from them, even if they are
   // compiled as C++.
-  if (getCurrentMainFile().endswith(".c"))
+  if (getCurrentMainFile().ends_with(".c"))
     return;
 
   SourceManager &SM = *Result.SourceManager;
 
   // Ignore code in .c files #included in other files (which shouldn't be done,
   // but people still do this for test and other purposes).
-  if (SM.getFilename(SM.getSpellingLoc(CastExpr->getBeginLoc())).endswith(".c"))
+  if (SM.getFilename(SM.getSpellingLoc(CastExpr->getBeginLoc()))
+          .ends_with(".c"))
     return;
 
   // Leave type spelling exactly as it was (unlike
@@ -217,8 +239,8 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     }
     if (DestType->isReferenceType()) {
-      QualType Dest = DestType.getNonReferenceType();
-      QualType Source = SourceType.getNonReferenceType();
+      const QualType Dest = DestType.getNonReferenceType();
+      const QualType Source = SourceType.getNonReferenceType();
       if (Source == Dest.withConst() ||
           SourceType.getNonReferenceType() == DestType.getNonReferenceType()) {
         ReplaceWithNamedCast("const_cast");
@@ -226,6 +248,12 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       }
       break;
     }
+    if (DestType->isVoidPointerType() && SourceType->isPointerType() &&
+        !SourceType->getPointeeType()->isPointerType()) {
+      ReplaceWithNamedCast("reinterpret_cast");
+      return;
+    }
+
     [[fallthrough]];
   case clang::CK_IntegralCast:
     // Convert integral and no-op casts between builtin types and enums to
@@ -244,6 +272,12 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
         ReplaceWithNamedCast("static_cast");
       else
         ReplaceWithNamedCast("reinterpret_cast");
+      return;
+    }
+    break;
+  case CK_BaseToDerived:
+    if (!needsConstCast(SourceType, DestType)) {
+      ReplaceWithNamedCast("static_cast");
       return;
     }
     break;

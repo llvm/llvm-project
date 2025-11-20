@@ -52,5 +52,5 @@ bb_join:
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 400, i32 600}
 ; CHECK: [[PROF2]] = !{!"branch_weights", i32 300, i32 300}
-; CHECK: [[PROF3]] = !{!"branch_weights", i32 678152731, i32 1469330917}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 613566756, i32 1533916892}
 ;.

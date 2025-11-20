@@ -47,7 +47,6 @@ TEST(ProgressMeterTest, Integration) {
   ProgressMeter<PreprogrammedClock> m(5, SS);
   for (int i = 0; i != 5; ++i)
     decltype(m)::ProgressMeterStep s(&m);
-  SS.flush();
   ASSERT_EQ("Processing...  20%, ETA 00:20\n"
             "Processing...  40%, ETA 00:29\n"
             "Processing...  60%, ETA 00:23\n"

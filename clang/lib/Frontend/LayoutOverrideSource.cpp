@@ -8,6 +8,7 @@
 #include "clang/Frontend/LayoutOverrideSource.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include <fstream>
@@ -147,8 +148,7 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
 
         // Skip over this offset, the following comma, and any spaces.
         LineStr = LineStr.substr(1);
-        while (!LineStr.empty() && isWhitespace(LineStr[0]))
-          LineStr = LineStr.substr(1);
+        LineStr = LineStr.drop_while(isWhitespace);
       }
     }
 
@@ -163,8 +163,7 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
 
         // Skip over this offset, the following comma, and any spaces.
         LineStr = LineStr.substr(1);
-        while (!LineStr.empty() && isWhitespace(LineStr[0]))
-          LineStr = LineStr.substr(1);
+        LineStr = LineStr.drop_while(isWhitespace);
       }
       continue;
     }
@@ -180,8 +179,7 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
 
         // Skip over this offset, the following comma, and any spaces.
         LineStr = LineStr.substr(1);
-        while (!LineStr.empty() && isWhitespace(LineStr[0]))
-          LineStr = LineStr.substr(1);
+        LineStr = LineStr.drop_while(isWhitespace);
       }
     }
   }

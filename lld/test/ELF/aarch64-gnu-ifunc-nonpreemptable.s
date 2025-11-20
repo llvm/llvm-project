@@ -1,5 +1,5 @@
 # REQUIRES: aarch64
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 
 # RUN: ld.lld --no-relax %t.o -o %t
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s --check-prefix=PDE
@@ -65,14 +65,14 @@ main:
 # PIE-EMPTY:
 # PIE-NEXT: <myfunc>:
 # PIE-NEXT:    10270: adrp    x16, 0x30000
-# PIE-NEXT:    10274: ldr     x17, [x16, #896]
-# PIE-NEXT:    10278: add     x16, x16, #896
-# PIE-NEXT:    1027c: br      x17
+# PIE-NEXT:           ldr     x17, [x16, #832]
+# PIE-NEXT:           add     x16, x16, #832
+# PIE-NEXT:           br      x17
 
 # PIE-RELOC:      .rela.dyn {
-# PIE-RELOC-NEXT:   0x30380 R_AARCH64_IRELATIVE - 0x10260
+# PIE-RELOC-NEXT:   0x30340 R_AARCH64_IRELATIVE - 0x10260
 # PIE-RELOC-NEXT: }
 # PIE-RELOC:      Hex dump of section '.got.plt':
-# NO-APPLY:       0x00030380 00000000 00000000
-# APPLY:          0x00030380 60020100 00000000
+# NO-APPLY:       0x00030340 00000000 00000000
+# APPLY:          0x00030340 60020100 00000000
 # PIE-RELOC-EMPTY:

@@ -43,14 +43,17 @@ TEST_CONSTEXPR_CXX20 void test0() {
   test(S(""), S("abcdeabcde"), 1, S::npos);
   test(S(""), S("abcdeabcdeabcdeabcde"), 1, S::npos);
   test(S("abcde"), S(""), 0, 0);
+  test(S("abcde"), S("a"), 0, 0);
   test(S("abcde"), S("abcde"), 0, 0);
   test(S("abcde"), S("abcdeabcde"), 0, S::npos);
   test(S("abcde"), S("abcdeabcdeabcdeabcde"), 0, S::npos);
   test(S("abcde"), S(""), 1, 1);
+  test(S("abcde"), S("a"), 1, S::npos);
   test(S("abcde"), S("abcde"), 1, S::npos);
   test(S("abcde"), S("abcdeabcde"), 1, S::npos);
   test(S("abcde"), S("abcdeabcdeabcdeabcde"), 1, S::npos);
   test(S("abcde"), S(""), 2, 2);
+  test(S("abcde"), S("a"), 2, S::npos);
   test(S("abcde"), S("abcde"), 2, S::npos);
   test(S("abcde"), S("abcdeabcde"), 2, S::npos);
   test(S("abcde"), S("abcdeabcdeabcdeabcde"), 2, S::npos);
@@ -59,58 +62,72 @@ TEST_CONSTEXPR_CXX20 void test0() {
   test(S("abcde"), S("abcdeabcde"), 4, S::npos);
   test(S("abcde"), S("abcdeabcdeabcdeabcde"), 4, S::npos);
   test(S("abcde"), S(""), 5, 5);
+  test(S("abcde"), S("a"), 5, S::npos);
   test(S("abcde"), S("abcde"), 5, S::npos);
   test(S("abcde"), S("abcdeabcde"), 5, S::npos);
   test(S("abcde"), S("abcdeabcdeabcdeabcde"), 5, S::npos);
   test(S("abcde"), S(""), 6, S::npos);
+  test(S("abcde"), S("a"), 6, S::npos);
   test(S("abcde"), S("abcde"), 6, S::npos);
   test(S("abcde"), S("abcdeabcde"), 6, S::npos);
   test(S("abcde"), S("abcdeabcdeabcdeabcde"), 6, S::npos);
   test(S("abcdeabcde"), S(""), 0, 0);
+  test(S("abcdeabcde"), S("a"), 0, 0);
   test(S("abcdeabcde"), S("abcde"), 0, 0);
   test(S("abcdeabcde"), S("abcdeabcde"), 0, 0);
   test(S("abcdeabcde"), S("abcdeabcdeabcdeabcde"), 0, S::npos);
   test(S("abcdeabcde"), S(""), 1, 1);
+  test(S("abcdeabcde"), S("a"), 1, 5);
   test(S("abcdeabcde"), S("abcde"), 1, 5);
   test(S("abcdeabcde"), S("abcdeabcde"), 1, S::npos);
   test(S("abcdeabcde"), S("abcdeabcdeabcdeabcde"), 1, S::npos);
   test(S("abcdeabcde"), S(""), 5, 5);
+  test(S("abcdeabcde"), S("a"), 5, 5);
   test(S("abcdeabcde"), S("abcde"), 5, 5);
   test(S("abcdeabcde"), S("abcdeabcde"), 5, S::npos);
   test(S("abcdeabcde"), S("abcdeabcdeabcdeabcde"), 5, S::npos);
   test(S("abcdeabcde"), S(""), 9, 9);
+  test(S("abcdeabcde"), S("a"), 9, S::npos);
   test(S("abcdeabcde"), S("abcde"), 9, S::npos);
   test(S("abcdeabcde"), S("abcdeabcde"), 9, S::npos);
   test(S("abcdeabcde"), S("abcdeabcdeabcdeabcde"), 9, S::npos);
   test(S("abcdeabcde"), S(""), 10, 10);
+  test(S("abcdeabcde"), S("a"), 10, S::npos);
   test(S("abcdeabcde"), S("abcde"), 10, S::npos);
   test(S("abcdeabcde"), S("abcdeabcde"), 10, S::npos);
   test(S("abcdeabcde"), S("abcdeabcdeabcdeabcde"), 10, S::npos);
   test(S("abcdeabcde"), S(""), 11, S::npos);
+  test(S("abcdeabcde"), S("a"), 11, S::npos);
   test(S("abcdeabcde"), S("abcde"), 11, S::npos);
   test(S("abcdeabcde"), S("abcdeabcde"), 11, S::npos);
   test(S("abcdeabcde"), S("abcdeabcdeabcdeabcde"), 11, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S(""), 0, 0);
+  test(S("abcdeabcdeabcdeabcde"), S("a"), 0, 0);
   test(S("abcdeabcdeabcdeabcde"), S("abcde"), 0, 0);
   test(S("abcdeabcdeabcdeabcde"), S("abcdeabcde"), 0, 0);
   test(S("abcdeabcdeabcdeabcde"), S("abcdeabcdeabcdeabcde"), 0, 0);
   test(S("abcdeabcdeabcdeabcde"), S(""), 1, 1);
+  test(S("abcdeabcdeabcdeabcde"), S("a"), 1, 5);
   test(S("abcdeabcdeabcdeabcde"), S("abcde"), 1, 5);
   test(S("abcdeabcdeabcdeabcde"), S("abcdeabcde"), 1, 5);
   test(S("abcdeabcdeabcdeabcde"), S("abcdeabcdeabcdeabcde"), 1, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S(""), 10, 10);
+  test(S("abcdeabcdeabcdeabcde"), S("a"), 10, 10);
   test(S("abcdeabcdeabcdeabcde"), S("abcde"), 10, 10);
   test(S("abcdeabcdeabcdeabcde"), S("abcdeabcde"), 10, 10);
   test(S("abcdeabcdeabcdeabcde"), S("abcdeabcdeabcdeabcde"), 10, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S(""), 19, 19);
+  test(S("abcdeabcdeabcdeabcde"), S("a"), 19, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S("abcde"), 19, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S("abcdeabcde"), 19, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S("abcdeabcdeabcdeabcde"), 19, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S(""), 20, 20);
+  test(S("abcdeabcdeabcdeabcde"), S("a"), 20, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S("abcde"), 20, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S("abcdeabcde"), 20, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S("abcdeabcdeabcdeabcde"), 20, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S(""), 21, S::npos);
+  test(S("abcdeabcdeabcdeabcde"), S("a"), 21, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S("abcde"), 21, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S("abcdeabcde"), 21, S::npos);
   test(S("abcdeabcdeabcdeabcde"), S("abcdeabcdeabcdeabcde"), 21, S::npos);
@@ -136,20 +153,17 @@ TEST_CONSTEXPR_CXX20 void test1() {
   test(S("abcdeabcdeabcdeabcde"), S("abcdeabcdeabcdeabcde"), 0);
 }
 
-TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    test0<S>();
-    test1<S>();
-  }
-#if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test0<S>();
-    test1<S>();
-  }
-#endif
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  test0<S>();
+  test1<S>();
+}
 
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_string<std::string>();
+#if TEST_STD_VER >= 11
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
+#endif
 #if TEST_STD_VER >= 11
   { // LWG 2946
     std::string s = " !";

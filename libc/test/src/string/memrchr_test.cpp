@@ -7,13 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/memrchr.h"
-#include "test/UnitTest/Test.h"
+
 #include <stddef.h>
+
+#include "hdr/signal_macros.h"
+#include "test/UnitTest/Test.h"
+
+namespace {
 
 // A helper function that calls memrchr and abstracts away the explicit cast for
 // readability purposes.
 const char *call_memrchr(const void *src, int c, size_t size) {
-  return reinterpret_cast<const char *>(__llvm_libc::memrchr(src, c, size));
+  return reinterpret_cast<const char *>(LIBC_NAMESPACE::memrchr(src, c, size));
 }
 
 TEST(LlvmLibcMemRChrTest, FindsCharacterAfterNullTerminator) {
@@ -112,3 +117,14 @@ TEST(LlvmLibcMemRChrTest, ZeroLengthShouldReturnNullptr) {
   // This will iterate over exactly zero characters, so should return nullptr.
   ASSERT_STREQ(call_memrchr(src, 'd', 0), nullptr);
 }
+
+#if defined(LIBC_ADD_NULL_CHECKS)
+
+TEST(LlvmLibcMemRChrTest, CrashOnNullPtr) {
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::memrchr(nullptr, 'd', 1); },
+               WITH_SIGNAL(-1));
+}
+
+#endif // defined(LIBC_ADD_NULL_CHECKS)
+
+} // namespace

@@ -1,0 +1,57 @@
+main:47:0
+ 1: 0
+ 2: 2
+ 3: 0
+ 4: 3
+ 7: 2 test_noninline:2
+ 8: 2
+ 9: 0
+ 5: foo:24
+  1: 4
+  2: 3 bar:3
+  4: 3 bar:3
+  5: 1 mismatch:1
+  3: baz:15
+   1: 3
+   2: block_only:12
+    1: 3
+    3: 3
+    5: 3
+    10: 3
+    !CFGChecksum: 206551239323
+   !CFGChecksum: 281479271677951
+  !CFGChecksum: 123456
+ 6: baz:14
+  1: 3
+  2: block_only:11
+   1: 3
+   3: 3
+   5: 3
+   10: 2
+   !CFGChecksum: 206551239323
+  !CFGChecksum: 281479271677951
+ 10: cold_func:0
+  1: 0
+  2: 0 block_only:0
+  !CFGChecksum: 281479271677951
+ !CFGChecksum: 1126003093360596
+test_noninline:22:2
+ 1: 2
+ 2: foo:20
+  1: 3
+  2: 2 bar:3
+  4: 3 bar:3
+  3: baz:13
+   1: 2
+   2: block_only:11
+    1: 2
+    3: 3
+    5: 3
+    10: 3
+    !CFGChecksum: 206551239323
+   !CFGChecksum: 281479271677951
+  !CFGChecksum: 123456
+ !CFGChecksum: 281479271677951
+bar:12:12
+ 1: 12
+ !CFGChecksum: 4294967295

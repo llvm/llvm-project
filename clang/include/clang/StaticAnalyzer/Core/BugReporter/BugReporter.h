@@ -19,6 +19,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
@@ -26,7 +27,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -320,7 +320,7 @@ protected:
 
   /// A set of location contexts that correspoind to call sites which should be
   /// considered "interesting".
-  llvm::SmallSet<const LocationContext *, 2> InterestingLocationContexts;
+  llvm::SmallPtrSet<const LocationContext *, 2> InterestingLocationContexts;
 
   /// A set of custom visitors which generate "event" diagnostics at
   /// interesting points in the path.
@@ -348,7 +348,7 @@ protected:
   llvm::SmallSet<InvalidationRecord, 4> Invalidations;
 
   /// Conditions we're already tracking.
-  llvm::SmallSet<const ExplodedNode *, 4> TrackedConditions;
+  llvm::SmallPtrSet<const ExplodedNode *, 4> TrackedConditions;
 
   /// Reports with different uniqueing locations are considered to be different
   /// for the purposes of deduplication.
@@ -570,7 +570,8 @@ class BugReporterData {
 public:
   virtual ~BugReporterData() = default;
 
-  virtual ArrayRef<PathDiagnosticConsumer*> getPathDiagnosticConsumers() = 0;
+  virtual ArrayRef<std::unique_ptr<PathDiagnosticConsumer>>
+  getPathDiagnosticConsumers() = 0;
   virtual ASTContext &getASTContext() = 0;
   virtual SourceManager &getSourceManager() = 0;
   virtual AnalyzerOptions &getAnalyzerOptions() = 0;
@@ -586,6 +587,9 @@ class BugReporter {
 private:
   BugReporterData& D;
 
+  /// The top-level entry point for the issue to be reported.
+  const Decl *AnalysisEntryPoint = nullptr;
+
   /// Generate and flush the diagnostics for the given bug report.
   void FlushReport(BugReportEquivClass& EQ);
 
@@ -595,6 +599,9 @@ private:
   /// A vector of BugReports for tracking the allocated pointers and cleanup.
   std::vector<BugReportEquivClass *> EQClassesVector;
 
+  /// User-provided in-code suppressions.
+  BugSuppression UserSuppressions;
+
 public:
   BugReporter(BugReporterData &d);
   virtual ~BugReporter();
@@ -602,7 +609,8 @@ public:
   /// Generate and flush diagnostics for all bug reports.
   void FlushReports();
 
-  ArrayRef<PathDiagnosticConsumer*> getPathDiagnosticConsumers() {
+  ArrayRef<std::unique_ptr<PathDiagnosticConsumer>>
+  getPathDiagnosticConsumers() {
     return D.getPathDiagnosticConsumers();
   }
 
@@ -615,10 +623,20 @@ public:
   ASTContext &getContext() { return D.getASTContext(); }
 
   const SourceManager &getSourceManager() { return D.getSourceManager(); }
+  const SourceManager &getSourceManager() const { return D.getSourceManager(); }
 
   const AnalyzerOptions &getAnalyzerOptions() { return D.getAnalyzerOptions(); }
 
   Preprocessor &getPreprocessor() { return D.getPreprocessor(); }
+  const Preprocessor &getPreprocessor() const { return D.getPreprocessor(); }
+
+  /// Get the top-level entry point for the issue to be reported.
+  const Decl *getAnalysisEntryPoint() const { return AnalysisEntryPoint; }
+
+  void setAnalysisEntryPoint(const Decl *EntryPoint) {
+    assert(EntryPoint);
+    AnalysisEntryPoint = EntryPoint;
+  }
 
   /// Add the given report to the set of reports tracked by BugReporter.
   ///
@@ -627,17 +645,18 @@ public:
   /// reports.
   virtual void emitReport(std::unique_ptr<BugReport> R);
 
-  void EmitBasicReport(const Decl *DeclWithIssue, const CheckerBase *Checker,
-                       StringRef BugName, StringRef BugCategory,
-                       StringRef BugStr, PathDiagnosticLocation Loc,
-                       ArrayRef<SourceRange> Ranges = std::nullopt,
-                       ArrayRef<FixItHint> Fixits = std::nullopt);
+  void EmitBasicReport(const Decl *DeclWithIssue,
+                       const CheckerFrontend *Checker, StringRef BugName,
+                       StringRef BugCategory, StringRef BugStr,
+                       PathDiagnosticLocation Loc,
+                       ArrayRef<SourceRange> Ranges = {},
+                       ArrayRef<FixItHint> Fixits = {});
 
   void EmitBasicReport(const Decl *DeclWithIssue, CheckerNameRef CheckerName,
                        StringRef BugName, StringRef BugCategory,
                        StringRef BugStr, PathDiagnosticLocation Loc,
-                       ArrayRef<SourceRange> Ranges = std::nullopt,
-                       ArrayRef<FixItHint> Fixits = std::nullopt);
+                       ArrayRef<SourceRange> Ranges = {},
+                       ArrayRef<FixItHint> Fixits = {});
 
 private:
   llvm::StringMap<std::unique_ptr<BugType>> StrBugTypes;
@@ -656,9 +675,10 @@ private:
 protected:
   /// Generate the diagnostics for the given bug report.
   virtual std::unique_ptr<DiagnosticForConsumerMapTy>
-  generateDiagnosticForConsumerMap(BugReport *exampleReport,
-                                   ArrayRef<PathDiagnosticConsumer *> consumers,
-                                   ArrayRef<BugReport *> bugReports);
+  generateDiagnosticForConsumerMap(
+      BugReport *exampleReport,
+      ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
+      ArrayRef<BugReport *> bugReports);
 };
 
 /// GRBugReporter is used for generating path-sensitive reports.
@@ -670,10 +690,11 @@ class PathSensitiveBugReporter final : public BugReporter {
       SmallVectorImpl<BugReport *> &bugReports) override;
 
   /// Generate the diagnostics for the given bug report.
-  std::unique_ptr<DiagnosticForConsumerMapTy>
-  generateDiagnosticForConsumerMap(BugReport *exampleReport,
-                                   ArrayRef<PathDiagnosticConsumer *> consumers,
-                                   ArrayRef<BugReport *> bugReports) override;
+  std::unique_ptr<DiagnosticForConsumerMapTy> generateDiagnosticForConsumerMap(
+      BugReport *exampleReport,
+      ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
+      ArrayRef<BugReport *> bugReports) override;
+
 public:
   PathSensitiveBugReporter(BugReporterData& d, ExprEngine& eng)
       : BugReporter(d), Eng(eng) {}
@@ -692,7 +713,7 @@ public:
   /// Iterates through the bug reports within a single equivalence class,
   /// stops at a first non-invalidated report.
   std::unique_ptr<DiagnosticForConsumerMapTy> generatePathDiagnostics(
-      ArrayRef<PathDiagnosticConsumer *> consumers,
+      ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
       ArrayRef<PathSensitiveBugReport *> &bugReports);
 
   void emitReport(std::unique_ptr<BugReport> R) override;
@@ -710,6 +731,7 @@ public:
   virtual ~BugReporterContext() = default;
 
   PathSensitiveBugReporter& getBugReporter() { return BR; }
+  const PathSensitiveBugReporter &getBugReporter() const { return BR; }
 
   ProgramStateManager& getStateManager() const {
     return BR.getStateManager();
@@ -733,12 +755,12 @@ public:
 /// It can be valuable to produce tags with some bits of information and later
 /// reuse them for a better diagnostic.
 ///
-/// Please make sure that derived class' constuctor is private and that the user
-/// can only create objects using DataTag::Factory.  This also means that
+/// Please make sure that derived class' constructor is private and that the
+/// user can only create objects using DataTag::Factory.  This also means that
 /// DataTag::Factory should be friend for every derived class.
 class DataTag : public ProgramPointTag {
 public:
-  StringRef getTagDescription() const override { return "Data Tag"; }
+  StringRef getDebugTag() const override { return "Data Tag"; }
 
   // Manage memory for DataTag objects.
   class Factory {
@@ -789,7 +811,7 @@ public:
     return std::move(Msg);
   }
 
-  StringRef getTagDescription() const override {
+  StringRef getDebugTag() const override {
     // TODO: Remember a few examples of generated messages
     // and display them in the ExplodedGraph dump by
     // returning them from this function.

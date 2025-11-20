@@ -16,7 +16,8 @@ The following options are described below:
  - :option:`MinimumVariableNameLength`, :option:`IgnoredVariableNames`
  - :option:`MinimumParameterNameLength`, :option:`IgnoredParameterNames`
  - :option:`MinimumLoopCounterNameLength`, :option:`IgnoredLoopCounterNames`
- - :option:`MinimumExceptionNameLength`, :option:`IgnoredExceptionVariableNames`
+ - :option:`MinimumExceptionNameLength`,
+   :option:`IgnoredExceptionVariableNames`
 
 .. option:: MinimumVariableNameLength
 
@@ -28,10 +29,7 @@ The following options are described below:
 
     .. code-block:: c++
 
-         int doubler(int x)   // warns that x is too short
-         {
-            return 2 * x;
-         }
+      int i = 42;    // warns that 'i' is too short
 
     This check does not have any fix suggestions in the general case since
     variable names have semantic value.
@@ -50,7 +48,10 @@ The following options are described below:
 
     .. code-block:: c++
 
-      int i = 42;    // warns that 'i' is too short
+         int doubler(int x)   // warns that x is too short
+         {
+            return 2 * x;
+         }
 
     This check does not have any fix suggestions in the general case since
     variable names have semantic value.

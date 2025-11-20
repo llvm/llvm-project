@@ -8,12 +8,13 @@
 
 # OpenMP Semantic Analysis
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
-## OpenMP for F18
+## OpenMP for Flang
 
 1. Define and document the parse tree representation for
     * Directives (listed below)
@@ -67,7 +68,7 @@ starting from `!$OMP`.
 In `parser-tree.h`,
 `OpenMPDeclarativeConstruct` is part
 of the `SpecificationConstruct` and `SpecificationPart`
-in F18 because
+in Flang because
 a declarative directive can only be placed in the specification part
 of a Fortran program.
 

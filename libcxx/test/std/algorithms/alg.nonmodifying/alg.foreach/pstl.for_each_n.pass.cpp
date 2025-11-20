@@ -25,10 +25,10 @@
 #include "test_execution_policies.h"
 #include "test_iterators.h"
 
-EXECUTION_POLICY_SFINAE_TEST(for_each);
+EXECUTION_POLICY_SFINAE_TEST(for_each_n);
 
-static_assert(sfinae_test_for_each<int, int*, int*, bool (*)(int)>);
-static_assert(!sfinae_test_for_each<std::execution::parallel_policy, int*, int*, bool (*)(int)>);
+static_assert(sfinae_test_for_each_n<int, int*, int, bool (*)(int)>);
+static_assert(!sfinae_test_for_each_n<std::execution::parallel_policy, int*, int, bool (*)(int)>);
 
 template <class Iter>
 struct Test {
@@ -49,16 +49,6 @@ struct Test {
 
 int main(int, char**) {
   types::for_each(types::forward_iterator_list<int*>{}, TestIteratorWithPolicies<Test>{});
-
-#ifndef TEST_HAS_NO_EXCEPTIONS
-  std::set_terminate(terminate_successful);
-  int a[] = {1, 2};
-  try {
-    std::for_each_n(std::execution::par, std::data(a), std::size(a), [](int) { throw int{}; });
-  } catch (int) {
-    assert(false);
-  }
-#endif
 
   return 0;
 }

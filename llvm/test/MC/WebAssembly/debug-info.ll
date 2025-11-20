@@ -7,37 +7,37 @@
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: TYPE (0x1)
 ; CHECK-NEXT:    Size: 4
-; CHECK-NEXT:    Offset: 8
+; CHECK-NEXT:    Offset: 14
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: IMPORT (0x2)
 ; CHECK-NEXT:    Size: 81
-; CHECK-NEXT:    Offset: 18
+; CHECK-NEXT:    Offset: 24
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: FUNCTION (0x3)
 ; CHECK-NEXT:    Size: 2
-; CHECK-NEXT:    Offset: 105
+; CHECK-NEXT:    Offset: 111
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: ELEM (0x9)
 ; CHECK-NEXT:    Size: 7
-; CHECK-NEXT:    Offset: 113
+; CHECK-NEXT:    Offset: 119
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: DATACOUNT (0xC)
 ; CHECK-NEXT:    Size: 1
-; CHECK-NEXT:    Offset: 126
+; CHECK-NEXT:    Offset: 132
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CODE (0xA)
 ; CHECK-NEXT:    Size: 4
-; CHECK-NEXT:    Offset: 133
+; CHECK-NEXT:    Offset: 139
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: DATA (0xB)
 ; CHECK-NEXT:    Size: 19
-; CHECK-NEXT:    Offset: 143
+; CHECK-NEXT:    Offset: 149
 ; CHECK-NEXT:    Segments [
 ; CHECK-NEXT:      Segment {
 ; CHECK-NEXT:        Name: .data.foo
@@ -54,91 +54,91 @@
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 86
-; CHECK-NEXT:    Offset: 168
+; CHECK-NEXT:    Offset: 174
 ; CHECK-NEXT:    Name: .debug_abbrev
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 114
-; CHECK-NEXT:    Offset: 274
+; CHECK-NEXT:    Offset: 280
 ; CHECK-NEXT:    Name: .debug_info
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 48
-; CHECK-NEXT:    Offset: 406
+; CHECK-NEXT:    Offset: 412
 ; CHECK-NEXT:    Name: .debug_aranges
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 121
-; CHECK-NEXT:    Offset: 475
+; CHECK-NEXT:    Offset: 481
 ; CHECK-NEXT:    Name: .debug_str
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 42
-; CHECK-NEXT:    Offset: 613
+; CHECK-NEXT:    Offset: 619
 ; CHECK-NEXT:    Name: .debug_pubnames
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 26
-; CHECK-NEXT:    Offset: 677
+; CHECK-NEXT:    Offset: 683
 ; CHECK-NEXT:    Name: .debug_pubtypes
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 56
-; CHECK-NEXT:    Offset: 725
+; CHECK-NEXT:    Offset: 731
 ; CHECK-NEXT:    Name: .debug_line
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 91
-; CHECK-NEXT:    Offset: 799
+; CHECK-NEXT:    Offset: 805
 ; CHECK-NEXT:    Name: linking
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 9
-; CHECK-NEXT:    Offset: 904
+; CHECK-NEXT:    Offset: 910
 ; CHECK-NEXT:    Name: reloc.DATA
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 61
-; CHECK-NEXT:    Offset: 930
+; CHECK-NEXT:    Offset: 936
 ; CHECK-NEXT:    Name: reloc..debug_info
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 18
-; CHECK-NEXT:    Offset: 1015
+; CHECK-NEXT:    Offset: 1021
 ; CHECK-NEXT:    Name: reloc..debug_aranges
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 1060
+; CHECK-NEXT:    Offset: 1066
 ; CHECK-NEXT:    Name: reloc..debug_pubnames
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 1094
+; CHECK-NEXT:    Offset: 1100
 ; CHECK-NEXT:    Name: reloc..debug_pubtypes
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 1128
+; CHECK-NEXT:    Offset: 1134
 ; CHECK-NEXT:    Name: reloc..debug_line
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 77
-; CHECK-NEXT:    Offset: 1158
+; CHECK-NEXT:    Offset: 1164
 ; CHECK-NEXT:    Name: producers
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]

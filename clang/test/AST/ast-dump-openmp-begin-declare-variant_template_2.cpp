@@ -66,7 +66,7 @@ int test() {
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_10:0x[a-z0-9]*]] <line:5:1, line:7:1> line:5:5 used also_before 'int (double)'
 // CHECK-NEXT: |   |-TemplateArgument type 'double'
 // CHECK-NEXT: |   | `-BuiltinType [[ADDR_11:0x[a-z0-9]*]] 'double'
-// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_12:0x[a-z0-9]*]] <col:17> col:18 'double':'double'
+// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_12:0x[a-z0-9]*]] <col:17> col:18 'double'
 // CHECK-NEXT: |   |-CompoundStmt [[ADDR_13:0x[a-z0-9]*]] <col:20, line:7:1>
 // CHECK-NEXT: |   | `-ReturnStmt [[ADDR_14:0x[a-z0-9]*]] <line:6:3, col:10>
 // CHECK-NEXT: |   |   `-IntegerLiteral [[ADDR_6]] <col:10> 'int' 1
@@ -79,7 +79,7 @@ int test() {
 // CHECK-NEXT: | |   `-ReturnStmt [[ADDR_22:0x[a-z0-9]*]] <line:10:3, col:10>
 // CHECK-NEXT: | |     `-IntegerLiteral [[ADDR_23:0x[a-z0-9]*]] <col:10> 'int' 0
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_24:0x[a-z0-9]*]] <line:9:1, line:11:1> line:9:5 used also_before_mismatch 'int ({{.*}})'
-// CHECK-NEXT: |   |-TemplateArgument integral 0
+// CHECK-NEXT: |   |-TemplateArgument integral '0'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_25:0x[a-z0-9]*]] <col:32, line:11:1>
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_26:0x[a-z0-9]*]] <line:10:3, col:10>
 // CHECK-NEXT: |       `-IntegerLiteral [[ADDR_23]] <col:10> 'int' 0
@@ -97,7 +97,7 @@ int test() {
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_17]] <line:18:1, line:20:1> line:18:1 also_before[implementation={extension(allow_templates)}] 'int (double)'
 // CHECK-NEXT: |   |-TemplateArgument type 'double'
 // CHECK-NEXT: |   | `-BuiltinType [[ADDR_11]] 'double'
-// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_37:0x[a-z0-9]*]] <col:17> col:18 'double':'double'
+// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_37:0x[a-z0-9]*]] <col:17> col:18 'double'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_38:0x[a-z0-9]*]] <col:20, line:20:1>
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_39:0x[a-z0-9]*]] <line:19:3, col:10>
 // CHECK-NEXT: |       `-IntegerLiteral [[ADDR_36]] <col:10> 'int' 0
@@ -110,7 +110,7 @@ int test() {
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_47:0x[a-z0-9]*]] <line:44:1, line:46:1> line:44:5 used also_after 'int (char)'
 // CHECK-NEXT: |   |-TemplateArgument type 'char'
 // CHECK-NEXT: |   | `-BuiltinType [[ADDR_48:0x[a-z0-9]*]] 'char'
-// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_49:0x[a-z0-9]*]] <col:16> col:17 'char':'char'
+// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_49:0x[a-z0-9]*]] <col:16> col:17 'char'
 // CHECK-NEXT: |   |-CompoundStmt [[ADDR_50:0x[a-z0-9]*]] <col:19, line:46:1>
 // CHECK-NEXT: |   | `-ReturnStmt [[ADDR_51:0x[a-z0-9]*]] <line:45:3, col:10>
 // CHECK-NEXT: |   |   `-IntegerLiteral [[ADDR_52:0x[a-z0-9]*]] <col:10> 'int' 6
@@ -126,7 +126,7 @@ int test() {
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_55]] <line:22:1, line:24:1> line:22:1 also_after[implementation={extension(allow_templates)}] 'int (char)'
 // CHECK-NEXT: |   |-TemplateArgument type 'char'
 // CHECK-NEXT: |   | `-BuiltinType [[ADDR_48]] 'char'
-// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_60:0x[a-z0-9]*]] <col:16> col:17 'char':'char'
+// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_60:0x[a-z0-9]*]] <col:16> col:17 'char'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_61:0x[a-z0-9]*]] <col:19, line:24:1>
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_62:0x[a-z0-9]*]] <line:23:3, col:10>
 // CHECK-NEXT: |       `-IntegerLiteral [[ADDR_59]] <col:10> 'int' 0
@@ -179,7 +179,7 @@ int test() {
 // CHECK-NEXT: | | `-OMPDeclareVariantAttr [[ADDR_101:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(allow_templates)}
 // CHECK-NEXT: | |   `-DeclRefExpr [[ADDR_102:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' {{.*}}Function [[ADDR_103:0x[a-z0-9]*]] 'only_def[implementation={extension(allow_templates)}]' 'int ({{.*}})'
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_104:0x[a-z0-9]*]] <col:1, col:18> col:5 used only_def 'int ({{.*}})'
-// CHECK-NEXT: |   |-TemplateArgument integral 0
+// CHECK-NEXT: |   |-TemplateArgument integral '0'
 // CHECK-NEXT: |   `-OMPDeclareVariantAttr [[ADDR_105:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(allow_templates)}
 // CHECK-NEXT: |     `-DeclRefExpr [[ADDR_106:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' {{.*}}Function [[ADDR_107:0x[a-z0-9]*]] 'only_def[implementation={extension(allow_templates)}]' 'int ({{.*}})'
 // CHECK-NEXT: |-FunctionTemplateDecl [[ADDR_108:0x[a-z0-9]*]] <line:37:1, line:40:1> line:38:1 only_def[implementation={extension(allow_templates)}]
@@ -189,7 +189,7 @@ int test() {
 // CHECK-NEXT: | |   `-ReturnStmt [[ADDR_110:0x[a-z0-9]*]] <line:39:3, col:10>
 // CHECK-NEXT: | |     `-IntegerLiteral [[ADDR_111:0x[a-z0-9]*]] <col:10> 'int' 0
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_107]] <line:38:1, line:40:1> line:38:1 only_def[implementation={extension(allow_templates)}] 'int ({{.*}})'
-// CHECK-NEXT: |   |-TemplateArgument integral 0
+// CHECK-NEXT: |   |-TemplateArgument integral '0'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_112:0x[a-z0-9]*]] <col:20, line:40:1>
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_113:0x[a-z0-9]*]] <line:39:3, col:10>
 // CHECK-NEXT: |       `-IntegerLiteral [[ADDR_111]] <col:10> 'int' 0
@@ -213,7 +213,7 @@ int test() {
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_128:0x[a-z0-9]*]] <line:48:1, line:50:1> line:48:5 used also_after_mismatch 'int (int)'
 // CHECK-NEXT: |   |-TemplateArgument type 'int'
 // CHECK-NEXT: |   | `-BuiltinType [[ADDR_129:0x[a-z0-9]*]] 'int'
-// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_130:0x[a-z0-9]*]] <col:25> col:26 'int':'int'
+// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_130:0x[a-z0-9]*]] <col:25> col:26 'int'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_131:0x[a-z0-9]*]] <col:28, line:50:1>
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_132:0x[a-z0-9]*]] <line:49:3, col:10>
 // CHECK-NEXT: |       `-IntegerLiteral [[ADDR_127]] <col:10> 'int' 0
@@ -244,12 +244,12 @@ int test() {
 // CHECK-NEXT:         | |   |-CallExpr [[ADDR_155:0x[a-z0-9]*]] <col:85, col:103> 'int'
 // CHECK-NEXT:         | |   | |-ImplicitCastExpr [[ADDR_156:0x[a-z0-9]*]] <col:85, col:100> 'int (*)(char)' <FunctionToPointerDecay>
 // CHECK-NEXT:         | |   | | `-DeclRefExpr [[ADDR_157:0x[a-z0-9]*]] <col:85, col:100> 'int (char)' {{.*}}Function [[ADDR_47]] 'also_after' 'int (char)' (FunctionTemplate [[ADDR_114]] 'also_after')
-// CHECK-NEXT:         | |   | `-ImplicitCastExpr [[ADDR_158:0x[a-z0-9]*]] <col:102> 'char':'char' <IntegralCast>
+// CHECK-NEXT:         | |   | `-ImplicitCastExpr [[ADDR_158:0x[a-z0-9]*]] <col:102> 'char' <IntegralCast>
 // CHECK-NEXT:         | |   |   `-IntegerLiteral [[ADDR_159:0x[a-z0-9]*]] <col:102> 'int' 0
 // CHECK-NEXT:         | |   `-CallExpr [[ADDR_160:0x[a-z0-9]*]] <line:22:1, line:54:103> 'int'
 // CHECK-NEXT:         | |     |-ImplicitCastExpr [[ADDR_161:0x[a-z0-9]*]] <line:22:1> 'int (*)(char)' <FunctionToPointerDecay>
 // CHECK-NEXT:         | |     | `-DeclRefExpr [[ADDR_54]] <col:1> 'int (char)' {{.*}}Function [[ADDR_55]] 'also_after[implementation={extension(allow_templates)}]' 'int (char)'
-// CHECK-NEXT:         | |     `-ImplicitCastExpr [[ADDR_162:0x[a-z0-9]*]] <line:54:102> 'char':'char' <IntegralCast>
+// CHECK-NEXT:         | |     `-ImplicitCastExpr [[ADDR_162:0x[a-z0-9]*]] <line:54:102> 'char' <IntegralCast>
 // CHECK-NEXT:         | |       `-IntegerLiteral [[ADDR_159]] <col:102> 'int' 0
 // CHECK-NEXT:         | `-CallExpr [[ADDR_163:0x[a-z0-9]*]] <col:107, col:128> 'int'
 // CHECK-NEXT:         |   |-ImplicitCastExpr [[ADDR_164:0x[a-z0-9]*]] <col:107> 'int (*)(int)' <FunctionToPointerDecay>

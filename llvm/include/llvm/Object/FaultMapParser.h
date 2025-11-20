@@ -9,6 +9,7 @@
 #ifndef LLVM_OBJECT_FAULTMAPPARSER_H
 #define LLVM_OBJECT_FAULTMAPPARSER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include <cassert>
 #include <cstdint>
@@ -42,7 +43,7 @@ class FaultMapParser {
 
   template <typename T> static T read(const uint8_t *P, const uint8_t *E) {
     assert(P + sizeof(T) <= E && "out of bounds read!");
-    return support::endian::read<T, support::little, 1>(P);
+    return support::endian::read<T, llvm::endianness::little>(P);
   }
 
 public:
@@ -154,13 +155,13 @@ public:
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS,
-                        const FaultMapParser::FunctionFaultInfoAccessor &);
+LLVM_ABI raw_ostream &
+operator<<(raw_ostream &OS, const FaultMapParser::FunctionFaultInfoAccessor &);
 
-raw_ostream &operator<<(raw_ostream &OS,
-                        const FaultMapParser::FunctionInfoAccessor &);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const FaultMapParser::FunctionInfoAccessor &);
 
-raw_ostream &operator<<(raw_ostream &OS, const FaultMapParser &);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const FaultMapParser &);
 
 } // namespace llvm
 

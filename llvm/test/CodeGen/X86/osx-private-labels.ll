@@ -1,7 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s
 ; Test all the cases where a L label is safe. Removing any entry from
-; TargetLoweringObjectFileMachO::isSectionAtomizableBySymbols should cause
-; this to fail.
+; isSectionAtomizableBySymbols should cause this to fail.
 ; We also test some noteworthy cases that require an l label.
 
 @private1 = private unnamed_addr constant [4 x i8] c"zed\00"
@@ -36,7 +35,7 @@
 
 @private6 = private unnamed_addr constant i128 42
 ; CHECK: .section	__TEXT,__literal16,16byte_literals
-; CHECK-NEXT: .p2align	3
+; CHECK-NEXT: .p2align	4
 ; CHECK-NEXT: L_private6:
 
 %struct._objc_class = type { ptr }

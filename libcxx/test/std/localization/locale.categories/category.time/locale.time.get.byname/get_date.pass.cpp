@@ -22,8 +22,10 @@
 // get_date(iter_type s, iter_type end, ios_base& str,
 //          ios_base::iostate& err, tm* t) const;
 
-#include <locale>
 #include <cassert>
+#include <ctime>
+#include <locale>
+
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -110,7 +112,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_date(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
-#if _LIBCPP_VERSION
+#if defined(_LIBCPP_VERSION)
           // libc++ points to the '/' after the month.
           assert(base(i) == in+2);
 #else
@@ -129,7 +131,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_date(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
-#if _LIBCPP_VERSION
+#if defined(_LIBCPP_VERSION)
           // libc++ points to the '/' after the month.
           assert(base(i) == in+2);
 #else

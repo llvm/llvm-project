@@ -17,6 +17,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -70,7 +71,9 @@ public:
 
   virtual void print(raw_ostream &OS) const = 0;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
+#endif
 
 protected:
   /// Query the SMT solver and returns true if two sorts are equal (same kind
@@ -117,12 +120,29 @@ public:
 
   virtual void print(raw_ostream &OS) const = 0;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
+#endif
 
 protected:
   /// Query the SMT solver and returns true if two sorts are equal (same kind
   /// and bit width). This does not check if the two sorts are the same objects.
   virtual bool equal_to(SMTExpr const &other) const = 0;
+};
+
+class SMTSolverStatistics {
+public:
+  SMTSolverStatistics() = default;
+  virtual ~SMTSolverStatistics() = default;
+
+  virtual double getDouble(llvm::StringRef) const = 0;
+  virtual unsigned getUnsigned(llvm::StringRef) const = 0;
+
+  virtual void print(raw_ostream &OS) const = 0;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 };
 
 /// Shared pointer for SMTExprs, used by SMTSolver API.
@@ -138,7 +158,9 @@ public:
   SMTSolver() = default;
   virtual ~SMTSolver() = default;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
+#endif
 
   // Returns an appropriate floating-point sort for the given bitwidth.
   SMTSortRef getFloatSort(unsigned BitWidth) {
@@ -434,13 +456,19 @@ public:
   virtual bool isFPSupported() = 0;
 
   virtual void print(raw_ostream &OS) const = 0;
+
+  /// Sets the requested option.
+  virtual void setBoolParam(StringRef Key, bool Value) = 0;
+  virtual void setUnsignedParam(StringRef Key, unsigned Value) = 0;
+
+  virtual std::unique_ptr<SMTSolverStatistics> getStatistics() const = 0;
 };
 
 /// Shared pointer for SMTSolvers.
 using SMTSolverRef = std::shared_ptr<SMTSolver>;
 
 /// Convenience method to create and Z3Solver object
-SMTSolverRef CreateZ3Solver();
+LLVM_ABI SMTSolverRef CreateZ3Solver();
 
 } // namespace llvm
 

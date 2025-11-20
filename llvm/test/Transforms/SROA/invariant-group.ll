@@ -11,10 +11,17 @@ declare i32 @somevalue()
 
 define void @f() {
 ; CHECK-LABEL: @f(
+; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
+; CHECK-NEXT:    [[A1_I8_INV:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[A]])
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds [[T]], ptr [[A]], i32 0, i32 1
 ; CHECK-NEXT:    [[SV1:%.*]] = call i32 @somevalue()
 ; CHECK-NEXT:    [[SV2:%.*]] = call i32 @somevalue()
-; CHECK-NEXT:    call void @h(i32 [[SV1]])
-; CHECK-NEXT:    call void @h(i32 [[SV2]])
+; CHECK-NEXT:    store i32 [[SV1]], ptr [[A1_I8_INV]], align 4, !invariant.group [[META0:![0-9]+]]
+; CHECK-NEXT:    store i32 [[SV2]], ptr [[A2]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[A1_I8_INV]], align 4, !invariant.group [[META0]]
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[A2]], align 4
+; CHECK-NEXT:    call void @h(i32 [[V1]])
+; CHECK-NEXT:    call void @h(i32 [[V2]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca %t
@@ -44,9 +51,9 @@ define void @g() {
 ; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds [[T]], ptr [[A]], i32 0, i32 1
 ; CHECK-NEXT:    [[SV1:%.*]] = call i32 @somevalue()
 ; CHECK-NEXT:    [[SV2:%.*]] = call i32 @somevalue()
-; CHECK-NEXT:    store i32 [[SV1]], ptr [[A1_I8_INV]], align 4, !invariant.group !0
+; CHECK-NEXT:    store i32 [[SV1]], ptr [[A1_I8_INV]], align 4, !invariant.group [[META0]]
 ; CHECK-NEXT:    store i32 [[SV2]], ptr [[A2]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[A1_I8_INV]], align 4, !invariant.group !0
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[A1_I8_INV]], align 4, !invariant.group [[META0]]
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[A2]], align 4
 ; CHECK-NEXT:    call void @h(i32 [[V1]])
 ; CHECK-NEXT:    call void @h(i32 [[V2]])
@@ -78,6 +85,152 @@ define void @g() {
 
   ret void
 }
+
+define void @store_and_launder() {
+; CHECK-LABEL: @store_and_launder(
+; CHECK-NEXT:    [[VALPTR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[VALPTR]], align 4
+; CHECK-NEXT:    [[BARR:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[VALPTR]])
+; CHECK-NEXT:    ret void
+;
+  %valptr = alloca i32, align 4
+  store i32 0, ptr %valptr, align 4
+  %barr = call ptr @llvm.launder.invariant.group.p0(ptr %valptr)
+  ret void
+}
+
+define i32 @launder_and_load() {
+; CHECK-LABEL: @launder_and_load(
+; CHECK-NEXT:    [[VALPTR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BARR:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[VALPTR]])
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[VALPTR]], align 4
+; CHECK-NEXT:    ret i32 [[V2]]
+;
+  %valptr = alloca i32, align 4
+  %barr = call ptr @llvm.launder.invariant.group.p0(ptr %valptr)
+  %v2 = load i32, ptr %valptr
+  ret i32 %v2
+}
+
+define void @launder_and_ptr_arith() {
+; CHECK-LABEL: @launder_and_ptr_arith(
+; CHECK-NEXT:    [[VALPTR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BARR:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[VALPTR]])
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds i32, ptr [[VALPTR]], i32 0
+; CHECK-NEXT:    ret void
+;
+  %valptr = alloca i32, align 4
+  %barr = call ptr @llvm.launder.invariant.group.p0(ptr %valptr)
+  %a2 = getelementptr inbounds i32, ptr %valptr, i32 0
+  ret void
+}
+
+define void @partial_use_of_alloca() {
+; CHECK-LABEL: @partial_use_of_alloca(
+; CHECK-NEXT:    [[VALPTR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[VALPTR]], align 4
+; CHECK-NEXT:    [[BARR:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[VALPTR]])
+; CHECK-NEXT:    [[LOAD_VAL:%.*]] = load i32, ptr [[VALPTR]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[LOAD_VAL]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[USE_ALLOCA:%.*]], label [[END:%.*]]
+; CHECK:       use_alloca:
+; CHECK-NEXT:    call void @use(ptr nonnull [[VALPTR]])
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  %valptr = alloca i32, align 4
+  store i32 0, ptr %valptr, align 4
+  %barr = call ptr @llvm.launder.invariant.group.p0(ptr %valptr)
+  %load_val = load i32, ptr %valptr, align 4
+  %cond = icmp eq i32 %load_val, 0
+  br i1 %cond, label %use_alloca, label %end
+
+use_alloca:
+  call void @use(ptr nonnull %valptr)
+  br label %end
+
+end:
+  ret void
+}
+
+define void @partial_promotion_of_alloca() {
+; CHECK-LABEL: @partial_promotion_of_alloca(
+; CHECK-NEXT:    [[STRUCT_PTR:%.*]] = alloca [[T:%.*]], align 4
+; CHECK-NEXT:    [[FIELD_PTR:%.*]] = getelementptr inbounds [[T]], ptr [[STRUCT_PTR]], i32 0, i32 0
+; CHECK-NEXT:    store i32 0, ptr [[FIELD_PTR]], align 4
+; CHECK-NEXT:    [[VOLATILE_FIELD_PTR:%.*]] = getelementptr inbounds [[T]], ptr [[STRUCT_PTR]], i32 0, i32 1
+; CHECK-NEXT:    store volatile i32 0, ptr [[VOLATILE_FIELD_PTR]], align 4, !invariant.group [[META0]]
+; CHECK-NEXT:    [[BARR:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[STRUCT_PTR]])
+; CHECK-NEXT:    [[LOAD_VAL:%.*]] = load volatile i32, ptr [[VOLATILE_FIELD_PTR]], align 4, !invariant.group [[META0]]
+; CHECK-NEXT:    ret void
+;
+  %struct_ptr = alloca %t, align 4
+  %field_ptr = getelementptr inbounds %t, ptr %struct_ptr, i32 0, i32 0
+  store i32 0, ptr %field_ptr, align 4
+  %volatile_field_ptr = getelementptr inbounds %t, ptr %struct_ptr, i32 0, i32 1
+  store volatile i32 0, ptr %volatile_field_ptr, align 4, !invariant.group !0
+  %barr = call ptr @llvm.launder.invariant.group.p0(ptr %struct_ptr)
+  %load_val = load volatile i32, ptr %volatile_field_ptr, align 4, !invariant.group !0
+  ret void
+}
+
+define void @memcpy_after_laundering_alloca(ptr %ptr) {
+; CHECK-LABEL: @memcpy_after_laundering_alloca(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca { i64, i64 }, align 8
+; CHECK-NEXT:    [[LAUNDER:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[LAUNDER]], ptr [[PTR:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca { i64, i64 }, align 8
+  %launder = call ptr @llvm.launder.invariant.group.p0(ptr %alloca)
+  call void @llvm.memcpy.p0.p0.i64(ptr %launder, ptr %ptr, i64 16, i1 false)
+  ret void
+}
+
+define void @memcpy_after_laundering_alloca_slices(ptr %ptr) {
+; CHECK-LABEL: @memcpy_after_laundering_alloca_slices(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca { [16 x i8], i64, [16 x i8] }, align 8
+; CHECK-NEXT:    [[LAUNDER:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[ALLOCA]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[LAUNDER]], i64 16
+; CHECK-NEXT:    store i64 0, ptr [[GEP]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[LAUNDER]], ptr [[PTR:%.*]], i64 40, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca { [16 x i8], i64, [16 x i8] }, align 8
+  %launder = call ptr @llvm.launder.invariant.group.p0(ptr %alloca)
+  %gep = getelementptr i8, ptr %launder, i64 16
+  store i64 0, ptr %gep
+  call void @llvm.memcpy.p0.p0.i64(ptr %launder, ptr %ptr, i64 40, i1 false)
+  ret void
+}
+
+define void @test_agg_store() {
+; CHECK-LABEL: @test_agg_store(
+; CHECK-NEXT:    [[STRUCT_PTR:%.*]] = alloca [[T:%.*]], i64 1, align 4
+; CHECK-NEXT:    [[STRUCT_PTR_FRESH:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[STRUCT_PTR]])
+; CHECK-NEXT:    [[STRUCT:%.*]] = call [[T]] @[[MAKE_T:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]]()
+; CHECK-NEXT:    store [[T]] [[STRUCT]], ptr [[STRUCT_PTR_FRESH]], align 4, !invariant.group [[META0]]
+; CHECK-NEXT:    [[FIRST_PTR:%.*]] = getelementptr [[T]], ptr [[STRUCT_PTR_FRESH]], i32 0, i32 0
+; CHECK-NEXT:    [[FIRST:%.*]] = load i32, ptr [[FIRST_PTR]], align 4
+; CHECK-NEXT:    [[SECOND_PTR:%.*]] = getelementptr [[T]], ptr [[STRUCT_PTR_FRESH]], i32 0, i32 1
+; CHECK-NEXT:    [[SECOND:%.*]] = load i32, ptr [[SECOND_PTR]], align 4
+; CHECK-NEXT:    ret void
+;
+  %struct_ptr = alloca %t, i64 1, align 4
+  %struct_ptr_fresh = call ptr @llvm.launder.invariant.group.p0(ptr %struct_ptr)
+  %struct = call %t @make_t()
+  store %t %struct, ptr %struct_ptr_fresh, align 4, !invariant.group !0
+  %first_ptr = getelementptr %t, ptr %struct_ptr_fresh, i32 0, i32 0
+  %first = load i32, ptr %first_ptr, align 4
+  %second_ptr = getelementptr %t, ptr %struct_ptr_fresh, i32 0, i32 1
+  %second = load i32, ptr %second_ptr, align 4
+  ret void
+}
+
+declare %t @make_t()
+
+declare void @use(ptr)
 
 !0 = !{}
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:

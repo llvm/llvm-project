@@ -1,4 +1,5 @@
 # RUN: llc -o - %s -mtriple=aarch64-- -mattr=+v8.1a -run-pass=postrapseudos | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64-- -mattr=+v8.1a -passes=post-ra-pseudos | FileCheck %s
 ---
 # CHECK-LABEL: name: copy_xseqpairs
 name: copy_xseqpairs

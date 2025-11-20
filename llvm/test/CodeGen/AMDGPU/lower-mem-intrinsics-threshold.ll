@@ -3,6 +3,10 @@
 ; RUN: opt -S -mtriple=amdgcn-- -pre-isel-intrinsic-lowering -mem-intrinsic-expand-size=4 %s | FileCheck -check-prefix=OPT4 %s
 ; RUN: opt -S -mtriple=amdgcn-- -pre-isel-intrinsic-lowering -mem-intrinsic-expand-size=0 %s | FileCheck -check-prefix=OPT0 %s
 ; RUN: opt -S -mtriple=amdgcn-- -pre-isel-intrinsic-lowering -mem-intrinsic-expand-size=-1 %s | FileCheck -check-prefix=OPT_NEG %s
+; RUN: opt -S -mtriple=amdgcn-- -passes=pre-isel-intrinsic-lowering -mem-intrinsic-expand-size=8 %s | FileCheck -check-prefix=OPT8 %s
+; RUN: opt -S -mtriple=amdgcn-- -passes=pre-isel-intrinsic-lowering -mem-intrinsic-expand-size=4 %s | FileCheck -check-prefix=OPT4 %s
+; RUN: opt -S -mtriple=amdgcn-- -passes=pre-isel-intrinsic-lowering -mem-intrinsic-expand-size=0 %s | FileCheck -check-prefix=OPT0 %s
+; RUN: opt -S -mtriple=amdgcn-- -passes=pre-isel-intrinsic-lowering -mem-intrinsic-expand-size=-1 %s | FileCheck -check-prefix=OPT_NEG %s
 
 ; Test the -mem-intrinsic-expand-size flag works.
 

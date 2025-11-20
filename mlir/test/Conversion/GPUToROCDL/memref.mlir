@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='use-opaque-pointers=1' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-rocdl -split-input-file | FileCheck %s
 // RUN: mlir-opt %s \
-// RUN:   -convert-gpu-to-rocdl='use-bare-ptr-memref-call-conv=true use-opaque-pointers=1' \
+// RUN:   -convert-gpu-to-rocdl='use-bare-ptr-memref-call-conv=true' \
 // RUN:   -split-input-file \
 // RUN: | FileCheck %s --check-prefix=BARE
 

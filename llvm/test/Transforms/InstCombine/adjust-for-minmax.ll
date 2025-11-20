@@ -115,7 +115,7 @@ define i32 @umax3(i32 %n) {
 
 define <2 x i32> @umax3_vec(<2 x i32> %n) {
 ; CHECK-LABEL: @umax3_vec(
-; CHECK-NEXT:    [[M:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[N:%.*]], <2 x i32> <i32 5, i32 5>)
+; CHECK-NEXT:    [[M:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[N:%.*]], <2 x i32> splat (i32 5))
 ; CHECK-NEXT:    ret <2 x i32> [[M]]
 ;
   %t = icmp ugt <2 x i32> %n, <i32 4, i32 4>
@@ -139,7 +139,7 @@ define i32 @umin3(i32 %n) {
 
 define <2 x i32> @umin3_vec(<2 x i32> %n) {
 ; CHECK-LABEL: @umin3_vec(
-; CHECK-NEXT:    [[M:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[N:%.*]], <2 x i32> <i32 6, i32 6>)
+; CHECK-NEXT:    [[M:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[N:%.*]], <2 x i32> splat (i32 6))
 ; CHECK-NEXT:    ret <2 x i32> [[M]]
 ;
   %t = icmp ult <2 x i32> %n, <i32 7, i32 7>
@@ -211,7 +211,7 @@ define i32 @umax4(i32 %n) {
 
 define <2 x i32> @umax4_vec(<2 x i32> %n) {
 ; CHECK-LABEL: @umax4_vec(
-; CHECK-NEXT:    [[M:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[N:%.*]], <2 x i32> <i32 8, i32 8>)
+; CHECK-NEXT:    [[M:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[N:%.*]], <2 x i32> splat (i32 8))
 ; CHECK-NEXT:    ret <2 x i32> [[M]]
 ;
   %t = icmp uge <2 x i32> %n, <i32 8, i32 8>
@@ -235,7 +235,7 @@ define i32 @umin4(i32 %n) {
 
 define <2 x i32> @umin4_vec(<2 x i32> %n) {
 ; CHECK-LABEL: @umin4_vec(
-; CHECK-NEXT:    [[M:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[N:%.*]], <2 x i32> <i32 9, i32 9>)
+; CHECK-NEXT:    [[M:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[N:%.*]], <2 x i32> splat (i32 9))
 ; CHECK-NEXT:    ret <2 x i32> [[M]]
 ;
   %t = icmp ule <2 x i32> %n, <i32 9, i32 9>
@@ -245,8 +245,8 @@ define <2 x i32> @umin4_vec(<2 x i32> %n) {
 
 define i64 @smax_sext(i32 %a) {
 ; CHECK-LABEL: @smax_sext(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 0)
-; CHECK-NEXT:    [[MAX:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[NARROW:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 0)
+; CHECK-NEXT:    [[MAX:%.*]] = zext nneg i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MAX]]
 ;
   %a_ext = sext i32 %a to i64
@@ -257,8 +257,8 @@ define i64 @smax_sext(i32 %a) {
 
 define <2 x i64> @smax_sext_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @smax_sext_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[A:%.*]], <2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[MAX:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[NARROW:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[A:%.*]], <2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[MAX:%.*]] = zext nneg <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MAX]]
 ;
   %a_ext = sext <2 x i32> %a to <2 x i64>
@@ -269,8 +269,8 @@ define <2 x i64> @smax_sext_vec(<2 x i32> %a) {
 
 define i64 @smin_sext(i32 %a) {
 ; CHECK-LABEL: @smin_sext(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[A:%.*]], i32 0)
-; CHECK-NEXT:    [[MIN:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[NARROW:%.*]] = call i32 @llvm.smin.i32(i32 [[A:%.*]], i32 0)
+; CHECK-NEXT:    [[MIN:%.*]] = sext i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MIN]]
 ;
   %a_ext = sext i32 %a to i64
@@ -281,8 +281,8 @@ define i64 @smin_sext(i32 %a) {
 
 define <2 x i64>@smin_sext_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @smin_sext_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[A:%.*]], <2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[MIN:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[NARROW:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[A:%.*]], <2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[MIN:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MIN]]
 ;
   %a_ext = sext <2 x i32> %a to <2 x i64>
@@ -293,8 +293,8 @@ define <2 x i64>@smin_sext_vec(<2 x i32> %a) {
 
 define i64 @umax_sext(i32 %a) {
 ; CHECK-LABEL: @umax_sext(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 3)
-; CHECK-NEXT:    [[MAX:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[NARROW:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 3)
+; CHECK-NEXT:    [[MAX:%.*]] = sext i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MAX]]
 ;
   %a_ext = sext i32 %a to i64
@@ -305,8 +305,8 @@ define i64 @umax_sext(i32 %a) {
 
 define <2 x i64> @umax_sext_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @umax_sext_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[A:%.*]], <2 x i32> <i32 3, i32 3>)
-; CHECK-NEXT:    [[MAX:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[NARROW:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[A:%.*]], <2 x i32> splat (i32 3))
+; CHECK-NEXT:    [[MAX:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MAX]]
 ;
   %a_ext = sext <2 x i32> %a to <2 x i64>
@@ -317,8 +317,8 @@ define <2 x i64> @umax_sext_vec(<2 x i32> %a) {
 
 define i64 @umin_sext(i32 %a) {
 ; CHECK-LABEL: @umin_sext(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[A:%.*]], i32 2)
-; CHECK-NEXT:    [[MIN:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[NARROW:%.*]] = call i32 @llvm.umin.i32(i32 [[A:%.*]], i32 2)
+; CHECK-NEXT:    [[MIN:%.*]] = zext nneg i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MIN]]
 ;
   %a_ext = sext i32 %a to i64
@@ -329,8 +329,8 @@ define i64 @umin_sext(i32 %a) {
 
 define <2 x i64> @umin_sext_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @umin_sext_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[A:%.*]], <2 x i32> <i32 2, i32 2>)
-; CHECK-NEXT:    [[MIN:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[NARROW:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[A:%.*]], <2 x i32> splat (i32 2))
+; CHECK-NEXT:    [[MIN:%.*]] = zext nneg <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MIN]]
 ;
   %a_ext = sext <2 x i32> %a to <2 x i64>
@@ -341,8 +341,8 @@ define <2 x i64> @umin_sext_vec(<2 x i32> %a) {
 
 define i64 @umax_sext2(i32 %a) {
 ; CHECK-LABEL: @umax_sext2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 2)
-; CHECK-NEXT:    [[MIN:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[NARROW:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 2)
+; CHECK-NEXT:    [[MIN:%.*]] = sext i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MIN]]
 ;
   %a_ext = sext i32 %a to i64
@@ -353,8 +353,8 @@ define i64 @umax_sext2(i32 %a) {
 
 define <2 x i64> @umax_sext2_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @umax_sext2_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[A:%.*]], <2 x i32> <i32 2, i32 2>)
-; CHECK-NEXT:    [[MIN:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[NARROW:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[A:%.*]], <2 x i32> splat (i32 2))
+; CHECK-NEXT:    [[MIN:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MIN]]
 ;
   %a_ext = sext <2 x i32> %a to <2 x i64>
@@ -365,8 +365,8 @@ define <2 x i64> @umax_sext2_vec(<2 x i32> %a) {
 
 define i64 @umin_sext2(i32 %a) {
 ; CHECK-LABEL: @umin_sext2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[A:%.*]], i32 3)
-; CHECK-NEXT:    [[MIN:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[NARROW:%.*]] = call i32 @llvm.umin.i32(i32 [[A:%.*]], i32 3)
+; CHECK-NEXT:    [[MIN:%.*]] = zext nneg i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MIN]]
 ;
   %a_ext = sext i32 %a to i64
@@ -377,8 +377,8 @@ define i64 @umin_sext2(i32 %a) {
 
 define <2 x i64> @umin_sext2_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @umin_sext2_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[A:%.*]], <2 x i32> <i32 3, i32 3>)
-; CHECK-NEXT:    [[MIN:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[NARROW:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[A:%.*]], <2 x i32> splat (i32 3))
+; CHECK-NEXT:    [[MIN:%.*]] = zext nneg <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MIN]]
 ;
   %a_ext = sext <2 x i32> %a to <2 x i64>
@@ -389,8 +389,8 @@ define <2 x i64> @umin_sext2_vec(<2 x i32> %a) {
 
 define i64 @umax_zext(i32 %a) {
 ; CHECK-LABEL: @umax_zext(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 3)
-; CHECK-NEXT:    [[MAX:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[NARROW:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 3)
+; CHECK-NEXT:    [[MAX:%.*]] = zext i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MAX]]
 ;
   %a_ext = zext i32 %a to i64
@@ -401,8 +401,8 @@ define i64 @umax_zext(i32 %a) {
 
 define <2 x i64> @umax_zext_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @umax_zext_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[A:%.*]], <2 x i32> <i32 3, i32 3>)
-; CHECK-NEXT:    [[MAX:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[NARROW:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[A:%.*]], <2 x i32> splat (i32 3))
+; CHECK-NEXT:    [[MAX:%.*]] = zext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MAX]]
 ;
   %a_ext = zext <2 x i32> %a to <2 x i64>
@@ -413,8 +413,8 @@ define <2 x i64> @umax_zext_vec(<2 x i32> %a) {
 
 define i64 @umin_zext(i32 %a) {
 ; CHECK-LABEL: @umin_zext(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[A:%.*]], i32 2)
-; CHECK-NEXT:    [[MIN:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[NARROW:%.*]] = call i32 @llvm.umin.i32(i32 [[A:%.*]], i32 2)
+; CHECK-NEXT:    [[MIN:%.*]] = zext nneg i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MIN]]
 ;
   %a_ext = zext i32 %a to i64
@@ -425,8 +425,8 @@ define i64 @umin_zext(i32 %a) {
 
 define <2 x i64> @umin_zext_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @umin_zext_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[A:%.*]], <2 x i32> <i32 2, i32 2>)
-; CHECK-NEXT:    [[MIN:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[NARROW:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[A:%.*]], <2 x i32> splat (i32 2))
+; CHECK-NEXT:    [[MIN:%.*]] = zext nneg <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MIN]]
 ;
   %a_ext = zext <2 x i32> %a to <2 x i64>

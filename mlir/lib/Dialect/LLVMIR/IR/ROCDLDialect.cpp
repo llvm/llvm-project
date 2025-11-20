@@ -23,12 +23,8 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Type.h"
-#include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
 using namespace ROCDL;
@@ -38,54 +34,6 @@ using namespace ROCDL;
 //===----------------------------------------------------------------------===//
 // Parsing for ROCDL ops
 //===----------------------------------------------------------------------===//
-
-// <operation> ::=
-//     `llvm.amdgcn.buffer.load.* %rsrc, %vindex, %offset, %glc, %slc :
-//     result_type`
-ParseResult MubufLoadOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 8> ops;
-  Type type;
-  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type) ||
-      parser.addTypeToList(type, result.types))
-    return failure();
-
-  MLIRContext *context = parser.getContext();
-  auto int32Ty = IntegerType::get(context, 32);
-  auto int1Ty = IntegerType::get(context, 1);
-  auto i32x4Ty = LLVM::getFixedVectorType(int32Ty, 4);
-  return parser.resolveOperands(ops,
-                                {i32x4Ty, int32Ty, int32Ty, int1Ty, int1Ty},
-                                parser.getNameLoc(), result.operands);
-}
-
-void MubufLoadOp::print(OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << (*this)->getResultTypes();
-}
-
-// <operation> ::=
-//     `llvm.amdgcn.buffer.store.* %vdata, %rsrc, %vindex, %offset, %glc, %slc :
-//     result_type`
-ParseResult MubufStoreOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 8> ops;
-  Type type;
-  if (parser.parseOperandList(ops, 6) || parser.parseColonType(type))
-    return failure();
-
-  MLIRContext *context = parser.getContext();
-  auto int32Ty = IntegerType::get(context, 32);
-  auto int1Ty = IntegerType::get(context, 1);
-  auto i32x4Ty = LLVM::getFixedVectorType(int32Ty, 4);
-
-  if (parser.resolveOperands(ops,
-                             {type, i32x4Ty, int32Ty, int32Ty, int1Ty, int1Ty},
-                             parser.getNameLoc(), result.operands))
-    return failure();
-  return success();
-}
-
-void MubufStoreOp::print(OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << getVdata().getType();
-}
 
 // <operation> ::=
 //     `llvm.amdgcn.raw.buffer.load.* %rsrc, %offset, %soffset, %aux
@@ -233,6 +181,15 @@ void RawBufferAtomicUMinOp::print(mlir::OpAsmPrinter &p) {
 // ROCDLDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
+namespace {
+struct ROCDLInlinerInterface final : DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
 // TODO: This should be the llvm.rocdl dialect once this is supported.
 void ROCDLDialect::initialize() {
   addOperations<
@@ -247,15 +204,16 @@ void ROCDLDialect::initialize() {
 
   // Support unknown operations because not all ROCDL operations are registered.
   allowUnknownOperations();
-  declarePromisedInterface<ROCDLTargetAttr, gpu::TargetAttrInterface>();
+  addInterfaces<ROCDLInlinerInterface>();
+  declarePromisedInterface<gpu::TargetAttrInterface, ROCDLTargetAttr>();
 }
 
 LogicalResult ROCDLDialect::verifyOperationAttribute(Operation *op,
                                                      NamedAttribute attr) {
   // Kernel function attribute should be attached to functions.
-  if (attr.getName() == ROCDLDialect::getKernelFuncAttrName()) {
+  if (kernelAttrName.getName() == attr.getName()) {
     if (!isa<LLVM::LLVMFuncOp>(op)) {
-      return op->emitError() << "'" << ROCDLDialect::getKernelFuncAttrName()
+      return op->emitError() << "'" << kernelAttrName.getName()
                              << "' attribute attached to unexpected op";
     }
   }
@@ -282,8 +240,8 @@ ROCDLTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     emitError() << "The target chip cannot be empty.";
     return failure();
   }
-  if (abiVersion != "400" && abiVersion != "500") {
-    emitError() << "Invalid ABI version, it must be either `400` or `500`.";
+  if (abiVersion != "400" && abiVersion != "500" && abiVersion != "600") {
+    emitError() << "Invalid ABI version, it must be `400`, `500` or '600'.";
     return failure();
   }
   if (files && !llvm::all_of(files, [](::mlir::Attribute attr) {

@@ -34,8 +34,10 @@ namespace IllegalSyntax {
 namespace VariableLengthArrays {
   using T = int[42]; // ok
 
-  int n = 32;
-  using T = int[n]; // expected-error {{variable length array declaration not allowed at file scope}}
+  int n = 32;       // expected-note {{declared here}}
+  using T = int[n]; // expected-error {{variable length array declaration not allowed at file scope}} \
+                       expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                       expected-note {{read of non-const variable 'n' is not allowed in a constant expression}}
 
   const int m = 42;
   using U = int[m];
@@ -43,9 +45,11 @@ namespace VariableLengthArrays {
   using U = int; // expected-error {{type alias redefinition with different types ('int' vs 'int[42]')}}
 
   void f() {
-    int n = 42;
+    int n = 42; // expected-note {{declared here}}
     goto foo; // expected-error {{cannot jump}}
-    using T = int[n]; // expected-note {{bypasses initialization of VLA type alias}}
+    using T = int[n]; // expected-note {{bypasses initialization of VLA type alias}} \
+                         expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                         expected-note {{read of non-const variable 'n' is not allowed in a constant expression}}
   foo: ;
   }
 }

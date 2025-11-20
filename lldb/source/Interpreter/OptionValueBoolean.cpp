@@ -10,6 +10,7 @@
 
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Interpreter/OptionArgParser.h"
+#include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/STLExtras.h"
@@ -27,6 +28,11 @@ void OptionValueBoolean::DumpValue(const ExecutionContext *exe_ctx,
     if (dump_mask & eDumpOptionType)
       strm.PutCString(" = ");
     strm.PutCString(m_current_value ? "true" : "false");
+    if (dump_mask & eDumpOptionDefaultValue &&
+        m_current_value != m_default_value) {
+      DefaultValueFormat label(strm);
+      strm.PutCString(m_default_value ? "true" : "false");
+    }
   }
 }
 
@@ -49,10 +55,10 @@ Status OptionValueBoolean::SetValueFromString(llvm::StringRef value_str,
       NotifyValueChanged();
     } else {
       if (value_str.size() == 0)
-        error.SetErrorString("invalid boolean string value <empty>");
+        error = Status::FromErrorString("invalid boolean string value <empty>");
       else
-        error.SetErrorStringWithFormat("invalid boolean string value: '%s'",
-                                       value_str.str().c_str());
+        error = Status::FromErrorStringWithFormat(
+            "invalid boolean string value: '%s'", value_str.str().c_str());
     }
   } break;
 

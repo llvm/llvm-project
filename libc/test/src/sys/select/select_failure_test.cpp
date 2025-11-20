@@ -8,21 +8,22 @@
 
 #include "src/sys/select/select.h"
 #include "src/unistd/read.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <sys/select.h>
 #include <unistd.h>
 
-using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+using LlvmLibcSelectTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcSelectTest, SelectInvalidFD) {
+TEST_F(LlvmLibcSelectTest, SelectInvalidFD) {
   fd_set set;
   FD_ZERO(&set);
   struct timeval timeout {
     0, 0
   };
-  ASSERT_THAT(__llvm_libc::select(-1, &set, nullptr, nullptr, &timeout),
+  ASSERT_THAT(LIBC_NAMESPACE::select(-1, &set, nullptr, nullptr, &timeout),
               Fails(EINVAL));
 }

@@ -10,11 +10,11 @@
 #include "src/math/acoshf.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 using LlvmLibcAcoshfExhaustiveTest =
     LlvmLibcUnaryOpExhaustiveMathTest<float, mpfr::Operation::Acosh,
-                                      __llvm_libc::acoshf>;
+                                      LIBC_NAMESPACE::acoshf>;
 
 // Range: [1, Inf];
 static constexpr uint32_t POS_START = 0x3f80'0000U;

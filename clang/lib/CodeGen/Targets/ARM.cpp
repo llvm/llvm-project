@@ -35,7 +35,9 @@ public:
     case llvm::Triple::EABI:
     case llvm::Triple::EABIHF:
     case llvm::Triple::GNUEABI:
+    case llvm::Triple::GNUEABIT64:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::MuslEABIHF:
       return true;
@@ -48,6 +50,7 @@ public:
     switch (getTarget().getTriple().getEnvironment()) {
     case llvm::Triple::EABIHF:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABIHF:
       return true;
     default:
@@ -68,6 +71,7 @@ private:
                                   unsigned functionCallConv) const;
   ABIArgInfo classifyHomogeneousAggregate(QualType Ty, const Type *Base,
                                           uint64_t Members) const;
+  bool shouldIgnoreEmptyArg(QualType Ty) const;
   ABIArgInfo coerceIllegalVector(QualType Ty) const;
   bool isIllegalVectorType(QualType Ty) const;
   bool containsAnyFP16Vectors(QualType Ty) const;
@@ -81,8 +85,8 @@ private:
 
   void computeInfo(CGFunctionInfo &FI) const override;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
   llvm::CallingConv::ID getLLVMDefaultCC() const;
   llvm::CallingConv::ID getABIDefaultCC() const;
@@ -130,38 +134,28 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
-    if (GV->isDeclaration())
+    auto *Fn = dyn_cast<llvm::Function>(GV);
+    if (!Fn)
       return;
-    const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-    if (!FD)
-      return;
-    auto *Fn = cast<llvm::Function>(GV);
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
 
-    if (const auto *TA = FD->getAttr<TargetAttr>()) {
+    if (FD && FD->hasAttr<TargetAttr>()) {
+      const auto *TA = FD->getAttr<TargetAttr>();
       ParsedTargetAttr Attr =
           CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
-        TargetInfo::BranchProtectionInfo BPI;
+        TargetInfo::BranchProtectionInfo BPI{};
         StringRef DiagMsg;
         StringRef Arch =
             Attr.CPU.empty() ? CGM.getTarget().getTargetOpts().CPU : Attr.CPU;
-        if (!CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
-                                                      Arch, BPI, DiagMsg)) {
+        if (!CGM.getTarget().validateBranchProtection(
+                Attr.BranchProtection, Arch, BPI, CGM.getLangOpts(), DiagMsg)) {
           CGM.getDiags().Report(
               D->getLocation(),
               diag::warn_target_unsupported_branch_protection_attribute)
               << Arch;
-        } else {
-          static const char *SignReturnAddrStr[] = {"none", "non-leaf", "all"};
-          assert(static_cast<unsigned>(BPI.SignReturnAddr) <= 2 &&
-                 "Unexpected SignReturnAddressScopeKind");
-          Fn->addFnAttr(
-              "sign-return-address",
-              SignReturnAddrStr[static_cast<int>(BPI.SignReturnAddr)]);
-
-          Fn->addFnAttr("branch-target-enforcement",
-                        BPI.BranchTargetEnforcement ? "true" : "false");
-        }
+        } else
+          setBranchProtectionFnAttributes(BPI, (*Fn));
       } else if (CGM.getLangOpts().BranchTargetEnforcement ||
                  CGM.getLangOpts().hasSignReturnAddress()) {
         // If the Branch Protection attribute is missing, validate the target
@@ -173,12 +167,16 @@ public:
               diag::warn_target_unsupported_branch_protection_attribute)
               << Attr.CPU;
       }
+    } else if (CGM.getTarget().isBranchProtectionSupportedArch(
+                   CGM.getTarget().getTargetOpts().CPU)) {
+      TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
+      setBranchProtectionFnAttributes(BPI, (*Fn));
     }
 
-    const ARMInterruptAttr *Attr = FD->getAttr<ARMInterruptAttr>();
-    if (!Attr)
+    if (!FD || !FD->hasAttr<ARMInterruptAttr>())
       return;
 
+    const ARMInterruptAttr *Attr = FD->getAttr<ARMInterruptAttr>();
     const char *Kind;
     switch (Attr->getInterrupt()) {
     case ARMInterruptAttr::Generic: Kind = ""; break;
@@ -190,6 +188,12 @@ public:
     }
 
     Fn->addFnAttr("interrupt", Kind);
+
+    // Note: the ARMSaveFPAttr can only exist if we also have an interrupt
+    // attribute
+    const ARMSaveFPAttr *SaveFPAttr = FD->getAttr<ARMSaveFPAttr>();
+    if (SaveFPAttr)
+      Fn->addFnAttr("save-fp");
 
     ARMABIKind ABI = getABIInfo<ARMABIInfo>().getABIKind();
     if (ABI == ARMABIKind::APCS)
@@ -300,7 +304,9 @@ ABIArgInfo ARMABIInfo::coerceIllegalVector(QualType Ty) const {
         llvm::Type::getInt32Ty(getVMContext()), Size / 32);
     return ABIArgInfo::getDirect(ResType);
   }
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(
+      Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+      /*ByVal=*/false);
 }
 
 ABIArgInfo ARMABIInfo::classifyHomogeneousAggregate(QualType Ty,
@@ -310,7 +316,7 @@ ABIArgInfo ARMABIInfo::classifyHomogeneousAggregate(QualType Ty,
   // Base can be a floating-point or a vector.
   if (const VectorType *VT = Base->getAs<VectorType>()) {
     // FP16 vectors should be converted to integer vectors
-    if (!getTarget().hasLegalHalfType() && containsAnyFP16Vectors(Ty)) {
+    if (!getTarget().hasFastHalfType() && containsAnyFP16Vectors(Ty)) {
       uint64_t Size = getContext().getTypeSize(VT);
       auto *NewVecTy = llvm::FixedVectorType::get(
           llvm::Type::getInt32Ty(getVMContext()), Size / 32);
@@ -328,6 +334,31 @@ ABIArgInfo ARMABIInfo::classifyHomogeneousAggregate(QualType Ty,
     Align = (Align > BaseAlign && Align >= 8) ? 8 : 0;
   }
   return ABIArgInfo::getDirect(nullptr, 0, nullptr, false, Align);
+}
+
+bool ARMABIInfo::shouldIgnoreEmptyArg(QualType Ty) const {
+  uint64_t Size = getContext().getTypeSize(Ty);
+  assert((isEmptyRecord(getContext(), Ty, true) || Size == 0) &&
+         "Arg is not empty");
+
+  // Empty records are ignored in C mode, and in C++ on WatchOS.
+  if (!getContext().getLangOpts().CPlusPlus ||
+      getABIKind() == ARMABIKind::AAPCS16_VFP)
+    return true;
+
+  // In C++ mode, arguments which have sizeof() == 0 are ignored. This is not a
+  // situation which is defined by any C++ standard or ABI, but this matches
+  // GCC's de facto ABI.
+  if (Size == 0)
+    return true;
+
+  // Clang 19.0 and earlier always ignored empty struct arguments in C++ mode.
+  if (getContext().getLangOpts().getClangABICompat() <=
+      LangOptions::ClangABI::Ver19)
+    return true;
+
+  // Otherwise, they are passed as if they have a size of 1 byte.
+  return false;
 }
 
 ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
@@ -351,25 +382,35 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
 
   if (!isAggregateTypeForABI(Ty)) {
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = Ty->getAs<EnumType>()) {
-      Ty = EnumTy->getDecl()->getIntegerType();
+    if (const auto *ED = Ty->getAsEnumDecl()) {
+      Ty = ED->getIntegerType();
     }
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 64)
-        return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
+        return getNaturalAlignIndirect(
+            Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+            /*ByVal=*/true);
 
-    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                              : ABIArgInfo::getDirect());
+    return (isPromotableIntegerTypeForABI(Ty)
+                ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
+                : ABIArgInfo::getDirect());
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
-    return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
-  // Ignore empty records.
-  if (isEmptyRecord(getContext(), Ty, true))
-    return ABIArgInfo::getIgnore();
+  // Empty records are either ignored completely or passed as if they were a
+  // 1-byte object, depending on the ABI and language standard.
+  if (isEmptyRecord(getContext(), Ty, true) ||
+      getContext().getTypeSize(Ty) == 0) {
+    if (shouldIgnoreEmptyArg(Ty))
+      return ABIArgInfo::getIgnore();
+    else
+      return ABIArgInfo::getDirect(llvm::Type::getInt8Ty(getVMContext()));
+  }
 
   if (IsAAPCS_VFP) {
     // Homogeneous Aggregates need to be expanded when we can fit the aggregate
@@ -398,7 +439,8 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
     // bigger than 128-bits, they get placed in space allocated by the caller,
     // and a pointer is passed.
     return ABIArgInfo::getIndirect(
-        CharUnits::fromQuantity(getContext().getTypeAlign(Ty) / 8), false);
+        CharUnits::fromQuantity(getContext().getTypeAlign(Ty) / 8),
+        getDataLayout().getAllocaAddrSpace(), false);
   }
 
   // Support byval for ARM.
@@ -416,15 +458,10 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   }
   if (getContext().getTypeSizeInChars(Ty) > CharUnits::fromQuantity(64)) {
     assert(getABIKind() != ARMABIKind::AAPCS16_VFP && "unexpected byval");
-    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(ABIAlign),
-                                   /*ByVal=*/true,
-                                   /*Realign=*/TyAlign > ABIAlign);
-  }
-
-  // On RenderScript, coerce Aggregates <= 64 bytes to an integer array of
-  // same size and alignment.
-  if (getTarget().isRenderScriptTarget()) {
-    return coerceToIntArray(Ty, getContext(), getVMContext());
+    return ABIArgInfo::getIndirect(
+        CharUnits::fromQuantity(ABIAlign),
+        /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/true, /*Realign=*/TyAlign > ABIAlign);
   }
 
   // Otherwise, pass by coercing to a structure of the appropriate size.
@@ -475,11 +512,11 @@ static bool isIntegerLikeType(QualType Ty, ASTContext &Context,
   // above, but they are not.
 
   // Otherwise, it must be a record type.
-  const RecordType *RT = Ty->getAs<RecordType>();
+  const RecordType *RT = Ty->getAsCanonical<RecordType>();
   if (!RT) return false;
 
   // Ignore records with flexible arrays.
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
   if (RD->hasFlexibleArrayMember())
     return false;
 
@@ -541,10 +578,11 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
   if (const VectorType *VT = RetTy->getAs<VectorType>()) {
     // Large vector types should be returned via memory.
     if (getContext().getTypeSize(RetTy) > 128)
-      return getNaturalAlignIndirect(RetTy);
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
     // TODO: FP16/BF16 vectors should be converted to integer vectors
     // This check is similar  to isIllegalVectorType - refactor?
-    if ((!getTarget().hasLegalHalfType() &&
+    if ((!getTarget().hasFastHalfType() &&
         (VT->getElementType()->isFloat16Type() ||
          VT->getElementType()->isHalfType())) ||
         (IsFloatABISoftFP &&
@@ -554,12 +592,14 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
 
   if (!isAggregateTypeForABI(RetTy)) {
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-      RetTy = EnumTy->getDecl()->getIntegerType();
+    if (const auto *ED = RetTy->getAsEnumDecl())
+      RetTy = ED->getIntegerType();
 
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > 64)
-        return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
+        return getNaturalAlignIndirect(
+            RetTy, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+            /*ByVal=*/false);
 
     return isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                 : ABIArgInfo::getDirect();
@@ -590,12 +630,13 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
     }
 
     // Otherwise return in memory.
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
   }
 
   // Otherwise this is an AAPCS variant.
 
-  if (isEmptyRecord(getContext(), RetTy, true))
+  if (isEmptyRecord(getContext(), RetTy, true) ||
+      getContext().getTypeSize(RetTy) == 0)
     return ABIArgInfo::getIgnore();
 
   // Check for homogeneous aggregates with AAPCS-VFP.
@@ -610,11 +651,6 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
   // are returned indirectly.
   uint64_t Size = getContext().getTypeSize(RetTy);
   if (Size <= 32) {
-    // On RenderScript, coerce Aggregates <= 4 bytes to an integer array of
-    // same size and alignment.
-    if (getTarget().isRenderScriptTarget()) {
-      return coerceToIntArray(RetTy, getContext(), getVMContext());
-    }
     if (getDataLayout().isBigEndian())
       // Return in 32 bit integer integer type (as if loaded by LDR, AAPCS 5.4)
       return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
@@ -632,7 +668,7 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
     return ABIArgInfo::getDirect(CoerceTy);
   }
 
-  return getNaturalAlignIndirect(RetTy);
+  return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 }
 
 /// isIllegalVector - check whether Ty is an illegal vector type.
@@ -642,9 +678,9 @@ bool ARMABIInfo::isIllegalVectorType(QualType Ty) const {
     // into float, and we don't want the ABI to depend on whether or not they
     // are supported in hardware. Thus return false to coerce vectors of these
     // types into integer vectors.
-    // We do not depend on hasLegalHalfType for bfloat as it is a
+    // We do not depend on hasFastHalfType for bfloat as it is a
     // separate IR type.
-    if ((!getTarget().hasLegalHalfType() &&
+    if ((!getTarget().hasFastHalfType() &&
         (VT->getElementType()->isFloat16Type() ||
          VT->getElementType()->isHalfType())) ||
         (IsFloatABISoftFP &&
@@ -677,13 +713,12 @@ bool ARMABIInfo::isIllegalVectorType(QualType Ty) const {
 /// Return true if a type contains any 16-bit floating point vectors
 bool ARMABIInfo::containsAnyFP16Vectors(QualType Ty) const {
   if (const ConstantArrayType *AT = getContext().getAsConstantArrayType(Ty)) {
-    uint64_t NElements = AT->getSize().getZExtValue();
+    uint64_t NElements = AT->getZExtSize();
     if (NElements == 0)
       return false;
     return containsAnyFP16Vectors(AT->getElementType());
-  } else if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
-
+  }
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     // If this is a C++ record, check the bases first.
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
       if (llvm::any_of(CXXRD->bases(), [this](const CXXBaseSpecifier &B) {
@@ -759,16 +794,15 @@ bool ARMABIInfo::isEffectivelyAAPCS_VFP(unsigned callConvention,
            (acceptHalf && (getABIKind() == ARMABIKind::AAPCS16_VFP));
 }
 
-Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                              QualType Ty) const {
+RValue ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                             QualType Ty, AggValueSlot Slot) const {
   CharUnits SlotSize = CharUnits::fromQuantity(4);
 
   // Empty records are ignored for parameter passing purposes.
-  if (isEmptyRecord(getContext(), Ty, true)) {
-    VAListAddr = VAListAddr.withElementType(CGF.Int8PtrTy);
-    auto *Load = CGF.Builder.CreateLoad(VAListAddr);
-    return Address(Load, CGF.ConvertTypeForMem(Ty), SlotSize);
-  }
+  uint64_t Size = getContext().getTypeSize(Ty);
+  bool IsEmpty = isEmptyRecord(getContext(), Ty, true);
+  if ((IsEmpty || Size == 0) && shouldIgnoreEmptyArg(Ty))
+    return Slot.asRValue();
 
   CharUnits TySize = getContext().getTypeSizeInChars(Ty);
   CharUnits TyAlignForABI = getContext().getTypeUnadjustedAlignInChars(Ty);
@@ -804,8 +838,8 @@ Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   }
 
   TypeInfoChars TyInfo(TySize, TyAlignForABI, AlignRequirementKind::None);
-  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TyInfo,
-                          SlotSize, /*AllowHigherAlign*/ true);
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TyInfo, SlotSize,
+                          /*AllowHigherAlign*/ true, Slot);
 }
 
 std::unique_ptr<TargetCodeGenInfo>

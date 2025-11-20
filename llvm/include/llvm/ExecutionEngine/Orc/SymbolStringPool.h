@@ -14,7 +14,9 @@
 #define LLVM_EXECUTIONENGINE_ORC_SYMBOLSTRINGPOOL_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Compiler.h"
 #include <atomic>
 #include <mutex>
 
@@ -32,9 +34,11 @@ class NonOwningSymbolStringPtr;
 class SymbolStringPool {
   friend class SymbolStringPoolTest;
   friend class SymbolStringPtrBase;
+  friend class SymbolStringPoolEntryUnsafe;
 
   // Implemented in DebugUtils.h.
-  friend raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
+  LLVM_ABI friend raw_ostream &operator<<(raw_ostream &OS,
+                                          const SymbolStringPool &SSP);
 
 public:
   /// Destroy a SymbolStringPool.
@@ -68,6 +72,7 @@ private:
 /// from nullptr to enable comparison with these values.
 class SymbolStringPtrBase {
   friend class SymbolStringPool;
+  friend class SymbolStringPoolEntryUnsafe;
   friend struct DenseMapInfo<SymbolStringPtr>;
   friend struct DenseMapInfo<NonOwningSymbolStringPtr>;
 
@@ -90,6 +95,9 @@ public:
   friend bool operator<(SymbolStringPtrBase LHS, SymbolStringPtrBase RHS) {
     return LHS.S < RHS.S;
   }
+
+  LLVM_ABI friend raw_ostream &operator<<(raw_ostream &OS,
+                                          const SymbolStringPtrBase &Sym);
 
 #ifndef NDEBUG
   // Returns true if the pool entry's ref count is above zero (or if the entry
@@ -134,8 +142,8 @@ protected:
 
 /// Pointer to a pooled string representing a symbol name.
 class SymbolStringPtr : public SymbolStringPtrBase {
-  friend class OrcV2CAPIHelper;
   friend class SymbolStringPool;
+  friend class SymbolStringPoolEntryUnsafe;
   friend struct DenseMapInfo<SymbolStringPtr>;
 
 public:
@@ -187,6 +195,47 @@ private:
   static SymbolStringPtr getTombstoneVal() {
     return SymbolStringPtr(reinterpret_cast<PoolEntryPtr>(TombstoneBitPattern));
   }
+};
+
+/// Provides unsafe access to ownership operations on SymbolStringPtr.
+/// This class can be used to manage SymbolStringPtr instances from C.
+class SymbolStringPoolEntryUnsafe {
+public:
+  using PoolEntry = SymbolStringPool::PoolMapEntry;
+
+  SymbolStringPoolEntryUnsafe(PoolEntry *E) : E(E) {}
+
+  /// Create an unsafe pool entry ref without changing the ref-count.
+  static SymbolStringPoolEntryUnsafe from(const SymbolStringPtrBase &S) {
+    return S.S;
+  }
+
+  /// Consumes the given SymbolStringPtr without releasing the pool entry.
+  static SymbolStringPoolEntryUnsafe take(SymbolStringPtr &&S) {
+    PoolEntry *E = nullptr;
+    std::swap(E, S.S);
+    return E;
+  }
+
+  PoolEntry *rawPtr() { return E; }
+
+  /// Creates a SymbolStringPtr for this entry, with the SymbolStringPtr
+  /// retaining the entry as usual.
+  SymbolStringPtr copyToSymbolStringPtr() { return SymbolStringPtr(E); }
+
+  /// Creates a SymbolStringPtr for this entry *without* performing a retain
+  /// operation during construction.
+  SymbolStringPtr moveToSymbolStringPtr() {
+    SymbolStringPtr S;
+    std::swap(S.S, E);
+    return S;
+  }
+
+  void retain() { ++E->getValue(); }
+  void release() { --E->getValue(); }
+
+private:
+  PoolEntry *E = nullptr;
 };
 
 /// Non-owning SymbolStringPool entry pointer. Instances are comparable with
@@ -266,6 +315,13 @@ inline bool SymbolStringPool::empty() const {
 inline size_t
 SymbolStringPool::getRefCount(const SymbolStringPtrBase &S) const {
   return S.getRefCount();
+}
+
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolStringPtrBase &Sym);
+
+inline hash_code hash_value(const orc::SymbolStringPtrBase &S) {
+  return hash_value(orc::SymbolStringPoolEntryUnsafe::from(S).rawPtr());
 }
 
 } // end namespace orc

@@ -18,26 +18,6 @@
 
 namespace __ubsan {
 
-class SymbolizedStackHolder {
-  SymbolizedStack *Stack;
-
-  void clear() {
-    if (Stack)
-      Stack->ClearAll();
-  }
-
-public:
-  explicit SymbolizedStackHolder(SymbolizedStack *Stack = nullptr)
-      : Stack(Stack) {}
-  ~SymbolizedStackHolder() { clear(); }
-  void reset(SymbolizedStack *S) {
-    if (Stack != S)
-      clear();
-    Stack = S;
-  }
-  const SymbolizedStack *get() const { return Stack; }
-};
-
 SymbolizedStack *getSymbolizedLocation(uptr PC);
 
 inline SymbolizedStack *getCallerLocation(uptr CallerPC) {

@@ -11,7 +11,7 @@ entry:
 ; CHECK: sub #2, r1
   %i = alloca i16, align 2
 ; CHECK: clr -2(r4)
-  store i16 0, i16* %i, align 2
+  store i16 0, ptr %i, align 2
 ; CHECK: pop r4
   ret void
 }

@@ -33,9 +33,16 @@ struct TestDataLayoutPropagationPass
     MLIRContext *context = &getContext();
     RewritePatternSet patterns(context);
     linalg::populateDataLayoutPropagationPatterns(
-        patterns, [](Operation *op) { return true; });
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+        patterns, [](OpOperand *opOperand) { return true; },
+        /*poisonPaddingOk=*/true);
+    linalg::ControlPropagationFn controlExtract =
+        [](OpOperand *opOperand) -> bool {
+      Operation *producer = opOperand->get().getDefiningOp();
+      Operation *consumer = opOperand->getOwner();
+      return consumer->getBlock() == producer->getBlock();
+    };
+    linalg::populateExtractSliceSinkingPatterns(patterns, controlExtract);
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };

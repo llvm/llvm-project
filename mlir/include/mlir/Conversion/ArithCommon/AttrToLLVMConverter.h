@@ -18,13 +18,32 @@
 
 namespace mlir {
 namespace arith {
-// Map arithmetic fastmath enum values to LLVMIR enum values.
+/// Maps arithmetic fastmath enum values to LLVM enum values.
 LLVM::FastmathFlags
 convertArithFastMathFlagsToLLVM(arith::FastMathFlags arithFMF);
 
-// Create an LLVM fastmath attribute from a given arithmetic fastmath attribute.
+/// Creates an LLVM fastmath attribute from a given arithmetic fastmath
+/// attribute.
 LLVM::FastmathFlagsAttr
 convertArithFastMathAttrToLLVM(arith::FastMathFlagsAttr fmfAttr);
+
+/// Maps arithmetic overflow enum values to LLVM enum values.
+LLVM::IntegerOverflowFlags
+convertArithOverflowFlagsToLLVM(arith::IntegerOverflowFlags arithFlags);
+
+/// Creates an LLVM rounding mode enum value from a given arithmetic rounding
+/// mode enum value.
+LLVM::RoundingMode
+convertArithRoundingModeToLLVM(arith::RoundingMode roundingMode);
+
+/// Creates an LLVM rounding mode attribute from a given arithmetic rounding
+/// mode attribute.
+LLVM::RoundingModeAttr
+convertArithRoundingModeAttrToLLVM(arith::RoundingModeAttr roundingModeAttr);
+
+/// Returns an attribute for the default LLVM FP exception behavior.
+LLVM::FPExceptionBehaviorAttr
+getLLVMDefaultFPExceptionBehavior(MLIRContext &context);
 
 // Attribute converter that populates a NamedAttrList by removing the fastmath
 // attribute from the source operation attributes, and replacing it with an
@@ -36,22 +55,96 @@ public:
     // Copy the source attributes.
     convertedAttr = NamedAttrList{srcOp->getAttrs()};
     // Get the name of the arith fastmath attribute.
-    llvm::StringRef arithFMFAttrName = SourceOp::getFastMathAttrName();
+    StringRef arithFMFAttrName = SourceOp::getFastMathAttrName();
     // Remove the source fastmath attribute.
-    auto arithFMFAttr = dyn_cast_or_null<arith::FastMathFlagsAttr>(
+    auto arithFMFAttr = dyn_cast_if_present<arith::FastMathFlagsAttr>(
         convertedAttr.erase(arithFMFAttrName));
     if (arithFMFAttr) {
-      llvm::StringRef targetAttrName = TargetOp::getFastmathAttrName();
+      StringRef targetAttrName = TargetOp::getFastmathAttrName();
       convertedAttr.set(targetAttrName,
                         convertArithFastMathAttrToLLVM(arithFMFAttr));
     }
   }
-
   ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
+  Attribute getPropAttr() const { return {}; }
 
 private:
   NamedAttrList convertedAttr;
 };
+
+// Attribute converter that populates a NamedAttrList by removing the overflow
+// attribute from the source operation attributes, and replacing it with an
+// equivalent LLVM overflow attribute.
+template <typename SourceOp, typename TargetOp>
+class AttrConvertOverflowToLLVM {
+public:
+  AttrConvertOverflowToLLVM(SourceOp srcOp) {
+    using IntegerOverflowFlagsAttr = LLVM::IntegerOverflowFlagsAttr;
+
+    // Copy the source attributes.
+    convertedAttr = NamedAttrList{srcOp->getAttrs()};
+    // Get the name of the arith overflow attribute.
+    StringRef arithAttrName = SourceOp::getIntegerOverflowAttrName();
+    // Remove the source overflow attribute from the set that will be present
+    // in the target.
+    if (auto arithAttr = dyn_cast_if_present<arith::IntegerOverflowFlagsAttr>(
+            convertedAttr.erase(arithAttrName))) {
+      auto llvmFlag = convertArithOverflowFlagsToLLVM(arithAttr.getValue());
+      // Create a dictionary attribute holding the overflow flags property.
+      // (In the LLVM dialect, the overflow flags are a property, not an
+      // attribute.)
+      MLIRContext *ctx = srcOp.getOperation()->getContext();
+      Builder b(ctx);
+      auto llvmFlagAttr = IntegerOverflowFlagsAttr::get(ctx, llvmFlag);
+      StringRef llvmAttrName = TargetOp::getOverflowFlagsAttrName();
+      NamedAttribute attr{llvmAttrName, llvmFlagAttr};
+      // Set the properties attribute of the operation state so that the
+      // property can be updated when the operation is created.
+      propertiesAttr = b.getDictionaryAttr(ArrayRef(attr));
+    }
+  }
+  ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
+  Attribute getPropAttr() const { return propertiesAttr; }
+
+private:
+  NamedAttrList convertedAttr;
+  DictionaryAttr propertiesAttr;
+};
+
+template <typename SourceOp, typename TargetOp>
+class AttrConverterConstrainedFPToLLVM {
+  static_assert(TargetOp::template hasTrait<
+                    LLVM::FPExceptionBehaviorOpInterface::Trait>(),
+                "Target constrained FP operations must implement "
+                "LLVM::FPExceptionBehaviorOpInterface");
+
+public:
+  AttrConverterConstrainedFPToLLVM(SourceOp srcOp) {
+    // Copy the source attributes.
+    convertedAttr = NamedAttrList{srcOp->getAttrs()};
+
+    if constexpr (TargetOp::template hasTrait<
+                      LLVM::RoundingModeOpInterface::Trait>()) {
+      // Get the name of the rounding mode attribute.
+      StringRef arithAttrName = srcOp.getRoundingModeAttrName();
+      // Remove the source attribute.
+      auto arithAttr =
+          cast<arith::RoundingModeAttr>(convertedAttr.erase(arithAttrName));
+      // Set the target attribute.
+      convertedAttr.set(TargetOp::getRoundingModeAttrName(),
+                        convertArithRoundingModeAttrToLLVM(arithAttr));
+    }
+    convertedAttr.set(TargetOp::getFPExceptionBehaviorAttrName(),
+                      getLLVMDefaultFPExceptionBehavior(*srcOp->getContext()));
+  }
+
+  ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
+  Attribute getPropAttr() const { return {}; }
+
+private:
+  NamedAttrList convertedAttr;
+};
+
 } // namespace arith
 } // namespace mlir
 

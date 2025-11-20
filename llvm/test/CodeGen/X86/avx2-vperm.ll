@@ -23,13 +23,13 @@ entry:
 define <8 x float> @perm_cl_fp_8x32(<8 x float> %A) nounwind readnone {
 ; X86-LABEL: perm_cl_fp_8x32:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vmovaps {{.*#+}} ymm1 = <u,7,2,u,4,u,1,6>
+; X86-NEXT:    vmovaps {{.*#+}} ymm1 = [u,7,2,u,4,u,1,6]
 ; X86-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: perm_cl_fp_8x32:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vmovaps {{.*#+}} ymm1 = <u,7,2,u,4,u,1,6>
+; X64-NEXT:    vmovaps {{.*#+}} ymm1 = [u,7,2,u,4,u,1,6]
 ; X64-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
 entry:

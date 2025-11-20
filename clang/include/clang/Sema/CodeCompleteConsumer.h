@@ -162,7 +162,8 @@ SimplifiedTypeClass getSimplifiedTypeClass(CanQualType T);
 
 /// Determine the type that this declaration will have if it is used
 /// as a type or in an expression.
-QualType getDeclUsageType(ASTContext &C, const NamedDecl *ND);
+QualType getDeclUsageType(ASTContext &C, NestedNameSpecifier Qualifier,
+                          const NamedDecl *ND);
 
 /// Determine the priority to be given to a macro code completion result
 /// with the given name.
@@ -362,7 +363,7 @@ private:
   QualType BaseType;
 
   /// The identifiers for Objective-C selector parts.
-  ArrayRef<IdentifierInfo *> SelIdents;
+  ArrayRef<const IdentifierInfo *> SelIdents;
 
   /// The scope specifier that comes before the completion token e.g.
   /// "a::b::"
@@ -375,11 +376,11 @@ private:
 public:
   /// Construct a new code-completion context of the given kind.
   CodeCompletionContext(Kind CCKind)
-      : CCKind(CCKind), IsUsingDeclaration(false), SelIdents(std::nullopt) {}
+      : CCKind(CCKind), IsUsingDeclaration(false), SelIdents() {}
 
   /// Construct a new code-completion context of the given kind.
   CodeCompletionContext(Kind CCKind, QualType T,
-                        ArrayRef<IdentifierInfo *> SelIdents = std::nullopt)
+                        ArrayRef<const IdentifierInfo *> SelIdents = {})
       : CCKind(CCKind), IsUsingDeclaration(false), SelIdents(SelIdents) {
     if (CCKind == CCC_DotMemberAccess || CCKind == CCC_ArrowMemberAccess ||
         CCKind == CCC_ObjCPropertyAccess || CCKind == CCC_ObjCClassMessage ||
@@ -406,7 +407,7 @@ public:
   QualType getBaseType() const { return BaseType; }
 
   /// Retrieve the Objective-C selector identifiers.
-  ArrayRef<IdentifierInfo *> getSelIdents() const { return SelIdents; }
+  ArrayRef<const IdentifierInfo *> getSelIdents() const { return SelIdents; }
 
   /// Determines whether we want C++ constructors as results within this
   /// context.
@@ -581,6 +582,7 @@ private:
   unsigned Priority : 16;
 
   /// The availability of this code-completion result.
+  LLVM_PREFERRED_TYPE(CXAvailabilityKind)
   unsigned Availability : 2;
 
   /// The name of the parent context.
@@ -866,7 +868,7 @@ public:
   /// If the result should have a nested-name-specifier, this is it.
   /// When \c QualifierIsInformative, the nested-name-specifier is
   /// informative rather than required.
-  NestedNameSpecifier *Qualifier = nullptr;
+  NestedNameSpecifier Qualifier = std::nullopt;
 
   /// If this Decl was unshadowed by using declaration, this can store a
   /// pointer to the UsingShadowDecl which was used in the unshadowing process.
@@ -881,7 +883,7 @@ public:
 
   /// Build a result that refers to a declaration.
   CodeCompletionResult(const NamedDecl *Declaration, unsigned Priority,
-                       NestedNameSpecifier *Qualifier = nullptr,
+                       NestedNameSpecifier Qualifier = std::nullopt,
                        bool QualifierIsInformative = false,
                        bool Accessible = true,
                        std::vector<FixItHint> FixIts = std::vector<FixItHint>())

@@ -34,7 +34,7 @@ dependent).
 .. code-block:: c++
 
     // AFTER
-    enum Color : std:int8_t {
+    enum Color : std::int8_t {
         RED = -1,
         GREEN = 0,
         BLUE = 1
@@ -57,6 +57,8 @@ Reducing the memory footprint of an ``enum`` can have significant benefits in
 terms of memory usage and cache performance. However, it's important to
 consider the trade-offs and potential impact on code readability and
 maintainability.
+
+Enums without enumerators (empty) are excluded from analysis.
 
 Requires C++11 or above.
 Does not provide auto-fixes.

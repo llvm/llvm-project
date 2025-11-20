@@ -11,12 +11,12 @@
 define float @combine_fabs_constant() {
 ; SSE-LABEL: combine_fabs_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_fabs_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    retq
   %1 = call float @llvm.fabs.f32(float -2.0)
   ret float %1
@@ -133,6 +133,100 @@ define <4 x float> @combine_vec_fabs_fcopysign(<4 x float> %a, <4 x float> %b) {
   %1 = call <4 x float> @llvm.copysign.v4f32(<4 x float> %a, <4 x float> %b)
   %2 = call <4 x float> @llvm.fabs.v4f32(<4 x float> %1)
   ret <4 x float> %2
+}
+
+; store(fabs(load())) - convert scalar to integer
+define void @combine_fabs_int_rmw_f64(ptr %ptr) {
+; SSE-LABEL: combine_fabs_int_rmw_f64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    andb $127, 7(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_fabs_int_rmw_f64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    andb $127, 7(%rdi)
+; AVX-NEXT:    retq
+  %1 = load double, ptr %ptr
+  %2 = call double @llvm.fabs.f64(double %1)
+  store double %2, ptr %ptr
+  ret void
+}
+
+define void @combine_fabs_int_f32(ptr %src, ptr %dst) {
+; SSE-LABEL: combine_fabs_int_f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; SSE-NEXT:    andl (%rdi), %eax
+; SSE-NEXT:    movl %eax, (%rsi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_fabs_int_f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; AVX-NEXT:    andl (%rdi), %eax
+; AVX-NEXT:    movl %eax, (%rsi)
+; AVX-NEXT:    retq
+  %1 = load float, ptr %src
+  %2 = call float @llvm.fabs.f32(float %1)
+  store float %2, ptr %dst
+  ret void
+}
+
+define void @combine_fabs_int_rmw_bfloat(ptr %ptr) nounwind {
+; SSE-LABEL: combine_fabs_int_rmw_bfloat:
+; SSE:       # %bb.0:
+; SSE-NEXT:    andb $127, 1(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_fabs_int_rmw_bfloat:
+; AVX:       # %bb.0:
+; AVX-NEXT:    andb $127, 1(%rdi)
+; AVX-NEXT:    retq
+  %1 = load bfloat, ptr %ptr
+  %2 = call bfloat @llvm.fabs.bf16(bfloat %1)
+  store bfloat %2, ptr %ptr
+  ret void
+}
+
+define void @combine_fabs_int_half(ptr %src, ptr %dst) nounwind {
+; SSE-LABEL: combine_fabs_int_half:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movzwl (%rdi), %eax
+; SSE-NEXT:    andl $32767, %eax # imm = 0x7FFF
+; SSE-NEXT:    movw %ax, (%rsi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_fabs_int_half:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movzwl (%rdi), %eax
+; AVX-NEXT:    andl $32767, %eax # imm = 0x7FFF
+; AVX-NEXT:    movw %ax, (%rsi)
+; AVX-NEXT:    retq
+  %1 = load half, ptr %src
+  %2 = call half @llvm.fabs.f16(half %1)
+  store half %2, ptr %dst
+  ret void
+}
+
+; don't convert vector to scalar
+define void @combine_fabs_vec_int_v4f32(ptr %src, ptr %dst) {
+; SSE-LABEL: combine_fabs_vec_int_v4f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps (%rdi), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    movaps %xmm0, (%rsi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_fabs_vec_int_v4f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN]
+; AVX-NEXT:    vandps (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX-NEXT:    retq
+  %1 = load <4 x float>, ptr %src
+  %2 = call <4 x float> @llvm.fabs.v4f32(<4 x float> %1)
+  store <4 x float> %2, ptr %dst
+  ret void
 }
 
 declare float @llvm.fabs.f32(float %p)

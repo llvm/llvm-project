@@ -10,3 +10,11 @@ vfrecip.s $vr29, $vr14
 vfrecip.d $vr24, $vr9
 # CHECK-INST: vfrecip.d $vr24, $vr9
 # CHECK-ENCODING: encoding: [0x38,0xf9,0x9c,0x72]
+
+vfrecipe.s $vr29, $vr14
+# CHECK-INST: vfrecipe.s $vr29, $vr14
+# CHECK-ENCODING: encoding: [0xdd,0x15,0x9d,0x72]
+
+vfrecipe.d $vr24, $vr9
+# CHECK-INST: vfrecipe.d $vr24, $vr9
+# CHECK-ENCODING: encoding: [0x38,0x19,0x9d,0x72]

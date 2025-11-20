@@ -78,8 +78,8 @@ func.func @copy_sign_vector_0D(%value: vector<1xf16>, %sign: vector<1xf16>) -> v
 
 // CHECK-LABEL: func @copy_sign_vector_0D
 //  CHECK-SAME: (%[[VALUE:.+]]: vector<1xf16>, %[[SIGN:.+]]: vector<1xf16>)
-//       CHECK:   %[[CASTVAL:.+]] = builtin.unrealized_conversion_cast %[[VALUE]] : vector<1xf16> to f16
-//       CHECK:   %[[CASTSIGN:.+]] = builtin.unrealized_conversion_cast %[[SIGN]] : vector<1xf16> to f16
+//   CHECK-DAG:   %[[CASTVAL:.+]] = builtin.unrealized_conversion_cast %[[VALUE]] : vector<1xf16> to f16
+//   CHECK-DAG:   %[[CASTSIGN:.+]] = builtin.unrealized_conversion_cast %[[SIGN]] : vector<1xf16> to f16
 //       CHECK:   %[[SMASK:.+]] = spirv.Constant -32768 : i16
 //       CHECK:   %[[VMASK:.+]] = spirv.Constant 32767 : i16
 //       CHECK:   %[[VCAST:.+]] = spirv.Bitcast %[[CASTVAL]] : f16 to i16

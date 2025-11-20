@@ -17,10 +17,10 @@ define void @getSetCCResultType(ptr %p, ptr %q) nounwind {
 ; RV32I-NEXT:    addi a3, a3, -1
 ; RV32I-NEXT:    addi a2, a2, -1
 ; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    sw a1, 12(a0)
-; RV32I-NEXT:    sw a2, 8(a0)
-; RV32I-NEXT:    sw a3, 4(a0)
 ; RV32I-NEXT:    sw a4, 0(a0)
+; RV32I-NEXT:    sw a3, 4(a0)
+; RV32I-NEXT:    sw a2, 8(a0)
+; RV32I-NEXT:    sw a1, 12(a0)
 ; RV32I-NEXT:    ret
 entry:
   %0 = load <4 x i32>, ptr %p, align 16

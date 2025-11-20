@@ -312,7 +312,7 @@ define i32 @test11(ptr %p, i32 %i) {
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i32 0
 ;
-  %limit = load i32, i32* %p, !range !{i32 0, i32 2147483647}
+  %limit = load i32, ptr %p, !range !{i32 0, i32 2147483647}
   %within.1 = icmp slt i32 %limit, %i
   %i.minus.7 = add i32 %i, -7
   %within.2 = icmp slt i32 %limit, %i.minus.7

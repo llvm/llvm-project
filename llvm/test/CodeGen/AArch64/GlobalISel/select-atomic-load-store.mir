@@ -4,9 +4,14 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64"
 
-  define i8 @load_acq_i8(i8* %ptr) {
-    %v = load atomic i8, i8* %ptr acquire, align 8
+  define i8 @load_acq_i8(ptr %ptr) {
+    %v = load atomic i8, ptr %ptr acquire, align 8
     ret i8 %v
+  }
+
+  define i32 @anyext_load_monotonic_i32() {
+    %v = load atomic i32, ptr null monotonic, align 4
+    ret i32 %v
   }
 
 ...
@@ -25,13 +30,33 @@ body:             |
 
     ; CHECK-LABEL: name: load_acq_i8
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDARB:%[0-9]+]]:gpr32 = LDARB [[COPY]] :: (load acquire (s8) from %ir.ptr, align 8)
-    ; CHECK: $w0 = COPY [[LDARB]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDARB:%[0-9]+]]:gpr32 = LDARB [[COPY]] :: (load acquire (s8) from %ir.ptr, align 8)
+    ; CHECK-NEXT: $w0 = COPY [[LDARB]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
     %2:gpr(s32) = G_LOAD %0(p0) :: (load acquire (s8) from %ir.ptr, align 8)
     $w0 = COPY %2(s32)
     RET_ReallyLR implicit $w0
+
+...
+---
+name:            anyext_load_monotonic_i32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: anyext_load_monotonic_i32
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64common = COPY $xzr
+    ; CHECK-NEXT: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load monotonic (s32) from `ptr null`)
+    ; CHECK-NEXT: %ld:gpr64all = SUBREG_TO_REG 0, [[LDRWui]], %subreg.sub_32
+    ; CHECK-NEXT: $x0 = COPY %ld
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %1:gpr(p0) = G_CONSTANT i64 0
+    %ld:gpr(s64) = G_LOAD %1(p0) :: (load monotonic (s32) from `ptr null`)
+    $x0 = COPY %ld(s64)
+    RET_ReallyLR implicit $x0
 
 ...

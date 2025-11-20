@@ -29,7 +29,6 @@ function(lldb_tablegen)
 
   if(LTG_TARGET)
     add_public_tablegen_target(${LTG_TARGET})
-    set_target_properties( ${LTG_TARGET} PROPERTIES FOLDER "LLDB tablegenning")
     set_property(GLOBAL APPEND PROPERTY LLDB_TABLEGEN_TARGETS ${LTG_TARGET})
   endif()
 endfunction(lldb_tablegen)
@@ -39,15 +38,11 @@ function(add_lldb_library name)
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-  # only supported parameters to this macro are the optional
-  # MODULE;SHARED;STATIC library type and source files
   cmake_parse_arguments(PARAM
     "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK;NO_INTERNAL_DEPENDENCIES;NO_PLUGIN_DEPENDENCIES"
-    "INSTALL_PREFIX;ENTITLEMENTS"
-    "EXTRA_CXXFLAGS;DEPENDS;LINK_LIBS;LINK_COMPONENTS;CLANG_LIBS"
+    "INSTALL_PREFIX"
+    "LINK_LIBS;CLANG_LIBS"
     ${ARGN})
-  llvm_process_sources(srcs ${PARAM_UNPARSED_ARGUMENTS})
-  list(APPEND LLVM_LINK_COMPONENTS ${PARAM_LINK_COMPONENTS})
 
   if(PARAM_NO_INTERNAL_DEPENDENCIES)
     foreach(link_lib ${PARAM_LINK_LIBS})
@@ -73,13 +68,6 @@ function(add_lldb_library name)
     set_property(GLOBAL APPEND PROPERTY LLDB_PLUGINS ${name})
   endif()
 
-  if (MSVC_IDE OR XCODE)
-    string(REGEX MATCHALL "/[^/]+" split_path ${CMAKE_CURRENT_SOURCE_DIR})
-    list(GET split_path -1 dir)
-    file(GLOB_RECURSE headers
-      ../../include/lldb${dir}/*.h)
-    set(srcs ${srcs} ${headers})
-  endif()
   if (PARAM_MODULE)
     set(libkind MODULE)
   elseif (PARAM_SHARED)
@@ -94,36 +82,20 @@ function(add_lldb_library name)
     set(libkind STATIC)
   endif()
 
-  #PIC not needed on Win
-  # FIXME: Setting CMAKE_CXX_FLAGS here is a no-op, use target_compile_options
-  # or omit this logic instead.
-  if (NOT WIN32)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  if(LLDB_NO_INSTALL_DEFAULT_RPATH)
+    set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
   endif()
 
-  if (PARAM_OBJECT)
-    add_library(${name} ${libkind} ${srcs})
+  llvm_add_library(${name} ${libkind}
+    ${PARAM_UNPARSED_ARGUMENTS}
+    LINK_LIBS ${PARAM_LINK_LIBS}
+    ${pass_NO_INSTALL_RPATH}
+  )
+
+  if(CLANG_LINK_CLANG_DYLIB)
+    target_link_libraries(${name} PRIVATE clang-cpp)
   else()
-    if(PARAM_ENTITLEMENTS)
-      set(pass_ENTITLEMENTS ENTITLEMENTS ${PARAM_ENTITLEMENTS})
-    endif()
-
-    if(LLDB_NO_INSTALL_DEFAULT_RPATH)
-      set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
-    endif()
-
-    llvm_add_library(${name} ${libkind} ${srcs}
-      LINK_LIBS ${PARAM_LINK_LIBS}
-      DEPENDS ${PARAM_DEPENDS}
-      ${pass_ENTITLEMENTS}
-      ${pass_NO_INSTALL_RPATH}
-    )
-
-    if(CLANG_LINK_CLANG_DYLIB)
-      target_link_libraries(${name} PRIVATE clang-cpp)
-    else()
-      target_link_libraries(${name} PRIVATE ${PARAM_CLANG_LIBS})
-    endif()
+    target_link_libraries(${name} PRIVATE ${PARAM_CLANG_LIBS})
   endif()
 
   # A target cannot be changed to a FRAMEWORK after calling install() because
@@ -158,17 +130,14 @@ function(add_lldb_library name)
     add_dependencies(${name} clang-tablegen-targets)
   endif()
 
-  # Add in any extra C++ compilation flags for this library.
-  target_compile_options(${name} PRIVATE ${PARAM_EXTRA_CXXFLAGS})
-
   if(PARAM_PLUGIN)
     get_property(parent_dir DIRECTORY PROPERTY PARENT_DIRECTORY)
     if(EXISTS ${parent_dir})
       get_filename_component(category ${parent_dir} NAME)
-      set_target_properties(${name} PROPERTIES FOLDER "lldb plugins/${category}")
+      set_target_properties(${name} PROPERTIES FOLDER "LLDB/Plugins/${category}")
     endif()
   else()
-    set_target_properties(${name} PROPERTIES FOLDER "lldb libraries")
+    set_target_properties(${name} PROPERTIES FOLDER "LLDB/Libraries")
   endif()
 
   # If we want to export all lldb symbols (i.e LLDB_EXPORT_ALL_SYMBOLS=ON), we
@@ -182,14 +151,10 @@ endfunction(add_lldb_library)
 function(add_lldb_executable name)
   cmake_parse_arguments(ARG
     "GENERATE_INSTALL"
-    "INSTALL_PREFIX;ENTITLEMENTS"
+    "INSTALL_PREFIX"
     "LINK_LIBS;CLANG_LIBS;LINK_COMPONENTS;BUILD_RPATH;INSTALL_RPATH"
     ${ARGN}
     )
-
-  if(ARG_ENTITLEMENTS)
-    set(pass_ENTITLEMENTS ENTITLEMENTS ${ARG_ENTITLEMENTS})
-  endif()
 
   if(LLDB_NO_INSTALL_DEFAULT_RPATH)
     set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
@@ -197,18 +162,35 @@ function(add_lldb_executable name)
 
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
   add_llvm_executable(${name}
-    ${pass_ENTITLEMENTS}
     ${pass_NO_INSTALL_RPATH}
     ${ARG_UNPARSED_ARGUMENTS}
   )
 
   target_link_libraries(${name} PRIVATE ${ARG_LINK_LIBS})
+  if(WIN32)
+    list(FIND ARG_LINK_LIBS liblldb LIBLLDB_INDEX)
+    if(NOT LIBLLDB_INDEX EQUAL -1)
+      if (MSVC)
+        target_link_options(${name} PRIVATE "/DELAYLOAD:$<TARGET_FILE_NAME:liblldb>")
+        target_link_libraries(${name} PRIVATE delayimp)
+      elseif (MINGW AND LINKER_IS_LLD)
+        # LLD can delay load just by passing a --delayload flag, as long as the import
+        # library is a short type import library (which LLD and MS link.exe produce).
+        # With ld.bfd, with long import libraries (as produced by GNU binutils), one
+        # has to generate a separate delayload import library with dlltool.
+        target_link_options(${name} PRIVATE "-Wl,--delayload=$<TARGET_FILE_NAME:liblldb>")
+      elseif (DEFINED LLDB_PYTHON_DLL_RELATIVE_PATH)
+        # If liblldb can't be delayloaded, then LLDB_PYTHON_DLL_RELATIVE_PATH will not
+        # have any effect.
+        message(WARNING "liblldb is not delay loaded, LLDB_PYTHON_DLL_RELATIVE_PATH has no effect")
+      endif()
+    endif()
+  endif()
   if(CLANG_LINK_CLANG_DYLIB)
     target_link_libraries(${name} PRIVATE clang-cpp)
   else()
     target_link_libraries(${name} PRIVATE ${ARG_CLANG_LIBS})
   endif()
-  set_target_properties(${name} PROPERTIES FOLDER "lldb executables")
 
   if (ARG_BUILD_RPATH)
     set_target_properties(${name} PROPERTIES BUILD_RPATH "${ARG_BUILD_RPATH}")
@@ -260,6 +242,7 @@ function(add_lldb_tool name)
   endif()
 
   add_lldb_executable(${name} GENERATE_INSTALL ${ARG_UNPARSED_ARGUMENTS})
+  set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endfunction()
 
 # The test suite relies on finding LLDB.framework binary resources in the
@@ -383,7 +366,7 @@ endfunction()
 
 function(lldb_find_python_module module)
   set(MODULE_FOUND PY_${module}_FOUND)
-  if (DEFINED ${MODULE_FOUND})
+  if (${MODULE_FOUND})
     return()
   endif()
 
@@ -392,10 +375,10 @@ function(lldb_find_python_module module)
     ERROR_QUIET)
 
   if (status)
-    set(${MODULE_FOUND} OFF CACHE BOOL "Failed to find python module '${module}'")
+    set(${MODULE_FOUND} OFF PARENT_SCOPE)
     message(STATUS "Could NOT find Python module '${module}'")
   else()
-    set(${MODULE_FOUND} ON CACHE BOOL "Found python module '${module}'")
+    set(${MODULE_FOUND} ON PARENT_SCOPE)
     message(STATUS "Found Python module '${module}'")
   endif()
 endfunction()

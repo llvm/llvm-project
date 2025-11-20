@@ -13,9 +13,10 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_CODEVIEW_H
 #define LLVM_DEBUGINFO_CODEVIEW_CODEVIEW_H
 
+#include "llvm/Support/Compiler.h"
 #include <cinttypes>
-#include <type_traits>
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm {
@@ -51,15 +52,15 @@ enum SymbolKind : uint16_t {
 
 #define CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(Class)                            \
   inline Class operator|(Class a, Class b) {                                   \
-    return static_cast<Class>(static_cast<std::underlying_type_t<Class>>(a) |  \
-                              static_cast<std::underlying_type_t<Class>>(b));  \
+    return static_cast<Class>(llvm::to_underlying(a) |                         \
+                              llvm::to_underlying(b));                         \
   }                                                                            \
   inline Class operator&(Class a, Class b) {                                   \
-    return static_cast<Class>(static_cast<std::underlying_type_t<Class>>(a) &  \
-                              static_cast<std::underlying_type_t<Class>>(b));  \
+    return static_cast<Class>(llvm::to_underlying(a) &                         \
+                              llvm::to_underlying(b));                         \
   }                                                                            \
   inline Class operator~(Class a) {                                            \
-    return static_cast<Class>(~static_cast<std::underlying_type_t<Class>>(a)); \
+    return static_cast<Class>(~llvm::to_underlying(a));                        \
   }                                                                            \
   inline Class &operator|=(Class &a, Class b) {                                \
     a = a | b;                                                                 \
@@ -135,38 +136,16 @@ enum class CPUType : uint16_t {
   HybridX86ARM64 = 0xf7,
   ARM64EC = 0xf8,
   ARM64X = 0xf9,
+  Unknown = 0xff,
   D3D11_Shader = 0x100,
 };
 
 /// These values correspond to the CV_CFL_LANG enumeration in the Microsoft
-/// Debug Interface Access SDK
+/// Debug Interface Access SDK, and are documented here:
+/// https://learn.microsoft.com/en-us/visualstudio/debugger/debug-interface-access/cv-cfl-lang
 enum SourceLanguage : uint8_t {
-  C = 0x00,
-  Cpp = 0x01,
-  Fortran = 0x02,
-  Masm = 0x03,
-  Pascal = 0x04,
-  Basic = 0x05,
-  Cobol = 0x06,
-  Link = 0x07,
-  Cvtres = 0x08,
-  Cvtpgd = 0x09,
-  CSharp = 0x0a,
-  VB = 0x0b,
-  ILAsm = 0x0c,
-  Java = 0x0d,
-  JScript = 0x0e,
-  MSIL = 0x0f,
-  HLSL = 0x10,
-  ObjC = 0x11,
-  ObjCpp = 0x12,
-
-  Rust = 0x15,
-
-  /// The DMD & Swift compilers emit 'D' and 'S', respectively, for the CV
-  /// source language. Microsoft does not have enumerators for them yet.
-  D = 'D',
-  Swift = 'S',
+#define CV_LANGUAGE(NAME, ID) NAME = ID,
+#include "CodeViewLanguages.def"
 };
 
 /// These values correspond to the CV_call_e enumeration, and are documented
@@ -199,7 +178,8 @@ enum class CallingConvention : uint8_t {
   ClrCall = 0x16,     // clr call
   Inline =
       0x17, // Marker for routines always inlined and thus lacking a convention
-  NearVector = 0x18 // near left to right push with regs, callee pops stack
+  NearVector = 0x18, // near left to right push with regs, callee pops stack
+  Swift = 0x19,      // Swift call
 };
 
 enum class ClassOptions : uint16_t {
@@ -547,9 +527,10 @@ enum class EncodedFramePtrReg : uint8_t {
   BasePtr = 3,
 };
 
-RegisterId decodeFramePtrReg(EncodedFramePtrReg EncodedReg, CPUType CPU);
+LLVM_ABI RegisterId decodeFramePtrReg(EncodedFramePtrReg EncodedReg,
+                                      CPUType CPU);
 
-EncodedFramePtrReg encodeFramePtrReg(RegisterId Reg, CPUType CPU);
+LLVM_ABI EncodedFramePtrReg encodeFramePtrReg(RegisterId Reg, CPUType CPU);
 
 /// These values correspond to the THUNK_ORDINAL enumeration.
 enum class ThunkOrdinal : uint8_t {

@@ -8,13 +8,13 @@
     ret void
   }
 
-  define dso_local i8* @ptr_mask(i8* %in) { ret i8* undef }
+  define dso_local ptr @ptr_mask(ptr %in) { ret ptr undef }
 
   @var_local = dso_local global i8 0
-  define dso_local i8* @global_local() { ret i8* undef }
+  define dso_local ptr @global_local() { ret ptr undef }
 
   @var_got = external dso_local global i8
-  define dso_local i8* @global_got() { ret i8* undef }
+  define dso_local ptr @global_got() { ret ptr undef }
 
   define dso_local void @icmp() { ret void }
   define dso_local void @fcmp() { ret void }
@@ -31,7 +31,7 @@ legalized:       true
 regBankSelected: true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr64sp, preferred-register: '' }
+# CHECK-NEXT:  - { id: 0, class: gpr64sp, preferred-register: '', flags: [  ] }
 registers:
   - { id: 0, class: gpr }
 
@@ -105,12 +105,12 @@ legalized:       true
 regBankSelected: true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 2, class: gpr64, preferred-register: '' }
-# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 4, class: gpr64, preferred-register: '' }
-# CHECK-NEXT:  - { id: 5, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 2, class: gpr64, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 4, class: gpr64, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 5, class: gpr32, preferred-register: '', flags: [  ] }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -159,12 +159,12 @@ legalized:       true
 regBankSelected: true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 2, class: fpr64, preferred-register: '' }
-# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 4, class: gpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 5, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 2, class: fpr64, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 4, class: gpr32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 5, class: gpr32, preferred-register: '', flags: [  ] }
 registers:
   - { id: 0, class: fpr }
   - { id: 1, class: gpr }
@@ -202,10 +202,10 @@ regBankSelected: true
 tracksRegLiveness: true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
-# CHECK-NEXT:  - { id: 2, class: fpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 2, class: fpr32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '', flags: [  ] }
 registers:
   - { id: 0, class: fpr }
   - { id: 1, class: gpr }
@@ -240,16 +240,16 @@ regBankSelected: true
 tracksRegLiveness: true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 2, class: gpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 4, class: gpr64, preferred-register: '' }
-# CHECK-NEXT:  - { id: 5, class: gpr64, preferred-register: '' }
-# CHECK-NEXT:  - { id: 6, class: gpr64, preferred-register: '' }
-# CHECK-NEXT:  - { id: 7, class: gpr64, preferred-register: '' }
-# CHECK-NEXT:  - { id: 8, class: gpr64, preferred-register: '' }
-# CHECK-NEXT:  - { id: 9, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 2, class: gpr32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 4, class: gpr64, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 5, class: gpr64, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 6, class: gpr64, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 7, class: gpr64, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 8, class: gpr64, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 9, class: gpr64, preferred-register: '', flags: [  ] }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }

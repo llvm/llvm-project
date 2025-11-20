@@ -11,13 +11,19 @@
 #include "gtest/gtest.h"
 #include "TestGraph.h"
 
+#include <array>
+#include <iterator>
+#include <type_traits>
+
+#include <cstddef>
+
 using namespace llvm;
 
 namespace {
 
 // Whether we're able to compile
 TEST(PostOrderIteratorTest, Compiles) {
-  typedef SmallPtrSet<void *, 4> ExtSetTy;
+  using ExtSetTy = SmallPtrSet<void *, 4>;
 
   // Tests that template specializations are kept up to date
   void *Null = nullptr;
@@ -38,7 +44,7 @@ TEST(PostOrderIteratorTest, Compiles) {
 
 static_assert(
     std::is_convertible_v<decltype(*std::declval<po_iterator<Graph<3>>>()),
-                          typename po_iterator<Graph<3>>::reference>);
+                          po_iterator<Graph<3>>::reference>);
 
 // Test post-order and reverse post-order traversals for simple graph type.
 TEST(PostOrderIteratorTest, PostOrderAndReversePostOrderTraverrsal) {
@@ -74,5 +80,35 @@ TEST(PostOrderIteratorTest, PostOrderAndReversePostOrderTraverrsal) {
   EXPECT_EQ(5, FromIterator[3]);
   EXPECT_EQ(1, FromIterator[4]);
   EXPECT_EQ(4, FromIterator[5]);
+}
+
+// po_iterator should be (at-least) a forward-iterator
+static_assert(std::is_base_of_v<std::forward_iterator_tag,
+                                po_iterator<Graph<4>>::iterator_category>);
+
+// po_ext_iterator cannot provide multi-pass guarantee, therefore its only
+// an input-iterator
+static_assert(std::is_same_v<po_ext_iterator<Graph<4>>::iterator_category,
+                             std::input_iterator_tag>);
+
+TEST(PostOrderIteratorTest, MultiPassSafeWithInternalSet) {
+  Graph<4> G;
+  G.AddEdge(0, 1);
+  G.AddEdge(1, 2);
+  G.AddEdge(1, 3);
+
+  std::array<decltype(G)::NodeType *, 4> NodesFirstPass, NodesSecondPass;
+
+  auto B = po_begin(G), E = po_end(G);
+
+  std::size_t I = 0;
+  for (auto It = B; It != E; ++It)
+    NodesFirstPass[I++] = *It;
+
+  I = 0;
+  for (auto It = B; It != E; ++It)
+    NodesSecondPass[I++] = *It;
+
+  EXPECT_EQ(NodesFirstPass, NodesSecondPass);
 }
 }

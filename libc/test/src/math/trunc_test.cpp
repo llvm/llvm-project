@@ -10,4 +10,4 @@
 
 #include "src/math/trunc.h"
 
-LIST_TRUNC_TESTS(double, __llvm_libc::trunc)
+LIST_TRUNC_TESTS(double, LIBC_NAMESPACE::trunc)

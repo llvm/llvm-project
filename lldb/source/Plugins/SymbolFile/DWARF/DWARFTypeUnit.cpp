@@ -13,6 +13,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 void DWARFTypeUnit::Dump(Stream *s) const {
   s->Format("{0:x16}: Type Unit: length = {1:x8}, version = {2:x4}, "

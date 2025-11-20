@@ -15,24 +15,14 @@ declare void @llvm.assume(i1)
 ; operations on another array.  Important for scientific codes.
 ;
 define i32 @different_array_test(i64 %A, i64 %B) {
-; NO_ASSUME-LABEL: @different_array_test(
-; NO_ASSUME-NEXT:    [[ARRAY11:%.*]] = alloca [100 x i32], align 4
-; NO_ASSUME-NEXT:    [[ARRAY22:%.*]] = alloca [200 x i32], align 4
-; NO_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ARRAY11]], i32 4) ]
-; NO_ASSUME-NEXT:    call void @external(ptr nonnull [[ARRAY11]])
-; NO_ASSUME-NEXT:    call void @external(ptr nonnull [[ARRAY22]])
-; NO_ASSUME-NEXT:    [[POINTER2:%.*]] = getelementptr i32, ptr [[ARRAY22]], i64 [[B:%.*]]
-; NO_ASSUME-NEXT:    store i32 7, ptr [[POINTER2]], align 4
-; NO_ASSUME-NEXT:    ret i32 0
-;
-; USE_ASSUME-LABEL: @different_array_test(
-; USE_ASSUME-NEXT:    [[ARRAY11:%.*]] = alloca [100 x i32], align 4
-; USE_ASSUME-NEXT:    [[ARRAY22:%.*]] = alloca [200 x i32], align 4
-; USE_ASSUME-NEXT:    call void @external(ptr nonnull [[ARRAY11]])
-; USE_ASSUME-NEXT:    call void @external(ptr nonnull [[ARRAY22]])
-; USE_ASSUME-NEXT:    [[POINTER2:%.*]] = getelementptr i32, ptr [[ARRAY22]], i64 [[B:%.*]]
-; USE_ASSUME-NEXT:    store i32 7, ptr [[POINTER2]], align 4
-; USE_ASSUME-NEXT:    ret i32 0
+; CHECK-LABEL: @different_array_test(
+; CHECK-NEXT:    [[ARRAY11:%.*]] = alloca [100 x i32], align 4
+; CHECK-NEXT:    [[ARRAY22:%.*]] = alloca [200 x i32], align 4
+; CHECK-NEXT:    call void @external(ptr nonnull [[ARRAY11]])
+; CHECK-NEXT:    call void @external(ptr nonnull [[ARRAY22]])
+; CHECK-NEXT:    [[POINTER2:%.*]] = getelementptr i32, ptr [[ARRAY22]], i64 [[B:%.*]]
+; CHECK-NEXT:    store i32 7, ptr [[POINTER2]], align 4
+; CHECK-NEXT:    ret i32 0
 ;
   %Array1 = alloca i32, i32 100
   %Array2 = alloca i32, i32 200
@@ -59,7 +49,7 @@ define i32 @constant_array_index_test() {
 ; CHECK-LABEL: @constant_array_index_test(
 ; CHECK-NEXT:    [[ARRAY1:%.*]] = alloca [100 x i32], align 4
 ; CHECK-NEXT:    call void @external(ptr nonnull [[ARRAY1]])
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[ARRAY1]], i64 6
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAY1]], i64 24
 ; CHECK-NEXT:    store i32 1, ptr [[P2]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -80,12 +70,12 @@ define i32 @constant_array_index_test() {
 ; they cannot alias.
 define i32 @gep_distance_test(ptr %A) {
 ; NO_ASSUME-LABEL: @gep_distance_test(
-; NO_ASSUME-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
+; NO_ASSUME-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 8
 ; NO_ASSUME-NEXT:    store i32 7, ptr [[B]], align 4
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: @gep_distance_test(
-; USE_ASSUME-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
+; USE_ASSUME-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 8
 ; USE_ASSUME-NEXT:    store i32 7, ptr [[B]], align 4
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 4), "nonnull"(ptr [[A]]), "align"(ptr [[A]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
@@ -102,12 +92,14 @@ define i32 @gep_distance_test(ptr %A) {
 ; cannot alias, even if there is a variable offset between them...
 define i32 @gep_distance_test2(ptr %A, i64 %distance) {
 ; NO_ASSUME-LABEL: @gep_distance_test2(
-; NO_ASSUME-NEXT:    [[B:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[DISTANCE:%.*]], i32 1
+; NO_ASSUME-NEXT:    [[B_SPLIT:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[DISTANCE:%.*]]
+; NO_ASSUME-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[B_SPLIT]], i64 4
 ; NO_ASSUME-NEXT:    store i32 7, ptr [[B]], align 4
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: @gep_distance_test2(
-; USE_ASSUME-NEXT:    [[B:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[DISTANCE:%.*]], i32 1
+; USE_ASSUME-NEXT:    [[B_SPLIT:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[DISTANCE:%.*]]
+; USE_ASSUME-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[B_SPLIT]], i64 4
 ; USE_ASSUME-NEXT:    store i32 7, ptr [[B]], align 4
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 4), "nonnull"(ptr [[A]]), "align"(ptr [[A]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0

@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -verify=expected,ge45,ge50,lt51 -fopenmp -fno-openmp-extensions -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,lt45,lt50,lt51 -fopenmp -fno-openmp-extensions -fopenmp-version=40 -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge45,lt50,lt51 -fopenmp -fno-openmp-extensions -fopenmp-version=45 -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge45,ge50,lt51 -fopenmp -fno-openmp-extensions -fopenmp-version=50 -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge45,ge50,ge51 -fopenmp -fno-openmp-extensions -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
-
-// RUN: %clang_cc1 -verify=expected,ge45,ge50,lt51 -fopenmp-simd -fno-openmp-extensions -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -DCCODE -verify=expected,ge45,ge50,lt51 -fopenmp -fno-openmp-extensions -ferror-limit 200 -x c %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge45,ge50,lt51 -fopenmp -fno-openmp-extensions -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized -Wno-vla
+// RUN: %clang_cc1 -verify=expected,lt45,lt50,lt51 -fopenmp -fno-openmp-extensions -fopenmp-version=40 -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized -Wno-vla
+// RUN: %clang_cc1 -verify=expected,ge45,lt50,lt51 -fopenmp -fno-openmp-extensions -fopenmp-version=45 -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized -Wno-vla
+// RUN: %clang_cc1 -verify=expected,ge45,ge50,lt51 -fopenmp -fno-openmp-extensions -fopenmp-version=50 -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized -Wno-vla
+// RUN: %clang_cc1 -verify=expected,ge45,ge50,ge51 -fopenmp -fno-openmp-extensions -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized -Wno-vla
+// RUN: %clang_cc1 -verify=expected,ge45,ge50,lt51 -fopenmp-simd -fno-openmp-extensions -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized -Wno-vla
+// RUN: %clang_cc1 -DCCODE -verify=expected,ge45,ge50,lt51 -fopenmp -fno-openmp-extensions -ferror-limit 200 -x c %s -Wno-openmp-mapping -Wuninitialized -Wno-vla
+// RUN: %clang_cc1 -verify=expected,ge45,ge50,lt51,omp52 -fopenmp -fno-openmp-extensions -fopenmp-version=52 -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
 #ifdef CCODE
 void foo(int arg) {
   const int n = 0;
@@ -84,6 +84,8 @@ struct SA {
     #pragma omp target teams map(always, tofrom: c[:],f)   // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     {}
     #pragma omp target teams map(always, tofrom: c,f[:])   // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+    {}
+    #pragma omp target teams map(always tofrom: c)   // omp52-error {{missing ',' after map type modifier}}
     {}
     return;
   }

@@ -1,7 +1,7 @@
 # REQUIRES: x86
-## Test R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX GOT optimization.
+## Test R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX/R_X86_64_CODE_4_GOTPCRELX GOT optimization.
 
-# RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-unknown-linux %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t1 --no-apply-dynamic-relocs
 # RUN: llvm-readelf -S -r -x .got.plt %t1 | FileCheck --check-prefixes=CHECK,NOAPPLY %s
 # RUN: ld.lld %t.o -o %t1 --apply-dynamic-relocs
@@ -13,18 +13,18 @@
 # RUN: ld.lld --no-relax %t.o -o %t2
 # RUN: llvm-objdump --no-print-imm-hex -d %t2 | FileCheck --check-prefix=NORELAX %s
 
-## .got is removed as all GOT-generating relocations are optimized.
+## In our implementation, .got is retained even if all GOT-generating relocations are optimized.
 # CHECK:      Name              Type            Address          Off    Size   ES Flg Lk Inf Al
-# CHECK:      .iplt             PROGBITS        0000000000201210 000210 000010 00  AX  0   0 16
-# CHECK-NEXT: .got.plt          PROGBITS        0000000000202220 000220 000008 00  WA  0   0  8
+# CHECK:      .iplt             PROGBITS        00000000002012e0 0002e0 000010 00  AX  0   0 16
+# CHECK-NEXT: .got              PROGBITS        00000000002022f0 0002f0 000000 00  WA  0   0  8
 
 ## There is one R_X86_64_IRELATIVE relocations.
 # RELOC-LABEL: Relocation section '.rela.dyn' at offset {{.*}} contains 1 entry:
 # CHECK:           Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
-# CHECK:       0000000000202220  0000000000000025 R_X86_64_IRELATIVE                        201172
+# CHECK:       00000000002032f0  0000000000000025 R_X86_64_IRELATIVE                        2011e2
 # CHECK-LABEL: Hex dump of section '.got.plt':
-# NOAPPLY-NEXT:  0x00202220 00000000 00000000
-# APPLY-NEXT:    0x00202220 72112000 00000000
+# NOAPPLY-NEXT:  0x002032f0 00000000 00000000
+# APPLY-NEXT:    0x002032f0 e2112000 00000000
 
 # 0x201173 + 7 - 10 = 0x201170
 # 0x20117a + 7 - 17 = 0x201170
@@ -33,45 +33,58 @@
 # DISASM:      Disassembly of section .text:
 # DISASM-EMPTY:
 # DISASM-NEXT: <foo>:
-# DISASM-NEXT:   201170: 90 nop
+# DISASM-NEXT:   2011e0: 90 nop
 # DISASM:      <hid>:
-# DISASM-NEXT:   201171: 90 nop
+# DISASM-NEXT:   2011e1: 90 nop
 # DISASM:      <ifunc>:
-# DISASM-NEXT:   201172: c3 retq
+# DISASM-NEXT:   2011e2: c3 retq
 # DISASM:      <_start>:
 # DISASM-NEXT: leaq -10(%rip), %rax
 # DISASM-NEXT: leaq -17(%rip), %rax
 # DISASM-NEXT: leaq -23(%rip), %rax
 # DISASM-NEXT: leaq -30(%rip), %rax
-# DISASM-NEXT: movq 4234(%rip), %rax
-# DISASM-NEXT: movq 4227(%rip), %rax
+# DISASM-NEXT: movq 8426(%rip), %rax
+# DISASM-NEXT: movq 8419(%rip), %rax
 # DISASM-NEXT: leaq -52(%rip), %rax
 # DISASM-NEXT: leaq -59(%rip), %rax
 # DISASM-NEXT: leaq -65(%rip), %rax
 # DISASM-NEXT: leaq -72(%rip), %rax
-# DISASM-NEXT: movq 4192(%rip), %rax
-# DISASM-NEXT: movq 4185(%rip), %rax
-# DISASM-NEXT: callq 0x201170 <foo>
-# DISASM-NEXT: callq 0x201170 <foo>
-# DISASM-NEXT: callq 0x201171 <hid>
-# DISASM-NEXT: callq 0x201171 <hid>
-# DISASM-NEXT: callq *4155(%rip)
-# DISASM-NEXT: callq *4149(%rip)
-# DISASM-NEXT: jmp   0x201170 <foo>
+# DISASM-NEXT: movq 8384(%rip), %rax
+# DISASM-NEXT: movq 8377(%rip), %rax
+# DISASM-NEXT: callq 0x2011e0 <foo>
+# DISASM-NEXT: callq 0x2011e0 <foo>
+# DISASM-NEXT: callq 0x2011e1 <hid>
+# DISASM-NEXT: callq 0x2011e1 <hid>
+# DISASM-NEXT: callq *8347(%rip)
+# DISASM-NEXT: callq *8341(%rip)
+# DISASM-NEXT: jmp   0x2011e0 <foo>
 # DISASM-NEXT: nop
-# DISASM-NEXT: jmp   0x201170 <foo>
+# DISASM-NEXT: jmp   0x2011e0 <foo>
 # DISASM-NEXT: nop
-# DISASM-NEXT: jmp   0x201171 <hid>
+# DISASM-NEXT: jmp   0x2011e1 <hid>
 # DISASM-NEXT: nop
-# DISASM-NEXT: jmp   0x201171 <hid>
+# DISASM-NEXT: jmp   0x2011e1 <hid>
 # DISASM-NEXT: nop
-# DISASM-NEXT: jmpq  *4119(%rip)
-# DISASM-NEXT: jmpq  *4113(%rip)
+# DISASM-NEXT: jmpq  *8311(%rip)
+# DISASM-NEXT: jmpq  *8305(%rip)
+# DISASM-NEXT: leaq -167(%rip), %r16
+# DISASM-NEXT: leaq -175(%rip), %r16
+# DISASM-NEXT: leaq -182(%rip), %r16
+# DISASM-NEXT: leaq -190(%rip), %r16
+# DISASM-NEXT: movq 8265(%rip), %r16
+# DISASM-NEXT: movq 8257(%rip), %r16
+# DISASM-NEXT: leaq -215(%rip), %r16
+# DISASM-NEXT: leaq -223(%rip), %r16
+# DISASM-NEXT: leaq -230(%rip), %r16
+# DISASM-NEXT: leaq -238(%rip), %r16
+# DISASM-NEXT: movq 8217(%rip), %r16
+# DISASM-NEXT: movq 8209(%rip), %r16
 
 # NORELAX-LABEL: <_start>:
 # NORELAX-COUNT-12: movq
 # NORELAX-COUNT-6:  callq *
 # NORELAX-COUNT-6:  jmpq *
+# NORELAX-COUNT-12: movq
 
 .text
 .globl foo
@@ -120,3 +133,16 @@ _start:
  jmp *hid@GOTPCREL(%rip)
  jmp *ifunc@GOTPCREL(%rip)
  jmp *ifunc@GOTPCREL(%rip)
+
+ movq foo@GOTPCREL(%rip), %r16
+ movq foo@GOTPCREL(%rip), %r16
+ movq hid@GOTPCREL(%rip), %r16
+ movq hid@GOTPCREL(%rip), %r16
+ movq ifunc@GOTPCREL(%rip), %r16
+ movq ifunc@GOTPCREL(%rip), %r16
+ movq foo@GOTPCREL(%rip), %r16
+ movq foo@GOTPCREL(%rip), %r16
+ movq hid@GOTPCREL(%rip), %r16
+ movq hid@GOTPCREL(%rip), %r16
+ movq ifunc@GOTPCREL(%rip), %r16
+ movq ifunc@GOTPCREL(%rip), %r16

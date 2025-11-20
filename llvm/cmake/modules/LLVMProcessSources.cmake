@@ -1,6 +1,3 @@
-include(AddFileDependencies)
-include(CMakeParseArguments)
-
 function(llvm_replace_compiler_option var old new)
   # Replaces a compiler option or switch `old' in `var' by `new'.
   # If `old' is not in `var', appends `new' to `var'.
@@ -113,7 +110,12 @@ function(llvm_check_source_file_list)
           else()
               set(fn_relative "${fn}")
           endif()
-          message(SEND_ERROR "Found unknown source file ${fn_relative}
+          message(SEND_ERROR "Found erroneous configuration for source file ${fn_relative}
+LLVM's build system enforces that all source files are added to a build target, \
+that exactly one build target exists in each directory, \
+and that this target lists all files in that directory. \
+If you want multiple targets in the same directory, add \
+PARTIAL_SOURCES_INTENDED to the target specification, though it is discouraged.
 Please update ${CMAKE_CURRENT_LIST_FILE}\n")
         endif()
       endif()

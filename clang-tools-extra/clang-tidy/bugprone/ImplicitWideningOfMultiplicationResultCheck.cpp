@@ -1,4 +1,4 @@
-//===--- ImplicitWideningOfMultiplicationResultCheck.cpp - clang-tidy -----===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,19 +9,20 @@
 #include "ImplicitWideningOfMultiplicationResultCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchersMacros.h"
+#include "clang/Lex/Lexer.h"
 #include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
+namespace clang::tidy::bugprone {
+
 namespace {
 AST_MATCHER(ImplicitCastExpr, isPartOfExplicitCast) {
   return Node.isPartOfExplicitCast();
 }
+AST_MATCHER(Expr, containsErrors) { return Node.containsErrors(); }
 } // namespace
-} // namespace clang
-
-namespace clang::tidy::bugprone {
 
 static const Expr *getLHSOfMulBinOp(const Expr *E) {
   assert(E == E->IgnoreParens() && "Already skipped all parens!");
@@ -41,6 +42,7 @@ ImplicitWideningOfMultiplicationResultCheck::
       UseCXXStaticCastsInCppSources(
           Options.get("UseCXXStaticCastsInCppSources", true)),
       UseCXXHeadersInCppSources(Options.get("UseCXXHeadersInCppSources", true)),
+      IgnoreConstantIntExpr(Options.get("IgnoreConstantIntExpr", false)),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()) {}
@@ -55,6 +57,7 @@ void ImplicitWideningOfMultiplicationResultCheck::storeOptions(
   Options.store(Opts, "UseCXXStaticCastsInCppSources",
                 UseCXXStaticCastsInCppSources);
   Options.store(Opts, "UseCXXHeadersInCppSources", UseCXXHeadersInCppSources);
+  Options.store(Opts, "IgnoreConstantIntExpr", IgnoreConstantIntExpr);
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
@@ -68,20 +71,33 @@ ImplicitWideningOfMultiplicationResultCheck::includeStddefHeader(
 
 void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
     const ImplicitCastExpr *ICE) {
-  ASTContext *Context = Result->Context;
+  const ASTContext *Context = Result->Context;
 
   const Expr *E = ICE->getSubExpr()->IgnoreParens();
-  QualType Ty = ICE->getType();
-  QualType ETy = E->getType();
+  const QualType Ty = ICE->getType();
+  const QualType ETy = E->getType();
 
   assert(!ETy->isDependentType() && !Ty->isDependentType() &&
          "Don't expect to ever get here in template Context.");
 
   // This must be a widening cast. Else we do not care.
-  unsigned SrcWidth = Context->getIntWidth(ETy);
-  unsigned TgtWidth = Context->getIntWidth(Ty);
+  const unsigned SrcWidth = Context->getIntWidth(ETy);
+  const unsigned TgtWidth = Context->getIntWidth(Ty);
   if (TgtWidth <= SrcWidth)
     return;
+
+  // Is the expression a compile-time constexpr that we know can fit in the
+  // source type?
+  if (IgnoreConstantIntExpr && ETy->isIntegerType() &&
+      !ETy->isUnsignedIntegerType()) {
+    if (const auto ConstExprResult = E->getIntegerConstantExpr(*Context)) {
+      const auto TypeSize = Context->getTypeSize(ETy);
+      const llvm::APSInt WidenedResult = ConstExprResult->extOrTrunc(TypeSize);
+      if (WidenedResult <= llvm::APSInt::getMaxValue(TypeSize, false) &&
+          WidenedResult >= llvm::APSInt::getMinValue(TypeSize, false))
+        return;
+    }
+  }
 
   // Does the index expression look like it might be unintentionally computed
   // in a narrower-than-wanted type?
@@ -99,15 +115,16 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
                      "make conversion explicit to silence this warning",
                      DiagnosticIDs::Note)
                 << E->getSourceRange();
-
+    const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+        E->getEndLoc(), 0, *Result->SourceManager, getLangOpts());
     if (ShouldUseCXXStaticCast)
       Diag << FixItHint::CreateInsertion(
                   E->getBeginLoc(), "static_cast<" + Ty.getAsString() + ">(")
-           << FixItHint::CreateInsertion(E->getEndLoc(), ")");
+           << FixItHint::CreateInsertion(EndLoc, ")");
     else
       Diag << FixItHint::CreateInsertion(E->getBeginLoc(),
                                          "(" + Ty.getAsString() + ")(")
-           << FixItHint::CreateInsertion(E->getEndLoc(), ")");
+           << FixItHint::CreateInsertion(EndLoc, ")");
     Diag << includeStddefHeader(E->getBeginLoc());
   }
 
@@ -137,7 +154,11 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
       Diag << FixItHint::CreateInsertion(LHS->getBeginLoc(),
                                          "static_cast<" +
                                              WideExprTy.getAsString() + ">(")
-           << FixItHint::CreateInsertion(LHS->getEndLoc(), ")");
+           << FixItHint::CreateInsertion(
+                  Lexer::getLocForEndOfToken(LHS->getEndLoc(), 0,
+                                             *Result->SourceManager,
+                                             getLangOpts()),
+                  ")");
     else
       Diag << FixItHint::CreateInsertion(LHS->getBeginLoc(),
                                          "(" + WideExprTy.getAsString() + ")");
@@ -147,7 +168,7 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
 
 void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
     const Expr *E) {
-  ASTContext *Context = Result->Context;
+  const ASTContext *Context = Result->Context;
 
   // We are looking for a pointer offset operation,
   // with one hand being a pointer, and another one being an offset.
@@ -170,19 +191,20 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
 
   IndexExpr = IndexExpr->IgnoreParens();
 
-  QualType IndexExprType = IndexExpr->getType();
+  const QualType IndexExprType = IndexExpr->getType();
 
   // If the index expression's type is not known (i.e. we are in a template),
   // we can't do anything here.
   if (IndexExprType->isDependentType())
     return;
 
-  QualType SSizeTy = Context->getPointerDiffType();
-  QualType USizeTy = Context->getSizeType();
-  QualType SizeTy = IndexExprType->isSignedIntegerType() ? SSizeTy : USizeTy;
+  const QualType SSizeTy = Context->getPointerDiffType();
+  const QualType USizeTy = Context->getSizeType();
+  const QualType SizeTy =
+      IndexExprType->isSignedIntegerType() ? SSizeTy : USizeTy;
   // FIXME: is there a way to actually get the QualType for size_t/ptrdiff_t?
   // Note that SizeTy.getAsString() will be unsigned long/..., NOT size_t!
-  StringRef TyAsString =
+  const StringRef TyAsString =
       IndexExprType->isSignedIntegerType() ? "ptrdiff_t" : "size_t";
 
   // So, is size_t actually wider than the result of the multiplication?
@@ -206,16 +228,17 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
                      "make conversion explicit to silence this warning",
                      DiagnosticIDs::Note)
                 << IndexExpr->getSourceRange();
-
+    const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+        IndexExpr->getEndLoc(), 0, *Result->SourceManager, getLangOpts());
     if (ShouldUseCXXStaticCast)
       Diag << FixItHint::CreateInsertion(
                   IndexExpr->getBeginLoc(),
                   (Twine("static_cast<") + TyAsString + ">(").str())
-           << FixItHint::CreateInsertion(IndexExpr->getEndLoc(), ")");
+           << FixItHint::CreateInsertion(EndLoc, ")");
     else
       Diag << FixItHint::CreateInsertion(IndexExpr->getBeginLoc(),
                                          (Twine("(") + TyAsString + ")(").str())
-           << FixItHint::CreateInsertion(IndexExpr->getEndLoc(), ")");
+           << FixItHint::CreateInsertion(EndLoc, ")");
     Diag << includeStddefHeader(IndexExpr->getBeginLoc());
   }
 
@@ -229,7 +252,11 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
       Diag << FixItHint::CreateInsertion(
                   LHS->getBeginLoc(),
                   (Twine("static_cast<") + TyAsString + ">(").str())
-           << FixItHint::CreateInsertion(LHS->getEndLoc(), ")");
+           << FixItHint::CreateInsertion(
+                  Lexer::getLocForEndOfToken(IndexExpr->getEndLoc(), 0,
+                                             *Result->SourceManager,
+                                             getLangOpts()),
+                  ")");
     else
       Diag << FixItHint::CreateInsertion(LHS->getBeginLoc(),
                                          (Twine("(") + TyAsString + ")").str());
@@ -239,7 +266,8 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
 
 void ImplicitWideningOfMultiplicationResultCheck::registerMatchers(
     MatchFinder *Finder) {
-  Finder->addMatcher(implicitCastExpr(unless(anyOf(isInTemplateInstantiation(),
+  Finder->addMatcher(implicitCastExpr(unless(anyOf(containsErrors(),
+                                                   isInTemplateInstantiation(),
                                                    isPartOfExplicitCast())),
                                       hasCastKind(CK_IntegralCast))
                          .bind("x"),

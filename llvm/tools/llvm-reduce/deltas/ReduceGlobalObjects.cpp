@@ -13,23 +13,27 @@ using namespace llvm;
 
 static bool shouldReduceSection(GlobalObject &GO) { return GO.hasSection(); }
 
-static bool shouldReduceAlign(GlobalObject &GO) {
-  return GO.getAlign().has_value();
+static bool shouldReduceAlign(GlobalVariable *GV) {
+  return GV->getAlign().has_value();
 }
+
+static bool shouldReduceAlign(Function *F) { return F->getAlign().has_value(); }
 
 static bool shouldReduceComdat(GlobalObject &GO) { return GO.hasComdat(); }
 
-static void reduceGOs(Oracle &O, ReducerWorkItem &Program) {
+void llvm::reduceGlobalObjectsDeltaPass(Oracle &O, ReducerWorkItem &Program) {
   for (auto &GO : Program.getModule().global_objects()) {
     if (shouldReduceSection(GO) && !O.shouldKeep())
       GO.setSection("");
-    if (shouldReduceAlign(GO) && !O.shouldKeep())
-      GO.setAlignment(MaybeAlign());
+    if (auto *GV = dyn_cast<GlobalVariable>(&GO)) {
+      if (shouldReduceAlign(GV) && !O.shouldKeep())
+        GV->setAlignment(MaybeAlign());
+    }
+    if (auto *F = dyn_cast<Function>(&GO)) {
+      if (shouldReduceAlign(F) && !O.shouldKeep())
+        F->setAlignment(MaybeAlign());
+    }
     if (shouldReduceComdat(GO) && !O.shouldKeep())
       GO.setComdat(nullptr);
   }
-}
-
-void llvm::reduceGlobalObjectsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceGOs, "Reducing GlobalObjects");
 }

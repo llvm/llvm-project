@@ -121,8 +121,6 @@ private:
   DenseMap<const BasicBlock *, SmallVector<std::pair<unsigned, Marker>, 4>>
       BBMarkers;
 
-  bool HasUnknownLifetimeStartOrEnd = false;
-
   void dumpAllocas() const;
   void dumpBlockLiveness() const;
   void dumpLiveRanges() const;
@@ -190,6 +188,7 @@ public:
   StackLifetimePrinterPass(raw_ostream &OS, StackLifetime::LivenessType Type)
       : Type(Type), OS(OS) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 };

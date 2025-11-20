@@ -48,9 +48,11 @@ add_clang_library(clangFrontend
   intrinsics_gen
 
   LINK_LIBS
+  clangAPINotes
   clangAST
   clangBasic
   clangDriver
+  clangOptions
   clangEdit
   clangLex
   clangParse

@@ -38,7 +38,6 @@ class DynamicType;
 class ExtensibleDialect;
 class MLIRContext;
 class OptionalParseResult;
-class ParseResult;
 
 namespace detail {
 struct DynamicAttrStorage;
@@ -150,7 +149,7 @@ class IsDynamicAttr : public TraitBase<ConcreteType, IsDynamicAttr> {};
 /// A dynamic attribute instance. This is an attribute whose definition is
 /// defined at runtime.
 /// It is possible to check if an attribute is a dynamic attribute using
-/// `my_attr.isa<DynamicAttr>()`, and getting the attribute definition of a
+/// `isa<DynamicAttr>(myAttr)`, and getting the attribute definition of a
 /// dynamic attribute using the `DynamicAttr::getAttrDef` method.
 /// All dynamic attributes have the same storage, which is an array of
 /// attributes.
@@ -307,7 +306,7 @@ class IsDynamicType : public TypeTrait::TraitBase<ConcreteType, IsDynamicType> {
 /// A dynamic type instance. This is a type whose definition is defined at
 /// runtime.
 /// It is possible to check if a type is a dynamic type using
-/// `my_type.isa<DynamicType>()`, and getting the type definition of a dynamic
+/// `isa<DynamicType>(myType)`, and getting the type definition of a dynamic
 /// type using the `DynamicType::getTypeDef` method.
 /// All dynamic types have the same storage, which is an array of attributes.
 class DynamicType
@@ -476,7 +475,7 @@ public:
   void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {}
   LogicalResult
   verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
-                      function_ref<InFlightDiagnostic()> getDiag) final {
+                      function_ref<InFlightDiagnostic()> emitError) final {
     return success();
   }
   int getOpPropertyByteSize() final { return 0; }
@@ -489,8 +488,8 @@ public:
   LogicalResult
   setPropertiesFromAttr(OperationName opName, OpaqueProperties properties,
                         Attribute attr,
-                        function_ref<InFlightDiagnostic &()> getDiag) final {
-    getDiag() << "extensible Dialects don't support properties";
+                        function_ref<InFlightDiagnostic()> emitError) final {
+    emitError() << "extensible Dialects don't support properties";
     return failure();
   }
   Attribute getPropertiesAsAttr(Operation *op) final { return {}; }

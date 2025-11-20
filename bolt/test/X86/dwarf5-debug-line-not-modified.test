@@ -7,7 +7,7 @@
 # RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks that BOLT generates correct debug_line_str when one of CU contributions is not modified.
+## This test checks that BOLT generates correct debug_line_str when one of CU contributions is not modified.
 
 # POSTCHECK: version: 5
 # POSTCHECK: include_directories[  0] =  .debug_line_str[{{.*}}] = "/test"

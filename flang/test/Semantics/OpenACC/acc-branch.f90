@@ -1,8 +1,8 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc -pedantic
 
 ! Check OpenACC restruction in branch in and out of some construct
 !
-program openacc_clause_validity
+subroutine openacc_clause_validity
 
   implicit none
 
@@ -13,16 +13,37 @@ program openacc_clause_validity
   !$acc parallel
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     !ERROR: RETURN statement is not allowed in a PARALLEL construct
     return
   end do
   !$acc end parallel
 
+  !$acc parallel loop
+  do i = 1, N
+    a(i) = 3.14d0
+    !ERROR: RETURN statement is not allowed in a PARALLEL LOOP construct
+    return
+  end do
+
+  !$acc serial loop
+  do i = 1, N
+    a(i) = 3.14d0
+    !ERROR: RETURN statement is not allowed in a SERIAL LOOP construct
+    return
+  end do
+
+  !$acc kernels loop
+  do i = 1, N
+    a(i) = 3.14d0
+    !ERROR: RETURN statement is not allowed in a KERNELS LOOP construct
+    return
+  end do
+
   !$acc parallel
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
       exit
     end if
@@ -53,14 +74,14 @@ program openacc_clause_validity
   ! Exit branches out of parallel construct, attached to an OpenACC parallel construct.
   thisblk: BLOCK
     fortname: if (.true.) then
-      !PORTABILITY: The construct name 'name1' should be distinct at the subprogram level
+      !PORTABILITY: The construct name 'name1' should be distinct at the subprogram level [-Wbenign-name-clash]
       name1: do k = 1, N
         !$acc parallel
         !ERROR: EXIT to construct 'fortname' outside of PARALLEL construct is not allowed
         exit fortname
         !$acc loop
           do i = 1, N
-            a(i) = 3.14
+            a(i) = 3.14d0
             if(i == N-1) THEN
               !ERROR: EXIT to construct 'name1' outside of PARALLEL construct is not allowed
               exit name1
@@ -68,7 +89,7 @@ program openacc_clause_validity
           end do
 
           loop2: do i = 1, N
-            a(i) = 3.33
+            a(i) = 3.33d0
             !ERROR: EXIT to construct 'thisblk' outside of PARALLEL construct is not allowed
             exit thisblk
           end do loop2
@@ -81,7 +102,7 @@ program openacc_clause_validity
   !$acc parallel
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     ifname: if (i == 2) then
       ! This is allowed.
       exit ifname
@@ -92,7 +113,7 @@ program openacc_clause_validity
   !$acc parallel
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
       stop 999 ! no error
     end if
@@ -101,7 +122,7 @@ program openacc_clause_validity
 
   !$acc kernels
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     !ERROR: RETURN statement is not allowed in a KERNELS construct
     return
   end do
@@ -109,7 +130,7 @@ program openacc_clause_validity
 
   !$acc kernels
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
       exit
     end if
@@ -118,7 +139,7 @@ program openacc_clause_validity
 
   !$acc kernels
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
       stop 999 ! no error
     end if
@@ -127,7 +148,7 @@ program openacc_clause_validity
 
   !$acc serial
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     !ERROR: RETURN statement is not allowed in a SERIAL construct
     return
   end do
@@ -135,7 +156,7 @@ program openacc_clause_validity
 
   !$acc serial
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
       exit
     end if
@@ -147,7 +168,7 @@ program openacc_clause_validity
   do i = 1, N
     ifname: if (.true.) then
       print *, "LGTM"
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
         !ERROR: EXIT to construct 'name2' outside of SERIAL construct is not allowed
         exit name2
@@ -160,7 +181,7 @@ program openacc_clause_validity
 
   !$acc serial
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
     if(i == N-1) THEN
       stop 999 ! no error
     end if
@@ -175,4 +196,4 @@ program openacc_clause_validity
 
   !$acc end data
 
-end program openacc_clause_validity
+end subroutine openacc_clause_validity

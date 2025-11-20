@@ -18,6 +18,7 @@ namespace mlir {
 class LoopLikeOpInterface;
 class Operation;
 class Region;
+class RewriterBase;
 class Value;
 
 /// Given a list of regions, perform loop-invariant code motion. An operation is
@@ -70,6 +71,46 @@ size_t moveLoopInvariantCode(
 /// Move side-effect free loop invariant code out of a loop-like op using
 /// methods provided by the interface.
 size_t moveLoopInvariantCode(LoopLikeOpInterface loopLike);
+
+/// Hoist loop-invariant tensor subsets (subset extraction and subset insertion
+/// ops) from loop-like ops. Extraction ops are moved before the loop. Insertion
+/// ops are moved after the loop. The loop body operates on newly added region
+/// iter_args (one per extraction-insertion pair).
+///
+/// A subset extraction op (`SubsetExtractionOpInterface`) extracts from a
+/// tensor value at a subset. The result of the op may have an arbitrary type,
+/// i.e., not necessarily a tensor type. Example: "tensor.extract_slice".
+///
+/// A subset insertion op  (`SubsetInsertionOpInterface`) inserts into a tensor
+/// value ("destination") at a subset. Example: "tensor.insert_slice".
+///
+/// Matching extraction-insertion subset ops can be hoisted from a loop if there
+/// are no other ops within the loop that operate on the same or on an
+/// overlapping subset. In particular, non-subset ops can prevent hoisting
+/// because the analysis does not know what subset they operate on.
+///
+/// Example:
+/// ```
+/// %r = scf.for ... iter_args(%t = %a) -> (tensor<?xf32>) {
+///   %0 = tensor.extract_slice %t[0][5][1] : tensor<?xf32> to tensor<5xf32>
+///   %1 = "test.foo"(%0) : (tensor<5xf32>) -> (tensor<5xf32>)
+///   %2 = tensor.insert_slice %1 into %t[0][5][1]
+///       : tensor<5xf32> into tensor<?xf32>
+///   scf.yield %2 : tensor<?xf32>
+/// }
+/// ```
+/// Is rewritten to:
+/// ```
+/// %0 = tensor.extract_slice %a[0][5][1] : tensor<?xf32> to tensor<5xf32>
+/// %new_loop:2 = scf.for ... iter_args(%t = %a, %h = %0) -> (tensor<?xf32>) {
+///   %1 = "test.foo"(%h) : (tensor<5xf32>) -> (tensor<5xf32>)
+///   scf.yield %t, %2 : tensor<?xf32>, tensor<5xf32>
+/// }
+/// %r = tensor.insert_slice %new_loop#1 into %new_loop#0
+///     : tensor<5xf32> into tensor<?xf32>
+/// ```
+LoopLikeOpInterface hoistLoopInvariantSubsets(RewriterBase &rewriter,
+                                              LoopLikeOpInterface loopLike);
 
 } // end namespace mlir
 

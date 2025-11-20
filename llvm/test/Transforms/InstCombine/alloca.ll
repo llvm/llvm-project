@@ -41,7 +41,7 @@ define void @test() {
   call void (...) @use( ptr %Z )
   %size = load i32, ptr @int
   %A = alloca {{}}, i32 %size
-  call void (...) @use( {{}}* %A )
+  call void (...) @use( ptr %A )
   ret void
 }
 
@@ -246,5 +246,16 @@ define void @test11() {
 entry:
   %y = alloca i32
   call void (...) @use(ptr nonnull @int) [ "blah"(ptr %y) ]
+  ret void
+}
+
+define void @test_inalloca_with_element_count(ptr %a) {
+; ALL-LABEL: @test_inalloca_with_element_count(
+; ALL-NEXT:    [[ALLOCA1:%.*]] = alloca inalloca [10 x %struct_type], align 4
+; ALL-NEXT:    call void @test9_aux(ptr nonnull inalloca([[STRUCT_TYPE:%.*]]) [[ALLOCA1]])
+; ALL-NEXT:    ret void
+;
+  %alloca = alloca inalloca %struct_type, i32 10, align 4
+  call void @test9_aux(ptr inalloca(%struct_type) %alloca)
   ret void
 }

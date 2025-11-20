@@ -9,12 +9,14 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_TRUNCATE_H
 #define LLVM_LIBC_SRC_UNISTD_TRUNCATE_H
 
-#include <unistd.h>
+#include "hdr/types/off_t.h"
+#include "hdr/unistd_macros.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int truncate(const char *, off_t);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_TRUNCATE_H

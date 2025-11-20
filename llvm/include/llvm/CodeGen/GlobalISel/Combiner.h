@@ -15,13 +15,13 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_COMBINER_H
 #define LLVM_CODEGEN_GLOBALISEL_COMBINER_H
 
+#include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
 namespace llvm {
 class MachineRegisterInfo;
-struct CombinerInfo;
 class GISelCSEInfo;
 class TargetPassConfig;
 class MachineFunction;
@@ -33,8 +33,12 @@ class MachineIRBuilder;
 /// TODO: Is it worth making this module-wide?
 class Combiner : public GIMatchTableExecutor {
 private:
+  using WorkListTy = GISelWorkList<512>;
+
   class WorkListMaintainer;
-  GISelWorkList<512> WorkList;
+  template <CombinerInfo::ObserverLevel Lvl> class WorkListMaintainerImpl;
+
+  WorkListTy WorkList;
 
   // We have a little hack here where keep the owned pointers private, and only
   // expose a reference. This has two purposes:
@@ -48,13 +52,15 @@ private:
 
   bool HasSetupMF = false;
 
+  static bool tryDCE(MachineInstr &MI, MachineRegisterInfo &MRI);
+
 public:
   /// If CSEInfo is not null, then the Combiner will use CSEInfo as the observer
   /// and also create a CSEMIRBuilder. Pass nullptr if CSE is not needed.
   Combiner(MachineFunction &MF, CombinerInfo &CInfo,
-           const TargetPassConfig *TPC, GISelKnownBits *KB,
+           const TargetPassConfig *TPC, GISelValueTracking *VT,
            GISelCSEInfo *CSEInfo = nullptr);
-  virtual ~Combiner();
+  ~Combiner() override;
 
   virtual bool tryCombineAll(MachineInstr &I) const = 0;
 
@@ -66,7 +72,7 @@ protected:
   MachineIRBuilder &B;
   MachineFunction &MF;
   MachineRegisterInfo &MRI;
-  GISelKnownBits *KB;
+  GISelValueTracking *VT;
 
   const TargetPassConfig *TPC;
   GISelCSEInfo *CSEInfo;

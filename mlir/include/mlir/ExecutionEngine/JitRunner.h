@@ -24,6 +24,7 @@
 namespace llvm {
 class Module;
 class LLVMContext;
+struct LogicalResult;
 
 namespace orc {
 class MangleAndInterner;
@@ -34,7 +35,6 @@ namespace mlir {
 
 class DialectRegistry;
 class Operation;
-struct LogicalResult;
 
 /// JitRunner command line options used by JitRunnerConfig methods
 struct JitRunnerOptions {
@@ -48,8 +48,8 @@ struct JitRunnerOptions {
 struct JitRunnerConfig {
   /// MLIR transformer applied after parsing the input into MLIR IR and before
   /// passing the MLIR IR to the ExecutionEngine.
-  llvm::function_ref<LogicalResult(mlir::Operation *,
-                                   JitRunnerOptions &options)>
+  llvm::function_ref<llvm::LogicalResult(mlir::Operation *,
+                                         JitRunnerOptions &options)>
       mlirTransformer = nullptr;
 
   /// A custom function that is passed to ExecutionEngine. It processes MLIR and

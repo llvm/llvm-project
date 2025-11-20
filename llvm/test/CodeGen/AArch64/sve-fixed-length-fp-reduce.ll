@@ -55,11 +55,11 @@ define half @fadda_v32f16(half %start, ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fadda_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    // kill: def $h0 killed $h0 def $z0
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
+; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    fadda h0, p0, h0, z1.h
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
-; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    fadda h0, p0, h0, z2.h
 ; VBITS_GE_256-NEXT:    fadda h0, p0, h0, z1.h
 ; VBITS_GE_256-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
@@ -151,11 +151,11 @@ define float @fadda_v16f32(float %start, ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fadda_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    // kill: def $s0 killed $s0 def $z0
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
+; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    fadda s0, p0, s0, z1.s
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    fadda s0, p0, s0, z2.s
 ; VBITS_GE_256-NEXT:    fadda s0, p0, s0, z1.s
 ; VBITS_GE_256-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
@@ -243,11 +243,11 @@ define double @fadda_v8f64(double %start, ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fadda_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    // kill: def $d0 killed $d0 def $z0
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    fadda d0, p0, d0, z1.d
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    fadda d0, p0, d0, z2.d
 ; VBITS_GE_256-NEXT:    fadda d0, p0, d0, z1.d
 ; VBITS_GE_256-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; VBITS_GE_256-NEXT:    ret

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
+#include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -48,8 +49,7 @@ Error release(MemoryMapper &M, const std::vector<ExecutorAddr> &Reservations) {
 }
 
 // A basic function to be used as both initializer/deinitializer
-orc::shared::CWrapperFunctionResult incrementWrapper(const char *ArgData,
-                                                     size_t ArgSize) {
+CWrapperFunctionResult incrementWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr A) -> Error {
@@ -67,6 +67,9 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
   {
     std::unique_ptr<MemoryMapper> Mapper =
         cantFail(InProcessMemoryMapper::Create());
+    jitlink::LinkGraph G("G", std::make_shared<SymbolStringPool>(),
+                         Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+                         jitlink::getGenericEdgeKindName);
 
     // We will do two separate allocations
     auto PageSize = Mapper->getPageSize();
@@ -81,8 +84,8 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
 
     {
       // Provide working memory
-      char *WA1 = Mapper->prepare(Mem1->Start, HW.size() + 1);
-      std::strcpy(static_cast<char *>(WA1), HW.c_str());
+      char *WA1 = Mapper->prepare(G, Mem1->Start, HW.size() + 1);
+      std::strcpy(WA1, HW.c_str());
     }
 
     // A structure to be passed to initialize
@@ -106,8 +109,8 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
     }
 
     {
-      char *WA2 = Mapper->prepare(Mem1->Start + PageSize, HW.size() + 1);
-      std::strcpy(static_cast<char *>(WA2), HW.c_str());
+      char *WA2 = Mapper->prepare(G, Mem1->Start + PageSize, HW.size() + 1);
+      std::strcpy(WA2, HW.c_str());
     }
 
     MemoryMapper::AllocInfo Alloc2;
@@ -159,8 +162,8 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
       auto Mem2 = reserve(*Mapper, PageSize);
       EXPECT_THAT_ERROR(Mem2.takeError(), Succeeded());
 
-      char *WA = Mapper->prepare(Mem2->Start, HW.size() + 1);
-      std::strcpy(static_cast<char *>(WA), HW.c_str());
+      char *WA = Mapper->prepare(G, Mem2->Start, HW.size() + 1);
+      std::strcpy(WA, HW.c_str());
 
       MemoryMapper::AllocInfo Alloc3;
       {

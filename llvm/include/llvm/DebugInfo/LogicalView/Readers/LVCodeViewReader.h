@@ -58,7 +58,7 @@ class LVSymbolVisitorDelegate;
 
 using LVNames = SmallVector<StringRef, 16>;
 
-// The ELF reader uses the DWARF constants to create the logical elements.
+// The DWARF reader uses the DWARF constants to create the logical elements.
 // The DW_TAG_* and DW_AT_* are used to select the logical object and to
 // set specific attributes, such as name, type, etc.
 // As the CodeView constants are different to the DWARF constants, the
@@ -200,7 +200,7 @@ public:
         Input(&Pdb), ExePath(ExePath), LogicalVisitor(this, W, Input) {}
   LVCodeViewReader(const LVCodeViewReader &) = delete;
   LVCodeViewReader &operator=(const LVCodeViewReader &) = delete;
-  ~LVCodeViewReader() = default;
+  ~LVCodeViewReader() override = default;
 
   void getLinkageName(const llvm::object::coff_section *CoffSection,
                       uint32_t RelocOffset, uint32_t Offset,

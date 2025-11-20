@@ -16,15 +16,15 @@ entry:
   %arrayidx.us.i117.i = getelementptr inbounds i32, ptr %res, i32 %idx
   store i32 0, ptr %arrayidx.us.i117.i, align 4
   %mul.us.i118.i = mul i32 %idx, %N
-  %inc11.us.i.i = or i32 %idx, 1
+  %inc11.us.i.i = or disjoint i32 %idx, 1
   %arrayidx.us.i117.1.i = getelementptr inbounds i32, ptr %res, i32 %inc11.us.i.i
   store i32 0, ptr %arrayidx.us.i117.1.i, align 4
   %mul.us.i118.1.i = mul i32 %inc11.us.i.i, %N
-  %inc11.us.i.1.i = or i32 %idx, 2
+  %inc11.us.i.1.i = or disjoint i32 %idx, 2
   %arrayidx.us.i117.2.i = getelementptr inbounds i32, ptr %res, i32 %inc11.us.i.1.i
   store i32 0, ptr %arrayidx.us.i117.2.i, align 4
   %mul.us.i118.2.i = mul i32 %inc11.us.i.1.i, %N
-  %inc11.us.i.2.i = or i32 %idx, 3
+  %inc11.us.i.2.i = or disjoint i32 %idx, 3
   %arrayidx.us.i117.3.i = getelementptr inbounds i32, ptr %res, i32 %inc11.us.i.2.i
   store i32 0, ptr %arrayidx.us.i117.3.i, align 4
   %mul.us.i118.3.i = mul i32 %inc11.us.i.2.i, %N
@@ -63,7 +63,7 @@ for.body:
   %conv6.us.i.i = sext i16 %A8 to i32
   %mul7.us.i.i = mul nsw i32 %conv6.us.i.i, %conv.us.i.i
   %add9.us.i.i = add nsw i32 %mul7.us.i.i, %A3
-  %inc.us.i.i = or i32 %j.026.us.i.i, 1
+  %inc.us.i.i = or disjoint i32 %j.026.us.i.i, 1
   %add.us.i.1.i = add i32 %j.026.us.i.i, %mul.us.i118.1.i
   %arrayidx4.us.i.1.i = getelementptr inbounds i16, ptr %A, i32 %add.us.i.1.i
   %A9 = load i16, ptr %arrayidx4.us.i.1.i, align 2
@@ -73,7 +73,7 @@ for.body:
   %conv6.us.i.1.i = sext i16 %B0 to i32
   %mul7.us.i.1.i = mul nsw i32 %conv6.us.i.1.i, %conv.us.i.1.i
   %add9.us.i.1.i = add nsw i32 %mul7.us.i.1.i, %A4
-  %inc.us.i.1.i = or i32 %j.026.us.i.i, 1
+  %inc.us.i.1.i = or disjoint i32 %j.026.us.i.i, 1
   %add.us.i.2.i = add i32 %j.026.us.i.i, %mul.us.i118.2.i
   %arrayidx4.us.i.2.i = getelementptr inbounds i16, ptr %A, i32 %add.us.i.2.i
   %B1 = load i16, ptr %arrayidx4.us.i.2.i, align 2
@@ -83,7 +83,7 @@ for.body:
   %conv6.us.i.2.i = sext i16 %B2 to i32
   %mul7.us.i.2.i = mul nsw i32 %conv6.us.i.2.i, %conv.us.i.2.i
   %add9.us.i.2.i = add nsw i32 %mul7.us.i.2.i, %A5
-  %inc.us.i.2.i = or i32 %j.026.us.i.i, 1
+  %inc.us.i.2.i = or disjoint i32 %j.026.us.i.i, 1
   %add.us.i.3.i = add i32 %j.026.us.i.i, %mul.us.i118.3.i
   %arrayidx4.us.i.3.i = getelementptr inbounds i16, ptr %A, i32 %add.us.i.3.i
   %B3 = load i16, ptr %arrayidx4.us.i.3.i, align 2
@@ -93,7 +93,7 @@ for.body:
   %conv6.us.i.3.i = sext i16 %B4 to i32
   %mul7.us.i.3.i = mul nsw i32 %conv6.us.i.3.i, %conv.us.i.3.i
   %add9.us.i.3.i = add nsw i32 %mul7.us.i.3.i, %A6
-  %inc.us.i.3.i = or i32 %j.026.us.i.i, 1
+  %inc.us.i.3.i = or disjoint i32 %j.026.us.i.i, 1
   %add.us.i.1337.i = add i32 %inc.us.i.i, %mul.us.i118.i
   %arrayidx4.us.i.1338.i = getelementptr inbounds i16, ptr %A, i32 %add.us.i.1337.i
   %B5 = load i16, ptr %arrayidx4.us.i.1338.i, align 2
@@ -103,7 +103,7 @@ for.body:
   %conv6.us.i.1341.i = sext i16 %B6 to i32
   %mul7.us.i.1342.i = mul nsw i32 %conv6.us.i.1341.i, %conv.us.i.1339.i
   %add9.us.i.1343.i = add nsw i32 %mul7.us.i.1342.i, %add9.us.i.i
-  %inc.us.i.1344.i = or i32 %j.026.us.i.i, 2
+  %inc.us.i.1344.i = or disjoint i32 %j.026.us.i.i, 2
   %add.us.i.1.1.i = add i32 %inc.us.i.1.i, %mul.us.i118.1.i
   %arrayidx4.us.i.1.1.i = getelementptr inbounds i16, ptr %A, i32 %add.us.i.1.1.i
   %B7 = load i16, ptr %arrayidx4.us.i.1.1.i, align 2
@@ -113,7 +113,7 @@ for.body:
   %conv6.us.i.1.1.i = sext i16 %B6.dup to i32
   %mul7.us.i.1.1.i = mul nsw i32 %conv6.us.i.1.1.i, %conv.us.i.1.1.i
   %add9.us.i.1.1.i = add nsw i32 %mul7.us.i.1.1.i, %add9.us.i.1.i
-  %inc.us.i.1.1.i = or i32 %j.026.us.i.i, 2
+  %inc.us.i.1.1.i = or disjoint i32 %j.026.us.i.i, 2
   %add.us.i.2.1.i = add i32 %inc.us.i.2.i, %mul.us.i118.2.i
   %arrayidx4.us.i.2.1.i = getelementptr inbounds i16, ptr %A, i32 %add.us.i.2.1.i
   %B9 = load i16, ptr %arrayidx4.us.i.2.1.i, align 2
@@ -123,7 +123,7 @@ for.body:
   %conv6.us.i.2.1.i = sext i16 %B6.dup.i to i32
   %mul7.us.i.2.1.i = mul nsw i32 %conv6.us.i.2.1.i, %conv.us.i.2.1.i
   %add9.us.i.2.1.i = add nsw i32 %mul7.us.i.2.1.i, %add9.us.i.2.i
-  %inc.us.i.2.1.i = or i32 %j.026.us.i.i, 2
+  %inc.us.i.2.1.i = or disjoint i32 %j.026.us.i.i, 2
   %add.us.i.3.1.i = add i32 %inc.us.i.3.i, %mul.us.i118.3.i
   %arrayidx4.us.i.3.1.i = getelementptr inbounds i16, ptr %A, i32 %add.us.i.3.1.i
   %B11 = load i16, ptr %arrayidx4.us.i.3.1.i, align 2
@@ -133,7 +133,7 @@ for.body:
   %conv6.us.i.3.1.i = sext i16 %B6.dup.i.i to i32
   %mul7.us.i.3.1.i = mul nsw i32 %conv6.us.i.3.1.i, %conv.us.i.3.1.i
   %add9.us.i.3.1.i = add nsw i32 %mul7.us.i.3.1.i, %add9.us.i.3.i
-  %inc.us.i.3.1.i = or i32 %j.026.us.i.i, 2
+  %inc.us.i.3.1.i = or disjoint i32 %j.026.us.i.i, 2
   %add.us.i.2346.i = add i32 %inc.us.i.1344.i, %mul.us.i118.i
   %arrayidx4.us.i.2347.i = getelementptr inbounds i16, ptr %A, i32 %add.us.i.2346.i
   %B13 = load i16, ptr %arrayidx4.us.i.2347.i, align 2
@@ -143,7 +143,7 @@ for.body:
   %conv6.us.i.2350.i = sext i16 %B14 to i32
   %mul7.us.i.2351.i = mul nsw i32 %conv6.us.i.2350.i, %conv.us.i.2348.i
   %add9.us.i.2352.i = add nsw i32 %mul7.us.i.2351.i, %add9.us.i.1343.i
-  %inc.us.i.2353.i = or i32 %j.026.us.i.i, 3
+  %inc.us.i.2353.i = or disjoint i32 %j.026.us.i.i, 3
   %add.us.i.1.2.i = add i32 %inc.us.i.1.1.i, %mul.us.i118.1.i
   %arrayidx4.us.i.1.2.i = getelementptr inbounds i16, ptr %A, i32 %add.us.i.1.2.i
   %B15 = load i16, ptr %arrayidx4.us.i.1.2.i, align 2
@@ -153,7 +153,7 @@ for.body:
   %conv6.us.i.1.2.i = sext i16 %B14.dup to i32
   %mul7.us.i.1.2.i = mul nsw i32 %conv6.us.i.1.2.i, %conv.us.i.1.2.i
   %add9.us.i.1.2.i = add nsw i32 %mul7.us.i.1.2.i, %add9.us.i.1.1.i
-  %inc.us.i.1.2.i = or i32 %j.026.us.i.i, 3
+  %inc.us.i.1.2.i = or disjoint i32 %j.026.us.i.i, 3
   %add.us.i.2.2.i = add i32 %inc.us.i.2.1.i, %mul.us.i118.2.i
   %arrayidx4.us.i.2.2.i = getelementptr inbounds i16, ptr %A, i32 %add.us.i.2.2.i
   %B17 = load i16, ptr %arrayidx4.us.i.2.2.i, align 2
@@ -163,7 +163,7 @@ for.body:
   %conv6.us.i.2.2.i = sext i16 %B14.dup.i to i32
   %mul7.us.i.2.2.i = mul nsw i32 %conv6.us.i.2.2.i, %conv.us.i.2.2.i
   %add9.us.i.2.2.i = add nsw i32 %mul7.us.i.2.2.i, %add9.us.i.2.1.i
-  %inc.us.i.2.2.i = or i32 %j.026.us.i.i, 3
+  %inc.us.i.2.2.i = or disjoint i32 %j.026.us.i.i, 3
   %add.us.i.3.2.i = add i32 %inc.us.i.3.1.i, %mul.us.i118.3.i
   %arrayidx4.us.i.3.2.i = getelementptr inbounds i16, ptr %A, i32 %add.us.i.3.2.i
   %B19 = load i16, ptr %arrayidx4.us.i.3.2.i, align 2
@@ -173,7 +173,7 @@ for.body:
   %conv6.us.i.3.2.i = sext i16 %B14.dup.i.i to i32
   %mul7.us.i.3.2.i = mul nsw i32 %conv6.us.i.3.2.i, %conv.us.i.3.2.i
   %add9.us.i.3.2.i = add nsw i32 %mul7.us.i.3.2.i, %add9.us.i.3.1.i
-  %inc.us.i.3.2.i = or i32 %j.026.us.i.i, 3
+  %inc.us.i.3.2.i = or disjoint i32 %j.026.us.i.i, 3
   %add.us.i.3355.i = add i32 %inc.us.i.2353.i, %mul.us.i118.i
   %arrayidx4.us.i.3356.i = getelementptr inbounds i16, ptr %A, i32 %add.us.i.3355.i
   %B21 = load i16, ptr %arrayidx4.us.i.3356.i, align 2

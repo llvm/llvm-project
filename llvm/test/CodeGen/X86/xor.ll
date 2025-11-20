@@ -59,15 +59,15 @@ define i32 @test4(i32 %a, i32 %b) nounwind  {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB3_1: # %bb
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    notl %edx
-; X86-NEXT:    andl %ecx, %edx
-; X86-NEXT:    addl %edx, %edx
-; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    notl %ecx
+; X86-NEXT:    andl %edx, %ecx
+; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    jne .LBB3_1
 ; X86-NEXT:  # %bb.2: # %bb12
 ; X86-NEXT:    retl
@@ -75,15 +75,15 @@ define i32 @test4(i32 %a, i32 %b) nounwind  {
 ; X64-LIN-LABEL: test4:
 ; X64-LIN:       # %bb.0: # %entry
 ; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    .p2align 4, 0x90
+; X64-LIN-NEXT:    .p2align 4
 ; X64-LIN-NEXT:  .LBB3_1: # %bb
 ; X64-LIN-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-LIN-NEXT:    movl %esi, %ecx
 ; X64-LIN-NEXT:    xorl %esi, %eax
-; X64-LIN-NEXT:    movl %eax, %ecx
-; X64-LIN-NEXT:    notl %ecx
-; X64-LIN-NEXT:    andl %esi, %ecx
-; X64-LIN-NEXT:    addl %ecx, %ecx
-; X64-LIN-NEXT:    movl %ecx, %esi
+; X64-LIN-NEXT:    movl %eax, %esi
+; X64-LIN-NEXT:    notl %esi
+; X64-LIN-NEXT:    andl %ecx, %esi
+; X64-LIN-NEXT:    addl %esi, %esi
 ; X64-LIN-NEXT:    jne .LBB3_1
 ; X64-LIN-NEXT:  # %bb.2: # %bb12
 ; X64-LIN-NEXT:    retq
@@ -91,15 +91,15 @@ define i32 @test4(i32 %a, i32 %b) nounwind  {
 ; X64-WIN-LABEL: test4:
 ; X64-WIN:       # %bb.0: # %entry
 ; X64-WIN-NEXT:    movl %ecx, %eax
-; X64-WIN-NEXT:    .p2align 4, 0x90
+; X64-WIN-NEXT:    .p2align 4
 ; X64-WIN-NEXT:  .LBB3_1: # %bb
 ; X64-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-WIN-NEXT:    movl %edx, %ecx
 ; X64-WIN-NEXT:    xorl %edx, %eax
-; X64-WIN-NEXT:    movl %eax, %ecx
-; X64-WIN-NEXT:    notl %ecx
-; X64-WIN-NEXT:    andl %edx, %ecx
-; X64-WIN-NEXT:    addl %ecx, %ecx
-; X64-WIN-NEXT:    movl %ecx, %edx
+; X64-WIN-NEXT:    movl %eax, %edx
+; X64-WIN-NEXT:    notl %edx
+; X64-WIN-NEXT:    andl %ecx, %edx
+; X64-WIN-NEXT:    addl %edx, %edx
 ; X64-WIN-NEXT:    jne .LBB3_1
 ; X64-WIN-NEXT:  # %bb.2: # %bb12
 ; X64-WIN-NEXT:    retq
@@ -123,16 +123,16 @@ define i16 @test5(i16 %a, i16 %b) nounwind  {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB4_1: # %bb
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    notl %edx
-; X86-NEXT:    andl %ecx, %edx
-; X86-NEXT:    addl %edx, %edx
-; X86-NEXT:    testw %dx, %dx
-; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    xorl %edx, %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    notl %ecx
+; X86-NEXT:    andl %edx, %ecx
+; X86-NEXT:    addl %ecx, %ecx
+; X86-NEXT:    testw %cx, %cx
 ; X86-NEXT:    jne .LBB4_1
 ; X86-NEXT:  # %bb.2: # %bb12
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -141,16 +141,16 @@ define i16 @test5(i16 %a, i16 %b) nounwind  {
 ; X64-LIN-LABEL: test5:
 ; X64-LIN:       # %bb.0: # %entry
 ; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    .p2align 4, 0x90
+; X64-LIN-NEXT:    .p2align 4
 ; X64-LIN-NEXT:  .LBB4_1: # %bb
 ; X64-LIN-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-LIN-NEXT:    xorl %esi, %eax
-; X64-LIN-NEXT:    movl %eax, %ecx
-; X64-LIN-NEXT:    notl %ecx
-; X64-LIN-NEXT:    andl %esi, %ecx
-; X64-LIN-NEXT:    addl %ecx, %ecx
-; X64-LIN-NEXT:    testw %cx, %cx
-; X64-LIN-NEXT:    movl %ecx, %esi
+; X64-LIN-NEXT:    movl %esi, %ecx
+; X64-LIN-NEXT:    xorl %ecx, %eax
+; X64-LIN-NEXT:    movl %eax, %esi
+; X64-LIN-NEXT:    notl %esi
+; X64-LIN-NEXT:    andl %ecx, %esi
+; X64-LIN-NEXT:    addl %esi, %esi
+; X64-LIN-NEXT:    testw %si, %si
 ; X64-LIN-NEXT:    jne .LBB4_1
 ; X64-LIN-NEXT:  # %bb.2: # %bb12
 ; X64-LIN-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -160,16 +160,16 @@ define i16 @test5(i16 %a, i16 %b) nounwind  {
 ; X64-WIN:       # %bb.0: # %entry
 ; X64-WIN-NEXT:    # kill: def $dx killed $dx def $edx
 ; X64-WIN-NEXT:    movl %ecx, %eax
-; X64-WIN-NEXT:    .p2align 4, 0x90
+; X64-WIN-NEXT:    .p2align 4
 ; X64-WIN-NEXT:  .LBB4_1: # %bb
 ; X64-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-WIN-NEXT:    xorl %edx, %eax
-; X64-WIN-NEXT:    movl %eax, %ecx
-; X64-WIN-NEXT:    notl %ecx
-; X64-WIN-NEXT:    andl %edx, %ecx
-; X64-WIN-NEXT:    addl %ecx, %ecx
-; X64-WIN-NEXT:    testw %cx, %cx
-; X64-WIN-NEXT:    movl %ecx, %edx
+; X64-WIN-NEXT:    movl %edx, %ecx
+; X64-WIN-NEXT:    xorl %ecx, %eax
+; X64-WIN-NEXT:    movl %eax, %edx
+; X64-WIN-NEXT:    notl %edx
+; X64-WIN-NEXT:    andl %ecx, %edx
+; X64-WIN-NEXT:    addl %edx, %edx
+; X64-WIN-NEXT:    testw %dx, %dx
 ; X64-WIN-NEXT:    jne .LBB4_1
 ; X64-WIN-NEXT:  # %bb.2: # %bb12
 ; X64-WIN-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -194,15 +194,15 @@ define i8 @test6(i8 %a, i8 %b) nounwind  {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB5_1: # %bb
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    xorb %cl, %al
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    notb %dl
-; X86-NEXT:    andb %cl, %dl
-; X86-NEXT:    addb %dl, %dl
-; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    notb %cl
+; X86-NEXT:    andb %dl, %cl
+; X86-NEXT:    addb %cl, %cl
 ; X86-NEXT:    jne .LBB5_1
 ; X86-NEXT:  # %bb.2: # %bb12
 ; X86-NEXT:    retl
@@ -210,15 +210,15 @@ define i8 @test6(i8 %a, i8 %b) nounwind  {
 ; X64-LIN-LABEL: test6:
 ; X64-LIN:       # %bb.0: # %entry
 ; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    .p2align 4, 0x90
+; X64-LIN-NEXT:    .p2align 4
 ; X64-LIN-NEXT:  .LBB5_1: # %bb
 ; X64-LIN-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-LIN-NEXT:    movl %esi, %ecx
 ; X64-LIN-NEXT:    xorb %sil, %al
-; X64-LIN-NEXT:    movl %eax, %ecx
-; X64-LIN-NEXT:    notb %cl
-; X64-LIN-NEXT:    andb %sil, %cl
-; X64-LIN-NEXT:    addb %cl, %cl
-; X64-LIN-NEXT:    movl %ecx, %esi
+; X64-LIN-NEXT:    movl %eax, %esi
+; X64-LIN-NEXT:    notb %sil
+; X64-LIN-NEXT:    andb %cl, %sil
+; X64-LIN-NEXT:    addb %sil, %sil
 ; X64-LIN-NEXT:    jne .LBB5_1
 ; X64-LIN-NEXT:  # %bb.2: # %bb12
 ; X64-LIN-NEXT:    # kill: def $al killed $al killed $eax
@@ -227,15 +227,15 @@ define i8 @test6(i8 %a, i8 %b) nounwind  {
 ; X64-WIN-LABEL: test6:
 ; X64-WIN:       # %bb.0: # %entry
 ; X64-WIN-NEXT:    movl %ecx, %eax
-; X64-WIN-NEXT:    .p2align 4, 0x90
+; X64-WIN-NEXT:    .p2align 4
 ; X64-WIN-NEXT:  .LBB5_1: # %bb
 ; X64-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-WIN-NEXT:    movl %edx, %ecx
 ; X64-WIN-NEXT:    xorb %dl, %al
-; X64-WIN-NEXT:    movl %eax, %ecx
-; X64-WIN-NEXT:    notb %cl
-; X64-WIN-NEXT:    andb %dl, %cl
-; X64-WIN-NEXT:    addb %cl, %cl
-; X64-WIN-NEXT:    movl %ecx, %edx
+; X64-WIN-NEXT:    movl %eax, %edx
+; X64-WIN-NEXT:    notb %dl
+; X64-WIN-NEXT:    andb %cl, %dl
+; X64-WIN-NEXT:    addb %dl, %dl
 ; X64-WIN-NEXT:    jne .LBB5_1
 ; X64-WIN-NEXT:  # %bb.2: # %bb12
 ; X64-WIN-NEXT:    retq
@@ -259,15 +259,15 @@ define i32 @test7(i32 %a, i32 %b) nounwind  {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB6_1: # %bb
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    xorl $2147483646, %edx # imm = 0x7FFFFFFE
-; X86-NEXT:    andl %ecx, %edx
-; X86-NEXT:    addl %edx, %edx
-; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    xorl $2147483646, %ecx # imm = 0x7FFFFFFE
+; X86-NEXT:    andl %edx, %ecx
+; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    jne .LBB6_1
 ; X86-NEXT:  # %bb.2: # %bb12
 ; X86-NEXT:    retl
@@ -275,15 +275,15 @@ define i32 @test7(i32 %a, i32 %b) nounwind  {
 ; X64-LIN-LABEL: test7:
 ; X64-LIN:       # %bb.0: # %entry
 ; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    .p2align 4, 0x90
+; X64-LIN-NEXT:    .p2align 4
 ; X64-LIN-NEXT:  .LBB6_1: # %bb
 ; X64-LIN-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-LIN-NEXT:    movl %esi, %ecx
 ; X64-LIN-NEXT:    xorl %esi, %eax
-; X64-LIN-NEXT:    movl %eax, %ecx
-; X64-LIN-NEXT:    xorl $2147483646, %ecx # imm = 0x7FFFFFFE
-; X64-LIN-NEXT:    andl %esi, %ecx
-; X64-LIN-NEXT:    addl %ecx, %ecx
-; X64-LIN-NEXT:    movl %ecx, %esi
+; X64-LIN-NEXT:    movl %eax, %esi
+; X64-LIN-NEXT:    xorl $2147483646, %esi # imm = 0x7FFFFFFE
+; X64-LIN-NEXT:    andl %ecx, %esi
+; X64-LIN-NEXT:    addl %esi, %esi
 ; X64-LIN-NEXT:    jne .LBB6_1
 ; X64-LIN-NEXT:  # %bb.2: # %bb12
 ; X64-LIN-NEXT:    retq
@@ -291,15 +291,15 @@ define i32 @test7(i32 %a, i32 %b) nounwind  {
 ; X64-WIN-LABEL: test7:
 ; X64-WIN:       # %bb.0: # %entry
 ; X64-WIN-NEXT:    movl %ecx, %eax
-; X64-WIN-NEXT:    .p2align 4, 0x90
+; X64-WIN-NEXT:    .p2align 4
 ; X64-WIN-NEXT:  .LBB6_1: # %bb
 ; X64-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-WIN-NEXT:    movl %edx, %ecx
 ; X64-WIN-NEXT:    xorl %edx, %eax
-; X64-WIN-NEXT:    movl %eax, %ecx
-; X64-WIN-NEXT:    xorl $2147483646, %ecx # imm = 0x7FFFFFFE
-; X64-WIN-NEXT:    andl %edx, %ecx
-; X64-WIN-NEXT:    addl %ecx, %ecx
-; X64-WIN-NEXT:    movl %ecx, %edx
+; X64-WIN-NEXT:    movl %eax, %edx
+; X64-WIN-NEXT:    xorl $2147483646, %edx # imm = 0x7FFFFFFE
+; X64-WIN-NEXT:    andl %ecx, %edx
+; X64-WIN-NEXT:    addl %edx, %edx
 ; X64-WIN-NEXT:    jne .LBB6_1
 ; X64-WIN-NEXT:  # %bb.2: # %bb12
 ; X64-WIN-NEXT:    retq
@@ -403,14 +403,19 @@ define i32 @PR17487(i1 %tobool) {
 ;
 ; X64-LIN-LABEL: PR17487:
 ; X64-LIN:       # %bb.0:
-; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    andl $1, %eax
+; X64-LIN-NEXT:    movd %edi, %xmm0
+; X64-LIN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X64-LIN-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-LIN-NEXT:    pextrw $4, %xmm0, %eax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: PR17487:
 ; X64-WIN:       # %bb.0:
-; X64-WIN-NEXT:    andb $1, %cl
 ; X64-WIN-NEXT:    movzbl %cl, %eax
+; X64-WIN-NEXT:    movd %eax, %xmm0
+; X64-WIN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X64-WIN-NEXT:    pand __xmm@00000000000000010000000000000001(%rip), %xmm0
+; X64-WIN-NEXT:    pextrw $4, %xmm0, %eax
 ; X64-WIN-NEXT:    retq
   %tmp = insertelement <2 x i1> undef, i1 %tobool, i32 1
   %tmp1 = zext <2 x i1> %tmp to <2 x i64>
@@ -622,24 +627,23 @@ define <4 x i32> @vec_add_of_not_decrement(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @vec_add_of_not_with_undef(<4 x i32> %x, <4 x i32> %y) {
 ; X86-LABEL: vec_add_of_not_with_undef:
 ; X86:       # %bb.0:
-; X86-NEXT:    psubd %xmm1, %xmm0
-; X86-NEXT:    pcmpeqd %xmm1, %xmm1
-; X86-NEXT:    paddd %xmm1, %xmm0
+; X86-NEXT:    pcmpeqd %xmm2, %xmm2
+; X86-NEXT:    pxor %xmm1, %xmm2
+; X86-NEXT:    paddd %xmm2, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LIN-LABEL: vec_add_of_not_with_undef:
 ; X64-LIN:       # %bb.0:
-; X64-LIN-NEXT:    psubd %xmm1, %xmm0
-; X64-LIN-NEXT:    pcmpeqd %xmm1, %xmm1
-; X64-LIN-NEXT:    paddd %xmm1, %xmm0
+; X64-LIN-NEXT:    pcmpeqd %xmm2, %xmm2
+; X64-LIN-NEXT:    pxor %xmm1, %xmm2
+; X64-LIN-NEXT:    paddd %xmm2, %xmm0
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: vec_add_of_not_with_undef:
 ; X64-WIN:       # %bb.0:
-; X64-WIN-NEXT:    movdqa (%rcx), %xmm1
-; X64-WIN-NEXT:    psubd (%rdx), %xmm1
 ; X64-WIN-NEXT:    pcmpeqd %xmm0, %xmm0
-; X64-WIN-NEXT:    paddd %xmm1, %xmm0
+; X64-WIN-NEXT:    pxor (%rdx), %xmm0
+; X64-WIN-NEXT:    paddd (%rcx), %xmm0
 ; X64-WIN-NEXT:    retq
   %t0 = sub <4 x i32> %x, %y
   %r = add <4 x i32> %t0, <i32 -1, i32 undef, i32 -1, i32 -1>
@@ -649,26 +653,25 @@ define <4 x i32> @vec_add_of_not_with_undef(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @vec_add_of_not_with_undef_decrement(<4 x i32> %x, <4 x i32> %y) {
 ; X86-LABEL: vec_add_of_not_with_undef_decrement:
 ; X86:       # %bb.0:
-; X86-NEXT:    psubd %xmm1, %xmm0
-; X86-NEXT:    pcmpeqd %xmm1, %xmm1
-; X86-NEXT:    psubd %xmm1, %xmm0
+; X86-NEXT:    pcmpeqd %xmm2, %xmm2
+; X86-NEXT:    pxor %xmm1, %xmm2
+; X86-NEXT:    paddd %xmm2, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LIN-LABEL: vec_add_of_not_with_undef_decrement:
 ; X64-LIN:       # %bb.0:
-; X64-LIN-NEXT:    psubd %xmm1, %xmm0
-; X64-LIN-NEXT:    pcmpeqd %xmm1, %xmm1
-; X64-LIN-NEXT:    psubd %xmm1, %xmm0
+; X64-LIN-NEXT:    pcmpeqd %xmm2, %xmm2
+; X64-LIN-NEXT:    pxor %xmm1, %xmm2
+; X64-LIN-NEXT:    paddd %xmm2, %xmm0
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: vec_add_of_not_with_undef_decrement:
 ; X64-WIN:       # %bb.0:
-; X64-WIN-NEXT:    movdqa (%rcx), %xmm0
-; X64-WIN-NEXT:    psubd (%rdx), %xmm0
-; X64-WIN-NEXT:    pcmpeqd %xmm1, %xmm1
-; X64-WIN-NEXT:    psubd %xmm1, %xmm0
+; X64-WIN-NEXT:    pcmpeqd %xmm0, %xmm0
+; X64-WIN-NEXT:    pxor (%rdx), %xmm0
+; X64-WIN-NEXT:    paddd (%rcx), %xmm0
 ; X64-WIN-NEXT:    retq
   %t0 = sub <4 x i32> %x, %y
-  %r = add <4 x i32> %t0, <i32 1, i32 undef, i32 1, i32 1>
+  %r = sub <4 x i32> %t0, <i32 1, i32 undef, i32 1, i32 1>
   ret <4 x i32> %r
 }

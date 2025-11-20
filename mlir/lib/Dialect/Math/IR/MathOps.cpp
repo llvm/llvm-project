@@ -17,6 +17,20 @@ using namespace mlir;
 using namespace mlir::math;
 
 //===----------------------------------------------------------------------===//
+// Common helpers
+//===----------------------------------------------------------------------===//
+
+/// Return the type of the same shape (scalar, vector or tensor) containing i1.
+static Type getI1SameShape(Type type) {
+  auto i1Type = IntegerType::get(type.getContext(), 1);
+  if (auto shapedType = llvm::dyn_cast<ShapedType>(type))
+    return shapedType.cloneWith(std::nullopt, i1Type);
+  if (llvm::isa<UnrankedTensorType>(type))
+    return UnrankedTensorType::get(i1Type);
+  return i1Type;
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
@@ -42,6 +56,78 @@ OpFoldResult math::AbsIOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// AcosOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::AcosOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(acos(a.convertToDouble()));
+        case 32:
+          return APFloat(acosf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// AcoshOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::AcoshOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(acosh(a.convertToDouble()));
+        case 32:
+          return APFloat(acoshf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// AsinOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::AsinOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(asin(a.convertToDouble()));
+        case 32:
+          return APFloat(asinf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// AsinhOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::AsinhOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(asinh(a.convertToDouble()));
+        case 32:
+          return APFloat(asinhf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // AtanOp folder
 //===----------------------------------------------------------------------===//
 
@@ -53,6 +139,24 @@ OpFoldResult math::AtanOp::fold(FoldAdaptor adaptor) {
           return APFloat(atan(a.convertToDouble()));
         case 32:
           return APFloat(atanf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// AtanhOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::AtanhOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(atanh(a.convertToDouble()));
+        case 32:
+          return APFloat(atanhf(a.convertToFloat()));
         default:
           return {};
         }
@@ -127,6 +231,24 @@ OpFoldResult math::CosOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// CoshOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::CoshOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(cosh(a.convertToDouble()));
+        case 32:
+          return APFloat(coshf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // SinOp folder
 //===----------------------------------------------------------------------===//
 
@@ -142,6 +264,34 @@ OpFoldResult math::SinOp::fold(FoldAdaptor adaptor) {
           return {};
         }
       });
+}
+
+//===----------------------------------------------------------------------===//
+// SinhOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::SinhOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(sinh(a.convertToDouble()));
+        case 32:
+          return APFloat(sinhf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// SinCosOp getShapeForUnroll
+//===----------------------------------------------------------------------===//
+
+std::optional<SmallVector<int64_t, 4>> math::SincosOp::getShapeForUnroll() {
+  if (auto vt = mlir::dyn_cast<VectorType>(getOperand().getType()))
+    return llvm::to_vector<4>(vt.getShape());
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -186,6 +336,24 @@ OpFoldResult math::ErfOp::fold(FoldAdaptor adaptor) {
           return APFloat(erf(a.convertToDouble()));
         case 32:
           return APFloat(erff(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// ErfcOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::ErfcOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (APFloat::SemanticsToEnum(a.getSemantics())) {
+        case APFloat::Semantics::S_IEEEdouble:
+          return APFloat(erfc(a.convertToDouble()));
+        case APFloat::Semantics::S_IEEEsingle:
+          return APFloat(erfcf(a.convertToFloat()));
         default:
           return {};
         }
@@ -422,6 +590,70 @@ OpFoldResult math::ExpM1Op::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// IsFiniteOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::IsFiniteOp::fold(FoldAdaptor adaptor) {
+  if (auto val = dyn_cast_or_null<FloatAttr>(adaptor.getOperand())) {
+    return BoolAttr::get(val.getContext(), val.getValue().isFinite());
+  }
+  if (auto splat = dyn_cast_or_null<SplatElementsAttr>(adaptor.getOperand())) {
+    return DenseElementsAttr::get(
+        cast<ShapedType>(getType()),
+        APInt(1, splat.getSplatValue<APFloat>().isFinite()));
+  }
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// IsInfOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::IsInfOp::fold(FoldAdaptor adaptor) {
+  if (auto val = dyn_cast_or_null<FloatAttr>(adaptor.getOperand())) {
+    return BoolAttr::get(val.getContext(), val.getValue().isInfinity());
+  }
+  if (auto splat = dyn_cast_or_null<SplatElementsAttr>(adaptor.getOperand())) {
+    return DenseElementsAttr::get(
+        cast<ShapedType>(getType()),
+        APInt(1, splat.getSplatValue<APFloat>().isInfinity()));
+  }
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// IsNaNOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::IsNaNOp::fold(FoldAdaptor adaptor) {
+  if (auto val = dyn_cast_or_null<FloatAttr>(adaptor.getOperand())) {
+    return BoolAttr::get(val.getContext(), val.getValue().isNaN());
+  }
+  if (auto splat = dyn_cast_or_null<SplatElementsAttr>(adaptor.getOperand())) {
+    return DenseElementsAttr::get(
+        cast<ShapedType>(getType()),
+        APInt(1, splat.getSplatValue<APFloat>().isNaN()));
+  }
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// IsNormalOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::IsNormalOp::fold(FoldAdaptor adaptor) {
+  if (auto val = dyn_cast_or_null<FloatAttr>(adaptor.getOperand())) {
+    return BoolAttr::get(val.getContext(), val.getValue().isNormal());
+  }
+  if (auto splat = dyn_cast_or_null<SplatElementsAttr>(adaptor.getOperand())) {
+    return DenseElementsAttr::get(
+        cast<ShapedType>(getType()),
+        APInt(1, splat.getSplatValue<APFloat>().isNormal()));
+  }
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // TanOp folder
 //===----------------------------------------------------------------------===//
 
@@ -524,7 +756,7 @@ Operation *math::MathDialect::materializeConstant(OpBuilder &builder,
                                                   Attribute value, Type type,
                                                   Location loc) {
   if (auto poison = dyn_cast<ub::PoisonAttr>(value))
-    return builder.create<ub::PoisonOp>(loc, type, poison);
+    return ub::PoisonOp::create(builder, loc, type, poison);
 
   return arith::ConstantOp::materialize(builder, value, type, loc);
 }

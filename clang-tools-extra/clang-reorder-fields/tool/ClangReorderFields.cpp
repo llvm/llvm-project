@@ -72,11 +72,10 @@ int main(int argc, const char **argv) {
 
   int ExitCode = Tool.run(Factory.get());
   LangOptions DefaultLangOptions;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions());
-  TextDiagnosticPrinter DiagnosticPrinter(errs(), &*DiagOpts);
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), &*DiagOpts,
-      &DiagnosticPrinter, false);
+  DiagnosticOptions DiagOpts;
+  TextDiagnosticPrinter DiagnosticPrinter(errs(), DiagOpts);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts,
+                                &DiagnosticPrinter, false);
 
   auto &FileMgr = Tool.getFiles();
   SourceManager Sources(Diagnostics, FileMgr);
@@ -84,8 +83,8 @@ int main(int argc, const char **argv) {
   Tool.applyAllReplacements(Rewrite);
 
   for (const auto &File : Files) {
-    auto Entry = FileMgr.getFile(File);
-    const auto ID = Sources.getOrCreateFileID(*Entry, SrcMgr::C_User);
+    auto Entry = llvm::cantFail(FileMgr.getFileRef(File));
+    const auto ID = Sources.getOrCreateFileID(Entry, SrcMgr::C_User);
     Rewrite.getEditBuffer(ID).write(outs());
   }
 

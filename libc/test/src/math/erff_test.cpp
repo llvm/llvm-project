@@ -6,45 +6,50 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/erff.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
-#include <errno.h>
-#include <stdint.h>
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-namespace mpfr = __llvm_libc::testing::mpfr;
-using __llvm_libc::testing::tlog;
+using LlvmLibcErffTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+using LIBC_NAMESPACE::testing::tlog;
 
-TEST(LlvmLibcErffTest, SpecialNumbers) {
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::erff(aNaN));
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, __llvm_libc::erff(inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(-1.0f, __llvm_libc::erff(neg_inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::erff(zero));
-  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, __llvm_libc::erff(neg_zero));
+TEST_F(LlvmLibcErffTest, SpecialNumbers) {
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::erff(aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::erff(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(-1.0f, LIBC_NAMESPACE::erff(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::erff(zero));
+  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::erff(neg_zero));
 }
 
-TEST(LlvmLibcErffTest, TrickyInputs) {
+TEST_F(LlvmLibcErffTest, TrickyInputs) {
   constexpr int N = 2;
   constexpr uint32_t INPUTS[N] = {
       0x3f65'9229U, // |x| = 0x1.cb2452p-1f
       0x4004'1e6aU, // |x| = 0x1.083cd4p+1f
   };
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Erf, x,
-                                   __llvm_libc::erff(x), 0.5);
+                                   LIBC_NAMESPACE::erff(x), TOLERANCE + 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Erf, -x,
-                                   __llvm_libc::erff(-x), 0.5);
+                                   LIBC_NAMESPACE::erff(-x), TOLERANCE + 0.5);
   }
 }
 
-TEST(LlvmLibcErffTest, InFloatRange) {
+TEST_F(LlvmLibcErffTest, InFloatRange) {
   constexpr uint32_t COUNT = 234561;
   constexpr uint32_t START = 0;           // 0
   constexpr uint32_t STOP = 0x4080'0000U; // 4.0f
@@ -64,12 +69,12 @@ TEST(LlvmLibcErffTest, InFloatRange) {
 
     for (uint32_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       float x = FPBits(v).get_val();
-      if (isnan(x))
+      if (FPBits(v).is_nan())
         continue;
 
-      float result = __llvm_libc::erff(x);
+      float result = LIBC_NAMESPACE::erff(x);
       ++cc;
-      if (isnan(result))
+      if (FPBits(result).is_nan())
         continue;
 
       ++count;
@@ -84,10 +89,10 @@ TEST(LlvmLibcErffTest, InFloatRange) {
         }
       }
     }
-    tlog << " Log failed: " << fails << "/" << count << "/" << cc
-         << " tests.\n";
-    tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     if (fails) {
+      tlog << " Log failed: " << fails << "/" << count << "/" << cc
+           << " tests.\n";
+      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
       EXPECT_MPFR_MATCH(mpfr::Operation::Erf, mx, mr, 0.5, rounding_mode);
     }
   };

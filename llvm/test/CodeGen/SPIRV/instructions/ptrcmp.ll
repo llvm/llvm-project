@@ -1,7 +1,13 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s --translator-compatibility-mode -o - | FileCheck %s --check-prefix=CHECK-COMPAT
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s --translator-compatibility-mode -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName [[EQ:%.*]] "test_eq"
 ; CHECK-DAG: OpName [[NE:%.*]] "test_ne"
+; CHECK-COMPAT-DAG: OpName [[EQ:%.*]] "test_eq"
+; CHECK-COMPAT-DAG: OpName [[NE:%.*]] "test_ne"
 ; CHECK-DAG: OpName [[ULT:%.*]] "test_ult"
 ; CHECK-DAG: OpName [[SLT:%.*]] "test_slt"
 ; CHECK-DAG: OpName [[ULE:%.*]] "test_ule"
@@ -19,6 +25,9 @@
 ; CHECK-NEXT: [[R:%.*]] = OpPtrEqual {{%.+}} [[A]] [[B]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
+; CHECK-COMPAT: [[EQ]] = OpFunction
+; CHECK-COMPAT-NOT: OpPtrEqual
+; CHECK-COMPAT: OpFunctionEnd
 define i1 @test_eq(i16* %a, i16* %b) {
   %r = icmp eq i16* %a, %b
   ret i1 %r
@@ -31,6 +40,9 @@ define i1 @test_eq(i16* %a, i16* %b) {
 ; CHECK-NEXT: [[R:%.*]] = OpPtrNotEqual {{%.+}} [[A]] [[B]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
+; CHECK-COMPAT: [[NE]] = OpFunction
+; CHECK-COMPAT-NOT: OpPtrNotEqual
+; CHECK-COMPAT: OpFunctionEnd
 define i1 @test_ne(i16* %a, i16* %b) {
   %r = icmp ne i16* %a, %b
   ret i1 %r

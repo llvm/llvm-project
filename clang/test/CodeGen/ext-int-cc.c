@@ -22,21 +22,20 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple systemz -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=SYSTEMZ
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple ppc64 -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=PPC64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple ppc -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=PPC32
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple aarch64 -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple aarch64 -O3 -disable-llvm-passes -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple aarch64 -target-abi darwinpcs -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64DARWIN
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm64_32-apple-ios -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm64_32-apple-ios -O3 -disable-llvm-passes -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm64_32-apple-ios -target-abi darwinpcs -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64DARWIN
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=ARM
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple loongarch64 -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=LA64
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple loongarch32 -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=LA32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple loongarch64 -O3 -disable-llvm-passes -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=LA64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple loongarch32 -O3 -disable-llvm-passes -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=LA32
 
 // Make sure 128 and 64 bit versions are passed like integers.
 void ParamPassing(_BitInt(128) b, _BitInt(64) c) {}
-// LIN64: define{{.*}} void @ParamPassing(i64 %{{.+}}, i64 %{{.+}}, i64 %{{.+}})
-// WIN64: define dso_local void @ParamPassing(ptr %{{.+}}, i64 %{{.+}})
-// LIN32: define{{.*}} void @ParamPassing(ptr %{{.+}}, i64 %{{.+}})
-// WIN32: define dso_local void @ParamPassing(ptr %{{.+}}, i64 %{{.+}})
-// NACL: define{{.*}} void @ParamPassing(ptr byval(i128) align 8 %{{.+}}, i64 %{{.+}})
+// LIN64: define{{.*}} void @ParamPassing(i128 %{{.+}}, i64 %{{.+}})
+// WIN64: define dso_local void @ParamPassing(ptr dead_on_return %{{.+}}, i64 %{{.+}})
+// LIN32: define{{.*}} void @ParamPassing(ptr dead_on_return %{{.+}}, i64 %{{.+}})
+// WIN32: define dso_local void @ParamPassing(ptr dead_on_return %{{.+}}, i64 %{{.+}})
 // NVPTX64: define{{.*}} void @ParamPassing(i128 %{{.+}}, i64 %{{.+}})
 // NVPTX: define{{.*}} void @ParamPassing(ptr byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // SPARCV9: define{{.*}} void @ParamPassing(i128 %{{.+}}, i64 %{{.+}})
@@ -50,48 +49,47 @@ void ParamPassing(_BitInt(128) b, _BitInt(64) c) {}
 // R600: define{{.*}} void @ParamPassing(ptr addrspace(5) byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // ARC: define{{.*}} void @ParamPassing(ptr byval(i128) align 4 %{{.+}}, i64 inreg %{{.+}})
 // XCORE: define{{.*}} void @ParamPassing(ptr byval(i128) align 4 %{{.+}}, i64 %{{.+}})
-// RISCV64: define{{.*}} void @ParamPassing(i128 %{{.+}}, i64 %{{.+}})
-// RISCV32: define{{.*}} void @ParamPassing(ptr %{{.+}}, i64 %{{.+}})
+// RISCV64: define{{.*}} void @ParamPassing(i128 signext %{{.+}}, i64 signext %{{.+}})
+// RISCV32: define{{.*}} void @ParamPassing(ptr dead_on_return %{{.+}}, i64 signext %{{.+}})
 // WASM: define{{.*}} void @ParamPassing(i128 %{{.+}}, i64 %{{.+}})
-// SYSTEMZ: define{{.*}} void @ParamPassing(ptr %{{.+}}, i64 %{{.+}})
+// SYSTEMZ: define{{.*}} void @ParamPassing(ptr dead_on_return %{{.+}}, i64 %{{.+}})
 // PPC64: define{{.*}} void @ParamPassing(i128 %{{.+}}, i64 %{{.+}})
 // PPC32: define{{.*}} void @ParamPassing(ptr byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // AARCH64: define{{.*}} void @ParamPassing(i128 %{{.+}}, i64 %{{.+}})
 // AARCH64DARWIN: define{{.*}} void @ParamPassing(i128 %{{.+}}, i64 %{{.+}})
 // ARM: define{{.*}} arm_aapcscc void @ParamPassing(ptr byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // LA64: define{{.*}} void @ParamPassing(i128 %{{.+}}, i64 %{{.+}})
-// LA32: define{{.*}} void @ParamPassing(ptr %{{.+}}, i64 %{{.+}})
+// LA32: define{{.*}} void @ParamPassing(ptr dead_on_return %{{.+}}, i64 %{{.+}})
 
 void ParamPassing2(_BitInt(127) b, _BitInt(63) c) {}
 // LIN64: define{{.*}} void @ParamPassing2(i64 %{{.+}}, i64 %{{.+}}, i64 %{{.+}})
-// WIN64: define dso_local void @ParamPassing2(ptr %{{.+}}, i63 %{{.+}})
-// LIN32: define{{.*}} void @ParamPassing2(ptr %{{.+}}, i63 %{{.+}})
-// WIN32: define dso_local void @ParamPassing2(ptr %{{.+}}, i63 %{{.+}})
-// NACL: define{{.*}} void @ParamPassing2(ptr byval(i127) align 8 %{{.+}}, i63 %{{.+}})
+// WIN64: define dso_local void @ParamPassing2(ptr dead_on_return %{{.+}}, i63 %{{.+}})
+// LIN32: define{{.*}} void @ParamPassing2(ptr dead_on_return %{{.+}}, i63 %{{.+}})
+// WIN32: define dso_local void @ParamPassing2(ptr dead_on_return %{{.+}}, i63 %{{.+}})
 // NVPTX64: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 %{{.+}})
-// NVPTX: define{{.*}} void @ParamPassing2(ptr byval(i127) align 8 %{{.+}}, i63 %{{.+}})
+// NVPTX: define{{.*}} void @ParamPassing2(ptr byval(i128) align 8 %{{.+}}, i63 %{{.+}})
 // SPARCV9: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 signext %{{.+}})
-// SPARC: define{{.*}} void @ParamPassing2(ptr byval(i127) align 8 %{{.+}}, i63 %{{.+}})
+// SPARC: define{{.*}} void @ParamPassing2(ptr byval(i128) align 8 %{{.+}}, i63 %{{.+}})
 // MIPS64: define{{.*}} void @ParamPassing2(i127 signext  %{{.+}}, i63 signext %{{.+}})
-// MIPS: define{{.*}} void @ParamPassing2(ptr byval(i127) align 8 %{{.+}}, i63 signext %{{.+}})
-// SPIR64: define{{.*}} spir_func void @ParamPassing2(ptr byval(i127) align 8 %{{.+}}, i63 %{{.+}})
-// SPIR: define{{.*}} spir_func void @ParamPassing2(ptr byval(i127) align 8 %{{.+}}, i63 %{{.+}})
-// HEX: define{{.*}} void @ParamPassing2(ptr byval(i127) align 8 %{{.+}}, i63 %{{.+}})
-// LANAI: define{{.*}} void @ParamPassing2(ptr byval(i127) align 4 %{{.+}}, i63 %{{.+}})
-// R600: define{{.*}} void @ParamPassing2(ptr addrspace(5) byval(i127) align 8 %{{.+}}, i63 %{{.+}})
-// ARC: define{{.*}} void @ParamPassing2(ptr byval(i127) align 4 %{{.+}}, i63 inreg %{{.+}})
-// XCORE: define{{.*}} void @ParamPassing2(ptr byval(i127) align 4 %{{.+}}, i63 %{{.+}})
-// RISCV64: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 signext %{{.+}})
-// RISCV32: define{{.*}} void @ParamPassing2(ptr %{{.+}}, i63 %{{.+}})
+// MIPS: define{{.*}} void @ParamPassing2(ptr byval(i128) align 8 %{{.+}}, i63 signext %{{.+}})
+// SPIR64: define{{.*}} spir_func void @ParamPassing2(ptr byval(i128) align 8 %{{.+}}, i63 %{{.+}})
+// SPIR: define{{.*}} spir_func void @ParamPassing2(ptr byval(i128) align 8 %{{.+}}, i63 %{{.+}})
+// HEX: define{{.*}} void @ParamPassing2(ptr byval(i128) align 8 %{{.+}}, i63 %{{.+}})
+// LANAI: define{{.*}} void @ParamPassing2(ptr byval(i128) align 4 %{{.+}}, i63 %{{.+}})
+// R600: define{{.*}} void @ParamPassing2(ptr addrspace(5) byval(i128) align 8 %{{.+}}, i63 %{{.+}})
+// ARC: define{{.*}} void @ParamPassing2(ptr byval(i128) align 4 %{{.+}}, i63 inreg %{{.+}})
+// XCORE: define{{.*}} void @ParamPassing2(ptr byval(i128) align 4 %{{.+}}, i63 %{{.+}})
+// RISCV64: define{{.*}} void @ParamPassing2(i127 signext %{{.+}}, i63 signext %{{.+}})
+// RISCV32: define{{.*}} void @ParamPassing2(ptr dead_on_return %{{.+}}, i63 signext %{{.+}})
 // WASM: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 %{{.+}})
-// SYSTEMZ: define{{.*}} void @ParamPassing2(ptr %{{.+}}, i63 signext %{{.+}})
+// SYSTEMZ: define{{.*}} void @ParamPassing2(ptr dead_on_return %{{.+}}, i63 signext %{{.+}})
 // PPC64: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 signext %{{.+}})
-// PPC32: define{{.*}} void @ParamPassing2(ptr byval(i127) align 8 %{{.+}}, i63 %{{.+}})
+// PPC32: define{{.*}} void @ParamPassing2(ptr byval(i128) align 8 %{{.+}}, i63 %{{.+}})
 // AARCH64: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 %{{.+}})
 // AARCH64DARWIN: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 %{{.+}})
-// ARM: define{{.*}} arm_aapcscc void @ParamPassing2(ptr byval(i127) align 8 %{{.+}}, i63 %{{.+}})
+// ARM: define{{.*}} arm_aapcscc void @ParamPassing2(ptr byval(i128) align 8 %{{.+}}, i63 %{{.+}})
 // LA64: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 signext %{{.+}})
-// LA32: define{{.*}} void @ParamPassing2(ptr %{{.+}}, i63 %{{.+}})
+// LA32: define{{.*}} void @ParamPassing2(ptr dead_on_return %{{.+}}, i63 %{{.+}})
 
 // Make sure we follow the signext rules for promotable integer types.
 void ParamPassing3(_BitInt(15) a, _BitInt(31) b) {}
@@ -99,7 +97,6 @@ void ParamPassing3(_BitInt(15) a, _BitInt(31) b) {}
 // WIN64: define dso_local void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
 // LIN32: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // WIN32: define dso_local void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
-// NACL: define{{.*}} void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
 // NVPTX64: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // NVPTX: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // SPARCV9: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
@@ -131,11 +128,11 @@ void ParamPassing3(_BitInt(15) a, _BitInt(31) b) {}
 // are negated. This will give an error when a target does support larger
 // _BitInt widths to alert us to enable the test.
 void ParamPassing4(_BitInt(129) a) {}
-// LIN64: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
-// WIN64: define dso_local void @ParamPassing4(ptr %{{.+}})
-// LIN32: define{{.*}} void @ParamPassing4(ptr %{{.+}})
-// WIN32: define dso_local void @ParamPassing4(ptr %{{.+}})
-// NACL-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
+// LIN64: define{{.*}} void @ParamPassing4(ptr byval([24 x i8]) align 8 %{{.+}})
+// WIN64: define dso_local void @ParamPassing4(ptr dead_on_return %{{.+}})
+// LIN32: define{{.*}} void @ParamPassing4(ptr dead_on_return %{{.+}})
+// WIN32: define dso_local void @ParamPassing4(ptr dead_on_return %{{.+}})
+// AARCH64: define{{.*}} void @ParamPassing4(ptr dead_on_return %{{.+}})
 // NVPTX64-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // NVPTX-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // SPARCV9-NOT: define{{.*}} void @ParamPassing4(ptr %{{.+}})
@@ -155,19 +152,17 @@ void ParamPassing4(_BitInt(129) a) {}
 // SYSTEMZ-NOT: define{{.*}} void @ParamPassing4(ptr %{{.+}})
 // PPC64-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // PPC32-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
-// AARCH64-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // AARCH64DARWIN-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // ARM-NOT: define{{.*}} arm_aapcscc void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
-// LA64-NOT: define{{.*}} void @ParamPassing4(ptr %{{.+}})
-// LA32-NOT: define{{.*}} void @ParamPassing4(ptr %{{.+}})
+// LA64: define{{.*}} void @ParamPassing4(ptr dead_on_return %{{.+}})
+// LA32: define{{.*}} void @ParamPassing4(ptr dead_on_return %{{.+}})
 #endif
 
-_BitInt(63) ReturnPassing(void){}
+_BitInt(63) ReturnPassing(void) { return 0; }
 // LIN64: define{{.*}} i64 @ReturnPassing(
 // WIN64: define dso_local i63 @ReturnPassing(
 // LIN32: define{{.*}} i63 @ReturnPassing(
 // WIN32: define dso_local i63 @ReturnPassing(
-// NACL: define{{.*}} i63 @ReturnPassing(
 // NVPTX64: define{{.*}} i63 @ReturnPassing(
 // NVPTX: define{{.*}} i63 @ReturnPassing(
 // SPARCV9: define{{.*}} signext i63 @ReturnPassing(
@@ -193,12 +188,11 @@ _BitInt(63) ReturnPassing(void){}
 // LA64: define{{.*}} signext i63 @ReturnPassing(
 // LA32: define{{.*}} i63 @ReturnPassing(
 
-_BitInt(64) ReturnPassing2(void){}
+_BitInt(64) ReturnPassing2(void) { return 0; }
 // LIN64: define{{.*}} i64 @ReturnPassing2(
 // WIN64: define dso_local i64 @ReturnPassing2(
 // LIN32: define{{.*}} i64 @ReturnPassing2(
 // WIN32: define dso_local i64 @ReturnPassing2(
-// NACL: define{{.*}} i64 @ReturnPassing2(
 // NVPTX64: define{{.*}} i64 @ReturnPassing2(
 // NVPTX: define{{.*}} i64 @ReturnPassing2(
 // SPARCV9: define{{.*}} i64 @ReturnPassing2(
@@ -224,106 +218,103 @@ _BitInt(64) ReturnPassing2(void){}
 // LA64: define{{.*}} i64 @ReturnPassing2(
 // LA32: define{{.*}} i64 @ReturnPassing2(
 
-_BitInt(127) ReturnPassing3(void){}
+_BitInt(127) ReturnPassing3(void) { return 0; }
 // LIN64: define{{.*}} { i64, i64 } @ReturnPassing3(
-// WIN64: define dso_local void @ReturnPassing3(ptr noalias sret
-// LIN32: define{{.*}} void @ReturnPassing3(ptr noalias sret
-// WIN32: define dso_local void @ReturnPassing3(ptr noalias sret
-// NACL: define{{.*}} void @ReturnPassing3(ptr noalias sret
+// WIN64: define dso_local void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
+// LIN32: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
+// WIN32: define dso_local void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // NVPTX/64 makes the intentional choice to put all return values direct, even
 // large structures, so we do the same here.
 // NVPTX64: define{{.*}} i127 @ReturnPassing3(
 // NVPTX: define{{.*}} i127 @ReturnPassing3(
 // SPARCV9: define{{.*}} i127 @ReturnPassing3(
-// SPARC: define{{.*}} void @ReturnPassing3(ptr noalias sret
+// SPARC: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // MIPS64: define{{.*}} i127 @ReturnPassing3(
-// MIPS: define{{.*}} void @ReturnPassing3(ptr noalias sret
-// SPIR64: define{{.*}} spir_func void @ReturnPassing3(ptr noalias sret
-// SPIR: define{{.*}} spir_func void @ReturnPassing3(ptr noalias sret
-// HEX: define{{.*}} void @ReturnPassing3(ptr noalias sret
-// LANAI: define{{.*}} void @ReturnPassing3(ptr noalias sret
-// R600: define{{.*}} void @ReturnPassing3(ptr addrspace(5) noalias sret
-// ARC: define{{.*}} void @ReturnPassing3(ptr noalias sret
-// XCORE: define{{.*}} void @ReturnPassing3(ptr noalias sret
+// MIPS: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
+// SPIR64: define{{.*}} spir_func void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
+// SPIR: define{{.*}} spir_func void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
+// HEX: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
+// LANAI: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
+// R600: define{{.*}} void @ReturnPassing3(ptr addrspace(5) dead_on_unwind noalias writable sret
+// ARC: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
+// XCORE: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // RISCV64: define{{.*}} i127 @ReturnPassing3(
-// RISCV32: define{{.*}} void @ReturnPassing3(ptr noalias sret
+// RISCV32: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // WASM: define{{.*}} i127 @ReturnPassing3(
-// SYSTEMZ: define{{.*}} void @ReturnPassing3(ptr noalias sret
+// SYSTEMZ: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // PPC64: define{{.*}} i127 @ReturnPassing3(
-// PPC32: define{{.*}} void @ReturnPassing3(ptr noalias sret
+// PPC32: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // AARCH64: define{{.*}} i127 @ReturnPassing3(
 // AARCH64DARWIN: define{{.*}} i127 @ReturnPassing3(
-// ARM: define{{.*}} arm_aapcscc void @ReturnPassing3(ptr noalias sret
+// ARM: define{{.*}} arm_aapcscc void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // LA64: define{{.*}} i127 @ReturnPassing3(
-// LA32: define{{.*}} void @ReturnPassing3(ptr noalias sret
+// LA32: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 
-_BitInt(128) ReturnPassing4(void){}
-// LIN64: define{{.*}} { i64, i64 } @ReturnPassing4(
-// WIN64: define dso_local void @ReturnPassing4(ptr noalias sret
-// LIN32: define{{.*}} void @ReturnPassing4(ptr noalias sret
-// WIN32: define dso_local void @ReturnPassing4(ptr noalias sret
-// NACL: define{{.*}} void @ReturnPassing4(ptr noalias sret
+_BitInt(128) ReturnPassing4(void) { return 0; }
+// LIN64: define{{.*}} i128 @ReturnPassing4(
+// WIN64: define dso_local void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
+// LIN32: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
+// WIN32: define dso_local void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // NVPTX64: define{{.*}} i128 @ReturnPassing4(
 // NVPTX: define{{.*}} i128 @ReturnPassing4(
 // SPARCV9: define{{.*}} i128 @ReturnPassing4(
-// SPARC: define{{.*}} void @ReturnPassing4(ptr noalias sret
+// SPARC: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // MIPS64: define{{.*}} i128 @ReturnPassing4(
-// MIPS: define{{.*}} void @ReturnPassing4(ptr noalias sret
-// SPIR64: define{{.*}} spir_func void @ReturnPassing4(ptr noalias sret
-// SPIR: define{{.*}} spir_func void @ReturnPassing4(ptr noalias sret
-// HEX: define{{.*}} void @ReturnPassing4(ptr noalias sret
-// LANAI: define{{.*}} void @ReturnPassing4(ptr noalias sret
-// R600: define{{.*}} void @ReturnPassing4(ptr addrspace(5) noalias sret
-// ARC: define{{.*}} void @ReturnPassing4(ptr noalias sret
-// XCORE: define{{.*}} void @ReturnPassing4(ptr noalias sret
+// MIPS: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
+// SPIR64: define{{.*}} spir_func void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
+// SPIR: define{{.*}} spir_func void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
+// HEX: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
+// LANAI: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
+// R600: define{{.*}} void @ReturnPassing4(ptr addrspace(5) dead_on_unwind noalias writable sret
+// ARC: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
+// XCORE: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // RISCV64: define{{.*}} i128 @ReturnPassing4(
-// RISCV32: define{{.*}} void @ReturnPassing4(ptr noalias sret
+// RISCV32: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // WASM: define{{.*}} i128 @ReturnPassing4(
-// SYSTEMZ: define{{.*}} void @ReturnPassing4(ptr noalias sret
+// SYSTEMZ: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // PPC64: define{{.*}} i128 @ReturnPassing4(
-// PPC32: define{{.*}} void @ReturnPassing4(ptr noalias sret
+// PPC32: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // AARCH64: define{{.*}} i128 @ReturnPassing4(
 // AARCH64DARWIN: define{{.*}} i128 @ReturnPassing4(
-// ARM: define{{.*}} arm_aapcscc void @ReturnPassing4(ptr noalias sret
+// ARM: define{{.*}} arm_aapcscc void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // LA64: define{{.*}} i128 @ReturnPassing4(
-// LA32: define{{.*}} void @ReturnPassing4(ptr noalias sret
+// LA32: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 
 #if __BITINT_MAXWIDTH__ > 128
-_BitInt(129) ReturnPassing5(void){}
-// LIN64: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// WIN64: define dso_local void @ReturnPassing5(ptr noalias sret
-// LIN32: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// WIN32: define dso_local void @ReturnPassing5(ptr noalias sret
-// NACL-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
+_BitInt(129) ReturnPassing5(void) { return 0; }
+// LIN64: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// WIN64: define dso_local void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// LIN32: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// WIN32: define dso_local void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// AARCH64: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // NVPTX64-NOT: define{{.*}} i129 @ReturnPassing5(
 // NVPTX-NOT: define{{.*}} i129 @ReturnPassing5(
 // SPARCV9-NOT: define{{.*}} i129 @ReturnPassing5(
-// SPARC-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// MIPS64-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// MIPS-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// SPIR64-NOT: define{{.*}} spir_func void @ReturnPassing5(ptr noalias sret
-// SPIR-NOT: define{{.*}} spir_func void @ReturnPassing5(ptr noalias sret
-// HEX-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// LANAI-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
+// SPARC-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// MIPS64-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// MIPS-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// SPIR64-NOT: define{{.*}} spir_func void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// SPIR-NOT: define{{.*}} spir_func void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// HEX-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// LANAI-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // R600-NOT: define{{.*}} void @ReturnPassing5(ptr addrspace(5) noalias sret
-// ARC-NOT: define{{.*}} void @ReturnPassing5(ptr inreg noalias sret
-// XCORE-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// RISCV64-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// RISCV32-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// WASM-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// SYSTEMZ-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// PPC64-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// PPC32-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// AARCH64-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// AARCH64DARWIN-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// ARM-NOT: define{{.*}} arm_aapcscc void @ReturnPassing5(ptr noalias sret
-// LA64-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// LA32-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
+// ARC-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind inreg noalias writable sret
+// XCORE-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// RISCV64-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// RISCV32-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// WASM-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// SYSTEMZ-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// PPC64-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// PPC32-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// AARCH64DARWIN-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// ARM-NOT: define{{.*}} arm_aapcscc void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// LA64: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// LA32: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 
 // SparcV9 is odd in that it has a return-size limit of 256, not 128 or 64
 // like other platforms, so test to make sure this behavior will still work.
-_BitInt(256) ReturnPassing6(void) {}
+_BitInt(256) ReturnPassing6(void) { return 0; }
 // SPARCV9-NOT: define{{.*}} i256 @ReturnPassing6(
-_BitInt(257) ReturnPassing7(void) {}
-// SPARCV9-NOT: define{{.*}} void @ReturnPassing7(ptr noalias sret
+_BitInt(257) ReturnPassing7(void) { return 0; }
+// SPARCV9-NOT: define{{.*}} void @ReturnPassing7(ptr dead_on_unwind noalias writable sret
 #endif

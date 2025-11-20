@@ -37,7 +37,7 @@ define i32 @shrink_xor(i64 %a) {
 define <2 x i32> @shrink_xor_vec(<2 x i64> %a) {
 ; CHECK-LABEL: @shrink_xor_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[TRUNC:%.*]] = xor <2 x i32> [[TMP1]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TRUNC:%.*]] = xor <2 x i32> [[TMP1]], splat (i32 2)
 ; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
 ;
   %xor = xor <2 x i64> %a, <i64 2, i64 2>
@@ -76,7 +76,7 @@ define <2 x i8> @shrink_or_vec(<2 x i16> %a) {
 define i31 @shrink_and(i64 %a) {
 ; CHECK-LABEL: @shrink_and(
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[A:%.*]], 42
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[AND]] to i31
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i64 [[AND]] to i31
 ; CHECK-NEXT:    ret i31 [[TRUNC]]
 ;
   %and = and i64 %a, 42
@@ -155,8 +155,7 @@ define i1 @searchArray2(i32 %hay, ptr %haystack) {
 ; CHECK-NEXT:    [[IDX:%.*]] = getelementptr i32, ptr [[HAYSTACK:%.*]], i64 [[INDVAR]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[IDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[LD]], [[HAY:%.*]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP1]] to i8
-; CHECK-NEXT:    [[AND]] = and i8 [[FOUND]], [[ZEXT]]
+; CHECK-NEXT:    [[AND]] = select i1 [[CMP1]], i8 [[FOUND]], i8 0
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[LOOP]]

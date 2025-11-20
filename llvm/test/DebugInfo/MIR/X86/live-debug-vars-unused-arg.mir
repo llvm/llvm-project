@@ -114,15 +114,15 @@ frameInfo:
   stackSize:       0
   offsetAdjustment: 0
   maxAlignment:    0
-  adjustsStack:    false
+  adjustsStack:    true
   hasCalls:        true
   stackProtector:  ''
   maxCallFrameSize: 4294967295
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:

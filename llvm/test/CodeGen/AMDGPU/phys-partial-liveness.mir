@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -debug-only=regalloc -verify-machineinstrs -run-pass=liveintervals -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -debug-only=regalloc --passes='print<live-intervals>' -o - %s 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # CHECK: Computing live-in reg-units in ABI blocks.

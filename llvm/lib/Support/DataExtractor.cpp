@@ -142,13 +142,13 @@ int64_t
 DataExtractor::getSigned(uint64_t *offset_ptr, uint32_t byte_size) const {
   switch (byte_size) {
   case 1:
-    return (int8_t)getU8(offset_ptr);
+    return getS8(offset_ptr);
   case 2:
-    return (int16_t)getU16(offset_ptr);
+    return getS16(offset_ptr);
   case 4:
-    return (int32_t)getU32(offset_ptr);
+    return getS32(offset_ptr);
   case 8:
-    return (int64_t)getU64(offset_ptr);
+    return getS64(offset_ptr);
   }
   llvm_unreachable("getSigned unhandled case!");
 }
@@ -202,7 +202,7 @@ static T getLEB128(StringRef Data, uint64_t *OffsetPtr, Error *Err,
   if (isError(Err))
     return T();
 
-  const char *error;
+  const char *error = nullptr;
   unsigned bytes_read;
   T result =
       Decoder(Bytes.data() + *OffsetPtr, &bytes_read, Bytes.end(), &error);
@@ -227,7 +227,7 @@ int64_t DataExtractor::getSLEB128(uint64_t *offset_ptr, Error *Err) const {
 }
 
 void DataExtractor::skip(Cursor &C, uint64_t Length) const {
-  ErrorAsOutParameter ErrAsOut(&C.Err);
+  ErrorAsOutParameter ErrAsOut(C.Err);
   if (isError(&C.Err))
     return;
 

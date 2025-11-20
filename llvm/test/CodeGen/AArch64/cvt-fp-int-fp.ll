@@ -73,6 +73,149 @@ entry:
   ret half %conv1
 }
 
+define bfloat @t7(bfloat %x)  {
+; CHECK-LABEL: t7:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzs w9, s0
+; CHECK-NEXT:    scvtf d0, w9
+; CHECK-NEXT:    fcvtxn s0, d0
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    add w8, w10, w8
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptosi bfloat %x to i32
+  %conv1 = sitofp i32 %conv to bfloat
+  ret bfloat %conv1
+}
+
+define bfloat @t8(bfloat %x)  {
+; CHECK-LABEL: t8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzu w9, s0
+; CHECK-NEXT:    ucvtf d0, w9
+; CHECK-NEXT:    fcvtxn s0, d0
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    add w8, w10, w8
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptoui bfloat %x to i32
+  %conv1 = uitofp i32 %conv to bfloat
+  ret bfloat %conv1
+}
+
+define i64 @testu_f64_multiuse(double %x) {
+; CHECK-LABEL: testu_f64_multiuse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu x8, d0
+; CHECK-NEXT:    ucvtf d1, x8
+; CHECK-NEXT:    fcmp d0, d1
+; CHECK-NEXT:    csel x0, x8, xzr, eq
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptoui double %x to i64
+  %conv1 = uitofp i64 %conv to double
+  %cmp = fcmp oeq double %x, %conv1
+  %cond = select i1 %cmp, i64 %conv, i64 0
+  ret i64 %cond
+}
+
+define i32 @testu_f32_multiuse(float %x) {
+; CHECK-LABEL: testu_f32_multiuse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu w8, s0
+; CHECK-NEXT:    ucvtf s1, w8
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    csel w0, w8, wzr, eq
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptoui float %x to i32
+  %conv1 = uitofp i32 %conv to float
+  %cmp = fcmp oeq float %x, %conv1
+  %cond = select i1 %cmp, i32 %conv, i32 0
+  ret i32 %cond
+}
+
+define i32 @testu_f16_multiuse(half %x) {
+; CHECK-LABEL: testu_f16_multiuse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu w8, h0
+; CHECK-NEXT:    ucvtf h1, w8
+; CHECK-NEXT:    fcmp h0, h1
+; CHECK-NEXT:    csel w0, w8, wzr, eq
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptoui half %x to i32
+  %conv1 = uitofp i32 %conv to half
+  %cmp = fcmp oeq half %x, %conv1
+  %cond = select i1 %cmp, i32 %conv, i32 0
+  ret i32 %cond
+}
+
+define i64 @tests_f64_multiuse(double %x) {
+; CHECK-LABEL: tests_f64_multiuse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs x8, d0
+; CHECK-NEXT:    scvtf d1, x8
+; CHECK-NEXT:    fcmp d0, d1
+; CHECK-NEXT:    csel x0, x8, xzr, eq
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptosi double %x to i64
+  %conv1 = sitofp i64 %conv to double
+  %cmp = fcmp oeq double %x, %conv1
+  %cond = select i1 %cmp, i64 %conv, i64 0
+  ret i64 %cond
+}
+
+define i32 @tests_f32_multiuse(float %x) {
+; CHECK-LABEL: tests_f32_multiuse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs w8, s0
+; CHECK-NEXT:    scvtf s1, w8
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    csel w0, w8, wzr, eq
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptosi float %x to i32
+  %conv1 = sitofp i32 %conv to float
+  %cmp = fcmp oeq float %x, %conv1
+  %cond = select i1 %cmp, i32 %conv, i32 0
+  ret i32 %cond
+}
+
+define i32 @tests_f16_multiuse(half %x) {
+; CHECK-LABEL: tests_f16_multiuse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs w8, h0
+; CHECK-NEXT:    scvtf h1, w8
+; CHECK-NEXT:    fcmp h0, h1
+; CHECK-NEXT:    csel w0, w8, wzr, eq
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptosi half %x to i32
+  %conv1 = sitofp i32 %conv to half
+  %cmp = fcmp oeq half %x, %conv1
+  %cond = select i1 %cmp, i32 %conv, i32 0
+  ret i32 %cond
+}
+
+
 define double @t1_strict(double %x) #0 {
 ; CHECK-LABEL: t1_strict:
 ; CHECK:       // %bb.0: // %entry
@@ -81,7 +224,7 @@ define double @t1_strict(double %x) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %conv = call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %x, metadata !"fpexcept.strict") #0
-  %conv1 = call double @llvm.experimental.constrained.sitofp.i64.f64(i64 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %conv1 = call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %conv1
 }
 
@@ -93,7 +236,7 @@ define float @t2_strict(float %x) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %x, metadata !"fpexcept.strict") #0
-  %conv1 = call float @llvm.experimental.constrained.sitofp.i32.f32(i32 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %conv1 = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %conv1
 }
 
@@ -105,7 +248,7 @@ define half @t3_strict(half %x) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %x, metadata !"fpexcept.strict") #0
-  %conv1 = call half @llvm.experimental.constrained.sitofp.i32.f16(i32 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %conv1 = call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret half %conv1
 }
 
@@ -117,7 +260,7 @@ define double @t4_strict(double %x) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %x, metadata !"fpexcept.strict") #0
-  %conv1 = call double @llvm.experimental.constrained.uitofp.i64.f64(i64 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %conv1 = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %conv1
 }
 
@@ -129,7 +272,7 @@ define float @t5_strict(float %x) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %x, metadata !"fpexcept.strict") #0
-  %conv1 = call float @llvm.experimental.constrained.uitofp.i32.f32(i32 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %conv1 = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %conv1
 }
 
@@ -141,21 +284,71 @@ define half @t6_strict(half %x) #0 {
 ; CHECK-NEXT:    ret
 entry:
   %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f16(half %x, metadata !"fpexcept.strict") #0
-  %conv1 = call half @llvm.experimental.constrained.uitofp.i32.f16(i32 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %conv1 = call half @llvm.experimental.constrained.uitofp.f16.i32(i32 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret half %conv1
+}
+
+define bfloat @t7_strict(bfloat %x) #0 {
+; CHECK-LABEL: t7_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzs w9, s0
+; CHECK-NEXT:    scvtf d0, w9
+; CHECK-NEXT:    fcvtxn s0, d0
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    add w8, w10, w8
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ret
+entry:
+  %conv = call i32 @llvm.experimental.constrained.fptosi.i32.bf16(bfloat %x, metadata !"fpexcept.strict") #0
+  %conv1 = call bfloat @llvm.experimental.constrained.sitofp.bf16.i32(i32 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret bfloat %conv1
+}
+
+define bfloat @t8_strict(bfloat %x) #0 {
+; CHECK-LABEL: t8_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzu w9, s0
+; CHECK-NEXT:    ucvtf d0, w9
+; CHECK-NEXT:    fcvtxn s0, d0
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    add w8, w10, w8
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ret
+entry:
+  %conv = call i32 @llvm.experimental.constrained.fptoui.i32.bf16(bfloat %x, metadata !"fpexcept.strict") #0
+  %conv1 = call bfloat @llvm.experimental.constrained.uitofp.bf16.i32(i32 %conv, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret bfloat %conv1
 }
 
 attributes #0 = { strictfp }
 
+declare i32 @llvm.experimental.constrained.fptosi.i32.bf16(bfloat, metadata)
+declare i32 @llvm.experimental.constrained.fptoui.i32.bf16(bfloat, metadata)
 declare i32 @llvm.experimental.constrained.fptosi.i32.f16(half, metadata)
 declare i32 @llvm.experimental.constrained.fptoui.i32.f16(half, metadata)
 declare i32 @llvm.experimental.constrained.fptosi.i32.f32(float, metadata)
 declare i32 @llvm.experimental.constrained.fptoui.i32.f32(float, metadata)
 declare i64 @llvm.experimental.constrained.fptosi.i64.f64(double, metadata)
 declare i64 @llvm.experimental.constrained.fptoui.i64.f64(double, metadata)
-declare half @llvm.experimental.constrained.sitofp.i32.f16(i32, metadata, metadata)
-declare half @llvm.experimental.constrained.uitofp.i32.f16(i32, metadata, metadata)
-declare float @llvm.experimental.constrained.sitofp.i32.f32(i32, metadata, metadata)
-declare float @llvm.experimental.constrained.uitofp.i32.f32(i32, metadata, metadata)
-declare double @llvm.experimental.constrained.sitofp.i64.f64(i64, metadata, metadata)
-declare double @llvm.experimental.constrained.uitofp.i64.f64(i64, metadata, metadata)
+declare bfloat @llvm.experimental.constrained.sitofp.bf16.i32(i32, metadata, metadata)
+declare bfloat @llvm.experimental.constrained.uitofp.bf16.i32(i32, metadata, metadata)
+declare half @llvm.experimental.constrained.sitofp.f16.i32(i32, metadata, metadata)
+declare half @llvm.experimental.constrained.uitofp.f16.i32(i32, metadata, metadata)
+declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata)
+declare float @llvm.experimental.constrained.uitofp.f32.i32(i32, metadata, metadata)
+declare double @llvm.experimental.constrained.sitofp.f64.i64(i64, metadata, metadata)
+declare double @llvm.experimental.constrained.uitofp.f64.i64(i64, metadata, metadata)

@@ -412,3 +412,28 @@ TEST(DWARFDebugAbbrevTest, DWARFAbbrevDeclSetMissingTerminator) {
           "abbreviation declaration attribute list was not terminated with a "
           "null entry"));
 }
+
+TEST(DWARFDebugAbbrevTest, DWARFDebugAbbrevParseError) {
+  SmallString<64> RawData;
+  raw_svector_ostream OS(RawData);
+  const uint32_t FirstCode = 70;
+  // First, we're going to manually add good data.
+  writeValidAbbreviationDeclarations(OS, FirstCode, InOrder);
+
+  // Afterwards, we're going to write an Abbreviation Decl manually without a
+  // termintating sequence.
+  encodeULEB128(FirstCode - 1, OS);
+  encodeULEB128(DW_TAG_compile_unit, OS);
+  OS << static_cast<uint8_t>(DW_CHILDREN_no);
+  encodeULEB128(DW_AT_name, OS);
+  encodeULEB128(DW_FORM_strp, OS);
+
+  // The specific error should percolate up to the DWARFDebugAbbrev::parse().
+  DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
+  DWARFDebugAbbrev DebugAbbrev(Data);
+  EXPECT_THAT_ERROR(
+      DebugAbbrev.parse(),
+      FailedWithMessage(
+          "abbreviation declaration attribute list was not terminated with a "
+          "null entry"));
+}

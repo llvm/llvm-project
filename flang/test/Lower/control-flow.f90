@@ -1,9 +1,9 @@
 ! Tests for control-flow
 
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! check the lowering of a RETURN in the body of a SUBROUTINE
-! CHECK-LABEL one
+! CHECK-LABEL: one
 subroutine one(a,b,c)
   d = 1.0
   if (a .ne. b) then
@@ -22,4 +22,4 @@ subroutine one(a,b,c)
  ! CHECK: ^bb[[EXIT]]:
  ! CHECK-NEXT: return
 end subroutine one
-    
+

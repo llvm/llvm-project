@@ -12,17 +12,16 @@
 #include "ProfiledBinary.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 #include <cstdint>
 #include <fstream>
-#include <list>
 #include <map>
-#include <vector>
-
-using namespace llvm;
-using namespace sampleprof;
 
 namespace llvm {
+
+class CleanupInstaller;
+
 namespace sampleprof {
 
 // Stream based trace line iterator
@@ -385,9 +384,7 @@ struct AddrBasedCtxKey : public ContextKey {
     return Context == Other->Context;
   }
 
-  void genHashCode() override {
-    HashCode = hash_combine_range(Context.begin(), Context.end());
-  }
+  void genHashCode() override { HashCode = hash_combine_range(Context); }
 };
 
 // The counter of branch samples for one function indexed by the branch,
@@ -396,10 +393,14 @@ using BranchSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
 // The counter of range samples for one function indexed by the range,
 // which is represented as the start and end offset pair.
 using RangeSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
+// <<inst-addr, vtable-data-symbol>, count> map for data access samples.
+// The instruction address is the virtual address in the binary.
+using DataAccessSample = std::map<std::pair<uint64_t, StringRef>, uint64_t>;
 // Wrapper for sample counters including range counter and branch counter
 struct SampleCounter {
   RangeSample RangeCounter;
   BranchSample BranchCounter;
+  DataAccessSample DataAccessCounter;
 
   void recordRangeCount(uint64_t Start, uint64_t End, uint64_t Repeat) {
     assert(Start <= End && "Invalid instruction range");
@@ -407,6 +408,10 @@ struct SampleCounter {
   }
   void recordBranchCount(uint64_t Source, uint64_t Target, uint64_t Repeat) {
     BranchCounter[{Source, Target}] += Repeat;
+  }
+  void recordDataAccessCount(uint64_t InstAddr, StringRef DataSymbol,
+                             uint64_t Repeat) {
+    DataAccessCounter[{InstAddr, DataSymbol}] += Repeat;
   }
 };
 
@@ -569,10 +574,17 @@ public:
   virtual ~PerfReaderBase() = default;
   static std::unique_ptr<PerfReaderBase>
   create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
-         std::optional<uint32_t> PIDFilter);
+         std::optional<int32_t> PIDFilter);
 
   // Entry of the reader to parse multiple perf traces
   virtual void parsePerfTraces() = 0;
+
+  // Parse the <ip, vtable-data-symbol> from the data access perf trace file,
+  // and accumulate the data access count for each <ip, data-symbol> pair.
+  Error
+  parseDataAccessPerfTraces(StringRef DataAccessPerfFile,
+                            std::optional<int32_t> PIDFilter = std::nullopt);
+
   const ContextSampleCounterMap &getSampleCounters() const {
     return SampleCounters;
   }
@@ -594,40 +606,40 @@ protected:
 class PerfScriptReader : public PerfReaderBase {
 public:
   PerfScriptReader(ProfiledBinary *B, StringRef PerfTrace,
-                   std::optional<uint32_t> PID)
-      : PerfReaderBase(B, PerfTrace), PIDFilter(PID){};
+                   std::optional<int32_t> PID)
+      : PerfReaderBase(B, PerfTrace), PIDFilter(PID) {};
 
   // Entry of the reader to parse multiple perf traces
   void parsePerfTraces() override;
+
+  // Parse a single line of a PERF_RECORD_MMAP event looking for a
+  // mapping between the binary name and its memory layout.
+  // TODO: Move this static method from PerScriptReader (subclass) to
+  // PerfReaderBase (superclass).
+  static bool extractMMapEventForBinary(ProfiledBinary *Binary, StringRef Line,
+                                        MMapEvent &MMap);
+
   // Generate perf script from perf data
-  static PerfInputFile
-  convertPerfDataToTrace(ProfiledBinary *Binary, PerfInputFile &File,
-                         std::optional<uint32_t> PIDFilter);
+  static PerfInputFile convertPerfDataToTrace(ProfiledBinary *Binary,
+                                              bool SkipPID, PerfInputFile &File,
+                                              std::optional<int32_t> PIDFilter);
   // Extract perf script type by peaking at the input
   static PerfContent checkPerfScriptType(StringRef FileName);
 
-protected:
-  // The parsed MMap event
-  struct MMapEvent {
-    uint64_t PID = 0;
-    uint64_t Address = 0;
-    uint64_t Size = 0;
-    uint64_t Offset = 0;
-    StringRef BinaryPath;
-  };
+  // Cleanup installers for temporary files created by perf script command.
+  // Those files will be automatically removed when running destructor or
+  // receiving signals.
+  static SmallVector<CleanupInstaller, 2> TempFileCleanups;
 
+protected:
   // Check whether a given line is LBR sample
   static bool isLBRSample(StringRef Line);
   // Check whether a given line is MMAP event
-  static bool isMMap2Event(StringRef Line);
-  // Parse a single line of a PERF_RECORD_MMAP2 event looking for a
-  // mapping between the binary name and its memory layout.
-  static bool extractMMap2EventForBinary(ProfiledBinary *Binary, StringRef Line,
-                                         MMapEvent &MMap);
+  static bool isMMapEvent(StringRef Line);
   // Update base address based on mmap events
   void updateBinaryAddress(const MMapEvent &Event);
   // Parse mmap event and update binary address
-  void parseMMap2Event(TraceStream &TraceIt);
+  void parseMMapEvent(TraceStream &TraceIt);
   // Parse perf events/samples and do aggregation
   void parseAndAggregateTrace();
   // Parse either an MMAP event or a perf sample
@@ -663,7 +675,7 @@ protected:
   // Keep track of all invalid return addresses
   std::set<uint64_t> InvalidReturnAddresses;
   // PID for the process of interest
-  std::optional<uint32_t> PIDFilter;
+  std::optional<int32_t> PIDFilter;
 };
 
 /*
@@ -675,8 +687,8 @@ protected:
 class LBRPerfReader : public PerfScriptReader {
 public:
   LBRPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
-                std::optional<uint32_t> PID)
-      : PerfScriptReader(Binary, PerfTrace, PID){};
+                std::optional<int32_t> PID)
+      : PerfScriptReader(Binary, PerfTrace, PID) {};
   // Parse the LBR only sample.
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
 };
@@ -693,8 +705,8 @@ public:
 class HybridPerfReader : public PerfScriptReader {
 public:
   HybridPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
-                   std::optional<uint32_t> PID)
-      : PerfScriptReader(Binary, PerfTrace, PID){};
+                   std::optional<int32_t> PID)
+      : PerfScriptReader(Binary, PerfTrace, PID) {};
   // Parse the hybrid sample including the call and LBR line
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
   void generateUnsymbolizedProfile() override;

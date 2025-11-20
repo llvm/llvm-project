@@ -1,4 +1,5 @@
-# RUN: llc -o - %s -march=amdgcn -mcpu=fiji  -run-pass=machine-cp -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+# RUN: llc -o - %s -mtriple=amdgcn -mcpu=fiji  -run-pass=machine-cp -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+# RUN: llc -o - %s -mtriple=amdgcn -mcpu=fiji  -passes=machine-cp | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: dead_copy
 # GCN:       bb.0

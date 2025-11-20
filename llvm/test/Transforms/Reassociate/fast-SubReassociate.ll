@@ -33,8 +33,8 @@ define float @test2(float %A, float %B) {
 ; Both 'reassoc' and 'nsz' are required.
 define float @test2_minimal(float %A, float %B) {
 ; CHECK-LABEL: @test2_minimal(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[Z:%.*]] = fsub reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret float [[Z]]
 ;
   %W = fadd reassoc nsz float %B, 5.000000e+00
   %X = fadd reassoc nsz float %A, -7.000000e+00
@@ -81,7 +81,7 @@ define float @test3(float %A, float %B, float %C, float %D) {
 define float @test4(float %A, float %B, float %C, float %D) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast float [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast float [[C:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[Q:%.*]] = fsub fast float [[D:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[Q]]
 ;

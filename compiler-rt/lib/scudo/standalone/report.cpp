@@ -9,6 +9,7 @@
 #include "report.h"
 
 #include "atomic_helpers.h"
+#include "chunk.h"
 #include "string_utils.h"
 
 #include <stdarg.h>
@@ -24,11 +25,7 @@ public:
     Message.vappend(Format, Args);
     va_end(Args);
   }
-  NORETURN ~ScopedErrorReport() {
-    outputRaw(Message.data());
-    setAbortMessage(Message.data());
-    die();
-  }
+  NORETURN ~ScopedErrorReport() { reportRawError(Message.data()); }
 
 private:
   ScopedString Message;
@@ -55,6 +52,13 @@ void NORETURN reportError(const char *Message) {
   Report.append("%s\n", Message);
 }
 
+// Generic fatal error message without ScopedString.
+void NORETURN reportRawError(const char *Message) {
+  outputRaw(Message);
+  setAbortMessage(Message);
+  die();
+}
+
 void NORETURN reportInvalidFlag(const char *FlagType, const char *Value) {
   ScopedErrorReport Report;
   Report.append("invalid value for %s option: '%s'\n", FlagType, Value);
@@ -62,17 +66,17 @@ void NORETURN reportInvalidFlag(const char *FlagType, const char *Value) {
 
 // The checksum of a chunk header is invalid. This could be caused by an
 // {over,under}write of the header, a pointer that is not an actual chunk.
-void NORETURN reportHeaderCorruption(void *Ptr) {
+void NORETURN reportHeaderCorruption(void *Header, const void *Ptr) {
   ScopedErrorReport Report;
-  Report.append("corrupted chunk header at address %p\n", Ptr);
-}
-
-// Two threads have attempted to modify a chunk header at the same time. This is
-// symptomatic of a race-condition in the application code, or general lack of
-// proper locking.
-void NORETURN reportHeaderRace(void *Ptr) {
-  ScopedErrorReport Report;
-  Report.append("race on chunk header at address %p\n", Ptr);
+  Report.append("corrupted chunk header at address %p", Ptr);
+  if (*static_cast<Chunk::PackedHeader *>(Header) == 0U) {
+    // Header all zero, which could indicate that this might be a pointer that
+    // has been double freed but the memory has been released to the kernel.
+    Report.append(": chunk header is zero and might indicate memory corruption "
+                  "or a double free\n");
+  } else {
+    Report.append(": most likely due to memory corruption\n");
+  }
 }
 
 // The allocator was compiled with parameters that conflict with field size
@@ -126,13 +130,13 @@ static const char *stringifyAction(AllocatorAction Action) {
 
 // The chunk is not in a state congruent with the operation we want to perform.
 // This is usually the case with a double-free, a realloc of a freed pointer.
-void NORETURN reportInvalidChunkState(AllocatorAction Action, void *Ptr) {
+void NORETURN reportInvalidChunkState(AllocatorAction Action, const void *Ptr) {
   ScopedErrorReport Report;
   Report.append("invalid chunk state when %s address %p\n",
                 stringifyAction(Action), Ptr);
 }
 
-void NORETURN reportMisalignedPointer(AllocatorAction Action, void *Ptr) {
+void NORETURN reportMisalignedPointer(AllocatorAction Action, const void *Ptr) {
   ScopedErrorReport Report;
   Report.append("misaligned pointer when %s address %p\n",
                 stringifyAction(Action), Ptr);
@@ -140,7 +144,7 @@ void NORETURN reportMisalignedPointer(AllocatorAction Action, void *Ptr) {
 
 // The deallocation function used is at odds with the one used to allocate the
 // chunk (eg: new[]/delete or malloc/delete, and so on).
-void NORETURN reportDeallocTypeMismatch(AllocatorAction Action, void *Ptr,
+void NORETURN reportDeallocTypeMismatch(AllocatorAction Action, const void *Ptr,
                                         u8 TypeA, u8 TypeB) {
   ScopedErrorReport Report;
   Report.append("allocation type mismatch when %s address %p (%d vs %d)\n",
@@ -149,7 +153,7 @@ void NORETURN reportDeallocTypeMismatch(AllocatorAction Action, void *Ptr,
 
 // The size specified to the delete operator does not match the one that was
 // passed to new when allocating the chunk.
-void NORETURN reportDeleteSizeMismatch(void *Ptr, uptr Size,
+void NORETURN reportDeleteSizeMismatch(const void *Ptr, uptr Size,
                                        uptr ExpectedSize) {
   ScopedErrorReport Report;
   Report.append(

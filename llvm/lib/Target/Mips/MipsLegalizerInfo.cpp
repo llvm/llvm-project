@@ -330,8 +330,9 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   verify(*ST.getInstrInfo());
 }
 
-bool MipsLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
-                                       MachineInstr &MI) const {
+bool MipsLegalizerInfo::legalizeCustom(
+    LegalizerHelper &Helper, MachineInstr &MI,
+    LostDebugLocObserver &LocObserver) const {
   using namespace TargetOpcode;
 
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
@@ -343,7 +344,7 @@ bool MipsLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   switch (MI.getOpcode()) {
   case G_LOAD:
   case G_STORE: {
-    unsigned MemSize = (**MI.memoperands_begin()).getSize();
+    unsigned MemSize = (**MI.memoperands_begin()).getSize().getValue();
     Register Val = MI.getOperand(0).getReg();
     unsigned Size = MRI.getType(Val).getSizeInBits();
 
@@ -507,16 +508,8 @@ bool MipsLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                           MachineInstr &MI) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   const MipsSubtarget &ST = MI.getMF()->getSubtarget<MipsSubtarget>();
-  const MipsInstrInfo &TII = *ST.getInstrInfo();
-  const MipsRegisterInfo &TRI = *ST.getRegisterInfo();
-  const RegisterBankInfo &RBI = *ST.getRegBankInfo();
 
   switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
-  case Intrinsic::trap: {
-    MachineInstr *Trap = MIRBuilder.buildInstr(Mips::TRAP);
-    MI.eraseFromParent();
-    return constrainSelectedInstRegOperands(*Trap, TII, TRI, RBI);
-  }
   case Intrinsic::vacopy: {
     MachinePointerInfo MPO;
     LLT PtrTy = LLT::pointer(0, 32);

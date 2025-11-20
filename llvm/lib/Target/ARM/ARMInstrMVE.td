@@ -184,15 +184,16 @@ def t2am_imm7shift0OffsetAsmOperand : t2am_imm7shiftOffsetAsmOperand<0>;
 def t2am_imm7shift1OffsetAsmOperand : t2am_imm7shiftOffsetAsmOperand<1>;
 def t2am_imm7shift2OffsetAsmOperand : t2am_imm7shiftOffsetAsmOperand<2>;
 
-class t2am_imm7_offset<int shift> : MemOperand,
-      ComplexPattern<i32, 1, "SelectT2AddrModeImm7Offset<"#shift#">",
-                     [], [SDNPWantRoot]> {
+class t2am_imm7_offset<int shift>
+    : MemOperand,
+      ComplexPattern<i32, 1, "SelectT2AddrModeImm7Offset<"#shift#">"> {
   // They are printed the same way as the imm8 version
   let PrintMethod = "printT2AddrModeImm8OffsetOperand";
   let ParserMatchClass =
     !cast<AsmOperandClass>("t2am_imm7shift"#shift#"OffsetAsmOperand");
   let EncoderMethod = "getT2ScaledImmOpValue<7,"#shift#">";
   let DecoderMethod = "DecodeT2Imm7<"#shift#">";
+  let WantsRoot = true;
 }
 
 // Operands for gather/scatter loads of the form [Rbase, Qoffsets]
@@ -408,6 +409,7 @@ class MVE_p<dag oops, dag iops, InstrItinClass itin, string iname,
            !strconcat(iname, "${vp}",
                       !if(!eq(suffix, ""), "", !strconcat(".", suffix))),
            ops, !strconcat(cstr, vpred.vpred_constraint), vecsize, pattern> {
+  bits<0> vp;
   let Inst{31-29} = 0b111;
   let Inst{27-26} = 0b11;
 }
@@ -478,7 +480,7 @@ def MVE_URSHR : MVE_ScalarShiftSRegImm<"urshr", 0b01>;
 
 class MVE_ScalarShiftSRegReg<string iname, bits<2> op5_4>
   : MVE_ScalarShiftSingleReg<iname, (ins rGPR:$RdaSrc, rGPR:$Rm),
-                     "$RdaSrc, $Rm", "$RdaDest = $RdaSrc",
+                     "$RdaSrc, $Rm", "@earlyclobber $RdaDest,$RdaDest = $RdaSrc",
                      [(set rGPR:$RdaDest,
                          (i32 (!cast<Intrinsic>("int_arm_mve_" # iname)
                                    (i32 rGPR:$RdaSrc), (i32 rGPR:$Rm))))]> {
@@ -681,8 +683,13 @@ class MVE_VADDV<string iname, string suffix, dag iops, string cstr,
 def SDTVecReduceP : SDTypeProfile<1, 2, [    // VADDLVp
   SDTCisInt<0>, SDTCisVec<1>, SDTCisVec<2>
 ]>;
+
+// sign- or zero-extend the elements of a vector to i32,
+// add them all together, and return an i32 of their sum
 def ARMVADDVs       : SDNode<"ARMISD::VADDVs", SDTVecReduce>;
 def ARMVADDVu       : SDNode<"ARMISD::VADDVu", SDTVecReduce>;
+
+// Same as VADDV[su] but with a v4i1 predicate mask
 def ARMVADDVps      : SDNode<"ARMISD::VADDVps", SDTVecReduceP>;
 def ARMVADDVpu      : SDNode<"ARMISD::VADDVpu", SDTVecReduceP>;
 
@@ -804,9 +811,19 @@ multiclass MVE_VADDLV_A<MVEVectorVTInfo VTI> {
   defvar InstN = !cast<Instruction>(NAME # "no_acc");
 
   defvar letter = VTI.SuffixLetter;
+
+  // sign- or zero-extend elements to i64 and sum, returning
+  // the low and high 32-bit halves of the sum
   defvar ARMVADDLV = SDNode<"ARMISD::VADDLV" # letter, SDTVecReduceL>;
+
+  // Same as VADDLV[su] but also add an input accumulator
+  // provided as low and high halves
   defvar ARMVADDLVA = SDNode<"ARMISD::VADDLVA" # letter, SDTVecReduceLA>;
+
+  // Same as VADDLV[su] but with a v4i1 predicate mask
   defvar ARMVADDLVp = SDNode<"ARMISD::VADDLVp" # letter, SDTVecReduceLP>;
+
+  // Same as VADDLVp[su] but with a v4i1 predicate mask
   defvar ARMVADDLVAp = SDNode<"ARMISD::VADDLVAp" # letter, SDTVecReduceLPA>;
 
   let Predicates = [HasMVEInt] in {
@@ -941,9 +958,17 @@ multiclass MVE_VMINMAXV_ty<string iname, bit isMin, string intrBaseName> {
 def SDTVecReduceR : SDTypeProfile<1, 2, [   // Reduction of an integer and vector into an integer
   SDTCisInt<0>, SDTCisInt<1>, SDTCisVec<2>
 ]>;
+
+// Find minimum unsigned value of a vector and register
 def ARMVMINVu       : SDNode<"ARMISD::VMINVu", SDTVecReduceR>;
+
+// Find minimum signed value of a vector and register
 def ARMVMINVs       : SDNode<"ARMISD::VMINVs", SDTVecReduceR>;
+
+// Find maximum unsigned value of a vector and register
 def ARMVMAXVu       : SDNode<"ARMISD::VMAXVu", SDTVecReduceR>;
+
+// Find maximum signed value of a vector and register
 def ARMVMAXVs       : SDNode<"ARMISD::VMAXVs", SDTVecReduceR>;
 
 defm MVE_VMINV : MVE_VMINMAXV_ty<"vminv", 1, "int_arm_mve_minv">;
@@ -1144,16 +1169,31 @@ def SDTVecReduce2LAP : SDTypeProfile<2, 5, [    // VMLALVA
   SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>, SDTCisInt<3>,
   SDTCisVec<4>, SDTCisVec<5>, SDTCisVec<6>
 ]>;
+
+// sign- or zero-extend the elements of two vectors to i32, multiply
+// them and add the results together, returning an i32 of the sum
 def ARMVMLAVs       : SDNode<"ARMISD::VMLAVs", SDTVecReduce2>;
 def ARMVMLAVu       : SDNode<"ARMISD::VMLAVu", SDTVecReduce2>;
+
+// Same as VMLAV but with i64, returning the low and
+// high 32-bit halves of the sum
 def ARMVMLALVs      : SDNode<"ARMISD::VMLALVs", SDTVecReduce2L>;
 def ARMVMLALVu      : SDNode<"ARMISD::VMLALVu", SDTVecReduce2L>;
+
+// Same as VMLALV but also add an input accumulator
+// provided as low and high halves
 def ARMVMLALVAs     : SDNode<"ARMISD::VMLALVAs", SDTVecReduce2LA>;
 def ARMVMLALVAu     : SDNode<"ARMISD::VMLALVAu", SDTVecReduce2LA>;
+
+// Same as VMLAV[su] with a v4i1 predicate mask
 def ARMVMLAVps      : SDNode<"ARMISD::VMLAVps", SDTVecReduce2P>;
 def ARMVMLAVpu      : SDNode<"ARMISD::VMLAVpu", SDTVecReduce2P>;
+
+// Same as VMLALV[su] with a v4i1 predicate mask
 def ARMVMLALVps     : SDNode<"ARMISD::VMLALVps", SDTVecReduce2LP>;
 def ARMVMLALVpu     : SDNode<"ARMISD::VMLALVpu", SDTVecReduce2LP>;
+
+// Same as VMLALVA[su] with a v4i1 predicate mask
 def ARMVMLALVAps    : SDNode<"ARMISD::VMLALVAps", SDTVecReduce2LAP>;
 def ARMVMLALVApu    : SDNode<"ARMISD::VMLALVApu", SDTVecReduce2LAP>;
 
@@ -1995,10 +2035,11 @@ class MVE_VQxDMULH_Base<string iname, string suffix, bits<2> size, bit rounding,
   let validForTailPredication = 1;
 }
 
+// MVE vqdmulh instruction
 def MVEvqdmulh : SDNode<"ARMISD::VQDMULH", SDTIntBinOp>;
 
 multiclass MVE_VQxDMULH_m<string iname, MVEVectorVTInfo VTI,
-                      SDNode Op, Intrinsic unpred_int, Intrinsic pred_int,
+                      SDPatternOperator Op, Intrinsic unpred_int, Intrinsic pred_int,
                       bit rounding> {
   def "" : MVE_VQxDMULH_Base<iname, VTI.Suffix, VTI.Size, rounding>;
   defvar Inst = !cast<Instruction>(NAME);
@@ -2199,7 +2240,7 @@ def subnsw : PatFrag<(ops node:$lhs, node:$rhs),
 }]>;
 
 multiclass MVE_VRHADD_m<MVEVectorVTInfo VTI, SDNode Op,
-                      SDNode unpred_op, Intrinsic PredInt> {
+                      SDPatternOperator unpred_op, Intrinsic PredInt> {
   def "" : MVE_VRHADD_Base<VTI.Suffix, VTI.Unsigned, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
   defm : MVE_TwoOpPattern<VTI, Op, PredInt, (? (i32 VTI.Unsigned)), !cast<Instruction>(NAME)>;
@@ -2221,64 +2262,6 @@ defm MVE_VRHADDs32 : MVE_VRHADD<MVE_v4s32, avgceils>;
 defm MVE_VRHADDu8  : MVE_VRHADD<MVE_v16u8, avgceilu>;
 defm MVE_VRHADDu16 : MVE_VRHADD<MVE_v8u16, avgceilu>;
 defm MVE_VRHADDu32 : MVE_VRHADD<MVE_v4u32, avgceilu>;
-
-// Rounding Halving Add perform the arithemtic operation with an extra bit of
-// precision, before performing the shift, to void clipping errors. We're not
-// modelling that here with these patterns, but we're using no wrap forms of
-// add to ensure that the extra bit of information is not needed for the
-// arithmetic or the rounding.
-let Predicates = [HasMVEInt] in {
-  def : Pat<(v16i8 (ARMvshrsImm (addnsw (addnsw (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn)),
-                                        (v16i8 (ARMvmovImm (i32 3585)))),
-                                (i32 1))),
-            (MVE_VRHADDs8 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v8i16 (ARMvshrsImm (addnsw (addnsw (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn)),
-                                        (v8i16 (ARMvmovImm (i32 2049)))),
-                                (i32 1))),
-            (MVE_VRHADDs16 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v4i32 (ARMvshrsImm (addnsw (addnsw (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn)),
-                                        (v4i32 (ARMvmovImm (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDs32 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v16i8 (ARMvshruImm (addnuw (addnuw (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn)),
-                                        (v16i8 (ARMvmovImm (i32 3585)))),
-                                (i32 1))),
-            (MVE_VRHADDu8 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v8i16 (ARMvshruImm (addnuw (addnuw (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn)),
-                                        (v8i16 (ARMvmovImm (i32 2049)))),
-                                (i32 1))),
-            (MVE_VRHADDu16 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v4i32 (ARMvshruImm (addnuw (addnuw (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn)),
-                                        (v4i32 (ARMvmovImm (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDu32 MQPR:$Qm, MQPR:$Qn)>;
-
-  def : Pat<(v16i8 (ARMvshrsImm (addnsw (addnsw (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn)),
-                                        (v16i8 (ARMvdup (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDs8 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v8i16 (ARMvshrsImm (addnsw (addnsw (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn)),
-                                        (v8i16 (ARMvdup (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDs16 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v4i32 (ARMvshrsImm (addnsw (addnsw (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn)),
-                                        (v4i32 (ARMvdup (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDs32 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v16i8 (ARMvshruImm (addnuw (addnuw (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn)),
-                                        (v16i8 (ARMvdup (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDu8 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v8i16 (ARMvshruImm (addnuw (addnuw (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn)),
-                                        (v8i16 (ARMvdup (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDu16 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v4i32 (ARMvshruImm (addnuw (addnuw (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn)),
-                                        (v4i32 (ARMvdup (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDu32 MQPR:$Qm, MQPR:$Qn)>;
-}
-
 
 class MVE_VHADDSUB<string iname, string suffix, bit U, bit subtract,
                    bits<2> size, list<dag> pattern=[]>
@@ -2303,8 +2286,7 @@ class MVE_VHSUB_<string suffix, bit U, bits<2> size,
   : MVE_VHADDSUB<"vhsub", suffix, U, 0b1, size, pattern>;
 
 multiclass MVE_VHADD_m<MVEVectorVTInfo VTI, SDNode Op,
-                      SDNode unpred_op, Intrinsic PredInt, PatFrag add_op,
-                      SDNode shift_op> {
+                      SDPatternOperator unpred_op, Intrinsic PredInt> {
   def "" : MVE_VHADD_<VTI.Suffix, VTI.Unsigned, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
   defm : MVE_TwoOpPattern<VTI, Op, PredInt, (? (i32 VTI.Unsigned)), !cast<Instruction>(NAME)>;
@@ -2313,29 +2295,21 @@ multiclass MVE_VHADD_m<MVEVectorVTInfo VTI, SDNode Op,
     // Unpredicated add-and-divide-by-two
     def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn), (i32 VTI.Unsigned))),
               (VTI.Vec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
-
-    def : Pat<(VTI.Vec (shift_op (add_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)), (i32 1))),
-              (Inst MQPR:$Qm, MQPR:$Qn)>;
   }
 }
 
-multiclass MVE_VHADD<MVEVectorVTInfo VTI, SDNode Op, PatFrag add_op, SDNode shift_op>
-  : MVE_VHADD_m<VTI, Op, int_arm_mve_vhadd, int_arm_mve_hadd_predicated, add_op,
-                shift_op>;
+multiclass MVE_VHADD<MVEVectorVTInfo VTI, SDNode Op>
+  : MVE_VHADD_m<VTI, Op, int_arm_mve_vhadd, int_arm_mve_hadd_predicated>;
 
-// Halving add/sub perform the arithemtic operation with an extra bit of
-// precision, before performing the shift, to void clipping errors. We're not
-// modelling that here with these patterns, but we're using no wrap forms of
-// add/sub to ensure that the extra bit of information is not needed.
-defm MVE_VHADDs8  : MVE_VHADD<MVE_v16s8, avgfloors, addnsw, ARMvshrsImm>;
-defm MVE_VHADDs16 : MVE_VHADD<MVE_v8s16, avgfloors, addnsw, ARMvshrsImm>;
-defm MVE_VHADDs32 : MVE_VHADD<MVE_v4s32, avgfloors, addnsw, ARMvshrsImm>;
-defm MVE_VHADDu8  : MVE_VHADD<MVE_v16u8, avgflooru, addnuw, ARMvshruImm>;
-defm MVE_VHADDu16 : MVE_VHADD<MVE_v8u16, avgflooru, addnuw, ARMvshruImm>;
-defm MVE_VHADDu32 : MVE_VHADD<MVE_v4u32, avgflooru, addnuw, ARMvshruImm>;
+defm MVE_VHADDs8  : MVE_VHADD<MVE_v16s8, avgfloors>;
+defm MVE_VHADDs16 : MVE_VHADD<MVE_v8s16, avgfloors>;
+defm MVE_VHADDs32 : MVE_VHADD<MVE_v4s32, avgfloors>;
+defm MVE_VHADDu8  : MVE_VHADD<MVE_v16u8, avgflooru>;
+defm MVE_VHADDu16 : MVE_VHADD<MVE_v8u16, avgflooru>;
+defm MVE_VHADDu32 : MVE_VHADD<MVE_v4u32, avgflooru>;
 
 multiclass MVE_VHSUB_m<MVEVectorVTInfo VTI,
-                      SDNode unpred_op, Intrinsic pred_int, PatFrag sub_op,
+                      SDPatternOperator unpred_op, Intrinsic pred_int, PatFrag sub_op,
                       SDNode shift_op> {
   def "" : MVE_VHSUB_<VTI.Suffix, VTI.Unsigned, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
@@ -3593,7 +3567,7 @@ multiclass MVE_VRINT_m<MVEVectorVTInfo VTI, string suffix, bits<3> opcode,
 }
 
 multiclass MVE_VRINT_ops<MVEVectorVTInfo VTI> {
-  defm N : MVE_VRINT_m<VTI, "n", 0b000, int_arm_mve_vrintn>;
+  defm N : MVE_VRINT_m<VTI, "n", 0b000, froundeven>;
   defm X : MVE_VRINT_m<VTI, "x", 0b001, frint>;
   defm A : MVE_VRINT_m<VTI, "a", 0b010, fround>;
   defm Z : MVE_VRINT_m<VTI, "z", 0b011, ftrunc>;
@@ -3650,10 +3624,10 @@ def ARMimmOneH: PatLeaf<(bitconvert (v8i16 (ARMvmovImm (i32 2620))))>; // 1.0 ha
 defm MVE_VMULf32 : MVE_VMUL_fp_m<MVE_v4f32, ARMimmOneF>;
 defm MVE_VMULf16 : MVE_VMUL_fp_m<MVE_v8f16, ARMimmOneH>;
 
-class MVE_VCMLA<string suffix, bits<2> size>
+class MVE_VCMLA<string suffix, bits<2> size, string cstr>
   : MVEFloatArithNeon<"vcmla", suffix, size{1}, (outs MQPR:$Qd),
                          (ins MQPR:$Qd_src, MQPR:$Qn, MQPR:$Qm, complexrotateop:$rot),
-                         "$Qd, $Qn, $Qm, $rot", vpred_n, "$Qd = $Qd_src", size, []> {
+                         "$Qd, $Qn, $Qm, $rot", vpred_n, "$Qd = $Qd_src"#cstr, size, []> {
   bits<4> Qd;
   bits<4> Qn;
   bits<2> rot;
@@ -3670,8 +3644,8 @@ class MVE_VCMLA<string suffix, bits<2> size>
   let Inst{4} = 0b0;
 }
 
-multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI> {
-  def "" : MVE_VCMLA<VTI.Suffix, VTI.Size>;
+multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI, string cstr=""> {
+  def "" : MVE_VCMLA<VTI.Suffix, VTI.Size, cstr>;
   defvar Inst = !cast<Instruction>(NAME);
 
   let Predicates = [HasMVEFloat] in {
@@ -3700,7 +3674,7 @@ multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI> {
 }
 
 defm MVE_VCMLAf16 : MVE_VCMLA_m<MVE_v8f16>;
-defm MVE_VCMLAf32 : MVE_VCMLA_m<MVE_v4f32>;
+defm MVE_VCMLAf32 : MVE_VCMLA_m<MVE_v4f32, ",@earlyclobber $Qd">;
 
 class MVE_VADDSUBFMA_fp<string iname, string suffix, bits<2> size, bit bit_4,
                         bit bit_8, bit bit_21, dag iops=(ins),
@@ -4479,6 +4453,7 @@ let Predicates = [HasMVEInt] in {
   defm PEOR   : two_predops<xor, t2EORrr>;
 }
 
+// Predicate cast for MVE i1 types
 // Occasionally we need to cast between a i32 and a boolean vector, for
 // example when moving between rGPR and VPR.P0 as part of predicate vector
 // shuffles. We also sometimes need to cast between different predicate
@@ -4794,7 +4769,7 @@ class MVE_VxMULH<string iname, string suffix, bit U, bits<2> size, bit round,
   let validForTailPredication = 1;
 }
 
-multiclass MVE_VxMULH_m<string iname, MVEVectorVTInfo VTI, SDNode unpred_op,
+multiclass MVE_VxMULH_m<string iname, MVEVectorVTInfo VTI, SDPatternOperator unpred_op,
                         Intrinsic PredInt, bit round> {
   def "" : MVE_VxMULH<iname, VTI.Suffix, VTI.Unsigned, VTI.Size, round>;
   defvar Inst = !cast<Instruction>(NAME);
@@ -4875,6 +4850,7 @@ defm MVE_VQMOVNu32  : MVE_VxMOVxN_halves<"vqmovn",  "u32", 0b1, 0b1, 0b01>;
 defm MVE_VQMOVUNs16 : MVE_VxMOVxN_halves<"vqmovun", "s16", 0b0, 0b0, 0b00>;
 defm MVE_VQMOVUNs32 : MVE_VxMOVxN_halves<"vqmovun", "s32", 0b0, 0b0, 0b01>;
 
+// MVE vmovn
 def MVEvmovn       : SDNode<"ARMISD::VMOVN", SDTARMVEXT>;
 
 multiclass MVE_VMOVN_p<Instruction Inst, bit top,
@@ -4945,7 +4921,11 @@ defm : MVE_VQMOVN_p<MVE_VQMOVUNs16th, 1, 0, 1, MVE_v16i8, MVE_v8i16>;
 
 def SDTARMVMOVNQ : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
                                         SDTCisVec<2>, SDTCisVT<3, i32>]>;
+
+// Vector (V) Saturating (Q) Move and Narrow (N), signed (s)
 def MVEvqmovns   : SDNode<"ARMISD::VQMOVNs", SDTARMVMOVNQ>;
+
+// Vector (V) Saturating (Q) Move and Narrow (N), unsigned (u)
 def MVEvqmovnu   : SDNode<"ARMISD::VQMOVNu", SDTARMVMOVNQ>;
 
 let Predicates = [HasMVEInt] in {
@@ -5003,7 +4983,11 @@ class MVE_VCVT_ff<string iname, string suffix, bit op, bit T,
 
 def SDTARMVCVTL    : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
                                          SDTCisVT<2, i32>]>;
+
+// MVE vcvt f32 -> f16, truncating into either the bottom or top lanes
 def MVEvcvtn       : SDNode<"ARMISD::VCVTN", SDTARMVMOVNQ>;
+
+// MVE vcvt f16 -> f32, extending from either the bottom or top lanes
 def MVEvcvtl       : SDNode<"ARMISD::VCVTL", SDTARMVCVTL>;
 
 multiclass MVE_VCVT_f2h_m<string iname, int half> {
@@ -5370,8 +5354,8 @@ class MVE_VxADDSUB_qr<string iname, string suffix,
   let validForTailPredication = 1;
 }
 
-multiclass MVE_VHADDSUB_qr_m<string iname, MVEVectorVTInfo VTI, bit subtract, SDNode Op,
-                             Intrinsic unpred_int, Intrinsic pred_int, PatFrag add_op, PatFrag shift_op> {
+multiclass MVE_VHADDSUB_qr_m<string iname, MVEVectorVTInfo VTI, bit subtract, SDPatternOperator Op,
+                             Intrinsic unpred_int, Intrinsic pred_int, PatFrag add_op, SDNode shift_op> {
   def "" : MVE_VxADDSUB_qr<iname, VTI.Suffix, VTI.Unsigned, VTI.Size, subtract, VTI.Size>;
   defm : MVE_TwoOpPatternDup<VTI, Op, pred_int, (? (i32 VTI.Unsigned)), !cast<Instruction>(NAME)>;
   defm : MVE_vec_scalar_int_pat_m<!cast<Instruction>(NAME),
@@ -5576,7 +5560,7 @@ class MVE_VxxMUL_qr<string iname, string suffix,
 }
 
 multiclass MVE_VxxMUL_qr_m<string iname, MVEVectorVTInfo VTI, bit bit_28,
-                           PatFrag Op, Intrinsic int_unpred, Intrinsic int_pred> {
+                           SDPatternOperator Op, Intrinsic int_unpred, Intrinsic int_pred> {
   def "" : MVE_VxxMUL_qr<iname, VTI.Suffix, bit_28, VTI.Size, VTI.Size>;
 
   let Predicates = [HasMVEInt] in {
@@ -5681,8 +5665,6 @@ multiclass MVE_VFMA_qr_multi<string iname, MVEVectorVTInfo VTI,
                                   (VTI.Vec (fma v1, v2, vs)),
                                   v1)),
                 (VTI.Vec (Inst v1, v2, is, ARMVCCThen, $pred, zero_reg))>;
-      def : Pat<(VTI.Vec (pred_int v1, v2, vs, pred)),
-                (VTI.Vec (Inst v1, v2, is, ARMVCCThen, pred, zero_reg))>;
     } else {
       def : Pat<(VTI.Vec (fma v1, vs, v2)),
                 (VTI.Vec (Inst v2, v1, is))>;
@@ -6932,6 +6914,9 @@ class MVE_WLSTP<string asm, bits<2> size>
 
 def SDT_MVEMEMCPYLOOPNODE
     : SDTypeProfile<0, 3, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>]>;
+
+// Pseudo-instruction representing a memory copy using a tail predicated
+// loop
 def MVE_MEMCPYLOOPNODE : SDNode<"ARMISD::MEMCPYLOOP", SDT_MVEMEMCPYLOOPNODE,
                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 
@@ -6944,6 +6929,9 @@ let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Defs = [CPSR] in {
 
 def SDT_MVEMEMSETLOOPNODE
     : SDTypeProfile<0, 3, [SDTCisPtrTy<0>, SDTCisVT<1, v16i8>, SDTCisVT<2, i32>]>;
+
+// Pseudo-instruction representing a memset using a tail predicated
+// loop
 def MVE_MEMSETLOOPNODE : SDNode<"ARMISD::MEMSETLOOP", SDT_MVEMEMSETLOOPNODE,
                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 

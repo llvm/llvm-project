@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <wchar.h> //for WEOF
-
+#include "hdr/wchar_macros.h" // for WEOF
 #include "src/wchar/btowc.h"
-
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcBtowc, DefaultLocale) {
@@ -17,8 +15,8 @@ TEST(LlvmLibcBtowc, DefaultLocale) {
   // everything else returns WEOF.
   for (int c = 0; c < 255; ++c) {
     if (c < 128)
-      EXPECT_EQ(__llvm_libc::btowc(c), static_cast<wint_t>(c));
+      EXPECT_EQ(LIBC_NAMESPACE::btowc(c), static_cast<wint_t>(c));
     else
-      EXPECT_EQ(__llvm_libc::btowc(c), WEOF);
+      EXPECT_EQ(LIBC_NAMESPACE::btowc(c), WEOF);
   }
 }

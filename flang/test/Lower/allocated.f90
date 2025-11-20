@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: allocated_test
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>{{.*}}, %[[arg1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>{{.*}})
@@ -15,4 +15,3 @@ subroutine allocated_test(scalar, array)
     ! CHECK: cmpi ne, %[[addrToInt1]], %c0{{.*}}
     print *, allocated(array)
   end subroutine
-  

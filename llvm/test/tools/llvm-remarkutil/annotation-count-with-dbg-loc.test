@@ -1,7 +1,14 @@
 RUN: llvm-remarkutil annotation-count --use-debug-loc --parser=yaml --annotation-type=remark %p/Inputs/annotation-count-with-dbg-loc.yaml | FileCheck %s
 RUN: llvm-remarkutil yaml2bitstream %p/Inputs/annotation-count-with-dbg-loc.yaml | llvm-remarkutil annotation-count --use-debug-loc --parser=bitstream --annotation-type=remark | FileCheck %s
+RUN: llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function-with-loc --remark-name="AnnotationSummary" %p/Inputs/annotation-count-with-dbg-loc.yaml | FileCheck %s --check-prefix=COUNT-CHECK
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/annotation-count-with-dbg-loc.yaml | llvm-remarkutil count --parser=bitstream --count-by=arg --group-by=function-with-loc --remark-name="AnnotationSummary" | FileCheck %s --check-prefix=COUNT-CHECK
 
 ; CHECK-LABEL: Source,Function,Count
 ; CHECK: path/to/anno.c:1:2,func1,1
 ; CHECK: path/to/anno2.c:1:2,func2,2
 ; CHECK: path/to/anno3.c:1:2,func3,3
+
+; COUNT-CHECK-LABEL: FuctionWithDebugLoc,count
+; COUNT-CHECK: path/to/anno.c:func1,1
+; COUNT-CHECK: path/to/anno2.c:func2,2
+; COUNT-CHECK: path/to/anno3.c:func3,3

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +neon -ffreestanding -S -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-UNSIGNED-POLY %s
-// RUN: %clang_cc1 -triple arm64-linux-gnu -target-feature +neon -ffreestanding -S -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-UNSIGNED-POLY %s
-// RUN: %clang_cc1 -triple armv7-apple-ios -ffreestanding -target-cpu cortex-a8 -S -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-SIGNED-POLY %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +neon -ffreestanding -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-UNSIGNED-POLY %s
+// RUN: %clang_cc1 -triple arm64-linux-gnu -target-feature +neon -ffreestanding -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-UNSIGNED-POLY %s
+// RUN: %clang_cc1 -triple armv7-apple-ios -ffreestanding -target-cpu cortex-a8 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-SIGNED-POLY %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

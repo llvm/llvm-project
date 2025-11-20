@@ -74,14 +74,14 @@ module m2
   end interface
  contains
   integer module function f1(x)
-    !ERROR: Dummy argument 'x' has type INTEGER(4); the corresponding argument in the interface body has type REAL(4)
+    !ERROR: Dummy argument 'x' has type INTEGER(4); the corresponding argument in the interface body has distinct type REAL(4)
     integer, intent(in) :: x
     f1 = x
   end function
   !ERROR: 'notf2' was not declared a separate module procedure
   module procedure notf2
   end procedure
-  !ERROR: Return type of function 'f3' does not match return type of the corresponding interface body
+  !ERROR: Result of function 'f3' is not compatible with the result of the corresponding interface body: function results have distinct types: REAL(4) vs INTEGER(4)
   module function f3(x) result(res)
     real :: res
     real, intent(in) :: x

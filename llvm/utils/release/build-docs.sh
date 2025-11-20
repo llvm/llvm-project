@@ -11,13 +11,13 @@
 #
 # Required Packages:
 # * Fedora:
-#   * dnf install doxygen python3-sphinx texlive-epstopdf ghostscript \
+#   * dnf install doxygen texlive-epstopdf ghostscript \
 #                 ninja-build gcc-c++
-#   * pip install sphinx-markdown-tables
+#   * pip install --user -r ./llvm/docs/requirements.txt
 # * Ubuntu:
-#   * apt-get install doxygen sphinx-common python3-recommonmark \
+#   * apt-get install doxygen \
 #             ninja-build graphviz texlive-font-utils
-#   * pip install sphinx-markdown-tables
+#   * pip install --user -r ./llvm/docs/requirements.txt
 #===------------------------------------------------------------------------===#
 
 set -e
@@ -113,7 +113,7 @@ fi
 if [ "$no_doxygen" != "yes" ]; then
   echo "Doxygen: enabled"
   doxygen_targets="$docs_target doxygen-clang doxygen-clang-tools doxygen-flang doxygen-llvm doxygen-mlir doxygen-polly"
-  doxygen_flag=" -DLLVM_ENABLE_DOXYGEN=ON -DLLVM_DOXYGEN_SVG=ON"
+  doxygen_flag=" -DLLVM_ENABLE_DOXYGEN=ON"
 else
    echo "Doxygen: disabled"
 fi

@@ -90,7 +90,7 @@
 // RUN:   -fmodule-file=%t/m02.pcm \
 // RUN:   -fmodule-file=%t/m03.pcm \
 // RUN:   -fmodule-file=%t/merge00.pcm \
-// RUN:   -verify stress1.cpp -S -emit-llvm -o %t/stress1.ll
+// RUN:   -verify stress1.cpp -emit-llvm -o %t/stress1.ll
 //
 // RUN: %clang_cc1 -fmodules -x c++ -std=c++11 \
 // RUN:   -I Inputs/stress1 \
@@ -103,7 +103,7 @@
 // RUN:   -fmodule-file=%t/m02.pcm \
 // RUN:   -fmodule-file=%t/m03.pcm \
 // RUN:   -fmodule-file=%t/merge00.pcm \
-// RUN:   -verify stress1.cpp -S -emit-llvm -o %t/stress1_check.ll
+// RUN:   -verify stress1.cpp -emit-llvm -o %t/stress1_check.ll
 //
 // RUN: diff -u %t/stress1.ll %t/stress1_check.ll
 //

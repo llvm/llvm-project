@@ -64,12 +64,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   // The expected result should be the difference between the first non-equal
   // characters of s1 and s2. If all characters are equal, the expected result
   // should be '\0' - '\0' = 0.
-  if (__llvm_libc::strcmp(s1, s2) != ch1 - ch2)
+  if (LIBC_NAMESPACE::strcmp(s1, s2) != ch1 - ch2)
     __builtin_trap();
 
   // Verify reversed operands. This should be the negated value of the previous
   // result, except of course if the previous result was zero.
-  if (__llvm_libc::strcmp(s2, s1) != ch2 - ch1)
+  if (LIBC_NAMESPACE::strcmp(s2, s1) != ch2 - ch1)
     __builtin_trap();
 
   delete[] data1;

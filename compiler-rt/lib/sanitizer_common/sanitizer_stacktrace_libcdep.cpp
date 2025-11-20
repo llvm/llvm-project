@@ -33,13 +33,14 @@ class StackTraceTextPrinter {
             stack_trace_fmt)) {}
 
   bool ProcessAddressFrames(uptr pc) {
-    SymbolizedStack *frames = symbolize_
-                                  ? Symbolizer::GetOrInit()->SymbolizePC(pc)
-                                  : SymbolizedStack::New(pc);
+    SymbolizedStackHolder symbolized_stack(
+        symbolize_ ? Symbolizer::GetOrInit()->SymbolizePC(pc)
+                   : SymbolizedStack::New(pc));
+    const SymbolizedStack *frames = symbolized_stack.get();
     if (!frames)
       return false;
 
-    for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
+    for (const SymbolizedStack *cur = frames; cur; cur = cur->next) {
       uptr prev_len = output_->length();
       StackTracePrinter::GetOrInit()->RenderFrame(
           output_, stack_trace_fmt_, frame_num_++, cur->info.address,
@@ -51,19 +52,18 @@ class StackTraceTextPrinter {
 
       ExtendDedupToken(cur);
     }
-    frames->ClearAll();
     return true;
   }
 
  private:
   // Extend the dedup token by appending a new frame.
-  void ExtendDedupToken(SymbolizedStack *stack) {
+  void ExtendDedupToken(const SymbolizedStack *stack) {
     if (!dedup_token_)
       return;
 
     if (dedup_frames_-- > 0) {
       if (dedup_token_->length())
-        dedup_token_->AppendF("--");
+        dedup_token_->Append("--");
       if (stack->info.function)
         dedup_token_->Append(stack->info.function);
     }
@@ -99,7 +99,7 @@ void StackTrace::PrintTo(InternalScopedString *output) const {
                                 output, &dedup_token);
 
   if (trace == nullptr || size == 0) {
-    output->AppendF("    <empty stack>\n\n");
+    output->Append("    <empty stack>\n\n");
     return;
   }
 
@@ -111,7 +111,7 @@ void StackTrace::PrintTo(InternalScopedString *output) const {
   }
 
   // Always add a trailing empty line after stack trace.
-  output->AppendF("\n");
+  output->Append("\n");
 
   // Append deduplication token, if non-empty.
   if (dedup_token.length())
@@ -198,7 +198,7 @@ void __sanitizer_symbolize_pc(uptr pc, const char *fmt, char *out_buf,
   StackTraceTextPrinter printer(fmt, '\0', &output, nullptr);
   if (!printer.ProcessAddressFrames(pc)) {
     output.clear();
-    output.AppendF("<can't symbolize>");
+    output.Append("<can't symbolize>");
   }
   CopyStringToBuffer(output, out_buf, out_buf_size);
 }

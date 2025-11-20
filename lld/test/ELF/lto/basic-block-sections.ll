@@ -1,10 +1,13 @@
 ; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
+; RUN: ld.lld %t.o -o %t --lto-basic-block-sections=labels --lto-O0 2>&1 | FileCheck -check-prefix=LABELSWARN %s
 ; RUN: ld.lld %t.o -o %t --lto-basic-block-sections=all --lto-O0 --save-temps
 ; RUN: llvm-readobj -s %t.lto.o | FileCheck --check-prefix=SECNAMES %s
 ; RUN: ld.lld %t.o -o %t --lto-basic-block-sections=all --lto-unique-basic-block-section-names --lto-O0 --save-temps
 ; RUN: llvm-readobj -s %t.lto.o | FileCheck --check-prefix=SECNAMES-FULL %s
 ; RUN: llvm-nm %t | FileCheck --check-prefix=SYMS %s
+
+; LABELSWARN: --lto-basic-block-sections=labels' is deprecated; Please use '--lto-basic-block-address-map' instead
 
 ; SECNAMES: Name: .text.foo {{.*}}
 ; SECNAMES: Name: .text.foo {{.*}}

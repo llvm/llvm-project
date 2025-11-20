@@ -21,7 +21,9 @@
 using namespace llvm;
 using CandidateInfo = ValueProfileCollector::CandidateInfo;
 
+namespace llvm {
 extern cl::opt<bool> MemOPOptMemcmpBcmp;
+} // end namespace llvm
 
 ///--------------------------- MemIntrinsicPlugin ------------------------------
 class MemIntrinsicPlugin : public InstVisitor<MemIntrinsicPlugin> {
@@ -90,9 +92,38 @@ public:
   }
 };
 
+///--------------------- VirtualTableValueProfilingPlugin --------------------
+class VTableProfilingPlugin {
+  Function &F;
+
+public:
+  static constexpr InstrProfValueKind Kind = IPVK_VTableTarget;
+
+  VTableProfilingPlugin(Function &Fn, TargetLibraryInfo &TLI) : F(Fn) {}
+
+  void run(std::vector<CandidateInfo> &Candidates) {
+    std::vector<Instruction *> Result = findVTableAddrs(F);
+    for (Instruction *I : Result) {
+      Instruction *InsertPt = I->getNextNode();
+      // When finding an insertion point, keep PHI and EH pad instructions
+      // before vp intrinsics. This is similar to
+      // `BasicBlock::getFirstInsertionPt`.
+      while (InsertPt && (dyn_cast<PHINode>(InsertPt) || InsertPt->isEHPad()))
+        InsertPt = InsertPt->getNextNode();
+      // Skip instrumentating the value if InsertPt is the last instruction.
+      // FIXME: Set InsertPt to the end of basic block to instrument the value
+      // if InsertPt is the last instruction.
+      if (InsertPt == nullptr)
+        continue;
+
+      Instruction *AnnotatedInst = I;
+      Candidates.emplace_back(CandidateInfo{I, InsertPt, AnnotatedInst});
+    }
+  }
+};
+
 ///----------------------- Registration of the plugins -------------------------
 /// For now, registering a plugin with the ValueProfileCollector is done by
 /// adding the plugin type to the VP_PLUGIN_LIST macro.
-#define VP_PLUGIN_LIST           \
-    MemIntrinsicPlugin,          \
-    IndirectCallPromotionPlugin
+#define VP_PLUGIN_LIST                                                         \
+  MemIntrinsicPlugin, IndirectCallPromotionPlugin, VTableProfilingPlugin

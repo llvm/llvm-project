@@ -1,4 +1,4 @@
-//===--- ImplementationInNamespaceCheck.cpp - clang-tidy ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "ImplementationInNamespaceCheck.h"
-#include "clang/AST/ASTContext.h"
+#include "NamespaceConstants.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::llvm_libc {
-
-const static StringRef RequiredNamespaceStart = "__llvm_libc";
-const static StringRef RequiredNamespaceMacroName = "LIBC_NAMESPACE";
 
 void ImplementationInNamespaceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -31,22 +28,36 @@ void ImplementationInNamespaceCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl =
       Result.Nodes.getNodeAs<Decl>("child_of_translation_unit");
-  MatchedDecl->dump();
   const auto *NS = dyn_cast<NamespaceDecl>(MatchedDecl);
+
+  // LLVM libc declarations should be inside of a non-anonymous namespace.
   if (NS == nullptr || NS->isAnonymousNamespace()) {
     diag(MatchedDecl->getLocation(),
          "declaration must be enclosed within the '%0' namespace")
-        << RequiredNamespaceMacroName;
+        << RequiredNamespaceDeclMacroName;
     return;
   }
+
+  // Enforce that the namespace is the result of macro expansion
   if (Result.SourceManager->isMacroBodyExpansion(NS->getLocation()) == false) {
     diag(NS->getLocation(), "the outermost namespace should be the '%0' macro")
-        << RequiredNamespaceMacroName;
+        << RequiredNamespaceDeclMacroName;
     return;
   }
-  if (NS->getName().starts_with(RequiredNamespaceStart) == false) {
+
+  // We want the macro to have [[gnu::visibility("hidden")]] as a prefix, but
+  // visibility is just an attribute in the AST construct, so we check that
+  // instead.
+  if (NS->getVisibility() != Visibility::HiddenVisibility) {
     diag(NS->getLocation(), "the '%0' macro should start with '%1'")
-        << RequiredNamespaceMacroName << RequiredNamespaceStart;
+        << RequiredNamespaceDeclMacroName << RequiredNamespaceDeclStart;
+    return;
+  }
+
+  // Lastly, make sure the namespace name actually has the __llvm_libc prefix
+  if (NS->getName().starts_with(RequiredNamespaceRefStart) == false) {
+    diag(NS->getLocation(), "the '%0' macro expansion should start with '%1'")
+        << RequiredNamespaceDeclMacroName << RequiredNamespaceRefStart;
     return;
   }
 }

@@ -3,10 +3,14 @@
 # REQUIRES: x86
 
 # RUN: yaml2obj %s -o %t.o
-# RUN: ld.lld %t.o -o %t
+# RUN: ld.lld --call-graph-profile-sort=hfsort %t.o -o %t
 # RUN: llvm-nm --no-sort %t | FileCheck %s
 # RUN: ld.lld --no-call-graph-profile-sort %t.o -o %t
 # RUN: llvm-nm --no-sort %t | FileCheck %s --check-prefix=NO-CG
+
+# RUN: yaml2obj -DTYPE=SHT_CREL %s -o %tcrel.o
+# RUN: ld.lld --call-graph-profile-sort=hfsort %tcrel.o -o %t
+# RUN: llvm-nm --no-sort %t | FileCheck %s
 
 # CHECK: 0000000000201124 t D
 # CHECK: 0000000000201122 t C
@@ -60,7 +64,7 @@ Sections:
       - Weight: 30
       - Weight: 90
   - Name: .rela.llvm.call-graph-profile
-    Type: SHT_RELA
+    Type: [[TYPE=SHT_RELA]]
     Info: .llvm.call-graph-profile
     Relocations:
       - Offset: 0x0

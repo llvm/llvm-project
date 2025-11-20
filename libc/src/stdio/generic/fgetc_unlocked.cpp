@@ -9,15 +9,17 @@
 #include "src/stdio/fgetc_unlocked.h"
 #include "src/__support/File/file.h"
 
-#include "src/errno/libc_errno.h"
-#include <stdio.h>
+#include "hdr/types/FILE.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
+#include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fgetc_unlocked, (::FILE * stream)) {
   unsigned char c;
   auto result =
-      reinterpret_cast<__llvm_libc::File *>(stream)->read_unlocked(&c, 1);
+      reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->read_unlocked(&c, 1);
   size_t r = result.value;
   if (result.has_error())
     libc_errno = result.error;
@@ -26,4 +28,4 @@ LLVM_LIBC_FUNCTION(int, fgetc_unlocked, (::FILE * stream)) {
   return c;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

@@ -1,7 +1,7 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
-; CHECK:     %[[#TypeImage:]] = OpTypeImage
-; CHECK:     %[[#TypeSampler:]] = OpTypeSampler
+; CHECK-DAG: %[[#TypeImage:]] = OpTypeImage
+; CHECK-DAG: %[[#TypeSampler:]] = OpTypeSampler
 ; CHECK-DAG: %[[#TypeImagePtr:]] = OpTypePointer {{.*}} %[[#TypeImage]]
 ; CHECK-DAG: %[[#TypeSamplerPtr:]] = OpTypePointer {{.*}} %[[#TypeSampler]]
 

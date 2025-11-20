@@ -19,9 +19,9 @@ define dso_local void @sgt_loopguard(ptr noalias nocapture readonly %a, ptr noal
 
 ; CHECK-TF:     %[[VIVELEM0:.*]] = extractelement <16 x i32> %vec.iv, i32 0
 ; CHECK-TF:     %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %[[VIVELEM0]], i32 %N)
-; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr %{{.*}}, i32 1, <16 x i1> %active.lane.mask
-; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr %{{.*}}, i32 1, <16 x i1> %active.lane.mask
-; CHECK-TF:     llvm.masked.store.v16i8.p0(<16 x i8> %{{.*}}, ptr %{{.*}}, i32 1, <16 x i1> %active.lane.mask)
+; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr align 1 %{{.*}}, <16 x i1> %active.lane.mask
+; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr align 1 %{{.*}}, <16 x i1> %active.lane.mask
+; CHECK-TF:     llvm.masked.store.v16i8.p0(<16 x i8> %{{.*}}, ptr align 1 %{{.*}}, <16 x i1> %active.lane.mask)
 entry:
   %cmp5 = icmp sgt i32 %N, 0
   br i1 %cmp5, label %while.body.preheader, label %while.end
@@ -107,9 +107,10 @@ while.body:
   %1 = load i8, ptr %b.addr.07, align 1
   %add = add i8 %1, %0
   %incdec.ptr4 = getelementptr inbounds i8, ptr %c.addr.08, i32 1
-  store i8 %add, ptr %c.addr.08, align 1
   %cmp = icmp sgt i32 %N.addr.09, 1
   %select = select i1 %cmp, i8 %0, i8 %1
+  %add2 = add i8 %add, %select
+  store i8 %add2, ptr %c.addr.08, align 1
   br i1 %cmp, label %while.body, label %while.end.loopexit
 
 while.end.loopexit:

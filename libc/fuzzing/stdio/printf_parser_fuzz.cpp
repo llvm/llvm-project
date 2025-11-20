@@ -16,7 +16,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 
-using namespace __llvm_libc;
+using namespace LIBC_NAMESPACE;
 
 // The design for the printf parser fuzzer is fairly simple. The parser uses a
 // mock arg list that will never fail, and is passed a randomized string. The

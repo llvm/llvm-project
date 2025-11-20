@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "XCore.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include <cstdlib> // ::getenv
 
@@ -63,11 +63,10 @@ void tools::XCore::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                         const char *LinkingOutput) const {
   ArgStringList CmdArgs;
 
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
-  } else {
-    assert(Output.isNothing() && "Invalid output.");
   }
 
   if (Args.hasArg(options::OPT_v))
@@ -114,7 +113,7 @@ bool XCoreToolChain::hasBlocksRuntime() const { return false; }
 
 void XCoreToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc) ||
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
       DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
   if (const char *cl_include_dir = getenv("XCC_C_INCLUDE_PATH")) {
@@ -138,7 +137,7 @@ void XCoreToolChain::addClangTargetOptions(const ArgList &DriverArgs,
 
 void XCoreToolChain::AddClangCXXStdlibIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc) ||
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
       DriverArgs.hasArg(options::OPT_nostdlibinc) ||
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;

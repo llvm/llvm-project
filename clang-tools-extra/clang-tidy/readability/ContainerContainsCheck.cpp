@@ -1,4 +1,4 @@
-//===--- ContainerContainsCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,41 +9,46 @@
 #include "ContainerContainsCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
-
 void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
-  const auto SupportedContainers = hasType(
-      hasUnqualifiedDesugaredType(recordType(hasDeclaration(cxxRecordDecl(
-          hasAnyName("::std::set", "::std::unordered_set", "::std::map",
-                     "::std::unordered_map", "::std::multiset",
-                     "::std::unordered_multiset", "::std::multimap",
-                     "::std::unordered_multimap"))))));
-
-  const auto CountCall =
-      cxxMemberCallExpr(on(SupportedContainers),
-                        callee(cxxMethodDecl(hasName("count"))),
-                        argumentCountIs(1))
-          .bind("call");
-
-  const auto FindCall =
-      cxxMemberCallExpr(on(SupportedContainers),
-                        callee(cxxMethodDecl(hasName("find"))),
-                        argumentCountIs(1))
-          .bind("call");
-
-  const auto EndCall = cxxMemberCallExpr(on(SupportedContainers),
-                                         callee(cxxMethodDecl(hasName("end"))),
-                                         argumentCountIs(0));
-
   const auto Literal0 = integerLiteral(equals(0));
   const auto Literal1 = integerLiteral(equals(1));
 
-  auto AddSimpleMatcher = [&](auto Matcher) {
-    Finder->addMatcher(
-        traverse(TK_IgnoreUnlessSpelledInSource, std::move(Matcher)), this);
+  const auto ClassWithContains = cxxRecordDecl(
+      hasMethod(cxxMethodDecl(isConst(), parameterCountIs(1), isPublic(),
+                              unless(isDeleted()), returns(booleanType()),
+                              hasAnyName("contains", "Contains"))
+                    .bind("contains_fun")));
+
+  const auto CountCall =
+      cxxMemberCallExpr(argumentCountIs(1),
+                        callee(cxxMethodDecl(hasAnyName("count", "Count"),
+                                             ofClass(ClassWithContains))))
+          .bind("call");
+
+  const auto FindCall =
+      // Either one argument, or assume the second argument is the position to
+      // start searching from.
+      cxxMemberCallExpr(
+          anyOf(argumentCountIs(1),
+                allOf(argumentCountIs(2), hasArgument(1, Literal0))),
+          callee(cxxMethodDecl(hasAnyName("find", "Find"),
+                               ofClass(ClassWithContains))))
+          .bind("call");
+
+  const auto EndCall = cxxMemberCallExpr(
+      argumentCountIs(0), callee(cxxMethodDecl(hasAnyName("end", "End"),
+                                               ofClass(ClassWithContains))));
+
+  const auto StringNpos = anyOf(declRefExpr(to(varDecl(hasName("npos")))),
+                                memberExpr(member(hasName("npos"))));
+
+  auto AddSimpleMatcher = [&](const auto &Matcher) {
+    Finder->addMatcher(traverse(TK_IgnoreUnlessSpelledInSource, Matcher), this);
   };
 
   // Find membership tests which use `count()`.
@@ -52,50 +57,46 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
                          .bind("positiveComparison"),
                      this);
   AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName("!="), hasRHS(Literal0))
+      binaryOperation(hasOperatorName("!="), hasOperands(CountCall, Literal0))
           .bind("positiveComparison"));
   AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal0), hasOperatorName("!="), hasRHS(CountCall))
+      binaryOperation(hasLHS(CountCall), hasOperatorName(">"), hasRHS(Literal0))
           .bind("positiveComparison"));
   AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName(">"), hasRHS(Literal0))
+      binaryOperation(hasLHS(Literal0), hasOperatorName("<"), hasRHS(CountCall))
           .bind("positiveComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal0), hasOperatorName("<"), hasRHS(CountCall))
-          .bind("positiveComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName(">="), hasRHS(Literal1))
-          .bind("positiveComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal1), hasOperatorName("<="), hasRHS(CountCall))
-          .bind("positiveComparison"));
+  AddSimpleMatcher(binaryOperation(hasLHS(CountCall), hasOperatorName(">="),
+                                   hasRHS(Literal1))
+                       .bind("positiveComparison"));
+  AddSimpleMatcher(binaryOperation(hasLHS(Literal1), hasOperatorName("<="),
+                                   hasRHS(CountCall))
+                       .bind("positiveComparison"));
 
   // Find inverted membership tests which use `count()`.
   AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName("=="), hasRHS(Literal0))
+      binaryOperation(hasOperatorName("=="), hasOperands(CountCall, Literal0))
+          .bind("negativeComparison"));
+  AddSimpleMatcher(binaryOperation(hasLHS(CountCall), hasOperatorName("<="),
+                                   hasRHS(Literal0))
+                       .bind("negativeComparison"));
+  AddSimpleMatcher(binaryOperation(hasLHS(Literal0), hasOperatorName(">="),
+                                   hasRHS(CountCall))
+                       .bind("negativeComparison"));
+  AddSimpleMatcher(
+      binaryOperation(hasLHS(CountCall), hasOperatorName("<"), hasRHS(Literal1))
           .bind("negativeComparison"));
   AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal0), hasOperatorName("=="), hasRHS(CountCall))
-          .bind("negativeComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName("<="), hasRHS(Literal0))
-          .bind("negativeComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal0), hasOperatorName(">="), hasRHS(CountCall))
-          .bind("negativeComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName("<"), hasRHS(Literal1))
-          .bind("negativeComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal1), hasOperatorName(">"), hasRHS(CountCall))
+      binaryOperation(hasLHS(Literal1), hasOperatorName(">"), hasRHS(CountCall))
           .bind("negativeComparison"));
 
-  // Find membership tests based on `find() == end()`.
+  // Find membership tests based on `find() == end()` or `find() == npos`.
   AddSimpleMatcher(
-      binaryOperator(hasLHS(FindCall), hasOperatorName("!="), hasRHS(EndCall))
+      binaryOperation(hasOperatorName("!="),
+                      hasOperands(FindCall, anyOf(EndCall, StringNpos)))
           .bind("positiveComparison"));
   AddSimpleMatcher(
-      binaryOperator(hasLHS(FindCall), hasOperatorName("=="), hasRHS(EndCall))
+      binaryOperation(hasOperatorName("=="),
+                      hasOperands(FindCall, anyOf(EndCall, StringNpos)))
           .bind("negativeComparison"));
 }
 
@@ -108,31 +109,41 @@ void ContainerContainsCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<Expr>("negativeComparison");
   assert((!PositiveComparison || !NegativeComparison) &&
          "only one of PositiveComparison or NegativeComparison should be set");
-  bool Negated = NegativeComparison != nullptr;
+  const bool Negated = NegativeComparison != nullptr;
   const auto *Comparison = Negated ? NegativeComparison : PositiveComparison;
+  const StringRef ContainsFunName =
+      Result.Nodes.getNodeAs<CXXMethodDecl>("contains_fun")->getName();
+  const Expr *SearchExpr = Call->getArg(0)->IgnoreParenImpCasts();
 
   // Diagnose the issue.
-  auto Diag =
-      diag(Call->getExprLoc(), "use 'contains' to check for membership");
+  auto Diag = diag(Call->getExprLoc(), "use '%0' to check for membership")
+              << ContainsFunName;
 
   // Don't fix it if it's in a macro invocation. Leave fixing it to the user.
-  SourceLocation FuncCallLoc = Comparison->getEndLoc();
+  const SourceLocation FuncCallLoc = Comparison->getEndLoc();
   if (!FuncCallLoc.isValid() || FuncCallLoc.isMacroID())
     return;
 
-  // Create the fix it.
-  const auto *Member = cast<MemberExpr>(Call->getCallee());
-  Diag << FixItHint::CreateReplacement(
-      Member->getMemberNameInfo().getSourceRange(), "contains");
-  SourceLocation ComparisonBegin = Comparison->getSourceRange().getBegin();
-  SourceLocation ComparisonEnd = Comparison->getSourceRange().getEnd();
-  SourceLocation CallBegin = Call->getSourceRange().getBegin();
-  SourceLocation CallEnd = Call->getSourceRange().getEnd();
-  Diag << FixItHint::CreateReplacement(
-      CharSourceRange::getCharRange(ComparisonBegin, CallBegin),
-      Negated ? "!" : "");
+  const StringRef SearchExprText = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(SearchExpr->getSourceRange()),
+      *Result.SourceManager, Result.Context->getLangOpts());
+
+  // Remove everything before the function call.
   Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
-      CallEnd.getLocWithOffset(1), ComparisonEnd.getLocWithOffset(1)));
+      Comparison->getBeginLoc(), Call->getBeginLoc()));
+
+  // Rename the function to `contains`.
+  Diag << FixItHint::CreateReplacement(Call->getExprLoc(), ContainsFunName);
+
+  // Replace arguments and everything after the function call.
+  Diag << FixItHint::CreateReplacement(
+      CharSourceRange::getTokenRange(Call->getArg(0)->getBeginLoc(),
+                                     Comparison->getEndLoc()),
+      (SearchExprText + ")").str());
+
+  // Add negation if necessary.
+  if (Negated)
+    Diag << FixItHint::CreateInsertion(Call->getBeginLoc(), "!");
 }
 
 } // namespace clang::tidy::readability

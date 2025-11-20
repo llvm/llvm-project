@@ -183,6 +183,25 @@ void ScalarEnumerationTraits<COFF::RelocationTypeAMD64>::enumeration(
   ECase(IMAGE_REL_AMD64_SSPAN32);
 }
 
+void ScalarEnumerationTraits<COFF::RelocationTypesMips>::enumeration(
+    IO &IO, COFF::RelocationTypesMips &Value) {
+  ECase(IMAGE_REL_MIPS_ABSOLUTE);
+  ECase(IMAGE_REL_MIPS_REFHALF);
+  ECase(IMAGE_REL_MIPS_REFWORD);
+  ECase(IMAGE_REL_MIPS_JMPADDR);
+  ECase(IMAGE_REL_MIPS_REFHI);
+  ECase(IMAGE_REL_MIPS_REFLO);
+  ECase(IMAGE_REL_MIPS_GPREL);
+  ECase(IMAGE_REL_MIPS_LITERAL);
+  ECase(IMAGE_REL_MIPS_SECTION);
+  ECase(IMAGE_REL_MIPS_SECREL);
+  ECase(IMAGE_REL_MIPS_SECRELLO);
+  ECase(IMAGE_REL_MIPS_SECRELHI);
+  ECase(IMAGE_REL_MIPS_JMPADDR16);
+  ECase(IMAGE_REL_MIPS_REFWORDNB);
+  ECase(IMAGE_REL_MIPS_PAIR);
+}
+
 void ScalarEnumerationTraits<COFF::RelocationTypesARM>::enumeration(
     IO &IO, COFF::RelocationTypesARM &Value) {
   ECase(IMAGE_REL_ARM_ABSOLUTE);
@@ -427,6 +446,10 @@ void MappingTraits<COFFYAML::Relocation>::mapping(IO &IO,
     MappingNormalization<NType<COFF::RelocationTypeAMD64>, uint16_t> NT(
         IO, Rel.Type);
     IO.mapRequired("Type", NT->Type);
+  } else if (H.Machine == COFF::IMAGE_FILE_MACHINE_R4000) {
+    MappingNormalization<NType<COFF::RelocationTypesMips>, uint16_t> NT(
+        IO, Rel.Type);
+    IO.mapRequired("Type", NT->Type);
   } else if (H.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT) {
     MappingNormalization<NType<COFF::RelocationTypesARM>, uint16_t> NT(
         IO, Rel.Type);
@@ -557,9 +580,9 @@ void MappingTraits<object::coff_load_config_code_integrity>::mapping(
 template <typename T, typename M>
 void mapLoadConfigMember(IO &IO, T &LoadConfig, const char *Name, M &Member) {
   // Map only members that match a specified size.
-  if (reinterpret_cast<char *>(&Member) -
-          reinterpret_cast<char *>(&LoadConfig) <
-      LoadConfig.Size)
+  ptrdiff_t dist =
+      reinterpret_cast<char *>(&Member) - reinterpret_cast<char *>(&LoadConfig);
+  if (dist < (ptrdiff_t)LoadConfig.Size)
     IO.mapOptional(Name, Member);
 }
 

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -x c -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s --check-prefixes=CHECK,CHECK-C
-// RUN: %clang_cc1 -x c++ -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s --check-prefixes=CHECK,CHECK-CPP
+// RUN: %clang_cc1 -x c -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s
+// RUN: %clang_cc1 -x c++ -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s
 
 #ifdef __cplusplus
 extern "C" {
@@ -110,8 +110,7 @@ void function_pointer_arith(funcptr_t *p, int k) {
 }
 
 // CHECK-LABEL: define{{.*}} void @dont_emit_checks_for_no_op_GEPs
-// CHECK-C: __ubsan_handle_pointer_overflow
-// CHECK-CPP-NOT: __ubsan_handle_pointer_overflow
+// CHECK-NOT: __ubsan_handle_pointer_overflow
 void dont_emit_checks_for_no_op_GEPs(char *p) {
   &p[0];
 

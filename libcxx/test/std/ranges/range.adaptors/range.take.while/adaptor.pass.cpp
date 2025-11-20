@@ -16,6 +16,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_range.h"
 #include "types.h"
 
 struct Pred {
@@ -41,12 +42,6 @@ static_assert(!std::is_invocable_v<decltype((std::views::take_while)), int, Pred
 static_assert(std::is_invocable_v<decltype((std::views::take_while)), int (&)[2], Pred>);
 static_assert(!std::is_invocable_v<decltype((std::views::take_while)), Foo (&)[2], Pred>);
 static_assert(std::is_invocable_v<decltype((std::views::take_while)), MoveOnlyView, Pred>);
-
-template <class View, class T>
-concept CanBePiped =
-    requires(View&& view, T&& t) {
-      { std::forward<View>(view) | std::forward<T>(t) };
-    };
 
 static_assert(!CanBePiped<MoveOnlyView, decltype(std::views::take_while)>);
 static_assert(CanBePiped<MoveOnlyView, decltype(std::views::take_while(Pred{}))>);

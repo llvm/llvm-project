@@ -1,4 +1,4 @@
-//===--- UseAnonymousNamespaceCheck.cpp - clang-tidy ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -31,26 +31,8 @@ AST_MATCHER(VarDecl, isStaticDataMember) { return Node.isStaticDataMember(); }
 
 UseAnonymousNamespaceCheck::UseAnonymousNamespaceCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {
-  std::optional<StringRef> HeaderFileExtensionsOption =
-      Options.get("HeaderFileExtensions");
-  RawStringHeaderFileExtensions =
-      HeaderFileExtensionsOption.value_or(utils::defaultHeaderFileExtensions());
-  if (HeaderFileExtensionsOption) {
-    if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
-                                    HeaderFileExtensions,
-                                    utils::defaultFileExtensionDelimiters())) {
-      this->configurationDiag("Invalid header file extension: '%0'")
-          << RawStringHeaderFileExtensions;
-    }
-  } else
-    HeaderFileExtensions = Context->getHeaderFileExtensions();
-}
-
-void UseAnonymousNamespaceCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
-}
+    : ClangTidyCheck(Name, Context),
+      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
 
 void UseAnonymousNamespaceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -70,7 +52,8 @@ void UseAnonymousNamespaceCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseAnonymousNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *MatchedDecl = Result.Nodes.getNodeAs<NamedDecl>("x")) {
-    StringRef Type = llvm::isa<VarDecl>(MatchedDecl) ? "variable" : "function";
+    const StringRef Type =
+        llvm::isa<VarDecl>(MatchedDecl) ? "variable" : "function";
     diag(MatchedDecl->getLocation(),
          "%0 %1 declared 'static', move to anonymous namespace instead")
         << Type << MatchedDecl;

@@ -16,10 +16,10 @@
 
 #include "MCInstrDescView.h"
 #include "RegisterAliasing.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Target/TargetMachine.h"
@@ -49,7 +49,7 @@ public:
                                     bool UseDummyPerfCounters = false);
 
   const TargetMachine &getTargetMachine() const { return *TheTargetMachine; }
-  std::unique_ptr<LLVMTargetMachine> createTargetMachine() const;
+  std::unique_ptr<TargetMachine> createTargetMachine() const;
 
   const ExegesisTarget &getExegesisTarget() const { return *TheExegesisTarget; }
 
@@ -76,16 +76,14 @@ public:
     return *OpcodeNameToOpcodeIdxMapping;
   };
 
-  const DenseMap<StringRef, unsigned> &getRegNameToRegNoMapping() const {
-    assert(RegNameToRegNoMapping);
-    return *RegNameToRegNoMapping;
-  }
+  std::optional<MCRegister>
+  getRegisterNumberFromName(StringRef RegisterName) const;
 
 private:
   std::unique_ptr<const DenseMap<StringRef, unsigned>>
   createOpcodeNameToOpcodeIdxMapping() const;
 
-  std::unique_ptr<const DenseMap<StringRef, unsigned>>
+  std::unique_ptr<const DenseMap<StringRef, MCRegister>>
   createRegNameToRegNoMapping() const;
 
   LLVMState(std::unique_ptr<const TargetMachine> TM, const ExegesisTarget *ET,
@@ -98,7 +96,7 @@ private:
   const PfmCountersInfo *PfmCounters;
   std::unique_ptr<const DenseMap<StringRef, unsigned>>
       OpcodeNameToOpcodeIdxMapping;
-  std::unique_ptr<const DenseMap<StringRef, unsigned>> RegNameToRegNoMapping;
+  std::unique_ptr<const DenseMap<StringRef, MCRegister>> RegNameToRegNoMapping;
 };
 
 } // namespace exegesis

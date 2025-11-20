@@ -1,5 +1,5 @@
 ! Test lowering of elemental calls in array expressions.
-! RUN: bbc -o - -emit-fir %s | FileCheck %s
+! RUN: bbc -o - -emit-fir -hlfir=false %s | FileCheck %s
 
 module scalar_in_elem
 
@@ -57,7 +57,7 @@ subroutine test_loop_order(i, j)
       integer, intent(in) :: j
     end function
   end interface
-  
+
   i = 42 + pure_func(j)
   i = 42 + impure_func(j)
 end subroutine

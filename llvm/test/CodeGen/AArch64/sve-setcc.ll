@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve < %s | FileCheck %s
 
 ; Ensure we use the CC result of SVE compare instructions when branching.
-define void @sve_cmplt_setcc(<vscale x 8 x i16>* %out, <vscale x 8 x i16> %in, <vscale x 8 x i1> %pg) {
+define void @sve_cmplt_setcc(ptr %out, <vscale x 8 x i16> %in, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: sve_cmplt_setcc:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmplt p1.h, p0/z, z0.h, #0
@@ -17,7 +17,7 @@ entry:
   br i1 %1, label %if.then, label %if.end
 
 if.then:
-  tail call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> %in, <vscale x 8 x i16>* %out, i32 2, <vscale x 8 x i1> %pg)
+  tail call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> %in, ptr %out, i32 2, <vscale x 8 x i1> %pg)
   br label %if.end
 
 if.end:
@@ -25,7 +25,7 @@ if.end:
 }
 
 ; Ensure we use the inverted CC result of SVE compare instructions when branching.
-define void @sve_cmplt_setcc_inverted(<vscale x 8 x i16>* %out, <vscale x 8 x i16> %in, <vscale x 8 x i1> %pg) {
+define void @sve_cmplt_setcc_inverted(ptr %out, <vscale x 8 x i16> %in, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: sve_cmplt_setcc_inverted:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmplt p1.h, p0/z, z0.h, #0
@@ -40,7 +40,7 @@ entry:
   br i1 %1, label %if.end, label %if.then
 
 if.then:
-  tail call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> %in, <vscale x 8 x i16>* %out, i32 2, <vscale x 8 x i1> %pg)
+  tail call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> %in, ptr %out, i32 2, <vscale x 8 x i1> %pg)
   br label %if.end
 
 if.end:
@@ -48,7 +48,7 @@ if.end:
 }
 
 ; Ensure we combine setcc and csel so as to not end up with an extra compare
-define void @sve_cmplt_setcc_hslo(<vscale x 8 x i16>* %out, <vscale x 8 x i16> %in, <vscale x 8 x i1> %pg) {
+define void @sve_cmplt_setcc_hslo(ptr %out, <vscale x 8 x i16> %in, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: sve_cmplt_setcc_hslo:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p1.h
@@ -66,7 +66,7 @@ entry:
   br i1 %1, label %if.then, label %if.end
 
 if.then:
-  tail call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> %in, <vscale x 8 x i16>* %out, i32 2, <vscale x 8 x i1> %pg)
+  tail call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> %in, ptr %out, i32 2, <vscale x 8 x i1> %pg)
   br label %if.end
 
 if.end:
@@ -123,4 +123,4 @@ declare i1 @llvm.aarch64.sve.ptest.last.nxv8i1(<vscale x 8 x i1>, <vscale x 8 x 
 
 declare <vscale x 8 x i1> @llvm.aarch64.sve.cmplt.wide.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 2 x i64>)
 
-declare void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16>, <vscale x 8 x i16>*, i32, <vscale x 8 x i1>)
+declare void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16>, ptr, i32, <vscale x 8 x i1>)

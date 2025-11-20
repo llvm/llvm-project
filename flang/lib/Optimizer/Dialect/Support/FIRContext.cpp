@@ -60,6 +60,143 @@ fir::KindMapping fir::getKindMapping(mlir::Operation *op) {
   return getKindMapping(moduleOp);
 }
 
+static constexpr const char *targetCpuName = "fir.target_cpu";
+
+void fir::setTargetCPU(mlir::ModuleOp mod, llvm::StringRef cpu) {
+  if (cpu.empty())
+    return;
+
+  auto *ctx = mod.getContext();
+  mod->setAttr(targetCpuName, mlir::StringAttr::get(ctx, cpu));
+}
+
+llvm::StringRef fir::getTargetCPU(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(targetCpuName))
+    return attr.getValue();
+
+  return {};
+}
+
+static constexpr const char *tuneCpuName = "fir.tune_cpu";
+
+void fir::setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu) {
+  if (cpu.empty())
+    return;
+
+  auto *ctx = mod.getContext();
+
+  mod->setAttr(tuneCpuName, mlir::StringAttr::get(ctx, cpu));
+}
+
+static constexpr const char *atomicIgnoreDenormalModeName =
+    "fir.atomic_ignore_denormal_mode";
+
+void fir::setAtomicIgnoreDenormalMode(mlir::ModuleOp mod, bool value) {
+  if (value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(atomicIgnoreDenormalModeName, mlir::UnitAttr::get(ctx));
+  } else {
+    if (mod->hasAttr(atomicIgnoreDenormalModeName))
+      mod->removeAttr(atomicIgnoreDenormalModeName);
+  }
+}
+
+bool fir::getAtomicIgnoreDenormalMode(mlir::ModuleOp mod) {
+  return mod->hasAttr(atomicIgnoreDenormalModeName);
+}
+
+static constexpr const char *atomicFineGrainedMemoryName =
+    "fir.atomic_fine_grained_memory";
+
+void fir::setAtomicFineGrainedMemory(mlir::ModuleOp mod, bool value) {
+  if (value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(atomicFineGrainedMemoryName, mlir::UnitAttr::get(ctx));
+  } else {
+    if (mod->hasAttr(atomicFineGrainedMemoryName))
+      mod->removeAttr(atomicFineGrainedMemoryName);
+  }
+}
+
+bool fir::getAtomicFineGrainedMemory(mlir::ModuleOp mod) {
+  return mod->hasAttr(atomicFineGrainedMemoryName);
+}
+
+static constexpr const char *atomicRemoteMemoryName =
+    "fir.atomic_remote_memory";
+
+void fir::setAtomicRemoteMemory(mlir::ModuleOp mod, bool value) {
+  if (value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(atomicRemoteMemoryName, mlir::UnitAttr::get(ctx));
+  } else {
+    if (mod->hasAttr(atomicRemoteMemoryName))
+      mod->removeAttr(atomicRemoteMemoryName);
+  }
+}
+
+bool fir::getAtomicRemoteMemory(mlir::ModuleOp mod) {
+  return mod->hasAttr(atomicRemoteMemoryName);
+}
+
+llvm::StringRef fir::getTuneCPU(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(tuneCpuName))
+    return attr.getValue();
+
+  return {};
+}
+
+static constexpr const char *targetFeaturesName = "fir.target_features";
+
+void fir::setTargetFeatures(mlir::ModuleOp mod, llvm::StringRef features) {
+  if (features.empty())
+    return;
+
+  auto *ctx = mod.getContext();
+  mod->setAttr(targetFeaturesName,
+               mlir::LLVM::TargetFeaturesAttr::get(ctx, features));
+}
+
+mlir::LLVM::TargetFeaturesAttr fir::getTargetFeatures(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::LLVM::TargetFeaturesAttr>(
+          targetFeaturesName))
+    return attr;
+
+  return {};
+}
+
+void fir::setIdent(mlir::ModuleOp mod, llvm::StringRef ident) {
+  if (ident.empty())
+    return;
+
+  mlir::MLIRContext *ctx = mod.getContext();
+  mod->setAttr(mlir::LLVM::LLVMDialect::getIdentAttrName(),
+               mlir::StringAttr::get(ctx, ident));
+}
+
+llvm::StringRef fir::getIdent(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(
+          mlir::LLVM::LLVMDialect::getIdentAttrName()))
+    return attr;
+  return {};
+}
+
+void fir::setCommandline(mlir::ModuleOp mod, llvm::StringRef cmdLine) {
+  if (cmdLine.empty())
+    return;
+
+  mlir::MLIRContext *ctx = mod.getContext();
+  mod->setAttr(mlir::LLVM::LLVMDialect::getCommandlineAttrName(),
+               mlir::StringAttr::get(ctx, cmdLine));
+}
+
+llvm::StringRef fir::getCommandline(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(
+          mlir::LLVM::LLVMDialect::getCommandlineAttrName()))
+    return attr;
+  return {};
+}
+
 std::string fir::determineTargetTriple(llvm::StringRef triple) {
   // Treat "" or "default" as stand-ins for the default machine.
   if (triple.empty() || triple == "default")

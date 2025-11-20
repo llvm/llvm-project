@@ -80,7 +80,7 @@ public:
   ArrayRef<T> copyArray(ArrayRef<T> Source) {
     if (!Source.empty())
       return Source.copy(Allocator);
-    return std::nullopt;
+    return {};
   }
 
   ParagraphComment *actOnParagraphComment(
@@ -131,6 +131,7 @@ public:
   InlineCommandComment *actOnInlineCommand(SourceLocation CommandLocBegin,
                                            SourceLocation CommandLocEnd,
                                            unsigned CommandID,
+                                           CommandMarkerKind CommandMarker,
                                            ArrayRef<Comment::Argument> Args);
 
   InlineContentComment *actOnUnknownCommand(SourceLocation LocBegin,
@@ -244,8 +245,7 @@ private:
                               StringRef Typo,
                               const TemplateParameterList *TemplateParameters);
 
-  InlineCommandComment::RenderKind
-  getInlineCommandRenderKind(StringRef Name) const;
+  InlineCommandRenderKind getInlineCommandRenderKind(StringRef Name) const;
 };
 
 } // end namespace comments

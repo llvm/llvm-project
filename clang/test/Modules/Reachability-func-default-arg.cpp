@@ -4,6 +4,9 @@
 //
 // RUN: %clang_cc1 -std=c++20 %t/func_default_arg.cppm -emit-module-interface -o %t/func_default_arg.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -verify -fsyntax-only
+
+// RUN: %clang_cc1 -std=c++20 %t/func_default_arg.cppm -emit-reduced-module-interface -o %t/func_default_arg.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -verify -fsyntax-only
 //
 //--- func_default_arg.cppm
 export module func_default_arg;

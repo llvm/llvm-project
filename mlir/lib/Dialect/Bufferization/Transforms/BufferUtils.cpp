@@ -11,15 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
+
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Pass/Pass.h"
-#include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallString.h"
 #include <optional>
 
 using namespace mlir;
@@ -96,60 +93,14 @@ BufferPlacementTransformationBase::BufferPlacementTransformationBase(
     Operation *op)
     : aliases(op), allocs(op), liveness(op) {}
 
-/// Returns true if the given operation represents a loop by testing whether it
-/// implements the `LoopLikeOpInterface` or the `RegionBranchOpInterface`. In
-/// the case of a `RegionBranchOpInterface`, it checks all region-based control-
-/// flow edges for cycles.
-bool BufferPlacementTransformationBase::isLoop(Operation *op) {
-  // If the operation implements the `LoopLikeOpInterface` it can be considered
-  // a loop.
-  if (isa<LoopLikeOpInterface>(op))
-    return true;
-
-  // If the operation does not implement the `RegionBranchOpInterface`, it is
-  // (currently) not possible to detect a loop.
-  RegionBranchOpInterface regionInterface;
-  if (!(regionInterface = dyn_cast<RegionBranchOpInterface>(op)))
-    return false;
-
-  // Recurses into a region using the current region interface to find potential
-  // cycles.
-  SmallPtrSet<Region *, 4> visitedRegions;
-  std::function<bool(Region *)> recurse = [&](Region *current) {
-    if (!current)
-      return false;
-    // If we have found a back edge, the parent operation induces a loop.
-    if (!visitedRegions.insert(current).second)
-      return true;
-    // Recurses into all region successors.
-    SmallVector<RegionSuccessor, 2> successors;
-    regionInterface.getSuccessorRegions(current, successors);
-    for (RegionSuccessor &regionEntry : successors)
-      if (recurse(regionEntry.getSuccessor()))
-        return true;
-    return false;
-  };
-
-  // Start with all entry regions and test whether they induce a loop.
-  SmallVector<RegionSuccessor, 2> successorRegions;
-  regionInterface.getSuccessorRegions(/*point=*/RegionBranchPoint::parent(),
-                                      successorRegions);
-  for (RegionSuccessor &regionEntry : successorRegions) {
-    if (recurse(regionEntry.getSuccessor()))
-      return true;
-    visitedRegions.clear();
-  }
-
-  return false;
-}
-
 //===----------------------------------------------------------------------===//
 // BufferPlacementTransformationBase
 //===----------------------------------------------------------------------===//
 
 FailureOr<memref::GlobalOp>
-bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment,
-                            Attribute memorySpace) {
+bufferization::getGlobalFor(arith::ConstantOp constantOp,
+                            SymbolTableCollection &symbolTables,
+                            uint64_t alignment, Attribute memorySpace) {
   auto type = cast<RankedTensorType>(constantOp.getType());
   auto moduleOp = constantOp->getParentOfType<ModuleOp>();
   if (!moduleOp)
@@ -172,7 +123,7 @@ bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment,
   // Create a builder without an insertion point. We will insert using the
   // symbol table to guarantee unique names.
   OpBuilder globalBuilder(moduleOp.getContext());
-  SymbolTable symbolTable(moduleOp);
+  SymbolTable &symbolTable = symbolTables.getSymbolTable(moduleOp);
 
   // Create a pretty name.
   SmallString<64> buf;
@@ -185,12 +136,14 @@ bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment,
       alignment > 0 ? IntegerAttr::get(globalBuilder.getI64Type(), alignment)
                     : IntegerAttr();
 
-  BufferizeTypeConverter typeConverter;
-  auto memrefType = cast<MemRefType>(typeConverter.convertType(type));
+  // Memref globals always have an identity layout.
+  auto memrefType =
+      cast<MemRefType>(getMemRefTypeWithStaticIdentityLayout(type));
   if (memorySpace)
     memrefType = MemRefType::Builder(memrefType).setMemorySpace(memorySpace);
-  auto global = globalBuilder.create<memref::GlobalOp>(
-      constantOp.getLoc(), (Twine("__constant_") + os.str()).str(),
+  auto global = memref::GlobalOp::create(
+      globalBuilder, constantOp.getLoc(),
+      (Twine("__constant_") + os.str()).str(),
       /*sym_visibility=*/globalBuilder.getStringAttr("private"),
       /*type=*/memrefType,
       /*initial_value=*/cast<ElementsAttr>(constantOp.getValue()),
@@ -202,3 +155,19 @@ bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment,
   global->moveBefore(&moduleOp.front());
   return global;
 }
+
+namespace mlir::bufferization {
+void removeSymbol(Operation *op, BufferizationState &state) {
+  SymbolTable &symbolTable = state.getSymbolTables().getSymbolTable(
+      op->getParentWithTrait<OpTrait::SymbolTable>());
+
+  symbolTable.remove(op);
+}
+
+void insertSymbol(Operation *op, BufferizationState &state) {
+  SymbolTable &symbolTable = state.getSymbolTables().getSymbolTable(
+      op->getParentWithTrait<OpTrait::SymbolTable>());
+
+  symbolTable.insert(op);
+}
+} // namespace mlir::bufferization

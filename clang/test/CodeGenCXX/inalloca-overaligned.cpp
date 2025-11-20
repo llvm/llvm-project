@@ -44,11 +44,11 @@ int pass_inalloca_overaligned() {
 // CHECK: call x86_thiscallcc noundef ptr @"??0OverAligned@@QAE@XZ"(ptr {{[^,]*}} [[TMP]])
 
 // Construct NonTrivial into the GEP.
-// CHECK: [[GEP:%[^ ]*]] = getelementptr inbounds <{ %struct.NonTrivial, ptr }>, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[GEP:%[^ ]*]] = getelementptr inbounds nuw <{ %struct.NonTrivial, ptr }>, ptr %{{.*}}, i32 0, i32 0
 // CHECK: call x86_thiscallcc noundef ptr @"??0NonTrivial@@QAE@XZ"(ptr {{[^,]*}} [[GEP]])
 
 // Store the address of an OverAligned temporary into the struct.
-// CHECK: getelementptr inbounds <{ %struct.NonTrivial, ptr }>, ptr %{{.*}}, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw <{ %struct.NonTrivial, ptr }>, ptr %{{.*}}, i32 0, i32 1
 // CHECK: store ptr [[TMP]], ptr %{{.*}}, align 4
 // CHECK: call noundef i32 @"?receive_inalloca_overaligned@@Y{{.*}}"(ptr inalloca(<{ %struct.NonTrivial, ptr }>) %argmem)
 
@@ -57,7 +57,7 @@ int receive_both(Both o) {
 }
 
 // CHECK-LABEL: define dso_local noundef i32 @"?receive_both@@Y{{.*}}"
-// CHECK-SAME: (ptr noundef %o)
+// CHECK-SAME: (ptr dead_on_return noundef %o)
 
 int pass_both() {
   gvi32 = receive_both(Both());
@@ -67,7 +67,7 @@ int pass_both() {
 // CHECK-LABEL: define dso_local noundef i32 @"?pass_both@@Y{{.*}}"
 // CHECK: [[TMP:%[^ ]*]] = alloca %struct.Both, align 8
 // CHECK: call x86_thiscallcc noundef ptr @"??0Both@@QAE@XZ"(ptr {{[^,]*}} [[TMP]])
-// CHECK: call noundef i32 @"?receive_both@@Y{{.*}}"(ptr noundef [[TMP]])
+// CHECK: call noundef i32 @"?receive_both@@Y{{.*}}"(ptr dead_on_return noundef [[TMP]])
 
 int receive_inalloca_both(NonTrivial nt, Both o) {
   return nt.x + o.x + o.y;
@@ -101,11 +101,11 @@ struct [[trivial_abi]] alignas(8) MyPtr {
 int receiveMyPtr(MyPtr o) { return *o.ptr; }
 
 // CHECK-LABEL: define dso_local noundef i32 @"?receiveMyPtr@@Y{{.*}}"
-// CHECK-SAME: (ptr noundef %o)
+// CHECK-SAME: (ptr dead_on_return noundef %o)
 
 int passMyPtr() { return receiveMyPtr(MyPtr()); }
 
 // CHECK-LABEL: define dso_local noundef i32 @"?passMyPtr@@Y{{.*}}"
 // CHECK: [[TMP:%[^ ]*]] = alloca %struct.MyPtr, align 8
 // CHECK: call x86_thiscallcc noundef ptr @"??0MyPtr@@QAE@XZ"(ptr {{[^,]*}} [[TMP]])
-// CHECK: call noundef i32 @"?receiveMyPtr@@Y{{.*}}"(ptr noundef [[TMP]])
+// CHECK: call noundef i32 @"?receiveMyPtr@@Y{{.*}}"(ptr dead_on_return noundef [[TMP]])

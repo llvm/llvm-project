@@ -48,7 +48,7 @@ processTokens(const FormatToken *Tok, tok::TokenKind StartTok,
 const FormatToken *skipAttribute(const FormatToken *Tok) {
   if (!Tok)
     return nullptr;
-  if (Tok->is(tok::kw___attribute)) {
+  if (Tok->isAttribute()) {
     Tok = Tok->getNextNonComment();
     Tok = processTokens(Tok, tok::l_paren, tok::r_paren, nullptr);
   } else if (Tok->is(tok::l_square)) {
@@ -70,7 +70,7 @@ std::string computeName(const FormatToken *NamespaceTok) {
     // and closing parenthesis or comma.
     assert(Tok && Tok->is(tok::l_paren) && "expected an opening parenthesis");
     Tok = Tok->getNextNonComment();
-    while (Tok && !Tok->isOneOf(tok::r_paren, tok::comma)) {
+    while (Tok && Tok->isNoneOf(tok::r_paren, tok::comma)) {
       name += Tok->TokenText;
       Tok = Tok->getNextNonComment();
     }
@@ -85,7 +85,7 @@ std::string computeName(const FormatToken *NamespaceTok) {
   // one token before that up until the '{'. A '(' might be a macro with
   // arguments.
   const FormatToken *FirstNSTok = nullptr;
-  while (Tok && !Tok->isOneOf(tok::l_brace, tok::coloncolon, tok::l_paren)) {
+  while (Tok && Tok->isNoneOf(tok::l_brace, tok::coloncolon, tok::l_paren)) {
     if (FirstNSTok)
       FirstNSName += FirstNSTok->TokenText;
     FirstNSTok = Tok;
@@ -170,7 +170,7 @@ bool validEndComment(const FormatToken *RBraceTok, StringRef NamespaceName,
   // Valid namespace end comments don't need to be edited.
   static const llvm::Regex NamespaceCommentPattern =
       llvm::Regex("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
-                  "namespace( +([a-zA-Z0-9:_]+))?\\.? *(\\*/)?$",
+                  "namespace( +([a-zA-Z0-9:_ ]+))?\\.? *(\\*/)?$",
                   llvm::Regex::IgnoreCase);
   static const llvm::Regex NamespaceMacroCommentPattern =
       llvm::Regex("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
@@ -189,7 +189,7 @@ bool validEndComment(const FormatToken *RBraceTok, StringRef NamespaceName,
     // Comment does not match regex.
     return false;
   }
-  StringRef NamespaceNameInComment = Groups.size() > 5 ? Groups[5] : "";
+  StringRef NamespaceNameInComment = Groups.size() > 5 ? Groups[5].rtrim() : "";
   // Anonymous namespace comments must not mention a namespace name.
   if (NamespaceName.empty() && !NamespaceNameInComment.empty())
     return false;

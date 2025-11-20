@@ -14,6 +14,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include <vector>
 
+namespace lldb_private::plugin {
+namespace dwarf {
 class DWARFUnit;
 
 class DWARFAttribute {
@@ -31,6 +33,7 @@ public:
     form = m_form;
     val = m_value;
   }
+
 protected:
   dw_attr_t m_attr;
   dw_form_t m_form;
@@ -72,5 +75,7 @@ protected:
   typedef llvm::SmallVector<AttributeValue, 8> collection;
   collection m_infos;
 };
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFATTRIBUTE_H

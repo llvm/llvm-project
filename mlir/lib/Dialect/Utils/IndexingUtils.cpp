@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Utils/IndexingUtils.h"
-
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/STLExtras.h"
-
 #include <numeric>
 #include <optional>
 
@@ -25,7 +24,7 @@ SmallVector<ExprType> computeSuffixProductImpl(ArrayRef<ExprType> sizes,
   if (sizes.empty())
     return {};
   SmallVector<ExprType> strides(sizes.size(), unit);
-  for (int64_t r = strides.size() - 2; r >= 0; --r)
+  for (int64_t r = static_cast<int64_t>(strides.size()) - 2; r >= 0; --r)
     strides[r] = strides[r + 1] * sizes[r + 1];
   return strides;
 }
@@ -70,7 +69,8 @@ SmallVector<ExprType> delinearizeImpl(ExprType linearIndex,
 //===----------------------------------------------------------------------===//
 
 SmallVector<int64_t> mlir::computeSuffixProduct(ArrayRef<int64_t> sizes) {
-  assert(llvm::all_of(sizes, [](int64_t s) { return s > 0; }) &&
+  assert((sizes.empty() ||
+          llvm::all_of(sizes.drop_front(), [](int64_t s) { return s >= 0; })) &&
          "sizes must be nonnegative");
   int64_t unit = 1;
   return ::computeSuffixProductImpl(sizes, unit);
@@ -81,21 +81,10 @@ SmallVector<int64_t> mlir::computeElementwiseMul(ArrayRef<int64_t> v1,
   return computeElementwiseMulImpl(v1, v2);
 }
 
-int64_t mlir::computeSum(ArrayRef<int64_t> basis) {
-  assert(llvm::all_of(basis, [](int64_t s) { return s > 0; }) &&
-         "basis must be nonnegative");
-  if (basis.empty())
-    return 0;
-  return std::accumulate(basis.begin(), basis.end(), 1, std::plus<int64_t>());
-}
-
 int64_t mlir::computeProduct(ArrayRef<int64_t> basis) {
   assert(llvm::all_of(basis, [](int64_t s) { return s > 0; }) &&
          "basis must be nonnegative");
-  if (basis.empty())
-    return 0;
-  return std::accumulate(basis.begin(), basis.end(), 1,
-                         std::multiplies<int64_t>());
+  return llvm::product_of(basis);
 }
 
 int64_t mlir::linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis) {
@@ -158,19 +147,11 @@ SmallVector<AffineExpr> mlir::computeElementwiseMul(ArrayRef<AffineExpr> v1,
 }
 
 AffineExpr mlir::computeSum(MLIRContext *ctx, ArrayRef<AffineExpr> basis) {
-  if (basis.empty())
-    return getAffineConstantExpr(0, ctx);
-  return std::accumulate(basis.begin(), basis.end(),
-                         getAffineConstantExpr(0, ctx),
-                         std::plus<AffineExpr>());
+  return llvm::sum_of(basis, getAffineConstantExpr(0, ctx));
 }
 
 AffineExpr mlir::computeProduct(MLIRContext *ctx, ArrayRef<AffineExpr> basis) {
-  if (basis.empty())
-    return getAffineConstantExpr(1, ctx);
-  return std::accumulate(basis.begin(), basis.end(),
-                         getAffineConstantExpr(1, ctx),
-                         std::multiplies<AffineExpr>());
+  return llvm::product_of(basis, getAffineConstantExpr(1, ctx));
 }
 
 AffineExpr mlir::linearize(MLIRContext *ctx, ArrayRef<AffineExpr> offsets,
@@ -213,11 +194,18 @@ mlir::invertPermutationVector(ArrayRef<int64_t> permutation) {
   return inversion;
 }
 
+bool mlir::isIdentityPermutation(ArrayRef<int64_t> permutation) {
+  for (auto i : llvm::seq<int64_t>(0, permutation.size()))
+    if (permutation[i] != i)
+      return false;
+  return true;
+}
+
 bool mlir::isPermutationVector(ArrayRef<int64_t> interchange) {
-  assert(llvm::all_of(interchange, [](int64_t s) { return s >= 0; }) &&
-         "permutation must be non-negative");
   llvm::SmallDenseSet<int64_t, 4> seenVals;
   for (auto val : interchange) {
+    if (val < 0 || static_cast<uint64_t>(val) >= interchange.size())
+      return false;
     if (seenVals.count(val))
       return false;
     seenVals.insert(val);
@@ -246,6 +234,32 @@ mlir::computePermutationVector(int64_t permSize, ArrayRef<int64_t> positions,
   return res;
 }
 
+SmallVector<int64_t> mlir::dropDims(ArrayRef<int64_t> inputPerm,
+                                    ArrayRef<int64_t> dropPositions) {
+  assert(inputPerm.size() >= dropPositions.size() &&
+         "expect inputPerm size large than position to drop");
+  SmallVector<int64_t> res;
+  unsigned permSize = inputPerm.size();
+  for (unsigned inputIndex = 0; inputIndex < permSize; ++inputIndex) {
+    int64_t targetIndex = inputPerm[inputIndex];
+    bool shouldDrop = false;
+    unsigned dropSize = dropPositions.size();
+    for (unsigned dropIndex = 0; dropIndex < dropSize; dropIndex++) {
+      if (dropPositions[dropIndex] == inputPerm[inputIndex]) {
+        shouldDrop = true;
+        break;
+      }
+      if (dropPositions[dropIndex] < inputPerm[inputIndex]) {
+        targetIndex--;
+      }
+    }
+    if (!shouldDrop) {
+      res.push_back(targetIndex);
+    }
+  }
+  return res;
+}
+
 SmallVector<int64_t> mlir::getI64SubArray(ArrayAttr arrayAttr,
                                           unsigned dropFront,
                                           unsigned dropBack) {
@@ -264,9 +278,8 @@ static MLIRContext *getContext(OpFoldResult val) {
   assert(val && "Invalid value");
   if (auto attr = dyn_cast<Attribute>(val)) {
     return attr.getContext();
-  } else {
-    return cast<Value>(val).getContext();
   }
+  return cast<Value>(val).getContext();
 }
 
 std::pair<AffineExpr, SmallVector<OpFoldResult>>
@@ -298,6 +311,14 @@ mlir::computeLinearIndex(OpFoldResult sourceOffset,
   }
 
   return {expr, values};
+}
+
+std::pair<AffineExpr, SmallVector<OpFoldResult>>
+mlir::computeLinearIndex(OpFoldResult sourceOffset, ArrayRef<int64_t> strides,
+                         ArrayRef<Value> indices) {
+  return computeLinearIndex(
+      sourceOffset, getAsIndexOpFoldResult(sourceOffset.getContext(), strides),
+      getAsOpFoldResult(ValueRange(indices)));
 }
 
 //===----------------------------------------------------------------------===//

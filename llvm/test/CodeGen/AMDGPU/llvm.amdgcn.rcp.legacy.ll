@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: not llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: not llc -mtriple=amdgcn -mcpu=fiji < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
 ; ERROR: error: <unknown>:0:0: in function rcp_legacy_f32 void (ptr addrspace(1), float): intrinsic not supported on subtarget
 
@@ -33,7 +33,7 @@ define amdgpu_kernel void @rcp_legacy_f32_constant_100.0(ptr addrspace(1) %out) 
 ; GCN-LABEL: {{^}}rcp_legacy_undef_f32:
 ; GCN-NOT: v_rcp_legacy_f32
 define amdgpu_kernel void @rcp_legacy_undef_f32(ptr addrspace(1) %out) #1 {
-  %rcp = call float @llvm.amdgcn.rcp.legacy(float undef)
+  %rcp = call float @llvm.amdgcn.rcp.legacy(float poison)
   store float %rcp, ptr addrspace(1) %out, align 4
   ret void
 }

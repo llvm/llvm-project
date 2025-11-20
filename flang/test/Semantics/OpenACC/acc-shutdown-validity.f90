@@ -32,7 +32,7 @@ program openacc_shutdown_validity
   do i = 1, N
     !ERROR: Directive SHUTDOWN may not be called within a compute region
     !$acc shutdown
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -41,7 +41,7 @@ program openacc_shutdown_validity
   do i = 1, N
     !ERROR: Directive SHUTDOWN may not be called within a compute region
     !$acc shutdown
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial
 
@@ -50,7 +50,7 @@ program openacc_shutdown_validity
   do i = 1, N
     !ERROR: Directive SHUTDOWN may not be called within a compute region
     !$acc shutdown
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end kernels
 
@@ -58,21 +58,21 @@ program openacc_shutdown_validity
   do i = 1, N
     !ERROR: Directive SHUTDOWN may not be called within a compute region
     !$acc shutdown
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc serial loop
   do i = 1, N
     !ERROR: Directive SHUTDOWN may not be called within a compute region
     !$acc shutdown
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop
   do i = 1, N
     !ERROR: Directive SHUTDOWN may not be called within a compute region
     !$acc shutdown
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc shutdown
@@ -80,9 +80,9 @@ program openacc_shutdown_validity
   !$acc shutdown if(ifCondition)
   !$acc shutdown device_num(1)
   !$acc shutdown device_num(i)
-  !$acc shutdown device_type(i)
-  !$acc shutdown device_type(2, i, j)
-  !$acc shutdown device_num(i) device_type(i, j) if(ifCondition)
+  !$acc shutdown device_type(*)
+  !$acc shutdown device_type(*, default, host)
+  !$acc shutdown device_num(i) device_type(default, host) if(ifCondition)
 
   !ERROR: At most one IF clause can appear on the SHUTDOWN directive
   !$acc shutdown if(.TRUE.) if(ifCondition)
@@ -90,7 +90,7 @@ program openacc_shutdown_validity
   !ERROR: At most one DEVICE_NUM clause can appear on the SHUTDOWN directive
   !$acc shutdown device_num(1) device_num(i)
 
-  !ERROR: At most one DEVICE_TYPE clause can appear on the SHUTDOWN directive
-  !$acc shutdown device_type(2) device_type(i, j)
+  ! OK
+  !$acc shutdown device_type(*) device_type(host, default)
 
 end program openacc_shutdown_validity

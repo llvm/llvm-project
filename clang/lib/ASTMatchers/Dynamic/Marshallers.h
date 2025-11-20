@@ -937,7 +937,7 @@ class MapAnyOfMatcherDescriptor : public MatcherDescriptor {
 public:
   MapAnyOfMatcherDescriptor(ASTNodeKind CladeNodeKind,
                             std::vector<ASTNodeKind> NodeKinds)
-      : CladeNodeKind(CladeNodeKind), NodeKinds(NodeKinds) {}
+      : CladeNodeKind(CladeNodeKind), NodeKinds(std::move(NodeKinds)) {}
 
   VariantMatcher create(SourceRange NameRange, ArrayRef<ParserValue> Args,
                         Diagnostics *Error) const override {
@@ -1026,7 +1026,7 @@ public:
     }
 
     return std::make_unique<MapAnyOfMatcherDescriptor>(CladeNodeKind,
-                                                       NodeKinds);
+                                                       std::move(NodeKinds));
   }
 
   bool isVariadic() const override { return true; }
@@ -1060,7 +1060,7 @@ makeMatcherAutoMarshall(ReturnType (*Func)(), StringRef MatcherName) {
   BuildReturnTypeVector<ReturnType>::build(RetTypes);
   return std::make_unique<FixedArgCountMatcherDescriptor>(
       matcherMarshall0<ReturnType>, reinterpret_cast<void (*)()>(Func),
-      MatcherName, RetTypes, std::nullopt);
+      MatcherName, RetTypes, ArrayRef<ArgKind>());
 }
 
 /// 1-arg overload

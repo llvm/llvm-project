@@ -78,9 +78,9 @@ define <4 x i32> @rotl_v4i32(<4 x i32> %x, <4 x i32> %z) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.4s, #31
 ; CHECK-NEXT:    neg v3.4s, v1.4s
+; CHECK-NEXT:    and v3.16b, v3.16b, v2.16b
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    and v2.16b, v3.16b, v2.16b
-; CHECK-NEXT:    neg v2.4s, v2.4s
+; CHECK-NEXT:    neg v2.4s, v3.4s
 ; CHECK-NEXT:    ushl v1.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ushl v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b

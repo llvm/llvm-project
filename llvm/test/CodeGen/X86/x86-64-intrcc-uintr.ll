@@ -21,28 +21,24 @@ define dso_local x86_intrcc void @test_uintr_isr_cc_empty(ptr nocapture byval(%s
 ; CHECK-USER-LABEL: test_uintr_isr_cc_empty:
 ; CHECK-USER:       # %bb.0: # %entry
 ; CHECK-USER-NEXT:    pushq %rax
-; CHECK-USER-NEXT:    cld
 ; CHECK-USER-NEXT:    addq $16, %rsp
 ; CHECK-USER-NEXT:    uiret
 ;
 ; CHECK0-USER-LABEL: test_uintr_isr_cc_empty:
 ; CHECK0-USER:       # %bb.0: # %entry
 ; CHECK0-USER-NEXT:    pushq %rax
-; CHECK0-USER-NEXT:    cld
 ; CHECK0-USER-NEXT:    addq $16, %rsp
 ; CHECK0-USER-NEXT:    uiret
 ;
 ; CHECK-KERNEL-LABEL: test_uintr_isr_cc_empty:
 ; CHECK-KERNEL:       # %bb.0: # %entry
 ; CHECK-KERNEL-NEXT:    pushq %rax
-; CHECK-KERNEL-NEXT:    cld
 ; CHECK-KERNEL-NEXT:    addq $16, %rsp
 ; CHECK-KERNEL-NEXT:    iretq
 ;
 ; CHECK0-KERNEL-LABEL: test_uintr_isr_cc_empty:
 ; CHECK0-KERNEL:       # %bb.0: # %entry
 ; CHECK0-KERNEL-NEXT:    pushq %rax
-; CHECK0-KERNEL-NEXT:    cld
 ; CHECK0-KERNEL-NEXT:    addq $16, %rsp
 ; CHECK0-KERNEL-NEXT:    iretq
 entry:
@@ -75,7 +71,6 @@ define dso_local x86_intrcc void @test_uintr_isr_cc_args(ptr nocapture readonly 
 ; CHECK-USER-NEXT:    pushq %rax
 ; CHECK-USER-NEXT:    pushq %rdx
 ; CHECK-USER-NEXT:    pushq %rcx
-; CHECK-USER-NEXT:    cld
 ; CHECK-USER-NEXT:    movq 32(%rsp), %rax
 ; CHECK-USER-NEXT:    movq 40(%rsp), %rcx
 ; CHECK-USER-NEXT:    movq 48(%rsp), %rdx
@@ -96,7 +91,6 @@ define dso_local x86_intrcc void @test_uintr_isr_cc_args(ptr nocapture readonly 
 ; CHECK0-USER-NEXT:    pushq %rax
 ; CHECK0-USER-NEXT:    pushq %rdx
 ; CHECK0-USER-NEXT:    pushq %rcx
-; CHECK0-USER-NEXT:    cld
 ; CHECK0-USER-NEXT:    movq 32(%rsp), %rax
 ; CHECK0-USER-NEXT:    leaq 40(%rsp), %rcx
 ; CHECK0-USER-NEXT:    movq (%rcx), %rdx
@@ -118,7 +112,6 @@ define dso_local x86_intrcc void @test_uintr_isr_cc_args(ptr nocapture readonly 
 ; CHECK-KERNEL-NEXT:    pushq %rax
 ; CHECK-KERNEL-NEXT:    pushq %rdx
 ; CHECK-KERNEL-NEXT:    pushq %rcx
-; CHECK-KERNEL-NEXT:    cld
 ; CHECK-KERNEL-NEXT:    movq 32(%rsp), %rax
 ; CHECK-KERNEL-NEXT:    movq 40(%rsp), %rcx
 ; CHECK-KERNEL-NEXT:    movq 48(%rsp), %rdx
@@ -139,7 +132,6 @@ define dso_local x86_intrcc void @test_uintr_isr_cc_args(ptr nocapture readonly 
 ; CHECK0-KERNEL-NEXT:    pushq %rax
 ; CHECK0-KERNEL-NEXT:    pushq %rdx
 ; CHECK0-KERNEL-NEXT:    pushq %rcx
-; CHECK0-KERNEL-NEXT:    cld
 ; CHECK0-KERNEL-NEXT:    movq 32(%rsp), %rax
 ; CHECK0-KERNEL-NEXT:    leaq 40(%rsp), %rcx
 ; CHECK0-KERNEL-NEXT:    movq (%rcx), %rdx

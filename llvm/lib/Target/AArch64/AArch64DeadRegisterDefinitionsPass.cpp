@@ -14,7 +14,6 @@
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -41,10 +40,7 @@ private:
   void processMachineBasicBlock(MachineBasicBlock &MBB);
 public:
   static char ID; // Pass identification, replacement for typeid.
-  AArch64DeadRegisterDefinitions() : MachineFunctionPass(ID) {
-    initializeAArch64DeadRegisterDefinitionsPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AArch64DeadRegisterDefinitions() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
@@ -68,10 +64,10 @@ static bool usesFrameIndex(const MachineInstr &MI) {
   return false;
 }
 
-// Instructions that lose their 'read' operation for a subesquent fence acquire
+// Instructions that lose their 'read' operation for a subsequent fence acquire
 // (DMB LD) once the zero register is used.
 //
-// WARNING: The aquire variants of the instructions are also affected, but they
+// WARNING: The acquire variants of the instructions are also affected, but they
 // are split out into `atomicBarrierDroppedOnZero()` to support annotations on
 // assembly.
 static bool atomicReadDroppedOnZero(unsigned Opcode) {
@@ -108,6 +104,10 @@ static bool atomicReadDroppedOnZero(unsigned Opcode) {
     case AArch64::LDUMINW:    case AArch64::LDUMINX:
     case AArch64::LDUMINLB:   case AArch64::LDUMINLH:
     case AArch64::LDUMINLW:   case AArch64::LDUMINLX:
+    case AArch64::SWPB:       case AArch64::SWPH:
+    case AArch64::SWPW:       case AArch64::SWPX:
+    case AArch64::SWPLB:      case AArch64::SWPLH:
+    case AArch64::SWPLW:      case AArch64::SWPLX:
     return true;
   }
   return false;
@@ -115,7 +115,6 @@ static bool atomicReadDroppedOnZero(unsigned Opcode) {
 
 void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
     MachineBasicBlock &MBB) {
-  const MachineFunction &MF = *MBB.getParent();
   for (MachineInstr &MI : MBB) {
     if (usesFrameIndex(MI)) {
       // We need to skip this instruction because while it appears to have a
@@ -124,7 +123,8 @@ void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
       LLVM_DEBUG(dbgs() << "    Ignoring, operand is frame index\n");
       continue;
     }
-    if (MI.definesRegister(AArch64::XZR) || MI.definesRegister(AArch64::WZR)) {
+    if (MI.definesRegister(AArch64::XZR, /*TRI=*/nullptr) ||
+        MI.definesRegister(AArch64::WZR, /*TRI=*/nullptr)) {
       // It is not allowed to write to the same register (not even the zero
       // register) twice in a single instruction.
       LLVM_DEBUG(
@@ -156,7 +156,7 @@ void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
         LLVM_DEBUG(dbgs() << "    Ignoring, def is tied operand.\n");
         continue;
       }
-      const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI, MF);
+      const TargetRegisterClass *RC = TII->getRegClass(Desc, I);
       unsigned NewReg;
       if (RC == nullptr) {
         LLVM_DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");

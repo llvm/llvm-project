@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/JTFootprintReduction.h"
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -232,7 +232,7 @@ void JTFootprintReduction::optimizeFunction(BinaryFunction &Function,
       continue;
     }
 
-    llvm_unreachable("Should either optimize PIC or NonPIC successfuly");
+    llvm_unreachable("Should either optimize PIC or NonPIC successfully");
   }
 
   if (!Modified.count(&Function))
@@ -246,9 +246,9 @@ void JTFootprintReduction::optimizeFunction(BinaryFunction &Function,
         ++I;
 }
 
-void JTFootprintReduction::runOnFunctions(BinaryContext &BC) {
+Error JTFootprintReduction::runOnFunctions(BinaryContext &BC) {
   if (opts::JumpTables == JTS_BASIC && BC.HasRelocations)
-    return;
+    return Error::success();
 
   std::unique_ptr<RegAnalysis> RA;
   std::unique_ptr<BinaryFunctionCallGraph> CG;
@@ -272,23 +272,24 @@ void JTFootprintReduction::runOnFunctions(BinaryContext &BC) {
   }
 
   if (TotalJTs == TotalJTsDenied) {
-    outs() << "BOLT-INFO: JT Footprint reduction: no changes were made.\n";
-    return;
+    BC.outs() << "BOLT-INFO: JT Footprint reduction: no changes were made.\n";
+    return Error::success();
   }
 
-  outs() << "BOLT-INFO: JT Footprint reduction stats (simple funcs only):\n";
+  BC.outs() << "BOLT-INFO: JT Footprint reduction stats (simple funcs only):\n";
   if (OptimizedScore)
-    outs() << format("\t   %.2lf%%", (OptimizedScore * 100.0 / TotalJTScore))
-           << " of dynamic JT entries were reduced.\n";
-  outs() << "\t   " << TotalJTs - TotalJTsDenied << " of " << TotalJTs
-         << " jump tables affected.\n";
-  outs() << "\t   " << IndJmps - IndJmpsDenied << " of " << IndJmps
-         << " indirect jumps to JTs affected.\n";
-  outs() << "\t   " << NumJTsBadMatch
-         << " JTs discarded due to unsupported jump pattern.\n";
-  outs() << "\t   " << NumJTsNoReg
-         << " JTs discarded due to register unavailability.\n";
-  outs() << "\t   " << BytesSaved << " bytes saved.\n";
+    BC.outs() << format("\t   %.2lf%%", (OptimizedScore * 100.0 / TotalJTScore))
+              << " of dynamic JT entries were reduced.\n";
+  BC.outs() << "\t   " << TotalJTs - TotalJTsDenied << " of " << TotalJTs
+            << " jump tables affected.\n";
+  BC.outs() << "\t   " << IndJmps - IndJmpsDenied << " of " << IndJmps
+            << " indirect jumps to JTs affected.\n";
+  BC.outs() << "\t   " << NumJTsBadMatch
+            << " JTs discarded due to unsupported jump pattern.\n";
+  BC.outs() << "\t   " << NumJTsNoReg
+            << " JTs discarded due to register unavailability.\n";
+  BC.outs() << "\t   " << BytesSaved << " bytes saved.\n";
+  return Error::success();
 }
 
 } // namespace bolt

@@ -6,9 +6,9 @@
 // the return value will be the value in A[2]
 // CHECK: @brev_ptr_inc
 // CHECK-DAG: llvm.hexagon.L2.loadri.pbr
-// CHECK-DAG: getelementptr{{.*}}i32 1
-// CHECK-NOT: getelementptr{{.*}}i32 2
-// CHECK-NOT: getelementptr{{.*}}i32 1
+// CHECK-DAG: getelementptr inbounds nuw i8, {{.*}}i32 4
+// CHECK-NOT: getelementptr inbounds nuw i8, {{.*}}i32 8
+// CHECK-NOT: getelementptr inbounds nuw i8, {{.*}}i32 4
 int brev_ptr_inc(int A[], int B[]) {
   int *p0 = &B[0];
   int *p1 = &A[0];

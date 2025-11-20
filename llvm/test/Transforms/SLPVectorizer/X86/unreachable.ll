@@ -15,7 +15,7 @@ define void @foo(ptr nocapture %x) #0 {
 ; CHECK-NEXT:    [[BAD:%.*]] = fadd float [[BAD]], 0.000000e+00
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ poison, [[BB1:%.*]] ], [ <i32 2, i32 2, i32 2, i32 2>, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ poison, [[BB1:%.*]] ], [ splat (i32 2), [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

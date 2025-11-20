@@ -12,13 +12,8 @@
 
 define <2 x i64> @loadext_2i8_to_2i64(ptr %p0) {
 ; SSE2-LABEL: @loadext_2i8_to_2i64(
-; SSE2-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P0:%.*]], i64 1
-; SSE2-NEXT:    [[I0:%.*]] = load i8, ptr [[P0]], align 1
-; SSE2-NEXT:    [[I1:%.*]] = load i8, ptr [[P1]], align 1
-; SSE2-NEXT:    [[X0:%.*]] = zext i8 [[I0]] to i64
-; SSE2-NEXT:    [[X1:%.*]] = zext i8 [[I1]] to i64
-; SSE2-NEXT:    [[V0:%.*]] = insertelement <2 x i64> poison, i64 [[X0]], i32 0
-; SSE2-NEXT:    [[V1:%.*]] = insertelement <2 x i64> [[V0]], i64 [[X1]], i32 1
+; SSE2-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[P0:%.*]], align 1
+; SSE2-NEXT:    [[V1:%.*]] = zext <2 x i8> [[TMP1]] to <2 x i64>
 ; SSE2-NEXT:    ret <2 x i64> [[V1]]
 ;
 ; SLM-LABEL: @loadext_2i8_to_2i64(

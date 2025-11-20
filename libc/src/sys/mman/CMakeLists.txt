@@ -36,3 +36,115 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.posix_madvise
 )
+
+add_entrypoint_object(
+  mincore
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mincore
+)
+
+add_entrypoint_object(
+  mlock
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mlock
+)
+
+add_entrypoint_object(
+  mlock2
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mlock2
+)
+
+add_entrypoint_object(
+  munlock
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.munlock
+)
+
+add_entrypoint_object(
+  mlockall
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mlockall
+)
+
+add_entrypoint_object(
+  munlockall
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.munlockall
+)
+
+add_entrypoint_object(
+  msync
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.msync
+)
+
+add_entrypoint_object(
+  pkey_alloc
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_alloc
+)
+
+add_entrypoint_object(
+  pkey_free
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_free
+)
+
+add_entrypoint_object(
+  pkey_get
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_get
+)
+
+add_entrypoint_object(
+  pkey_mprotect
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_mprotect
+)
+
+add_entrypoint_object(
+  pkey_set
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_set
+)
+
+add_entrypoint_object(
+  remap_file_pages
+  ALIAS
+  DEPENDS
+  .${LIBC_TARGET_OS}.remap_file_pages
+)
+
+add_entrypoint_object(
+  shm_open
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.shm_open
+)
+
+add_entrypoint_object(
+  shm_unlink
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.shm_unlink
+)
+
+add_entrypoint_object(
+  mremap
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mremap
+)

@@ -24,34 +24,32 @@
 #include "test_allocator.h"
 
 template <class T>
-struct some_comp
-{
-    typedef T value_type;
-    some_comp(const some_comp&);
-    bool operator()(const T&, const T&) const { return false; }
+struct some_comp {
+  typedef T value_type;
+  some_comp(const some_comp&);
+  bool operator()(const T&, const T&) const { return false; }
 };
 
-int main(int, char**)
-{
+int main(int, char**) {
 #if defined(_LIBCPP_VERSION)
-    typedef std::pair<const MoveOnly, MoveOnly> V;
-    {
-        typedef std::map<MoveOnly, MoveOnly> C;
-        static_assert(std::is_nothrow_move_constructible<C>::value, "");
-    }
-    {
-        typedef std::map<MoveOnly, MoveOnly, std::less<MoveOnly>, test_allocator<V>> C;
-        static_assert(std::is_nothrow_move_constructible<C>::value, "");
-    }
-    {
-        typedef std::map<MoveOnly, MoveOnly, std::less<MoveOnly>, other_allocator<V>> C;
-        static_assert(std::is_nothrow_move_constructible<C>::value, "");
-    }
+  typedef std::pair<const MoveOnly, MoveOnly> V;
+  {
+    typedef std::map<MoveOnly, MoveOnly> C;
+    static_assert(std::is_nothrow_move_constructible<C>::value, "");
+  }
+  {
+    typedef std::map<MoveOnly, MoveOnly, std::less<MoveOnly>, test_allocator<V>> C;
+    static_assert(std::is_nothrow_move_constructible<C>::value, "");
+  }
+  {
+    typedef std::map<MoveOnly, MoveOnly, std::less<MoveOnly>, other_allocator<V>> C;
+    static_assert(std::is_nothrow_move_constructible<C>::value, "");
+  }
 #endif // _LIBCPP_VERSION
-    {
-        typedef std::map<MoveOnly, MoveOnly, some_comp<MoveOnly>> C;
-        static_assert(!std::is_nothrow_move_constructible<C>::value, "");
-    }
+  {
+    typedef std::map<MoveOnly, MoveOnly, some_comp<MoveOnly>> C;
+    static_assert(!std::is_nothrow_move_constructible<C>::value, "");
+  }
 
   return 0;
 }

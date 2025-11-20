@@ -59,7 +59,7 @@ private:
 namespace tools {
 namespace msp430 {
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("MSP430::Linker", "msp430-elf-ld", TC) {}
   bool hasIntegratedCPP() const override { return false; }

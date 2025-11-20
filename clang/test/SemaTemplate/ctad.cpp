@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++17 -verify %s
+// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx17 %s
+// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx20 %s
 
 namespace pr41427 {
   template <typename T> class A {
@@ -20,8 +21,10 @@ namespace Access {
   protected:
     struct type {};
   };
-  template<typename T> struct D : B { // expected-note {{not viable}}
-    D(T, typename T::type); // expected-note {{private member}}
+  template<typename T> struct D : B { // expected-note {{not viable}} \
+                                         expected-note {{implicit deduction guide declared as 'template <typename T> D(Access::D<T>) -> Access::D<T>'}}
+    D(T, typename T::type); // expected-note {{private member}} \
+                            // expected-note {{implicit deduction guide declared as 'template <typename T> D(T, typename T::type) -> Access::D<T>'}}
   };
   D b = {B(), {}};
 
@@ -43,4 +46,73 @@ namespace Access {
     struct type {};
   };
   D z = {Z(), {}};
+}
+
+namespace GH69987 {
+template<class> struct X {};
+template<class = void> struct X;
+X x;
+
+template<class T, class B> struct Y { Y(T); };
+template<class T, class B=void> struct Y ;
+Y y(1);
+}
+
+namespace NoCrashOnGettingDefaultArgLoc {
+template <typename>
+class A {
+  A(int = 1); // expected-note {{candidate template ignored: couldn't infer template argumen}} \
+              // expected-note {{implicit deduction guide declared as 'template <typename> D(int = <null expr>) -> NoCrashOnGettingDefaultArgLoc::D<type-parameter-0-0>'}}
+};
+class C : A<int> {
+  using A::A;
+};
+template <typename>
+class D : C { // expected-note {{candidate function template not viable: requires 1 argument}} \
+                 expected-note {{implicit deduction guide declared as 'template <typename> D(NoCrashOnGettingDefaultArgLoc::D<type-parameter-0-0>) -> NoCrashOnGettingDefaultArgLoc::D<type-parameter-0-0>'}}
+  using C::C;
+};
+D abc; // expected-error {{no viable constructor or deduction guide}}
+}
+
+namespace AsValueParameter {
+  namespace foo {
+    // cxx17-note@+2 {{template is declared here}}
+    // cxx20-note@+1 {{'A<int>' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+    template <class> struct A {
+      A();
+    };
+  }
+  template <foo::A> struct B {}; // expected-note {{template parameter is declared here}}
+  // cxx17-error@-1 {{use of class template 'foo::A' requires template arguments; argument deduction not allowed in template parameter}}
+
+  template struct B<foo::A<int>{}>;
+  // cxx17-error@-1 {{value of type 'foo::A<int>' is not implicitly convertible to 'int'}}
+  // cxx20-error@-2 {{non-type template parameter has non-literal type 'foo::A<int>' (aka 'AsValueParameter::foo::A<int>')}}
+} // namespace AsValueParameter
+
+namespace ConvertDeducedTemplateArgument {
+  namespace A {
+    template <class> struct B {};
+  }
+
+  template <template <class> class TT1> struct C {
+    C(TT1<int>);
+  };
+
+  template <template <class> class TT2> using D = TT2<int>;
+
+  auto x = C(D<A::B>());
+}
+
+namespace pr165560 {
+template <class T, class> struct S {
+  using A = T;
+  template <class> struct I { // expected-note{{candidate function template not viable: requires 1 argument, but 0 were provided}} \
+                              // expected-note{{implicit deduction guide declared as 'template <class> I(pr165560::S<int, int>::I<type-parameter-0-0>) -> pr165560::S<int, int>::I<type-parameter-0-0>'}}
+    I(typename A::F) {} // expected-error{{type 'A' (aka 'int') cannot be used prior to '::' because it has no members}}
+  };
+};
+S<int, int>::I i; // expected-error{{no viable constructor or deduction guide for deduction of template arguments of 'S<int, int>::I'}} \
+                  // expected-note{{while building implicit deduction guide first needed here}}
 }

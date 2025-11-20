@@ -1,4 +1,4 @@
-//===--- MagicNumbersCheck.cpp - clang-tidy-------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,6 @@
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/STLExtras.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 
@@ -146,7 +145,7 @@ void MagicNumbersCheck::registerMatchers(MatchFinder *Finder) {
 
 void MagicNumbersCheck::check(const MatchFinder::MatchResult &Result) {
 
-  TraversalKindScope RAII(*Result.Context, TK_AsIs);
+  const TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
   checkBoundMatch<IntegerLiteral>(Result, "integer");
   checkBoundMatch<FloatingLiteral>(Result, "float");
@@ -202,8 +201,7 @@ bool MagicNumbersCheck::isIgnoredValue(const IntegerLiteral *Literal) const {
   if (IgnorePowersOf2IntegerValues && IntValue.isPowerOf2())
     return true;
 
-  return std::binary_search(IgnoredIntegerValues.begin(),
-                            IgnoredIntegerValues.end(), Value);
+  return llvm::binary_search(IgnoredIntegerValues, Value);
 }
 
 bool MagicNumbersCheck::isIgnoredValue(const FloatingLiteral *Literal) const {
@@ -213,14 +211,12 @@ bool MagicNumbersCheck::isIgnoredValue(const FloatingLiteral *Literal) const {
 
   if (&FloatValue.getSemantics() == &llvm::APFloat::IEEEsingle()) {
     const float Value = FloatValue.convertToFloat();
-    return std::binary_search(IgnoredFloatingPointValues.begin(),
-                              IgnoredFloatingPointValues.end(), Value);
+    return llvm::binary_search(IgnoredFloatingPointValues, Value);
   }
 
   if (&FloatValue.getSemantics() == &llvm::APFloat::IEEEdouble()) {
     const double Value = FloatValue.convertToDouble();
-    return std::binary_search(IgnoredDoublePointValues.begin(),
-                              IgnoredDoublePointValues.end(), Value);
+    return llvm::binary_search(IgnoredDoublePointValues, Value);
   }
 
   return false;
@@ -252,7 +248,7 @@ bool MagicNumbersCheck::isBitFieldWidth(
 bool MagicNumbersCheck::isUserDefinedLiteral(
     const clang::ast_matchers::MatchFinder::MatchResult &Result,
     const clang::Expr &Literal) const {
-  DynTypedNodeList Parents = Result.Context->getParents(Literal);
+  const DynTypedNodeList Parents = Result.Context->getParents(Literal);
   if (Parents.empty())
     return false;
   return Parents[0].get<UserDefinedLiteral>() != nullptr;

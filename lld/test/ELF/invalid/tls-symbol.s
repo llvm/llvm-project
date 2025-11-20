@@ -4,7 +4,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 
-# CHECK: has an STT_TLS symbol but doesn't have an SHF_TLS section
+# CHECK: has an STT_TLS symbol but doesn't have a PT_TLS segment
 
 --- !ELF
 FileHeader:      

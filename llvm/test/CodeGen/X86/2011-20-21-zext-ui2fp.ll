@@ -7,7 +7,7 @@
 define void @ui_to_fp_conv(ptr nocapture %aFOO, ptr nocapture %RET) nounwind {
 ; CHECK-LABEL: ui_to_fp_conv:
 ; CHECK:       # %bb.0: # %allocas
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+0,1.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,1.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    movups %xmm1, 16(%rsi)
 ; CHECK-NEXT:    movups %xmm0, (%rsi)

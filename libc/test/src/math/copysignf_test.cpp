@@ -10,4 +10,4 @@
 
 #include "src/math/copysignf.h"
 
-LIST_COPYSIGN_TESTS(float, __llvm_libc::copysignf)
+LIST_COPYSIGN_TESTS(float, LIBC_NAMESPACE::copysignf)

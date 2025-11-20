@@ -6,35 +6,65 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
+#include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/sinf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
-#include <errno.h>
-#include <stdint.h>
+using LlvmLibcSinfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
-
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcSinfTest, SpecialNumbers) {
-  libc_errno = 0;
-
-  EXPECT_FP_EQ(aNaN, __llvm_libc::sinf(aNaN));
+TEST_F(LlvmLibcSinfTest, SpecialNumbers) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::sinf(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(0.0f, __llvm_libc::sinf(0.0f));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(-0.0f, __llvm_libc::sinf(-0.0f));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::sinf(inf));
+// When accuracy is not required, signed zeros might not be preserved.
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  EXPECT_TRUE(0.0f == LIBC_NAMESPACE::sinf(-0.0f));
+#else
+  EXPECT_FP_EQ(-0.0f, LIBC_NAMESPACE::sinf(-0.0f));
+  EXPECT_MATH_ERRNO(0);
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinf(inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::sinf(neg_inf));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcSinfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(max_denormal));
+}
+
+TEST_F(LlvmLibcSinfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(max_denormal));
+}
+
+TEST_F(LlvmLibcSinfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(max_denormal));
+}
+
+#endif

@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Check for semantic errors in ALLOCATE statements
 
 subroutine C946(param_ca_4_assumed, param_ta_4_assumed, param_ca_4_deferred)
@@ -85,9 +85,9 @@ subroutine C946(param_ca_4_assumed, param_ta_4_assumed, param_ca_4_deferred)
 
   allocate(deferredChar, source="abcd")
   allocate(deferredChar, mold=deferredChar)
-  !PORTABILITY: Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD
+  !PORTABILITY: Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD [-Wallocate-to-other-length]
   allocate(char2, source="a")
-  !PORTABILITY: Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD
+  !PORTABILITY: Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD [-Wallocate-to-other-length]
   allocate(char2, source="abc")
   allocate(char2, mold=deferredChar)
 

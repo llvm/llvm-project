@@ -1,0 +1,213 @@
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: split-file %s %t
+# RUN: %python %t/all.py > %t/all.ll
+# RUN: sed 's@---TEMPORARY_DIR---@%{/t:regex_replacement}@' %t/debug.map.template > %t/debug.map
+# RUN: %llc_dwarf -mtriple x86_64-apple-macosx10.4.0 -o %t/all.o -filetype=obj %t/all.ll
+# RUN: dsymutil -f -y %t/debug.map -o - | llvm-dwarfdump -debug-line - | FileCheck %s
+# RUN: dsymutil --linker parallel -f -y %t/debug.map -o - | llvm-dwarfdump -debug-line - | tee %t/output.txt | FileCheck %s
+
+# CHECK:      include_directories[255] = "/tmp/tmp.0HPkdttdoU/d254"
+# CHECK-NEXT: include_directories[256] = "/tmp/tmp.0HPkdttdoU/d255"
+# CHECK-NEXT: include_directories[257] = "/tmp/tmp.0HPkdttdoU/d256"
+
+# CHECK: dir_index: 255
+# CHECK: dir_index: 256
+# CHECK: dir_index: 257
+
+# Original file generated doing the following (fish shell):
+# - for cnt in (seq 0 256); mkdir -p d$cnt ; printf "void func$cnd() {}\n#define FUNC$cnt func$cnt()\n" >> d$cnt/f$cnt.c ; end
+# - for cnt in (seq 0 256); printf "#include \"f$cnt.c\"" >> all.c ; end
+# - printf "void all() {\n" >> all.c
+# - for cnt in (seq 0 256); printf "FUNC$cnt;\n" >> all.c ; end
+# - printf "}\n" >> all.c
+# - clang -target x86_64-apple-macos -S -emit-llvm -gdwarf-5 -o all.ll all.c (for cnt in (seq 0 256); echo "-Id$cnt"; end)
+# - Edit all.ll manually and change all DIFile so the directory in filename is
+#   moved into the directory field.
+# - Transformed into Python manually.
+
+#--- all.py
+import math
+import string
+
+PROLOGUE = string.Template("""\
+; ModuleID = 'all.c'
+source_filename = "all.c"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-apple-macosx10.4.0"
+""")
+
+FUNCTION = string.Template("""\
+; Function Attrs: noinline nounwind optnone uwtable
+define void @func$idx() #0 !dbg !$dbg_reference_subprogram {
+  ret void, !dbg !$dbg_reference_location_ret
+}
+""")
+
+ALL_FUNCTION_PROLOGUE = string.Template("""\
+; Function Attrs: noinline nounwind optnone uwtable
+define void @all() #0 !dbg !$dbg_reference_subprogram {
+""")
+
+ALL_FUNCTION_CALL = string.Template("""\
+  call void @func$idx(), !dbg !$dbg_reference_location_call
+""")
+
+ALL_FUNCTION_EPILOGUE = string.Template("""\
+  ret void, !dbg !$dbg_reference_location_ret
+}
+""")
+
+DWARF_PROLOGUE = string.Template("""\
+attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="core2" "target-features"="+cmov,+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+ssse3,+x87" "tune-cpu"="generic" }
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!2, !3, !4, !5, !6, !7}
+!llvm.ident = !{!8}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang version 18.1.6 (CentOS 18.1.6-3.el9)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
+!1 = !DIFile(filename: "all.c", directory: "/tmp/tmp.0HPkdttdoU", checksumkind: CSK_MD5, checksum: "8b5068f097f0c272ddc808ed2d82cb12")
+!2 = !{i32 7, !"Dwarf Version", i32 5}
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = !{i32 1, !"wchar_size", i32 4}
+!5 = !{i32 8, !"PIC Level", i32 2}
+!6 = !{i32 7, !"uwtable", i32 2}
+!7 = !{i32 7, !"frame-pointer", i32 2}
+!8 = !{!"clang version 18.1.6 (CentOS 18.1.6-3.el9)"}
+""")
+
+DWARF_FUNCTION_WITH_TYPE = string.Template("""\
+!$dbg_reference_subprogram = distinct !DISubprogram(name: "func$idx", scope: !$dbg_reference_file, file: !$dbg_reference_file, line: 1, type: !11, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
+!$dbg_reference_file = !DIFile(filename: "f$idx.c", directory: "/tmp/tmp.0HPkdttdoU/d$idx", checksumkind: CSK_MD5, checksum: "01234567890123456789012345678901")
+!11 = !DISubroutineType(types: !12)
+!12 = !{null}
+!$dbg_reference_location = !DILocation(line: 1, column: $column, scope: !$dbg_reference_subprogram)
+""")
+
+DWARF_FUNCTION = string.Template("""\
+!$dbg_reference_subprogram = distinct !DISubprogram(name: "func$idx", scope: !$dbg_reference_file, file: !$dbg_reference_file, line: 1, type: !11, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
+!$dbg_reference_file = !DIFile(filename: "f$idx.c", directory: "/tmp/tmp.0HPkdttdoU/d$idx", checksumkind: CSK_MD5, checksum: "01234567890123456789012345678901")
+!$dbg_reference_location = !DILocation(line: 1, column: $column, scope: !$dbg_reference_subprogram)
+""")
+
+DWARF_ALL_FUNCTION_PROLOGUE = string.Template("""\
+!$dbg_reference_subprogram = distinct !DISubprogram(name: "all", scope: !1, file: !1, line: $line_number, type: !11, scopeLine: $line_number, spFlags: DISPFlagDefinition, unit: !0)
+""")
+
+DWARF_ALL_FUNCTION_LOCATION = string.Template("""\
+!$dbg_reference_location = !DILocation(line: $line_number, column: 1, scope: !$dbg_reference_subprogram)
+""")
+
+NUM_FUNCS = 257
+
+dbg_reference_subprogram = 9
+dbg_reference_file = 10
+dbg_reference_location = 13
+column_base = 15
+functions = []
+dwarf_subprograms = []
+
+first = True
+for idx in range(NUM_FUNCS):
+  functions.append(
+    FUNCTION.substitute(
+      idx=idx,
+      dbg_reference_subprogram=dbg_reference_subprogram,
+      dbg_reference_location_ret=dbg_reference_location,
+    )
+  )
+  if first:
+    dwarf_subprograms.append(
+      DWARF_FUNCTION_WITH_TYPE.substitute(
+        idx=idx,
+        dbg_reference_subprogram=dbg_reference_subprogram,
+        dbg_reference_file=dbg_reference_file,
+        dbg_reference_location=dbg_reference_location,
+        column=column_base,
+      )
+    )
+  else:
+    dwarf_subprograms.append(
+      DWARF_FUNCTION.substitute(
+        idx=idx,
+        dbg_reference_subprogram=dbg_reference_subprogram,
+        dbg_reference_file=dbg_reference_file,
+        dbg_reference_location=dbg_reference_location,
+        column=column_base + math.floor(math.log10(idx)),
+      )
+    )
+
+  dbg_reference_subprogram += 5 if first else 3
+  dbg_reference_file += 5 if first else 3
+  dbg_reference_location += 3
+  first = False
+
+dbg_reference_location = dbg_reference_subprogram + 1
+line_number = 258
+all_function = []
+dwarf_all_subprogram = []
+
+all_function.append(
+  ALL_FUNCTION_PROLOGUE.substitute(
+    dbg_reference_subprogram=dbg_reference_subprogram
+  )
+)
+dwarf_all_subprogram.append(
+  DWARF_ALL_FUNCTION_PROLOGUE.substitute(
+    dbg_reference_subprogram=dbg_reference_subprogram,
+    line_number=line_number
+  )
+)
+line_number += 1
+
+for idx in range(NUM_FUNCS):
+  all_function.append(
+    ALL_FUNCTION_CALL.substitute(
+      idx=idx,
+      dbg_reference_location_call=dbg_reference_location,
+    )
+  )
+  dwarf_all_subprogram.append(
+    DWARF_ALL_FUNCTION_LOCATION.substitute(
+      dbg_reference_location=dbg_reference_location,
+      line_number=line_number,
+      dbg_reference_subprogram=dbg_reference_subprogram,
+    )
+  )
+
+  dbg_reference_location += 1
+  line_number += 1
+
+all_function.append(
+  ALL_FUNCTION_EPILOGUE.substitute(
+    dbg_reference_location_ret=dbg_reference_location
+  )
+)
+dwarf_all_subprogram.append(
+  DWARF_ALL_FUNCTION_LOCATION.substitute(
+    dbg_reference_location=dbg_reference_location,
+    line_number=line_number,
+    dbg_reference_subprogram=dbg_reference_subprogram,
+  )
+)
+
+print(PROLOGUE.substitute())
+for function in functions:
+  print(function)
+for all_function_piece in all_function:
+  print(all_function_piece, end='')
+print()
+print(DWARF_PROLOGUE.substitute(), end='')
+for dwarf_subprogram in dwarf_subprograms:
+  print(dwarf_subprogram, end='')
+for dwarf_all_subprogram_piece in dwarf_all_subprogram:
+  print(dwarf_all_subprogram_piece, end='')
+print()
+
+#--- debug.map.template
+---
+triple: 'x86_64-apple-darwin'
+objects:
+  - filename: ---TEMPORARY_DIR---/all.o
+    symbols:
+      - { sym: _all, objAddr: 0x0, binAddr: 0x0, size: 0x0 }
+...

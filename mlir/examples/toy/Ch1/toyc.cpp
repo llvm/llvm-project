@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "toy/AST.h"
+#include "toy/Lexer.h"
 #include "toy/Parser.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -17,6 +19,9 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
+#include <string>
+#include <system_error>
 
 using namespace toy;
 namespace cl = llvm::cl;
@@ -34,7 +39,8 @@ static cl::opt<enum Action>
                cl::values(clEnumValN(DumpAST, "ast", "output the AST dump")));
 
 /// Returns a Toy AST resulting from parsing the file or a nullptr on error.
-std::unique_ptr<toy::ModuleAST> parseInputFile(llvm::StringRef filename) {
+static std::unique_ptr<toy::ModuleAST>
+parseInputFile(llvm::StringRef filename) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileOrErr =
       llvm::MemoryBuffer::getFileOrSTDIN(filename);
   if (std::error_code ec = fileOrErr.getError()) {

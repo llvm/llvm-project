@@ -53,6 +53,12 @@ struct TestLoopUnrollingPass
   }
 
   void runOnOperation() override {
+    if (!(unrollFactor.getValue() > 0 || unrollFactor.getValue() == -1)) {
+      emitError(UnknownLoc::get(&getContext()),
+                "Invalid option: 'unroll-factor' should be greater than 0 or "
+                "equal to -1");
+      return signalPassFailure();
+    }
     SmallVector<scf::ForOp, 4> loops;
     getOperation()->walk([&](scf::ForOp forOp) {
       if (getNestingDepth(forOp) == loopDepth)
@@ -63,12 +69,16 @@ struct TestLoopUnrollingPass
         op->setAttr("unrolled_iteration", b.getUI32IntegerAttr(i));
       }
     };
-    for (auto loop : loops)
-      (void)loopUnrollByFactor(loop, unrollFactor, annotateFn);
+    for (auto loop : loops) {
+      if (unrollFactor.getValue() == -1)
+        (void)loopUnrollFull(loop);
+      else
+        (void)loopUnrollByFactor(loop, unrollFactor, annotateFn);
+    }
   }
-  Option<uint64_t> unrollFactor{*this, "unroll-factor",
-                                llvm::cl::desc("Loop unroll factor."),
-                                llvm::cl::init(1)};
+  Option<int64_t> unrollFactor{*this, "unroll-factor",
+                               llvm::cl::desc("Loop unroll factor."),
+                               llvm::cl::init(1)};
   Option<bool> annotateLoop{*this, "annotate",
                             llvm::cl::desc("Annotate unrolled iterations."),
                             llvm::cl::init(false)};

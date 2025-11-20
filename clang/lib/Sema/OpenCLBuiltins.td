@@ -139,6 +139,10 @@ def ArmIntegerDotProductAccumulateInt8         : FunctionExtension<"cl_arm_integ
 def ArmIntegerDotProductAccumulateInt16        : FunctionExtension<"cl_arm_integer_dot_product_accumulate_int16">;
 def ArmIntegerDotProductAccumulateSaturateInt8 : FunctionExtension<"cl_arm_integer_dot_product_accumulate_saturate_int8">;
 
+// AMD extensions.
+def AMDMediaOps : FunctionExtension<"cl_amd_media_ops">;
+def AMDMediaOps2 : FunctionExtension<"cl_amd_media_ops2">;
+
 // Qualified Type.  These map to ASTContext::QualType.
 class QualType<string _TypeExpr, bit _IsAbstract=0> {
   // Expression to obtain the QualType inside OCL2Qual.
@@ -563,15 +567,12 @@ foreach name = ["acos", "acosh", "acospi",
                 "log", "log2", "log10", "log1p", "logb",
                 "rint", "round", "rsqrt",
                 "sin", "sinh", "sinpi",
+                "sqrt",
                 "tan", "tanh", "tanpi",
                 "tgamma", "trunc",
                 "lgamma"] in {
     def : Builtin<name, [FGenTypeN, FGenTypeN], Attr.Const>;
 }
-
-// sqrt is handled in opencl-c-base.h to handle
-// -cl-fp32-correctly-rounded-divide-sqrt.
-
 foreach name = ["nan"] in {
   def : Builtin<name, [GenTypeFloatVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
   def : Builtin<name, [GenTypeDoubleVecAndScalar, GenTypeULongVecAndScalar], Attr.Const>;
@@ -939,7 +940,7 @@ def : Builtin<"read_mem_fence", [Void, MemFenceFlags]>;
 def : Builtin<"write_mem_fence", [Void, MemFenceFlags]>;
 
 // OpenCL v3.0 s6.15.10 - Address Space Qualifier Functions.
-// to_global, to_local, to_private are declared in Builtins.def.
+// to_global, to_local, to_private are declared in Builtins.td.
 
 let Extension = FuncExtOpenCLCGenericAddressSpace in {
   // The OpenCL 3.0 specification defines these with a "gentype" argument indicating any builtin
@@ -961,11 +962,23 @@ foreach name = ["async_work_group_strided_copy"] in {
   def : Builtin<name, [Event, PointerType<AGenTypeN, LocalAS>, PointerType<ConstType<AGenTypeN>, GlobalAS>, Size, Size, Event]>;
   def : Builtin<name, [Event, PointerType<AGenTypeN, GlobalAS>, PointerType<ConstType<AGenTypeN>, LocalAS>, Size, Size, Event]>;
 }
-foreach name = ["wait_group_events"] in {
-  def : Builtin<name, [Void, Int, PointerType<Event, GenericAS>]>;
-}
 foreach name = ["prefetch"] in {
   def : Builtin<name, [Void, PointerType<ConstType<AGenTypeN>, GlobalAS>, Size]>;
+}
+
+// The wait_group_events is declared with an argument of type event_t*.
+// The address-space of the pointer parameter is different if the generic address space is available.
+multiclass BuiltinWithDefaultPointerArg<AddressSpace AS> {
+  foreach name = ["wait_group_events"] in {
+    def : Builtin<name, [Void, Int, PointerType<Event, AS>]>;
+  }
+}
+
+let Extension = FuncExtOpenCLCNamedAddressSpaceBuiltins in {
+  defm : BuiltinWithDefaultPointerArg<PrivateAS>;
+}
+let Extension = FuncExtOpenCLCGenericAddressSpace in {
+  defm : BuiltinWithDefaultPointerArg<GenericAS>;
 }
 
 //--------------------------------------------------------------------
@@ -1451,25 +1464,25 @@ let Extension = FuncExtOpenCLCWGCollectiveFunctions in {
 //--------------------------------------------------------------------
 // OpenCL2.0 : 6.13.16 : Pipe Functions
 // --- Table 27 ---
-// Defined in Builtins.def
+// Defined in Builtins.td
 
 // --- Table 28 ---
-// Builtins taking pipe arguments are defined in Builtins.def
+// Builtins taking pipe arguments are defined in Builtins.td
 let Extension = FuncExtOpenCLCPipes in {
   def : Builtin<"is_valid_reserve_id", [Bool, ReserveId]>;
 }
 
 // --- Table 29 ---
-// Defined in Builtins.def
+// Defined in Builtins.td
 
 
 //--------------------------------------------------------------------
 // OpenCL2.0 : 6.13.17 : Enqueuing Kernels
 // --- Table 30 ---
-// Defined in Builtins.def
+// Defined in Builtins.td
 
 // --- Table 32 ---
-// Defined in Builtins.def
+// Defined in Builtins.td
 
 // --- Table 33 ---
 let Extension = FuncExtOpenCLCDeviceEnqueue in {
@@ -1855,6 +1868,20 @@ let Extension = FunctionExtension<"cl_khr_subgroup_rotate"> in {
   def : Builtin<"sub_group_clustered_rotate", [AGenType1, AGenType1, Int, UInt], Attr.Convergent>;
 }
 
+// cl_khr_kernel_clock
+let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_scope_device"> in {
+  def : Builtin<"clock_read_device", [ULong]>;
+  def : Builtin<"clock_read_hilo_device", [VectorType<UInt, 2>]>;
+}
+let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_scope_work_group"> in {
+  def : Builtin<"clock_read_work_group", [ULong]>;
+  def : Builtin<"clock_read_hilo_work_group", [VectorType<UInt, 2>]>;
+}
+let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_scope_sub_group"> in {
+  def : Builtin<"clock_read_sub_group", [ULong]>;
+  def : Builtin<"clock_read_hilo_sub_group", [VectorType<UInt, 2>]>;
+}
+
 //--------------------------------------------------------------------
 // Arm extensions.
 let Extension = ArmIntegerDotProductInt8 in {
@@ -1880,4 +1907,32 @@ let Extension = ArmIntegerDotProductAccumulateSaturateInt8 in {
     def : Builtin<name, [UInt, VectorType<UChar, 4>, VectorType<UChar, 4>, UInt]>;
     def : Builtin<name, [Int, VectorType<Char, 4>, VectorType<Char, 4>, Int]>;
   }
+}
+
+//--------------------------------------------------------------------
+// AMD extensions.
+let Extension = AMDMediaOps in {
+  foreach name = ["amd_bitalign", "amd_bytealign", "amd_lerp", "amd_sadhi", "amd_sad"] in {
+    def : Builtin<name, [GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar]>;
+  }
+  foreach name = ["amd_unpack0", "amd_unpack1", "amd_unpack2", "amd_unpack3"] in {
+    def : Builtin<name, [GenTypeFloatVecAndScalar, GenTypeUIntVecAndScalar]>;
+  }
+  def : Builtin<"amd_pack", [UInt, VectorType<Float, 4>]>;
+  def : Builtin<"amd_sad4", [UInt, VectorType<UInt, 4>, VectorType<UInt, 4>, UInt]>;
+}
+
+let Extension = AMDMediaOps2 in {
+  def : Builtin<"amd_bfe", [GenTypeIntVecAndScalar, GenTypeIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar]>;
+  foreach name = ["amd_bfe", "amd_msad", "amd_sadd", "amd_sadw"] in {
+    def : Builtin<name, [GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar]>;
+  }
+  def : Builtin<"amd_bfm", [GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar]>;
+  foreach name = ["amd_max3", "amd_median3", "amd_min3"] in {
+    foreach gentype = [GenTypeFloatVecAndScalar, GenTypeIntVecAndScalar, GenTypeUIntVecAndScalar] in {
+      def : Builtin<name, [gentype, gentype, gentype, gentype]>;
+    }
+  }
+  def : Builtin<"amd_mqsad", [GenTypeULongVecAndScalar, GenTypeULongVecAndScalar, GenTypeUIntVecAndScalar, GenTypeULongVecAndScalar]>;
+  def : Builtin<"amd_qsad", [GenTypeULongVecAndScalar, GenTypeULongVecAndScalar, GenTypeUIntVecAndScalar, GenTypeULongVecAndScalar]>;
 }

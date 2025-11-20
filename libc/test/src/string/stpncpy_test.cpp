@@ -6,21 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/__support/CPP/span.h"
 #include "src/string/stpncpy.h"
 #include "test/UnitTest/Test.h"
 #include <stddef.h> // For size_t.
 
-class LlvmLibcStpncpyTest : public __llvm_libc::testing::Test {
+class LlvmLibcStpncpyTest : public LIBC_NAMESPACE::testing::Test {
 public:
-  void check_stpncpy(__llvm_libc::cpp::span<char> dst,
-                     const __llvm_libc::cpp::span<const char> src, size_t n,
-                     const __llvm_libc::cpp::span<const char> expected,
+  void check_stpncpy(LIBC_NAMESPACE::cpp::span<char> dst,
+                     const LIBC_NAMESPACE::cpp::span<const char> src, size_t n,
+                     const LIBC_NAMESPACE::cpp::span<const char> expected,
                      size_t expectedCopied) {
     // Making sure we don't overflow buffer.
     ASSERT_GE(dst.size(), n);
     // Making sure stpncpy returns a pointer to the end of dst.
-    ASSERT_EQ(__llvm_libc::stpncpy(dst.data(), src.data(), n),
+    ASSERT_EQ(LIBC_NAMESPACE::stpncpy(dst.data(), src.data(), n),
               dst.data() + expectedCopied);
     // Expected must be of the same size as dst.
     ASSERT_EQ(dst.size(), expected.size());
@@ -71,3 +72,12 @@ TEST_F(LlvmLibcStpncpyTest, CopyTwoWithNull) {
   const char expected[] = {'x', '\0'};
   check_stpncpy(dst, src, 2, expected, 1);
 }
+
+#if defined(LIBC_ADD_NULL_CHECKS)
+
+TEST_F(LlvmLibcStpncpyTest, CrashOnNullPtr) {
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::stpncpy(nullptr, nullptr, 1); },
+               WITH_SIGNAL(-1));
+}
+
+#endif // defined(LIBC_ADD_NULL_CHECKS)

@@ -4,7 +4,10 @@ add_mlir_library(MLIRDialectUtils
   StructuredOpsUtils.cpp
   StaticValueUtils.cpp
 
+  DEPENDS
+  MLIRDialectUtilsIncGen
+  MLIRArithDialect
+
   LINK_LIBS PUBLIC
-  MLIRArithUtils
   MLIRIR
 )

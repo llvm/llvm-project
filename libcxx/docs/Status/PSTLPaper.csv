@@ -8,7 +8,7 @@ Section,Description,Assignee,Complete
 | `[alg.copy] <https://wg21.link/alg.copy>`_,std::copy_n,Nikolas Klauser,|Complete|
 | `[alg.count] <https://wg21.link/alg.count>`_,std::count,Nikolas Klauser,|Complete|
 | `[alg.count] <https://wg21.link/alg.count>`_,std::count_if,Nikolas Klauser,|Complete|
-| `[alg.equal] <https://wg21.link/alg.equal>`_,std::equal,Nikolas Klauser,|Not Started|
+| `[alg.equal] <https://wg21.link/alg.equal>`_,std::equal,Nikolas Klauser,|Complete|
 | `[alg.exclusive.scan] <https://wg21.link/alg.exclusive.scan>`_,std::exclusive_scan,Nikolas Klauser,|Not Started|
 | `[alg.exclusive.scan] <https://wg21.link/alg.exclusive.scan>`_,std::exclusive_scan,Nikolas Klauser,|Not Started|
 | `[alg.fill] <https://wg21.link/alg.fill>`_,std::fill,Nikolas Klauser,|Complete|
@@ -36,7 +36,7 @@ Section,Description,Assignee,Complete
 | `[alg.min.max] <https://wg21.link/alg.min.max>`_,std::min_element,Nikolas Klauser,|Not Started|
 | `[alg.min.max] <https://wg21.link/alg.min.max>`_,std::minmax_element,Nikolas Klauser,|Not Started|
 | `[mismatch] <https://wg21.link/mismatch>`_,std::mismatch,Nikolas Klauser,|Not Started|
-| `[alg.move] <https://wg21.link/alg.move>`_,std::move,Nikolas Klauser,|In Progress|
+| `[alg.move] <https://wg21.link/alg.move>`_,std::move,Nikolas Klauser,|Complete|
 | `[alg.none.of] <https://wg21.link/alg.none.of>`_,std::none_of,Nikolas Klauser,|Complete|
 | `[alg.nth.element] <https://wg21.link/alg.nth.element>`_,std::nth_element,Nikolas Klauser,|Not Started|
 | `[alg.sort] <https://wg21.link/alg.sort>`_,std::partial_sort,Nikolas Klauser,|Not Started|
@@ -55,7 +55,7 @@ Section,Description,Assignee,Complete
 | `[alg.reverse] <https://wg21.link/alg.reverse>`_,std::reverse,Nikolas Klauser,|Not Started|
 | `[alg.reverse] <https://wg21.link/alg.reverse>`_,std::reverse_copy,Nikolas Klauser,|Not Started|
 | `[alg.rotate] <https://wg21.link/alg.rotate>`_,std::rotate,Nikolas Klauser,|Not Started|
-| `[alg.rotate] <https://wg21.link/alg.rotate>`_,std::rotate_copy,Nikolas Klauser,|Not Started|
+| `[alg.rotate] <https://wg21.link/alg.rotate>`_,std::rotate_copy,Nikolas Klauser,|Complete|
 | `[alg.search] <https://wg21.link/alg.search>`_,std::search,Nikolas Klauser,|Not Started|
 | `[alg.search] <https://wg21.link/alg.search>`_,std::search_n,Nikolas Klauser,|Not Started|
 | `[alg.set.operations] <https://wg21.link/alg.set.operations>`_,std::set_difference,Nikolas Klauser,|Not Started|

@@ -3,6 +3,7 @@
 # documentation in ../ClangFormatStyleOptions.rst automatically.
 # Run from the directory in which this file is located to update the docs.
 
+import argparse
 import inspect
 import os
 import re
@@ -20,7 +21,7 @@ DOC_FILE = os.path.join(CLANG_DIR, "docs/ClangFormatStyleOptions.rst")
 PLURALS_FILE = os.path.join(os.path.dirname(__file__), "plurals.txt")
 
 plurals: Set[str] = set()
-with open(PLURALS_FILE, "a+") as f:
+with open(PLURALS_FILE) as f:
     f.seek(0)
     plurals = set(f.read().splitlines())
 
@@ -129,6 +130,7 @@ class Option(object):
             s += indent(
                 "\n\nNested configuration flags:\n\n%s\n" % self.nested_struct, 2
             )
+            s = s.replace("<option-name>", self.name)
         return s
 
 
@@ -143,11 +145,18 @@ class NestedStruct(object):
 
 
 class NestedField(object):
-    def __init__(self, name, comment):
+    def __init__(self, name, comment, version):
         self.name = name
         self.comment = comment.strip()
+        self.version = version
 
     def __str__(self):
+        if self.version:
+            return "\n* ``%s`` :versionbadge:`clang-format %s`\n%s" % (
+                self.name,
+                self.version,
+                doxygen2rst(indent(self.comment, 2, indent_first_line=False)),
+            )
         return "\n* ``%s`` %s" % (
             self.name,
             doxygen2rst(indent(self.comment, 2, indent_first_line=False)),
@@ -165,18 +174,28 @@ class Enum(object):
 
 
 class NestedEnum(object):
-    def __init__(self, name, enumtype, comment, values):
+    def __init__(self, name, enumtype, comment, version, values):
         self.name = name
         self.comment = comment
         self.values = values
         self.type = enumtype
+        self.version = version
 
     def __str__(self):
-        s = "\n* ``%s %s``\n%s" % (
-            to_yaml_type(self.type),
-            self.name,
-            doxygen2rst(indent(self.comment, 2)),
-        )
+        s = ""
+        if self.version:
+            s = "\n* ``%s %s`` :versionbadge:`clang-format %s`\n\n%s" % (
+                to_yaml_type(self.type),
+                self.name,
+                self.version,
+                doxygen2rst(indent(self.comment, 2)),
+            )
+        else:
+            s = "\n* ``%s %s``\n%s" % (
+                to_yaml_type(self.type),
+                self.name,
+                doxygen2rst(indent(self.comment, 2)),
+            )
         s += indent("\nPossible values:\n\n", 2)
         s += indent("\n".join(map(str, self.values)), 2)
         return s
@@ -278,7 +297,9 @@ class OptionsReader:
                 InFieldComment,
                 InEnum,
                 InEnumMemberComment,
-            ) = range(8)
+                InNestedEnum,
+                InNestedEnumMemberComment,
+            ) = range(10)
 
         state = State.BeforeStruct
 
@@ -289,6 +310,7 @@ class OptionsReader:
         enum = None
         nested_struct = None
         version = None
+        deprecated = False
 
         for line in self.header:
             self.lineno += 1
@@ -308,6 +330,8 @@ class OptionsReader:
                     match = re.match(r"/// \\version\s*(?P<version>[0-9.]+)*", line)
                     if match:
                         version = match.group("version")
+                elif line.startswith("/// @deprecated"):
+                    deprecated = True
                 elif line.startswith("///"):
                     comment += self.__clean_comment_line(line)
                 elif line.startswith("enum"):
@@ -326,6 +350,9 @@ class OptionsReader:
                     field_type, field_name = re.match(
                         r"([<>:\w(,\s)]+)\s+(\w+);", line
                     ).groups()
+                    if deprecated:
+                        field_type = "deprecated"
+                        deprecated = False
 
                     if not version:
                         self.__warning(f"missing version for {field_name}", line)
@@ -344,27 +371,38 @@ class OptionsReader:
                     state = State.InStruct
                     nested_structs[nested_struct.name] = nested_struct
             elif state == State.InNestedFieldComment:
-                if line.startswith("///"):
+                if line.startswith(r"/// \version"):
+                    match = re.match(r"/// \\version\s*(?P<version>[0-9.]+)*", line)
+                    if match:
+                        version = match.group("version")
+                elif line.startswith("///"):
                     comment += self.__clean_comment_line(line)
+                elif line.startswith("enum"):
+                    state = State.InNestedEnum
+                    name = re.sub(r"enum\s+(\w+)\s*(:((\s*\w+)+)\s*)?\{", "\\1", line)
+                    enum = Enum(name, comment)
                 else:
                     state = State.InNestedStruct
                     field_type, field_name = re.match(
                         r"([<>:\w(,\s)]+)\s+(\w+);", line
                     ).groups()
+                    # if not version:
+                    #    self.__warning(f"missing version for {field_name}", line)
                     if field_type in enums:
                         nested_struct.values.append(
                             NestedEnum(
                                 field_name,
                                 field_type,
                                 comment,
+                                version,
                                 enums[field_type].values,
                             )
                         )
                     else:
                         nested_struct.values.append(
-                            NestedField(field_type + " " + field_name, comment)
+                            NestedField(field_type + " " + field_name, comment, version)
                         )
-
+                    version = None
             elif state == State.InEnum:
                 if line.startswith("///"):
                     state = State.InEnumMemberComment
@@ -373,14 +411,38 @@ class OptionsReader:
                     state = State.InStruct
                     enums[enum.name] = enum
                 else:
-                    # Enum member without documentation. Must be documented where the enum
-                    # is used.
+                    # Enum member without documentation. Must be documented
+                    # where the enum is used.
+                    pass
+            elif state == State.InNestedEnum:
+                if line.startswith("///"):
+                    state = State.InNestedEnumMemberComment
+                    comment = self.__clean_comment_line(line)
+                elif line == "};":
+                    state = State.InNestedStruct
+                    enums[enum.name] = enum
+                else:
+                    # Enum member without documentation. Must be
+                    # documented where the enum is used.
                     pass
             elif state == State.InEnumMemberComment:
                 if line.startswith("///"):
                     comment += self.__clean_comment_line(line)
                 else:
                     state = State.InEnum
+                    val = line.replace(",", "")
+                    pos = val.find(" // ")
+                    if pos != -1:
+                        config = val[pos + 4 :]
+                        val = val[:pos]
+                    else:
+                        config = val
+                    enum.values.append(EnumValue(val, comment, config))
+            elif state == State.InNestedEnumMemberComment:
+                if line.startswith("///"):
+                    comment += self.__clean_comment_line(line)
+                else:
+                    state = State.InNestedEnum
                     val = line.replace(",", "")
                     pos = val.find(" // ")
                     if pos != -1:
@@ -402,6 +464,7 @@ class OptionsReader:
                 "std::vector<IncludeCategory>",
                 "std::vector<RawStringFormat>",
                 "std::optional<unsigned>",
+                "deprecated",
             ]:
                 if option.type in enums:
                     option.enum = enums[option.type]
@@ -412,6 +475,10 @@ class OptionsReader:
         return options
 
 
+p = argparse.ArgumentParser()
+p.add_argument("-o", "--output", help="path of output file")
+args = p.parse_args()
+
 with open(FORMAT_STYLE_FILE) as f:
     opts = OptionsReader(f).read_options()
 with open(INCLUDE_STYLE_FILE) as f:
@@ -420,10 +487,12 @@ with open(INCLUDE_STYLE_FILE) as f:
 opts = sorted(opts, key=lambda x: x.name)
 options_text = "\n\n".join(map(str, opts))
 
-with open(DOC_FILE) as f:
+with open(DOC_FILE, encoding="utf-8") as f:
     contents = f.read()
 
 contents = substitute(contents, "FORMAT_STYLE_OPTIONS", options_text)
 
-with open(DOC_FILE, "wb") as output:
-    output.write(contents.encode())
+with open(
+    args.output if args.output else DOC_FILE, "w", newline="", encoding="utf-8"
+) as f:
+    f.write(contents)

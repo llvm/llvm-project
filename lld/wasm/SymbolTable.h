@@ -50,6 +50,9 @@ public:
 
   void trace(StringRef name);
 
+  Symbol *addSharedFunction(StringRef name, uint32_t flags, InputFile *file,
+                            const WasmSignature *sig);
+  Symbol *addSharedData(StringRef name, uint32_t flags, InputFile *file);
   Symbol *addDefinedFunction(StringRef name, uint32_t flags, InputFile *file,
                              InputFunction *function);
   Symbol *addDefinedData(StringRef name, uint32_t flags, InputFile *file,
@@ -83,7 +86,7 @@ public:
 
   TableSymbol *resolveIndirectFunctionTable(bool required);
 
-  void addLazy(ArchiveFile *f, const llvm::object::Archive::Symbol *sym);
+  void addLazy(StringRef name, InputFile *f);
 
   bool addComdat(StringRef name);
 
@@ -100,14 +103,6 @@ public:
   void handleSymbolVariants();
   void handleWeakUndefines();
   DefinedFunction *createUndefinedStub(const WasmSignature &sig);
-
-  std::vector<ObjFile *> objectFiles;
-  std::vector<StubFile *> stubFiles;
-  std::vector<SharedFile *> sharedFiles;
-  std::vector<BitcodeFile *> bitcodeFiles;
-  std::vector<InputFunction *> syntheticFunctions;
-  std::vector<InputGlobal *> syntheticGlobals;
-  std::vector<InputTable *> syntheticTables;
 
 private:
   std::pair<Symbol *, bool> insert(StringRef name, const InputFile *file);

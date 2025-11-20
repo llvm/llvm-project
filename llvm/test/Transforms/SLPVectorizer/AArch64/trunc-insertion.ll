@@ -3,41 +3,38 @@
 target triple = "aarch64-unknown-linux-gnu"
 @d = internal unnamed_addr global i32 5, align 4
 
-define dso_local void @l() local_unnamed_addr {
+define dso_local void @l(i1 %arg) local_unnamed_addr {
 ; CHECK-LABEL: @l(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i16> [ undef, [[BB:%.*]] ], [ [[TMP11:%.*]], [[BB25:%.*]] ]
-; CHECK-NEXT:    br i1 undef, label [[BB3:%.*]], label [[BB11:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i16> [ undef, [[BB:%.*]] ], [ [[TMP9:%.*]], [[BB25:%.*]] ]
+; CHECK-NEXT:    br i1 %arg, label [[BB3:%.*]], label [[BB11:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[I4:%.*]] = zext i1 undef to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i16> [[TMP0]], undef
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <2 x i16> [[TMP1]], <i16 8, i16 8>
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <2 x i16> [[TMP1]], splat (i16 8)
 ; CHECK-NEXT:    br label [[BB25]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    [[I12:%.*]] = zext i1 undef to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i16> [[TMP0]], undef
-; CHECK-NEXT:    [[TMP5:%.*]] = sext <2 x i16> [[TMP4]] to <2 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <2 x i64> undef, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i1> [[TMP6]] to <2 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult <2 x i32> undef, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = zext <2 x i1> [[TMP8]] to <2 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i16> [[TMP0]], undef
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <2 x i16> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <2 x i64> undef, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP5]] to <2 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult <2 x i32> undef, [[TMP6]]
 ; CHECK-NEXT:    br label [[BB25]]
 ; CHECK:       bb25:
 ; CHECK-NEXT:    [[I28:%.*]] = phi i32 [ [[I12]], [[BB11]] ], [ [[I4]], [[BB3]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i32> [ [[TMP9]], [[BB11]] ], [ [[TMP3]], [[BB3]] ]
-; CHECK-NEXT:    [[TMP11]] = phi <2 x i16> [ [[TMP4]], [[BB11]] ], [ [[TMP1]], [[BB3]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = trunc <2 x i32> [[TMP10]] to <2 x i8>
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i8> [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = zext i8 [[TMP13]] to i32
-; CHECK-NEXT:    [[I31:%.*]] = and i32 undef, [[TMP14]]
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i8> [[TMP12]], i32 1
-; CHECK-NEXT:    [[TMP16:%.*]] = zext i8 [[TMP15]] to i32
-; CHECK-NEXT:    [[I32:%.*]] = and i32 [[I31]], [[TMP16]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i1> [ [[TMP7]], [[BB11]] ], [ [[TMP2]], [[BB3]] ]
+; CHECK-NEXT:    [[TMP9]] = phi <2 x i16> [ [[TMP3]], [[BB11]] ], [ [[TMP1]], [[BB3]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP10]] to i32
+; CHECK-NEXT:    [[I31:%.*]] = and i32 undef, [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i1 [[TMP12]] to i32
+; CHECK-NEXT:    [[I32:%.*]] = and i32 [[I31]], [[TMP13]]
 ; CHECK-NEXT:    [[I33:%.*]] = and i32 [[I32]], [[I28]]
-; CHECK-NEXT:    br i1 undef, label [[BB34:%.*]], label [[BB1]]
+; CHECK-NEXT:    br i1 %arg, label [[BB34:%.*]], label [[BB1]]
 ; CHECK:       bb34:
 ; CHECK-NEXT:    [[I35:%.*]] = phi i32 [ [[I33]], [[BB25]] ]
 ; CHECK-NEXT:    br label [[BB36:%.*]]
@@ -51,7 +48,7 @@ bb:
 bb1:                                              ; preds = %bb25, %bb
   %i = phi i16 [ undef, %bb ], [ %i29, %bb25 ]
   %i2 = phi i16 [ undef, %bb ], [ %i30, %bb25 ]
-  br i1 undef, label %bb3, label %bb11
+  br i1 %arg, label %bb3, label %bb11
 
 bb3:                                              ; preds = %bb1
   %i4 = zext i1 undef to i32
@@ -88,7 +85,7 @@ bb25:                                             ; preds = %bb11, %bb3
   %i31 = and i32 undef, %i26
   %i32 = and i32 %i31, %i27
   %i33 = and i32 %i32, %i28
-  br i1 undef, label %bb34, label %bb1
+  br i1 %arg, label %bb34, label %bb1
 
 bb34:                                             ; preds = %bb25
   %i35 = phi i32 [ %i33, %bb25 ]

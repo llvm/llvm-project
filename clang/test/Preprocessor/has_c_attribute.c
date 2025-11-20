@@ -9,6 +9,15 @@ C2x(fallthrough)
 // CHECK: __nodiscard__: 202003L
 C2x(__nodiscard__)
 
+// CHECK: warn_unused_result: 0
+C2x(warn_unused_result)
+
+// CHECK: gnu::warn_unused_result: 1
+C2x(gnu::warn_unused_result)
+
+// CHECK: clang::warn_unused_result: 0
+C2x(clang::warn_unused_result)
+
 // CHECK: selectany: 0
 C2x(selectany); // Known attribute not supported in C mode
 
@@ -27,10 +36,10 @@ C2x(deprecated)
 // CHECK: maybe_unused: 202106L
 C2x(maybe_unused)
 
-// CHECK: __gnu__::warn_unused_result: 202003L
+// CHECK: __gnu__::warn_unused_result: 1
 C2x(__gnu__::warn_unused_result)
 
-// CHECK: gnu::__warn_unused_result__: 202003L
+// CHECK: gnu::__warn_unused_result__: 1
 C2x(gnu::__warn_unused_result__)
 
 // Test that macro expansion of the builtin argument works.
@@ -75,3 +84,23 @@ int funclike_1;
 int funclike_2;
 #endif
 // CHECK: int funclike_2;
+
+#if __has_c_attribute(CL\
+)
+int has_clang_likely_5;
+#endif
+// CHECK: int has_clang_likely_5;
+
+#define CL_2 clang::\
+likely
+
+#if __has_c_attribute(CL_2)
+int has_clang_likely_6;
+#endif
+// CHECK: int has_clang_likely_6;
+
+#if __has_c_attribute(CL_2\
+)
+int has_clang_likely_7;
+#endif
+// CHECK: int has_clang_likely_7;

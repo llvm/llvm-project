@@ -20,7 +20,7 @@ SUBROUTINE LINEAR_BAD(N)
 
   !$omp target
   !$omp teams
-  !ERROR: Variable 'j' not allowed in `LINEAR` clause, only loop iterator can be specified in `LINEAR` clause of a construct combined with `DISTRIBUTE`
+  !ERROR: Variable 'j' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
   !$omp distribute parallel do simd linear(j) 
   do i = 1, N
       a = 3.14
@@ -31,8 +31,8 @@ SUBROUTINE LINEAR_BAD(N)
 
   !$omp target
   !$omp teams
-  !ERROR: Variable 'j' not allowed in `LINEAR` clause, only loop iterator can be specified in `LINEAR` clause of a construct combined with `DISTRIBUTE`
-  !ERROR: Variable 'b' not allowed in `LINEAR` clause, only loop iterator can be specified in `LINEAR` clause of a construct combined with `DISTRIBUTE`
+  !ERROR: Variable 'j' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
+  !ERROR: Variable 'b' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
   !$omp distribute parallel do simd linear(j) linear(b)
   do i = 1, N
      a = 3.14
@@ -43,8 +43,8 @@ SUBROUTINE LINEAR_BAD(N)
 
   !$omp target
   !$omp teams
-  !ERROR: Variable 'j' not allowed in `LINEAR` clause, only loop iterator can be specified in `LINEAR` clause of a construct combined with `DISTRIBUTE`
-  !ERROR: Variable 'b' not allowed in `LINEAR` clause, only loop iterator can be specified in `LINEAR` clause of a construct combined with `DISTRIBUTE`
+  !ERROR: Variable 'j' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
+  !ERROR: Variable 'b' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
   !$omp distribute parallel do simd linear(j, b)
   do i = 1, N
      a = 3.14
@@ -53,8 +53,8 @@ SUBROUTINE LINEAR_BAD(N)
   !$omp end teams
   !$omp end target 
 
-  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
-  !ERROR: Variable 'j' not allowed in `LINEAR` clause, only loop iterator can be specified in `LINEAR` clause of a construct combined with `DISTRIBUTE`
+  !WARNING: `DISTRIBUTE` must be dynamically enclosed in a `TEAMS` region.
+  !ERROR: Variable 'j' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
   !$omp distribute simd linear(i,j)
    do i = 1, N
       do j = 1, N
@@ -63,8 +63,8 @@ SUBROUTINE LINEAR_BAD(N)
    enddo
    !$omp end distribute simd
 
-   !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
-   !ERROR: Variable 'j' not allowed in `LINEAR` clause, only loop iterator can be specified in `LINEAR` clause of a construct combined with `DISTRIBUTE`
+   !WARNING: `DISTRIBUTE` must be dynamically enclosed in a `TEAMS` region.
+   !ERROR: Variable 'j' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
    !$omp distribute simd linear(i,j) collapse(1)
    do i = 1, N
       do j = 1, N
@@ -73,7 +73,7 @@ SUBROUTINE LINEAR_BAD(N)
    enddo
    !$omp end distribute simd
 
-   !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
+   !WARNING: `DISTRIBUTE` must be dynamically enclosed in a `TEAMS` region.
    !$omp distribute simd linear(i,j) collapse(2)
    do i = 1, N
       do j = 1, N

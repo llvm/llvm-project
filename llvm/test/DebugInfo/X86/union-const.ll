@@ -1,4 +1,5 @@
 ; RUN: llc -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_const_value [DW_FORM_udata]	(0)
 ; CHECK-NEXT: DW_AT_name {{.*}}"a"

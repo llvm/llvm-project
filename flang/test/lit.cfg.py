@@ -18,11 +18,22 @@ from lit.llvm.subst import FindTool
 # name: The name of this test suite.
 config.name = "Flang"
 
+# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
+# See https://github.com/llvm/llvm-project/issues/106636 for more details.
+#
+# We prefer the lit internal shell which provides a better user experience on failures
+# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
+# env var.
+use_lit_shell = True
+lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if lit_shell_env:
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
+
 # testFormat: The test format to use to interpret tests.
 #
 # For now we require '&&' between commands, until they get globally killed and
 # the test runner updated.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -118,13 +129,27 @@ if config.flang_standalone_build:
                 "PATH", config.flang_llvm_tools_dir, append_path=True
             )
 
+# On MacOS, some tests need -isysroot to build binaries.
+isysroot_flag = []
+if config.osx_sysroot:
+    isysroot_flag = ["-isysroot", config.osx_sysroot]
+config.substitutions.append(("%isysroot", " ".join(isysroot_flag)))
+
+# Check for DEFAULT_SYSROOT, because when it is set -isysroot has no effect.
+if config.default_sysroot:
+    config.available_features.add("default_sysroot")
+
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
 tools = [
-    ToolSubst("%flang", command=FindTool("flang-new"), unresolved="fatal"),
+    ToolSubst(
+        "%flang",
+        command=FindTool("flang"),
+        unresolved="fatal",
+    ),
     ToolSubst(
         "%flang_fc1",
-        command=FindTool("flang-new"),
+        command=FindTool("flang"),
         extra_args=["-fc1"],
         unresolved="fatal",
     ),
@@ -149,25 +174,6 @@ else:
         ToolSubst("%not_todo_abort_cmd", command=FindTool("not"), unresolved="fatal")
     )
 
-# Define some variables to help us test that the flang runtime doesn't depend on
-# the C++ runtime libraries. For this we need a C compiler. If for some reason
-# we don't have one, we can just disable the test.
-if config.cc:
-    libruntime = os.path.join(config.flang_lib_dir, "libFortranRuntime.a")
-    libdecimal = os.path.join(config.flang_lib_dir, "libFortranDecimal.a")
-    include = os.path.join(config.flang_src_dir, "include")
-
-    if (
-        os.path.isfile(libruntime)
-        and os.path.isfile(libdecimal)
-        and os.path.isdir(include)
-    ):
-        config.available_features.add("c-compiler")
-        tools.append(ToolSubst("%cc", command=config.cc, unresolved="fatal"))
-        tools.append(ToolSubst("%libruntime", command=libruntime, unresolved="fatal"))
-        tools.append(ToolSubst("%libdecimal", command=libdecimal, unresolved="fatal"))
-        tools.append(ToolSubst("%include", command=include, unresolved="fatal"))
-
 # Add all the tools and their substitutions (if applicable). Use the search paths provided for
 # finding the tools.
 if config.flang_standalone_build:
@@ -177,7 +183,38 @@ if config.flang_standalone_build:
 else:
     llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
 
+llvm_config.use_clang(required=False)
+
+# Clang may need the include path for ISO_fortran_binding.h.
+config.substitutions.append(("%flang_include", config.flang_headers_dir))
+
 # Enable libpgmath testing
 result = lit_config.params.get("LIBPGMATH")
 if result:
     config.environment["LIBPGMATH"] = True
+
+# Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
+openmp_flags_substitution = "-fopenmp"
+if config.have_openmp_rtl:
+    config.available_features.add("openmp_runtime")
+    # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
+    # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
+    # project or runtime.
+    if config.openmp_module_dir:
+        openmp_flags_substitution += f" -J {config.openmp_module_dir}"
+config.substitutions.append(("%openmp_flags", openmp_flags_substitution))
+
+# Add features and substitutions to test F128 math support.
+# %f128-lib substitution may be used to generate check prefixes
+# for LIT tests checking for F128 library support.
+if config.flang_runtime_f128_math_lib or config.have_ldbl_mant_dig_113:
+    config.available_features.add("flang-supports-f128-math")
+if config.flang_runtime_f128_math_lib:
+    config.available_features.add(
+        "flang-f128-math-lib-" + config.flang_runtime_f128_math_lib
+    )
+    config.substitutions.append(
+        ("%f128-lib", config.flang_runtime_f128_math_lib.upper())
+    )
+else:
+    config.substitutions.append(("%f128-lib", "NONE"))

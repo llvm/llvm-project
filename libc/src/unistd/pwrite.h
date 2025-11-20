@@ -9,12 +9,16 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_PWRITE_H
 #define LLVM_LIBC_SRC_UNISTD_PWRITE_H
 
-#include <unistd.h>
+#include "hdr/types/off_t.h"
+#include "hdr/types/size_t.h"
+#include "hdr/types/ssize_t.h"
+#include "hdr/unistd_macros.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_PWRITE_H

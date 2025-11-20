@@ -4,7 +4,10 @@
 //
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/foo.cppm -o %t/foo.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -verify -fsyntax-only
-//
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/foo.cppm -o %t/foo.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -verify -fsyntax-only -DREDUCED
+
 //--- foo.cppm
 module;
 # 3 __FILE__ 1 // use the next physical line number here (and below)
@@ -48,10 +51,16 @@ import foo;
 void use() {
   foo<short>();
   foo<int>();
+#ifdef REDUCED
+  // In reduced BMI, the foo2 template function is optimized out.
+  foo2<short>(); // expected-error {{use of undeclared identifier 'foo2'}}
+  foo2<int>();   // expected-error {{use of undeclared identifier 'foo2'}}
+#else
   foo2<short>(); // expected-error {{missing '#include'; 'foo2' must be declared before it is used}}
                  // expected-note@* {{declaration here is not visible}}
   foo2<int>();   // expected-error {{missing '#include'; 'foo2' must be declared before it is used}}
                  // expected-note@* {{declaration here is not visible}}
+#endif
   foo3<short>();
   foo3<int>();
 

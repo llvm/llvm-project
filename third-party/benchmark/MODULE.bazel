@@ -1,0 +1,32 @@
+module(
+    name = "google_benchmark",
+    version = "1.8.3",
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.5.0")
+bazel_dep(name = "platforms", version = "0.0.7")
+bazel_dep(name = "rules_foreign_cc", version = "0.10.1")
+bazel_dep(name = "rules_cc", version = "0.0.9")
+
+bazel_dep(name = "rules_python", version = "0.27.1", dev_dependency = True)
+bazel_dep(name = "googletest", version = "1.12.1", dev_dependency = True, repo_name = "com_google_googletest")
+
+bazel_dep(name = "libpfm", version = "4.11.0")
+
+# Register a toolchain for Python 3.9 to be able to build numpy. Python
+# versions >=3.10 are problematic.
+# A second reason for this is to be able to build Python hermetically instead
+# of relying on the changing default version from rules_python.
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python", dev_dependency = True)
+python.toolchain(python_version = "3.9")
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip", dev_dependency = True)
+pip.parse(
+    hub_name = "tools_pip_deps",
+    python_version = "3.9",
+    requirements_lock = "//tools:requirements.txt",
+)
+use_repo(pip, "tools_pip_deps")
+
+# -- bazel_dep definitions -- #

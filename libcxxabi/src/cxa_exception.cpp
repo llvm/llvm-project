@@ -192,7 +192,9 @@ void *__cxa_allocate_exception(size_t thrown_size) throw() {
         std::terminate();
     __cxa_exception *exception_header =
         static_cast<__cxa_exception *>((void *)(raw_buffer + header_offset));
-    ::memset(exception_header, 0, actual_size);
+    // We warn on memset to a non-trivially castable type. We might want to
+    // change that diagnostic to not fire on a trivially obvious zero fill.
+    ::memset(static_cast<void*>(exception_header), 0, actual_size);
     return thrown_object_from_cxa_exception(exception_header);
 }
 
@@ -206,6 +208,24 @@ void __cxa_free_exception(void *thrown_object) throw() {
     __aligned_free_with_fallback((void *)raw_buffer);
 }
 
+__cxa_exception* __cxa_init_primary_exception(void* object, std::type_info* tinfo,
+#ifdef __wasm__
+// In Wasm, a destructor returns its argument
+                                              void *(_LIBCXXABI_DTOR_FUNC* dest)(void*)) throw() {
+#else
+                                              void(_LIBCXXABI_DTOR_FUNC* dest)(void*)) throw() {
+#endif
+  __cxa_exception* exception_header = cxa_exception_from_thrown_object(object);
+  exception_header->referenceCount = 0;
+  exception_header->unexpectedHandler = std::get_unexpected();
+  exception_header->terminateHandler = std::get_terminate();
+  exception_header->exceptionType = tinfo;
+  exception_header->exceptionDestructor = dest;
+  setOurExceptionClass(&exception_header->unwindHeader);
+  exception_header->unwindHeader.exception_cleanup = exception_cleanup_func;
+
+  return exception_header;
+}
 
 //  This function shall allocate a __cxa_dependent_exception and
 //  return a pointer to it. (Really to the object, not past its' end).
@@ -254,28 +274,21 @@ will call terminate, assuming that there was no handler for the
 exception.
 */
 void
-#ifdef __USING_WASM_EXCEPTIONS__
+#ifdef __wasm__
 // In Wasm, a destructor returns its argument
 __cxa_throw(void *thrown_object, std::type_info *tinfo, void *(_LIBCXXABI_DTOR_FUNC *dest)(void *)) {
 #else
 __cxa_throw(void *thrown_object, std::type_info *tinfo, void (_LIBCXXABI_DTOR_FUNC *dest)(void *)) {
 #endif
-    __cxa_eh_globals *globals = __cxa_get_globals();
-    __cxa_exception* exception_header = cxa_exception_from_thrown_object(thrown_object);
+  __cxa_eh_globals* globals = __cxa_get_globals();
+  globals->uncaughtExceptions += 1; // Not atomically, since globals are thread-local
 
-    exception_header->unexpectedHandler = std::get_unexpected();
-    exception_header->terminateHandler  = std::get_terminate();
-    exception_header->exceptionType = tinfo;
-    exception_header->exceptionDestructor = dest;
-    setOurExceptionClass(&exception_header->unwindHeader);
-    exception_header->referenceCount = 1;  // This is a newly allocated exception, no need for thread safety.
-    globals->uncaughtExceptions += 1;   // Not atomically, since globals are thread-local
-
-    exception_header->unwindHeader.exception_cleanup = exception_cleanup_func;
+  __cxa_exception* exception_header = __cxa_init_primary_exception(thrown_object, tinfo, dest);
+  exception_header->referenceCount = 1; // This is a newly allocated exception, no need for thread safety.
 
 #if __has_feature(address_sanitizer)
-    // Inform the ASan runtime that now might be a good time to clean stuff up.
-    __asan_handle_no_return();
+  // Inform the ASan runtime that now might be a good time to clean stuff up.
+  __asan_handle_no_return();
 #endif
 
 #ifdef __USING_SJLJ_EXCEPTIONS__
@@ -576,6 +589,11 @@ void __cxa_end_catch() {
             globals->caughtExceptions = 0;
         }
     }
+}
+
+void __cxa_call_terminate(void* unwind_arg) throw() {
+  __cxa_begin_catch(unwind_arg);
+  std::terminate();
 }
 
 // Note:  exception_header may be masquerading as a __cxa_dependent_exception

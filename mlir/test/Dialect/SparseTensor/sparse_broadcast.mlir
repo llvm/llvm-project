@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --sparsification --canonicalize --cse | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map --sparsification --canonicalize --cse | FileCheck %s
 
 #DCSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 #SparseTensor = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : compressed) }>
@@ -16,12 +16,12 @@
 //   CHECK-DAG:  %[[TMP_c3:.*]] = arith.constant 3 : index
 //   CHECK-DAG:  %[[TMP_c0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:  %[[TMP_c1:.*]] = arith.constant 1 : index
-//       CHECK:  %[[TMP_0:.*]] = tensor.empty()
-//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 0 : index}
-//       CHECK:  %[[TMP_2:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 0 : index}
-//       CHECK:  %[[TMP_3:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 1 : index}
-//       CHECK:  %[[TMP_4:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 1 : index}
-//       CHECK:  %[[TMP_5:.*]] = sparse_tensor.values %[[TMP_arg0]]
+//   CHECK-DAG:  %[[TMP_0:.*]] = tensor.empty()
+//   CHECK-DAG:  %[[TMP_1:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 0 : index}
+//   CHECK-DAG:  %[[TMP_2:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 0 : index}
+//   CHECK-DAG:  %[[TMP_3:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 1 : index}
+//   CHECK-DAG:  %[[TMP_4:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 1 : index}
+//   CHECK-DAG:  %[[TMP_5:.*]] = sparse_tensor.values %[[TMP_arg0]]
 //       CHECK:  %[[TMP_6:.*]] = memref.load %[[TMP_1]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_7:.*]] = memref.load %[[TMP_1]][%[[TMP_c1]]] : memref<?xindex>
 //       CHECK:  %[[T:.*]] = scf.for %[[TMP_arg1:.*]] = %[[TMP_6]] to %[[TMP_7]] step %[[TMP_c1]] {{.*}} {
@@ -33,7 +33,7 @@
 //       CHECK:      %[[L2:.*]] = scf.for %[[TMP_arg3:.*]] = %[[TMP_10]] to %[[TMP_12]] step %[[TMP_c1]] {{.*}} {
 //       CHECK:        %[[TMP_13:.*]] = memref.load %[[TMP_4]][%[[TMP_arg3]]] : memref<?xindex>
 //       CHECK:        %[[TMP_14:.*]] = memref.load %[[TMP_5]][%[[TMP_arg3]]] : memref<?xi32>
-//       CHECK:        %[[Y:.*]] = sparse_tensor.insert %[[TMP_14]] into %{{.*}}[%[[TMP_9]], %[[TMP_arg2]], %[[TMP_13]]]
+//       CHECK:        %[[Y:.*]] = tensor.insert %[[TMP_14]] into %{{.*}}[%[[TMP_9]], %[[TMP_arg2]], %[[TMP_13]]]
 //       CHECK:        scf.yield %[[Y]]
 //       CHECK:      }
 //       CHECK:      scf.yield %[[L2]]

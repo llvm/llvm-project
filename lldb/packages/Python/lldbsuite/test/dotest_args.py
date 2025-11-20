@@ -49,6 +49,23 @@ def create_parser():
             """Specify the compiler(s) used to build the inferior executables. The compiler path can be an executable basename or a full path to a compiler executable. This option can be specified multiple times."""
         ),
     )
+    group.add_argument(
+        "--sysroot",
+        metavar="sysroot",
+        dest="sysroot",
+        default="",
+        help=textwrap.dedent(
+            """Specify the path to sysroot. This overrides apple_sdk sysroot."""
+        ),
+    )
+    group.add_argument(
+        "--triple",
+        metavar="triple",
+        dest="triple",
+        help=textwrap.dedent(
+            """Specify the target triple. Used for cross compilation."""
+        ),
+    )
     if sys.platform == "darwin":
         group.add_argument(
             "--apple-sdk",
@@ -87,6 +104,12 @@ def create_parser():
         ),
     )
 
+    group.add_argument(
+        "--make",
+        metavar="make",
+        dest="make",
+        help=textwrap.dedent("Specify which make to use."),
+    )
     group.add_argument(
         "--dsymutil",
         metavar="dsymutil",
@@ -218,12 +241,6 @@ def create_parser():
         help="Leave logs/traces even for successful test runs (useful for creating reference log files during debugging.)",
     )
     group.add_argument(
-        "--codesign-identity",
-        metavar="Codesigning identity",
-        default="lldb_codesign",
-        help="The codesigning identity to use",
-    )
-    group.add_argument(
         "--build-dir",
         dest="test_build_dir",
         metavar="Test build directory",
@@ -243,10 +260,16 @@ def create_parser():
         help="The clang module cache directory used in the Make files by Clang while building tests. Defaults to <test build directory>/module-cache-clang.",
     )
     group.add_argument(
+        "--lldb-obj-root",
+        dest="lldb_obj_root",
+        metavar="path",
+        help="The path to the LLDB object files.",
+    )
+    group.add_argument(
         "--lldb-libs-dir",
         dest="lldb_libs_dir",
         metavar="path",
-        help="The path to LLDB library directory (containing liblldb)",
+        help="The path to LLDB library directory (containing liblldb).",
     )
     group.add_argument(
         "--enable-plugin",
@@ -276,6 +299,20 @@ def create_parser():
         dest="lldb_platform_working_dir",
         metavar="platform-working-dir",
         help="The directory to use on the remote platform.",
+    )
+    group.add_argument(
+        "--platform-available-ports",
+        dest="lldb_platform_available_ports",
+        nargs="*",
+        type=int,
+        metavar="platform-available-ports",
+        help="Ports available for connection to a lldb server on the remote platform",
+    )
+    group.add_argument(
+        "--cmake-build-type",
+        dest="cmake_build_type",
+        metavar="cmake-build-type",
+        help="Specifies the build type on single-configuration",
     )
 
     # Test-suite behaviour

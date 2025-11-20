@@ -144,8 +144,7 @@ define <2 x i32> @orrimm2s_lsl0(<2 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: orrimm2s_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI12_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI12_0]
+; CHECK-GI-NEXT:    movi d1, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <2 x i32> %a, < i32 255, i32 255>
@@ -160,8 +159,7 @@ define <2 x i32> @orrimm2s_lsl8(<2 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: orrimm2s_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI13_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI13_0]
+; CHECK-GI-NEXT:    movi d1, #0x00ff000000ff00
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <2 x i32> %a, < i32 65280, i32 65280>
@@ -176,8 +174,7 @@ define <2 x i32> @orrimm2s_lsl16(<2 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: orrimm2s_lsl16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI14_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI14_0]
+; CHECK-GI-NEXT:    movi d1, #0xff000000ff0000
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <2 x i32> %a, < i32 16711680, i32 16711680>
@@ -192,8 +189,7 @@ define <2 x i32> @orrimm2s_lsl24(<2 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: orrimm2s_lsl24:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI15_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI15_0]
+; CHECK-GI-NEXT:    movi d1, #0xff000000ff000000
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <2 x i32> %a, < i32 4278190080, i32 4278190080>
@@ -208,8 +204,7 @@ define <4 x i32> @orrimm4s_lsl0(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: orrimm4s_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI16_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI16_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <4 x i32> %a, < i32 255, i32 255, i32 255, i32 255>
@@ -224,8 +219,7 @@ define <4 x i32> @orrimm4s_lsl8(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: orrimm4s_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI17_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI17_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0x00ff000000ff00
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <4 x i32> %a, < i32 65280, i32 65280, i32 65280, i32 65280>
@@ -240,8 +234,7 @@ define <4 x i32> @orrimm4s_lsl16(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: orrimm4s_lsl16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI18_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI18_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff000000ff0000
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <4 x i32> %a, < i32 16711680, i32 16711680, i32 16711680, i32 16711680>
@@ -256,8 +249,7 @@ define <4 x i32> @orrimm4s_lsl24(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: orrimm4s_lsl24:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI19_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI19_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff000000ff000000
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <4 x i32> %a, < i32 4278190080, i32 4278190080, i32 4278190080, i32 4278190080>
@@ -272,8 +264,7 @@ define <4 x i16> @orrimm4h_lsl0(<4 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: orrimm4h_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI20_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI20_0]
+; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <4 x i16> %a, < i16 255, i16 255, i16 255, i16 255 >
@@ -288,8 +279,7 @@ define <4 x i16> @orrimm4h_lsl8(<4 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: orrimm4h_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI21_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI21_0]
+; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff00
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <4 x i16> %a, < i16 65280, i16 65280, i16 65280, i16 65280 >
@@ -304,8 +294,7 @@ define <8 x i16> @orrimm8h_lsl0(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: orrimm8h_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI22_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI22_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <8 x i16> %a, < i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255 >
@@ -320,8 +309,7 @@ define <8 x i16> @orrimm8h_lsl8(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: orrimm8h_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI23_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI23_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <8 x i16> %a, < i16 65280, i16 65280, i16 65280, i16 65280, i16 65280, i16 65280, i16 65280, i16 65280 >
@@ -336,8 +324,7 @@ define <2 x i32> @bicimm2s_lsl0(<2 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm2s_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI24_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI24_0]
+; CHECK-GI-NEXT:    mvni v1.2s, #16
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 4294967279, i32 4294967279 >
@@ -352,8 +339,7 @@ define <2 x i32> @bicimm2s_lsl8(<2 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm2s_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI25_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI25_0]
+; CHECK-GI-NEXT:    mvni v1.2s, #16, lsl #8
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 4294963199, i32  4294963199 >
@@ -368,8 +354,7 @@ define <2 x i32> @bicimm2s_lsl16(<2 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm2s_lsl16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI26_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI26_0]
+; CHECK-GI-NEXT:    mvni v1.2s, #16, lsl #16
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 4293918719, i32 4293918719 >
@@ -384,8 +369,7 @@ define <2 x i32> @bicimm2s_lsl124(<2 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm2s_lsl124:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI27_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI27_0]
+; CHECK-GI-NEXT:    mvni v1.2s, #16, lsl #24
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 4026531839, i32  4026531839>
@@ -400,8 +384,7 @@ define <4 x i32> @bicimm4s_lsl0(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm4s_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI28_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI28_0]
+; CHECK-GI-NEXT:    mvni v1.4s, #16
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 4294967279, i32 4294967279, i32 4294967279, i32 4294967279 >
@@ -416,8 +399,7 @@ define <4 x i32> @bicimm4s_lsl8(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm4s_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI29_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI29_0]
+; CHECK-GI-NEXT:    mvni v1.4s, #16, lsl #8
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 4294963199, i32  4294963199, i32  4294963199, i32  4294963199 >
@@ -432,8 +414,7 @@ define <4 x i32> @bicimm4s_lsl16(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm4s_lsl16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI30_0]
+; CHECK-GI-NEXT:    mvni v1.4s, #16, lsl #16
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 4293918719, i32 4293918719, i32 4293918719, i32 4293918719 >
@@ -448,8 +429,7 @@ define <4 x i32> @bicimm4s_lsl124(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm4s_lsl124:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI31_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI31_0]
+; CHECK-GI-NEXT:    mvni v1.4s, #16, lsl #24
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 4026531839, i32  4026531839, i32  4026531839, i32  4026531839>
@@ -464,8 +444,7 @@ define <4 x i16> @bicimm4h_lsl0_a(<4 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm4h_lsl0_a:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI32_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI32_0]
+; CHECK-GI-NEXT:    mvni v1.4h, #16
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 4294967279, i16  4294967279, i16  4294967279, i16  4294967279 >
@@ -480,8 +459,7 @@ define <4 x i16> @bicimm4h_lsl0_b(<4 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm4h_lsl0_b:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI33_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI33_0]
+; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff00
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 65280, i16  65280, i16  65280, i16 65280 >
@@ -496,8 +474,7 @@ define <4 x i16> @bicimm4h_lsl8_a(<4 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm4h_lsl8_a:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI34_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI34_0]
+; CHECK-GI-NEXT:    mvni v1.4h, #16, lsl #8
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 4294963199, i16  4294963199, i16  4294963199, i16  4294963199>
@@ -512,8 +489,7 @@ define <4 x i16> @bicimm4h_lsl8_b(<4 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm4h_lsl8_b:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI35_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI35_0]
+; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 255, i16 255, i16 255, i16 255>
@@ -528,8 +504,7 @@ define <8 x i16> @bicimm8h_lsl0_a(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm8h_lsl0_a:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI36_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI36_0]
+; CHECK-GI-NEXT:    mvni v1.8h, #16
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 4294967279, i16  4294967279, i16  4294967279, i16  4294967279,
@@ -545,8 +520,7 @@ define <8 x i16> @bicimm8h_lsl0_b(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm8h_lsl0_b:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI37_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI37_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 65280, i16  65280, i16  65280, i16 65280, i16 65280, i16  65280, i16  65280, i16 65280 >
@@ -561,8 +535,7 @@ define <8 x i16> @bicimm8h_lsl8_a(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm8h_lsl8_a:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI38_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI38_0]
+; CHECK-GI-NEXT:    mvni v1.8h, #16, lsl #8
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 4294963199, i16  4294963199, i16  4294963199, i16  4294963199,
@@ -578,8 +551,7 @@ define <8 x i16> @bicimm8h_lsl8_b(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: bicimm8h_lsl8_b:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI39_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI39_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
@@ -912,8 +884,10 @@ define <2 x i64> @orn2xi64(<2 x i64> %a, <2 x i64> %b)  {
 define <2 x i32> @bsl2xi32_const(<2 x i32> %a, <2 x i32> %b)  {
 ; CHECK-SD-LABEL: bsl2xi32_const:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi d2, #0x000000ffffffff
-; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: bsl2xi32_const:
@@ -951,8 +925,10 @@ define <4 x i16> @bsl4xi16_const(<4 x i16> %a, <4 x i16> %b)  {
 define <1 x i64> @bsl1xi64_const(<1 x i64> %a, <1 x i64> %b)  {
 ; CHECK-SD-LABEL: bsl1xi64_const:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi d2, #0xffffffffffffff00
-; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    mov v0.b[0], v1.b[0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: bsl1xi64_const:
@@ -1009,12 +985,17 @@ define <8 x i16> @bsl8xi16_const(<8 x i16> %a, <8 x i16> %b)  {
 }
 
 define <2 x i64> @bsl2xi64_const(<2 x i64> %a, <2 x i64> %b)  {
-; CHECK-LABEL: bsl2xi64_const:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI75_0
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI75_0]
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: bsl2xi64_const:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bsl2xi64_const:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI75_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI75_0]
+; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 -1, i64 0 >
 	%tmp2 = and <2 x i64> %b, < i64 0, i64 -1 >
 	%tmp3 = or <2 x i64> %tmp1, %tmp2
@@ -1129,7 +1110,7 @@ define <8 x i8> @vselect_constant_cond_zero_v8i8(<8 x i8> %a) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI83_0
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI83_0]
 ; CHECK-GI-NEXT:    shl v1.8b, v1.8b, #7
-; CHECK-GI-NEXT:    sshr v1.8b, v1.8b, #7
+; CHECK-GI-NEXT:    cmlt v1.8b, v1.8b, #0
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
   %b = select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x i8> %a, <8 x i8> zeroinitializer
@@ -1145,10 +1126,14 @@ define <4 x i16> @vselect_constant_cond_zero_v4i16(<4 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_zero_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI84_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI84_0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w9, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov v1.h[1], w9
+; CHECK-GI-NEXT:    mov v1.h[2], w9
+; CHECK-GI-NEXT:    mov v1.h[3], w8
 ; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
-; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #15
+; CHECK-GI-NEXT:    cmlt v1.4h, v1.4h, #0
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
   %b = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i16> %a, <4 x i16> zeroinitializer
@@ -1165,13 +1150,14 @@ define <4 x i32> @vselect_constant_cond_zero_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_zero_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI85_1
-; CHECK-GI-NEXT:    adrp x9, .LCPI85_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI85_1]
-; CHECK-GI-NEXT:    ldr d2, [x9, :lo12:.LCPI85_0]
-; CHECK-GI-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w9, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov v1.s[1], w9
+; CHECK-GI-NEXT:    mov v1.s[2], w9
+; CHECK-GI-NEXT:    mov v1.s[3], w8
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
   %b = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> %a, <4 x i32> zeroinitializer
@@ -1181,11 +1167,8 @@ define <4 x i32> @vselect_constant_cond_zero_v4i32(<4 x i32> %a) {
 define <8 x i8> @vselect_constant_cond_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-SD-LABEL: vselect_constant_cond_v8i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi d2, #0xffffffffff00ff00
-; CHECK-SD-NEXT:    movi d3, #0x00000000ff00ff
-; CHECK-SD-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v3.8b
-; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    movi d2, #0x00000000ff00ff
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_v8i8:
@@ -1193,7 +1176,7 @@ define <8 x i8> @vselect_constant_cond_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI86_0
 ; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI86_0]
 ; CHECK-GI-NEXT:    shl v2.8b, v2.8b, #7
-; CHECK-GI-NEXT:    sshr v2.8b, v2.8b, #7
+; CHECK-GI-NEXT:    cmlt v2.8b, v2.8b, #0
 ; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %c = select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x i8> %a, <8 x i8> %b
@@ -1203,19 +1186,20 @@ define <8 x i8> @vselect_constant_cond_v8i8(<8 x i8> %a, <8 x i8> %b) {
 define <4 x i16> @vselect_constant_cond_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: vselect_constant_cond_v4i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi d2, #0x00ffffffff0000
-; CHECK-SD-NEXT:    movi d3, #0xffff00000000ffff
-; CHECK-SD-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v3.8b
-; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    movi d2, #0xffff00000000ffff
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI87_0
-; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI87_0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w9, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    mov v2.h[1], w9
+; CHECK-GI-NEXT:    mov v2.h[2], w9
+; CHECK-GI-NEXT:    mov v2.h[3], w8
 ; CHECK-GI-NEXT:    shl v2.4h, v2.4h, #15
-; CHECK-GI-NEXT:    sshr v2.4h, v2.4h, #15
+; CHECK-GI-NEXT:    cmlt v2.4h, v2.4h, #0
 ; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %c = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i16> %a, <4 x i16> %b
@@ -1232,13 +1216,14 @@ define <4 x i32> @vselect_constant_cond_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI88_1
-; CHECK-GI-NEXT:    adrp x9, .LCPI88_0
-; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI88_1]
-; CHECK-GI-NEXT:    ldr d3, [x9, :lo12:.LCPI88_0]
-; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w9, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    mov v2.s[1], w9
+; CHECK-GI-NEXT:    mov v2.s[2], w9
+; CHECK-GI-NEXT:    mov v2.s[3], w8
 ; CHECK-GI-NEXT:    shl v2.4s, v2.4s, #31
-; CHECK-GI-NEXT:    sshr v2.4s, v2.4s, #31
+; CHECK-GI-NEXT:    cmlt v2.4s, v2.4s, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %c = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> %a, <4 x i32> %b
@@ -1517,9 +1502,7 @@ define <8 x i8> @vselect_cmpz_ne(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 ;
 ; CHECK-GI-LABEL: vselect_cmpz_ne:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    mvn v0.8b, v0.8b
+; CHECK-GI-NEXT:    cmtst v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    bsl v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %cmp = icmp ne <8 x i8> %a, zeroinitializer
@@ -1528,38 +1511,23 @@ define <8 x i8> @vselect_cmpz_ne(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 }
 
 define <8 x i8> @vselect_cmpz_eq(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
-; CHECK-SD-LABEL: vselect_cmpz_eq:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmeq v0.8b, v0.8b, #0
-; CHECK-SD-NEXT:    bsl v0.8b, v1.8b, v2.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vselect_cmpz_eq:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    bsl v0.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vselect_cmpz_eq:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
+; CHECK-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    ret
   %cmp = icmp eq <8 x i8> %a, zeroinitializer
   %d = select <8 x i1> %cmp, <8 x i8> %b, <8 x i8> %c
   ret <8 x i8> %d
 }
 
 define <8 x i8> @vselect_tst(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
-; CHECK-SD-LABEL: vselect_tst:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    cmeq v0.8b, v0.8b, #0
-; CHECK-SD-NEXT:    bsl v0.8b, v2.8b, v1.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vselect_tst:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    bsl v0.8b, v2.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vselect_tst:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
+; CHECK-NEXT:    bsl v0.8b, v2.8b, v1.8b
+; CHECK-NEXT:    ret
   %tmp3 = and <8 x i8> %a, %b
   %tmp4 = icmp eq <8 x i8> %tmp3, zeroinitializer
   %d = select <8 x i1> %tmp4, <8 x i8> %c, <8 x i8> %b
@@ -1567,18 +1535,10 @@ define <8 x i8> @vselect_tst(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 }
 
 define <8 x i8> @sext_tst(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
-; CHECK-SD-LABEL: sext_tst:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmtst v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sext_tst:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    mvn v0.8b, v0.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sext_tst:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmtst v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
   %tmp3 = and <8 x i8> %a, %b
   %tmp4 = icmp ne <8 x i8> %tmp3, zeroinitializer
   %d = sext <8 x i1> %tmp4 to <8 x i8>
@@ -1990,8 +1950,7 @@ define <2 x i64> @and64imm4s_lsl0(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: and64imm4s_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI128_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI128_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xffffff00ffffff00
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 -1095216660736, i64 -1095216660736>
@@ -2006,8 +1965,7 @@ define <2 x i64> @and64imm4s_lsl8(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: and64imm4s_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI129_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI129_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xffff00ffffff00ff
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 -280375465148161, i64 -280375465148161>
@@ -2022,8 +1980,7 @@ define <2 x i64> @and64imm4s_lsl16(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: and64imm4s_lsl16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI130_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI130_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ffffff00ffff
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 -71776119077928961, i64 -71776119077928961>
@@ -2038,8 +1995,7 @@ define <2 x i64> @and64imm4s_lsl24(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: and64imm4s_lsl24:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI131_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI131_0]
+; CHECK-GI-NEXT:    mvni v1.4s, #254, lsl #24
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 144115183814443007, i64 144115183814443007>
@@ -2086,8 +2042,7 @@ define <2 x i32> @and16imm4h_lsl0(<2 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: and16imm4h_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI134_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI134_0]
+; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff00
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 4278255360, i32 4278255360>
@@ -2102,8 +2057,7 @@ define <2 x i32> @and16imm4h_lsl8(<2 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: and16imm4h_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI135_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI135_0]
+; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 16711935, i32 16711935>
@@ -2182,8 +2136,7 @@ define <4 x i32> @and16imm8h_lsl0(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: and16imm8h_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI140_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI140_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 4278255360, i32 4278255360, i32 4278255360, i32 4278255360>
@@ -2198,8 +2151,7 @@ define <4 x i32> @and16imm8h_lsl8(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: and16imm8h_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI141_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI141_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 16711935, i32 16711935, i32 16711935, i32 16711935>
@@ -2214,8 +2166,7 @@ define <2 x i64> @and64imm8h_lsl0(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: and64imm8h_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI142_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI142_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 -71777214294589696, i64 -71777214294589696>
@@ -2230,8 +2181,7 @@ define <2 x i64> @and64imm8h_lsl8(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: and64imm8h_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI143_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI143_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 71777214294589695, i64 71777214294589695>
@@ -2247,9 +2197,8 @@ define <8 x i16> @bic_shifted_knownbits(<8 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: bic_shifted_knownbits:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI144_0
+; CHECK-GI-NEXT:    movi v1.8h, #1
 ; CHECK-GI-NEXT:    ushr v0.8h, v0.8h, #9
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI144_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -2293,8 +2242,7 @@ define <8 x i32> @bic_shifted_knownbits3(<8 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: bic_shifted_knownbits3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI146_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI146_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    and v1.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ushll v0.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    ushll2 v1.4s, v1.8h, #0
@@ -2316,10 +2264,9 @@ define <8 x i32> @bic_shifted_knownbits4(<8 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: bic_shifted_knownbits4:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI147_0
+; CHECK-GI-NEXT:    movi v2.2d, #0xffff0000ffff0000
 ; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #8
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #8
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI147_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
@@ -2657,8 +2604,7 @@ define <2 x i64> @orr64imm4s_lsl0(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: orr64imm4s_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI168_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI168_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <2 x i64> %a, < i64 1095216660735, i64 1095216660735>
@@ -2673,8 +2619,7 @@ define <2 x i64> @orr64imm4s_lsl8(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: orr64imm4s_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI169_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI169_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0x00ff000000ff00
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <2 x i64> %a, < i64 280375465148160, i64 280375465148160>
@@ -2689,8 +2634,7 @@ define <2 x i64> @orr64imm4s_lsl16(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: orr64imm4s_lsl16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI170_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI170_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff000000ff0000
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <2 x i64> %a, < i64 71776119077928960, i64 71776119077928960>
@@ -2705,8 +2649,7 @@ define <2 x i64> @orr64imm4s_lsl24(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: orr64imm4s_lsl24:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI171_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI171_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff000000ff000000
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <2 x i64> %a, < i64 -72057589759737856, i64 -72057589759737856>
@@ -2753,8 +2696,7 @@ define <2 x i32> @orr16imm4h_lsl0(<2 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: orr16imm4h_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI174_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI174_0]
+; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <2 x i32> %a, < i32 16711935, i32 16711935>
@@ -2769,8 +2711,7 @@ define <2 x i32> @orr16imm4h_lsl8(<2 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: orr16imm4h_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI175_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI175_0]
+; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff00
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <2 x i32> %a, < i32 4278255360, i32 4278255360>
@@ -2849,8 +2790,7 @@ define <4 x i32> @orr16imm8h_lsl0(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: orr16imm8h_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI180_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI180_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <4 x i32> %a, < i32 16711935, i32 16711935, i32 16711935, i32 16711935>
@@ -2865,8 +2805,7 @@ define <4 x i32> @orr16imm8h_lsl8(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: orr16imm8h_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI181_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI181_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <4 x i32> %a, < i32 4278255360, i32 4278255360, i32 4278255360, i32 4278255360>
@@ -2881,8 +2820,7 @@ define <2 x i64> @orr64imm8h_lsl0(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: orr64imm8h_lsl0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI182_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI182_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <2 x i64> %a, < i64 71777214294589695, i64 71777214294589695>
@@ -2897,11 +2835,40 @@ define <2 x i64> @orr64imm8h_lsl8(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: orr64imm8h_lsl8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI183_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI183_0]
+; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = or <2 x i64> %a, < i64 -71777214294589696, i64 -71777214294589696>
 	ret <2 x i64> %tmp1
 }
 
+define <8 x i16> @pr149380(<4 x i16> %u1, <1 x i64> %u2, <8 x i16> %vqshlu_n169) {
+; CHECK-SD-LABEL: pr149380:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    movi v0.8h, #1
+; CHECK-SD-NEXT:    orr v2.8h, #1
+; CHECK-SD-NEXT:    sqadd v0.8h, v2.8h, v0.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: pr149380:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    neg v1.8h, v2.8h
+; CHECK-GI-NEXT:    movi v3.8h, #1
+; CHECK-GI-NEXT:    neg v1.8h, v1.8h
+; CHECK-GI-NEXT:    sub v0.8h, v0.8h, v2.8h
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    sqadd v0.8h, v3.8h, v0.8h
+; CHECK-GI-NEXT:    ret
+entry:
+  %mul.i = mul <8 x i16> %vqshlu_n169, < i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1 >
+  %sub.i = sub <8 x i16> zeroinitializer, %mul.i
+  %vbsl3.i = and <8 x i16> %sub.i, %vqshlu_n169
+  %0 = add <8 x i16> %mul.i, < i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1 >
+  %vbsl4.i = and <8 x i16> %0, < i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1 >
+  %vbsl5.i = or <8 x i16> %vbsl3.i, %vbsl4.i
+  %vqaddq_v2.i26515 = tail call <8 x i16> @llvm.aarch64.neon.sqadd.v8i16(<8 x i16> < i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1 >, <8 x i16> %vbsl5.i)
+  ret <8 x i16> %vqaddq_v2.i26515
+}

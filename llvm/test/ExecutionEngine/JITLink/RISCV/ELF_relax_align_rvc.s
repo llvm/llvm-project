@@ -10,6 +10,16 @@
 # RUN:     -slab-allocate 100Kb -slab-address 0x0 -slab-page-size 4096 \
 # RUN:     -check %s %t.rv64
 
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax,+zca %s -o %t.rv32zca
+# RUN: llvm-jitlink -noexec \
+# RUN:     -slab-allocate 100Kb -slab-address 0x0 -slab-page-size 4096 \
+# RUN:     -check %s %t.rv32zca
+
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax,+zca %s -o %t.rv64zca
+# RUN: llvm-jitlink -noexec \
+# RUN:     -slab-allocate 100Kb -slab-address 0x0 -slab-page-size 4096 \
+# RUN:     -check %s %t.rv64zca
+
     .globl main,align2,align4,align8,align16,align32
     .type  main,@function
 main:

@@ -37,15 +37,15 @@
     call void @llvm.dbg.value(metadata i32 %p8, metadata !25, metadata !DIExpression()), !dbg !28
     call void @llvm.dbg.value(metadata i32 %p1, metadata !26, metadata !DIExpression()), !dbg !28
     call void @llvm.dbg.value(metadata i32 %p6, metadata !27, metadata !DIExpression()), !dbg !28
-    %arraydecay1 = bitcast [2 x i32]* %arr to i32*, !dbg !28
-    call void @bar(i32* nonnull %arraydecay1), !dbg !28
+    %arraydecay1 = bitcast ptr %arr to ptr, !dbg !28
+    call void @bar(ptr nonnull %arraydecay1), !dbg !28
     ret void, !dbg !28
   }
 
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-  declare dso_local void @bar(i32*) local_unnamed_addr
+  declare dso_local void @bar(ptr) local_unnamed_addr
 
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1
@@ -98,6 +98,8 @@ fixedStack:
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true }
   - { id: 2, type: default, offset: 0, size: 4, alignment: 16, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true }
+frameInfo:
+  adjustsStack:    true
 stack:
   - { id: 0, name: arr, type: default, offset: 0, size: 8, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true }

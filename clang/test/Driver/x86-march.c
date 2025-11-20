@@ -112,6 +112,26 @@
 // RUN:   | FileCheck %s -check-prefix=gracemont
 // gracemont: "-target-cpu" "gracemont"
 //
+// RUN: %clang --target=x86_64 -c -### %s -march=pantherlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=pantherlake
+// pantherlake: "-target-cpu" "pantherlake"
+//
+// RUN: %clang --target=x86_64 -c -### %s -march=wildcatlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=wildcatlake
+// wildcatlake: "-target-cpu" "wildcatlake"
+//
+// RUN: %clang --target=x86_64 -c -### %s -march=novalake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=novalake
+// novalake: "-target-cpu" "novalake"
+//
+// RUN: %clang --target=x86_64 -c -### %s -march=clearwaterforest 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=clearwaterforest
+// clearwaterforest: "-target-cpu" "clearwaterforest"
+//
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=diamondrapids 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=diamondrapids
+// diamondrapids: "-target-cpu" "diamondrapids"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=lakemont 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=lakemont
 // lakemont: "-target-cpu" "lakemont"
@@ -234,6 +254,10 @@
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=znver4 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=znver4
 // znver4: "-target-cpu" "znver4"
+//
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=znver5 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=znver5
+// znver5: "-target-cpu" "znver5"
 
 // RUN: %clang -target x86_64 -c -### %s -march=x86-64 2>&1 | FileCheck %s --check-prefix=x86-64
 // x86-64: "-target-cpu" "x86-64"

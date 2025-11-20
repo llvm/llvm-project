@@ -89,6 +89,101 @@ entry:
   ret i1 %cmp.i5
 }
 
+define zeroext i1 @test5(i64 %a) {
+; CHECK-LABEL: test5:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 4, -1
+; CHECK-NEXT:    addis 3, 3, -32768
+; CHECK-NEXT:    rldic 4, 4, 32, 0
+; CHECK-NEXT:    subc 4, 3, 4
+; CHECK-NEXT:    subfe 3, 3, 3
+; CHECK-NEXT:    neg 3, 3
+; CHECK-NEXT:    blr
+entry:
+  %0 = add i64 %a, -2147483648
+  %cmp = icmp ult i64 %0, -4294967296
+  ret i1 %cmp
+}
+
+define zeroext i1 @test6(i64 %a) {
+; CHECK-LABEL: test6:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi 3, 3, -32768
+; CHECK-NEXT:    lis 4, -1
+; CHECK-NEXT:    subc 4, 3, 4
+; CHECK-NEXT:    subfe 3, 3, 3
+; CHECK-NEXT:    neg 3, 3
+; CHECK-NEXT:    blr
+entry:
+  %0 = add i64 %a, -32768
+  %cmp = icmp ult i64 %0, -65536
+  ret i1 %cmp
+}
+
+define zeroext i1 @test7(i64 %a) {
+; CHECK-LABEL: test7:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi 3, 3, -128
+; CHECK-NEXT:    li 4, -256
+; CHECK-NEXT:    subc 4, 3, 4
+; CHECK-NEXT:    subfe 3, 3, 3
+; CHECK-NEXT:    neg 3, 3
+; CHECK-NEXT:    blr
+entry:
+  %0 = add i64 %a, -128
+  %cmp = icmp ult i64 %0, -256
+  ret i1 %cmp
+}
+
+define zeroext i1 @test8(i32 %a) {
+; CHECK-LABEL: test8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi 3, 3, -32768
+; CHECK-NEXT:    lis 4, -1
+; CHECK-NEXT:    rlwinm 3, 3, 16, 16, 31
+; CHECK-NEXT:    ori 4, 4, 1
+; CHECK-NEXT:    add 3, 3, 4
+; CHECK-NEXT:    rldicl 3, 3, 1, 63
+; CHECK-NEXT:    blr
+entry:
+  %0 = add i32 %a, -32768
+  %cmp = icmp ult i32 %0, -65536
+  ret i1 %cmp
+}
+
+define zeroext i1 @test9(i32 %a) {
+; CHECK-LABEL: test9:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lis 4, -256
+; CHECK-NEXT:    addi 3, 3, -128
+; CHECK-NEXT:    ori 4, 4, 1
+; CHECK-NEXT:    clrldi 3, 3, 32
+; CHECK-NEXT:    rldic 4, 4, 8, 0
+; CHECK-NEXT:    add 3, 3, 4
+; CHECK-NEXT:    rldicl 3, 3, 1, 63
+; CHECK-NEXT:    blr
+entry:
+  %0 = add i32 %a, -128
+  %cmp = icmp ult i32 %0, -256
+  ret i1 %cmp
+}
+
+define zeroext i1 @test10(i16 %a) {
+; CHECK-LABEL: test10:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi 3, 3, -128
+; CHECK-NEXT:    lis 4, -1
+; CHECK-NEXT:    clrlwi 3, 3, 16
+; CHECK-NEXT:    ori 4, 4, 256
+; CHECK-NEXT:    add 3, 3, 4
+; CHECK-NEXT:    rldicl 3, 3, 1, 63
+; CHECK-NEXT:    blr
+entry:
+  %0 = add i16 %a, -128
+  %cmp = icmp ult i16 %0, -256
+  ret i1 %cmp
+}
+
 !1 = !{!2, !2, i64 0}
 !2 = !{!"int", !3, i64 0}
 !3 = !{!"omnipotent char", !4, i64 0}

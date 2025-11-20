@@ -137,7 +137,7 @@ void test5(void) {
   // CHECK: store i32 36
   gi = OBJECT_SIZE_BUILTIN(&data->t[1], 3);
 
-  struct Data *const arr = my_calloc(sizeof(*data), 2);
+  struct Data *const arr = my_calloc(2, sizeof(*data));
   // CHECK: store i32 96
   gi = OBJECT_SIZE_BUILTIN(arr, 0);
   // CHECK: store i32 96
@@ -171,7 +171,7 @@ void test6(void) {
   // CHECK: store i32 11
   gi = OBJECT_SIZE_BUILTIN(data->end, 3);
 
-  struct Data *const arr = my_calloc(sizeof(*arr) + 5, 3);
+  struct Data *const arr = my_calloc(3, sizeof(*arr) + 5);
   // AFAICT, GCC treats malloc and calloc identically. So, we should do the
   // same.
   //

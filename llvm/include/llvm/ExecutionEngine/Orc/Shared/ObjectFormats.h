@@ -14,64 +14,32 @@
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_OBJECTFORMATS_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MachOObjectFormat.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
 
-// MachO section names.
-
-extern StringRef MachODataCommonSectionName;
-extern StringRef MachODataDataSectionName;
-extern StringRef MachOEHFrameSectionName;
-extern StringRef MachOCompactUnwindInfoSectionName;
-extern StringRef MachOModInitFuncSectionName;
-extern StringRef MachOObjCCatListSectionName;
-extern StringRef MachOObjCCatList2SectionName;
-extern StringRef MachOObjCClassListSectionName;
-extern StringRef MachOObjCClassNameSectionName;
-extern StringRef MachOObjCClassRefsSectionName;
-extern StringRef MachOObjCConstSectionName;
-extern StringRef MachOObjCDataSectionName;
-extern StringRef MachOObjCImageInfoSectionName;
-extern StringRef MachOObjCMethNameSectionName;
-extern StringRef MachOObjCMethTypeSectionName;
-extern StringRef MachOObjCNLCatListSectionName;
-extern StringRef MachOObjCSelRefsSectionName;
-extern StringRef MachOSwift5ProtoSectionName;
-extern StringRef MachOSwift5ProtosSectionName;
-extern StringRef MachOSwift5TypesSectionName;
-extern StringRef MachOSwift5TypeRefSectionName;
-extern StringRef MachOSwift5FieldMetadataSectionName;
-extern StringRef MachOSwift5EntrySectionName;
-extern StringRef MachOThreadBSSSectionName;
-extern StringRef MachOThreadDataSectionName;
-extern StringRef MachOThreadVarsSectionName;
-
-extern StringRef MachOInitSectionNames[19];
-
 // ELF section names.
-extern StringRef ELFEHFrameSectionName;
+LLVM_ABI extern StringRef ELFEHFrameSectionName;
 
-extern StringRef ELFInitArrayFuncSectionName;
-extern StringRef ELFInitFuncSectionName;
-extern StringRef ELFFiniArrayFuncSectionName;
-extern StringRef ELFFiniFuncSectionName;
-extern StringRef ELFCtorArrayFuncSectionName;
-extern StringRef ELFDtorArrayFuncSectionName;
+LLVM_ABI extern StringRef ELFInitArrayFuncSectionName;
+LLVM_ABI extern StringRef ELFInitFuncSectionName;
+LLVM_ABI extern StringRef ELFFiniArrayFuncSectionName;
+LLVM_ABI extern StringRef ELFFiniFuncSectionName;
+LLVM_ABI extern StringRef ELFCtorArrayFuncSectionName;
+LLVM_ABI extern StringRef ELFDtorArrayFuncSectionName;
 
-extern StringRef ELFInitSectionNames[3];
+LLVM_ABI extern StringRef ELFInitSectionNames[3];
 
-extern StringRef ELFThreadBSSSectionName;
-extern StringRef ELFThreadDataSectionName;
+LLVM_ABI extern StringRef ELFThreadBSSSectionName;
+LLVM_ABI extern StringRef ELFThreadDataSectionName;
 
-bool isMachOInitializerSection(StringRef SegName, StringRef SecName);
-bool isMachOInitializerSection(StringRef QualifiedName);
+LLVM_ABI bool isELFInitializerSection(StringRef SecName);
 
-bool isELFInitializerSection(StringRef SecName);
-
-bool isCOFFInitializerSection(StringRef Name);
+LLVM_ABI bool isCOFFInitializerSection(StringRef Name);
 
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_MEMORYFLAGS_H
+#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_OBJECTFORMATS_H

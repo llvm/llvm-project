@@ -7,10 +7,12 @@ add_mlir_library(MLIRMemRefTestPasses
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
+  MLIRTestDialect
+  )
+mlir_target_link_libraries(MLIRMemRefTestPasses PUBLIC
   MLIRPass
   MLIRMemRefDialect
   MLIRMemRefTransforms
-  MLIRTestDialect
   )
 
 target_include_directories(MLIRMemRefTestPasses

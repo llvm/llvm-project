@@ -23,10 +23,12 @@ namespace aarch64 {
 void getAArch64TargetFeatures(const Driver &D, const llvm::Triple &Triple,
                               const llvm::opt::ArgList &Args,
                               std::vector<llvm::StringRef> &Features,
-                              bool ForAS);
+                              bool ForAS, bool ForMultilib = false);
 
 std::string getAArch64TargetCPU(const llvm::opt::ArgList &Args,
                                 const llvm::Triple &Triple, llvm::opt::Arg *&A);
+
+bool isAArch64BareMetal(const llvm::Triple &Triple);
 
 } // end namespace aarch64
 } // end namespace target

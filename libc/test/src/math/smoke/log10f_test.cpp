@@ -6,29 +6,65 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
+#include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/log10f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
-#include <errno.h>
-#include <stdint.h>
+using LlvmLibcLog10fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
+TEST_F(LlvmLibcLog10fTest, SpecialNumbers) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::log10f(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
 
-TEST(LlvmLibcLog10fTest, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, __llvm_libc::log10f(aNaN));
-  EXPECT_FP_EQ(inf, __llvm_libc::log10f(inf));
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log10f(neg_inf), FE_INVALID);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::log10f(0.0f), FE_DIVBYZERO);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::log10f(-0.0f),
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log10f(aNaN));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log10f(inf));
+  EXPECT_MATH_ERRNO(0);
+
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log10f(neg_inf), FE_INVALID);
+  EXPECT_MATH_ERRNO(EDOM);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::log10f(0.0f),
                               FE_DIVBYZERO);
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log10f(-1.0f), FE_INVALID);
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::log10f(1.0f));
+  EXPECT_MATH_ERRNO(ERANGE);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::log10f(-0.0f),
+                              FE_DIVBYZERO);
+  EXPECT_MATH_ERRNO(ERANGE);
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log10f(-1.0f), FE_INVALID);
+  EXPECT_MATH_ERRNO(EDOM);
+
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::log10f(1.0f));
 
   float x = 1.0f;
   for (int i = 0; i < 11; ++i, x *= 10.0f) {
-    EXPECT_FP_EQ_ALL_ROUNDING(static_cast<float>(i), __llvm_libc::log10f(x));
+    EXPECT_FP_EQ_ALL_ROUNDING(static_cast<float>(i), LIBC_NAMESPACE::log10f(x));
   }
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcLog10fTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(-0x1.66d3e7bd9a403p5f, LIBC_NAMESPACE::log10f(min_denormal));
+}
+
+TEST_F(LlvmLibcLog10fTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(FPBits::inf(Sign::NEG).get_val(),
+               LIBC_NAMESPACE::log10f(min_denormal));
+}
+
+TEST_F(LlvmLibcLog10fTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(FPBits::inf(Sign::NEG).get_val(),
+               LIBC_NAMESPACE::log10f(min_denormal));
+}
+
+#endif

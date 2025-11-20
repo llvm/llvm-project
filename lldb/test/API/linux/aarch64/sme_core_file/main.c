@@ -1,16 +1,21 @@
 // clang-format off
 // Compile with:
-// clang -target aarch64-unknown-linux-gnu main.c -o a.out -g -march=armv8.6-a+sve+sme
+// clang -target aarch64-unknown-linux-gnu main.c -o a.out -g -march=armv8.6-a+sve+sme+sme2
 //
 // For minimal corefile size, do this before running the program:
-// echo 0x20 > /proc/self/coredeump_filter
+// echo 0x20 > /proc/self/coredump_filter
 //
-// Must be run on a system that has SVE and SME, including the smefa64
-// extension. Example command:
-// main 0 32 64 1
+// Must be run on a system that has SVE, SME and SME2, including the smefa64
+// extension.
+//
+// Example command:
+// ./a.out 0 32 64 1
 //
 // This would not enter streaming mode, set non-streaming VL to 32
-// bytes, streaming VL to 64 bytes and enable ZA.
+// bytes, streaming VL to 64 bytes and enable ZA and ZT0.
+//
+// To generate all the test files, use the generate.sh script that's in this
+// folder.
 // clang-format on
 
 #include <stdbool.h>
@@ -94,6 +99,17 @@ void set_za_register(int streaming_vl) {
                  "r"(&data)
                  : "w12");
   }
+#undef MAX_VL_BYTES
+}
+
+void set_zt0_register() {
+#define ZTO_LEN (512 / 8)
+  uint8_t data[ZTO_LEN];
+  for (unsigned i = 0; i < ZTO_LEN; ++i)
+    data[i] = i + 1;
+
+  asm volatile("ldr zt0, [%0]" ::"r"(&data));
+#undef ZT0_LEN
 }
 
 void set_tpidr2(uint64_t value) {
@@ -132,6 +148,7 @@ int main(int argc, char **argv) {
   if (strcmp(argv[4], "1") == 0) {
     SMSTART_ZA;
     set_za_register(streaming_vl);
+    set_zt0_register();
   }
 
   *(volatile char *)(0) = 0; // Crashes here.

@@ -1,14 +1,5 @@
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
-declare_args() {
-  # If is_goma is true, the location of the goma client install.
-  # Set this to the output of `goma_ctl goma_dir`.
-  goma_dir = ""
-}
-
-assert(!use_goma || goma_dir != "",
-       "set `goma_dir` to the output of `goma_ctl goma_dir` in your args.gn")
-
 unix_copy_command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
 
 template("unix_toolchain") {
@@ -27,10 +18,10 @@ template("unix_toolchain") {
       cxx = rebase_path(clang_base_path, root_build_dir) + "/bin/clang++"
     }
 
-    ld = cxx  # Don't use goma wrapper for linking.
-    if (use_goma) {
-      cc = "$goma_dir/gomacc $cc"
-      cxx = "$goma_dir/gomacc $cxx"
+    ld = cxx  # Don't use compiler wrapper for linking.
+    if (compiler_wrapper != "") {
+      cc = "$compiler_wrapper $cc"
+      cxx = "$compiler_wrapper $cxx"
     }
 
     tool("cc") {
@@ -78,23 +69,6 @@ template("unix_toolchain") {
       outputs = [ "{{output_dir}}/{{target_output_name}}.a" ]
       output_prefix = "lib"
       default_output_dir = "{{root_out_dir}}/lib"
-    }
-
-    if (current_os == "ios" || current_os == "mac") {
-      # gn < 1693 (e214b5d35898) doesn't support |frameworks|, requiring
-      # frameworks to be listed in |libs|, but gn >= 1808 (3028c6a426a4) forbids
-      # frameworks from appearing in |libs|. This assertion provides a helpful
-      # cue to upgrade, and is much more user-friendly than the failure that
-      # occurs when an older gn encounters |frameworks|.
-      #
-      # gn_version doesn’t actually exist in gn < 1709 (52cb644a3fb4), and
-      # defined(gn_version) doesn't actually work as expected
-      # (https://crbug.com/gn/183), so 1709 is the true minimum enforced by
-      # this construct, and if gn_version is not available, this line will still
-      # be blamed, making the resolution somewhat discoverable.
-      assert(gn_version >= 1693,
-             "Your GN is too old! " +
-                 "Update it, perhaps by running llvm/utils/gn/get.py")
     }
 
     # Make these apply to all tools below.
@@ -196,7 +170,7 @@ template("stage2_unix_toolchain") {
       forward_variables_from(invoker.toolchain_args, "*")
 
       clang_base_path = root_build_dir
-      use_goma = false
+      llvm_enable_zstd = false
     }
 
     deps = [
@@ -215,6 +189,13 @@ stage2_unix_toolchain("stage2_unix") {
   toolchain_args = {
     current_os = host_os
     current_cpu = host_cpu
+  }
+}
+
+stage2_unix_toolchain("stage2_unix_x86") {
+  toolchain_args = {
+    current_os = host_os
+    current_cpu = "x86"
   }
 }
 
@@ -302,8 +283,8 @@ template("win_toolchain") {
       }
     }
 
-    if (use_goma) {
-      cl = "$goma_dir/gomacc $cl"
+    if (compiler_wrapper != "") {
+      cl = "$compiler_wrapper $cl"
     }
 
     tool("cc") {
@@ -424,7 +405,6 @@ win_toolchain("stage2_win_x64") {
       sysroot = win_sysroot
     }
     clang_base_path = root_build_dir
-    use_goma = false
   }
   deps = [
     "//:clang($host_toolchain)",
@@ -441,7 +421,6 @@ win_toolchain("stage2_win_x86") {
       sysroot = win_sysroot
     }
     clang_base_path = root_build_dir
-    use_goma = false
   }
   deps = [
     "//:clang($host_toolchain)",

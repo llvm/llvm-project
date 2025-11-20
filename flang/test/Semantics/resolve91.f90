@@ -4,7 +4,7 @@ module m
   procedure(real), pointer :: p
   !ERROR: EXTERNAL attribute was already specified on 'p'
   !ERROR: POINTER attribute was already specified on 'p'
-  !ERROR: The interface for procedure 'p' has already been declared
+  !ERROR: The type of 'p' has already been declared
   procedure(integer), pointer :: p
 end
 
@@ -82,3 +82,10 @@ module m8
   !ERROR: The type of 'pvar' has already been declared
   integer, pointer :: pVar => kVar
 end module m8
+
+module m9
+  integer :: p, q
+  procedure() p ! ok
+  !ERROR: The type of 'q' has already been declared
+  procedure(real) q
+end module m9

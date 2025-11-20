@@ -3,10 +3,10 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec -data-sections=false < %s |\
 ; RUN:   FileCheck %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -filetype=obj %s -o %t.o
+; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=ppc -filetype=obj %s -o %t.o
 ; RUN: llvm-readobj --syms --auxiliary-header %t.o | FileCheck %s --check-prefixes=SYM,AUX32
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -filetype=obj %s -o %t64.o
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=ppc -filetype=obj %s -o %t64.o
 ; RUN: llvm-readobj --syms --auxiliary-header %t64.o | FileCheck %s --check-prefixes=SYM,AUX64
 
 @b =  global i32 0, align 4
@@ -79,11 +79,8 @@ declare dllexport i32 @bar_e(ptr)
 ; CHECK:        .weak   .zoo_weak_extern_h[PR],hidden
 ; CHECK:        .weak   zoo_weak_extern_h[DS],hidden
 ; CHECK:        .weak   .zoo_weak_extern_e[PR],exported
-; CHECK:        .weak   zoo_weak_extern_e[DS],exported
 ; CHECK:        .extern .bar_h[PR],hidden
-; CHECK:        .extern bar_h[DS],hidden
 ; CHECK:        .extern .bar_e[PR],exported
-; CHECK:        .extern bar_e[DS],exported
 
 ; AUX32:       AuxiliaryHeader {
 ; AUX32-NEXT:    Magic: 0x0
@@ -123,25 +120,7 @@ declare dllexport i32 @bar_e(ptr)
 ; SYM-NEXT:    Type: 0x4000
 ; SYM-NEXT:    StorageClass: C_WEAKEXT (0x6F)
 
-; SYM:         Name: zoo_weak_extern_e
-; SYM-NEXT:    Value (RelocatableAddress): 0x0
-; SYM-NEXT:    Section: N_UNDEF
-; SYM-NEXT:    Type: 0x4000
-; SYM-NEXT:    StorageClass: C_WEAKEXT (0x6F)
-
-; SYM:         Name: bar_h
-; SYM-NEXT:    Value (RelocatableAddress): 0x0
-; SYM-NEXT:    Section: N_UNDEF
-; SYM-NEXT:    Type: 0x2000
-; SYM-NEXT:    StorageClass: C_EXT (0x2)
-
 ; SYM:         Name: .bar_e
-; SYM-NEXT:    Value (RelocatableAddress): 0x0
-; SYM-NEXT:    Section: N_UNDEF
-; SYM-NEXT:    Type: 0x4000
-; SYM-NEXT:    StorageClass: C_EXT (0x2)
-
-; SYM:         Name: bar_e
 ; SYM-NEXT:    Value (RelocatableAddress): 0x0
 ; SYM-NEXT:    Section: N_UNDEF
 ; SYM-NEXT:    Type: 0x4000

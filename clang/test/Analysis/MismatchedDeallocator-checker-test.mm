@@ -14,6 +14,19 @@ void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
 void free(void *);
 void __attribute((ownership_takes(malloc, 1))) my_free(void *);
 
+void __attribute((ownership_returns(malloc1))) *my_malloc1(size_t);
+void __attribute((ownership_takes(malloc1, 1))) my_free1(void *);
+
+void __attribute((ownership_returns(malloc2))) *my_malloc2(size_t);
+
+// The order of these declarations are important to verify that analisys still works even
+// if there are less specific declarations of the same functions
+void __attribute((ownership_returns(malloc3))) *my_malloc3(size_t);
+void *my_malloc3(size_t);
+
+void *my_malloc4(size_t);
+void __attribute((ownership_returns(malloc4))) *my_malloc4(size_t);
+
 //---------------------------------------------------------------
 // Test if an allocation function matches deallocation function
 //---------------------------------------------------------------
@@ -21,79 +34,114 @@ void __attribute((ownership_takes(malloc, 1))) my_free(void *);
 //--------------- test malloc family
 void testMalloc1() {
   int *p = (int *)malloc(sizeof(int));
-  delete p; // expected-warning{{Memory allocated by malloc() should be deallocated by free(), not 'delete'}}
+  delete p; // expected-warning{{Memory allocated by 'malloc()' should be deallocated by 'free()', not 'delete'}}
 }
 
 void testMalloc2() {
   int *p = (int *)malloc(8);
   int *q = (int *)realloc(p, 16);
-  delete q; // expected-warning{{Memory allocated by realloc() should be deallocated by free(), not 'delete'}}
+  delete q; // expected-warning{{Memory allocated by 'realloc()' should be deallocated by 'free()', not 'delete'}}
 }
 
 void testMalloc3() {
   int *p = (int *)calloc(1, sizeof(int));
-  delete p; // expected-warning{{Memory allocated by calloc() should be deallocated by free(), not 'delete'}}
+  delete p; // expected-warning{{Memory allocated by 'calloc()' should be deallocated by 'free()', not 'delete'}}
 }
 
 void testMalloc4(const char *s) {
   char *p = strdup(s);
-  delete p; // expected-warning{{Memory allocated by strdup() should be deallocated by free(), not 'delete'}}
+  delete p; // expected-warning{{Memory allocated by 'strdup()' should be deallocated by 'free()', not 'delete'}}
 }
 
 void testMalloc5() {
   int *p = (int *)my_malloc(sizeof(int));
-  delete p; // expected-warning{{Memory allocated by my_malloc() should be deallocated by free(), not 'delete'}}
+  delete p; // expected-warning{{Memory allocated by 'my_malloc()' should be deallocated by 'free()', not 'delete'}}
 }
 
 void testMalloc6() {
   int *p = (int *)malloc(sizeof(int));
-  operator delete(p); // expected-warning{{Memory allocated by malloc() should be deallocated by free(), not operator delete}}
+  operator delete(p); // expected-warning{{Memory allocated by 'malloc()' should be deallocated by 'free()', not 'operator delete'}}
 }
 
 void testMalloc7() {
   int *p = (int *)malloc(sizeof(int));
-  delete[] p; // expected-warning{{Memory allocated by malloc() should be deallocated by free(), not 'delete[]'}}
+  delete[] p; // expected-warning{{Memory allocated by 'malloc()' should be deallocated by 'free()', not 'delete[]'}}
 }
 
 void testMalloc8() {
   int *p = (int *)malloc(sizeof(int));
-  operator delete[](p); // expected-warning{{Memory allocated by malloc() should be deallocated by free(), not operator delete[]}}
+  operator delete[](p); // expected-warning{{Memory allocated by 'malloc()' should be deallocated by 'free()', not 'operator delete[]'}}
+}
+
+void testMalloc9() {
+  int *p = (int *)my_malloc(sizeof(int));
+  my_free(p); // no warning
+}
+
+void testMalloc10() {
+  int *p = (int *)my_malloc1(sizeof(int));
+  my_free1(p); // no warning
+}
+
+void testMalloc11() {
+  int *p = (int *)my_malloc1(sizeof(int));
+  my_free(p); // expected-warning{{Memory allocated by 'my_malloc1()' should be deallocated by function that takes ownership of 'malloc1', not 'my_free()', which takes ownership of 'malloc'}}
+}
+
+void testMalloc12() {
+  int *p = (int *)my_malloc2(sizeof(int));
+  my_free1(p); // expected-warning{{Memory allocated by 'my_malloc2()' should be deallocated by function that takes ownership of 'malloc2', not 'my_free1()', which takes ownership of 'malloc1'}}
+}
+
+void testMalloc13() {
+  int *p = (int *)my_malloc1(sizeof(int));
+  free(p); // expected-warning{{Memory allocated by 'my_malloc1()' should be deallocated by function that takes ownership of 'malloc1', not 'free()'}}
+}
+
+void testMalloc14() {
+  int *p = (int *)my_malloc3(sizeof(int));
+  free(p); // expected-warning{{Memory allocated by 'my_malloc3()' should be deallocated by function that takes ownership of 'malloc3', not 'free()'}}
+}
+
+void testMalloc15() {
+  int *p = (int *)my_malloc4(sizeof(int));
+  free(p); // expected-warning{{Memory allocated by 'my_malloc4()' should be deallocated by function that takes ownership of 'malloc4', not 'free()'}}
 }
 
 void testAlloca() {
   int *p = (int *)__builtin_alloca(sizeof(int));
-  delete p; // expected-warning{{Memory allocated by alloca() should not be deallocated}}
+  delete p; // expected-warning{{Memory allocated by 'alloca()' should not be deallocated}}
 }
 
 //--------------- test new family
 void testNew1() {
   int *p = new int;
-  free(p); // expected-warning{{Memory allocated by 'new' should be deallocated by 'delete', not free()}}
+  free(p); // expected-warning{{Memory allocated by 'new' should be deallocated by 'delete', not 'free()'}}
 }
 
 void testNew2() {
   int *p = (int *)operator new(0);
-  free(p); // expected-warning{{Memory allocated by operator new should be deallocated by 'delete', not free()}}
+  free(p); // expected-warning{{Memory allocated by 'operator new' should be deallocated by 'delete', not 'free()'}}
 }
 
 void testNew3() {
   int *p = new int[1];
-  free(p); // expected-warning{{Memory allocated by 'new[]' should be deallocated by 'delete[]', not free()}}
+  free(p); // expected-warning{{Memory allocated by 'new[]' should be deallocated by 'delete[]', not 'free()'}}
 }
 
 void testNew4() {
   int *p = new int;
-  realloc(p, sizeof(long)); // expected-warning{{Memory allocated by 'new' should be deallocated by 'delete', not realloc()}}
+  realloc(p, sizeof(long)); // expected-warning{{Memory allocated by 'new' should be deallocated by 'delete', not 'realloc()'}}
 }
 
 void testNew5() {
   int *p = (int *)operator new(0);
-  realloc(p, sizeof(long)); // expected-warning{{Memory allocated by operator new should be deallocated by 'delete', not realloc()}}
+  realloc(p, sizeof(long)); // expected-warning{{Memory allocated by 'operator new' should be deallocated by 'delete', not 'realloc()'}}
 }
 
 void testNew6() {
   int *p = new int[1];
-  realloc(p, sizeof(long)); // expected-warning{{Memory allocated by 'new[]' should be deallocated by 'delete[]', not realloc()}}
+  realloc(p, sizeof(long)); // expected-warning{{Memory allocated by 'new[]' should be deallocated by 'delete[]', not 'realloc()'}}
 }
 
 int *allocInt() {
@@ -106,7 +154,7 @@ void testNew7() {
 
 void testNew8() {
   int *p = (int *)operator new(0);
-  delete[] p; // expected-warning{{Memory allocated by operator new should be deallocated by 'delete', not 'delete[]'}}
+  delete[] p; // expected-warning{{Memory allocated by 'operator new' should be deallocated by 'delete', not 'delete[]'}}
 }
 
 int *allocIntArray(unsigned c) {
@@ -120,7 +168,7 @@ void testNew9() {
 
 void testNew10() {
   int *p = (int *)operator new[](0);
-  delete p; // expected-warning{{Memory allocated by operator new[] should be deallocated by 'delete[]', not 'delete'}}
+  delete p; // expected-warning{{Memory allocated by 'operator new[]' should be deallocated by 'delete[]', not 'delete'}}
 }
 
 void testNew11(NSUInteger dataLength) {
@@ -208,7 +256,7 @@ struct SimpleSmartPointer {
   ~SimpleSmartPointer() {
     delete ptr;
     // expected-warning@-1 {{Memory allocated by 'new[]' should be deallocated by 'delete[]', not 'delete'}}
-    // expected-warning@-2 {{Memory allocated by malloc() should be deallocated by free(), not 'delete'}}
+    // expected-warning@-2 {{Memory allocated by 'malloc()' should be deallocated by 'free()', not 'delete'}}
   }
 };
 

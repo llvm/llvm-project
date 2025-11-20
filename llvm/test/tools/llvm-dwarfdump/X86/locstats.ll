@@ -1,5 +1,11 @@
 ; RUN: llc -debug-entry-values %s -o - -filetype=obj \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
+; RUN: llc -debug-entry-values --dwarf-version=4 %s -o - -filetype=obj \
+; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
+; RUN: llc -debug-entry-values --dwarf-version=3 %s -o - -filetype=obj \
+; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
+; RUN: llc -debug-entry-values --dwarf-version=2 %s -o - -filetype=obj \
+; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
 
 ; CHECK:      "sum_all_variables(#bytes in parent scope covered by DW_OP_entry_value)": 5,
 ; CHECK-NEXT: "sum_all_params(#bytes in parent scope)": 20,
@@ -89,6 +95,12 @@
 ; CHECK-NEXT: "#local vars - entry values with [80%,90%) of parent scope covered by DW_AT_location": 1,
 ; CHECK-NEXT: "#local vars - entry values with [90%,100%) of parent scope covered by DW_AT_location": 0,
 ; CHECK-NEXT: "#local vars - entry values with 100% of parent scope covered by DW_AT_location": 1
+; CHECK-NEXT: "#bytes with line information": 51,
+; CHECK-NEXT: "#bytes with line-0 locations": 3,
+; CHECK-NEXT: "#line entries": 7,
+; CHECK-NEXT: "#line entries (is_stmt)": 5,
+; CHECK-NEXT: "#line entries (unique)": 6,
+; CHECK-NEXT: "#line entries (unique non-0)": 5
 
 ; The source code of the test case:
 ; extern void fn3(int *);

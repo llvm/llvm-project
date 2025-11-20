@@ -302,10 +302,10 @@ constexpr bool test() {
   // Copying from `bool` to `char` will invoke the optimization, so only check one direction.
   test_copy_and_move<char, bool>();
 
-  // Copying between different structs with the same represenation (there is no way to guarantee the representation is
+  // Copying between different structs with the same representation (there is no way to guarantee the representation is
   // the same).
   test_copy_and_move<S1, S2>();
-  // Copying between different unions with the same represenation.
+  // Copying between different unions with the same representation.
   test_copy_and_move<U1, U2>();
 
   // Copying from a regular pointer to a void pointer (these are not considered trivially copyable).
@@ -314,7 +314,7 @@ constexpr bool test() {
   test_copy_and_move<int*, const int*>();
 
   // `memmove` does not support volatile pointers.
-  // (See also https://github.com/llvm/llvm-project/issues/28901).
+  // (See also https://llvm.org/PR28527).
   if (!std::is_constant_evaluated()) {
     test_both_directions<volatile int, int>();
     test_both_directions<volatile int, volatile int>();

@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple arm64-apple-darwin    -S -emit-llvm -o - -O2 -disable-llvm-passes %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -S -emit-llvm -o - -O2 -disable-llvm-passes %s | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-apple-darwin    -fobjc-arc -S -emit-llvm -o - -O2 -disable-llvm-passes %s | FileCheck %s --check-prefixes=CHECK,ARC
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-arc -S -emit-llvm -o - -O2 -disable-llvm-passes %s | FileCheck %s --check-prefixes=CHECK,ARC
+// RUN: %clang_cc1 -triple arm64-apple-darwin    -emit-llvm -o - -O2 -disable-llvm-passes %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - -O2 -disable-llvm-passes %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-darwin    -fobjc-arc -emit-llvm -o - -O2 -disable-llvm-passes %s | FileCheck %s --check-prefixes=CHECK,ARC
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-arc -emit-llvm -o - -O2 -disable-llvm-passes %s | FileCheck %s --check-prefixes=CHECK,ARC
 
 struct stret { int x[100]; };
 struct stret one = {{1}};

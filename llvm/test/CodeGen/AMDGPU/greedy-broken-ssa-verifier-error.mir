@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs -run-pass=greedy -stress-regalloc=2 %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs -run-pass=greedy -stress-regalloc=2 %s -o - | FileCheck -check-prefix=GCN %s
 
 # Make sure there's no verifier error after register allocation
 # introduces vreg defs when the MIR parser infers SSA.
@@ -15,7 +15,7 @@ machineFunctionInfo:
 body:             |
   ; GCN-LABEL: name: ra_introduces_vreg_def
   ; GCN: [[COPY_V0:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GCN: [[COPY_V0]]:vgpr_32 =
+  ; GCN: [[COPY_V1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   bb.0:
     liveins: $vgpr0, $vgpr1
     %0:vgpr_32 = COPY $vgpr0

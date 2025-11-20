@@ -18,7 +18,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -46,7 +45,7 @@ void MipsELFStreamer::emitInstruction(const MCInst &Inst,
     if (!Op.isReg())
       continue;
 
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     RegInfoRecord->SetPhysRegUsed(Reg, MCRegInfo);
   }
 
@@ -76,7 +75,7 @@ void MipsELFStreamer::createPendingLabelRelocs() {
   // FIXME: Also mark labels when in MIPS16 mode.
   if (ELFTargetStreamer->isMicroMipsEnabled()) {
     for (auto *L : Labels) {
-      auto *Label = cast<MCSymbolELF>(L);
+      auto *Label = static_cast<MCSymbolELF *>(L);
       getAssembler().registerSymbol(*Label);
       Label->setOther(ELF::STO_MIPS_MICROMIPS);
     }
@@ -90,8 +89,7 @@ void MipsELFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   Labels.push_back(Symbol);
 }
 
-void MipsELFStreamer::switchSection(MCSection *Section,
-                                    const MCExpr *Subsection) {
+void MipsELFStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
   MCELFStreamer::switchSection(Section, Subsection);
   Labels.clear();
 }
@@ -112,10 +110,11 @@ void MipsELFStreamer::EmitMipsOptionRecords() {
     I->EmitMipsOptionRecord();
 }
 
-MCELFStreamer *llvm::createMipsELFStreamer(
-    MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-    std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
-    bool RelaxAll) {
+MCELFStreamer *
+llvm::createMipsELFStreamer(MCContext &Context,
+                            std::unique_ptr<MCAsmBackend> MAB,
+                            std::unique_ptr<MCObjectWriter> OW,
+                            std::unique_ptr<MCCodeEmitter> Emitter) {
   return new MipsELFStreamer(Context, std::move(MAB), std::move(OW),
                              std::move(Emitter));
 }

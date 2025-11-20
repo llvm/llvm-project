@@ -32,6 +32,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -41,12 +44,10 @@ namespace ranges {
 template <class _InIter, class _OutIter>
 using unique_copy_result = in_out_result<_InIter, _OutIter>;
 
-namespace __unique_copy {
-
 template <class _InIter, class _OutIter>
 concept __can_reread_from_output = (input_iterator<_OutIter> && same_as<iter_value_t<_InIter>, iter_value_t<_OutIter>>);
 
-struct __fn {
+struct __unique_copy {
   template <class _InIter, class _OutIter>
   static consteval auto __get_algo_tag() {
     if constexpr (forward_iterator<_InIter>) {
@@ -59,7 +60,7 @@ struct __fn {
   }
 
   template <class _InIter, class _OutIter>
-  using __algo_tag_t = decltype(__get_algo_tag<_InIter, _OutIter>());
+  using __algo_tag_t _LIBCPP_NODEBUG = decltype(__get_algo_tag<_InIter, _OutIter>());
 
   template <input_iterator _InIter,
             sentinel_for<_InIter> _Sent,
@@ -101,15 +102,15 @@ struct __fn {
   }
 };
 
-} // namespace __unique_copy
-
 inline namespace __cpo {
-inline constexpr auto unique_copy = __unique_copy::__fn{};
+inline constexpr auto unique_copy = __unique_copy{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_UNIQUE_COPY_H

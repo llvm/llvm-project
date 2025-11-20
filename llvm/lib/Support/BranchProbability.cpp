@@ -20,8 +20,6 @@
 
 using namespace llvm;
 
-constexpr uint32_t BranchProbability::D;
-
 raw_ostream &BranchProbability::print(raw_ostream &OS) const {
   if (isUnknown())
     return OS << "?%";
@@ -110,4 +108,11 @@ uint64_t BranchProbability::scale(uint64_t Num) const {
 
 uint64_t BranchProbability::scaleByInverse(uint64_t Num) const {
   return ::scale<0>(Num, D, N);
+}
+
+BranchProbability BranchProbability::pow(unsigned N) const {
+  BranchProbability Res = BranchProbability::getOne();
+  for (unsigned I = 0; I < N; ++I)
+    Res *= *this;
+  return Res;
 }

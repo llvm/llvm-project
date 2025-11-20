@@ -127,9 +127,10 @@ __device__ __host__ float load2() {
 
 // HOST-LABEL: define {{.*}}@_Z5load3v()
 // HOST:  %ld.managed = load ptr, ptr @v2, align 16
-// HOST:  %0 = getelementptr inbounds [100 x %struct.vec], ptr %ld.managed, i64 0, i64 1, i32 1
-// HOST:  %1 = load float, ptr %0, align 4
-// HOST:  ret float %1
+// HOST:  %0 = getelementptr inbounds [100 x %struct.vec], ptr %ld.managed, i64 0, i64 1
+// HOST:  %1 = getelementptr inbounds nuw %struct.vec, ptr %0, i32 0, i32 1
+// HOST:  %2 = load float, ptr %1, align 4
+// HOST:  ret float %2
 float load3() {
   return v2[1].y;
 }
@@ -139,10 +140,11 @@ float load3() {
 // HOST:  %0 = getelementptr inbounds [100 x %struct.vec], ptr %ld.managed, i64 0, i64 1
 // HOST:  %1 = ptrtoint ptr %0 to i64
 // HOST:  %ld.managed1 = load ptr, ptr @v2, align 16
-// HOST:  %2 = getelementptr inbounds [100 x %struct.vec], ptr %ld.managed1, i64 0, i64 1, i32 1
-// HOST:  %3 = ptrtoint ptr %2 to i64
-// HOST:  %4 = sub i64 %3, %1
-// HOST:  %sub.ptr.div = sdiv exact i64 %4, 4
+// HOST:  %2 = getelementptr inbounds [100 x %struct.vec], ptr %ld.managed1, i64 0, i64 1
+// HOST:  %3 = getelementptr inbounds nuw %struct.vec, ptr %2, i32 0, i32 1
+// HOST:  %4 = ptrtoint ptr %3 to i64
+// HOST:  %5 = sub i64 %4, %1
+// HOST:  %sub.ptr.div = sdiv exact i64 %5, 4
 // HOST:  %conv = sitofp i64 %sub.ptr.div to float
 // HOST:  ret float %conv
 float addr_taken2() {

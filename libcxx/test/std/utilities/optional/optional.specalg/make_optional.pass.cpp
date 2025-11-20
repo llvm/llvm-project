@@ -8,17 +8,15 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// XFAIL: availability-bad_optional_access-missing && !no-exceptions
-
 // <optional>
 //
 // template <class T>
 //   constexpr optional<decay_t<T>> make_optional(T&& v);
 
+#include <cassert>
+#include <memory>
 #include <optional>
 #include <string>
-#include <memory>
-#include <cassert>
 
 #include "test_macros.h"
 

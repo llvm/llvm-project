@@ -59,8 +59,7 @@ bool ObjectFilePlaceholder::SetLoadAddress(Target &target, addr_t value,
   GetModule()->GetSectionList();
   assert(m_sections_up->GetNumSections(0) == 1);
 
-  target.GetSectionLoadList().SetSectionLoadAddress(
-      m_sections_up->GetSectionAtIndex(0), m_base);
+  target.SetSectionLoadAddress(m_sections_up->GetSectionAtIndex(0), m_base);
   return true;
 }
 

@@ -12,11 +12,40 @@
 #ifndef LLVM_ABI_BREAKING_CHECKS_H
 #define LLVM_ABI_BREAKING_CHECKS_H
 
+// llvm-config.h is required for LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS
+#include "llvm/Config/llvm-config.h"
+
 /* Define to enable checks that alter the LLVM C++ ABI */
 #cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS
 
 /* Define to enable reverse iteration of unordered llvm containers */
 #cmakedefine01 LLVM_ENABLE_REVERSE_ITERATION
+
+#if !defined(__has_attribute)
+#define __has_attribute(attribute) 0
+#endif
+
+// Properly annotate EnableABIBreakingChecks or DisableABIBreakingChecks for
+// export from shared library.
+// TODO(https://github.com/llvm/llvm-project/issues/145406): eliminate need for
+// two preprocessor definitions to gate LLVM_ABI macro definitions.
+#if defined(LLVM_BUILD_STATIC) || !defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
+#define ABI_BREAKING_EXPORT_ABI
+#else
+#if defined(_WIN32)
+#if defined(LLVM_EXPORTS)
+#define ABI_BREAKING_EXPORT_ABI __declspec(dllexport)
+#else
+#define ABI_BREAKING_EXPORT_ABI __declspec(dllimport)
+#endif
+#else
+#if __has_attribute(visibility)
+#define ABI_BREAKING_EXPORT_ABI __attribute__((__visibility__("default")))
+#else
+#define ABI_BREAKING_EXPORT_ABI
+#endif
+#endif
+#endif
 
 /* Allow selectively disabling link-time mismatch checking so that header-only
    ADT content from LLVM can be used without linking libSupport. */
@@ -43,12 +72,12 @@
 #endif
 namespace llvm {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-extern int EnableABIBreakingChecks;
+ABI_BREAKING_EXPORT_ABI extern int EnableABIBreakingChecks;
 LLVM_HIDDEN_VISIBILITY
 __attribute__((weak)) int *VerifyEnableABIBreakingChecks =
     &EnableABIBreakingChecks;
 #else
-extern int DisableABIBreakingChecks;
+ABI_BREAKING_EXPORT_ABI extern int DisableABIBreakingChecks;
 LLVM_HIDDEN_VISIBILITY
 __attribute__((weak)) int *VerifyDisableABIBreakingChecks =
     &DisableABIBreakingChecks;

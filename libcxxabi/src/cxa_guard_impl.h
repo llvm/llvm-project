@@ -47,6 +47,9 @@
 #include "__cxxabi_config.h"
 #include "include/atomic_support.h" // from libc++
 #if defined(__has_include)
+#  if __has_include(<sys/futex.h>)
+#    include <sys/futex.h>
+#  endif
 #  if __has_include(<sys/syscall.h>)
 #    include <sys/syscall.h>
 #  endif
@@ -55,7 +58,7 @@
 #  endif
 #endif
 
-#include <__threading_support>
+#include <__thread/support.h>
 #include <cstdint>
 #include <cstring>
 #include <limits.h>
@@ -88,7 +91,7 @@
 // the former.
 #ifdef BUILDING_CXA_GUARD
 #  include "abort_message.h"
-#  define ABORT_WITH_MESSAGE(...) ::abort_message(__VA_ARGS__)
+#  define ABORT_WITH_MESSAGE(...) ::__abort_message(__VA_ARGS__)
 #elif defined(TESTING_CXA_GUARD)
 #  define ABORT_WITH_MESSAGE(...) ::abort()
 #else
@@ -153,12 +156,12 @@ private:
 //                       PlatformGetThreadID
 //===----------------------------------------------------------------------===//
 
-#if defined(__APPLE__) && defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
+#if defined(__APPLE__) && _LIBCPP_HAS_THREAD_API_PTHREAD
 uint32_t PlatformThreadID() {
   static_assert(sizeof(mach_port_t) == sizeof(uint32_t), "");
   return static_cast<uint32_t>(pthread_mach_thread_np(std::__libcpp_thread_get_current_id()));
 }
-#elif defined(SYS_gettid) && defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
+#elif defined(SYS_gettid) && _LIBCPP_HAS_THREAD_API_PTHREAD
 uint32_t PlatformThreadID() {
   static_assert(sizeof(pid_t) == sizeof(uint32_t), "");
   return static_cast<uint32_t>(syscall(SYS_gettid));
@@ -411,7 +414,18 @@ private:
 //                         Futex Implementation
 //===----------------------------------------------------------------------===//
 
-#if defined(SYS_futex)
+#if defined(__OpenBSD__)
+void PlatformFutexWait(int* addr, int expect) {
+  constexpr int WAIT = 0;
+  futex(reinterpret_cast<volatile uint32_t*>(addr), WAIT, expect, NULL, NULL);
+  __tsan_acquire(addr);
+}
+void PlatformFutexWake(int* addr) {
+  constexpr int WAKE = 1;
+  __tsan_release(addr);
+  futex(reinterpret_cast<volatile uint32_t*>(addr), WAKE, INT_MAX, NULL, NULL);
+}
+#elif defined(SYS_futex)
 void PlatformFutexWait(int* addr, int expect) {
   constexpr int WAIT = 0;
   syscall(SYS_futex, addr, WAIT, expect, 0);
@@ -662,8 +676,8 @@ static_assert(CurrentImplementation != Implementation::Futex || PlatformSupports
 
 using SelectedImplementation = SelectImplementation<CurrentImplementation>::type;
 
-} // end namespace
-} // end namespace __cxxabiv1
+} // namespace
+} // namespace __cxxabiv1
 
 #if defined(__clang__)
 #  pragma clang diagnostic pop

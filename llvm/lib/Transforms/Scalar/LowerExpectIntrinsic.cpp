@@ -13,7 +13,6 @@
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -21,10 +20,8 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
 
 #include <cmath>
@@ -105,10 +102,7 @@ static bool handleSwitchExpect(SwitchInst &SI) {
   misexpect::checkExpectAnnotations(SI, Weights, /*IsFrontend=*/true);
 
   SI.setCondition(ArgValue);
-
-  SI.setMetadata(LLVMContext::MD_prof,
-                 MDBuilder(CI->getContext()).createBranchWeights(Weights));
-
+  setBranchWeights(SI, Weights, /*IsExpected=*/true);
   return true;
 }
 
@@ -268,11 +262,13 @@ static void handlePhiDef(CallInst *Expect) {
     if (IsOpndComingFromSuccessor(BI->getSuccessor(1)))
       BI->setMetadata(LLVMContext::MD_prof,
                       MDB.createBranchWeights(LikelyBranchWeightVal,
-                                              UnlikelyBranchWeightVal));
+                                              UnlikelyBranchWeightVal,
+                                              /*IsExpected=*/true));
     else if (IsOpndComingFromSuccessor(BI->getSuccessor(0)))
       BI->setMetadata(LLVMContext::MD_prof,
                       MDB.createBranchWeights(UnlikelyBranchWeightVal,
-                                              LikelyBranchWeightVal));
+                                              LikelyBranchWeightVal,
+                                              /*IsExpected=*/true));
   }
 }
 
@@ -337,12 +333,12 @@ template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
   SmallVector<uint32_t, 4> ExpectedWeights;
   if ((ExpectedValue->getZExtValue() == ValueComparedTo) ==
       (Predicate == CmpInst::ICMP_EQ)) {
-    Node =
-        MDB.createBranchWeights(LikelyBranchWeightVal, UnlikelyBranchWeightVal);
+    Node = MDB.createBranchWeights(
+        LikelyBranchWeightVal, UnlikelyBranchWeightVal, /*IsExpected=*/true);
     ExpectedWeights = {LikelyBranchWeightVal, UnlikelyBranchWeightVal};
   } else {
-    Node =
-        MDB.createBranchWeights(UnlikelyBranchWeightVal, LikelyBranchWeightVal);
+    Node = MDB.createBranchWeights(UnlikelyBranchWeightVal,
+                                   LikelyBranchWeightVal, /*IsExpected=*/true);
     ExpectedWeights = {UnlikelyBranchWeightVal, LikelyBranchWeightVal};
   }
 
@@ -415,30 +411,4 @@ PreservedAnalyses LowerExpectIntrinsicPass::run(Function &F,
     return PreservedAnalyses::none();
 
   return PreservedAnalyses::all();
-}
-
-namespace {
-/// Legacy pass for lowering expect intrinsics out of the IR.
-///
-/// When this pass is run over a function it uses expect intrinsics which feed
-/// branches and switches to provide branch weight metadata for those
-/// terminators. It then removes the expect intrinsics from the IR so the rest
-/// of the optimizer can ignore them.
-class LowerExpectIntrinsic : public FunctionPass {
-public:
-  static char ID;
-  LowerExpectIntrinsic() : FunctionPass(ID) {
-    initializeLowerExpectIntrinsicPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override { return lowerExpectIntrinsic(F); }
-};
-} // namespace
-
-char LowerExpectIntrinsic::ID = 0;
-INITIALIZE_PASS(LowerExpectIntrinsic, "lower-expect",
-                "Lower 'expect' Intrinsics", false, false)
-
-FunctionPass *llvm::createLowerExpectIntrinsicPass() {
-  return new LowerExpectIntrinsic();
 }

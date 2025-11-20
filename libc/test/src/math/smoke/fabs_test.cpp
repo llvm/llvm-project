@@ -10,4 +10,4 @@
 
 #include "src/math/fabs.h"
 
-LIST_FABS_TESTS(double, __llvm_libc::fabs)
+LIST_FABS_TESTS(double, LIBC_NAMESPACE::fabs)

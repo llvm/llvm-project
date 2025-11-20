@@ -17,7 +17,7 @@
 //
 // If the library was built in c++23 mode, this test would succeed.
 //
-// Older CMake passed -std:c++latest to set C++ 20 mode on clang-cl, which
+// Older CMake passed -std:c++latest to set C++20 mode on clang-cl, which
 // hid this issue. With newer CMake versions, it passes -std:c++20 which
 // makes this fail.
 //
@@ -61,7 +61,7 @@ protected:
 int main(int, char**) {
   testbuf<char> sb1;
   std::ostream os1(&sb1);
-  int n1;
+  int n1 = 0;
   os1 << &n1;
   assert(os1.good());
   std::string s1 = sb1.str();
@@ -74,7 +74,7 @@ int main(int, char**) {
 
   testbuf<char> sb3;
   std::ostream os3(&sb3);
-  volatile int n3;
+  volatile int n3 = 0;
   os3 << &n3;
   assert(os3.good());
   std::string s3 = sb3.str();

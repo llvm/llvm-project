@@ -4,8 +4,8 @@
 define <1 x float> @constrained_vector_fma_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_fma_v1f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = [5.0E-1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = [2.5E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem
 ; CHECK-NEXT:    retq
 entry:
@@ -38,14 +38,14 @@ entry:
 define <3 x float> @constrained_vector_fma_v3f32() #0 {
 ; CHECK-LABEL: constrained_vector_fma_v3f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = [5.0E-1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = [3.5E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm0 * xmm1) + mem
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = [2.5E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = [5.5E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    vfmadd213ss {{.*#+}} xmm2 = (xmm0 * xmm2) + mem
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = [1.5E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = [4.5E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    vfmadd213ss {{.*#+}} xmm3 = (xmm0 * xmm3) + mem
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0],xmm3[0],xmm2[2,3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
@@ -63,8 +63,8 @@ entry:
 define <3 x double> @constrained_vector_fma_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_fma_v3f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = [5.0E-1,0.0E+0]
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm1 = [3.5E+0,0.0E+0]
 ; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm1 = (xmm0 * xmm1) + mem
 ; CHECK-NEXT:    vmovapd {{.*#+}} xmm0 = [2.5E+0,1.5E+0]
 ; CHECK-NEXT:    vmovapd {{.*#+}} xmm2 = [5.5E+0,4.5E+0]

@@ -32,9 +32,6 @@ class ARMRegisterBankInfo final : public ARMGenRegisterBankInfo {
 public:
   ARMRegisterBankInfo(const TargetRegisterInfo &TRI);
 
-  const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                             LLT) const override;
-
   const InstructionMapping &
   getInstrMapping(const MachineInstr &MI) const override;
 };

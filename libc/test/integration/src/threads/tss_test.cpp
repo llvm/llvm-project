@@ -31,8 +31,8 @@ void dtor(void *data) {
 }
 
 int func(void *obj) {
-  ASSERT_EQ(__llvm_libc::tss_set(key, &child_thread_data), thrd_success);
-  int *d = reinterpret_cast<int *>(__llvm_libc::tss_get(key));
+  ASSERT_EQ(LIBC_NAMESPACE::tss_set(key, &child_thread_data), thrd_success);
+  int *d = reinterpret_cast<int *>(LIBC_NAMESPACE::tss_get(key));
   ASSERT_TRUE(d != nullptr);
   ASSERT_EQ(&child_thread_data, d);
   ASSERT_EQ(*d, THREAD_DATA_INITVAL);
@@ -41,23 +41,23 @@ int func(void *obj) {
 }
 
 TEST_MAIN() {
-  ASSERT_EQ(__llvm_libc::tss_create(&key, &dtor), thrd_success);
-  ASSERT_EQ(__llvm_libc::tss_set(key, &main_thread_data), thrd_success);
-  int *d = reinterpret_cast<int *>(__llvm_libc::tss_get(key));
+  ASSERT_EQ(LIBC_NAMESPACE::tss_create(&key, &dtor), thrd_success);
+  ASSERT_EQ(LIBC_NAMESPACE::tss_set(key, &main_thread_data), thrd_success);
+  int *d = reinterpret_cast<int *>(LIBC_NAMESPACE::tss_get(key));
   ASSERT_TRUE(d != nullptr);
   ASSERT_EQ(&main_thread_data, d);
   ASSERT_EQ(*d, THREAD_DATA_INITVAL);
 
   thrd_t th;
   int arg = 0xBAD;
-  ASSERT_EQ(__llvm_libc::thrd_create(&th, &func, &arg), thrd_success);
+  ASSERT_EQ(LIBC_NAMESPACE::thrd_create(&th, &func, &arg), thrd_success);
   int retval = THREAD_DATA_INITVAL; // Init to some non-zero val.
-  ASSERT_EQ(__llvm_libc::thrd_join(th, &retval), thrd_success);
+  ASSERT_EQ(LIBC_NAMESPACE::thrd_join(th, &retval), thrd_success);
   ASSERT_EQ(retval, 0);
   ASSERT_EQ(arg, THREAD_RUN_VAL);
   ASSERT_EQ(child_thread_data, THREAD_DATA_FINIVAL);
 
-  __llvm_libc::tss_delete(key);
+  LIBC_NAMESPACE::tss_delete(key);
 
   return 0;
 }

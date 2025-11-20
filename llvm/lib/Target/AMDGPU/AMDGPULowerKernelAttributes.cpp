@@ -14,14 +14,15 @@
 
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 
@@ -77,22 +78,40 @@ public:
 Function *getBasePtrIntrinsic(Module &M, bool IsV5OrAbove) {
   auto IntrinsicId = IsV5OrAbove ? Intrinsic::amdgcn_implicitarg_ptr
                                  : Intrinsic::amdgcn_dispatch_ptr;
-  StringRef Name = Intrinsic::getName(IntrinsicId);
-  return M.getFunction(Name);
+  return Intrinsic::getDeclarationIfExists(&M, IntrinsicId);
 }
 
 } // end anonymous namespace
 
-static bool processUse(CallInst *CI, bool IsV5OrAbove) {
-  Function *F = CI->getParent()->getParent();
+static void annotateGridSizeLoadWithRangeMD(LoadInst *Load,
+                                            uint32_t MaxNumGroups) {
+  if (MaxNumGroups == 0 || MaxNumGroups == std::numeric_limits<uint32_t>::max())
+    return;
 
-  auto MD = F->getMetadata("reqd_work_group_size");
+  if (!Load->getType()->isIntegerTy(32))
+    return;
+
+  // TODO: If there is existing range metadata, preserve it if it is stricter.
+  MDBuilder MDB(Load->getContext());
+  MDNode *Range = MDB.createRange(APInt(32, 1), APInt(32, MaxNumGroups + 1));
+  Load->setMetadata(LLVMContext::MD_range, Range);
+}
+
+static bool processUse(CallInst *CI, bool IsV5OrAbove) {
+  Function *F = CI->getFunction();
+
+  auto *MD = F->getMetadata("reqd_work_group_size");
   const bool HasReqdWorkGroupSize = MD && MD->getNumOperands() == 3;
 
   const bool HasUniformWorkGroupSize =
     F->getFnAttribute("uniform-work-group-size").getValueAsBool();
 
-  if (!HasReqdWorkGroupSize && !HasUniformWorkGroupSize)
+  SmallVector<unsigned> MaxNumWorkgroups =
+      AMDGPU::getIntegerVecAttribute(*F, "amdgpu-max-num-workgroups",
+                                     /*Size=*/3, /*DefaultVal=*/0);
+
+  if (!HasReqdWorkGroupSize && !HasUniformWorkGroupSize &&
+      none_of(MaxNumWorkgroups, [](unsigned X) { return X != 0; }))
     return false;
 
   Value *BlockCounts[3] = {nullptr, nullptr, nullptr};
@@ -100,7 +119,7 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   Value *Remainders[3]  = {nullptr, nullptr, nullptr};
   Value *GridSizes[3]   = {nullptr, nullptr, nullptr};
 
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
 
   // We expect to see several GEP users, casted to the appropriate type and
   // loaded.
@@ -133,16 +152,22 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
     if (IsV5OrAbove) { // Base is ImplicitArgPtr.
       switch (Offset) {
       case HIDDEN_BLOCK_COUNT_X:
-        if (LoadSize == 4)
+        if (LoadSize == 4) {
           BlockCounts[0] = Load;
+          annotateGridSizeLoadWithRangeMD(Load, MaxNumWorkgroups[0]);
+        }
         break;
       case HIDDEN_BLOCK_COUNT_Y:
-        if (LoadSize == 4)
+        if (LoadSize == 4) {
           BlockCounts[1] = Load;
+          annotateGridSizeLoadWithRangeMD(Load, MaxNumWorkgroups[1]);
+        }
         break;
       case HIDDEN_BLOCK_COUNT_Z:
-        if (LoadSize == 4)
+        if (LoadSize == 4) {
           BlockCounts[2] = Load;
+          annotateGridSizeLoadWithRangeMD(Load, MaxNumWorkgroups[2]);
+        }
         break;
       case HIDDEN_GROUP_SIZE_X:
         if (LoadSize == 2)
@@ -224,10 +249,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
                            : m_Intrinsic<Intrinsic::amdgcn_workgroup_id_z>());
 
       for (User *ICmp : BlockCount->users()) {
-        ICmpInst::Predicate Pred;
-        if (match(ICmp, m_ICmp(Pred, GroupIDIntrin, m_Specific(BlockCount)))) {
-          if (Pred != ICmpInst::ICMP_ULT)
-            continue;
+        if (match(ICmp, m_SpecificICmp(ICmpInst::ICMP_ULT, GroupIDIntrin,
+                                       m_Specific(BlockCount)))) {
           ICmp->replaceAllUsesWith(llvm::ConstantInt::getTrue(ICmp->getType()));
           MadeChange = true;
         }
@@ -286,8 +309,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
             if (HasReqdWorkGroupSize) {
               ConstantInt *KnownSize
                 = mdconst::extract<ConstantInt>(MD->getOperand(I));
-              UMin->replaceAllUsesWith(ConstantExpr::getIntegerCast(
-                  KnownSize, UMin->getType(), false));
+              UMin->replaceAllUsesWith(ConstantFoldIntegerCast(
+                  KnownSize, UMin->getType(), false, DL));
             } else {
               UMin->replaceAllUsesWith(ZextGroupSize);
             }
@@ -310,7 +333,7 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
 
     ConstantInt *KnownSize = mdconst::extract<ConstantInt>(MD->getOperand(I));
     GroupSize->replaceAllUsesWith(
-        ConstantExpr::getIntegerCast(KnownSize, GroupSize->getType(), false));
+        ConstantFoldIntegerCast(KnownSize, GroupSize->getType(), false, DL));
     MadeChange = true;
   }
 
@@ -322,7 +345,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
 // TargetPassConfig for subtarget.
 bool AMDGPULowerKernelAttributes::runOnModule(Module &M) {
   bool MadeChange = false;
-  bool IsV5OrAbove = AMDGPU::getCodeObjectVersion(M) >= AMDGPU::AMDHSA_COV5;
+  bool IsV5OrAbove =
+      AMDGPU::getAMDHSACodeObjectVersion(M) >= AMDGPU::AMDHSA_COV5;
   Function *BasePtr = getBasePtrIntrinsic(M, IsV5OrAbove);
 
   if (!BasePtr) // ImplicitArgPtr/DispatchPtr not used.
@@ -355,7 +379,7 @@ ModulePass *llvm::createAMDGPULowerKernelAttributesPass() {
 PreservedAnalyses
 AMDGPULowerKernelAttributesPass::run(Function &F, FunctionAnalysisManager &AM) {
   bool IsV5OrAbove =
-      AMDGPU::getCodeObjectVersion(*F.getParent()) >= AMDGPU::AMDHSA_COV5;
+      AMDGPU::getAMDHSACodeObjectVersion(*F.getParent()) >= AMDGPU::AMDHSA_COV5;
   Function *BasePtr = getBasePtrIntrinsic(*F.getParent(), IsV5OrAbove);
 
   if (!BasePtr) // ImplicitArgPtr/DispatchPtr not used.

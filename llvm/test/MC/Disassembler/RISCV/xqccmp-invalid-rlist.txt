@@ -1,0 +1,11 @@
+# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+experimental-xqccmp %s \
+# RUN:   | FileCheck -check-prefixes=CHECK,CHECK-XQCCMP %s
+
+[0x00,0x00]
+# CHECK: unimp
+
+[0x42,0xb9]
+# CHECK-XQCCMP-NOT: qc.cm.pushfp {ra}, -{{[0-9]+}}
+
+[0x00,0x00]
+# CHECK: unimp

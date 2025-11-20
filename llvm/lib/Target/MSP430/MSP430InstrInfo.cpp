@@ -12,13 +12,9 @@
 
 #include "MSP430InstrInfo.h"
 #include "MSP430.h"
-#include "MSP430MachineFunctionInfo.h"
-#include "MSP430TargetMachine.h"
+#include "MSP430Subtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Function.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -29,14 +25,15 @@ using namespace llvm;
 // Pin the vtable to this file.
 void MSP430InstrInfo::anchor() {}
 
-MSP430InstrInfo::MSP430InstrInfo(MSP430Subtarget &STI)
-  : MSP430GenInstrInfo(MSP430::ADJCALLSTACKDOWN, MSP430::ADJCALLSTACKUP),
-    RI() {}
+MSP430InstrInfo::MSP430InstrInfo(const MSP430Subtarget &STI)
+    : MSP430GenInstrInfo(STI, RI, MSP430::ADJCALLSTACKDOWN,
+                         MSP430::ADJCALLSTACKUP),
+      RI() {}
 
 void MSP430InstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-    bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    bool isKill, int FrameIdx, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (MI != MBB.end()) DL = MI->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
@@ -63,8 +60,8 @@ void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MI,
                                            Register DestReg, int FrameIdx,
                                            const TargetRegisterClass *RC,
-                                           const TargetRegisterInfo *TRI,
-                                           Register VReg) const {
+                                           Register VReg,
+                                           MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (MI != MBB.end()) DL = MI->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
@@ -89,8 +86,9 @@ void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
 void MSP430InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
-                                  const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc) const {
+                                  const DebugLoc &DL, Register DestReg,
+                                  Register SrcReg, bool KillSrc,
+                                  bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc;
   if (MSP430::GR16RegClass.contains(DestReg, SrcReg))
     Opc = MSP430::MOV16rr;

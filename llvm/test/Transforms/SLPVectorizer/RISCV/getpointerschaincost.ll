@@ -12,7 +12,7 @@ define void @f(ptr %dest, i64 %i) {
 ; CHECK-SAME: (ptr [[DEST:%.*]], i64 [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i32, ptr [[DEST]], i32 0
-; CHECK-NEXT:    store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr [[P1]], align 4
+; CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[P1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -46,7 +46,7 @@ define void @g(ptr %dest, i64 %i) {
 ; CHECK-SAME: (ptr [[DEST:%.*]], i64 [[I:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i32, ptr [[DEST]], i32 2048
-; CHECK-NEXT:    store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr [[P1]], align 4
+; CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[P1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -77,7 +77,7 @@ define void @h(ptr %dest, i32 %i) {
 ; CHECK-SAME: (ptr [[DEST:%.*]], i32 [[I:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr [4 x i32], ptr [[DEST]], i32 [[I]], i32 0
-; CHECK-NEXT:    store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr [[P1]], align 4
+; CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[P1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

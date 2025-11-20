@@ -2,13 +2,13 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GCN,GFX10 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12 %s
 
 ; Test using saddr addressing mode of global_* flat atomic instructions.
 
 define amdgpu_ps void @global_xchg_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_xchg_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_swap v0, v1, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -16,23 +16,26 @@ define amdgpu_ps void @global_xchg_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ;
 ; GFX10-LABEL: global_xchg_saddr_i32_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap v0, v1, s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_xchg_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b32 v0, v1, s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_xchg_saddr_i32_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_swap_b32 v0, v1, s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %unused = atomicrmw xchg ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
@@ -43,7 +46,6 @@ define amdgpu_ps void @global_xchg_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 define amdgpu_ps void @global_xchg_saddr_i32_nortn_offset_2047(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_xchg_saddr_i32_nortn_offset_2047:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_swap v0, v1, s[2:3] offset:2047
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -51,23 +53,26 @@ define amdgpu_ps void @global_xchg_saddr_i32_nortn_offset_2047(ptr addrspace(1) 
 ;
 ; GFX10-LABEL: global_xchg_saddr_i32_nortn_offset_2047:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap v0, v1, s[2:3] offset:2047
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_xchg_saddr_i32_nortn_offset_2047:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b32 v0, v1, s[2:3] offset:2047
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_xchg_saddr_i32_nortn_offset_2047:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_swap_b32 v0, v1, s[2:3] offset:2047 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 2047
@@ -79,7 +84,6 @@ define amdgpu_ps void @global_xchg_saddr_i32_nortn_offset_2047(ptr addrspace(1) 
 define amdgpu_ps void @global_xchg_saddr_i32_nortn_offset_neg2048(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_xchg_saddr_i32_nortn_offset_neg2048:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_swap v0, v1, s[2:3] offset:-2048
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -87,23 +91,26 @@ define amdgpu_ps void @global_xchg_saddr_i32_nortn_offset_neg2048(ptr addrspace(
 ;
 ; GFX10-LABEL: global_xchg_saddr_i32_nortn_offset_neg2048:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap v0, v1, s[2:3] offset:-2048
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_xchg_saddr_i32_nortn_offset_neg2048:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b32 v0, v1, s[2:3] offset:-2048
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_xchg_saddr_i32_nortn_offset_neg2048:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_swap_b32 v0, v1, s[2:3] offset:-2048 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -2048
@@ -114,7 +121,6 @@ define amdgpu_ps void @global_xchg_saddr_i32_nortn_offset_neg2048(ptr addrspace(
 define amdgpu_ps float @global_xchg_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_xchg_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_swap v0, v0, v1, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -122,23 +128,27 @@ define amdgpu_ps float @global_xchg_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX10-LABEL: global_xchg_saddr_i32_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap v0, v0, v1, s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_xchg_saddr_i32_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_xchg_saddr_i32_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %rtn = atomicrmw xchg ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
@@ -149,7 +159,6 @@ define amdgpu_ps float @global_xchg_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 define amdgpu_ps float @global_xchg_saddr_i32_rtn_2048(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_xchg_saddr_i32_rtn_2048:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_swap v0, v0, v1, s[2:3] offset:2048 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -161,23 +170,27 @@ define amdgpu_ps float @global_xchg_saddr_i32_rtn_2048(ptr addrspace(1) inreg %s
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v3, s[0:1], s3, 0, s[0:1]
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc, 0x800, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc, 0, v3, vcc
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap v0, v[2:3], v1, off glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_xchg_saddr_i32_rtn_2048:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[2:3] offset:2048 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_xchg_saddr_i32_rtn_2048:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[2:3] offset:2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 2048
@@ -189,7 +202,6 @@ define amdgpu_ps float @global_xchg_saddr_i32_rtn_2048(ptr addrspace(1) inreg %s
 define amdgpu_ps float @global_xchg_saddr_i32_rtn_neg2048(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_xchg_saddr_i32_rtn_neg2048:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_swap v0, v0, v1, s[2:3] offset:-2048 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -197,23 +209,27 @@ define amdgpu_ps float @global_xchg_saddr_i32_rtn_neg2048(ptr addrspace(1) inreg
 ;
 ; GFX10-LABEL: global_xchg_saddr_i32_rtn_neg2048:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap v0, v0, v1, s[2:3] offset:-2048 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_xchg_saddr_i32_rtn_neg2048:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[2:3] offset:-2048 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_xchg_saddr_i32_rtn_neg2048:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[2:3] offset:-2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -2048
@@ -226,7 +242,7 @@ define amdgpu_ps float @global_xchg_saddr_i32_rtn_neg2048(ptr addrspace(1) inreg
 ; Uniformity edge cases
 ; --------------------------------------------------------------------------------
 
-@ptr.in.lds = internal addrspace(3) global ptr addrspace(1) undef
+@ptr.in.lds = internal addrspace(3) global ptr addrspace(1) poison
 
 ; Base pointer is uniform, but also in VGPRs
 define amdgpu_ps float @global_xchg_saddr_uniform_ptr_in_vgprs_rtn(i32 %voffset, i32 %data) {
@@ -237,8 +253,7 @@ define amdgpu_ps float @global_xchg_saddr_uniform_ptr_in_vgprs_rtn(i32 %voffset,
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_nop 3
+; GFX9-NEXT:    s_nop 4
 ; GFX9-NEXT:    global_atomic_swap v0, v0, v1, s[0:1] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -251,12 +266,10 @@ define amdgpu_ps float @global_xchg_saddr_uniform_ptr_in_vgprs_rtn(i32 %voffset,
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap v0, v0, v1, s[0:1] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_xchg_saddr_uniform_ptr_in_vgprs_rtn:
@@ -266,13 +279,24 @@ define amdgpu_ps float @global_xchg_saddr_uniform_ptr_in_vgprs_rtn(i32 %voffset,
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[0:1] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_xchg_saddr_uniform_ptr_in_vgprs_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    ds_load_b64 v[2:3], v2
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX12-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %sbase = load ptr addrspace(1), ptr addrspace(3) @ptr.in.lds
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -290,8 +314,7 @@ define amdgpu_ps float @global_xchg_saddr_uniform_ptr_in_vgprs_rtn_immoffset(i32
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_nop 3
+; GFX9-NEXT:    s_nop 4
 ; GFX9-NEXT:    global_atomic_swap v0, v0, v1, s[0:1] offset:42 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -304,12 +327,10 @@ define amdgpu_ps float @global_xchg_saddr_uniform_ptr_in_vgprs_rtn_immoffset(i32
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap v0, v0, v1, s[0:1] offset:42 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_xchg_saddr_uniform_ptr_in_vgprs_rtn_immoffset:
@@ -319,13 +340,24 @@ define amdgpu_ps float @global_xchg_saddr_uniform_ptr_in_vgprs_rtn_immoffset(i32
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[0:1] offset:42 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_xchg_saddr_uniform_ptr_in_vgprs_rtn_immoffset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    ds_load_b64 v[2:3], v2
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX12-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[0:1] offset:42 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %sbase = load ptr addrspace(1), ptr addrspace(3) @ptr.in.lds
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -344,8 +376,7 @@ define amdgpu_ps void @global_xchg_saddr_uniform_ptr_in_vgprs_nortn(i32 %voffset
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_nop 3
+; GFX9-NEXT:    s_nop 4
 ; GFX9-NEXT:    global_atomic_swap v0, v1, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -358,12 +389,10 @@ define amdgpu_ps void @global_xchg_saddr_uniform_ptr_in_vgprs_nortn(i32 %voffset
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap v0, v1, s[0:1]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_xchg_saddr_uniform_ptr_in_vgprs_nortn:
@@ -373,13 +402,23 @@ define amdgpu_ps void @global_xchg_saddr_uniform_ptr_in_vgprs_nortn(i32 %voffset
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_xchg_saddr_uniform_ptr_in_vgprs_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    ds_load_b64 v[2:3], v2
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX12-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %sbase = load ptr addrspace(1), ptr addrspace(3) @ptr.in.lds
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -396,8 +435,7 @@ define amdgpu_ps void @global_xchg_saddr_uniform_ptr_in_vgprs_nortn_immoffset(i3
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_nop 3
+; GFX9-NEXT:    s_nop 4
 ; GFX9-NEXT:    global_atomic_swap v0, v1, s[0:1] offset:42
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -410,12 +448,10 @@ define amdgpu_ps void @global_xchg_saddr_uniform_ptr_in_vgprs_nortn_immoffset(i3
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap v0, v1, s[0:1] offset:42
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_xchg_saddr_uniform_ptr_in_vgprs_nortn_immoffset:
@@ -425,13 +461,23 @@ define amdgpu_ps void @global_xchg_saddr_uniform_ptr_in_vgprs_nortn_immoffset(i3
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1] offset:42
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_xchg_saddr_uniform_ptr_in_vgprs_nortn_immoffset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    ds_load_b64 v[2:3], v2
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX12-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1] offset:42 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %sbase = load ptr addrspace(1), ptr addrspace(3) @ptr.in.lds
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -451,7 +497,6 @@ define amdgpu_ps void @global_xchg_saddr_uniform_ptr_in_vgprs_nortn_immoffset(i3
 define amdgpu_ps <2 x float> @global_xchg_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_xchg_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_swap_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -459,23 +504,27 @@ define amdgpu_ps <2 x float> @global_xchg_saddr_i64_rtn(ptr addrspace(1) inreg %
 ;
 ; GFX10-LABEL: global_xchg_saddr_i64_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_xchg_saddr_i64_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b64 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_xchg_saddr_i64_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_swap_b64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %rtn = atomicrmw xchg ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
@@ -486,7 +535,6 @@ define amdgpu_ps <2 x float> @global_xchg_saddr_i64_rtn(ptr addrspace(1) inreg %
 define amdgpu_ps <2 x float> @global_xchg_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_xchg_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_swap_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -494,23 +542,27 @@ define amdgpu_ps <2 x float> @global_xchg_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ;
 ; GFX10-LABEL: global_xchg_saddr_i64_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_xchg_saddr_i64_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b64 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_xchg_saddr_i64_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_swap_b64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
@@ -522,7 +574,6 @@ define amdgpu_ps <2 x float> @global_xchg_saddr_i64_rtn_neg128(ptr addrspace(1) 
 define amdgpu_ps void @global_xchg_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_xchg_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_swap_x2 v0, v[1:2], s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -530,23 +581,26 @@ define amdgpu_ps void @global_xchg_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 ;
 ; GFX10-LABEL: global_xchg_saddr_i64_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap_x2 v0, v[1:2], s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_xchg_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b64 v0, v[1:2], s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_xchg_saddr_i64_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_swap_b64 v0, v[1:2], s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %unused = atomicrmw xchg ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
@@ -556,7 +610,6 @@ define amdgpu_ps void @global_xchg_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 define amdgpu_ps void @global_xchg_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_xchg_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_swap_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -564,23 +617,26 @@ define amdgpu_ps void @global_xchg_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
 ;
 ; GFX10-LABEL: global_xchg_saddr_i64_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_swap_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_xchg_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_swap_b64 v0, v[1:2], s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_xchg_saddr_i64_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_swap_b64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
@@ -595,7 +651,6 @@ define amdgpu_ps void @global_xchg_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
 define amdgpu_ps float @global_add_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_add_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_add v0, v0, v1, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -603,23 +658,27 @@ define amdgpu_ps float @global_add_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ;
 ; GFX10-LABEL: global_add_saddr_i32_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_add v0, v0, v1, s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_add_saddr_i32_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_add_u32 v0, v0, v1, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_add_saddr_i32_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_add_u32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %rtn = atomicrmw add ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
@@ -630,7 +689,6 @@ define amdgpu_ps float @global_add_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 define amdgpu_ps float @global_add_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_add_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_add v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -638,23 +696,27 @@ define amdgpu_ps float @global_add_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ;
 ; GFX10-LABEL: global_add_saddr_i32_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_add v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_add_saddr_i32_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_add_u32 v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_add_saddr_i32_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_add_u32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
@@ -666,7 +728,6 @@ define amdgpu_ps float @global_add_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 define amdgpu_ps void @global_add_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_add_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_add v0, v1, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -674,23 +735,26 @@ define amdgpu_ps void @global_add_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX10-LABEL: global_add_saddr_i32_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_add v0, v1, s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_add_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_add_u32 v0, v1, s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_add_saddr_i32_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_add_u32 v0, v1, s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %unused = atomicrmw add ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
@@ -700,7 +764,6 @@ define amdgpu_ps void @global_add_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 define amdgpu_ps void @global_add_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_add_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_add v0, v1, s[2:3] offset:-128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -708,23 +771,26 @@ define amdgpu_ps void @global_add_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX10-LABEL: global_add_saddr_i32_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_add v0, v1, s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_add_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_add_u32 v0, v1, s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_add_saddr_i32_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_add_u32 v0, v1, s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
@@ -735,7 +801,6 @@ define amdgpu_ps void @global_add_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 define amdgpu_ps <2 x float> @global_add_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_add_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_add_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -743,23 +808,27 @@ define amdgpu_ps <2 x float> @global_add_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ;
 ; GFX10-LABEL: global_add_saddr_i64_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_add_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_add_saddr_i64_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_add_u64 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_add_saddr_i64_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_add_u64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %rtn = atomicrmw add ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
@@ -770,7 +839,6 @@ define amdgpu_ps <2 x float> @global_add_saddr_i64_rtn(ptr addrspace(1) inreg %s
 define amdgpu_ps <2 x float> @global_add_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_add_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_add_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -778,23 +846,27 @@ define amdgpu_ps <2 x float> @global_add_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ;
 ; GFX10-LABEL: global_add_saddr_i64_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_add_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_add_saddr_i64_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_add_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_add_saddr_i64_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_add_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
@@ -806,7 +878,6 @@ define amdgpu_ps <2 x float> @global_add_saddr_i64_rtn_neg128(ptr addrspace(1) i
 define amdgpu_ps void @global_add_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_add_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_add_x2 v0, v[1:2], s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -814,23 +885,26 @@ define amdgpu_ps void @global_add_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX10-LABEL: global_add_saddr_i64_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_add_x2 v0, v[1:2], s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_add_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_add_u64 v0, v[1:2], s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_add_saddr_i64_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_add_u64 v0, v[1:2], s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %unused = atomicrmw add ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
@@ -840,7 +914,6 @@ define amdgpu_ps void @global_add_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 define amdgpu_ps void @global_add_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_add_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_add_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -848,23 +921,26 @@ define amdgpu_ps void @global_add_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX10-LABEL: global_add_saddr_i64_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_add_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_add_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_add_u64 v0, v[1:2], s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_add_saddr_i64_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_add_u64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
@@ -879,7 +955,6 @@ define amdgpu_ps void @global_add_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 define amdgpu_ps float @global_sub_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_sub_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_sub v0, v0, v1, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -887,26 +962,30 @@ define amdgpu_ps float @global_sub_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ;
 ; GFX10-LABEL: global_sub_saddr_i32_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_sub v0, v0, v1, s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_sub_saddr_i32_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_sub_u32 v0, v0, v1, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_sub_saddr_i32_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_sub_u32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw sub ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw sub ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -914,7 +993,6 @@ define amdgpu_ps float @global_sub_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 define amdgpu_ps float @global_sub_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_sub_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_sub v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -922,27 +1000,31 @@ define amdgpu_ps float @global_sub_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ;
 ; GFX10-LABEL: global_sub_saddr_i32_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_sub v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_sub_saddr_i32_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_sub_u32 v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_sub_saddr_i32_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_sub_u32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw sub ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw sub ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -950,7 +1032,6 @@ define amdgpu_ps float @global_sub_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 define amdgpu_ps void @global_sub_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_sub_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_sub v0, v1, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -958,33 +1039,35 @@ define amdgpu_ps void @global_sub_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX10-LABEL: global_sub_saddr_i32_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_sub v0, v1, s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_sub_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_sub_u32 v0, v1, s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_sub_saddr_i32_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_sub_u32 v0, v1, s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw sub ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw sub ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_sub_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_sub_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_sub v0, v1, s[2:3] offset:-128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -992,34 +1075,36 @@ define amdgpu_ps void @global_sub_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX10-LABEL: global_sub_saddr_i32_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_sub v0, v1, s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_sub_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_sub_u32 v0, v1, s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_sub_saddr_i32_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_sub_u32 v0, v1, s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw sub ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw sub ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps <2 x float> @global_sub_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_sub_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_sub_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1027,26 +1112,30 @@ define amdgpu_ps <2 x float> @global_sub_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ;
 ; GFX10-LABEL: global_sub_saddr_i64_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_sub_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_sub_saddr_i64_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_sub_u64 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_sub_saddr_i64_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_sub_u64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw sub ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw sub ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1054,7 +1143,6 @@ define amdgpu_ps <2 x float> @global_sub_saddr_i64_rtn(ptr addrspace(1) inreg %s
 define amdgpu_ps <2 x float> @global_sub_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_sub_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_sub_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1062,27 +1150,31 @@ define amdgpu_ps <2 x float> @global_sub_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ;
 ; GFX10-LABEL: global_sub_saddr_i64_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_sub_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_sub_saddr_i64_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_sub_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_sub_saddr_i64_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_sub_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw sub ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw sub ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1090,7 +1182,6 @@ define amdgpu_ps <2 x float> @global_sub_saddr_i64_rtn_neg128(ptr addrspace(1) i
 define amdgpu_ps void @global_sub_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_sub_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_sub_x2 v0, v[1:2], s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1098,33 +1189,35 @@ define amdgpu_ps void @global_sub_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX10-LABEL: global_sub_saddr_i64_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_sub_x2 v0, v[1:2], s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_sub_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_sub_u64 v0, v[1:2], s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_sub_saddr_i64_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_sub_u64 v0, v[1:2], s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw sub ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw sub ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_sub_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_sub_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_sub_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1132,27 +1225,30 @@ define amdgpu_ps void @global_sub_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX10-LABEL: global_sub_saddr_i64_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_sub_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_sub_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_sub_u64 v0, v[1:2], s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_sub_saddr_i64_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_sub_u64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw sub ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw sub ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1163,7 +1259,6 @@ define amdgpu_ps void @global_sub_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 define amdgpu_ps float @global_and_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_and_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_and v0, v0, v1, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1171,26 +1266,30 @@ define amdgpu_ps float @global_and_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ;
 ; GFX10-LABEL: global_and_saddr_i32_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_and v0, v0, v1, s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_and_saddr_i32_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_and_b32 v0, v0, v1, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_and_saddr_i32_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_and_b32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw and ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw and ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1198,7 +1297,6 @@ define amdgpu_ps float @global_and_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 define amdgpu_ps float @global_and_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_and_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_and v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1206,27 +1304,31 @@ define amdgpu_ps float @global_and_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ;
 ; GFX10-LABEL: global_and_saddr_i32_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_and v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_and_saddr_i32_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_and_b32 v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_and_saddr_i32_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_and_b32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw and ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw and ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1234,7 +1336,6 @@ define amdgpu_ps float @global_and_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 define amdgpu_ps void @global_and_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_and_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_and v0, v1, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1242,33 +1343,35 @@ define amdgpu_ps void @global_and_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX10-LABEL: global_and_saddr_i32_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_and v0, v1, s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_and_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_and_b32 v0, v1, s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_and_saddr_i32_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_and_b32 v0, v1, s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw and ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw and ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_and_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_and_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_and v0, v1, s[2:3] offset:-128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1276,34 +1379,36 @@ define amdgpu_ps void @global_and_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX10-LABEL: global_and_saddr_i32_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_and v0, v1, s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_and_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_and_b32 v0, v1, s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_and_saddr_i32_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_and_b32 v0, v1, s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw and ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw and ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps <2 x float> @global_and_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_and_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_and_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1311,26 +1416,30 @@ define amdgpu_ps <2 x float> @global_and_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ;
 ; GFX10-LABEL: global_and_saddr_i64_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_and_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_and_saddr_i64_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_and_b64 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_and_saddr_i64_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_and_b64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw and ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw and ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1338,7 +1447,6 @@ define amdgpu_ps <2 x float> @global_and_saddr_i64_rtn(ptr addrspace(1) inreg %s
 define amdgpu_ps <2 x float> @global_and_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_and_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_and_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1346,27 +1454,31 @@ define amdgpu_ps <2 x float> @global_and_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ;
 ; GFX10-LABEL: global_and_saddr_i64_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_and_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_and_saddr_i64_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_and_b64 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_and_saddr_i64_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_and_b64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw and ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw and ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1374,7 +1486,6 @@ define amdgpu_ps <2 x float> @global_and_saddr_i64_rtn_neg128(ptr addrspace(1) i
 define amdgpu_ps void @global_and_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_and_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_and_x2 v0, v[1:2], s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1382,33 +1493,35 @@ define amdgpu_ps void @global_and_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX10-LABEL: global_and_saddr_i64_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_and_x2 v0, v[1:2], s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_and_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_and_b64 v0, v[1:2], s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_and_saddr_i64_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_and_b64 v0, v[1:2], s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw and ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw and ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_and_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_and_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_and_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1416,27 +1529,30 @@ define amdgpu_ps void @global_and_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX10-LABEL: global_and_saddr_i64_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_and_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_and_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_and_b64 v0, v[1:2], s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_and_saddr_i64_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_and_b64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw and ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw and ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1447,7 +1563,6 @@ define amdgpu_ps void @global_and_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 define amdgpu_ps float @global_or_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_or_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_or v0, v0, v1, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1455,26 +1570,30 @@ define amdgpu_ps float @global_or_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i
 ;
 ; GFX10-LABEL: global_or_saddr_i32_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_or v0, v0, v1, s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_or_saddr_i32_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_or_b32 v0, v0, v1, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_or_saddr_i32_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_or_b32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw or ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw or ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1482,7 +1601,6 @@ define amdgpu_ps float @global_or_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i
 define amdgpu_ps float @global_or_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_or_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_or v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1490,27 +1608,31 @@ define amdgpu_ps float @global_or_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %s
 ;
 ; GFX10-LABEL: global_or_saddr_i32_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_or v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_or_saddr_i32_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_or_b32 v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_or_saddr_i32_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_or_b32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw or ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw or ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1518,7 +1640,6 @@ define amdgpu_ps float @global_or_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %s
 define amdgpu_ps void @global_or_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_or_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_or v0, v1, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1526,33 +1647,35 @@ define amdgpu_ps void @global_or_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, 
 ;
 ; GFX10-LABEL: global_or_saddr_i32_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_or v0, v1, s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_or_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_or_b32 v0, v1, s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_or_saddr_i32_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_or_b32 v0, v1, s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw or ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw or ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_or_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_or_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_or v0, v1, s[2:3] offset:-128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1560,34 +1683,36 @@ define amdgpu_ps void @global_or_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %
 ;
 ; GFX10-LABEL: global_or_saddr_i32_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_or v0, v1, s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_or_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_or_b32 v0, v1, s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_or_saddr_i32_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_or_b32 v0, v1, s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw or ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw or ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps <2 x float> @global_or_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_or_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_or_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1595,26 +1720,30 @@ define amdgpu_ps <2 x float> @global_or_saddr_i64_rtn(ptr addrspace(1) inreg %sb
 ;
 ; GFX10-LABEL: global_or_saddr_i64_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_or_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_or_saddr_i64_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_or_b64 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_or_saddr_i64_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_or_b64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw or ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw or ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1622,7 +1751,6 @@ define amdgpu_ps <2 x float> @global_or_saddr_i64_rtn(ptr addrspace(1) inreg %sb
 define amdgpu_ps <2 x float> @global_or_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_or_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_or_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1630,27 +1758,31 @@ define amdgpu_ps <2 x float> @global_or_saddr_i64_rtn_neg128(ptr addrspace(1) in
 ;
 ; GFX10-LABEL: global_or_saddr_i64_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_or_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_or_saddr_i64_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_or_b64 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_or_saddr_i64_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_or_b64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw or ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw or ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1658,7 +1790,6 @@ define amdgpu_ps <2 x float> @global_or_saddr_i64_rtn_neg128(ptr addrspace(1) in
 define amdgpu_ps void @global_or_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_or_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_or_x2 v0, v[1:2], s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1666,33 +1797,35 @@ define amdgpu_ps void @global_or_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, 
 ;
 ; GFX10-LABEL: global_or_saddr_i64_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_or_x2 v0, v[1:2], s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_or_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_or_b64 v0, v[1:2], s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_or_saddr_i64_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_or_b64 v0, v[1:2], s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw or ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw or ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_or_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_or_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_or_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1700,27 +1833,30 @@ define amdgpu_ps void @global_or_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %
 ;
 ; GFX10-LABEL: global_or_saddr_i64_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_or_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_or_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_or_b64 v0, v[1:2], s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_or_saddr_i64_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_or_b64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw or ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw or ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1731,7 +1867,6 @@ define amdgpu_ps void @global_or_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %
 define amdgpu_ps float @global_xor_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_xor_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_xor v0, v0, v1, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1739,26 +1874,30 @@ define amdgpu_ps float @global_xor_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ;
 ; GFX10-LABEL: global_xor_saddr_i32_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_xor v0, v0, v1, s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_xor_saddr_i32_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_xor_b32 v0, v0, v1, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_xor_saddr_i32_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_xor_b32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw xor ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw xor ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1766,7 +1905,6 @@ define amdgpu_ps float @global_xor_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 define amdgpu_ps float @global_xor_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_xor_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_xor v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1774,27 +1912,31 @@ define amdgpu_ps float @global_xor_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ;
 ; GFX10-LABEL: global_xor_saddr_i32_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_xor v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_xor_saddr_i32_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_xor_b32 v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_xor_saddr_i32_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_xor_b32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw xor ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw xor ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1802,7 +1944,6 @@ define amdgpu_ps float @global_xor_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 define amdgpu_ps void @global_xor_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_xor_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_xor v0, v1, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1810,33 +1951,35 @@ define amdgpu_ps void @global_xor_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX10-LABEL: global_xor_saddr_i32_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_xor v0, v1, s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_xor_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_xor_b32 v0, v1, s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_xor_saddr_i32_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_xor_b32 v0, v1, s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw xor ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw xor ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_xor_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_xor_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_xor v0, v1, s[2:3] offset:-128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1844,34 +1987,36 @@ define amdgpu_ps void @global_xor_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX10-LABEL: global_xor_saddr_i32_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_xor v0, v1, s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_xor_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_xor_b32 v0, v1, s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_xor_saddr_i32_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_xor_b32 v0, v1, s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw xor ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw xor ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps <2 x float> @global_xor_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_xor_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_xor_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1879,26 +2024,30 @@ define amdgpu_ps <2 x float> @global_xor_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ;
 ; GFX10-LABEL: global_xor_saddr_i64_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_xor_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_xor_saddr_i64_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_xor_b64 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_xor_saddr_i64_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_xor_b64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw xor ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw xor ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1906,7 +2055,6 @@ define amdgpu_ps <2 x float> @global_xor_saddr_i64_rtn(ptr addrspace(1) inreg %s
 define amdgpu_ps <2 x float> @global_xor_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_xor_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_xor_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1914,27 +2062,31 @@ define amdgpu_ps <2 x float> @global_xor_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ;
 ; GFX10-LABEL: global_xor_saddr_i64_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_xor_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_xor_saddr_i64_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_xor_b64 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_xor_saddr_i64_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_xor_b64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw xor ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw xor ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1942,7 +2094,6 @@ define amdgpu_ps <2 x float> @global_xor_saddr_i64_rtn_neg128(ptr addrspace(1) i
 define amdgpu_ps void @global_xor_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_xor_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_xor_x2 v0, v[1:2], s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1950,33 +2101,35 @@ define amdgpu_ps void @global_xor_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX10-LABEL: global_xor_saddr_i64_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_xor_x2 v0, v[1:2], s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_xor_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_xor_b64 v0, v[1:2], s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_xor_saddr_i64_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_xor_b64 v0, v[1:2], s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw xor ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw xor ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_xor_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_xor_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_xor_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -1984,27 +2137,30 @@ define amdgpu_ps void @global_xor_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX10-LABEL: global_xor_saddr_i64_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_xor_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_xor_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_xor_b64 v0, v[1:2], s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_xor_saddr_i64_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_xor_b64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw xor ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw xor ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2015,15 +2171,12 @@ define amdgpu_ps void @global_xor_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 define amdgpu_ps float @global_max_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_max_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smax v0, v0, v1, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_max_saddr_i32_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smax v0, v0, v1, s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2031,15 +2184,21 @@ define amdgpu_ps float @global_max_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ;
 ; GFX11-LABEL: global_max_saddr_i32_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_i32 v0, v0, v1, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_max_saddr_i32_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_i32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw max ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw max ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2047,15 +2206,12 @@ define amdgpu_ps float @global_max_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 define amdgpu_ps float @global_max_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_max_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smax v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_max_saddr_i32_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smax v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2063,16 +2219,22 @@ define amdgpu_ps float @global_max_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ;
 ; GFX11-LABEL: global_max_saddr_i32_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_i32 v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_max_saddr_i32_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_i32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw max ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw max ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2080,14 +2242,11 @@ define amdgpu_ps float @global_max_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 define amdgpu_ps void @global_max_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_max_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smax v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_max_saddr_i32_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smax v0, v1, s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2095,29 +2254,31 @@ define amdgpu_ps void @global_max_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX11-LABEL: global_max_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_i32 v0, v1, s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_max_saddr_i32_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_i32 v0, v1, s[2:3] scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw max ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw max ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_max_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_max_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smax v0, v1, s[2:3] offset:-128
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_max_saddr_i32_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smax v0, v1, s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2125,31 +2286,33 @@ define amdgpu_ps void @global_max_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX11-LABEL: global_max_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_i32 v0, v1, s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_max_saddr_i32_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_i32 v0, v1, s[2:3] offset:-128 scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw max ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw max ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_max_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smax_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_max_saddr_i64_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smax_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2157,15 +2320,21 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ;
 ; GFX11-LABEL: global_max_saddr_i64_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_i64 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_max_saddr_i64_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_i64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw max ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw max ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2173,15 +2342,12 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn(ptr addrspace(1) inreg %s
 define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_max_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smax_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_max_saddr_i64_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smax_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2189,16 +2355,22 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ;
 ; GFX11-LABEL: global_max_saddr_i64_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_i64 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_max_saddr_i64_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_i64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw max ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw max ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2206,14 +2378,11 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn_neg128(ptr addrspace(1) i
 define amdgpu_ps void @global_max_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_max_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smax_x2 v0, v[1:2], s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_max_saddr_i64_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smax_x2 v0, v[1:2], s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2221,29 +2390,31 @@ define amdgpu_ps void @global_max_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX11-LABEL: global_max_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_i64 v0, v[1:2], s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_max_saddr_i64_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_i64 v0, v[1:2], s[2:3] scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw max ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw max ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_max_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_max_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smax_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_max_saddr_i64_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smax_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2251,16 +2422,21 @@ define amdgpu_ps void @global_max_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX11-LABEL: global_max_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_i64 v0, v[1:2], s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_max_saddr_i64_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_i64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw max ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw max ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2271,15 +2447,12 @@ define amdgpu_ps void @global_max_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 define amdgpu_ps float @global_min_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_min_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smin v0, v0, v1, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_min_saddr_i32_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smin v0, v0, v1, s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2287,15 +2460,21 @@ define amdgpu_ps float @global_min_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ;
 ; GFX11-LABEL: global_min_saddr_i32_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_i32 v0, v0, v1, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_min_saddr_i32_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_i32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw min ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw min ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2303,15 +2482,12 @@ define amdgpu_ps float @global_min_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 define amdgpu_ps float @global_min_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_min_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smin v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_min_saddr_i32_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smin v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2319,16 +2495,22 @@ define amdgpu_ps float @global_min_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ;
 ; GFX11-LABEL: global_min_saddr_i32_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_i32 v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_min_saddr_i32_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_i32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw min ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw min ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2336,14 +2518,11 @@ define amdgpu_ps float @global_min_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 define amdgpu_ps void @global_min_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_min_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smin v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_min_saddr_i32_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smin v0, v1, s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2351,29 +2530,31 @@ define amdgpu_ps void @global_min_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX11-LABEL: global_min_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_i32 v0, v1, s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_min_saddr_i32_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_i32 v0, v1, s[2:3] scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw min ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw min ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_min_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_min_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smin v0, v1, s[2:3] offset:-128
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_min_saddr_i32_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smin v0, v1, s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2381,31 +2562,33 @@ define amdgpu_ps void @global_min_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX11-LABEL: global_min_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_i32 v0, v1, s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_min_saddr_i32_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_i32 v0, v1, s[2:3] offset:-128 scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw min ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw min ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_min_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smin_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_min_saddr_i64_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smin_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2413,15 +2596,21 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ;
 ; GFX11-LABEL: global_min_saddr_i64_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_i64 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_min_saddr_i64_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_i64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw min ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw min ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2429,15 +2618,12 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn(ptr addrspace(1) inreg %s
 define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_min_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smin_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_min_saddr_i64_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smin_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2445,16 +2631,22 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ;
 ; GFX11-LABEL: global_min_saddr_i64_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_i64 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_min_saddr_i64_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_i64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw min ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw min ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2462,14 +2654,11 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn_neg128(ptr addrspace(1) i
 define amdgpu_ps void @global_min_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_min_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smin_x2 v0, v[1:2], s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_min_saddr_i64_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smin_x2 v0, v[1:2], s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2477,29 +2666,31 @@ define amdgpu_ps void @global_min_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX11-LABEL: global_min_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_i64 v0, v[1:2], s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_min_saddr_i64_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_i64 v0, v[1:2], s[2:3] scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw min ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw min ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_min_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_min_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_smin_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_min_saddr_i64_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_smin_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2507,16 +2698,21 @@ define amdgpu_ps void @global_min_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX11-LABEL: global_min_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_i64 v0, v[1:2], s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_min_saddr_i64_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_i64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw min ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw min ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2527,15 +2723,12 @@ define amdgpu_ps void @global_min_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 define amdgpu_ps float @global_umax_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umax_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umax v0, v0, v1, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_umax_saddr_i32_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umax v0, v0, v1, s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2543,15 +2736,21 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX11-LABEL: global_umax_saddr_i32_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_u32 v0, v0, v1, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_umax_saddr_i32_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_u32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw umax ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umax ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2559,15 +2758,12 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 define amdgpu_ps float @global_umax_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umax_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umax v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_umax_saddr_i32_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umax v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2575,16 +2771,22 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX11-LABEL: global_umax_saddr_i32_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_u32 v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_umax_saddr_i32_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_u32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw umax ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umax ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2592,14 +2794,11 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 define amdgpu_ps void @global_umax_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umax_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umax v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_umax_saddr_i32_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umax v0, v1, s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2607,29 +2806,31 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ;
 ; GFX11-LABEL: global_umax_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_u32 v0, v1, s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_umax_saddr_i32_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_u32 v0, v1, s[2:3] scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw umax ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umax ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_umax_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umax_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umax v0, v1, s[2:3] offset:-128
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_umax_saddr_i32_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umax v0, v1, s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2637,31 +2838,33 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
 ;
 ; GFX11-LABEL: global_umax_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_u32 v0, v1, s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_umax_saddr_i32_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_u32 v0, v1, s[2:3] offset:-128 scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw umax ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umax ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umax_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umax_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_umax_saddr_i64_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umax_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2669,15 +2872,21 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn(ptr addrspace(1) inreg %
 ;
 ; GFX11-LABEL: global_umax_saddr_i64_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_u64 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_umax_saddr_i64_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_u64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw umax ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umax ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2685,15 +2894,12 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn(ptr addrspace(1) inreg %
 define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umax_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umax_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_umax_saddr_i64_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umax_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2701,16 +2907,22 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ;
 ; GFX11-LABEL: global_umax_saddr_i64_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_umax_saddr_i64_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw umax ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umax ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2718,14 +2930,11 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn_neg128(ptr addrspace(1) 
 define amdgpu_ps void @global_umax_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umax_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umax_x2 v0, v[1:2], s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_umax_saddr_i64_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umax_x2 v0, v[1:2], s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2733,29 +2942,31 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 ;
 ; GFX11-LABEL: global_umax_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_u64 v0, v[1:2], s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_umax_saddr_i64_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_u64 v0, v[1:2], s[2:3] scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw umax ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umax ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_umax_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umax_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umax_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_umax_saddr_i64_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umax_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2763,16 +2974,21 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
 ;
 ; GFX11-LABEL: global_umax_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_max_u64 v0, v[1:2], s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_umax_saddr_i64_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_max_u64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw umax ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umax ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2783,15 +2999,12 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
 define amdgpu_ps float @global_umin_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umin_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umin v0, v0, v1, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_umin_saddr_i32_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umin v0, v0, v1, s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2799,15 +3012,21 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ;
 ; GFX11-LABEL: global_umin_saddr_i32_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_u32 v0, v0, v1, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_umin_saddr_i32_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_u32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw umin ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umin ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2815,15 +3034,12 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 define amdgpu_ps float @global_umin_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umin_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umin v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_umin_saddr_i32_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umin v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2831,16 +3047,22 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ;
 ; GFX11-LABEL: global_umin_saddr_i32_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_u32 v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_umin_saddr_i32_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_u32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw umin ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umin ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2848,14 +3070,11 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 define amdgpu_ps void @global_umin_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umin_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umin v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_umin_saddr_i32_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umin v0, v1, s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2863,29 +3082,31 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ;
 ; GFX11-LABEL: global_umin_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_u32 v0, v1, s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_umin_saddr_i32_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_u32 v0, v1, s[2:3] scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw umin ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umin ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_umin_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umin_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umin v0, v1, s[2:3] offset:-128
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_umin_saddr_i32_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umin v0, v1, s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2893,31 +3114,33 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
 ;
 ; GFX11-LABEL: global_umin_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_u32 v0, v1, s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_umin_saddr_i32_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_u32 v0, v1, s[2:3] offset:-128 scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw umin ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umin ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umin_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umin_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_umin_saddr_i64_rtn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umin_x2 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2925,15 +3148,21 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn(ptr addrspace(1) inreg %
 ;
 ; GFX11-LABEL: global_umin_saddr_i64_rtn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_u64 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_umin_saddr_i64_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_u64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw umin ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umin ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2941,15 +3170,12 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn(ptr addrspace(1) inreg %
 define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umin_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umin_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_umin_saddr_i64_rtn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umin_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2957,16 +3183,22 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ;
 ; GFX11-LABEL: global_umin_saddr_i64_rtn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_umin_saddr_i64_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw umin ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umin ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2974,14 +3206,11 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn_neg128(ptr addrspace(1) 
 define amdgpu_ps void @global_umin_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umin_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umin_x2 v0, v[1:2], s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_umin_saddr_i64_nortn:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umin_x2 v0, v[1:2], s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2989,29 +3218,31 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 ;
 ; GFX11-LABEL: global_umin_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_u64 v0, v[1:2], s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_umin_saddr_i64_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_u64 v0, v[1:2], s[2:3] scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw umin ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umin ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 define amdgpu_ps void @global_umin_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umin_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_umin_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_umin_saddr_i64_nortn_neg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_umin_x2 v0, v[1:2], s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -3019,16 +3250,21 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
 ;
 ; GFX11-LABEL: global_umin_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_min_u64 v0, v[1:2], s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_umin_saddr_i64_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_min_u64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw umin ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umin ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3040,7 +3276,6 @@ define amdgpu_ps float @global_cmpxchg_saddr_i32_rtn(ptr addrspace(1) inreg %sba
 ; GFX9-LABEL: global_cmpxchg_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v3, v1
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_cmpswap v0, v0, v[2:3], s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -3049,24 +3284,31 @@ define amdgpu_ps float @global_cmpxchg_saddr_i32_rtn(ptr addrspace(1) inreg %sba
 ; GFX10-LABEL: global_cmpxchg_saddr_i32_rtn:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v1
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_cmpswap v0, v0, v[2:3], s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_cmpxchg_saddr_i32_rtn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v1
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_cmpswap_b32 v0, v0, v[2:3], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_cmpxchg_saddr_i32_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v3, v1
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v0, v[2:3], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %cmpxchg = cmpxchg ptr addrspace(1) %gep0, i32 %cmp, i32 %data seq_cst seq_cst
@@ -3079,7 +3321,6 @@ define amdgpu_ps float @global_cmpxchg_saddr_i32_rtn_neg128(ptr addrspace(1) inr
 ; GFX9-LABEL: global_cmpxchg_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v3, v1
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_cmpswap v0, v0, v[2:3], s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -3088,24 +3329,31 @@ define amdgpu_ps float @global_cmpxchg_saddr_i32_rtn_neg128(ptr addrspace(1) inr
 ; GFX10-LABEL: global_cmpxchg_saddr_i32_rtn_neg128:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v1
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_cmpswap v0, v0, v[2:3], s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_cmpxchg_saddr_i32_rtn_neg128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v1
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_cmpswap_b32 v0, v0, v[2:3], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_cmpxchg_saddr_i32_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v3, v1
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v0, v[2:3], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
@@ -3119,7 +3367,6 @@ define amdgpu_ps void @global_cmpxchg_saddr_i32_nortn(ptr addrspace(1) inreg %sb
 ; GFX9-LABEL: global_cmpxchg_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v3, v1
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_cmpswap v0, v[2:3], s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -3128,24 +3375,30 @@ define amdgpu_ps void @global_cmpxchg_saddr_i32_nortn(ptr addrspace(1) inreg %sb
 ; GFX10-LABEL: global_cmpxchg_saddr_i32_nortn:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v1
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_cmpswap v0, v[2:3], s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_cmpxchg_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v1
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_cmpxchg_saddr_i32_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v3, v1
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], s[2:3] scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %unused = cmpxchg ptr addrspace(1) %gep0, i32 %cmp, i32 %data seq_cst seq_cst
@@ -3156,7 +3409,6 @@ define amdgpu_ps void @global_cmpxchg_saddr_i32_nortn_neg128(ptr addrspace(1) in
 ; GFX9-LABEL: global_cmpxchg_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v3, v1
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_cmpswap v0, v[2:3], s[2:3] offset:-128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -3165,24 +3417,30 @@ define amdgpu_ps void @global_cmpxchg_saddr_i32_nortn_neg128(ptr addrspace(1) in
 ; GFX10-LABEL: global_cmpxchg_saddr_i32_nortn_neg128:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v1
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_cmpswap v0, v[2:3], s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_cmpxchg_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v1
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_cmpxchg_saddr_i32_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v3, v1
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], s[2:3] offset:-128 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
@@ -3195,7 +3453,6 @@ define amdgpu_ps <2 x float> @global_cmpxchg_saddr_i64_rtn(ptr addrspace(1) inre
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v1
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v0, v[3:6], s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -3205,25 +3462,33 @@ define amdgpu_ps <2 x float> @global_cmpxchg_saddr_i64_rtn(ptr addrspace(1) inre
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v1
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_cmpswap_x2 v[0:1], v0, v[3:6], s[2:3] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_cmpxchg_saddr_i64_rtn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v1
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_cmpswap_b64 v[0:1], v0, v[3:6], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_cmpxchg_saddr_i64_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v6, v2
+; GFX12-NEXT:    v_mov_b32_e32 v5, v1
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_cmpswap_b64 v[0:1], v0, v[3:6], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %cmpxchg = cmpxchg ptr addrspace(1) %gep0, i64 %cmp, i64 %data seq_cst seq_cst
@@ -3237,7 +3502,6 @@ define amdgpu_ps <2 x float> @global_cmpxchg_saddr_i64_rtn_neg128(ptr addrspace(
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v1
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v0, v[3:6], s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -3247,25 +3511,33 @@ define amdgpu_ps <2 x float> @global_cmpxchg_saddr_i64_rtn_neg128(ptr addrspace(
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v1
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_cmpswap_x2 v[0:1], v0, v[3:6], s[2:3] offset:-128 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_cmpxchg_saddr_i64_rtn_neg128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v1
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_cmpswap_b64 v[0:1], v0, v[3:6], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_cmpxchg_saddr_i64_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v6, v2
+; GFX12-NEXT:    v_mov_b32_e32 v5, v1
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_cmpswap_b64 v[0:1], v0, v[3:6], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
@@ -3280,7 +3552,6 @@ define amdgpu_ps void @global_cmpxchg_saddr_i64_nortn(ptr addrspace(1) inreg %sb
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v1
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_cmpswap_x2 v0, v[3:6], s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -3290,25 +3561,32 @@ define amdgpu_ps void @global_cmpxchg_saddr_i64_nortn(ptr addrspace(1) inreg %sb
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v1
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_cmpswap_x2 v0, v[3:6], s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_cmpxchg_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v1
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_cmpswap_b64 v0, v[3:6], s[2:3]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_cmpxchg_saddr_i64_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v6, v2
+; GFX12-NEXT:    v_mov_b32_e32 v5, v1
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_cmpswap_b64 v0, v[3:6], s[2:3] scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %unused = cmpxchg ptr addrspace(1) %gep0, i64 %cmp, i64 %data seq_cst seq_cst
@@ -3320,7 +3598,6 @@ define amdgpu_ps void @global_cmpxchg_saddr_i64_nortn_neg128(ptr addrspace(1) in
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v1
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_cmpswap_x2 v0, v[3:6], s[2:3] offset:-128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -3330,25 +3607,32 @@ define amdgpu_ps void @global_cmpxchg_saddr_i64_nortn_neg128(ptr addrspace(1) in
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v1
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_cmpswap_x2 v0, v[3:6], s[2:3] offset:-128
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_cmpxchg_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v1
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_cmpswap_b64 v0, v[3:6], s[2:3] offset:-128
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_cmpxchg_saddr_i64_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v6, v2
+; GFX12-NEXT:    v_mov_b32_e32 v5, v1
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_cmpswap_b64 v0, v[3:6], s[2:3] offset:-128 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
@@ -3372,9 +3656,15 @@ define amdgpu_ps float @global_inc_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX11-NEXT:    global_atomic_inc_u32 v0, v0, v1, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_inc_saddr_i32_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_inc_u32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic
+  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -3391,10 +3681,16 @@ define amdgpu_ps float @global_inc_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX11-NEXT:    global_atomic_inc_u32 v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_inc_saddr_i32_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_inc_u32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic
+  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -3408,12 +3704,15 @@ define amdgpu_ps void @global_inc_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX11-LABEL: global_inc_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_inc_u32 v0, v1, s[2:3]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_inc_saddr_i32_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_inc_u32 v0, v1, s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic
+  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3426,13 +3725,16 @@ define amdgpu_ps void @global_inc_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX11-LABEL: global_inc_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_inc_u32 v0, v1, s[2:3] offset:-128
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_inc_saddr_i32_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_inc_u32 v0, v1, s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic
+  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3448,9 +3750,15 @@ define amdgpu_ps <2 x float> @global_inc_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX11-NEXT:    global_atomic_inc_u64 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_inc_saddr_i64_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_inc_u64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic
+  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -3467,10 +3775,16 @@ define amdgpu_ps <2 x float> @global_inc_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX11-NEXT:    global_atomic_inc_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_inc_saddr_i64_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_inc_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic
+  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -3484,12 +3798,15 @@ define amdgpu_ps void @global_inc_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX11-LABEL: global_inc_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_inc_u64 v0, v[1:2], s[2:3]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_inc_saddr_i64_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_inc_u64 v0, v[1:2], s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic
+  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3502,13 +3819,16 @@ define amdgpu_ps void @global_inc_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX11-LABEL: global_inc_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_inc_u64 v0, v[1:2], s[2:3] offset:-128
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_inc_saddr_i64_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_inc_u64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic
+  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3529,9 +3849,15 @@ define amdgpu_ps float @global_dec_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX11-NEXT:    global_atomic_dec_u32 v0, v0, v1, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_dec_saddr_i32_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_dec_u32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic
+  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -3548,10 +3874,16 @@ define amdgpu_ps float @global_dec_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX11-NEXT:    global_atomic_dec_u32 v0, v0, v1, s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_dec_saddr_i32_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_dec_u32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic
+  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -3565,12 +3897,15 @@ define amdgpu_ps void @global_dec_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX11-LABEL: global_dec_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_dec_u32 v0, v1, s[2:3]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_dec_saddr_i32_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_dec_u32 v0, v1, s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic
+  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3583,13 +3918,16 @@ define amdgpu_ps void @global_dec_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX11-LABEL: global_dec_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_dec_u32 v0, v1, s[2:3] offset:-128
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_dec_saddr_i32_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_dec_u32 v0, v1, s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic
+  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3605,9 +3943,15 @@ define amdgpu_ps <2 x float> @global_dec_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX11-NEXT:    global_atomic_dec_u64 v[0:1], v0, v[1:2], s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_dec_saddr_i64_rtn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_dec_u64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic
+  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -3624,10 +3968,16 @@ define amdgpu_ps <2 x float> @global_dec_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX11-NEXT:    global_atomic_dec_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: global_dec_saddr_i64_rtn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_dec_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic
+  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -3641,12 +3991,15 @@ define amdgpu_ps void @global_dec_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX11-LABEL: global_dec_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_dec_u64 v0, v[1:2], s[2:3]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_dec_saddr_i64_nortn:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_dec_u64 v0, v[1:2], s[2:3] scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic
+  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3659,14 +4012,19 @@ define amdgpu_ps void @global_dec_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX11-LABEL: global_dec_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_dec_u64 v0, v[1:2], s[2:3] offset:-128
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_dec_saddr_i64_nortn_neg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_atomic_dec_u64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic
+  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 attributes #0 = { argmemonly nounwind willreturn }
+
+!0 = !{}

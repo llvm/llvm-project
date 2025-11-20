@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fsyntax-only -pedantic %s 2>&1 | FileCheck %s
 ! Verify varnings on nonconforming DATA statements
 ! As a common extension, C876 violations are not errors.
 program main

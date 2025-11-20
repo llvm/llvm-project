@@ -326,7 +326,7 @@ define i8 @mul_may_overflow_var_nonzero_minabsvarindex_one_index(ptr %arr, i8 %x
 ; CHECK-NEXT:  PartialAlias (off 917): [2000 x i8]* %arr, i8* %gep.917
 ; CHECK-NEXT:  MayAlias: i8* %gep.917, i8* %gep.idx
 ; CHECK-NEXT:  MustAlias: [2000 x i8]* %arr, i8* %gep.0
-; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.idx
+; CHECK-NEXT:  MayAlias: i8* %gep.0, i8* %gep.idx
 ; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.917
 ;
   load [2000 x i8], ptr %arr
@@ -362,4 +362,48 @@ define i8 @mul_nsw_var_nonzero_minabsvarindex_one_index(ptr %arr, i8 %x, i64 %v)
   ret i8 %l
 }
 
+define i8 @test_pr72831_may_wrap(i64 %off) {
+; CHECK-LABEL: Function: test_pr72831_may_wrap: 2 pointers, 0 call sites
+; CHECK-NEXT:  MayAlias:    i8* %gep, i8* %p
+entry:
+  %p = alloca [2 x i8], align 1
+  %ext = zext i1 false to i64
+  %add.1 = add nuw nsw i64 %off, 1
+  %add.2 = add nuw nsw i64 %add.1, %ext
+  %idx = shl i64 %add.2, 32
+  %gep = getelementptr inbounds [2 x i8], ptr %p, i64 0, i64 %idx
+  store i8 0, ptr %gep, align 1
+  %l = load i8, ptr %p, align 1
+  ret i8 %l
+}
+
+define i8 @test_pr72831_no_wrap(i64 %off) {
+; CHECK-LABEL: Function: test_pr72831_no_wrap: 2 pointers, 0 call sites
+; CHECK-NEXT:  NoAlias:    i8* %gep, i8* %p
+entry:
+  %p = alloca [2 x i8], align 1
+  %ext = zext i1 false to i64
+  %add.1 = add nuw nsw i64 %off, 1
+  %add.2 = add nuw nsw i64 %add.1, %ext
+  %idx = shl nsw nuw i64 %add.2, 32
+  %gep = getelementptr inbounds [2 x i8], ptr %p, i64 0, i64 %idx
+  store i8 0, ptr %gep, align 1
+  %l = load i8, ptr %p, align 1
+  ret i8 %l
+}
+
 declare void @llvm.assume(i1)
+
+define i64 @mul_may_overflow_var_nonzero_minabsvarindex_two_index(i64 %arg, ptr %arg1) {
+; CHECK-LABEL:  Function: mul_may_overflow_var_nonzero_minabsvarindex_two_index
+; CHECK-LABEL:  MayAlias:      i64* %getelementptr, i64* %getelementptr2
+bb:
+  %xor = xor i64 %arg, -9223372036854775808
+  %getelementptr = getelementptr i64, ptr %arg1, i64 %xor
+  %load = load i64, ptr %getelementptr, align 8
+  %getelementptr2 = getelementptr i64, ptr %arg1, i64 %arg
+  store i64 1, ptr %getelementptr2, align 8
+  %load3 = load i64, ptr %getelementptr, align 8
+  %mul = mul i64 %load, %load3
+  ret i64 %mul
+}

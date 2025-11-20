@@ -8,7 +8,7 @@
 
 #include "TestingSupport.h"
 #include "clang/AST/Decl.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
@@ -30,18 +30,20 @@ namespace clang::dataflow {
 // flow-condition at function exit.
 std::string analyzeAndPrintExitCondition(llvm::StringRef Code) {
   DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>());
-  clang::TestAST AST(Code);
+  TestInputs Inputs(Code);
+  Inputs.Language = TestLanguage::Lang_CXX17;
+  clang::TestAST AST(Inputs);
   const auto *Target =
       cast<FunctionDecl>(test::findValueDecl(AST.context(), "target"));
   Environment InitEnv(DACtx, *Target);
-  auto CFCtx = cantFail(ControlFlowContext::build(*Target));
+  auto ACFG = cantFail(AdornedCFG::build(*Target));
 
   NoopAnalysis Analysis(AST.context(), DataflowAnalysisOptions{});
 
-  auto Result = runDataflowAnalysis(CFCtx, Analysis, InitEnv);
+  auto Result = runDataflowAnalysis(ACFG, Analysis, InitEnv);
   EXPECT_FALSE(!Result) << Result.takeError();
 
-  Atom FinalFC = (*Result)[CFCtx.getCFG().getExit().getBlockID()]
+  Atom FinalFC = (*Result)[ACFG.getCFG().getExit().getBlockID()]
                      ->Env.getFlowConditionToken();
   std::string Textual;
   llvm::raw_string_ostream OS(Textual);

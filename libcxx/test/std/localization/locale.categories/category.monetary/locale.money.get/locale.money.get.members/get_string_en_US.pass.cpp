@@ -13,6 +13,10 @@
 // iter_type get(iter_type b, iter_type e, bool intl, ios_base& iob,
 //               ios_base::iostate& err, string_type& v) const;
 
+// Bionic has minimal locale support, investigate this later.
+// XFAIL: LIBCXX-ANDROID-FIXME
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // REQUIRES: locale.en_US.UTF-8
 
 #include <locale>

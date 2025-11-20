@@ -11,7 +11,6 @@
 #define _LIBCPP___FUNCTIONAL_IS_TRANSPARENT
 
 #include <__config>
-#include <__type_traits/integral_constant.h>
 #include <__type_traits/void_t.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -22,14 +21,21 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 14
 
-template <class _Tp, class, class = void>
-struct __is_transparent : false_type {};
+template <class _Tp, class _Key = void, class = void>
+inline const bool __is_transparent_v = false;
 
-template <class _Tp, class _Up>
-struct __is_transparent<_Tp, _Up, __void_t<typename _Tp::is_transparent> >
-   : true_type {};
+template <class _Tp, class _Key>
+inline const bool __is_transparent_v<_Tp, _Key, __void_t<typename _Tp::is_transparent> > = true;
 
 #endif
+
+// Two types are considered transparently comparable if `comparator(key, arg)` is equivalent to `comparator(key,
+// <implicit cast to KeyT>(arg))`.
+//
+// This is different from `__is_transparent_v`, which is only a property of the comparator and doesn't provide
+// additional semantic guarantees.
+template <class _Comparator, class _KeyT, class _Arg, class = void>
+inline const bool __is_transparently_comparable_v = false;
 
 _LIBCPP_END_NAMESPACE_STD
 

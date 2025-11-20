@@ -49,7 +49,7 @@
   }
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #0
+  declare void @llvm.stackprotector(ptr, ptr) #0
 
   attributes #0 = { nounwind }
 

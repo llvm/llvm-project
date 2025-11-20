@@ -6,34 +6,39 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/exp10.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
-#include <errno.h>
-#include <stdint.h>
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-namespace mpfr = __llvm_libc::testing::mpfr;
-using __llvm_libc::testing::tlog;
+using LlvmLibcExp10Test = LIBC_NAMESPACE::testing::FPTest<double>;
 
-DECLARE_SPECIAL_CONSTANTS(double)
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+using LIBC_NAMESPACE::testing::tlog;
 
-TEST(LlvmLibcExp10Test, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, __llvm_libc::exp10(aNaN));
-  EXPECT_FP_EQ(inf, __llvm_libc::exp10(inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::exp10(neg_inf));
-  EXPECT_FP_EQ_WITH_EXCEPTION(zero, __llvm_libc::exp10(-0x1.0p20),
+TEST_F(LlvmLibcExp10Test, SpecialNumbers) {
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::exp10(aNaN));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::exp10(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::exp10(neg_inf));
+  EXPECT_FP_EQ_WITH_EXCEPTION(zero, LIBC_NAMESPACE::exp10(-0x1.0p20),
                               FE_UNDERFLOW);
-  EXPECT_FP_EQ_WITH_EXCEPTION(inf, __llvm_libc::exp10(0x1.0p20), FE_OVERFLOW);
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0, __llvm_libc::exp10(0.0));
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0, __llvm_libc::exp10(-0.0));
+  EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::exp10(0x1.0p20),
+                              FE_OVERFLOW);
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0, LIBC_NAMESPACE::exp10(0.0));
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0, LIBC_NAMESPACE::exp10(-0.0));
 }
 
-TEST(LlvmLibcExp10Test, TrickyInputs) {
+TEST_F(LlvmLibcExp10Test, TrickyInputs) {
   constexpr int N = 41;
   constexpr uint64_t INPUTS[N] = {
       0x40033093317082F8, 0x3FD79289C6E6A5C0,
@@ -78,16 +83,16 @@ TEST(LlvmLibcExp10Test, TrickyInputs) {
       0x4037000000000000, // x = 23
   };
   for (int i = 0; i < N; ++i) {
-    double x = double(FPBits(INPUTS[i]));
+    double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
-                                   __llvm_libc::exp10(x), 0.5);
+                                   LIBC_NAMESPACE::exp10(x), TOLERANCE + 0.5);
   }
 }
 
-TEST(LlvmLibcExp10Test, InDoubleRange) {
+TEST_F(LlvmLibcExp10Test, InDoubleRange) {
   constexpr uint64_t COUNT = 1'231;
-  uint64_t START = __llvm_libc::fputil::FPBits<double>(0.25).uintval();
-  uint64_t STOP = __llvm_libc::fputil::FPBits<double>(4.0).uintval();
+  uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0.25).uintval();
+  uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(4.0).uintval();
   uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
@@ -103,18 +108,17 @@ TEST(LlvmLibcExp10Test, InDoubleRange) {
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x < 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x < 0.0)
         continue;
-      libc_errno = 0;
-      double result = __llvm_libc::exp10(x);
+      double result = LIBC_NAMESPACE::exp10(x);
       ++cc;
-      if (isnan(result) || isinf(result))
+      if (FPBits(result).is_nan() || FPBits(result).is_inf())
         continue;
 
       ++count;
 
       if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Exp10, x, result,
-                                             0.5, rounding_mode)) {
+                                             TOLERANCE + 0.5, rounding_mode)) {
         ++fails;
         while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Exp10, x,
                                                   result, tol, rounding_mode)) {
@@ -128,10 +132,10 @@ TEST(LlvmLibcExp10Test, InDoubleRange) {
         }
       }
     }
-    tlog << " Exp10 failed: " << fails << "/" << count << "/" << cc
-         << " tests.\n";
-    tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     if (fails) {
+      tlog << " Exp10 failed: " << fails << "/" << count << "/" << cc
+           << " tests.\n";
+      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
       EXPECT_MPFR_MATCH(mpfr::Operation::Exp10, mx, mr, 0.5, rounding_mode);
     }
   };

@@ -752,7 +752,7 @@ yield
 # CHECK-NEXT:  1      3     1.00           *            strb	r0, [r1, r2]
 # CHECK-NEXT:  1      3     1.00           *            strb.w	r0, [r1, r2]
 # CHECK-NEXT:  1      3     1.00           *            strb.w	r0, [r1, r2, lsl #1]
-# CHECK-NEXT:  1      3     1.00                  U     strbt	r0, [r1, #1]
+# CHECK-NEXT:  1      3     1.00           *            strbt	r0, [r1, #1]
 # CHECK-NEXT:  1      3     1.00           *            strd	r0, r1, [r2, #4]
 # CHECK-NEXT:  1      3     1.00           *            strd	r0, r1, [r2], #4
 # CHECK-NEXT:  1      3     1.00           *            strd	r0, r1, [r2, #4]!
@@ -769,8 +769,8 @@ yield
 # CHECK-NEXT:  1      3     1.00           *            strh	r0, [r1, r2]
 # CHECK-NEXT:  1      3     1.00           *            strh.w	r0, [r1, r2]
 # CHECK-NEXT:  1      3     1.00           *            strh.w	r0, [r1, r2, lsl #1]
-# CHECK-NEXT:  1      3     1.00                  U     strht	r0, [r1, #1]
-# CHECK-NEXT:  1      3     1.00                  U     strt	r0, [r1, #1]
+# CHECK-NEXT:  1      3     1.00           *            strht	r0, [r1, #1]
+# CHECK-NEXT:  1      3     1.00           *            strt	r0, [r1, #1]
 # CHECK-NEXT:  1      1     0.50                        subs	r0, r1, #1
 # CHECK-NEXT:  1      1     0.50                        subs	r0, #1
 # CHECK-NEXT:  1      1     0.50                        sub.w	r0, r1, #1

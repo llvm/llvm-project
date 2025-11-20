@@ -20,38 +20,44 @@ namespace llvm {
 
 // This struct is used for both the folding and unfold tables. They KeyOp
 // is used to determine the sorting order.
-struct X86MemoryFoldTableEntry {
+struct X86FoldTableEntry {
   unsigned KeyOp;
   unsigned DstOp;
   uint16_t Flags;
 
-  bool operator<(const X86MemoryFoldTableEntry &RHS) const {
+  bool operator<(const X86FoldTableEntry &RHS) const {
     return KeyOp < RHS.KeyOp;
   }
-  bool operator==(const X86MemoryFoldTableEntry &RHS) const {
+  bool operator==(const X86FoldTableEntry &RHS) const {
     return KeyOp == RHS.KeyOp;
   }
-  friend bool operator<(const X86MemoryFoldTableEntry &TE, unsigned Opcode) {
+  friend bool operator<(const X86FoldTableEntry &TE, unsigned Opcode) {
     return TE.KeyOp < Opcode;
   }
 };
 
 // Look up the memory folding table entry for folding a load and a store into
 // operand 0.
-const X86MemoryFoldTableEntry *lookupTwoAddrFoldTable(unsigned RegOp);
+const X86FoldTableEntry *lookupTwoAddrFoldTable(unsigned RegOp);
 
 // Look up the memory folding table entry for folding a load or store with
 // operand OpNum.
-const X86MemoryFoldTableEntry *lookupFoldTable(unsigned RegOp, unsigned OpNum);
+const X86FoldTableEntry *lookupFoldTable(unsigned RegOp, unsigned OpNum);
+
+// Look up the broadcast folding table entry for folding a broadcast with
+// operand OpNum.
+const X86FoldTableEntry *lookupBroadcastFoldTable(unsigned RegOp,
+                                                  unsigned OpNum);
 
 // Look up the memory unfolding table entry for this instruction.
-const X86MemoryFoldTableEntry *lookupUnfoldTable(unsigned MemOp);
+const X86FoldTableEntry *lookupUnfoldTable(unsigned MemOp);
 
-// Look up the broadcast memory folding table entry for this instruction from
+// Look up the broadcast folding table entry for this instruction from
 // the regular memory instruction.
-const X86MemoryFoldTableEntry *lookupBroadcastFoldTable(unsigned MemOp,
+const X86FoldTableEntry *lookupBroadcastFoldTableBySize(unsigned MemOp,
                                                         unsigned BroadcastBits);
 
+bool matchBroadcastSize(const X86FoldTableEntry &Entry, unsigned BroadcastBits);
 } // namespace llvm
 
 #endif

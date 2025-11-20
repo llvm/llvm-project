@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_STACK_T_H__
-#define __LLVM_LIBC_TYPES_STACK_T_H__
+#ifndef LLVM_LIBC_TYPES_STACK_T_H
+#define LLVM_LIBC_TYPES_STACK_T_H
 
-#include <llvm-libc-types/size_t.h>
+#include "size_t.h"
 
 typedef struct {
   // The order of the fields declared here should match the kernel definition
@@ -19,4 +19,4 @@ typedef struct {
   size_t ss_size;
 } stack_t;
 
-#endif // __LLVM_LIBC_TYPES_STACK_T_H__
+#endif // LLVM_LIBC_TYPES_STACK_T_H

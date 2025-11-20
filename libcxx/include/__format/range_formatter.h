@@ -20,6 +20,7 @@
 #include <__config>
 #include <__format/buffer.h>
 #include <__format/concepts.h>
+#include <__format/fmt_pair_like.h>
 #include <__format/format_context.h>
 #include <__format/format_error.h>
 #include <__format/formatter.h>
@@ -39,7 +40,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _CharT = char>
   requires same_as<remove_cvref_t<_Tp>, _Tp> && formattable<_Tp, _CharT>
-struct _LIBCPP_TEMPLATE_VIS range_formatter {
+struct range_formatter {
   _LIBCPP_HIDE_FROM_ABI constexpr void set_separator(basic_string_view<_CharT> __separator) noexcept {
     __separator_ = __separator;
   }
@@ -246,9 +247,8 @@ private:
   __parse_empty_range_underlying_spec(_ParseContext& __ctx, typename _ParseContext::iterator __begin) {
     __ctx.advance_to(__begin);
     [[maybe_unused]] typename _ParseContext::iterator __result = __underlying_.parse(__ctx);
-    _LIBCPP_ASSERT_UNCATEGORIZED(
-        __result == __begin,
-        "the underlying's parse function should not advance the input beyond the end of the input");
+    _LIBCPP_ASSERT_INTERNAL(__result == __begin,
+                            "the underlying's parse function should not advance the input beyond the end of the input");
     return __begin;
   }
 
@@ -258,7 +258,7 @@ private:
   basic_string_view<_CharT> __closing_bracket_ = _LIBCPP_STATICALLY_WIDEN(_CharT, "]");
 };
 
-#endif //_LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

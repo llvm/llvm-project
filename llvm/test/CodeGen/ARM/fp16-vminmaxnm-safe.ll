@@ -5,11 +5,11 @@
 define half @fp16_vminnm_o(half %a, half %b) {
 ; CHECK-LABEL: fp16_vminnm_o:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f16 s0, r1
-; CHECK-NEXT:    vmov.f16 s2, r0
-; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmov.f16 s0, r0
+; CHECK-NEXT:    vmov.f16 s2, r1
+; CHECK-NEXT:    vcmp.f16 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f16 s0, s2, s0
+; CHECK-NEXT:    vselgt.f16 s0, s0, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -37,11 +37,11 @@ entry:
 define half @fp16_vminnm_u(half %a, half %b) {
 ; CHECK-LABEL: fp16_vminnm_u:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f16 s0, r0
-; CHECK-NEXT:    vmov.f16 s2, r1
-; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmov.f16 s0, r1
+; CHECK-NEXT:    vmov.f16 s2, r0
+; CHECK-NEXT:    vcmp.f16 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselge.f16 s0, s2, s0
+; CHECK-NEXT:    vselge.f16 s0, s0, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -53,11 +53,11 @@ entry:
 define half @fp16_vminnm_ule(half %a, half %b) {
 ; CHECK-LABEL: fp16_vminnm_ule:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f16 s0, r0
-; CHECK-NEXT:    vmov.f16 s2, r1
-; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmov.f16 s0, r1
+; CHECK-NEXT:    vmov.f16 s2, r0
+; CHECK-NEXT:    vcmp.f16 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f16 s0, s2, s0
+; CHECK-NEXT:    vselgt.f16 s0, s0, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -69,11 +69,11 @@ entry:
 define half @fp16_vminnm_u_rev(half %a, half %b) {
 ; CHECK-LABEL: fp16_vminnm_u_rev:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f16 s0, r1
-; CHECK-NEXT:    vmov.f16 s2, r0
-; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmov.f16 s0, r0
+; CHECK-NEXT:    vmov.f16 s2, r1
+; CHECK-NEXT:    vcmp.f16 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselge.f16 s0, s2, s0
+; CHECK-NEXT:    vselge.f16 s0, s0, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -517,9 +517,9 @@ define half @fp16_vminmaxnm_e_0(half %a) {
 ; CHECK-NEXT:    .short 0x0000 @ half 0
 entry:
   %cmp1 = fcmp nsz ole half 0., %a
-  %cond1 = select i1 %cmp1, half 0., half %a
+  %cond1 = select nsz i1 %cmp1, half 0., half %a
   %cmp2 = fcmp nsz uge half 0., %cond1
-  %cond2 = select i1 %cmp2, half 0., half %cond1
+  %cond2 = select nsz i1 %cmp2, half 0., half %cond1
   ret half %cond2
 }
 
@@ -540,7 +540,7 @@ define half @fp16_vminmaxnm_e_neg0(half %a) {
 ; CHECK-NEXT:    .short 0x8000 @ half -0
 entry:
   %cmp1 = fcmp nsz ule half -0., %a
-  %cond1 = select i1 %cmp1, half -0., half %a
+  %cond1 = select nsz i1 %cmp1, half -0., half %a
   %cmp2 = fcmp nsz oge half -0., %cond1
   %cond2 = select i1 %cmp2, half -0., half %cond1
   ret half %cond2

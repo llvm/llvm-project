@@ -42,18 +42,21 @@ int main() {
 }
 #endif
 // IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37
-// IR-GPU-SAME: (ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR0:[0-9]+]] {
+// IR-GPU-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR0:[0-9]+]] {
 // IR-GPU-NEXT:  entry:
+// IR-GPU-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DEVICE_RESULT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 8, addrspace(5)
+// IR-GPU-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // IR-GPU-NEXT:    [[DEVICE_RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DEVICE_RESULT_ADDR]] to ptr
 // IR-GPU-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OMP_PTEAM_MEM_ALLOC_ADDR]] to ptr
 // IR-GPU-NEXT:    [[CAPTURED_VARS_ADDRS_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
+// IR-GPU-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_kernel_environment to ptr))
+// IR-GPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_kernel_environment to ptr), ptr [[DYN_PTR]])
 // IR-GPU-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // IR-GPU-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // IR-GPU:       user_code.entry:

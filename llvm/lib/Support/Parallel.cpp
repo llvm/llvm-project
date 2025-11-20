@@ -7,13 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Parallel.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/ExponentialBackoff.h"
+#include "llvm/Support/Jobserver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
 
 #include <atomic>
-#include <deque>
 #include <future>
+#include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -39,7 +43,7 @@ namespace {
 class Executor {
 public:
   virtual ~Executor() = default;
-  virtual void add(std::function<void()> func, bool Sequential = false) = 0;
+  virtual void add(std::function<void()> func) = 0;
   virtual size_t getThreadCount() const = 0;
 
   static Executor *getDefaultExecutor();
@@ -49,7 +53,10 @@ public:
 ///   in filo order.
 class ThreadPoolExecutor : public Executor {
 public:
-  explicit ThreadPoolExecutor(ThreadPoolStrategy S = hardware_concurrency()) {
+  explicit ThreadPoolExecutor(ThreadPoolStrategy S) {
+    if (S.UseJobserver)
+      TheJobserver = JobserverClient::getInstance();
+
     ThreadCount = S.compute_thread_count();
     // Spawn all but one of the threads in another thread as spawning threads
     // can take a while.
@@ -57,11 +64,11 @@ public:
     Threads.resize(1);
     std::lock_guard<std::mutex> Lock(Mutex);
     // Use operator[] before creating the thread to avoid data race in .size()
-    // in “safe libc++” mode.
+    // in 'safe libc++' mode.
     auto &Thread0 = Threads[0];
     Thread0 = std::thread([this, S] {
       for (unsigned I = 1; I < ThreadCount; ++I) {
-        Threads.emplace_back([=] { work(S, I); });
+        Threads.emplace_back([this, S, I] { work(S, I); });
         if (Stop)
           break;
       }
@@ -69,6 +76,10 @@ public:
       work(S, 0);
     });
   }
+
+  // To make sure the thread pool executor can only be created with a parallel
+  // strategy.
+  ThreadPoolExecutor() = delete;
 
   void stop() {
     {
@@ -98,13 +109,10 @@ public:
     static void call(void *Ptr) { ((ThreadPoolExecutor *)Ptr)->stop(); }
   };
 
-  void add(std::function<void()> F, bool Sequential = false) override {
+  void add(std::function<void()> F) override {
     {
       std::lock_guard<std::mutex> Lock(Mutex);
-      if (Sequential)
-        WorkQueueSequential.emplace_front(std::move(F));
-      else
-        WorkQueue.emplace_back(std::move(F));
+      WorkStack.push_back(std::move(F));
     }
     Cond.notify_one();
   }
@@ -112,50 +120,81 @@ public:
   size_t getThreadCount() const override { return ThreadCount; }
 
 private:
-  bool hasSequentialTasks() const {
-    return !WorkQueueSequential.empty() && !SequentialQueueIsLocked;
-  }
-
-  bool hasGeneralTasks() const { return !WorkQueue.empty(); }
-
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
     threadIndex = ThreadID;
     S.apply_thread_strategy(ThreadID);
-    while (true) {
-      std::unique_lock<std::mutex> Lock(Mutex);
-      Cond.wait(Lock, [&] {
-        return Stop || hasGeneralTasks() || hasSequentialTasks();
-      });
-      if (Stop)
-        break;
-      bool Sequential = hasSequentialTasks();
-      if (Sequential)
-        SequentialQueueIsLocked = true;
-      else
-        assert(hasGeneralTasks());
+    // Note on jobserver deadlock avoidance:
+    // GNU Make grants each invoked process one implicit job slot. Our
+    // JobserverClient models this by returning an implicit JobSlot on the
+    // first successful tryAcquire() in a process. This guarantees forward
+    // progress without requiring a dedicated "always-on" thread here.
 
-      auto &Queue = Sequential ? WorkQueueSequential : WorkQueue;
-      auto Task = std::move(Queue.back());
-      Queue.pop_back();
-      Lock.unlock();
-      Task();
-      if (Sequential)
-        SequentialQueueIsLocked = false;
+    static thread_local std::unique_ptr<ExponentialBackoff> Backoff;
+
+    while (true) {
+      if (TheJobserver) {
+        // Jobserver-mode scheduling:
+        // - Acquire one job slot (with exponential backoff to avoid busy-wait).
+        // - While holding the slot, drain and run tasks from the local queue.
+        // - Release the slot when the queue is empty or when shutting down.
+        // Rationale: Holding a slot amortizes acquire/release overhead over
+        // multiple tasks and avoids requeue/yield churn, while still enforcing
+        // the jobserver’s global concurrency limit. With K available slots,
+        // up to K workers run tasks in parallel; within each worker tasks run
+        // sequentially until the local queue is empty.
+        ExponentialBackoff Backoff(std::chrono::hours(24));
+        JobSlot Slot;
+        do {
+          if (Stop)
+            return;
+          Slot = TheJobserver->tryAcquire();
+          if (Slot.isValid())
+            break;
+        } while (Backoff.waitForNextAttempt());
+
+        auto SlotReleaser = llvm::make_scope_exit(
+            [&] { TheJobserver->release(std::move(Slot)); });
+
+        while (true) {
+          std::function<void()> Task;
+          {
+            std::unique_lock<std::mutex> Lock(Mutex);
+            Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
+            if (Stop && WorkStack.empty())
+              return;
+            if (WorkStack.empty())
+              break;
+            Task = std::move(WorkStack.back());
+            WorkStack.pop_back();
+          }
+          Task();
+        }
+      } else {
+        std::unique_lock<std::mutex> Lock(Mutex);
+        Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
+        if (Stop)
+          break;
+        auto Task = std::move(WorkStack.back());
+        WorkStack.pop_back();
+        Lock.unlock();
+        Task();
+      }
     }
   }
 
   std::atomic<bool> Stop{false};
-  std::atomic<bool> SequentialQueueIsLocked{false};
-  std::deque<std::function<void()>> WorkQueue;
-  std::deque<std::function<void()>> WorkQueueSequential;
+  std::vector<std::function<void()>> WorkStack;
   std::mutex Mutex;
   std::condition_variable Cond;
   std::promise<void> ThreadsCreated;
   std::vector<std::thread> Threads;
   unsigned ThreadCount;
+
+  JobserverClient *TheJobserver = nullptr;
 };
 
 Executor *Executor::getDefaultExecutor() {
+#ifdef _WIN32
   // The ManagedStatic enables the ThreadPoolExecutor to be stopped via
   // llvm_shutdown() which allows a "clean" fast exit, e.g. via _exit(). This
   // stops the thread pool and waits for any worker thread creation to complete
@@ -179,6 +218,14 @@ Executor *Executor::getDefaultExecutor() {
       ManagedExec;
   static std::unique_ptr<ThreadPoolExecutor> Exec(&(*ManagedExec));
   return Exec.get();
+#else
+  // ManagedStatic is not desired on other platforms. When `Exec` is destroyed
+  // by llvm_shutdown(), worker threads will clean up and invoke TLS
+  // destructors. This can lead to race conditions if other threads attempt to
+  // access TLS objects that have already been destroyed.
+  static ThreadPoolExecutor Exec(strategy);
+  return &Exec;
+#endif
 }
 } // namespace
 } // namespace detail
@@ -205,16 +252,14 @@ TaskGroup::~TaskGroup() {
   L.sync();
 }
 
-void TaskGroup::spawn(std::function<void()> F, bool Sequential) {
+void TaskGroup::spawn(std::function<void()> F) {
 #if LLVM_ENABLE_THREADS
   if (Parallel) {
     L.inc();
-    detail::Executor::getDefaultExecutor()->add(
-        [&, F = std::move(F)] {
-          F();
-          L.dec();
-        },
-        Sequential);
+    detail::Executor::getDefaultExecutor()->add([&, F = std::move(F)] {
+      F();
+      L.dec();
+    });
     return;
   }
 #endif

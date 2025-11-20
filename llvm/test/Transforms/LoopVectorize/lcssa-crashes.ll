@@ -27,7 +27,7 @@ define void @test() {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], undef
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY_I_I_I]], label [[FOR_END_I_I_I]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY_I_I_I]], label [[FOR_END_I_I_I]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end.i.i.i:
 ; CHECK-NEXT:    [[LCSSA:%.*]] = phi ptr [ undef, [[FOR_INC_I_I_I]] ], [ undef, [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    unreachable
@@ -104,7 +104,7 @@ while.body:
   %pos.337 = phi i32 [ %inc46, %while.body ], [ %add41, %entry ]
   %inc46 = add i32 %pos.337, 1
   %arrayidx48 = getelementptr inbounds [1024 x i8], ptr undef, i64 0, i64 %idxprom4738
-  store i8 0, i8* %arrayidx48, align 1
+  store i8 0, ptr %arrayidx48, align 1
   %and43 = and i32 %inc46, 3
   %cmp44 = icmp eq i32 %and43, 0
   %idxprom47 = zext i32 %inc46 to i64
@@ -119,7 +119,7 @@ while.end:
 define i32 @pr57508(ptr %src) {
 ; CHECK-LABEL: @pr57508(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -128,18 +128,16 @@ define i32 @pr57508(ptr %src) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 2000
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 false, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 2000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[LOCAL:%.*]] = phi i32 [ [[LOCAL_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 2000, [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[LOCAL:%.*]] = phi i32 [ [[LOCAL_NEXT:%.*]], [[LOOP]] ], [ 2000, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[LOCAL_NEXT]] = add i32 [[LOCAL]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 2000
-; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       loop.exit:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb:

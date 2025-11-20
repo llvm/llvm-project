@@ -66,9 +66,8 @@ Error ExplainOutputStyle::explainPdbFile() {
 }
 
 Error ExplainOutputStyle::explainBinaryFile() {
-  std::unique_ptr<BinaryByteStream> Stream =
-      std::make_unique<BinaryByteStream>(File.unknown().getBuffer(),
-                                          llvm::support::little);
+  std::unique_ptr<BinaryByteStream> Stream = std::make_unique<BinaryByteStream>(
+      File.unknown().getBuffer(), llvm::endianness::little);
   switch (opts::explain::InputType) {
   case opts::explain::InputFileType::DBIStream: {
     DbiStream Dbi(std::move(Stream));
@@ -140,8 +139,8 @@ bool ExplainOutputStyle::explainPdbBlockStatus() {
                  FileOffset, File.pdb().getFileSize());
     return false;
   }
-  P.formatLine("Block:Offset = {2:X-}:{1:X-4}.", FileOffset, pdbBlockOffset(),
-               pdbBlockIndex());
+  P.formatLine("Block:Offset = {0:X-}:{1:X-4}.", pdbBlockIndex(),
+               pdbBlockOffset());
 
   bool IsFree = File.pdb().getMsfLayout().FreePageMap[pdbBlockIndex()];
   P.formatLine("Address is in block {0} ({1}allocated).", pdbBlockIndex(),

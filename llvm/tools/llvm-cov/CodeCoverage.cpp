@@ -100,10 +100,12 @@ private:
                                const CoverageMapping &Coverage);
 
   /// Create source views for the branches of the view.
-  void attachBranchSubViews(SourceCoverageView &View, StringRef SourceName,
-                            ArrayRef<CountedRegion> Branches,
-                            const MemoryBuffer &File,
-                            CoverageData &CoverageInfo);
+  void attachBranchSubViews(SourceCoverageView &View,
+                            ArrayRef<CountedRegion> Branches);
+
+  /// Create source views for the MCDC records.
+  void attachMCDCSubViews(SourceCoverageView &View,
+                          ArrayRef<MCDCRecord> MCDCRecords);
 
   /// Create the source view of a particular function.
   std::unique_ptr<SourceCoverageView>
@@ -151,7 +153,7 @@ private:
   bool HadSourceFiles = false;
 
   /// The path to the indexed profile.
-  std::string PGOFilename;
+  std::optional<std::string> PGOFilename;
 
   /// A list of input source files.
   std::vector<std::string> SourceFiles;
@@ -319,17 +321,13 @@ void CodeCoverageTool::attachExpansionSubViews(
         SourceCoverageView::create(Expansion.Function.Name, SourceBuffer.get(),
                                    ViewOpts, std::move(ExpansionCoverage));
     attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
-    attachBranchSubViews(*SubView, Expansion.Function.Name, SubViewBranches,
-                         SourceBuffer.get(), ExpansionCoverage);
+    attachBranchSubViews(*SubView, SubViewBranches);
     View.addExpansion(Expansion.Region, std::move(SubView));
   }
 }
 
 void CodeCoverageTool::attachBranchSubViews(SourceCoverageView &View,
-                                            StringRef SourceName,
-                                            ArrayRef<CountedRegion> Branches,
-                                            const MemoryBuffer &File,
-                                            CoverageData &CoverageInfo) {
+                                            ArrayRef<CountedRegion> Branches) {
   if (!ViewOpts.ShowBranchCounts && !ViewOpts.ShowBranchPercents)
     return;
 
@@ -338,17 +336,33 @@ void CodeCoverageTool::attachBranchSubViews(SourceCoverageView &View,
 
   // Group branches that have the same line number into the same subview.
   while (NextBranch != EndBranch) {
-    std::vector<CountedRegion> ViewBranches;
+    SmallVector<CountedRegion, 0> ViewBranches;
     unsigned CurrentLine = NextBranch->LineStart;
-
     while (NextBranch != EndBranch && CurrentLine == NextBranch->LineStart)
       ViewBranches.push_back(*NextBranch++);
 
-    if (!ViewBranches.empty()) {
-      auto SubView = SourceCoverageView::create(SourceName, File, ViewOpts,
-                                                std::move(CoverageInfo));
-      View.addBranch(CurrentLine, ViewBranches, std::move(SubView));
-    }
+    View.addBranch(CurrentLine, std::move(ViewBranches));
+  }
+}
+
+void CodeCoverageTool::attachMCDCSubViews(SourceCoverageView &View,
+                                          ArrayRef<MCDCRecord> MCDCRecords) {
+  if (!ViewOpts.ShowMCDC)
+    return;
+
+  const auto *NextRecord = MCDCRecords.begin();
+  const auto *EndRecord = MCDCRecords.end();
+
+  // Group and process MCDC records that have the same line number into the
+  // same subview.
+  while (NextRecord != EndRecord) {
+    SmallVector<MCDCRecord, 0> ViewMCDCRecords;
+    unsigned CurrentLine = NextRecord->getDecisionRegion().LineEnd;
+    while (NextRecord != EndRecord &&
+           CurrentLine == NextRecord->getDecisionRegion().LineEnd)
+      ViewMCDCRecords.push_back(*NextRecord++);
+
+    View.addMCDCRecord(CurrentLine, std::move(ViewMCDCRecords));
   }
 }
 
@@ -364,12 +378,13 @@ CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
 
   auto Branches = FunctionCoverage.getBranches();
   auto Expansions = FunctionCoverage.getExpansions();
+  auto MCDCRecords = FunctionCoverage.getMCDCRecords();
   auto View = SourceCoverageView::create(DC.demangle(Function.Name),
                                          SourceBuffer.get(), ViewOpts,
                                          std::move(FunctionCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
-  attachBranchSubViews(*View, DC.demangle(Function.Name), Branches,
-                       SourceBuffer.get(), FunctionCoverage);
+  attachBranchSubViews(*View, Branches);
+  attachMCDCSubViews(*View, MCDCRecords);
 
   return View;
 }
@@ -386,11 +401,12 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
 
   auto Branches = FileCoverage.getBranches();
   auto Expansions = FileCoverage.getExpansions();
+  auto MCDCRecords = FileCoverage.getMCDCRecords();
   auto View = SourceCoverageView::create(SourceFile, SourceBuffer.get(),
                                          ViewOpts, std::move(FileCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
-  attachBranchSubViews(*View, SourceFile, Branches, SourceBuffer.get(),
-                       FileCoverage);
+  attachBranchSubViews(*View, Branches);
+  attachMCDCSubViews(*View, MCDCRecords);
   if (!ViewOpts.ShowFunctionInstantiations)
     return View;
 
@@ -408,11 +424,12 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
         auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
         auto SubViewExpansions = SubViewCoverage.getExpansions();
         auto SubViewBranches = SubViewCoverage.getBranches();
+        auto SubViewMCDCRecords = SubViewCoverage.getMCDCRecords();
         SubView = SourceCoverageView::create(
             Funcname, SourceBuffer.get(), ViewOpts, std::move(SubViewCoverage));
         attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
-        attachBranchSubViews(*SubView, SourceFile, SubViewBranches,
-                             SourceBuffer.get(), SubViewCoverage);
+        attachBranchSubViews(*SubView, SubViewBranches);
+        attachMCDCSubViews(*SubView, SubViewMCDCRecords);
       }
 
       unsigned FileID = Function->CountedRegions.front().FileID;
@@ -438,10 +455,12 @@ static bool modifiedTimeGT(StringRef LHS, StringRef RHS) {
 }
 
 std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
-  for (StringRef ObjectFilename : ObjectFilenames)
-    if (modifiedTimeGT(ObjectFilename, PGOFilename))
-      warning("profile data may be out of date - object is newer",
-              ObjectFilename);
+  if (PGOFilename) {
+    for (StringRef ObjectFilename : ObjectFilenames)
+      if (modifiedTimeGT(ObjectFilename, PGOFilename.value()))
+        warning("profile data may be out of date - object is newer",
+                ObjectFilename);
+  }
   auto FS = vfs::getRealFileSystem();
   auto CoverageOrErr = CoverageMapping::load(
       ObjectFilenames, PGOFilename, *FS, CoverageArches,
@@ -478,7 +497,7 @@ void CodeCoverageTool::remapPathNames(const CoverageMapping &Coverage) {
   if (!PathRemappings)
     return;
 
-  // Convert remapping paths to native paths with trailing seperators.
+  // Convert remapping paths to native paths with trailing separators.
   auto nativeWithTrailing = [](StringRef Path) -> std::string {
     if (Path.empty())
       return "";
@@ -502,7 +521,7 @@ void CodeCoverageTool::remapPathNames(const CoverageMapping &Coverage) {
       SmallString<128> NativeFilename;
       sys::path::native(Filename, NativeFilename);
       sys::path::remove_dots(NativeFilename, true);
-      if (NativeFilename.startswith(RemapFrom)) {
+      if (NativeFilename.starts_with(RemapFrom)) {
         RemappedFilenames[Filename] =
             RemapTo + NativeFilename.substr(RemapFrom.size()).str();
       }
@@ -530,7 +549,7 @@ void CodeCoverageTool::removeUnmappedInputs(const CoverageMapping &Coverage) {
   // The user may have specified source files which aren't in the coverage
   // mapping. Filter these files away.
   llvm::erase_if(SourceFiles, [&](const std::string &SF) {
-    return !std::binary_search(CoveredFiles.begin(), CoveredFiles.end(), SF);
+    return !llvm::binary_search(CoveredFiles, SF);
   });
 }
 
@@ -571,8 +590,7 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
   // Invoke the demangler.
   std::vector<StringRef> ArgsV;
   ArgsV.reserve(ViewOpts.DemanglerOpts.size());
-  for (StringRef Arg : ViewOpts.DemanglerOpts)
-    ArgsV.push_back(Arg);
+  llvm::append_range(ArgsV, ViewOpts.DemanglerOpts);
   std::optional<StringRef> Redirects[] = {
       InputPath.str(), OutputPath.str(), {""}};
   std::string ErrMsg;
@@ -652,10 +670,15 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "dump-collected-paths", cl::Optional, cl::Hidden,
       cl::desc("Show the collected paths to source files"));
 
-  cl::opt<std::string, true> PGOFilename(
-      "instr-profile", cl::Required, cl::location(this->PGOFilename),
+  cl::opt<std::string> PGOFilename(
+      "instr-profile", cl::Optional,
       cl::desc(
           "File with the profile data obtained after an instrumented run"));
+
+  cl::opt<bool> EmptyProfile(
+      "empty-profile", cl::Optional,
+      cl::desc("Use a synthetic profile with no data to generate "
+               "baseline coverage"));
 
   cl::list<std::string> Arches(
       "arch", cl::desc("architectures of the coverage mapping binaries"));
@@ -752,6 +775,10 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       cl::desc("Show branch condition statistics in summary table"),
       cl::init(true));
 
+  cl::opt<bool> MCDCSummary("show-mcdc-summary", cl::Optional,
+                            cl::desc("Show MCDC statistics in summary table"),
+                            cl::init(false));
+
   cl::opt<bool> InstantiationSummary(
       "show-instantiation-summary", cl::Optional,
       cl::desc("Show instantiation statistics in summary table"));
@@ -784,6 +811,15 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       BIDFetcher = std::make_unique<object::BuildIDFetcher>(DebugFileDirectory);
     }
     this->CheckBinaryIDs = CheckBinaryIDs;
+
+    if (!PGOFilename.empty() == EmptyProfile) {
+      error(
+          "exactly one of -instr-profile and -empty-profile must be specified");
+      return 1;
+    }
+    if (!PGOFilename.empty()) {
+      this->PGOFilename = std::make_optional(PGOFilename.getValue());
+    }
 
     if (!CovFilename.empty())
       ObjectFilenames.emplace_back(CovFilename);
@@ -923,6 +959,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       ::exit(0);
     }
 
+    ViewOpts.ShowMCDCSummary = MCDCSummary;
     ViewOpts.ShowBranchSummary = BranchSummary;
     ViewOpts.ShowRegionSummary = RegionSummary;
     ViewOpts.ShowInstantiationSummary = InstantiationSummary;
@@ -968,6 +1005,11 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
                             "percent", "Show True/False percent")),
       cl::init(CoverageViewOptions::BranchOutputType::Off));
 
+  cl::opt<bool> ShowMCDC(
+      "show-mcdc", cl::Optional,
+      cl::desc("Show the MCDC Coverage for each applicable boolean expression"),
+      cl::cat(ViewCategory));
+
   cl::opt<bool> ShowBestLineRegionsCounts(
       "show-line-counts-or-regions", cl::Optional,
       cl::desc("Show the execution counts for each line, or the execution "
@@ -986,11 +1028,21 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
                                       cl::desc("Show directory coverage"),
                                       cl::cat(ViewCategory));
 
+  cl::opt<bool> ShowCreatedTime("show-created-time", cl::Optional,
+                                cl::desc("Show created time for each page."),
+                                cl::init(true), cl::cat(ViewCategory));
+
   cl::opt<std::string> ShowOutputDirectory(
       "output-dir", cl::init(""),
       cl::desc("Directory in which coverage information is written out"));
   cl::alias ShowOutputDirectoryA("o", cl::desc("Alias for --output-dir"),
                                  cl::aliasopt(ShowOutputDirectory));
+
+  cl::opt<bool> BinaryCounters(
+      "binary-counters", cl::Optional,
+      cl::desc("Show binary counters (1/0) in lines and branches instead of "
+               "integer execution counts"),
+      cl::cat(ViewCategory));
 
   cl::opt<uint32_t> TabSize(
       "tab-size", cl::init(2),
@@ -1063,11 +1115,13 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   ViewOpts.ShowExpandedRegions = ShowExpansions;
   ViewOpts.ShowBranchCounts =
       ShowBranches == CoverageViewOptions::BranchOutputType::Count;
+  ViewOpts.ShowMCDC = ShowMCDC;
   ViewOpts.ShowBranchPercents =
       ShowBranches == CoverageViewOptions::BranchOutputType::Percent;
   ViewOpts.ShowFunctionInstantiations = ShowInstantiations;
   ViewOpts.ShowDirectoryCoverage = ShowDirectoryCoverage;
   ViewOpts.ShowOutputDirectory = ShowOutputDirectory;
+  ViewOpts.BinaryCounters = BinaryCounters;
   ViewOpts.TabSize = TabSize;
   ViewOpts.ProjectTitle = ProjectTitle;
 
@@ -1078,18 +1132,23 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
     }
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
-  }
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
 
-  auto ModifiedTime = Status.getLastModificationTime();
-  std::string ModifiedTimeStr = to_string(ModifiedTime);
-  size_t found = ModifiedTimeStr.rfind(':');
-  ViewOpts.CreatedTimeStr = (found != std::string::npos)
-                                ? "Created: " + ModifiedTimeStr.substr(0, found)
-                                : "Created: " + ModifiedTimeStr;
+    if (ShowCreatedTime) {
+      auto ModifiedTime = Status.getLastModificationTime();
+      std::string ModifiedTimeStr = to_string(ModifiedTime);
+      size_t found = ModifiedTimeStr.rfind(':');
+      ViewOpts.CreatedTimeStr =
+          (found != std::string::npos)
+              ? "Created: " + ModifiedTimeStr.substr(0, found)
+              : "Created: " + ModifiedTimeStr;
+    }
+  }
 
   auto Coverage = load();
   if (!Coverage)
@@ -1169,7 +1228,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
                           ShowFilenames);
   } else {
     // In -output-dir mode, it's safe to use multiple threads to print files.
-    ThreadPool Pool(S);
+    DefaultThreadPool Pool(S);
     for (const std::string &SourceFile : SourceFiles)
       Pool.async(&CodeCoverageTool::writeSourceFileView, this, SourceFile,
                  Coverage.get(), Printer.get(), ShowFilenames);
@@ -1197,10 +1256,12 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
     return 1;
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
   }
 
   auto Coverage = load();
@@ -1242,6 +1303,10 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
                               cl::desc("Don't export branch data (LCOV)"),
                               cl::cat(ExportCategory));
 
+  cl::opt<bool> UnifyInstantiations("unify-instantiations", cl::Optional,
+                                    cl::desc("Unify function instantiations"),
+                                    cl::init(true), cl::cat(ExportCategory));
+
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
@@ -1249,6 +1314,7 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
   ViewOpts.SkipExpansions = SkipExpansions;
   ViewOpts.SkipFunctions = SkipFunctions;
   ViewOpts.SkipBranches = SkipBranches;
+  ViewOpts.UnifyFunctionInstantiations = UnifyInstantiations;
 
   if (ViewOpts.Format != CoverageViewOptions::OutputFormat::Text &&
       ViewOpts.Format != CoverageViewOptions::OutputFormat::Lcov) {
@@ -1257,10 +1323,12 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
     return 1;
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
   }
 
   auto Coverage = load();

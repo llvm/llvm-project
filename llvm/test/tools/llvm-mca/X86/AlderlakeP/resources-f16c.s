@@ -48,14 +48,14 @@ vcvtps2ph   $0, %ymm0, (%rax)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 4.00   4.00   0.67   0.67   1.00   4.00    -     1.00   1.00   1.00    -     0.67    -
+# CHECK-NEXT: 4.00   4.00   0.67   0.67   1.00   4.00    -     1.00   1.00   1.00   0.67    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
 # CHECK-NEXT: 0.50   0.50    -      -      -     1.00    -      -      -      -      -      -      -     vcvtph2ps	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vcvtph2ps	(%rax), %xmm2
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vcvtph2ps	(%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -     1.00    -      -      -      -      -      -      -     vcvtph2ps	%xmm0, %ymm2
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vcvtph2ps	(%rax), %ymm2
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     vcvtph2ps	(%rax), %ymm2
 # CHECK-NEXT: 0.50   0.50    -      -      -     1.00    -      -      -      -      -      -      -     vcvtps2ph	$0, %xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -     0.50    -      -     0.50   0.50   0.50    -      -      -     vcvtps2ph	$0, %xmm0, (%rax)
 # CHECK-NEXT: 0.50   0.50    -      -      -     1.00    -      -      -      -      -      -      -     vcvtps2ph	$0, %ymm0, %xmm2

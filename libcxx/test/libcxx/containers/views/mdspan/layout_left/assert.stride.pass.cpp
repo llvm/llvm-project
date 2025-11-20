@@ -8,8 +8,8 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-hardening-mode=unchecked
-// XFAIL: availability-verbose_abort-missing
+// UNSUPPORTED: libcpp-hardening-mode=none
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <mdspan>
 
@@ -33,9 +33,9 @@
 int main(int, char**) {
   // value out of range
   {
-    std::layout_left::template mapping<std::dextents<int, 3>> m{std::dextents<int, 3>{100, 100, 100}};
+    std::layout_left::mapping<std::dextents<int, 3>> m{std::dextents<int, 3>{100, 100, 100}};
 
-    TEST_LIBCPP_ASSERT_FAILURE(m.stride(4), "invalid rank index");
+    TEST_LIBCPP_ASSERT_FAILURE(m.stride(4), "layout_left::mapping::stride(): invalid rank index");
   }
   return 0;
 }

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Speculation.h"
+
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -58,8 +60,6 @@ void IRSpeculationLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                               ThreadSafeModule TSM) {
 
   assert(TSM && "Speculation Layer received Null Module ?");
-  assert(TSM.getContext().getContext() != nullptr &&
-         "Module with null LLVMContext?");
 
   // Instrumentation of runtime calls, lock the Module
   TSM.withModuleDo([this, &R](Module &M) {
@@ -67,7 +67,7 @@ void IRSpeculationLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
     auto SpeculatorVTy = StructType::create(MContext, "Class.Speculator");
     auto RuntimeCallTy = FunctionType::get(
         Type::getVoidTy(MContext),
-        {SpeculatorVTy->getPointerTo(), Type::getInt64Ty(MContext)}, false);
+        {PointerType::getUnqual(MContext), Type::getInt64Ty(MContext)}, false);
     auto RuntimeCall =
         Function::Create(RuntimeCallTy, Function::LinkageTypes::ExternalLinkage,
                          "__orc_speculate_for", &M);

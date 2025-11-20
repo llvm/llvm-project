@@ -86,7 +86,7 @@ MSBuild.exe had been shipped as a component of the .NET framework, but since
 2013 it's part of Visual Studio. You can find it at "C:\\Program Files
 (x86)\\msbuild".
 
-You can build LLD as a 64 bit application. To do that, open VS2013 x64 command
+You can build LLD as a 64-bit application. To do that, open VS2013 x64 command
 prompt and run cmake for "Visual Studio 12 Win64" target.
 
 Using Ninja
@@ -95,3 +95,14 @@ Using Ninja
 1. Check out LLVM and LLD from the LLVM SVN repository (or Git mirror),
 #. run ``cmake -G ninja <llvm-source-dir>`` from VS command prompt,
 #. run ``ninja lld``
+
+Extensions
+==========
+
+LLD flags
+---------
+
+* ``/build-id``: Always generate GUID hash. When PDB is generated, LLD uses PDB
+  content hash for GUID. Otherwise, LLD uses output binary content hash for GUID.
+  LLD also provides ``__buildid`` symbol pointing to the 16 bytes GUID hash if
+  there is a reference to it.

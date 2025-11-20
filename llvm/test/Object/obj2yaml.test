@@ -711,12 +711,14 @@ FileHeader:
 # ELF-AVR-NEXT:    FirstSec: .text
 # ELF-AVR-NEXT:    LastSec:  .text
 # ELF-AVR-NEXT:    Align:    0x2
+# ELF-AVR-NEXT:    Offset:   0x74
 # ELF-AVR-NEXT:  - Type:     PT_LOAD
 # ELF-AVR-NEXT:    Flags:    [ PF_W, PF_R ]
 # ELF-AVR-NEXT:    FirstSec: .data
 # ELF-AVR-NEXT:    LastSec:  .data
 # ELF-AVR-NEXT:    VAddr:    0x800060
 # ELF-AVR-NEXT:    PAddr:    0x4
+# ELF-AVR-NEXT:    Offset:   0x78
 # ELF-AVR-NEXT: Sections:
 # ELF-AVR-NEXT:   - Name:            .text
 # ELF-AVR-NEXT:     Type:            SHT_PROGBITS

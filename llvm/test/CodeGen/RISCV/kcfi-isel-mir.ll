@@ -20,7 +20,7 @@ define void @f2(ptr noundef %x) #0 {
   ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprtc = COPY $x10
-  ; CHECK-NEXT:   PseudoTAILIndirect [[COPY]], implicit $x2, cfi-type 12345678
+  ; CHECK-NEXT:   PseudoTAILIndirect [[COPY]], csr_ilp32_lp64, implicit $x2, cfi-type 12345678
   tail call void %x() [ "kcfi"(i32 12345678) ]
   ret void
 }

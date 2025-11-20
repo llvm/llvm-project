@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -std=c++11 -fexperimental-new-constant-interpreter
 
 using size_t = decltype(sizeof(0));
 struct noreturn_t {} constexpr noreturn = {};
@@ -23,7 +24,9 @@ void bad_news(int *ip)
   auto t = new (int(*)[[]]); // expected-error {{an attribute list cannot appear here}}
   auto u = new (int(*)[[]{return 1;}()][2]); // expected-error {{C++11 only allows consecutive left square brackets when introducing an attribute}} \
                                                 expected-error {{variably modified type}} \
-                                                expected-error {{a lambda expression may not appear inside of a constant expression}}
+                                                expected-error {{a lambda expression may not appear inside of a constant expression}} \
+                                                expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                                expected-note-re {{non-literal type '(lambda at {{.*}})' cannot be used in a constant expression}}
 }
 
 void good_deletes()

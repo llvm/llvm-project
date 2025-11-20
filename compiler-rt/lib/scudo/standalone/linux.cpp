@@ -14,6 +14,7 @@
 #include "internal_defs.h"
 #include "linux.h"
 #include "mutex.h"
+#include "report_linux.h"
 #include "string_utils.h"
 
 #include <errno.h>
@@ -39,7 +40,10 @@
 
 namespace scudo {
 
+#if !defined(SCUDO_PAGE_SIZE)
+// This function is only used when page size is not hard-coded.
 uptr getPageSize() { return static_cast<uptr>(sysconf(_SC_PAGESIZE)); }
+#endif
 
 void NORETURN die() { abort(); }
 
@@ -66,7 +70,7 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
   void *P = mmap(Addr, Size, MmapProt, MmapFlags, -1, 0);
   if (P == MAP_FAILED) {
     if (!(Flags & MAP_ALLOWNOMEM) || errno != ENOMEM)
-      dieOnMapUnmapError(errno == ENOMEM ? Size : 0);
+      reportMapError(errno == ENOMEM ? Size : 0);
     return nullptr;
   }
 #if SCUDO_ANDROID
@@ -80,7 +84,7 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
 void unmap(void *Addr, uptr Size, UNUSED uptr Flags,
            UNUSED MapPlatformData *Data) {
   if (munmap(Addr, Size) != 0)
-    dieOnMapUnmapError();
+    reportUnmapError(reinterpret_cast<uptr>(Addr), Size);
 }
 
 // TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
@@ -88,7 +92,7 @@ void setMemoryPermission(uptr Addr, uptr Size, uptr Flags,
                          UNUSED MapPlatformData *Data) {
   int Prot = (Flags & MAP_NOACCESS) ? PROT_NONE : (PROT_READ | PROT_WRITE);
   if (mprotect(reinterpret_cast<void *>(Addr), Size, Prot) != 0)
-    dieOnMapUnmapError();
+    reportProtectError(Addr, Size, Prot);
 }
 
 // TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
@@ -188,6 +192,12 @@ bool getRandom(void *Buffer, uptr Length, UNUSED bool Blocking) {
       syscall(SYS_getrandom, Buffer, Length, Blocking ? 0 : GRND_NONBLOCK);
   if (ReadBytes == static_cast<ssize_t>(Length))
     return true;
+  // If this system call is not implemented in the kernel, then we will try
+  // and use /dev/urandom. Otherwise, if the syscall fails, return false
+  // assuming that trying to read /dev/urandom will cause a delay waiting for
+  // the random data to be usable.
+  if (errno != ENOSYS)
+    return false;
 #endif // defined(SYS_getrandom)
   // Up to 256 bytes, a read off /dev/urandom will not be interrupted.
   // Blocking is moot here, O_NONBLOCK has no effect when opening /dev/urandom.

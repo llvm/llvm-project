@@ -24,14 +24,14 @@ CommandObjectGUI::CommandObjectGUI(CommandInterpreter &interpreter)
 
 CommandObjectGUI::~CommandObjectGUI() = default;
 
-bool CommandObjectGUI::DoExecute(Args &args, CommandReturnObject &result) {
+void CommandObjectGUI::DoExecute(Args &args, CommandReturnObject &result) {
 #if LLDB_ENABLE_CURSES
   Debugger &debugger = GetDebugger();
 
-  File &input = debugger.GetInputFile();
-  File &output = debugger.GetOutputFile();
-  if (input.GetStream() && output.GetStream() && input.GetIsRealTerminal() &&
-      input.GetIsInteractive()) {
+  FileSP input_sp = debugger.GetInputFileSP();
+  FileSP output_sp = debugger.GetOutputFileSP();
+  if (input_sp->GetStream() && output_sp->GetStream() &&
+      input_sp->GetIsRealTerminal() && input_sp->GetIsInteractive()) {
     IOHandlerSP io_handler_sp(new IOHandlerCursesGUI(debugger));
     if (io_handler_sp)
       debugger.RunIOHandlerAsync(io_handler_sp);
@@ -39,9 +39,7 @@ bool CommandObjectGUI::DoExecute(Args &args, CommandReturnObject &result) {
   } else {
     result.AppendError("the gui command requires an interactive terminal.");
   }
-  return true;
 #else
   result.AppendError("lldb was not built with gui support");
-  return false;
 #endif
 }

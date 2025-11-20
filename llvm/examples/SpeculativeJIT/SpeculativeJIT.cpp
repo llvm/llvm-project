@@ -3,9 +3,11 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+#include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/SpeculateAnalyses.h"
 #include "llvm/ExecutionEngine/Orc/Speculation.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
@@ -18,7 +20,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
 
-#include <list>
 #include <string>
 
 using namespace llvm;
@@ -49,7 +50,9 @@ public:
     if (!DL)
       return DL.takeError();
 
-    auto EPC = SelfExecutorProcessControl::Create();
+    auto EPC = SelfExecutorProcessControl::Create(
+        nullptr,
+        std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt));
     if (!EPC)
       return EPC.takeError();
 
@@ -107,36 +110,30 @@ private:
       IndirectStubsManagerBuilderFunction ISMBuilder,
       std::unique_ptr<DynamicLibrarySearchGenerator> ProcessSymbolsGenerator)
       : ES(std::move(ES)), DL(std::move(DL)),
-        MainJD(this->ES->createBareJITDylib("<main>")), LCTMgr(std::move(LCTMgr)),
+        MainJD(this->ES->createBareJITDylib("<main>")),
+        LCTMgr(std::move(LCTMgr)),
         CompileLayer(*this->ES, ObjLayer,
                      std::make_unique<ConcurrentIRCompiler>(std::move(JTMB))),
         S(Imps, *this->ES),
         SpeculateLayer(*this->ES, CompileLayer, S, Mangle, BlockFreqQuery()),
-        CODLayer(*this->ES, SpeculateLayer, *this->LCTMgr,
-                 std::move(ISMBuilder)) {
+        IPLayer(*this->ES, SpeculateLayer),
+        CODLayer(*this->ES, IPLayer, *this->LCTMgr, std::move(ISMBuilder)) {
     MainJD.addGenerator(std::move(ProcessSymbolsGenerator));
     this->CODLayer.setImplMap(&Imps);
-    this->ES->setDispatchTask(
-        [this](std::unique_ptr<Task> T) {
-          CompileThreads.async(
-              [UnownedT = T.release()]() {
-                std::unique_ptr<Task> T(UnownedT);
-                T->run();
-              });
-        });
     ExitOnErr(S.addSpeculationRuntime(MainJD, Mangle));
     LocalCXXRuntimeOverrides CXXRuntimeoverrides;
     ExitOnErr(CXXRuntimeoverrides.enable(MainJD, Mangle));
   }
 
-  static std::unique_ptr<SectionMemoryManager> createMemMgr() {
+  static std::unique_ptr<SectionMemoryManager>
+  createMemMgr(const MemoryBuffer &) {
     return std::make_unique<SectionMemoryManager>();
   }
 
   std::unique_ptr<ExecutionSession> ES;
   DataLayout DL;
   MangleAndInterner Mangle{*ES, DL};
-  ThreadPool CompileThreads{llvm::hardware_concurrency(NumThreads)};
+  DefaultThreadPool CompileThreads{llvm::hardware_concurrency(NumThreads)};
 
   JITDylib &MainJD;
 
@@ -147,6 +144,7 @@ private:
   Speculator S;
   RTDyldObjectLinkingLayer ObjLayer{*ES, createMemMgr};
   IRSpeculationLayer SpeculateLayer;
+  IRPartitionLayer IPLayer;
   CompileOnDemandLayer CODLayer;
 };
 

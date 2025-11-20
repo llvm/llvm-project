@@ -56,6 +56,9 @@
 main:
     movl variable(%rip), %eax
     ret
+    .global _pei386_runtime_relocator
+_pei386_runtime_relocator:
+    ret
     .data
 ptr:
     .quad variable

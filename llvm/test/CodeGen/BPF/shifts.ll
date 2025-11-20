@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpfel -show-mc-encoding | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel -mcpu=v1 -show-mc-encoding | FileCheck %s
 
 define zeroext i8 @lshr8(i8 zeroext %a, i8 zeroext %cnt) nounwind readnone {
 entry:

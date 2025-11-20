@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Remarks/Remark.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include <optional>
 
 using namespace llvm;
@@ -22,7 +24,14 @@ std::string Remark::getArgsAsMsg() const {
   raw_string_ostream OS(Str);
   for (const Argument &Arg : Args)
     OS << Arg.Val;
-  return OS.str();
+  return Str;
+}
+
+Argument *Remark::getArgByKey(StringRef Key) {
+  auto *It = find_if(Args, [&](auto &Arg) { return Arg.Key == Key; });
+  if (It == Args.end())
+    return nullptr;
+  return &*It;
 }
 
 void RemarkLocation::print(raw_ostream &OS) const {

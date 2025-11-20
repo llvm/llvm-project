@@ -34,4 +34,6 @@ struct Concrete : public Effect::Base<Concrete> {};
 } // namespace TestEffects
 } // namespace mlir
 
+#include "TestOpInterfaces.h.inc"
+
 #endif // MLIR_TEST_LIB_DIALECT_TEST_TESTINTERFACES_H

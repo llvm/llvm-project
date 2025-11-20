@@ -26,11 +26,8 @@ std::string FormatExtensionFlags(uint64_t Flags) {
     Features.push_back("none");
   CSKY::getExtensionFeatures(Flags, Features);
 
-  Features.erase(std::remove_if(Features.begin(), Features.end(),
-                                [](StringRef extension) {
-                                  return extension.startswith("-");
-                                }),
-                 Features.end());
+  llvm::erase_if(
+      Features, [](StringRef extension) { return extension.starts_with("-"); });
 
   return llvm::join(Features, ", ");
 }
@@ -1020,7 +1017,7 @@ TEST(TargetParserTest, testInvalidCSKYArch) {
 bool testCSKYArch(StringRef Arch, StringRef DefaultCPU) {
   CSKY::ArchKind AK = CSKY::parseArch(Arch);
   bool Result = (AK != CSKY::ArchKind::INVALID);
-  Result &= CSKY::getDefaultCPU(Arch).equals(DefaultCPU);
+  Result &= CSKY::getDefaultCPU(Arch) == DefaultCPU;
   return Result;
 }
 

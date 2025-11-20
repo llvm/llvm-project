@@ -163,8 +163,8 @@ public:
       Volume = 0;
       break;
     case A:
-      Area = 0; // expected-warning {{1 uninitialized field}}
-      break;
+      Area = 0;
+      break; // expected-warning {{1 uninitialized field}}
     }
   }
 
@@ -201,8 +201,8 @@ public:
       Volume = 0;
       break;
     case A:
-      Area = 0; // expected-warning {{1 uninitialized field}}
-      break;
+      Area = 0;
+      break; // expected-warning {{1 uninitialized field}}
     }
   }
 

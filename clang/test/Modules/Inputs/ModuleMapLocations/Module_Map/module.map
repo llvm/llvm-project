@@ -1,0 +1,3 @@
+module module_map {
+  header "a.h"
+}

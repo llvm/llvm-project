@@ -13,6 +13,7 @@
 #include "MipsInstrInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
+#include "Mips.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -25,6 +26,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
@@ -37,8 +39,9 @@ using namespace llvm;
 // Pin the vtable to this file.
 void MipsInstrInfo::anchor() {}
 
-MipsInstrInfo::MipsInstrInfo(const MipsSubtarget &STI, unsigned UncondBr)
-    : MipsGenInstrInfo(Mips::ADJCALLSTACKDOWN, Mips::ADJCALLSTACKUP),
+MipsInstrInfo::MipsInstrInfo(const MipsSubtarget &STI,
+                             const MipsRegisterInfo &RI, unsigned UncondBr)
+    : MipsGenInstrInfo(STI, RI, Mips::ADJCALLSTACKDOWN, Mips::ADJCALLSTACKUP),
       Subtarget(STI), UncondBrOpc(UncondBr) {}
 
 const MipsInstrInfo *MipsInstrInfo::create(MipsSubtarget &STI) {
@@ -50,6 +53,13 @@ const MipsInstrInfo *MipsInstrInfo::create(MipsSubtarget &STI) {
 
 bool MipsInstrInfo::isZeroImm(const MachineOperand &op) const {
   return op.isImm() && op.getImm() == 0;
+}
+
+MCInst MipsInstrInfo::getNop() const {
+  return MCInstBuilder(Mips::SLL)
+      .addReg(Mips::ZERO)
+      .addReg(Mips::ZERO)
+      .addImm(0);
 }
 
 /// insertNoop - If data hazard condition is found insert the target nop
@@ -571,6 +581,13 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
   return 0;
 }
 
+bool MipsInstrInfo::SafeAfterMflo(const MachineInstr &MI) const {
+  if (IsDIVMULT(MI.getOpcode()))
+    return false;
+
+  return true;
+}
+
 /// Predicate for distingushing between control transfer instructions and all
 /// other instructions for handling forbidden slots. Consider inline assembly
 /// as unsafe as well.
@@ -619,8 +636,15 @@ bool MipsInstrInfo::SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
     return false;
 
   return !llvm::any_of(LoadMI.defs(), [&](const MachineOperand &Op) {
-    return Op.isReg() && MIInSlot.readsRegister(Op.getReg());
+    return Op.isReg() && MIInSlot.readsRegister(Op.getReg(), /*TRI=*/nullptr);
   });
+}
+
+bool MipsInstrInfo::IsMfloOrMfhi(const MachineInstr &MI) const {
+  if (IsMFLOMFHI(MI.getOpcode()))
+    return true;
+
+  return false;
 }
 
 /// Predicate for distingushing instructions that have forbidden slots.
@@ -663,6 +687,22 @@ bool MipsInstrInfo::HasLoadDelaySlot(const MachineInstr &MI) const {
   }
 }
 
+bool MipsInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
+  const unsigned Opcode = MI.getOpcode();
+  switch (Opcode) {
+  default:
+    break;
+  case Mips::ADDiu:
+  case Mips::ADDiu_MM:
+  case Mips::DADDiu:
+    return ((MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) ||
+            (MI.getOperand(1).isReg() &&
+             (MI.getOperand(1).getReg() == Mips::ZERO ||
+              MI.getOperand(1).getReg() == Mips::ZERO_64)));
+  }
+  return MI.isAsCheapAsAMove();
+}
+
 /// Return the number of bytes of code the specified instruction may be.
 unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
@@ -699,7 +739,7 @@ MipsInstrInfo::genInstrWithNewOpc(unsigned NewOpc,
   bool BranchWithZeroOperand = false;
   if (I->isBranch() && !I->isPseudo()) {
     auto TRI = I->getParent()->getParent()->getSubtarget().getRegisterInfo();
-    ZeroOperandPosition = I->findRegisterUseOperandIdx(Mips::ZERO, false, TRI);
+    ZeroOperandPosition = I->findRegisterUseOperandIdx(Mips::ZERO, TRI, false);
     BranchWithZeroOperand = ZeroOperandPosition != -1;
   }
 

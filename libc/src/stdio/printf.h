@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_H
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int printf(const char *__restrict format, ...);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_H

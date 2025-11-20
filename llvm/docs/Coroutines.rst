@@ -37,7 +37,7 @@ then destroy it:
 
 .. _coroutine frame:
 
-In addition to the function stack frame which exists when a coroutine is
+In addition to the function stack frame, which exists when a coroutine is
 executing, there is an additional region of storage that contains objects that
 keep the coroutine state when a coroutine is suspended. This region of storage
 is called the **coroutine frame**. It is created when a coroutine is called
@@ -145,7 +145,7 @@ lowerings:
   yielded values.
 
   The coroutine indicates that it has run to completion by returning
-  a null continuation pointer. Any yielded values will be `undef`
+  a null continuation pointer. Any yielded values will be `undef` and
   should be ignored.
 
 - In yield-once returned-continuation lowering, the coroutine must
@@ -159,7 +159,7 @@ passed to the `coro.id` intrinsic, which guarantees a certain size
 and alignment statically. The same buffer must be passed to the
 continuation function(s). The coroutine will allocate memory if the
 buffer is insufficient, in which case it will need to store at
-least that pointer in the buffer; therefore the buffer must always
+least that pointer in the buffer; therefore, the buffer must always
 be at least pointer-sized. How the coroutine uses the buffer may
 vary between suspend points.
 
@@ -182,7 +182,7 @@ handling of control-flow must be handled explicitly by the frontend.
 In this lowering, a coroutine is assumed to take the current `async context` as
 one of its arguments (the argument position is determined by
 `llvm.coro.id.async`). It is used to marshal arguments and return values of the
-coroutine. Therefore an async coroutine returns `void`.
+coroutine. Therefore, an async coroutine returns `void`.
 
 .. code-block:: llvm
 
@@ -193,7 +193,7 @@ Values live across a suspend point need to be stored in the coroutine frame to
 be available in the continuation function. This frame is stored as a tail to the
 `async context`.
 
-Every suspend point takes an `context projection function` argument which
+Every suspend point takes a `context projection function` argument which
 describes how-to obtain the continuations `async context` and every suspend
 point has an associated `resume function` denoted by the
 `llvm.coro.async.resume` intrinsic. The coroutine is resumed by calling this
@@ -221,7 +221,7 @@ a parameter to the `llvm.coro.suspend.async` intrinsic.
                                               ptr %resume_func_ptr,
                                               ptr %context_projection_function
 
-The frontend should provide a `async function pointer` struct associated with
+The frontend should provide an `async function pointer` struct associated with
 each async coroutine by `llvm.coro.id.async`'s argument. The initial size and
 alignment of the `async context` must be provided as arguments to the
 `llvm.coro.id.async` intrinsic. Lowering will update the size entry with the
@@ -303,7 +303,7 @@ The LLVM IR for this coroutine looks like this:
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+    call void @llvm.coro.end(ptr %hdl, i1 false, token none)
     ret ptr %hdl
   }
 
@@ -312,15 +312,16 @@ lowered to a constant representing the size required for the coroutine frame.
 The `coro.begin`_ intrinsic initializes the coroutine frame and returns the
 coroutine handle. The second parameter of `coro.begin` is given a block of memory
 to be used if the coroutine frame needs to be allocated dynamically.
+
 The `coro.id`_ intrinsic serves as coroutine identity useful in cases when the
-`coro.begin`_ intrinsic get duplicated by optimization passes such as
+`coro.begin`_ intrinsic gets duplicated by optimization passes such as
 jump-threading.
 
 The `cleanup` block destroys the coroutine frame. The `coro.free`_ intrinsic,
 given the coroutine handle, returns a pointer of the memory block to be freed or
 `null` if the coroutine frame was not allocated dynamically. The `cleanup`
 block is entered when coroutine runs to completion by itself or destroyed via
-call to the `coro.destroy`_ intrinsic.
+a call to the `coro.destroy`_ intrinsic.
 
 The `suspend` block contains code to be executed when coroutine runs to
 completion or suspended. The `coro.end`_ intrinsic marks the point where
@@ -336,7 +337,7 @@ Coroutine Transformation
 ------------------------
 
 One of the steps of coroutine lowering is building the coroutine frame. The
-def-use chains are analyzed to determine which objects need be kept alive across
+def-use chains are analyzed to determine which objects need to be kept alive across
 suspend points. In the coroutine shown in the previous section, use of virtual register
 `%inc` is separated from the definition by a suspend point, therefore, it
 cannot reside on the stack frame since the latter goes away once the coroutine
@@ -531,7 +532,7 @@ as follows:
     ret void
   }
 
-If different cleanup code needs to get executed for different suspend points,
+If different cleanup code needs to be executed for different suspend points,
 a similar switch will be in the `f.destroy` function.
 
 .. note ::
@@ -605,7 +606,7 @@ be used to communicate with the coroutine. This distinguished alloca is called
 **coroutine promise** and is provided as the second parameter to the
 `coro.id`_ intrinsic.
 
-The following coroutine designates a 32 bit integer `promise` and uses it to
+The following coroutine designates a 32-bit integer `promise` and uses it to
 store the current value produced by a coroutine.
 
 .. code-block:: llvm
@@ -636,7 +637,7 @@ store the current value produced by a coroutine.
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+    call void @llvm.coro.end(ptr %hdl, i1 false, token none)
     ret ptr %hdl
   }
 
@@ -739,7 +740,7 @@ looks like this:
     <SUSPEND final=true> // injected final suspend point
   }
 
-and python iterator `__next__` would look like:
+and Python iterator `__next__` would look like:
 
 .. code-block:: c++
 
@@ -749,6 +750,87 @@ and python iterator `__next__` would look like:
     return *(int*)coro.promise(hdl, 4, false);
   }
 
+Custom ABIs and Plugin Libraries
+--------------------------------
+
+Plugin libraries can extend coroutine lowering enabling a wide variety of users
+to utilize the coroutine transformation passes. An existing coroutine lowering
+is extended by:
+
+#. defining custom ABIs that inherit from the existing ABIs,
+#. give a list of generators for the custom ABIs when constructing the `CoroSplit`_ pass, and
+#. use `coro.begin.custom.abi`_ in place of `coro.begin`_ that has an additional parameter for the index of the generator/ABI to be used for the coroutine.
+
+A custom ABI overriding the SwitchABI's materialization looks like:
+
+.. code-block:: c++
+
+  class CustomSwitchABI : public coro::SwitchABI {
+  public:
+    CustomSwitchABI(Function &F, coro::Shape &S)
+      : coro::SwitchABI(F, S, ExtraMaterializable) {}
+  };
+
+Giving a list of custom ABI generators while constructing the `CoroSplit`
+pass looks like:
+
+.. code-block:: c++
+
+  CoroSplitPass::BaseABITy GenCustomABI = [](Function &F, coro::Shape &S) {
+    return std::make_unique<CustomSwitchABI>(F, S);
+  };
+
+  CGSCCPassManager CGPM;
+  CGPM.addPass(CoroSplitPass({GenCustomABI}));
+
+The LLVM IR for a coroutine using a Coroutine with a custom ABI looks like:
+
+.. code-block:: llvm
+
+  define ptr @f(i32 %n) presplitcoroutine_custom_abi {
+  entry:
+    %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+    %size = call i32 @llvm.coro.size.i32()
+    %alloc = call ptr @malloc(i32 %size)
+    %hdl = call noalias ptr @llvm.coro.begin.custom.abi(token %id, ptr %alloc, i32 0)
+    br label %loop
+  loop:
+    %n.val = phi i32 [ %n, %entry ], [ %inc, %loop ]
+    %inc = add nsw i32 %n.val, 1
+    call void @print(i32 %n.val)
+    %0 = call i8 @llvm.coro.suspend(token none, i1 false)
+    switch i8 %0, label %suspend [i8 0, label %loop
+                                  i8 1, label %cleanup]
+  cleanup:
+    %mem = call ptr @llvm.coro.free(token %id, ptr %hdl)
+    call void @free(ptr %mem)
+    br label %suspend
+  suspend:
+    call void @llvm.coro.end(ptr %hdl, i1 false, token none)
+    ret ptr %hdl
+  }
+
+Parameter Attributes
+====================
+Some parameter attributes, used to communicate additional information about the result or parameters of a function, require special handling.
+
+ByVal
+-----
+A ByVal parameter on an argument indicates that the pointee should be treated as being passed by value to the function.
+Prior to the coroutine transforms loads and stores to/from the pointer are generated where the value is needed.
+Consequently, a ByVal argument is treated much like an alloca.
+Space is allocated for it on the coroutine frame and the uses of the argument pointer are replaced with a pointer to the coroutine frame.
+
+Swift Error
+-----------
+Clang supports the swiftcall calling convention in many common targets, and a user could call a function that takes a swifterror argument from a C++ coroutine.
+The swifterror parameter attribute exists to model and optimize Swift error handling.
+A swifterror alloca or parameter can only be loaded, stored, or passed as a swifterror call argument, and a swifterror call argument can only be a direct reference to a swifterror alloca or parameter. 
+These rules, not coincidentally, mean that you can always perfectly model the data flow in the alloca, and LLVM CodeGen actually has to do that in order to emit code.
+
+For coroutine lowering the default treatment of allocas breaks those rules — splitting will try to replace the alloca with an entry in the coro frame, which can lead to trying to pass that as a swifterror argument.
+To pass a swifterror argument in a split function, we need to still have the alloca around, but we also potentially need the coro frame slot, since useful data can (in theory) be stored in the swifterror alloca slot across suspensions in the presplit coroutine.
+When split a coroutine it is consequently necessary to keep both the frame slot as well as the alloca itself and then keep them in sync.
 
 Intrinsics
 ==========
@@ -883,7 +965,7 @@ Semantics:
 Using this intrinsic on a coroutine that does not have a coroutine promise
 leads to undefined behavior. It is possible to read and modify coroutine
 promise of the coroutine which is currently executing. The coroutine author and
-a coroutine user are responsible to makes sure there is no data races.
+a coroutine user are responsible for ensuring no data races.
 
 Example:
 """"""""
@@ -1007,6 +1089,36 @@ with small positive and negative offsets).
 
 A frontend should emit exactly one `coro.begin` intrinsic per coroutine.
 
+.. _coro.begin.custom.abi:
+
+'llvm.coro.begin.custom.abi' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare ptr @llvm.coro.begin.custom.abi(token <id>, ptr <mem>, i32)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.begin.custom.abi``' intrinsic is used in place of the
+`coro.begin` intrinsic that has an additional parameter to specify the custom
+ABI for the coroutine. The return is identical to that of the `coro.begin`
+intrinsic.
+
+Arguments:
+""""""""""
+
+The first and second arguments are identical to those of the `coro.begin`
+intrinsic.
+
+The third argument is an i32 index of the generator list given to the
+`CoroSplit` pass specifying the custom ABI generator for this coroutine.
+
+Semantics:
+""""""""""
+
+The semantics are identical to those of the `coro.begin` intrinsic.
+
 .. _coro.free:
 
 'llvm.coro.free' Intrinsic
@@ -1069,7 +1181,7 @@ Overview:
 """""""""
 
 The '``llvm.coro.alloc``' intrinsic returns `true` if dynamic allocation is
-required to obtain a memory for the coroutine frame and `false` otherwise.
+required to obtain memory for the coroutine frame and `false` otherwise.
 This is not supported for returned-continuation coroutines.
 
 Arguments:
@@ -1332,7 +1444,7 @@ A frontend should emit function attribute `presplitcoroutine` for the coroutine.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare i1 @llvm.coro.end(ptr <handle>, i1 <unwind>, token <result.token>)
+  declare void @llvm.coro.end(ptr <handle>, i1 <unwind>, token <result.token>)
 
 Overview:
 """""""""
@@ -1390,8 +1502,9 @@ For landingpad based exception model, it is expected that frontend uses the
 .. code-block:: llvm
 
     ehcleanup:
-      %InResumePart = call i1 @llvm.coro.end(ptr null, i1 true, token none)
-      br i1 %InResumePart, label %eh.resume, label %cleanup.cont
+      call void @llvm.coro.end(ptr null, i1 true, token none)
+      %InRamp = call i1 @llvm.coro.is_in_ramp()
+      br i1 %InRamp, label %cleanup.cont, label %eh.resume
 
     cleanup.cont:
       ; rest of the cleanup
@@ -1403,10 +1516,10 @@ For landingpad based exception model, it is expected that frontend uses the
       %lpad.val29 = insertvalue { ptr, i32 } %lpad.val, i32 %sel, 1
       resume { ptr, i32 } %lpad.val29
 
-The `CoroSpit` pass replaces `coro.end` with ``True`` in the resume functions,
-thus leading to immediate unwind to the caller, whereas in start function it
-is replaced with ``False``, thus allowing to proceed to the rest of the cleanup
-code that is only needed during initial invocation of the coroutine.
+The `CoroSpit` pass replaces `coro.is_in_ramp` with ``True`` in the ramp functions,
+thus allowing to proceed to the rest of the cleanup code that is only needed during
+initial invocation of the coroutine. Otherwise, it is replaced with ``False``,
+thus leading to immediate unwind to the caller.
 
 For Windows Exception handling model, a frontend should attach a funclet bundle
 referring to an enclosing cleanuppad as follows:
@@ -1415,7 +1528,7 @@ referring to an enclosing cleanuppad as follows:
 
     ehcleanup:
       %tok = cleanuppad within none []
-      %unused = call i1 @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %tok) ]
+      call void @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %tok) ]
       cleanupret from %tok unwind label %RestOfTheCleanup
 
 The `CoroSplit` pass, if the funclet bundle is present, will insert
@@ -1480,7 +1593,7 @@ The number of arguments must match the return type of the continuation function:
 
   cleanup:
     %tok = call token (...) @llvm.coro.end.results(i8 %val)
-    call i1 @llvm.coro.end(ptr %hdl, i1 0, token %tok)
+    call void @llvm.coro.end(ptr %hdl, i1 0, token %tok)
     unreachable
 
   ...
@@ -1492,7 +1605,7 @@ The number of arguments must match the return type of the continuation function:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare i1 @llvm.coro.end.async(ptr <handle>, i1 <unwind>, ...)
+  declare void @llvm.coro.end.async(ptr <handle>, i1 <unwind>, ...)
 
 Overview:
 """""""""
@@ -1516,17 +1629,17 @@ The second argument should be `true` if this coro.end is in the block that is
 part of the unwind sequence leaving the coroutine body due to an exception and
 `false` otherwise.
 
-The third argument if present should specify a function to be called.
+The third argument, if present, should specify a function to be called.
 
 If the third argument is present, the remaining arguments are the arguments to
 the function call.
 
 .. code-block:: llvm
 
-  call i1 (ptr, i1, ...) @llvm.coro.end.async(
-                           ptr %hdl, i1 0,
-                           ptr @must_tail_call_return,
-                           ptr %ctxt, ptr %task, ptr %actor)
+  call void (ptr, i1, ...) @llvm.coro.end.async(
+                             ptr %hdl, i1 0,
+                             ptr @must_tail_call_return,
+                             ptr %ctxt, ptr %task, ptr %actor)
   unreachable
 
 .. _coro.suspend:
@@ -1588,7 +1701,7 @@ Semantics:
 If a coroutine that was suspended at the suspend point marked by this intrinsic
 is resumed via `coro.resume`_ the control will transfer to the basic block
 of the 0-case. If it is resumed via `coro.destroy`_, it will proceed to the
-basic block indicated by the 1-case. To suspend, coroutine proceed to the
+basic block indicated by the 1-case. To suspend, coroutine proceeds to the
 default label.
 
 If suspend intrinsic is marked as final, it can consider the `true` branch
@@ -1605,7 +1718,7 @@ unreachable and can perform optimizations that can take advantage of that fact.
 Overview:
 """""""""
 
-The '``llvm.coro.save``' marks the point where a coroutine need to update its
+The '``llvm.coro.save``' marks the point where a coroutine needs to update its
 state to prepare for resumption to be considered suspended (and thus eligible
 for resumption). It is illegal to merge two '``llvm.coro.save``' calls unless their
 '``llvm.coro.suspend``' users are also merged. So '``llvm.coro.save``' is currently
@@ -1681,7 +1794,7 @@ The fourth to six argument are the arguments for the third argument.
 Semantics:
 """"""""""
 
-The result of the intrinsic are mapped to the arguments of the resume function.
+The results of the intrinsic are mapped to the arguments of the resume function.
 Execution is suspended at this intrinsic and resumed when the resume function is
 called.
 
@@ -1744,21 +1857,315 @@ a call to ``llvm.coro.suspend.retcon`` after resuming abnormally.
 In a yield-once coroutine, it is undefined behavior if the coroutine
 executes a call to ``llvm.coro.suspend.retcon`` after resuming in any way.
 
+.. _coro.await.suspend.void:
+
+'llvm.coro.await.suspend.void' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare void @llvm.coro.await.suspend.void(
+                ptr <awaiter>,
+                ptr <handle>,
+                ptr <await_suspend_function>)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.await.suspend.void``' intrinsic encapsulates C++ 
+`await-suspend` block until it can't interfere with coroutine transform.
+
+The `await_suspend` block of `co_await` is essentially asynchronous
+to the execution of the coroutine. Inlining it normally into an unsplit
+coroutine can cause miscompilation because the coroutine CFG misrepresents
+the true control flow of the program: things that happen in the
+await_suspend are not guaranteed to happen prior to the resumption of the
+coroutine, and things that happen after the resumption of the coroutine
+(including its exit and the potential deallocation of the coroutine frame)
+are not guaranteed to happen only after the end of `await_suspend`.
+
+This version of intrinsic corresponds to 
+'``void awaiter.await_suspend(...)``' variant.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to `awaiter` object.
+
+The second argument is a pointer to the current coroutine's frame.
+
+The third argument is a pointer to the wrapper function encapsulating
+`await-suspend` logic. Its signature must be
+
+.. code-block:: llvm
+
+    declare void @await_suspend_function(ptr %awaiter, ptr %hdl)
+
+Semantics:
+""""""""""
+
+The intrinsic must be used between corresponding `coro.save`_ and 
+`coro.suspend`_ calls. It is lowered to a direct 
+`await_suspend_function` call during `CoroSplit`_ pass.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+  ; before lowering
+  await.suspend:
+    %save = call token @llvm.coro.save(ptr %hdl)
+    call void @llvm.coro.await.suspend.void(
+                ptr %awaiter,
+                ptr %hdl,
+                ptr @await_suspend_function)
+    %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+    ...
+
+  ; after lowering
+  await.suspend:
+    %save = call token @llvm.coro.save(ptr %hdl)
+    ; the call to await_suspend_function can be inlined
+    call void @await_suspend_function(
+                ptr %awaiter,
+                ptr %hdl)
+    %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)   
+    ...
+
+  ; wrapper function example
+  define void @await_suspend_function(ptr %awaiter, ptr %hdl)
+    entry:
+      %hdl.arg = ... ; construct std::coroutine_handle from %hdl
+      call void @"Awaiter::await_suspend"(ptr %awaiter, ptr %hdl.arg)
+      ret void
+
+.. _coro.await.suspend.bool:
+
+'llvm.coro.await.suspend.bool' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare i1 @llvm.coro.await.suspend.bool(
+                ptr <awaiter>,
+                ptr <handle>,
+                ptr <await_suspend_function>)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.await.suspend.bool``' intrinsic encapsulates C++
+`await-suspend` block until it can't interfere with coroutine transform.
+
+The `await_suspend` block of `co_await` is essentially asynchronous
+to the execution of the coroutine. Inlining it normally into an unsplit
+coroutine can cause miscompilation because the coroutine CFG misrepresents
+the true control flow of the program: things that happen in the
+await_suspend are not guaranteed to happen prior to the resumption of the
+coroutine, and things that happen after the resumption of the coroutine
+(including its exit and the potential deallocation of the coroutine frame)
+are not guaranteed to happen only after the end of `await_suspend`.
+
+This version of intrinsic corresponds to 
+'``bool awaiter.await_suspend(...)``' variant.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to `awaiter` object.
+
+The second argument is a pointer to the current coroutine's frame.
+
+The third argument is a pointer to the wrapper function encapsulating
+`await-suspend` logic. Its signature must be
+
+.. code-block:: llvm
+
+    declare i1 @await_suspend_function(ptr %awaiter, ptr %hdl)
+
+Semantics:
+""""""""""
+
+The intrinsic must be used between corresponding `coro.save`_ and 
+`coro.suspend`_ calls. It is lowered to a direct 
+`await_suspend_function` call during `CoroSplit`_ pass.
+
+If `await_suspend_function` call returns `true`, the current coroutine is
+immediately resumed.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+  ; before lowering
+  await.suspend:
+    %save = call token @llvm.coro.save(ptr %hdl)
+    %resume = call i1 @llvm.coro.await.suspend.bool(
+                ptr %awaiter,
+                ptr %hdl,
+                ptr @await_suspend_function)
+    br i1 %resume, %await.suspend.bool, %await.ready
+  await.suspend.bool:
+    %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+    ...
+  await.ready:
+    call void @"Awaiter::await_resume"(ptr %awaiter)
+    ...
+
+  ; after lowering
+  await.suspend:
+    %save = call token @llvm.coro.save(ptr %hdl)
+    ; the call to await_suspend_function can inlined
+    %resume = call i1 @await_suspend_function(
+                ptr %awaiter,
+                ptr %hdl)
+    br i1 %resume, %await.suspend.bool, %await.ready
+    ...
+
+  ; wrapper function example
+  define i1 @await_suspend_function(ptr %awaiter, ptr %hdl)
+    entry:
+      %hdl.arg = ... ; construct std::coroutine_handle from %hdl
+      %resume = call i1 @"Awaiter::await_suspend"(ptr %awaiter, ptr %hdl.arg)
+      ret i1 %resume
+
+.. _coro.await.suspend.handle:
+
+'llvm.coro.await.suspend.handle' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare void @llvm.coro.await.suspend.handle(
+                ptr <awaiter>,
+                ptr <handle>,
+                ptr <await_suspend_function>)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.await.suspend.handle``' intrinsic encapsulates C++
+`await-suspend` block until it can't interfere with coroutine transform.
+
+The `await_suspend` block of `co_await` is essentially asynchronous
+to the execution of the coroutine. Inlining it normally into an unsplit
+coroutine can cause miscompilation because the coroutine CFG misrepresents
+the true control flow of the program: things that happen in the
+await_suspend are not guaranteed to happen prior to the resumption of the
+coroutine, and things that happen after the resumption of the coroutine
+(including its exit and the potential deallocation of the coroutine frame)
+are not guaranteed to happen only after the end of `await_suspend`.
+
+This version of intrinsic corresponds to 
+'``std::coroutine_handle<> awaiter.await_suspend(...)``' variant.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to `awaiter` object.
+
+The second argument is a pointer to the current coroutine's frame.
+
+The third argument is a pointer to the wrapper function encapsulating
+`await-suspend` logic. Its signature must be
+
+.. code-block:: llvm
+
+    declare ptr @await_suspend_function(ptr %awaiter, ptr %hdl)
+
+Semantics:
+""""""""""
+
+The intrinsic must be used between corresponding `coro.save`_ and 
+`coro.suspend`_ calls. It is lowered to a direct 
+`await_suspend_function` call during `CoroSplit`_ pass.
+
+`await_suspend_function` must return a pointer to a valid
+coroutine frame. The intrinsic will be lowered to a tail call resuming the
+returned coroutine frame. It will be marked `musttail` on targets that support
+that. Instructions following the intrinsic will become unreachable.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+  ; before lowering
+  await.suspend:
+    %save = call token @llvm.coro.save(ptr %hdl)
+    call void @llvm.coro.await.suspend.handle(
+        ptr %awaiter,
+        ptr %hdl,
+        ptr @await_suspend_function)
+    %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+    ...
+
+  ; after lowering
+  await.suspend:
+    %save = call token @llvm.coro.save(ptr %hdl)
+    ; the call to await_suspend_function can be inlined
+    %next = call ptr @await_suspend_function(
+                ptr %awaiter,
+                ptr %hdl)
+    musttail call void @llvm.coro.resume(%next)
+    ret void
+    ...
+
+  ; wrapper function example
+  define ptr @await_suspend_function(ptr %awaiter, ptr %hdl)
+    entry:
+      %hdl.arg = ... ; construct std::coroutine_handle from %hdl
+      %hdl.raw = call ptr @"Awaiter::await_suspend"(ptr %awaiter, ptr %hdl.arg)
+      %hdl.result = ... ; get address of returned coroutine handle
+      ret ptr %hdl.result
+
+'llvm.coro.is_in_ramp' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare i1 @llvm.coro.is_in_ramp()
+
+Overview:
+"""""""""
+
+The '``llvm.coro.is_in_ramp``' intrinsic returns a bool value that marks coroutine ramp
+function and resume/destroy function.
+
+Arguments:
+""""""""""
+
+None
+
+Semantics:
+""""""""""
+
+The `CoroSpit` pass replaces `coro.is_in_ramp` with ``True`` ramp functions.
+Otherwise, it is replaced with ``False``, allowing the frontend to separate
+ramp function and resume/destroy function.
+
 Coroutine Transformation Passes
 ===============================
 CoroEarly
 ---------
-The pass CoroEarly lowers coroutine intrinsics that hide the details of the
-structure of the coroutine frame, but, otherwise not needed to be preserved to
-help later coroutine passes. This pass lowers `coro.frame`_, `coro.done`_,
-and `coro.promise`_ intrinsics.
+The CoroEarly pass ensures later middle end passes correctly interpret coroutine 
+semantics and lowers coroutine intrinsics that not needed to be preserved to 
+help later coroutine passes. This pass lowers `coro.promise`_, `coro.frame`_ and 
+`coro.done`_ intrinsics. Afterwards, it replaces uses of promise alloca with 
+`coro.promise`_ intrinsic.
 
 .. _CoroSplit:
 
 CoroSplit
 ---------
 The pass CoroSplit builds coroutine frame and outlines resume and destroy parts
-into separate functions.
+into separate functions. This pass also lowers `coro.await.suspend.void`_,
+`coro.await.suspend.bool`_ and `coro.await.suspend.handle`_ intrinsics.
+
+CoroAnnotationElide
+-------------------
+This pass finds all usages of coroutines that are "must elide" and replaces
+`coro.begin` intrinsic with an address of a coroutine frame placed on its caller
+and replaces `coro.alloc` and `coro.free` intrinsics with `false` and `null`
+respectively to remove the deallocation code.
 
 CoroElide
 ---------
@@ -1774,6 +2181,29 @@ CoroCleanup
 -----------
 This pass runs late to lower all coroutine related intrinsics not replaced by
 earlier passes.
+
+Attributes
+==========
+
+coro_only_destroy_when_complete
+-------------------------------
+
+When the coroutine is marked with coro_only_destroy_when_complete, it indicates
+the coroutine must reach the final suspend point when it get destroyed.
+
+This attribute only works for switched-resume coroutines now.
+
+coro_elide_safe
+---------------
+
+When a Call or Invoke instruction to switch ABI coroutine `f` is marked with
+`coro_elide_safe`, CoroSplitPass generates a `f.noalloc` ramp function.
+`f.noalloc` has one more argument than its original ramp function `f`, which is
+the pointer to the allocated frame. `f.noalloc` also suppresses any allocations
+or deallocations that may be guarded by `@llvm.coro.alloc` and `@llvm.coro.free`.
+
+CoroAnnotationElidePass performs the heap elision when possible. Note that for
+recursive or mutually recursive functions this elision is usually not possible.
 
 Metadata
 ========

@@ -20,4 +20,6 @@ _test_end:
   .data
 // CHECK: Hex dump of section '.data':
 // CHECK: 0x{{.*}} 04000000
+  .reloc ., R_RISCV_ADD32, _test_end
+  .reloc ., R_RISCV_SUB32, _start
   .word _test_end - _start

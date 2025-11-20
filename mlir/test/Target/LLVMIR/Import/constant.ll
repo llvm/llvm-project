@@ -47,9 +47,19 @@ define void @undef_constant(i32 %arg0) {
 
 ; // -----
 
+; CHECK-LABEL: @poison_constant
+define void @poison_constant(double %arg0) {
+  ; CHECK:  %[[POISON:.+]] = llvm.mlir.poison : f64
+  ; CHECK:  llvm.fadd %[[POISON]], %{{.*}} : f64
+  %1 = fadd double poison, %arg0
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @null_constant
 define ptr @null_constant() {
-  ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.null : !llvm.ptr
+  ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.zero : !llvm.ptr
   ; CHECK:  llvm.return %[[NULL]] : !llvm.ptr
   ret ptr null
 }
@@ -180,7 +190,7 @@ define i32 @function_address_after_def() {
 ; CHECK-DAG:  %[[CHAIN1:.+]] = llvm.insertvalue %[[C2]], %[[CHAIN0]][1]
 ; CHECK-DAG:  %[[CHAIN2:.+]] = llvm.insertvalue %[[C3]], %[[CHAIN1]][2]
 ; CHECK-DAG:  %[[CHAIN3:.+]] = llvm.insertvalue %[[C4]], %[[CHAIN2]][3]
-; CHECK-DAG:  %[[NULL:.+]] = llvm.mlir.null : !llvm.ptr
+; CHECK-DAG:  %[[NULL:.+]] = llvm.mlir.zero : !llvm.ptr
 ; CHECK-DAG:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.struct<"nested_agg_type", (struct<"simple_agg_type", (i32, i8, i16, i32)>, ptr)>
 ; CHECK-DAG:  %[[CHAIN4:.+]] = llvm.insertvalue %[[CHAIN3]], %[[ROOT]][0]
 ; CHECK-DAG:  %[[CHAIN5:.+]] = llvm.insertvalue %[[NULL]], %[[CHAIN4]][1]
@@ -188,13 +198,13 @@ define i32 @function_address_after_def() {
 %nested_agg_type = type {%simple_agg_type, ptr}
 @nested_agg = global %nested_agg_type { %simple_agg_type{i32 1, i8 2, i16 3, i32 4}, ptr null }
 
-; CHECK-DAG:  %[[NULL:.+]] = llvm.mlir.null : !llvm.ptr
-; CHECK-DAG:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.vec<2 x ptr>
+; CHECK-DAG:  %[[NULL:.+]] = llvm.mlir.zero : !llvm.ptr
+; CHECK-DAG:  %[[ROOT:.+]] = llvm.mlir.undef : vector<2x!llvm.ptr>
 ; CHECK-DAG:  %[[P0:.+]] = llvm.mlir.constant(0 : i32) : i32
-; CHECK-DAG:  %[[CHAIN0:.+]] = llvm.insertelement %[[NULL]], %[[ROOT]][%[[P0]] : i32] : !llvm.vec<2 x ptr>
+; CHECK-DAG:  %[[CHAIN0:.+]] = llvm.insertelement %[[NULL]], %[[ROOT]][%[[P0]] : i32] : vector<2x!llvm.ptr>
 ; CHECK-DAG:  %[[P1:.+]] = llvm.mlir.constant(1 : i32) : i32
-; CHECK-DAG:  %[[CHAIN1:.+]] = llvm.insertelement %[[NULL]], %[[CHAIN0]][%[[P1]] : i32] : !llvm.vec<2 x ptr>
-; CHECK-DAG:  llvm.return %[[CHAIN1]] : !llvm.vec<2 x ptr>
+; CHECK-DAG:  %[[CHAIN1:.+]] = llvm.insertelement %[[NULL]], %[[CHAIN0]][%[[P1]] : i32] : vector<2x!llvm.ptr>
+; CHECK-DAG:  llvm.return %[[CHAIN1]] : vector<2x!llvm.ptr>
 @vector_agg = global <2 x ptr> <ptr null, ptr null>
 
 ; // -----
@@ -219,10 +229,48 @@ define i64 @const_exprs_with_duplicate() {
 
 ; Verify the import of constant expressions with cyclic dependencies.
 
-@cyclic = internal constant i64 mul (i64 ptrtoint (ptr @cyclic to i64), i64 ptrtoint (ptr @cyclic to i64))
+@cyclic = internal constant i64 add (i64 ptrtoint (ptr @cyclic to i64), i64 ptrtoint (ptr @cyclic to i64))
 
 ; CHECK-LABEL: @cyclic
 ; CHECK:  %[[ADDR:.+]] = llvm.mlir.addressof @cyclic
 ; CHECK:  %[[VAL0:.+]] = llvm.ptrtoint %[[ADDR]]
-; CHECK:  %[[VAL1:.+]] = llvm.mul %[[VAL0]], %[[VAL0]]
+; CHECK:  %[[VAL1:.+]] = llvm.add %[[VAL0]], %[[VAL0]]
 ; CHECK:  llvm.return %[[VAL1]]
+
+; // -----
+
+declare void @extern_func()
+@const = dso_local constant i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @extern_func to i64), i64 ptrtoint (ptr @const to i64)) to i32)
+
+; CHECK: llvm.mlir.global external constant @const()
+; CHECK:   %[[ADDR:.+]] = llvm.mlir.addressof @const : !llvm.ptr
+; CHECK:   llvm.ptrtoint %[[ADDR]] : !llvm.ptr to i64
+; CHECK:   llvm.dso_local_equivalent @extern_func : !llvm.ptr
+
+; // -----
+
+declare i32 @extern_func()
+
+define void @call_extern_func() {
+  call noundef i32 dso_local_equivalent @extern_func()
+  ret void
+}
+
+; CHECK-LABEL: @call_extern_func()
+; CHECK: %[[DSO_EQ:.+]] = llvm.dso_local_equivalent @extern_func : !llvm.ptr
+; CHECK: llvm.call %[[DSO_EQ]]() : !llvm.ptr, () -> (i32 {llvm.noundef})
+
+; // -----
+
+define void @aliasee_func() {
+  ret void
+}
+
+@alias_func = alias void (), ptr @aliasee_func
+define void @call_alias_func() {
+  call void dso_local_equivalent @alias_func()
+  ret void
+}
+
+; CHECK-LABEL: @call_alias_func()
+; CHECK: llvm.dso_local_equivalent @alias_func : !llvm.ptr

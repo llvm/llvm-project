@@ -11,92 +11,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
-#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "vector-broadcast-lowering"
 
 using namespace mlir;
 using namespace mlir::vector;
-
-/// This function constructs the appropriate integer or float
-/// operation given the vector combining kind and operands. The
-/// supported int operations are : add, mul, min (signed/unsigned),
-/// max(signed/unsigned), and, or, xor. The supported float
-/// operations are : add, mul, min and max.
-static Value genOperator(Location loc, Value x, Value y,
-                         vector::CombiningKind kind,
-                         PatternRewriter &rewriter) {
-  using vector::CombiningKind;
-
-  auto elType = cast<VectorType>(x.getType()).getElementType();
-  bool isInt = elType.isIntOrIndex();
-
-  Value combinedResult{nullptr};
-  switch (kind) {
-  case CombiningKind::ADD:
-    if (isInt)
-      combinedResult = rewriter.create<arith::AddIOp>(loc, x, y);
-    else
-      combinedResult = rewriter.create<arith::AddFOp>(loc, x, y);
-    break;
-  case CombiningKind::MUL:
-    if (isInt)
-      combinedResult = rewriter.create<arith::MulIOp>(loc, x, y);
-    else
-      combinedResult = rewriter.create<arith::MulFOp>(loc, x, y);
-    break;
-  case CombiningKind::MINUI:
-    combinedResult = rewriter.create<arith::MinUIOp>(loc, x, y);
-    break;
-  case CombiningKind::MINSI:
-    combinedResult = rewriter.create<arith::MinSIOp>(loc, x, y);
-    break;
-  case CombiningKind::MAXUI:
-    combinedResult = rewriter.create<arith::MaxUIOp>(loc, x, y);
-    break;
-  case CombiningKind::MAXSI:
-    combinedResult = rewriter.create<arith::MaxSIOp>(loc, x, y);
-    break;
-  case CombiningKind::AND:
-    combinedResult = rewriter.create<arith::AndIOp>(loc, x, y);
-    break;
-  case CombiningKind::OR:
-    combinedResult = rewriter.create<arith::OrIOp>(loc, x, y);
-    break;
-  case CombiningKind::XOR:
-    combinedResult = rewriter.create<arith::XOrIOp>(loc, x, y);
-    break;
-  case CombiningKind::MINF:
-  case CombiningKind::MINIMUMF:
-    combinedResult = rewriter.create<arith::MinimumFOp>(loc, x, y);
-    break;
-  case CombiningKind::MAXF:
-  case CombiningKind::MAXIMUMF:
-    combinedResult = rewriter.create<arith::MaximumFOp>(loc, x, y);
-    break;
-  }
-  return combinedResult;
-}
 
 /// This function checks to see if the vector combining kind
 /// is consistent with the integer or float element type.
@@ -105,9 +34,9 @@ static bool isValidKind(bool isInt, vector::CombiningKind kind) {
   enum class KindType { FLOAT, INT, INVALID };
   KindType type{KindType::INVALID};
   switch (kind) {
-  case CombiningKind::MINF:
+  case CombiningKind::MINNUMF:
   case CombiningKind::MINIMUMF:
-  case CombiningKind::MAXF:
+  case CombiningKind::MAXNUMF:
   case CombiningKind::MAXIMUMF:
     type = KindType::FLOAT;
     break;
@@ -170,7 +99,7 @@ namespace {
 ///   return %7, %8 : vector<2x3xi32>, vector<2xi32>
 /// ```
 struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ScanOp scanOp,
                                 PatternRewriter &rewriter) const override {
@@ -182,21 +111,31 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
     if (!isValidKind(isInt, scanOp.getKind()))
       return failure();
 
-    VectorType resType = VectorType::get(destShape, elType);
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, resType, rewriter.getZeroAttr(resType));
+    VectorType resType = destType;
+    Value result = arith::ConstantOp::create(rewriter, loc, resType,
+                                             rewriter.getZeroAttr(resType));
     int64_t reductionDim = scanOp.getReductionDim();
     bool inclusive = scanOp.getInclusive();
     int64_t destRank = destType.getRank();
     VectorType initialValueType = scanOp.getInitialValueType();
     int64_t initialValueRank = initialValueType.getRank();
 
-    SmallVector<int64_t> reductionShape(destShape.begin(), destShape.end());
+    SmallVector<int64_t> reductionShape(destShape);
+    SmallVector<bool> reductionScalableDims(destType.getScalableDims());
+
+    if (reductionScalableDims[reductionDim])
+      return rewriter.notifyMatchFailure(
+          scanOp, "Trying to reduce scalable dimension - not yet supported!");
+
+    // The reduction dimension, after reducing, becomes 1. It's a fixed-width
+    // dimension - no need to touch the scalability flag.
     reductionShape[reductionDim] = 1;
-    VectorType reductionType = VectorType::get(reductionShape, elType);
+    VectorType reductionType =
+        VectorType::get(reductionShape, elType, reductionScalableDims);
+
     SmallVector<int64_t> offsets(destRank, 0);
     SmallVector<int64_t> strides(destRank, 1);
-    SmallVector<int64_t> sizes(destShape.begin(), destShape.end());
+    SmallVector<int64_t> sizes(destShape);
     sizes[reductionDim] = 1;
     ArrayAttr scanSizes = rewriter.getI64ArrayAttr(sizes);
     ArrayAttr scanStrides = rewriter.getI64ArrayAttr(strides);
@@ -205,9 +144,9 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
     for (int i = 0; i < destShape[reductionDim]; i++) {
       offsets[reductionDim] = i;
       ArrayAttr scanOffsets = rewriter.getI64ArrayAttr(offsets);
-      Value input = rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, reductionType, scanOp.getSource(), scanOffsets, scanSizes,
-          scanStrides);
+      Value input = vector::ExtractStridedSliceOp::create(
+          rewriter, loc, reductionType, scanOp.getSource(), scanOffsets,
+          scanSizes, scanStrides);
       Value output;
       if (i == 0) {
         if (inclusive) {
@@ -215,32 +154,32 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
         } else {
           if (initialValueRank == 0) {
             // ShapeCastOp cannot handle 0-D vectors
-            output = rewriter.create<vector::BroadcastOp>(
-                loc, input.getType(), scanOp.getInitialValue());
+            output = vector::BroadcastOp::create(rewriter, loc, input.getType(),
+                                                 scanOp.getInitialValue());
           } else {
-            output = rewriter.create<vector::ShapeCastOp>(
-                loc, input.getType(), scanOp.getInitialValue());
+            output = vector::ShapeCastOp::create(rewriter, loc, input.getType(),
+                                                 scanOp.getInitialValue());
           }
         }
       } else {
         Value y = inclusive ? input : lastInput;
-        output = genOperator(loc, lastOutput, y, scanOp.getKind(), rewriter);
-        assert(output != nullptr);
+        output = vector::makeArithReduction(rewriter, loc, scanOp.getKind(),
+                                            lastOutput, y);
       }
-      result = rewriter.create<vector::InsertStridedSliceOp>(
-          loc, output, result, offsets, strides);
+      result = vector::InsertStridedSliceOp::create(rewriter, loc, output,
+                                                    result, offsets, strides);
       lastOutput = output;
       lastInput = input;
     }
 
     Value reduction;
     if (initialValueRank == 0) {
-      Value v = rewriter.create<vector::ExtractOp>(loc, lastOutput, 0);
+      Value v = vector::ExtractOp::create(rewriter, loc, lastOutput, 0);
       reduction =
-          rewriter.create<vector::BroadcastOp>(loc, initialValueType, v);
+          vector::BroadcastOp::create(rewriter, loc, initialValueType, v);
     } else {
-      reduction = rewriter.create<vector::ShapeCastOp>(loc, initialValueType,
-                                                       lastOutput);
+      reduction = vector::ShapeCastOp::create(rewriter, loc, initialValueType,
+                                              lastOutput);
     }
 
     rewriter.replaceOp(scanOp, {result, reduction});

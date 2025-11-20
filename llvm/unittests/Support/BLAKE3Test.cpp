@@ -62,7 +62,7 @@ TEST(BLAKE3Test, BLAKE3) {
             "616F575A1B58D4C9797D4217B9730AE5E6EB319D76EDEF6549B46F4EFE31FF8B");
 
   // Using generic HashBuilder.
-  HashBuilder<BLAKE3, support::endianness::native> HashBuilder;
+  HashBuilder<BLAKE3, llvm::endianness::native> HashBuilder;
   HashBuilder.update(std::get<0>(testvectors[2]));
   BLAKE3Result<> HBHash1 = HashBuilder.final();
   BLAKE3Result<> HBHash2 = HashBuilder.result();
@@ -84,7 +84,7 @@ TEST(BLAKE3Test, SmallerHashSize) {
   EXPECT_EQ(hashStr1, "6437B3AC38465133FFB63B75273A8DB5");
 
   // Using generic HashBuilder.
-  HashBuilder<TruncatedBLAKE3<16>, support::endianness::native> HashBuilder;
+  HashBuilder<TruncatedBLAKE3<16>, llvm::endianness::native> HashBuilder;
   HashBuilder.update(Input);
   BLAKE3Result<16> hash3 = HashBuilder.final();
   BLAKE3Result<16> hash4 = HashBuilder.result();

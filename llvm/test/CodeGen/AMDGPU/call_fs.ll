@@ -1,6 +1,6 @@
 
-; RUN: llc < %s -march=r600 -mcpu=redwood -show-mc-encoding -o - | FileCheck --check-prefix=EG %s
-; RUN: llc < %s -march=r600 -mcpu=rv710 -show-mc-encoding -o - | FileCheck --check-prefix=R600 %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood -show-mc-encoding -o - | FileCheck --check-prefix=EG %s
+; RUN: llc < %s -mtriple=r600 -mcpu=rv710 -show-mc-encoding -o - | FileCheck --check-prefix=R600 %s
 
 ; EG: .long 257
 ; EG: {{^}}call_fs:

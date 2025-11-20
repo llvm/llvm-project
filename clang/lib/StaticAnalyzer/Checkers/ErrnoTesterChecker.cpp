@@ -70,13 +70,15 @@ private:
 
   using EvalFn = std::function<void(CheckerContext &, const CallEvent &)>;
   const CallDescriptionMap<EvalFn> TestCalls{
-      {{{"ErrnoTesterChecker_setErrno"}, 1}, &ErrnoTesterChecker::evalSetErrno},
-      {{{"ErrnoTesterChecker_getErrno"}, 0}, &ErrnoTesterChecker::evalGetErrno},
-      {{{"ErrnoTesterChecker_setErrnoIfError"}, 0},
+      {{CDM::SimpleFunc, {"ErrnoTesterChecker_setErrno"}, 1},
+       &ErrnoTesterChecker::evalSetErrno},
+      {{CDM::SimpleFunc, {"ErrnoTesterChecker_getErrno"}, 0},
+       &ErrnoTesterChecker::evalGetErrno},
+      {{CDM::SimpleFunc, {"ErrnoTesterChecker_setErrnoIfError"}, 0},
        &ErrnoTesterChecker::evalSetErrnoIfError},
-      {{{"ErrnoTesterChecker_setErrnoIfErrorRange"}, 0},
+      {{CDM::SimpleFunc, {"ErrnoTesterChecker_setErrnoIfErrorRange"}, 0},
        &ErrnoTesterChecker::evalSetErrnoIfErrorRange},
-      {{{"ErrnoTesterChecker_setErrnoCheckState"}, 0},
+      {{CDM::SimpleFunc, {"ErrnoTesterChecker_setErrnoCheckState"}, 0},
        &ErrnoTesterChecker::evalSetErrnoCheckState}};
 };
 
@@ -128,8 +130,7 @@ void ErrnoTesterChecker::evalSetErrnoIfErrorRange(CheckerContext &C,
 
   ProgramStateRef StateFailure = State->BindExpr(
       Call.getOriginExpr(), C.getLocationContext(), SVB.makeIntVal(1, true));
-  DefinedOrUnknownSVal ErrnoVal = SVB.conjureSymbolVal(
-      nullptr, Call.getOriginExpr(), C.getLocationContext(), C.blockCount());
+  DefinedOrUnknownSVal ErrnoVal = SVB.conjureSymbolVal(Call, C.blockCount());
   StateFailure = StateFailure->assume(ErrnoVal, true);
   assert(StateFailure && "Failed to assume on an initial value.");
   StateFailure =

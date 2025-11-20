@@ -1,3 +1,4 @@
+
 // RUN: mlir-opt -allow-unregistered-dialect -pass-pipeline='builtin.module(gpu.module(gpu.func(test-gpu-memory-promotion)))' -split-input-file %s | FileCheck %s
 
 gpu.module @foo {

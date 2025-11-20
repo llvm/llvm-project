@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/FileCheck/FileCheck.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -32,7 +33,7 @@ using namespace llvm;
 
 class MachineMetadataTest : public testing::Test {
 public:
-  MachineMetadataTest() {}
+  MachineMetadataTest() = default;
 
 protected:
   LLVMContext Context;
@@ -65,20 +66,20 @@ protected:
     });
   }
 
-  std::unique_ptr<LLVMTargetMachine>
-  createTargetMachine(std::string TT, StringRef CPU, StringRef FS) {
+  std::unique_ptr<TargetMachine>
+  createTargetMachine(std::string TargetStr, StringRef CPU, StringRef FS) {
+    Triple TT(TargetStr);
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget(TT, Error);
     if (!T)
       return nullptr;
     TargetOptions Options;
-    return std::unique_ptr<LLVMTargetMachine>(
-        static_cast<LLVMTargetMachine *>(T->createTargetMachine(
-            TT, CPU, FS, Options, std::nullopt, std::nullopt)));
+    return std::unique_ptr<TargetMachine>(T->createTargetMachine(
+        TT, CPU, FS, Options, std::nullopt, std::nullopt));
   }
 
   std::unique_ptr<Module> parseMIR(const TargetMachine &TM, StringRef MIRCode,
-                                   const char *FnName, MachineModuleInfo &MMI) {
+                                   MachineModuleInfo &MMI) {
     SMDiagnostic Diagnostic;
     std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
     MIR = createMIRParser(std::move(MBuffer), Context);
@@ -105,7 +106,6 @@ static std::string print(std::function<void(raw_ostream &OS)> PrintFn) {
   std::string Str;
   raw_string_ostream OS(Str);
   PrintFn(OS);
-  OS.flush();
   return Str;
 }
 
@@ -132,8 +132,7 @@ TEST_F(MachineMetadataTest, TrivialHook) {
               MO.print(OS, MST, LLT{}, /*OpIdx*/ ~0U, /*PrintDef=*/false,
                        /*IsStandalone=*/false,
                        /*ShouldPrintRegisterTies=*/false, /*TiedOperandIdx=*/0,
-                       /*TRI=*/nullptr,
-                       /*IntrinsicInfo=*/nullptr);
+                       /*TRI=*/nullptr);
             }));
   // Print the definition of that metadata node.
   EXPECT_EQ("!0 = !{!\"foo\"}",
@@ -170,8 +169,7 @@ TEST_F(MachineMetadataTest, BasicHook) {
               MO.print(OS, MST, LLT{}, /*OpIdx*/ ~0U, /*PrintDef=*/false,
                        /*IsStandalone=*/false,
                        /*ShouldPrintRegisterTies=*/false, /*TiedOperandIdx=*/0,
-                       /*TRI=*/nullptr,
-                       /*IntrinsicInfo=*/nullptr);
+                       /*TRI=*/nullptr);
             }));
   // Print the definition of these unnamed metadata nodes.
   EXPECT_EQ("!0 = !{!\"bar\"}",
@@ -187,14 +185,12 @@ static bool checkOutput(std::string CheckString, std::string Output) {
   SmallString<4096> CheckFileBuffer;
   FileCheckRequest Req;
   FileCheck FC(Req);
-  StringRef CheckFileText =
-      FC.CanonicalizeFile(*CheckBuffer.get(), CheckFileBuffer);
+  StringRef CheckFileText = FC.CanonicalizeFile(*CheckBuffer, CheckFileBuffer);
 
   SourceMgr SM;
   SM.AddNewSourceBuffer(MemoryBuffer::getMemBuffer(CheckFileText, "CheckFile"),
                         SMLoc());
-  Regex PrefixRE = FC.buildCheckPrefixRegex();
-  if (FC.readCheckFile(SM, CheckFileText, PrefixRE))
+  if (FC.readCheckFile(SM, CheckFileText))
     return false;
 
   auto OutBuffer = OutputBuffer->getBuffer();
@@ -209,8 +205,8 @@ TEST_F(MachineMetadataTest, MMSlotTrackerAArch64) {
 
   StringRef MIRString = R"MIR(
 --- |
-  define i32 @test0(i32* %p) {
-    %r = load i32, i32* %p, align 4
+  define i32 @test0(ptr %p) {
+    %r = load i32, ptr %p, align 4
     ret i32 %r
   }
 ...
@@ -228,7 +224,7 @@ body:             |
 )MIR";
 
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "test0", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   auto *MF = MMI.getMachineFunction(*M->getFunction("test0"));
@@ -254,7 +250,7 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MF);
+  MachineModuleSlotTracker MST(MMI, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ("%1:gpr32 = LDRWui %0, 0 :: (load (s32) from %ir.p, "
@@ -278,7 +274,7 @@ body:             |
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
-  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, *MF); });
+  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
 CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
@@ -339,7 +335,7 @@ body:             |
 )MIR";
 
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "test0", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   auto *MF = MMI.getMachineFunction(*M->getFunction("test0"));
@@ -358,8 +354,8 @@ TEST_F(MachineMetadataTest, MMSlotTrackerX64) {
 
   StringRef MIRString = R"MIR(
 --- |
-  define i32 @test0(i32* %p) {
-    %r = load i32, i32* %p, align 4
+  define i32 @test0(ptr %p) {
+    %r = load i32, ptr %p, align 4
     ret i32 %r
   }
 ...
@@ -377,7 +373,7 @@ body:             |
 )MIR";
 
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "test0", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   auto *MF = MMI.getMachineFunction(*M->getFunction("test0"));
@@ -404,7 +400,7 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MF);
+  MachineModuleSlotTracker MST(MMI, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ("%1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, "
@@ -428,7 +424,7 @@ body:             |
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
-  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, *MF); });
+  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
 CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
@@ -450,8 +446,8 @@ TEST_F(MachineMetadataTest, MMSlotTrackerAMDGPU) {
 
   StringRef MIRString = R"MIR(
 --- |
-  define i32 @test0(i32* %p) {
-    %r = load i32, i32* %p, align 4
+  define i32 @test0(ptr %p) {
+    %r = load i32, ptr %p, align 4
     ret i32 %r
   }
 ...
@@ -475,7 +471,7 @@ body:             |
 )MIR";
 
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "test0", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   auto *MF = MMI.getMachineFunction(*M->getFunction("test0"));
@@ -502,7 +498,7 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MF);
+  MachineModuleSlotTracker MST(MMI, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ(
@@ -527,7 +523,7 @@ body:             |
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
-  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, *MF); });
+  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
 CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
@@ -564,12 +560,11 @@ body:             |
 ...
 )MIR";
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "foo", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();
-  ASSERT_TRUE(Properties.hasProperty(
-      MachineFunctionProperties::Property::TiedOpsRewritten));
+  ASSERT_TRUE(Properties.hasTiedOpsRewritten());
 }
 
 TEST_F(MachineMetadataTest, NoTiedOpsRewritten) {
@@ -595,10 +590,9 @@ body:             |
 ...
 )MIR";
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "foo", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();
-  ASSERT_FALSE(Properties.hasProperty(
-      MachineFunctionProperties::Property::TiedOpsRewritten));
+  ASSERT_FALSE(Properties.hasTiedOpsRewritten());
 }

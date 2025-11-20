@@ -1,11 +1,11 @@
 // RUN: %clangxx -g -O0 %s -o %t
 
 // Check that trying to dlopen() the ASan dylib fails.
-// We explictly set `abort_on_error=0` because
+// We explicitly set `abort_on_error=0` because
 // - By default the lit config sets this but we don't want this
 //   test to implicitly depend on this.
 // - It avoids requiring `--crash` to be passed to `not`.
-// RUN: APPLE_ASAN_INIT_FOR_DLOPEN=0 %env_asan_opts=abort_on_error=0 not \
+// RUN: %env_asan_opts=abort_on_error=0 APPLE_ASAN_INIT_FOR_DLOPEN=0 not \
 // RUN:   %run %t %shared_libasan 2>&1 | \
 // RUN:   FileCheck -check-prefix=CHECK-DL-OPEN-FAIL %s
 // RUN: env -u APPLE_ASAN_INIT_FOR_DLOPEN %env_asan_opts=abort_on_error=0 not \

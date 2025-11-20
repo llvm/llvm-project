@@ -11,15 +11,15 @@
 #include "test/UnitTest/Test.h"
 #include <stddef.h> // For size_t.
 
-class LlvmLibcStrncpyTest : public __llvm_libc::testing::Test {
+class LlvmLibcStrncpyTest : public LIBC_NAMESPACE::testing::Test {
 public:
-  void check_strncpy(__llvm_libc::cpp::span<char> dst,
-                     const __llvm_libc::cpp::span<const char> src, size_t n,
-                     const __llvm_libc::cpp::span<const char> expected) {
+  void check_strncpy(LIBC_NAMESPACE::cpp::span<char> dst,
+                     const LIBC_NAMESPACE::cpp::span<const char> src, size_t n,
+                     const LIBC_NAMESPACE::cpp::span<const char> expected) {
     // Making sure we don't overflow buffer.
     ASSERT_GE(dst.size(), n);
     // Making sure strncpy returns dst.
-    ASSERT_EQ(__llvm_libc::strncpy(dst.data(), src.data(), n), dst.data());
+    ASSERT_EQ(LIBC_NAMESPACE::strncpy(dst.data(), src.data(), n), dst.data());
     // Expected must be of the same size as dst.
     ASSERT_EQ(dst.size(), expected.size());
     // Expected and dst are the same.

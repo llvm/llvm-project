@@ -79,7 +79,57 @@ def PatFragTest0 : GICombineRule<
   (match (FooPF $dst)),
   (apply (COPY $dst, (i32 0)))>;
 
+
+// CHECK:      (CombineRule name:TypeOfProp id:2 root:x
+// CHECK-NEXT:   (MatchPats
+// CHECK-NEXT:     <match_root>__TypeOfProp_match_0:(CodeGenInstructionPattern G_ZEXT operands:[<def>$x, $y])
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (ApplyPats
+// CHECK-NEXT:     <apply_root>__TypeOfProp_apply_0:(CodeGenInstructionPattern G_ANYEXT operands:[<def>$x, GITypeOf<$y>:$tmp])
+// CHECK-NEXT:     __TypeOfProp_apply_1:(CodeGenInstructionPattern G_ANYEXT operands:[<def>GITypeOf<$y>:$tmp, $y])
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable MatchPats
+// CHECK-NEXT:     x -> __TypeOfProp_match_0
+// CHECK-NEXT:     y -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable ApplyPats
+// CHECK-NEXT:     tmp -> __TypeOfProp_apply_1
+// CHECK-NEXT:     x -> __TypeOfProp_apply_0
+// CHECK-NEXT:     y -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT: )
+def TypeOfProp : GICombineRule<
+  (defs root:$x),
+  (match (G_ZEXT $x, $y)),
+  (apply (G_ANYEXT $x, GITypeOf<"$y">:$tmp),
+         (G_ANYEXT $tmp, $y))>;
+
+// CHECK:      (CombineRule name:VariadicTypeTest id:3 root:a
+// CHECK-NEXT:   (MatchPats
+// CHECK-NEXT:     <match_root>__VariadicTypeTest_match_0:(CodeGenInstructionPattern G_UNMERGE_VALUES operands:[<def>$a, <def>$b, GIVariadic<1,0>:$z])
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (ApplyPats
+// CHECK-NEXT:     <apply_root>__VariadicTypeTest_apply_0:(CodeGenInstructionPattern G_UNMERGE_VALUES operands:[<def>$a, <def>$b, GIVariadic<1,0>:$z])
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable MatchPats
+// CHECK-NEXT:     a -> __VariadicTypeTest_match_0
+// CHECK-NEXT:     b -> __VariadicTypeTest_match_0
+// CHECK-NEXT:     z -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable ApplyPats
+// CHECK-NEXT:     a -> __VariadicTypeTest_apply_0
+// CHECK-NEXT:     b -> __VariadicTypeTest_apply_0
+// CHECK-NEXT:     z -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT: )
+def VariadicTypeTest: GICombineRule<
+  (defs root:$a),
+  (match (G_UNMERGE_VALUES $a, $b, GIVariadic<>:$z)),
+  (apply (G_UNMERGE_VALUES $a, $b, $z))>;
+
 def MyCombiner: GICombiner<"GenMyCombiner", [
   InstTest0,
-  PatFragTest0
+  PatFragTest0,
+  TypeOfProp,
+  VariadicTypeTest,
 ]>;

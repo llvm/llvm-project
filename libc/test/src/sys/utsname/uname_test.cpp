@@ -12,12 +12,11 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <sys/utsname.h>
 
 TEST(LlvmLibcUnameTest, GetMachineName) {
   struct utsname names;
-  ASSERT_GE(__llvm_libc::uname(&names), 0);
+  ASSERT_GE(LIBC_NAMESPACE::uname(&names), 0);
 #ifdef LIBC_TARGET_ARCH_IS_X86_64
   ASSERT_STREQ(names.machine, "x86_64");
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)

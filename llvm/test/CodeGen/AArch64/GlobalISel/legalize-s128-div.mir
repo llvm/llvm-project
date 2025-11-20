@@ -4,9 +4,9 @@
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-apple-ios"
 
-  define void @udiv_test(i128* %v1ptr, i128* %v2ptr) { ret void }
+  define void @udiv_test(ptr %v1ptr, ptr %v2ptr) { ret void }
 
-  define void @sdiv_test(i128* %v1ptr, i128* %v2ptr) { ret void }
+  define void @sdiv_test(ptr %v1ptr, ptr %v2ptr) { ret void }
 
 ...
 ---

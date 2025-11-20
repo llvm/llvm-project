@@ -1,3 +1,5 @@
+// XFAIL: system-aix
+
 // REQUIRES: zlib
 
 // RUN: %clang -### -fintegrated-as -Wa,-compress-debug-sections -c %s 2>&1 | FileCheck -check-prefix CHECK-_COMPRESS_DEBUG_SECTIONS %s

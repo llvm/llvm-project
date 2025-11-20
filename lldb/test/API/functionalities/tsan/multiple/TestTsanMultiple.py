@@ -49,7 +49,7 @@ class TsanMultipleTestCase(TestBase):
             stop_description = (
                 self.dbg.GetSelectedTarget()
                 .process.GetSelectedThread()
-                .GetStopDescription(100)
+                .stop_description
             )
 
             self.assertTrue(
@@ -84,7 +84,7 @@ class TsanMultipleTestCase(TestBase):
                     lldb.eInstrumentationRuntimeTypeThreadSanitizer
                 )
             )
-            self.assertTrue(backtraces.GetSize() >= 1)
+            self.assertGreaterEqual(backtraces.GetSize(), 1)
 
             self.runCmd("continue")
 

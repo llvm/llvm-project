@@ -110,16 +110,6 @@ static cl::opt<bool> SuppressWarnings("suppress-warnings",
                                       cl::desc("Suppress all linking warnings"),
                                       cl::init(false), cl::cat(LinkCategory));
 
-static cl::opt<bool> PreserveBitcodeUseListOrder(
-    "preserve-bc-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden, cl::cat(LinkCategory));
-
-static cl::opt<bool> PreserveAssemblyUseListOrder(
-    "preserve-ll-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden, cl::cat(LinkCategory));
-
 static cl::opt<bool> NoVerify("disable-verify",
                               cl::desc("Do not run the verifier"), cl::Hidden,
                               cl::cat(LinkCategory));
@@ -219,7 +209,7 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
       M = getLazyIRModule(MemoryBuffer::getMemBuffer(MemBuf.get(), false),
                           ParseErr, Context);
 
-    if (!M.get()) {
+    if (!M) {
       errs() << Argv0 << ": ";
       WithColor::error() << " parsing member '" << ChildName
                          << "' of archive library failed'" << ArchiveName
@@ -313,12 +303,13 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
       ExitOnErr(llvm::getModuleSummaryIndexForFile(SummaryIndex));
 
   // Map of Module -> List of globals to import from the Module
-  FunctionImporter::ImportMapTy ImportList;
+  FunctionImporter::ImportIDTable ImportIDs;
+  FunctionImporter::ImportMapTy ImportList(ImportIDs);
 
   auto ModuleLoader = [&DestModule](const char *argv0,
                                     const std::string &Identifier) {
-    std::unique_ptr<MemoryBuffer> Buffer =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(Identifier)));
+    std::unique_ptr<MemoryBuffer> Buffer = ExitOnErr(errorOrToExpected(
+        MemoryBuffer::getFileOrSTDIN(Identifier, /*IsText=*/true)));
     return loadFile(argv0, std::move(Buffer), DestModule.getContext(), false);
   };
 
@@ -365,9 +356,12 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
     if (Verbose)
       errs() << "Importing " << FunctionName << " from " << FileName << "\n";
 
-    auto &Entry =
-        ImportList[FileNameStringCache.insert(FileName).first->getKey()];
-    Entry.insert(F->getGUID());
+    // `-import` specifies the `<filename,function-name>` pairs to import as
+    // definition, so make the import type definition directly.
+    // FIXME: A follow-up patch should add test coverage for import declaration
+    // in `llvm-link` CLI (e.g., by introducing a new command line option).
+    ImportList.addDefinition(
+        FileNameStringCache.insert(FileName).first->getKey(), F->getGUID());
   }
   auto CachedModuleLoader = [&](StringRef Identifier) {
     return ModuleLoaderCache.takeModule(std::string(Identifier));
@@ -386,14 +380,22 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
   // Similar to some flags, internalization doesn't apply to the first file.
   bool InternalizeLinkedSymbols = false;
   for (const auto &File : Files) {
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(File, /*IsText=*/true);
+
+    // When we encounter a missing file, make sure we expose its name.
+    if (auto EC = BufferOrErr.getError())
+      if (EC == std::errc::no_such_file_or_directory)
+        ExitOnErr(createStringError(EC, "No such file or directory: '%s'",
+                                    File.c_str()));
+
     std::unique_ptr<MemoryBuffer> Buffer =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(File)));
+        ExitOnErr(errorOrToExpected(std::move(BufferOrErr)));
 
     std::unique_ptr<Module> M =
         identify_magic(Buffer->getBuffer()) == file_magic::archive
             ? loadArFile(argv0, std::move(Buffer), Context)
             : loadFile(argv0, std::move(Buffer), Context);
-    if (!M.get()) {
+    if (!M) {
       errs() << argv0 << ": ";
       WithColor::error() << " loading file '" << File << "'\n";
       return false;
@@ -418,16 +420,15 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
       // does not do the ThinLink that would normally determine what values to
       // promote.
       for (auto &I : *Index) {
-        for (auto &S : I.second.SummaryList) {
+        for (auto &S : I.second.getSummaryList()) {
           if (GlobalValue::isLocalLinkage(S->linkage()))
             S->setLinkage(GlobalValue::ExternalLinkage);
         }
       }
 
       // Promotion
-      if (renameModuleForThinLTO(*M, *Index,
-                                 /*ClearDSOLocalOnDeclarations=*/false))
-        return true;
+      renameModuleForThinLTO(*M, *Index,
+                             /*ClearDSOLocalOnDeclarations=*/false);
     }
 
     if (Verbose)
@@ -512,10 +513,13 @@ int main(int argc, char **argv) {
 
   if (Verbose)
     errs() << "Writing bitcode...\n";
+  Composite->removeDebugIntrinsicDeclarations();
   if (OutputAssembly) {
-    Composite->print(Out.os(), nullptr, PreserveAssemblyUseListOrder);
-  } else if (Force || !CheckBitcodeOutputToConsole(Out.os()))
-    WriteBitcodeToFile(*Composite, Out.os(), PreserveBitcodeUseListOrder);
+    Composite->print(Out.os(), nullptr, /* ShouldPreserveUseListOrder */ false);
+  } else if (Force || !CheckBitcodeOutputToConsole(Out.os())) {
+    WriteBitcodeToFile(*Composite, Out.os(),
+                       /* ShouldPreserveUseListOrder */ true);
+  }
 
   // Declare success.
   Out.keep();

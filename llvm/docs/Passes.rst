@@ -5,18 +5,26 @@ LLVM's Analysis and Transform Passes
 .. contents::
     :local:
 
+.. toctree::
+   :hidden:
+
+   KernelInfo
+
 Introduction
 ============
+.. warning:: This document is not updated frequently, and the list of passes
+  is most likely incomplete. It is possible to list passes known by the opt
+  tool using ``opt -print-passes``.
 
-This document serves as a high level summary of the optimization features that
+This document serves as a high-level summary of the optimization features that
 LLVM provides.  Optimizations are implemented as Passes that traverse some
 portion of a program to either collect information or transform the program.
 The table below divides the passes that LLVM provides into three categories.
 Analysis passes compute information that other passes can use or for debugging
 or program visualization purposes.  Transform passes can use (or invalidate)
 the analysis passes.  Transform passes all mutate the program in some way.
-Utility passes provides some utility but don't otherwise fit categorization.
-For example passes to extract functions to bitcode or write a module to bitcode
+Utility passes provide some utility but don't otherwise fit categorization.
+For example, passes to extract functions to bitcode or write a module to bitcode
 are neither analysis nor transform passes.  The table of contents above
 provides a quick summary of each pass and links to the more complete pass
 description later in the document.
@@ -53,7 +61,7 @@ Yet to be written.
 ``da``: Dependence Analysis
 ---------------------------
 
-Dependence analysis framework, which is used to detect dependences in memory
+Dependence analysis framework, which is used to detect dependencies in memory
 accesses.
 
 ``domfrontier``: Dominance Frontier Construction
@@ -82,7 +90,7 @@ postscript or some other suitable format.
 This pass, only available in ``opt``, prints the control flow graph into a
 ``.dot`` graph.  This graph can then be processed with the :program:`dot` tool
 to convert it to postscript or some other suitable format.
-Additionally the ``-cfg-func-name=<substring>`` option can be used to filter the
+Additionally, the ``-cfg-func-name=<substring>`` option can be used to filter the
 functions that are printed. All functions that contain the specified substring
 will be printed.
 
@@ -93,7 +101,7 @@ This pass, only available in ``opt``, prints the control flow graph into a
 ``.dot`` graph, omitting the function bodies.  This graph can then be processed
 with the :program:`dot` tool to convert it to postscript or some other suitable
 format.
-Additionally the ``-cfg-func-name=<substring>`` option can be used to filter the
+Additionally, the ``-cfg-func-name=<substring>`` option can be used to filter the
 functions that are printed. All functions that contain the specified substring
 will be printed.
 
@@ -145,6 +153,12 @@ This pass collects the count of all instructions and reports them.
 Bookkeeping for "interesting" users of expressions computed from induction
 variables.
 
+``kernel-info``: GPU Kernel Info
+--------------------------------
+
+Reports various statistics for codes compiled for GPUs.  This pass is
+:doc:`documented separately<KernelInfo>`.
+
 ``lazy-value-info``: Lazy Value Information Analysis
 ----------------------------------------------------
 
@@ -193,14 +207,11 @@ memory operations it depends on.  It builds on alias analysis information, and
 tries to provide a lazy, caching interface to a common kind of alias
 information query.
 
-``module-debuginfo``: Decodes module-level debug info
------------------------------------------------------
+``print<module-debuginfo>``: Decodes module-level debug info
+------------------------------------------------------------
 
-This pass decodes the debug info metadata in a module and prints in a
+This pass decodes the debug info metadata in a module and prints it to standard output in a
 (sufficiently-prepared-) human-readable form.
-
-For example, run this pass from ``opt`` along with the ``-analyze`` option, and
-it'll print to standard output.
 
 ``postdomtree``: Post-Dominator Tree Construction
 -------------------------------------------------
@@ -228,18 +239,18 @@ standard error in a human-readable form.
 ``print-cfg-sccs``: Print SCCs of each function CFG
 ---------------------------------------------------
 
-This pass, only available in ``opt``, printsthe SCCs of each function CFG to
-standard error in a human-readable fom.
+This pass, only available in ``opt``, prints the SCCs of each function CFG to
+standard error in a human-readable form.
 
-``print-function``: Print function to stderr
---------------------------------------------
+``function(print)``: Print function to stderr
+---------------------------------------------
 
 The ``PrintFunctionPass`` class is designed to be pipelined with other
 ``FunctionPasses``, and prints out the functions of the module as they are
 processed.
 
-``print-module``: Print module to stderr
-----------------------------------------
+``module(print)``: Print module to stderr
+-----------------------------------------
 
 This pass simply prints out the entire module when it is executed.
 
@@ -475,7 +486,7 @@ Bottom-up inlining of functions into callees.
 ``instcombine``: Combine redundant instructions
 -----------------------------------------------
 
-Combine instructions to form fewer, simple instructions.  This pass does not
+Combine instructions to form fewer, simpler instructions.  This pass does not
 modify the CFG. This pass is where algebraic simplification happens.
 
 This pass combines things like:
@@ -491,7 +502,7 @@ into:
 
   %Z = add i32 %X, 2
 
-This is a simple worklist driven algorithm.
+This is a simple worklist-driven algorithm.
 
 This pass guarantees that the following canonicalizations are performed on the
 program:
@@ -521,9 +532,9 @@ library calls on different targets.
 ``aggressive-instcombine``: Combine expression patterns
 --------------------------------------------------------
 
-Combine expression patterns to form expressions with fewer, simple instructions.
+Combine expression patterns to form expressions with fewer, simpler instructions.
 
-For example, this pass reduce width of expressions post-dominated by TruncInst
+For example, this pass reduces the width of expressions post-dominated by ``TruncInst``
 into smaller width when applicable.
 
 It differs from instcombine pass in that it can modify CFG and contains pattern
@@ -542,6 +553,14 @@ variables with initializers are marked as internal.
 
 An interprocedural variant of :ref:`Sparse Conditional Constant Propagation
 <passes-sccp>`.
+
+``normalize``: Transforms IR into a normal form that's easier to diff
+---------------------------------------------------------------------
+
+This pass aims to transform LLVM Modules into a normal form by reordering and
+renaming instructions while preserving the same semantics. The normalizer makes
+it easier to spot semantic differences while diffing two modules which have
+undergone two different passes.
 
 ``jump-threading``: Jump Threading
 ----------------------------------
@@ -703,7 +722,7 @@ determine the trip counts of loops easily.
 ---------------------------------------------
 
 This pass implements a simple unroll and jam classical loop optimisation pass.
-It transforms loop from:
+It transforms a loop from:
 
 .. code-block:: c++
 
@@ -728,8 +747,8 @@ wrapper functions that are registered as global constructors in
 ``llvm.global_ctors`` and which contain a call to ``__cxa_atexit`` to register
 their destructor functions.
 
-``loweratomic``: Lower atomic intrinsics to non-atomic form
------------------------------------------------------------
+``lower-atomic``: Lower atomic intrinsics to non-atomic form
+------------------------------------------------------------
 
 This pass lowers atomic intrinsics to non-atomic form for use in a known
 non-preemptible environment.
@@ -739,8 +758,8 @@ this would require knowledge of the entire call graph of the program including
 any libraries which may not be available in bitcode form); it simply lowers
 every atomic intrinsic.
 
-``lowerinvoke``: Lower invokes to calls, for unwindless code generators
------------------------------------------------------------------------
+``lower-invoke``: Lower invokes to calls, for unwindless code generators
+------------------------------------------------------------------------
 
 This transformation is designed for use by code generators which do not yet
 support stack unwinding.  This pass converts ``invoke`` instructions to
@@ -748,8 +767,8 @@ support stack unwinding.  This pass converts ``invoke`` instructions to
 become dead code (which can be removed by running the ``-simplifycfg`` pass
 afterwards).
 
-``lowerswitch``: Lower ``SwitchInst``\ s to branches
-----------------------------------------------------
+``lower-switch``: Lower ``SwitchInst``\ s to branches
+-----------------------------------------------------
 
 Rewrites switch instructions with a sequence of branches, which allows targets
 to get away with not implementing the switch instruction until it is
@@ -780,11 +799,11 @@ This pass looks for equivalent functions that are mergeable and folds them.
 
 Total-ordering is introduced among the functions set: we define comparison
 that answers for every two functions which of them is greater. It allows to
-arrange functions into the binary tree.
+arrange functions into a binary tree.
 
-For every new function we check for equivalent in tree.
+For every new function we check for equivalent in the tree.
 
-If equivalent exists we fold such functions. If both functions are overridable,
+If equivalent exists, we fold such functions. If both functions are overridable,
 we move the functionality into a new internal function and leave two
 overridable thunks to it.
 
@@ -819,7 +838,7 @@ For example: 4 + (x + 5) ⇒ x + (4 + 5)
 
 In the implementation of this algorithm, constants are assigned rank = 0,
 function arguments are rank = 1, and other values are assigned ranks
-corresponding to the reverse post order traversal of current function (starting
+corresponding to the reverse post-order traversal of the current function (starting
 at 2), which effectively gives values in deep loops higher rank than values not
 in loops.
 
@@ -924,17 +943,8 @@ code size or making it harder to reverse engineer code.
 ``strip-dead-debug-info``: Strip debug info for unused symbols
 --------------------------------------------------------------
 
-.. FIXME: this description is the same as for -strip
-
-performs code stripping. this transformation can delete:
-
-* names for virtual registers
-* symbols for internal globals and functions
-* debug information
-
-note that this transformation makes code much less readable, so it should only
-be used in situations where the strip utility would be used, such as reducing
-code size or making it harder to reverse engineer code.
+Performs code stripping. Similar to strip, but only strips debug info for
+unused symbols.
 
 ``strip-dead-prototypes``: Strip Unused Function Prototypes
 -----------------------------------------------------------
@@ -944,35 +954,17 @@ declarations and removes them.  Dead declarations are declarations of functions
 for which no implementation is available (i.e., declarations for unused library
 functions).
 
-``strip-debug-declare``: Strip all ``llvm.dbg.declare`` intrinsics
-------------------------------------------------------------------
+``strip-debug-declare``: Strip all ``llvm.dbg.declare`` intrinsics and
+``#dbg_declare`` records.
+-------------------------------------------------------------------
 
-.. FIXME: this description is the same as for -strip
-
-This pass implements code stripping.  Specifically, it can delete:
-
-#. names for virtual registers
-#. symbols for internal globals and functions
-#. debug information
-
-Note that this transformation makes code much less readable, so it should only
-be used in situations where the 'strip' utility would be used, such as reducing
-code size or making it harder to reverse engineer code.
+Performs code stripping. Similar to strip, but only strips
+``llvm.dbg.declare`` intrinsics.
 
 ``strip-nondebug``: Strip all symbols, except dbg symbols, from a module
 ------------------------------------------------------------------------
 
-.. FIXME: this description is the same as for -strip
-
-This pass implements code stripping.  Specifically, it can delete:
-
-#. names for virtual registers
-#. symbols for internal globals and functions
-#. debug information
-
-Note that this transformation makes code much less readable, so it should only
-be used in situations where the 'strip' utility would be used, such as reducing
-code size or making it harder to reverse engineer code.
+Performs code stripping. Similar to strip, but dbg info is preserved.
 
 ``tailcallelim``: Tail Call Elimination
 ---------------------------------------
@@ -1027,7 +1019,7 @@ noisy.
 ``verify``: Module Verifier
 ---------------------------
 
-Verifies an LLVM IR code.  This is useful to run after an optimization which is
+Verifies LLVM IR code.  This is useful to run after an optimization which is
 undergoing testing.  Note that llvm-as verifies its input before emitting
 bitcode, and also that malformed bitcode is likely to make LLVM crash.  All
 language front-ends are therefore encouraged to verify their output before
@@ -1067,7 +1059,7 @@ instead just tries to ensure that code is well-formed.
 ----------------------------------
 
 Displays the control flow graph using the GraphViz tool.
-Additionally the ``-cfg-func-name=<substring>`` option can be used to filter the
+Additionally, the ``-cfg-func-name=<substring>`` option can be used to filter the
 functions that are displayed. All functions that contain the specified substring
 will be displayed.
 
@@ -1076,7 +1068,7 @@ will be displayed.
 
 Displays the control flow graph using the GraphViz tool, but omitting function
 bodies.
-Additionally the ``-cfg-func-name=<substring>`` option can be used to filter the
+Additionally, the ``-cfg-func-name=<substring>`` option can be used to filter the
 functions that are displayed. All functions that contain the specified substring
 will be displayed.
 

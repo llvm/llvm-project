@@ -51,19 +51,27 @@ using FileToChangesMap =
 /// Directories starting with '.' are ignored during traversal.
 ///
 /// \param[in] Directory Directory to begin search for serialized
-/// TranslationUnitReplacements.
+/// TranslationUnitReplacements or TranslationUnitDiagnostics.
 /// \param[out] TUs Collection of all found and deserialized
 /// TranslationUnitReplacements or TranslationUnitDiagnostics.
-/// \param[out] TUFiles Collection of all TranslationUnitReplacement files
-/// found in \c Directory.
+/// \param[out] TUFiles Collection of all TranslationUnitReplacement or
+/// TranslationUnitDiagnostics files found in \c Directory.
 /// \param[in] Diagnostics DiagnosticsEngine used for error output.
 ///
 /// \returns An error_code indicating success or failure in navigating the
 /// directory structure.
+template <typename TranslationUnits>
+std::error_code collectReplacementsFromDirectory(
+    const llvm::StringRef Directory, TranslationUnits &TUs,
+    TUReplacementFiles &TUFiles,
+    clang::DiagnosticsEngine &Diagnostics) = delete;
+
+template <>
 std::error_code collectReplacementsFromDirectory(
     const llvm::StringRef Directory, TUReplacements &TUs,
     TUReplacementFiles &TUFiles, clang::DiagnosticsEngine &Diagnostics);
 
+template <>
 std::error_code collectReplacementsFromDirectory(
     const llvm::StringRef Directory, TUDiagnostics &TUs,
     TUReplacementFiles &TUFiles, clang::DiagnosticsEngine &Diagnostics);

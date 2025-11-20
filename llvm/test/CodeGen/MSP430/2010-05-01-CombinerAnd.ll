@@ -19,7 +19,7 @@ land.end:                                         ; preds = %land.rhs, %while.co
   br i1 %0, label %while.body, label %while.end
 
 while.body:                                       ; preds = %land.end
-  %tmp4 = load i16, i16* undef                         ; <i16> [#uses=0]
+  %tmp4 = load i16, ptr undef                         ; <i16> [#uses=0]
   br label %while.cond
 
 while.end:                                        ; preds = %land.end

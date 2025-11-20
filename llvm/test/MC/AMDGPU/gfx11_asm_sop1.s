@@ -2964,6 +2964,9 @@ s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_SAVE_WAVE)
 s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_TBA)
 // GFX11: encoding: [0x85,0x4c,0x80,0xbe]
 
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_TBA_TO_PC)
+// GFX11: encoding: [0x86,0x4c,0x80,0xbe]
+
 s_ctz_i32_b32 s5, s1
 // GFX11: encoding: [0x01,0x08,0x85,0xbe]
 

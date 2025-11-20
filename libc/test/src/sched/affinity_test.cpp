@@ -7,38 +7,38 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h"
-#include "src/errno/libc_errno.h"
 #include "src/sched/sched_getaffinity.h"
 #include "src/sched/sched_setaffinity.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 
-#include <sched.h>
+#include "hdr/types/cpu_set_t.h"
+#include "hdr/types/pid_t.h"
 #include <sys/syscall.h>
 
-TEST(LlvmLibcSchedAffinityTest, SmokeTest) {
+using LlvmLibcSchedAffinityTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcSchedAffinityTest, SmokeTest) {
   cpu_set_t mask;
-  libc_errno = 0;
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
-  pid_t tid = __llvm_libc::syscall_impl<pid_t>(SYS_gettid);
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  pid_t tid = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid);
   ASSERT_GT(tid, pid_t(0));
   // We just get and set the same mask.
-  ASSERT_THAT(__llvm_libc::sched_getaffinity(tid, sizeof(cpu_set_t), &mask),
+  ASSERT_THAT(LIBC_NAMESPACE::sched_getaffinity(tid, sizeof(cpu_set_t), &mask),
               Succeeds(0));
-  ASSERT_THAT(__llvm_libc::sched_setaffinity(tid, sizeof(cpu_set_t), &mask),
+  ASSERT_THAT(LIBC_NAMESPACE::sched_setaffinity(tid, sizeof(cpu_set_t), &mask),
               Succeeds(0));
 }
 
-TEST(LlvmLibcSchedAffinityTest, BadMask) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-  pid_t tid = __llvm_libc::syscall_impl<pid_t>(SYS_gettid);
+TEST_F(LlvmLibcSchedAffinityTest, BadMask) {
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+  pid_t tid = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid);
 
-  libc_errno = 0;
-  ASSERT_THAT(__llvm_libc::sched_getaffinity(tid, sizeof(cpu_set_t), nullptr),
-              Fails(EFAULT));
+  ASSERT_THAT(
+      LIBC_NAMESPACE::sched_getaffinity(tid, sizeof(cpu_set_t), nullptr),
+      Fails(EFAULT));
 
-  libc_errno = 0;
-  ASSERT_THAT(__llvm_libc::sched_setaffinity(tid, sizeof(cpu_set_t), nullptr),
-              Fails(EFAULT));
-
-  libc_errno = 0;
+  ASSERT_THAT(
+      LIBC_NAMESPACE::sched_setaffinity(tid, sizeof(cpu_set_t), nullptr),
+      Fails(EFAULT));
 }

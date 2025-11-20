@@ -8,13 +8,14 @@
 
 #include "src/stdio/feof.h"
 #include "src/__support/File/file.h"
+#include "src/__support/macros/config.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, feof, (::FILE * stream)) {
-  return reinterpret_cast<__llvm_libc::File *>(stream)->iseof();
+  return reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->iseof();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

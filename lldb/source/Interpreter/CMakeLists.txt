@@ -6,6 +6,8 @@ lldb_tablegen(InterpreterPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE InterpreterProperties.td
   TARGET LLDBInterpreterPropertiesEnumGen)
 
+add_subdirectory(Interfaces)
+
 add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
   CommandAlias.cpp
   CommandHistory.cpp
@@ -53,19 +55,22 @@ add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
   Property.cpp
   ScriptInterpreter.cpp
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Interpreter
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
+    lldbInterpreterInterfaces
     lldbCommands
     lldbCore
     lldbDataFormatters
     lldbHost
     lldbTarget
     lldbUtility
-
-  LINK_COMPONENTS
-    Support
   )
 
 add_dependencies(lldbInterpreter
+  lldbInterpreterInterfaces
   LLDBInterpreterPropertiesGen
   LLDBInterpreterPropertiesEnumGen)
 

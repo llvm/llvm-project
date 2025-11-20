@@ -37,7 +37,7 @@ declare dso_local void @_Z3pinv() local_unnamed_addr
 
 define dso_local i32 @main() local_unnamed_addr !dbg !18 {
 entry:
-  call void @llvm.dbg.declare(metadata %"struct.ns::t1"* undef, metadata !22, metadata !DIExpression()), !dbg !23
+  call void @llvm.dbg.declare(metadata ptr undef, metadata !22, metadata !DIExpression()), !dbg !23
   call void @_Z3pinv(), !dbg !25
   ret i32 0, !dbg !26
 }

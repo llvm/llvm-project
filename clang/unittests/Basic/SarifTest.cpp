@@ -35,23 +35,21 @@ static std::string serializeSarifDocument(llvm::json::Object &&Doc) {
   llvm::json::Value Value(std::move(Doc));
   llvm::raw_string_ostream OS{Output};
   OS << llvm::formatv("{0}", Value);
-  OS.flush();
   return Output;
 }
 
 class SarifDocumentWriterTest : public ::testing::Test {
 protected:
   SarifDocumentWriterTest()
-      : InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
+      : InMemoryFileSystem(
+            llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>()),
         FileMgr(FileSystemOptions(), InMemoryFileSystem),
-        DiagID(new DiagnosticIDs()), DiagOpts(new DiagnosticOptions()),
-        Diags(DiagID, DiagOpts.get(), new IgnoringDiagConsumer()),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr) {}
 
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
@@ -60,8 +58,8 @@ protected:
                         bool IsMainFile = false) {
     std::unique_ptr<llvm::MemoryBuffer> SourceBuf =
         llvm::MemoryBuffer::getMemBuffer(SourceText);
-    const FileEntry *SourceFile =
-        FileMgr.getVirtualFile(Name, SourceBuf->getBufferSize(), 0);
+    FileEntryRef SourceFile =
+        FileMgr.getVirtualFileRef(Name, SourceBuf->getBufferSize(), 0);
     SourceMgr.overrideFileContents(SourceFile, std::move(SourceBuf));
     FileID FID = SourceMgr.getOrCreateFileID(SourceFile, SrcMgr::C_User);
     if (IsMainFile)

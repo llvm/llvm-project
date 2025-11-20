@@ -23,14 +23,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
-#include <numeric>
 
 using namespace llvm;
-
-// FIXME(mtrofin): remove the flag altogether
-static cl::opt<bool>
-    UseSimpleLogger("tfutils-use-simplelogger", cl::init(true), cl::Hidden,
-                    cl::desc("Output simple (non-protobuf) log."));
 
 void Logger::writeHeader(std::optional<TensorSpec> AdviceSpec) {
   json::OStream JOS(*OS);

@@ -151,6 +151,12 @@ func.func @test_divui(%arg0 : i64, %arg1 : i64) -> i64 {
   return %0 : i64
 }
 
+// CHECK-LABEL: test_divui_exact
+func.func @test_divui_exact(%arg0 : i64, %arg1 : i64) -> i64 {
+  %0 = arith.divui %arg0, %arg1 exact : i64
+  return %0 : i64
+}
+
 // CHECK-LABEL: test_divui_tensor
 func.func @test_divui_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) -> tensor<8x8xi64> {
   %0 = arith.divui %arg0, %arg1 : tensor<8x8xi64>
@@ -172,6 +178,12 @@ func.func @test_divui_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : vector<[8
 // CHECK-LABEL: test_divsi
 func.func @test_divsi(%arg0 : i64, %arg1 : i64) -> i64 {
   %0 = arith.divsi %arg0, %arg1 : i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: test_divsi_exact
+func.func @test_divsi_exact(%arg0 : i64, %arg1 : i64) -> i64 {
+  %0 = arith.divsi %arg0, %arg1 exact : i64
   return %0 : i64
 }
 
@@ -391,6 +403,12 @@ func.func @test_shrui(%arg0 : i64, %arg1 : i64) -> i64 {
   return %0 : i64
 }
 
+// CHECK-LABEL: test_shrui_exact
+func.func @test_shrui_exact(%arg0 : i64, %arg1 : i64) -> i64 {
+  %0 = arith.shrui %arg0, %arg1 exact : i64
+  return %0 : i64
+}
+
 // CHECK-LABEL: test_shrui_tensor
 func.func @test_shrui_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) -> tensor<8x8xi64> {
   %0 = arith.shrui %arg0, %arg1 : tensor<8x8xi64>
@@ -412,6 +430,12 @@ func.func @test_shrui_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : vector<[8
 // CHECK-LABEL: test_shrsi
 func.func @test_shrsi(%arg0 : i64, %arg1 : i64) -> i64 {
   %0 = arith.shrsi %arg0, %arg1 : i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: test_shrsi_exact
+func.func @test_shrsi_exact(%arg0 : i64, %arg1 : i64) -> i64 {
+  %0 = arith.shrsi %arg0, %arg1 exact : i64
   return %0 : i64
 }
 
@@ -701,6 +725,16 @@ func.func @test_truncf_vector(%arg0 : vector<8xf32>) -> vector<8xbf16> {
 func.func @test_truncf_scalable_vector(%arg0 : vector<[8]xf32>) -> vector<[8]xbf16> {
   %0 = arith.truncf %arg0 : vector<[8]xf32> to vector<[8]xbf16>
   return %0 : vector<[8]xbf16>
+}
+
+// CHECK-LABEL: test_truncf_rounding_mode
+func.func @test_truncf_rounding_mode(%arg0 : f64) -> (f32, f32, f32, f32, f32) {
+  %0 = arith.truncf %arg0 to_nearest_even : f64 to f32
+  %1 = arith.truncf %arg0 downward : f64 to f32
+  %2 = arith.truncf %arg0 upward : f64 to f32
+  %3 = arith.truncf %arg0 toward_zero : f64 to f32
+  %4 = arith.truncf %arg0 to_nearest_away : f64 to f32
+  return %0, %1, %2, %3, %4 : f32, f32, f32, f32, f32
 }
 
 // CHECK-LABEL: test_uitofp
@@ -1118,6 +1152,8 @@ func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
   %7 = arith.addf %arg0, %arg1 fastmath<nnan,ninf> : f32
 // CHECK: {{.*}} = arith.mulf %arg0, %arg1 fastmath<fast> : f32
   %8 = arith.mulf %arg0, %arg1 fastmath<reassoc,nnan,ninf,nsz,arcp,contract,afn> : f32
+// CHECK: {{.*}} = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
+  %9 = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
 
   return
 }
@@ -1135,4 +1171,19 @@ func.func @select_tensor_encoding(
   // CHECK: = arith.select %{{.*}}, %{{.*}}, %{{.*}} : tensor<8xi1, "foo">, tensor<8xi32, "foo">
   %0 = arith.select %arg0, %arg1, %arg2 : tensor<8xi1, "foo">, tensor<8xi32, "foo">
   return %0 : tensor<8xi32, "foo">
+}
+
+// CHECK-LABEL: @intflags_func
+func.func @intflags_func(%arg0: i64, %arg1: i64) {
+  // CHECK: %{{.*}} = arith.addi %{{.*}}, %{{.*}} overflow<nsw> : i64
+  %0 = arith.addi %arg0, %arg1 overflow<nsw> : i64
+  // CHECK: %{{.*}} = arith.subi %{{.*}}, %{{.*}} overflow<nuw> : i64
+  %1 = arith.subi %arg0, %arg1 overflow<nuw> : i64
+  // CHECK: %{{.*}} = arith.muli %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
+  %2 = arith.muli %arg0, %arg1 overflow<nsw, nuw> : i64
+  // CHECK: %{{.*}} = arith.shli %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
+  %3 = arith.shli %arg0, %arg1 overflow<nsw, nuw> : i64
+  // CHECK: %{{.*}} = arith.trunci %{{.*}} overflow<nsw, nuw> : i64 to i32
+  %4 = arith.trunci %arg0 overflow<nsw, nuw> : i64 to i32
+  return
 }

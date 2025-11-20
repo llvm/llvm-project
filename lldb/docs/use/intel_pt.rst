@@ -27,7 +27,7 @@ Build Instructions
 ------------------
 
 Clone and build the low level Intel PT
-decoder library [LibIPT library](https://github.com/intel/libipt).
+decoder library `LibIPT library <https://github.com/intel/libipt>`_.
 ::
 
   $ git clone git@github.com:intel/libipt.git

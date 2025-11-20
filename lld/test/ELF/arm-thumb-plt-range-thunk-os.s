@@ -96,14 +96,20 @@ far_nonpreemptible_alias:
 // CHECK4-NEXT:  4000024:	d4 d4 d4 d4 	.word	0xd4d4d4d4
 // CHECK4-NEXT:  4000028:	d4 d4 d4 d4 	.word	0xd4d4d4d4
 // CHECK4-NEXT:  400002c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
+// CHECK4-EMPTY:
+// CHECK4-NEXT: <elsewhere@plt>:
 // CHECK4-NEXT:  4000030:	e28fc600    	add	r12, pc, #0, #12
 // CHECK4-NEXT:  4000034:	e28cca20    	add	r12, r12, #32
 // CHECK4-NEXT:  4000038:	e5bcf08c    	ldr	pc, [r12, #140]!
 // CHECK4-NEXT:  400003c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
+// CHECK4-EMPTY:
+// CHECK4-NEXT: <preemptible@plt>:
 // CHECK4-NEXT:  4000040:	e28fc600    	add	r12, pc, #0, #12
 // CHECK4-NEXT:  4000044:	e28cca20    	add	r12, r12, #32
 // CHECK4-NEXT:  4000048:	e5bcf080    	ldr	pc, [r12, #128]!
 // CHECK4-NEXT:  400004c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
+// CHECK4-EMPTY:
+// CHECK4-NEXT: <far_preemptible@plt>:
 // CHECK4-NEXT:  4000050:	e28fc600    	add	r12, pc, #0, #12
 // CHECK4-NEXT:  4000054:	e28cca20    	add	r12, r12, #32
 // CHECK4-NEXT:  4000058:	e5bcf074    	ldr	pc, [r12, #116]!

@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
+#include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 static struct {
 } stub;
 FILE *stdout = reinterpret_cast<FILE *>(&stub);
-} // namespace __llvm_libc
-extern "C" FILE *stdout = reinterpret_cast<FILE *>(&__llvm_libc::stub);
+} // namespace LIBC_NAMESPACE_DECL
+extern "C" FILE *stdout = reinterpret_cast<FILE *>(&LIBC_NAMESPACE::stub);

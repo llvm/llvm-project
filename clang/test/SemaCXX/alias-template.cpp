@@ -31,12 +31,14 @@ namespace IllegalSyntax {
 namespace VariableLengthArrays {
   template<typename Z> using T = int[42]; // ok
 
-  int n = 32;
-  template<typename Z> using T = int[n]; // expected-error {{variable length array declaration not allowed at file scope}}
+  int n = 32; // expected-note {{declared here}}
+  template<typename Z> using T = int[n]; // expected-error {{variable length array declaration not allowed at file scope}} \
+                                            expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                            expected-note {{read of non-const variable 'n' is not allowed in a constant expression}}
 
   const int m = 42;
   template<typename Z> using U = int[m];
-  template<typename Z> using U = int[42]; // expected-note {{previous definition}} 
+  template<typename Z> using U = int[42]; // expected-note {{previous definition}}
   template<typename Z> using U = int; // expected-error {{type alias template redefinition with different types ('int' vs 'int[42]')}}
 }
 
@@ -52,18 +54,24 @@ namespace LookupFilter {
   template<typename U> using S = S<U>*; // ok
 }
 
-namespace InFunctions {
+namespace UnexpandedPack {
   template<typename...T> struct S0 {
     template<typename Z> using U = T*; // expected-error {{declaration type contains unexpanded parameter pack 'T'}}
     U<char> u;
   };
+}
 
+namespace InvalidType {
   template<typename Z> using T1 = int;
   template<typename Z> using T2 = int[-1]; // expected-error {{array size is negative}}
+}
+
+namespace ShadowTemplateParam {
   template<typename...T> struct S3 { // expected-note {{template parameter is declared here}}
     template<typename Z> using T = int; // expected-error {{declaration of 'T' shadows template parameter}}
   };
-  template<typename Z> using Z = Z;
+  template<typename Z> // expected-note {{template parameter is declared here}}
+  using Z = Z; // expected-error {{declaration of 'Z' shadows template parameter}}
 }
 
 namespace ClassNameRedecl {

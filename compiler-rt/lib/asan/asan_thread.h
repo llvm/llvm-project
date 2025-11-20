@@ -36,25 +36,27 @@ class AsanThread;
 class AsanThreadContext final : public ThreadContextBase {
  public:
   explicit AsanThreadContext(int tid)
-      : ThreadContextBase(tid), announced(false),
-        destructor_iterations(GetPthreadDestructorIterations()), stack_id(0),
+      : ThreadContextBase(tid),
+        announced(false),
+        destructor_iterations(GetPthreadDestructorIterations()),
         thread(nullptr) {}
   bool announced;
   u8 destructor_iterations;
-  u32 stack_id;
   AsanThread *thread;
 
   void OnCreated(void *arg) override;
   void OnFinished() override;
-
-  struct CreateThreadContextArgs {
-    AsanThread *thread;
-    StackTrace *stack;
-  };
 };
 
 // AsanThreadContext objects are never freed, so we need many of them.
 COMPILER_CHECK(sizeof(AsanThreadContext) <= 256);
+
+#if defined(_MSC_VER) && !defined(__clang__)
+// MSVC raises a warning about a nonstandard extension being used for the 0
+// sized element in this array. Disable this for warn-as-error builds.
+#  pragma warning(push)
+#  pragma warning(disable : 4200)
+#endif
 
 // AsanThread are stored in TSD and destroyed when the thread dies.
 class AsanThread {
@@ -73,7 +75,7 @@ class AsanThread {
   struct InitOptions;
   void Init(const InitOptions *options = nullptr);
 
-  void ThreadStart(tid_t os_id);
+  void ThreadStart(ThreadID os_id);
   thread_return_t RunThread();
 
   uptr stack_top();
@@ -102,7 +104,7 @@ class AsanThread {
     if (!fake_stack_) return;
     FakeStack *t = fake_stack_;
     fake_stack_ = nullptr;
-    SetTLSFakeStack(nullptr);
+    ResetTLSFakeStack();
     t->Destroy(tid);
   }
 
@@ -184,6 +186,10 @@ class AsanThread {
 
   char start_data_[];
 };
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#  pragma warning(pop)
+#endif
 
 // Returns a single instance of registry.
 ThreadRegistry &asanThreadRegistry();

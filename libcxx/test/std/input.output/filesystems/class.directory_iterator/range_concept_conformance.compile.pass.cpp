@@ -8,14 +8,14 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem
-// UNSUPPORTED: availability-filesystem-missing
 
 // directory_iterator
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include <concepts>
 #include <ranges>
+namespace fs = std::filesystem;
 
 static_assert(std::same_as<std::ranges::iterator_t<fs::directory_iterator>, fs::directory_iterator>);
 static_assert(std::ranges::common_range<fs::directory_iterator>);
@@ -40,4 +40,3 @@ static_assert(!std::ranges::view<const fs::directory_iterator&>);
 static_assert(!std::ranges::sized_range<const fs::directory_iterator&>);
 static_assert(std::ranges::borrowed_range<const fs::directory_iterator&>);
 static_assert(std::ranges::viewable_range<const fs::directory_iterator&>);
-

@@ -7,18 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
-#include "SystemZ.h"
 #include "TargetInfo/SystemZTargetInfo.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "systemz-disassembler"
 
@@ -32,7 +34,7 @@ public:
     : MCDisassembler(STI, Ctx) {}
   ~SystemZDisassembler() override = default;
 
-  DecodeStatus getInstruction(MCInst &instr, uint64_t &Size,
+  DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
 };
@@ -45,7 +47,9 @@ static MCDisassembler *createSystemZDisassembler(const Target &T,
   return new SystemZDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZDisassembler() {
+// NOLINTNEXTLINE(readability-identifier-naming)
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheSystemZTarget(),
                                          createSystemZDisassembler);
@@ -70,11 +74,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZDisassembler() {
 /// is done and if a symbol is found an MCExpr is created with that, else
 /// an MCExpr with the immediate Value is created.  This function returns true
 /// if it adds an operand to the MCInst and false otherwise.
-static bool tryAddingSymbolicOperand(int64_t Value, bool isBranch,
+static bool tryAddingSymbolicOperand(int64_t Value, bool IsBranch,
                                      uint64_t Address, uint64_t Offset,
                                      uint64_t Width, MCInst &MI,
                                      const MCDisassembler *Decoder) {
-  return Decoder->tryAddingSymbolicOperand(MI, Value, Address, isBranch, Offset,
+  return Decoder->tryAddingSymbolicOperand(MI, Value, Address, IsBranch, Offset,
                                            Width, /*InstSize=*/0);
 }
 
@@ -280,9 +284,9 @@ static DecodeStatus decodePCDBLOperand(MCInst &Inst, uint64_t Imm,
                                        uint64_t Address, bool isBranch,
                                        const MCDisassembler *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid PC-relative offset");
-  uint64_t Value = SignExtend64<N>(Imm) * 2 + Address;
+  uint64_t Value = SignExtend64<N>(Imm) * 2;
 
-  if (!tryAddingSymbolicOperand(Value, isBranch, Address, 2, N / 8,
+  if (!tryAddingSymbolicOperand(Value + Address, isBranch, Address, 2, N / 8,
                                 Inst, Decoder))
     Inst.addOperand(MCOperand::createImm(Value));
 
@@ -325,6 +329,8 @@ DecodeStatus SystemZDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
                                                  raw_ostream &CS) const {
+  CommentStream = &CS;
+
   // Get the first two bytes of the instruction.
   Size = 0;
   if (Bytes.size() < 2)

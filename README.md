@@ -1,5 +1,9 @@
 # The LLVM Compiler Infrastructure
 
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8273/badge)](https://www.bestpractices.dev/projects/8273)
+[![libc++](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule)](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml?query=event%3Aschedule)
+
 Welcome to the LLVM project!
 
 This repository contains the source code for LLVM, a toolkit for the
@@ -12,7 +16,7 @@ files needed to process intermediate representations and convert them into
 object files. Tools include an assembler, disassembler, bitcode analyzer, and
 bitcode optimizer.
 
-C-like languages use the [Clang](http://clang.llvm.org/) frontend. This
+C-like languages use the [Clang](https://clang.llvm.org/) frontend. This
 component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
 -- and from there into object files, using LLVM.
 
@@ -32,8 +36,9 @@ the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
 ## Getting in touch
 
 Join the [LLVM Discourse forums](https://discourse.llvm.org/), [Discord
-chat](https://discord.gg/xS7Z362), or #llvm IRC channel on
-[OFTC](https://oftc.net/).
+chat](https://discord.gg/xS7Z362),
+[LLVM Office Hours](https://llvm.org/docs/GettingInvolved.html#office-hours) or
+[Regular sync-ups](https://llvm.org/docs/GettingInvolved.html#online-sync-ups).
 
 The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
 participants to all modes of communication within the project.

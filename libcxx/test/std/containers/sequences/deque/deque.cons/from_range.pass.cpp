@@ -19,7 +19,7 @@
 
 int main(int, char**) {
   for_all_iterators_and_allocators<int>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_container<std::deque, int, Iter, Sent, Alloc>([](const auto& c) {
+    test_sequence_container<std::deque, int, Iter, Sent, Alloc>([]([[maybe_unused]] const auto& c) {
       LIBCPP_ASSERT(c.__invariants());
     });
   });
@@ -28,7 +28,7 @@ int main(int, char**) {
   static_assert(test_constraints<std::deque, int, double>());
 
   // TODO(varconst): `deque`'s constructors currently aren't exception-safe.
-  // See https://github.com/llvm/llvm-project/issues/62056.
+  // See https://llvm.org/PR62056.
   //test_exception_safety_throwing_copy<std::deque>();
   //test_exception_safety_throwing_allocator<std::deque, int>();
 

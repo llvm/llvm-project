@@ -12,13 +12,25 @@
 TEST(LlvmLibcStrLenTest, EmptyString) {
   const char *empty = "";
 
-  size_t result = __llvm_libc::strlen(empty);
+  size_t result = LIBC_NAMESPACE::strlen(empty);
   ASSERT_EQ((size_t)0, result);
 }
 
 TEST(LlvmLibcStrLenTest, AnyString) {
   const char *any = "Hello World!";
 
-  size_t result = __llvm_libc::strlen(any);
+  size_t result = LIBC_NAMESPACE::strlen(any);
   ASSERT_EQ((size_t)12, result);
+}
+
+TEST(LlvmLibcStrLenTest, DataAfterNulString) {
+  constexpr char A[10] = {'a', 'b', 'c', 'd', 'e', 'f', 0, 'h', 'i', 'j'};
+  size_t result = LIBC_NAMESPACE::strlen(A);
+  ASSERT_EQ((size_t)6, result);
+}
+
+TEST(LlvmLibcStrLenTest, MultipleNulsInOneWord) {
+  constexpr char A[10] = {'a', 'b', 0, 'd', 'e', 'f', 0, 'h', 'i', 'j'};
+  size_t result = LIBC_NAMESPACE::strlen(A);
+  ASSERT_EQ((size_t)2, result);
 }

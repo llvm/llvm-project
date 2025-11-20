@@ -115,14 +115,12 @@
 
 #include "mlir/Transforms/CFGToSCF.h"
 
-#include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 
@@ -427,8 +425,7 @@ public:
   /// region with an instance of `returnLikeOp`s kind.
   void combineExit(Operation *returnLikeOp,
                    function_ref<Value(unsigned)> getSwitchValue) {
-    auto [iter, inserted] =
-        returnLikeToCombinedExit.insert({returnLikeOp, nullptr});
+    auto [iter, inserted] = returnLikeToCombinedExit.try_emplace(returnLikeOp);
     if (!inserted && iter->first == returnLikeOp)
       return;
 
@@ -601,7 +598,7 @@ static FailureOr<StructuredLoopProperties> createSingleExitingLatch(
   {
     auto builder = OpBuilder::atBlockBegin(latchBlock);
     interface.createConditionalBranch(
-        builder.getUnknownLoc(), builder, shouldRepeat, loopHeader,
+        loc, builder, shouldRepeat, loopHeader,
         latchBlock->getArguments().take_front(loopHeader->getNumArguments()),
         /*falseDest=*/exitBlock,
         /*falseArgs=*/{});
@@ -710,7 +707,7 @@ transformToReduceLoop(Block *loopHeader, Block *exitBlock,
     llvm::SmallDenseMap<Block *, bool> dominanceCache;
     // Returns true if `loopBlock` dominates `block`.
     auto loopBlockDominates = [&](Block *block) {
-      auto [iter, inserted] = dominanceCache.insert({block, false});
+      auto [iter, inserted] = dominanceCache.try_emplace(block);
       if (!inserted)
         return iter->second;
       iter->second = dominanceInfo.dominates(loopBlock, block);
@@ -720,7 +717,13 @@ transformToReduceLoop(Block *loopHeader, Block *exitBlock,
     auto checkValue = [&](Value value) {
       Value blockArgument;
       for (OpOperand &use : llvm::make_early_inc_range(value.getUses())) {
-        if (loopBlocks.contains(use.getOwner()->getBlock()))
+        // Go through all the parent blocks and find the one part of the region
+        // of the loop. If the block is part of the loop, then the value does
+        // not escape the loop through this use.
+        Block *currBlock = use.getOwner()->getBlock();
+        while (currBlock && currBlock->getParent() != loopHeader->getParent())
+          currBlock = currBlock->getParentOp()->getBlock();
+        if (loopBlocks.contains(currBlock))
           continue;
 
         // Block argument is only created the first time it is required.
@@ -1177,8 +1180,7 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
     auto builder = OpBuilder::atBlockTerminator(user->getBlock());
     LogicalResult result = interface.createStructuredBranchRegionTerminatorOp(
         user->getLoc(), builder, structuredCondOp, user,
-        static_cast<OperandRange>(
-            getMutableSuccessorOperands(user->getBlock(), 0)));
+        getMutableSuccessorOperands(user->getBlock(), 0).getAsOperandRange());
     if (failed(result))
       return failure();
     user->erase();
@@ -1279,7 +1281,7 @@ FailureOr<bool> mlir::transformCFGToSCF(Region &region,
 
   DenseMap<Type, Value> typedUndefCache;
   auto getUndefValue = [&](Type type) {
-    auto [iter, inserted] = typedUndefCache.insert({type, nullptr});
+    auto [iter, inserted] = typedUndefCache.try_emplace(type);
     if (!inserted)
       return iter->second;
 

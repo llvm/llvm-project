@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_EXIT_H
 #define LLVM_LIBC_SRC_STDLIB_EXIT_H
 
-#include <stdlib.h>
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 [[noreturn]] void exit(int status);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_EXIT_H

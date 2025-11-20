@@ -1,0 +1,34 @@
+# RUN: llvm-mc --disassemble %s -triple=i386 | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=i386 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+# ATT:   vmovd   (%ecx), %xmm5
+# INTEL: vmovd   xmm5, dword ptr [ecx]
+0x62 0xf1 0x7e 0x08 0x7e 0x29
+
+# ATT:   vmovd   %xmm5, (%ecx)
+# INTEL: vmovd   dword ptr [ecx], xmm5
+0x62 0xf1 0x7d 0x08 0xd6 0x29
+
+# ATT:   vmovd   %xmm2, %xmm1
+# INTEL: vmovd   xmm1, xmm2
+0x62 0xf1 0x7e 0x08 0x7e 0xca
+
+# ATT:   vmovd   %xmm2, %xmm1
+# INTEL: vmovd   xmm1, xmm2
+0x62 0xf1 0x7d 0x08 0xd6 0xca
+
+# ATT:   vmovw   %xmm5, (%ecx)
+# INTEL: vmovw   dword ptr [ecx], xmm5
+0x62 0xf5 0x7e 0x08 0x7e 0x29
+
+# ATT:   vmovw   (%ecx), %xmm5
+# INTEL: vmovw   xmm5, word ptr [ecx]
+0x62 0xf5 0x7e 0x08 0x6e 0x29
+
+# ATT:   vmovw   %xmm2, %xmm1
+# INTEL: vmovw   xmm1, xmm2
+0x62 0xf5 0x7e 0x08 0x6e 0xca
+
+# ATT:   vmovw   %xmm2, %xmm1
+# INTEL: vmovw   xmm1, xmm2
+0x62 0xf5 0x7e 0x08 0x7e 0xca

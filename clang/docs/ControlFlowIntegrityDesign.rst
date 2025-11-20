@@ -349,7 +349,7 @@ address point. Note that libraries like libcxxabi do assume this property.
 
 (2) virtual function entry layout property
 
-For each virtual function the distance between an virtual table entry for this function and the corresponding
+For each virtual function the distance between a virtual table entry for this function and the corresponding
 address point is always the same. This property ensures that dynamic dispatch still works with the interleaving layout.
 
 Note that the interleaving scheme in the CFI implementation guarantees both properties above whereas the original scheme proposed

@@ -15,6 +15,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ProfDataUtils.h"
 using namespace llvm;
 
 MDString *MDBuilder::createString(StringRef Str) {
@@ -35,26 +36,38 @@ MDNode *MDBuilder::createFPMath(float Accuracy) {
 }
 
 MDNode *MDBuilder::createBranchWeights(uint32_t TrueWeight,
-                                       uint32_t FalseWeight) {
-  return createBranchWeights({TrueWeight, FalseWeight});
+                                       uint32_t FalseWeight, bool IsExpected) {
+  return createBranchWeights({TrueWeight, FalseWeight}, IsExpected);
 }
 
-MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights) {
+MDNode *MDBuilder::createLikelyBranchWeights() {
+  // Value chosen to match UR_NONTAKEN_WEIGHT, see BranchProbabilityInfo.cpp
+  return createBranchWeights((1U << 20) - 1, 1);
+}
+
+MDNode *MDBuilder::createUnlikelyBranchWeights() {
+  // Value chosen to match UR_NONTAKEN_WEIGHT, see BranchProbabilityInfo.cpp
+  return createBranchWeights(1, (1U << 20) - 1);
+}
+
+MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights,
+                                       bool IsExpected) {
   assert(Weights.size() >= 1 && "Need at least one branch weights!");
 
-  SmallVector<Metadata *, 4> Vals(Weights.size() + 1);
-  Vals[0] = createString("branch_weights");
+  unsigned int Offset = IsExpected ? 2 : 1;
+  SmallVector<Metadata *, 4> Vals(Weights.size() + Offset);
+  Vals[0] = createString(MDProfLabels::BranchWeights);
+  if (IsExpected)
+    Vals[1] = createString(MDProfLabels::ExpectedBranchWeights);
 
   Type *Int32Ty = Type::getInt32Ty(Context);
   for (unsigned i = 0, e = Weights.size(); i != e; ++i)
-    Vals[i + 1] = createConstant(ConstantInt::get(Int32Ty, Weights[i]));
+    Vals[i + Offset] = createConstant(ConstantInt::get(Int32Ty, Weights[i]));
 
   return MDNode::get(Context, Vals);
 }
 
-MDNode *MDBuilder::createUnpredictable() {
-  return MDNode::get(Context, std::nullopt);
-}
+MDNode *MDBuilder::createUnpredictable() { return MDNode::get(Context, {}); }
 
 MDNode *MDBuilder::createFunctionEntryCount(
     uint64_t Count, bool Synthetic,
@@ -62,9 +75,9 @@ MDNode *MDBuilder::createFunctionEntryCount(
   Type *Int64Ty = Type::getInt64Ty(Context);
   SmallVector<Metadata *, 8> Ops;
   if (Synthetic)
-    Ops.push_back(createString("synthetic_function_entry_count"));
+    Ops.push_back(createString(MDProfLabels::SyntheticFunctionEntryCount));
   else
-    Ops.push_back(createString("function_entry_count"));
+    Ops.push_back(createString(MDProfLabels::FunctionEntryCount));
   Ops.push_back(createConstant(ConstantInt::get(Int64Ty, Count)));
   if (Imports) {
     SmallVector<GlobalValue::GUID, 2> OrderID(Imports->begin(), Imports->end());
@@ -75,10 +88,9 @@ MDNode *MDBuilder::createFunctionEntryCount(
   return MDNode::get(Context, Ops);
 }
 
-MDNode *MDBuilder::createFunctionSectionPrefix(StringRef Prefix) {
+MDNode *MDBuilder::createGlobalObjectSectionPrefix(StringRef Prefix) {
   return MDNode::get(Context,
-                     {createString("function_section_prefix"),
-                      createString(Prefix)});
+                     {createString("section_prefix"), createString(Prefix)});
 }
 
 MDNode *MDBuilder::createRange(const APInt &Lo, const APInt &Hi) {
@@ -138,9 +150,10 @@ MDNode *MDBuilder::mergeCallbackEncodings(MDNode *ExistingCallbacks,
   for (unsigned u = 0; u < NumExistingOps; u++) {
     Ops[u] = ExistingCallbacks->getOperand(u);
 
-    auto *OldCBCalleeIdxAsCM = cast<ConstantAsMetadata>(Ops[u]);
+    auto *OldCBCalleeIdxAsCM =
+        cast<ConstantAsMetadata>(cast<MDNode>(Ops[u])->getOperand(0));
     uint64_t OldCBCalleeIdx =
-      cast<ConstantInt>(OldCBCalleeIdxAsCM->getValue())->getZExtValue();
+        cast<ConstantInt>(OldCBCalleeIdxAsCM->getValue())->getZExtValue();
     (void)OldCBCalleeIdx;
     assert(NewCBCalleeIdx != OldCBCalleeIdx &&
            "Cannot map a callback callee index twice!");
@@ -329,8 +342,8 @@ MDNode *MDBuilder::createMutableTBAAAccessTag(MDNode *Tag) {
 
 MDNode *MDBuilder::createIrrLoopHeaderWeight(uint64_t Weight) {
   Metadata *Vals[] = {
-    createString("loop_header_weight"),
-    createConstant(ConstantInt::get(Type::getInt64Ty(Context), Weight)),
+      createString("loop_header_weight"),
+      createConstant(ConstantInt::get(Type::getInt64Ty(Context), Weight)),
   };
   return MDNode::get(Context, Vals);
 }

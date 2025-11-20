@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that post-increment store instructions are being generated.
 ; CHECK: memw(r{{[0-9]+}}++#4) = r{{[0-9]+}}

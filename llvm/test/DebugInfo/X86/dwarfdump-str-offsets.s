@@ -1,6 +1,9 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
 # RUN: llvm-dwarfdump -v %t.o 2> %t.err | FileCheck --check-prefixes=COMMON,SPLIT,OFFSETS %s
-# RUN: llvm-dwarfdump -verify %t.o | FileCheck --check-prefix=VERIFY %s
+
+# FIXME: the verifier does not accept padding between debug-str-offset
+# sections, which this test uses.
+# RUN: llvm-dwarfdump -verify --debug-info %t.o | FileCheck --check-prefix=VERIFY %s
 # RUN: llvm-dwarfdump -debug-str-offsets %t.o | FileCheck --check-prefix=OFFSETS %s
 # 
 # Check that we don't report an error on a non-existent range list table.

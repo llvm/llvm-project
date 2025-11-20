@@ -53,7 +53,7 @@ define { i8, i1 } @no_fold_on_constant_sub_overflow(i8 %x) {
 
 define { <2 x i32>, <2 x i1> } @fold_simple_splat_constant(<2 x i32> %x) {
 ; CHECK-LABEL: @fold_simple_splat_constant(
-; CHECK-NEXT:    [[B:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 -42, i32 -42>)
+; CHECK-NEXT:    [[B:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> [[X:%.*]], <2 x i32> splat (i32 -42))
 ; CHECK-NEXT:    ret { <2 x i32>, <2 x i1> } [[B]]
 ;
   %a = sub nsw <2 x i32> %x, <i32 12, i32 12>
@@ -64,7 +64,7 @@ define { <2 x i32>, <2 x i1> } @fold_simple_splat_constant(<2 x i32> %x) {
 define { <2 x i32>, <2 x i1> } @no_fold_splat_undef_constant(<2 x i32> %x) {
 ; CHECK-LABEL: @no_fold_splat_undef_constant(
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X:%.*]], <i32 -12, i32 undef>
-; CHECK-NEXT:    [[B:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> [[A]], <2 x i32> <i32 -30, i32 -30>)
+; CHECK-NEXT:    [[B:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> [[A]], <2 x i32> splat (i32 -30))
 ; CHECK-NEXT:    ret { <2 x i32>, <2 x i1> } [[B]]
 ;
   %a = sub nsw <2 x i32> %x, <i32 12, i32 undef>
@@ -75,7 +75,7 @@ define { <2 x i32>, <2 x i1> } @no_fold_splat_undef_constant(<2 x i32> %x) {
 define { <2 x i32>, <2 x i1> } @no_fold_splat_not_constant(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @no_fold_splat_not_constant(
 ; CHECK-NEXT:    [[A:%.*]] = sub nsw <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> [[A]], <2 x i32> <i32 -30, i32 -30>)
+; CHECK-NEXT:    [[B:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> [[A]], <2 x i32> splat (i32 -30))
 ; CHECK-NEXT:    ret { <2 x i32>, <2 x i1> } [[B]]
 ;
   %a = sub nsw <2 x i32> %x, %y

@@ -1,4 +1,5 @@
-// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf="allow-pattern-rollback=0" -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @simple_std_for_loop(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 //  CHECK-NEXT:  cf.br ^bb1(%{{.*}} : index)
@@ -13,6 +14,24 @@
 //  CHECK-NEXT:    return
 func.func @simple_std_for_loop(%arg0 : index, %arg1 : index, %arg2 : index) {
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
+    %c1 = arith.constant 1 : index
+  }
+  return
+}
+
+// CHECK-LABEL: func @unsigned_loop(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
+//  CHECK-NEXT:  cf.br ^bb1(%{{.*}} : index)
+//  CHECK-NEXT:  ^bb1(%{{.*}}: index):    // 2 preds: ^bb0, ^bb2
+//  CHECK-NEXT:    %{{.*}} = arith.cmpi ult, %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:    cf.cond_br %{{.*}}, ^bb2, ^bb3
+//  CHECK-NEXT:  ^bb2:   // pred: ^bb1
+//  CHECK-NEXT:    %{{.*}} = arith.constant 1 : index
+//  CHECK-NEXT:    %[[iv:.*]] = arith.addi %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:    cf.br ^bb1(%[[iv]] : index)
+//  CHECK-NEXT:  ^bb3:   // pred: ^bb1
+//  CHECK-NEXT:    return
+func.func @unsigned_loop(%arg0 : index, %arg1 : index, %arg2 : index) {
+  scf.for unsigned %i0 = %arg0 to %arg1 step %arg2 {
     %c1 = arith.constant 1 : index
   }
   return
@@ -254,6 +273,7 @@ func.func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                                           step (%arg4, %step) {
     %c1 = arith.constant 1 : index
+    scf.reduce
   }
   return
 }
@@ -347,7 +367,7 @@ func.func @simple_parallel_reduce_loop(%arg0: index, %arg1: index,
   // CHECK:   return %[[ITER_ARG]]
   %0 = scf.parallel (%i) = (%arg0) to (%arg1) step (%arg2) init(%arg3) -> f32 {
     %cst = arith.constant 42.0 : f32
-    scf.reduce(%cst) : f32 {
+    scf.reduce(%cst : f32) {
     ^bb0(%lhs: f32, %rhs: f32):
       %1 = arith.mulf %lhs, %rhs : f32
       scf.reduce.return %1 : f32
@@ -383,14 +403,12 @@ func.func @parallel_reduce_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   %0:2 = scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                        step (%arg4, %step) init(%arg5, %init) -> (f32, i64) {
     %cf = arith.constant 42.0 : f32
-    scf.reduce(%cf) : f32 {
+    %2 = func.call @generate() : () -> i64
+    scf.reduce(%cf, %2 : f32, i64) {
     ^bb0(%lhs: f32, %rhs: f32):
       %1 = arith.addf %lhs, %rhs : f32
       scf.reduce.return %1 : f32
-    }
-
-    %2 = func.call @generate() : () -> i64
-    scf.reduce(%2) : i64 {
+    }, {
     ^bb0(%lhs: i64, %rhs: i64):
       %3 = arith.ori %lhs, %rhs : i64
       scf.reduce.return %3 : i64
@@ -580,7 +598,7 @@ func.func @ifs_in_parallel(%arg1: index, %arg2: index, %arg3: index, %arg4: i1, 
         scf.yield %2 : index
       }
     }
-    scf.yield
+    scf.reduce
   }
 
   // CHECK: ^[[LOOP_CONT]]:
@@ -676,3 +694,78 @@ func.func @forall(%num_threads: index) {
   }
   return
 }
+
+// -----
+
+//      CHECK: #[[LOOP_UNROLL:.*]] = #llvm.loop_unroll<full = true>
+// CHECK-DAG: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
+
+// CHECK-DAG: #[[FULL_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL]]>
+// CHECK-DAG: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
+// CHECK: func @simple_std_for_loops_annotation
+//      CHECK: ^[[bb1:.*]](%{{.*}}: index):
+//      CHECK:   cf.cond_br %{{.*}}, ^[[bb2:.*]], ^[[bb6:.*]]
+//      CHECK: ^[[bb2]]:
+//      CHECK:   cf.br ^[[bb3:.*]]({{.*}})
+//      CHECK: ^[[bb3]](%{{.*}}: index):
+//      CHECK:   cf.cond_br %{{.*}}, ^[[bb4:.*]], ^[[bb5:.*]]
+//      CHECK: ^[[bb4]]:
+//      CHECK:   cf.br ^[[bb3]]({{.*}}) {llvm.loop_annotation = #[[FULL_UNROLL]]}
+//      CHECK: ^[[bb5]]:
+//      CHECK:   cf.br ^[[bb1]]({{.*}}) {llvm.loop_annotation = #[[NO_UNROLL]]}
+//      CHECK: ^[[bb6]]:
+//      CHECK:   return
+#no_unroll = #llvm.loop_annotation<unroll = <disable = true>>
+#full_unroll = #llvm.loop_annotation<unroll = <full = true>>
+func.func @simple_std_for_loops_annotation(%arg0 : index, %arg1 : index, %arg2 : index) {
+  scf.for %i0 = %arg0 to %arg1 step %arg2 {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c4 = arith.constant 4 : index
+    scf.for %i1 = %c0 to %c4 step %c1 {
+      %c1_0 = arith.constant 1 : index
+    } {llvm.loop_annotation = #full_unroll}
+  } {llvm.loop_annotation = #no_unroll}
+  return
+}
+
+// -----
+
+// CHECK: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
+// CHECK: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
+// CHECK: func @simple_while_loops_annotation
+//      CHECK: cf.br
+//      CHECK: cf.cond_br {{.*}} {llvm.loop_annotation = #[[NO_UNROLL]]}
+//      CHECK: return
+#no_unroll = #llvm.loop_annotation<unroll = <disable = true>>
+func.func @simple_while_loops_annotation(%arg0 : i1) {
+  scf.while : () -> () {
+    scf.condition(%arg0)
+  } do {
+    scf.yield
+  } attributes {llvm.loop_annotation = #no_unroll}
+  return
+}
+
+// -----
+
+// CHECK: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
+// CHECK: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
+// CHECK: func @do_while_loops_annotation
+// CHECK: cf.br
+// CHECK: cf.cond_br
+// CHECK: cf.br {{.*}} {llvm.loop_annotation = #[[NO_UNROLL]]}
+// CHECK: return
+#no_unroll = #llvm.loop_annotation<unroll = <disable = true>>
+func.func @do_while_loops_annotation() {
+  %c0_i32 = arith.constant 0 : i32
+  scf.while (%arg2 = %c0_i32) : (i32) -> (i32) {
+    %0 = "test.make_condition"() : () -> i1
+    scf.condition(%0) %c0_i32 : i32
+  } do {
+ ^bb0(%arg2: i32):    
+    scf.yield %c0_i32: i32
+  } attributes {llvm.loop_annotation = #no_unroll}
+  return
+}
+

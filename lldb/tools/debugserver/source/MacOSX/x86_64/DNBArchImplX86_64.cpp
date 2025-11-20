@@ -182,22 +182,39 @@ kern_return_t DNBArchImplX86_64::GetGPRState(bool force) {
     m_state.context.gpr.__gs = ('g' << 8) + 's';
     m_state.SetError(e_regSetGPR, Read, 0);
 #else
-    mach_msg_type_number_t count = e_regSetWordSizeGPR;
+    mach_msg_type_number_t count = e_regSetWordSizeGPRFull;
+    int flavor = __x86_64_THREAD_FULL_STATE;
     m_state.SetError(
         e_regSetGPR, Read,
-        ::thread_get_state(m_thread->MachPortNumber(), __x86_64_THREAD_STATE,
+        ::thread_get_state(m_thread->MachPortNumber(), flavor,
                            (thread_state_t)&m_state.context.gpr, &count));
+
+    if (!m_state.GetError(e_regSetGPR, Read)) {
+      m_state.hasFullGPRState = true;
+    } else {
+      m_state.hasFullGPRState = false;
+      count = e_regSetWordSizeGPR;
+      flavor = __x86_64_THREAD_STATE;
+      m_state.SetError(
+          e_regSetGPR, Read,
+          ::thread_get_state(m_thread->MachPortNumber(), flavor,
+                             (thread_state_t)&m_state.context.gpr, &count));
+    }
     DNBLogThreadedIf(
         LOG_THREAD,
-        "::thread_get_state (0x%4.4x, %u, &gpr, %u) => 0x%8.8x"
+        "::thread_get_state (0x%4.4x, %u (%s), &gpr, %u) => 0x%8.8x"
         "\n\trax = %16.16llx rbx = %16.16llx rcx = %16.16llx rdx = %16.16llx"
         "\n\trdi = %16.16llx rsi = %16.16llx rbp = %16.16llx rsp = %16.16llx"
         "\n\t r8 = %16.16llx  r9 = %16.16llx r10 = %16.16llx r11 = %16.16llx"
         "\n\tr12 = %16.16llx r13 = %16.16llx r14 = %16.16llx r15 = %16.16llx"
         "\n\trip = %16.16llx"
-        "\n\tflg = %16.16llx  cs = %16.16llx  fs = %16.16llx  gs = %16.16llx",
-        m_thread->MachPortNumber(), x86_THREAD_STATE64,
-        x86_THREAD_STATE64_COUNT, m_state.GetError(e_regSetGPR, Read),
+        "\n\tflg = %16.16llx  cs = %16.16llx  fs = %16.16llx  gs = %16.16llx"
+        "\n\t ds = %16.16llx  es = %16.16llx  ss = %16.16llx gsB = %16.16llx",
+        m_thread->MachPortNumber(), flavor,
+        m_state.hasFullGPRState ? "full" : "non-full",
+        m_state.hasFullGPRState ? e_regSetWordSizeGPRFull
+                                : e_regSetWordSizeGPR,
+        m_state.GetError(e_regSetGPR, Read),
         m_state.context.gpr.__rax, m_state.context.gpr.__rbx,
         m_state.context.gpr.__rcx, m_state.context.gpr.__rdx,
         m_state.context.gpr.__rdi, m_state.context.gpr.__rsi,
@@ -208,7 +225,9 @@ kern_return_t DNBArchImplX86_64::GetGPRState(bool force) {
         m_state.context.gpr.__r14, m_state.context.gpr.__r15,
         m_state.context.gpr.__rip, m_state.context.gpr.__rflags,
         m_state.context.gpr.__cs, m_state.context.gpr.__fs,
-        m_state.context.gpr.__gs);
+        m_state.context.gpr.__gs, m_state.context.gpr.__ds,
+        m_state.context.gpr.__es, m_state.context.gpr.__ss,
+        m_state.context.gpr.__gsbase );
 
 //      DNBLogThreadedIf (LOG_THREAD, "thread_get_state(0x%4.4x, %u, &gpr, %u)
 //      => 0x%8.8x"
@@ -459,21 +478,26 @@ kern_return_t DNBArchImplX86_64::SetGPRState() {
                   "(SetGPRState() for stop_count = %u)",
       m_thread->MachPortNumber(), kret, m_thread->Process()->StopCount());
 
+  mach_msg_type_number_t count =
+      m_state.hasFullGPRState ? e_regSetWordSizeGPRFull : e_regSetWordSizeGPR;
+  int flavor = m_state.hasFullGPRState ? __x86_64_THREAD_FULL_STATE
+                                       : __x86_64_THREAD_STATE;
   m_state.SetError(e_regSetGPR, Write,
-                   ::thread_set_state(m_thread->MachPortNumber(),
-                                      __x86_64_THREAD_STATE,
+                   ::thread_set_state(m_thread->MachPortNumber(), flavor,
                                       (thread_state_t)&m_state.context.gpr,
-                                      e_regSetWordSizeGPR));
+                                      count));
   DNBLogThreadedIf(
       LOG_THREAD,
-      "::thread_set_state (0x%4.4x, %u, &gpr, %u) => 0x%8.8x"
+      "::thread_set_state (0x%4.4x, %u (%s), &gpr, %u) => 0x%8.8x"
       "\n\trax = %16.16llx rbx = %16.16llx rcx = %16.16llx rdx = %16.16llx"
       "\n\trdi = %16.16llx rsi = %16.16llx rbp = %16.16llx rsp = %16.16llx"
       "\n\t r8 = %16.16llx  r9 = %16.16llx r10 = %16.16llx r11 = %16.16llx"
       "\n\tr12 = %16.16llx r13 = %16.16llx r14 = %16.16llx r15 = %16.16llx"
       "\n\trip = %16.16llx"
-      "\n\tflg = %16.16llx  cs = %16.16llx  fs = %16.16llx  gs = %16.16llx",
-      m_thread->MachPortNumber(), __x86_64_THREAD_STATE, e_regSetWordSizeGPR,
+      "\n\tflg = %16.16llx  cs = %16.16llx  fs = %16.16llx  gs = %16.16llx"
+      "\n\t ds = %16.16llx  es = %16.16llx  ss = %16.16llx gsB = %16.16llx",
+      m_thread->MachPortNumber(), flavor,
+      m_state.hasFullGPRState ? "full" : "non-full", count,
       m_state.GetError(e_regSetGPR, Write), m_state.context.gpr.__rax,
       m_state.context.gpr.__rbx, m_state.context.gpr.__rcx,
       m_state.context.gpr.__rdx, m_state.context.gpr.__rdi,
@@ -484,7 +508,9 @@ kern_return_t DNBArchImplX86_64::SetGPRState() {
       m_state.context.gpr.__r13, m_state.context.gpr.__r14,
       m_state.context.gpr.__r15, m_state.context.gpr.__rip,
       m_state.context.gpr.__rflags, m_state.context.gpr.__cs,
-      m_state.context.gpr.__fs, m_state.context.gpr.__gs);
+      m_state.context.gpr.__fs, m_state.context.gpr.__gs,
+      m_state.context.gpr.__ds, m_state.context.gpr.__es,
+      m_state.context.gpr.__ss, m_state.context.gpr.__gsbase);
   return m_state.GetError(e_regSetGPR, Write);
 }
 
@@ -1157,6 +1183,10 @@ enum {
   gpr_cs,
   gpr_fs,
   gpr_gs,
+  gpr_ds,
+  gpr_es,
+  gpr_ss,
+  gpr_gsbase,
   gpr_eax,
   gpr_ebx,
   gpr_ecx,
@@ -1543,6 +1573,7 @@ enum debugserver_regnums {
   debugserver_k5 = 123,
   debugserver_k6 = 124,
   debugserver_k7 = 125,
+  debugserver_gsbase = 126,
 };
 
 #define GPR_OFFSET(reg) (offsetof(DNBArchImplX86_64::GPR, __##reg))
@@ -1690,6 +1721,10 @@ const DNBRegisterInfo DNBArchImplX86_64::g_gpr_registers[] = {
     DEFINE_GPR_ALT2(cs, NULL),
     DEFINE_GPR_ALT2(fs, NULL),
     DEFINE_GPR_ALT2(gs, NULL),
+    DEFINE_GPR_ALT2(ds, NULL),
+    DEFINE_GPR_ALT2(es, NULL),
+    DEFINE_GPR_ALT2(ss, NULL),
+    DEFINE_GPR_ALT2(gsbase, NULL),
     DEFINE_GPR_PSEUDO_32(eax, rax),
     DEFINE_GPR_PSEUDO_32(ebx, rbx),
     DEFINE_GPR_PSEUDO_32(ecx, rcx),
@@ -2313,6 +2348,8 @@ bool DNBArchImplX86_64::GetRegisterValue(uint32_t set, uint32_t reg,
     value->info = *regInfo;
     switch (set) {
     case e_regSetGPR:
+      if (reg > gpr_gs && !m_state.hasFullGPRState)
+        return false;
       if (reg < k_num_gpr_registers) {
         value->value.uint64 = ((uint64_t *)(&m_state.context.gpr))[reg];
         return true;
@@ -2524,6 +2561,8 @@ bool DNBArchImplX86_64::SetRegisterValue(uint32_t set, uint32_t reg,
   if (regInfo) {
     switch (set) {
     case e_regSetGPR:
+      if (reg > gpr_gs && !m_state.hasFullGPRState)
+        return false;
       if (reg < k_num_gpr_registers) {
         ((uint64_t *)(&m_state.context.gpr))[reg] = value->value.uint64;
         success = true;

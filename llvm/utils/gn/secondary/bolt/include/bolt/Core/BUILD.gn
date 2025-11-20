@@ -1,0 +1,14 @@
+import("//llvm/lib/Target/write_target_def_file.gni")
+
+bolt_targets_to_build = []
+foreach(target, llvm_targets_to_build) {
+  if (target == "AArch64" || target == "RISCV" || target == "X86") {
+    bolt_targets_to_build += [ target ]
+  }
+}
+
+write_target_def_file("TargetConfig.def") {
+  key = "BOLT_ENUM_TARGETS"
+  value = "BOLT_TARGET"
+  all_targets = bolt_targets_to_build
+}

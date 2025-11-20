@@ -2,6 +2,14 @@
 ; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa 2>&1
 ; RUN: FileCheck --input-file=%t --check-prefix=REMARKS %s
 
+; REMARKS: --- !Analysis
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        pr48212
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
 ; REMARKS: --- !Passed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            Interchanged

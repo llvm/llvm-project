@@ -28,12 +28,13 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 /// NoFolder - Create "constants" (actually, instructions) with no folding.
-class NoFolder final : public IRBuilderFolder {
-  virtual void anchor();
+class LLVM_ABI NoFolder final : public IRBuilderFolder {
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   explicit NoFolder() = default;
@@ -70,12 +71,12 @@ public:
     return nullptr;
   }
 
-  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+  Value *FoldCmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     return nullptr;
   }
 
   Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 bool IsInBounds = false) const override {
+                 GEPNoWrapFlags NW) const override {
     return nullptr;
   }
 
@@ -107,14 +108,19 @@ public:
     return nullptr;
   }
 
+  Value *FoldCast(Instruction::CastOps Op, Value *V,
+                  Type *DestTy) const override {
+    return nullptr;
+  }
+
+  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
+                             Instruction *FMFSource) const override {
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
-
-  Instruction *CreateCast(Instruction::CastOps Op, Constant *C,
-                          Type *DestTy) const override {
-    return CastInst::Create(Op, C, DestTy);
-  }
 
   Instruction *CreatePointerCast(Constant *C, Type *DestTy) const override {
     return CastInst::CreatePointerCast(C, DestTy);
@@ -123,48 +129,6 @@ public:
   Instruction *CreatePointerBitCastOrAddrSpaceCast(
       Constant *C, Type *DestTy) const override {
     return CastInst::CreatePointerBitCastOrAddrSpaceCast(C, DestTy);
-  }
-
-  Instruction *CreateIntCast(Constant *C, Type *DestTy,
-                             bool isSigned) const override {
-    return CastInst::CreateIntegerCast(C, DestTy, isSigned);
-  }
-
-  Instruction *CreateFPCast(Constant *C, Type *DestTy) const override {
-    return CastInst::CreateFPCast(C, DestTy);
-  }
-
-  Instruction *CreateBitCast(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::BitCast, C, DestTy);
-  }
-
-  Instruction *CreateIntToPtr(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::IntToPtr, C, DestTy);
-  }
-
-  Instruction *CreatePtrToInt(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::PtrToInt, C, DestTy);
-  }
-
-  Instruction *CreateZExtOrBitCast(Constant *C, Type *DestTy) const override {
-    return CastInst::CreateZExtOrBitCast(C, DestTy);
-  }
-
-  Instruction *CreateSExtOrBitCast(Constant *C, Type *DestTy) const override {
-    return CastInst::CreateSExtOrBitCast(C, DestTy);
-  }
-
-  Instruction *CreateTruncOrBitCast(Constant *C, Type *DestTy) const override {
-    return CastInst::CreateTruncOrBitCast(C, DestTy);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Compare Instructions
-  //===--------------------------------------------------------------------===//
-
-  Instruction *CreateFCmp(CmpInst::Predicate P,
-                          Constant *LHS, Constant *RHS) const override {
-    return new FCmpInst(P, LHS, RHS);
   }
 };
 

@@ -1,4 +1,4 @@
-//===--- FunctionSizeCheck.h - clang-tidy -----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,12 +41,25 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const unsigned LineThreshold;
-  const unsigned StatementThreshold;
-  const unsigned BranchThreshold;
-  const unsigned ParameterThreshold;
-  const unsigned NestingThreshold;
-  const unsigned VariableThreshold;
+  const std::optional<unsigned> LineThreshold;
+  const std::optional<unsigned> StatementThreshold;
+  const std::optional<unsigned> BranchThreshold;
+  const std::optional<unsigned> ParameterThreshold;
+  const std::optional<unsigned> NestingThreshold;
+  const std::optional<unsigned> VariableThreshold;
+  const bool CountMemberInitAsStmt;
+
+  static constexpr std::optional<unsigned> DefaultLineThreshold = std::nullopt;
+  static constexpr std::optional<unsigned> DefaultStatementThreshold = 800U;
+  static constexpr std::optional<unsigned> DefaultBranchThreshold =
+      std::nullopt;
+  static constexpr std::optional<unsigned> DefaultParameterThreshold =
+      std::nullopt;
+  static constexpr std::optional<unsigned> DefaultNestingThreshold =
+      std::nullopt;
+  static constexpr std::optional<unsigned> DefaultVariableThreshold =
+      std::nullopt;
+  static constexpr bool DefaultCountMemberInitAsStmt = true;
 };
 
 } // namespace clang::tidy::readability

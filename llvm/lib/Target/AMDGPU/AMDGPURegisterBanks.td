@@ -11,11 +11,11 @@ def SGPRRegBank : RegisterBank<"SGPR",
 >;
 
 def VGPRRegBank : RegisterBank<"VGPR",
-  [VGPR_LO16, VGPR_HI16, VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192, VReg_224, VReg_256, VReg_288, VReg_320, VReg_352, VReg_384, VReg_512, VReg_1024]
+  [VGPR_16_Lo128, VGPR_16, VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192, VReg_224, VReg_256, VReg_288, VReg_320, VReg_352, VReg_384, VReg_512, VReg_1024]
 >;
 
 // It is helpful to distinguish conditions from ordinary SGPRs.
-def VCCRegBank : RegisterBank <"VCC", [SReg_1]>;
+def VCCRegBank : RegisterBank<"VCC", [SReg_32, SReg_64]>;
 
 def AGPRRegBank : RegisterBank <"AGPR",
   [AGPR_LO16, AGPR_32, AReg_64, AReg_96, AReg_128, AReg_160, AReg_192, AReg_224, AReg_256, AReg_288, AReg_320, AReg_352, AReg_384, AReg_512, AReg_1024]

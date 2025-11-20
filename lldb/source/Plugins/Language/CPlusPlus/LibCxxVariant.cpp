@@ -97,10 +97,13 @@ LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
   // the byte size.
   CompilerType index_type = index_sp->GetCompilerType();
 
-  std::optional<uint64_t> index_type_bytes = index_type.GetByteSize(nullptr);
-  if (!index_type_bytes)
-    return LibcxxVariantIndexValidity::Invalid;
-
+  llvm::Expected<uint64_t> index_type_bytes = index_type.GetByteSize(nullptr);
+  if (!index_type_bytes) {
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters),
+                    index_type_bytes.takeError(), "{0}");
+    if (!index_type_bytes)
+      return LibcxxVariantIndexValidity::Invalid;
+  }
   uint64_t npos_value = VariantNposValue(*index_type_bytes);
   uint64_t index_value = index_sp->GetValueAsUnsigned(0);
 
@@ -199,41 +202,45 @@ public:
     Update();
   }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    return formatters::ExtractIndexFromString(name.GetCString());
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+    auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+    if (!optional_idx) {
+      return llvm::createStringError("Type has no child named '%s'",
+                                     name.AsCString());
+    }
+    return *optional_idx;
   }
 
-  bool MightHaveChildren() override { return true; }
-  bool Update() override;
-  size_t CalculateNumChildren() override { return m_size; }
-  ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ChildCacheState Update() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override { return m_size; }
+  ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
 private:
   size_t m_size = 0;
 };
 } // namespace
 
-bool VariantFrontEnd::Update() {
+lldb::ChildCacheState VariantFrontEnd::Update() {
   m_size = 0;
   ValueObjectSP impl_sp = formatters::GetChildMemberWithName(
       m_backend, {ConstString("__impl_"), ConstString("__impl")});
   if (!impl_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   LibcxxVariantIndexValidity validity = LibcxxVariantGetIndexValidity(impl_sp);
 
   if (validity == LibcxxVariantIndexValidity::Invalid)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   if (validity == LibcxxVariantIndexValidity::NPos)
-    return true;
+    return lldb::ChildCacheState::eReuse;
 
   m_size = 1;
 
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
-ValueObjectSP VariantFrontEnd::GetChildAtIndex(size_t idx) {
+ValueObjectSP VariantFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx >= m_size)
     return {};
 

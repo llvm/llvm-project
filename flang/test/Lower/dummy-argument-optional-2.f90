@@ -1,6 +1,6 @@
 ! Test passing pointer, allocatables, and optional assumed shapes to optional
 ! explicit shapes (see F2018 15.5.2.12).
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 module optional_tests
 implicit none
 interface
@@ -64,8 +64,7 @@ subroutine pass_pointer_scalar_char(c)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK:         %[[VAL_2:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> index
 ! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.ptr<!fir.char<1,?>>
-! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ptr<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_3]], %[[VAL_2]] : (!fir.ptr<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 ! CHECK:         fir.call @_QPtakes_opt_scalar_char(%[[VAL_5]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
@@ -77,8 +76,7 @@ subroutine pass_allocatable_scalar_char(c)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:         %[[VAL_2:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
 ! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
-! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_3]], %[[VAL_2]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 ! CHECK:         fir.call @_QPtakes_opt_scalar_char(%[[VAL_5]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
@@ -123,7 +121,6 @@ subroutine pass_pointer_array(i)
 ! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_29]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 ! CHECK:         fir.if %[[and]] {
 ! CHECK:           fir.call @_FortranACopyOutAssign
-! CHECK:           fir.freemem %[[VAL_9]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:         }
 end subroutine
 
@@ -159,7 +156,6 @@ subroutine pass_pointer_array_char(c)
 ! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_52]]) {{.*}}: (!fir.boxchar<1>) -> ()
 ! CHECK:         fir.if %[[and]] {
 ! CHECK:           fir.call @_FortranACopyOutAssign
-! CHECK:           fir.freemem %[[VAL_9]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:         }
 ! CHECK:         return
 ! CHECK:       }
@@ -194,7 +190,6 @@ subroutine forward_pointer_array()
 ! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_14]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 ! CHECK:         fir.if %[[and]] {
 ! CHECK:           fir.call @_FortranACopyOutAssign
-! CHECK:           fir.freemem %[[VAL_7]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:         }
 end subroutine
 
@@ -233,7 +228,6 @@ subroutine pass_opt_assumed_shape(x)
 ! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_26]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 ! CHECK:         fir.if %[[and]] {
 ! CHECK:           fir.call @_FortranACopyOutAssign
-! CHECK:           fir.freemem %[[VAL_27]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:         }
 end subroutine
 
@@ -272,7 +266,6 @@ subroutine pass_opt_assumed_shape_char(c)
 ! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_50]]) {{.*}}: (!fir.boxchar<1>) -> ()
 ! CHECK:         fir.if %[[and]] {
 ! CHECK:           fir.call @_FortranACopyOutAssign
-! CHECK:           fir.freemem %[[VAL_49]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:         }
 end subroutine
 
@@ -405,8 +398,8 @@ subroutine pass_opt_assumed_shape_to_intentin(x)
 ! CHECK:         %[[VAL_24:.*]] = fir.convert %[[VAL_7]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
 ! CHECK:         fir.call @_QPtakes_opt_explicit_shape_intentin(%[[VAL_24]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 ! CHECK:         fir.if %[[and]] {
-! CHECK-NOT:       fir.call @_FortranACopyOutAssign
-! CHECK:           fir.freemem %[[VAL_7]] : !fir.heap<!fir.array<?xf32>>
+! CHECK:           fir.zero
+! CHECK:           fir.call @_FortranACopyOutAssign
 ! CHECK:         }
 end subroutine
 
@@ -437,7 +430,6 @@ subroutine pass_opt_assumed_shape_to_intentout(x)
 ! CHECK:         fir.call @_QPtakes_opt_explicit_shape_intentout(%[[VAL_14]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 ! CHECK:         fir.if %[[and]] {
 ! CHECK:           fir.call @_FortranACopyOutAssign
-! CHECK:           fir.freemem %[[VAL_7]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:         }
 end subroutine
 end module

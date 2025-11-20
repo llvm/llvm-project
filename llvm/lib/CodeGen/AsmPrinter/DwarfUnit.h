@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 #include <string>
@@ -34,6 +35,8 @@ class MCSymbol;
 /// source file.
 class DwarfUnit : public DIEUnit {
 protected:
+  /// A numeric ID unique among all CUs in the module
+  unsigned UniqueID;
   /// MDNode for the compile unit.
   const DICompileUnit *CUNode;
 
@@ -42,6 +45,9 @@ protected:
 
   /// Target of Dwarf emission.
   AsmPrinter *Asm;
+
+  /// The start of the unit within its section.
+  MCSymbol *LabelBegin = nullptr;
 
   /// Emitted at the end of the CU and used to compute the CU Length field.
   MCSymbol *EndLabel = nullptr;
@@ -68,8 +74,8 @@ protected:
   /// corresponds to the MDNode mapped with the subprogram DIE.
   DenseMap<DIE *, const DINode *> ContainingTypeMap;
 
-  DwarfUnit(dwarf::Tag, const DICompileUnit *Node, AsmPrinter *A, DwarfDebug *DW,
-            DwarfFile *DWU);
+  DwarfUnit(dwarf::Tag, const DICompileUnit *Node, AsmPrinter *A,
+            DwarfDebug *DW, DwarfFile *DWU, unsigned UniqueID = 0);
 
   bool applySubprogramDefinitionAttributes(const DISubprogram *SP, DIE &SPDie, bool Minimal);
 
@@ -92,10 +98,17 @@ protected:
   }
 
 public:
+  /// Gets Unique ID for this unit.
+  unsigned getUniqueID() const { return UniqueID; }
   // Accessors.
   AsmPrinter* getAsmPrinter() const { return Asm; }
+  /// Get the the symbol for start of the section for this unit.
+  MCSymbol *getLabelBegin() const {
+    assert(LabelBegin && "LabelBegin is not initialized");
+    return LabelBegin;
+  }
   MCSymbol *getEndLabel() const { return EndLabel; }
-  uint16_t getLanguage() const { return CUNode->getSourceLanguage(); }
+  llvm::dwarf::SourceLanguage getSourceLanguage() const;
   const DICompileUnit *getCUNode() const { return CUNode; }
   DwarfDebug &getDwarfDebug() const { return *DD; }
 
@@ -116,8 +129,10 @@ public:
                              const DIScope *Context) = 0;
 
   /// Add a new global type to the compile unit.
-  virtual void addGlobalType(const DIType *Ty, const DIE &Die,
-                             const DIScope *Context) = 0;
+  virtual void addGlobalTypeImpl(const DIType *Ty, const DIE &Die,
+                                 const DIScope *Context) = 0;
+
+  void addGlobalType(const DIType *Ty, const DIE &Die, const DIScope *Context);
 
   /// Returns the DIE map slot for the specified debug variable.
   ///
@@ -151,7 +166,12 @@ public:
   void addSInt(DIEValueList &Die, dwarf::Attribute Attribute,
                std::optional<dwarf::Form> Form, int64_t Integer);
 
-  void addSInt(DIELoc &Die, std::optional<dwarf::Form> Form, int64_t Integer);
+  void addSInt(DIEValueList &Die, std::optional<dwarf::Form> Form,
+               int64_t Integer);
+
+  /// Add an integer attribute data and value; value may be any width.
+  void addInt(DIE &Die, dwarf::Attribute Attribute, const APInt &Integer,
+	      bool Unsigned);
 
   /// Add a string attribute data and value.
   ///
@@ -196,8 +216,12 @@ public:
   void addBlock(DIE &Die, dwarf::Attribute Attribute, dwarf::Form Form,
                 DIEBlock *Block);
 
+  /// Add an expression as block data.
+  void addBlock(DIE &Die, dwarf::Attribute Attribute, const DIExpression *Expr);
+
   /// Add location information to specified debug information entry.
-  void addSourceLine(DIE &Die, unsigned Line, const DIFile *File);
+  void addSourceLine(DIE &Die, unsigned Line, unsigned Column,
+                     const DIFile *File);
   void addSourceLine(DIE &Die, const DILocalVariable *V);
   void addSourceLine(DIE &Die, const DIGlobalVariable *G);
   void addSourceLine(DIE &Die, const DISubprogram *SP);
@@ -236,7 +260,9 @@ public:
 
   DIE *getOrCreateNameSpace(const DINamespace *NS);
   DIE *getOrCreateModule(const DIModule *M);
-  DIE *getOrCreateSubprogramDIE(const DISubprogram *SP, bool Minimal = false);
+  virtual DIE *getOrCreateSubprogramDIE(const DISubprogram *SP,
+                                        const Function *FnHint,
+                                        bool Minimal = false);
 
   void applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
                                  bool SkipSPAttributes = false);
@@ -254,7 +280,11 @@ public:
   void constructContainingTypeDIEs();
 
   /// Construct function argument DIEs.
-  void constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args);
+  ///
+  /// \returns The index of the object parameter in \c Args if one exists.
+  /// Returns std::nullopt otherwise.
+  std::optional<unsigned> constructSubprogramArguments(DIE &Buffer,
+                                                       DITypeRefArray Args);
 
   /// Create a DIE with the given Tag, add the DIE to its parent, and
   /// call insertDIE if MD is not null.
@@ -301,8 +331,13 @@ public:
   /// Get context owner's DIE.
   DIE *createTypeDIE(const DICompositeType *Ty);
 
+  /// If this is a named finished type then include it in the list of types for
+  /// the accelerator tables.
+  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
+                               const DIE &TyDIE);
+
 protected:
-  ~DwarfUnit();
+  ~DwarfUnit() override;
 
   /// Create new static data member DIE.
   DIE *getOrCreateStaticMemberDIE(const DIDerivedType *DT);
@@ -314,14 +349,39 @@ protected:
   /// Emit the common part of the header for this unit.
   void emitCommonHeader(bool UseOffsets, dwarf::UnitType UT);
 
+  bool shouldPlaceInUnitDIE(const DISubprogram *SP, bool Minimal) {
+    // Add subprogram declarations to the CU die directly.
+    return Minimal || SP->getDeclaration();
+  }
+
+  DIE *getOrCreateSubprogramContextDIE(const DISubprogram *SP,
+                                       bool IgnoreScope) {
+    if (IgnoreScope)
+      return &getUnitDie();
+    return getOrCreateContextDIE(SP->getScope());
+  }
+
 private:
+  DISourceLanguageName getLanguage() const {
+    return CUNode->getSourceLanguage();
+  }
+
+  /// A helper to add a wide integer constant to a DIE using a block
+  /// form.
+  void addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val);
+
+  // Add discriminant constants to a DW_TAG_variant DIE.
+  void addDiscriminant(DIE &Variant, Constant *Discriminant, bool IsUnsigned);
+
   void constructTypeDIE(DIE &Buffer, const DIBasicType *BTy);
+  void constructTypeDIE(DIE &Buffer, const DIFixedPointType *BTy);
   void constructTypeDIE(DIE &Buffer, const DIStringType *BTy);
   void constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy);
   void constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy);
-  void constructSubrangeDIE(DIE &Buffer, const DISubrange *SR, DIE *IndexTy);
-  void constructGenericSubrangeDIE(DIE &Buffer, const DIGenericSubrange *SR,
-                                   DIE *IndexTy);
+  void constructSubrangeDIE(DIE &Buffer, const DISubrangeType *SR,
+                            bool ForArray = false);
+  void constructSubrangeDIE(DIE &Buffer, const DISubrange *SR);
+  void constructGenericSubrangeDIE(DIE &Buffer, const DIGenericSubrange *SR);
   void constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   void constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   DIE &constructMemberDIE(DIE &Buffer, const DIDerivedType *DT);
@@ -342,11 +402,6 @@ private:
   void setIndexTyDie(DIE *D) { IndexTyDie = D; }
 
   virtual void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) = 0;
-
-  /// If this is a named finished type then include it in the list of types for
-  /// the accelerator tables.
-  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
-                               const DIE &TyDIE);
 
   virtual bool isDwoUnit() const = 0;
   const MCSymbol *getCrossSectionRelativeBaseAddress() const override;
@@ -369,9 +424,12 @@ class DwarfTypeUnit final : public DwarfUnit {
 
 public:
   DwarfTypeUnit(DwarfCompileUnit &CU, AsmPrinter *A, DwarfDebug *DW,
-                DwarfFile *DWU, MCDwarfDwoLineTable *SplitLineTable = nullptr);
+                DwarfFile *DWU, unsigned UniqueID,
+                MCDwarfDwoLineTable *SplitLineTable = nullptr);
 
   void setTypeSignature(uint64_t Signature) { TypeSignature = Signature; }
+  /// Returns Type Signature.
+  uint64_t getTypeSignature() const { return TypeSignature; }
   void setType(const DIE *Ty) { this->Ty = Ty; }
 
   /// Emit the header for this unit, not including the initial length field.
@@ -382,8 +440,8 @@ public:
   }
   void addGlobalName(StringRef Name, const DIE &Die,
                      const DIScope *Context) override;
-  void addGlobalType(const DIType *Ty, const DIE &Die,
-                     const DIScope *Context) override;
+  void addGlobalTypeImpl(const DIType *Ty, const DIE &Die,
+                         const DIScope *Context) override;
   DwarfCompileUnit &getCU() override { return CU; }
 };
 } // end llvm namespace

@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "VEToolchain.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include <cstdlib> // ::getenv
 
@@ -33,6 +32,7 @@ VEToolChain::VEToolChain(const Driver &D, const llvm::Triple &Triple,
   // These are OK.
 
   // Default file paths are following:
+  //   ${RESOURCEDIR}/lib/ve-unknown-linux-gnu, (== getArchSpecificLibPaths)
   //   ${RESOURCEDIR}/lib/linux/ve, (== getArchSpecificLibPaths)
   //   /lib/../lib64,
   //   /usr/lib/../lib64,
@@ -46,6 +46,7 @@ VEToolChain::VEToolChain(const Driver &D, const llvm::Triple &Triple,
 
   // Add library directories:
   //   ${BINPATH}/../lib/ve-unknown-linux-gnu, (== getStdlibPath)
+  //   ${RESOURCEDIR}/lib/ve-unknown-linux-gnu, (== getArchSpecificLibPaths)
   //   ${RESOURCEDIR}/lib/linux/ve, (== getArchSpecificLibPaths)
   //   ${SYSROOT}/opt/nec/ve/lib,
   if (std::optional<std::string> Path = getStdlibPath())
@@ -77,7 +78,7 @@ bool VEToolChain::hasBlocksRuntime() const { return false; }
 
 void VEToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                             ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   if (DriverArgs.hasArg(options::OPT_nobuiltininc) &&
@@ -116,7 +117,7 @@ void VEToolChain::addClangTargetOptions(const ArgList &DriverArgs,
 
 void VEToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc) ||
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
       DriverArgs.hasArg(options::OPT_nostdlibinc) ||
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
@@ -140,6 +141,12 @@ void VEToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
          "Only -lc++ (aka libxx) is supported in this toolchain.");
 
   tools::addArchSpecificRPath(*this, Args, CmdArgs);
+
+  // Add paths for libc++.so and other shared libraries.
+  if (std::optional<std::string> Path = getStdlibPath()) {
+    CmdArgs.push_back("-rpath");
+    CmdArgs.push_back(Args.MakeArgString(*Path));
+  }
 
   CmdArgs.push_back("-lc++");
   if (Args.hasArg(options::OPT_fexperimental_library))

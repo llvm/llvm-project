@@ -18,4 +18,8 @@ static_library("RuntimeLibs") {
     "InstrumentationRuntimeLibrary.cpp",
     "RuntimeLibrary.cpp",
   ]
+
+  # FIXME: Hopefully change this, see
+  # https://github.com/llvm/llvm-project/pull/97130/files#r1691863361
+  defines = [ "CMAKE_INSTALL_FULL_LIBDIR=\"\"" ]
 }

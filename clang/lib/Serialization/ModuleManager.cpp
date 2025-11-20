@@ -18,6 +18,7 @@
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "llvm/ADT/STLExtras.h"
@@ -26,13 +27,11 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Support/Chrono.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <string>
@@ -42,8 +41,8 @@ using namespace clang;
 using namespace serialization;
 
 ModuleFile *ModuleManager::lookupByFileName(StringRef Name) const {
-  auto Entry = FileMgr.getFile(Name, /*OpenFile=*/false,
-                               /*CacheFailure=*/false);
+  auto Entry = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/false,
+                                          /*CacheFailure=*/false);
   if (Entry)
     return lookup(*Entry);
 
@@ -52,8 +51,8 @@ ModuleFile *ModuleManager::lookupByFileName(StringRef Name) const {
 
 ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
   if (const Module *Mod = HeaderSearchInfo.getModuleMap().findModule(Name))
-    if (const FileEntry *File = Mod->getASTFile())
-      return lookup(File);
+    if (OptionalFileEntryRef File = Mod->getASTFile())
+      return lookup(*File);
 
   return nullptr;
 }
@@ -64,8 +63,8 @@ ModuleFile *ModuleManager::lookup(const FileEntry *File) const {
 
 std::unique_ptr<llvm::MemoryBuffer>
 ModuleManager::lookupBuffer(StringRef Name) {
-  auto Entry = FileMgr.getFile(Name, /*OpenFile=*/false,
-                               /*CacheFailure=*/false);
+  auto Entry = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/false,
+                                          /*CacheFailure=*/false);
   if (!Entry)
     return nullptr;
   return std::move(InMemoryBuffers[*Entry]);
@@ -108,9 +107,13 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
 
   // Look for the file entry. This only fails if the expected size or
   // modification time differ.
-  OptionalFileEntryRefDegradesToFileEntryPtr Entry;
-  if (Type == MK_ExplicitModule || Type == MK_PrebuiltModule) {
-    // If we're not expecting to pull this file out of the module cache, it
+  OptionalFileEntryRef Entry;
+  bool IgnoreModTime = Type == MK_ExplicitModule || Type == MK_PrebuiltModule;
+  if (ImportedBy)
+    IgnoreModTime &= ImportedBy->Kind == MK_ExplicitModule ||
+                     ImportedBy->Kind == MK_PrebuiltModule;
+  if (IgnoreModTime) {
+    // If neither this file nor the importer are in the module cache, this file
     // might have a different mtime due to being moved across filesystems in
     // a distributed build. The size must still match, though. (As must the
     // contents, but we can't check that.)
@@ -119,11 +122,13 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Note: ExpectedSize and ExpectedModTime will be 0 for MK_ImplicitModule
   // when using an ASTFileSignature.
   if (lookupModuleFile(FileName, ExpectedSize, ExpectedModTime, Entry)) {
-    ErrorStr = "module file out of date";
+    ErrorStr = IgnoreModTime ? "module file has a different size than expected"
+                             : "module file has a different size or "
+                               "modification time than expected";
     return OutOfDate;
   }
 
-  if (!Entry && FileName != "-") {
+  if (!Entry) {
     ErrorStr = "module file not found";
     return Missing;
   }
@@ -150,7 +155,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   };
 
   // Check whether we already loaded this module, before
-  if (ModuleFile *ModuleEntry = Modules.lookup(Entry)) {
+  if (ModuleFile *ModuleEntry = Modules.lookup(*Entry)) {
     if (implicitModuleNamesMatch(Type, ModuleEntry, *Entry)) {
       // Check the stored signature.
       if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
@@ -163,63 +168,55 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   }
 
   // Allocate a new module.
-  auto NewModule = std::make_unique<ModuleFile>(Type, Generation);
+  auto NewModule = std::make_unique<ModuleFile>(Type, *Entry, Generation);
   NewModule->Index = Chain.size();
   NewModule->FileName = FileName.str();
-  NewModule->File = Entry;
   NewModule->ImportLoc = ImportLoc;
   NewModule->InputFilesValidationTimestamp = 0;
 
-  if (NewModule->Kind == MK_ImplicitModule) {
-    std::string TimestampFilename = NewModule->getTimestampFilename();
-    llvm::vfs::Status Status;
-    // A cached stat value would be fine as well.
-    if (!FileMgr.getNoncachedStatValue(TimestampFilename, Status))
-      NewModule->InputFilesValidationTimestamp =
-          llvm::sys::toTimeT(Status.getLastModificationTime());
-  }
+  if (NewModule->Kind == MK_ImplicitModule)
+    NewModule->InputFilesValidationTimestamp =
+        ModCache->getModuleTimestamp(NewModule->FileName);
 
   // Load the contents of the module
   if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
     // The buffer was already provided for us.
-    NewModule->Buffer = &ModuleCache->addBuiltPCM(FileName, std::move(Buffer));
+    NewModule->Buffer = &getModuleCache().getInMemoryModuleCache().addBuiltPCM(
+        FileName, std::move(Buffer));
     // Since the cached buffer is reused, it is safe to close the file
     // descriptor that was opened while stat()ing the PCM in
     // lookupModuleFile() above, it won't be needed any longer.
     Entry->closeFile();
   } else if (llvm::MemoryBuffer *Buffer =
-                 getModuleCache().lookupPCM(FileName)) {
+                 getModuleCache().getInMemoryModuleCache().lookupPCM(
+                     FileName)) {
     NewModule->Buffer = Buffer;
     // As above, the file descriptor is no longer needed.
     Entry->closeFile();
-  } else if (getModuleCache().shouldBuildPCM(FileName)) {
+  } else if (getModuleCache().getInMemoryModuleCache().shouldBuildPCM(
+                 FileName)) {
     // Report that the module is out of date, since we tried (and failed) to
     // import it earlier.
     Entry->closeFile();
     return OutOfDate;
   } else {
-    // Open the AST file.
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf((std::error_code()));
-    if (FileName == "-") {
-      Buf = llvm::MemoryBuffer::getSTDIN();
-    } else {
-      // Get a buffer of the file and close the file descriptor when done.
-      // The file is volatile because in a parallel build we expect multiple
-      // compiler processes to use the same module file rebuilding it if needed.
-      //
-      // RequiresNullTerminator is false because module files don't need it, and
-      // this allows the file to still be mmapped.
-      Buf = FileMgr.getBufferForFile(*NewModule->File,
-                                     /*IsVolatile=*/true,
-                                     /*RequiresNullTerminator=*/false);
-    }
+    // Get a buffer of the file and close the file descriptor when done.
+    // The file is volatile because in a parallel build we expect multiple
+    // compiler processes to use the same module file rebuilding it if needed.
+    //
+    // RequiresNullTerminator is false because module files don't need it, and
+    // this allows the file to still be mmapped.
+    auto Buf = FileMgr.getBufferForFile(NewModule->File,
+                                        /*IsVolatile=*/true,
+                                        /*RequiresNullTerminator=*/false);
 
     if (!Buf) {
       ErrorStr = Buf.getError().message();
       return Missing;
     }
 
-    NewModule->Buffer = &getModuleCache().addPCM(FileName, std::move(*Buf));
+    NewModule->Buffer = &getModuleCache().getInMemoryModuleCache().addPCM(
+        FileName, std::move(*Buf));
   }
 
   // Initialize the stream.
@@ -232,7 +229,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     return OutOfDate;
 
   // We're keeping this module.  Store it everywhere.
-  Module = Modules[Entry] = NewModule.get();
+  Module = Modules[*Entry] = NewModule.get();
 
   updateModuleImports(*NewModule, ImportedBy, ImportLoc);
 
@@ -286,8 +283,8 @@ void ModuleManager::removeModules(ModuleIterator First) {
 void
 ModuleManager::addInMemoryBuffer(StringRef FileName,
                                  std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  const FileEntry *Entry =
-      FileMgr.getVirtualFile(FileName, Buffer->getBufferSize(), 0);
+  FileEntryRef Entry =
+      FileMgr.getVirtualFileRef(FileName, Buffer->getBufferSize(), 0);
   InMemoryBuffers[Entry] = std::move(Buffer);
 }
 
@@ -330,12 +327,11 @@ void ModuleManager::moduleFileAccepted(ModuleFile *MF) {
   ModulesInCommonWithGlobalIndex.push_back(MF);
 }
 
-ModuleManager::ModuleManager(FileManager &FileMgr,
-                             InMemoryModuleCache &ModuleCache,
+ModuleManager::ModuleManager(FileManager &FileMgr, ModuleCache &ModCache,
                              const PCHContainerReader &PCHContainerRdr,
                              const HeaderSearch &HeaderSearchInfo)
-    : FileMgr(FileMgr), ModuleCache(&ModuleCache),
-      PCHContainerRdr(PCHContainerRdr), HeaderSearchInfo(HeaderSearchInfo) {}
+    : FileMgr(FileMgr), ModCache(&ModCache), PCHContainerRdr(PCHContainerRdr),
+      HeaderSearchInfo(HeaderSearchInfo) {}
 
 void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
                           llvm::SmallPtrSetImpl<ModuleFile *> *ModuleFilesHit) {
@@ -441,22 +437,19 @@ void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
 bool ModuleManager::lookupModuleFile(StringRef FileName, off_t ExpectedSize,
                                      time_t ExpectedModTime,
                                      OptionalFileEntryRef &File) {
-  File = std::nullopt;
-  if (FileName == "-")
+  if (FileName == "-") {
+    File = expectedToOptional(FileMgr.getSTDIN());
     return false;
+  }
 
   // Open the file immediately to ensure there is no race between stat'ing and
   // opening the file.
-  OptionalFileEntryRef FileOrErr =
-      expectedToOptional(FileMgr.getFileRef(FileName, /*OpenFile=*/true,
-                                            /*CacheFailure=*/false));
-  if (!FileOrErr)
-    return false;
+  File = FileMgr.getOptionalFileRef(FileName, /*OpenFile=*/true,
+                                    /*CacheFailure=*/false);
 
-  File = *FileOrErr;
-
-  if ((ExpectedSize && ExpectedSize != File->getSize()) ||
-      (ExpectedModTime && ExpectedModTime != File->getModificationTime()))
+  if (File &&
+      ((ExpectedSize && ExpectedSize != File->getSize()) ||
+       (ExpectedModTime && ExpectedModTime != File->getModificationTime())))
     // Do not destroy File, as it may be referenced. If we need to rebuild it,
     // it will be destroyed by removeModules.
     return true;

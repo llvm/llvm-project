@@ -3,7 +3,6 @@ Test that "memory region" lookup uses the ABI plugin to remove
 non address bits from addresses before lookup.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -40,7 +39,8 @@ class AArch64LinuxTaggedMemoryRegionTestCase(TestBase):
 
         # Despite the non address bits we should find a region
         self.expect(
-            "memory region the_page", patterns=["\[0x[0-9A-Fa-f]+-0x[0-9A-Fa-f]+\) r-x"]
+            "memory region the_page",
+            patterns=[r"\[0x[0-9A-Fa-f]+-0x[0-9A-Fa-f]+\) r-x"],
         )
 
         # Check that the usual error message is displayed after repeating
@@ -57,7 +57,7 @@ class AArch64LinuxTaggedMemoryRegionTestCase(TestBase):
             if result.Succeeded():
                 repeats += 1
             else:
-                self.assertRegexpMatches(result.GetError(), "Usage: memory region")
+                self.assertRegex(result.GetError(), "Usage: memory region")
                 break
 
         # This time repeat until we get the last region. At that
@@ -69,5 +69,6 @@ class AArch64LinuxTaggedMemoryRegionTestCase(TestBase):
         # This should not error, since the user supplied address overrides
         # the previous end address.
         self.expect(
-            "memory region the_page", patterns=["\[0x[0-9A-Fa-f]+-0x[0-9A-Fa-f]+\) r-x"]
+            "memory region the_page",
+            patterns=[r"\[0x[0-9A-Fa-f]+-0x[0-9A-Fa-f]+\) r-x"],
         )

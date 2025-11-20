@@ -710,3 +710,49 @@ func.func @nested_region() {
 // CHECK-NEXT: scf.yield
 // CHECK-NEXT: }
 // CHECK-NEXT: return
+
+// -----
+
+func.func @nested_region_inside_loop_use() {
+  cf.br ^bb1
+
+^bb1:
+  %3 = "test.test1"() : () -> i32
+  scf.execute_region {
+    "test.foo"(%3) : (i32) -> ()
+    scf.yield
+  }
+  cf.br ^bb1
+}
+
+// CHECK-LABEL: func @nested_region_inside_loop_use
+// CHECK: scf.while
+// CHECK-NEXT: %[[DEF:.*]] = "test.test1"()
+// CHECK-NEXT: scf.execute_region
+// CHECK-NEXT: "test.foo"(%[[DEF]])
+
+// -----
+
+func.func @nested_region_outside_loop_use() {
+  cf.br ^bb1
+
+^bb1:
+  %3 = "test.test1"() : () -> i32
+  %cond = "test.test2"() : () -> i1
+  cf.cond_br %cond, ^bb1, ^bb2
+
+^bb2:
+  scf.execute_region {
+    "test.foo"(%3) : (i32) -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func @nested_region_outside_loop_use
+// CHECK: %[[RES:.*]] = scf.while
+// CHECK: %[[DEF:.*]] = "test.test1"()
+// CHECK: scf.condition(%{{.*}}) %[[DEF]]
+
+// CHECK: scf.execute_region
+// CHECK-NEXT: "test.foo"(%[[RES]])

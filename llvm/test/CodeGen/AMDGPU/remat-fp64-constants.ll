@@ -1,14 +1,17 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
+
+; Rematerialization test for fp64 constants (w/ intentionally high register pressure).
+; Check to make sure we have at least six constant MOVs, not necessarily consecutive, inside the loop.
 
 ; GCN-LABEL: {{^}}test_remat_sgpr:
 ; GCN-NOT:     v_writelane_b32
 ; GCN:         {{^}}[[LOOP:.LBB[0-9_]+]]:
-; GCN-COUNT-6: s_mov_b32 s{{[0-9]+}}, 0x
+; GCN-COUNT-6: {{s_mov_b32|v_mov_b32_e32}} {{[sv]}}{{[0-9]+}}, 0x
 ; GCN-NOT:     v_writelane_b32
 ; GCN:         s_cbranch_{{[^ ]+}} [[LOOP]]
 ; GCN: .sgpr_spill_count: 0
-define amdgpu_kernel void @test_remat_sgpr(ptr addrspace(1) %arg, ptr addrspace(1) %arg1) {
+define amdgpu_kernel void @test_remat_sgpr(ptr addrspace(1) %arg, ptr addrspace(1) %arg1) #0 {
 bb:
   %i = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb3
@@ -43,3 +46,5 @@ bb3:                                              ; preds = %bb3, %bb
 
 declare double @llvm.fma.f64(double, double, double)
 declare i32 @llvm.amdgcn.workitem.id.x()
+
+attributes #0 = { "amdgpu-flat-work-group-size"="1024,1024" }

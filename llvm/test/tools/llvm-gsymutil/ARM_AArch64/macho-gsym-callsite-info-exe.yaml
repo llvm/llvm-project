@@ -1,0 +1,558 @@
+## Test that reconstructs a MachO binary from YAML and generates a callsite-enabled gsym from it - and then verifies the gsym.
+## See llvm/test/tools/llvm-gsymutil/ARM_AArch64/macho-gsym-callsite-info.test for the script to generate this yaml file
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/call_sites.exe.yaml -o %t/call_sites.exe
+
+# RUN: llvm-gsymutil --num-threads=1 --convert=%t/call_sites.exe --callsites-yaml-file=%t/callsites.yaml -o %t/call_sites_exe.gsym
+
+# Dump the GSYM file and check the output for callsite information
+# RUN: llvm-gsymutil %t/call_sites_exe.gsym | FileCheck --check-prefix=CHECK-GSYM %s
+
+
+# CHECK-GSYM:      FunctionInfo @ 0x[[#%x,]]: [0x[[#%x,]] - 0x[[#%x,]]) "func_mainBin_dec_call_everything"
+# CHECK-GSYM-NEXT: CallSites (by relative return offset):
+# CHECK-GSYM-NEXT:   0x[[#%x,]] Flags[InternalCall] MatchRegex[func_mainBin_dec_01]
+# CHECK-GSYM-NEXT:   0x[[#%x,]] Flags[InternalCall] MatchRegex[func_mainBin_dec_02]
+# CHECK-GSYM-NEXT:   0x[[#%x,]] Flags[InternalCall] MatchRegex[func_mainBin_dec_03]
+# CHECK-GSYM-NEXT:   0x[[#%x,]] Flags[InternalCall] MatchRegex[func_mainBin_inc_01]
+# CHECK-GSYM-NEXT:   0x[[#%x,]] Flags[InternalCall] MatchRegex[func_mainBin_inc_02]
+# CHECK-GSYM-NEXT:   0x[[#%x,]] Flags[InternalCall] MatchRegex[func_mainBin_inc_03]
+# CHECK-GSYM-NEXT:   0x[[#%x,]] Flags[None] MatchRegex[.*func.*]
+# CHECK-GSYM-NEXT:   0x[[#%x,]] Flags[ExternalCall] MatchRegex[.*extern_func.*]
+
+
+#--- callsites.yaml
+functions:
+  - name: func_mainBin_dec_call_everything
+    callsites:
+      - return_offset: 0x0C
+        match_regex: ["func_mainBin_dec_01"]
+        flags:
+          - "InternalCall"
+      - return_offset: 0x10
+        match_regex: ["func_mainBin_dec_02"]
+        flags:
+          - "InternalCall"
+      - return_offset: 0x14
+        match_regex: ["func_mainBin_dec_03"]
+        flags:
+          - "InternalCall"
+      - return_offset: 24
+        match_regex: ["func_mainBin_inc_01"]
+        flags:
+          - "InternalCall"
+      - return_offset: 28
+        match_regex: ["func_mainBin_inc_02"]
+        flags:
+          - "InternalCall"
+      - return_offset: 32
+        match_regex: ["func_mainBin_inc_03"]
+        flags:
+          - "InternalCall"
+      - return_offset: 44
+        match_regex: [".*func.*"]
+      - return_offset: 56
+        match_regex: [".*extern_func.*"]
+        flags:
+          - "ExternalCall"
+
+
+#--- call_sites.exe.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x2
+  ncmds:           14
+  sizeofcmds:      760
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x100000338
+        size:            216
+        offset:          0x338
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         28000090090140B929050051090100B9C0035FD628000090090140B929050051090100B9C0035FD628000090090140B929050051090100B9C0035FD628000090090140B929050011090100B9C0035FD628000090090140B929050011090100B9C0035FD628000090090140B929050011090100B9C0035FD6FD7BBFA9FD030091E0FFFF97E4FFFF97E8FFFF97ECFFFF97F0FFFF97F4FFFF971F2003D5A8E1015800013FD61F2003D588E1015800013FD6280000901F0100B9FD7BC1A8C0035FD6FD7BBFA9FD030091ECFFFF9700008052FD7BC1A8C0035FD6
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          4294983680
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        0
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __common
+        segname:         __DATA
+        addr:            0x100004000
+        size:            24
+        offset:          0x0
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x1
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4295000064
+    vmsize:          1648
+    fileoff:         16384
+    filesize:        1648
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      16384
+    export_size:     232
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          16632
+    nsyms:           34
+    stroff:          17176
+    strsize:         568
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       22
+    iextdefsym:      22
+    nextdefsym:      12
+    iundefsym:       34
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         32
+    name:            12
+    Content:         '/usr/lib/dyld'
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            4C4C44E9-5555-3144-A1D3-328233D00078
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           720896
+    sdk:             720896
+    ntools:          1
+    Tools:
+      - tool:            4
+        version:         1310720
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        1016
+    stacksize:       0
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         16616
+    datasize:        16
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         16632
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         17744
+    datasize:        288
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      5
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      52
+            Name:            _mh_execute_header
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      56
+            Name:            main
+            Flags:           0x0
+            Address:         0x3F8
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    0
+            NodeOffset:      61
+            Name:            g_
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+            Children:
+              - TerminalSize:    4
+                NodeOffset:      104
+                Name:            volatile_var
+                Flags:           0x0
+                Address:         0x4000
+                Other:           0x0
+                ImportName:      ''
+              - TerminalSize:    4
+                NodeOffset:      110
+                Name:            func_ptr
+                Flags:           0x0
+                Address:         0x4008
+                Other:           0x0
+                ImportName:      ''
+              - TerminalSize:    4
+                NodeOffset:      116
+                Name:            extern_func_ptr
+                Flags:           0x0
+                Address:         0x4010
+                Other:           0x0
+                ImportName:      ''
+          - TerminalSize:    0
+            NodeOffset:      122
+            Name:            func_mainBin_
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+            Children:
+              - TerminalSize:    0
+                NodeOffset:      139
+                Name:            dec_
+                Flags:           0x0
+                Address:         0x0
+                Other:           0x0
+                ImportName:      ''
+                Children:
+                  - TerminalSize:    3
+                    NodeOffset:      163
+                    Name:            call_everything
+                    Flags:           0x0
+                    Address:         0x3B0
+                    Other:           0x0
+                    ImportName:      ''
+                  - TerminalSize:    0
+                    NodeOffset:      168
+                    Name:            '0'
+                    Flags:           0x0
+                    Address:         0x0
+                    Other:           0x0
+                    ImportName:      ''
+                    Children:
+                      - TerminalSize:    3
+                        NodeOffset:      182
+                        Name:            '1'
+                        Flags:           0x0
+                        Address:         0x338
+                        Other:           0x0
+                        ImportName:      ''
+                      - TerminalSize:    3
+                        NodeOffset:      187
+                        Name:            '3'
+                        Flags:           0x0
+                        Address:         0x360
+                        Other:           0x0
+                        ImportName:      ''
+                      - TerminalSize:    3
+                        NodeOffset:      192
+                        Name:            '2'
+                        Flags:           0x0
+                        Address:         0x34C
+                        Other:           0x0
+                        ImportName:      ''
+              - TerminalSize:    0
+                NodeOffset:      197
+                Name:            inc_0
+                Flags:           0x0
+                Address:         0x0
+                Other:           0x0
+                ImportName:      ''
+                Children:
+                  - TerminalSize:    3
+                    NodeOffset:      211
+                    Name:            '2'
+                    Flags:           0x0
+                    Address:         0x388
+                    Other:           0x0
+                    ImportName:      ''
+                  - TerminalSize:    3
+                    NodeOffset:      216
+                    Name:            '1'
+                    Flags:           0x0
+                    Address:         0x374
+                    Other:           0x0
+                    ImportName:      ''
+                  - TerminalSize:    3
+                    NodeOffset:      221
+                    Name:            '3'
+                    Flags:           0x0
+                    Address:         0x39C
+                    Other:           0x0
+                    ImportName:      ''
+  NameList:
+    - n_strx:          235
+      n_type:          0x64
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          295
+      n_type:          0x66
+      n_sect:          0
+      n_desc:          1
+      n_value:         0
+    - n_strx:          353
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968312
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         24
+    - n_strx:          359
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968120
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         20
+    - n_strx:          380
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968140
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         20
+    - n_strx:          401
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968160
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         20
+    - n_strx:          422
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968180
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         20
+    - n_strx:          443
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968200
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         20
+    - n_strx:          464
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968220
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         20
+    - n_strx:          485
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968240
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         72
+    - n_strx:          519
+      n_type:          0x20
+      n_sect:          2
+      n_desc:          0
+      n_value:         4294983680
+    - n_strx:          535
+      n_type:          0x20
+      n_sect:          2
+      n_desc:          0
+      n_value:         4294983688
+    - n_strx:          547
+      n_type:          0x20
+      n_sect:          2
+      n_desc:          0
+      n_value:         4294983696
+    - n_strx:          1
+      n_type:          0x64
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968312
+    - n_strx:          8
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968120
+    - n_strx:          29
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968140
+    - n_strx:          50
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968160
+    - n_strx:          71
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968180
+    - n_strx:          92
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968200
+    - n_strx:          113
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968220
+    - n_strx:          134
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968240
+    - n_strx:          168
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         4294983680
+    - n_strx:          184
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         4294983688
+    - n_strx:          196
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         4294983696
+    - n_strx:          215
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+  StringTable:
+    - ' '
+    - _main
+    - _func_mainBin_dec_01
+    - _func_mainBin_dec_02
+    - _func_mainBin_dec_03
+    - _func_mainBin_inc_01
+    - _func_mainBin_inc_02
+    - _func_mainBin_inc_03
+    - _func_mainBin_dec_call_everything
+    - _g_volatile_var
+    - _g_func_ptr
+    - _g_extern_func_ptr
+    - __mh_execute_header
+    - '/tmp/_______________________________________/call_sites.cpp'
+    - '/tmp/_______________________________________/call_sites.o'
+    - _main
+    - _func_mainBin_dec_01
+    - _func_mainBin_dec_02
+    - _func_mainBin_dec_03
+    - _func_mainBin_inc_01
+    - _func_mainBin_inc_02
+    - _func_mainBin_inc_03
+    - _func_mainBin_dec_call_everything
+    - _g_volatile_var
+    - _g_func_ptr
+    - _g_extern_func_ptr
+    - ''
+    - ''
+  FunctionStarts:  [ 0x338, 0x34C, 0x360, 0x374, 0x388, 0x39C, 0x3B0, 0x3F8 ]
+...

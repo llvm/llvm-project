@@ -18,6 +18,16 @@ Example:
     std::string Copy(Input); // Oops - forgot to std::move
   }
 
+Note that parameters that are unused and marked as such will not be diagnosed.
+
+Example:
+
+.. code-block:: c++
+
+  void conditional_use([[maybe_unused]] std::string&& Input) {
+    // No diagnostic here since Input is unused and marked as such
+  }
+
 Options
 -------
 
@@ -68,6 +78,10 @@ Options
     void forwarding_ref(T&& t) {
       T other = std::forward<T>(t);
     }
+
+.. option:: MoveFunction
+
+   Specify the function used for moving. Default is `::std::move`.
 
 This check implements `F.18
 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#f18-for-will-move-from-parameters-pass-by-x-and-stdmove-the-parameter>`_

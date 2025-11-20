@@ -37,6 +37,12 @@ void printPackedOrDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                    Value packed, Type packedType,
                                    OperandRange values, TypeRange valueTypes,
                                    DenseI64ArrayAttr integers);
+inline void printPackedOrDynamicIndexList(OpAsmPrinter &printer, Operation *op,
+                                          Value packed, OperandRange values,
+                                          DenseI64ArrayAttr integers) {
+  printPackedOrDynamicIndexList(printer, op, packed, Type(), values,
+                                TypeRange{}, integers);
+}
 
 /// Parser hook for custom directive in assemblyFormat.
 ///
@@ -47,7 +53,15 @@ void printPackedOrDynamicIndexList(OpAsmPrinter &printer, Operation *op,
 ParseResult parsePackedOrDynamicIndexList(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &packed,
     Type &packedType, SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    SmallVectorImpl<Type> &valueTypes, DenseI64ArrayAttr &integers);
+    SmallVectorImpl<Type> *valueTypes, DenseI64ArrayAttr &integers);
+inline ParseResult parsePackedOrDynamicIndexList(
+    OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &packed,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    DenseI64ArrayAttr &integers) {
+  Type packedType;
+  return parsePackedOrDynamicIndexList(parser, packed, packedType, values,
+                                       nullptr, integers);
+}
 } // namespace transform
 } // namespace mlir
 

@@ -62,9 +62,8 @@ define void @multiple_successor_to_header_same_incoming(i8 %len.n, i16 %a, i1 %c
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i16 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i16 [[IV]], 0
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i16 [[IV]], [[A]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[T_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(i16 [[IV]])
@@ -124,9 +123,8 @@ define void @multiple_successor_to_header_different_incoming(i8 %len.n, i16 %a, 
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i16 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i16 [[IV]], 0
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i16 [[IV]], [[A]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[T_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(i16 [[IV]])

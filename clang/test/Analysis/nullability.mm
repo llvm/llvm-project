@@ -55,6 +55,7 @@ extern void __assert_fail(__const char *__assertion, __const char *__file,
 @property(readonly, nullable) void (^propReturnsNullableBlock)(void);
 @property(readonly, nullable) int *propReturnsNullable;
 @property(readonly) int *propReturnsUnspecified;
++ (nullable TestObject *)getNullableObject;
 @end
 
 TestObject * getUnspecifiedTestObject();
@@ -256,6 +257,12 @@ void testObjCPropertyReadNullability() {
   case 8:
     [o takesNonnullBlock:o.propReturnsNullableBlock]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
     break;
+  case 9:
+    [o takesNonnull:getNullableTestObject().propReturnsNonnull]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    break;
+  case 10:
+    [o takesNonnull:[TestObject getNullableObject].propReturnsNonnull]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    break;
   }
 }
 
@@ -431,7 +438,7 @@ int * _Nonnull InlinedPreconditionViolationInFunctionCallee(int * _Nonnull p2) {
 
 int * _Nonnull InlinedReturnNullOverSuppressionCallee(int * _Nonnull p2) {
   int *result = 0;
-  return result; // no-warning; but this is an over suppression
+  return result; // expected-warning{{Null returned from a function that is expected to return a non-null value}}
 }
 
 int *InlinedReturnNullOverSuppressionCaller(int * _Nonnull p1) {

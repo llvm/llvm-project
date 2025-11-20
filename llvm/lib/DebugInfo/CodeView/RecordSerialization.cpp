@@ -103,7 +103,7 @@ Error llvm::codeview::consume(BinaryStreamReader &Reader, APSInt &Num) {
 
 Error llvm::codeview::consume(StringRef &Data, APSInt &Num) {
   ArrayRef<uint8_t> Bytes(Data.bytes_begin(), Data.bytes_end());
-  BinaryByteStream S(Bytes, llvm::support::little);
+  BinaryByteStream S(Bytes, llvm::endianness::little);
   BinaryStreamReader SR(S);
   auto EC = consume(SR, Num);
   Data = Data.take_back(SR.bytesRemaining());
@@ -129,7 +129,7 @@ Error llvm::codeview::consume(BinaryStreamReader &Reader, uint32_t &Item) {
 
 Error llvm::codeview::consume(StringRef &Data, uint32_t &Item) {
   ArrayRef<uint8_t> Bytes(Data.bytes_begin(), Data.bytes_end());
-  BinaryByteStream S(Bytes, llvm::support::little);
+  BinaryByteStream S(Bytes, llvm::endianness::little);
   BinaryStreamReader SR(S);
   auto EC = consume(SR, Item);
   Data = Data.take_back(SR.bytesRemaining());

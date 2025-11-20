@@ -9,11 +9,11 @@ define i1 @test1(ptr %arg, i1 %arg2) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load ptr, ptr [[ARG:%.*]], !nonnull !0
+; CHECK-NEXT:    [[LOAD1:%.*]] = load ptr, ptr [[ARG:%.*]], align 8, !nonnull [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[LOAD1]], null
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[LOAD2:%.*]] = load ptr, ptr [[ARG]]
+; CHECK-NEXT:    [[LOAD2:%.*]] = load ptr, ptr [[ARG]], align 8
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[LOAD2]], null
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -34,11 +34,11 @@ define i1 @test2(ptr %arg, i1 %arg2) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load ptr, ptr [[ARG:%.*]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[LOAD1]], null
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[LOAD2:%.*]] = load ptr, ptr [[ARG]], !nonnull !0
+; CHECK-NEXT:    [[LOAD2:%.*]] = load ptr, ptr [[ARG]], align 8, !nonnull [[META0]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[LOAD2]], null
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -60,11 +60,11 @@ define i1 @test3(ptr %ptr, i1 %arg2) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[PTR:%.*]], !range !1
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[PTR:%.*]], align 4, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[LOAD1]], 999
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[PTR]]
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[LOAD2]], 999
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -85,11 +85,11 @@ define i1 @test4(ptr %ptr, i1 %arg2) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[PTR:%.*]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[LOAD1]], 999
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[PTR]], !range !1
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[PTR]], align 4, !range [[RNG1]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[LOAD2]], 999
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -110,11 +110,11 @@ define i1 @test5(ptr %ptr, i1 %arg2) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[PTR:%.*]], !range !1
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[PTR:%.*]], align 4, !range [[RNG1]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[LOAD1]], 999
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[PTR]]
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[LOAD2]], 999
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -135,11 +135,11 @@ define i1 @test6(ptr %ptr, i1 %arg2) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[PTR:%.*]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[LOAD1]], 999
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[PTR]], !range !1
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[PTR]], align 4, !range [[RNG1]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[LOAD2]], 999
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;

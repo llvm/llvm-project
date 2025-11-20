@@ -5,4 +5,4 @@
 // RUN: %clang --target=aarch64 -march=armv8.5a+bf16+nobf16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A-BF16-NO-BF16 %s
 // GENERICV85A-BF16-NO-BF16: "-target-feature" "-bf16"
 // RUN: %clang --target=aarch64 -march=armv8.5a+bf16+sve -### -c %s 2>&1 | FileCheck -check-prefixes=GENERICV85A-BF16-SVE %s
-// GENERICV85A-BF16-SVE: "-target-feature" "+bf16" "-target-feature" "+sve"
+// GENERICV85A-BF16-SVE: "-target-feature" "+bf16"{{.*}} "-target-feature" "+sve"

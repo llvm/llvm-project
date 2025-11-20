@@ -12,18 +12,15 @@
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
-#include <unordered_set>
 #include <vector>
 
 namespace mlir {
-#define GEN_PASS_DEF_OUTLINESHAPECOMPUTATION
+#define GEN_PASS_DEF_OUTLINESHAPECOMPUTATIONPASS
 #include "mlir/Dialect/Shape/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -69,9 +66,9 @@ createFuncFromCluster(OpBuilder &b, const SmallVector<Operation *, 8> &cluster,
       cluster.empty()
           ? b.getFunctionType(shape.getType(), shape.getType())
           : b.getFunctionType(ValueRange(inputs).getTypes(), shape.getType());
-  shape::FuncOp fnOp = b.create<shape::FuncOp>(loc, fnName, fnType);
+  shape::FuncOp fnOp = shape::FuncOp::create(b, loc, fnName, fnType);
   Block *block = fnOp.addEntryBlock();
-  b.setInsertionPoint(block, block->end());
+  b.setInsertionPointToEnd(block);
   IRMapping bvm;
   if (cluster.empty()) {
     bvm.map(shape, fnOp.getArgument(0));
@@ -85,7 +82,7 @@ createFuncFromCluster(OpBuilder &b, const SmallVector<Operation *, 8> &cluster,
   llvm::SmallVector<Value, 4> fnReturns;
   fnReturns.push_back(bvm.lookupOrDefault(shape));
 
-  b.create<shape::ReturnOp>(loc, fnReturns);
+  shape::ReturnOp::create(b, loc, fnReturns);
   fnOp.setPrivate();
   return std::make_pair(fnOp, inputs);
 }
@@ -163,7 +160,8 @@ void constructShapeFunc(
 }
 
 struct OutlineShapeComputationPass
-    : public impl::OutlineShapeComputationBase<OutlineShapeComputationPass> {
+    : public impl::OutlineShapeComputationPassBase<
+          OutlineShapeComputationPass> {
 
   void runOnOperation() override;
 
@@ -186,7 +184,7 @@ class TensorDimOpRewriter : public OpRewritePattern<tensor::DimOp> {
   LogicalResult matchAndRewrite(tensor::DimOp op,
                                 PatternRewriter &rewriter) const override {
     auto shapeOf =
-        rewriter.create<shape::ShapeOfOp>(op.getLoc(), op.getSource());
+        shape::ShapeOfOp::create(rewriter, op.getLoc(), op.getSource());
     rewriter.replaceOpWithNewOp<shape::GetExtentOp>(op, op.getType(), shapeOf,
                                                     op.getIndex());
     return success();
@@ -207,7 +205,7 @@ void OutlineShapeComputationPass::runOnOperation() {
     MLIRContext *context = funcOp.getContext();
     RewritePatternSet prevPatterns(context);
     prevPatterns.insert<TensorDimOpRewriter>(context);
-    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(prevPatterns))))
+    if (failed(applyPatternsGreedily(funcOp, std::move(prevPatterns))))
       return signalPassFailure();
 
     // initialize class member `onlyUsedByWithShapes`
@@ -254,7 +252,7 @@ void OutlineShapeComputationPass::runOnOperation() {
     }
 
     // Apply patterns, note this also performs DCE.
-    if (failed(applyPatternsAndFoldGreedily(funcOp, {})))
+    if (failed(applyPatternsGreedily(funcOp, {})))
       return signalPassFailure();
   });
 }
@@ -292,10 +290,8 @@ void OutlineShapeComputationPass::getClusterFromValue(
       cluster.insert(op);
       for (Value inp : op->getOperands()) {
         Operation *inpDefOp = inp.getDefiningOp();
-        if (nullptr != inpDefOp && !visited.contains(inpDefOp)) {
-          visited.insert(inpDefOp);
+        if (nullptr != inpDefOp && visited.insert(inpDefOp).second)
           queue.push(inpDefOp);
-        }
       }
     }
   }
@@ -326,8 +322,3 @@ bool OutlineShapeComputationPass::calOnlyUsedByWithShapesRecursively(
 }
 
 } // namespace
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createOutlineShapeComputationPass() {
-  return std::make_unique<OutlineShapeComputationPass>();
-}

@@ -36,7 +36,7 @@ CUDA installation on a handful of common Linux distributions, but in general the
 most reliable way to make it work is to install CUDA in a single directory from
 NVIDIA's `.run` package and specify its location via `--cuda-path=...` argument.
 
-CUDA compilation is supported on Linux. Compilation on MacOS and Windows may or
+CUDA compilation is supported on Linux. Compilation on macOS and Windows may or
 may not work and currently have no maintainers.
 
 Invoking clang
@@ -64,7 +64,7 @@ brackets as described below:
   y[2] = 6
   y[3] = 8
 
-On MacOS, replace `-lcudart_static` with `-lcudart`; otherwise, you may get
+On macOS, replace `-lcudart_static` with `-lcudart`; otherwise, you may get
 "CUDA driver version is insufficient for CUDA runtime version" errors when you
 run your program.
 
@@ -418,6 +418,17 @@ the compiler chooses to inline ``host_only``.
 Member functions, including constructors, may be overloaded using H and D
 attributes.  However, destructors cannot be overloaded.
 
+Clang Warnings for Host and Device Function Declarations
+--------------------------------------------------------
+
+Clang can emit warnings when it detects that host (H) and device (D) functions are declared or defined with the same signature. These warnings are not enabled by default.
+
+To enable these warnings, use the following compiler flag:
+
+.. code-block:: console
+
+    -Wnvcc-compat
+
 Using a Different Class on Host/Device
 --------------------------------------
 
@@ -503,7 +514,7 @@ Modern CPUs and GPUs are architecturally quite different, so code that's fast
 on a CPU isn't necessarily fast on a GPU.  We've made a number of changes to
 LLVM to make it generate good GPU code.  Among these changes are:
 
-* `Straight-line scalar optimizations <https://goo.gl/4Rb9As>`_ -- These
+* `Straight-line scalar optimizations <https://docs.google.com/document/d/1momWzKFf4D6h8H3YlfgKQ3qeZy5ayvMRh6yR-Xn2hUE>`_ -- These
   reduce redundancy within straight-line code.
 
 * `Aggressive speculative execution
@@ -512,7 +523,7 @@ LLVM to make it generate good GPU code.  Among these changes are:
   most effective on code along dominator paths.
 
 * `Memory space inference
-  <https://llvm.org/doxygen/NVPTXInferAddressSpaces_8cpp_source.html>`_ --
+  <https://llvm.org/doxygen/InferAddressSpaces_8cpp_source.html>`_ --
   In PTX, we can operate on pointers that are in a particular "address space"
   (global, shared, constant, or local), or we can operate on pointers in the
   "generic" address space, which can point to anything.  Operations in a

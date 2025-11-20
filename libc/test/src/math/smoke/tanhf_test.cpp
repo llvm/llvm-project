@@ -6,35 +6,59 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
+#include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
 #include "src/math/tanhf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
-#include <errno.h>
-#include <stdint.h>
+using LlvmLibcTanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
-
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcTanhfTest, SpecialNumbers) {
-  libc_errno = 0;
-
-  EXPECT_FP_EQ(aNaN, __llvm_libc::tanhf(aNaN));
+TEST_F(LlvmLibcTanhfTest, SpecialNumbers) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::tanhf(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(0.0f, __llvm_libc::tanhf(0.0f));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanhf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(-0.0f, __llvm_libc::tanhf(-0.0f));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanhf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(1.0f, __llvm_libc::tanhf(inf));
+  EXPECT_FP_EQ(-0.0f, LIBC_NAMESPACE::tanhf(-0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(-1.0f, __llvm_libc::tanhf(neg_inf));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::tanhf(inf));
+  EXPECT_MATH_ERRNO(0);
+
+  EXPECT_FP_EQ(-1.0f, LIBC_NAMESPACE::tanhf(neg_inf));
   EXPECT_MATH_ERRNO(0);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcTanhfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanhf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanhf(max_denormal));
+}
+
+TEST_F(LlvmLibcTanhfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanhf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanhf(max_denormal));
+}
+
+TEST_F(LlvmLibcTanhfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanhf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanhf(max_denormal));
+}
+
+#endif

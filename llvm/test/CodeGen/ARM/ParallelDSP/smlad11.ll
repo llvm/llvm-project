@@ -33,13 +33,13 @@ for.body:
   %i.053 = phi i32 [ %add29, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.053
   %0 = load i16, ptr %arrayidx, align 2
-  %add1 = or i32 %i.053, 1
+  %add1 = or disjoint i32 %i.053, 1
   %arrayidx2 = getelementptr inbounds i16, ptr %arg3, i32 %add1
   %1 = load i16, ptr %arrayidx2, align 2
-  %add3 = or i32 %i.053, 2
+  %add3 = or disjoint i32 %i.053, 2
   %arrayidx4 = getelementptr inbounds i16, ptr %arg3, i32 %add3
   %2 = load i16, ptr %arrayidx4, align 2
-  %add5 = or i32 %i.053, 3
+  %add5 = or disjoint i32 %i.053, 3
   %arrayidx6 = getelementptr inbounds i16, ptr %arg3, i32 %add5
   %3 = load i16, ptr %arrayidx6, align 2
   %arrayidx8 = getelementptr inbounds i16, ptr %arg2, i32 %i.053

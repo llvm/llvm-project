@@ -20,7 +20,7 @@
 ; IMPORT-NEXT:  @g = internal global i32 42, align 4 #0
 ; IMPORT:  attributes #0 = { "thinlto-internalize" }
 
-; CODEGEN:      define dso_local i32 @main
+; CODEGEN:      define dso_local noundef i32 @main
 ; CODEGEN-NEXT:    ret i32 42
 
 ; PRESERVED:      @g.alias = external global i32

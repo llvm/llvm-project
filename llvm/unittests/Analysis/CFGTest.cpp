@@ -39,7 +39,7 @@ protected:
 
     // A failure here means that the test itself is buggy.
     if (!M)
-      report_fatal_error(os.str().c_str());
+      report_fatal_error(errMsg.c_str());
 
     Function *F = M->getFunction("test");
     if (F == nullptr)
@@ -61,7 +61,7 @@ protected:
 
     assert(ExclusionSet.empty());
     for (auto I = F->begin(), E = F->end(); I != E; ++I) {
-      if (I->hasName() && I->getName().startswith("excluded"))
+      if (I->hasName() && I->getName().starts_with("excluded"))
         ExclusionSet.insert(&*I);
     }
   }

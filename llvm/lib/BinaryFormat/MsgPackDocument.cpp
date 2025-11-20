@@ -104,6 +104,10 @@ DocNode &DocNode::operator=(uint64_t Val) {
   *this = getDocument()->getNode(Val);
   return *this;
 }
+DocNode &DocNode::operator=(double Val) {
+  *this = getDocument()->getNode(Val);
+  return *this;
+}
 
 // A level in the document reading stack.
 struct StackLevel {
@@ -143,7 +147,13 @@ bool Document::readFromBlob(
     // On to next element (or key if doing a map key next).
     // Read the value.
     Object Obj;
-    if (!MPReader.read(Obj)) {
+    Expected<bool> ReadObj = MPReader.read(Obj);
+    if (!ReadObj) {
+      // FIXME: Propagate the Error to the caller.
+      consumeError(ReadObj.takeError());
+      return false;
+    }
+    if (!ReadObj.get()) {
       if (Multi && Stack.size() == 1) {
         // OK to finish here as we've just done a top-level element with Multi
         break;
@@ -286,6 +296,9 @@ void Document::writeToBlob(std::string &Blob) {
       break;
     case Type::Binary:
       MPWriter.write(Node.getBinary());
+      break;
+    case Type::Float:
+      MPWriter.write(Node.getFloat());
       break;
     case Type::Empty:
       llvm_unreachable("unhandled empty msgpack node");

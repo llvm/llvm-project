@@ -38,8 +38,11 @@ protected:
   }
 };
 
-INSTANTIATE_TEST_SUITE_P(SynthesisTests, SynthesisTest,
-                        ::testing::ValuesIn(allTestClangConfigs()) );
+INSTANTIATE_TEST_SUITE_P(
+    SynthesisTests, SynthesisTest, ::testing::ValuesIn(allTestClangConfigs()),
+    [](const testing::TestParamInfo<TestClangConfig> &Info) {
+      return Info.param.toShortString();
+    });
 
 TEST_P(SynthesisTest, Leaf_Punctuation) {
   buildTree("", GetParam());

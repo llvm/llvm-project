@@ -4,7 +4,7 @@ module m
   integer, private :: j
   !ERROR: The accessibility of 'i' has already been specified as PUBLIC
   private i
-  !WARNING: The accessibility of 'j' has already been specified as PRIVATE
+  !WARNING: The accessibility of 'j' has already been specified as PRIVATE [-Wredundant-attribute]
   private j
 end
 
@@ -48,4 +48,56 @@ module m3
   public :: operator(>)
   !ERROR: The accessibility of 'OPERATOR(.GT.)' has already been specified as PUBLIC
   private :: operator(.gt.)
+end
+
+module m4
+  private
+  type, public :: foo
+  end type
+  interface foo
+    procedure fun
+  end interface
+ contains
+  function fun
+  end
+end
+
+subroutine s4
+  !ERROR: 'fun' is PRIVATE in 'm4'
+  use m4, only: foo, fun
+  type(foo) x ! ok
+  !PORTABILITY: Reference to generic function 'foo' (resolving to specific 'fun') is ambiguous with a structure constructor of the same name [-Wambiguous-structure-constructor]
+  print *, foo()
+end
+
+module m5
+  public
+  type, private :: foo
+  end type
+  interface foo
+    procedure fun
+  end interface
+ contains
+  function fun
+  end
+end
+
+subroutine s5
+  !ERROR: 'foo' is PRIVATE in 'm5'
+  use m5, only: foo, fun
+  print *, fun() ! ok
+end
+
+module m6
+  !WARNING: 'foo' is PRIVATE in 'm5'
+  use m5, only: name$with$dollar => foo
+  !ERROR: 'foo' is PRIVATE in 'm5'
+  use m5, only: normal_name => foo
+end
+
+subroutine s6
+  !The special dispensation for USE association of private names to local
+  !aliases with '$' in them only applies to modules.
+  !ERROR: 'foo' is PRIVATE in 'm5'
+  use m5, only: name$with$dollar => foo
 end

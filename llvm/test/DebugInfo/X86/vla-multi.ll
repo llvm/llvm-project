@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin %s -o - -filetype=obj | llvm-dwarfdump - | FileCheck %s
+
 ; Test debug info for multidimensional arrays.
 ;
 ; void f(int i, int j, int k, int r) {

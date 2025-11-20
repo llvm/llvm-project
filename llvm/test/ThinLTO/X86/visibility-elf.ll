@@ -36,12 +36,12 @@ declare void @ext(ptr)
 ;; Currently the visibility is not propagated onto an unimported function,
 ;; because we don't have summaries for declarations.
 ; CHECK: declare extern_weak void @not_imported()
-; CHECK: define available_externally hidden void @hidden_def_ref() !thinlto_src_module !0
-; CHECK: define available_externally hidden void @hidden_def_weak_ref() !thinlto_src_module !0
+; CHECK: define available_externally hidden void @hidden_def_ref() !thinlto_src_module !0 !thinlto_src_file !1
+; CHECK: define available_externally hidden void @hidden_def_weak_ref() !thinlto_src_module !0 !thinlto_src_file !1
 ;; This can be hidden, but we cannot communicate the declaration's visibility
 ;; to other modules because declarations don't have summaries, and the IRLinker
 ;; overrides it when importing the protected def.
-; CHECK: define available_externally protected void @protected_def_hidden_ref() !thinlto_src_module !0
+; CHECK: define available_externally protected void @protected_def_hidden_ref() !thinlto_src_module !0 !thinlto_src_file !1
 
 ; CHECK2: define hidden i32 @hidden_def_weak_def()
 ; CHECK2: define protected void @protected_def_weak_def()

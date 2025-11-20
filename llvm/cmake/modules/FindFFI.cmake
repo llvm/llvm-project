@@ -15,6 +15,7 @@
 # FFI_FOUND
 # FFI_INCLUDE_DIRS
 # FFI_LIBRARIES
+# FFI_STATIC_LIBRARIES
 # HAVE_FFI_CALL
 #
 # HAVE_FFI_H or HAVE_FFI_FFI_H is defined depending on the ffi.h include path.
@@ -22,7 +23,10 @@
 # Additionally, the following import target will be defined:
 # FFI::ffi
 
-find_path(FFI_INCLUDE_DIRS ffi.h PATHS ${FFI_INCLUDE_DIR})
+find_package(PkgConfig QUIET)
+pkg_check_modules(PC_LIBFFI QUIET libffi)
+
+find_path(FFI_INCLUDE_DIRS ffi.h PATHS ${FFI_INCLUDE_DIR} ${PC_LIBFFI_INCLUDE_DIRS})
 if( EXISTS "${FFI_INCLUDE_DIRS}/ffi.h" )
   set(FFI_HEADER ffi.h CACHE INTERNAL "")
   set(HAVE_FFI_H 1 CACHE INTERNAL "")
@@ -34,19 +38,32 @@ else()
   endif()
 endif()
 
-find_library(FFI_LIBRARIES ffi PATHS ${FFI_LIBRARY_DIR})
+find_library(FFI_LIBRARIES NAMES ffi PATHS ${FFI_LIBRARY_DIR} ${PC_LIBFFI_LIBRARY_DIRS})
+find_library(FFI_STATIC_LIBRARIES NAMES libffi.a PATHS ${FFI_LIBRARY_DIR} ${PC_LIBFFI_LIBRARY_DIRS})
 
 if(FFI_LIBRARIES)
   include(CMakePushCheckState)
-  include(CheckCSourceCompiles)
   cmake_push_check_state()
   list(APPEND CMAKE_REQUIRED_LIBRARIES ${FFI_LIBRARIES})
-  check_c_source_compiles("
+  set(HAVE_FFI_CALL_SRC [=[
+    #ifdef __cplusplus
+    extern "C" {
+    #endif
     struct ffi_cif;
     typedef struct ffi_cif ffi_cif;
     void ffi_call(ffi_cif *cif, void (*fn)(void), void *rvalue, void **avalue);
-    int main(void) { ffi_call(0, 0, 0, 0); }"
-    HAVE_FFI_CALL)
+    #ifdef __cplusplus
+    }
+    #endif
+    int main(void) { ffi_call(0, 0, 0, 0); }
+    ]=])
+  if(DEFINED CMAKE_C_COMPILER)
+    include(CheckCSourceCompiles)
+    check_c_source_compiles("${HAVE_FFI_CALL_SRC}" HAVE_FFI_CALL)
+  else()
+    include(CheckCXXSourceCompiles)
+    check_cxx_source_compiles("${HAVE_FFI_CALL_SRC}" HAVE_FFI_CALL)
+  endif()
   cmake_pop_check_state()
 endif()
 
@@ -64,6 +81,7 @@ find_package_handle_standard_args(FFI
                                     ${required_includes}
                                     HAVE_FFI_CALL)
 mark_as_advanced(FFI_LIBRARIES
+                 FFI_STATIC_LIBRARIES
                  FFI_INCLUDE_DIRS
                  HAVE_FFI_CALL
                  FFI_HEADER
@@ -71,11 +89,18 @@ mark_as_advanced(FFI_LIBRARIES
                  HAVE_FFI_FFI_H)
 
 if(FFI_FOUND)
-  if(NOT TARGET FFI::ffi)
+  if(NOT TARGET FFI::ffi AND FFI_LIBRARIES)
     add_library(FFI::ffi UNKNOWN IMPORTED)
     set_target_properties(FFI::ffi PROPERTIES IMPORTED_LOCATION "${FFI_LIBRARIES}")
     if(FFI_INCLUDE_DIRS)
       set_target_properties(FFI::ffi PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFI_INCLUDE_DIRS}")
+    endif()
+  endif()
+  if(NOT TARGET FFI::ffi_static AND FFI_STATIC_LIBRARIES)
+    add_library(FFI::ffi_static UNKNOWN IMPORTED)
+    set_target_properties(FFI::ffi_static PROPERTIES IMPORTED_LOCATION "${FFI_STATIC_LIBRARIES}")
+    if(FFI_INCLUDE_DIRS)
+      set_target_properties(FFI::ffi_static PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFI_INCLUDE_DIRS}")
     endif()
   endif()
 endif()

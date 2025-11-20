@@ -316,7 +316,7 @@ define i1 @canonicalize_ueq_arg_f32(float %x) {
 
 define <2 x i1> @canonicalize_ueq_arg_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @canonicalize_ueq_arg_v2f32(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %canon.x = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %x)
   %cmp = fcmp ueq <2 x float> %canon.x, %x

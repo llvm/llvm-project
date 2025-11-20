@@ -13,7 +13,6 @@
 #include "llvm/Support/LEB128.h"
 
 using namespace llvm;
-using endianness = llvm::support::endianness;
 
 BinaryStreamReader::BinaryStreamReader(BinaryStreamRef Ref) : Stream(Ref) {}
 
@@ -175,5 +174,5 @@ BinaryStreamReader::split(uint64_t Off) const {
   First = First.keep_front(Off);
   BinaryStreamReader W1{First};
   BinaryStreamReader W2{Second};
-  return std::make_pair(W1, W2);
+  return {W1, W2};
 }

@@ -11,7 +11,7 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-LABEL: @reverse_interleave_load_fold_mask(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -22,7 +22,7 @@ define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i32> [[BROADCAST_SPLAT2]], <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i32> [[VEC_IV]], <i32 40, i32 40>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i32> [[VEC_IV]], splat (i32 40)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
@@ -56,31 +56,14 @@ define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-NEXT:    [[TMP24:%.*]] = add nsw <2 x i16> [[TMP22]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP25]] = add <2 x i16> [[VEC_PHI]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = select <2 x i1> [[TMP1]], <2 x i16> [[TMP25]], <2 x i16> [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i32 [[INDEX_NEXT]], 42
 ; CHECK-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP28:%.*]] = call i16 @llvm.vector.reduce.add.v2i16(<2 x i16> [[TMP26]])
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ -1, [[MIDDLE_BLOCK]] ], [ 41, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, [[ENTRY]] ], [ [[TMP28]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IVMINUS1:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i16 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[PREVSUM:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IVMINUS1]] = add nsw i16 [[IV]], -1
-; CHECK-NEXT:    [[GEPA0:%.*]] = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 [[IVMINUS1]], i16 0
-; CHECK-NEXT:    [[TMP29:%.*]] = load i16, ptr [[GEPA0]], align 1
-; CHECK-NEXT:    [[GEPA3:%.*]] = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 [[IVMINUS1]], i16 3
-; CHECK-NEXT:    [[TMP30:%.*]] = load i16, ptr [[GEPA3]], align 1
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[TMP29]], [[TMP30]]
-; CHECK-NEXT:    [[PREVSUM]] = add nsw i16 [[SUM]], [[ADD]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[IV]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PREVSUM_LCSSA:%.*]] = phi i16 [ [[PREVSUM]], [[LOOP]] ], [ [[TMP28]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i16 [[PREVSUM_LCSSA]]
+; CHECK-NEXT:    ret i16 [[TMP28]]
 ;
 entry:
   br label %loop

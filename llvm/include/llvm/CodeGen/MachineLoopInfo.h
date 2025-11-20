@@ -31,7 +31,10 @@
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericLoopInfo.h"
 
 namespace llvm {
@@ -39,43 +42,59 @@ namespace llvm {
 class MachineDominatorTree;
 // Implementation in LoopInfoImpl.h
 class MachineLoop;
-extern template class LoopBase<MachineBasicBlock, MachineLoop>;
+extern template class LLVM_TEMPLATE_ABI
+    LoopBase<MachineBasicBlock, MachineLoop>;
 
 class MachineLoop : public LoopBase<MachineBasicBlock, MachineLoop> {
 public:
   /// Return the "top" block in the loop, which is the first block in the linear
   /// layout, ignoring any parts of the loop not contiguous with the part that
   /// contains the header.
-  MachineBasicBlock *getTopBlock();
+  LLVM_ABI MachineBasicBlock *getTopBlock();
 
   /// Return the "bottom" block in the loop, which is the last block in the
   /// linear layout, ignoring any parts of the loop not contiguous with the part
   /// that contains the header.
-  MachineBasicBlock *getBottomBlock();
+  LLVM_ABI MachineBasicBlock *getBottomBlock();
 
   /// Find the block that contains the loop control variable and the
   /// loop test. This will return the latch block if it's one of the exiting
   /// blocks. Otherwise, return the exiting block. Return 'null' when
   /// multiple exiting blocks are present.
-  MachineBasicBlock *findLoopControlBlock();
+  LLVM_ABI MachineBasicBlock *findLoopControlBlock() const;
 
   /// Return the debug location of the start of this loop.
   /// This looks for a BB terminating instruction with a known debug
   /// location by looking at the preheader and header blocks. If it
   /// cannot find a terminating instruction with location information,
   /// it returns an unknown location.
-  DebugLoc getStartLoc() const;
+  LLVM_ABI DebugLoc getStartLoc() const;
+
+  /// Find the llvm.loop metadata for this loop.
+  /// If each branch to the header of this loop contains the same llvm.loop
+  /// metadata, then this metadata node is returned. Otherwise, if any
+  /// latch instruction does not contain the llvm.loop metadata or
+  /// multiple latch instructions contain different llvm.loop metadata nodes,
+  /// then null is returned.
+  LLVM_ABI MDNode *getLoopID() const;
 
   /// Returns true if the instruction is loop invariant.
   /// I.e., all virtual register operands are defined outside of the loop,
   /// physical registers aren't accessed explicitly, and there are no side
   /// effects that aren't captured by the operands or other flags.
-  bool isLoopInvariant(MachineInstr &I) const;
+  /// ExcludeReg can be used to exclude the given register from the check
+  /// i.e. when we're considering hoisting it's definition but not hoisted it
+  /// yet
+  LLVM_ABI bool isLoopInvariant(MachineInstr &I,
+                                const Register ExcludeReg = 0) const;
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 
 private:
   friend class LoopInfoBase<MachineBasicBlock, MachineLoop>;
+
+  /// Returns true if the given physreg has no defs inside the loop.
+  bool isLoopInvariantImplicitPhysReg(Register Reg) const;
 
   explicit MachineLoop(MachineBasicBlock *MBB)
     : LoopBase<MachineBasicBlock, MachineLoop>(MBB) {}
@@ -84,25 +103,23 @@ private:
 };
 
 // Implementation in LoopInfoImpl.h
-extern template class LoopInfoBase<MachineBasicBlock, MachineLoop>;
+extern template class LLVM_TEMPLATE_ABI
+    LoopInfoBase<MachineBasicBlock, MachineLoop>;
 
-class MachineLoopInfo : public MachineFunctionPass {
+class MachineLoopInfo : public LoopInfoBase<MachineBasicBlock, MachineLoop> {
   friend class LoopBase<MachineBasicBlock, MachineLoop>;
-
-  LoopInfoBase<MachineBasicBlock, MachineLoop> LI;
+  friend class MachineLoopInfoWrapperPass;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
-
-  MachineLoopInfo();
-  explicit MachineLoopInfo(MachineDominatorTree &MDT)
-      : MachineFunctionPass(ID) {
-    calculate(MDT);
-  }
+  MachineLoopInfo() = default;
+  explicit MachineLoopInfo(MachineDominatorTree &MDT) { calculate(MDT); }
+  MachineLoopInfo(MachineLoopInfo &&) = default;
   MachineLoopInfo(const MachineLoopInfo &) = delete;
   MachineLoopInfo &operator=(const MachineLoopInfo &) = delete;
 
-  LoopInfoBase<MachineBasicBlock, MachineLoop>& getBase() { return LI; }
+  /// Handle invalidation explicitly.
+  LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                           MachineFunctionAnalysisManager::Invalidator &);
 
   /// Find the block that either is the loop preheader, or could
   /// speculatively be used as the preheader. This is e.g. useful to place
@@ -111,73 +128,51 @@ public:
   /// find the speculative preheader if the regular preheader is not present.
   /// With FindMultiLoopPreheader = false, nullptr will be returned if the found
   /// preheader is the preheader of multiple loops.
-  MachineBasicBlock *
+  LLVM_ABI MachineBasicBlock *
   findLoopPreheader(MachineLoop *L, bool SpeculativePreheader = false,
                     bool FindMultiLoopPreheader = false) const;
 
-  /// The iterator interface to the top-level loops in the current function.
-  using iterator = LoopInfoBase<MachineBasicBlock, MachineLoop>::iterator;
-  inline iterator begin() const { return LI.begin(); }
-  inline iterator end() const { return LI.end(); }
-  bool empty() const { return LI.empty(); }
-
-  /// Return the innermost loop that BB lives in. If a basic block is in no loop
-  /// (for example the entry node), null is returned.
-  inline MachineLoop *getLoopFor(const MachineBasicBlock *BB) const {
-    return LI.getLoopFor(BB);
-  }
-
-  /// Same as getLoopFor.
-  inline const MachineLoop *operator[](const MachineBasicBlock *BB) const {
-    return LI.getLoopFor(BB);
-  }
-
-  /// Return the loop nesting level of the specified block.
-  inline unsigned getLoopDepth(const MachineBasicBlock *BB) const {
-    return LI.getLoopDepth(BB);
-  }
-
-  /// True if the block is a loop header node.
-  inline bool isLoopHeader(const MachineBasicBlock *BB) const {
-    return LI.isLoopHeader(BB);
-  }
-
   /// Calculate the natural loop information.
+  LLVM_ABI void calculate(MachineDominatorTree &MDT);
+};
+
+/// Analysis pass that exposes the \c MachineLoopInfo for a machine function.
+class MachineLoopAnalysis : public AnalysisInfoMixin<MachineLoopAnalysis> {
+  friend AnalysisInfoMixin<MachineLoopAnalysis>;
+  LLVM_ABI static AnalysisKey Key;
+
+public:
+  using Result = MachineLoopInfo;
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
+};
+
+/// Printer pass for the \c LoopAnalysis results.
+class MachineLoopPrinterPass : public PassInfoMixin<MachineLoopPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MachineLoopPrinterPass(raw_ostream &OS) : OS(OS) {}
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class LLVM_ABI MachineLoopInfoWrapperPass : public MachineFunctionPass {
+  MachineLoopInfo LI;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  MachineLoopInfoWrapperPass();
+
   bool runOnMachineFunction(MachineFunction &F) override;
-  void calculate(MachineDominatorTree &MDT);
 
   void releaseMemory() override { LI.releaseMemory(); }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-  /// This removes the specified top-level loop from this loop info object. The
-  /// loop is not deleted, as it will presumably be inserted into another loop.
-  inline MachineLoop *removeLoop(iterator I) { return LI.removeLoop(I); }
-
-  /// Change the top-level loop that contains BB to the specified loop. This
-  /// should be used by transformations that restructure the loop hierarchy
-  /// tree.
-  inline void changeLoopFor(MachineBasicBlock *BB, MachineLoop *L) {
-    LI.changeLoopFor(BB, L);
-  }
-
-  /// Replace the specified loop in the top-level loops list with the indicated
-  /// loop.
-  inline void changeTopLevelLoop(MachineLoop *OldLoop, MachineLoop *NewLoop) {
-    LI.changeTopLevelLoop(OldLoop, NewLoop);
-  }
-
-  /// This adds the specified loop to the collection of top-level loops.
-  inline void addTopLevelLoop(MachineLoop *New) {
-    LI.addTopLevelLoop(New);
-  }
-
-  /// This method completely removes BB from all data structures, including all
-  /// of the Loop objects it is nested in and our mapping from
-  /// MachineBasicBlocks to loops.
-  void removeBlock(MachineBasicBlock *BB) {
-    LI.removeBlock(BB);
-  }
+  MachineLoopInfo &getLI() { return LI; }
 };
 
 // Allow clients to walk the list of nested loops...

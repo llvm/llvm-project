@@ -1,0 +1,56 @@
+# This file has declarations that appear both in <stdlib.h> and in <malloc.h>.
+# These include the subset of GNU extensions that Scudo supports.
+#
+# Note: glibc's <stdlib.h> and <malloc.h> both also have `reallocarray`,
+# which Scudo does not support and is omitted here.  (Each of those glibc
+# headers also has related functions the other lacks, but those should be
+# covered separately in stdlib.yaml and malloc.yaml instead.)
+
+functions:
+  - name: aligned_alloc
+    standards:
+      - stdc
+    return_type: void *
+    arguments:
+      - type: size_t
+      - type: size_t
+  - name: calloc
+    standards:
+      - stdc
+    return_type: void *
+    arguments:
+      - type: size_t
+      - type: size_t
+  - name: free
+    standards:
+      - stdc
+    return_type: void
+    arguments:
+      - type: void *
+  - name: malloc
+    standards:
+      - stdc
+    return_type: void *
+    arguments:
+      - type: size_t
+  - name: memalign
+    standards:
+      - gnu
+    return_type: void *
+    arguments:
+      - type: size_t
+      - type: size_t
+  - name: realloc
+    standards:
+      - stdc
+    return_type: void *
+    arguments:
+      - type: void *
+      - type: size_t
+  - name: valloc
+    standards:
+      - bsd
+      - gnu
+    return_type: void *
+    arguments:
+      - type: size_t

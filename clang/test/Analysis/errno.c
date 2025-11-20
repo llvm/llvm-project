@@ -3,7 +3,7 @@
 // RUN:   -analyzer-checker=apiModeling.Errno \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-checker=debug.ErrnoTest \
-// RUN:   -analyzer-checker=alpha.unix.Errno \
+// RUN:   -analyzer-checker=unix.Errno \
 // RUN:   -DERRNO_VAR
 
 // RUN: %clang_analyze_cc1 -verify %s \
@@ -11,7 +11,7 @@
 // RUN:   -analyzer-checker=apiModeling.Errno \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-checker=debug.ErrnoTest \
-// RUN:   -analyzer-checker=alpha.unix.Errno \
+// RUN:   -analyzer-checker=unix.Errno \
 // RUN:   -DERRNO_FUNC
 
 #include "Inputs/system-header-simulator.h"
@@ -72,14 +72,14 @@ void testErrnoCheck0() {
   // The function did not promise to not change 'errno' if no failure happens.
   int X = ErrnoTesterChecker_setErrnoCheckState();
   if (X == 0) {
-    if (errno) { // expected-warning{{An undefined value may be read from 'errno' [alpha.unix.Errno]}}
+    if (errno) { // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
     }
     if (errno) { // no warning for second time (analysis stops at the first warning)
     }
   }
   X = ErrnoTesterChecker_setErrnoCheckState();
   if (X == 0) {
-    if (errno) { // expected-warning{{An undefined value may be read from 'errno' [alpha.unix.Errno]}}
+    if (errno) { // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
     }
     errno = 0;
   }
@@ -113,12 +113,12 @@ void testErrnoCheck2() {
   // change of 'errno'.
   int X = ErrnoTesterChecker_setErrnoCheckState();
   if (X == 2) {
-    errno = 0; // expected-warning{{Value of 'errno' was not checked and is overwritten here [alpha.unix.Errno]}}
+    errno = 0; // expected-warning{{Value of 'errno' was not checked and is overwritten here [unix.Errno]}}
     errno = 0;
   }
   X = ErrnoTesterChecker_setErrnoCheckState();
   if (X == 2) {
-    errno = 0; // expected-warning{{Value of 'errno' was not checked and is overwritten here [alpha.unix.Errno]}}
+    errno = 0; // expected-warning{{Value of 'errno' was not checked and is overwritten here [unix.Errno]}}
     if (errno) {
     }
   }
@@ -141,7 +141,7 @@ void testErrnoCheck3() {
 void testErrnoCheckUndefinedLoad() {
   int X = ErrnoTesterChecker_setErrnoCheckState();
   if (X == 0) {
-    if (errno) { // expected-warning{{An undefined value may be read from 'errno' [alpha.unix.Errno]}}
+    if (errno) { // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
     }
   }
 }
@@ -149,7 +149,7 @@ void testErrnoCheckUndefinedLoad() {
 void testErrnoNotCheckedAtSystemCall() {
   int X = ErrnoTesterChecker_setErrnoCheckState();
   if (X == 2) {
-    printf("%i", 1); // expected-warning{{Value of 'errno' was not checked and may be overwritten by function 'printf' [alpha.unix.Errno]}}
+    printf("%i", 1); // expected-warning{{Value of 'errno' was not checked and may be overwritten by function 'printf' [unix.Errno]}}
     printf("%i", 1); // no warning ('printf' does not change errno state)
   }
 }

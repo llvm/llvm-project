@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=bpfel -mcpu=v2 -mattr=+alu32 < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=bpfel -mcpu=v2 -mattr=+alu32 < %s | FileCheck %s
 ;
 ; long long select_u(unsigned a, unsigned b, long long c, long long d)
 ; {

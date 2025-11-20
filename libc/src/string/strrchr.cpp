@@ -9,12 +9,13 @@
 #include "src/string/strrchr.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/string/string_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, strrchr, (const char *src, int c)) {
   return internal::strrchr_implementation(src, c);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

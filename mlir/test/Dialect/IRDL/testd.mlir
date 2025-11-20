@@ -120,24 +120,67 @@ func.func @succeededAnyConstraint() {
 // -----
 
 //===----------------------------------------------------------------------===//
-// Dynamic base constraint
+// Base constraints
 //===----------------------------------------------------------------------===//
 
 func.func @succeededDynBaseConstraint() {
-  // CHECK: "testd.dynbase"() : () -> !testd.parametric<i32>
-  "testd.dynbase"() : () -> !testd.parametric<i32>
-  // CHECK: "testd.dynbase"() : () -> !testd.parametric<i64>
-  "testd.dynbase"() : () -> !testd.parametric<i64>
-  // CHECK: "testd.dynbase"() : () -> !testd.parametric<!testd.parametric<i64>>
-  "testd.dynbase"() : () -> !testd.parametric<!testd.parametric<i64>>
+  // CHECK: "testd.dyn_type_base"() : () -> !testd.parametric<i32>
+  "testd.dyn_type_base"() : () -> !testd.parametric<i32>
+  // CHECK: "testd.dyn_type_base"() : () -> !testd.parametric<i64>
+  "testd.dyn_type_base"() : () -> !testd.parametric<i64>
+  // CHECK: "testd.dyn_type_base"() : () -> !testd.parametric<!testd.parametric<i64>>
+  "testd.dyn_type_base"() : () -> !testd.parametric<!testd.parametric<i64>>
+  // CHECK: "testd.dyn_attr_base"() {attr1 = #testd.parametric_attr<i32>} : () -> ()
+  "testd.dyn_attr_base"() {attr1 = #testd.parametric_attr<i32>} : () -> ()
+  // CHECK: "testd.dyn_attr_base"() {attr1 = #testd.parametric_attr<i64>} : () -> ()
+  "testd.dyn_attr_base"() {attr1 = #testd.parametric_attr<i64>} : () -> ()
   return
 }
 
 // -----
 
-func.func @failedDynBaseConstraint() {
-  // expected-error@+1 {{expected base type 'testd.parametric' but got 'i32'}}
-  "testd.dynbase"() : () -> i32
+func.func @failedDynTypeBaseConstraint() {
+  // expected-error@+1 {{expected base type 'testd.parametric' but got 'builtin.integer'}}
+  "testd.dyn_type_base"() : () -> i32
+  return
+}
+
+// -----
+
+func.func @failedDynAttrBaseConstraintNotType() {
+  // expected-error@+1 {{expected base attribute 'testd.parametric_attr' but got 'builtin.type'}}
+  "testd.dyn_attr_base"() {attr1 = i32}: () -> ()
+  return
+}
+
+// -----
+
+
+func.func @succeededNamedBaseConstraint() {
+  // CHECK: "testd.named_type_base"() : () -> i32
+  "testd.named_type_base"() : () -> i32
+  // CHECK: "testd.named_type_base"() : () -> i64
+  "testd.named_type_base"() : () -> i64
+  // CHECK: "testd.named_attr_base"() {attr1 = 0 : i32} : () -> ()
+  "testd.named_attr_base"() {attr1 = 0 : i32} : () -> ()
+  // CHECK: "testd.named_attr_base"() {attr1 = 0 : i64} : () -> ()
+  "testd.named_attr_base"() {attr1 = 0 : i64} : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedNamedTypeBaseConstraint() {
+  // expected-error@+1 {{expected base type 'builtin.integer' but got 'builtin.vector'}}
+  "testd.named_type_base"() : () -> vector<i32>
+  return
+}
+
+// -----
+
+func.func @failedDynAttrBaseConstraintNotType() {
+  // expected-error@+1 {{expected base attribute 'builtin.integer' but got 'builtin.type'}}
+  "testd.named_attr_base"() {attr1 = i32}: () -> ()
   return
 }
 

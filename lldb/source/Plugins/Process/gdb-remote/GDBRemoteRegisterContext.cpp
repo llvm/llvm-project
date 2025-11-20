@@ -8,6 +8,12 @@
 
 #include "GDBRemoteRegisterContext.h"
 
+#include "ProcessGDBRemote.h"
+#include "ProcessGDBRemoteLog.h"
+#include "ThreadGDBRemote.h"
+#include "Utility/ARM_DWARF_Registers.h"
+#include "Utility/ARM_ehframe_Registers.h"
+#include "lldb/Core/Architecture.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -15,11 +21,6 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
-#include "ProcessGDBRemote.h"
-#include "ProcessGDBRemoteLog.h"
-#include "ThreadGDBRemote.h"
-#include "Utility/ARM_DWARF_Registers.h"
-#include "Utility/ARM_ehframe_Registers.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
 #include <memory>
@@ -227,7 +228,9 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info) {
           SetAllRegisterValid(true);
           return true;
         } else if (buffer_sp->GetByteSize() > 0) {
-          for (auto x : llvm::enumerate(m_reg_info_sp->registers())) {
+          for (auto x : llvm::enumerate(
+                   m_reg_info_sp->registers<
+                       DynamicRegisterInfo::reg_collection_const_range>())) {
             const struct RegisterInfo &reginfo = x.value();
             m_reg_valid[x.index()] =
                 (reginfo.byte_offset + reginfo.byte_size <=
@@ -373,14 +376,8 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
   if (dst == nullptr)
     return false;
 
-  // Code below is specific to AArch64 target in SVE or SME state
-  // If vector granule (vg) register is being written then thread's
-  // register context reconfiguration is triggered on success.
-  // We do not allow writes to SVG so it is not mentioned here.
-  const ArchSpec &arch = process->GetTarget().GetArchitecture();
-  bool do_reconfigure_arm64_sve = arch.IsValid() &&
-                                  arch.GetTriple().isAArch64() &&
-                                  (strcmp(reg_info->name, "vg") == 0);
+  const bool should_reconfigure_registers =
+      RegisterWriteCausesReconfigure(reg_info->name);
 
   if (data.CopyByteOrderedData(data_offset,                // src offset
                                reg_info->byte_size,        // src length
@@ -400,8 +397,8 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
                 {m_reg_data.GetDataStart(), size_t(m_reg_data.GetByteSize())}))
 
         {
-          if (do_reconfigure_arm64_sve)
-            AArch64Reconfigure();
+          if (should_reconfigure_registers)
+            ReconfigureRegisterInfo();
 
           InvalidateAllRegisters();
 
@@ -434,11 +431,6 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
         } else {
           // This is an actual register, write it
           success = SetPrimordialRegister(reg_info, gdb_comm);
-
-          if (success && do_reconfigure_arm64_sve) {
-            AArch64Reconfigure();
-            InvalidateAllRegisters();
-          }
         }
 
         // Check if writing this register will invalidate any other register
@@ -451,6 +443,10 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
                                    eRegisterKindLLDB, reg),
                                false);
         }
+
+        if (success && should_reconfigure_registers &&
+            ReconfigureRegisterInfo())
+          InvalidateAllRegisters();
 
         return success;
       }
@@ -762,77 +758,20 @@ uint32_t GDBRemoteRegisterContext::ConvertRegisterKindToRegisterNumber(
   return m_reg_info_sp->ConvertRegisterKindToRegisterNumber(kind, num);
 }
 
-void GDBRemoteRegisterContext::AArch64Reconfigure() {
-  assert(m_reg_info_sp);
-
-  // Once we start to reconfigure registers, we cannot read any of them.
-  // So we must read VG and SVG up front.
-
-  const uint64_t fail_value = LLDB_INVALID_ADDRESS;
-  std::optional<uint64_t> vg_reg_value;
-  const RegisterInfo *vg_reg_info = m_reg_info_sp->GetRegisterInfo("vg");
-  if (vg_reg_info) {
-    // Make sure we get the latest value of vg from the remote.
-    SetRegisterIsValid(vg_reg_info, false);
-    uint32_t vg_reg_num = vg_reg_info->kinds[eRegisterKindLLDB];
-    uint64_t reg_value = ReadRegisterAsUnsigned(vg_reg_num, fail_value);
-    if (reg_value != fail_value && reg_value <= 32)
-      vg_reg_value = reg_value;
-  }
-
-  std::optional<uint64_t> svg_reg_value;
-  const RegisterInfo *svg_reg_info = m_reg_info_sp->GetRegisterInfo("svg");
-  if (svg_reg_info) {
-    uint32_t svg_reg_num = svg_reg_info->kinds[eRegisterKindLLDB];
-    uint64_t reg_value = ReadRegisterAsUnsigned(svg_reg_num, fail_value);
-    if (reg_value != fail_value && reg_value <= 32)
-      svg_reg_value = reg_value;
-  }
-
-  if (vg_reg_value)
-    m_reg_info_sp->UpdateARM64SVERegistersInfos(*vg_reg_value);
-  if (svg_reg_value)
-    m_reg_info_sp->UpdateARM64SMERegistersInfos(*svg_reg_value);
-
-  // At this point if we have updated any registers, their offsets will all be
-  // invalid. If we did, we need to update them all.
-  if (vg_reg_value || svg_reg_value) {
-    m_reg_info_sp->ConfigureOffsets();
-    // From here we are able to read registers again.
-
-    // Make a heap based buffer that is big enough to store all registers
-    m_reg_data.SetData(std::make_shared<DataBufferHeap>(
-        m_reg_info_sp->GetRegisterDataByteSize(), 0));
-    m_reg_data.SetByteOrder(GetByteOrder());
-  }
+bool GDBRemoteRegisterContext::RegisterWriteCausesReconfigure(
+    const llvm::StringRef name) {
+  ExecutionContext exe_ctx(CalculateThread());
+  const Architecture *architecture =
+      exe_ctx.GetProcessRef().GetTarget().GetArchitecturePlugin();
+  return architecture && architecture->RegisterWriteCausesReconfigure(name);
 }
 
-void GDBRemoteDynamicRegisterInfo::UpdateARM64SVERegistersInfos(uint64_t vg) {
-  // SVE Z register size is vg x 8 bytes.
-  uint32_t z_reg_byte_size = vg * 8;
-
-  // SVE vector length has changed, accordingly set size of Z, P and FFR
-  // registers. Also invalidate register offsets it will be recalculated
-  // after SVE register size update.
-  for (auto &reg : m_regs) {
-    if (reg.value_regs == nullptr) {
-      if (reg.name[0] == 'z' && isdigit(reg.name[1]))
-        reg.byte_size = z_reg_byte_size;
-      else if (reg.name[0] == 'p' && isdigit(reg.name[1]))
-        reg.byte_size = vg;
-      else if (strcmp(reg.name, "ffr") == 0)
-        reg.byte_size = vg;
-    }
-    reg.byte_offset = LLDB_INVALID_INDEX32;
-  }
-}
-
-void GDBRemoteDynamicRegisterInfo::UpdateARM64SMERegistersInfos(uint64_t svg) {
-  for (auto &reg : m_regs) {
-    if (strcmp(reg.name, "za") == 0) {
-      // ZA is a register with size (svg*8) * (svg*8). A square essentially.
-      reg.byte_size = (svg * 8) * (svg * 8);
-    }
-    reg.byte_offset = LLDB_INVALID_INDEX32;
-  }
+bool GDBRemoteRegisterContext::ReconfigureRegisterInfo() {
+  ExecutionContext exe_ctx(CalculateThread());
+  const Architecture *architecture =
+      exe_ctx.GetProcessRef().GetTarget().GetArchitecturePlugin();
+  if (architecture)
+    return architecture->ReconfigureRegisterInfo(*(m_reg_info_sp.get()),
+                                                 m_reg_data, *this);
+  return false;
 }

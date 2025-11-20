@@ -13,46 +13,30 @@
 #include "Symbols.h"
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
+#include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <string>
-#include <system_error>
 #include <vector>
 
 using namespace llvm;
 using namespace llvm::object;
 using namespace lld;
 using namespace lld::coff;
-
-// Creates an empty file to and returns a raw_fd_ostream to write to it.
-static std::unique_ptr<raw_fd_ostream> openFile(StringRef file) {
-  std::error_code ec;
-  auto ret =
-      std::make_unique<raw_fd_ostream>(file, ec, sys::fs::OpenFlags::OF_None);
-  if (ec) {
-    error("cannot open " + file + ": " + ec.message());
-    return nullptr;
-  }
-  return ret;
-}
 
 std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
   return lto::getThinLTOOutputFile(path, ctx.config.thinLTOPrefixReplaceOld,
@@ -97,10 +81,26 @@ lto::Config BitcodeCompiler::createConfig() {
   c.CSIRProfile = std::string(ctx.config.ltoCSProfileFile);
   c.RunCSIRInstr = ctx.config.ltoCSProfileGenerate;
   c.PGOWarnMismatch = ctx.config.ltoPGOWarnMismatch;
+  c.SampleProfile = ctx.config.ltoSampleProfileName;
+  c.TimeTraceEnabled = ctx.config.timeTraceEnabled;
+  c.TimeTraceGranularity = ctx.config.timeTraceGranularity;
 
-  if (ctx.config.saveTemps)
+  if (ctx.config.emit == EmitKind::LLVM) {
+    c.PreCodeGenModuleHook = [this](size_t task, const Module &m) {
+      if (std::unique_ptr<raw_fd_ostream> os =
+              openLTOOutputFile(ctx.config.outputFile))
+        WriteBitcodeToFile(m, *os, false);
+      return false;
+    };
+  } else if (ctx.config.emit == EmitKind::ASM) {
+    c.CGFileType = CodeGenFileType::AssemblyFile;
+    c.Options.MCOptions.AsmVerbose = true;
+  }
+
+  if (!ctx.config.saveTempsArgs.empty())
     checkError(c.addSaveTemps(std::string(ctx.config.outputFile) + ".",
-                              /*UseInputModulePath*/ true));
+                              /*UseInputModulePath*/ true,
+                              ctx.config.saveTempsArgs));
   return c;
 }
 
@@ -111,9 +111,19 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
 
   // Initialize ltoObj.
   lto::ThinBackend backend;
-  if (ctx.config.thinLTOIndexOnly) {
+  if (!ctx.config.dtltoDistributor.empty()) {
+    backend = lto::createOutOfProcessThinBackend(
+        llvm::hardware_concurrency(ctx.config.thinLTOJobs),
+        /*OnWrite=*/nullptr,
+        /*ShouldEmitIndexFiles=*/false,
+        /*ShouldEmitImportFiles=*/false, ctx.config.outputFile,
+        ctx.config.dtltoDistributor, ctx.config.dtltoDistributorArgs,
+        ctx.config.dtltoCompiler, ctx.config.dtltoCompilerPrependArgs,
+        ctx.config.dtltoCompilerArgs, !ctx.config.saveTempsArgs.empty());
+  } else if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(
+        llvm::hardware_concurrency(ctx.config.thinLTOJobs),
         std::string(ctx.config.thinLTOPrefixReplaceOld),
         std::string(ctx.config.thinLTOPrefixReplaceNew),
         std::string(ctx.config.thinLTOPrefixReplaceNativeObject),
@@ -167,6 +177,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting objects.
 std::vector<InputFile *> BitcodeCompiler::compile() {
+  llvm::TimeTraceScope timeScope("Bitcode compile");
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
   files.resize(maxTasks);
@@ -215,6 +226,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     pruneCache(ctx.config.ltoCache, ctx.config.ltoCachePolicy, files);
 
   std::vector<InputFile *> ret;
+  bool emitASM = ctx.config.emit == EmitKind::ASM;
+  const char *Ext = emitASM ? ".s" : ".obj";
   for (unsigned i = 0; i != maxTasks; ++i) {
     StringRef bitcodeFilePath;
     // Get the native object contents either from the cache or from memory.  Do
@@ -237,20 +250,21 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     if (bitcodeFilePath == "ld-temp.o") {
       ltoObjName =
           saver().save(Twine(ctx.config.outputFile) + ".lto" +
-                       (i == 0 ? Twine("") : Twine('.') + Twine(i)) + ".obj");
+                       (i == 0 ? Twine("") : Twine('.') + Twine(i)) + Ext);
     } else {
       StringRef directory = sys::path::parent_path(bitcodeFilePath);
-      StringRef baseName = sys::path::filename(bitcodeFilePath);
+      StringRef baseName = sys::path::stem(bitcodeFilePath);
       StringRef outputFileBaseName = sys::path::filename(ctx.config.outputFile);
       SmallString<64> path;
       sys::path::append(path, directory,
-                        outputFileBaseName + ".lto." + baseName);
+                        outputFileBaseName + ".lto." + baseName + Ext);
       sys::path::remove_dots(path, true);
       ltoObjName = saver().save(path.str());
     }
-    if (ctx.config.saveTemps)
+    if (llvm::is_contained(ctx.config.saveTempsArgs, "prelink") || emitASM)
       saveBuffer(buf[i].second, ltoObjName);
-    ret.push_back(make<ObjFile>(ctx, MemoryBufferRef(objBuf, ltoObjName)));
+    if (!emitASM)
+      ret.push_back(ObjFile::create(ctx, MemoryBufferRef(objBuf, ltoObjName)));
   }
 
   return ret;

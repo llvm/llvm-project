@@ -105,7 +105,7 @@ template <class T> class NegativeTemplateConstructor {
     int FIELD;                                   \
   };                                             \
 // Ensure FIELD is not initialized since fixes inside of macros are disabled.
-// CHECK-FIXES: int FIELD;
+// CHECK-FIXES: int FIELD; {{\\}}
 
 UNINITIALIZED_FIELD_IN_MACRO_BODY(F);
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: constructor does not initialize these fields: F
@@ -243,7 +243,7 @@ struct PositiveUninitializedBaseOrdering : public NegativeAggregateType,
 };
 
 // We shouldn't need to initialize anything because PositiveUninitializedBase
-// has a user-defined constructor.
+// has a user-provided constructor.
 struct NegativeUninitializedBase : public PositiveUninitializedBase {
   NegativeUninitializedBase() {}
 };
@@ -429,7 +429,7 @@ template struct PositiveTemplateVirtualDestructor<int>;
     virtual ~UninitializedFieldVirtual##FIELD() {}       \
   };                                                     \
 // Ensure FIELD is not initialized since fixes inside of macros are disabled.
-// CHECK-FIXES: int FIELD;
+// CHECK-FIXES: int FIELD; {{\\}}
 
 UNINITIALIZED_FIELD_IN_MACRO_BODY_VIRTUAL(F);
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: constructor does not initialize these fields: F
@@ -461,12 +461,6 @@ struct NegativeEmptyArrayMember {
 struct NegativeIncompleteArrayMember {
   NegativeIncompleteArrayMember() {}
   char e[];
-};
-
-template <typename T> class NoCrash {
-  class B : public NoCrash {
-    template <typename U> B(U u) {}
-  };
 };
 
 struct PositiveBitfieldMember {

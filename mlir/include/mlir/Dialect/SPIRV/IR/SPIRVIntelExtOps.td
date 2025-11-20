@@ -11,6 +11,7 @@
 // at (https://github.com/intel/llvm)
 // Supported extensions
 // * SPV_INTEL_bfloat16_conversion
+// * SPV_INTEL_tensor_float32_conversion
 //===----------------------------------------------------------------------===//
 
 
@@ -19,7 +20,7 @@
 
 // -----
 
-def SPIRV_INTELConvertFToBF16Op : SPIRV_IntelVendorOp<"ConvertFToBF16", []> {
+def SPIRV_INTELConvertFToBF16Op : SPIRV_IntelVendorOp<"ConvertFToBF16", [SameOperandsAndResultShape]> {
   let summary = "See extension SPV_INTEL_bfloat16_conversion";
 
   let description = [{
@@ -33,11 +34,6 @@ def SPIRV_INTELConvertFToBF16Op : SPIRV_IntelVendorOp<"ConvertFToBF16", []> {
     It must have the same number of components as Result Type. The component width must be 32 bits.
 
     Results are computed per component.
-
-    ```
-    convert-f-to-bf16-op ::= ssa-id `=` `spirv.INTEL.ConvertFToBF16` ssa-use
-                          `:` operand-type `to` result-type
-    ```
 
     #### Example:
 
@@ -63,16 +59,17 @@ def SPIRV_INTELConvertFToBF16Op : SPIRV_IntelVendorOp<"ConvertFToBF16", []> {
   let results = (outs
     SPIRV_ScalarOrVectorOf<SPIRV_Int16>:$result
   );
+
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand) `to` type($result)
   }];
 
-  let hasVerifier = 1;
+  let hasVerifier = 0;
 }
 
 // -----
 
-def SPIRV_INTELConvertBF16ToFOp : SPIRV_IntelVendorOp<"ConvertBF16ToF", []> {
+def SPIRV_INTELConvertBF16ToFOp : SPIRV_IntelVendorOp<"ConvertBF16ToF", [SameOperandsAndResultShape]> {
   let summary = "See extension SPV_INTEL_bfloat16_conversion";
 
   let description = [{
@@ -84,11 +81,6 @@ def SPIRV_INTELConvertBF16ToFOp : SPIRV_IntelVendorOp<"ConvertBF16ToF", []> {
     The type must have the same number of components as the Result Type. The component width must be 16 bits.
 
     Results are computed per component.
-
-    ```
-    convert-bf16-to-f-op ::= ssa-id `=` `spirv.INTEL.ConvertBF16ToF` ssa-use
-                          `:` operand-type `to` result-type
-    ```
 
     #### Example:
 
@@ -117,7 +109,144 @@ def SPIRV_INTELConvertBF16ToFOp : SPIRV_IntelVendorOp<"ConvertBF16ToF", []> {
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand) `to` type($result)
   }];
-  let hasVerifier = 1;
+
+  let hasVerifier = 0;
+}
+
+// -----
+
+def SPIRV_INTELRoundFToTF32Op : SPIRV_IntelVendorOp<"RoundFToTF32", [SameOperandsAndResultShape]> {
+  let summary = "See extension SPV_INTEL_tensor_float32_conversion";
+
+  let description = [{
+    Convert value numerically from a 32-bit floating point type to tensor float32,
+    with rounding to the nearest even.
+
+    Result Type must be a scalar or vector of 32-bit floating-point type.
+    The component width must be 32 bits. Bit pattern in the Result represents a tensor float32 value.
+
+    Float Value must be a scalar or vector of floating-point type.
+    It must have the same number of components as Result Type. The component width must be 32 bits.
+
+    Results are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %1 = spirv.RoundFToTF32 %0 : f32 to f32
+    %3 = spirv.RoundFToTF32 %2 : vector<3xf32> to vector<3xf32>
+    ```
+
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_INTEL_tensor_float32_conversion]>,
+    Capability<[SPIRV_C_TensorFloat32RoundingINTEL]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Float32>:$operand
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Float32>:$result
+  );
+
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand) `to` type($result)
+  }];
+
+  let hasVerifier = 0;
+}
+
+// -----
+
+class SPIRV_IntelSplitBarrierOp<string mnemonic>
+    : SPIRV_IntelVendorOp<mnemonic, []> {
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_INTEL_split_barrier]>,
+    Capability<[SPIRV_C_SplitBarrierINTEL]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$memory_semantics
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $execution_scope $memory_scope $memory_semantics attr-dict
+  }];
+
+  let hasVerifier = 0;
+}
+
+def SPIRV_INTELControlBarrierArriveOp
+    : SPIRV_IntelSplitBarrierOp<"ControlBarrierArrive"> {
+  let summary = "See extension SPV_INTEL_split_barrier";
+
+  let description = [{
+    Indicates that an invocation has arrived at a split control barrier. This
+    may allow other invocations waiting on the split control barrier to continue
+    executing.
+
+    When `Execution` is `Workgroup` or larger, behavior is undefined unless all
+    invocations within `Execution` execute the same dynamic instance of this
+    instruction. When `Execution` is `Subgroup` or `Invocation`, the behavior of
+    this instruction in non-uniform control flow is defined by the client API.
+
+    If `Semantics` is not `None`, this instruction also serves as the start of a
+    memory barrier similar to an `OpMemoryBarrier` instruction with the same
+    `Memory` and `Semantics` operands. This allows atomically specifying both a
+    control barrier and a memory barrier (that is, without needing two
+    instructions). If `Semantics` is `None`, `Memory` is ignored.
+
+    #### Example:
+
+    ```mlir
+    spirv.ControlBarrierArrive <Workgroup> <Device> <Acquire|UniformMemory>
+    ```
+  }];
+}
+
+
+// -----
+
+def SPIRV_INTELControlBarrierWaitOp
+    : SPIRV_IntelSplitBarrierOp<"ControlBarrierWait"> {
+  let summary = "See extension SPV_INTEL_split_barrier";
+
+  let description = [{
+    Waits for other invocations of this module to arrive at a split control
+    barrier.
+
+    When `Execution` is `Workgroup` or larger, behavior is undefined unless all
+    invocations within `Execution` execute the same dynamic instance of this
+    instruction. When `Execution` is `Subgroup` or `Invocation`, the behavior of
+    this instruction in non-uniform control flow is defined by the client API.
+
+    If `Semantics` is not `None`, this instruction also serves as the end of a
+    memory barrier similar to an `OpMemoryBarrier` instruction with the same
+    `Memory` and `Semantics` operands. This ensures that memory accesses issued
+    before arriving at the split barrier are observed before memory accesses
+    issued after this instruction. This control is ensured only for memory
+    accesses issued by this invocation and observed by another invocation
+    executing within `Memory` scope. This allows atomically specifying both a
+    control barrier and a memory barrier (that is, without needing two
+    instructions). If `Semantics` is `None`, `Memory` is ignored.
+
+    #### Example:
+
+    ```mlir
+    spirv.ControlBarrierWait <Workgroup> <Device> <Acquire|UniformMemory>
+    ```
+  }];
 }
 
 

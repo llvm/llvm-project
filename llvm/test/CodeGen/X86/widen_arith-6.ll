@@ -14,8 +14,8 @@ define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; CHECK-NEXT:    movl $1073741824, {{[0-9]+}}(%esp) # imm = 0x40000000
 ; CHECK-NEXT:    movl $1065353216, {{[0-9]+}}(%esp) # imm = 0x3F800000
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = <1.97604004E+3,1.97604004E+3,1.97604004E+3,u>
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.97604004E+3,1.97604004E+3,1.97604004E+3,u]
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %forcond
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax

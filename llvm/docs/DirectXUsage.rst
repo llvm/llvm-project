@@ -13,6 +13,12 @@ User Guide for the DirectX Target
 .. toctree::
    :hidden:
 
+   DirectX/DXContainer
+   DirectX/DXILArchitecture
+   DirectX/DXILOpTableGenDesign
+   DirectX/DXILResources
+   DirectX/RootSignatures
+
 Introduction
 ============
 
@@ -23,7 +29,7 @@ Initially the backend is aimed at supporting DirectX 12, and support for DirectX
 11 is planned at a later date.
 
 The DirectX backend is currently experimental and is not shipped with any
-release builds of LLVM tools. To enable building the DirectX backend locally add
+release builds of LLVM tools. To build the DirectX backend locally, add
 ``DirectX`` to the ``LLVM_EXPERIMENTAL_TARGETS_TO_BUILD`` CMake option. For more
 information on building LLVM see the :doc:`CMake` documentation.
 
@@ -32,7 +38,7 @@ information on building LLVM see the :doc:`CMake` documentation.
 Target Triples
 ==============
 
-At present the DirectX target only supports the ``dxil`` architecture, which
+At present, the DirectX target only supports the ``dxil`` architecture, which
 generates code for the
 `DirectX Intermediate Language. <https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst>`_
 
@@ -40,8 +46,8 @@ In addition to target architecture, the DirectX backend also needs to know the
 target runtime version and pipeline stage. These are expressed using the OS and
 Environment triple component.
 
-Presently the DirectX backend requires targeting the ``shadermodel`` OS, and
-supports versions 6.0+ (at time of writing the latest announced version is 6.7).
+Presently, the DirectX backend requires targeting the ``shadermodel`` OS, and
+supports versions 6.0+ (as of writing, the latest announced version is 6.7).
 
 .. table:: DirectX Environments
 
@@ -79,6 +85,8 @@ code generation targets in LLVM, the LLVM codebase uses a more neutral name,
 The ``DXContainer`` format is sparsely documented in the functional
 specification, but a reference implementation exists in the
 `DirectXShaderCompiler. <https://github.com/microsoft/DirectXShaderCompiler>`_.
+The format is documented in the LLVM project docs as well (see
+:doc:`DirectX/DXContainer`).
 
 Support for generating ``DXContainer`` files in LLVM, is being added to the LLVM
 MC layer for object streamers and writers, and to the Object and ObjectYAML

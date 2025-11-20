@@ -9,11 +9,12 @@
 #include "src/math/copysignl.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long double, copysignl, (long double x, long double y)) {
   return fputil::copysign(x, y);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

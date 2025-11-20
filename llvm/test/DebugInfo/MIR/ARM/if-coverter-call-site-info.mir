@@ -33,34 +33,34 @@
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "armv6kz-unknown-linux-gnueabihf"
   
-  @mri_common_symbol = external dso_local local_unnamed_addr global i32*, align 4
+  @mri_common_symbol = external dso_local local_unnamed_addr global ptr, align 4
   
   ; Function Attrs: nounwind
-  define dso_local void @baa(i32* %secptr, i32 %subseg) local_unnamed_addr #0 !dbg !14 {
+  define dso_local void @baa(ptr %secptr, i32 %subseg) local_unnamed_addr #0 !dbg !14 {
   entry:
-    call void @llvm.dbg.value(metadata i32* %secptr, metadata !16, metadata !DIExpression()), !dbg !18
+    call void @llvm.dbg.value(metadata ptr %secptr, metadata !16, metadata !DIExpression()), !dbg !18
     call void @llvm.dbg.value(metadata i32 %subseg, metadata !17, metadata !DIExpression()), !dbg !18
-    %cmp = icmp eq i32* %secptr, null, !dbg !19
+    %cmp = icmp eq ptr %secptr, null, !dbg !19
     %cmp1 = icmp eq i32 %subseg, 0, !dbg !21
     %or.cond = and i1 %cmp, %cmp1, !dbg !22
     br i1 %or.cond, label %if.end, label %if.then, !dbg !22
   
   if.then:                                          ; preds = %entry
-    tail call void @foo(i32* %secptr, i32 %subseg), !dbg !23
+    tail call void @foo(ptr %secptr, i32 %subseg), !dbg !23
     br label %if.end, !dbg !23
   
   if.end:                                           ; preds = %entry, %if.then
-    store i32* null, i32** @mri_common_symbol, align 4, !dbg !24, !tbaa !25
+    store ptr null, ptr @mri_common_symbol, align 4, !dbg !24, !tbaa !25
     ret void, !dbg !29
   }
   
-  declare !dbg !4 dso_local void @foo(i32*, i32) local_unnamed_addr
+  declare !dbg !4 dso_local void @foo(ptr, i32) local_unnamed_addr
   
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata)
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**)
+  declare void @llvm.stackprotector(ptr, ptr)
   
   attributes #0 = { "frame-pointer"="all" }
   
@@ -123,7 +123,7 @@ callSites:
       - { arg: 1, reg: '$r1' } }
 constants:
   - id:              0
-    value:           'i32** null'
+    value:           'ptr null'
     alignment:       4
 machineFunctionInfo: {}
 body:             |

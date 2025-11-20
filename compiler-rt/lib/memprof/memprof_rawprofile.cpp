@@ -7,10 +7,7 @@
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_array_ref.h"
 #include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_linux.h"
-#include "sanitizer_common/sanitizer_procmaps.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
-#include "sanitizer_common/sanitizer_stackdepotbase.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_vector.h"
 
@@ -19,10 +16,20 @@ using ::__sanitizer::Vector;
 using ::llvm::memprof::MemInfoBlock;
 using SegmentEntry = ::llvm::memprof::SegmentEntry;
 using Header = ::llvm::memprof::Header;
+using ::llvm::memprof::encodeHistogramCount;
 
 namespace {
 template <class T> char *WriteBytes(const T &Pod, char *Buffer) {
-  *(T *)Buffer = Pod;
+  static_assert(is_trivially_copyable<T>::value, "T must be POD");
+  const uint8_t *Src = reinterpret_cast<const uint8_t *>(&Pod);
+
+  for (size_t I = 0; I < sizeof(T); ++I)
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    // Reverse byte order since reader is little-endian.
+    Buffer[I] = Src[sizeof(T) - 1 - I];
+#else
+    Buffer[I] = Src[I];
+#endif
   return Buffer + sizeof(T);
 }
 
@@ -32,7 +39,6 @@ void RecordStackId(const uptr Key, UNUSED LockedMemInfoBlock *const &MIB,
   auto *StackIds = reinterpret_cast<Vector<u64> *>(Arg);
   StackIds->PushBack(Key);
 }
-} // namespace
 
 u64 SegmentSizeBytes(ArrayRef<LoadedModule> Modules) {
   u64 NumSegmentsToRecord = 0;
@@ -146,27 +152,44 @@ void SerializeStackToBuffer(const Vector<u64> &StackIds,
 // ---------- MIB Entry 0
 // Alloc Count
 // ...
+//       ---- AccessHistogram Entry 0
+//            ...
+//       ---- AccessHistogram Entry AccessHistogramSize - 1
 // ---------- MIB Entry 1
 // Alloc Count
 // ...
+//       ---- AccessHistogram Entry 0
+//            ...
+//       ---- AccessHistogram Entry AccessHistogramSize - 1
 // ----------
 void SerializeMIBInfoToBuffer(MIBMapTy &MIBMap, const Vector<u64> &StackIds,
                               const u64 ExpectedNumBytes, char *&Buffer) {
   char *Ptr = Buffer;
   const u64 NumEntries = StackIds.Size();
   Ptr = WriteBytes(NumEntries, Ptr);
-
   for (u64 i = 0; i < NumEntries; i++) {
     const u64 Key = StackIds[i];
     MIBMapTy::Handle h(&MIBMap, Key, /*remove=*/true, /*create=*/false);
     CHECK(h.exists());
     Ptr = WriteBytes(Key, Ptr);
-    Ptr = WriteBytes((*h)->mib, Ptr);
+    // FIXME: We unnecessarily serialize the AccessHistogram pointer. Adding a
+    // serialization schema will fix this issue. See also FIXME in
+    // deserialization.
+    auto &MIB = (*h)->mib;
+    Ptr = WriteBytes(MIB, Ptr);
+    for (u64 j = 0; j < MIB.AccessHistogramSize; ++j) {
+      u16 HistogramEntry =
+          encodeHistogramCount(((u64 *)(MIB.AccessHistogram))[j]);
+      Ptr = WriteBytes(HistogramEntry, Ptr);
+    }
+    if (MIB.AccessHistogramSize > 0) {
+      InternalFree((void *)MIB.AccessHistogram);
+    }
   }
-
   CHECK(ExpectedNumBytes >= static_cast<u64>(Ptr - Buffer) &&
         "Expected num bytes != actual bytes written");
 }
+} // namespace
 
 // Format
 // ---------- Header
@@ -192,7 +215,15 @@ void SerializeMIBInfoToBuffer(MIBMapTy &MIBMap, const Vector<u64> &StackIds,
 // ---------- MIB Entry
 // Alloc Count
 // ...
-// ----------
+//       ---- AccessHistogram Entry 0
+//            ...
+//       ---- AccessHistogram Entry AccessHistogramSize - 1
+// ---------- MIB Entry 1
+// Alloc Count
+// ...
+//       ---- AccessHistogram Entry 0
+//            ...
+//       ---- AccessHistogram Entry AccessHistogramSize - 1
 // Optional Padding Bytes
 // ---------- Stack Info
 // Num Entries
@@ -218,13 +249,26 @@ u64 SerializeToRawProfile(MIBMapTy &MIBMap, ArrayRef<LoadedModule> Modules,
   const u64 NumMIBInfoBytes = RoundUpTo(
       sizeof(u64) + StackIds.Size() * (sizeof(u64) + sizeof(MemInfoBlock)), 8);
 
+  // Get Number of AccessHistogram entries in total
+  u64 TotalAccessHistogramEntries = 0;
+  MIBMap.ForEach(
+      [](const uptr Key, UNUSED LockedMemInfoBlock *const &MIB, void *Arg) {
+        u64 *TotalAccessHistogramEntries = (u64 *)Arg;
+        *TotalAccessHistogramEntries += MIB->mib.AccessHistogramSize;
+      },
+      reinterpret_cast<void *>(&TotalAccessHistogramEntries));
+  const u64 NumHistogramBytes =
+      RoundUpTo(TotalAccessHistogramEntries * sizeof(uint16_t), 8);
+
   const u64 NumStackBytes = RoundUpTo(StackSizeBytes(StackIds), 8);
 
   // Ensure that the profile is 8b aligned. We allow for some optional padding
   // at the end so that any subsequent profile serialized to the same file does
   // not incur unaligned accesses.
-  const u64 TotalSizeBytes = RoundUpTo(
-      sizeof(Header) + NumSegmentBytes + NumStackBytes + NumMIBInfoBytes, 8);
+  const u64 TotalSizeBytes =
+      RoundUpTo(sizeof(Header) + NumSegmentBytes + NumStackBytes +
+                    NumMIBInfoBytes + NumHistogramBytes,
+                8);
 
   // Allocate the memory for the entire buffer incl. info blocks.
   Buffer = (char *)InternalAlloc(TotalSizeBytes);
@@ -235,18 +279,19 @@ u64 SerializeToRawProfile(MIBMapTy &MIBMap, ArrayRef<LoadedModule> Modules,
                 static_cast<u64>(TotalSizeBytes),
                 sizeof(Header),
                 sizeof(Header) + NumSegmentBytes,
-                sizeof(Header) + NumSegmentBytes + NumMIBInfoBytes};
+                sizeof(Header) + NumSegmentBytes + NumMIBInfoBytes +
+                    NumHistogramBytes};
   Ptr = WriteBytes(header, Ptr);
 
   SerializeSegmentsToBuffer(Modules, NumSegmentBytes, Ptr);
   Ptr += NumSegmentBytes;
 
-  SerializeMIBInfoToBuffer(MIBMap, StackIds, NumMIBInfoBytes, Ptr);
-  Ptr += NumMIBInfoBytes;
+  SerializeMIBInfoToBuffer(MIBMap, StackIds,
+                           NumMIBInfoBytes + NumHistogramBytes, Ptr);
+  Ptr += NumMIBInfoBytes + NumHistogramBytes;
 
   SerializeStackToBuffer(StackIds, NumStackBytes, Ptr);
 
   return TotalSizeBytes;
 }
-
 } // namespace __memprof

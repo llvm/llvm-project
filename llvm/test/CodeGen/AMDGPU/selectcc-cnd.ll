@@ -1,4 +1,4 @@
-;RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
+;RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
 
 ;CHECK-NOT: SETE
 ;CHECK: CNDE {{\*?}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1.0, literal.x,

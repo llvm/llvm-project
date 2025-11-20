@@ -5,6 +5,8 @@
 // RUN:   | FileCheck -check-prefixes=LP64-LP64F-LP64D,LP64F-LP64D,LP64-LP64F,LP64F %s
 // RUN: %clang_cc1 -triple riscv64 -target-feature +f -target-feature +d -target-abi lp64d -emit-llvm %s -o - \
 // RUN:   | FileCheck -check-prefixes=LP64-LP64F-LP64D,LP64F-LP64D,LP64D %s
+// RUN: %clang_cc1 -triple riscv64 -emit-llvm -target-abi lp64e %s -o - \
+// RUN:     | FileCheck -check-prefixes=LP64-LP64F-LP64D,LP64-LP64F,LP64,LP64E %s
 
 #include <stddef.h>
 #include <stdint.h>
@@ -240,7 +242,7 @@ struct large {
 };
 
 // LP64-LP64F-LP64D-LABEL: define dso_local void @f_agg_large
-// LP64-LP64F-LP64D-SAME: (ptr noundef [[X:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (ptr dead_on_return noundef [[X:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 void f_agg_large(struct large x) {
@@ -250,7 +252,7 @@ void f_agg_large(struct large x) {
 // The address where the struct should be written to will be the first
 // argument
 // LP64-LP64F-LP64D-LABEL: define dso_local void @f_agg_large_ret
-// LP64-LP64F-LP64D-SAME: (ptr noalias sret([[STRUCT_LARGE:%.*]]) align 8 [[AGG_RESULT:%.*]], i32 noundef signext [[I:%.*]], i8 noundef signext [[J:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_LARGE:%.*]]) align 8 [[AGG_RESULT:%.*]], i32 noundef signext [[I:%.*]], i8 noundef signext [[J:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 struct large f_agg_large_ret(int32_t i, int8_t j) {
@@ -260,7 +262,7 @@ struct large f_agg_large_ret(int32_t i, int8_t j) {
 typedef unsigned char v32i8 __attribute__((vector_size(32)));
 
 // LP64-LP64F-LP64D-LABEL: define dso_local void @f_vec_large_v32i8
-// LP64-LP64F-LP64D-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (ptr dead_on_return noundef [[TMP0:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 void f_vec_large_v32i8(v32i8 x) {
@@ -268,7 +270,7 @@ void f_vec_large_v32i8(v32i8 x) {
 }
 
 // LP64-LP64F-LP64D-LABEL: define dso_local void @f_vec_large_v32i8_ret
-// LP64-LP64F-LP64D-SAME: (ptr noalias sret(<32 x i8>) align 32 [[AGG_RESULT:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (ptr dead_on_unwind noalias writable sret(<32 x i8>) align 32 [[AGG_RESULT:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 v32i8 f_vec_large_v32i8_ret(void) {
@@ -279,7 +281,7 @@ v32i8 f_vec_large_v32i8_ret(void) {
 // if they were passed in registers.
 
 // LP64-LP64F-LP64D-LABEL: define dso_local signext i32 @f_scalar_stack_1
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]], [2 x i64] [[B_COERCE:%.*]], i128 [[C_COERCE:%.*]], ptr noundef [[D:%.*]], i8 noundef zeroext [[E:%.*]], i8 noundef signext [[F:%.*]], i8 noundef zeroext [[G:%.*]], i8 noundef signext [[H:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]], [2 x i64] [[B_COERCE:%.*]], i128 [[C_COERCE:%.*]], ptr dead_on_return noundef [[D:%.*]], i8 noundef zeroext [[E:%.*]], i8 noundef signext [[F:%.*]], i8 noundef zeroext [[G:%.*]], i8 noundef signext [[H:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 int f_scalar_stack_1(struct tiny a, struct small b, struct small_aligned c,
@@ -288,7 +290,7 @@ int f_scalar_stack_1(struct tiny a, struct small b, struct small_aligned c,
 }
 
 // LP64-LP64F-LP64D-LABEL: define dso_local signext i32 @f_scalar_stack_2
-// LP64-LP64F-LP64D-SAME: (i32 noundef signext [[A:%.*]], i128 noundef [[B:%.*]], i64 noundef [[C:%.*]], fp128 noundef [[D:%.*]], ptr noundef [[TMP0:%.*]], i8 noundef zeroext [[F:%.*]], i8 noundef signext [[G:%.*]], i8 noundef zeroext [[H:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (i32 noundef signext [[A:%.*]], i128 noundef [[B:%.*]], i64 noundef [[C:%.*]], fp128 noundef [[D:%.*]], ptr dead_on_return noundef [[TMP0:%.*]], i8 noundef zeroext [[F:%.*]], i8 noundef signext [[G:%.*]], i8 noundef zeroext [[H:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 int f_scalar_stack_2(int32_t a, __int128_t b, int64_t c, long double d, v32i8 e,
@@ -297,7 +299,7 @@ int f_scalar_stack_2(int32_t a, __int128_t b, int64_t c, long double d, v32i8 e,
 }
 
 // LP64-LP64F-LP64D-LABEL: define dso_local signext i32 @f_scalar_stack_3
-// LP64-LP64F-LP64D-SAME: (i32 noundef signext [[A:%.*]], i128 noundef [[B:%.*]], double noundef [[C:%.*]], fp128 noundef [[D:%.*]], ptr noundef [[TMP0:%.*]], i8 noundef zeroext [[F:%.*]], i8 noundef signext [[G:%.*]], i8 noundef zeroext [[H:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (i32 noundef signext [[A:%.*]], i128 noundef [[B:%.*]], double noundef [[C:%.*]], fp128 noundef [[D:%.*]], ptr dead_on_return noundef [[TMP0:%.*]], i8 noundef zeroext [[F:%.*]], i8 noundef signext [[G:%.*]], i8 noundef zeroext [[H:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 int f_scalar_stack_3(int32_t a, __int128_t b, double c, long double d, v32i8 e,
@@ -310,7 +312,7 @@ int f_scalar_stack_3(int32_t a, __int128_t b, double c, long double d, v32i8 e,
 // to pass a pointer.
 
 // LP64-LP64F-LP64D-LABEL: define dso_local void @f_scalar_stack_4
-// LP64-LP64F-LP64D-SAME: (ptr noalias sret([[STRUCT_LARGE:%.*]]) align 8 [[AGG_RESULT:%.*]], i32 noundef signext [[A:%.*]], i128 noundef [[B:%.*]], fp128 noundef [[C:%.*]], ptr noundef [[TMP0:%.*]], i8 noundef zeroext [[E:%.*]], i8 noundef signext [[F:%.*]], i8 noundef zeroext [[G:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_LARGE:%.*]]) align 8 [[AGG_RESULT:%.*]], i32 noundef signext [[A:%.*]], i128 noundef [[B:%.*]], fp128 noundef [[C:%.*]], ptr dead_on_return noundef [[TMP0:%.*]], i8 noundef zeroext [[E:%.*]], i8 noundef signext [[F:%.*]], i8 noundef zeroext [[G:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 struct large f_scalar_stack_4(uint32_t a, __int128_t b, long double c, v32i8 d,
@@ -319,7 +321,7 @@ struct large f_scalar_stack_4(uint32_t a, __int128_t b, long double c, v32i8 d,
 }
 
 // LP64-LP64F-LP64D-LABEL: define dso_local void @f_scalar_stack_5
-// LP64-LP64F-LP64D-SAME: (ptr noalias sret([[STRUCT_LARGE:%.*]]) align 8 [[AGG_RESULT:%.*]], double noundef [[A:%.*]], i128 noundef [[B:%.*]], fp128 noundef [[C:%.*]], ptr noundef [[TMP0:%.*]], i8 noundef zeroext [[E:%.*]], i8 noundef signext [[F:%.*]], i8 noundef zeroext [[G:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_LARGE:%.*]]) align 8 [[AGG_RESULT:%.*]], double noundef [[A:%.*]], i128 noundef [[B:%.*]], fp128 noundef [[C:%.*]], ptr dead_on_return noundef [[TMP0:%.*]], i8 noundef zeroext [[E:%.*]], i8 noundef signext [[F:%.*]], i8 noundef zeroext [[G:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 struct large f_scalar_stack_5(double a, __int128_t b, long double c, v32i8 d,
@@ -328,7 +330,7 @@ struct large f_scalar_stack_5(double a, __int128_t b, long double c, v32i8 d,
 }
 
 // LP64-LP64F-LP64D-LABEL: define dso_local signext i32 @f_scalar_stack_6
-// LP64-LP64F-LP64D-SAME: (i32 noundef signext [[A:%.*]], i128 noundef [[B:%.*]], float noundef [[C:%.*]], fp128 noundef [[D:%.*]], ptr noundef [[TMP0:%.*]], i8 noundef zeroext [[F:%.*]], i8 noundef signext [[G:%.*]], i8 noundef zeroext [[H:%.*]], half noundef [[I:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (i32 noundef signext [[A:%.*]], i128 noundef [[B:%.*]], float noundef [[C:%.*]], fp128 noundef [[D:%.*]], ptr dead_on_return noundef [[TMP0:%.*]], i8 noundef zeroext [[F:%.*]], i8 noundef signext [[G:%.*]], i8 noundef zeroext [[H:%.*]], half noundef [[I:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 int f_scalar_stack_6(int32_t a, __int128_t b, float c, long double d, v32i8 e,
@@ -1438,13 +1440,13 @@ struct doublearr2_tricky4_s f_ret_doublearr2_tricky4_s(void) {
 struct int_double_int_s { int a; double b; int c; };
 
 // LP64-LP64F-LP64D-LABEL: define dso_local void @f_int_double_int_s_arg
-// LP64-LP64F-LP64D-SAME: (ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (ptr dead_on_return noundef [[A:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 void f_int_double_int_s_arg(struct int_double_int_s a) {}
 
 // LP64-LP64F-LP64D-LABEL: define dso_local void @f_ret_int_double_int_s
-// LP64-LP64F-LP64D-SAME: (ptr noalias sret([[STRUCT_INT_DOUBLE_INT_S:%.*]]) align 8 [[AGG_RESULT:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_INT_DOUBLE_INT_S:%.*]]) align 8 [[AGG_RESULT:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 struct int_double_int_s f_ret_int_double_int_s(void) {
@@ -2046,3 +2048,5 @@ union float16_u f_ret_float16_u(void) {
   return (union float16_u){1.0};
 }
 
+//// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+// LP64E: {{.*}}

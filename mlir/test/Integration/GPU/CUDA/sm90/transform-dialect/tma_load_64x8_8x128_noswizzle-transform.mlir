@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:     -test-transform-dialect-interpreter \
+// RUN:     -transform-interpreter \
 // RUN:     -test-transform-dialect-erase-schedule \
 // RUN:     -convert-nvgpu-to-nvvm -gpu-kernel-outlining \
 // RUN:     -convert-scf-to-cf -convert-nvvm-to-llvm \
@@ -20,13 +20,13 @@
 // Basic PTX check to make sure we are generating the right instructions.
 // CHECK-PTX: mbarrier.init.shared.b64
 // CHECK-PTX: mbarrier.arrive.expect_tx.shared.b64
-// CHECK-PTX: cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes
-// CHECK-PTX: cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes
+// CHECK-PTX: cp.async.bulk.tensor.2d.shared::cluster.global.tile.mbarrier::complete_tx::bytes
+// CHECK-PTX: cp.async.bulk.tensor.2d.shared::cluster.global.tile.mbarrier::complete_tx::bytes
 // CHECK-PTX: mbarrier.arrive.expect_tx.shared.b64
 // CHECK-PTX: mbarrier.try_wait.parity.shared.b64
 
 // RUN: mlir-opt %s \
-// RUN:     -test-transform-dialect-interpreter \
+// RUN:     -transform-interpreter \
 // RUN:     -test-transform-dialect-erase-schedule \
 // RUN:     -convert-nvgpu-to-nvvm -gpu-kernel-outlining \
 // RUN:     -convert-scf-to-cf -convert-nvvm-to-llvm \
@@ -42,7 +42,7 @@
 // RUN:     -expand-strided-metadata --nvvm-attach-target="module=main_kernel features=+ptx80 chip=sm_90 O=3" \
 // RUN:  | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-index-to-llvm{index-bitwidth=32},canonicalize,cse))' \
 // RUN:  | mlir-opt --gpu-to-llvm --gpu-module-to-binary=format=%gpu_compilation_format -canonicalize -cse -reconcile-unrealized-casts \
-// RUN: | mlir-cpu-runner \
+// RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
@@ -83,7 +83,7 @@ func.func @main() {
   %memref_1, %asyncToken_2 = gpu.alloc async [%0] () : memref<8x128xf32>
   %1 = gpu.memcpy async [%0] %memref, %alloc : memref<64x8xf32>, memref<64x8xf32>
   %2 = gpu.memcpy async [%0] %memref_1, %alloc_0 : memref<8x128xf32>, memref<8x128xf32>
-  
+
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1, %grid_z = %c1)
             threads(%tx, %ty, %tz) in (%block_x = %c128, %block_y = %c1, %block_z = %c1) {
     %out = memref.get_global @bufferLhsGlobal : memref<64x8xf32, 3>
@@ -96,19 +96,21 @@ func.func @main() {
     scf.if %10 {
       %11 = memref.load %out[%c45, %c7] : memref<64x8xf32, 3>
       %12 = memref.load %out_1[%c7, %c0] : memref<8x128xf32, 3>
-      gpu.printf "[GPU] TMA LOADED lhs[45][7] %f\0A" %11 : f32
-      gpu.printf "[GPU] TMA LOADED rhs[7][0] %f\0A" %12 : f32
+      gpu.printf "[GPU] TMA LOADED lhs[45][7] %f\0A", %11 : f32
+      gpu.printf "[GPU] TMA LOADED rhs[7][0] %f\0A", %12 : f32
     }
     gpu.terminator
   }
-  
+
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %copy = transform.structured.match ops{["linalg.copy"]} in %arg1 
-    : (!transform.any_op) -> !transform.any_op
-  transform.nvgpu.rewrite_copy_as_tma %copy 
-    : (!transform.any_op) -> ()
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %copy = transform.structured.match ops{["linalg.copy"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.nvgpu.rewrite_copy_as_tma %copy
+      : (!transform.any_op) -> ()
+      transform.yield
+  }
 }

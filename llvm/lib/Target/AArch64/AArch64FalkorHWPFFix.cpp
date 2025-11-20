@@ -46,7 +46,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cassert>
 #include <iterator>
 #include <utility>
 
@@ -82,10 +81,7 @@ class FalkorMarkStridedAccessesLegacy : public FunctionPass {
 public:
   static char ID; // Pass ID, replacement for typeid
 
-  FalkorMarkStridedAccessesLegacy() : FunctionPass(ID) {
-    initializeFalkorMarkStridedAccessesLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  FalkorMarkStridedAccessesLegacy() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
@@ -181,21 +177,18 @@ class FalkorHWPFFix : public MachineFunctionPass {
 public:
   static char ID;
 
-  FalkorHWPFFix() : MachineFunctionPass(ID) {
-    initializeFalkorHWPFFixPass(*PassRegistry::getPassRegistry());
-  }
+  FalkorHWPFFix() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -224,7 +217,7 @@ char FalkorHWPFFix::ID = 0;
 
 INITIALIZE_PASS_BEGIN(FalkorHWPFFix, "aarch64-falkor-hwpf-fix-late",
                       "Falkor HW Prefetch Fix Late Phase", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(FalkorHWPFFix, "aarch64-falkor-hwpf-fix-late",
                     "Falkor HW Prefetch Fix Late Phase", false, false)
 
@@ -819,10 +812,10 @@ bool FalkorHWPFFix::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
 
-  TII = static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
+  TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
 
-  MachineLoopInfo &LI = getAnalysis<MachineLoopInfo>();
+  MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
 
   Modified = false;
 

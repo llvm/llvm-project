@@ -8,17 +8,15 @@
 
 #include "PassDetail.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
@@ -38,7 +36,7 @@ namespace detail {
 /// reproducers when a signal is raised, such as a segfault.
 struct RecoveryReproducerContext {
   RecoveryReproducerContext(std::string passPipelineStr, Operation *op,
-                            PassManager::ReproducerStreamFactory &streamFactory,
+                            ReproducerStreamFactory &streamFactory,
                             bool verifyPasses);
   ~RecoveryReproducerContext();
 
@@ -67,7 +65,7 @@ private:
 
   /// The factory for the reproducer output stream to use when generating the
   /// reproducer.
-  PassManager::ReproducerStreamFactory &streamFactory;
+  ReproducerStreamFactory &streamFactory;
 
   /// Various pass manager and context flags.
   bool disableThreads;
@@ -92,7 +90,7 @@ llvm::ManagedStatic<llvm::SmallSetVector<RecoveryReproducerContext *, 1>>
 
 RecoveryReproducerContext::RecoveryReproducerContext(
     std::string passPipelineStr, Operation *op,
-    PassManager::ReproducerStreamFactory &streamFactory, bool verifyPasses)
+    ReproducerStreamFactory &streamFactory, bool verifyPasses)
     : pipelineElements(std::move(passPipelineStr)),
       preCrashOperation(op->clone()), streamFactory(streamFactory),
       disableThreads(!op->getContext()->isMultithreadingEnabled()),
@@ -106,22 +104,24 @@ RecoveryReproducerContext::~RecoveryReproducerContext() {
   disable();
 }
 
-void RecoveryReproducerContext::generate(std::string &description) {
+static void appendReproducer(std::string &description, Operation *op,
+                             const ReproducerStreamFactory &factory,
+                             const std::string &pipelineElements,
+                             bool disableThreads, bool verifyPasses) {
   llvm::raw_string_ostream descOS(description);
 
   // Try to create a new output stream for this crash reproducer.
   std::string error;
-  std::unique_ptr<PassManager::ReproducerStream> stream = streamFactory(error);
+  std::unique_ptr<ReproducerStream> stream = factory(error);
   if (!stream) {
     descOS << "failed to create output stream: " << error;
     return;
   }
   descOS << "reproducer generated at `" << stream->description() << "`";
 
-  std::string pipeline = (preCrashOperation->getName().getStringRef() + "(" +
-                          pipelineElements + ")")
-                             .str();
-  AsmState state(preCrashOperation);
+  std::string pipeline =
+      (op->getName().getStringRef() + "(" + pipelineElements + ")").str();
+  AsmState state(op);
   state.attachResourcePrinter(
       "mlir_reproducer", [&](Operation *op, AsmResourceBuilder &builder) {
         builder.buildString("pipeline", pipeline);
@@ -130,7 +130,12 @@ void RecoveryReproducerContext::generate(std::string &description) {
       });
 
   // Output the .mlir module.
-  preCrashOperation->print(stream->os(), state);
+  op->print(stream->os(), state);
+}
+
+void RecoveryReproducerContext::generate(std::string &description) {
+  appendReproducer(description, preCrashOperation, streamFactory,
+                   pipelineElements, disableThreads, verifyPasses);
 }
 
 void RecoveryReproducerContext::disable() {
@@ -175,12 +180,11 @@ void RecoveryReproducerContext::registerSignalHandler() {
 //===----------------------------------------------------------------------===//
 
 struct PassCrashReproducerGenerator::Impl {
-  Impl(PassManager::ReproducerStreamFactory &streamFactory,
-       bool localReproducer)
+  Impl(ReproducerStreamFactory &streamFactory, bool localReproducer)
       : streamFactory(streamFactory), localReproducer(localReproducer) {}
 
   /// The factory to use when generating a crash reproducer.
-  PassManager::ReproducerStreamFactory streamFactory;
+  ReproducerStreamFactory streamFactory;
 
   /// Flag indicating if reproducer generation should be localized to the
   /// failing pass.
@@ -198,7 +202,7 @@ struct PassCrashReproducerGenerator::Impl {
 };
 
 PassCrashReproducerGenerator::PassCrashReproducerGenerator(
-    PassManager::ReproducerStreamFactory &streamFactory, bool localReproducer)
+    ReproducerStreamFactory &streamFactory, bool localReproducer)
     : impl(std::make_unique<Impl>(streamFactory, localReproducer)) {}
 PassCrashReproducerGenerator::~PassCrashReproducerGenerator() = default;
 
@@ -314,7 +318,7 @@ void PassCrashReproducerGenerator::prepareReproducerFor(Pass *pass,
     passOS << ")";
 
   impl->activeContexts.push_back(std::make_unique<RecoveryReproducerContext>(
-      passOS.str(), op, impl->streamFactory, impl->pmFlagVerifyPasses));
+      passStr, op, impl->streamFactory, impl->pmFlagVerifyPasses));
 }
 void PassCrashReproducerGenerator::prepareReproducerFor(
     iterator_range<PassManager::pass_iterator> passes, Operation *op) {
@@ -324,7 +328,7 @@ void PassCrashReproducerGenerator::prepareReproducerFor(
       passes, passOS, [&](Pass &pass) { pass.printAsTextualPipeline(passOS); });
 
   impl->activeContexts.push_back(std::make_unique<RecoveryReproducerContext>(
-      passOS.str(), op, impl->streamFactory, impl->pmFlagVerifyPasses));
+      passStr, op, impl->streamFactory, impl->pmFlagVerifyPasses));
 }
 
 void PassCrashReproducerGenerator::removeLastReproducerFor(Pass *pass,
@@ -382,9 +386,9 @@ private:
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// This class represents a default instance of PassManager::ReproducerStream
+/// This class represents a default instance of mlir::ReproducerStream
 /// that is backed by a file.
-struct FileReproducerStream : public PassManager::ReproducerStream {
+struct FileReproducerStream : public mlir::ReproducerStream {
   FileReproducerStream(std::unique_ptr<llvm::ToolOutputFile> outputFile)
       : outputFile(std::move(outputFile)) {}
   ~FileReproducerStream() override { outputFile->keep(); }
@@ -407,33 +411,62 @@ private:
 
 LogicalResult PassManager::runWithCrashRecovery(Operation *op,
                                                 AnalysisManager am) {
+  const bool threadingEnabled = getContext()->isMultithreadingEnabled();
   crashReproGenerator->initialize(getPasses(), op, verifyPasses);
 
   // Safely invoke the passes within a recovery context.
   LogicalResult passManagerResult = failure();
   llvm::CrashRecoveryContext recoveryContext;
-  recoveryContext.RunSafelyOnThread(
-      [&] { passManagerResult = runPasses(op, am); });
+  const auto runPassesFn = [&] { passManagerResult = runPasses(op, am); };
+  if (threadingEnabled)
+    recoveryContext.RunSafelyOnThread(runPassesFn);
+  else
+    recoveryContext.RunSafely(runPassesFn);
   crashReproGenerator->finalize(op, passManagerResult);
+
   return passManagerResult;
+}
+
+static ReproducerStreamFactory
+makeReproducerStreamFactory(StringRef outputFile) {
+  // Capture the filename by value in case outputFile is out of scope when
+  // invoked.
+  std::string filename = outputFile.str();
+  return [filename](std::string &error) -> std::unique_ptr<ReproducerStream> {
+    std::unique_ptr<llvm::ToolOutputFile> outputFile =
+        mlir::openOutputFile(filename, &error);
+    if (!outputFile) {
+      error = "Failed to create reproducer stream: " + error;
+      return nullptr;
+    }
+    return std::make_unique<FileReproducerStream>(std::move(outputFile));
+  };
+}
+
+void printAsTextualPipeline(
+    raw_ostream &os, StringRef anchorName,
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+    bool pretty = false);
+
+std::string mlir::makeReproducer(
+    StringRef anchorName,
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+    Operation *op, StringRef outputFile, bool disableThreads,
+    bool verifyPasses) {
+
+  std::string description;
+  std::string pipelineStr;
+  llvm::raw_string_ostream passOS(pipelineStr);
+  ::printAsTextualPipeline(passOS, anchorName, passes);
+  appendReproducer(description, op, makeReproducerStreamFactory(outputFile),
+                   pipelineStr, disableThreads, verifyPasses);
+  return description;
 }
 
 void PassManager::enableCrashReproducerGeneration(StringRef outputFile,
                                                   bool genLocalReproducer) {
-  // Capture the filename by value in case outputFile is out of scope when
-  // invoked.
-  std::string filename = outputFile.str();
-  enableCrashReproducerGeneration(
-      [filename](std::string &error) -> std::unique_ptr<ReproducerStream> {
-        std::unique_ptr<llvm::ToolOutputFile> outputFile =
-            mlir::openOutputFile(filename, &error);
-        if (!outputFile) {
-          error = "Failed to create reproducer stream: " + error;
-          return nullptr;
-        }
-        return std::make_unique<FileReproducerStream>(std::move(outputFile));
-      },
-      genLocalReproducer);
+  enableCrashReproducerGeneration(makeReproducerStreamFactory(outputFile),
+                                  genLocalReproducer);
 }
 
 void PassManager::enableCrashReproducerGeneration(

@@ -30,7 +30,6 @@
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
-#include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
@@ -43,8 +42,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 
 using namespace llvm;
 
@@ -95,6 +95,13 @@ static cl::opt<bool>
                            cl::desc("enable optimization of conditional traps"),
                            cl::init(false), cl::Hidden);
 
+DEBUG_COUNTER(
+    PeepholeXToICounter, "ppc-xtoi-peephole",
+    "Controls whether PPC reg+reg to reg+imm peephole is performed on a MI");
+
+DEBUG_COUNTER(PeepholePerOpCounter, "ppc-per-op-peephole",
+              "Controls whether PPC per opcode peephole is performed on a MI");
+
 namespace {
 
 struct PPCMIPeephole : public MachineFunctionPass {
@@ -105,15 +112,13 @@ struct PPCMIPeephole : public MachineFunctionPass {
   MachineRegisterInfo *MRI;
   LiveVariables *LV;
 
-  PPCMIPeephole() : MachineFunctionPass(ID) {
-    initializePPCMIPeepholePass(*PassRegistry::getPassRegistry());
-  }
+  PPCMIPeephole() : MachineFunctionPass(ID) {}
 
 private:
   MachineDominatorTree *MDT;
   MachinePostDominatorTree *MPDT;
   MachineBlockFrequencyInfo *MBFI;
-  uint64_t EntryFreq;
+  BlockFrequency EntryFreq;
   SmallSet<Register, 16> RegsToUpdate;
 
   // Initialize class variables.
@@ -147,14 +152,14 @@ private:
 public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveVariables>();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addRequired<MachinePostDominatorTree>();
-    AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addPreserved<LiveVariables>();
-    AU.addPreserved<MachineDominatorTree>();
-    AU.addPreserved<MachinePostDominatorTree>();
-    AU.addPreserved<MachineBlockFrequencyInfo>();
+    AU.addRequired<LiveVariablesWrapperPass>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -180,22 +185,21 @@ public:
 
 #define addRegToUpdate(R) addRegToUpdateWithLine(R, __LINE__)
 void PPCMIPeephole::addRegToUpdateWithLine(Register Reg, int Line) {
-  if (!Register::isVirtualRegister(Reg))
+  if (!Reg.isVirtual())
     return;
   if (RegsToUpdate.insert(Reg).second)
-    LLVM_DEBUG(dbgs() << "Adding register: " << Register::virtReg2Index(Reg)
-                      << " on line " << Line
-                      << " for re-computation of kill flags\n");
+    LLVM_DEBUG(dbgs() << "Adding register: " << printReg(Reg) << " on line "
+                      << Line << " for re-computation of kill flags\n");
 }
 
 // Initialize class variables.
 void PPCMIPeephole::initialize(MachineFunction &MFParm) {
   MF = &MFParm;
   MRI = &MF->getRegInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
-  MPDT = &getAnalysis<MachinePostDominatorTree>();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
-  LV = &getAnalysis<LiveVariables>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+  LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
   EntryFreq = MBFI->getEntryFreq();
   TII = MF->getSubtarget<PPCSubtarget>().getInstrInfo();
   RegsToUpdate.clear();
@@ -300,7 +304,7 @@ void PPCMIPeephole::UpdateTOCSaves(
     PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
 
     MachineBasicBlock *Entry = &MF->front();
-    uint64_t CurrBlockFreq = MBFI->getBlockFreq(MI->getParent()).getFrequency();
+    BlockFrequency CurrBlockFreq = MBFI->getBlockFreq(MI->getParent());
 
     // If the block in which the TOC save resides is in a block that
     // post-dominates Entry, or a block that is hotter than entry (keep in mind
@@ -440,6 +444,9 @@ void PPCMIPeephole::convertUnprimedAccPHIs(
       if (MRI->isSSA())
         addRegToUpdate(RegMBB.first.getReg());
     }
+    // The liveness of old PHI and new PHI have to be updated.
+    addRegToUpdate(PHI->getOperand(0).getReg());
+    addRegToUpdate(AccReg);
     ChangedPHIMap[PHI] = NewPHI.getInstr();
     LLVM_DEBUG(dbgs() << "Converting PHI: ");
     LLVM_DEBUG(PHI->dump());
@@ -469,6 +476,9 @@ bool PPCMIPeephole::simplifyCode() {
           if (MI.isDebugInstr())
             continue;
 
+          if (!DebugCounter::shouldExecute(PeepholeXToICounter))
+            continue;
+
           SmallSet<Register, 4> RRToRIRegsToUpdate;
           if (!TII->convertToImmediateForm(MI, RRToRIRegsToUpdate))
             continue;
@@ -486,7 +496,6 @@ bool PPCMIPeephole::simplifyCode() {
           NumConvertedToImmediateForm++;
           SomethingChanged = true;
           Simplified = true;
-          continue;
         }
       }
     } while (SomethingChanged && FixedPointRegToImm);
@@ -536,6 +545,9 @@ bool PPCMIPeephole::simplifyCode() {
 
       // Ignore debug instructions.
       if (MI.isDebugInstr())
+        continue;
+
+      if (!DebugCounter::shouldExecute(PeepholePerOpCounter))
         continue;
 
       // Per-opcode peepholes.
@@ -895,8 +907,9 @@ bool PPCMIPeephole::simplifyCode() {
               LLVM_DEBUG(MI.dump());
               LLVM_DEBUG(dbgs() << "Through instruction:\n");
               LLVM_DEBUG(DefMI->dump());
-              RoundInstr->eraseFromParent();
               addRegToUpdate(ConvReg1);
+              addRegToUpdate(FRSPDefines);
+              ToErase = RoundInstr;
             }
           };
 
@@ -985,9 +998,9 @@ bool PPCMIPeephole::simplifyCode() {
           // the transformation.
           bool IsWordAligned = false;
           if (SrcMI->getOperand(1).isGlobal()) {
-            const GlobalObject *GO =
-                dyn_cast<GlobalObject>(SrcMI->getOperand(1).getGlobal());
-            if (GO && GO->getAlign() && *GO->getAlign() >= 4 &&
+            const GlobalVariable *GV =
+                dyn_cast<GlobalVariable>(SrcMI->getOperand(1).getGlobal());
+            if (GV && GV->getAlign() && *GV->getAlign() >= 4 &&
                 (SrcMI->getOperand(1).getOffset() % 4 == 0))
               IsWordAligned = true;
           } else if (SrcMI->getOperand(1).isImm()) {
@@ -1035,7 +1048,16 @@ bool PPCMIPeephole::simplifyCode() {
         } else if (MI.getOpcode() == PPC::EXTSW_32_64 &&
                    TII->isSignExtended(NarrowReg, MRI)) {
           // We can eliminate EXTSW if the input is known to be already
-          // sign-extended.
+          // sign-extended. However, we are not sure whether a spill will occur
+          // during register allocation. If there is no promotion, it will use
+          // 'stw' instead of 'std', and 'lwz' instead of 'ld' when spilling,
+          // since the register class is 32-bits. Consequently, the high 32-bit
+          // information will be lost. Therefore, all these instructions in the
+          // chain used to deduce sign extension to eliminate the 'extsw' will
+          // need to be promoted to 64-bit pseudo instructions when the 'extsw'
+          // is eliminated.
+          TII->promoteInstr32To64ForElimEXTSW(NarrowReg, MRI, 0, LV);
+
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
           Register TmpReg =
               MF->getRegInfo().createVirtualRegister(&PPC::G8RCRegClass);
@@ -1197,6 +1219,68 @@ bool PPCMIPeephole::simplifyCode() {
                       combineSEXTAndSHL(MI, ToErase);
         break;
       }
+      case PPC::ANDI_rec:
+      case PPC::ANDI8_rec:
+      case PPC::ANDIS_rec:
+      case PPC::ANDIS8_rec: {
+        Register TrueReg =
+            TRI->lookThruCopyLike(MI.getOperand(1).getReg(), MRI);
+        if (!TrueReg.isVirtual() || !MRI->hasOneNonDBGUse(TrueReg))
+          break;
+
+        MachineInstr *SrcMI = MRI->getVRegDef(TrueReg);
+        if (!SrcMI)
+          break;
+
+        unsigned SrcOpCode = SrcMI->getOpcode();
+        if (SrcOpCode != PPC::RLDICL && SrcOpCode != PPC::RLDICR)
+          break;
+
+        Register SrcReg, DstReg;
+        SrcReg = SrcMI->getOperand(1).getReg();
+        DstReg = MI.getOperand(1).getReg();
+        const TargetRegisterClass *SrcRC = MRI->getRegClassOrNull(SrcReg);
+        const TargetRegisterClass *DstRC = MRI->getRegClassOrNull(DstReg);
+        if (DstRC != SrcRC)
+          break;
+
+        uint64_t AndImm = MI.getOperand(2).getImm();
+        if (MI.getOpcode() == PPC::ANDIS_rec ||
+            MI.getOpcode() == PPC::ANDIS8_rec)
+          AndImm <<= 16;
+        uint64_t LZeroAndImm = llvm::countl_zero<uint64_t>(AndImm);
+        uint64_t RZeroAndImm = llvm::countr_zero<uint64_t>(AndImm);
+        uint64_t ImmSrc = SrcMI->getOperand(3).getImm();
+
+        // We can transfer `RLDICL/RLDICR + ANDI_rec/ANDIS_rec` to `ANDI_rec 0`
+        // if all bits to AND are already zero in the input.
+        bool PatternResultZero =
+            (SrcOpCode == PPC::RLDICL && (RZeroAndImm + ImmSrc > 63)) ||
+            (SrcOpCode == PPC::RLDICR && LZeroAndImm > ImmSrc);
+
+        // We can eliminate RLDICL/RLDICR if it's used to clear bits and all
+        // bits cleared will be ANDed with 0 by ANDI_rec/ANDIS_rec.
+        bool PatternRemoveRotate =
+            SrcMI->getOperand(2).getImm() == 0 &&
+            ((SrcOpCode == PPC::RLDICL && LZeroAndImm >= ImmSrc) ||
+             (SrcOpCode == PPC::RLDICR && (RZeroAndImm + ImmSrc > 63)));
+
+        if (!PatternResultZero && !PatternRemoveRotate)
+          break;
+
+        LLVM_DEBUG(dbgs() << "Combining pair: ");
+        LLVM_DEBUG(SrcMI->dump());
+        LLVM_DEBUG(MI.dump());
+        if (PatternResultZero)
+          MI.getOperand(2).setImm(0);
+        MI.getOperand(1).setReg(SrcMI->getOperand(1).getReg());
+        LLVM_DEBUG(dbgs() << "To: ");
+        LLVM_DEBUG(MI.dump());
+        addRegToUpdate(MI.getOperand(1).getReg());
+        addRegToUpdate(SrcMI->getOperand(0).getReg());
+        Simplified = true;
+        break;
+      }
       case PPC::RLWINM:
       case PPC::RLWINM_rec:
       case PPC::RLWINM8:
@@ -1211,6 +1295,10 @@ bool PPCMIPeephole::simplifyCode() {
           addRegToUpdate(OrigOp1Reg);
           if (MI.getOperand(1).isReg())
             addRegToUpdate(MI.getOperand(1).getReg());
+          if (ToErase && ToErase->getOperand(1).isReg())
+            for (auto UseReg : ToErase->explicit_uses())
+              if (UseReg.isReg())
+                addRegToUpdate(UseReg.getReg());
           ++NumRotatesCollapsed;
         }
         break;
@@ -1951,10 +2039,10 @@ bool PPCMIPeephole::combineSEXTAndSHL(MachineInstr &MI,
 
 INITIALIZE_PASS_BEGIN(PPCMIPeephole, DEBUG_TYPE,
                       "PowerPC MI Peephole Optimization", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(LiveVariables)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_END(PPCMIPeephole, DEBUG_TYPE,
                     "PowerPC MI Peephole Optimization", false, false)
 

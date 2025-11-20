@@ -13,8 +13,8 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Platform.h"
@@ -83,7 +83,11 @@ ModuleSP DynamicLoader::GetTargetExecutable() {
       ModuleSpec module_spec(executable->GetFileSpec(),
                              executable->GetArchitecture());
       auto module_sp = std::make_shared<Module>(module_spec);
-
+      // If we're a coredump and we already have a main executable, we don't
+      // need to reload the module list that target already has
+      if (!m_process->IsLiveDebugSession()) {
+        return executable;
+      }
       // Check if the executable has changed and set it to the target
       // executable if they differ.
       if (module_sp && module_sp->GetUUID().IsValid() &&
@@ -153,11 +157,16 @@ DynamicLoader::GetSectionListFromModule(const ModuleSP module) const {
 ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file) {
   Target &target = m_process->GetTarget();
   ModuleSpec module_spec(file, target.GetArchitecture());
+  if (UUID uuid = m_process->FindModuleUUID(file.GetPath())) {
+    // Process may be able to augment the module_spec with UUID, e.g. ELF core.
+    module_spec.GetUUID() = uuid;
+  }
 
   if (ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec))
     return module_sp;
 
-  if (ModuleSP module_sp = target.GetOrCreateModule(module_spec, false))
+  if (ModuleSP module_sp =
+          target.GetOrCreateModule(module_spec, /*notify=*/false))
     return module_sp;
 
   return nullptr;
@@ -196,49 +205,76 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
   Target &target = process->GetTarget();
   Status error;
 
+  StreamString prog_str;
+  if (!name.empty()) {
+    prog_str << name.str() << " ";
+  }
+  if (uuid.IsValid())
+    prog_str << uuid.GetAsString();
+  if (value_is_offset == 0 && value != LLDB_INVALID_ADDRESS) {
+    prog_str << " at 0x";
+    prog_str.PutHex64(value);
+  }
+
   if (!uuid.IsValid() && !value_is_offset) {
     memory_module_sp = ReadUnnamedMemoryModule(process, value, name);
 
-    if (memory_module_sp)
+    if (memory_module_sp) {
       uuid = memory_module_sp->GetUUID();
+      if (uuid.IsValid()) {
+        prog_str << " ";
+        prog_str << uuid.GetAsString();
+      }
+    }
   }
   ModuleSpec module_spec;
+  module_spec.SetTarget(target.shared_from_this());
   module_spec.GetUUID() = uuid;
   FileSpec name_filespec(name);
   if (FileSystem::Instance().Exists(name_filespec))
     module_spec.GetFileSpec() = name_filespec;
 
   if (uuid.IsValid()) {
+    Progress progress("Locating binary", prog_str.GetString().str());
+
     // Has lldb already seen a module with this UUID?
+    // Or have external lookup enabled in DebugSymbols on macOS.
     if (!module_sp)
-      error = ModuleList::GetSharedModule(module_spec, module_sp, nullptr,
-                                          nullptr, nullptr);
+      error =
+          ModuleList::GetSharedModule(module_spec, module_sp, nullptr, nullptr);
 
     // Can lldb's symbol/executable location schemes
     // find an executable and symbol file.
     if (!module_sp) {
       FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+      StatisticsMap symbol_locator_map;
       module_spec.GetSymbolFileSpec() =
-          Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths,
+                                                    symbol_locator_map);
       ModuleSpec objfile_module_spec =
-          Symbols::LocateExecutableObjectFile(module_spec);
+          PluginManager::LocateExecutableObjectFile(module_spec,
+                                                    symbol_locator_map);
       module_spec.GetFileSpec() = objfile_module_spec.GetFileSpec();
       if (FileSystem::Instance().Exists(module_spec.GetFileSpec()) &&
           FileSystem::Instance().Exists(module_spec.GetSymbolFileSpec())) {
         module_sp = std::make_shared<Module>(module_spec);
+      }
+
+      if (module_sp) {
+        module_sp->GetSymbolLocatorStatistics().merge(symbol_locator_map);
       }
     }
 
     // If we haven't found a binary, or we don't have a SymbolFile, see
     // if there is an external search tool that can find it.
     if (!module_sp || !module_sp->GetSymbolFileFileSpec()) {
-      Symbols::DownloadObjectAndSymbolFile(module_spec, error,
-                                           force_symbol_search);
+      PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
+                                                 force_symbol_search);
       if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
         module_sp = std::make_shared<Module>(module_spec);
       } else if (force_symbol_search && error.AsCString("") &&
                  error.AsCString("")[0] != '\0') {
-        target.GetDebugger().GetErrorStream() << error.AsCString();
+        *target.GetDebugger().GetAsyncErrorStream() << error.AsCString();
       }
     }
 
@@ -303,19 +339,19 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     }
   } else {
     if (force_symbol_search) {
-      Stream &s = target.GetDebugger().GetErrorStream();
-      s.Printf("Unable to find file");
+      lldb::StreamUP s = target.GetDebugger().GetAsyncErrorStream();
+      s->Printf("Unable to find file");
       if (!name.empty())
-        s.Printf(" %s", name.str().c_str());
+        s->Printf(" %s", name.str().c_str());
       if (uuid.IsValid())
-        s.Printf(" with UUID %s", uuid.GetAsString().c_str());
+        s->Printf(" with UUID %s", uuid.GetAsString().c_str());
       if (value != LLDB_INVALID_ADDRESS) {
         if (value_is_offset)
-          s.Printf(" with slide 0x%" PRIx64, value);
+          s->Printf(" with slide 0x%" PRIx64, value);
         else
-          s.Printf(" at address 0x%" PRIx64, value);
+          s->Printf(" at address 0x%" PRIx64, value);
       }
-      s.Printf("\n");
+      s->Printf("\n");
     }
     LLDB_LOGF(log,
               "Unable to find binary %s with UUID %s and load it at "
@@ -352,4 +388,3 @@ void DynamicLoader::LoadOperatingSystemPlugin(bool flush)
     if (m_process)
         m_process->LoadOperatingSystemPlugin(flush);
 }
-

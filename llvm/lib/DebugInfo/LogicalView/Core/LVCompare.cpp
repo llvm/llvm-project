@@ -206,11 +206,10 @@ Error LVCompare::execute(LVReader *ReferenceReader, LVReader *TargetReader) {
               updateExpected(Reference);
             Reference->setIsInCompare();
             LVElement *CurrentTarget = nullptr;
-            if (std::any_of(Targets.begin(), Targets.end(),
-                            [&](auto Target) -> bool {
-                              CurrentTarget = Target;
-                              return Reference->equals(Target);
-                            })) {
+            if (llvm::any_of(Targets, [&](auto Target) -> bool {
+                  CurrentTarget = Target;
+                  return Reference->equals(Target);
+                })) {
               if (Pass == LVComparePass::Missing && Reference->getIsScope()) {
                 // If the elements being compared are scopes and are a match,
                 // they are recorded, to be used when creating the augmented
@@ -231,7 +230,7 @@ Error LVCompare::execute(LVReader *ReferenceReader, LVReader *TargetReader) {
         }
         if (Pass == LVComparePass::Added)
           // Record all the current missing elements for this category.
-          Set.insert(Set.end(), Elements.begin(), Elements.end());
+          llvm::append_range(Set, Elements);
         if (options().getReportList()) {
           if (Elements.size()) {
             OS << "\n(" << Elements.size() << ") "
@@ -313,8 +312,9 @@ Error LVCompare::execute(LVReader *ReferenceReader, LVReader *TargetReader) {
 
       // We need to find an insertion point in the reference scopes tree.
       Parent = Element->getParentScope();
-      if (ScopeLinks.find(Parent) != ScopeLinks.end()) {
-        LVScope *InsertionPoint = ScopeLinks[Parent];
+      auto It = ScopeLinks.find(Parent);
+      if (It != ScopeLinks.end()) {
+        LVScope *InsertionPoint = It->second;
         LLVM_DEBUG({
           dbgs() << "Inserted at: "
                  << hexSquareString(InsertionPoint->getOffset()) << "\n";

@@ -10,12 +10,12 @@
 #define MLIR_SUPPORT_STORAGEUNIQUER_H
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include <utility>
 
 namespace mlir {
 namespace detail {
@@ -97,9 +97,9 @@ public:
     template <typename T>
     ArrayRef<T> copyInto(ArrayRef<T> elements) {
       if (elements.empty())
-        return std::nullopt;
+        return {};
       auto result = allocator.Allocate<T>(elements.size());
-      std::uninitialized_copy(elements.begin(), elements.end(), result);
+      llvm::uninitialized_copy(elements, result);
       return ArrayRef<T>(result, elements.size());
     }
 
@@ -110,7 +110,7 @@ public:
         return StringRef();
 
       char *result = allocator.Allocate<char>(str.size() + 1);
-      std::uninitialized_copy(str.begin(), str.end(), result);
+      llvm::uninitialized_copy(str, result);
       result[str.size()] = 0;
       return StringRef(result, str.size());
     }
@@ -207,7 +207,7 @@ public:
 
     // Generate a constructor function for the derived storage.
     auto ctorFn = [&](StorageAllocator &allocator) {
-      auto *storage = Storage::construct(allocator, derivedKey);
+      auto *storage = Storage::construct(allocator, std::move(derivedKey));
       if (initFn)
         initFn(storage);
       return storage;
@@ -300,9 +300,9 @@ private:
   static typename ImplTy::KeyTy getKey(Args &&...args) {
     if constexpr (llvm::is_detected<detail::has_impltype_getkey_t, ImplTy,
                                     Args...>::value)
-      return ImplTy::getKey(args...);
+      return ImplTy::getKey(std::forward<Args>(args)...);
     else
-      return typename ImplTy::KeyTy(args...);
+      return typename ImplTy::KeyTy(std::forward<Args>(args)...);
   }
 
   //===--------------------------------------------------------------------===//

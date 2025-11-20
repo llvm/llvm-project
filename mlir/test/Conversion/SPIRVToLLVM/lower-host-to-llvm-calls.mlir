@@ -1,4 +1,4 @@
-// RUN: mlir-opt --lower-host-to-llvm='use-opaque-pointers=1' %s -split-input-file | FileCheck %s
+// RUN: mlir-opt --lower-host-to-llvm %s -split-input-file | FileCheck %s
 
 module attributes {gpu.container_module, spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], [SPV_KHR_variable_pointers]>, #spirv.resource_limits<max_compute_workgroup_invocations = 128, max_compute_workgroup_size = [128, 128, 64]>>} {
 

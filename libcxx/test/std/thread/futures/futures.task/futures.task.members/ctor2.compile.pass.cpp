@@ -18,11 +18,13 @@
 
 #include <cassert>
 #include <future>
+#include <memory>
+#include <type_traits>
 
 #include "test_allocator.h"
 
 struct A {};
-using PT = std::packaged_task<A(int, char)>;
+using PT  = std::packaged_task<A(int, char)>;
 using VPT = volatile std::packaged_task<A(int, char)>;
 
 static_assert(!std::is_constructible<PT, std::allocator_arg_t, test_allocator<A>, VPT>::value, "");
@@ -35,7 +37,14 @@ static_assert(!std::is_constructible<PA, std::allocator_arg_t, std::allocator<A>
 static_assert(!std::is_constructible<PA, std::allocator_arg_t, std::allocator<A>, volatile PA&>::value, "");
 static_assert(!std::is_constructible<PA, std::allocator_arg_t, std::allocator<A>, volatile PA&&>::value, "");
 
-static_assert( std::is_constructible<PA, std::allocator_arg_t, std::allocator<A>, const PI&>::value, "");
-static_assert( std::is_constructible<PA, std::allocator_arg_t, std::allocator<A>, const PI&&>::value, "");
-static_assert( std::is_constructible<PA, std::allocator_arg_t, std::allocator<A>, volatile PI&>::value, "");
-static_assert( std::is_constructible<PA, std::allocator_arg_t, std::allocator<A>, volatile PI&&>::value, "");
+#if TEST_STD_VER >= 17 // packaged_task allocator support was removed in C++17 (LWG 2921)
+static_assert(!std::is_constructible_v<PA, std::allocator_arg_t, std::allocator<A>, const PI&>);
+static_assert(!std::is_constructible_v<PA, std::allocator_arg_t, std::allocator<A>, const PI&&>);
+static_assert(!std::is_constructible_v<PA, std::allocator_arg_t, std::allocator<A>, volatile PI&>);
+static_assert(!std::is_constructible_v<PA, std::allocator_arg_t, std::allocator<A>, volatile PI&&>);
+#else
+static_assert(std::is_constructible<PA, std::allocator_arg_t, std::allocator<A>, const PI&>::value, "");
+static_assert(std::is_constructible<PA, std::allocator_arg_t, std::allocator<A>, const PI&&>::value, "");
+static_assert(std::is_constructible<PA, std::allocator_arg_t, std::allocator<A>, volatile PI&>::value, "");
+static_assert(std::is_constructible<PA, std::allocator_arg_t, std::allocator<A>, volatile PI&&>::value, "");
+#endif

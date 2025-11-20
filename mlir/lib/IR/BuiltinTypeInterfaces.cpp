@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Diagnostics.h"
-#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/APFloat.h"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -20,10 +19,20 @@ using namespace mlir::detail;
 #include "mlir/IR/BuiltinTypeInterfaces.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// ShapedType
+// FloatType
 //===----------------------------------------------------------------------===//
 
-constexpr int64_t ShapedType::kDynamic;
+unsigned FloatType::getWidth() {
+  return APFloat::semanticsSizeInBits(getFloatSemantics());
+}
+
+unsigned FloatType::getFPMantissaWidth() {
+  return APFloat::semanticsPrecision(getFloatSemantics());
+}
+
+//===----------------------------------------------------------------------===//
+// ShapedType
+//===----------------------------------------------------------------------===//
 
 int64_t ShapedType::getNumElements(ArrayRef<int64_t> shape) {
   int64_t num = 1;

@@ -91,13 +91,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-
-  FunctionPass *createHexagonEarlyIfConversion();
-  void initializeHexagonEarlyIfConversionPass(PassRegistry& Registry);
-
-} // end namespace llvm
-
 static cl::opt<bool> EnableHexagonBP("enable-hexagon-br-prob", cl::Hidden,
   cl::init(true), cl::desc("Enable branch probability info"));
 static cl::opt<unsigned> SizeLimit("eif-limit", cl::init(6), cl::Hidden,
@@ -139,8 +132,7 @@ namespace {
     const TargetRegisterInfo &TRI;
     friend raw_ostream &operator<< (raw_ostream &OS, const PrintFP &P);
   };
-  raw_ostream &operator<<(raw_ostream &OS,
-                          const PrintFP &P) LLVM_ATTRIBUTE_UNUSED;
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS, const PrintFP &P);
   raw_ostream &operator<<(raw_ostream &OS, const PrintFP &P) {
     OS << "{ SplitB:" << PrintMB(P.FP.SplitB)
        << ", PredR:" << printReg(P.FP.PredR, &P.TRI)
@@ -161,10 +153,10 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBranchProbabilityInfo>();
-      AU.addRequired<MachineDominatorTree>();
-      AU.addPreserved<MachineDominatorTree>();
-      AU.addRequired<MachineLoopInfo>();
+      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
+      AU.addRequired<MachineLoopInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -601,8 +593,6 @@ bool HexagonEarlyIfConversion::visitBlock(MachineBasicBlock *B,
   // Visit all dominated blocks from the same loop first, then process B.
   MachineDomTreeNode *N = MDT->getNode(B);
 
-  using GTN = GraphTraits<MachineDomTreeNode *>;
-
   // We will change CFG/DT during this traversal, so take precautions to
   // avoid problems related to invalidated iterators. In fact, processing
   // a child C of B cannot cause another child to be removed, but it can
@@ -611,7 +601,7 @@ bool HexagonEarlyIfConversion::visitBlock(MachineBasicBlock *B,
   // prior to processing B, so there is no need to process it again.
   // Simply keep a list of children of B, and traverse that list.
   using DTNodeVectType = SmallVector<MachineDomTreeNode *, 4>;
-  DTNodeVectType Cn(GTN::child_begin(N), GTN::child_end(N));
+  DTNodeVectType Cn(llvm::children<MachineDomTreeNode *>(N));
   for (auto &I : Cn) {
     MachineBasicBlock *SB = I->getBlock();
     if (!Deleted.count(SB))
@@ -1056,10 +1046,11 @@ bool HexagonEarlyIfConversion::runOnMachineFunction(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
   MFN = &MF;
   MRI = &MF.getRegInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
-  MLI = &getAnalysis<MachineLoopInfo>();
-  MBPI = EnableHexagonBP ? &getAnalysis<MachineBranchProbabilityInfo>() :
-    nullptr;
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MBPI = EnableHexagonBP
+             ? &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI()
+             : nullptr;
 
   Deleted.clear();
   bool Changed = false;

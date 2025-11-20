@@ -27,8 +27,9 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Testing/Support/Error.h"
 
-using namespace lldb_private;
 using namespace lldb;
+using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 class LineEntryTest : public testing::Test {
   SubsystemRAII<FileSystem, HostInfo, ObjectFileMachO, SymbolFileDWARF,

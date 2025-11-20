@@ -8,7 +8,6 @@
 
 #include "llvm/ObjectYAML/ArchiveYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;

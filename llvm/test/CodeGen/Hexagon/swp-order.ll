@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that when we order instructions in a packet we check for
 ; order dependences so that the source of an order dependence

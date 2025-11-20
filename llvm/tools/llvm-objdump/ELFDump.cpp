@@ -17,7 +17,6 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -64,23 +63,31 @@ static Expected<StringRef> getDynamicStrTab(const ELFFile<ELFT> &Elf) {
   if (!DynamicEntriesOrError)
     return DynamicEntriesOrError.takeError();
 
+  typename ELFT::Xword StringTableSize{0};
+  const uint8_t *MappedAddr = nullptr;
   for (const typename ELFT::Dyn &Dyn : *DynamicEntriesOrError) {
     if (Dyn.d_tag == ELF::DT_STRTAB) {
       auto MappedAddrOrError = Elf.toMappedAddr(Dyn.getPtr());
       if (!MappedAddrOrError)
-        consumeError(MappedAddrOrError.takeError());
-      return StringRef(reinterpret_cast<const char *>(*MappedAddrOrError));
+        return MappedAddrOrError.takeError();
+      MappedAddr = *MappedAddrOrError;
     }
+    if (Dyn.d_tag == ELF::DT_STRSZ)
+      StringTableSize = Dyn.getVal();
   }
+  if (MappedAddr && StringTableSize)
+    return StringRef(reinterpret_cast<const char *>(MappedAddr),
+                     StringTableSize);
 
-  // If the dynamic segment is not present, we fall back on the sections.
+  // If the dynamic segment is not present, or is missing the important tags, we
+  // fall back on the sections.
   auto SectionsOrError = Elf.sections();
   if (!SectionsOrError)
     return SectionsOrError.takeError();
 
   for (const typename ELFT::Shdr &Sec : *SectionsOrError) {
-    if (Sec.sh_type == ELF::SHT_DYNSYM)
-      return Elf.getStringTableForSymtab(Sec);
+    if (Sec.sh_type == ELF::SHT_DYNAMIC)
+      return Elf.getLinkAsStrtab(Sec);
   }
 
   return createError("dynamic string table not found");
@@ -104,7 +111,11 @@ static Error getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
   // In SHT_REL case we would need to read the addend from section data.
   // GNU objdump does not do that and we just follow for simplicity atm.
   bool Undef = false;
-  if ((*SecOrErr)->sh_type == ELF::SHT_RELA) {
+  if ((*SecOrErr)->sh_type == ELF::SHT_CREL) {
+    auto ERela = Obj->getCrel(Rel);
+    Addend = ERela.r_addend;
+    Undef = ERela.getSymbol(false) == 0;
+  } else if ((*SecOrErr)->sh_type == ELF::SHT_RELA) {
     const typename ELFT::Rela *ERela = Obj->getRela(Rel);
     Addend = ERela->r_addend;
     Undef = ERela->getSymbol(false) == 0;
@@ -181,8 +192,10 @@ static uint64_t getSectionLMA(const ELFFile<ELFT> &Obj,
   // Search for a PT_LOAD segment containing the requested section. Use this
   // segment's p_addr to calculate the section's LMA.
   for (const typename ELFT::Phdr &Phdr : *PhdrRangeOrErr)
-    if ((Phdr.p_type == ELF::PT_LOAD) && (Phdr.p_vaddr <= Sec.getAddress()) &&
-        (Phdr.p_vaddr + Phdr.p_memsz > Sec.getAddress()))
+    if ((Phdr.p_type == ELF::PT_LOAD) &&
+        (isSectionInSegment<ELFT>(
+            Phdr, *cast<const ELFObjectFile<ELFT>>(Sec.getObject())
+                       ->getSection(Sec.getRawDataRefImpl()))))
       return Sec.getAddress() - Phdr.p_vaddr + Phdr.p_paddr;
 
   // Return section's VMA if it isn't in a PT_LOAD segment.
@@ -216,12 +229,12 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicSection() {
   std::string TagFmt = "  %-" + std::to_string(MaxLen) + "s ";
 
   outs() << "\nDynamic Section:\n";
+
   for (const typename ELFT::Dyn &Dyn : DynamicEntries) {
     if (Dyn.d_tag == ELF::DT_NULL)
       continue;
 
     std::string Str = Elf.getDynamicTagAsString(Dyn.d_tag);
-    outs() << format(TagFmt.c_str(), Str.c_str());
 
     const char *Fmt =
         ELFT::Is64Bits ? "0x%016" PRIx64 "\n" : "0x%08" PRIx64 "\n";
@@ -230,14 +243,24 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicSection() {
         Dyn.d_tag == ELF::DT_AUXILIARY || Dyn.d_tag == ELF::DT_FILTER) {
       Expected<StringRef> StrTabOrErr = getDynamicStrTab(Elf);
       if (StrTabOrErr) {
-        const char *Data = StrTabOrErr.get().data();
-        outs() << (Data + Dyn.d_un.d_val) << "\n";
+        const char *Data = StrTabOrErr->data();
+        if (Dyn.getVal() >= StrTabOrErr->size()) {
+          reportWarning("invalid string table offset, string table size: 0x" +
+                            Twine::utohexstr(StrTabOrErr->size()),
+                        Obj.getFileName());
+          outs() << format(TagFmt.c_str(), Str.c_str())
+                 << format(Fmt, (uint64_t)Dyn.getVal());
+          continue;
+        }
+        outs() << format(TagFmt.c_str(), Str.c_str()) << Data + Dyn.getVal()
+               << "\n";
         continue;
       }
       reportWarning(toString(StrTabOrErr.takeError()), Obj.getFileName());
       consumeError(StrTabOrErr.takeError());
     }
-    outs() << format(Fmt, (uint64_t)Dyn.d_un.d_val);
+    outs() << format(TagFmt.c_str(), Str.c_str())
+           << format(Fmt, (uint64_t)Dyn.getVal());
   }
 }
 
@@ -263,10 +286,13 @@ template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
       outs() << "   RELRO ";
       break;
     case ELF::PT_GNU_PROPERTY:
-      outs() << "   PROPERTY ";
+      outs() << "PROPERTY ";
       break;
     case ELF::PT_GNU_STACK:
       outs() << "   STACK ";
+      break;
+    case ELF::PT_GNU_SFRAME:
+      outs() << "  SFRAME ";
       break;
     case ELF::PT_INTERP:
       outs() << "  INTERP ";
@@ -288,6 +314,9 @@ template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
       break;
     case ELF::PT_OPENBSD_RANDOMIZE:
       outs() << "OPENBSD_RANDOMIZE ";
+      break;
+    case ELF::PT_OPENBSD_SYSCALLS:
+      outs() << "OPENBSD_SYSCALLS ";
       break;
     case ELF::PT_OPENBSD_WXNEEDED:
       outs() << "OPENBSD_WXNEEDED ";
@@ -369,38 +398,6 @@ void ELFDumper<ELFT>::printSymbolVersionDependency(
   }
 }
 
-template <class ELFT>
-static void printSymbolVersionDefinition(const typename ELFT::Shdr &Shdr,
-                                         ArrayRef<uint8_t> Contents,
-                                         StringRef StrTab) {
-  outs() << "\nVersion definitions:\n";
-
-  const uint8_t *Buf = Contents.data();
-  uint32_t VerdefIndex = 1;
-  // sh_info contains the number of entries in the SHT_GNU_verdef section. To
-  // make the index column have consistent width, we should insert blank spaces
-  // according to sh_info.
-  uint16_t VerdefIndexWidth = std::to_string(Shdr.sh_info).size();
-  while (Buf) {
-    auto *Verdef = reinterpret_cast<const typename ELFT::Verdef *>(Buf);
-    outs() << format_decimal(VerdefIndex++, VerdefIndexWidth) << " "
-           << format("0x%02" PRIx16 " ", (uint16_t)Verdef->vd_flags)
-           << format("0x%08" PRIx32 " ", (uint32_t)Verdef->vd_hash);
-
-    const uint8_t *BufAux = Buf + Verdef->vd_aux;
-    uint16_t VerdauxIndex = 0;
-    while (BufAux) {
-      auto *Verdaux = reinterpret_cast<const typename ELFT::Verdaux *>(BufAux);
-      if (VerdauxIndex)
-        outs() << std::string(VerdefIndexWidth + 17, ' ');
-      outs() << StringRef(StrTab.drop_front(Verdaux->vda_name).data()) << '\n';
-      BufAux = Verdaux->vda_next ? BufAux + Verdaux->vda_next : nullptr;
-      ++VerdauxIndex;
-    }
-    Buf = Verdef->vd_next ? Buf + Verdef->vd_next : nullptr;
-  }
-}
-
 template <class ELFT> void ELFDumper<ELFT>::printSymbolVersion() {
   const ELFFile<ELFT> &Elf = getELFFile();
   StringRef FileName = Obj.getFileName();
@@ -411,16 +408,26 @@ template <class ELFT> void ELFDumper<ELFT>::printSymbolVersion() {
         Shdr.sh_type != ELF::SHT_GNU_verdef)
       continue;
 
-    ArrayRef<uint8_t> Contents =
-        unwrapOrError(Elf.getSectionContents(Shdr), FileName);
-    const typename ELFT::Shdr *StrTabSec =
-        unwrapOrError(Elf.getSection(Shdr.sh_link), FileName);
-    StringRef StrTab = unwrapOrError(Elf.getStringTable(*StrTabSec), FileName);
-
-    if (Shdr.sh_type == ELF::SHT_GNU_verneed)
+    if (Shdr.sh_type == ELF::SHT_GNU_verneed) {
       printSymbolVersionDependency(Shdr);
-    else
-      printSymbolVersionDefinition<ELFT>(Shdr, Contents, StrTab);
+    } else {
+      OS << "\nVersion definitions:\n";
+      Expected<std::vector<VerDef>> V =
+          getELFFile().getVersionDefinitions(Shdr);
+      if (!V) {
+        this->reportUniqueWarning(V.takeError());
+        continue;
+      }
+      for (const VerDef &Def : *V) {
+        OS << Def.Ndx << ' ' << format_hex(Def.Flags, 4) << ' '
+           << format_hex(Def.Hash, 10) << ' ' << Def.Name << '\n';
+        if (!Def.AuxV.empty()) {
+          for (auto [I, Aux] : enumerate(Def.AuxV))
+            OS << (I ? ' ' : '\t') << Aux.Name;
+          OS << '\n';
+        }
+      }
+    }
   }
 }
 

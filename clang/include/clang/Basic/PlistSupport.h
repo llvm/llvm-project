@@ -26,13 +26,10 @@ using FIDMap = llvm::DenseMap<FileID, unsigned>;
 
 inline unsigned AddFID(FIDMap &FIDs, SmallVectorImpl<FileID> &V,
                    FileID FID) {
-  FIDMap::iterator I = FIDs.find(FID);
-  if (I != FIDs.end())
-    return I->second;
-  unsigned NewValue = V.size();
-  FIDs[FID] = NewValue;
-  V.push_back(FID);
-  return NewValue;
+  auto [I, Inserted] = FIDs.try_emplace(FID, V.size());
+  if (Inserted)
+    V.push_back(FID);
+  return I->second;
 }
 
 inline unsigned AddFID(FIDMap &FIDs, SmallVectorImpl<FileID> &V,
@@ -77,8 +74,7 @@ inline raw_ostream &EmitInteger(raw_ostream &o, int64_t value) {
 
 inline raw_ostream &EmitString(raw_ostream &o, StringRef s) {
   o << "<string>";
-  for (StringRef::const_iterator I = s.begin(), E = s.end(); I != E; ++I) {
-    char c = *I;
+  for (char c : s) {
     switch (c) {
     default:
       o << c;

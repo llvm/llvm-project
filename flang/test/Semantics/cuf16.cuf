@@ -1,0 +1,95 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+module m
+  interface operator(-)
+    !ERROR: OPERATOR(-) function 'f1' conflicts with intrinsic operator
+    function f1(x)
+      real, intent(in) :: x
+    end
+    !ERROR: OPERATOR(-) function 'f2' conflicts with intrinsic operator
+    attributes(device) function f2(x)
+      real, intent(in), device :: x(:)
+    end
+    function f3(x) ! ok
+      real, intent(in), device :: x(:,:)
+    end
+    !ERROR: OPERATOR(-) function 'f4' conflicts with intrinsic operator
+    attributes(device) function f4(x)
+      real, intent(in) :: x(:,:,:)
+    end
+    !ERROR: OPERATOR(-) function 'f5' conflicts with intrinsic operator
+    function f5(x)
+      real, intent(in), unified :: x(:,:,:,:)
+    end
+    !ERROR: OPERATOR(-) function 'f6' conflicts with intrinsic operator
+    attributes(device) function f6(x)
+      real, intent(in), managed :: x(:,:,:,:,:)
+    end
+  end interface
+  interface operator(*)
+    !ERROR: OPERATOR(*) function 'f11' conflicts with intrinsic operator
+    function f11(x, y)
+      real, intent(in) :: x, y
+    end
+    !ERROR: OPERATOR(*) function 'f12' conflicts with intrinsic operator
+    attributes(device) function f12(x, y)
+      real, intent(in), device :: x, y(:)
+    end
+    !ERROR: OPERATOR(*) function 'f13' conflicts with intrinsic operator
+    attributes(device) function f13(x, y)
+      real, intent(in) :: x(:), y
+    end
+    function f14a(x, y) ! ok
+      real, intent(in), device :: x(:)
+      real, intent(in) :: y(:)
+    end
+    function f14b(x, y) ! ok
+      real, intent(in) :: x
+      real, intent(in), device :: y(:,:)
+    end
+    !ERROR: OPERATOR(*) function 'f15' conflicts with intrinsic operator
+    function f15(x, y)
+      real, intent(in) :: x(:,:)
+      real, intent(in), unified :: y
+    end
+    !ERROR: OPERATOR(*) function 'f16' conflicts with intrinsic operator
+    attributes(device) function f16(x, y)
+      real, intent(in), device :: x(:,:)
+      real, intent(in), managed :: y(:,:)
+    end
+  end interface
+  interface assignment(=)
+    !ERROR: Defined assignment subroutine 's1' conflicts with intrinsic assignment
+    subroutine s1(x, y)
+      real, intent(in out) :: x
+      real, intent(in) :: y
+    end
+    !ERROR: Defined assignment subroutine 's2' conflicts with intrinsic assignment
+    attributes(device) subroutine s2(x, y)
+      real, intent(in out), device :: x(:)
+      real, intent(in), device :: y
+    end
+    !ERROR: Defined assignment subroutine 's3' conflicts with intrinsic assignment
+    attributes(device) subroutine s3(x, y)
+      real, intent(in out) :: x(:)
+      real, intent(in) :: y(:)
+    end
+    subroutine s4a(x, y) ! ok
+      real, intent(in out), device :: x(:,:)
+      real, intent(in) :: y
+    end
+    subroutine s4b(x, y) ! ok
+      real, intent(in out) :: x(:,:)
+      real, intent(in), device :: y(:,:)
+    end
+    !ERROR: Defined assignment subroutine 's5' conflicts with intrinsic assignment
+    subroutine s5(x, y)
+      real, intent(in out) :: x(:,:,:)
+      real, intent(in), unified :: y
+    end
+    !ERROR: Defined assignment subroutine 's6' conflicts with intrinsic assignment
+    attributes(device) subroutine s6(x, y)
+      real, intent(in out), device :: x(:,:,:)
+      real, intent(in), managed :: y(:,:,:)
+    end
+  end interface
+end

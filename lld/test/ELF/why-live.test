@@ -1,0 +1,161 @@
+# REQUIRES: x86
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 -o shared.o shared.s
+# RUN: ld.lld -shared shared.o -o a.so
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 -o a.o a.s
+
+#--- shared.s
+.globl test_shared
+.section .test_shared,"ax",@progbits
+test_shared:
+  jmp test_shared
+
+#--- a.s
+## Simple live section
+.globl _start
+.section ._start,"ax",@progbits
+_start:
+  jmp test_simple
+  .quad .Lanonymous
+  .quad .Lanonymous_within_symbol
+  jmp test_shared
+  .quad test_local
+.size _start, .-_start
+
+.globl test_simple
+.section .test_simple,"ax",@progbits
+test_simple:
+  jmp test_simple
+  jmp test_from_unsized
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_simple | FileCheck %s --check-prefix=SIMPLE
+
+# SIMPLE:      live symbol: a.o:(test_simple)
+# SIMPLE-NEXT: >>> referenced by: a.o:(_start) (entry point)
+# SIMPLE-EMPTY:
+
+## Live only by being a member of .test_simple
+.globl test_incidental
+test_incidental:
+  jmp test_incidental
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_incidental | FileCheck %s --check-prefix=INCIDENTAL
+
+# INCIDENTAL:      live symbol: a.o:(test_incidental)
+# INCIDENTAL-NEXT: >>> in live section: a.o:(.test_simple)
+# INCIDENTAL-NEXT: >>> contained live symbol: a.o:(test_simple)
+# INCIDENTAL-NEXT: >>> referenced by: a.o:(_start) (entry point)
+# INCIDENTAL-EMPTY:
+
+## Reached from a reference in section .test_simple directly, since test_simple is an unsized symbol.
+.globl test_from_unsized
+.section .test_from_unsized,"ax",@progbits
+test_from_unsized:
+  jmp test_from_unsized
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_from_unsized | FileCheck %s --check-prefix=FROM-UNSIZED
+
+# FROM-UNSIZED:      live symbol: a.o:(test_from_unsized)
+# FROM-UNSIZED-NEXT: >>> referenced by: a.o:(.test_simple)
+# FROM-UNSIZED-NEXT: >>> contained live symbol: a.o:(test_simple)
+# FROM-UNSIZED-NEXT: >>> referenced by: a.o:(_start) (entry point)
+# FROM-UNSIZED-EMPTY:
+
+## Symbols in dead sections are dead and not reported.
+.globl test_dead
+.section .test_dead,"ax",@progbits
+test_dead:
+  jmp test_dead
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_dead | count 0
+
+## Undefined symbols are considered live, since they are not in dead sections.
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_undef -u test_undef | FileCheck %s --check-prefix=UNDEFINED
+
+# UNDEFINED:     live symbol: <internal>:(test_undef) (no section)
+# UNDEFINED-EMPTY:
+
+## Defined symbols without input section parents are live.
+.globl test_absolute
+test_absolute = 1234
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_absolute | FileCheck %s --check-prefix=ABSOLUTE
+
+# ABSOLUTE:     live symbol: a.o:(test_absolute) (no section)
+# ABSOLUTE-EMPTY:
+
+## Retained sections are intrinsically live, and they make contained symbols live.
+.globl test_retained
+.section .test_retained,"axR",@progbits
+test_retained:
+  jmp test_retained
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_retained | FileCheck %s --check-prefix=RETAINED
+
+# RETAINED:      live symbol: a.o:(test_retained)
+# RETAINED-NEXT: >>> in live section: a.o:(.test_retained) (retained)
+# RETAINED-EMPTY:
+
+## Relocs that reference offsets from sections (e.g., from anonymous symbols) are considered to point to the section if no enclosing symbol exists.
+
+.globl test_section_offset
+.section .test_section_offset,"ax",@progbits
+test_section_offset:
+  jmp test_section_offset
+.Lanonymous:
+  jmp test_section_offset
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_section_offset | FileCheck %s --check-prefix=SECTION-OFFSET
+
+# SECTION-OFFSET:      live symbol: a.o:(test_section_offset)
+# SECTION-OFFSET-NEXT: >>> in live section: a.o:(.test_section_offset)
+# SECTION-OFFSET-NEXT: >>> referenced by: a.o:(_start) (entry point)
+# SECTION-OFFSET-EMPTY:
+
+## Relocs that reference offsets from sections (e.g., from anonymous symbols) are considered to point to the enclosing symbol if one exists.
+
+.globl test_section_offset_within_symbol
+.section .test_section_offset_within_symbol,"ax",@progbits
+test_section_offset_within_symbol:
+  jmp test_section_offset_within_symbol
+.Lanonymous_within_symbol:
+  jmp test_section_offset_within_symbol
+.size test_section_offset_within_symbol, .-test_section_offset_within_symbol
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_section_offset_within_symbol | FileCheck %s --check-prefix=SECTION-OFFSET-WITHIN-SYMBOL
+
+# SECTION-OFFSET-WITHIN-SYMBOL:      live symbol: a.o:(test_section_offset_within_symbol)
+# SECTION-OFFSET-WITHIN-SYMBOL-NEXT: >>> referenced by: a.o:(_start) (entry point)
+# SECTION-OFFSET-WITHIN-SYMBOL-EMPTY:
+
+## Local symbols can be queried just like global symbols.
+
+.section .test_local,"ax",@progbits
+test_local:
+  jmp test_local
+.size test_local, .-test_local
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_local | FileCheck %s --check-prefix=LOCAL
+
+# LOCAL:      live symbol: a.o:(test_local)
+# LOCAL-NEXT: >>> referenced by: a.o:(_start) (entry point)
+# LOCAL-EMPTY:
+
+## Shared symbols
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_shared | FileCheck %s --check-prefix=SHARED
+
+# SHARED:      live symbol: a.so:(test_shared)
+# SHARED-NEXT: >>> referenced by: a.o:(_start) (entry point)
+# SHARED-EMPTY:
+
+## Globs match multiple cases. Multiple --why-live flags union.
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live="test_se*" --why-live="test_se*" | FileCheck %s --check-prefix=MULTIPLE
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_section_offset --why-live=test_section_offset_within_symbol | FileCheck %s --check-prefix=MULTIPLE
+
+# MULTIPLE-DAG: live symbol: a.o:(test_section_offset)
+# MULTIPLE-DAG: live symbol: a.o:(test_section_offset_within_symbol)
+# MULTIPLE-NOT: live symbol

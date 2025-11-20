@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck %s
 ;
 ; This test checks that the lds input queue will is empty at the end of
 ; the ALU clause.
@@ -8,7 +8,7 @@
 ; CHECK-NOT: ALU clause
 ; CHECK: MOV * T{{[0-9]\.[XYZW]}}, OQAP
 
-@local_mem = internal unnamed_addr addrspace(3) global [2 x i32] undef, align 4
+@local_mem = internal unnamed_addr addrspace(3) global [2 x i32] poison, align 4
 
 define amdgpu_kernel void @lds_input_queue(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %index) {
 entry:

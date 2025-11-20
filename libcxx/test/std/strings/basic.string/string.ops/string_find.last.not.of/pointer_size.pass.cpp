@@ -137,18 +137,16 @@ TEST_CONSTEXPR_CXX20 void test1() {
   test(S("pniotcfrhqsmgdkjbael"), "htaobedqikfplcgjsmrn", S::npos);
 }
 
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  test0<S>();
+  test1<S>();
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    test0<S>();
-    test1<S>();
-  }
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test0<S>();
-    test1<S>();
-  }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 #endif
 
   return true;

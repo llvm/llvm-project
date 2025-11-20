@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file a TargetTransformInfo::Concept conforming object specific
+/// This file a TargetTransformInfoImplBase conforming object specific
 /// to the WebAssembly target machine.
 ///
 /// It uses the target's detailed information to provide more precise answers to
@@ -21,7 +21,6 @@
 
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include <algorithm>
 
 namespace llvm {
 
@@ -38,7 +37,7 @@ class WebAssemblyTTIImpl final : public BasicTTIImplBase<WebAssemblyTTIImpl> {
 
 public:
   WebAssemblyTTIImpl(const WebAssemblyTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   /// \name Scalar TTI Implementations
@@ -46,36 +45,65 @@ public:
 
   // TODO: Implement more Scalar TTI for WebAssembly
 
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const;
+  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE) const;
+                               OptimizationRemarkEmitter *ORE) const override;
 
   /// @}
 
   /// \name Vector TTI Implementations
   /// @{
 
-  unsigned getNumberOfRegisters(unsigned ClassID) const;
-  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
+  bool enableInterleavedAccessVectorization() const override { return true; }
+
+  unsigned getNumberOfRegisters(unsigned ClassID) const override;
+  TypeSize
+  getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
-      const Instruction *CxtI = nullptr);
+      ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const override;
+
+  InstructionCost
+  getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                   TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
+                   const Instruction *I = nullptr) const override;
+
+  TTI::MemCmpExpansionOptions
+  enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
+
+  InstructionCost getMemoryOpCost(
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const override;
+  InstructionCost getInterleavedMemoryOpCost(
+      unsigned Opcode, Type *Ty, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+      bool UseMaskForCond, bool UseMaskForGaps) const override;
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0, Value *Op1);
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override;
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind) const override;
+  TTI::ReductionShuffle
+  getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const override;
+
+  bool supportsTailCalls() const override;
+
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const override;
 
   /// @}
-
-  bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const;
-
-  bool supportsTailCalls() const;
 };
 
 } // end namespace llvm

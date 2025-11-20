@@ -8,10 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#ifndef _LIBCPP_HAS_NO_THREADS
+#if _LIBCPP_HAS_THREADS
   // [thread.sema.cnt], class template counting_semaphore
   using std::counting_semaphore;
 
   using std::binary_semaphore;
-#endif // _LIBCPP_HAS_NO_THREADS
+#endif // _LIBCPP_HAS_THREADS
 } // namespace std

@@ -71,15 +71,6 @@
         nullptr, nullptr,                                                      \
   }
 
-// Note that the size and offset will be updated by platform-specific classes.
-#define DEFINE_GPR_WITH_BASE(reg, alt, kind1, kind2, kind3, kind4)             \
-  {                                                                            \
-    #reg, alt, sizeof(((GPR *)nullptr)->reg), GPR_OFFSET(reg), eEncodingUint,  \
-        eFormatHex,                                                            \
-        {kind1, kind2, kind3, kind4, x86_64_with_base::lldb_##reg}, nullptr,   \
-        nullptr, nullptr,                                                      \
-  }
-
 #define DEFINE_FPR(name, reg, kind1, kind2, kind3, kind4)                      \
   {                                                                            \
     #name, nullptr, FPR_SIZE(reg), FPR_OFFSET(reg), eEncodingUint, eFormatHex, \
@@ -224,8 +215,8 @@ static RegisterInfo g_register_infos_x86_64_with_base[] = {
     DEFINE_GPR(fs,     nullptr,  dwarf_fs_x86_64,      dwarf_fs_x86_64,      LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
     DEFINE_GPR(gs,     nullptr,  dwarf_gs_x86_64,      dwarf_gs_x86_64,      LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
     DEFINE_GPR(ss,     nullptr,  dwarf_ss_x86_64,      dwarf_ss_x86_64,      LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(fs_base,     nullptr,  dwarf_fs_base_x86_64,      dwarf_fs_base_x86_64,      LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(gs_base,     nullptr,  dwarf_gs_base_x86_64,      dwarf_gs_base_x86_64,      LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
+    DEFINE_GPR(fs_base,nullptr,  dwarf_fs_base_x86_64, dwarf_fs_base_x86_64, LLDB_REGNUM_GENERIC_TP,     LLDB_INVALID_REGNUM),
+    DEFINE_GPR(gs_base,nullptr,  dwarf_gs_base_x86_64, dwarf_gs_base_x86_64, LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
     DEFINE_GPR(ds,     nullptr,  dwarf_ds_x86_64,      dwarf_ds_x86_64,      LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
     DEFINE_GPR(es,     nullptr,  dwarf_es_x86_64,      dwarf_es_x86_64,      LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
 

@@ -24,9 +24,9 @@
 ; RUN: llvm-dis %t5.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR1
 ; RUN: llvm-dis %t5.2.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR2
 
-; PRINT-DAG: Devirtualized call to {{.*}} (_ZN1A1nEi)
+; PRINT-DAG: Devirtualized call to {{.*}} (_ZN1B1nEi)
 
-; REMARK-DAG: single-impl: devirtualized a call to _ZN1A1nEi
+; REMARK-DAG: single-impl: devirtualized a call to _ZN1B1nEi
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
@@ -51,11 +51,11 @@ define i32 @_ZN1B1nEi(ptr %this, i32 %a) #0 comdat($_ZTV1B) {
 ; Ensures that vtable of B is live so that we will attempt devirt.
 define dso_local i32 @use_B(ptr %a) {
 entry:
-  store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1B, i64 0, inrange i32 0, i64 2), ptr %a, align 8
+  store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1B, i64 0, i32 0, i64 2), ptr %a, align 8
   ret i32 0
 }
 
-; CHECK-IR1: define i32 @test(
+; CHECK-IR1: define noundef i32 @test(
 define i32 @test(ptr %obj, i32 %a) {
 entry:
   %vtable = load ptr, ptr %obj
@@ -65,7 +65,7 @@ entry:
   %fptr1 = load ptr, ptr %fptrptr, align 8
 
   ; Check that the call was devirtualized.
-  ; CHECK-IR1: tail call i32 {{.*}}@_ZN1A1nEi
+  ; CHECK-IR1: tail call i32 {{.*}}@_ZN1B1nEi
   %call = tail call i32 %fptr1(ptr nonnull %obj, i32 %a)
 
   ret i32 %call
@@ -73,7 +73,7 @@ entry:
 
 ; CHECK-IR2: define i32 @test2
 ; Check that the call was devirtualized.
-; CHECK-IR2:   tail call i32 @_ZN1A1nEi
+; CHECK-IR2:   tail call i32 @_ZN1B1nEi
 
 declare i1 @llvm.type.test(ptr, metadata)
 declare void @llvm.assume(i1)

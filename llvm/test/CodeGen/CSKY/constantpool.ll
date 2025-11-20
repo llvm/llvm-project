@@ -4,7 +4,7 @@
 
 declare i32 @llvm.cttz.i32(i32, i1)
 
-define void @cttztest(i32 %C, i32* %CP) {
+define void @cttztest(i32 %C, ptr %CP) {
 ; GENERIC-LABEL: cttztest:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
@@ -39,6 +39,6 @@ define void @cttztest(i32 %C, i32* %CP) {
 ; GENERIC-NEXT:  .LCPI0_0:
 ; GENERIC-NEXT:    .ascii "\000\001\034\002\035\016\030\003\036\026\024\017\031\021\004\b\037\033\r\027\025\023\020\007\032\f\022\006\013\005\n\t"
 	%c = call i32 @llvm.cttz.i32( i32 %C, i1 true )
-	store i32 %c, i32* %CP
+	store i32 %c, ptr %CP
 	ret void
 }

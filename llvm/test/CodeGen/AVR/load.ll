@@ -1,61 +1,61 @@
-; RUN: llc -mattr=avr6,sram < %s -march=avr -verify-machineinstrs | FileCheck %s
+; RUN: llc -mattr=avr6,sram < %s -mtriple=avr-none -verify-machineinstrs | FileCheck %s
 
-define i8 @load8(i8* %x) {
+define i8 @load8(ptr %x) {
 ; CHECK-LABEL: load8:
 ; CHECK: ld r24, {{[XYZ]}}
-  %1 = load i8, i8* %x
+  %1 = load i8, ptr %x
   ret i8 %1
 }
 
-define i16 @load16(i16* %x) {
+define i16 @load16(ptr %x) {
 ; CHECK-LABEL: load16:
 ; CHECK: ld r24,  [[PTR:[YZ]]]
 ; CHECK: ldd r25, [[PTR]]+1
-  %1 = load i16, i16* %x
+  %1 = load i16, ptr %x
   ret i16 %1
 }
 
-define i8 @load8disp(i8* %x) {
+define i8 @load8disp(ptr %x) {
 ; CHECK-LABEL: load8disp:
 ; CHECK: ldd r24, {{[YZ]}}+63
-  %1 = getelementptr inbounds i8, i8* %x, i64 63
-  %2 = load i8, i8* %1
+  %1 = getelementptr inbounds i8, ptr %x, i64 63
+  %2 = load i8, ptr %1
   ret i8 %2
 }
 
-define i8 @load8nodisp(i8* %x) {
+define i8 @load8nodisp(ptr %x) {
 ; CHECK-LABEL: load8nodisp:
 ; CHECK: movw r26, r24
 ; CHECK: subi r26, 192
 ; CHECK: sbci r27, 255
 ; CHECK: ld r24, {{[XYZ]}}
-  %1 = getelementptr inbounds i8, i8* %x, i64 64
-  %2 = load i8, i8* %1
+  %1 = getelementptr inbounds i8, ptr %x, i64 64
+  %2 = load i8, ptr %1
   ret i8 %2
 }
 
-define i16 @load16disp(i16* %x) {
+define i16 @load16disp(ptr %x) {
 ; CHECK-LABEL: load16disp:
 ; CHECK: ldd r24, [[PTR:[YZ]]]+62
 ; CHECK: ldd r25, [[PTR]]+63
-  %1 = getelementptr inbounds i16, i16* %x, i64 31
-  %2 = load i16, i16* %1
+  %1 = getelementptr inbounds i16, ptr %x, i64 31
+  %2 = load i16, ptr %1
   ret i16 %2
 }
 
-define i16 @load16nodisp(i16* %x) {
+define i16 @load16nodisp(ptr %x) {
 ; CHECK-LABEL: load16nodisp:
 ; CHECK: subi r24, 192
 ; CHECK: sbci r25, 255
 ; CHECK: movw r30, r24
 ; CHECK: ld r24,  [[PTR:[YZ]]]
 ; CHECK: ldd r25, [[PTR]]+1
-  %1 = getelementptr inbounds i16, i16* %x, i64 32
-  %2 = load i16, i16* %1
+  %1 = getelementptr inbounds i16, ptr %x, i64 32
+  %2 = load i16, ptr %1
   ret i16 %2
 }
 
-define i8 @load8postinc(i8* %x, i8 %y) {
+define i8 @load8postinc(ptr %x, i8 %y) {
 ; CHECK-LABEL: load8postinc:
 ; CHECK: ld {{.*}}, {{[XYZ]}}+
 entry:
@@ -64,10 +64,10 @@ entry:
 while.body:                                       ; preds = %entry, %while.body
   %r.09 = phi i8 [ %add, %while.body ], [ 0, %entry ]
   %y.addr.08 = phi i8 [ %dec, %while.body ], [ %y, %entry ]
-  %x.addr.07 = phi i8* [ %incdec.ptr, %while.body ], [ %x, %entry ]
+  %x.addr.07 = phi ptr [ %incdec.ptr, %while.body ], [ %x, %entry ]
   %dec = add i8 %y.addr.08, -1
-  %incdec.ptr = getelementptr inbounds i8, i8* %x.addr.07, i16 1
-  %0 = load i8, i8* %x.addr.07
+  %incdec.ptr = getelementptr inbounds i8, ptr %x.addr.07, i16 1
+  %0 = load i8, ptr %x.addr.07
   %add = add i8 %0, %r.09
   %tobool = icmp eq i8 %dec, 0
   br i1 %tobool, label %while.end, label %while.body
@@ -76,7 +76,7 @@ while.end:                                        ; preds = %while.body, %entry
   ret i8 %r.0.lcssa
 }
 
-define i16 @load16postinc(i16* %x, i16 %y) {
+define i16 @load16postinc(ptr %x, i16 %y) {
 ; CHECK-LABEL: load16postinc:
 ; CHECK: ld {{.*}}, {{[XYZ]}}+
 ; CHECK: ld {{.*}}, {{[XYZ]}}+
@@ -86,10 +86,10 @@ entry:
 while.body:                                       ; preds = %entry, %while.body
   %r.05 = phi i16 [ %add, %while.body ], [ 0, %entry ]
   %y.addr.04 = phi i16 [ %dec, %while.body ], [ %y, %entry ]
-  %x.addr.03 = phi i16* [ %incdec.ptr, %while.body ], [ %x, %entry ]
+  %x.addr.03 = phi ptr [ %incdec.ptr, %while.body ], [ %x, %entry ]
   %dec = add nsw i16 %y.addr.04, -1
-  %incdec.ptr = getelementptr inbounds i16, i16* %x.addr.03, i16 1
-  %0 = load i16, i16* %x.addr.03
+  %incdec.ptr = getelementptr inbounds i16, ptr %x.addr.03, i16 1
+  %0 = load i16, ptr %x.addr.03
   %add = add nsw i16 %0, %r.05
   %tobool = icmp eq i16 %dec, 0
   br i1 %tobool, label %while.end, label %while.body
@@ -98,19 +98,43 @@ while.end:                                        ; preds = %while.body, %entry
   ret i16 %r.0.lcssa
 }
 
-define i8 @load8predec(i8* %x, i8 %y) {
+define i16 @load16postincloopreduce(ptr %p, i16 %cnt) {
+; CHECK-LABEL: load16postincloopreduce:
+; CHECK: ld {{.*}}, {{[XYZ]}}+
+; CHECK: ld {{.*}}, {{[XYZ]}}+
+entry:
+  %cmp3 = icmp sgt i16 %cnt, 0
+  br i1 %cmp3, label %for.body, label %for.cond.cleanup
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  %sum.0.lcssa = phi i16 [ 0, %entry ], [ %add, %for.body ]
+  ret i16 %sum.0.lcssa
+for.body:                                         ; preds = %entry, %for.body
+  %i.06 = phi i16 [ %inc, %for.body ], [ 0, %entry ]
+  %sum.05 = phi i16 [ %add, %for.body ], [ 0, %entry ]
+  %p.addr.04 = phi ptr [ %incdec.ptr, %for.body ], [ %p, %entry ]
+  %incdec.ptr = getelementptr inbounds nuw i8, ptr %p.addr.04, i16 2
+  %0 = load i16, ptr %p.addr.04, align 1
+  %add = add nsw i16 %0, %sum.05
+  %inc = add nuw nsw i16 %i.06, 1
+  %exitcond.not = icmp eq i16 %inc, %cnt
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define i8 @load8predec(ptr %x, i8 %y) {
 ; CHECK-LABEL: load8predec:
-; CHECK: ld {{.*}}, -{{[XYZ]}}
+; TODO: ld {{.*}}, -{{[XYZ]}}
+; CHECK: sbiw r26, 1
+; CHECK: ld {{.*}}, X
 entry:
   %tobool6 = icmp eq i8 %y, 0
   br i1 %tobool6, label %while.end, label %while.body
 while.body:                                       ; preds = %entry, %while.body
   %r.09 = phi i8 [ %add, %while.body ], [ 0, %entry ]
   %y.addr.08 = phi i8 [ %dec, %while.body ], [ %y, %entry ]
-  %x.addr.07 = phi i8* [ %incdec.ptr, %while.body ], [ %x, %entry ]
+  %x.addr.07 = phi ptr [ %incdec.ptr, %while.body ], [ %x, %entry ]
   %dec = add i8 %y.addr.08, -1
-  %incdec.ptr = getelementptr inbounds i8, i8* %x.addr.07, i16 -1
-  %0 = load i8, i8* %incdec.ptr
+  %incdec.ptr = getelementptr inbounds i8, ptr %x.addr.07, i16 -1
+  %0 = load i8, ptr %incdec.ptr
   %add = add i8 %0, %r.09
   %tobool = icmp eq i8 %dec, 0
   br i1 %tobool, label %while.end, label %while.body
@@ -119,20 +143,24 @@ while.end:                                        ; preds = %while.body, %entry
   ret i8 %r.0.lcssa
 }
 
-define i16 @load16predec(i16* %x, i16 %y) {
+define i16 @load16predec(ptr %x, i16 %y) {
 ; CHECK-LABEL: load16predec:
-; CHECK: ld {{.*}}, -{{[XYZ]}}
-; CHECK: ld {{.*}}, -{{[XYZ]}}
+; TODO: ld {{.*}}, -{{[XYZ]}}
+; TODO: ld {{.*}}, -{{[XYZ]}}
+; CHECK: sbiw r24, 2
+; CHECK: movw r30, r24
+; CHECK: ld {{.*}}, Z
+; CHECK: ldd {{.*}}, Z+1
 entry:
   %tobool2 = icmp eq i16 %y, 0
   br i1 %tobool2, label %while.end, label %while.body
 while.body:                                       ; preds = %entry, %while.body
   %r.05 = phi i16 [ %add, %while.body ], [ 0, %entry ]
   %y.addr.04 = phi i16 [ %dec, %while.body ], [ %y, %entry ]
-  %x.addr.03 = phi i16* [ %incdec.ptr, %while.body ], [ %x, %entry ]
+  %x.addr.03 = phi ptr [ %incdec.ptr, %while.body ], [ %x, %entry ]
   %dec = add nsw i16 %y.addr.04, -1
-  %incdec.ptr = getelementptr inbounds i16, i16* %x.addr.03, i16 -1
-  %0 = load i16, i16* %incdec.ptr
+  %incdec.ptr = getelementptr inbounds i16, ptr %x.addr.03, i16 -1
+  %0 = load i16, ptr %incdec.ptr
   %add = add nsw i16 %0, %r.05
   %tobool = icmp eq i16 %dec, 0
   br i1 %tobool, label %while.end, label %while.body

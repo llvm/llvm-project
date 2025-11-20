@@ -203,6 +203,7 @@ body:             |
     ; CHECK-LABEL: name: remove_and_65535_groupstaticsize
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 65535
     ; CHECK-NEXT: %and:_(s32) = G_AND %lds_size, %mask
@@ -225,6 +226,7 @@ body:             |
     ; CHECK-LABEL: name: remove_and_131071_groupstaticsize
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     ; CHECK-NEXT: $vgpr0 = COPY %lds_size(s32)
     %ptr:_(p1) = COPY $vgpr0_vgpr1
@@ -245,6 +247,7 @@ body:             |
     ; CHECK-LABEL: name: no_remove_and_65536_groupstaticsize
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 65536
     ; CHECK-NEXT: %and:_(s32) = G_AND %lds_size, %mask
@@ -267,6 +270,7 @@ body:             |
     ; CHECK-LABEL: name: no_remove_and_32767_groupstaticsize
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 32767
     ; CHECK-NEXT: %and:_(s32) = G_AND %lds_size, %mask
@@ -291,6 +295,8 @@ body:             |
     ; CHECK-LABEL: name: remove_and_umin_lhs_only
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: %val:_(s32) = COPY $vgpr4
     ; CHECK-NEXT: %k255:_(s32) = G_CONSTANT i32 255
     ; CHECK-NEXT: %umin0:_(s32) = G_UMIN %val, %k255
@@ -316,9 +322,11 @@ body:             |
     ; CHECK-LABEL: name: remove_and_umin_rhs_only
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: %val:_(s32) = COPY $vgpr4
     ; CHECK-NEXT: %k255:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: %umin0:_(s32) = G_UMIN %k255, %val
+    ; CHECK-NEXT: %umin0:_(s32) = G_UMIN %val, %k255
     ; CHECK-NEXT: $vgpr0 = COPY %umin0(s32)
     %ptr0:_(p1) = COPY $vgpr0_vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3

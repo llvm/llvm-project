@@ -10,6 +10,11 @@ int always_inline();
 int __always_inline__();
 #endif
 
+// CHECK: warn_unused_result
+#if __has_attribute(warn_unused_result)
+int warn_unused_result();
+#endif
+
 // CHECK: no_dummy_attribute
 #if !__has_attribute(dummy_attribute)
 int no_dummy_attribute();
@@ -63,3 +68,23 @@ int has_no_volatile_attribute();
 int has_fallthrough;
 #endif
 // CHECK: int has_fallthrough;
+
+#if __has_attribute(F\
+)
+int has_fallthrough_2;
+#endif
+// CHECK: int has_fallthrough_2;
+
+#define F_2 fall\
+through
+
+#if __has_attribute(F_2)
+int has_fallthrough_3;
+#endif
+// CHECK: int has_fallthrough_3;
+
+#if __has_attribute(F_2\
+)
+int has_fallthrough_4;
+#endif
+// CHECK: int has_fallthrough_4;

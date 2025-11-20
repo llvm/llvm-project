@@ -10,10 +10,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXX_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXX_H
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
 namespace formatters {
@@ -26,6 +26,22 @@ GetChildMemberWithName(ValueObject &obj,
 lldb::ValueObjectSP GetFirstValueOfLibCXXCompressedPair(ValueObject &pair);
 lldb::ValueObjectSP GetSecondValueOfLibCXXCompressedPair(ValueObject &pair);
 
+/// Returns the ValueObjectSP of the child of \c obj. If \c obj has no
+/// child named \c child_name, returns the __compressed_pair child instead
+/// with \c compressed_pair_name, if one exists.
+///
+/// Latest libc++ wrap the compressed children in an anonymous structure.
+/// The \c anon_struct_idx indicates the location of this struct.
+///
+/// The returned boolean is \c true if the returned child was has an old-style
+/// libc++ __compressed_pair layout.
+///
+/// If no child was found returns a nullptr.
+std::pair<lldb::ValueObjectSP, bool>
+GetValueOrOldCompressedPair(ValueObject &obj, size_t anon_struct_idx,
+                            llvm::StringRef child_name,
+                            llvm::StringRef compressed_pair_name);
+bool isStdTemplate(ConstString type_name, llvm::StringRef type);
 
 bool LibcxxStringSummaryProviderASCII(
     ValueObject &valobj, Stream &stream,
@@ -59,6 +75,10 @@ bool LibcxxWStringViewSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::wstring_view
 
+bool LibcxxStdSliceArraySummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::slice_array
+
 bool LibcxxSmartPointerSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions
@@ -76,87 +96,9 @@ SyntheticChildrenFrontEnd *
 LibcxxVectorBoolSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                          lldb::ValueObjectSP);
 
-bool LibcxxContainerSummaryProvider(ValueObject &valobj, Stream &stream,
-                                    const TypeSummaryOptions &options);
-
 /// Formatter for libc++ std::span<>.
 bool LibcxxSpanSummaryProvider(ValueObject &valobj, Stream &stream,
                                const TypeSummaryOptions &options);
-
-class LibCxxMapIteratorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
-public:
-  LibCxxMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
-
-  size_t CalculateNumChildren() override;
-
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
-
-  bool Update() override;
-
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
-
-  ~LibCxxMapIteratorSyntheticFrontEnd() override;
-
-private:
-  ValueObject *m_pair_ptr;
-  lldb::ValueObjectSP m_pair_sp;
-};
-
-SyntheticChildrenFrontEnd *
-LibCxxMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
-                                          lldb::ValueObjectSP);
-
-/// Formats libcxx's std::unordered_map iterators
-///
-/// In raw form a std::unordered_map::iterator is represented as follows:
-///
-/// (lldb) var it --raw --ptr-depth 1
-/// (std::__1::__hash_map_iterator<
-///    std::__1::__hash_iterator<
-///      std::__1::__hash_node<
-///        std::__1::__hash_value_type<
-///            std::__1::basic_string<char, std::__1::char_traits<char>,
-///            std::__1::allocator<char> >, std::__1::basic_string<char,
-///            std::__1::char_traits<char>, std::__1::allocator<char> > >,
-///        void *> *> >)
-///  it = {
-///   __i_ = {
-///     __node_ = 0x0000600001700040 {
-///       __next_ = 0x0000600001704000
-///     }
-///   }
-/// }
-class LibCxxUnorderedMapIteratorSyntheticFrontEnd
-    : public SyntheticChildrenFrontEnd {
-public:
-  LibCxxUnorderedMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
-
-  ~LibCxxUnorderedMapIteratorSyntheticFrontEnd() override = default;
-
-  size_t CalculateNumChildren() override;
-
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
-
-  bool Update() override;
-
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
-
-private:
-  ValueObject *m_iter_ptr = nullptr; ///< Held, not owned. Child of iterator
-                                     ///< ValueObject supplied at construction.
-
-  lldb::ValueObjectSP m_pair_sp; ///< ValueObject for the key/value pair
-                                 ///< that the iterator currently points
-                                 ///< to.
-};
-
-SyntheticChildrenFrontEnd *
-LibCxxUnorderedMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
-                                                   lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
 LibCxxVectorIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
@@ -166,35 +108,32 @@ class LibcxxSharedPtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   LibcxxSharedPtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
   ~LibcxxSharedPtrSyntheticFrontEnd() override;
 
 private:
   ValueObject *m_cntrl;
+  ValueObject *m_ptr_obj;
 };
 
 class LibcxxUniquePtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   LibcxxUniquePtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
   ~LibcxxUniquePtrSyntheticFrontEnd() override;
 
@@ -220,6 +159,18 @@ LibcxxStdVectorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                         lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
+LibcxxStdValarraySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                          lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxStdSliceArraySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                            lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxStdProxyArraySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                            lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
 LibcxxStdListSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                       lldb::ValueObjectSP);
 
@@ -232,12 +183,16 @@ LibcxxStdMapSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                      lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
+LibCxxMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                          lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
 LibcxxStdUnorderedMapSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                               lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
-LibcxxInitializerListSyntheticFrontEndCreator(CXXSyntheticChildren *,
-                                              lldb::ValueObjectSP);
+LibCxxUnorderedMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                                   lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *LibcxxQueueFrontEndCreator(CXXSyntheticChildren *,
                                                       lldb::ValueObjectSP);
@@ -260,6 +215,34 @@ LibcxxStdSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
 SyntheticChildrenFrontEnd *
 LibcxxStdRangesRefViewSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                lldb::ValueObjectSP);
+
+bool LibcxxChronoSysSecondsSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::sys_seconds
+
+bool LibcxxChronoSysDaysSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::sys_days
+
+bool LibcxxChronoLocalSecondsSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::local_seconds
+
+bool LibcxxChronoLocalDaysSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::local_days
+
+bool LibcxxChronoMonthSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::month
+
+bool LibcxxChronoWeekdaySummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::weekday
+
+bool LibcxxChronoYearMonthDaySummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::year_month_day
 
 } // namespace formatters
 } // namespace lldb_private

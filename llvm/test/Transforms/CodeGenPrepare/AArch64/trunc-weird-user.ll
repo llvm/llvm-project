@@ -1,4 +1,4 @@
-; RUN: opt -S -codegenprepare -mtriple=arm64-apple-ios7.0 %s | FileCheck %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=arm64-apple-ios7.0 %s | FileCheck %s
 
 %foo = type { i8 }
 

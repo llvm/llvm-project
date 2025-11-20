@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_SIGACTION_H__
-#define __LLVM_LIBC_TYPES_SIGACTION_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_SIGACTION_H
+#define LLVM_LIBC_TYPES_STRUCT_SIGACTION_H
 
-#include <llvm-libc-types/siginfo_t.h>
-#include <llvm-libc-types/sigset_t.h>
+#include "siginfo_t.h"
+#include "sigset_t.h"
 
 struct sigaction {
   union {
@@ -25,6 +25,4 @@ struct sigaction {
 #endif
 };
 
-typedef void (*__sighandler_t)(int);
-
-#endif // __LLVM_LIBC_TYPES_SIGACTION_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_SIGACTION_H

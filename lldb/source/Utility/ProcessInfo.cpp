@@ -121,8 +121,8 @@ void ProcessInstanceInfo::Dump(Stream &s, UserIDResolver &resolver) const {
   if (m_pid != LLDB_INVALID_PROCESS_ID)
     s.Printf("    pid = %" PRIu64 "\n", m_pid);
 
-  if (m_parent_pid != LLDB_INVALID_PROCESS_ID)
-    s.Printf(" parent = %" PRIu64 "\n", m_parent_pid);
+  if (ParentProcessIDIsValid())
+    s.Printf(" parent = %" PRIu64 "\n", GetParentProcessID());
 
   if (m_executable) {
     s.Printf("   name = %s\n", m_executable.GetFilename().GetCString());
@@ -193,7 +193,8 @@ void ProcessInstanceInfo::DumpTableHeader(Stream &s, bool show_args,
 void ProcessInstanceInfo::DumpAsTableRow(Stream &s, UserIDResolver &resolver,
                                          bool show_args, bool verbose) const {
   if (m_pid != LLDB_INVALID_PROCESS_ID) {
-    s.Printf("%-6" PRIu64 " %-6" PRIu64 " ", m_pid, m_parent_pid);
+    s.Printf("%-6" PRIu64 " %-6" PRIu64 " ", m_pid,
+             (ParentProcessIDIsValid()) ? GetParentProcessID() : 0);
 
     StreamString arch_strm;
     if (m_arch.IsValid())

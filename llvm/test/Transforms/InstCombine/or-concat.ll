@@ -65,7 +65,7 @@ define i64 @concat_bswap32_unary_flip(i64 %a0) {
 
 define <2 x i64> @concat_bswap32_unary_flip_vector(<2 x i64> %a0) {
 ; CHECK-LABEL: @concat_bswap32_unary_flip_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> [[A0:%.*]], <2 x i64> [[A0]], <2 x i64> <i64 32, i64 32>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> [[A0:%.*]], <2 x i64> [[A0]], <2 x i64> splat (i64 32))
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
@@ -86,7 +86,7 @@ define i64 @concat_bswap32_binary(i32 %a0, i32 %a1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A1:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[A0:%.*]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP4]])
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
@@ -103,8 +103,8 @@ define <2 x i64> @concat_bswap32_binary_vector(<2 x i32> %a0, <2 x i32> %a1) {
 ; CHECK-LABEL: @concat_bswap32_binary_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[A1:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[A0:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <2 x i64> [[TMP2]], <i64 32, i64 32>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i64> [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <2 x i64> [[TMP2]], splat (i64 32)
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint <2 x i64> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[TMP4]])
 ; CHECK-NEXT:    ret <2 x i64> [[TMP5]]
 ;
@@ -176,7 +176,7 @@ define i64 @concat_bitreverse32_unary_flip(i64 %a0) {
 
 define <2 x i64> @concat_bitreverse32_unary_flip_vector(<2 x i64> %a0) {
 ; CHECK-LABEL: @concat_bitreverse32_unary_flip_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> [[A0:%.*]], <2 x i64> [[A0]], <2 x i64> <i64 32, i64 32>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> [[A0:%.*]], <2 x i64> [[A0]], <2 x i64> splat (i64 32))
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
@@ -197,7 +197,7 @@ define i64 @concat_bitreverse32_binary(i32 %a0, i32 %a1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A1:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[A0:%.*]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[TMP4]])
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
@@ -214,8 +214,8 @@ define <2 x i64> @concat_bitreverse32_binary_vector(<2 x i32> %a0, <2 x i32> %a1
 ; CHECK-LABEL: @concat_bitreverse32_binary_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[A1:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[A0:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <2 x i64> [[TMP2]], <i64 32, i64 32>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i64> [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <2 x i64> [[TMP2]], splat (i64 32)
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint <2 x i64> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> [[TMP4]])
 ; CHECK-NEXT:    ret <2 x i64> [[TMP5]]
 ;

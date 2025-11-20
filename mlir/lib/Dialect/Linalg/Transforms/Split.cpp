@@ -40,7 +40,7 @@ createSplitPart(RewriterBase &b, Location loc, TilingInterface op,
   sizesCopy[dimension] = size;
   offsetsCopy[dimension] = offset;
 
-  // Create the part as it it were a single tile.
+  // Create the part as if it were a single tile.
   FailureOr<TilingResult> tilingResult =
       op.getTiledImplementation(b, offsetsCopy, sizesCopy);
 
@@ -52,8 +52,8 @@ createSplitPart(RewriterBase &b, Location loc, TilingInterface op,
       return nullptr;
     SmallVector<OpFoldResult> resultStrides(resultOffsets.size(),
                                             b.getIndexAttr(1));
-    Value inserted = b.create<tensor::InsertSliceOp>(
-        loc, result, resultOperands[index], resultOffsets, resultSizes,
+    Value inserted = tensor::InsertSliceOp::create(
+        b, loc, result, resultOperands[index], resultOffsets, resultSizes,
         resultStrides);
     results.push_back(inserted);
   }
@@ -83,7 +83,9 @@ linalg::splitOp(RewriterBase &rewriter, TilingInterface op, unsigned dimension,
   bindDims(rewriter.getContext(), d0, d1, d2);
   OpFoldResult minSplitPoint = affine::makeComposedFoldedAffineMin(
       rewriter, op.getLoc(),
-      AffineMap::inferFromExprList(ArrayRef<AffineExpr>{d0, d1 + d2}).front(),
+      AffineMap::inferFromExprList(ArrayRef<AffineExpr>{d0, d1 + d2},
+                                   rewriter.getContext())
+          .front(),
       {splitPoint, offsets[dimension], sizes[dimension]});
 
   // Compute the size of the second part. Return early if the second part would
@@ -113,7 +115,7 @@ linalg::splitOp(RewriterBase &rewriter, TilingInterface op, unsigned dimension,
   // Need to pretend that the original op now takes as operands firstResults,
   // otherwise tiling interface implementation will take the wrong value to
   // produce data tiles.
-  rewriter.updateRootInPlace(op, [&]() {
+  rewriter.modifyOpInPlace(op, [&]() {
     unsigned numTotalOperands = op->getNumOperands();
     unsigned numOutputOperands = firstResults.size();
     op->setOperands(numTotalOperands - numOutputOperands, numOutputOperands,

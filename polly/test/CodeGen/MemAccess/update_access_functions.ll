@@ -1,6 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop \
-; RUN:                -polly-import-jscop-postfix=transformed -polly-codegen \
-; RUN:                 < %s -S | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -polly-import-jscop-postfix=transformed -S < %s | FileCheck %s
 
 ; CHECK-LABEL: polly.stmt.loop1:
 ; CHECK-NEXT:   %3 = mul nsw i64 5, %polly.indvar{{[0-9]*}}

@@ -1,4 +1,4 @@
-; RUN: opt -winehprepare < %s
+; RUN: opt < %s -passes=win-eh-prepare -S | FileCheck %s
 
 target triple = "x86_64-pc-windows-msvc"
 

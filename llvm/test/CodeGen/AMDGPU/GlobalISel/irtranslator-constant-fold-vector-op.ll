@@ -22,3 +22,4 @@ entry:
   store <4 x i64> %add, ptr addrspace(1) null, align 32
   ret void
 }
+

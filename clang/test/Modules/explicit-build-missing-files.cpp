@@ -50,6 +50,7 @@ int y = a2<int>;
 // CHECK: In module 'a':
 // CHECK-NEXT: a.h:1:45: error:
 
+int z = b<int>;
 // MISSING-B: could not find file '{{.*}}b.h'
 // MISSING-B-NOT: please delete the module cache
 #endif

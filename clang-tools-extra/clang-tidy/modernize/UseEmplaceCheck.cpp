@@ -1,4 +1,4 @@
-//===--- UseEmplaceCheck.cpp - clang-tidy----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +13,10 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 namespace {
+AST_MATCHER_P(InitListExpr, initCountLeq, unsigned, N) {
+  return Node.getNumInits() <= N;
+}
+
 // Identical to hasAnyName, except it does not take template specifiers into
 // account. This is used to match the functions names as in
 // DefaultEmplacyFunctions below without caring about the template types of the
@@ -41,11 +45,11 @@ AST_MATCHER_P(NamedDecl, hasAnyNameIgnoringTemplates, std::vector<StringRef>,
   // FullNameTrimmed matches any of the given Names.
   const StringRef FullNameTrimmedRef = FullNameTrimmed;
   for (const StringRef Pattern : Names) {
-    if (Pattern.startswith("::")) {
+    if (Pattern.starts_with("::")) {
       if (FullNameTrimmed == Pattern)
         return true;
-    } else if (FullNameTrimmedRef.endswith(Pattern) &&
-               FullNameTrimmedRef.drop_back(Pattern.size()).endswith("::")) {
+    } else if (FullNameTrimmedRef.ends_with(Pattern) &&
+               FullNameTrimmedRef.drop_back(Pattern.size()).ends_with("::")) {
       return true;
     }
   }
@@ -67,11 +71,9 @@ AST_MATCHER_P(CallExpr, hasLastArgument,
 // function had parameters defined (this is useful to check if there is only one
 // variadic argument).
 AST_MATCHER(CXXMemberCallExpr, hasSameNumArgsAsDeclNumParams) {
-  if (Node.getMethodDecl()->isFunctionTemplateSpecialization())
-    return Node.getNumArgs() == Node.getMethodDecl()
-                                    ->getPrimaryTemplate()
-                                    ->getTemplatedDecl()
-                                    ->getNumParams();
+  if (const FunctionTemplateDecl *Primary =
+          Node.getMethodDecl()->getPrimaryTemplate())
+    return Node.getNumArgs() == Primary->getTemplatedDecl()->getNumParams();
 
   return Node.getNumArgs() == Node.getMethodDecl()->getNumParams();
 }
@@ -79,41 +81,44 @@ AST_MATCHER(CXXMemberCallExpr, hasSameNumArgsAsDeclNumParams) {
 AST_MATCHER(DeclRefExpr, hasExplicitTemplateArgs) {
   return Node.hasExplicitTemplateArgs();
 }
+} // namespace
 
 // Helper Matcher which applies the given QualType Matcher either directly or by
 // resolving a pointer type to its pointee. Used to match v.push_back() as well
 // as p->push_back().
-auto hasTypeOrPointeeType(
+static auto hasTypeOrPointeeType(
     const ast_matchers::internal::Matcher<QualType> &TypeMatcher) {
   return anyOf(hasType(TypeMatcher),
                hasType(pointerType(pointee(TypeMatcher))));
 }
 
 // Matches if the node has canonical type matching any of the given names.
-auto hasWantedType(llvm::ArrayRef<StringRef> TypeNames) {
+static auto hasWantedType(llvm::ArrayRef<StringRef> TypeNames) {
   return hasCanonicalType(hasDeclaration(cxxRecordDecl(hasAnyName(TypeNames))));
 }
 
 // Matches member call expressions of the named method on the listed container
 // types.
-auto cxxMemberCallExprOnContainer(
-    StringRef MethodName, llvm::ArrayRef<StringRef> ContainerNames) {
+static auto
+cxxMemberCallExprOnContainer(StringRef MethodName,
+                             llvm::ArrayRef<StringRef> ContainerNames) {
   return cxxMemberCallExpr(
       hasDeclaration(functionDecl(hasName(MethodName))),
       on(hasTypeOrPointeeType(hasWantedType(ContainerNames))));
 }
 
-const auto DefaultContainersWithPushBack =
+static const auto DefaultContainersWithPushBack =
     "::std::vector; ::std::list; ::std::deque";
-const auto DefaultContainersWithPush =
+static const auto DefaultContainersWithPush =
     "::std::stack; ::std::queue; ::std::priority_queue";
-const auto DefaultContainersWithPushFront =
+static const auto DefaultContainersWithPushFront =
     "::std::forward_list; ::std::list; ::std::deque";
-const auto DefaultSmartPointers =
+static const auto DefaultSmartPointers =
     "::std::shared_ptr; ::std::unique_ptr; ::std::auto_ptr; ::std::weak_ptr";
-const auto DefaultTupleTypes = "::std::pair; ::std::tuple";
-const auto DefaultTupleMakeFunctions = "::std::make_pair; ::std::make_tuple";
-const auto DefaultEmplacyFunctions =
+static const auto DefaultTupleTypes = "::std::pair; ::std::tuple";
+static const auto DefaultTupleMakeFunctions =
+    "::std::make_pair; ::std::make_tuple";
+static const auto DefaultEmplacyFunctions =
     "vector::emplace_back; vector::emplace;"
     "deque::emplace; deque::emplace_front; deque::emplace_back;"
     "forward_list::emplace_after; forward_list::emplace_front;"
@@ -127,7 +132,6 @@ const auto DefaultEmplacyFunctions =
     "unordered_multiset::emplace; unordered_multiset::emplace_hint;"
     "unordered_multimap::emplace; unordered_multimap::emplace_hint;"
     "stack::emplace; queue::emplace; priority_queue::emplace";
-} // namespace
 
 UseEmplaceCheck::UseEmplaceCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), IgnoreImplicitConstructors(Options.get(
@@ -162,10 +166,10 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   auto CallEmplacy = cxxMemberCallExpr(
       hasDeclaration(
           functionDecl(hasAnyNameIgnoringTemplates(EmplacyFunctions))),
-      on(hasTypeOrPointeeType(hasCanonicalType(hasDeclaration(
-          has(typedefNameDecl(hasName("value_type"),
-                              hasType(type(hasUnqualifiedDesugaredType(
-                                  recordType().bind("value_type")))))))))));
+      on(hasTypeOrPointeeType(
+          hasCanonicalType(hasDeclaration(has(typedefNameDecl(
+              hasName("value_type"),
+              hasType(hasCanonicalType(recordType().bind("value_type"))))))))));
 
   // We can't replace push_backs of smart pointer because
   // if emplacement fails (f.e. bad_alloc in vector) we will have leak of
@@ -207,11 +211,12 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   auto HasConstructExpr = has(ignoringImplicit(SoughtConstructExpr));
 
   // allow for T{} to be replaced, even if no CTOR is declared
-  auto HasConstructInitListExpr = has(initListExpr(anyOf(
-      allOf(has(SoughtConstructExpr),
-            has(cxxConstructExpr(argumentCountIs(0)))),
-      has(cxxBindTemporaryExpr(has(SoughtConstructExpr),
-                               has(cxxConstructExpr(argumentCountIs(0))))))));
+  auto HasConstructInitListExpr = has(initListExpr(
+      initCountLeq(1), anyOf(allOf(has(SoughtConstructExpr),
+                                   has(cxxConstructExpr(argumentCountIs(0)))),
+                             has(cxxBindTemporaryExpr(
+                                 has(SoughtConstructExpr),
+                                 has(cxxConstructExpr(argumentCountIs(0))))))));
   auto HasBracedInitListExpr =
       anyOf(has(cxxBindTemporaryExpr(HasConstructInitListExpr)),
             HasConstructInitListExpr);
@@ -238,17 +243,16 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
 
   auto HasConstructExprWithValueTypeType =
       has(ignoringImplicit(cxxConstructExpr(
-          SoughtConstructExpr, hasType(type(hasUnqualifiedDesugaredType(
-                                   type(equalsBoundNode("value_type"))))))));
+          SoughtConstructExpr,
+          hasType(hasCanonicalType(type(equalsBoundNode("value_type")))))));
 
-  auto HasBracedInitListWithValueTypeType =
-      anyOf(allOf(HasConstructInitListExpr,
-                  has(initListExpr(hasType(type(hasUnqualifiedDesugaredType(
-                      type(equalsBoundNode("value_type")))))))),
-            has(cxxBindTemporaryExpr(
-                HasConstructInitListExpr,
-                has(initListExpr(hasType(type(hasUnqualifiedDesugaredType(
-                    type(equalsBoundNode("value_type"))))))))));
+  auto HasBracedInitListWithValueTypeType = anyOf(
+      allOf(HasConstructInitListExpr,
+            has(initListExpr(hasType(
+                hasCanonicalType(type(equalsBoundNode("value_type"))))))),
+      has(cxxBindTemporaryExpr(HasConstructInitListExpr,
+                               has(initListExpr(hasType(hasCanonicalType(
+                                   type(equalsBoundNode("value_type")))))))));
 
   auto HasConstructExprWithValueTypeTypeAsLastArgument = hasLastArgument(
       materializeTemporaryExpr(
@@ -286,19 +290,17 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          cxxMemberCallExpr(
-              CallEmplacy,
-              on(hasType(cxxRecordDecl(has(typedefNameDecl(
-                  hasName("value_type"),
-                  hasType(type(
-                      hasUnqualifiedDesugaredType(recordType(hasDeclaration(
-                          cxxRecordDecl(hasAnyName(SmallVector<StringRef, 2>(
-                              TupleTypes.begin(), TupleTypes.end()))))))))))))),
-              has(MakeTuple), hasSameNumArgsAsDeclNumParams(),
-              unless(isInTemplateInstantiation()))
-              .bind("emplacy_call")),
+      traverse(TK_AsIs,
+               cxxMemberCallExpr(
+                   CallEmplacy,
+                   on(hasType(cxxRecordDecl(has(typedefNameDecl(
+                       hasName("value_type"),
+                       hasType(hasCanonicalType(recordType(hasDeclaration(
+                           cxxRecordDecl(hasAnyName(SmallVector<StringRef, 2>(
+                               TupleTypes.begin(), TupleTypes.end())))))))))))),
+                   has(MakeTuple), hasSameNumArgsAsDeclNumParams(),
+                   unless(isInTemplateInstantiation()))
+                   .bind("emplacy_call")),
       this);
 }
 

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -21,6 +22,7 @@
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 
 using namespace mlir;
 
@@ -32,7 +34,8 @@ public:
   using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
 
   LogicalResult
-  amendOperation(Operation *op, NamedAttribute attribute,
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final;
 
   LogicalResult
@@ -43,7 +46,8 @@ public:
 } // namespace
 
 LogicalResult TestDialectLLVMIRTranslationInterface::amendOperation(
-    Operation *op, NamedAttribute attribute,
+    Operation *op, ArrayRef<llvm::Instruction *> instructions,
+    NamedAttribute attribute,
     LLVM::ModuleTranslation &moduleTranslation) const {
   return llvm::StringSwitch<llvm::function_ref<LogicalResult(Attribute)>>(
              attribute.getName())
@@ -59,17 +63,29 @@ LogicalResult TestDialectLLVMIRTranslationInterface::amendOperation(
               }
 
               bool createSymbol = false;
-              if (auto boolAttr = attr.dyn_cast<BoolAttr>())
+              if (auto boolAttr = dyn_cast<BoolAttr>(attr))
                 createSymbol = boolAttr.getValue();
 
               if (createSymbol) {
                 OpBuilder builder(op->getRegion(0));
-                builder.create<test::SymbolOp>(
-                    op->getLoc(),
+                test::SymbolOp::create(
+                    builder, op->getLoc(),
                     StringAttr::get(op->getContext(), "sym_from_attr"),
                     /*sym_visibility=*/nullptr);
               }
 
+              return success();
+            })
+      .Case("test.add_annotation",
+            [&](Attribute attr) {
+              for (llvm::Instruction *instruction : instructions) {
+                if (auto strAttr = dyn_cast<StringAttr>(attr)) {
+                  instruction->addAnnotationMetadata("annotation_from_test: " +
+                                                     strAttr.getValue().str());
+                } else {
+                  instruction->addAnnotationMetadata("annotation_from_test");
+                }
+              }
               return success();
             })
       .Default([](Attribute) {
@@ -107,6 +123,7 @@ void registerTestToLLVMIR() {
         if (!llvmModule)
           return failure();
 
+        llvmModule->removeDebugIntrinsicDeclarations();
         llvmModule->print(output, nullptr);
         return success();
       },

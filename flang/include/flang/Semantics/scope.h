@@ -11,11 +11,11 @@
 
 #include "attr.h"
 #include "symbol.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/reference.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Support/Fortran.h"
 #include <list>
 #include <map>
 #include <optional>
@@ -61,7 +61,7 @@ class Scope {
 public:
   ENUM_CLASS(Kind, Global, IntrinsicModules, Module, MainProgram, Subprogram,
       BlockData, DerivedType, BlockConstruct, Forall, OtherConstruct,
-      ImpliedDos)
+      OpenACCConstruct, ImpliedDos, OtherClause)
   using ImportKind = common::ImportKind;
 
   // Create the Global scope -- the root of the scope tree
@@ -86,6 +86,13 @@ public:
     CHECK(parent_ != this);
     return *parent_;
   }
+
+  mapType &commonBlocks() { return commonBlocks_; }
+  const mapType &commonBlocks() const { return commonBlocks_; }
+
+  mapType &commonBlockUses() { return commonBlockUses_; }
+  const mapType &commonBlockUses() const { return commonBlockUses_; }
+
   Kind kind() const { return kind_; }
   bool IsGlobal() const { return kind_ == Kind::Global; }
   bool IsIntrinsicModules() const { return kind_ == Kind::IntrinsicModules; }
@@ -138,6 +145,8 @@ public:
   const_iterator cend() const { return symbols_.cend(); }
 
   // Return symbols in declaration order (the iterators above are in name order)
+  // When a generic procedure interface shadows a derived type or specific
+  // procedure, only the generic's symbol appears in the output.
   SymbolVector GetSymbols() const;
   MutableSymbolVector GetSymbols();
 
@@ -184,10 +193,19 @@ public:
   // Cray pointers are saved as map of pointee name -> pointer symbol
   const mapType &crayPointers() const { return crayPointers_; }
   void add_crayPointer(const SourceName &, Symbol &);
-  mapType &commonBlocks() { return commonBlocks_; }
-  const mapType &commonBlocks() const { return commonBlocks_; }
-  Symbol &MakeCommonBlock(const SourceName &);
-  Symbol *FindCommonBlock(const SourceName &) const;
+  Symbol &MakeCommonBlock(SourceName, SourceName location);
+  bool AddCommonBlockUse(
+      const SourceName &name, Attrs attrs, Symbol &cbUltimate);
+
+  // Find COMMON block that is declared in the current scope
+  Symbol *FindCommonBlock(const SourceName &name) const;
+
+  // Find USE-associated COMMON block in the current scope
+  Symbol *FindCommonBlockUse(const SourceName &name) const;
+
+  // Find COMMON block in current and surrounding scopes, follow USE
+  // associations
+  Symbol *FindCommonBlockInVisibleScopes(const SourceName &) const;
 
   /// Make a Symbol but don't add it to the scope.
   template <typename D>
@@ -225,6 +243,7 @@ public:
   ImportKind GetImportKind() const;
   // Names appearing in IMPORT statements in this scope
   std::set<SourceName> importNames() const { return importNames_; }
+  bool CanImport(const SourceName &) const;
 
   // Set the kind of imports from host into this scope.
   // Return an error message for incompatible kinds.
@@ -280,6 +299,7 @@ private:
   std::list<Scope> children_;
   mapType symbols_;
   mapType commonBlocks_;
+  mapType commonBlockUses_; // USE-assocated COMMON blocks
   std::list<EquivalenceSet> equivalenceSets_;
   mapType crayPointers_;
   std::map<SourceName, common::Reference<Scope>> submodules_;
@@ -298,7 +318,6 @@ private:
   // or Symbol& points to one in there.
   static Symbols<1024> allSymbols;
 
-  bool CanImport(const SourceName &) const;
   const DeclTypeSpec &MakeLengthlessType(DeclTypeSpec &&);
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Scope &);

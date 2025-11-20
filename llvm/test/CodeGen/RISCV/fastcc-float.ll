@@ -50,19 +50,19 @@ define float @caller(<32 x float> %A) nounwind {
 ; CHECK-NEXT:    fmv.w.x fa5, a5
 ; CHECK-NEXT:    fmv.w.x fa6, a6
 ; CHECK-NEXT:    fmv.w.x fa7, a7
-; CHECK-NEXT:    fsw fs11, 44(sp)
-; CHECK-NEXT:    fsw fs10, 40(sp)
-; CHECK-NEXT:    fsw fs9, 36(sp)
 ; CHECK-NEXT:    fsw fs8, 32(sp)
-; CHECK-NEXT:    fsw fs7, 28(sp)
-; CHECK-NEXT:    fsw fs6, 24(sp)
-; CHECK-NEXT:    fsw fs5, 20(sp)
+; CHECK-NEXT:    fsw fs9, 36(sp)
+; CHECK-NEXT:    fsw fs10, 40(sp)
+; CHECK-NEXT:    fsw fs11, 44(sp)
 ; CHECK-NEXT:    fsw fs4, 16(sp)
-; CHECK-NEXT:    fsw fs3, 12(sp)
-; CHECK-NEXT:    fsw fs2, 8(sp)
-; CHECK-NEXT:    fsw fs1, 4(sp)
+; CHECK-NEXT:    fsw fs5, 20(sp)
+; CHECK-NEXT:    fsw fs6, 24(sp)
+; CHECK-NEXT:    fsw fs7, 28(sp)
 ; CHECK-NEXT:    fsw fs0, 0(sp)
-; CHECK-NEXT:    call callee@plt
+; CHECK-NEXT:    fsw fs1, 4(sp)
+; CHECK-NEXT:    fsw fs2, 8(sp)
+; CHECK-NEXT:    fsw fs3, 12(sp)
+; CHECK-NEXT:    call callee
 ; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret

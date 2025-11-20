@@ -1,7 +1,7 @@
-; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=TOVGPR -check-prefix=GCN %s
-; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -march=amdgcn -mcpu=tonga  -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=TOVGPR -check-prefix=GCN %s
-; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=TOVMEM -check-prefix=GCN %s
-; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=TOVMEM -check-prefix=GCN %s
+; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=TOVGPR -check-prefix=GCN %s
+; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -mtriple=amdgcn -mcpu=tonga  < %s | FileCheck -enable-var-scope -check-prefix=TOVGPR -check-prefix=GCN %s
+; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -enable-var-scope -check-prefix=TOVMEM -check-prefix=GCN %s
+; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=TOVMEM -check-prefix=GCN %s
 
 ; XXX - Why does it like to use vcc?
 
@@ -17,7 +17,7 @@
 ; TOVMEM: s_mov_b64 [[COPY_EXEC:s\[[0-9]+:[0-9]+\]]], exec
 ; TOVMEM: s_mov_b64 exec, 1
 ; TOVMEM: v_writelane_b32 [[SPILL_VREG:v[0-9]+]], [[M0_COPY]], 0
-; TOVMEM: buffer_store_dword [[SPILL_VREG]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:4 ; 4-byte Folded Spill
+; TOVMEM: buffer_store_dword [[SPILL_VREG]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 ; 4-byte Folded Spill
 ; TOVMEM: s_mov_b64 exec, [[COPY_EXEC]]
 
 ; GCN: s_cbranch_scc1 [[ENDIF:.LBB[0-9]+_[0-9]+]]
@@ -26,7 +26,7 @@
 ; TOVGPR: v_readlane_b32 [[M0_RESTORE:s[0-9]+]], [[SPILL_VREG]], [[M0_LANE]]
 ; TOVGPR: s_mov_b32 m0, [[M0_RESTORE]]
 
-; TOVMEM: buffer_load_dword [[RELOAD_VREG:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:4 ; 4-byte Folded Reload
+; TOVMEM: buffer_load_dword [[RELOAD_VREG:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 ; 4-byte Folded Reload
 ; TOVMEM: s_waitcnt vmcnt(0)
 ; TOVMEM: v_readlane_b32 [[M0_RESTORE:s[0-9]+]], [[RELOAD_VREG]], 0
 ; TOVMEM: s_mov_b32 m0, [[M0_RESTORE]]
@@ -48,7 +48,7 @@ endif:
   ret void
 }
 
-@lds = internal addrspace(3) global [64 x float] undef
+@lds = internal addrspace(3) global [64 x float] poison
 
 ; m0 is killed, so it isn't necessary during the entry block spill to preserve it
 ; GCN-LABEL: {{^}}spill_kill_m0_lds:
@@ -114,11 +114,11 @@ main_body:
    br i1 %cmp, label %if, label %else
 
 if:                                               ; preds = %main_body
-  store volatile i32 8, ptr addrspace(1) undef
+  store volatile i32 8, ptr addrspace(1) poison
   br label %endif
 
 else:                                             ; preds = %main_body
-  store volatile i32 11, ptr addrspace(1) undef
+  store volatile i32 11, ptr addrspace(1) poison
   br label %endif
 
 endif:
@@ -169,12 +169,12 @@ endif:
 ; TOSMEM: s_endpgm
 define amdgpu_kernel void @restore_m0_lds(i32 %arg) {
   %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={m0}"() #0
-  %sval = load volatile i64, ptr addrspace(4) undef
+  %sval = load volatile i64, ptr addrspace(4) poison
   %cmp = icmp eq i32 %arg, 0
   br i1 %cmp, label %ret, label %bb
 
 bb:
-  store volatile i64 %sval, ptr addrspace(3) undef
+  store volatile i64 %sval, ptr addrspace(3) poison
   call void asm sideeffect "; use $0", "{m0}"(i32 %m0) #0
   br label %ret
 
@@ -190,3 +190,4 @@ declare float @llvm.amdgcn.wqm.f32(float) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
+

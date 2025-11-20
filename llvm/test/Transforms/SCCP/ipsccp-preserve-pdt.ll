@@ -4,32 +4,33 @@
 
 ; This test case is trying to validate that the postdomtree is preserved
 ; correctly by the ipsccp pass. A tricky bug was introduced in commit
-; 1b1232047e83b69561 when PDT would be feched using getCachedAnalysis in order
+; 1b1232047e83b69561 when PDT would be fetched using getCachedAnalysis in order
 ; to setup a DomTreeUpdater (to update the PDT during transformation in order
 ; to preserve the analysis). But given that commit the PDT could end up being
 ; required and calculated via BlockFrequency analysis. So the problem was that
 ; when setting up the DomTreeUpdater we used a nullptr in case PDT wasn't
-; cached at the begininng of IPSCCP, to indicate that no updates where needed
+; cached at the beginning of IPSCCP, to indicate that no updates were needed
 ; for PDT. But then the PDT was calculated, given the input IR, and preserved
 ; using the non-updated state (as the DTU wasn't configured for updating the
 ; PDT).
 
 ; CHECK-NOT: <badref>
 ; CHECK: Inorder PostDominator Tree: DFSNumbers invalid: 0 slow queries.
-; CHECK-NEXT:   [1]  <<exit node>> {4294967295,4294967295} [0]
-; CHECK-NEXT:     [2] %for.body {4294967295,4294967295} [1]
-; CHECK-NEXT:     [2] %if.end4 {4294967295,4294967295} [1]
-; CHECK-NEXT:       [3] %entry {4294967295,4294967295} [2]
-; CHECK-NEXT:     [2] %for.cond34 {4294967295,4294967295} [1]
-; CHECK-NEXT:       [3] %for.cond16 {4294967295,4294967295} [2]
-; CHECK-NEXT: Roots: %for.cond34 %for.body
+; CHECK-NEXT:  [1]  <<exit node>> {4294967295,4294967295} [0]
+; CHECK-NEXT:    [2] %for.body {4294967295,4294967295} [1]
+; CHECK-NEXT:    [2] %if.end4 {4294967295,4294967295} [1]
+; CHECK-NEXT:      [3] %entry {4294967295,4294967295} [2]
+; CHECK-NEXT:    [2] %for.body37 {4294967295,4294967295} [1]
+; CHECK-NEXT:      [3] %for.cond34 {4294967295,4294967295} [2]
+; CHECK-NEXT:        [4] %for.cond16 {4294967295,4294967295} [3]
+; CHECK-NEXT: Roots: %for.body %for.body37
 ; CHECK-NEXT: PostDominatorTree for function: bar
 ; CHECK-NOT: <badref>
 
 declare hidden i1 @compare(ptr) align 2
 declare hidden { i8, ptr } @getType(ptr) align 2
 
-define internal void @foo(ptr %TLI, ptr %DL, ptr %Ty, ptr %ValueVTs, ptr %Offsets, i64 %StartingOffset) {
+define internal void @foo(ptr %TLI, ptr %DL, ptr %Ty, ptr %ValueVTs, ptr %Offsets, i64 %StartingOffset, i1 %arg) {
 entry:
   %VT = alloca i64, align 8
   br i1 false, label %if.then, label %if.end4
@@ -51,7 +52,7 @@ for.cond16:                                       ; preds = %for.cond34, %if.end
   br label %for.cond34
 
 for.cond34:                                       ; preds = %for.body37, %for.cond16
-  br i1 undef, label %for.body37, label %for.cond16
+  br i1 %arg, label %for.body37, label %for.cond16
 
 for.body37:                                       ; preds = %for.cond34
   %tobool39 = icmp ne ptr %Offsets, null

@@ -7,7 +7,11 @@
  *===-----------------------------------------------------------------------===
  */
 
-#if !defined(offsetof) || __has_feature(modules)
-/* Always define offsetof when modules are available. */
+/*
+ * When -fbuiltin-headers-in-system-modules is set this is a non-modular header
+ * and needs to behave as if it was textual.
+ */
+#if !defined(offsetof) ||                                                      \
+    (__has_feature(modules) && !__building_module(_Builtin_stddef))
 #define offsetof(t, d) __builtin_offsetof(t, d)
 #endif

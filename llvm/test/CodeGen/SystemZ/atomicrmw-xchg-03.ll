@@ -96,8 +96,8 @@ define i32 @f8(i32 %dummy, ptr %src, i32 %b) {
 ; Check that indexed addresses are not allowed.
 define i32 @f9(i32 %dummy, i64 %base, i64 %index, i32 %b) {
 ; CHECK-LABEL: f9:
+; CHECK: l %r2, 0(%r4,%r3)
 ; CHECK: agr %r3, %r4
-; CHECK: l %r2, 0(%r3)
 ; CHECK: cs %r2, {{%r[0-9]+}}, 0(%r3)
 ; CHECK: br %r14
   %add = add i64 %base, %index

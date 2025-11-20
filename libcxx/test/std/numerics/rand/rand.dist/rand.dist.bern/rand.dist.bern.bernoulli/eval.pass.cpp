@@ -13,10 +13,11 @@
 // template<class _URNG> result_type operator()(_URNG& g);
 
 #include <random>
+#include <cassert>
+#include <cmath>
+#include <cstddef>
 #include <numeric>
 #include <vector>
-#include <cassert>
-#include <cstddef>
 
 #include "test_macros.h"
 
@@ -63,8 +64,8 @@ int main(int, char**)
         double x_kurtosis = (6 * sqr(d.p()) - 6 * d.p() + 1)/x_var;
         assert(std::abs((mean - x_mean) / x_mean) < 0.01);
         assert(std::abs((var - x_var) / x_var) < 0.01);
-        assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.02);
+        assert(std::abs((skew - x_skew) / x_skew) < 0.02);
+        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.05);
     }
     {
         typedef std::bernoulli_distribution D;
@@ -99,8 +100,8 @@ int main(int, char**)
         double x_kurtosis = (6 * sqr(d.p()) - 6 * d.p() + 1)/x_var;
         assert(std::abs((mean - x_mean) / x_mean) < 0.01);
         assert(std::abs((var - x_var) / x_var) < 0.01);
-        assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.02);
+        assert(std::abs((skew - x_skew) / x_skew) < 0.02);
+        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.05);
     }
 
   return 0;

@@ -12,20 +12,20 @@ namespace {
 class UnsafeBufferUsageTest : public ::testing::Test {
 protected:
   UnsafeBufferUsageTest()
-      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
-        Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
+      : FileMgr(FileMgrOpts),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr) {}
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
 };
 } // namespace
 
 TEST_F(UnsafeBufferUsageTest, FixItHintsConflict) {
-  const FileEntry *DummyFile = FileMgr.getVirtualFile("<virtual>", 100, 0);
+  FileEntryRef DummyFile = FileMgr.getVirtualFileRef("<virtual>", 100, 0);
   FileID DummyFileID = SourceMgr.getOrCreateFileID(DummyFile, SrcMgr::C_User);
   SourceLocation StartLoc = SourceMgr.getLocForStartOfFile(DummyFileID);
 

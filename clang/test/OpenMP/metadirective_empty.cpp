@@ -14,11 +14,17 @@ void func() {
                                :) default(parallel for)
   for (int i = 0; i < N; i++)
     ;
+
+#pragma omp metadirective when(implementation = {vendor(llvm)} \
+                               :nothing) default(parallel for)
+  for (int i = 0; i < N; i++)
+    ;
 }
 
 // CHECK-LABEL: void @_Z4funcv()
 // CHECK: entry:
 // CHECK:   [[I:%.+]] = alloca i32,
+// CHECK:   [[I1:%.+]] = alloca i32,
 // CHECK:   store i32 0, ptr [[I]],
 // CHECK:   br label %[[FOR_COND:.+]]
 // CHECK: [[FOR_COND]]:
@@ -33,6 +39,20 @@ void func() {
 // CHECK:   store i32 [[INC]], ptr [[I]],
 // CHECK:   br label %[[FOR_COND]],
 // CHECK: [[FOR_END]]:
+// CHECK:   store i32 0, ptr [[I1]],
+// CHECK:   br label %[[FOR_COND1:.+]]
+// CHECK: [[FOR_COND1]]:
+// CHECK:   [[TWO:%.+]] = load i32, ptr [[I1]],
+// CHECK:   [[CMP1:%.+]] = icmp slt i32 [[TWO]], 1000
+// CHECK:   br i1 [[CMP1]], label %[[FOR_BODY1:.+]], label %[[FOR_END1:.+]]
+// CHECK: [[FOR_BODY1]]:
+// CHECK:   br label %[[FOR_INC1:.+]]
+// CHECK: [[FOR_INC1]]:
+// CHECK:   [[THREE:%.+]] = load i32, ptr [[I1]],
+// CHECK:   [[INC1:%.+]] = add nsw i32 [[THREE]], 1
+// CHECK:   store i32 [[INC1]], ptr [[I1]],
+// CHECK:   br label %[[FOR_COND1]],
+// CHECK: [[FOR_END1]]:
 // CHECK:   ret void
 // CHECK: }
 

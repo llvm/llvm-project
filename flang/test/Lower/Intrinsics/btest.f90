@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: btest_test
 function btest_test(i, j)
@@ -15,4 +15,3 @@ function btest_test(i, j)
     ! CHECK: return %[[VAL_9]] : !fir.logical<4>
     btest_test = btest(i, j)
   end
-  

@@ -1,10 +1,7 @@
-// https://github.com/llvm/llvm-project/issues/60678
-// XFAIL: glibc-2.37
-
-// RUN: %clang_dfsan %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
+// RUN: %clang_dfsan %s -o %t && env DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
 // RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
-// RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
+// RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false -no-pie %s -o %t && env DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 //
 // Tests custom implementations of various glibc functions.
 
@@ -178,7 +175,7 @@ void test_stat() {
 
   s.st_dev = i;
   SAVE_ORIGINS(s)
-  ret = stat("/nonexistent", &s);
+  ret = stat("/nonexistent_581cb021aba7", &s);
   assert(-1 == ret);
   ASSERT_ZERO_LABEL(ret);
   ASSERT_LABEL(s.st_dev, i_label);
@@ -771,26 +768,53 @@ void test_recvmsg() {
   ssize_t sent = sendmsg(sockfds[0], &smsg, 0);
   assert(sent > 0);
 
-  char rbuf[128];
-  struct iovec riovs[2] = {{&rbuf[0], 4}, {&rbuf[4], 4}};
-  struct msghdr rmsg = {};
-  rmsg.msg_iov = riovs;
-  rmsg.msg_iovlen = 2;
+  {
+    char rpbuf[2];
+    struct iovec peek_iov;
+    peek_iov.iov_base = rpbuf;
+    peek_iov.iov_len = 2;
 
-  dfsan_set_label(i_label, rbuf, sizeof(rbuf));
-  dfsan_set_label(i_label, &rmsg, sizeof(rmsg));
+    struct msghdr peek_header = {};
+    peek_header.msg_iov = &peek_iov;
+    peek_header.msg_iovlen = 1;
 
-  DEFINE_AND_SAVE_ORIGINS(rmsg)
+    dfsan_set_label(i_label, rpbuf, sizeof(rpbuf));
+    dfsan_set_label(i_label, &peek_header, sizeof(peek_header));
 
-  ssize_t received = recvmsg(sockfds[1], &rmsg, 0);
-  assert(received == sent);
-  assert(memcmp(sbuf, rbuf, 8) == 0);
-  ASSERT_ZERO_LABEL(received);
-  ASSERT_READ_ZERO_LABEL(&rmsg, sizeof(rmsg));
-  ASSERT_READ_ZERO_LABEL(&rbuf[0], 8);
-  ASSERT_READ_LABEL(&rbuf[8], 1, i_label);
+    DEFINE_AND_SAVE_ORIGINS(peek_header)
 
-  ASSERT_SAVED_ORIGINS(rmsg)
+    ssize_t received = recvmsg(sockfds[1], &peek_header, MSG_PEEK | MSG_TRUNC);
+    assert(received == sent);
+    assert(memcmp(sbuf, rpbuf, 2) == 0);
+    ASSERT_ZERO_LABEL(received);
+    ASSERT_READ_ZERO_LABEL(&peek_header, sizeof(peek_header));
+    ASSERT_READ_ZERO_LABEL(&rpbuf[0], 0);
+
+    ASSERT_SAVED_ORIGINS(peek_header)
+  }
+
+  {
+    char rbuf[128];
+    struct iovec riovs[2] = {{&rbuf[0], 4}, {&rbuf[4], 4}};
+    struct msghdr rmsg = {};
+    rmsg.msg_iov = riovs;
+    rmsg.msg_iovlen = 2;
+
+    dfsan_set_label(i_label, rbuf, sizeof(rbuf));
+    dfsan_set_label(i_label, &rmsg, sizeof(rmsg));
+
+    DEFINE_AND_SAVE_ORIGINS(rmsg)
+
+    ssize_t received = recvmsg(sockfds[1], &rmsg, 0);
+    assert(received == sent);
+    assert(memcmp(sbuf, rbuf, 8) == 0);
+    ASSERT_ZERO_LABEL(received);
+    ASSERT_READ_ZERO_LABEL(&rmsg, sizeof(rmsg));
+    ASSERT_READ_ZERO_LABEL(&rbuf[0], 8);
+    ASSERT_READ_LABEL(&rbuf[8], 1, i_label);
+
+    ASSERT_SAVED_ORIGINS(rmsg)
+  }
 
   close(sockfds[0]);
   close(sockfds[1]);
@@ -2101,18 +2125,24 @@ void test_sscanf_chunk(T expected, const char *format, char *input,
   char padded_input[512];
   strcpy(padded_input, "foo ");
   strcat(padded_input, input);
+  strcpy(padded_input, "@");
+  strcat(padded_input, input);
   strcat(padded_input, " bar");
 
   char padded_format[512];
   strcpy(padded_format, "foo ");
+  // Swap the first '%' for '%*' so this input is skipped.
+  strcpy(padded_format, "%*");
+  strcat(padded_format, format + 1);
+  strcpy(padded_format, "@");
   strcat(padded_format, format);
   strcat(padded_format, " bar");
 
   char *s = padded_input + 4;
   T arg;
   memset(&arg, 0, sizeof(arg));
-  dfsan_set_label(i_label, (void *)(s), strlen(input));
-  dfsan_set_label(j_label, (void *)(padded_format + 4), strlen(format));
+  dfsan_set_label(i_label, (void *)(padded_input), strlen(padded_input));
+  dfsan_set_label(j_label, (void *)(padded_format), strlen(padded_format));
   dfsan_origin a_o = dfsan_get_origin((long)(*s));
 #ifndef ORIGIN_TRACKING
   (void)a_o;
@@ -2150,7 +2180,7 @@ void test_sscanf() {
   // Test formatting & label propagation (multiple conversion specifiers): %s,
   // %d, %n, %f, and %%.
   int n;
-  strcpy(buf, "hello world, 2014/8/27 12345.678123 % 1000");
+  strcpy(buf, "hello world, 42 2014/8/31 12345.678123 % 1000");
   char *s = buf + 6; //starts with world
   int y = 0;
   int m = 0;
@@ -2159,41 +2189,48 @@ void test_sscanf() {
   int val = 0;
   dfsan_set_label(k_label, (void *)(s + 1), 2); // buf[7]-b[9]
   dfsan_origin s_o = dfsan_get_origin((long)(s[1]));
-  dfsan_set_label(i_label, (void *)(s + 12), 1);
-  dfsan_origin m_o = dfsan_get_origin((long)s[12]); // buf[18]
-  dfsan_set_label(j_label, (void *)(s + 14), 2);    // buf[20]
-  dfsan_origin d_o = dfsan_get_origin((long)s[14]);
-  dfsan_set_label(m_label, (void *)(s + 18), 4); //buf[24]
-  dfsan_origin f_o = dfsan_get_origin((long)s[18]);
+  assert(s[10] == '2');
+  dfsan_set_label(i_label, (void *)(s + 10), 4);    // 2014
+  dfsan_origin y_o = dfsan_get_origin((long)s[10]); // buf[16]
+  assert(s[17] == '3');
+  dfsan_set_label(j_label, (void *)(s + 17), 2);    // 31
+  dfsan_origin d_o = dfsan_get_origin((long)s[17]); // buf[23]
+  assert(s[20] == '1');
+  dfsan_set_label(m_label, (void *)(s + 20), 5);    // 12345
+  dfsan_origin f_o = dfsan_get_origin((long)s[20]); //buf[26]
 
 #ifndef ORIGIN_TRACKING
   (void)s_o;
-  (void)m_o;
+  (void)y_o;
   (void)d_o;
   (void)f_o;
 #else
   assert(s_o != 0);
-  assert(m_o != 0);
+  assert(y_o != 0);
   assert(d_o != 0);
   assert(f_o != 0);
 #endif
-  int r = sscanf(buf, "hello %s %d/%d/%d %f %% %n%d", buf_out, &y, &m, &d,
+  int r = sscanf(buf, "hello %s %*d %d/%d/%d %f %% %n%d", buf_out, &y, &m, &d,
                  &fval, &n, &val);
   assert(r == 6);
   assert(strcmp(buf_out, "world,") == 0);
+  assert(y == 2014);
+  assert(m == 8);
+  assert(d == 31);
+  assert(fval > 12300.0f);
+  assert(fval < 12400.0f);
   ASSERT_READ_LABEL(buf_out, 1, 0);
   ASSERT_READ_LABEL(buf_out + 1, 2, k_label);
   ASSERT_INIT_ORIGINS(buf_out + 1, 2, s_o);
-  ASSERT_READ_LABEL(buf + 9, 9, 0);
-  ASSERT_READ_LABEL(&m, 1, i_label);
-  ASSERT_INIT_ORIGINS(&m, 1, m_o);
-  ASSERT_READ_LABEL(&d, 4, j_label);
-  ASSERT_INIT_ORIGINS(&d, 2, d_o);
+  ASSERT_READ_LABEL(&y, sizeof(y), i_label);
+  ASSERT_INIT_ORIGINS(&y, sizeof(y), y_o);
+  ASSERT_READ_LABEL(&d, sizeof(d), j_label);
+  ASSERT_INIT_ORIGINS(&d, sizeof(d), d_o);
   ASSERT_READ_LABEL(&fval, sizeof(fval), m_label);
   ASSERT_INIT_ORIGINS(&fval, sizeof(fval), f_o);
   ASSERT_READ_LABEL(&val, 4, 0);
   ASSERT_LABEL(r, 0);
-  assert(n == 38);
+  assert(n == 41);
   assert(val == 1000);
 
   // Test formatting & label propagation (single conversion specifier, with
@@ -2243,7 +2280,7 @@ void test_sscanf() {
   // %n, %s, %d, %f, and %% already tested
 }
 
-// Tested by a seperate source file.  This empty function is here to appease the
+// Tested by a separate source file.  This empty function is here to appease the
 // check-wrappers script.
 void test_fork() {}
 

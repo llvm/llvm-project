@@ -36,7 +36,7 @@ void Fortran::lower::ComponentPath::clear() {
 
 bool Fortran::lower::isRankedArrayAccess(const Fortran::evaluate::ArrayRef &x) {
   for (const Fortran::evaluate::Subscript &sub : x.subscript()) {
-    if (std::visit(
+    if (Fortran::common::visit(
             Fortran::common::visitors{
                 [&](const Fortran::evaluate::Triplet &) { return true; },
                 [&](const Fortran::evaluate::IndirectSubscriptIntegerExpr &e) {

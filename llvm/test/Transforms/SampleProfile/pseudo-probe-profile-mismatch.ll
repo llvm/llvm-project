@@ -1,54 +1,61 @@
 ; REQUIRES: x86_64-linux
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch.prof -report-profile-staleness -persist-profile-staleness -S 2>%t -o %t.ll
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch.prof --salvage-unused-profile=false -report-profile-staleness -persist-profile-staleness -S 2>%t -o %t.ll
 ; RUN: FileCheck %s --input-file %t
 ; RUN: FileCheck %s --input-file %t.ll -check-prefix=CHECK-MD
 ; RUN: llc < %t.ll -filetype=obj -o %t.obj
 ; RUN: llvm-objdump --section-headers %t.obj | FileCheck %s --check-prefix=CHECK-OBJ
 ; RUN: llc < %t.ll -filetype=asm -o - | FileCheck %s --check-prefix=CHECK-ASM
 
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch-nested.prof -report-profile-staleness -persist-profile-staleness -S 2>&1 | FileCheck %s --check-prefix=CHECK-NESTED
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch-nested.prof --salvage-unused-profile=false -report-profile-staleness -persist-profile-staleness -S 2>&1 | FileCheck %s --check-prefix=CHECK-NESTED
 
 
-; CHECK: (1/3) of functions' profile are invalid and (10/50) of samples are discarded due to function hash mismatch.
-; CHECK: (2/3) of callsites' profile are invalid and (20/30) of samples are discarded due to callsite location mismatch.
+; CHECK: (2/3) of functions' profile are invalid and (40/50) of samples are discarded due to function hash mismatch.
+; CHECK: (2/3) of callsites' profile are invalid and (20/50) of samples are discarded due to callsite location mismatch.
+; CHECK: (1/2) of callsites and (10/20) of samples are recovered by stale profile matching.
 
-; CHECK-MD: ![[#]] = !{!"NumMismatchedFuncHash", i64 1, !"TotalProfiledFunc", i64 3, !"MismatchedFuncHashSamples", i64 10, !"TotalFuncHashSamples", i64 50, !"NumMismatchedCallsites", i64 2, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 20, !"TotalCallsiteSamples", i64 30}
+; CHECK-MD: ![[#]] = !{!"NumStaleProfileFunc", i64 2, !"TotalProfiledFunc", i64 3, !"MismatchedFunctionSamples", i64 40, !"TotalFunctionSamples", i64 50, !"NumMismatchedCallsites", i64 1, !"NumRecoveredCallsites", i64 1, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 10, !"RecoveredCallsiteSamples", i64 10}
+
 
 ; CHECK-OBJ: .llvm_stats
 
-; CHECK-ASM: .section  .llvm_stats,"",@progbits
-; CHECK-ASM: .byte 21
-; CHECK-ASM: .ascii  "NumMismatchedFuncHash"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "MQ=="
-; CHECK-ASM: .byte 17
-; CHECK-ASM: .ascii  "TotalProfiledFunc"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "Mw=="
-; CHECK-ASM: .byte 25
-; CHECK-ASM: .ascii  "MismatchedFuncHashSamples"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "MTA="
-; CHECK-ASM: .byte 20
-; CHECK-ASM: .ascii  "TotalFuncHashSamples"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "NTA="
-; CHECK-ASM: .byte 22
-; CHECK-ASM: .ascii  "NumMismatchedCallsites"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "Mg=="
-; CHECK-ASM: .byte 22
-; CHECK-ASM: .ascii  "TotalProfiledCallsites"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "Mw=="
-; CHECK-ASM: .byte 25
-; CHECK-ASM: .ascii  "MismatchedCallsiteSamples"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "MjA="
-; CHECK-ASM: .byte 20
-; CHECK-ASM: .ascii  "TotalCallsiteSamples"
-; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "MzA="
+; CHECK-ASM: .section	.llvm_stats,"",@progbits
+; CHECK-ASM: .byte	19
+; CHECK-ASM: .ascii	"NumStaleProfileFunc"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"Mg=="
+; CHECK-ASM: .byte	17
+; CHECK-ASM: .ascii	"TotalProfiledFunc"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"Mw=="
+; CHECK-ASM: .byte	25
+; CHECK-ASM: .ascii	"MismatchedFunctionSamples"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"NDA="
+; CHECK-ASM: .byte	20
+; CHECK-ASM: .ascii	"TotalFunctionSamples"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"NTA="
+; CHECK-ASM: .byte	22
+; CHECK-ASM: .ascii	"NumMismatchedCallsites"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"MQ=="
+; CHECK-ASM: .byte	21
+; CHECK-ASM: .ascii	"NumRecoveredCallsites"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"MQ=="
+; CHECK-ASM: .byte	22
+; CHECK-ASM: .ascii	"TotalProfiledCallsites"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"Mw=="
+; CHECK-ASM: .byte	25
+; CHECK-ASM: .ascii	"MismatchedCallsiteSamples"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"MTA="
+; CHECK-ASM: .byte	24
+; CHECK-ASM: .ascii	"RecoveredCallsiteSamples"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"MTA="
+
 
 ; CHECK-NESTED: (1/2) of functions' profile are invalid and (211/311) of samples are discarded due to function hash mismatch.
 
@@ -63,14 +70,14 @@ define dso_local i32 @foo(i32 noundef %x) #0 !dbg !16 {
 entry:
   %y = alloca i32, align 4
   call void @llvm.dbg.value(metadata i32 %x, metadata !20, metadata !DIExpression()), !dbg !22
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %y), !dbg !23
+  call void @llvm.lifetime.start.p0(ptr nonnull %y), !dbg !23
   call void @llvm.dbg.declare(metadata ptr %y, metadata !21, metadata !DIExpression()), !dbg !24
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 1, i32 0, i64 -1), !dbg !25
   %add = add nsw i32 %x, 1, !dbg !26
   store volatile i32 %add, ptr %y, align 4, !dbg !24, !tbaa !27
   %y.0. = load volatile i32, ptr %y, align 4, !dbg !31, !tbaa !27
   %add1 = add nsw i32 %y.0., 1, !dbg !32
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %y), !dbg !33
+  call void @llvm.lifetime.end.p0(ptr nonnull %y), !dbg !33
   ret i32 %add1, !dbg !34
 }
 
@@ -78,10 +85,10 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(ptr nocapture) #2
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(ptr nocapture) #2
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @bar(i32 noundef %x) #3 !dbg !35 {

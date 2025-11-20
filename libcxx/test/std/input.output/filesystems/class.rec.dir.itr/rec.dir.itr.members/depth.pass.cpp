@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
-// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -16,7 +16,7 @@
 
 // int depth() const
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <set>
 #include <cassert>
@@ -24,7 +24,7 @@
 #include "assert_macros.h"
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
 static void test_depth()

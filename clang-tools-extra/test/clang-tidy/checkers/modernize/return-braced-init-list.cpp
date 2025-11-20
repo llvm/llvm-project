@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-return-braced-init-list %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s modernize-return-braced-init-list %t
 
 namespace std {
 typedef decltype(sizeof(int)) size_t;
@@ -30,12 +30,16 @@ public:
 };
 
 template <typename T>
+struct allocator {};
+
+template <typename T, typename Allocator = ::std::allocator<T>>
 class vector {
 public:
-  vector(T) {}
-  vector(std::initializer_list<T>) {}
+  vector(T);
+  vector(size_t, T, const Allocator &alloc = Allocator());
+  vector(std::initializer_list<T>);
 };
-}
+} // namespace std
 
 class Bar {};
 
@@ -76,10 +80,12 @@ Foo f2() {
   return {b2};
 }
 
+#if __cplusplus >= 201402L
 auto f3() {
   Bar b3;
   return Foo(b3);
 }
+#endif
 
 #define A(b) Foo(b)
 
@@ -98,11 +104,25 @@ Foo f6() {
   return Foo(b6, 1);
 }
 
-std::vector<int> f7() {
+std::vector<int> vectorWithOneParameter() {
   int i7 = 1;
   return std::vector<int>(i7);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
 }
+
+std::vector<int> vectorIntWithTwoParameter() {
+  return std::vector<int>(1, 2);
+}
+
+std::vector<double> vectorDoubleWithTwoParameter() {
+  return std::vector<double>(1, 2.1);
+}
+struct A {};
+std::vector<A> vectorRecordWithTwoParameter() {
+  A a{};
+  return std::vector<A>(1, a);
+}
+
 
 Bar f8() {
   return {};

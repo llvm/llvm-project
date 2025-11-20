@@ -16,7 +16,7 @@ class IOHandlerCompletionTest(PExpectTest):
     @skipIfAsan
     @skipIfEditlineSupportMissing
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr49408")
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_completion(self):
         self.build()
         self.launch(dimensions=(100, 500), executable=self.getBuildArtifact("a.out"))
@@ -55,7 +55,7 @@ class IOHandlerCompletionTest(PExpectTest):
         self.child.expect(
             re.compile(
                 b"TestIOHandler(\r"
-                + self.cursor_forward_escape_seq("\d+")
+                + self.cursor_forward_escape_seq(r"\d+")
                 + b")?Completion.py"
             )
         )
@@ -73,6 +73,12 @@ class IOHandlerCompletionTest(PExpectTest):
         self.child.send("\t")
         self.child.expect_exact("More (Y/n/a)")
         self.child.send("n")
+        self.expect_prompt()
+
+        # Start tab completion and abort showing more commands with '^C'.
+        self.child.send("\t")
+        self.child.expect_exact("More (Y/n/a)")
+        self.child.sendcontrol("c")
         self.expect_prompt()
 
         # Shouldn't crash or anything like that.

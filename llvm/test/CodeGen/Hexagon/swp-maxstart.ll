@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that the MinStart computation, which is based upon the length
 ; of the chain edges, is computed correctly. A bug in the code allowed

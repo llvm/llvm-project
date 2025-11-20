@@ -15,7 +15,7 @@
 #ifndef LLVM_CODEGEN_VALUETYPES_H
 #define LLVM_CODEGEN_VALUETYPES_H
 
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
@@ -27,6 +27,7 @@ namespace llvm {
 
   class LLVMContext;
   class Type;
+  struct fltSemantics;
 
   /// Extended Value Type. Capable of holding value types which are not native
   /// for any processor (such as the i12345 type), as well as the types an MVT
@@ -107,6 +108,13 @@ namespace llvm {
       return changeExtendedVectorElementType(EltVT);
     }
 
+    /// Return a VT for a type whose attributes match ourselves with the
+    /// exception of the element type that is chosen by the caller.
+    EVT changeElementType(EVT EltVT) const {
+      EltVT = EltVT.getScalarType();
+      return isVector() ? changeVectorElementType(EltVT) : EltVT;
+    }
+
     /// Return the type converted to an equivalently sized integer or vector
     /// with integer element type. Similar to changeVectorElementTypeToInteger,
     /// but also handles scalars.
@@ -167,6 +175,9 @@ namespace llvm {
       return isSimple() ? V.isScalableVector() : isExtendedScalableVector();
     }
 
+    /// Return true if this is a vector value type.
+    bool isRISCVVectorTuple() const { return V.isRISCVVectorTuple(); }
+
     bool isFixedLengthVector() const {
       return isSimple() ? V.isFixedLengthVector()
                         : isExtendedFixedLengthVector();
@@ -217,9 +228,15 @@ namespace llvm {
       return isSimple() ? V.is2048BitVector() : isExtended2048BitVector();
     }
 
+    /// Return true if this is a capability type.
+    bool isCheriCapability() const {
+      return isSimple() ? V.isCheriCapability() : false;
+    }
+
     /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
-      return (V==MVT::iAny || V==MVT::fAny || V==MVT::vAny || V==MVT::iPTRAny);
+      return (V == MVT::iAny || V == MVT::fAny || V == MVT::vAny ||
+              V == MVT::pAny);
     }
 
     /// Return true if the bit size is a multiple of 8.
@@ -320,7 +337,7 @@ namespace llvm {
       assert(isVector() && "Invalid vector type!");
 
       if (isScalableVector())
-        llvm::reportInvalidSizeRequest(
+        llvm::reportFatalInternalError(
             "Possible incorrect use of EVT::getVectorNumElements() for "
             "scalable vector. Scalable flag may be dropped, use "
             "EVT::getVectorElementCount() instead");
@@ -341,6 +358,11 @@ namespace llvm {
     /// Given a vector type, return the minimum number of elements it contains.
     unsigned getVectorMinNumElements() const {
       return getVectorElementCount().getKnownMinValue();
+    }
+
+    /// Given a RISCV vector tuple type, return the num_fields.
+    unsigned getRISCVVectorTupleNumFields() const {
+      return V.getRISCVVectorTupleNumFields();
     }
 
     /// Return the size of the specified value type in bits.
@@ -465,10 +487,10 @@ namespace llvm {
     }
 
     /// This function returns value type as a string, e.g. "i32".
-    std::string getEVTString() const;
+    LLVM_ABI std::string getEVTString() const;
 
     /// Support for debugging, callable in GDB: VT.dump()
-    void dump() const;
+    LLVM_ABI void dump() const;
 
     /// Implement operator<<.
     void print(raw_ostream &OS) const {
@@ -478,12 +500,14 @@ namespace llvm {
     /// This method returns an LLVM type corresponding to the specified EVT.
     /// For integer types, this returns an unsigned type. Note that this will
     /// abort for types that cannot be represented.
-    Type *getTypeForEVT(LLVMContext &Context) const;
+    LLVM_ABI Type *getTypeForEVT(LLVMContext &Context) const;
 
     /// Return the value type corresponding to the specified type.
-    /// This returns all pointers as iPTR.  If HandleUnknown is true, unknown
-    /// types are returned as Other, otherwise they are invalid.
-    static EVT getEVT(Type *Ty, bool HandleUnknown = false);
+    /// If HandleUnknown is true, unknown types are returned as Other,
+    /// otherwise they are invalid.
+    /// NB: This includes pointer types, which require a DataLayout to convert
+    /// to a concrete value type.
+    LLVM_ABI static EVT getEVT(Type *Ty, bool HandleUnknown = false);
 
     intptr_t getRawBits() const {
       if (isSimple())
@@ -503,36 +527,41 @@ namespace llvm {
       }
     };
 
+    /// Returns an APFloat semantics tag appropriate for the value type. If this
+    /// is a vector type, the element semantics are returned.
+    LLVM_ABI const fltSemantics &getFltSemantics() const;
+
   private:
     // Methods for handling the Extended-type case in functions above.
     // These are all out-of-line to prevent users of this header file
     // from having a dependency on Type.h.
-    EVT changeExtendedTypeToInteger() const;
-    EVT changeExtendedVectorElementType(EVT EltVT) const;
-    EVT changeExtendedVectorElementTypeToInteger() const;
-    static EVT getExtendedIntegerVT(LLVMContext &C, unsigned BitWidth);
-    static EVT getExtendedVectorVT(LLVMContext &C, EVT VT, unsigned NumElements,
-                                   bool IsScalable);
-    static EVT getExtendedVectorVT(LLVMContext &Context, EVT VT,
-                                   ElementCount EC);
-    bool isExtendedFloatingPoint() const LLVM_READONLY;
-    bool isExtendedInteger() const LLVM_READONLY;
-    bool isExtendedScalarInteger() const LLVM_READONLY;
-    bool isExtendedVector() const LLVM_READONLY;
-    bool isExtended16BitVector() const LLVM_READONLY;
-    bool isExtended32BitVector() const LLVM_READONLY;
-    bool isExtended64BitVector() const LLVM_READONLY;
-    bool isExtended128BitVector() const LLVM_READONLY;
-    bool isExtended256BitVector() const LLVM_READONLY;
-    bool isExtended512BitVector() const LLVM_READONLY;
-    bool isExtended1024BitVector() const LLVM_READONLY;
-    bool isExtended2048BitVector() const LLVM_READONLY;
-    bool isExtendedFixedLengthVector() const LLVM_READONLY;
-    bool isExtendedScalableVector() const LLVM_READONLY;
-    EVT getExtendedVectorElementType() const;
-    unsigned getExtendedVectorNumElements() const LLVM_READONLY;
-    ElementCount getExtendedVectorElementCount() const LLVM_READONLY;
-    TypeSize getExtendedSizeInBits() const LLVM_READONLY;
+    LLVM_ABI EVT changeExtendedTypeToInteger() const;
+    LLVM_ABI EVT changeExtendedVectorElementType(EVT EltVT) const;
+    LLVM_ABI EVT changeExtendedVectorElementTypeToInteger() const;
+    LLVM_ABI static EVT getExtendedIntegerVT(LLVMContext &C, unsigned BitWidth);
+    LLVM_ABI static EVT getExtendedVectorVT(LLVMContext &C, EVT VT,
+                                            unsigned NumElements,
+                                            bool IsScalable);
+    LLVM_ABI static EVT getExtendedVectorVT(LLVMContext &Context, EVT VT,
+                                            ElementCount EC);
+    LLVM_ABI bool isExtendedFloatingPoint() const LLVM_READONLY;
+    LLVM_ABI bool isExtendedInteger() const LLVM_READONLY;
+    LLVM_ABI bool isExtendedScalarInteger() const LLVM_READONLY;
+    LLVM_ABI bool isExtendedVector() const LLVM_READONLY;
+    LLVM_ABI bool isExtended16BitVector() const LLVM_READONLY;
+    LLVM_ABI bool isExtended32BitVector() const LLVM_READONLY;
+    LLVM_ABI bool isExtended64BitVector() const LLVM_READONLY;
+    LLVM_ABI bool isExtended128BitVector() const LLVM_READONLY;
+    LLVM_ABI bool isExtended256BitVector() const LLVM_READONLY;
+    LLVM_ABI bool isExtended512BitVector() const LLVM_READONLY;
+    LLVM_ABI bool isExtended1024BitVector() const LLVM_READONLY;
+    LLVM_ABI bool isExtended2048BitVector() const LLVM_READONLY;
+    LLVM_ABI bool isExtendedFixedLengthVector() const LLVM_READONLY;
+    LLVM_ABI bool isExtendedScalableVector() const LLVM_READONLY;
+    LLVM_ABI EVT getExtendedVectorElementType() const;
+    LLVM_ABI unsigned getExtendedVectorNumElements() const LLVM_READONLY;
+    LLVM_ABI ElementCount getExtendedVectorElementCount() const LLVM_READONLY;
+    LLVM_ABI TypeSize getExtendedSizeInBits() const LLVM_READONLY;
   };
 
   inline raw_ostream &operator<<(raw_ostream &OS, const EVT &V) {
