@@ -319,6 +319,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Support vector extending
     for (auto T : MVT::integer_fixedlen_vector_valuetypes()) {
+      setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, T, Custom);
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Custom);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Custom);
     }
@@ -1136,7 +1137,27 @@ void WebAssemblyTargetLowering::computeKnownBitsForTargetNode(
     }
     break;
   }
-
+  case WebAssemblyISD::EXTEND_LOW_U:
+  case WebAssemblyISD::EXTEND_HIGH_U: {
+    // We know the high half, of each destination vector element, will be zero.
+    SDValue SrcOp = Op.getOperand(0);
+    EVT VT = SrcOp.getSimpleValueType();
+    unsigned BitWidth = Known.getBitWidth();
+    if (VT == MVT::v8i8 || VT == MVT::v16i8) {
+      assert(BitWidth >= 8 && "Unexpected width!");
+      APInt Mask = APInt::getHighBitsSet(BitWidth, BitWidth - 8);
+      Known.Zero |= Mask;
+    } else if (VT == MVT::v4i16 || VT == MVT::v8i16) {
+      assert(BitWidth >= 16 && "Unexpected width!");
+      APInt Mask = APInt::getHighBitsSet(BitWidth, BitWidth - 16);
+      Known.Zero |= Mask;
+    } else if (VT == MVT::v2i32 || VT == MVT::v4i32) {
+      assert(BitWidth >= 32 && "Unexpected width!");
+      APInt Mask = APInt::getHighBitsSet(BitWidth, BitWidth - 32);
+      Known.Zero |= Mask;
+    }
+    break;
+  }
   // For 128-bit addition if the upper bits are all zero then it's known that
   // the upper bits of the result will have all bits guaranteed zero except the
   // first.
@@ -1705,6 +1726,7 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerSIGN_EXTEND_INREG(Op, DAG);
   case ISD::ZERO_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
+  case ISD::ANY_EXTEND_VECTOR_INREG:
     return LowerEXTEND_VECTOR_INREG(Op, DAG);
   case ISD::BUILD_VECTOR:
     return LowerBUILD_VECTOR(Op, DAG);
@@ -2299,6 +2321,9 @@ WebAssemblyTargetLowering::LowerEXTEND_VECTOR_INREG(SDValue Op,
 
   unsigned Ext;
   switch (Op.getOpcode()) {
+  default:
+    llvm_unreachable("unexpected opcode");
+  case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG:
     Ext = WebAssemblyISD::EXTEND_LOW_U;
     break;
