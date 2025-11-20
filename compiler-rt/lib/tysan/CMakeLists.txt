@@ -4,11 +4,13 @@ include_directories(..)
 set(TYSAN_SOURCES
   tysan.cpp
   tysan_interceptors.cpp
+  tysan_interface.cpp
   )
 
 SET(TYSAN_HEADERS
   tysan.h
   tysan_flags.inc
+  tysan_interface.h
   tysan_platform.h
   )
 
