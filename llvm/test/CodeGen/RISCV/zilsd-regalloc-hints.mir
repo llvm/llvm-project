@@ -38,8 +38,8 @@ body: |
     ; WITH-HINT-LABEL: name: test_load_pair_hints
     ; WITH-HINT: liveins: $x10
     ; WITH-HINT-NEXT: {{  $}}
-    ; WITH-HINT-NEXT: early-clobber renamable $x12, renamable $x13 = PseudoLD_RV32_OPT killed renamable $x10, 0 :: (load (s32) from %ir.p), (load (s32) from %ir.p2)
-    ; WITH-HINT-NEXT: renamable $x10 = ADD killed renamable $x12, killed renamable $x13
+    ; WITH-HINT-NEXT: renamable $x10, renamable $x11 = PseudoLD_RV32_OPT killed renamable $x10, 0 :: (load (s32) from %ir.p), (load (s32) from %ir.p2)
+    ; WITH-HINT-NEXT: renamable $x10 = ADD killed renamable $x10, killed renamable $x11
     ; WITH-HINT-NEXT: PseudoRET implicit $x10
     %10:gpr = COPY $x10
     ; These two LW instructions at offset 0 and 4 should be combined
