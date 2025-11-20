@@ -2225,6 +2225,9 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
 
+    // Mark C++ special member functions (Constructor, Destructor etc.)
+    setCXXSpecialMemberAttr(func, funcDecl);
+
     if (!cgf)
       theModule.push_back(func);
   }
@@ -2238,6 +2241,58 @@ CIRGenModule::createCIRBuiltinFunction(mlir::Location loc, StringRef name,
   cir::FuncOp fnOp = createCIRFunction(loc, name, ty, fd);
   fnOp.setBuiltin(true);
   return fnOp;
+}
+
+static cir::CtorKind getCtorKindFromDecl(const CXXConstructorDecl *ctor) {
+  if (ctor->isDefaultConstructor())
+    return cir::CtorKind::Default;
+  if (ctor->isCopyConstructor())
+    return cir::CtorKind::Copy;
+  if (ctor->isMoveConstructor())
+    return cir::CtorKind::Move;
+  return cir::CtorKind::Custom;
+}
+
+static cir::AssignKind getAssignKindFromDecl(const CXXMethodDecl *method) {
+  if (method->isCopyAssignmentOperator())
+    return cir::AssignKind::Copy;
+  if (method->isMoveAssignmentOperator())
+    return cir::AssignKind::Move;
+  llvm_unreachable("not a copy or move assignment operator");
+}
+
+void CIRGenModule::setCXXSpecialMemberAttr(
+    cir::FuncOp funcOp, const clang::FunctionDecl *funcDecl) {
+  if (!funcDecl)
+    return;
+
+  if (const auto *dtor = dyn_cast<CXXDestructorDecl>(funcDecl)) {
+    auto cxxDtor = cir::CXXDtorAttr::get(
+        convertType(getASTContext().getCanonicalTagType(dtor->getParent())),
+        dtor->isTrivial());
+    funcOp.setCxxSpecialMemberAttr(cxxDtor);
+    return;
+  }
+
+  if (const auto *ctor = dyn_cast<CXXConstructorDecl>(funcDecl)) {
+    cir::CtorKind kind = getCtorKindFromDecl(ctor);
+    auto cxxCtor = cir::CXXCtorAttr::get(
+        convertType(getASTContext().getCanonicalTagType(ctor->getParent())),
+        kind, ctor->isTrivial());
+    funcOp.setCxxSpecialMemberAttr(cxxCtor);
+    return;
+  }
+
+  const auto *method = dyn_cast<CXXMethodDecl>(funcDecl);
+  if (method && (method->isCopyAssignmentOperator() ||
+                 method->isMoveAssignmentOperator())) {
+    cir::AssignKind assignKind = getAssignKindFromDecl(method);
+    auto cxxAssign = cir::CXXAssignAttr::get(
+        convertType(getASTContext().getCanonicalTagType(method->getParent())),
+        assignKind, method->isTrivial());
+    funcOp.setCxxSpecialMemberAttr(cxxAssign);
+    return;
+  }
 }
 
 cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
