@@ -221,7 +221,7 @@ def uncomment_download_links(repo, release_version):
                 print("  Files required:", files)
                 if files.issubset(release_assets):
                     print("  All files present, revealing link line.")
-                    line.replace("<!--", "").replace(comment_tag, "").replace(
+                    line = line.replace("<!--", "").replace(comment_tag, "").replace(
                         "-->", ""
                     ).strip()
                     modified = True
