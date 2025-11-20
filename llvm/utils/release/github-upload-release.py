@@ -195,7 +195,7 @@ def upload_files(repo, release, files):
 
 
 def uncomment_download_links(repo, release_version):
-    release = repo.get_release("llvmorg-{}".format(release_version))
+    release = repo.get_release(f"llvmorg-{release_version}")
 
     # At this point any automatic builds have finished and if
     # they succeeded, uploaded files to the release assets.
