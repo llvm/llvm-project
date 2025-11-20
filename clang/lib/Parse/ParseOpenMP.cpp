@@ -4932,6 +4932,37 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       ConsumeToken();
       if (Tok.is(tok::colon))
         Data.ColonLoc = Tok.getLocation();
+      if (getLangOpts().OpenMP >= 61) {
+        // Handle optional need_device_ptr modifier.
+        if (Tok.is(tok::l_paren)) {
+          BalancedDelimiterTracker T(*this, tok::l_paren);
+          T.consumeOpen();
+          if (Tok.is(tok::identifier)) {
+            std::string Modifier = PP.getSpelling(Tok);
+            if (Modifier == "fb_nullify" || Modifier == "fb_preserve") {
+              Data.NeedDevicePtrModifier = Modifier == "fb_nullify"
+                                               ? OMPC_NEEDDEVICE_fp_nullify
+                                               : OMPC_NEEDDEVICE_fp_preserve;
+            } else {
+              Diag(Tok, diag::err_omp_unknown_need_device_ptr_modifier)
+                  << (getLangOpts().OpenMP >= 60 ? 1 : 0);
+              SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end,
+                        StopBeforeMatch);
+              return false;
+            }
+            ConsumeToken();
+            if (Tok.is(tok::r_paren)) {
+              Data.NeedDevicePtrModifierLoc = Tok.getLocation();
+              ConsumeAnyToken();
+            } else {
+              Diag(Tok, diag::err_expected) << tok::r_paren;
+              SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end,
+                        StopBeforeMatch);
+              return false;
+            }
+          }
+        }
+      }
       ExpectAndConsume(tok::colon, diag::warn_pragma_expected_colon,
                        "adjust-op");
     }
