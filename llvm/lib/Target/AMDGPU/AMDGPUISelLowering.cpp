@@ -2805,8 +2805,11 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
 
     SDValue C = DAG.getConstantFP(IsLog10 ? c_log10 : c_log, DL, VT);
     SDValue CC = DAG.getConstantFP(IsLog10 ? cc_log10 : cc_log, DL, VT);
-    // Our implementation of LOG is not contract safe, so disable instruction
-    // contraction.
+    // Our implementation of LOG is not contract safe because we generate
+    // error-correcting summations based on the rounding error of the first
+    // multiplication below, so contracting the multiply with the final add will
+    // lead to inaccurate final results. Disable contraction for the expanded
+    // instructions.
     Flags.setAllowContract(false);
     R = DAG.getNode(ISD::FMUL, DL, VT, Y, C, Flags);
     SDValue NegR = DAG.getNode(ISD::FNEG, DL, VT, R, Flags);
@@ -2830,8 +2833,11 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
     SDValue YHInt = DAG.getNode(ISD::AND, DL, MVT::i32, YAsInt, MaskConst);
     SDValue YH = DAG.getNode(ISD::BITCAST, DL, MVT::f32, YHInt);
     SDValue YT = DAG.getNode(ISD::FSUB, DL, VT, Y, YH, Flags);
-    // Our implementation of LOG is not contract safe, so disable instruction
-    // contraction.
+    // Our implementation of LOG is not contract safe because we generate
+    // error-correcting summations based on the rounding error of the first
+    // multiplication below, so contracting the multiply with the final add will
+    // lead to inaccurate final results. Disable contraction for the expanded
+    // instructions.
     Flags.setAllowContract(false);
     SDValue YTCT = DAG.getNode(ISD::FMUL, DL, VT, YT, CT, Flags);
     SDValue Mad0 = getMad(DAG, DL, VT, YH, CT, YTCT, Flags);
