@@ -516,10 +516,9 @@ using AttrSet = std::multiset<const Attr *, decltype(&compareAttrKind)>;
 }
 
 /// Collects all supported, non-inherited attributes from the given decl.
-/// Returns true on success. If the decl contains any unsupported attribute,
-/// returns false and sets UnsupportedAttr to point to that attribute.
-static bool collectComparableAttrs(const Decl *D, AttrSet &Attrs,
-                                   const Attr *&UnsupportedAttr) {
+/// If the decl doesn't contain any unsupported attributes, returns a nullptr,
+/// otherwise returns the first unsupported attribute.
+static const Attr *collectComparableAttrs(const Decl *D, AttrSet &Attrs) {
   for (const Attr *A : D->attrs()) {
     switch (A->getKind()) {
     case attr::Availability:
@@ -528,14 +527,12 @@ static bool collectComparableAttrs(const Decl *D, AttrSet &Attrs,
       if (!A->isInherited())
         Attrs.insert(A);
       break;
-
     default:
-      UnsupportedAttr = A;
-      return false; // unsupported attribute
+      return A; // unsupported attribute
     }
   }
 
-  return true;
+  return nullptr;
 }
 
 /// Determines whether D1 and D2 have compatible sets of attributes for the
@@ -547,11 +544,10 @@ static AttrComparisonResult areDeclAttrsEquivalent(const Decl *D1,
 
   AttrSet A1(&compareAttrKind), A2(&compareAttrKind);
 
-  const Attr *UnsupportedAttr1 = nullptr, *UnsupportedAttr2 = nullptr;
-  bool HasUnsupportedAttr1 = collectComparableAttrs(D1, A1, UnsupportedAttr1);
-  bool HasUnsupportedAttr2 = collectComparableAttrs(D2, A2, UnsupportedAttr2);
+  const Attr *UnsupportedAttr1 = collectComparableAttrs(D1, A1);
+  const Attr *UnsupportedAttr2 = collectComparableAttrs(D2, A2);
 
-  if (!HasUnsupportedAttr1 || !HasUnsupportedAttr2)
+  if (UnsupportedAttr1 || UnsupportedAttr2)
     return {AttrComparisonKind::NotEqual, UnsupportedAttr1, UnsupportedAttr2};
 
   auto I1 = A1.begin(), E1 = A1.end(), I2 = A2.begin(), E2 = A2.end();
@@ -563,7 +559,7 @@ static AttrComparisonResult areDeclAttrsEquivalent(const Decl *D1,
 
   if (I1 != E1)
     return {AttrComparisonKind::NotEqual, *I1};
-  if (I2 != E2)
+  else if (I2 != E2)
     return {AttrComparisonKind::NotEqual, nullptr, *I2};
 
   return {AttrComparisonKind::Equal};
