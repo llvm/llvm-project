@@ -95,7 +95,7 @@ static const unsigned ZvfbfaOps[] = {ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN,
 
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
 
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
   assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialised target ABI");
@@ -526,7 +526,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SSUBSAT, VTs, Legal);
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
     setOperationAction({ISD::ABDS, ISD::ABDU}, VTs, Legal);
-    setOperationAction(ISD::BUILD_VECTOR, VTs, Custom);
+    setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
     setOperationAction(ISD::BITCAST, VTs, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VTs, Custom);
   }
@@ -4433,37 +4433,6 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   MVT XLenVT = Subtarget.getXLenVT();
 
   SDLoc DL(Op);
-  // Handle P extension packed vector BUILD_VECTOR with PLI for splat constants
-  if (Subtarget.enablePExtCodeGen()) {
-    bool IsPExtVector =
-        (VT == MVT::v2i16 || VT == MVT::v4i8) ||
-        (Subtarget.is64Bit() &&
-         (VT == MVT::v4i16 || VT == MVT::v8i8 || VT == MVT::v2i32));
-    if (IsPExtVector) {
-      if (SDValue SplatValue = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
-        if (auto *C = dyn_cast<ConstantSDNode>(SplatValue)) {
-          int64_t SplatImm = C->getSExtValue();
-          bool IsValidImm = false;
-
-          // Check immediate range based on vector type
-          if (VT == MVT::v8i8 || VT == MVT::v4i8) {
-            // PLI_B uses 8-bit unsigned or unsigned immediate
-            IsValidImm = isUInt<8>(SplatImm) || isInt<8>(SplatImm);
-            if (isUInt<8>(SplatImm))
-              SplatImm = (int8_t)SplatImm;
-          } else {
-            // PLI_H and PLI_W use 10-bit signed immediate
-            IsValidImm = isInt<10>(SplatImm);
-          }
-
-          if (IsValidImm) {
-            SDValue Imm = DAG.getSignedTargetConstant(SplatImm, DL, XLenVT);
-            return DAG.getNode(RISCVISD::PLI, DL, VT, Imm);
-          }
-        }
-      }
-    }
-  }
 
   // Proper support for f16 requires Zvfh. bf16 always requires special
   // handling. We need to cast the scalar to integer and create an integer
@@ -18396,8 +18365,7 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
     }
   }
   for (std::pair<SDValue, SDValue> OldNewValues : ValuesToReplace) {
-    DAG.ReplaceAllUsesOfValueWith(OldNewValues.first, OldNewValues.second);
-    DCI.AddToWorklist(OldNewValues.second.getNode());
+    DCI.CombineTo(OldNewValues.first.getNode(), OldNewValues.second);
   }
   return InputRootReplacement;
 }
