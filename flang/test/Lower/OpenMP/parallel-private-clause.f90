@@ -231,14 +231,14 @@ end subroutine increment_list_items
 !FIRDialect-DAG: %[[Z1:.*]] = fir.alloca i32 {bindc_name = "z1", fir.target, uniq_name = "_QFparallel_pointerEz1"}
 !FIRDialect-DAG: %[[Z1_DECL:.*]]:2 = hlfir.declare %[[Z1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFparallel_pointerEz1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !FIRDialect-DAG:  %[[Z2:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "z2", fir.target, uniq_name = "_QFparallel_pointerEz2"}
-!FIRDialect-DAG:  %[[Z2_DECL:.*]]:2 = hlfir.declare %[[Z2]](%{{.*}}) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFparallel_pointerEz2"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+!FIRDialect-DAG:  %[[Z2_DECL:.*]]:2 = hlfir.declare %[[Z2]](%[[Z2_SHAPE:.*]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFparallel_pointerEz2"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 !FIRDialect:      omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[Y1_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[Y2_PVT:.*]] : {{.*}}) {
 !FIRDialect-DAG:    %[[Y1_PVT_DECL:.*]]:2 = hlfir.declare %[[Y1_PVT]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFparallel_pointerEy1"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !FIRDialect-DAG:    %[[Y2_PVT_DECL:.*]]:2 = hlfir.declare %[[Y2_PVT]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFparallel_pointerEy2"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 !FIRDialect-DAG:    %[[PP18:.*]] = fir.embox %[[Z1_DECL]]#0 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
 !FIRDialect:       fir.store %[[PP18]] to %[[Y1_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
-!FIRDialect-DAG:    %[[PP19:.*]] = fir.shape %c10 : (index) -> !fir.shape<1>
-!FIRDialect-DAG:    %[[PP20:.*]] = fir.embox %[[Z2_DECL]]#0(%[[PP19]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
+!FIRDialect:       %[[Z2_CAST:.*]] = fir.convert %[[Z2_DECL]]#0 : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<?xi32>>
+!FIRDialect-DAG:    %[[PP20:.*]] = fir.embox %[[Z2_CAST]](%[[Z2_SHAPE]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
 !FIRDialect:        fir.store %[[PP20]] to %[[Y2_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 !FIRDialect:       omp.terminator
 !FIRDialect:     }

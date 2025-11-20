@@ -471,13 +471,19 @@ else()
   if(${LIBOMP_INSTALL_ALIASES})
     # Create aliases (symlinks) of the library for backwards compatibility
     extend_path(outdir "${CMAKE_INSTALL_PREFIX}" "${OPENMP_INSTALL_LIBDIR}")
+    if(AIX)
+      # On AIX, libomp.a is the name for both static and shared objects.
+      set(LIBRARY_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
+    else()
+      set(LIBRARY_SUFFIX ${LIBOMP_LIBRARY_SUFFIX})
+    endif()
     set(LIBOMP_ALIASES "libgomp;libiomp5")
     foreach(alias IN LISTS LIBOMP_ALIASES)
-      install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
-        \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY
+      install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_NAME}${LIBRARY_SUFFIX}\"
+        \"${alias}${LIBRARY_SUFFIX}\" WORKING_DIRECTORY
         \"\$ENV{DESTDIR}${outdir}\")")
     endforeach()
-    if(LIBOMP_ENABLE_SHARED)
+    if(LIBOMP_ENABLE_SHARED AND NOT AIX)
       install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
         \"${VERSIONED_LIBGOMP_NAME}\" WORKING_DIRECTORY
         \"\$ENV{DESTDIR}${outdir}\")")

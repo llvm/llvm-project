@@ -310,6 +310,7 @@ public:
     auto xDeclOp = fir::cg::XDeclareOp::create(
         rewriter, loc, declareOp.getType(), declareOp.getMemref(), shapeOpers,
         shiftOpers, declareOp.getTypeparams(), declareOp.getDummyScope(),
+        declareOp.getStorage(), declareOp.getStorageOffset(),
         declareOp.getUniqName(), dummyArgNoAttr);
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << declareOp << " to " << xDeclOp << '\n');
