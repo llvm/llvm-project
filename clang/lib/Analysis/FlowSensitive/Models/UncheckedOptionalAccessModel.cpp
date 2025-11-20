@@ -78,6 +78,12 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
                             isFullyQualifiedNamespaceEqualTo(*N, "folly"));
   }
 
+  if (RD.getName() == "Optional_Base") {
+    const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
+    return N != nullptr &&
+           isFullyQualifiedNamespaceEqualTo(*N, "bslstl", "BloombergLP");
+  }
+
   if (RD.getName() == "NullableValue") {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
     return N != nullptr &&
