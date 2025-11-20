@@ -95,9 +95,17 @@ static RValue emitUnaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
 
 static RValue errorBuiltinNYI(CIRGenFunction &cgf, const CallExpr *e,
                               unsigned builtinID) {
-  cgf.cgm.errorNYI(e->getSourceRange(),
-                   std::string("unimplemented X86 builtin call: ") +
-                       cgf.getContext().BuiltinInfo.getName(builtinID));
+
+  if (cgf.getContext().BuiltinInfo.isLibFunction(builtinID)) {
+    cgf.cgm.errorNYI(
+        e->getSourceRange(),
+        std::string("unimplemented X86 library function builtin call: ") +
+            cgf.getContext().BuiltinInfo.getName(builtinID));
+  } else {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     std::string("unimplemented X86 builtin call: ") +
+                         cgf.getContext().BuiltinInfo.getName(builtinID));
+  }
 
   return cgf.getUndefRValue(e->getType());
 }
