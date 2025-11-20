@@ -10,7 +10,8 @@ struct [[=1, =F{true}]] f2 {};
 struct [[=1]] [[=2]] f3 {};
 // Declaration
 const [[=1]] F f4{};
-void foo([[=F{false}]]int i) {} // function parameters
+void f41([[=F{false}]]int i) {} // function parameters
+template<class T> [[=3]] void f42(T t); // non dep on template decl
 // Redeclaration
 [[=2, =3, =2]] void f5();
 void f5 [[=4, =2]] ();

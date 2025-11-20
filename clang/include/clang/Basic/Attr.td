@@ -944,7 +944,7 @@ private:
 
 public:
 
-  APValue getValue() const { return Value; }
+  const APValue & getValue() const { return Value; }
   void setValue(APValue V) { Value = V; }
 
   SourceLocation getEqLoc() const { return EqLoc; }
