@@ -334,7 +334,7 @@ struct FormatToken {
         EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
         ContinuesLineCommentSection(false), Finalized(false),
         ClosesRequiresClause(false), EndsCppAttributeGroup(false),
-        BlockKind(BK_Unknown), BlockCommentKind(CommentKind::Plain),
+        BlockCommentKind(CommentKind::Plain), BlockKind(BK_Unknown),
         Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
         TypeIsFinalized(false), Type(TT_Unknown) {}
 
@@ -413,11 +413,19 @@ struct FormatToken {
   unsigned EndsCppAttributeGroup : 1;
 
 private:
-  /// Contains the kind of block if this token is a brace.
-  unsigned BlockKind : 2;
-
   /// Kind of block comment.
   CommentKind BlockCommentKind = CommentKind::Plain;
+
+public:
+  CommentKind getBlockCommentKind() const { return BlockCommentKind; }
+  void setBlockCommentKind(CommentKind Kind) {
+    BlockCommentKind = Kind;
+    assert(getBlockCommentKind() == Kind && "CommentKind overflow!");
+  }
+
+private:
+  /// Contains the kind of block if this token is a brace.
+  unsigned BlockKind : 2;
 
 public:
   BraceBlockKind getBlockKind() const {
@@ -426,12 +434,6 @@ public:
   void setBlockKind(BraceBlockKind BBK) {
     BlockKind = BBK;
     assert(getBlockKind() == BBK && "BraceBlockKind overflow!");
-  }
-
-  CommentKind getBlockCommentKind() const { return BlockCommentKind; }
-  void setBlockCommentKind(CommentKind Kind) {
-    BlockCommentKind = Kind;
-    assert(getBlockCommentKind() == Kind && "CommentKind overflow!");
   }
 
 private:
