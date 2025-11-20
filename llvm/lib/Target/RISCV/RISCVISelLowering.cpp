@@ -16874,6 +16874,10 @@ static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
   } else if (CanSub) {
     Op = ISD::SUB;
     ShiftAmt1 = MulAmt + MulAmtLowBit;
+  } else if (isPowerOf2_64(MulAmtLowBit - MulAmt)) {
+    Op = ISD::SUB;
+    ShiftAmt1 = MulAmtLowBit;
+    MulAmtLowBit -= MulAmt;
   } else {
     return SDValue();
   }
