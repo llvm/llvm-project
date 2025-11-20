@@ -3454,6 +3454,20 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
             .Case([&](UnrollHeuristicOp op) -> std::string {
               llvm_unreachable("heuristic unrolling does not generate a loop");
             })
+            .Case([&](FuseOp op) -> std::string {
+              unsigned int first = 0;
+              unsigned int count = 0;
+              if (op.getFirst() && op.getCount()) {
+                first = op.getFirst().getInt();
+                count = op.getCount().getInt();
+              }
+              unsigned opnum = generator->getOperandNumber();
+              if ((first != 0 && opnum <= first - 1) ||
+                  (count != 0 && opnum >= first + 1))
+                return "canonloop_fuse";
+              else
+                return "fused";
+            })
             .Case([&](TileOp op) -> std::string {
               auto [generateesFirst, generateesCount] =
                   op.getGenerateesODSOperandIndexAndLength();
@@ -3826,6 +3840,60 @@ std::pair<unsigned, unsigned> TileOp ::getApplyeesODSOperandIndexAndLength() {
 }
 
 std::pair<unsigned, unsigned> TileOp::getGenerateesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_generatees);
+}
+
+//===----------------------------------------------------------------------===//
+// FuseOp
+//===----------------------------------------------------------------------===//
+
+static void printLoopTransformClis(OpAsmPrinter &p, FuseOp op,
+                                   OperandRange generatees,
+                                   OperandRange applyees) {
+  if (!generatees.empty())
+    p << '(' << llvm::interleaved(generatees) << ')';
+
+  if (!applyees.empty())
+    p << " <- (" << llvm::interleaved(applyees) << ')';
+}
+
+LogicalResult FuseOp::verify() {
+  if (getApplyees().size() < 2)
+    return emitOpError() << "must apply to at least two loops";
+
+  if (getFirst() && getCount()) {
+    unsigned int first = getFirst().getInt();
+    unsigned int count = getCount().getInt();
+    if (first + count - 1 > getApplyees().size())
+      return emitOpError() << "the numbers of applyees must be at least first "
+                              "minus one plus count attributes";
+    if (!getGeneratees().empty() &&
+        getGeneratees().size() != getApplyees().size() + 1 - count)
+      return emitOpError() << "the number of generatees must be the number of "
+                              "aplyees plus one minus count";
+
+  } else {
+    if (!getGeneratees().empty() && getGeneratees().size() != 1)
+      return emitOpError()
+             << "in a complete fuse the number of generatees must be exactly 1";
+  }
+  for (auto &&applyee : getApplyees()) {
+    auto [create, gen, cons] = decodeCli(applyee);
+
+    if (!gen)
+      return emitOpError() << "applyee CLI has no generator";
+    auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
+    if (!loop)
+      return emitOpError()
+             << "currently only supports omp.canonical_loop as applyee";
+  }
+  return success();
+}
+std::pair<unsigned, unsigned> FuseOp ::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyees);
+}
+
+std::pair<unsigned, unsigned> FuseOp::getGenerateesODSOperandIndexAndLength() {
   return getODSOperandIndexAndLength(odsIndex_generatees);
 }
 
