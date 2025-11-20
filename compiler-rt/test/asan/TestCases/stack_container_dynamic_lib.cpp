@@ -20,7 +20,7 @@
 // RUN: %clangxx_asan -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ -o %t %t-main.o %t-object.o %libdl
 // RUN: %run %t 2>&1 | FileCheck --check-prefix=CHECK-NO-CONTAINER-OVERFLOW %s
 //
-// UNSUPPORTED: *
+// UNSUPPORTED: true
 
 #include <assert.h>
 #include <sanitizer/common_interface_defs.h>
