@@ -1520,135 +1520,94 @@ __device__ void nvvm_min_max_sm86() {
   // CHECK: ret void
 }
 
-#define F16 (__fp16)0.1f
-#define F16_2 (__fp16)0.2f
+// CHECK-LABEL: nvvm_add_sub_fma_f32_sat
+__device__ void nvvm_add_sub_fma_f32_sat() {
+  // CHECK: call float @llvm.nvvm.add.rn.sat.f
+  __nvvm_add_rn_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rn.ftz.sat.f
+  __nvvm_add_rn_ftz_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rz.sat.f
+  __nvvm_add_rz_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rz.ftz.sat.f
+  __nvvm_add_rz_ftz_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rm.sat.f
+  __nvvm_add_rm_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rm.ftz.sat.f
+  __nvvm_add_rm_ftz_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rp.sat.f
+  __nvvm_add_rp_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rp.ftz.sat.f
+  __nvvm_add_rp_ftz_sat_f(1.0f, 2.0f);
 
-__device__ void nvvm_add_mixed_precision_sm100() {
-#if __CUDA_ARCH__ >= 1000
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_add_mixed_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rn.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_add_mixed_rn_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rz.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_add_mixed_rz_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rm.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_add_mixed_rm_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rp.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_add_mixed_rp_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.sat.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_add_mixed_sat_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rn.sat.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_add_mixed_rn_sat_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rz.sat.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_add_mixed_rz_sat_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rm.sat.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_add_mixed_rm_sat_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rp.sat.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_add_mixed_rp_sat_f16_f32(F16, 1.0f);
+  // CHECK: call float @llvm.nvvm.sub.rn.sat.f
+  __nvvm_sub_rn_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rn.ftz.sat.f
+  __nvvm_sub_rn_ftz_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rz.sat.f
+  __nvvm_sub_rz_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rz.ftz.sat.f
+  __nvvm_sub_rz_ftz_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rm.sat.f
+  __nvvm_sub_rm_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rm.ftz.sat.f
+  __nvvm_sub_rm_ftz_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rp.sat.f
+  __nvvm_sub_rp_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rp.ftz.sat.f
+  __nvvm_sub_rp_ftz_sat_f(1.0f, 2.0f);
 
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_add_mixed_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rn.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_add_mixed_rn_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rz.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_add_mixed_rz_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rm.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_add_mixed_rm_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rp.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_add_mixed_rp_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.sat.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_add_mixed_sat_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rn.sat.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_add_mixed_rn_sat_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rz.sat.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_add_mixed_rz_sat_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rm.sat.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_add_mixed_rm_sat_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.add.mixed.rp.sat.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_add_mixed_rp_sat_bf16_f32(BF16, 1.0f);
-#endif
+  // CHECK: call float @llvm.nvvm.fma.rn.sat.f
+  __nvvm_fma_rn_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rn.ftz.sat.f
+  __nvvm_fma_rn_ftz_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rz.sat.f
+  __nvvm_fma_rz_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rz.ftz.sat.f
+  __nvvm_fma_rz_ftz_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rm.sat.f
+  __nvvm_fma_rm_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rm.ftz.sat.f
+  __nvvm_fma_rm_ftz_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rp.sat.f
+  __nvvm_fma_rp_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rp.ftz.sat.f
+  __nvvm_fma_rp_ftz_sat_f(1.0f, 2.0f, 3.0f);
+
+  // CHECK: ret void
 }
 
-__device__ void nvvm_sub_mixed_precision_sm100() {
-#if __CUDA_ARCH__ >= 1000
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_sub_mixed_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rn.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_sub_mixed_rn_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rz.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_sub_mixed_rz_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rm.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_sub_mixed_rm_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rp.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_sub_mixed_rp_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.sat.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_sub_mixed_sat_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rn.sat.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_sub_mixed_rn_sat_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rz.sat.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_sub_mixed_rz_sat_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rm.sat.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_sub_mixed_rm_sat_f16_f32(F16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rp.sat.f32.f16(half 0xH2E66, float 1.000000e+00)
-  __nvvm_sub_mixed_rp_sat_f16_f32(F16, 1.0f);
+// CHECK-LABEL: nvvm_sub_f32
+__device__ void nvvm_sub_f32() {
+  // CHECK: call float @llvm.nvvm.sub.rn.f
+  __nvvm_sub_rn_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rn.ftz.f
+  __nvvm_sub_rn_ftz_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rz.f
+  __nvvm_sub_rz_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rz.ftz.f
+  __nvvm_sub_rz_ftz_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rm.f
+  __nvvm_sub_rm_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rm.ftz.f
+  __nvvm_sub_rm_ftz_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rp.f
+  __nvvm_sub_rp_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.sub.rp.ftz.f
+  __nvvm_sub_rp_ftz_f(1.0f, 2.0f);
 
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_sub_mixed_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rn.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_sub_mixed_rn_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rz.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_sub_mixed_rz_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rm.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_sub_mixed_rm_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rp.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_sub_mixed_rp_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.sat.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_sub_mixed_sat_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rn.sat.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_sub_mixed_rn_sat_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rz.sat.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_sub_mixed_rz_sat_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rm.sat.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_sub_mixed_rm_sat_bf16_f32(BF16, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.sub.mixed.rp.sat.f32.bf16(bfloat 0xR3DCD, float 1.000000e+00)
-  __nvvm_sub_mixed_rp_sat_bf16_f32(BF16, 1.0f);
-#endif
+  // CHECK: ret void
 }
 
-__device__ void nvvm_fma_mixed_precision_sm100() {
-#if __CUDA_ARCH__ >= 1000
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rn.f32.f16(half 0xH2E66, half 0xH3266, float 1.000000e+00)
-  __nvvm_fma_mixed_rn_f16_f32(F16, F16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rz.f32.f16(half 0xH2E66, half 0xH3266, float 1.000000e+00)
-  __nvvm_fma_mixed_rz_f16_f32(F16, F16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rm.f32.f16(half 0xH2E66, half 0xH3266, float 1.000000e+00)
-  __nvvm_fma_mixed_rm_f16_f32(F16, F16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rp.f32.f16(half 0xH2E66, half 0xH3266, float 1.000000e+00)
-  __nvvm_fma_mixed_rp_f16_f32(F16, F16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rn.sat.f32.f16(half 0xH2E66, half 0xH3266, float 1.000000e+00)
-  __nvvm_fma_mixed_rn_sat_f16_f32(F16, F16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rz.sat.f32.f16(half 0xH2E66, half 0xH3266, float 1.000000e+00)
-  __nvvm_fma_mixed_rz_sat_f16_f32(F16, F16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rm.sat.f32.f16(half 0xH2E66, half 0xH3266, float 1.000000e+00)
-  __nvvm_fma_mixed_rm_sat_f16_f32(F16, F16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rp.sat.f32.f16(half 0xH2E66, half 0xH3266, float 1.000000e+00)
-  __nvvm_fma_mixed_rp_sat_f16_f32(F16, F16_2, 1.0f);
+// CHECK-LABEL: nvvm_sub_f64
+__device__ void nvvm_sub_f64() {
+  // CHECK: call double @llvm.nvvm.sub.rn.d
+  __nvvm_sub_rn_d(1.0f, 2.0f);
+  // CHECK: call double @llvm.nvvm.sub.rz.d 
+  __nvvm_sub_rz_d(1.0f, 2.0f);
+  // CHECK: call double @llvm.nvvm.sub.rm.d
+  __nvvm_sub_rm_d(1.0f, 2.0f);
+  // CHECK: call double @llvm.nvvm.sub.rp.d
+  __nvvm_sub_rp_d(1.0f, 2.0f);
 
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rn.f32.bf16(bfloat 0xR3DCD, bfloat 0xR3E4D, float 1.000000e+00)
-  __nvvm_fma_mixed_rn_bf16_f32(BF16, BF16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rz.f32.bf16(bfloat 0xR3DCD, bfloat 0xR3E4D, float 1.000000e+00)
-  __nvvm_fma_mixed_rz_bf16_f32(BF16, BF16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rm.f32.bf16(bfloat 0xR3DCD, bfloat 0xR3E4D, float 1.000000e+00)
-  __nvvm_fma_mixed_rm_bf16_f32(BF16, BF16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rp.f32.bf16(bfloat 0xR3DCD, bfloat 0xR3E4D, float 1.000000e+00)
-  __nvvm_fma_mixed_rp_bf16_f32(BF16, BF16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rn.sat.f32.bf16(bfloat 0xR3DCD, bfloat 0xR3E4D, float 1.000000e+00)
-  __nvvm_fma_mixed_rn_sat_bf16_f32(BF16, BF16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rz.sat.f32.bf16(bfloat 0xR3DCD, bfloat 0xR3E4D, float 1.000000e+00)
-  __nvvm_fma_mixed_rz_sat_bf16_f32(BF16, BF16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rm.sat.f32.bf16(bfloat 0xR3DCD, bfloat 0xR3E4D, float 1.000000e+00)
-  __nvvm_fma_mixed_rm_sat_bf16_f32(BF16, BF16_2, 1.0f);
-  // CHECK_PTX86_SM100: call float @llvm.nvvm.fma.mixed.rp.sat.f32.bf16(bfloat 0xR3DCD, bfloat 0xR3E4D, float 1.000000e+00)
-  __nvvm_fma_mixed_rp_sat_bf16_f32(BF16, BF16_2, 1.0f);
-#endif
+  // CHECK: ret void
 }
