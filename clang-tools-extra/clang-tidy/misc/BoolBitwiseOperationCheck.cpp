@@ -19,13 +19,11 @@ namespace clang::tidy::misc {
 
 static const DynTypedNode *ignoreParensTowardsTheRoot(const DynTypedNode *N,
                                                       ASTContext *AC) {
-  if (const auto *S = N->get<Stmt>()) {
-    if (isa<ParenExpr>(S)) {
-      auto Parents = AC->getParents(*S);
-      // FIXME: do we need to consider all `Parents` ?
-      if (!Parents.empty())
-        return ignoreParensTowardsTheRoot(&Parents[0], AC);
-    }
+  if (const auto *S = N->get<Stmt>(); isa_and_nonnull<ParenExpr>(S)) {
+    auto Parents = AC->getParents(*S);
+    // FIXME: do we need to consider all `Parents` ?
+    if (!Parents.empty())
+      return ignoreParensTowardsTheRoot(&Parents[0], AC);
   }
   return N;
 }
@@ -65,64 +63,56 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
   if (!BinOp)
     return false;
 
-  for (const auto &[Bitwise, _] : OperatorsTransformation) {
-    if (BinOp->getOpcodeStr() == Bitwise) {
-      bool IsBooleanLHS = BinOp->getLHS()
-                              ->IgnoreImpCasts()
-                              ->getType()
-                              .getDesugaredType(*AC)
-                              ->isBooleanType();
-      bool IsBooleanRHS = BinOp->getRHS()
-                              ->IgnoreImpCasts()
-                              ->getType()
-                              .getDesugaredType(*AC)
-                              ->isBooleanType();
-      if (IsBooleanLHS && IsBooleanRHS) {
-        RootAssignsToBoolean = RootAssignsToBoolean.value_or(false);
-        return true;
-      }
-      if (((IsBooleanLHS || IsBooleanRHS) && assignsToBoolean(BinOp, AC)) ||
-          RootAssignsToBoolean.value_or(false)) {
-        RootAssignsToBoolean = RootAssignsToBoolean.value_or(true);
-        return true;
-      }
-      if (BinOp->isCompoundAssignmentOp() && IsBooleanLHS) {
-        RootAssignsToBoolean = RootAssignsToBoolean.value_or(true);
-        return true;
-      }
+  if (!llvm::is_contained(llvm::make_first_range(OperatorsTransformation), BinOp->getOpcodeStr()))
+    return false;
 
-      std::optional<bool> DummyFlag = false;
-      IsBooleanLHS =
-          IsBooleanLHS ||
-          isBooleanBitwise(
-              dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreParenImpCasts()),
-              AC, DummyFlag);
-      IsBooleanRHS =
-          IsBooleanRHS ||
-          isBooleanBitwise(
-              dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreParenImpCasts()),
-              AC, DummyFlag);
+  bool IsBooleanLHS = BinOp->getLHS()
+                          ->IgnoreImpCasts()
+                          ->getType()
+                          .getDesugaredType(*AC)
+                          ->isBooleanType();
+  bool IsBooleanRHS = BinOp->getRHS()
+                          ->IgnoreImpCasts()
+                          ->getType()
+                          .getDesugaredType(*AC)
+                          ->isBooleanType();
+  if (IsBooleanLHS && IsBooleanRHS) {
+    RootAssignsToBoolean = RootAssignsToBoolean.value_or(false);
+    return true;
+  }
+  if (((IsBooleanLHS || IsBooleanRHS) && assignsToBoolean(BinOp, AC)) ||
+      RootAssignsToBoolean.value_or(false)) {
+    RootAssignsToBoolean = RootAssignsToBoolean.value_or(true);
+    return true;
+  }
+  if (BinOp->isCompoundAssignmentOp() && IsBooleanLHS) {
+    RootAssignsToBoolean = RootAssignsToBoolean.value_or(true);
+    return true;
+  }
 
-      if (IsBooleanLHS && IsBooleanRHS) {
-        RootAssignsToBoolean = RootAssignsToBoolean.value_or(false);
-        return true;
-      }
-    }
+  std::optional<bool> DummyFlag = false;
+  IsBooleanLHS =
+      IsBooleanLHS ||
+      isBooleanBitwise(
+          dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreParenImpCasts()),
+          AC, DummyFlag);
+  IsBooleanRHS =
+      IsBooleanRHS ||
+      isBooleanBitwise(
+          dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreParenImpCasts()),
+          AC, DummyFlag);
+
+  if (IsBooleanLHS && IsBooleanRHS) {
+    RootAssignsToBoolean = RootAssignsToBoolean.value_or(false);
+    return true;
   }
   return false;
 }
 
 static const Expr *getAcceptableCompoundsLHS(const BinaryOperator *BinOp) {
   assert(BinOp->isCompoundAssignmentOp());
-
-  if (const auto *DeclRefLHS =
-          dyn_cast<DeclRefExpr>(BinOp->getLHS()->IgnoreImpCasts()))
-    return DeclRefLHS;
-  if (const auto *MemberLHS =
-          dyn_cast<MemberExpr>(BinOp->getLHS()->IgnoreImpCasts()))
-    return MemberLHS;
-
-  return nullptr;
+  const Expr *LHS = BinOp->getLHS()->IgnoreImpCasts();
+  return isa<DeclRefExpr, MemberExpr>(LHS) ? LHS : nullptr;
 }
 
 BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
