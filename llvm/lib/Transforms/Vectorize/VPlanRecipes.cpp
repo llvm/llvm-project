@@ -453,8 +453,12 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
     GEPFlags &= Other.GEPFlags;
     break;
   case OperationType::FPMathOp:
-    FMFs.NoNaNs &= Other.FMFs.NoNaNs;
-    FMFs.NoInfs &= Other.FMFs.NoInfs;
+  case OperationType::FCmp:
+    assert((OpType != OperationType::FCmp ||
+            FCmpFlags.Pred == Other.FCmpFlags.Pred) &&
+           "Cannot drop CmpPredicate");
+    getFMFsRef().NoNaNs &= Other.getFMFsRef().NoNaNs;
+    getFMFsRef().NoInfs &= Other.getFMFsRef().NoInfs;
     break;
   case OperationType::NonNegOp:
     NonNegFlags.NonNeg &= Other.NonNegFlags.NonNeg;
@@ -469,16 +473,17 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
 }
 
 FastMathFlags VPIRFlags::getFastMathFlags() const {
-  assert(OpType == OperationType::FPMathOp &&
+  assert((OpType == OperationType::FPMathOp || OpType == OperationType::FCmp) &&
          "recipe doesn't have fast math flags");
+  const FastMathFlagsTy &F = getFMFsRef();
   FastMathFlags Res;
-  Res.setAllowReassoc(FMFs.AllowReassoc);
-  Res.setNoNaNs(FMFs.NoNaNs);
-  Res.setNoInfs(FMFs.NoInfs);
-  Res.setNoSignedZeros(FMFs.NoSignedZeros);
-  Res.setAllowReciprocal(FMFs.AllowReciprocal);
-  Res.setAllowContract(FMFs.AllowContract);
-  Res.setApproxFunc(FMFs.ApproxFunc);
+  Res.setAllowReassoc(F.AllowReassoc);
+  Res.setNoNaNs(F.NoNaNs);
+  Res.setNoInfs(F.NoInfs);
+  Res.setNoSignedZeros(F.NoSignedZeros);
+  Res.setAllowReciprocal(F.AllowReciprocal);
+  Res.setAllowContract(F.AllowContract);
+  Res.setApproxFunc(F.ApproxFunc);
   return Res;
 }
 
@@ -488,6 +493,10 @@ void VPSingleDefRecipe::dump() const { VPDef::dump(); }
 void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
                          VPSlotTracker &SlotTracker) const {
   printRecipe(O, Indent, SlotTracker);
+  if (auto DL = getDebugLoc()) {
+    O << ", !dbg ";
+    DL.print(O);
+  }
 }
 #endif
 
@@ -1476,11 +1485,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
 
   printFlags(O);
   printOperands(O, SlotTracker);
-
-  if (auto DL = getDebugLoc()) {
-    O << ", !dbg ";
-    DL.print(O);
-  }
 }
 #endif
 
@@ -2074,11 +2078,12 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
            Opcode == Instruction::FMul || Opcode == Instruction::FSub ||
            Opcode == Instruction::FNeg || Opcode == Instruction::FDiv ||
            Opcode == Instruction::FRem || Opcode == Instruction::FPExt ||
-           Opcode == Instruction::FPTrunc || Opcode == Instruction::FCmp ||
-           Opcode == Instruction::Select ||
+           Opcode == Instruction::FPTrunc || Opcode == Instruction::Select ||
            Opcode == VPInstruction::WideIVStep ||
            Opcode == VPInstruction::ReductionStartVector ||
            Opcode == VPInstruction::ComputeReductionResult;
+  case OperationType::FCmp:
+    return Opcode == Instruction::FCmp;
   case OperationType::NonNegOp:
     return Opcode == Instruction::ZExt || Opcode == Instruction::UIToFP;
   case OperationType::Cmp:
@@ -2095,6 +2100,10 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
   switch (OpType) {
   case OperationType::Cmp:
     O << " " << CmpInst::getPredicateName(getPredicate());
+    break;
+  case OperationType::FCmp:
+    O << " " << CmpInst::getPredicateName(getPredicate());
+    getFastMathFlags().print(O);
     break;
   case OperationType::DisjointOp:
     if (DisjointFlags.IsDisjoint)
@@ -2204,15 +2213,14 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     Value *B = State.get(getOperand(1));
     Value *C = nullptr;
     if (FCmp) {
-      // Propagate fast math flags.
-      C = Builder.CreateFCmpFMF(
-          getPredicate(), A, B,
-          dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+      C = Builder.CreateFCmp(getPredicate(), A, B);
     } else {
       C = Builder.CreateICmp(getPredicate(), A, B);
     }
-    if (auto *I = dyn_cast<Instruction>(C))
+    if (auto *I = dyn_cast<Instruction>(C)) {
+      applyFlags(*I);
       applyMetadata(*I);
+    }
     State.set(this, C);
     break;
   }
@@ -3583,8 +3591,10 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 
   InstructionCost Cost = 0;
   if (IsMasked) {
+    unsigned IID = isa<VPWidenLoadRecipe>(this) ? Intrinsic::masked_load
+                                                : Intrinsic::masked_store;
     Cost +=
-        Ctx.TTI.getMaskedMemoryOpCost(Opcode, Ty, Alignment, AS, Ctx.CostKind);
+        Ctx.TTI.getMaskedMemoryOpCost({IID, Ty, Alignment, AS}, Ctx.CostKind);
   } else {
     TTI::OperandValueInfo OpInfo = Ctx.getOperandInfo(
         isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this) ? getOperand(0)
@@ -3702,8 +3712,10 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
+  // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
+  // After migrating to getMemIntrinsicInstrCost, switch this to vp_load.
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      Instruction::Load, Ty, Alignment, AS, Ctx.CostKind);
+      {Intrinsic::masked_load, Ty, Alignment, AS}, Ctx.CostKind);
   if (!Reverse)
     return Cost;
 
@@ -3811,8 +3823,10 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
+  // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
+  // After migrating to getMemIntrinsicInstrCost, switch this to vp_store.
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      Instruction::Store, Ty, Alignment, AS, Ctx.CostKind);
+      {Intrinsic::masked_store, Ty, Alignment, AS}, Ctx.CostKind);
   if (!Reverse)
     return Cost;
 

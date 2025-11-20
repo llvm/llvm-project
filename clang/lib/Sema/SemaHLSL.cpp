@@ -773,7 +773,7 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
 
 bool SemaHLSL::determineActiveSemanticOnScalar(
     FunctionDecl *FD, DeclaratorDecl *OutputDecl, DeclaratorDecl *D,
-    SemanticInfo &ActiveSemantic, llvm::StringSet<> &ActiveInputSemantics) {
+    SemanticInfo &ActiveSemantic, llvm::StringSet<> &UsedSemantics) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
     if (ActiveSemantic.Semantic)
@@ -805,7 +805,7 @@ bool SemaHLSL::determineActiveSemanticOnScalar(
   for (unsigned I = 0; I < ElementCount; ++I) {
     Twine VariableName = BaseName.concat(Twine(Location + I));
 
-    auto [_, Inserted] = ActiveInputSemantics.insert(VariableName.str());
+    auto [_, Inserted] = UsedSemantics.insert(VariableName.str());
     if (!Inserted) {
       Diag(D->getLocation(), diag::err_hlsl_semantic_index_overlap)
           << VariableName.str();
@@ -816,26 +816,29 @@ bool SemaHLSL::determineActiveSemanticOnScalar(
   return true;
 }
 
-bool SemaHLSL::determineActiveSemantic(
-    FunctionDecl *FD, DeclaratorDecl *OutputDecl, DeclaratorDecl *D,
-    SemanticInfo &ActiveSemantic, llvm::StringSet<> &ActiveInputSemantics) {
+bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD,
+                                       DeclaratorDecl *OutputDecl,
+                                       DeclaratorDecl *D,
+                                       SemanticInfo &ActiveSemantic,
+                                       llvm::StringSet<> &UsedSemantics) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
     if (ActiveSemantic.Semantic)
       ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
   }
 
-  const Type *T = D->getType()->getUnqualifiedDesugaredType();
+  const Type *T = D == FD ? &*FD->getReturnType() : &*D->getType();
+  T = T->getUnqualifiedDesugaredType();
+
   const RecordType *RT = dyn_cast<RecordType>(T);
   if (!RT)
     return determineActiveSemanticOnScalar(FD, OutputDecl, D, ActiveSemantic,
-                                           ActiveInputSemantics);
+                                           UsedSemantics);
 
   const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *Field : RD->fields()) {
     SemanticInfo Info = ActiveSemantic;
-    if (!determineActiveSemantic(FD, OutputDecl, Field, Info,
-                                 ActiveInputSemantics)) {
+    if (!determineActiveSemantic(FD, OutputDecl, Field, Info, UsedSemantics)) {
       Diag(Field->getLocation(), diag::note_hlsl_semantic_used_here) << Field;
       return false;
     }
@@ -915,13 +918,21 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
     if (ActiveSemantic.Semantic)
       ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
 
+    // FIXME: Verify output semantics in parameters.
     if (!determineActiveSemantic(FD, Param, Param, ActiveSemantic,
                                  ActiveInputSemantics)) {
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();
     }
   }
-  // FIXME: Verify return type semantic annotation.
+
+  SemanticInfo ActiveSemantic;
+  llvm::StringSet<> ActiveOutputSemantics;
+  ActiveSemantic.Semantic = FD->getAttr<HLSLParsedSemanticAttr>();
+  if (ActiveSemantic.Semantic)
+    ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
+  if (!FD->getReturnType()->isVoidType())
+    determineActiveSemantic(FD, FD, FD, ActiveSemantic, ActiveOutputSemantics);
 }
 
 void SemaHLSL::checkSemanticAnnotation(
@@ -3047,54 +3058,29 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
-    if (SemaRef.checkArgCount(TheCall, 1) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0))
-      return true;
-    // use the type of the handle (arg0) as a return type
+    assert(TheCall->getNumArgs() == 1 && "expected 1 arg");
+    // Update return type to be the attributed resource type from arg0.
     QualType ResourceTy = TheCall->getArg(0)->getType();
     TheCall->setType(ResourceTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_resource_handlefrombinding: {
-    ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 6) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.IntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(5),
-                            AST.getPointerType(AST.CharTy.withConst())))
-      return true;
-    // use the type of the handle (arg0) as a return type
+    assert(TheCall->getNumArgs() == 6 && "expected 6 args");
+    // Update return type to be the attributed resource type from arg0.
     QualType ResourceTy = TheCall->getArg(0)->getType();
     TheCall->setType(ResourceTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_resource_handlefromimplicitbinding: {
-    ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 6) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.IntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(5),
-                            AST.getPointerType(AST.CharTy.withConst())))
-      return true;
-    // use the type of the handle (arg0) as a return type
+    assert(TheCall->getNumArgs() == 6 && "expected 6 args");
+    // Update return type to be the attributed resource type from arg0.
     QualType ResourceTy = TheCall->getArg(0)->getType();
     TheCall->setType(ResourceTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_resource_counterhandlefromimplicitbinding: {
+    assert(TheCall->getNumArgs() == 3 && "expected 3 args");
     ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 3) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy))
-      return true;
-
     QualType MainHandleTy = TheCall->getArg(0)->getType();
     auto *MainResType = MainHandleTy->getAs<HLSLAttributedResourceType>();
     auto MainAttrs = MainResType->getAttrs();
@@ -3103,25 +3089,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     QualType CounterHandleTy = AST.getHLSLAttributedResourceType(
         MainResType->getWrappedType(), MainResType->getContainedType(),
         MainAttrs);
+    // Update return type to be the attributed resource type from arg0
+    // with added IsCounter flag.
     TheCall->setType(CounterHandleTy);
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_resource_getdimensions_x: {
-    ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 2) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckModifiableLValue(&SemaRef, TheCall, 1))
-      return true;
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_resource_getstride: {
-    ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 2) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckModifiableLValue(&SemaRef, TheCall, 1))
-      return true;
     break;
   }
   case Builtin::BI__builtin_hlsl_and:
@@ -3423,14 +3393,12 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_buffer_update_counter: {
+    assert(TheCall->getNumArgs() == 2 && "expected 2 args");
     auto checkResTy = [](const HLSLAttributedResourceType *ResTy) -> bool {
       return !(ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
                ResTy->getAttrs().RawBuffer && ResTy->hasContainedType());
     };
-    if (SemaRef.checkArgCount(TheCall, 2) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
-                            SemaRef.getASTContext().IntTy))
+    if (CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy))
       return true;
     Expr *OffsetExpr = TheCall->getArg(1);
     std::optional<llvm::APSInt> Offset =
