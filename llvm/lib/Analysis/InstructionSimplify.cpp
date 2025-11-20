@@ -3274,9 +3274,7 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpPredicate Pred, BinaryOperator *LBO,
 static bool trySimplifyICmpWithAdds(CmpPredicate Pred, Value *LHS, Value *RHS,
                                     const InstrInfoQuery &IIQ) {
   // TODO: support other predicates.
-  if ((Pred != CmpInst::ICMP_SLT && Pred != CmpInst::ICMP_SGT &&
-       Pred != CmpInst::ICMP_SLE && Pred != CmpInst::ICMP_SGE) ||
-      !IIQ.UseInstrInfo)
+  if (!ICmpInst::isSigned(Pred) || !IIQ.UseInstrInfo)
     return false;
 
   // Canonicalize nsw add as RHS.
