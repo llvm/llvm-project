@@ -18433,15 +18433,15 @@ the low-bits.
 Arguments:
 """"""""""
 
-The arguments may be any integer type or vector of integer type. Both arguments
-and result must have the same type.
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
 
 Semantics:
 """"""""""
 
 The '``llvm.clmul``' intrinsic computes carry-less multiply of its arguments,
-which is the result of applying the standard Euclidean multiplication algorithm,
-where all of the additions are replaced with XORs, and returns the low-bits.
+which is the result of applying the standard multiplication algorithm, where
+all of the additions are replaced with XORs, and returns the low-bits.
 The vector variants operate lane-wise.
 
 Example:
