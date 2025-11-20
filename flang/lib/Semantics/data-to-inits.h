@@ -63,7 +63,7 @@ void AccumulateDataInitializations(DataInitializations &,
     const std::list<common::Indirection<parser::DataStmtValue>> &);
 
 void ConvertToInitializers(
-    DataInitializations &, evaluate::ExpressionAnalyzer &);
+    DataInitializations &, evaluate::ExpressionAnalyzer &, bool ProcessScopes = false);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_DATA_TO_INITS_H_
