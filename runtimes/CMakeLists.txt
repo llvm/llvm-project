@@ -90,7 +90,7 @@ include(ExtendPath)
 
 # CMake 3.24 is the first version of CMake that directly recognizes Flang.
 # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
-if (CMAKE_VERSION VERSION_LESS "3.24")
+if (CMAKE_VERSION VERSION_LESS "3.24" AND CMAKE_Fortran_COMPILER)
   cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
   if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR
       _Fortran_COMPILER_STEM STREQUAL "flang")
