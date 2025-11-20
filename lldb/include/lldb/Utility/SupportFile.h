@@ -77,7 +77,7 @@ protected:
   const Checksum m_checksum;
 };
 
-typedef NonNullSharedPtr<lldb_private::SupportFile> SupportFileSP;
+typedef NonNullSharedPtr<lldb_private::SupportFile> SupportFileNSP;
 
 } // namespace lldb_private
 

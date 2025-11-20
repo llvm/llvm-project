@@ -177,7 +177,7 @@ Sections:
     return createStringError("No .text");
 
   auto cu_up = std::make_unique<CompileUnit>(module_sp, /*user_data=*/nullptr,
-                                             /*support_file_sp=*/nullptr,
+                                             /*support_file_nsp=*/nullptr,
                                              /*uid=*/0, eLanguageTypeC,
                                              /*is_optimized=*/eLazyBoolNo);
   LineTable *line_table = new LineTable(cu_up.get(), std::move(line_sequences));

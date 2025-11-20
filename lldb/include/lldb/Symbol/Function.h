@@ -469,11 +469,12 @@ public:
   ///
   /// \param[out] line_no
   ///     The line number.
-  void GetStartLineSourceInfo(SupportFileSP &source_file_sp, uint32_t &line_no);
+  void GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
+                              uint32_t &line_no);
 
   using SourceRange = Range<uint32_t, uint32_t>;
   /// Find the file and line number range of the function.
-  llvm::Expected<std::pair<SupportFileSP, SourceRange>> GetSourceInfo();
+  llvm::Expected<std::pair<SupportFileNSP, SourceRange>> GetSourceInfo();
 
   /// Get the outgoing call edges from this function, sorted by their return
   /// PC addresses (in increasing order).
