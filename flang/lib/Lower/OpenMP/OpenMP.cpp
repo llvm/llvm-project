@@ -3675,8 +3675,8 @@ getReductionType(lower::AbstractConverter &converter,
 
   if (!isSimpleReductionType(reductionType))
     TODO(converter.getCurrentLocation(),
-         "declare reduction using currently only supports trival types or "
-         "derived types containing trivial types");
+         "declare reduction currently only supports trival types or derived "
+         "types containing trivial types");
   return reductionType;
 }
 
