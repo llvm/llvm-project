@@ -84,7 +84,9 @@ static mlir::Value convertKunpckMaskToVector(CIRGenBuilderTy &builder,
     mlir::Type i32Ty = builder.getSInt32Ty();
     for (auto i : llvm::seq<unsigned>(0, numElems))
       indices.push_back(cir::IntAttr::get(i32Ty, i));
-    maskVec = builder.createVecShuffle(mask.getLoc(), maskVec, indices);
+    cir::ConstantOp poison =
+        builder.getConstant(mask.getLoc(), cir::PoisonAttr::get(maskVec.getType()));
+    maskVec = builder.createVecShuffle(mask.getLoc(), maskVec, poison, indices);
   }
   return maskVec;
 }
@@ -97,6 +99,7 @@ static mlir::Value emitKunpckOp(CIRGenBuilderTy &builder, mlir::Value op0,
   mlir::Value rhs = convertKunpckMaskToVector(builder, op1, numElems);
 
   // Build shuffle indices as attributes to avoid redundant conversion.
+  // createVecShuffle will loop through the vector again to convert if we use int64_t.
   llvm::SmallVector<mlir::Attribute, 64> indices;
   mlir::Type i32Ty = builder.getSInt32Ty();
   for (auto i : llvm::seq<unsigned>(0, numElems))
@@ -104,10 +107,14 @@ static mlir::Value emitKunpckOp(CIRGenBuilderTy &builder, mlir::Value op0,
 
   // First extract half of each vector. This gives better codegen than
   // doing it in a single shuffle.
-  lhs = builder.createVecShuffle(loc, lhs,
-                                 llvm::ArrayRef(indices.data(), numElems / 2));
-  rhs = builder.createVecShuffle(loc, rhs,
-                                 llvm::ArrayRef(indices.data(), numElems / 2));
+  // Use poison as second operand for unary shuffle to avoid conversion loop.
+  cir::ConstantOp poison =
+      builder.getConstant(loc, cir::PoisonAttr::get(lhs.getType()));
+  lhs = builder.createVecShuffle(
+      loc, lhs, poison, llvm::ArrayRef(indices.data(), numElems / 2));
+  rhs = builder.createVecShuffle(
+      loc, rhs, poison, llvm::ArrayRef(indices.data(), numElems / 2));
+  
   // Concat the vectors.
   // NOTE: Operands are swapped to match the intrinsic definition.
   mlir::Value res = builder.createVecShuffle(loc, rhs, lhs, indices);
