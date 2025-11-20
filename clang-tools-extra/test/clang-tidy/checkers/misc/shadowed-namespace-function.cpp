@@ -180,3 +180,17 @@ void f1_anon() {}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
+
+void f1_inline_ns();
+namespace foo_inline_ns {
+  void f0_inline_ns();
+  void f1_inline_ns();
+}
+void f0_inline_ns() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f0_inline_ns' shadows 'foo_inline_ns::f0_inline_ns' [misc-shadowed-namespace-function]
+// CHECK-FIXES: void foo_inline_ns::f0_inline_ns() {}
+void f1_inline_ns() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f1_inline_ns' shadows 'foo_inline_ns::f1_inline_ns' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+//////////////////////////////////////////////////////////////////////////////////////////
