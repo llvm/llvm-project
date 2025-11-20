@@ -651,8 +651,9 @@ bool isDead(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
     return true;
   }
 
-  // It is possible that the only side effect is that the instruction is referenced in the
-  // global registry. If that is the only side effect, the intrinsic is dead.
+  // It is possible that the only side effect is that the instruction is
+  // referenced in the global registry. If that is the only side effect, the
+  // intrinsic is dead.
   if (MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS ||
       MI.getOpcode() == TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS) {
     const auto &Intr = cast<GIntrinsic>(MI);
