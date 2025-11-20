@@ -4627,3 +4627,157 @@ define <8 x i64> @clmul_v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
   %a = call <8 x i64> @llvm.clmul.v8i64(<8 x i64> %x, <8 x i64> %y)
   ret <8 x i64> %a
 }
+
+define <4 x i8> @clmulr_v4i8(<4 x i8> %a, <4 x i8> %b) nounwind {
+; CHECK-LABEL: clmulr_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    li a0, 16
+; CHECK-NEXT:    vand.vi v9, v8, 2
+; CHECK-NEXT:    vand.vi v11, v8, 1
+; CHECK-NEXT:    vmul.vv v9, v10, v9
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v11, v9
+; CHECK-NEXT:    vand.vi v11, v8, 4
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vi v11, v8, 8
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 64
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 256
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 512
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 1024
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    slli a0, a0, 11
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    lui a0, 1
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    lui a0, 2
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    lui a0, 4
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    lui a0, 8
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vmul.vv v8, v10, v8
+; CHECK-NEXT:    vxor.vv v8, v9, v8
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 7
+; CHECK-NEXT:    ret
+  %a.ext = zext <4 x i8> %a to <4 x i16>
+  %b.ext = zext <4 x i8> %b to <4 x i16>
+  %clmul = call <4 x i16> @llvm.clmul.v4i8(<4 x i16> %a.ext, <4 x i16> %b.ext)
+  %res.ext = lshr <4 x i16> %clmul, splat(i16 7)
+  %res = trunc <4 x i16> %res.ext to <4 x i8>
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @clmulh_v4i8(<4 x i8> %a, <4 x i8> %b) nounwind {
+; CHECK-LABEL: clmulh_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    li a0, 16
+; CHECK-NEXT:    vand.vi v9, v8, 2
+; CHECK-NEXT:    vand.vi v11, v8, 1
+; CHECK-NEXT:    vmul.vv v9, v10, v9
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v11, v9
+; CHECK-NEXT:    vand.vi v11, v8, 4
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vi v11, v8, 8
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 64
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 256
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 512
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 1024
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    slli a0, a0, 11
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    lui a0, 1
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    lui a0, 2
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    lui a0, 4
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vand.vx v11, v8, a0
+; CHECK-NEXT:    lui a0, 8
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vmul.vv v11, v10, v11
+; CHECK-NEXT:    vxor.vv v9, v9, v11
+; CHECK-NEXT:    vmul.vv v8, v10, v8
+; CHECK-NEXT:    vxor.vv v8, v9, v8
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 8
+; CHECK-NEXT:    ret
+  %a.ext = zext <4 x i8> %a to <4 x i16>
+  %b.ext = zext <4 x i8> %b to <4 x i16>
+  %clmul = call <4 x i16> @llvm.clmul.v4i8(<4 x i16> %a.ext, <4 x i16> %b.ext)
+  %res.ext = lshr <4 x i16> %clmul, splat(i16 8)
+  %res = trunc <4 x i16> %res.ext to <4 x i8>
+  ret <4 x i8> %res
+}
