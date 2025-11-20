@@ -7281,20 +7281,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     }
     return;
   }
-  case Intrinsic::clmul:
-  case Intrinsic::clmulr: {
-    SDValue Op1 = getValue(I.getArgOperand(0));
-    SDValue Op2 = getValue(I.getArgOperand(1));
-    unsigned Opcode;
-    switch (Intrinsic) {
-    case Intrinsic::clmul:
-      Opcode = ISD::CLMUL;
-      break;
-    case Intrinsic::clmulr:
-      Opcode = ISD::CLMULR;
-      break;
-    }
-    setValue(&I, DAG.getNode(Opcode, sdl, Op1.getValueType(), Op1, Op2));
+  case Intrinsic::clmul: {
+    SDValue X = getValue(I.getArgOperand(0));
+    SDValue Y = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::CLMUL, sdl, X.getValueType(), X, Y));
     return;
   }
   case Intrinsic::sadd_sat: {

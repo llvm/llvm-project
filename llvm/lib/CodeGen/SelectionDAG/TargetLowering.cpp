@@ -8324,20 +8324,15 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
     }
     break;
   }
-  case ISD::CLMULR: {
-    SDValue XRev = DAG.getNode(ISD::BITREVERSE, DL, VT, X);
-    SDValue YRev = DAG.getNode(ISD::BITREVERSE, DL, VT, X);
-    SDValue ResR = DAG.getNode(ISD::CLMUL, DL, VT, XRev, YRev);
-    Res = DAG.getNode(ISD::BITREVERSE, DL, VT, ResR);
-    break;
-  }
+  case ISD::CLMULR:
   case ISD::CLMULH: {
     EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), 2 * BW);
     SDValue XExt = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVT, X);
     SDValue YExt = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVT, Y);
     SDValue ClMul = DAG.getNode(ISD::CLMUL, DL, ExtVT, XExt, YExt);
+    unsigned ShtAmt = Node->getOpcode() == ISD::CLMULR ? BW - 1 : BW;
     SDValue HiBits = DAG.getNode(ISD::SRL, DL, ExtVT, ClMul,
-                                 DAG.getShiftAmountConstant(BW, VT, DL));
+                                 DAG.getShiftAmountConstant(ShtAmt, VT, DL));
     Res = DAG.getNode(ISD::TRUNCATE, DL, VT, HiBits);
     break;
   }

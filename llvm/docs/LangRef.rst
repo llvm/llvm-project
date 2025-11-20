@@ -18454,54 +18454,6 @@ Example:
       %r = call i4 @llvm.clmul.i4(i4 -4, i4 2)   ; %r = -8
       %r = call i4 @llvm.clmul.i4(i4 -4, i4 -5)  ; %r = 4
 
-'``llvm.clmulr.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ``llvm.clmulr`` on any integer
-or vectors of integer elements.
-
-::
-
-      declare i16 @llvm.clmulr.i16(i16 %a, i16 %b)
-      declare i32 @llvm.clmulr.i32(i32 %a, i32 %b)
-      declare i64 @llvm.clmulr.i64(i64 %a, i64 %b)
-      declare <4 x i32> @llvm.clmulr.v4i32(<4 x i32> %a, <4 x i32> %b)
-
-Overview:
-"""""""""
-
-The '``llvm.clmulr``' family of intrinsic functions performs reversed
-carry-less multiplication on the two arguments.
-
-Arguments:
-""""""""""
-
-The arguments may be any integer type or vector of integer type. Both arguments
-and result must have the same type.
-
-Semantics:
-""""""""""
-
-The '``llvm.clmulr``' intrinsic computes reversed carry-less multiply of its
-arguments. The vector variants operate lane-wise.
-
-.. code-block:: text
-
-      clmulr(%a, %b) = bitreverse(clmul(bitreverse(%a), bitreverse(%b)))
-
-Example:
-""""""""
-
-.. code-block:: llvm
-
-      %r = call i4 @llvm.clmulr.i4(i4 1, i4 2)    ; %r = 0
-      %r = call i4 @llvm.clmulr.i4(i4 5, i4 6)    ; %r = 3
-      %r = call i4 @llvm.clmulr.i4(i4 -4, i4 2)   ; %r = 3
-      %r = call i4 @llvm.clmulr.i4(i4 -4, i4 -5)  ; %r = -2
-
 .. _int_overflow:
 
 Arithmetic with Overflow Intrinsics
