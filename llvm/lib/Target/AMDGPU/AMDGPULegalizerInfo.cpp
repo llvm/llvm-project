@@ -3518,6 +3518,9 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
   MachineRegisterInfo &MRI = *B.getMRI();
   Register Dst = MI.getOperand(0).getReg();
   Register X = MI.getOperand(1).getReg();
+  // Our implementation of LOG is not contract safe, so disable contraction in
+  // the flags before reading the field.
+  MI.clearFlags(MachineInstr::FmContract);
   unsigned Flags = MI.getFlags();
   const LLT Ty = MRI.getType(X);
   MachineFunction &MF = B.getMF();
