@@ -88,11 +88,60 @@ class CFIInstrInserter : public MachineFunctionPass {
 #define INVALID_REG UINT_MAX
 #define INVALID_OFFSET INT_MAX
   /// contains the location where CSR register is saved.
-  struct CSRSavedLocation {
-    CSRSavedLocation(std::optional<unsigned> R, std::optional<int> O)
-        : Reg(R), Offset(O) {}
-    std::optional<unsigned> Reg;
-    std::optional<int> Offset;
+  class CSRSavedLocation {
+  public:
+    enum Kind { INVALID, REGISTER, CFA_OFFSET };
+    Kind K;
+
+  private:
+    union {
+      // Dwarf register number
+      unsigned Reg;
+      // CFA offset
+      int64_t Offset;
+    } U;
+
+  public:
+    CSRSavedLocation() { K = Kind::INVALID; }
+
+    bool isValid() const { return K != Kind::INVALID; }
+
+    unsigned getRegister() const {
+      assert(K == REGISTER);
+      return U.Reg;
+    }
+
+    void setRegister(unsigned _Reg) {
+      assert(K == REGISTER);
+      U.Reg = _Reg;
+    }
+
+    int64_t getOffset() const {
+      assert(K == REGISTER);
+      return U.Offset;
+    }
+
+    void setOffset(int64_t _Offset) {
+      assert(K == REGISTER);
+      U.Offset = _Offset;
+    }
+
+    bool operator==(const CSRSavedLocation &RHS) const {
+      if (K != RHS.K)
+        return false;
+      switch (K) {
+      case Kind::INVALID:
+        return !RHS.isValid();
+      case Kind::REGISTER:
+        return getRegister() == RHS.getRegister();
+      case Kind::CFA_OFFSET:
+        return getOffset() == RHS.getOffset();
+      }
+      llvm_unreachable("Unknown CSRSavedLocation Kind!");
+    }
+    bool operator!=(const CSRSavedLocation &RHS) const {
+      return !(*this == RHS);
+    }
   };
 
   /// Contains cfa offset and register values valid at entry and exit of basic
@@ -266,12 +315,20 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpValOffset:
         break;
       }
-      if (CSRReg || CSROffset) {
+      CSRSavedLocation CSRLoc;
+      if (CSRReg) {
+        CSRLoc.K = CSRSavedLocation::Kind::REGISTER;
+        CSRLoc.setRegister(*CSRReg);
+      }
+      if (CSROffset) {
+        CSRLoc.K = CSRSavedLocation::Kind::CFA_OFFSET;
+        CSRLoc.setOffset(*CSROffset);
+      }
+      if (CSRLoc.isValid()) {
         auto It = CSRLocMap.find(CFI.getRegister());
         if (It == CSRLocMap.end()) {
-          CSRLocMap.insert(
-              {CFI.getRegister(), CSRSavedLocation(CSRReg, CSROffset)});
-        } else if (It->second.Reg != CSRReg || It->second.Offset != CSROffset) {
+          CSRLocMap.insert({CFI.getRegister(), CSRLoc});
+        } else if (It->second != CSRLoc) {
           reportFatalInternalError(
               "Different saved locations for the same CSR");
         }
@@ -394,14 +451,19 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
       assert(it != CSRLocMap.end() && "Reg should have an entry in CSRLocMap");
       unsigned CFIIndex;
       CSRSavedLocation RO = it->second;
-      if (!RO.Reg && RO.Offset) {
+      switch (RO.K) {
+      case CSRSavedLocation::CFA_OFFSET: {
         CFIIndex = MF.addFrameInst(
-            MCCFIInstruction::createOffset(nullptr, Reg, *RO.Offset));
-      } else if (RO.Reg && !RO.Offset) {
+            MCCFIInstruction::createOffset(nullptr, Reg, RO.getOffset()));
+        break;
+      }
+      case CSRSavedLocation::REGISTER: {
         CFIIndex = MF.addFrameInst(
-            MCCFIInstruction::createRegister(nullptr, Reg, *RO.Reg));
-      } else {
-        llvm_unreachable("RO.Reg and RO.Offset cannot both be valid/invalid");
+            MCCFIInstruction::createRegister(nullptr, Reg, RO.getRegister()));
+        break;
+      }
+      default:
+        llvm_unreachable("INVALID CSRSavedLocation!");
       }
       BuildMI(*MBBInfo.MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);
