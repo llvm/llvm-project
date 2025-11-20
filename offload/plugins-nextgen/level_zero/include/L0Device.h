@@ -306,10 +306,15 @@ public:
     return Plugin::success();
   }
 
-  // Add a new program to the device. Return a reference to the new program.
-  L0ProgramTy &addProgram(int32_t ImageId,
-                          std::unique_ptr<MemoryBuffer> &&Image) {
-    Programs.emplace_back(ImageId, *this, std::move(Image));
+  // add a new program to the device. Return a reference to the new program
+  Expected<L0ProgramTy &> addProgram(int32_t ImageId,
+                                     L0ProgramBuilderTy &Builder) {
+    auto ImageOrErr = Builder.getELF();
+    if (!ImageOrErr)
+      return ImageOrErr.takeError();
+    Programs.emplace_back(ImageId, *this, std::move(*ImageOrErr),
+                          Builder.getGlobalModule(),
+                          std::move(Builder.getModules()));
     return Programs.back();
   }
 
