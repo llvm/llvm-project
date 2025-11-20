@@ -1985,7 +1985,7 @@ static void boundsSafetyRecursiveInit(CodeGenFunction &CGF, const Decl *D,
   } else if (ShouldInitializeType(Ty)) {
     boundsSafetyZeroInit(CGF, BaseAddrGen(), IsVolatileQualified);
   } else if (auto RTy = Ty->getAs<RecordType>()) {
-    auto RD = RTy->getOriginalDecl();
+    auto RD = RTy->getDecl();
     assert(RD);
     if (RD->isUnion()) {
       for (auto F : RD->fields()) {

@@ -270,7 +270,7 @@ void IndexRecordHasher::hashCanonicalType(CanQualType CT) {
     }
     if (const TagType *tag = dyn_cast<TagType>(T)) {
       HashBuilder.add('$');
-      hashDecl(tag->getOriginalDecl()->getCanonicalDecl());
+      hashDecl(tag->getDecl()->getCanonicalDecl());
       return;
     }
     if (const ObjCInterfaceType *interface = dyn_cast<ObjCInterfaceType>(T)) {

@@ -15085,7 +15085,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // initializer lists (and no initializers), but that's it.
   if (Init && getLangOpts().BoundsSafety && VDecl->hasLocalStorage()) {
     auto *RecordT = VDecl->getType()->getAs<RecordType>();
-    if (RecordT && RecordT->getOriginalDecl()->hasFlexibleArrayMember()) {
+    if (RecordT && RecordT->getDecl()->hasFlexibleArrayMember()) {
       if (!isa<InitListExpr>(Init->IgnoreParenImpCasts())) {
         Diag(
             Init->getBeginLoc(), diag::err_flexible_array_member_passed_by_copy)
@@ -16806,7 +16806,7 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
     }
 
     auto *RecordT = T->getAs<RecordType>();
-    if (RecordT && RecordT->getOriginalDecl()->hasFlexibleArrayMember()) {
+    if (RecordT && RecordT->getDecl()->hasFlexibleArrayMember()) {
       // BoundsSafety prevents passing flexible array members by copy.
       Diag(TSInfo->getTypeLoc().getBeginLoc(),
            diag::err_flexible_array_member_passed_by_copy) << TSInfo->getType();

@@ -333,7 +333,7 @@ bool DiagnoseUnguardedFeatureAvailability::VisitTypeLoc(TypeLoc Ty) {
     return true;
 
   if (const auto *TT = dyn_cast<TagType>(TyPtr)) {
-    TagDecl *TD = TT->getOriginalDecl();
+    TagDecl *TD = TT->getDecl();
     diagnoseDeclFeatureAvailability(TD, Ty.getSourceRange());
   } else if (const auto *TD = dyn_cast<TypedefType>(TyPtr)) {
     TypedefNameDecl *D = TD->getDecl();

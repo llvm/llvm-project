@@ -712,7 +712,7 @@ PromoteBoundsSafetyFlexibleArrayMember(Sema &S, MemberExpr *M, Expr *ArrayBase) 
   if (auto *PT = BasePtr->getType()->getAs<PointerType>()) {
     if (!PT->getPointerAttributes().hasUpperBound()) {
       auto *RecordPointee = PT->getPointeeType()->getAs<RecordType>();
-      auto *RD = RecordPointee->getOriginalDecl();
+      auto *RD = RecordPointee->getDecl();
       assert(RD->hasFlexibleArrayMember() &&
              RD->getTagKind() != TagTypeKind::Union);
       // Skipping the null check for the struct base because it must have been
@@ -909,7 +909,7 @@ static RecordDecl *getImmediateDeclForFlexibleArrayPromotion(QualType T) {
   if (T->isSinglePointerType() && !T->isBoundsAttributedType()) {
     auto *PT = T->getAs<PointerType>();
     if (auto *RecordPointee = PT->getPointeeType()->getAs<RecordType>()) {
-      auto *RD = RecordPointee->getOriginalDecl();
+      auto *RD = RecordPointee->getDecl();
       if (RD->hasFlexibleArrayMember() &&
           RD->getTagKind() != TagTypeKind::Union) {
         return RD;
@@ -8041,7 +8041,7 @@ bool Sema::CheckDynamicCountSizeForAssignment(
   if (UnboundedRHS)
     // It might still have a flexible array member
     if (auto *RT = RHSTy->getPointeeType()->getAs<RecordType>())
-      UnboundedRHS = !RT->getOriginalDecl()->hasFlexibleArrayMember();
+      UnboundedRHS = !RT->getDecl()->hasFlexibleArrayMember();
 
   ReplaceDeclRefWithRHS Transform(*this, DependentValues);
   if (!DependentValues.empty()) {
@@ -13914,7 +13914,7 @@ static bool checkArithmeticUnaryOpBoundsSafetyPointer(Sema &S, Expr *Operand, bo
   }
 
   if (auto *RD = ResType->getPointeeType()->getAs<RecordType>()) {
-    if (RD->getOriginalDecl()->hasFlexibleArrayMember()) {
+    if (RD->getDecl()->hasFlexibleArrayMember()) {
       S.Diag(Operand->getExprLoc(),
         diag::err_bounds_safety_flexible_array_member_record_pointer_arithmetic);
       return false;
@@ -13982,7 +13982,7 @@ static bool checkArithmeticBinOpBoundsSafetyPointer(Sema &S, Expr *Base,
   }
 
   if (auto *RD = PT->getPointeeType()->getAs<RecordType>()) {
-    if (RD->getOriginalDecl()->hasFlexibleArrayMember()) {
+    if (RD->getDecl()->hasFlexibleArrayMember()) {
       S.Diag(Base->getExprLoc(),
         diag::err_bounds_safety_flexible_array_member_record_pointer_arithmetic);
       return false;
@@ -17090,7 +17090,7 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   /* TO_UPSTREAM(BoundsSafety) ON*/
   if (getLangOpts().BoundsSafety) {
     auto *RecordTy = RHSType->getAs<RecordType>();
-    if (RecordTy && RecordTy->getOriginalDecl()->hasFlexibleArrayMember()) {
+    if (RecordTy && RecordTy->getDecl()->hasFlexibleArrayMember()) {
       // BoundsSafety prevents passing flexible array members by copy.
       QualType DisplayType = CompoundType.isNull()
           ? RHS.get()->IgnoreParenImpCasts()->getType() : CompoundType;
@@ -26560,7 +26560,7 @@ ExprResult BoundsCheckBuilder::CheckFlexibleArrayMemberSizeImpl(
   SmallVector<FieldDecl *, 1> PathToFlex;
   ArrayRef<TypeCoupledDeclRefInfo> CountDecls;
   auto *RT = FAMPtr->getType()->getPointeeType()->getAs<RecordType>();
-  bool Found = FlexUtils.Find(RT->getOriginalDecl(), PathToFlex, CountDecls);
+  bool Found = FlexUtils.Find(RT->getDecl(), PathToFlex, CountDecls);
   assert(Found); (void)Found;
 
   Expr *FlexibleObj = FlexUtils.SelectFlexibleObject(PathToFlex, OpaqueRoot);

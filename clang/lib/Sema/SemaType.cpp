@@ -2636,7 +2636,7 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
   // by value.
   if (getLangOpts().BoundsSafety) {
     auto *RecordTy = T->getAs<RecordType>();
-    if (RecordTy && RecordTy->getOriginalDecl()->hasFlexibleArrayMember()) {
+    if (RecordTy && RecordTy->getDecl()->hasFlexibleArrayMember()) {
       Diag(Loc, diag::err_flexible_array_member_passed_by_copy) << T;
       return true;
     }
@@ -5137,7 +5137,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (S.getLangOpts().BoundsSafety) {
         SourceLocation DiagLoc;
         auto *RecordTy = T->getAs<RecordType>();
-        if (RecordTy && RecordTy->getOriginalDecl()->hasFlexibleArrayMember()) {
+        if (RecordTy && RecordTy->getDecl()->hasFlexibleArrayMember()) {
           if (TInfo) {
             DiagLoc = TInfo->getTypeLoc().getBeginLoc();
           } else {

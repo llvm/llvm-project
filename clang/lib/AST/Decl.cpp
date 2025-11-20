@@ -5223,7 +5223,7 @@ bool RecordDecl::isParentStructOf(const Decl *Inner) const {
     return true;
   for (auto FD : fields()) {
     if (auto InnerStructTy = FD->getType()->getAs<RecordType>()) {
-      if (cast<RecordDecl>(InnerStructTy->getOriginalDecl())->isParentStructOf(Inner))
+      if (cast<RecordDecl>(InnerStructTy->getDecl())->isParentStructOf(Inner))
         return true;
     }
   }

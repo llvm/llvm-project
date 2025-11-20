@@ -6976,7 +6976,7 @@ unsigned TransitiveFieldCopyCount(const RecordDecl *RD,
   for (auto FD : RD->fields()) {
     if (auto InnerStructTy = FD->getType()->getAs<RecordType>()) {
       Count += TransitiveFieldCopyCount(
-          cast<RecordDecl>(InnerStructTy->getOriginalDecl()), Inner);
+          cast<RecordDecl>(InnerStructTy->getDecl()), Inner);
     }
   }
   return Count;

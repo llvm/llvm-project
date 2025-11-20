@@ -105,7 +105,7 @@ static void checkValueTerminatedInit(Sema &S, SourceLocation Loc,
   // Recursively check each field.
   if (const auto *RT = T->getAs<RecordType>()) {
     unsigned Index = 0;
-    for (const FieldDecl *FD : RT->getOriginalDecl()->fields()) {
+    for (const FieldDecl *FD : RT->getDecl()->fields()) {
       Expr *I;
       bool ZI;
       std::tie(I, ZI) = getInitAt(Index);

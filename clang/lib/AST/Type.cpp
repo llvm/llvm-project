@@ -2739,7 +2739,7 @@ bool Type::isSizeMeaningless() const {
   if (isFunctionType())
     return true;
   if (auto *RT = getAs<RecordType>())
-    if (RT->getOriginalDecl()->hasFlexibleArrayMember())
+    if (RT->getDecl()->hasFlexibleArrayMember())
       return true;
   return false;
 }
