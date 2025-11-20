@@ -4084,7 +4084,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
         continue;
       case VPDef::VPReductionSC:
       case VPDef::VPActiveLaneMaskPHISC:
-      case VPDef::VPLastActiveMaskPHISC:
       case VPDef::VPWidenCallSC:
       case VPDef::VPWidenCanonicalIVSC:
       case VPDef::VPWidenCastSC:

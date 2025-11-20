@@ -561,7 +561,6 @@ public:
     case VPRecipeBase::VPPredInstPHISC:
     case VPRecipeBase::VPCanonicalIVPHISC:
     case VPRecipeBase::VPActiveLaneMaskPHISC:
-    case VPRecipeBase::VPLastActiveMaskPHISC:
     case VPRecipeBase::VPFirstOrderRecurrencePHISC:
     case VPRecipeBase::VPWidenPHISC:
     case VPRecipeBase::VPWidenIntOrFpInductionSC:
