@@ -42,6 +42,7 @@
 #include <mutex>
 #include <string>
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/circular_raw_ostream.h"
 
 /// 32-Bit field data attributes controlling information presented to the user.
@@ -330,11 +331,11 @@ struct DebugSettings {
 
     Settings.DefaultLevel = 1;
 
-    SmallVector<StringRef> DbgTypes;
-    EnvRef.split(DbgTypes, ',', -1, false);
-
-    for (auto &DT : DbgTypes)
-      Settings.Filters.push_back(parseDebugFilter(DT));
+    for (auto &FilterSpec : llvm::split(EnvRef, ',')) {
+      if (FilterSpec.empty())
+        continue;
+      Settings.Filters.push_back(parseDebugFilter(FilterSpec));
+    }
   });
 
   return Settings;

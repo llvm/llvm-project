@@ -451,9 +451,8 @@ struct GenELF64PluginTy final : public GenericPluginTy {
     if (auto Err = Plugin::check(ffi_init(), "failed to initialize libffi"))
       return std::move(Err);
 #endif
-    ODBG("Init") << "GenELF64 plugin detected "
-      << ODBG_IF_LEVEL(2) << NUM_DEVICES << " "
-      << ODBG_RESET_LEVEL() << "devices";
+    ODBG("Init") << "GenELF64 plugin detected " << ODBG_IF_LEVEL(2)
+                 << NUM_DEVICES << " " << ODBG_RESET_LEVEL() << "devices";
 
     return NUM_DEVICES;
   }
