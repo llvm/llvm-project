@@ -2709,6 +2709,7 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned tasktype : 1;
   unsigned reserved : 8;
   unsigned free_agent_eligible : 1;
+  unsigned transparent : 1;
   unsigned detachable : 1;
   unsigned priority_specified : 1;
   unsigned proxy : 1;
