@@ -46,17 +46,17 @@
 
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base -o %t.dir/dwarf5-addr-base.dSYM
+RUN: dsymutil -y %p/dummy-debug-map-arm64.map -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base -o %t.dir/dwarf5-addr-base.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | FileCheck %s
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --linker parallel --no-odr -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --linker parallel --no-odr -y %p/dummy-debug-map-arm64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
 RUN:   -o %t.dir/dwarf5-addr-base.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | FileCheck %s
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --linker parallel -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --linker parallel -y %p/dummy-debug-map-arm64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
 RUN:   -o %t.dir/dwarf5-addr-base.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | \
@@ -64,18 +64,18 @@ RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-LLVM
 
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --update -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base -o %t.dir/dwarf5-addr-base.dSYM
+RUN: dsymutil --update -y %p/dummy-debug-map-arm64.map -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base -o %t.dir/dwarf5-addr-base.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | FileCheck %s --check-prefix=UPD
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --linker parallel --no-odr --update -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --linker parallel --no-odr --update -y %p/dummy-debug-map-arm64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
 RUN:   -o %t.dir/dwarf5-addr-base.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | \
 RUN:   FileCheck %s --check-prefix=UPD
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --linker parallel --update -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --linker parallel --update -y %p/dummy-debug-map-arm64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
 RUN:   -o %t.dir/dwarf5-addr-base.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | \
