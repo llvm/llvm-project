@@ -272,7 +272,8 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
           CSRLocMap.insert(
               {CFI.getRegister(), CSRSavedLocation(CSRReg, CSROffset)});
         } else if (It->second.Reg != CSRReg || It->second.Offset != CSROffset) {
-          llvm_unreachable("Different saved locations for the same CSR");
+          reportFatalInternalError(
+              "Different saved locations for the same CSR");
         }
         CSRSaved.set(CFI.getRegister());
       }
