@@ -1144,3 +1144,53 @@ define void @concat(<2 x i8> %i8v2, <2 x i8> %i8v2_2, <4 x i8> %i8v4, <4 x i8> %
   %v4f64_2 = shufflevector <2 x double> %doublev2, <2 x double> %doublev2_2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret void
 }
+
+define void @insert(<16 x i8> %i8v16, <16 x i8> %i8v16_2) {
+; ALL-LABEL: 'insert'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %test0 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %test1 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %test2 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %test3 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %test4 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %test5 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %test6 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %test7 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 1, i32 16, i32 17, i32 18, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'insert'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %test0 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %test1 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %test2 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %test3 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %test4 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %test5 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %test6 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %test7 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 1, i32 16, i32 17, i32 18, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %test0 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %test1 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %test2 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %test3 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %test4 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %test5 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
+  %test6 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21>
+  %test7 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 0, i32 1, i32 16, i32 17, i32 18, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret void
+}
+
+define void @splice(<16 x i8> %i8v16, <16 x i8> %i8v16_2) {
+; ALL-LABEL: 'splice'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %test0 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %test1 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'splice'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %test0 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %test1 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %test0 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27>
+  %test1 = shufflevector <16 x i8> %i8v16, <16 x i8> %i8v16_2, <16 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25>
+  ret void
+}

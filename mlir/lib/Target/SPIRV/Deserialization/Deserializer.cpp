@@ -2292,6 +2292,38 @@ LogicalResult spirv::Deserializer::processPhi(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult spirv::Deserializer::processSwitch(ArrayRef<uint32_t> operands) {
+  if (!curBlock)
+    return emitError(unknownLoc, "OpSwitch must appear in a block");
+
+  if (operands.size() < 2)
+    return emitError(unknownLoc, "OpSwitch must at least specify selector and "
+                                 "a default target");
+
+  if (operands.size() % 2)
+    return emitError(unknownLoc,
+                     "OpSwitch must at have an even number of operands: "
+                     "selector, default target and any number of literal and "
+                     "label <id> pairs");
+
+  Value selector = getValue(operands[0]);
+  Block *defaultBlock = getOrCreateBlock(operands[1]);
+  Location loc = createFileLineColLoc(opBuilder);
+
+  SmallVector<int32_t> literals;
+  SmallVector<Block *> blocks;
+  for (unsigned i = 2, e = operands.size(); i < e; i += 2) {
+    literals.push_back(operands[i]);
+    blocks.push_back(getOrCreateBlock(operands[i + 1]));
+  }
+
+  SmallVector<ValueRange> targetOperands(blocks.size(), {});
+  spirv::SwitchOp::create(opBuilder, loc, selector, defaultBlock,
+                          ArrayRef<Value>(), literals, blocks, targetOperands);
+
+  return success();
+}
+
 namespace {
 /// A class for putting all blocks in a structured selection/loop in a
 /// spirv.mlir.selection/spirv.mlir.loop op.

@@ -304,6 +304,8 @@ private:
 
   LogicalResult processBranchOp(spirv::BranchOp branchOp);
 
+  LogicalResult processSwitchOp(spirv::SwitchOp switchOp);
+
   //===--------------------------------------------------------------------===//
   // Operations
   //===--------------------------------------------------------------------===//
