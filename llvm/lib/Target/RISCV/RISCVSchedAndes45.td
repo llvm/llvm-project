@@ -610,7 +610,7 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVLDFF", [Andes45VLSU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDM",  [Andes45VLSU], mx, IsWorstCase>;
   }
-  let Latency = 1, ReleaseAtCycles = [Cycles] in {
+  let ReleaseAtCycles = [Cycles] in {
     defm "" : LMULWriteResMX<"WriteVSTE", [Andes45VLSU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTM", [Andes45VLSU], mx, IsWorstCase>;
   }
@@ -628,7 +628,7 @@ foreach mx = SchedMxList in {
   let Latency = !add(4, !add(VLSU_MEM_LATENCY, !div(Andes45DLEN, 8))),
       ReleaseAtCycles = [Cycles] in
     defm "" : LMULWriteResMX<"WriteVLDS8",  [Andes45VLSU], mx, IsWorstCase>;
-  let Latency = 1, ReleaseAtCycles = [Cycles] in
+  let ReleaseAtCycles = [Cycles] in
     defm "" : LMULWriteResMX<"WriteVSTS8",  [Andes45VLSU], mx, IsWorstCase>;
 }
 foreach mx = SchedMxList in {
@@ -637,7 +637,7 @@ foreach mx = SchedMxList in {
   let Latency = !add(4, !add(VLSU_MEM_LATENCY, !div(Andes45DLEN, 16))),
       ReleaseAtCycles = [Cycles] in
     defm "" : LMULWriteResMX<"WriteVLDS16",  [Andes45VLSU], mx, IsWorstCase>;
-  let Latency = 1, ReleaseAtCycles = [Cycles] in
+  let ReleaseAtCycles = [Cycles] in
     defm "" : LMULWriteResMX<"WriteVSTS16",  [Andes45VLSU], mx, IsWorstCase>;
 }
 foreach mx = SchedMxList in {
@@ -646,7 +646,7 @@ foreach mx = SchedMxList in {
   let Latency = !add(4, !add(VLSU_MEM_LATENCY, !div(Andes45DLEN, 32))),
       ReleaseAtCycles = [Cycles] in
     defm "" : LMULWriteResMX<"WriteVLDS32",  [Andes45VLSU], mx, IsWorstCase>;
-  let Latency = 1, ReleaseAtCycles = [Cycles] in
+  let ReleaseAtCycles = [Cycles] in
     defm "" : LMULWriteResMX<"WriteVSTS32",  [Andes45VLSU], mx, IsWorstCase>;
 }
 foreach mx = SchedMxList in {
@@ -655,7 +655,7 @@ foreach mx = SchedMxList in {
   let Latency = !add(4, !add(VLSU_MEM_LATENCY, !div(Andes45DLEN, 64))),
       ReleaseAtCycles = [Cycles] in
     defm "" : LMULWriteResMX<"WriteVLDS64",  [Andes45VLSU], mx, IsWorstCase>;
-  let Latency = 1, ReleaseAtCycles = [Cycles] in
+  let ReleaseAtCycles = [Cycles] in
     defm "" : LMULWriteResMX<"WriteVSTS64",  [Andes45VLSU], mx, IsWorstCase>;
 }
 
@@ -673,8 +673,7 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVLDUX8", [Andes45VLSU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDOX8", [Andes45VLSU], mx, IsWorstCase>;
   }
-  let Latency = 1,
-      ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
+  let ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
     defm "" : LMULWriteResMX<"WriteVSTUX8", [Andes45VLSU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTOX8", [Andes45VLSU], mx, IsWorstCase>;
   }
@@ -687,8 +686,7 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVLDUX16", [Andes45VLSU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDOX16", [Andes45VLSU], mx, IsWorstCase>;
   }
-  let Latency = 1,
-      ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
+  let ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
     defm "" : LMULWriteResMX<"WriteVSTUX16", [Andes45VLSU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTOX16", [Andes45VLSU], mx, IsWorstCase>;
   }
@@ -701,8 +699,7 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVLDUX32", [Andes45VLSU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDOX32", [Andes45VLSU], mx, IsWorstCase>;
   }
-  let Latency = 1,
-      ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
+  let ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
     defm "" : LMULWriteResMX<"WriteVSTUX32", [Andes45VLSU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTOX32", [Andes45VLSU], mx, IsWorstCase>;
   }
@@ -715,8 +712,7 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVLDUX64", [Andes45VLSU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDOX64", [Andes45VLSU], mx, IsWorstCase>;
   }
-  let Latency = 1,
-      ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
+  let ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
     defm "" : LMULWriteResMX<"WriteVSTUX64", [Andes45VLSU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTOX64", [Andes45VLSU], mx, IsWorstCase>;
   }
@@ -734,13 +730,13 @@ let Latency = 6, ReleaseAtCycles = [8] in
 let Latency = 6, ReleaseAtCycles = [16] in
   def : WriteRes<WriteVLD8R, [Andes45VLSU]>;
 // VST*R is LMUL aware
-let Latency = 1, ReleaseAtCycles = [2] in
+let ReleaseAtCycles = [2] in
   def : WriteRes<WriteVST1R, [Andes45VLSU]>;
-let Latency = 1, ReleaseAtCycles = [4] in
+let ReleaseAtCycles = [4] in
   def : WriteRes<WriteVST2R, [Andes45VLSU]>;
-let Latency = 1, ReleaseAtCycles = [8] in
+let ReleaseAtCycles = [8] in
   def : WriteRes<WriteVST4R, [Andes45VLSU]>;
-let Latency = 1, ReleaseAtCycles = [16] in
+let ReleaseAtCycles = [16] in
   def : WriteRes<WriteVST8R, [Andes45VLSU]>;
 
 // Unit-Stride Segmented Loads and Stores
@@ -761,7 +757,7 @@ foreach mx = SchedMxList in {
                                  [Andes45VLSU], mx, IsWorstCase>;
       }
       // TODO
-      let Latency = 1, ReleaseAtCycles = [Cycles] in
+      let ReleaseAtCycles = [Cycles] in
       defm "" : LMULWriteResMX<"WriteVSSEG" # nf # "e" # eew,
                                [Andes45VLSU], mx, IsWorstCase>;
     }
@@ -781,7 +777,7 @@ foreach mx = SchedMxList in {
           ReleaseAtCycles = [Cycles] in
         defm "" : LMULWriteResMX<"WriteVLSSEG" # nf # "e" # eew,
                                  [Andes45VLSU], mx, IsWorstCase>;
-      let Latency = 1, ReleaseAtCycles = [Cycles] in
+      let ReleaseAtCycles = [Cycles] in
         defm "" : LMULWriteResMX<"WriteVSSSEG" # nf # "e" # eew,
                                  [Andes45VLSU], mx, IsWorstCase>;
     }
@@ -804,8 +800,7 @@ foreach mx = SchedMxList in {
         defm "" : LMULWriteResMX<"WriteVLOXSEG" # nf # "e" # eew,
                                  [Andes45VLSU], mx, IsWorstCase>;
       }
-      let Latency = 1,
-          ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
+      let ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
         defm "" : LMULWriteResMX<"WriteVSUXSEG" # nf # "e" # eew,
                                  [Andes45VLSU], mx, IsWorstCase>;
         defm "" : LMULWriteResMX<"WriteVSOXSEG" # nf # "e" # eew,
