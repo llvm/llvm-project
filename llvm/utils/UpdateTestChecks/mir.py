@@ -8,6 +8,17 @@ from UpdateTestChecks.common import (
     warn,
 )
 
+
+class _ConflictMarker:
+    """Sentinel indicating conflicting output for the same prefix across different RUN lines."""
+    def __bool__(self):
+        return False  # Behaves like None in boolean context
+    def __repr__(self):
+        return "CONFLICT"
+
+
+CONFLICT = _ConflictMarker()
+
 IR_FUNC_NAME_RE = re.compile(
     r"^\s*define\s+(?:internal\s+)?[^@]*@(?P<func>[A-Za-z0-9_.]+)\s*\("
 )
@@ -52,10 +63,12 @@ MIR_FUNC_RE = re.compile(
 
 
 def build_function_info_dictionary(
-    test, raw_tool_output, triple, prefixes, func_dict, verbose
+    test, raw_tool_output, triple, prefixes, func_dict, processed_prefixes, verbose
 ):
+    functions_in_current_run = set()
     for m in MIR_FUNC_RE.finditer(raw_tool_output):
         func = m.group("func")
+        functions_in_current_run.add(func)
         fixedStack = m.group("fixedStack")
         body = m.group("body")
         if verbose:
@@ -90,14 +103,29 @@ def build_function_info_dictionary(
                 body, fixedStack, None, None, None, None, ginfo=None
             )
             if func in func_dict[prefix]:
+                existing = func_dict[prefix][func]
+                if existing is CONFLICT:
+                    continue
                 if (
-                    not func_dict[prefix][func]
-                    or func_dict[prefix][func].scrub != info.scrub
-                    or func_dict[prefix][func].extrascrub != info.extrascrub
+                    existing.scrub != info.scrub
+                    or existing.extrascrub != info.extrascrub
                 ):
-                    func_dict[prefix][func] = None
+                    func_dict[prefix][func] = CONFLICT
             else:
-                func_dict[prefix][func] = info
+                # New function for this prefix.
+                if prefix in processed_prefixes:
+                    # Not the first RUN for this prefix, so this function
+                    # is missing from previous RUNs - mark as CONFLICT.
+                    func_dict[prefix][func] = CONFLICT
+                else:
+                    func_dict[prefix][func] = info
+
+    # Check for functions that existed in previous RUNs but are missing in current run.
+    for prefix in prefixes:
+        for func in list(func_dict[prefix].keys()):
+            if func not in functions_in_current_run:
+                func_dict[prefix][func] = CONFLICT
+        processed_prefixes.add(prefix)
 
 
 def mangle_vreg(opcode, current_names):
@@ -170,8 +198,23 @@ def add_mir_checks_for_function(
         for prefix in run[0]:
             if prefix in printed_prefixes:
                 break
-            # func_info can be empty if there was a prefix conflict.
-            if not func_dict[prefix].get(func_name):
+            # If the whole prefix dictionary is empty, it means there was a conflict
+            # (e.g., same prefix used for both ASM and MIR in update_llc_test_checks.py).
+            # In this case, skip generating any checks for this prefix.
+            if not func_dict.get(prefix):
+                continue
+            # Handle missing functions with CHECK-NOT.
+            if func_name not in func_dict[prefix]:
+                if printed_prefixes:
+                    indent = len(output_lines[-1]) - len(output_lines[-1].lstrip(" "))
+                    output_lines.append(" " * indent + ";")
+                # Use check_indent if provided, otherwise compute from output_lines
+                check = "{}; {}".format(check_indent, prefix)
+                output_lines.append("{}-NOT: name: {}".format(check, func_name))
+                printed_prefixes.add(prefix)
+                break
+            # This is a CONFLICT, move on.
+            if not func_dict[prefix][func_name]:
                 continue
             if printed_prefixes:
                 # Add some space between different check prefixes.
@@ -322,6 +365,9 @@ def add_mir_checks(
             m = MIR_PREFIX_DATA_RE.match(input_line)
             if not m:
                 state = "mir function body"
+                # Compute check_indent from the first line of the function body
+                indent = len(input_line) - len(input_line.lstrip(" "))
+                check_indent = " " * indent
                 add_mir_checks_for_function(
                     test,
                     output_lines,
@@ -332,6 +378,7 @@ def add_mir_checks(
                     print_fixed_stack=print_fixed_stack,
                     first_check_is_next=first_check_is_next,
                     at_the_function_name=at_the_function_name,
+                    check_indent=check_indent,
                 )
 
             if should_add_mir_line_to_output(input_line, prefix_set):
