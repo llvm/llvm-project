@@ -68,10 +68,6 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   bool IsLibModule =
       BuildOptions.find("-library-compilation") != std::string::npos;
 
-  // Add required flag to enable dynamic linking.
-  if (IsLibModule)
-    BuildOptions += " -library-compilation ";
-
   ze_module_desc_t ModuleDesc{};
   ModuleDesc.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
   ModuleDesc.pNext = nullptr;
