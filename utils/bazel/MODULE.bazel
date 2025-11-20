@@ -21,7 +21,7 @@ use_repo(
     "llvm-raw",
     "llvm_zlib",
     "vulkan_headers",
-    "vulkan_sdk_setup",
+    "vulkan_sdk",
     "gmp",
     "mpfr",
     "mpc",
