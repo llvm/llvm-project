@@ -25,6 +25,7 @@
 #include <__type_traits/integer_traits.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_signed.h>
 #include <__type_traits/make_unsigned.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/unreachable.h>
