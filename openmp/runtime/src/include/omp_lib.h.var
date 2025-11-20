@@ -491,14 +491,14 @@
 
         function omp_get_uid_from_device(device_num) bind(c)
           import
-          import :: c_ptr
+          use, intrinsic :: iso_c_binding, only : c_ptr
           integer (kind=omp_integer_kind), value :: device_num
           type(c_ptr) omp_get_uid_from_device
         end function omp_get_uid_from_device
 
         function omp_get_device_from_uid(device_uid) bind(c)
           import
-          import :: c_ptr
+          use, intrinsic :: iso_c_binding, only : c_ptr
           type(c_ptr), value :: device_uid
           integer (kind=omp_integer_kind) omp_get_device_from_uid
         end function omp_get_device_from_uid
