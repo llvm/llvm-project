@@ -14,10 +14,10 @@ RUN: echo ....U. > %tmp/T2/2
 RUN: echo ...Z.. > %tmp/T2/3
 RUN: echo ...Z.. > %tmp/T2/4
 RUN: echo ....E. > %tmp/T2/5
-RUN: %python -c "print('.....R' + 'X' * 1024, end='')" > %tmp/T2/6
+RUN: %python -c "print('.....R' + 'X' * 4096, end='')" > %tmp/T2/6
 
 # Check that we can report an error if file size exceeded
-RUN: (ulimit -f 1; not %run %t-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=SIGXFSZ)
+RUN: (ulimit -f 4; not %run %t-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=SIGXFSZ)
 SIGXFSZ: ERROR: libFuzzer: file size exceeded
 
 # Check that we honor TMPDIR
