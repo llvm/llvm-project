@@ -33,53 +33,7 @@ static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
       .getResult();
 }
 
-static mlir::Value convertMaskToVector(CIRGenBuilderTy &builder,
-                                       mlir::Value mask, unsigned numElems) {
-  auto maskIntType = mlir::cast<cir::IntType>(mask.getType());
-  unsigned maskWidth = maskIntType.getWidth();
-
-  // Create a vector of bool type with maskWidth elements
-  auto maskVecType =
-      cir::VectorType::get(builder.getContext(),
-                           cir::BoolType::get(builder.getContext()), maskWidth);
-  mlir::Value maskVec = builder.createBitcast(mask, maskVecType);
-
-  // If we have less than 8 elements, then the starting mask was an i8 and
-  // we need to extract down to the right number of elements.
-  if (numElems < 8) {
-    llvm::SmallVector<int64_t, 4> indices;
-    for (unsigned i = 0; i != numElems; ++i)
-      indices.push_back(i);
-    maskVec = builder.createVecShuffle(mask.getLoc(), maskVec, indices);
-  }
-  return maskVec;
-}
-
-static mlir::Value emitKunpckOp(CIRGenBuilderTy &builder, mlir::Value op0,
-                                mlir::Value op1, mlir::Location loc) {
-  auto maskIntType = mlir::cast<cir::IntType>(op0.getType());
-  unsigned numElems = maskIntType.getWidth();
-  mlir::Value lhs = convertMaskToVector(builder, op0, numElems);
-  mlir::Value rhs = convertMaskToVector(builder, op1, numElems);
-  llvm::SmallVector<int64_t, 64> indices;
-  for (unsigned i = 0; i != numElems; ++i)
-    indices.push_back(i);
-
-  // First extract half of each vector. This gives better codegen than
-  // doing it in a single shuffle.
-  lhs = builder.createVecShuffle(loc, lhs,
-                                 llvm::ArrayRef(indices.data(), numElems / 2));
-  rhs = builder.createVecShuffle(loc, rhs,
-                                 llvm::ArrayRef(indices.data(), numElems / 2));
-  // Concat the vectors.
-  // NOTE: Operands are swapped to match the intrinsic definition.
-  mlir::Value res = builder.createVecShuffle(
-      loc, rhs, lhs, llvm::ArrayRef(indices.data(), numElems));
-  return builder.createBitcast(res, op0.getType());
-}
-
 // OG has unordered comparison as a form of optimization in addition to
-// ordered comparison, while CIR doesn't.
 //
 // This means that we can't encode the comparison code of UGT (unordered
 // greater than), at least not at the CIR level.
@@ -111,6 +65,49 @@ static mlir::Value emitVectorFCmp(CIRGenBuilderTy &builder,
   mlir::Value bitCast = builder.createBitcast(
       shouldInvert ? builder.createNot(cmp) : cmp, ops[0].getType());
   return bitCast;
+}
+
+static mlir::Value convertKunpckMaskToVector(CIRGenBuilderTy &builder,
+                                             mlir::Value mask,
+                                             unsigned numElems) {
+  unsigned maskWidth = mlir::cast<cir::IntType>(mask.getType()).getWidth();
+  auto maskVecType =
+      cir::VectorType::get(builder.getContext(),
+                           cir::BoolType::get(builder.getContext()), maskWidth);
+  mlir::Value maskVec = builder.createBitcast(mask, maskVecType);
+
+  // If we have less than 8 elements, then the starting mask was an i8 and
+  // we need to extract down to the right number of elements.
+  if (numElems < 8) {
+    llvm::SmallVector<int64_t, 4> indices;
+    for (unsigned i = 0; i != numElems; ++i)
+      indices.push_back(i);
+    maskVec = builder.createVecShuffle(mask.getLoc(), maskVec, indices);
+  }
+  return maskVec;
+}
+
+static mlir::Value emitKunpckOp(CIRGenBuilderTy &builder, mlir::Value op0,
+                                mlir::Value op1, mlir::Location loc) {
+  auto maskIntType = mlir::cast<cir::IntType>(op0.getType());
+  unsigned numElems = maskIntType.getWidth();
+  mlir::Value lhs = convertKunpckMaskToVector(builder, op0, numElems);
+  mlir::Value rhs = convertKunpckMaskToVector(builder, op1, numElems);
+  llvm::SmallVector<int64_t, 64> indices;
+  for (unsigned i = 0; i != numElems; ++i)
+    indices.push_back(i);
+
+  // First extract half of each vector. This gives better codegen than
+  // doing it in a single shuffle.
+  lhs = builder.createVecShuffle(loc, lhs,
+                                 llvm::ArrayRef(indices.data(), numElems / 2));
+  rhs = builder.createVecShuffle(loc, rhs,
+                                 llvm::ArrayRef(indices.data(), numElems / 2));
+  // Concat the vectors.
+  // NOTE: Operands are swapped to match the intrinsic definition.
+  mlir::Value res = builder.createVecShuffle(
+      loc, rhs, lhs, llvm::ArrayRef(indices.data(), numElems));
+  return builder.createBitcast(res, op0.getType());
 }
 
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
