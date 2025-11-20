@@ -1268,7 +1268,7 @@ cc_library(
         ":Support",
         ":TargetParser",
         ":config",
-        ":target_library_info_gen"
+        ":target_library_info_gen",
     ],
 )
 
@@ -1302,7 +1302,7 @@ cc_library(
         ":Support",
         ":TargetParser",
         ":config",
-        ":target_library_info_gen"
+        ":target_library_info_gen",
     ],
 )
 
