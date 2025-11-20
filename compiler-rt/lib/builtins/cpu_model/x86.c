@@ -960,10 +960,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_AVX512IFMA);
   if (HasLeaf7 && ((EBX >> 24) & 1))
     setFeature(FEATURE_CLWB);
-  if (HasLeaf7 && ((EBX >> 26) & 1) && HasAVX512Save)
-    setFeature(FEATURE_AVX512PF);
-  if (HasLeaf7 && ((EBX >> 27) & 1) && HasAVX512Save)
-    setFeature(FEATURE_AVX512ER);
   if (HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512CD);
   if (HasLeaf7 && ((EBX >> 29) & 1))
@@ -973,8 +969,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512VL);
 
-  if (HasLeaf7 && ((ECX >> 0) & 1))
-    setFeature(FEATURE_PREFETCHWT1);
   if (HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512VBMI);
   if (HasLeaf7 && ((ECX >> 4) & 1))
@@ -1010,10 +1004,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7 && ((ECX >> 29) & 1))
     setFeature(FEATURE_ENQCMD);
 
-  if (HasLeaf7 && ((EDX >> 2) & 1) && HasAVX512Save)
-    setFeature(FEATURE_AVX5124VNNIW);
-  if (HasLeaf7 && ((EDX >> 3) & 1) && HasAVX512Save)
-    setFeature(FEATURE_AVX5124FMAPS);
   if (HasLeaf7 && ((EDX >> 5) & 1))
     setFeature(FEATURE_UINTR);
   if (HasLeaf7 && ((EDX >> 8) & 1) && HasAVX512Save)
