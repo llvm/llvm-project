@@ -68,6 +68,25 @@ static mlir::Value emitVectorFCmp(CIRGenBuilderTy &builder,
   return bitCast;
 }
 
+static mlir::Value emitX86FunnelShift(CIRGenFunction &cgf, const CallExpr *e,
+                                      mlir::Value &op0, mlir::Value &op1,
+                                      mlir::Value &amt, bool isRight) {
+  auto ty = op0.getType();
+
+  // Amount may be scalar immediate, in which case create a splat vector.
+  // Funnel shifts amounts are treated as modulo and types are all power-of-2
+  // so we only care about the lowest log2 bits anyway.
+  if (amt.getType() != ty) {
+    amt = cgf.getBuilder().createIntCast(
+        amt, mlir::cast<cir::VectorType>(ty).getElementType());
+    amt = cir::VecSplatOp::create(cgf.getBuilder(), cgf.getLoc(e->getExprLoc()),
+                                  ty, amt);
+  }
+
+  const std::string intrinsicName = isRight ? "fshr" : "fshl";
+  return emitIntrinsicCallOp(cgf, e, intrinsicName, ty, op0, op1, amt);
+}
+
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
                                                const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
@@ -87,14 +106,15 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   // evaluation.
   assert(!cir::MissingFeatures::msvcBuiltins());
 
-  // Find out if any arguments are required to be integer constant expressions.
+  // Find out if any arguments are required to be integer constant
+  // expressions.
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());
 
   // The operands of the builtin call
   llvm::SmallVector<mlir::Value> ops;
 
-  // `ICEArguments` is a bitmap indicating whether the argument at the i-th bit
-  // is required to be a constant integer expression.
+  // `ICEArguments` is a bitmap indicating whether the argument at the i-th
+  // bit is required to be a constant integer expression.
   unsigned iceArguments = 0;
   ASTContext::GetBuiltinTypeError error;
   getContext().GetBuiltinType(builtinID, error, &iceArguments);
@@ -593,12 +613,14 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_prolq128:
   case X86::BI__builtin_ia32_prolq256:
   case X86::BI__builtin_ia32_prolq512:
+    return emitX86FunnelShift(*this, e, ops[0], ops[1], ops[1], false);
   case X86::BI__builtin_ia32_prord128:
   case X86::BI__builtin_ia32_prord256:
   case X86::BI__builtin_ia32_prord512:
   case X86::BI__builtin_ia32_prorq128:
   case X86::BI__builtin_ia32_prorq256:
   case X86::BI__builtin_ia32_prorq512:
+    return emitX86FunnelShift(*this, e, ops[0], ops[1], ops[1], true);
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
   case X86::BI__builtin_ia32_selectb_512:
