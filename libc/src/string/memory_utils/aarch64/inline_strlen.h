@@ -105,6 +105,6 @@ namespace sve {
 #endif
 }
 
-} // internal::arch_vector
+} // namespace internal::arch_vector
 } // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_STRLEN_H
