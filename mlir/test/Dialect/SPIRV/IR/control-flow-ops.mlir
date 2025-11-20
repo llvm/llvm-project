@@ -795,6 +795,53 @@ func.func @selection(%cond: i1) -> () {
 
 // -----
 
+func.func @selection_switch(%selector: i32) -> () {
+  %zero = spirv.Constant 0: i32
+  %one = spirv.Constant 1: i32
+  %two = spirv.Constant 2: i32
+  %three = spirv.Constant 3: i32
+  %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+
+  // CHECK: spirv.mlir.selection {
+  spirv.mlir.selection {
+    // CHECK-NEXT: spirv.Switch {{%.*}} : i32, [
+    // CHECK-NEXT: default: ^bb1,
+    // CHECK-NEXT: 0: ^bb2,
+    // CHECK-NEXT: 1: ^bb3
+    spirv.Switch %selector : i32, [
+      default: ^default,
+      0: ^case0,
+      1: ^case1
+    ]
+  // CHECK: ^bb1
+  ^default:
+    spirv.Store "Function" %var, %one : i32
+    // CHECK: spirv.Branch ^bb4
+    spirv.Branch ^merge
+
+  // CHECK: ^bb2
+  ^case0:
+    spirv.Store "Function" %var, %two : i32
+    // CHECK: spirv.Branch ^bb4
+    spirv.Branch ^merge
+
+  // CHECK: ^bb3
+  ^case1:
+    spirv.Store "Function" %var, %three : i32
+    // CHECK: spirv.Branch ^bb4
+    spirv.Branch ^merge
+
+  // CHECK: ^bb4
+  ^merge:
+    // CHECK-NEXT: spirv.mlir.merge
+    spirv.mlir.merge
+  }
+
+  spirv.Return
+}
+
+// -----
+
 // CHECK-LABEL: @empty_region
 func.func @empty_region() -> () {
   // CHECK: spirv.mlir.selection

@@ -293,7 +293,7 @@ Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
     return getDefaultTarget();
 
   SuccessorRange targets = getTargets();
-  if (auto value = llvm::dyn_cast_or_null<IntegerAttr>(operands.front())) {
+  if (auto value = dyn_cast_or_null<IntegerAttr>(operands.front())) {
     for (auto [index, literal] : llvm::enumerate(literals->getValues<APInt>()))
       if (literal == value.getValue())
         return targets[index];
