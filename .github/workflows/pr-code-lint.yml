@@ -77,7 +77,9 @@ jobs:
                 genconfusable               # for "ConfusableIdentifierCheck.h"
 
       - name: Install linter dependencies
-        run: pip install doc8 --break-system-packages
+        run: |
+          pip install doc8 --break-system-packages
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Run clang-tidy linter
         env:
