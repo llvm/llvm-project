@@ -2264,14 +2264,14 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
 
   auto CheckVectorTypeForPromotion = [&](VectorType *VTy) -> bool {
     uint64_t ElementSize =
-    DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
+        DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
 
     // While the definition of LLVM vectors is bitpacked, we don't support sizes
     // that aren't byte sized.
     if (ElementSize % 8)
       return false;
     assert((DL.getTypeSizeInBits(VTy).getFixedValue() % 8) == 0 &&
-          "vector size not a multiple of element size?");
+           "vector size not a multiple of element size?");
     ElementSize /= 8;
 
     for (const Slice &S : P)
@@ -5203,16 +5203,17 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 /// promoted.
 AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
                                    Partition &P) {
-  // Try to compute a friendly type for `PartitionTy`, which is the type of the new alloca
-  // for this partition. This won't always succeed, in which case we fall back to a legal integer type
-  // or an i8 array of an appropriate size.
+  // Try to compute a friendly type for `PartitionTy`, which is the type of the
+  // new alloca for this partition. This won't always succeed, in which case we
+  // fall back to a legal integer type or an i8 array of an appropriate size.
   Type *PartitionTy = nullptr;
   IntegerType *LargestIntegerUsedTy = nullptr;
   bool IsVectorPromotable = false;
   const DataLayout &DL = AI.getDataLayout();
   unsigned VScale = AI.getFunction()->getVScaleValue();
 
-  // First check if the partition can be promoted to a vector. If it can, we are done.
+  // First check if the partition can be promoted to a vector. If it can, we are
+  // done.
   VectorType *VecTy = isVectorPromotionViable(P, DL, VScale);
   if (VecTy) {
     PartitionTy = VecTy;
@@ -5220,44 +5221,51 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   }
 
   if (!PartitionTy) {
-    // Otherwise, check if there is a common type that all slices of the partition use.
-    // Collect the largest integer type used as a backup.
-    auto CommonUseTy =
-        findCommonType(P.begin(), P.end(), P.endOffset());
+    // Otherwise, check if there is a common type that all slices of the
+    // partition use. Collect the largest integer type used as a backup.
+    auto CommonUseTy = findCommonType(P.begin(), P.end(), P.endOffset());
     LargestIntegerUsedTy = CommonUseTy.second;
     // If there is a common type that spans the partition, use it.
     if (CommonUseTy.first) {
       TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy.first);
-      if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size()) {
+      if (CommonUseSize.isFixed() &&
+          CommonUseSize.getFixedValue() >= P.size()) {
         PartitionTy = CommonUseTy.first;
       }
     }
   }
 
   if (!PartitionTy)
-    // Otherwise, check if there is an appropriate subtype of the original alloca type to use.
+    // Otherwise, check if there is an appropriate subtype of the original
+    // alloca type to use.
     if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
                                                  P.beginOffset(), P.size()))
       PartitionTy = TypePartitionTy;
 
-  // If the type has not been selected yet OR if the type selected is a non-promotable aggregate
-  if ((!PartitionTy || (!IsVectorPromotable && !PartitionTy->isSingleValueType())))
+  // If the type has not been selected yet OR if the type selected is a
+  // non-promotable aggregate
+  if ((!PartitionTy ||
+       (!IsVectorPromotable && !PartitionTy->isSingleValueType())))
     // If the largest integer type used spans the partition, use it.
-      if (LargestIntegerUsedTy && DL.getTypeAllocSize(LargestIntegerUsedTy).getFixedValue() >= P.size())
-        PartitionTy = LargestIntegerUsedTy;
+    if (LargestIntegerUsedTy &&
+        DL.getTypeAllocSize(LargestIntegerUsedTy).getFixedValue() >= P.size())
+      PartitionTy = LargestIntegerUsedTy;
 
-  // If the type has not been selected yet OR if the type selected is a non-promotable array of integers, try to select
-  // a legal integer type of the same size as the alloca.
+  // If the type has not been selected yet OR if the type selected is a
+  // non-promotable array of integers, try to select a legal integer type of the
+  // same size as the alloca.
   if ((!PartitionTy || (PartitionTy->isArrayTy() && !IsVectorPromotable)) &&
       DL.isLegalInteger(P.size() * 8))
     PartitionTy = Type::getIntNTy(*C, P.size() * 8);
-  
-  // Finally, if nothing worked, fall back to an i8 array of the appropriate size.
+
+  // Finally, if nothing worked, fall back to an i8 array of the appropriate
+  // size.
   if (!PartitionTy)
     PartitionTy = ArrayType::get(Type::getInt8Ty(*C), P.size());
   assert(DL.getTypeAllocSize(PartitionTy).getFixedValue() >= P.size());
 
-  bool IsIntegerPromotable = IsVectorPromotable ? false : isIntegerWideningViable(P, PartitionTy, DL);
+  bool IsIntegerPromotable =
+      IsVectorPromotable ? false : isIntegerWideningViable(P, PartitionTy, DL);
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
