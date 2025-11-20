@@ -2987,7 +2987,6 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddInitializers = true;
   AC.getCFGBuildOptions().AddImplicitDtors = true;
   AC.getCFGBuildOptions().AddTemporaryDtors = true;
-  AC.getCFGBuildOptions().AddLifetime = true;
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
@@ -3003,6 +3002,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       P.enableConsumedAnalysis || EnableLifetimeSafetyAnalysis) {
     // Unreachable code analysis and thread safety require a linearized CFG.
     AC.getCFGBuildOptions().setAllAlwaysAdd();
+    AC.getCFGBuildOptions().AddLifetime = true;
   } else {
     AC.getCFGBuildOptions()
       .setAlwaysAdd(Stmt::BinaryOperatorClass)
