@@ -3562,10 +3562,9 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
     auto C = B.buildFConstant(Ty, IsLog10 ? c_log10 : c_log);
     auto CC = B.buildFConstant(Ty, IsLog10 ? cc_log10 : cc_log);
     // Our implementation of LOG is not contract safe because we generate
-    // error-correcting summations based on the rounding error of the first
-    // multiplication below, so contracting the multiply with the final add will
-    // lead to inaccurate final results. Disable contraction for the expanded
-    // instructions.
+    // error-correcting summations  for which contraction may lead to an
+    // increase in the error of the approximation. Disable contraction for the
+    // expanded instructions.
     auto NewFlags = Flags & ~(MachineInstr::FmContract);
     R = B.buildFMul(Ty, Y, C, NewFlags).getReg(0);
     auto NegR = B.buildFNeg(Ty, R, NewFlags);
@@ -3588,10 +3587,9 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
     auto YH = B.buildAnd(Ty, Y, MaskConst);
     auto YT = B.buildFSub(Ty, Y, YH, Flags);
     // Our implementation of LOG is not contract safe because we generate
-    // error-correcting summations based on the rounding error of the first
-    // multiplication below, so contracting the multiply with the final add will
-    // lead to inaccurate final results. Disable contraction for the expanded
-    // instructions.
+    // error-correcting summations  for which contraction may lead to an
+    // increase in the error of the approximation. Disable contraction for the
+    // expanded instructions.
     auto NewFlags = Flags & ~(MachineInstr::FmContract);
     auto YTCT = B.buildFMul(Ty, YT, CT, NewFlags);
 
