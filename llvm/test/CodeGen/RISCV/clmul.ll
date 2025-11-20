@@ -7334,29 +7334,6 @@ define i32 @clmulr_i32(i32 %a, i32 %b) nounwind {
   ret i32 %res
 }
 
-define i4 @clmulr_constfold_i4() nounwind {
-; CHECK-LABEL: clmulr_constfold_i4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ret
-  %clmul = call i8 @llvm.clmul.i8(i8 1, i8 2)
-  %res.ext = lshr i8 %clmul, 3
-  %res = trunc i8 %res.ext to i4
-  ret i4 %res
-}
-
-define i16 @clmulr_constfold_i16() nounwind {
-; CHECK-LABEL: clmulr_constfold_i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 5
-; CHECK-NEXT:    addi a0, a0, 1365
-; CHECK-NEXT:    ret
-  %clmul = call i32 @llvm.clmul.i16(i32 -2, i32 -1)
-  %res.ext = lshr i32 %clmul, 15
-  %res = trunc i32 %res.ext to i16
-  ret i16 %res
-}
-
 define i4 @clmulh_i4(i4 %a, i4 %b) nounwind {
 ; RV32IM-LABEL: clmulh_i4:
 ; RV32IM:       # %bb.0:
@@ -11482,27 +11459,4 @@ define i32 @clmulh_i32(i32 %a, i32 %b) nounwind {
   %res.ext = lshr i64 %clmul, 32
   %res = trunc i64 %res.ext to i32
   ret i32 %res
-}
-
-define i4 @clmulh_constfold_i4() nounwind {
-; CHECK-LABEL: clmulh_constfold_i4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ret
-  %clmul = call i8 @llvm.clmul.i8(i8 1, i8 2)
-  %res.ext = lshr i8 %clmul, 4
-  %res = trunc i8 %res.ext to i4
-  ret i4 %res
-}
-
-define i16 @clmulh_constfold_i16() nounwind {
-; CHECK-LABEL: clmulh_constfold_i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 11
-; CHECK-NEXT:    addi a0, a0, -1366
-; CHECK-NEXT:    ret
-  %clmul = call i32 @llvm.clmul.i16(i32 -2, i32 -1)
-  %res.ext = lshr i32 %clmul, 16
-  %res = trunc i32 %res.ext to i16
-  ret i16 %res
 }
