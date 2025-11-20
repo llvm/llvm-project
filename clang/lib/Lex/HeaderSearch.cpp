@@ -881,7 +881,7 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
         << IncludeFilename;
 }
 
-void HeaderSearch::DiagnoseHeaderShadowing(
+void HeaderSearch::diagnoseHeaderShadowing(
     StringRef Filename, OptionalFileEntryRef FE, bool &DiagnosedShadowing,
     SourceLocation IncludeLoc, ConstSearchDirIterator FromDir,
     ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
@@ -1024,7 +1024,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       if (OptionalFileEntryRef FE = getFileAndSuggestModule(
               TmpDir, IncludeLoc, IncluderAndDir.second, IncluderIsSystemHeader,
               RequestingModule, SuggestedModule)) {
-        DiagnoseHeaderShadowing(Filename, FE, DiagnosedShadowing, IncludeLoc,
+        diagnoseHeaderShadowing(Filename, FE, DiagnosedShadowing, IncludeLoc,
                                 FromDir, Includers, isAngled,
                                 &IncluderAndDir - Includers.begin(), nullptr);
         if (!Includer) {
@@ -1161,7 +1161,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
     if (!File)
       continue;
 
-    DiagnoseHeaderShadowing(Filename, File, DiagnosedShadowing, IncludeLoc,
+    diagnoseHeaderShadowing(Filename, File, DiagnosedShadowing, IncludeLoc,
                             FromDir, Includers, isAngled, -1, It);
 
     CurDir = It;

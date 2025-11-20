@@ -465,7 +465,7 @@ public:
     ExternalSource = ES;
   }
 
-  void DiagnoseHeaderShadowing(
+  void diagnoseHeaderShadowing(
       StringRef Filename, OptionalFileEntryRef FE, bool &DiagnosedShadowing,
       SourceLocation IncludeLoc, ConstSearchDirIterator FromDir,
       ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,

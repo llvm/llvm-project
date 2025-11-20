@@ -405,7 +405,7 @@ Improvements to Clang's diagnostics
   attributes are used with a negative size (#GH165463).
 
 - A new warning ``-Wshadow-header`` has been added to detect when a header file
-  included via quotes (#include "...") is found in multiple distinct search directories.
+  is found in multiple search directories(excluding system paths).
 
 Improvements to Clang's time-trace
 ----------------------------------
