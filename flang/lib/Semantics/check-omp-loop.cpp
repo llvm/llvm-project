@@ -311,7 +311,8 @@ void OmpStructureChecker::CheckFullUnroll(
             return c.Id() == llvm::omp::Clause::OMPC_partial;
           })};
       if (!isPartial) {
-        context_.Say(x.source, "OpenMP loop construct cannot apply to a fully unrolled loop"_err_en_US);
+        context_.Say(x.source,
+            "OpenMP loop construct cannot apply to a fully unrolled loop"_err_en_US);
       }
     }
   }
