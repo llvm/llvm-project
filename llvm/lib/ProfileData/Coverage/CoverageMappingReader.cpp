@@ -1232,8 +1232,7 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
       if (!CoverageRecordsOrErr)
         return CoverageRecordsOrErr.takeError();
       const auto &CoverageRecords = CoverageRecordsOrErr.get();
-      FuncRecordsBuffer = std::copy(CoverageRecords.begin(),
-                                    CoverageRecords.end(), FuncRecordsBuffer);
+      FuncRecordsBuffer = llvm::copy(CoverageRecords, FuncRecordsBuffer);
       FuncRecordsBuffer =
           std::fill_n(FuncRecordsBuffer,
                       alignAddr(FuncRecordsBuffer, RecordAlignment) -

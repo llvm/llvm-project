@@ -182,6 +182,12 @@ foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
   def MODF_#FPTy : RuntimeLibcall;
 }
 
+foreach VecTy = ["V4F32", "V2F64", "NXV4F32", "NXV2F64"] in {
+  def MODF_#VecTy : RuntimeLibcall;
+  def SINCOS_#VecTy : RuntimeLibcall;
+  def SINCOSPI_#VecTy : RuntimeLibcall;
+}
+
 def FEGETENV : RuntimeLibcall;
 def FESETENV : RuntimeLibcall;
 
@@ -971,10 +977,6 @@ def frexpf : RuntimeLibcallImpl<FREXP_F32>;
 def frexp : RuntimeLibcallImpl<FREXP_F64>;
 defm frexpl : LibmLongDoubleLibCall;
 
-def sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
-def sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
-defm sincospil : LibmLongDoubleLibCall;
-
 def modff : RuntimeLibcallImpl<MODF_F32>;
 def modf : RuntimeLibcallImpl<MODF_F64>;
 defm modfl : LibmLongDoubleLibCall;
@@ -1051,6 +1053,15 @@ def sincosf : RuntimeLibcallImpl<SINCOS_F32>;
 def sincos : RuntimeLibcallImpl<SINCOS_F64>;
 defm sincosl : LibmLongDoubleLibCall;
 
+// Exists in sun math library
+def sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
+def sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
+defm sincospil : LibmLongDoubleLibCall;
+
+// Exists on macOS
+def __sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
+def __sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
+
 def bzero : RuntimeLibcallImpl<BZERO>;
 def __bzero : RuntimeLibcallImpl<BZERO>;
 
@@ -1077,6 +1088,50 @@ def __riscv_flush_icache : RuntimeLibcallImpl<RISCV_FLUSH_ICACHE>;
 def __security_check_cookie : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE>;
 def __security_check_cookie_arm64ec : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE,
   "#__security_check_cookie_arm64ec">;
+
+//===----------------------------------------------------------------------===//
+// sleef calls
+//===----------------------------------------------------------------------===//
+
+defset list<RuntimeLibcallImpl> SleefLibcalls = {
+  def _ZGVnN2vl8_modf : RuntimeLibcallImpl<MODF_V2F64>;
+  def _ZGVnN4vl4_modff : RuntimeLibcallImpl<MODF_V4F32>;
+  def _ZGVsNxvl8_modf : RuntimeLibcallImpl<MODF_NXV2F64>;
+  def _ZGVsNxvl4_modff : RuntimeLibcallImpl<MODF_NXV4F32>;
+
+  def _ZGVnN2vl8l8_sincos : RuntimeLibcallImpl<SINCOS_V2F64>;
+  def _ZGVnN4vl4l4_sincosf : RuntimeLibcallImpl<SINCOS_V4F32>;
+  def _ZGVsNxvl8l8_sincos : RuntimeLibcallImpl<SINCOS_NXV2F64>;
+  def _ZGVsNxvl4l4_sincosf : RuntimeLibcallImpl<SINCOS_NXV4F32>;
+
+  def _ZGVnN4vl4l4_sincospif : RuntimeLibcallImpl<SINCOSPI_V4F32>;
+  def _ZGVnN2vl8l8_sincospi : RuntimeLibcallImpl<SINCOSPI_V2F64>;
+  def _ZGVsNxvl4l4_sincospif : RuntimeLibcallImpl<SINCOSPI_NXV4F32>;
+  def _ZGVsNxvl8l8_sincospi : RuntimeLibcallImpl<SINCOSPI_NXV2F64>;
+}
+
+//===----------------------------------------------------------------------===//
+// ARMPL calls
+//===----------------------------------------------------------------------===//
+
+defset list<RuntimeLibcallImpl> ARMPLLibcalls = {
+  def armpl_vmodfq_f64 : RuntimeLibcallImpl<MODF_V2F64>; // CallingConv::AArch64_VectorCall
+  def armpl_vmodfq_f32 : RuntimeLibcallImpl<MODF_V4F32>; // CallingConv::AArch64_VectorCall
+  def armpl_svmodf_f64_x : RuntimeLibcallImpl<MODF_NXV2F64>;
+  def armpl_svmodf_f32_x : RuntimeLibcallImpl<MODF_NXV4F32>;
+
+  def armpl_vsincosq_f64
+      : RuntimeLibcallImpl<SINCOS_V2F64>; // CallingConv::AArch64_VectorCall
+  def armpl_vsincosq_f32
+      : RuntimeLibcallImpl<SINCOS_V4F32>; // CallingConv::AArch64_VectorCall
+  def armpl_svsincos_f64_x : RuntimeLibcallImpl<SINCOS_NXV2F64>;
+  def armpl_svsincos_f32_x : RuntimeLibcallImpl<SINCOS_NXV4F32>;
+
+  def armpl_vsincospiq_f32 : RuntimeLibcallImpl<SINCOSPI_V4F32>;
+  def armpl_vsincospiq_f64 : RuntimeLibcallImpl<SINCOSPI_V2F64>;
+  def armpl_svsincospi_f32_x : RuntimeLibcallImpl<SINCOSPI_NXV4F32>;
+  def armpl_svsincospi_f64_x : RuntimeLibcallImpl<SINCOSPI_NXV2F64>;
+}
 
 //===----------------------------------------------------------------------===//
 // F128 libm Runtime Libcalls
@@ -1206,7 +1261,9 @@ defvar DefaultLibcallImpls32 = (add DefaultRuntimeLibcallImpls);
 defvar DefaultLibcallImpls64 = (add DefaultRuntimeLibcallImpls,
                                     Int128RTLibcalls);
 
-defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret),
+// TODO: Guessing sincospi added at same time as sincos_stret
+defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret,
+                                             __sincospif, __sincospi),
                                         darwinHasSinCosStret>;
 defvar DarwinExp10 = LibcallImpls<(add __exp10f, __exp10), darwinHasExp10>;
 
@@ -1585,7 +1642,7 @@ def __aeabi_f2ulz : RuntimeLibcallImpl<FPTOUINT_F32_I64>; // CallingConv::ARM_AA
 // RTABI chapter 4.1.2, Table 7
 def __aeabi_d2f : RuntimeLibcallImpl<FPROUND_F64_F32>; // CallingConv::ARM_AAPCS
 def __aeabi_d2h : RuntimeLibcallImpl<FPROUND_F64_F16>; // CallingConv::ARM_AAPCS
-def  __aeabi_f2d : RuntimeLibcallImpl<FPEXT_F32_F64>; // CallingConv::ARM_AAPCS
+def __aeabi_f2d : RuntimeLibcallImpl<FPEXT_F32_F64>; // CallingConv::ARM_AAPCS
 
 // Integer to floating-point conversions.
 // RTABI chapter 4.1.2, Table 8
@@ -2333,7 +2390,7 @@ defset list<RuntimeLibcallImpl> PPCRuntimeLibcalls = {
 
 defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
   def ___memcmp64 : RuntimeLibcallImpl<MEMCMP>;
-  def ___memmove64 : RuntimeLibcallImpl<MEMCPY>;
+  def ___memmove64 : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
   def ___strlen64 : RuntimeLibcallImpl<STRLEN>;
