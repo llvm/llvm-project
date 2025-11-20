@@ -261,9 +261,7 @@ inline uptr loadTag(uptr Ptr) {
 
 #else
 
-inline bool systemSupportsMemoryTagging() {
-  return false;
-}
+inline bool systemSupportsMemoryTagging() { return false; }
 
 inline NORETURN bool systemDetectsMemoryTagFaultsTestOnly() {
   UNREACHABLE("memory tagging not supported");
