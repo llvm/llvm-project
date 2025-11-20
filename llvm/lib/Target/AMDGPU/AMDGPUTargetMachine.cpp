@@ -2030,15 +2030,23 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   // Parse FirstKernArgPreloadReg separately, since it's a Register,
   // not ArgDescriptor.
   if (YamlMFI.ArgInfo && YamlMFI.ArgInfo->FirstKernArgPreloadReg) {
-    const auto &A = *YamlMFI.ArgInfo->FirstKernArgPreloadReg;
+    const yaml::SIArgument &A = *YamlMFI.ArgInfo->FirstKernArgPreloadReg;
 
     if (!A.IsRegister) {
+      // For stack arguments, we don't have RegisterName.SourceRange,
+      // but we should have some location info from the YAML parser
       const MemoryBuffer &Buffer =
           *PFS.SM->getMemoryBuffer(PFS.SM->getMainFileID());
-      Error =
-          SMDiagnostic(*PFS.SM, SMLoc(), Buffer.getBufferIdentifier(), 1, 0,
-                       SourceMgr::DK_Error,
-                       "firstKernArgPreloadReg must be a register", "", {}, {});
+      // Create a minimal valid source range
+      SMLoc Loc = SMLoc::getFromPointer(Buffer.getBufferStart());
+      SMRange Range(Loc, Loc);
+      
+      Error = SMDiagnostic(*PFS.SM, Loc, Buffer.getBufferIdentifier(), 1, 0,
+                           SourceMgr::DK_Error,
+                           "firstKernArgPreloadReg must be a register, not a stack location",
+                           "", {}, {});
+      
+      SourceRange = Range;
       return true;
     }
 
@@ -2052,7 +2060,6 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
       return diagnoseRegisterClass(A.RegisterName);
 
     MFI->ArgInfo.FirstKernArgPreloadReg = Reg;
-
     MFI->NumUserSGPRs += YamlMFI.NumKernargPreloadSGPRs;
   }
 

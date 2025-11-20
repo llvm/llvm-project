@@ -721,14 +721,14 @@ convertArgumentInfo(const AMDGPUFunctionArgInfo &ArgInfo,
   // not ArgDescriptor.
   if (ArgInfo.FirstKernArgPreloadReg) {
     Register Reg = ArgInfo.FirstKernArgPreloadReg;
-    if (Reg.isPhysical()) {
-      yaml::SIArgument SA = yaml::SIArgument::createArgument(true);
-      raw_string_ostream OS(SA.RegisterName.Value);
-      OS << printReg(Reg, &TRI);
+    assert(Reg.isPhysical() && "FirstKernArgPreloadReg must be a physical register");
 
-      AI.FirstKernArgPreloadReg = SA;
-      Any = true;
-    }
+    yaml::SIArgument SA = yaml::SIArgument::createArgument(true);
+    raw_string_ostream OS(SA.RegisterName.Value);
+    OS << printReg(Reg, &TRI);
+
+    AI.FirstKernArgPreloadReg = SA;
+    Any = true;
   }
 
   if (Any)
