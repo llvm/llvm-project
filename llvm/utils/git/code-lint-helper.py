@@ -141,9 +141,14 @@ View the output from clang-tidy here.
 
 
 def find_comment(pr: any, args: LintArgs) -> any:
-    comment_tag = get_comment_tag(args.linter)
+    linter_tag = get_comment_tag(args.linter)
+    other_linter = "doc8" if args.linter == "clang-tidy" else "clang-tidy"
+    other_tag = get_comment_tag(other_linter)
+
     for comment in pr.as_issue().get_comments():
-        if comment_tag in comment.body:
+        body = comment.body
+        if linter_tag in body and other_tag not in body:
+            # Found a comment that is exclusively for this linter.
             return comment
     return None
 
@@ -228,7 +233,6 @@ def run_clang_tidy(changed_files: List[str], args: LintArgs) -> Optional[str]:
     )
 
     return clean_clang_tidy_output(proc.stdout.strip())
-
 
 
 def clean_doc8_output(output: str) -> Optional[str]:
