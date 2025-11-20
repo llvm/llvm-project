@@ -38,7 +38,8 @@ struct Options {
   }
 };
 
-template <typename Config> bool useMemoryTagging(const Options &Options) {
+template <typename Config>
+constexpr bool useMemoryTagging(const Options &Options) {
   return allocatorSupportsMemoryTagging<Config>() &&
          Options.get(OptionBit::UseMemoryTagging);
 }
