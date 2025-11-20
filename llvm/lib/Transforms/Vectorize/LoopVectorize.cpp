@@ -7264,7 +7264,6 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     assert(IsExpectedPattern && "Unexpected reduction resume pattern");
     MainResumeValue = OrigResumeV;
   }
-
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
 
   // When fixing reductions in the epilogue loop we should already have
@@ -8227,7 +8226,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
           Phi, RdxDesc.getRecurrenceKind(), *StartV, CM.isInLoopReduction(Phi),
           CM.useOrderedReductions(RdxDesc), ScaleFactor,
           RdxDesc.hasLoopUsesOutsideReductionChain());
-    } else if (Legal->isFixedOrderRecurrence(Phi)) {
+    } else {
       // TODO: Currently fixed-order recurrences are modeled as chains of
       // first-order recurrences. If there are no users of the intermediate
       // recurrences in the chain, the fixed order recurrence should be modeled

@@ -215,35 +215,35 @@ static bool checkOrderedReduction(RecurKind Kind, Instruction *ExactFPMathInst,
 }
 
 /// Returns true if \p Phi is a min/max reduction matching \p Kind where \p Phi
-/// is used in the loop outside the reduction chain. This is common for
+/// is used in the loop outside the reduction chain. This is common for loops
+/// selecting the index of a minimum/maximum value (argmax).
 static bool isMinMaxReductionWithLoopUsersOutsideReductionChain(
     PHINode *Phi, RecurKind Kind, Loop *TheLoop, RecurrenceDescriptor &RedDes) {
   BasicBlock *Latch = TheLoop->getLoopLatch();
   if (!Latch)
     return false;
-  assert(Phi->getNumIncomingValues() == 2 &&
-         "phi must have exactly 2 incoming values");
+  assert(Phi->getNumIncomingValues() == 2 && "phi must have 2 incoming values");
   Value *Inc = Phi->getIncomingValueForBlock(Latch);
-  if (Phi->hasOneUse() ||
+  if (Phi->hasOneUse() || !Inc->hasOneUse() ||
       !RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind))
     return false;
 
   Value *A, *B;
-  bool Matched = [&]() {
+  bool IsMinMax = [&]() {
     switch (Kind) {
     case RecurKind::UMax:
-      return match(Inc, m_OneUse(m_UMax(m_Value(A), m_Value(B))));
+      return match(Inc, m_UMax(m_Value(A), m_Value(B)));
     case RecurKind::UMin:
-      return match(Inc, m_OneUse(m_UMin(m_Value(A), m_Value(B))));
+      return match(Inc, m_UMin(m_Value(A), m_Value(B)));
     case RecurKind::SMax:
-      return match(Inc, m_OneUse(m_SMax(m_Value(A), m_Value(B))));
+      return match(Inc, m_SMax(m_Value(A), m_Value(B)));
     case RecurKind::SMin:
-      return match(Inc, m_OneUse(m_SMin(m_Value(A), m_Value(B))));
+      return match(Inc, m_SMin(m_Value(A), m_Value(B)));
     default:
       llvm_unreachable("all min/max kinds must be handled");
     }
   }();
-  if (!Matched)
+  if (!IsMinMax)
     return false;
 
   if (A == B || (A != Phi && B != Phi))
@@ -270,6 +270,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   if (Phi->getParent() != TheLoop->getHeader())
     return false;
 
+  // Check for min/max reduction variables that feed other users in the loop.
   if (isMinMaxReductionWithLoopUsersOutsideReductionChain(Phi, Kind, TheLoop,
                                                           RedDes))
     return true;

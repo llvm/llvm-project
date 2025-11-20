@@ -818,13 +818,14 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   Branch->setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
-/// If \p RedPhiR is used by a ComputeReductionResult recipe, return it.
-/// Otherwise return nullptr.
-static VPInstruction *
-findComputeReductionResult(VPReductionPHIRecipe *RedPhiR) {
-  auto It = find_if(RedPhiR->users(), [](VPUser *U) {
+/// If \p RedPhiR is used to compute are reduction result via a
+/// ComputeReductionResult, ComputeFindIVResult or ComputeAnyOfResult
+/// VPInstruction, return it. Otherwise return nullptr.
+static VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *RedPhiR,
+                                                 unsigned Opcode) {
+  auto It = find_if(RedPhiR->users(), [Opcode](VPUser *U) {
     auto *VPI = dyn_cast<VPInstruction>(U);
-    return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
+    return VPI && VPI->getOpcode() == Opcode;
   });
   return It == RedPhiR->user_end() ? nullptr : cast<VPInstruction>(*It);
 }
@@ -933,7 +934,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 
     // If we exit early due to NaNs, compute the final reduction result based on
     // the reduction phi at the beginning of the last vector iteration.
-    auto *RdxResult = findComputeReductionResult(RedPhiR);
+    auto *RdxResult = findComputeReductionResult(
+        RedPhiR, VPInstruction::ComputeReductionResult);
 
     auto *NewSel = MiddleBuilder.createSelect(AnyNaNLane, RedPhiR,
                                               RdxResult->getOperand(1));
@@ -997,14 +999,11 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
   for (auto &PhiR : make_early_inc_range(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
     auto *MinMaxPhiR = dyn_cast<VPReductionPHIRecipe>(&PhiR);
-    if (!MinMaxPhiR)
+    // TODO: check for multi-uses in VPlan directly.
+    if (!MinMaxPhiR || !MinMaxPhiR->hasLoopUsesOutsideReductionChain())
       continue;
 
     RecurKind RdxKind = MinMaxPhiR->getRecurrenceKind();
-    // TODO: check for multi-uses in VPlan directly.
-    if (!MinMaxPhiR->hasLoopUsesOutsideReductionChain())
-      continue;
-
     assert(
         RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) &&
         "only min/max recurrences support users outside the reduction chain");
@@ -1062,10 +1061,9 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     //  2. Compare the partial min/max reduction result to its final value and,
     //  3. Select the lanes of the partial FindLastIV reductions which
     //  correspond to the lanes matching the min/max reduction result.
-    VPInstruction *FindIVResult = dyn_cast<VPInstruction>(
-        *(Sel->user_begin() + (*Sel->user_begin() == FindIVPhiR ? 1 : 0)));
-    if (!FindIVResult)
-      return false;
+    VPInstruction *FindIVResult =
+        cast<VPInstruction>(findComputeReductionResult(
+            FindIVPhiR, VPInstruction::ComputeFindIVResult));
     VPBuilder B(FindIVResult);
     VPInstruction *MinMaxResult = B.createNaryOp(
         VPInstruction::ComputeReductionResult,
