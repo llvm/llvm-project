@@ -94,7 +94,6 @@ public:
 
 private:
   void resetVRegsType(MachineFunction &MF);
-  // New helper function for dead instruction removal
   void removeDeadInstruction(MachineInstr &MI) const;
   void removeOpNamesForDeadMI(MachineInstr &MI) const;
 
@@ -516,9 +515,13 @@ static bool isConstReg(MachineRegisterInfo *MRI, Register OpReg) {
 // TODO(168736): We should make this either a flag in tabelgen
 // or reduce our dependence on the global registry, so we can remove this
 // function. It can easily be missed when new intrinsics are added.
+
+// Most SPIR-V instrinsics are considered to have side-effects in their tablegen
+// definition because they are referenced in the global registry. This is a list
+// of intrinsics that have no side effects other than their references in the
+// global registry.
 static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   switch (ID) {
-  // Intrinsics that do not have side effects.
   // This is not an exhaustive list and may need to be updated.
   case Intrinsic::spv_all:
   case Intrinsic::spv_alloca:
@@ -648,6 +651,8 @@ bool isDead(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
     return true;
   }
 
+  // It is possible that the only side effect is that the instruction is referenced in the
+  // global registry. If that is the only side effect, the intrinsic is dead.
   if (MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS ||
       MI.getOpcode() == TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS) {
     const auto &Intr = cast<GIntrinsic>(MI);

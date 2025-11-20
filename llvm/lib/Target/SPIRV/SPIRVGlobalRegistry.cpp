@@ -226,9 +226,15 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeVoid(MachineIRBuilder &MIRBuilder) {
 
 void SPIRVGlobalRegistry::invalidateMachineInstr(MachineInstr *MI) {
   // Other maps that may hold MachineInstr*:
-  // - VRegToTypeMap: Clearing would require a linear search. If we are deleting
-  // type, then no registers remaining in the code should have this type. Should
-  // be safe to leave as is.
+  // - VRegToTypeMap: We cannot remove the definitions of `MI` from
+  // VRegToTypeMap because some calls to invalidateMachineInstr are replacing MI
+  // with another instruction defining the same register. We expect that if MI
+  // is a type instruction, and it is still referenced in VRegToTypeMap, then
+  // those registers are dead or the VRegToTypeMap is out-of-date. We do not
+  // expect passes to ask for the SPIR-V type of a dead register. If the
+  // VRegToTypeMap is out-of-date already, then there was an error before. We
+  // cannot add an assert to verify this because the VRegToTypeMap can be
+  // out-of-date.
   // - FunctionToInstr & FunctionToInstrRev: At this point, we should not be
   // deleting functions. No need to update.
   // - AliasInstMDMap: Would require a linear search, and the Intel Alias
@@ -338,7 +344,7 @@ Register SPIRVGlobalRegistry::createConstFP(const ConstantFP *CF,
   LLT LLTy = LLT::scalar(BitWidth);
   Register Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
   CurMF->getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
-  assignFloatTypeToVReg(BitWidth, Res, I, TII);
+  assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
 
   MachineInstr *DepMI = const_cast<MachineInstr *>(SpvType);
   MachineIRBuilder MIRBuilder(*DepMI->getParent(), DepMI->getIterator());
