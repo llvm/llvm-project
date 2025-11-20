@@ -896,6 +896,22 @@ define i16 @icmp_fold_to_llvm_ucmp_when_ne(i16 %x, i16 %y) {
   ret i16 %6
 }
 
+define i32 @icmp_fold_to_llvm_ucmp_mixed_types(i16 %0, i16 %1) {
+; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_mixed_types(
+; CHECK-NEXT:    [[DOTFRZ1:%.*]] = freeze i16 [[TMP1:%.*]]
+; CHECK-NEXT:    [[DOTFRZ:%.*]] = freeze i16 [[TMP0:%.*]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[DOTFRZ]], [[DOTFRZ1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.ucmp.i32.i16(i16 [[DOTFRZ]], i16 [[DOTFRZ1]])
+; CHECK-NEXT:    [[SELECT_UCMP:%.*]] = select i1 [[DOTNOT]], i32 1, i32 [[TMP3]]
+; CHECK-NEXT:    ret i32 [[SELECT_UCMP]]
+;
+  %.not = icmp eq i16 %0, %1
+  %3 = icmp ult i16 %0, %1
+  %4 = select i1 %3, i32 -1, i32 1
+  %.1 = select i1 %.not, i32 1, i32 %4
+  ret i32 %.1
+}
+
 define i16 @icmp_fold_to_llvm_ucmp_negative_test_invalid_constant_1(i16 %x, i16 %y, i16 %Z) {
 ; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_negative_test_invalid_constant_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[X:%.*]], [[Y:%.*]]
@@ -922,20 +938,23 @@ define i16 @icmp_fold_to_llvm_ucmp_negative_test_invalid_constant_2(i16 %x, i16 
   ret i16 %6
 }
 
-define i32 @icmp_fold_to_llvm_ucmp_mixed_types(i16 %0, i16 %1) {
-; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_mixed_types(
-; CHECK-NEXT:    [[DOTFRZ1:%.*]] = freeze i16 [[TMP1:%.*]]
-; CHECK-NEXT:    [[DOTFRZ:%.*]] = freeze i16 [[TMP0:%.*]]
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[DOTFRZ]], [[DOTFRZ1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.ucmp.i32.i16(i16 [[DOTFRZ]], i16 [[DOTFRZ1]])
-; CHECK-NEXT:    [[SELECT_UCMP:%.*]] = select i1 [[DOTNOT]], i32 1, i32 [[TMP3]]
-; CHECK-NEXT:    ret i32 [[SELECT_UCMP]]
+define i8 @icmp_fold_to_llvm_ucmp_negative_test_ptr(ptr %0, ptr %1) {
+; CHECK-LABEL: @icmp_fold_to_llvm_ucmp_negative_test_ptr(
+; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP1:%.*]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i8 -1, i8 1
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i8 0, i8 [[TMP6]]
+; CHECK-NEXT:    ret i8 [[TMP8]]
 ;
-  %.not = icmp eq i16 %0, %1
-  %3 = icmp ult i16 %0, %1
-  %4 = select i1 %3, i32 -1, i32 1
-  %.1 = select i1 %.not, i32 1, i32 %4
-  ret i32 %.1
+  %3 = load ptr, ptr %0, align 8
+  %4 = load ptr, ptr %1, align 8
+  %5 = icmp ult ptr %3, %4
+  %6 = select i1 %5, i8 -1, i8 1
+  %7 = icmp eq ptr %3, %4
+  %8 = select i1 %7, i8 0, i8 %6
+  ret i8 %8
 }
 
 declare void @use(i1)

@@ -1979,6 +1979,12 @@ static Value *foldSelectToInstrincCmp(SelectInst &SI, const ICmpInst *ICI,
       (IPred == ICmpInst::ICMP_ULT || IPred == ICmpInst::ICMP_SLT)) {
     Value *X = ICI->getOperand(0);
     Value *Y = ICI->getOperand(1);
+
+    // icmp(ult, ptr %X, ptr %Y) -> cannot be folded because
+    // there is no intrinsic for a pointer comparison.
+    if (!X->getType()->isIntegerTy() || !Y->getType()->isIntegerTy())
+      return nullptr;
+
     Builder.SetInsertPoint(&SI);
     auto IID = IPred == ICmpInst::ICMP_ULT ? Intrinsic::ucmp : Intrinsic::scmp;
 
