@@ -16,26 +16,25 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
-platform_impl *platform_impl::getPlatformImpl(ol_platform_handle_t Platform) {
+platform_impl& platform_impl::getPlatformImpl(ol_platform_handle_t Platform) {
   auto &PlatformCache = getPlatformCache();
-  for (const auto &PlatImpl : PlatformCache) {
-    if (PlatImpl->getHandleRef() == Platform)
-      return PlatImpl.get();
+  for (auto &PlatImpl : PlatformCache) {
+    if (PlatImpl.getHandleRef() == Platform)
+      return PlatImpl;
   }
-  assert(false && "All platform_impl objects must be created during initial "
-                  "device & platform discovery");
-  return nullptr;
+
+  throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
+                              "Platform for requested handle can't be created. This handle is not in the list of platforms discovered by liboffload");
 }
 
-range_view<std::unique_ptr<platform_impl>> platform_impl::getPlatforms() {
+range_view<platform_impl> platform_impl::getPlatforms() {
   [[maybe_unused]] static auto InitPlatformsOnce = []() {
     discoverOffloadDevices();
     auto &PlatformCache = getPlatformCache();
     for (const auto &Topo : getOffloadTopologies()) {
       size_t PlatformIndex = 0;
       for (const auto &OffloadPlatform : Topo.platforms()) {
-        PlatformCache.emplace_back(
-            std::make_unique<platform_impl>(OffloadPlatform, PlatformIndex++));
+        PlatformCache.emplace_back(platform_impl(OffloadPlatform, PlatformIndex++));
       }
     }
     return true;

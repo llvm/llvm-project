@@ -37,6 +37,18 @@ public:
   /// the device returned by default_selector_v.
   // platform();
 
+  platform(const platform &rhs) = default;
+
+  platform(platform &&rhs) = default;
+
+  platform &operator=(const platform &rhs) = default;
+
+  platform &operator=(platform &&rhs) = default;
+
+  bool operator==(const platform &rhs) const { return &impl == &rhs.impl; }
+
+  bool operator!=(const platform &rhs) const { return !(*this == rhs); }
+
   /// Constructs a platform object that is a copy of the platform which contains
   /// the device that is selected by selector.
   /// \param DeviceSelectorInstance is SYCL 2020 Device Selector, a simple
@@ -96,7 +108,7 @@ public:
   static std::vector<platform> get_platforms();
 
 private:
-  platform(detail::platform_impl &Impl) : ObjBase(Impl) {}
+  platform(const detail::platform_impl &Impl) : ObjBase(Impl) {}
 
   friend detail::ObjBase<detail::platform_impl &, platform>;
 }; // class platform
