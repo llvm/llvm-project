@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // This test requires the fix to std::filebuf::close() (which is defined in the
-// built library) from PR XXX.
+// built library) from https://github.com/llvm/llvm-project/pull/168947.
 // UNSUPPORTED: using-built-library-before-llvm-22
 
 // <fstream>
