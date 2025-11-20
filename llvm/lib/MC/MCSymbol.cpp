@@ -87,6 +87,10 @@ void MCSymbol::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
 LLVM_DUMP_METHOD void MCSymbol::dump() const { dbgs() << *this; }
 #endif
 
+// Determine whether the offset between two labels can change at link time.
+// Currently, this function is used only in DWARF info emission logic, where it
+// helps generate more optimal debug info when the offset between labels is
+// constant at link time.
 bool llvm::isRangeRelaxable(const MCSymbol *Begin, const MCSymbol *End) {
   assert(Begin && "Range without a begin symbol?");
   assert(End && "Range without an end symbol?");

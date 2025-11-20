@@ -3372,6 +3372,12 @@ emitRangeList(DwarfDebug &DD, AsmPrinter *Asm, MCSymbol *Sym, const Ranges &R,
           Asm->emitLabelDifference(End, Base, Size);
         }
       } else if (UseDwarf5) {
+        // NOTE: We can't use absoluteSymbolDiff here instead of
+        // isRangeRelaxable. While isRangeRelaxable only checks that the offset
+        // between labels won't change at link time (which is exactly what we
+        // need), absoluteSymbolDiff also requires that the offset remain
+        // unchanged at assembly time, imposing a much stricter condition.
+        // Consequently, this would lead to less optimal debug info emission.
         if (DD.useSplitDwarf() && llvm::isRangeRelaxable(Begin, End)) {
           Asm->OutStreamer->AddComment(StringifyEnum(StartxEndx));
           Asm->emitInt8(StartxEndx);
