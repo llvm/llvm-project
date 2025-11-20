@@ -34,6 +34,8 @@ class LintArgs:
     issue_number: int = 0
     build_path: str = "build"
     clang_tidy_binary: str = "clang-tidy"
+    doc8_binary: str = "doc8"
+    linter: str = None
 
     def __init__(self, args: argparse.Namespace = None) -> None:
         if not args is None:
@@ -46,9 +48,12 @@ class LintArgs:
             self.verbose = args.verbose
             self.build_path = args.build_path
             self.clang_tidy_binary = args.clang_tidy_binary
+            self.doc8_binary = args.doc8_binary
+            self.linter = args.linter
 
 
-COMMENT_TAG = "<!--LLVM CODE LINT COMMENT: clang-tidy-->"
+COMMENT_TAG_CLANG_TIDY = "<!--LLVM CODE LINT COMMENT: clang-tidy-->"
+COMMENT_TAG_DOC8 = "<!--LLVM CODE LINT COMMENT: doc8-->"
 
 
 def get_instructions(cpp_files: List[str]) -> str:
@@ -135,11 +140,20 @@ View the output from clang-tidy here.
 """
 
 
-def find_comment(pr: any) -> any:
+def find_comment(pr: any, args: LintArgs) -> any:
+    comment_tag = get_comment_tag(args.linter)
     for comment in pr.as_issue().get_comments():
-        if COMMENT_TAG in comment.body:
+        if comment_tag in comment.body:
             return comment
     return None
+
+
+def get_comment_tag(linter: str) -> str:
+    if linter == "clang-tidy":
+        return COMMENT_TAG_CLANG_TIDY
+    elif linter == "doc8":
+        return COMMENT_TAG_DOC8
+    raise ValueError(f"Unknown linter: {linter}")
 
 
 def create_comment(
@@ -150,9 +164,10 @@ def create_comment(
     repo = github.Github(args.token).get_repo(args.repo)
     pr = repo.get_issue(args.issue_number).as_pull_request()
 
-    comment_text = COMMENT_TAG + "\n\n" + comment_text
+    comment_tag = get_comment_tag(args.linter)
+    comment_text = comment_tag + "\n\n" + comment_text
 
-    existing_comment = find_comment(pr)
+    existing_comment = find_comment(pr, args)
 
     comment = None
     if create_new or existing_comment:
@@ -215,7 +230,126 @@ def run_clang_tidy(changed_files: List[str], args: LintArgs) -> Optional[str]:
     return clean_clang_tidy_output(proc.stdout.strip())
 
 
-def run_linter(changed_files: List[str], args: LintArgs) -> tuple[bool, Optional[dict]]:
+
+def clean_doc8_output(output: str) -> Optional[str]:
+    if not output:
+        return None
+
+    lines = output.split("\n")
+    cleaned_lines = []
+    in_summary = False
+
+    for line in lines:
+        if line.startswith("Scanning...") or line.startswith("Validating..."):
+            continue
+        if line.startswith("========"):
+            in_summary = True
+            continue
+        if in_summary:
+            continue
+        if line.strip():
+            cleaned_lines.append(line)
+
+    if cleaned_lines:
+        return "\n".join(cleaned_lines)
+    return None
+
+
+def get_doc8_instructions() -> str:
+    # TODO: use git diff
+    return "doc8 ./clang-tools-extra/docs/clang-tidy/checks/"
+
+
+def create_doc8_comment_text(doc8_output: str) -> str:
+    instructions = get_doc8_instructions()
+    return f"""
+:warning: Documentation linter doc8 found issues in your code. :warning:
+
+<details>
+<summary>
+You can test this locally with the following command:
+</summary>
+
+```bash
+{instructions}
+```
+
+</details>
+
+<details>
+<summary>
+View the output from doc8 here.
+</summary>
+
+```
+{doc8_output}
+```
+
+</details>
+"""
+
+
+def run_doc8(args: LintArgs) -> tuple[int, Optional[str]]:
+    doc8_cmd = [args.doc8_binary, "./clang-tools-extra/docs/clang-tidy/checks/"]
+
+    if args.verbose:
+        print(f"Running doc8: {' '.join(doc8_cmd)}")
+
+    proc = subprocess.run(
+        doc8_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+
+    cleaned_output = clean_doc8_output(proc.stdout.strip())
+    if proc.returncode != 0 and cleaned_output is None:
+        # Infrastructure failure
+        return proc.returncode, proc.stderr.strip()
+
+    return proc.returncode, cleaned_output
+
+
+def run_doc8_linter(args: LintArgs) -> tuple[bool, Optional[dict]]:
+    returncode, result = run_doc8(args)
+    should_update_gh = args.token is not None and args.repo is not None
+    comment = None
+
+    if returncode == 0:
+        if should_update_gh:
+            comment_text = (
+                ":white_check_mark: With the latest revision "
+                "this PR passed the documentation linter."
+            )
+            comment = create_comment(comment_text, args, create_new=False)
+        return True, comment
+    else:
+        if should_update_gh:
+            if result:
+                comment_text = create_doc8_comment_text(result)
+                comment = create_comment(comment_text, args, create_new=True)
+            else:
+                comment_text = (
+                    ":warning: The documentation linter failed without printing "
+                    "an output. Check the logs for output. :warning:"
+                )
+                comment = create_comment(comment_text, args, create_new=False)
+        else:
+            if result:
+                print(
+                    "Warning: Documentation linter, doc8 detected "
+                    "some issues with your code..."
+                )
+                print(result)
+            else:
+                print("Warning: Documentation linter, doc8 failed to run.")
+        return False, comment
+
+
+def run_clang_tidy_linter(
+    changed_files: List[str], args: LintArgs
+) -> tuple[bool, Optional[dict]]:
     changed_files = [arg for arg in changed_files if "third-party" not in arg]
 
     cpp_files = filter_changed_files(changed_files)
@@ -256,6 +390,13 @@ def run_linter(changed_files: List[str], args: LintArgs) -> tuple[bool, Optional
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--linter",
+        type=str,
+        choices=["clang-tidy", "doc8"],
+        required=True,
+        help="The linter to run.",
+    )
+    parser.add_argument(
         "--token", type=str, required=True, help="GitHub authentication token"
     )
     parser.add_argument("--issue-number", type=int, required=True)
@@ -292,38 +433,56 @@ if __name__ == "__main__":
         help="Path to clang-tidy binary",
     )
     parser.add_argument(
+        "--doc8-binary",
+        type=str,
+        default="doc8",
+        help="Path to doc8 binary",
+    )
+    parser.add_argument(
         "--verbose", action="store_true", default=True, help="Verbose output"
     )
 
     parsed_args = parser.parse_args()
     args = LintArgs(parsed_args)
 
-    changed_files = []
-    if args.changed_files:
-        changed_files = args.changed_files.split(",")
-
     if args.verbose:
-        print(f"got changed files: {changed_files}")
+        print(f"running linter {args.linter}")
 
-    if args.verbose:
-        print("running linter clang-tidy")
-
-    success, comment = run_linter(changed_files, args)
+    success, comment = False, None
+    if args.linter == "clang-tidy":
+        changed_files = []
+        if args.changed_files:
+            changed_files = args.changed_files.split(",")
+        if args.verbose:
+            print(f"got changed files: {changed_files}")
+        success, comment = run_clang_tidy_linter(changed_files, args)
+    elif args.linter == "doc8":
+        success, comment = run_doc8_linter(args)
 
     if not success:
         if args.verbose:
-            print("linter clang-tidy failed")
+            print(f"linter {args.linter} failed")
 
     # Write comments file if we have a comment
     if comment:
+        import json
         if args.verbose:
-            print(f"linter clang-tidy has comment: {comment}")
+            print(f"linter {args.linter} has comment: {comment}")
+
+        existing_comments = []
+        if os.path.exists("comments"):
+            with open("comments", "r") as f:
+                try:
+                    existing_comments = json.load(f)
+                except json.JSONDecodeError:
+                    # File might be empty or invalid, start fresh
+                    pass
+
+        existing_comments.append(comment)
 
         with open("comments", "w") as f:
-            import json
-
-            json.dump([comment], f)
+            json.dump(existing_comments, f)
 
     if not success:
-        print("error: some linters failed: clang-tidy")
+        print(f"error: linter {args.linter} failed")
         sys.exit(1)

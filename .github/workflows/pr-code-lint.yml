@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 2
-      
+
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47.0.0
@@ -39,14 +39,14 @@ jobs:
           skip_initial_fetch: true
           base_sha: 'HEAD~1'
           sha: 'HEAD'
-      
+
       - name: Listed files
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           echo "Changed files:"
           echo "$CHANGED_FILES"
-      
+
       # TODO: create special mapping for 'codegen' targets, for now build predefined set
       # TODO: add entrypoint in 'compute_projects.py' that only adds a project and its direct dependencies
       - name: Configure and CodeGen
@@ -71,25 +71,38 @@ jobs:
                 -DLLVM_INCLUDE_TESTS=OFF \
                 -DCLANG_INCLUDE_TESTS=OFF \
                 -DCMAKE_BUILD_TYPE=Release
-          
+
           ninja -C build \
                 clang-tablegen-targets \
                 genconfusable               # for "ConfusableIdentifierCheck.h"
 
-      - name: Run code linter
+      - name: Run clang-tidy linter
         env:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           echo "[]" > comments &&
           python3 llvm/utils/git/code-lint-helper.py \
+            --linter clang-tidy \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
             --start-rev HEAD~1 \
             --end-rev HEAD \
             --verbose \
             --changed-files "$CHANGED_FILES"
-      
+
+      - name: Run doc8 linter
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python3 llvm/utils/git/code-lint-helper.py \
+            --linter doc8 \
+            --token ${{ secrets.GITHUB_TOKEN }} \
+            --issue-number $GITHUB_PR_NUMBER \
+            --start-rev HEAD~1 \
+            --end-rev HEAD \
+            --verbose
+
       - name: Upload results
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
