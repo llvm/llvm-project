@@ -33,8 +33,8 @@ static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
       .getResult();
 }
 
-static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Value mask,
-                                   unsigned numElems) {
+static mlir::Value convertMaskToVector(CIRGenBuilderTy &builder,
+                                       mlir::Value mask, unsigned numElems) {
   auto maskIntType = mlir::cast<cir::IntType>(mask.getType());
   unsigned maskWidth = maskIntType.getWidth();
 
@@ -53,6 +53,29 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Value mask,
     maskVec = builder.createVecShuffle(mask.getLoc(), maskVec, indices);
   }
   return maskVec;
+}
+
+static mlir::Value emitKunpckOp(CIRGenBuilderTy &builder, mlir::Value op0,
+                                mlir::Value op1, mlir::Location loc) {
+  auto maskIntType = mlir::cast<cir::IntType>(op0.getType());
+  unsigned numElems = maskIntType.getWidth();
+  mlir::Value lhs = convertMaskToVector(builder, op0, numElems);
+  mlir::Value rhs = convertMaskToVector(builder, op1, numElems);
+  llvm::SmallVector<int64_t, 64> indices;
+  for (unsigned i = 0; i != numElems; ++i)
+    indices.push_back(i);
+
+  // First extract half of each vector. This gives better codegen than
+  // doing it in a single shuffle.
+  lhs = builder.createVecShuffle(loc, lhs,
+                                 llvm::ArrayRef(indices.data(), numElems / 2));
+  rhs = builder.createVecShuffle(loc, rhs,
+                                 llvm::ArrayRef(indices.data(), numElems / 2));
+  // Concat the vectors.
+  // NOTE: Operands are swapped to match the intrinsic definition.
+  mlir::Value res = builder.createVecShuffle(
+      loc, rhs, lhs, llvm::ArrayRef(indices.data(), numElems));
+  return builder.createBitcast(res, op0.getType());
 }
 
 // OG has unordered comparison as a form of optimization in addition to
@@ -191,31 +214,15 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vec_set_v16hi:
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
 
   case X86::BI__builtin_ia32_kunpckdi:
   case X86::BI__builtin_ia32_kunpcksi:
-  case X86::BI__builtin_ia32_kunpckhi: {
-    auto maskIntType = mlir::cast<cir::IntType>(ops[0].getType());
-    unsigned numElems = maskIntType.getWidth();
-    mlir::Value lhs = getMaskVecValue(builder, ops[0], numElems);
-    mlir::Value rhs = getMaskVecValue(builder, ops[1], numElems);
-    llvm::SmallVector<int64_t, 64> indices;
-    for (unsigned i = 0; i != numElems; ++i)
-      indices.push_back(i);
-
-    // First extract half of each vector. This gives better codegen than
-    // doing it in a single shuffle.
-    mlir::Location loc = getLoc(expr->getExprLoc());
-    lhs = builder.createVecShuffle(
-        loc, lhs, llvm::ArrayRef(indices.data(), numElems / 2));
-    rhs = builder.createVecShuffle(
-        loc, rhs, llvm::ArrayRef(indices.data(), numElems / 2));
-    // Concat the vectors.
-    // NOTE: Operands are swapped to match the intrinsic definition.
-    mlir::Value res = builder.createVecShuffle(
-        loc, rhs, lhs, llvm::ArrayRef(indices.data(), numElems));
-    return builder.createBitcast(res, ops[0].getType());
-  }
+  case X86::BI__builtin_ia32_kunpckhi:
+    return emitKunpckOp(builder, ops[0], ops[1], getLoc(expr->getExprLoc()));
 
   case X86::BI_mm_setcsr:
   case X86::BI__builtin_ia32_ldmxcsr:
