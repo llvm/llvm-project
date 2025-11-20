@@ -17,7 +17,7 @@ namespace internal::arch_vector {
 #include "src/__support/CPP/bit.h" // countr_zero
 #include <arm_neon.h>
 #include <stddef.h> // size_t
-namepace neon {
+namespace neon {
   [[maybe_unused]] LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static size_t
   string_length(const char *src) {
     using Vector __attribute__((may_alias)) = uint8x8_t;
