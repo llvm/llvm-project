@@ -16,9 +16,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LIBC_INLINE size_t fwrite_internal(const void *buffer, size_t size, size_t nmemb,
-                                   ::FILE *stream) {
-  __llvm_libc_stdio_write(stream, reinterpret_cast<const char *>(buffer), size * nmemb);
+LIBC_INLINE size_t fwrite_internal(const void *buffer, size_t size,
+                                   size_t nmemb, ::FILE *stream) {
+  __llvm_libc_stdio_write(stream, reinterpret_cast<const char *>(buffer),
+                          size * nmemb);
   return nmemb;
 }
 

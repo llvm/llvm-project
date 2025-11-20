@@ -14,8 +14,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
-  return fputc_internal(c, stdout);
-}
+LLVM_LIBC_FUNCTION(int, putchar, (int c)) { return fputc_internal(c, stdout); }
 
 } // namespace LIBC_NAMESPACE_DECL
