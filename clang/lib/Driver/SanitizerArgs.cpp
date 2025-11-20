@@ -423,10 +423,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   MinimalRuntime =
       Args.hasFlag(options::OPT_fsanitize_minimal_runtime,
                    options::OPT_fno_sanitize_minimal_runtime, MinimalRuntime);
-  HandlerPreserveAllRegs = Args.hasFlag(
-      options::OPT_fsanitize_handler_preserve_all_regs_experimental,
-      options::OPT_fno_sanitize_handler_preserve_all_regs_experimental,
-      HandlerPreserveAllRegs);
+  HandlerPreserveAllRegs =
+      Args.hasFlag(options::OPT_fsanitize_handler_preserve_all_regs,
+                   options::OPT_fno_sanitize_handler_preserve_all_regs,
+                   HandlerPreserveAllRegs);
 
   // The object size sanitizer should not be enabled at -O0.
   Arg *OptLevel = Args.getLastArg(options::OPT_O_Group);
@@ -1474,7 +1474,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back("-fsanitize-minimal-runtime");
 
   if (HandlerPreserveAllRegs)
-    CmdArgs.push_back("-fsanitize-handler-preserve-all-regs-experimental");
+    CmdArgs.push_back("-fsanitize-handler-preserve-all-regs");
 
   if (AsanFieldPadding)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-field-padding=" +
