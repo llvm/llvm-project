@@ -22,6 +22,7 @@
 
 #include "tysan/tysan.h"
 
+#include <ctype.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -40,20 +41,62 @@ tysan_copy_types(const void *daddr, const void *saddr, uptr size) {
     internal_memmove(shadow_for(daddr), shadow_for(saddr), size * sizeof(uptr));
 }
 
-static const char *getDisplayName(const char *Name) {
+/// Struct returned by `parseIndirectionPrefix`.
+struct ParseIndirectionPrefixResult {
+  /// Level of indirection - 0 if the prefix is not found.
+  size_t Indirection;
+  /// Pointer to the remaining part of the name after the indirection prefix.
+  /// (This is the original pointer if the prefix is not found.)
+  const char *RemainingName;
+};
+
+/// Parses the "p{indirection} " prefix given to pointer type names in TBAA.
+static ParseIndirectionPrefixResult parseIndirectionPrefix(const char *Name) {
+  size_t CharIndex = 0;
+
+  // Parse 'p'.
+  // This also handles the case of an empty string.
+  if (Name[CharIndex++] != 'p')
+    return {0, Name};
+
+  // Parse indirection level.
+  size_t Indirection = 0;
+  while (isdigit(Name[CharIndex])) {
+    const auto DigitValue = static_cast<size_t>(Name[CharIndex] - '0');
+    Indirection = Indirection * 10 + DigitValue;
+    ++CharIndex;
+  }
+
+  // Parse space.
+  if (Name[CharIndex++] != ' ')
+    return {0, Name};
+
+  return {Indirection, Name + CharIndex};
+}
+
+static void printDisplayName(const char *Name) {
   if (Name[0] == '\0')
-    return "<anonymous type>";
+    Printf("<anonymous type>");
+
+  // Parse indirection prefix and remove it.
+  const auto [Indirection, RemainingName] = parseIndirectionPrefix(Name);
 
   // Clang generates tags for C++ types that demangle as typeinfo. Remove the
   // prefix from the generated string.
   const char *TIPrefix = "typeinfo name for ";
   size_t TIPrefixLen = strlen(TIPrefix);
 
-  const char *DName = Symbolizer::GetOrInit()->Demangle(Name);
+  const char *DName = Symbolizer::GetOrInit()->Demangle(RemainingName);
   if (!internal_strncmp(DName, TIPrefix, TIPrefixLen))
     DName += TIPrefixLen;
 
-  return DName;
+  // Print type name.
+  Printf("%s", DName);
+
+  // Print asterisks for indirection (C pointer notation).
+  for (size_t i = 0; i < Indirection; ++i) {
+    Printf("*");
+  }
 }
 
 static void printTDName(tysan_type_descriptor *td) {
@@ -75,8 +118,7 @@ static void printTDName(tysan_type_descriptor *td) {
     }
     break;
   case TYSAN_STRUCT_TD:
-    Printf("%s", getDisplayName(
-                     (char *)(td->Struct.Members + td->Struct.MemberCount)));
+    printDisplayName((char *)(td->Struct.Members + td->Struct.MemberCount));
     break;
   }
 }
