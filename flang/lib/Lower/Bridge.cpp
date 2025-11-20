@@ -4954,13 +4954,16 @@ private:
     // type of a deallocated polymorphic pointer is its static type).
     if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
             assign.rhs)) {
-      llvm::SmallVector<mlir::Value, 1> lenParams;
-      hlfir::genLengthParameters(loc, *builder, lhs, lenParams);
+      llvm::SmallVector<mlir::Value, 1> nonDeferredLenParams;
+      if (auto lhsVar =
+              llvm::dyn_cast_if_present<fir::FortranVariableOpInterface>(
+                  lhs.getDefiningOp()))
+        nonDeferredLenParams = lhsVar.getExplicitTypeParams();
       if (isInsideHlfirForallOrWhere()) {
         // Inside FORALL, the non deferred type parameters may only be
         // accessible in the hlfir.region_assign lhs region if they were
         // computed there.
-        for (mlir::Value &param : lenParams)
+        for (mlir::Value &param : nonDeferredLenParams)
           if (!param.getParentRegion()->isAncestor(
                   builder->getBlock()->getParent())) {
             if (llvm::isa_and_nonnull<mlir::arith::ConstantOp>(
@@ -4972,7 +4975,7 @@ private:
           }
       }
       return fir::factory::createUnallocatedBox(*builder, loc, lhsBoxType,
-                                                lenParams);
+                                                nonDeferredLenParams);
     }
     hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
         loc, *this, assign.rhs, localSymbols, rhsContext);
