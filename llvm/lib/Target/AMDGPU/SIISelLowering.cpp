@@ -7371,8 +7371,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
 static SDValue lowerWaveShuffle(const SITargetLowering &TLI, SDNode *N,
                                     SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  unsigned ValSize = VT.getSizeInBits();
-  assert(ValSize == 32);
+  assert(VT.getSizeInBits() == 32);
   SDLoc SL(N);
 
   SDValue Value = N->getOperand(1);

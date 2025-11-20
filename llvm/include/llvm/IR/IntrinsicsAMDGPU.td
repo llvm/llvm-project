@@ -2693,7 +2693,7 @@ def int_amdgcn_call_whole_wave:
 def int_amdgcn_wave_shuffle :
   DefaultAttrsIntrinsic<[llvm_any_ty],                                                            // return types
                         [LLVMMatchType<0>, llvm_i32_ty],                                          // arg types
-                        [IntrConvergent, IntrNoMem, IntrNoFree, IntrWillReturn, IntrNoCallback]>; // flags
+                        [IntrConvergent, IntrNoMem]>; // flags
 
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics
