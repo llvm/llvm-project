@@ -278,8 +278,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(
   const ProgramStateRef State = C.getState();
   if (PointeeT->isVoidType())
     PointeeT = C.getASTContext().CharTy;
-  const SVal PointeeV =
-      State->getSVal(SValMemRegion, PointeeT);
+  const SVal PointeeV = State->getSVal(SValMemRegion, PointeeT);
 
   if (PointeeV.isUndef()) {
     if (ExplodedNode *N = C.generateErrorNode()) {
