@@ -7492,21 +7492,6 @@ static bool getMiscPatterns(MachineInstr &Root,
   return false;
 }
 
-/// Check if a given MachineInstr `MIa` may alias with any of the instructions
-/// in `MemInstrs`.
-static bool mayAlias(const MachineInstr &MIa,
-                     SmallVectorImpl<const MachineInstr *> &MemInstrs,
-                     AliasAnalysis *AA) {
-  for (const MachineInstr *MIb : MemInstrs) {
-    if (MIa.mayAlias(AA, *MIb, /*UseTBAA*/ false)) {
-      MIb->dump();
-      return true;
-    }
-  }
-
-  return false;
-}
-
 /// Check if the given instruction forms a gather load pattern that can be
 /// optimized for better Memory-Level Parallelism (MLP). This function
 /// identifies chains of NEON lane load instructions that load data from
@@ -7600,8 +7585,7 @@ static bool getGatherLanePattern(MachineInstr &Root,
 
     // Check for potential aliasing with any of the load instructions to
     // optimize.
-    if ((CurrInstr.mayLoadOrStore() || CurrInstr.isCall()) &&
-        mayAlias(CurrInstr, LoadInstrs, nullptr))
+    if (CurrInstr.isLoadFoldBarrier())
       return false;
   }
 
