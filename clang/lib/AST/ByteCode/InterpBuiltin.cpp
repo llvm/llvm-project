@@ -3495,36 +3495,33 @@ static bool interp__builtin_ia32_shufbitqmb_mask(InterpState &S, CodePtr OpPC,
   PrimType ShuffleMaskElemT =
       *S.getContext().classify(ShuffleMaskVecT->getElementType());
 
-  const unsigned NumBytesInQWord = 8;
-  const unsigned NumBitsInByte = 8;
-  const unsigned NumBytes = SourceVecT->getNumElements();
-  const unsigned NumQWords = NumBytes / NumBytesInQWord;
-  const unsigned RetWidth = ZeroMask.getBitWidth();
+  unsigned NumBytesInQWord = 8;
+  unsigned NumBitsInByte = 8;
+  unsigned NumBytes = SourceVecT->getNumElements();
+  unsigned NumQWords = NumBytes / NumBytesInQWord;
+  unsigned RetWidth = ZeroMask.getBitWidth();
   APSInt RetMask(llvm::APInt(RetWidth, 0), /*isUnsigned=*/true);
 
   for (unsigned QWordId = 0; QWordId != NumQWords; ++QWordId) {
-
     APInt SourceQWord(64, 0);
-    for (unsigned ByteInQWord = 0; ByteInQWord != NumBytesInQWord;
-         ++ByteInQWord) {
+    for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
       uint64_t Byte = 0;
       INT_TYPE_SWITCH(SourceElemT, {
         Byte = static_cast<uint64_t>(
-            Source.elem<T>(QWordId * NumBytesInQWord + ByteInQWord));
+            Source.elem<T>(QWordId * NumBytesInQWord + ByteIdx));
       });
-      SourceQWord |= (Byte & 0xFF) << (ByteInQWord * NumBitsInByte);
+      SourceQWord.insertBits(APInt(8, Byte & 0xFF), ByteIdx * NumBitsInByte);
     }
 
-    for (unsigned ByteInQWord = 0; ByteInQWord != NumBytesInQWord;
-         ++ByteInQWord) {
-      unsigned ByteIdx = QWordId * NumBytesInQWord + ByteInQWord;
+    for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+      unsigned SelIdx = QWordId * NumBytesInQWord + ByteIdx;
       unsigned M = 0;
       INT_TYPE_SWITCH(ShuffleMaskElemT, {
-        M = static_cast<unsigned>(ShuffleMask.elem<T>(ByteIdx)) & 0x3F;
+        M = static_cast<unsigned>(ShuffleMask.elem<T>(SelIdx)) & 0x3F;
       });
 
-      if (ZeroMask[ByteIdx]) {
-        RetMask.setBitVal(ByteIdx, SourceQWord[M]);
+      if (ZeroMask[SelIdx]) {
+        RetMask.setBitVal(SelIdx, SourceQWord[M]);
       }
     }
   }

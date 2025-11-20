@@ -16729,24 +16729,20 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     APSInt RetMask(llvm::APInt(RetWidth, 0), /*isUnsigned=*/true);
 
     for (unsigned QWordId = 0; QWordId != NumQWords; ++QWordId) {
-
       APInt SourceQWord(64, 0);
-      for (unsigned ByteInQWord = 0; ByteInQWord != NumBytesInQWord;
-           ++ByteInQWord) {
-        uint64_t Byte =
-            Source.getVectorElt(QWordId * NumBytesInQWord + ByteInQWord)
-                .getInt()
-                .getZExtValue();
-        SourceQWord |= (Byte & 0xFF) << (ByteInQWord * NumBitsInByte);
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        uint64_t Byte = Source.getVectorElt(QWordId * NumBytesInQWord + ByteIdx)
+                            .getInt()
+                            .getZExtValue();
+        SourceQWord.insertBits(APInt(8, Byte & 0xFF), ByteIdx * NumBitsInByte);
       }
 
-      for (unsigned ByteInQWord = 0; ByteInQWord != NumBytesInQWord;
-           ++ByteInQWord) {
-        unsigned ByteIdx = QWordId * NumBytesInQWord + ByteInQWord;
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        unsigned SelIdx = QWordId * NumBytesInQWord + ByteIdx;
         unsigned M =
-            ShuffleMask.getVectorElt(ByteIdx).getInt().getZExtValue() & 0x3F;
-        if (ZeroMask[ByteIdx]) {
-          RetMask.setBitVal(ByteIdx, SourceQWord[M]);
+            ShuffleMask.getVectorElt(SelIdx).getInt().getZExtValue() & 0x3F;
+        if (ZeroMask[SelIdx]) {
+          RetMask.setBitVal(SelIdx, SourceQWord[M]);
         }
       }
     }
