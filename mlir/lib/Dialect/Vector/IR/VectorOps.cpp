@@ -6087,11 +6087,19 @@ public:
   using Base::Base;
   LogicalResult matchAndRewrite(ScatterOp scatter,
                                 PatternRewriter &rewriter) const override {
+    ShapedType baseType = scatter.getBaseType();
+    bool isMemRef = isa<MemRefType>(baseType);
+    if (!isMemRef && !isa<RankedTensorType>(baseType))
+      return failure();
+
     switch (getMaskFormat(scatter.getMask())) {
     case MaskFormat::AllTrue:
       return failure(); // no unmasked equivalent
     case MaskFormat::AllFalse:
-      rewriter.eraseOp(scatter);
+      if (isMemRef)
+        rewriter.eraseOp(scatter);
+      else
+        rewriter.replaceOp(scatter, scatter.getBase());
       return success();
     case MaskFormat::Unknown:
       return failure();
@@ -6107,6 +6115,9 @@ public:
   using Base::Base;
   LogicalResult matchAndRewrite(ScatterOp op,
                                 PatternRewriter &rewriter) const override {
+    if (!isa<MemRefType>(op.getBase().getType()))
+      return failure();
+
     if (failed(isZeroBasedContiguousSeq(op.getIndices())))
       return failure();
 

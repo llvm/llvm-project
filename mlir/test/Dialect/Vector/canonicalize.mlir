@@ -3909,6 +3909,21 @@ func.func @contiguous_scatter_step(%base: memref<?xf32>,
 
 // -----
 
+// CHECK-LABEL: @scatter_tensor_all_false
+//  CHECK-SAME:   (%[[BASE:.*]]: tensor<16xf32>, %[[INDEX:.*]]: vector<16xindex>, %[[VALUE:.*]]: vector<16xf32>) -> tensor<16xf32> {
+//       CHECK:   return %[[BASE]] : tensor<16xf32>
+func.func @scatter_tensor_all_false(%base: tensor<16xf32>,
+                                    %index: vector<16xindex>,
+                                    %value: vector<16xf32>) -> tensor<16xf32> {
+  %c0 = arith.constant 0 : index
+  %mask = arith.constant dense<false> : vector<16xi1>
+  %0 = vector.scatter %base[%c0][%index], %mask, %value
+      : tensor<16xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32> -> tensor<16xf32>
+  return %0 : tensor<16xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @fold_extract_constant_indices
 //   CHECK-SAME:   %[[ARG:.*]]: vector<32x1xi32>) -> i32 {
 //        CHECK:   %[[RES:.*]] = vector.extract %[[ARG]][0, 0] : i32 from vector<32x1xi32>
