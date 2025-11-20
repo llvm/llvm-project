@@ -10,11 +10,11 @@ define double @test() {
 ; CHECK-NEXT:    br label %[[BB4]]
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 0, 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 1>, i32 [[MUL]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i32> [[TMP0]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 [[MUL]], i32 0
 ; CHECK-NEXT:    [[TMP3]] = or <4 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 1>, i32 [[MUL]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i32> [[TMP0]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP5]], i32 2
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 false, label %[[BB7:.*]], label %[[BB1]]
