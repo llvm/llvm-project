@@ -1504,6 +1504,11 @@ TargetTransformInfo::getInstructionUniformity(const Value *V) const {
   return TTIImpl->getInstructionUniformity(V);
 }
 
+bool TargetTransformInfo::isUniform(const Instruction *I,
+                                    const SmallBitVector &UniformArgs) const {
+  return TTIImpl->isUniform(I, UniformArgs);
+}
+
 TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}

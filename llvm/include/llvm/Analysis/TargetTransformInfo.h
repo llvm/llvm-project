@@ -2005,6 +2005,18 @@ public:
 
   InstructionUniformity getInstructionUniformity(const Value *V) const;
 
+  /// Determine if an instruction with some operands uniform can be proven
+  /// uniform. This is used for custom uniformity analysis where the target
+  /// can define complex rules that depend on which specific operands are
+  /// uniform.
+  ///
+  /// \param I The instruction to check.
+  /// \param UniformArgs A bitvector indicating which operands are known to be
+  ///                    uniform (bit N corresponds to operand N).
+  /// \returns true if the instruction result can be proven uniform given the
+  ///          uniform operands, false otherwise.
+  bool isUniform(const Instruction *I, const SmallBitVector &UniformArgs) const;
+
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;
 };

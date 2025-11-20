@@ -20,6 +20,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -10629,11 +10630,10 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
 
   unsigned opcode = MI.getOpcode();
 
-  // Special handling for permlane16/permlanex16 - uniformity depends on
-  // operands
+  // permlane16/permlanex16 require custom uniformity analysis
   if (opcode == AMDGPU::V_PERMLANE16_B32_e64 ||
       opcode == AMDGPU::V_PERMLANEX16_B32_e64)
-    return InstructionUniformity::AnyOfFirstTwoUseOp;
+    return InstructionUniformity::Custom;
 
   if (opcode == AMDGPU::V_READLANE_B32 ||
       opcode == AMDGPU::V_READFIRSTLANE_B32 ||
@@ -10711,6 +10711,23 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
   //       therefore no longer recognizable.
 
   return InstructionUniformity::Default;
+}
+bool SIInstrInfo::isUniform(const MachineInstr &MI,
+                            const SmallBitVector &UniformArgs) const {
+  unsigned opcode = MI.getOpcode();
+
+  // Custom uniformity check for permlane16/permlanex16
+  if (opcode == AMDGPU::V_PERMLANE16_B32_e64 ||
+      opcode == AMDGPU::V_PERMLANEX16_B32_e64) {
+    // Result is uniform if either src0 or src1 is uniform
+    // UniformArgs[0] = src0 (source value)
+    // UniformArgs[1] = src1 (lane select)
+    if (UniformArgs.size() >= 2) {
+      return UniformArgs[0] || UniformArgs[1];
+    }
+  }
+
+  return false;
 }
 
 unsigned SIInstrInfo::getDSShaderTypeValue(const MachineFunction &MF) {

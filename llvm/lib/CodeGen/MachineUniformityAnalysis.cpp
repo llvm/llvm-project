@@ -8,6 +8,7 @@
 
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -60,6 +61,10 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
         break;
       case InstructionUniformity::NeverUniform:
         markDivergent(instr);
+        break;
+      case InstructionUniformity::Custom:
+        // Instructions requiring custom uniformity analysis based on operands
+        addUniformInstruction(&instr, uniformity);
         break;
       case InstructionUniformity::Default:
         break;
@@ -152,41 +157,25 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::isDivergentUse(
 }
 
 template <>
-bool GenericUniformityAnalysisImpl<MachineSSAContext>::isOperandUniform(
-    const MachineInstr &MI, InstructionUniformity IU) const {
-  switch (IU) {
-  // For permlane16/permlanex16, check if either src or lane select is uniform
-  // These instructions have mixed immediate and register operands:
-  // Operand 1 is src0 (the source value to permute)
-  // Operand 3 is src1 (lane select - which lane within the 16 to read from)
-  // Result is uniform if EITHER the source OR lane select is uniform
-  case InstructionUniformity::AnyOfFirstTwoUseOp: {
-    // Check if any of the first two register use operands is uniform
-    // Result is uniform if ANY of these operands is uniform
-    const MachineOperand *FirstRegOp = nullptr;
-    const MachineOperand *SecondRegOp = nullptr;
+bool GenericUniformityAnalysisImpl<MachineSSAContext>::isCustomUniform(
+    const MachineInstr &MI) const {
+  const auto &InstrInfo = *F.getSubtarget().getInstrInfo();
 
-    // Find the first two register use operands
-    for (const MachineOperand &MO : MI.uses()) {
-      if (MO.isReg() && MO.getReg().isVirtual()) {
-        if (!FirstRegOp)
-          FirstRegOp = &MO;
-        else if (!SecondRegOp) {
-          SecondRegOp = &MO;
-          break;
-        }
-      }
+  // Build bitvector of uniform register use operands
+  SmallVector<const MachineOperand *, 4> RegUseOps;
+  for (const MachineOperand &MO : MI.uses()) {
+    if (MO.isReg() && MO.getReg().isVirtual()) {
+      RegUseOps.push_back(&MO);
     }
-
-    if (!FirstRegOp || !SecondRegOp)
-      return false;
-
-    // Return true if either operand is uniform
-    return !isDivergentUse(*FirstRegOp) || !isDivergentUse(*SecondRegOp);
   }
-  default:
-    return false;
+
+  SmallBitVector UniformArgs(RegUseOps.size());
+  for (unsigned i = 0; i < RegUseOps.size(); ++i) {
+    UniformArgs[i] = !isDivergentUse(*RegUseOps[i]);
   }
+
+  // Query target-specific uniformity callback
+  return InstrInfo.isUniform(MI, UniformArgs);
 }
 
 // This ensures explicit instantiation of
