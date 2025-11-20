@@ -752,6 +752,10 @@ Improvements to Clang's diagnostics
   pointer, provided it can be proven that the pointer only points to
   ``[[noreturn]]`` functions.
 
+- A new warning ``-Wenum-compare-typo`` has been added to detect potential erroneous
+  comparison operators when mixed with bitwise operators in enum value initializers.
+  This can be locally disabled by explicitly casting the initializer value.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

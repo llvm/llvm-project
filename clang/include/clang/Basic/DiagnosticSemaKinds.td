@@ -14480,4 +14480,12 @@ def err_acc_device_type_multiple_archs
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+
+def warn_comparison_in_enum_initializer : Warning<
+  "comparison operator '%0' is potentially a typo for a shift operator '%1'">,
+  InGroup<DiagGroup<"enum-compare-typo">>;
+
+def note_enum_compare_typo_suggest : Note<
+  "use '%0' to perform a bitwise shift">;
+
 } // end of sema component.
