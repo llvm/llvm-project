@@ -998,7 +998,7 @@ bool ShrinkWrapLegacy::runOnMachineFunction(MachineFunction &MF) {
   MachineOptimizationRemarkEmitter *ORE =
       &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
-  return ShrinkWrapImpl(MDT, MPDT, MBFI, MLI, ORE).run(MF);
+  return ShrinkWrapImpl(RCI, MDT, MPDT, MBFI, MLI, ORE).run(MF);
 }
 
 PreservedAnalyses ShrinkWrapPass::run(MachineFunction &MF,
@@ -1007,6 +1007,7 @@ PreservedAnalyses ShrinkWrapPass::run(MachineFunction &MF,
   if (MF.empty() || !ShrinkWrapImpl::isShrinkWrapEnabled(MF))
     return PreservedAnalyses::all();
 
+  RegisterClassInfo &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachinePostDominatorTree &MPDT =
       MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
@@ -1016,7 +1017,7 @@ PreservedAnalyses ShrinkWrapPass::run(MachineFunction &MF,
   MachineOptimizationRemarkEmitter &ORE =
       MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
 
-  ShrinkWrapImpl(&MDT, &MPDT, &MBFI, &MLI, &ORE).run(MF);
+  ShrinkWrapImpl(&RCI, &MDT, &MPDT, &MBFI, &MLI, &ORE).run(MF);
   return PreservedAnalyses::all();
 }
 
