@@ -2767,7 +2767,9 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
   EVT VT = Op.getValueType();
   SDNodeFlags Flags = Op->getFlags();
   SDLoc DL(Op);
-
+  // Our implementation of LOG is not contract safe, so disable instruction
+  // contraction.
+  Flags.setAllowContract(false);
   const bool IsLog10 = Op.getOpcode() == ISD::FLOG10;
   assert(IsLog10 || Op.getOpcode() == ISD::FLOG);
 
