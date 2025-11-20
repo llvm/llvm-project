@@ -455,7 +455,7 @@ int RTNAME(Irand)(int *i) {
 
 // RAND(I)
 float RTNAME(Rand)(int *i) {
-  unsigned mask;
+  unsigned mask = 0;
   auto radix = std::numeric_limits<float>::radix;
   auto digits = std::numeric_limits<float>::digits;
   if (radix == 2)
