@@ -491,3 +491,10 @@ bool CPPLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
   return mangled_name.starts_with("_ZTh") || mangled_name.starts_with("_ZTv") ||
          mangled_name.starts_with("_ZTc");
 }
+
+bool CPPLanguageRuntime::ShouldUseMicrosoftABI(Process *process) {
+  return process->GetTarget()
+      .GetArchitecture()
+      .GetTriple()
+      .isWindowsMSVCEnvironment();
+}

@@ -81,6 +81,8 @@ public:
 
   bool IsSymbolARuntimeThunk(const Symbol &symbol) override;
 
+  static bool ShouldUseMicrosoftABI(Process *process);
+
 protected:
   // Classes that inherit from CPPLanguageRuntime can see and modify these
   CPPLanguageRuntime(Process *process);
