@@ -21,6 +21,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -182,7 +183,8 @@ static void describeUninitializedArgumentInCall(const CallEvent &Call,
 namespace {
 class FindUninitializedField {
 public:
-  SmallVector<const FieldDecl *, 10> FieldChain;
+  using FieldChainTy = SmallVector<const FieldDecl *, 10>;
+  FieldChainTy FieldChain;
 
 private:
   StoreManager &StoreMgr;
@@ -219,27 +221,32 @@ public:
 
     return false;
   }
+};
+} // namespace
 
-  void printFieldChain(llvm::raw_ostream &OS) {
-    if (FieldChain.size() == 1)
-      OS << " (e.g., field: '" << *FieldChain[0] << "')";
+namespace llvm {
+template <> struct format_provider<FindUninitializedField::FieldChainTy> {
+  static void format(const FindUninitializedField::FieldChainTy &V,
+                     raw_ostream &Stream, StringRef Style) {
+    if (V.size() == 1)
+      Stream << "(e.g., field: '" << *V[0] << "')";
     else {
-      OS << " (e.g., via the field chain: '";
+      Stream << "(e.g., via the field chain: '";
       bool First = true;
-      for (SmallVectorImpl<const FieldDecl *>::iterator DI = FieldChain.begin(),
-                                                        DE = FieldChain.end();
+      for (FindUninitializedField::FieldChainTy::const_iterator DI = V.begin(),
+                                                                DE = V.end();
            DI != DE; ++DI) {
         if (First)
           First = false;
         else
-          OS << '.';
-        OS << **DI;
+          Stream << '.';
+        Stream << **DI;
       }
-      OS << "')";
+      Stream << "')";
     }
   }
 };
-} // namespace
+} // namespace llvm
 
 bool CallAndMessageChecker::uninitRefOrPointer(
     CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
@@ -276,15 +283,11 @@ bool CallAndMessageChecker::uninitRefOrPointer(
 
   if (PointeeV.isUndef()) {
     if (ExplodedNode *N = C.generateErrorNode()) {
-      SmallString<200> Buf;
-      llvm::raw_svector_ostream Os(Buf);
-      Os << (ArgumentNumber + 1) << llvm::getOrdinalSuffix(ArgumentNumber + 1)
-         << " function call argument is ";
-      if (ParamT->isPointerType())
-        Os << "a pointer to uninitialized value";
-      else
-        Os << "an uninitialized value";
-      auto R = std::make_unique<PathSensitiveBugReport>(BT, Os.str(), N);
+      std::string Msg = llvm::formatv(
+          "{0}{1} function call argument is {2} uninitialized value",
+          ArgumentNumber + 1, llvm::getOrdinalSuffix(ArgumentNumber + 1),
+          ParamT->isPointerType() ? "a pointer to" : "an");
+      auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
       R->addRange(ArgRange);
       if (ArgEx)
         bugreporter::trackExpressionValue(N, ArgEx, *R);
@@ -302,23 +305,15 @@ bool CallAndMessageChecker::uninitRefOrPointer(
 
     if (F.Find(D->getRegion())) {
       if (ExplodedNode *N = C.generateErrorNode()) {
-        SmallString<512> Buf;
-        llvm::raw_svector_ostream Os(Buf);
-        Os << (ArgumentNumber + 1) << llvm::getOrdinalSuffix(ArgumentNumber + 1)
-           << " function call argument";
-        if (ParamT->isPointerType())
-          Os << " points to";
-        else
-          Os << " references";
-        Os << " an uninitialized value";
-
-        F.printFieldChain(Os);
-
-        auto R = std::make_unique<PathSensitiveBugReport>(BT, Os.str(), N);
+        std::string Msg = llvm::formatv(
+            "{0}{1} function call argument {2} an uninitialized value {3}",
+            (ArgumentNumber + 1), llvm::getOrdinalSuffix(ArgumentNumber + 1),
+            ParamT->isPointerType() ? "points to" : "references", F.FieldChain);
+        auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
         R->addRange(ArgRange);
-
         if (ArgEx)
           bugreporter::trackExpressionValue(N, ArgEx, *R);
+
         C.emitReport(std::move(R));
       }
       return true;
@@ -370,13 +365,12 @@ bool CallAndMessageChecker::PreVisitProcessArg(
         return true;
       }
       if (ExplodedNode *N = C.generateErrorNode()) {
-        SmallString<512> Str;
-        llvm::raw_svector_ostream os(Str);
-        os << "Passed-by-value struct argument contains uninitialized data";
-        F.printFieldChain(os);
+        std::string Msg = llvm::formatv(
+            "Passed-by-value struct argument contains uninitialized data {0}",
+            F.FieldChain);
 
         // Generate a report for this bug.
-        auto R = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
+        auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
         R->addRange(ArgRange);
 
         if (ArgEx)
