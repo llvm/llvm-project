@@ -6,23 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
-
 // <array>
-
-// template <class T, size_t N>
-//   constexpr array<remove_cv_t<T>, N> to_array(T (&a)[N]);
-// template <class T, size_t N>
-//   constexpr array<remove_cv_t<T>, N> to_array(T (&&a)[N]);
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <array>
 
-#include "MoveOnly.h"
 #include "test_macros.h"
+#include "MoveOnly.h"
 
 // expected-warning@array:* 0-1 {{suggest braces around initialization of subobject}}
 
-void test() {
+int main(int, char**) {
   {
     char source[3][6] = {"hi", "world"};
     // expected-error@array:* {{to_array does not accept multidimensional arrays}}
@@ -44,4 +38,6 @@ void test() {
     // expected-error-re@array:* 0-1{{{{(call to implicitly-deleted copy constructor of 'MoveOnly')|(call to deleted constructor of 'MoveOnly')}}}}
     (void)std::to_array(std::move(cmo)); // expected-note {{requested here}}
   }
+
+  return 0;
 }

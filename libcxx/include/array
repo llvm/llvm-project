@@ -473,8 +473,8 @@ array(_Tp, _Args...) -> array<_Tp, 1 + sizeof...(_Args)>;
 #  endif
 
 template <class _Tp, size_t _Size>
-inline _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_CONSTEXPR_SINCE_CXX20 bool operator==(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+operator==(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y) {
   return std::equal(__x.begin(), __x.end(), __y.begin());
 }
 
@@ -545,7 +545,8 @@ get(const array<_Tp, _Size>& __a) _NOEXCEPT {
 }
 
 template <size_t _Ip, class _Tp, size_t _Size>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp&& get(array<_Tp, _Size>&& __a) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp&&
+get(array<_Tp, _Size>&& __a) _NOEXCEPT {
   static_assert(_Ip < _Size, "Index out of bounds in std::get<> (std::array &&)");
   return std::move(__a.__elems_[_Ip]);
 }
