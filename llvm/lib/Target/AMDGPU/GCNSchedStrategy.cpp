@@ -978,10 +978,8 @@ GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
 
 static MachineInstr *getLastMIForRegion(MachineBasicBlock::iterator RegionBegin,
                                         MachineBasicBlock::iterator RegionEnd) {
-  auto REnd = RegionEnd == RegionBegin->getParent()->end()
-                  ? std::prev(RegionEnd)
-                  : RegionEnd;
-  return &*skipDebugInstructionsBackward(REnd, RegionBegin);
+  assert(RegionBegin != RegionEnd && "Region must not be empty");
+  return &*skipDebugInstructionsBackward(std::prev(RegionEnd), RegionBegin);
 }
 
 void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
@@ -1076,9 +1074,12 @@ GCNScheduleDAGMILive::getRegionLiveOutMap() const {
   assert(!Regions.empty());
   std::vector<MachineInstr *> RegionLastMIs;
   RegionLastMIs.reserve(Regions.size());
-  for (auto &[RegionBegin, RegionEnd] : reverse(Regions))
+  for (auto &[RegionBegin, RegionEnd] : reverse(Regions)) {
+    // Skip empty regions.
+    if (RegionBegin == RegionEnd)
+      continue;
     RegionLastMIs.push_back(getLastMIForRegion(RegionBegin, RegionEnd));
-
+  }
   return getLiveRegMap(RegionLastMIs, /*After=*/true, *LIS);
 }
 
@@ -1088,10 +1089,12 @@ void RegionPressureMap::buildLiveRegMap() {
   RegionLiveRegMap =
       IsLiveOut ? DAG->getRegionLiveOutMap() : DAG->getRegionLiveInMap();
   for (unsigned I = 0; I < DAG->Regions.size(); I++) {
+    auto &[RegionBegin, RegionEnd] = DAG->Regions[I];
+    // Skip empty regions.
+    if (RegionBegin == RegionEnd)
+      continue;
     MachineInstr *RegionKey =
-        IsLiveOut
-            ? getLastMIForRegion(DAG->Regions[I].first, DAG->Regions[I].second)
-            : &*DAG->Regions[I].first;
+        IsLiveOut ? getLastMIForRegion(RegionBegin, RegionEnd) : &*RegionBegin;
     IdxToInstruction[I] = RegionKey;
   }
 }

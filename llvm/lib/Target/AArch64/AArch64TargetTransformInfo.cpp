@@ -4730,12 +4730,12 @@ bool AArch64TTIImpl::prefersVectorizedAddressing() const {
 }
 
 InstructionCost
-AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
-                                      Align Alignment, unsigned AddressSpace,
+AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                       TTI::TargetCostKind CostKind) const {
+  Type *Src = MICA.getDataType();
+
   if (useNeonVector(Src))
-    return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                        CostKind);
+    return BaseT::getMaskedMemoryOpCost(MICA, CostKind);
   auto LT = getTypeLegalizationCost(Src);
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();

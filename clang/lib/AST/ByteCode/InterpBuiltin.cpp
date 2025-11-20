@@ -1317,8 +1317,9 @@ static bool interp__builtin_infer_alloc_token(InterpState &S, CodePtr OpPC,
   uint64_t BitWidth = ASTCtx.getTypeSize(ASTCtx.getSizeType());
   auto Mode =
       ASTCtx.getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
+  auto MaxTokensOpt = ASTCtx.getLangOpts().AllocTokenMax;
   uint64_t MaxTokens =
-      ASTCtx.getLangOpts().AllocTokenMax.value_or(~0ULL >> (64 - BitWidth));
+      MaxTokensOpt.value_or(0) ? *MaxTokensOpt : (~0ULL >> (64 - BitWidth));
 
   // We do not read any of the arguments; discard them.
   for (int I = Call->getNumArgs() - 1; I >= 0; --I)
@@ -3361,6 +3362,28 @@ static bool interp__builtin_ia32_vpconflict(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_cvt_vec2mask(InterpState &S, CodePtr OpPC,
+                                              const CallExpr *Call,
+                                              unsigned ID) {
+  assert(Call->getNumArgs() == 1);
+
+  const Pointer &Vec = S.Stk.pop<Pointer>();
+  unsigned RetWidth = S.getASTContext().getIntWidth(Call->getType());
+  APInt RetMask(RetWidth, 0);
+
+  unsigned VectorLen = Vec.getNumElems();
+  PrimType ElemT = Vec.getFieldDesc()->getPrimType();
+
+  for (unsigned ElemNum = 0; ElemNum != VectorLen; ++ElemNum) {
+    APSInt A;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, { A = Vec.elem<T>(ElemNum).toAPSInt(); });
+    unsigned MSB = A[A.getBitWidth() - 1];
+    RetMask.setBitVal(ElemNum, MSB);
+  }
+  pushInteger(S, RetMask, Call->getType());
+  return true;
+}
+
 static bool interp__builtin_ia32_shuffle_generic(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
@@ -4619,12 +4642,31 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_pshufd:
   case X86::BI__builtin_ia32_pshufd256:
   case X86::BI__builtin_ia32_pshufd512:
+  case X86::BI__builtin_ia32_vpermilps:
+  case X86::BI__builtin_ia32_vpermilps256:
+  case X86::BI__builtin_ia32_vpermilps512:
     return interp__builtin_ia32_shuffle_generic(
         S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           unsigned LaneBase = (DstIdx / 4) * 4;
           unsigned LaneIdx = DstIdx % 4;
           unsigned Sel = (ShuffleMask >> (2 * LaneIdx)) & 0x3;
           return std::make_pair(0, static_cast<int>(LaneBase + Sel));
+        });
+
+  case X86::BI__builtin_ia32_vpermilpd:
+  case X86::BI__builtin_ia32_vpermilpd256:
+  case X86::BI__builtin_ia32_vpermilpd512:
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned Control) {
+          unsigned NumElemPerLane = 2;
+          unsigned BitsPerElem = 1;
+          unsigned MaskBits = 8;
+          unsigned IndexMask = 0x1;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned LaneOffset = Lane * NumElemPerLane;
+          unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+          unsigned Index = (Control >> BitIndex) & IndexMask;
+          return std::make_pair(0, static_cast<int>(LaneOffset + Index));
         });
 
   case X86::BI__builtin_ia32_kandqi:
@@ -4758,6 +4800,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
     return interp__builtin_vec_set(S, OpPC, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_cvtb2mask128:
+  case X86::BI__builtin_ia32_cvtb2mask256:
+  case X86::BI__builtin_ia32_cvtb2mask512:
+  case X86::BI__builtin_ia32_cvtw2mask128:
+  case X86::BI__builtin_ia32_cvtw2mask256:
+  case X86::BI__builtin_ia32_cvtw2mask512:
+  case X86::BI__builtin_ia32_cvtd2mask128:
+  case X86::BI__builtin_ia32_cvtd2mask256:
+  case X86::BI__builtin_ia32_cvtd2mask512:
+  case X86::BI__builtin_ia32_cvtq2mask128:
+  case X86::BI__builtin_ia32_cvtq2mask256:
+  case X86::BI__builtin_ia32_cvtq2mask512:
+    return interp__builtin_ia32_cvt_vec2mask(S, OpPC, Call, BuiltinID);
 
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpw128_mask:
