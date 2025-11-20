@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=riscv64 -riscv-enable-live-variables -verify-machineinstrs \
 ; RUN: -riscv-liveness-update-kills -stop-after=riscv-live-variables \
-; RUN: -o - %s | FileCheck %s
+; RUN: -riscv-liveness-update-mbb-liveins < %s | FileCheck %s
 
 ; Test that updateMBBLiveIns correctly updates the live-in sets of basic blocks
 
@@ -23,7 +23,28 @@ entry:
 ; Test with control flow: verify live-ins are correct for entry block with multiple args
 ; CHECK-LABEL: name: test_control_flow
 ; CHECK: bb.0.entry:
+; CHECK:   successors: %bb.1(0x30000000), %bb.2(0x50000000); %bb.1(37.50%), %bb.2(62.50%)
 ; CHECK:   liveins: $x10, $x11, $x12
+; CHECK:   BNE killed renamable $x12, killed $x0, %bb.2
+; CHECK:   PseudoBR %bb.1
+; CHECK:
+; CHECK: bb.1.then:
+; CHECK: ; predecessors: %bb.0
+; CHECK:   successors: %bb.3(0x80000000); %bb.3(100.00%)
+; CHECK:   liveins: $x10, $x11
+; CHECK:   renamable $x10 = ADD killed renamable $x10, killed renamable $x11
+; CHECK:   PseudoBR %bb.3
+; CHECK:
+; CHECK: bb.2.else:
+; CHECK: ; predecessors: %bb.0
+; CHECK:   successors: %bb.3(0x80000000); %bb.3(100.00%)
+; CHECK:   liveins: $x10, $x11
+; CHECK:   renamable $x10 = SUB killed renamable $x10, killed renamable $x11
+; CHECK:
+; CHECK: bb.3.end:
+; CHECK: ; predecessors: %bb.2, %bb.1
+; CHECK:   liveins: $x10
+; CHECK:   PseudoRET implicit killed $x10
 
 define i64 @test_control_flow(i64 %a, i64 %b, i64 %cond) {
 entry:
@@ -48,7 +69,9 @@ end:
 ; CHECK: bb.0.entry:
 ; CHECK:   liveins: $x10
 ; CHECK: bb.1.loop:
+; CHECK-NOT: liveins:
 ; CHECK: bb.2.exit:
+; CHECK-NOT: liveins:
 
 define i64 @test_loop(i64 %n) {
 entry:
