@@ -60,7 +60,7 @@
 /mlir/lib/Conversion/*ToROCDL @krzysz00 @kuhar
 /mlir/include/mlir/Dialect/LLVMIR/ROCDL* @krzysz00 @kuhar
 
-# Arith dialects in MLIR.
+# Arith dialect in MLIR.
 /mlir/include/mlir/Dialect/Arith @kuhar
 /mlir/lib/Dialect/Arith @kuhar
 /mlir/lib/Conversion/ArithTo* @kuhar
