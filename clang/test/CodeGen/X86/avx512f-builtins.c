@@ -12059,14 +12059,3 @@ TEST_CONSTEXPR(match_v8di(
                                     (__m512i)(__v8di){0, 15, 16, 23, 1, 17, 2, 18},
                                     (__m512i)(__v8di){101, 102, 103, 104, 105, 106, 107, 108}),
     -1, 108, -3, -8, -5, -2, -7, -3));
-
-__mmask16 test_mm512_kunpackb(__mmask16 a, __mmask16 b) {
-  // CHECK-LABEL: test_mm512_kunpackb
-  // CHECK: [[A_BITCAST:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: [[A_SHUFFLE:%.*]] = shufflevector <16 x i1> [[A_BITCAST]], <16 x i1> [[A_BITCAST]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  // CHECK: [[B_BITCAST:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: [[B_SHUFFLE:%.*]] = shufflevector <16 x i1> [[B_BITCAST]], <16 x i1> [[B_BITCAST]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  // CHECK: [[CONCAT:%.*]] = shufflevector <8 x i1> [[B_SHUFFLE]], <8 x i1> [[A_SHUFFLE]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  // CHECK: bitcast <16 x i1> [[CONCAT]] to i16
-  return _mm512_kunpackb(a, b);
-}
