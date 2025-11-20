@@ -1673,7 +1673,7 @@ static void genTargetClauses(
     hostEvalInfo->collectValues(clauseOps.hostEvalVars);
   }
   cp.processIf(llvm::omp::Directive::OMPD_target, clauseOps);
-  cp.processIsDevicePtr(clauseOps, isDevicePtrSyms);
+  cp.processIsDevicePtr(stmtCtx, clauseOps, isDevicePtrSyms);
   cp.processMap(loc, stmtCtx, clauseOps, llvm::omp::Directive::OMPD_unknown,
                 &mapSyms);
   cp.processNowait(clauseOps);
@@ -2485,13 +2485,15 @@ static bool isDuplicateMappedSymbol(
     const semantics::Symbol &sym,
     const llvm::SetVector<const semantics::Symbol *> &privatizedSyms,
     const llvm::SmallVectorImpl<const semantics::Symbol *> &hasDevSyms,
-    const llvm::SmallVectorImpl<const semantics::Symbol *> &mappedSyms) {
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &mappedSyms,
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &isDevicePtrSyms) {
   llvm::SmallVector<const semantics::Symbol *> concatSyms;
   concatSyms.reserve(privatizedSyms.size() + hasDevSyms.size() +
-                     mappedSyms.size());
+                     mappedSyms.size() + isDevicePtrSyms.size());
   concatSyms.append(privatizedSyms.begin(), privatizedSyms.end());
   concatSyms.append(hasDevSyms.begin(), hasDevSyms.end());
   concatSyms.append(mappedSyms.begin(), mappedSyms.end());
+  concatSyms.append(isDevicePtrSyms.begin(), isDevicePtrSyms.end());
 
   auto checkSymbol = [&](const semantics::Symbol &checkSym) {
     return std::any_of(concatSyms.begin(), concatSyms.end(),
@@ -2530,6 +2532,41 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   genTargetClauses(converter, semaCtx, symTable, stmtCtx, eval, item->clauses,
                    loc, clauseOps, defaultMaps, hasDeviceAddrSyms,
                    isDevicePtrSyms, mapSyms);
+
+  if (!isDevicePtrSyms.empty()) {
+    // is_device_ptr maps get duplicated so the clause and synthesized
+    // has_device_addr entry each own a unique MapInfoOp user, keeping
+    // MapInfoFinalization happy while still wiring the symbol into
+    // has_device_addr when the user didn’t spell it explicitly.
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    auto insertionPt = builder.saveInsertionPoint();
+    auto alreadyPresent = [&](const semantics::Symbol *sym) {
+      return llvm::any_of(hasDeviceAddrSyms, [&](const semantics::Symbol *s) {
+        return s && sym && s->GetUltimate() == sym->GetUltimate();
+      });
+    };
+
+    for (auto [idx, sym] : llvm::enumerate(isDevicePtrSyms)) {
+      mlir::Value mapVal = clauseOps.isDevicePtrVars[idx];
+      if (!sym || !mapVal)
+        continue;
+      auto mapInfo = mapVal.getDefiningOp<mlir::omp::MapInfoOp>();
+      if (!mapInfo)
+        continue;
+
+      if (!alreadyPresent(sym)) {
+        clauseOps.hasDeviceAddrVars.push_back(mapVal);
+        hasDeviceAddrSyms.push_back(sym);
+      }
+
+      builder.setInsertionPointAfter(mapInfo);
+      auto clonedOp = builder.clone(*mapInfo.getOperation());
+      auto clonedMapInfo = mlir::dyn_cast<mlir::omp::MapInfoOp>(clonedOp);
+      assert(clonedMapInfo && "expected cloned map info op");
+      clauseOps.isDevicePtrVars[idx] = clonedMapInfo.getResult();
+    }
+    builder.restoreInsertionPoint(insertionPt);
+  }
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/
@@ -2570,7 +2607,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       return;
 
     if (!isDuplicateMappedSymbol(sym, dsp.getAllSymbolsToPrivatize(),
-                                 hasDeviceAddrSyms, mapSyms)) {
+                                 hasDeviceAddrSyms, mapSyms, isDevicePtrSyms)) {
       if (const auto *details =
               sym.template detailsIf<semantics::HostAssocDetails>())
         converter.copySymbolBinding(details->symbol(), sym);
