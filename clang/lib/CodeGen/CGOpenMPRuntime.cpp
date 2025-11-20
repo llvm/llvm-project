@@ -8637,8 +8637,7 @@ private:
                              OMPC_MOTION_MODIFIER_iterator)) {
         if (auto *IteratorExpr = dyn_cast<OMPIteratorExpr>(
                 C->getIteratorModifier()->IgnoreParenImpCasts())) {
-          const auto *VD =
-              cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
+          const auto *VD = cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
           CGF.EmitVarDecl(*VD);
         }
       }
@@ -8663,8 +8662,7 @@ private:
                              OMPC_MOTION_MODIFIER_iterator)) {
         if (auto *IteratorExpr = dyn_cast<OMPIteratorExpr>(
                 C->getIteratorModifier()->IgnoreParenImpCasts())) {
-          const auto *VD =
-              cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
+          const auto *VD = cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
           CGF.EmitVarDecl(*VD);
         }
       }
