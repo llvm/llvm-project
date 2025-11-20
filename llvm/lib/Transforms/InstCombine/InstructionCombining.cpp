@@ -5072,6 +5072,15 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   while (!Worklist.empty()) {
     auto *U = Worklist.pop_back_val();
     Value *V = U->get();
+
+    if (auto *PN = dyn_cast<PHINode>(V)) {
+      if (FreezePhisVisited.contains(PN)) {
+        LLVM_DEBUG(dbgs() << "freeze has already been pushed through PHI '"
+                          << PN->getName() << "', skipping.\n");
+        continue;
+      }
+    }
+
     if (!CanPushFreeze(V)) {
       // If we can't push through the original instruction, abort the transform.
       if (U == OrigUse)
@@ -5101,6 +5110,8 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
 
     I->dropPoisonGeneratingAnnotations();
     this->Worklist.add(I);
+    if (auto *PN = dyn_cast<PHINode>(V))
+      FreezePhisVisited.insert(PN);
   }
 
   return OrigUse->get();
