@@ -56,10 +56,34 @@ static Value getDomaincedValue(DominanceInfo &dominanceInfo, Value a, Value b) {
   }
 }
 
+static bool isOpContainBlock(Operation *op, Block *block) {
+  Operation *parentOp = block->getParentOp();
+  while (parentOp && parentOp != op) {
+    parentOp = parentOp->getParentOp();
+  }
+  return parentOp == op ? true : false;
+}
+
 /// Find the hoisting position for the pure op.
 static Value getDestPos(Operation *op) {
   DominanceInfo dominanceInfo(op);
   SmallVector<Value> operands(op->getOperands());
+  if (op->getNumRegions()) {
+    op->walk([&](Operation *operation) {
+      for (auto operand : operation->getOperands()) {
+        Operation *defineOp = operand.getDefiningOp();
+        if (!defineOp) {
+          BlockArgument argument = cast<BlockArgument>(operand);
+          if (!isOpContainBlock(op, argument.getOwner()))
+            operands.push_back(operand);
+          continue;
+        }
+        if (!isOpContainBlock(op, defineOp->getBlock())) {
+          operands.push_back(operand);
+        }
+      }
+    });
+  }
   if (operands.empty())
     return {};
   Value ret = operands[0];
@@ -71,13 +95,18 @@ static Value getDestPos(Operation *op) {
 
 /// Hoist single pure op.
 static void hoistPureOp(RewriterBase &rewriter, Operation *op) {
+  LDBG() << "hoistPureOp: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
   Value pos = getDestPos(op);
   if (!pos)
     return;
 
   if (Operation *defineOp = pos.getDefiningOp()) {
+    if (op == defineOp)
+      return;
+
     LDBG() << "move " << OpWithFlags(op, OpPrintingFlags().skipRegions())
-           << " after " << OpWithFlags(op, OpPrintingFlags().skipRegions());
+           << " after "
+           << OpWithFlags(defineOp, OpPrintingFlags().skipRegions());
     rewriter.moveOpAfter(op, defineOp);
     return;
   }
