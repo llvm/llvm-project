@@ -39,7 +39,7 @@ from textwrap import dedent
 # * A unique tag to go in "<!-- <tag>" so we can find it later in the release
 #   message.
 # * A format string for the line's content.
-# * Filenames to substitute into the format string. Before substitution into
+# * A list of filenames to substitute into the format string. Before substitution into
 #   the format string, file names will have the base download URL prepended to
 #   them and 'release' replaced with the release version.
 #
@@ -53,58 +53,58 @@ release_links = (
         (
             "LINUX_X86",
             "* [Linux x86_64]({0}) ([signature]({1}))",
-            "LLVM-{release}-Linux-X64.tar.xz",
-            "LLVM-{release}-Linux-X64.tar.xz.jsonl",
+            ["LLVM-{release}-Linux-X64.tar.xz",
+            "LLVM-{release}-Linux-X64.tar.xz.jsonl"],
         ),
         (
             "LINUX_ARM64",
             "* [Linux Arm64]({0}) ([signature]({1}))",
-            "LLVM-{release}-Linux-ARM64.tar.xz",
-            "LLVM-{release}-Linux-ARM64.tar.xz.jsonl",
+            ["LLVM-{release}-Linux-ARM64.tar.xz",
+            "LLVM-{release}-Linux-ARM64.tar.xz.jsonl"],
         ),
         (
             "LINUX_ARMV7A",
             "* [Linux Armv7-a]({0}) ([signature]({1}))",
-            "clang+llvm-{release}-armv7a-linux-gnueabihf.tar.gz",
-            "clang+llvm-{release}-armv7a-linux-gnueabihf.tar.gz.sig",
+            ["clang+llvm-{release}-armv7a-linux-gnueabihf.tar.gz",
+            "clang+llvm-{release}-armv7a-linux-gnueabihf.tar.gz.sig"],
         ),
     ),
     (
         (
             "MACOS_ARM64",
             "* [macOS Apple Silicon]({0}) (ARM64) ([signature]({1}))",
-            "LLVM-{release}-macOS-ARM64.tar.xz",
-            "LLVM-{release}-macOS-ARM64.tar.xz.jsonl",
+            ["LLVM-{release}-macOS-ARM64.tar.xz",
+            "LLVM-{release}-macOS-ARM64.tar.xz.jsonl"],
         ),
         (
             "MACOS_X86",
             "* [macOS Intel]({0}) (x86-64) ([signature]({1}))",
-            "LLVM-{release}-macOS-X64.tar.xz",
-            "LLVM-{release}-macOS-X64.tar.xz.jsonl",
+            ["LLVM-{release}-macOS-X64.tar.xz",
+            "LLVM-{release}-macOS-X64.tar.xz.jsonl"],
         ),
     ),
     (
         (
             "WINDOWS_X64",
             "* Windows x64 (64-bit): [installer]({0}) ([signature]({1})), [archive]({2}) ([signature]({3}))",
-            "LLVM-{release}-win64.exe",
+            ["LLVM-{release}-win64.exe",
             "LLVM-{release}-win64.exe.sig",
             "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz",
-            "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz.sig",
+            "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz.sig"],
         ),
         (
             "WINDOWS_X86",
             "* Windows x86 (32-bit): [installer]({0}) ([signature]({1}))",
-            "LLVM-{release}-win32.exe",
-            "LLVM-{release}-win32.exe.sig",
+            ["LLVM-{release}-win32.exe",
+            "LLVM-{release}-win32.exe.sig"],
         ),
         (
             "WINDOWS_ARM64",
             "* Windows on Arm (ARM64): [installer]({0}) ([signature]({1})), [archive]({2}) ([signature]({3}))",
-            "LLVM-{release}-woa64.exe",
+            ["LLVM-{release}-woa64.exe",
             "LLVM-{release}-woa64.exe.sig",
             "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz",
-            "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz.sig",
+            "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz.sig"],
         ),
     ),
 )
@@ -118,7 +118,7 @@ def generate_download_links(release):
 
     for section in release_links:
         for line in section:
-            comment_tag, format_string, *files = line
+            comment_tag, format_string, files = line
             markdown_line = f"<!-- {comment_tag} "
             files = [base_url + f.format(release=release) for f in files]
             markdown_line += format_string.format(*files)
@@ -212,7 +212,7 @@ def uncomment_download_links(repo, release_version):
             continue
 
         for section in release_links:
-            for comment_tag, _, *files in section:
+            for comment_tag, _, files in section:
                 if not comment_tag in line:
                     continue
 
