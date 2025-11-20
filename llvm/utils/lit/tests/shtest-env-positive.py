@@ -7,7 +7,7 @@
 
 ## Test the env command's successful executions.
 
-# CHECK: -- Testing: 10 tests{{.*}}
+# CHECK: -- Testing: 11 tests{{.*}}
 
 # CHECK: PASS: shtest-env :: env-args-last-is-assign.txt ({{[^)]*}})
 # CHECK: env FOO=1
@@ -36,6 +36,11 @@
 # CHECK: PASS: shtest-env :: env-calls-env.txt ({{[^)]*}})
 # CHECK: env env | {{.*}}
 # CHECK: # executed command: env env
+# CHECK-NOT: # error:
+# CHECK: --
+
+# CHECK: PASS: shtest-env :: env-current-testcase.txt ({{[^)]*}})
+# CHECK: # executed command: bash -c 'echo $LIT_CURRENT_TESTCASE'
 # CHECK-NOT: # error:
 # CHECK: --
 
@@ -71,6 +76,6 @@
 # CHECK-NOT: # error:
 # CHECK: --
 
-# CHECK: Total Discovered Tests: 10
-# CHECK: Passed: 10 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK: Total Discovered Tests: 11
+# CHECK: Passed: 11 {{\([0-9]*\.[0-9]*%\)}}
 # CHECK-NOT: {{.}}
