@@ -2249,6 +2249,8 @@ SemaOpenACC::CheckLinkClauseVarList(ArrayRef<Expr *> VarExprs) {
       continue;
     }
 
+    Expr *OrigExpr = VarExpr;
+
     while (isa<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
       if (auto *ASE = dyn_cast<ArraySectionExpr>(VarExpr))
         VarExpr = ASE->getBase()->IgnoreParenImpCasts();
@@ -2263,7 +2265,7 @@ SemaOpenACC::CheckLinkClauseVarList(ArrayRef<Expr *> VarExprs) {
     if (!Var || !Var->hasExternalStorage())
       Diag(VarExpr->getBeginLoc(), diag::err_acc_link_not_extern);
     else
-      NewVarList.push_back(VarExpr);
+      NewVarList.push_back(OrigExpr);
   }
 
   return NewVarList;
