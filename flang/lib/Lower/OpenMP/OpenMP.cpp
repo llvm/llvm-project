@@ -2485,13 +2485,15 @@ static bool isDuplicateMappedSymbol(
     const semantics::Symbol &sym,
     const llvm::SetVector<const semantics::Symbol *> &privatizedSyms,
     const llvm::SmallVectorImpl<const semantics::Symbol *> &hasDevSyms,
-    const llvm::SmallVectorImpl<const semantics::Symbol *> &mappedSyms) {
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &mappedSyms,
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &isDevicePtrSyms) {
   llvm::SmallVector<const semantics::Symbol *> concatSyms;
   concatSyms.reserve(privatizedSyms.size() + hasDevSyms.size() +
-                     mappedSyms.size());
+                     mappedSyms.size() + isDevicePtrSyms.size());
   concatSyms.append(privatizedSyms.begin(), privatizedSyms.end());
   concatSyms.append(hasDevSyms.begin(), hasDevSyms.end());
   concatSyms.append(mappedSyms.begin(), mappedSyms.end());
+  concatSyms.append(isDevicePtrSyms.begin(), isDevicePtrSyms.end());
 
   auto checkSymbol = [&](const semantics::Symbol &checkSym) {
     return std::any_of(concatSyms.begin(), concatSyms.end(),
@@ -2538,6 +2540,77 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                            /*isTargetPrivitization=*/true);
   dsp.processStep1(&clauseOps);
 
+  // Ensure is_device_ptr variables are available inside the target region by
+  // passing them as block arguments via the has_device_addr list, and record
+  // the associated var_ptr values so the clause operands reference the same
+  // MLIR SSA values used by the map info operations.
+  if (!isDevicePtrSyms.empty()) {
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    llvm::DenseMap<const semantics::Symbol *, mlir::Value> symToMapInfo;
+    for (auto [symPtr, mapVal] : llvm::zip(hasDeviceAddrSyms, clauseOps.hasDeviceAddrVars))
+      if (symPtr)
+        symToMapInfo.try_emplace(symPtr, mapVal);
+
+    llvm::SmallVector<mlir::Value> remappedIsDevicePtrVars;
+    remappedIsDevicePtrVars.reserve(isDevicePtrSyms.size());
+
+    for (const semantics::Symbol *sym : isDevicePtrSyms) {
+      if (!sym)
+        continue;
+
+      mlir::omp::MapInfoOp mapInfoOp;
+      if (auto it = symToMapInfo.find(sym); it != symToMapInfo.end())
+        mapInfoOp = mlir::dyn_cast_or_null<mlir::omp::MapInfoOp>(
+            it->second.getDefiningOp());
+
+      if (!mapInfoOp && !llvm::is_contained(mapSyms, sym)) {
+        fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(*sym);
+
+        fir::factory::AddrAndBoundsInfo info =
+            Fortran::lower::getDataOperandBaseAddr(
+                converter, builder, sym->GetUltimate(),
+                converter.getCurrentLocation());
+
+        llvm::SmallVector<mlir::Value> bounds =
+            fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                               mlir::omp::MapBoundsType>(
+                builder, info, dataExv,
+                semantics::IsAssumedSizeArray(sym->GetUltimate()),
+                converter.getCurrentLocation());
+
+        mlir::Value baseOp = info.rawInput;
+        if (auto refType =
+                mlir::dyn_cast<fir::ReferenceType>(baseOp.getType()))
+          (void)refType; // element type not needed for storage-only mapping
+
+        mlir::Value mapVal = createMapInfoOp(
+            builder, converter.getCurrentLocation(), baseOp,
+            /*varPtrPtr=*/mlir::Value{}, sym->name().ToString(), bounds,
+            /*members=*/{}, /*membersIndex=*/mlir::ArrayAttr{},
+            mlir::omp::ClauseMapFlags::storage,
+            mlir::omp::VariableCaptureKind::ByRef, baseOp.getType(),
+            /*partialMap=*/false, /*mapperId=*/mlir::FlatSymbolRefAttr{});
+
+        clauseOps.hasDeviceAddrVars.push_back(mapVal);
+        hasDeviceAddrSyms.push_back(sym);
+        symToMapInfo[sym] = mapVal;
+        mapInfoOp = mapVal.getDefiningOp<mlir::omp::MapInfoOp>();
+      }
+
+      if (mapInfoOp) {
+        builder.setInsertionPointAfter(mapInfoOp);
+        auto clonedOp = builder.clone(*mapInfoOp.getOperation());
+        auto clonedMapInfo = mlir::dyn_cast<mlir::omp::MapInfoOp>(clonedOp);
+        assert(clonedMapInfo && "expected cloned map info op");
+        remappedIsDevicePtrVars.push_back(clonedMapInfo.getResult());
+      }
+    }
+
+    if (!remappedIsDevicePtrVars.empty())
+      clauseOps.isDevicePtrVars.assign(remappedIsDevicePtrVars.begin(),
+                                       remappedIsDevicePtrVars.end());
+  }
+
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
   // symbols used inside the region that do not have explicit data-environment
@@ -2570,7 +2643,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       return;
 
     if (!isDuplicateMappedSymbol(sym, dsp.getAllSymbolsToPrivatize(),
-                                 hasDeviceAddrSyms, mapSyms)) {
+                                 hasDeviceAddrSyms, mapSyms, isDevicePtrSyms)) {
       if (const auto *details =
               sym.template detailsIf<semantics::HostAssocDetails>())
         converter.copySymbolBinding(details->symbol(), sym);
