@@ -241,6 +241,7 @@ TEST(TestRtsanInterceptors, PvallocDiesWhenRealtime) {
 }
 #endif
 
+#if !SANITIZER_FREEBSD
 TEST(TestRtsanInterceptors, MmapDiesWhenRealtime) {
   auto Func = []() {
     void *_ = mmap(nullptr, 8, PROT_READ | PROT_WRITE,
@@ -249,6 +250,7 @@ TEST(TestRtsanInterceptors, MmapDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, MAYBE_APPEND_64("mmap"));
   ExpectNonRealtimeSurvival(Func);
 }
+#endif
 
 #if SANITIZER_LINUX
 TEST(TestRtsanInterceptors, MremapDiesWhenRealtime) {
@@ -260,6 +262,7 @@ TEST(TestRtsanInterceptors, MremapDiesWhenRealtime) {
 }
 #endif
 
+#if !SANITIZER_FREEBSD
 TEST(TestRtsanInterceptors, MunmapDiesWhenRealtime) {
   void *ptr = mmap(nullptr, 8, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -269,6 +272,7 @@ TEST(TestRtsanInterceptors, MunmapDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "munmap");
   ExpectNonRealtimeSurvival(Func);
 }
+#endif
 
 class RtsanOpenedMmapTest : public RtsanFileTest {
 protected:
@@ -333,7 +337,7 @@ TEST_F(RtsanOpenedMmapTest, MsyncDiesWhenRealtime) {
 }
 
 TEST_F(RtsanOpenedMmapTest, MincoreDiesWhenRealtime) {
-#if SANITIZER_APPLE
+#if SANITIZER_APPLE || SANITIZER_FREEBSD
   std::vector<char> vec(GetSize() / 1024);
 #else
   std::vector<unsigned char> vec(GetSize() / 1024);
@@ -1706,6 +1710,7 @@ TEST_F(KqueueTest, KeventDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_APPLE
 TEST_F(KqueueTest, Kevent64DiesWhenRealtime) {
   struct kevent64_s event;
   EV_SET64(&event, 0, EVFILT_READ, EV_ADD, 0, 0, 0, 0, 0);
@@ -1718,6 +1723,7 @@ TEST_F(KqueueTest, Kevent64DiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "kevent64");
   ExpectNonRealtimeSurvival(Func);
 }
+#endif // SANITIZER_APPLE
 #endif // SANITIZER_INTERCEPT_KQUEUE
 
 #if SANITIZER_LINUX
