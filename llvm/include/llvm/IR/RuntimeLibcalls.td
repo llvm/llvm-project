@@ -385,6 +385,7 @@ def MEMCPY_CHK : RuntimeLibcall;
 def MEMMOVE : RuntimeLibcall;
 def MEMMOVE_CHK : RuntimeLibcall;
 def MEMSET : RuntimeLibcall;
+def MEMCHR : RuntimeLibcall;
 def MEMSET_CHK : RuntimeLibcall;
 def MALLOC : RuntimeLibcall;
 def CALLOC : RuntimeLibcall;
@@ -1398,6 +1399,7 @@ def fesetmode : RuntimeLibcallImpl<FESETMODE>;
 def memcpy : RuntimeLibcallImpl<MEMCPY>;
 def memmove : RuntimeLibcallImpl<MEMMOVE>;
 def memset : RuntimeLibcallImpl<MEMSET>;
+def memchr : RuntimeLibcallImpl<MEMCHR>;
 
 def __memcpy_chk : RuntimeLibcallImpl<MEMCPY_CHK>;
 def __memmove_chk : RuntimeLibcallImpl<MEMMOVE_CHK>;
