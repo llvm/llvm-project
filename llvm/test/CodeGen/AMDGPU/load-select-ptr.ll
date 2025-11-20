@@ -139,3 +139,87 @@ define amdgpu_kernel void @select_ptr_crash_i64_local_offsets(i32 %tmp, ptr addr
   store i64 %tmp5, ptr addrspace(1) %ptr2, align 8
   ret void
 }
+
+; The resultant load cannot be treated as uniform
+define amdgpu_kernel void @sample_test(ptr addrspace(1) %dest, ptr addrspace(1) %sourceA, ptr addrspace(1) %sourceB, i1 %tobool.not.i) #0 {
+; GCN-LABEL: sample_test:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
+; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GCN-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
+; GCN-NEXT:    s_load_dword s2, s[4:5], 0x18
+; GCN-NEXT:    v_mov_b32_e32 v3, s1
+; GCN-NEXT:    v_add_u32_e32 v2, vcc, s0, v2
+; GCN-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_bitcmp1_b32 s2, 0
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[6:7], 0x0
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v4, s3
+; GCN-NEXT:    v_mov_b32_e32 v5, s2
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
+; GCN-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; GCN-NEXT:    s_endpgm
+entry:
+  %0 = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %conv2.i.i.i1 = zext i32 %0 to i64
+  %arrayidx.i = getelementptr i64, ptr addrspace(1) %sourceA, i64 %conv2.i.i.i1
+  %dest.gep = getelementptr i64, ptr addrspace(1) %dest, i64 %conv2.i.i.i1
+  %ld0 = load i64, ptr addrspace(1) %arrayidx.i, align 8, !amdgpu.noclobber !0
+  %ld1 = load i64, ptr addrspace(1) %sourceB, align 8
+  %cond.i = select i1 %tobool.not.i, i64 %ld0, i64 %ld1
+  store i64 %cond.i, ptr addrspace(1) %dest.gep, align 8
+  ret void
+}
+
+; The resultant load cannot be treated as uniform
+define amdgpu_kernel void @constant_is_not_uniform(ptr addrspace(1) %dest, ptr addrspace(4) %sourceA, ptr addrspace(4) %sourceB, i1 %tobool.not.i) #0 {
+; GCN-LABEL: constant_is_not_uniform:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
+; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GCN-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
+; GCN-NEXT:    s_load_dword s2, s[4:5], 0x18
+; GCN-NEXT:    v_mov_b32_e32 v3, s1
+; GCN-NEXT:    v_add_u32_e32 v2, vcc, s0, v2
+; GCN-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_bitcmp1_b32 s2, 0
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[6:7], 0x0
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v4, s3
+; GCN-NEXT:    v_mov_b32_e32 v5, s2
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
+; GCN-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; GCN-NEXT:    s_endpgm
+entry:
+  %0 = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %conv2.i.i.i1 = zext i32 %0 to i64
+  %arrayidx.i = getelementptr i64, ptr addrspace(4) %sourceA, i64 %conv2.i.i.i1
+  %dest.gep = getelementptr i64, ptr addrspace(1) %dest, i64 %conv2.i.i.i1
+  %ld0 = load i64, ptr addrspace(4) %arrayidx.i, align 8
+  %ld1 = load i64, ptr addrspace(4) %sourceB, align 8
+  %cond.i = select i1 %tobool.not.i, i64 %ld0, i64 %ld1
+  store i64 %cond.i, ptr addrspace(1) %dest.gep, align 8
+  ret void
+}
+
+attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+
+!0 = !{}

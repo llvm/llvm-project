@@ -7992,13 +7992,15 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
 /// Find all possible partial reductions in the loop and track all of those that
 /// are valid so recipes can be formed later.
 void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
-  // Find all possible partial reductions.
-  SmallVector<std::pair<PartialReductionChain, unsigned>>
-      PartialReductionChains;
-  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+  // Find all possible partial reductions, grouping chains by their PHI. This
+  // grouping allows invalidating the whole chain, if any link is not a valid
+  // partial reduction.
+  MapVector<Instruction *,
+            SmallVector<std::pair<PartialReductionChain, unsigned>>>
+      ChainsByPhi;
+  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars())
     getScaledReductions(Phi, RdxDesc.getLoopExitInstr(), Range,
-                        PartialReductionChains);
-  }
+                        ChainsByPhi[Phi]);
 
   // A partial reduction is invalid if any of its extends are used by
   // something that isn't another partial reduction. This is because the
@@ -8006,8 +8008,9 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
 
   // Build up a set of partial reduction ops for efficient use checking.
   SmallPtrSet<User *, 4> PartialReductionOps;
-  for (const auto &[PartialRdx, _] : PartialReductionChains)
-    PartialReductionOps.insert(PartialRdx.ExtendUser);
+  for (const auto &[_, Chains] : ChainsByPhi)
+    for (const auto &[PartialRdx, _] : Chains)
+      PartialReductionOps.insert(PartialRdx.ExtendUser);
 
   auto ExtendIsOnlyUsedByPartialReductions =
       [&PartialReductionOps](Instruction *Extend) {
@@ -8018,31 +8021,38 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
 
   // Check if each use of a chain's two extends is a partial reduction
   // and only add those that don't have non-partial reduction users.
-  for (auto Pair : PartialReductionChains) {
-    PartialReductionChain Chain = Pair.first;
-    if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
-        (!Chain.ExtendB || ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB)))
-      ScaledReductionMap.try_emplace(Chain.Reduction, Pair.second);
+  for (const auto &[_, Chains] : ChainsByPhi) {
+    for (const auto &[Chain, Scale] : Chains) {
+      if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
+          (!Chain.ExtendB ||
+           ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB)))
+        ScaledReductionMap.try_emplace(Chain.Reduction, Scale);
+    }
   }
 
   // Check that all partial reductions in a chain are only used by other
   // partial reductions with the same scale factor. Otherwise we end up creating
   // users of scaled reductions where the types of the other operands don't
   // match.
-  for (const auto &[Chain, Scale] : PartialReductionChains) {
-    auto AllUsersPartialRdx = [ScaleVal = Scale, this](const User *U) {
-      auto *UI = cast<Instruction>(U);
-      if (isa<PHINode>(UI) && UI->getParent() == OrigLoop->getHeader()) {
-        return all_of(UI->users(), [ScaleVal, this](const User *U) {
-          auto *UI = cast<Instruction>(U);
-          return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal;
-        });
+  for (const auto &[Phi, Chains] : ChainsByPhi) {
+    for (const auto &[Chain, Scale] : Chains) {
+      auto AllUsersPartialRdx = [ScaleVal = Scale, RdxPhi = Phi,
+                                 this](const User *U) {
+        auto *UI = cast<Instruction>(U);
+        if (isa<PHINode>(UI) && UI->getParent() == OrigLoop->getHeader())
+          return UI == RdxPhi;
+        return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal ||
+               !OrigLoop->contains(UI->getParent());
+      };
+
+      // If any partial reduction entry for the phi is invalid, invalidate the
+      // whole chain.
+      if (!all_of(Chain.Reduction->users(), AllUsersPartialRdx)) {
+        for (const auto &[Chain, _] : Chains)
+          ScaledReductionMap.erase(Chain.Reduction);
+        break;
       }
-      return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal ||
-             !OrigLoop->contains(UI->getParent());
-    };
-    if (!all_of(Chain.Reduction->users(), AllUsersPartialRdx))
-      ScaledReductionMap.erase(Chain.Reduction);
+    }
   }
 }
 
@@ -8061,6 +8071,19 @@ bool VPRecipeBuilder::getScaledReductions(
   if (Op == PHI)
     std::swap(Op, PhiOp);
 
+  using namespace llvm::PatternMatch;
+  // If Op is an extend, then it's still a valid partial reduction if the
+  // extended mul fulfills the other requirements.
+  // For example, reduce.add(ext(mul(ext(A), ext(B)))) is still a valid partial
+  // reduction since the inner extends will be widened. We already have oneUse
+  // checks on the inner extends so widening them is safe.
+  std::optional<TTI::PartialReductionExtendKind> OuterExtKind = std::nullopt;
+  if (match(Op, m_ZExtOrSExt(m_Mul(m_Value(), m_Value())))) {
+    auto *Cast = cast<CastInst>(Op);
+    OuterExtKind = TTI::getPartialReductionExtendKind(Cast->getOpcode());
+    Op = Cast->getOperand(0);
+  }
+
   // Try and get a scaled reduction from the first non-phi operand.
   // If one is found, we use the discovered reduction instruction in
   // place of the accumulator for costing.
@@ -8077,8 +8100,6 @@ bool VPRecipeBuilder::getScaledReductions(
   if (PhiOp != PHI)
     return false;
 
-  using namespace llvm::PatternMatch;
-
   // If the update is a binary operator, check both of its operands to see if
   // they are extends. Otherwise, see if the update comes directly from an
   // extend.
@@ -8088,7 +8109,7 @@ bool VPRecipeBuilder::getScaledReductions(
   Type *ExtOpTypes[2] = {nullptr};
   TTI::PartialReductionExtendKind ExtKinds[2] = {TTI::PR_None};
 
-  auto CollectExtInfo = [this, &Exts, &ExtOpTypes,
+  auto CollectExtInfo = [this, OuterExtKind, &Exts, &ExtOpTypes,
                          &ExtKinds](SmallVectorImpl<Value *> &Ops) -> bool {
     for (const auto &[I, OpI] : enumerate(Ops)) {
       const APInt *C;
@@ -8109,6 +8130,10 @@ bool VPRecipeBuilder::getScaledReductions(
 
       ExtOpTypes[I] = ExtOp->getType();
       ExtKinds[I] = TTI::getPartialReductionExtendKind(Exts[I]);
+      // The outer extend kind must be the same as the inner extends, so that
+      // they can be folded together.
+      if (OuterExtKind.has_value() && OuterExtKind.value() != ExtKinds[I])
+        return false;
     }
     return true;
   };
