@@ -26,8 +26,16 @@ class RISCVRegisterBankInfo;
 class RISCVSubtarget;
 class RISCVTargetMachine;
 
-FunctionPass *createRISCVCodeGenPreparePass();
-void initializeRISCVCodeGenPreparePass(PassRegistry &);
+class RISCVCodeGenPreparePass : public PassInfoMixin<RISCVCodeGenPreparePass> {
+private:
+  const RISCVTargetMachine *TM;
+
+public:
+  RISCVCodeGenPreparePass(const RISCVTargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+FunctionPass *createRISCVCodeGenPrepareLegacyPass();
+void initializeRISCVCodeGenPrepareLegacyPassPass(PassRegistry &);
 
 FunctionPass *createRISCVDeadRegisterDefinitionsPass();
 void initializeRISCVDeadRegisterDefinitionsPass(PassRegistry &);

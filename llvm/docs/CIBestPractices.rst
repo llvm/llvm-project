@@ -135,7 +135,7 @@ branches as follows:
   push:
     branches:
       - main
-      - releases/*
+      - release/*
 
 Container Best Practices
 ========================
