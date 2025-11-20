@@ -8,74 +8,69 @@ define float @test_add_f32_f16(half %a, float %b) {
 ; CHECK-LABEL: test_add_f32_f16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<12>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [test_add_f32_f16_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_add_f32_f16_param_1];
-; CHECK-NEXT:    add.f32.f16 %r2, %rs1, %r1;
-; CHECK-NEXT:    add.rn.f32.f16 %r3, %rs1, %r2;
-; CHECK-NEXT:    add.rz.f32.f16 %r4, %rs1, %r3;
-; CHECK-NEXT:    add.rm.f32.f16 %r5, %rs1, %r4;
-; CHECK-NEXT:    add.rp.f32.f16 %r6, %rs1, %r5;
-; CHECK-NEXT:    add.sat.f32.f16 %r7, %rs1, %r6;
-; CHECK-NEXT:    add.rn.sat.f32.f16 %r8, %rs1, %r7;
-; CHECK-NEXT:    add.rz.sat.f32.f16 %r9, %rs1, %r8;
-; CHECK-NEXT:    add.rm.sat.f32.f16 %r10, %rs1, %r9;
-; CHECK-NEXT:    add.rp.sat.f32.f16 %r11, %rs1, %r10;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r11;
+; CHECK-NEXT:    add.rn.f32.f16 %r2, %rs1, %r1;
+; CHECK-NEXT:    add.rz.f32.f16 %r3, %rs1, %r2;
+; CHECK-NEXT:    add.rm.f32.f16 %r4, %rs1, %r3;
+; CHECK-NEXT:    add.rp.f32.f16 %r5, %rs1, %r4;
+; CHECK-NEXT:    add.rn.sat.f32.f16 %r6, %rs1, %r5;
+; CHECK-NEXT:    add.rz.sat.f32.f16 %r7, %rs1, %r6;
+; CHECK-NEXT:    add.rm.sat.f32.f16 %r8, %rs1, %r7;
+; CHECK-NEXT:    add.rp.sat.f32.f16 %r9, %rs1, %r8;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
-  %r1 = call float @llvm.nvvm.add.mixed.f32.f16(half %a, float %b)
-  %r2 = call float @llvm.nvvm.add.mixed.rn.f32.f16(half %a, float %r1)
-  %r3 = call float @llvm.nvvm.add.mixed.rz.f32.f16(half %a, float %r2)
-  %r4 = call float @llvm.nvvm.add.mixed.rm.f32.f16(half %a, float %r3)
-  %r5 = call float @llvm.nvvm.add.mixed.rp.f32.f16(half %a, float %r4)
+  %r0 = fpext half %a to float
+
+  %r1 = call float @llvm.nvvm.add.rn.f(float %r0, float %b)
+  %r2 = call float @llvm.nvvm.add.rz.f(float %r0, float %r1)
+  %r3 = call float @llvm.nvvm.add.rm.f(float %r0, float %r2)
+  %r4 = call float @llvm.nvvm.add.rp.f(float %r0, float %r3)
 
   ; SAT
-  %r6 = call float @llvm.nvvm.add.mixed.sat.f32.f16(half %a, float %r5)
-  %r7 = call float @llvm.nvvm.add.mixed.rn.sat.f32.f16(half %a, float %r6)
-  %r8 = call float @llvm.nvvm.add.mixed.rz.sat.f32.f16(half %a, float %r7)
-  %r9 = call float @llvm.nvvm.add.mixed.rm.sat.f32.f16(half %a, float %r8)
-  %r10 = call float @llvm.nvvm.add.mixed.rp.sat.f32.f16(half %a, float %r9)
+  %r5 = call float @llvm.nvvm.add.rn.sat.f(float %r0, float %r4)
+  %r6 = call float @llvm.nvvm.add.rz.sat.f(float %r0, float %r5)
+  %r7 = call float @llvm.nvvm.add.rm.sat.f(float %r0, float %r6)
+  %r8 = call float @llvm.nvvm.add.rp.sat.f(float %r0, float %r7)
 
-  ret float %r10
+  ret float %r8
 }
 
 define float @test_add_f32_bf16(bfloat %a, float %b) {
 ; CHECK-LABEL: test_add_f32_bf16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<12>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [test_add_f32_bf16_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_add_f32_bf16_param_1];
-; CHECK-NEXT:    add.f32.bf16 %r2, %rs1, %r1;
-; CHECK-NEXT:    add.rn.f32.bf16 %r3, %rs1, %r2;
-; CHECK-NEXT:    add.rz.f32.bf16 %r4, %rs1, %r3;
-; CHECK-NEXT:    add.rm.f32.bf16 %r5, %rs1, %r4;
-; CHECK-NEXT:    add.rp.f32.bf16 %r6, %rs1, %r5;
-; CHECK-NEXT:    add.sat.f32.bf16 %r7, %rs1, %r6;
-; CHECK-NEXT:    add.rn.sat.f32.bf16 %r8, %rs1, %r7;
-; CHECK-NEXT:    add.rz.sat.f32.bf16 %r9, %rs1, %r8;
-; CHECK-NEXT:    add.rm.sat.f32.bf16 %r10, %rs1, %r9;
-; CHECK-NEXT:    add.rp.sat.f32.bf16 %r11, %rs1, %r10;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r11;
+; CHECK-NEXT:    add.rn.f32.bf16 %r2, %rs1, %r1;
+; CHECK-NEXT:    add.rz.f32.bf16 %r3, %rs1, %r2;
+; CHECK-NEXT:    add.rm.f32.bf16 %r4, %rs1, %r3;
+; CHECK-NEXT:    add.rp.f32.bf16 %r5, %rs1, %r4;
+; CHECK-NEXT:    add.rn.sat.f32.bf16 %r6, %rs1, %r5;
+; CHECK-NEXT:    add.rz.sat.f32.bf16 %r7, %rs1, %r6;
+; CHECK-NEXT:    add.rm.sat.f32.bf16 %r8, %rs1, %r7;
+; CHECK-NEXT:    add.rp.sat.f32.bf16 %r9, %rs1, %r8;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
-  %r1 = call float @llvm.nvvm.add.mixed.f32.bf16(bfloat %a, float %b)
-  %r2 = call float @llvm.nvvm.add.mixed.rn.f32.bf16(bfloat %a, float %r1)
-  %r3 = call float @llvm.nvvm.add.mixed.rz.f32.bf16(bfloat %a, float %r2)
-  %r4 = call float @llvm.nvvm.add.mixed.rm.f32.bf16(bfloat %a, float %r3)
-  %r5 = call float @llvm.nvvm.add.mixed.rp.f32.bf16(bfloat %a, float %r4)
+  %r0 = fpext bfloat %a to float
+
+  %r1 = call float @llvm.nvvm.add.rn.f(float %r0, float %b)
+  %r2 = call float @llvm.nvvm.add.rz.f(float %r0, float %r1)
+  %r3 = call float @llvm.nvvm.add.rm.f(float %r0, float %r2)
+  %r4 = call float @llvm.nvvm.add.rp.f(float %r0, float %r3)
 
   ; SAT
-  %r6 = call float @llvm.nvvm.add.mixed.sat.f32.bf16(bfloat %a, float %r5)
-  %r7 = call float @llvm.nvvm.add.mixed.rn.sat.f32.bf16(bfloat %a, float %r6)
-  %r8 = call float @llvm.nvvm.add.mixed.rz.sat.f32.bf16(bfloat %a, float %r7)
-  %r9 = call float @llvm.nvvm.add.mixed.rm.sat.f32.bf16(bfloat %a, float %r8)
-  %r10 = call float @llvm.nvvm.add.mixed.rp.sat.f32.bf16(bfloat %a, float %r9)
-
-  ret float %r10
+  %r5 = call float @llvm.nvvm.add.rn.sat.f(float %r0, float %r4)
+  %r6 = call float @llvm.nvvm.add.rz.sat.f(float %r0, float %r5)
+  %r7 = call float @llvm.nvvm.add.rm.sat.f(float %r0, float %r6)
+  %r8 = call float @llvm.nvvm.add.rp.sat.f(float %r0, float %r7)
+  ret float %r8
 }
 
 ; SUB
@@ -84,74 +79,69 @@ define float @test_sub_f32_f16(half %a, float %b) {
 ; CHECK-LABEL: test_sub_f32_f16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<12>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [test_sub_f32_f16_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_sub_f32_f16_param_1];
-; CHECK-NEXT:    sub.f32.f16 %r2, %rs1, %r1;
-; CHECK-NEXT:    sub.rn.f32.f16 %r3, %rs1, %r2;
-; CHECK-NEXT:    sub.rz.f32.f16 %r4, %rs1, %r3;
+; CHECK-NEXT:    sub.rn.f32.f16 %r2, %rs1, %r1;
+; CHECK-NEXT:    sub.rz.f32.f16 %r3, %rs1, %r2;
+; CHECK-NEXT:    sub.rm.f32.f16 %r4, %rs1, %r3;
 ; CHECK-NEXT:    sub.rm.f32.f16 %r5, %rs1, %r4;
-; CHECK-NEXT:    sub.rp.f32.f16 %r6, %rs1, %r5;
-; CHECK-NEXT:    sub.sat.f32.f16 %r7, %rs1, %r6;
-; CHECK-NEXT:    sub.rn.sat.f32.f16 %r8, %rs1, %r7;
-; CHECK-NEXT:    sub.rz.sat.f32.f16 %r9, %rs1, %r8;
-; CHECK-NEXT:    sub.rm.sat.f32.f16 %r10, %rs1, %r9;
-; CHECK-NEXT:    sub.rp.sat.f32.f16 %r11, %rs1, %r10;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r11;
+; CHECK-NEXT:    sub.rn.sat.f32.f16 %r6, %rs1, %r5;
+; CHECK-NEXT:    sub.rz.sat.f32.f16 %r7, %rs1, %r6;
+; CHECK-NEXT:    sub.rm.sat.f32.f16 %r8, %rs1, %r7;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
-  %r1 = call float @llvm.nvvm.sub.mixed.f32.f16(half %a, float %b)
-  %r2 = call float @llvm.nvvm.sub.mixed.rn.f32.f16(half %a, float %r1)
-  %r3 = call float @llvm.nvvm.sub.mixed.rz.f32.f16(half %a, float %r2)
-  %r4 = call float @llvm.nvvm.sub.mixed.rm.f32.f16(half %a, float %r3)
-  %r5 = call float @llvm.nvvm.sub.mixed.rp.f32.f16(half %a, float %r4)
+  %r0 = fpext half %a to float
+
+  %r1 = call float @llvm.nvvm.sub.rn.f(float %r0, float %b)
+  %r2 = call float @llvm.nvvm.sub.rz.f(float %r0, float %r1)
+  %r3 = call float @llvm.nvvm.sub.rm.f(float %r0, float %r2)
+  %r4 = call float @llvm.nvvm.sub.rm.f(float %r0, float %r3)
 
   ; SAT
-  %r6 = call float @llvm.nvvm.sub.mixed.sat.f32.f16(half %a, float %r5)
-  %r7 = call float @llvm.nvvm.sub.mixed.rn.sat.f32.f16(half %a, float %r6)
-  %r8 = call float @llvm.nvvm.sub.mixed.rz.sat.f32.f16(half %a, float %r7)
-  %r9 = call float @llvm.nvvm.sub.mixed.rm.sat.f32.f16(half %a, float %r8)
-  %r10 = call float @llvm.nvvm.sub.mixed.rp.sat.f32.f16(half %a, float %r9)
+  %r5 = call float @llvm.nvvm.sub.rn.sat.f(float %r0, float %r4)
+  %r6 = call float @llvm.nvvm.sub.rz.sat.f(float %r0, float %r5)
+  %r7 = call float @llvm.nvvm.sub.rm.sat.f(float %r0, float %r6)
+  %r8 = call float @llvm.nvvm.sub.rp.sat.f(float %r0, float %r7)
 
-  ret float %r10
+  ret float %r7
 }
 
 define float @test_sub_f32_bf16(bfloat %a, float %b) {
 ; CHECK-LABEL: test_sub_f32_bf16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<12>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [test_sub_f32_bf16_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_sub_f32_bf16_param_1];
-; CHECK-NEXT:    sub.f32.bf16 %r2, %rs1, %r1;
-; CHECK-NEXT:    sub.rn.f32.bf16 %r3, %rs1, %r2;
-; CHECK-NEXT:    sub.rz.f32.bf16 %r4, %rs1, %r3;
-; CHECK-NEXT:    sub.rm.f32.bf16 %r5, %rs1, %r4;
-; CHECK-NEXT:    sub.rp.f32.bf16 %r6, %rs1, %r5;
-; CHECK-NEXT:    sub.sat.f32.bf16 %r7, %rs1, %r6;
-; CHECK-NEXT:    sub.rn.sat.f32.bf16 %r8, %rs1, %r7;
-; CHECK-NEXT:    sub.rz.sat.f32.bf16 %r9, %rs1, %r8;
-; CHECK-NEXT:    sub.rm.sat.f32.bf16 %r10, %rs1, %r9;
-; CHECK-NEXT:    sub.rp.sat.f32.bf16 %r11, %rs1, %r10;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r11;
+; CHECK-NEXT:    sub.rn.f32.bf16 %r2, %rs1, %r1;
+; CHECK-NEXT:    sub.rz.f32.bf16 %r3, %rs1, %r2;
+; CHECK-NEXT:    sub.rm.f32.bf16 %r4, %rs1, %r3;
+; CHECK-NEXT:    sub.rp.f32.bf16 %r5, %rs1, %r4;
+; CHECK-NEXT:    sub.rn.sat.f32.bf16 %r6, %rs1, %r5;
+; CHECK-NEXT:    sub.rz.sat.f32.bf16 %r7, %rs1, %r6;
+; CHECK-NEXT:    sub.rm.sat.f32.bf16 %r8, %rs1, %r7;
+; CHECK-NEXT:    sub.rp.sat.f32.bf16 %r9, %rs1, %r8;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
-  %r1 = call float @llvm.nvvm.sub.mixed.f32.bf16(bfloat %a, float %b)
-  %r2 = call float @llvm.nvvm.sub.mixed.rn.f32.bf16(bfloat %a, float %r1)
-  %r3 = call float @llvm.nvvm.sub.mixed.rz.f32.bf16(bfloat %a, float %r2)
-  %r4 = call float @llvm.nvvm.sub.mixed.rm.f32.bf16(bfloat %a, float %r3)
-  %r5 = call float @llvm.nvvm.sub.mixed.rp.f32.bf16(bfloat %a, float %r4)
+  %r0 = fpext bfloat %a to float
+
+  %r1 = call float @llvm.nvvm.sub.rn.f(float %r0, float %b)
+  %r2 = call float @llvm.nvvm.sub.rz.f(float %r0, float %r1)
+  %r3 = call float @llvm.nvvm.sub.rm.f(float %r0, float %r2)
+  %r4 = call float @llvm.nvvm.sub.rp.f(float %r0, float %r3)
 
   ; SAT
-  %r6 = call float @llvm.nvvm.sub.mixed.sat.f32.bf16(bfloat %a, float %r5)
-  %r7 = call float @llvm.nvvm.sub.mixed.rn.sat.f32.bf16(bfloat %a, float %r6)
-  %r8 = call float @llvm.nvvm.sub.mixed.rz.sat.f32.bf16(bfloat %a, float %r7)
-  %r9 = call float @llvm.nvvm.sub.mixed.rm.sat.f32.bf16(bfloat %a, float %r8)
-  %r10 = call float @llvm.nvvm.sub.mixed.rp.sat.f32.bf16(bfloat %a, float %r9)
+  %r5 = call float @llvm.nvvm.sub.rn.sat.f(float %r0, float %r4)
+  %r6 = call float @llvm.nvvm.sub.rz.sat.f(float %r0, float %r5)
+  %r7 = call float @llvm.nvvm.sub.rm.sat.f(float %r0, float %r6)
+  %r8 = call float @llvm.nvvm.sub.rp.sat.f(float %r0, float %r7)
 
-  ret float %r10
+  ret float %r8
 }
 
 ; FMA
@@ -160,7 +150,7 @@ define float @test_fma_f32_f16(half %a, half %b, float %c) {
 ; CHECK-LABEL: test_fma_f32_f16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [test_fma_f32_f16_param_0];
@@ -173,19 +163,21 @@ define float @test_fma_f32_f16(half %a, half %b, float %c) {
 ; CHECK-NEXT:    fma.rn.sat.f32.f16 %r6, %rs1, %rs2, %r5;
 ; CHECK-NEXT:    fma.rz.sat.f32.f16 %r7, %rs1, %rs2, %r6;
 ; CHECK-NEXT:    fma.rm.sat.f32.f16 %r8, %rs1, %rs2, %r7;
-; CHECK-NEXT:    fma.rp.sat.f32.f16 %r9, %rs1, %rs2, %r8;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
-  %r1 = call float @llvm.nvvm.fma.mixed.rn.f32.f16(half %a, half %b, float %c)
-  %r2 = call float @llvm.nvvm.fma.mixed.rz.f32.f16(half %a, half %b, float %r1)
-  %r3 = call float @llvm.nvvm.fma.mixed.rm.f32.f16(half %a, half %b, float %r2)
-  %r4 = call float @llvm.nvvm.fma.mixed.rp.f32.f16(half %a, half %b, float %r3)
+  %r0 = fpext half %a to float
+  %r1 = fpext half %b to float
+
+  %r2 = call float @llvm.nvvm.fma.rn.f(float %r0, float %r1, float %c)
+  %r3 = call float @llvm.nvvm.fma.rz.f(float %r0, float %r1, float %r2)
+  %r4 = call float @llvm.nvvm.fma.rm.f(float %r0, float %r1, float %r3)
+  %r5 = call float @llvm.nvvm.fma.rp.f(float %r0, float %r1, float %r4)
 
   ; SAT
-  %r5 = call float @llvm.nvvm.fma.mixed.rn.sat.f32.f16(half %a, half %b, float %r4)
-  %r6 = call float @llvm.nvvm.fma.mixed.rz.sat.f32.f16(half %a, half %b, float %r5)
-  %r7 = call float @llvm.nvvm.fma.mixed.rm.sat.f32.f16(half %a, half %b, float %r6)
-  %r8 = call float @llvm.nvvm.fma.mixed.rp.sat.f32.f16(half %a, half %b, float %r7)
+  %r6 = call float @llvm.nvvm.fma.rn.sat.f(float %r0, float %r1, float %r5)
+  %r7 = call float @llvm.nvvm.fma.rz.sat.f(float %r0, float %r1, float %r6)
+  %r8 = call float @llvm.nvvm.fma.rm.sat.f(float %r0, float %r1, float %r7)
+  %r9 = call float @llvm.nvvm.fma.rp.sat.f(float %r0, float %r1, float %r8)
 
   ret float %r8
 }
@@ -194,7 +186,7 @@ define float @test_fma_f32_bf16(bfloat %a, bfloat %b, float %c) {
 ; CHECK-LABEL: test_fma_f32_bf16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [test_fma_f32_bf16_param_0];
@@ -207,19 +199,21 @@ define float @test_fma_f32_bf16(bfloat %a, bfloat %b, float %c) {
 ; CHECK-NEXT:    fma.rn.sat.f32.bf16 %r6, %rs1, %rs2, %r5;
 ; CHECK-NEXT:    fma.rz.sat.f32.bf16 %r7, %rs1, %rs2, %r6;
 ; CHECK-NEXT:    fma.rm.sat.f32.bf16 %r8, %rs1, %rs2, %r7;
-; CHECK-NEXT:    fma.rp.sat.f32.bf16 %r9, %rs1, %rs2, %r8;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
-  %r1 = call float @llvm.nvvm.fma.mixed.rn.f32.bf16(bfloat %a, bfloat %b, float %c)
-  %r2 = call float @llvm.nvvm.fma.mixed.rz.f32.bf16(bfloat %a, bfloat %b, float %r1)
-  %r3 = call float @llvm.nvvm.fma.mixed.rm.f32.bf16(bfloat %a, bfloat %b, float %r2)
-  %r4 = call float @llvm.nvvm.fma.mixed.rp.f32.bf16(bfloat %a, bfloat %b, float %r3)
+  %r0 = fpext bfloat %a to float
+  %r1 = fpext bfloat %b to float
+
+  %r2 = call float @llvm.nvvm.fma.rn.f(float %r0, float %r1, float %c)
+  %r3 = call float @llvm.nvvm.fma.rz.f(float %r0, float %r1, float %r2)
+  %r4 = call float @llvm.nvvm.fma.rm.f(float %r0, float %r1, float %r3)
+  %r5 = call float @llvm.nvvm.fma.rp.f(float %r0, float %r1, float %r4)
 
   ; SAT
-  %r5 = call float @llvm.nvvm.fma.mixed.rn.sat.f32.bf16(bfloat %a, bfloat %b, float %r4)
-  %r6 = call float @llvm.nvvm.fma.mixed.rz.sat.f32.bf16(bfloat %a, bfloat %b, float %r5)
-  %r7 = call float @llvm.nvvm.fma.mixed.rm.sat.f32.bf16(bfloat %a, bfloat %b, float %r6)
-  %r8 = call float @llvm.nvvm.fma.mixed.rp.sat.f32.bf16(bfloat %a, bfloat %b, float %r7)
+  %r6 = call float @llvm.nvvm.fma.rn.sat.f(float %r0, float %r1, float %r5)
+  %r7 = call float @llvm.nvvm.fma.rz.sat.f(float %r0, float %r1, float %r6)
+  %r8 = call float @llvm.nvvm.fma.rm.sat.f(float %r0, float %r1, float %r7)
+  %r9 = call float @llvm.nvvm.fma.rp.sat.f(float %r0, float %r1, float %r8)
 
   ret float %r8
 }
