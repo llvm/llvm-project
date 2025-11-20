@@ -18,6 +18,7 @@
 // clang-format on
 #include "mlir/Config/mlir-config.h"
 #include "nanobind/nanobind.h"
+#include "llvm/ADT/ScopeExit.h"
 
 namespace nb = nanobind;
 using namespace mlir;
@@ -43,6 +44,10 @@ public:
     }
 
     return PyInsertionPoint(PyOperation::forOperation(ctx, op));
+  }
+
+  PyRewriterBaseListener getListener() {
+    return PyRewriterBaseListener(mlirRewriterBaseGetListener(base), ctx);
   }
 
   void replaceOp(MlirOperation op, MlirOperation newOp) {
@@ -202,7 +207,15 @@ public:
           PyMlirContext::forContext(mlirOperationGetContext(op));
       nb::object opView = PyOperation::forOperation(ctx, op)->createOpView();
 
-      nb::object res = f(opView, PyPatternRewriter(rewriter));
+      PyPatternRewriter pyRewriter(rewriter);
+      nb::object listener = nb::cast(pyRewriter.getListener());
+
+      listener.attr("__enter__")();
+      auto exit = llvm::make_scope_exit([listener] {
+        listener.attr("__exit__")(nb::none(), nb::none(), nb::none());
+      });
+      nb::object res = f(opView, pyRewriter);
+
       return logicalResultFromObject(res);
     };
     MlirRewritePattern pattern = mlirOpRewritePatternCreate(
@@ -234,6 +247,8 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
       class_<PyPatternRewriter>(m, "PatternRewriter")
           .def_prop_ro("ip", &PyPatternRewriter::getInsertionPoint,
                        "The current insertion point of the PatternRewriter.")
+          .def_prop_ro("listener", &PyPatternRewriter::getListener,
+                       "The rewrite listener of the PatternRewriter.")
           .def(
               "replace_op",
               [](PyPatternRewriter &self, MlirOperation op,
