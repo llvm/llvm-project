@@ -6,9 +6,16 @@ tablegen("NVPTXGenDAGISel") {
   td_file = "NVPTX.td"
 }
 
+tablegen("NVPTXGenSDNodeInfo") {
+  visibility = [ ":LLVMNVPTXCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "NVPTX.td"
+}
+
 static_library("LLVMNVPTXCodeGen") {
   deps = [
     ":NVPTXGenDAGISel",
+    ":NVPTXGenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
