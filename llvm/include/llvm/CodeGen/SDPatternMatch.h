@@ -155,6 +155,71 @@ struct Opcode_match {
   }
 };
 
+// === Patterns combinators ===
+template <typename... Preds> struct And {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return true;
+  }
+};
+
+template <typename Pred, typename... Preds>
+struct And<Pred, Preds...> : And<Preds...> {
+  Pred P;
+  And(const Pred &p, const Preds &...preds) : And<Preds...>(preds...), P(p) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return P.match(Ctx, N) && And<Preds...>::match(Ctx, N);
+  }
+};
+
+template <typename... Preds> struct Or {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return false;
+  }
+};
+
+template <typename Pred, typename... Preds>
+struct Or<Pred, Preds...> : Or<Preds...> {
+  Pred P;
+  Or(const Pred &p, const Preds &...preds) : Or<Preds...>(preds...), P(p) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return P.match(Ctx, N) || Or<Preds...>::match(Ctx, N);
+  }
+};
+
+template <typename Pred> struct Not {
+  Pred P;
+
+  explicit Not(const Pred &P) : P(P) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return !P.match(Ctx, N);
+  }
+};
+// Explicit deduction guide.
+template <typename Pred> Not(const Pred &P) -> Not<Pred>;
+
+/// Match if the inner pattern does NOT match.
+template <typename Pred> inline Not<Pred> m_Unless(const Pred &P) {
+  return Not{P};
+}
+
+template <typename... Preds> And<Preds...> m_AllOf(const Preds &...preds) {
+  return And<Preds...>(preds...);
+}
+
+template <typename... Preds> Or<Preds...> m_AnyOf(const Preds &...preds) {
+  return Or<Preds...>(preds...);
+}
+
+template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
+  return m_Unless(m_AnyOf(preds...));
+}
+
 inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
 
 inline Opcode_match m_Undef() { return Opcode_match(ISD::UNDEF); }
@@ -371,71 +436,6 @@ template <typename Pattern> inline auto m_LegalType(const Pattern &P) {
                           return TLI.isTypeLegal(N.getValueType());
                         },
                         P};
-}
-
-// === Patterns combinators ===
-template <typename... Preds> struct And {
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
-    return true;
-  }
-};
-
-template <typename Pred, typename... Preds>
-struct And<Pred, Preds...> : And<Preds...> {
-  Pred P;
-  And(const Pred &p, const Preds &...preds) : And<Preds...>(preds...), P(p) {}
-
-  template <typename MatchContext>
-  bool match(const MatchContext &Ctx, SDValue N) {
-    return P.match(Ctx, N) && And<Preds...>::match(Ctx, N);
-  }
-};
-
-template <typename... Preds> struct Or {
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
-    return false;
-  }
-};
-
-template <typename Pred, typename... Preds>
-struct Or<Pred, Preds...> : Or<Preds...> {
-  Pred P;
-  Or(const Pred &p, const Preds &...preds) : Or<Preds...>(preds...), P(p) {}
-
-  template <typename MatchContext>
-  bool match(const MatchContext &Ctx, SDValue N) {
-    return P.match(Ctx, N) || Or<Preds...>::match(Ctx, N);
-  }
-};
-
-template <typename Pred> struct Not {
-  Pred P;
-
-  explicit Not(const Pred &P) : P(P) {}
-
-  template <typename MatchContext>
-  bool match(const MatchContext &Ctx, SDValue N) {
-    return !P.match(Ctx, N);
-  }
-};
-// Explicit deduction guide.
-template <typename Pred> Not(const Pred &P) -> Not<Pred>;
-
-/// Match if the inner pattern does NOT match.
-template <typename Pred> inline Not<Pred> m_Unless(const Pred &P) {
-  return Not{P};
-}
-
-template <typename... Preds> And<Preds...> m_AllOf(const Preds &...preds) {
-  return And<Preds...>(preds...);
-}
-
-template <typename... Preds> Or<Preds...> m_AnyOf(const Preds &...preds) {
-  return Or<Preds...>(preds...);
-}
-
-template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
-  return m_Unless(m_AnyOf(preds...));
 }
 
 // === Generic node matching ===
