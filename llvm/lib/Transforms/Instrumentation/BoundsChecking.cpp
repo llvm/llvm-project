@@ -174,9 +174,8 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
 static std::string
 getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts) {
   std::string Name = "__ubsan_handle_local_out_of_bounds";
-  if (Opts.MinRuntime) {
+  if (Opts.MinRuntime)
     Name += "_minimal";
-  }
   if (!Opts.MayReturn)
     Name += "_abort";
   if (Opts.HandlerPreserveAllRegs && Opts.MinRuntime)
