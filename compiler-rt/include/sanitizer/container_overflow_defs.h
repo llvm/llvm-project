@@ -77,7 +77,8 @@ __sanitizer_annotate_contiguous_container(const void *__beg, const void *__end,
                                           const void *__new_mid) {}
 #else
 void SANITIZER_CDECL __sanitizer_annotate_contiguous_container(
-    const void *__beg, const void *__end, const void *__old_mid, const void *__new_mid);
+    const void *__beg, const void *__end, const void *__old_mid,
+    const void *__new_mid);
 #endif
 
 /// Similar to <c>__sanitizer_annotate_contiguous_container</c>.
@@ -184,10 +185,9 @@ void SANITIZER_CDECL __sanitizer_copy_contiguous_container_annotations(
 /// \returns True if the contiguous container <c>[beg, end)</c> is properly
 ///  poisoned.
 #ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
-__attribute__((__internal_linkage__)) inline int
-    SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *__beg,
-                                                            const void *__mid,
-                                                            const void *__end) {}
+__attribute__((__internal_linkage__)) inline int SANITIZER_CDECL
+__sanitizer_verify_contiguous_container(const void *__beg, const void *__mid,
+                                        const void *__end) {}
 #else
 int SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *__beg,
                                                             const void *__mid,
@@ -216,11 +216,10 @@ int SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *__beg,
 /// container_beg, container_end, end)</c> is properly poisoned - only
 /// [container_beg; container_end) is addressable.
 #ifdef __SANITIZER_DISABLE_CONTAINER_OVERFLOW__
-__attribute__((__internal_linkage__)) inline int SANITIZER_CDECL
-__sanitizer_verify_double_ended_contiguous_container(const void *__storage_beg,
-                                                     const void *__container_beg,
-                                                     const void *__container_end,
-                                                     const void *__storage_end) {}
+__attribute__((__internal_linkage__)) inline int
+    SANITIZER_CDECL __sanitizer_verify_double_ended_contiguous_container(
+        const void *__storage_beg, const void *__container_beg,
+        const void *__container_end, const void *__storage_end) {}
 #else
 int SANITIZER_CDECL __sanitizer_verify_double_ended_contiguous_container(
     const void *__storage_beg, const void *__container_beg,
