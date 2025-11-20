@@ -3374,7 +3374,7 @@ static bool interp__builtin_ia32_cvt_vec2mask(InterpState &S, CodePtr OpPC,
   unsigned VectorLen = Vec.getNumElems();
   PrimType ElemT = Vec.getFieldDesc()->getPrimType();
 
-  for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
+  for (unsigned ElemNum = 0; ElemNum != VectorLen; ++ElemNum) {
     APSInt A;
     INT_TYPE_SWITCH_NO_BOOL(ElemT, { A = Vec.elem<T>(ElemNum).toAPSInt(); });
     unsigned MSB = A[A.getBitWidth() - 1];
