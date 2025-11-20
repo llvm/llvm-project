@@ -13053,7 +13053,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
               unsigned NumElemPerLane = 2;
               unsigned Lane = DstIdx / NumElemPerLane;
               unsigned Offset = Mask & 0b10 ? 1 : 0;
-              return std::make_pair(0, static_cast<int>(Lane * NumElemPerLane + Offset));
+              return std::make_pair(
+                  0, static_cast<int>(Lane * NumElemPerLane + Offset));
             }))
       return false;
     return Success(R, E);
@@ -13088,12 +13089,13 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
               unsigned NumElemPerLane = 4;
               unsigned Lane = DstIdx / NumElemPerLane;
               unsigned Offset = Mask & 0b11;
-              return std::make_pair(0, static_cast<int>(Lane * NumElemPerLane + Offset));
+              return std::make_pair(
+                  0, static_cast<int>(Lane * NumElemPerLane + Offset));
             }))
       return false;
     return Success(R, E);
   }
-  
+
   case X86::BI__builtin_ia32_phminposuw128: {
     APValue Source;
     if (!Evaluate(Source, Info, E->getArg(0)))
