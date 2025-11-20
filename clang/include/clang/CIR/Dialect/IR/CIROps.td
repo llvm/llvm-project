@@ -2856,45 +2856,59 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
 }
 
 def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
-  DeclareOpInterfaceMethods<BranchOpInterface>,
-  Terminator, AttrSizedOperandSegments
+  Terminator
 ]> {
   let summary = "try_call operation";
-
   let description = [{
-    Mostly similar to cir.call but requires two destination
-    branches, one for handling exceptions in case its thrown and
-    the other one to follow on regular control-flow.
+    Mostly similar to `cir.call` but requires two destination
+    branches, one for follow on regular control-flow, and the other
+    one for handling exceptions in case it's thrown.
+
+    This operation is used only after the CFG flatterning pass.
 
     Example:
 
     ```mlir
-    // Direct call
-    %result = cir.try_call @division(%a, %b) ^normalDest, ^unwindDest 
+    // Before CFG flattening
+    cir.try {
+      %call = cir.call @division(%a, %b) : () -> !s32i
+      cir.yield
+    } catch all {
+      cir.yield
+    }
+
+    // After CFG flattening
+    %call = cir.try_call @division(%a, %b) ^normalDest, ^unwindDest
       : (f32, f32) -> f32
+    ^normalDest:
+      cir.br ^afterTryBlock
+    ^unwindDest:
+      %exception_ptr, %type_id = cir.eh.inflight_exception
+      cir.br ^catchHandlerBlock(%exception_ptr : !cir.ptr<!void>)
+    ^catchHandlerBlock:
+      ...
     ```
   }];
 
-  let arguments = !con((ins
-    Variadic<CIR_AnyType>:$normalDestOperands,
-    Variadic<CIR_AnyType>:$unwindDestOperands
-  ), commonArgs);
-
+  let arguments = commonArgs;
   let results = (outs Optional<CIR_AnyType>:$result);
-  let successors = (successor AnySuccessor:$normalDest, AnySuccessor:$unwindDest);
+  let successors = (successor 
+    AnySuccessor:$normalDest,
+    AnySuccessor:$unwindDest
+  );
 
   let skipDefaultBuilders = 1;
   let hasLLVMLowering = false;
 
   let builders = [
-    OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
+    OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
+                "mlir::Type":$resType,
                "mlir::Block *":$normalDest,
                "mlir::Block *":$unwindDest,
-               CArg<"mlir::ValueRange", "{}">:$operands,
-               CArg<"mlir::ValueRange", "{}">:$normalDestOperands,
-               CArg<"mlir::ValueRange", "{}">:$unwindDestOperands,
+               CArg<"mlir::ValueRange", "{}">:$callOperands,
                CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
-      $_state.addOperands(operands);
+      $_state.addOperands(callOperands);
+
       if (callee)
         $_state.addAttribute("callee", callee);
       if (resType && !isa<VoidType>(resType))
@@ -2904,15 +2918,6 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
         SideEffectAttr::get($_builder.getContext(), sideEffect));
 
       // Handle branches
-      $_state.addOperands(normalDestOperands);
-      $_state.addOperands(unwindDestOperands);
-      // The TryCall ODS layout is: cont, landing_pad, operands.
-      llvm::copy(::llvm::ArrayRef<int32_t>({
-        static_cast<int32_t>(normalDestOperands.size()),
-        static_cast<int32_t>(unwindDestOperands.size()),
-        static_cast<int32_t>(operands.size())
-        }),
-        odsState.getOrAddProperties<Properties>().operandSegmentSizes.begin());
       $_state.addSuccessors(normalDest);
       $_state.addSuccessors(unwindDest);
     }]>,
@@ -2920,12 +2925,10 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
                "FuncType":$fn_type,
                "mlir::Block *":$normalDest,
                "mlir::Block *":$unwindDest,
-               CArg<"mlir::ValueRange", "{}">:$operands,
-               CArg<"mlir::ValueRange", "{}">:$normalDestOperands,
-               CArg<"mlir::ValueRange", "{}">:$unwindDestOperands, 
+               CArg<"mlir::ValueRange", "{}">:$callOperands,
                CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
       ::llvm::SmallVector<mlir::Value, 4> finalCallOperands({ind_target});
-      finalCallOperands.append(operands.begin(), operands.end());
+      finalCallOperands.append(callOperands.begin(), callOperands.end());
       $_state.addOperands(finalCallOperands);
 
       if (!fn_type.hasVoidReturn())
@@ -2935,15 +2938,6 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
         SideEffectAttr::get($_builder.getContext(), sideEffect));
 
       // Handle branches
-      $_state.addOperands(normalDestOperands);
-      $_state.addOperands(unwindDestOperands);
-      // The TryCall ODS layout is: cont, landing_pad, operands.
-      llvm::copy(::llvm::ArrayRef<int32_t>({
-        static_cast<int32_t>(normalDestOperands.size()),
-        static_cast<int32_t>(unwindDestOperands.size()),
-        static_cast<int32_t>(finalCallOperands.size())
-        }),
-        odsState.getOrAddProperties<Properties>().operandSegmentSizes.begin());
       $_state.addSuccessors(normalDest);
       $_state.addSuccessors(unwindDest);
     }]>
