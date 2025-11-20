@@ -3347,6 +3347,9 @@ void AArch64TargetLowering::fixupPtrauthDiscriminator(
     AddrDisc = TmpReg;
   }
 
+  if (AddrDiscOp.getReg() != AddrDisc)
+    AddrDiscOp.setIsKill(false);
+
   AddrDiscOp.setReg(AddrDisc);
   IntDiscOp.setImm(IntDisc);
 }
