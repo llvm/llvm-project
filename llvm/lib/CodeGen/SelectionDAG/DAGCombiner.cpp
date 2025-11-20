@@ -10318,13 +10318,16 @@ SDValue DAGCombiner::visitShiftByConstant(SDNode *N) {
   // Fold clmul(zext(x), zext(y)) >> (BW - 1 | BW) -> clmul(r|h)(x, y).
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+  uint64_t HalfBW = VT.getScalarSizeInBits() / 2;
   SDValue X, Y;
   if (sd_match(N, m_Srl(m_Clmul(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y))),
-                        m_SpecificInt(VT.getScalarSizeInBits() / 2 - 1))))
+                        m_SpecificInt(HalfBW - 1))) &&
+      X.getScalarValueSizeInBits() == HalfBW)
     return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
                        DAG.getNode(ISD::CLMULR, DL, X.getValueType(), X, Y));
   if (sd_match(N, m_Srl(m_Clmul(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y))),
-                        m_SpecificInt(VT.getScalarSizeInBits() / 2))))
+                        m_SpecificInt(HalfBW))) &&
+      X.getScalarValueSizeInBits() == HalfBW)
     return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
                        DAG.getNode(ISD::CLMULH, DL, X.getValueType(), X, Y));
 
