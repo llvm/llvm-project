@@ -114,9 +114,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[TARGET_ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[TARGET_ANY_ACCESS]], 0>}>
 // CHECK: #[[TARGET_ANY_ARG:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[TARGET_ANY_DATA]], 0>}>
 // CHECK: #[[TARGET_TARGET_DATA:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[TARGET_ANY_DATA]], 0>}>
-// CHECK: #[[TARGET_A_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[TARGET_TARGET_DATA]], access_type = #[[TARGET_TARGET_DATA]], offset = 0>
 // CHECK: #[[TARGET_B:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtargetargEb", members = {<#[[TARGET_ANY_ARG]], 0>}>
+// CHECK: #[[TARGET_A:.+]] = #llvm.tbaa_type_desc<id = "target data/_QFtargetargEa", members = {<#[[TARGET_TARGET_DATA]], 0>}>
 // CHECK: #[[TARGET_B_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[TARGET_B]], access_type = #[[TARGET_B]], offset = 0>
+// CHECK: #[[TARGET_A_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[TARGET_A]], access_type = #[[TARGET_A]], offset = 0>
 
 // CHECK-LABEL:   func.func @_QPtargetarg(
 // CHECK-SAME:                            %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a", fir.target},

@@ -99,11 +99,25 @@ struct TBAATree {
   //   |- "any data access"
   //      |
   //      |- "dummy arg data"
-  //      |- "target data"
-  //         |
-  //         |- "allocated data"
-  //         |- "direct data"
-  //         |- "global data"
+  //        |
+  //        |- <dummy arg name 1>
+  //        |- <dummy arg name 2>
+  //      |- "target data" <-- Any POINTER variable goes here
+  //        |
+  //        |- <target name 1> <--- any TARGET variable goes here
+  //        |- <target name 2>
+  //      |- "allocated data"
+  //        |
+  //        |- <allocated name 1>
+  //        |- <allocated name 2>
+  //      |- "direct data"
+  //        |
+  //        |- <direct name 1>
+  //        |- <direct name 2>
+  //      |- "global data"
+  //        |
+  //        |- <global name 1>
+  //        |- <global name 2>
   static TBAATree buildTree(mlir::StringAttr functionName);
 
 private:
