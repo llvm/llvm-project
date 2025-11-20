@@ -40,29 +40,38 @@ struct VectorContractToFMA : public OpRewritePattern<vector::ContractionOp> {
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
 
-    if (contractOp.getKind() != vector::CombiningKind::ADD) {
+    if (contractOp.getKind() != vector::CombiningKind::ADD)
       return rewriter.notifyMatchFailure(contractOp,
                                          "Expects add combining kind");
-    }
 
     VectorType lhsTy = contractOp.getLhsType();
     if (!lhsTy.getElementType().isF32())
       return rewriter.notifyMatchFailure(contractOp,
                                          "Only F32 lowering is supported.");
-    if (llvm::any_of(lhsTy.getShape(), [](int64_t dim) { return dim != 1; }))
-      return rewriter.notifyMatchFailure(
-          contractOp, "Expects one for all dimensions of LHS");
+
+    ArrayRef<int64_t> lhsShape = lhsTy.getShape();
+    llvm::SmallVector<int64_t> dimsLhs;
+    llvm::copy_if(lhsShape, std::back_inserter(dimsLhs),
+                  [](int64_t dim) { return dim != 1; });
 
     VectorType rhsTy = contractOp.getRhsType();
     ArrayRef<int64_t> rhsShape = rhsTy.getShape();
     llvm::SmallVector<int64_t> dimsRhs;
     llvm::copy_if(rhsShape, std::back_inserter(dimsRhs),
                   [](int64_t dim) { return dim != 1; });
-    if (dimsRhs.size() != 1)
-      return rewriter.notifyMatchFailure(contractOp, "Irregular RHS shape");
+
+    if (dimsLhs.size() > 0 && dimsRhs.size() > 0)
+      return rewriter.notifyMatchFailure(
+          contractOp, "Excepts unit dimensions for either LHS or RHS shape.");
+
+    if (dimsLhs.size() != 1 && dimsRhs.size() != 1)
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Irregular LHS or RHS shape.");
 
     VectorType accTy = dyn_cast<VectorType>(contractOp.getAccType());
-    assert(accTy && "Invalid accumulator");
+    if (!accTy)
+      return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type");
+
     ArrayRef<int64_t> accShape = accTy.getShape();
     llvm::SmallVector<int64_t> dimsAcc;
     llvm::copy_if(accShape, std::back_inserter(dimsAcc),
@@ -72,21 +81,39 @@ struct VectorContractToFMA : public OpRewritePattern<vector::ContractionOp> {
 
     // Lowers vector.contract into a broadcast+FMA sequence.
     auto loc = contractOp.getLoc();
-    auto castLhs = vector::ShapeCastOp::create(
-        rewriter, loc, VectorType::get(1, lhsTy.getElementType()),
-        contractOp.getLhs());
-    auto castRhs = vector::ShapeCastOp::create(
-        rewriter, loc, VectorType::get(dimsRhs.front(), rhsTy.getElementType()),
-        contractOp.getRhs());
     auto castAcc = vector::ShapeCastOp::create(
         rewriter, loc, VectorType::get(dimsAcc.front(), accTy.getElementType()),
         contractOp.getAcc());
-    auto broadcastLhs = vector::BroadcastOp::create(
-        rewriter, loc, castRhs.getResult().getType(), castLhs);
-    auto fma =
-        vector::FMAOp::create(rewriter, loc, broadcastLhs, castRhs, castAcc);
-    auto castFma = vector::ShapeCastOp::create(rewriter, loc, accTy, fma);
 
+    vector::FMAOp fma;
+
+    if (dimsRhs.size() > 0) {
+      auto castLhs = vector::ShapeCastOp::create(
+          rewriter, loc, VectorType::get(1, lhsTy.getElementType()),
+          contractOp.getLhs());
+      auto castRhs = vector::ShapeCastOp::create(
+          rewriter, loc,
+          VectorType::get(dimsRhs.front(), rhsTy.getElementType()),
+          contractOp.getRhs());
+      auto broadcastLhs = vector::BroadcastOp::create(
+          rewriter, loc, castRhs.getResult().getType(), castLhs);
+      fma =
+          vector::FMAOp::create(rewriter, loc, broadcastLhs, castRhs, castAcc);
+    } else {
+      auto castLhs = vector::ShapeCastOp::create(
+          rewriter, loc,
+          VectorType::get(dimsLhs.front(), lhsTy.getElementType()),
+          contractOp.getLhs());
+      auto castRhs = vector::ShapeCastOp::create(
+          rewriter, loc, VectorType::get(1, rhsTy.getElementType()),
+          contractOp.getRhs());
+      auto broadcastRhs = vector::BroadcastOp::create(
+          rewriter, loc, castLhs.getResult().getType(), castRhs);
+      fma =
+          vector::FMAOp::create(rewriter, loc, castLhs, broadcastRhs, castAcc);
+    }
+
+    auto castFma = vector::ShapeCastOp::create(rewriter, loc, accTy, fma);
     rewriter.replaceOp(contractOp, castFma);
 
     return success();

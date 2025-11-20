@@ -21,7 +21,7 @@ def ApplyVectorContractToFMAPatternsOp : Op<Transform_Dialect,
     "apply_patterns.x86vector.vector_contract_to_fma",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that vector contract operation can be lowered to a FMA.
+    Collect patterns to lower a F32 type vector.contract operation to a FMA.
   }];
   
   let assemblyFormat = "attr-dict";
@@ -31,7 +31,8 @@ def ApplyVectorContractToPackedTypeDotProductPatternsOp : Op<Transform_Dialect,
     "apply_patterns.x86vector.vector_contract_to_packed_type_dot_product",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that vector contract operation can be lowered to a BF16/Int8 dot-product.
+    Collect patterns to lower a BF16/Int8 type vector.contract operation 
+	to a BF16/Int8 dot-product.
   }];
 
   let assemblyFormat = "attr-dict";
