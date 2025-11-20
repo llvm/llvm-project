@@ -403,3 +403,64 @@ loop:
 exit:
   ret i32 %select.data
 }
+
+define i32 @csa_with_extra_use_of_select(i64 %N, ptr readonly %data, ptr noalias %out, i32 %a) {
+; NEON-LABEL: define i32 @csa_with_extra_use_of_select(
+; NEON-SAME: i64 [[N:%.*]], ptr readonly [[DATA:%.*]], ptr noalias [[OUT:%.*]], i32 [[A:%.*]]) {
+; NEON-NEXT:  [[ENTRY:.*]]:
+; NEON-NEXT:    br label %[[LOOP:.*]]
+; NEON:       [[LOOP]]:
+; NEON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; NEON-NEXT:    [[DATA_PHI:%.*]] = phi i32 [ -1, %[[ENTRY]] ], [ [[SELECT_DATA:%.*]], %[[LOOP]] ]
+; NEON-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
+; NEON-NEXT:    [[LD:%.*]] = load i32, ptr [[LD_ADDR]], align 4
+; NEON-NEXT:    [[SELECT_CMP:%.*]] = icmp slt i32 [[A]], [[LD]]
+; NEON-NEXT:    [[SELECT_DATA]] = select i1 [[SELECT_CMP]], i32 [[LD]], i32 [[DATA_PHI]]
+; NEON-NEXT:    [[ST_ADDR:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[IV]]
+; NEON-NEXT:    store i32 [[SELECT_DATA]], ptr [[ST_ADDR]], align 4
+; NEON-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; NEON-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; NEON-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT:.*]], label %[[LOOP]]
+; NEON:       [[EXIT]]:
+; NEON-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LOOP]] ]
+; NEON-NEXT:    ret i32 [[SELECT_DATA_LCSSA]]
+;
+; SVE-LABEL: define i32 @csa_with_extra_use_of_select(
+; SVE-SAME: i64 [[N:%.*]], ptr readonly [[DATA:%.*]], ptr noalias [[OUT:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
+; SVE-NEXT:  [[ENTRY:.*]]:
+; SVE-NEXT:    br label %[[LOOP:.*]]
+; SVE:       [[LOOP]]:
+; SVE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; SVE-NEXT:    [[DATA_PHI:%.*]] = phi i32 [ -1, %[[ENTRY]] ], [ [[SELECT_DATA:%.*]], %[[LOOP]] ]
+; SVE-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
+; SVE-NEXT:    [[LD:%.*]] = load i32, ptr [[LD_ADDR]], align 4
+; SVE-NEXT:    [[SELECT_CMP:%.*]] = icmp slt i32 [[A]], [[LD]]
+; SVE-NEXT:    [[SELECT_DATA]] = select i1 [[SELECT_CMP]], i32 [[LD]], i32 [[DATA_PHI]]
+; SVE-NEXT:    [[ST_ADDR:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[IV]]
+; SVE-NEXT:    store i32 [[SELECT_DATA]], ptr [[ST_ADDR]], align 4
+; SVE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; SVE-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; SVE-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT:.*]], label %[[LOOP]]
+; SVE:       [[EXIT]]:
+; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LOOP]] ]
+; SVE-NEXT:    ret i32 [[SELECT_DATA_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %data.phi = phi i32 [ -1, %entry ], [ %select.data, %loop ]
+  %ld.addr = getelementptr inbounds i32, ptr %data, i64 %iv
+  %ld = load i32, ptr %ld.addr, align 4
+  %select.cmp = icmp slt i32 %a, %ld
+  %select.data = select i1 %select.cmp, i32 %ld, i32 %data.phi
+  %st.addr = getelementptr inbounds i32, ptr %out, i64 %iv
+  store i32 %select.data, ptr %st.addr, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit.cmp = icmp eq i64 %iv.next, %N
+  br i1 %exit.cmp, label %exit, label %loop
+
+exit:
+  ret i32 %select.data
+}
