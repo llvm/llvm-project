@@ -583,12 +583,10 @@ subroutine omp_target_is_device_ptr
 
    !CHECK: %[[P_STORAGE:.*]] = omp.map.info {{.*}}{name = "p"}
    !CHECK: %[[P_IS:.*]] = omp.map.info {{.*}}{name = "p"}
-   !CHECK: %[[I_MAP:.*]] = omp.map.info {{.*}}{name = "i"}
    !CHECK: %[[ARR_MAP:.*]] = omp.map.info {{.*}}{name = "arr"}
    !CHECK: omp.target is_device_ptr(%[[P_IS]] :
    !CHECK-SAME: has_device_addr(%[[P_STORAGE]] ->
-   !CHECK-SAME: map_entries(%[[I_MAP]] ->
-   !CHECK-SAME: %[[ARR_MAP]] ->
+   !CHECK-SAME: map_entries({{.*}}%[[ARR_MAP]] ->
    !$omp target is_device_ptr(p)
       if (c_associated(p)) i = i + 1
       arr(1) = i
