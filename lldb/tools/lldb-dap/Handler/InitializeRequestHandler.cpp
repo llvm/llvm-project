@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CommandPlugins.h"
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
-#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
-#include "lldb/API/SBTarget.h"
+#include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandReturnObject.h"
 
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
@@ -21,22 +19,8 @@ using namespace lldb_dap::protocol;
 /// Initialize request; value of command field is 'initialize'.
 llvm::Expected<InitializeResponse> InitializeRequestHandler::Run(
     const InitializeRequestArguments &arguments) const {
-  dap.clientFeatures = arguments.supportedFeatures;
-
-  // Do not source init files until in/out/err are configured.
-  dap.debugger = lldb::SBDebugger::Create(false);
-  dap.debugger.SetInputFile(dap.in);
-  dap.target = dap.debugger.GetDummyTarget();
-
-  llvm::Expected<int> out_fd = dap.out.GetWriteFileDescriptor();
-  if (!out_fd)
-    return out_fd.takeError();
-  dap.debugger.SetOutputFile(lldb::SBFile(*out_fd, "w", false));
-
-  llvm::Expected<int> err_fd = dap.err.GetWriteFileDescriptor();
-  if (!err_fd)
-    return err_fd.takeError();
-  dap.debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
+  if (auto err = dap.CreateDebugger(arguments.supportedFeatures))
+    return err;
 
   auto interp = dap.debugger.GetCommandInterpreter();
 
@@ -56,28 +40,6 @@ llvm::Expected<InitializeResponse> InitializeRequestHandler::Run(
 
   if (llvm::Error err = dap.RunPreInitCommands())
     return err;
-
-  auto cmd = dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
-      "lldb-dap", "Commands for managing lldb-dap.");
-  if (arguments.supportedFeatures.contains(
-          eClientFeatureStartDebuggingRequest)) {
-    cmd.AddCommand(
-        "start-debugging", new StartDebuggingCommand(dap),
-        "Sends a startDebugging request from the debug adapter to the client "
-        "to start a child debug session of the same type as the caller.");
-  }
-  cmd.AddCommand(
-      "repl-mode", new ReplModeCommand(dap),
-      "Get or set the repl behavior of lldb-dap evaluation requests.");
-  cmd.AddCommand("send-event", new SendEventCommand(dap),
-                 "Sends an DAP event to the client.");
-
-  if (arguments.supportedFeatures.contains(eClientFeatureProgressReporting))
-    dap.StartProgressEventThread();
-
-  // Start our event thread so we can receive events from the debugger, target,
-  // process and more.
-  dap.StartEventThread();
 
   return dap.GetCapabilities();
 }

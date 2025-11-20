@@ -148,7 +148,7 @@ struct ErrorMessage {
 
   /// An object used as a dictionary for looking up the variables in the format
   /// string.
-  std::optional<std::map<std::string, std::string>> variables;
+  std::map<std::string, std::string> variables;
 
   /// If true send to telemetry.
   bool sendTelemetry = false;
@@ -157,10 +157,10 @@ struct ErrorMessage {
   bool showUser = false;
 
   /// A url where additional information about this message can be found.
-  std::optional<std::string> url;
+  std::string url;
 
   /// A label that is presented to the user as the UI for opening the url.
-  std::optional<std::string> urlLabel;
+  std::string urlLabel;
 };
 bool fromJSON(const llvm::json::Value &, ErrorMessage &, llvm::json::Path);
 llvm::json::Value toJSON(const ErrorMessage &);

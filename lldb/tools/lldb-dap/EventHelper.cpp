@@ -243,12 +243,14 @@ void SendTerminatedEvent(DAP &dap) { dap.SendTerminatedEvent(); }
 // Grab any STDOUT and STDERR from the process and send it up to VS Code
 // via an "output" event to the "stdout" and "stderr" categories.
 void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process) {
-  char buffer[OutputBufferSize];
+  char buffer[OutputBufferSize] = {0};
   size_t count;
   while ((count = process.GetSTDOUT(buffer, sizeof(buffer))) > 0)
-    dap.SendOutput(OutputType::Stdout, llvm::StringRef(buffer, count));
+    dap.SendOutput(protocol::eOutputCategoryStderr,
+                   llvm::StringRef(buffer, count));
   while ((count = process.GetSTDERR(buffer, sizeof(buffer))) > 0)
-    dap.SendOutput(OutputType::Stderr, llvm::StringRef(buffer, count));
+    dap.SendOutput(protocol::eOutputCategoryStderr,
+                   llvm::StringRef(buffer, count));
 }
 
 // Send a "continued" event to indicate the process is in the running state.
@@ -284,7 +286,7 @@ void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process) {
 void SendInvalidatedEvent(
     DAP &dap, llvm::ArrayRef<protocol::InvalidatedEventBody::Area> areas,
     lldb::tid_t tid) {
-  if (!dap.clientFeatures.contains(protocol::eClientFeatureInvalidatedEvent))
+  if (!dap.client_features.contains(protocol::eClientFeatureInvalidatedEvent))
     return;
   protocol::InvalidatedEventBody body;
   body.areas = areas;
@@ -296,7 +298,7 @@ void SendInvalidatedEvent(
 }
 
 void SendMemoryEvent(DAP &dap, lldb::SBValue variable) {
-  if (!dap.clientFeatures.contains(protocol::eClientFeatureMemoryEvent))
+  if (!dap.client_features.contains(protocol::eClientFeatureMemoryEvent))
     return;
   protocol::MemoryEventBody body;
   body.memoryReference = variable.GetLoadAddress();
