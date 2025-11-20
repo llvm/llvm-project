@@ -89,6 +89,8 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_ppc_fetch_and_swaplp:
   case PPC::BI__builtin_amo_lwat:
   case PPC::BI__builtin_amo_ldat:
+  case PPC::BI__builtin_amo_lwat_s:
+  case PPC::BI__builtin_amo_ldat_s:
     return true;
   }
   return false;
