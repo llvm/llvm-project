@@ -201,67 +201,6 @@ inline uint32_t getDebugLevel() {
     }                                                                          \
   } while (false)
 
-// New macros that will allow for more granular control over debugging output
-// Each message can be classified by Component, Type and Level
-// Component: The broad component of the offload runtime emitting the message.
-// Type: A cross-component classification of messages
-// Level: The verbosity level of the message
-//
-// The component is pulled from the TARGET_NAME macro, Type and Level can be
-// defined for each debug message but by default they are "default" and "1"
-// respectively.
-//
-// Constructing messages should be done using C++ stream style syntax.
-//
-// Usage examples:
-// ODBG("type1", 2) << "This is a level 2 message of type1";
-// ODBG("Init") << "This is a default level of the init type";
-// ODBG() << "This is a level 1 message of the default type";
-// ODBG("Init", 3) << NumDevices << " were initialized";
-// ODBG("Kernel") << "Launching " << KernelName << " on device " << DeviceId;
-//
-// Additionally, ODBG_IF_LEVEL can be used to have parts of a stream to provide
-// additional detail at different levels without needing to split the message.
-// Using ODBG_RESET_LEVEL will reset the level back to the original level.
-// E.g.:
-// ODBG("Mapping", 2) << "Function F"
-//   << ODBG_IF_LEVEL(3) << " with argument value=" << Arg
-//   << ODBG_IF_LEVEL(4) << " and address=" << &Arg
-//   << ODBG_RESET_LEVEL() << " called";
-//
-// Similarly the ODBG_ONLY_LEVEL can be used to print parts of a stream only at
-// a specific level, e.g.:
-// ODBG() << "Starting computation "
-//   << ODBG_ONLY_LEVEL(1) << "on a device"
-//   << ODBG_ONLY_LEVEL(2) << "and mapping data on device" << DeviceId;
-//   << ODBG_ONLY_LEVEL(3) << dumpDetailedMappingInfo(DeviceId);
-//
-// Message output can be controlled by setting LIBOMPTARGET_DEBUG or
-// LIBOFFLOAD_DEBUG environment variables. Their syntax is as follows:
-// [integer]|all|<type1>[:<level1>][,<type2>[:<level2>],...]
-//
-// 0 : Disable all debug messages
-// all : Enable all level 1 debug messages
-// integer : Set the default level for all messages
-// <type> : Enable only messages of the specified type and level (more than one
-//          can be specified). Components are also supported as
-//          types.
-// <level> : Set the verbosity level for the specified type (default is 1)
-//
-// Some examples:
-// LIBOFFLOAD_DEBUG=1  (Print all messages of level 1 or lower)
-// LIBOFFLOAD_DEBUG=5  (Print all messages of level 5 or lower)
-// LIBOFFLOAD_DEBUG=init (Print messages of type "init" of level 1 or lower)
-// LIBOFFLOAD_DEBUG=init:3,mapping:2 (Print messages of type "init" of level 3
-//                                   or lower and messages of type "mapping" of
-//                                   level 2 or lower)
-// LIBOFFLOAD_DEBUG=omptarget:4, init (Print messages from component "omptarget"
-//                                   of level 4 or lower and messages of type
-//                                   "init" of level 1 or lower)
-//
-// For very specific cases where more control is needed, use ODBG_STREAM or
-// ODBG_BASE. See below for details.
-
 namespace llvm::offload::debug {
 
 #ifdef OMPTARGET_DEBUG
@@ -489,14 +428,38 @@ static inline raw_ostream &operator<<(raw_ostream &Os,
   ODBG_STREAM(llvm::offload::debug::dbgs(), Type, Level)
 #define ODBG_SELECT(Type, Level, NArgs, ...) ODBG_##NArgs
 
+// Print a debug message of a certain type and verbosity level. If no type
+// or level is provided, "default" and "1" are assumed respectively.
+// Usage examples:
+// ODBG("type1", 2) << "This is a level 2 message of type1";
+// ODBG("Init") << "This is a default level of the init type";
+// ODBG() << "This is a level 1 message of the default type";
+// ODBG("Init", 3) << NumDevices << " were initialized";
+// ODBG("Kernel") << "Launching " << KernelName << " on device " << DeviceId;
+#define ODBG(...) ODBG_SELECT(__VA_ARGS__ __VA_OPT__(, ) 2, 1, 0)(__VA_ARGS__)
+
+// Filter the next elements in the debug stream if the current debug level is
+// lower than  specified level. Example:
+// ODBG("Mapping", 2) << "level 2 info "
+//   << ODBG_IF_LEVEL(3) << " level 3 info" << Arg
+//   << ODBG_IF_LEVEL(4) << " level 4 info" << &Arg
+//   << ODBG_RESET_LEVEL() << " more level 2 info";
 #define ODBG_IF_LEVEL(Level)                                                   \
   static_cast<llvm::offload::debug::odbg_ostream::IfLevel>(Level)
+
+// Filter the next elements in the debug stream if the current debug level is
+// not exactly the specified level. Example:
+// ODBG() << "Starting computation "
+//   << ODBG_ONLY_LEVEL(1) << "on a device"
+//   << ODBG_ONLY_LEVEL(2) << "and mapping data on device" << DeviceId;
+//   << ODBG_ONLY_LEVEL(3) << dumpDetailedMappingInfo(DeviceId);
 #define ODBG_ONLY_LEVEL(Level)                                                 \
   static_cast<llvm::offload::debug::odbg_ostream::OnlyLevel>(Level)
+
+// Reset the level back to the original level after ODBG_IF_LEVEL or
+// ODBG_ONLY_LEVEL have been used
 #define ODBG_RESET_LEVEL()                                                     \
   static_cast<llvm::offload::debug::odbg_ostream::IfLevel>(0)
-
-#define ODBG(...) ODBG_SELECT(__VA_ARGS__ __VA_OPT__(, ) 2, 1, 0)(__VA_ARGS__)
 
 #else
 
