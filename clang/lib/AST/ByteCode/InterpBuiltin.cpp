@@ -3367,7 +3367,9 @@ static bool interp__builtin_ia32_cvt_vec2mask(InterpState &S, CodePtr OpPC,
   assert(Call->getNumArgs() == 1);
 
   const Pointer &Vec = S.Stk.pop<Pointer>();
-  APInt RetMask(Vec.getNumElems(), 0);
+  unsigned RetWidth = S.getASTContext().getIntWidth(Call->getType());
+  APInt RetMask(RetWidth, 0);
+
   unsigned VectorLen = Vec.getNumElems();
   PrimType ElemT = Vec.getFieldDesc()->getPrimType();
 
