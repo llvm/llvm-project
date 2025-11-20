@@ -6411,6 +6411,9 @@ static void handleRequiresCapabilityAttr(Sema &S, Decl *D,
 
 static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   Expr *CE = AL.getArgAsExpr(0);
+  // Let E be the expression std​::​meta​::​reflect_constant(CE). E
+  // shall be a constant expression; the result of E is the underlying constant
+  // of the annotation.
   if (CE->isLValue()) {
     if (CE->getType()->isRecordType()) {
       InitializedEntity Entity = InitializedEntity::InitializeTemporary(

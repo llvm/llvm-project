@@ -149,6 +149,26 @@ static void instantiateDependentAlignedAttr(
   }
 }
 
+static void instantiateCxx26AnnotationAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const CXX26AnnotationAttr *CXX26AnnotationAttr, Decl *New) {
+  Expr *CE = CXX26AnnotationAttr->getArg();
+  ExprResult Result = S.SubstExpr(CE, TemplateArgs);
+  if (Result.isInvalid())
+    return;
+
+  Expr *concreteExpr = Result.get();
+  Expr::EvalResult V;
+  if (!concreteExpr->EvaluateAsRValue(V, S.getASTContext(), true))
+    llvm_unreachable("failed to evaluate annotation expression");
+
+  auto *Annot =
+      CXX26AnnotationAttr::Create(S.Context, CE, *CXX26AnnotationAttr);
+  Annot->setEqLoc(CXX26AnnotationAttr->getEqLoc());
+  Annot->setValue(V.Val);
+  New->addAttr(Annot);
+}
+
 static void instantiateDependentAssumeAlignedAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
     const AssumeAlignedAttr *Aligned, Decl *New) {
@@ -853,6 +873,11 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
     const AlignedAttr *Aligned = dyn_cast<AlignedAttr>(TmplAttr);
     if (Aligned && Aligned->isAlignmentDependent()) {
       instantiateDependentAlignedAttr(*this, TemplateArgs, Aligned, New);
+      continue;
+    }
+
+    if (const auto *Cxx26Annotation = dyn_cast<CXX26AnnotationAttr>(TmplAttr)) {
+      instantiateCxx26AnnotationAttr(*this, TemplateArgs, Cxx26Annotation, New);
       continue;
     }
 

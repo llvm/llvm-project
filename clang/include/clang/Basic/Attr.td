@@ -748,10 +748,6 @@ class Attr {
   // Note: Any additional data members will leak and should be constructed
   // externally on the ASTContext.
   code AdditionalMembers = [{}];
-  // Any additional text that should be included verbatim after instantiating
-  // an attribute on a template. This can be used if additional bookkeeping is
-  // required for the data members.
-  code PostInstantiationStmts =[{}];
   // Any documentation that should be associated with the attribute. Since an
   // attribute may be documented under multiple categories, more than one
   // Documentation entry may be listed.
@@ -953,16 +949,6 @@ public:
 
   SourceLocation getEqLoc() const { return EqLoc; }
   void setEqLoc(SourceLocation Loc) { EqLoc = Loc; }
-  }];
-
-  let PostInstantiationStmts = [{
-    Expr::EvalResult V;
-    if (!Result->getArg()->isValueDependent() &&
-        !Result->getArg()->EvaluateAsRValue(V, C, true))
-      llvm_unreachable("failed to evaluate annotation expression");
-
-    Result->setValue(V.Val);
-    Result->setEqLoc(A->getEqLoc());
   }];
 
   let HasCustomParsing = 1;

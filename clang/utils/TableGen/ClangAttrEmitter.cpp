@@ -4102,15 +4102,13 @@ EmitClangAttrTemplateInstantiateHelper(ArrayRef<const Record *> Attrs,
     for (auto const &ai : Args)
       ai->writeTemplateInstantiation(OS);
 
-    OS << "      auto* Result = new (C) " << R.getName() << "Attr(C, *A";
+    OS << "      return new (C) " << R.getName() << "Attr(C, *A";
     for (auto const &ai : Args) {
       OS << ", ";
       ai->writeTemplateInstantiationArgs(OS);
     }
-    OS << ");\n";
-    OS << R.getValueAsString("PostInstantiationStmts");
-    OS << "return Result;\n";
-    OS << "    }\n";
+    OS << ");\n"
+       << "    }\n";
   }
   OS << "  } // end switch\n"
      << "  llvm_unreachable(\"Unknown attribute!\");\n"
