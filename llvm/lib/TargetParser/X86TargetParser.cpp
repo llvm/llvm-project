@@ -784,7 +784,7 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
   };
   std::array<unsigned, std::size(Priorities)> HelperList;
   std::iota(HelperList.begin(), HelperList.begin() + MAX_PRIORITY + 1, 0);
-  for (size_t i = MaxPriority + 1; i != std::size(Priorities); ++i)
+  for (size_t i = MAX_PRIORITY + 1; i != std::size(Priorities); ++i)
     HelperList[i] = 0;
   assert(std::is_permutation(HelperList.begin(), HelperList.end(),
                              std::begin(Priorities), std::end(Priorities)) &&
