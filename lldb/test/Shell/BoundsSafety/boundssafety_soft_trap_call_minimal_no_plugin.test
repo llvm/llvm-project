@@ -5,19 +5,21 @@
 # RUN: %clang_host %t.o %t.softtrap_runtime.o -o %t.out
 # RUN: %lldb -b -s %s %t.out | FileCheck %s
 
-# This test relies on this plugin being enabled
-plugin list instrumentation-runtime.BoundsSafety
-# CHECK: [+] BoundsSafety
+# Run without the plugin. A user might want to do this so they can set their
+# own custom breakpoint with custom stopping behavior (e.g. stop after n hits).
+plugin disable instrumentation-runtime.BoundsSafety
+# CHECK: [-] BoundsSafety
 
+b __bounds_safety_soft_trap
 run
 
-# CHECK: * thread #{{.*}} stop reason = Soft Bounds check failed: indexing above upper bound in 'array[index]'{{$}}
+# CHECK: * thread #{{.*}} stop reason = breakpoint 1.1
 
-# Check that the `bad_read` frame is selected
+# Check that reason for bounds check failing can be seen in the stacktrace
 bt
-# CHECK: frame #{{.*}}`__bounds_safety_soft_trap{{$}}
+# CHECK: * frame #{{.*}}`__bounds_safety_soft_trap{{$}}
 # CHECK-NEXT: frame #{{.*}}`__clang_trap_msg$Bounds check failed$indexing above upper bound in 'array[index]'
-# CHECK-NEXT: * frame #{{.*}}`bad_read(index=10) at boundsSafetySoftTraps.c:5
+# CHECK-NEXT: frame #{{.*}}`bad_read(index=10) at boundsSafetySoftTraps.c:5
 
 # Resume execution
 c
