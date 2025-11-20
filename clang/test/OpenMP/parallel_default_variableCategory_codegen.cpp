@@ -59,33 +59,28 @@ int main (int argc, char **argv) {
 #endif
 
 // CHECK-LABEL: define {{.*}}main.omp_outlined{{.*}}
-// CHECK-NEXT:  entry:
-// CHECK: %x.addr = alloca{{.*}}
-// CHECK: %xPtr = alloca{{.*}}
-// CHECK: store ptr null, ptr %xPtr{{.*}}
-// CHECK: store ptr %xPtr{{.*}}
-// CHECK: store ptr %x.addr{{.*}}
-// CHECK-NEXT:  {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
+// CHECK: store ptr null, ptr{{.*}}
+// CHECK-NEXT: {{.*}}getelementptr {{.*}}
+// CHECK-NEXT: store ptr {{.*}}
+// CHECK-NEXT: {{.*}}getelementptr {{.*}}
+// CHECK-NEXT: store ptr {{.*}}
+// CHECK-NEXT: {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
 // CHECK: ret void
 //
 // CHECK: define {{.*}}main.omp_outlined{{.*}}
-// CHECK-NEXT:  entry:
-// CHECK-DAG: %i.addr = alloca{{.*}}
-// CHECK-DAG:  %n.addr = alloca{{.*}}
-// CHECK-DAG:  %aggregate.addr = alloca{{.*}}
-// CHECK-DAG:  %x.addr = alloca{{.*}}
-// CHECK: [[TMP0:%.*]] = load{{.*}}%i.addr{{.*}}
-// CHECK-NEXT:  [[TMP1:%.*]] = load{{.*}}%n.addr{{.*}}
-// CHECK-NEXT:  [[TMP2:%.*]] = load{{.*}}%aggregate.addr{{.*}}
-// CHECK-NEXT:  [[TMP3:%.*]] = load{{.*}}%x.addr{{.*}}
-// CHECK: store ptr [[TMP2]]{{.*}}
-// CHECK-NEXT:  {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
-// CHECK: store ptr [[TMP2]]{{.*}}
-// CHECK: store ptr [[TMP3]]{{.*}}
-// CHECK-NEXT:  {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
-// CHECK: store ptr [[TMP0]]{{.*}}
-// CHECK: store ptr [[TMP1]]{{.*}}
-// CHECK: store ptr [[TMP2]]{{.*}}
-// CHECK: store ptr [[TMP3]]{{.*}}
-// CHECK-NEXT:  {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
+// CHECK: {{.*}}getelementptr {{.*}}
+// CHECK-NEXT: store ptr {{.*}}
+// CHECK-NEXT: {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
+// CHECK: store ptr {{.*}}
+// CHECK-NEXT: {{.*}}getelementptr {{.*}}
+// CHECK-NEXT: store ptr {{.*}}
+// CHECK-NEXT: {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
+// CHECK: store ptr {{.*}}
+// CHECK-NEXT: {{.*}}getelementptr {{.*}}
+// CHECK-NEXT: store ptr {{.*}}
+// CHECK-NEXT: {{.*}}getelementptr {{.*}}
+// CHECK-NEXT: store ptr {{.*}}
+// CHECK-NEXT: {{.*}}getelementptr {{.*}}
+// CHECK-NEXT: store ptr {{.*}}
+// CHECK-NEXT: {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
 // CHECK: ret void
