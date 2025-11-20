@@ -16614,7 +16614,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     unsigned RetWidth = Info.Ctx.getIntWidth(E->getType());
     llvm::APInt Bits(RetWidth, 0);
 
-    for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
+    for (unsigned ElemNum = 0; ElemNum != VectorLen; ++ElemNum) {
       const APSInt &A = Vec.getVectorElt(ElemNum).getInt();
       unsigned MSB = A[A.getBitWidth() - 1];
       Bits.setBitVal(ElemNum, MSB);
