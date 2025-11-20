@@ -49,6 +49,8 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
 
             self.assertTrue(len(threads) == 1)
             lldbutil.check_expression(self, self.frame(), "i", str(i), False)
+            if i == 4:
+                self.expect('e self', substrs=['F<Int>.Type'])
             if i == 6:
               lldbutil.check_expression(self, self.frame(), "self", "a.H<Int>")
               frame = threads[0].GetFrameAtIndex(0)
