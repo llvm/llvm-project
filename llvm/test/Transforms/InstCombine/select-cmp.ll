@@ -957,5 +957,27 @@ define i8 @icmp_fold_to_llvm_ucmp_negative_test_ptr(ptr %0, ptr %1) {
   ret i8 %8
 }
 
+define i32 @fold_ucmp(i32 %0, i32 %1) {
+; CHECK-LABEL: @fold_ucmp(
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.ucmp.i32.i32(i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %3 = icmp eq i32 %0, %1
+  %4 = tail call i32 @llvm.ucmp.i32.i32(i32 %0, i32 %1)
+  %5 = select i1 %3, i32 0, i32 %4
+  ret i32 %5
+}
+
+define i32 @fold_scmp(i32 %0, i32 %1) {
+; CHECK-LABEL: @fold_scmp(
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.scmp.i32.i32(i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %3 = icmp eq i32 %0, %1
+  %4 = tail call i32 @llvm.scmp.i32.i32(i32 %0, i32 %1)
+  %5 = select i1 %3, i32 0, i32 %4
+  ret i32 %5
+}
+
 declare void @use(i1)
 declare void @use.i8(i8)

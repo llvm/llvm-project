@@ -1955,15 +1955,17 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
   return nullptr;
 }
 
-/// Transform
-///
-/// select(icmp(eq, X, Y), Z, select(icmp(ult, X, Y), -1, 1))
-/// into select(icmp(eq, X, Y), Z, llvm.ucmp(freeze(X), freeze(Y)))
-///
-/// or
-///
-/// select(icmp(eq, X, Y), Z, select(icmp(slt, X, Y), -1, 1))
-/// into select(icmp(eq, X, Y), Z, llvm.scmp(freeze(X), freeze(Y)))
+// Transform
+//
+// select(icmp(eq, X, Y), Z, select(icmp(ult, X, Y), -1, 1))
+// ->
+// select(icmp(eq, X, Y), Z, llvm.ucmp(freeze(X), freeze(Y)))
+//
+// or
+//
+// select(icmp(eq, X, Y), Z, select(icmp(slt, X, Y), -1, 1))
+// ->
+//  select(icmp(eq, X, Y), Z, llvm.scmp(freeze(X), freeze(Y)))
 static Value *foldSelectToInstrincCmp(SelectInst &SI, const ICmpInst *ICI,
                                       Value *TrueVal, Value *FalseVal,
                                       InstCombiner::BuilderTy &Builder) {
@@ -1973,12 +1975,11 @@ static Value *foldSelectToInstrincCmp(SelectInst &SI, const ICmpInst *ICI,
     return nullptr;
 
   CmpPredicate IPred;
-  if (match(FalseVal, m_Select(m_ICmp(IPred, m_Specific(ICI->getOperand(0)),
-                                      m_Specific(ICI->getOperand(1))),
+  Value *X = ICI->getOperand(0);
+  Value *Y = ICI->getOperand(1);
+  if (match(FalseVal, m_Select(m_ICmp(IPred, m_Specific(X), m_Specific(Y)),
                                m_AllOnes(), m_One())) &&
       (IPred == ICmpInst::ICMP_ULT || IPred == ICmpInst::ICMP_SLT)) {
-    Value *X = ICI->getOperand(0);
-    Value *Y = ICI->getOperand(1);
 
     // icmp(ult, ptr %X, ptr %Y) -> cannot be folded because
     // there is no intrinsic for a pointer comparison.
@@ -1999,6 +2000,30 @@ static Value *foldSelectToInstrincCmp(SelectInst &SI, const ICmpInst *ICI,
         Builder.CreateIntrinsic(FalseVal->getType(), IID, {FrozenX, FrozenY});
     return Builder.CreateSelect(SI.getCondition(), TrueVal, Cmp, "select.ucmp");
   }
+
+  return nullptr;
+}
+
+// Transform
+// select(icmp(eq, X, Y), 0, llvm.cmp(X, Y))
+// ->
+// llvm.cmp(X, Y)
+static Value *foldInstrincCmp(SelectInst &SI, const ICmpInst *ICI,
+                              Value *TrueVal, Value *FalseVal,
+                              InstCombiner::BuilderTy &Builder) {
+  ICmpInst::Predicate Pred = ICI->getPredicate();
+
+  if (Pred != ICmpInst::ICMP_EQ)
+    return nullptr;
+
+  Value *X = ICI->getOperand(0);
+  Value *Y = ICI->getOperand(1);
+
+  auto ucmp = m_Intrinsic<Intrinsic::ucmp>(m_Specific(X), m_Specific(Y));
+  auto scmp = m_Intrinsic<Intrinsic::scmp>(m_Specific(X), m_Specific(Y));
+  if (match(SI.getTrueValue(), m_Zero()) &&
+      (match(SI.getFalseValue(), ucmp) || match(SI.getFalseValue(), scmp)))
+    return SI.getFalseValue();
 
   return nullptr;
 }
@@ -2235,6 +2260,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectToInstrincCmp(SI, ICI, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldInstrincCmp(SI, ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
   return Changed ? &SI : nullptr;
