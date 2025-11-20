@@ -20,8 +20,9 @@ constexpr bool isAllocatorAware<bsl::string>() {
   return true;
 }
 
-// Note: in reality `Optional_Base` checks if type uses bsl::allocator<>
-// This is simplified mock to illustrate similar behaviour
+// Note: real `Optional_Base` uses `BloombergLP::bslma::UsesBslmaAllocator`
+// to check if type is alocator-aware.
+// This is simplified mock to illustrate similar behaviour.
 template <class T, bool AA = isAllocatorAware<T>()>
 class Optional_Base {
 
