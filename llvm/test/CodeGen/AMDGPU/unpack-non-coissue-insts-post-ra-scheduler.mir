@@ -7,9 +7,6 @@
 name:            test_pk_mul_unpacking_f32
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -99,9 +96,6 @@ body:             |
 ---
 name:            test_op_sel_selection_unpacking_f32
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5'}
 
 body:             |
   bb.0.entry:
@@ -193,9 +187,6 @@ body:             |
 name:            test_op_sel_hi_selection_unpacking_f32
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5'}
-
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -285,9 +276,6 @@ body:             |
 ---
 name:            test_pk_add_unpacking_f32
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -443,9 +431,6 @@ body:             |
 name:            test_pk_fma_unpacking_f32
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -527,9 +512,6 @@ body:             |
 ---
 name:            test_unpacking_does_not_introduce_rw_dependency
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -616,9 +598,6 @@ body:             |
 ---
 name:            test_opcodes_not_supported_for_unpacking_are_skipped
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -716,9 +695,6 @@ body:             |
 name:            test_opsel_register_is_correctly_marked_as_killed
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -809,9 +785,6 @@ body:             |
 name:            test_inst_dependent_on_mfma_are_not_unpacked
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -900,9 +873,6 @@ body:             |
 name:            test_mfma_def_using_instr_blocks_unpacking
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -986,9 +956,6 @@ body:             |
 ---
 name:            test_unpacking_with_imm_input
 tracksRegLiveness: true
-
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -1080,9 +1047,6 @@ body:             |
 name:            test_neg_lo_hi_post_unpacking
 tracksRegLiveness: true
 
-liveins:
-  - { reg: '$sgpr4_sgpr5' }
-
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -1167,3 +1131,570 @@ body:             |
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     renamable $vgpr16_vgpr17 = nofpexcept V_PK_MUL_F32 8, killed $sgpr30_sgpr31, 11, killed $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     S_ENDPGM 0
+
+...
+---
+name:            test_v_pk_mov_unpacking
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $sgpr4_sgpr5
+    ; GFX950-LABEL: name: test_v_pk_mov_unpacking
+    ; GFX950: liveins: $sgpr4_sgpr5
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX950-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX950-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX950-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX950-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX950-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX950-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX950-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_v_pk_mov_unpacking
+    ; GFX942: liveins: $sgpr4_sgpr5
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX942-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX942-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX942-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX942-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX942-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX942-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX942-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_v_pk_mov_unpacking
+    ; GFX90A: liveins: $sgpr4_sgpr5
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX90A-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX90A-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX90A-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX90A-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX90A-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 8, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+  early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+  renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+  renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+  renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+  early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+  early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+  $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+  $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+  $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+  $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+  $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+  renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+  $vgpr4_vgpr5 = V_PK_MOV_B32 8, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+  S_ENDPGM 0
+
+...
+---
+name:            test_v_pk_mov_with_neg_modifiers_not_unpacked_0
+tracksRegLiveness: true
+
+body:             |
+  bb.0.entry:
+  liveins: $sgpr4_sgpr5
+    ; GFX950-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_0
+    ; GFX950: liveins: $sgpr4_sgpr5
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX950-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX950-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX950-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX950-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX950-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX950-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX950-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 9, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_0
+    ; GFX942: liveins: $sgpr4_sgpr5
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX942-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX942-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX942-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX942-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX942-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX942-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX942-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 9, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_0
+    ; GFX90A: liveins: $sgpr4_sgpr5
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX90A-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX90A-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX90A-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX90A-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX90A-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 9, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+  early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+  renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+  renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+  renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+  early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+  early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+  $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+  $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+  $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+  $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+  $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+  renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+  $vgpr4_vgpr5 = V_PK_MOV_B32 9, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+  S_ENDPGM 0
+
+...
+---
+name:            test_v_pk_mov_with_neg_modifiers_not_unpacked_1
+tracksRegLiveness: true
+
+body:             |
+  bb.0.entry:
+  liveins: $sgpr4_sgpr5
+    ; GFX950-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_1
+    ; GFX950: liveins: $sgpr4_sgpr5
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX950-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX950-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX950-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX950-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX950-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX950-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX950-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 8, killed $vgpr0_vgpr1, 10, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_1
+    ; GFX942: liveins: $sgpr4_sgpr5
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX942-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX942-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX942-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX942-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX942-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX942-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX942-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 8, killed $vgpr0_vgpr1, 10, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_v_pk_mov_with_neg_modifiers_not_unpacked_1
+    ; GFX90A: liveins: $sgpr4_sgpr5
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX90A-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX90A-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX90A-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX90A-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX90A-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 8, killed $vgpr0_vgpr1, 10, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+  early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+  renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+  renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+  renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+  early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+  early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+  $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+  $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+  $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+  $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+  $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+  renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+  $vgpr4_vgpr5 = V_PK_MOV_B32 8, killed $vgpr0_vgpr1, 10, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+  S_ENDPGM 0
+
+...
+---
+name:            test_v_pk_mov_with_neg_modifiers_correctly_unpacked_2
+tracksRegLiveness: true
+
+body:             |
+  bb.0.entry:
+  liveins: $sgpr4_sgpr5
+    ; GFX950-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_2
+    ; GFX950: liveins: $sgpr4_sgpr5
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX950-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX950-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX950-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX950-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX950-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX950-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX950-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_2
+    ; GFX942: liveins: $sgpr4_sgpr5
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX942-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX942-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX942-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX942-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX942-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX942-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX942-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_2
+    ; GFX90A: liveins: $sgpr4_sgpr5
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX90A-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX90A-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX90A-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX90A-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX90A-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 8, killed $vgpr0_vgpr1, 9, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+  early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+  renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+  renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+  renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+  early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+  early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+  $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+  $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+  $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+  $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+  $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+  renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+  $vgpr4_vgpr5 = V_PK_MOV_B32 8, killed $vgpr0_vgpr1, 9, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+  S_ENDPGM 0
+
+...
+---
+name:            test_v_pk_mov_with_neg_modifiers_correctly_unpacked_3
+tracksRegLiveness: true
+
+body:             |
+  bb.0.entry:
+  liveins: $sgpr4_sgpr5
+    ; GFX950-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_3
+    ; GFX950: liveins: $sgpr4_sgpr5
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX950-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX950-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX950-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX950-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX950-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX950-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX950-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_3
+    ; GFX942: liveins: $sgpr4_sgpr5
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX942-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX942-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX942-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX942-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX942-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX942-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX942-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_3
+    ; GFX90A: liveins: $sgpr4_sgpr5
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX90A-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX90A-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX90A-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX90A-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX90A-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 10, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+  early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+  renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+  renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+  renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+  early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+  early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+  $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+  $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+  $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+  $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+  $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+  renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+  $vgpr4_vgpr5 = V_PK_MOV_B32 10, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+  S_ENDPGM 0
+
+...
+---
+name:            test_v_pk_mov_with_neg_modifiers_correctly_unpacked_4
+tracksRegLiveness: true
+
+body:             |
+  bb.0.entry:
+  liveins: $sgpr4_sgpr5
+    ; GFX950-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_4
+    ; GFX950: liveins: $sgpr4_sgpr5
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX950-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX950-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX950-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX950-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX950-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX950-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX950-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 14, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_4
+    ; GFX942: liveins: $sgpr4_sgpr5
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX942-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX942-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX942-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX942-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX942-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX942-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX942-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 14, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_v_pk_mov_with_neg_modifiers_correctly_unpacked_4
+    ; GFX90A: liveins: $sgpr4_sgpr5
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX90A-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX90A-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX90A-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX90A-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX90A-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 14, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+  early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+  renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+  renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+  renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+  early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+  early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+  $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+  $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+  $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+  $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+  $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+  renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+  $vgpr4_vgpr5 = V_PK_MOV_B32 14, killed $vgpr0_vgpr1, 8, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+  S_ENDPGM 0
+
+...
+---
+name:            test_v_pk_mov_op_sel_unpacking
+tracksRegLiveness: true
+
+body:             |
+  bb.0.entry:
+  liveins: $sgpr4_sgpr5
+    ; GFX950-LABEL: name: test_v_pk_mov_op_sel_unpacking
+    ; GFX950: liveins: $sgpr4_sgpr5
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX950-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX950-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX950-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX950-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX950-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX950-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX950-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX950-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX950-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_v_pk_mov_op_sel_unpacking
+    ; GFX942: liveins: $sgpr4_sgpr5
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX942-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX942-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX942-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX942-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX942-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX942-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX942-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX942-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX942-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_v_pk_mov_op_sel_unpacking
+    ; GFX90A: liveins: $sgpr4_sgpr5
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    ; GFX90A-NEXT: renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX90A-NEXT: renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    ; GFX90A-NEXT: early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    ; GFX90A-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    ; GFX90A-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    ; GFX90A-NEXT: $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    ; GFX90A-NEXT: $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 12, killed $vgpr0_vgpr1, 0, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+  early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+  renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+  renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+  renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+  early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+  early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+  $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+  $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+  $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+  $vgpr10 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
+  $vgpr11 = V_MOV_B32_e32 killed $sgpr7, implicit $exec, implicit $exec
+  renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+  $vgpr4_vgpr5 = V_PK_MOV_B32 12, killed $vgpr0_vgpr1, 0, killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
+  S_ENDPGM 0
