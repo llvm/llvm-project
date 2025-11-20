@@ -17,6 +17,4 @@ program main
   end do
   counter = counter+1
   !$omp end target
-
-  print '("Result: "I0)', counter
  end program
