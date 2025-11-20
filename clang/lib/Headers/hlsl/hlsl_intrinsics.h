@@ -672,7 +672,7 @@ smoothstep(__detail::HLSL_FIXED_VECTOR<float, N> Min,
 
 /// \fn T ddx(T x)
 /// \brief Computes the sum of the absolute values of the partial derivatives
-/// with regard to the x and y screen space coordinates.
+/// with regard to the x screen space coordinate.
 /// \param x [in] The floating-point scalar or vector to process.
 ///
 /// The return value is a floating-point scalar or vector where each element
@@ -712,7 +712,7 @@ ddx(__detail::HLSL_FIXED_VECTOR<float, N> input) {
 
 /// \fn T ddy(T x)
 /// \brief Computes the sum of the absolute values of the partial derivatives
-/// with regard to the x and y screen space coordinates.
+/// with regard to the y screen space coordinate.
 /// \param x [in] The floating-point scalar or vector to process.
 ///
 /// The return value is a floating-point scalar or vector where each element
