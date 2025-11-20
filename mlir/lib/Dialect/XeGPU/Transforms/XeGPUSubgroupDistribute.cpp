@@ -1504,8 +1504,9 @@ struct VectorExtractStridedSliceDistribution
     auto distributedType =
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
     // Find the distributed dimension. There should be exactly one.
-    auto yieldedType = cast<VectorType>(operand->get().getType());
-    auto distributedDims = getDistributedDims(yieldedType, distributedType);
+    auto extractResultType = cast<VectorType>(operand->get().getType());
+    auto distributedDims =
+        getDistributedDims(extractResultType, distributedType);
     // Only single dimension distribution is supported.
     if (distributedDims.size() != 1)
       return rewriter.notifyMatchFailure(
@@ -1616,8 +1617,9 @@ struct VectorInsertStridedSliceDistribution
         cast<VectorType>(warpOp.getResult(operandNumber).getType());
     // Find the distributed dimension of the dest vector. There should be
     // exactly one.
-    auto yieldedType = cast<VectorType>(operand->get().getType());
-    auto destDistributedDims = getDistributedDims(yieldedType, distributedType);
+    auto insertResultType = cast<VectorType>(operand->get().getType());
+    auto destDistributedDims =
+        getDistributedDims(insertResultType, distributedType);
     // Only single dimension distribution is supported.
     if (destDistributedDims.size() != 1)
       return rewriter.notifyMatchFailure(
