@@ -152,6 +152,7 @@ void getFeaturesForCPU(StringRef CPU,
       EnabledFeatures.push_back(F.substr(1));
 }
 
+namespace {
 class RISCVTuneFeatureLookupTable {
   struct RISCVTuneFeature {
     unsigned PosIdx;
@@ -209,8 +210,8 @@ public:
   }
 
   /// Returns the implied features, or empty ArrayRef if not found. Note:
-  /// ImpliedFeatureMap / InvImpliedFeatureMap are the owner of these implied
-  /// feature list, so we can just return the ArrayRef.
+  /// ImpliedFeatureMap / InvImpliedFeatureMap are the owners of these implied
+  /// feature lists, so we can just return the ArrayRef.
   ArrayRef<StringRef> featureImplies(StringRef FeatureName,
                                      bool Inverse = false) const {
     const auto &Map = Inverse ? InvImpliedFeatureMap : ImpliedFeatureMap;
@@ -220,6 +221,7 @@ public:
     return It->second;
   }
 };
+} // namespace
 
 void getAllTuneFeatures(SmallVectorImpl<StringRef> &Features) {
   RISCVTuneFeatureLookupTable::getAllTuneFeatures(Features);
@@ -235,7 +237,7 @@ Error parseTuneFeatureString(StringRef TFString,
   std::string WarningMsg;
 
   TFString = TFString.trim();
-  // Note: StringSet is not really ergnomic to use in this case here.
+  // Note: StringSet is not really ergonomic to use in this case here.
   SmallStringSet PositiveFeatures;
   SmallStringSet NegativeFeatures;
   // Phase 1: Collect explicit features.
