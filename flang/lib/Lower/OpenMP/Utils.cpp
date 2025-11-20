@@ -779,17 +779,9 @@ static void processTileSizesFromOpenMPConstruct(
   if (!ompCons)
     return;
   if (auto *ompLoop{std::get_if<parser::OpenMPLoopConstruct>(&ompCons->u)}) {
-    const auto &nestedOptional =
-        std::get<std::optional<parser::NestedConstruct>>(ompLoop->t);
-    assert(nestedOptional.has_value() &&
-           "Expected a DoConstruct or OpenMPLoopConstruct");
-    const auto *innerConstruct =
-        std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
-            &(nestedOptional.value()));
-    if (innerConstruct) {
-      const auto &innerLoopDirective = innerConstruct->value();
+    if (auto *innerConstruct = ompLoop->GetNestedConstruct()) {
       const parser::OmpDirectiveSpecification &innerBeginSpec =
-          innerLoopDirective.BeginDir();
+          innerConstruct->BeginDir();
       if (innerBeginSpec.DirId() == llvm::omp::Directive::OMPD_tile) {
         // Get the size values from parse tree and convert to a vector.
         for (const auto &clause : innerBeginSpec.Clauses().v) {

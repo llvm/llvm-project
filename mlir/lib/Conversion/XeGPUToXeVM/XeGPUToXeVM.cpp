@@ -194,10 +194,9 @@ class CreateNdDescToXeVMPattern
       if (!sourceMemrefTy.hasRank()) {
         return rewriter.notifyMatchFailure(op, "Expected ranked Memref.");
       }
-      baseAddr =
-          memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc, source);
-      // Cast index to i64.
-      baseAddr = arith::IndexCastUIOp::create(rewriter, loc, i64Ty, baseAddr);
+      // Access adaptor after failure check to avoid rolling back generated code
+      // for materialization cast.
+      baseAddr = adaptor.getSource();
     } else {
       baseAddr = adaptor.getSource();
       if (baseAddr.getType() != i64Ty) {
@@ -579,9 +578,6 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
   }
 };
 
-// Lower xegpu::CreateMemDescOp to memref::ViewOp. Since SLM access instructions
-// on Xe2 and Xe3 operate on 32-bit or 64-bit units, all data types smaller than
-// 32 bits will be converted to 32 bits.
 class CreateMemDescOpPattern final
     : public OpConversionPattern<xegpu::CreateMemDescOp> {
 public:
@@ -590,16 +586,7 @@ public:
   matchAndRewrite(xegpu::CreateMemDescOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    auto resTy = op.getMemDesc();
-
-    // Create the result MemRefType with the same shape, element type, and
-    // memory space
-    auto newResTy = getTypeConverter()->convertType<MemRefType>(resTy);
-
-    Value zero = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 0);
-    auto viewOp = memref::ViewOp::create(rewriter, op.getLoc(), newResTy,
-                                         op.getSource(), zero, ValueRange());
-    rewriter.replaceOp(op, viewOp);
+    rewriter.replaceOp(op, adaptor.getSource());
     return success();
   }
 };
@@ -619,7 +606,7 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
 
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
-    Value basePtrStruct = adaptor.getMemDesc();
+    Value baseAddr32 = adaptor.getMemDesc();
     Value mdescVal = op.getMemDesc();
     // Load result or Store value Type can be vector or scalar.
     Value data;
@@ -647,21 +634,14 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
 
     auto mdescTy = cast<xegpu::MemDescType>(mdescVal.getType());
 
-    Value basePtrLLVM = memref::ExtractAlignedPointerAsIndexOp::create(
-        rewriter, loc, basePtrStruct);
-
-    // Convert base pointer (ptr) to i32
-    Value basePtrI32 = arith::IndexCastUIOp::create(
-        rewriter, loc, rewriter.getI32Type(), basePtrLLVM);
-
     Value linearOffset = mdescTy.getLinearOffsets(rewriter, loc, offsets);
     linearOffset = arith::IndexCastUIOp::create(
         rewriter, loc, rewriter.getI32Type(), linearOffset);
-    basePtrI32 = addOffsetToBaseAddr(rewriter, loc, basePtrI32, linearOffset,
-                                     elemByteSize);
+    Value basePtrI32 = addOffsetToBaseAddr(rewriter, loc, baseAddr32,
+                                           linearOffset, elemByteSize);
 
     // convert base pointer (i32) to LLVM pointer type
-    basePtrLLVM =
+    Value basePtrLLVM =
         LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtrI32);
 
     if (op.getSubgroupBlockIoAttr()) {
@@ -1005,15 +985,14 @@ struct ConvertXeGPUToXeVMPass
       auto i32Type = IntegerType::get(&getContext(), 32);
       return VectorType::get(8, i32Type);
     });
-    // Convert MemDescType into flattened MemRefType for SLM
+    // Convert MemDescType into i32 for SLM
     typeConverter.addConversion([&](xegpu::MemDescType type) -> Type {
-      Type elemTy = type.getElementType();
-      int numElems = type.getNumElements();
-      return MemRefType::get(numElems, elemTy, AffineMap(), 3);
+      return IntegerType::get(&getContext(), 32);
     });
 
     typeConverter.addConversion([&](MemRefType type) -> Type {
-      // Convert MemRefType to i64 type.
+      if (type.getMemorySpaceAsInt() == 3)
+        return IntegerType::get(&getContext(), 32);
       return IntegerType::get(&getContext(), 64);
     });
 
