@@ -2038,8 +2038,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   if (beginName.v == llvm::omp::OMPD_master_taskloop ||
       beginName.v == llvm::omp::OMPD_master_taskloop_simd ||
       beginName.v == llvm::omp::OMPD_parallel_master_taskloop ||
-      beginName.v == llvm::omp::OMPD_parallel_master_taskloop_simd ||
-      beginName.v == llvm::omp::Directive::OMPD_target_loop) {
+      beginName.v == llvm::omp::OMPD_parallel_master_taskloop_simd) {
     unsigned version{context_.langOptions().OpenMPVersion};
     IssueNonConformanceWarning(beginName.v, beginName.source, version);
   }
@@ -2047,13 +2046,9 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   SetContextAssociatedLoopLevel(GetNumAffectedLoopsFromLoopConstruct(x));
 
   if (beginName.v == llvm::omp::Directive::OMPD_do) {
-    auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-    if (optLoopCons.has_value()) {
-      if (const auto &doConstruct{
-              std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
-        if (doConstruct->IsDoWhile()) {
-          return true;
-        }
+    if (const parser::DoConstruct *doConstruct{x.GetNestedLoop()}) {
+      if (doConstruct->IsDoWhile()) {
+        return true;
       }
     }
   }
@@ -2210,18 +2205,8 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromInnerLoopContruct(
     const parser::OpenMPLoopConstruct &x,
     llvm::SmallVector<std::int64_t> &levels,
     llvm::SmallVector<const parser::OmpClause *> &clauses) {
-
-  const auto &nestedOptional =
-      std::get<std::optional<parser::NestedConstruct>>(x.t);
-  assert(nestedOptional.has_value() &&
-      "Expected a DoConstruct or OpenMPLoopConstruct");
-  const auto *innerConstruct =
-      std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
-          &(nestedOptional.value()));
-
-  if (innerConstruct) {
-    CollectNumAffectedLoopsFromLoopConstruct(
-        innerConstruct->value(), levels, clauses);
+  if (auto *innerConstruct{x.GetNestedConstruct()}) {
+    CollectNumAffectedLoopsFromLoopConstruct(*innerConstruct, levels, clauses);
   }
 }
 
@@ -2286,24 +2271,12 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
 
   // Find the associated region by skipping nested loop-associated constructs
   // such as loop transformations
-  const parser::NestedConstruct *innermostAssocRegion{nullptr};
   const parser::OpenMPLoopConstruct *innermostConstruct{&x};
-  while (const auto &innerAssocStmt{
-      std::get<std::optional<parser::NestedConstruct>>(
-          innermostConstruct->t)}) {
-    innermostAssocRegion = &(innerAssocStmt.value());
-    if (const auto *innerConstruct{
-            std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
-                innermostAssocRegion)}) {
-      innermostConstruct = &innerConstruct->value();
-    } else {
-      break;
-    }
+  while (auto *nested{innermostConstruct->GetNestedConstruct()}) {
+    innermostConstruct = nested;
   }
 
-  if (!innermostAssocRegion)
-    return;
-  const auto &outer{std::get_if<parser::DoConstruct>(innermostAssocRegion)};
+  const auto *outer{innermostConstruct->GetNestedLoop()};
   if (!outer)
     return;
 
@@ -2398,61 +2371,51 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
   const parser::OmpClause *clause{GetAssociatedClause()};
   bool hasCollapseClause{
       clause ? (clause->Id() == llvm::omp::OMPC_collapse) : false};
-  const parser::OpenMPLoopConstruct *innerMostLoop = &x;
-  const parser::NestedConstruct *innerMostNest = nullptr;
-  while (auto &optLoopCons{
-      std::get<std::optional<parser::NestedConstruct>>(innerMostLoop->t)}) {
-    innerMostNest = &(optLoopCons.value());
-    if (const auto *innerLoop{
-            std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
-                innerMostNest)}) {
-      innerMostLoop = &(innerLoop->value());
-    } else
-      break;
+
+  const parser::OpenMPLoopConstruct *innerMostNest = &x;
+  while (auto *nested{innerMostNest->GetNestedConstruct()}) {
+    innerMostNest = nested;
   }
 
-  if (innerMostNest) {
-    if (const auto &outer{std::get_if<parser::DoConstruct>(innerMostNest)}) {
-      for (const parser::DoConstruct *loop{&*outer}; loop && level > 0;
-          --level) {
-        if (loop->IsDoConcurrent()) {
-          // DO CONCURRENT is explicitly allowed for the LOOP construct so long
-          // as there isn't a COLLAPSE clause
-          if (isLoopConstruct) {
-            if (hasCollapseClause) {
-              // hasCollapseClause implies clause != nullptr
-              context_.Say(clause->source,
-                  "DO CONCURRENT loops cannot be used with the COLLAPSE clause."_err_en_US);
-            }
-          } else {
-            auto &stmt =
-                std::get<parser::Statement<parser::NonLabelDoStmt>>(loop->t);
-            context_.Say(stmt.source,
-                "DO CONCURRENT loops cannot form part of a loop nest."_err_en_US);
+  if (const auto *outer{innerMostNest->GetNestedLoop()}) {
+    for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
+      if (loop->IsDoConcurrent()) {
+        // DO CONCURRENT is explicitly allowed for the LOOP construct so long
+        // as there isn't a COLLAPSE clause
+        if (isLoopConstruct) {
+          if (hasCollapseClause) {
+            // hasCollapseClause implies clause != nullptr
+            context_.Say(clause->source,
+                "DO CONCURRENT loops cannot be used with the COLLAPSE clause."_err_en_US);
           }
-        }
-        // go through all the nested do-loops and resolve index variables
-        const parser::Name *iv{GetLoopIndex(*loop)};
-        if (iv) {
-          if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
-            SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
-            iv->symbol = symbol; // adjust the symbol within region
-            AddToContextObjectWithDSA(*symbol, ivDSA);
-          }
-
-          const auto &block{std::get<parser::Block>(loop->t)};
-          const auto it{block.begin()};
-          loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
+        } else {
+          auto &stmt =
+              std::get<parser::Statement<parser::NonLabelDoStmt>>(loop->t);
+          context_.Say(stmt.source,
+              "DO CONCURRENT loops cannot form part of a loop nest."_err_en_US);
         }
       }
-      CheckAssocLoopLevel(level, GetAssociatedClause());
-    } else {
-      context_.Say(GetContext().directiveSource,
-          "A DO loop must follow the %s directive"_err_en_US,
-          parser::ToUpperCaseLetters(
-              llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
-                  .str()));
+      // go through all the nested do-loops and resolve index variables
+      const parser::Name *iv{GetLoopIndex(*loop)};
+      if (iv) {
+        if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
+          SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
+          iv->symbol = symbol; // adjust the symbol within region
+          AddToContextObjectWithDSA(*symbol, ivDSA);
+        }
+
+        const auto &block{std::get<parser::Block>(loop->t)};
+        const auto it{block.begin()};
+        loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
+      }
     }
+    CheckAssocLoopLevel(level, GetAssociatedClause());
+  } else {
+    context_.Say(GetContext().directiveSource,
+        "A DO loop must follow the %s directive"_err_en_US,
+        parser::ToUpperCaseLetters(
+            llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
+                .str()));
   }
 }
 
@@ -3658,8 +3621,8 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(llvm::omp::Directive D,
   case llvm::omp::OMPD_allocate:
     setAlternativeStr("ALLOCATORS");
     break;
-  case llvm::omp::OMPD_target_loop:
-  default:;
+  default:
+    break;
   }
   context_.Warn(common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US,
       warnStrOS.str());

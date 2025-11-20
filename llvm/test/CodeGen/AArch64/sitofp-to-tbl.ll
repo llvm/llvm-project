@@ -244,11 +244,9 @@ define void @sitofp_v2i8_to_v2f64(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB3_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x0, x8, lsl #1
-; CHECK-NEXT:    ldrsb w10, [x9]
-; CHECK-NEXT:    ldrsb w9, [x9, #1]
-; CHECK-NEXT:    fmov s0, w10
-; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    ldr h0, [x0, x8, lsl #1]
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-NEXT:    str q0, [x1, x8, lsl #4]
