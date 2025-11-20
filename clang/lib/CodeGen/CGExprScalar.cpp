@@ -2422,9 +2422,27 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
     }
     return V;
   }
+  if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
+    assert(LoadList.size() >= MatTy->getNumElementsFlattened() &&
+           "Flattened type on RHS must have the same number or more elements "
+           "than vector on LHS.");
+    llvm::Value *V =
+        CGF.Builder.CreateLoad(CGF.CreateIRTemp(DestTy, "flatcast.tmp"));
+    // write to V.
+    for (unsigned I = 0, E = MatTy->getNumElementsFlattened(); I < E; I++) {
+      RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
+      assert(RVal.isScalar() &&
+             "All flattened source values should be scalars.");
+      llvm::Value *Cast =
+          CGF.EmitScalarConversion(RVal.getScalarVal(), LoadList[I].getType(),
+                                   MatTy->getElementType(), Loc);
+      V = CGF.Builder.CreateInsertElement(V, Cast, I);
+    }
+    return V;
+  }
   // if its a builtin just do an extract element or load.
   assert(DestTy->isBuiltinType() &&
-         "Destination type must be a vector or builtin type.");
+         "Destination type must be a vector, matrix, or builtin type.");
   RValue RVal = CGF.EmitLoadOfLValue(LoadList[0], Loc);
   assert(RVal.isScalar() && "All flattened source values should be scalars.");
   return CGF.EmitScalarConversion(RVal.getScalarVal(), LoadList[0].getType(),
@@ -2953,6 +2971,21 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     }
     llvm::Value *Zero = llvm::Constant::getNullValue(CGF.SizeTy);
     return Builder.CreateExtractElement(Vec, Zero, "cast.vtrunc");
+  }
+  case CK_HLSLMatrixTruncation: {
+    assert((DestTy->isMatrixType() || DestTy->isBuiltinType()) &&
+           "Destination type must be a matrix or builtin type.");
+    Value *Mat = Visit(E);
+    if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
+      SmallVector<int> Mask;
+      unsigned NumElts = MatTy->getNumElementsFlattened();
+      for (unsigned I = 0; I != NumElts; ++I)
+        Mask.push_back(I);
+
+      return Builder.CreateShuffleVector(Mat, Mask, "trunc");
+    }
+    llvm::Value *Zero = llvm::Constant::getNullValue(CGF.SizeTy);
+    return Builder.CreateExtractElement(Mat, Zero, "cast.mtrunc");
   }
   case CK_HLSLElementwiseCast: {
     RValue RV = CGF.EmitAnyExpr(E);
