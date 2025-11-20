@@ -48,6 +48,10 @@ static cl::opt<bool> UpdateKills("riscv-liveness-update-kills",
                                  cl::desc("Update kill flags"), cl::init(false),
                                  cl::Hidden);
 
+static cl::opt<bool> UpdateLiveIns("riscv-liveness-update-mbb-liveins",
+                                   cl::desc("Update MBB live-in sets"),
+                                   cl::init(false), cl::Hidden);
+
 static cl::opt<unsigned> MaxVRegs("riscv-liveness-max-vregs",
                                   cl::desc("Maximum VRegs to track"),
                                   cl::init(1024), cl::Hidden);
@@ -129,7 +133,7 @@ private:
   void computeGlobalLiveness(MachineFunction &MF);
 
   /// Update MBB live-in sets based on computed liveness information
-  void updateMBBLiveIns(MachineFunction &MF);
+  bool updateMBBLiveIns(MachineFunction &MF);
 
   /// Process a single instruction to extract def/use information
   void processInstruction(const MachineInstr &MI, LivenessInfo &Info,
@@ -348,18 +352,18 @@ void RISCVLiveVariables::computeGlobalLiveness(MachineFunction &MF) {
   }
 }
 
-void RISCVLiveVariables::updateMBBLiveIns(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << "Updating MBB live-in sets\n");
-
+bool RISCVLiveVariables::updateMBBLiveIns(MachineFunction &MF) {
   // Update each MBB's live-in set based on computed liveness
   // Only update physical register live-ins, as MBB live-in sets
   // track physical registers entering a block
+  bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     auto It = BlockLiveness.find(&MBB);
     if (It == BlockLiveness.end())
       continue;
 
     const LivenessInfo &Info = It->second;
+    Changed = true;
 
     // Clear existing live-ins
     MBB.clearLiveIns();
@@ -397,8 +401,7 @@ void RISCVLiveVariables::updateMBBLiveIns(MachineFunction &MF) {
     // Sort and unique the live-ins for efficient lookup
     MBB.sortUniqueLiveIns();
   }
-
-  LLVM_DEBUG(dbgs() << "MBB live-in sets updated\n");
+  return Changed;
 }
 
 bool RISCVLiveVariables::isLiveAt(Register Reg, const MachineInstr &MI) const {
@@ -537,13 +540,14 @@ bool RISCVLiveVariables::runOnMachineFunction(MachineFunction &MF) {
   // Step 2: Compute global liveness (LiveIn and LiveOut sets)
   computeGlobalLiveness(MF);
 
-  // Step 3: Update live-in sets of MBBs based on computed liveness
-  updateMBBLiveIns(MF);
-
   bool Changed = false;
+  // Step 3: Update live-in sets of MBBs based on computed liveness
+  if (UpdateLiveIns)
+    Changed = updateMBBLiveIns(MF);
+
   // Step 4: Mark kill flags on operands
   if (UpdateKills && MaxVRegs >= RegCounter)
-    Changed = markKills(MF);
+    Changed |= markKills(MF);
 
   LLVM_DEBUG({
     dbgs() << "\n***** Final Liveness Information *****\n";
