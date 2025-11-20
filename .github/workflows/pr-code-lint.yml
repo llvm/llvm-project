@@ -76,6 +76,9 @@ jobs:
                 clang-tablegen-targets \
                 genconfusable               # for "ConfusableIdentifierCheck.h"
 
+      - name: Install linter dependencies
+        run: pip install doc8 --break-system-packages
+
       - name: Run clang-tidy linter
         env:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
