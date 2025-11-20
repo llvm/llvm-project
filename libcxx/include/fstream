@@ -778,7 +778,12 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::close() {
     if (fclose(__h.release()))
       __rt = nullptr;
     __file_ = nullptr;
-    setbuf(0, 0);
+    // Reset the get and the put areas without nonetheless getting rid of the
+    // underlying buffers, which might have been configured by the user who might
+    // reopen the stream.
+    this->setg(nullptr, nullptr, nullptr);
+    this->setp(nullptr, nullptr);
+    __cm_ = __no_io_operations;
   }
   return __rt;
 }
