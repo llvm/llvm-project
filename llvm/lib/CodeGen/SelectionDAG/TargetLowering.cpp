@@ -8314,16 +8314,16 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
       isOperationLegalOrCustomOrPromote(Opcode, VT.getVectorElementType()))
     return DAG.UnrollVectorOp(Node);
 
-  SDValue Res = DAG.getConstant(0, DL, VT);
   switch (Opcode) {
   case ISD::CLMUL: {
+    SDValue Res = DAG.getConstant(0, DL, VT);
     for (unsigned I = 0; I < BW; ++I) {
       SDValue Mask = DAG.getConstant(APInt::getOneBitSet(BW, I), DL, VT);
       SDValue YMasked = DAG.getNode(ISD::AND, DL, VT, Y, Mask);
       SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, X, YMasked);
       Res = DAG.getNode(ISD::XOR, DL, VT, Res, Mul);
     }
-    break;
+    return Res;
   }
   case ISD::CLMULR:
   case ISD::CLMULH: {
@@ -8335,12 +8335,11 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
       SDValue XRev = DAG.getNode(ISD::BITREVERSE, DL, VT, X);
       SDValue YRev = DAG.getNode(ISD::BITREVERSE, DL, VT, Y);
       SDValue ClMul = DAG.getNode(ISD::CLMUL, DL, VT, XRev, YRev);
-      Res = DAG.getNode(ISD::BITREVERSE, DL, VT, ClMul);
-      Res = Opcode == ISD::CLMULR
-                ? Res
-                : DAG.getNode(ISD::SRL, DL, VT, Res,
-                              DAG.getShiftAmountConstant(1, VT, DL));
-      break;
+      SDValue Res = DAG.getNode(ISD::BITREVERSE, DL, VT, ClMul);
+      if (Opcode == ISD::CLMULR)
+        Res = DAG.getNode(ISD::SRL, DL, VT, Res,
+                          DAG.getShiftAmountConstant(1, VT, DL));
+      return Res;
     }
     SDValue XExt = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVT, X);
     SDValue YExt = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVT, Y);
@@ -8348,11 +8347,10 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
     unsigned ShtAmt = Opcode == ISD::CLMULR ? BW - 1 : BW;
     SDValue HiBits = DAG.getNode(ISD::SRL, DL, ExtVT, ClMul,
                                  DAG.getShiftAmountConstant(ShtAmt, ExtVT, DL));
-    Res = DAG.getNode(ISD::TRUNCATE, DL, VT, HiBits);
-    break;
+    return DAG.getNode(ISD::TRUNCATE, DL, VT, HiBits);
   }
   }
-  return Res;
+  llvm_unreachable("Expected CLMUL, CLMULR, or CLMULH");
 }
 
 // TODO: Merge with expandFunnelShift.

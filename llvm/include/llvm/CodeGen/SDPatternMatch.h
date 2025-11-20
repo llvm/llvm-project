@@ -922,8 +922,8 @@ inline BinaryOpc_match<LHS, RHS> m_Rotr(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
-inline BinaryOpc_match<LHS, RHS> m_Clmul(const LHS &L, const RHS &R) {
-  return BinaryOpc_match<LHS, RHS>(ISD::CLMUL, L, R);
+inline BinaryOpc_match<LHS, RHS, true> m_Clmul(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::CLMUL, L, R);
 }
 
 template <typename LHS, typename RHS>

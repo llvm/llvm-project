@@ -18440,7 +18440,7 @@ Semantics:
 """"""""""
 
 The '``llvm.clmul``' intrinsic computes carry-less multiply of its arguments,
-which is the result of applying the standard Eucledian multiplication algorithm,
+which is the result of applying the standard Euclidean multiplication algorithm,
 where all of the additions are replaced with XORs, and returns the low-bits.
 The vector variants operate lane-wise.
 
