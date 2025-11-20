@@ -3,9 +3,7 @@
 # This test is the same as llvm/test/DebugInfo/AArch64/instr-ref-target-hooks.ll, however, the output is taken just before the livedebugvalues pass, and then a clobber
 # to the stack slot has been added after the first LDRXui in bb.2.if.then13, the livedebugvalues pass should still recover the value, as it was loaded into $x8 before the clobber.
 
-# REQUIRES: system-darwin
-
-# RUN: llc -o - %s -run-pass=livedebugvalues | FileCheck %s
+# RUN: llc -o - %s -start-before=livedebugvalues -stop-after=livedebugvalues -mtriple=aarch64-apple-darwin | FileCheck %s
 
 # CHECK: ![[LOC:[0-9]+]] = !DILocalVariable(name: "__last",
 # CHECK-LABEL: bb.2.if.then13

@@ -183,6 +183,9 @@ private:
   bool InConditionalLine() const {
     return InOpenMPConditionalLine() || InOpenACCOrCUDAConditionalLine();
   }
+  bool IsOpenMPDirective() const {
+    return directiveSentinel_ && std::strcmp(directiveSentinel_, "$omp") == 0;
+  }
   bool InFixedFormSource() const {
     return inFixedForm_ && !inPreprocessorDirective_ && !InCompilerDirective();
   }
