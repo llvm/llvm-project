@@ -36,10 +36,6 @@ function execOnError() {
    exec "$@"
 }
 
-if  [ "$GPURUN_BYPASS" = "1" ]; then
-  execOnError "$@"
-fi
-
 # PROGVERSION string is updated by cmake when component is installed
 PROGVERSION=X.Y-Z
 function version(){
@@ -173,6 +169,10 @@ while [ "$_end_gpurun_opts" == "0"  ] ; do
      shift
    fi
 done
+
+if  [ "$GPURUN_BYPASS" = "1" ]; then
+  execOnError "$@"
+fi
 
 # Default: quiet operation
 GPURUN_VERBOSE=${GPURUN_VERBOSE:-0}
