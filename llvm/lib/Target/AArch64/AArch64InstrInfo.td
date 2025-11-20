@@ -6808,6 +6808,10 @@ defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fround, "F
 // For global-isel we can use register classes to determine
 // which FCVT instruction to use.
 let Predicates = [HasFPRCVT] in {
+def : Pat<(i64 (any_lround f16:$Rn)),
+          (FCVTASDHr f16:$Rn)>;
+def : Pat<(i64 (any_llround f16:$Rn)),
+          (FCVTASDHr f16:$Rn)>;
 def : Pat<(i64 (any_lround f32:$Rn)),
           (FCVTASDSr f32:$Rn)>;
 def : Pat<(i64 (any_llround f32:$Rn)),
