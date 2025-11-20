@@ -5520,7 +5520,8 @@ static SDValue combineSTORE(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     // Unfortunately, we can't do this in the legalizer because there is no
     // way to setOperationAction for an non-simple type.
     StoreSDNode *ST = cast<StoreSDNode>(N);
-    if (!ST->getValue().getValueType().isSimple())
+    if (!ST->getValue().getValueType().isSimple() ||
+        ST->getValue().getScalarValueSizeInBits() >= 256)
       return lowerSTOREVector(SDValue(ST, 0), DCI.DAG, STI);
   }
 
@@ -5533,7 +5534,8 @@ static SDValue combineLOAD(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     // Here is our chance to custom lower a load with a non-simple type.
     // Unfortunately, we can't do this in the legalizer because there is no
     // way to setOperationAction for an non-simple type.
-    if (!N->getValueType(0).isSimple())
+    if (!N->getValueType(0).isSimple() ||
+        N->getValueType(0).getScalarSizeInBits() >= 256)
       return lowerLoadVector(N, DCI.DAG, STI);
   }
 
