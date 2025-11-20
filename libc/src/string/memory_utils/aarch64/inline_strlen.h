@@ -95,15 +95,16 @@ namespace sve {
   return len;
 }
 } // namespace sve
-} // internal::arch_vector
-} // namespace LIBC_NAMESPACE_DECL
 #endif // LIBC_TARGET_CPU_HAS_SVE
 
-namespace LIBC_NAMESPACE_DECL {
+[[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
 #ifdef LIBC_TARGET_CPU_HAS_SVE
-namespace string_length_impl = sve;
+  return sve::string_length(src);
 #elif defined(__ARM_NEON)
-namespace string_length_impl = neon;
+  return neon::string_length(src);
 #endif
+}
+
+} // internal::arch_vector
 } // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_STRLEN_H
