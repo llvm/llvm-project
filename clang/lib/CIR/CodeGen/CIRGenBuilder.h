@@ -344,6 +344,11 @@ public:
     llvm_unreachable("negation for the given type is NYI");
   }
 
+  cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
+                                   cir::FPClassTest flags) {
+    return cir::IsFPClassOp::create(*this, loc, src, flags);
+  }
+
   // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
   // operations.
   mlir::Value createFloatingCast(mlir::Value v, mlir::Type destType) {

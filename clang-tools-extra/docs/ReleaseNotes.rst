@@ -527,6 +527,11 @@ Changes in existing checks
   ignoring default constructors with user provided arguments and adding
   detection in container's method except ``empty``.
 
+- Improved :doc:`readability-duplicate-include
+  <clang-tidy/checks/readability/duplicate-include>` check by adding
+  the ``IgnoredFilesList`` option (semicolon-separated list of regexes or
+  filenames) to allow intentional duplicates.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
   declarations and macros in system headers. The documentation is also improved

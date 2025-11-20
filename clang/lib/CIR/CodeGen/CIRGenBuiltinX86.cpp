@@ -121,13 +121,26 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     return emitIntrinsicCallOp(*this, expr, "x86.sse.sfence", voidTy);
   case X86::BI_mm_prefetch:
   case X86::BI__rdtsc:
-  case X86::BI__builtin_ia32_rdtscp:
+  case X86::BI__builtin_ia32_rdtscp: {
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
+  }
   case X86::BI__builtin_ia32_lzcnt_u16:
   case X86::BI__builtin_ia32_lzcnt_u32:
-  case X86::BI__builtin_ia32_lzcnt_u64:
+  case X86::BI__builtin_ia32_lzcnt_u64: {
+    mlir::Value isZeroPoison = builder.getFalse(getLoc(expr->getExprLoc()));
+    return emitIntrinsicCallOp(*this, expr, "ctlz", ops[0].getType(),
+                               mlir::ValueRange{ops[0], isZeroPoison});
+  }
   case X86::BI__builtin_ia32_tzcnt_u16:
   case X86::BI__builtin_ia32_tzcnt_u32:
-  case X86::BI__builtin_ia32_tzcnt_u64:
+  case X86::BI__builtin_ia32_tzcnt_u64: {
+    mlir::Value isZeroPoison = builder.getFalse(getLoc(expr->getExprLoc()));
+    return emitIntrinsicCallOp(*this, expr, "cttz", ops[0].getType(),
+                               mlir::ValueRange{ops[0], isZeroPoison});
+  }
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:
