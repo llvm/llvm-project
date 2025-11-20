@@ -23,20 +23,15 @@ include "llvm/TableGen/SearchableTable.td"
 def FeatureSoftMulDiv
   : SubtargetFeature<"soft-mul-div", "UseSoftMulDiv", "true",
                      "Use software emulation for integer multiply and divide">;
-
 def FeatureNoFSMULD
   : SubtargetFeature<"no-fsmuld", "HasNoFSMULD", "true",
                      "Disable the fsmuld instruction.">;
 def FeatureNoFMULS
   : SubtargetFeature<"no-fmuls", "HasNoFMULS", "true",
                      "Disable the fmuls instruction.">;
-
 def FeatureV9
   : SubtargetFeature<"v9", "IsV9", "true",
                      "Enable SPARC-V9 instructions">;
-def Feature64Bit : SubtargetFeature<"64bit", "Is64Bit", "true",
-                                    "Enable 64-bit mode", [FeatureV9]>;
-
 def FeatureV8Plus
   : SubtargetFeature<"v8plus", "IsV8Plus", "true",
                      "Enable V8+ mode, allowing use of 64-bit V9 instructions in 32-bit code">;
@@ -77,17 +72,18 @@ def FeatureLeon
 def FeaturePWRPSR
   : SubtargetFeature<"leonpwrpsr", "HasPWRPSR", "true",
                      "Enable the PWRPSR instruction">;
-
 def FeatureHardQuad
   : SubtargetFeature<"hard-quad-float", "HasHardQuad", "true",
                      "Enable quad-word floating point instructions">;
-
 def UsePopc : SubtargetFeature<"popc", "UsePopc", "true",
                                "Use the popc (population count) instruction">;
 
 def FeatureSoftFloat : SubtargetFeature<"soft-float", "UseSoftFloat", "true",
                               "Use software emulation for floating point">;
-
+def Feature32Bit : SubtargetFeature<"32bit", "Is32Bit", "true",
+                                    "Enable 32-bit mode">;
+def Feature64Bit : SubtargetFeature<"64bit", "Is64Bit", "true",
+                                    "Enable 64-bit mode", [FeatureV9]>;
 //===----------------------------------------------------------------------===//
 // SPARC Subtarget tuning features.
 //
