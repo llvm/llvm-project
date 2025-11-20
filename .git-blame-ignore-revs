@@ -144,11 +144,6 @@ b7e332d3f59f567b1999fbcc660d7837cba8e406
 6056f942abe83b05406df8b04e95ec37a3d160b5
 906295b8a31c8dac5aa845864c0bca9f02f86184
 
-# [clang-tidy][NFC] Fix alphabetical order in list.rst and ReleaseNotes.rst
-80a65c36625900e37f35c913977e351018ec6d87
-0013b5f83d8e3310990d18b8ce581aa2831ea5c5
-fddfc705d03ec6e9c75441d66057c1219902c8c1
-
 # [clang-tidy][NFC] Remove trailing whitespaces in documentation
 8f2b167de4a1268160c06512d08863a9e8f43290
 
