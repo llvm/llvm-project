@@ -174,7 +174,7 @@ extern cl::opt<bool> ANDIGlueBug;
 
 PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
                                      const PPCSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
   // Initialize map that relates the PPC addressing modes to the computed flags
   // of a load/store instruction. The map is used to determine the optimal
   // addressing mode when selecting load and stores.
@@ -210,8 +210,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // setbc instruction.
   if (!Subtarget.hasP10Vector()) {
     setOperationAction(ISD::SSUBO, MVT::i32, Custom);
-    if (isPPC64)
+    setOperationAction(ISD::SADDO, MVT::i32, Custom);
+    if (isPPC64) {
       setOperationAction(ISD::SSUBO, MVT::i64, Custom);
+      setOperationAction(ISD::SADDO, MVT::i64, Custom);
+    }
   }
 
   // Match BITREVERSE to customized fast code sequence in the td file.
@@ -12514,6 +12517,37 @@ SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues({Sub, OverflowTrunc}, dl);
 }
 
+/// Implements signed add with overflow detection using the rule:
+/// (x eqv y) & (sum xor x), where the overflow bit is extracted from the sign
+SDValue PPCTargetLowering::LowerSADDO(SDValue Op, SelectionDAG &DAG) const {
+
+  SDLoc dl(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  EVT VT = Op.getNode()->getValueType(0);
+
+  SDValue Sum = DAG.getNode(ISD::ADD, dl, VT, LHS, RHS);
+
+  // Compute ~(x xor y)
+  SDValue XorXY = DAG.getNode(ISD::XOR, dl, VT, LHS, RHS);
+  SDValue EqvXY = DAG.getNOT(dl, XorXY, VT);
+  // Compute (s xor x)
+  SDValue SumXorX = DAG.getNode(ISD::XOR, dl, VT, Sum, LHS);
+
+  // overflow = (x eqv y) & (s xor x)
+  SDValue OverflowInSign = DAG.getNode(ISD::AND, dl, VT, EqvXY, SumXorX);
+
+  // Shift sign bit down to LSB
+  SDValue Overflow =
+      DAG.getNode(ISD::SRL, dl, VT, OverflowInSign,
+                  DAG.getConstant(VT.getSizeInBits() - 1, dl, MVT::i32));
+  // Truncate to the overflow type (i1)
+  SDValue OverflowTrunc =
+      DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
+
+  return DAG.getMergeValues({Sum, OverflowTrunc}, dl);
+}
+
 // Lower unsigned 3-way compare producing -1/0/1.
 SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -12565,6 +12599,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
   case ISD::SSUBO:
     return LowerSSUBO(Op, DAG);
+  case ISD::SADDO:
+    return LowerSADDO(Op, DAG);
 
   case ISD::INLINEASM:
   case ISD::INLINEASM_BR:       return LowerINLINEASM(Op, DAG);

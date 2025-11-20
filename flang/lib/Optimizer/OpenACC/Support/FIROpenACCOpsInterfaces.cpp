@@ -59,4 +59,13 @@ bool PartialEntityAccessModel<hlfir::DeclareOp>::isCompleteView(
   return !getBaseEntity(op);
 }
 
+mlir::SymbolRefAttr AddressOfGlobalModel::getSymbol(mlir::Operation *op) const {
+  return mlir::cast<fir::AddrOfOp>(op).getSymbolAttr();
+}
+
+bool GlobalVariableModel::isConstant(mlir::Operation *op) const {
+  auto globalOp = mlir::cast<fir::GlobalOp>(op);
+  return globalOp.getConstant().has_value();
+}
+
 } // namespace fir::acc

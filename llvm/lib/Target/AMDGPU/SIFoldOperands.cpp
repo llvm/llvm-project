@@ -766,6 +766,29 @@ static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
                       FoldCandidate(MI, OpNo, FoldOp, Commuted, ShrinkOp));
 }
 
+// Returns true if the instruction is a packed F32 instruction and the
+// corresponding scalar operand reads 32 bits and replicates the bits to both
+// channels.
+static bool isPKF32InstrReplicatesLower32BitsOfScalarOperand(
+    const GCNSubtarget *ST, MachineInstr *MI, unsigned OpNo) {
+  if (!ST->hasPKF32InstsReplicatingLower32BitsOfScalarInput())
+    return false;
+  const MCOperandInfo &OpDesc = MI->getDesc().operands()[OpNo];
+  return OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP32;
+}
+
+// Packed FP32 instructions only read 32 bits from a scalar operand (SGPR or
+// literal) and replicates the bits to both channels. Therefore, if the hi and
+// lo are not same, we can't fold it.
+static bool checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(
+    const FoldableDef &OpToFold) {
+  assert(OpToFold.isImm() && "Expected immediate operand");
+  uint64_t ImmVal = OpToFold.getEffectiveImmVal().value();
+  uint32_t Lo = Lo_32(ImmVal);
+  uint32_t Hi = Hi_32(ImmVal);
+  return Lo == Hi;
+}
+
 bool SIFoldOperandsImpl::tryAddToFoldList(
     SmallVectorImpl<FoldCandidate> &FoldList, MachineInstr *MI, unsigned OpNo,
     const FoldableDef &OpToFold) const {
@@ -918,6 +941,13 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
     if (tryToFoldAsFMAAKorMK())
       return true;
   }
+
+  // Special case for PK_F32 instructions if we are trying to fold an imm to
+  // src0 or src1.
+  if (OpToFold.isImm() &&
+      isPKF32InstrReplicatesLower32BitsOfScalarOperand(ST, MI, OpNo) &&
+      !checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(OpToFold))
+    return false;
 
   appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
   return true;
@@ -1134,6 +1164,9 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
     return false;
 
   if (OpToFold.isImm() && OpToFold.isOperandLegal(*TII, *UseMI, UseOpIdx)) {
+    if (isPKF32InstrReplicatesLower32BitsOfScalarOperand(ST, UseMI, UseOpIdx) &&
+        !checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(OpToFold))
+      return false;
     appendFoldCandidate(FoldList, UseMI, UseOpIdx, OpToFold);
     return true;
   }
