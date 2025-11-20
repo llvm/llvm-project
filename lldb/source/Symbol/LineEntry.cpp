@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/LineEntry.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 
@@ -241,13 +244,33 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
   return complete_line_range;
 }
 
-void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp) {
-  if (target_sp) {
-    // Apply any file remappings to our file.
-    if (auto new_file_spec = target_sp->GetSourcePathMap().FindFile(
-            original_file_sp->GetSpecOnly())) {
-      file_sp = std::make_shared<SupportFile>(*new_file_spec,
-                                              original_file_sp->GetChecksum());
+void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp,
+                                  lldb::ModuleSP module_sp) {
+  if (!target_sp) {
+    return;
+  }
+
+  // Apply any file remappings to our file.
+  if (auto new_file_spec = target_sp->GetSourcePathMap().FindFile(
+          original_file_sp->GetSpecOnly())) {
+    file_sp = std::make_shared<SupportFile>(*new_file_spec,
+                                            original_file_sp->GetChecksum());
+  }
+
+  lldb::PlatformSP platform_sp = target_sp->GetPlatform();
+  if (module_sp && platform_sp) {
+    FileSpec original_file_spec = original_file_sp->GetSpecOnly();
+    FileSpec resolved_source_file_spec;
+    bool didResolveSourceFile = false;
+
+    // Call resolve source file callback if set. This allows users to implement
+    // their own source file cache system. For example, to search source files
+    // from source servers.
+    platform_sp->CallResolveSourceFileCallbackIfSet(
+        module_sp, original_file_spec, resolved_source_file_spec,
+        &didResolveSourceFile);
+    if (didResolveSourceFile) {
+      file_sp = std::make_shared<SupportFile>(resolved_source_file_spec);
     }
   }
 }
