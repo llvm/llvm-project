@@ -2672,10 +2672,12 @@ def : AMDGPUPat <
                $src1), sub1)
 >;
 
-// rotr pattern
-def : AMDGPUPat <
-  (UniformBinFrag<rotr> i32:$src0, (i32 (ImmSub i32:$src1, i32:$src1_inv))),
-  (S_OR_B32 (S_LSHR_B32 i32:$src0, i32:$src1), (S_LSHL_B32 i32:$src0, i32:$src1_inv))
+def : GCNPat<(UniformBinFrag<rotr> i32:$src0, i32:$src1),
+  (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src0, sub0, $src0, sub1), (S_AND_B32 $src1, (i32 31))), sub0))
+>;
+
+def : GCNPat<(UniformBinFrag<rotr> i32:$src0, (i32 ShiftAmt32Imm:$src1)),
+  (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src0, sub0, $src0, sub1), $src1), sub0))
 >;
 
 let True16Predicate = NotHasTrue16BitInsts in {
