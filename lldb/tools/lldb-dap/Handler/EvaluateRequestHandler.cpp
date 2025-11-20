@@ -10,12 +10,18 @@
 #include "EventHelper.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
+#include "Variables.h"
+#include "lldb/API/SBValue.h"
+#include "lldb/Host/File.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <chrono>
+#include <cstddef>
 
 using namespace llvm;
 using namespace lldb_dap;
@@ -31,38 +37,44 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
   EvaluateResponseBody body;
   lldb::SBFrame frame = dap.GetLLDBFrame(arguments.frameId);
   std::string expression = arguments.expression;
-  bool repeat_last_command =
-      expression.empty() && dap.last_nonempty_var_expression.empty();
 
-  if (arguments.context == protocol::eEvaluateContextRepl &&
-      (repeat_last_command ||
-       (!expression.empty() &&
-        dap.DetectReplMode(frame, expression, false) == ReplMode::Command))) {
-    // Since the current expression is not for a variable, clear the
-    // last_nonempty_var_expression field.
-    dap.last_nonempty_var_expression.clear();
+  if (arguments.context == eEvaluateContextRepl &&
+      dap.DetectReplMode(frame, expression, false) == ReplMode::Command) {
     // If we're evaluating a command relative to the current frame, set the
     // focus_tid to the current frame for any thread related events.
     if (frame.IsValid()) {
       dap.focus_tid = frame.GetThread().GetThreadID();
     }
 
-    bool required_command_failed = false;
-    body.result = RunLLDBCommands(
-        dap.debugger, llvm::StringRef(), {expression}, required_command_failed,
-        /*parse_command_directives=*/false, /*echo_commands=*/false);
-    return body;
-  }
+    for (const auto &line_ref : llvm::split(expression, "\n")) {
+      ReplContext context{dap, line_ref};
+      if (llvm::Error err = context.Run())
+        return err;
 
-  if (arguments.context == eEvaluateContextRepl) {
-    // If the expression is empty and the last expression was for a
-    // variable, set the expression to the previous expression (repeat the
-    // evaluation); otherwise save the current non-empty expression for the
-    // next (possibly empty) variable expression.
-    if (expression.empty())
-      expression = dap.last_nonempty_var_expression;
-    else
-      dap.last_nonempty_var_expression = expression;
+      if (!context.succeeded)
+        return llvm::make_error<DAPError>(std::string(context.output),
+                                          /*show_user=*/false);
+
+      body.result += std::string(context.output);
+
+      if (context.values && context.values.GetSize()) {
+        if (context.values.GetSize() == 1) {
+          lldb::SBValue v = context.values.GetValueAtIndex(0);
+          if (!IsPersistent(v))
+            v = v.Persist();
+          VariableDescription desc(
+              v, dap.configuration.enableAutoVariableSummaries);
+          body.type = desc.display_type_name;
+          if (v.MightHaveChildren() || ValuePointsToCode(v))
+            body.variablesReference = dap.variables.InsertVariable(v);
+        } else {
+          body.variablesReference =
+              dap.variables.InsertVariables(context.values);
+        }
+      }
+    }
+
+    return body;
   }
 
   // Always try to get the answer from the local variables if possible. If
@@ -91,11 +103,8 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
 
   body.result = desc.GetResult(arguments.context);
   body.type = desc.display_type_name;
-
   if (value.MightHaveChildren() || ValuePointsToCode(value))
-    body.variablesReference = dap.variables.InsertVariable(
-        value, /*is_permanent=*/arguments.context == eEvaluateContextRepl);
-
+    body.variablesReference = dap.variables.InsertVariable(value);
   if (lldb::addr_t addr = value.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
     body.memoryReference = EncodeMemoryReference(addr);
 

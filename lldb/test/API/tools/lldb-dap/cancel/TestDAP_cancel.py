@@ -2,8 +2,6 @@
 Test lldb-dap cancel request
 """
 
-import time
-
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbdap_testcase

@@ -64,4 +64,55 @@ llvm::json::Value toJSON(const MemoryEventBody &MEB) {
       {"count", MEB.count}};
 }
 
+static llvm::json::Value toJSON(const OutputCategory &OC) {
+  switch (OC) {
+  case eOutputCategoryConsole:
+    return "console";
+  case eOutputCategoryImportant:
+    return "important";
+  case eOutputCategoryStdout:
+    return "stdout";
+  case eOutputCategoryStderr:
+    return "stderr";
+  case eOutputCategoryTelemetry:
+    return "telemetry";
+  }
+  llvm_unreachable("unhandled output category!.");
+}
+
+static llvm::json::Value toJSON(const OutputGroup &OG) {
+  switch (OG) {
+  case eOutputGroupStart:
+    return "start";
+  case eOutputGroupStartCollapsed:
+    return "startCollapsed";
+  case eOutputGroupEnd:
+    return "end";
+  case eOutputGroupNone:
+    break;
+  }
+  llvm_unreachable("unhandled output category!.");
+}
+
+llvm::json::Value toJSON(const OutputEventBody &OEB) {
+  json::Object Result{{"output", OEB.output}, {"category", OEB.category}};
+
+  if (OEB.group != eOutputGroupNone)
+    Result.insert({"group", OEB.group});
+  if (OEB.variablesReference)
+    Result.insert({"variablesReference", OEB.variablesReference});
+  if (OEB.source)
+    Result.insert({"source", OEB.source});
+  if (OEB.line != LLDB_INVALID_LINE_NUMBER)
+    Result.insert({"line", OEB.line});
+  if (OEB.column != LLDB_INVALID_COLUMN_NUMBER)
+    Result.insert({"column", OEB.column});
+  if (OEB.data)
+    Result.insert({"data", OEB.data});
+  if (OEB.locationReference)
+    Result.insert({"locationReference", OEB.locationReference});
+
+  return Result;
+}
+
 } // namespace lldb_dap::protocol

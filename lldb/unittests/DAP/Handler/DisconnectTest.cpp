@@ -38,20 +38,14 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminated) {
 #ifndef __linux__
 TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
   CreateDebugger();
-
-  if (!GetDebuggerSupportsTarget("X86"))
-    GTEST_SKIP() << "Unsupported platform";
-
   LoadCore();
 
   DisconnectRequestHandler handler(*dap);
 
-  dap->configuration.terminateCommands = {"?script print(1)",
-                                          "script print(2)"};
+  dap->configuration.terminateCommands = {"?help", "script print(2)"};
   EXPECT_EQ(dap->target.GetProcess().GetState(), lldb::eStateStopped);
   ASSERT_THAT_ERROR(handler.Run(std::nullopt), Succeeded());
-  EXPECT_CALL(client, Received(Output("1\n")));
-  EXPECT_CALL(client, Received(Output("2\n"))).Times(2);
+  EXPECT_CALL(client, Received(Output("2\n")));
   EXPECT_CALL(client, Received(Output("(lldb) script print(2)\n")));
   EXPECT_CALL(client, Received(Output("Running terminateCommands:\n")));
   EXPECT_CALL(client, Received(IsEvent("terminated", _)));

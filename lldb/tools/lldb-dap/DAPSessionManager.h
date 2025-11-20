@@ -16,24 +16,21 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_DAPSESSIONMANAGER_H
 #define LLDB_TOOLS_LLDB_DAP_DAPSESSIONMANAGER_H
 
+#include "DAPForward.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBTarget.h"
-#include "lldb/Host/MainLoop.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/Error.h"
 #include <condition_variable>
 #include <map>
 #include <memory>
 #include <mutex>
-#include <optional>
+#include <set>
 #include <thread>
 #include <vector>
 
 namespace lldb_dap {
-
-// Forward declarations
-struct DAP;
 
 class ManagedEventThread {
 public:
@@ -54,17 +51,32 @@ private:
 /// a single lldb-dap process. Handles session lifecycle tracking, coordinates
 /// shared debugger event threads, and facilitates target handoff between
 /// sessions for dynamically created targets.
-class DAPSessionManager {
+class SessionManager {
 public:
   /// Get the singleton instance of the DAP session manager.
-  static DAPSessionManager &GetInstance();
+  static SessionManager &GetInstance();
+
+  /// RAII Session tracking.
+  class SessionHandle {
+  public:
+    SessionManager &manager;
+    DAP &dap;
+
+    SessionHandle(SessionManager &manager, DAP &dap)
+        : manager(manager), dap(dap) {}
+
+    ~SessionHandle() {
+      std::scoped_lock<std::mutex> lock(manager.m_sessions_mutex);
+
+      auto index = manager.m_active_sessions.find(&dap);
+      assert(index != manager.m_active_sessions.end());
+      manager.m_active_sessions.erase(index);
+      manager.m_sessions_condition.notify_all();
+    }
+  };
 
   /// Register a DAP session.
-  void RegisterSession(lldb_private::MainLoop *loop, DAP *dap);
-
-  /// Unregister a DAP session. Called by sessions when they complete their
-  /// disconnection, which unblocks WaitForAllSessionsToDisconnect().
-  void UnregisterSession(lldb_private::MainLoop *loop);
+  SessionHandle Register(DAP &dap);
 
   /// Get all active DAP sessions.
   std::vector<DAP *> GetActiveSessions();
@@ -94,19 +106,19 @@ public:
   void ReleaseExpiredEventThreads();
 
 private:
-  DAPSessionManager() = default;
-  ~DAPSessionManager() = default;
+  SessionManager() = default;
+  ~SessionManager() = default;
 
   // Non-copyable and non-movable.
-  DAPSessionManager(const DAPSessionManager &) = delete;
-  DAPSessionManager &operator=(const DAPSessionManager &) = delete;
-  DAPSessionManager(DAPSessionManager &&) = delete;
-  DAPSessionManager &operator=(DAPSessionManager &&) = delete;
+  SessionManager(const SessionManager &) = delete;
+  SessionManager &operator=(const SessionManager &) = delete;
+  SessionManager(SessionManager &&) = delete;
+  SessionManager &operator=(SessionManager &&) = delete;
 
   bool m_client_failed = false;
   std::mutex m_sessions_mutex;
   std::condition_variable m_sessions_condition;
-  std::map<lldb_private::MainLoop *, DAP *> m_active_sessions;
+  std::set<DAP *> m_active_sessions;
 
   /// Map from debugger ID to its event thread, used when multiple DAP sessions
   /// share the same debugger instance.

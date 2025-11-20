@@ -128,6 +128,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         self.assertEvaluate("var1", "20", want_type="int")
         # Empty expression should equate to the previous expression.
         if context == "repl":
+            self.assertEvaluate("p var1", "20")
             self.assertEvaluate("", "20")
         else:
             self.assertEvaluateFailure("")

@@ -20,6 +20,8 @@
 
 namespace lldb_dap {
 
+bool IsPersistent(lldb::SBValue &);
+
 struct Variables {
   lldb::SBValueList locals;
   lldb::SBValueList globals;
@@ -41,7 +43,8 @@ struct Variables {
 
   /// Insert a new \p variable.
   /// \return variableReference assigned to this expandable variable.
-  int64_t InsertVariable(lldb::SBValue variable, bool is_permanent);
+  int64_t InsertVariable(lldb::SBValue variable);
+  int64_t InsertVariables(lldb::SBValueList variables);
 
   lldb::SBValueList *GetTopLevelScope(int64_t variablesReference);
 
@@ -61,6 +64,8 @@ private:
   /// Variables that persist across entire debug session.
   /// These are the variables evaluated from debug console REPL.
   llvm::DenseMap<int64_t, lldb::SBValue> m_referencedpermanent_variables;
+
+  llvm::DenseMap<int64_t, lldb::SBValueList> m_referencedlists;
 
   int64_t m_next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
   int64_t m_next_permanent_var_ref{PermanentVariableStartIndex};

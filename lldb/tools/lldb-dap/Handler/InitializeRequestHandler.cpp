@@ -6,14 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CommandPlugins.h"
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
-#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
-#include "lldb/API/SBTarget.h"
 
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
@@ -22,8 +18,6 @@ using namespace lldb_dap::protocol;
 llvm::Expected<InitializeResponse> InitializeRequestHandler::Run(
     const InitializeRequestArguments &arguments) const {
   // Store initialization arguments for later use in Launch/Attach.
-  dap.clientFeatures = arguments.supportedFeatures;
-  dap.sourceInitFile = arguments.lldbExtSourceInitFile;
-
+  dap.client_features = arguments.supportedFeatures;
   return dap.GetCapabilities();
 }

@@ -995,15 +995,15 @@ class DebugCommunication(object):
 
     def request_evaluate(
         self,
-        expression,
+        expression: str,
         frameIndex=0,
-        threadId=None,
-        context=None,
+        threadId: Optional[int] = None,
+        context: Optional[
+            Literal["watch", "repl", "hover", "clipboard", "variables"]
+        ] = None,
         is_hex: Optional[bool] = None,
-    ):
+    ) -> Optional[Response]:
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
-        if stackFrame is None:
-            return []
         args_dict = {
             "expression": expression,
             "frameId": stackFrame["id"],
@@ -1012,7 +1012,7 @@ class DebugCommunication(object):
             args_dict["context"] = context
         if is_hex is not None:
             args_dict["format"] = {"hex": is_hex}
-        command_dict = {
+        command_dict: Request = {
             "command": "evaluate",
             "type": "request",
             "arguments": args_dict,

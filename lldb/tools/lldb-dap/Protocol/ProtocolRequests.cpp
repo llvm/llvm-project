@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolRequests.h"
+#include "DAP.h"
 #include "JSONUtils.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/lldb-defines.h"
@@ -221,8 +222,7 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
          OM.mapOptional("locale", IRA.locale) &&
          OM.mapOptional("linesStartAt1", IRA.linesStartAt1) &&
          OM.mapOptional("columnsStartAt1", IRA.columnsStartAt1) &&
-         OM.mapOptional("pathFormat", IRA.pathFormat) &&
-         OM.mapOptional("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
+         OM.mapOptional("pathFormat", IRA.pathFormat);
 }
 
 bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
@@ -235,6 +235,7 @@ bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
          O.mapOptional("displayExtendedBacktrace",
                        C.displayExtendedBacktrace) &&
          O.mapOptional("stopOnEntry", C.stopOnEntry) &&
+         O.mapOptional("sourceInitFiles", C.sourceInitFiles) &&
          O.mapOptional("commandEscapePrefix", C.commandEscapePrefix) &&
          O.mapOptional("customFrameFormat", C.customFrameFormat) &&
          O.mapOptional("customThreadFormat", C.customThreadFormat) &&
@@ -312,15 +313,28 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
 bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && fromJSON(Params, ARA.configuration, P) &&
+  if (!O || !O.mapOptional("targetId", ARA.targetId) ||
+      !O.mapOptional("debuggerId", ARA.debuggerId))
+    return false;
+
+  if (ARA.targetId != LLDB_DAP_INVALID_TARGET_ID &&
+      ARA.debuggerId == LLDB_DAP_INVALID_DEBUGGER_ID) {
+    P.field("debuggerId").report("must be set if 'targetId' is set");
+    return false;
+  }
+  if (ARA.targetId == LLDB_DAP_INVALID_TARGET_ID &&
+      ARA.debuggerId != LLDB_DAP_INVALID_DEBUGGER_ID) {
+    P.field("targetId").report("must be set if 'debuggerId' is set");
+    return false;
+  }
+
+  return fromJSON(Params, ARA.configuration, P) &&
          O.mapOptional("attachCommands", ARA.attachCommands) &&
          O.mapOptional("pid", ARA.pid) &&
          O.mapOptional("waitFor", ARA.waitFor) &&
          O.mapOptional("gdb-remote-port", ARA.gdbRemotePort) &&
          O.mapOptional("gdb-remote-hostname", ARA.gdbRemoteHostname) &&
-         O.mapOptional("coreFile", ARA.coreFile) &&
-         O.mapOptional("targetId", ARA.targetId) &&
-         O.mapOptional("debuggerId", ARA.debuggerId);
+         O.mapOptional("coreFile", ARA.coreFile);
 }
 
 bool fromJSON(const json::Value &Params, ContinueArguments &CA, json::Path P) {

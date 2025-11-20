@@ -7,16 +7,38 @@
 //===----------------------------------------------------------------------===//
 
 #include "Variables.h"
+#include "TestFixtures.h"
+#include "TestingSupport/SubsystemRAII.h"
+#include "lldb/API/SBTarget.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
 #include "gtest/gtest.h"
 
+using namespace llvm;
+using namespace lldb;
 using namespace lldb_dap;
+using namespace lldb_private;
+using namespace lldb_dap_tests;
 
 class VariablesTest : public ::testing::Test {
 protected:
+  SubsystemRAII<SBDebugger> subsystems;
+
   enum : bool { Permanent = true, Temporary = false };
+  TestFixtures fixtures;
+  SBValue temp_value;
+  SBValue perm_value;
   Variables vars;
+
+  void SetUp() override {
+    fixtures.LoadDebugger();
+    fixtures.LoadTarget();
+    SBTarget &target = fixtures.target;
+    temp_value = target.CreateValueFromExpression("temp", "1");
+    ASSERT_TRUE(temp_value);
+    perm_value = temp_value.Persist();
+    ASSERT_TRUE(perm_value);
+  }
 };
 
 TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
@@ -32,19 +54,21 @@ TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
 }
 
 TEST_F(VariablesTest, InsertAndGetVariable_Temporary) {
-  lldb::SBValue dummy;
-  const int64_t ref = vars.InsertVariable(dummy, Temporary);
-  lldb::SBValue out = vars.GetVariable(ref);
+  const int64_t ref = vars.InsertVariable(temp_value);
+  SBValue out = vars.GetVariable(ref);
 
-  EXPECT_EQ(out.IsValid(), dummy.IsValid());
+  EXPECT_EQ(out.IsValid(), temp_value.IsValid());
+  EXPECT_EQ(out.GetName(), temp_value.GetName());
+  EXPECT_EQ(out.GetValue(), temp_value.GetValue());
 }
 
 TEST_F(VariablesTest, InsertAndGetVariable_Permanent) {
-  lldb::SBValue dummy;
-  const int64_t ref = vars.InsertVariable(dummy, Permanent);
-  lldb::SBValue out = vars.GetVariable(ref);
+  const int64_t ref = vars.InsertVariable(perm_value);
+  SBValue out = vars.GetVariable(ref);
 
-  EXPECT_EQ(out.IsValid(), dummy.IsValid());
+  EXPECT_EQ(out.IsValid(), perm_value.IsValid());
+  EXPECT_EQ(out.GetName(), perm_value.GetName());
+  EXPECT_EQ(out.GetValue(), perm_value.GetValue());
 }
 
 TEST_F(VariablesTest, IsPermanentVariableReference) {
@@ -56,19 +80,18 @@ TEST_F(VariablesTest, IsPermanentVariableReference) {
 }
 
 TEST_F(VariablesTest, Clear_RemovesTemporaryKeepsPermanent) {
-  lldb::SBValue dummy;
-  const int64_t temp = vars.InsertVariable(dummy, Temporary);
-  const int64_t perm = vars.InsertVariable(dummy, Permanent);
+  const int64_t temp = vars.InsertVariable(temp_value);
+  const int64_t perm = vars.InsertVariable(perm_value);
   vars.Clear();
 
   EXPECT_FALSE(vars.GetVariable(temp).IsValid());
-  EXPECT_EQ(vars.GetVariable(perm).IsValid(), dummy.IsValid());
+  EXPECT_EQ(vars.GetVariable(perm).IsValid(), perm_value.IsValid());
 }
 
 TEST_F(VariablesTest, GetTopLevelScope_ReturnsCorrectScope) {
-  vars.locals.Append(lldb::SBValue());
-  vars.globals.Append(lldb::SBValue());
-  vars.registers.Append(lldb::SBValue());
+  vars.locals.Append(SBValue());
+  vars.globals.Append(SBValue());
+  vars.registers.Append(SBValue());
 
   EXPECT_EQ(vars.GetTopLevelScope(VARREF_LOCALS), &vars.locals);
   EXPECT_EQ(vars.GetTopLevelScope(VARREF_GLOBALS), &vars.globals);
@@ -77,9 +100,9 @@ TEST_F(VariablesTest, GetTopLevelScope_ReturnsCorrectScope) {
 }
 
 TEST_F(VariablesTest, FindVariable_LocalsByName) {
-  lldb::SBValue dummy;
+  SBValue dummy;
   vars.locals.Append(dummy);
-  lldb::SBValue found = vars.FindVariable(VARREF_LOCALS, "");
+  SBValue found = vars.FindVariable(VARREF_LOCALS, "");
 
   EXPECT_EQ(found.IsValid(), dummy.IsValid());
 }

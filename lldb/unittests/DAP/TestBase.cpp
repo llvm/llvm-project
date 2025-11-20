@@ -8,13 +8,12 @@
 
 #include "TestBase.h"
 #include "DAPLog.h"
-#include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBDefines.h"
-#include "lldb/API/SBStructuredData.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/Pipe.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <cstdio>
@@ -36,13 +35,12 @@ void TransportBase::SetUp() {
   std::tie(to_client, to_server) = TestDAPTransport::createPair();
 
   std::error_code EC;
-  log = std::make_unique<Log>("-", EC);
+  log = std::make_unique<Log>(llvm::outs(), log_mutex);
   dap = std::make_unique<DAP>(
-      /*log=*/log.get(),
       /*default_repl_mode=*/ReplMode::Auto,
       /*pre_init_commands=*/std::vector<std::string>(),
-      /*no_lldbinit=*/false,
       /*client_name=*/"test_client",
+      /*log=*/*log.get(),
       /*transport=*/*to_client, /*loop=*/loop);
 
   auto server_handle = to_server->RegisterMessageHandler(loop, *dap);
@@ -61,79 +59,19 @@ void TransportBase::Run() {
   EXPECT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
 }
 
-void DAPTestBase::SetUp() { TransportBase::SetUp(); }
-
-void DAPTestBase::TearDown() {
-  if (core)
-    ASSERT_THAT_ERROR(core->discard(), Succeeded());
-  if (binary)
-    ASSERT_THAT_ERROR(binary->discard(), Succeeded());
-}
-
-void DAPTestBase::SetUpTestSuite() {
-  lldb::SBError error = SBDebugger::InitializeWithErrorHandling();
-  EXPECT_TRUE(error.IsValid());
-  EXPECT_TRUE(error.Success());
-}
-void DAPTestBase::TeatUpTestSuite() { SBDebugger::Terminate(); }
-
-bool DAPTestBase::GetDebuggerSupportsTarget(StringRef platform) {
-  EXPECT_TRUE(dap->debugger);
-
-  lldb::SBStructuredData data = dap->debugger.GetBuildConfiguration()
-                                    .GetValueForKey("targets")
-                                    .GetValueForKey("value");
-  for (size_t i = 0; i < data.GetSize(); i++) {
-    char buf[100] = {0};
-    size_t size = data.GetItemAtIndex(i).GetStringValue(buf, sizeof(buf));
-    if (StringRef(buf, size) == platform)
-      return true;
-  }
-
-  return false;
-}
-
 void DAPTestBase::CreateDebugger() {
-  dap->debugger = lldb::SBDebugger::Create();
+  ASSERT_THAT_ERROR(dap->InitializeDebugger(), Succeeded());
   ASSERT_TRUE(dap->debugger);
+  fixtures.debugger = dap->debugger;
+
+  if (!fixtures.IsPlatformSupported("X86"))
+    GTEST_SKIP() << "Unsupported platform";
+
   dap->target = dap->debugger.GetDummyTarget();
-
-  Expected<lldb::FileUP> dev_null = FileSystem::Instance().Open(
-      FileSpec(FileSystem::DEV_NULL), File::eOpenOptionReadWrite);
-  ASSERT_THAT_EXPECTED(dev_null, Succeeded());
-  lldb::FileSP dev_null_sp = std::move(*dev_null);
-
-  std::FILE *dev_null_stream = dev_null_sp->GetStream();
-  ASSERT_THAT_ERROR(dap->ConfigureIO(dev_null_stream, dev_null_stream),
-                    Succeeded());
-
-  dap->debugger.SetInputFile(dap->in);
-  auto out_fd = dap->out.GetWriteFileDescriptor();
-  ASSERT_THAT_EXPECTED(out_fd, Succeeded());
-  dap->debugger.SetOutputFile(lldb::SBFile(*out_fd, "w", false));
-  auto err_fd = dap->out.GetWriteFileDescriptor();
-  ASSERT_THAT_EXPECTED(err_fd, Succeeded());
-  dap->debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
 }
 
 void DAPTestBase::LoadCore() {
-  ASSERT_TRUE(dap->debugger);
-  llvm::Expected<lldb_private::TestFile> binary_yaml =
-      lldb_private::TestFile::fromYamlFile(k_linux_binary);
-  ASSERT_THAT_EXPECTED(binary_yaml, Succeeded());
-  llvm::Expected<llvm::sys::fs::TempFile> binary_file =
-      binary_yaml->writeToTemporaryFile();
-  ASSERT_THAT_EXPECTED(binary_file, Succeeded());
-  binary = std::move(*binary_file);
-  dap->target = dap->debugger.CreateTarget(binary->TmpName.data());
-  ASSERT_TRUE(dap->target);
-  llvm::Expected<lldb_private::TestFile> core_yaml =
-      lldb_private::TestFile::fromYamlFile(k_linux_core);
-  ASSERT_THAT_EXPECTED(core_yaml, Succeeded());
-  llvm::Expected<llvm::sys::fs::TempFile> core_file =
-      core_yaml->writeToTemporaryFile();
-  ASSERT_THAT_EXPECTED(core_file, Succeeded());
-  this->core = std::move(*core_file);
-  SBProcess process = dap->target.LoadCore(this->core->TmpName.data());
-  ASSERT_TRUE(process);
+  fixtures.LoadTarget();
+  fixtures.LoadProcess();
+  dap->target = fixtures.target;
 }

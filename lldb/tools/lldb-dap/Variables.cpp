@@ -8,8 +8,16 @@
 
 #include "Variables.h"
 #include "JSONUtils.h"
+#include "lldb/API/SBValueList.h"
 
 using namespace lldb_dap;
+
+bool lldb_dap::IsPersistent(lldb::SBValue &v) {
+  llvm::StringRef name = v.GetName();
+  // Variables stored by the REPL are permanent, like $0, $1, etc.
+  uint64_t dummy_idx;
+  return name.consume_front("$") && !name.consumeInteger(0, dummy_idx);
+}
 
 lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
   switch (variablesReference) {
@@ -20,6 +28,9 @@ lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
   case VARREF_REGS:
     return &registers;
   default:
+    if (m_referencedlists.contains(variablesReference) &&
+        m_referencedlists[variablesReference].IsValid())
+      return &m_referencedlists[variablesReference];
     return nullptr;
   }
 }
@@ -54,12 +65,37 @@ lldb::SBValue Variables::GetVariable(int64_t var_ref) const {
   return lldb::SBValue();
 }
 
-int64_t Variables::InsertVariable(lldb::SBValue variable, bool is_permanent) {
-  int64_t var_ref = GetNewVariableReference(is_permanent);
-  if (is_permanent)
-    m_referencedpermanent_variables.insert(std::make_pair(var_ref, variable));
-  else
-    m_referencedvariables.insert(std::make_pair(var_ref, variable));
+int64_t Variables::InsertVariable(lldb::SBValue variable) {
+  bool perm = IsPersistent(variable);
+
+  llvm::DenseMap<int64_t, lldb::SBValue> &var_map =
+      perm ? m_referencedpermanent_variables : m_referencedvariables;
+  for (auto &[var_ref, var] : var_map) {
+    if (var.IsValid() && var.GetID() == variable.GetID())
+      return var_ref;
+  }
+  int64_t var_ref = GetNewVariableReference(perm);
+  var_map.emplace_or_assign(var_ref, variable);
+  return var_ref;
+}
+
+int64_t Variables::InsertVariables(lldb::SBValueList variables) {
+  for (const auto &[var_ref, variable] : m_referencedlists)
+    if (variable.IsValid() && variable.GetSize() == variables.GetSize()) {
+      bool all_match = true;
+      for (uint32_t i = 0; i < variables.GetSize(); ++i) {
+        if (variable.GetValueAtIndex(i).GetID() !=
+            variables.GetValueAtIndex(i).GetID()) {
+          all_match = false;
+          break;
+        }
+      }
+      if (all_match)
+        return var_ref;
+    }
+
+  int64_t var_ref = GetNewVariableReference(true);
+  m_referencedlists.insert_or_assign(var_ref, variables);
   return var_ref;
 }
 

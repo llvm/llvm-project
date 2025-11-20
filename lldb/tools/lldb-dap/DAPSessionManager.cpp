@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 #include "DAPSessionManager.h"
 #include "DAP.h"
+#include "DAPLog.h"
 #include "EventHelper.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBTarget.h"
-#include "lldb/Host/MainLoopBase.h"
-#include "llvm/Support/Threading.h"
 #include "llvm/Support/WithColor.h"
-
-#include <chrono>
 #include <mutex>
 
 namespace lldb_dap {
@@ -31,55 +28,39 @@ ManagedEventThread::~ManagedEventThread() {
   }
 }
 
-DAPSessionManager &DAPSessionManager::GetInstance() {
+SessionManager &SessionManager::GetInstance() {
   static std::once_flag initialized;
-  static DAPSessionManager *instance =
-      nullptr; // NOTE: intentional leak to avoid issues with C++ destructor
-               // chain
+  static SessionManager *instance = nullptr; // NOTE: intentional leak to avoid
+                                             // issues with C++ destructor chain
 
-  std::call_once(initialized, []() { instance = new DAPSessionManager(); });
+  std::call_once(initialized, []() { instance = new SessionManager(); });
 
   return *instance;
 }
 
-void DAPSessionManager::RegisterSession(lldb_private::MainLoop *loop,
-                                        DAP *dap) {
+SessionManager::SessionHandle SessionManager::Register(DAP &dap) {
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
-  m_active_sessions[loop] = dap;
+  m_active_sessions.insert(&dap);
+  return SessionHandle(*this, dap);
 }
 
-void DAPSessionManager::UnregisterSession(lldb_private::MainLoop *loop) {
-  std::unique_lock<std::mutex> lock(m_sessions_mutex);
-  m_active_sessions.erase(loop);
-  std::notify_all_at_thread_exit(m_sessions_condition, std::move(lock));
-}
-
-std::vector<DAP *> DAPSessionManager::GetActiveSessions() {
+std::vector<DAP *> SessionManager::GetActiveSessions() {
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
-  std::vector<DAP *> sessions;
-  for (const auto &[loop, dap] : m_active_sessions)
-    if (dap)
-      sessions.emplace_back(dap);
-  return sessions;
+  return std::vector<DAP *>(m_active_sessions.begin(), m_active_sessions.end());
 }
 
-void DAPSessionManager::DisconnectAllSessions() {
+void SessionManager::DisconnectAllSessions() {
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
   m_client_failed = false;
-  for (auto [loop, dap] : m_active_sessions) {
-    if (dap) {
-      if (llvm::Error error = dap->Disconnect()) {
-        m_client_failed = true;
-        llvm::WithColor::error() << "DAP client disconnected failed: "
-                                 << llvm::toString(std::move(error)) << "\n";
-      }
-      loop->AddPendingCallback(
-          [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  for (auto *dap : m_active_sessions)
+    if (llvm::Error error = dap->Disconnect()) {
+      m_client_failed = true;
+      llvm::WithColor::error() << "DAP client disconnected failed: "
+                               << llvm::toString(std::move(error)) << "\n";
     }
-  }
 }
 
-llvm::Error DAPSessionManager::WaitForAllSessionsToDisconnect() {
+llvm::Error SessionManager::WaitForAllSessionsToDisconnect() {
   std::unique_lock<std::mutex> lock(m_sessions_mutex);
   m_sessions_condition.wait(lock, [this] { return m_active_sessions.empty(); });
 
@@ -92,8 +73,8 @@ llvm::Error DAPSessionManager::WaitForAllSessionsToDisconnect() {
 }
 
 std::shared_ptr<ManagedEventThread>
-DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
-                                             DAP *requesting_dap) {
+SessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
+                                          DAP *requesting_dap) {
   lldb::user_id_t debugger_id = debugger.GetID();
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
 
@@ -110,22 +91,23 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
   auto new_thread_sp = std::make_shared<ManagedEventThread>(
       requesting_dap->broadcaster,
       std::thread(EventThread, debugger, requesting_dap->broadcaster,
-                  requesting_dap->m_client_name, requesting_dap->log));
+                  requesting_dap->GetClientName(),
+                  std::ref(requesting_dap->log)));
   m_debugger_event_threads[debugger_id] = new_thread_sp;
   return new_thread_sp;
 }
 
-DAP *DAPSessionManager::FindDAPForTarget(lldb::SBTarget target) {
+DAP *SessionManager::FindDAPForTarget(lldb::SBTarget target) {
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
 
-  for (const auto &[loop, dap] : m_active_sessions)
+  for (auto *dap : m_active_sessions)
     if (dap && dap->target.IsValid() && dap->target == target)
       return dap;
 
   return nullptr;
 }
 
-void DAPSessionManager::ReleaseExpiredEventThreads() {
+void SessionManager::ReleaseExpiredEventThreads() {
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
   for (auto it = m_debugger_event_threads.begin();
        it != m_debugger_event_threads.end();) {

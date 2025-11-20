@@ -21,8 +21,8 @@ TEST(DAPErrorTest, DefaultConstructor) {
   EXPECT_EQ(error.getMessage(), "Invalid thread");
   EXPECT_EQ(error.convertToErrorCode(), llvm::inconvertibleErrorCode());
   EXPECT_TRUE(error.getShowUser());
-  EXPECT_EQ(error.getURL(), std::nullopt);
-  EXPECT_EQ(error.getURLLabel(), std::nullopt);
+  EXPECT_TRUE(error.getURL().empty());
+  EXPECT_TRUE(error.getURLLabel().empty());
 }
 
 TEST(DAPErrorTest, FullConstructor) {
@@ -32,6 +32,6 @@ TEST(DAPErrorTest, FullConstructor) {
   EXPECT_EQ(error.getMessage(), "Timed out");
   EXPECT_EQ(error.convertToErrorCode(), timed_out);
   EXPECT_FALSE(error.getShowUser());
-  EXPECT_THAT(error.getURL(), testing::Optional<std::string>("URL"));
-  EXPECT_THAT(error.getURLLabel(), testing::Optional<std::string>("URLLabel"));
+  EXPECT_EQ(error.getURL(), "URL");
+  EXPECT_EQ(error.getURLLabel(), "URLLabel");
 }

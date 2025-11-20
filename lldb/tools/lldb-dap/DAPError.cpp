@@ -15,9 +15,19 @@ namespace lldb_dap {
 
 char DAPError::ID;
 
+DAPError::DAPError(std::string message) : DAPError(std::move(message), true) {}
+
+DAPError::DAPError(std::string message, std::error_code EC)
+    : DAPError(std::move(message), std::move(EC), true) {}
+
+DAPError::DAPError(std::string message, bool show_user)
+    : DAPError(std::move(message), llvm::inconvertibleErrorCode(), show_user) {}
+
+DAPError::DAPError(std::string message, std::error_code EC, bool show_user)
+    : DAPError(std::move(message), std::move(EC), show_user, "", "") {}
+
 DAPError::DAPError(std::string message, std::error_code EC, bool show_user,
-                   std::optional<std::string> url,
-                   std::optional<std::string> url_label)
+                   std::string url, std::string url_label)
     : m_message(std::move(message)), m_ec(EC), m_show_user(show_user),
       m_url(std::move(url)), m_url_label(std::move(url_label)) {}
 

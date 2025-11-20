@@ -9,6 +9,9 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_DAPFORWARD_H
 #define LLDB_TOOLS_LLDB_DAP_DAPFORWARD_H
 
+#include "llvm/Support/raw_ostream.h"
+#include <memory>
+
 // IWYU pragma: begin_exports
 
 namespace lldb_dap {
@@ -22,6 +25,8 @@ class ResponseHandler;
 class SourceBreakpoint;
 class Watchpoint;
 struct DAP;
+using LogSP = std::shared_ptr<Log>;
+using StreamSP = std::shared_ptr<llvm::raw_ostream>;
 } // namespace lldb_dap
 
 namespace lldb {

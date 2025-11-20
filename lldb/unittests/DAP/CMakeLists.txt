@@ -13,6 +13,7 @@ add_lldb_unittest(DAPTests
   ProtocolTypesTest.cpp
   ProtocolUtilsTest.cpp
   TestBase.cpp
+  TestFixtures.cpp
   VariablesTest.cpp
 
   SBAPITEST

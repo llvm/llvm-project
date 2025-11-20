@@ -743,6 +743,11 @@ void Debugger::Terminate() {
         debugger->Clear();
       g_debugger_list_ptr->clear();
     }
+
+    delete g_debugger_list_ptr;
+    delete g_debugger_list_mutex_ptr;
+    g_debugger_list_ptr = nullptr;
+    g_debugger_list_mutex_ptr = nullptr;
   }
 }
 

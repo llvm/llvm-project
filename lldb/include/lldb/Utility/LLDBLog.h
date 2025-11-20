@@ -57,6 +57,7 @@ enum class LLDBLog : Log::MaskType {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 void InitializeLldbChannel();
+void TerminateLldbChannel();
 
 template <> Log::Channel &LogChannelFor<LLDBLog>();
 } // namespace lldb_private

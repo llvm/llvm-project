@@ -128,14 +128,6 @@ struct InitializeRequestArguments {
 
   /// The set of supported features reported by the client.
   llvm::DenseSet<ClientFeature> supportedFeatures;
-
-  /// lldb-dap Extensions
-  /// @{
-
-  /// Source init files when initializing lldb::SBDebugger.
-  bool lldbExtSourceInitFile = true;
-
-  /// @}
 };
 bool fromJSON(const llvm::json::Value &, InitializeRequestArguments &,
               llvm::json::Path);
@@ -170,6 +162,9 @@ struct Configuration {
 
   /// Stop at the entry point of the program when launching or attaching.
   bool stopOnEntry = false;
+
+  /// Source init files (e.g. '~/.lldbinit') on launch or attach.
+  bool sourceInitFiles = true;
 
   /// Optional timeout when waiting for the program to `runInTerminal` or
   /// attach.
@@ -315,6 +310,8 @@ using LaunchResponse = VoidResponse;
 #define LLDB_DAP_INVALID_PORT -1
 /// An invalid 'frameId' default value.
 #define LLDB_DAP_INVALID_FRAME_ID UINT64_MAX
+#define LLDB_DAP_INVALID_DEBUGGER_ID -1
+#define LLDB_DAP_INVALID_TARGET_ID UINT64_MAX
 
 /// lldb-dap specific attach arguments.
 struct AttachRequestArguments {
@@ -351,10 +348,10 @@ struct AttachRequestArguments {
   std::string coreFile;
 
   /// Unique ID of an existing target to attach to.
-  std::optional<lldb::user_id_t> targetId;
+  lldb::user_id_t targetId = LLDB_DAP_INVALID_TARGET_ID;
 
   /// ID of an existing debugger instance to use.
-  std::optional<int> debuggerId;
+  int debuggerId = LLDB_DAP_INVALID_DEBUGGER_ID;
 
   /// @}
 };

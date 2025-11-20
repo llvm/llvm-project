@@ -101,4 +101,5 @@ void SystemInitializerCommon::Terminate() {
   Log::DisableAllLogChannels();
   FileSystem::Terminate();
   Diagnostics::Terminate();
+  TerminateLldbChannel();
 }

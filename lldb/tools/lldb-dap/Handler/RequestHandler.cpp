@@ -13,10 +13,13 @@
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RunInTerminal.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBEnvironment.h"
+#include "lldb/API/SBStream.h"
+#include "lldb/lldb-types.h"
 #include "llvm/Support/Error.h"
 #include <mutex>
 
@@ -80,7 +83,7 @@ SetupIORedirection(const std::vector<std::optional<std::string>> &stdio,
 
 static llvm::Error
 RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
-  if (!dap.clientFeatures.contains(
+  if (!dap.client_features.contains(
           protocol::eClientFeatureRunInTerminalRequest))
     return llvm::make_error<DAPError>("Cannot use runInTerminal, feature is "
                                       "not supported by the connected client");
@@ -259,6 +262,26 @@ void BaseRequestHandler::PrintWelcomeMessage() const {
 #ifdef LLDB_DAP_WELCOME_MESSAGE
   dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
 #endif
+}
+
+void BaseRequestHandler::PrintIntroductionMessage() const {
+  lldb::SBStream msg;
+  msg.Print("To get started with the lldb-dap debug console try "
+            "\"<variable>\", \"help [<cmd-name>]\", or \"apropos "
+            "<search-word>\".\r\nFor more information visit "
+            "https://github.com/llvm/llvm-project/blob/main/lldb/tools/"
+            "lldb-dap/README.md\r\n");
+  if (dap.target && dap.target.GetExecutable()) {
+    char path[PATH_MAX] = {0};
+    dap.target.GetExecutable().GetPath(path, sizeof(path));
+    msg.Printf("Executable binary set to '%s' (%s).\r\n", path,
+               dap.target.GetTriple());
+  }
+  if (dap.target.GetProcess()) {
+    msg.Printf("Attached to process %llu.\r\n",
+               dap.target.GetProcess().GetProcessID());
+  }
+  dap.SendOutput(eOutputCategoryConsole, {msg.GetData(), msg.GetSize()});
 }
 
 bool BaseRequestHandler::HasInstructionGranularity(

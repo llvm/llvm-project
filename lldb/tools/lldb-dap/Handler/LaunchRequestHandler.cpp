@@ -22,6 +22,8 @@ namespace lldb_dap {
 
 /// Launch request; value of command field is 'launch'.
 Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
+  dap.source_init_files = arguments.configuration.sourceInitFiles;
+
   // Initialize DAP debugger.
   if (Error err = dap.InitializeDebugger())
     return err;

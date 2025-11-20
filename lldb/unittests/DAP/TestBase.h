@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "DAPLog.h"
 #include "Protocol/ProtocolBase.h"
+#include "TestFixtures.h"
 #include "TestingSupport/Host/JSONTransportTestUtilities.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "Transport.h"
@@ -54,11 +55,11 @@ using TestDAPTransport = TestTransport<lldb_dap::ProtocolDescriptor>;
 /// messages.
 class TransportBase : public testing::Test {
 protected:
-  lldb_private::SubsystemRAII<lldb_private::FileSystem, lldb_private::HostInfo>
-      subsystems;
+  lldb_private::SubsystemRAII<lldb::SBDebugger> subsystems;
   lldb_private::MainLoop loop;
   lldb_private::MainLoop::ReadHandleUP handles[2];
 
+  lldb_dap::Log::Mutex log_mutex;
   std::unique_ptr<lldb_dap::Log> log;
 
   std::unique_ptr<TestDAPTransport> to_client;
@@ -99,18 +100,8 @@ inline auto Output(llvm::StringRef o, llvm::StringRef cat = "console") {
 /// A base class for tests that interact with a `lldb_dap::DAP` instance.
 class DAPTestBase : public TransportBase {
 protected:
-  std::optional<llvm::sys::fs::TempFile> core;
-  std::optional<llvm::sys::fs::TempFile> binary;
+  TestFixtures fixtures;
 
-  static constexpr llvm::StringLiteral k_linux_binary = "linux-x86_64.out.yaml";
-  static constexpr llvm::StringLiteral k_linux_core = "linux-x86_64.core.yaml";
-
-  static void SetUpTestSuite();
-  static void TeatUpTestSuite();
-  void SetUp() override;
-  void TearDown() override;
-
-  bool GetDebuggerSupportsTarget(llvm::StringRef platform);
   void CreateDebugger();
   void LoadCore();
 };

@@ -64,6 +64,10 @@ protected:
   /// LLDB_DAP_WELCOME_MESSAGE is defined.
   void PrintWelcomeMessage() const;
 
+  /// Prints an introduction to the debug console and information about the
+  /// debug session.
+  void PrintIntroductionMessage() const;
+
   // Takes a LaunchRequest object and launches the process, also handling
   // runInTerminal if applicable. It doesn't do any of the additional
   // initialization and bookkeeping stuff that is needed for `request_launch`.
@@ -187,26 +191,31 @@ class RequestHandler : public BaseRequestHandler {
           response.message = lldb_dap::protocol::eResponseMessageNotStopped;
         },
         [&](const DAPError &err) {
-          protocol::ErrorMessage error_message;
-          error_message.sendTelemetry = false;
-          error_message.format = err.getMessage();
-          error_message.showUser = err.getShowUser();
-          error_message.id = err.convertToErrorCode().value();
-          error_message.url = err.getURL();
-          error_message.urlLabel = err.getURLLabel();
-          protocol::ErrorResponseBody body;
-          body.error = error_message;
-          response.body = body;
+          // If we don't need to show the user, then we can simply return a
+          // message instead.
+          if (err.getShowUser()) {
+            protocol::ErrorMessage error_message;
+            error_message.format = err.getMessage();
+            error_message.showUser = err.getShowUser();
+            error_message.id = err.convertToErrorCode().value();
+            error_message.url = err.getURL();
+            error_message.urlLabel = err.getURLLabel();
+            protocol::ErrorResponseBody body;
+            body.error = error_message;
+            response.body = body;
+          } else {
+            response.message = err.getMessage();
+          }
         },
         [&](const llvm::ErrorInfoBase &err) {
           protocol::ErrorMessage error_message;
           error_message.showUser = true;
-          error_message.sendTelemetry = false;
           error_message.format = err.message();
           error_message.id = err.convertToErrorCode().value();
           protocol::ErrorResponseBody body;
           body.error = error_message;
           response.body = body;
+          response.message = err.message();
         });
   }
 };

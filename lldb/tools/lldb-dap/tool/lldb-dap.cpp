@@ -410,9 +410,9 @@ validateConnection(llvm::StringRef conn) {
 }
 
 static llvm::Error serveConnection(
-    const Socket::SocketProtocol &protocol, const std::string &name, Log *log,
+    const Socket::SocketProtocol &protocol, const std::string &name, Log &log,
     const ReplMode default_repl_mode,
-    const std::vector<std::string> &pre_init_commands, bool no_lldbinit,
+    const std::vector<std::string> &pre_init_commands,
     std::optional<std::chrono::seconds> connection_timeout_seconds) {
   Status status;
   static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
@@ -446,7 +446,7 @@ static llvm::Error serveConnection(
                            connection_timeout_seconds.value());
   std::condition_variable dap_sessions_condition;
   unsigned int clientCount = 0;
-  auto handle = listener->Accept(g_loop, [=, &clientCount](
+  auto handle = listener->Accept(g_loop, [=, &log, &clientCount](
                                              std::unique_ptr<Socket> sock) {
     // Reset the keep alive timer, because we won't be killing the server
     // while this connection is being served.
@@ -460,12 +460,12 @@ static llvm::Error serveConnection(
 
     // Move the client into a background thread to unblock accepting the next
     // client.
-    std::thread client([=]() {
-      llvm::set_thread_name(client_name + ".runloop");
+    std::thread client([=, log = log.WithPrefix(client_name)]() mutable {
+      llvm::set_thread_name("lldb.DAP." + client_name + ".runloop");
       MainLoop loop;
-      Transport transport(client_name, log, io, io);
-      DAP dap(log, default_repl_mode, pre_init_commands, no_lldbinit,
-              client_name, transport, loop);
+      Transport transport(log, io, io);
+      DAP dap(default_repl_mode, pre_init_commands, client_name, log, transport,
+              loop);
 
       if (auto Err = dap.ConfigureIO()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -474,7 +474,7 @@ static llvm::Error serveConnection(
       }
 
       // Register the DAP session with the global manager.
-      DAPSessionManager::GetInstance().RegisterSession(&loop, &dap);
+      auto session_handle = SessionManager::GetInstance().Register(dap);
 
       if (auto Err = dap.Loop()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -482,9 +482,8 @@ static llvm::Error serveConnection(
                                         ") error: ");
       }
 
-      DAP_LOG(log, "({0}) client disconnected", client_name);
-      // Unregister the DAP session from the global manager.
-      DAPSessionManager::GetInstance().UnregisterSession(&loop);
+      DAP_LOG(log, "client disconnected");
+
       // Start the countdown to kill the server at the end of each connection.
       if (connection_timeout_seconds)
         TrackConnectionTimeout(g_loop, g_connection_timeout_mutex,
@@ -508,10 +507,10 @@ static llvm::Error serveConnection(
       "lldb-dap server shutdown requested, disconnecting remaining clients...");
 
   // Disconnect all active sessions using the global manager.
-  DAPSessionManager::GetInstance().DisconnectAllSessions();
+  SessionManager::GetInstance().DisconnectAllSessions();
 
   // Wait for all clients to finish disconnecting and return any errors.
-  return DAPSessionManager::GetInstance().WaitForAllSessionsToDisconnect();
+  return SessionManager::GetInstance().WaitForAllSessionsToDisconnect();
 }
 
 int main(int argc, char *argv[]) {
@@ -642,18 +641,6 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-  std::unique_ptr<Log> log = nullptr;
-  const char *log_file_path = getenv("LLDBDAP_LOG");
-  if (log_file_path) {
-    std::error_code EC;
-    log = std::make_unique<Log>(log_file_path, EC);
-    if (EC) {
-      llvm::logAllUnhandledErrors(llvm::errorCodeToError(EC), llvm::errs(),
-                                  "Failed to create log file: ");
-      return EXIT_FAILURE;
-    }
-  }
-
   // Initialize LLDB first before we do anything.
   lldb::SBError error = lldb::SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {
@@ -663,10 +650,25 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  StreamSP log_os = nullptr;
+  if (const char *log_file_path = getenv("LLDBDAP_LOG"); log_file_path) {
+    int FD;
+    if (std::error_code EC = llvm::sys::fs::openFileForWrite(
+            log_file_path, FD, llvm::sys::fs::CD_CreateAlways,
+            llvm::sys::fs::OF_Append)) {
+      llvm::errs() << "Failed to open log file: " << log_file_path << ": "
+                   << EC.message() << "\n";
+      return EXIT_FAILURE;
+    }
+    log_os = std::make_shared<llvm::raw_fd_ostream>(FD, /*shouldClose=*/true);
+  }
+  Log::Mutex mutex;
+  Log log(log_os ? *log_os.get() : llvm::nulls(), mutex);
+
   // Create a memory monitor. This can return nullptr if the host platform is
   // not supported.
   std::unique_ptr<lldb_private::MemoryMonitor> memory_monitor =
-      lldb_private::MemoryMonitor::Create([log = log.get()]() {
+      lldb_private::MemoryMonitor::Create([&log]() {
         DAP_LOG(log, "memory pressure detected");
         lldb::SBDebugger::MemoryPressureDetected();
       });
@@ -687,11 +689,9 @@ int main(int argc, char *argv[]) {
     pre_init_commands.push_back(arg);
   }
 
-  bool no_lldbinit = input_args.hasArg(OPT_no_lldbinit);
-
   if (!connection.empty()) {
-    auto maybeProtoclAndName = validateConnection(connection);
-    if (auto Err = maybeProtoclAndName.takeError()) {
+    auto maybeProtocolAndName = validateConnection(connection);
+    if (auto Err = maybeProtocolAndName.takeError()) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                   "Invalid connection: ");
       return EXIT_FAILURE;
@@ -699,10 +699,10 @@ int main(int argc, char *argv[]) {
 
     Socket::SocketProtocol protocol;
     std::string name;
-    std::tie(protocol, name) = *maybeProtoclAndName;
-    if (auto Err = serveConnection(protocol, name, log.get(), default_repl_mode,
-                                   pre_init_commands, no_lldbinit,
-                                   connection_timeout_seconds)) {
+    std::tie(protocol, name) = *maybeProtocolAndName;
+    if (auto Err =
+            serveConnection(protocol, name, log, default_repl_mode,
+                            pre_init_commands, connection_timeout_seconds)) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                   "Connection failed: ");
       return EXIT_FAILURE;
@@ -735,11 +735,11 @@ int main(int argc, char *argv[]) {
   lldb::IOObjectSP output = std::make_shared<NativeFile>(
       stdout_fd, File::eOpenOptionWriteOnly, NativeFile::Unowned);
 
-  constexpr llvm::StringLiteral client_name = "stdio";
+  Log stdio_log = log.WithPrefix("(stdio) ");
   MainLoop loop;
-  Transport transport(client_name, log.get(), input, output);
-  DAP dap(log.get(), default_repl_mode, pre_init_commands, no_lldbinit,
-          client_name, transport, loop);
+  Transport transport(stdio_log, input, output);
+  DAP dap(default_repl_mode, pre_init_commands, "stdio", stdio_log, transport,
+          loop);
 
   // stdout/stderr redirection to the IDE's console
   if (auto Err = dap.ConfigureIO(stdout, stderr)) {
@@ -750,20 +750,18 @@ int main(int argc, char *argv[]) {
 
   // Register the DAP session with the global manager for stdio mode.
   // This is needed for the event handling to find the correct DAP instance.
-  DAPSessionManager::GetInstance().RegisterSession(&loop, &dap);
+  auto session_handle = SessionManager::GetInstance().Register(dap);
 
   // used only by TestVSCode_redirection_to_console.py
   if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
     redirection_test();
 
   if (auto Err = dap.Loop()) {
-    DAP_LOG(log.get(), "({0}) DAP session error: {1}", client_name,
+    DAP_LOG(log, "(stdio) DAP session error: {1}",
             llvm::toStringWithoutConsuming(Err));
     llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                 "DAP session error: ");
-    DAPSessionManager::GetInstance().UnregisterSession(&loop);
     return EXIT_FAILURE;
   }
-  DAPSessionManager::GetInstance().UnregisterSession(&loop);
   return EXIT_SUCCESS;
 }

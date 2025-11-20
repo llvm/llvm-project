@@ -255,12 +255,14 @@ void SendTerminatedEvent(DAP &dap) { dap.SendTerminatedEvent(); }
 // Grab any STDOUT and STDERR from the process and send it up to VS Code
 // via an "output" event to the "stdout" and "stderr" categories.
 void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process) {
-  char buffer[OutputBufferSize];
+  char buffer[OutputBufferSize] = {0};
   size_t count;
   while ((count = process.GetSTDOUT(buffer, sizeof(buffer))) > 0)
-    dap.SendOutput(OutputType::Stdout, llvm::StringRef(buffer, count));
+    dap.SendOutput(protocol::eOutputCategoryStderr,
+                   llvm::StringRef(buffer, count));
   while ((count = process.GetSTDERR(buffer, sizeof(buffer))) > 0)
-    dap.SendOutput(OutputType::Stderr, llvm::StringRef(buffer, count));
+    dap.SendOutput(protocol::eOutputCategoryStderr,
+                   llvm::StringRef(buffer, count));
 }
 
 // Send a "continued" event to indicate the process is in the running state.
@@ -296,7 +298,7 @@ void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process) {
 void SendInvalidatedEvent(
     DAP &dap, llvm::ArrayRef<protocol::InvalidatedEventBody::Area> areas,
     lldb::tid_t tid) {
-  if (!dap.clientFeatures.contains(protocol::eClientFeatureInvalidatedEvent))
+  if (!dap.client_features.contains(protocol::eClientFeatureInvalidatedEvent))
     return;
   protocol::InvalidatedEventBody body;
   body.areas = areas;
@@ -308,7 +310,7 @@ void SendInvalidatedEvent(
 }
 
 void SendMemoryEvent(DAP &dap, lldb::SBValue variable) {
-  if (!dap.clientFeatures.contains(protocol::eClientFeatureMemoryEvent))
+  if (!dap.client_features.contains(protocol::eClientFeatureMemoryEvent))
     return;
   protocol::MemoryEventBody body;
   body.memoryReference = variable.GetLoadAddress();
@@ -318,18 +320,12 @@ void SendMemoryEvent(DAP &dap, lldb::SBValue variable) {
   dap.Send(protocol::Event{"memory", std::move(body)});
 }
 
-// Event handler functions that are called by EventThread.
-// These handlers extract the necessary objects from events and find the
-// appropriate DAP instance to handle them, maintaining compatibility with
-// the original DAP::Handle*Event pattern while supporting multi-session
-// debugging.
-
-void HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited,
-                        Log *log) {
+static void HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited,
+                               Log &log) {
   lldb::SBProcess process = lldb::SBProcess::GetProcessFromEvent(event);
 
   // Find the DAP instance that owns this process's target.
-  DAP *dap = DAPSessionManager::FindDAP(process.GetTarget());
+  DAP *dap = SessionManager::FindDAP(process.GetTarget());
   if (!dap) {
     DAP_LOG(log, "Unable to find DAP instance for process {0}",
             process.GetProcessID());
@@ -357,8 +353,7 @@ void HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited,
         SendStdOutStdErr(*dap, process);
         if (llvm::Error err = SendThreadStoppedEvent(*dap))
           DAP_LOG_ERROR(dap->log, std::move(err),
-                        "({1}) reporting thread stopped: {0}",
-                        dap->GetClientName());
+                        "reporting thread stopped: {0}");
       }
       break;
     case lldb::eStateRunning:
@@ -369,7 +364,7 @@ void HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited,
     case lldb::eStateExited:
       lldb::SBStream stream;
       process.GetStatus(stream);
-      dap->SendOutput(OutputType::Console, stream.GetData());
+      dap->SendOutput(OutputCategory::eOutputCategoryConsole, stream.GetData());
 
       // When restarting, we can get an "exited" event for the process we
       // just killed with the old PID, or even with no PID. In that case
@@ -393,11 +388,11 @@ void HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited,
   }
 }
 
-void HandleTargetEvent(const lldb::SBEvent &event, Log *log) {
+static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
   lldb::SBTarget target = lldb::SBTarget::GetTargetFromEvent(event);
 
   // Find the DAP instance that owns this target.
-  DAP *dap = DAPSessionManager::FindDAP(target);
+  DAP *dap = SessionManager::FindDAP(target);
   if (!dap) {
     DAP_LOG(log, "Unable to find DAP instance for target");
     return;
@@ -480,7 +475,7 @@ void HandleTargetEvent(const lldb::SBEvent &event, Log *log) {
   }
 }
 
-void HandleBreakpointEvent(const lldb::SBEvent &event, Log *log) {
+static void HandleBreakpointEvent(const lldb::SBEvent &event, Log &log) {
   const uint32_t event_mask = event.GetType();
   if (!(event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged))
     return;
@@ -490,7 +485,7 @@ void HandleBreakpointEvent(const lldb::SBEvent &event, Log *log) {
     return;
 
   // Find the DAP instance that owns this breakpoint's target.
-  DAP *dap = DAPSessionManager::FindDAP(bp.GetTarget());
+  DAP *dap = SessionManager::FindDAP(bp.GetTarget());
   if (!dap) {
     DAP_LOG(log, "Unable to find DAP instance for breakpoint");
     return;
@@ -529,7 +524,7 @@ void HandleBreakpointEvent(const lldb::SBEvent &event, Log *log) {
   }
 }
 
-void HandleThreadEvent(const lldb::SBEvent &event, Log *log) {
+static void HandleThreadEvent(const lldb::SBEvent &event, Log &log) {
   uint32_t event_type = event.GetType();
 
   if (!(event_type & lldb::SBThread::eBroadcastBitStackChanged))
@@ -540,7 +535,7 @@ void HandleThreadEvent(const lldb::SBEvent &event, Log *log) {
     return;
 
   // Find the DAP instance that owns this thread's process/target.
-  DAP *dap = DAPSessionManager::FindDAP(thread.GetProcess().GetTarget());
+  DAP *dap = SessionManager::FindDAP(thread.GetProcess().GetTarget());
   if (!dap) {
     DAP_LOG(log, "Unable to find DAP instance for thread");
     return;
@@ -550,10 +545,10 @@ void HandleThreadEvent(const lldb::SBEvent &event, Log *log) {
                        thread.GetThreadID());
 }
 
-void HandleDiagnosticEvent(const lldb::SBEvent &event, Log *log) {
+static void HandleDiagnosticEvent(const lldb::SBEvent &event, Log &log) {
   // Global debugger events - send to all DAP instances.
   std::vector<DAP *> active_instances =
-      DAPSessionManager::GetInstance().GetActiveSessions();
+      SessionManager::GetInstance().GetActiveSessions();
   for (DAP *dap_instance : active_instances) {
     if (!dap_instance)
       continue;
@@ -565,7 +560,7 @@ void HandleDiagnosticEvent(const lldb::SBEvent &event, Log *log) {
 
     std::string type = GetStringValue(data.GetValueForKey("type"));
     std::string message = GetStringValue(data.GetValueForKey("message"));
-    dap_instance->SendOutput(OutputType::Important,
+    dap_instance->SendOutput(OutputCategory::eOutputCategoryImportant,
                              llvm::formatv("{0}: {1}", type, message).str());
   }
 }
@@ -576,7 +571,7 @@ void HandleDiagnosticEvent(const lldb::SBEvent &event, Log *log) {
 // shared event processing loop that:
 // 1. Listens to events from a shared debugger instance
 // 2. Dispatches events to the appropriate handler, which internally finds the
-//    DAP instance using DAPSessionManager::FindDAP()
+//    DAP instance using SessionManager::FindDAP()
 // 3. Handles events for multiple different DAP sessions
 // This allows multiple DAP sessions to share a single debugger and event
 // thread, which is essential for the target handoff mechanism where child
@@ -588,8 +583,8 @@ void HandleDiagnosticEvent(const lldb::SBEvent &event, Log *log) {
 // them prevent multiple threads from writing simultaneously so no locking
 // is required.
 void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
-                 llvm::StringRef client_name, Log *log) {
-  llvm::set_thread_name("lldb.DAP.client." + client_name + ".event_handler");
+                 llvm::StringRef client_name, Log &log) {
+  llvm::set_thread_name("lldb.DAP." + client_name + ".event_handler");
   lldb::SBListener listener = debugger.GetListener();
   broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
   debugger.GetBroadcaster().AddListener(

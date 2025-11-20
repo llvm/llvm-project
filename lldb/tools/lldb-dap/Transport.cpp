@@ -17,13 +17,10 @@ using namespace lldb_private;
 
 namespace lldb_dap {
 
-Transport::Transport(llvm::StringRef client_name, lldb_dap::Log *log,
-                     lldb::IOObjectSP input, lldb::IOObjectSP output)
-    : HTTPDelimitedJSONTransport(input, output), m_client_name(client_name),
-      m_log(log) {}
+Transport::Transport(lldb_dap::Log &log, lldb::IOObjectSP input,
+                     lldb::IOObjectSP output)
+    : HTTPDelimitedJSONTransport(input, output), m_log(log) {}
 
-void Transport::Log(llvm::StringRef message) {
-  DAP_LOG(m_log, "({0}) {1}", m_client_name, message);
-}
+void Transport::Log(llvm::StringRef message) { m_log.Emit(message); }
 
 } // namespace lldb_dap
