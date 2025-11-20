@@ -4821,24 +4821,6 @@ private:
     assert(!lowerToHighLevelFIR() && "code should not be called with HFLIR");
     if (Fortran::evaluate::IsProcedureDesignator(assign.rhs))
       TODO(loc, "procedure pointer assignment");
-    if (Fortran::evaluate::IsProcedurePointer(assign.lhs)) {
-      hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
-          loc, *this, assign.lhs, localSymbols, stmtCtx);
-      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
-              assign.rhs)) {
-        // rhs is null(). rhs being null(pptr) is handled in genNull.
-        auto boxTy{
-            Fortran::lower::getUntypedBoxProcType(builder->getContext())};
-        hlfir::Entity rhs(
-            fir::factory::createNullBoxProc(*builder, loc, boxTy));
-        builder->createStoreWithConvert(loc, rhs, lhs);
-        return;
-      }
-      hlfir::Entity rhs(getBase(Fortran::lower::convertExprToAddress(
-          loc, *this, assign.rhs, localSymbols, stmtCtx)));
-      builder->createStoreWithConvert(loc, rhs, lhs);
-      return;
-    }
 
     std::optional<Fortran::evaluate::DynamicType> lhsType =
         assign.lhs.GetType();
