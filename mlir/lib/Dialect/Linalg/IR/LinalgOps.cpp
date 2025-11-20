@@ -2091,7 +2091,7 @@ LogicalResult TransposeOp::fold(FoldAdaptor adaptor,
     return failure();
 
   // Single dimension transpose.
-  if (getPermutation().size() == 0) {
+  if (getPermutation().empty()) {
     result.push_back(getInput());
     return success();
   }
