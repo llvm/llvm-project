@@ -56,7 +56,8 @@ define <vscale x 2 x bfloat> @fadd_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 
 ;
 ; B16B16-LABEL: fadd_nxv2bf16:
 ; B16B16:       // %bb.0:
-; B16B16-NEXT:    bfadd z0.h, z0.h, z1.h
+; B16B16-NEXT:    ptrue p0.d
+; B16B16-NEXT:    bfadd z0.h, p0/m, z0.h, z1.h
 ; B16B16-NEXT:    ret
   %res = fadd <vscale x 2 x bfloat> %a, %b
   ret <vscale x 2 x bfloat> %res
@@ -74,7 +75,8 @@ define <vscale x 4 x bfloat> @fadd_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 ;
 ; B16B16-LABEL: fadd_nxv4bf16:
 ; B16B16:       // %bb.0:
-; B16B16-NEXT:    bfadd z0.h, z0.h, z1.h
+; B16B16-NEXT:    ptrue p0.s
+; B16B16-NEXT:    bfadd z0.h, p0/m, z0.h, z1.h
 ; B16B16-NEXT:    ret
   %res = fadd <vscale x 4 x bfloat> %a, %b
   ret <vscale x 4 x bfloat> %res
@@ -525,7 +527,8 @@ define <vscale x 2 x bfloat> @fmul_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 
 ;
 ; B16B16-LABEL: fmul_nxv2bf16:
 ; B16B16:       // %bb.0:
-; B16B16-NEXT:    bfmul z0.h, z0.h, z1.h
+; B16B16-NEXT:    ptrue p0.d
+; B16B16-NEXT:    bfmul z0.h, p0/m, z0.h, z1.h
 ; B16B16-NEXT:    ret
   %res = fmul <vscale x 2 x bfloat> %a, %b
   ret <vscale x 2 x bfloat> %res
@@ -543,7 +546,8 @@ define <vscale x 4 x bfloat> @fmul_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 ;
 ; B16B16-LABEL: fmul_nxv4bf16:
 ; B16B16:       // %bb.0:
-; B16B16-NEXT:    bfmul z0.h, z0.h, z1.h
+; B16B16-NEXT:    ptrue p0.s
+; B16B16-NEXT:    bfmul z0.h, p0/m, z0.h, z1.h
 ; B16B16-NEXT:    ret
   %res = fmul <vscale x 4 x bfloat> %a, %b
   ret <vscale x 4 x bfloat> %res
@@ -672,7 +676,8 @@ define <vscale x 2 x bfloat> @fsub_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 
 ;
 ; B16B16-LABEL: fsub_nxv2bf16:
 ; B16B16:       // %bb.0:
-; B16B16-NEXT:    bfsub z0.h, z0.h, z1.h
+; B16B16-NEXT:    ptrue p0.d
+; B16B16-NEXT:    bfsub z0.h, p0/m, z0.h, z1.h
 ; B16B16-NEXT:    ret
   %res = fsub <vscale x 2 x bfloat> %a, %b
   ret <vscale x 2 x bfloat> %res
@@ -690,7 +695,8 @@ define <vscale x 4 x bfloat> @fsub_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 ;
 ; B16B16-LABEL: fsub_nxv4bf16:
 ; B16B16:       // %bb.0:
-; B16B16-NEXT:    bfsub z0.h, z0.h, z1.h
+; B16B16-NEXT:    ptrue p0.s
+; B16B16-NEXT:    bfsub z0.h, p0/m, z0.h, z1.h
 ; B16B16-NEXT:    ret
   %res = fsub <vscale x 4 x bfloat> %a, %b
   ret <vscale x 4 x bfloat> %res

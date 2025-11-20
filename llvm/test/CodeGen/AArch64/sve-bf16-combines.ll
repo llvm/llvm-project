@@ -311,8 +311,7 @@ define <vscale x 8 x bfloat> @fadd_sel_nxv8bf16(<vscale x 8 x bfloat> %a, <vscal
 ;
 ; SVE-B16B16-LABEL: fadd_sel_nxv8bf16:
 ; SVE-B16B16:       // %bb.0:
-; SVE-B16B16-NEXT:    bfadd z1.h, z0.h, z1.h
-; SVE-B16B16-NEXT:    mov z0.h, p0/m, z1.h
+; SVE-B16B16-NEXT:    bfadd z0.h, p0/m, z0.h, z1.h
 ; SVE-B16B16-NEXT:    ret
   %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> zeroinitializer
   %fadd = fadd nsz <vscale x 8 x bfloat> %a, %sel
@@ -341,8 +340,7 @@ define <vscale x 8 x bfloat> @fsub_sel_nxv8bf16(<vscale x 8 x bfloat> %a, <vscal
 ;
 ; SVE-B16B16-LABEL: fsub_sel_nxv8bf16:
 ; SVE-B16B16:       // %bb.0:
-; SVE-B16B16-NEXT:    bfsub z1.h, z0.h, z1.h
-; SVE-B16B16-NEXT:    mov z0.h, p0/m, z1.h
+; SVE-B16B16-NEXT:    bfsub z0.h, p0/m, z0.h, z1.h
 ; SVE-B16B16-NEXT:    ret
   %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> zeroinitializer
   %fsub = fsub <vscale x 8 x bfloat> %a, %sel
@@ -371,8 +369,7 @@ define <vscale x 8 x bfloat> @fadd_sel_negzero_nxv8bf16(<vscale x 8 x bfloat> %a
 ;
 ; SVE-B16B16-LABEL: fadd_sel_negzero_nxv8bf16:
 ; SVE-B16B16:       // %bb.0:
-; SVE-B16B16-NEXT:    bfadd z1.h, z0.h, z1.h
-; SVE-B16B16-NEXT:    mov z0.h, p0/m, z1.h
+; SVE-B16B16-NEXT:    bfadd z0.h, p0/m, z0.h, z1.h
 ; SVE-B16B16-NEXT:    ret
   %nz = fneg <vscale x 8 x bfloat> zeroinitializer
   %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %nz
@@ -402,8 +399,7 @@ define <vscale x 8 x bfloat> @fsub_sel_negzero_nxv8bf16(<vscale x 8 x bfloat> %a
 ;
 ; SVE-B16B16-LABEL: fsub_sel_negzero_nxv8bf16:
 ; SVE-B16B16:       // %bb.0:
-; SVE-B16B16-NEXT:    bfsub z1.h, z0.h, z1.h
-; SVE-B16B16-NEXT:    mov z0.h, p0/m, z1.h
+; SVE-B16B16-NEXT:    bfsub z0.h, p0/m, z0.h, z1.h
 ; SVE-B16B16-NEXT:    ret
   %nz = fneg <vscale x 8 x bfloat> zeroinitializer
   %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %nz
@@ -490,9 +486,7 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_nxv8bf16(<vscale x 8 x bfloat> %a, <
 ;
 ; SVE-B16B16-LABEL: fsub_sel_fmul_nxv8bf16:
 ; SVE-B16B16:       // %bb.0:
-; SVE-B16B16-NEXT:    bfmul z1.h, z1.h, z2.h
-; SVE-B16B16-NEXT:    bfsub z1.h, z0.h, z1.h
-; SVE-B16B16-NEXT:    mov z0.h, p0/m, z1.h
+; SVE-B16B16-NEXT:    bfmls z0.h, p0/m, z1.h, z2.h
 ; SVE-B16B16-NEXT:    ret
   %fmul = fmul <vscale x 8 x bfloat> %b, %c
   %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> %fmul, <vscale x 8 x bfloat> zeroinitializer
@@ -532,9 +526,7 @@ define <vscale x 8 x bfloat> @fadd_sel_fmul_nsz_nxv8bf16(<vscale x 8 x bfloat> %
 ;
 ; SVE-B16B16-LABEL: fadd_sel_fmul_nsz_nxv8bf16:
 ; SVE-B16B16:       // %bb.0:
-; SVE-B16B16-NEXT:    bfmul z1.h, z1.h, z2.h
-; SVE-B16B16-NEXT:    bfadd z1.h, z0.h, z1.h
-; SVE-B16B16-NEXT:    mov z0.h, p0/m, z1.h
+; SVE-B16B16-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
 ; SVE-B16B16-NEXT:    ret
   %fmul = fmul <vscale x 8 x bfloat> %b, %c
   %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> %fmul, <vscale x 8 x bfloat> zeroinitializer
@@ -574,9 +566,7 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_nsz_nxv8bf16(<vscale x 8 x bfloat> %
 ;
 ; SVE-B16B16-LABEL: fsub_sel_fmul_nsz_nxv8bf16:
 ; SVE-B16B16:       // %bb.0:
-; SVE-B16B16-NEXT:    bfmul z1.h, z1.h, z2.h
-; SVE-B16B16-NEXT:    bfsub z1.h, z0.h, z1.h
-; SVE-B16B16-NEXT:    mov z0.h, p0/m, z1.h
+; SVE-B16B16-NEXT:    bfmls z0.h, p0/m, z1.h, z2.h
 ; SVE-B16B16-NEXT:    ret
   %fmul = fmul <vscale x 8 x bfloat> %b, %c
   %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> %fmul, <vscale x 8 x bfloat> zeroinitializer
@@ -616,9 +606,7 @@ define <vscale x 8 x bfloat> @fadd_sel_fmul_negzero_nxv8bf16(<vscale x 8 x bfloa
 ;
 ; SVE-B16B16-LABEL: fadd_sel_fmul_negzero_nxv8bf16:
 ; SVE-B16B16:       // %bb.0:
-; SVE-B16B16-NEXT:    bfmul z1.h, z1.h, z2.h
-; SVE-B16B16-NEXT:    bfadd z1.h, z0.h, z1.h
-; SVE-B16B16-NEXT:    mov z0.h, p0/m, z1.h
+; SVE-B16B16-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
 ; SVE-B16B16-NEXT:    ret
   %fmul = fmul <vscale x 8 x bfloat> %b, %c
   %nz = fneg <vscale x 8 x bfloat> zeroinitializer
@@ -707,9 +695,7 @@ define <vscale x 8 x bfloat> @fadd_sel_fmul_negzero_nsz_nxv8bf16(<vscale x 8 x b
 ;
 ; SVE-B16B16-LABEL: fadd_sel_fmul_negzero_nsz_nxv8bf16:
 ; SVE-B16B16:       // %bb.0:
-; SVE-B16B16-NEXT:    bfmul z1.h, z1.h, z2.h
-; SVE-B16B16-NEXT:    bfadd z1.h, z0.h, z1.h
-; SVE-B16B16-NEXT:    mov z0.h, p0/m, z1.h
+; SVE-B16B16-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
 ; SVE-B16B16-NEXT:    ret
   %fmul = fmul <vscale x 8 x bfloat> %b, %c
   %nz = fneg <vscale x 8 x bfloat> zeroinitializer
@@ -750,9 +736,7 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_negzero_nsz_nxv8bf16(<vscale x 8 x b
 ;
 ; SVE-B16B16-LABEL: fsub_sel_fmul_negzero_nsz_nxv8bf16:
 ; SVE-B16B16:       // %bb.0:
-; SVE-B16B16-NEXT:    bfmul z1.h, z1.h, z2.h
-; SVE-B16B16-NEXT:    bfsub z1.h, z0.h, z1.h
-; SVE-B16B16-NEXT:    mov z0.h, p0/m, z1.h
+; SVE-B16B16-NEXT:    bfmls z0.h, p0/m, z1.h, z2.h
 ; SVE-B16B16-NEXT:    ret
   %fmul = fmul <vscale x 8 x bfloat> %b, %c
   %nz = fneg <vscale x 8 x bfloat> zeroinitializer
