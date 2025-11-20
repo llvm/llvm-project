@@ -2291,8 +2291,31 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
            std::numeric_limits<unsigned short>::max();
   });
 
+  auto CheckVectorTypeForPromotion = [&](VectorType *VTy) -> bool {
+    uint64_t ElementSize =
+    DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
+
+    // While the definition of LLVM vectors is bitpacked, we don't support sizes
+    // that aren't byte sized.
+    if (ElementSize % 8)
+      return false;
+    assert((DL.getTypeSizeInBits(VTy).getFixedValue() % 8) == 0 &&
+          "vector size not a multiple of element size?");
+    ElementSize /= 8;
+
+    for (const Slice &S : P)
+      if (!isVectorPromotionViableForSlice(P, S, VTy, ElementSize, DL, VScale))
+        return false;
+
+    for (const Slice *S : P.splitSliceTails())
+      if (!isVectorPromotionViableForSlice(P, *S, VTy, ElementSize, DL, VScale))
+        return false;
+
+    return true;
+  };
+  // Try each vector type, and return the one which works.
   for (VectorType *VTy : CandidateTys)
-    if (checkVectorTypeForPromotion(P, VTy, DL, VScale))
+    if (CheckVectorTypeForPromotion(VTy))
       return VTy;
 
   return nullptr;
@@ -5252,10 +5275,9 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
       if (LargestIntegerUsedTy && DL.getTypeAllocSize(LargestIntegerUsedTy).getFixedValue() >= P.size())
         PartitionTy = LargestIntegerUsedTy;
 
-  // If the type has not been selected yet OR if the type selected is an array of integers, try to select
+  // If the type has not been selected yet OR if the type selected is a non-promotable array of integers, try to select
   // a legal integer type of the same size as the alloca.
-  if ((!PartitionTy || (PartitionTy->isArrayTy() &&
-                    PartitionTy->getArrayElementType()->isIntegerTy())) &&
+  if ((!PartitionTy || (PartitionTy->isArrayTy() && !IsVectorPromotable)) &&
       DL.isLegalInteger(P.size() * 8))
     PartitionTy = Type::getIntNTy(*C, P.size() * 8);
   
@@ -5264,7 +5286,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     PartitionTy = ArrayType::get(Type::getInt8Ty(*C), P.size());
   assert(DL.getTypeAllocSize(PartitionTy).getFixedValue() >= P.size());
 
-  bool IsIntegerPromotable = isIntegerWideningViable(P, PartitionTy, DL);
+  bool IsIntegerPromotable = IsVectorPromotable ? false : isIntegerWideningViable(P, PartitionTy, DL);
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
