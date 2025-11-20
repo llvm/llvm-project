@@ -2,9 +2,6 @@
 // in order to handle uninstrumented libraries
 // UNSUPPORTED: target={{.*windows-msvc.*}}
 
-// FIXME: Fix this test under GCC.
-// REQUIRES: Clang
-
 // Mimic a closed-source library compiled without ASan
 // RUN: %clangxx_asan -fno-sanitize=address -DSHARED_LIB %s %fPIC -shared -o %t-so.so
 
@@ -12,7 +9,7 @@
 // %t-object.o and %t-main compiled seperately and then linked together
 // RUN: %clangxx_asan -DMULTI_SOURCE %s -c -o %t-object.o
 // RUN: %clangxx_asan %s -c -o %t-main.o
-// RUN: %clangxx_asan -o %t %t-main.o %t-object.o
+// RUN: %clangxx_asan -o %t %t-main.o %t-object.o %libdl
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 // Disable container overflow checks at runtime using ASAN_OPTIONS=detect_container_overflow=0
@@ -20,7 +17,7 @@
 
 // RUN: %clangxx_asan -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ -DMULTI_SOURCE %s -c -o %t-object.o
 // RUN: %clangxx_asan -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ %s -c -o %t-main.o
-// RUN: %clangxx_asan -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ -o %t %t-main.o %t-object.o
+// RUN: %clangxx_asan -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ -o %t %t-main.o %t-object.o %libdl
 // RUN: %run %t 2>&1 | FileCheck --check-prefix=CHECK-NO-CONTAINER-OVERFLOW %s
 
 #include <assert.h>
