@@ -2720,6 +2720,10 @@ llvm_target_lib_list = [lib for lib in [
                 ],
             ),
             (
+                ["-gen-sd-node-info"],
+                "lib/Target/LoongArch/LoongArchGenSDNodeInfo.inc",
+            ),
+            (
                 ["-gen-subtarget"],
                 "lib/Target/LoongArch/LoongArchGenSubtargetInfo.inc",
             ),
