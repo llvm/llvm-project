@@ -784,6 +784,11 @@ public:
 
   virtual bool isPop(const MCInst &Inst) const { return false; }
 
+  /// Determine if a basic block looks like an epilogue. For now it is only
+  /// called at the final stage of building CFG to check basic block ending
+  /// with an indirect call that has unknown control flow attribute.
+  virtual bool isEpilogue(const BinaryBasicBlock &BB) const { return false; }
+
   /// Return true if the instruction is used to terminate an indirect branch.
   virtual bool isTerminateBranch(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -1371,20 +1376,13 @@ public:
   /// Return true if \p Inst has RestoreState annotation.
   bool hasRestoreState(const MCInst &Inst) const;
 
-  /// Stores RA Signed annotation on \p Inst.
-  void setRASigned(MCInst &Inst) const;
+  /// Sets kRASigned or kRAUnsigned annotation on \p Inst.
+  /// Fails if \p Inst has either annotation already set.
+  void setRAState(MCInst &Inst, bool State) const;
 
-  /// Return true if \p Inst has Signed RA annotation.
-  bool isRASigned(const MCInst &Inst) const;
-
-  /// Stores RA Unsigned annotation on \p Inst.
-  void setRAUnsigned(MCInst &Inst) const;
-
-  /// Return true if \p Inst has Unsigned RA annotation.
-  bool isRAUnsigned(const MCInst &Inst) const;
-
-  /// Return true if \p Inst doesn't have any annotation related to RA state.
-  bool isRAStateUnknown(const MCInst &Inst) const;
+  /// Return true if \p Inst has kRASigned annotation, false if it has
+  /// kRAUnsigned annotation, and std::nullopt if neither annotation is set.
+  std::optional<bool> getRAState(const MCInst &Inst) const;
 
   /// Return true if the instruction is a call with an exception handling info.
   virtual bool isInvoke(const MCInst &Inst) const {

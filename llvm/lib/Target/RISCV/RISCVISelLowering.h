@@ -71,6 +71,9 @@ public:
 
   bool preferScalarizeSplat(SDNode *N) const override;
 
+  /// Customize the preferred legalization strategy for certain types.
+  LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
+
   bool softPromoteHalfType() const override { return true; }
 
   /// Return the register type for a given MVT, ensuring vectors are treated
@@ -572,6 +575,9 @@ private:
 
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue expandUnalignedVPLoad(SDValue Op, SelectionDAG &DAG) const;
+  SDValue expandUnalignedVPStore(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;

@@ -11,6 +11,16 @@
 
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+class ScriptInterpreter;
+namespace python {
+class SWIGBridge;
+}
+namespace lua {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 /// Represents a list of SBFrame objects.
@@ -65,6 +75,10 @@ public:
 
 protected:
   friend class SBThread;
+
+  friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::lua::SWIGBridge;
+  friend class lldb_private::ScriptInterpreter;
 
 private:
   SBFrameList(const lldb::StackFrameListSP &frame_list_sp);

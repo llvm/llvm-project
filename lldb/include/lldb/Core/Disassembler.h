@@ -297,6 +297,10 @@ public:
 
   lldb::InstructionSP GetInstructionAtIndex(size_t idx) const;
 
+  llvm::ArrayRef<lldb::InstructionSP> Instructions() const {
+    return m_instructions;
+  }
+
   /// Get the instruction at the given address.
   ///
   /// \return

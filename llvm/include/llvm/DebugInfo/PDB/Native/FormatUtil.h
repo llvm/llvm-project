@@ -19,7 +19,6 @@
 #include "llvm/Support/FormatVariadic.h"
 
 #include <string>
-#include <type_traits>
 
 namespace llvm {
 namespace pdb {

@@ -6,15 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CODEGEN_LIBCALLLOWERINGINFO_H
+#define LLVM_CODEGEN_LIBCALLLOWERINGINFO_H
+
 #include "llvm/IR/RuntimeLibcalls.h"
 
 namespace llvm {
 
 class LibcallLoweringInfo {
 private:
-  LLVM_ABI const RTLIB::RuntimeLibcallsInfo &RTLCI;
+  const RTLIB::RuntimeLibcallsInfo &RTLCI;
   /// Stores the implementation choice for each each libcall.
-  LLVM_ABI RTLIB::LibcallImpl LibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {
+  RTLIB::LibcallImpl LibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {
       RTLIB::Unsupported};
 
 public:
@@ -64,3 +67,5 @@ public:
 };
 
 } // end namespace llvm
+
+#endif // LLVM_CODEGEN_LIBCALLLOWERINGINFO_H

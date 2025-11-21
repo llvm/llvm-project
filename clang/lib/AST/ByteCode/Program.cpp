@@ -197,7 +197,8 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
     // global variable and points to the block we just created.
     if (auto DummyIt = DummyVariables.find(Redecl);
         DummyIt != DummyVariables.end()) {
-      assert(!Globals[DummyIt->second]->block()->hasPointers());
+      Global *Dummy = Globals[DummyIt->second];
+      Dummy->block()->movePointersTo(NewGlobal->block());
       Globals[DummyIt->second] = NewGlobal;
       DummyVariables.erase(DummyIt);
     }

@@ -1074,78 +1074,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
 float4 f16tof32(uint4);
 
 //===----------------------------------------------------------------------===//
-// firstbithigh builtins
-//===----------------------------------------------------------------------===//
-
-/// \fn T firstbithigh(T Val)
-/// \brief Returns the location of the first set bit starting from the highest
-/// order bit and working downward, per component.
-/// \param Val the input value.
-
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint firstbithigh(int16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint2 firstbithigh(int16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint3 firstbithigh(int16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint4 firstbithigh(int16_t4);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint firstbithigh(uint16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint2 firstbithigh(uint16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint3 firstbithigh(uint16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint4 firstbithigh(uint16_t4);
-#endif
-
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint firstbithigh(int);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint2 firstbithigh(int2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint3 firstbithigh(int3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint4 firstbithigh(int4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint firstbithigh(uint);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint2 firstbithigh(uint2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint3 firstbithigh(uint3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint4 firstbithigh(uint4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint firstbithigh(int64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint2 firstbithigh(int64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint3 firstbithigh(int64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint4 firstbithigh(int64_t4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint firstbithigh(uint64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint2 firstbithigh(uint64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint3 firstbithigh(uint64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint4 firstbithigh(uint64_t4);
-
-//===----------------------------------------------------------------------===//
 // firstbitlow builtins
 //===----------------------------------------------------------------------===//
 
@@ -3017,6 +2945,74 @@ float4 radians(float4);
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_group_memory_barrier_with_group_sync)
 __attribute__((convergent)) void GroupMemoryBarrierWithGroupSync(void);
+
+//===----------------------------------------------------------------------===//
+// ddx_coarse builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T ddx_coarse(T value)
+/// \brief Computes a low precision partial derivative with respect to the
+/// screen-space x-coordinate.
+/// \param value The input value.
+///
+/// The return value is a floating point scalar or vector containing the low
+/// prevision partial derivative of the input value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+half ddx_coarse(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+half2 ddx_coarse(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+half3 ddx_coarse(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+half4 ddx_coarse(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+float ddx_coarse(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+float2 ddx_coarse(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+float3 ddx_coarse(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+float4 ddx_coarse(float4);
+
+//===----------------------------------------------------------------------===//
+// ddy_coarse builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T ddy_coarse(T value)
+/// \brief Computes a low precision partial derivative with respect to the
+/// screen-space y-coordinate.
+/// \param value The input value.
+///
+/// The return value is a floating point scalar or vector containing the low
+/// prevision partial derivative of the input value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+half ddy_coarse(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+half2 ddy_coarse(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+half3 ddy_coarse(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+half4 ddy_coarse(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+float ddy_coarse(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+float2 ddy_coarse(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+float3 ddy_coarse(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+float4 ddy_coarse(float4);
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_ALIAS_INTRINSICS_H_

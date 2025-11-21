@@ -36,7 +36,7 @@ concurrency:
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-next-runners
+    runs-on: llvm-premerge-libcxx-runners
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -60,7 +60,7 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
         with:
           name: ${{ matrix.config }}-${{ matrix.cxx }}-results
@@ -73,7 +73,7 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-next-runners
+    runs-on: llvm-premerge-libcxx-runners
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -105,7 +105,7 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
           name: ${{ matrix.config }}-${{ matrix.cxx }}-results
@@ -148,19 +148,19 @@ jobs:
           'generic-static',
           'bootstrapping-build'
         ]
-        machine: [ 'llvm-premerge-libcxx-next-runners' ]
+        machine: [ 'llvm-premerge-libcxx-runners' ]
         include:
         - config: 'generic-cxx26'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-asan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-tsan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-ubsan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
     runs-on: ${{ matrix.machine }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -169,7 +169,7 @@ jobs:
         env:
           CC: clang-22
           CXX: clang++-22
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
         with:
           name: ${{ matrix.config }}-results
@@ -222,8 +222,8 @@ jobs:
           python3 -m venv .venv
           source .venv/bin/activate
           python -m pip install psutil
-          bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+          xcrun bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
           name: macos-${{ matrix.config }}-results

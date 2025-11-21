@@ -88,4 +88,26 @@ namespace InvalidBitCast {
                              // both-note {{in call to}}
 
 
+  struct sockaddr
+  {
+    char sa_data[8];
+  };
+  struct in_addr
+  {
+    unsigned int s_addr;
+  };
+  struct sockaddr_in
+  {
+    unsigned short int sin_port;
+    struct in_addr sin_addr;
+  };
+  /// Bitcast from sockaddr to sockaddr_in. Used to crash.
+  unsigned int get_addr(sockaddr addr) {
+      return ((sockaddr_in *)&addr)->sin_addr.s_addr;
+  }
+
+
+  struct s { int a; int b[1]; };
+  struct s myx;
+  int *myy = ((struct s *)&myx.a)->b;
 }

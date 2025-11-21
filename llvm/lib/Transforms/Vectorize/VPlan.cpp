@@ -52,10 +52,6 @@
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 
-namespace llvm {
-extern cl::opt<bool> EnableVPlanNativePath;
-}
-
 /// @{
 /// Metadata attribute names
 const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";
@@ -103,20 +99,20 @@ VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
 
 VPValue::~VPValue() {
   assert(Users.empty() && "trying to delete a VPValue with remaining users");
-  if (Def)
+  if (VPDef *Def = getDefiningRecipe())
     Def->removeDefinedValue(this);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::print(raw_ostream &OS, VPSlotTracker &SlotTracker) const {
-  if (const VPRecipeBase *R = dyn_cast_or_null<VPRecipeBase>(Def))
+  if (const VPRecipeBase *R = getDefiningRecipe())
     R->print(OS, "", SlotTracker);
   else
     printAsOperand(OS, SlotTracker);
 }
 
 void VPValue::dump() const {
-  const VPRecipeBase *Instr = dyn_cast_or_null<VPRecipeBase>(this->Def);
+  const VPRecipeBase *Instr = getDefiningRecipe();
   VPSlotTracker SlotTracker(
       (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
   print(dbgs(), SlotTracker);
@@ -888,8 +884,7 @@ VPlan::~VPlan() {
   }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
-  if (BackedgeTakenCount)
-    delete BackedgeTakenCount;
+  delete BackedgeTakenCount;
 }
 
 VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
@@ -1432,7 +1427,7 @@ void VPUser::printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const {
 void VPSlotTracker::assignName(const VPValue *V) {
   assert(!VPValue2Name.contains(V) && "VPValue already has a name!");
   auto *UV = V->getUnderlyingValue();
-  auto *VPI = dyn_cast_or_null<VPInstruction>(V->getDefiningRecipe());
+  auto *VPI = dyn_cast_or_null<VPInstruction>(V);
   if (!UV && !(VPI && !VPI->getName().empty())) {
     VPValue2Name[V] = (Twine("vp<%") + Twine(NextSlot) + ">").str();
     NextSlot++;
