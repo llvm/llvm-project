@@ -1,6 +1,6 @@
-# RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=greedy,amdgpu-rewrite-agpr-copy-mfma -verify-machineinstrs -o - %s 2>&1 | FileCheck %s
-# CHECK: Illegal virtual register for instruction
-# CHECK: Expected a VGPR_32 register, but got a AGPR_32 register
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=greedy,amdgpu-rewrite-agpr-copy-mfma -verify-machineinstrs -o - %s 2>&1 | FileCheck %s
+# CHECK-NOT: Illegal virtual register for instruction
+# CHECK-NOT: Expected a VGPR_32 register, but got a AGPR_32 register
  
 # Test for issue in amdgpu-rewrite-agpr-copy-mfma, which reassigns scale operand
 # in vgpr_32 register to agpr_32, not permitted by instruction format.
