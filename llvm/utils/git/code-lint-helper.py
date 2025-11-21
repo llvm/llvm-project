@@ -105,10 +105,20 @@ View the output from {self.name} here.
 </details>
 """
 
+    # TODO: Refactor this
     def find_comment(self, pr: any) -> any:
+        all_linter_names = [l.name for l in ALL_LINTERS]
+        other_linter_names = [name for name in all_linter_names if name != self.name]
+
+        other_tags = [
+            self.COMMENT_TAG.format(linter=name) for name in other_linter_names
+        ]
+
         for comment in pr.as_issue().get_comments():
-            if self.comment_tag in comment.body:
-                return comment
+            body = comment.body
+            if self.comment_tag in body:
+                if not any(other_tag in body for other_tag in other_tags):
+                    return comment
         return None
 
     def update_pr(self, comment_text: str, args: LintArgs, create_new: bool) -> None:

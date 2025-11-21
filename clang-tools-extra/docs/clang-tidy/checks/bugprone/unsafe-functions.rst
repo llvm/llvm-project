@@ -17,6 +17,7 @@ The check implements the following rules from the CERT C Coding Standard:
 
 `cert-msc24-c` and `cert-msc33-c` redirect here as aliases of this check.
 
+
 Unsafe functions
 ----------------
 
