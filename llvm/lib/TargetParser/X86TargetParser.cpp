@@ -762,7 +762,8 @@ llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   for (StringRef FeatureStr : FeatureStrs) {
     unsigned Feature = StringSwitch<unsigned>(FeatureStr)
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, ABI_VALUE)
-#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, ABI_VALUE)
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE)                    \
+  .Case(STR, ABI_VALUE)
 #include "llvm/TargetParser/X86TargetParser.def"
         ;
     assert(Feature / 32 < FeatureMask.size());
