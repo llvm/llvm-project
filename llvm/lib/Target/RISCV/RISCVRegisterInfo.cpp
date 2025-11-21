@@ -895,6 +895,9 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       // Check if this register matches the even/odd requirement
       bool IsOdd = (RegNum % 2 != 0);
 
+      // Skip unallocatable registers.
+      if (MRI->isReserved(PhysReg))
+        continue;
       // Verify the pair register exists and is in the same register class
       if ((WantOdd && IsOdd) || (!WantOdd && !IsOdd))
         Hints.push_back(PhysReg);
