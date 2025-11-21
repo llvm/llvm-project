@@ -2260,6 +2260,7 @@ static constexpr DirectiveSet GetLoopDirectives() {
       unsigned(Directive::OMPD_teams_distribute_parallel_do_simd),
       unsigned(Directive::OMPD_teams_distribute_simd),
       unsigned(Directive::OMPD_teams_loop),
+      unsigned(Directive::OMPD_fuse),
       unsigned(Directive::OMPD_tile),
       unsigned(Directive::OMPD_unroll),
   };

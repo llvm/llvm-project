@@ -22,6 +22,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addrspace(1) %arg, i32 %cnd) #0 {
 ; GCN-LABEL: uniform_conditional_max_short_forward_branch:
 ; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_load_b32 s0, s[4:5], 0x2c
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
@@ -62,6 +63,7 @@ bb3:
 define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrspace(1) %arg, i32 %cnd) #0 {
 ; GCN-LABEL: uniform_conditional_min_long_forward_branch:
 ; GCN:       ; %bb.0: ; %bb0
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_load_b32 s0, s[4:5], 0x2c
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
@@ -104,6 +106,7 @@ bb3:
 define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr addrspace(1) %arg, float %cnd) #0 {
 ; GCN-LABEL: uniform_conditional_min_long_forward_vcnd_branch:
 ; GCN:       ; %bb.0: ; %bb0
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_load_b32 s0, s[4:5], 0x2c
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_f32 s0, 0
@@ -146,6 +149,7 @@ bb3:
 define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-LABEL: min_long_forward_vbranch:
 ; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
@@ -198,6 +202,7 @@ bb3:
 define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-LABEL: long_backward_sbranch:
 ; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_mov_b32 s0, 0
 ; GCN-NEXT:  .LBB4_1: ; %bb2
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -238,6 +243,7 @@ bb3:
 define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr addrspace(1) %arg, i32 %arg1) {
 ; GCN-LABEL: uniform_unconditional_min_long_forward_branch:
 ; GCN:       ; %bb.0: ; %bb0
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_load_b32 s0, s[4:5], 0x2c
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
@@ -299,6 +305,7 @@ bb4:
 define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr addrspace(1) %arg, i32 %arg1) {
 ; GCN-LABEL: uniform_unconditional_min_long_backward_branch:
 ; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_mov_b32 vcc_lo, exec_lo
 ; GCN-NEXT:  .LBB6_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -334,6 +341,7 @@ loop:
 define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-LABEL: expand_requires_expand:
 ; GCN:       ; %bb.0: ; %bb0
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_lt_i32 s0, 0
@@ -401,6 +409,7 @@ bb3:
 define amdgpu_kernel void @uniform_inside_divergent(ptr addrspace(1) %out, i32 %cond) #0 {
 ; GCN-LABEL: uniform_inside_divergent:
 ; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GCN-NEXT:    s_mov_b32 s3, exec_lo
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -450,6 +459,7 @@ endif:
 define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-LABEL: analyze_mask_branch:
 ; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_mov_b32 s0, exec_lo
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    v_mov_b32_e64 v0, 0
@@ -518,6 +528,7 @@ ret:
 define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i64 %arg5) #0 {
 ; GCN-LABEL: long_branch_hang:
 ; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
 ; GCN-NEXT:    s_mov_b32 s7, -1
 ; GCN-NEXT:    s_wait_kmcnt 0x0

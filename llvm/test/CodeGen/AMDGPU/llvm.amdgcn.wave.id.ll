@@ -29,6 +29,7 @@ define amdgpu_cs void @test_wave_id(ptr addrspace(1) %out) {
 ;
 ; GFX1250-LABEL: test_wave_id:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0

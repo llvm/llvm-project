@@ -13,6 +13,7 @@
 define amdgpu_kernel void @test_move_load_address_to_vgpr(ptr addrspace(1) nocapture %arg1, ptr nocapture %arg2) {
 ; GCN-LABEL: test_move_load_address_to_vgpr:
 ; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0

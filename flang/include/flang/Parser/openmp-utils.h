@@ -123,6 +123,9 @@ template <typename T> OmpDirectiveName GetOmpDirectiveName(const T &x) {
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x);
 const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x);
 
+const OpenMPLoopConstruct *GetOmpLoop(const ExecutionPartConstruct &x);
+const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x);
+
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause);
 
 template <typename T>

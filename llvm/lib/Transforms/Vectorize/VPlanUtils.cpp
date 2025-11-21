@@ -397,17 +397,14 @@ bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
 
 std::optional<MemoryLocation>
 vputils::getMemoryLocation(const VPRecipeBase &R) {
-  return TypeSwitch<const VPRecipeBase *, std::optional<MemoryLocation>>(&R)
-      .Case<VPWidenMemoryRecipe, VPInterleaveBase, VPReplicateRecipe>(
-          [](auto *S) {
-            MemoryLocation Loc;
-            // Populate noalias metadata from VPIRMetadata.
-            if (MDNode *NoAliasMD = S->getMetadata(LLVMContext::MD_noalias))
-              Loc.AATags.NoAlias = NoAliasMD;
-            if (MDNode *AliasScopeMD =
-                    S->getMetadata(LLVMContext::MD_alias_scope))
-              Loc.AATags.Scope = AliasScopeMD;
-            return Loc;
-          })
-      .Default([](auto *) { return std::nullopt; });
+  auto *M = dyn_cast<VPIRMetadata>(&R);
+  if (!M)
+    return std::nullopt;
+  MemoryLocation Loc;
+  // Populate noalias metadata from VPIRMetadata.
+  if (MDNode *NoAliasMD = M->getMetadata(LLVMContext::MD_noalias))
+    Loc.AATags.NoAlias = NoAliasMD;
+  if (MDNode *AliasScopeMD = M->getMetadata(LLVMContext::MD_alias_scope))
+    Loc.AATags.Scope = AliasScopeMD;
+  return Loc;
 }

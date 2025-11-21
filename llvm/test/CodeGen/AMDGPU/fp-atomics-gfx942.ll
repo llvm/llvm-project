@@ -34,6 +34,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat(ptr %ptr) {
 ;
 ; GFX1250-LABEL: flat_atomic_fadd_f32_noret_pat:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
@@ -75,6 +76,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat_ieee(ptr %ptr) #0 {
 ;
 ; GFX1250-LABEL: flat_atomic_fadd_f32_noret_pat_ieee:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
@@ -153,6 +155,7 @@ define amdgpu_kernel void @local_atomic_fadd_v2f16_noret(ptr addrspace(3) %ptr, 
 ;
 ; GFX1250-LABEL: local_atomic_fadd_v2f16_noret:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -220,6 +223,7 @@ define amdgpu_kernel void @local_atomic_fadd_v2bf16_noret(ptr addrspace(3) %ptr,
 ;
 ; GFX1250-LABEL: local_atomic_fadd_v2bf16_noret:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1

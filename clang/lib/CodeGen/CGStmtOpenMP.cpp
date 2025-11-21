@@ -1950,9 +1950,9 @@ public:
       Scope = new OMPLoopScope(CGF, *Dir);
       CGSI = new CodeGenFunction::CGCapturedStmtInfo(CR_OpenMP);
       CapInfoRAII = new CodeGenFunction::CGCapturedStmtRAII(CGF, CGSI);
-    }
-    if (const auto *Dir =
-            dyn_cast<OMPCanonicalLoopSequenceTransformationDirective>(S)) {
+    } else if (const auto *Dir =
+                   dyn_cast<OMPCanonicalLoopSequenceTransformationDirective>(
+                       S)) {
       // For simplicity we reuse the loop scope similarly to what we do with
       // OMPCanonicalLoopNestTransformationDirective do by being a subclass
       // of OMPLoopBasedDirective.
