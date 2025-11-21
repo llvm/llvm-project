@@ -77,7 +77,7 @@ FallThroughWarningPass::getLiveSet(cir::FuncOp cfg) {
   auto &first = cfg.getBody().getBlocks().front();
 
   for (auto &block : cfg.getBody()) {
-    if (block.isReachable(&first))
+    if (first.isReachable(&block))
       liveSet.insert(&block);
   }
   return liveSet;
