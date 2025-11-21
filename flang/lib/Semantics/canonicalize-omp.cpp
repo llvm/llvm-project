@@ -9,6 +9,7 @@
 #include "canonicalize-omp.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/semantics.h"
 
 // After Loop Canonicalization, rewrite OpenMP parse tree to make OpenMP
@@ -51,8 +52,6 @@ public:
     } // Block list
   }
 
-  void Post(parser::ExecutionPart &body) { RewriteOmpAllocations(body); }
-
   // Pre-visit all constructs that have both a specification part and
   // an execution part, and store the connection between the two.
   bool Pre(parser::BlockConstruct &x) {
@@ -88,6 +87,7 @@ public:
 
   void Post(parser::SpecificationPart &spec) {
     CanonicalizeUtilityConstructs(spec);
+    CanonicalizeAllocateDirectives(spec);
   }
 
   void Post(parser::OmpMapClause &map) { CanonicalizeMapModifiers(map); }
@@ -137,33 +137,46 @@ private:
           "A DO loop must follow the %s directive"_err_en_US,
           parser::ToUpperCaseLetters(dirName.source.ToString()));
     };
-    auto tileUnrollError = [](const parser::OmpDirectiveName &dirName,
-                               parser::Messages &messages) {
+    auto transformUnrollError = [](const parser::OmpDirectiveName &dirName,
+                                    parser::Messages &messages) {
       messages.Say(dirName.source,
-          "If a loop construct has been fully unrolled, it cannot then be tiled"_err_en_US,
+          "If a loop construct has been fully unrolled, it cannot then be further transformed"_err_en_US,
           parser::ToUpperCaseLetters(dirName.source.ToString()));
     };
+    auto missingEndFuse = [](auto &dir, auto &messages) {
+      messages.Say(dir.source,
+          "The %s construct requires the END FUSE directive"_err_en_US,
+          parser::ToUpperCaseLetters(dir.source.ToString()));
+    };
+
+    bool endFuseNeeded = beginName.v == llvm::omp::Directive::OMPD_fuse;
+
+    auto &body{std::get<parser::Block>(x.t)};
 
     nextIt = it;
-    while (++nextIt != block.end()) {
+    nextIt++;
+    while (nextIt != block.end()) {
       // Ignore compiler directives.
-      if (GetConstructIf<parser::CompilerDirective>(*nextIt))
+      if (GetConstructIf<parser::CompilerDirective>(*nextIt)) {
+        nextIt++;
         continue;
+      }
 
       if (auto *doCons{GetConstructIf<parser::DoConstruct>(*nextIt)}) {
         if (doCons->GetLoopControl()) {
           // move DoConstruct
-          std::get<std::optional<std::variant<parser::DoConstruct,
-              common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t) =
-              std::move(*doCons);
+          body.push_back(std::move(*nextIt));
           nextIt = block.erase(nextIt);
           // try to match OmpEndLoopDirective
           if (nextIt != block.end()) {
             if (auto *endDir{
                     GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
-              std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
-                  std::move(*endDir);
-              nextIt = block.erase(nextIt);
+              auto &endDirName = endDir->DirName();
+              if (endDirName.v != llvm::omp::Directive::OMPD_fuse) {
+                std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
+                    std::move(*endDir);
+                nextIt = block.erase(nextIt);
+              }
             }
           }
         } else {
@@ -173,53 +186,45 @@ private:
         }
       } else if (auto *ompLoopCons{
                      GetOmpIf<parser::OpenMPLoopConstruct>(*nextIt)}) {
-        // We should allow UNROLL and TILE constructs to be inserted between an
-        // OpenMP Loop Construct and the DO loop itself
+        // We should allow loop transformation constructs to be inserted between
+        // an OpenMP Loop Construct and the DO loop itself
         auto &nestedBeginDirective = ompLoopCons->BeginDir();
         auto &nestedBeginName = nestedBeginDirective.DirName();
-        if ((nestedBeginName.v == llvm::omp::Directive::OMPD_unroll ||
-                nestedBeginName.v == llvm::omp::Directive::OMPD_tile) &&
-            !(nestedBeginName.v == llvm::omp::Directive::OMPD_unroll &&
-                beginName.v == llvm::omp::Directive::OMPD_tile)) {
-          // iterate through the remaining block items to find the end directive
-          // for the unroll/tile directive.
-          parser::Block::iterator endIt;
-          endIt = nextIt;
-          while (endIt != block.end()) {
-            if (auto *endDir{
-                    GetConstructIf<parser::OmpEndLoopDirective>(*endIt)}) {
-              auto &endDirName = endDir->DirName();
-              if (endDirName.v == beginName.v) {
-                std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
-                    std::move(*endDir);
-                endIt = block.erase(endIt);
-                continue;
+        if (llvm::omp::loopTransformationSet.test(nestedBeginName.v)) {
+          if (nestedBeginName.v == llvm::omp::Directive::OMPD_unroll &&
+              llvm::omp::loopTransformationSet.test(beginName.v)) {
+            // if a loop has been unrolled, the user can not then transform that
+            // loop as it has been unrolled
+            const parser::OmpClauseList &unrollClauseList{
+                nestedBeginDirective.Clauses()};
+            if (unrollClauseList.v.empty()) {
+              // if the clause list is empty for an unroll construct, we assume
+              // the loop is being fully unrolled
+              transformUnrollError(beginName, messages_);
+            } else {
+              // parse the clauses for the unroll directive to find the full
+              // clause
+              for (auto &clause : unrollClauseList.v) {
+                if (clause.Id() == llvm::omp::OMPC_full) {
+                  transformUnrollError(beginName, messages_);
+                }
               }
             }
-            ++endIt;
           }
           RewriteOpenMPLoopConstruct(*ompLoopCons, block, nextIt);
-          auto &ompLoop = std::get<std::optional<parser::NestedConstruct>>(x.t);
-          ompLoop =
-              std::optional<parser::NestedConstruct>{parser::NestedConstruct{
-                  common::Indirection{std::move(*ompLoopCons)}}};
+          body.push_back(std::move(*nextIt));
           nextIt = block.erase(nextIt);
-        } else if (nestedBeginName.v == llvm::omp::Directive::OMPD_unroll &&
-            beginName.v == llvm::omp::Directive::OMPD_tile) {
-          // if a loop has been unrolled, the user can not then tile that loop
-          // as it has been unrolled
-          const parser::OmpClauseList &unrollClauseList{
-              nestedBeginDirective.Clauses()};
-          if (unrollClauseList.v.empty()) {
-            // if the clause list is empty for an unroll construct, we assume
-            // the loop is being fully unrolled
-            tileUnrollError(beginName, messages_);
-          } else {
-            // parse the clauses for the unroll directive to find the full
-            // clause
-            for (auto &clause : unrollClauseList.v) {
-              if (clause.Id() == llvm::omp::OMPC_full) {
-                tileUnrollError(beginName, messages_);
+          // check the following block item to find the end directive
+          // for the loop transform directive.
+          if (nextIt != block.end()) {
+            if (auto *endDir{
+                    GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
+              auto &endDirName = endDir->DirName();
+              if (endDirName.v == beginName.v &&
+                  endDirName.v != llvm::omp::Directive::OMPD_fuse) {
+                std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
+                    std::move(*endDir);
+                nextIt = block.erase(nextIt);
               }
             }
           }
@@ -231,41 +236,164 @@ private:
       } else {
         missingDoConstruct(beginName, messages_);
       }
+
+      if (endFuseNeeded && nextIt != block.end()) {
+        if (auto *endDir{
+                GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
+          auto &endDirName = endDir->DirName();
+          if (endDirName.v == llvm::omp::Directive::OMPD_fuse) {
+            endFuseNeeded = false;
+            std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
+                std::move(*endDir);
+            nextIt = block.erase(nextIt);
+          }
+        }
+      }
+      if (endFuseNeeded)
+        continue;
       // If we get here, we either found a loop, or issued an error message.
       return;
     }
     if (nextIt == block.end()) {
-      missingDoConstruct(beginName, messages_);
+      if (endFuseNeeded)
+        missingEndFuse(beginName, messages_);
+      else
+        missingDoConstruct(beginName, messages_);
     }
   }
 
-  void RewriteOmpAllocations(parser::ExecutionPart &body) {
-    // Rewrite leading declarative allocations so they are nested
-    // within their respective executable allocate directive
-    //
-    // Original:
-    //   ExecutionPartConstruct -> OpenMPDeclarativeAllocate
-    //   ExecutionPartConstruct -> OpenMPDeclarativeAllocate
-    //   ExecutionPartConstruct -> OpenMPExecutableAllocate
-    //
-    // After rewriting:
-    //   ExecutionPartConstruct -> OpenMPExecutableAllocate
-    //     ExecutionPartConstruct -> OpenMPDeclarativeAllocate
-    //     ExecutionPartConstruct -> OpenMPDeclarativeAllocate
-    for (auto it = body.v.rbegin(); it != body.v.rend();) {
-      if (auto *exec = GetOmpIf<parser::OpenMPExecutableAllocate>(*(it++))) {
-        parser::OpenMPDeclarativeAllocate *decl;
-        std::list<parser::OpenMPDeclarativeAllocate> subAllocates;
-        while (it != body.v.rend() &&
-            (decl = GetOmpIf<parser::OpenMPDeclarativeAllocate>(*it))) {
-          subAllocates.push_front(std::move(*decl));
-          it = decltype(it)(body.v.erase(std::next(it).base()));
-        }
-        if (!subAllocates.empty()) {
-          std::get<std::optional<std::list<parser::OpenMPDeclarativeAllocate>>>(
-              exec->t) = {std::move(subAllocates)};
+  // Canonicalization of allocate directives
+  //
+  // In OpenMP 5.0 and 5.1 the allocate directive could either be a declarative
+  // one or an executable one. As usual in such cases, this poses a problem
+  // when the directive appears at the boundary between the specification part
+  // and the execution part.
+  // The executable form can actually consist of several adjacent directives,
+  // whereas the declarative form is always standalone. Additionally, the
+  // executable form must be associated with an allocate statement.
+  //
+  // The parser tries to parse declarative statements first, so in the
+  // following case, the two directives will be declarative, even though
+  // they should be treated as a single executable form:
+  //   integer, allocatable :: x, y   ! Specification
+  //   !$omp allocate(x)
+  //   !$omp allocate(y)
+  //   allocate(x, y)                 ! Execution
+  //
+  void CanonicalizeAllocateDirectives(parser::SpecificationPart &spec) {
+    auto found = blockForSpec_.find(&spec);
+    if (found == blockForSpec_.end()) {
+      // There is no corresponding execution part, so there is nothing to do.
+      return;
+    }
+    parser::Block &block = *found->second;
+
+    auto isAllocateStmt = [](const parser::ExecutionPartConstruct &epc) {
+      if (auto *ec = std::get_if<parser::ExecutableConstruct>(&epc.u)) {
+        if (auto *as =
+                std::get_if<parser::Statement<parser::ActionStmt>>(&ec->u)) {
+          return std::holds_alternative<
+              common::Indirection<parser::AllocateStmt>>(as->statement.u);
         }
       }
+      return false;
+    };
+
+    if (!block.empty() && isAllocateStmt(block.front())) {
+      // There are two places where an OpenMP declarative construct can
+      // show up in the tuple in specification part:
+      // (1) in std::list<OpenMPDeclarativeConstruct>, or
+      // (2) in std::list<DeclarationConstruct>.
+      // The case (1) is only possible if the list (2) is empty.
+
+      auto &omps =
+          std::get<std::list<parser::OpenMPDeclarativeConstruct>>(spec.t);
+      auto &decls = std::get<std::list<parser::DeclarationConstruct>>(spec.t);
+
+      if (!decls.empty()) {
+        MakeExecutableAllocateFromDecls(decls, block);
+      } else {
+        MakeExecutableAllocateFromOmps(omps, block);
+      }
+    }
+  }
+
+  parser::ExecutionPartConstruct EmbedInExec(
+      parser::OmpAllocateDirective *alo, parser::ExecutionPartConstruct &&epc) {
+    // Nest current epc inside the allocate directive.
+    std::get<parser::Block>(alo->t).push_front(std::move(epc));
+    // Set the new epc to be the ExecutionPartConstruct made from
+    // the allocate directive.
+    parser::OpenMPConstruct opc(std::move(*alo));
+    common::Indirection<parser::OpenMPConstruct> ind(std::move(opc));
+    parser::ExecutableConstruct ec(std::move(ind));
+    return parser::ExecutionPartConstruct(std::move(ec));
+  }
+
+  void MakeExecutableAllocateFromDecls(
+      std::list<parser::DeclarationConstruct> &decls, parser::Block &body) {
+    using OpenMPDeclarativeConstruct =
+        common::Indirection<parser::OpenMPDeclarativeConstruct>;
+
+    auto getAllocate = [](parser::DeclarationConstruct *dc) {
+      if (auto *sc = std::get_if<parser::SpecificationConstruct>(&dc->u)) {
+        if (auto *odc = std::get_if<OpenMPDeclarativeConstruct>(&sc->u)) {
+          if (auto *alo =
+                  std::get_if<parser::OmpAllocateDirective>(&odc->value().u)) {
+            return alo;
+          }
+        }
+      }
+      return static_cast<parser::OmpAllocateDirective *>(nullptr);
+    };
+
+    std::list<parser::DeclarationConstruct>::reverse_iterator rlast = [&]() {
+      for (auto rit = decls.rbegin(), rend = decls.rend(); rit != rend; ++rit) {
+        if (getAllocate(&*rit) == nullptr) {
+          return rit;
+        }
+      }
+      return decls.rend();
+    }();
+
+    if (rlast != decls.rbegin()) {
+      // We have already checked that the first statement in body is
+      // ALLOCATE.
+      parser::ExecutionPartConstruct epc(std::move(body.front()));
+      for (auto rit = decls.rbegin(); rit != rlast; ++rit) {
+        epc = EmbedInExec(getAllocate(&*rit), std::move(epc));
+      }
+
+      body.pop_front();
+      body.push_front(std::move(epc));
+      decls.erase(rlast.base(), decls.end());
+    }
+  }
+
+  void MakeExecutableAllocateFromOmps(
+      std::list<parser::OpenMPDeclarativeConstruct> &omps,
+      parser::Block &body) {
+    using OpenMPDeclarativeConstruct = parser::OpenMPDeclarativeConstruct;
+
+    std::list<OpenMPDeclarativeConstruct>::reverse_iterator rlast = [&]() {
+      for (auto rit = omps.rbegin(), rend = omps.rend(); rit != rend; ++rit) {
+        if (!std::holds_alternative<parser::OmpAllocateDirective>(rit->u)) {
+          return rit;
+        }
+      }
+      return omps.rend();
+    }();
+
+    if (rlast != omps.rbegin()) {
+      parser::ExecutionPartConstruct epc(std::move(body.front()));
+      for (auto rit = omps.rbegin(); rit != rlast; ++rit) {
+        epc = EmbedInExec(
+            &std::get<parser::OmpAllocateDirective>(rit->u), std::move(epc));
+      }
+
+      body.pop_front();
+      body.push_front(std::move(epc));
+      omps.erase(rlast.base(), omps.end());
     }
   }
 

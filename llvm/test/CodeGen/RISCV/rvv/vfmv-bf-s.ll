@@ -7,9 +7,8 @@ declare bfloat @llvm.riscv.vfmv.f.s.nxv1bf16(<vscale x 1 x bfloat>)
 define bfloat @intrinsic_vfmv.f.s_s_nxv1bf16(<vscale x 1 x bfloat> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.f.s_s_nxv1bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    vsetivli zero, 1, e16alt, m1, ta, ma
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call bfloat @llvm.riscv.vfmv.f.s.nxv1bf16(<vscale x 1 x bfloat> %0)
@@ -21,9 +20,8 @@ declare bfloat @llvm.riscv.vfmv.f.s.nxv2bf16(<vscale x 2 x bfloat>)
 define bfloat @intrinsic_vfmv.f.s_s_nxv2bf16(<vscale x 2 x bfloat> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.f.s_s_nxv2bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    vsetivli zero, 1, e16alt, m1, ta, ma
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call bfloat @llvm.riscv.vfmv.f.s.nxv2bf16(<vscale x 2 x bfloat> %0)
@@ -35,9 +33,8 @@ declare bfloat @llvm.riscv.vfmv.f.s.nxv4bf16(<vscale x 4 x bfloat>)
 define bfloat @intrinsic_vfmv.f.s_s_nxv4bf16(<vscale x 4 x bfloat> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.f.s_s_nxv4bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    vsetivli zero, 1, e16alt, m1, ta, ma
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call bfloat @llvm.riscv.vfmv.f.s.nxv4bf16(<vscale x 4 x bfloat> %0)
@@ -49,9 +46,8 @@ declare bfloat @llvm.riscv.vfmv.f.s.nxv8bf16(<vscale x 8 x bfloat>)
 define bfloat @intrinsic_vfmv.f.s_s_nxv8bf16(<vscale x 8 x bfloat> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.f.s_s_nxv8bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    vsetivli zero, 1, e16alt, m1, ta, ma
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call bfloat @llvm.riscv.vfmv.f.s.nxv8bf16(<vscale x 8 x bfloat> %0)
@@ -63,9 +59,8 @@ declare bfloat @llvm.riscv.vfmv.f.s.nxv16bf16(<vscale x 16 x bfloat>)
 define bfloat @intrinsic_vfmv.f.s_s_nxv16bf16(<vscale x 16 x bfloat> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.f.s_s_nxv16bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    vsetivli zero, 1, e16alt, m1, ta, ma
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call bfloat @llvm.riscv.vfmv.f.s.nxv16bf16(<vscale x 16 x bfloat> %0)
@@ -77,9 +72,8 @@ declare bfloat @llvm.riscv.vfmv.f.s.nxv32bf16(<vscale x 32 x bfloat>)
 define bfloat @intrinsic_vfmv.f.s_s_nxv32bf16(<vscale x 32 x bfloat> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.f.s_s_nxv32bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    vsetivli zero, 1, e16alt, m1, ta, ma
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call bfloat @llvm.riscv.vfmv.f.s.nxv32bf16(<vscale x 32 x bfloat> %0)

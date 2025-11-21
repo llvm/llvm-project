@@ -664,14 +664,14 @@ define void @memset_size(ptr %dst, i64 %size, i32 %value) {
 ; GISel-WITHOUT-MOPS-O0-LABEL: memset_size:
 ; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
 ; GISel-WITHOUT-MOPS-O0-NEXT:    sub sp, sp, #32
-; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 32
 ; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_offset w30, -16
-; GISel-WITHOUT-MOPS-O0-NEXT:    str x1, [sp, #8] // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O0-NEXT:    str x1, [sp, #8] // 8-byte Spill
 ; GISel-WITHOUT-MOPS-O0-NEXT:    mov w1, w2
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x2, [sp, #8] // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x2, [sp, #8] // 8-byte Reload
 ; GISel-WITHOUT-MOPS-O0-NEXT:    bl memset
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; GISel-WITHOUT-MOPS-O0-NEXT:    add sp, sp, #32
 ; GISel-WITHOUT-MOPS-O0-NEXT:    ret
 ;
@@ -733,14 +733,14 @@ define void @memset_size_volatile(ptr %dst, i64 %size, i32 %value) {
 ; GISel-WITHOUT-MOPS-O0-LABEL: memset_size_volatile:
 ; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
 ; GISel-WITHOUT-MOPS-O0-NEXT:    sub sp, sp, #32
-; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 32
 ; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_offset w30, -16
-; GISel-WITHOUT-MOPS-O0-NEXT:    str x1, [sp, #8] // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O0-NEXT:    str x1, [sp, #8] // 8-byte Spill
 ; GISel-WITHOUT-MOPS-O0-NEXT:    mov w1, w2
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x2, [sp, #8] // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x2, [sp, #8] // 8-byte Reload
 ; GISel-WITHOUT-MOPS-O0-NEXT:    bl memset
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; GISel-WITHOUT-MOPS-O0-NEXT:    add sp, sp, #32
 ; GISel-WITHOUT-MOPS-O0-NEXT:    ret
 ;

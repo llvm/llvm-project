@@ -311,6 +311,10 @@ static std::optional<std::string> hexagonAttrToFeatureString(unsigned Attr) {
     return "v73";
   case 75:
     return "v75";
+  case 79:
+    return "v79";
+  case 81:
+    return "v81";
   default:
     return {};
   }
