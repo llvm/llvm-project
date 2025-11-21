@@ -15,17 +15,21 @@
 
 #include "CIRGenBuilder.h"
 #include "CIRGenCall.h"
+#include "CIRGenTBAA.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 #include "CIRGenVTables.h"
 #include "CIRGenValue.h"
 
 #include "clang/AST/CharUnits.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "TargetInfo.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "clang/AST/Decl.h"
@@ -84,6 +88,8 @@ private:
   const clang::TargetInfo &target;
 
   std::unique_ptr<CIRGenCXXABI> abi;
+
+  std::unique_ptr<CIRGenTBAA> tbaa;
 
   CIRGenTypes genTypes;
 
@@ -324,6 +330,52 @@ public:
   /// with codegen.
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
                                            LValueBaseInfo *baseInfo);
+
+  /// Get attribute used to describe accesses to objects of
+  /// the given type.
+  cir::TBAAAttr getTBAATypeInfo(QualType type);
+
+  /// Get TBAA information that describes an access to an object of the given
+  /// type.
+  TBAAAccessInfo getTBAAAccessInfo(QualType accessType);
+
+  /// Get the TBAA information that describes an access to a virtual table
+  /// pointer.
+  TBAAAccessInfo getTBAAVTablePtrAccessInfo(mlir::Type vTablePtrType);
+
+  mlir::ArrayAttr getTBAAStructInfo(QualType type);
+
+  /// Get metadata that describes the given base access type. Return null if the
+  /// type is not suitable for use in TBAA access tags.
+  cir::TBAAAttr getTBAABaseTypeInfo(QualType type);
+
+  mlir::ArrayAttr getTBAAAccessTagInfo(TBAAAccessInfo tbaaInfo);
+
+  /// Get merged TBAA information for the purposes of type casts.
+  TBAAAccessInfo mergeTBAAInfoForCast(TBAAAccessInfo sourceInfo,
+                                      TBAAAccessInfo targetInfo);
+
+  /// Get merged TBAA information for the purposes of conditional operator.
+  TBAAAccessInfo mergeTBAAInfoForConditionalOperator(TBAAAccessInfo infoA,
+                                                     TBAAAccessInfo infoB);
+
+  /// Get merged TBAA information for the purposes of memory transfer calls.
+  TBAAAccessInfo mergeTBAAInfoForMemoryTransfer(TBAAAccessInfo destInfo,
+                                                TBAAAccessInfo srcInfo);
+
+  /// Get TBAA information for an access with a given base lvalue.
+  TBAAAccessInfo getTBAAInfoForSubobject(LValue base, QualType accessType) {
+    if (base.getTBAAInfo().isMayAlias())
+      return TBAAAccessInfo::getMayAliasInfo();
+    return getTBAAAccessInfo(accessType);
+  }
+
+  template <typename Op>
+  void decorateOperationWithTBAA(Op op, TBAAAccessInfo tbaaInfo) {
+    if (mlir::ArrayAttr tag = getTBAAAccessTagInfo(tbaaInfo)) {
+      op.setTbaaAttr(tag);
+    }
+  }
 
   /// TODO: Add TBAAAccessInfo
   CharUnits getDynamicOffsetAlignment(CharUnits actualBaseAlign,

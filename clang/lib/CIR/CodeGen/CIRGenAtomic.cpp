@@ -1011,7 +1011,7 @@ void CIRGenFunction::emitAtomicStore(RValue rvalue, LValue dest,
     if (isVolatile)
       store.setIsVolatile(true);
 
-    assert(!cir::MissingFeatures::opLoadStoreTbaa());
+    cgm.decorateOperationWithTBAA(store, dest.getTBAAInfo());
     return;
   }
 
