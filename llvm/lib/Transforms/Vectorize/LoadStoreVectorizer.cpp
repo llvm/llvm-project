@@ -1965,7 +1965,8 @@ ChainElem Vectorizer::createExtraElementAfter(const ChainElem &Prev, Type *Ty,
 Value *Vectorizer::createMaskForExtraElements(const ArrayRef<ChainElem> C,
                                               FixedVectorType *VecTy) {
   // Start each mask element as false
-  SmallVector<Constant *, 64> MaskElts(VecTy->getNumElements(), Builder.getInt1(false));
+  SmallVector<Constant *, 64> MaskElts(VecTy->getNumElements(),
+                                       Builder.getInt1(false));
   // Iterate over the chain and set the corresponding mask element to true for
   // each element that is not an extra element.
   for (const ChainElem &E : C) {
