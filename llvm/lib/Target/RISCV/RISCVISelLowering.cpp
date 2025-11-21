@@ -529,6 +529,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
     setOperationAction({ISD::ABDS, ISD::ABDU}, VTs, Legal);
     setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
+    setOperationAction(ISD::SHL, VTs, Custom);
     setOperationAction(ISD::BITCAST, VTs, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VTs, Custom);
   }
@@ -8592,6 +8593,37 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VSELECT:
     return lowerToScalableOp(Op, DAG);
   case ISD::SHL:
+    if (Subtarget.enablePExtCodeGen() &&
+        Op.getSimpleValueType().isFixedLengthVector()) {
+      // There's no vector-vector version of shift instruction in P extension so
+      // we need to fallback to scalar computation and pack them back.
+      MVT VecVT = Op.getSimpleValueType();
+      unsigned NumElts = VecVT.getVectorNumElements();
+      MVT VecEltTy = VecVT.getVectorElementType();
+      SDValue Src0 = Op.getOperand(0);
+      SDValue Src1 = Op.getOperand(1);
+      SDLoc DL(Op);
+      SmallVector<SDValue, 2> Results;
+
+      if (Src1.getNode()->getOpcode() == ISD::SPLAT_VECTOR)
+        return Op;
+
+      for (unsigned I = 0; I < NumElts; ++I) {
+        // extract scalar value
+        SDValue SrcElt0 =
+            DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VecEltTy,
+                        {Src0, DAG.getConstant(I, DL, Subtarget.getXLenVT())});
+        SDValue SrcElt1 =
+            DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VecEltTy,
+                        {Src1, DAG.getConstant(I, DL, Subtarget.getXLenVT())});
+        // perform computation
+        Results.push_back(
+            DAG.getNode(ISD::SHL, DL, VecEltTy, SrcElt0, SrcElt1));
+      }
+      // pack the results
+      return DAG.getNode(ISD::BUILD_VECTOR, DL, VecVT, Results);
+    }
+    [[fallthrough]];
   case ISD::SRA:
   case ISD::SRL:
     if (Op.getSimpleValueType().isFixedLengthVector())
