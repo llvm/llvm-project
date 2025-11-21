@@ -279,7 +279,7 @@ InstrumentationBoundsSafetyStopInfo::
   }
   };
 
-  // Examine the register for the first argument
+  // Examine the register for the first argument.
   auto *arg0_info = rc->GetRegisterInfo(
       lldb::RegisterKind::eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
   if (!arg0_info) {
