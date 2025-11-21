@@ -1016,7 +1016,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
     return RValue::get(arithOp.getOverflow());
   }
-      
+
   case Builtin::BI__builtin_uadd_overflow:
   case Builtin::BI__builtin_uaddl_overflow:
   case Builtin::BI__builtin_uaddll_overflow:
@@ -1088,7 +1088,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
     return RValue::get(arithOp.getOverflow());
   }
-      
+
   case Builtin::BIaddressof:
   case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
