@@ -378,7 +378,10 @@ Status NativeFile::Close() {
           m_options & (File::eOpenOptionReadOnly | File::eOpenOptionWriteOnly |
                        File::eOpenOptionReadWrite);
 
-      if (rw == eOpenOptionWriteOnly || rw == eOpenOptionReadWrite) {
+      // If the stream is writable, and has not already been closed, flush
+      // it.
+      if ((rw == eOpenOptionWriteOnly || rw == eOpenOptionReadWrite) &&
+          (m_stream->_flags != m_stream->_fileno)) {
         if (::fflush(m_stream) == EOF)
           error = Status::FromErrno();
       }
