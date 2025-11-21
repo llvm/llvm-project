@@ -20,7 +20,7 @@ run
 bt
 # CHECK: frame #{{.*}}`__bounds_safety_soft_trap_s{{$}}
 # CHECK-NEXT: frame #{{.*}}`__clang_trap_msg$Bounds check failed$
-# CHECK-NEXT: * frame #{{.*}}`main({{.+}}) at boundsSafetySoftTrapsMissingReason.c:16
+# CHECK-NEXT: * frame #{{.*}}`main({{.+}}) at boundsSafetySoftTrapsMissingReason.c:17
 
 # Resume execution
 c
