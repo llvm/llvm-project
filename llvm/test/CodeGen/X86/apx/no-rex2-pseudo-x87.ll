@@ -4,17 +4,13 @@
 define void @x87(ptr %0, ptr %1) nounwind {
 ; CHECK-LABEL: x87:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    movq %rdi, %r14
+; CHECK-NEXT:    movq %rsi, %r16
+; CHECK-NEXT:    movq %rdi, %r17
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    flds (%r14)
-; CHECK-NEXT:    fstps (%rbx)
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    flds (%r17)
+; CHECK-NEXT:    fstps (%r16)
 ; CHECK-NEXT:    retq
   tail call void asm sideeffect "nop", "~{eax},~{ecx},~{edx},~{esi},~{edi},~{r8},~{r9},~{r10},~{r11}"()
   %3 = load float, ptr %0

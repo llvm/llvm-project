@@ -4,14 +4,12 @@
 define dso_local void @amx(ptr noundef %data) nounwind {
 ; CHECK-LABEL: amx:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdi, %r16
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    movl $8, %eax
-; CHECK-NEXT:    tileloadd (%rbx,%rax), %tmm4
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    tileloadd (%r16,%rax), %tmm4
 ; CHECK-NEXT:    retq
 entry:
   tail call void asm sideeffect "nop", "~{eax},~{ecx},~{edx},~{esi},~{edi},~{r8},~{r9},~{r10},~{r11}"()

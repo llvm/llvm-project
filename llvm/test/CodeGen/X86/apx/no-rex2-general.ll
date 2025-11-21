@@ -31,13 +31,11 @@ define i32 @map1_or_vex(<2 x double> noundef %a) nounwind {
 ;
 ; AVX-LABEL: map1_or_vex:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    vcvtsd2si %xmm0, %ebx
+; AVX-NEXT:    vcvtsd2si %xmm0, %r16d
 ; AVX-NEXT:    #APP
 ; AVX-NEXT:    nop
 ; AVX-NEXT:    #NO_APP
-; AVX-NEXT:    movl %ebx, %eax
-; AVX-NEXT:    popq %rbx
+; AVX-NEXT:    movl %r16d, %eax
 ; AVX-NEXT:    retq
 entry:
   %0 = tail call i32 @llvm.x86.sse2.cvtsd2si(<2 x double> %a)
@@ -48,30 +46,22 @@ entry:
 define <2 x i64> @map2_or_vex(ptr nocapture noundef readonly %b, i64 noundef %c) nounwind {
 ; SSE-LABEL: map2_or_vex:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    pushq %r14
-; SSE-NEXT:    pushq %rbx
-; SSE-NEXT:    movq %rsi, %rbx
-; SSE-NEXT:    movq %rdi, %r14
+; SSE-NEXT:    movq %rsi, %r16
+; SSE-NEXT:    movq %rdi, %r17
 ; SSE-NEXT:    #APP
 ; SSE-NEXT:    nop
 ; SSE-NEXT:    #NO_APP
-; SSE-NEXT:    pabsb (%r14,%rbx,4), %xmm0
-; SSE-NEXT:    popq %rbx
-; SSE-NEXT:    popq %r14
+; SSE-NEXT:    pabsb (%r17,%r16,4), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: map2_or_vex:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushq %r14
-; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    movq %rsi, %rbx
-; AVX-NEXT:    movq %rdi, %r14
+; AVX-NEXT:    movq %rsi, %r16
+; AVX-NEXT:    movq %rdi, %r17
 ; AVX-NEXT:    #APP
 ; AVX-NEXT:    nop
 ; AVX-NEXT:    #NO_APP
-; AVX-NEXT:    vpabsb (%r14,%rbx,4), %xmm0
-; AVX-NEXT:    popq %rbx
-; AVX-NEXT:    popq %r14
+; AVX-NEXT:    vpabsb (%r17,%r16,4), %xmm0
 ; AVX-NEXT:    retq
 entry:
   tail call void asm sideeffect "nop", "~{eax},~{ecx},~{edx},~{esi},~{edi},~{r8},~{r9},~{r10},~{r11}"()
