@@ -1084,7 +1084,7 @@ PPCTTIImpl::getVPLegalizationStrategy(const VPIntrinsic &PI) const {
 }
 
 bool PPCTTIImpl::hasActiveVectorLength() const {
-  unsigned CPU =  ST->getCPUDirective();
+  unsigned CPU = ST->getCPUDirective();
   if (!PPCEVL)
     return false;
   if (CPU == PPC::DIR_PWR10 || CPU == PPC::DIR_PWR_FUTURE ||
@@ -1094,8 +1094,7 @@ bool PPCTTIImpl::hasActiveVectorLength() const {
 }
 
 static inline bool isLegalLoadWithLengthType(EVT VT) {
-  if (VT != MVT::i64 && VT != MVT::i32 && VT != MVT::i16 &&
-      VT != MVT::i8)
+  if (VT != MVT::i64 && VT != MVT::i32 && VT != MVT::i16 && VT != MVT::i8)
     return false;
   return true;
 }
@@ -1115,16 +1114,17 @@ bool PPCTTIImpl::isLegalMaskedStore(Type *DataType, Align Alignment,
 }
 
 InstructionCost
-PPCTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *DataTy,
-                                  Align Alignment,
-                                  unsigned AddressSpace,
+PPCTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                   TTI::TargetCostKind CostKind) const {
-  InstructionCost BaseCost =
-      BaseT::getMaskedMemoryOpCost(Opcode, DataTy, Alignment, AddressSpace,
-                                   CostKind);
+  Type *DataTy = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  unsigned Opcode = MICA.getID() == Intrinsic::masked_load
+                        ? Instruction::Load
+                        : Instruction::Store;
+  unsigned AddressSpace = MICA.getAddressSpace();
 
-  if (Opcode != Instruction::Load && Opcode != Instruction::Store)
-    return BaseCost;
+  InstructionCost BaseCost = BaseT::getMaskedMemoryOpCost(MICA, CostKind);
+
   auto VecTy = dyn_cast<FixedVectorType>(DataTy);
   if (!VecTy)
     return BaseCost;

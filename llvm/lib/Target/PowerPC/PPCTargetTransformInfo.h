@@ -161,8 +161,7 @@ public:
                          unsigned AddressSpace) const override;
 
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *DataTy, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const override;
 
 private:
