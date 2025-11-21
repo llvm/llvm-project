@@ -1614,7 +1614,8 @@
 ; INLINER-NEXT:        Loop-Closed SSA Form Pass
 ; INLINER-NEXT:      Analysis if a function is memory bound
 ; INLINER-NEXT:      DummyCGSCCPass
-; INLINER-NEXT:      FunctionPass Manager
+; INLINER-NEXT:      AMDGPU Inlining Pass Manager
+; INLINER-NEXT:        AMDGPU Inlining Anchor
 ; INLINER-NEXT:        Dominator Tree Construction
 ; INLINER-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; INLINER-NEXT:        Function Alias Analysis Results
@@ -1745,15 +1746,11 @@
 ; INLINER-NEXT:        Machine Copy Propagation Pass
 ; INLINER-NEXT:        Post-RA pseudo instruction expansion pass
 ; INLINER-NEXT:        SI Shrink Instructions
-; INLINER-NEXT:      AMDGPU Inlining Pass Manager
 ; INLINER-NEXT:        AMDGPU Inlining Anchor
 ; INLINER-NEXT:        AMDGPU Machine Level Inliner
 ; INLINER-NEXT:        SI post-RA bundler
 ; INLINER-NEXT:        MachineDominator Tree Construction
 ; INLINER-NEXT:        Machine Natural Loop Construction
-; INLINER-NEXT:        Dominator Tree Construction
-; INLINER-NEXT:        Basic Alias Analysis (stateless AA impl)
-; INLINER-NEXT:        Function Alias Analysis Results
 ; INLINER-NEXT:        PostRA Machine Instruction Scheduler
 ; INLINER-NEXT:        Machine Block Frequency Analysis
 ; INLINER-NEXT:        MachinePostDominator Tree Construction
