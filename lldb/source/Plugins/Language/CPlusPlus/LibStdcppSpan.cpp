@@ -46,12 +46,11 @@ public:
   }
 
   lldb::ChildCacheState Update() override {
-    const ValueObjectSP element_ptr =
-        m_backend.GetChildMemberWithName(ConstString("_M_ptr"));
-    if (!element_ptr)
+    const ValueObjectSP data_ptr = m_backend.GetChildMemberWithName("_M_ptr");
+    if (!data_ptr)
       return lldb::ChildCacheState::eRefetch;
 
-    m_element_type = element_ptr->GetCompilerType().GetPointeeType();
+    m_element_type = data_ptr->GetCompilerType().GetPointeeType();
 
     // Get element size.
     llvm::Expected<uint64_t> size_or_err = m_element_type.GetByteSize(nullptr);
@@ -63,14 +62,14 @@ public:
 
     m_element_size = *size_or_err;
     if (m_element_size > 0) {
-      m_start = element_ptr.get();
+      m_start = data_ptr.get();
     }
 
     // Get number of elements.
-    if (auto size_sp = m_backend.GetChildAtNamePath(
-            {ConstString("_M_extent"), ConstString("_M_extent_value")})) {
+    if (const ValueObjectSP size_sp =
+            m_backend.GetChildAtNamePath({"_M_extent", "_M_extent_value"})) {
       m_num_elements = size_sp->GetValueAsUnsigned(0);
-    } else if (auto arg =
+    } else if (const auto arg =
                    m_backend.GetCompilerType().GetIntegralTemplateArgument(1)) {
 
       m_num_elements = arg->value.GetAPSInt().getLimitedValue();
