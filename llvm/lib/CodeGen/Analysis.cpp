@@ -123,6 +123,9 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                            TypeSize StartingOffset) {
   SmallVector<Type *> Types;
   ComputeValueTypes(DL, Ty, Types, Offsets, StartingOffset);
+  ValueVTs.reserve(Types.size());
+  if (MemVTs)
+    MemVTs->reserve(Types.size());
   for (Type *Ty : Types) {
     ValueVTs.push_back(TLI.getValueType(DL, Ty));
     if (MemVTs)
@@ -139,6 +142,7 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
   if (FixedOffsets) {
     SmallVector<TypeSize, 4> Offsets;
     ComputeValueVTs(TLI, DL, Ty, ValueVTs, MemVTs, &Offsets, Offset);
+    FixedOffsets->reserve(Offsets.size());
     for (TypeSize Offset : Offsets)
       FixedOffsets->push_back(Offset.getFixedValue());
   } else {
@@ -152,6 +156,7 @@ void llvm::computeValueLLTs(const DataLayout &DL, Type &Ty,
                             TypeSize StartingOffset) {
   SmallVector<Type *> ValTys;
   ComputeValueTypes(DL, &Ty, ValTys, Offsets, StartingOffset);
+  ValueLLTs.reserve(ValTys.size());
   for (Type *ValTy : ValTys)
     ValueLLTs.push_back(getLLTForType(*ValTy, DL));
 }
@@ -164,6 +169,7 @@ void llvm::computeValueLLTs(const DataLayout &DL, Type &Ty,
   if (FixedOffsets) {
     SmallVector<TypeSize, 4> Offsets;
     computeValueLLTs(DL, Ty, ValueLLTs, &Offsets, StartingOffset);
+    FixedOffsets->reserve(Offsets.size());
     for (TypeSize Offset : Offsets)
       FixedOffsets->push_back(Offset.getFixedValue());
   } else {
