@@ -31,9 +31,8 @@ LLVM_LIBC_FUNCTION(int, sprintf,
                                  // destruction automatically.
   va_end(vlist);
 
-  printf_core::WriteBuffer<
-      printf_core::Mode<printf_core::WriteMode::RESIZE_AND_FILL_BUFF>::value>
-      wb(buffer, cpp::numeric_limits<size_t>::max());
+  printf_core::DropOverflowBuffer wb(buffer,
+                                     cpp::numeric_limits<size_t>::max());
   printf_core::Writer writer(wb);
 
   auto ret_val = printf_core::printf_main(&writer, format, args);
