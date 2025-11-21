@@ -65,6 +65,16 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
           createOutOp<mlir::acc::DeleteOp>(cgf, copyin);
           break;
         }
+      } else if (auto create = val.getDefiningOp<mlir::acc::CreateOp>()) {
+        switch (create.getDataClause()) {
+        default:
+          cgf.cgm.errorNYI(declareRange,
+                           "OpenACC local declare clause create cleanup");
+          break;
+        case mlir::acc::DataClause::acc_copyout:
+          createOutOp<mlir::acc::CopyoutOp>(cgf, create);
+          break;
+        }
       } else if (val.getDefiningOp<mlir::acc::DeclareLinkOp>()) {
         // Link has no exit clauses, and shouldn't be copied.
         continue;
