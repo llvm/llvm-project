@@ -16483,9 +16483,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
       // original function body. An early error return here is not valid; the
       // current declaration context and function scopes must be popped before
       // returning.
-      if (SR.isUsable()) {
+      if (SR.isUsable())
         Body = SR.get();
-      }
     }
   }
 
