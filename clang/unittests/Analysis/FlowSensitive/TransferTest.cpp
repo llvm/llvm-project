@@ -17,6 +17,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
@@ -4382,6 +4383,40 @@ TEST(TransferTest, VarDeclInitAssignConditionalOperator) {
       });
 }
 
+TEST(TransferTest, VarDeclInitReferenceAssignConditionalOperator) {
+  std::string Code = R"(
+    struct A {
+      int i;
+    };
+
+    void target(A Foo, A Bar, bool Cond) {
+      A &Baz = Cond ? Foo : Bar;
+      // Make sure A::i is modeled.
+      Baz.i;
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *FooIVal = cast<IntegerValue>(getFieldValue(
+            &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "Foo"), "i",
+            ASTCtx, Env));
+        auto *BarIVal = cast<IntegerValue>(getFieldValue(
+            &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "Bar"), "i",
+            ASTCtx, Env));
+        auto *BazIVal = cast<IntegerValue>(getFieldValue(
+            &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "Baz"), "i",
+            ASTCtx, Env));
+
+        EXPECT_NE(BazIVal, FooIVal);
+        EXPECT_NE(BazIVal, BarIVal);
+      });
+}
+
 TEST(TransferTest, VarDeclInDoWhile) {
   std::string Code = R"(
     void target(int *Foo) {
@@ -6174,6 +6209,102 @@ TEST(TransferTest, ConditionalOperatorLocation) {
 
         EXPECT_NE(&JoinDifferent, &I1);
         EXPECT_NE(&JoinDifferent, &I2);
+      });
+}
+
+TEST(TransferTest, ConditionalOperatorValuesTested) {
+  // Even though the LHS and the RHS of the conditional operator have different
+  // StorageLocations, we get constraints from the condition that the values
+  // must be equal to B1 for JoinDifferentIsB1, or B2 for JoinDifferentIsB2.
+  std::string Code = R"(
+    void target(bool B1, bool B2) {
+      bool JoinDifferentIsB1 = (B1 == B2) ? B2 : B1;
+      bool JoinDifferentIsB2 = (B1 == B2) ? B1 : B2;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
+
+        auto &B1 = getValueForDecl<BoolValue>(ASTCtx, Env, "B1");
+        auto &B2 = getValueForDecl<BoolValue>(ASTCtx, Env, "B2");
+        auto &JoinDifferentIsB1 =
+            getValueForDecl<BoolValue>(ASTCtx, Env, "JoinDifferentIsB1");
+        auto &JoinDifferentIsB2 =
+            getValueForDecl<BoolValue>(ASTCtx, Env, "JoinDifferentIsB2");
+
+        const Formula &JoinDifferentIsB1EqB1 =
+            Env.arena().makeEquals(JoinDifferentIsB1.formula(), B1.formula());
+        EXPECT_TRUE(Env.allows(JoinDifferentIsB1EqB1));
+        EXPECT_TRUE(Env.proves(JoinDifferentIsB1EqB1));
+
+        const Formula &JoinDifferentIsB2EqB2 =
+            Env.arena().makeEquals(JoinDifferentIsB2.formula(), B2.formula());
+        EXPECT_TRUE(Env.allows(JoinDifferentIsB2EqB2));
+        EXPECT_TRUE(Env.proves(JoinDifferentIsB2EqB2));
+      });
+}
+
+TEST(TransferTest, ConditionalOperatorLocationUpdatedAfter) {
+  // We don't currently model a Conditional Operator with an LValue result
+  // as having aliases to the LHS and RHS (if it isn't just the same LValue
+  // on both sides). We also don't model that the update "may" happen
+  // (a weak update). So, we don't consider the LHS and RHS as being weakly
+  // updated at [[after_diff]].
+  std::string Code = R"(
+    void target(bool Cond, bool B1, bool B2) {
+      (void)0;
+      // [[before_same]]
+      (Cond ? B1 : B1) = !B1;
+      // [[after_same]]
+      (Cond ? B1 : B2) = !B1;
+      // [[after_diff]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        Environment BeforeSameEnv =
+            getEnvironmentAtAnnotation(Results, "before_same").fork();
+        Environment AfterSameEnv =
+            getEnvironmentAtAnnotation(Results, "after_same").fork();
+        Environment AfterDiffEnv =
+            getEnvironmentAtAnnotation(Results, "after_diff").fork();
+
+        auto &BeforeSameB1 =
+            getValueForDecl<BoolValue>(ASTCtx, BeforeSameEnv, "B1");
+        auto &AfterSameB1 =
+            getValueForDecl<BoolValue>(ASTCtx, AfterSameEnv, "B1");
+        auto &AfterDiffB1 =
+            getValueForDecl<BoolValue>(ASTCtx, AfterDiffEnv, "B1");
+
+        EXPECT_NE(&BeforeSameB1, &AfterSameB1);
+        EXPECT_NE(&BeforeSameB1, &AfterDiffB1);
+        // FIXME: The formula for AfterSameB1 should be different from
+        // AfterDiffB1 to reflect that B1 may be updated.
+        EXPECT_EQ(&AfterSameB1, &AfterDiffB1);
+
+        // The value of B1 is definitely different from before_same vs
+        // after_same.
+        const Formula &B1ChangedForSame =
+            AfterSameEnv.arena().makeNot(AfterSameEnv.arena().makeEquals(
+                AfterSameB1.formula(), BeforeSameB1.formula()));
+        EXPECT_TRUE(AfterSameEnv.allows(B1ChangedForSame));
+        EXPECT_TRUE(AfterSameEnv.proves(B1ChangedForSame));
+
+        // FIXME: It should be possible that B1 *may* be updated, so it may be
+        // that AfterSameB1 != AfterDiffB1 or AfterSameB1 == AfterDiffB1.
+        const Formula &B1ChangedForDiff =
+            AfterDiffEnv.arena().makeNot(AfterDiffEnv.arena().makeEquals(
+                AfterDiffB1.formula(), AfterSameB1.formula()));
+        EXPECT_FALSE(AfterSameEnv.allows(B1ChangedForDiff));
+        // proves() should be false, since B1 may or may not have changed
+        // depending on `Cond`.
+        EXPECT_FALSE(AfterSameEnv.proves(B1ChangedForDiff));
       });
 }
 
