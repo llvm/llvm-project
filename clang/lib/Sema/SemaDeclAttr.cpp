@@ -6177,7 +6177,7 @@ static bool checkIsRawIdentifier(const Sema &S, StringRef StrRef) {
   auto FileLoc = S.getSourceManager().getLocForStartOfFile(
       S.getSourceManager().getMainFileID());
   Lexer Lex(FileLoc, S.getLangOpts(), Str.c_str(), Str.c_str(),
-      Str.c_str() + Str.size());
+            Str.c_str() + Str.size());
   Token Tok;
   bool LexedToEnd = Lex.LexFromRawLexer(Tok);
   return LexedToEnd && Tok.is(tok::raw_identifier);
