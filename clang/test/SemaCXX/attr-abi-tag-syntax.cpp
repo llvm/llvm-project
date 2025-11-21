@@ -31,3 +31,13 @@ extern int a2;
 // expected-note@-1 {{previous declaration is here}}
 __attribute__((abi_tag("A")))extern int a2;
 // expected-error@-1 {{cannot add 'abi_tag' attribute in a redeclaration}}
+
+[[gnu::abi_tag("[[something]]")]] // expected-error {{'gnu::abi_tag' attribute parameters must be string literals containing valid identifiers}}
+int f1() { 
+	return 0;
+}
+
+[[gnu::abi_tag("something")]]
+int f2() { 
+	return 0;
+}
