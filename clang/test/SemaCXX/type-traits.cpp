@@ -3993,6 +3993,10 @@ namespace is_trivially_equality_comparable {
 struct ForwardDeclared; // expected-note {{forward declaration of 'is_trivially_equality_comparable::ForwardDeclared'}}
 static_assert(!__is_trivially_equality_comparable(ForwardDeclared)); // expected-error {{incomplete type 'ForwardDeclared' used in type trait expression}}
 
+enum Enum {};
+enum EnumWithOpEq {};
+bool operator==(EnumWithOpEq, EnumWithOpEq);
+
 static_assert(!__is_trivially_equality_comparable(void));
 static_assert(__is_trivially_equality_comparable(int));
 static_assert(!__is_trivially_equality_comparable(int[]));
@@ -4000,6 +4004,8 @@ static_assert(!__is_trivially_equality_comparable(int[3]));
 static_assert(!__is_trivially_equality_comparable(float));
 static_assert(!__is_trivially_equality_comparable(double));
 static_assert(!__is_trivially_equality_comparable(long double));
+static_assert(__is_trivially_equality_comparable(Enum));
+static_assert(!__is_trivially_equality_comparable(EnumWithOpEq));
 
 struct NonTriviallyEqualityComparableNoComparator {
   int i;
@@ -4033,19 +4039,21 @@ struct TriviallyEqualityComparable {
 };
 static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparable));
 
-struct TriviallyEqualityComparableContainsArray {
-  int a[4];
+template <class T>
+struct TriviallyEqualityComparableContains {
+  T t;
 
-  bool operator==(const TriviallyEqualityComparableContainsArray&) const = default;
+  bool operator==(const TriviallyEqualityComparableContains&) const = default;
 };
-static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContainsArray));
 
-struct TriviallyEqualityComparableContainsMultiDimensionArray {
-  int a[4][4];
-
-  bool operator==(const TriviallyEqualityComparableContainsMultiDimensionArray&) const = default;
-};
-static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContainsMultiDimensionArray));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<float>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<double>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<long double>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int[4]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int[4][4]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<Enum>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<EnumWithOpEq>));
 
 auto GetNonCapturingLambda() { return [](){ return 42; }; }
 
@@ -4195,13 +4203,6 @@ struct NotTriviallyEqualityComparableNonTriviallyComparableBase : NotTriviallyEq
   bool operator==(const NotTriviallyEqualityComparableNonTriviallyComparableBase&) const = default;
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyComparableBase));
-
-enum E {
-  a,
-  b
-};
-bool operator==(E, E) { return false; }
-static_assert(!__is_trivially_equality_comparable(E));
 
 struct NotTriviallyEqualityComparableHasEnum {
   E e;
@@ -4434,15 +4435,8 @@ struct NotTriviallyEqualityComparableHasReferenceMember {
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasReferenceMember));
 
-enum E {
-  a,
-  b
-};
-bool operator==(E, E) { return false; }
-static_assert(!__is_trivially_equality_comparable(E));
-
 struct NotTriviallyEqualityComparableHasEnum {
-  E e;
+  Enum e;
   friend bool operator==(const NotTriviallyEqualityComparableHasEnum&, const NotTriviallyEqualityComparableHasEnum&) = default;
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasEnum));
@@ -4465,7 +4459,7 @@ static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableRefC
 }
 
 #endif // __cplusplus >= 202002L
-};
+}
 
 namespace can_pass_in_regs {
 
