@@ -56,9 +56,9 @@ void a(N::E NEVal, S *SPtr, S &SRef) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"static_cast<int>("
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
 
-  LOG(
+  LOG( // expected-warning{{format specifies type 'int' but the argument has type 'N::E'}}
       "%d",
-      SPtr->Type // expected-warning{{format specifies type 'int' but the argument has type 'N::E'}}
+      SPtr->Type
   );
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"static_cast<int>("
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
@@ -68,8 +68,8 @@ void a(N::E NEVal, S *SPtr, S &SRef) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:7}:"static_cast<int>("
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:16-[[@LINE-2]]:16}:")"
 
-  LOG("%d",
-      SRef.Type); // expected-warning{{format specifies type 'int' but the argument has type 'N::E'}}
+  LOG("%d", // expected-warning{{format specifies type 'int' but the argument has type 'N::E'}}
+      SRef.Type);
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:7}:"static_cast<int>("
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:16-[[@LINE-2]]:16}:")"
 
