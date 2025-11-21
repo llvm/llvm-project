@@ -79,9 +79,8 @@ static void processAddrOfOpInDerivedTypeDescriptor(
     llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols) {
   if (auto globalOp = symTab.lookup<fir::GlobalOp>(
           addrOfOp.getSymbol().getLeafReference().getValue())) {
-    if (globalsSet.contains(globalOp)) {
+    if (globalsSet.contains(globalOp))
       return;
-    }
     globalsSet.insert(globalOp);
     symbols.push_back(addrOfOp.getSymbolAttr());
     globalOp.walk([&](fir::AddrOfOp op) {
@@ -114,10 +113,10 @@ static void collectReferencedSymbolsForType(
 
     fir::GlobalOp globalOp = symbolTable->lookup<fir::GlobalOp>(
         fir::NameUniquer::getTypeDescriptorName(recTy.getName()));
-    if (!globalOp) {
+    if (!globalOp)
       globalOp = symbolTable->lookup<fir::GlobalOp>(
           fir::NameUniquer::getTypeDescriptorAssemblyName(recTy.getName()));
-    }
+
     if (globalOp) {
       globalsSet.insert(globalOp);
       symbols.push_back(
