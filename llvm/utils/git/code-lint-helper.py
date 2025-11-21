@@ -111,6 +111,19 @@ def filter_changed_files(changed_files: List[str]) -> List[str]:
     return filtered_files
 
 
+def filter_doc_files(changed_files: List[str]) -> List[str]:
+    filtered_files = []
+    for filepath in changed_files:
+        _, ext = os.path.splitext(filepath)
+        if ext not in (".rst"):
+            continue
+        if not filepath.startswith("clang-tools-extra/docs/clang-tidy/checks/"):
+            continue
+        if os.path.exists(filepath):
+            filtered_files.append(filepath)
+    return filtered_files
+
+
 def create_comment_text(warning: str, cpp_files: List[str]) -> str:
     instructions = get_instructions(cpp_files)
     return f"""
@@ -235,37 +248,13 @@ def run_clang_tidy(changed_files: List[str], args: LintArgs) -> Optional[str]:
     return clean_clang_tidy_output(proc.stdout.strip())
 
 
-def clean_doc8_output(output: str) -> Optional[str]:
-    if not output:
-        return None
-
-    lines = output.split("\n")
-    cleaned_lines = []
-    in_summary = False
-
-    for line in lines:
-        if line.startswith("Scanning...") or line.startswith("Validating..."):
-            continue
-        if line.startswith("========"):
-            in_summary = True
-            continue
-        if in_summary:
-            continue
-        if line.strip():
-            cleaned_lines.append(line)
-
-    if cleaned_lines:
-        return "\n".join(cleaned_lines)
-    return None
+def get_doc8_instructions(doc_files: List[str]) -> str:
+    files_str = " ".join(doc_files)
+    return f"doc8 -q {files_str}"
 
 
-def get_doc8_instructions() -> str:
-    # TODO: use git diff
-    return "doc8 ./clang-tools-extra/docs/clang-tidy/checks/"
-
-
-def create_doc8_comment_text(doc8_output: str) -> str:
-    instructions = get_doc8_instructions()
+def create_doc8_comment_text(doc8_output: str, doc_files: List[str]) -> str:
+    instructions = get_doc8_instructions(doc_files)
     return f"""
 :warning: Documentation linter doc8 found issues in your code. :warning:
 
@@ -293,8 +282,11 @@ View the output from doc8 here.
 """
 
 
-def run_doc8(args: LintArgs) -> tuple[int, Optional[str]]:
-    doc8_cmd = [args.doc8_binary, "./clang-tools-extra/docs/clang-tidy/checks/"]
+def run_doc8(doc_files: List[str], args: LintArgs) -> tuple[int, Optional[str]]:
+    if not doc_files:
+        return 0, None
+
+    doc8_cmd = [args.doc8_binary, "-q"] + doc_files
 
     if args.verbose:
         print(f"Running doc8: {' '.join(doc8_cmd)}")
@@ -307,20 +299,32 @@ def run_doc8(args: LintArgs) -> tuple[int, Optional[str]]:
         check=False,
     )
 
-    cleaned_output = clean_doc8_output(proc.stdout.strip())
-    if proc.returncode != 0 and cleaned_output is None:
+    output = proc.stdout.strip()
+    if proc.returncode != 0 and not output:
         # Infrastructure failure
         return proc.returncode, proc.stderr.strip()
 
-    return proc.returncode, cleaned_output
+    return proc.returncode, output if output else None
 
 
 def run_doc8_linter(args: LintArgs) -> tuple[bool, Optional[dict]]:
-    returncode, result = run_doc8(args)
+    changed_files = []
+    if args.changed_files:
+        changed_files = args.changed_files.split(',')
+    doc_files = filter_doc_files(changed_files)
+
+    is_success = True
+    result = None
+
+    if doc_files:
+        returncode, result = run_doc8(doc_files, args)
+        if returncode != 0:
+            is_success = False
+
     should_update_gh = args.token is not None and args.repo is not None
     comment = None
 
-    if returncode == 0:
+    if is_success:
         if should_update_gh:
             comment_text = (
                 ":white_check_mark: With the latest revision "
@@ -331,7 +335,7 @@ def run_doc8_linter(args: LintArgs) -> tuple[bool, Optional[dict]]:
     else:
         if should_update_gh:
             if result:
-                comment_text = create_doc8_comment_text(result)
+                comment_text = create_doc8_comment_text(result, doc_files)
                 comment = create_comment(comment_text, args, create_new=True)
             else:
                 comment_text = (
