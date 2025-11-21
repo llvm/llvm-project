@@ -63,9 +63,9 @@ void FactsGenerator::run() {
       const CFGElement &Element = Block->Elements[I];
       if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
         Visit(CS->getStmt());
-      else if (std::optional<CFGAutomaticObjDtor> DtorOpt =
-                   Element.getAs<CFGAutomaticObjDtor>())
-        handleDestructor(*DtorOpt);
+      else if (std::optional<CFGLifetimeEnds> LifetimeEnds =
+                   Element.getAs<CFGLifetimeEnds>())
+        handleLifetimeEnds(*LifetimeEnds);
     }
     CurrentBlockFacts.append(EscapesInCurrentBlock.begin(),
                              EscapesInCurrentBlock.end());
@@ -229,25 +229,19 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   killAndFlowOrigin(*MTE, *MTE->getSubExpr());
 }
 
-void FactsGenerator::handleDestructor(const CFGAutomaticObjDtor &DtorOpt) {
-  /// TODO: Also handle trivial destructors (e.g., for `int`
-  /// variables) which will never have a CFGAutomaticObjDtor node.
+void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   /// TODO: Handle loans to temporaries.
-  /// TODO: Consider using clang::CFG::BuildOptions::AddLifetime to reuse the
-  /// lifetime ends.
-  const VarDecl *DestructedVD = DtorOpt.getVarDecl();
-  if (!DestructedVD)
+  const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
+  if (!LifetimeEndsVD)
     return;
   // Iterate through all loans to see if any expire.
-  /// TODO(opt): Do better than a linear search to find loans associated with
-  /// 'DestructedVD'.
-  for (const Loan &L : FactMgr.getLoanMgr().getLoans()) {
-    const AccessPath &LoanPath = L.Path;
+  for (const auto &Loan : FactMgr.getLoanMgr().getLoans()) {
+    const AccessPath &LoanPath = Loan.Path;
     // Check if the loan is for a stack variable and if that variable
     // is the one being destructed.
-    if (LoanPath.D == DestructedVD)
+    if (LoanPath.D == LifetimeEndsVD)
       CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-          L.ID, DtorOpt.getTriggerStmt()->getEndLoc()));
+          Loan.ID, LifetimeEnds.getTriggerStmt()->getEndLoc()));
   }
 }
 
