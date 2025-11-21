@@ -20,9 +20,9 @@ code is build with ``-fno-strict-aliasing``, sacrificing performance.
 TypeSanitizer is built to catch when these strict aliasing rules have been violated, helping 
 users find where such bugs originate in their code despite the code looking valid at first glance.
 
-As TypeSanitizer is still experimental, it can currently have a large impact on runtime speed, 
-memory use, and code size. It also has a large compile-time overhead. Work is being done to 
-reduce these impacts.
+Typical memory overhead introduced by TypeSanitizer is about **8x**. Runtime slowdown varies greatly
+depending on how often the instrumented code relies on type aliasing. In the best case slowdown is
+**2x-3x**.
 
 The TypeSanitizer Algorithm
 ===========================
@@ -128,6 +128,14 @@ references to LLVM IR specific terms.
 Sanitizer features
 ==================
 
+Instrumentation code inlining
+------------------------------
+
+By default TypeSanitizer inserts instrumentation through function calls. This may lead to a reduction in
+runtime performance. ``-fno-sanitize-type-outline-instrumentation`` (default: ``false``) forces all
+code instrumentation to be inlined. This will increase the size of the generated code and compiler
+overhead, but may improve the runtime performance of the resulting code.
+
 ``__has_feature(type_sanitizer)``
 ------------------------------------
 
@@ -179,10 +187,6 @@ Limitations
   shadow memory for each byte of user memory.
 * There are transformation passes which run before TypeSanitizer. If these 
   passes optimize out an aliasing violation, TypeSanitizer cannot catch it.
-* Currently, all instrumentation is inlined. This can result in a **15x** 
-  (on average) increase in generated file size, and **3x** to **7x** increase 
-  in compile time. In some documented cases this can cause the compiler to hang.
-  There are plans to improve this in the future.
 * Codebases that use unions and struct-initialized variables can see incorrect 
   results, as TypeSanitizer doesn't yet instrument these reliably.
 * Since Clang & LLVM's TBAA system is used to generate the checks used by the 
