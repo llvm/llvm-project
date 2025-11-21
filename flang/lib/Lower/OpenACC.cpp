@@ -5090,10 +5090,9 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   Fortran::lower::StatementContext stmtCtx;
   auto loopOp = buildACCLoopOp(
       converter, converter.getCurrentLocation(), semanticsContext, stmtCtx,
-      doConstruct, eval, privateOperands,
-      dataOperandSymbolPairs, gangOperands, workerNumOperands, vectorOperands,
-      tileOperands, cacheOperands, reductionOperands, retTy, yieldValue,
-      loopsToProcess);
+      doConstruct, eval, privateOperands, dataOperandSymbolPairs, gangOperands,
+      workerNumOperands, vectorOperands, tileOperands, cacheOperands,
+      reductionOperands, retTy, yieldValue, loopsToProcess);
 
   // Normal do loops which are not annotated with `acc loop` should be
   // left for analysis by marking with `auto`. This is the case even in the case
