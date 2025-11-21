@@ -91,7 +91,7 @@ private:
 InstrumentationBoundsSafetyStopInfo::InstrumentationBoundsSafetyStopInfo(
     Thread &thread)
     : StopInfo(thread, 0) {
-  // No additional data describing the reason for stopping
+  // No additional data describing the reason for stopping.
   m_extended_info = nullptr;
   m_description = SOFT_TRAP_FALLBACK_CATEGORY;
 
