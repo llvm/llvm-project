@@ -19,8 +19,6 @@
 //===----------------------------------------------------------------------===//
 
 def simm10 : RISCVSImmOp<10>, ImmLeaf<XLenVT, "return isInt<10>(Imm);">;
-def tuimm3 : RISCVUImmOp<3>, TImmLeaf<XLenVT, "return isUInt<3>(Imm);">;
-def tuimm4 : RISCVUImmOp<4>, TImmLeaf<XLenVT, "return isUInt<4>(Imm);">;
 
 def SImm8UnsignedAsmOperand : SImmAsmOperand<8, "Unsigned"> {
   let RenderMethod = "addSImm8UnsignedOperands";
@@ -1516,16 +1514,16 @@ let Predicates = [HasStdExtP] in {
   def: Pat<(XLenVecI16VT (abdu GPR:$rs1, GPR:$rs2)), (PDIFU_H GPR:$rs1, GPR:$rs2)>;
   
   // 8-bit logical shift left patterns
-  def: Pat<(XLenVecI8VT (shl GPR:$rs1, (XLenVecI8VT (riscv_pli tuimm3:$shamt)))),
-           (PSLLI_B GPR:$rs1, tuimm3:$shamt)>;
+  def: Pat<(XLenVecI8VT (shl GPR:$rs1, (XLenVecI8VT (splat_vector uimm3:$shamt)))),
+           (PSLLI_B GPR:$rs1, uimm3:$shamt)>;
 
   // 16-bit logical shift left patterns
-  def: Pat<(XLenVecI16VT (shl GPR:$rs1, (XLenVecI16VT (riscv_pli tuimm4:$shamt)))),
-           (PSLLI_H GPR:$rs1, tuimm4:$shamt)>;
+  def: Pat<(XLenVecI16VT (shl GPR:$rs1, (XLenVecI16VT (splat_vector uimm4:$shamt)))),
+           (PSLLI_H GPR:$rs1, uimm4:$shamt)>;
 
   // 16-bit signed saturation shift left patterns
-  def: Pat<(XLenVecI16VT (sshlsat GPR:$rs1, (XLenVecI16VT (riscv_pli tuimm4:$shamt)))),
-           (PSSLAI_H GPR:$rs1, tuimm4:$shamt)>;
+  def: Pat<(XLenVecI16VT (sshlsat GPR:$rs1, (XLenVecI16VT (splat_vector uimm4:$shamt)))),
+           (PSSLAI_H GPR:$rs1, uimm4:$shamt)>;
 
   // 8-bit PLI SD node pattern
   def: Pat<(XLenVecI8VT (splat_vector simm8_unsigned:$imm8)), (PLI_B simm8_unsigned:$imm8)>;
@@ -1573,12 +1571,12 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def: Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (XLenVT X0), GPR:$rs2)>;
 
   // 32-bit logical shift left patterns
-  def: Pat<(v2i32 (shl GPR:$rs1, (v2i32 (riscv_pli tuimm5:$shamt)))),
-           (PSLLI_W GPR:$rs1, tuimm5:$shamt)>;
+  def: Pat<(v2i32 (shl GPR:$rs1, (v2i32 (splat_vector uimm5:$shamt)))),
+           (PSLLI_W GPR:$rs1, uimm5:$shamt)>;
 
   // 32-bit signed saturation shift left patterns
-  def: Pat<(v2i32 (sshlsat GPR:$rs1, (v2i32 (riscv_pli tuimm5:$shamt)))),
-           (PSSLAI_W GPR:$rs1, tuimm5:$shamt)>;
+  def: Pat<(v2i32 (sshlsat GPR:$rs1, (v2i32 (splat_vector uimm5:$shamt)))),
+           (PSSLAI_W GPR:$rs1, uimm5:$shamt)>;
 
   // Load/Store patterns
   def : StPat<store, SD, GPR, v8i8>;
