@@ -1,9 +1,9 @@
-! Test that flang OpenMP and OpenMP offload related 
-! commands forward or expand to the appropriate commands 
+! Test that flang OpenMP and OpenMP offload related
+! commands forward or expand to the appropriate commands
 ! for flang -fc1 as expected. Assumes a gfx90a, aarch64,
-! and sm_70 architecture, but doesn't require one to be 
-! installed or compiled for, just testing the appropriate 
-! generation of jobs are created with the correct 
+! and sm_70 architecture, but doesn't require one to be
+! installed or compiled for, just testing the appropriate
+! generation of jobs are created with the correct
 ! corresponding arguments.
 
 ! Test regular -fopenmp with no offload
@@ -47,7 +47,7 @@
 ! OFFLOAD-DEVICE-NEXT: "{{[^"]*}}flang" "-fc1" "-triple" "nvptx64-nvidia-cuda"
 ! OFFLOAD-DEVICE-NOT: "{{[^"]*}}flang" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 
-! Test regular -fopenmp with offload for basic fopenmp-is-target-device flag addition and correct fopenmp 
+! Test regular -fopenmp with offload for basic fopenmp-is-target-device flag addition and correct fopenmp
 ! RUN: %flang -### -fopenmp --offload-arch=gfx90a -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib %s 2>&1 | FileCheck --check-prefixes=CHECK-OPENMP-IS-TARGET-DEVICE %s
 ! CHECK-OPENMP-IS-TARGET-DEVICE: "{{[^"]*}}flang" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" {{.*}}.f90"
 
@@ -169,7 +169,7 @@
 ! RUN: | FileCheck %s --check-prefixes=CHECK-OPENMP-VERSION
 ! CHECK-OPENMP-VERSION: "{{[^"]*}}flang" "-fc1" {{.*}} "-fopenmp" "-fopenmp-version=45" {{.*}}.f90"
 
-! Test diagnostic error when host IR file is non-existent 
+! Test diagnostic error when host IR file is non-existent
 ! RUN: not %flang_fc1 %s -o %t 2>&1 -fopenmp -fopenmp-is-target-device \
 ! RUN: -fopenmp-host-ir-file-path non-existant-file.bc \
 ! RUN: | FileCheck %s --check-prefix=HOST-IR-MISSING

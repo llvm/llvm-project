@@ -22,9 +22,6 @@ attributes(global) subroutine devsub()
 
   call syncthreads()
   call syncwarp(1)
-  call threadfence()
-  call threadfence_block()
-  call threadfence_system()
   ret = syncthreads_and(1)
   res = syncthreads_and(tid > offset)
   ret = syncthreads_count(1)
@@ -105,28 +102,25 @@ end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
 ! CHECK: nvvm.barrier0
-! CHECK: fir.call @llvm.nvvm.bar.warp.sync(%c1{{.*}}) fastmath<contract> : (i32) -> ()
-! CHECK: fir.call @llvm.nvvm.membar.gl() fastmath<contract> : () -> ()
-! CHECK: fir.call @llvm.nvvm.membar.cta() fastmath<contract> : () -> ()
-! CHECK: fir.call @llvm.nvvm.membar.sys() fastmath<contract> : () -> ()
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.and(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<and> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.and(%[[CONV]])
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.popc(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<and> %[[CONV]] -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<popc> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.popc(%[[CONV]]) fastmath<contract> : (i32) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.or(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<popc> %[[CONV]] -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<or> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.or(%[[CONV]]) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<or> %[[CONV]] -> i32
 ! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
 ! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
@@ -219,10 +213,10 @@ end
 ! CHECK-LABEL: func.func @_QPhost1()
 ! CHECK: cuf.kernel
 ! CHECK: nvvm.barrier0
-! CHECK: fir.call @llvm.nvvm.bar.warp.sync(%c1{{.*}}) fastmath<contract> : (i32) -> ()
-! CHECK: fir.call @llvm.nvvm.barrier0.and(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-! CHECK: fir.call @llvm.nvvm.barrier0.popc(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-! CHECK: fir.call @llvm.nvvm.barrier0.or(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
+! CHECK: nvvm.barrier #nvvm.reduction<and> %c1{{.*}} -> i32
+! CHECK: nvvm.barrier #nvvm.reduction<popc> %c1{{.*}} -> i32
+! CHECK: nvvm.barrier #nvvm.reduction<or> %c1{{.*}} -> i32
 
 attributes(device) subroutine testMatch()
   integer :: a, ipred, mask, v32
@@ -440,7 +434,7 @@ end subroutine
 
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
-! CHECK: %{{.*}} = nvvm.mbarrier.arrive.shared %[[SHARED_PTR]] : !llvm.ptr<3> -> i64
+! CHECK: %{{.*}} = nvvm.mbarrier.arrive %[[SHARED_PTR]] : !llvm.ptr<3> -> i64
 
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
@@ -483,7 +477,7 @@ end subroutine
 ! CHECK: %[[DST_7:.*]] = llvm.addrspacecast %[[DST_PTR]] : !llvm.ptr to !llvm.ptr<7>
 ! CHECK: %[[SRC_PTR:.*]] = fir.convert %[[SRC]] : (!fir.ref<f64>) -> !llvm.ptr
 ! CHECK: %[[SRC_3:.*]] = llvm.addrspacecast %[[SRC_PTR]] : !llvm.ptr to !llvm.ptr<1>
-! CHECK: nvvm.cp.async.bulk.shared.cluster.global %[[DST_7]], %[[SRC_3]], %[[BARRIER_3]], %[[COUNT_LOAD]] : <7>, <1>
+! CHECK: nvvm.cp.async.bulk.shared.cluster.global %[[DST_7]], %[[SRC_3]], %[[BARRIER_3]], %[[COUNT_LOAD]] : !llvm.ptr<7>, <1>
 
 attributes(global) subroutine test_bulk_s2g(a)
   real(8), device :: a(*)

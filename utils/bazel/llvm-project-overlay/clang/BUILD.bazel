@@ -2,6 +2,8 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load(
@@ -1025,6 +1027,7 @@ cc_library(
 gentbl_cc_library(
     name = "sema_attr_gen",
     tbl_outs = {
+        "include/clang/Sema/AttrIsTypeDependent.inc": ["-gen-clang-attr-is-type-dependent"],
         "include/clang/Sema/AttrParsedAttrImpl.inc": ["-gen-clang-attr-parsed-attr-impl"],
         "include/clang/Sema/AttrParsedAttrKinds.inc": ["-gen-clang-attr-parsed-attr-kinds"],
         "include/clang/Sema/AttrSpellingListIndex.inc": ["-gen-clang-attr-spelling-index"],
@@ -1231,6 +1234,7 @@ cc_library(
         ":format",
         ":frontend",
         ":lex",
+        ":options",
         ":rewrite",
         ":support",
         ":tooling_core",
@@ -1501,10 +1505,23 @@ cc_library(
 
 gentbl_cc_library(
     name = "driver_options_inc_gen",
-    tbl_outs = {"include/clang/Driver/Options.inc": ["-gen-opt-parser-defs"]},
+    tbl_outs = {"include/clang/Options/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
-    td_file = "include/clang/Driver/Options.td",
+    td_file = "include/clang/Options/Options.td",
     deps = ["//llvm:OptParserTdFiles"],
+)
+
+cc_library(
+    name = "options",
+    srcs = glob(["lib/Options/*.cpp"]),
+    hdrs = glob(["include/clang/Options/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":basic",
+        ":driver_options_inc_gen",
+        ":static_analyzer_checkers_gen",
+        "//llvm:Option",
+    ],
 )
 
 cc_library(
@@ -1544,6 +1561,7 @@ cc_library(
         ":config",
         ":driver_options_inc_gen",
         ":lex",
+        ":options",
         ":parse",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",
@@ -1700,6 +1718,7 @@ cc_library(
         ":driver_options_inc_gen",
         ":edit",
         ":lex",
+        ":options",
         ":parse",
         ":sema",
         ":serialization",
@@ -1769,6 +1788,7 @@ cc_library(
         ":frontend",
         ":frontend_tool",
         ":lex",
+        ":options",
         ":parse",
         ":sema",
         ":serialization",
@@ -1995,12 +2015,14 @@ cc_library(
     hdrs = glob(["include/clang/FrontendTool/*.h"]),
     includes = ["include"],
     deps = [
+        ":basic",
         ":codegen",
         ":config",
         ":driver",
         ":extract_api",
         ":frontend",
         ":frontend_rewrite",
+        ":options",
         ":static_analyzer_frontend",
         "//llvm:Option",
         "//llvm:Support",
@@ -2176,6 +2198,7 @@ cc_library(
         ":frontend_rewrite",
         ":frontend_tool",
         ":lex",
+        ":options",
         ":parse",
         ":sema",
         ":serialization",
@@ -2258,6 +2281,7 @@ cc_binary(
         ":driver",
         ":frontend",
         ":frontend_rewrite",
+        ":options",
         ":serialization",
         ":static_analyzer_frontend",
         ":tooling",

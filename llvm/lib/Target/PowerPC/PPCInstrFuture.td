@@ -420,6 +420,11 @@ let Predicates = [HasVSX, IsISAFuture] in {
       : VXForm_VRTAB5<323, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
                       "vucmprlh $VRT, $VRA, $VRB", []>;
 
+  def XVRLW : XX3Form_XTAB6<60, 184, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                            "xvrlw $XT, $XA, $XB",
+                            [(set v4i32:$XT, (int_ppc_vsx_xvrlw v4i32:$XA,
+                                                 v4i32:$XB))]>;
+
   // AES Acceleration Instructions
   def XXAESENCP : XX3Form_XTABp5_M2<194, (outs vsrprc:$XTp),
                                     (ins vsrprc:$XAp, vsrprc:$XBp, u2imm:$M),
@@ -547,6 +552,10 @@ def : Pat<(int_ppc_vsx_stxvprl v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRL $XTp,
                                                                     $RA, $RB)>;
 def : Pat<(int_ppc_vsx_stxvprll v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRLL $XTp,
                                                                      $RA, $RB)>;
+let Predicates = [HasVSX, IsISAFuture] in {
+  def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)), (v4i32 (XVRLW v4i32:$vA,
+                                                     v4i32:$vB))>;
+}
 
 //---------------------------- Instruction aliases ---------------------------//
 // Predicate combinations available:

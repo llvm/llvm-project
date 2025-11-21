@@ -29,8 +29,13 @@ TEST(ConstantsTest, UseCounts) {
 
   EXPECT_TRUE(Zero->use_empty());
   EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
   EXPECT_FALSE(Zero->hasOneUse());
   EXPECT_FALSE(Zero->hasOneUser());
+  EXPECT_FALSE(Zero->hasNUses(1));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(1));
+  EXPECT_FALSE(Zero->hasNUses(2));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(2));
 
   std::unique_ptr<Module> M(new Module("MyModule", Context));
 
@@ -45,35 +50,14 @@ TEST(ConstantsTest, UseCounts) {
   // Still looks like use_empty with uses.
   EXPECT_TRUE(Zero->use_empty());
   EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
   EXPECT_FALSE(Zero->hasOneUse());
   EXPECT_FALSE(Zero->hasOneUser());
+  EXPECT_FALSE(Zero->hasNUses(1));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(1));
+  EXPECT_FALSE(Zero->hasNUses(2));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(2));
 }
-
-#ifdef GTEST_HAS_DEATH_TEST
-#ifndef NDEBUG
-
-TEST(ConstantsTest, hasNUsesInvalid) {
-  LLVMContext Context;
-  Type *Int32Ty = Type::getInt32Ty(Context);
-  Constant *Zero = ConstantInt::get(Int32Ty, 0);
-  std::unique_ptr<Module> M(new Module("MyModule", Context));
-
-  // Introduce some uses
-  new GlobalVariable(*M, Int32Ty, /*isConstant=*/false,
-                     GlobalValue::ExternalLinkage, /*Initializer=*/Zero,
-                     "gv_user0");
-  new GlobalVariable(*M, Int32Ty, /*isConstant=*/false,
-                     GlobalValue::ExternalLinkage, /*Initializer=*/Zero,
-                     "gv_user1");
-
-  for (int I = 0; I != 3; ++I) {
-    EXPECT_DEATH(Zero->hasNUses(I), "hasUseList\\(\\)");
-    EXPECT_DEATH(Zero->hasNUsesOrMore(I), "hasUseList\\(\\)");
-  }
-}
-
-#endif
-#endif
 
 TEST(ConstantsTest, Integer_i1) {
   LLVMContext Context;

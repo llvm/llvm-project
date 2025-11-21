@@ -640,7 +640,7 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
 }
 
 void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
-  MachineOperand DstOp = I.getOperand(0);
+  const MachineOperand &DstOp = I.getOperand(0);
 
   uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
   assert(UnpackedOpcode != std::numeric_limits<uint16_t>::max() &&
