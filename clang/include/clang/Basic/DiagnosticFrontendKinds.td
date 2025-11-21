@@ -191,7 +191,7 @@ def err_verify_nonconst_addrspace : Error<
 def err_verify_message_partial_match
     : Error<"diagnostic messages of '%0' severity not fully matched: %1">;
 def err_verify_directive_out_of_order
-    : Error<"all diagnostics were successfully matched, but out of order "
+    : Error<"all diagnostics were successfully matched, but out-of-order "
             "directives were found: %0">;
 def err_verify_non_singular_match
     : Error<"exactly one diagnostic can be matched">;
