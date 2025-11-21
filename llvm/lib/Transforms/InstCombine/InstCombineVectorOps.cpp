@@ -153,10 +153,10 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
       // non-commutative operations.
       Value *FirstOp = (B0->getOperand(0) == PN) ? scalarPHI : Op;
       Value *SecondOp = (B0->getOperand(0) == PN) ? Op : scalarPHI;
-      Value *newPHIUser = InsertNewInstWith(
-          BinaryOperator::CreateWithCopiedFlags(B0->getOpcode(),
-                                                FirstOp, SecondOp, B0),
-          B0->getIterator());
+      Value *newPHIUser =
+          InsertNewInstWith(BinaryOperator::CreateWithCopiedFlags(
+                                B0->getOpcode(), FirstOp, SecondOp, B0),
+                            B0->getIterator());
       scalarPHI->addIncoming(newPHIUser, inBB);
     } else {
       // Scalarize PHI input:

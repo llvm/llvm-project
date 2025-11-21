@@ -130,9 +130,8 @@ define void @scalarize_phi_sub(ptr %n, ptr %inout) {
 ;
 entry:
   %t0 = load volatile float, ptr %inout, align 4
-  %insert = insertelement <4 x float> undef, float %t0, i32 0
-  %splat = shufflevector <4 x float> %insert, <4 x float> undef, <4 x i32> zeroinitializer
-  %insert1 = insertelement <4 x float> undef, float 3.0, i32 0
+  %insert = insertelement <4 x float> poison, float %t0, i32 0
+  %splat = shufflevector <4 x float> %insert, <4 x float> poison, <4 x i32> zeroinitializer
   br label %for.cond
 
 for.cond:
