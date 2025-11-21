@@ -10726,13 +10726,13 @@ static void DetectPrecisionLossInComplexDivision(Sema &S, QualType DivisorTy,
   if (!CT)
     return;
 
-  ASTContext &Ctx = S.getASTContext();
-  QualType ElementType = CT->getElementType().getDesugaredType(Ctx);
+  QualType ElementType = CT->getElementType().getCanonicalType();
   bool IsComplexRangePromoted = S.getLangOpts().getComplexRange() ==
                                 LangOptions::ComplexRangeKind::CX_Promoted;
   if (!ElementType->isFloatingType() || !IsComplexRangePromoted)
     return;
 
+  ASTContext &Ctx = S.getASTContext();
   QualType HigherElementType = Ctx.GetHigherPrecisionFPType(ElementType);
   const llvm::fltSemantics &ElementTypeSemantics =
       Ctx.getFloatTypeSemantics(ElementType);
