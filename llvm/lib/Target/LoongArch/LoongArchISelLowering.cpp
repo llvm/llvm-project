@@ -2004,6 +2004,85 @@ static SDValue lowerVECTOR_SHUFFLE_VPICKOD(const SDLoc &DL, ArrayRef<int> Mask,
   return DAG.getNode(LoongArchISD::VPICKOD, DL, VT, V2, V1);
 }
 
+// Check the Mask and then build SrcVec and MaskImm infos which will
+// be used to build LoongArchISD nodes for VPERMI_W or XVPERMI_W.
+// On success, return true. Otherwise, return false.
+static bool buildVPERMIInfo(ArrayRef<int> Mask, SDValue V1, SDValue V2,
+                            SmallVectorImpl<SDValue> &SrcVec,
+                            unsigned &MaskImm) {
+  unsigned MaskSize = Mask.size();
+
+  auto isValid = [&](int M, int Off) {
+    return (M == -1) || (M >= Off && M < Off + 4);
+  };
+
+  auto buildImm = [&](int MLo, int MHi, unsigned Off, unsigned I) {
+    auto immPart = [&](int M, unsigned Off) {
+      return (M == -1 ? 0 : (M - Off)) & 0x3;
+    };
+    MaskImm |= immPart(MLo, Off) << (I * 2);
+    MaskImm |= immPart(MHi, Off) << ((I + 1) * 2);
+  };
+
+  for (unsigned i = 0; i < 4; i += 2) {
+    int MLo = Mask[i];
+    int MHi = Mask[i + 1];
+
+    if (MaskSize == 8) { // Only v8i32/v8f32 need this check.
+      int M2Lo = Mask[i + 4];
+      int M2Hi = Mask[i + 5];
+      if (M2Lo != MLo + 4 || M2Hi != MHi + 4)
+        return false;
+    }
+
+    if (isValid(MLo, 0) && isValid(MHi, 0)) {
+      SrcVec.push_back(V1);
+      buildImm(MLo, MHi, 0, i);
+    } else if (isValid(MLo, MaskSize) && isValid(MHi, MaskSize)) {
+      SrcVec.push_back(V2);
+      buildImm(MLo, MHi, MaskSize, i);
+    } else {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/// Lower VECTOR_SHUFFLE into VPERMI (if possible).
+///
+/// VPERMI selects two elements from each of the two vectors based on the
+/// mask and places them in the corresponding positions of the result vector
+/// in order. Only v4i32 and v4f32 types are allowed.
+///
+/// It is possible to lower into VPERMI when the mask consists of two of the
+/// following forms concatenated:
+///   <i, j, u, v>
+///   <u, v, i, j>
+/// where i,j are in [0,4) and u,v are in [4, 8).
+/// For example:
+///   <2, 3, 4, 5>
+///   <5, 7, 0, 2>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above forms.
+static SDValue lowerVECTOR_SHUFFLE_VPERMI(const SDLoc &DL, ArrayRef<int> Mask,
+                                          MVT VT, SDValue V1, SDValue V2,
+                                          SelectionDAG &DAG,
+                                          const LoongArchSubtarget &Subtarget) {
+  if ((VT != MVT::v4i32 && VT != MVT::v4f32) ||
+      Mask.size() != VT.getVectorNumElements())
+    return SDValue();
+
+  SmallVector<SDValue, 2> SrcVec;
+  unsigned MaskImm = 0;
+  if (!buildVPERMIInfo(Mask, V1, V2, SrcVec, MaskImm))
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::VPERMI, DL, VT, SrcVec[1], SrcVec[0],
+                     DAG.getConstant(MaskImm, DL, Subtarget.getGRLenVT()));
+}
+
 /// Lower VECTOR_SHUFFLE into VSHUF.
 ///
 /// This mostly consists of converting the shuffle mask into a BUILD_VECTOR and
@@ -2087,11 +2166,14 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
       (Result =
            lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG, Subtarget)))
     return Result;
-  if ((Result = lowerVECTOR_SHUFFLEAsZeroOrAnyExtend(DL, Mask, VT, V1, V2, DAG,
-                                                     Zeroable)))
-    return Result;
   if ((Result = lowerVECTOR_SHUFFLEAsShift(DL, Mask, VT, V1, V2, DAG, Subtarget,
                                            Zeroable)))
+    return Result;
+  if ((Result =
+           lowerVECTOR_SHUFFLE_VPERMI(DL, Mask, VT, V1, V2, DAG, Subtarget)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLEAsZeroOrAnyExtend(DL, Mask, VT, V1, V2, DAG,
+                                                     Zeroable)))
     return Result;
   if ((Result = lowerVECTOR_SHUFFLEAsByteRotate(DL, Mask, VT, V1, V2, DAG,
                                                 Subtarget)))
@@ -2160,21 +2242,40 @@ lowerVECTOR_SHUFFLE_XVSHUF4I(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
 /// Lower VECTOR_SHUFFLE into XVPERMI (if possible).
 static SDValue
 lowerVECTOR_SHUFFLE_XVPERMI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
-                            SDValue V1, SelectionDAG &DAG,
+                            SDValue V1, SDValue V2, SelectionDAG &DAG,
                             const LoongArchSubtarget &Subtarget) {
-  // Only consider XVPERMI_D.
-  if (Mask.size() != 4 || (VT != MVT::v4i64 && VT != MVT::v4f64))
+  MVT GRLenVT = Subtarget.getGRLenVT();
+  unsigned MaskSize = Mask.size();
+  if (MaskSize != VT.getVectorNumElements())
     return SDValue();
 
-  unsigned MaskImm = 0;
-  for (unsigned i = 0; i < Mask.size(); ++i) {
-    if (Mask[i] == -1)
-      continue;
-    MaskImm |= Mask[i] << (i * 2);
+  // Consider XVPERMI_W.
+  if (VT == MVT::v8i32 || VT == MVT::v8f32) {
+    SmallVector<SDValue, 2> SrcVec;
+    unsigned MaskImm = 0;
+    if (!buildVPERMIInfo(Mask, V1, V2, SrcVec, MaskImm))
+      return SDValue();
+
+    return DAG.getNode(LoongArchISD::VPERMI, DL, VT, SrcVec[1], SrcVec[0],
+                       DAG.getConstant(MaskImm, DL, GRLenVT));
   }
 
-  return DAG.getNode(LoongArchISD::XVPERMI, DL, VT, V1,
-                     DAG.getConstant(MaskImm, DL, Subtarget.getGRLenVT()));
+  // Consider XVPERMI_D.
+  if (VT == MVT::v4i64 || VT == MVT::v4f64) {
+    unsigned MaskImm = 0;
+    for (unsigned i = 0; i < MaskSize; ++i) {
+      if (Mask[i] == -1)
+        continue;
+      if (Mask[i] >= (int)MaskSize)
+        return SDValue();
+      MaskImm |= Mask[i] << (i * 2);
+    }
+
+    return DAG.getNode(LoongArchISD::XVPERMI, DL, VT, V1,
+                       DAG.getConstant(MaskImm, DL, GRLenVT));
+  }
+
+  return SDValue();
 }
 
 /// Lower VECTOR_SHUFFLE into XVPERM (if possible).
@@ -2677,7 +2778,7 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     if (SDValue NewShuffle = widenShuffleMask(DL, Mask, VT, V1, V2, DAG))
       return NewShuffle;
     if ((Result =
-             lowerVECTOR_SHUFFLE_XVPERMI(DL, Mask, VT, V1, DAG, Subtarget)))
+             lowerVECTOR_SHUFFLE_XVPERMI(DL, Mask, VT, V1, V2, DAG, Subtarget)))
       return Result;
     if ((Result = lowerVECTOR_SHUFFLE_XVPERM(DL, Mask, VT, V1, DAG, Subtarget)))
       return Result;
@@ -2706,6 +2807,9 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     return Result;
   if ((Result = lowerVECTOR_SHUFFLEAsShift(DL, Mask, VT, V1, V2, DAG, Subtarget,
                                            Zeroable)))
+    return Result;
+  if ((Result =
+           lowerVECTOR_SHUFFLE_XVPERMI(DL, Mask, VT, V1, V2, DAG, Subtarget)))
     return Result;
   if ((Result =
            lowerVECTOR_SHUFFLE_XVINSVE0(DL, Mask, VT, V1, V2, DAG, Subtarget)))
