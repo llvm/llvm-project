@@ -59,6 +59,7 @@ public:
     BuildOptions.setAllAlwaysAdd();
     BuildOptions.AddImplicitDtors = true;
     BuildOptions.AddTemporaryDtors = true;
+    BuildOptions.AddLifetime = true;
 
     // Run the main analysis.
     Analysis = std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr);
@@ -1307,6 +1308,42 @@ TEST_F(LifetimeAnalysisTest, LivenessOutsideLoop) {
   EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p1"));
 }
 
+TEST_F(LifetimeAnalysisTest, TrivialDestructorsUAF) {
+  SetupTest(R"(
+    void target() {
+      int *ptr;
+      {
+          int s = 1;
+          ptr = &s;
+      }
+      POINT(p1);    
+      (void)*ptr;
+    }
+  )");
+  EXPECT_THAT(Origin("ptr"), HasLoansTo({"s"}, "p1"));
+  EXPECT_THAT(Origins({"ptr"}), MustBeLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, TrivialClassDestructorsUAF) {
+  SetupTest(R"(
+    class S {
+      View a, b;
+    };
+
+    void target() {
+      S* ptr;
+      {
+          S s;
+          ptr = &s;
+      }
+      POINT(p1);
+      (void)ptr;
+    }
+  )");
+  EXPECT_THAT(Origin("ptr"), HasLoansTo({"s"}, "p1"));
+  EXPECT_THAT(Origins({"ptr"}), MustBeLiveAt("p1"));
+}
+
 TEST_F(LifetimeAnalysisTest, SimpleReturnStackAddress) {
   SetupTest(R"(
     MyObj* target() {
@@ -1504,6 +1541,35 @@ TEST_F(LifetimeAnalysisTest, ReturnBeforeUseAfterScope) {
 
   EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj"}, "p1"));
   EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, TrivialDestructorsUAR) {
+  SetupTest(R"(
+    int* target() {
+      int s = 10;
+      int* p = &s;
+      POINT(p1);
+      return p;
+    }
+  )");
+  EXPECT_THAT("s", HasLiveLoanAtExpiry("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, TrivialClassDestructorsUAR) {
+  SetupTest(R"(
+    class S {
+      View a, b;
+    };
+
+    S* target() {
+      S *ptr;
+      S s;
+      ptr = &s;
+      POINT(p1);
+      return ptr;
+    }
+  )");
+  EXPECT_THAT("s", HasLiveLoanAtExpiry("p1"));
 }
 
 } // anonymous namespace

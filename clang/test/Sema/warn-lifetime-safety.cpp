@@ -12,6 +12,10 @@ struct [[gsl::Pointer()]] View {
   void use() const;
 };
 
+class TriviallyDestructedClass {
+  View a, b;
+};
+
 //===----------------------------------------------------------------------===//
 // Basic Definite Use-After-Free (-W...permissive)
 // These are cases where the pointer is guaranteed to be dangling at the use site.
@@ -396,6 +400,24 @@ void loan_from_previous_iteration(MyObj safe, bool condition) {
   }             // expected-note {{destroyed here}}
 }
 
+void trivial_int_uaf() {
+  int * a;
+  {
+      int b = 1;
+      a = &b;  // expected-warning {{object whose reference is captured does not live long enough}}
+  }            // expected-note {{destroyed here}}
+  (void)*a;    // expected-note {{later used here}}
+}
+
+void trivial_class_uaf() {
+  TriviallyDestructedClass* ptr;
+  {
+      TriviallyDestructedClass s;
+      ptr = &s; // expected-warning {{object whose reference is captured does not live long enough}}
+  }             // expected-note {{destroyed here}}
+  (void)ptr;    // expected-note {{later used here}}
+}
+
 //===----------------------------------------------------------------------===//
 // Basic Definite Use-After-Return (Return-Stack-Address) (-W...permissive)
 // These are cases where the pointer is guaranteed to be dangling at the use site.
@@ -491,6 +513,43 @@ MyObj& reference_return_of_local() {
   MyObj stack;      
   return stack;     // expected-warning {{address of stack memory is returned later}}
                     // expected-note@-1 {{returned here}}
+}
+
+int* trivial_int_uar() {
+  int *a;
+  int b = 1;
+  a = &b;          // expected-warning {{address of stack memory is returned later}}
+  return a;        // expected-note {{returned here}}
+}
+
+TriviallyDestructedClass* trivial_class_uar () {
+  TriviallyDestructedClass *ptr;
+  TriviallyDestructedClass s;
+  ptr = &s;       // expected-warning {{address of stack memory is returned later}}
+  return ptr;     // expected-note {{returned here}}
+}
+
+// FIXME: No lifetime warning for this as no expire facts are generated for parameters
+const int& return_parameter(int a) { 
+  return a; 
+}
+
+// FIXME: No lifetime warning for this as no expire facts are generated for parameters
+int* return_pointer_to_parameter(int a) {
+    return &a;
+}
+
+const int& return_reference_to_parameter(int a)
+{
+    const int &b = a; 
+    return b;         // expected-warning {{address of stack memory is returned later}}
+                      // expected-note@-1 {{returned here}}
+}
+
+const int& get_ref_to_local() {
+    int a = 42;
+    return a;         // expected-warning {{address of stack memory is returned later}}
+                      // expected-note@-1 {{returned here}}
 }
 
 //===----------------------------------------------------------------------===//
@@ -688,7 +747,8 @@ void lifetimebound_partial_safety(bool cond) {
   v.use();                // expected-note {{later used here}}
 }
 
-// FIXME: Creating reference from lifetimebound call doesn't propagate loans.
+// FIXME: Warning should be on the 'GetObject' call, not the assignment to 'ptr'. 
+// The loan from the lifetimebound argument is not propagated to the call expression itself.
 const MyObj& GetObject(View v [[clang::lifetimebound]]);
 void lifetimebound_return_reference() {
   View v;
@@ -697,9 +757,9 @@ void lifetimebound_return_reference() {
     MyObj obj;
     View temp_v = obj;
     const MyObj& ref = GetObject(temp_v);
-    ptr = &ref;
-  }
-  (void)*ptr;
+    ptr = &ref;           // expected-warning {{object whose reference is captured does not live long enough}}
+  }                       // expected-note {{destroyed here}}
+  (void)*ptr;             // expected-note {{later used here}}
 }
 
 // FIXME: No warning for non gsl::Pointer types. Origin tracking is only supported for pointer types.
