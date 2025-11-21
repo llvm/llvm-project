@@ -4,10 +4,10 @@
 # REQUIRES: x86-registered-target
 
 # RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
-# RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
-# RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
 
-# ERR: error: 'While reading call graph info's Flags': Unexpected value. Expected [0-7] but found [8]
+# WARN: warning: 'while reading call graph info's Flags': Unexpected value. Expected [0-7] but found [8]
 
 .text
 .globl _Z3foov

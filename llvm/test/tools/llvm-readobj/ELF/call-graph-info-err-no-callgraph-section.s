@@ -3,10 +3,10 @@
 # REQUIRES: x86-registered-target
 
 # RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
-# RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
-# RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
 
-# CHECK: error: 'Missing section': No .llvm.callgraph section found.
+# CHECK: warning: 'missing section': No .llvm.callgraph section found.
 
 .text
 .globl _Z3foov

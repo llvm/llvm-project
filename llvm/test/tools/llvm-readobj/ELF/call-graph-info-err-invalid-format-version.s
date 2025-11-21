@@ -7,7 +7,7 @@
 # RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
 # RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
 
-# ERR: error: 'Unknown value': Unknown format version value [1] in .llvm.callgraph section.
+# ERR: error: 'unknown value': Unknown format version value [1] in .llvm.callgraph section.
 
 .text
 .globl _Z3foov

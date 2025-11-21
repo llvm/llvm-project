@@ -49,6 +49,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -5298,22 +5299,6 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
   OS << "GNUStyle::printCGProfile not implemented\n";
 }
 
-template <class ELFT>
-static std::optional<object::SectionRef>
-getCallGraphSection(const object::ELFObjectFile<ELFT> &ObjF) {
-  // Get the .llvm.callgraph section.
-  StringRef CallGraphSectionName(".llvm.callgraph");
-  for (auto Sec : ObjF.sections()) {
-    if (Expected<StringRef> NameOrErr = Sec.getName()) {
-      StringRef Name = *NameOrErr;
-      if (Name == CallGraphSectionName)
-        return Sec;
-    } else
-      consumeError(NameOrErr.takeError());
-  }
-  return std::nullopt;
-}
-
 namespace callgraph {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 enum Flags : uint8_t {
@@ -5327,20 +5312,22 @@ enum Flags : uint8_t {
 
 template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
   const Elf_Shdr *CGSection = findSectionByName(".llvm.callgraph");
-  if (!CGSection)
-    reportError(createError("No .llvm.callgraph section found."),
-                "Missing section");
+  if (!CGSection) {
+    reportWarning(createError("No .llvm.callgraph section found."),
+                  "missing section");
+    return false;
+  }
 
   Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
       Obj.getSectionContents(*CGSection);
   if (!SectionBytesOrErr) {
     reportError(SectionBytesOrErr.takeError(),
-                "Unable to read the .llvm.callgraph section");
+                "unable to read the .llvm.callgraph section");
   }
 
   auto PrintMalformedError = [&](Error &E, Twine FuncPC, StringRef Component) {
     reportError(std::move(E),
-                Twine("While reading call graph info's [" + Component +
+                Twine("while reading call graph info's [" + Component +
                       "] for function at [0x" + FuncPC + "]")
                     .str());
   };
@@ -5354,32 +5341,38 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     Error CGSectionErr = Error::success();
     uint8_t FormatVersionNumber = Data.getU8(&Offset, &CGSectionErr);
     if (CGSectionErr) {
-      reportError(std::move(CGSectionErr),
-                  "While reading call graph info FormatVersionNumber");
+      reportWarning(std::move(CGSectionErr),
+                    "while reading call graph info FormatVersionNumber");
+      return false;
     }
     if (FormatVersionNumber != 0) {
       reportError(createError("Unknown format version value [" +
                               std::to_string(FormatVersionNumber) +
                               "] in .llvm.callgraph section."),
-                  "Unknown value");
+                  "unknown value");
     }
 
     uint8_t FlagsVal = Data.getU8(&Offset, &CGSectionErr);
-    if (CGSectionErr)
-      reportError(std::move(CGSectionErr),
-                  "While reading call graph info's Flags");
+    if (CGSectionErr) {
+      reportWarning(std::move(CGSectionErr),
+                    "while reading call graph info's Flags");
+      return false;
+    }
     callgraph::Flags CGFlags = static_cast<callgraph::Flags>(FlagsVal);
     if (FlagsVal > 7) {
-      reportError(createError("Unexpected value. Expected [0-7] but found [" +
-                              std::to_string(FlagsVal) + "]"),
-                  "While reading call graph info's Flags");
+      reportWarning(createError("Unexpected value. Expected [0-7] but found [" +
+                                std::to_string(FlagsVal) + "]"),
+                    "while reading call graph info's Flags");
+      return false;
     }
     uint64_t FuncAddrOffset = Offset;
     typename ELFT::uint FuncAddr =
         Data.getUnsigned(&Offset, sizeof(FuncAddr), &CGSectionErr);
-    if (CGSectionErr)
-      reportError(std::move(CGSectionErr),
-                  "While reading call graph info function entry PC");
+    if (CGSectionErr) {
+      reportWarning(std::move(CGSectionErr),
+                    "while reading call graph info function entry PC");
+      return false;
+    }
 
     bool IsETREL = this->Obj.getHeader().e_type == ELF::ET_REL;
     // Create a new entry for this function.
@@ -8314,7 +8307,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   if (!this->processCallGraphSection() || this->FuncCGInfos.empty()) {
-    ListScope CGI(W, "CallGraph");
     return;
   }
 
