@@ -29,7 +29,7 @@ static const DynTypedNode *ignoreParensTowardsTheRoot(const DynTypedNode *N,
 }
 
 static bool assignsToBoolean(const BinaryOperator *BinOp, ASTContext *AC) {
-  TraversalKindScope RAII(*AC, TK_AsIs);
+  const TraversalKindScope RAII(*AC, TK_AsIs);
   auto Parents = AC->getParents(*BinOp);
 
   return llvm::any_of(Parents, [&](const DynTypedNode &Parent) {
@@ -67,15 +67,15 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
                           BinOp->getOpcodeStr()))
     return false;
 
-  const auto isBooleanType = [&AC](const Expr *expr) -> bool {
-    return expr->IgnoreImpCasts()
+  const auto IsBooleanType = [&AC](const Expr *Expr) -> bool {
+    return Expr->IgnoreImpCasts()
         ->getType()
         .getDesugaredType(*AC)
         ->isBooleanType();
   };
 
-  bool IsBooleanLHS = isBooleanType(BinOp->getLHS());
-  bool IsBooleanRHS = isBooleanType(BinOp->getRHS());
+  bool IsBooleanLHS = IsBooleanType(BinOp->getLHS());
+  bool IsBooleanRHS = IsBooleanType(BinOp->getRHS());
   if (IsBooleanLHS && IsBooleanRHS) {
     RootAssignsToBoolean = RootAssignsToBoolean.value_or(false);
     return true;
