@@ -298,8 +298,8 @@ public:
 /// data.
 class MCEncodedFragment : public MCFragment {
   uint8_t BundlePadding = 0;
-  uint32_t ContentStart = 0;
-  uint32_t ContentEnd = 0;
+  uint32_t ContentSize = 0;
+  uint64_t ContentStart = 0;
   uint32_t FixupStart = 0;
   uint32_t FixupEnd = 0;
 
@@ -360,22 +360,23 @@ public:
 
   // Content-related functions manage parent's storage using ContentStart and
   // ContentSize.
-  void clearContents() { ContentEnd = ContentStart; }
+  void clearContents() { ContentSize = 0; }
   // Get a SmallVector reference. The caller should call doneAppending to update
-  // `ContentEnd`.
+  // `ContentSize`.
   SmallVectorImpl<char> &getContentsForAppending() {
     SmallVectorImpl<char> &S = getParent()->ContentStorage;
-    if (LLVM_UNLIKELY(ContentEnd != S.size())) {
+    if (LLVM_UNLIKELY(ContentStart + ContentSize != S.size())) {
       // Move the elements to the end. Reserve space to avoid invalidating
       // S.begin()+I for `append`.
-      auto Size = ContentEnd - ContentStart;
       auto I = std::exchange(ContentStart, S.size());
-      S.reserve(S.size() + Size);
-      S.append(S.begin() + I, S.begin() + I + Size);
+      S.reserve(S.size() + ContentSize);
+      S.append(S.begin() + I, S.begin() + I + ContentSize);
     }
     return S;
   }
-  void doneAppending() { ContentEnd = getParent()->ContentStorage.size(); }
+  void doneAppending() {
+    ContentSize = getParent()->ContentStorage.size() - ContentStart;
+  }
   void appendContents(ArrayRef<char> Contents) {
     getContentsForAppending().append(Contents.begin(), Contents.end());
     doneAppending();
@@ -387,11 +388,11 @@ public:
   LLVM_ABI void setContents(ArrayRef<char> Contents);
   MutableArrayRef<char> getContents() {
     return MutableArrayRef(getParent()->ContentStorage)
-        .slice(ContentStart, ContentEnd - ContentStart);
+        .slice(ContentStart, ContentSize);
   }
   ArrayRef<char> getContents() const {
     return ArrayRef(getParent()->ContentStorage)
-        .slice(ContentStart, ContentEnd - ContentStart);
+        .slice(ContentStart, ContentSize);
   }
 
   // Fixup-related functions manage parent's storage using FixupStart and
@@ -409,7 +410,7 @@ public:
         .slice(FixupStart, FixupEnd - FixupStart);
   }
 
-  size_t getSize() const { return ContentEnd - ContentStart; }
+  size_t getSize() const { return ContentSize; }
 };
 
 /// Fragment for data and encoded instructions.
