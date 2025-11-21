@@ -151,6 +151,14 @@ translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
   }
 }
 
+//
+// Note:
+// Block operations for tile of sub byte element types are handled by
+// emulating with larger element types.
+// Tensor descriptor are keep intact and only ops consuming them are
+// emulated
+//
+
 class CreateNdDescToXeVMPattern
     : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -268,9 +276,64 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
           op, "Expected offset rank to match descriptor rank.");
     auto elemType = tdescTy.getElementType();
     auto elemBitSize = elemType.getIntOrFloatBitWidth();
-    if (elemBitSize % 8 != 0)
+    bool isSubByte = elemBitSize < 8;
+    uint64_t wScaleFactor = 1;
+
+    if (!isSubByte && (elemBitSize % 8 != 0))
       return rewriter.notifyMatchFailure(
           op, "Expected element type bit width to be multiple of 8.");
+    auto tileW = tdescTy.getDimSize(tileRank - 1);
+    // For sub byte types, only 4bits are currently supported.
+    if (isSubByte) {
+      if (elemBitSize != 4)
+        return rewriter.notifyMatchFailure(
+            op, "Only sub byte types of 4bits are supported.");
+      if (tileRank != 2)
+        return rewriter.notifyMatchFailure(
+            op, "Sub byte types are only supported for 2D tensor descriptors.");
+      auto subByteFactor = 8 / elemBitSize;
+      auto sub16BitFactor = subByteFactor * 2;
+      auto sub32BitFactor = sub16BitFactor * 2;
+      auto tileH = tdescTy.getDimSize(0);
+      if (tileW == executionSize * sub16BitFactor) {
+        // Usage case for loading as Matrix A operand
+        // Emulate with 16bit loads/stores.
+        //   scaled_tileW = executionSize
+        elemType = rewriter.getIntegerType(16);
+        tileW = executionSize;
+        wScaleFactor = sub16BitFactor;
+      } else if (tileW == executionSize * sub32BitFactor) {
+        // Usage case for loading as pre-packed Matrix B operand
+        // Emulate with 32bit loads/stores.
+        //  scaled_tileW = executionSize
+        elemType = rewriter.getIntegerType(32);
+        tileW = executionSize;
+        wScaleFactor = sub32BitFactor;
+      } else if constexpr (std::is_same_v<OpType, xegpu::LoadNdOp>) {
+        if (!(tileH == systolicDepth * 4 &&
+              tileW == executionSize * subByteFactor)) {
+          return rewriter.notifyMatchFailure(
+              op, "Unsupported tile shape for sub byte types.");
+        }
+        const bool vnni = op.getPacked().value_or(false);
+        if (!vnni) {
+          return rewriter.notifyMatchFailure(
+              op, "Unsupported tile shape for sub byte types without pack.");
+        }
+        // Usage case for loading as Matrix B with pack request.
+        // source is assumed to pre-packed into 8bit elements
+        // Emulate with 8bit loads with pack request.
+        //   scaled_tileW = executionSize
+        elemType = rewriter.getIntegerType(8);
+        tileW = executionSize;
+        wScaleFactor = subByteFactor;
+      } else {
+        return rewriter.notifyMatchFailure(
+            op, "Unsupported tile width for sub byte types.");
+      }
+      // recompute element bit size for emulation.
+      elemBitSize = elemType.getIntOrFloatBitWidth();
+    }
 
     // Get address space from tensor descriptor memory space.
     auto ptrTypeLLVM = LLVM::LLVMPointerType::get(
@@ -302,12 +365,24 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
       // Convert base pointer (i64) to LLVM pointer type.
       Value basePtrLLVM =
           LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtr);
+      // FIXME: width or pitch is not the same as baseShapeW it should be the
+      // stride of the second to last dimension in row major layout.
       // Compute width in bytes.
       Value surfaceW =
           arith::MulIOp::create(rewriter, loc, baseShapeW, elemByteSize);
 
-      // Get tile width from the tensor descriptor type.
-      auto tileW = tdescTy.getDimSize(tileRank - 1);
+      if (wScaleFactor > 1) {
+        // Scale baseShapeW, offsetW, surfaceW for sub byte emulation.
+        // Note: tileW is already scaled above.
+        Value wScaleFactorValLog2 = arith::ConstantIntOp::create(
+            rewriter, loc, rewriter.getI32Type(), llvm::Log2_64(wScaleFactor));
+        baseShapeW = arith::ShRSIOp::create(rewriter, loc, baseShapeW,
+                                            wScaleFactorValLog2);
+        offsetW =
+            arith::ShRSIOp::create(rewriter, loc, offsetW, wScaleFactorValLog2);
+        surfaceW = arith::ShRSIOp::create(rewriter, loc, surfaceW,
+                                          wScaleFactorValLog2);
+      }
       // Get tile height from the tensor descriptor type.
       auto tileH = tdescTy.getDimSize(0);
       // Get vblocks from the tensor descriptor type.
