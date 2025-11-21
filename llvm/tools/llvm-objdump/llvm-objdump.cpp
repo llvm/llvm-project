@@ -3533,6 +3533,35 @@ commaSeparatedValues(const llvm::opt::InputArgList &InputArgs, int ID) {
   return Values;
 }
 
+static void mcpuHelp() {
+  std::string Error;
+  Triple DummyTriple;
+
+  if (!TripleName.empty())
+    DummyTriple.setTriple(TripleName);
+  else {
+    // If the target triple is derived from the files, we display help message
+    // when disassembling them.
+    if (Disassemble)
+      return;
+    for (std::string Filename : InputFilenames) {
+      OwningBinary<Binary> OBinary =
+          unwrapOrError(createBinary(Filename), Filename);
+      Binary *Bin = OBinary.getBinary();
+      if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin)) {
+        DummyTriple = Obj->makeTriple();
+        break;
+      }
+    }
+  }
+
+  const Target *DummyTarget = TargetRegistry::lookupTarget(DummyTriple, Error);
+  if (!DummyTarget)
+    reportCmdLineError(Error);
+  // We need to access the Help() through the corresponding MCSubtargetInfo.
+  DummyTarget->createMCSubtargetInfo(DummyTriple, "help", "");
+}
+
 static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
   MachOOpt = true;
   FullLeadingAddr = true;
@@ -3830,6 +3859,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
       !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
       !Relocations && !SectionHeaders && !SectionContents && !SymbolTable &&
       !DynamicSymbolTable && !UnwindInfo && !FaultMapSection && !Offloading &&
+      MCPU != "help" &&
       !(MachOOpt &&
         (Bind || DataInCode || ChainedFixups || DyldInfo || DylibId ||
          DylibsUsed || ExportsTrie || FirstPrivateHeader ||
@@ -3839,6 +3869,9 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
     T->printHelp(ToolName);
     return 2;
   }
+
+  if (MCPU == "help")
+    mcpuHelp();
 
   DisasmSymbolSet.insert_range(DisassembleSymbols);
 
