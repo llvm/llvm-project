@@ -184,11 +184,21 @@ protected:
                                       HLSLAppliedSemanticAttr *Semantic,
                                       std::optional<unsigned> Index);
 
+  void emitSystemSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                               const clang::DeclaratorDecl *Decl,
+                               HLSLAppliedSemanticAttr *Semantic,
+                               std::optional<unsigned> Index);
+
   llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B,
                                         const FunctionDecl *FD,
                                         llvm::Type *Type,
                                         const clang::DeclaratorDecl *Decl,
                                         HLSLAppliedSemanticAttr *Semantic);
+
+  void handleScalarSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
+                                 llvm::Value *Source,
+                                 const clang::DeclaratorDecl *Decl,
+                                 HLSLAppliedSemanticAttr *Semantic);
 
   std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleStructSemanticLoad(
@@ -197,11 +207,23 @@ protected:
       specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
       specific_attr_iterator<HLSLAppliedSemanticAttr> end);
 
+  specific_attr_iterator<HLSLAppliedSemanticAttr> handleStructSemanticStore(
+      llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
+      const clang::DeclaratorDecl *Decl,
+      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd);
+
   std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                      llvm::Type *Type, const clang::DeclaratorDecl *Decl,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> end);
+
+  specific_attr_iterator<HLSLAppliedSemanticAttr>
+  handleSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
+                      llvm::Value *Source, const clang::DeclaratorDecl *Decl,
+                      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+                      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
@@ -266,10 +288,22 @@ private:
                                     HLSLAppliedSemanticAttr *Semantic,
                                     std::optional<unsigned> Index);
 
+  void emitSPIRVUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                                  HLSLAppliedSemanticAttr *Semantic,
+                                  std::optional<unsigned> Index);
+  void emitDXILUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                                 HLSLAppliedSemanticAttr *Semantic,
+                                 std::optional<unsigned> Index);
+  void emitUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                             const clang::DeclaratorDecl *Decl,
+                             HLSLAppliedSemanticAttr *Semantic,
+                             std::optional<unsigned> Index);
+
   llvm::Triple::ArchType getArch();
 
   llvm::DenseMap<const clang::RecordType *, llvm::StructType *> LayoutTypes;
   unsigned SPIRVLastAssignedInputSemanticLocation = 0;
+  unsigned SPIRVLastAssignedOutputSemanticLocation = 0;
 };
 
 } // namespace CodeGen
