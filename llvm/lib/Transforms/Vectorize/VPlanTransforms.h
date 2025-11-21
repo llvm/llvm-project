@@ -373,7 +373,7 @@ struct VPlanTransforms {
                                     std::optional<unsigned> VScaleForTuning);
 
   /// Update the resume phis in the scalar preheader after creating wide recipes
-  /// for first-order recurrences, reductions and inductions, End values for
+  /// for first-order recurrences, reductions and inductions. End values for
   /// inductions are added to \p IVEndValues.
   static void
   updateScalarResumePhis(VPlan &Plan,
