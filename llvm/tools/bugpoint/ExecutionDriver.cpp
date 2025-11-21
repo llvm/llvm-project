@@ -13,6 +13,7 @@
 
 #include "BugDriver.h"
 #include "ToolRunner.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Program.h"
@@ -101,13 +102,15 @@ static cl::opt<std::string> CustomExecCommand(
 
 // Anything specified after the --args option are taken as arguments to the
 // program being debugged.
-cl::list<std::string> llvm::InputArgv("args", cl::Positional,
-                                      cl::desc("<program arguments>..."),
-                                      cl::PositionalEatsArgs);
+namespace llvm {
+cl::list<std::string> InputArgv("args", cl::Positional,
+                                cl::desc("<program arguments>..."),
+                                cl::PositionalEatsArgs);
 
-cl::opt<std::string> llvm::OutputPrefix(
-    "output-prefix", cl::init("bugpoint"),
-    cl::desc("Prefix to use for outputs (default: 'bugpoint')"));
+cl::opt<std::string>
+    OutputPrefix("output-prefix", cl::init("bugpoint"),
+                 cl::desc("Prefix to use for outputs (default: 'bugpoint')"));
+} // namespace llvm
 
 static cl::list<std::string> ToolArgv("tool-args", cl::Positional,
                                       cl::desc("<tool arguments>..."),
