@@ -17,6 +17,7 @@ add_flang_library(FIRTransforms
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
   FIRToSCF.cpp
+  FIRToCoreMLIR.cpp
   MemoryUtils.cpp
   MemoryAllocation.cpp
   StackArrays.cpp
@@ -36,7 +37,6 @@ add_flang_library(FIRTransforms
   SimplifyFIROperations.cpp
   OptimizeArrayRepacking.cpp
   ConvertComplexPow.cpp
-  ConvertFIRToMLIR.cpp
   MIFOpConversion.cpp
 
   DEPENDS

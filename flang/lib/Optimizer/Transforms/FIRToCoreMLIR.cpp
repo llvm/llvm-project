@@ -1,4 +1,4 @@
-//===-- ConvertFIRToMLIR.cpp ----------------------------------------------===//
+//===-- FIRToCoreMLIR.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,13 +15,13 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace fir {
-#define GEN_PASS_DEF_CONVERTFIRTOMLIRPASS
+#define GEN_PASS_DEF_FIRTOCOREMLIRPASS
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
 namespace {
-class ConvertFIRToMLIRPass
-    : public fir::impl::ConvertFIRToMLIRPassBase<ConvertFIRToMLIRPass> {
+class FIRToCoreMLIRPass
+    : public fir::impl::FIRToCoreMLIRPassBase<FIRToCoreMLIRPass> {
 public:
   void runOnOperation() override;
 };
@@ -217,7 +217,7 @@ static mlir::TypeConverter prepareTypeConverter() {
   return converter;
 }
 
-void ConvertFIRToMLIRPass::runOnOperation() {
+void FIRToCoreMLIRPass::runOnOperation() {
   mlir::MLIRContext *ctx = &getContext();
   mlir::ModuleOp theModule = getOperation();
   mlir::TypeConverter converter = prepareTypeConverter();

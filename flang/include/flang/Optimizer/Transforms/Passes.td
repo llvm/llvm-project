@@ -87,10 +87,10 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
   ];
 }
 
-def ConvertFIRToMLIRPass : Pass<"fir-to-mlir", "mlir::ModuleOp"> {
-  let summary = "Convert the FIR dialect module to MLIR standard dialects.";
+def FIRToCoreMLIRPass : Pass<"fir-to-core-mlir", "mlir::ModuleOp"> {
+  let summary = "Convert the FIR dialect module to core MLIR dialects.";
   let description = [{
-    Convert the FIR dialect module to MLIR standard dialects.
+    Convert the FIR dialect module to core MLIR dialects.
   }];
   let dependentDialects = [
     "fir::FIROpsDialect", "fir::FIRCodeGenDialect", "mlir::scf::SCFDialect",

@@ -112,8 +112,8 @@ void addFIRToLLVMPass(mlir::PassManager &pm,
   if (disableFirToLlvmIr)
     return;
 
-  if (config.LowerThroughMLIR) {
-    pm.addPass(createConvertFIRToMLIRPass());
+  if (config.LowerThroughCoreMLIR) {
+    pm.addPass(createFIRToCoreMLIRPass());
     pm.addPass(mlir::memref::createFoldMemRefAliasOpsPass());
     pm.addPass(mlir::createMem2Reg());
     pm.addPass(mlir::createCSEPass());
