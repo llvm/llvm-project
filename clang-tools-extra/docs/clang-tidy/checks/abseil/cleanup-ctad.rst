@@ -3,7 +3,8 @@
 abseil-cleanup-ctad
 ===================
 
-Suggests switching the initialization pattern of ``absl::Cleanup`` instances from the factor function to class template argument
+Suggests switching the initialization pattern of ``absl::Cleanup``
+instances from the factor function to class template argument
 deduction (CTAD), in C++17 and higher.
 
 .. code-block:: c++

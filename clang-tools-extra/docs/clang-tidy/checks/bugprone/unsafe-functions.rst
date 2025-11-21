@@ -3,7 +3,6 @@
 bugprone-unsafe-functions
 =========================
 
-
 Checks for functions that have safer, more secure replacements available, or
 are considered deprecated due to design flaws.
 The check heavily relies on the functions from the
@@ -16,7 +15,6 @@ The check implements the following rules from the CERT C Coding Standard:
     <https://wiki.sei.cmu.edu/confluence/display/c/MSC33-C.+Do+not+pass+invalid+data+to+the+asctime%28%29+function>`_.
 
 `cert-msc24-c` and `cert-msc33-c` redirect here as aliases of this check.
-
 
 Unsafe functions
 ----------------
