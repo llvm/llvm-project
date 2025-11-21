@@ -3900,18 +3900,8 @@ void CodeGenFunction::EmitCheck(
 
   // Clear arguments for the MinimalRuntime handler.
   if (CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
-    switch (CheckHandler) {
-    case SanitizerHandler::TypeMismatch:
-      // Pass value pointer only. It adds minimal overhead.
-      StaticArgs = {};
-      assert(DynamicArgs.size() == 1);
-      break;
-    default:
-      // No arguments for other checks.
-      StaticArgs = {};
-      DynamicArgs = {};
-      break;
-    }
+    StaticArgs = {};
+    DynamicArgs = {};
   }
 
   // Handler functions take an i8* pointing to the (handler-specific) static
