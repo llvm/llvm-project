@@ -3951,7 +3951,7 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     StringRef S = llvm::getAllocTokenModeAsString(*Opts.AllocTokenMode);
     GenerateArg(Consumer, OPT_falloc_token_mode_EQ, S);
   }
-  // Generate args for Matrices
+  // Generate args for matrix types.
   if (Opts.MatrixTypes) {
     if (Opts.DefaultMatrixMemoryLayout == LangOptions::MatrixColMajor)
       GenerateArg(Consumer, OPT_fmatrix_memory_layout_EQ, "column-major");
@@ -4552,7 +4552,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
   }
 
-  // Enable options for Matrices
+  // Enable options for matrix types.
   if (Opts.MatrixTypes) {
     if (const Arg *A = Args.getLastArg(OPT_fmatrix_memory_layout_EQ)) {
       StringRef Val = A->getValue();
