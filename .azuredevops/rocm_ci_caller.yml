@@ -3,9 +3,6 @@ pr:
   branches:
     include:
       - release/rocm-rel-*
-  paths:
-    include:
-      - '**/*'
   drafts: false
 
 variables:
