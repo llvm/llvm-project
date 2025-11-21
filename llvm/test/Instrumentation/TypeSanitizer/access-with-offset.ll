@@ -11,6 +11,25 @@
 ; CHECK: @llvm.used = appending global [5 x ptr] [ptr @tysan.module_ctor, ptr @__tysan_v1_Simple_20C_2fC_2b_2b_20TBAA, ptr @__tysan_v1_omnipotent_20char, ptr @__tysan_v1_any_20pointer, ptr @__tysan_v1_any_20pointer_o_0], section "llvm.metadata"
 ; CHECK: @__tysan_shadow_memory_address = external global i64
 ; CHECK: @__tysan_app_memory_mask = external global i64
+;.
+; CHECK-INLINE: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @tysan.module_ctor, ptr null }]
+; CHECK-INLINE: @__tysan_v1_Simple_20C_2fC_2b_2b_20TBAA = linkonce_odr constant { i64, i64, [18 x i8] } { i64 2, i64 0, [18 x i8] c"Simple C/C++ TBAA\00" }, comdat
+; CHECK-INLINE: @__tysan_v1_omnipotent_20char = linkonce_odr constant { i64, i64, ptr, i64, [16 x i8] } { i64 2, i64 1, ptr @__tysan_v1_Simple_20C_2fC_2b_2b_20TBAA, i64 0, [16 x i8] c"omnipotent char\00" }, comdat
+; CHECK-INLINE: @__tysan_v1_any_20pointer = linkonce_odr constant { i64, i64, ptr, i64, [12 x i8] } { i64 2, i64 1, ptr @__tysan_v1_omnipotent_20char, i64 0, [12 x i8] c"any pointer\00" }, comdat
+; CHECK-INLINE: @__tysan_v1_any_20pointer_o_0 = linkonce_odr constant { i64, ptr, ptr, i64 } { i64 1, ptr @__tysan_v1_any_20pointer, ptr @__tysan_v1_any_20pointer, i64 0 }, comdat
+; CHECK-INLINE: @llvm.used = appending global [5 x ptr] [ptr @tysan.module_ctor, ptr @__tysan_v1_Simple_20C_2fC_2b_2b_20TBAA, ptr @__tysan_v1_omnipotent_20char, ptr @__tysan_v1_any_20pointer, ptr @__tysan_v1_any_20pointer_o_0], section "llvm.metadata"
+; CHECK-INLINE: @__tysan_shadow_memory_address = external global i64
+; CHECK-INLINE: @__tysan_app_memory_mask = external global i64
+;.
+; CHECK-OUTLINE: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @tysan.module_ctor, ptr null }]
+; CHECK-OUTLINE: @__tysan_v1_Simple_20C_2fC_2b_2b_20TBAA = linkonce_odr constant { i64, i64, [18 x i8] } { i64 2, i64 0, [18 x i8] c"Simple C/C++ TBAA\00" }, comdat
+; CHECK-OUTLINE: @__tysan_v1_omnipotent_20char = linkonce_odr constant { i64, i64, ptr, i64, [16 x i8] } { i64 2, i64 1, ptr @__tysan_v1_Simple_20C_2fC_2b_2b_20TBAA, i64 0, [16 x i8] c"omnipotent char\00" }, comdat
+; CHECK-OUTLINE: @__tysan_v1_any_20pointer = linkonce_odr constant { i64, i64, ptr, i64, [12 x i8] } { i64 2, i64 1, ptr @__tysan_v1_omnipotent_20char, i64 0, [12 x i8] c"any pointer\00" }, comdat
+; CHECK-OUTLINE: @__tysan_v1_any_20pointer_o_0 = linkonce_odr constant { i64, ptr, ptr, i64 } { i64 1, ptr @__tysan_v1_any_20pointer, ptr @__tysan_v1_any_20pointer, i64 0 }, comdat
+; CHECK-OUTLINE: @llvm.used = appending global [5 x ptr] [ptr @tysan.module_ctor, ptr @__tysan_v1_Simple_20C_2fC_2b_2b_20TBAA, ptr @__tysan_v1_omnipotent_20char, ptr @__tysan_v1_any_20pointer, ptr @__tysan_v1_any_20pointer_o_0], section "llvm.metadata"
+; CHECK-OUTLINE: @__tysan_shadow_memory_address = external global i64
+; CHECK-OUTLINE: @__tysan_app_memory_mask = external global i64
+;.
 define ptr @test_load_offset(ptr %argv) {
 ; CHECK-LABEL: define ptr @test_load_offset(
 ; CHECK-SAME: ptr [[ARGV:%.*]]) {
@@ -116,6 +135,10 @@ entry:
 ; CHECK: [[META2]] = !{!"any pointer", [[META3:![0-9]+]], i64 0}
 ; CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
 ; CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
+;.
+; CHECK-INLINE: attributes #[[ATTR0:[0-9]+]] = { nounwind }
+;.
+; CHECK-OUTLINE: attributes #[[ATTR0:[0-9]+]] = { nounwind }
 ;.
 ; CHECK-INLINE: [[PROF0]] = !{!"branch_weights", i32 1, i32 100000}
 ; CHECK-INLINE: [[ANYPTR_TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
