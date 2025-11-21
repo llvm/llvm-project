@@ -79,16 +79,6 @@ def main(
       pr_number: The number of the PR associated with this run.
       return_code: The numerical return code of ninja/CMake.
     """
-    if return_code == 0:
-        with open("comment", "w") as comment_file_handle:
-            comment = get_comment(
-                github_token,
-                pr_number,
-                ":white_check_mark: With the latest revision this PR passed "
-                "the premerge checks.",
-            )
-            if "id" in comment:
-                json.dump([comment], comment_file_handle)
     junit_objects, ninja_logs = generate_test_report_lib.load_info_from_files(
         build_log_files
     )
@@ -114,10 +104,10 @@ def main(
     advisor_response = requests.get(
         PREMERGE_ADVISOR_URL, json=explanation_request, timeout=5
     )
+    comment = None
     if advisor_response.status_code == 200:
         print(advisor_response.json())
-        comments = [
-            get_comment(
+        comment = get_comment(
                 github_token,
                 pr_number,
                 generate_test_report_lib.generate_report(
@@ -128,11 +118,15 @@ def main(
                     failure_explanations_list=advisor_response.json(),
                 ),
             )
-        ]
-        with open("comments", "w") as comment_file_handle:
-            json.dump(comments, comment_file_handle)
     else:
         print(advisor_response.reason)
+    if comment:
+        if return_code == 0 and "id" not in comment:
+            # If the job succeeds and there is not an existing comment, we
+            # should not write one to reduce noise.
+            return
+        with open("comments", "w") as comment_file_handle:
+            json.dump([comment], comment_file_handle)
 
 
 if __name__ == "__main__":
