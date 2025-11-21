@@ -1,0 +1,61 @@
+trigger: none
+pr:
+  branches:
+    include:
+      - release/rocm-rel-*
+  paths:
+    include:
+      - '**/*'
+  drafts: false
+
+variables:
+  - group: internal
+  - name: REPOSITORY_NAME
+    value: '$(Build.Repository.Name)'
+  - name: HEAD_SHA
+    value: '$(system.pullRequest.sourceCommitId)'
+  - name: PR_NUM
+    value: '$(system.pullRequest.pullRequestNumber)'
+  - name: PR_URL
+    value: '$(system.pullRequest.sourceRepositoryUri)/pull/$(PR_NUM)'
+  - name: BASE_REF
+    value: '$(system.pullRequest.TargetBranch)'
+  - name: EVENT_TYPE
+    value: 'pull_request'
+  - name: GH_PAT
+    value: '$(svc_acc_org_secret)'
+jobs:
+- job: Trigger_Pipeline
+  displayName: 'Trigger Pipeline'
+  pool: rocm-ci-caller
+  steps:
+  - checkout: none
+  - script: |
+          rm -rf $(repo_name)
+          git clone $(gh_repo)
+    displayName: Checkout Code
+  - script: |
+          set -e
+          echo "Calling jenkins_api.py for PR #$(PR_NUM)"
+          cd $(repo_name)
+          docker run \
+            -v "$PWD:/src" \
+            -w /src \
+            -e GH_TOKEN="$(svc_acc_org_secret)" \
+            -e svc_acc_org_secret="$(svc_acc_org_secret)" \
+            $(base_image) \
+            bash -c "echo 'Fetching PR title from GitHub API...' && \
+            echo 'repos/$(REPOSITORY_NAME)/pulls/$(PR_NUM)' && \
+            export TITLE=\$(gh api repos/$(REPOSITORY_NAME)/pulls/$(PR_NUM) | jq -r .title) && \
+            python3 jenkins_api.py \
+              -ghr '$(REPOSITORY_NAME)' \
+              -ghsha '$(HEAD_SHA)' \
+              -ghprn '$(PR_NUM)' \
+              -ghpru '$(PR_URL)' \
+              -ghprt \"\$TITLE\" \
+              -ghpat '$(GH_PAT)' \
+              -br   '$(BASE_REF)' \
+              -et   '$(EVENT_TYPE)'" > /dev/null 2>&1
+    displayName: Invoke jenkins_api.py in Docker
+    env:
+      svc_acc_org_secret: $(svc_acc_org_secret)
