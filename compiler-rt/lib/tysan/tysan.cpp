@@ -73,14 +73,18 @@ int getTDName(void *_td, char *buffer, uptr buffer_size, bool asset_on_error){
   case TYSAN_MEMBER_TD:
     written = getTDName(td->Member.Access, buffer, buffer_size, false);
     if (td->Member.Access != td->Member.Base && written != buffer_size) {
-      written += internal_snprintf(&buffer[written], buffer_size - written, " (in ");
-      written += getTDName(td->Member.Base, &buffer[written], buffer_size - written, false);
-      written += internal_snprintf(&buffer[written], buffer_size - written, " at offset %zu)", td->Member.Offset);
+      written +=
+          internal_snprintf(&buffer[written], buffer_size - written, " (in ");
+      written += getTDName(td->Member.Base, &buffer[written],
+                           buffer_size - written, false);
+      written += internal_snprintf(&buffer[written], buffer_size - written,
+                                   " at offset %zu)", td->Member.Offset);
     }
     break;
   case TYSAN_STRUCT_TD:
-    written = internal_snprintf(buffer, buffer_size, "%s",
-      getDisplayName((char *)(td->Struct.Members + td->Struct.MemberCount)));
+    written = internal_snprintf(
+        buffer, buffer_size, "%s",
+        getDisplayName((char *)(td->Struct.Members + td->Struct.MemberCount)));
     break;
   }
   return written;
