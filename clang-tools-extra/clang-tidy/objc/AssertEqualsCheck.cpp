@@ -25,7 +25,7 @@ void AssertEqualsCheck::registerMatchers(MatchFinder *Finder) {
   for (const auto &[CurrName, _] : NameMap) {
     Finder->addMatcher(
         binaryOperator(anyOf(hasOperatorName("!="), hasOperatorName("==")),
-                       isExpandedFromMacro(std::string(CurrName)),
+                       isExpandedFromMacro(CurrName),
                        anyOf(hasLHS(hasType(qualType(
                                  hasCanonicalType(asString("NSString *"))))),
                              hasRHS(hasType(qualType(
