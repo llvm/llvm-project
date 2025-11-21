@@ -2170,7 +2170,7 @@ lowerVECTOR_SHUFFLE_XVSHUF4I(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
         MaskImm |= ((MHi <= 3) ? (MHi - 2) : (MHi - 4)) & 0x3;
     }
 
-    return DAG.getNode(LoongArchISD::VSHUF4I, DL, VT, V1, V2,
+    return DAG.getNode(LoongArchISD::VSHUF4I_D, DL, VT, V1, V2,
                        DAG.getConstant(MaskImm, DL, Subtarget.getGRLenVT()));
   }
 
