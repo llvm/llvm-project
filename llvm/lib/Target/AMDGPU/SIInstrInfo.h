@@ -299,8 +299,7 @@ private:
   void storeRegToStackSlotImpl(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI, Register SrcReg,
                                bool isKill, int FrameIndex,
-                               const TargetRegisterClass *RC,
-                               const TargetRegisterInfo *TRI, Register VReg,
+                               const TargetRegisterClass *RC, Register VReg,
                                MachineInstr::MIFlag Flags, bool NeedsCFI) const;
 
 public:
