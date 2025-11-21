@@ -1742,6 +1742,9 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
   // Collect named contexts.
   DeclarationName NameInScope = getDeclName();
   for (; Ctx; Ctx = Ctx->getParent()) {
+    if (P.Callbacks && P.Callbacks->isScopeVisible(Ctx))
+      continue;
+
     // Suppress anonymous namespace if requested.
     if (P.SuppressUnwrittenScope && isa<NamespaceDecl>(Ctx) &&
         cast<NamespaceDecl>(Ctx)->isAnonymousNamespace())
