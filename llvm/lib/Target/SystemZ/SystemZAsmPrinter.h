@@ -31,6 +31,7 @@ private:
   MCSymbol *CurrentFnPPA1Sym;     // PPA1 Symbol.
   MCSymbol *CurrentFnEPMarkerSym; // Entry Point Marker.
   MCSymbol *PPA2Sym;
+  MCSymbol *ADASym;
 
   SystemZTargetStreamer *getTargetStreamer() {
     MCTargetStreamer *TS = OutStreamer->getTargetStreamer();
@@ -101,13 +102,15 @@ private:
 public:
   SystemZAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer), ID), CurrentFnPPA1Sym(nullptr),
-        CurrentFnEPMarkerSym(nullptr), PPA2Sym(nullptr),
+        CurrentFnEPMarkerSym(nullptr), PPA2Sym(nullptr), ADASym(nullptr),
         ADATable(TM.getPointerSize(0)) {}
 
   // Override AsmPrinter.
   StringRef getPassName() const override { return "SystemZ Assembly Printer"; }
   void emitInstruction(const MachineInstr *MI) override;
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
+  void emitXXStructorList(const DataLayout &DL, const Constant *List,
+                          bool IsCtor) override;
   void emitEndOfAsmFile(Module &M) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &OS) override;

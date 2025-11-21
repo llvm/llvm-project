@@ -31,6 +31,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Compiler.h"
@@ -189,6 +190,10 @@ uint32_t SystemZAsmPrinter::AssociatedDataAreaTable::insert(const MCSymbol *Sym,
     break;
   }
 
+  // Language Environment DLL logic requires function descriptors, for
+  // imported functions, that are placed in the ADA to be 8 byte aligned.
+  if (SlotKind == SystemZII::MO_ADA_DIRECT_FUNC_DESC)
+    NextDisplacement = alignTo(NextDisplacement, 8);
   uint32_t Displacement = NextDisplacement;
   Displacements[std::make_pair(Sym, SlotKind)] = NextDisplacement;
   NextDisplacement += Length;
@@ -1012,6 +1017,59 @@ void SystemZAsmPrinter::emitMachineConstantPoolValue(
   OutStreamer->emitValue(Expr, Size);
 }
 
+// Emit the ctor or dtor list taking into account the init priority.
+void SystemZAsmPrinter::emitXXStructorList(const DataLayout &DL,
+                                           const Constant *List, bool IsCtor) {
+  if (TM.getTargetTriple().isOSBinFormatGOFF())
+    AsmPrinter::emitXXStructorList(DL, List, IsCtor);
+
+  SmallVector<Structor, 8> Structors;
+  preprocessXXStructorList(DL, List, Structors);
+  if (Structors.empty())
+    return;
+
+  const Align Align = llvm::Align(4);
+  const TargetLoweringObjectFile &Obj = getObjFileLowering();
+  for (Structor &S : Structors) {
+    MCSection *OutputSection =
+        (IsCtor ? Obj.getStaticCtorSection(S.Priority, nullptr)
+                : Obj.getStaticDtorSection(S.Priority, nullptr));
+    OutStreamer->switchSection(OutputSection);
+    if (OutStreamer->getCurrentSection() != OutStreamer->getPreviousSection())
+      emitAlignment(Align);
+
+    const MCSectionGOFF *Section =
+        static_cast<const MCSectionGOFF *>(getCurrentSection());
+    uint32_t XtorPriority = Section->getPRAttributes().SortKey;
+
+    const GlobalValue *GV = dyn_cast<GlobalValue>(S.Func->stripPointerCasts());
+    assert(GV && "C++ xxtor pointer was not a GlobalValue!");
+    MCSymbolGOFF *Symbol = static_cast<MCSymbolGOFF *>(getSymbol(GV));
+
+    // @@SQINIT entry: { unsigned prio; void (*ctor)();  void (*dtor)(); }
+
+    unsigned PointerSizeInBytes = DL.getPointerSize();
+
+    auto &Ctx = OutStreamer->getContext();
+    const MCExpr *ADAFuncRefExpr;
+    unsigned SlotKind = SystemZII::MO_ADA_DIRECT_FUNC_DESC;
+    ADAFuncRefExpr = MCBinaryExpr::createAdd(
+        MCSpecifierExpr::create(MCSymbolRefExpr::create(ADASym, OutContext),
+                                SystemZ::S_QCon, OutContext),
+        MCConstantExpr::create(ADATable.insert(Symbol, SlotKind).second, Ctx),
+        Ctx);
+
+    emitInt32(XtorPriority);
+    if (IsCtor) {
+      OutStreamer->emitValue(ADAFuncRefExpr, PointerSizeInBytes);
+      OutStreamer->emitIntValue(0, PointerSizeInBytes);
+    } else {
+      OutStreamer->emitIntValue(0, PointerSizeInBytes);
+      OutStreamer->emitValue(ADAFuncRefExpr, PointerSizeInBytes);
+    }
+  }
+}
+
 static void printFormattedRegName(const MCAsmInfo *MAI, unsigned RegNo,
                                   raw_ostream &OS) {
   const char *RegName;
@@ -1587,6 +1645,8 @@ void SystemZAsmPrinter::emitStartOfAsmFile(Module &M) {
 }
 
 void SystemZAsmPrinter::emitPPA2(Module &M) {
+  ADASym = getObjFileLowering().getADASection()->getBeginSymbol();
+
   OutStreamer->pushSection();
   OutStreamer->switchSection(getObjFileLowering().getTextSection(),
                              GOFF::SK_PPA2);
