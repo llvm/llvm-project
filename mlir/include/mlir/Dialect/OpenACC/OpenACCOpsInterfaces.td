@@ -75,4 +75,27 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
   ];
 }
 
+def IndirectGlobalAccessOpInterface : OpInterface<"IndirectGlobalAccessOpInterface"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    An interface for operations that indirectly access global symbols.
+    This interface provides a way to query which global symbols are referenced
+    by an operation, which is useful for tracking dependencies and performing
+    analysis on global variable usage.
+
+    The symbolTable parameter is optional. If null, implementations will look up
+    their own symbol table. This allows callers to pass a pre-existing symbol
+    table for efficiency when querying multiple operations.
+  }];
+
+  let methods = [
+    InterfaceMethod<"Get the symbols referenced by this operation",
+      "void",
+      "getReferencedSymbols",
+      (ins "::llvm::SmallVectorImpl<::mlir::SymbolRefAttr>&":$symbols,
+           "::mlir::SymbolTable *":$symbolTable)>,
+  ];
+}
+
 #endif // OPENACC_OPS_INTERFACES
