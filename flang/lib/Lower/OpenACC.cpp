@@ -1427,8 +1427,8 @@ static void genPrivatizationRecipes(
           builder, operandLocation, info.addr, asFortran, bounds, true,
           /*implicit=*/false, mlir::acc::DataClause::acc_private, retTy, async,
           asyncDeviceTypes, asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true);
-      op.setRecipeAttr(mlir::SymbolRefAttr::get(builder.getContext(),
-                                                recipe.getSymName().str()));
+      op.setRecipeAttr(
+          mlir::SymbolRefAttr::get(builder.getContext(), recipe.getSymName()));
       dataOperands.push_back(op.getAccVar());
 
       // Track the symbol and its corresponding mlir::Value if requested
@@ -1445,8 +1445,8 @@ static void genPrivatizationRecipes(
           /*implicit=*/false, mlir::acc::DataClause::acc_firstprivate, retTy,
           async, asyncDeviceTypes, asyncOnlyDeviceTypes,
           /*unwrapBoxAddr=*/true);
-      op.setRecipeAttr(mlir::SymbolRefAttr::get(builder.getContext(),
-                                                recipe.getSymName().str()));
+      op.setRecipeAttr(
+          mlir::SymbolRefAttr::get(builder.getContext(), recipe.getSymName()));
       dataOperands.push_back(op.getAccVar());
 
       // Track the symbol and its corresponding mlir::Value if requested
@@ -1677,8 +1677,8 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     mlir::acc::ReductionRecipeOp recipe =
         Fortran::lower::createOrGetReductionRecipe(
             builder, recipeName, operandLocation, ty, mlirOp, bounds);
-    op.setRecipeAttr(mlir::SymbolRefAttr::get(builder.getContext(),
-                                              recipe.getSymName().str()));
+    op.setRecipeAttr(
+        mlir::SymbolRefAttr::get(builder.getContext(), recipe.getSymName()));
     reductionOperands.push_back(op.getAccVar());
   }
 }
