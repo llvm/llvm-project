@@ -3517,7 +3517,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         ToRemove.push_back(Expr);
       }
 
-      // Expand LastActiveLane into Not + FirstActiveLane + Sub.
+      // Expand LastActiveLane into Not + FirstActiveLaneZeroNotPoison + Sub.
       auto *LastActiveL = dyn_cast<VPInstruction>(&R);
       if (LastActiveL &&
           LastActiveL->getOpcode() == VPInstruction::LastActiveLane) {
@@ -3528,9 +3528,9 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
           NotMasks.push_back(NotMask);
         }
 
-        // Create FirstActiveLane on the inverted masks.
+        // Create FirstActiveLaneZeroNotPoison on the inverted masks.
         VPValue *FirstInactiveLane = Builder.createNaryOp(
-            VPInstruction::FirstActiveLane, NotMasks,
+            VPInstruction::FirstActiveLaneZeroNotPoison, NotMasks,
             LastActiveL->getDebugLoc(), "first.inactive.lane");
 
         // Subtract 1 to get the last active lane.

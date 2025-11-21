@@ -591,6 +591,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::SLPLoad:
   case VPInstruction::SLPStore:
   case VPInstruction::FirstActiveLane:
+  case VPInstruction::FirstActiveLaneZeroNotPoison:
   case VPInstruction::LastActiveLane:
     // Cannot determine the number of operands from the opcode.
     return -1u;
@@ -1002,13 +1003,16 @@ Value *VPInstruction::generate(VPTransformState &State) {
     }
     return Res;
   }
-  case VPInstruction::FirstActiveLane: {
+  case VPInstruction::FirstActiveLane:
+  case VPInstruction::FirstActiveLaneZeroNotPoison: {
+    const bool ZeroIsPoison =
+        getOpcode() != VPInstruction::FirstActiveLaneZeroNotPoison;
     if (getNumOperands() == 1) {
       Value *Mask = State.get(getOperand(0));
       // LastActiveLane might get expanded to a FirstActiveLane with an all-ones
       // mask, so make sure zero returns VF and not poison.
       return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
-                                                  /*ZeroIsPoison=*/false, Name);
+                                                  ZeroIsPoison, Name);
     }
     // If there are multiple operands, create a chain of selects to pick the
     // first operand with an active lane and add the number of lanes of the
@@ -1024,9 +1028,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
                     Builder.CreateICmpEQ(State.get(getOperand(Idx)),
                                          Builder.getFalse()),
                     Builder.getInt64Ty())
-              : Builder.CreateCountTrailingZeroElems(
-                    Builder.getInt64Ty(), State.get(getOperand(Idx)),
-                    /*ZeroIsPoison=*/false, Name);
+              : Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(),
+                                                     State.get(getOperand(Idx)),
+                                                     ZeroIsPoison, Name);
       Value *Current = Builder.CreateAdd(
           Builder.CreateMul(RuntimeVF, Builder.getInt64(Idx)), TrailingZeros);
       if (Res) {
@@ -1164,7 +1168,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticReductionCost(
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
-  case VPInstruction::FirstActiveLane: {
+  case VPInstruction::FirstActiveLane:
+  case VPInstruction::FirstActiveLaneZeroNotPoison: {
     Type *ScalarTy = Ctx.Types.inferScalarType(getOperand(0));
     if (VF.isScalar())
       return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ScalarTy,
@@ -1254,6 +1259,7 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::ExtractLane ||
          getOpcode() == VPInstruction::FirstActiveLane ||
+         getOpcode() == VPInstruction::FirstActiveLaneZeroNotPoison ||
          getOpcode() == VPInstruction::LastActiveLane ||
          getOpcode() == VPInstruction::ComputeAnyOfResult ||
          getOpcode() == VPInstruction::ComputeFindIVResult ||
@@ -1321,6 +1327,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::FirstActiveLane:
+  case VPInstruction::FirstActiveLaneZeroNotPoison:
   case VPInstruction::LastActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
@@ -1497,6 +1504,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::FirstActiveLane:
     O << "first-active-lane";
+    break;
+  case VPInstruction::FirstActiveLaneZeroNotPoison:
+    O << "first-active-lane-zero-not-poison";
     break;
   case VPInstruction::LastActiveLane:
     O << "last-active-lane";
