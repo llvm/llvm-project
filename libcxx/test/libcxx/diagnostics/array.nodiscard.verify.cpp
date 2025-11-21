@@ -57,7 +57,7 @@ void test_members() {
 
 template <typename ArrT>
 void test_get() {
-  std::array<int> a{};
+  std::array<int, 94> a{};
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::get<0>(a);
