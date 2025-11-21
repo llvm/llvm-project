@@ -9,6 +9,7 @@
 // synthesized for functions declared with the sycl_kernel_entry_point
 // attribute.
 
+
 ////////////////////////////////////////////////////////////////////////////////
 // Valid declarations.
 ////////////////////////////////////////////////////////////////////////////////
@@ -232,6 +233,7 @@ template<int, int = 0>
 struct BADKT {
   void operator()() const;
 };
+
 
 // Undeclared sycl_kernel_launch identifier from non-template function.
 namespace bad1 {
