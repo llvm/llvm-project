@@ -174,7 +174,7 @@ extern cl::opt<bool> ANDIGlueBug;
 
 PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
                                      const PPCSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
   // Initialize map that relates the PPC addressing modes to the computed flags
   // of a load/store instruction. The map is used to determine the optimal
   // addressing mode when selecting load and stores.
@@ -15563,8 +15563,8 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
   assert(N->getOpcode() == ISD::SETCC && "Should be called with a SETCC node");
 
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  assert(CC == ISD::SETNE ||
-         CC == ISD::SETEQ && "CC mus be ISD::SETNE or ISD::SETEQ");
+  assert((CC == ISD::SETNE || CC == ISD::SETEQ) &&
+         "CC mus be ISD::SETNE or ISD::SETEQ");
 
   auto getV16i8Load = [&](const SDValue &Operand) {
     if (Operand.getOpcode() == ISD::Constant)
