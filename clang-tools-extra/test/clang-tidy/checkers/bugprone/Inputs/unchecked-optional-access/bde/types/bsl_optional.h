@@ -21,19 +21,10 @@ constexpr bool isAllocatorAware<bsl::string>() {
 }
 
 // Note: real `Optional_Base` uses `BloombergLP::bslma::UsesBslmaAllocator`
-// to check if type is alocator-aware.
+// to check if type is allocator-aware.
 // This is simplified mock to illustrate similar behaviour.
 template <class T, bool AA = isAllocatorAware<T>()>
 class Optional_Base {
-
-};
-
-template <class T>
-class Optional_Base<T, false> : public std::optional<T> {
-};
-
-template <class T>
-class Optional_Base<T, true> {
 public:
   const T &operator*() const &;
   T &operator*() &;
@@ -64,6 +55,10 @@ public:
   void swap(Optional_Base &rhs) noexcept;
 
   template <typename U> Optional_Base &operator=(const U &u);
+};
+
+template <class T>
+class Optional_Base<T, false> : public std::optional<T> {
 };
 
 } // namespace BloombergLP::bslstl
