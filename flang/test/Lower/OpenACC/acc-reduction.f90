@@ -1663,9 +1663,9 @@ end subroutine
 ! CHECK: %[[UB19:.*]] = arith.constant 19 : index
 ! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB19]] : index) extent(%[[C20]] : index)
 ! stride(%[[STRIDE1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<10x20xi32>>) bounds(%[[BOUND0]], %[[BOUND1]]) ->
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<10x20xi32>>) bounds(%[[BOUND0]], %[[BOUND1]]) recipe(@reduction_add_section_lb0.ub9xlb0.ub19_ref_10x20xi32) ->
 ! !fir.ref<!fir.array<10x20xi32>> {name = "a(:10,:20)"}
-! CHECK: acc.parallel reduction(@reduction_add_section_lb0.ub9xlb0.ub19_ref_10x20xi32 -> %[[RED]] : !fir.ref<!fir.array<10x20xi32>>)
+! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.array<10x20xi32>>)
 
 subroutine acc_reduction_add_dynamic_extent_add(a)
   integer :: a(:)
