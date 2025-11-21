@@ -3547,8 +3547,11 @@ static void mcpuHelp() {
     for (std::string Filename : InputFilenames) {
       OwningBinary<Binary> OBinary =
           unwrapOrError(createBinary(Filename), Filename);
-      Binary *Obj = OBinary.getBinary();
-      DummyTriple = dyn_cast<ObjectFile>(Obj)->makeTriple();
+      Binary *Bin = OBinary.getBinary();
+      if (ObjectFile* Obj = dyn_cast<ObjectFile>(Bin)) {
+        DummyTriple = Obj->makeTriple();
+        break;
+      }
     }
   }
 
