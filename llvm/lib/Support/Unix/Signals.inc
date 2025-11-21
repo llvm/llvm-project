@@ -327,8 +327,12 @@ static void RegisterHandlers() { // Not signal-safe.
     }
     sigemptyset(&NewHandler.sa_mask);
 
-    // Install the new handler, save the old one in RegisteredSignalInfo.
-    sigaction(Signal, &NewHandler, &RegisteredSignalInfo[Index].SA);
+    // Install the new handler if the signal disposition isn't SIG_IGN,
+    // save the old one in RegisteredSignalInfo.
+    struct sigaction act;
+    sigaction(Signal, NULL, &act);
+    if (act.sa_handler != SIG_IGN)
+      sigaction(Signal, &NewHandler, &RegisteredSignalInfo[Index].SA);
     RegisteredSignalInfo[Index].SigNo = Signal;
     ++NumRegisteredSignals;
   };
@@ -411,14 +415,12 @@ static void SignalHandler(int Sig, siginfo_t *Info, void *) {
   // Otherwise if it is a fault (like SEGV) run any handler.
   llvm::sys::RunSignalHandlers();
 
-#ifdef __s390__
-  // On S/390, certain signals are delivered with PSW Address pointing to
-  // *after* the faulting instruction.  Simply returning from the signal
-  // handler would continue execution after that point, instead of
-  // re-raising the signal.  Raise the signal manually in those cases.
-  if (Sig == SIGILL || Sig == SIGFPE || Sig == SIGTRAP)
-    raise(Sig);
-#endif
+  // Resignal if it is a kill signal so that the exit code contains the
+  // terminating signal number.
+  if (llvm::is_contained(KillSigs, Sig)) {
+    raise(Sig); // Execute the default handler.
+    return;
+  }
 
 #if defined(__linux__)
   // Re-raising a signal via `raise` loses the original siginfo. Recent
@@ -441,6 +443,11 @@ static void InfoSignalHandler(int Sig) {
   SaveAndRestore SaveErrnoDuringASignalHandler(errno);
   if (SignalHandlerFunctionType CurrentInfoFunction = InfoSignalFunction)
     CurrentInfoFunction();
+
+  if (Sig == SIGUSR1) {
+    sys::unregisterHandlers();
+    raise(Sig);
+  }
 }
 
 void sys::RunInterruptHandlers() {

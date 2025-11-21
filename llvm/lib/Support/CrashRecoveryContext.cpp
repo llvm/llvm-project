@@ -398,7 +398,11 @@ static void installExceptionOrSignalHandlers() {
   sigemptyset(&Handler.sa_mask);
 
   for (unsigned i = 0; i != NumSignals; ++i) {
-    sigaction(Signals[i], &Handler, &PrevActions[i]);
+    struct sigaction act;
+    sigaction(Signals[i], NULL, &act);
+    // Don't install signal handler if the disposition of a signal is SIG_IGN.
+    if (act.sa_handler != SIG_IGN)
+      sigaction(Signals[i], &Handler, &PrevActions[i]);
   }
 }
 
