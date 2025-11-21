@@ -29,12 +29,14 @@ template <typename T> class NonNullSharedPtr : private std::shared_ptr<T> {
 public:
   NonNullSharedPtr(const std::shared_ptr<T> &t)
       : Base(t ? t : std::make_shared<T>()) {
-    assert(t && "NonNullSharedPtr initialized from NULL shared_ptr");
+    assert(t && "NonNullSharedPtr constructed from nullptr");
   }
 
-  NonNullSharedPtr(std::shared_ptr<T> &&t)
-      : Base(t ? std::move(t) : std::make_shared<T>()) {
-    // Can't assert on t as it's been moved-from.
+  NonNullSharedPtr(std::shared_ptr<T> &&t) : Base(std::move(t)) {
+    const auto b = static_cast<bool>(*this);
+    assert(b && "NonNullSharedPtr constructed from nullptr");
+    if (!b)
+      Base::operator=(std::make_shared<T>());
   }
 
   NonNullSharedPtr(const NonNullSharedPtr &other) : Base(other) {}
