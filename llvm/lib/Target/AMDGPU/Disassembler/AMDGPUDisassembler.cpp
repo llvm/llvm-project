@@ -892,6 +892,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   // have EXEC as implicit destination. Issue a warning if encoding for
   // vdst is not EXEC.
   if ((MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3) &&
+      MCII->get(MI.getOpcode()).getNumDefs() == 0 &&
       MCII->get(MI.getOpcode()).hasImplicitDefOfPhysReg(AMDGPU::EXEC)) {
     auto ExecEncoding = MRI.getEncodingValue(AMDGPU::EXEC_LO);
     if (Bytes_[0] != ExecEncoding)
@@ -1198,8 +1199,8 @@ void AMDGPUDisassembler::convertVOP3DPPInst(MCInst &MI) const {
 
 // Given a wide tuple \p Reg check if it will overflow 256 registers.
 // \returns \p Reg on success or NoRegister otherwise.
-static unsigned CheckVGPROverflow(unsigned Reg, const MCRegisterClass &RC,
-                                  const MCRegisterInfo &MRI) {
+static MCRegister CheckVGPROverflow(MCRegister Reg, const MCRegisterClass &RC,
+                                    const MCRegisterInfo &MRI) {
   unsigned NumRegs = RC.getSizeInBits() / 32;
   MCRegister Sub0 = MRI.getSubReg(Reg, AMDGPU::sub0);
   if (!Sub0)
@@ -1213,7 +1214,7 @@ static unsigned CheckVGPROverflow(unsigned Reg, const MCRegisterClass &RC,
 
   assert(BaseReg && "Only vector registers expected");
 
-  return (Sub0 - BaseReg + NumRegs <= 256) ? Reg : AMDGPU::NoRegister;
+  return (Sub0 - BaseReg + NumRegs <= 256) ? Reg : MCRegister();
 }
 
 // Note that before gfx10, the MIMG encoding provided no information about
@@ -1455,9 +1456,8 @@ MCOperand AMDGPUDisassembler::errOperand(unsigned V,
   return MCOperand();
 }
 
-inline
-MCOperand AMDGPUDisassembler::createRegOperand(unsigned int RegId) const {
-  return MCOperand::createReg(AMDGPU::getMCReg(RegId, STI));
+inline MCOperand AMDGPUDisassembler::createRegOperand(MCRegister Reg) const {
+  return MCOperand::createReg(AMDGPU::getMCReg(Reg, STI));
 }
 
 inline

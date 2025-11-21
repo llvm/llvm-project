@@ -73,8 +73,6 @@ using namespace llvm;
 // statistics
 
 STATISTIC(TotalArrayPairs, "Array pairs tested");
-STATISTIC(SeparableSubscriptPairs, "Separable subscript pairs");
-STATISTIC(CoupledSubscriptPairs, "Coupled subscript pairs");
 STATISTIC(NonlinearSubscriptPairs, "Nonlinear subscript pairs");
 STATISTIC(ZIVapplications, "ZIV applications");
 STATISTIC(ZIVindependence, "ZIV independence");
@@ -96,8 +94,6 @@ STATISTIC(SymbolicRDIVapplications, "Symbolic RDIV applications");
 STATISTIC(SymbolicRDIVindependence, "Symbolic RDIV independence");
 STATISTIC(DeltaApplications, "Delta applications");
 STATISTIC(DeltaSuccesses, "Delta successes");
-STATISTIC(DeltaIndependence, "Delta independence");
-STATISTIC(DeltaPropagations, "Delta propagations");
 STATISTIC(GCDapplications, "GCD applications");
 STATISTIC(GCDsuccesses, "GCD successes");
 STATISTIC(GCDindependence, "GCD independence");
@@ -122,11 +118,61 @@ static cl::opt<unsigned> MIVMaxLevelThreshold(
     cl::desc("Maximum depth allowed for the recursive algorithm used to "
              "explore MIV direction vectors."));
 
-static cl::opt<bool> RunSIVRoutinesOnly(
-    "da-run-siv-routines-only", cl::init(false), cl::ReallyHidden,
-    cl::desc("Run only SIV routines and disable others (ZIV, RDIV, and MIV). "
-             "The purpose is mainly to exclude the influence of those routines "
-             "in regression tests for SIV routines."));
+namespace {
+
+/// Types of dependence test routines.
+enum class DependenceTestType {
+  All,
+  StrongSIV,
+  WeakCrossingSIV,
+  ExactSIV,
+  WeakZeroSIV,
+  ExactRDIV,
+  SymbolicRDIV,
+  GCDMIV,
+  BanerjeeMIV,
+};
+
+} // anonymous namespace
+
+static cl::opt<DependenceTestType> EnableDependenceTest(
+    "da-enable-dependence-test", cl::init(DependenceTestType::All),
+    cl::ReallyHidden,
+    cl::desc("Run only specified dependence test routine and disable others. "
+             "The purpose is mainly to exclude the influence of other "
+             "dependence test routines in regression tests. If set to All, all "
+             "dependence test routines are enabled."),
+    cl::values(clEnumValN(DependenceTestType::All, "all",
+                          "Enable all dependence test routines."),
+               clEnumValN(DependenceTestType::StrongSIV, "strong-siv",
+                          "Enable only Strong SIV test."),
+               clEnumValN(DependenceTestType::WeakCrossingSIV,
+                          "weak-crossing-siv",
+                          "Enable only Weak-Crossing SIV test."),
+               clEnumValN(DependenceTestType::ExactSIV, "exact-siv",
+                          "Enable only Exact SIV test."),
+               clEnumValN(DependenceTestType::WeakZeroSIV, "weak-zero-siv",
+                          "Enable only Weak-Zero SIV test."),
+               clEnumValN(DependenceTestType::ExactRDIV, "exact-rdiv",
+                          "Enable only Exact RDIV test."),
+               clEnumValN(DependenceTestType::SymbolicRDIV, "symbolic-rdiv",
+                          "Enable only Symbolic RDIV test."),
+               clEnumValN(DependenceTestType::GCDMIV, "gcd-miv",
+                          "Enable only GCD MIV test."),
+               clEnumValN(DependenceTestType::BanerjeeMIV, "banerjee-miv",
+                          "Enable only Banerjee MIV test.")));
+
+// TODO: This flag is disabled by default because it is still under development.
+// Enable it or delete this flag when the feature is ready.
+static cl::opt<bool> EnableMonotonicityCheck(
+    "da-enable-monotonicity-check", cl::init(false), cl::Hidden,
+    cl::desc("Check if the subscripts are monotonic. If it's not, dependence "
+             "is reported as unknown."));
+
+static cl::opt<bool> DumpMonotonicityReport(
+    "da-dump-monotonicity-report", cl::init(false), cl::Hidden,
+    cl::desc(
+        "When printing analysis, dump the results of monotonicity checks."));
 
 //===----------------------------------------------------------------------===//
 // basics
@@ -177,13 +223,197 @@ void DependenceAnalysisWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<LoopInfoWrapperPass>();
 }
 
+namespace {
+
+/// The property of monotonicity of a SCEV. To define the monotonicity, assume
+/// a SCEV defined within N-nested loops. Let i_k denote the iteration number
+/// of the k-th loop. Then we can regard the SCEV as an N-ary function:
+///
+///   F(i_1, i_2, ..., i_N)
+///
+/// The domain of i_k is the closed range [0, BTC_k], where BTC_k is the
+/// backedge-taken count of the k-th loop.
+///
+/// A function F is said to be "monotonically increasing with respect to the
+/// k-th loop" if x <= y implies the following condition:
+///
+///   F(i_1, ..., i_{k-1}, x, i_{k+1}, ..., i_N) <=
+///   F(i_1, ..., i_{k-1}, y, i_{k+1}, ..., i_N)
+///
+/// where i_1, ..., i_{k-1}, i_{k+1}, ..., i_N, x, and y are elements of their
+/// respective domains.
+///
+/// Likewise F is "monotonically decreasing with respect to the k-th loop"
+/// if x <= y implies
+///
+///   F(i_1, ..., i_{k-1}, x, i_{k+1}, ..., i_N) >=
+///   F(i_1, ..., i_{k-1}, y, i_{k+1}, ..., i_N)
+///
+/// A function F that is monotonically increasing or decreasing with respect to
+/// the k-th loop is simply called "monotonic with respect to k-th loop".
+///
+/// A function F is said to be "multivariate monotonic" when it is monotonic
+/// with respect to all of the N loops.
+///
+/// Since integer comparison can be either signed or unsigned, we need to
+/// distinguish monotonicity in the signed sense from that in the unsigned
+/// sense. Note that the inequality "x <= y" merely indicates loop progression
+/// and is not affected by the difference between signed and unsigned order.
+///
+/// Currently we only consider monotonicity in a signed sense.
+enum class SCEVMonotonicityType {
+  /// We don't know anything about the monotonicity of the SCEV.
+  Unknown,
+
+  /// The SCEV is loop-invariant with respect to the outermost loop. In other
+  /// words, the function F corresponding to the SCEV is a constant function.
+  Invariant,
+
+  /// The function F corresponding to the SCEV is multivariate monotonic in a
+  /// signed sense. Note that the multivariate monotonic function may also be a
+  /// constant function. The order employed in the definition of monotonicity
+  /// is not strict order.
+  MultivariateSignedMonotonic,
+};
+
+struct SCEVMonotonicity {
+  SCEVMonotonicity(SCEVMonotonicityType Type,
+                   const SCEV *FailurePoint = nullptr);
+
+  SCEVMonotonicityType getType() const { return Type; }
+
+  const SCEV *getFailurePoint() const { return FailurePoint; }
+
+  bool isUnknown() const { return Type == SCEVMonotonicityType::Unknown; }
+
+  void print(raw_ostream &OS, unsigned Depth) const;
+
+private:
+  SCEVMonotonicityType Type;
+
+  /// The subexpression that caused Unknown. Mainly for debugging purpose.
+  const SCEV *FailurePoint;
+};
+
+/// Check the monotonicity of a SCEV. Since dependence tests (SIV, MIV, etc.)
+/// assume that subscript expressions are (multivariate) monotonic, we need to
+/// verify this property before applying those tests. Violating this assumption
+/// may cause them to produce incorrect results.
+struct SCEVMonotonicityChecker
+    : public SCEVVisitor<SCEVMonotonicityChecker, SCEVMonotonicity> {
+
+  SCEVMonotonicityChecker(ScalarEvolution *SE) : SE(SE) {}
+
+  /// Check the monotonicity of \p Expr. \p Expr must be integer type. If \p
+  /// OutermostLoop is not null, \p Expr must be defined in \p OutermostLoop or
+  /// one of its nested loops.
+  SCEVMonotonicity checkMonotonicity(const SCEV *Expr,
+                                     const Loop *OutermostLoop);
+
+private:
+  ScalarEvolution *SE;
+
+  /// The outermost loop that DA is analyzing.
+  const Loop *OutermostLoop;
+
+  /// A helper to classify \p Expr as either Invariant or Unknown.
+  SCEVMonotonicity invariantOrUnknown(const SCEV *Expr);
+
+  /// Return true if \p Expr is loop-invariant with respect to the outermost
+  /// loop.
+  bool isLoopInvariant(const SCEV *Expr) const;
+
+  /// A helper to create an Unknown SCEVMonotonicity.
+  SCEVMonotonicity createUnknown(const SCEV *FailurePoint) {
+    return SCEVMonotonicity(SCEVMonotonicityType::Unknown, FailurePoint);
+  }
+
+  SCEVMonotonicity visitAddRecExpr(const SCEVAddRecExpr *Expr);
+
+  SCEVMonotonicity visitConstant(const SCEVConstant *) {
+    return SCEVMonotonicity(SCEVMonotonicityType::Invariant);
+  }
+  SCEVMonotonicity visitVScale(const SCEVVScale *) {
+    return SCEVMonotonicity(SCEVMonotonicityType::Invariant);
+  }
+
+  // TODO: Handle more cases.
+  SCEVMonotonicity visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+  SCEVMonotonicity visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+  SCEVMonotonicity visitAddExpr(const SCEVAddExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+  SCEVMonotonicity visitMulExpr(const SCEVMulExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+  SCEVMonotonicity visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+  SCEVMonotonicity visitTruncateExpr(const SCEVTruncateExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+  SCEVMonotonicity visitUDivExpr(const SCEVUDivExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+  SCEVMonotonicity visitSMaxExpr(const SCEVSMaxExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+  SCEVMonotonicity visitUMaxExpr(const SCEVUMaxExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+  SCEVMonotonicity visitSMinExpr(const SCEVSMinExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+  SCEVMonotonicity visitUMinExpr(const SCEVUMinExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+  SCEVMonotonicity visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+  SCEVMonotonicity visitUnknown(const SCEVUnknown *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+  SCEVMonotonicity visitCouldNotCompute(const SCEVCouldNotCompute *Expr) {
+    return invariantOrUnknown(Expr);
+  }
+
+  friend struct SCEVVisitor<SCEVMonotonicityChecker, SCEVMonotonicity>;
+};
+
+} // anonymous namespace
+
 // Used to test the dependence analyzer.
 // Looks through the function, noting instructions that may access memory.
 // Calls depends() on every possible pair and prints out the result.
 // Ignores all other instructions.
 static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
-                                  ScalarEvolution &SE, bool NormalizeResults) {
+                                  ScalarEvolution &SE, LoopInfo &LI,
+                                  bool NormalizeResults) {
   auto *F = DA->getFunction();
+
+  if (DumpMonotonicityReport) {
+    SCEVMonotonicityChecker Checker(&SE);
+    OS << "Monotonicity check:\n";
+    for (Instruction &Inst : instructions(F)) {
+      if (!isa<LoadInst>(Inst) && !isa<StoreInst>(Inst))
+        continue;
+      Value *Ptr = getLoadStorePointerOperand(&Inst);
+      const Loop *L = LI.getLoopFor(Inst.getParent());
+      const Loop *OutermostLoop = L ? L->getOutermostLoop() : nullptr;
+      const SCEV *PtrSCEV = SE.getSCEVAtScope(Ptr, L);
+      const SCEV *AccessFn = SE.removePointerBase(PtrSCEV);
+      SCEVMonotonicity Mon = Checker.checkMonotonicity(AccessFn, OutermostLoop);
+      OS.indent(2) << "Inst: " << Inst << "\n";
+      OS.indent(4) << "Expr: " << *AccessFn << "\n";
+      Mon.print(OS, 4);
+    }
+    OS << "\n";
+  }
+
   for (inst_iterator SrcI = inst_begin(F), SrcE = inst_end(F); SrcI != SrcE;
        ++SrcI) {
     if (SrcI->mayReadOrWriteMemory()) {
@@ -235,7 +465,8 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
 void DependenceAnalysisWrapperPass::print(raw_ostream &OS,
                                           const Module *) const {
   dumpExampleDependence(
-      OS, info.get(), getAnalysis<ScalarEvolutionWrapperPass>().getSE(), false);
+      OS, info.get(), getAnalysis<ScalarEvolutionWrapperPass>().getSE(),
+      getAnalysis<LoopInfoWrapperPass>().getLoopInfo(), false);
 }
 
 PreservedAnalyses
@@ -244,7 +475,7 @@ DependenceAnalysisPrinterPass::run(Function &F, FunctionAnalysisManager &FAM) {
      << "':\n";
   dumpExampleDependence(OS, &FAM.getResult<DependenceAnalysis>(F),
                         FAM.getResult<ScalarEvolutionAnalysis>(F),
-                        NormalizeResults);
+                        FAM.getResult<LoopAnalysis>(F), NormalizeResults);
   return PreservedAnalyses::all();
 }
 
@@ -671,6 +902,83 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
 }
 
 //===----------------------------------------------------------------------===//
+// SCEVMonotonicity
+
+SCEVMonotonicity::SCEVMonotonicity(SCEVMonotonicityType Type,
+                                   const SCEV *FailurePoint)
+    : Type(Type), FailurePoint(FailurePoint) {
+  assert(
+      ((Type == SCEVMonotonicityType::Unknown) == (FailurePoint != nullptr)) &&
+      "FailurePoint must be provided iff Type is Unknown");
+}
+
+void SCEVMonotonicity::print(raw_ostream &OS, unsigned Depth) const {
+  OS.indent(Depth) << "Monotonicity: ";
+  switch (Type) {
+  case SCEVMonotonicityType::Unknown:
+    assert(FailurePoint && "FailurePoint must be provided for Unknown");
+    OS << "Unknown\n";
+    OS.indent(Depth) << "Reason: " << *FailurePoint << "\n";
+    break;
+  case SCEVMonotonicityType::Invariant:
+    OS << "Invariant\n";
+    break;
+  case SCEVMonotonicityType::MultivariateSignedMonotonic:
+    OS << "MultivariateSignedMonotonic\n";
+    break;
+  }
+}
+
+bool SCEVMonotonicityChecker::isLoopInvariant(const SCEV *Expr) const {
+  return !OutermostLoop || SE->isLoopInvariant(Expr, OutermostLoop);
+}
+
+SCEVMonotonicity SCEVMonotonicityChecker::invariantOrUnknown(const SCEV *Expr) {
+  if (isLoopInvariant(Expr))
+    return SCEVMonotonicity(SCEVMonotonicityType::Invariant);
+  return createUnknown(Expr);
+}
+
+SCEVMonotonicity
+SCEVMonotonicityChecker::checkMonotonicity(const SCEV *Expr,
+                                           const Loop *OutermostLoop) {
+  assert((!OutermostLoop || OutermostLoop->isOutermost()) &&
+         "OutermostLoop must be outermost");
+  assert(Expr->getType()->isIntegerTy() && "Expr must be integer type");
+  this->OutermostLoop = OutermostLoop;
+  return visit(Expr);
+}
+
+/// We only care about an affine AddRec at the moment. For an affine AddRec,
+/// the monotonicity can be inferred from its nowrap property. For example, let
+/// X and Y be loop-invariant, and assume Y is non-negative. An AddRec
+/// {X,+.Y}<nsw> implies:
+///
+///   X <=s (X + Y) <=s ((X + Y) + Y) <=s ...
+///
+/// Thus, we can conclude that the AddRec is monotonically increasing with
+/// respect to the associated loop in a signed sense. The similar reasoning
+/// applies when Y is non-positive, leading to a monotonically decreasing
+/// AddRec.
+SCEVMonotonicity
+SCEVMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
+  if (!Expr->isAffine() || !Expr->hasNoSignedWrap())
+    return createUnknown(Expr);
+
+  const SCEV *Start = Expr->getStart();
+  const SCEV *Step = Expr->getStepRecurrence(*SE);
+
+  SCEVMonotonicity StartMon = visit(Start);
+  if (StartMon.isUnknown())
+    return StartMon;
+
+  if (!isLoopInvariant(Step))
+    return createUnknown(Expr);
+
+  return SCEVMonotonicity(SCEVMonotonicityType::MultivariateSignedMonotonic);
+}
+
+//===----------------------------------------------------------------------===//
 // DependenceInfo methods
 
 // For debugging purposes. Dumps a dependence to OS.
@@ -822,9 +1130,14 @@ bool DependenceInfo::haveSameSD(const Loop *SrcLoop,
   if (SE->hasLoopInvariantBackedgeTakenCount(DstLoop))
     DstUP = SE->getBackedgeTakenCount(DstLoop);
 
-  if (SrcUB != nullptr && DstUP != nullptr &&
-      SE->isKnownPredicate(ICmpInst::ICMP_EQ, SrcUB, DstUP))
-    return true;
+  if (SrcUB != nullptr && DstUP != nullptr) {
+    Type *WiderType = SE->getWiderType(SrcUB->getType(), DstUP->getType());
+    SrcUB = SE->getNoopOrZeroExtend(SrcUB, WiderType);
+    DstUP = SE->getNoopOrZeroExtend(DstUP, WiderType);
+
+    if (SE->isKnownPredicate(ICmpInst::ICMP_EQ, SrcUB, DstUP))
+      return true;
+  }
 
   return false;
 }
@@ -1273,6 +1586,39 @@ static const SCEV *minusSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
   return nullptr;
 }
 
+/// Returns \p A * \p B if it guaranteed not to signed wrap. Otherwise returns
+/// nullptr. \p A and \p B must have the same integer type.
+static const SCEV *mulSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
+                                           ScalarEvolution &SE) {
+  if (SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, A, B))
+    return SE.getMulExpr(A, B);
+  return nullptr;
+}
+
+/// Returns the absolute value of \p A. In the context of dependence analysis,
+/// we need an absolute value in a mathematical sense. If \p A is the signed
+/// minimum value, we cannot represent it unless extending the original type.
+/// Thus if we cannot prove that \p A is not the signed minimum value, returns
+/// nullptr.
+static const SCEV *absSCEVNoSignedOverflow(const SCEV *A, ScalarEvolution &SE) {
+  IntegerType *Ty = cast<IntegerType>(A->getType());
+  if (!Ty)
+    return nullptr;
+
+  const SCEV *SMin =
+      SE.getConstant(APInt::getSignedMinValue(Ty->getBitWidth()));
+  if (!SE.isKnownPredicate(CmpInst::ICMP_NE, A, SMin))
+    return nullptr;
+  return SE.getAbsExpr(A, /*IsNSW=*/true);
+}
+
+/// Returns true iff \p Test is enabled.
+static bool isDependenceTestEnabled(DependenceTestType Test) {
+  if (EnableDependenceTest == DependenceTestType::All)
+    return true;
+  return EnableDependenceTest == Test;
+}
+
 // testZIV -
 // When we have a pair of subscripts of the form [c1] and [c2],
 // where c1 and c2 are both loop invariant, we attack it using
@@ -1334,6 +1680,9 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
                                    const Loop *CurDstLoop, unsigned Level,
                                    FullDependence &Result,
                                    Constraint &NewConstraint) const {
+  if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
+    return false;
+
   LLVM_DEBUG(dbgs() << "\tStrong SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff);
   LLVM_DEBUG(dbgs() << ", " << *Coeff->getType() << "\n");
@@ -1345,26 +1694,36 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   assert(0 < Level && Level <= CommonLevels && "level out of range");
   Level--;
 
-  const SCEV *Delta = SE->getMinusSCEV(SrcConst, DstConst);
+  const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
+  if (!Delta) {
+    Result.Consistent = false;
+    return false;
+  }
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta);
   LLVM_DEBUG(dbgs() << ", " << *Delta->getType() << "\n");
 
   // check that |Delta| < iteration count
-  if (const SCEV *UpperBound =
-          collectUpperBound(CurSrcLoop, Delta->getType())) {
+  bool IsDeltaLarge = [&] {
+    const SCEV *UpperBound = collectUpperBound(CurSrcLoop, Delta->getType());
+    if (!UpperBound)
+      return false;
+
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
     LLVM_DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
-    const SCEV *AbsDelta =
-        SE->isKnownNonNegative(Delta) ? Delta : SE->getNegativeSCEV(Delta);
-    const SCEV *AbsCoeff =
-        SE->isKnownNonNegative(Coeff) ? Coeff : SE->getNegativeSCEV(Coeff);
-    const SCEV *Product = SE->getMulExpr(UpperBound, AbsCoeff);
-    if (isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product)) {
-      // Distance greater than trip count - no dependence
-      ++StrongSIVindependence;
-      ++StrongSIVsuccesses;
-      return true;
-    }
+    const SCEV *AbsDelta = absSCEVNoSignedOverflow(Delta, *SE);
+    const SCEV *AbsCoeff = absSCEVNoSignedOverflow(Coeff, *SE);
+    if (!AbsDelta || !AbsCoeff)
+      return false;
+    const SCEV *Product = mulSCEVNoSignedOverflow(UpperBound, AbsCoeff, *SE);
+    if (!Product)
+      return false;
+    return isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product);
+  }();
+  if (IsDeltaLarge) {
+    // Distance greater than trip count - no dependence
+    ++StrongSIVindependence;
+    ++StrongSIVsuccesses;
+    return true;
   }
 
   // Can we compute distance?
@@ -1468,6 +1827,9 @@ bool DependenceInfo::weakCrossingSIVtest(
     const Loop *CurSrcLoop, const Loop *CurDstLoop, unsigned Level,
     FullDependence &Result, Constraint &NewConstraint,
     const SCEV *&SplitIter) const {
+  if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
+    return false;
+
   LLVM_DEBUG(dbgs() << "\tWeak-Crossing SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
@@ -1726,6 +2088,9 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                                   const Loop *CurDstLoop, unsigned Level,
                                   FullDependence &Result,
                                   Constraint &NewConstraint) const {
+  if (!isDependenceTestEnabled(DependenceTestType::ExactSIV))
+    return false;
+
   LLVM_DEBUG(dbgs() << "\tExact SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
   LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
@@ -1905,6 +2270,9 @@ bool DependenceInfo::weakZeroSrcSIVtest(
     const SCEV *DstCoeff, const SCEV *SrcConst, const SCEV *DstConst,
     const Loop *CurSrcLoop, const Loop *CurDstLoop, unsigned Level,
     FullDependence &Result, Constraint &NewConstraint) const {
+  if (!isDependenceTestEnabled(DependenceTestType::WeakZeroSIV))
+    return false;
+
   // For the WeakSIV test, it's possible the loop isn't common to
   // the Src and Dst loops. If it isn't, then there's no need to
   // record a direction.
@@ -1931,6 +2299,9 @@ bool DependenceInfo::weakZeroSrcSIVtest(
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(DstCoeff);
   if (!ConstCoeff)
     return false;
+
+  // Since ConstCoeff is constant, !isKnownNegative means it's non-negative.
+  // TODO: Bail out if it's a signed minimum value.
   const SCEV *AbsCoeff = SE->isKnownNegative(ConstCoeff)
                              ? SE->getNegativeSCEV(ConstCoeff)
                              : ConstCoeff;
@@ -2013,6 +2384,9 @@ bool DependenceInfo::weakZeroDstSIVtest(
     const SCEV *SrcCoeff, const SCEV *SrcConst, const SCEV *DstConst,
     const Loop *CurSrcLoop, const Loop *CurDstLoop, unsigned Level,
     FullDependence &Result, Constraint &NewConstraint) const {
+  if (!isDependenceTestEnabled(DependenceTestType::WeakZeroSIV))
+    return false;
+
   // For the WeakSIV test, it's possible the loop isn't common to the
   // Src and Dst loops. If it isn't, then there's no need to record a direction.
   LLVM_DEBUG(dbgs() << "\tWeak-Zero (dst) SIV test\n");
@@ -2038,6 +2412,9 @@ bool DependenceInfo::weakZeroDstSIVtest(
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
   if (!ConstCoeff)
     return false;
+
+  // Since ConstCoeff is constant, !isKnownNegative means it's non-negative.
+  // TODO: Bail out if it's a signed minimum value.
   const SCEV *AbsCoeff = SE->isKnownNegative(ConstCoeff)
                              ? SE->getNegativeSCEV(ConstCoeff)
                              : ConstCoeff;
@@ -2096,8 +2473,9 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                                    const SCEV *SrcConst, const SCEV *DstConst,
                                    const Loop *SrcLoop, const Loop *DstLoop,
                                    FullDependence &Result) const {
-  if (RunSIVRoutinesOnly)
+  if (!isDependenceTestEnabled(DependenceTestType::ExactRDIV))
     return false;
+
   LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
   LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
   LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
@@ -2242,8 +2620,9 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
                                       const SCEV *C1, const SCEV *C2,
                                       const Loop *Loop1,
                                       const Loop *Loop2) const {
-  if (RunSIVRoutinesOnly)
+  if (!isDependenceTestEnabled(DependenceTestType::SymbolicRDIV))
     return false;
+
   ++SymbolicRDIVapplications;
   LLVM_DEBUG(dbgs() << "\ttry symbolic RDIV test\n");
   LLVM_DEBUG(dbgs() << "\t    A1 = " << *A1);
@@ -2489,14 +2868,18 @@ bool DependenceInfo::testMIV(const SCEV *Src, const SCEV *Dst,
          banerjeeMIVtest(Src, Dst, Loops, Result);
 }
 
-// Given a product, e.g., 10*X*Y, returns the first constant operand,
-// in this case 10. If there is no constant part, returns std::nullopt.
-static std::optional<APInt> getConstantPart(const SCEV *Expr) {
+/// Given a SCEVMulExpr, returns its first operand if its first operand is a
+/// constant and the product doesn't overflow in a signed sense. Otherwise,
+/// returns std::nullopt. For example, given (10 * X * Y)<nsw>, it returns 10.
+/// Notably, if it doesn't have nsw, the multiplication may overflow, and if
+/// so, it may not a multiple of 10.
+static std::optional<APInt> getConstanCoefficient(const SCEV *Expr) {
   if (const auto *Constant = dyn_cast<SCEVConstant>(Expr))
     return Constant->getAPInt();
   if (const auto *Product = dyn_cast<SCEVMulExpr>(Expr))
     if (const auto *Constant = dyn_cast<SCEVConstant>(Product->getOperand(0)))
-      return Constant->getAPInt();
+      if (Product->hasNoSignedWrap())
+        return Constant->getAPInt();
   return std::nullopt;
 }
 
@@ -2522,7 +2905,7 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
   if (AddRec->getLoop() == CurLoop) {
     CurLoopCoeff = Step;
   } else {
-    std::optional<APInt> ConstCoeff = getConstantPart(Step);
+    std::optional<APInt> ConstCoeff = getConstanCoefficient(Step);
 
     // If the coefficient is the product of a constant and other stuff, we can
     // use the constant in the GCD computation.
@@ -2557,8 +2940,9 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
 // to "a common divisor".
 bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
                                 FullDependence &Result) const {
-  if (RunSIVRoutinesOnly)
+  if (!isDependenceTestEnabled(DependenceTestType::GCDMIV))
     return false;
+
   LLVM_DEBUG(dbgs() << "starting gcd\n");
   ++GCDapplications;
   unsigned BitWidth = SE->getTypeSizeInBits(Src->getType());
@@ -2574,7 +2958,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstantPart(Coeff);
+    std::optional<APInt> ConstCoeff = getConstanCoefficient(Coeff);
     if (!ConstCoeff)
       return false;
     RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
@@ -2592,7 +2976,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstantPart(Coeff);
+    std::optional<APInt> ConstCoeff = getConstanCoefficient(Coeff);
     if (!ConstCoeff)
       return false;
     RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
@@ -2613,7 +2997,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
       } else if (const SCEVMulExpr *Product = dyn_cast<SCEVMulExpr>(Operand)) {
         // Search for constant operand to participate in GCD;
         // If none found; return false.
-        std::optional<APInt> ConstOp = getConstantPart(Product);
+        std::optional<APInt> ConstOp = getConstanCoefficient(Product);
         if (!ConstOp)
           return false;
         ExtraGCD = APIntOps::GreatestCommonDivisor(ExtraGCD, ConstOp->abs());
@@ -2666,7 +3050,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     Delta = SE->getMinusSCEV(SrcCoeff, DstCoeff);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstantPart(Delta);
+    std::optional<APInt> ConstCoeff = getConstanCoefficient(Delta);
     if (!ConstCoeff)
       // The difference of the two coefficients might not be a product
       // or constant, in which case we give up on this direction.
@@ -2725,8 +3109,9 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
 bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
                                      const SmallBitVector &Loops,
                                      FullDependence &Result) const {
-  if (RunSIVRoutinesOnly)
+  if (!isDependenceTestEnabled(DependenceTestType::BanerjeeMIV))
     return false;
+
   LLVM_DEBUG(dbgs() << "starting Banerjee\n");
   ++BanerjeeApplications;
   LLVM_DEBUG(dbgs() << "    Src = " << *Src << '\n');
@@ -3244,157 +3629,6 @@ const SCEV *DependenceInfo::addToCoefficient(const SCEV *Expr,
       AddRec->getNoWrapFlags());
 }
 
-// Review the constraints, looking for opportunities
-// to simplify a subscript pair (Src and Dst).
-// Return true if some simplification occurs.
-// If the simplification isn't exact (that is, if it is conservative
-// in terms of dependence), set consistent to false.
-// Corresponds to Figure 5 from the paper
-//
-//            Practical Dependence Testing
-//            Goff, Kennedy, Tseng
-//            PLDI 1991
-bool DependenceInfo::propagate(const SCEV *&Src, const SCEV *&Dst,
-                               SmallBitVector &Loops,
-                               SmallVectorImpl<Constraint> &Constraints,
-                               bool &Consistent) {
-  bool Result = false;
-  for (unsigned LI : Loops.set_bits()) {
-    LLVM_DEBUG(dbgs() << "\t    Constraint[" << LI << "] is");
-    LLVM_DEBUG(Constraints[LI].dump(dbgs()));
-    if (Constraints[LI].isDistance())
-      Result |= propagateDistance(Src, Dst, Constraints[LI], Consistent);
-    else if (Constraints[LI].isLine())
-      Result |= propagateLine(Src, Dst, Constraints[LI], Consistent);
-    else if (Constraints[LI].isPoint())
-      Result |= propagatePoint(Src, Dst, Constraints[LI]);
-  }
-  return Result;
-}
-
-// Attempt to propagate a distance
-// constraint into a subscript pair (Src and Dst).
-// Return true if some simplification occurs.
-// If the simplification isn't exact (that is, if it is conservative
-// in terms of dependence), set consistent to false.
-bool DependenceInfo::propagateDistance(const SCEV *&Src, const SCEV *&Dst,
-                                       Constraint &CurConstraint,
-                                       bool &Consistent) {
-  const Loop *CurSrcLoop = CurConstraint.getAssociatedSrcLoop();
-  const Loop *CurDstLoop = CurConstraint.getAssociatedDstLoop();
-  LLVM_DEBUG(dbgs() << "\t\tSrc is " << *Src << "\n");
-  const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
-  if (A_K->isZero())
-    return false;
-  const SCEV *DA_K = SE->getMulExpr(A_K, CurConstraint.getD());
-  Src = SE->getMinusSCEV(Src, DA_K);
-  Src = zeroCoefficient(Src, CurSrcLoop);
-  LLVM_DEBUG(dbgs() << "\t\tnew Src is " << *Src << "\n");
-  LLVM_DEBUG(dbgs() << "\t\tDst is " << *Dst << "\n");
-  Dst = addToCoefficient(Dst, CurDstLoop, SE->getNegativeSCEV(A_K));
-  LLVM_DEBUG(dbgs() << "\t\tnew Dst is " << *Dst << "\n");
-  if (!findCoefficient(Dst, CurDstLoop)->isZero())
-    Consistent = false;
-  return true;
-}
-
-// Attempt to propagate a line
-// constraint into a subscript pair (Src and Dst).
-// Return true if some simplification occurs.
-// If the simplification isn't exact (that is, if it is conservative
-// in terms of dependence), set consistent to false.
-bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
-                                   Constraint &CurConstraint,
-                                   bool &Consistent) {
-  const Loop *CurSrcLoop = CurConstraint.getAssociatedSrcLoop();
-  const Loop *CurDstLoop = CurConstraint.getAssociatedDstLoop();
-  const SCEV *A = CurConstraint.getA();
-  const SCEV *B = CurConstraint.getB();
-  const SCEV *C = CurConstraint.getC();
-  LLVM_DEBUG(dbgs() << "\t\tA = " << *A << ", B = " << *B << ", C = " << *C
-                    << "\n");
-  LLVM_DEBUG(dbgs() << "\t\tSrc = " << *Src << "\n");
-  LLVM_DEBUG(dbgs() << "\t\tDst = " << *Dst << "\n");
-  if (A->isZero()) {
-    const SCEVConstant *Bconst = dyn_cast<SCEVConstant>(B);
-    const SCEVConstant *Cconst = dyn_cast<SCEVConstant>(C);
-    if (!Bconst || !Cconst)
-      return false;
-    APInt Beta = Bconst->getAPInt();
-    APInt Charlie = Cconst->getAPInt();
-    APInt CdivB = Charlie.sdiv(Beta);
-    assert(Charlie.srem(Beta) == 0 && "C should be evenly divisible by B");
-    const SCEV *AP_K = findCoefficient(Dst, CurDstLoop);
-    Src = SE->getMinusSCEV(Src, SE->getMulExpr(AP_K, SE->getConstant(CdivB)));
-    Dst = zeroCoefficient(Dst, CurDstLoop);
-    if (!findCoefficient(Src, CurSrcLoop)->isZero())
-      Consistent = false;
-  } else if (B->isZero()) {
-    const SCEVConstant *Aconst = dyn_cast<SCEVConstant>(A);
-    const SCEVConstant *Cconst = dyn_cast<SCEVConstant>(C);
-    if (!Aconst || !Cconst)
-      return false;
-    APInt Alpha = Aconst->getAPInt();
-    APInt Charlie = Cconst->getAPInt();
-    APInt CdivA = Charlie.sdiv(Alpha);
-    assert(Charlie.srem(Alpha) == 0 && "C should be evenly divisible by A");
-    const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
-    Src = SE->getAddExpr(Src, SE->getMulExpr(A_K, SE->getConstant(CdivA)));
-    Src = zeroCoefficient(Src, CurSrcLoop);
-    if (!findCoefficient(Dst, CurDstLoop)->isZero())
-      Consistent = false;
-  } else if (isKnownPredicate(CmpInst::ICMP_EQ, A, B)) {
-    const SCEVConstant *Aconst = dyn_cast<SCEVConstant>(A);
-    const SCEVConstant *Cconst = dyn_cast<SCEVConstant>(C);
-    if (!Aconst || !Cconst)
-      return false;
-    APInt Alpha = Aconst->getAPInt();
-    APInt Charlie = Cconst->getAPInt();
-    APInt CdivA = Charlie.sdiv(Alpha);
-    assert(Charlie.srem(Alpha) == 0 && "C should be evenly divisible by A");
-    const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
-    Src = SE->getAddExpr(Src, SE->getMulExpr(A_K, SE->getConstant(CdivA)));
-    Src = zeroCoefficient(Src, CurSrcLoop);
-    Dst = addToCoefficient(Dst, CurDstLoop, A_K);
-    if (!findCoefficient(Dst, CurDstLoop)->isZero())
-      Consistent = false;
-  } else {
-    // paper is incorrect here, or perhaps just misleading
-    const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
-    Src = SE->getMulExpr(Src, A);
-    Dst = SE->getMulExpr(Dst, A);
-    Src = SE->getAddExpr(Src, SE->getMulExpr(A_K, C));
-    Src = zeroCoefficient(Src, CurSrcLoop);
-    Dst = addToCoefficient(Dst, CurDstLoop, SE->getMulExpr(A_K, B));
-    if (!findCoefficient(Dst, CurDstLoop)->isZero())
-      Consistent = false;
-  }
-  LLVM_DEBUG(dbgs() << "\t\tnew Src = " << *Src << "\n");
-  LLVM_DEBUG(dbgs() << "\t\tnew Dst = " << *Dst << "\n");
-  return true;
-}
-
-// Attempt to propagate a point
-// constraint into a subscript pair (Src and Dst).
-// Return true if some simplification occurs.
-bool DependenceInfo::propagatePoint(const SCEV *&Src, const SCEV *&Dst,
-                                    Constraint &CurConstraint) {
-  const Loop *CurSrcLoop = CurConstraint.getAssociatedSrcLoop();
-  const Loop *CurDstLoop = CurConstraint.getAssociatedDstLoop();
-  const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
-  const SCEV *AP_K = findCoefficient(Dst, CurDstLoop);
-  const SCEV *XA_K = SE->getMulExpr(A_K, CurConstraint.getX());
-  const SCEV *YAP_K = SE->getMulExpr(AP_K, CurConstraint.getY());
-  LLVM_DEBUG(dbgs() << "\t\tSrc is " << *Src << "\n");
-  Src = SE->getAddExpr(Src, SE->getMinusSCEV(XA_K, YAP_K));
-  Src = zeroCoefficient(Src, CurSrcLoop);
-  LLVM_DEBUG(dbgs() << "\t\tnew Src is " << *Src << "\n");
-  LLVM_DEBUG(dbgs() << "\t\tDst is " << *Dst << "\n");
-  Dst = zeroCoefficient(Dst, CurDstLoop);
-  LLVM_DEBUG(dbgs() << "\t\tnew Dst is " << *Dst << "\n");
-  return true;
-}
-
 // Update direction vector entry based on the current constraint.
 void DependenceInfo::updateDirection(Dependence::DVEntry &Level,
                                      const Constraint &CurConstraint) const {
@@ -3488,10 +3722,19 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   // resize Pair to contain as many pairs of subscripts as the delinearization
   // has found, and then initialize the pairs following the delinearization.
   Pair.resize(Size);
+  SCEVMonotonicityChecker MonChecker(SE);
+  const Loop *OutermostLoop = SrcLoop ? SrcLoop->getOutermostLoop() : nullptr;
   for (int I = 0; I < Size; ++I) {
     Pair[I].Src = SrcSubscripts[I];
     Pair[I].Dst = DstSubscripts[I];
     unifySubscriptType(&Pair[I]);
+
+    if (EnableMonotonicityCheck) {
+      if (MonChecker.checkMonotonicity(Pair[I].Src, OutermostLoop).isUnknown())
+        return false;
+      if (MonChecker.checkMonotonicity(Pair[I].Dst, OutermostLoop).isUnknown())
+        return false;
+    }
   }
 
   return true;
@@ -3513,12 +3756,13 @@ bool DependenceInfo::tryDelinearizeFixedSize(
            "expected src and dst scev unknowns to be equal");
   });
 
-  SmallVector<int, 4> SrcSizes;
-  SmallVector<int, 4> DstSizes;
-  if (!tryDelinearizeFixedSizeImpl(SE, Src, SrcAccessFn, SrcSubscripts,
-                                   SrcSizes) ||
-      !tryDelinearizeFixedSizeImpl(SE, Dst, DstAccessFn, DstSubscripts,
-                                   DstSizes))
+  const SCEV *ElemSize = SE->getElementSize(Src);
+  assert(ElemSize == SE->getElementSize(Dst) && "Different element sizes");
+  SmallVector<const SCEV *, 4> SrcSizes, DstSizes;
+  if (!delinearizeFixedSizeArray(*SE, SE->removePointerBase(SrcAccessFn),
+                                 SrcSubscripts, SrcSizes, ElemSize) ||
+      !delinearizeFixedSizeArray(*SE, SE->removePointerBase(DstAccessFn),
+                                 DstSubscripts, DstSizes, ElemSize))
     return false;
 
   // Check that the two size arrays are non-empty and equal in length and
@@ -3544,7 +3788,7 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   // iff the subscripts are positive and are less than the range of the
   // dimension.
   if (!DisableDelinearizationChecks) {
-    auto AllIndicesInRange = [&](SmallVector<int, 4> &DimensionSizes,
+    auto AllIndicesInRange = [&](ArrayRef<const SCEV *> DimensionSizes,
                                  SmallVectorImpl<const SCEV *> &Subscripts,
                                  Value *Ptr) {
       size_t SSize = Subscripts.size();
@@ -3557,17 +3801,14 @@ bool DependenceInfo::tryDelinearizeFixedSize(
           });
           return false;
         }
-        if (auto *SType = dyn_cast<IntegerType>(S->getType())) {
-          const SCEV *Range = SE->getConstant(
-              ConstantInt::get(SType, DimensionSizes[I - 1], false));
-          if (!isKnownLessThan(S, Range)) {
-            LLVM_DEBUG({
-              dbgs() << "Check failed: !isKnownLessThan(S, Range)\n";
-              dbgs() << "  S: " << *S << "\n"
-                     << "  Range: " << *Range << "\n";
-            });
-            return false;
-          }
+        const SCEV *Range = DimensionSizes[I - 1];
+        if (!isKnownLessThan(S, Range)) {
+          LLVM_DEBUG({
+            dbgs() << "Check failed: !isKnownLessThan(S, Range)\n";
+            dbgs() << "  S: " << *S << "\n"
+                   << "  Range: " << *Range << "\n";
+          });
+          return false;
         }
       }
       return true;
@@ -3824,6 +4065,14 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   Pair[0].Src = SrcEv;
   Pair[0].Dst = DstEv;
 
+  SCEVMonotonicityChecker MonChecker(SE);
+  const Loop *OutermostLoop = SrcLoop ? SrcLoop->getOutermostLoop() : nullptr;
+  if (EnableMonotonicityCheck)
+    if (MonChecker.checkMonotonicity(Pair[0].Src, OutermostLoop).isUnknown() ||
+        MonChecker.checkMonotonicity(Pair[0].Dst, OutermostLoop).isUnknown())
+      return std::make_unique<Dependence>(Src, Dst,
+                                          SCEVUnionPredicate(Assume, *SE));
+
   if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
       LLVM_DEBUG(dbgs() << "    delinearized\n");
@@ -3888,68 +4137,11 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     LLVM_DEBUG(dumpSmallBitVector(Pair[P].Loops));
   }
 
-  SmallBitVector Separable(Pairs);
-  SmallBitVector Coupled(Pairs);
-
-  // Partition subscripts into separable and minimally-coupled groups
-  // Algorithm in paper is algorithmically better;
-  // this may be faster in practice. Check someday.
-  //
-  // Here's an example of how it works. Consider this code:
-  //
-  //   for (i = ...) {
-  //     for (j = ...) {
-  //       for (k = ...) {
-  //         for (l = ...) {
-  //           for (m = ...) {
-  //             A[i][j][k][m] = ...;
-  //             ... = A[0][j][l][i + j];
-  //           }
-  //         }
-  //       }
-  //     }
-  //   }
-  //
-  // There are 4 subscripts here:
-  //    0 [i] and [0]
-  //    1 [j] and [j]
-  //    2 [k] and [l]
-  //    3 [m] and [i + j]
-  //
-  // We've already classified each subscript pair as ZIV, SIV, etc.,
-  // and collected all the loops mentioned by pair P in Pair[P].Loops.
-  // In addition, we've initialized Pair[P].GroupLoops to Pair[P].Loops
-  // and set Pair[P].Group = {P}.
-  //
-  //      Src Dst    Classification Loops  GroupLoops Group
-  //    0 [i] [0]         SIV       {1}      {1}        {0}
-  //    1 [j] [j]         SIV       {2}      {2}        {1}
-  //    2 [k] [l]         RDIV      {3,4}    {3,4}      {2}
-  //    3 [m] [i + j]     MIV       {1,2,5}  {1,2,5}    {3}
-  //
-  // For each subscript SI 0 .. 3, we consider each remaining subscript, SJ.
-  // So, 0 is compared against 1, 2, and 3; 1 is compared against 2 and 3, etc.
-  //
-  // We begin by comparing 0 and 1. The intersection of the GroupLoops is empty.
-  // Next, 0 and 2. Again, the intersection of their GroupLoops is empty.
-  // Next 0 and 3. The intersection of their GroupLoop = {1}, not empty,
-  // so Pair[3].Group = {0,3} and Done = false (that is, 0 will not be added
-  // to either Separable or Coupled).
-  //
-  // Next, we consider 1 and 2. The intersection of the GroupLoops is empty.
-  // Next, 1 and 3. The intersection of their GroupLoops = {2}, not empty,
-  // so Pair[3].Group = {0, 1, 3} and Done = false.
-  //
-  // Next, we compare 2 against 3. The intersection of the GroupLoops is empty.
-  // Since Done remains true, we add 2 to the set of Separable pairs.
-  //
-  // Finally, we consider 3. There's nothing to compare it with,
-  // so Done remains true and we add it to the Coupled set.
-  // Pair[3].Group = {0, 1, 3} and GroupLoops = {1, 2, 5}.
-  //
-  // In the end, we've got 1 separable subscript and 1 coupled group.
+  // Test each subscript individually
   for (unsigned SI = 0; SI < Pairs; ++SI) {
-    if (Pair[SI].Classification == Subscript::NonLinear) {
+    LLVM_DEBUG(dbgs() << "testing subscript " << SI);
+    switch (Pair[SI].Classification) {
+    case Subscript::NonLinear:
       // ignore these, but collect loops for later
       ++NonlinearSubscriptPairs;
       collectCommonLoops(Pair[SI].Src, LI->getLoopFor(Src->getParent()),
@@ -3957,47 +4149,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       collectCommonLoops(Pair[SI].Dst, LI->getLoopFor(Dst->getParent()),
                          Pair[SI].Loops);
       Result.Consistent = false;
-    } else if (Pair[SI].Classification == Subscript::ZIV) {
-      // always separable
-      Separable.set(SI);
-    } else {
-      // SIV, RDIV, or MIV, so check for coupled group
-      bool Done = true;
-      for (unsigned SJ = SI + 1; SJ < Pairs; ++SJ) {
-        SmallBitVector Intersection = Pair[SI].GroupLoops;
-        Intersection &= Pair[SJ].GroupLoops;
-        if (Intersection.any()) {
-          // accumulate set of all the loops in group
-          Pair[SJ].GroupLoops |= Pair[SI].GroupLoops;
-          // accumulate set of all subscripts in group
-          Pair[SJ].Group |= Pair[SI].Group;
-          Done = false;
-        }
-      }
-      if (Done) {
-        if (Pair[SI].Group.count() == 1) {
-          Separable.set(SI);
-          ++SeparableSubscriptPairs;
-        } else {
-          Coupled.set(SI);
-          ++CoupledSubscriptPairs;
-        }
-      }
-    }
-  }
-
-  LLVM_DEBUG(dbgs() << "    Separable = ");
-  LLVM_DEBUG(dumpSmallBitVector(Separable));
-  LLVM_DEBUG(dbgs() << "    Coupled = ");
-  LLVM_DEBUG(dumpSmallBitVector(Coupled));
-
-  Constraint NewConstraint;
-  NewConstraint.setAny(SE);
-
-  // test separable subscripts
-  for (unsigned SI : Separable.set_bits()) {
-    LLVM_DEBUG(dbgs() << "testing subscript " << SI);
-    switch (Pair[SI].Classification) {
+      break;
     case Subscript::ZIV:
       LLVM_DEBUG(dbgs() << ", ZIV\n");
       if (testZIV(Pair[SI].Src, Pair[SI].Dst, Result))
@@ -4007,6 +4159,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       LLVM_DEBUG(dbgs() << ", SIV\n");
       unsigned Level;
       const SCEV *SplitIter = nullptr;
+      Constraint NewConstraint;
+      NewConstraint.setAny(SE);
       if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
                   SplitIter))
         return nullptr;
@@ -4022,125 +4176,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       if (testMIV(Pair[SI].Src, Pair[SI].Dst, Pair[SI].Loops, Result))
         return nullptr;
       break;
-    default:
-      llvm_unreachable("subscript has unexpected classification");
-    }
-  }
-
-  if (Coupled.count()) {
-    // test coupled subscript groups
-    LLVM_DEBUG(dbgs() << "starting on coupled subscripts\n");
-    LLVM_DEBUG(dbgs() << "MaxLevels + 1 = " << MaxLevels + 1 << "\n");
-    SmallVector<Constraint, 4> Constraints(MaxLevels + 1);
-    for (unsigned II = 0; II <= MaxLevels; ++II)
-      Constraints[II].setAny(SE);
-    for (unsigned SI : Coupled.set_bits()) {
-      LLVM_DEBUG(dbgs() << "testing subscript group " << SI << " { ");
-      SmallBitVector Group(Pair[SI].Group);
-      SmallBitVector Sivs(Pairs);
-      SmallBitVector Mivs(Pairs);
-      SmallBitVector ConstrainedLevels(MaxLevels + 1);
-      SmallVector<Subscript *, 4> PairsInGroup;
-      for (unsigned SJ : Group.set_bits()) {
-        LLVM_DEBUG(dbgs() << SJ << " ");
-        if (Pair[SJ].Classification == Subscript::SIV)
-          Sivs.set(SJ);
-        else
-          Mivs.set(SJ);
-        PairsInGroup.push_back(&Pair[SJ]);
-      }
-      unifySubscriptType(PairsInGroup);
-      LLVM_DEBUG(dbgs() << "}\n");
-      while (Sivs.any()) {
-        bool Changed = false;
-        for (unsigned SJ : Sivs.set_bits()) {
-          LLVM_DEBUG(dbgs() << "testing subscript " << SJ << ", SIV\n");
-          // SJ is an SIV subscript that's part of the current coupled group
-          unsigned Level;
-          const SCEV *SplitIter = nullptr;
-          LLVM_DEBUG(dbgs() << "SIV\n");
-          if (testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result, NewConstraint,
-                      SplitIter))
-            return nullptr;
-          ConstrainedLevels.set(Level);
-          if (intersectConstraints(&Constraints[Level], &NewConstraint)) {
-            if (Constraints[Level].isEmpty()) {
-              ++DeltaIndependence;
-              return nullptr;
-            }
-            Changed = true;
-          }
-          Sivs.reset(SJ);
-        }
-        if (Changed) {
-          // propagate, possibly creating new SIVs and ZIVs
-          LLVM_DEBUG(dbgs() << "    propagating\n");
-          LLVM_DEBUG(dbgs() << "\tMivs = ");
-          LLVM_DEBUG(dumpSmallBitVector(Mivs));
-          for (unsigned SJ : Mivs.set_bits()) {
-            // SJ is an MIV subscript that's part of the current coupled group
-            LLVM_DEBUG(dbgs() << "\tSJ = " << SJ << "\n");
-            if (propagate(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops,
-                          Constraints, Result.Consistent)) {
-              LLVM_DEBUG(dbgs() << "\t    Changed\n");
-              ++DeltaPropagations;
-              Pair[SJ].Classification = classifyPair(
-                  Pair[SJ].Src, LI->getLoopFor(Src->getParent()), Pair[SJ].Dst,
-                  LI->getLoopFor(Dst->getParent()), Pair[SJ].Loops);
-              switch (Pair[SJ].Classification) {
-              case Subscript::ZIV:
-                LLVM_DEBUG(dbgs() << "ZIV\n");
-                if (testZIV(Pair[SJ].Src, Pair[SJ].Dst, Result))
-                  return nullptr;
-                Mivs.reset(SJ);
-                break;
-              case Subscript::SIV:
-                Sivs.set(SJ);
-                Mivs.reset(SJ);
-                break;
-              case Subscript::RDIV:
-              case Subscript::MIV:
-                break;
-              default:
-                llvm_unreachable("bad subscript classification");
-              }
-            }
-          }
-        }
-      }
-
-      // test & propagate remaining RDIVs
-      for (unsigned SJ : Mivs.set_bits()) {
-        if (Pair[SJ].Classification == Subscript::RDIV) {
-          LLVM_DEBUG(dbgs() << "RDIV test\n");
-          if (testRDIV(Pair[SJ].Src, Pair[SJ].Dst, Result))
-            return nullptr;
-          // I don't yet understand how to propagate RDIV results
-          Mivs.reset(SJ);
-        }
-      }
-
-      // test remaining MIVs
-      // This code is temporary.
-      // Better to somehow test all remaining subscripts simultaneously.
-      for (unsigned SJ : Mivs.set_bits()) {
-        if (Pair[SJ].Classification == Subscript::MIV) {
-          LLVM_DEBUG(dbgs() << "MIV test\n");
-          if (testMIV(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops, Result))
-            return nullptr;
-        } else
-          llvm_unreachable("expected only MIV subscripts at this point");
-      }
-
-      // update Result.DV from constraint vector
-      LLVM_DEBUG(dbgs() << "    updating\n");
-      for (unsigned SJ : ConstrainedLevels.set_bits()) {
-        if (SJ > CommonLevels)
-          break;
-        updateDirection(Result.DV[SJ - 1], Constraints[SJ]);
-        if (Result.DV[SJ - 1].Direction == Dependence::DVEntry::NONE)
-          return nullptr;
-      }
     }
   }
 
@@ -4318,56 +4353,26 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
     Pair[P].Group.set(P);
   }
 
-  SmallBitVector Separable(Pairs);
-  SmallBitVector Coupled(Pairs);
+  Constraint NewConstraint;
+  NewConstraint.setAny(SE);
 
-  // partition subscripts into separable and minimally-coupled groups
+  // Test each subscript individually for split iteration
   for (unsigned SI = 0; SI < Pairs; ++SI) {
-    if (Pair[SI].Classification == Subscript::NonLinear) {
+    switch (Pair[SI].Classification) {
+    case Subscript::NonLinear:
       // ignore these, but collect loops for later
       collectCommonLoops(Pair[SI].Src, LI->getLoopFor(Src->getParent()),
                          Pair[SI].Loops);
       collectCommonLoops(Pair[SI].Dst, LI->getLoopFor(Dst->getParent()),
                          Pair[SI].Loops);
       Result.Consistent = false;
-    } else if (Pair[SI].Classification == Subscript::ZIV)
-      Separable.set(SI);
-    else {
-      // SIV, RDIV, or MIV, so check for coupled group
-      bool Done = true;
-      for (unsigned SJ = SI + 1; SJ < Pairs; ++SJ) {
-        SmallBitVector Intersection = Pair[SI].GroupLoops;
-        Intersection &= Pair[SJ].GroupLoops;
-        if (Intersection.any()) {
-          // accumulate set of all the loops in group
-          Pair[SJ].GroupLoops |= Pair[SI].GroupLoops;
-          // accumulate set of all subscripts in group
-          Pair[SJ].Group |= Pair[SI].Group;
-          Done = false;
-        }
-      }
-      if (Done) {
-        if (Pair[SI].Group.count() == 1)
-          Separable.set(SI);
-        else
-          Coupled.set(SI);
-      }
-    }
-  }
-
-  Constraint NewConstraint;
-  NewConstraint.setAny(SE);
-
-  // test separable subscripts
-  for (unsigned SI : Separable.set_bits()) {
-    switch (Pair[SI].Classification) {
+      break;
     case Subscript::SIV: {
       unsigned Level;
       const SCEV *SplitIter = nullptr;
       (void)testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
                     SplitIter);
-      if (Level == SplitLevel) {
-        assert(SplitIter != nullptr);
+      if (Level == SplitLevel && SplitIter != nullptr) {
         return SplitIter;
       }
       break;
@@ -4376,70 +4381,8 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
     case Subscript::RDIV:
     case Subscript::MIV:
       break;
-    default:
-      llvm_unreachable("subscript has unexpected classification");
     }
   }
-
-  assert(!Coupled.empty() && "coupled expected non-empty");
-
-  // test coupled subscript groups
-  SmallVector<Constraint, 4> Constraints(MaxLevels + 1);
-  for (unsigned II = 0; II <= MaxLevels; ++II)
-    Constraints[II].setAny(SE);
-  for (unsigned SI : Coupled.set_bits()) {
-    SmallBitVector Group(Pair[SI].Group);
-    SmallBitVector Sivs(Pairs);
-    SmallBitVector Mivs(Pairs);
-    SmallBitVector ConstrainedLevels(MaxLevels + 1);
-    for (unsigned SJ : Group.set_bits()) {
-      if (Pair[SJ].Classification == Subscript::SIV)
-        Sivs.set(SJ);
-      else
-        Mivs.set(SJ);
-    }
-    while (Sivs.any()) {
-      bool Changed = false;
-      for (unsigned SJ : Sivs.set_bits()) {
-        // SJ is an SIV subscript that's part of the current coupled group
-        unsigned Level;
-        const SCEV *SplitIter = nullptr;
-        (void)testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result, NewConstraint,
-                      SplitIter);
-        if (Level == SplitLevel && SplitIter)
-          return SplitIter;
-        ConstrainedLevels.set(Level);
-        if (intersectConstraints(&Constraints[Level], &NewConstraint))
-          Changed = true;
-        Sivs.reset(SJ);
-      }
-      if (!Changed)
-        continue;
-      // propagate, possibly creating new SIVs and ZIVs
-      for (unsigned SJ : Mivs.set_bits()) {
-        // SJ is an MIV subscript that's part of the current coupled group
-        if (!propagate(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops, Constraints,
-                       Result.Consistent))
-          continue;
-        Pair[SJ].Classification = classifyPair(
-            Pair[SJ].Src, LI->getLoopFor(Src->getParent()), Pair[SJ].Dst,
-            LI->getLoopFor(Dst->getParent()), Pair[SJ].Loops);
-        switch (Pair[SJ].Classification) {
-        case Subscript::ZIV:
-          Mivs.reset(SJ);
-          break;
-        case Subscript::SIV:
-          Sivs.set(SJ);
-          Mivs.reset(SJ);
-          break;
-        case Subscript::RDIV:
-        case Subscript::MIV:
-          break;
-        default:
-          llvm_unreachable("bad subscript classification");
-        }
-      }
-    }
-  }
-  llvm_unreachable("somehow reached end of routine");
+  // No split iteration found
+  return nullptr;
 }

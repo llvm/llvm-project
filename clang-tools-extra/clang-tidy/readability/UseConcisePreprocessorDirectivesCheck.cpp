@@ -91,7 +91,10 @@ private:
     Check.diag(
         DirectiveLoc,
         "preprocessor condition can be written more concisely using '#%0'")
-        << FixItHint::CreateReplacement(DirectiveLoc, Replacements[Inverted])
+        << FixItHint::CreateReplacement(
+               CharSourceRange::getCharRange(DirectiveLoc,
+                                             ConditionRange.getBegin()),
+               (Replacements[Inverted].str() + " "))
         << FixItHint::CreateReplacement(ConditionRange, Macro)
         << Replacements[Inverted];
   }

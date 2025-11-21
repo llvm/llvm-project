@@ -1525,7 +1525,15 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   }
 
   // Try to extend the entire expression tree to the wide destination type.
-  if (shouldChangeType(SrcTy, DestTy) && canEvaluateSExtd(Src, DestTy)) {
+  bool ShouldExtendExpression = true;
+  Value *TruncSrc = nullptr;
+  // It is not desirable to extend expression in the trunc + sext pattern when
+  // destination type is narrower than original (pre-trunc) type.
+  if (match(Src, m_Trunc(m_Value(TruncSrc))))
+    if (TruncSrc->getType()->getScalarSizeInBits() > DestBitSize)
+      ShouldExtendExpression = false;
+  if (ShouldExtendExpression && shouldChangeType(SrcTy, DestTy) &&
+      canEvaluateSExtd(Src, DestTy)) {
     // Okay, we can transform this!  Insert the new expression now.
     LLVM_DEBUG(
         dbgs() << "ICE: EvaluateInDifferentType converting expression type"
@@ -1545,13 +1553,18 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
                                       ShAmt);
   }
 
-  Value *X;
-  if (match(Src, m_Trunc(m_Value(X)))) {
+  Value *X = TruncSrc;
+  if (X) {
     // If the input has more sign bits than bits truncated, then convert
     // directly to final type.
     unsigned XBitSize = X->getType()->getScalarSizeInBits();
-    if (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)
-      return CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
+    bool HasNSW = cast<TruncInst>(Src)->hasNoSignedWrap();
+    if (HasNSW || (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)) {
+      auto *Res = CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
+      if (auto *ResTrunc = dyn_cast<TruncInst>(Res); ResTrunc && HasNSW)
+        ResTrunc->setHasNoSignedWrap(true);
+      return Res;
+    }
 
     // If input is a trunc from the destination type, then convert into shifts.
     if (Src->hasOneUse() && X->getType() == DestTy) {
@@ -1643,31 +1656,44 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
 
 /// Return a Constant* for the specified floating-point constant if it fits
 /// in the specified FP type without changing its value.
-static bool fitsInFPType(ConstantFP *CFP, const fltSemantics &Sem) {
+static bool fitsInFPType(APFloat F, const fltSemantics &Sem) {
   bool losesInfo;
-  APFloat F = CFP->getValueAPF();
   (void)F.convert(Sem, APFloat::rmNearestTiesToEven, &losesInfo);
   return !losesInfo;
 }
 
-static Type *shrinkFPConstant(ConstantFP *CFP, bool PreferBFloat) {
-  if (CFP->getType() == Type::getPPC_FP128Ty(CFP->getContext()))
-    return nullptr;  // No constant folding of this.
+static Type *shrinkFPConstant(LLVMContext &Ctx, const APFloat &F,
+                              bool PreferBFloat) {
   // See if the value can be truncated to bfloat and then reextended.
-  if (PreferBFloat && fitsInFPType(CFP, APFloat::BFloat()))
-    return Type::getBFloatTy(CFP->getContext());
+  if (PreferBFloat && fitsInFPType(F, APFloat::BFloat()))
+    return Type::getBFloatTy(Ctx);
   // See if the value can be truncated to half and then reextended.
-  if (!PreferBFloat && fitsInFPType(CFP, APFloat::IEEEhalf()))
-    return Type::getHalfTy(CFP->getContext());
+  if (!PreferBFloat && fitsInFPType(F, APFloat::IEEEhalf()))
+    return Type::getHalfTy(Ctx);
   // See if the value can be truncated to float and then reextended.
-  if (fitsInFPType(CFP, APFloat::IEEEsingle()))
-    return Type::getFloatTy(CFP->getContext());
-  if (CFP->getType()->isDoubleTy())
-    return nullptr;  // Won't shrink.
-  if (fitsInFPType(CFP, APFloat::IEEEdouble()))
-    return Type::getDoubleTy(CFP->getContext());
+  if (fitsInFPType(F, APFloat::IEEEsingle()))
+    return Type::getFloatTy(Ctx);
+  if (&F.getSemantics() == &APFloat::IEEEdouble())
+    return nullptr; // Won't shrink.
+  // See if the value can be truncated to double and then reextended.
+  if (fitsInFPType(F, APFloat::IEEEdouble()))
+    return Type::getDoubleTy(Ctx);
   // Don't try to shrink to various long double types.
   return nullptr;
+}
+
+static Type *shrinkFPConstant(ConstantFP *CFP, bool PreferBFloat) {
+  Type *Ty = CFP->getType();
+  if (Ty->getScalarType()->isPPC_FP128Ty())
+    return nullptr; // No constant folding of this.
+
+  Type *ShrinkTy =
+      shrinkFPConstant(CFP->getContext(), CFP->getValueAPF(), PreferBFloat);
+  if (ShrinkTy)
+    if (auto *VecTy = dyn_cast<VectorType>(Ty))
+      ShrinkTy = VectorType::get(ShrinkTy, VecTy);
+
+  return ShrinkTy;
 }
 
 // Determine if this is a vector of ConstantFPs and if so, return the minimal
@@ -1720,10 +1746,10 @@ static Type *getMinimumFPType(Value *V, bool PreferBFloat) {
 
   // Try to shrink scalable and fixed splat vectors.
   if (auto *FPC = dyn_cast<Constant>(V))
-    if (isa<VectorType>(V->getType()))
+    if (auto *VTy = dyn_cast<VectorType>(V->getType()))
       if (auto *Splat = dyn_cast_or_null<ConstantFP>(FPC->getSplatValue()))
         if (Type *T = shrinkFPConstant(Splat, PreferBFloat))
-          return T;
+          return VectorType::get(T, VTy);
 
   // Try to shrink a vector of FP constants. This returns nullptr on scalable
   // vectors
@@ -1796,10 +1822,9 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
   Type *Ty = FPT.getType();
   auto *BO = dyn_cast<BinaryOperator>(FPT.getOperand(0));
   if (BO && BO->hasOneUse()) {
-    Type *LHSMinType =
-        getMinimumFPType(BO->getOperand(0), /*PreferBFloat=*/Ty->isBFloatTy());
-    Type *RHSMinType =
-        getMinimumFPType(BO->getOperand(1), /*PreferBFloat=*/Ty->isBFloatTy());
+    bool PreferBFloat = Ty->getScalarType()->isBFloatTy();
+    Type *LHSMinType = getMinimumFPType(BO->getOperand(0), PreferBFloat);
+    Type *RHSMinType = getMinimumFPType(BO->getOperand(1), PreferBFloat);
     unsigned OpWidth = BO->getType()->getFPMantissaWidth();
     unsigned LHSWidth = LHSMinType->getFPMantissaWidth();
     unsigned RHSWidth = RHSMinType->getFPMantissaWidth();
@@ -2123,7 +2148,7 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
   return nullptr;
 }
 
-Value *InstCombinerImpl::foldPtrToIntOfGEP(Type *IntTy, Value *Ptr) {
+Value *InstCombinerImpl::foldPtrToIntOrAddrOfGEP(Type *IntTy, Value *Ptr) {
   // Look through chain of one-use GEPs.
   Type *PtrTy = Ptr->getType();
   SmallVector<GEPOperator *> GEPs;
@@ -2185,7 +2210,7 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
       Mask->getType() == Ty)
     return BinaryOperator::CreateAnd(Builder.CreatePtrToInt(Ptr, Ty), Mask);
 
-  if (Value *V = foldPtrToIntOfGEP(Ty, SrcOp))
+  if (Value *V = foldPtrToIntOrAddrOfGEP(Ty, SrcOp))
     return replaceInstUsesWith(CI, V);
 
   Value *Vec, *Scalar, *Index;
@@ -2203,6 +2228,21 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
 }
 
 Instruction *InstCombinerImpl::visitPtrToAddr(PtrToAddrInst &CI) {
+  Value *SrcOp = CI.getPointerOperand();
+  Type *Ty = CI.getType();
+
+  // (ptrtoaddr (ptrmask P, M))
+  //    -> (and (ptrtoaddr P), M)
+  // This is generally beneficial as `and` is better supported than `ptrmask`.
+  Value *Ptr, *Mask;
+  if (match(SrcOp, m_OneUse(m_Intrinsic<Intrinsic::ptrmask>(m_Value(Ptr),
+                                                            m_Value(Mask)))) &&
+      Mask->getType() == Ty)
+    return BinaryOperator::CreateAnd(Builder.CreatePtrToAddr(Ptr), Mask);
+
+  if (Value *V = foldPtrToIntOrAddrOfGEP(Ty, SrcOp))
+    return replaceInstUsesWith(CI, V);
+
   // FIXME: Implement variants of ptrtoint folds.
   return commonCastTransforms(CI);
 }

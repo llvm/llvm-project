@@ -1172,3 +1172,15 @@ func.func @reduce_sum_constant_aggressive() -> tensor<2x3xi32> {
   %res1 = tosa.add %res0, %argmax1 : (tensor<2x3xi32>, tensor<2x3xi32>) -> tensor<2x3xi32>
   return %res1 : tensor<2x3xi32>
 }
+
+// -----
+
+// no_shift_op_reorder checks that %arg1 won't be reorder with %0
+// by the folder pass.
+// CHECK-LABEL: @no_shift_op_reorder
+func.func @no_shift_op_reorder (%arg0 : tensor<44x1xi16>, %arg1 : tensor<1xi8>) -> tensor<44x57xi32> {
+  %0 = "tosa.const"() {values = dense<1> : tensor<44x57xi16>} : () -> tensor<44x57xi16>
+  // CHECK: tosa.mul %arg0, %0, %arg1
+  %1 = tosa.mul %arg0, %0, %arg1 : (tensor<44x1xi16>, tensor<44x57xi16>, tensor<1xi8>) -> tensor<44x57xi32>
+  return %1 : tensor<44x57xi32>
+}

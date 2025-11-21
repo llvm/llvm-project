@@ -590,15 +590,18 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
       } else {
         // else we have to handle each individual field after after a
         // get-element.
+        const CIRGenRecordLayout &layout =
+            cgf.cgm.getTypes().getCIRGenRecordLayout(rd);
         for (const auto &[field, combiner] :
              llvm::zip_equal(rd->fields(), combinerRecipes)) {
           mlir::Type fieldType = cgf.convertType(field->getType());
           auto fieldPtr = cir::PointerType::get(fieldType);
+          unsigned fieldIndex = layout.getCIRFieldNo(field);
 
           mlir::Value lhsField = builder.createGetMember(
-              loc, fieldPtr, lhsArg, field->getName(), field->getFieldIndex());
+              loc, fieldPtr, lhsArg, field->getName(), fieldIndex);
           mlir::Value rhsField = builder.createGetMember(
-              loc, fieldPtr, rhsArg, field->getName(), field->getFieldIndex());
+              loc, fieldPtr, rhsArg, field->getName(), fieldIndex);
 
           emitSingleCombiner(lhsField, rhsField, combiner);
         }
@@ -614,11 +617,11 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
   if (const auto *cat = cgf.getContext().getAsConstantArrayType(origType)) {
     // If we're in an array, we have to emit the combiner for each element of
     // the array.
-    auto itrTy = mlir::cast<cir::IntType>(cgf.PtrDiffTy);
+    auto itrTy = mlir::cast<cir::IntType>(cgf.ptrDiffTy);
     auto itrPtrTy = cir::PointerType::get(itrTy);
 
     mlir::Value zero =
-        builder.getConstInt(loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), 0);
+        builder.getConstInt(loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), 0);
     mlir::Value itr =
         cir::AllocaOp::create(builder, loc, itrPtrTy, itrTy, "itr",
                               cgf.cgm.getSize(cgf.getPointerAlign()));
@@ -630,7 +633,7 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto loadItr = cir::LoadOp::create(builder, loc, {itr});
           mlir::Value arraySize = builder.getConstInt(
-              loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), cat->getZExtSize());
+              loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), cat->getZExtSize());
           auto cmp = builder.createCompare(loc, cir::CmpOpKind::lt, loadItr,
                                            arraySize);
           builder.createCondition(cmp);

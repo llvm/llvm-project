@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-xegpu-move-func-to-warp-op -split-input-file --allow-unregistered-dialect %s | FileCheck %s
+// RUN: mlir-opt -xevm-attach-target='chip=pvc' -test-xegpu-move-func-to-warp-op -split-input-file --allow-unregistered-dialect %s | FileCheck %s
 
 gpu.module @test {
 gpu.func @empty()  {
