@@ -239,10 +239,9 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
     const AccessPath &LoanPath = Loan.Path;
     // Check if the loan is for a stack variable and if that variable
     // is the one being destructed.
-    if (LoanPath.D == LifetimeEndsVD) {
+    if (LoanPath.D == LifetimeEndsVD)
       CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
           Loan.ID, LifetimeEnds.getTriggerStmt()->getEndLoc()));
-    }
   }
 }
 
