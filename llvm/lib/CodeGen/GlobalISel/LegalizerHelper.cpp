@@ -7609,7 +7609,7 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
   }
   case TargetOpcode::G_CTLZ: {
     auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
-    unsigned Len = SrcTy.getSizeInBits();
+    unsigned Len = SrcTy.getScalarSizeInBits();
 
     if (isSupported({TargetOpcode::G_CTLZ_ZERO_UNDEF, {DstTy, SrcTy}})) {
       // If CTLZ_ZERO_UNDEF is supported, emit that and a select for zero.
@@ -7657,7 +7657,7 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
   case TargetOpcode::G_CTTZ: {
     auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
 
-    unsigned Len = SrcTy.getSizeInBits();
+    unsigned Len = SrcTy.getScalarSizeInBits();
     if (isSupported({TargetOpcode::G_CTTZ_ZERO_UNDEF, {DstTy, SrcTy}})) {
       // If CTTZ_ZERO_UNDEF is legal or custom, emit that and a select with
       // zero.
@@ -7695,7 +7695,7 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
   case TargetOpcode::G_CTPOP: {
     Register SrcReg = MI.getOperand(1).getReg();
     LLT Ty = MRI.getType(SrcReg);
-    unsigned Size = Ty.getSizeInBits();
+    unsigned Size = Ty.getScalarSizeInBits();
     MachineIRBuilder &B = MIRBuilder;
 
     // Bail out on irregular type lengths.
