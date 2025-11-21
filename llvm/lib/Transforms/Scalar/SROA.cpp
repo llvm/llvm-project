@@ -2290,7 +2290,7 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
     return cast<FixedVectorType>(VTy)->getNumElements() >
            std::numeric_limits<unsigned short>::max();
   });
-  
+
   // Find a vector type viable for promotion by iterating over all slices.
   auto *VTy = llvm::find_if(CandidateTys, [&](VectorType *VTy) -> bool {
     uint64_t ElementSize =
