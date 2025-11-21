@@ -818,15 +818,19 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   Branch->setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
-/// If \p RedPhiR is used by a VPInstruction with \p Opcode, return it.
-/// Otherwise return nullptr;
-static VPInstruction *findReductionUser(VPReductionPHIRecipe *RedPhiR,
-                                        unsigned Opcode) {
-  auto It = find_if(RedPhiR->users(), [Opcode](VPUser *U) {
-    auto *VPI = dyn_cast<VPInstruction>(U);
-    return VPI && VPI->getOpcode() == Opcode;
-  });
-  return It == RedPhiR->user_end() ? nullptr : cast<VPInstruction>(*It);
+/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
+/// return nullptr;
+template <typename MatchT>
+static VPRecipeBase *findUser(VPValue *V, const MatchT &P) {
+  auto It = find_if(V->users(), match_fn(P));
+  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
+}
+
+/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
+/// return nullptr.
+template <unsigned Opcode>
+static VPInstruction *findUserVPInstruction(VPValue *V) {
+  return cast_or_null<VPInstruction>(findUser(V, m_VPInstruction<Opcode>()));
 }
 
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
@@ -934,7 +938,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     // If we exit early due to NaNs, compute the final reduction result based on
     // the reduction phi at the beginning of the last vector iteration.
     auto *RdxResult =
-        findReductionUser(RedPhiR, VPInstruction::ComputeReductionResult);
+        findUserVPInstruction<VPInstruction::ComputeReductionResult>(RedPhiR);
 
     auto *NewSel = MiddleBuilder.createSelect(AnyNaNLane, RedPhiR,
                                               RdxResult->getOperand(1));
@@ -1013,17 +1017,15 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
         dyn_cast<VPRecipeWithIRFlags>(MinMaxPhiR->getBackedgeValue());
     if (!MinMaxOp || MinMaxOp->getNumUsers() != 2)
       return false;
-    auto MinMaxUsers = to_vector(MinMaxPhiR->users());
-    auto *Cmp = dyn_cast<VPRecipeWithIRFlags>(
-        MinMaxUsers[0] == MinMaxOp ? MinMaxUsers[1] : MinMaxUsers[0]);
     VPValue *CmpOpA;
     VPValue *CmpOpB;
-    if (!Cmp || Cmp->getNumUsers() != 1 ||
-        !match(Cmp, m_Binary<Instruction::ICmp>(m_VPValue(CmpOpA),
-                                                m_VPValue(CmpOpB))))
+    CmpInst::Predicate Pred;
+    auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(
+        findUser(MinMaxPhiR, m_Cmp(m_VPValue(CmpOpA), m_VPValue(CmpOpB))));
+    if (!Cmp || Cmp->getNumUsers() != 1)
       return false;
 
-    CmpInst::Predicate Pred = Cmp->getPredicate();
+    Pred = Cmp->getPredicate();
     // TODO: Strict predicates need to find the first IV value for which the
     // predicate holds, not the last.
     if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE ||
@@ -1035,7 +1037,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
       Pred = CmpInst::getSwappedPredicate(Pred);
 
     // Cmp must be used by the select of a FindLastIV chain.
-    VPValue *Sel = dyn_cast<VPSingleDefRecipe>(*Cmp->user_begin());
+    VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
     VPValue *IVOp, *FindIV;
     if (!Sel ||
         !match(Sel,
@@ -1060,10 +1062,11 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     //  2. Compare the partial min/max reduction result to its final value and,
     //  3. Select the lanes of the partial FindLastIV reductions which
     //  correspond to the lanes matching the min/max reduction result.
-    auto *FindIVResult = cast<VPInstruction>(
-        findReductionUser(FindIVPhiR, VPInstruction::ComputeFindIVResult));
-    auto *MinMaxResult = cast<VPInstruction>(
-        findReductionUser(MinMaxPhiR, VPInstruction::ComputeReductionResult));
+    VPInstruction *FindIVResult =
+        findUserVPInstruction<VPInstruction::ComputeFindIVResult>(FindIVPhiR);
+    VPInstruction *MinMaxResult =
+        findUserVPInstruction<VPInstruction::ComputeReductionResult>(
+            MinMaxPhiR);
     MinMaxResult->moveBefore(*FindIVResult->getParent(),
                              FindIVResult->getIterator());
 
