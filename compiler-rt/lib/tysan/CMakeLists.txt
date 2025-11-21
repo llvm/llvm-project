@@ -46,8 +46,10 @@ if(APPLE)
     OBJECT_LIBS RTTysan_dynamic
                 RTInterception
                 RTSanitizerCommon
+                RTSanitizerCommonCoverage
                 RTSanitizerCommonLibc
                 RTSanitizerCommonSymbolizer
+                RTUbsan
     CFLAGS ${TYSAN_DYNAMIC_CFLAGS}
     LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
     DEFS ${TYSAN_DYNAMIC_DEFINITIONS}
@@ -71,8 +73,8 @@ else()
       SOURCES ${TYSAN_SOURCES}
       OBJECT_LIBS RTInterception
                   RTSanitizerCommon
-                  RTSanitizerCommonLibc
                   RTSanitizerCommonCoverage
+                  RTSanitizerCommonLibc
                   RTSanitizerCommonSymbolizer
                   RTUbsan
       CFLAGS ${TYSAN_CFLAGS}

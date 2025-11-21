@@ -217,6 +217,8 @@ Changes to BOLT
 Changes to Sanitizers
 ---------------------
 
+* Support running TypeSanitizer with UndefinedBehaviourSanitizer
+
 Other Changes
 -------------
 
