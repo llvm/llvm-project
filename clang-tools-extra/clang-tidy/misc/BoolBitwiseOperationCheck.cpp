@@ -67,16 +67,15 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
                           BinOp->getOpcodeStr()))
     return false;
 
-  bool IsBooleanLHS = BinOp->getLHS()
-                          ->IgnoreImpCasts()
-                          ->getType()
-                          .getDesugaredType(*AC)
-                          ->isBooleanType();
-  bool IsBooleanRHS = BinOp->getRHS()
-                          ->IgnoreImpCasts()
-                          ->getType()
-                          .getDesugaredType(*AC)
-                          ->isBooleanType();
+  const auto isBooleanType = [&AC](const Expr *expr) -> bool {
+    return expr->IgnoreImpCasts()
+        ->getType()
+        .getDesugaredType(*AC)
+        ->isBooleanType();
+  };
+
+  bool IsBooleanLHS = isBooleanType(BinOp->getLHS());
+  bool IsBooleanRHS = isBooleanType(BinOp->getRHS());
   if (IsBooleanLHS && IsBooleanRHS) {
     RootAssignsToBoolean = RootAssignsToBoolean.value_or(false);
     return true;
