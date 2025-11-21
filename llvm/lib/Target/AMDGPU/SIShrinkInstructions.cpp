@@ -541,9 +541,11 @@ bool SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
 /// For AND or OR, try using S_BITSET{0,1} to clear or set bits.
 /// If the inverse of the immediate is legal, use ANDN2, ORN2 or
 /// XNOR (as a ^ b == ~(a ^ ~b)).
-/// \param MoveIterator true if the caller should continue the machine function iterator.
+/// \param MoveIterator true if the caller should continue the machine function
+/// iterator.
 /// \return true if MI was modified.
-bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI, bool &MoveIterator) const {
+bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI,
+                                               bool &MoveIterator) const {
   unsigned Opc = MI.getOpcode();
   const MachineOperand *Dest = &MI.getOperand(0);
   MachineOperand *Src0 = &MI.getOperand(1);
@@ -1000,7 +1002,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_fake16_e64 ||
           (MI.getOpcode() == AMDGPU::V_FMA_F64_e64 &&
            ST->hasFmaakFmamkF64Insts())) {
-          Changed |= shrinkMadFma(MI);
+        Changed |= shrinkMadFma(MI);
         continue;
       }
 
