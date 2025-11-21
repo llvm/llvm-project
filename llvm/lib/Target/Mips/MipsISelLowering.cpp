@@ -356,8 +356,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FCOPYSIGN,          MVT::f32,   Custom);
   setOperationAction(ISD::FCOPYSIGN,          MVT::f64,   Custom);
   setOperationAction(ISD::FP_TO_SINT,         MVT::i32,   Custom);
-  setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
-  setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
+  setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::i32, Custom);
+  setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::i32, Custom);
 
   if (Subtarget.hasMips32r2() ||
       getTargetMachine().getTargetTriple().isOSLinux())
@@ -397,8 +397,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
       setOperationAction(ISD::STORE,              MVT::i64,   Custom);
     }
     setOperationAction(ISD::FP_TO_SINT,         MVT::i64,   Custom);
-    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i64, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i64, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::i64, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::i64, Custom);
     setOperationAction(ISD::SHL_PARTS,          MVT::i64,   Custom);
     setOperationAction(ISD::SRA_PARTS,          MVT::i64,   Custom);
     setOperationAction(ISD::SRL_PARTS,          MVT::i64,   Custom);
