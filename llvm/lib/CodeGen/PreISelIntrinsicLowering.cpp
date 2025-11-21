@@ -369,7 +369,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
             canEmitLibcall(TM, ParentFunc, RTLIB::MEMSET))
           break;
 
-        expandMemSetAsLoop(Memset);
+        expandMemSetAsLoop(Memset, TTI);
         Changed = true;
         Memset->eraseFromParent();
       }
@@ -384,7 +384,9 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
       if (isa<ConstantInt>(Memset->getLength()))
         break;
 
-      expandMemSetAsLoop(Memset);
+      Function *ParentFunc = Memset->getFunction();
+      const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
+      expandMemSetAsLoop(Memset, TTI);
       Changed = true;
       Memset->eraseFromParent();
       break;
