@@ -185,7 +185,6 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
 static bool hasPreprocessorBranchEndBetweenLocations(
     const ElseAfterReturnCheck::ConditionalBranchMap &ConditionalBranchMap,
     const SourceManager &SM, SourceLocation StartLoc, SourceLocation EndLoc) {
-
   const SourceLocation ExpandedStartLoc = SM.getExpansionLoc(StartLoc);
   const SourceLocation ExpandedEndLoc = SM.getExpansionLoc(EndLoc);
   if (!SM.isWrittenInSameFile(ExpandedStartLoc, ExpandedEndLoc))

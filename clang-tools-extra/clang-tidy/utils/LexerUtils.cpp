@@ -170,7 +170,6 @@ static bool breakAndReturnEndPlus1Token(const Stmt &S) {
 static SourceLocation getSemicolonAfterStmtEndLoc(const SourceLocation &EndLoc,
                                                   const SourceManager &SM,
                                                   const LangOptions &LangOpts) {
-
   if (EndLoc.isMacroID()) {
     // Assuming EndLoc points to a function call foo within macro F.
     // This method is supposed to return location of the semicolon within
@@ -206,7 +205,6 @@ static SourceLocation getSemicolonAfterStmtEndLoc(const SourceLocation &EndLoc,
 
 SourceLocation getUnifiedEndLoc(const Stmt &S, const SourceManager &SM,
                                 const LangOptions &LangOpts) {
-
   const Stmt *LastChild = &S;
   while (!LastChild->children().empty() && !breakAndReturnEnd(*LastChild) &&
          !breakAndReturnEndPlus1Token(*LastChild)) {

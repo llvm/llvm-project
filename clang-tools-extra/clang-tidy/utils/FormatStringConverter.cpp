@@ -624,7 +624,6 @@ bool FormatStringConverter::HandlePrintfSpecifier(const PrintfSpecifier &FS,
                                                   const char *StartSpecifier,
                                                   unsigned SpecifierLen,
                                                   const TargetInfo &Target) {
-
   const size_t StartSpecifierPos = StartSpecifier - PrintfFormatString.data();
   assert(StartSpecifierPos + SpecifierLen <= PrintfFormatString.size());
 

@@ -101,11 +101,9 @@ void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
                                            hasName(MakeOptional),
                                            returns(BindOptionalType)))),
                    hasArgument(0, OptionalDerefMatcher)),
-               callExpr(
+               callExpr(argumentCountIs(1),
 
-                   argumentCountIs(1),
-
-                   hasArgument(0, OptionalDerefMatcher))),
+                        hasArgument(0, OptionalDerefMatcher))),
            unless(anyOf(hasAncestor(typeLoc()),
                         hasAncestor(expr(matchers::hasUnevaluatedContext())))))
           .bind("expr"),

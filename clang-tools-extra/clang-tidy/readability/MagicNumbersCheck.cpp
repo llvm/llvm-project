@@ -25,7 +25,6 @@ namespace clang {
 
 static bool isUsedToInitializeAConstant(const MatchFinder::MatchResult &Result,
                                         const DynTypedNode &Node) {
-
   const auto *AsDecl = Node.get<DeclaratorDecl>();
   if (AsDecl) {
     if (AsDecl->getType().isConstQualified())
@@ -45,7 +44,6 @@ static bool isUsedToInitializeAConstant(const MatchFinder::MatchResult &Result,
 
 static bool isUsedToDefineATypeAlias(const MatchFinder::MatchResult &Result,
                                      const DynTypedNode &Node) {
-
   if (Node.get<TypeAliasDecl>() || Node.get<TypedefNameDecl>())
     return true;
 
@@ -144,7 +142,6 @@ void MagicNumbersCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void MagicNumbersCheck::check(const MatchFinder::MatchResult &Result) {
-
   const TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
   checkBoundMatch<IntegerLiteral>(Result, "integer");

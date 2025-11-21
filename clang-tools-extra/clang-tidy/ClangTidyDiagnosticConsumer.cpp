@@ -819,7 +819,6 @@ void ClangTidyDiagnosticConsumer::removeDuplicatedDiagnosticsOfAliasCheckers() {
           (*Inserted.first)->Message.Fix;
 
       if (CandidateFix != ExistingFix) {
-
         // In case of a conflict, don't suggest any fix-it.
         ExistingError.Message.Fix.clear();
         ExistingError.Notes.emplace_back(
