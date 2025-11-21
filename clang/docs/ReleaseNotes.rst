@@ -687,6 +687,7 @@ AST Matchers
 - Fixed detection of explicit parameter lists in ``LambdaExpr``. (#GH168452)
 - Added ``hasExplicitParameters`` for ``LambdaExpr`` as an output attribute to
   AST JSON dumps.
+- Add `arrayTypeLoc` matcher for matching `ArrayTypeLoc`s.
 
 clang-format
 ------------
