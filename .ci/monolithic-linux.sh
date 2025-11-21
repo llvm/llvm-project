@@ -63,3 +63,46 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_WERROR=ON
 
 start-group "ninja"
+
+if [[ -n "${targets}" ]]; then
+  # Targets are not escaped as they are passed as separate arguments.
+  ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
+  cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
+fi
+
+if [[ -n "${runtime_targets}" ]]; then
+  start-group "ninja Runtimes"
+
+  ninja -C "${BUILD_DIR}" ${runtime_targets} |& tee ninja_runtimes.log
+  cp ${BUILD_DIR}/.ninja_log ninja_runtimes.ninja_log
+fi
+
+# Compiling runtimes with just-built Clang and running their tests
+# as an additional testing for Clang.
+if [[ -n "${runtime_targets_needs_reconfig}" ]]; then
+  start-group "CMake Runtimes C++26"
+
+  cmake \
+    -D LIBCXX_TEST_PARAMS="std=c++26" \
+    -D LIBCXXABI_TEST_PARAMS="std=c++26" \
+    "${BUILD_DIR}"
+
+  start-group "ninja Runtimes C++26"
+
+  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig} \
+    |& tee ninja_runtimes_needs_reconfig1.log
+  cp ${BUILD_DIR}/.ninja_log ninja_runtimes_needs_reconig.ninja_log
+
+  start-group "CMake Runtimes Clang Modules"
+
+  cmake \
+    -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
+    -D LIBCXXABI_TEST_PARAMS="enable_modules=clang" \
+    "${BUILD_DIR}"
+
+  start-group "ninja Runtimes Clang Modules"
+
+  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig} \
+    |& tee ninja_runtimes_needs_reconfig2.log
+  cp ${BUILD_DIR}/.ninja_log ninja_runtimes_needs_reconfig2.ninja_log
+fi

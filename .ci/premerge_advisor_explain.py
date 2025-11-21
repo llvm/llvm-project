@@ -112,7 +112,8 @@ def main(
             advisor_explanations = advisor_response.json()
         else:
             print(advisor_response.reason)
-    comments.append(get_comment(
+    comments.append(
+        get_comment(
             github_token,
             pr_number,
             generate_test_report_lib.generate_report(
@@ -122,7 +123,8 @@ def main(
                 ninja_logs,
                 failure_explanations_list=advisor_explanations,
             ),
-        ))
+        )
+    )
     if return_code == 0 and "id" not in comments[0]:
         # If the job succeeds and there is not an existing comment, we
         # should not write one to reduce noise.
