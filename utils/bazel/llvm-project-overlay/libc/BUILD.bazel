@@ -5450,8 +5450,8 @@ libc_support_library(
 libc_support_library(
     name = "string_utils",
     hdrs = [
-        "src/string/string_utils.h",
         "src/string/string_length.h",
+        "src/string/string_utils.h",
     ],
     deps = [
         ":__support_common",

@@ -10,49 +10,47 @@
 
 #include "src/__support/macros/properties/cpu_features.h"
 
-namespace LIBC_NAMESPACE_DECL {
-
-namespace internal::arch_vector {
 #if defined(__ARM_NEON)
 #include "src/__support/CPP/bit.h" // countr_zero
 #include <arm_neon.h>
 #include <stddef.h> // size_t
+namespace LIBC_NAMESPACE_DECL::arch_vector {
 namespace neon {
-  [[maybe_unused]] LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static size_t
-  string_length(const char *src) {
-    using Vector __attribute__((may_alias)) = uint8x8_t;
+[[maybe_unused]] LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static size_t
+string_length(const char *src) {
+  using Vector __attribute__((may_alias)) = uint8x8_t;
 
-    uintptr_t misalign_bytes =
-        reinterpret_cast<uintptr_t>(src) % sizeof(Vector);
-    const Vector *block_ptr =
-        reinterpret_cast<const Vector *>(src - misalign_bytes);
-    Vector v = *block_ptr;
-    Vector vcmp = vceqz_u8(v);
-    uint64x1_t cmp_mask = vreinterpret_u64_u8(vcmp);
-    uint64_t cmp = vget_lane_u64(cmp_mask, 0);
-    cmp = cmp >> (misalign_bytes << 3);
+  uintptr_t misalign_bytes = reinterpret_cast<uintptr_t>(src) % sizeof(Vector);
+  const Vector *block_ptr =
+      reinterpret_cast<const Vector *>(src - misalign_bytes);
+  Vector v = *block_ptr;
+  Vector vcmp = vceqz_u8(v);
+  uint64x1_t cmp_mask = vreinterpret_u64_u8(vcmp);
+  uint64_t cmp = vget_lane_u64(cmp_mask, 0);
+  cmp = cmp >> (misalign_bytes << 3);
+  if (cmp)
+    return cpp::countr_zero(cmp) >> 3;
+
+  while (true) {
+    ++block_ptr;
+    v = *block_ptr;
+    vcmp = vceqz_u8(v);
+    cmp_mask = vreinterpret_u64_u8(vcmp);
+    cmp = vget_lane_u64(cmp_mask, 0);
     if (cmp)
-      return cpp::countr_zero(cmp) >> 3;
-
-    while (true) {
-      ++block_ptr;
-      v = *block_ptr;
-      vcmp = vceqz_u8(v);
-      cmp_mask = vreinterpret_u64_u8(vcmp);
-      cmp = vget_lane_u64(cmp_mask, 0);
-      if (cmp)
-        return static_cast<size_t>(reinterpret_cast<uintptr_t>(block_ptr) -
-                                   reinterpret_cast<uintptr_t>(src) +
-                                   (cpp::countr_zero(cmp) >> 3));
-    }
+      return static_cast<size_t>(reinterpret_cast<uintptr_t>(block_ptr) -
+                                 reinterpret_cast<uintptr_t>(src) +
+                                 (cpp::countr_zero(cmp) >> 3));
   }
+}
 } // namespace neon
-
+} // namespace LIBC_NAMESPACE_DECL::arch_vector
 #endif // __ARM_NEON
 
 #ifdef LIBC_TARGET_CPU_HAS_SVE
 #include "src/__support/macros/optimization.h"
 #include <arm_sve.h>
+namespace LIBC_NAMESPACE_DECL::arch_vector {
 namespace sve {
 [[maybe_unused]] LIBC_INLINE static size_t string_length(const char *src) {
   const uint8_t *ptr = reinterpret_cast<const uint8_t *>(src);
@@ -95,8 +93,10 @@ namespace sve {
   return len;
 }
 } // namespace sve
+} // namespace LIBC_NAMESPACE_DECL::arch_vector
 #endif // LIBC_TARGET_CPU_HAS_SVE
 
+namespace LIBC_NAMESPACE_DECL::arch_vector {
 [[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
 #ifdef LIBC_TARGET_CPU_HAS_SVE
   return sve::string_length(src);
@@ -104,7 +104,5 @@ namespace sve {
   return neon::string_length(src);
 #endif
 }
-
-} // namespace internal::arch_vector
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE_DECL::arch_vector
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_STRLEN_H
