@@ -163,7 +163,7 @@ bool DependencyScanningWorker::computeDependencies(
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     DiagnosticConsumer &DC, std::optional<llvm::MemoryBufferRef> TUBuffer) {
   if (TUBuffer) {
-    auto [FinalFS, FinalCommandLine] = initVFSForTUBuferScanning(
+    auto [FinalFS, FinalCommandLine] = initVFSForTUBufferScanning(
         BaseFS, CommandLine, WorkingDirectory, *TUBuffer, CAS);
     return scanDependencies(WorkingDirectory, FinalCommandLine, Consumer,
                             Controller, DC, FinalFS);

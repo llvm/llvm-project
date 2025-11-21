@@ -117,11 +117,11 @@ createCompilerInvocation(ArrayRef<std::string> CommandLine,
                          DiagnosticsEngine &Diags);
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
-initVFSForTUBuferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                          ArrayRef<std::string> CommandLine,
-                          StringRef WorkingDirectory,
-                          llvm::MemoryBufferRef TUBuffer,
-                          std::shared_ptr<cas::ObjectStore> CAS);
+initVFSForTUBufferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                           ArrayRef<std::string> CommandLine,
+                           StringRef WorkingDirectory,
+                           llvm::MemoryBufferRef TUBuffer,
+                           std::shared_ptr<cas::ObjectStore> CAS);
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
           std::vector<std::string>>
