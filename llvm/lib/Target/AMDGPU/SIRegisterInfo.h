@@ -346,14 +346,6 @@ public:
   ArrayRef<int16_t> getRegSplitParts(const TargetRegisterClass *RC,
                                      unsigned EltSize) const;
 
-  bool shouldCoalesce(MachineInstr *MI,
-                      const TargetRegisterClass *SrcRC,
-                      unsigned SubReg,
-                      const TargetRegisterClass *DstRC,
-                      unsigned DstSubReg,
-                      const TargetRegisterClass *NewRC,
-                      LiveIntervals &LIS) const override;
-
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
 

@@ -17,6 +17,7 @@
 #include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
@@ -138,6 +139,8 @@ public:
   // Default address space for the target.
   unsigned DefaultTargetAS = 0;
 
+  CallingConv::ID RuntimeCC = llvm::CallingConv::C;
+
   LLVM_ABI OpenMPIRBuilderConfig();
   LLVM_ABI OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
                                  bool OpenMPOffloadMandatory,
@@ -169,6 +172,8 @@ public:
   }
 
   unsigned getDefaultTargetAS() const { return DefaultTargetAS; }
+
+  CallingConv::ID getRuntimeCC() const { return RuntimeCC; }
 
   bool hasRequiresFlags() const { return RequiresFlags; }
   LLVM_ABI bool hasRequiresReverseOffload() const;
@@ -208,6 +213,7 @@ public:
   void setSeparator(StringRef S) { Separator = S; }
   void setGridValue(omp::GV G) { GridValue = G; }
   void setDefaultTargetAS(unsigned AS) { DefaultTargetAS = AS; }
+  void setRuntimeCC(CallingConv::ID CC) { RuntimeCC = CC; }
 
   LLVM_ABI void setHasRequiresReverseOffload(bool Value);
   LLVM_ABI void setHasRequiresUnifiedAddress(bool Value);
@@ -2131,6 +2137,10 @@ public:
                                                      omp::RuntimeFunction FnID);
 
   LLVM_ABI Function *getOrCreateRuntimeFunctionPtr(omp::RuntimeFunction FnID);
+
+  CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
+                                      ArrayRef<Value *> Args,
+                                      StringRef Name = "");
 
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
   LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef LocStr,

@@ -3755,20 +3755,6 @@ bool SIRegisterInfo::isAGPR(const MachineRegisterInfo &MRI,
   return RC && isAGPRClass(RC);
 }
 
-bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
-                                    const TargetRegisterClass *SrcRC,
-                                    unsigned SubReg,
-                                    const TargetRegisterClass *DstRC,
-                                    unsigned DstSubReg,
-                                    const TargetRegisterClass *NewRC,
-                                    LiveIntervals &LIS) const {
-  // TODO: This should be more aggressive, but be more cautious with very wide
-  // tuples.
-  unsigned NewSize = getRegSizeInBits(*NewRC);
-  return NewSize <= 128 || NewSize <= getRegSizeInBits(*SrcRC) ||
-         NewSize <= getRegSizeInBits(*DstRC);
-}
-
 unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                              MachineFunction &MF) const {
   unsigned MinOcc = ST.getOccupancyWithWorkGroupSizes(MF).first;

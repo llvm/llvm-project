@@ -235,7 +235,7 @@ void InitializePlatformEarly() {
   }
   // In some configurations, the max_vm is expanded, but much of this space is
   // already mapped. TSAN will not work in this configuration.
-  if (!MemoryRangeIsAvailable(HiAppMemEnd() - 1, HiAppMemEnd())) {
+  if (!MemoryRangeIsAvailable(HiAppMemEnd() - 1, HiAppMemEnd() - 1)) {
     Report(
         "ThreadSanitizer: Unsupported virtual memory layout: Address %p is "
         "already mapped.\n",

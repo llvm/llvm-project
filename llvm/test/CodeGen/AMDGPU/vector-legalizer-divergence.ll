@@ -10,18 +10,17 @@ define amdgpu_kernel void @spam(ptr addrspace(1) noalias %arg) {
 ; CHECK-LABEL: spam:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; CHECK-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
-; CHECK-NEXT:    v_mov_b32_e32 v5, 0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_mov_b32 s3, 0xf000
 ; CHECK-NEXT:    s_mov_b32 s2, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
-; CHECK-NEXT:    v_mov_b32_e32 v0, v5
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0x7ff80000
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[0:3], 0 addr64 offset:16
+; CHECK-NEXT:    buffer_store_dwordx4 v[1:4], v[0:1], s[0:3], 0 addr64 offset:16
 ; CHECK-NEXT:    s_waitcnt expcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v2, v5
-; CHECK-NEXT:    v_mov_b32_e32 v3, v5
-; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[0:3], 0 addr64 offset:48
+; CHECK-NEXT:    v_mov_b32_e32 v3, v1
+; CHECK-NEXT:    v_mov_b32_e32 v4, v1
+; CHECK-NEXT:    buffer_store_dwordx4 v[1:4], v[0:1], s[0:3], 0 addr64 offset:48
 ; CHECK-NEXT:    s_endpgm
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = zext i32 %tmp to i64
