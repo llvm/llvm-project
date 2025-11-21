@@ -105,7 +105,7 @@ protected:
   Matcher(KindTy K) : Kind(K) {}
 
 public:
-  virtual ~Matcher() {}
+  virtual ~Matcher() = default;
 
   unsigned getSize() const { return Size; }
   void setSize(unsigned sz) { Size = sz; }

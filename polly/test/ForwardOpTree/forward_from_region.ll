@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-optree>' -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=polly-custom<optree>' -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Move instructions from region statements.
 ;

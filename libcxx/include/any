@@ -88,7 +88,6 @@ namespace std {
 #  include <__new/allocate.h>
 #  include <__type_traits/add_cv_quals.h>
 #  include <__type_traits/add_pointer.h>
-#  include <__type_traits/aligned_storage.h>
 #  include <__type_traits/conditional.h>
 #  include <__type_traits/decay.h>
 #  include <__type_traits/enable_if.h>
@@ -147,14 +146,13 @@ template <class _ValueType>
 _LIBCPP_HIDE_FROM_ABI add_pointer_t<_ValueType> any_cast(any*) _NOEXCEPT;
 
 namespace __any_imp {
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
-using _Buffer _LIBCPP_NODEBUG = aligned_storage_t<3 * sizeof(void*), alignof(void*)>;
-_LIBCPP_SUPPRESS_DEPRECATED_POP
+inline constexpr size_t __small_buffer_size      = 3 * sizeof(void*);
+inline constexpr size_t __small_buffer_alignment = alignof(void*);
 
 template <class _Tp>
 using _IsSmallObject _LIBCPP_NODEBUG =
     integral_constant<bool,
-                      sizeof(_Tp) <= sizeof(_Buffer) && alignof(_Buffer) % alignof(_Tp) == 0 &&
+                      sizeof(_Tp) <= __small_buffer_size && alignof(_Tp) <= __small_buffer_alignment &&
                           is_nothrow_move_constructible<_Tp>::value >;
 
 enum class _Action { _Destroy, _Copy, _Move, _Get, _TypeInfo };
@@ -284,7 +282,7 @@ private:
   union _Storage {
     _LIBCPP_HIDE_FROM_ABI constexpr _Storage() : __ptr(nullptr) {}
     void* __ptr;
-    __any_imp::_Buffer __buf;
+    alignas(__any_imp::__small_buffer_alignment) char __buf[__any_imp::__small_buffer_size];
   };
 
   _LIBCPP_HIDE_FROM_ABI void*

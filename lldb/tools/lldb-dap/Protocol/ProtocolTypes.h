@@ -28,8 +28,9 @@
 #include <optional>
 #include <string>
 
-#define LLDB_DAP_INVALID_VARRERF UINT64_MAX
+#define LLDB_DAP_INVALID_VARRERF INT64_MAX
 #define LLDB_DAP_INVALID_SRC_REF 0
+#define LLDB_DAP_INVALID_VALUE_LOC 0
 
 namespace lldb_dap::protocol {
 
@@ -1006,6 +1007,36 @@ struct Variable {
 };
 llvm::json::Value toJSON(const Variable &);
 bool fromJSON(const llvm::json::Value &, Variable &, llvm::json::Path);
+
+enum ExceptionBreakMode : unsigned {
+  eExceptionBreakModeNever,
+  eExceptionBreakModeAlways,
+  eExceptionBreakModeUnhandled,
+  eExceptionBreakModeUserUnhandled,
+};
+llvm::json::Value toJSON(ExceptionBreakMode);
+
+struct ExceptionDetails {
+  /// Message contained in the exception.
+  std::string message;
+
+  /// Short type name of the exception object.
+  std::string typeName;
+
+  /// Fully-qualified type name of the exception object.
+  std::string fullTypeName;
+
+  /// An expression that can be evaluated in the current scope to obtain the
+  /// exception object.
+  std::string evaluateName;
+
+  /// Stack trace at the time the exception was thrown.
+  std::string stackTrace;
+
+  /// Details of the exception contained by this exception, if any.
+  std::vector<ExceptionDetails> innerException;
+};
+llvm::json::Value toJSON(const ExceptionDetails &);
 
 } // namespace lldb_dap::protocol
 

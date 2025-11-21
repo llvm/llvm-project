@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s -pipeliner-experimental-cg=true -terminal-rule=0 | FileCheck %s
 
 ; Test that the pipeliner cause an assert and correctly pipelines the
 ; loop.

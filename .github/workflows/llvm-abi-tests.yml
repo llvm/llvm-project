@@ -10,13 +10,13 @@ on:
       - 'release/**'
     paths:
       - 'llvm/**'
-      - '.github/workflows/llvm-tests.yml'
+      - '.github/workflows/llvm-abi-tests.yml'
   pull_request:
     branches:
       - 'release/**'
     paths:
       - 'llvm/**'
-      - '.github/workflows/llvm-tests.yml'
+      - '.github/workflows/llvm-abi-tests.yml'
 
 concurrency:
   # Skip intermediate builds: always.
@@ -72,6 +72,8 @@ jobs:
     if: github.repository_owner == 'llvm'
     needs: abi-dump-setup
     runs-on: ubuntu-24.04
+    container:
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:f80125c0f767e29b8616210c0fd5cea2cd1f4fb6f2ca86d89f6016b6329b8d7f" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b"
     strategy:
       matrix:
         name:
@@ -87,19 +89,6 @@ jobs:
             ref: ${{ github.sha }}
             repo: ${{ github.repository }}
     steps:
-      - name: Install Ninja
-        uses: llvm/actions/install-ninja@main
-      - name: Install abi-compliance-checker
-        run: |
-          sudo apt-get update
-          sudo apt-get -y install abi-dumper autoconf pkg-config
-      - name: Install universal-ctags
-        run: |
-          git clone https://github.com/universal-ctags/ctags.git
-          cd ctags
-          ./autogen.sh
-          ./configure
-          sudo make install
       - name: Download source code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -128,14 +117,14 @@ jobs:
           # Remove symbol versioning from dumps, so we can compare across major versions.
           sed -i 's/LLVM_${{ matrix.llvm_version_major }}/LLVM_NOVERSION/' ${{ matrix.ref }}.abi
       - name: Upload ABI file
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # 4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.ref }}.abi
 
       - name: Upload symbol list file
         if: matrix.name == 'build-baseline'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # 4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
         with:
           name: symbol-list
           path: llvm.symbols
@@ -143,30 +132,28 @@ jobs:
   abi-compare:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-24.04
+    container:
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:f80125c0f767e29b8616210c0fd5cea2cd1f4fb6f2ca86d89f6016b6329b8d7f" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b
     needs:
       - abi-dump-setup
       - abi-dump
     steps:
       - name: Download baseline
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: build-baseline
           path: build-baseline
       - name: Download latest
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: build-latest
           path: build-latest
       - name: Download symbol list
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: symbol-list
           path: symbol-list
 
-      - name: Install abi-compliance-checker
-        run: |
-          sudo apt-get update
-          sudo apt-get -y install abi-compliance-checker
       - name: Compare ABI
         run: |
           if [ -s symbol-list/llvm.symbols ]; then
@@ -179,7 +166,7 @@ jobs:
           abi-compliance-checker $EXTRA_ARGS -l libLLVM.so -old build-baseline/*.abi -new build-latest/*.abi || test "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c"
       - name: Upload ABI Comparison
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # 4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
         with:
           name: compat-report-${{ github.sha }}
           path: compat_reports/

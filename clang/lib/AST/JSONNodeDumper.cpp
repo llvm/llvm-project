@@ -272,15 +272,13 @@ void JSONNodeDumper::writeIncludeStack(PresumedLoc Loc, bool JustFirst) {
   JOS.attributeEnd();
 }
 
-void JSONNodeDumper::writeBareSourceLocation(SourceLocation Loc,
-                                             bool IsSpelling) {
+void JSONNodeDumper::writeBareSourceLocation(SourceLocation Loc) {
   PresumedLoc Presumed = SM.getPresumedLoc(Loc);
-  unsigned ActualLine = IsSpelling ? SM.getSpellingLineNumber(Loc)
-                                   : SM.getExpansionLineNumber(Loc);
-  StringRef ActualFile = SM.getBufferName(Loc);
-
   if (Presumed.isValid()) {
-    JOS.attribute("offset", SM.getDecomposedLoc(Loc).second);
+    StringRef ActualFile = SM.getBufferName(Loc);
+    auto [FID, FilePos] = SM.getDecomposedLoc(Loc);
+    unsigned ActualLine = SM.getLineNumber(FID, FilePos);
+    JOS.attribute("offset", FilePos);
     if (LastLocFilename != ActualFile) {
       JOS.attribute("file", ActualFile);
       JOS.attribute("line", ActualLine);
@@ -318,18 +316,17 @@ void JSONNodeDumper::writeSourceLocation(SourceLocation Loc) {
   if (Expansion != Spelling) {
     // If the expansion and the spelling are different, output subobjects
     // describing both locations.
-    JOS.attributeObject("spellingLoc", [Spelling, this] {
-      writeBareSourceLocation(Spelling, /*IsSpelling*/ true);
-    });
+    JOS.attributeObject(
+        "spellingLoc", [Spelling, this] { writeBareSourceLocation(Spelling); });
     JOS.attributeObject("expansionLoc", [Expansion, Loc, this] {
-      writeBareSourceLocation(Expansion, /*IsSpelling*/ false);
+      writeBareSourceLocation(Expansion);
       // If there is a macro expansion, add extra information if the interesting
       // bit is the macro arg expansion.
       if (SM.isMacroArgExpansion(Loc))
         JOS.attribute("isMacroArgExpansion", true);
     });
   } else
-    writeBareSourceLocation(Spelling, /*IsSpelling*/ true);
+    writeBareSourceLocation(Spelling);
 }
 
 void JSONNodeDumper::writeSourceRange(SourceRange R) {

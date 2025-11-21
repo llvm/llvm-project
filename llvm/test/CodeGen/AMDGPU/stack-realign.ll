@@ -295,9 +295,9 @@ define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:1028 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
 ; GCN-NEXT:    v_writelane_b32 v40, s16, 2
-; GCN-NEXT:    v_mov_b32_e32 v32, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s34, 3
 ; GCN-NEXT:    s_mov_b32 s34, s32
+; GCN-NEXT:    v_mov_b32_e32 v32, 0
 ; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s33 offset:1024
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s34

@@ -65,8 +65,8 @@ func.func @reshape_ranked_memref_to_ranked(%input : memref<2x3xf32>,
 func.func @reshape_unranked_memref_to_ranked(%input : memref<2x3xf32>,
                                         %shape : memref<2xindex>) {
   %unranked_input = memref.cast %input : memref<2x3xf32> to memref<*xf32>
-  %output = memref.reshape %input(%shape)
-                : (memref<2x3xf32>, memref<2xindex>) -> memref<?x?xf32>
+  %output = memref.reshape %unranked_input(%shape)
+                : (memref<*xf32>, memref<2xindex>) -> memref<?x?xf32>
 
   %unranked_output = memref.cast %output : memref<?x?xf32> to memref<*xf32>
   call @printMemrefF32(%unranked_output) : (memref<*xf32>) -> ()
@@ -95,8 +95,8 @@ func.func @reshape_unranked_memref_to_unranked(%input : memref<2x3xf32>,
                                           %shape : memref<2xindex>) {
   %unranked_input = memref.cast %input : memref<2x3xf32> to memref<*xf32>
   %dyn_size_shape = memref.cast %shape : memref<2xindex> to memref<?xindex>
-  %output = memref.reshape %input(%dyn_size_shape)
-                : (memref<2x3xf32>, memref<?xindex>) -> memref<*xf32>
+  %output = memref.reshape %unranked_input(%dyn_size_shape)
+                : (memref<*xf32>, memref<?xindex>) -> memref<*xf32>
 
   call @printMemrefF32(%output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 2] strides = [2, 1] data =

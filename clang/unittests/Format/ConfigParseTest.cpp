@@ -172,6 +172,16 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BinPackLongBracedList);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
+  CHECK_PARSE_BOOL(BreakAfterOpenBracketBracedList);
+  CHECK_PARSE_BOOL(BreakAfterOpenBracketFunction);
+  CHECK_PARSE_BOOL(BreakAfterOpenBracketIf);
+  CHECK_PARSE_BOOL(BreakAfterOpenBracketLoop);
+  CHECK_PARSE_BOOL(BreakAfterOpenBracketSwitch);
+  CHECK_PARSE_BOOL(BreakBeforeCloseBracketBracedList);
+  CHECK_PARSE_BOOL(BreakBeforeCloseBracketFunction);
+  CHECK_PARSE_BOOL(BreakBeforeCloseBracketIf);
+  CHECK_PARSE_BOOL(BreakBeforeCloseBracketLoop);
+  CHECK_PARSE_BOOL(BreakBeforeCloseBracketSwitch);
   CHECK_PARSE_BOOL(BreakBeforeTemplateCloser);
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakStringLiterals);
@@ -533,20 +543,23 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("EnumTrailingComma: Remove", EnumTrailingComma,
               FormatStyle::ETC_Remove);
 
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
-  CHECK_PARSE("AlignAfterOpenBracket: Align", AlignAfterOpenBracket,
-              FormatStyle::BAS_Align);
-  CHECK_PARSE("AlignAfterOpenBracket: DontAlign", AlignAfterOpenBracket,
-              FormatStyle::BAS_DontAlign);
-  CHECK_PARSE("AlignAfterOpenBracket: AlwaysBreak", AlignAfterOpenBracket,
-              FormatStyle::BAS_AlwaysBreak);
-  CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracket,
-              FormatStyle::BAS_BlockIndent);
+  Style.AlignAfterOpenBracket = false;
+  CHECK_PARSE("AlignAfterOpenBracket: Align", AlignAfterOpenBracket, true);
+  CHECK_PARSE("AlignAfterOpenBracket: DontAlign", AlignAfterOpenBracket, false);
   // For backward compatibility:
-  CHECK_PARSE("AlignAfterOpenBracket: false", AlignAfterOpenBracket,
-              FormatStyle::BAS_DontAlign);
-  CHECK_PARSE("AlignAfterOpenBracket: true", AlignAfterOpenBracket,
-              FormatStyle::BAS_Align);
+  CHECK_PARSE("AlignAfterOpenBracket: AlwaysBreak", AlignAfterOpenBracket,
+              true);
+  CHECK_PARSE("AlignAfterOpenBracket: AlwaysBreak\n"
+              "BreakAfterOpenBracketIf: false",
+              BreakAfterOpenBracketIf, false);
+  CHECK_PARSE("BreakAfterOpenBracketLoop: true\n"
+              "AlignAfterOpenBracket: AlwaysBreak",
+              BreakAfterOpenBracketLoop, true);
+  CHECK_PARSE("AlignAfterOpenBracket: false", AlignAfterOpenBracket, false);
+  CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracket,
+              true);
+  Style.AlignAfterOpenBracket = false;
+  CHECK_PARSE("AlignAfterOpenBracket: true", AlignAfterOpenBracket, true);
 
   Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
   CHECK_PARSE("AlignEscapedNewlines: DontAlign", AlignEscapedNewlines,
@@ -576,20 +589,20 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 
   CHECK_PARSE("AlignTrailingComments: Leave", AlignTrailingComments,
               FormatStyle::TrailingCommentsAlignmentStyle(
-                  {FormatStyle::TCAS_Leave, 0}));
+                  {FormatStyle::TCAS_Leave, 0, true}));
   CHECK_PARSE("AlignTrailingComments: Always", AlignTrailingComments,
               FormatStyle::TrailingCommentsAlignmentStyle(
-                  {FormatStyle::TCAS_Always, 0}));
+                  {FormatStyle::TCAS_Always, 0, true}));
   CHECK_PARSE("AlignTrailingComments: Never", AlignTrailingComments,
               FormatStyle::TrailingCommentsAlignmentStyle(
-                  {FormatStyle::TCAS_Never, 0}));
+                  {FormatStyle::TCAS_Never, 0, true}));
   // For backwards compatibility
   CHECK_PARSE("AlignTrailingComments: true", AlignTrailingComments,
               FormatStyle::TrailingCommentsAlignmentStyle(
-                  {FormatStyle::TCAS_Always, 0}));
+                  {FormatStyle::TCAS_Always, 0, true}));
   CHECK_PARSE("AlignTrailingComments: false", AlignTrailingComments,
               FormatStyle::TrailingCommentsAlignmentStyle(
-                  {FormatStyle::TCAS_Never, 0}));
+                  {FormatStyle::TCAS_Never, 0, true}));
   CHECK_PARSE_NESTED_VALUE("Kind: Always", AlignTrailingComments, Kind,
                            FormatStyle::TCAS_Always);
   CHECK_PARSE_NESTED_VALUE("Kind: Never", AlignTrailingComments, Kind,
@@ -598,6 +611,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
                            FormatStyle::TCAS_Leave);
   CHECK_PARSE_NESTED_VALUE("OverEmptyLines: 1234", AlignTrailingComments,
                            OverEmptyLines, 1234u);
+  CHECK_PARSE_NESTED_BOOL(AlignTrailingComments, AlignPPAndNotPP);
 
   Style.UseTab = FormatStyle::UT_ForIndentation;
   CHECK_PARSE("UseTab: Never", UseTab, FormatStyle::UT_Never);

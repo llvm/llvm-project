@@ -269,12 +269,13 @@ protected:
         loop.RequestTermination();
       });
     }
-    loop.AddCallback(
+    bool addition_succeeded = loop.AddCallback(
         [](MainLoopBase &loop) {
           loop.RequestTermination();
           FAIL() << "timeout";
         },
         timeout);
+    EXPECT_TRUE(addition_succeeded);
     auto handle = transport->RegisterMessageHandler(loop, message_handler);
     if (!handle)
       return handle.takeError();
@@ -367,7 +368,9 @@ protected:
   }
 
   void Run() {
-    loop.AddPendingCallback([](auto &loop) { loop.RequestTermination(); });
+    bool addition_succeeded =
+        loop.AddPendingCallback([](auto &loop) { loop.RequestTermination(); });
+    EXPECT_TRUE(addition_succeeded);
     EXPECT_THAT_ERROR(loop.Run().takeError(), Succeeded());
   }
 };
@@ -435,8 +438,9 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReadPartialMessage) {
   EXPECT_CALL(message_handler, Received(Request{5, "foo", std::nullopt}));
 
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), part1.size()), Succeeded());
-  loop.AddPendingCallback(
+  bool addition_succeeded = loop.AddPendingCallback(
       [](MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(Run(/*close_stdin=*/false), Succeeded());
   ASSERT_THAT_EXPECTED(input.Write(part2.data(), part2.size()), Succeeded());
   input.CloseWriteFileDescriptor();
@@ -454,15 +458,17 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReadWithZeroByteWrites) {
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), part1.size()), Succeeded());
 
   // Run the main loop once for the initial read.
-  loop.AddPendingCallback(
+  bool addition_succeeded = loop.AddPendingCallback(
       [](MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(Run(/*close_stdin=*/false), Succeeded());
 
   // zero-byte write.
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), 0),
                        Succeeded()); // zero-byte write.
-  loop.AddPendingCallback(
+  addition_succeeded = loop.AddPendingCallback(
       [](MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(Run(/*close_stdin=*/false), Succeeded());
 
   // Write the remaining part of the message.
@@ -569,8 +575,9 @@ TEST_F(JSONRPCTransportTest, ReadPartialMessage) {
   EXPECT_CALL(message_handler, Received(Request{42, "foo", std::nullopt}));
 
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), part1.size()), Succeeded());
-  loop.AddPendingCallback(
+  bool addition_succeeded = loop.AddPendingCallback(
       [](MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(Run(/*close_input=*/false), Succeeded());
 
   ASSERT_THAT_EXPECTED(input.Write(part2.data(), part2.size()), Succeeded());

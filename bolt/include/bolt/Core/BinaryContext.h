@@ -354,9 +354,6 @@ public:
   /// Newly created segments.
   std::vector<SegmentInfo> NewSegments;
 
-  /// Symbols that are expected to be undefined in MCContext during emission.
-  std::unordered_set<MCSymbol *> UndefinedSymbols;
-
   /// [name] -> [BinaryData*] map used for global symbol resolution.
   using SymbolMapType = StringMap<BinaryData *>;
   SymbolMapType GlobalSymbols;
@@ -500,7 +497,7 @@ public:
   ///
   /// As we fold identical functions, multiple symbols can point
   /// to the same BinaryFunction.
-  std::unordered_map<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
+  DenseMap<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
 
   /// A mutex that is used to control parallel accesses to SymbolToFunctionMap
   mutable llvm::sys::RWMutex SymbolToFunctionMapMutex;
@@ -781,11 +778,6 @@ public:
     uint64_t PseudoProbeLooseMatchedSampleCount{0};
     ///   the count of call matched samples
     uint64_t CallMatchedSampleCount{0};
-    ///   the number of stale functions that have matching number of blocks in
-    ///   the profile
-    uint64_t NumStaleFuncsWithEqualBlockCount{0};
-    ///   the number of blocks that have matching size but a differing hash
-    uint64_t NumStaleBlocksWithEqualIcount{0};
   } Stats;
 
   // Original binary execution count stats.
@@ -936,6 +928,16 @@ public:
   /// Return <Symbol, Addend> pair corresponding to the \p Address.
   std::pair<const MCSymbol *, uint64_t>
   handleAddressRef(uint64_t Address, BinaryFunction &BF, bool IsPCRel);
+
+  /// When \p Address inside function \p BF is a target of a control transfer
+  /// instruction (branch) from another function, return a corresponding symbol
+  /// that should be used by the branch. For example, main or secondary entry
+  /// point.
+  ///
+  /// If \p Address is an invalid destination, such as a constant island, return
+  /// nullptr and mark \p BF as ignored, since we cannot properly handle a
+  /// branch to a constant island.
+  MCSymbol *handleExternalBranchTarget(uint64_t Address, BinaryFunction &BF);
 
   /// Analyze memory contents at the given \p Address and return the type of
   /// memory contents (such as a possible jump table).

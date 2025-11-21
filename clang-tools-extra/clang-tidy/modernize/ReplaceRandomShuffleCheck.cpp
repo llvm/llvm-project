@@ -78,7 +78,7 @@ void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {
   }();
 
   std::string NewName = "shuffle";
-  StringRef ContainerText = Lexer::getSourceText(
+  const StringRef ContainerText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(MatchedDecl->getSourceRange()),
       *Result.SourceManager, getLangOpts());
   if (ContainerText.starts_with("std::"))

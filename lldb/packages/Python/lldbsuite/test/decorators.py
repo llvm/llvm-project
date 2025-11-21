@@ -647,6 +647,31 @@ def skipIfOutOfTreeDebugserver(func):
     return skipTestIfFn(is_out_of_tree_debugserver)(func)
 
 
+def skipIfOutOfTreeLibunwind(func):
+    """Decorate the item to skip tests if libunwind was not built in-tree."""
+
+    def is_out_of_tree_libunwind():
+        if not configuration.llvm_tools_dir:
+            return "out-of-tree libunwind"
+
+        # llvm_tools_dir is typically <build>/bin, so lib is a sibling.
+        llvm_lib_dir = os.path.join(
+            os.path.dirname(configuration.llvm_tools_dir), "lib"
+        )
+
+        if not os.path.isdir(llvm_lib_dir):
+            return "out-of-tree libunwind"
+
+        # Check for libunwind library (any extension).
+        for filename in os.listdir(llvm_lib_dir):
+            if filename.startswith("libunwind.") or filename.startswith("unwind."):
+                return None
+
+        return "out-of-tree libunwind"
+
+    return skipTestIfFn(is_out_of_tree_libunwind)(func)
+
+
 def skipIfRemote(func):
     """Decorate the item to skip tests if testing remotely."""
     return unittest.skipIf(lldb.remote_platform, "skip on remote platform")(func)

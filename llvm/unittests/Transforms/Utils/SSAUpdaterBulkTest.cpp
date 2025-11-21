@@ -393,9 +393,8 @@ static void RunEliminateNewDuplicatePHINode(
   }
 
   Function *F = M->getFunction("main");
-  auto BBIt = std::find_if(F->begin(), F->end(), [](const BasicBlock &Block) {
-    return Block.getName() == "testbb";
-  });
+  auto BBIt = llvm::find_if(
+      *F, [](const BasicBlock &Block) { return Block.getName() == "testbb"; });
   ASSERT_NE(BBIt, F->end());
   Check(*BBIt, EliminateNewDuplicatePHINodes);
 }

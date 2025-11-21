@@ -27,6 +27,14 @@ typedef __bf16 __m256bh_u __attribute__((__vector_size__(32), __aligned__(1)));
   __attribute__((__always_inline__, __nodebug__, __target__("avx10.2"),        \
                  __min_vector_width__(128)))
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
+#else
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256
+#endif
+
 static __inline __m256bh __DEFAULT_FN_ATTRS256 _mm256_setzero_pbh(void) {
   return __builtin_bit_cast(__m256bh, _mm256_setzero_ps());
 }
@@ -213,12 +221,12 @@ static __inline__ __m128bh __DEFAULT_FN_ATTRS128 _mm_move_sbh(__m128bh __a,
   return __a;
 }
 
-static __inline__ __m128bh __DEFAULT_FN_ATTRS128
+static __inline__ __m128bh __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_mask_move_sbh(__m128bh __W, __mmask8 __U, __m128bh __A, __m128bh __B) {
   return __builtin_ia32_selectsbf_128(__U, _mm_move_sbh(__A, __B), __W);
 }
 
-static __inline__ __m128bh __DEFAULT_FN_ATTRS128
+static __inline__ __m128bh __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_maskz_move_sbh(__mmask8 __U, __m128bh __A, __m128bh __B) {
   return __builtin_ia32_selectsbf_128(__U, _mm_move_sbh(__A, __B),
                                       _mm_setzero_pbh());
@@ -287,24 +295,24 @@ _mm256_mask_blend_pbh(__mmask16 __U, __m256bh __A, __m256bh __W) {
                                                 (__v16bf)__A);
 }
 
-static __inline__ __m128bh __DEFAULT_FN_ATTRS128
+static __inline__ __m128bh __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_permutex2var_pbh(__m128bh __A, __m128i __I, __m128bh __B) {
   return (__m128bh)__builtin_ia32_vpermi2varhi128((__v8hi)__A, (__v8hi)__I,
                                                   (__v8hi)__B);
 }
 
-static __inline__ __m256bh __DEFAULT_FN_ATTRS256
+static __inline__ __m256bh __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_permutex2var_pbh(__m256bh __A, __m256i __I, __m256bh __B) {
   return (__m256bh)__builtin_ia32_vpermi2varhi256((__v16hi)__A, (__v16hi)__I,
                                                   (__v16hi)__B);
 }
 
-static __inline__ __m128bh __DEFAULT_FN_ATTRS128
+static __inline__ __m128bh __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_permutexvar_pbh(__m128i __A, __m128bh __B) {
   return (__m128bh)__builtin_ia32_permvarhi128((__v8hi)__B, (__v8hi)__A);
 }
 
-static __inline__ __m256bh __DEFAULT_FN_ATTRS256
+static __inline__ __m256bh __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_permutexvar_pbh(__m256i __A, __m256bh __B) {
   return (__m256bh)__builtin_ia32_permvarhi256((__v16hi)__B, (__v16hi)__A);
 }
@@ -1080,6 +1088,7 @@ _mm_maskz_fnmsub_pbh(__mmask8 __U, __m128bh __A, __m128bh __B, __m128bh __C) {
 
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS256
-
+#undef __DEFAULT_FN_ATTRS128_CONSTEXPR
+#undef __DEFAULT_FN_ATTRS256_CONSTEXPR
 #endif
 #endif

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantParenthesesCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -32,15 +34,30 @@ AST_MATCHER(ParenExpr, isInMacro) {
 
 } // namespace
 
+RedundantParenthesesCheck::RedundantParenthesesCheck(StringRef Name,
+                                                     ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      AllowedDecls(utils::options::parseStringList(
+          Options.get("AllowedDecls", "std::max;std::min"))) {}
+
+void RedundantParenthesesCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AllowedDecls",
+                utils::options::serializeStringList(AllowedDecls));
+}
+
 void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
   const auto ConstantExpr =
       expr(anyOf(integerLiteral(), floatLiteral(), characterLiteral(),
                  cxxBoolLiteral(), stringLiteral(), cxxNullPtrLiteralExpr()));
   Finder->addMatcher(
-      parenExpr(subExpr(anyOf(parenExpr(), ConstantExpr, declRefExpr())),
-                unless(anyOf(isInMacro(),
-                             // sizeof(...) is common used.
-                             hasParent(unaryExprOrTypeTraitExpr()))))
+      parenExpr(
+          subExpr(anyOf(parenExpr(), ConstantExpr,
+                        declRefExpr(to(namedDecl(unless(
+                            matchers::matchesAnyListedName(AllowedDecls))))))),
+          unless(anyOf(isInMacro(),
+                       // sizeof(...) is common used.
+                       hasParent(unaryExprOrTypeTraitExpr()))))
           .bind("dup"),
       this);
 }

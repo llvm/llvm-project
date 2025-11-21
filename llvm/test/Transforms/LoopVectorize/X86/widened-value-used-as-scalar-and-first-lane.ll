@@ -44,7 +44,7 @@ define void @iv.4_used_as_vector_and_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP14]], ptr align 4 [[TMP34]], <4 x i1> [[TMP18]])
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP15]], ptr align 4 [[TMP35]], <4 x i1> [[TMP19]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD_3]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD_3]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:

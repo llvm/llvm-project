@@ -85,6 +85,35 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !3
 }
 
+; LOOP-UNROLL-LABEL: Loop Unroll: F[pragma_unroll_count2] Loop %for.body
+; LOOP-UNROLL-NEXT: Loop Size = 4
+; LOOP-UNROLL-NEXT: Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
+; LOOP-UNROLL-NEXT: Trying runtime unrolling on Loop:
+; LOOP-UNROLL-NEXT: Loop at depth 1 containing: %for.body<header><exiting>,%for.cond<latch>
+; LOOP-UNROLL-NEXT: Using epilog remainder.
+; LOOP-UNROLL-NEXT: Loop latch not terminated by a conditional branch.
+; LOOP-UNROLL-NEXT: UNROLLING loop %for.body by 5!
+
+; LOOP-UNROLL-FULL-LABEL: Loop Unroll: F[pragma_unroll_count2] Loop %for.body
+; LOOP-UNROLL-FULL-NEXT: Loop Size = 4
+; LOOP-UNROLL-FULL-NEXT: Not attempting partial/runtime unroll in FullLoopUnroll
+define void @pragma_unroll_count2(i64 %n) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.cond, %entry
+  %i = phi i64 [ 0, %entry ], [ %inc, %for.cond ]
+  %cmp = icmp ult i64 %i, %n
+  br i1 %cmp, label %for.cond, label %for.cond.cleanup
+
+for.cond:                                         ; preds = %for.body
+  %inc = add i64 %i, 8
+  br label %for.body, !llvm.loop !3
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+}
+
 ; LOOP-UNROLL: llvm.loop.unroll.disable
 ; LOOP-UNROLL-FULL: llvm.loop.unroll.enable
 !0 = !{!"llvm.loop.unroll.enable"}

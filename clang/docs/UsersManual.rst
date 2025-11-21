@@ -1090,7 +1090,7 @@ Usually, config file options are placed before command-line options, regardless
 of the actual operation to be performed. The exception is being made for the
 options prefixed with the ``$`` character. These will be used only when the linker
 is being invoked, and added after all of the command-line specified linker
-inputs. Here is some example of ``$``-prefixed options:
+inputs. Here is an example of ``$``-prefixed options:
 
 ::
 

@@ -29,9 +29,9 @@ jobs:
           sparse-checkout: |
             .github/
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@303c0aef88fc2fe5ff6d63d3b1596bfd83dfa1f9 # v3.30.4
+        uses: github/codeql-action/init@014f16e7ab1402f30e7c3329d33797e7948572db # v4.31.3
         with:
           languages: actions
           queries: security-extended
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@303c0aef88fc2fe5ff6d63d3b1596bfd83dfa1f9 # v3.30.4
+        uses: github/codeql-action/analyze@014f16e7ab1402f30e7c3329d33797e7948572db # v4.31.3

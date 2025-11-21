@@ -147,9 +147,8 @@ static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_sub_ps(__m256 __a,
 ///    A 256-bit vector of [4 x double] containing the right source operand.
 /// \returns A 256-bit vector of [4 x double] containing the alternating sums
 ///    and differences between both operands.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_addsub_pd(__m256d __a, __m256d __b)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_addsub_pd(__m256d __a, __m256d __b) {
   return (__m256d)__builtin_ia32_addsubpd256((__v4df)__a, (__v4df)__b);
 }
 
@@ -166,9 +165,8 @@ _mm256_addsub_pd(__m256d __a, __m256d __b)
 ///    A 256-bit vector of [8 x float] containing the right source operand.
 /// \returns A 256-bit vector of [8 x float] containing the alternating sums and
 ///    differences between both operands.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_addsub_ps(__m256 __a, __m256 __b)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_addsub_ps(__m256 __a, __m256 __b) {
   return (__m256)__builtin_ia32_addsubps256((__v8sf)__a, (__v8sf)__b);
 }
 

@@ -251,18 +251,15 @@ struct HistogramInfo {
 /// induction variable and the different reduction variables.
 class LoopVectorizationLegality {
 public:
-  LoopVectorizationLegality(Loop *L, PredicatedScalarEvolution &PSE,
-                            DominatorTree *DT, TargetTransformInfo *TTI,
-                            TargetLibraryInfo *TLI, Function *F,
-                            LoopAccessInfoManager &LAIs, LoopInfo *LI,
-                            OptimizationRemarkEmitter *ORE,
-                            LoopVectorizationRequirements *R,
-                            LoopVectorizeHints *H, DemandedBits *DB,
-                            AssumptionCache *AC, BlockFrequencyInfo *BFI,
-                            ProfileSummaryInfo *PSI, AAResults *AA)
+  LoopVectorizationLegality(
+      Loop *L, PredicatedScalarEvolution &PSE, DominatorTree *DT,
+      TargetTransformInfo *TTI, TargetLibraryInfo *TLI, Function *F,
+      LoopAccessInfoManager &LAIs, LoopInfo *LI, OptimizationRemarkEmitter *ORE,
+      LoopVectorizationRequirements *R, LoopVectorizeHints *H, DemandedBits *DB,
+      AssumptionCache *AC, bool AllowRuntimeSCEVChecks, AAResults *AA)
       : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT), LAIs(LAIs),
-        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC), BFI(BFI), PSI(PSI),
-        AA(AA) {}
+        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
+        AllowRuntimeSCEVChecks(AllowRuntimeSCEVChecks), AA(AA) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -720,9 +717,8 @@ private:
   /// Hold potentially faulting loads.
   SmallPtrSet<const Instruction *, 4> PotentiallyFaultingLoads;
 
-  /// BFI and PSI are used to check for profile guided size optimizations.
-  BlockFrequencyInfo *BFI;
-  ProfileSummaryInfo *PSI;
+  /// Whether or not creating SCEV predicates is allowed.
+  bool AllowRuntimeSCEVChecks;
 
   // Alias Analysis results used to check for possible aliasing with loads
   // used in uncountable exit conditions.

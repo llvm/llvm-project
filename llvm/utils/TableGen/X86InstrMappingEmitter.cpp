@@ -35,10 +35,10 @@ class X86InstrMappingEmitter {
   // to make the search more efficient
   std::map<uint64_t, std::vector<const CodeGenInstruction *>> CompressedInsts;
 
-  typedef std::pair<const CodeGenInstruction *, const CodeGenInstruction *>
-      Entry;
-  typedef std::map<StringRef, std::vector<const CodeGenInstruction *>>
-      PredicateInstMap;
+  using Entry =
+      std::pair<const CodeGenInstruction *, const CodeGenInstruction *>;
+  using PredicateInstMap =
+      std::map<StringRef, std::vector<const CodeGenInstruction *>>;
 
   // Hold all compressed instructions that need to check predicate
   PredicateInstMap PredicateInsts;

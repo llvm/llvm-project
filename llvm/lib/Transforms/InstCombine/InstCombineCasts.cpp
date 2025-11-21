@@ -1525,7 +1525,15 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   }
 
   // Try to extend the entire expression tree to the wide destination type.
-  if (shouldChangeType(SrcTy, DestTy) && canEvaluateSExtd(Src, DestTy)) {
+  bool ShouldExtendExpression = true;
+  Value *TruncSrc = nullptr;
+  // It is not desirable to extend expression in the trunc + sext pattern when
+  // destination type is narrower than original (pre-trunc) type.
+  if (match(Src, m_Trunc(m_Value(TruncSrc))))
+    if (TruncSrc->getType()->getScalarSizeInBits() > DestBitSize)
+      ShouldExtendExpression = false;
+  if (ShouldExtendExpression && shouldChangeType(SrcTy, DestTy) &&
+      canEvaluateSExtd(Src, DestTy)) {
     // Okay, we can transform this!  Insert the new expression now.
     LLVM_DEBUG(
         dbgs() << "ICE: EvaluateInDifferentType converting expression type"
@@ -1545,13 +1553,18 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
                                       ShAmt);
   }
 
-  Value *X;
-  if (match(Src, m_Trunc(m_Value(X)))) {
+  Value *X = TruncSrc;
+  if (X) {
     // If the input has more sign bits than bits truncated, then convert
     // directly to final type.
     unsigned XBitSize = X->getType()->getScalarSizeInBits();
-    if (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)
-      return CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
+    bool HasNSW = cast<TruncInst>(Src)->hasNoSignedWrap();
+    if (HasNSW || (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)) {
+      auto *Res = CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
+      if (auto *ResTrunc = dyn_cast<TruncInst>(Res); ResTrunc && HasNSW)
+        ResTrunc->setHasNoSignedWrap(true);
+      return Res;
+    }
 
     // If input is a trunc from the destination type, then convert into shifts.
     if (Src->hasOneUse() && X->getType() == DestTy) {
@@ -2135,7 +2148,7 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
   return nullptr;
 }
 
-Value *InstCombinerImpl::foldPtrToIntOfGEP(Type *IntTy, Value *Ptr) {
+Value *InstCombinerImpl::foldPtrToIntOrAddrOfGEP(Type *IntTy, Value *Ptr) {
   // Look through chain of one-use GEPs.
   Type *PtrTy = Ptr->getType();
   SmallVector<GEPOperator *> GEPs;
@@ -2197,7 +2210,7 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
       Mask->getType() == Ty)
     return BinaryOperator::CreateAnd(Builder.CreatePtrToInt(Ptr, Ty), Mask);
 
-  if (Value *V = foldPtrToIntOfGEP(Ty, SrcOp))
+  if (Value *V = foldPtrToIntOrAddrOfGEP(Ty, SrcOp))
     return replaceInstUsesWith(CI, V);
 
   Value *Vec, *Scalar, *Index;
@@ -2215,6 +2228,21 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
 }
 
 Instruction *InstCombinerImpl::visitPtrToAddr(PtrToAddrInst &CI) {
+  Value *SrcOp = CI.getPointerOperand();
+  Type *Ty = CI.getType();
+
+  // (ptrtoaddr (ptrmask P, M))
+  //    -> (and (ptrtoaddr P), M)
+  // This is generally beneficial as `and` is better supported than `ptrmask`.
+  Value *Ptr, *Mask;
+  if (match(SrcOp, m_OneUse(m_Intrinsic<Intrinsic::ptrmask>(m_Value(Ptr),
+                                                            m_Value(Mask)))) &&
+      Mask->getType() == Ty)
+    return BinaryOperator::CreateAnd(Builder.CreatePtrToAddr(Ptr), Mask);
+
+  if (Value *V = foldPtrToIntOrAddrOfGEP(Ty, SrcOp))
+    return replaceInstUsesWith(CI, V);
+
   // FIXME: Implement variants of ptrtoint folds.
   return commonCastTransforms(CI);
 }

@@ -625,7 +625,7 @@ define void @simple_histogram_rtdepcheck(ptr noalias %buckets, ptr %array, ptr %
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[VEC_IND]], ptr [[TMP15]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       middle.block:

@@ -19,7 +19,14 @@ def MemRef_Dialect : Dialect {
     manipulation ops, which are not strongly associated with any particular
     other dialect or domain abstraction.
   }];
-  let dependentDialects = ["arith::ArithDialect"];
+  let dependentDialects = [
+    // `arith` is a dependency because it is used to materialize constants,
+    // and in some canonicalization patterns.
+    "arith::ArithDialect",
+    // `ub` is a dependency because `AllocaOp::getDefaultValue` can produce a
+    // `ub.poison` value.
+    "ub::UBDialect"
+  ];
   let hasConstantMaterializer = 1;
 }
 

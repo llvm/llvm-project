@@ -394,9 +394,6 @@ def FeatureTRBE : Extension<"trbe", "TRBE", "FEAT_TRBE",
 def FeatureETE : Extension<"ete", "ETE", "FEAT_ETE",
   "Enable Embedded Trace Extension", [FeatureTRBE]>;
 
-def FeatureTME : ExtensionWithMArch<"tme", "TME", "FEAT_TME",
-  "Enable Transactional Memory Extension">;
-
 //===----------------------------------------------------------------------===//
 //  Armv9.1 Architecture Extensions
 //===----------------------------------------------------------------------===//
@@ -624,6 +621,22 @@ def FeatureF16F32DOT : ExtensionWithMArch<"f16f32dot", "F16F32DOT", "FEAT_F16F32
 
 def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM",
   "Enable Armv9.7-A Advanced SIMD half-precision matrix multiply-accumulate to single-precision", [FeatureNEON, FeatureFullFP16]>;
+
+//===----------------------------------------------------------------------===//
+//  Future Architecture Technologies
+//===----------------------------------------------------------------------===//
+
+def FeatureMOPS_GO: ExtensionWithMArch<"mops-go", "MOPS_GO", "FEAT_MOPS_GO",
+  "Enable memset acceleration granule only">;
+
+def FeatureBTIE: ExtensionWithMArch<"btie", "BTIE", "FEAT_BTIE",
+  "Enable Enhanced Branch Target Identification extension">;
+
+def FeatureS1POE2: ExtensionWithMArch<"poe2", "POE2", "FEAT_S1POE2",
+  "Enable Stage 1 Permission Overlays Extension 2 instructions">;
+
+def FeatureTEV: ExtensionWithMArch<"tev", "TEV", "FEAT_TEV",
+  "Enable TIndex Exception-like Vector instructions">;
 
 //===----------------------------------------------------------------------===//
 //  Other Features

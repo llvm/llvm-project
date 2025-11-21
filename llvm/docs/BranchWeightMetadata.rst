@@ -92,7 +92,7 @@ The second weight is optional and corresponds to the unwind branch.
 If only one weight is set, then it contains the execution count of the call
 and used in SamplePGO mode only as described for the call instruction. If both
 weights are specified then the second weight contains the count of unwind branch
-taken and the first weights contains the execution count of the call minus
+taken and the first weight contains the execution count of the call minus
 the count of unwind branch taken. Both weights specified are used to calculate
 BranchProbability as for BranchInst and for SamplePGO the sum of both weights
 is used.
@@ -223,7 +223,7 @@ indicates that it was called 2,590 times at runtime.
   !1 = !{!"function_entry_count", i64 2590}
 
 If "function_entry_count" has more than 2 operands, the subsequent operands are
-the GUID of the functions that needs to be imported by ThinLTO. This is only
+the GUID of the functions that need to be imported by ThinLTO. This is only
 set by sampling-based profile. It is needed because the sampling-based profile
 was collected on a binary that had already imported and inlined these functions,
 and we need to ensure the IR matches in the ThinLTO backends for profile

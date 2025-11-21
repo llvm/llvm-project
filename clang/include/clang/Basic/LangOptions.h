@@ -566,8 +566,8 @@ public:
   bool AtomicFineGrainedMemory = false;
   bool AtomicIgnoreDenormalMode = false;
 
-  /// Maximum number of allocation tokens (0 = no max), nullopt if none set (use
-  /// target default).
+  /// Maximum number of allocation tokens (0 = target SIZE_MAX), nullopt if none
+  /// set (use target SIZE_MAX).
   std::optional<uint64_t> AllocTokenMax;
 
   /// The allocation token mode.

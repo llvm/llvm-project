@@ -19,7 +19,7 @@ static bool isConcatenatedLiteralsOnPurpose(ASTContext *Ctx,
   // String literals surrounded by parentheses are assumed to be on purpose.
   //    i.e.:  const char* Array[] = { ("a" "b" "c"), "d", [...] };
 
-  TraversalKindScope RAII(*Ctx, TK_AsIs);
+  const TraversalKindScope RAII(*Ctx, TK_AsIs);
   auto Parents = Ctx->getParents(*Lit);
   if (Parents.size() == 1 && Parents[0].get<ParenExpr>() != nullptr)
     return true;
@@ -35,15 +35,15 @@ static bool isConcatenatedLiteralsOnPurpose(ASTContext *Ctx,
   //     };
   const SourceManager &SM = Ctx->getSourceManager();
   bool IndentedCorrectly = true;
-  SourceLocation FirstToken = Lit->getStrTokenLoc(0);
-  FileID BaseFID = SM.getFileID(FirstToken);
-  unsigned int BaseIndent = SM.getSpellingColumnNumber(FirstToken);
-  unsigned int BaseLine = SM.getSpellingLineNumber(FirstToken);
+  const SourceLocation FirstToken = Lit->getStrTokenLoc(0);
+  const FileID BaseFID = SM.getFileID(FirstToken);
+  const unsigned int BaseIndent = SM.getSpellingColumnNumber(FirstToken);
+  const unsigned int BaseLine = SM.getSpellingLineNumber(FirstToken);
   for (unsigned int TokNum = 1; TokNum < Lit->getNumConcatenated(); ++TokNum) {
-    SourceLocation Token = Lit->getStrTokenLoc(TokNum);
-    FileID FID = SM.getFileID(Token);
-    unsigned int Indent = SM.getSpellingColumnNumber(Token);
-    unsigned int Line = SM.getSpellingLineNumber(Token);
+    const SourceLocation Token = Lit->getStrTokenLoc(TokNum);
+    const FileID FID = SM.getFileID(Token);
+    const unsigned int Indent = SM.getSpellingColumnNumber(Token);
+    const unsigned int Line = SM.getSpellingLineNumber(Token);
     if (FID != BaseFID || Line != BaseLine + TokNum || Indent <= BaseIndent) {
       IndentedCorrectly = false;
       break;
@@ -100,7 +100,7 @@ void SuspiciousMissingCommaCheck::check(
   assert(InitializerList && ConcatenatedLiteral);
 
   // Skip small arrays as they often generate false-positive.
-  unsigned int Size = InitializerList->getNumInits();
+  const unsigned int Size = InitializerList->getNumInits();
   if (Size < SizeThreshold)
     return;
 

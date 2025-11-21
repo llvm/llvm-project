@@ -1583,7 +1583,10 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
               if (!TII->isAddImmediate(*DeadMI, Reg))
                 continue;
               LIS->RemoveMachineInstrFromMaps(*DeadMI);
+              Register AddReg = DeadMI->getOperand(1).getReg();
               DeadMI->eraseFromParent();
+              if (AddReg.isVirtual())
+                LIS->shrinkToUses(&LIS->getInterval(AddReg));
             }
           }
         }
@@ -1752,6 +1755,14 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
       if (!VNI || !PrevVNI || VNI != PrevVNI)
         return false;
     }
+
+    // If we define VL and need to move the definition up, check we can extend
+    // the live interval upwards from MI to PrevMI.
+    Register VL = MI.getOperand(0).getReg();
+    if (VL.isVirtual() && LIS &&
+        LIS->getInterval(VL).overlaps(LIS->getInstructionIndex(PrevMI),
+                                      LIS->getInstructionIndex(MI)))
+      return false;
   }
 
   assert(PrevMI.getOperand(2).isImm() && MI.getOperand(2).isImm());
@@ -1869,11 +1880,15 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   // Loop over the dead AVL values, and delete them now.  This has
   // to be outside the above loop to avoid invalidating iterators.
   for (auto *MI : ToDelete) {
+    assert(MI->getOpcode() == RISCV::ADDI);
+    Register AddReg = MI->getOperand(1).getReg();
     if (LIS) {
       LIS->removeInterval(MI->getOperand(0).getReg());
       LIS->RemoveMachineInstrFromMaps(*MI);
     }
     MI->eraseFromParent();
+    if (LIS && AddReg.isVirtual())
+      LIS->shrinkToUses(&LIS->getInterval(AddReg));
   }
 }
 

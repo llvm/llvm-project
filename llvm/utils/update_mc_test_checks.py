@@ -24,14 +24,16 @@ ERROR_CHECK_RE = re.compile(r"# COM: .*")
 OUTPUT_SKIPPED_RE = re.compile(r"(.text)")
 COMMENT = {"asm": "//", "dasm": "#"}
 
+SUBSTITUTIONS = [
+    ("%extract-encodings", "sed -n 's/.*encoding://p'"),
+]
+
 
 def invoke_tool(exe, check_rc, cmd_args, testline, verbose=False):
-    if isinstance(cmd_args, list):
-        args = [applySubstitutions(a, substitutions) for a in cmd_args]
-    else:
-        args = cmd_args
+    substs = SUBSTITUTIONS + [(t, exe) for t in mc_LIKE_TOOLS]
+    args = [common.applySubstitutions(cmd, substs) for cmd in cmd_args.split("|")]
 
-    cmd = 'echo "' + testline + '" | ' + exe + " " + args
+    cmd = 'echo "' + testline + '" | ' + exe + " " + " | ".join(args)
     if verbose:
         print("Command: ", cmd)
 
@@ -128,9 +130,6 @@ def update_test(ti: common.TestInfo):
         mc_mode = "asm"
     elif ti.path.endswith(".txt"):
         mc_mode = "dasm"
-
-        if ti.args.sort:
-            raise Exception("sorting with dasm(.txt) file is not supported!")
     else:
         common.warn("Expected .s and .txt, Skipping file : ", ti.path)
         return
@@ -210,9 +209,6 @@ def update_test(ti: common.TestInfo):
     testlines = list(dict.fromkeys(testlines))
     common.debug("Valid test line found: ", len(testlines))
 
-    run_list_size = len(run_list)
-    testnum = len(testlines)
-
     raw_output = []
     raw_prefixes = []
     for (
@@ -250,18 +246,17 @@ def update_test(ti: common.TestInfo):
 
     output_lines = []
     generated_prefixes = {}
+    sort_keys = {}
     used_prefixes = set()
     prefix_set = set([prefix for p in run_list for prefix in p[0]])
     common.debug("Rewriting FileCheck prefixes:", str(prefix_set))
 
-    for test_id in range(testnum):
-        input_line = testlines[test_id]
-
+    for test_id, input_line in enumerate(testlines):
         # a {prefix : output, [runid] } dict
         # insert output to a prefix-key dict, and do a max sorting
         # to select the most-used prefix which share the same output string
         p_dict = {}
-        for run_id in range(run_list_size):
+        for run_id in range(len(run_list)):
             out = raw_output[run_id][test_id]
 
             if hasErr(out):
@@ -269,44 +264,44 @@ def update_test(ti: common.TestInfo):
             else:
                 o = getOutputString(out)
 
-            prefixes = raw_prefixes[run_id]
-
-            for p in prefixes:
+            for p in raw_prefixes[run_id]:
                 if p not in p_dict:
                     p_dict[p] = o, [run_id]
+                    continue
+
+                if p_dict[p] == (None, []):
+                    continue
+
+                prev_o, run_ids = p_dict[p]
+                if o == prev_o:
+                    run_ids.append(run_id)
+                    p_dict[p] = o, run_ids
                 else:
-                    if p_dict[p] == (None, []):
-                        continue
-
-                    prev_o, run_ids = p_dict[p]
-                    if o == prev_o:
-                        run_ids.append(run_id)
-                        p_dict[p] = o, run_ids
-                    else:
-                        # conflict, discard
-                        p_dict[p] = None, []
-
-        p_dict_sorted = dict(sorted(p_dict.items(), key=lambda item: -len(item[1][1])))
+                    # conflict, discard
+                    p_dict[p] = None, []
 
         # prefix is selected and generated with most shared output lines
         # each run_id can only be used once
-        used_runid = set()
-
+        used_run_ids = set()
         selected_prefixes = set()
-        for prefix, tup in p_dict_sorted.items():
-            o, run_ids = tup
-
-            if len(run_ids) == 0:
-                continue
-
-            skip = False
-            for i in run_ids:
-                if i in used_runid:
-                    skip = True
-                else:
-                    used_runid.add(i)
-            if not skip:
+        get_num_runs = lambda item: len(item[1][1])
+        p_dict_sorted = sorted(p_dict.items(), key=get_num_runs, reverse=True)
+        for prefix, (o, run_ids) in p_dict_sorted:
+            if run_ids and used_run_ids.isdisjoint(run_ids):
                 selected_prefixes.add(prefix)
+
+            used_run_ids.update(run_ids)
+
+        # Use smallest outputs across RUN lines as sorting keys for
+        # disassembler tests. Sort by instruction codes if no RUN line
+        # produced a disassembled instruction.
+        if mc_mode == "dasm":
+            instr_outs = [
+                o
+                for prefix, (o, run_ids) in p_dict_sorted
+                if o is not None and "encoding:" in o
+            ]
+            sort_keys[input_line] = min(instr_outs) if instr_outs else input_line
 
         # Generate check lines in alphabetical order.
         check_lines = []
@@ -381,7 +376,7 @@ def update_test(ti: common.TestInfo):
                     line = l.split("\n")[0]
 
                 # runline placed on the top
-                return (not isRunLine(line), line)
+                return (not isRunLine(line), sort_keys.get(line, line))
 
             test_units = sorted(test_units, key=getkey)
 

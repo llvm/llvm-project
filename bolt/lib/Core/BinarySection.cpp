@@ -112,8 +112,10 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
       RI = ROE;
 
       // Skip undefined symbols.
-      auto HasUndefSym = [this](const auto &Relocation) {
-        return BC.UndefinedSymbols.count(Relocation.Symbol);
+      auto HasUndefSym = [](const auto &Relocation) {
+        return Relocation.Symbol && Relocation.Symbol->isTemporary() &&
+               Relocation.Symbol->isUndefined() &&
+               !Relocation.Symbol->isRegistered();
       };
 
       if (std::any_of(ROI, ROE, HasUndefSym))

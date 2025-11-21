@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -S \
-; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S -polly-invariant-load-hoisting=true < %s | FileCheck %s
 ;
 ; CHECK:      entry:
 ; CHECK-NEXT:   %outvalue.141.phiops = alloca i64

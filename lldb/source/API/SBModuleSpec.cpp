@@ -9,6 +9,7 @@
 #include "lldb/API/SBModuleSpec.h"
 #include "Utils.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBTarget.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
@@ -172,6 +173,18 @@ void SBModuleSpec::SetObjectSize(uint64_t object_size) {
   LLDB_INSTRUMENT_VA(this, object_size);
 
   m_opaque_up->SetObjectSize(object_size);
+}
+
+SBTarget SBModuleSpec::GetTarget() {
+  LLDB_INSTRUMENT_VA(this);
+
+  return SBTarget(m_opaque_up->GetTargetSP());
+}
+
+void SBModuleSpec::SetTarget(SBTarget target) {
+  LLDB_INSTRUMENT_VA(this, target);
+
+  m_opaque_up->SetTarget(target.GetSP());
 }
 
 SBModuleSpecList::SBModuleSpecList() : m_opaque_up(new ModuleSpecList()) {

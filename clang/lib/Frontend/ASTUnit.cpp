@@ -26,6 +26,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -40,7 +41,6 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
@@ -518,14 +518,14 @@ class ASTInfoCollector : public ASTReaderListener {
   LangOptions &LangOpts;
   CodeGenOptions &CodeGenOpts;
   TargetOptions &TargetOpts;
-  unsigned &Counter;
+  uint32_t &Counter;
 
 public:
   ASTInfoCollector(HeaderSearchOptions &HSOpts,
                    std::string &SpecificModuleCachePath,
                    PreprocessorOptions &PPOpts, LangOptions &LangOpts,
                    CodeGenOptions &CodeGenOpts, TargetOptions &TargetOpts,
-                   unsigned &Counter)
+                   uint32_t &Counter)
       : HSOpts(HSOpts), SpecificModuleCachePath(SpecificModuleCachePath),
         PPOpts(PPOpts), LangOpts(LangOpts), CodeGenOpts(CodeGenOpts),
         TargetOpts(TargetOpts), Counter(Counter) {}
@@ -577,7 +577,7 @@ public:
   }
 
   void ReadCounter(const serialization::ModuleFile &M,
-                   unsigned NewCounter) override {
+                   uint32_t NewCounter) override {
     Counter = NewCounter;
   }
 };

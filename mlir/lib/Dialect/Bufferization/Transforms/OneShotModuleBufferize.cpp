@@ -285,12 +285,8 @@ static void removeBufferizationAttributes(BlockArgument bbArg) {
 static func::FuncOp
 getCalledFunction(func::CallOp callOp,
                   mlir::SymbolTableCollection &symbolTable) {
-  SymbolRefAttr sym =
-      llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
-  if (!sym)
-    return nullptr;
   return dyn_cast_or_null<func::FuncOp>(
-      symbolTable.lookupNearestSymbolFrom(callOp, sym));
+      callOp.resolveCallableInTable(&symbolTable));
 }
 
 /// Return "true" if the given function signature has tensor semantics.

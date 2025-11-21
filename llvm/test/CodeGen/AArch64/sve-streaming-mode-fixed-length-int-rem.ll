@@ -883,9 +883,8 @@ define void @srem_v8i32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    movprfx z5, z2
 ; CHECK-NEXT:    sdiv z5.s, p0/m, z5.s, z3.s
 ; CHECK-NEXT:    msb z0.s, p0/m, z4.s, z1.s
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    mls z1.s, p0/m, z5.s, z3.s
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    mls z2.s, p0/m, z5.s, z3.s
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: srem_v8i32:
@@ -1013,9 +1012,8 @@ define void @srem_v4i64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    movprfx z5, z2
 ; CHECK-NEXT:    sdiv z5.d, p0/m, z5.d, z3.d
 ; CHECK-NEXT:    msb z0.d, p0/m, z4.d, z1.d
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    mls z1.d, p0/m, z5.d, z3.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    mls z2.d, p0/m, z5.d, z3.d
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: srem_v4i64:
@@ -1933,9 +1931,8 @@ define void @urem_v8i32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    movprfx z5, z2
 ; CHECK-NEXT:    udiv z5.s, p0/m, z5.s, z3.s
 ; CHECK-NEXT:    msb z0.s, p0/m, z4.s, z1.s
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    mls z1.s, p0/m, z5.s, z3.s
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    mls z2.s, p0/m, z5.s, z3.s
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: urem_v8i32:
@@ -2063,9 +2060,8 @@ define void @urem_v4i64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    movprfx z5, z2
 ; CHECK-NEXT:    udiv z5.d, p0/m, z5.d, z3.d
 ; CHECK-NEXT:    msb z0.d, p0/m, z4.d, z1.d
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    mls z1.d, p0/m, z5.d, z3.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    mls z2.d, p0/m, z5.d, z3.d
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: urem_v4i64:

@@ -545,8 +545,8 @@ define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) {
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP18]], 2
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
-; IF-EVL-NEXT:    [[TMP12:%.*]] = mul <vscale x 2 x i64> [[TMP6]], splat (i64 1)
-; IF-EVL-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP12]]
+; IF-EVL-NEXT:    [[TMP8:%.*]] = mul <vscale x 2 x i64> [[TMP6]], splat (i64 1)
+; IF-EVL-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vscale.i32()
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = mul nuw i32 [[TMP13]], 2
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = sub i32 [[TMP19]], 1
@@ -589,8 +589,8 @@ define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) {
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TC]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
-; NO-VP-NEXT:    [[TMP7:%.*]] = mul <vscale x 2 x i64> [[TMP6]], splat (i64 1)
-; NO-VP-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP7]]
+; NO-VP-NEXT:    [[TMP5:%.*]] = mul nuw nsw <vscale x 2 x i64> [[TMP6]], splat (i64 1)
+; NO-VP-NEXT:    [[INDUCTION:%.*]] = add nuw nsw <vscale x 2 x i64> zeroinitializer, [[TMP5]]
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; NO-VP-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
@@ -607,7 +607,7 @@ define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) {
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 2 x i64> [[TMP13]], ptr [[TMP11]], align 8
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; NO-VP-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:

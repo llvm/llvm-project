@@ -265,4 +265,59 @@ def fir_FortranVariableStorageOpInterface
       [{ return detail::verifyFortranVariableStorageOpInterface($_op); }];
 }
 
+def fir_FortranObjectViewOpInterface
+    : OpInterface<"FortranObjectViewOpInterface"> {
+  let description = [{
+    Interface for operations that may produce results that allow accessing
+    objects in memory based on the operands of these operations.
+    For example:
+    ```
+    %0 = fir.convert %x : (!llvm.ptr) -> !fir.llvm_ptr<i32>
+    ```
+    When the result of `fir.convert` is used to access an object in memory,
+    FIR alias analysis may want to pass through `fir.convert` to be able
+    to find the original Fortran object that is being accessed.
+    This interface provides methods that allow discovering information
+    about the accessed object and the characteristics of the resulting
+    "view" of the object, e.g. whether the result and the input
+    access the object from the same location within the object or
+    whether they are offsetted (which may happen, for example, in case of
+    `fir.array_coor` operation).
+  }];
+  let cppNamespace = "::fir";
+
+  let methods =
+      [InterfaceMethod<
+           /*desc=*/
+           [{ Returns the operand which the given OpResult is based on. }],
+           /*retTy=*/"::mlir::Value",
+           /*methodName=*/"getViewSource",
+           /*args=*/(ins "::mlir::OpResult":$resultView),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
+        assert($_op.getOperation() == resultView.getOwner() &&
+               "resultView must be a result of this operation");
+        return $_op.getViewSource(resultView);
+      }]>,
+       InterfaceMethod<
+           /*desc=*/[{
+        Returns the constant offset (in bytes) applied to the corresponding
+        operand to produce the resulting view.
+        If it is not possible to identify the constant offset,
+        the result is nullopt.
+        Note that the offset may be negative, e.g. when addressing
+        an array section with a negative stride.
+      }],
+           /*retTy=*/"std::optional<std::int64_t>",
+           /*methodName=*/"getViewOffset",
+           /*args=*/(ins "::mlir::OpResult":$resultView),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
+        assert($_op.getOperation() == resultView.getOwner() &&
+               "resultView must be a result of this operation");
+        return $_op.getViewOffset(resultView);
+      }]>,
+  ];
+}
+
 #endif  // FORTRANVARIABLEINTERFACE

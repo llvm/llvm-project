@@ -30,6 +30,12 @@ tablegen("PPCGenRegisterBank") {
   td_file = "PPC.td"
 }
 
+tablegen("PPCGenSDNodeInfo") {
+  visibility = [ ":LLVMPowerPCCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "PPC.td"
+}
+
 static_library("LLVMPowerPCCodeGen") {
   deps = [
     ":PPCGenCallingConv",
@@ -37,6 +43,7 @@ static_library("LLVMPowerPCCodeGen") {
     ":PPCGenFastISel",
     ":PPCGenGlobalISel",
     ":PPCGenRegisterBank",
+    ":PPCGenSDNodeInfo",
     "AsmParser:PPCGenAsmMatcher",
     "MCTargetDesc",
     "TargetInfo",

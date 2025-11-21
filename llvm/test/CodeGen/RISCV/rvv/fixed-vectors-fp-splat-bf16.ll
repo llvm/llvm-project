@@ -3,6 +3,8 @@
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32d -mattr=+v,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVFBFMIN
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+zfbfmin,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZFBFMIN-ZVFBFMIN
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVFBFMIN
+; RUN: llc -mtriple=riscv32 -target-abi=ilp32d -mattr=+v,+experimental-zvfbfa -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVFBFA
+; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+experimental-zvfbfa -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVFBFA
 
 define <8 x bfloat> @splat_v8bf16(ptr %x, bfloat %y) {
 ; ZFBFMIN-ZVFBFMIN-LABEL: splat_v8bf16:
@@ -18,6 +20,12 @@ define <8 x bfloat> @splat_v8bf16(ptr %x, bfloat %y) {
 ; ZVFBFMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFBFMIN-NEXT:    vmv.v.x v8, a0
 ; ZVFBFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: splat_v8bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m1, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    ret
   %a = insertelement <8 x bfloat> poison, bfloat %y, i32 0
   %b = shufflevector <8 x bfloat> %a, <8 x bfloat> poison, <8 x i32> zeroinitializer
   ret <8 x bfloat> %b
@@ -37,6 +45,12 @@ define <16 x bfloat> @splat_16bf16(ptr %x, bfloat %y) {
 ; ZVFBFMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vmv.v.x v8, a0
 ; ZVFBFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: splat_16bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m2, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    ret
   %a = insertelement <16 x bfloat> poison, bfloat %y, i32 0
   %b = shufflevector <16 x bfloat> %a, <16 x bfloat> poison, <16 x i32> zeroinitializer
   ret <16 x bfloat> %b
@@ -58,6 +72,12 @@ define <64 x bfloat> @splat_64bf16(ptr %x, bfloat %y) {
 ; ZVFBFMIN-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; ZVFBFMIN-NEXT:    vmv.v.x v8, a0
 ; ZVFBFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: splat_64bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m8, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    ret
   %a = insertelement <64 x bfloat> poison, bfloat %y, i32 0
   %b = shufflevector <64 x bfloat> %a, <64 x bfloat> poison, <64 x i32> zeroinitializer
   ret <64 x bfloat> %b
@@ -75,6 +95,12 @@ define <8 x bfloat> @splat_zero_v8bf16(ptr %x) {
 ; ZVFBFMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFBFMIN-NEXT:    vmv.v.i v8, 0
 ; ZVFBFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: splat_zero_v8bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vmv.v.i v8, 0
+; ZVFBFA-NEXT:    ret
   ret <8 x bfloat> splat (bfloat 0.0)
 }
 
@@ -90,6 +116,12 @@ define <16 x bfloat> @splat_zero_16bf16(ptr %x) {
 ; ZVFBFMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vmv.v.i v8, 0
 ; ZVFBFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: splat_zero_16bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vmv.v.i v8, 0
+; ZVFBFA-NEXT:    ret
   ret <16 x bfloat> splat (bfloat 0.0)
 }
 
@@ -107,6 +139,13 @@ define <8 x bfloat> @splat_negzero_v8bf16(ptr %x) {
 ; ZVFBFMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFBFMIN-NEXT:    vmv.v.x v8, a0
 ; ZVFBFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: splat_negzero_v8bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 1048568
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v8, a0
+; ZVFBFA-NEXT:    ret
   ret <8 x bfloat> splat (bfloat -0.0)
 }
 
@@ -124,5 +163,12 @@ define <16 x bfloat> @splat_negzero_16bf16(ptr %x) {
 ; ZVFBFMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vmv.v.x v8, a0
 ; ZVFBFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: splat_negzero_16bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 1048568
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v8, a0
+; ZVFBFA-NEXT:    ret
   ret <16 x bfloat> splat (bfloat -0.0)
 }

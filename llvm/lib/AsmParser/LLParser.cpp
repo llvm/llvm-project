@@ -315,11 +315,10 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       return error(NT.second.second,
                    "use of undefined type '%" + Twine(NT.first) + "'");
 
-  for (StringMap<std::pair<Type*, LocTy> >::iterator I =
-       NamedTypes.begin(), E = NamedTypes.end(); I != E; ++I)
-    if (I->second.second.isValid())
-      return error(I->second.second,
-                   "use of undefined type named '" + I->getKey() + "'");
+  for (const auto &[Name, TypeInfo] : NamedTypes)
+    if (TypeInfo.second.isValid())
+      return error(TypeInfo.second,
+                   "use of undefined type named '" + Name + "'");
 
   if (!ForwardRefComdats.empty())
     return error(ForwardRefComdats.begin()->second,
@@ -2552,6 +2551,10 @@ static std::optional<MemoryEffects::Location> keywordToLoc(lltok::Kind Tok) {
     return IRMemLocation::InaccessibleMem;
   case lltok::kw_errnomem:
     return IRMemLocation::ErrnoMem;
+  case lltok::kw_target_mem0:
+    return IRMemLocation::TargetMem0;
+  case lltok::kw_target_mem1:
+    return IRMemLocation::TargetMem1;
   default:
     return std::nullopt;
   }
@@ -4538,6 +4541,9 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       if (!Indices.empty() && !Ty->isSized(&Visited))
         return error(ID.Loc, "base element of getelementptr must be sized");
 
+      if (!ConstantExpr::isSupportedGetElementPtr(Ty))
+        return error(ID.Loc, "invalid base element for constant getelementptr");
+
       if (!GetElementPtrInst::getIndexedType(Ty, Indices))
         return error(ID.Loc, "invalid getelementptr indices");
 
@@ -5639,16 +5645,17 @@ bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(name, MDStringField, );                                             \
   OPTIONAL(size, MDUnsignedOrMDField, (0, UINT64_MAX));                        \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
+  OPTIONAL(dataSize, MDUnsignedField, (0, UINT32_MAX));                        \
   OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
   OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           \
   OPTIONAL(flags, DIFlagField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result = GET_OR_DISTINCT(DIBasicType, (Context, tag.Val, name.Val,
-                                         size.getValueAsMetadata(Context),
-                                         align.Val, encoding.Val,
-                                         num_extra_inhabitants.Val, flags.Val));
+  Result = GET_OR_DISTINCT(
+      DIBasicType,
+      (Context, tag.Val, name.Val, size.getValueAsMetadata(Context), align.Val,
+       encoding.Val, num_extra_inhabitants.Val, dataSize.Val, flags.Val));
   return false;
 }
 
@@ -6341,8 +6348,8 @@ bool LLParser::parseDIObjCProperty(MDNode *&Result, bool IsDistinct) {
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(DIObjCProperty,
-                           (Context, name.Val, file.Val, line.Val, setter.Val,
-                            getter.Val, attributes.Val, type.Val));
+                           (Context, name.Val, file.Val, line.Val, getter.Val,
+                            setter.Val, attributes.Val, type.Val));
   return false;
 }
 

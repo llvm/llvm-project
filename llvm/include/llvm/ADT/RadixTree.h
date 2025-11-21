@@ -19,8 +19,8 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
-#include <limits>
 #include <list>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -93,7 +93,7 @@ private:
     /// If this node does not have a value (i.e., it's an internal node that
     /// only serves as a path to other values), this iterator will be equal
     /// to default constructed `ContainerType::iterator()`.
-    typename ContainerType::iterator Value;
+    std::optional<typename ContainerType::iterator> Value;
 
     /// The first character of the Key. Used for fast child lookup.
     KeyValueType KeyFront;
@@ -216,7 +216,7 @@ private:
                                     KeyConstIteratorType{}};
 
     void findNextValid() {
-      while (Curr && Curr->Value == typename ContainerType::iterator())
+      while (Curr && !Curr->Value.has_value())
         advance();
     }
 
@@ -250,7 +250,7 @@ private:
   public:
     IteratorImpl() = default;
 
-    MappedType &operator*() const { return *Curr->Value; }
+    MappedType &operator*() const { return **Curr->Value; }
 
     IteratorImpl &operator++() {
       advance();
@@ -316,12 +316,12 @@ public:
     const value_type &NewValue = KeyValuePairs.emplace_front(
         std::move(Key), T(std::forward<Ts>(Args)...));
     Node &Node = findOrCreate(NewValue.first);
-    bool HasValue = Node.Value != typename ContainerType::iterator();
+    bool HasValue = Node.Value.has_value();
     if (!HasValue)
       Node.Value = KeyValuePairs.begin();
     else
       KeyValuePairs.pop_front();
-    return {Node.Value, !HasValue};
+    return {*Node.Value, !HasValue};
   }
 
   ///

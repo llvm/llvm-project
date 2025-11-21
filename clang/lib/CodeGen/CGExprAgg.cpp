@@ -755,10 +755,9 @@ void AggExprEmitter::VisitOpaqueValueExpr(OpaqueValueExpr *e) {
 
 void
 AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
-  if (Dest.isPotentiallyAliased() &&
-      E->getType().isPODType(CGF.getContext())) {
-    // For a POD type, just emit a load of the lvalue + a copy, because our
-    // compound literal might alias the destination.
+  if (Dest.isPotentiallyAliased()) {
+    // Just emit a load of the lvalue + a copy, because our compound literal
+    // might alias the destination.
     EmitAggLoadOfLValue(E);
     return;
   }
@@ -2278,6 +2277,10 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
         return;
     }
   }
+
+  if (getLangOpts().HLSL && Ty.getAddressSpace() == LangAS::hlsl_constant)
+    if (CGM.getHLSLRuntime().emitBufferCopy(*this, DestPtr, SrcPtr, Ty))
+      return;
 
   // Aggregate assignment turns into llvm.memcpy.  This is almost valid per
   // C99 6.5.16.1p3, which states "If the value being stored in an object is

@@ -472,6 +472,9 @@ private:
   /// Processes a SPIR-V OpPhi instruction with the given `operands`.
   LogicalResult processPhi(ArrayRef<uint32_t> operands);
 
+  /// Processes a SPIR-V OpSwitch instruction with the given `operands`.
+  LogicalResult processSwitch(ArrayRef<uint32_t> operands);
+
   /// Creates block arguments on predecessors previously recorded when handling
   /// OpPhi instructions.
   LogicalResult wireUpBlockArgument();

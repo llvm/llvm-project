@@ -283,7 +283,6 @@ static ExitOnError ExitOnErr;
 LLVM_ATTRIBUTE_USED static void linkComponents() {
   errs() << (void *)&llvm_orc_registerEHFrameSectionAllocAction
          << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
 }
 
@@ -305,7 +304,7 @@ public:
         this->CacheDir[this->CacheDir.size() - 1] != '/')
       this->CacheDir += '/';
   }
-  ~LLIObjectCache() override {}
+  ~LLIObjectCache() override = default;
 
   void notifyObjectCompiled(const Module *M, MemoryBufferRef Obj) override {
     const std::string &ModuleID = M->getModuleIdentifier();
@@ -1228,15 +1227,15 @@ static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote() {
     std::unique_ptr<char[]> ChildPath, ChildIn, ChildOut;
     {
       ChildPath.reset(new char[ChildExecPath.size() + 1]);
-      std::copy(ChildExecPath.begin(), ChildExecPath.end(), &ChildPath[0]);
+      llvm::copy(ChildExecPath, &ChildPath[0]);
       ChildPath[ChildExecPath.size()] = '\0';
       std::string ChildInStr = utostr(PipeFD[0][0]);
       ChildIn.reset(new char[ChildInStr.size() + 1]);
-      std::copy(ChildInStr.begin(), ChildInStr.end(), &ChildIn[0]);
+      llvm::copy(ChildInStr, &ChildIn[0]);
       ChildIn[ChildInStr.size()] = '\0';
       std::string ChildOutStr = utostr(PipeFD[1][1]);
       ChildOut.reset(new char[ChildOutStr.size() + 1]);
-      std::copy(ChildOutStr.begin(), ChildOutStr.end(), &ChildOut[0]);
+      llvm::copy(ChildOutStr, &ChildOut[0]);
       ChildOut[ChildOutStr.size()] = '\0';
     }
 

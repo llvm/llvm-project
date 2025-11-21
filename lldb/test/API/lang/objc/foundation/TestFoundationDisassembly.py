@@ -13,52 +13,6 @@ class FoundationDisassembleTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfAsan
-    def test_foundation_disasm(self):
-        """Do 'disassemble -n func' on each and every 'Code' symbol entry from the Foundation.framework."""
-        self.build()
-
-        # Enable synchronous mode
-        self.dbg.SetAsync(False)
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target, VALID_TARGET)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        foundation_framework = None
-        for module in target.modules:
-            if module.file.basename == "Foundation":
-                foundation_framework = module.file.fullpath
-                break
-
-        self.assertIsNotNone(foundation_framework, "Foundation.framework path located")
-        self.runCmd("image dump symtab '%s'" % foundation_framework)
-        raw_output = self.res.GetOutput()
-        # Now, grab every 'Code' symbol and feed it into the command:
-        # 'disassemble -n func'.
-        #
-        # The symbol name is on the last column and trails the flag column which
-        # looks like '0xhhhhhhhh', i.e., 8 hexadecimal digits.
-        codeRE = re.compile(
-            r"""
-                             \ Code\ {9}    # ' Code' followed by 9 SPCs,
-                             .*             # the wildcard chars,
-                             0x[0-9a-f]{8}  # the flag column, and
-                             \ (.+)$        # finally the function symbol.
-                             """,
-            re.VERBOSE,
-        )
-        for line in raw_output.split(os.linesep):
-            match = codeRE.search(line)
-            if match:
-                func = match.group(1)
-                self.runCmd('image lookup -s "%s"' % func)
-                self.runCmd('disassemble --force -n "%s"' % func)
-
-    @skipIfAsan
     def test_simple_disasm(self):
         """Test the lldb 'disassemble' command"""
         self.build()

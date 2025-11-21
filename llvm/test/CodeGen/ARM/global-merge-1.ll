@@ -7,6 +7,7 @@
 ; RUN: llc %s -O3 -o - | FileCheck -check-prefix=MERGE %s
 ; RUN: llc %s -O3 -o - -arm-global-merge=false | FileCheck -check-prefix=NO-MERGE %s
 ; RUN: llc %s -O3 -o - -arm-global-merge=true | FileCheck -check-prefix=MERGE %s
+; RUN: llc %s -O3 -o - -arm-global-merge=true -global-merge-max-offset=0 | FileCheck -check-prefix=NO-MERGE %s
 
 ; MERGE-NOT: .zerofill __DATA,__bss,_bar,20,2
 ; MERGE-NOT: .zerofill __DATA,__bss,_baz,20,2

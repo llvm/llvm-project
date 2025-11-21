@@ -23,12 +23,6 @@ public:
                               llvm::LazyCallGraph &CG,
                               llvm::CGSCCUpdateResult &UR);
 };
-
-llvm::Pass *createScopInlinerWrapperPass();
 } // namespace polly
-
-namespace llvm {
-void initializeScopInlinerWrapperPassPass(llvm::PassRegistry &);
-}
 
 #endif /* POLLY_POLLYINLINER_H */

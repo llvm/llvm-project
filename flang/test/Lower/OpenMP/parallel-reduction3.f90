@@ -54,7 +54,7 @@
 
 ! CHECK-LABEL:   func.func @_QPs(
 ! CHECK-SAME:                    %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFsEx"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsEx"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsEi"}
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFsEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i32>

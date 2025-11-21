@@ -531,7 +531,7 @@ Sections:
   // Check that we can detect unsupported versions.
   SmallString<128> UnsupportedVersionYamlString(CommonYamlString);
   UnsupportedVersionYamlString += R"(
-      - Version: 5
+      - Version: 6
         BBRanges:
           - BaseAddress: 0x11111
             BBEntries:
@@ -543,7 +543,7 @@ Sections:
   {
     SCOPED_TRACE("unsupported version");
     DoCheck(UnsupportedVersionYamlString,
-            "unsupported SHT_LLVM_BB_ADDR_MAP version: 5");
+            "unsupported SHT_LLVM_BB_ADDR_MAP version: 6");
   }
 
   SmallString<128> ZeroBBRangesYamlString(CommonYamlString);
@@ -1181,8 +1181,8 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
   # Link: 0 (by default, can be overriden)
     Entries:
-      - Version: 2
-        Feature: 0x7
+      - Version: 5
+        Feature: 0x87
         BBRanges:
           - BaseAddress: 0x44444
             BBEntries:
@@ -1205,7 +1205,8 @@ Sections:
     PGOAnalyses:
       - FuncEntryCount: 1000
         PGOBBEntries:
-          - BBFreq:         1000
+          - BBFreq:          1000
+            PostLinkBBFreq:  50
             Successors:
             - ID:          1
               BrProb:      0x22222222
@@ -1243,8 +1244,8 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
   # Link: 0 (by default, can be overriden)
     Entries:
-      - Version: 2
-        Feature: 0xc
+      - Version: 5
+        Feature: 0x8c
         BBRanges:
           - BaseAddress: 0x66666
             BBEntries:
@@ -1265,8 +1266,9 @@ Sections:
     PGOAnalyses:
       - PGOBBEntries:
          - Successors:
-            - ID:          1
-              BrProb:      0x22222222
+            - ID:              1
+              BrProb:          0x22222222
+              PostLinkBrFreq:  7
             - ID:          2
               BrProb:      0xcccccccc
          - Successors:
@@ -1278,59 +1280,66 @@ Sections:
   BBAddrMap E1 = {
       {{0x11111, {{1, 0x0, 0x1, {false, true, false, false, false}, {}, 0}}}}};
   PGOAnalysisMap P1 = {
-      892, {}, {true, false, false, false, false, false, false}};
+      892, {}, {true, false, false, false, false, false, false, false}};
   BBAddrMap E2 = {
       {{0x22222, {{2, 0x0, 0x2, {false, false, true, false, false}, {}, 0}}}}};
   PGOAnalysisMap P2 = {{},
-                       {{BlockFrequency(343), {}}},
-                       {false, true, false, false, false, false, false}};
+                       {{BlockFrequency(343), 0, {}}},
+                       {false, true, false, false, false, false, false, false}};
   BBAddrMap E3 = {
       {{0x33333,
         {{0, 0x0, 0x3, {false, true, true, false, false}, {}, 0},
          {1, 0x3, 0x3, {false, false, true, false, false}, {}, 0},
          {2, 0x6, 0x3, {false, false, false, false, false}, {}, 0}}}}};
-  PGOAnalysisMap P3 = {{},
-                       {{{},
-                         {{1, BranchProbability::getRaw(0x1111'1111)},
-                          {2, BranchProbability::getRaw(0xeeee'eeee)}}},
-                        {{}, {{2, BranchProbability::getRaw(0xffff'ffff)}}},
-                        {{}, {}}},
-                       {false, false, true, false, false, false, false}};
+  PGOAnalysisMap P3 = {
+      {},
+      {{{},
+        0,
+        {{1, BranchProbability::getRaw(0x1111'1111), 0},
+         {2, BranchProbability::getRaw(0xeeee'eeee), 0}}},
+       {{}, 0, {{2, BranchProbability::getRaw(0xffff'ffff), 0}}},
+       {{}, 0, {}}},
+      {false, false, true, false, false, false, false, false}};
   BBAddrMap E4 = {
       {{0x44444,
         {{0, 0x0, 0x4, {false, false, false, true, true}, {}, 0},
          {1, 0x4, 0x4, {false, false, false, false, false}, {}, 0},
          {2, 0x8, 0x4, {false, false, false, false, false}, {}, 0},
          {3, 0xc, 0x4, {false, false, false, false, false}, {}, 0}}}}};
-  PGOAnalysisMap P4 = {
-      1000,
-      {{BlockFrequency(1000),
-        {{1, BranchProbability::getRaw(0x2222'2222)},
-         {2, BranchProbability::getRaw(0x3333'3333)},
-         {3, BranchProbability::getRaw(0xaaaa'aaaa)}}},
-       {BlockFrequency(133),
-        {{2, BranchProbability::getRaw(0x1111'1111)},
-         {3, BranchProbability::getRaw(0xeeee'eeee)}}},
-       {BlockFrequency(18), {{3, BranchProbability::getRaw(0xffff'ffff)}}},
-       {BlockFrequency(1000), {}}},
-      {true, true, true, false, false, false, false}};
+  PGOAnalysisMap P4 = {1000,
+                       {{BlockFrequency(1000),
+                         50,
+                         {{1, BranchProbability::getRaw(0x2222'2222), 0},
+                          {2, BranchProbability::getRaw(0x3333'3333), 0},
+                          {3, BranchProbability::getRaw(0xaaaa'aaaa), 0}}},
+                        {BlockFrequency(133),
+                         0,
+                         {{2, BranchProbability::getRaw(0x1111'1111), 0},
+                          {3, BranchProbability::getRaw(0xeeee'eeee), 0}}},
+                        {BlockFrequency(18),
+                         0,
+                         {{3, BranchProbability::getRaw(0xffff'ffff), 0}}},
+                        {BlockFrequency(1000), 0, {}}},
+                       {true, true, true, false, false, false, false, true}};
   BBAddrMap E5 = {
       {{0x55555, {{2, 0x0, 0x2, {false, false, true, false, false}, {}, 0}}}}};
   PGOAnalysisMap P5 = {
-      {}, {}, {false, false, false, false, false, false, false}};
+      {}, {}, {false, false, false, false, false, false, false, false}};
   BBAddrMap E6 = {
       {{0x66666,
         {{0, 0x0, 0x6, {false, true, true, false, false}, {}, 0},
          {1, 0x6, 0x6, {false, false, true, false, false}, {}, 0}}},
        {0x666661,
         {{2, 0x0, 0x6, {false, false, false, false, false}, {}, 0}}}}};
-  PGOAnalysisMap P6 = {{},
-                       {{{},
-                         {{1, BranchProbability::getRaw(0x2222'2222)},
-                          {2, BranchProbability::getRaw(0xcccc'cccc)}}},
-                        {{}, {{2, BranchProbability::getRaw(0x8888'8888)}}},
-                        {{}, {}}},
-                       {false, false, true, true, false, false, false}};
+  PGOAnalysisMap P6 = {
+      {},
+      {{{},
+        0,
+        {{1, BranchProbability::getRaw(0x2222'2222), 7},
+         {2, BranchProbability::getRaw(0xcccc'cccc), 0}}},
+       {{}, 0, {{2, BranchProbability::getRaw(0x8888'8888), 0}}},
+       {{}, 0, {}}},
+      {false, false, true, true, false, false, false, true}};
 
   std::vector<BBAddrMap> Section0BBAddrMaps = {E4, E5, E6};
   std::vector<BBAddrMap> Section1BBAddrMaps = {E3};
@@ -1465,7 +1474,7 @@ Sections:
     DoCheckFails(
         TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
         "unable to read SHT_LLVM_BB_ADDR_MAP section with index 6: "
-        "unexpected end of data at offset 0xa while reading [0x3, 0xb)");
+        "unexpected end of data at offset 0xa while reading [0x4, 0xc)");
     // Check that we can read the other section's bb-address-maps which are
     // valid.
     DoCheckSucceeds(TruncatedYamlString, /*TextSectionIndex=*/2,

@@ -1365,8 +1365,8 @@ public:
             arith::SubIOp::create(rewriter, loc, capacity, newSize);
         Value fillValue = constantZero(rewriter, loc, value.getType());
         Value subBuffer = memref::SubViewOp::create(
-            rewriter, loc, newBuffer, /*offset=*/ValueRange{newSize},
-            /*size=*/ValueRange{fillSize},
+            rewriter, loc, newBuffer, /*offsets=*/ValueRange{newSize},
+            /*sizes=*/ValueRange{fillSize},
             /*step=*/ValueRange{constantIndex(rewriter, loc, 1)});
         linalg::FillOp::create(rewriter, loc, fillValue, subBuffer);
       }
@@ -1386,8 +1386,8 @@ public:
       memref::StoreOp::create(rewriter, loc, value, buffer, size);
     } else {
       Value subBuffer = memref::SubViewOp::create(
-          rewriter, loc, buffer, /*offset=*/ValueRange{size},
-          /*size=*/ValueRange{n},
+          rewriter, loc, buffer, /*offsets=*/ValueRange{size},
+          /*sizes=*/ValueRange{n},
           /*step=*/ValueRange{constantIndex(rewriter, loc, 1)});
       linalg::FillOp::create(rewriter, loc, value, subBuffer);
     }

@@ -684,7 +684,7 @@ a null pointer that the language implementation would.
 The code sequence produced for this operation must not be directly attackable.
 However, if the discriminator values are not constant integers, their
 computations may still be attackable.  In the future, Clang should be enhanced
-to guaranteed non-attackability if these expressions are
+to guarantee non-attackability if these expressions are
 :ref:`safely-derived<Safe derivation>`.
 
 ``ptrauth_auth_function``
@@ -1572,7 +1572,7 @@ type, they contain an ``isa`` pointer signed as described
 :ref:`below<Objc isa and super>`.
 
 The invocation pointer in a block is signed with the ``IA`` key using address
-diversity and a constant dicriminator of 0.  Using a uniform discriminator is
+diversity and a constant discriminator of 0.  Using a uniform discriminator is
 seen as a weakness to be potentially improved, but this is tricky due to the
 subtype polymorphism directly permitted for blocks.
 
@@ -1651,7 +1651,7 @@ declaration, which can cause type errors if the address of the ivar is taken:
   }
   @end
 
-To fix such an mismatch the schema macro from `<ptrauth.h>`:
+To fix such a mismatch the schema macro from `<ptrauth.h>`:
 
 .. code-block:: ObjC
 
@@ -1660,7 +1660,7 @@ To fix such an mismatch the schema macro from `<ptrauth.h>`:
   void f(SEL __ptrauth_objc_sel*);
 
 or less safely, and introducing the possibility of an
-:ref:`signing or authentication oracle<Signing oracles>`, an unauthencaticated
+:ref:`signing or authentication oracle<Signing oracles>`, an unauthenticated
 temporary may be used as intermediate storage.
 
 Alternative implementations

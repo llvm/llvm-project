@@ -4534,6 +4534,85 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCompareCapture) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+TEST_F(OpenMPIRBuilderTest, OMPAtomicRWStructType) {
+  // Test for issue #165184: atomic read/write on struct types should use
+  // element type size, not pointer size.
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  BasicBlock *EntryBB = BB;
+  OpenMPIRBuilder::InsertPointTy AllocaIP(EntryBB,
+                                          EntryBB->getFirstInsertionPt());
+
+  LLVMContext &Ctx = M->getContext();
+
+  // Create a struct type {double, double} to simulate complex(8) - 16 bytes
+  StructType *Complex8Ty = StructType::create(
+      Ctx, {Type::getDoubleTy(Ctx), Type::getDoubleTy(Ctx)}, "complex");
+
+  AllocaInst *XVal = Builder.CreateAlloca(Complex8Ty);
+  XVal->setName("AtomicVar");
+  OpenMPIRBuilder::AtomicOpValue X = {XVal, Complex8Ty, false, false};
+  AtomicOrdering AO = AtomicOrdering::SequentiallyConsistent;
+
+  // Create value to write: {1.0, 1.0}
+  Constant *Real = ConstantFP::get(Type::getDoubleTy(Ctx), 1.0);
+  Constant *Imag = ConstantFP::get(Type::getDoubleTy(Ctx), 1.0);
+  Constant *ValToWrite = ConstantStruct::get(Complex8Ty, {Real, Imag});
+
+  // Test atomic write
+  Builder.restoreIP(
+      OMPBuilder.createAtomicWrite(Loc, X, ValToWrite, AO, AllocaIP));
+
+  // Test atomic read
+  AllocaInst *VVal = Builder.CreateAlloca(Complex8Ty);
+  VVal->setName("ReadDest");
+  OpenMPIRBuilder::AtomicOpValue V = {VVal, Complex8Ty, false, false};
+
+  Builder.restoreIP(OMPBuilder.createAtomicRead(Loc, X, V, AO, AllocaIP));
+
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  // Verify that __atomic_store and __atomic_load are called with size 16
+  bool FoundAtomicStore = false;
+  bool FoundAtomicLoad = false;
+
+  for (Function &Fn : *M) {
+    if (Fn.getName().starts_with("__atomic_store")) {
+      // Check that first call to __atomic_store has size argument = 16
+      for (User *U : Fn.users()) {
+        if (auto *CB = dyn_cast<CallBase>(U)) {
+          if (auto *SizeArg = dyn_cast<ConstantInt>(CB->getArgOperand(0))) {
+            EXPECT_EQ(SizeArg->getZExtValue(), 16U);
+            FoundAtomicStore = true;
+            break;
+          }
+        }
+      }
+    }
+    if (Fn.getName().starts_with("__atomic_load")) {
+      // Check that first call to __atomic_load has size argument = 16
+      for (User *U : Fn.users()) {
+        if (auto *CB = dyn_cast<CallBase>(U)) {
+          if (auto *SizeArg = dyn_cast<ConstantInt>(CB->getArgOperand(0))) {
+            EXPECT_EQ(SizeArg->getZExtValue(), 16U);
+            FoundAtomicLoad = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  EXPECT_TRUE(FoundAtomicStore) << "Did not find __atomic_store call";
+  EXPECT_TRUE(FoundAtomicLoad) << "Did not find __atomic_load call";
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateTeams) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
@@ -7576,8 +7655,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
   // Checking the general structure of the IR generated is same as expected.
   Instruction *GeneratedStoreInst = TaskgroupCall->getNextNode();
   EXPECT_EQ(GeneratedStoreInst, InternalStoreInst);
-  Instruction *GeneratedLoad32 =
-      GeneratedStoreInst->getNextNode();
+  Instruction *GeneratedLoad32 = GeneratedStoreInst->getNextNode();
   EXPECT_EQ(GeneratedLoad32, InternalLoad32);
   Instruction *GeneratedLoad128 = GeneratedLoad32->getNextNode();
   EXPECT_EQ(GeneratedLoad128, InternalLoad128);

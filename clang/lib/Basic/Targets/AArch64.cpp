@@ -606,9 +606,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasMTE)
     Builder.defineMacro("__ARM_FEATURE_MEMORY_TAGGING", "1");
 
-  if (HasTME)
-    Builder.defineMacro("__ARM_FEATURE_TME", "1");
-
   if (HasMatMul)
     Builder.defineMacro("__ARM_FEATURE_MATMUL_INT8", "1");
 
@@ -811,10 +808,10 @@ bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
-      .Cases("aarch64", "arm64", "arm", true)
+      .Cases({"aarch64", "arm64", "arm"}, true)
       .Case("fmv", HasFMV)
       .Case("fp", FPU & FPUMode)
-      .Cases("neon", "simd", FPU & NeonMode)
+      .Cases({"neon", "simd"}, FPU & NeonMode)
       .Case("jscvt", HasJSCVT)
       .Case("fcma", HasFCMA)
       .Case("rng", HasRandGen)
@@ -829,8 +826,8 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("cssc", HasCSSC)
       .Case("sha2", HasSHA2)
       .Case("sha3", HasSHA3)
-      .Cases("aes", "pmull", HasAES)
-      .Cases("fp16", "fullfp16", HasFullFP16)
+      .Cases({"aes", "pmull"}, HasAES)
+      .Cases({"fp16", "fullfp16"}, HasFullFP16)
       .Case("dit", HasDIT)
       .Case("dpb", HasCCPP)
       .Case("dpb2", HasCCDP)
@@ -859,9 +856,9 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("memtag", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
-      .Cases("ssbs", "ssbs2", HasSSBS)
+      .Cases({"ssbs", "ssbs2"}, HasSSBS)
       .Case("bti", HasBTI)
-      .Cases("ls64", "ls64_v", "ls64_accdata", HasLS64)
+      .Cases({"ls64", "ls64_v", "ls64_accdata"}, HasLS64)
       .Case("wfxt", HasWFxT)
       .Case("rcpc3", HasRCPC3)
       .Case("fp8", HasFP8)
@@ -1173,8 +1170,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     }
     if (Feature == "+mte")
       HasMTE = true;
-    if (Feature == "+tme")
-      HasTME = true;
     if (Feature == "+pauth")
       HasPAuth = true;
     if (Feature == "+i8mm")
