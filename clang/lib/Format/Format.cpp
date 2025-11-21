@@ -1961,6 +1961,10 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.PenaltyBreakBeforeFirstCallParameter = 1;
   GoogleStyle.PenaltyReturnTypeOnItsOwnLine = 200;
 
+  GoogleStyle.Macros.push_back("ASSIGN_OR_RETURN(a, b)=a = (b)");
+  GoogleStyle.Macros.push_back(
+      "ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c");
+
   if (Language == FormatStyle::LK_Java) {
     GoogleStyle.AlignAfterOpenBracket = false;
     GoogleStyle.AlignOperands = FormatStyle::OAS_DontAlign;

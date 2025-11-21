@@ -63,6 +63,14 @@ TEST_F(FormatTestMacroExpansion, UnexpandConfiguredMacros) {
                "ReturnMe());",
                Style);
 
+  verifyFormat("void f() {\n"
+               "  ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
+               "                   MySomewhatLongFunction(SomethingElse()));\n"
+               "  ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
+               "                   MySomewhatLongFunction(SomethingElse()), "
+               "ReturnMe());",
+               getGoogleStyle());
+
   verifyFormat(R"(
 #define MACRO(a, b) ID(a + b)
 )",
