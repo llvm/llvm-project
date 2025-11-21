@@ -20,8 +20,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
 
-template <template<typename> typename ContainerTy>
-static auto makeCannonicalTypesRange(const ContainerTy<ParmVarDecl*> &C) {
+template <template <typename> typename ContainerTy>
+static auto makeCannonicalTypesRange(const ContainerTy<ParmVarDecl *> &C) {
   return llvm::map_range(C, [](const ParmVarDecl *Param) {
     return Param->getType().getCanonicalType();
   });
@@ -137,7 +137,8 @@ void ShadowedNamespaceFunctionCheck::check(
 
   for (const FunctionDecl *NoteShadowedFunc : AllShadowedFuncs)
     diag(NoteShadowedFunc->getLocation(), "function %0 declared here",
-         DiagnosticIDs::Note) << NoteShadowedFunc;
+         DiagnosticIDs::Note)
+        << NoteShadowedFunc;
 }
 
 } // namespace clang::tidy::misc
