@@ -10318,6 +10318,8 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":FunctionInterfaces",
+        ":IR",
         ":OpenACCDialect",
         ":OpenACCOpsIncGen",
         ":OpenACCPassIncGen",
@@ -10325,6 +10327,7 @@ cc_library(
         ":Support",
         ":ViewLikeInterface",
         "//llvm:Support",
+        "//llvm:ir_headers",
     ],
 )
 
@@ -13105,6 +13108,7 @@ cc_library(
         ":RuntimeVerifiableOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
