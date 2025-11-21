@@ -426,8 +426,11 @@
     if (present(str)) then
       ! CHECK: fir.call @_FortranATrim
       select case (trim(str))
+        ! == 'a'
         ! CHECK-O0: fir.call @_FortranACharacterCompareScalar1
         ! CHECK-O0-NEXT: arith.cmpi eq, {{.*}}, %c0_i32 : i32
+        ! CHECK-O1: fir.do_loop {{.*}} -> (i8) {
+        ! CHECK-O1: arith.cmpi eq, %{{[0-9]+}}, %c{{[0-9]+}}_i8 : i8
         case ('a')
           ! CHECK-DAG: fir.store %c10_i32 to {{.*}} : !fir.ref<i32>
           num = 10
