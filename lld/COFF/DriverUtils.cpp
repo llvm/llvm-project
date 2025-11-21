@@ -862,6 +862,9 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
                 << "', did you mean '" << nearest << "'";
   }
 
+  if (args.hasArg(OPT_link))
+    Warn(ctx) << "ignoring /link, did you pass it multiple times?";
+
   if (args.hasArg(OPT_lib))
     Warn(ctx) << "ignoring /lib since it's not the first argument";
 
