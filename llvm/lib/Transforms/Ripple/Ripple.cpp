@@ -14,6 +14,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_iterator.h"
@@ -45,6 +46,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CFGUpdate.h"
 #include "llvm/Support/Casting.h"
@@ -55,8 +57,10 @@
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Evaluator.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <array>
 #include <bitset>
 #include <cassert>
@@ -67,6 +71,7 @@
 #include <queue>
 #include <string>
 #include <system_error>
+#include <type_traits>
 #include <vector>
 
 using namespace llvm;
@@ -159,6 +164,42 @@ IntrinsicInst *intrinsicWithId(Instruction *I,
       intrinsicWithId(const_cast<const Instruction *>(I), ids));
 }
 
+/**
+ * @brief Returns a SetVector, S, of basic blocks on the path from \p From to \p
+ * To. The insertion order in S corresponds to the BFS traversal from \p From to
+ * \p To. 'S' is inclusive of \p From and \p To.
+ *
+ * @param From Starting point of traversal.
+ * @param To End point of traversal.
+ * @return SetVector<BasicBlock *>
+ *
+ * \note 'To' must postdominate 'From'.
+ */
+SetVector<BasicBlock *>
+allBasicBlocksFromToBFS(BasicBlock *From, BasicBlock *To,
+                        PostDominatorTreeAnalysis::Result &PDomTree) {
+  assert(From != To);
+  assert(PDomTree.dominates(To, From));
+
+  std::queue<BasicBlock *> ToProcess;
+  SetVector<BasicBlock *> Visited;
+  ToProcess.push(From);
+  while (!ToProcess.empty()) {
+    auto *BB = ToProcess.front();
+    ToProcess.pop();
+    Visited.insert(BB);
+    if (BB == To)
+      continue;
+    for (auto *SI : successors(BB)) {
+      if (!Visited.contains(SI)) {
+        ToProcess.push(SI);
+      }
+    }
+  }
+  assert((Visited.front() == From) && (Visited.back() == To));
+  return Visited;
+}
+
 Constant *getRippleNeutralReductionElement(Intrinsic::ID ID, Type *EltTy,
                                            FastMathFlags FMF) {
   assert(VPReductionIntrinsic::isVPReduction(ID) &&
@@ -222,6 +263,25 @@ getAllReachableBBsExcluding(const BasicBlock *BB,
   return ReachableBBs;
 }
 
+std::pair<BasicBlock *, BasicBlock *>
+getIncrementAndCleanupTargets(BasicBlock *BranchingBB, BasicBlock *PDom,
+                              DominatorTreeAnalysis::Result &DT) {
+  BasicBlock *BB1 = *succ_begin(BranchingBB);
+  BasicBlock *BB2 = *(succ_begin(BranchingBB) + 1);
+
+  const SmallPtrSet<BasicBlock *, 1> ExclusionSet({PDom});
+
+  if (!isPotentiallyReachable(BB2, BranchingBB, &ExclusionSet, &DT)) {
+    return {BB1, BB2};
+  }
+  if (!isPotentiallyReachable(BB1, BranchingBB, &ExclusionSet)) {
+    return {BB2, BB1};
+  }
+  llvm_unreachable(
+      "getIncrementAndCleanupTargets must be only called in the case of"
+      " hasTrivialLoopLikeBackEdge is true.");
+}
+
 } // namespace
 
 bool llvm::hasTrivialLoopLikeBackEdge(BasicBlock *BranchingBB, BasicBlock *PDom,
@@ -247,6 +307,27 @@ bool llvm::hasTrivialLoopLikeBackEdge(BasicBlock *BranchingBB, BasicBlock *PDom,
   }
   return false;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+///                            Helper Functions                              ///
+////////////////////////////////////////////////////////////////////////////////
+
+namespace llvm {
+void removeIncomingBlockFromPhis(const BasicBlock *RefToRemove,
+                                 BasicBlock *BBToProcess) {
+  auto Phis = BBToProcess->phis();
+  // No Phis
+  if (Phis.empty())
+    return;
+  bool ContainsRef =
+      is_contained(cast<PHINode>(*Phis.begin()).blocks(), RefToRemove);
+  if (!ContainsRef)
+    return;
+  for (PHINode &Phi : make_early_inc_range(BBToProcess->phis())) {
+    Phi.removeIncomingValue(RefToRemove);
+  }
+}
+} // namespace llvm
 
 ////////////////////////////////////////////////////////////////////////////////
 ///                             TensorShapeAny                               ///
@@ -2114,8 +2195,7 @@ void Ripple::genVectorInstructions() {
     } else if (toShape.isVector() || rippleVectorizeCall(*call)) {
       Intrinsic::ID vectorIntrId =
           getVectorIntrinsicIDForCall(call, &targetLibraryInfo);
-      if (toShape.isVector() &&
-                 vectorIntrId != Intrinsic::not_intrinsic) {
+      if (toShape.isVector() && vectorIntrId != Intrinsic::not_intrinsic) {
         // We assume vectorizing an intrinsic call does not
         // introduce approximations
         ProcessIntrinsicCall(call, toShape, vectorIntrId);
@@ -2602,6 +2682,918 @@ bool Ripple::maskInstructionWhenIfConvert(const Instruction *I) const {
                           Intrinsic::masked_expandload,
                           Intrinsic::masked_compressstore}) ||
          isa<VPIntrinsic>(I) || isa<SelectInst>(I);
+}
+
+void Ripple::applyMaskToOps(ArrayRef<BasicBlock *> BBs, Value *VectorMask,
+                            const TensorShape &MaskShape,
+                            Instruction *MaskInsertionPoint) {
+  return applyMaskToOps(make_range(BBs.begin(), BBs.end()), VectorMask,
+                        MaskShape, MaskInsertionPoint);
+}
+
+template <typename IteratorT>
+void Ripple::applyMaskToOps(iterator_range<IteratorT> BBs, Value *VectorMask,
+                            const TensorShape &MaskShape,
+                            Instruction *MaskInsertionPoint) {
+  assert(VectorMask->getType()->isVectorTy());
+
+  // We create a dummy (non-maskable) instruction that will not be processed by
+  // this function if the current mask insertion point will be processed.
+  bool RemoveInsertionPoint = false;
+  if (maskInstructionWhenIfConvert(MaskInsertionPoint) &&
+      any_of(BBs, [MaskInsertionPoint](BasicBlock *BB) {
+        return BB == MaskInsertionPoint->getParent();
+      })) {
+    irBuilder.SetInsertPoint(MaskInsertionPoint);
+    auto *NewMaskInsertPoint = irBuilder.Insert(BinaryOperator::Create(
+        Instruction::Add, PoisonValue::get(irBuilder.getInt8Ty()),
+        PoisonValue::get(irBuilder.getInt8Ty())));
+    MaskInsertionPoint = NewMaskInsertPoint;
+    RemoveInsertionPoint = true;
+  }
+
+  // A cache of the same mask, with different shapes
+  std::map<TensorShape, Value *> MaskWithDifferentShapes = {
+      {MaskShape, VectorMask}};
+  auto getMaskWithShape =
+      [&](const TensorShape &RequestedMaskShape) -> Value * {
+    auto CachedMaskIt = MaskWithDifferentShapes.find(RequestedMaskShape);
+    if (CachedMaskIt != MaskWithDifferentShapes.end())
+      return CachedMaskIt->second;
+    irBuilder.SetInsertPoint(MaskInsertionPoint);
+    auto ReshapedMask =
+        reduceBcastMaskToShape(VectorMask, MaskShape, RequestedMaskShape);
+    MaskWithDifferentShapes.insert({RequestedMaskShape, ReshapedMask});
+    return ReshapedMask;
+  };
+
+  // Apply the mask to the maskable operators
+  LLVM_DEBUG(dbgs() << "Mask to apply: " << *VectorMask << " with shape "
+                    << MaskShape << " insert at " << *MaskInsertionPoint
+                    << "\n");
+  std::queue<BasicBlock *> WorkList;
+  for (BasicBlock *ClonedBB : BBs)
+    WorkList.push(ClonedBB);
+
+  while (!WorkList.empty()) {
+    BasicBlock *BBToProcess = WorkList.front();
+    WorkList.pop();
+    for (auto &I : make_early_inc_range(*BBToProcess)) {
+
+      if (!maskInstructionWhenIfConvert(&I))
+        continue;
+      if (ToSkipMaskingWhenIfConvert.contains(&I)) {
+        LLVM_DEBUG(dbgs() << "Skip masking for instruction: " << I << "\n");
+        continue;
+      }
+
+      const TensorShape &InstructionShape = getRippleShape(&I);
+      auto MaskToApply = getMaskWithShape(InstructionShape);
+
+      LLVM_DEBUG(dbgs() << "Applying mask " << *MaskToApply << " with shape "
+                        << MaskShape << " to " << I << "\n");
+
+      irBuilder.SetInsertPoint(&I);
+      if (LoadInst *Load = dyn_cast<LoadInst>(&I)) {
+        // Transform into a masked load
+
+        AllocaInst *AllocaPtr = dyn_cast<AllocaInst>(Load->getPointerOperand());
+        if (!Load->getType()->isVectorTy()) {
+          // For scalars we have to introduce a branch to load only when the
+          // mask is true.
+          //
+          // Interpret the following as: BasicBlock | Instructions
+          //
+          // BB | ...              BB | ...
+          //    | x = load   ->       | br mask Y N
+          //    | rest
+          //                        Y | x = load
+          //                          | br N
+          //
+          //                        N | PHI (Y -> x), (BB -> Poison)
+          //                          | rest
+          assert(!MaskToApply->getType()->isVectorTy());
+          // We move everything after the load in another BB
+          BasicBlock *AfterLoadBB = SplitBlock(
+              BBToProcess, std::next(Load->getIterator()), &DTU, nullptr,
+              nullptr,
+              Twine(BBToProcess->getName()) + ".ripple.after.masked.load");
+          // We move the load in it's own BB
+          BasicBlock *LoadBB =
+              SplitBlock(BBToProcess, I.getIterator(), &DTU, nullptr, nullptr,
+                         Twine(I.getName()) + ".ripple.branch.mask.apply");
+          setRippleShape(LoadBB->getTerminator(), ScalarShape);
+
+          // We replace the unconditional branch by a conditional one
+          Instruction *Term = BBToProcess->getTerminator();
+          irBuilder.SetInsertPoint(BBToProcess);
+          irBuilder.SetCurrentDebugLocation(Load->getDebugLoc());
+          BranchInst *Br =
+              irBuilder.CreateCondBr(MaskToApply, LoadBB, AfterLoadBB);
+          setRippleShape(Br, ScalarShape);
+          invalidateRippleDataFor(Term);
+          Term->eraseFromParent();
+
+          // And we insert a PHI in AfterLoadBB
+          irBuilder.SetInsertPoint(AfterLoadBB->begin());
+          irBuilder.SetCurrentDebugLocation(Load->getDebugLoc());
+          PHINode *LoadPHI = irBuilder.CreatePHI(Load->getType(), 2,
+                                                 Twine(Load->getName()) +
+                                                     ".ripple.masked.load");
+          setRippleShape(LoadPHI, ScalarShape);
+          Load->replaceAllUsesWith(LoadPHI);
+          LoadPHI->addIncoming(Load, LoadBB);
+          LoadPHI->addIncoming(PoisonValue::get(Load->getType()), BBToProcess);
+
+          // The current DTU state after the two SplitBlocks is "BBToProcess ->
+          // LoadBB -> AfterLoadBB". Since we change the direct branch into a
+          // conditional branch we insert the new link BBToProcess ->
+          // AfterLoadBB.
+          DTU.applyUpdates({DominatorTree::UpdateType(
+              DominatorTree::Insert, BBToProcess, AfterLoadBB)});
+
+          // We are done with this BasicBlock but still need to process what
+          // comes after the load
+          WorkList.push(AfterLoadBB);
+          break;
+        } else if (AllocaPtr && getRippleShape(AllocaPtr).isVector()) {
+          // We generate a Select(Mask, Load, Poison) to match a MaskedLoad
+          // semantics. This is mostly useful for debugging (and possibly an
+          // optimization hint).
+          // TODO: Check if this helps or hinders optimizations
+          setInsertPointAfter(irBuilder, Load);
+          irBuilder.SetCurrentDebugLocation(Load->getDebugLoc());
+          Value *SelectedLoad = irBuilder.CreateSelect(
+              MaskToApply, Load, PoisonValue::get(Load->getType()));
+          setRippleShape(SelectedLoad, InstructionShape);
+          Load->replaceUsesWithIf(SelectedLoad, [=](Use &U) {
+            return U.getUser() != SelectedLoad;
+          });
+        } else {
+          Value *MaskedLoad = irBuilder.CreateMaskedLoad(
+              Load->getType(), Load->getPointerOperand(), Load->getAlign(),
+              MaskToApply, nullptr, Twine(I.getName()) + ".ripple.masked.load");
+          setRippleShape(MaskedLoad, InstructionShape);
+          Load->replaceAllUsesWith(MaskedLoad);
+          invalidateRippleDataFor(Load);
+          Load->eraseFromParent();
+        }
+      } else if (IntrinsicInst *MaskedLoad =
+                     intrinsicWithId(&I, {Intrinsic::masked_load})) {
+        // Add the branch mask to the existing one
+        Value *OldMask = MaskedLoad->getArgOperand(1);
+        Value *NewMask = irBuilder.CreateAnd(OldMask, MaskToApply,
+                                             Twine(OldMask->getName()) +
+                                                 ".ripple.branch.mask.apply");
+        setRippleShape(NewMask, InstructionShape);
+        MaskedLoad->setArgOperand(1, NewMask);
+      } else if (IntrinsicInst *MaskedGather =
+                     intrinsicWithId(&I, {Intrinsic::masked_gather})) {
+        // Add the branch mask to the existing one
+        Value *OldMask = MaskedGather->getArgOperand(1);
+        Value *NewMask = irBuilder.CreateAnd(OldMask, MaskToApply,
+                                             Twine(OldMask->getName()) +
+                                                 ".ripple.branch.mask.apply");
+        setRippleShape(NewMask, InstructionShape);
+        MaskedGather->setArgOperand(1, NewMask);
+      } else if (IntrinsicInst *ExpandLoad =
+                     intrinsicWithId(&I, {Intrinsic::masked_expandload})) {
+        Value *OldMask = ExpandLoad->getArgOperand(1);
+        Value *NewMask = irBuilder.CreateAnd(OldMask, MaskToApply,
+                                             "ripple.branch.mask.apply");
+        setRippleShape(NewMask, InstructionShape);
+        ExpandLoad->setArgOperand(1, NewMask);
+      } else if (StoreInst *Store = dyn_cast<StoreInst>(&I)) {
+        // Transform into a masked store
+        if (!Store->getValueOperand()->getType()->isVectorTy()) {
+          // For scalar store, we move it to its own basic block and branch if
+          // the mask is true.
+          //
+          // Interpret the following as: BasicBlock | Instructions
+          //
+          // BB | ...              BB | ...
+          //    | store      ->       | br mask Y N
+          //    | rest
+          //                        Y | store
+          //                          | br N
+          //
+          //                        N | rest
+          assert(!MaskToApply->getType()->isVectorTy());
+
+          // We move everything after the store in another BB
+          BasicBlock *AfterStoreBB = SplitBlock(
+              BBToProcess, std::next(Store->getIterator()), &DTU, nullptr,
+              nullptr,
+              Twine(BBToProcess->getName()) + "ripple.after.masked.store");
+          // We move the store in it's own BB
+          BasicBlock *StoreBB = SplitBlock(
+              BBToProcess, Store->getIterator(), &DTU, nullptr, nullptr,
+              Twine(I.getName()) + ".ripple.branch.mask.apply");
+          setRippleShape(StoreBB->getTerminator(), ScalarShape);
+
+          // We replace the unconditional branch by a conditional one and we
+          // are done!
+          Instruction *Term = BBToProcess->getTerminator();
+          irBuilder.SetInsertPoint(BBToProcess);
+          irBuilder.SetCurrentDebugLocation(Store->getDebugLoc());
+          BranchInst *Br =
+              irBuilder.CreateCondBr(MaskToApply, StoreBB, AfterStoreBB);
+          setRippleShape(Br, ScalarShape);
+          invalidateRippleDataFor(Term);
+          Term->eraseFromParent();
+
+          // The current DTU state after the two SplitBlocks is "BBToProcess ->
+          // StoreBB -> AfterStoreBB". Since we change the direct branch into a
+          // conditional branch we insert the new link BBToProcess ->
+          // AfterStoreBB.
+          DTU.applyUpdates({DominatorTree::UpdateType(
+              DominatorTree::Insert, BBToProcess, AfterStoreBB)});
+
+          // We are done with this BasicBlock but still need to process what
+          // comes after the store
+          WorkList.push(AfterStoreBB);
+          break;
+        } else if (AllocaInst *AllocaPtr =
+                       dyn_cast<AllocaInst>(Store->getPointerOperand())) {
+          // This could be an aligned masked store depending on the alloca
+          Instruction *MaskedStore = irBuilder.CreateMaskedStore(
+              Store->getValueOperand(), Store->getPointerOperand(),
+              AllocaPtr->getAlign(), MaskToApply);
+          setRippleShape(MaskedStore, InstructionShape);
+          invalidateRippleDataFor(Store);
+          Store->eraseFromParent();
+        } else {
+          Instruction *MaskedStoreI = irBuilder.CreateMaskedStore(
+              Store->getValueOperand(), Store->getPointerOperand(),
+              Store->getAlign(), MaskToApply);
+          setRippleShape(MaskedStoreI, InstructionShape);
+          invalidateRippleDataFor(Store);
+          Store->eraseFromParent();
+        }
+      } else if (IntrinsicInst *MaskedStore =
+                     intrinsicWithId(&I, {Intrinsic::masked_store})) {
+        // Add the branch mask to the existing one
+        Value *OldMask = MaskedStore->getArgOperand(2);
+        Value *NewMask = irBuilder.CreateAnd(OldMask, MaskToApply,
+                                             Twine(OldMask->getName()) +
+                                                 ".ripple.branch.mask.apply");
+        setRippleShape(NewMask, InstructionShape);
+        MaskedStore->setArgOperand(2, NewMask);
+      } else if (IntrinsicInst *MaskedScatter =
+                     intrinsicWithId(&I, {Intrinsic::masked_scatter})) {
+        // Add the branch mask to the existing one
+        Value *OldMask = MaskedScatter->getArgOperand(2);
+        Value *NewMask = irBuilder.CreateAnd(OldMask, MaskToApply,
+                                             Twine(OldMask->getName()) +
+                                                 ".ripple.branch.mask.apply");
+        setRippleShape(NewMask, InstructionShape);
+        MaskedScatter->setArgOperand(2, NewMask);
+      } else if (IntrinsicInst *CompressStore =
+                     intrinsicWithId(&I, {Intrinsic::masked_compressstore})) {
+        Value *OldMask = CompressStore->getArgOperand(2);
+        Value *NewMask = irBuilder.CreateAnd(OldMask, MaskToApply,
+                                             "ripple.branch.mask.apply");
+        setRippleShape(NewMask, InstructionShape);
+        CompressStore->setArgOperand(2, NewMask);
+      } else if (SelectInst *Select = dyn_cast<SelectInst>(&I)) {
+        if (SelectToMaskWhenIfConvert.contains(Select)) {
+          LLVM_DEBUG(dbgs() << "Masking a special select: " << *Select << "\n");
+          Value *OldMask = Select->getCondition();
+          Value *NewMask = irBuilder.CreateAnd(OldMask, MaskToApply,
+                                               ".ripple.branch.mask.apply");
+          setRippleShape(NewMask, InstructionShape);
+          Select->setCondition(NewMask);
+        }
+      } else if (VPIntrinsic *VPIntr = dyn_cast<VPIntrinsic>(&I)) {
+        // Some VP intrinsics have no mask
+        if (Value *OldMask = VPIntr->getMaskParam()) {
+          Value *NewMask = irBuilder.CreateAnd(OldMask, MaskToApply,
+                                               ".ripple.branch.mask.apply");
+          setRippleShape(NewMask, InstructionShape);
+          VPIntr->setMaskParam(NewMask);
+        }
+      }
+    }
+  }
+  if (RemoveInsertionPoint)
+    MaskInsertionPoint->eraseFromParent();
+}
+
+void Ripple::ifConvert() {
+  auto makeUniquePredToPostDom = [&](DenseSet<BasicBlock *> &ToClone,
+                                     BasicBlock *BranchBlock,
+                                     BasicBlock *PostDom) -> BasicBlock * {
+    // If there are multiple edges coming into postDom that can come from the
+    // basic blocks we are cloning or the branch block, we insert an extra basic
+    // block so that there is only one edge going into postDom
+    SmallVector<BasicBlock *, 8> PredsToSplit;
+    std::copy_if(pred_begin(PostDom), pred_end(PostDom),
+                 std::back_inserter(PredsToSplit),
+                 [&](auto BB) { return ToClone.contains(BB); });
+    assert(PredsToSplit.size() > 0 &&
+           "We should always at least be splitting one predecessor to PostDom");
+    BasicBlock *Split = SplitBlockPredecessors(PostDom, PredsToSplit,
+                                               ".ripple.predsplit", &DTU);
+    // This should not happen because we are testing that the sub-graph is to
+    // clone is a SESE region
+    assert(Split != nullptr && "Failed to split for if-conversion");
+    assert(&*Split->getFirstNonPHIIt() == Split->getTerminator() &&
+           "Only expected PHI and a branch from the split");
+    assert(Split->getUniqueSuccessor() == PostDom &&
+           "Split should have a unique successor");
+    setRippleShape(Split->getTerminator(), ScalarShape);
+    // Since we split Phis from PostDom, copy their shapes here
+    for (PHINode &Phi : Split->phis()) {
+      Value *FollowerFromPostDom = *Phi.user_begin();
+      assert(isa<PHINode>(FollowerFromPostDom) &&
+             cast<PHINode>(FollowerFromPostDom)->getParent() == PostDom);
+      setRippleShape(&Phi, getRippleShape(FollowerFromPostDom));
+      LLVM_DEBUG(dbgs() << "Shape of PHI " << Phi << " is "
+                        << getRippleShape(&Phi) << "\n");
+    }
+    ToClone.insert(Split);
+    return Split;
+  };
+
+  auto normalizeBranchEntries = [&](BasicBlock *BranchBlock) -> void {
+    // Add a basic block that can be cloned between BranchBlock and every branch
+    // targets. This is useful to detect which branches have BranchBlock as
+    // direct predecessors and those who don't when pruning PHI entries for some
+    // paths.
+    // For example:
+    //
+    // -----> D -----|
+    // |             v
+    // A -> B -> C ->E
+    // |         ^
+    // ----------|
+    //
+    // Where A is BranchBlock.
+    //
+    // When processing the branch B->C->E we have to prune the branch coming
+    // directly to C from A. Adding an extra empty BB between A and all its
+    // successors allows us to correctly identify these cases (since A is not
+    // part of the BBs we are cloning).
+    SmallPtrSet<BasicBlock *, 0> SuccsToProcess(successors(BranchBlock).begin(),
+                                                successors(BranchBlock).end());
+    for (BasicBlock *Succ : SuccsToProcess) {
+      BasicBlock *Split = SplitBlockPredecessors(
+          Succ, {BranchBlock}, ".ripple.vecbranch.succ", &DTU);
+      setRippleShape(Split->getTerminator(), ScalarShape);
+    }
+  };
+
+  auto brTerminator = [](BasicBlock *BB) {
+    assert(isa<BranchInst>(BB->getTerminator()));
+    BranchInst *BI = cast<BranchInst>(BB->getTerminator());
+    assert(BI->isUnconditional());
+    return BI;
+  };
+
+  auto updateSelectInstMaskSet = [&](ValueToValueMapTy &VMap) -> void {
+    // Update select to mask set with new arrivals
+    SmallPtrSet<SelectInst *, 8> ToMaskAsWell;
+    for (SelectInst *SelectToMask : SelectToMaskWhenIfConvert)
+      if (SelectInst *SelectClone =
+              cast_if_present<SelectInst>(VMap.lookup(SelectToMask)))
+        ToMaskAsWell.insert(SelectClone);
+    SelectToMaskWhenIfConvert.insert(ToMaskAsWell.begin(), ToMaskAsWell.end());
+  };
+
+  auto updateStoreInstMaskSet = [&](ValueToValueMapTy &VMap) -> void {
+    // Update store to be skipped in masking set with new arrivals
+    SmallPtrSet<Instruction *, 8> ToSkipMaskAsWell;
+    for (Instruction *ToSkipMasking : ToSkipMaskingWhenIfConvert)
+      if (Instruction *ClonedI =
+              cast_if_present<Instruction>(VMap.lookup(ToSkipMasking)))
+        ToSkipMaskAsWell.insert(ClonedI);
+    ToSkipMaskingWhenIfConvert.insert(ToSkipMaskAsWell.begin(),
+                                      ToSkipMaskAsWell.end());
+  };
+
+  SmallVector<BasicBlock *, 0> BBsWithVectorBranchOrSwitch;
+  for (auto *BB : getFuncRPOT()) {
+    if (BB->back().isSpecialTerminator())
+      // In ifConvert, we are only concerned with branch or switch instructions.
+      continue;
+    Value *last = BB->getTerminator();
+    BranchInst *Branch = dyn_cast<BranchInst>(last);
+    SwitchInst *Switch = dyn_cast<SwitchInst>(last);
+    bool IsVectorBranch =
+        Branch && Branch->isConditional() && getRippleShape(Branch).isVector();
+    bool IsVectorSwitch = Switch && getRippleShape(Switch).isVector();
+    if (IsVectorBranch || IsVectorSwitch) {
+      BBsWithVectorBranchOrSwitch.push_back(BB);
+    }
+  }
+
+  // After this we modify the control flow so FuncRPOT is not valid anymore
+  delete FuncRPOT;
+  FuncRPOT = nullptr;
+
+  // We process vector branches from the inner mostly-nested outwards.  Hence,
+  // when we process a vector branch, the sub-graph is vector-branch free. That
+  // way, we don't have to track vector branches that would be cloned and need
+  // to be processed too.
+  std::sort(BBsWithVectorBranchOrSwitch.begin(),
+            BBsWithVectorBranchOrSwitch.end(),
+            [&](BasicBlock *BB1, BasicBlock *BB2) {
+              return domTree.getNode(BB1)->getLevel() >
+                     domTree.getNode(BB2)->getLevel();
+            });
+  // For each vector branch the algorithm works as follows:
+  //
+  // "entry" is the basic block w/ a vector if conditional and "pdom" is its
+  // immediate post dominator.
+  //
+  // First, we make it so that only one branch from the sub-graph starting at
+  // entry enters pdom. "predpdom" is inserted and will consists of PHI
+  // functions (if needed) and an unconditional jump to pdom.
+  //
+  //          entry                                   entry
+  //     /      |  ...  \                        /      |  ...  \
+  //    br1    br2     brn                      br1    br2     brn
+  //    |       |      /                        |       |      /
+  //    entry_subgraph     otherpath     ->     entry_subgraph     otherpath
+  //        \     |       /                         \     |       /
+  //         \    |      /                          predpdom     /
+  //          \   |     /                               \       /
+  //             pdom                                     pdom
+  //
+  // Next, we splice entry to pdom, partially separating the sub-graph.
+  // Notice that now the the sub-graph is essentially dead code since there is
+  // no path from the function entry to it.
+  //
+  //        entry
+  //   /      |  ...  \
+  //  br1    br2     brn                    entry  br1    br2     brn
+  //  |       |      /                        |     |       |      /
+  //  entry_subgraph                  ->      \     entry_subgraph
+  //      \     |                              \        \     |
+  //      predpdom     otherpath                \       predpdom    otherpath
+  //          \       /                          \         |       /
+  //             pdom                                     pdom
+  //
+  // For each branch, we clone the sub-graph starting with the branch entry
+  // basic block (e.g. br1) to pdom. We splice the sub-graph in-between entry
+  // and pdom (represented below as br1_subG, etc). Finally each branch vector
+  // mask is applied to its respective cloned subgraph maskable operators.
+  //
+  //  entry  br1    br2     brn             entry    br1    br2     brn
+  //     \    |       |      /                |        \     |      /
+  //      \   entry_subgraph               br1_subG   entry_subgraph
+  //       \     \     |                      |          \     |
+  //        \    predpdom   otherpath      br2_subG      predpdom   otherpath
+  //         \      |      /                  ...           |      /
+  //          \     |     /                brn_subG         |     /
+  //          \     |     /                        \        |    /
+  //                pdom                                   pdom
+  //
+  // Finally, we process live values created in the subgraph between entry and
+  // pdom. Hence, for each PHI function in predpdom, we create a cascade of
+  // select instructions to select the values we specialized in [br1_subG,
+  // brn_subG] with respect to each branch mask.
+  // Note: At this point, we can disconnect the sub-graph {[br1 ... brn] ->
+  // predPdom} that we kept connected to simplify cloning and value re-mapping.
+  // It will be garbage-collected at the end.
+  //
+  //   entry                           entry
+  //     |                               |
+  //  br1_subG                        br1_subG
+  //     |                               |
+  //  br2_subG                  ->    br2_subG
+  //     ...                             ...
+  //  brn_subG    otherpath           brn_subG
+  //        \    /                        |
+  //         pdom                   PHI_to_select  otherpath
+  //                                       \        /
+  //                                          pdom
+  //
+  for (auto *BranchingBB : BBsWithVectorBranchOrSwitch) {
+    Instruction *BranchOrSwitch = BranchingBB->getTerminator();
+    auto BranchSwitchIt = BranchAndSwitchVecCond.find(BranchOrSwitch);
+    assert(BranchSwitchIt != BranchAndSwitchVecCond.end());
+    Value *VectorConditional = BranchSwitchIt->second;
+    BranchAndSwitchVecCond.erase(BranchSwitchIt);
+    TensorShape MaskShape = getRippleShape(BranchOrSwitch);
+    BasicBlock *BranchPostDom =
+        postdomTree.getNode(BranchingBB)->getIDom()->getBlock();
+    LLVM_DEBUG(dbgs() << "[Vector if conversion] processing vector branch "
+                      << *BranchOrSwitch << " w/ vector condition "
+                      << *VectorConditional << " from BasicBlock "
+                      << BranchingBB->getName()
+                      << " and immediate post-dominator "
+                      << BranchPostDom->getName() << "\n");
+
+    // Insert an intermediate basic block between BranchingBB and all its
+    // successors. This simplifies cloning by not having to process direct
+    // successors of BranchingBB or BranchingBB being a predecessor of
+    // BranchPostDom in a special way.
+    normalizeBranchEntries(BranchingBB);
+
+    auto BBsToClone = allBasicBlocksFromTo(BranchingBB, BranchPostDom);
+
+    // Prepare for cloning so that there is only one edge to BranchPostDom
+    BasicBlock *PredOfBranchPostDomOrigin =
+        makeUniquePredToPostDom(BBsToClone, BranchingBB, BranchPostDom);
+
+    LLVM_DEBUG(dbgs() << "Function before if convert\n\n"; F.print(dbgs()));
+
+    /// Handle CFGs of the nature: A<->B->Exit with entry in A or B.
+    if (hasTrivialLoopLikeBackEdge(BranchingBB, BranchPostDom, domTree)) {
+      // TODO: Generalize this implementation using the "Whole Function
+      // Vectorization" algorithm. (See
+      // <https://doi.org/10.1007/978-3-642-28652-0_1>)
+      auto [LoopIncTarget, LoopCleanupTarget] =
+          getIncrementAndCleanupTargets(BranchingBB, BranchPostDom, domTree);
+      auto LoopIncBBs =
+          allBasicBlocksFromToBFS(LoopIncTarget, BranchingBB, postdomTree);
+
+      Value *LoopIncMask = nullptr;
+      if (BranchInst *Branch = dyn_cast<BranchInst>(BranchOrSwitch)) {
+        irBuilder.SetInsertPoint(Branch);
+        if (Branch->getSuccessor(0) == LoopIncTarget) {
+          LoopIncMask = VectorConditional;
+        } else {
+          assert(Branch->getSuccessor(1) == LoopIncTarget);
+          LoopIncMask = irBuilder.CreateNot(
+              VectorConditional, "mask.loopinc." + BranchingBB->getName());
+          setRippleShape(LoopIncMask, MaskShape);
+          // Normalize so that successor "0" is always LoopInc
+          Branch->setSuccessor(0, LoopIncTarget);
+          Branch->setSuccessor(1, LoopCleanupTarget);
+        }
+
+        // Branch into the increment target only if any of the vector lanes take
+        // the branch => Use ReduceOr(LoopIncMask).
+        auto *MaskReduceOred = irBuilder.CreateOrReduce(LoopIncMask);
+        Branch->setCondition(MaskReduceOred);
+        setRippleShape(MaskReduceOred, ScalarShape);
+      } else {
+        llvm_unreachable("This branch is unreachable.");
+      }
+
+      // Apply mask to all the basic blocks in the cycle.
+      auto ExpectedAllTrueMask = tensorBcast(
+          ConstantInt::get(irBuilder.getInt1Ty(), 1), ScalarShape, MaskShape);
+      if (!ExpectedAllTrueMask)
+        report_fatal_error("Failure to broadcast a scalar constant!");
+      auto *AllTrueMask = *ExpectedAllTrueMask;
+      DenseMap<BasicBlock *, Value *> LoopIncBB2Mask;
+      LoopIncBB2Mask.insert({BranchingBB, LoopIncMask});
+      for (auto *LoopIncBB : LoopIncBBs) {
+        if (pred_size(LoopIncBB) != 1) {
+          irBuilder.SetInsertPoint(&*LoopIncBB->getFirstInsertionPt());
+          auto *LoopIncBBMask = irBuilder.CreatePHI(
+              VectorConditional->getType(), pred_size(LoopIncBB));
+          // Mask operations in LoopIncBB with the mask phi(currentMask, true).
+          for (auto *PredLoopIncBB : predecessors(LoopIncBB)) {
+            if (LoopIncBB2Mask.contains(PredLoopIncBB))
+              LoopIncBBMask->addIncoming(LoopIncBB2Mask.at(PredLoopIncBB),
+                                         PredLoopIncBB);
+            else
+              LoopIncBBMask->addIncoming(AllTrueMask, PredLoopIncBB);
+          }
+          setRippleShape(LoopIncBBMask, MaskShape);
+          LoopIncBB2Mask.insert_or_assign(LoopIncBB, LoopIncBBMask);
+        } else {
+          auto *PredLoopIncBB = *pred_begin(LoopIncBB);
+          assert(LoopIncBB2Mask.contains(PredLoopIncBB));
+          LoopIncBB2Mask.insert_or_assign(LoopIncBB,
+                                          LoopIncBB2Mask.at(PredLoopIncBB));
+        }
+      }
+      for (auto &[LoopIncBB, LoopIncBBMask] : LoopIncBB2Mask)
+        applyMaskToOps({LoopIncBB}, LoopIncBB2Mask.at(LoopIncBB), MaskShape,
+                       &*LoopIncBB->getFirstInsertionPt());
+      continue;
+    }
+
+    // Build the branch masks
+    SmallVector<std::pair<BasicBlock *, Value *>, 2> TargetMasks;
+    if (BranchInst *Branch = dyn_cast<BranchInst>(BranchOrSwitch)) {
+      vectorBranchMasks(Branch, VectorConditional, TargetMasks, MaskShape);
+    } else {
+      assert(isa<SwitchInst>(BranchOrSwitch));
+      SwitchInst *Switch = cast<SwitchInst>(BranchOrSwitch);
+      vectorSwitchMasks(Switch, VectorConditional, TargetMasks, MaskShape);
+    }
+
+    // We simplify the CFG to prepare the flattening of the control flow
+    // (if-conversion) of BB. For each branch going out of BB, the
+    // sub-graph leading to postDom will be cloned and masked and inserted
+    // in between BB and postDom, sequentially.
+    //
+    //   BB              BB
+    //   / \              |
+    //  /   \             |
+    // LHS  RHS   ->      |
+    //  |    |            |
+    //    ...             |
+    //     |              |
+    // BranchPostDom   BranchPostDom
+    std::vector<DominatorTree::UpdateType> DTUList;
+    // Insert a new edge from BB to immPostDom
+    irBuilder.SetInsertPoint(BranchingBB);
+    irBuilder.SetCurrentDebugLocation(BranchOrSwitch->getDebugLoc());
+    BranchInst *Br = irBuilder.CreateBr(BranchPostDom);
+    setRippleShape(Br, ScalarShape);
+    // Remove Edges from BB to LHS & RHS
+    invalidateRippleDataFor(BranchOrSwitch);
+    BranchOrSwitch->eraseFromParent();
+    for (auto TargetAndMask : TargetMasks) {
+      DTUList.push_back(
+          {DominatorTree::Delete, BranchingBB, TargetAndMask.first});
+    }
+
+    // The basic block that precedes immPostDom
+    BasicBlock *PredOfBranchPostDomCurrent = BranchingBB;
+    // Now we clone and apply the masks
+    std::vector<ValueToValueMapTy> VMaps(TargetMasks.size());
+    std::vector<BasicBlock *> ClonedBBs;
+    ClonedBBs.reserve(BBsToClone.size());
+    size_t VMapIndex = 0;
+    for (auto TargetAndMask : TargetMasks) {
+      BasicBlock *const BranchEntryBlock = TargetAndMask.first;
+      Value *const VectorMask = TargetAndMask.second;
+      ValueToValueMapTy &VMap = VMaps[VMapIndex++];
+      ClonedBBs.clear();
+      // Makes it so that BB (that branches into the targets) is
+      // replaced by the new entry point in the cloned subgraph
+      VMap[BranchingBB] = PredOfBranchPostDomCurrent;
+
+      // Clone the sub-graph for the branch.
+      clonePathStartingWith(BranchEntryBlock, BBsToClone, VMap, ClonedBBs);
+      updateSelectInstMaskSet(VMap);
+      updateStoreInstMaskSet(VMap);
+
+      // Instead of branching to immPostDom, jump to the branch entry
+      BasicBlock *BranchEntryClone = cast<BasicBlock>(&*VMap[BranchEntryBlock]);
+      BranchInst *ToBranchPostDom = brTerminator(PredOfBranchPostDomCurrent);
+      assert(ToBranchPostDom->getSuccessor(0) == BranchPostDom);
+      ToBranchPostDom->setSuccessor(0, BranchEntryClone);
+      DTUList.push_back({DominatorTree::Insert, PredOfBranchPostDomCurrent,
+                         BranchEntryClone});
+
+      // Record changes done to the CFG
+      assert(VMap[PredOfBranchPostDomOrigin].pointsToAliveValue());
+      BasicBlock *PredOfBranchPostDomClone =
+          cast<BasicBlock>(&*VMap[PredOfBranchPostDomOrigin]);
+      assert(PredOfBranchPostDomClone->getUniqueSuccessor() == BranchPostDom);
+      for (auto *ClonedBB : ClonedBBs) {
+        // This will either be updated next iteration (or after loop)
+        if (ClonedBB == PredOfBranchPostDomClone)
+          continue;
+        for (auto *S : successors(ClonedBB)) {
+          DTUList.push_back({DominatorTree::Insert, ClonedBB, S});
+        }
+      }
+
+      DTU.applyUpdates(DTUList);
+      DTUList.clear();
+
+      // Apply masks to maskable ops (load/store/reduction/shuffles)
+      applyMaskToOps(ClonedBBs, VectorMask, MaskShape, Br);
+
+      PredOfBranchPostDomCurrent = PredOfBranchPostDomClone;
+      LLVM_DEBUG(dbgs() << "Function after applying mask " << *VectorMask
+                        << " to " << *BranchEntryBlock << "\n";
+                 F.print(dbgs()));
+    }
+    DTUList.push_back(
+        {DominatorTree::Insert, PredOfBranchPostDomCurrent, BranchPostDom});
+
+    // Unlinks the original sub-graph from BranchPostDom now that the cloning is
+    // finished
+    BranchPostDom->replacePhiUsesWith(PredOfBranchPostDomOrigin,
+                                      PredOfBranchPostDomCurrent);
+    Instruction *Terminator = PredOfBranchPostDomOrigin->getTerminator();
+    // We create a new terminator instruction to keep the BasicBlock in a valid
+    // state. The original sub-graph is dead code and is garbage collected at
+    // the end.
+    irBuilder.SetInsertPoint(PredOfBranchPostDomOrigin);
+    irBuilder.CreateRetVoid();
+    // Erasing the branch instruction removes predOmmPoseDomOrig from the
+    // predecessors of immPostDom
+    invalidateRippleDataFor(Terminator);
+    Terminator->eraseFromParent();
+    DTUList.push_back(
+        {DominatorTree::Delete, PredOfBranchPostDomOrigin, BranchPostDom});
+
+    // Apply the dominator tree updates before splitting for "PHI to select"
+    // insertion
+    DTU.applyUpdates(DTUList);
+
+    // For every PHI values in predImmPostDomOrig we create a *select*
+    // instruction to get the correct value flowing in immPostDom
+    SmallVector<BasicBlock *, 1> PredsToSplit = {PredOfBranchPostDomCurrent};
+    BasicBlock *SelectInsertionBlock = SplitBlockPredecessors(
+        BranchPostDom, PredsToSplit, "ripple.vecbranch.selectblock", &DTU);
+    // There should only be a jump to BranchPostDom in the split BasicBlock
+    setRippleShape(SelectInsertionBlock->getTerminator(), ScalarShape);
+    for (PHINode &Phi : PredOfBranchPostDomOrigin->phis()) {
+      // We have one value flowing in from each branch
+      std::vector<Value *> SpecializedPhis;
+      for (ValueToValueMapTy &VMap : VMaps) {
+        auto SpecializedPhi = VMap.lookup(&Phi);
+        assert(SpecializedPhi.pointsToAliveValue() &&
+               "Mapping to PhiNode must be alive");
+        LLVM_DEBUG(dbgs() << "Specialized phi " << *SpecializedPhi
+                          << getRippleShape(SpecializedPhi) << "\n");
+        SpecializedPhis.push_back(SpecializedPhi);
+      }
+
+      TensorShape PhiShape = getRippleShape(&Phi);
+      LLVM_DEBUG(dbgs() << "Applying mask " << MaskShape << " to select of PHI "
+                        << Phi << " with shape " << PhiShape << "\n");
+
+      // Create a possible cascade of selects (for switches)
+      Value *SelectedValue = SpecializedPhis[TargetMasks.size() - 1];
+      for (unsigned MaskIdx = 0; MaskIdx < TargetMasks.size() - 1; ++MaskIdx) {
+        irBuilder.SetInsertPoint(SelectInsertionBlock->getFirstInsertionPt());
+        irBuilder.SetCurrentDebugLocation(Phi.getDebugLoc());
+
+        auto MaskToApply = reduceBcastMaskToShape(TargetMasks[MaskIdx].second,
+                                                  MaskShape, PhiShape);
+        LLVM_DEBUG(dbgs() << "Select between " << *SpecializedPhis[MaskIdx]
+                          << " and " << *SelectedValue << " using mask "
+                          << *MaskToApply << "\n");
+        SelectedValue = irBuilder.CreateSelect(
+            MaskToApply, SpecializedPhis[MaskIdx], SelectedValue,
+            Twine(Phi.getName()) + ".ripple.phi.vectorized", &Phi);
+
+        setRippleShape(SelectedValue, PhiShape);
+      }
+
+      Phi.replaceAllUsesWith(SelectedValue);
+    }
+    LLVM_DEBUG(dbgs() << "[Vector if conversion] Constructed the following "
+                         "vector select block:\n";
+               SelectInsertionBlock->print(dbgs()));
+
+    // Delete the original sub-graph
+    std::vector<BasicBlock *> DeadBlocks(BBsToClone.begin(), BBsToClone.end());
+    for (auto &BB : DeadBlocks)
+      for (auto &I : *BB)
+        invalidateRippleDataFor(&I);
+
+    DeleteDeadBlocks(DeadBlocks, &DTU);
+    DTU.flush();
+    LLVM_DEBUG(DTU.getDomTree().verify());
+    LLVM_DEBUG(DTU.getPostDomTree().verify());
+  }
+  assert(BranchAndSwitchVecCond.empty());
+}
+
+void Ripple::clonePathStartingWith(BasicBlock *Start,
+                                   const DenseSet<BasicBlock *> &BBsToClone,
+                                   ValueToValueMapTy &VMap,
+                                   std::vector<BasicBlock *> &ClonedBBs) {
+  std::queue<BasicBlock *> WorkList;
+  WorkList.push(Start);
+  while (!WorkList.empty()) {
+    BasicBlock *BB = WorkList.front();
+    WorkList.pop();
+    // Don't clone twice (can revisit when loops are present in the SESE region)
+    if (VMap.count(BB))
+      continue;
+    BasicBlock *Clone =
+        CloneBasicBlock(BB, VMap, ".ripple.branch.clone", BB->getParent());
+    LLVM_DEBUG(dbgs() << "Cloned " << BB->getName() << " as "
+                      << Clone->getName() << "\n");
+    VMap[BB] = Clone;
+    ClonedBBs.push_back(Clone);
+    for (BasicBlock *Next : successors(BB)) {
+      if (BBsToClone.contains(Next) && !VMap.count(Next))
+        WorkList.push(Next);
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "MidPoint \n");
+
+  // Fix PHIs with incoming values from blocks that were deleted
+  for (BasicBlock *BB : BBsToClone) {
+    if (!VMap.count(BB)) {
+      for (auto *Succ : successors(BB)) {
+        auto ClonedBBIterator = VMap.find(Succ);
+        if (ClonedBBIterator != VMap.end()) {
+          BasicBlock *ClonedBB = cast<BasicBlock>(&*ClonedBBIterator->second);
+          LLVM_DEBUG(dbgs()
+                     << "Did not clone " << BB->getName()
+                     << ", fixing PHIs in clone of " << Succ->getName() << " ("
+                     << ClonedBB->getName() << ")" << *ClonedBB << "\n");
+          // we cannot use the "removePredecessors" method because ClonedBB does
+          // not have the block as predecessor (that's why we are removing it)
+          removeIncomingBlockFromPhis(BB, ClonedBB);
+        }
+      }
+    }
+  }
+
+  // Remap all the instructions
+  remapInstructionsInBlocks(ClonedBBs, VMap);
+  for (const auto &[SourceVal, MappedVal] : VMap)
+    if (const Instruction *I = dyn_cast<Instruction>(SourceVal))
+      setRippleShape(MappedVal, getRippleShape(I));
+}
+
+void Ripple::vectorBranchMasks(
+    BranchInst *Branch, Value *VectorCondition,
+    SmallVectorImpl<std::pair<BasicBlock *, Value *>> &TargetMasks,
+    const TensorShape &MaskShape) {
+  // Create additional masks right before the branch instruction
+  irBuilder.SetInsertPoint(Branch);
+  if (Branch->getSuccessor(0) == Branch->getSuccessor(1)) {
+    // True and False branch to the same BasicBlock, the mask is true
+    VectorType *ConditionType = cast<VectorType>(VectorCondition->getType());
+    Value *TrueMask =
+        ConstantVector::getSplat(ConditionType->getElementCount(),
+                                 ConstantInt::getTrue(Branch->getContext()));
+    TargetMasks.push_back(std::make_pair(Branch->getSuccessor(0), TrueMask));
+  } else {
+    TargetMasks.push_back(
+        std::make_pair(Branch->getSuccessor(0), VectorCondition));
+    Value *FalseMask =
+        irBuilder.CreateNot(VectorCondition, "ripple.false.branch.mask");
+    setRippleShape(FalseMask, MaskShape);
+    TargetMasks.push_back(std::make_pair(Branch->getSuccessor(1), FalseMask));
+  }
+}
+
+void Ripple::vectorSwitchMasks(
+    SwitchInst *Switch, Value *VectorCondition,
+    SmallVectorImpl<std::pair<BasicBlock *, Value *>> &TargetMasks,
+    const TensorShape &MaskShape) {
+
+  using TargetMasksType =
+      typename std::remove_reference<decltype(TargetMasks)>::type::value_type;
+
+  assert(VectorCondition->getType()->isVectorTy());
+  VectorType *ConditionType = cast<VectorType>(VectorCondition->getType());
+  // Create the masks right before the switch instruction
+  irBuilder.SetInsertPoint(Switch);
+  auto SwitchCases = Switch->cases();
+  for (auto &Case : SwitchCases) {
+    auto *CaseValue = Case.getCaseValue();
+    assert(!CaseValue->getType()->isVectorTy());
+    Constant *CaseValueSplat =
+        ConstantVector::getSplat(ConditionType->getElementCount(), CaseValue);
+    Value *CaseMask = irBuilder.CreateICmpEQ(VectorCondition, CaseValueSplat,
+                                             "ripple.switch.case.mask");
+    setRippleShape(CaseMask, MaskShape);
+    TargetMasks.push_back(std::make_pair(Case.getCaseSuccessor(), CaseMask));
+  }
+
+  // Build the default mask as NOT(OR(caseMasks))
+  // If only default is present, the default mask will be true
+  Value *DefaultMask =
+      SwitchCases.empty()
+          ? ConstantVector::getSplat(ConditionType->getElementCount(),
+                                     ConstantInt::getTrue(Switch->getContext()))
+          : TargetMasks[0].second;
+  for (unsigned i = 1; i < TargetMasks.size(); ++i) {
+    DefaultMask = irBuilder.CreateOr(DefaultMask, TargetMasks[i].second);
+    setRippleShape(DefaultMask, MaskShape);
+  }
+  if (!SwitchCases.empty()) {
+    DefaultMask = irBuilder.CreateNot(DefaultMask);
+    setRippleShape(DefaultMask, MaskShape);
+  }
+  DefaultMask->setName("ripple.switch.default.mask");
+  TargetMasks.push_back(std::make_pair(Switch->getDefaultDest(), DefaultMask));
+
+  // Merge the masks when jumping to the same target, keeping default last
+  SmallPtrSet<TargetMasksType *, 16> Simplified;
+  for (auto TargetPairIt = TargetMasks.rbegin(), end = TargetMasks.rend();
+       TargetPairIt != end; ++TargetPairIt) {
+    auto &TargetPair = *TargetPairIt;
+    if (Simplified.contains(&TargetPair))
+      continue;
+    auto &[BranchBB, BranchMask] = TargetPair;
+    for (auto OtherPairIt = TargetPairIt + 1; OtherPairIt != end;
+         ++OtherPairIt) {
+      auto &OtherTargetPair = *OtherPairIt;
+      if (Simplified.contains(&OtherTargetPair))
+        continue;
+      auto &[OtherBranchBB, OtherMask] = OtherTargetPair;
+      // Switch to the same target, we can OR the masks and remove
+      // OtherTargetPair
+      if (BranchBB == OtherBranchBB) {
+        Value *NewMask = irBuilder.CreateOr(BranchMask, OtherMask);
+        setRippleShape(NewMask, MaskShape);
+        BranchMask = NewMask;
+        Simplified.insert(&OtherTargetPair);
+      }
+    }
+  }
+  if (!Simplified.empty()) {
+    SmallVector<TargetMasksType, 16> KeptPairs;
+    std::copy_if(TargetMasks.begin(), TargetMasks.end(),
+                 std::back_inserter(KeptPairs),
+                 [&](auto &Pair) { return !Simplified.contains(&Pair); });
+    TargetMasks.clear();
+    TargetMasks.append(KeptPairs.begin(), KeptPairs.end());
+  }
 }
 
 DenseSet<BasicBlock *> Ripple::allBasicBlocksFromTo(BasicBlock *from,
@@ -3562,7 +4554,6 @@ void Ripple::simplifySlopes() {
   }
 }
 
-
 iterator_range<User::const_op_iterator>
 Ripple::vectorizableOperands(const Instruction *I) {
   auto Begin = I->op_begin();
@@ -4031,6 +5022,33 @@ DebugLoc Ripple::sanitizeRippleLocation(const Instruction *I) {
     return stripInliningFromDebugLoc(I->getDebugLoc());
   else
     return I->getDebugLoc();
+}
+
+Value *Ripple::reduceBcastMaskToShape(Value *Mask, const TensorShape &MaskShape,
+                                      const TensorShape &ExpectedShape) {
+  auto ReductionDims =
+      MaskShape.reductionDimensionsBeforeBroadcast(ExpectedShape);
+
+  if (ReductionDims.any()) {
+    TensorShape ReducedShape = MaskShape;
+    ReducedShape.reduceDimensions(ReductionDims);
+    // Neutral reduction of mask is a false mask
+    Value *ReducedMask = genMultiDimReduction(Intrinsic::vp_reduce_or, Mask,
+                                              MaskShape, ReductionDims);
+    LLVM_DEBUG(dbgs() << "Mask reduced to " << ReducedShape << " is "
+                      << *ReducedMask << "\n");
+    auto BcastMask = tensorBcast(ReducedMask, ReducedShape, ExpectedShape);
+    // Checked by checkVectorBranch
+    if (!BcastMask)
+      report_fatal_error("Mask Broadcast failure");
+    return *BcastMask;
+  } else {
+    // The tensorBcast diagnostic has the same info as in this function
+    auto BcastMask = tensorBcast(Mask, MaskShape, ExpectedShape);
+    if (!BcastMask)
+      report_fatal_error("Mask Broadcast failure");
+    return *BcastMask;
+  }
 }
 
 bool Ripple::allInstructionsHaveRippleShapes() const {

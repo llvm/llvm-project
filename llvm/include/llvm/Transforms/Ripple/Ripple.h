@@ -26,6 +26,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -66,6 +67,7 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 namespace llvm {
 
@@ -671,6 +673,26 @@ private:
                                     NDLoadStoreAttr &Attr);
 };
 
+// ---------------------------------------------------------------------------//
+//                            Helper Functions                                //
+// ---------------------------------------------------------------------------//
+
+/**
+ * @brief Updates phi instructions in \p BBToProcess such that all incoming
+ * edges from \p RefToRemove are removed.
+ *
+ * @param RefToRemove The predecessor to remove.
+ * @param BBToProcess
+ *
+ * \note \p RefToRemove might still have \p BBToProcess as the successor. It is
+ * the caller's responsibility to appropriately update the successors of \p
+ * RefToRemove.
+ */
+void removeIncomingBlockFromPhis(const BasicBlock *RefToRemove,
+                                 BasicBlock *BBToProcess);
+
+// _____________________________________________________________________________
+
 class Ripple {
   TargetMachine *TM;
 
@@ -1233,6 +1255,31 @@ private:
   computeRippleShapeForBitsetIntrinsic(const IntrinsicInst *I,
                                        const TensorShape &IShape);
 
+  /// @brief If-conversion for vector branches
+  /// Replaces the pattern "if x then a else b" into  mask(x, a) -> mask(!x, b)
+  void ifConvert();
+
+  /// @brief Apply mask to maskable operators in the given basic blocks
+  /// @param BBs the basic blocks to consider
+  /// @param VectorMask the mask value to apply
+  /// @param MaskShape the mask tensor shape
+  /// @param MaskInsertionPoint The location where mask reductions/broadcasts
+  /// will be inserted
+  void applyMaskToOps(ArrayRef<BasicBlock *> BBs, Value *VectorMask,
+                      const TensorShape &MaskShape,
+                      Instruction *MaskInsertionPoint);
+
+  /// @brief Apply mask to maskable operators in the given basic block range
+  /// @param BBs the basic block range to consider
+  /// @param VectorMask the mask value to apply
+  /// @param MaskShape the mask tensor shape
+  /// @param MaskInsertionPoint The location where mask reductions/broadcasts
+  /// will be inserted
+  template <typename IteratorT>
+  void applyMaskToOps(llvm::iterator_range<IteratorT> BBs, Value *VectorMask,
+                      const TensorShape &MaskShape,
+                      Instruction *MaskInsertionPoint);
+
   /// @brief Tests if all the reachable instruction of the function have an
   /// associated Ripple shape
   /// @return true if all instructions have a ripple shape, false otherwise
@@ -1247,6 +1294,30 @@ private:
   /// must post-dominate @p from.
   DenseSet<BasicBlock *> allBasicBlocksFromTo(BasicBlock *from,
                                               BasicBlock *to) const;
+
+  /// @brief Build the masks for the lhs and rhs of the BranchInst
+  void vectorBranchMasks(
+      BranchInst *Branch, Value *VectorCondition,
+      SmallVectorImpl<std::pair<BasicBlock *, Value *>> &TargetMasks,
+      const TensorShape &MaskShape);
+
+  /// @brief Build the masks for the switch branches
+  /// The default condition is inserted last in TargetMasks
+  void vectorSwitchMasks(
+      SwitchInst *Switch, Value *VectorCondition,
+      SmallVectorImpl<std::pair<BasicBlock *, Value *>> &TargetMasks,
+      const TensorShape &MaskShape);
+
+  /// @brief Depth first clones basic blocks starting from *start* only for
+  /// BasicBlocks in BBs
+  /// @param Start the first basic block to clone
+  /// @param BBs the set of basic blocks to clone
+  /// @param VMap the value map populated during the cloning
+  /// @param ClonedBBs a vector to populate with pointers of cloned basic blocks
+  void clonePathStartingWith(BasicBlock *Start,
+                             const DenseSet<BasicBlock *> &BBs,
+                             ValueToValueMapTy &VMap,
+                             std::vector<BasicBlock *> &ClonedBBs);
 
   /// @brief Generates the instructions for a multi-dimensional reduction.
   /// The algorithm generates log2 shuffle and reduction instruction per
@@ -1277,6 +1348,14 @@ private:
   Expected<TensorShape>
   inferShapeFromOperands(const Instruction *I, bool AllowPartialPhi,
                          bool &RequiresWaitingForSpecialization);
+
+  /// @brief Apply a reduction followed by a broadcast to get a mask that can be
+  /// applied to ExpectedShape.
+  /// @param Mask The mask value
+  /// @param MaskShape The mask shape
+  /// @param ExpectedShape The expected mask shape
+  Value *reduceBcastMaskToShape(Value *Mask, const TensorShape &MaskShape,
+                                const TensorShape &ExpectedShape);
 
   /// @brief Returns true if the value has a valid type and shape for a linear
   /// series, i.e., integer or pointers and FromShape can be broadcasted to
