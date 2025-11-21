@@ -25,8 +25,10 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/FMF.h"
@@ -2494,6 +2496,104 @@ Expected<Value *> Ripple::tensorBcast(Value *V, const TensorShape &FromShape,
   }
 }
 
+DILocalVariable *Ripple::createVectorLocalFromScalarLocal(
+    DIBuilder &DIB, DILocalVariable *LocalVariable, const TensorShape &Shape) {
+  unsigned VectorLanes = Shape.flatShape();
+  DIType *VariableType = LocalVariable->getType();
+  if (!VariableType)
+    return nullptr;
+
+  // The subrange is used by the debugger to know the number of
+  // elements of the vector
+  DISubrange *Sr = DIB.getOrCreateSubrange(/*start*/ 0, /*size*/ VectorLanes);
+
+  // We construct the vector type from the scalar debug type
+  DICompositeType *VectorTy = DIB.createVectorType(
+      VectorLanes * VariableType->getSizeInBits(),
+      VariableType->getAlignInBits(), VariableType, DIB.getOrCreateArray({Sr}));
+
+  LLVM_DEBUG(dbgs() << "Built composite vector type " << *VectorTy
+                    << " with vector size " << VectorLanes << " subrange "
+                    << *Sr << "\n");
+
+  // Create a new LocalVariable with the correct type
+  DILocalVariable *VectorLocal = DIB.createAutoVariable(
+      LocalVariable->getScope(),
+      tensorizedName(LocalVariable->getName(), Shape), LocalVariable->getFile(),
+      LocalVariable->getLine(), VectorTy, true, LocalVariable->getFlags(),
+      LocalVariable->getAlignInBits());
+
+  LLVM_DEBUG(dbgs() << "Built local vector variable " << *VectorLocal << "\n");
+  return VectorLocal;
+}
+
+void Ripple::vectorGenerationPostProcess() {
+  // Fixup debug info
+  DISubprogram *SP = F.getSubprogram();
+  DICompileUnit *CU = SP ? SP->getUnit() : nullptr;
+  if (CU) {
+    DIBuilder DIB(*F.getParent(), /*AllowUnresolved*/ false, CU);
+    for (auto &BB : F) {
+      for (auto &I : make_early_inc_range(BB)) {
+        // Process Debug records
+        for (DbgRecord &DbgR : make_early_inc_range(I.getDbgRecordRange())) {
+          if (DbgVariableRecord *DVR = dyn_cast<DbgVariableRecord>(&DbgR)) {
+            processDebugIntrinsicOrRecord(DIB, *DVR);
+          }
+        }
+        // Support old style Debug intrinsics
+        if (DbgVariableIntrinsic *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
+          processDebugIntrinsicOrRecord(DIB, *DVI);
+        }
+      }
+    }
+    DIB.finalize();
+  }
+
+  // LS that have not been replaced have the shape of the base, and since we
+  // replace all bases w/o a ScalarShape, they are scalar!
+  for (auto &[I, LS] : LsCache.Valid) {
+    if (!InstructionReplacementMapping.contains(
+            const_cast<Instruction *>(&*I))) {
+      assert(LS->getBaseShape().isScalar());
+      setRippleShape(I, LS->getBaseShape());
+    }
+  }
+  // We don't need Linear Series after vector codegen
+  clearLinearSeriesCache();
+
+  // Check that the users of a replaced instruction are also being vectorized
+  // (modulo if-converted instruction)
+  for (auto &[I, Replacement] : InstructionReplacementMapping) {
+    if (Replacement && Replacement->getType() != I->getType()) {
+      for (auto *User : I->users()) {
+        if (Instruction *UserInst = dyn_cast<Instruction>(User))
+          if (!InstructionReplacementMapping.contains(UserInst) &&
+              !(isa<BranchInst>(UserInst) || isa<SwitchInst>(UserInst))) {
+            LLVM_DEBUG(dbgs()
+                       << "Instruction " << *I << " has a non-vectorized user "
+                       << *User << "\n");
+            llvm_unreachable(
+                "A vectorized instruction has a non-vectorized user");
+          }
+      }
+    }
+  }
+
+  // We replace all values that need replacement
+  for (auto &[I, Replacement] : InstructionReplacementMapping) {
+    invalidateRippleDataFor(I);
+    // Some replacement can be in place
+    auto It = I->getIterator();
+    if (Replacement && Replacement->getType() == I->getType()) {
+      ReplaceInstWithValue(It, Replacement);
+    } else {
+      ReplaceInstWithValue(It, PoisonValue::get(I->getType()));
+    }
+  }
+  InstructionReplacementMapping.clear();
+}
+
 bool Ripple::maskInstructionWhenIfConvert(const Instruction *I) const {
   return isa<LoadInst>(I) || isa<StoreInst>(I) ||
          intrinsicWithId(I,
@@ -4445,6 +4545,55 @@ Error Ripple::checkRippleSemantics() {
     }
   }
   return AllErrors;
+}
+
+template <typename T>
+void Ripple::processDebugIntrinsicOrRecord(DIBuilder &DIB, T &DbgVariable) {
+  for (unsigned VarIdx = 0, e = DbgVariable.getNumVariableLocationOps();
+       VarIdx < e; VarIdx++) {
+    if (Instruction *VariableInst =
+            dyn_cast<Instruction>(DbgVariable.getVariableLocationOp(VarIdx))) {
+      auto RemappedVariable = InstructionReplacementMapping.find(VariableInst);
+      // No replacement, no fix needed!
+      if (RemappedVariable == InstructionReplacementMapping.end())
+        continue;
+
+      auto [InstBeingReplaced, ReplacementValue] = *RemappedVariable;
+
+      if (ReplacementValue == nullptr) {
+        // We removed the instruction => remove the Debug instruction / record
+        invalidateRippleDataFor(&DbgVariable);
+        DbgVariable.eraseFromParent();
+        continue;
+      }
+
+      const TensorShape &VecShape = getRippleShape(&*InstBeingReplaced);
+
+      // We expose ripple.block.index as a vector for the debugger, but
+      // replace it by the base value 0 for linear series
+      if (IntrinsicInst *RippleIndexInst = intrinsicWithId(
+              InstBeingReplaced, {Intrinsic::ripple_block_index}))
+        ReplacementValue = LinearSeries::constructLinearSeriesVector(
+            cast<IntegerType>(RippleIndexInst->getType()),
+            VecShape.flatShape());
+
+      // Set the replacement as metadata
+      DbgVariable.replaceVariableLocationOp(VarIdx, ReplacementValue);
+
+      // Simple replacement, no need to fix the debug type
+      if (InstBeingReplaced->getType() == ReplacementValue->getType())
+        continue;
+
+      // We are dealing with scalar -> vector type transformations
+      assert(!InstBeingReplaced->getType()->isVectorTy() &&
+             "Expected scalar to vector replacement");
+
+      if (DILocalVariable *LocalVectorVar = createVectorLocalFromScalarLocal(
+              DIB, DbgVariable.getVariable(), VecShape)) {
+        DbgVariable.setVariable(LocalVectorVar);
+      }
+    }
+  }
 }
 
 std::string Ripple::tensorizedName(StringRef Name, const TensorShape &Shape) {
