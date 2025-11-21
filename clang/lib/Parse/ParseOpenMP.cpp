@@ -4933,7 +4933,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       if (Tok.is(tok::colon))
         Data.ColonLoc = Tok.getLocation();
       if (getLangOpts().OpenMP >= 61) {
-        // Handle optional need_device_ptr modifier.
+        // Handle the optional fallback argument for the need_device_ptr
+        // modifier.
         if (Tok.is(tok::l_paren)) {
           BalancedDelimiterTracker T(*this, tok::l_paren);
           T.consumeOpen();
@@ -4941,11 +4942,10 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
             std::string Modifier = PP.getSpelling(Tok);
             if (Modifier == "fb_nullify" || Modifier == "fb_preserve") {
               Data.NeedDevicePtrModifier = Modifier == "fb_nullify"
-                                               ? OMPC_NEEDDEVICE_fp_nullify
-                                               : OMPC_NEEDDEVICE_fp_preserve;
+                                               ? OMPC_NEED_DEVICE_PTR_fb_nullify
+                                               : OMPC_NEED_DEVICE_PTR_fb_preserve;
             } else {
-              Diag(Tok, diag::err_omp_unknown_need_device_ptr_modifier)
-                  << (getLangOpts().OpenMP >= 60 ? 1 : 0);
+              Diag(Tok, diag::err_omp_unknown_need_device_ptr_modifier);
               SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end,
                         StopBeforeMatch);
               return false;

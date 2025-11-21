@@ -212,10 +212,10 @@ enum OpenMPAdjustArgsOpKind {
 };
 
 /// OpenMP 6.1 need_device modifier
-enum OpenMPNeedDeviceModifier {
-#define OPENMP_NEEDDEVICE_MODIFIER(Name) OMPC_NEEDDEVICE_##Name,
+enum OpenMPNeedDevicePtrModifier {
+#define OPENMP_NEED_DEVICE_PTR_MODIFIER(Name) OMPC_NEED_DEVICE_PTR_##Name,
 #include "clang/Basic/OpenMPKinds.def"
-  OMPC_NEEDDEVICE_unknown,
+  OMPC_NEED_DEVICE_PTR_unknown,
 };
 
 /// OpenMP bindings for the 'bind' clause.

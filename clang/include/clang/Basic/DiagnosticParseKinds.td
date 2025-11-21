@@ -1725,8 +1725,9 @@ def warn_omp_invalid_attribute_for_ompx_attributes : Warning<"'ompx_attribute' c
 def err_omp_duplicate_modifier : Error<"duplicate modifier '%0' in '%1' clause">;
 def err_omp_expected_modifier : Error<"expected modifier in '%0' clause">;
 def err_omp_unknown_need_device_ptr_modifier
-    : Error<"unknown modifier in 'need_device_ptr' clause%select{| (OpenMP 6.1 or later only)}0">;
-
+    : Error<
+        "invalid argument for 'need_device_ptr' modifier in 'adjust_args' clause. "
+        "Expected 'fp_nullify' or 'fb_preserve'">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
