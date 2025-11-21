@@ -2468,14 +2468,6 @@ let Predicates = [hasPTX<73>, hasSM<52>] in {
 
 include "NVPTXIntrinsics.td"
 
-//-----------------------------------
-// Notes
-//-----------------------------------
-// BSWAP is currently custom-lowered during operation legalization in
-// NVPTXISelLowering.cpp.
-// See the lowerBSWAP function in NVPTXISelLowering.cpp for details.
-
-
 ////////////////////////////////////////////////////////////////////////////////
 // PTX Fence instructions
 ////////////////////////////////////////////////////////////////////////////////
