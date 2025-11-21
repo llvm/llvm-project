@@ -87,10 +87,9 @@ static bool isValidModule(std::unique_ptr<Module> &M,
   return false;
 }
 
-namespace llvm {
 // Note this class needs to be in llvm namespace since its declared as a friend
 // of BugDriver.
-class ReducePassList : public ListReducer<std::string> {
+class llvm::ReducePassList : public ListReducer<std::string> {
   BugDriver &BD;
 
 public:
@@ -102,7 +101,6 @@ public:
   Expected<TestResult> doTest(std::vector<std::string> &Removed,
                               std::vector<std::string> &Kept) override;
 };
-} // namespace llvm
 
 Expected<ReducePassList::TestResult>
 ReducePassList::doTest(std::vector<std::string> &Prefix,
