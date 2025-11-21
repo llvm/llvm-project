@@ -729,11 +729,12 @@ static void emitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
 static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
                                             raw_ostream &OS) {
   enum struct Association {
-    None = 0, // None should be the smallest value.
-    Block,    // The values of the rest don't matter.
-    Declaration,
+    None = 0,    // None should be the smallest value.
+    Block,       // If the order of the rest of these changes, update the
+    Declaration, // 'Reduce' function below.
     Delimited,
-    Loop,
+    LoopNest,
+    LoopSeq,
     Separating,
     FromLeaves,
     Invalid,
@@ -746,7 +747,8 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
         .Case("AS_Block", Association::Block)
         .Case("AS_Declaration", Association::Declaration)
         .Case("AS_Delimited", Association::Delimited)
-        .Case("AS_Loop", Association::Loop)
+        .Case("AS_LoopNest", Association::LoopNest)
+        .Case("AS_LoopSeq", Association::LoopSeq)
         .Case("AS_None", Association::None)
         .Case("AS_Separating", Association::Separating)
         .Case("AS_FromLeaves", Association::FromLeaves)
@@ -777,13 +779,12 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     // Calculate the result using the following rules:
     //   x + x = x
     //   AS_None + x = x
-    //   AS_Block + AS_Loop = AS_Loop
+    //   AS_Block + AS_Loop{Nest|Seq} = AS_Loop{Nest|Seq}
     if (A == Association::None || A == B)
       return B;
-    if (A == Association::Block && B == Association::Loop)
+    if (A == Association::Block &&
+        (B == Association::LoopNest || B == Association::LoopSeq))
       return B;
-    if (A == Association::Loop && B == Association::Block)
-      return A;
     return Association::Invalid;
   };
 
