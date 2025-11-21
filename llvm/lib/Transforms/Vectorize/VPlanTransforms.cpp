@@ -2535,15 +2535,32 @@ void VPlanTransforms::cse(VPlan &Plan) {
 static void licm(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
 
-  /// Sink recipes with no users inside the vector loop region into a dedicated
-  /// exit block.
-  auto *SingleExit =
-      cast_or_null<VPBasicBlock>(LoopRegion->getSingleSuccessor());
-  // Check whether there is a unique dedicated exit block.
-  // TODO: Should check all predecessors of the exit block.
-  if (SingleExit && SingleExit->getSinglePredecessor() == LoopRegion) {
+  // Collect loop regions in preorder.
+  SmallVector<VPRegionBlock *> WorklistForSink{LoopRegion};
+  for (VPRegionBlock *R : VPBlockUtils::blocksOnly<VPRegionBlock>(
+           vp_depth_first_deep(LoopRegion->getEntry()))) {
+    if (!R->isReplicator())
+      WorklistForSink.push_back(R);
+  }
+
+  // Sink recipes with no users inside the vector loop region into a dedicated
+  // exit block.
+  SmallPtrSet<VPBasicBlock *, 16> Visited;
+  while (!WorklistForSink.empty()) {
+    VPRegionBlock *CurLoop = WorklistForSink.pop_back_val();
+    auto *SingleExit =
+        cast_or_null<VPBasicBlock>(CurLoop->getSingleSuccessor());
+    // Check whether there is a unique dedicated exit block.
+    // TODO: Should check all predecessors of the exit block.
+    if (!SingleExit || SingleExit->getSinglePredecessor() != CurLoop)
+      continue;
+
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-             vp_depth_first_shallow(LoopRegion->getEntry()))) {
+             vp_depth_first_shallow(CurLoop->getEntry()))) {
+      // Skip the basic block in inner loops.
+      if (!Visited.insert(VPBB).second)
+        continue;
+
       for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
         if (isDeadRecipe(R)) {
           R.eraseFromParent();
@@ -2553,9 +2570,12 @@ static void licm(VPlan &Plan) {
           continue;
 
         auto *Def = cast<VPSingleDefRecipe>(&R);
-        if (any_of(Def->users(), [LoopRegion](VPUser *U) {
-              auto *UR = cast<VPRecipeBase>(U);
-              return UR->getParent()->getEnclosingLoopRegion();
+        // Cannot sink the recipe if any user is defined in the same loop or in
+        // any nested inner loop region.
+        if (any_of(Def->users(), [&](VPUser *U) {
+              VPBasicBlock *UB = cast<VPRecipeBase>(U)->getParent();
+              return Visited.count(UB) ||
+                     UB->getEnclosingLoopRegion() == CurLoop;
             }))
           continue;
         Def->moveBefore(*SingleExit, SingleExit->getFirstNonPhi());
