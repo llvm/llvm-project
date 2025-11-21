@@ -19,6 +19,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Util.h"
+#include "clang/Frontend/FrontendOptions.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -916,6 +917,12 @@ void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                           raw_ostream *OS = nullptr);
 
 } // end namespace driver
+
+unsigned getOptimizationLevel(const llvm::opt::ArgList &Args, InputKind IK,
+                              DiagnosticsEngine &Diags);
+
+unsigned getOptimizationLevelSize(const llvm::opt::ArgList &Args);
+
 } // end namespace clang
 
 #endif
