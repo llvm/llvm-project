@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-shadowed-namespace-function %t
+// RUN: %check_clang_tidy -std=c++98-or-later %s misc-shadowed-namespace-function %t
 
 void f1_general();
 namespace foo_general {
@@ -184,8 +184,8 @@ namespace foo_good4 {
   char f0_good4();
   unsigned f1_good4();
 }
-short f0_good4() { return {}; }
-int f1_good4() { return {}; }
+short f0_good4() { return 0; }
+int f1_good4() { return 0; }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -218,7 +218,7 @@ void f1_anon() {}
 //////////////////////////////////////////////////////////////////////////////////////////
 
 void f1_inline_ns();
-namespace foo_inline_ns {
+inline namespace foo_inline_ns {
   void f0_inline_ns();
   void f1_inline_ns();
 }

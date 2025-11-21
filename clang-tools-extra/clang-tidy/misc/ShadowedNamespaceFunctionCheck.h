@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SHADOWEDNAMESPACEFUNCTIONCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include <tuple>
 
 namespace clang::tidy::misc {
 

@@ -14,15 +14,14 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include <tuple>
 
-using namespace clang;
 using namespace clang::ast_matchers;
-using namespace clang::tidy;
 
 namespace clang::tidy::misc {
 
-template <typename ContainerTy>
-static auto makeCannonicalTypesRange(ContainerTy &&C) {
+template <template<typename> typename ContainerTy>
+static auto makeCannonicalTypesRange(const ContainerTy<ParmVarDecl*> &C) {
   return llvm::map_range(C, [](const ParmVarDecl *Param) {
     return Param->getType().getCanonicalType();
   });
@@ -45,7 +44,6 @@ static std::pair<const FunctionDecl *, const NamespaceDecl *>
 findShadowedInNamespace(const NamespaceDecl *NS, const FunctionDecl *GlobalFunc,
                         StringRef GlobalFuncName,
                         llvm::SmallPtrSet<const FunctionDecl *, 16> &All) {
-
   if (NS->isAnonymousNamespace())
     return {nullptr, nullptr};
 
@@ -57,9 +55,10 @@ findShadowedInNamespace(const NamespaceDecl *NS, const FunctionDecl *GlobalFunc,
     if (const auto *NestedNS = dyn_cast<NamespaceDecl>(Decl)) {
       auto [NestedShadowedFunc, NestedShadowedNamespace] =
           findShadowedInNamespace(NestedNS, GlobalFunc, GlobalFuncName, All);
-      if (!ShadowedFunc)
-        std::tie(ShadowedFunc, ShadowedNamespace) =
-            std::tie(NestedShadowedFunc, NestedShadowedNamespace);
+      if (!ShadowedFunc) {
+        ShadowedFunc = NestedShadowedFunc;
+        ShadowedNamespace = NestedShadowedNamespace;
+      }
     }
 
     // Check functions
@@ -81,13 +80,14 @@ findShadowedInNamespace(const NamespaceDecl *NS, const FunctionDecl *GlobalFunc,
 }
 
 void ShadowedNamespaceFunctionCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      functionDecl(isDefinition(), decl(hasDeclContext(translationUnitDecl())),
-                   unless(anyOf(isImplicit(), isVariadic(), isMain(),
-                                isStaticStorageClass(),
-                                ast_matchers::isTemplateInstantiation())))
-          .bind("func"),
-      this);
+  using ast_matchers::isTemplateInstantiation;
+  Finder->addMatcher(functionDecl(isDefinition(),
+                                  hasDeclContext(translationUnitDecl()),
+                                  unless(anyOf(isImplicit(), isVariadic(),
+                                               isMain(), isStaticStorageClass(),
+                                               isTemplateInstantiation())))
+                         .bind("func"),
+                     this);
 }
 
 void ShadowedNamespaceFunctionCheck::check(
@@ -108,9 +108,10 @@ void ShadowedNamespaceFunctionCheck::check(
     if (const auto *NS = dyn_cast<NamespaceDecl>(Decl)) {
       auto [NestedShadowedFunc, NestedShadowedNamespace] =
           findShadowedInNamespace(NS, Func, FuncName, AllShadowedFuncs);
-      if (!ShadowedFunc)
-        std::tie(ShadowedFunc, ShadowedNamespace) =
-            std::tie(NestedShadowedFunc, NestedShadowedNamespace);
+      if (!ShadowedFunc) {
+        ShadowedFunc = NestedShadowedFunc;
+        ShadowedNamespace = NestedShadowedNamespace;
+      }
     }
   }
 
@@ -136,8 +137,7 @@ void ShadowedNamespaceFunctionCheck::check(
 
   for (const FunctionDecl *NoteShadowedFunc : AllShadowedFuncs)
     diag(NoteShadowedFunc->getLocation(), "function %0 declared here",
-         DiagnosticIDs::Note)
-        << NoteShadowedFunc->getDeclName();
+         DiagnosticIDs::Note) << NoteShadowedFunc;
 }
 
 } // namespace clang::tidy::misc
