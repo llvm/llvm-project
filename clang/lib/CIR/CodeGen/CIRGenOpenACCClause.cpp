@@ -876,6 +876,18 @@ public:
     }
   }
 
+  void VisitLinkClause(const OpenACCLinkClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::DeclareEnterOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::DeclareLinkOp>(
+            var, mlir::acc::DataClause::acc_declare_link, {},
+            /*structured=*/true,
+            /*implicit=*/false);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitLinkClause");
+    }
+  }
+
   void VisitDeleteClause(const OpenACCDeleteClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ExitDataOp>) {
       for (const Expr *var : clause.getVarList())
@@ -1151,6 +1163,7 @@ EXPL_SPEC(mlir::acc::AtomicReadOp)
 EXPL_SPEC(mlir::acc::AtomicWriteOp)
 EXPL_SPEC(mlir::acc::AtomicCaptureOp)
 EXPL_SPEC(mlir::acc::AtomicUpdateOp)
+EXPL_SPEC(mlir::acc::DeclareEnterOp)
 #undef EXPL_SPEC
 
 template <typename ComputeOp, typename LoopOp>
