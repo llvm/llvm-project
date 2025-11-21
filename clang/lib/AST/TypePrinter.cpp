@@ -147,8 +147,6 @@ public:
 
   void printBefore(QualType T, raw_ostream &OS);
   void printAfter(QualType T, raw_ostream &OS);
-  void AppendScope(DeclContext *DC, raw_ostream &OS,
-                   DeclarationName NameInScope);
   void printTagType(const TagType *T, raw_ostream &OS);
   void printFunctionAfter(const FunctionType::ExtInfo &Info, raw_ostream &OS);
 #define ABSTRACT_TYPE(CLASS, PARENT)
@@ -1267,7 +1265,7 @@ void TypePrinter::printTypeSpec(NamedDecl *D, raw_ostream &OS) {
   // In C, this will always be empty except when the type
   // being printed is anonymous within other Record.
   if (!Policy.SuppressScope)
-    AppendScope(D->getDeclContext(), OS, D->getDeclName());
+    D->printNestedNameSpecifier(OS, Policy);
 
   IdentifierInfo *II = D->getIdentifier();
   OS << II->getName();
@@ -1281,7 +1279,7 @@ void TypePrinter::printUnresolvedUsingBefore(const UnresolvedUsingType *T,
     OS << ' ';
   auto *D = T->getDecl();
   if (Policy.FullyQualifiedName || T->isCanonicalUnqualified()) {
-    AppendScope(D->getDeclContext(), OS, D->getDeclName());
+    D->printNestedNameSpecifier(OS, Policy);
   } else {
     T->getQualifier().print(OS, Policy);
   }
@@ -1298,7 +1296,7 @@ void TypePrinter::printUsingBefore(const UsingType *T, raw_ostream &OS) {
     OS << ' ';
   auto *D = T->getDecl();
   if (Policy.FullyQualifiedName) {
-    AppendScope(D->getDeclContext(), OS, D->getDeclName());
+    D->printNestedNameSpecifier(OS, Policy);
   } else {
     T->getQualifier().print(OS, Policy);
   }
@@ -1322,7 +1320,7 @@ void TypePrinter::printTypedefBefore(const TypedefType *T, raw_ostream &OS) {
     OS << ' ';
   auto *D = T->getDecl();
   if (Policy.FullyQualifiedName) {
-    AppendScope(D->getDeclContext(), OS, D->getDeclName());
+    D->printNestedNameSpecifier(OS, Policy);
   } else {
     T->getQualifier().print(OS, Policy);
   }
@@ -1560,59 +1558,6 @@ void TypePrinter::printPredefinedSugarBefore(const PredefinedSugarType *T,
 void TypePrinter::printPredefinedSugarAfter(const PredefinedSugarType *T,
                                             raw_ostream &OS) {}
 
-/// Appends the given scope to the end of a string.
-void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
-                              DeclarationName NameInScope) {
-  if (DC->isTranslationUnit())
-    return;
-
-  // FIXME: Consider replacing this with NamedDecl::printNestedNameSpecifier,
-  // which can also print names for function and method scopes.
-  if (DC->isFunctionOrMethod())
-    return;
-
-  if (Policy.Callbacks && Policy.Callbacks->isScopeVisible(DC))
-    return;
-
-  if (const auto *NS = dyn_cast<NamespaceDecl>(DC)) {
-    if (Policy.SuppressUnwrittenScope && NS->isAnonymousNamespace())
-      return AppendScope(DC->getParent(), OS, NameInScope);
-
-    // Only suppress an inline namespace if the name has the same lookup
-    // results in the enclosing namespace.
-    if (Policy.SuppressInlineNamespace !=
-            PrintingPolicy::SuppressInlineNamespaceMode::None &&
-        NS->isInline() && NameInScope &&
-        NS->isRedundantInlineQualifierFor(NameInScope))
-      return AppendScope(DC->getParent(), OS, NameInScope);
-
-    AppendScope(DC->getParent(), OS, NS->getDeclName());
-    if (NS->getIdentifier())
-      OS << NS->getName() << "::";
-    else
-      OS << "(anonymous namespace)::";
-  } else if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(DC)) {
-    AppendScope(DC->getParent(), OS, Spec->getDeclName());
-    IncludeStrongLifetimeRAII Strong(Policy);
-    OS << Spec->getIdentifier()->getName();
-    const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
-    printTemplateArgumentList(
-        OS, TemplateArgs.asArray(), Policy,
-        Spec->getSpecializedTemplate()->getTemplateParameters());
-    OS << "::";
-  } else if (const auto *Tag = dyn_cast<TagDecl>(DC)) {
-    AppendScope(DC->getParent(), OS, Tag->getDeclName());
-    if (TypedefNameDecl *Typedef = Tag->getTypedefNameForAnonDecl())
-      OS << Typedef->getIdentifier()->getName() << "::";
-    else if (Tag->getIdentifier())
-      OS << Tag->getIdentifier()->getName() << "::";
-    else
-      return;
-  } else {
-    AppendScope(DC->getParent(), OS, NameInScope);
-  }
-}
-
 void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
   TagDecl *D = T->getDecl();
 
@@ -1642,7 +1587,7 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
     // Compute the full nested-name-specifier for this type.
     // In C, this will always be empty except when the type
     // being printed is anonymous within other Record.
-    AppendScope(D->getDeclContext(), OS, D->getDeclName());
+    D->printNestedNameSpecifier(OS, Policy);
   }
 
   if (const IdentifierInfo *II = D->getIdentifier())
@@ -1865,7 +1810,7 @@ void TypePrinter::printTemplateId(const TemplateSpecializationType *T,
   // FIXME: Null TD never exercised in test suite.
   if (FullyQualify && TD) {
     if (!Policy.SuppressScope)
-      AppendScope(TD->getDeclContext(), OS, TD->getDeclName());
+      TD->printNestedNameSpecifier(OS, Policy);
 
     OS << TD->getName();
   } else {
