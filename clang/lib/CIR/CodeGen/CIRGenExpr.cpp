@@ -1189,9 +1189,20 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
     base = emitLValue(e->getBase());
   } else {
     // Otherwise, the base is a normal rvalue (as in (V+V).x), emit it as such.
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitExtVectorElementExpr: base is a normal rvalue");
-    return {};
+    assert(e->getBase()->getType()->isVectorType() &&
+           "Result must be a vector");
+    mlir::Value vec = emitScalarExpr(e->getBase());
+
+    // Store the vector to memory (because LValue wants an address).
+    QualType baseTy = e->getBase()->getType();
+    Address vecMem = createMemTemp(baseTy, vec.getLoc(), "tmp");
+    if (!getLangOpts().HLSL && baseTy->isExtVectorBoolType()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitExtVectorElementExpr: ExtVectorBoolType & !HLSL");
+      return {};
+    }
+    builder.createStore(vec.getLoc(), vec, vecMem);
+    base = makeAddrLValue(vecMem, baseTy, AlignmentSource::Decl);
   }
 
   QualType type =
