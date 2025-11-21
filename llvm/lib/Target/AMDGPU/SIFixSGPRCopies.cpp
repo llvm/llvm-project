@@ -856,7 +856,7 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
     }
   }
 
-  if (TRI->isVectorRegister(*MRI, PHIRes) ||
+  if (TRI->hasVectorRegisters(MRI->getRegClass(PHIRes)) ||
        RC0 == &AMDGPU::VReg_1RegClass) {
     LLVM_DEBUG(dbgs() << "Legalizing PHI: " << MI);
     TII->legalizeOperands(MI, MDT);
