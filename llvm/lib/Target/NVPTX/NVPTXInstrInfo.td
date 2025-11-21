@@ -2477,9 +2477,10 @@ include "NVPTXIntrinsics.td"
 //   unpack). sm_20 supports native 32-bit register, but not native 16-bit
 // register.
 
-def : Pat <
-  (i16 (bswap i16:$a)),
-  (i16 (CVT_u16_u32 (PRMT_B32rii (i32 (CVT_u32_u16 $a, CvtNONE)), (i32 0), (i32 0x0001), PrmtNONE), CvtNONE))>;
+def : Pat<(i16 (bswap i16:$a)),
+          (i16 (CVT_u16_u32 (PRMT_B32rii (i32 (CVT_u32_u16 $a, CvtNONE)),
+                                          (i32 0), (i32 0x0001), PrmtNONE),
+                             CvtNONE))>;
 
 def : Pat <
   (i32 (bswap i32:$a)),
