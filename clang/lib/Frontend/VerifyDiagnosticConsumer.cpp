@@ -1240,16 +1240,40 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
     const auto [DiagLevel, DiagIndex] = LevelDiagPair;
     const auto &[DiagLoc, DiagText] = getLocDiagPair(DiagLevel, DiagIndex);
     const SourceLocation DirLoc = Directive->DirectiveLoc;
+
     bool LocsMatch =
         SourceMgr.getPresumedLineNumber(DiagLoc) ==
             SourceMgr.getPresumedLineNumber(Directive->DiagnosticLoc) &&
         IsFromSameFile(SourceMgr, Directive->DiagnosticLoc, DiagLoc);
-    if (!LocsMatch ||
-        Directive->match(DiagText) != DiagnosticMatchResult::Match) {
-      OS << "\n  '" << Directive->Spelling << "' at line "
-         << SourceMgr.getPresumedLineNumber(DirLoc) << " in "
-         << SourceMgr.getFilename(DirLoc) << ": " << Directive->Text;
-      ++NumProblems;
+    bool TextMatch = Directive->match(DiagText) == DiagnosticMatchResult::Match;
+    if (LocsMatch && TextMatch) {
+      continue;
+    }
+    ++NumProblems;
+
+    auto printFileNameIfDifferent = [&](SourceLocation DirLoc,
+                                        SourceLocation Loc) {
+      if (!IsFromSameFile(SourceMgr, DirLoc, Loc)) {
+        OS << " in " << SourceMgr.getFilename(Loc);
+      }
+    };
+
+    OS << "\n  '" << Directive->Spelling << "' at line "
+       << SourceMgr.getPresumedLineNumber(DirLoc) << " in "
+       << SourceMgr.getFilename(DirLoc) << ": " << Directive->Text
+       << "\n    matches diagnostic at line "
+       << SourceMgr.getPresumedLineNumber(Directive->DiagnosticLoc);
+    printFileNameIfDifferent(DirLoc, Directive->DiagnosticLoc);
+    if (TextMatch) {
+      OS << ", but diagnostic with the same message was first emitted at line "
+         << SourceMgr.getPresumedLineNumber(DiagLoc);
+      printFileNameIfDifferent(DirLoc, DiagLoc);
+    } else {
+      OS << ", but diagnostic at line "
+         << SourceMgr.getPresumedLineNumber(DiagLoc);
+      printFileNameIfDifferent(DirLoc, DiagLoc);
+      OS << " was emitted first:"
+         << "\n      " << DiagText;
     }
   }
   if (NumProblems > 0) {
