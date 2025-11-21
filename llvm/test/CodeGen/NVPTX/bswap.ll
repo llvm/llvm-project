@@ -10,16 +10,12 @@ target triple = "nvptx64-nvidia-cuda"
 define i16 @bswap16(i16 %a) {
 ; CHECK-LABEL: bswap16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [bswap16_param_0];
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x1U;
-; CHECK-NEXT:    cvt.u16.u32 %rs2, %r2;
-; CHECK-NEXT:    cvt.u32.u16 %r3, %rs2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ld.param.b16 %r1, [bswap16_param_0];
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x7701U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %b = tail call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %b
@@ -63,7 +59,7 @@ define i64 @bswap64(i64 %a) {
 ; PTX70-EMPTY:
 ; PTX70-NEXT:  // %bb.0:
 ; PTX70-NEXT:    ld.param.b64 %rd1, [bswap64_param_0];
-; PTX70-NEXT:    { .reg .b32 tmp; mov.b64 {%r1, tmp}, %rd1; }
+; PTX70-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; PTX70-NEXT:    prmt.b32 %r2, %r1, 0, 0x123U;
 ; PTX70-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r3}, %rd1; }
 ; PTX70-NEXT:    prmt.b32 %r4, %r3, 0, 0x123U;
@@ -78,7 +74,7 @@ define i64 @bswap64(i64 %a) {
 ; PTX71-EMPTY:
 ; PTX71-NEXT:  // %bb.0:
 ; PTX71-NEXT:    ld.param.b64 %rd1, [bswap64_param_0];
-; PTX71-NEXT:    mov.b64 {%r1, _}, %rd1;
+; PTX71-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; PTX71-NEXT:    prmt.b32 %r2, %r1, 0, 0x123U;
 ; PTX71-NEXT:    mov.b64 {_, %r3}, %rd1;
 ; PTX71-NEXT:    prmt.b32 %r4, %r3, 0, 0x123U;

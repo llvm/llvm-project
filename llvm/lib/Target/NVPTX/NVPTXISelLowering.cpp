@@ -1104,6 +1104,12 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   //   * MVT::Other - internal.addrspace.wrap
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::i32, MVT::i128, MVT::v4f32, MVT::Other}, Custom);
+
+  // Custom lowering for bswap
+  setOperationAction(ISD::BSWAP, MVT::i16, Custom);
+  setOperationAction(ISD::BSWAP, MVT::i32, Custom);
+  setOperationAction(ISD::BSWAP, MVT::i64, Custom);
+  setOperationAction(ISD::BSWAP, MVT::v2i16, Custom);
 }
 
 TargetLoweringBase::LegalizeTypeAction
@@ -2568,6 +2574,45 @@ static SDValue lowerTcgen05St(SDValue Op, SelectionDAG &DAG) {
   return Tcgen05StNode;
 }
 
+static SDValue lowerBSWAP(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT VT = Op.getValueType();
+
+  if (VT == MVT::i16) {
+    SDValue Extended = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, Src);
+    SDValue Swapped =
+        getPRMT(Extended, DAG.getConstant(0, DL, MVT::i32), 0x7701, DL, DAG);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Swapped);
+  }
+
+  if (VT == MVT::i32) {
+    return getPRMT(Src, DAG.getConstant(0, DL, MVT::i32), 0x0123, DL, DAG);
+  }
+
+  if (VT == MVT::v2i16) {
+    SDValue Converted = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Src);
+    SDValue Swapped =
+        getPRMT(Converted, DAG.getConstant(0, DL, MVT::i32), 0x2301, DL, DAG);
+    return DAG.getNode(ISD::BITCAST, DL, MVT::v2i16, Swapped);
+  }
+
+  if (VT == MVT::i64) {
+    SDValue Low = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Src,
+                              DAG.getIntPtrConstant(0, DL));
+    SDValue High = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Src,
+                               DAG.getIntPtrConstant(1, DL));
+    SDValue SwappedLow =
+        getPRMT(Low, DAG.getConstant(0, DL, MVT::i32), 0x0123, DL, DAG);
+    SDValue SwappedHigh =
+        getPRMT(High, DAG.getConstant(0, DL, MVT::i32), 0x0123, DL, DAG);
+    return DAG.getNode(NVPTXISD::BUILD_VECTOR, DL, MVT::i64,
+                       {SwappedHigh, SwappedLow});
+  }
+
+  llvm_unreachable("unsupported type for bswap");
+}
+
 static unsigned getTcgen05MMADisableOutputLane(unsigned IID) {
   switch (IID) {
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
@@ -3191,7 +3236,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerCTLZCTPOP(Op, DAG);
   case ISD::FREM:
     return lowerFREM(Op, DAG);
-
+  case ISD::BSWAP:
+    return lowerBSWAP(Op, DAG);
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
