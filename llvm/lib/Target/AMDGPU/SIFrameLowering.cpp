@@ -2251,16 +2251,6 @@ bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
   return true;
 }
 
-static bool isLiveIntoMBB(MCRegister Reg, MachineBasicBlock &MBB,
-                          const TargetRegisterInfo *TRI) {
-  for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R) {
-    if (MBB.isLiveIn(*R)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 bool SIFrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
@@ -2268,8 +2258,36 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *SITRI = static_cast<const SIRegisterInfo *>(TRI);
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
 
   if (!ST.useVGPRBlockOpsForCSR()) {
+    SparseBitVector<> LiveInRoots;
+    if (MRI.tracksLiveness()) {
+      for (const auto &LI : MBB.liveins()) {
+        for (MCRegUnitMaskIterator MI(LI.PhysReg, TRI); MI.isValid(); ++MI) {
+          auto [Unit, UnitLaneMask] = *MI;
+          if ((LI.LaneMask & UnitLaneMask).none())
+            continue;
+          for (MCRegUnitRootIterator RI(Unit, TRI); RI.isValid(); ++RI)
+            LiveInRoots.set(*RI);
+        }
+      }
+    }
+
+    auto UpdateLiveInCheckCanKill = [&](MCRegister Reg) {
+      if (!MRI.tracksLiveness())
+        return false;
+      for (MCRegUnitIterator UI(Reg, TRI); UI.isValid(); ++UI) {
+        for (MCRegUnitRootIterator RI(*UI, TRI); RI.isValid(); ++RI) {
+          if (LiveInRoots.test(*RI))
+            return false;
+        }
+      }
+      // Reg is live in to the spill
+      MBB.addLiveIn(Reg);
+      return true;
+    };
+
     for (const CalleeSavedInfo &CS : CSI) {
       // Insert the spill to the stack frame.
       unsigned Reg = CS.getReg();
@@ -2285,9 +2303,8 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
         // the incoming register value, so don't kill at the spill point. This
         // happens since we pass some special inputs (workgroup IDs) in the
         // callee saved range.
-        const bool IsLiveIn = isLiveIntoMBB(Reg, MBB, TRI);
-        TII->storeRegToStackSlotCFI(MBB, MI, Reg, !IsLiveIn, CS.getFrameIdx(),
-                                    RC);
+        TII->storeRegToStackSlotCFI(MBB, MI, Reg, UpdateLiveInCheckCanKill(Reg),
+                                    CS.getFrameIdx(), RC);
       }
     }
     return true;
