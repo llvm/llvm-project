@@ -205,3 +205,26 @@ void init_expr(int a, int b, int c) {
 // OGCG:   %[[C_PLUS_THREE:.*]] = add nsw i32 %[[C]], 3
 // OGCG:   store i32 %[[C_PLUS_THREE]], ptr %[[S_C]]
 // OGCG:   ret void
+
+void cxx_default_init_with_struct_field() {
+  struct Parent {
+    int getA();
+    int a = getA();
+  };
+  Parent p = Parent{};
+}
+
+// CIR: %[[P_ADDR:.*]] = cir.alloca !rec_Parent, !cir.ptr<!rec_Parent>, ["p", init]
+// CIR: %[[P_ELEM_0_PTR:.*]] = cir.get_member %[[P_ADDR]][0] {name = "a"} : !cir.ptr<!rec_Parent> -> !cir.ptr<!s32i>
+// CIR: %[[METHOD_CALL:.*]] = cir.call @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(%[[P_ADDR]]) : (!cir.ptr<!rec_Parent>) -> !s32i
+// CIR: cir.store{{.*}} %[[METHOD_CALL]], %[[P_ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: %[[P_ADDR:.*]] = alloca %struct.Parent, i64 1, align 4
+// LLVM: %[[P_ELEM_0_PTR:.*]] = getelementptr %struct.Parent, ptr %[[P_ADDR]], i32 0, i32 0
+// LLVM: %[[METHOD_CALL:.*]] = call i32 @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(ptr %[[P_ADDR]])
+// LLVM: store i32 %[[METHOD_CALL]], ptr %[[P_ELEM_0_PTR]], align 4
+
+// OGCG: %[[P_ADDR:.*]] = alloca %struct.Parent, align 4
+// OGCG: %[[P_ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.Parent, ptr %[[P_ADDR]], i32 0, i32 0
+// OGCG: %[[METHOD_CALL:.*]] = call noundef i32 @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(ptr {{.*}} %[[P_ADDR]])
+// OGCG: store i32 %[[METHOD_CALL]], ptr %[[P_ELEM_0_PTR]], align 4

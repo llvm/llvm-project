@@ -1852,21 +1852,25 @@ bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
       // TODO: Do we need a specific flag or type here, to distinghuish against
       // other ConstructName things? Leaving this for the full implementation
       // of mapper lowering.
-      auto *misc{symbol->detailsIf<MiscDetails>()};
-      if (!misc || misc->kind() != MiscDetails::Kind::ConstructName)
+      auto &ultimate{symbol->GetUltimate()};
+      auto *misc{ultimate.detailsIf<MiscDetails>()};
+      auto *md{ultimate.detailsIf<MapperDetails>()};
+      if (!md && (!misc || misc->kind() != MiscDetails::Kind::ConstructName))
         context().Say(mapper->v.source,
             "Name '%s' should be a mapper name"_err_en_US, mapper->v.source);
       else
         mapper->v.symbol = symbol;
     } else {
-      mapper->v.symbol =
-          &MakeSymbol(mapper->v, MiscDetails{MiscDetails::Kind::ConstructName});
-      // TODO: When completing the implementation, we probably want to error if
-      // the symbol is not declared, but right now, testing that the TODO for
-      // OmpMapClause happens is obscured by the TODO for declare mapper, so
-      // leaving this out. Remove the above line once the declare mapper is
-      // implemented. context().Say(mapper->v.source, "'%s' not
-      // declared"_err_en_US, mapper->v.source);
+      // Allow the special 'default' mapper identifier without prior
+      // declaration so lowering can recognize and handle it. Emit an
+      // error for any other missing mapper identifier.
+      if (mapper->v.source.ToString() == "default") {
+        mapper->v.symbol = &MakeSymbol(
+            mapper->v, MiscDetails{MiscDetails::Kind::ConstructName});
+      } else {
+        context().Say(
+            mapper->v.source, "'%s' not declared"_err_en_US, mapper->v.source);
+      }
     }
   }
   return true;
@@ -1880,8 +1884,16 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   // the type has been fully processed.
   BeginDeclTypeSpec();
   auto &mapperName{std::get<std::string>(spec.t)};
-  MakeSymbol(parser::CharBlock(mapperName), Attrs{},
-      MiscDetails{MiscDetails::Kind::ConstructName});
+  // Create or update the mapper symbol with MapperDetails and
+  // keep track of the declarative construct for module emission.
+  SourceName mapperSource{context().SaveTempName(std::string{mapperName})};
+  Symbol &mapperSym{MakeSymbol(mapperSource, Attrs{})};
+  if (!mapperSym.detailsIf<MapperDetails>()) {
+    mapperSym.set_details(MapperDetails{});
+  }
+  if (!context().langOptions().OpenMPSimd) {
+    mapperSym.get<MapperDetails>().AddDecl(declaratives_.back());
+  }
   PushScope(Scope::Kind::OtherConstruct, nullptr);
   Walk(std::get<parser::TypeSpec>(spec.t));
   auto &varName{std::get<parser::Name>(spec.t)};
@@ -3611,10 +3623,20 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
           rename.u);
     }
     for (const auto &[name, symbol] : *useModuleScope_) {
+      // Default USE imports public names, excluding intrinsic-only and most
+      // miscellaneous details. Allow OpenMP mapper identifiers represented
+      // as MapperDetails, and also legacy MiscDetails::ConstructName.
+      bool isMapper{symbol->has<MapperDetails>()};
+      if (!isMapper) {
+        if (const auto *misc{symbol->detailsIf<MiscDetails>()}) {
+          isMapper = misc->kind() == MiscDetails::Kind::ConstructName;
+        }
+      }
       if (symbol->attrs().test(Attr::PUBLIC) && !IsUseRenamed(symbol->name()) &&
           (!symbol->implicitAttrs().test(Attr::INTRINSIC) ||
               symbol->has<UseDetails>()) &&
-          !symbol->has<MiscDetails>() && useNames.count(name) == 0) {
+          (!symbol->has<MiscDetails>() || isMapper) &&
+          useNames.count(name) == 0) {
         SourceName location{x.moduleName.source};
         if (auto *localSymbol{FindInScope(name)}) {
           DoAddUse(location, localSymbol->name(), *localSymbol, *symbol);
@@ -3945,22 +3967,6 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     useProcedure = &useUltimate;
   }
 
-  // Creates a UseErrorDetails symbol in the current scope for a
-  // current UseDetails symbol, but leaves the UseDetails in the
-  // scope's name map.
-  auto CreateLocalUseError{[&]() {
-    EraseSymbol(*localSymbol);
-    CHECK(localSymbol->has<UseDetails>());
-    UseErrorDetails details{localSymbol->get<UseDetails>()};
-    details.add_occurrence(location, useSymbol);
-    Symbol *newSymbol{&MakeSymbol(localName, Attrs{}, std::move(details))};
-    // Restore *localSymbol in currScope
-    auto iter{currScope().find(localName)};
-    CHECK(iter != currScope().end() && &*iter->second == newSymbol);
-    iter->second = MutableSymbolRef{*localSymbol};
-    return newSymbol;
-  }};
-
   // When two derived types arrived, try to combine them.
   const Symbol *combinedDerivedType{nullptr};
   if (!useDerivedType) {
@@ -3986,8 +3992,19 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       combinedDerivedType = localDerivedType;
     } else {
       // Create a local UseErrorDetails for the ambiguous derived type
-      if (localGeneric) {
-        combinedDerivedType = CreateLocalUseError();
+      if (localSymbol->has<UseDetails>() && localGeneric) {
+        // Creates a UseErrorDetails symbol in the current scope for a
+        // current UseDetails symbol, but leaves the UseDetails in the
+        // scope's name map.
+        UseErrorDetails details{localSymbol->get<UseDetails>()};
+        EraseSymbol(*localSymbol);
+        details.add_occurrence(location, useSymbol);
+        Symbol *newSymbol{&MakeSymbol(localName, Attrs{}, std::move(details))};
+        // Restore *localSymbol in currScope
+        auto iter{currScope().find(localName)};
+        CHECK(iter != currScope().end() && &*iter->second == newSymbol);
+        iter->second = MutableSymbolRef{*localSymbol};
+        combinedDerivedType = newSymbol;
       } else {
         ConvertToUseError(*localSymbol, location, useSymbol);
         localDerivedType = nullptr;
@@ -10066,7 +10083,8 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       std::holds_alternative<parser::CompilerDirective::ForceInline>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Inline>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Prefetch>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::NoInline>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::NoInline>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::IVDep>(x.u)) {
     return;
   }
   if (const auto *tkr{

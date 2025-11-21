@@ -207,6 +207,7 @@ public:
   NODE(CompilerDirective, AssumeAligned)
   NODE(CompilerDirective, IgnoreTKR)
   NODE(CompilerDirective, Inline)
+  NODE(CompilerDirective, IVDep)
   NODE(CompilerDirective, ForceInline)
   NODE(CompilerDirective, LoopCount)
   NODE(CompilerDirective, NameValue)

@@ -20,7 +20,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
-#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/Unwind.h"
@@ -54,40 +53,6 @@ StackFrameList::~StackFrameList() {
   // Call clear since this takes a lock and clears the stack frame list in case
   // another thread is currently using this stack frame list
   Clear();
-}
-
-SyntheticStackFrameList::SyntheticStackFrameList(
-    Thread &thread, lldb::StackFrameListSP input_frames,
-    const lldb::StackFrameListSP &prev_frames_sp, bool show_inline_frames)
-    : StackFrameList(thread, prev_frames_sp, show_inline_frames),
-      m_input_frames(std::move(input_frames)) {}
-
-bool SyntheticStackFrameList::FetchFramesUpTo(
-    uint32_t end_idx, InterruptionControl allow_interrupt) {
-  // Check if the thread has a synthetic frame provider.
-  if (auto provider_sp = m_thread.GetFrameProvider()) {
-    // Use the synthetic frame provider to generate frames lazily.
-    // Keep fetching until we reach end_idx or the provider returns an error.
-    for (uint32_t idx = m_frames.size(); idx <= end_idx; idx++) {
-      if (allow_interrupt &&
-          m_thread.GetProcess()->GetTarget().GetDebugger().InterruptRequested())
-        return true;
-      auto frame_or_err = provider_sp->GetFrameAtIndex(idx);
-      if (!frame_or_err) {
-        // Provider returned error - we've reached the end.
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), frame_or_err.takeError(),
-                       "Frame provider reached end at index {0}: {1}", idx);
-        SetAllFramesFetched();
-        break;
-      }
-      m_frames.push_back(*frame_or_err);
-    }
-
-    return false; // Not interrupted.
-  }
-
-  // If no provider, fall back to the base implementation.
-  return StackFrameList::FetchFramesUpTo(end_idx, allow_interrupt);
 }
 
 void StackFrameList::CalculateCurrentInlinedDepth() {

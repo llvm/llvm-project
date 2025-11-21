@@ -285,10 +285,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   }
   SetLoopInfo(x);
 
-  auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-  if (optLoopCons.has_value()) {
-    if (const auto &doConstruct{
-            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+  for (auto &construct : std::get<parser::Block>(x.t)) {
+    if (const auto *doConstruct{parser::omp::GetDoConstruct(construct)}) {
       const auto &doBlock{std::get<parser::Block>(doConstruct->t)};
       CheckNoBranching(doBlock, beginName.v, beginName.source);
     }
@@ -305,6 +303,11 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
       beginName.v == llvm::omp::Directive::OMPD_distribute_simd) {
     CheckDistLinear(x);
   }
+  if (beginName.v == llvm::omp::Directive::OMPD_fuse) {
+    CheckLooprangeBounds(x);
+  } else {
+    CheckNestedFuse(x);
+  }
 }
 
 const parser::Name OmpStructureChecker::GetLoopIndex(
@@ -314,45 +317,37 @@ const parser::Name OmpStructureChecker::GetLoopIndex(
 }
 
 void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {
-  auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-  if (optLoopCons.has_value()) {
-    if (const auto &loopConstruct{
-            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
-      const parser::DoConstruct *loop{&*loopConstruct};
-      if (loop && loop->IsDoNormal()) {
-        const parser::Name &itrVal{GetLoopIndex(loop)};
-        SetLoopIv(itrVal.symbol);
-      }
+  if (const auto *loop{x.GetNestedLoop()}) {
+    if (loop->IsDoNormal()) {
+      const parser::Name &itrVal{GetLoopIndex(loop)};
+      SetLoopIv(itrVal.symbol);
     }
   }
 }
 
 void OmpStructureChecker::CheckLoopItrVariableIsInt(
     const parser::OpenMPLoopConstruct &x) {
-  auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-  if (optLoopCons.has_value()) {
-    if (const auto &loopConstruct{
-            std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
-
-      for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
-        if (loop->IsDoNormal()) {
-          const parser::Name &itrVal{GetLoopIndex(loop)};
-          if (itrVal.symbol) {
-            const auto *type{itrVal.symbol->GetType()};
-            if (!type->IsNumeric(TypeCategory::Integer)) {
-              context_.Say(itrVal.source,
-                  "The DO loop iteration"
-                  " variable must be of the type integer."_err_en_US,
-                  itrVal.ToString());
-            }
+  for (auto &construct : std::get<parser::Block>(x.t)) {
+    for (const parser::DoConstruct *loop{
+             parser::omp::GetDoConstruct(construct)};
+        loop;) {
+      if (loop->IsDoNormal()) {
+        const parser::Name &itrVal{GetLoopIndex(loop)};
+        if (itrVal.symbol) {
+          const auto *type{itrVal.symbol->GetType()};
+          if (!type->IsNumeric(TypeCategory::Integer)) {
+            context_.Say(itrVal.source,
+                "The DO loop iteration"
+                " variable must be of the type integer."_err_en_US,
+                itrVal.ToString());
           }
         }
-        // Get the next DoConstruct if block is not empty.
-        const auto &block{std::get<parser::Block>(loop->t)};
-        const auto it{block.begin()};
-        loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
-                                 : nullptr;
       }
+      // Get the next DoConstruct if block is not empty.
+      const auto &block{std::get<parser::Block>(loop->t)};
+      const auto it{block.begin()};
+      loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
+                               : nullptr;
     }
   }
 }
@@ -417,28 +412,27 @@ void OmpStructureChecker::CheckDistLinear(
 
     // Match the loop index variables with the collected symbols from linear
     // clauses.
-    auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-    if (optLoopCons.has_value()) {
-      if (const auto &loopConstruct{
-              std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
-        for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
-          if (loop->IsDoNormal()) {
-            const parser::Name &itrVal{GetLoopIndex(loop)};
-            if (itrVal.symbol) {
-              // Remove the symbol from the collected set
-              indexVars.erase(&itrVal.symbol->GetUltimate());
-            }
-            collapseVal--;
-            if (collapseVal == 0) {
-              break;
-            }
+    for (auto &construct : std::get<parser::Block>(x.t)) {
+      std::int64_t curCollapseVal{collapseVal};
+      for (const parser::DoConstruct *loop{
+               parser::omp::GetDoConstruct(construct)};
+          loop;) {
+        if (loop->IsDoNormal()) {
+          const parser::Name &itrVal{GetLoopIndex(loop)};
+          if (itrVal.symbol) {
+            // Remove the symbol from the collected set
+            indexVars.erase(&itrVal.symbol->GetUltimate());
           }
-          // Get the next DoConstruct if block is not empty.
-          const auto &block{std::get<parser::Block>(loop->t)};
-          const auto it{block.begin()};
-          loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
-                                   : nullptr;
+          curCollapseVal--;
+          if (curCollapseVal == 0) {
+            break;
+          }
         }
+        // Get the next DoConstruct if block is not empty.
+        const auto &block{std::get<parser::Block>(loop->t)};
+        const auto it{block.begin()};
+        loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
+                                 : nullptr;
       }
     }
 
@@ -448,6 +442,63 @@ void OmpStructureChecker::CheckDistLinear(
       context_.Say(source,
           "Variable '%s' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE"_err_en_US,
           root.name());
+    }
+  }
+}
+
+void OmpStructureChecker::CheckLooprangeBounds(
+    const parser::OpenMPLoopConstruct &x) {
+  const parser::OmpClauseList &clauseList{x.BeginDir().Clauses()};
+  if (clauseList.v.empty()) {
+    return;
+  }
+  for (auto &clause : clauseList.v) {
+    if (const auto *lrClause{
+            std::get_if<parser::OmpClause::Looprange>(&clause.u)}) {
+      auto first{GetIntValue(std::get<0>((lrClause->v).t))};
+      auto count{GetIntValue(std::get<1>((lrClause->v).t))};
+      if (!first || !count) {
+        return;
+      }
+      auto &loopConsList{std::get<parser::Block>(x.t)};
+      if (*first > 0 && *count > 0 &&
+          loopConsList.size() < (unsigned)(*first + *count - 1)) {
+        context_.Say(clause.source,
+            "The loop range indicated in the %s clause must not be out of the bounds of the Loop Sequence following the construct."_err_en_US,
+            parser::ToUpperCaseLetters(clause.source.ToString()));
+      }
+      return;
+    }
+  }
+}
+
+void OmpStructureChecker::CheckNestedFuse(
+    const parser::OpenMPLoopConstruct &x) {
+  auto &loopConsList{std::get<parser::Block>(x.t)};
+  assert(loopConsList.size() == 1 && "Not Expecting a loop sequence");
+  const auto *ompConstruct{parser::omp::GetOmpLoop(loopConsList.front())};
+  if (!ompConstruct) {
+    return;
+  }
+  const parser::OmpClauseList &clauseList{ompConstruct->BeginDir().Clauses()};
+  if (clauseList.v.empty()) {
+    return;
+  }
+  for (auto &clause : clauseList.v) {
+    if (const auto *lrClause{
+            std::get_if<parser::OmpClause::Looprange>(&clause.u)}) {
+      auto count{GetIntValue(std::get<1>((lrClause->v).t))};
+      if (!count) {
+        return;
+      }
+      auto &nestedLoopConsList{std::get<parser::Block>(ompConstruct->t)};
+      if (nestedLoopConsList.size() > (unsigned)(*count)) {
+        context_.Say(x.BeginDir().DirName().source,
+            "The loop sequence following the %s construct must be fully fused first."_err_en_US,
+            parser::ToUpperCaseLetters(
+                x.BeginDir().DirName().source.ToString()));
+      }
+      return;
     }
   }
 }

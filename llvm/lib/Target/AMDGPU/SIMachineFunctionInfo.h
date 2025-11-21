@@ -1014,7 +1014,9 @@ public:
   void setNumWaveDispatchVGPRs(unsigned Count) { NumWaveDispatchVGPRs = Count; }
 
   Register getPrivateSegmentWaveByteOffsetSystemSGPR() const {
-    return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
+    if (ArgInfo.PrivateSegmentWaveByteOffset)
+      return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
+    return MCRegister();
   }
 
   /// Returns the physical register reserved for use as the resource

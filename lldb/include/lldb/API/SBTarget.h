@@ -19,7 +19,6 @@
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBStatisticsOptions.h"
 #include "lldb/API/SBSymbolContextList.h"
-#include "lldb/API/SBThreadCollection.h"
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBWatchpoint.h"
@@ -986,35 +985,6 @@ public:
   lldb::SBTrace CreateTrace(SBError &error);
 
   lldb::SBMutex GetAPIMutex() const;
-
-  /// Register a scripted frame provider for this target.
-  /// If a scripted frame provider with the same name and same argument
-  /// dictionary is already registered on this target, it will be overwritten.
-  ///
-  /// \param[in] class_name
-  ///     The name of the Python class that implements the frame provider.
-  ///
-  /// \param[in] args_dict
-  ///     A dictionary of arguments to pass to the frame provider class.
-  ///
-  /// \param[out] error
-  ///     An error object indicating success or failure.
-  ///
-  /// \return
-  ///     A unique identifier for the frame provider descriptor that was
-  ///     registered. 0 if the registration failed.
-  uint32_t RegisterScriptedFrameProvider(const char *class_name,
-                                         lldb::SBStructuredData args_dict,
-                                         lldb::SBError &error);
-
-  /// Remove a scripted frame provider from this target by name.
-  ///
-  /// \param[in] provider_id
-  ///     The id of the frame provider class to remove.
-  ///
-  /// \return
-  ///     An error object indicating success or failure.
-  lldb::SBError RemoveScriptedFrameProvider(uint32_t provider_id);
 
 protected:
   friend class SBAddress;

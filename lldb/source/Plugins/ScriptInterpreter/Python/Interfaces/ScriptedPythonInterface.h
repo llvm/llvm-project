@@ -330,112 +330,6 @@ public:
     return m_object_instance_sp;
   }
 
-  /// Call a static method on a Python class without creating an instance.
-  ///
-  /// This method resolves a Python class by name and calls a static method
-  /// on it, returning the result. This is useful for calling class-level
-  /// methods that don't require an instance.
-  ///
-  /// \param class_name The fully-qualified name of the Python class.
-  /// \param method_name The name of the static method to call.
-  /// \param error Output parameter to receive error information if the call
-  /// fails.
-  /// \param args Arguments to pass to the static method.
-  ///
-  /// \return The return value of the static method call, or an error value.
-  template <typename T = StructuredData::ObjectSP, typename... Args>
-  T CallStaticMethod(llvm::StringRef class_name, llvm::StringRef method_name,
-                     Status &error, Args &&...args) {
-    using namespace python;
-    using Locker = ScriptInterpreterPythonImpl::Locker;
-
-    std::string caller_signature =
-        llvm::Twine(LLVM_PRETTY_FUNCTION + llvm::Twine(" (") +
-                    llvm::Twine(class_name) + llvm::Twine(".") +
-                    llvm::Twine(method_name) + llvm::Twine(")"))
-            .str();
-
-    if (class_name.empty())
-      return ErrorWithMessage<T>(caller_signature, "missing script class name",
-                                 error);
-
-    Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
-                   Locker::FreeLock);
-
-    // Get the interpreter dictionary.
-    auto dict =
-        PythonModule::MainModule().ResolveName<python::PythonDictionary>(
-            m_interpreter.GetDictionaryName());
-    if (!dict.IsAllocated())
-      return ErrorWithMessage<T>(
-          caller_signature,
-          llvm::formatv("could not find interpreter dictionary: {0}",
-                        m_interpreter.GetDictionaryName())
-              .str(),
-          error);
-
-    // Resolve the class.
-    auto class_obj =
-        PythonObject::ResolveNameWithDictionary<python::PythonCallable>(
-            class_name, dict);
-    if (!class_obj.IsAllocated())
-      return ErrorWithMessage<T>(
-          caller_signature,
-          llvm::formatv("could not find script class: {0}", class_name).str(),
-          error);
-
-    // Get the static method from the class.
-    if (!class_obj.HasAttribute(method_name))
-      return ErrorWithMessage<T>(
-          caller_signature,
-          llvm::formatv("class {0} does not have method {1}", class_name,
-                        method_name)
-              .str(),
-          error);
-
-    PythonCallable method =
-        class_obj.GetAttributeValue(method_name).AsType<PythonCallable>();
-    if (!method.IsAllocated())
-      return ErrorWithMessage<T>(caller_signature,
-                                 llvm::formatv("method {0}.{1} is not callable",
-                                               class_name, method_name)
-                                     .str(),
-                                 error);
-
-    // Transform the arguments.
-    std::tuple<Args...> original_args = std::forward_as_tuple(args...);
-    auto transformed_args = TransformArgs(original_args);
-
-    // Call the static method.
-    llvm::Expected<PythonObject> expected_return_object =
-        llvm::make_error<llvm::StringError>("Not initialized.",
-                                            llvm::inconvertibleErrorCode());
-    std::apply(
-        [&method, &expected_return_object](auto &&...args) {
-          llvm::consumeError(expected_return_object.takeError());
-          expected_return_object = method(args...);
-        },
-        transformed_args);
-
-    if (llvm::Error e = expected_return_object.takeError()) {
-      error = Status::FromError(std::move(e));
-      return ErrorWithMessage<T>(
-          caller_signature, "python static method could not be called", error);
-    }
-
-    PythonObject py_return = std::move(expected_return_object.get());
-
-    // Re-assign reference and pointer arguments if needed.
-    if (sizeof...(Args) > 0)
-      if (!ReassignPtrsOrRefsArgs(original_args, transformed_args))
-        return ErrorWithMessage<T>(
-            caller_signature,
-            "couldn't re-assign reference and pointer arguments", error);
-
-    // Extract value from Python object (handles unallocated case).
-    return ExtractValueFromPythonObject<T>(py_return, error);
-  }
-
 protected:
   template <typename T = StructuredData::ObjectSP>
   T ExtractValueFromPythonObject(python::PythonObject &p, Status &error) {
@@ -452,7 +346,7 @@ protected:
                     llvm::Twine(method_name) + llvm::Twine(")"))
             .str();
     if (!m_object_instance_sp)
-      return ErrorWithMessage<T>(caller_signature, "python object ill-formed",
+      return ErrorWithMessage<T>(caller_signature, "Python object ill-formed",
                                  error);
 
     Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
@@ -464,7 +358,7 @@ protected:
     if (!implementor.IsAllocated())
       return llvm::is_contained(GetAbstractMethods(), method_name)
                  ? ErrorWithMessage<T>(caller_signature,
-                                       "python implementor not allocated",
+                                       "Python implementor not allocated.",
                                        error)
                  : T{};
 
@@ -485,20 +379,20 @@ protected:
     if (llvm::Error e = expected_return_object.takeError()) {
       error = Status::FromError(std::move(e));
       return ErrorWithMessage<T>(caller_signature,
-                                 "python method could not be called", error);
+                                 "Python method could not be called.", error);
     }
 
     PythonObject py_return = std::move(expected_return_object.get());
 
     // Now that we called the python method with the transformed arguments,
-    // we need to iterate again over both the original and transformed
+    // we need to interate again over both the original and transformed
     // parameter pack, and transform back the parameter that were passed in
     // the original parameter pack as references or pointers.
     if (sizeof...(Args) > 0)
       if (!ReassignPtrsOrRefsArgs(original_args, transformed_args))
         return ErrorWithMessage<T>(
             caller_signature,
-            "couldn't re-assign reference and pointer arguments", error);
+            "Couldn't re-assign reference and pointer arguments.", error);
 
     if (!py_return.IsAllocated())
       return {};
@@ -702,11 +596,6 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
 template <>
 lldb::StreamSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StreamSP>(
-    python::PythonObject &p, Status &error);
-
-template <>
-lldb::ThreadSP
-ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ThreadSP>(
     python::PythonObject &p, Status &error);
 
 template <>
