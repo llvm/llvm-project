@@ -394,23 +394,27 @@ static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
                                                   FPRoundingMode rnd,
                                                   bool hasRandomBits,
                                                   Operation *op) {
-  switch (rnd) {
-  case FPRoundingMode::RN:
-  case FPRoundingMode::RZ:
-    if (hasRandomBits)
-      return op->emitOpError(
-          "random_bits not supported for RN and RZ rounding modes.");
-    break;
-  case FPRoundingMode::RS:
-    if (!hasRandomBits)
-      return op->emitOpError("random_bits is required for RS rounding mode.");
-    break;
-  default:
+  static constexpr FPRoundingMode validRndModes[] = {
+      FPRoundingMode::RN, FPRoundingMode::RZ, FPRoundingMode::RS};
+
+  if (!llvm::is_contained(validRndModes, rnd)) {
     return op->emitOpError(
                "Only RN, RZ, and RS rounding modes are supported for "
                "conversions from f32x2 to ")
            << dstType << ".";
   }
+
+  if (rnd == FPRoundingMode::RS) {
+    if (!hasRandomBits) {
+      return op->emitOpError("random_bits is required for RS rounding mode.");
+    }
+  } else {
+    if (hasRandomBits) {
+      return op->emitOpError(
+          "random_bits not supported for RN and RZ rounding modes.");
+    }
+  }
+
   return success();
 }
 
