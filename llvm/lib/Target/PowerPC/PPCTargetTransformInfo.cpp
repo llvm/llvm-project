@@ -1118,9 +1118,8 @@ PPCTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                   TTI::TargetCostKind CostKind) const {
   Type *DataTy = MICA.getDataType();
   Align Alignment = MICA.getAlignment();
-  unsigned Opcode = MICA.getID() == Intrinsic::masked_load
-                        ? Instruction::Load
-                        : Instruction::Store;
+  unsigned Opcode = MICA.getID() == Intrinsic::masked_load ? Instruction::Load
+                                                           : Instruction::Store;
   unsigned AddressSpace = MICA.getAddressSpace();
 
   InstructionCost BaseCost = BaseT::getMaskedMemoryOpCost(MICA, CostKind);
