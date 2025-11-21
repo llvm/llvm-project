@@ -1,4 +1,4 @@
-//===--- StaticAssertCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,9 +13,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include <optional>
 #include <string>
 
@@ -40,8 +38,7 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(
           hasAnyOperatorName("&&", "=="),
           hasEitherOperand(ignoringImpCasts(stringLiteral().bind("assertMSG"))),
-          anyOf(binaryOperator(hasEitherOperand(IsAlwaysFalseWithCast)),
-                anything()))
+          optionally(binaryOperator(hasEitherOperand(IsAlwaysFalseWithCast))))
           .bind("assertExprRoot"),
       IsAlwaysFalse);
   auto NonConstexprFunctionCall =
@@ -54,12 +51,10 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
   auto NonConstexprCode =
       expr(anyOf(NonConstexprFunctionCall, NonConstexprVariableReference));
   auto AssertCondition =
-      expr(
-          anyOf(expr(ignoringParenCasts(anyOf(
-                    AssertExprRoot, unaryOperator(hasUnaryOperand(
-                                        ignoringParenCasts(AssertExprRoot)))))),
-                anything()),
-          unless(NonConstexprCode), unless(hasDescendant(NonConstexprCode)))
+      expr(optionally(expr(ignoringParenCasts(anyOf(
+               AssertExprRoot, unaryOperator(hasUnaryOperand(
+                                   ignoringParenCasts(AssertExprRoot))))))),
+           unless(NonConstexprCode), unless(hasDescendant(NonConstexprCode)))
           .bind("condition");
   auto Condition =
       anyOf(ignoringParenImpCasts(callExpr(
@@ -89,12 +84,12 @@ void StaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *AssertExprRoot =
       Result.Nodes.getNodeAs<BinaryOperator>("assertExprRoot");
   const auto *CastExpr = Result.Nodes.getNodeAs<CStyleCastExpr>("castExpr");
-  SourceLocation AssertExpansionLoc = CondStmt->getBeginLoc();
+  const SourceLocation AssertExpansionLoc = CondStmt->getBeginLoc();
 
   if (!AssertExpansionLoc.isValid() || !AssertExpansionLoc.isMacroID())
     return;
 
-  StringRef MacroName =
+  const StringRef MacroName =
       Lexer::getImmediateMacroName(AssertExpansionLoc, SM, Opts);
 
   if (MacroName != "assert" || Condition->isValueDependent() ||
@@ -104,19 +99,20 @@ void StaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
 
   // False literal is not the result of macro expansion.
   if (IsAlwaysFalse && (!CastExpr || CastExpr->getType()->isPointerType())) {
-    SourceLocation FalseLiteralLoc =
+    const SourceLocation FalseLiteralLoc =
         SM.getImmediateSpellingLoc(IsAlwaysFalse->getExprLoc());
     if (!FalseLiteralLoc.isMacroID())
       return;
 
-    StringRef FalseMacroName =
+    const StringRef FalseMacroName =
         Lexer::getImmediateMacroName(FalseLiteralLoc, SM, Opts);
     if (FalseMacroName.compare_insensitive("false") == 0 ||
         FalseMacroName.compare_insensitive("null") == 0)
       return;
   }
 
-  SourceLocation AssertLoc = SM.getImmediateMacroCallerLoc(AssertExpansionLoc);
+  const SourceLocation AssertLoc =
+      SM.getImmediateMacroCallerLoc(AssertExpansionLoc);
 
   SmallVector<FixItHint, 4> FixItHints;
   SourceLocation LastParenLoc;

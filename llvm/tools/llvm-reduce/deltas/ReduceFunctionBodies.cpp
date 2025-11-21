@@ -13,7 +13,6 @@
 
 #include "ReduceFunctionBodies.h"
 #include "Utils.h"
-#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
 
 using namespace llvm;

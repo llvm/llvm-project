@@ -25,13 +25,9 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace mlir::spirv;
@@ -96,11 +92,13 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
   /// as necessary.
   void handleTerminator(Operation *op, Block *newDest) const final {
     if (auto returnOp = dyn_cast<spirv::ReturnOp>(op)) {
-      OpBuilder(op).create<spirv::BranchOp>(op->getLoc(), newDest);
+      auto builder = OpBuilder(op);
+      spirv::BranchOp::create(builder, op->getLoc(), newDest);
       op->erase();
     } else if (auto retValOp = dyn_cast<spirv::ReturnValueOp>(op)) {
-      OpBuilder(op).create<spirv::BranchOp>(retValOp->getLoc(), newDest,
-                                            retValOp->getOperands());
+      auto builder = OpBuilder(op);
+      spirv::BranchOp::create(builder, retValOp->getLoc(), newDest,
+                              retValOp->getOperands());
       op->erase();
     }
   }
@@ -175,10 +173,7 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
 
   // Check other allowed types
   if (auto t = llvm::dyn_cast<FloatType>(type)) {
-    if (type.isBF16()) {
-      parser.emitError(typeLoc, "cannot use 'bf16' to compose SPIR-V types");
-      return Type();
-    }
+    // TODO: All float types are allowed for now, but this should be fixed.
   } else if (auto t = llvm::dyn_cast<IntegerType>(type)) {
     if (!ScalarType::isValid(t)) {
       parser.emitError(typeLoc,
@@ -195,6 +190,13 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
       parser.emitError(
           typeLoc, "vector length has to be less than or equal to 4 but found ")
           << t.getNumElements();
+      return Type();
+    }
+  } else if (auto t = dyn_cast<TensorArmType>(type)) {
+    if (!isa<ScalarType>(t.getElementType())) {
+      parser.emitError(
+          typeLoc, "only scalar element type allowed in tensor type but found ")
+          << t.getElementType();
       return Type();
     }
   } else {
@@ -249,10 +251,18 @@ static Type parseAndVerifySampledImageType(SPIRVDialect const &dialect,
   if (parser.parseType(type))
     return Type();
 
-  if (!llvm::isa<ImageType>(type)) {
+  auto imageType = dyn_cast<ImageType>(type);
+  if (!imageType) {
     parser.emitError(typeLoc,
                      "sampled image must be composed using image type, got ")
         << type;
+    return Type();
+  }
+
+  if (llvm::is_contained({Dim::SubpassData, Dim::Buffer}, imageType.getDim())) {
+    parser.emitError(
+        typeLoc, "sampled image Dim must not be SubpassData or Buffer, got ")
+        << stringifyDim(imageType.getDim());
     return Type();
   }
 
@@ -364,6 +374,52 @@ static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
     return {};
 
   return CooperativeMatrixType::get(elementTy, dims[0], dims[1], scope, use);
+}
+
+// tensor-arm-type ::=
+//   `!spirv.arm.tensor` `<` dim0 `x` dim1 `x` ... `x` dimN `x` element-type`>`
+static Type parseTensorArmType(SPIRVDialect const &dialect,
+                               DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return {};
+
+  bool unranked = false;
+  SmallVector<int64_t, 4> dims;
+  SMLoc countLoc = parser.getCurrentLocation();
+
+  if (parser.parseOptionalStar().succeeded()) {
+    unranked = true;
+    if (parser.parseXInDimensionList())
+      return {};
+  } else if (parser.parseDimensionList(dims, /*allowDynamic=*/true)) {
+    return {};
+  }
+
+  if (!unranked && dims.empty()) {
+    parser.emitError(countLoc, "arm.tensors do not support rank zero");
+    return {};
+  }
+
+  if (llvm::is_contained(dims, 0)) {
+    parser.emitError(countLoc, "arm.tensors do not support zero dimensions");
+    return {};
+  }
+
+  if (llvm::any_of(dims, [](int64_t dim) { return dim < 0; }) &&
+      llvm::any_of(dims, [](int64_t dim) { return dim > 0; })) {
+    parser.emitError(countLoc, "arm.tensor shape dimensions must be either "
+                               "fully dynamic or completed shaped");
+    return {};
+  }
+
+  auto elementTy = parseAndVerifyType(dialect, parser);
+  if (!elementTy)
+    return {};
+
+  if (parser.parseGreater())
+    return {};
+
+  return TensorArmType::get(dims, elementTy);
 }
 
 // TODO: Reorder methods to be utilities first and parse*Type
@@ -619,19 +675,17 @@ static ParseResult parseStructMemberDecorations(
 
     // Parse member decoration value if it exists.
     if (succeeded(parser.parseOptionalEqual())) {
-      auto memberDecorationValue =
-          parseAndVerifyInteger<uint32_t>(dialect, parser);
-
-      if (!memberDecorationValue)
+      Attribute memberDecorationValue;
+      if (failed(parser.parseAttribute(memberDecorationValue)))
         return failure();
 
       memberDecorationInfo.emplace_back(
-          static_cast<uint32_t>(memberTypes.size() - 1), 1,
-          memberDecoration.value(), memberDecorationValue.value());
+          static_cast<uint32_t>(memberTypes.size() - 1),
+          memberDecoration.value(), memberDecorationValue);
     } else {
       memberDecorationInfo.emplace_back(
-          static_cast<uint32_t>(memberTypes.size() - 1), 0,
-          memberDecoration.value(), 0);
+          static_cast<uint32_t>(memberTypes.size() - 1),
+          memberDecoration.value(), UnitAttr::get(dialect.getContext()));
     }
     return success();
   };
@@ -647,7 +701,9 @@ static ParseResult parseStructMemberDecorations(
 //             `!spirv.struct<` (id `,`)?
 //                          `(`
 //                            (spirv-type (`[` struct-member-decoration `]`)?)*
-//                          `)>`
+//                          `)`
+//                            (`,` struct-decoration)?
+//                          `>`
 static Type parseStructType(SPIRVDialect const &dialect,
                             DialectAsmParser &parser) {
   // TODO: This function is quite lengthy. Break it down into smaller chunks.
@@ -721,17 +777,48 @@ static Type parseStructType(SPIRVDialect const &dialect,
     return Type();
   }
 
-  if (failed(parser.parseRParen()) || failed(parser.parseGreater()))
+  if (failed(parser.parseRParen()))
+    return Type();
+
+  SmallVector<StructType::StructDecorationInfo, 1> structDecorationInfo;
+
+  auto parseStructDecoration = [&]() {
+    std::optional<spirv::Decoration> decoration =
+        parseAndVerify<spirv::Decoration>(dialect, parser);
+    if (!decoration)
+      return failure();
+
+    // Parse decoration value if it exists.
+    if (succeeded(parser.parseOptionalEqual())) {
+      Attribute decorationValue;
+      if (failed(parser.parseAttribute(decorationValue)))
+        return failure();
+
+      structDecorationInfo.emplace_back(decoration.value(), decorationValue);
+    } else {
+      structDecorationInfo.emplace_back(decoration.value(),
+                                        UnitAttr::get(dialect.getContext()));
+    }
+    return success();
+  };
+
+  while (succeeded(parser.parseOptionalComma()))
+    if (failed(parseStructDecoration()))
+      return Type();
+
+  if (failed(parser.parseGreater()))
     return Type();
 
   if (!identifier.empty()) {
     if (failed(idStructTy.trySetBody(memberTypes, offsetInfo,
-                                     memberDecorationInfo)))
+                                     memberDecorationInfo,
+                                     structDecorationInfo)))
       return Type();
     return idStructTy;
   }
 
-  return StructType::get(memberTypes, offsetInfo, memberDecorationInfo);
+  return StructType::get(memberTypes, offsetInfo, memberDecorationInfo,
+                         structDecorationInfo);
 }
 
 // spirv-type ::= array-type
@@ -762,6 +849,8 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return parseStructType(*this, parser);
   if (keyword == "matrix")
     return parseMatrixType(*this, parser);
+  if (keyword == "arm.tensor")
+    return parseTensorArmType(*this, parser);
   parser.emitError(parser.getNameLoc(), "unknown SPIR-V type: ") << keyword;
   return Type();
 }
@@ -834,8 +923,9 @@ static void print(StructType type, DialectAsmPrinter &os) {
       }
       auto eachFn = [&os](spirv::StructType::MemberDecorationInfo decoration) {
         os << stringifyDecoration(decoration.decoration);
-        if (decoration.hasValue) {
-          os << "=" << decoration.decorationValue;
+        if (decoration.hasValue()) {
+          os << "=";
+          os.printAttributeWithoutType(decoration.decorationValue);
         }
       };
       llvm::interleaveComma(decorations, os, eachFn);
@@ -844,7 +934,23 @@ static void print(StructType type, DialectAsmPrinter &os) {
   };
   llvm::interleaveComma(llvm::seq<unsigned>(0, type.getNumElements()), os,
                         printMember);
-  os << ")>";
+  os << ")";
+
+  SmallVector<spirv::StructType::StructDecorationInfo, 1> decorations;
+  type.getStructDecorations(decorations);
+  if (!decorations.empty()) {
+    os << ", ";
+    auto eachFn = [&os](spirv::StructType::StructDecorationInfo decoration) {
+      os << stringifyDecoration(decoration.decoration);
+      if (decoration.hasValue()) {
+        os << "=";
+        os.printAttributeWithoutType(decoration.decorationValue);
+      }
+    };
+    llvm::interleaveComma(decorations, os, eachFn);
+  }
+
+  os << ">";
 }
 
 static void print(CooperativeMatrixType type, DialectAsmPrinter &os) {
@@ -858,12 +964,30 @@ static void print(MatrixType type, DialectAsmPrinter &os) {
   os << ">";
 }
 
+static void print(TensorArmType type, DialectAsmPrinter &os) {
+  os << "arm.tensor<";
+
+  llvm::interleave(
+      type.getShape(), os,
+      [&](int64_t dim) {
+        if (ShapedType::isDynamic(dim))
+          os << '?';
+        else
+          os << dim;
+      },
+      "x");
+  if (!type.hasRank()) {
+    os << "*";
+  }
+  os << "x" << type.getElementType() << ">";
+}
+
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<ArrayType, CooperativeMatrixType, PointerType, RuntimeArrayType,
-            ImageType, SampledImageType, StructType, MatrixType>(
+            ImageType, SampledImageType, StructType, MatrixType, TensorArmType>(
           [&](auto type) { print(type, os); })
-      .Default([](Type) { llvm_unreachable("unhandled SPIR-V type"); });
+      .DefaultUnreachable("Unhandled SPIR-V type");
 }
 
 //===----------------------------------------------------------------------===//
@@ -874,12 +998,12 @@ Operation *SPIRVDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
   if (auto poison = dyn_cast<ub::PoisonAttr>(value))
-    return builder.create<ub::PoisonOp>(loc, type, poison);
+    return ub::PoisonOp::create(builder, loc, type, poison);
 
   if (!spirv::ConstantOp::isBuildableWith(type))
     return nullptr;
 
-  return builder.create<spirv::ConstantOp>(loc, type, value);
+  return spirv::ConstantOp::create(builder, loc, type, value);
 }
 
 //===----------------------------------------------------------------------===//
@@ -950,7 +1074,12 @@ LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
 }
 
 LogicalResult SPIRVDialect::verifyRegionResultAttribute(
-    Operation *op, unsigned /*regionIndex*/, unsigned /*resultIndex*/,
+    Operation *op, unsigned /*regionIndex*/, unsigned resultIndex,
     NamedAttribute attribute) {
-  return op->emitError("cannot attach SPIR-V attributes to region result");
+  if (auto graphOp = dyn_cast<spirv::GraphARMOp>(op))
+    return verifyRegionAttribute(
+        op->getLoc(), graphOp.getResultTypes()[resultIndex], attribute);
+  return op->emitError(
+      "cannot attach SPIR-V attributes to region result which is "
+      "not part of a spirv::GraphARMOp type");
 }

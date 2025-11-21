@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: no-exceptions
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // <string>
 
 // size_type max_size() const; // constexpr since C++20

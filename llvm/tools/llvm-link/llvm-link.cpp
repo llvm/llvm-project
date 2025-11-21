@@ -110,16 +110,6 @@ static cl::opt<bool> SuppressWarnings("suppress-warnings",
                                       cl::desc("Suppress all linking warnings"),
                                       cl::init(false), cl::cat(LinkCategory));
 
-static cl::opt<bool> PreserveBitcodeUseListOrder(
-    "preserve-bc-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden, cl::cat(LinkCategory));
-
-static cl::opt<bool> PreserveAssemblyUseListOrder(
-    "preserve-ll-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden, cl::cat(LinkCategory));
-
 static cl::opt<bool> NoVerify("disable-verify",
                               cl::desc("Do not run the verifier"), cl::Hidden,
                               cl::cat(LinkCategory));
@@ -128,9 +118,6 @@ static cl::opt<bool> IgnoreNonBitcode(
     "ignore-non-bitcode",
     cl::desc("Do not report an error for non-bitcode files in archives"),
     cl::Hidden);
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 
 static ExitOnError ExitOnErr;
 
@@ -433,7 +420,7 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
       // does not do the ThinLink that would normally determine what values to
       // promote.
       for (auto &I : *Index) {
-        for (auto &S : I.second.SummaryList) {
+        for (auto &S : I.second.getSummaryList()) {
           if (GlobalValue::isLocalLinkage(S->linkage()))
             S->setLinkage(GlobalValue::ExternalLinkage);
         }
@@ -478,11 +465,6 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&LinkCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
-
-  // Since llvm-link collects multiple IR modules together, for simplicity's
-  // sake we disable the "PreserveInputDbgFormat" flag to enforce a single
-  // debug info format.
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
 
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLinkDiagnosticHandler>(),
@@ -531,17 +513,12 @@ int main(int argc, char **argv) {
 
   if (Verbose)
     errs() << "Writing bitcode...\n";
-  auto SetFormat = [&](bool NewFormat) {
-    Composite->setIsNewDbgInfoFormat(NewFormat);
-    if (NewFormat)
-      Composite->removeDebugIntrinsicDeclarations();
-  };
+  Composite->removeDebugIntrinsicDeclarations();
   if (OutputAssembly) {
-    SetFormat(UseNewDbgInfoFormat);
-    Composite->print(Out.os(), nullptr, PreserveAssemblyUseListOrder);
+    Composite->print(Out.os(), nullptr, /* ShouldPreserveUseListOrder */ false);
   } else if (Force || !CheckBitcodeOutputToConsole(Out.os())) {
-    SetFormat(UseNewDbgInfoFormat);
-    WriteBitcodeToFile(*Composite, Out.os(), PreserveBitcodeUseListOrder);
+    WriteBitcodeToFile(*Composite, Out.os(),
+                       /* ShouldPreserveUseListOrder */ true);
   }
 
   // Declare success.

@@ -1,4 +1,4 @@
-//===--- AvoidBindCheck.cpp - clang-tidy-----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -19,11 +18,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstddef>
 #include <string>
 
@@ -255,14 +252,13 @@ static SmallVector<BindArgument, 4>
 buildBindArguments(const MatchFinder::MatchResult &Result,
                    const CallableInfo &Callable) {
   SmallVector<BindArgument, 4> BindArguments;
-  static llvm::Regex MatchPlaceholder("^_([0-9]+)$");
+  static const llvm::Regex MatchPlaceholder("^_([0-9]+)$");
 
   const auto *BindCall = Result.Nodes.getNodeAs<CallExpr>("bind");
 
   // Start at index 1 as first argument to bind is the function name.
   unsigned CaptureIndex = 0;
   for (size_t I = 1, ArgCount = BindCall->getNumArgs(); I < ArgCount; ++I) {
-
     const Expr *E = BindCall->getArg(I);
     BindArgument &B = BindArguments.emplace_back();
 
@@ -270,7 +266,7 @@ buildBindArguments(const MatchFinder::MatchResult &Result,
     if (Callable.Type == CT_MemberFunction)
       --ArgIndex;
 
-    bool IsObjectPtr = (I == 1 && Callable.Type == CT_MemberFunction);
+    const bool IsObjectPtr = (I == 1 && Callable.Type == CT_MemberFunction);
     B.E = E;
     B.SourceTokens = getSourceTextForExpr(Result, E);
 
@@ -330,27 +326,25 @@ static int findPositionOfPlaceholderUse(ArrayRef<BindArgument> Args,
 static void addPlaceholderArgs(const LambdaProperties &LP,
                                llvm::raw_ostream &Stream,
                                bool PermissiveParameterList) {
-
   ArrayRef<BindArgument> Args = LP.BindArguments;
 
-  const auto *MaxPlaceholderIt =
-      std::max_element(Args.begin(), Args.end(),
-                       [](const BindArgument &B1, const BindArgument &B2) {
-                         return B1.PlaceHolderIndex < B2.PlaceHolderIndex;
-                       });
+  const auto *MaxPlaceholderIt = llvm::max_element(
+      Args, [](const BindArgument &B1, const BindArgument &B2) {
+        return B1.PlaceHolderIndex < B2.PlaceHolderIndex;
+      });
 
   // Placeholders (if present) have index 1 or greater.
   if (!PermissiveParameterList && (MaxPlaceholderIt == Args.end() ||
                                    MaxPlaceholderIt->PlaceHolderIndex == 0))
     return;
 
-  size_t PlaceholderCount = MaxPlaceholderIt->PlaceHolderIndex;
+  const size_t PlaceholderCount = MaxPlaceholderIt->PlaceHolderIndex;
   Stream << "(";
   StringRef Delimiter = "";
   for (size_t I = 1; I <= PlaceholderCount; ++I) {
     Stream << Delimiter << "auto &&";
 
-    int ArgIndex = findPositionOfPlaceholderUse(Args, I);
+    const int ArgIndex = findPositionOfPlaceholderUse(Args, I);
 
     if (ArgIndex != -1 && Args[ArgIndex].IsUsed)
       Stream << " " << Args[ArgIndex].UsageIdentifier;
@@ -396,7 +390,7 @@ findCandidateCallOperators(const CXXRecordDecl *RecordDecl, size_t NumArgs) {
   std::vector<const FunctionDecl *> Candidates;
 
   for (const clang::CXXMethodDecl *Method : RecordDecl->methods()) {
-    OverloadedOperatorKind OOK = Method->getOverloadedOperator();
+    const OverloadedOperatorKind OOK = Method->getOverloadedOperator();
 
     if (OOK != OverloadedOperatorKind::OO_Call)
       continue;
@@ -414,7 +408,7 @@ findCandidateCallOperators(const CXXRecordDecl *RecordDecl, size_t NumArgs) {
       continue;
     const FunctionDecl *FD = FTD->getTemplatedDecl();
 
-    OverloadedOperatorKind OOK = FD->getOverloadedOperator();
+    const OverloadedOperatorKind OOK = FD->getOverloadedOperator();
     if (OOK != OverloadedOperatorKind::OO_Call)
       continue;
 
@@ -456,8 +450,8 @@ static bool isFixitSupported(const CallableInfo &Callee,
   return true;
 }
 
-const FunctionDecl *getCallOperator(const CXXRecordDecl *Callable,
-                                    size_t NumArgs) {
+static const FunctionDecl *getCallOperator(const CXXRecordDecl *Callable,
+                                           size_t NumArgs) {
   std::vector<const FunctionDecl *> Candidates =
       findCandidateCallOperators(Callable, NumArgs);
   if (Candidates.size() != 1)
@@ -466,16 +460,15 @@ const FunctionDecl *getCallOperator(const CXXRecordDecl *Callable,
   return Candidates.front();
 }
 
-const FunctionDecl *
+static const FunctionDecl *
 getCallMethodDecl(const MatchFinder::MatchResult &Result, CallableType Type,
                   CallableMaterializationKind Materialization) {
-
   const Expr *Callee = Result.Nodes.getNodeAs<Expr>("ref");
   const Expr *CallExpression = ignoreTemporariesAndPointers(Callee);
 
   if (Type == CT_Object) {
     const auto *BindCall = Result.Nodes.getNodeAs<CallExpr>("bind");
-    size_t NumArgs = BindCall->getNumArgs() - 1;
+    const size_t NumArgs = BindCall->getNumArgs() - 1;
     return getCallOperator(Callee->getType()->getAsCXXRecordDecl(), NumArgs);
   }
 
@@ -492,7 +485,7 @@ getCallMethodDecl(const MatchFinder::MatchResult &Result, CallableType Type,
 static CallableType getCallableType(const MatchFinder::MatchResult &Result) {
   const auto *CallableExpr = Result.Nodes.getNodeAs<Expr>("ref");
 
-  QualType QT = CallableExpr->getType();
+  const QualType QT = CallableExpr->getType();
   if (QT->isMemberFunctionPointerType())
     return CT_MemberFunction;
 
@@ -589,7 +582,7 @@ static bool emitCapture(llvm::StringSet<> &CaptureSet, StringRef Delimiter,
     return false;
 
   // This capture has already been emitted.
-  if (CaptureSet.count(Identifier) != 0)
+  if (CaptureSet.contains(Identifier))
     return false;
 
   Stream << Delimiter;
@@ -618,7 +611,7 @@ static void emitCaptureList(const LambdaProperties &LP,
     if (B.CM == CM_None || !B.IsUsed)
       continue;
 
-    StringRef Delimiter = AnyCapturesEmitted ? ", " : "";
+    const StringRef Delimiter = AnyCapturesEmitted ? ", " : "";
 
     if (emitCapture(CaptureSet, Delimiter, B.CM, B.CE, B.CaptureIdentifier,
                     B.SourceTokens, Stream))
@@ -673,7 +666,7 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
   emitCaptureList(LP, Result, Stream);
   Stream << "]";
 
-  ArrayRef<BindArgument> FunctionCallArgs = ArrayRef(LP.BindArguments);
+  const ArrayRef<BindArgument> FunctionCallArgs = ArrayRef(LP.BindArguments);
 
   addPlaceholderArgs(LP, Stream, PermissiveParameterList);
 

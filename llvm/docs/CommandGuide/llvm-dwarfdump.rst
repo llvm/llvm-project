@@ -83,7 +83,7 @@ OPTIONS
 .. option:: -n <name>, --name=<name>
 
             Find and print all debug info entries whose name
-            (`DW_AT_name` attribute) is <name>.
+            (`DW_AT_name`/`DW_AT_linkage_name` attribute) is <name>.
 
 .. option:: --lookup=<address>
 
@@ -134,6 +134,15 @@ OPTIONS
 
             Abbreviate the description of type unit entries.
 
+.. option:: -t, --filter-child-tag
+
+            Only dump children whose DWARF tag is one of the specified tags.
+            Example usage:
+
+            .. code-block:: c
+
+              llvm-dwarfdump -t DW_TAG_structure_type -t DW_TAG_member -c
+
 .. option:: -x, --regex
 
             Treat any <name> strings as regular expressions when searching
@@ -162,7 +171,7 @@ OPTIONS
 
 .. option:: --verify-json=<path>
 
-            Output JSON-formatted error summary to the a file specfied by
+            Output JSON-formatted error summary to the file specified by
             <path>. Implies :option:`--verify`.  The output format is described
             in the section below (:ref:`verify-json-format`).
 

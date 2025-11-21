@@ -24,7 +24,9 @@
 #  include <wctype.h>
 #endif
 
-#include <xlocale.h>
+#if __has_include(<xlocale.h>)
+#  include <xlocale.h>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -89,16 +91,6 @@ __strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
 //
 // Character manipulation functions
 //
-#if defined(_LIBCPP_BUILDING_LIBRARY)
-inline _LIBCPP_HIDE_FROM_ABI int __islower(int __c, __locale_t __loc) { return ::islower_l(__c, __loc); }
-
-inline _LIBCPP_HIDE_FROM_ABI int __isupper(int __c, __locale_t __loc) { return ::isupper_l(__c, __loc); }
-#endif
-
-inline _LIBCPP_HIDE_FROM_ABI int __isdigit(int __c, __locale_t __loc) { return ::isdigit_l(__c, __loc); }
-
-inline _LIBCPP_HIDE_FROM_ABI int __isxdigit(int __c, __locale_t __loc) { return ::isxdigit_l(__c, __loc); }
-
 #if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __toupper(int __c, __locale_t __loc) { return ::toupper_l(__c, __loc); }
 

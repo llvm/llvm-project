@@ -385,6 +385,50 @@ Users need to implement a single function to capture the CF table at startup:
     // the collected control flow.
   }
 
+Tracing Stack Depth
+===================
+
+With ``-fsanitize-coverage=stack-depth`` the compiler will track how much
+stack space has been used for a function call chain. Leaf functions are
+not included in this tracing.
+
+The maximum depth of a function call graph is stored in the thread-local
+``__sancov_lowest_stack`` variable. Instrumentation is inserted in every
+non-leaf function to check the frame pointer against this variable,
+and if it is lower, store the current frame pointer. This effectively
+inserts the following:
+
+.. code-block:: c++
+
+  extern thread_local uintptr_t __sancov_lowest_stack;
+
+  uintptr_t stack = (uintptr_t)__builtin_frame_address(0);
+  if (stack < __sancov_lowest_stack)
+    __sancov_lowest_stack = stack;
+
+If ``-fsanitize-coverage-stack-depth-callback-min=N`` (where
+``N > 0``) is also used, the tracking is delegated to a callback,
+``__sanitizer_cov_stack_depth``, instead of adding instrumentation to
+update ``__sancov_lowest_stack``. The ``N`` of the argument is used
+to determine which functions to instrument. Only functions estimated
+to be using ``N`` bytes or more of stack space will be instrumented to
+call the tracing callback. In the case of a dynamically sized stack,
+the callback is unconditionally added.
+
+The callback takes no arguments and is responsible for determining
+the stack usage and doing any needed comparisons and storage. A roughly
+equivalent implementation of ``__sancov_lowest_stack`` using the callback
+would look like this:
+
+.. code-block:: c++
+
+  void __sanitizer_cov_stack_depth(void) {
+    uintptr_t stack = (uintptr_t)__builtin_frame_address(0);
+
+    if (stack < __sancov_lowest_stack)
+      __sancov_lowest_stack = stack;
+  }
+
 Gated Trace Callbacks
 =====================
 

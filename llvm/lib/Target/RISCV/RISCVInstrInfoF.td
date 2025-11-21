@@ -35,36 +35,64 @@ def SDT_RISCVFSGNJX
     : SDTypeProfile<1, 2, [SDTCisFP<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>]>;
 
 def riscv_fclass
-    : SDNode<"RISCVISD::FCLASS", SDT_RISCVFCLASS>;
+    : RVSDNode<"FCLASS", SDT_RISCVFCLASS>;
 
+// Rounds an FP value to its corresponding integer in the same FP format.
+// First operand is the value to round, the second operand is the largest
+// integer that can be represented exactly in the FP format. This will be
+// expanded into multiple instructions and basic blocks with a custom
+// inserter.
 def riscv_fround
-    : SDNode<"RISCVISD::FROUND", SDT_RISCVFROUND>;
+    : RVSDNode<"FROUND", SDT_RISCVFROUND>;
 
 def riscv_fsgnjx
-    : SDNode<"RISCVISD::FSGNJX", SDT_RISCVFSGNJX>;
+    : RVSDNode<"FSGNJX", SDT_RISCVFSGNJX>;
 
+// FPR<->GPR transfer operations when the FPR is smaller than XLEN, needed as
+// XLEN is the only legal integer width.
+//
+// FMV_W_X_RV64 matches the semantics of the FMV.W.X.
+// FMV_X_ANYEXTW_RV64 is similar to FMV.X.W but has an any-extended result.
+//
+// This is a more convenient semantic for producing dagcombines that remove
+// unnecessary GPR->FPR->GPR moves.
 def riscv_fmv_w_x_rv64
-    : SDNode<"RISCVISD::FMV_W_X_RV64", SDT_RISCVFMV_W_X_RV64>;
+    : RVSDNode<"FMV_W_X_RV64", SDT_RISCVFMV_W_X_RV64>;
 def riscv_fmv_x_anyextw_rv64
-    : SDNode<"RISCVISD::FMV_X_ANYEXTW_RV64", SDT_RISCVFMV_X_ANYEXTW_RV64>;
+    : RVSDNode<"FMV_X_ANYEXTW_RV64", SDT_RISCVFMV_X_ANYEXTW_RV64>;
+
+// FP to 32 bit int conversions for RV64. These are used to keep track of the
+// result being sign extended to 64 bit. These saturate out of range inputs.
+// Used for FP_TO_S/UINT and FP_TO_S/UINT_SAT lowering. Rounding mode
+// is passed as a TargetConstant operand using the RISCVFPRndMode enum.
 def riscv_fcvt_w_rv64
-    : SDNode<"RISCVISD::FCVT_W_RV64", SDT_RISCVFCVT_W_RV64>;
+    : RVSDNode<"FCVT_W_RV64", SDT_RISCVFCVT_W_RV64>;
 def riscv_fcvt_wu_rv64
-    : SDNode<"RISCVISD::FCVT_WU_RV64", SDT_RISCVFCVT_W_RV64>;
+    : RVSDNode<"FCVT_WU_RV64", SDT_RISCVFCVT_W_RV64>;
+
+// FP to XLen int conversions. Corresponds to fcvt.l(u).s/d/h on RV64 and
+// fcvt.w(u).s/d/h on RV32. Unlike FP_TO_S/UINT these saturate out of
+// range inputs. These are used for FP_TO_S/UINT_SAT lowering. Rounding mode
+// is passed as a TargetConstant operand using the RISCVFPRndMode enum.
 def riscv_fcvt_x
-    : SDNode<"RISCVISD::FCVT_X", SDT_RISCVFCVT_X>;
+    : RVSDNode<"FCVT_X", SDT_RISCVFCVT_X>;
 def riscv_fcvt_xu
-    : SDNode<"RISCVISD::FCVT_XU", SDT_RISCVFCVT_X>;
+    : RVSDNode<"FCVT_XU", SDT_RISCVFCVT_X>;
 
-def riscv_fmin : SDNode<"RISCVISD::FMIN", SDTFPBinOp>;
-def riscv_fmax : SDNode<"RISCVISD::FMAX", SDTFPBinOp>;
+// Floating point fmax and fmin matching the RISC-V instruction semantics.
+def riscv_fmin : RVSDNode<"FMIN", SDTFPBinOp>;
+def riscv_fmax : RVSDNode<"FMAX", SDTFPBinOp>;
 
-def riscv_strict_fcvt_w_rv64
-    : SDNode<"RISCVISD::STRICT_FCVT_W_RV64", SDT_RISCVFCVT_W_RV64,
-             [SDNPHasChain]>;
-def riscv_strict_fcvt_wu_rv64
-    : SDNode<"RISCVISD::STRICT_FCVT_WU_RV64", SDT_RISCVFCVT_W_RV64,
-             [SDNPHasChain]>;
+let IsStrictFP = true in {
+  // FP to 32 bit int conversions for RV64. These are used to keep track of the
+  // result being sign extended to 64 bit. These saturate out of range inputs.
+  def riscv_strict_fcvt_w_rv64
+      : RVSDNode<"STRICT_FCVT_W_RV64", SDT_RISCVFCVT_W_RV64,
+              [SDNPHasChain]>;
+  def riscv_strict_fcvt_wu_rv64
+      : RVSDNode<"STRICT_FCVT_WU_RV64", SDT_RISCVFCVT_W_RV64,
+              [SDNPHasChain]>;
+}
 
 def riscv_any_fcvt_w_rv64 : PatFrags<(ops node:$src, node:$frm),
                                      [(riscv_strict_fcvt_w_rv64 node:$src, node:$frm),
@@ -93,7 +121,7 @@ def FPR32INX : RegisterOperand<GPRF32> {
   let ParserMatchClass = GPRAsFPR32;
 }
 
-// Describes a combination of predicates from F/D/Zfh/Zfhmin or
+// Describes a combination of predicates from F/D/Q/Zfh/Zfhmin or
 // Zfinx/Zdinx/Zhinx/Zhinxmin that are applied to scalar FP instruction.
 // Contains the DAGOperand for the primary type for the predicates. The primary
 // type may be unset for combinations of predicates like Zfh+D.
@@ -103,7 +131,7 @@ def FPR32INX : RegisterOperand<GPRF32> {
 // The DAGOperand can be unset if the predicates are not enough to define it.
 class ExtInfo<string suffix, string space, list<Predicate> predicates,
               ValueType primaryvt, DAGOperand primaryty, DAGOperand f32ty,
-              DAGOperand f64ty, DAGOperand f16ty> {
+              DAGOperand f64ty, DAGOperand f16ty, ValueType intvt = XLenVT> {
   list<Predicate> Predicates = predicates;
   string Suffix = suffix;
   string Space = space;
@@ -112,6 +140,7 @@ class ExtInfo<string suffix, string space, list<Predicate> predicates,
   DAGOperand F32Ty = f32ty;
   DAGOperand F64Ty = f64ty;
   ValueType PrimaryVT = primaryvt;
+  ValueType IntVT = intvt;
 }
 
 def FExt       : ExtInfo<"", "", [HasStdExtF], f32, FPR32, FPR32, ?, ?>;
@@ -168,7 +197,7 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class FPLoad_r<bits<3> funct3, string opcodestr, DAGOperand rty,
                SchedWrite sw>
     : RVInstI<funct3, OPC_LOAD_FP, (outs rty:$rd),
-              (ins GPRMem:$rs1, simm12:$imm12),
+              (ins GPRMem:$rs1, simm12_lo:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">,
       Sched<[sw, ReadFMemBase]>;
 
@@ -176,7 +205,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class FPStore_r<bits<3> funct3, string opcodestr, DAGOperand rty,
                 SchedWrite sw>
     : RVInstS<funct3, OPC_STORE_FP, (outs),
-              (ins rty:$rs2, GPRMem:$rs1, simm12:$imm12),
+              (ins rty:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">,
       Sched<[sw, ReadFStoreData, ReadFMemBase]>;
 
@@ -286,9 +315,9 @@ multiclass FPCmp_rr_m<bits<7> funct7, bits<3> funct3, string opcodestr,
   def Ext.Suffix : FPCmp_rr<funct7, funct3, opcodestr, Ext.PrimaryTy, Commutable>;
 }
 
-class PseudoFROUND<DAGOperand Ty, ValueType vt>
+class PseudoFROUND<DAGOperand Ty, ValueType vt, ValueType intvt = XLenVT>
     : Pseudo<(outs Ty:$rd), (ins Ty:$rs1, Ty:$rs2, ixlenimm:$rm),
-      [(set Ty:$rd, (vt (riscv_fround Ty:$rs1, Ty:$rs2, timm:$rm)))]> {
+      [(set Ty:$rd, (vt (riscv_fround Ty:$rs1, Ty:$rs2, (intvt timm:$rm))))]> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
@@ -301,6 +330,7 @@ class PseudoFROUND<DAGOperand Ty, ValueType vt>
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtF] in {
+let canFoldAsLoad = 1 in
 def FLW : FPLoad_r<0b010, "flw", FPR32, WriteFLD32>;
 
 // Operands for stores are in the order srcreg, base, offset rather than
@@ -501,13 +531,14 @@ def fpimm0    : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
 
 /// Generic pattern classes
 class PatSetCC<DAGOperand Ty, SDPatternOperator OpNode, CondCode Cond,
-               RVInstCommon Inst, ValueType vt>
-    : Pat<(XLenVT (OpNode (vt Ty:$rs1), Ty:$rs2, Cond)), (Inst $rs1, $rs2)>;
+               RVInstCommon Inst, ValueType vt, ValueType intvt = XLenVT>
+    : Pat<(intvt (OpNode (vt Ty:$rs1), Ty:$rs2, Cond)), (Inst $rs1, $rs2)>;
 multiclass PatSetCC_m<SDPatternOperator OpNode, CondCode Cond,
                       RVInstCommon Inst, ExtInfo Ext> {
   let Predicates = Ext.Predicates in
   def Ext.Suffix : PatSetCC<Ext.PrimaryTy, OpNode, Cond,
-                            !cast<RVInstCommon>(Inst#Ext.Suffix), Ext.PrimaryVT>;
+                            !cast<RVInstCommon>(Inst#Ext.Suffix),
+                            Ext.PrimaryVT, Ext.IntVT>;
 }
 
 class PatFprFpr<SDPatternOperator OpNode, RVInstR Inst,
@@ -521,14 +552,15 @@ multiclass PatFprFpr_m<SDPatternOperator OpNode, RVInstR Inst,
 }
 
 class PatFprFprDynFrm<SDPatternOperator OpNode, RVInstRFrm Inst,
-                      DAGOperand RegTy, ValueType vt>
-    : Pat<(OpNode (vt RegTy:$rs1), (vt RegTy:$rs2)), (Inst $rs1, $rs2, FRM_DYN)>;
+                      DAGOperand RegTy, ValueType vt, ValueType intvt>
+    : Pat<(OpNode (vt RegTy:$rs1), (vt RegTy:$rs2)),
+          (Inst $rs1, $rs2,(intvt FRM_DYN))>;
 multiclass PatFprFprDynFrm_m<SDPatternOperator OpNode, RVInstRFrm Inst,
                              ExtInfo Ext> {
   let Predicates = Ext.Predicates in
   def Ext.Suffix : PatFprFprDynFrm<OpNode,
                                    !cast<RVInstRFrm>(Inst#Ext.Suffix),
-                                   Ext.PrimaryTy, Ext.PrimaryVT>;
+                                   Ext.PrimaryTy, Ext.PrimaryVT, Ext.IntVT>;
 }
 
 /// Float conversion operations
@@ -627,6 +659,7 @@ foreach Ext = FExts in {
   defm : PatFprFpr_m<fmaximumnum, FMAX_S, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_S, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_S, Ext>;
+  let Predicates = Ext.Predicates in
   def : Pat<(f32 (fcanonicalize FPR32:$rs1)), (FMIN_S $rs1, $rs1)>;
 }
 

@@ -371,7 +371,7 @@ define i64 @sh3adduw_3(i64 %0, i64 %1) {
   ret i64 %5
 }
 
-; Make sure we use sext.h+slli+srli for Zba+Zbb.
+; Make sure we use sext.b+slli+srli for Zba+Zbb.
 ; FIXME: The RV64I and Zba only cases can be done with only 3 shifts.
 define zeroext i32 @sext_ashr_zext_i8(i8 %a) nounwind {
 ; RV64I-LABEL: sext_ashr_zext_i8:

@@ -87,13 +87,14 @@ static std::string ModuleFilesDir;
 static bool EagerLoadModules;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
-static std::optional<std::string> ModuleName;
+static std::optional<std::string> ModuleNames;
 static std::vector<std::string> ModuleDepTargets;
 static std::string TranslationUnitFile;
 static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
 static bool PrintTiming;
+static bool EmitVisibleModules;
 static llvm::BumpPtrAllocator Alloc;
 static llvm::StringSaver Saver{Alloc};
 static std::vector<const char *> CommandLine;
@@ -105,6 +106,7 @@ static constexpr bool DoRoundTripDefault = false;
 #endif
 
 static bool RoundTripArgs = DoRoundTripDefault;
+static bool VerbatimArgs = false;
 
 static void ParseArgs(int argc, char **argv) {
   ScanDepsOptTable Tbl;
@@ -203,8 +205,8 @@ static void ParseArgs(int argc, char **argv) {
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_compilation_database_EQ))
     CompilationDB = A->getValue();
 
-  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_name_EQ))
-    ModuleName = A->getValue();
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_names_EQ))
+    ModuleNames = A->getValue();
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_dependency_target_EQ))
     ModuleDepTargets.emplace_back(A->getValue());
@@ -232,9 +234,13 @@ static void ParseArgs(int argc, char **argv) {
 
   PrintTiming = Args.hasArg(OPT_print_timing);
 
+  EmitVisibleModules = Args.hasArg(OPT_emit_visible_modules);
+
   Verbose = Args.hasArg(OPT_verbose);
 
   RoundTripArgs = Args.hasArg(OPT_round_trip_args);
+
+  VerbatimArgs = Args.hasArg(OPT_verbatim_args);
 
   if (const llvm::opt::Arg *A = Args.getLastArgNoClaim(OPT_DASH_DASH))
     CommandLine.assign(A->getValues().begin(), A->getValues().end());
@@ -346,7 +352,10 @@ template <typename Container>
 static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings) {
   return [&JOS, Strings = std::forward<Container>(Strings)] {
     for (StringRef Str : Strings)
-      JOS.value(Str);
+      // Not reporting SDKSettings.json so that test checks can remain (mostly)
+      // platform-agnostic.
+      if (!Str.ends_with("SDKSettings.json"))
+        JOS.value(Str);
   };
 }
 
@@ -377,6 +386,14 @@ static auto toJSONSorted(llvm::json::OStream &JOS,
   };
 }
 
+static auto toJSONSorted(llvm::json::OStream &JOS, std::vector<std::string> V) {
+  llvm::sort(V);
+  return [&JOS, V = std::move(V)] {
+    for (const StringRef Entry : V)
+      JOS.value(Entry);
+  };
+}
+
 // Thread safe.
 class FullDeps {
 public:
@@ -390,7 +407,10 @@ public:
     ID.FileName = std::string(Input);
     ID.ContextHash = std::move(TUDeps.ID.ContextHash);
     ID.FileDeps = std::move(TUDeps.FileDeps);
-    ID.ModuleDeps = std::move(TUDeps.ClangModuleDeps);
+    ID.NamedModule = std::move(TUDeps.ID.ModuleName);
+    ID.NamedModuleDeps = std::move(TUDeps.NamedModuleDeps);
+    ID.ClangModuleDeps = std::move(TUDeps.ClangModuleDeps);
+    ID.VisibleModules = std::move(TUDeps.VisibleModules);
     ID.DriverCommandLine = std::move(TUDeps.DriverCommandLine);
     ID.Commands = std::move(TUDeps.Commands);
 
@@ -403,7 +423,7 @@ public:
     std::vector<ModuleDeps *> NewMDs;
     {
       std::unique_lock<std::mutex> ul(Lock);
-      for (const ModuleDeps &MD : Graph) {
+      for (ModuleDeps &MD : Graph) {
         auto I = Modules.find({MD.ID, 0});
         if (I != Modules.end()) {
           I->first.InputIndex = std::min(I->first.InputIndex, InputIndex);
@@ -412,12 +432,12 @@ public:
         auto Res = Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
         NewMDs.push_back(&Res->second);
       }
-      // First call to \c getBuildArguments is somewhat expensive. Let's call it
-      // on the current thread (instead of the main one), and outside the
-      // critical section.
-      for (ModuleDeps *MD : NewMDs)
-        (void)MD->getBuildArguments();
     }
+    // First call to \c getBuildArguments is somewhat expensive. Let's call it
+    // on the current thread (instead of the main one), and outside the
+    // critical section.
+    for (ModuleDeps *MD : NewMDs)
+      (void)MD->getBuildArguments();
   }
 
   bool roundTripCommand(ArrayRef<std::string> ArgStrs,
@@ -433,11 +453,11 @@ public:
   // Returns \c true if any command lines fail to round-trip. We expect
   // commands already be canonical when output by the scanner.
   bool roundTripCommands(raw_ostream &ErrOS) {
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions{};
-    TextDiagnosticPrinter DiagConsumer(ErrOS, &*DiagOpts);
+    DiagnosticOptions DiagOpts;
+    TextDiagnosticPrinter DiagConsumer(ErrOS, DiagOpts);
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
         CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                            &*DiagOpts, &DiagConsumer,
+                                            DiagOpts, &DiagConsumer,
                                             /*ShouldOwnClient=*/false);
 
     for (auto &&M : Modules)
@@ -482,7 +502,12 @@ public:
                                toJSONStrings(JOS, MD.getBuildArguments()));
             JOS.attribute("context-hash", StringRef(MD.ID.ContextHash));
             JOS.attributeArray("file-deps", [&] {
-              MD.forEachFileDep([&](StringRef FileDep) { JOS.value(FileDep); });
+              MD.forEachFileDep([&](StringRef FileDep) {
+                // Not reporting SDKSettings.json so that test checks can remain
+                // (mostly) platform-agnostic.
+                if (!FileDep.ends_with("SDKSettings.json"))
+                  JOS.value(FileDep);
+              });
             });
             JOS.attributeArray("link-libraries",
                                toJSONSorted(JOS, MD.LinkLibraries));
@@ -500,27 +525,47 @@ public:
                   JOS.object([&] {
                     JOS.attribute("clang-context-hash",
                                   StringRef(I.ContextHash));
+                    if (!I.NamedModule.empty())
+                      JOS.attribute("named-module", (I.NamedModule));
+                    if (!I.NamedModuleDeps.empty())
+                      JOS.attributeArray("named-module-deps", [&] {
+                        for (const auto &Dep : I.NamedModuleDeps)
+                          JOS.value(Dep);
+                      });
                     JOS.attributeArray("clang-module-deps",
-                                       toJSONSorted(JOS, I.ModuleDeps));
+                                       toJSONSorted(JOS, I.ClangModuleDeps));
                     JOS.attributeArray("command-line",
                                        toJSONStrings(JOS, Cmd.Arguments));
                     JOS.attribute("executable", StringRef(Cmd.Executable));
                     JOS.attributeArray("file-deps",
                                        toJSONStrings(JOS, I.FileDeps));
                     JOS.attribute("input-file", StringRef(I.FileName));
+                    if (EmitVisibleModules)
+                      JOS.attributeArray("visible-clang-modules",
+                                         toJSONSorted(JOS, I.VisibleModules));
                   });
                 }
               } else {
                 JOS.object([&] {
                   JOS.attribute("clang-context-hash", StringRef(I.ContextHash));
+                  if (!I.NamedModule.empty())
+                    JOS.attribute("named-module", (I.NamedModule));
+                  if (!I.NamedModuleDeps.empty())
+                    JOS.attributeArray("named-module-deps", [&] {
+                      for (const auto &Dep : I.NamedModuleDeps)
+                        JOS.value(Dep);
+                    });
                   JOS.attributeArray("clang-module-deps",
-                                     toJSONSorted(JOS, I.ModuleDeps));
+                                     toJSONSorted(JOS, I.ClangModuleDeps));
                   JOS.attributeArray("command-line",
                                      toJSONStrings(JOS, I.DriverCommandLine));
                   JOS.attribute("executable", "clang");
                   JOS.attributeArray("file-deps",
                                      toJSONStrings(JOS, I.FileDeps));
                   JOS.attribute("input-file", StringRef(I.FileName));
+                  if (EmitVisibleModules)
+                    JOS.attributeArray("visible-clang-modules",
+                                       toJSONSorted(JOS, I.VisibleModules));
                 });
               }
             });
@@ -569,7 +614,10 @@ private:
     std::string FileName;
     std::string ContextHash;
     std::vector<std::string> FileDeps;
-    std::vector<ModuleID> ModuleDeps;
+    std::string NamedModule;
+    std::vector<std::string> NamedModuleDeps;
+    std::vector<ModuleID> ClangModuleDeps;
+    std::vector<std::string> VisibleModules;
     std::vector<std::string> DriverCommandLine;
     std::vector<Command> Commands;
   };
@@ -597,11 +645,12 @@ static bool handleTranslationUnitResult(
   return false;
 }
 
-static bool handleModuleResult(
-    StringRef ModuleName, llvm::Expected<ModuleDepsGraph> &MaybeModuleGraph,
-    FullDeps &FD, size_t InputIndex, SharedStream &OS, SharedStream &Errs) {
-  if (!MaybeModuleGraph) {
-    llvm::handleAllErrors(MaybeModuleGraph.takeError(),
+static bool handleModuleResult(StringRef ModuleName,
+                               llvm::Expected<TranslationUnitDeps> &MaybeTUDeps,
+                               FullDeps &FD, size_t InputIndex,
+                               SharedStream &OS, SharedStream &Errs) {
+  if (!MaybeTUDeps) {
+    llvm::handleAllErrors(MaybeTUDeps.takeError(),
                           [&ModuleName, &Errs](llvm::StringError &Err) {
                             Errs.applyLocked([&](raw_ostream &OS) {
                               OS << "Error while scanning dependencies for "
@@ -611,8 +660,18 @@ static bool handleModuleResult(
                           });
     return true;
   }
-  FD.mergeDeps(std::move(*MaybeModuleGraph), InputIndex);
+  FD.mergeDeps(std::move(MaybeTUDeps->ModuleGraph), InputIndex);
   return false;
+}
+
+static void handleErrorWithInfoString(StringRef Info, llvm::Error E,
+                                      SharedStream &OS, SharedStream &Errs) {
+  llvm::handleAllErrors(std::move(E), [&Info, &Errs](llvm::StringError &Err) {
+    Errs.applyLocked([&](raw_ostream &OS) {
+      OS << "Error: " << Info << ":\n";
+      OS << Err.getMessage();
+    });
+  });
 }
 
 class P1689Deps {
@@ -755,9 +814,10 @@ getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
         CompilationDB, ErrorMessage,
         tooling::JSONCommandLineSyntax::AutoDetect);
 
+  DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          new DiagnosticOptions);
+                                          DiagOpts);
   driver::Driver TheDriver(CommandLine[0], llvm::sys::getDefaultTargetTriple(),
                            *Diags);
   TheDriver.setCheckInputsExist(false);
@@ -836,14 +896,16 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   llvm::cl::PrintOptionValues();
 
-  // Expand response files in advance, so that we can "see" all the arguments
-  // when adjusting below.
-  Compilations = expandResponseFiles(std::move(Compilations),
-                                     llvm::vfs::getRealFileSystem());
+  if (!VerbatimArgs) {
+    // Expand response files in advance, so that we can "see" all the arguments
+    // when adjusting below.
+    Compilations = expandResponseFiles(std::move(Compilations),
+                                       llvm::vfs::getRealFileSystem());
 
-  Compilations = inferTargetAndDriverMode(std::move(Compilations));
+    Compilations = inferTargetAndDriverMode(std::move(Compilations));
 
-  Compilations = inferToolLocation(std::move(Compilations));
+    Compilations = inferToolLocation(std::move(Compilations));
+  }
 
   // The command options are rewritten to run Clang in preprocessor only mode.
   auto AdjustingCompilations =
@@ -851,7 +913,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           std::move(Compilations));
   ResourceDirectoryCache ResourceDirCache;
 
-  AdjustingCompilations->appendArgumentsAdjuster(
+  auto ArgsAdjuster =
       [&ResourceDirCache](const tooling::CommandLineArguments &Args,
                           StringRef FileName) {
         std::string LastO;
@@ -913,7 +975,10 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         }
         AdjustedArgs.insert(AdjustedArgs.end(), FlagsEnd, Args.end());
         return AdjustedArgs;
-      });
+      };
+
+  if (!VerbatimArgs)
+    AdjustingCompilations->appendArgumentsAdjuster(ArgsAdjuster);
 
   SharedStream Errs(llvm::errs());
 
@@ -953,7 +1018,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   };
 
   if (Format == ScanningOutputFormat::Full)
-    FD.emplace(!ModuleName ? Inputs.size() : 0);
+    FD.emplace(!ModuleNames ? Inputs.size() : 0);
 
   std::atomic<size_t> NumStatusCalls = 0;
   std::atomic<size_t> NumOpenFileForReadCalls = 0;
@@ -1027,13 +1092,48 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                                              MakeformatOS, Errs))
             HadErrors = true;
         }
-      } else if (ModuleName) {
-        auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
-            *ModuleName, Input->CommandLine, CWD, AlreadySeenModules,
-            LookupOutput);
-        if (handleModuleResult(*ModuleName, MaybeModuleDepsGraph, *FD,
-                               LocalIndex, DependencyOS, Errs))
-          HadErrors = true;
+      } else if (ModuleNames) {
+        StringRef ModuleNameRef(*ModuleNames);
+        SmallVector<StringRef> Names;
+        ModuleNameRef.split(Names, ',');
+
+        if (Names.size() == 1) {
+          auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
+              Names[0], Input->CommandLine, CWD, AlreadySeenModules,
+              LookupOutput);
+          if (handleModuleResult(Names[0], MaybeModuleDepsGraph, *FD,
+                                 LocalIndex, DependencyOS, Errs))
+            HadErrors = true;
+        } else {
+          if (llvm::Error Err =
+                  WorkerTool.initializeCompilerInstanceWithContext(
+                      CWD, Input->CommandLine)) {
+            handleErrorWithInfoString(
+                "Compiler instance with context setup error", std::move(Err),
+                DependencyOS, Errs);
+            HadErrors = true;
+            continue;
+          }
+
+          for (auto N : Names) {
+            auto MaybeModuleDepsGraph =
+                WorkerTool.computeDependenciesByNameWithContext(
+                    N, AlreadySeenModules, LookupOutput);
+            if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
+                                   DependencyOS, Errs)) {
+              HadErrors = true;
+              break;
+            }
+          }
+
+          if (llvm::Error Err =
+                  WorkerTool.finalizeCompilerInstanceWithContext()) {
+            handleErrorWithInfoString(
+                "Compiler instance with context finialization error",
+                std::move(Err), DependencyOS, Errs);
+            HadErrors = true;
+          }
+        }
       } else {
         std::unique_ptr<llvm::MemoryBuffer> TU;
         std::optional<llvm::MemoryBufferRef> TUBuffer;

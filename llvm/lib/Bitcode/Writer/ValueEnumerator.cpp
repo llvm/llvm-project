@@ -230,6 +230,9 @@ static void predictValueUseListOrderImpl(const Value *V, const Function *F,
 
 static void predictValueUseListOrder(const Value *V, const Function *F,
                                      OrderMap &OM, UseListOrderStack &Stack) {
+  if (!V->hasUseList())
+    return;
+
   auto &IDPair = OM[V];
   assert(IDPair.first && "Unmapped value");
   if (IDPair.second)
@@ -482,8 +485,8 @@ ValueEnumerator::ValueEnumerator(const Module &M,
         // Enumerate metadata attached with this instruction.
         MDs.clear();
         I.getAllMetadataOtherThanDebugLoc(MDs);
-        for (unsigned i = 0, e = MDs.size(); i != e; ++i)
-          EnumerateMetadata(&F, MDs[i].second);
+        for (const auto &MD : MDs)
+          EnumerateMetadata(&F, MD.second);
 
         // Don't enumerate the location directly -- it has a special record
         // type -- but enumerate its operands.
@@ -491,6 +494,12 @@ ValueEnumerator::ValueEnumerator(const Module &M,
           for (const Metadata *Op : L->operands())
             EnumerateMetadata(&F, Op);
       }
+  }
+  for (const GlobalIFunc &GIF : M.ifuncs()) {
+    MDs.clear();
+    GIF.getAllMetadata(MDs);
+    for (const auto &I : MDs)
+      EnumerateMetadata(nullptr, I.second);
   }
 
   // Optimize constant ordering.
@@ -607,9 +616,8 @@ void ValueEnumerator::OptimizeConstants(unsigned CstStart, unsigned CstEnd) {
 /// EnumerateValueSymbolTable - Insert all of the values in the specified symbol
 /// table into the values table.
 void ValueEnumerator::EnumerateValueSymbolTable(const ValueSymbolTable &VST) {
-  for (ValueSymbolTable::const_iterator VI = VST.begin(), VE = VST.end();
-       VI != VE; ++VI)
-    EnumerateValue(VI->getValue());
+  for (const auto &VI : VST)
+    EnumerateValue(VI.getValue());
 }
 
 /// Insert all of the values referenced by named metadata in the specified

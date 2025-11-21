@@ -95,7 +95,7 @@ memory access occurred.
 To maintain distinct source locations for SamplePGO, it is often beneficial to
 retain an arbitrary but deterministic location instead of discarding line and
 column information as part of merging. In particular, loss of location
-information for calls inhibit optimizations such as indirect call promotion.
+information for calls inhibits optimizations such as indirect call promotion.
 This behavior can be optionally enabled until support for accurately
 representing merged instructions in the line table is implemented.
 
@@ -168,6 +168,55 @@ location is available.
 See the discussion in the section about
 :ref:`merging locations<WhenToMergeLocation>` for examples of when the rule for
 dropping locations applies.
+
+When to remap a debug location
+------------------------------
+
+When code paths are duplicated, during passes such as loop unrolling or jump
+threading, `DILocation` attachments need to be remapped using `mapAtomInstance`
+and `RemapSourceAtom`. This is to support the Key Instructions debug info feature.
+See :doc:`KeyInstructionsDebugInfo` for information.
+
+.. _NewInstLocations:
+
+Setting locations for new instructions
+--------------------------------------
+
+Whenever a new instruction is created and there is no suitable location for that
+instruction, that instruction should be annotated accordingly. There are a set
+of special ``DebugLoc`` values that can be set on an instruction to annotate the
+reason that it does not have a valid location. These are as follows:
+
+* ``DebugLoc::getCompilerGenerated()``: This indicates that the instruction is a
+  compiler-generated instruction, i.e. it is not associated with any user source
+  code.
+
+* ``DebugLoc::getDropped()``: This indicates that the instruction has
+  intentionally had its source location removed, according to the rules for
+  :ref:`dropping locations<WhenToDropLocation>`; this is set automatically by
+  ``Instruction::dropLocation()``.
+
+* ``DebugLoc::getUnknown()``: This indicates that the instruction does not have
+  a known or currently knowable source location, e.g. that it is infeasible to
+  determine the correct source location, or that the source location is
+  ambiguous in a way that LLVM cannot currently represent.
+
+* ``DebugLoc::getTemporary()``: This is used for instructions that we don't
+  expect to be emitted (e.g. ``UnreachableInst``), and so should not need a
+  valid location; if we ever try to emit a temporary location into an object/asm
+  file, this indicates that something has gone wrong.
+
+Where applicable, these should be used instead of leaving an instruction without
+an assigned location or explicitly setting the location as ``DebugLoc()``.
+Ordinarily these special locations are identical to an absent location, but LLVM
+built with coverage-tracking
+(``-DLLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING="COVERAGE"``) will keep track of
+these special locations in order to detect unintentionally-missing locations;
+for this reason, the most important rule is to *not* apply any of these if it
+isn't clear which, if any, is appropriate - an absent location can be detected
+and fixed, while an incorrectly annotated instruction is much harder to detect.
+On the other hand, if any of these clearly apply, then they should be used to
+prevent false positives from being flagged up.
 
 Rules for updating debug values
 ===============================
@@ -379,7 +428,41 @@ tests. Changes to this pass are not allowed to break existing tests.
    check lines. In cases where this can't be avoided (say, if a test wouldn't
    be precise enough), moving the test to its own file is preferred.
 
-.. _MIRDebugify:
+Using Coverage Tracking to remove false positives
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As described :ref:`above<WhenToDropLocation>`, there are valid reasons for
+instructions to not have source locations. Therefore, when detecting dropped or
+not-generated source locations, it may be preferable to avoid detecting cases
+where the missing source location is intentional. For this, you can use the
+"coverage tracking" feature in LLVM to prevent these from appearing in the
+``debugify`` output. This is enabled in a build of LLVM by setting the CMake
+flag ``-DLLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE``. When this has been
+set, LLVM will enable runtime tracking of
+:ref:`DebugLoc annotations<NewInstLocations>`, allowing ``debugify`` to ignore
+instructions that have an explicitly recorded reason given for not having a
+source location.
+
+For triaging source location bugs detected with ``debugify``, you may find it
+helpful to instead set the CMake flag to enable "origin tracking",
+``-DLLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE_AND_ORIGIN``. This flag adds
+more detail to ``debugify``'s output, by including one or more stacktraces with
+every missing source location, capturing the point at which the empty source
+location was created, and every point at which it was copied to an instruction,
+making it trivial in most cases to find the origin of the underlying bug. If
+using origin tracking, it is recommended to also build LLVM with debug info
+enabled, so that the stacktrace can be accurately symbolized.
+
+.. note::
+
+   The coverage tracking feature has been designed primarily for use with the
+   :ref:`original debug info preservation<OriginalDI>` mode of ``debugify``, and
+   so may not be reliable in other settings. When using this mode, the
+   stacktraces produced by the ``COVERAGE_AND_ORIGIN`` setting will be printed
+   in an easy-to-read format as part of the reports generated by the
+   ``llvm-original-di-preservation.py`` script.
+
+.. _OriginalDI:
 
 Test original debug info preservation in optimizations
 ------------------------------------------------------
@@ -416,12 +499,12 @@ a JSON file as follows:
   $ opt -verify-debuginfo-preserve -verify-di-preserve-export=sample.json -pass-to-test sample.ll
 
 and then use the ``llvm/utils/llvm-original-di-preservation.py`` script
-to generate an HTML page with the issues reported in a more human readable form
+to generate an HTML page with the issues reported in a more human-readable form
 as follows:
 
 .. code-block:: bash
 
-  $ llvm-original-di-preservation.py sample.json sample.html
+  $ llvm-original-di-preservation.py sample.json --report-file sample.html
 
 Testing of original debug info preservation can be invoked from front-end level
 as follows:
@@ -436,6 +519,8 @@ as follows:
 
 Please do note that there are some known false positives, for source locations
 and debug record checking, so that will be addressed as a future work.
+
+.. _MIRDebugify:
 
 Mutation testing for MIR-level transformations
 ----------------------------------------------

@@ -1,0 +1,109 @@
+# RUN: llc -mtriple=aarch64 -run-pass=pipeliner -debug-only=pipeliner -aarch64-enable-pipeliner -pipeliner-mve-cg %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Test a case where fenv is enabled, there are instructions that may raise a
+# floating-point exception, and there is an instruction for barrier event. In
+# this case the order of them must not change.
+#
+# FIXME: Currently the following dependencies are missed.
+#
+# Loop carried edges from SU(7)
+#   Order
+#     SU(2)
+#     SU(3)
+#     SU(4)
+#     SU(5)
+
+# CHECK:      ===== Loop Carried Edges Begin =====
+# CHECK-NEXT: ===== Loop Carried Edges End =====
+
+--- |
+  @x = dso_local global i32 0, align 4
+
+  define dso_local void @f(ptr nocapture noundef writeonly %a, float noundef %y, i32 noundef %n) {
+  entry:
+    %cmp6 = icmp sgt i32 %n, 0
+    br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
+
+  for.body.preheader:
+    %wide.trip.count = zext nneg i32 %n to i64
+    br label %for.body
+
+  for.cond.cleanup:
+    ret void
+
+  for.body:
+    %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+    %tmp9 = trunc i64 %indvars.iv to i32
+    %conv = tail call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %tmp9, metadata !"round.dynamic", metadata !"fpexcept.strict") #2
+    %add = tail call float @llvm.experimental.constrained.fadd.f32(float %conv, float %y, metadata !"round.dynamic", metadata !"fpexcept.strict") #2
+    %0 = shl nuw nsw i64 %indvars.iv, 2
+    %scevgep = getelementptr i8, ptr %a, i64 %0
+    store float %add, ptr %scevgep, align 4, !tbaa !6
+    %1 = load volatile i32, ptr @x, align 4, !tbaa !10
+    %2 = zext i32 %1 to i64
+    %3 = add i64 %indvars.iv, %2
+    %tmp = trunc i64 %3 to i32
+    store volatile i32 %tmp, ptr @x, align 4, !tbaa !10
+    %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+    %exitcond.not = icmp eq i64 %wide.trip.count, %indvars.iv.next
+    br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  }
+
+  declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata)
+
+  declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
+
+  attributes #2 = { strictfp }
+
+  !6 = !{!7, !7, i64 0}
+  !7 = !{!"float", !8, i64 0}
+  !8 = !{!"omnipotent char", !9, i64 0}
+  !9 = !{!"Simple C/C++ TBAA"}
+  !10 = !{!11, !11, i64 0}
+  !11 = !{!"int", !8, i64 0}
+
+...
+---
+name:            f
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $s0, $w1
+  
+    %5:gpr32common = COPY $w1
+    %4:fpr32 = COPY $s0
+    %3:gpr64common = COPY $x0
+    dead $wzr = SUBSWri %5, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+  
+  bb.1.for.body.preheader:
+    %8:gpr32 = ORRWrs $wzr, %5, 0
+    %0:gpr64 = SUBREG_TO_REG 0, killed %8, %subreg.sub_32
+    %9:gpr64all = COPY $xzr
+    %7:gpr64all = COPY %9
+    %13:gpr64common = ADRP target-flags(aarch64-page) @x
+    B %bb.3
+  
+  bb.2.for.cond.cleanup:
+    RET_ReallyLR
+  
+  bb.3.for.body:
+    successors: %bb.2, %bb.3
+  
+    %1:gpr64common = PHI %7, %bb.1, %2, %bb.3
+    %10:gpr32 = COPY %1.sub_32
+    %11:fpr32 = SCVTFUWSri %10, implicit $fpcr
+    %12:fpr32 = FADDSrr killed %11, %4, implicit $fpcr
+    STRSroX killed %12, %3, %1, 0, 1 :: (store (s32) into %ir.scevgep, !tbaa !6)
+    %14:gpr32 = LDRWui %13, target-flags(aarch64-pageoff, aarch64-nc) @x :: (volatile dereferenceable load (s32) from @x, !tbaa !10)
+    %15:gpr32 = ADDWrr %10, killed %14
+    STRWui killed %15, %13, target-flags(aarch64-pageoff, aarch64-nc) @x :: (volatile store (s32) into @x, !tbaa !10)
+    %16:gpr64common = nuw nsw ADDXri %1, 1, 0
+    %2:gpr64all = COPY %16
+    dead $xzr = SUBSXrr %0, %16, implicit-def $nzcv
+    Bcc 0, %bb.2, implicit $nzcv
+    B %bb.3
+...

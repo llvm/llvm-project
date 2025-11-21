@@ -11,7 +11,7 @@ image show-unwind -n func0
 # CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.
 # CHECK-NEXT: This UnwindPlan is valid at all instruction locations: no.
 # CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
-# CHECK-NEXT: Address range of this UnwindPlan: [stack-cfi-parsing.out..module_image + 0-0x0000000000000002)
+# CHECK-NEXT: Address range of this UnwindPlan: [stack-cfi-parsing.out..module_image + 0-2)
 # CHECK-NEXT: row[0]:    0: CFA=DW_OP_breg7 +0 => rbp=DW_OP_breg7 +0 rip=DW_OP_pick 0x0
 # CHECK-NEXT: row[1]:    1: CFA=DW_OP_breg7 +0 => rbx=DW_OP_breg2 +0 rbp=DW_OP_breg0 +0 rip=DW_OP_pick 0x0
 
@@ -48,6 +48,6 @@ image show-unwind -n func9
 # CHECK: Asynchronous (not restricted to call-sites) UnwindPlan is 'breakpad STACK CFI'
 # CHECK: Synchronous (restricted to call-sites) UnwindPlan is 'breakpad STACK CFI'
 # CHECK: Symbol file UnwindPlan:
-# CHECK: Address range of this UnwindPlan: [stack-cfi-parsing.out..module_image + 9-0x000000000000000a)
+# CHECK: Address range of this UnwindPlan: [stack-cfi-parsing.out..module_image + 9-10)
 # CHECK: row[0]:    0: CFA=DW_OP_breg6 +0 => rip=DW_OP_breg0 +0
 

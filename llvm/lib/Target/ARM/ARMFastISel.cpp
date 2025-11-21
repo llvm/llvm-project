@@ -20,6 +20,7 @@
 #include "ARMISelLowering.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
+#include "ARMTargetMachine.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "Utils/ARMBaseInfo.h"
@@ -85,7 +86,7 @@ namespace {
   // All possible address modes, plus some.
 class Address {
 public:
-  using BaseKind = enum { RegBase, FrameIndexBase };
+  enum BaseKind { RegBase, FrameIndexBase };
 
 private:
   BaseKind Kind = RegBase;
@@ -134,9 +135,9 @@ class ARMFastISel final : public FastISel {
   /// make the right decision when generating code for different targets.
   const ARMSubtarget *Subtarget;
   Module &M;
-  const TargetMachine &TM;
-  const TargetInstrInfo &TII;
-  const TargetLowering &TLI;
+  const ARMBaseInstrInfo &TII;
+  const ARMTargetLowering &TLI;
+  const ARMBaseTargetMachine &TM;
   ARMFunctionInfo *AFI;
 
   // Convenience variables to avoid some queries.
@@ -149,8 +150,8 @@ class ARMFastISel final : public FastISel {
         : FastISel(funcInfo, libInfo),
           Subtarget(&funcInfo.MF->getSubtarget<ARMSubtarget>()),
           M(const_cast<Module &>(*funcInfo.Fn->getParent())),
-          TM(funcInfo.MF->getTarget()), TII(*Subtarget->getInstrInfo()),
-          TLI(*Subtarget->getTargetLowering()) {
+          TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()),
+          TM(TLI.getTM()) {
       AFI = funcInfo.MF->getInfo<ARMFunctionInfo>();
       isThumb2 = AFI->isThumbFunction();
       Context = &funcInfo.Fn->getContext();
@@ -1893,7 +1894,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
     report_fatal_error("Unsupported calling convention");
   case CallingConv::Fast:
     if (Subtarget->hasVFP2Base() && !isVarArg) {
-      if (!Subtarget->isAAPCS_ABI())
+      if (!TM.isAAPCS_ABI())
         return (Return ? RetFastCC_ARM_APCS : FastCC_ARM_APCS);
       // For AAPCS ABI targets, just use VFP variant of the calling convention.
       return (Return ? RetCC_ARM_AAPCS_VFP : CC_ARM_AAPCS_VFP);
@@ -1902,7 +1903,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::C:
   case CallingConv::CXX_FAST_TLS:
     // Use target triple & subtarget features to do actual dispatch.
-    if (Subtarget->isAAPCS_ABI()) {
+    if (TM.isAAPCS_ABI()) {
       if (Subtarget->hasFPRegs() &&
           TM.Options.FloatABIType == FloatABI::Hard && !isVarArg)
         return (Return ? RetCC_ARM_AAPCS_VFP: CC_ARM_AAPCS_VFP);
@@ -1942,8 +1943,11 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
                                   unsigned &NumBytes,
                                   bool isVarArg) {
   SmallVector<CCValAssign, 16> ArgLocs;
+  SmallVector<Type *, 16> OrigTys;
+  for (Value *Arg : Args)
+    OrigTys.push_back(Arg->getType());
   CCState CCInfo(CC, isVarArg, *FuncInfo.MF, ArgLocs, *Context);
-  CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags,
+  CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags, OrigTys,
                              CCAssignFnForCall(CC, false, isVarArg));
 
   // Check that we can handle all of the arguments. If we can't, then bail out
@@ -2092,7 +2096,8 @@ bool ARMFastISel::FinishCall(MVT RetVT, SmallVectorImpl<Register> &UsedRegs,
   if (RetVT != MVT::isVoid) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, isVarArg, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, CCAssignFnForCall(CC, true, isVarArg));
+    CCInfo.AnalyzeCallResult(RetVT, I->getType(),
+                             CCAssignFnForCall(CC, true, isVarArg));
 
     // Copy all of the result registers out of their specified physreg.
     if (RVLocs.size() == 2 && RetVT == MVT::f64) {
@@ -2277,7 +2282,7 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
   if (RetVT != MVT::isVoid && RetVT != MVT::i32) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, CCAssignFnForCall(CC, true, false));
+    CCInfo.AnalyzeCallResult(RetVT, RetTy, CCAssignFnForCall(CC, true, false));
     if (RVLocs.size() >= 2 && RetVT != MVT::f64)
       return false;
   }
@@ -2388,7 +2393,8 @@ bool ARMFastISel::SelectCall(const Instruction *I,
       RetVT != MVT::i16 && RetVT != MVT::i32) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, isVarArg, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, CCAssignFnForCall(CC, true, isVarArg));
+    CCInfo.AnalyzeCallResult(RetVT, RetTy,
+                             CCAssignFnForCall(CC, true, isVarArg));
     if (RVLocs.size() >= 2 && RetVT != MVT::f64)
       return false;
   }
@@ -2498,6 +2504,7 @@ bool ARMFastISel::SelectCall(const Instruction *I,
   // Set all unused physreg defs as dead.
   static_cast<MachineInstr *>(MIB)->setPhysRegsDeadExcept(UsedRegs, TRI);
 
+  diagnoseDontCall(*CI);
   return true;
 }
 
@@ -2561,8 +2568,7 @@ bool ARMFastISel::SelectIntrinsicCall(const IntrinsicInst &I) {
     const TargetRegisterClass *RC = isThumb2 ? &ARM::tGPRRegClass
                                              : &ARM::GPRRegClass;
 
-    const ARMBaseRegisterInfo *RegInfo =
-        static_cast<const ARMBaseRegisterInfo *>(Subtarget->getRegisterInfo());
+    const ARMBaseRegisterInfo *RegInfo = Subtarget->getRegisterInfo();
     Register FramePtr = RegInfo->getFrameRegister(*(FuncInfo.MF));
     Register SrcReg = FramePtr;
 
@@ -2635,12 +2641,8 @@ bool ARMFastISel::SelectIntrinsicCall(const IntrinsicInst &I) {
     return SelectCall(&I, "memset");
   }
   case Intrinsic::trap: {
-    unsigned Opcode;
-    if (Subtarget->isThumb())
-      Opcode = ARM::tTRAP;
-    else
-      Opcode = Subtarget->useNaClTrap() ? ARM::TRAPNaCl : ARM::TRAP;
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opcode));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+            TII.get(Subtarget->isThumb() ? ARM::tTRAP : ARM::TRAP));
     return true;
   }
   }

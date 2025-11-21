@@ -24,6 +24,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -85,13 +86,6 @@ static cl::opt<bool> SpecPreheader("hwloop-spec-preheader", cl::Hidden,
                                             "instructions"));
 
 STATISTIC(NumHWLoops, "Number of loops converted to hardware loops");
-
-namespace llvm {
-
-  FunctionPass *createHexagonHardwareLoops();
-  void initializeHexagonHardwareLoopsPass(PassRegistry&);
-
-} // end namespace llvm
 
 namespace {
 
@@ -731,6 +725,11 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
                                                Register IVReg,
                                                int64_t IVBump,
                                                Comparison::Kind Cmp) const {
+  LLVM_DEBUG(llvm::dbgs() << "Loop: " << *Loop << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Initial Value: " << *Start << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "End Value: " << *End << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Inc/Dec Value: " << IVBump << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Comparison: " << Cmp << "\n");
   // Cannot handle comparison EQ, i.e. while (A == B).
   if (Cmp == Comparison::EQ)
     return nullptr;
@@ -846,6 +845,7 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
   if (IVBump < 0) {
     std::swap(Start, End);
     IVBump = -IVBump;
+    std::swap(CmpLess, CmpGreater);
   }
   // Cmp may now have a wrong direction, e.g.  LEs may now be GEs.
   // Signedness, and "including equality" are preserved.
@@ -989,7 +989,45 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
     CountSR = 0;
   }
 
-  return new CountValue(CountValue::CV_Register, CountR, CountSR);
+  const TargetRegisterClass *PredRC = &Hexagon::PredRegsRegClass;
+  Register MuxR = CountR;
+  unsigned MuxSR = CountSR;
+  // For the loop count to be valid unsigned number, CmpLess should imply
+  // Dist >= 0. Similarly, CmpGreater should imply Dist < 0. We can skip the
+  // check if the initial distance is zero and the comparison is LTu || LTEu.
+  if (!(Start->isImm() && StartV == 0 && Comparison::isUnsigned(Cmp) &&
+        CmpLess) &&
+      (CmpLess || CmpGreater)) {
+    // Generate:
+    //   DistCheck = CMP_GT DistR,  0   --> CmpLess
+    //   DistCheck = CMP_GT DistR, -1   --> CmpGreater
+    Register DistCheckR = MRI->createVirtualRegister(PredRC);
+    const MCInstrDesc &DistCheckD = TII->get(Hexagon::C2_cmpgti);
+    BuildMI(*PH, InsertPos, DL, DistCheckD, DistCheckR)
+        .addReg(DistR, 0, DistSR)
+        .addImm((CmpLess) ? 0 : -1);
+
+    // Generate:
+    //   MUXR = MUX DistCheck, CountR, 1   --> CmpLess
+    //   MUXR = MUX DistCheck, 1, CountR   --> CmpGreater
+    MuxR = MRI->createVirtualRegister(IntRC);
+    if (CmpLess) {
+      const MCInstrDesc &MuxD = TII->get(Hexagon::C2_muxir);
+      BuildMI(*PH, InsertPos, DL, MuxD, MuxR)
+          .addReg(DistCheckR)
+          .addReg(CountR, 0, CountSR)
+          .addImm(1);
+    } else {
+      const MCInstrDesc &MuxD = TII->get(Hexagon::C2_muxri);
+      BuildMI(*PH, InsertPos, DL, MuxD, MuxR)
+          .addReg(DistCheckR)
+          .addImm(1)
+          .addReg(CountR, 0, CountSR);
+    }
+    MuxSR = 0;
+  }
+
+  return new CountValue(CountValue::CV_Register, MuxR, MuxSR);
 }
 
 /// Return true if the operation is invalid within hardware loop.

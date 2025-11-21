@@ -16,6 +16,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Query/Matcher/Registry.h"
+#include "mlir/Query/Matcher/SliceMatchers.h"
 #include "mlir/Tools/mlir-query/MlirQueryMain.h"
 
 using namespace mlir;
@@ -39,6 +40,22 @@ int main(int argc, char **argv) {
   query::matcher::Registry matcherRegistry;
 
   // Matchers registered in alphabetical order for consistency:
+  matcherRegistry.registerMatcher("allOf", query::matcher::internal::allOf);
+  matcherRegistry.registerMatcher("anyOf", query::matcher::internal::anyOf);
+  matcherRegistry.registerMatcher(
+      "getAllDefinitions",
+      query::matcher::m_GetAllDefinitions<query::matcher::DynMatcher>);
+  matcherRegistry.registerMatcher(
+      "getDefinitions",
+      query::matcher::m_GetDefinitions<query::matcher::DynMatcher>);
+  matcherRegistry.registerMatcher(
+      "getDefinitionsByPredicate",
+      query::matcher::m_GetDefinitionsByPredicate<query::matcher::DynMatcher,
+                                                  query::matcher::DynMatcher>);
+  matcherRegistry.registerMatcher(
+      "getUsersByPredicate",
+      query::matcher::m_GetUsersByPredicate<query::matcher::DynMatcher,
+                                            query::matcher::DynMatcher>);
   matcherRegistry.registerMatcher("hasOpAttrName",
                                   static_cast<HasOpAttrName *>(m_Attr));
   matcherRegistry.registerMatcher("hasOpName", static_cast<HasOpName *>(m_Op));

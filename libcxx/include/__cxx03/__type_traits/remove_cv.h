@@ -37,11 +37,6 @@ template <class _Tp>
 using __remove_cv_t = __remove_volatile_t<__remove_const_t<_Tp> >;
 #endif // __has_builtin(__remove_cv)
 
-#if _LIBCPP_STD_VER >= 14
-template <class _Tp>
-using remove_cv_t = __remove_cv_t<_Tp>;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_CV_H

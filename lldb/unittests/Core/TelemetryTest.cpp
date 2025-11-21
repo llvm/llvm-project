@@ -53,7 +53,8 @@ class FakePlugin : public telemetry::TelemetryManager {
 public:
   FakePlugin()
       : telemetry::TelemetryManager(std::make_unique<telemetry::LLDBConfig>(
-            /*enable_telemetry=*/true, /*detailed_command_telemetry=*/true)) {}
+            /*enable_telemetry=*/true, /*detailed_command_telemetry=*/true,
+            /*enable_client_telemetry=*/true)) {}
 
   // TelemetryManager interface
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override {
@@ -96,7 +97,7 @@ public:
 #if LLVM_ENABLE_TELEMETRY
 #define TELEMETRY_TEST(suite, test) TEST_F(suite, test)
 #else
-#define TELEMETRY_TEST(suite, test) TEST(DISABLED_##suite, test)
+#define TELEMETRY_TEST(suite, test) TEST_F(suite, DISABLED_##test)
 #endif
 
 TELEMETRY_TEST(TelemetryTest, PluginTest) {

@@ -1,0 +1,86 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-dwarfdump -i %t | FileCheck %s
+
+# Test REL relocation handling for AMDGPU
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_producer ("dxc")
+# CHECK: DW_AT_name (".\\example.hlsl")
+# CHECK: DW_AT_str_offsets_base (0x00000008)
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_AMDGPU_PAL
+  Type:            ET_REL
+  Machine:         EM_AMDGPU
+  Flags:           [ EF_AMDGPU_MACH_AMDGCN_GFX1201 ]
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         01110125251305032572171017110B120673178C0117000000
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         23000000050001080000000001000400010800000000000000005C000000080000000C00000000
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         0C000000050000000000000004000000
+  - Name:            .rel.debug_info
+    Type:            SHT_REL
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x8
+        Symbol:          .debug_abbrev
+        Type:            R_AMDGPU_ABS32
+      - Offset:          0x11
+        Symbol:          .debug_str_offsets
+        Type:            R_AMDGPU_ABS32
+  - Name:            .rel.debug_str_offsets
+    Type:            SHT_REL
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_str_offsets
+    Relocations:
+      - Offset:          0x8
+        Symbol:          .debug_str
+        Type:            R_AMDGPU_ABS32
+      - Offset:          0xC
+        Symbol:          .debug_str
+        Type:            R_AMDGPU_ABS32
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .debug_abbrev
+      - Name:            .debug_info
+      - Name:            .rel.debug_info
+      - Name:            .debug_str_offsets
+      - Name:            .rel.debug_str_offsets
+      - Name:            .debug_str
+      - Name:            .symtab
+Symbols:
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_info
+    Type:            STT_SECTION
+    Section:         .debug_info
+  - Name:            .debug_str_offsets
+    Type:            STT_SECTION
+    Section:         .debug_str_offsets
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+DWARF:
+  debug_str:
+    - 'dxc'
+    - '.\example.hlsl'
+...

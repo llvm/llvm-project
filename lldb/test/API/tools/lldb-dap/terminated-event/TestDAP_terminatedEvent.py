@@ -35,10 +35,18 @@ class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program)
         # Set breakpoints
         functions = ["foo"]
-        breakpoint_ids = self.set_function_breakpoints(functions)
+
+        # This breakpoint will be resolved only when the libfoo module is loaded
+        breakpoint_ids = self.set_function_breakpoints(
+            functions, wait_for_resolve=False
+        )
         self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
         main_bp_line = line_number("main.cpp", "// main breakpoint 1")
-        breakpoint_ids.append(self.set_source_breakpoints("main.cpp", [main_bp_line]))
+        breakpoint_ids.append(
+            self.set_source_breakpoints(
+                "main.cpp", [main_bp_line], wait_for_resolve=False
+            )
+        )
 
         self.continue_to_breakpoints(breakpoint_ids)
         self.continue_to_exit()

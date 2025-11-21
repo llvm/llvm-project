@@ -25,6 +25,7 @@
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/is_core_convertible.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
@@ -551,9 +552,10 @@ public:
           is_nothrow_constructible_v<_Tp, _Up> && is_nothrow_constructible_v<_Err, _OtherErr>) // strengthened
       : __base(__other.__has_val(), std::move(__other.__union())) {}
 
-  template <class _Up = _Tp>
+  template <class _Up = remove_cv_t<_Tp>>
     requires(!is_same_v<remove_cvref_t<_Up>, in_place_t> && !is_same_v<expected, remove_cvref_t<_Up>> &&
-             is_constructible_v<_Tp, _Up> && !__is_std_unexpected<remove_cvref_t<_Up>>::value &&
+             !is_same_v<remove_cvref_t<_Up>, unexpect_t> && is_constructible_v<_Tp, _Up> &&
+             !__is_std_unexpected<remove_cvref_t<_Up>>::value &&
              (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_expected<remove_cvref_t<_Up>>::value))
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_Up, _Tp>)
       expected(_Up&& __u) noexcept(is_nothrow_constructible_v<_Tp, _Up>) // strengthened
@@ -664,7 +666,7 @@ public:
     return *this;
   }
 
-  template <class _Up = _Tp>
+  template <class _Up = remove_cv_t<_Tp>>
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(_Up&& __v)
     requires(!is_same_v<expected, remove_cvref_t<_Up>> && !__is_std_unexpected<remove_cvref_t<_Up>>::value &&
              is_constructible_v<_Tp, _Up> && is_assignable_v<_Tp&, _Up> &&
@@ -882,14 +884,14 @@ public:
     return std::move(this->__unex());
   }
 
-  template <class _Up>
+  template <class _Up = remove_cv_t<_Tp>>
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) const& {
     static_assert(is_copy_constructible_v<_Tp>, "value_type has to be copy constructible");
     static_assert(is_convertible_v<_Up, _Tp>, "argument has to be convertible to value_type");
     return this->__has_val() ? this->__val() : static_cast<_Tp>(std::forward<_Up>(__v));
   }
 
-  template <class _Up>
+  template <class _Up = remove_cv_t<_Tp>>
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) && {
     static_assert(is_move_constructible_v<_Tp>, "value_type has to be move constructible");
     static_assert(is_convertible_v<_Up, _Tp>, "argument has to be convertible to value_type");
@@ -1139,8 +1141,15 @@ public:
 
   // [expected.object.eq], equality operators
   template <class _T2, class _E2>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y)
     requires(!is_void_v<_T2>)
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y) {
+#  if _LIBCPP_STD_VER >= 26
+            && requires {
+                 { *__x == *__y } -> __core_convertible_to<bool>;
+                 { __x.error() == __y.error() } -> __core_convertible_to<bool>;
+               }
+#  endif
+  {
     if (__x.__has_val() != __y.__has_val()) {
       return false;
     } else {
@@ -1153,12 +1162,24 @@ public:
   }
 
   template <class _T2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const _T2& __v) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const _T2& __v)
+#  if _LIBCPP_STD_VER >= 26
+    requires(!__is_std_expected<_T2>::value) && requires {
+      { *__x == __v } -> __core_convertible_to<bool>;
+    }
+#  endif
+  {
     return __x.__has_val() && static_cast<bool>(__x.__val() == __v);
   }
 
   template <class _E2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __e) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __e)
+#  if _LIBCPP_STD_VER >= 26
+    requires requires {
+      { __x.error() == __e.error() } -> __core_convertible_to<bool>;
+    }
+#  endif
+  {
     return !__x.__has_val() && static_cast<bool>(__x.__unex() == __e.error());
   }
 };
@@ -1851,7 +1872,13 @@ public:
   // [expected.void.eq], equality operators
   template <class _T2, class _E2>
     requires is_void_v<_T2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y)
+#  if _LIBCPP_STD_VER >= 26
+    requires requires {
+      { __x.error() == __y.error() } -> __core_convertible_to<bool>;
+    }
+#  endif
+  {
     if (__x.__has_val() != __y.__has_val()) {
       return false;
     } else {
@@ -1860,7 +1887,13 @@ public:
   }
 
   template <class _E2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __y) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __y)
+#  if _LIBCPP_STD_VER >= 26
+    requires requires {
+      { __x.error() == __y.error() } -> __core_convertible_to<bool>;
+    }
+#  endif
+  {
     return !__x.__has_val() && static_cast<bool>(__x.__unex() == __y.error());
   }
 };

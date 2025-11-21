@@ -55,7 +55,7 @@ functions:
         hash:            0xFFFFFFFFFFFFFFF1
         insns:           1
         succ:            [ { bid: 3, cnt: 1} ]
-        probes:          [ { blx: 1 } ]
+        probes:          [ { blk: [ 1 ] } ]
     inline_tree:         [ { g: 0 } ]
 pseudo_probe_desc:
   gs:              [ 0xDB956436E78DD5FA ]

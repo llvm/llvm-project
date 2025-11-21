@@ -14,18 +14,30 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:  compound=true
 ; CHECK-NEXT:  N0 [label =
 ; CHECK-NEXT:    "ir-bb\<for.body.preheader\>:\l" +
-; CHECK-NEXT:    "Successor(s): vector.ph\l"
+; CHECK-NEXT:    "Successor(s): scalar.ph, vector.ph\l"
 ; CHECK-NEXT:  ]
-; CHECK-NEXT:  N0 -> N1 [ label=""]
+; CHECK-NEXT:  N0 -> N1 [ label="T"]
+; CHECK-NEXT:  N0 -> N2 [ label="F"]
 ; CHECK-NEXT:  N1 [label =
+; CHECK-NEXT:    "scalar.ph:\l" +
+; CHECK-NEXT:    "  EMIT-SCALAR vp\<%bc.resume.val\> = phi [ vp\<%2\>, middle.block ], [ ir\<0\>, ir-bb\<for.body.preheader\> ]\l" +
+; CHECK-NEXT:    "Successor(s): ir-bb\<for.body\>\l"
+; CHECK-NEXT:  ]
+; CHECK-NEXT:  N1 -> N3 [ label=""]
+; CHECK-NEXT:  N3 [label =
+; CHECK-NEXT:    "ir-bb\<for.body\>:\l" +
+; CHECK-NEXT:    "  IR   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp\<%bc.resume.val\> from scalar.ph)\l" +
+; CHECK:         "No successors\l"
+; CHECK-NEXT:  ]
+; CHECK-NEXT:  N2 [label =
 ; CHECK-NEXT:    "vector.ph:\l" +
 ; CHECK-NEXT:    "Successor(s): vector loop\l"
 ; CHECK-NEXT:  ]
-; CHECK-NEXT:  N1 -> N2 [ label="" lhead=cluster_N3]
-; CHECK-NEXT:  subgraph cluster_N3 {
+; CHECK-NEXT:  N2 -> N4 [ label="" lhead=cluster_N5]
+; CHECK-NEXT:  subgraph cluster_N5 {
 ; CHECK-NEXT:    fontname=Courier
 ; CHECK-NEXT:    label="\<x1\> vector loop"
-; CHECK-NEXT:    N2 [label =
+; CHECK-NEXT:    N4 [label =
 ; CHECK-NEXT:    "vector.body:\l" +
 ; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV:%.+]]\> = CANONICAL-INDUCTION ir\<0\>, vp\<[[CAN_IV_NEXT:%.+]]\>\l" +
 ; CHECK-NEXT:    "  vp\<[[STEPS:%.+]]\> = SCALAR-STEPS vp\<[[CAN_IV]]\>, ir\<1\>, vp\<[[VF]]\>\l" +

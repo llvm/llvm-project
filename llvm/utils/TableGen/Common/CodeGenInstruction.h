@@ -77,18 +77,18 @@ public:
 
     /// Name - If this operand was assigned a symbolic name, this is it,
     /// otherwise, it's empty.
-    std::string Name;
+    StringRef Name;
 
     /// The names of sub-operands, if given, otherwise empty.
-    std::vector<std::string> SubOpNames;
+    std::vector<StringRef> SubOpNames;
 
     /// PrinterMethodName - The method used to print operands of this type in
     /// the asmprinter.
-    std::string PrinterMethodName;
+    StringRef PrinterMethodName;
 
     /// The method used to get the machine operand value for binary
     /// encoding, per sub-operand. If empty, uses "getMachineOpValue".
-    std::vector<std::string> EncoderMethodNames;
+    std::vector<StringRef> EncoderMethodNames;
 
     /// OperandType - A value from MCOI::OperandType representing the type of
     /// the operand.
@@ -103,11 +103,6 @@ public:
     unsigned MIOperandNo;
     unsigned MINumOperands; // The number of operands.
 
-    /// DoNotEncode - Bools are set to true in this vector for each operand in
-    /// the DisableEncoding list.  These should not be emitted by the code
-    /// emitter.
-    BitVector DoNotEncode;
-
     /// MIOperandInfo - Default MI operand type. Note an operand may be made
     /// up of multiple MI operands.
     const DagInit *MIOperandInfo;
@@ -116,22 +111,20 @@ public:
     /// track constraint info for each.
     std::vector<ConstraintInfo> Constraints;
 
-    OperandInfo(const Record *R, const std::string &N, const std::string &PMN,
+    OperandInfo(const Record *R, StringRef Name, StringRef PrinterMethodName,
                 const std::string &OT, unsigned MION, unsigned MINO,
                 const DagInit *MIOI)
-        : Rec(R), Name(N), SubOpNames(MINO), PrinterMethodName(PMN),
-          EncoderMethodNames(MINO), OperandType(OT), MIOperandNo(MION),
-          MINumOperands(MINO), DoNotEncode(MINO), MIOperandInfo(MIOI),
-          Constraints(MINO) {}
+        : Rec(R), Name(Name), SubOpNames(MINO),
+          PrinterMethodName(PrinterMethodName), EncoderMethodNames(MINO),
+          OperandType(OT), MIOperandNo(MION), MINumOperands(MINO),
+          MIOperandInfo(MIOI), Constraints(MINO) {}
 
     /// getTiedOperand - If this operand is tied to another one, return the
     /// other operand number.  Otherwise, return -1.
     int getTiedRegister() const {
-      for (unsigned j = 0, e = Constraints.size(); j != e; ++j) {
-        const CGIOperandList::ConstraintInfo &CI = Constraints[j];
+      for (const CGIOperandList::ConstraintInfo &CI : Constraints)
         if (CI.isTied())
           return CI.getTiedOperand();
-      }
       return -1;
     }
   };
@@ -165,8 +158,8 @@ public:
   OperandInfo &back() { return OperandList.back(); }
   const OperandInfo &back() const { return OperandList.back(); }
 
-  typedef std::vector<OperandInfo>::iterator iterator;
-  typedef std::vector<OperandInfo>::const_iterator const_iterator;
+  using iterator = std::vector<OperandInfo>::iterator;
+  using const_iterator = std::vector<OperandInfo>::const_iterator;
   iterator begin() { return OperandList.begin(); }
   const_iterator begin() const { return OperandList.begin(); }
   iterator end() { return OperandList.end(); }
@@ -177,20 +170,20 @@ public:
   /// specified name, abort.
   unsigned getOperandNamed(StringRef Name) const;
 
-  /// hasOperandNamed - Query whether the instruction has an operand of the
-  /// given name. If so, return true and set OpIdx to the index of the
-  /// operand. Otherwise, return false.
-  bool hasOperandNamed(StringRef Name, unsigned &OpIdx) const;
+  /// findOperandNamed - Query whether the instruction has an operand of the
+  /// given name. If so, the index of the operand. Otherwise, return
+  /// std::nullopt.
+  std::optional<unsigned> findOperandNamed(StringRef Name) const;
 
-  bool hasSubOperandAlias(StringRef Name,
-                          std::pair<unsigned, unsigned> &SubOp) const;
+  std::optional<std::pair<unsigned, unsigned>>
+  findSubOperandAlias(StringRef Name) const;
 
-  /// ParseOperandName - Parse an operand name like "$foo" or "$foo.bar",
+  /// Parses an operand name like "$foo" or "$foo.bar",
   /// where $foo is a whole operand and $foo.bar refers to a suboperand.
   /// This aborts if the name is invalid.  If AllowWholeOp is true, references
   /// to operands with suboperands are allowed, otherwise not.
-  std::pair<unsigned, unsigned> ParseOperandName(StringRef Op,
-                                                 bool AllowWholeOp = true);
+  std::pair<unsigned, unsigned>
+  parseOperandName(StringRef Op, bool AllowWholeOp = true) const;
 
   /// getFlattenedOperandNumber - Flatten a operand/suboperand pair into a
   /// flat machineinstr operand #.
@@ -207,17 +200,6 @@ public:
         return {i, Op - OperandList[i].MIOperandNo};
     }
   }
-
-  /// isFlatOperandNotEmitted - Return true if the specified flat operand #
-  /// should not be emitted with the code emitter.
-  bool isFlatOperandNotEmitted(unsigned FlatOpNo) const {
-    std::pair<unsigned, unsigned> Op = getSubOperandNumber(FlatOpNo);
-    if (OperandList[Op.first].DoNotEncode.size() > Op.second)
-      return OperandList[Op.first].DoNotEncode[Op.second];
-    return false;
-  }
-
-  void ProcessDisableEncoding(StringRef Value);
 };
 
 class CodeGenInstruction {
@@ -227,7 +209,7 @@ public:
 
   /// AsmString - The format string used to emit a .s file for the
   /// instruction.
-  std::string AsmString;
+  StringRef AsmString;
 
   /// Operands - This is information about the (ins) and (outs) list specified
   /// to the instruction.
@@ -337,6 +319,8 @@ public:
     const RecordVal *RV = TheDef->getValue("Inst");
     return RV && isa<DagInit>(RV->getValue());
   }
+
+  StringRef getName() const { return TheDef->getName(); }
 
 private:
   bool isOperandImpl(StringRef OpListName, unsigned i,

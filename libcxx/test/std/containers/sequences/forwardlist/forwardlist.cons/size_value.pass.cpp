@@ -8,7 +8,7 @@
 
 // <forward_list>
 
-// forward_list(size_type n, const value_type& v);
+// forward_list(size_type n, const value_type& v); // constexpr since C++26
 
 #include <forward_list>
 #include <cassert>
@@ -16,7 +16,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef int T;
     typedef std::forward_list<T> C;
@@ -40,6 +40,15 @@ int main(int, char**) {
       assert(*i == v);
     assert(n == N);
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

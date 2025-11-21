@@ -174,6 +174,13 @@ void report_fatal_error(Error Err, bool GenCrashDiag) {
   report_fatal_error(Twine(ErrMsg), GenCrashDiag);
 }
 
+void reportFatalInternalError(Error Err) {
+  report_fatal_error(std::move(Err), /*GenCrashDiag=*/true);
+}
+void reportFatalUsageError(Error Err) {
+  report_fatal_error(std::move(Err), /*GenCrashDiag=*/false);
+}
+
 } // end namespace llvm
 
 LLVMErrorTypeId LLVMGetErrorTypeId(LLVMErrorRef Err) {

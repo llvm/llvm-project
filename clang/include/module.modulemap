@@ -36,7 +36,8 @@ module Clang_Basic {
   requires cplusplus
   umbrella "clang/Basic"
 
-  textual header "clang/Basic/AArch64SVEACLETypes.def"
+  textual header "clang/Basic/AArch64ACLETypes.def"
+  textual header "clang/Basic/ABIVersions.def"
   textual header "clang/Basic/AMDGPUTypes.def"
   textual header "clang/Basic/BuiltinHeaders.def"
   textual header "clang/Basic/BuiltinsAArch64.def"
@@ -145,6 +146,7 @@ module Clang_Lex {
   module * { export * }
 }
 
+module Clang_Options { requires cplusplus umbrella "clang/Options" module * { export * } }
 module Clang_Parse { requires cplusplus umbrella "clang/Parse" module * { export * } }
 module Clang_Rewrite { requires cplusplus umbrella "clang/Rewrite/Core" module * { export * } }
 module Clang_RewriteFrontend { requires cplusplus umbrella "clang/Rewrite/Frontend" module * { export * } }

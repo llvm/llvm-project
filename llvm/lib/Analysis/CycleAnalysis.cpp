@@ -52,9 +52,7 @@ PreservedAnalyses CycleInfoVerifierPass::run(Function &F,
 
 char CycleInfoWrapperPass::ID = 0;
 
-CycleInfoWrapperPass::CycleInfoWrapperPass() : FunctionPass(ID) {
-  initializeCycleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+CycleInfoWrapperPass::CycleInfoWrapperPass() : FunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(CycleInfoWrapperPass, "cycles", "Cycle Info Analysis",
                       true, true)

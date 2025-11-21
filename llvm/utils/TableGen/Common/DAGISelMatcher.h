@@ -105,7 +105,7 @@ protected:
   Matcher(KindTy K) : Kind(K) {}
 
 public:
-  virtual ~Matcher() {}
+  virtual ~Matcher() = default;
 
   unsigned getSize() const { return Size; }
   void setSize(unsigned sz) { Size = sz; }
@@ -714,7 +714,7 @@ class CheckComplexPatMatcher : public Matcher {
   unsigned MatchNumber;
 
   /// Name - The name of the node we're matching, for comment emission.
-  std::string Name;
+  StringRef Name;
 
   /// FirstResult - This is the first slot in the RecordedNodes list that the
   /// result of the match populates.
@@ -722,14 +722,14 @@ class CheckComplexPatMatcher : public Matcher {
 
 public:
   CheckComplexPatMatcher(const ComplexPattern &pattern, unsigned matchnumber,
-                         const std::string &name, unsigned firstresult)
+                         StringRef name, unsigned firstresult)
       : Matcher(CheckComplexPat), Pattern(pattern), MatchNumber(matchnumber),
         Name(name), FirstResult(firstresult) {}
 
   const ComplexPattern &getPattern() const { return Pattern; }
   unsigned getMatchNumber() const { return MatchNumber; }
 
-  std::string getName() const { return Name; }
+  StringRef getName() const { return Name; }
   unsigned getFirstResult() const { return FirstResult; }
 
   static bool classof(const Matcher *N) {
@@ -838,8 +838,9 @@ class EmitIntegerMatcher : public Matcher {
 
 public:
   EmitIntegerMatcher(int64_t val, MVT::SimpleValueType vt, unsigned resultNo)
-      : Matcher(EmitInteger), Val(SignExtend64(val, MVT(vt).getSizeInBits())),
-        VT(vt), ResultNo(resultNo) {}
+      : Matcher(EmitInteger),
+        Val(SignExtend64(val, MVT(vt).getFixedSizeInBits())), VT(vt),
+        ResultNo(resultNo) {}
 
   int64_t getValue() const { return Val; }
   MVT::SimpleValueType getVT() const { return VT; }

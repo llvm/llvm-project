@@ -5,11 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+#include "hdr/stdint_proxy.h"
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include <stddef.h>
-#include <stdint.h>
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #include "src/sys/auxv/getauxval.h"
@@ -63,16 +63,21 @@ int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 // which just hands out continuous blocks from a statically allocated chunk of
 // memory.
 
-static constexpr uint64_t MEMORY_SIZE = 16384;
-static uint8_t memory[MEMORY_SIZE];
-static uint8_t *ptr = memory;
+static constexpr uint64_t ALIGNMENT = alignof(double);
+static constexpr uint64_t MEMORY_SIZE = 256 * 1024 /* 256 KiB */;
+alignas(ALIGNMENT) static uint8_t memory[MEMORY_SIZE];
+static size_t ptr = 0;
 
 extern "C" {
 
-void *malloc(size_t s) {
-  void *mem = ptr;
-  ptr += s;
-  return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
+void *malloc(size_t size) {
+  LIBC_NAMESPACE::cpp::AtomicRef<size_t> ref(ptr);
+  size = (size + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
+  size_t old_ptr =
+      ref.fetch_add(size, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
+  if (static_cast<size_t>(old_ptr + size) >= MEMORY_SIZE)
+    return nullptr;
+  return &memory[old_ptr];
 }
 
 void free(void *) {}

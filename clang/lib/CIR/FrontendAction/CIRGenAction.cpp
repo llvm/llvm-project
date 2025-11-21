@@ -62,15 +62,16 @@ class CIRGenConsumer : public clang::ASTConsumer {
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::unique_ptr<CIRGenerator> Gen;
   const FrontendOptions &FEOptions;
+  CodeGenOptions &CGO;
 
 public:
   CIRGenConsumer(CIRGenAction::OutputType Action, CompilerInstance &CI,
-                 std::unique_ptr<raw_pwrite_stream> OS)
+                 CodeGenOptions &CGO, std::unique_ptr<raw_pwrite_stream> OS)
       : Action(Action), CI(CI), OutputStream(std::move(OS)),
         FS(&CI.getVirtualFileSystem()),
         Gen(std::make_unique<CIRGenerator>(CI.getDiagnostics(), std::move(FS),
                                            CI.getCodeGenOpts())),
-        FEOptions(CI.getFrontendOpts()) {}
+        FEOptions(CI.getFrontendOpts()), CGO(CGO) {}
 
   void Initialize(ASTContext &Ctx) override {
     assert(!Context && "initialized multiple times");
@@ -81,6 +82,14 @@ public:
   bool HandleTopLevelDecl(DeclGroupRef D) override {
     Gen->HandleTopLevelDecl(D);
     return true;
+  }
+
+  void HandleCXXStaticMemberVarInstantiation(clang::VarDecl *VD) override {
+    Gen->HandleCXXStaticMemberVarInstantiation(VD);
+  }
+
+  void HandleInlineFunctionDefinition(FunctionDecl *D) override {
+    Gen->HandleInlineFunctionDefinition(D);
   }
 
   void HandleTranslationUnit(ASTContext &C) override {
@@ -102,7 +111,8 @@ public:
     if (!FEOptions.ClangIRDisablePasses) {
       // Setup and run CIR pipeline.
       if (runCIRToCIRPasses(MlirModule, MlirCtx, C,
-                            !FEOptions.ClangIRDisableCIRVerifier)
+                            !FEOptions.ClangIRDisableCIRVerifier,
+                            CGO.OptimizationLevel > 0)
               .failed()) {
         CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
         return;
@@ -133,6 +143,23 @@ public:
     }
     }
   }
+
+  void HandleTagDeclDefinition(TagDecl *D) override {
+    PrettyStackTraceDecl CrashInfo(D, SourceLocation(),
+                                   Context->getSourceManager(),
+                                   "CIR generation of declaration");
+    Gen->HandleTagDeclDefinition(D);
+  }
+
+  void HandleTagDeclRequiredDefinition(const TagDecl *D) override {
+    Gen->HandleTagDeclRequiredDefinition(D);
+  }
+
+  void CompleteTentativeDefinition(VarDecl *D) override {
+    Gen->CompleteTentativeDefinition(D);
+  }
+
+  void HandleVTable(CXXRecordDecl *RD) override { Gen->HandleVTable(RD); }
 };
 } // namespace cir
 
@@ -168,8 +195,8 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   if (!Out)
     Out = getOutputStream(CI, InFile, Action);
 
-  auto Result =
-      std::make_unique<cir::CIRGenConsumer>(Action, CI, std::move(Out));
+  auto Result = std::make_unique<cir::CIRGenConsumer>(
+      Action, CI, CI.getCodeGenOpts(), std::move(Out));
 
   return Result;
 }

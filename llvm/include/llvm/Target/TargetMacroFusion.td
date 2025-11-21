@@ -55,11 +55,20 @@ class TieReg<int firstOpIdx, int secondOpIdx> : BothFusionPredicate {
   int SecondOpIdx = secondOpIdx;
 }
 
+// The operand of `FirstMI` at position `firstOpIdx` should be the same as the
+// operand at position `secondOpIdx`.
+// If the fusion has `IsCommutable` being true and the operand at `secondOpIdx`
+// has commutable operand, then the commutable operand will be checked too.
+class FirstInstHasSameReg<int firstOpIdx, int secondOpIdx> : FirstFusionPredicate {
+  int FirstOpIdx = firstOpIdx;
+  int SecondOpIdx = secondOpIdx;
+}
+
 // The operand of `SecondMI` at position `firstOpIdx` should be the same as the
 // operand at position `secondOpIdx`.
 // If the fusion has `IsCommutable` being true and the operand at `secondOpIdx`
 // has commutable operand, then the commutable operand will be checked too.
-class SameReg<int firstOpIdx, int secondOpIdx> : SecondFusionPredicate {
+class SecondInstHasSameReg<int firstOpIdx, int secondOpIdx> : SecondFusionPredicate {
   int FirstOpIdx = firstOpIdx;
   int SecondOpIdx = secondOpIdx;
 }
@@ -129,7 +138,7 @@ class SimpleFusion<string name, string fieldName, string desc,
                 SecondFusionPredicateWithMCInstPredicate<secondPred>,
                 WildcardTrue,
                 FirstFusionPredicateWithMCInstPredicate<firstPred>,
-                SameReg<0, 1>,
+                SecondInstHasSameReg<0, 1>,
                 OneUse,
                 TieReg<0, 1>,
               ],

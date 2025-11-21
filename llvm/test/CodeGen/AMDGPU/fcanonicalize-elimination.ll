@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -verify-machineinstrs -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-FLUSH,GCN-FLUSH %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -verify-machineinstrs -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-DENORM,GCN-DENORM %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-DENORM,GCN-DENORM %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLUSH,GCN-FLUSH %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-FLUSH,GCN-FLUSH %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-DENORM,GCN-DENORM %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-DENORM,GCN-DENORM %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLUSH,GCN-FLUSH %s
 
 ; GCN-LABEL: {{^}}test_no_fold_canonicalize_loaded_value_f32:
 ; VI: v_mul_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
@@ -497,12 +497,10 @@ define amdgpu_kernel void @test_fold_canonicalize_minnum_value_f32(ptr addrspace
   ret void
 }
 
-; FIXME: Should there be more checks here? minnum with NaN operand is simplified away.
+; FIXME: Should there be more checks here? minnum with sNaN operand is simplified to qNaN.
 
 ; GCN-LABEL: test_fold_canonicalize_sNaN_value_f32:
-; GCN: {{flat|global}}_load_dword [[LOAD:v[0-9]+]]
-; VI: v_mul_f32_e32 v{{[0-9]+}}, 1.0, [[LOAD]]
-; GFX9: v_max_f32_e32 v{{[0-9]+}}, [[LOAD]], [[LOAD]]
+; GCN: v_mov_b32_e32 v{{.+}}, 0x7fc00000
 define amdgpu_kernel void @test_fold_canonicalize_sNaN_value_f32(ptr addrspace(1) %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
@@ -852,6 +850,66 @@ define float @v_test_canonicalize_amdgcn_log(float %a) {
 define float @v_test_canonicalize_amdgcn_exp2(float %a) {
   %log = call float @llvm.amdgcn.exp2.f32(float %a)
   %canonicalized = call float @llvm.canonicalize.f32(float %log)
+  ret float %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_minimum:
+; GCN: s_waitcnt
+; GCN-NEXT: v_min_f32_e32 [[MIN:v[0-9]+]], v0, v1
+; GCN-NEXT: v_mov_b32_e32 [[K:v[0-9]+]], 0x7fc00000
+; GCN-NEXT: v_cmp_o_f32_e32 vcc, v0, v1
+; GCN-NEXT: v_cndmask_b32_e32 v0, [[K]], [[MIN]], vcc
+; VI-FLUSH-NEXT: v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT: s_setpc_b64
+define float @v_test_canonicalize_minimum(float %a, float %b) {
+  %min = call float @llvm.minimum.f32(float %a, float %b)
+  %canonicalized = call float @llvm.canonicalize.f32(float %min)
+  ret float %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_maximum:
+; GCN: s_waitcnt
+; GCN-NEXT: v_max_f32_e32 [[MIN:v[0-9]+]], v0, v1
+; GCN-NEXT: v_mov_b32_e32 [[K:v[0-9]+]], 0x7fc00000
+; GCN-NEXT: v_cmp_o_f32_e32 vcc, v0, v1
+; GCN-NEXT: v_cndmask_b32_e32 v0, [[K]], [[MIN]], vcc
+; VI-FLUSH-NEXT: v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT: s_setpc_b64
+define float @v_test_canonicalize_maximum(float %a, float %b) {
+  %min = call float @llvm.maximum.f32(float %a, float %b)
+  %canonicalized = call float @llvm.canonicalize.f32(float %min)
+  ret float %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_minimumnum:
+; GCN: s_waitcnt
+; VI-NEXT: v_mul_f32_e32 v1, 1.0, v1
+; VI-NEXT: v_mul_f32_e32 v0, 1.0, v0
+
+; GFX9-NEXT: v_max_f32_e32 v1, v1, v1
+; GFX9-NEXT: v_max_f32_e32 v0, v0, v0
+
+; GCN-NEXT: v_min_f32_e32 v0, v0, v1
+; GCN-NEXT: s_setpc_b64
+define float @v_test_canonicalize_minimumnum(float %a, float %b) {
+  %min = call float @llvm.minimumnum.f32(float %a, float %b)
+  %canonicalized = call float @llvm.canonicalize.f32(float %min)
+  ret float %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_maximumnum:
+; GCN: s_waitcnt
+; VI-NEXT: v_mul_f32_e32 v1, 1.0, v1
+; VI-NEXT: v_mul_f32_e32 v0, 1.0, v0
+
+; GFX9-NEXT: v_max_f32_e32 v1, v1, v1
+; GFX9-NEXT: v_max_f32_e32 v0, v0, v0
+
+; GCN-NEXT: v_max_f32_e32 v0, v0, v1
+; GCN-NEXT: s_setpc_b64
+define float @v_test_canonicalize_maximumnum(float %a, float %b) {
+  %min = call float @llvm.maximumnum.f32(float %a, float %b)
+  %canonicalized = call float @llvm.canonicalize.f32(float %min)
   ret float %canonicalized
 }
 

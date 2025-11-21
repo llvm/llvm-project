@@ -17,7 +17,6 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -633,7 +632,7 @@ bool ObjcCategoryMerger::collectCategoryWriterInfoFromCategory(
         tryGetDefinedAtIsecOffset(catInfo.catBodyIsec, catLayout.nameOffset);
 
     if (!catNameSym) {
-      // This is an unhandeled case where the category name is not a symbol but
+      // This is an unhandled case where the category name is not a symbol but
       // instead points to an CStringInputSection (that doesn't have any symbol)
       // TODO: Find a small repro and either fix or add a test case for this
       // scenario

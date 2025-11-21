@@ -102,7 +102,7 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: T i, j, b, c, d, e, x[20];
 // CHECK-NEXT: #pragma omp target data map(to: c){{$}}
 // CHECK-NEXT: i = argc;
-// CHECK-NEXT: #pragma omp target data map(to: c) if(target data: j > 0)
+// CHECK-NEXT: #pragma omp target data map(to: c) if(target{{[ _]}}data: j > 0)
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target data map(to: c) if(b)
 // CHECK-NEXT: foo();
@@ -140,7 +140,7 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: int i, j, b, c, d, e, x[20];
 // CHECK-NEXT: #pragma omp target data map(to: c)
 // CHECK-NEXT: i = argc;
-// CHECK-NEXT: #pragma omp target data map(to: c) if(target data: j > 0)
+// CHECK-NEXT: #pragma omp target data map(to: c) if(target{{[ _]}}data: j > 0)
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target data map(to: c) if(b)
 // CHECK-NEXT: foo();
@@ -178,7 +178,7 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: char i, j, b, c, d, e, x[20];
 // CHECK-NEXT: #pragma omp target data map(to: c)
 // CHECK-NEXT: i = argc;
-// CHECK-NEXT: #pragma omp target data map(to: c) if(target data: j > 0)
+// CHECK-NEXT: #pragma omp target data map(to: c) if(target{{[ _]}}data: j > 0)
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target data map(to: c) if(b)
 // CHECK-NEXT: foo();
@@ -225,7 +225,7 @@ int main (int argc, char **argv) {
   a=2;
 // CHECK-NEXT: a = 2;
 #pragma omp target data map(to: c) if (target data: b)
-// CHECK: #pragma omp target data map(to: c) if(target data: b)
+// CHECK: #pragma omp target data map(to: c) if(target{{[ _]}}data: b)
   foo();
 // CHECK-NEXT: foo();
 

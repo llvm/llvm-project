@@ -19,7 +19,8 @@
 
 #include "test_macros.h"
 
-static_assert(std::is_trivial<decltype(std::ignore)>::value, "");
+static_assert(std::is_trivially_copyable<decltype(std::ignore)>::value, "");
+static_assert(std::is_trivially_default_constructible<decltype(std::ignore)>::value, "");
 
 #if TEST_STD_VER >= 17
 [[nodiscard]] constexpr int test_nodiscard() { return 8294; }

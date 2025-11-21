@@ -18,7 +18,7 @@
 ; RUN: llvm-mc -arch=wasm32 -filetype=obj \
 ; RUN:         %p/Inputs/hello-world-clang.s -o %t.hello-world-clang.o
 
-; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
+; RUN: llvm-debuginfo-analyzer --attribute=language,level,format,producer \
 ; RUN:                         --print=lines,instructions \
 ; RUN:                         %t.hello-world-clang.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
@@ -28,6 +28,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'hello-world.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 19{{.*}}'
+; ONE-NEXT: [002]               {Language} 'DW_LANG_C_plus_plus_14'
 ; ONE-NEXT: [002]     3         {Function} extern not_inlined 'main' -> 'int'
 ; ONE-NEXT: [003]     4           {Line}
 ; ONE-NEXT: [003]                 {Code} 'nop'
@@ -70,5 +71,5 @@
 ; ONE-NEXT: [003]                 {Code} 'local.get	6'
 ; ONE-NEXT: [003]                 {Code} 'return'
 ; ONE-NEXT: [003]                 {Code} 'end'
-; ONE-NEXT: [003]     6           {Line}
-; ONE-NEXT: [003]                 {Code} 'return'
+; ONE-NEXT: [002]     6         {Line}
+; ONE-NEXT: [002]               {Code} 'return'

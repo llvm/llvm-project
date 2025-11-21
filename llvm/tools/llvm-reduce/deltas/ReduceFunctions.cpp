@@ -14,10 +14,8 @@
 
 #include "ReduceFunctions.h"
 #include "Utils.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <iterator>
 
 using namespace llvm;
 
@@ -32,7 +30,7 @@ void llvm::reduceFunctionsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
     // Intrinsics don't have function bodies that are useful to
     // reduce. Additionally, intrinsics may have additional operand
     // constraints. But, do drop intrinsics that are not referenced.
-    if ((!F.isIntrinsic() || F.use_empty()) && !hasAliasOrBlockAddressUse(F) &&
+    if ((!F.isIntrinsic() || F.use_empty()) && !hasAliasUse(F) &&
         !O.shouldKeep())
       FuncsToRemove.insert(&F);
   }

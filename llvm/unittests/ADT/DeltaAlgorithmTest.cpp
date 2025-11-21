@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DeltaAlgorithm.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
-#include <algorithm>
 #include <cstdarg>
 using namespace llvm;
 
@@ -38,8 +38,7 @@ class FixedDeltaAlgorithm final : public DeltaAlgorithm {
 protected:
   bool ExecuteOneTest(const changeset_ty &Changes) override {
     ++NumTests;
-    return std::includes(Changes.begin(), Changes.end(),
-                         FailingSet.begin(), FailingSet.end());
+    return llvm::includes(Changes, FailingSet);
   }
 
 public:

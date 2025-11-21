@@ -165,7 +165,8 @@ ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file) {
   if (ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec))
     return module_sp;
 
-  if (ModuleSP module_sp = target.GetOrCreateModule(module_spec, false))
+  if (ModuleSP module_sp =
+          target.GetOrCreateModule(module_spec, /*notify=*/false))
     return module_sp;
 
   return nullptr;
@@ -211,7 +212,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
   if (uuid.IsValid())
     prog_str << uuid.GetAsString();
   if (value_is_offset == 0 && value != LLDB_INVALID_ADDRESS) {
-    prog_str << "at 0x";
+    prog_str << " at 0x";
     prog_str.PutHex64(value);
   }
 
@@ -227,8 +228,11 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     }
   }
   ModuleSpec module_spec;
+  module_spec.SetTarget(target.shared_from_this());
   module_spec.GetUUID() = uuid;
   FileSpec name_filespec(name);
+  if (FileSystem::Instance().Exists(name_filespec))
+    module_spec.GetFileSpec() = name_filespec;
 
   if (uuid.IsValid()) {
     Progress progress("Locating binary", prog_str.GetString().str());
@@ -236,21 +240,28 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     // Has lldb already seen a module with this UUID?
     // Or have external lookup enabled in DebugSymbols on macOS.
     if (!module_sp)
-      error = ModuleList::GetSharedModule(module_spec, module_sp, nullptr,
-                                          nullptr, nullptr);
+      error =
+          ModuleList::GetSharedModule(module_spec, module_sp, nullptr, nullptr);
 
     // Can lldb's symbol/executable location schemes
     // find an executable and symbol file.
     if (!module_sp) {
       FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+      StatisticsMap symbol_locator_map;
       module_spec.GetSymbolFileSpec() =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths,
+                                                    symbol_locator_map);
       ModuleSpec objfile_module_spec =
-          PluginManager::LocateExecutableObjectFile(module_spec);
+          PluginManager::LocateExecutableObjectFile(module_spec,
+                                                    symbol_locator_map);
       module_spec.GetFileSpec() = objfile_module_spec.GetFileSpec();
       if (FileSystem::Instance().Exists(module_spec.GetFileSpec()) &&
           FileSystem::Instance().Exists(module_spec.GetSymbolFileSpec())) {
         module_sp = std::make_shared<Module>(module_spec);
+      }
+
+      if (module_sp) {
+        module_sp->GetSymbolLocatorStatistics().merge(symbol_locator_map);
       }
     }
 

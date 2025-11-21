@@ -6,7 +6,7 @@
 // RUN: %clang -std=gnu11 --driver-mode=gcc -O0 -glldb -fblocks -arch x86_64 \
 // RUN:     -fsanitize=address %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t --debugger 'lldb' -- %s
+// RUN:     --binary %t %dexter_lldb_args -- %s
 
 struct S {
   int a[8];

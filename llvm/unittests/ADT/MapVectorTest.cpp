@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
 #include <utility>
@@ -265,6 +267,29 @@ TEST(MapVectorTest, NonCopyable) {
 
   ASSERT_EQ(MV.count(1), 1u);
   ASSERT_EQ(*MV.find(2)->second, 2);
+}
+
+TEST(MapVectorTest, GetArrayRef) {
+  MapVector<int, int> MV;
+
+  // The underlying vector is empty to begin with.
+  EXPECT_TRUE(MV.getArrayRef().empty());
+
+  // Test inserted element.
+  MV.insert(std::make_pair(100, 99));
+  EXPECT_TRUE(MV.getArrayRef().equals({std::pair(100, 99)}));
+
+  // Inserting a different element for an existing key won't change the
+  // underlying vector.
+  auto [Iter, Inserted] = MV.try_emplace(100, 98);
+  EXPECT_FALSE(Inserted);
+  EXPECT_EQ(Iter->second, 99);
+  EXPECT_TRUE(MV.getArrayRef().equals({std::pair(100, 99)}));
+
+  // Inserting a new element. Tests that elements are in order in the underlying
+  // array.
+  MV.insert(std::make_pair(99, 98));
+  EXPECT_TRUE(MV.getArrayRef().equals({std::pair(100, 99), std::pair(99, 98)}));
 }
 
 template <class IntType> struct MapVectorMappedTypeTest : ::testing::Test {

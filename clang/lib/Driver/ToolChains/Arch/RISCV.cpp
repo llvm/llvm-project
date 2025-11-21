@@ -8,14 +8,11 @@
 
 #include "RISCV.h"
 #include "../Clang.h"
-#include "ToolChains/CommonArgs.h"
-#include "clang/Basic/CharInfo.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -52,11 +49,8 @@ static bool getArchFeatures(const Driver &D, StringRef Arch,
   return true;
 }
 
-// Get features except standard extension feature
-static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
-                                    const llvm::Triple &Triple,
-                                    StringRef Mcpu,
-                                    std::vector<StringRef> &Features) {
+static bool isValidRISCVCPU(const Driver &D, const Arg *A,
+                            const llvm::Triple &Triple, StringRef Mcpu) {
   bool Is64Bit = Triple.isRISCV64();
   if (!llvm::RISCV::parseCPU(Mcpu, Is64Bit)) {
     // Try inverting Is64Bit in case the CPU is valid, but for the wrong target.
@@ -66,7 +60,9 @@ static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
     else
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Mcpu;
+    return false;
   }
+  return true;
 }
 
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
@@ -87,7 +83,8 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (CPU == "native")
       CPU = llvm::sys::getHostCPUName();
 
-    getRISCFeaturesFromMcpu(D, A, Triple, CPU, Features);
+    if (!isValidRISCVCPU(D, A, Triple, CPU))
+      return;
 
     if (llvm::RISCV::hasFastScalarUnalignedAccess(CPU))
       CPUFastScalarUnaligned = true;
@@ -276,9 +273,12 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   // Clang does not yet support MULTILIB_REUSE, so we use `rv{XLEN}imafdc`
   // instead of `rv{XLEN}gc` though they are (currently) equivalent.
 
-  // 1. If `-march=` is specified, use it.
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
-    return A->getValue();
+  // 1. If `-march=` is specified, use it unless the value is "unset".
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
+    StringRef MArch = A->getValue();
+    if (MArch != "unset")
+      return MArch.str();
+  }
 
   // 2. Get march (isa string) based on `-mcpu=`
   if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
@@ -303,7 +303,7 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
 
     StringRef MArch = llvm::RISCV::getMArchFromMcpu(CPU);
     // Bypass if target cpu's default march is empty.
-    if (MArch != "")
+    if (!MArch.empty())
       return MArch.str();
   }
 

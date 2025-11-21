@@ -85,6 +85,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   if (options.features.IsEnabled(LanguageFeature::OpenACC) ||
       (options.prescanAndReformat && noneOfTheAbove)) {
     prescanner.AddCompilerDirectiveSentinel("$acc");
+    prescanner.AddCompilerDirectiveSentinel("@acc");
   }
   if (options.features.IsEnabled(LanguageFeature::OpenMP) ||
       (options.prescanAndReformat && noneOfTheAbove)) {
@@ -95,9 +96,6 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
       (options.prescanAndReformat && noneOfTheAbove)) {
     prescanner.AddCompilerDirectiveSentinel("$cuf");
     prescanner.AddCompilerDirectiveSentinel("@cuf");
-  }
-  if (options.features.IsEnabled(LanguageFeature::CUDA)) {
-    preprocessor_.Define("_CUDA", "1");
   }
   ProvenanceRange range{allSources.AddIncludedFile(
       *sourceFile, ProvenanceRange{}, options.isModuleFile)};
@@ -155,7 +153,7 @@ void Parsing::EmitPreprocessedSource(
       const auto getOriginalChar{[&](char ch) {
         if (IsLetter(ch) && provenance && provenance->size() == 1) {
           if (const char *orig{allSources.GetSource(*provenance)}) {
-            const char upper{ToUpperCaseLetter(ch)};
+            char upper{ToUpperCaseLetter(ch)};
             if (*orig == upper) {
               return upper;
             }
@@ -184,21 +182,23 @@ void Parsing::EmitPreprocessedSource(
       std::optional<SourcePosition> position{provenance
               ? allSources.GetSourcePosition(provenance->start())
               : std::nullopt};
-      if (lineDirectives && column == 1 && position) {
-        if (&*position->path != sourcePath) {
-          out << "#line \"" << *position->path << "\" " << position->line
-              << '\n';
-        } else if (position->line != sourceLine) {
-          if (sourceLine < position->line &&
-              sourceLine + 10 >= position->line) {
-            // Emit a few newlines to catch up when they'll likely
-            // require fewer bytes than a #line directive would have
-            // occupied.
-            while (sourceLine++ < position->line) {
-              out << '\n';
+      if (column == 1 && position) {
+        if (lineDirectives) {
+          if (&*position->path != sourcePath) {
+            out << "#line \"" << *position->path << "\" " << position->line
+                << '\n';
+          } else if (position->line != sourceLine) {
+            if (sourceLine < position->line &&
+                sourceLine + 10 >= position->line) {
+              // Emit a few newlines to catch up when they'll likely
+              // require fewer bytes than a #line directive would have
+              // occupied.
+              while (sourceLine++ < position->line) {
+                out << '\n';
+              }
+            } else {
+              out << "#line " << position->line << '\n';
             }
-          } else {
-            out << "#line " << position->line << '\n';
           }
         }
         sourcePath = &*position->path;
@@ -228,10 +228,11 @@ void Parsing::EmitPreprocessedSource(
         column = 7; // start of fixed form source field
         ++sourceLine;
         inContinuation = true;
-      } else if (!inDirective && ch != ' ' && (ch < '0' || ch > '9')) {
+      } else if (!inDirective && !ompConditionalLine && ch != ' ' &&
+          (ch < '0' || ch > '9')) {
         // Put anything other than a label or directive into the
         // Fortran fixed form source field (columns [7:72]).
-        for (; column < 7; ++column) {
+        for (int toCol{ch == '&' ? 6 : 7}; column < toCol; ++column) {
           out << ' ';
         }
       }
@@ -239,12 +240,12 @@ void Parsing::EmitPreprocessedSource(
         if (ompConditionalLine) {
           // Only digits can stay in the label field
           if (!(ch >= '0' && ch <= '9')) {
-            for (; column < 7; ++column) {
+            for (int toCol{ch == '&' ? 6 : 7}; column < toCol; ++column) {
               out << ' ';
             }
           }
         } else if (!inContinuation && !inDirectiveSentinel && position &&
-            position->column <= 72) {
+            position->line == sourceLine && position->column < 72) {
           // Preserve original indentation
           for (; column < position->column; ++column) {
             out << ' ';
@@ -282,6 +283,8 @@ void Parsing::Parse(llvm::raw_ostream &out) {
       .set_log(&log_);
   ParseState parseState{cooked()};
   parseState.set_inFixedForm(options_.isFixedForm).set_userState(&userState);
+  // Don't bother managing message buffers when parsing module files.
+  parseState.set_deferMessages(options_.isModuleFile);
   parseTree_ = program.Parse(parseState);
   CHECK(
       !parseState.anyErrorRecovery() || parseState.messages().AnyFatalError());

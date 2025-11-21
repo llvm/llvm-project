@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfh,+v -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-; Test that we can remove trivially-undef VP operations of various kinds.
+; Test that we can remove trivially-poison VP operations of various kinds.
 
 declare <4 x i32> @llvm.vp.load.v4i32.p0(ptr, <4 x i1>, i32)
 

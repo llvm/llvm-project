@@ -116,9 +116,7 @@ static MapInfo gatherMapInfo() {
   // cstrings are not stored in sorted order in their OutputSections, so we sort
   // them here.
   for (auto &liveCStrings : info.liveCStringsForSection)
-    parallelSort(liveCStrings.second, [](const auto &p1, const auto &p2) {
-      return p1.first < p2.first;
-    });
+    parallelSort(liveCStrings.second, llvm::less_first());
   return info;
 }
 
@@ -241,7 +239,7 @@ void macho::writeMapFile() {
         printIsecArrSyms(textOsec->inputs, textOsec->getThunks());
       } else if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
         printIsecArrSyms(concatOsec->inputs);
-      } else if (osec == in.cStringSection || osec == in.objcMethnameSection) {
+      } else if (is_contained(in.cStringSections, osec)) {
         const auto &liveCStrings = info.liveCStringsForSection.lookup(osec);
         uint64_t lastAddr = 0; // strings will never start at address 0, so this
                                // is a sentinel value

@@ -312,11 +312,12 @@ ComputeReturnAdjustmentBaseOffset(ASTContext &Context,
     return BaseOffset();
   }
 
-  const CXXRecordDecl *DerivedRD =
-    cast<CXXRecordDecl>(cast<RecordType>(CanDerivedReturnType)->getDecl());
+  const auto *DerivedRD =
+      cast<CXXRecordDecl>(cast<RecordType>(CanDerivedReturnType)->getDecl())
+          ->getDefinitionOrSelf();
 
-  const CXXRecordDecl *BaseRD =
-    cast<CXXRecordDecl>(cast<RecordType>(CanBaseReturnType)->getDecl());
+  const auto *BaseRD =
+      cast<CXXRecordDecl>(cast<RecordType>(CanBaseReturnType)->getDecl());
 
   return ComputeBaseOffset(Context, BaseRD, DerivedRD);
 }
@@ -1595,8 +1596,8 @@ void ItaniumVTableBuilder::AddMethods(
       NewVirtualFunctions.push_back(MD);
   }
 
-  std::stable_sort(
-      NewImplicitVirtualFunctions.begin(), NewImplicitVirtualFunctions.end(),
+  llvm::stable_sort(
+      NewImplicitVirtualFunctions,
       [](const CXXMethodDecl *A, const CXXMethodDecl *B) {
         if (A == B)
           return false;
@@ -1735,8 +1736,8 @@ void ItaniumVTableBuilder::LayoutPrimaryAndSecondaryVTables(
       const CXXMethodDecl *MD = I.first;
       const MethodInfo &MI = I.second;
       if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
-        MethodVTableIndices[GlobalDecl(DD, Dtor_Complete)] =
-            MI.VTableIndex - AddressPoint;
+        MethodVTableIndices[GlobalDecl(DD, Dtor_Complete)]
+            = MI.VTableIndex - AddressPoint;
         MethodVTableIndices[GlobalDecl(DD, Dtor_Deleting)]
             = MI.VTableIndex + 1 - AddressPoint;
       } else {
@@ -2658,7 +2659,8 @@ private:
                                 WhichVFPtr.NonVirtualOffset, MI.VFTableIndex);
       if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
         // In Microsoft ABI vftable always references vector deleting dtor.
-        CXXDtorType DtorTy = Context.getTargetInfo().getCXXABI().isMicrosoft()
+        CXXDtorType DtorTy = Context.getTargetInfo().emitVectorDeletingDtors(
+                                 Context.getLangOpts())
                                  ? Dtor_VectorDeleting
                                  : Dtor_Deleting;
         MethodVFTableLocations[GlobalDecl(DD, DtorTy)] = Loc;
@@ -3291,7 +3293,8 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
       const CXXDestructorDecl *DD = Component.getDestructorDecl();
 
       DD->printQualifiedName(Out);
-      if (Context.getTargetInfo().getCXXABI().isMicrosoft())
+      if (Context.getTargetInfo().emitVectorDeletingDtors(
+              Context.getLangOpts()))
         Out << "() [vector deleting]";
       else
         Out << "() [scalar deleting]";
@@ -3880,7 +3883,8 @@ MicrosoftVTableContext::getMethodVFTableLocation(GlobalDecl GD) {
   assert(hasVtableSlot(cast<CXXMethodDecl>(GD.getDecl())) &&
          "Only use this method for virtual methods or dtors");
   if (isa<CXXDestructorDecl>(GD.getDecl()))
-    assert(GD.getDtorType() == Dtor_VectorDeleting);
+    assert(GD.getDtorType() == Dtor_VectorDeleting ||
+           GD.getDtorType() == Dtor_Deleting);
 
   GD = GD.getCanonicalDecl();
 

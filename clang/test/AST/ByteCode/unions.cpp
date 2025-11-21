@@ -1,7 +1,10 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref,both %s
+// RUN: %clang_cc1            -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1            -verify=ref,both      %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,both      %s
+
+#define assert_active(F)   if (!__builtin_is_within_lifetime(&F)) (1/0);
+#define assert_inactive(F) if ( __builtin_is_within_lifetime(&F)) (1/0);
 
 union U {
   int a;
@@ -228,9 +231,24 @@ namespace Nested {
   }
   static_assert(foo2() == 10);
 
- constexpr int foo3() { // both-error {{constexpr function never produces a constant expression}}
+ consteval int foo3() { // both-error {{function never produces a constant expression}}
     U2 u;
+    /// No active field.
+    assert_active(u);
+    assert_inactive(u.u);
+    assert_inactive(u.u2);
+    assert_inactive(u.x);
+    assert_inactive(u.y);
+
     u.u.a = 10;
+    assert_active(u);
+    assert_active(u.u);
+    assert_active(u.u.a);
+    assert_inactive(u.u.b);
+    assert_inactive(u.u2);
+    assert_inactive(u.x);
+    assert_inactive(u.y);
+
     int a = u.u.b; // both-note 2{{read of member 'b' of union with active member 'a' is not allowed in a constant expression}}
 
     return 1;
@@ -340,6 +358,21 @@ namespace IndirectField {
   static_assert(s2.d == 6, "");
   static_assert(s2.e == 0, ""); // both-error {{constant expression}} both-note {{union with active member}}
   static_assert(s2.f == 7, "");
+}
+
+namespace CtorActivatesFields {
+  struct TailClobberer {
+    constexpr TailClobberer() { b = false; }
+    bool b;
+  };
+
+  class expected {
+    union __union_t {
+      constexpr __union_t() : __unex_() {}
+      TailClobberer __unex_;
+    } __union_;
+  };
+  constexpr expected y;
 }
 
 namespace CopyCtor {
@@ -578,6 +611,7 @@ namespace MoveOrAssignOp {
   };
 
   class F {
+  public:
     struct __long {
       min_pointer __data_;
     };
@@ -598,7 +632,301 @@ namespace MoveOrAssignOp {
     return true;
   }
   static_assert(foo());
+
+  constexpr F f2{};
+  static_assert(__builtin_is_within_lifetime(&f2.__rep_));
+  static_assert(__builtin_is_within_lifetime(&f2.__rep_.__l));
+  static_assert(__builtin_is_within_lifetime(&f2.__rep_.__l.__data_));
 }
+
+namespace CopyEmptyUnion {
+  struct A {
+    union {}; // both-warning {{declaration does not declare anything}}
+  };
+  constexpr int foo() {
+     A a;
+     A a2 = a;
+     return 1;
+  }
+  static_assert(foo() == 1);
+}
+
+namespace BitFields {
+  constexpr bool simple() {
+    union U {
+      unsigned a : 1;
+      unsigned b : 1;
+    };
+
+    U u{1};
+    u.b = 1;
+    return u.b;
+  }
+  static_assert(simple());
+}
+
+namespace deactivateRecurses {
+
+  constexpr int foo() {
+    struct A {
+      struct {
+        int a;
+      };
+      int b;
+    };
+    struct B {
+      struct {
+        int a;
+        int b;
+      };
+    };
+
+    union U {
+      A a;
+      B b;
+    } u;
+
+    u.b.a = 10;
+    ++u.b.a;
+
+    u.a.a = 10;
+    ++u.a.a;
+
+    if (__builtin_constant_p(u.b.a))
+      return 10;
+
+    return 1;
+  }
+  static_assert(foo() == 1);
+}
+
+namespace AnonymousUnion {
+  struct Long {
+    struct {
+      unsigned is_long;
+    };
+    unsigned Size;
+  };
+
+  struct Short {
+    struct {
+      unsigned is_long;
+      unsigned Size;
+    };
+    char data;
+  };
+
+  union Rep {
+    Short S;
+    Long L;
+  };
+
+  consteval int test() {
+    union UU {
+      struct {
+        Rep R;
+        int a;
+      };
+    } U;
+
+    U.R.S.Size = 10;
+    assert_active(U);
+    assert_active(U.R);
+    assert_active(U.R.S);
+    assert_active(U.R.S.Size);
+
+    U.a = 10;
+    assert_active(U.a);
+    assert_active(U);
+
+    assert_active(U);
+    assert_active(U.R);
+    assert_active(U.R.S);
+    assert_active(U.R.S.Size);
+
+    return 1;
+  }
+  static_assert(test() == 1);
+}
+
+namespace AccessViaPointer {
+  struct A {
+    int x;
+    int y;
+    int arr[3];
+    union { int p, q; };
+  };
+  union B {
+    A a;
+    int b;
+  };
+
+  constexpr int write_wrong_member_indirect() { // both-error {{never produces a constant}}
+    B b = {.b = 1};
+    int *p = &b.a.y;
+
+    *p = 12; // both-note 2{{assignment to member 'a' of union with active member 'b'}}
+
+    return *p;
+  }
+  static_assert(write_wrong_member_indirect() == 1); // both-error {{not an integral constant expression}} \
+                                                     // both-note {{in call to}}
+}
+
+namespace Activation {
+  union U {
+    int a;
+    int b;
+  };
+
+  struct S { int& b; };
+
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+    U u;
+    u.a = 10;
+    S s{u.b};
+
+    // LHS is a MemberExpr, but not of a union type. shouldn't activate u.b.
+    s.b = 12; // both-note 2{{assignment to member 'b' of union with active member 'a'}}
+
+    return u.b;
+
+  }
+  static_assert(foo() == 12); // both-error {{not an integral constant expression}} \
+                              // both-note {{in call to}}
+
+  struct SS {
+    int a;
+    consteval SS() {
+      a = 10;
+    }
+  };
+
+  /// Activating the struct should also activate all the struct members.
+  consteval int structInUnion() {
+    union {
+      SS s;
+      int b;
+    } u{};
+
+    // assert_active(u.s);
+    // assert_active(u.s.a);
+    //assert_inactive(u.b);
+
+    return u.s.a;
+  }
+  static_assert(structInUnion() == 10);
+
+}
+
+namespace Activation2 {
+  struct Base {
+    int y;
+  };
+  struct A : Base {
+    int x;
+    int arr[3];
+    union { int p, q; };
+  };
+  union B {
+    A a;
+    int b;
+  };
+
+  constexpr int change_member_indirectly() {
+    B b = {.b = 1};
+    b.a.arr[1] = 1;
+    int &r = b.a.y;
+    r = 123;
+
+    b.b = 2;
+    b.a.y = 3;
+    b.a.arr[2] = 4;
+    return b.a.arr[2];
+  }
+  static_assert(change_member_indirectly() == 4);
+}
+
+namespace CopyCtorMutable {
+  struct E {
+    union {
+      int a;
+      mutable int b; // both-note {{here}}
+    };
+  };
+  constexpr E e1 = {{1}};
+  constexpr E e2 = e1; // both-error {{constant}} \
+                       // both-note {{read of mutable member 'b'}} \
+                       // both-note {{in call}}
+}
+
+
+namespace NonTrivialCtor {
+  struct A { int x = 1; constexpr int f() { return 1; } };
+  struct B : A { int y = 1; constexpr int g() { return 2; } };
+  struct C {
+    int x;
+    constexpr virtual int f() = 0;
+  };
+  struct D : C {
+    int y;
+    constexpr virtual int f() override { return 3; }
+  };
+
+  union U {
+    int n;
+    B b;
+    D d;
+  };
+
+  consteval int test(int which) {
+    if (which == 0) {}
+
+    U u{.n = 5};
+    assert_active(u);
+    assert_active(u.n);
+    assert_inactive(u.b);
+
+    switch (which) {
+    case 0:
+      u.b.x = 10; // both-note {{assignment to member 'b' of union with active member 'n'}}
+      return u.b.f();
+    case 1:
+      u.b.y = 10; // both-note {{assignment to member 'b' of union with active member 'n'}}
+      return u.b.g();
+    case 2:
+      u.d.x = 10; // both-note {{assignment to member 'd' of union with active member 'n'}}
+     return u.d.f();
+    case 3:
+    u.d.y = 10; // both-note {{assignment to member 'd' of union with active member 'n'}}
+      return u.d.f();
+    }
+
+    return 1;
+  }
+  static_assert(test(0)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+  static_assert(test(1)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+  static_assert(test(2)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+  static_assert(test(3)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+
+}
+
+namespace PrimitiveFieldInitActivates {
+  /// The initializer of a needs the field to be active _before_ it's visited.
+  template<int> struct X {};
+  union V {
+    int a, b;
+    constexpr V(X<0>) : a(a = 1) {} // ok
+    constexpr V(X<2>) : a() { b = 1; } // ok
+  };
+  constinit V v0 = X<0>();
+  constinit V v2 = X<2>();
+}
+
 #endif
 
 namespace AddressComparison {
@@ -638,3 +966,24 @@ namespace AddressComparison {
   static_assert(&U2.a[0] != &U2.b[1]);
   static_assert(&U2.a[0] == &U2.b[1]); // both-error {{failed}}
 }
+
+#if __cplusplus >= 202002L
+namespace UnionMemberOnePastEnd {
+  constexpr bool b() {
+    union  {
+      int p;
+    };
+    return &p == (&p + 1);
+  }
+  static_assert(!b());
+}
+
+namespace ActicvateInvalidPtr {
+  constexpr void bar() { // both-error {{never produces a constant expression}}
+    union {
+      int a[1];
+    } foo;
+    foo.a[1] = 0; // both-note {{assignment to dereferenced one-past-the-end pointer}}
+  }
+}
+#endif

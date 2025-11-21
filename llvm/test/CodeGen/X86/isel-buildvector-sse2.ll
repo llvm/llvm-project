@@ -20,20 +20,13 @@ define <7 x i8> @test_vector_v7i8() {
 ; SSE2-GISEL-LABEL: test_vector_v7i8:
 ; SSE2-GISEL:       # %bb.0:
 ; SSE2-GISEL-NEXT:    movq %rdi, %rax
-; SSE2-GISEL-NEXT:    movb $4, %cl
-; SSE2-GISEL-NEXT:    movb $8, %dl
-; SSE2-GISEL-NEXT:    movb $15, %sil
-; SSE2-GISEL-NEXT:    movb $16, %dil
-; SSE2-GISEL-NEXT:    movb $23, %r8b
-; SSE2-GISEL-NEXT:    movb $42, %r9b
-; SSE2-GISEL-NEXT:    movb $63, %r10b
-; SSE2-GISEL-NEXT:    movb %cl, (%rax)
-; SSE2-GISEL-NEXT:    movb %dl, 1(%rax)
-; SSE2-GISEL-NEXT:    movb %sil, 2(%rax)
-; SSE2-GISEL-NEXT:    movb %dil, 3(%rax)
-; SSE2-GISEL-NEXT:    movb %r8b, 4(%rax)
-; SSE2-GISEL-NEXT:    movb %r9b, 5(%rax)
-; SSE2-GISEL-NEXT:    movb %r10b, 6(%rax)
+; SSE2-GISEL-NEXT:    movb $4, (%rdi)
+; SSE2-GISEL-NEXT:    movb $8, 1(%rdi)
+; SSE2-GISEL-NEXT:    movb $15, 2(%rdi)
+; SSE2-GISEL-NEXT:    movb $16, 3(%rdi)
+; SSE2-GISEL-NEXT:    movb $23, 4(%rdi)
+; SSE2-GISEL-NEXT:    movb $42, 5(%rdi)
+; SSE2-GISEL-NEXT:    movb $63, 6(%rdi)
 ; SSE2-GISEL-NEXT:    retq
   ret <7 x i8> <i8 4, i8 8, i8 15, i8 16, i8 23, i8 42, i8 63>
 }

@@ -64,7 +64,8 @@
 // RUN:     -Wno-missing-reduced-bmi -### 2>&1 | FileCheck Hello.cppm -check-prefix=NO_WARN
 //
 // RUN: %clang -std=c++20 Hello.cppm --precompile -o Hello.pcm \
-// RUN:     -Wno-missing-reduced-bmi -### 2>&1 | FileCheck Hello.cppm -check-prefix=NO_WARN
+// RUN:     -fno-modules-reduced-bmi -Wno-missing-reduced-bmi -### 2>&1 | \
+// RUN:     FileCheck Hello.cppm -check-prefix=NO_WARN
 
 //--- Hello.cppm
 export module Hello;

@@ -181,6 +181,18 @@ mlir::Value genIsNotAllocatedOrAssociatedTest(fir::FirOpBuilder &builder,
 mlir::Value genNullBoxStorage(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Type boxTy);
 
+/// Generate an unallocated box of the given \p boxTy with the
+/// bounds, type parameters, and dynamic type set according to the
+/// parameters.
+/// \p shape may be null for scalars, and \p polymorphicMold may be null for
+/// statically typed entities. This box can then be directly passed to the
+/// runtime for allocation.
+mlir::Value getAndEstablishBoxStorage(fir::FirOpBuilder &builder,
+                                      mlir::Location loc,
+                                      fir::BaseBoxType boxTy, mlir::Value shape,
+                                      llvm::ArrayRef<mlir::Value> typeParams,
+                                      mlir::Value polymorphicMold);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_MUTABLEBOX_H

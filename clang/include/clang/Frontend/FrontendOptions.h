@@ -241,6 +241,8 @@ class FrontendInputFile {
   /// Whether we're dealing with a 'system' input (vs. a 'user' input).
   bool IsSystem = false;
 
+  friend class CompilerInvocationBase;
+
 public:
   FrontendInputFile() = default;
   FrontendInputFile(StringRef File, InputKind Kind, bool IsSystem = false)
@@ -529,6 +531,10 @@ public:
 
   /// Output Path for module output file.
   std::string ModuleOutputPath;
+
+  /// Output path to dump ranges of deserialized declarations to use as
+  /// minimization hints.
+  std::string DumpMinimizationHintsPath;
 
 public:
   FrontendOptions()

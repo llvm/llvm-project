@@ -166,7 +166,7 @@ namespace inalloca_nonvirt {
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
-  // WIN64: call {{.*}} @"??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr %[[ARG1]], i32 2, ptr %[[ARG3]], ptr{{.*}} %[[TMP]])
+  // WIN64: call {{.*}} @"??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr dead_on_return %[[ARG1]], i32 2, ptr dead_on_return %[[ARG3]], ptr{{.*}} %[[TMP]])
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call void @"??1Q@@QEAA@XZ"(ptr {{[^,]*}} %[[TMP]])
 
@@ -202,7 +202,7 @@ namespace inalloca_nonvirt {
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
-  // WIN64: call {{.*}} @"??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr %[[ARG1]], i32 2, ptr %[[ARG3]], ptr{{.*}} %[[TMP]])
+  // WIN64: call {{.*}} @"??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr dead_on_return %[[ARG1]], i32 2, ptr dead_on_return %[[ARG3]], ptr{{.*}} %[[TMP]])
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call void @"??1Q@@QEAA@XZ"(ptr {{[^,]*}} %[[TMP]])
 }
@@ -253,7 +253,7 @@ namespace inalloca_virt {
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN64: br i1
-  // WIN64: call {{.*}} @"??0A@inalloca_virt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr %[[ARG1]], i32 2, ptr %[[ARG3]], ptr{{.*}} %[[TMP]])
+  // WIN64: call {{.*}} @"??0A@inalloca_virt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr dead_on_return %[[ARG1]], i32 2, ptr dead_on_return %[[ARG3]], ptr{{.*}} %[[TMP]])
   // WIN64: br
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
@@ -302,7 +302,7 @@ namespace inalloca_virt {
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN64: br i1
   // WIN64: store {{.*}} @"??_8C@inalloca_virt@@7B@"
-  // WIN64: call {{.*}} @"??0A@inalloca_virt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr %[[ARG1]], i32 2, ptr %[[ARG3]], ptr{{.*}} %[[TMP]])
+  // WIN64: call {{.*}} @"??0A@inalloca_virt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr dead_on_return %[[ARG1]], i32 2, ptr dead_on_return %[[ARG3]], ptr{{.*}} %[[TMP]])
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call void @"??1Q@@QEAA@XZ"(ptr {{[^,]*}} %[[TMP]])

@@ -10,8 +10,10 @@
 ## FILE_SHARE_WRITE  = 2
 ## FILE_SHARE_DELETE = 4
 
-# RUN:     %python %s %t.o 7
-# RUN: not %python %s %t.o 3 2>&1 | FileCheck %s
+# RUN:     %python %s %t.o 7 false
+# RUN: not %python %s %t.o 3 false 2>&1 | FileCheck %s
+# RUN:     %python %s %t.o 7 true
+# RUN: not %python %s %t.o 3 true 2>&1 | FileCheck %s
 # CHECK: error: failed to write output '{{.*}}': {{.*}}
 
 import contextlib
@@ -26,6 +28,7 @@ import time
 
 object_file = sys.argv[1]
 share_flags = int(sys.argv[2])
+use_mmap = bool(sys.argv[3])
 
 @contextlib.contextmanager
 def open_with_share_flags(filename, share_flags):
@@ -55,7 +58,10 @@ os.makedirs(outdir)
 elf = os.path.join(outdir, 'output_file.elf')
 open(elf, 'wb').close()
 with open_with_share_flags(elf, share_flags):
-    subprocess.check_call(['ld.lld.exe', object_file, '-o', elf])
+    args = ['ld.lld.exe', object_file, '-o', elf]
+    if use_mmap:
+        args.append("--mmap-output-file")
+    subprocess.check_call(args)
 
 ## Check the linker wrote the output file.
 with open(elf, 'rb') as f:

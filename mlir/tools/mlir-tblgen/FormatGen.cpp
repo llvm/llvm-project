@@ -400,8 +400,10 @@ FailureOr<FormatElement *> FormatParser::parseOptionalGroup(Context ctx) {
 
 FailureOr<FormatElement *> FormatParser::parseCustomDirective(SMLoc loc,
                                                               Context ctx) {
-  if (ctx != TopLevelContext)
-    return emitError(loc, "'custom' is only valid as a top-level directive");
+  if (ctx != TopLevelContext && ctx != StructDirectiveContext) {
+    return emitError(loc, "`custom` can only be used at the top-level context "
+                          "or within a `struct` directive");
+  }
 
   FailureOr<FormatToken> nameTok;
   if (failed(parseToken(FormatToken::less,
@@ -516,7 +518,7 @@ bool mlir::tblgen::isValidLiteral(StringRef value,
   // If there is only one character, this must either be punctuation or a
   // single character bare identifier.
   if (value.size() == 1) {
-    StringRef bare = "_:,=<>()[]{}?+*";
+    StringRef bare = "_:,=<>()[]{}?+-*";
     if (isalpha(front) || bare.contains(front))
       return true;
     if (emitError)

@@ -706,20 +706,20 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
   auto TripleName = TheTriple.getTriple();
 
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple, Error);
   failIfNotEmpty(Error);
 
   std::unique_ptr<const MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+      TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
   failIfEmpty(STI, "no subtarget info for target " + TripleName);
 
   std::unique_ptr<const MCRegisterInfo> MRI(
-      TheTarget->createMCRegInfo(TripleName));
+      TheTarget->createMCRegInfo(TheTriple));
   failIfEmpty(MRI, "no register info for target " + TripleName);
 
   MCTargetOptions MCOptions;
   std::unique_ptr<const MCAsmInfo> AsmInfo(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   failIfEmpty(AsmInfo, "no asm info for target " + TripleName);
 
   MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
@@ -730,7 +730,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
   std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   failIfEmpty(MII, "no instruction info for target " + TripleName);
 
-  std::unique_ptr<const MCInstrAnalysis> MIA(
+  std::unique_ptr<MCInstrAnalysis> MIA(
       TheTarget->createMCInstrAnalysis(MII.get()));
   failIfEmpty(MIA, "no instruction analysis info for target " + TripleName);
 
@@ -750,6 +750,9 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
     failIfError(BytesStr);
     ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(*BytesStr);
 
+    if (MIA)
+      MIA->resetState();
+
     for (uint64_t Index = 0, Size = 0; Index < Section.getSize();
          Index += Size) {
       MCInst Inst;
@@ -760,6 +763,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
           Size = std::min<uint64_t>(
               ThisBytes.size(),
               DisAsm->suggestBytesToSkip(ThisBytes, ThisAddr));
+        MIA->resetState();
         continue;
       }
       uint64_t Addr = Index + SectionAddr;
@@ -770,6 +774,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
           MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target) &&
           SanCovAddrs.find(Target) != SanCovAddrs.end())
         Addrs->insert(CovPoint);
+      MIA->updateState(Inst, Addr);
     }
   }
 }
@@ -889,8 +894,7 @@ symbolize(const RawCoverage &Data, const std::string ObjectFile) {
   }
 
   std::set<uint64_t> AllAddrs = findCoveragePointAddrs(ObjectFile);
-  if (!std::includes(AllAddrs.begin(), AllAddrs.end(), Data.Addrs->begin(),
-                     Data.Addrs->end())) {
+  if (!llvm::includes(AllAddrs, *Data.Addrs)) {
     fail("Coverage points in binary and .sancov file do not match.");
   }
   Coverage->Points = getCoveragePoints(ObjectFile, AllAddrs, *Data.Addrs);
@@ -1003,7 +1007,6 @@ static void printNotCoveredFunctions(const SymbolizedCoverage &CovData,
 // Read list of files and merges their coverage info.
 static void readAndPrintRawCoverage(const std::vector<std::string> &FileNames,
                                     raw_ostream &OS) {
-  std::vector<std::unique_ptr<RawCoverage>> Covs;
   for (const auto &FileName : FileNames) {
     auto Cov = RawCoverage::read(FileName);
     if (!Cov)

@@ -50,16 +50,6 @@ NXCOMPAT: IMAGE_DLL_CHARACTERISTICS_NX_COMPAT
 # RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=NONXCOMPAT %s
 NONXCOMPAT-NOT: IMAGE_DLL_CHARACTERISTICS_NX_COMPAT
 
-# RUN: lld-link /out:%t.exe /entry:main /cetcompat %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CETCOMPAT %s
-CETCOMPAT: IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT
-
-# RUN: lld-link /out:%t.exe /entry:main %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=NONCETCOMPAT %s
-# RUN: lld-link /out:%t.exe /entry:main /cetcompat:no %t.obj
-# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=NONCETCOMPAT %s
-NONCETCOMPAT-NOT: IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT
-
 # RUN: lld-link /out:%t.exe /entry:main /swaprun:CD %t.obj
 # RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=SWAPCD %s
 # RUN: lld-link /out:%t.exe /entry:main /swaprun:cd,net %t.obj

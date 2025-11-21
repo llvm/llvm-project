@@ -122,7 +122,7 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    mul a1, a1, a2
-; RV64I-NEXT:    addiw a3, a3, -1
+; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    and a1, a1, a3
 ; RV64I-NEXT:    sub a1, a0, a1

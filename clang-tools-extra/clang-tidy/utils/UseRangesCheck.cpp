@@ -1,4 +1,4 @@
-//===--- UseRangesCheck.cpp - clang-tidy ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -44,7 +43,7 @@ static std::string getFullPrefix(ArrayRef<UseRangesCheck::Indexes> Signature) {
   llvm::raw_string_ostream OS(Output);
   for (const UseRangesCheck::Indexes &Item : Signature)
     OS << Item.BeginArg << ":" << Item.EndArg << ":"
-       << (Item.ReplaceArg == Item.First ? '0' : '1');
+       << (Item.ReplaceArg == UseRangesCheck::Indexes::First ? '0' : '1');
   return Output;
 }
 
@@ -56,7 +55,7 @@ AST_MATCHER(Expr, hasSideEffects) {
 } // namespace
 
 static auto
-makeExprMatcher(ast_matchers::internal::Matcher<Expr> ArgumentMatcher,
+makeExprMatcher(const ast_matchers::internal::Matcher<Expr> &ArgumentMatcher,
                 ArrayRef<StringRef> MethodNames,
                 ArrayRef<StringRef> FreeNames) {
   return expr(
@@ -74,7 +73,7 @@ makeMatcherPair(StringRef State, const UseRangesCheck::Indexes &Indexes,
                 const std::optional<UseRangesCheck::ReverseIteratorDescriptor>
                     &ReverseDescriptor) {
   std::string ArgBound = (ArgName + llvm::Twine(Indexes.BeginArg)).str();
-  SmallString<64> ID = {BoundCall, State};
+  const SmallString<64> ID = {BoundCall, State};
   ast_matchers::internal::Matcher<CallExpr> ArgumentMatcher = allOf(
       hasArgument(Indexes.BeginArg,
                   makeExprMatcher(expr(unless(hasSideEffects())).bind(ArgBound),
@@ -85,9 +84,9 @@ makeMatcherPair(StringRef State, const UseRangesCheck::Indexes &Indexes,
                       {"end", "cend"}, EndFreeNames)));
   if (ReverseDescriptor) {
     ArgBound.push_back('R');
-    SmallVector<StringRef> RBegin{
+    const SmallVector<StringRef> RBegin{
         llvm::make_first_range(ReverseDescriptor->FreeReverseNames)};
-    SmallVector<StringRef> REnd{
+    const SmallVector<StringRef> REnd{
         llvm::make_second_range(ReverseDescriptor->FreeReverseNames)};
     ArgumentMatcher = anyOf(
         ArgumentMatcher,
@@ -111,9 +110,9 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
   auto Replaces = getReplacerMap();
   ReverseDescriptor = getReverseDescriptor();
   auto BeginEndNames = getFreeBeginEndMethods();
-  llvm::SmallVector<StringRef, 4> BeginNames{
+  const llvm::SmallVector<StringRef, 4> BeginNames{
       llvm::make_first_range(BeginEndNames)};
-  llvm::SmallVector<StringRef, 4> EndNames{
+  const llvm::SmallVector<StringRef, 4> EndNames{
       llvm::make_second_range(BeginEndNames)};
   Replacers.clear();
   llvm::DenseSet<Replacer *> SeenRepl;
@@ -150,7 +149,7 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
     }
     Finder->addMatcher(
         callExpr(
-            callee(functionDecl(hasAnyName(std::move(Names)))
+            callee(functionDecl(hasAnyName(Names))
                        .bind((FuncDecl + Twine(Replacers.size() - 1).str()))),
             ast_matchers::internal::DynTypedMatcher::constructVariadic(
                 ast_matchers::internal::DynTypedMatcher::VO_AnyOf,
@@ -170,7 +169,7 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
   llvm::SmallBitVector Commas(Call.getNumArgs());
   // The first comma is actually the '(' which we can't remove
   Commas[0] = true;
-  for (unsigned Index : Sorted) {
+  for (const unsigned Index : Sorted) {
     const Expr *Arg = Call.getArg(Index);
     if (Commas[Index]) {
       if (Index >= Commas.size()) {
@@ -193,9 +192,9 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
 }
 
 void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
-  Replacer *Replacer = nullptr;
+  const Replacer *Replacer = nullptr;
   const FunctionDecl *Function = nullptr;
-  for (auto [Node, Value] : Result.Nodes.getMap()) {
+  for (const auto &[Node, Value] : Result.Nodes.getMap()) {
     StringRef NodeStr(Node);
     if (!NodeStr.consume_front(FuncDecl))
       continue;
@@ -255,7 +254,7 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
           Diag << Inserter.createIncludeInsertion(
               Result.SourceManager->getFileID(Call->getBeginLoc()),
               *ReverseDescriptor->ReverseHeader);
-        StringRef ArgText = Lexer::getSourceText(
+        const StringRef ArgText = Lexer::getSourceText(
             CharSourceRange::getTokenRange(ArgExpr->getSourceRange()),
             Result.Context->getSourceManager(), Result.Context->getLangOpts());
         SmallString<128> ReplaceText;

@@ -371,26 +371,20 @@ static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target,
 
   if (!sc.comp_unit)
     return;
-  StreamString error_stream;
-
   ClangModulesDeclVendor::ModuleVector modules_for_macros =
       persistent_state->GetHandLoadedClangModules();
-  if (decl_vendor->AddModulesForCompileUnit(*sc.comp_unit, modules_for_macros,
-                                            error_stream))
+
+  auto err =
+      decl_vendor->AddModulesForCompileUnit(*sc.comp_unit, modules_for_macros);
+  if (!err)
     return;
 
-  // Failed to load some modules, so emit the error stream as a diagnostic.
-  if (!error_stream.Empty()) {
-    // The error stream already contains several Clang diagnostics that might
-    // be either errors or warnings, so just print them all as one remark
-    // diagnostic to prevent that the message starts with "error: error:".
-    diagnostic_manager.PutString(lldb::eSeverityInfo, error_stream.GetString());
-    return;
-  }
-
-  diagnostic_manager.PutString(lldb::eSeverityError,
-                               "Unknown error while loading modules needed for "
-                               "current compilation unit.");
+  // Module load errors aren't fatal to the expression evaluator. Printing
+  // them as diagnostics to the console would be too noisy and misleading
+  // Hence just print them to the expression log.
+  llvm::handleAllErrors(std::move(err), [](const llvm::StringError &e) {
+    LLDB_LOG(GetLog(LLDBLog::Expressions), "{0}", e.getMessage());
+  });
 }
 
 ClangExpressionSourceCode::WrapKind ClangUserExpression::GetWrapKind() const {
@@ -574,7 +568,7 @@ bool ClangUserExpression::TryParse(
 
   m_parser = std::make_unique<ClangExpressionParser>(
       exe_ctx.GetBestExecutionContextScope(), *this, generate_debug_info,
-      m_include_directories, m_filename);
+      diagnostic_manager, m_include_directories, m_filename);
 
   unsigned num_errors = m_parser->Parse(diagnostic_manager);
 
@@ -818,7 +812,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   }
 
   ClangExpressionParser parser(exe_ctx.GetBestExecutionContextScope(), *this,
-                               false);
+                               false, diagnostic_manager);
 
   // We have to find the source code location where the user text is inside
   // the transformed expression code. When creating the transformed text, we
@@ -897,12 +891,13 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
     Status object_ptr_error;
 
     if (m_ctx_obj) {
-      AddressType address_type;
-      object_ptr = m_ctx_obj->GetAddressOf(false, &address_type);
-      if (object_ptr == LLDB_INVALID_ADDRESS ||
-          address_type != eAddressTypeLoad)
+      ValueObject::AddrAndType address = m_ctx_obj->GetAddressOf(false);
+      if (address.address == LLDB_INVALID_ADDRESS ||
+          address.type != eAddressTypeLoad)
         object_ptr_error = Status::FromErrorString("Can't get context object's "
                                                    "debuggee address");
+      else
+        object_ptr = address.address;
     } else {
       if (m_in_cplusplus_method) {
         object_ptr =
