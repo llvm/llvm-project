@@ -121,10 +121,11 @@ Error MustacheGenerator::generateDocumentation(
 
       auto File = MemoryBuffer::getFile(Path);
       if (EC = File.getError(); EC) {
-        // TODO: Buffer errors to report later, look into using Clang
-        // diagnostics.
-        llvm::errs() << "Failed to open file: " << Path << " " << EC.message()
-                     << '\n';
+        unsigned ID = CDCtx.Diags.getCustomDiagID(DiagnosticsEngine::Warning,
+                                                  "Failed to open file: %0 %1");
+        CDCtx.Diags.Report(ID) << Path << EC.message();
+        JSONIter.increment(EC);
+        continue;
       }
 
       auto Parsed = json::parse((*File)->getBuffer());
