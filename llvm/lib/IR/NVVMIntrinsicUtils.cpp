@@ -38,7 +38,7 @@ void nvvm::printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
 }
 
 void nvvm::printTcgen05CollectorUsageOp(raw_ostream &OS,
-                                  const Constant *ImmArgVal) {
+                                        const Constant *ImmArgVal) {
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
     switch (static_cast<Tcgen05CollectorUsageOp>(Val)) {
