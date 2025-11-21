@@ -41,6 +41,23 @@ const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x) {
   return nullptr;
 }
 
+const OpenMPLoopConstruct *GetOmpLoop(const ExecutionPartConstruct &x) {
+  if (auto *construct{GetOmp(x)}) {
+    if (auto *omp{std::get_if<OpenMPLoopConstruct>(&construct->u)}) {
+      return omp;
+    }
+  }
+  return nullptr;
+}
+const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x) {
+  if (auto *y{std::get_if<ExecutableConstruct>(&x.u)}) {
+    if (auto *z{std::get_if<common::Indirection<DoConstruct>>(&y->u)}) {
+      return &z->value();
+    }
+  }
+  return nullptr;
+}
+
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause) {
   // Clauses with OmpObjectList as its data member
   using MemberObjectListClauses = std::tuple<OmpClause::Copyin,

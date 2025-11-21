@@ -347,16 +347,17 @@ getBinaryAssignOpArgs(const Expr *Op) {
   return getBinaryAssignOpArgs(Op, IsCompoundAssign);
 }
 
-static std::optional<const Expr *> getUnaryOpArgs(const Expr *Op) {
+static std::optional<std::pair<const Expr *, bool>>
+getUnaryOpArgs(const Expr *Op) {
   if (const auto *UO = dyn_cast<UnaryOperator>(Op))
-    return UO->getSubExpr();
+    return {{UO->getSubExpr(), UO->isPostfix()}};
 
   if (const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(Op)) {
     // Post-inc/dec have a second unused argument to differentiate it, so we
     // accept -- or ++ as unary, or any operator call with only 1 arg.
     if (OpCall->getNumArgs() == 1 || OpCall->getOperator() == OO_PlusPlus ||
         OpCall->getOperator() == OO_MinusMinus)
-      return {OpCall->getArg(0)};
+      return {{OpCall->getArg(0), /*IsPostfix=*/OpCall->getNumArgs() == 1}};
   }
 
   return std::nullopt;
@@ -410,10 +411,10 @@ getWriteStmtInfo(const Expr *E) {
 
 static std::optional<OpenACCAtomicConstruct::SingleStmtInfo>
 getUpdateStmtInfo(const Expr *E) {
-  std::optional<const Expr *> UnaryArgs = getUnaryOpArgs(E);
+  std::optional<std::pair<const Expr *, bool>> UnaryArgs = getUnaryOpArgs(E);
   if (UnaryArgs) {
     auto Res = OpenACCAtomicConstruct::SingleStmtInfo::createUpdate(
-        E, (*UnaryArgs)->IgnoreImpCasts());
+        E, UnaryArgs->first->IgnoreImpCasts(), UnaryArgs->second);
 
     if (!Res.X->isLValue() || !Res.X->getType()->isScalarType())
       return std::nullopt;
@@ -428,7 +429,7 @@ getUpdateStmtInfo(const Expr *E) {
     return std::nullopt;
 
   auto Res = OpenACCAtomicConstruct::SingleStmtInfo::createUpdate(
-      E, BinaryArgs->first->IgnoreImpCasts());
+      E, BinaryArgs->first->IgnoreImpCasts(), /*PostFixIncDec=*/false);
 
   if (!Res.X->isLValue() || !Res.X->getType()->isScalarType())
     return std::nullopt;
@@ -513,17 +514,12 @@ getCaptureStmtInfo(const Stmt *AssocStmt) {
 
     return OpenACCAtomicConstruct::StmtInfo::createUpdateRead(*Update, *Read);
   } else {
-    // All of the possible forms (listed below) that are writable as a single
-    // line are expressed as an update, then as a read.  We should be able to
-    // just run these two in the right order.
-    // UPDATE: READ
-    // v = x++;
-    // v = x--;
-    // v = ++x;
-    // v = --x;
-    // v = x binop=expr
-    // v = x = x binop expr
-    // v = x = expr binop x
+    // All of the forms that can be done in a single line fall into 2
+    // categories: update/read, or read/update. The special cases are the
+    // postfix unary operators, which we have to make sure we do the 'read'
+    // first.  However, we still parse these as the RHS first, so we have a
+    // 'reversing' step. READ: UPDATE v = x++; v = x--; UPDATE: READ v = ++x; v
+    // = --x; v = x binop=expr v = x = x binop expr v = x = expr binop x
 
     const Expr *E = cast<const Expr>(AssocStmt);
 
@@ -535,6 +531,11 @@ getCaptureStmtInfo(const Stmt *AssocStmt) {
     // Fixup this, since the 'X' for the read is the result after write, but is
     // the same value as the LHS-most variable of the update(its X).
     Read->X = Update->X;
+
+    // Postfix is a read FIRST, then an update.
+    if (Update->IsPostfixIncDec)
+      return OpenACCAtomicConstruct::StmtInfo::createReadUpdate(*Read, *Update);
+
     return OpenACCAtomicConstruct::StmtInfo::createUpdateRead(*Update, *Read);
   }
   return {};
