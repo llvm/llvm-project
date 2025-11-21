@@ -70,11 +70,11 @@ else()
   set(_libcxx_benchmark_mode "no")
 endif()
 
-if (NOT LIBCXX_ENABLE_EXCEPTIONS)
+if (NOT RUNTIMES_ENABLE_EXCEPTIONS)
   serialize_lit_param(SERIALIZED_LIT_PARAMS enable_exceptions False)
 endif()
 
-if (NOT LIBCXX_ENABLE_RTTI)
+if (NOT RUNTIMES_ENABLE_RTTI)
   serialize_lit_param(SERIALIZED_LIT_PARAMS enable_rtti False)
 endif()
 
