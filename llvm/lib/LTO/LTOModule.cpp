@@ -623,7 +623,7 @@ void LTOModule::parseSymbols() {
   for (const auto &[Key, Value] : _undefines) {
     // If this symbol also has a definition, then don't make an undefine because
     // it is a tentative definition.
-    if (!_defines.count(Key))
+    if (!_defines.contains(Key))
       _symbols.push_back(Value);
   }
 }
