@@ -7291,11 +7291,26 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
     Result = ActOnConstantExpression(Result.get());
     if (Result.isInvalid() || !Result.get())
       return ExprError();
+    Expr *OldDeductionArg = DeductionArg;
     setDeductionArg(ActOnFinishFullExpr(Result.get(), Arg->getBeginLoc(),
                                         /*DiscardedValue=*/false,
                                         /*IsConstexpr=*/true,
                                         /*IsTemplateArgument=*/true)
                         .get());
+    // As for designated initializer, there might be multiple candidate
+    // template parameter types, we must clear field decls of designators
+    // to make sure results of current check will not affect checks for
+    // later types.
+    if (InitListExpr *ILE = dyn_cast<InitListExpr>(OldDeductionArg)) {
+      for (Expr *I : ILE->inits()) {
+        if (DesignatedInitExpr *DIE = dyn_cast<DesignatedInitExpr>(I)) {
+          for (DesignatedInitExpr::Designator &D : DIE->designators()) {
+            if (D.isFieldDesignator())
+              D.clearFieldDecl();
+          }
+        }
+      }
+    }
     IsConvertedConstantExpression = false;
   }
 
