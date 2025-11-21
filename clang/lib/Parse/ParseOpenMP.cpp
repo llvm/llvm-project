@@ -4941,9 +4941,9 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
           if (Tok.is(tok::identifier)) {
             std::string Modifier = PP.getSpelling(Tok);
             if (Modifier == "fb_nullify" || Modifier == "fb_preserve") {
-              Data.NeedDevicePtrModifier = Modifier == "fb_nullify"
-                                               ? OMPC_NEED_DEVICE_PTR_fb_nullify
-                                               : OMPC_NEED_DEVICE_PTR_fb_preserve;
+              Data.NeedDevicePtrModifier =
+                  Modifier == "fb_nullify" ? OMPC_NEED_DEVICE_PTR_fb_nullify
+                                           : OMPC_NEED_DEVICE_PTR_fb_preserve;
             } else {
               Diag(Tok, diag::err_omp_unknown_need_device_ptr_modifier);
               SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end,
