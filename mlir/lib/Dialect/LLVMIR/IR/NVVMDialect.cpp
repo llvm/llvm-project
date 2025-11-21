@@ -390,10 +390,10 @@ LogicalResult ConvertF4x2ToF16x2Op::verify() {
 // Stochastic Rounding Conversion Ops
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verifyConvertF32x2ToFPx2Op(Twine dstType,
-                                                FPRoundingMode rnd,
-                                                bool hasRandomBits,
-                                                Operation *op) {
+static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
+                                                  FPRoundingMode rnd,
+                                                  bool hasRandomBits,
+                                                  Operation *op) {
   switch (rnd) {
   case FPRoundingMode::RN:
   case FPRoundingMode::RZ:
@@ -415,11 +415,13 @@ static LogicalResult verifyConvertF32x2ToFPx2Op(Twine dstType,
 }
 
 LogicalResult ConvertF32x2ToF16x2Op::verify() {
-  return verifyConvertF32x2ToFPx2Op("f16x2", getRnd(), getRandomBits(), *this);
+  return verifyConvertF32x2ToFP16x2Op("f16x2", getRnd(),
+                                      getRandomBits() ? true : false, *this);
 }
 
 LogicalResult ConvertF32x2ToBF16x2Op::verify() {
-  return verifyConvertF32x2ToFPx2Op("bf16x2", getRnd(), getRandomBits(), *this);
+  return verifyConvertF32x2ToFP16x2Op("bf16x2", getRnd(),
+                                      getRandomBits() ? true : false, *this);
 }
 
 LogicalResult ConvertF32x4ToF8x4Op::verify() {
@@ -2778,8 +2780,8 @@ ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(op.getSrcHi()));
   args.push_back(mt.lookupValue(op.getSrcLo()));
-  if (op.getRbits())
-    args.push_back(mt.lookupValue(op.getRbits()));
+  if (op.getRandomBits())
+    args.push_back(mt.lookupValue(op.getRandomBits()));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
@@ -2826,8 +2828,8 @@ ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(op.getSrcHi()));
   args.push_back(mt.lookupValue(op.getSrcLo()));
-  if (op.getRbits())
-    args.push_back(mt.lookupValue(op.getRbits()));
+  if (op.getRandomBits())
+    args.push_back(mt.lookupValue(op.getRandomBits()));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
