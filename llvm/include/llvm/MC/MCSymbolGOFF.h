@@ -25,38 +25,22 @@ class MCSymbolGOFF : public MCSymbol {
   // Associated data area of the section. Needs to be emitted first.
   MCSectionGOFF *ADA = nullptr;
 
-  GOFF::LDAttr LDAttributes;
-  GOFF::ERAttr ERAttributes;
-
   GOFF::ESDExecutable CodeData = GOFF::ESDExecutable::ESD_EXE_Unspecified;
   GOFF::ESDLinkageType Linkage = GOFF::ESDLinkageType::ESD_LT_XPLink;
 
   enum SymbolFlags : uint16_t {
-    SF_LD = 0x01,     // LD attributes are set.
-    SF_ER = 0x02,     // ER attributes are set.
-    SF_Hidden = 0x04, // Symbol is hidden, aka not exported.
-    SF_Weak = 0x08,   // Symbol is weak.
+    SF_Hidden = 0x01, // Symbol is hidden, aka not exported.
+    SF_Weak = 0x02,   // Symbol is weak.
   };
 
 public:
   MCSymbolGOFF(const MCSymbolTableEntry *Name, bool IsTemporary)
       : MCSymbol(Name, IsTemporary) {}
 
-  void setLDAttributes(GOFF::LDAttr Attr) {
-    modifyFlags(SF_LD, SF_LD);
-    LDAttributes = Attr;
-  }
-  const GOFF::LDAttr &getLDAttributes() const { return LDAttributes; }
-  GOFF::LDAttr &getLDAttributes() { return LDAttributes; }
-  bool hasLDAttributes() const { return getFlags() & SF_LD; }
-
-  void setERAttributes(GOFF::ERAttr Attr) {
-    modifyFlags(SF_ER, SF_ER);
-    ERAttributes = Attr;
-  }
-  const GOFF::ERAttr &getERAttributes() const { return ERAttributes; }
-  GOFF::ERAttr &getERAttributes() { return ERAttributes; }
-  bool hasERAttributes() const { return getFlags() & SF_ER; }
+  GOFF::LDAttr getLDAttributes() const;
+  bool hasLDAttributes() const;
+  GOFF::ERAttr getERAttributes() const;
+  bool hasERAttributes() const;
 
   void setADA(MCSectionGOFF *AssociatedDataArea) {
     ADA = AssociatedDataArea;
@@ -81,8 +65,6 @@ public:
 
   void setLinkage(GOFF::ESDLinkageType Value) { Linkage = Value; }
   GOFF::ESDLinkageType getLinkage() const { return Linkage; }
-
-  void initAttributes();
 };
 } // end namespace llvm
 

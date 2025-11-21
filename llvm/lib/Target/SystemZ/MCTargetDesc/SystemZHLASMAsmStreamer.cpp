@@ -236,13 +236,12 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCSymbolGOFF *Sym = static_cast<MCSymbolGOFF *>(Symbol);
 
   MCStreamer::emitLabel(Sym, Loc);
-  Sym->initAttributes();
 
   // Emit ENTRY statement only if not implied by CSECT.
   bool EmitEntry = !sameNameAsCSECT(Sym);
 
   if (!Sym->isTemporary() && Sym->hasLDAttributes()) {
-    GOFF::LDAttr &LD = Sym->getLDAttributes();
+    GOFF::LDAttr LD = Sym->getLDAttributes();
     if (EmitEntry) {
       OS << " ENTRY " << Sym->getName();
       EmitEOL();
@@ -419,16 +418,18 @@ void SystemZHLASMAsmStreamer::emitExterns() {
       continue;
     if (Symbol.isRegistered()) {
       auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
-      Sym.initAttributes();
-      GOFF::ERAttr &ER = Sym.getERAttributes();
-      OS << " "
-         << (ER.BindingStrength == GOFF::ESDBindingStrength::ESD_BST_Weak
-                 ? "WXTRN"
-                 : "EXTRN")
-         << " " << Sym.getName();
-      EmitEOL();
-      emitXATTR(OS, Sym.getName(), ER.Linkage, ER.Executable, ER.BindingScope);
-      EmitEOL();
+      if (Sym.hasERAttributes()) {
+        GOFF::ERAttr ER = Sym.getERAttributes();
+        OS << " "
+           << (ER.BindingStrength == GOFF::ESDBindingStrength::ESD_BST_Weak
+                   ? "WXTRN"
+                   : "EXTRN")
+           << " " << Sym.getName();
+        EmitEOL();
+        emitXATTR(OS, Sym.getName(), ER.Linkage, ER.Executable,
+                  ER.BindingScope);
+        EmitEOL();
+      }
     }
   }
 }

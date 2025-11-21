@@ -57,7 +57,6 @@ void MCGOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 
 void MCGOFFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCObjectStreamer::emitLabel(Symbol, Loc);
-  static_cast<MCSymbolGOFF *>(Symbol)->initAttributes();
 }
 
 bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
@@ -121,14 +120,6 @@ bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
 }
 
 void MCGOFFStreamer::emitExterns() {
-  for (auto &Symbol : getAssembler().symbols()) {
-    if (Symbol.isTemporary())
-      continue;
-    if (Symbol.isRegistered()) {
-      auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
-      Sym.initAttributes();
-    }
-  }
 }
 
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,
