@@ -4119,8 +4119,7 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
   if (!ClassAliases.empty()) {
     llvm::Type *ArgTypes[2] = {PtrTy, PtrToInt8Ty};
     llvm::FunctionType *RegisterAliasTy =
-      llvm::FunctionType::get(Builder.getVoidTy(),
-                              ArgTypes, false);
+        llvm::FunctionType::get(BoolTy, ArgTypes, false);
     llvm::Function *RegisterAlias = llvm::Function::Create(
       RegisterAliasTy,
       llvm::GlobalValue::ExternalWeakLinkage, "class_registerAlias_np",
