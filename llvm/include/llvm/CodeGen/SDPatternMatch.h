@@ -222,7 +222,7 @@ template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
 
 inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
 
-auto m_Undef() {
+inline auto m_Undef() {
   return m_AnyOf(Opcode_match(ISD::UNDEF), Opcode_match(ISD::POISON));
 }
 
