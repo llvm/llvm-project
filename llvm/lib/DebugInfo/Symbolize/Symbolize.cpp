@@ -1,5 +1,4 @@
-//===-- LLVMSymbolize.cpp
-//-------------------------------------------------===//
+//===-- LLVMSymbolize.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -641,13 +640,21 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
   Error Err = Error::success();
   for (auto &Child : Archive->children(Err, /*SkipInternal=*/true)) {
     Expected<StringRef> NameOrErr = Child.getName();
-    if (!NameOrErr)
+    if (!NameOrErr) {
+      // TODO: Report this as a warning to the client. Consider adding a
+      // callback mechanism to report warning-level issues.
+      consumeError(NameOrErr.takeError());
       continue;
+    }
     if (*NameOrErr == MemberName) {
       Expected<std::unique_ptr<object::Binary>> MemberOrErr =
           Child.getAsBinary();
-      if (!MemberOrErr)
+      if (!MemberOrErr) {
+        // TODO: Report this as a warning to the client. Consider adding a
+        // callback mechanism to report warning-level issues.
+        consumeError(MemberOrErr.takeError());
         continue;
+      }
 
       std::unique_ptr<object::Binary> Binary = std::move(*MemberOrErr);
       if (auto *Obj = dyn_cast<object::ObjectFile>(Binary.get())) {
@@ -691,9 +698,8 @@ LLVMSymbolizer::getOrCreateObject(const std::string &Path,
       StringRef ArchivePath = StringRef(Path).substr(0, OpenParen);
       StringRef MemberName =
           StringRef(Path).substr(OpenParen + 1, Path.size() - OpenParen - 2);
-      StringRef FullPath = Path;
       return getOrCreateObjectFromArchive(ArchivePath, MemberName, ArchName,
-                                          FullPath);
+                                          Path);
     }
   }
 

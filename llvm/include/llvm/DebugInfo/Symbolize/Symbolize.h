@@ -1,5 +1,4 @@
-//===- Symbolize.h ----------------------------------------------*- C++
-//-*-===//
+//===- Symbolize.h ----------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -247,8 +246,8 @@ private:
   };
 
   /// Parsed object file for each path/member/architecture triple.
-  /// Used to cache objects extracted from containers (Mach-O universal
-  /// binaries, archives).
+  /// Used to cache objects extracted from containers (e.g: Mach-O
+  /// universal binaries, archives).
   std::map<ContainerCacheKey, std::unique_ptr<ObjectFile>> ObjectFileCache;
 
   Expected<object::Binary *>
