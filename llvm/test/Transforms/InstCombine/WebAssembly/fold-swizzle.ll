@@ -7,23 +7,20 @@ declare <16 x i8> @llvm.wasm.swizzle(<16 x i8>, <16 x i8>)
 declare <16 x i8> @llvm.wasm.relaxed.swizzle(<16 x i8>, <16 x i8>)
 
 ; Identity swizzle pattern
-; TODO: Should simplify to nothing.
 define <16 x i8> @swizzle_identity(<16 x i8> %v) {
 ; CHECK-LABEL: define <16 x i8> @swizzle_identity(
 ; CHECK-SAME: <16 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> [[V]], <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
-; CHECK-NEXT:    ret <16 x i8> [[RESULT]]
+; CHECK-NEXT:    ret <16 x i8> [[V]]
 ;
   %result = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %v, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
   ret <16 x i8> %result
 }
 
 ; Reverse swizzle pattern
-; TODO: Should simplify to shufflevector.
 define <16 x i8> @swizzle_reverse(<16 x i8> %v) {
 ; CHECK-LABEL: define <16 x i8> @swizzle_reverse(
 ; CHECK-SAME: <16 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> [[V]], <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <16 x i8> [[V]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x i8> [[RESULT]]
 ;
   %result = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %v, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
@@ -31,11 +28,10 @@ define <16 x i8> @swizzle_reverse(<16 x i8> %v) {
 }
 
 ; undef elements
-; TODO: Should simplify to shufflevector.
 define <16 x i8> @swizzle_with_undef(<16 x i8> %v) {
 ; CHECK-LABEL: define <16 x i8> @swizzle_with_undef(
 ; CHECK-SAME: <16 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> [[V]], <16 x i8> <i8 0, i8 undef, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
+; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <16 x i8> [[V]], <16 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    ret <16 x i8> [[RESULT]]
 ;
   %result = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %v, <16 x i8> <i8 0, i8 undef, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
@@ -54,11 +50,10 @@ define <16 x i8> @swizzle_non_constant(<16 x i8> %v, <16 x i8> %mask) {
 }
 
 ; Out-of-bounds index, otherwise identity pattern
-; TODO: Should simplify to insertelement.
 define <16 x i8> @swizzle_out_of_bounds_1(<16 x i8> %v) {
 ; CHECK-LABEL: define <16 x i8> @swizzle_out_of_bounds_1(
 ; CHECK-SAME: <16 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> [[V]], <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 16>)
+; CHECK-NEXT:    [[RESULT:%.*]] = insertelement <16 x i8> [[V]], i8 0, i64 15
 ; CHECK-NEXT:    ret <16 x i8> [[RESULT]]
 ;
   %result = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %v, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 16>)
@@ -66,11 +61,10 @@ define <16 x i8> @swizzle_out_of_bounds_1(<16 x i8> %v) {
 }
 
 ; Out-of-bounds indices, both negative and positive
-; TODO: Should simplify to shufflevector.
 define <16 x i8> @swizzle_out_of_bounds_2(<16 x i8> %v) {
 ; CHECK-LABEL: define <16 x i8> @swizzle_out_of_bounds_2(
 ; CHECK-SAME: <16 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> [[V]], <16 x i8> <i8 99, i8 -1, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <16 x i8> [[V]], <16 x i8> <i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <16 x i32> <i32 16, i32 16, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x i8> [[RESULT]]
 ;
   %result = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %v, <16 x i8> <i8 99, i8 -1, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
@@ -78,23 +72,20 @@ define <16 x i8> @swizzle_out_of_bounds_2(<16 x i8> %v) {
 }
 
 ; Identity swizzle pattern (relaxed_swizzle)
-; TODO: Should simplify to nothing.
 define <16 x i8> @relaxed_swizzle_identity(<16 x i8> %v) {
 ; CHECK-LABEL: define <16 x i8> @relaxed_swizzle_identity(
 ; CHECK-SAME: <16 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = tail call <16 x i8> @llvm.wasm.relaxed.swizzle(<16 x i8> [[V]], <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
-; CHECK-NEXT:    ret <16 x i8> [[RESULT]]
+; CHECK-NEXT:    ret <16 x i8> [[V]]
 ;
   %result = tail call <16 x i8> @llvm.wasm.relaxed.swizzle(<16 x i8> %v, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
   ret <16 x i8> %result
 }
 
 ; Reverse swizzle pattern (relaxed_swizzle)
-; TODO: Should simplify to shufflevector.
 define <16 x i8> @relaxed_swizzle_reverse(<16 x i8> %v) {
 ; CHECK-LABEL: define <16 x i8> @relaxed_swizzle_reverse(
 ; CHECK-SAME: <16 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = tail call <16 x i8> @llvm.wasm.relaxed.swizzle(<16 x i8> [[V]], <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <16 x i8> [[V]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x i8> [[RESULT]]
 ;
   %result = tail call <16 x i8> @llvm.wasm.relaxed.swizzle(<16 x i8> %v, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
@@ -102,11 +93,10 @@ define <16 x i8> @relaxed_swizzle_reverse(<16 x i8> %v) {
 }
 
 ; Out-of-bounds index, only negative (relaxed_swizzle)
-; TODO: Should simplify to shufflevector.
 define <16 x i8> @relaxed_swizzle_out_of_bounds(<16 x i8> %v) {
 ; CHECK-LABEL: define <16 x i8> @relaxed_swizzle_out_of_bounds(
 ; CHECK-SAME: <16 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = tail call <16 x i8> @llvm.wasm.relaxed.swizzle(<16 x i8> [[V]], <16 x i8> <i8 -99, i8 -1, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <16 x i8> [[V]], <16 x i8> <i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <16 x i32> <i32 16, i32 16, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x i8> [[RESULT]]
 ;
   %result = tail call <16 x i8> @llvm.wasm.relaxed.swizzle(<16 x i8> %v, <16 x i8> <i8 -99, i8 -1, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
