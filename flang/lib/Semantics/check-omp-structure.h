@@ -316,6 +316,8 @@ private:
   void CheckAtomicWrite(const parser::OpenMPAtomicConstruct &x);
   void CheckAtomicUpdate(const parser::OpenMPAtomicConstruct &x);
 
+  void CheckLooprangeBounds(const parser::OpenMPLoopConstruct &x);
+  void CheckNestedFuse(const parser::OpenMPLoopConstruct &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
