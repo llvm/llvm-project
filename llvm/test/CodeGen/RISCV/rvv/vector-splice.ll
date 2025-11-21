@@ -4252,10 +4252,6 @@ define <vscale x 2 x i32> @splice_nxv2i32_slidedown(<vscale x 2 x i32> %a) #0 {
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; NOVLDEP-NEXT:    vslidedown.vi v8, v8, 3
-; NOVLDEP-NEXT:    csrr a0, vlenb
-; NOVLDEP-NEXT:    srli a0, a0, 2
-; NOVLDEP-NEXT:    addi a0, a0, -3
-; NOVLDEP-NEXT:    vslideup.vx v8, v9, a0
 ; NOVLDEP-NEXT:    ret
 ;
 ; VLDEP-LABEL: splice_nxv2i32_slidedown:
@@ -4265,36 +4261,18 @@ define <vscale x 2 x i32> @splice_nxv2i32_slidedown(<vscale x 2 x i32> %a) #0 {
 ; VLDEP-NEXT:    addi a0, a0, -3
 ; VLDEP-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; VLDEP-NEXT:    vslidedown.vi v8, v8, 3
-; VLDEP-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; VLDEP-NEXT:    vslideup.vx v8, v9, a0
 ; VLDEP-NEXT:    ret
   %res = call <vscale x 2 x i32> @llvm.vector.splice(<vscale x 2 x i32> %a, <vscale x 2 x i32> poison, i32 3)
   ret <vscale x 2 x i32> %res
 }
 
 define <vscale x 2 x i32> @splice_nxv2i32_slideup(<vscale x 2 x i32> %a) #0 {
-; NOVLDEP-LABEL: splice_nxv2i32_slideup:
-; NOVLDEP:       # %bb.0:
-; NOVLDEP-NEXT:    csrr a0, vlenb
-; NOVLDEP-NEXT:    srli a0, a0, 2
-; NOVLDEP-NEXT:    addi a0, a0, -3
-; NOVLDEP-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; NOVLDEP-NEXT:    vslidedown.vx v9, v8, a0
-; NOVLDEP-NEXT:    vslideup.vi v9, v8, 3
-; NOVLDEP-NEXT:    vmv.v.v v8, v9
-; NOVLDEP-NEXT:    ret
-;
-; VLDEP-LABEL: splice_nxv2i32_slideup:
-; VLDEP:       # %bb.0:
-; VLDEP-NEXT:    csrr a0, vlenb
-; VLDEP-NEXT:    srli a0, a0, 2
-; VLDEP-NEXT:    addi a0, a0, -3
-; VLDEP-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
-; VLDEP-NEXT:    vslidedown.vx v9, v8, a0
-; VLDEP-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; VLDEP-NEXT:    vslideup.vi v9, v8, 3
-; VLDEP-NEXT:    vmv.v.v v8, v9
-; VLDEP-NEXT:    ret
+; CHECK-LABEL: splice_nxv2i32_slideup:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v9, v8, 3
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
   %res = call <vscale x 2 x i32> @llvm.vector.splice(<vscale x 2 x i32> poison, <vscale x 2 x i32> %a, i32 -3)
   ret <vscale x 2 x i32> %res
 }
