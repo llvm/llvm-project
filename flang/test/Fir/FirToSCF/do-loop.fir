@@ -1,4 +1,5 @@
-// RUN: fir-opt %s --fir-to-scf --split-input-file | FileCheck %s
+// RUN: fir-opt %s --fir-to-scf --split-input-file | FileCheck %s --check-prefixes=CHECK,NO-PARALLEL
+// RUN: fir-opt %s --fir-to-scf='parallel-unordered' --split-input-file | FileCheck %s --check-prefixes=CHECK,PARALLEL
 
 // CHECK-LABEL:   func.func @simple_loop(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>) {
@@ -165,12 +166,13 @@ func.func @loop_with_final_value(%arg0: !fir.ref<!fir.array<100xi32>>, %arg1: !f
 // CHECK:           %[[DIVSI_0:.*]] = arith.divsi %[[ADDI_0]], %[[CONSTANT_0]] : index
 // CHECK:           %[[CONSTANT_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[CONSTANT_4:.*]] = arith.constant 1 : index
-// CHECK:           scf.parallel (%[[VAL_0:.*]]) = (%[[CONSTANT_3]]) to (%[[DIVSI_0]]) step (%[[CONSTANT_4]]) {
+// PARALLEL:        scf.parallel (%[[VAL_0:.*]]) = (%[[CONSTANT_3]]) to (%[[DIVSI_0]]) step (%[[CONSTANT_4]]) {
+// NO-PARALLEL:     scf.for %[[VAL_0:.*]] = %[[CONSTANT_3]] to %[[DIVSI_0]] step %[[CONSTANT_4]] {
 // CHECK:             %[[MULI_0:.*]] = arith.muli %[[VAL_0]], %[[CONSTANT_0]] : index
 // CHECK:             %[[ADDI_1:.*]] = arith.addi %[[CONSTANT_0]], %[[MULI_0]] : index
 // CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[ARG0]](%[[SHAPE_0]]) %[[ADDI_1]] : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:             fir.store %[[CONSTANT_2]] to %[[ARRAY_COOR_0]] : !fir.ref<i32>
-// CHECK:             scf.reduce
+// PARALLEL:          scf.reduce
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }

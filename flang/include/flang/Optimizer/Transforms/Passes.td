@@ -85,6 +85,10 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::scf::SCFDialect"
   ];
+  let options = [Option<"parallelUnordered", "parallel-unordered", "bool",
+                        /*default=*/"false",
+                        "Whether to convert `fir.do_loop` with the unordered "
+                        "attribute to `scf.parallel`. Defaults to false.">];
 }
 
 def AnnotateConstantOperands : Pass<"annotate-constant"> {

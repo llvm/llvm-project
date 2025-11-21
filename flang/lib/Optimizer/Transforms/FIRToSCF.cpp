@@ -25,6 +25,12 @@ public:
 struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
   using OpRewritePattern<fir::DoLoopOp>::OpRewritePattern;
 
+  DoLoopConversion(mlir::MLIRContext *context,
+                   bool parallelUnorderedLoop = false,
+                   mlir::PatternBenefit benefit = 1)
+      : OpRewritePattern<fir::DoLoopOp>(context, benefit),
+        parallelUnorderedLoop(parallelUnorderedLoop) {}
+
   mlir::LogicalResult
   matchAndRewrite(fir::DoLoopOp doLoopOp,
                   mlir::PatternRewriter &rewriter) const override {
@@ -57,7 +63,7 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
 
     // Create the scf.for or scf.parallel operation
     mlir::Operation *scfLoopOp = nullptr;
-    if (isUnordered) {
+    if (isUnordered && parallelUnorderedLoop) {
       scfLoopOp = mlir::scf::ParallelOp::create(rewriter, loc, {zero},
                                                 {tripCount}, {one}, iterArgs);
     } else {
@@ -99,6 +105,9 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
     rewriter.replaceOp(doLoopOp, scfLoopOp);
     return mlir::success();
   }
+
+private:
+  bool parallelUnorderedLoop;
 };
 
 struct IterWhileConversion : public mlir::OpRewritePattern<fir::IterWhileOp> {
@@ -210,10 +219,15 @@ struct IfConversion : public mlir::OpRewritePattern<fir::IfOp> {
 };
 } // namespace
 
+void fir::populateFIRToSCFRewrites(mlir::RewritePatternSet &patterns,
+                                   bool parallelUnordered) {
+  patterns.add<IterWhileConversion, IfConversion>(patterns.getContext());
+  patterns.add<DoLoopConversion>(patterns.getContext(), parallelUnordered);
+}
+
 void FIRToSCFPass::runOnOperation() {
   mlir::RewritePatternSet patterns(&getContext());
-  patterns.add<DoLoopConversion, IterWhileConversion, IfConversion>(
-      patterns.getContext());
+  fir::populateFIRToSCFRewrites(patterns, parallelUnordered);
   walkAndApplyPatterns(getOperation(), std::move(patterns));
 }
 
