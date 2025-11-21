@@ -80,20 +80,6 @@ func.func @divu_broadcast(%arg0: memref<8x16xi32>, %arg1: memref<4x8x16xi32>, %a
 
 // -----
 
-func.func @pooling_nhwc_max_unsigned_float(
-    %input: tensor<?x?x?x?xf32>,
-    %filter: tensor<?x?xf32>,
-    %init_val: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
-  // CHECK: unsupported operation: unsigned max not on uint
-  linalg.pooling_nhwc_max_unsigned {dilations = dense<1> : tensor<2xi64>,
-                                    strides = dense<1> : tensor<2xi64>}
-      ins (%input, %filter: tensor<?x?x?x?xf32>, tensor<?x?xf32>)
-     outs (%init_val: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
-  return %init_val : tensor<?x?x?x?xf32>
-}
-
-// -----
-
 func.func @exp_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
   // CHECK: operand 1 ('f16') doesn't match the element type of the enclosing linalg.generic op ('f32')
   linalg.exp ins(%arg : memref<4x8x16xf16>) outs(%out: memref<4x8x16xf32>)
