@@ -20,30 +20,30 @@ define void @test0(ptr noalias %M3, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP4]], align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[WIDE_LOAD]], splat (i16 10)
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = ashr exact i64 [[TMP10]], 32
-; CHECK-NEXT:    [[TMP15:%.*]] = ashr exact i64 [[TMP11]], 32
-; CHECK-NEXT:    [[TMP16:%.*]] = ashr exact i64 [[TMP12]], 32
-; CHECK-NEXT:    [[TMP17:%.*]] = ashr exact i64 [[TMP13]], 32
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i16> [[TMP5]], i32 0
-; CHECK-NEXT:    store i16 [[TMP22]], ptr [[TMP18]], align 2
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i16> [[TMP5]], i32 1
-; CHECK-NEXT:    store i16 [[TMP23]], ptr [[TMP19]], align 2
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
-; CHECK-NEXT:    store i16 [[TMP24]], ptr [[TMP20]], align 2
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
-; CHECK-NEXT:    store i16 [[TMP25]], ptr [[TMP21]], align 2
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP10]], align 8
+; CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP11]], align 8
+; CHECK-NEXT:    [[TMP16:%.*]] = load i64, ptr [[TMP12]], align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = load i64, ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = ashr exact i64 [[TMP14]], 32
+; CHECK-NEXT:    [[TMP19:%.*]] = ashr exact i64 [[TMP15]], 32
+; CHECK-NEXT:    [[TMP20:%.*]] = ashr exact i64 [[TMP16]], 32
+; CHECK-NEXT:    [[TMP21:%.*]] = ashr exact i64 [[TMP17]], 32
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP18]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP21]]
+; CHECK-NEXT:    store i16 [[TMP6]], ptr [[TMP22]], align 2
+; CHECK-NEXT:    store i16 [[TMP7]], ptr [[TMP23]], align 2
+; CHECK-NEXT:    store i16 [[TMP8]], ptr [[TMP24]], align 2
+; CHECK-NEXT:    store i16 [[TMP9]], ptr [[TMP25]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -95,30 +95,30 @@ define void @test1(ptr noalias %M3, ptr noalias %A, ptr noalias %B, ptr noalias 
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[BROADCAST_SPLAT]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i16> [[WIDE_LOAD]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP10]], align 8
-; CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = ashr exact i64 [[TMP12]], 32
-; CHECK-NEXT:    [[TMP17:%.*]] = ashr exact i64 [[TMP13]], 32
-; CHECK-NEXT:    [[TMP18:%.*]] = ashr exact i64 [[TMP14]], 32
-; CHECK-NEXT:    [[TMP19:%.*]] = ashr exact i64 [[TMP15]], 32
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP18]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP19]]
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i16> [[TMP7]], i32 0
-; CHECK-NEXT:    store i16 [[TMP24]], ptr [[TMP20]], align 2
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i16> [[TMP7]], i32 1
-; CHECK-NEXT:    store i16 [[TMP25]], ptr [[TMP21]], align 2
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i16> [[TMP7]], i32 2
-; CHECK-NEXT:    store i16 [[TMP26]], ptr [[TMP22]], align 2
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i16> [[TMP7]], i32 3
-; CHECK-NEXT:    store i16 [[TMP27]], ptr [[TMP23]], align 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i16> [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i16> [[TMP7]], i32 2
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i16> [[TMP7]], i32 3
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP16:%.*]] = load i64, ptr [[TMP12]], align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = load i64, ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr [[TMP14]], align 8
+; CHECK-NEXT:    [[TMP19:%.*]] = load i64, ptr [[TMP15]], align 8
+; CHECK-NEXT:    [[TMP20:%.*]] = ashr exact i64 [[TMP16]], 32
+; CHECK-NEXT:    [[TMP21:%.*]] = ashr exact i64 [[TMP17]], 32
+; CHECK-NEXT:    [[TMP22:%.*]] = ashr exact i64 [[TMP18]], 32
+; CHECK-NEXT:    [[TMP23:%.*]] = ashr exact i64 [[TMP19]], 32
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[TMP23]]
+; CHECK-NEXT:    store i16 [[TMP8]], ptr [[TMP24]], align 2
+; CHECK-NEXT:    store i16 [[TMP9]], ptr [[TMP25]], align 2
+; CHECK-NEXT:    store i16 [[TMP10]], ptr [[TMP26]], align 2
+; CHECK-NEXT:    store i16 [[TMP11]], ptr [[TMP27]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP28]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]

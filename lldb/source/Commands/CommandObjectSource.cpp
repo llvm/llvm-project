@@ -777,7 +777,7 @@ protected:
     if (sc.function) {
       Target &target = GetTarget();
 
-      SupportFileSP start_file = std::make_shared<SupportFile>();
+      SupportFileNSP start_file = std::make_shared<SupportFile>();
       uint32_t start_line;
       uint32_t end_line;
       FileSpec end_file;
@@ -1194,7 +1194,7 @@ protected:
           // file(s) will be found and assigned to
           // sc.comp_unit->GetPrimarySupportFile, which is NOT what we want to
           // print. Instead, we want to print the one from the line entry.
-          lldb::SupportFileSP found_file_sp = sc.line_entry.file_sp;
+          SupportFileNSP found_file_sp = sc.line_entry.file_sp;
 
           target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
               found_file_sp, m_options.start_line, column, 0,

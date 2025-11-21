@@ -7,7 +7,7 @@ irdl.dialect @test_irdl_to_cpp {
     irdl.results(res: %1)
   }
 }
-// ----- 
+// -----
 
 irdl.dialect @test_irdl_to_cpp {
   irdl.operation @operands_no_any_of {
@@ -42,7 +42,7 @@ irdl.dialect @test_irdl_to_cpp {
 
 irdl.dialect @test_irdl_to_cpp {
   irdl.type @ty {
-    %0 = irdl.any 
+    %0 = irdl.any
     // expected-error@+1 {{IRDL C++ translation does not yet support translation of irdl.parameters operation}}
     irdl.parameters(ty: %0)
   }
@@ -51,29 +51,8 @@ irdl.dialect @test_irdl_to_cpp {
 // -----
 
 irdl.dialect @test_irdl_to_cpp {
-  irdl.operation @test_op {
-    // expected-error@+1 {{IRDL C++ translation does not yet support translation of irdl.region operation}}
-    %0 = irdl.region()
-    irdl.regions(reg: %0)
-  }
-  
-}
-
-// -----
-
-irdl.dialect @test_irdl_to_cpp {
-  irdl.operation @test_op {
-    // expected-error@+1 {{IRDL C++ translation does not yet support translation of irdl.regions operation}}
-    irdl.regions()
-  }
-  
-}
-
-// -----
-
-irdl.dialect @test_irdl_to_cpp {
   irdl.type @test_derived {
     // expected-error@+1 {{IRDL C++ translation does not yet support translation of irdl.base operation}}
     %0 = irdl.base "!builtin.integer"
-  }    
+  }
 }

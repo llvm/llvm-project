@@ -18,7 +18,7 @@
   declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>) #2
   declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32 immarg, <4 x i1>) #3
 
-  attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="128" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+armv8.1-m.main,+fp-armv8d16sp,+fp16,+fpregs,+fullfp16,+hwdiv,+lob,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2sp,+vfp3d16sp,+vfp4d16sp" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="128" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+armv8.1-m.main,+fp-armv8d16sp,+fp16,+fpregs,+fullfp16,+hwdiv,+lob,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2sp,+vfp3d16sp,+vfp4d16sp" "use-soft-float"="false" }
   attributes #1 = { nounwind readnone }
   attributes #2 = { argmemonly nounwind readonly willreturn }
   attributes #3 = { argmemonly nounwind willreturn }
@@ -98,28 +98,29 @@ body:             |
 
     ; CHECK-LABEL: name: foo
     ; CHECK: liveins: $q0, $r0, $r1, $r2, $lr
-    ; CHECK: $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r7, killed $lr
-    ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_offset 8
-    ; CHECK: frame-setup CFI_INSTRUCTION offset $lr, -4
-    ; CHECK: frame-setup CFI_INSTRUCTION offset $r7, -8
-    ; CHECK: $r7 = frame-setup tMOVr killed $sp, 14 /* CC::al */, $noreg
-    ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_register $r7
-    ; CHECK: renamable $r12 = t2LDRi12 $r7, 16, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.2)
-    ; CHECK: renamable $lr = t2LDRi12 $r7, 12, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.1)
-    ; CHECK: renamable $r3 = t2LDRi12 $r7, 8, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.0)
-    ; CHECK: BUNDLE implicit-def $vpr, implicit-def dead $q0, implicit $q0, implicit $zr, implicit killed $r0, implicit killed $r3, implicit killed $r1, implicit killed $lr {
-    ; CHECK:   MVE_VPTv4f32r 1, renamable $q0, $zr, 10, implicit-def $vpr
-    ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r0, 0, 1, internal renamable $vpr, $noreg :: (load (s128) from %ir.src, align 4)
-    ; CHECK:   MVE_VSTRWU32 internal killed renamable $q0, killed renamable $r3, 0, 1, internal renamable $vpr, $noreg :: (store (s128) into %ir.dest, align 4)
-    ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r1, 0, 1, internal renamable $vpr, $noreg :: (load (s128) from %ir.src2, align 4)
-    ; CHECK:   MVE_VSTRWU32 internal killed renamable $q0, killed renamable $lr, 0, 1, internal renamable $vpr, $noreg :: (store (s128) into %ir.dest2, align 4)
-    ; CHECK: }
-    ; CHECK: BUNDLE implicit-def $q0, implicit killed $vpr, implicit killed $r2, implicit killed $r12 {
-    ; CHECK:   MVE_VPST 4, implicit $vpr
-    ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 1, renamable $vpr, $noreg :: (load (s128) from %ir.src3, align 4)
-    ; CHECK:   MVE_VSTRWU32 internal renamable $q0, killed renamable $r12, 0, 1, killed renamable $vpr, $noreg :: (store (s128) into %ir.dest3, align 4)
-    ; CHECK: }
-    ; CHECK: $sp = t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r7, def $pc, implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r7, killed $lr
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -4
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r7, -8
+    ; CHECK-NEXT: $r7 = frame-setup tMOVr killed $sp, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_register $r7
+    ; CHECK-NEXT: renamable $r12 = t2LDRi12 $r7, 16, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.2)
+    ; CHECK-NEXT: renamable $lr = t2LDRi12 $r7, 12, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.1)
+    ; CHECK-NEXT: renamable $r3 = t2LDRi12 $r7, 8, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.0)
+    ; CHECK-NEXT: BUNDLE implicit-def $vpr, implicit-def dead $q0, implicit $q0, implicit $zr, implicit killed $r0, implicit killed $r3, implicit killed $r1, implicit killed $lr :: (load (s128) from %ir.src, align 4), (store (s128) into %ir.dest, align 4), (load (s128) from %ir.src2, align 4), (store (s128) into %ir.dest2, align 4) {
+    ; CHECK-NEXT:   MVE_VPTv4f32r 1, renamable $q0, $zr, 10, implicit-def $vpr
+    ; CHECK-NEXT:   renamable $q0 = MVE_VLDRWU32 killed renamable $r0, 0, 1, internal renamable $vpr, $noreg :: (load (s128) from %ir.src, align 4)
+    ; CHECK-NEXT:   MVE_VSTRWU32 internal killed renamable $q0, killed renamable $r3, 0, 1, internal renamable $vpr, $noreg :: (store (s128) into %ir.dest, align 4)
+    ; CHECK-NEXT:   renamable $q0 = MVE_VLDRWU32 killed renamable $r1, 0, 1, internal renamable $vpr, $noreg :: (load (s128) from %ir.src2, align 4)
+    ; CHECK-NEXT:   MVE_VSTRWU32 internal killed renamable $q0, killed renamable $lr, 0, 1, internal renamable $vpr, $noreg :: (store (s128) into %ir.dest2, align 4)
+    ; CHECK-NEXT: }
+    ; CHECK-NEXT: BUNDLE implicit-def $q0, implicit killed $vpr, implicit killed $r2, implicit killed $r12 :: (load (s128) from %ir.src3, align 4), (store (s128) into %ir.dest3, align 4) {
+    ; CHECK-NEXT:   MVE_VPST 4, implicit $vpr
+    ; CHECK-NEXT:   renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 1, renamable $vpr, $noreg :: (load (s128) from %ir.src3, align 4)
+    ; CHECK-NEXT:   MVE_VSTRWU32 internal renamable $q0, killed renamable $r12, 0, 1, killed renamable $vpr, $noreg :: (store (s128) into %ir.dest3, align 4)
+    ; CHECK-NEXT: }
+    ; CHECK-NEXT: $sp = t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r7, def $pc, implicit $q0
     $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r7, killed $lr
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4

@@ -123,6 +123,8 @@ def OMPC_Collapse : Clause<[Spelling<"collapse">]> {
   let clangClass = "OMPCollapseClause";
   let flangClass = "ScalarIntConstantExpr";
 }
+def OMPC_Collector : Clause<[Spelling<"collector">]> {
+}
 def OMPC_Compare : Clause<[Spelling<"compare">]> {
   let clangClass = "OMPCompareClause";
 }
@@ -163,6 +165,10 @@ def OMPC_Device : Clause<[Spelling<"device">]> {
   let clangClass = "OMPDeviceClause";
   let flangClass = "OmpDeviceClause";
 }
+def OMPC_DeviceSafesync : Clause<[Spelling<"device_safesync">]> {
+  let flangClass = "OmpDeviceSafesyncClause";
+  let isValueOptional = true;
+}
 def OMPC_DeviceType : Clause<[Spelling<"device_type">]> {
   let flangClass = "OmpDeviceTypeClause";
 }
@@ -177,8 +183,11 @@ def OMPC_Doacross : Clause<[Spelling<"doacross">]> {
 }
 def OMPC_DynamicAllocators : Clause<[Spelling<"dynamic_allocators">]> {
   let clangClass = "OMPDynamicAllocatorsClause";
+  let flangClass = "OmpDynamicAllocatorsClause";
+  let isValueOptional = true;
 }
 def OMPC_DynGroupprivate : Clause<[Spelling<"dyn_groupprivate">]> {
+  let clangClass = "OMPDynGroupprivateClause";
   let flangClass = "OmpDynGroupprivateClause";
 }
 def OMPC_Enter : Clause<[Spelling<"enter">]> {
@@ -257,6 +266,8 @@ def OMPC_Inclusive : Clause<[Spelling<"inclusive">]> {
 }
 def OMPC_Indirect : Clause<[Spelling<"indirect">]> {
   let flangClass = "OmpIndirectClause";
+}
+def OMPC_Inductor : Clause<[Spelling<"inductor">]> {
 }
 def OMPC_Init : Clause<[Spelling<"init">]> {
   let clangClass = "OMPInitClause";
@@ -353,6 +364,7 @@ def OMPC_Novariants : Clause<[Spelling<"novariants">]> {
 }
 def OMPC_NoWait : Clause<[Spelling<"nowait">]> {
   let clangClass = "OMPNowaitClause";
+  let isValueOptional = true;
 }
 def OMP_NUMTASKS_Strict : EnumVal<"strict", 1, 1> {}
 def OMP_NUMTASKS_Unknown : EnumVal<"unknown", 2, 0> { let isDefault = 1; }
@@ -466,6 +478,8 @@ def OMPC_Replayable : Clause<[Spelling<"replayable">]> {
 }
 def OMPC_ReverseOffload : Clause<[Spelling<"reverse_offload">]> {
   let clangClass = "OMPReverseOffloadClause";
+  let flangClass = "OmpReverseOffloadClause";
+  let isValueOptional = true;
 }
 def OMPC_SafeLen : Clause<[Spelling<"safelen">]> {
   let clangClass = "OMPSafelenClause";
@@ -530,6 +544,10 @@ def OMPC_GroupPrivate : Clause<[Spelling<"groupprivate">]> {
 def OMPC_Threads : Clause<[Spelling<"threads">]> {
   let clangClass = "OMPThreadsClause";
 }
+def OMPC_Threadset : Clause<[Spelling<"threadset">]> {
+  let clangClass = "OMPThreadsetClause";
+  let flangClass = "OmpThreadsetClause";
+}
 def OMPC_To : Clause<[Spelling<"to">]> {
   let clangClass = "OMPToClause";
   let flangClass = "OmpToClause";
@@ -540,12 +558,18 @@ def OMPC_Transparent : Clause<[Spelling<"transparent">]> {
 }
 def OMPC_UnifiedAddress : Clause<[Spelling<"unified_address">]> {
   let clangClass = "OMPUnifiedAddressClause";
+  let flangClass = "OmpUnifiedAddressClause";
+  let isValueOptional = true;
 }
 def OMPC_UnifiedSharedMemory : Clause<[Spelling<"unified_shared_memory">]> {
   let clangClass = "OMPUnifiedSharedMemoryClause";
+  let flangClass = "OmpUnifiedSharedMemoryClause";
+  let isValueOptional = true;
 }
 def OMPC_SelfMaps : Clause<[Spelling<"self_maps">]> {
   let clangClass = "OMPSelfMapsClause";
+  let flangClass = "OmpSelfMapsClause";
+  let isValueOptional = true;
 }
 def OMPC_Uniform : Clause<[Spelling<"uniform">]> {
   let flangClass = "Name";
@@ -729,6 +753,14 @@ def OMP_Critical : Directive<[Spelling<"critical">]> {
   ];
   let association = AS_Block;
   let category = CA_Executable;
+}
+def OMP_DeclareInduction : Directive<[Spelling<"declare_induction">]> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Collector, 60>,
+    VersionedClause<OMPC_Inductor, 60>,
+  ];
+  let association = AS_None;
+  let category = CA_Declarative;
 }
 def OMP_DeclareMapper : Directive<[Spelling<"declare mapper", 1, 52>,
                                    Spelling<"declare_mapper", 60>]> {
@@ -1007,6 +1039,7 @@ def OMP_Requires : Directive<[Spelling<"requires">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_UnifiedAddress>,
     VersionedClause<OMPC_UnifiedSharedMemory>,
+    VersionedClause<OMPC_DeviceSafesync, 60>,
     // OpenMP 5.2 Spec: If an implementation is not supporting a requirement
     // (reverse offload in this case) then it should give compile-time error
     // termination.
@@ -1238,6 +1271,7 @@ def OMP_Task : Directive<[Spelling<"task">]> {
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_Threadset, 60>,
     VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_Transparent, 60>,
   ];
@@ -1281,6 +1315,7 @@ def OMP_TaskLoop : Directive<[Spelling<"taskloop">]> {
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_Threadset, 60>,
     VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_Transparent, 60>,
   ];
@@ -1331,6 +1366,9 @@ def OMP_ThreadPrivate : Directive<[Spelling<"threadprivate">]> {
 }
 def OMP_Tile : Directive<[Spelling<"tile">]> {
   let allowedOnceClauses = [
+    VersionedClause<OMPC_Sizes, 51>,
+  ];
+  let requiredClauses = [
     VersionedClause<OMPC_Sizes, 51>,
   ];
   let association = AS_Loop;

@@ -92,43 +92,11 @@ define amdgpu_kernel void @v_fneg_fsub_nsz_f32(ptr addrspace(1) %out, ptr addrsp
   ret void
 }
 
-; FUNC-LABEL: {{^}}v_fneg_fsub_nsz_attribute_f32:
-; SI: v_sub_f32_e32 [[SUB:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
-; SI-NOT: xor
-define amdgpu_kernel void @v_fneg_fsub_nsz_attribute_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
-  %a = load float, ptr addrspace(1) %in, align 4
-  %b = load float, ptr addrspace(1) %b_ptr, align 4
-  %result = fsub float %a, %b
-  %neg.result = fsub float -0.0, %result
-  store float %neg.result, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-; For some reason the attribute has a string "true" or "false", so
-; make sure it is disabled and the fneg is not folded if it is not
-; "true".
-; FUNC-LABEL: {{^}}v_fneg_fsub_nsz_false_attribute_f32:
-; SI: v_sub_f32_e32 [[SUB:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
-; SI: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[SUB]]
-define amdgpu_kernel void @v_fneg_fsub_nsz_false_attribute_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
-  %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
-  %a = load float, ptr addrspace(1) %in, align 4
-  %b = load float, ptr addrspace(1) %b_ptr, align 4
-  %result = fsub float %a, %b
-  %neg.result = fsub float -0.0, %result
-  store float %neg.result, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-; FUNC-LABEL: {{^}}v_fsub_0_nsz_attribute_f32:
+; FUNC-LABEL: {{^}}v_fsub_0_nsz_flag_f32:
 ; SI-NOT: v_sub
-define amdgpu_kernel void @v_fsub_0_nsz_attribute_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+define amdgpu_kernel void @v_fsub_0_nsz_flag_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %a = load float, ptr addrspace(1) %in, align 4
-  %result = fsub float %a, 0.0
+  %result = fsub nsz float %a, 0.0
   store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
-
-attributes #0 = { nounwind "no-signed-zeros-fp-math"="true" }
-attributes #1 = { nounwind "no-signed-zeros-fp-math"="false" }

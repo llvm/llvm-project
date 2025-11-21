@@ -8,16 +8,15 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_STRLEN_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_STRLEN_H
 
+#include "src/__support/macros/properties/cpu_features.h"
+
 #if defined(__ARM_NEON)
 #include "src/__support/CPP/bit.h" // countr_zero
-
 #include <arm_neon.h>
 #include <stddef.h> // size_t
-
 namespace LIBC_NAMESPACE_DECL {
-
 namespace neon {
-[[gnu::no_sanitize_address]] [[maybe_unused]] LIBC_INLINE static size_t
+[[maybe_unused]] LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static size_t
 string_length(const char *src) {
   using Vector __attribute__((may_alias)) = uint8x8_t;
 
@@ -45,9 +44,63 @@ string_length(const char *src) {
   }
 }
 } // namespace neon
-
-namespace string_length_impl = neon;
-
 } // namespace LIBC_NAMESPACE_DECL
 #endif // __ARM_NEON
+
+#ifdef LIBC_TARGET_CPU_HAS_SVE
+#include "src/__support/macros/optimization.h"
+#include <arm_sve.h>
+namespace LIBC_NAMESPACE_DECL {
+namespace sve {
+[[maybe_unused]] LIBC_INLINE static size_t string_length(const char *src) {
+  const uint8_t *ptr = reinterpret_cast<const uint8_t *>(src);
+  // Initialize the first-fault register to all true
+  svsetffr();
+  const svbool_t all_true = svptrue_b8(); // all true predicate
+  svbool_t cmp_zero;
+  size_t len = 0;
+
+  for (;;) {
+    // Read a vector's worth of bytes, stopping on first fault.
+    svuint8_t data = svldff1_u8(all_true, &ptr[len]);
+    svbool_t fault_mask = svrdffr_z(all_true);
+    bool has_no_fault = svptest_last(all_true, fault_mask);
+    if (LIBC_LIKELY(has_no_fault)) {
+      // First fault did not fail: the whole vector is valid.
+      // Avoid depending on the contents of FFR beyond the branch.
+      len += svcntb(); // speculative increment
+      cmp_zero = svcmpeq_n_u8(all_true, data, 0);
+      bool has_no_zero = !svptest_any(all_true, cmp_zero);
+      if (LIBC_LIKELY(has_no_zero))
+        continue;
+      len -= svcntb(); // undo speculative increment
+      break;
+    } else {
+      // First fault failed: only some of the vector is valid.
+      // Perform the comparison only on the valid bytes.
+      cmp_zero = svcmpeq_n_u8(fault_mask, data, 0);
+      bool has_zero = svptest_any(fault_mask, cmp_zero);
+      if (LIBC_LIKELY(has_zero))
+        break;
+      svsetffr();
+      len += svcntp_b8(all_true, fault_mask);
+      continue;
+    }
+  }
+  // Select the bytes before the first and count them.
+  svbool_t before_zero = svbrkb_z(all_true, cmp_zero);
+  len += svcntp_b8(all_true, before_zero);
+  return len;
+}
+} // namespace sve
+} // namespace LIBC_NAMESPACE_DECL
+#endif // LIBC_TARGET_CPU_HAS_SVE
+
+namespace LIBC_NAMESPACE_DECL {
+#ifdef LIBC_TARGET_CPU_HAS_SVE
+namespace string_length_impl = sve;
+#elif defined(__ARM_NEON)
+namespace string_length_impl = neon;
+#endif
+} // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_STRLEN_H

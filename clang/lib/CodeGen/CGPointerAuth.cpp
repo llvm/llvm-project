@@ -426,10 +426,10 @@ CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
                                         llvm::ConstantInt *OtherDiscriminator) {
   llvm::Constant *AddressDiscriminator;
   if (StorageAddress) {
-    assert(StorageAddress->getType() == UnqualPtrTy);
+    assert(StorageAddress->getType() == DefaultPtrTy);
     AddressDiscriminator = StorageAddress;
   } else {
-    AddressDiscriminator = llvm::Constant::getNullValue(UnqualPtrTy);
+    AddressDiscriminator = llvm::Constant::getNullValue(DefaultPtrTy);
   }
 
   llvm::ConstantInt *IntegerDiscriminator;

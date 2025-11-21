@@ -246,16 +246,14 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
   return true;
 }
 
-namespace llvm {
-raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const MachineValueTypeSet &T) {
   T.writeToStream(OS);
   return OS;
 }
-raw_ostream &operator<<(raw_ostream &OS, const TypeSetByHwMode &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const TypeSetByHwMode &T) {
   T.writeToStream(OS);
   return OS;
 }
-} // namespace llvm
 
 LLVM_DUMP_METHOD
 void TypeSetByHwMode::dump() const { dbgs() << *this << '\n'; }
@@ -778,7 +776,7 @@ bool TypeInfer::EnforceSameSize(TypeSetByHwMode &A, TypeSetByHwMode &B) {
   if (B.empty())
     Changed |= EnforceAny(B);
 
-  typedef SmallSet<TypeSize, 2, TypeSizeComparator> TypeSizeSet;
+  using TypeSizeSet = SmallSet<TypeSize, 2, TypeSizeComparator>;
 
   auto NoSize = [](const TypeSizeSet &Sizes, MVT T) -> bool {
     return !Sizes.contains(T.getSizeInBits());
@@ -4131,7 +4129,7 @@ void CodeGenDAGPatterns::ParseInstructions() {
   }
 }
 
-typedef std::pair<TreePatternNode *, unsigned> NameRecord;
+using NameRecord = std::pair<TreePatternNode *, unsigned>;
 
 static void FindNames(TreePatternNode &P,
                       std::map<StringRef, NameRecord> &Names,
@@ -4592,7 +4590,7 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
 }
 
 /// Dependent variable map for CodeGenDAGPattern variant generation
-typedef StringMap<int> DepVarMap;
+using DepVarMap = StringMap<int>;
 
 static void FindDepVarsOf(TreePatternNode &N, DepVarMap &DepMap) {
   if (N.isLeaf()) {

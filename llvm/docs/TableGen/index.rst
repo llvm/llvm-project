@@ -20,7 +20,7 @@ domain-specific information.  Because there may be a large number of these
 records, it is specifically designed to allow writing flexible descriptions and
 for common features of these records to be factored out.  This reduces the
 amount of duplication in the description, reduces the chance of error, and makes
-it easier to structure domain specific information.
+it easier to structure domain-specific information.
 
 The TableGen front end parses a file, instantiates the declarations, and
 hands the result off to a domain-specific `backend`_ for processing.  See
@@ -44,8 +44,8 @@ distribution, respectively.
 The TableGen program
 ====================
 
-TableGen files are interpreted by the TableGen program: `llvm-tblgen` available
-on your build directory under `bin`. It is not installed in the system (or where
+TableGen files are interpreted by the TableGen program: ``llvm-tblgen`` available
+in your build directory under ``bin``. It is not installed in the system (or where
 your sysroot is set to), since it has no use beyond LLVM's build process.
 
 Running TableGen
@@ -54,6 +54,11 @@ Running TableGen
 TableGen runs just like any other LLVM tool.  The first (optional) argument
 specifies the file to read.  If a filename is not specified, ``llvm-tblgen``
 reads from standard input.
+
+The ``-o`` option specifies the output file or ``-`` to output to
+stdout. Where TableGen produces multiple output files, the option
+specifies the name of the main output file, which also works as the
+name prefix for other output files.
 
 To be useful, one of the `backends`_ must be used.  These backends are
 selectable on the command line (type '``llvm-tblgen -help``' for a list).  For
@@ -86,7 +91,7 @@ the `-dump-json` option.
 
 If you plan to use TableGen, you will most likely have to write a `backend`_
 that extracts the information specific to what you need and formats it in the
-appropriate way. You can do this by extending TableGen itself in C++, or by
+appropriate way. You can do this by extending TableGen itself in C++ or by
 writing a script in any language that can consume the JSON output.
 
 Example
@@ -152,7 +157,7 @@ of the x86 architecture.  ``def ADD32rr`` defines a record named
 ``ADD32rr``, and the comment at the end of the line indicates the superclasses
 of the definition.  The body of the record contains all of the data that
 TableGen assembled for the record, indicating that the instruction is part of
-the "X86" namespace, the pattern indicating how the instruction is selected by
+the ``X86`` namespace, the pattern indicating how the instruction is selected by
 the code generator, that it is a two-address instruction, has a particular
 encoding, etc.  The contents and semantics of the information in the record are
 specific to the needs of the X86 backend, and are only shown as an example.
@@ -175,13 +180,13 @@ TableGen, all of the information was derived from the following definition:
 This definition makes use of the custom class ``I`` (extended from the custom
 class ``X86Inst``), which is defined in the X86-specific TableGen file, to
 factor out the common features that instructions of its class share.  A key
-feature of TableGen is that it allows the end-user to define the abstractions
+feature of TableGen is that it allows the end user to define the abstractions
 they prefer to use when describing their information.
 
 Syntax
 ======
 
-TableGen has a syntax that is loosely based on C++ templates, with built-in
+TableGen has a syntax loosely based on C++ templates, with built-in
 types and specification. In addition, TableGen's syntax introduces some
 automation concepts like multiclass, foreach, let, etc.
 
@@ -193,41 +198,41 @@ which are considered 'records'.
 
 **TableGen records** have a unique name, a list of values, and a list of
 superclasses.  The list of values is the main data that TableGen builds for each
-record; it is this that holds the domain specific information for the
+record; it is this that holds the domain-specific information for the
 application.  The interpretation of this data is left to a specific `backend`_,
-but the structure and format rules are taken care of and are fixed by
+but the structure and format rules are taken care of and fixed by
 TableGen.
 
 **TableGen definitions** are the concrete form of 'records'.  These generally do
-not have any undefined values, and are marked with the '``def``' keyword.
+not have any undefined values and are marked with the '``def``' keyword.
 
 .. code-block:: text
 
   def FeatureFPARMv8 : SubtargetFeature<"fp-armv8", "HasFPARMv8", "true",
                                         "Enable ARMv8 FP">;
 
-In this example, FeatureFPARMv8 is ``SubtargetFeature`` record initialised
+In this example, ``FeatureFPARMv8`` is ``SubtargetFeature`` record initialised
 with some values. The names of the classes are defined via the
-keyword `class` either on the same file or some other included. Most target
+keyword `class` either in the same file or some other included. Most target
 TableGen files include the generic ones in ``include/llvm/Target``.
 
 **TableGen classes** are abstract records that are used to build and describe
 other records.  These classes allow the end-user to build abstractions for
-either the domain they are targeting (such as "Register", "RegisterClass", and
-"Instruction" in the LLVM code generator) or for the implementor to help factor
-out common properties of records (such as "FPInst", which is used to represent
+either the domain they are targeting (such as ``Register``, ``RegisterClass``, and
+``Instruction`` in the LLVM code generator) or for the implementor to help factor
+out common properties of records (such as ``FPInst``, which is used to represent
 floating point instructions in the X86 backend).  TableGen keeps track of all of
 the classes that are used to build up a definition, so the backend can find all
-definitions of a particular class, such as "Instruction".
+definitions of a particular class, such as ``Instruction``.
 
 .. code-block:: text
 
  class ProcNoItin<string Name, list<SubtargetFeature> Features>
        : Processor<Name, NoItineraries, Features>;
 
-Here, the class ProcNoItin, receiving parameters `Name` of type `string` and
-a list of target features is specializing the class Processor by passing the
-arguments down as well as hard-coding NoItineraries.
+Here, the class ``ProcNoItin``, receiving parameters ``Name`` of type ``string`` and
+a list of target features is specializing the class ``Processor`` by passing the
+arguments down as well as hard-coding ``NoItineraries``.
 
 **TableGen multiclasses** are groups of abstract records that are instantiated
 all at once.  Each instantiation can result in multiple TableGen definitions.
@@ -295,8 +300,8 @@ TableGen Deficiencies
 
 Despite being very generic, TableGen has some deficiencies that have been
 pointed out numerous times. The common theme is that, while TableGen allows
-you to build domain specific languages, the final languages that you create
-lack the power of other DSLs, which in turn increase considerably the size
+you to build domain-specific languages, the final languages that you create
+lack the power of other DSLs, which in turn considerably increases the size
 and complexity of TableGen files.
 
 At the same time, TableGen allows you to create virtually any meaning of
@@ -305,6 +310,6 @@ design and make it very hard for newcomers to understand the evil TableGen
 file.
 
 There are some in favor of extending the semantics even more, but making sure
-backends adhere to strict rules. Others are suggesting we should move to less,
+backends adhere to strict rules. Others suggest moving to fewer,
 more powerful DSLs designed with specific purposes, or even reusing existing
 DSLs.

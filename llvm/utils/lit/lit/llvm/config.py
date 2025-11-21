@@ -53,7 +53,10 @@ class LLVMConfig(object):
             self.use_lit_shell = True
 
             global lit_path_displayed
-            if not self.lit_config.quiet and lit_path_displayed is False:
+            if (
+                self.lit_config.diagnostic_level_enabled("note")
+                and lit_path_displayed is False
+            ):
                 self.lit_config.note("using lit tools: {}".format(path))
                 lit_path_displayed = True
 
@@ -85,7 +88,8 @@ class LLVMConfig(object):
                 "HWASAN_SYMBOLIZER_PATH",
                 "MSAN_SYMBOLIZER_PATH",
                 "TSAN_SYMBOLIZER_PATH",
-                "UBSAN_SYMBOLIZER_PATH" "ASAN_OPTIONS",
+                "UBSAN_SYMBOLIZER_PATH",
+                "ASAN_OPTIONS",
                 "HWASAN_OPTIONS",
                 "MSAN_OPTIONS",
                 "RTSAN_OPTIONS",
@@ -526,7 +530,7 @@ class LLVMConfig(object):
 
         if tool:
             tool = os.path.normpath(tool)
-            if not self.lit_config.quiet and not quiet:
+            if not quiet:
                 self.lit_config.note("using {}: {}".format(name, tool))
         return tool
 
@@ -636,10 +640,9 @@ class LLVMConfig(object):
                 ("%ms_abi_triple", self.make_msabi_triple(self.config.target_triple))
             )
         else:
-            if not self.lit_config.quiet:
-                self.lit_config.note(
-                    "No default target triple was found, some tests may fail as a result."
-                )
+            self.lit_config.note(
+                "No default target triple was found, some tests may fail as a result."
+            )
             self.config.substitutions.append(("%itanium_abi_triple", ""))
             self.config.substitutions.append(("%ms_abi_triple", ""))
 

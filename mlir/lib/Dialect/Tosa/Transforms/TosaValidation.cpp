@@ -14,7 +14,6 @@
 #include "mlir/Dialect/Tosa/IR/TargetEnv.h"
 #include "mlir/Dialect/Tosa/IR/TosaProfileCompliance.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
-#include "mlir/Dialect/Tosa/Transforms/PassesEnums.cpp.inc"
 
 #include <string>
 
@@ -130,28 +129,6 @@ static LogicalResult checkConstantOperandNegate(Operation *op,
   return success();
 }
 
-struct TosaLevel {
-  int32_t MAX_RANK = 0;
-  int32_t MAX_KERNEL = 0;
-  int32_t MAX_STRIDE = 0;
-  int32_t MAX_SCALE = 0;
-  int32_t MAX_LOG2_SIZE = 0;
-  int32_t MAX_NESTING = 0;
-  int32_t MAX_TENSOR_LIST_SIZE = 0;
-
-  bool operator==(const TosaLevel &rhs) {
-    return MAX_RANK == rhs.MAX_RANK && MAX_KERNEL == rhs.MAX_KERNEL &&
-           MAX_STRIDE == rhs.MAX_STRIDE && MAX_SCALE == rhs.MAX_SCALE &&
-           MAX_LOG2_SIZE == rhs.MAX_LOG2_SIZE &&
-           MAX_NESTING == rhs.MAX_NESTING &&
-           MAX_TENSOR_LIST_SIZE == rhs.MAX_TENSOR_LIST_SIZE;
-  }
-};
-
-static constexpr TosaLevel TOSA_LEVEL_EIGHTK = {6, 8192, 8192, 256, 31, 6, 64};
-static constexpr TosaLevel TOSA_LEVEL_NONE = {32, 2147483647, 2147483647, 2048,
-                                              63, 256,        256};
-
 //===----------------------------------------------------------------------===//
 // TOSA Validation Pass.
 //===----------------------------------------------------------------------===//
@@ -162,12 +139,9 @@ public:
 
   explicit TosaValidation(const TosaValidationOptions &options)
       : TosaValidation() {
-    this->profile = options.profile;
-    this->extension = options.extension;
     this->strictOpSpecAlignment = options.strictOpSpecAlignment;
     this->allowInvalidOpDatatypeCombinations =
         options.allowInvalidOpDatatypeCombinations;
-    this->level = options.level;
   }
   void runOnOperation() final;
 
@@ -207,28 +181,28 @@ private:
 
   LogicalResult levelCheckKernel(Operation *op, int32_t v,
                                  const StringRef checkDesc) {
-    if (v > tosaLevel.MAX_KERNEL)
+    if (v > targetEnv.getLevel().MAX_KERNEL)
       return op->emitOpError() << "failed level check: " << checkDesc;
     return success();
   }
 
   LogicalResult levelCheckStride(Operation *op, int32_t v,
                                  const StringRef checkDesc) {
-    if (v > tosaLevel.MAX_STRIDE)
+    if (v > targetEnv.getLevel().MAX_STRIDE)
       return op->emitOpError() << "failed level check: " << checkDesc;
     return success();
   }
 
   LogicalResult levelCheckScale(Operation *op, int32_t v,
                                 const StringRef checkDesc) {
-    if (v > tosaLevel.MAX_SCALE)
+    if (v > targetEnv.getLevel().MAX_SCALE)
       return op->emitOpError() << "failed level check: " << checkDesc;
     return success();
   }
 
   LogicalResult levelCheckListSize(Operation *op, int32_t v,
                                    const StringRef checkDesc) {
-    if (v > tosaLevel.MAX_TENSOR_LIST_SIZE)
+    if (v > targetEnv.getLevel().MAX_TENSOR_LIST_SIZE)
       return op->emitOpError()
              << "failed level check for MAX_TENSOR_LIST_SIZE: " << checkDesc;
     return success();
@@ -285,6 +259,7 @@ private:
   template <typename T>
   LogicalResult levelCheckRanks(T tosaOp) {
     auto op = tosaOp.getOperation();
+    const TosaLevel tosaLevel = targetEnv.getLevel();
     for (auto v : op->getOperands()) {
       if (failed(levelCheckRank(op, v, "operand", tosaLevel.MAX_RANK)))
         return failure();
@@ -466,7 +441,7 @@ private:
     int32_t maxNestedDepth = 0;
     getMaxNestedDepth(op, maxNestedDepth);
 
-    if (maxNestedDepth >= tosaLevel.MAX_NESTING) {
+    if (maxNestedDepth >= targetEnv.getLevel().MAX_NESTING) {
       op->emitOpError() << "failed level check: " << maxNestedDepth
                         << " >= MAX_NESTING";
       return failure();
@@ -523,43 +498,6 @@ private:
     return success();
   }
 
-  // configure profile and level values from pass options profileName and
-  // levelName
-  void configLevelAndProfile() {
-    tosaLevel = TOSA_LEVEL_NONE;
-    if (level == TosaLevelEnum::EightK) {
-      tosaLevel = TOSA_LEVEL_EIGHTK;
-    }
-
-    if (!profile.empty()) {
-      for (std::string &prof : profile) {
-        auto profSymbol = symbolizeProfile(prof);
-        if (profSymbol) {
-          targetEnv.addProfile(profSymbol.value());
-        } else {
-          llvm::errs() << "unknown TOSA profile name passed in: " << prof
-                       << ", supported profiles are `pro_int` and `pro_fp`\n";
-          return signalPassFailure();
-        }
-      }
-    }
-
-    if (!extension.empty()) {
-      for (std::string &ext : extension) {
-        auto extSymbol = symbolizeExtension(ext);
-        if (extSymbol) {
-          targetEnv.addExtension(extSymbol.value());
-        } else {
-          llvm::errs() << "unknown TOSA extension name passed in: " << ext
-                       << ", supported extension are int16, int4, bf16, "
-                       << "fp8e4m3, fp8e5m2, fft, variable, controlflow, "
-                       << "doubleround, inexactround and dynamic\n";
-          return signalPassFailure();
-        }
-      }
-    }
-  }
-
   LogicalResult CheckVariable(Operation *op);
   LogicalResult CheckVariableReadOrWrite(Operation *op);
   bool isValidElementType(Type type, const bool allowUnsigned = false);
@@ -567,7 +505,6 @@ private:
   SmallVector<
       std::function<LogicalResult(Operation *, const tosa::TargetEnv &)>>
       constCheckers;
-  TosaLevel tosaLevel;
   DenseMap<StringAttr, mlir::Type> variablesMap;
   TosaProfileCompliance profileComp;
   tosa::TargetEnv targetEnv;
@@ -576,13 +513,13 @@ private:
 template <>
 LogicalResult TosaValidation::levelCheckRanks(tosa::ArgMaxOp tosaOp) {
   auto *op = tosaOp.getOperation();
-  if (failed(
-          levelCheckRank(op, tosaOp.getInput(), "operand", tosaLevel.MAX_RANK)))
+  if (failed(levelCheckRank(op, tosaOp.getInput(), "operand",
+                            targetEnv.getLevel().MAX_RANK)))
     return failure();
 
   // rank(output) = rank(input) - 1
   if (failed(levelCheckRank(op, tosaOp.getOutput(), "result",
-                            tosaLevel.MAX_RANK - 1)))
+                            targetEnv.getLevel().MAX_RANK - 1)))
     return failure();
 
   return success();
@@ -594,7 +531,7 @@ LogicalResult TosaValidation::levelCheckRanks(tosa::IfOp tosaOp) {
 
   // Only the condition input has rank limitation.
   if (failed(levelCheckRank(op, tosaOp.getCondition(), "operand",
-                            tosaLevel.MAX_RANK)))
+                            targetEnv.getLevel().MAX_RANK)))
     return failure();
 
   return success();
@@ -605,7 +542,7 @@ LogicalResult TosaValidation::levelCheckRanks(tosa::VariableOp tosaOp) {
   auto *op = tosaOp.getOperation();
   auto variableType = getVariableType(tosaOp);
   if (failed(levelCheckRank(op, variableType, "variable type",
-                            tosaLevel.MAX_RANK)))
+                            targetEnv.getLevel().MAX_RANK)))
     return failure();
 
   return success();
@@ -698,6 +635,8 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(Transpose);
   // Type Conversion
   CHECK_RANKS_AND_SIZES(Cast);
+  CHECK_RANKS_AND_SIZES(CastFromBlockScaled);
+  CHECK_RANKS_AND_SIZES(CastToBlockScaled);
   CHECK_RANKS_AND_SIZES(Rescale);
   // Control Flow Operators
   CHECK_RANKS_AND_SIZES(If);
@@ -720,6 +659,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_SIZES(TransposeConv2D);
   CHECK_SIZES(FFT2d);
   CHECK_SIZES(MatMul);
+  CHECK_SIZES(MatmulTBlockScaled);
   CHECK_SIZES(MaxPool2d);
   CHECK_SIZES(RFFT2d);
   // Scatter/Gather Operators
@@ -753,7 +693,7 @@ LogicalResult TosaValidation::levelCheckSize(Operation *op,
                                  << " shape dimension cannot be dynamic";
     }
 
-    int64_t element_bits = type.getElementTypeBitWidth();
+    int64_t element_bits = tosa::getBitWidth(getElementTypeOrSelf(type));
     int64_t element_bytes = std::max(INT64_C(1), element_bits / 8);
     int64_t size = element_bytes * type.getNumElements();
 
@@ -762,7 +702,8 @@ LogicalResult TosaValidation::levelCheckSize(Operation *op,
     // defined in 1.7. Levels.
     // For each tensor, the number of tensor elements multiplied by the
     // element size in bytes must be representable as a tensor_size_t.
-    const int64_t max_size = (INT64_C(1) << tosaLevel.MAX_LOG2_SIZE) - 1;
+    const int64_t max_size =
+        (INT64_C(1) << targetEnv.getLevel().MAX_LOG2_SIZE) - 1;
     if (size > max_size)
       return op->emitOpError()
              << "failed level check: " << operandOrResult
@@ -772,7 +713,7 @@ LogicalResult TosaValidation::levelCheckSize(Operation *op,
 }
 
 LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
-  if (tosaLevel == TOSA_LEVEL_NONE) {
+  if (targetEnv.getLevel() == TOSA_LEVEL_NONE) {
     // no need to do level checks
     return success();
   }
@@ -1254,9 +1195,9 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
 bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
   if (isa<FloatType>(type)) {
     return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
-               Float8E5M2Type>(type);
-  }
-  if (auto intTy = dyn_cast<IntegerType>(type)) {
+               Float8E5M2Type, Float4E2M1FNType, Float6E2M3FNType,
+               Float6E3M2FNType, Float8E8M0FNUType>(type);
+  } else if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isSignless()) {
       switch (intTy.getWidth()) {
       case 1:
@@ -1265,6 +1206,7 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
       case 16:
       case 32:
       case 48:
+      case 64:
         return true;
       }
     } else if (allowUnsigned && intTy.isUnsigned()) {
@@ -1275,20 +1217,27 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
         return true;
       }
     }
-  } else if (mlir::isa<tosa::shapeType>(type)) {
+  } else if (isa<tosa::shapeType>(type))
     return true;
-  }
+  else if (isa<tosa::mxint8Type>(type))
+    return true;
   return false;
 }
 
 void TosaValidation::runOnOperation() {
-  configLevelAndProfile();
+  ModuleOp modOp = getOperation();
+  const TargetEnvAttr targetEnvAttr = lookupTargetEnvOrDefault(modOp);
+  const auto maybeTargetEnv =
+      tosa::TargetEnv::createTargetEnvFromAttr(targetEnvAttr, modOp.getLoc());
+  if (failed(maybeTargetEnv))
+    return signalPassFailure();
+  targetEnv = *maybeTargetEnv;
 
   TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
   if (!tosaDialect)
     return;
 
-  getOperation().walk([&](Operation *op) {
+  modOp.walk([&](Operation *op) {
     if (op->getDialect() != tosaDialect)
       return;
 

@@ -8,7 +8,7 @@
 static const std::string LongHtmlString = [] {
   std::string S;
   S.reserve(500000);
-  for (int i = 0; i < 50000; ++i) {
+  for (int Idx = 0; Idx < 50000; ++Idx) {
     S += "<script>alert('xss');</script>";
   }
   return S;
@@ -153,7 +153,11 @@ static const std::string LargeOutputStringTemplate = "{{long_string}}";
 // syntaxes.
 static void BM_Mustache_StringRendering(benchmark::State &state,
                                         const std::string &TplStr) {
-  llvm::mustache::Template Tpl(TplStr);
+  llvm::BumpPtrAllocator Allocator;
+  llvm::StringSaver Saver(Allocator);
+  llvm::mustache::MustacheContext Ctx(Allocator, Saver);
+
+  llvm::mustache::Template Tpl(TplStr, Ctx);
   llvm::json::Value Data =
       llvm::json::Object({{"content", llvm::json::Value(LongHtmlString)}});
   for (auto _ : state) {
@@ -172,7 +176,11 @@ BENCHMARK_CAPTURE(BM_Mustache_StringRendering, Unescaped_Ampersand,
 // Tests the "hot render" cost of repeatedly traversing a deep and wide
 // JSON object.
 static void BM_Mustache_DeepTraversal(benchmark::State &state) {
-  llvm::mustache::Template Tpl(DeepTraversalTemplate);
+  llvm::BumpPtrAllocator Allocator;
+  llvm::StringSaver Saver(Allocator);
+  llvm::mustache::MustacheContext Ctx(Allocator, Saver);
+
+  llvm::mustache::Template Tpl(DeepTraversalTemplate, Ctx);
   for (auto _ : state) {
     std::string Result;
     llvm::raw_string_ostream OS(Result);
@@ -184,7 +192,12 @@ BENCHMARK(BM_Mustache_DeepTraversal);
 
 // Tests the "hot render" cost of pushing and popping a deep context stack.
 static void BM_Mustache_DeeplyNestedRendering(benchmark::State &state) {
-  llvm::mustache::Template Tpl(DeeplyNestedRenderingTemplate);
+
+  llvm::BumpPtrAllocator Allocator;
+  llvm::StringSaver Saver(Allocator);
+  llvm::mustache::MustacheContext Ctx(Allocator, Saver);
+
+  llvm::mustache::Template Tpl(DeeplyNestedRenderingTemplate, Ctx);
   for (auto _ : state) {
     std::string Result;
     llvm::raw_string_ostream OS(Result);
@@ -197,7 +210,11 @@ BENCHMARK(BM_Mustache_DeeplyNestedRendering);
 // Tests the performance of the loop logic when iterating over a huge number of
 // items.
 static void BM_Mustache_HugeArrayIteration(benchmark::State &state) {
-  llvm::mustache::Template Tpl(HugeArrayIterationTemplate);
+  llvm::BumpPtrAllocator Allocator;
+  llvm::StringSaver Saver(Allocator);
+  llvm::mustache::MustacheContext Ctx(Allocator, Saver);
+
+  llvm::mustache::Template Tpl(HugeArrayIterationTemplate, Ctx);
   for (auto _ : state) {
     std::string Result;
     llvm::raw_string_ostream OS(Result);
@@ -209,8 +226,12 @@ BENCHMARK(BM_Mustache_HugeArrayIteration);
 
 // Tests the performance of the parser on a large, "wide" template.
 static void BM_Mustache_ComplexTemplateParsing(benchmark::State &state) {
+  llvm::BumpPtrAllocator Allocator;
+  llvm::StringSaver Saver(Allocator);
+  llvm::mustache::MustacheContext Ctx(Allocator, Saver);
+
   for (auto _ : state) {
-    llvm::mustache::Template Tpl(ComplexTemplateParsingTemplate);
+    llvm::mustache::Template Tpl(ComplexTemplateParsingTemplate, Ctx);
     benchmark::DoNotOptimize(Tpl);
   }
 }
@@ -218,8 +239,12 @@ BENCHMARK(BM_Mustache_ComplexTemplateParsing);
 
 // Tests the performance of the parser on a small, "deep" template.
 static void BM_Mustache_SmallTemplateParsing(benchmark::State &state) {
+  llvm::BumpPtrAllocator Allocator;
+  llvm::StringSaver Saver(Allocator);
+  llvm::mustache::MustacheContext Ctx(Allocator, Saver);
+
   for (auto _ : state) {
-    llvm::mustache::Template Tpl(SmallTemplateParsingTemplate);
+    llvm::mustache::Template Tpl(SmallTemplateParsingTemplate, Ctx);
     benchmark::DoNotOptimize(Tpl);
   }
 }
@@ -227,7 +252,11 @@ BENCHMARK(BM_Mustache_SmallTemplateParsing);
 
 // Tests the performance of rendering a template that includes a partial.
 static void BM_Mustache_PartialsRendering(benchmark::State &state) {
-  llvm::mustache::Template Tpl(ComplexPartialTemplate);
+  llvm::BumpPtrAllocator Allocator;
+  llvm::StringSaver Saver(Allocator);
+  llvm::mustache::MustacheContext Ctx(Allocator, Saver);
+
+  llvm::mustache::Template Tpl(ComplexPartialTemplate, Ctx);
   Tpl.registerPartial("item_partial", ItemPartialTemplate);
   llvm::json::Value Data = HugeArrayData;
 
@@ -243,7 +272,11 @@ BENCHMARK(BM_Mustache_PartialsRendering);
 // Tests the performance of the underlying buffer management when generating a
 // very large output.
 static void BM_Mustache_LargeOutputString(benchmark::State &state) {
-  llvm::mustache::Template Tpl(LargeOutputStringTemplate);
+  llvm::BumpPtrAllocator Allocator;
+  llvm::StringSaver Saver(Allocator);
+  llvm::mustache::MustacheContext Ctx(Allocator, Saver);
+
+  llvm::mustache::Template Tpl(LargeOutputStringTemplate, Ctx);
   for (auto _ : state) {
     std::string Result;
     llvm::raw_string_ostream OS(Result);

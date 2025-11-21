@@ -111,14 +111,14 @@ entry:
   ret i32 %conv6
 }
 
-define i32 @utesth_f16i32(half %x) {
-; CHECK-CVT-LABEL: utesth_f16i32:
+define i32 @utest_f16i32(half %x) {
+; CHECK-CVT-LABEL: utest_f16i32:
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    fcvt s0, h0
 ; CHECK-CVT-NEXT:    fcvtzu w0, s0
 ; CHECK-CVT-NEXT:    ret
 ;
-; CHECK-FP16-LABEL: utesth_f16i32:
+; CHECK-FP16-LABEL: utest_f16i32:
 ; CHECK-FP16:       // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    fcvtzu w0, h0
 ; CHECK-FP16-NEXT:    ret
@@ -298,8 +298,8 @@ entry:
   ret i16 %conv6
 }
 
-define i16 @utesth_f16i16(half %x) {
-; CHECK-CVT-LABEL: utesth_f16i16:
+define i16 @utest_f16i16(half %x) {
+; CHECK-CVT-LABEL: utest_f16i16:
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    fcvt s0, h0
 ; CHECK-CVT-NEXT:    mov w9, #65535 // =0xffff
@@ -308,7 +308,7 @@ define i16 @utesth_f16i16(half %x) {
 ; CHECK-CVT-NEXT:    csel w0, w8, w9, lo
 ; CHECK-CVT-NEXT:    ret
 ;
-; CHECK-FP16-LABEL: utesth_f16i16:
+; CHECK-FP16-LABEL: utest_f16i16:
 ; CHECK-FP16:       // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    fcvtzu w8, h0
 ; CHECK-FP16-NEXT:    mov w9, #65535 // =0xffff
@@ -493,8 +493,8 @@ entry:
   ret i64 %conv6
 }
 
-define i64 @utesth_f16i64(half %x) {
-; CHECK-LABEL: utesth_f16i64:
+define i64 @utest_f16i64(half %x) {
+; CHECK-LABEL: utest_f16i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -636,14 +636,14 @@ entry:
   ret i32 %conv6
 }
 
-define i32 @utesth_f16i32_mm(half %x) {
-; CHECK-CVT-LABEL: utesth_f16i32_mm:
+define i32 @utest_f16i32_mm(half %x) {
+; CHECK-CVT-LABEL: utest_f16i32_mm:
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    fcvt s0, h0
 ; CHECK-CVT-NEXT:    fcvtzu w0, s0
 ; CHECK-CVT-NEXT:    ret
 ;
-; CHECK-FP16-LABEL: utesth_f16i32_mm:
+; CHECK-FP16-LABEL: utest_f16i32_mm:
 ; CHECK-FP16:       // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    fcvtzu w0, h0
 ; CHECK-FP16-NEXT:    ret
@@ -808,8 +808,8 @@ entry:
   ret i16 %conv6
 }
 
-define i16 @utesth_f16i16_mm(half %x) {
-; CHECK-CVT-LABEL: utesth_f16i16_mm:
+define i16 @utest_f16i16_mm(half %x) {
+; CHECK-CVT-LABEL: utest_f16i16_mm:
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    fcvt s0, h0
 ; CHECK-CVT-NEXT:    mov w9, #65535 // =0xffff
@@ -818,7 +818,7 @@ define i16 @utesth_f16i16_mm(half %x) {
 ; CHECK-CVT-NEXT:    csel w0, w8, w9, lo
 ; CHECK-CVT-NEXT:    ret
 ;
-; CHECK-FP16-LABEL: utesth_f16i16_mm:
+; CHECK-FP16-LABEL: utest_f16i16_mm:
 ; CHECK-FP16:       // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    fcvtzu w8, h0
 ; CHECK-FP16-NEXT:    mov w9, #65535 // =0xffff
@@ -986,8 +986,8 @@ entry:
   ret i64 %conv6
 }
 
-define i64 @utesth_f16i64_mm(half %x) {
-; CHECK-LABEL: utesth_f16i64_mm:
+define i64 @utest_f16i64_mm(half %x) {
+; CHECK-LABEL: utest_f16i64_mm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -1024,6 +1024,29 @@ entry:
   %spec.store.select7 = call i128 @llvm.smax.i128(i128 %spec.store.select, i128 0)
   %conv6 = trunc i128 %spec.store.select7 to i64
   ret i64 %conv6
+}
+
+; i32 non saturate
+
+define i32 @ustest_f16i32_nsat(half %x) {
+; CHECK-CVT-LABEL: ustest_f16i32_nsat:
+; CHECK-CVT:       // %bb.0:
+; CHECK-CVT-NEXT:    fcvt s0, h0
+; CHECK-CVT-NEXT:    fcvtzs w8, s0
+; CHECK-CVT-NEXT:    and w8, w8, w8, asr #31
+; CHECK-CVT-NEXT:    bic w0, w8, w8, asr #31
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-FP16-LABEL: ustest_f16i32_nsat:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    fcvtzs w8, h0
+; CHECK-FP16-NEXT:    and w8, w8, w8, asr #31
+; CHECK-FP16-NEXT:    bic w0, w8, w8, asr #31
+; CHECK-FP16-NEXT:    ret
+  %conv = fptosi half %x to i32
+  %spec.store.select = call i32 @llvm.smin.i32(i32 0, i32 %conv)
+  %spec.store.select7 = call i32 @llvm.smax.i32(i32 %spec.store.select, i32 0)
+  ret i32 %spec.store.select7
 }
 
 declare i32 @llvm.smin.i32(i32, i32)

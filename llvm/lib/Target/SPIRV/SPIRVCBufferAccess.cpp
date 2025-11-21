@@ -35,6 +35,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ReplaceConstant.h"
 
 #define DEBUG_TYPE "spirv-cbuffer-access"
 using namespace llvm;
@@ -53,9 +54,20 @@ static Instruction *findHandleDef(GlobalVariable *HandleVar) {
 }
 
 static bool replaceCBufferAccesses(Module &M) {
-  std::optional<hlsl::CBufferMetadata> CBufMD = hlsl::CBufferMetadata::get(M);
+  std::optional<hlsl::CBufferMetadata> CBufMD =
+      hlsl::CBufferMetadata::get(M, [](Type *Ty) {
+        if (auto *TET = dyn_cast<TargetExtType>(Ty))
+          return TET->getName() == "spirv.Padding";
+        return false;
+      });
   if (!CBufMD)
     return false;
+
+  SmallVector<Constant *> CBufferGlobals;
+  for (const hlsl::CBufferMapping &Mapping : *CBufMD)
+    for (const hlsl::CBufferMember &Member : Mapping.Members)
+      CBufferGlobals.push_back(Member.GV);
+  convertUsersOfConstantsToInstructions(CBufferGlobals);
 
   for (const hlsl::CBufferMapping &Mapping : *CBufMD) {
     Instruction *HandleDef = findHandleDef(Mapping.Handle);
@@ -80,12 +92,7 @@ static bool replaceCBufferAccesses(Module &M) {
       Value *GetPointerCall = Builder.CreateIntrinsic(
           PtrType, Intrinsic::spv_resource_getpointer, {HandleDef, IndexVal});
 
-      // We cannot use replaceAllUsesWith here because some uses may be
-      // ConstantExprs, which cannot be replaced with non-constants.
-      SmallVector<User *, 4> Users(MemberGV->users());
-      for (User *U : Users) {
-        U->replaceUsesOfWith(MemberGV, GetPointerCall);
-      }
+      MemberGV->replaceAllUsesWith(GetPointerCall);
     }
   }
 

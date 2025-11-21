@@ -162,6 +162,92 @@ Sections:
         BBRanges:
           - BaseAddress: 0x20
 
+## Check that obj2yaml can dump basic block hash in the .llvm_bb_addr_map section.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: obj2yaml %t4 | FileCheck %s --check-prefix=BBHASH
+
+# BBHASH:      --- !ELF
+# BBHASH-NEXT: FileHeader:
+# BBHASH-NEXT:   Class: ELFCLASS64
+# BBHASH-NEXT:   Data:  ELFDATA2LSB
+# BBHASH-NEXT:   Type:  ET_EXEC
+# BBHASH-NEXT: Sections:
+# BBHASH-NEXT:   - Name: .llvm_bb_addr_map
+# BBHASH-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
+# BBHASH-NEXT:     Entries:
+# BBHASH-NEXT:       - Version: 4
+# BBHASH-NEXT:         Feature: 0x40
+# BBHASH-NEXT:         BBRanges:
+# BBHASH-NEXT:           - BBEntries:
+# BBHASH-NEXT:             - ID:            0
+# BBHASH-NEXT:               AddressOffset: 0x1
+# BBHASH-NEXT:               Size:          0x2
+# BBHASH-NEXT:               Metadata:      0x3
+# BBHASH-NEXT:               Hash:          0x1
+# BBHASH-NEXT:             - ID:            2
+# BBHASH-NEXT:               AddressOffset: 0x4
+# BBHASH-NEXT:               Size:          0x5
+# BBHASH-NEXT:               Metadata:      0x6
+# BBHASH-NEXT:               Hash:          0x2
+# BBHASH-NEXT:             - ID:            4
+# BBHASH-NEXT:               AddressOffset: 0xFFFFFFFFFFFFFFF7
+# BBHASH-NEXT:               Size:          0xFFFFFFFFFFFFFFF8
+# BBHASH-NEXT:               Metadata:      0xFFFFFFFFFFFFFFF9
+# BBHASH-NEXT:               Hash:          0x3
+# BBHASH-NEXT:       - Version: 4
+# BBHASH-NEXT:         Feature: 0x68
+# BBHASH-NEXT:         BBRanges:
+# BBHASH-NEXT:           - BaseAddress: 0xFFFFFFFFFFFFFF20
+# BBHASH-NEXT:             BBEntries:
+# BBHASH-NEXT:               - ID:              6
+# BBHASH-NEXT:                 AddressOffset:   0xA
+# BBHASH-NEXT:                 Size:            0xB
+# BBHASH-NEXT:                 Metadata:        0xC
+# BBHASH-NEXT:                 CallsiteEndOffsets: [ 0x1, 0x2 ]
+# BBHASH-NEXT:                 Hash:          0x123
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   .llvm_bb_addr_map
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 4
+        Feature: 0x40
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x1
+                Size:          0x2
+                Metadata:      0x3
+                Hash:          0x1
+              - ID:            2
+                AddressOffset: 0x4
+                Size:          0x5
+                Metadata:      0x6
+                Hash:          0x2
+              - ID:            4
+                AddressOffset: 0xFFFFFFFFFFFFFFF7
+                Size:          0xFFFFFFFFFFFFFFF8
+                Metadata:      0xFFFFFFFFFFFFFFF9
+                Hash:          0x3
+      - Version:   4
+        Feature:   0x68
+        BBRanges:
+          - BaseAddress:   0xFFFFFFFFFFFFFF20
+            BBEntries:
+             - ID:              6
+               AddressOffset:   0xA
+               Size:            0xB
+               Metadata:        0xC
+               CallsiteEndOffsets: [ 0x1, 0x2 ]
+               Hash:            0x123
+
 ## Check that obj2yaml uses the "Content" tag to describe an .llvm_bb_addr_map section
 ## when it can't extract the entries, for example, when the section is truncated, or
 ## when an invalid 'NumBlocks' or 'NumBBRanges` field is specified.

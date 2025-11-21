@@ -14,7 +14,7 @@ unsigned my_strlen(const char *buf);
 
 // CHECK-MESSAGES: :[[@LINE+1]]:29: warning: pointer parameter 'last' can be pointer to const [readability-non-const-parameter]
 void warn1(int *first, int *last) {
-  // CHECK-FIXES: {{^}}void warn1(int *first, const int *last) {{{$}}
+  // CHECK-FIXES: void warn1(int *first, const int *last) {
   *first = 0;
   if (first < last) {
   } // <- last can be const
@@ -28,14 +28,14 @@ void warn2(char *p) {
 
 // CHECK-MESSAGES: :[[@LINE+1]]:19: warning: pointer parameter 'p' can be
 void assign1(int *p) {
-  // CHECK-FIXES: {{^}}void assign1(const int *p) {{{$}}
+  // CHECK-FIXES: void assign1(const int *p) {
   const int *q;
   q = p;
 }
 
 // CHECK-MESSAGES: :[[@LINE+1]]:19: warning: pointer parameter 'p' can be
 void assign2(int *p) {
-  // CHECK-FIXES: {{^}}void assign2(const int *p) {{{$}}
+  // CHECK-FIXES: void assign2(const int *p) {
   const int *q;
   q = p + 1;
 }
@@ -82,13 +82,13 @@ void assign10(int *buf) {
 
 // CHECK-MESSAGES: :[[@LINE+1]]:17: warning: pointer parameter 'p' can be
 void init1(int *p) {
-  // CHECK-FIXES: {{^}}void init1(const int *p) {{{$}}
+  // CHECK-FIXES: void init1(const int *p) {
   const int *q = p;
 }
 
 // CHECK-MESSAGES: :[[@LINE+1]]:17: warning: pointer parameter 'p' can be
 void init2(int *p) {
-  // CHECK-FIXES: {{^}}void init2(const int *p) {{{$}}
+  // CHECK-FIXES: void init2(const int *p) {
   const int *q = p + 1;
 }
 
@@ -115,25 +115,25 @@ void init7(int *p, int x) {
 
 // CHECK-MESSAGES: :[[@LINE+1]]:18: warning: pointer parameter 'p' can be
 int return1(int *p) {
-  // CHECK-FIXES: {{^}}int return1(const int *p) {{{$}}
+  // CHECK-FIXES: int return1(const int *p) {
   return *p;
 }
 
 // CHECK-MESSAGES: :[[@LINE+1]]:25: warning: pointer parameter 'p' can be
 const int *return2(int *p) {
-  // CHECK-FIXES: {{^}}const int *return2(const int *p) {{{$}}
+  // CHECK-FIXES: const int *return2(const int *p) {
   return p;
 }
 
 // CHECK-MESSAGES: :[[@LINE+1]]:25: warning: pointer parameter 'p' can be
 const int *return3(int *p) {
-  // CHECK-FIXES: {{^}}const int *return3(const int *p) {{{$}}
+  // CHECK-FIXES: const int *return3(const int *p) {
   return p + 1;
 }
 
 // CHECK-MESSAGES: :[[@LINE+1]]:27: warning: pointer parameter 'p' can be
 const char *return4(char *p) {
-  // CHECK-FIXES: {{^}}const char *return4(const char *p) {{{$}}
+  // CHECK-FIXES: const char *return4(const char *p) {
   return p ? p : "";
 }
 
@@ -231,13 +231,13 @@ struct XYConst {
 };
 // CHECK-MESSAGES: :[[@LINE+1]]:30: warning: pointer parameter 'x' can be pointer to const
 void recordInitListDiag(int *x) {
-  // CHECK-FIXES: {{^}}void recordInitListDiag(const int *x) {{{$}}
+  // CHECK-FIXES: void recordInitListDiag(const int *x) {
   XYConst xy = {x};
 }
 typedef XYConst XYConstAlias;
 // CHECK-MESSAGES: :[[@LINE+1]]:35: warning: pointer parameter 'x' can be pointer to const
 void recordInitListAliasDiag(int *x) {
-  // CHECK-FIXES: {{^}}void recordInitListAliasDiag(const int *x) {{{$}}
+  // CHECK-FIXES: void recordInitListAliasDiag(const int *x) {
   XYConstAlias xy = {x};
 }
 
@@ -253,7 +253,7 @@ class C2 {
 public:
   // CHECK-MESSAGES: :[[@LINE+1]]:11: warning: pointer parameter 'p' can be
   C2(int *p) : p(p) {}
-  // CHECK-FIXES: {{^}}  C2(const int *p) : p(p) {}{{$}}
+  // CHECK-FIXES: C2(const int *p) : p(p) {}
 
 private:
   const int *p;
@@ -272,7 +272,7 @@ class Warn {
 public:
   // CHECK-MESSAGES: :[[@LINE+1]]:21: warning: pointer parameter 'p' can be
   void doStuff(int *p) {
-    // CHECK-FIXES: {{^}}  void doStuff(const int *p) {{{$}}
+    // CHECK-FIXES: void doStuff(const int *p) {
     x = *p;
   }
 
@@ -297,14 +297,14 @@ public:
 };
 
 extern char foo(char *s); // 1
-// CHECK-FIXES: {{^}}extern char foo(const char *s); // 1{{$}}
+// CHECK-FIXES: extern char foo(const char *s); // 1
 // CHECK-MESSAGES: :[[@LINE+1]]:16: warning: pointer parameter 's' can be
 char foo(char *s) {
-  // CHECK-FIXES: {{^}}char foo(const char *s) {{{$}}
+  // CHECK-FIXES: char foo(const char *s) {
   return *s;
 }
 char foo(char *s); // 2
-// CHECK-FIXES: {{^}}char foo(const char *s); // 2{{$}}
+// CHECK-FIXES: char foo(const char *s); // 2
 
 void lvalueReference(int *p) {
   // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be
@@ -313,7 +313,7 @@ void lvalueReference(int *p) {
 
 // CHECK-MESSAGES: :[[@LINE+1]]:32: warning: pointer parameter 'p' can be
 void constLValueReference(int *p) {
-  // CHECK-FIXES: {{^}}void constLValueReference(const int *p) {{{$}}
+  // CHECK-FIXES: void constLValueReference(const int *p) {
   const int &x = *p;
 }
 
@@ -326,7 +326,7 @@ void lambdaLVRef(int *p) {
 
 // CHECK-MESSAGES: :[[@LINE+1]]:28: warning: pointer parameter 'p' can be
 void lambdaConstLVRef(int *p) {
-  // CHECK-FIXES: {{^}}void lambdaConstLVRef(const int *p) {{{$}}
+  // CHECK-FIXES: void lambdaConstLVRef(const int *p) {
   auto foo = [&]() {
     const int &x = *p;
   };

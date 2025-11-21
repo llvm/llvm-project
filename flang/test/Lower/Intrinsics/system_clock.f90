@@ -32,11 +32,9 @@ end subroutine
 
 ! CHECK-LABEL: @_QPss
 subroutine ss(count)
-  ! CHECK:   %[[V_0:[0-9]+]] = fir.alloca !fir.box<!fir.heap<i64>> {bindc_name = "count_max", uniq_name = "_QFssEcount_max"}
   ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca !fir.heap<i64> {uniq_name = "_QFssEcount_max.addr"}
   ! CHECK:   %[[V_2:[0-9]+]] = fir.zero_bits !fir.heap<i64>
   ! CHECK:   fir.store %[[V_2]] to %[[V_1]] : !fir.ref<!fir.heap<i64>>
-  ! CHECK:   %[[V_3:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<i64>> {bindc_name = "count_rate", uniq_name = "_QFssEcount_rate"}
   ! CHECK:   %[[V_4:[0-9]+]] = fir.alloca !fir.ptr<i64> {uniq_name = "_QFssEcount_rate.addr"}
   ! CHECK:   %[[V_5:[0-9]+]] = fir.zero_bits !fir.ptr<i64>
   ! CHECK:   fir.store %[[V_5]] to %[[V_4]] : !fir.ref<!fir.ptr<i64>>

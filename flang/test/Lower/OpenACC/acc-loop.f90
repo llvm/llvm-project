@@ -376,8 +376,8 @@ end subroutine
 ! CHECK-SAME: %[[ARG_J:.*]]: !fir.ref<i32> {fir.bindc_name = "j"}
 ! CHECK-SAME: %[[ARG_K:.*]]: !fir.ref<i32> {fir.bindc_name = "k"}
 ! CHECK: %[[DC_I:.*]]:2 = hlfir.declare %[[ARG_I]] dummy_scope %0
-! CHECK: %[[DC_J:.*]]:2 = hlfir.declare %[[ARG_J]] dummy_scope %0 
-! CHECK: %[[DC_K:.*]]:2 = hlfir.declare %[[ARG_K]] dummy_scope %0 
+! CHECK: %[[DC_J:.*]]:2 = hlfir.declare %[[ARG_J]] dummy_scope %0
+! CHECK: %[[DC_K:.*]]:2 = hlfir.declare %[[ARG_K]] dummy_scope %0
 ! CHECK: acc.parallel combined(loop)
 ! CHECK: %[[P_I:.*]] = acc.private varPtr(%[[DC_I]]#0 : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
 ! CHECK: %[[P_J:.*]] = acc.private varPtr(%[[DC_J]]#0 : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "j"}

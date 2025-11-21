@@ -75,6 +75,16 @@ They meet the criteria for inclusion below. Knowing their handles help us keep t
      - capitan-davide
      - capitan_davide
      - capitan-davide
+   * - Jorge Pinto Sousa
+     - Critical Techworks
+     - sousajo-cc
+     - sousajo-cc
+     - sousajo-cc
+   * - José Rui Simões
+     - Critical Software
+     - jr-simoes
+     - jr_simoes
+     - iznogoud-zz
    * - Oscar Slotosch
      - Validas
      - slotosch
@@ -100,6 +110,11 @@ They meet the criteria for inclusion below. Knowing their handles help us keep t
      - YoungJunLee
      - YoungJunLee
      - IamYJLee
+   * - Zaky Hermawan
+     - No Affiliation
+     - ZakyHermawan
+     - quarkz99
+     - zakyHermawan
 
 
 Organizations are limited to three representatives within the group to maintain diversity.
@@ -166,6 +181,46 @@ Membership Review
 
 To ensure the group remains active and focused, member participation will be reviewed every six months. Inactive members may be removed following this review.
 
+Decision Making
+---------------
+
+The LLVM Qualification Working Group aims to make decisions transparently, collaboratively, and without unnecessary formality. The goal is to maintain efficiency while encouraging broad participation and mutual understanding.
+
+This section describes the lightweight process used to handle proposals and decisions within the group. It may be revised as the group evolves and gains experience.
+
+Principles
+^^^^^^^^^^
+
+* **Consensus first:** The preferred mode of decision-making is consensus through open discussion (primarily on Discord or during sync-up meetings).
+* **Inclusiveness and respect:** All viewpoints are encouraged, and members are expected to contribute constructively toward reaching a shared understanding.
+* **Transparency:** Discussions leading to a decision should be visible to the group and, whenever appropriate, summarized in public channels (e.g., Discourse meeting notes, Discord channel, documentation updates).
+
+Consensus and Time Limits
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Discussions remain open until a clear consensus emerges, meaning no sustained objections have been raised after reasonable discussion.
+
+To prevent open-ended debates, if no new viewpoints are expressed after an agreed period (e.g., 2 weeks), the moderator (typically the person who started the discussion thread) may take one of the following actions:
+
+* **Summarize the apparent consensus** and close the discussion, or
+* **Postpone the topic** to the next sync-up meeting if the outcome remains unclear, or
+* **Call for a short vote** to confirm the group’s position.
+
+Voting Procedure
+^^^^^^^^^^^^^^^^
+
+When consensus cannot be reached or when a clear yes/no decision is needed:
+
+* The moderator may call for a **simple vote** using emoji reactions on Discord or a similar visible method.
+* A decision passes if it receives a **majority (>50%)** of votes among **participants who voted.** Non-votes are **not counted** in the total.
+* To ensure decisions reflect the collective position of the group, **at least three-quarters of the total core members** must participate in the vote for it to be considered valid.
+* If results are evenly split **(50/50)**, or if participation falls below this threshold, the topic may be postponed to the next sync-up meeting for further discussion.
+
+Documentation
+^^^^^^^^^^^^^
+
+Final decisions should be briefly documented (e.g., in meeting minutes, the corresponding GitHub issue, or Discord discussion thread). Once stable, the resulting policy or outcome may be reflected in this documentation for reference.
+
 Current Topics & Backlog
 ========================
 
@@ -190,10 +245,11 @@ Slides used to support discussions during sync-up meetings are stored in LLVM's 
 
 Available slides:
 
+* (add future entries here)
+* `October 2025 <https://docs.google.com/presentation/d/1ND2SkjgcHvcEbQmMd8ExL-PpRXouP49T-wfy3xf2yRQ/edit?usp=sharing>`_
 * `September 2025 <https://docs.google.com/presentation/d/1SZAE-QHfJED6CxJCCtBkPDxcw7XU9ORX54TJyXe1ppc/edit?usp=sharing>`_
 * `August 2025 <https://docs.google.com/presentation/d/1K8GWoRm8ZAeyyGvTeV5f-sMOhMr7WHiEk6_Nm5Fk10o/edit?usp=sharing>`_
 * `July 2025 <https://docs.google.com/presentation/d/1ktURe9qz5ggbdOQYK-2ISpiC18B-Y_35WvGyAnnxEpw/edit?usp=sharing>`_
-* (add future entries here)
 
 AI Transcription Policy
 =======================

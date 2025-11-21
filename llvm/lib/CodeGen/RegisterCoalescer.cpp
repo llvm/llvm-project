@@ -81,7 +81,7 @@ static cl::opt<bool> EnableJoining("join-liveintervals",
 
 static cl::opt<bool> UseTerminalRule("terminal-rule",
                                      cl::desc("Apply the terminal rule"),
-                                     cl::init(false), cl::Hidden);
+                                     cl::init(true), cl::Hidden);
 
 /// Temporary flag to test critical edge unsplitting.
 static cl::opt<bool> EnableJoinSplits(
@@ -378,7 +378,7 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
 
 public:
   // For legacy pass only.
-  RegisterCoalescer() {}
+  RegisterCoalescer() = default;
   RegisterCoalescer &operator=(RegisterCoalescer &&Other) = default;
 
   RegisterCoalescer(LiveIntervals *LIS, SlotIndexes *SI,
@@ -584,14 +584,14 @@ bool CoalescerPair::isCoalescable(const MachineInstr *MI) const {
       return DstReg == Dst;
     // This is a partial register copy. Check that the parts match.
     return Register(TRI.getSubReg(DstReg, SrcSub)) == Dst;
-  } else {
-    // DstReg is virtual.
-    if (DstReg != Dst)
-      return false;
-    // Registers match, do the subregisters line up?
-    return TRI.composeSubRegIndices(SrcIdx, SrcSub) ==
-           TRI.composeSubRegIndices(DstIdx, DstSub);
   }
+
+  // DstReg is virtual.
+  if (DstReg != Dst)
+    return false;
+  // Registers match, do the subregisters line up?
+  return TRI.composeSubRegIndices(SrcIdx, SrcSub) ==
+         TRI.composeSubRegIndices(DstIdx, DstSub);
 }
 
 void RegisterCoalescerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -1373,7 +1373,7 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   }
 
   const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
-  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI);
+  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
       Register NewDstReg = DstReg;
@@ -1600,6 +1600,22 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
       SlotIndex DefIndex =
           CurrIdx.getRegSlot(NewMI.getOperand(0).isEarlyClobber());
       VNInfo::Allocator &Alloc = LIS->getVNInfoAllocator();
+
+      // Refine the subranges that are now defined by the remat.
+      // This will split existing subranges if necessary.
+      DstInt.refineSubRanges(
+          Alloc, DstMask,
+          [&DefIndex, &Alloc](LiveInterval::SubRange &SR) {
+            // We know that this lane is defined by this instruction,
+            // but at this point it might not be live because it was not defined
+            // by the original instruction. This happens when the
+            // rematerialization widens the defined register. Assign that lane a
+            // dead def so that the interferences are properly modeled.
+            if (!SR.liveAt(DefIndex))
+              SR.createDeadDef(DefIndex, Alloc);
+          },
+          *LIS->getSlotIndexes(), *TRI);
+
       for (LiveInterval::SubRange &SR : DstInt.subranges()) {
         if ((SR.LaneMask & DstMask).none()) {
           LLVM_DEBUG(dbgs()
@@ -1617,14 +1633,6 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
           // updateRegDefUses. The original subrange def may have only undefed
           // some lanes.
           UpdatedSubRanges = true;
-        } else {
-          // We know that this lane is defined by this instruction,
-          // but at this point it might not be live because it was not defined
-          // by the original instruction. This happens when the
-          // rematerialization widens the defined register. Assign that lane a
-          // dead def so that the interferences are properly modeled.
-          if (!SR.liveAt(DefIndex))
-            SR.createDeadDef(DefIndex, Alloc);
         }
       }
       if (UpdatedSubRanges)
@@ -2051,6 +2059,12 @@ bool RegisterCoalescer::joinCopy(
   }
 
   if (CP.getNewRC()) {
+    if (RegClassInfo.getNumAllocatableRegs(CP.getNewRC()) == 0) {
+      LLVM_DEBUG(dbgs() << "\tNo " << TRI->getRegClassName(CP.getNewRC())
+                        << "are available for allocation\n");
+      return false;
+    }
+
     auto SrcRC = MRI->getRegClass(CP.getSrcReg());
     auto DstRC = MRI->getRegClass(CP.getDstReg());
     unsigned SrcIdx = CP.getSrcIdx();
@@ -2914,8 +2928,7 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
     if ((V.ValidLanes & OtherV.ValidLanes).any())
       // Overlapping lanes can't be resolved.
       return CR_Impossible;
-    else
-      return CR_Merge;
+    return CR_Merge;
   }
 
   // No simultaneous def. Is Other live at the def?

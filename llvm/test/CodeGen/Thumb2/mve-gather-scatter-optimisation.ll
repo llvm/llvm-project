@@ -236,11 +236,11 @@ define arm_aapcs_vfpcc void @push_out_mul_gather_scatter(ptr noalias nocapture r
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-NEXT:  .LBB5_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q2, [r0, q1, uxtw #2]
-; CHECK-NEXT:    vadd.i32 q3, q1, q0
+; CHECK-NEXT:    vldrw.u32 q3, [r0, q1, uxtw #2]
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vstrw.32 q2, [r0, q1, uxtw #2]
-; CHECK-NEXT:    vmov q1, q3
+; CHECK-NEXT:    vmov q2, q1
+; CHECK-NEXT:    vadd.i32 q1, q1, q0
+; CHECK-NEXT:    vstrw.32 q3, [r0, q2, uxtw #2]
 ; CHECK-NEXT:    bne .LBB5_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
 ; CHECK-NEXT:    bx lr
@@ -330,20 +330,20 @@ define arm_aapcs_vfpcc void @non_gatscat_use1(ptr noalias nocapture readonly %da
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    adr r4, .LCPI7_0
 ; CHECK-NEXT:    mov.w r12, #9
-; CHECK-NEXT:    vldrw.u32 q1, [r4]
+; CHECK-NEXT:    vldrw.u32 q0, [r4]
 ; CHECK-NEXT:    mov.w lr, #12
 ; CHECK-NEXT:    movs r4, #8
-; CHECK-NEXT:    vdup.32 q0, r0
+; CHECK-NEXT:    vdup.32 q1, r0
 ; CHECK-NEXT:  .LBB7_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmov q3, q0
-; CHECK-NEXT:    vadd.i32 q2, q1, r4
-; CHECK-NEXT:    vmla.i32 q3, q1, lr
-; CHECK-NEXT:    vmul.i32 q1, q1, r12
-; CHECK-NEXT:    vldrw.u32 q4, [q3, #24]
+; CHECK-NEXT:    vmov q2, q0
+; CHECK-NEXT:    vmov q3, q1
+; CHECK-NEXT:    vmla.i32 q3, q2, lr
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vstrw.32 q1, [r3]
-; CHECK-NEXT:    vmov q1, q2
+; CHECK-NEXT:    vldrw.u32 q4, [q3, #24]
+; CHECK-NEXT:    vmul.i32 q2, q2, r12
+; CHECK-NEXT:    vadd.i32 q0, q0, r4
+; CHECK-NEXT:    vstrw.32 q2, [r3]
 ; CHECK-NEXT:    vstrb.8 q4, [r1], #16
 ; CHECK-NEXT:    bne .LBB7_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
@@ -390,22 +390,22 @@ define arm_aapcs_vfpcc void @non_gatscat_use2(ptr noalias nocapture readonly %da
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    adr r4, .LCPI8_0
 ; CHECK-NEXT:    movs r5, #18
-; CHECK-NEXT:    vldrw.u32 q2, [r4]
+; CHECK-NEXT:    vldrw.u32 q0, [r4]
 ; CHECK-NEXT:    mov.w r12, #9
 ; CHECK-NEXT:    mov.w lr, #12
 ; CHECK-NEXT:    movs r4, #8
-; CHECK-NEXT:    vdup.32 q0, r0
-; CHECK-NEXT:    vdup.32 q1, r5
+; CHECK-NEXT:    vdup.32 q1, r0
+; CHECK-NEXT:    vdup.32 q2, r5
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vadd.i32 q3, q2, r4
-; CHECK-NEXT:    vmla.i32 q4, q2, lr
+; CHECK-NEXT:    vmov q3, q0
+; CHECK-NEXT:    vmov q4, q1
+; CHECK-NEXT:    vmla.i32 q4, q3, lr
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vldrw.u32 q5, [q4, #24]
-; CHECK-NEXT:    vmov q4, q1
-; CHECK-NEXT:    vmla.i32 q4, q2, r12
-; CHECK-NEXT:    vmov q2, q3
+; CHECK-NEXT:    vmov q4, q2
+; CHECK-NEXT:    vmla.i32 q4, q3, r12
+; CHECK-NEXT:    vadd.i32 q0, q0, r4
 ; CHECK-NEXT:    vstrb.8 q5, [r1], #16
 ; CHECK-NEXT:    vstrw.32 q4, [r3]
 ; CHECK-NEXT:    bne .LBB8_1
@@ -487,21 +487,21 @@ define dso_local void @arm_mat_mult_q31(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:    @ => This Loop Header: Depth=2
 ; CHECK-NEXT:    @ Child Loop BB9_3 Depth 3
 ; CHECK-NEXT:    vldrw.u32 q0, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vmov q7, q2
+; CHECK-NEXT:    vmov q1, q2
 ; CHECK-NEXT:    dls lr, r10
 ; CHECK-NEXT:    vmov.i32 q5, #0x0
-; CHECK-NEXT:    vmlas.i32 q7, q0, r7
-; CHECK-NEXT:    vmov q6, q4
+; CHECK-NEXT:    vmlas.i32 q1, q0, r7
+; CHECK-NEXT:    vmov q7, q4
 ; CHECK-NEXT:  .LBB9_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB9_1 Depth=1
 ; CHECK-NEXT:    @ Parent Loop BB9_2 Depth=2
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
-; CHECK-NEXT:    vadd.i32 q0, q7, q3
-; CHECK-NEXT:    vldrw.u32 q1, [r1, q7, uxtw #2]
-; CHECK-NEXT:    vldrw.u32 q7, [q6, #32]!
-; CHECK-NEXT:    vmul.i32 q1, q1, q7
-; CHECK-NEXT:    vmov q7, q0
-; CHECK-NEXT:    vadd.i32 q5, q1, q5
+; CHECK-NEXT:    vmov q6, q1
+; CHECK-NEXT:    vadd.i32 q1, q1, q3
+; CHECK-NEXT:    vldrw.u32 q0, [r1, q6, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q6, [q7, #32]!
+; CHECK-NEXT:    vmul.i32 q0, q0, q6
+; CHECK-NEXT:    vadd.i32 q5, q0, q5
 ; CHECK-NEXT:    le lr, .LBB9_3
 ; CHECK-NEXT:  @ %bb.4: @ %middle.block
 ; CHECK-NEXT:    @ in Loop: Header=BB9_2 Depth=2
@@ -702,12 +702,12 @@ define dso_local void @arm_mat_mult_q15(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:    @ Parent Loop BB10_5 Depth=1
 ; CHECK-NEXT:    @ Parent Loop BB10_8 Depth=2
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
-; CHECK-NEXT:    vadd.i32 q6, q5, q3
-; CHECK-NEXT:    vldrh.s32 q7, [r1, q5, uxtw #1]
-; CHECK-NEXT:    vldrh.s32 q5, [r3], #8
-; CHECK-NEXT:    vmul.i32 q5, q7, q5
-; CHECK-NEXT:    vadd.i32 q4, q5, q4
-; CHECK-NEXT:    vmov q5, q6
+; CHECK-NEXT:    vmov q6, q5
+; CHECK-NEXT:    vadd.i32 q5, q5, q3
+; CHECK-NEXT:    vldrh.s32 q7, [r1, q6, uxtw #1]
+; CHECK-NEXT:    vldrh.s32 q6, [r3], #8
+; CHECK-NEXT:    vmul.i32 q6, q7, q6
+; CHECK-NEXT:    vadd.i32 q4, q6, q4
 ; CHECK-NEXT:    le lr, .LBB10_11
 ; CHECK-NEXT:  @ %bb.12: @ %middle.block
 ; CHECK-NEXT:    @ in Loop: Header=BB10_8 Depth=2
@@ -922,15 +922,15 @@ define hidden arm_aapcs_vfpcc i32 @arm_depthwise_conv_s8(ptr nocapture readonly 
 ; CHECK-NEXT:    @ Parent Loop BB11_3 Depth=3
 ; CHECK-NEXT:    @ Parent Loop BB11_4 Depth=4
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=5
-; CHECK-NEXT:    vldrb.s32 q2, [r0, q5]
-; CHECK-NEXT:    vadd.i32 q7, q5, q0
-; CHECK-NEXT:    vldrb.s32 q5, [r1, q4]
-; CHECK-NEXT:    vadd.i32 q6, q4, q0
-; CHECK-NEXT:    vadd.i32 q2, q2, r2
+; CHECK-NEXT:    vmov q7, q5
+; CHECK-NEXT:    vmov q6, q4
+; CHECK-NEXT:    vldrb.s32 q2, [r0, q7]
+; CHECK-NEXT:    vldrb.s32 q7, [r1, q6]
 ; CHECK-NEXT:    subs r5, #4
-; CHECK-NEXT:    vmlava.u32 r12, q2, q5
-; CHECK-NEXT:    vmov q5, q7
-; CHECK-NEXT:    vmov q4, q6
+; CHECK-NEXT:    vadd.i32 q4, q4, q0
+; CHECK-NEXT:    vadd.i32 q2, q2, r2
+; CHECK-NEXT:    vadd.i32 q5, q5, q0
+; CHECK-NEXT:    vmlava.u32 r12, q2, q7
 ; CHECK-NEXT:    bne .LBB11_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
 ; CHECK-NEXT:    @ in Loop: Header=BB11_4 Depth=4

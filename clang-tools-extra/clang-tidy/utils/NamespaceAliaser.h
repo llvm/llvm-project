@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NAMESPACEALIASER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NAMESPACEALIASER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_NAMESPACEALIASER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_NAMESPACEALIASER_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Stmt.h"
@@ -45,4 +45,4 @@ private:
 
 } // namespace clang::tidy::utils
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NAMESPACEALIASER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_NAMESPACEALIASER_H

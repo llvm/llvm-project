@@ -1233,20 +1233,6 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
                                     llvm::outs());
 }
 
-void GetDependenciesByModuleNameAction::ExecuteAction() {
-  CompilerInstance &CI = getCompilerInstance();
-  Preprocessor &PP = CI.getPreprocessor();
-  SourceManager &SM = PP.getSourceManager();
-  FileID MainFileID = SM.getMainFileID();
-  SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
-  SmallVector<IdentifierLoc, 2> Path;
-  IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
-  Path.emplace_back(FileStart, ModuleID);
-  auto ModResult = CI.loadModule(FileStart, Path, Module::Hidden, false);
-  PPCallbacks *CB = PP.getPPCallbacks();
-  CB->moduleImport(SourceLocation(), Path, ModResult);
-}
-
 //===----------------------------------------------------------------------===//
 // HLSL Specific Actions
 //===----------------------------------------------------------------------===//

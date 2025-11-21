@@ -74,7 +74,7 @@ void UseEqualsDeleteCheck::registerMatchers(MatchFinder *Finder) {
 void UseEqualsDeleteCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Func =
           Result.Nodes.getNodeAs<CXXMethodDecl>(SpecialFunction)) {
-    SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+    const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         Func->getEndLoc(), 0, *Result.SourceManager, getLangOpts());
 
     if (IgnoreMacros && Func->getLocation().isMacroID())

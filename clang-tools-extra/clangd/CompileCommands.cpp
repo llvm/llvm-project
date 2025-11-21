@@ -11,8 +11,8 @@
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Options/Options.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -206,7 +206,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   if (Cmd.empty())
     return;
 
-  auto &OptTable = clang::driver::getDriverOptTable();
+  auto &OptTable = getDriverOptTable();
   // OriginalArgs needs to outlive ArgList.
   llvm::SmallVector<const char *, 16> OriginalArgs;
   OriginalArgs.reserve(Cmd.size());
@@ -222,8 +222,8 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   llvm::opt::InputArgList ArgList;
   ArgList = OptTable.ParseArgs(
       llvm::ArrayRef(OriginalArgs).drop_front(), IgnoredCount, IgnoredCount,
-      llvm::opt::Visibility(IsCLMode ? driver::options::CLOption
-                                     : driver::options::ClangOption));
+      llvm::opt::Visibility(IsCLMode ? options::CLOption
+                                     : options::ClangOption));
 
   llvm::SmallVector<unsigned, 1> IndicesToDrop;
   // Having multiple architecture options (e.g. when building fat binaries)
@@ -232,7 +232,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   // As there are no signals to figure out which one user actually wants. They
   // can explicitly specify one through `CompileFlags.Add` if need be.
   unsigned ArchOptCount = 0;
-  for (auto *Input : ArgList.filtered(driver::options::OPT_arch)) {
+  for (auto *Input : ArgList.filtered(options::OPT_arch)) {
     ++ArchOptCount;
     for (auto I = 0U; I <= Input->getNumValues(); ++I)
       IndicesToDrop.push_back(Input->getIndex() + I);
@@ -262,13 +262,12 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   // explicitly at the end of the flags. This ensures modifications done in the
   // following steps apply in more cases (like setting -x, which only affects
   // inputs that come after it).
-  for (auto *Input : ArgList.filtered(driver::options::OPT_INPUT)) {
+  for (auto *Input : ArgList.filtered(options::OPT_INPUT)) {
     SawInput(Input->getValue(0));
     IndicesToDrop.push_back(Input->getIndex());
   }
   // Anything after `--` is also treated as input, drop them as well.
-  if (auto *DashDash =
-          ArgList.getLastArgNoClaim(driver::options::OPT__DASH_DASH)) {
+  if (auto *DashDash = ArgList.getLastArgNoClaim(options::OPT__DASH_DASH)) {
     auto DashDashIndex = DashDash->getIndex() + 1; // +1 accounts for Cmd[0]
     // Another +1 so we don't treat the `--` itself as an input.
     for (unsigned I = DashDashIndex + 1; I < Cmd.size(); ++I)
@@ -424,11 +423,11 @@ DriverMode getDriverMode(const std::vector<std::string> &Args) {
 // Returns the set of DriverModes where an option may be used.
 unsigned char getModes(const llvm::opt::Option &Opt) {
   unsigned char Result = DM_None;
-  if (Opt.hasVisibilityFlag(driver::options::ClangOption))
+  if (Opt.hasVisibilityFlag(options::ClangOption))
     Result |= DM_GCC;
-  if (Opt.hasVisibilityFlag(driver::options::CC1Option))
+  if (Opt.hasVisibilityFlag(options::CC1Option))
     Result |= DM_CC1;
-  if (Opt.hasVisibilityFlag(driver::options::CLOption))
+  if (Opt.hasVisibilityFlag(options::CLOption))
     Result |= DM_CL;
   return Result;
 }
@@ -442,8 +441,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
   using TableTy =
       llvm::StringMap<llvm::SmallVector<Rule, 4>, llvm::BumpPtrAllocator>;
   static TableTy *Table = [] {
-    auto &DriverTable = driver::getDriverOptTable();
-    using DriverID = clang::driver::options::ID;
+    auto &DriverTable = getDriverOptTable();
+    using DriverID = clang::options::ID;
 
     // Collect sets of aliases, so we can treat -foo and -foo= as synonyms.
     // Conceptually a double-linked list: PrevAlias[I] -> I -> NextAlias[I].
@@ -466,9 +465,9 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
     } AliasTable[] = {
 #define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
                FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-               METAVAR, VALUES)                                                \
+               METAVAR, VALUES, SUBCOMMANDIDS_OFFSET)                          \
   {DriverID::OPT_##ID, DriverID::OPT_##ALIAS, ALIASARGS},
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef OPTION
     };
     for (auto &E : AliasTable)

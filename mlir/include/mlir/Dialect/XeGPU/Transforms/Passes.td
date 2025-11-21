@@ -26,11 +26,7 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
     The pass distributes subgroup level (SIMD) XeGPU ops to work items.
   }];
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
-                           "vector::VectorDialect"];
-  let options = [Option<
-    "enableSGReductions", "enable-sg-reductions", "bool",
-    /*default=*/"true",
-    "Enable subgroup reductions using subgroup shuffles.">];
+                           "vector::VectorDialect", "index::IndexDialect"];
 }
 
 def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
@@ -47,7 +43,12 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
   let options = [Option<
     "printOnly", "print-analysis-only", "bool",
     /*default=*/"false",
-    "Print the result of layout propagation analysis and exit.">];
+    "Print the result of layout propagation analysis and exit.">,
+    Option<
+    "layoutKind", "layout-kind", "std::string",
+    /*default=*/"\"lane\"",
+    "Propagate `inst` / `lane` level of xegpu layouts.">
+  ];
 }
 
 def XeGPUWgToSgDistribute : Pass<"xegpu-wg-to-sg-distribute"> {
@@ -82,6 +83,18 @@ def XeGPUVectorLinearize : Pass<"xegpu-vector-linearize"> {
   }];
   let dependentDialects = ["arith::ArithDialect", "memref::MemRefDialect",
                            "scf::SCFDialect", "ub::UBDialect", "vector::VectorDialect"];
+}
+
+def XeGPUOptimizeBlockLoads : Pass<"xegpu-optimize-block-loads"> {
+  let summary = "Optimize XeGPU block load operations";
+  let description = [{
+    This pass rewrites XeGPU loadNd operations into more optimal forms
+    to improve performance. This includes,
+    - Rewriting transpose B loads into more optimal forms to use HW block
+      transpose instructions for better performance.
+  }];
+  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
+                           "vector::VectorDialect"];
 }
 
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD

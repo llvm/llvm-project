@@ -30,17 +30,15 @@ namespace lldb_dap::protocol {
 
 // MARK: Base Protocol
 
+/// Message unique identifier type.
+using Id = int64_t;
+
+/// A unique identifier that indicates the `seq` field should be calculated by
+/// the current session.
+static constexpr Id kCalculateSeq = INT64_MAX;
+
 /// A client or debug adapter initiated request.
 struct Request {
-  /// Sequence number of the message (also known as message ID). The `seq` for
-  /// the first message sent by a client or debug adapter is 1, and for each
-  /// subsequent message is 1 greater than the previous message sent by that
-  /// actor. `seq` can be used to order requests, responses, and events, and to
-  /// associate requests with their corresponding responses. For protocol
-  /// messages of type `request` the sequence number can be used to cancel the
-  /// request.
-  int64_t seq;
-
   /// The command to execute.
   std::string command;
 
@@ -48,7 +46,16 @@ struct Request {
   ///
   /// Request handlers are expected to validate the arguments, which is handled
   /// by `RequestHandler`.
-  std::optional<llvm::json::Value> arguments;
+  std::optional<llvm::json::Value> arguments = std::nullopt;
+
+  /// Sequence number of the message (also known as message ID). The `seq` for
+  /// the first message sent by a client or debug adapter is 1, and for each
+  /// subsequent message is 1 greater than the previous message sent by that
+  /// actor. `seq` can be used to order requests, responses, and events, and to
+  /// associate requests with their corresponding responses. For protocol
+  /// messages of type `request` the sequence number can be used to cancel the
+  /// request.
+  Id seq = kCalculateSeq;
 };
 llvm::json::Value toJSON(const Request &);
 bool fromJSON(const llvm::json::Value &, Request &, llvm::json::Path);
@@ -60,7 +67,16 @@ struct Event {
   std::string event;
 
   /// Event-specific information.
-  std::optional<llvm::json::Value> body;
+  std::optional<llvm::json::Value> body = std::nullopt;
+
+  /// Sequence number of the message (also known as message ID). The `seq` for
+  /// the first message sent by a client or debug adapter is 1, and for each
+  /// subsequent message is 1 greater than the previous message sent by that
+  /// actor. `seq` can be used to order requests, responses, and events, and to
+  /// associate requests with their corresponding responses. For protocol
+  /// messages of type `request` the sequence number can be used to cancel the
+  /// request.
+  Id seq = kCalculateSeq;
 };
 llvm::json::Value toJSON(const Event &);
 bool fromJSON(const llvm::json::Value &, Event &, llvm::json::Path);
@@ -76,7 +92,7 @@ enum ResponseMessage : unsigned {
 /// Response for a request.
 struct Response {
   /// Sequence number of the corresponding request.
-  int64_t request_seq;
+  Id request_seq = 0;
 
   /// The command requested.
   std::string command;
@@ -85,21 +101,31 @@ struct Response {
   /// attribute may contain the result of the request. If the value is false,
   /// the attribute `message` contains the error in short form and the `body`
   /// may contain additional information (see `ErrorMessage`).
-  bool success;
+  bool success = false;
 
   // FIXME: Migrate usage of fallback string to ErrorMessage
 
   /// Contains the raw error in short form if `success` is false. This raw error
   /// might be interpreted by the client and is not shown in the UI. Some
   /// predefined values exist.
-  std::optional<std::variant<ResponseMessage, std::string>> message;
+  std::optional<std::variant<ResponseMessage, std::string>> message =
+      std::nullopt;
 
   /// Contains request result if success is true and error details if success is
   /// false.
   ///
   /// Request handlers are expected to build an appropriate body, see
   /// `RequestHandler`.
-  std::optional<llvm::json::Value> body;
+  std::optional<llvm::json::Value> body = std::nullopt;
+
+  /// Sequence number of the message (also known as message ID). The `seq` for
+  /// the first message sent by a client or debug adapter is 1, and for each
+  /// subsequent message is 1 greater than the previous message sent by that
+  /// actor. `seq` can be used to order requests, responses, and events, and to
+  /// associate requests with their corresponding responses. For protocol
+  /// messages of type `request` the sequence number can be used to cancel the
+  /// request.
+  Id seq = kCalculateSeq;
 };
 bool fromJSON(const llvm::json::Value &, Response &, llvm::json::Path);
 llvm::json::Value toJSON(const Response &);

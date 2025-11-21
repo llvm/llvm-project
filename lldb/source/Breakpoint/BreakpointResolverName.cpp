@@ -233,7 +233,7 @@ void BreakpointResolverName::AddNameLookup(ConstString name,
         m_lookups.emplace_back(variant_lookup);
       }
     }
-    return true;
+    return IterationAction::Continue;
   };
 
   if (Language *lang = Language::FindPlugin(m_language)) {

@@ -304,9 +304,9 @@ TEST(Paragraph, SeparationOfChunks) {
 
   P.appendSpace().appendCode("code").appendText(".\n  newline");
   EXPECT_EQ(P.asEscapedMarkdown(),
-            "after `foobar` bat`no` `space` text `code`.\n  newline");
+            "after `foobar` bat`no` `space` text `code`.  \n  newline");
   EXPECT_EQ(P.asMarkdown(),
-            "after `foobar` bat`no` `space` text `code`.\n  newline");
+            "after `foobar` bat`no` `space` text `code`.  \n  newline");
   EXPECT_EQ(P.asPlainText(), "after foobar batno space text code.\nnewline");
 }
 
@@ -371,19 +371,115 @@ TEST(Paragraph, SeparationOfChunks3) {
   EXPECT_EQ(P.asPlainText(), "after\nfoobar");
 
   P.appendText("- bat\n");
-  EXPECT_EQ(P.asEscapedMarkdown(), "after  \n  foobar\n\\- bat");
+  EXPECT_EQ(P.asEscapedMarkdown(), "after  \n  foobar  \n\\- bat");
   EXPECT_EQ(P.asMarkdown(), "after  \n  foobar\n- bat");
   EXPECT_EQ(P.asPlainText(), "after\nfoobar\n- bat");
 
   P.appendText("- baz");
-  EXPECT_EQ(P.asEscapedMarkdown(), "after  \n  foobar\n\\- bat\n\\- baz");
+  EXPECT_EQ(P.asEscapedMarkdown(), "after  \n  foobar  \n\\- bat  \n\\- baz");
   EXPECT_EQ(P.asMarkdown(), "after  \n  foobar\n- bat\n- baz");
   EXPECT_EQ(P.asPlainText(), "after\nfoobar\n- bat\n- baz");
 
   P.appendText(" faz ");
-  EXPECT_EQ(P.asEscapedMarkdown(), "after  \n  foobar\n\\- bat\n\\- baz faz");
+  EXPECT_EQ(P.asEscapedMarkdown(),
+            "after  \n  foobar  \n\\- bat  \n\\- baz faz");
   EXPECT_EQ(P.asMarkdown(), "after  \n  foobar\n- bat\n- baz faz");
   EXPECT_EQ(P.asPlainText(), "after\nfoobar\n- bat\n- baz faz");
+}
+
+TEST(Paragraph, PunctuationLineBreaks) {
+
+  struct {
+    std::string Text;
+    std::string EscapedMarkdown;
+    std::string Markdown;
+    std::string PlainText;
+  } Cases[] = {
+      {"Line ending with dot.\nForces a visual linebreak.",
+       "Line ending with dot.  \nForces a visual linebreak.",
+       "Line ending with dot.  \nForces a visual linebreak.",
+       "Line ending with dot.\nForces a visual linebreak."},
+      {"Line ending with colon:\nForces a visual linebreak.",
+       "Line ending with colon:  \nForces a visual linebreak.",
+       "Line ending with colon:  \nForces a visual linebreak.",
+       "Line ending with colon:\nForces a visual linebreak."},
+      {"Line ending with semicolon:\nForces a visual linebreak.",
+       "Line ending with semicolon:  \nForces a visual linebreak.",
+       "Line ending with semicolon:  \nForces a visual linebreak.",
+       "Line ending with semicolon:\nForces a visual linebreak."},
+      {"Line ending with comma,\nForces a visual linebreak.",
+       "Line ending with comma,  \nForces a visual linebreak.",
+       "Line ending with comma,  \nForces a visual linebreak.",
+       "Line ending with comma,\nForces a visual linebreak."},
+      {"Line ending with exclamation mark!\nForces a visual linebreak.",
+       "Line ending with exclamation mark!  \nForces a visual linebreak.",
+       "Line ending with exclamation mark!  \nForces a visual linebreak.",
+       "Line ending with exclamation mark!\nForces a visual linebreak."},
+      {"Line ending with question mark?\nForces a visual linebreak.",
+       "Line ending with question mark?  \nForces a visual linebreak.",
+       "Line ending with question mark?  \nForces a visual linebreak.",
+       "Line ending with question mark?\nForces a visual linebreak."},
+  };
+
+  for (const auto &C : Cases) {
+    Paragraph P;
+    P.appendText(C.Text);
+    EXPECT_EQ(P.asEscapedMarkdown(), C.EscapedMarkdown);
+    EXPECT_EQ(P.asMarkdown(), C.Markdown);
+    EXPECT_EQ(P.asPlainText(), C.PlainText);
+  }
+}
+
+TEST(Paragraph, LineBreakIndicators) {
+
+  struct {
+    std::string Text;
+    std::string EscapedMarkdown;
+    std::string Markdown;
+    std::string PlainText;
+  } Cases[] = {
+      {"Visual linebreak for\n- list items\n- and so on",
+       "Visual linebreak for  \n\\- list items  \n\\- and so on",
+       "Visual linebreak for\n- list items\n- and so on",
+       "Visual linebreak for\n- list items\n- and so on"},
+      {"Visual linebreak for\n* list items\n* and so on",
+       "Visual linebreak for  \n\\* list items  \n\\* and so on",
+       "Visual linebreak for\n* list items\n* and so on",
+       "Visual linebreak for\n* list items\n* and so on"},
+      {"Visual linebreak for\n@command any doxygen command\n\\other other "
+       "doxygen command",
+       "Visual linebreak for  \n@command any doxygen command  \n\\\\other "
+       "other doxygen command",
+       "Visual linebreak for  \n@command any doxygen command  \n\\other other "
+       "doxygen command",
+       "Visual linebreak for\n@command any doxygen command\n\\other other "
+       "doxygen command"},
+      {"Visual linebreak for\n>blockquoute line 1\n> blockquoute line 2",
+       "Visual linebreak for  \n\\>blockquoute line 1  \n\\> blockquoute line "
+       "2",
+       "Visual linebreak for\n>blockquoute line 1\n> blockquoute line 2",
+       "Visual linebreak for\n>blockquoute line 1\n> blockquoute line 2"},
+      {"Visual linebreak for\n# Heading 1\ntext under heading\n## Heading "
+       "2\ntext under heading 2",
+       "Visual linebreak for  \n\\# Heading 1\ntext under heading  \n\\## "
+       "Heading 2\ntext under heading 2",
+       "Visual linebreak for\n# Heading 1\ntext under heading\n## Heading "
+       "2\ntext under heading 2",
+       "Visual linebreak for\n# Heading 1 text under heading\n## Heading 2 "
+       "text under heading 2"},
+      {"Visual linebreak for\n`inline code`",
+       "Visual linebreak for  \n\\`inline code\\`",
+       "Visual linebreak for\n`inline code`",
+       "Visual linebreak for\n`inline code`"},
+  };
+
+  for (const auto &C : Cases) {
+    Paragraph P;
+    P.appendText(C.Text);
+    EXPECT_EQ(P.asEscapedMarkdown(), C.EscapedMarkdown);
+    EXPECT_EQ(P.asMarkdown(), C.Markdown);
+    EXPECT_EQ(P.asPlainText(), C.PlainText);
+  }
 }
 
 TEST(Paragraph, ExtraSpaces) {

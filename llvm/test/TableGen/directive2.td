@@ -54,6 +54,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  #include <utility>
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
+// CHECK-EMPTY:
 // CHECK-NEXT:  namespace tdl {
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Association {
@@ -132,6 +133,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  LLVM_ABI Association getDirectiveAssociation(Directive D);
 // CHECK-NEXT:  LLVM_ABI Category getDirectiveCategory(Directive D);
 // CHECK-NEXT:  LLVM_ABI SourceLanguage getDirectiveLanguages(Directive D);
+// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace tdl
 // CHECK-EMPTY:
 // CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Association> {
@@ -149,14 +151,15 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Clause> {
 // CHECK-NEXT:    static constexpr bool is_iterable = true;
 // CHECK-NEXT:  };
+// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm
+// CHECK-EMPTY:
 // CHECK-NEXT:  #endif // LLVM_Tdl_INC
 
 // IMPL:      #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-NEXT: #undef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-EMPTY:
-// IMPL-NEXT: namespace llvm {
-// IMPL-NEXT: namespace tdl {
+// IMPL-NEXT: namespace llvm::tdl {
 // IMPL-EMPTY:
 // IMPL-NEXT:   // Sets for dira
 // IMPL-EMPTY:
@@ -173,8 +176,8 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-EMPTY:
 // IMPL-NEXT:   static  requiredClauses_TDLD_dira {
 // IMPL-NEXT:   };
-// IMPL-NEXT: } // namespace tdl
-// IMPL-NEXT: } // namespace llvm
+// IMPL-EMPTY:
+// IMPL-NEXT: } // namespace llvm::tdl
 // IMPL-EMPTY:
 // IMPL-NEXT: #endif // GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-EMPTY:

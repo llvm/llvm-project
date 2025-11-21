@@ -1207,7 +1207,7 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
   } else {
     // Bitcast the block literal to a generic block literal.
     BlockPtr =
-        Builder.CreatePointerCast(BlockPtr, UnqualPtrTy, "block.literal");
+        Builder.CreatePointerCast(BlockPtr, DefaultPtrTy, "block.literal");
     // Get pointer to the block invoke function
     FuncPtr = Builder.CreateStructGEP(GenBlockTy, BlockPtr, 3);
 

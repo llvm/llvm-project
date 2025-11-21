@@ -206,10 +206,14 @@ void ThreadStart(ThreadState *thr, Tid tid, ThreadID os_id,
   }
 #endif
 
-#if !SANITIZER_GO
+#if !SANITIZER_GO && !SANITIZER_ANDROID
   // Don't imitate stack/TLS writes for the main thread,
   // because its initialization is synchronized with all
   // subsequent threads anyway.
+  // Because thr is created by MmapOrDie, the thr object
+  // is not in tls, the pointer to the thr object is in
+  // TLS_SLOT_SANITIZER slot. So skip this check on
+  // Android platform.
   if (tid != kMainTid) {
     if (stk_addr && stk_size) {
       const uptr pc = StackTrace::GetNextInstructionPc(

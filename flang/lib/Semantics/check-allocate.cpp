@@ -26,6 +26,10 @@ struct AllocateCheckerInfo {
   std::optional<evaluate::DynamicType> sourceExprType;
   std::optional<parser::CharBlock> sourceExprLoc;
   std::optional<parser::CharBlock> typeSpecLoc;
+  std::optional<parser::CharBlock> statSource;
+  std::optional<parser::CharBlock> msgSource;
+  const SomeExpr *statVar{nullptr};
+  const SomeExpr *msgVar{nullptr};
   int sourceExprRank{0}; // only valid if gotMold || gotSource
   bool gotStat{false};
   bool gotMsg{false};
@@ -141,22 +145,30 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
             [&](const parser::StatOrErrmsg &statOrErr) {
               common::visit(
                   common::visitors{
-                      [&](const parser::StatVariable &) {
+                      [&](const parser::StatVariable &var) {
                         if (info.gotStat) { // C943
                           context.Say(
                               "STAT may not be duplicated in a ALLOCATE statement"_err_en_US);
                         }
                         info.gotStat = true;
+                        info.statVar = GetExpr(context, var);
+                        info.statSource =
+                            parser::Unwrap<parser::Variable>(var)->GetSource();
                       },
                       [&](const parser::MsgVariable &var) {
                         WarnOnDeferredLengthCharacterScalar(context,
                             GetExpr(context, var),
-                            var.v.thing.thing.GetSource(), "ERRMSG=");
+                            parser::UnwrapRef<parser::Variable>(var)
+                                .GetSource(),
+                            "ERRMSG=");
                         if (info.gotMsg) { // C943
                           context.Say(
                               "ERRMSG may not be duplicated in a ALLOCATE statement"_err_en_US);
                         }
                         info.gotMsg = true;
+                        info.msgVar = GetExpr(context, var);
+                        info.msgSource =
+                            parser::Unwrap<parser::Variable>(var)->GetSource();
                       },
                   },
                   statOrErr.u);
@@ -439,7 +451,7 @@ static bool HaveCompatibleLengths(
         evaluate::ToInt64(type1.characterTypeSpec().length().GetExplicit())};
     auto v2{
         evaluate::ToInt64(type2.characterTypeSpec().length().GetExplicit())};
-    return !v1 || !v2 || *v1 == *v2;
+    return !v1 || !v2 || (*v1 >= 0 ? *v1 : 0) == (*v2 >= 0 ? *v2 : 0);
   } else {
     return true;
   }
@@ -452,9 +464,19 @@ static bool HaveCompatibleLengths(
     auto v1{
         evaluate::ToInt64(type1.characterTypeSpec().length().GetExplicit())};
     auto v2{type2.knownLength()};
-    return !v1 || !v2 || *v1 == *v2;
+    return !v1 || !v2 || (*v1 >= 0 ? *v1 : 0) == (*v2 >= 0 ? *v2 : 0);
   } else {
     return true;
+  }
+}
+
+bool AreSameAllocation(const SomeExpr *root, const SomeExpr *path) {
+  if (root && path) {
+    // For now we just use equality of expressions. If we implement a more
+    // sophisticated alias analysis we should use it here.
+    return *root == *path;
+  } else {
+    return false;
   }
 }
 
@@ -598,7 +620,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           std::optional<evaluate::ConstantSubscript> lbound;
           if (const auto &lb{std::get<0>(shapeSpec.t)}) {
             lbound.reset();
-            const auto &lbExpr{lb->thing.thing.value()};
+            const auto &lbExpr{parser::UnwrapRef<parser::Expr>(lb)};
             if (const auto *expr{GetExpr(context, lbExpr)}) {
               auto folded{
                   evaluate::Fold(context.foldingContext(), SomeExpr(*expr))};
@@ -609,7 +631,8 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             lbound = 1;
           }
           if (lbound) {
-            const auto &ubExpr{std::get<1>(shapeSpec.t).thing.thing.value()};
+            const auto &ubExpr{
+                parser::UnwrapRef<parser::Expr>(std::get<1>(shapeSpec.t))};
             if (const auto *expr{GetExpr(context, ubExpr)}) {
               auto folded{
                   evaluate::Fold(context.foldingContext(), SomeExpr(*expr))};
@@ -685,6 +708,17 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     if (!cudaAttr || *cudaAttr != common::CUDADataAttr::Device) {
       context.Say(name_.source,
           "Object in ALLOCATE must have DEVICE attribute when STREAM option is specified"_err_en_US);
+    }
+  }
+
+  if (const SomeExpr *allocObj{GetExpr(context, allocateObject_)}) {
+    if (AreSameAllocation(allocObj, allocateInfo_.statVar)) {
+      context.Say(allocateInfo_.statSource.value_or(name_.source),
+          "STAT variable in ALLOCATE must not be the variable being allocated"_err_en_US);
+    }
+    if (AreSameAllocation(allocObj, allocateInfo_.msgVar)) {
+      context.Say(allocateInfo_.msgSource.value_or(name_.source),
+          "ERRMSG variable in ALLOCATE must not be the variable being allocated"_err_en_US);
     }
   }
   return RunCoarrayRelatedChecks(context);

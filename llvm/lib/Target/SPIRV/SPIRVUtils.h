@@ -289,6 +289,9 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
 // Get constant integer value of the given ConstReg.
 uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
 
+// Get constant integer value of the given ConstReg, sign-extended.
+int64_t getIConstValSext(Register ConstReg, const MachineRegisterInfo *MRI);
+
 // Check if MI is a SPIR-V specific intrinsic call.
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
 // Check if it's a SPIR-V specific intrinsic call.
@@ -556,5 +559,8 @@ unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType);
 MachineBasicBlock::iterator
 getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
+
+std::optional<SPIRV::LinkageType::LinkageType>
+getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

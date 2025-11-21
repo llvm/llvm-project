@@ -79,7 +79,7 @@ svint64_t lax_cast(fixed_int32_t type) {
 // CHECK-LABEL: define dso_local <vscale x 4 x i32> @to_svint32_t__from_gnu_int32_t(
 // CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TYPE:%.*]] = load <16 x i32>, ptr [[TMP0]], align 16, !tbaa [[CHAR_TBAA2:![0-9]+]]
+// CHECK-NEXT:    [[TYPE:%.*]] = load <16 x i32>, ptr [[TMP0]], align 16, !tbaa [[CHAR_TBAA6:![0-9]+]]
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> poison, <16 x i32> [[TYPE]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[CAST_SCALABLE]]
 //
@@ -91,7 +91,7 @@ svint32_t to_svint32_t__from_gnu_int32_t(gnu_int32_t type) {
 // CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i32>) align 16 captures(none) initializes((0, 64)) [[AGG_RESULT:%.*]], <vscale x 4 x i32> [[TYPE:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CAST_FIXED:%.*]] = tail call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[TYPE]], i64 0)
-// CHECK-NEXT:    store <16 x i32> [[CAST_FIXED]], ptr [[AGG_RESULT]], align 16, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    store <16 x i32> [[CAST_FIXED]], ptr [[AGG_RESULT]], align 16, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 gnu_int32_t from_svint32_t__to_gnu_int32_t(svint32_t type) {
@@ -101,7 +101,7 @@ gnu_int32_t from_svint32_t__to_gnu_int32_t(svint32_t type) {
 // CHECK-LABEL: define dso_local <vscale x 4 x i32> @to_fixed_int32_t__from_gnu_int32_t(
 // CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TYPE:%.*]] = load <16 x i32>, ptr [[TMP0]], align 16, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TYPE:%.*]] = load <16 x i32>, ptr [[TMP0]], align 16, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> poison, <16 x i32> [[TYPE]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[CAST_SCALABLE]]
 //
@@ -113,14 +113,14 @@ fixed_int32_t to_fixed_int32_t__from_gnu_int32_t(gnu_int32_t type) {
 // CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i32>) align 16 captures(none) initializes((0, 64)) [[AGG_RESULT:%.*]], <vscale x 4 x i32> noundef [[TYPE_COERCE:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TYPE:%.*]] = tail call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[TYPE_COERCE]], i64 0)
-// CHECK-NEXT:    store <16 x i32> [[TYPE]], ptr [[AGG_RESULT]], align 16, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    store <16 x i32> [[TYPE]], ptr [[AGG_RESULT]], align 16, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 gnu_int32_t from_fixed_int32_t__to_gnu_int32_t(fixed_int32_t type) {
   return type;
 }
 //.
-// CHECK: [[CHAR_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[CHAR_TBAA6]] = !{[[META4]], [[META4]], i64 0}
 //.

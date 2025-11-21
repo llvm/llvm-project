@@ -1121,6 +1121,8 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   bool IsMasked = false;
   // This is used by segment load/store to determine it's llvm type.
   unsigned SegInstSEW = 8;
+  // This is used by XSfmm.
+  unsigned TWiden = 0;
 
   // Required for overloaded intrinsics.
   llvm::SmallVector<llvm::Type *, 2> IntrinsicTypes;

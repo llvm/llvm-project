@@ -140,7 +140,7 @@ public:
   }
 
   // Iterate through the registered counters
-  typedef UniqueVector<std::string> CounterVector;
+  using CounterVector = UniqueVector<std::string>;
   CounterVector::const_iterator begin() const {
     return RegisteredCounters.begin();
   }
@@ -178,6 +178,7 @@ protected:
     std::string Desc;
     SmallVector<Chunk> Chunks;
   };
+  bool handleCounterIncrement(CounterInfo &Info);
 
   DenseMap<unsigned, CounterInfo> Counters;
   CounterVector RegisteredCounters;
@@ -187,6 +188,8 @@ protected:
   bool Enabled = false;
 
   bool ShouldPrintCounter = false;
+
+  bool ShouldPrintCounterQueries = false;
 
   bool BreakOnLast = false;
 };

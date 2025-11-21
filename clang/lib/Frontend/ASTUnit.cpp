@@ -512,152 +512,73 @@ namespace {
 /// Gathers information from ASTReader that will be used to initialize
 /// a Preprocessor.
 class ASTInfoCollector : public ASTReaderListener {
-  Preprocessor &PP;
-  ASTContext *Context;
   HeaderSearchOptions &HSOpts;
+  std::string &SpecificModuleCachePath;
   PreprocessorOptions &PPOpts;
-  LangOptions &LangOpt;
+  LangOptions &LangOpts;
   CodeGenOptions &CodeGenOpts;
-  std::shared_ptr<TargetOptions> &TargetOpts;
-  IntrusiveRefCntPtr<TargetInfo> &Target;
-  unsigned &Counter;
-  bool InitializedLanguage = false;
-  bool InitializedHeaderSearchPaths = false;
+  TargetOptions &TargetOpts;
+  uint32_t &Counter;
 
 public:
-  ASTInfoCollector(Preprocessor &PP, ASTContext *Context,
-                   HeaderSearchOptions &HSOpts, PreprocessorOptions &PPOpts,
-                   LangOptions &LangOpt, CodeGenOptions &CodeGenOpts,
-                   std::shared_ptr<TargetOptions> &TargetOpts,
-                   IntrusiveRefCntPtr<TargetInfo> &Target, unsigned &Counter)
-      : PP(PP), Context(Context), HSOpts(HSOpts), PPOpts(PPOpts),
-        LangOpt(LangOpt), CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts),
-        Target(Target), Counter(Counter) {}
+  ASTInfoCollector(HeaderSearchOptions &HSOpts,
+                   std::string &SpecificModuleCachePath,
+                   PreprocessorOptions &PPOpts, LangOptions &LangOpts,
+                   CodeGenOptions &CodeGenOpts, TargetOptions &TargetOpts,
+                   uint32_t &Counter)
+      : HSOpts(HSOpts), SpecificModuleCachePath(SpecificModuleCachePath),
+        PPOpts(PPOpts), LangOpts(LangOpts), CodeGenOpts(CodeGenOpts),
+        TargetOpts(TargetOpts), Counter(Counter) {}
 
-  bool ReadLanguageOptions(const LangOptions &LangOpts,
+  bool ReadLanguageOptions(const LangOptions &NewLangOpts,
                            StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override {
-    if (InitializedLanguage)
-      return false;
-
-    // FIXME: We did similar things in ReadHeaderSearchOptions too. But such
-    // style is not scaling. Probably we need to invite some mechanism to
-    // handle such patterns generally.
-    auto PICLevel = LangOpt.PICLevel;
-    auto PIE = LangOpt.PIE;
-
-    LangOpt = LangOpts;
-
-    LangOpt.PICLevel = PICLevel;
-    LangOpt.PIE = PIE;
-
-    InitializedLanguage = true;
-
-    updated();
+    LangOpts = NewLangOpts;
     return false;
   }
 
-  bool ReadCodeGenOptions(const CodeGenOptions &CGOpts,
+  bool ReadCodeGenOptions(const CodeGenOptions &NewCodeGenOpts,
                           StringRef ModuleFilename, bool Complain,
                           bool AllowCompatibleDifferences) override {
-    this->CodeGenOpts = CGOpts;
+    CodeGenOpts = NewCodeGenOpts;
     return false;
   }
 
-  bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
+  bool ReadHeaderSearchOptions(const HeaderSearchOptions &NewHSOpts,
                                StringRef ModuleFilename,
-                               StringRef SpecificModuleCachePath,
+                               StringRef NewSpecificModuleCachePath,
                                bool Complain) override {
-    // llvm::SaveAndRestore doesn't support bit field.
-    auto ForceCheckCXX20ModulesInputFiles =
-        this->HSOpts.ForceCheckCXX20ModulesInputFiles;
-    llvm::SaveAndRestore X(this->HSOpts.UserEntries);
-    llvm::SaveAndRestore Y(this->HSOpts.SystemHeaderPrefixes);
-    llvm::SaveAndRestore Z(this->HSOpts.VFSOverlayFiles);
-
-    this->HSOpts = HSOpts;
-    this->HSOpts.ForceCheckCXX20ModulesInputFiles =
-        ForceCheckCXX20ModulesInputFiles;
-
+    HSOpts = NewHSOpts;
+    SpecificModuleCachePath = NewSpecificModuleCachePath;
     return false;
   }
 
-  bool ReadHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
+  bool ReadHeaderSearchPaths(const HeaderSearchOptions &NewHSOpts,
                              bool Complain) override {
-    if (InitializedHeaderSearchPaths)
-      return false;
-
-    this->HSOpts.UserEntries = HSOpts.UserEntries;
-    this->HSOpts.SystemHeaderPrefixes = HSOpts.SystemHeaderPrefixes;
-    this->HSOpts.VFSOverlayFiles = HSOpts.VFSOverlayFiles;
-
-    // Initialize the FileManager. We can't do this in update(), since that
-    // performs the initialization too late (once both target and language
-    // options are read).
-    PP.getFileManager().setVirtualFileSystem(createVFSFromOverlayFiles(
-        HSOpts.VFSOverlayFiles, PP.getDiagnostics(),
-        PP.getFileManager().getVirtualFileSystemPtr()));
-
-    InitializedHeaderSearchPaths = true;
-
+    HSOpts.UserEntries = NewHSOpts.UserEntries;
+    HSOpts.SystemHeaderPrefixes = NewHSOpts.SystemHeaderPrefixes;
+    HSOpts.VFSOverlayFiles = NewHSOpts.VFSOverlayFiles;
     return false;
   }
 
-  bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
+  bool ReadPreprocessorOptions(const PreprocessorOptions &NewPPOpts,
                                StringRef ModuleFilename, bool ReadMacros,
                                bool Complain,
                                std::string &SuggestedPredefines) override {
-    this->PPOpts = PPOpts;
+    PPOpts = NewPPOpts;
     return false;
   }
 
-  bool ReadTargetOptions(const TargetOptions &TargetOpts,
+  bool ReadTargetOptions(const TargetOptions &NewTargetOpts,
                          StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override {
-    // If we've already initialized the target, don't do it again.
-    if (Target)
-      return false;
-
-    this->TargetOpts = std::make_shared<TargetOptions>(TargetOpts);
-    Target =
-        TargetInfo::CreateTargetInfo(PP.getDiagnostics(), *this->TargetOpts);
-
-    updated();
+    TargetOpts = NewTargetOpts;
     return false;
   }
 
   void ReadCounter(const serialization::ModuleFile &M,
-                   unsigned Value) override {
-    Counter = Value;
-  }
-
-private:
-  void updated() {
-    if (!Target || !InitializedLanguage)
-      return;
-
-    // Inform the target of the language options.
-    //
-    // FIXME: We shouldn't need to do this, the target should be immutable once
-    // created. This complexity should be lifted elsewhere.
-    Target->adjust(PP.getDiagnostics(), LangOpt, /*AuxTarget=*/nullptr);
-
-    // Initialize the preprocessor.
-    PP.Initialize(*Target);
-
-    if (!Context)
-      return;
-
-    // Initialize the ASTContext
-    Context->InitBuiltinTypes(*Target);
-
-    // Adjust printing policy based on language options.
-    Context->setPrintingPolicy(PrintingPolicy(LangOpt));
-
-    // We didn't have access to the comment options when the ASTContext was
-    // constructed, so register them now.
-    Context->getCommentCommandTraits().registerCommentOptions(
-        LangOpt.CommentOpts);
+                   uint32_t NewCounter) override {
+    Counter = NewCounter;
   }
 };
 
@@ -812,7 +733,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     std::shared_ptr<DiagnosticOptions> DiagOpts,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
     const FileSystemOptions &FileSystemOpts, const HeaderSearchOptions &HSOpts,
-    const LangOptions *LangOpts, bool OnlyLocalDecls,
+    const LangOptions *ProvidedLangOpts, bool OnlyLocalDecls,
     CaptureDiagsKind CaptureDiagnostics, bool AllowASTWithCompilerErrors,
     bool UserFilesAreVolatile) {
   std::unique_ptr<ASTUnit> AST(new ASTUnit(true));
@@ -826,41 +747,71 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
 
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
 
-  AST->LangOpts = LangOpts ? std::make_unique<LangOptions>(*LangOpts)
-                           : std::make_unique<LangOptions>();
+  std::unique_ptr<LangOptions> LocalLangOpts;
+  const LangOptions &LangOpts = [&]() -> const LangOptions & {
+    if (ProvidedLangOpts)
+      return *ProvidedLangOpts;
+    LocalLangOpts = std::make_unique<LangOptions>();
+    return *LocalLangOpts;
+  }();
+
+  AST->LangOpts = std::make_unique<LangOptions>(LangOpts);
   AST->OnlyLocalDecls = OnlyLocalDecls;
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->DiagOpts = DiagOpts;
   AST->Diagnostics = Diags;
-  AST->FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOpts, VFS);
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
-  AST->SourceMgr = llvm::makeIntrusiveRefCnt<SourceManager>(
-      AST->getDiagnostics(), AST->getFileManager(), UserFilesAreVolatile);
-  AST->ModCache = createCrossProcessModuleCache();
   AST->HSOpts = std::make_unique<HeaderSearchOptions>(HSOpts);
   AST->HSOpts->ModuleFormat = std::string(PCHContainerRdr.getFormats().front());
-  AST->HeaderInfo.reset(new HeaderSearch(AST->getHeaderSearchOpts(),
-                                         AST->getSourceManager(),
-                                         AST->getDiagnostics(),
-                                         AST->getLangOpts(),
-                                         /*Target=*/nullptr));
   AST->PPOpts = std::make_shared<PreprocessorOptions>();
+  AST->CodeGenOpts = std::make_unique<CodeGenOptions>();
+  AST->TargetOpts = std::make_shared<TargetOptions>();
 
-  // Gather Info for preprocessor construction later on.
+  AST->ModCache = createCrossProcessModuleCache();
 
-  HeaderSearch &HeaderInfo = *AST->HeaderInfo;
+  // Gather info for preprocessor construction later on.
+  std::string SpecificModuleCachePath;
+  unsigned Counter = 0;
+  // Using a temporary FileManager since the AST file might specify custom
+  // HeaderSearchOptions::VFSOverlayFiles that affect the underlying VFS.
+  FileManager TmpFileMgr(FileSystemOpts, VFS);
+  ASTInfoCollector Collector(*AST->HSOpts, SpecificModuleCachePath,
+                             *AST->PPOpts, *AST->LangOpts, *AST->CodeGenOpts,
+                             *AST->TargetOpts, Counter);
+  if (ASTReader::readASTFileControlBlock(
+          Filename, TmpFileMgr, *AST->ModCache, PCHContainerRdr,
+          /*FindModuleFileExtensions=*/true, Collector,
+          /*ValidateDiagnosticOptions=*/true, ASTReader::ARR_None)) {
+    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_pch);
+    return nullptr;
+  }
+
+  VFS = createVFSFromOverlayFiles(AST->HSOpts->VFSOverlayFiles,
+                                  *AST->Diagnostics, std::move(VFS));
+
+  AST->FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOpts, VFS);
+
+  AST->SourceMgr = llvm::makeIntrusiveRefCnt<SourceManager>(
+      AST->getDiagnostics(), AST->getFileManager(), UserFilesAreVolatile);
+
+  AST->HSOpts->PrebuiltModuleFiles = HSOpts.PrebuiltModuleFiles;
+  AST->HSOpts->PrebuiltModulePaths = HSOpts.PrebuiltModulePaths;
+  AST->HeaderInfo = std::make_unique<HeaderSearch>(
+      AST->getHeaderSearchOpts(), AST->getSourceManager(),
+      AST->getDiagnostics(), AST->getLangOpts(),
+      /*Target=*/nullptr);
+  AST->HeaderInfo->setModuleCachePath(SpecificModuleCachePath);
 
   AST->PP = std::make_shared<Preprocessor>(
       *AST->PPOpts, AST->getDiagnostics(), *AST->LangOpts,
-      AST->getSourceManager(), HeaderInfo, AST->ModuleLoader,
+      AST->getSourceManager(), *AST->HeaderInfo, AST->ModuleLoader,
       /*IILookup=*/nullptr,
       /*OwnsHeaderSearch=*/false);
-  Preprocessor &PP = *AST->PP;
 
   if (ToLoad >= LoadASTOnly)
     AST->Ctx = llvm::makeIntrusiveRefCnt<ASTContext>(
-        *AST->LangOpts, AST->getSourceManager(), PP.getIdentifierTable(),
-        PP.getSelectorTable(), PP.getBuiltinInfo(),
+        *AST->LangOpts, AST->getSourceManager(), AST->PP->getIdentifierTable(),
+        AST->PP->getSelectorTable(), AST->PP->getBuiltinInfo(),
         AST->getTranslationUnitKind());
 
   DisableValidationForModuleKind disableValid =
@@ -868,23 +819,59 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
     disableValid = DisableValidationForModuleKind::All;
   AST->Reader = llvm::makeIntrusiveRefCnt<ASTReader>(
-      PP, *AST->ModCache, AST->Ctx.get(), PCHContainerRdr, *AST->CodeGenOpts,
-      ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
+      *AST->PP, *AST->ModCache, AST->Ctx.get(), PCHContainerRdr,
+      *AST->CodeGenOpts, ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
       /*isysroot=*/"",
       /*DisableValidationKind=*/disableValid, AllowASTWithCompilerErrors);
 
-  unsigned Counter = 0;
-  AST->Reader->setListener(std::make_unique<ASTInfoCollector>(
-      *AST->PP, AST->Ctx.get(), *AST->HSOpts, *AST->PPOpts, *AST->LangOpts,
-      *AST->CodeGenOpts, AST->TargetOpts, AST->Target, Counter));
-
-  // Attach the AST reader to the AST context as an external AST
-  // source, so that declarations will be deserialized from the
-  // AST file as needed.
+  // Attach the AST reader to the AST context as an external AST source, so that
+  // declarations will be deserialized from the AST file as needed.
   // We need the external source to be set up before we read the AST, because
   // eagerly-deserialized declarations may use it.
   if (AST->Ctx)
     AST->Ctx->setExternalSource(AST->Reader);
+
+  AST->Target =
+      TargetInfo::CreateTargetInfo(AST->PP->getDiagnostics(), *AST->TargetOpts);
+  // Inform the target of the language options.
+  //
+  // FIXME: We shouldn't need to do this, the target should be immutable once
+  // created. This complexity should be lifted elsewhere.
+  AST->Target->adjust(AST->PP->getDiagnostics(), *AST->LangOpts,
+                      /*AuxTarget=*/nullptr);
+
+  // Initialize the preprocessor.
+  AST->PP->Initialize(*AST->Target);
+
+  AST->PP->setCounterValue(Counter);
+
+  if (AST->Ctx) {
+    // Initialize the ASTContext
+    AST->Ctx->InitBuiltinTypes(*AST->Target);
+
+    // Adjust printing policy based on language options.
+    AST->Ctx->setPrintingPolicy(PrintingPolicy(*AST->LangOpts));
+
+    // We didn't have access to the comment options when the ASTContext was
+    // constructed, so register them now.
+    AST->Ctx->getCommentCommandTraits().registerCommentOptions(
+        AST->LangOpts->CommentOpts);
+  }
+
+  // The temporary FileManager we used for ASTReader::readASTFileControlBlock()
+  // might have already read stdin, and reading it again will fail. Let's
+  // explicitly forward the buffer.
+  if (Filename == "-")
+    if (auto FE = llvm::expectedToOptional(TmpFileMgr.getSTDIN()))
+      if (auto BufRef = TmpFileMgr.getBufferForFile(*FE)) {
+        auto Buf = llvm::MemoryBuffer::getMemBufferCopy(
+            (*BufRef)->getBuffer(), (*BufRef)->getBufferIdentifier());
+        AST->Reader->getModuleManager().addInMemoryBuffer("-", std::move(Buf));
+      }
+
+  // Reinstate the provided options that are relevant for reading AST files.
+  AST->HSOpts->ForceCheckCXX20ModulesInputFiles =
+      HSOpts.ForceCheckCXX20ModulesInputFiles;
 
   switch (AST->Reader->ReadAST(Filename, serialization::MK_MainFile,
                                SourceLocation(), ASTReader::ARR_None)) {
@@ -901,11 +888,18 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     return nullptr;
   }
 
+  // Now that we have successfully loaded the AST file, we can reinstate some
+  // options that the clients expect us to preserve (but would trip AST file
+  // validation, so we couldn't set them earlier).
+  AST->HSOpts->UserEntries = HSOpts.UserEntries;
+  AST->HSOpts->SystemHeaderPrefixes = HSOpts.SystemHeaderPrefixes;
+  AST->HSOpts->VFSOverlayFiles = HSOpts.VFSOverlayFiles;
+  AST->LangOpts->PICLevel = LangOpts.PICLevel;
+  AST->LangOpts->PIE = LangOpts.PIE;
+
   AST->OriginalSourceFile = std::string(AST->Reader->getOriginalSourceFile());
 
-  PP.setCounterValue(Counter);
-
-  Module *M = HeaderInfo.lookupModule(AST->getLangOpts().CurrentModule);
+  Module *M = AST->HeaderInfo->lookupModule(AST->getLangOpts().CurrentModule);
   if (M && AST->getLangOpts().isCompilingModule() && M->isNamedModule())
     AST->Ctx->setCurrentNamedModule(M);
 
@@ -915,13 +909,14 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
 
   // Create a semantic analysis object and tell the AST reader about it.
   if (ToLoad >= LoadEverything) {
-    AST->TheSema.reset(new Sema(PP, *AST->Ctx, *AST->Consumer));
+    AST->TheSema = std::make_unique<Sema>(*AST->PP, *AST->Ctx, *AST->Consumer);
     AST->TheSema->Initialize();
     AST->Reader->InitializeSema(*AST->TheSema);
   }
 
   // Tell the diagnostic client that we have started a source file.
-  AST->getDiagnostics().getClient()->BeginSourceFile(PP.getLangOpts(), &PP);
+  AST->getDiagnostics().getClient()->BeginSourceFile(AST->PP->getLangOpts(),
+                                                     AST->PP.get());
 
   return AST;
 }
@@ -1651,6 +1646,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   AST->Reader = nullptr;
 
   // Create a file manager object to provide access to and cache the filesystem.
+  Clang->setVirtualFileSystem(AST->getVirtualFileSystemPtr());
   Clang->setFileManager(AST->getFileManagerPtr());
 
   // Create the source manager.
@@ -2290,6 +2286,7 @@ void ASTUnit::CodeComplete(
          "IR inputs not support here!");
 
   // Use the source and file managers that we were given.
+  Clang->setVirtualFileSystem(FileMgr->getVirtualFileSystemPtr());
   Clang->setFileManager(FileMgr);
   Clang->setSourceManager(SourceMgr);
 

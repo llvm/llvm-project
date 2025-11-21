@@ -190,8 +190,9 @@ def XeVM_StoreCacheControlAttr
 
 def XeVM_BlockLoadOp
     : XeVM_Op<"blockload">,
-      Results<(
-          outs FixedVectorOfRankAndType<[1], [XeVM_1DBlockElemType]>:$res)>,
+      Results<(outs AnyTypeOf<
+          [XeVM_1DBlockElemType,
+           FixedVectorOfRankAndType<[1], [XeVM_1DBlockElemType]>]>:$res)>,
       Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr,
           OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
   let summary = "subgroup block load";
@@ -228,7 +229,9 @@ def XeVM_BlockLoadOp
 def XeVM_BlockStoreOp
     : XeVM_Op<"blockstore">,
       Arguments<(ins Arg<LLVM_AnyPointer, "", [MemWrite]>:$ptr,
-          FixedVectorOfRankAndType<[1], [XeVM_1DBlockElemType]>:$val,
+          AnyTypeOf<[XeVM_1DBlockElemType,
+                     FixedVectorOfRankAndType<[1],
+                                              [XeVM_1DBlockElemType]>]>:$val,
           OptionalAttr<XeVM_StoreCacheControlAttr>:$cache_control)> {
   let summary = "subgroup block store";
   let description = [{
@@ -460,10 +463,9 @@ def XeVM_PrefetchOp
 
 def XeVM_BlockPrefetch2dOp
     : XeVM_Op<"blockprefetch2d">,
-      Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr, I32:$base_width,
-          I32:$base_height, I32:$base_pitch, I32:$x, I32:$y,
-          I32Attr:$elem_size_in_bits, I32Attr:$tile_width, I32Attr:$tile_height,
-          I32Attr:$v_blocks,
+      Arguments<(ins LLVM_AnyPointer:$ptr, I32:$base_width, I32:$base_height,
+          I32:$base_pitch, I32:$x, I32:$y, I32Attr:$elem_size_in_bits,
+          I32Attr:$tile_width, I32Attr:$tile_height, I32Attr:$v_blocks,
           OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
 
   let summary = "2D block prefetch";

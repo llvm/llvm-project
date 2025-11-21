@@ -120,12 +120,6 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
   assert(!cir::MissingFeatures::vtableRelativeLayout());
 
   switch (component.getKind()) {
-  case VTableComponent::CK_CompleteDtorPointer:
-    cgm.errorNYI("getVTableComponent: CompleteDtorPointer");
-    return mlir::Attribute();
-  case VTableComponent::CK_DeletingDtorPointer:
-    cgm.errorNYI("getVTableComponent: DeletingDtorPointer");
-    return mlir::Attribute();
   case VTableComponent::CK_UnusedFunctionPointer:
     cgm.errorNYI("getVTableComponent: UnusedFunctionPointer");
     return mlir::Attribute();
@@ -148,8 +142,12 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
            "expected GlobalViewAttr or ConstPtrAttr");
     return rtti;
 
-  case VTableComponent::CK_FunctionPointer: {
-    GlobalDecl gd = component.getGlobalDecl();
+  case VTableComponent::CK_FunctionPointer:
+  case VTableComponent::CK_CompleteDtorPointer:
+  case VTableComponent::CK_DeletingDtorPointer: {
+    GlobalDecl gd = component.getGlobalDecl(
+        cgm.getASTContext().getTargetInfo().emitVectorDeletingDtors(
+            cgm.getASTContext().getLangOpts()));
 
     assert(!cir::MissingFeatures::cudaSupport());
 
@@ -327,9 +325,40 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *rd) {
       llvm_unreachable("Should not have been asked to emit this");
     }
   }
+  // -fapple-kext mode does not support weak linkage, so we must use
+  // internal linkage.
+  if (astContext.getLangOpts().AppleKext)
+    return cir::GlobalLinkageKind::InternalLinkage;
 
-  errorNYI(rd->getSourceRange(), "getVTableLinkage: no key function");
-  return cir::GlobalLinkageKind::ExternalLinkage;
+  auto discardableODRLinkage = cir::GlobalLinkageKind::LinkOnceODRLinkage;
+  auto nonDiscardableODRLinkage = cir::GlobalLinkageKind::WeakODRLinkage;
+  if (rd->hasAttr<DLLExportAttr>()) {
+    // Cannot discard exported vtables.
+    discardableODRLinkage = nonDiscardableODRLinkage;
+  } else if (rd->hasAttr<DLLImportAttr>()) {
+    // Imported vtables are available externally.
+    discardableODRLinkage = cir::GlobalLinkageKind::AvailableExternallyLinkage;
+    nonDiscardableODRLinkage =
+        cir::GlobalLinkageKind::AvailableExternallyLinkage;
+  }
+
+  switch (rd->getTemplateSpecializationKind()) {
+  case TSK_Undeclared:
+  case TSK_ExplicitSpecialization:
+  case TSK_ImplicitInstantiation:
+    return discardableODRLinkage;
+
+  case TSK_ExplicitInstantiationDeclaration: {
+    errorNYI(rd->getSourceRange(),
+             "getVTableLinkage: explicit instantiation declaration");
+    return cir::GlobalLinkageKind::ExternalLinkage;
+  }
+
+  case TSK_ExplicitInstantiationDefinition:
+    return nonDiscardableODRLinkage;
+  }
+
+  llvm_unreachable("Invalid TemplateSpecializationKind!");
 }
 
 cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *rd) {

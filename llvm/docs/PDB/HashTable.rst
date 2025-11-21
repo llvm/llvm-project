@@ -17,8 +17,8 @@ a consumer to read a list of values and reconstruct the hash table on the fly.
 The serialization format supports hash tables of arbitrarily large size and
 capacity, as well as value types and hash functions.  The only supported key
 value type is a uint32.  The only requirement is that the producer and consumer
-agree on the hash function.  As such, the hash function can is not discussed
-further in this document, it is assumed that for a particular instance of a PDB
+agree on the hash function.  As such, the hash function is not discussed
+further in this document. It is assumed that for a particular instance of a PDB
 file hash table, the appropriate hash function is being used.
 
 On-Disk Format

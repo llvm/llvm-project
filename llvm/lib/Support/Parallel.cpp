@@ -7,12 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Parallel.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/ExponentialBackoff.h"
+#include "llvm/Support/Jobserver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
 
 #include <atomic>
 #include <future>
+#include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -49,6 +54,9 @@ public:
 class ThreadPoolExecutor : public Executor {
 public:
   explicit ThreadPoolExecutor(ThreadPoolStrategy S) {
+    if (S.UseJobserver)
+      TheJobserver = JobserverClient::getInstance();
+
     ThreadCount = S.compute_thread_count();
     // Spawn all but one of the threads in another thread as spawning threads
     // can take a while.
@@ -68,6 +76,10 @@ public:
       work(S, 0);
     });
   }
+
+  // To make sure the thread pool executor can only be created with a parallel
+  // strategy.
+  ThreadPoolExecutor() = delete;
 
   void stop() {
     {
@@ -111,15 +123,62 @@ private:
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
     threadIndex = ThreadID;
     S.apply_thread_strategy(ThreadID);
+    // Note on jobserver deadlock avoidance:
+    // GNU Make grants each invoked process one implicit job slot. Our
+    // JobserverClient models this by returning an implicit JobSlot on the
+    // first successful tryAcquire() in a process. This guarantees forward
+    // progress without requiring a dedicated "always-on" thread here.
+
+    static thread_local std::unique_ptr<ExponentialBackoff> Backoff;
+
     while (true) {
-      std::unique_lock<std::mutex> Lock(Mutex);
-      Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
-      if (Stop)
-        break;
-      auto Task = std::move(WorkStack.back());
-      WorkStack.pop_back();
-      Lock.unlock();
-      Task();
+      if (TheJobserver) {
+        // Jobserver-mode scheduling:
+        // - Acquire one job slot (with exponential backoff to avoid busy-wait).
+        // - While holding the slot, drain and run tasks from the local queue.
+        // - Release the slot when the queue is empty or when shutting down.
+        // Rationale: Holding a slot amortizes acquire/release overhead over
+        // multiple tasks and avoids requeue/yield churn, while still enforcing
+        // the jobserver’s global concurrency limit. With K available slots,
+        // up to K workers run tasks in parallel; within each worker tasks run
+        // sequentially until the local queue is empty.
+        ExponentialBackoff Backoff(std::chrono::hours(24));
+        JobSlot Slot;
+        do {
+          if (Stop)
+            return;
+          Slot = TheJobserver->tryAcquire();
+          if (Slot.isValid())
+            break;
+        } while (Backoff.waitForNextAttempt());
+
+        auto SlotReleaser = llvm::make_scope_exit(
+            [&] { TheJobserver->release(std::move(Slot)); });
+
+        while (true) {
+          std::function<void()> Task;
+          {
+            std::unique_lock<std::mutex> Lock(Mutex);
+            Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
+            if (Stop && WorkStack.empty())
+              return;
+            if (WorkStack.empty())
+              break;
+            Task = std::move(WorkStack.back());
+            WorkStack.pop_back();
+          }
+          Task();
+        }
+      } else {
+        std::unique_lock<std::mutex> Lock(Mutex);
+        Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
+        if (Stop)
+          break;
+        auto Task = std::move(WorkStack.back());
+        WorkStack.pop_back();
+        Lock.unlock();
+        Task();
+      }
     }
   }
 
@@ -130,6 +189,8 @@ private:
   std::promise<void> ThreadsCreated;
   std::vector<std::thread> Threads;
   unsigned ThreadCount;
+
+  JobserverClient *TheJobserver = nullptr;
 };
 
 Executor *Executor::getDefaultExecutor() {

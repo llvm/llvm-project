@@ -1161,6 +1161,8 @@ bool MIParser::parse(MachineInstr *&MI) {
       MemOperands.push_back(MemOp);
       if (Token.isNewlineOrEOF())
         break;
+      if (OpCode == TargetOpcode::BUNDLE && Token.is(MIToken::lbrace))
+        break;
       if (Token.isNot(MIToken::comma))
         return error("expected ',' before the next machine memory operand");
       lex();
@@ -2787,6 +2789,9 @@ bool MIParser::parseShuffleMaskOperand(MachineOperand &Dest) {
 
   if (expectAndConsume(MIToken::rparen))
     return error("shufflemask should be terminated by ')'.");
+
+  if (ShufMask.size() < 2)
+    return error("shufflemask should have > 1 element");
 
   ArrayRef<int> MaskAlloc = MF.allocateShuffleMask(ShufMask);
   Dest = MachineOperand::CreateShuffleMask(MaskAlloc);

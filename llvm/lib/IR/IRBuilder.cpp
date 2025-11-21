@@ -25,6 +25,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -494,9 +495,11 @@ CallInst *IRBuilderBase::CreateMaskedLoad(Type *Ty, Value *Ptr, Align Alignment,
   if (!PassThru)
     PassThru = PoisonValue::get(Ty);
   Type *OverloadedTypes[] = { Ty, PtrTy };
-  Value *Ops[] = {Ptr, getInt32(Alignment.value()), Mask, PassThru};
-  return CreateMaskedIntrinsic(Intrinsic::masked_load, Ops,
-                               OverloadedTypes, Name);
+  Value *Ops[] = {Ptr, Mask, PassThru};
+  CallInst *CI =
+      CreateMaskedIntrinsic(Intrinsic::masked_load, Ops, OverloadedTypes, Name);
+  CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), Alignment));
+  return CI;
 }
 
 /// Create a call to a Masked Store intrinsic.
@@ -512,8 +515,11 @@ CallInst *IRBuilderBase::CreateMaskedStore(Value *Val, Value *Ptr,
   assert(DataTy->isVectorTy() && "Val should be a vector");
   assert(Mask && "Mask should not be all-ones (null)");
   Type *OverloadedTypes[] = { DataTy, PtrTy };
-  Value *Ops[] = {Val, Ptr, getInt32(Alignment.value()), Mask};
-  return CreateMaskedIntrinsic(Intrinsic::masked_store, Ops, OverloadedTypes);
+  Value *Ops[] = {Val, Ptr, Mask};
+  CallInst *CI =
+      CreateMaskedIntrinsic(Intrinsic::masked_store, Ops, OverloadedTypes);
+  CI->addParamAttr(1, Attribute::getWithAlignment(CI->getContext(), Alignment));
+  return CI;
 }
 
 /// Create a call to a Masked intrinsic, with given intrinsic Id,
@@ -551,12 +557,14 @@ CallInst *IRBuilderBase::CreateMaskedGather(Type *Ty, Value *Ptrs,
     PassThru = PoisonValue::get(Ty);
 
   Type *OverloadedTypes[] = {Ty, PtrsTy};
-  Value *Ops[] = {Ptrs, getInt32(Alignment.value()), Mask, PassThru};
+  Value *Ops[] = {Ptrs, Mask, PassThru};
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
-  return CreateMaskedIntrinsic(Intrinsic::masked_gather, Ops, OverloadedTypes,
-                               Name);
+  CallInst *CI = CreateMaskedIntrinsic(Intrinsic::masked_gather, Ops,
+                                       OverloadedTypes, Name);
+  CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), Alignment));
+  return CI;
 }
 
 /// Create a call to a Masked Scatter intrinsic.
@@ -576,11 +584,14 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
     Mask = getAllOnesMask(NumElts);
 
   Type *OverloadedTypes[] = {DataTy, PtrsTy};
-  Value *Ops[] = {Data, Ptrs, getInt32(Alignment.value()), Mask};
+  Value *Ops[] = {Data, Ptrs, Mask};
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
-  return CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, OverloadedTypes);
+  CallInst *CI =
+      CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, OverloadedTypes);
+  CI->addParamAttr(1, Attribute::getWithAlignment(CI->getContext(), Alignment));
+  return CI;
 }
 
 /// Create a call to Masked Expand Load intrinsic
@@ -1000,6 +1011,17 @@ CallInst *IRBuilderBase::CreateConstrainedFPCall(
   CallInst *C = CreateCall(Callee, UseArgs, Name);
   setConstrainedFPCallAttr(C);
   return C;
+}
+
+Value *IRBuilderBase::CreateSelectWithUnknownProfile(Value *C, Value *True,
+                                                     Value *False,
+                                                     StringRef PassName,
+                                                     const Twine &Name) {
+  Value *Ret = CreateSelectFMF(C, True, False, {}, Name);
+  if (auto *SI = dyn_cast<SelectInst>(Ret)) {
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, PassName);
+  }
+  return Ret;
 }
 
 Value *IRBuilderBase::CreateSelect(Value *C, Value *True, Value *False,

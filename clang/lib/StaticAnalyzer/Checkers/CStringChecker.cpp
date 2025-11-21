@@ -251,6 +251,8 @@ public:
                                         const Expr *Ex,
                                         const MemRegion *MR,
                                         bool hypothetical);
+  static const StringLiteral *getStringLiteralFromRegion(const MemRegion *MR);
+
   SVal getCStringLength(CheckerContext &C,
                         ProgramStateRef &state,
                         const Expr *Ex,
@@ -983,6 +985,21 @@ SVal CStringChecker::getCStringLengthForRegion(CheckerContext &C,
   return strLength;
 }
 
+const StringLiteral *
+CStringChecker::getStringLiteralFromRegion(const MemRegion *MR) {
+  switch (MR->getKind()) {
+  case MemRegion::StringRegionKind:
+    return cast<StringRegion>(MR)->getStringLiteral();
+  case MemRegion::NonParamVarRegionKind:
+    if (const VarDecl *Decl = cast<NonParamVarRegion>(MR)->getDecl();
+        Decl->getType().isConstQualified() && Decl->hasGlobalStorage())
+      return dyn_cast_or_null<StringLiteral>(Decl->getInit());
+    return nullptr;
+  default:
+    return nullptr;
+  }
+}
+
 SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
                                       const Expr *Ex, SVal Buf,
                                       bool hypothetical) const {
@@ -1013,30 +1030,19 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
   // its length. For anything we can't figure out, just return UnknownVal.
   MR = MR->StripCasts();
 
-  switch (MR->getKind()) {
-  case MemRegion::StringRegionKind: {
-    // Modifying the contents of string regions is undefined [C99 6.4.5p6],
-    // so we can assume that the byte length is the correct C string length.
-    SValBuilder &svalBuilder = C.getSValBuilder();
-    QualType sizeTy = svalBuilder.getContext().getSizeType();
-    const StringLiteral *strLit = cast<StringRegion>(MR)->getStringLiteral();
-    return svalBuilder.makeIntVal(strLit->getLength(), sizeTy);
-  }
-  case MemRegion::NonParamVarRegionKind: {
+  if (const StringLiteral *StrLit = getStringLiteralFromRegion(MR)) {
     // If we have a global constant with a string literal initializer,
     // compute the initializer's length.
-    const VarDecl *Decl = cast<NonParamVarRegion>(MR)->getDecl();
-    if (Decl->getType().isConstQualified() && Decl->hasGlobalStorage()) {
-      if (const Expr *Init = Decl->getInit()) {
-        if (auto *StrLit = dyn_cast<StringLiteral>(Init)) {
-          SValBuilder &SvalBuilder = C.getSValBuilder();
-          QualType SizeTy = SvalBuilder.getContext().getSizeType();
-          return SvalBuilder.makeIntVal(StrLit->getLength(), SizeTy);
-        }
-      }
-    }
-    [[fallthrough]];
+    // Modifying the contents of string regions is undefined [C99 6.4.5p6],
+    // so we can assume that the byte length is the correct C string length.
+    // FIXME: Embedded null characters are not handled.
+    SValBuilder &SVB = C.getSValBuilder();
+    return SVB.makeIntVal(StrLit->getLength(), SVB.getContext().getSizeType());
   }
+
+  switch (MR->getKind()) {
+  case MemRegion::StringRegionKind:
+  case MemRegion::NonParamVarRegionKind:
   case MemRegion::SymbolicRegionKind:
   case MemRegion::AllocaRegionKind:
   case MemRegion::ParamVarRegionKind:
@@ -1046,10 +1052,28 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
   case MemRegion::CompoundLiteralRegionKind:
     // FIXME: Can we track this? Is it necessary?
     return UnknownVal();
-  case MemRegion::ElementRegionKind:
-    // FIXME: How can we handle this? It's not good enough to subtract the
-    // offset from the base string length; consider "123\x00567" and &a[5].
+  case MemRegion::ElementRegionKind: {
+    // If an offset into the string literal is used, use the original length
+    // minus the offset.
+    // FIXME: Embedded null characters are not handled.
+    const ElementRegion *ER = cast<ElementRegion>(MR);
+    const SubRegion *SuperReg =
+        cast<SubRegion>(ER->getSuperRegion()->StripCasts());
+    const StringLiteral *StrLit = getStringLiteralFromRegion(SuperReg);
+    if (!StrLit)
+      return UnknownVal();
+    SValBuilder &SVB = C.getSValBuilder();
+    NonLoc Idx = ER->getIndex();
+    QualType SizeTy = SVB.getContext().getSizeType();
+    NonLoc LengthVal =
+        SVB.makeIntVal(StrLit->getLength(), SizeTy).castAs<NonLoc>();
+    if (state->assume(SVB.evalBinOpNN(state, BO_LE, Idx, LengthVal,
+                                      SVB.getConditionType())
+                          .castAs<DefinedOrUnknownSVal>(),
+                      true))
+      return SVB.evalBinOp(state, BO_Sub, LengthVal, Idx, SizeTy);
     return UnknownVal();
+  }
   default:
     // Other regions (mostly non-data) can't have a reliable C string length.
     // In this case, an error is emitted and UndefinedVal is returned.
@@ -1074,6 +1098,7 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
 
 const StringLiteral *CStringChecker::getCStringLiteral(CheckerContext &C,
   ProgramStateRef &state, const Expr *expr, SVal val) const {
+  // FIXME: use getStringLiteralFromRegion (and remove unused parameters)?
 
   // Get the memory region pointed to by the val.
   const MemRegion *bufRegion = val.getAsRegion();

@@ -62,6 +62,7 @@ def AMDGPUIfBreakOp : SDTypeProfile<1, 2,
 // AMDGPU DAG Nodes
 //
 
+// Masked control flow nodes.
 def AMDGPUif : SDNode<"AMDGPUISD::IF", AMDGPUIfOp, [SDNPHasChain]>;
 def AMDGPUelse : SDNode<"AMDGPUISD::ELSE", AMDGPUElseOp, [SDNPHasChain]>;
 def AMDGPUloop : SDNode<"AMDGPUISD::LOOP", AMDGPULoopOp, [SDNPHasChain]>;
@@ -114,6 +115,7 @@ def AMDGPUtrap : SDNode<"AMDGPUISD::TRAP",
     [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPOptInGlue]
 >;
 
+// Pointer to the start of the shader's constant data.
 def AMDGPUconstdata_ptr : SDNode<
   "AMDGPUISD::CONST_DATA_PTR", SDTypeProfile <1, 1, [SDTCisVT<0, iPTR>,
                                                      SDTCisVT<0, iPTR>]>
@@ -122,18 +124,21 @@ def AMDGPUconstdata_ptr : SDNode<
 // This argument to this node is a dword address.
 def AMDGPUdwordaddr : SDNode<"AMDGPUISD::DWORDADDR", SDTIntUnaryOp>;
 
+// SIN_HW, COS_HW - f32 for SI, 1 ULP max error, valid from -100 pi to 100 pi.
+// Denormals handled on some parts.
 def AMDGPUcos_impl : SDNode<"AMDGPUISD::COS_HW", SDTFPUnaryOp>;
 def AMDGPUsin_impl : SDNode<"AMDGPUISD::SIN_HW", SDTFPUnaryOp>;
+
 // out = a - floor(a)
 def AMDGPUfract_impl : SDNode<"AMDGPUISD::FRACT", SDTFPUnaryOp>;
 
 // out = 1.0 / a
 def AMDGPUrcp_impl : SDNode<"AMDGPUISD::RCP", SDTFPUnaryOp>;
 
-// v_log_f32, which is log2
+// v_log_f32, which is log2, no denormal handling for f32.
 def AMDGPUlog_impl : SDNode<"AMDGPUISD::LOG", SDTFPUnaryOp>;
 
-// v_exp_f32, which is exp2
+// v_exp_f32, which is exp2, no denormal handling for f32.
 def AMDGPUexp_impl : SDNode<"AMDGPUISD::EXP", SDTFPUnaryOp>;
 
 // out = 1.0 / sqrt(a)
@@ -146,11 +151,16 @@ def AMDGPUrcp_iflag : SDNode<"AMDGPUISD::RCP_IFLAG", SDTFPUnaryOp>;
 // out = 1.0 / sqrt(a) result clamped to +/- max_float.
 def AMDGPUrsq_clamp_impl : SDNode<"AMDGPUISD::RSQ_CLAMP", SDTFPUnaryOp>;
 
+// Convert two float 32 numbers into a single register holding two packed f16
+// with round to zero.
 def AMDGPUpkrtz_f16_f32_impl : SDNode<"AMDGPUISD::CVT_PKRTZ_F16_F32", AMDGPUFPPackOp>;
 def AMDGPUpknorm_i16_f32_impl : SDNode<"AMDGPUISD::CVT_PKNORM_I16_F32", AMDGPUFPPackOp>;
 def AMDGPUpknorm_u16_f32_impl : SDNode<"AMDGPUISD::CVT_PKNORM_U16_F32", AMDGPUFPPackOp>;
 def AMDGPUpk_i16_i32_impl : SDNode<"AMDGPUISD::CVT_PK_I16_I32", AMDGPUIntPackOp>;
 def AMDGPUpk_u16_u32_impl : SDNode<"AMDGPUISD::CVT_PK_U16_U32", AMDGPUIntPackOp>;
+
+// Same as the standard node, except the high bits of the resulting integer
+// are known 0.
 def AMDGPUfp_to_f16 : SDNode<"AMDGPUISD::FP_TO_FP16" , SDTFPToIntOp>;
 
 
@@ -225,14 +235,18 @@ def AMDGPUSetCCOp : SDTypeProfile<1, 3, [        // setcc
   SDTCisInt<0>, SDTCisSameAs<1, 2>, SDTCisVT<3, OtherVT>
 ]>;
 
+// This is SETCC with the full mask result which is used for a compare with a
+// result bit per item in the wavefront.
 def AMDGPUsetcc : SDNode<"AMDGPUISD::SETCC", AMDGPUSetCCOp>;
 
+// FP ops with input and output chain.
 def AMDGPUfma : SDNode<"AMDGPUISD::FMA_W_CHAIN", SDTFPTernaryOp, [
    SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 def AMDGPUmul : SDNode<"AMDGPUISD::FMUL_W_CHAIN", SDTFPBinOp, [
   SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+// These cvt_f32_ubyte* nodes need to remain consecutive and in order.
 def AMDGPUcvt_f32_ubyte0 : SDNode<"AMDGPUISD::CVT_F32_UBYTE0",
   SDTIntToFPOp, []>;
 def AMDGPUcvt_f32_ubyte1 : SDNode<"AMDGPUISD::CVT_F32_UBYTE1",
@@ -264,6 +278,8 @@ def AMDGPUdiv_fmas_impl : SDNode<"AMDGPUISD::DIV_FMAS", AMDGPUFmasOp,
 // Denominator, src2 = Numerator).
 def AMDGPUdiv_fixup_impl : SDNode<"AMDGPUISD::DIV_FIXUP", SDTFPTernaryOp>;
 
+// For emitting ISD::FMAD when f32 denormals are enabled because mac/mad is
+// treated as an illegal operation.
 def AMDGPUfmad_ftz_impl : SDNode<"AMDGPUISD::FMAD_FTZ", SDTFPTernaryOp>;
 
 def AMDGPUregister_load : SDNode<"AMDGPUISD::REGISTER_LOAD",
@@ -290,14 +306,23 @@ def AMDGPUatomic_cmp_swap : SDNode<"AMDGPUISD::ATOMIC_CMP_SWAP",
                             [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                              SDNPMemOperand]>;
 
+// Extract range of bits with zero extension to 32-bits.
 def AMDGPUbfe_u32_impl : SDNode<"AMDGPUISD::BFE_U32", AMDGPUDTIntTernaryOp>;
+
+// Extract range of bits with sign extension to 32-bits.
 def AMDGPUbfe_i32_impl : SDNode<"AMDGPUISD::BFE_I32", AMDGPUDTIntTernaryOp>;
+
+// (src0 & src1) | (~src0 & src2)
 def AMDGPUbfi : SDNode<"AMDGPUISD::BFI", AMDGPUDTIntTernaryOp>;
+
+// Insert a range of bits into a 32-bit word.
 def AMDGPUbfm : SDNode<"AMDGPUISD::BFM", SDTIntBinOp>;
 
+// ctlz with -1 if input is zero.
 def AMDGPUffbh_u32_impl : SDNode<"AMDGPUISD::FFBH_U32", SDTIntBitCountUnaryOp>;
 def AMDGPUffbh_i32_impl : SDNode<"AMDGPUISD::FFBH_I32", SDTIntBitCountUnaryOp>;
 
+// cttz with -1 if input is zero.
 def AMDGPUffbl_b32_impl : SDNode<"AMDGPUISD::FFBL_B32", SDTIntBitCountUnaryOp>;
 
 // Signed and unsigned 24-bit multiply. The highest 8-bits are ignore
@@ -394,16 +419,24 @@ def IL_brcond      : SDNode<"AMDGPUISD::BRANCH_COND", SDTIL_BRCond, [SDNPHasChai
 //===----------------------------------------------------------------------===//
 // Call/Return DAG Nodes
 //===----------------------------------------------------------------------===//
+
+// A uniform kernel return that terminates the wavefront.
 def AMDGPUendpgm : SDNode<"AMDGPUISD::ENDPGM", SDTNone,
     [SDNPHasChain, SDNPOptInGlue]>;
+
+// s_endpgm, but we may want to insert it in the middle of the block.
 def AMDGPUendpgm_trap : SDNode<"AMDGPUISD::ENDPGM_TRAP", SDTNone,
     [SDNPHasChain]>;
+
+// "s_trap 2" equivalent on hardware that does not support it.
 def AMDGPUsimulated_trap : SDNode<"AMDGPUISD::SIMULATED_TRAP", SDTNone,
     [SDNPHasChain]>;
 
+// Return to a shader part's epilog code.
 def AMDGPUreturn_to_epilog : SDNode<"AMDGPUISD::RETURN_TO_EPILOG", SDTNone,
     [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
+// Return with values from a non-entry function.
 def AMDGPUret_glue : SDNode<"AMDGPUISD::RET_GLUE", SDTNone,
   [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;

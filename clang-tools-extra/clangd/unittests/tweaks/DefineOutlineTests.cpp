@@ -15,6 +15,8 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using ::testing::UnorderedElementsAre;
+
 TWEAK_TEST(DefineOutline);
 
 TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
@@ -446,7 +448,6 @@ inline T Foo<T>::bar(const T& t, const U& u) { return {}; }
 
 TEST_F(DefineOutlineTest, InCppFile) {
   FileName = "Test.cpp";
-
   struct {
     llvm::StringRef Test;
     llvm::StringRef ExpectedSource;
@@ -747,6 +748,232 @@ TEST_F(DefineOutlineTest, FailsMacroSpecifier) {
   }
 }
 
+TWEAK_WORKSPACE_TEST(DefineOutline);
+
+// Test that DefineOutline's use of getCorrespondingHeaderOrSource()
+// to find the source file corresponding to a header file in which the
+// tweak is invoked is working as intended.
+TEST_F(DefineOutlineWorkspaceTest, FindsCorrespondingSource) {
+  llvm::Annotations HeaderBefore(R"cpp(
+class A {
+  void bar();
+  void f^oo(){}
+};
+)cpp");
+  std::string SourceBefore(R"cpp(
+#include "a.hpp"
+void A::bar(){}
+)cpp");
+  std::string HeaderAfter = R"cpp(
+class A {
+  void bar();
+  void foo();
+};
+)cpp";
+  std::string SourceAfter = R"cpp(
+#include "a.hpp"
+void A::bar(){}void A::foo(){}
+
+)cpp";
+  Workspace.addSource("a.hpp", HeaderBefore.code());
+  Workspace.addMainFile("a.cpp", SourceBefore);
+  auto Result = apply("a.hpp", {HeaderBefore.point(), HeaderBefore.point()});
+  EXPECT_THAT(Result,
+              AllOf(withStatus("success"),
+                    editedFiles(UnorderedElementsAre(
+                        FileWithContents(testPath("a.hpp"), HeaderAfter),
+                        FileWithContents(testPath("a.cpp"), SourceAfter)))));
+}
+
+// Test that the definition is inserted in a sensible location
+// under various circumstances.
+// Note that the formatting looks a little off here and there,
+// which is because in contrast to the actual tweak, the test procedure
+// does not run clang-format on the resulting code.
+TEST_F(DefineOutlineWorkspaceTest, SensibleInsertionLocations) {
+  const struct {
+    llvm::StringRef HeaderBefore;
+    llvm::StringRef SourceBefore;
+    llvm::StringRef HeaderAfter;
+    llvm::StringRef SourceAfter;
+  } Cases[] = {
+      // Criterion 1: Distance
+      {
+          R"cpp(
+struct Foo {
+  void ignored1();     // Too far away
+  void ignored2();     // No definition
+  void ignored3() {}   // Defined inline
+  void fo^o() {}
+  void neighbor();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored1() {}
+void Foo::neighbor() {}
+)cpp",
+          R"cpp(
+struct Foo {
+  void ignored1();     // Too far away
+  void ignored2();     // No definition
+  void ignored3() {}   // Defined inline
+  void foo() ;
+  void neighbor();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored1() {}
+void Foo::foo() {}
+void Foo::neighbor() {}
+)cpp"},
+
+      // Criterion 2: Prefer preceding
+      {
+          R"cpp(
+struct Foo {
+  void neighbor();
+  void fo^o() {}
+  void ignored();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::neighbor() {}
+void Foo::ignored() {}
+)cpp",
+          R"cpp(
+struct Foo {
+  void neighbor();
+  void foo() ;
+  void ignored();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::neighbor() {}void Foo::foo() {}
+
+void Foo::ignored() {}
+)cpp"},
+
+      // Like above, but with a namespace
+      {
+          R"cpp(
+namespace NS {
+struct Foo {
+  void neighbor();
+  void fo^o() {}
+  void ignored();
+};
+}
+)cpp",
+          R"cpp(
+#include "a.hpp"
+namespace NS {
+void Foo::neighbor() {}
+void Foo::ignored() {}
+}
+)cpp",
+          R"cpp(
+namespace NS {
+struct Foo {
+  void neighbor();
+  void foo() ;
+  void ignored();
+};
+}
+)cpp",
+          R"cpp(
+#include "a.hpp"
+namespace NS {
+void Foo::neighbor() {}void Foo::foo() {}
+
+void Foo::ignored() {}
+}
+)cpp"},
+
+      // Like above, but there is no namespace at the definition site
+      {
+          R"cpp(
+namespace NS {
+struct Foo {
+  void neighbor();
+  void fo^o() {}
+  void ignored();
+};
+}
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void NS::Foo::neighbor() {}
+void NS::Foo::ignored() {}
+)cpp",
+          R"cpp(
+namespace NS {
+struct Foo {
+  void neighbor();
+  void foo() ;
+  void ignored();
+};
+}
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void NS::Foo::neighbor() {}void NS::Foo::foo() {}
+
+void NS::Foo::ignored() {}
+)cpp"},
+
+      // Neighbor's definition is in header
+      {
+          R"cpp(
+struct Foo {
+  void fo^o() {}
+  void neighbor();
+  void ignored();
+};
+inline void Foo::neighbor() {}
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored() {}
+)cpp",
+          R"cpp(
+struct Foo {
+  void foo() ;
+  void neighbor();
+  void ignored();
+};
+inline void Foo::foo() {}
+inline void Foo::neighbor() {}
+)cpp",
+          {}},
+
+  };
+
+  for (const auto &Case : Cases) {
+    Workspace = {};
+    llvm::Annotations Hdr(Case.HeaderBefore);
+    Workspace.addSource("a.hpp", Hdr.code());
+    Workspace.addMainFile("a.cpp", Case.SourceBefore);
+    auto Result = apply("a.hpp", {Hdr.point(), Hdr.point()});
+    if (Case.SourceAfter.empty()) {
+      EXPECT_THAT(Result,
+                  AllOf(withStatus("success"),
+                        editedFiles(UnorderedElementsAre(FileWithContents(
+                            testPath("a.hpp"), Case.HeaderAfter)))));
+
+    } else {
+      EXPECT_THAT(
+          Result,
+          AllOf(withStatus("success"),
+                editedFiles(UnorderedElementsAre(
+                    FileWithContents(testPath("a.hpp"), Case.HeaderAfter),
+                    FileWithContents(testPath("a.cpp"), Case.SourceAfter)))));
+    }
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

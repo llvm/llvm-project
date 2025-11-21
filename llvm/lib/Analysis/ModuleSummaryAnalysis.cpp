@@ -1100,12 +1100,12 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
   for (auto &GlobalList : Index) {
     // Ignore entries for references that are undefined in the current module.
-    if (GlobalList.second.SummaryList.empty())
+    if (GlobalList.second.getSummaryList().empty())
       continue;
 
-    assert(GlobalList.second.SummaryList.size() == 1 &&
+    assert(GlobalList.second.getSummaryList().size() == 1 &&
            "Expected module's index to have one summary per GUID");
-    auto &Summary = GlobalList.second.SummaryList[0];
+    auto &Summary = GlobalList.second.getSummaryList()[0];
     if (!IsThinLTO) {
       Summary->setNotEligibleToImport();
       continue;

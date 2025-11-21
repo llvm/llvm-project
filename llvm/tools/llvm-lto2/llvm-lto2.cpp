@@ -111,6 +111,12 @@ static cl::opt<std::string> DTLTOCompiler(
     "dtlto-compiler",
     cl::desc("Compiler to use for DTLTO ThinLTO backend compilations."));
 
+static cl::list<std::string> DTLTOCompilerPrependArgs(
+    "dtlto-compiler-prepend-arg", cl::CommaSeparated,
+    cl::desc("Prepend arguments to pass to the remote compiler for backend "
+             "compilations."),
+    cl::value_desc("arg"));
+
 static cl::list<std::string> DTLTOCompilerArgs(
     "dtlto-compiler-arg", cl::CommaSeparated,
     cl::desc("Arguments to pass to the remote compiler for backend "
@@ -371,6 +377,9 @@ static int run(int argc, char **argv) {
                     "with -dtlto-distributor\n";
   auto DTLTODistributorArgsSV = llvm::to_vector<0>(llvm::map_range(
       DTLTODistributorArgs, [](const std::string &S) { return StringRef(S); }));
+  auto DTLTOCompilerPrependArgsSV = llvm::to_vector<0>(
+      llvm::map_range(DTLTOCompilerPrependArgs,
+                      [](const std::string &S) { return StringRef(S); }));
   auto DTLTOCompilerArgsSV = llvm::to_vector<0>(llvm::map_range(
       DTLTOCompilerArgs, [](const std::string &S) { return StringRef(S); }));
 
@@ -388,7 +397,7 @@ static int run(int argc, char **argv) {
         llvm::heavyweight_hardware_concurrency(Threads),
         /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
         DTLTODistributor, DTLTODistributorArgsSV, DTLTOCompiler,
-        DTLTOCompilerArgsSV, SaveTemps);
+        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, SaveTemps);
   } else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),

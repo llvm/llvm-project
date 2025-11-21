@@ -27,10 +27,27 @@ class AArch64Subtarget;
 class AArch64FunctionInfo;
 class AArch64FrameLowering;
 
+struct SVEFrameSizes {
+  struct {
+    StackOffset CalleeSavesSize, LocalsSize;
+  } PPR, ZPR;
+};
+
+struct SVEStackAllocations {
+  StackOffset BeforePPRs, AfterPPRs, AfterZPRs;
+  StackOffset totalSize() const { return BeforePPRs + AfterPPRs + AfterZPRs; }
+};
+
 class AArch64PrologueEpilogueCommon {
 public:
   AArch64PrologueEpilogueCommon(MachineFunction &MF, MachineBasicBlock &MBB,
                                 const AArch64FrameLowering &AFL);
+
+  enum class SVEStackLayout {
+    Default,
+    Split,
+    CalleeSavesAboveFrameRecord,
+  };
 
 protected:
   bool requiresGetVGCall() const;
@@ -53,6 +70,9 @@ protected:
 
   bool shouldCombineCSRLocalStackBump(uint64_t StackBumpBytes) const;
 
+  SVEFrameSizes getSVEStackFrameSizes() const;
+  SVEStackAllocations getSVEStackAllocations(SVEFrameSizes const &);
+
   MachineFunction &MF;
   MachineBasicBlock &MBB;
 
@@ -68,6 +88,7 @@ protected:
   bool IsFunclet = false;   // Note: Set in derived constructors.
   bool NeedsWinCFI = false; // Note: Can be changed in emitFramePointerSetup.
   bool HomPrologEpilog = false; // Note: Set in derived constructors.
+  SVEStackLayout SVELayout = SVEStackLayout::Default;
 
   // Note: "HasWinCFI" is mutable as it can change in any "emit" function.
   mutable bool HasWinCFI = false;
@@ -158,6 +179,10 @@ public:
 
 private:
   bool shouldCombineCSRLocalStackBump(uint64_t StackBumpBytes) const;
+
+  /// A helper for moving the SP to a negative offset from the FP, without
+  /// deallocating any stack in the range FP to FP + Offset.
+  void moveSPBelowFP(MachineBasicBlock::iterator MBBI, StackOffset Offset);
 
   void emitSwiftAsyncContextFramePointer(MachineBasicBlock::iterator MBBI,
                                          const DebugLoc &DL) const;

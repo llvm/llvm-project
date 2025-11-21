@@ -145,6 +145,60 @@ def generate_cpp_nested_loop_test(n: int) -> str:
     return cpp_code
 
 
+def generate_cpp_switch_fan_out_test(n: int) -> str:
+    """
+    Generates C++ code with a switch statement with N branches.
+    Each branch 'i' 'uses' (reads) a single, unique pointer 'pi'.
+    This pattern creates a "fan-in" join point for the backward
+    liveness analysis, stressing the LivenessMap::join operation
+    by forcing it to merge N disjoint, single-element sets of live origins.
+    The resulting complexity for LiveOrigins should be O(n log n) or higher.
+
+    Example (n=3):
+        struct MyObj { int id; ~MyObj() {} };
+
+        void switch_fan_out_3(int condition) {
+            MyObj v1{1}; MyObj v2{1}; MyObj v3{1};
+            MyObj* p1 = &v1; MyObj* p2 = &v2; MyObj* p3 = &v3;
+
+            switch (condition % 3) {
+                case 0:
+                    p1->id = 1;
+                    break;
+                case 1:
+                    p2->id = 1;
+                    break;
+                case 2:
+                    p3->id = 1;
+                    break;
+            }
+        }
+    """
+    if n <= 0:
+        return "// Number of variables must be positive."
+
+    cpp_code = "struct MyObj { int id; ~MyObj() {} };\n\n"
+    cpp_code += f"void switch_fan_out{n}(int condition) {{\n"
+    # Generate N distinct objects
+    for i in range(1, n + 1):
+        cpp_code += f"  MyObj v{i}{{1}};\n"
+    cpp_code += "\n"
+    # Generate N distinct pointers, each as a separate variable
+    for i in range(1, n + 1):
+        cpp_code += f"  MyObj* p{i} = &v{i};\n"
+    cpp_code += "\n"
+
+    cpp_code += f"  switch (condition % {n}) {{\n"
+    for case_num in range(n):
+        cpp_code += f"    case {case_num}:\n"
+        cpp_code += f"      p{case_num + 1}->id = 1;\n"
+        cpp_code += "      break;\n"
+
+    cpp_code += "  }\n}\n"
+    cpp_code += f"\nint main() {{ switch_fan_out{n}(0); return 0; }}\n"
+    return cpp_code
+
+
 def analyze_trace_file(trace_path: str) -> dict:
     """
     Parses the -ftime-trace JSON output to find durations for the lifetime
@@ -156,14 +210,14 @@ def analyze_trace_file(trace_path: str) -> dict:
         "total_us": 0.0,
         "fact_gen_us": 0.0,
         "loan_prop_us": 0.0,
-        "expired_loans_us": 0.0,
+        "live_origins_us": 0.0,
     }
     event_name_map = {
         "LifetimeSafetyAnalysis": "lifetime_us",
         "ExecuteCompiler": "total_us",
         "FactGenerator": "fact_gen_us",
         "LoanPropagation": "loan_prop_us",
-        "ExpiredLoans": "expired_loans_us",
+        "LiveOrigins": "live_origins_us",
     }
     try:
         with open(trace_path, "r") as f:
@@ -227,7 +281,7 @@ def generate_markdown_report(results: dict) -> str:
 
         # Table header
         report.append(
-            "| N (Input Size) | Total Time | Analysis Time (%) | Fact Generator (%) | Loan Propagation (%) | Expired Loans (%) |"
+            "| N (Input Size) | Total Time | Analysis Time (%) | Fact Generator (%) | Loan Propagation (%) | Live Origins (%) |"
         )
         report.append(
             "|:---------------|-----------:|------------------:|-------------------:|---------------------:|------------------:|"
@@ -247,7 +301,7 @@ def generate_markdown_report(results: dict) -> str:
                 f"{data['lifetime_ms'][i] / total_t * 100:>17.2f}% |",
                 f"{data['fact_gen_ms'][i] / total_t * 100:>18.2f}% |",
                 f"{data['loan_prop_ms'][i] / total_t * 100:>20.2f}% |",
-                f"{data['expired_loans_ms'][i] / total_t * 100:>17.2f}% |",
+                f"{data['live_origins_ms'][i] / total_t * 100:>17.2f}% |",
             ]
             report.append(" ".join(row))
 
@@ -259,7 +313,7 @@ def generate_markdown_report(results: dict) -> str:
             "Total Analysis": data["lifetime_ms"],
             "FactGenerator": data["fact_gen_ms"],
             "LoanPropagation": data["loan_prop_ms"],
-            "ExpiredLoans": data["expired_loans_ms"],
+            "LiveOrigins": data["live_origins_ms"],
         }
 
         for phase_name, y_data in analysis_phases.items():
@@ -302,7 +356,13 @@ def run_single_test(
         source_file,
     ]
 
-    result = subprocess.run(clang_command, capture_output=True, text=True, timeout=60)
+    try:
+        result = subprocess.run(
+            clang_command, capture_output=True, text=True, timeout=60
+        )
+    except subprocess.TimeoutExpired:
+        print(f"Compilation timed out for N={n}!", file=sys.stderr)
+        return {}
 
     if result.returncode != 0:
         print(f"Compilation failed for N={n}!", file=sys.stderr)
@@ -354,6 +414,12 @@ if __name__ == "__main__":
             "generator_func": generate_cpp_nested_loop_test,
             "n_values": [50, 100, 150, 200],
         },
+        {
+            "name": "switch_fan_out",
+            "title": "Switch Fan-out",
+            "generator_func": generate_cpp_switch_fan_out_test,
+            "n_values": [500, 1000, 2000, 4000],
+        },
     ]
 
     results = {}
@@ -368,7 +434,7 @@ if __name__ == "__main__":
             "total_ms": [],
             "fact_gen_ms": [],
             "loan_prop_ms": [],
-            "expired_loans_ms": [],
+            "live_origins_ms": [],
         }
         for n in config["n_values"]:
             durations_ms = run_single_test(
@@ -387,7 +453,7 @@ if __name__ == "__main__":
                     f"    Total Analysis: {human_readable_time(durations_ms['lifetime_ms'])} | "
                     f"FactGen: {human_readable_time(durations_ms['fact_gen_ms'])} | "
                     f"LoanProp: {human_readable_time(durations_ms['loan_prop_ms'])} | "
-                    f"ExpiredLoans: {human_readable_time(durations_ms['expired_loans_ms'])}"
+                    f"LiveOrigins: {human_readable_time(durations_ms['live_origins_ms'])}"
                 )
 
     print("\n\n" + "=" * 80)

@@ -33,6 +33,7 @@
 #include "clang/Basic/DiagnosticTrap.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -465,11 +466,16 @@ public:
       return nullptr;
 
     if (Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
-      if (E->isGLValue())
+      if (E->isGLValue()) {
+        // This was already converted to an rvalue when it was constant
+        // evaluated.
+        if (E->hasAPValueResult() && !E->getAPValueResult().isLValue())
+          return Result;
         return CGF.EmitLoadOfScalar(
             Address(Result, CGF.convertTypeForLoadStore(E->getType()),
                     CGF.getContext().getTypeAlignInChars(E->getType())),
             /*Volatile*/ false, E->getType(), E->getExprLoc());
+      }
       return Result;
     }
     return Visit(E->getSubExpr());
@@ -2392,45 +2398,47 @@ bool CodeGenFunction::ShouldNullCheckClassCastValue(const CastExpr *CE) {
 }
 
 // RHS is an aggregate type
-static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, Address RHSVal,
-                                      QualType RHSTy, QualType LHSTy,
-                                      SourceLocation Loc) {
-  SmallVector<std::pair<Address, llvm::Value *>, 16> LoadGEPList;
-  SmallVector<QualType, 16> SrcTypes; // Flattened type
-  CGF.FlattenAccessAndType(RHSVal, RHSTy, LoadGEPList, SrcTypes);
-  // LHS is either a vector or a builtin?
+static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
+                                      QualType DestTy, SourceLocation Loc) {
+  SmallVector<LValue, 16> LoadList;
+  CGF.FlattenAccessAndTypeLValue(SrcVal, LoadList);
+  // Dest is either a vector or a builtin?
   // if its a vector create a temp alloca to store into and return that
-  if (auto *VecTy = LHSTy->getAs<VectorType>()) {
-    assert(SrcTypes.size() >= VecTy->getNumElements() &&
-           "Flattened type on RHS must have more elements than vector on LHS.");
+  if (auto *VecTy = DestTy->getAs<VectorType>()) {
+    assert(LoadList.size() >= VecTy->getNumElements() &&
+           "Flattened type on RHS must have the same number or more elements "
+           "than vector on LHS.");
     llvm::Value *V =
-        CGF.Builder.CreateLoad(CGF.CreateIRTemp(LHSTy, "flatcast.tmp"));
+        CGF.Builder.CreateLoad(CGF.CreateIRTemp(DestTy, "flatcast.tmp"));
     // write to V.
     for (unsigned I = 0, E = VecTy->getNumElements(); I < E; I++) {
-      llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[I].first, "load");
-      llvm::Value *Idx = LoadGEPList[I].second;
-      Load = Idx ? CGF.Builder.CreateExtractElement(Load, Idx, "vec.extract")
-                 : Load;
-      llvm::Value *Cast = CGF.EmitScalarConversion(
-          Load, SrcTypes[I], VecTy->getElementType(), Loc);
+      RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
+      assert(RVal.isScalar() &&
+             "All flattened source values should be scalars.");
+      llvm::Value *Cast =
+          CGF.EmitScalarConversion(RVal.getScalarVal(), LoadList[I].getType(),
+                                   VecTy->getElementType(), Loc);
       V = CGF.Builder.CreateInsertElement(V, Cast, I);
     }
     return V;
   }
-  // i its a builtin just do an extract element or load.
-  assert(LHSTy->isBuiltinType() &&
+  // if its a builtin just do an extract element or load.
+  assert(DestTy->isBuiltinType() &&
          "Destination type must be a vector or builtin type.");
-  llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[0].first, "load");
-  llvm::Value *Idx = LoadGEPList[0].second;
-  Load =
-      Idx ? CGF.Builder.CreateExtractElement(Load, Idx, "vec.extract") : Load;
-  return CGF.EmitScalarConversion(Load, LHSTy, SrcTypes[0], Loc);
+  RValue RVal = CGF.EmitLoadOfLValue(LoadList[0], Loc);
+  assert(RVal.isScalar() && "All flattened source values should be scalars.");
+  return CGF.EmitScalarConversion(RVal.getScalarVal(), LoadList[0].getType(),
+                                  DestTy, Loc);
 }
 
 // VisitCastExpr - Emit code for an explicit or implicit cast.  Implicit casts
 // have to handle a more broad range of conversions than explicit casts, as they
 // handle things like function to ptr-to-function decay etc.
 Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
+  auto RestoreCurCast =
+      llvm::make_scope_exit([this, Prev = CGF.CurCast] { CGF.CurCast = Prev; });
+  CGF.CurCast = CE;
+
   Expr *E = CE->getSubExpr();
   QualType DestTy = CE->getType();
   CastKind Kind = CE->getCastKind();
@@ -2949,12 +2957,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_HLSLElementwiseCast: {
     RValue RV = CGF.EmitAnyExpr(E);
     SourceLocation Loc = CE->getExprLoc();
-    QualType SrcTy = E->getType();
 
     assert(RV.isAggregate() && "Not a valid HLSL Elementwise Cast.");
     // RHS is an aggregate
-    Address SrcVal = RV.getAggregateAddress();
-    return EmitHLSLElementwiseCast(CGF, SrcVal, SrcTy, DestTy, Loc);
+    LValue SrcVal = CGF.MakeAddrLValue(RV.getAggregateAddress(), E->getType());
+    return EmitHLSLElementwiseCast(CGF, SrcVal, DestTy, Loc);
   }
   } // end of switch
 
@@ -3576,7 +3583,7 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
       }
 
       const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(
-          CurrentType->castAsCanonical<RecordType>()->getOriginalDecl());
+          CurrentType->castAsCanonical<RecordType>()->getDecl());
 
       // Save the element type.
       CurrentType = ON.getBase()->getType();

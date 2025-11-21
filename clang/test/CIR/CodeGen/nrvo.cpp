@@ -22,13 +22,13 @@ struct S f1() {
   return s;
 }
 
-// CIR:      cir.func{{.*}} @_Z2f1v() -> !rec_S {
+// CIR:      cir.func{{.*}} @_Z2f1v() -> !rec_S
 // CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["__retval", init]
 // CIR-NEXT:   cir.call @_ZN1SC1Ev(%[[RETVAL]]) : (!cir.ptr<!rec_S>) -> ()
 // CIR-NEXT:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!rec_S>, !rec_S
 // CIR-NEXT:   cir.return %[[RET]]
 
-// CIR-NOELIDE:      cir.func{{.*}} @_Z2f1v() -> !rec_S {
+// CIR-NOELIDE:      cir.func{{.*}} @_Z2f1v() -> !rec_S
 // CIR-NOELIDE-NEXT:   %[[RETVAL:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["__retval"]
 // CIR-NOELIDE-NEXT:   %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
 // CIR-NOELIDE-NEXT:   cir.call @_ZN1SC1Ev(%[[S]]) : (!cir.ptr<!rec_S>) -> ()

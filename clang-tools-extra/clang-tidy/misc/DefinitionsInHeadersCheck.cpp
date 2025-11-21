@@ -93,7 +93,8 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
       }
     }
 
-    bool IsFullSpec = FD->getTemplateSpecializationKind() != TSK_Undeclared;
+    const bool IsFullSpec =
+        FD->getTemplateSpecializationKind() != TSK_Undeclared;
     diag(FD->getLocation(),
          "%select{function|full function template specialization}0 %1 defined "
          "in a header file; function definitions in header files can lead to "

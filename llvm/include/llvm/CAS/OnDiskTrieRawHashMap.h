@@ -83,7 +83,7 @@ public:
   /// Validate the trie data structure.
   ///
   /// Callback receives the file offset to the data entry and the data stored.
-  Error validate(
+  LLVM_ABI_FOR_TEST Error validate(
       function_ref<Error(FileOffset, ConstValueProxy)> RecordVerifier) const;
 
   /// Check the valid range of file offset for OnDiskTrieRawHashMap.
@@ -133,38 +133,39 @@ public:
     bool IsValue = false;
   };
 
-  class pointer;
-  class const_pointer : public PointerImpl<ConstValueProxy> {
+  class OnDiskPtr;
+  class ConstOnDiskPtr : public PointerImpl<ConstValueProxy> {
   public:
-    const_pointer() = default;
+    ConstOnDiskPtr() = default;
 
   private:
-    friend class pointer;
+    friend class OnDiskPtr;
     friend class OnDiskTrieRawHashMap;
-    using const_pointer::PointerImpl::PointerImpl;
+    using ConstOnDiskPtr::PointerImpl::PointerImpl;
   };
 
-  class pointer : public PointerImpl<ValueProxy> {
+  class OnDiskPtr : public PointerImpl<ValueProxy> {
   public:
-    operator const_pointer() const {
-      return const_pointer(Value, getOffset(), IsValue);
+    operator ConstOnDiskPtr() const {
+      return ConstOnDiskPtr(Value, getOffset(), IsValue);
     }
 
-    pointer() = default;
+    OnDiskPtr() = default;
 
   private:
     friend class OnDiskTrieRawHashMap;
-    using pointer::PointerImpl::PointerImpl;
+    using OnDiskPtr::PointerImpl::PointerImpl;
   };
 
   /// Find the value from hash.
   ///
   /// \returns pointer to the value if exists, otherwise returns a non-value
   /// pointer that evaluates to `false` when convert to boolean.
-  const_pointer find(ArrayRef<uint8_t> Hash) const;
+  LLVM_ABI_FOR_TEST ConstOnDiskPtr find(ArrayRef<uint8_t> Hash) const;
 
   /// Helper function to recover a pointer into the trie from file offset.
-  Expected<const_pointer> recoverFromFileOffset(FileOffset Offset) const;
+  LLVM_ABI_FOR_TEST Expected<ConstOnDiskPtr>
+  recoverFromFileOffset(FileOffset Offset) const;
 
   using LazyInsertOnConstructCB =
       function_ref<void(FileOffset TentativeOffset, ValueProxy TentativeValue)>;
@@ -186,11 +187,12 @@ public:
   /// The in-memory \a TrieRawHashMap uses LazyAtomicPointer to synchronize
   /// simultaneous writes, but that seems dangerous to use in a memory-mapped
   /// file in case a process crashes in the busy state.
-  Expected<pointer> insertLazy(ArrayRef<uint8_t> Hash,
-                               LazyInsertOnConstructCB OnConstruct = nullptr,
-                               LazyInsertOnLeakCB OnLeak = nullptr);
+  LLVM_ABI_FOR_TEST Expected<OnDiskPtr>
+  insertLazy(ArrayRef<uint8_t> Hash,
+             LazyInsertOnConstructCB OnConstruct = nullptr,
+             LazyInsertOnLeakCB OnLeak = nullptr);
 
-  Expected<pointer> insert(const ConstValueProxy &Value) {
+  Expected<OnDiskPtr> insert(const ConstValueProxy &Value) {
     return insertLazy(Value.Hash, [&](FileOffset, ValueProxy Allocated) {
       assert(Allocated.Hash == Value.Hash);
       assert(Allocated.Data.size() == Value.Data.size());
@@ -198,8 +200,8 @@ public:
     });
   }
 
-  size_t size() const;
-  size_t capacity() const;
+  LLVM_ABI_FOR_TEST size_t size() const;
+  LLVM_ABI_FOR_TEST size_t capacity() const;
 
   /// Gets or creates a file at \p Path with a hash-mapped trie named \p
   /// TrieName. The hash size is \p NumHashBits (in bits) and the records store
@@ -213,16 +215,16 @@ public:
   /// configure the trie, if it doesn't already exist.
   ///
   /// \pre NumHashBits is a multiple of 8 (byte-aligned).
-  static Expected<OnDiskTrieRawHashMap>
+  LLVM_ABI_FOR_TEST static Expected<OnDiskTrieRawHashMap>
   create(const Twine &Path, const Twine &TrieName, size_t NumHashBits,
          uint64_t DataSize, uint64_t MaxFileSize,
          std::optional<uint64_t> NewFileInitialSize,
          std::optional<size_t> NewTableNumRootBits = std::nullopt,
          std::optional<size_t> NewTableNumSubtrieBits = std::nullopt);
 
-  OnDiskTrieRawHashMap(OnDiskTrieRawHashMap &&RHS);
-  OnDiskTrieRawHashMap &operator=(OnDiskTrieRawHashMap &&RHS);
-  ~OnDiskTrieRawHashMap();
+  LLVM_ABI_FOR_TEST OnDiskTrieRawHashMap(OnDiskTrieRawHashMap &&RHS);
+  LLVM_ABI_FOR_TEST OnDiskTrieRawHashMap &operator=(OnDiskTrieRawHashMap &&RHS);
+  LLVM_ABI_FOR_TEST ~OnDiskTrieRawHashMap();
 
 private:
   struct ImplType;

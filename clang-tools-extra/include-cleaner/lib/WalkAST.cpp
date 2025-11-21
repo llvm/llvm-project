@@ -342,7 +342,7 @@ public:
   }
 
   bool VisitTagTypeLoc(TagTypeLoc TTL) {
-    reportType(TTL.getNameLoc(), TTL.getOriginalDecl());
+    reportType(TTL.getNameLoc(), TTL.getDecl());
     return true;
   }
 

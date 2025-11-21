@@ -15,15 +15,16 @@
 ;;
 ;; The entry of the direction vector for the outermost loop is `DVEntry::LE`.
 ;; We need to treat this as `*`, not `<`. See issue #123920 for details.
+;; In conclusion, we must not interchange the loops.
 
-; CHECK: --- !Missed
+; CHECK:      --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        f
-; CHECK: --- !Missed
-; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            Dependence
-; CHECK-NEXT: Function:        f
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          All loops have dependencies in all directions.
+; CHECK-NEXT: ...
+
 
 @a = dso_local global [16 x [16 x [16 x i32]]] zeroinitializer, align 4
 

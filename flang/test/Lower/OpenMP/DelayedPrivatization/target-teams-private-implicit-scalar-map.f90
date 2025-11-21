@@ -23,9 +23,9 @@ program test_default_implicit_firstprivate
 !CHECK:           %[[VAL_4:.*]] = fir.declare %{{.*}} {uniq_name = "_QFEk"} : (!fir.ref<i32>) -> !fir.ref<i32>
 !CHECK:           %[[VAL_5:.*]] = fir.declare %{{.*}} {uniq_name = "_QFExdgfx"} : (!fir.ref<i32>) -> !fir.ref<i32>
 !CHECK:           %[[VAL_6:.*]] = fir.declare %{{.*}} {uniq_name = "_QFExfpvx"} : (!fir.ref<i32>) -> !fir.ref<i32>
-!CHECK:           %[[VAL_7:.*]] = omp.map.info var_ptr(%[[VAL_2]] : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
-!CHECK:           %[[VAL_8:.*]] = omp.map.info var_ptr(%[[VAL_3]] : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "j"}
-!CHECK:           %[[VAL_9:.*]] = omp.map.info var_ptr(%[[VAL_4]] : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "k"}
+!CHECK:           %[[VAL_7:.*]] = omp.map.info var_ptr(%[[VAL_2]] : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
+!CHECK:           %[[VAL_8:.*]] = omp.map.info var_ptr(%[[VAL_3]] : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32> {name = "j"}
+!CHECK:           %[[VAL_9:.*]] = omp.map.info var_ptr(%[[VAL_4]] : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32> {name = "k"}
 !CHECK:           %[[VAL_10:.*]] = fir.box_offset %[[VAL_0]] base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?x?x?xi32>>>
 !CHECK:           %[[VAL_11:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, i32) map_clauses(implicit, tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_10]] : !fir.llvm_ptr<!fir.ref<!fir.array<?x?x?xi32>>>) bounds({{.*}}) -> !fir.llvm_ptr<!fir.ref<!fir.array<?x?x?xi32>>> {name = ""}
 !CHECK:           %[[VAL_12:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>) map_clauses(implicit, to) capture(ByRef) members(%[[VAL_11]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?x?x?xi32>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>> {name = "allocarr"}

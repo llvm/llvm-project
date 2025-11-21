@@ -435,7 +435,7 @@ void GCNHazardRecognizer::RecedeCycle() {
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
-using HazardFnResult = enum { HazardFound, HazardExpired, NoHazardFound };
+enum HazardFnResult { HazardFound, HazardExpired, NoHazardFound };
 
 using IsExpiredFn = function_ref<bool(const MachineInstr &, int WaitStates)>;
 using GetNumWaitStatesFn = function_ref<unsigned int(const MachineInstr &)>;
@@ -643,7 +643,7 @@ int GCNHazardRecognizer::getWaitStatesSinceSetReg(IsHazardFn IsHazard,
 static void addRegUnits(const SIRegisterInfo &TRI, BitVector &BV,
                         MCRegister Reg) {
   for (MCRegUnit Unit : TRI.regunits(Reg))
-    BV.set(Unit);
+    BV.set(static_cast<unsigned>(Unit));
 }
 
 static void addRegsToSet(const SIRegisterInfo &TRI,
@@ -869,7 +869,7 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) {
   int VDataIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdata);
   int VDataRCID = -1;
   if (VDataIdx != -1)
-    VDataRCID = Desc.operands()[VDataIdx].RegClass;
+    VDataRCID = TII->getOpRegClassID(Desc.operands()[VDataIdx]);
 
   if (TII->isMUBUF(MI) || TII->isMTBUF(MI)) {
     // There is no hazard if the instruction does not use vector regs
@@ -893,8 +893,8 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) {
   // All our MIMG definitions use a 256-bit T#, so we can skip checking for them.
   if (TII->isMIMG(MI)) {
     int SRsrcIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::srsrc);
-    assert(SRsrcIdx != -1 &&
-           AMDGPU::getRegBitWidth(Desc.operands()[SRsrcIdx].RegClass) == 256);
+    assert(SRsrcIdx != -1 && AMDGPU::getRegBitWidth(TII->getOpRegClassID(
+                                 Desc.operands()[SRsrcIdx])) == 256);
     (void)SRsrcIdx;
   }
 
@@ -1502,9 +1502,8 @@ static bool shouldRunLdsBranchVmemWARHazardFixup(const MachineFunction &MF,
   bool HasVmem = false;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      HasLds |= SIInstrInfo::isDS(MI);
-      HasVmem |= (SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
-                 SIInstrInfo::isSegmentSpecificFLAT(MI);
+      HasLds |= SIInstrInfo::isDS(MI) || SIInstrInfo::isLDSDMA(MI);
+      HasVmem |= SIInstrInfo::isVMEM(MI);
       if (HasLds && HasVmem)
         return true;
     }
@@ -1526,10 +1525,9 @@ bool GCNHazardRecognizer::fixLdsBranchVmemWARHazard(MachineInstr *MI) {
   assert(!ST.hasExtendedWaitCounts());
 
   auto IsHazardInst = [](const MachineInstr &MI) {
-    if (SIInstrInfo::isDS(MI))
+    if (SIInstrInfo::isDS(MI) || SIInstrInfo::isLDSDMA(MI))
       return 1;
-    if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
-        SIInstrInfo::isSegmentSpecificFLAT(MI))
+    if (SIInstrInfo::isVMEM(MI))
       return 2;
     return 0;
   };
@@ -3267,29 +3265,103 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
     return false;
   assert(!ST.hasExtendedWaitCounts());
 
-  if (!ST.isWave64() || !SIInstrInfo::isSALU(*MI))
+  if (!ST.isWave64())
+    return false;
+
+  const bool IsSALU = SIInstrInfo::isSALU(*MI);
+  const bool IsVALU = SIInstrInfo::isVALU(*MI);
+  if (!IsSALU && !IsVALU)
     return false;
 
   // The hazard sequence is three instructions:
   //   1. VALU reads SGPR as mask
-  //   2. SALU writes SGPR
-  //   3. SALU reads SGPR
-  // The hazard can expire if the distance between 2 and 3 is sufficient.
-  // In practice this happens <10% of the time, hence this always assumes
-  // the hazard exists if 1 and 2 are present to avoid searching.
+  //   2. VALU/SALU writes SGPR
+  //   3. VALU/SALU reads SGPR
+  // The hazard can expire if the distance between 2 and 3 is sufficient,
+  // or (2) is VALU and (3) is SALU.
+  // In practice this happens <10% of the time, hence always assume the hazard
+  // exists if (1) and (2) are present to avoid searching all SGPR reads.
 
-  const MachineOperand *SDSTOp = TII.getNamedOperand(*MI, AMDGPU::OpName::sdst);
-  if (!SDSTOp || !SDSTOp->isReg())
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  auto IgnoreableSGPR = [](const Register Reg) {
+    switch (Reg) {
+    case AMDGPU::EXEC:
+    case AMDGPU::EXEC_LO:
+    case AMDGPU::EXEC_HI:
+    case AMDGPU::M0:
+    case AMDGPU::SGPR_NULL:
+    case AMDGPU::SGPR_NULL64:
+    case AMDGPU::SCC:
+      return true;
+    default:
+      return false;
+    }
+  };
+  auto IsVCC = [](const Register Reg) {
+    return Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI;
+  };
+
+  struct StateType {
+    SmallSet<Register, 2> HazardSGPRs;
+
+    static unsigned getHashValue(const StateType &State) {
+      return hash_combine_range(State.HazardSGPRs);
+    }
+    static bool isEqual(const StateType &LHS, const StateType &RHS) {
+      return LHS.HazardSGPRs == RHS.HazardSGPRs;
+    }
+  };
+
+  SmallVector<const MachineInstr *> WaitInstrs;
+  bool HasSGPRRead = false;
+  StateType InitialState;
+
+  // Look for SGPR write.
+  MachineOperand *HazardDef = nullptr;
+  for (MachineOperand &Op : MI->operands()) {
+    if (!Op.isReg())
+      continue;
+    if (Op.isDef() && HazardDef)
+      continue;
+
+    Register Reg = Op.getReg();
+    if (IgnoreableSGPR(Reg))
+      continue;
+    if (!IsVCC(Reg)) {
+      if (Op.isImplicit())
+        continue;
+      if (!TRI->isSGPRReg(MRI, Reg))
+        continue;
+    }
+    // Also check for SGPR reads.
+    if (Op.isUse()) {
+      HasSGPRRead = true;
+      continue;
+    }
+
+    assert(!HazardDef);
+    HazardDef = &Op;
+  }
+
+  if (!HazardDef)
     return false;
 
-  const Register HazardReg = SDSTOp->getReg();
-  if (HazardReg == AMDGPU::EXEC ||
-      HazardReg == AMDGPU::EXEC_LO ||
-      HazardReg == AMDGPU::EXEC_HI ||
-      HazardReg == AMDGPU::M0)
-    return false;
+  // Setup to track writes to individual SGPRs
+  const Register HazardReg = HazardDef->getReg();
+  if (AMDGPU::SReg_32RegClass.contains(HazardReg)) {
+    InitialState.HazardSGPRs.insert(HazardReg);
+  } else {
+    assert(AMDGPU::SReg_64RegClass.contains(HazardReg));
+    InitialState.HazardSGPRs.insert(TRI->getSubReg(HazardReg, AMDGPU::sub0));
+    InitialState.HazardSGPRs.insert(TRI->getSubReg(HazardReg, AMDGPU::sub1));
+  }
 
-  auto IsHazardFn = [HazardReg, this](const MachineInstr &I) {
+  auto IsHazardFn = [&](StateType &State, const MachineInstr &I) {
+    if (State.HazardSGPRs.empty())
+      return HazardExpired;
+
     switch (I.getOpcode()) {
     case AMDGPU::V_ADDC_U32_e32:
     case AMDGPU::V_ADDC_U32_dpp:
@@ -3304,11 +3376,10 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
     case AMDGPU::V_SUBB_U32_e32:
     case AMDGPU::V_SUBB_U32_dpp:
     case AMDGPU::V_SUBBREV_U32_e32:
-    case AMDGPU::V_SUBBREV_U32_dpp:
+    case AMDGPU::V_SUBBREV_U32_dpp: {
       // These implicitly read VCC as mask source.
-      return HazardReg == AMDGPU::VCC ||
-             HazardReg == AMDGPU::VCC_LO ||
-             HazardReg == AMDGPU::VCC_HI;
+      return IsVCC(HazardReg) ? HazardFound : NoHazardFound;
+    }
     case AMDGPU::V_ADDC_U32_e64:
     case AMDGPU::V_ADDC_U32_e64_dpp:
     case AMDGPU::V_CNDMASK_B16_t16_e64:
@@ -3324,68 +3395,109 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
       // Only check mask register overlaps.
       const MachineOperand *SSRCOp = TII.getNamedOperand(I, AMDGPU::OpName::src2);
       assert(SSRCOp);
-      return TRI.regsOverlap(SSRCOp->getReg(), HazardReg);
+      bool Result = TRI->regsOverlap(SSRCOp->getReg(), HazardReg);
+      return Result ? HazardFound : NoHazardFound;
     }
     default:
-      return false;
+      return NoHazardFound;
     }
   };
 
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto IsExpiredFn = [&MRI, this](const MachineInstr &I, int) {
-    // s_waitcnt_depctr sa_sdst(0) mitigates hazard.
-    if (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-        AMDGPU::DepCtr::decodeFieldSaSdst(I.getOperand(0).getImm()) == 0)
-      return true;
+  const unsigned ConstantMaskBits = AMDGPU::DepCtr::encodeFieldSaSdst(
+      AMDGPU::DepCtr::encodeFieldVaSdst(AMDGPU::DepCtr::encodeFieldVaVcc(0), 0),
+      0);
+  auto UpdateStateFn = [&](StateType &State, const MachineInstr &I) {
+    switch (I.getOpcode()) {
+    case AMDGPU::S_WAITCNT_DEPCTR:
+      // Record mergable waits within region of instructions free of SGPR reads.
+      if (!HasSGPRRead && I.getParent() == MI->getParent() && !I.isBundled() &&
+          (I.getOperand(0).getImm() & ConstantMaskBits) == ConstantMaskBits)
+        WaitInstrs.push_back(&I);
+      break;
+    default:
+      // Update tracking of SGPR reads and writes.
+      for (auto &Op : I.operands()) {
+        if (!Op.isReg())
+          continue;
 
-    // VALU access to any SGPR or literal constant other than HazardReg
-    // mitigates hazard. No need to check HazardReg here as this will
-    // only be called when !IsHazardFn.
-    if (!SIInstrInfo::isVALU(I))
-      return false;
-    for (int OpNo = 0, End = I.getNumOperands(); OpNo < End; ++OpNo) {
-      const MachineOperand &Op = I.getOperand(OpNo);
-      if (Op.isReg()) {
-        Register OpReg = Op.getReg();
-        // Only consider uses
-        if (!Op.isUse())
+        Register Reg = Op.getReg();
+        if (IgnoreableSGPR(Reg))
           continue;
-        // Ignore EXEC
-        if (OpReg == AMDGPU::EXEC ||
-            OpReg == AMDGPU::EXEC_LO ||
-            OpReg == AMDGPU::EXEC_HI)
-          continue;
-        // Ignore all implicit uses except VCC
-        if (Op.isImplicit()) {
-          if (OpReg == AMDGPU::VCC ||
-              OpReg == AMDGPU::VCC_LO ||
-              OpReg == AMDGPU::VCC_HI)
-            return true;
+        if (!IsVCC(Reg)) {
+          if (Op.isImplicit())
+            continue;
+          if (!TRI->isSGPRReg(MRI, Reg))
+            continue;
+        }
+        if (Op.isUse()) {
+          HasSGPRRead = true;
           continue;
         }
-        if (TRI.isSGPRReg(MRI, OpReg))
-          return true;
-      } else {
-        const MCInstrDesc &InstDesc = I.getDesc();
-        const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
-        if (!TII.isInlineConstant(Op, OpInfo))
-          return true;
+
+        // Stop tracking any SGPRs with writes on the basis that they will
+        // already have an appropriate wait inserted afterwards.
+        SmallVector<Register, 2> Found;
+        for (Register SGPR : State.HazardSGPRs) {
+          if (Reg == SGPR || TRI->regsOverlap(Reg, SGPR))
+            Found.push_back(SGPR);
+        }
+        for (Register SGPR : Found)
+          State.HazardSGPRs.erase(SGPR);
       }
+      break;
     }
-    return false;
   };
 
   // Check for hazard
-  if (::getWaitStatesSince(IsHazardFn, MI, IsExpiredFn) ==
-      std::numeric_limits<int>::max())
+  if (!hasHazard<StateType>(InitialState, IsHazardFn, UpdateStateFn,
+                            MI->getParent(),
+                            std::next(MI->getReverseIterator())))
     return false;
 
-  auto NextMI = std::next(MI->getIterator());
+  // Compute counter mask
+  unsigned DepCtr =
+      IsVALU ? (IsVCC(HazardReg) ? AMDGPU::DepCtr::encodeFieldVaVcc(0)
+                                 : AMDGPU::DepCtr::encodeFieldVaSdst(0))
+             : AMDGPU::DepCtr::encodeFieldSaSdst(0);
 
-  // Add s_waitcnt_depctr sa_sdst(0) after SALU write.
+  // Try to merge previous waits into this one for regions with no SGPR reads.
+  if (!WaitInstrs.empty()) {
+    // Note: WaitInstrs contains const pointers, so walk backward from MI to
+    // obtain a mutable pointer to each instruction to be merged.
+    // This is expected to be a very short walk within the same block.
+    SmallVector<MachineInstr *> ToErase;
+    unsigned Found = 0;
+    for (MachineBasicBlock::reverse_iterator It = MI->getReverseIterator(),
+                                             End = MI->getParent()->rend();
+         Found < WaitInstrs.size() && It != End; ++It) {
+      MachineInstr *WaitMI = &*It;
+      // Find next wait instruction.
+      if (std::as_const(WaitMI) != WaitInstrs[Found])
+        continue;
+      Found++;
+      unsigned WaitMask = WaitMI->getOperand(0).getImm();
+      assert((WaitMask & ConstantMaskBits) == ConstantMaskBits);
+      DepCtr = AMDGPU::DepCtr::encodeFieldSaSdst(
+          DepCtr, std::min(AMDGPU::DepCtr::decodeFieldSaSdst(WaitMask),
+                           AMDGPU::DepCtr::decodeFieldSaSdst(DepCtr)));
+      DepCtr = AMDGPU::DepCtr::encodeFieldVaSdst(
+          DepCtr, std::min(AMDGPU::DepCtr::decodeFieldVaSdst(WaitMask),
+                           AMDGPU::DepCtr::decodeFieldVaSdst(DepCtr)));
+      DepCtr = AMDGPU::DepCtr::encodeFieldVaVcc(
+          DepCtr, std::min(AMDGPU::DepCtr::decodeFieldVaVcc(WaitMask),
+                           AMDGPU::DepCtr::decodeFieldVaVcc(DepCtr)));
+      ToErase.push_back(WaitMI);
+    }
+    assert(Found == WaitInstrs.size());
+    for (MachineInstr *WaitMI : ToErase)
+      WaitMI->eraseFromParent();
+  }
+
+  // Add s_waitcnt_depctr after SGPR write.
+  auto NextMI = std::next(MI->getIterator());
   auto NewMI = BuildMI(*MI->getParent(), NextMI, MI->getDebugLoc(),
                        TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-                   .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
+                   .addImm(DepCtr);
 
   // SALU write may be s_getpc in a bundle.
   updateGetPCBundle(NewMI);

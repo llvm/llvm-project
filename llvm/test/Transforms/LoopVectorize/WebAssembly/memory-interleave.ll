@@ -7,6 +7,7 @@ target triple = "wasm32-unknown-wasi"
 %struct.TwoInts = type { i32, i32 }
 %struct.ThreeInts = type { i32, i32, i32 }
 %struct.FourInts = type { i32, i32, i32, i32 }
+%struct.TwoShorts = type { i16, i16 }
 %struct.ThreeShorts = type { i16, i16, i16 }
 %struct.FourShorts = type { i16, i16, i16, i16 }
 %struct.TwoBytes = type { i8, i8 }
@@ -14,6 +15,8 @@ target triple = "wasm32-unknown-wasi"
 %struct.FourBytes = type { i8, i8, i8, i8 }
 %struct.FiveBytes = type { i8, i8, i8, i8, i8 }
 %struct.EightBytes = type { i8, i8, i8, i8, i8, i8, i8, i8 }
+%struct.TwoFloats = type { float, float }
+%struct.FourFloats = type { float, float, float, float }
 
 ; CHECK-LABEL: two_ints_same_op
 ; CHECK: Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2 at %10
@@ -1228,7 +1231,7 @@ define hidden void @scale_uv_row_down2(ptr nocapture noundef readonly %0, i32 no
 ; CHECK: LV: Found an estimated cost of 26 for VF 8 For instruction: %14 = load i8
 ; CHECK: LV: Found an estimated cost of 26 for VF 8 For instruction: %20 = load i8
 ; CHECK: LV: Found an estimated cost of 7 for VF 8 For instruction: store i8 %48
-; CHECK: LV: Vector loop of width 8 costs: 10.
+; CHECK: LV: Vector loop of width 8 costs: 11.
 ; CHECK: LV: Found an estimated cost of 132 for VF 16 For instruction: %14 = load i8
 ; CHECK: LV: Found an estimated cost of 132 for VF 16 For instruction: %20 = load i8
 ; CHECK: LV: Found an estimated cost of 6 for VF 16 For instruction: store i8 %48
@@ -1349,4 +1352,1001 @@ define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0,
 
 34:                                               ; preds = %6, %4
   ret void
+}
+
+; CHECK-LABEL: two_floats_same_op
+; CHECK: LV: Scalar loop costs: 14
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: LV: Scalar loop costs: 14.
+; CHECK: LV: Vector loop of width 2 costs: 19.
+; CHECK: LV: Vector loop of width 4 costs: 15.
+; CHECK: LV: Selecting VF: 1.
+define hidden void @two_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp21.not = icmp eq i32 %N, 0
+  br i1 %cmp21.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.022 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.022
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoFloats, ptr %b, i32 %i.022
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %arrayidx3 = getelementptr inbounds nuw %struct.TwoFloats, ptr %res, i32 %i.022
+  store float %mul, ptr %arrayidx3, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %mul8 = fmul float %2, %3
+  %y10 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 4
+  store float %mul8, ptr %y10, align 4
+  %inc = add nuw i32 %i.022, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_floats_vary_op
+; CHECK: LV: Scalar loop costs: 14
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: LV: Scalar loop costs: 14.
+; CHECK: LV: Vector loop of width 2 costs: 19.
+; CHECK: LV: Vector loop of width 4 costs: 15.
+; CHECK: LV: Selecting VF: 1.
+define hidden void @two_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp20.not = icmp eq i32 %N, 0
+  br i1 %cmp20.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.021 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.021
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoFloats, ptr %b, i32 %i.021
+  %1 = load float, ptr %arrayidx1, align 4
+  %add = fadd float %0, %1
+  %arrayidx3 = getelementptr inbounds nuw %struct.TwoFloats, ptr %res, i32 %i.021
+  store float %add, ptr %arrayidx3, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %sub = fsub float %2, %3
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 4
+  store float %sub, ptr %y9, align 4
+  %inc = add nuw i32 %i.021, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_bytes_two_floats_same_op
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: LV: Scalar loop costs: 18
+; CHECK: LV: Vector loop of width 2 costs: 27
+; CHECK: LV: Vector loop of width 4 costs: 15
+; CHECK: LV: Selecting VF: 4.
+define hidden void @two_bytes_two_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp24.not = icmp eq i32 %N, 0
+  br i1 %cmp24.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.025 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoBytes, ptr %a, i32 %i.025
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = sitofp i8 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoBytes, ptr %b, i32 %i.025
+  %1 = load i8, ptr %arrayidx1, align 1
+  %conv3 = sitofp i8 %1 to float
+  %mul = fmul float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.TwoFloats, ptr %res, i32 %i.025
+  store float %mul, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 1
+  %2 = load i8, ptr %y, align 1
+  %conv7 = sitofp i8 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 1
+  %3 = load i8, ptr %y9, align 1
+  %conv10 = sitofp i8 %3 to float
+  %mul11 = fmul float %conv7, %conv10
+  %y13 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %mul11, ptr %y13, align 4
+  %inc = add nuw i32 %i.025, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_bytes_two_floats_vary_op
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: LV: Scalar loop costs: 18
+; CHECK: LV: Vector loop of width 2 costs: 27
+; CHECK: LV: Vector loop of width 4 costs: 15
+; CHECK: LV: Selecting VF: 4.
+define hidden void @two_bytes_two_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp23.not = icmp eq i32 %N, 0
+  br i1 %cmp23.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.024 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoBytes, ptr %a, i32 %i.024
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = sitofp i8 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoBytes, ptr %b, i32 %i.024
+  %1 = load i8, ptr %arrayidx1, align 1
+  %conv3 = sitofp i8 %1 to float
+  %add = fadd float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.TwoFloats, ptr %res, i32 %i.024
+  store float %add, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 1
+  %2 = load i8, ptr %y, align 1
+  %conv7 = sitofp i8 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 1
+  %3 = load i8, ptr %y9, align 1
+  %conv10 = sitofp i8 %3 to float
+  %sub = fsub float %conv7, %conv10
+  %y12 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %sub, ptr %y12, align 4
+  %inc = add nuw i32 %i.024, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_floats_two_bytes_same_op
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: LV: Scalar loop costs: 16
+; CHECK: LV: Vector loop of width 2 costs: 26
+; CHECK: LV: Vector loop of width 4 costs: 16.
+; CHECK: LV: Selecting VF: 1.
+define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp22.not = icmp eq i32 %N, 0
+  br i1 %cmp22.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.023
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoFloats, ptr %b, i32 %i.023
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %conv = fptosi float %mul to i8
+  %arrayidx3 = getelementptr inbounds nuw %struct.TwoBytes, ptr %res, i32 %i.023
+  store i8 %conv, ptr %arrayidx3, align 1
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %mul8 = fmul float %2, %3
+  %conv9 = fptosi float %mul8 to i8
+  %y11 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 1
+  store i8 %conv9, ptr %y11, align 1
+  %inc = add nuw i32 %i.023, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_floats_two_bytes_vary_op
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: LV: Scalar loop costs: 16
+; CHECK: LV: Vector loop of width 2 costs: 26
+; CHECK: LV: Vector loop of width 4 costs: 16.
+; CHECK: LV: Selecting VF: 1.
+define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp21.not = icmp eq i32 %N, 0
+  br i1 %cmp21.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.022 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.022
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoFloats, ptr %b, i32 %i.022
+  %1 = load float, ptr %arrayidx1, align 4
+  %add = fadd float %0, %1
+  %conv = fptosi float %add to i8
+  %arrayidx3 = getelementptr inbounds nuw %struct.TwoBytes, ptr %res, i32 %i.022
+  store i8 %conv, ptr %arrayidx3, align 1
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %sub = fsub float %2, %3
+  %conv8 = fptosi float %sub to i8
+  %y10 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 1
+  store i8 %conv8, ptr %y10, align 1
+  %inc = add nuw i32 %i.022, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_shorts_two_floats_same_op
+; CHECK: Cost of 11 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 11 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: LV: Scalar loop costs: 18
+; CHECK: LV: Vector loop of width 2 costs: 24
+; CHECK: LV: Vector loop of width 4 costs: 12
+; CHECK: LV: Selecting VF: 4.
+define hidden void @two_shorts_two_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp24.not = icmp eq i32 %N, 0
+  br i1 %cmp24.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.025 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoShorts, ptr %a, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv = sitofp i16 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoShorts, ptr %b, i32 %i.025
+  %1 = load i16, ptr %arrayidx1, align 2
+  %conv3 = sitofp i16 %1 to float
+  %mul = fmul float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.TwoFloats, ptr %res, i32 %i.025
+  store float %mul, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 2
+  %2 = load i16, ptr %y, align 2
+  %conv7 = sitofp i16 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 2
+  %3 = load i16, ptr %y9, align 2
+  %conv10 = sitofp i16 %3 to float
+  %mul11 = fmul float %conv7, %conv10
+  %y13 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %mul11, ptr %y13, align 4
+  %inc = add nuw i32 %i.025, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_shorts_two_floats_vary_op
+; CHECK: Cost of 11 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 11 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: LV: Scalar loop costs: 18
+; CHECK: LV: Vector loop of width 2 costs: 24
+; CHECK: LV: Vector loop of width 4 costs: 12
+; CHECK: LV: Selecting VF: 4.
+define hidden void @two_shorts_two_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp23.not = icmp eq i32 %N, 0
+  br i1 %cmp23.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.024 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoShorts, ptr %a, i32 %i.024
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv = sitofp i16 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoShorts, ptr %b, i32 %i.024
+  %1 = load i16, ptr %arrayidx1, align 2
+  %conv3 = sitofp i16 %1 to float
+  %add = fadd float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.TwoFloats, ptr %res, i32 %i.024
+  store float %add, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 2
+  %2 = load i16, ptr %y, align 2
+  %conv7 = sitofp i16 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 2
+  %3 = load i16, ptr %y9, align 2
+  %conv10 = sitofp i16 %3 to float
+  %sub = fsub float %conv7, %conv10
+  %y12 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %sub, ptr %y12, align 4
+  %inc = add nuw i32 %i.024, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_floats_two_shorts_same_op
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 11 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: LV: Scalar loop costs: 16
+; CHECK: LV: Vector loop of width 2 costs: 23
+; CHECK: LV: Vector loop of width 4 costs: 14
+; CHECK: LV: Selecting VF: 4
+define hidden void @two_floats_two_shorts_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp22.not = icmp eq i32 %N, 0
+  br i1 %cmp22.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.023
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoFloats, ptr %b, i32 %i.023
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %conv = fptosi float %mul to i16
+  %arrayidx3 = getelementptr inbounds nuw %struct.TwoShorts, ptr %res, i32 %i.023
+  store i16 %conv, ptr %arrayidx3, align 2
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %mul8 = fmul float %2, %3
+  %conv9 = fptosi float %mul8 to i16
+  %y11 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 2
+  store i16 %conv9, ptr %y11, align 2
+  %inc = add nuw i32 %i.023, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_floats_two_shorts_vary_op
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 11 for VF 2: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2
+; CHECK: LV: Scalar loop costs: 16
+; CHECK: LV: Vector loop of width 2 costs: 23
+; CHECK: LV: Vector loop of width 4 costs: 14
+; CHECK: LV: Selecting VF: 4
+define hidden void @two_floats_two_shorts_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp21.not = icmp eq i32 %N, 0
+  br i1 %cmp21.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.022 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.022
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoFloats, ptr %b, i32 %i.022
+  %1 = load float, ptr %arrayidx1, align 4
+  %add = fadd float %0, %1
+  %conv = fptosi float %add to i16
+  %arrayidx3 = getelementptr inbounds nuw %struct.TwoShorts, ptr %res, i32 %i.022
+  store i16 %conv, ptr %arrayidx3, align 2
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %sub = fsub float %2, %3
+  %conv8 = fptosi float %sub to i16
+  %y10 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 2
+  store i16 %conv8, ptr %y10, align 2
+  %inc = add nuw i32 %i.022, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_floats_same_op
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: LV: Scalar loop costs: 24
+; CHECK: LV: Vector loop of width 2 costs: 33
+; CHECK: LV: Vector loop of width 4 costs: 30
+; CHECK: LV: Selecting VF: 1
+define hidden void @four_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp45.not = icmp eq i32 %N, 0
+  br i1 %cmp45.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.046 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.046
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourFloats, ptr %b, i32 %i.046
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %arrayidx3 = getelementptr inbounds nuw %struct.FourFloats, ptr %res, i32 %i.046
+  store float %mul, ptr %arrayidx3, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %mul8 = fmul float %2, %3
+  %y10 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 4
+  store float %mul8, ptr %y10, align 4
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %4 = load float, ptr %z, align 4
+  %z13 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %5 = load float, ptr %z13, align 4
+  %mul14 = fmul float %4, %5
+  %z16 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 8
+  store float %mul14, ptr %z16, align 4
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %6 = load float, ptr %w, align 4
+  %w19 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %7 = load float, ptr %w19, align 4
+  %mul20 = fmul float %6, %7
+  %w22 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 12
+  store float %mul20, ptr %w22, align 4
+  %inc = add nuw i32 %i.046, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_floats_vary_op
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: LV: Scalar loop costs: 24
+; CHECK: LV: Vector loop of width 2 costs: 33
+; CHECK: LV: Vector loop of width 4 costs: 30
+; CHECK: LV: Selecting VF: 1
+define hidden void @four_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp42.not = icmp eq i32 %N, 0
+  br i1 %cmp42.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.043 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.043
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourFloats, ptr %b, i32 %i.043
+  %1 = load float, ptr %arrayidx1, align 4
+  %add = fadd float %0, %1
+  %arrayidx3 = getelementptr inbounds nuw %struct.FourFloats, ptr %res, i32 %i.043
+  store float %add, ptr %arrayidx3, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %sub = fsub float %2, %3
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 4
+  store float %sub, ptr %y9, align 4
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %4 = load float, ptr %z, align 4
+  %z12 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %5 = load float, ptr %z12, align 4
+  %mul = fmul float %4, %5
+  %z14 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 8
+  store float %mul, ptr %z14, align 4
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %6 = load float, ptr %w, align 4
+  %w17 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %7 = load float, ptr %w17, align 4
+  %div = fdiv float %6, %7
+  %w19 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 12
+  store float %div, ptr %w19, align 4
+  %inc = add nuw i32 %i.043, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_bytes_four_floats_same_op
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: LV: Scalar loop costs: 32
+; CHECK: LV: Vector loop of width 2 costs: 51
+; CHECK: LV: Vector loop of width 4 costs: 27
+; CHECK: LV: Selecting VF: 4
+define hidden void @four_bytes_four_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp52.not = icmp eq i32 %N, 0
+  br i1 %cmp52.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.053 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourBytes, ptr %a, i32 %i.053
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = sitofp i8 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourBytes, ptr %b, i32 %i.053
+  %1 = load i8, ptr %arrayidx1, align 1
+  %conv3 = sitofp i8 %1 to float
+  %mul = fmul float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.FourFloats, ptr %res, i32 %i.053
+  store float %mul, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 1
+  %2 = load i8, ptr %y, align 1
+  %conv7 = sitofp i8 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 1
+  %3 = load i8, ptr %y9, align 1
+  %conv10 = sitofp i8 %3 to float
+  %mul11 = fmul float %conv7, %conv10
+  %y13 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %mul11, ptr %y13, align 4
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 2
+  %4 = load i8, ptr %z, align 1
+  %conv15 = sitofp i8 %4 to float
+  %z17 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 2
+  %5 = load i8, ptr %z17, align 1
+  %conv18 = sitofp i8 %5 to float
+  %mul19 = fmul float %conv15, %conv18
+  %z21 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 8
+  store float %mul19, ptr %z21, align 4
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 3
+  %6 = load i8, ptr %w, align 1
+  %conv23 = sitofp i8 %6 to float
+  %w25 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 3
+  %7 = load i8, ptr %w25, align 1
+  %conv26 = sitofp i8 %7 to float
+  %mul27 = fmul float %conv23, %conv26
+  %w29 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 12
+  store float %mul27, ptr %w29, align 4
+  %inc = add nuw i32 %i.053, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_bytes_four_floats_vary_op
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: LV: Scalar loop costs: 32
+; CHECK: LV: Vector loop of width 2 costs: 51
+; CHECK: LV: Vector loop of width 4 costs: 27
+; CHECK: LV: Selecting VF: 4
+define hidden void @four_bytes_four_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp49.not = icmp eq i32 %N, 0
+  br i1 %cmp49.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.050 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourBytes, ptr %a, i32 %i.050
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = sitofp i8 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourBytes, ptr %b, i32 %i.050
+  %1 = load i8, ptr %arrayidx1, align 1
+  %conv3 = sitofp i8 %1 to float
+  %mul = fmul float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.FourFloats, ptr %res, i32 %i.050
+  store float %mul, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 1
+  %2 = load i8, ptr %y, align 1
+  %conv7 = sitofp i8 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 1
+  %3 = load i8, ptr %y9, align 1
+  %conv10 = sitofp i8 %3 to float
+  %add = fadd float %conv7, %conv10
+  %y12 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %add, ptr %y12, align 4
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 2
+  %4 = load i8, ptr %z, align 1
+  %conv14 = sitofp i8 %4 to float
+  %z16 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 2
+  %5 = load i8, ptr %z16, align 1
+  %conv17 = sitofp i8 %5 to float
+  %div = fdiv float %conv14, %conv17
+  %z19 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 8
+  store float %div, ptr %z19, align 4
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 3
+  %6 = load i8, ptr %w, align 1
+  %conv21 = sitofp i8 %6 to float
+  %w23 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 3
+  %7 = load i8, ptr %w23, align 1
+  %conv24 = sitofp i8 %7 to float
+  %sub = fsub float %conv21, %conv24
+  %w26 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 12
+  store float %sub, ptr %w26, align 4
+  %inc = add nuw i32 %i.050, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_floats_four_bytes_same_op
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: LV: Scalar loop costs: 28
+; CHECK: LV: Vector loop of width 2 costs: 48
+; CHECK: LV: Vector loop of width 4 costs: 31
+; CHECK: LV: Selecting VF: 1
+define hidden void @four_floats_four_bytes_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp48.not = icmp eq i32 %N, 0
+  br i1 %cmp48.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.049 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.049
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourFloats, ptr %b, i32 %i.049
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %conv = fptosi float %mul to i8
+  %arrayidx3 = getelementptr inbounds nuw %struct.FourBytes, ptr %res, i32 %i.049
+  store i8 %conv, ptr %arrayidx3, align 1
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %mul8 = fmul float %2, %3
+  %conv9 = fptosi float %mul8 to i8
+  %y11 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 1
+  store i8 %conv9, ptr %y11, align 1
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %4 = load float, ptr %z, align 4
+  %z14 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %5 = load float, ptr %z14, align 4
+  %mul15 = fmul float %4, %5
+  %conv16 = fptosi float %mul15 to i8
+  %z18 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 2
+  store i8 %conv16, ptr %z18, align 1
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %6 = load float, ptr %w, align 4
+  %w21 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %7 = load float, ptr %w21, align 4
+  %mul22 = fmul float %6, %7
+  %conv23 = fptosi float %mul22 to i8
+  %w25 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 3
+  store i8 %conv23, ptr %w25, align 1
+  %inc = add nuw i32 %i.049, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_floats_four_bytes_vary_op
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: LV: Scalar loop costs: 28
+; CHECK: LV: Vector loop of width 2 costs: 48
+; CHECK: LV: Vector loop of width 4 costs: 31
+; CHECK: LV: Selecting VF: 1
+define hidden void @four_floats_four_bytes_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp45.not = icmp eq i32 %N, 0
+  br i1 %cmp45.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.046 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.046
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourFloats, ptr %b, i32 %i.046
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %conv = fptosi float %mul to i8
+  %arrayidx3 = getelementptr inbounds nuw %struct.FourBytes, ptr %res, i32 %i.046
+  store i8 %conv, ptr %arrayidx3, align 1
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %add = fadd float %2, %3
+  %conv8 = fptosi float %add to i8
+  %y10 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 1
+  store i8 %conv8, ptr %y10, align 1
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %4 = load float, ptr %z, align 4
+  %z13 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %5 = load float, ptr %z13, align 4
+  %div = fdiv float %4, %5
+  %conv14 = fptosi float %div to i8
+  %z16 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 2
+  store i8 %conv14, ptr %z16, align 1
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %6 = load float, ptr %w, align 4
+  %w19 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %7 = load float, ptr %w19, align 4
+  %sub = fsub float %6, %7
+  %conv20 = fptosi float %sub to i8
+  %w22 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 3
+  store i8 %conv20, ptr %w22, align 1
+  %inc = add nuw i32 %i.046, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_shorts_four_floats_same_op
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: LV: Scalar loop costs: 32
+; CHECK: LV: Vector loop of width 2 costs: 41
+; CHECK: LV: Vector loop of width 4 costs: 25
+; CHECK: LV: Selecting VF: 4
+define hidden void @four_shorts_four_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp52.not = icmp eq i32 %N, 0
+  br i1 %cmp52.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.053 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourShorts, ptr %a, i32 %i.053
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv = sitofp i16 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourShorts, ptr %b, i32 %i.053
+  %1 = load i16, ptr %arrayidx1, align 2
+  %conv3 = sitofp i16 %1 to float
+  %mul = fmul float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.FourFloats, ptr %res, i32 %i.053
+  store float %mul, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 2
+  %2 = load i16, ptr %y, align 2
+  %conv7 = sitofp i16 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 2
+  %3 = load i16, ptr %y9, align 2
+  %conv10 = sitofp i16 %3 to float
+  %mul11 = fmul float %conv7, %conv10
+  %y13 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %mul11, ptr %y13, align 4
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %4 = load i16, ptr %z, align 2
+  %conv15 = sitofp i16 %4 to float
+  %z17 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %5 = load i16, ptr %z17, align 2
+  %conv18 = sitofp i16 %5 to float
+  %mul19 = fmul float %conv15, %conv18
+  %z21 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 8
+  store float %mul19, ptr %z21, align 4
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 6
+  %6 = load i16, ptr %w, align 2
+  %conv23 = sitofp i16 %6 to float
+  %w25 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 6
+  %7 = load i16, ptr %w25, align 2
+  %conv26 = sitofp i16 %7 to float
+  %mul27 = fmul float %conv23, %conv26
+  %w29 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 12
+  store float %mul27, ptr %w29, align 4
+  %inc = add nuw i32 %i.053, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_shorts_four_floats_vary_op
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: LV: Scalar loop costs: 32
+; CHECK: LV: Vector loop of width 2 costs: 41
+; CHECK: LV: Vector loop of width 4 costs: 25
+; CHECK: LV: Selecting VF: 4
+define hidden void @four_shorts_four_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp49.not = icmp eq i32 %N, 0
+  br i1 %cmp49.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.050 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourShorts, ptr %a, i32 %i.050
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv = sitofp i16 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourShorts, ptr %b, i32 %i.050
+  %1 = load i16, ptr %arrayidx1, align 2
+  %conv3 = sitofp i16 %1 to float
+  %mul = fmul float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.FourFloats, ptr %res, i32 %i.050
+  store float %mul, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 2
+  %2 = load i16, ptr %y, align 2
+  %conv7 = sitofp i16 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 2
+  %3 = load i16, ptr %y9, align 2
+  %conv10 = sitofp i16 %3 to float
+  %add = fadd float %conv7, %conv10
+  %y12 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %add, ptr %y12, align 4
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %4 = load i16, ptr %z, align 2
+  %conv14 = sitofp i16 %4 to float
+  %z16 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %5 = load i16, ptr %z16, align 2
+  %conv17 = sitofp i16 %5 to float
+  %div = fdiv float %conv14, %conv17
+  %z19 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 8
+  store float %div, ptr %z19, align 4
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 6
+  %6 = load i16, ptr %w, align 2
+  %conv21 = sitofp i16 %6 to float
+  %w23 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 6
+  %7 = load i16, ptr %w23, align 2
+  %conv24 = sitofp i16 %7 to float
+  %sub = fsub float %conv21, %conv24
+  %w26 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 12
+  store float %sub, ptr %w26, align 4
+  %inc = add nuw i32 %i.050, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_floats_four_shorts_same_op
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: LV: Scalar loop costs: 28
+; CHECK: LV: Vector loop of width 2 costs: 41
+; CHECK: LV: Vector loop of width 4 costs: 29
+; CHECK: LV: Selecting VF: 1
+define hidden void @four_floats_four_shorts_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp48.not = icmp eq i32 %N, 0
+  br i1 %cmp48.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.049 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.049
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourFloats, ptr %b, i32 %i.049
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %conv = fptosi float %mul to i16
+  %arrayidx3 = getelementptr inbounds nuw %struct.FourShorts, ptr %res, i32 %i.049
+  store i16 %conv, ptr %arrayidx3, align 2
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %mul8 = fmul float %2, %3
+  %conv9 = fptosi float %mul8 to i16
+  %y11 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 2
+  store i16 %conv9, ptr %y11, align 2
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %4 = load float, ptr %z, align 4
+  %z14 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %5 = load float, ptr %z14, align 4
+  %mul15 = fmul float %4, %5
+  %conv16 = fptosi float %mul15 to i16
+  %z18 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 4
+  store i16 %conv16, ptr %z18, align 2
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %6 = load float, ptr %w, align 4
+  %w21 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %7 = load float, ptr %w21, align 4
+  %mul22 = fmul float %6, %7
+  %conv23 = fptosi float %mul22 to i16
+  %w25 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 6
+  store i16 %conv23, ptr %w25, align 2
+  %inc = add nuw i32 %i.049, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_floats_four_shorts_vary_op
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: LV: Scalar loop costs: 28
+; CHECK: LV: Vector loop of width 2 costs: 41
+; CHECK: LV: Vector loop of width 4 costs: 29
+; CHECK: LV: Selecting VF: 1
+define hidden void @four_floats_four_shorts_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp45.not = icmp eq i32 %N, 0
+  br i1 %cmp45.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.046 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.046
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourFloats, ptr %b, i32 %i.046
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %conv = fptosi float %mul to i16
+  %arrayidx3 = getelementptr inbounds nuw %struct.FourShorts, ptr %res, i32 %i.046
+  store i16 %conv, ptr %arrayidx3, align 2
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %add = fadd float %2, %3
+  %conv8 = fptosi float %add to i16
+  %y10 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 2
+  store i16 %conv8, ptr %y10, align 2
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %4 = load float, ptr %z, align 4
+  %z13 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %5 = load float, ptr %z13, align 4
+  %div = fdiv float %4, %5
+  %conv14 = fptosi float %div to i16
+  %z16 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 4
+  store i16 %conv14, ptr %z16, align 2
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %6 = load float, ptr %w, align 4
+  %w19 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %7 = load float, ptr %w19, align 4
+  %sub = fsub float %6, %7
+  %conv20 = fptosi float %sub to i16
+  %w22 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 6
+  store i16 %conv20, ptr %w22, align 2
+  %inc = add nuw i32 %i.046, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }

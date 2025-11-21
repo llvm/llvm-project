@@ -1,0 +1,77 @@
+name: Build CI Tooling Containers
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container-tooling.yml
+      - '.github/workflows/containers/github-action-ci-tooling/**'
+      - llvm/utils/git/requirements_formatting.txt
+      - llvm/utils/git/requirements_linting.txt
+      - '.github/actions/build-container/**'
+      - '.github/actions/push-container/**'
+  pull_request:
+    paths:
+      - .github/workflows/build-ci-container-tooling.yml
+      - '.github/workflows/containers/github-action-ci-tooling/**'
+      - llvm/utils/git/requirements_formatting.txt
+      - llvm/utils/git/requirements_linting.txt
+      - '.github/actions/build-container/**'
+      - '.github/actions/push-container/**'
+
+jobs:
+  build-ci-container-tooling:
+    name: Build Container ${{ matrix.container-name }}
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - container-name: format
+            test-command: 'cd $HOME && clang-format --version | grep version && git-clang-format -h | grep usage && black --version | grep black'
+          - container-name: lint
+            test-command: 'cd $HOME && clang-tidy --version | grep version && clang-tidy-diff.py -h | grep usage'
+          - container-name: abi-tests
+            test-command: 'cd $HOME && abi-compliance-checker --help'
+            target: abi-tests
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          sparse-checkout: |
+            .github/workflows/containers/github-action-ci-tooling/
+            llvm/utils/git/requirements_formatting.txt
+            llvm/utils/git/requirements_linting.txt
+            clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
+            .github/actions/build-container
+
+      - name: Build Container
+        uses: ./.github/actions/build-container
+        with:
+          container-name: ci-ubuntu-24.04-${{ matrix.container-name }}
+          dockerfile: .github/workflows/containers/github-action-ci-tooling/Dockerfile
+          target: ci-container-${{ matrix.target || format('code-{0}', matrix.container-name) }}
+          test-command: ${{ matrix.test-command }}
+
+  push-ci-container:
+    if: github.event_name == 'push'
+    needs:
+      - build-ci-container-tooling
+    permissions:
+      packages: write
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          sparse-checkout: |
+            .github/actions/push-container
+
+      - uses: ./.github/actions/push-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

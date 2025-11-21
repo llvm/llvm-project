@@ -152,7 +152,6 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_load_b32 v2, v0, s[0:1] scale_offset scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
@@ -256,7 +255,6 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:  .LBB5_3: ; %bb4
 ; GCN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 63
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SYS
@@ -281,7 +279,7 @@ bb0:
   br i1 %tmp, label %bb2, label %bb3
 
 bb2:
-  store volatile i32 17, ptr addrspace(1) undef
+  store volatile i32 17, ptr addrspace(1) poison
   br label %bb4
 
 bb3:
@@ -376,7 +374,7 @@ bb0:
   br i1 %cmp0, label %bb2, label %bb1
 
 bb1:
-  %val = load volatile i32, ptr addrspace(4) undef
+  %val = load volatile i32, ptr addrspace(4) poison
   %cmp1 = icmp eq i32 %val, 3
   br i1 %cmp1, label %bb3, label %bb2
 
@@ -513,7 +511,7 @@ loop_body:
   br label %loop
 
 ret:
-  store volatile i32 7, ptr addrspace(1) undef
+  store volatile i32 7, ptr addrspace(1) poison
   ret void
 }
 
@@ -623,7 +621,7 @@ bb14:                                             ; preds = %bb13, %bb9
   br label %bb19
 
 bb19:                                             ; preds = %bb14, %bb13, %bb9
-  %tmp20 = phi i32 [ undef, %bb9 ], [ undef, %bb13 ], [ %tmp18, %bb14 ]
+  %tmp20 = phi i32 [ poison, %bb9 ], [ poison, %bb13 ], [ %tmp18, %bb14 ]
   %tmp21 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %arg5
   store i32 %tmp20, ptr addrspace(1) %tmp21, align 4
   ret void

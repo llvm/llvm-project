@@ -45,7 +45,9 @@ break_id_t BreakpointSite::GetNextID() {
 // RETURNS - true if we should stop at this breakpoint, false if we
 // should continue.
 
-bool BreakpointSite::ShouldStop(StoppointCallbackContext *context) {
+bool BreakpointSite::ShouldStop(
+    StoppointCallbackContext *context,
+    BreakpointLocationCollection &stopping_bp_locs) {
   m_hit_counter.Increment();
   // ShouldStop can do a lot of work, and might even come back and hit
   // this breakpoint site again.  So don't hold the m_constituents_mutex the
@@ -56,7 +58,7 @@ bool BreakpointSite::ShouldStop(StoppointCallbackContext *context) {
     std::lock_guard<std::recursive_mutex> guard(m_constituents_mutex);
     constituents_copy = m_constituents;
   }
-  return constituents_copy.ShouldStop(context);
+  return constituents_copy.ShouldStop(context, stopping_bp_locs);
 }
 
 bool BreakpointSite::IsBreakpointAtThisSite(lldb::break_id_t bp_id) {

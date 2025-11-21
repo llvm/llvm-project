@@ -524,12 +524,18 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
         descAddr =
             builder.createConvert(loc, builder.getRefType(symType), varAddr);
       } else {
+        fir::BaseBoxType boxType;
         const auto expr = Fortran::evaluate::AsGenericExpr(s);
         fir::ExtendedValue exv = converter.genExprAddr(*expr, stmtCtx);
         mlir::Type type = fir::getBase(exv).getType();
+        bool isClassType = mlir::isa<fir::ClassType>(type);
         if (mlir::Type baseTy = fir::dyn_cast_ptrOrBoxEleTy(type))
           type = baseTy;
-        fir::BoxType boxType = fir::BoxType::get(fir::PointerType::get(type));
+
+        if (isClassType)
+          boxType = fir::ClassType::get(fir::PointerType::get(type));
+        else
+          boxType = fir::BoxType::get(fir::PointerType::get(type));
         descAddr = builder.createTemporary(loc, boxType);
         fir::MutableBoxValue box = fir::MutableBoxValue(descAddr, {}, {});
         fir::factory::associateMutableBox(builder, loc, box, exv,
@@ -944,7 +950,8 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   makeNextConditionalOn(builder, loc, checkResult, ok, inLoop);
   const auto &itemList = std::get<0>(ioImpliedDo.t);
   const auto &control = std::get<1>(ioImpliedDo.t);
-  const auto &loopSym = *control.name.thing.thing.symbol;
+  const auto &loopSym =
+      *Fortran::parser::UnwrapRef<Fortran::parser::Name>(control.name).symbol;
   mlir::Value loopVar = fir::getBase(converter.genExprAddr(
       Fortran::evaluate::AsGenericExpr(loopSym).value(), stmtCtx));
   auto genControlValue = [&](const Fortran::parser::ScalarIntExpr &expr) {

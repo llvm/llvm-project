@@ -249,6 +249,7 @@ public:
 
     LRUEntries.clear();
     LRUEntries.init(Entries, sizeof(Entries));
+    OldestPresentEntry = nullptr;
 
     AvailEntries.clear();
     AvailEntries.init(Entries, sizeof(Entries));
@@ -322,8 +323,6 @@ public:
         }
         CachedBlock PrevEntry = Quarantine[QuarantinePos];
         Quarantine[QuarantinePos] = Entry;
-        if (OldestTime == 0)
-          OldestTime = Entry.Time;
         Entry = PrevEntry;
       }
 
@@ -339,9 +338,6 @@ public:
       }
 
       insert(Entry);
-
-      if (OldestTime == 0)
-        OldestTime = Entry.Time;
     } while (0);
 
     for (MemMapT &EvictMemMap : EvictionMemMaps)
@@ -355,7 +351,6 @@ public:
         SCUDO_SCOPED_TRACE(
             GetSecondaryReleaseToOSTraceName(ReleaseToOS::Normal));
 
-        // TODO: Add ReleaseToOS logic to LRU algorithm
         releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
         Mutex.unlock();
       } else
@@ -535,6 +530,11 @@ public:
 
   void unmapTestOnly() { empty(); }
 
+  void releaseOlderThanTestOnly(u64 ReleaseTime) {
+    ScopedLock L(Mutex);
+    releaseOlderThan(ReleaseTime);
+  }
+
 private:
   void insert(const CachedBlock &Entry) REQUIRES(Mutex) {
     CachedBlock *AvailEntry = AvailEntries.front();
@@ -542,10 +542,16 @@ private:
 
     *AvailEntry = Entry;
     LRUEntries.push_front(AvailEntry);
+    if (OldestPresentEntry == nullptr && AvailEntry->Time != 0)
+      OldestPresentEntry = AvailEntry;
   }
 
   void remove(CachedBlock *Entry) REQUIRES(Mutex) {
     DCHECK(Entry->isValid());
+    if (OldestPresentEntry == Entry) {
+      OldestPresentEntry = LRUEntries.getPrev(Entry);
+      DCHECK(OldestPresentEntry == nullptr || OldestPresentEntry->Time != 0);
+    }
     LRUEntries.remove(Entry);
     Entry->invalidate();
     AvailEntries.push_front(Entry);
@@ -560,6 +566,7 @@ private:
       for (CachedBlock &Entry : LRUEntries)
         MapInfo[N++] = Entry.MemMap;
       LRUEntries.clear();
+      OldestPresentEntry = nullptr;
     }
     for (uptr I = 0; I < N; I++) {
       MemMapT &MemMap = MapInfo[I];
@@ -567,36 +574,42 @@ private:
     }
   }
 
-  void releaseIfOlderThan(CachedBlock &Entry, u64 Time) REQUIRES(Mutex) {
-    if (!Entry.isValid() || !Entry.Time)
-      return;
-    if (Entry.Time > Time) {
-      if (OldestTime == 0 || Entry.Time < OldestTime)
-        OldestTime = Entry.Time;
-      return;
-    }
-    Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase, Entry.CommitSize);
-    Entry.Time = 0;
-  }
-
-  void releaseOlderThan(u64 Time) REQUIRES(Mutex) {
+  void releaseOlderThan(u64 ReleaseTime) REQUIRES(Mutex) {
     SCUDO_SCOPED_TRACE(GetSecondaryReleaseOlderThanTraceName());
 
-    if (!LRUEntries.size() || OldestTime == 0 || OldestTime > Time)
-      return;
-    OldestTime = 0;
-    if (!Config::getQuarantineDisabled())
-      for (uptr I = 0; I < Config::getQuarantineSize(); I++)
-        releaseIfOlderThan(Quarantine[I], Time);
-    for (uptr I = 0; I < Config::getEntriesArraySize(); I++)
-      releaseIfOlderThan(Entries[I], Time);
+    if (!Config::getQuarantineDisabled()) {
+      for (uptr I = 0; I < Config::getQuarantineSize(); I++) {
+        auto &Entry = Quarantine[I];
+        if (!Entry.isValid() || Entry.Time == 0 || Entry.Time > ReleaseTime)
+          continue;
+        Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase,
+                                             Entry.CommitSize);
+        Entry.Time = 0;
+      }
+    }
+
+    for (CachedBlock *Entry = OldestPresentEntry; Entry != nullptr;
+         Entry = LRUEntries.getPrev(Entry)) {
+      DCHECK(Entry->isValid());
+      DCHECK(Entry->Time != 0);
+
+      if (Entry->Time > ReleaseTime) {
+        // All entries are newer than this, so no need to keep scanning.
+        OldestPresentEntry = Entry;
+        return;
+      }
+
+      Entry->MemMap.releaseAndZeroPagesToOS(Entry->CommitBase,
+                                            Entry->CommitSize);
+      Entry->Time = 0;
+    }
+    OldestPresentEntry = nullptr;
   }
 
   HybridMutex Mutex;
   u32 QuarantinePos GUARDED_BY(Mutex) = 0;
   atomic_u32 MaxEntriesCount = {};
   atomic_uptr MaxEntrySize = {};
-  u64 OldestTime GUARDED_BY(Mutex) = 0;
   atomic_s32 ReleaseToOsIntervalMs = {};
   u32 CallsToRetrieve GUARDED_BY(Mutex) = 0;
   u32 SuccessfulRetrieves GUARDED_BY(Mutex) = 0;
@@ -606,6 +619,8 @@ private:
   NonZeroLengthArray<CachedBlock, Config::getQuarantineSize()>
       Quarantine GUARDED_BY(Mutex) = {};
 
+  // The oldest entry in the LRUEntries that has Time non-zero.
+  CachedBlock *OldestPresentEntry GUARDED_BY(Mutex) = nullptr;
   // Cached blocks stored in LRU order
   DoublyLinkedList<CachedBlock> LRUEntries GUARDED_BY(Mutex);
   // The unused Entries

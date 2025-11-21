@@ -182,3 +182,6 @@ if tar_executable:
 # ELF tests expect the default target for ld.lld to be ELF.
 if config.ld_lld_default_mingw:
     config.excludes.append("ELF")
+
+if config.enable_threads:
+    config.available_features.add("thread_support")

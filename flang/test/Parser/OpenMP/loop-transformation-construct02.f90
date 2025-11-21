@@ -11,7 +11,7 @@ subroutine loop_transformation_construct
 
   !$omp do
   !$omp unroll
-  !$omp tile
+  !$omp tile sizes(2)
   do i = 1, I
     y(i) = y(i) * 5
   end do
@@ -26,49 +26,53 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = do
 !CHECK-PARSE-NEXT: | | | | OmpClauseList ->
 !CHECK-PARSE-NEXT: | | | | Flags = None
-!CHECK-PARSE-NEXT: | | | OpenMPLoopConstruct
-!CHECK-PARSE-NEXT: | | | | OmpBeginLoopDirective
-!CHECK-PARSE-NEXT: | | | | | OmpDirectiveName -> llvm::omp::Directive = unroll
-!CHECK-PARSE-NEXT: | | | | | OmpClauseList ->
-!CHECK-PARSE-NEXT: | | | | | Flags = None
-!CHECK-PARSE-NEXT: | | | | OpenMPLoopConstruct
+!CHECK-PARSE-NEXT: | | | Block
+!CHECK-PARSE-NEXT: | | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
 !CHECK-PARSE-NEXT: | | | | | OmpBeginLoopDirective
-!CHECK-PARSE-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = tile
+!CHECK-PARSE-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = unroll
 !CHECK-PARSE-NEXT: | | | | | | OmpClauseList ->
 !CHECK-PARSE-NEXT: | | | | | | Flags = None
-!CHECK-PARSE-NEXT: | | | | | DoConstruct
-!CHECK-PARSE-NEXT: | | | | | | NonLabelDoStmt
-!CHECK-PARSE-NEXT: | | | | | | | LoopControl -> LoopBounds
-!CHECK-PARSE-NEXT: | | | | | | | | Scalar -> Name = 'i'
-!CHECK-PARSE-NEXT: | | | | | | | | Scalar -> Expr = '1_4'
-!CHECK-PARSE-NEXT: | | | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
-!CHECK-PARSE-NEXT: | | | | | | | | Scalar -> Expr = 'i'
-!CHECK-PARSE-NEXT: | | | | | | | | | Designator -> DataRef -> Name = 'i'
-!CHECK-PARSE-NEXT: | | | | | | Block
-!CHECK-PARSE-NEXT: | | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'y(int(i,kind=8))=5_4*y(int(i,kind=8))'
-!CHECK-PARSE-NEXT: | | | | | | | | Variable = 'y(int(i,kind=8))'
-!CHECK-PARSE-NEXT: | | | | | | | | | Designator -> DataRef -> ArrayElement
-!CHECK-PARSE-NEXT: | | | | | | | | | | DataRef -> Name = 'y'
-!CHECK-PARSE-NEXT: | | | | | | | | | | SectionSubscript -> Integer -> Expr = 'i'
-!CHECK-PARSE-NEXT: | | | | | | | | | | | Designator -> DataRef -> Name = 'i'
-!CHECK-PARSE-NEXT: | | | | | | | | Expr = '5_4*y(int(i,kind=8))'
-!CHECK-PARSE-NEXT: | | | | | | | | | Multiply
-!CHECK-PARSE-NEXT: | | | | | | | | | | Expr = 'y(int(i,kind=8))'
-!CHECK-PARSE-NEXT: | | | | | | | | | | | Designator -> DataRef -> ArrayElement
-!CHECK-PARSE-NEXT: | | | | | | | | | | | | DataRef -> Name = 'y'
-!CHECK-PARSE-NEXT: | | | | | | | | | | | | SectionSubscript -> Integer -> Expr = 'i'
-!CHECK-PARSE-NEXT: | | | | | | | | | | | | | Designator -> DataRef -> Name = 'i'
-!CHECK-PARSE-NEXT: | | | | | | | | | | Expr = '5_4'
-!CHECK-PARSE-NEXT: | | | | | | | | | | | LiteralConstant -> IntLiteralConstant = '5'
-!CHECK-PARSE-NEXT: | | | | | | EndDoStmt ->
+!CHECK-PARSE-NEXT: | | | | | Block
+!CHECK-PARSE-NEXT: | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
+!CHECK-PARSE-NEXT: | | | | | | | OmpBeginLoopDirective
+!CHECK-PARSE-NEXT: | | | | | | | | OmpDirectiveName -> llvm::omp::Directive = tile
+!CHECK-PARSE-NEXT: | | | | | | | | OmpClauseList -> OmpClause -> Sizes -> Scalar -> Integer -> Expr = '2_4'
+!CHECK-PARSE-NEXT: | | | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
+!CHECK-PARSE-NEXT: | | | | | | | | Flags = None
+!CHECK-PARSE-NEXT: | | | | | | | Block
+!CHECK-PARSE-NEXT: | | | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+!CHECK-PARSE-NEXT: | | | | | | | | | NonLabelDoStmt
+!CHECK-PARSE-NEXT: | | | | | | | | | | LoopControl -> LoopBounds
+!CHECK-PARSE-NEXT: | | | | | | | | | | | Scalar -> Name = 'i'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | Scalar -> Expr = '1_4'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | Scalar -> Expr = 'i'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | Designator -> DataRef -> Name = 'i'
+!CHECK-PARSE-NEXT: | | | | | | | | | Block
+!CHECK-PARSE-NEXT: | | | | | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'y(int(i,kind=8))=5_4*y(int(i,kind=8))'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | Variable = 'y(int(i,kind=8))'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | Designator -> DataRef -> ArrayElement
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | | DataRef -> Name = 'y'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | | SectionSubscript -> Integer -> Expr = 'i'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | | | Designator -> DataRef -> Name = 'i'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | Expr = '5_4*y(int(i,kind=8))'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | Multiply
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | | Expr = 'y(int(i,kind=8))'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | | | Designator -> DataRef -> ArrayElement
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | | | | DataRef -> Name = 'y'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | | | | SectionSubscript -> Integer -> Expr = 'i'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | | | | | Designator -> DataRef -> Name = 'i'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | | Expr = '5_4'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | | | LiteralConstant -> IntLiteralConstant = '5'
+!CHECK-PARSE-NEXT: | | | | | | | | | EndDoStmt ->
+!CHECK-PARSE-NEXT: | | | | | | | OmpEndLoopDirective
+!CHECK-PARSE-NEXT: | | | | | | | | OmpDirectiveName -> llvm::omp::Directive = tile
+!CHECK-PARSE-NEXT: | | | | | | | | OmpClauseList ->
+!CHECK-PARSE-NEXT: | | | | | | | | Flags = None
 !CHECK-PARSE-NEXT: | | | | | OmpEndLoopDirective
-!CHECK-PARSE-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = tile
+!CHECK-PARSE-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = unroll
 !CHECK-PARSE-NEXT: | | | | | | OmpClauseList ->
 !CHECK-PARSE-NEXT: | | | | | | Flags = None
-!CHECK-PARSE-NEXT: | | | | OmpEndLoopDirective
-!CHECK-PARSE-NEXT: | | | | | OmpDirectiveName -> llvm::omp::Directive = unroll
-!CHECK-PARSE-NEXT: | | | | | OmpClauseList ->
-!CHECK-PARSE-NEXT: | | | | | Flags = None
 !CHECK-PARSE-NEXT: | | | OmpEndLoopDirective
 !CHECK-PARSE-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = do
 !CHECK-PARSE-NEXT: | | | | OmpClauseList ->

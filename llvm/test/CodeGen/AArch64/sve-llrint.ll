@@ -5,9 +5,8 @@ define <vscale x 1 x i64> @llrint_v1i64_v1f16(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: llrint_v1i64_v1f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov w8, #64511 // =0xfbff
+; CHECK-NEXT:    mov z1.h, #-1025 // =0xfffffffffffffbff
 ; CHECK-NEXT:    mov z2.d, #0x8000000000000000
-; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    mov w8, #31743 // =0x7bff
 ; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z0.h, z1.h
@@ -28,9 +27,8 @@ define <vscale x 2 x i64> @llrint_v1i64_v2f16(<vscale x 2 x half> %x) {
 ; CHECK-LABEL: llrint_v1i64_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov w8, #64511 // =0xfbff
+; CHECK-NEXT:    mov z1.h, #-1025 // =0xfffffffffffffbff
 ; CHECK-NEXT:    mov z2.d, #0x8000000000000000
-; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    mov w8, #31743 // =0x7bff
 ; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z0.h, z1.h
@@ -52,10 +50,9 @@ define <vscale x 4 x i64> @llrint_v4i64_v4f16(<vscale x 4 x half> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    mov w8, #64511 // =0xfbff
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z2.h, w8
 ; CHECK-NEXT:    mov w8, #31743 // =0x7bff
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.h, #-1025 // =0xfffffffffffffbff
 ; CHECK-NEXT:    mov z3.d, #0x8000000000000000
 ; CHECK-NEXT:    mov z4.d, #0x8000000000000000
 ; CHECK-NEXT:    mov z5.d, #0x7fffffffffffffff
@@ -85,17 +82,16 @@ define <vscale x 8 x i64> @llrint_v8i64_v8f16(<vscale x 8 x half> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    uunpklo z1.s, z0.h
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
-; CHECK-NEXT:    mov w8, #64511 // =0xfbff
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z4.h, w8
 ; CHECK-NEXT:    mov w8, #31743 // =0x7bff
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z4.h, #-1025 // =0xfffffffffffffbff
 ; CHECK-NEXT:    mov z5.d, #0x8000000000000000
 ; CHECK-NEXT:    mov z6.d, #0x8000000000000000
 ; CHECK-NEXT:    mov z7.d, #0x8000000000000000
@@ -129,11 +125,11 @@ define <vscale x 8 x i64> @llrint_v8i64_v8f16(<vscale x 8 x half> %x) {
 ; CHECK-NEXT:    sel z1.d, p4, z25.d, z6.d
 ; CHECK-NEXT:    sel z2.d, p5, z25.d, z7.d
 ; CHECK-NEXT:    fcmuo p2.h, p0/z, z3.h, z3.h
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    fcmuo p0.h, p0/z, z24.h, z24.h
 ; CHECK-NEXT:    sel z3.d, p6, z25.d, z4.d
-; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z0.d, p3/m, #0 // =0x0
 ; CHECK-NEXT:    mov z1.d, p1/m, #0 // =0x0
 ; CHECK-NEXT:    mov z2.d, p2/m, #0 // =0x0
@@ -151,23 +147,24 @@ define <vscale x 16 x i64> @llrint_v16i64_v16f16(<vscale x 16 x half> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p10, [sp, #1, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #1, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    uunpklo z2.s, z0.h
 ; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    mov w8, #64511 // =0xfbff
+; CHECK-NEXT:    mov w8, #31743 // =0x7bff
 ; CHECK-NEXT:    uunpklo z7.s, z1.h
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z0.h, #-1025 // =0xfffffffffffffbff
 ; CHECK-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEXT:    mov z0.d, #0x8000000000000000
 ; CHECK-NEXT:    mov z5.d, #0x8000000000000000
+; CHECK-NEXT:    mov z29.h, w8
 ; CHECK-NEXT:    mov z31.d, #0x8000000000000000
 ; CHECK-NEXT:    uunpklo z4.d, z2.s
 ; CHECK-NEXT:    uunpklo z24.d, z3.s
@@ -175,10 +172,8 @@ define <vscale x 16 x i64> @llrint_v16i64_v16f16(<vscale x 16 x half> %x) {
 ; CHECK-NEXT:    uunpkhi z6.d, z2.s
 ; CHECK-NEXT:    uunpklo z26.d, z7.s
 ; CHECK-NEXT:    uunpkhi z7.d, z7.s
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    mov w8, #31743 // =0x7bff
+; CHECK-NEXT:    mov z2.d, #0x8000000000000000
 ; CHECK-NEXT:    uunpklo z30.d, z1.s
-; CHECK-NEXT:    mov z29.h, w8
 ; CHECK-NEXT:    mov z3.d, #0x8000000000000000
 ; CHECK-NEXT:    uunpkhi z1.d, z1.s
 ; CHECK-NEXT:    movprfx z27, z4
@@ -191,17 +186,17 @@ define <vscale x 16 x i64> @llrint_v16i64_v16f16(<vscale x 16 x half> %x) {
 ; CHECK-NEXT:    frintx z26.h, p0/m, z26.h
 ; CHECK-NEXT:    frintx z7.h, p0/m, z7.h
 ; CHECK-NEXT:    mov z6.d, #0x8000000000000000
-; CHECK-NEXT:    fcmge p1.h, p0/z, z27.h, z2.h
-; CHECK-NEXT:    fcmge p3.h, p0/z, z24.h, z2.h
-; CHECK-NEXT:    fcmge p4.h, p0/z, z25.h, z2.h
-; CHECK-NEXT:    fcmge p2.h, p0/z, z28.h, z2.h
-; CHECK-NEXT:    fcmge p5.h, p0/z, z26.h, z2.h
-; CHECK-NEXT:    fcvtzs z0.d, p1/m, z27.h
+; CHECK-NEXT:    fcmge p1.h, p0/z, z27.h, z0.h
+; CHECK-NEXT:    fcmge p3.h, p0/z, z24.h, z0.h
+; CHECK-NEXT:    fcmge p4.h, p0/z, z25.h, z0.h
+; CHECK-NEXT:    fcmge p2.h, p0/z, z28.h, z0.h
+; CHECK-NEXT:    fcmge p5.h, p0/z, z26.h, z0.h
+; CHECK-NEXT:    fcvtzs z2.d, p1/m, z27.h
 ; CHECK-NEXT:    fcvtzs z4.d, p3/m, z24.h
 ; CHECK-NEXT:    fcvtzs z5.d, p4/m, z25.h
 ; CHECK-NEXT:    fcmgt p3.h, p0/z, z27.h, z29.h
 ; CHECK-NEXT:    fcvtzs z3.d, p2/m, z28.h
-; CHECK-NEXT:    fcmge p4.h, p0/z, z7.h, z2.h
+; CHECK-NEXT:    fcmge p4.h, p0/z, z7.h, z0.h
 ; CHECK-NEXT:    fcvtzs z6.d, p5/m, z26.h
 ; CHECK-NEXT:    fcmuo p1.h, p0/z, z27.h, z27.h
 ; CHECK-NEXT:    movprfx z27, z30
@@ -212,7 +207,7 @@ define <vscale x 16 x i64> @llrint_v16i64_v16f16(<vscale x 16 x half> %x) {
 ; CHECK-NEXT:    fcmuo p2.h, p0/z, z28.h, z28.h
 ; CHECK-NEXT:    mov z28.d, #0x8000000000000000
 ; CHECK-NEXT:    fcvtzs z31.d, p4/m, z7.h
-; CHECK-NEXT:    fcmge p4.h, p0/z, z27.h, z2.h
+; CHECK-NEXT:    fcmge p4.h, p0/z, z27.h, z0.h
 ; CHECK-NEXT:    fcmgt p6.h, p0/z, z24.h, z29.h
 ; CHECK-NEXT:    fcmuo p7.h, p0/z, z24.h, z24.h
 ; CHECK-NEXT:    mov z24.d, #0x7fffffffffffffff
@@ -221,36 +216,36 @@ define <vscale x 16 x i64> @llrint_v16i64_v16f16(<vscale x 16 x half> %x) {
 ; CHECK-NEXT:    fcmuo p10.h, p0/z, z25.h, z25.h
 ; CHECK-NEXT:    mov z25.d, #0x8000000000000000
 ; CHECK-NEXT:    sel z1.d, p5, z24.d, z3.d
-; CHECK-NEXT:    mov z0.d, p3/m, z24.d
 ; CHECK-NEXT:    sel z3.d, p8, z24.d, z5.d
-; CHECK-NEXT:    fcmge p4.h, p0/z, z30.h, z2.h
+; CHECK-NEXT:    fcmge p4.h, p0/z, z30.h, z0.h
+; CHECK-NEXT:    sel z0.d, p3, z24.d, z2.d
 ; CHECK-NEXT:    sel z2.d, p6, z24.d, z4.d
-; CHECK-NEXT:    mov z0.d, p1/m, #0 // =0x0
 ; CHECK-NEXT:    mov z1.d, p2/m, #0 // =0x0
 ; CHECK-NEXT:    mov z3.d, p10/m, #0 // =0x0
-; CHECK-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    mov z2.d, p7/m, #0 // =0x0
-; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    fcmgt p9.h, p0/z, z26.h, z29.h
+; CHECK-NEXT:    mov z2.d, p7/m, #0 // =0x0
+; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    fcvtzs z25.d, p4/m, z30.h
+; CHECK-NEXT:    mov z0.d, p1/m, #0 // =0x0
 ; CHECK-NEXT:    fcmgt p5.h, p0/z, z7.h, z29.h
 ; CHECK-NEXT:    fcmgt p6.h, p0/z, z27.h, z29.h
-; CHECK-NEXT:    fcmgt p4.h, p0/z, z30.h, z29.h
 ; CHECK-NEXT:    sel z4.d, p9, z24.d, z6.d
+; CHECK-NEXT:    fcmgt p4.h, p0/z, z30.h, z29.h
 ; CHECK-NEXT:    fcmuo p8.h, p0/z, z7.h, z7.h
 ; CHECK-NEXT:    sel z5.d, p5, z24.d, z31.d
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    sel z6.d, p6, z24.d, z28.d
-; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    fcmuo p9.h, p0/z, z27.h, z27.h
-; CHECK-NEXT:    sel z7.d, p4, z24.d, z25.d
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    fcmuo p3.h, p0/z, z26.h, z26.h
+; CHECK-NEXT:    sel z7.d, p4, z24.d, z25.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z5.d, p8/m, #0 // =0x0
-; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    fcmuo p0.h, p0/z, z30.h, z30.h
 ; CHECK-NEXT:    mov z6.d, p9/m, #0 // =0x0
-; CHECK-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z4.d, p3/m, #0 // =0x0
 ; CHECK-NEXT:    mov z7.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    addvl sp, sp, #1
@@ -266,15 +261,15 @@ define <vscale x 32 x i64> @llrint_v32i64_v32f16(<vscale x 32 x half> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-18
-; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
@@ -302,48 +297,47 @@ define <vscale x 32 x i64> @llrint_v32i64_v32f16(<vscale x 32 x half> %x) {
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x40, 0x1c // $d14 @ cfa - 56 * VG - 16
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x40, 0x1c // $d15 @ cfa - 64 * VG - 16
 ; CHECK-NEXT:    uunpklo z4.s, z0.h
-; CHECK-NEXT:    uunpkhi z5.s, z0.h
-; CHECK-NEXT:    mov w9, #64511 // =0xfbff
-; CHECK-NEXT:    uunpklo z6.s, z1.h
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    uunpkhi z28.s, z1.h
-; CHECK-NEXT:    mov z30.h, w9
+; CHECK-NEXT:    uunpkhi z0.s, z0.h
 ; CHECK-NEXT:    mov w9, #31743 // =0x7bff
+; CHECK-NEXT:    uunpklo z5.s, z1.h
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z28.h, #-1025 // =0xfffffffffffffbff
+; CHECK-NEXT:    uunpkhi z29.s, z1.h
+; CHECK-NEXT:    mov z7.d, #0x8000000000000000
 ; CHECK-NEXT:    uunpklo z13.s, z2.h
 ; CHECK-NEXT:    mov z9.d, #0x8000000000000000
 ; CHECK-NEXT:    uunpkhi z14.s, z2.h
 ; CHECK-NEXT:    uunpkhi z17.s, z3.h
-; CHECK-NEXT:    uunpklo z7.d, z4.s
+; CHECK-NEXT:    uunpklo z6.d, z4.s
 ; CHECK-NEXT:    uunpkhi z4.d, z4.s
-; CHECK-NEXT:    uunpklo z27.d, z5.s
-; CHECK-NEXT:    uunpklo z31.d, z6.s
-; CHECK-NEXT:    uunpkhi z8.d, z6.s
-; CHECK-NEXT:    uunpkhi z29.d, z5.s
-; CHECK-NEXT:    uunpkhi z11.d, z28.s
-; CHECK-NEXT:    uunpklo z10.d, z28.s
+; CHECK-NEXT:    uunpklo z27.d, z0.s
+; CHECK-NEXT:    uunpklo z31.d, z5.s
+; CHECK-NEXT:    uunpkhi z8.d, z5.s
+; CHECK-NEXT:    uunpkhi z30.d, z0.s
+; CHECK-NEXT:    uunpkhi z11.d, z29.s
+; CHECK-NEXT:    uunpklo z10.d, z29.s
 ; CHECK-NEXT:    uunpklo z15.s, z3.h
 ; CHECK-NEXT:    uunpklo z16.d, z14.s
 ; CHECK-NEXT:    uunpkhi z14.d, z14.s
 ; CHECK-NEXT:    mov z24.d, #0x8000000000000000
-; CHECK-NEXT:    movprfx z1, z7
-; CHECK-NEXT:    frintx z1.h, p0/m, z7.h
 ; CHECK-NEXT:    movprfx z5, z27
 ; CHECK-NEXT:    frintx z5.h, p0/m, z27.h
+; CHECK-NEXT:    movprfx z1, z6
+; CHECK-NEXT:    frintx z1.h, p0/m, z6.h
 ; CHECK-NEXT:    frintx z4.h, p0/m, z4.h
 ; CHECK-NEXT:    movprfx z12, z31
 ; CHECK-NEXT:    frintx z12.h, p0/m, z31.h
 ; CHECK-NEXT:    movprfx z27, z8
 ; CHECK-NEXT:    frintx z27.h, p0/m, z8.h
-; CHECK-NEXT:    movprfx z6, z29
-; CHECK-NEXT:    frintx z6.h, p0/m, z29.h
+; CHECK-NEXT:    movprfx z6, z30
+; CHECK-NEXT:    frintx z6.h, p0/m, z30.h
 ; CHECK-NEXT:    movprfx z31, z10
 ; CHECK-NEXT:    frintx z31.h, p0/m, z10.h
-; CHECK-NEXT:    mov z7.d, #0x8000000000000000
 ; CHECK-NEXT:    mov z8.d, #0x8000000000000000
+; CHECK-NEXT:    frintx z11.h, p0/m, z11.h
 ; CHECK-NEXT:    movprfx z3, z16
 ; CHECK-NEXT:    frintx z3.h, p0/m, z16.h
-; CHECK-NEXT:    frintx z11.h, p0/m, z11.h
-; CHECK-NEXT:    mov z29.h, w9
+; CHECK-NEXT:    mov z30.h, w9
 ; CHECK-NEXT:    uunpklo z10.d, z13.s
 ; CHECK-NEXT:    uunpkhi z13.d, z13.s
 ; CHECK-NEXT:    uunpkhi z20.d, z15.s
@@ -354,124 +348,124 @@ define <vscale x 32 x i64> @llrint_v32i64_v32f16(<vscale x 32 x half> %x) {
 ; CHECK-NEXT:    uunpklo z15.d, z15.s
 ; CHECK-NEXT:    mov z2.d, #0x8000000000000000
 ; CHECK-NEXT:    mov z21.d, #0x8000000000000000
+; CHECK-NEXT:    frintx z10.h, p0/m, z10.h
 ; CHECK-NEXT:    mov z26.d, #0x8000000000000000
-; CHECK-NEXT:    mov z28.d, #0x7fffffffffffffff
+; CHECK-NEXT:    mov z29.d, #0x7fffffffffffffff
 ; CHECK-NEXT:    movprfx z19, z13
 ; CHECK-NEXT:    frintx z19.h, p0/m, z13.h
 ; CHECK-NEXT:    movprfx z13, z14
 ; CHECK-NEXT:    frintx z13.h, p0/m, z14.h
-; CHECK-NEXT:    frintx z10.h, p0/m, z10.h
 ; CHECK-NEXT:    frintx z16.h, p0/m, z16.h
 ; CHECK-NEXT:    mov z22.d, #0x8000000000000000
 ; CHECK-NEXT:    mov z23.d, #0x8000000000000000
-; CHECK-NEXT:    frintx z15.h, p0/m, z15.h
 ; CHECK-NEXT:    mov z14.d, #0x8000000000000000
-; CHECK-NEXT:    fcmge p4.h, p0/z, z4.h, z30.h
-; CHECK-NEXT:    fcmge p2.h, p0/z, z12.h, z30.h
-; CHECK-NEXT:    fcmgt p9.h, p0/z, z12.h, z29.h
+; CHECK-NEXT:    frintx z15.h, p0/m, z15.h
+; CHECK-NEXT:    fcmge p4.h, p0/z, z4.h, z28.h
+; CHECK-NEXT:    fcmge p2.h, p0/z, z12.h, z28.h
+; CHECK-NEXT:    fcmgt p9.h, p0/z, z12.h, z30.h
 ; CHECK-NEXT:    fcmuo p8.h, p0/z, z12.h, z12.h
 ; CHECK-NEXT:    fcvtzs z7.d, p4/m, z4.h
 ; CHECK-NEXT:    fcvtzs z8.d, p2/m, z12.h
 ; CHECK-NEXT:    mov z12.d, #0x8000000000000000
-; CHECK-NEXT:    fcmge p4.h, p0/z, z27.h, z30.h
+; CHECK-NEXT:    fcmge p4.h, p0/z, z27.h, z28.h
 ; CHECK-NEXT:    fcmuo p10.h, p0/z, z11.h, z11.h
-; CHECK-NEXT:    fcmge p3.h, p0/z, z5.h, z30.h
-; CHECK-NEXT:    mov z8.d, p9/m, z28.d
+; CHECK-NEXT:    fcmge p3.h, p0/z, z5.h, z28.h
+; CHECK-NEXT:    mov z8.d, p9/m, z29.d
 ; CHECK-NEXT:    fcvtzs z9.d, p4/m, z27.h
-; CHECK-NEXT:    fcmge p4.h, p0/z, z11.h, z30.h
+; CHECK-NEXT:    fcmge p4.h, p0/z, z11.h, z28.h
 ; CHECK-NEXT:    fcvtzs z24.d, p3/m, z5.h
 ; CHECK-NEXT:    mov z8.d, p8/m, #0 // =0x0
-; CHECK-NEXT:    fcmge p1.h, p0/z, z6.h, z30.h
-; CHECK-NEXT:    fcmge p5.h, p0/z, z1.h, z30.h
+; CHECK-NEXT:    fcmge p1.h, p0/z, z6.h, z28.h
+; CHECK-NEXT:    fcmge p5.h, p0/z, z1.h, z28.h
 ; CHECK-NEXT:    str z8, [x8, #4, mul vl]
 ; CHECK-NEXT:    fcvtzs z12.d, p4/m, z11.h
-; CHECK-NEXT:    fcmgt p4.h, p0/z, z11.h, z29.h
+; CHECK-NEXT:    fcmgt p4.h, p0/z, z11.h, z30.h
 ; CHECK-NEXT:    uunpkhi z11.d, z17.s
 ; CHECK-NEXT:    movprfx z17, z20
 ; CHECK-NEXT:    frintx z17.h, p0/m, z20.h
 ; CHECK-NEXT:    fcvtzs z25.d, p1/m, z6.h
 ; CHECK-NEXT:    mov z20.d, #0x8000000000000000
 ; CHECK-NEXT:    fcvtzs z0.d, p5/m, z1.h
-; CHECK-NEXT:    fcmge p6.h, p0/z, z10.h, z30.h
+; CHECK-NEXT:    fcmge p6.h, p0/z, z10.h, z28.h
 ; CHECK-NEXT:    frintx z11.h, p0/m, z11.h
-; CHECK-NEXT:    fcmge p3.h, p0/z, z31.h, z30.h
-; CHECK-NEXT:    fcmge p1.h, p0/z, z13.h, z30.h
+; CHECK-NEXT:    fcmge p3.h, p0/z, z31.h, z28.h
+; CHECK-NEXT:    fcmge p1.h, p0/z, z13.h, z28.h
 ; CHECK-NEXT:    fcvtzs z18.d, p6/m, z10.h
-; CHECK-NEXT:    fcmgt p11.h, p0/z, z10.h, z29.h
-; CHECK-NEXT:    fcmge p5.h, p0/z, z11.h, z30.h
+; CHECK-NEXT:    fcmgt p11.h, p0/z, z10.h, z30.h
+; CHECK-NEXT:    fcmge p5.h, p0/z, z11.h, z28.h
 ; CHECK-NEXT:    fcvtzs z2.d, p3/m, z31.h
 ; CHECK-NEXT:    fcvtzs z21.d, p1/m, z13.h
-; CHECK-NEXT:    fcmge p2.h, p0/z, z17.h, z30.h
-; CHECK-NEXT:    fcmge p3.h, p0/z, z16.h, z30.h
+; CHECK-NEXT:    fcmge p2.h, p0/z, z17.h, z28.h
+; CHECK-NEXT:    fcmge p3.h, p0/z, z16.h, z28.h
 ; CHECK-NEXT:    fcmuo p1.h, p0/z, z10.h, z10.h
-; CHECK-NEXT:    sel z10.d, p4, z28.d, z12.d
-; CHECK-NEXT:    sel z12.d, p11, z28.d, z18.d
+; CHECK-NEXT:    sel z10.d, p4, z29.d, z12.d
+; CHECK-NEXT:    sel z12.d, p11, z29.d, z18.d
 ; CHECK-NEXT:    fcvtzs z26.d, p5/m, z11.h
 ; CHECK-NEXT:    fcvtzs z22.d, p2/m, z17.h
-; CHECK-NEXT:    fcmgt p4.h, p0/z, z11.h, z29.h
+; CHECK-NEXT:    fcmgt p4.h, p0/z, z11.h, z30.h
 ; CHECK-NEXT:    fcvtzs z23.d, p3/m, z16.h
 ; CHECK-NEXT:    mov z10.d, p10/m, #0 // =0x0
 ; CHECK-NEXT:    mov z12.d, p1/m, #0 // =0x0
-; CHECK-NEXT:    fcmge p6.h, p0/z, z19.h, z30.h
+; CHECK-NEXT:    fcmge p6.h, p0/z, z19.h, z28.h
 ; CHECK-NEXT:    str z10, [x8, #7, mul vl]
-; CHECK-NEXT:    fcmge p7.h, p0/z, z3.h, z30.h
+; CHECK-NEXT:    fcmge p7.h, p0/z, z3.h, z28.h
 ; CHECK-NEXT:    str z12, [x8, #8, mul vl]
-; CHECK-NEXT:    mov z26.d, p4/m, z28.d
-; CHECK-NEXT:    fcmge p2.h, p0/z, z15.h, z30.h
-; CHECK-NEXT:    mov z30.d, #0x8000000000000000
+; CHECK-NEXT:    mov z26.d, p4/m, z29.d
+; CHECK-NEXT:    fcmge p2.h, p0/z, z15.h, z28.h
+; CHECK-NEXT:    mov z28.d, #0x8000000000000000
 ; CHECK-NEXT:    fcvtzs z14.d, p6/m, z19.h
-; CHECK-NEXT:    fcmgt p5.h, p0/z, z16.h, z29.h
-; CHECK-NEXT:    fcmgt p3.h, p0/z, z17.h, z29.h
+; CHECK-NEXT:    fcmgt p5.h, p0/z, z16.h, z30.h
+; CHECK-NEXT:    fcmgt p3.h, p0/z, z17.h, z30.h
 ; CHECK-NEXT:    fcvtzs z20.d, p7/m, z3.h
-; CHECK-NEXT:    fcvtzs z30.d, p2/m, z15.h
+; CHECK-NEXT:    fcvtzs z28.d, p2/m, z15.h
 ; CHECK-NEXT:    fcmuo p1.h, p0/z, z11.h, z11.h
 ; CHECK-NEXT:    fcmuo p2.h, p0/z, z16.h, z16.h
-; CHECK-NEXT:    sel z11.d, p5, z28.d, z23.d
-; CHECK-NEXT:    sel z16.d, p3, z28.d, z22.d
-; CHECK-NEXT:    fcmgt p4.h, p0/z, z19.h, z29.h
-; CHECK-NEXT:    fcmgt p3.h, p0/z, z15.h, z29.h
+; CHECK-NEXT:    sel z11.d, p5, z29.d, z23.d
+; CHECK-NEXT:    sel z16.d, p3, z29.d, z22.d
+; CHECK-NEXT:    fcmgt p4.h, p0/z, z19.h, z30.h
+; CHECK-NEXT:    fcmgt p3.h, p0/z, z15.h, z30.h
 ; CHECK-NEXT:    mov z26.d, p1/m, #0 // =0x0
 ; CHECK-NEXT:    mov z11.d, p2/m, #0 // =0x0
-; CHECK-NEXT:    fcmgt p1.h, p0/z, z13.h, z29.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z13.h, z30.h
 ; CHECK-NEXT:    fcmuo p6.h, p0/z, z17.h, z17.h
 ; CHECK-NEXT:    str z26, [x8, #15, mul vl]
-; CHECK-NEXT:    sel z26.d, p4, z28.d, z14.d
+; CHECK-NEXT:    sel z26.d, p4, z29.d, z14.d
 ; CHECK-NEXT:    str z11, [x8, #14, mul vl]
-; CHECK-NEXT:    mov z30.d, p3/m, z28.d
-; CHECK-NEXT:    fcmgt p2.h, p0/z, z3.h, z29.h
+; CHECK-NEXT:    mov z28.d, p3/m, z29.d
+; CHECK-NEXT:    fcmgt p2.h, p0/z, z3.h, z30.h
 ; CHECK-NEXT:    fcmuo p4.h, p0/z, z13.h, z13.h
 ; CHECK-NEXT:    fcmuo p3.h, p0/z, z3.h, z3.h
-; CHECK-NEXT:    sel z3.d, p1, z28.d, z21.d
+; CHECK-NEXT:    sel z3.d, p1, z29.d, z21.d
 ; CHECK-NEXT:    mov z16.d, p6/m, #0 // =0x0
-; CHECK-NEXT:    fcmgt p12.h, p0/z, z27.h, z29.h
-; CHECK-NEXT:    sel z11.d, p2, z28.d, z20.d
+; CHECK-NEXT:    fcmgt p12.h, p0/z, z27.h, z30.h
+; CHECK-NEXT:    sel z11.d, p2, z29.d, z20.d
 ; CHECK-NEXT:    str z16, [x8, #13, mul vl]
 ; CHECK-NEXT:    mov z3.d, p4/m, #0 // =0x0
 ; CHECK-NEXT:    fcmuo p6.h, p0/z, z15.h, z15.h
-; CHECK-NEXT:    fcmgt p1.h, p0/z, z4.h, z29.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z4.h, z30.h
 ; CHECK-NEXT:    mov z11.d, p3/m, #0 // =0x0
-; CHECK-NEXT:    mov z9.d, p12/m, z28.d
+; CHECK-NEXT:    mov z9.d, p12/m, z29.d
 ; CHECK-NEXT:    str z3, [x8, #11, mul vl]
 ; CHECK-NEXT:    fcmuo p5.h, p0/z, z19.h, z19.h
-; CHECK-NEXT:    fcmgt p2.h, p0/z, z5.h, z29.h
+; CHECK-NEXT:    fcmgt p2.h, p0/z, z5.h, z30.h
 ; CHECK-NEXT:    str z11, [x8, #10, mul vl]
-; CHECK-NEXT:    mov z30.d, p6/m, #0 // =0x0
-; CHECK-NEXT:    sel z3.d, p1, z28.d, z7.d
-; CHECK-NEXT:    fcmgt p4.h, p0/z, z6.h, z29.h
+; CHECK-NEXT:    mov z28.d, p6/m, #0 // =0x0
+; CHECK-NEXT:    sel z3.d, p1, z29.d, z7.d
+; CHECK-NEXT:    fcmgt p4.h, p0/z, z6.h, z30.h
 ; CHECK-NEXT:    fcmuo p3.h, p0/z, z27.h, z27.h
-; CHECK-NEXT:    str z30, [x8, #12, mul vl]
+; CHECK-NEXT:    str z28, [x8, #12, mul vl]
 ; CHECK-NEXT:    mov z26.d, p5/m, #0 // =0x0
-; CHECK-NEXT:    sel z7.d, p2, z28.d, z24.d
-; CHECK-NEXT:    fcmgt p6.h, p0/z, z31.h, z29.h
-; CHECK-NEXT:    fcmgt p1.h, p0/z, z1.h, z29.h
+; CHECK-NEXT:    sel z7.d, p2, z29.d, z24.d
+; CHECK-NEXT:    fcmgt p6.h, p0/z, z31.h, z30.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z1.h, z30.h
 ; CHECK-NEXT:    str z26, [x8, #9, mul vl]
-; CHECK-NEXT:    sel z24.d, p4, z28.d, z25.d
+; CHECK-NEXT:    sel z24.d, p4, z29.d, z25.d
 ; CHECK-NEXT:    mov z9.d, p3/m, #0 // =0x0
 ; CHECK-NEXT:    fcmuo p5.h, p0/z, z31.h, z31.h
 ; CHECK-NEXT:    fcmuo p2.h, p0/z, z6.h, z6.h
-; CHECK-NEXT:    mov z2.d, p6/m, z28.d
+; CHECK-NEXT:    mov z2.d, p6/m, z29.d
 ; CHECK-NEXT:    str z9, [x8, #5, mul vl]
-; CHECK-NEXT:    mov z0.d, p1/m, z28.d
+; CHECK-NEXT:    mov z0.d, p1/m, z29.d
 ; CHECK-NEXT:    fcmuo p3.h, p0/z, z5.h, z5.h
 ; CHECK-NEXT:    fcmuo p4.h, p0/z, z4.h, z4.h
 ; CHECK-NEXT:    mov z2.d, p5/m, #0 // =0x0
@@ -501,15 +495,15 @@ define <vscale x 32 x i64> @llrint_v32i64_v32f16(<vscale x 32 x half> %x) {
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -602,9 +596,9 @@ define <vscale x 8 x i64> @llrint_v8i64_v8f32(<vscale x 8 x float> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    uunpklo z2.d, z0.s
@@ -643,14 +637,14 @@ define <vscale x 8 x i64> @llrint_v8i64_v8f32(<vscale x 8 x float> %x) {
 ; CHECK-NEXT:    fcmuo p6.s, p0/z, z3.s, z3.s
 ; CHECK-NEXT:    fcmuo p2.s, p0/z, z2.s, z2.s
 ; CHECK-NEXT:    sel z2.d, p5, z4.d, z24.d
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    fcmuo p0.s, p0/z, z1.s, z1.s
 ; CHECK-NEXT:    sel z1.d, p3, z4.d, z7.d
 ; CHECK-NEXT:    sel z3.d, p1, z4.d, z26.d
 ; CHECK-NEXT:    mov z2.d, p6/m, #0 // =0x0
-; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z1.d, p4/m, #0 // =0x0
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z0.d, p2/m, #0 // =0x0
 ; CHECK-NEXT:    mov z3.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    addvl sp, sp, #1
@@ -666,13 +660,13 @@ define <vscale x 16 x i64> @llrint_v16i64_v16f32(<vscale x 16 x float> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p10, [sp, #1, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #1, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -744,7 +738,7 @@ define <vscale x 16 x i64> @llrint_v16i64_v16f32(<vscale x 16 x float> %x) {
 ; CHECK-NEXT:    fcmgt p9.s, p0/z, z24.s, z29.s
 ; CHECK-NEXT:    fcmgt p5.s, p0/z, z30.s, z29.s
 ; CHECK-NEXT:    mov z3.d, p10/m, #0 // =0x0
-; CHECK-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    fcmgt p6.s, p0/z, z25.s, z29.s
 ; CHECK-NEXT:    fcvtzs z7.d, p4/m, z5.s
 ; CHECK-NEXT:    fcmgt p4.s, p0/z, z5.s, z29.s
@@ -752,22 +746,22 @@ define <vscale x 16 x i64> @llrint_v16i64_v16f32(<vscale x 16 x float> %x) {
 ; CHECK-NEXT:    fcmuo p7.s, p0/z, z6.s, z6.s
 ; CHECK-NEXT:    sel z6.d, p6, z9.d, z8.d
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    fcmuo p8.s, p0/z, z30.s, z30.s
 ; CHECK-NEXT:    fcmuo p9.s, p0/z, z25.s, z25.s
 ; CHECK-NEXT:    mov z7.d, p4/m, z9.d
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z2.d, p7/m, #0 // =0x0
-; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    fcmuo p3.s, p0/z, z24.s, z24.s
 ; CHECK-NEXT:    fcmuo p0.s, p0/z, z5.s, z5.s
 ; CHECK-NEXT:    sel z5.d, p5, z9.d, z31.d
 ; CHECK-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z6.d, p9/m, #0 // =0x0
-; CHECK-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z5.d, p8/m, #0 // =0x0
-; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z4.d, p3/m, #0 // =0x0
 ; CHECK-NEXT:    mov z7.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    addvl sp, sp, #3
@@ -783,15 +777,15 @@ define <vscale x 32 x i64> @llrint_v32i64_v32f32(<vscale x 32 x float> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-18
-; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
@@ -1016,15 +1010,15 @@ define <vscale x 32 x i64> @llrint_v32i64_v32f32(<vscale x 32 x float> %x) {
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1115,9 +1109,9 @@ define <vscale x 8 x i64> @llrint_v8i64_v8f64(<vscale x 8 x double> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d
@@ -1153,13 +1147,13 @@ define <vscale x 8 x i64> @llrint_v8i64_v8f64(<vscale x 8 x double> %x) {
 ; CHECK-NEXT:    sel z1.d, p3, z25.d, z6.d
 ; CHECK-NEXT:    fcmuo p6.d, p0/z, z2.d, z2.d
 ; CHECK-NEXT:    sel z2.d, p4, z25.d, z7.d
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    fcmuo p0.d, p0/z, z3.d, z3.d
 ; CHECK-NEXT:    sel z3.d, p1, z25.d, z5.d
 ; CHECK-NEXT:    mov z1.d, p5/m, #0 // =0x0
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z2.d, p6/m, #0 // =0x0
-; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z3.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1174,13 +1168,13 @@ define <vscale x 16 x i64> @llrint_v16f64(<vscale x 16 x double> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p10, [sp, #1, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #1, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
@@ -1249,23 +1243,23 @@ define <vscale x 16 x i64> @llrint_v16f64(<vscale x 16 x double> %x) {
 ; CHECK-NEXT:    sel z4.d, p9, z8.d, z29.d
 ; CHECK-NEXT:    fcmuo p8.d, p0/z, z5.d, z5.d
 ; CHECK-NEXT:    sel z5.d, p5, z8.d, z31.d
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    fcmuo p9.d, p0/z, z6.d, z6.d
 ; CHECK-NEXT:    sel z6.d, p6, z8.d, z24.d
-; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z3.d, p10/m, #0 // =0x0
-; CHECK-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z4.d, p4/m, #0 // =0x0
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z5.d, p8/m, #0 // =0x0
-; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z6.d, p9/m, #0 // =0x0
-; CHECK-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    fcmuo p0.d, p0/z, z7.d, z7.d
 ; CHECK-NEXT:    sel z7.d, p7, z8.d, z9.d
 ; CHECK-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z7.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1280,15 +1274,15 @@ define <vscale x 32 x i64> @llrint_v32f64(<vscale x 32 x double> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-18
-; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
@@ -1509,15 +1503,15 @@ define <vscale x 32 x i64> @llrint_v32f64(<vscale x 32 x double> %x) {
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

@@ -13,7 +13,6 @@
 #include <__compare/three_way_comparable.h>
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
-#include <__concepts/copyable.h>
 #include <__concepts/derived_from.h>
 #include <__concepts/equality_comparable.h>
 #include <__concepts/invocable.h>
@@ -64,7 +63,7 @@ concept __regular_invocable_with_range_ref = regular_invocable<_Fn, range_refere
 template <class _View, class _Fn>
 concept __transform_view_constraints =
     view<_View> && is_object_v<_Fn> && regular_invocable<_Fn&, range_reference_t<_View>> &&
-    __is_referenceable_v<invoke_result_t<_Fn&, range_reference_t<_View>>>;
+    __referenceable<invoke_result_t<_Fn&, range_reference_t<_View>>>;
 
 #  if _LIBCPP_STD_VER >= 23
 template <input_range _View, move_constructible _Fn>

@@ -41,10 +41,6 @@
 using namespace mlir;
 using namespace mlir::tensor;
 
-using llvm::divideCeilSigned;
-using llvm::divideFloorSigned;
-using llvm::mod;
-
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
 Operation *TensorDialect::materializeConstant(OpBuilder &builder,
@@ -555,9 +551,7 @@ void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
 RankedTensorType ConcatOp::inferResultType(int64_t dim, TypeRange inputTypes) {
   assert(!inputTypes.empty() && "cannot concatenate 0 tensors");
   auto tensorTypes =
-      llvm::to_vector<4>(llvm::map_range(inputTypes, [](Type type) {
-        return llvm::cast<RankedTensorType>(type);
-      }));
+      llvm::map_to_vector<4>(inputTypes, llvm::CastTo<RankedTensorType>);
   int64_t concatRank = tensorTypes[0].getRank();
 
   // The concatenation dim must be in the range [0, rank).
@@ -2310,6 +2304,7 @@ RankedTensorType ExtractSliceOp::inferResultType(
                                sourceTensorType.getEncoding());
 }
 
+// TODO: This uses neither offsets nor strides!
 RankedTensorType ExtractSliceOp::inferResultType(
     RankedTensorType sourceTensorType, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides) {

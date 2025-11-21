@@ -210,8 +210,8 @@ struct SpecificConstantMatch {
 };
 
 /// Matches a constant equal to \p RequestedValue.
-inline SpecificConstantMatch m_SpecificICst(APInt RequestedValue) {
-  return SpecificConstantMatch(std::move(RequestedValue));
+inline SpecificConstantMatch m_SpecificICst(const APInt &RequestedValue) {
+  return SpecificConstantMatch(RequestedValue);
 }
 
 inline SpecificConstantMatch m_SpecificICst(int64_t RequestedValue) {
@@ -221,7 +221,7 @@ inline SpecificConstantMatch m_SpecificICst(int64_t RequestedValue) {
 /// Matcher for a specific constant splat.
 struct SpecificConstantSplatMatch {
   APInt RequestedVal;
-  SpecificConstantSplatMatch(const APInt RequestedVal)
+  SpecificConstantSplatMatch(const APInt &RequestedVal)
       : RequestedVal(RequestedVal) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     return isBuildVectorConstantSplat(Reg, MRI, RequestedVal,
@@ -230,8 +230,9 @@ struct SpecificConstantSplatMatch {
 };
 
 /// Matches a constant splat of \p RequestedValue.
-inline SpecificConstantSplatMatch m_SpecificICstSplat(APInt RequestedValue) {
-  return SpecificConstantSplatMatch(std::move(RequestedValue));
+inline SpecificConstantSplatMatch
+m_SpecificICstSplat(const APInt &RequestedValue) {
+  return SpecificConstantSplatMatch(RequestedValue);
 }
 
 inline SpecificConstantSplatMatch m_SpecificICstSplat(int64_t RequestedValue) {
@@ -242,7 +243,7 @@ inline SpecificConstantSplatMatch m_SpecificICstSplat(int64_t RequestedValue) {
 /// Matcher for a specific constant or constant splat.
 struct SpecificConstantOrSplatMatch {
   APInt RequestedVal;
-  SpecificConstantOrSplatMatch(const APInt RequestedVal)
+  SpecificConstantOrSplatMatch(const APInt &RequestedVal)
       : RequestedVal(RequestedVal) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     APInt MatchedVal;
@@ -263,8 +264,8 @@ struct SpecificConstantOrSplatMatch {
 /// Matches a \p RequestedValue constant or a constant splat of \p
 /// RequestedValue.
 inline SpecificConstantOrSplatMatch
-m_SpecificICstOrSplat(APInt RequestedValue) {
-  return SpecificConstantOrSplatMatch(std::move(RequestedValue));
+m_SpecificICstOrSplat(const APInt &RequestedValue) {
+  return SpecificConstantOrSplatMatch(RequestedValue);
 }
 
 inline SpecificConstantOrSplatMatch

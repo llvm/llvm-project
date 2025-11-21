@@ -603,8 +603,8 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
     bool SatisfiesSME = Builtin::evaluateRequiredTargetFeatures(
         StreamingBuiltinGuard, CallerFeatures);
 
-    if ((SatisfiesSVE && SatisfiesSME) ||
-        (SatisfiesSVE && FnType == SemaARM::ArmStreamingCompatible))
+    if (SatisfiesSVE && SatisfiesSME)
+      // Function type is irrelevant for streaming-agnostic builtins.
       return false;
     else if (SatisfiesSVE)
       BuiltinType = SemaARM::ArmNonStreaming;
@@ -850,8 +850,10 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(const TargetInfo &TI,
                                            unsigned BuiltinID,
                                            CallExpr *TheCall) {
   assert((BuiltinID == ARM::BI__builtin_arm_ldrex ||
+          BuiltinID == ARM::BI__builtin_arm_ldrexd ||
           BuiltinID == ARM::BI__builtin_arm_ldaex ||
           BuiltinID == ARM::BI__builtin_arm_strex ||
+          BuiltinID == ARM::BI__builtin_arm_strexd ||
           BuiltinID == ARM::BI__builtin_arm_stlex ||
           BuiltinID == AArch64::BI__builtin_arm_ldrex ||
           BuiltinID == AArch64::BI__builtin_arm_ldaex ||
@@ -859,9 +861,12 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(const TargetInfo &TI,
           BuiltinID == AArch64::BI__builtin_arm_stlex) &&
          "unexpected ARM builtin");
   bool IsLdrex = BuiltinID == ARM::BI__builtin_arm_ldrex ||
+                 BuiltinID == ARM::BI__builtin_arm_ldrexd ||
                  BuiltinID == ARM::BI__builtin_arm_ldaex ||
                  BuiltinID == AArch64::BI__builtin_arm_ldrex ||
                  BuiltinID == AArch64::BI__builtin_arm_ldaex;
+  bool IsDoubleWord = BuiltinID == ARM::BI__builtin_arm_ldrexd ||
+                      BuiltinID == ARM::BI__builtin_arm_strexd;
 
   ASTContext &Context = getASTContext();
   DeclRefExpr *DRE =
@@ -928,6 +933,11 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(const TargetInfo &TI,
   if (!TI.getTriple().isAArch64()) {
     unsigned Mask = TI.getARMLDREXMask();
     unsigned Bits = Context.getTypeSize(ValType);
+    if (IsDoubleWord) {
+      // Explicit request for ldrexd/strexd means only double word sizes
+      // supported if the target supports them.
+      Mask &= TargetInfo::ARM_LDREX_D;
+    }
     bool Supported =
         (llvm::isPowerOf2_64(Bits)) && Bits >= 8 && (Mask & (Bits / 8));
 
@@ -968,8 +978,11 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(const TargetInfo &TI,
           }
         }
       } else {
+        bool EmitDoubleWordDiagnostic =
+            IsDoubleWord && !Mask && TI.getARMLDREXMask();
         Diag(DRE->getBeginLoc(),
              diag::err_atomic_exclusive_builtin_pointer_size_none)
+            << (EmitDoubleWordDiagnostic ? 1 : 0)
             << PointerArg->getSourceRange();
       }
     }
@@ -1013,8 +1026,10 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
                                           unsigned BuiltinID,
                                           CallExpr *TheCall) {
   if (BuiltinID == ARM::BI__builtin_arm_ldrex ||
+      BuiltinID == ARM::BI__builtin_arm_ldrexd ||
       BuiltinID == ARM::BI__builtin_arm_ldaex ||
       BuiltinID == ARM::BI__builtin_arm_strex ||
+      BuiltinID == ARM::BI__builtin_arm_strexd ||
       BuiltinID == ARM::BI__builtin_arm_stlex) {
     return CheckARMBuiltinExclusiveCall(TI, BuiltinID, TheCall);
   }
@@ -1168,7 +1183,6 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
     l = 0;
     u = 15;
     break;
-  case AArch64::BI__builtin_arm_tcancel: l = 0; u = 65535; break;
   }
 
   return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u + l);

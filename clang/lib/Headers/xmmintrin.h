@@ -2416,9 +2416,8 @@ _mm_min_pu8(__m64 __a, __m64 __b) {
 ///    A 64-bit integer vector containing the values with bits to be extracted.
 /// \returns The most significant bit from each 8-bit element in \a __a,
 ///    written to bits [7:0].
-static __inline__ int __DEFAULT_FN_ATTRS_SSE2
-_mm_movemask_pi8(__m64 __a)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_movemask_pi8(__m64 __a) {
   return __builtin_ia32_pmovmskb128((__v16qi)__zext128(__a));
 }
 
@@ -3015,9 +3014,7 @@ _mm_cvtps_pi8(__m128 __a)
 /// \returns A 32-bit integer value. Bits [3:0] contain the sign bits from each
 ///    single-precision floating-point element of the parameter. Bits [31:4] are
 ///    set to zero.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_movemask_ps(__m128 __a)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_movemask_ps(__m128 __a) {
   return __builtin_ia32_movmskps((__v4sf)__a);
 }
 

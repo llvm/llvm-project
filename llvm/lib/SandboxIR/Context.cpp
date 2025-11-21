@@ -443,7 +443,7 @@ Argument *Context::getOrCreateArgument(llvm::Argument *LLVMArg) {
 }
 
 Constant *Context::getOrCreateConstant(llvm::Constant *LLVMC) {
-  return cast<Constant>(getOrCreateValueInternal(LLVMC, 0));
+  return cast<Constant>(getOrCreateValueInternal(LLVMC, nullptr));
 }
 
 BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
@@ -637,7 +637,7 @@ Context::Context(LLVMContext &LLVMCtx)
     : LLVMCtx(LLVMCtx), IRTracker(*this),
       LLVMIRBuilder(LLVMCtx, ConstantFolder()) {}
 
-Context::~Context() {}
+Context::~Context() = default;
 
 void Context::clear() {
   // TODO: Ideally we should clear only function-scope objects, and keep global

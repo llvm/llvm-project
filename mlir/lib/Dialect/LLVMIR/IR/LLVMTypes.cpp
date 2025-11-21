@@ -134,10 +134,10 @@ static void printExtTypeParams(AsmPrinter &p, ArrayRef<Type> typeParams,
 
 /// These are unused for now.
 /// TODO: Move over to these once more types have been migrated to TypeDef.
-LLVM_ATTRIBUTE_UNUSED static OptionalParseResult
+[[maybe_unused]] static OptionalParseResult
 generatedTypeParser(AsmParser &parser, StringRef *mnemonic, Type &value);
-LLVM_ATTRIBUTE_UNUSED static LogicalResult
-generatedTypePrinter(Type def, AsmPrinter &printer);
+[[maybe_unused]] static LogicalResult generatedTypePrinter(Type def,
+                                                           AsmPrinter &printer);
 
 #include "mlir/Dialect/LLVMIR/LLVMTypeInterfaces.cpp.inc"
 
@@ -798,7 +798,7 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
           // clang-format on
           .Case<PtrLikeTypeInterface>(
               [](Type type) { return isCompatiblePtrType(type); })
-          .Default([](Type) { return false; });
+          .Default(false);
 
   if (!result)
     compatibleTypes.erase(type);

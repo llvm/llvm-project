@@ -2339,19 +2339,33 @@ void ASTDeclReader::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
 void ASTDeclReader::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
   VisitCXXMethodDecl(D);
 
-  CXXDestructorDecl *Canon = D->getCanonicalDecl();
+  ASTContext &C = Reader.getContext();
+  CXXDestructorDecl *Canon = cast<CXXDestructorDecl>(D->getCanonicalDecl());
   if (auto *OperatorDelete = readDeclAs<FunctionDecl>()) {
     auto *ThisArg = Record.readExpr();
     // FIXME: Check consistency if we have an old and new operator delete.
-    if (!Canon->OperatorDelete) {
-      Canon->OperatorDelete = OperatorDelete;
+    if (!C.dtorHasOperatorDelete(D, ASTContext::OperatorDeleteKind::Regular)) {
+      C.addOperatorDeleteForVDtor(D, OperatorDelete,
+                                  ASTContext::OperatorDeleteKind::Regular);
       Canon->OperatorDeleteThisArg = ThisArg;
     }
   }
   if (auto *OperatorGlobDelete = readDeclAs<FunctionDecl>()) {
-    if (!Canon->OperatorGlobalDelete) {
-      Canon->OperatorGlobalDelete = OperatorGlobDelete;
-    }
+    if (!C.dtorHasOperatorDelete(D,
+                                 ASTContext::OperatorDeleteKind::GlobalRegular))
+      C.addOperatorDeleteForVDtor(
+          D, OperatorGlobDelete, ASTContext::OperatorDeleteKind::GlobalRegular);
+  }
+  if (auto *OperatorArrayDelete = readDeclAs<FunctionDecl>()) {
+    if (!C.dtorHasOperatorDelete(D, ASTContext::OperatorDeleteKind::Array))
+      C.addOperatorDeleteForVDtor(D, OperatorArrayDelete,
+                                  ASTContext::OperatorDeleteKind::Array);
+  }
+  if (auto *OperatorGlobArrayDelete = readDeclAs<FunctionDecl>()) {
+    if (!C.dtorHasOperatorDelete(D,
+                                 ASTContext::OperatorDeleteKind::ArrayGlobal))
+      C.addOperatorDeleteForVDtor(D, OperatorGlobArrayDelete,
+                                  ASTContext::OperatorDeleteKind::ArrayGlobal);
   }
 }
 
@@ -2424,7 +2438,7 @@ void ASTDeclReader::VisitImplicitConceptSpecializationDecl(
   VisitDecl(D);
   llvm::SmallVector<TemplateArgument, 4> Args;
   for (unsigned I = 0; I < D->NumTemplateArgs; ++I)
-    Args.push_back(Record.readTemplateArgument(/*Canonicalize=*/true));
+    Args.push_back(Record.readTemplateArgument(/*Canonicalize=*/false));
   D->setTemplateArguments(Args);
 }
 
@@ -4852,22 +4866,48 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
     case DeclUpdateKind::CXXResolvedDtorDelete: {
       // Set the 'operator delete' directly to avoid emitting another update
       // record.
+      CXXDestructorDecl *Canon = cast<CXXDestructorDecl>(D->getCanonicalDecl());
+      ASTContext &C = Reader.getContext();
       auto *Del = readDeclAs<FunctionDecl>();
-      auto *First = cast<CXXDestructorDecl>(D->getCanonicalDecl());
       auto *ThisArg = Record.readExpr();
+      auto *Dtor = cast<CXXDestructorDecl>(D);
       // FIXME: Check consistency if we have an old and new operator delete.
-      if (!First->OperatorDelete) {
-        First->OperatorDelete = Del;
-        First->OperatorDeleteThisArg = ThisArg;
+      if (!C.dtorHasOperatorDelete(Dtor,
+                                   ASTContext::OperatorDeleteKind::Regular)) {
+        C.addOperatorDeleteForVDtor(Dtor, Del,
+                                    ASTContext::OperatorDeleteKind::Regular);
+        Canon->OperatorDeleteThisArg = ThisArg;
       }
       break;
     }
 
     case DeclUpdateKind::CXXResolvedDtorGlobDelete: {
       auto *Del = readDeclAs<FunctionDecl>();
-      auto *Canon = cast<CXXDestructorDecl>(D->getCanonicalDecl());
-      if (!Canon->OperatorGlobalDelete)
-        Canon->OperatorGlobalDelete = Del;
+      auto *Dtor = cast<CXXDestructorDecl>(D);
+      ASTContext &C = Reader.getContext();
+      if (!C.dtorHasOperatorDelete(
+              Dtor, ASTContext::OperatorDeleteKind::GlobalRegular))
+        C.addOperatorDeleteForVDtor(
+            Dtor, Del, ASTContext::OperatorDeleteKind::GlobalRegular);
+      break;
+    }
+    case DeclUpdateKind::CXXResolvedDtorArrayDelete: {
+      auto *Del = readDeclAs<FunctionDecl>();
+      auto *Dtor = cast<CXXDestructorDecl>(D);
+      ASTContext &C = Reader.getContext();
+      if (!C.dtorHasOperatorDelete(Dtor, ASTContext::OperatorDeleteKind::Array))
+        C.addOperatorDeleteForVDtor(Dtor, Del,
+                                    ASTContext::OperatorDeleteKind::Array);
+      break;
+    }
+    case DeclUpdateKind::CXXResolvedDtorGlobArrayDelete: {
+      auto *Del = readDeclAs<FunctionDecl>();
+      auto *Dtor = cast<CXXDestructorDecl>(D);
+      ASTContext &C = Reader.getContext();
+      if (!C.dtorHasOperatorDelete(Dtor,
+                                   ASTContext::OperatorDeleteKind::ArrayGlobal))
+        C.addOperatorDeleteForVDtor(
+            Dtor, Del, ASTContext::OperatorDeleteKind::ArrayGlobal);
       break;
     }
 

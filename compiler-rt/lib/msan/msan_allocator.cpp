@@ -217,24 +217,51 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
   }
   auto *meta = reinterpret_cast<Metadata *>(allocator.GetMetaData(allocated));
   meta->requested_size = size;
+  uptr actually_allocated_size = allocator.GetActuallyAllocatedSize(allocated);
+  void* padding_start = reinterpret_cast<char*>(allocated) + size;
+  uptr padding_size = actually_allocated_size - size;
+
+  // - With calloc(7,1), we can set the ideal tagging:
+  //     bytes 0-6:  initialized,   origin not set (and irrelevant)
+  //     byte  7:    uninitialized, origin TAG_ALLOC_PADDING
+  //     bytes 8-15: uninitialized, origin TAG_ALLOC_PADDING
+  // - If we have malloc(7) and __msan_get_track_origins() > 1, the 4-byte
+  //   origin granularity only allows the slightly suboptimal tagging:
+  //     bytes 0-6:  uninitialized, origin TAG_ALLOC
+  //     byte  7:    uninitialized, origin TAG_ALLOC (suboptimal)
+  //     bytes 8-15: uninitialized, origin TAG_ALLOC_PADDING
+  // - If we have malloc(7) and __msan_get_track_origins() == 1, we use a
+  //   single origin bean to reduce overhead:
+  //     bytes 0-6:  uninitialized, origin TAG_ALLOC
+  //     byte  7:    uninitialized, origin TAG_ALLOC (suboptimal)
+  //     bytes 8-15: uninitialized, origin TAG_ALLOC (suboptimal)
+  if (__msan_get_track_origins() && flags()->poison_in_malloc &&
+      (zero || (__msan_get_track_origins() > 1))) {
+    stack->tag = STACK_TRACE_TAG_ALLOC_PADDING;
+    Origin o2 = Origin::CreateHeapOrigin(stack);
+    __msan_set_origin(padding_start, padding_size, o2.raw_id());
+  }
+
   if (zero) {
     if (allocator.FromPrimary(allocated))
       __msan_clear_and_unpoison(allocated, size);
     else
       __msan_unpoison(allocated, size);  // Mem is already zeroed.
+
+    if (flags()->poison_in_malloc)
+      __msan_poison(padding_start, padding_size);
   } else if (flags()->poison_in_malloc) {
-    __msan_poison(allocated, size);
+    __msan_poison(allocated, actually_allocated_size);
+
     if (__msan_get_track_origins()) {
       stack->tag = StackTrace::TAG_ALLOC;
       Origin o = Origin::CreateHeapOrigin(stack);
-      __msan_set_origin(allocated, size, o.raw_id());
+      __msan_set_origin(
+          allocated,
+          __msan_get_track_origins() == 1 ? actually_allocated_size : size,
+          o.raw_id());
     }
   }
-
-  uptr actually_allocated_size = allocator.GetActuallyAllocatedSize(allocated);
-  // For compatibility, the allocator converted 0-sized allocations into 1 byte
-  if (size == 0 && actually_allocated_size > 0 && flags()->poison_in_malloc)
-    __msan_poison(allocated, 1);
 
   UnpoisonParam(2);
   RunMallocHooks(allocated, size);
@@ -255,9 +282,10 @@ void __msan::MsanDeallocate(BufferedStackTrace *stack, void *p) {
   if (flags()->poison_in_free && allocator.FromPrimary(p)) {
     __msan_poison(p, size);
     if (__msan_get_track_origins()) {
+      uptr actually_allocated_size = allocator.GetActuallyAllocatedSize(p);
       stack->tag = StackTrace::TAG_DEALLOC;
       Origin o = Origin::CreateHeapOrigin(stack);
-      __msan_set_origin(p, size, o.raw_id());
+      __msan_set_origin(p, actually_allocated_size, o.raw_id());
     }
   }
   if (MsanThread *t = GetCurrentThread()) {

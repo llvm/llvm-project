@@ -9,6 +9,7 @@
 // Helpers for remark utilites
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkFormat.h"
@@ -19,6 +20,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 // Keep input + output help + names consistent across the various modes via a
@@ -47,7 +49,8 @@
       "serializer", cl::init(Format::Auto),                                    \
       cl::desc("Output remark format to serialize"),                           \
       cl::values(clEnumValN(Format::Auto, "auto",                              \
-                            "Follow the parser format (default)"),             \
+                            "Automatic detection based on output file "        \
+                            "extension or parser format (default)"),           \
                  clEnumValN(Format::YAML, "yaml", "YAML"),                     \
                  clEnumValN(Format::Bitstream, "bitstream", "Bitstream")),     \
       cl::sub(SUBOPT));
@@ -151,6 +154,12 @@ getOutputFileWithFlags(StringRef OutputFileName, sys::fs::OpenFlags Flags);
 Expected<std::unique_ptr<ToolOutputFile>>
 getOutputFileForRemarks(StringRef OutputFileName, Format OutputFormat);
 
+/// Choose the serializer format. If \p SelectedFormat is Format::Auto, try to
+/// detect the format based on the extension of \p OutputFileName or fall back
+/// to \p DefaultFormat.
+Format getSerializerFormat(StringRef OutputFileName, Format SelectedFormat,
+                           Format DefaultFormat);
+
 /// Filter object which can be either a string or a regex to match with the
 /// remark properties.
 class FilterMatcher {
@@ -197,6 +206,55 @@ struct Filters {
   /// Returns true if \p Remark satisfies all the provided filters.
   bool filterRemark(const Remark &Remark);
 };
+
+/// Helper to construct Remarks using an API similar to DiagnosticInfo.
+/// Once this is more fully featured, consider implementing DiagnosticInfo using
+/// RemarkBuilder.
+class RemarkBuilder {
+  BumpPtrAllocator Alloc;
+  UniqueStringSaver Strs;
+
+public:
+  Remark R;
+  struct Argument {
+    std::string Key;
+    std::string Val;
+    std::optional<RemarkLocation> Loc;
+    Argument(StringRef Key, StringRef Val,
+             std::optional<RemarkLocation> Loc = std::nullopt)
+        : Key(Key), Val(Val), Loc(Loc) {}
+    Argument(StringRef Key, int Val,
+             std::optional<RemarkLocation> Loc = std::nullopt)
+        : Key(Key), Val(itostr(Val)), Loc(Loc) {}
+  };
+
+  RemarkBuilder(Type RemarkType, StringRef PassName, StringRef RemarkName,
+                StringRef FunctionName)
+      : Strs(Alloc) {
+    R.RemarkType = RemarkType;
+    R.PassName = Strs.save(PassName);
+    R.RemarkName = Strs.save(RemarkName);
+    R.FunctionName = Strs.save(FunctionName);
+  }
+
+  RemarkBuilder &operator<<(Argument &&Arg) {
+    auto &RArg = R.Args.emplace_back(Strs.save(Arg.Key), Strs.save(Arg.Val));
+    RArg.Loc = Arg.Loc;
+    return *this;
+  }
+
+  RemarkBuilder &operator<<(const char *Str) {
+    R.Args.emplace_back("String", Str);
+    return *this;
+  }
+
+  RemarkBuilder &operator<<(StringRef Str) {
+    R.Args.emplace_back("String", Strs.save(Str));
+    return *this;
+  }
+};
+
+using NV = RemarkBuilder::Argument;
 
 } // namespace remarks
 } // namespace llvm

@@ -20,6 +20,7 @@ extern llvm::cl::opt<bool> treatIndexAsSection;
 
 namespace fir {
 class FirOpBuilder;
+class RecordType;
 } // namespace fir
 namespace Fortran {
 
@@ -134,7 +135,14 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     semantics::SemanticsContext &semaCtx, lower::StatementContext &stmtCtx,
     omp::ObjectList &objectList, llvm::SmallVectorImpl<int64_t> &indices,
     OmpMapParentAndMemberData &parentMemberIndices, llvm::StringRef asFortran,
-    llvm::omp::OpenMPOffloadMappingFlags mapTypeBits);
+    mlir::omp::ClauseMapFlags mapTypeBits);
+
+mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    fir::RecordType recordType, llvm::StringRef mapperNameStr);
+
+bool requiresImplicitDefaultDeclareMapper(
+    const semantics::DerivedTypeSpec &typeSpec);
 
 omp::ObjectList gatherObjectsOf(omp::Object derivedTypeMember,
                                 semantics::SemanticsContext &semaCtx);
@@ -162,6 +170,13 @@ void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
 int64_t collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
     lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
+    mlir::omp::LoopRelatedClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
+
+void collectLoopRelatedInfo(
+    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::pft::Evaluation &eval, std::int64_t collapseValue,
+    // const omp::List<omp::Clause> &clauses,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
 

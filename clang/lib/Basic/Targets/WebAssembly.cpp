@@ -213,6 +213,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
 
 bool WebAssemblyTargetInfo::handleTargetFeatures(
     std::vector<std::string> &Features, DiagnosticsEngine &Diags) {
+  HasMustTail = false;
   for (const auto &Feature : Features) {
     if (Feature == "+atomics") {
       HasAtomics = true;
@@ -345,10 +346,12 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "+tail-call") {
       HasTailCall = true;
+      HasMustTail = true;
       continue;
     }
     if (Feature == "-tail-call") {
       HasTailCall = false;
+      HasMustTail = false;
       continue;
     }
     if (Feature == "+wide-arithmetic") {

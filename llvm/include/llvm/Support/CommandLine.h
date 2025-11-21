@@ -549,7 +549,7 @@ template <class DataType> struct OptionValue;
 // The default value safely does nothing. Option value printing is only
 // best-effort.
 template <class DataType, bool isClass>
-struct OptionValueBase : public GenericOptionValue {
+struct OptionValueBase : GenericOptionValue {
   // Temporary storage for argument passing.
   using WrapperType = OptionValue<DataType>;
 
@@ -2099,7 +2099,7 @@ getRegisteredOptions(SubCommand &Sub = SubCommand::getTopLevel());
 ///
 /// This interface is useful for defining subcommands in libraries and
 /// the dispatch from a single point (like in the main function).
-LLVM_ABI iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+LLVM_ABI iterator_range<SmallPtrSet<SubCommand *, 4>::iterator>
 getRegisteredSubcommands();
 
 //===----------------------------------------------------------------------===//

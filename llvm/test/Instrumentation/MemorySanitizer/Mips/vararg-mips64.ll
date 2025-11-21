@@ -54,12 +54,12 @@ define i32 @bar() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 4) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
+; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 4), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 8), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 16), align 8
 ; CHECK-NEXT:    store i64 24, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 (i32, ...) @foo(i32 0, i32 1, i64 2, double 3.000000e+00)
@@ -82,11 +82,11 @@ define i32 @bar2() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    store i64 0, ptr @__msan_va_arg_tls, align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 8), align 8
 ; CHECK-NEXT:    store i64 16, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 (i32, i32, ...) @foo2(i32 0, i32 1, i64 2, double 3.000000e+00)
@@ -124,8 +124,8 @@ entry:
 
 ; If the size of __msan_va_arg_tls changes the second argument of `add` must also be changed.
 ; CHECK-LABEL: @many_args
-; CHECK: i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 792)
-; CHECK-NOT: i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 800)
+; CHECK: getelementptr (i8, ptr @__msan_va_arg_tls, i64 792)
+; CHECK-NOT: getelementptr (i8, ptr @__msan_va_arg_tls, i64 800)
 declare i64 @sum(i64 %n, ...)
 
 ; CHECK: declare void @__msan_maybe_warning_1(i8 signext, i32 signext)

@@ -560,6 +560,7 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
+  case AArch64::G_PMULL:
     return true;
   case TargetOpcode::G_INTRINSIC:
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
@@ -590,6 +591,8 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
                                             unsigned Depth) const {
   switch (MI.getOpcode()) {
   case AArch64::G_DUP:
+  case AArch64::G_SADDLP:
+  case AArch64::G_UADDLP:
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP:
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
@@ -798,6 +801,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (Ty.isVector())
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else if (isPreISelGenericFloatingPointOpcode(Opc) ||
+             (MO.isDef() && onlyDefinesFP(MI, MRI, TRI)) ||
+             (MO.isUse() && onlyUsesFP(MI, MRI, TRI)) ||
              Ty.getSizeInBits() > 64)
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else
@@ -852,7 +857,9 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case TargetOpcode::G_FPTOSI_SAT:
-  case TargetOpcode::G_FPTOUI_SAT: {
+  case TargetOpcode::G_FPTOUI_SAT:
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI: {
     LLT DstType = MRI.getType(MI.getOperand(0).getReg());
     if (DstType.isVector())
       break;
@@ -860,11 +867,19 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
       break;
     }
-    OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
+    TypeSize DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    TypeSize SrcSize = getSizeInBits(MI.getOperand(1).getReg(), MRI, TRI);
+    if (((DstSize == SrcSize) || STI.hasFeature(AArch64::FeatureFPRCVT)) &&
+        all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+               [&](const MachineInstr &UseMI) {
+                 return onlyUsesFP(UseMI, MRI, TRI) ||
+                        prefersFPUse(UseMI, MRI, TRI);
+               }))
+      OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
+    else
+      OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
     break;
   }
-  case TargetOpcode::G_FPTOSI:
-  case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_INTRINSIC_LRINT:
   case TargetOpcode::G_INTRINSIC_LLRINT:
     if (MRI.getType(MI.getOperand(0).getReg()).isVector())
