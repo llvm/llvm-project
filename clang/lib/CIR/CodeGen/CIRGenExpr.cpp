@@ -1550,7 +1550,8 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
 
   case SD_FullExpression:
     cgf.pushDestroy(NormalAndEHCleanup, referenceTemporary, e->getType(),
-                    CIRGenFunction::destroyCXXObject);
+                    CIRGenFunction::destroyCXXObject,
+                    /*useEHCleanup=*/ true);
     break;
 
   case SD_Automatic:

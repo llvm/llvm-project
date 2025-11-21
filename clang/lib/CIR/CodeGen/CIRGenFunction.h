@@ -938,18 +938,36 @@ public:
   void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth);
   void popCleanupBlock();
 
+  template <class T>
+  typename DominatingValue<T>::saved_type saveValueInCond(T value) {
+    return DominatingValue<T>::save(*this, value);
+  }
+
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
   /// against the possibility that we're currently inside a
   /// conditionally-evaluated expression.
   template <class T, class... As>
-  void pushFullExprCleanup(CleanupKind kind, As... a) {
+  void pushFullExprCleanup(CleanupKind kind, As... args) {
     // If we're not in a conditional branch, or if none of the
     // arguments requires saving, then use the unconditional cleanup.
     if (!isInConditionalBranch())
-      return ehStack.pushCleanup<T>(kind, a...);
+      return ehStack.pushCleanup<T>(kind, args...);
 
-    cgm.errorNYI("pushFullExprCleanup in conditional branch");
+    // Stash values in a tuple so we can guarantee the order of saves.
+    using SavedTuple = std::tuple<typename DominatingValue<As>::saved_type...>;
+    SavedTuple savedTuple{saveValueInCond(args)...};
+
+    using CleanupType = EHScopeStack::ConditionalCleanup<T, As...>;
+    ehStack.pushCleanupTuple<CleanupType>(kind, savedTuple);
+
+    /// Set up the last cleanup that was pushed as a conditional
+    /// full-expression cleanup
+    initFullExprCleanupWithFlag(createCleanupActiveFlag());
   }
+
+  void initFullExprCleanupWithFlag(Address activeFlag);
+
+  Address createCleanupActiveFlag();
 
   /// Enters a new scope for capturing cleanups, all of which
   /// will be executed once the scope is exited.
@@ -1194,7 +1212,7 @@ public:
                    QualType type);
 
   void pushDestroy(CleanupKind kind, Address addr, QualType type,
-                   Destroyer *destroyer);
+                   Destroyer *destroyer, bool useEHCleanupForArray);
 
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 

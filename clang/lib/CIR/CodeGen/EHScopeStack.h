@@ -50,6 +50,28 @@ struct BranchFixup {
   cir::BrOp initialBranch = {};
 };
 
+template <class T> struct InvariantValue {
+  using type = T;
+  using saved_type = T;
+  static bool needsSaving(type value) { return false; }
+  static saved_type save(CIRGenFunction &cgf, type value) { return value; }
+  static type restore(CIRGenFunction &cgf, saved_type value) { return value; }
+};
+
+/// A metaprogramming class for ensuring that a value will dominate an
+/// arbitrary position in a function.
+template <class T> struct DominatingValue : InvariantValue<T> {};
+
+template <class T, bool mightBeInstruction =
+                       (std::is_base_of<mlir::Value, T>::value ||
+                        std::is_base_of<mlir::Operation, T>::value) &&
+                       !std::is_base_of<cir::ConstantOp, T>::value &&
+                       !std::is_base_of<mlir::Block, T>::value> struct DominatingPointer;
+template <class T> struct DominatingPointer<T, false> : InvariantValue<T *> {};
+
+// template <class T> struct DominatingPointer<T,true> at end of file
+template <class T> struct DominatingValue<T *> : DominatingPointer<T> {};
+
 enum CleanupKind : unsigned {
   /// Denotes a cleanup that should run when a scope is exited using exceptional
   /// control flow (a throw statement leading to stack unwinding, ).
@@ -127,13 +149,68 @@ public:
 
     virtual ~Cleanup() = default;
 
+    /// Generation flags.
+    class Flags {
+      enum {
+        F_IsForEH = 0x1,
+        F_IsNormalCleanupKind = 0x2,
+        F_IsEHCleanupKind = 0x4,
+        F_HasExitSwitch = 0x8,
+      };
+      unsigned flags{0};
+
+    public:
+      Flags() = default;
+
+      /// isForEH - true if the current emission is for an EH cleanup.
+      bool isForEHCleanup() const { return flags & F_IsForEH; }
+      bool isForNormalCleanup() const { return !isForEHCleanup(); }
+      void setIsForEHCleanup() { flags |= F_IsForEH; }
+
+      bool isNormalCleanupKind() const { return flags & F_IsNormalCleanupKind; }
+      void setIsNormalCleanupKind() { flags |= F_IsNormalCleanupKind; }
+
+      /// isEHCleanupKind - true if the cleanup was pushed as an EH
+      /// cleanup.
+      bool isEHCleanupKind() const { return flags & F_IsEHCleanupKind; }
+      void setIsEHCleanupKind() { flags |= F_IsEHCleanupKind; }
+
+      bool hasExitSwitch() const { return flags & F_HasExitSwitch; }
+      void setHasExitSwitch() { flags |= F_HasExitSwitch; }
+    };
+
     /// Emit the cleanup.  For normal cleanups, this is run in the
     /// same EH context as when the cleanup was pushed, i.e. the
     /// immediately-enclosing context of the cleanup scope.  For
     /// EH cleanups, this is run in a terminate context.
     ///
     // \param flags cleanup kind.
-    virtual void emit(CIRGenFunction &cgf) = 0;
+    virtual void emit(CIRGenFunction &cgf, Flags flags) = 0;
+  };
+
+  /// ConditionalCleanup stores the saved form of its parameters,
+  /// then restores them and performs the cleanup.
+  template <class T, class... As>
+  class ConditionalCleanup final : public Cleanup {
+    using SavedTuple = std::tuple<typename DominatingValue<As>::saved_type...>;
+    SavedTuple savedTuple;
+
+    template <std::size_t... Is>
+    T restore(CIRGenFunction &cgf, std::index_sequence<Is...>) {
+      // It's important that the restores are emitted in order. The braced init
+      // list guarantees that.
+      return T{DominatingValue<As>::restore(cgf, std::get<Is>(savedTuple))...};
+    }
+
+    void emit(CIRGenFunction &cgf, Flags flags) override {
+      restore(cgf, std::index_sequence_for<As...>()).emit(cgf, flags);
+    }
+
+  public:
+    ConditionalCleanup(typename DominatingValue<As>::saved_type... args)
+        : savedTuple(args...) {}
+
+    ConditionalCleanup(SavedTuple tuple) : savedTuple(std::move(tuple)) {}
   };
 
 private:
@@ -199,6 +276,15 @@ public:
                   "Cleanup's alignment is too large.");
     void *buffer = pushCleanup(kind, sizeof(T));
     [[maybe_unused]] Cleanup *obj = new (buffer) T(a...);
+  }
+
+  /// Push a lazily-created cleanup on the stack. Tuple version.
+  template <class T, class... As>
+  void pushCleanupTuple(CleanupKind kind, std::tuple<As...> args) {
+    static_assert(alignof(T) <= ScopeStackAlignment,
+                  "Cleanup's alignment is too large.");
+    void *buffer = pushCleanup(kind, sizeof(T));
+    [[maybe_unused]] Cleanup *obj = new (buffer) T(std::move(args));
   }
 
   void setCGF(CIRGenFunction *inCGF) { cgf = inCGF; }

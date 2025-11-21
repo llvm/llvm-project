@@ -133,7 +133,7 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
   CallBaseDtor(const CXXRecordDecl *base, bool baseIsVirtual)
       : baseClass(base), baseIsVirtual(baseIsVirtual) {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     const CXXRecordDecl *derivedClass =
         cast<CXXMethodDecl>(cgf.curFuncDecl)->getParent();
 
@@ -904,9 +904,9 @@ mlir::Value loadThisForDtorDelete(CIRGenFunction &cgf,
 
 /// Call the operator delete associated with the current destructor.
 struct CallDtorDelete final : EHScopeStack::Cleanup {
-  CallDtorDelete() {}
+  CallDtorDelete() = default;
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(cgf.curFuncDecl);
     const CXXRecordDecl *classDecl = dtor->getParent();
     cgf.emitDeleteCall(dtor->getOperatorDelete(),
@@ -923,7 +923,7 @@ public:
   DestroyField(const FieldDecl *field, CIRGenFunction::Destroyer *destroyer)
       : field(field), destroyer(destroyer) {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     // Find the address of the field.
     Address thisValue = cgf.loadCXXThisAddress();
     CanQualType recordTy =

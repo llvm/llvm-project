@@ -796,14 +796,19 @@ void CIRGenFunction::emitNullabilityCheck(LValue lhs, mlir::Value rhs,
 namespace {
 struct DestroyObject final : EHScopeStack::Cleanup {
   DestroyObject(Address addr, QualType type,
-                CIRGenFunction::Destroyer *destroyer)
-      : addr(addr), type(type), destroyer(destroyer) {}
+                CIRGenFunction::Destroyer *destroyer, bool useEHCleanupForArray)
+      : addr(addr), type(type), destroyer(destroyer), useEHCleanupForArray(useEHCleanupForArray) {}
 
   Address addr;
   QualType type;
   CIRGenFunction::Destroyer *destroyer;
+  bool useEHCleanupForArray;
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    // Don't use an EH cleanup recursively from an EH cleanup.
+    [[maybe_unused]] bool useEHCleanupForArray =
+        flags.isForNormalCleanup() && this->useEHCleanupForArray;
+
     cgf.emitDestroy(addr, type, destroyer);
   }
 };
@@ -811,7 +816,7 @@ struct DestroyObject final : EHScopeStack::Cleanup {
 struct CallStackRestore final : EHScopeStack::Cleanup {
   Address stack;
   CallStackRestore(Address stack) : stack(stack) {}
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     mlir::Location loc = stack.getPointer().getLoc();
     mlir::Value v = cgf.getBuilder().createLoad(loc, stack);
     cgf.getBuilder().createStackRestore(loc, v);
@@ -826,12 +831,12 @@ void CIRGenFunction::pushDestroy(QualType::DestructionKind dtorKind,
   assert(dtorKind && "cannot push destructor for trivial type");
 
   CleanupKind cleanupKind = getCleanupKind(dtorKind);
-  pushDestroy(cleanupKind, addr, type, getDestroyer(dtorKind));
+  pushDestroy(cleanupKind, addr, type, getDestroyer(dtorKind), cleanupKind & EHCleanup);
 }
 
 void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
-                                 QualType type, Destroyer *destroyer) {
-  pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
+                                 QualType type, Destroyer *destroyer, bool useEHCleanupForArray) {
+  pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer, useEHCleanupForArray);
 }
 
 /// Destroys all the elements of the given array, beginning from last to first.
@@ -982,8 +987,10 @@ void CIRGenFunction::emitAutoVarTypeCleanup(
   if (!destroyer)
     destroyer = getDestroyer(dtorKind);
 
-  assert(!cir::MissingFeatures::ehCleanupFlags());
-  ehStack.pushCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
+  // Use an EH cleanup in array destructors iff the destructor itself
+  // is being pushed as an EH cleanup.
+  bool useEHCleanup = (cleanupKind & EHCleanup);
+  ehStack.pushCleanup<DestroyObject>(cleanupKind, addr, type, destroyer, useEHCleanup);
 }
 
 void CIRGenFunction::maybeEmitDeferredVarDeclInit(const VarDecl *vd) {

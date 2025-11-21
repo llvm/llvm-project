@@ -185,6 +185,10 @@ class alignas(EHScopeStack::ScopeStackAlignment) EHCleanupScope
   /// created if needed before the cleanup is popped.
   mlir::Block *normalBlock = nullptr;
 
+  /// An optional i1 variable indicating whether this cleanup has been
+  /// activated yet.
+  Address activeFlag;
+
   /// The number of fixups required by enclosing scopes (not including
   /// this one).  If this is the top cleanup scope, all the fixups
   /// from this index onwards belong to this scope.
@@ -205,7 +209,8 @@ public:
                  EHScopeStack::stable_iterator enclosingNormal,
                  EHScopeStack::stable_iterator enclosingEH)
       : EHScope(EHScope::Cleanup, enclosingEH),
-        enclosingNormal(enclosingNormal), fixupDepth(fixupDepth) {
+        enclosingNormal(enclosingNormal), activeFlag(Address::invalid()),
+        fixupDepth(fixupDepth) {
     // TODO(cir): When exception handling is upstreamed, isNormalCleanup and
     // isEHCleanup will be arguments to the constructor.
     cleanupBits.isNormalCleanup = true;
@@ -228,8 +233,30 @@ public:
 
   bool isNormalCleanup() const { return cleanupBits.isNormalCleanup; }
 
+  bool isEHCleanup() const { return cleanupBits.isEHCleanup; }
+
   bool isActive() const { return cleanupBits.isActive; }
   void setActive(bool isActive) { cleanupBits.isActive = isActive; }
+
+  bool hasActiveFlag() const { return activeFlag.isValid(); }
+  Address getActiveFlag() const { return activeFlag; }
+  void setActiveFlag(Address var) {
+    assert(var.getAlignment().isOne());
+    activeFlag = var;
+  }
+
+  void setTestFlagInNormalCleanup() {
+    cleanupBits.testFlagInNormalCleanup = true;
+  }
+
+  bool shouldTestFlagInNormalCleanup() const {
+    return cleanupBits.testFlagInNormalCleanup;
+  }
+
+  void setTestFlagInEHCleanup() { cleanupBits.testFlagInEHCleanup = true; }
+  bool shouldTestFlagInEHCleanup() const {
+    return cleanupBits.testFlagInEHCleanup;
+  }
 
   unsigned getFixupDepth() const { return fixupDepth; }
   EHScopeStack::stable_iterator getEnclosingNormalCleanup() const {
