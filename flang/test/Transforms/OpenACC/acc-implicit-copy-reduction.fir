@@ -39,8 +39,8 @@ func.func @test_reduction_implicit_copy() {
   fir.store %c0_i32 to %r_decl : !fir.ref<i32>
 
   acc.parallel {
-    %red_var = acc.reduction varPtr(%r_decl : !fir.ref<i32>) -> !fir.ref<i32> {name = "r"}
-    acc.loop reduction(@reduction_add_ref_i32 -> %red_var : !fir.ref<i32>) control(%iv : i32) = (%c1_i32 : i32) to (%cN : i32) step (%c1_i32 : i32) {
+    %red_var = acc.reduction varPtr(%r_decl : !fir.ref<i32>) recipe(@reduction_add_ref_i32) -> !fir.ref<i32> {name = "r"}
+    acc.loop reduction(%red_var : !fir.ref<i32>) control(%iv : i32) = (%c1_i32 : i32) to (%cN : i32) step (%c1_i32 : i32) {
       fir.store %iv to %i_decl : !fir.ref<i32>
       %cur_r = fir.load %red_var : !fir.ref<i32>
       %new_r = arith.addi %cur_r, %c1_i32 : i32
@@ -106,8 +106,8 @@ func.func @test_reduction_with_usage_outside_loop() {
 
   %out_copyout = acc.create varPtr(%out_decl : !fir.ref<i32>) -> !fir.ref<i32> {dataClause = #acc<data_clause acc_copyout>, name = "out"}
   acc.parallel dataOperands(%out_copyout : !fir.ref<i32>) {
-    %red_var = acc.reduction varPtr(%r_decl : !fir.ref<i32>) -> !fir.ref<i32> {name = "r"}
-    acc.loop reduction(@reduction_add_ref_i32 -> %red_var : !fir.ref<i32>) control(%iv : i32) = (%c1_i32 : i32) to (%cN : i32) step (%c1_i32 : i32) {
+    %red_var = acc.reduction varPtr(%r_decl : !fir.ref<i32>) recipe(@reduction_add_ref_i32) -> !fir.ref<i32> {name = "r"}
+    acc.loop reduction(%red_var : !fir.ref<i32>) control(%iv : i32) = (%c1_i32 : i32) to (%cN : i32) step (%c1_i32 : i32) {
       fir.store %iv to %i_decl : !fir.ref<i32>
       %cur_r = fir.load %red_var : !fir.ref<i32>
       %new_r = arith.addi %cur_r, %c1_i32 : i32

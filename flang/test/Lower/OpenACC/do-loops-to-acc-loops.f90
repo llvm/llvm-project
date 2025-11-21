@@ -18,8 +18,8 @@ subroutine basic_do_loop()
   !$acc end kernels
 
 ! CHECK: acc.kernels {
-! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
-! CHECK: acc.loop private(@privatization_ref_i32 -> %[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
+! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: acc.loop private(%[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
 ! CHECK: %[[PRIVATE_DECLARE:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {uniq_name = "_QFbasic_do_loopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: fir.store %{{.*}} to %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
 ! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
@@ -47,8 +47,8 @@ subroutine basic_do_concurrent()
   !$acc end kernels
 
 ! CHECK: acc.kernels {
-! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
-! CHECK: acc.loop private(@privatization_ref_i32 -> %[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
+! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: acc.loop private(%[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
 ! CHECK: %[[PRIVATE_DECLARE:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {uniq_name = "_QFbasic_do_concurrentEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: fir.store %{{.*}} to %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
 ! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
@@ -76,8 +76,8 @@ subroutine basic_do_loop_parallel()
   !$acc end parallel
 
 ! CHECK: acc.parallel {
-! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
-! CHECK: acc.loop private(@privatization_ref_i32 -> %[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
+! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: acc.loop private(%[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
 ! CHECK: %[[PRIVATE_DECLARE:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {uniq_name = "_QFbasic_do_loop_parallelEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: fir.store %{{.*}} to %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
 ! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
@@ -105,8 +105,8 @@ subroutine basic_do_loop_serial()
   !$acc end serial
 
 ! CHECK: acc.serial {
-! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
-! CHECK: acc.loop private(@privatization_ref_i32 -> %[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
+! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: acc.loop private(%[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
 ! CHECK: %[[PRIVATE_DECLARE:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {uniq_name = "_QFbasic_do_loop_serialEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: fir.store %{{.*}} to %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
 ! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
@@ -134,8 +134,8 @@ subroutine basic_do_concurrent_parallel()
   !$acc end parallel
 
 ! CHECK: acc.parallel {
-! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
-! CHECK: acc.loop private(@privatization_ref_i32 -> %[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
+! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: acc.loop private(%[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
 ! CHECK: %[[PRIVATE_DECLARE:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {uniq_name = "_QFbasic_do_concurrent_parallelEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: fir.store %{{.*}} to %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
 ! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
@@ -163,8 +163,8 @@ subroutine basic_do_concurrent_serial()
   !$acc end serial
 
 ! CHECK: acc.serial {
-! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
-! CHECK: acc.loop private(@privatization_ref_i32 -> %[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
+! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: acc.loop private(%[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
 ! CHECK: %[[PRIVATE_DECLARE:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {uniq_name = "_QFbasic_do_concurrent_serialEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: fir.store %{{.*}} to %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
 ! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
@@ -271,8 +271,8 @@ subroutine variable_bounds_and_step(n, start_val, step_val)
   !$acc end kernels
 
 ! CHECK: acc.kernels {
-! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
-! CHECK: acc.loop private(@privatization_ref_i32 -> %[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
+! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: acc.loop private(%[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
 ! CHECK: %[[PRIVATE_DECLARE:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {uniq_name = "_QFvariable_bounds_and_stepEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: fir.store %{{.*}} to %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
 ! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
