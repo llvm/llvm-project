@@ -23625,6 +23625,54 @@ static SDValue EmitTest(SDValue Op, X86::CondCode X86CC, const SDLoc &dl,
     return DAG.getNode(X86ISD::SUB, dl, VTs, Op->getOperand(0),
                        Op->getOperand(1)).getValue(1);
   }
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA: {
+    SDValue Amt = ArithOp.getOperand(1);
+
+    // Skip Constants
+    if (isa<ConstantSDNode>(Amt))
+      break;
+
+    // Check we can make this optimization
+    if (ArithOp->getFlags().hasNoZero() || DAG.isKnownNeverZero(Amt)) {
+      SDLoc DL(ArithOp);
+
+      // CopyToReg(CL, Amt)
+      SDValue Chain = DAG.getEntryNode();
+      SDValue Glue;
+
+      Chain = DAG.getCopyToReg(Chain, DL, X86::CL, Amt, Glue);
+      Glue = Chain.getValue(1);
+
+      // Select Opcode
+      unsigned X86Opcode;
+      switch (ArithOp.getOpcode()) {
+      case ISD::SHL:
+        X86Opcode = X86ISD::SHL;
+        break;
+      case ISD::SRL:
+        X86Opcode = X86ISD::SRL;
+        break;
+      case ISD::SRA:
+        X86Opcode = X86ISD::SRA;
+        break;
+      default:
+        llvm_unreachable("Unexpected shift opcode");
+      }
+
+      // Create Node [ValueToShift, Glue]
+      SDVTList VTs = DAG.getVTList(ArithOp.getValueType(), MVT::i32);
+      SDValue Ops[] = {ArithOp.getOperand(0), Glue};
+
+      SDValue NewNode = DAG.getNode(X86Opcode, DL, VTs, Ops);
+
+      // Replace and Return
+      DAG.ReplaceAllUsesOfValueWith(ArithOp, NewNode.getValue(0));
+      return NewNode.getValue(1);
+    }
+    break;
+  }
   default:
     break;
   }
@@ -35467,6 +35515,9 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CVTTP2UIS)
   NODE_NAME_CASE(MCVTTP2UIS)
   NODE_NAME_CASE(POP_FROM_X87_REG)
+  NODE_NAME_CASE(SHL)
+  NODE_NAME_CASE(SRL)
+  NODE_NAME_CASE(SRA)
   }
   return nullptr;
 #undef NODE_NAME_CASE
