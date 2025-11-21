@@ -162,7 +162,8 @@ def AS_Block : Association<"Block"> {}            // Block (incl. single
 def AS_Declaration : Association<"Declaration"> {}   // Declaration
 def AS_Delimited : Association<"Delimited"> {}    // Region delimited with
                                                   // begin/end
-def AS_Loop : Association<"Loop"> {}              // Loop
+def AS_LoopNest : Association<"LoopNest"> {}      // Loop nest
+def AS_LoopSeq : Association<"LoopSeq"> {}        // Loop sequence
 def AS_Separating : Association<"Separating"> {}  // Separates parts of a
                                                   // construct
 
@@ -173,7 +174,7 @@ def AS_FromLeaves : Association<"FromLeaves"> {}    // See below
 //   x + y = y + x
 //   x + x = x
 //   AS_None + x = x
-//   AS_Block + AS_Loop = AS_Loop
+//   AS_Block + AS_Loop{Nest|Seq} = AS_Loop{Nest|Seq}
 // Other combinations are not allowed.
 // This association is not valid for leaf constructs.
 // The name "AS_FromLeaves" is recognized by TableGen, and there is no enum

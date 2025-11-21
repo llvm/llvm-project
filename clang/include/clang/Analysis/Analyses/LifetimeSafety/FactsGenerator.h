@@ -50,7 +50,7 @@ public:
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
 
 private:
-  void handleDestructor(const CFGAutomaticObjDtor &DtorOpt);
+  void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
 
