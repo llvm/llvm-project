@@ -170,6 +170,12 @@ inline StringRef getInstrProfRegFuncsName() {
   return "__llvm_profile_register_functions";
 }
 
+/// Return the name of function that initializes self-referential datavar values
+/// on NVPTX targets
+inline StringRef getInstrProfDelayedInitFuncName() {
+  return "__llvm_profile_delayed_data_var_init";
+}
+
 /// Return the name of the runtime interface that registers per-function control
 /// data for one instrumented function.
 inline StringRef getInstrProfRegFuncName() {
