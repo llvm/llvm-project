@@ -2755,19 +2755,19 @@ NVVM::IDArgPair
 ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
                                              LLVM::ModuleTranslation &mt,
                                              llvm::IRBuilderBase &builder) {
-  static const llvm::Intrinsic::ID rndRNIds[] = {
+  static constexpr llvm::Intrinsic::ID rndRNIds[] = {
       llvm::Intrinsic::nvvm_ff2f16x2_rn,
       llvm::Intrinsic::nvvm_ff2f16x2_rn_relu,
       llvm::Intrinsic::nvvm_ff2f16x2_rn_satfinite,
       llvm::Intrinsic::nvvm_ff2f16x2_rn_relu_satfinite,
   };
-  static const llvm::Intrinsic::ID rndRZIds[] = {
+  static constexpr llvm::Intrinsic::ID rndRZIds[] = {
       llvm::Intrinsic::nvvm_ff2f16x2_rz,
       llvm::Intrinsic::nvvm_ff2f16x2_rz_relu,
       llvm::Intrinsic::nvvm_ff2f16x2_rz_satfinite,
       llvm::Intrinsic::nvvm_ff2f16x2_rz_relu_satfinite,
   };
-  static const llvm::Intrinsic::ID rndRSIds[] = {
+  static constexpr llvm::Intrinsic::ID rndRSIds[] = {
       llvm::Intrinsic::nvvm_ff2f16x2_rs,
       llvm::Intrinsic::nvvm_ff2f16x2_rs_relu,
       llvm::Intrinsic::nvvm_ff2f16x2_rs_satfinite,
@@ -2776,7 +2776,9 @@ ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
 
   bool hasRelu = op.getRelu();
   bool hasSatFinite = (op.getSat() == NVVM::SaturationMode::SATFINITE);
-  unsigned idx = hasRelu | (hasSatFinite << 1);
+  // idx: bit-0 - relu
+  //      bit-1 - satfinite
+  unsigned idx = (hasSatFinite << 1) | hasRelu;
 
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(op.getSrcHi()));
@@ -2800,19 +2802,19 @@ NVVM::IDArgPair
 ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
                                               LLVM::ModuleTranslation &mt,
                                               llvm::IRBuilderBase &builder) {
-  static const llvm::Intrinsic::ID rndRNIds[] = {
+  static constexpr llvm::Intrinsic::ID rndRNIds[] = {
       llvm::Intrinsic::nvvm_ff2bf16x2_rn,
       llvm::Intrinsic::nvvm_ff2bf16x2_rn_relu,
       llvm::Intrinsic::nvvm_ff2bf16x2_rn_satfinite,
       llvm::Intrinsic::nvvm_ff2bf16x2_rn_relu_satfinite,
   };
-  static const llvm::Intrinsic::ID rndRZIds[] = {
+  static constexpr llvm::Intrinsic::ID rndRZIds[] = {
       llvm::Intrinsic::nvvm_ff2bf16x2_rz,
       llvm::Intrinsic::nvvm_ff2bf16x2_rz_relu,
       llvm::Intrinsic::nvvm_ff2bf16x2_rz_satfinite,
       llvm::Intrinsic::nvvm_ff2bf16x2_rz_relu_satfinite,
   };
-  static const llvm::Intrinsic::ID rndRSIds[] = {
+  static constexpr llvm::Intrinsic::ID rndRSIds[] = {
       llvm::Intrinsic::nvvm_ff2bf16x2_rs,
       llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu,
       llvm::Intrinsic::nvvm_ff2bf16x2_rs_satfinite,
@@ -2821,7 +2823,9 @@ ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
 
   bool hasRelu = op.getRelu();
   bool hasSatFinite = (op.getSat() == NVVM::SaturationMode::SATFINITE);
-  unsigned idx = hasRelu | (hasSatFinite << 1);
+  // idx: bit-0 - relu
+  //      bit-1 - satfinite
+  unsigned idx = (hasSatFinite << 1) | hasRelu;
 
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(op.getSrcHi()));
