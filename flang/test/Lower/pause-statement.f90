@@ -1,4 +1,4 @@
-! RUN: bbc %s -emit-fir -hlfir=false --canonicalize -o - | FileCheck %s
+! RUN: bbc %s -emit-fir --canonicalize -o - | FileCheck %s
 
 ! CHECK-LABEL: pause_test
 subroutine pause_test()
@@ -10,7 +10,7 @@ end subroutine
 ! CHECK-LABEL: pause_code
 subroutine pause_code()
   pause 42
- ! CHECK: fir.call @_Fortran{{.*}}PauseStatement
+ ! CHECK: fir.call @_Fortran{{.*}}PauseStatementInt
  ! CHECK-NEXT: return
 end subroutine
 

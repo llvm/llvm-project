@@ -276,7 +276,6 @@ void Fortran::lower::genPauseStatement(
   if (stmt.v.has_value()) {
     const auto &code = stmt.v.value();
     auto expr = converter.genExprValue(*Fortran::semantics::GetExpr(code), stmtCtx);
-    LLVM_DEBUG(llvm::dbgs() << "pause expression: "; expr.dump(); llvm::dbgs() << '\n');
     expr.match(
         // Character-valued expression -> call PauseStatementText (CHAR, LEN)
         [&](const fir::CharBoxValue &x) {
@@ -290,7 +289,7 @@ void Fortran::lower::genPauseStatement(
         },
         // Numeric/unboxed value -> call PauseStatement which accepts an integer code.
         [&](fir::UnboxedValue x) {
-           callee = fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
+           callee = fir::runtime::getRuntimeFunc<mkRTKey(PauseStatementInt)>(loc, builder);
            calleeType = callee.getFunctionType();
             if (calleeType.getNumInputs() >= 1) {
               mlir::Value cast =
@@ -299,7 +298,8 @@ void Fortran::lower::genPauseStatement(
             }
         },
         [&](auto) {
-          mlir::emitError(loc, "unhandled expression in PAUSE");
+          fir::emitFatalError(loc, "unhandled expression in PAUSE");
+          // mlir::emitError(loc, "unhandled expression in PAUSE");
           std::exit(1);
         });
   } else {
@@ -309,10 +309,8 @@ void Fortran::lower::genPauseStatement(
   
   fir::CallOp::create(builder, loc, callee, operands);
 
-  // NOTE: PAUSE should not unconditionally terminate the current block.
-  // Unlike STOP, PAUSE does not necessarily abandon control flow, so do not
-  // subsequent control flow (e.g. GOTO/branches) to be generated.
-  // insert genUnreachable() here. Leaving the block un-terminated allows
+  // NOTE: PAUSE does not terminate the current block. The program may resume
+  // and continue normal execution, so we do not emit control-flow terminators.
 }
 
 void Fortran::lower::genPointerAssociate(fir::FirOpBuilder &builder,
