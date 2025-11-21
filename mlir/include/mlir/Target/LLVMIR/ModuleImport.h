@@ -282,8 +282,9 @@ public:
   /// after the function conversion has finished.
   void addDebugIntrinsic(llvm::CallInst *intrinsic);
 
-  /// Similar to `addDebugIntrinsic`, but for debug records.
-  void addDebugRecord(llvm::DbgRecord *debugRecord);
+  /// Adds a debug record to the list of debug records that need to be imported
+  /// after the function conversion has finished.
+  void addDebugRecord(llvm::DbgVariableRecord *dbgRecord);
 
   /// Converts the LLVM values for an intrinsic to mixed MLIR values and
   /// attributes for LLVM_IntrOpBase. Attributes correspond to LLVM immargs. The
@@ -343,14 +344,14 @@ private:
   /// Converts all debug intrinsics in `debugIntrinsics`. Assumes that the
   /// function containing the intrinsics has been fully converted to MLIR.
   LogicalResult processDebugIntrinsics();
-  /// Converts all debug records in `debugRecords`. Assumes that the
+  /// Converts all debug records in `dbgRecords`. Assumes that the
   /// function containing the record has been fully converted to MLIR.
   LogicalResult processDebugRecords();
   /// Converts a single debug intrinsic.
   LogicalResult processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
                                       DominanceInfo &domInfo);
   /// Converts a single debug record.
-  LogicalResult processDebugRecord(llvm::DbgRecord &debugRecord,
+  LogicalResult processDebugRecord(llvm::DbgVariableRecord &dbgRecord,
                                    DominanceInfo &domInfo);
   /// Process arguments for declare/value operation insertion. `localVarAttr`
   /// and `localExprAttr` are the attained attributes after importing the debug
@@ -358,7 +359,7 @@ private:
   /// used by these operations.
   std::tuple<DILocalVariableAttr, DIExpressionAttr, Value>
   processDebugOpArgumentsAndInsertionPt(
-      Location loc, bool hasArgList, bool isKillLocation,
+      Location loc,
       llvm::function_ref<FailureOr<Value>()> convertArgOperandToValue,
       llvm::Value *address,
       llvm::PointerUnion<llvm::Value *, llvm::DILocalVariable *> variable,
@@ -508,7 +509,7 @@ private:
   SetVector<llvm::Instruction *> debugIntrinsics;
   /// Function-local list of debug records that need to be imported after the
   /// function conversion has finished.
-  SetVector<llvm::DbgRecord *> debugRecords;
+  SetVector<llvm::DbgVariableRecord *> dbgRecords;
   /// Mapping between LLVM alias scope and domain metadata nodes and
   /// attributes in the LLVM dialect corresponding to these nodes.
   DenseMap<const llvm::MDNode *, Attribute> aliasScopeMapping;

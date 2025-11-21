@@ -42,10 +42,12 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
 
   let summary = "Set xegpu.layout attribute to a xegpu.create_nd_desc op result.";
   let description = [{
-    Given an `xegpu.create_nd_desc` operation, this transform adds `xegpu.layout`
-    attribute to the result tensor descriptor. The layout is defined by the
-    `sg_layout`, and `sg_data` and optional `inst_data` attributes. Returns a handle
-    to the transformed op.
+    Given an `xegpu.create_nd_desc` operation, this transform adds
+    `xegpu.layout` attribute to the result tensor descriptor. The layout is
+    defined by the `sg_layout`, and `sg_data` and optional `inst_data`
+    attributes. If `slice_dims` is provided, the `xegpu.layout` attribute is
+    wrapped in an `xegpu.slice<..., dims=slice_dims>` attribute. Returns a handle to
+    the transformed op.
   }];
 
   let arguments = (ins
@@ -55,7 +57,8 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
                    Variadic<TransformAnyParamTypeOrAnyHandle>:$inst_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_layout,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_data,
-                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$slice_dims
                    );
 
   let results = (outs TransformHandleTypeInterface:$transformed);
@@ -63,7 +66,8 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedSgLayout,
                    "ArrayRef<OpFoldResult>":$mixedSgData,
-                   "ArrayRef<OpFoldResult>":$mixedInstData
+                   "ArrayRef<OpFoldResult>":$mixedInstData,
+                   "ArrayRef<int64_t>":$sliceDims
                    )>,
   ];
 
@@ -72,6 +76,7 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
     `sg_layout` `=` custom<DynamicIndexList>($sg_layout, $static_sg_layout)
     `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
     (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
+    (`slice_dims` `=` $slice_dims^)?
     attr-dict `:` functional-type(operands, results)
   }];
 
@@ -107,7 +112,9 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
     Sets the `xegpu.layout` attribute of an op. If `result=true`, sets the
     `layout_result_{index}`, otherwise `layout_operand_{index}` attribute. The
     target operand/result value is defined by the `index` argument. The layout
-    is defined by the `sg_layout`, `sg_data` and optional `inst_data` attributes.
+    is defined by the `sg_layout`, `sg_data` and optional `inst_data`
+    attributes. If `slice_dims` is provided, the `xegpu.layout` attribute is
+    wrapped in an `xegpu.slice<..., dims=slice_dims>` attribute.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
@@ -118,6 +125,7 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_layout,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$slice_dims,
                    DefaultValuedAttr<UnitAttr, "false">:$result
                    );
 
@@ -128,6 +136,7 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
                    "ArrayRef<OpFoldResult>":$mixedSgLayout,
                    "ArrayRef<OpFoldResult>":$mixedSgData,
                    "ArrayRef<OpFoldResult>":$mixedInstData,
+                   "ArrayRef<int64_t>":$sliceDims,
                    CArg<"bool", "false">:$result
                    )>,
   ];
@@ -137,6 +146,7 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
     `sg_layout` `=` custom<DynamicIndexList>($sg_layout, $static_sg_layout)
     `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
     (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
+    (`slice_dims` `=` $slice_dims^)?
     attr-dict `:` qualified(type(operands))
   }];
 
