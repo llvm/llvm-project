@@ -2418,7 +2418,9 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
   bool IsOrdered;
 
   /// The phi is part of a multi-use reduction (e.g., used in FindLastIV
-  /// patterns).
+  /// patterns for argmin/argmax).
+  /// TODO: Also support cases where the phi itself has a single use, but its
+  /// compare has multiple uses.
   bool HasLoopUsesOutsideReductionChain;
 
   /// When expanding the reduction PHI, the plan's VF element count is divided

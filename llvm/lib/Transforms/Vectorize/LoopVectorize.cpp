@@ -7999,10 +7999,8 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
             SmallVector<std::pair<PartialReductionChain, unsigned>>>
       ChainsByPhi;
   for (const auto &[Phi, RdxDesc] : Legal->getReductionVars())
-    if (Instruction *RdxExitInstr = RdxDesc.getLoopExitInstr()) {
-      getScaledReductions(Phi, RdxDesc.getLoopExitInstr(), Range,
-                          ChainsByPhi[Phi]);
-    }
+    if (Instruction *RdxExitInstr = RdxDesc.getLoopExitInstr())
+      getScaledReductions(Phi, RdxExitInstr, Range, ChainsByPhi[Phi]);
 
   // A partial reduction is invalid if any of its extends are used by
   // something that isn't another partial reduction. This is because the
