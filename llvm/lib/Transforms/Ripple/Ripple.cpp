@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_iterator.h"
 #include "llvm/Analysis/CFG.h"
@@ -24,8 +25,10 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -44,6 +47,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueMap.h"
@@ -62,6 +66,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <array>
+#include <atomic>
 #include <bitset>
 #include <cassert>
 #include <cstdlib>
@@ -971,6 +976,13 @@ Ripple::replacementValueAndShape(Value *V) const {
              "Tensor LinearSeries base has not been generated");
       return {V, &ScalarShape};
     }
+  } else if (Argument *Arg = dyn_cast<Argument>(V)) {
+    // When we are specializing this function, the original arguments are
+    // duplicated, with the ripple arguments following the original ones
+    if (isPendingRippleSpecialization(F)) {
+      Argument *ReplacementArg = F.getArg(Arg->getArgNo() + F.arg_size() / 2);
+      return {ReplacementArg, &getRippleShape(ReplacementArg)};
+    }
   }
   LLVM_DEBUG(dbgs() << "No replacement tensor value for " << *V << "\n");
   return {V, &getRippleShape(V)};
@@ -1047,7 +1059,9 @@ const TensorShape &Ripple::getRippleShape(const Constant *C,
 const TensorShape &Ripple::getRippleShape(const Argument *A,
                                           bool ShapePropagation) const {
   // When specializing, arguments can have tensor shapes!
-  if (ShapePropagation && A->getType()->isVectorTy())
+  if (isPendingRippleSpecialization(F))
+    return ArgumentShapes[A->getArgNo()];
+  else if (ShapePropagation && A->getType()->isVectorTy())
     return ShapeIgnoredByRipple;
   else if (!A->getType()->isVectorTy())
     return ScalarShape;
@@ -1092,6 +1106,23 @@ Error Ripple::propagateShapes(bool &WaitingForSpecialization) {
 
   if (Error E = checkBlockShapeUsage(F))
     return E;
+
+  // Arguments have ripple shapes during specialization
+  if (isPendingRippleSpecialization(F)) {
+    bool DefaultToScalar = true;
+    if (hasRippleShapeMetadata(F)) {
+      SmallVector<std::unique_ptr<TensorShape>, 8> ArgShapes;
+      std::unique_ptr<TensorShape> ReturnShape;
+      if (getFunctionShapeMetadata(F, ArgShapes, ReturnShape)) {
+        DefaultToScalar = false;
+        assert(ArgShapes.size() == F.arg_size());
+        llvm::transform(ArgShapes, std::back_inserter(ArgumentShapes),
+                        [](auto &UniqPtr) { return std::move(*UniqPtr); });
+      }
+    }
+    if (DefaultToScalar)
+      ArgumentShapes.append(F.arg_size(), ScalarShape);
+  }
 
   std::queue<Instruction *> WorkQueue;
   WaitingForSpecialization = false;
@@ -1192,6 +1223,26 @@ Error Ripple::propagateShapes(bool &WaitingForSpecialization) {
 
   assert(allInstructionsHaveRippleShapes() &&
          "Some instruction has no Ripple shape");
+
+  if (isPendingRippleSpecialization(F)) {
+    // All the return must have the same shape, broadcast to a common shape!
+    TensorShape BcastReturnShape = ScalarShape;
+    for (const auto &I : instructions(F)) {
+      if (const auto *Return = dyn_cast<ReturnInst>(&I)) {
+        auto &RetShape = getRippleShape(Return);
+        auto NewShape = combineShapeBcastWithErrorReporting(
+            BcastReturnShape, RetShape,
+            "Ripple cannot combine this return instruction's tensor shape with "
+            "other return instructions' shape using the broadcast rule",
+            sanitizeRippleLocation(Return));
+        RETURN_UNEXPECTED(NewShape);
+        std::swap(BcastReturnShape, *NewShape);
+      }
+    }
+    for (const auto &I : instructions(F))
+      if (const auto *Return = dyn_cast<ReturnInst>(&I))
+        setRippleShape(Return, BcastReturnShape);
+  }
 
   // Now that all shapes have settled, create linear series
   for (auto *BB : getFuncRPOT()) {
@@ -2177,6 +2228,50 @@ void Ripple::genVectorInstructions() {
     isFuncRPOTValid = false;
   };
 
+  auto processSpecializedFunctionCall =
+      [&](CallInst *Call, Function *SpecializedFunction,
+          const TensorShape &ToShape, bool IsMaskedCall) {
+        irBuilder.SetInsertPoint(Call);
+        SmallVector<Value *, 8> Arguments;
+        llvm::transform(Call->args(), std::back_inserter(Arguments),
+                        [&](Use &U) { return getTensorUse(U).first; });
+        if (IsMaskedCall) {
+          Function *MaskedSpecialization =
+              getMaskedSpecialization(*SpecializedFunction);
+          if (!MaskedSpecialization)
+            llvm_unreachable("We should always create a specialization and "
+                             "its masked companion at the same time");
+
+          // If the masked is not being leveraged by the specialization, we can
+          // fallback to the non-masked version
+          if (MaskedSpecialization->getArg(MaskedSpecialization->arg_size() - 1)
+                  ->getNumUses()) {
+            auto MaskShape = getSpecializationMaskShape(Call->args());
+            // We already checked that the specialization can be created during
+            // shape propagation. We must succeed here!
+            if (!MaskShape)
+              llvm_unreachable(
+                  "Ripple specialization cannot broadcast mask in codegen!");
+            SelectInst *MaskArgument = irBuilder.Insert(
+                createMaskSelectToTrueFalse(
+                    getSpecializationMaskElementType(),
+                    ElementCount::getFixed(MaskShape->flatShape())),
+                "ripple.specialization.mask");
+            setRippleShape(MaskArgument, MaskShape.get());
+            // Enable masking for this select
+            SelectToMaskWhenIfConvert.insert(MaskArgument);
+
+            // Call the masked specialization with the extra argument instead!
+            SpecializedFunction = MaskedSpecialization;
+            Arguments.push_back(MaskArgument);
+          }
+        }
+        auto *SpecializedCall =
+            irBuilder.CreateCall(SpecializedFunction, Arguments);
+        SpecializedCall->setCallingConv(CallingConv::Fast);
+        setReplacementFor(Call, SpecializedCall, ToShape);
+      };
+
   auto processCallInst = [&](CallInst *call,
                              const TensorShape &toShape) -> void {
     // Check if the call matches any specific ripple intrinsic
@@ -2195,12 +2290,21 @@ void Ripple::genVectorInstructions() {
     } else if (toShape.isVector() || rippleVectorizeCall(*call)) {
       Intrinsic::ID vectorIntrId =
           getVectorIntrinsicIDForCall(call, &targetLibraryInfo);
-      if (toShape.isVector() && vectorIntrId != Intrinsic::not_intrinsic) {
+      bool IsMaskedCall = MaskedCalls.contains(call);
+      if (toShape.isVector() &&
+                 vectorIntrId != Intrinsic::not_intrinsic) {
         // We assume vectorizing an intrinsic call does not
         // introduce approximations
         ProcessIntrinsicCall(call, toShape, vectorIntrId);
       } else {
-        {
+        auto [SpecializedFunction, ReturnShape] =
+            getRippleSpecializationFor(*call);
+        if (SpecializedFunction) {
+          assert(getRippleShape(call) == ReturnShape);
+          assert(!isPendingRippleSpecialization(*SpecializedFunction));
+          processSpecializedFunctionCall(call, SpecializedFunction, ReturnShape,
+                                         IsMaskedCall);
+        } else {
           assert(toShape.isVector() &&
                  "ripple general function call has broadcast "
                  "semantics and cannot return a scalar");
@@ -2234,6 +2338,18 @@ void Ripple::genVectorInstructions() {
         DL.getPrefTypeAlign(VectorType::get(AllocatedTy, ToShape.flatShape(),
                                             /*Scalable*/ false))));
     setReplacementFor(Alloca, AllocaVector, ToShape);
+  };
+
+  auto processReturn = [&](ReturnInst *Return,
+                           const TensorShape &ToShape) -> void {
+    // We only process return that have a value when we specialize
+    assert(isPendingRippleSpecialization(F));
+    assert(Return->getNumOperands() != 0);
+    irBuilder.SetInsertPoint(Return);
+    auto *ReturnOperandBcasted =
+        getTensorUseAndBcast(Return->getOperandUse(0), ToShape);
+    auto *VectorReturn = irBuilder.CreateRet(ReturnOperandBcasted);
+    setReplacementFor(Return, VectorReturn, ToShape);
   };
 
   for (auto *BB : getFuncRPOT()) {
@@ -2311,8 +2427,11 @@ void Ripple::genVectorInstructions() {
           BranchAndSwitchVecCond[Switch] = VectorCondVal;
         } break;
         case Instruction::Ret: {
-          // Checked by checkRippleFunctionReturn
-          report_fatal_error("Unsupported return instruction vectorization");
+          if (isPendingRippleSpecialization(F))
+            processReturn(cast<ReturnInst>(I), toShape);
+          else
+            // Checked by checkRippleFunctionReturn
+            report_fatal_error("Unsupported return instruction vectorization");
         } break;
         case Instruction::Alloca:
           processAlloca(cast<AllocaInst>(I), toShape);
@@ -2672,6 +2791,22 @@ void Ripple::vectorGenerationPostProcess() {
     }
   }
   InstructionReplacementMapping.clear();
+
+  if (isPendingRippleSpecialization(F)) {
+    // Function pending ripple specialization have twice the number of arguments
+    // to allow processing by the ripple pass. We replace all use of the
+    // remaining scalar original arguments (first half) by the ripple arguments
+    // (second half)
+
+    for (unsigned ArgIdx = 0, E = F.arg_size() / 2; ArgIdx < E; ++ArgIdx) {
+      auto &Arg = *F.getArg(ArgIdx);
+      // If the arg is still used
+      if (Arg.use_begin() != Arg.use_end()) {
+        assert(getRippleShape(&Arg).isScalar());
+        Arg.replaceAllUsesWith(F.getArg(E + Arg.getArgNo()));
+      }
+    }
+  }
 }
 
 bool Ripple::maskInstructionWhenIfConvert(const Instruction *I) const {
@@ -4782,6 +4917,28 @@ Ripple::inferShapeFromOperands(const Instruction *I, bool AllowPartialPhi,
       LLVM_DEBUG(dbgs() << "Store shape final " << StoreShape << "\n");
       return StoreShape;
     }
+  } else if (auto *Call = dyn_cast<CallInst>(I)) {
+    if (rippleVectorizeCall(*Call)) {
+      if (canBeSpecialized(Call->getCalledFunction())) {
+        auto [Spec, RetShape] = getRippleSpecializationFor(*Call);
+        if (Spec) {
+          if (isPendingRippleSpecialization(*Spec))
+            LLVM_DEBUG(dbgs()
+                       << "Pending specialization " << Spec->getName() << "\n");
+          if (isPendingRippleSpecialization(*Spec) ||
+              shouldWaitForVoidReturnSpecialization(*Spec)) {
+            RequiresWaitingForSpecialization = true;
+            return ScalarShape;
+          }
+          return RetShape;
+        } else {
+          // Ask for Specialization and stop shape propagation
+          RequiresWaitingForSpecialization = true;
+          if (requestSpecializationFor(*Call))
+            return ScalarShape;
+        }
+      }
+    }
   }
 
   // We assume a broadcast semantics of instruction operands
@@ -5518,7 +5675,8 @@ Error Ripple::checkTypeCanBeVectorized(const Instruction *I) {
 }
 
 Error Ripple::checkRippleFunctionReturn(const ReturnInst *Return) const {
-  if (getRippleShape(Return).isVector()) {
+  // When we specialize, the return can be vectorized
+  if (!isPendingRippleSpecialization(F) && getRippleShape(Return).isVector()) {
     DiagnosticInfoRippleWithLoc DI(
         DS_Error, F, sanitizeRippleLocation(Return),
         "Ripple does not allow vectorization of the return value");
@@ -5798,6 +5956,562 @@ Ripple::aliasesWithAlloca(const MemoryLocation &Loc,
   return {AliasResult::NoAlias, nullptr};
 }
 
+static constexpr StringRef RippleFunShapeMetaKey("RippleFunctionShapeMetadata");
+
+void Ripple::setFunctionShapeMetadata(Function &F,
+                                      ArrayRef<const TensorShape *> ArgShapes,
+                                      const TensorShape &ReturnShape) {
+  assert(ArgShapes.size() == F.arg_size());
+  SmallVector<Metadata *, 8> OperandsAndReturnShapesMeta;
+  for (auto *Shape : ArgShapes)
+    OperandsAndReturnShapesMeta.push_back(
+        Shape->toConstMetadata(irBuilder.getInt64Ty()));
+  OperandsAndReturnShapesMeta.push_back(
+      ReturnShape.toConstMetadata(irBuilder.getInt64Ty()));
+  MDNode *FunctionShapeMetadata =
+      MDNode::get(F.getContext(), OperandsAndReturnShapesMeta);
+  F.setMetadata(RippleFunShapeMetaKey, FunctionShapeMetadata);
+}
+
+bool Ripple::getFunctionShapeMetadata(
+    const Function &F, SmallVectorImpl<std::unique_ptr<TensorShape>> &ArgShapes,
+    std::unique_ptr<TensorShape> &ReturnShape) const {
+
+  auto metaToUniquePtr = [this](const Metadata *Meta,
+                                std::unique_ptr<TensorShape> &TShape) -> bool {
+    if (auto *MDN = dyn_cast<MDNode>(Meta)) {
+      if (auto TS = TensorShape::fromConstMetadata(tensorRank(), MDN)) {
+        std::swap(TShape, TS);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  if (!hasRippleShapeMetadata(F))
+    return false;
+
+  auto *RippleShapeMeta = F.getMetadata(RippleFunShapeMetaKey);
+
+  assert(F.arg_size() <= RippleShapeMeta->getNumOperands());
+  for (auto &Operand : make_range(RippleShapeMeta->op_begin(),
+                                  RippleShapeMeta->op_begin() + F.arg_size())) {
+    ArgShapes.push_back(nullptr);
+    if (!metaToUniquePtr(Operand.get(), ArgShapes.back()))
+      return false;
+  }
+  assert(F.arg_size() + 1 == RippleShapeMeta->getNumOperands() &&
+         "Malformed ripple function shape metadata: should have 1 shape for "
+         "each argument and 1 for the return");
+  if (!metaToUniquePtr(RippleShapeMeta->getOperand(F.arg_size()), ReturnShape))
+    return false;
+  if (F.getReturnType()->isVoidTy())
+    assert(ReturnShape->isScalar());
+  return true;
+}
+
+bool Ripple::hasRippleShapeMetadata(const Function &F) {
+  return F.getMetadata(RippleFunShapeMetaKey) != nullptr;
+}
+
+bool Ripple::canBeSpecialized(const Function *F) {
+  // TODO: we can probably support varible argument functions later
+  return F && F->getIntrinsicID() == Intrinsic::not_intrinsic &&
+         !F->isDeclaration() && !F->isInterposable() && !F->isVarArg();
+}
+
+bool Ripple::shouldWaitForVoidReturnSpecialization(const Function &Spec) const {
+  if (Spec.getReturnType()->isVoidTy()) {
+    assert(SpecializationsAvailable.contains(const_cast<Function *>(&Spec)));
+    return !isPendingRippleSpecialization(F) && Spec.isDeclaration();
+  }
+  return false;
+}
+
+bool Ripple::isPendingRippleSpecialization(const Function &F) const {
+  return SpecializationsPending.contains(const_cast<Function *>(&F));
+}
+
+static constexpr StringRef RippleSpecializationPrefix("ripple.specialization.");
+
+std::pair<Function *, TensorShape>
+Ripple::getRippleSpecializationFor(const CallInst &Call) const {
+  std::pair<Function *, TensorShape> NoMatch(nullptr, ScalarShape);
+  if (!Call.getCalledFunction())
+    return NoMatch;
+
+  auto checkCandidate =
+      [&](Function &Candidate) -> std::pair<Function *, TensorShape> {
+    // We look for functions specialization with name
+    // "ripple.specialization.XX.name"
+    auto OriginalName = getOriginalName(Candidate.getName());
+    assert(!OriginalName.empty() &&
+           "We should only check specialization candidates");
+    if (OriginalName == Call.getCalledFunction()->getName()) {
+      // Check if the input tensors match the function call
+      SmallVector<std::unique_ptr<TensorShape>, 8> ArgShapes;
+      std::unique_ptr<TensorShape> ReturnShape;
+      LLVM_DEBUG(dbgs() << "Reading metadata from " << Candidate.getName()
+                        << "\n");
+      if (getFunctionShapeMetadata(Candidate, ArgShapes, ReturnShape)) {
+        LLVM_DEBUG(dbgs() << "Got shape for function!\n");
+        // When waiting for specialization, the function has twice the number of
+        // arguments
+        assert(Call.arg_size() *
+                   (1 + isPendingRippleSpecialization(Candidate)) ==
+               ArgShapes.size());
+
+        bool Match = true;
+        for (unsigned Idx = 0, E = Call.arg_size(); Match && Idx < E; ++Idx)
+          if (*ArgShapes[Idx] != getRippleShape(Call.getArgOperand(Idx)))
+            Match = false;
+
+        if (Match) {
+          LLVM_DEBUG(dbgs() << "Matching ripple specialization: "
+                            << Candidate.getName() << ", return shape "
+                            << *ReturnShape << "!\n");
+          return {&Candidate, *ReturnShape};
+        }
+      } else {
+        llvm_unreachable("a Specialization is missing a shape metadata");
+      }
+    }
+    return NoMatch;
+  };
+  for (Function *Candidate : SpecializationsAvailable) {
+    auto Match = checkCandidate(*Candidate);
+    if (Match.first)
+      return Match;
+  }
+  for (Function *Candidate : SpecializationsPending) {
+    auto Match = checkCandidate(*Candidate);
+    if (Match.first)
+      return Match;
+  }
+  return NoMatch;
+}
+
+static constexpr StringRef RippleFinalSpecializationPrefix("final.");
+std::string Ripple::getUniqueSpecializationName(StringRef OriginalName,
+                                                bool Final) {
+  static std::atomic<unsigned> UniqueRippleSpecializationCounter{0};
+  std::string NewSpecializationName =
+      RippleSpecializationPrefix.str() +
+      (Final ? RippleFinalSpecializationPrefix.str() : "") +
+      std::to_string(UniqueRippleSpecializationCounter++) + "." +
+      OriginalName.str();
+  return NewSpecializationName;
+}
+
+StringRef Ripple::getOriginalName(StringRef SpecializationName) {
+  if (!SpecializationName.starts_with(RippleSpecializationPrefix))
+    return StringRef();
+
+  auto SpecName = SpecializationName.substr(RippleSpecializationPrefix.size());
+  if (SpecName.starts_with(RippleFinalSpecializationPrefix))
+    SpecName = SpecName.substr(RippleFinalSpecializationPrefix.size());
+  auto OriginName = SpecName.split(".").second;
+  return OriginName;
+}
+
+bool Ripple::requestSpecializationFor(const CallInst &Call) {
+  Function *CalledFunction = Call.getCalledFunction();
+  assert(getRippleSpecializationFor(Call).first == nullptr);
+  assert(!CalledFunction->isDeclaration());
+
+  SmallVector<const TensorShape *> ArgShapes;
+  ArgShapes.reserve(Call.arg_size() * 2);
+  llvm::transform(Call.args(), std::back_inserter(ArgShapes),
+                  [&](auto &Arg) { return &getRippleShape(Arg.get()); });
+
+  auto SpecMaskShape = TensorShape::broadcastShapeFromAll(ArgShapes);
+  if (!SpecMaskShape) {
+    consumeError(SpecMaskShape.takeError());
+    std::string ErrMsg;
+    {
+      llvm::raw_string_ostream RSO(ErrMsg);
+      RSO << "The function " << CalledFunction->getName()
+          << " does not follow the ripple broadcast rule: "
+          << " the operands tensor shapes are not "
+             "broadcast-compatible: ["
+          << *ArgShapes[0];
+      for_each(make_range(std::next(ArgShapes.begin()), ArgShapes.end()),
+               [&](auto *TShape) { RSO << ", " << *TShape; });
+      RSO << "]";
+    }
+    DiagnosticInfoRippleWithLoc DI(DS_Warning, F, sanitizeRippleLocation(&Call),
+                                   ErrMsg);
+    F.getContext().diagnose(DI);
+    return false;
+  }
+
+  // Clone the function
+  Function *FClone;
+  {
+    ValueToValueMapTy VMap;
+
+    // We clone the function into a temporary function that will be specialized.
+    // To do so we duplicate the arguments, the first half are the original
+    // function arguments and the next half are the "ripple tensor arguments".
+    // We eliminate the original arguments once the specialization has been
+    // processed.
+    std::vector<Type *> ArgTypes;
+    // The original argument types
+    for (const Argument &Arg : CalledFunction->args())
+      ArgTypes.push_back(Arg.getType());
+
+    // The Ripple argument types
+    for (const Argument &Arg : CalledFunction->args()) {
+      auto &TShape = getRippleShape(Call.getOperand(Arg.getArgNo()));
+      if (TShape.isVector()) {
+        // If the argument is a vector we can't promote!
+        if (Arg.getType()->isVectorTy() ||
+            ((Arg.hasByValAttr() || Arg.hasStructRetAttr()) &&
+             Arg.getPointeeInMemoryValueType()->isVectorTy()))
+          llvm_unreachable("TODO: migrate this to an error that we cannot "
+                           "promote this function's argument");
+        Type *PromotedType = VectorType::get(Arg.getType(), TShape.flatShape(),
+                                             /*IsScalable*/ false);
+        ArgTypes.push_back(PromotedType);
+      } else {
+        ArgTypes.push_back(Arg.getType());
+      }
+    }
+
+    FunctionType *FTy = FunctionType::get(CalledFunction->getReturnType(),
+                                          ArgTypes, /*IsVarArg*/ false);
+    FClone = Function::Create(
+        FTy, CalledFunction->getLinkage(), CalledFunction->getAddressSpace(),
+        getUniqueSpecializationName(CalledFunction->getName()),
+        CalledFunction->getParent());
+
+    // Setup the cloning VMap for arguments
+    for (const Argument &Arg : CalledFunction->args())
+      VMap[&Arg] = FClone->getArg(Arg.getArgNo());
+
+    SmallVector<ReturnInst *, 8> Returns; // Ignore returns cloned.
+    CloneFunctionInto(FClone, CalledFunction, VMap,
+                      CloneFunctionChangeType::LocalChangesOnly, Returns, "",
+                      nullptr);
+    FClone->setVisibility(GlobalValue::DefaultVisibility);
+    FClone->setLinkage(GlobalValue::InternalLinkage);
+  }
+  // Make it a fast call since we are not bound by any ABI!
+  FClone->setCallingConv(CallingConv::Fast);
+  // Mark for specialization
+  SpecializationsPending.insert(FClone);
+  {
+    // The call arguments that are ripple.set.shape
+    SmallVector<std::pair<unsigned, IntrinsicInst *>, 4> BlockShapeAsArg;
+    specializationCallBlockShapeArgs(&Call, BlockShapeAsArg);
+    // Insert the block shapes that are passed as parameter into the function we
+    // are specializing so that the ripple pass can do its job
+    auto InsertPoint = FClone->getEntryBlock().getFirstInsertionPt();
+
+    // Used by RemapInstruction to fix the instruction's metadata
+    ValueToValueMapTy VMap;
+    if (F.getSubprogram())
+      if (FClone->getSubprogram())
+        VMap.MD()[F.getSubprogram()] = TrackingMDRef(FClone->getSubprogram());
+
+    for (auto &[ArgIdx, BlockShapeII] : BlockShapeAsArg) {
+      Instruction *SetBlockShapeClone = BlockShapeII->clone();
+      SetBlockShapeClone->insertBefore(InsertPoint);
+      RemapInstruction(SetBlockShapeClone, VMap, RF_None);
+      FClone->getArg(ArgIdx)->replaceAllUsesWith(SetBlockShapeClone);
+    }
+  }
+
+  // Copy the shapes for the ripple arguments
+  llvm::copy(ArgShapes, std::back_inserter(ArgShapes));
+  setFunctionShapeMetadata(*FClone, ArgShapes, ScalarShape);
+  LLVM_DEBUG(dbgs() << "Requesting specialization for call " << Call << ":";
+             FClone->print(dbgs()));
+
+  {
+    // Insert dummy (unused) block shapes so that ripple will run and will
+    // select this function's PE rank as minimum for its own PE rank
+    IRBuilder<> IRB(&*FClone->getEntryBlock().getFirstInsertionPt());
+    auto *Int64Ty = IRB.getInt64Ty();
+    auto *One = ConstantInt::get(Int64Ty, 1, false);
+    auto *Two = ConstantInt::get(Int64Ty, 2, false);
+    for (auto &[PEId, PERank] : PERanks) {
+      SmallVector<Value *, RippleIntrinsicsMaxDims + 1> RippleSetShapeArgs;
+      RippleSetShapeArgs.push_back(ConstantInt::get(Int64Ty, PEId, false));
+      for (unsigned i = 0; i < RippleIntrinsicsMaxDims; ++i)
+        RippleSetShapeArgs.push_back(i < PERank ? Two : One);
+      IRB.CreateIntrinsic(Intrinsic::ripple_block_setshape, {Int64Ty},
+                          RippleSetShapeArgs);
+    }
+  }
+
+  // When the specialization returns void we preemptively create the declaration
+  // of the final specialization (because we have all the type info necessary
+  // This allows us to support cycles of void function specialization.
+  if (CalledFunction->getReturnType()->isVoidTy()) {
+    std::vector<Type *> ArgTypes;
+    // Get the final vector argument types from FClone
+    for (unsigned ArgIdx = 0, E = CalledFunction->arg_size(); ArgIdx < E;
+         ++ArgIdx)
+      ArgTypes.push_back(FClone->getArg(ArgIdx + E)->getType());
+    // for void we create the final call here so that we can handle cycles
+    FunctionType *FTy = FunctionType::get(CalledFunction->getReturnType(),
+                                          ArgTypes, /*IsVarArg*/ false);
+    Function *ProcessedSpecialization = Function::Create(
+        FTy, GlobalValue::InternalLinkage, CalledFunction->getAddressSpace(),
+        getUniqueSpecializationName(CalledFunction->getName(), /*Final*/ true),
+        CalledFunction->getParent());
+    ProcessedSpecialization->copyAttributesFrom(FClone);
+    // Mark this declaration as the destination of the final specialization
+    registerFinalFunctionNameMetadata(FClone, ProcessedSpecialization);
+    ArgShapes.resize(ArgShapes.size() / 2);
+    setFunctionShapeMetadata(*ProcessedSpecialization, ArgShapes, ScalarShape);
+    // Make this final declaration as an available specialization, we don't need
+    // to wait for the specialization to be processed for it to be used
+    SpecializationsAvailable.insert(ProcessedSpecialization);
+
+    // Create the masked declaration of this specialization
+    assert(!SpecMaskShape->isScalar());
+    VectorType *SpecMaskType = VectorType::get(
+        irBuilder.getInt1Ty(), SpecMaskShape->flatShape(), /*Scalable*/ false);
+    ArgTypes.push_back(SpecMaskType);
+    FunctionType *MaskedFTy = FunctionType::get(CalledFunction->getReturnType(),
+                                                ArgTypes, /*IsVarArg*/ false);
+    Function *MaskedSpecializationFinal =
+        Function::Create(MaskedFTy, GlobalValue::InternalLinkage,
+                         CalledFunction->getAddressSpace(),
+                         getMaskedSpecializationName(*ProcessedSpecialization),
+                         CalledFunction->getParent());
+    ArgShapes.push_back(&*SpecMaskShape);
+    setFunctionShapeMetadata(*MaskedSpecializationFinal, ArgShapes,
+                             ScalarShape);
+  }
+  return true;
+}
+
+void Ripple::finishSpecialization() {
+  assert(isPendingRippleSpecialization(F));
+  const TensorShape *ReturnShape = &ScalarShape;
+  Type *ReturnType = Type::getVoidTy(F.getContext());
+  if (!F.getReturnType()->isVoidTy()) {
+    for (const auto &I : instructions(F))
+      if (auto *Return = dyn_cast<ReturnInst>(&I)) {
+        ReturnShape = &getRippleShape(Return);
+        break;
+      }
+    if (ReturnShape->isVector()) {
+      ReturnType = VectorType::get(F.getReturnType(), ReturnShape->flatShape(),
+                                   /*Scalable*/ false);
+      // Remove scalar attributes that don't apply to vector types
+      AttributeMask Mask;
+      Mask.addAttribute(Attribute::AttrKind::ZExt);
+      Mask.addAttribute(Attribute::AttrKind::SExt);
+      Mask.addAttribute(Attribute::AttrKind::NoExt);
+      Mask.addAttribute(Attribute::AttrKind::InReg);
+      Mask.addAttribute(Attribute::AttrKind::NoUndef);
+      F.removeRetAttrs(Mask);
+    } else
+      ReturnType = F.getReturnType();
+  }
+  SmallVector<const TensorShape *> ArgumentShapes;
+  ArgumentShapes.reserve(F.arg_size() / 2);
+  // We get the tensor shape of the ripple arguments
+  for (unsigned ArgIdx = 0, E = F.arg_size() / 2; ArgIdx < E; ArgIdx++) {
+    Argument *RippleArg = F.getArg(E + ArgIdx);
+    ArgumentShapes.push_back(&getRippleShape(RippleArg));
+  }
+  auto SpecMaskShape = TensorShape::broadcastShapeFromAll(ArgumentShapes);
+  // This is checked when requesting specialization construction
+  if (!SpecMaskShape)
+    llvm_unreachable("We shouldn't be constructing ripple specializations when "
+                     "argument tensor shapes don't broadcast");
+  TensorShape &MaskShape = SpecMaskShape.get();
+  Function *ProcessedSpecialization = nullptr;
+  Function *MaskedSpecialization = nullptr;
+  if (ReturnType->isVoidTy()) {
+    // For void returning function we pre-created the final function declaration
+    // to allow processing in the presence of cycles (shape propagation does not
+    // care in this case)
+    Function *FinalDecl = retrieveFinalSpecializationDecl(&F);
+    assert(FinalDecl && FinalDecl->isDeclaration() &&
+           "Pending void returning ripple specialization "
+           "must have a final name attached");
+    ProcessedSpecialization = FinalDecl;
+    MaskedSpecialization = getMaskedSpecialization(*ProcessedSpecialization);
+    assert(ProcessedSpecialization &&
+           "Missing ripple final specialization function declaration");
+  } else {
+    // Ripple argument types
+    SmallVector<Type *> ArgumentTypes;
+    ArgumentTypes.reserve(F.arg_size() / 2);
+    for (unsigned ArgIdx = 0, E = F.arg_size() / 2; ArgIdx < E; ArgIdx++)
+      ArgumentTypes.push_back(F.getArg(E + ArgIdx)->getType());
+    FunctionType *FTy =
+        FunctionType::get(ReturnType, ArgumentTypes, /*IsVarArg*/ false);
+    // Two functions can't have the same name so we add a "final" to the
+    // ripple specialization prefix
+    ProcessedSpecialization =
+        Function::Create(FTy, GlobalValue::InternalLinkage, F.getAddressSpace(),
+                         getUniqueSpecializationName(
+                             getOriginalName(F.getName()), /*Final*/ true),
+                         F.getParent());
+    SpecializationsAvailable.insert(ProcessedSpecialization);
+
+    // Create the masked declaration of this specialization
+    VectorType *SpecMaskType = VectorType::get(
+        irBuilder.getInt1Ty(), MaskShape.flatShape(), /*Scalable*/ false);
+    ArgumentTypes.push_back(SpecMaskType);
+    FunctionType *MaskedFTy =
+        FunctionType::get(ReturnType, ArgumentTypes, /*IsVarArg*/ false);
+    MaskedSpecialization = Function::Create(
+        MaskedFTy, GlobalValue::InternalLinkage, F.getAddressSpace(),
+        getMaskedSpecializationName(*ProcessedSpecialization), F.getParent());
+  }
+  assert(MaskedSpecialization && ProcessedSpecialization);
+
+  {
+    ValueToValueMapTy VMap;
+    for (unsigned ArgIdx = 0, E = ProcessedSpecialization->arg_size();
+         ArgIdx < E; ++ArgIdx) {
+      assert(F.getArg(ArgIdx)->getNumUses() == 0);
+      Argument *NewArg = ProcessedSpecialization->getArg(ArgIdx);
+      VMap[F.getArg(ArgIdx)] = NewArg;
+      VMap[F.getArg(ArgIdx + E)] = NewArg;
+    }
+    SmallVector<ReturnInst *, 8> Returns; // Ignore returns cloned.
+    // let cloneFunction handle all the metadata mapping, etc instead of
+    // re-implementing it here
+    CloneFunctionInto(ProcessedSpecialization, &F, VMap,
+                      CloneFunctionChangeType::LocalChangesOnly, Returns, "",
+                      nullptr);
+  }
+
+  eraseFunctionSpecializationRelatedMetadata(*ProcessedSpecialization);
+  setFunctionShapeMetadata(*ProcessedSpecialization, ArgumentShapes,
+                           *ReturnShape);
+  LLVM_DEBUG(dbgs() << "\nFinal specialization of " << F.getName() << ":\n";
+             ProcessedSpecialization->print(dbgs()));
+
+  // Create a temporary mask for whole function masking. After cloning the
+  // function, we will replace this instruction by the argument (which does not
+  // exist here)!
+  irBuilder.SetInsertPoint(F.getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
+  SelectInst *TemporaryMask = irBuilder.Insert(createMaskSelectToTrueFalse(
+      irBuilder.getInt1Ty(),
+      ElementCount::get(MaskShape.flatShape(), /*Scalable*/ false),
+      "ripple.specialization.mask"));
+  setRippleShape(TemporaryMask, MaskShape);
+
+  SmallVector<BasicBlock *> BBs;
+  auto refToPtr = [](BasicBlock &BB) { return &BB; };
+  applyMaskToOps(make_range(map_iterator(F.begin(), refToPtr),
+                            map_iterator(F.end(), refToPtr)),
+                 TemporaryMask, MaskShape,
+                 &*std::next(TemporaryMask->getIterator()));
+  {
+    ValueToValueMapTy VMap;
+    for (unsigned ArgIdx = 0, E = MaskedSpecialization->arg_size() - 1;
+         ArgIdx < E; ++ArgIdx) {
+      assert(F.getArg(ArgIdx)->getNumUses() == 0);
+      Argument *NewArg = MaskedSpecialization->getArg(ArgIdx);
+      VMap[F.getArg(ArgIdx)] = NewArg;
+      VMap[F.getArg(ArgIdx + E)] = NewArg;
+    }
+    Argument *MaskArg =
+        MaskedSpecialization->getArg(MaskedSpecialization->arg_size() - 1);
+    assert(TemporaryMask->getType() == MaskArg->getType());
+    SmallVector<ReturnInst *, 8> Returns; // Ignore returns cloned.
+    // let cloneFunction handle all the metadata mapping, etc instead of
+    // re-implementing it here
+    CloneFunctionInto(MaskedSpecialization, &F, VMap,
+                      CloneFunctionChangeType::LocalChangesOnly, Returns, "",
+                      nullptr);
+    // Replace the use of the temporary mask by the argument!
+    auto TemporaryMaskMapping =
+        cast<Instruction>(VMap[TemporaryMask])->getIterator();
+    ReplaceInstWithValue(TemporaryMaskMapping, MaskArg);
+  }
+
+  ArgumentShapes.push_back(&MaskShape);
+  setFunctionShapeMetadata(*MaskedSpecialization, ArgumentShapes, *ReturnShape);
+  LLVM_DEBUG(dbgs() << "\nMasked specialization of " << F.getName() << ":\n";
+             MaskedSpecialization->print(dbgs()));
+}
+
+Function *
+Ripple::specializationOriginalFunction(const Function &Specialization) {
+  auto OriginalName = getOriginalName(Specialization.getName());
+  if (OriginalName.empty())
+    return nullptr;
+  return Specialization.getParent()->getFunction(OriginalName);
+}
+
+static constexpr StringRef
+    RippleSpecializationFinalName("ripple.specialization.final.fname");
+
+void Ripple::registerFinalFunctionNameMetadata(
+    Function *PendingSpecialization, const Function *FinalSpecialization) {
+  assert(isPendingRippleSpecialization(*PendingSpecialization) &&
+         PendingSpecialization->getReturnType()->isVoidTy());
+  PendingSpecialization->setMetadata(
+      RippleSpecializationFinalName,
+      MDNode::get(PendingSpecialization->getContext(),
+                  MDString::get(PendingSpecialization->getContext(),
+                                FinalSpecialization->getName())));
+}
+
+Function *Ripple::retrieveFinalSpecializationDecl(
+    const Function *PendingSpecialization) const {
+  if (!PendingSpecialization)
+    return nullptr;
+  assert(isPendingRippleSpecialization(*PendingSpecialization) &&
+         PendingSpecialization->getReturnType()->isVoidTy());
+  if (MDNode *MDN =
+          PendingSpecialization->getMetadata(RippleSpecializationFinalName)) {
+    if (MDString *MDS = dyn_cast<MDString>(MDN->getOperand(0))) {
+      Function *FinalSpec =
+          PendingSpecialization->getParent()->getFunction(MDS->getString());
+      assert(FinalSpec->isDeclaration());
+      return FinalSpec;
+    }
+  }
+  return nullptr;
+}
+
+void Ripple::eraseFunctionSpecializationRelatedMetadata(Function &F) {
+  unsigned KindID = F.getContext().getMDKindID(RippleFunShapeMetaKey);
+  F.eraseMetadata(KindID);
+  KindID = F.getContext().getMDKindID(RippleSpecializationFinalName);
+  F.eraseMetadata(KindID);
+}
+
+std::string
+Ripple::getMaskedSpecializationName(const Function &Specialization) const {
+  assert(Specialization.getName().starts_with(RippleSpecializationPrefix) &&
+         "This function doen't use the ripple specialization name mangling");
+  return "masked." + Specialization.getName().str();
+}
+
+Function *
+Ripple::getMaskedSpecialization(const Function &Specialization) const {
+  return Specialization.getParent()->getFunction(
+      getMaskedSpecializationName(Specialization));
+}
+
+IntegerType *Ripple::getSpecializationMaskElementType() {
+  return irBuilder.getInt1Ty();
+}
+
+template <typename IteratorT>
+Expected<TensorShape>
+Ripple::getSpecializationMaskShape(llvm::iterator_range<IteratorT> Args) const {
+  SmallVector<const TensorShape *, 16> ArgShapes;
+  llvm::transform(Args, std::back_inserter(ArgShapes),
+                  [&](auto &Arg) { return &getRippleShape(Arg.get()); });
+
+  return TensorShape::broadcastShapeFromAll(ArgShapes);
+}
+
 template <bool ReportAmbiguity>
 IntrinsicInst *Ripple::getBlockShapeIntrinsic(const Use &RippleBlockShapePtr) {
   std::array<Instruction *, 2> Clobbering = {};
@@ -5925,6 +6639,17 @@ Ripple::setShapeToTensorShape(const IntrinsicInst *RippleSetShape) const {
     }
   }
   return TensorShape(std::move(BlockShape));
+}
+
+void Ripple::specializationCallBlockShapeArgs(
+    const CallInst *CI,
+    SmallVectorImpl<std::pair<unsigned, IntrinsicInst *>> &BSArgs) {
+  unsigned ArgNo = 0;
+  for (auto &Arg : CI->args()) {
+    if (IntrinsicInst *BSI = getBlockShapeIntrinsic(Arg))
+      BSArgs.push_back({ArgNo, BSI});
+    ArgNo++;
+  }
 }
 
 Error Ripple::checkBlockShapeUsage(const Function &F) {

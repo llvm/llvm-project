@@ -21,6 +21,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -820,6 +821,41 @@ public:
   std::map<AssertingVH<const Instruction>, TensorShape>
   getInstructionToRippleShape() const;
 
+  /// @brief Erase ripple function-specialization related metadata that has been
+  /// attached to the given function
+  static void eraseFunctionSpecializationRelatedMetadata(Function &F);
+
+  /// @brief Returns true if a function is marked for Ripple Specialization
+  bool isPendingRippleSpecialization(const Function &F) const;
+
+  /// @brief Returns true if a function is marked for Ripple Specialization
+  bool shouldWaitForVoidReturnSpecialization(const Function &F) const;
+
+  /// @brief Returns a unique name for a specialization of function name
+  /// OriginalName
+  static std::string getUniqueSpecializationName(StringRef OriginalName,
+                                                 bool Final = false);
+
+  /// @brief Returns the base (OriginalName) of the ripple function
+  /// specialization, or an empty string if it is not a specialization.
+  static StringRef getOriginalName(StringRef SpecializationName);
+
+  /// @brief Gets the base function of this specialization, or nullptr if it is
+  /// not a ripple specialization
+  static Function *
+  specializationOriginalFunction(const Function &Specialization);
+
+  /// Store the name of the final specialization for void returning functions.
+  /// That way we can call the final function w/o having to wait for the
+  /// specialization to be processed by ripple.
+  void registerFinalFunctionNameMetadata(Function *PendingSpecialization,
+                                         const Function *FinalSpecialization);
+
+  /// Retrieve the declaration of the processed specialization or nullptr if it
+  /// has not been created yet
+  Function *
+  retrieveFinalSpecializationDecl(const Function *PendingSpecialization) const;
+
 private:
   /// @brief Datatype returned when constructing linear series
   /// This also make sure that linear series are deleted when no more in use,
@@ -982,6 +1018,9 @@ private:
 
   DenseSet<AssertingVH<AllocaInst>> PromotableAlloca;
   DenseSet<AssertingVH<AllocaInst>> NonPromotableAlloca;
+
+  /// @brief Argument shapes used for function specialization
+  SmallVector<TensorShape, 8> ArgumentShapes;
 
   /// @brief A way to return the processing status of this function pass to the
   /// Ripple module pass
@@ -1534,6 +1573,62 @@ private:
     FuncRPOT = nullptr;
   }
 
+  /// @brief Returns true if the function has shape information embedded
+  static bool hasRippleShapeMetadata(const Function &F);
+
+  /// @brief Set the function shape metadata
+  void setFunctionShapeMetadata(Function &F,
+                                ArrayRef<const TensorShape *> ArgShapes,
+                                const TensorShape &ReturnShape);
+
+  /// @brief Retrieve the tensor shapes of the function's argument and return
+  /// when it's a specialization.
+  bool getFunctionShapeMetadata(
+      const Function &F,
+      SmallVectorImpl<std::unique_ptr<TensorShape>> &ArgShapes,
+      std::unique_ptr<TensorShape> &ReturnShape) const;
+
+  /// @brief Returns true if a function is safe to be specialized by Ripple
+  static bool canBeSpecialized(const Function *F);
+
+  /// @brief Returns the specialization for Call if there is one in the module
+  /// and the return tensor shape.
+  /// The returned function may be a call that has not yet been processed by
+  /// ripple and hence the return shape cannot be trusted. The caller can test
+  /// that by using @ref isPendingRippleSpecialization and may have to postpone
+  /// processing until the function has been processed.
+  std::pair<Function *, TensorShape>
+  getRippleSpecializationFor(const CallInst &Call) const;
+
+  /// @brief Initiate the process of specializing the given call
+  bool requestSpecializationFor(const CallInst &Call);
+
+  /// @brief Called when ripple is done processing a specialization, to fix the
+  /// function prototype now that all the types have settled.
+  /// @pre isPendingRippleSpecialization is true
+  void finishSpecialization();
+
+  /// @brief Request the masked specialization of a given non-masked
+  /// specialization
+  /// @param Specialization The specialization function
+  /// @return The masked specialization, or nullptr if it does not exist
+  Function *getMaskedSpecialization(const Function &Specialization) const;
+
+  /// @brief Returns the name of the masked specialization given a
+  /// specialization function
+  std::string getMaskedSpecializationName(const Function &Specialization) const;
+
+  /// @brief Returns the element type of a specialization mask
+  IntegerType *getSpecializationMaskElementType();
+
+  /// @brief Given a function's operand value range, returns the shape of the
+  /// specialization's mask
+  /// This function queries the shape of the operands to infer the shape of the
+  /// mask.
+  template <typename IteratorT>
+  Expected<TensorShape>
+  getSpecializationMaskShape(llvm::iterator_range<IteratorT> Args) const;
+
   /// @brief Returns the tensor shape of RippleSetShape
   TensorShape setShapeToTensorShape(const IntrinsicInst *RippleSetShape) const;
 
@@ -1541,6 +1636,13 @@ private:
   /// ripple.get.size intrinsic
   TensorShape::DimSize
   getRippleGetSizeValue(const IntrinsicInst *RippleGetSize);
+
+  /// @brief Populates @p BSArgs with pairs <argument index,
+  /// ripple_set_block_shape intrinsic> for each argument we can trace back to
+  /// block set shape or use the block shape with a ripple intrinsic
+  void specializationCallBlockShapeArgs(
+      const CallInst *CI,
+      SmallVectorImpl<std::pair<unsigned, IntrinsicInst *>> &BSArgs);
 
   /// @brief Checks that all the ripple instrinsics in this function that rely
   /// on a block size can find them and returns an error otherwise.
