@@ -179,8 +179,16 @@ protected:
       (R.getVersion() >= VersionTuple(major, minor));
   }
 
-  std::string ManglePublicSymbol(StringRef Name) {
-    return (StringRef(CGM.getTriple().isOSBinFormatCOFF() ? "$_" : "._") + Name).str();
+  const std::string ManglePublicSymbol(StringRef Name) {
+    StringRef prefix = "._";
+
+    // Exported symbols in Emscripten must be a valid Javascript identifier.
+    auto triple = CGM.getTriple();
+    if (triple.isOSBinFormatCOFF() || triple.isOSBinFormatWasm()) {
+      prefix = "$_";
+    }
+
+    return (prefix + Name).str();
   }
 
   std::string SymbolForProtocol(Twine Name) {
