@@ -95,38 +95,40 @@ def main(
                 explanation_request["failures"].append(
                     {"name": name, "message": failure_messsage}
                 )
-    else:
+    elif return_code != 0:
         ninja_failures = generate_test_report_lib.find_failure_in_ninja_logs(ninja_logs)
         for name, failure_message in ninja_failures:
             explanation_request["failures"].append(
                 {"name": name, "message": failure_message}
             )
-    advisor_response = requests.get(
-        PREMERGE_ADVISOR_URL, json=explanation_request, timeout=5
-    )
-    comment = None
-    if advisor_response.status_code == 200:
-        print(advisor_response.json())
-        comment = get_comment(
-                github_token,
-                pr_number,
-                generate_test_report_lib.generate_report(
-                    generate_test_report_lib.compute_platform_title(),
-                    return_code,
-                    junit_objects,
-                    ninja_logs,
-                    failure_explanations_list=advisor_response.json(),
-                ),
-            )
-    else:
-        print(advisor_response.reason)
-    if comment:
-        if return_code == 0 and "id" not in comment:
-            # If the job succeeds and there is not an existing comment, we
-            # should not write one to reduce noise.
-            return
-        with open("comments", "w") as comment_file_handle:
-            json.dump([comment], comment_file_handle)
+    comments = []
+    advisor_explanations = []
+    if return_code != 0:
+        advisor_response = requests.get(
+            PREMERGE_ADVISOR_URL, json=explanation_request, timeout=5
+        )
+        if advisor_response.status_code == 200:
+            print(advisor_response.json())
+            advisor_explanations = advisor_response.json()
+        else:
+            print(advisor_response.reason)
+    comments.append(get_comment(
+            github_token,
+            pr_number,
+            generate_test_report_lib.generate_report(
+                generate_test_report_lib.compute_platform_title(),
+                return_code,
+                junit_objects,
+                ninja_logs,
+                failure_explanations_list=advisor_explanations,
+            ),
+        ))
+    if return_code == 0 and "id" not in comments[0]:
+        # If the job succeeds and there is not an existing comment, we
+        # should not write one to reduce noise.
+        comments = []
+    with open("comments", "w") as comment_file_handle:
+        json.dump(comments, comment_file_handle)
 
 
 if __name__ == "__main__":
