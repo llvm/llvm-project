@@ -2417,6 +2417,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
       }
       CheckAssocLoopLevel(level, GetAssociatedClause());
     } else {
+      unsigned version{context_.langOptions().OpenMPVersion};
       context_.Say(GetContext().directiveSource,
           "A DO loop must follow the %s directive"_err_en_US,
           parser::ToUpperCaseLetters(

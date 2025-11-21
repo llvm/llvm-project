@@ -550,7 +550,9 @@ void OmpStructureChecker::CheckLooprangeBounds(
 void OmpStructureChecker::CheckNestedFuse(
     const parser::OpenMPLoopConstruct &x) {
   auto &loopConsList{std::get<parser::Block>(x.t)};
-  assert(loopConsList.size() == 1 && "Not Expecting a loop sequence");
+  if (loopConsList.empty()) {
+    return;
+  }
   const auto *ompConstruct{parser::omp::GetOmpLoop(loopConsList.front())};
   if (!ompConstruct) {
     return;
