@@ -13,7 +13,7 @@ common --enable_bzlmod --noenable_workspace
 common --legacy_external_runfiles
 
 # Prevent invalid caching if input files are modified during a build.
-build --experimental_guard_against_concurrent_changes
+build --guard_against_concurrent_changes
 
 # Automatically enable --config=(linux|macos|windows) based on the host
 build --enable_platform_specific_config
