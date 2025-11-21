@@ -11,10 +11,6 @@
 
 #include "mlir/IR/Value.h"
 
-#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/PatternMatch.h"
-
 namespace mlir {
 
 class ImplicitLocOpBuilder;
@@ -85,8 +81,11 @@ struct MaskHelper {
 
 //===----------------------------------------------------------------------===//
 
+// Lowers a FP32 type vector.contract operation to an FMA operation.
 void populateVectorContractToFMAPatterns(RewritePatternSet &patterns);
 
+// Lowers a BF16/Int8 type vector.contract operation to a BF16/Int8 dot-product
+// operation.
 void populateVectorContractToPackedTypeDotProductPatterns(
     RewritePatternSet &patterns);
 

@@ -24,6 +24,8 @@ using namespace mlir;
 using namespace mlir::vector;
 using namespace mlir::x86vector;
 
+namespace {
+
 static FailureOr<SmallVector<mlir::utils::IteratorType>>
 inferIteratorsFromOutMap(AffineMap map) {
   if (!map.isProjectedPermutation())
@@ -36,6 +38,8 @@ inferIteratorsFromOutMap(AffineMap map) {
   return iterators;
 }
 
+// Returns true if the operation is in VNNI layout.
+// Optionally, the check can be constrained to a specific VNNI blocking factor.
 static bool isInVnniLayout(Operation *op, ArrayRef<AffineMap> indexingMaps,
                            std::optional<unsigned> blockingFactor) {
   // Narrow down type operations - VNNI only applies to contractions.
@@ -207,8 +211,11 @@ struct VectorContractToPackedTypeDotProduct
 
     Value dp;
 
-    // LHS shape is unit dimension. Broadcast into vector-size of non-unit
-    // dimension in RHS shape. Subtract one to remove VNNI dim.
+    // Broadcast the unit-dimension LHS or RHS to match the vector length of the
+    // corresponding non-unit dimension on the other operand. For example,
+    // if LHS has type vector<1x1x2xbf16> and RHS has type vector<1x16x2xbf16>,
+    // we broadcast the LHS to vector<16x2xbf16>. In the opposite case (non-unit
+    // dimension on the LHS), we broadcast the RHS instead.
     if ((nonUnitDimRhs.size() - 1) > 0) {
       auto castRhs = vector::ShapeCastOp::create(
           rewriter, loc,
@@ -242,7 +249,7 @@ struct VectorContractToPackedTypeDotProduct
             VectorType::get(nonUnitDimRhs.front(), rewriter.getIntegerType(32)),
             castAcc, bitcastLhsPkType, castRhs);
       }
-    } else { // RHS shape is unit dimension.
+    } else {
       auto castLhs = vector::ShapeCastOp::create(
           rewriter, loc,
           VectorType::get(nonUnitDimLhs.front() * nonUnitDimLhs.back(),
@@ -277,15 +284,16 @@ struct VectorContractToPackedTypeDotProduct
       }
     }
 
-    if (dp) {
-      auto castDp = vector::ShapeCastOp::create(rewriter, loc, accTy, dp);
-      rewriter.replaceOp(contractOp, castDp);
-      return success();
-    }
+    if (!dp)
+      return failure();
 
-    return failure();
+    auto castDp = vector::ShapeCastOp::create(rewriter, loc, accTy, dp);
+    rewriter.replaceOp(contractOp, castDp);
+    return success();
   }
 };
+
+} // namespace
 
 void x86vector::populateVectorContractToPackedTypeDotProductPatterns(
     RewritePatternSet &patterns) {

@@ -22,6 +22,8 @@ using namespace mlir;
 using namespace mlir::vector;
 using namespace mlir::x86vector;
 
+namespace {
+
 // Implements outer product contraction as a sequence of broadcast and
 // FMA operations.
 //
@@ -95,8 +97,11 @@ struct VectorContractToFMA : public OpRewritePattern<vector::ContractionOp> {
 
     vector::FMAOp fma;
 
-    // LHS shape is unit dimension. Broadcast into vector-size of non-unit
-    // dimension in RHS shape.
+    // Broadcast the unit-dimension LHS or RHS to match the vector length of the
+    // corresponding non-unit dimension on the other operand. For example,
+    // if LHS has type vector<1x1xf32> and RHS has type vector<1x16xf32>, we
+    // broadcast the LHS to vector<1x16xf32>. In the opposite case (non-unit
+    // dimension on the LHS), we broadcast the RHS instead.
     if (nonUnitDimRhs.size() > 0) {
       auto castLhs = vector::ShapeCastOp::create(
           rewriter, loc, VectorType::get(1, lhsTy.getElementType()),
@@ -129,6 +134,8 @@ struct VectorContractToFMA : public OpRewritePattern<vector::ContractionOp> {
     return success();
   }
 };
+
+} // namespace
 
 void x86vector::populateVectorContractToFMAPatterns(
     RewritePatternSet &patterns) {
