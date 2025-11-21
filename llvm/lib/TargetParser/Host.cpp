@@ -2282,8 +2282,9 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["aes"] = (crypto & Aes) == Aes;
   Features["sha2"] = (crypto & Sha2) == Sha2;
 
-  // SVE support is disabled in for cores which are identified as supporting
-  // SVE; disable SVE if we don't detect support at runtime.
+  // Even if an underlying core supports SVE, it might not be available if
+  // it's disabled by the OS, or some other layer. Disable SVE if we don't
+  // detect support at runtime.
   if (!Features.contains("sve"))
     Features["sve"] = false;
 #endif
