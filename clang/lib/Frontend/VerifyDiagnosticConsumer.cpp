@@ -133,12 +133,14 @@ public:
     }
 
     llvm::SmallVector<StringRef, 4> Matches;
-    Regex.match(S.trim(), &Matches);
+    llvm::StringRef TrimmedText = S.trim();
+    Regex.match(TrimmedText, &Matches);
     if (Matches.empty()) {
       return DiagnosticMatchResult::NoMatch;
     }
-    return Matches[0].size() == S.size() ? DiagnosticMatchResult::Match
-                                         : DiagnosticMatchResult::PartialMatch;
+    return Matches[0].size() == TrimmedText.size()
+               ? DiagnosticMatchResult::Match
+               : DiagnosticMatchResult::PartialMatch;
   }
 
 private:
