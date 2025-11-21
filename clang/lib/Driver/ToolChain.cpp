@@ -1152,7 +1152,7 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
       return std::string(UseLinker);
   } else {
     llvm::SmallString<8> LinkerName;
-    if (Triple.isOSDarwin())
+    if (Triple.isOSBinFormatMachO())
       LinkerName.append("ld64.");
     else
       LinkerName.append("ld.");
