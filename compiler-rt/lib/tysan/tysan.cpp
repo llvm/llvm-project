@@ -56,16 +56,16 @@ static const char *getDisplayName(const char *Name) {
   return DName;
 }
 
-int getTDName(void *_td, char *buffer, uptr buffer_size, bool asset_on_error){
-  tysan_type_descriptor* td = (tysan_type_descriptor*)_td;
-  if(((sptr)td) <= 0){
+int getTDName(void *_td, char *buffer, uptr buffer_size, bool assert_on_error) {
+  tysan_type_descriptor *td = (tysan_type_descriptor *)_td;
+  if (((sptr)td) <= 0) {
     return internal_snprintf(buffer, buffer_size, "<unknown type>");
   }
 
   uptr written = 0;
   switch (td->Tag) {
   default:
-    if (asset_on_error)
+    if (assert_on_error)
       CHECK(false && "invalid enum value");
     else
       written = internal_snprintf(buffer, buffer_size, "<invalid shadow>");
