@@ -970,8 +970,11 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeForwardPointer(
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeFunction(
-    SPIRVType *RetType, const SmallVectorImpl<SPIRVType *> &ArgTypes,
+    const FunctionType *Ty, SPIRVType *RetType,
+    const SmallVectorImpl<SPIRVType *> &ArgTypes,
     MachineIRBuilder &MIRBuilder) {
+  if (Ty->isVarArg())
+    reportFatalUsageError("SPIR-V does not support variadic functions");
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeFunction)
                    .addDef(createTypeVReg(MIRBuilder))
@@ -988,7 +991,8 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeFunctionWithArgs(
     MachineIRBuilder &MIRBuilder) {
   if (const MachineInstr *MI = findMI(Ty, false, &MIRBuilder.getMF()))
     return MI;
-  const MachineInstr *NewMI = getOpTypeFunction(RetType, ArgTypes, MIRBuilder);
+  const MachineInstr *NewMI =
+      getOpTypeFunction(cast<FunctionType>(Ty), RetType, ArgTypes, MIRBuilder);
   add(Ty, false, NewMI);
   return finishCreatingSPIRVType(Ty, NewMI);
 }
@@ -1097,7 +1101,7 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     for (const auto &ParamTy : FType->params())
       ParamTypes.push_back(findSPIRVType(ParamTy, MIRBuilder, AccQual,
                                          ExplicitLayoutRequired, EmitIR));
-    return getOpTypeFunction(RetTy, ParamTypes, MIRBuilder);
+    return getOpTypeFunction(FType, RetTy, ParamTypes, MIRBuilder);
   }
 
   unsigned AddrSpace = typeToAddressSpace(Ty);
