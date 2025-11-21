@@ -503,8 +503,11 @@ ProfileGenerator::getTopLevelFunctionProfile(FunctionId FuncName) {
 void ProfileGenerator::generateProfile() {
   collectProfiledFunctions();
 
-  if (Binary->usePseudoProbes())
+  if (Binary->usePseudoProbes()) {
     Binary->decodePseudoProbe();
+    if (LoadFunctionFromSymbol)
+      Binary->loadSymbolsFromPseudoProbe();
+  }
 
   if (SampleCounters) {
     if (Binary->usePseudoProbes()) {
@@ -723,8 +726,7 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
 }
 
 StringRef
-ProfileGeneratorBase::getCalleeNameForAddress(uint64_t TargetAddress,
-                                              bool RestoreSymbolName) {
+ProfileGeneratorBase::getCalleeNameForAddress(uint64_t TargetAddress) {
   // Get the function range by branch target if it's a call branch.
   auto *FRange = Binary->findFuncRangeForStartAddr(TargetAddress);
 
@@ -733,14 +735,9 @@ ProfileGeneratorBase::getCalleeNameForAddress(uint64_t TargetAddress,
   if (!FRange || !FRange->IsFuncEntry)
     return StringRef();
 
-  if (RestoreSymbolName && FRange->Func->HasSymtabName) {
-    const AddressProbesMap &Address2ProbesMap = Binary->getAddress2ProbesMap();
-    for (const MCDecodedPseudoProbe &Probe :
-         Address2ProbesMap.find(TargetAddress)) {
-      if (const auto *ProbeDesc = Binary->getFuncDescForGUID(Probe.getGuid()))
-        return FunctionSamples::getCanonicalFnName(ProbeDesc->FuncName);
-    }
-  }
+  auto FuncName = Binary->findPseudoProbeName(FRange->Func);
+  if (FuncName.size())
+    return FunctionSamples::getCanonicalFnName(FuncName);
 
   return FunctionSamples::getCanonicalFnName(FRange->getFuncName());
 }
@@ -929,6 +926,8 @@ void CSProfileGenerator::generateProfile() {
     Binary->decodePseudoProbe();
     if (InferMissingFrames)
       initializeMissingFrameInferrer();
+    if (LoadFunctionFromSymbol)
+      Binary->loadSymbolsFromPseudoProbe();
   }
 
   if (SampleCounters) {
@@ -1362,7 +1361,7 @@ void CSProfileGenerator::populateBoundarySamplesWithProbes(
         getFunctionProfileForLeafProbe(CtxKey, CallProbe);
     FunctionProfile.addBodySamples(CallProbe->getIndex(), 0, Count);
     FunctionProfile.addTotalSamples(Count);
-    StringRef CalleeName = getCalleeNameForAddress(TargetAddress, true);
+    StringRef CalleeName = getCalleeNameForAddress(TargetAddress);
     if (CalleeName.size() == 0)
       continue;
     FunctionProfile.addCalledTargetSamples(CallProbe->getIndex(),

@@ -1310,7 +1310,7 @@ void PerfScriptReader::warnInvalidRange() {
       continue;
     }
 
-    if (FRange->Func->HasSymtabName)
+    if (FRange->Func->NameStatus != DwarfNameStatus::Matched)
       RecoveredRange += I.second;
 
     if (EndAddress >= FRange->EndAddress) {

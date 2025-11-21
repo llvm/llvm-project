@@ -109,8 +109,7 @@ protected:
 
   bool filterAmbiguousProfile(FunctionSamples &FS);
 
-  StringRef getCalleeNameForAddress(uint64_t TargetAddress,
-                                    bool RestoreSymbolName = false);
+  StringRef getCalleeNameForAddress(uint64_t TargetAddress);
 
   void computeSummaryAndThreshold(SampleProfileMap &ProfileMap);
 
