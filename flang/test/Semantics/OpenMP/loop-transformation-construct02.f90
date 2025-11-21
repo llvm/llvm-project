@@ -22,17 +22,17 @@ end subroutine
 
 subroutine loop_transformation_construct3
   implicit none
-  integer :: i = 5
-  integer :: y
+  integer, parameter :: i = 5
+  integer :: x
   integer :: v(i)
 
   !$omp do
   !$omp fuse
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
   !$omp end fuse
   !$omp end do
@@ -42,13 +42,13 @@ end subroutine
 
 subroutine loop_transformation_construct4
   implicit none
-  integer :: i = 5
-  integer :: y
+  integer, parameter :: i = 5
+  integer :: x
   integer :: v(i)
 
   !$omp do
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
   !ERROR: A DO loop must follow the FUSE directive
   !$omp fuse
@@ -57,8 +57,8 @@ end subroutine
 
 subroutine loop_transformation_construct5
   implicit none
-  integer :: i = 5
-  integer :: y
+  integer, parameter :: i = 5
+  integer :: x
   integer :: v(i)
 
   !$omp do
@@ -66,28 +66,28 @@ subroutine loop_transformation_construct5
   !$omp fuse
   !$omp unroll full
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
   !$omp end fuse
 end subroutine
 
 subroutine loop_transformation_construct6
   implicit none
-  integer :: i = 5
-  integer :: y
+  integer, parameter :: i = 5
+  integer :: x
   integer :: v(i)
 
   !$omp do
   !$omp fuse looprange(1,1)
   !$omp unroll partial(2)
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
   !$omp end fuse 
 end subroutine
