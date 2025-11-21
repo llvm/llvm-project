@@ -121,12 +121,12 @@ class CFIInstrInserter : public MachineFunctionPass {
     bool isValid() const { return K != Kind::Invalid; }
 
     unsigned getRegister() const {
-      assert(K == Register);
+      assert(K == Kind::Register);
       return U.Reg;
     }
 
     int64_t getOffset() const {
-      assert(K == Register);
+      assert(K == Kind::CFAOffset);
       return U.Offset;
     }
 
