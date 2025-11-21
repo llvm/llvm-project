@@ -59,6 +59,10 @@ enum class Tcgen05CollectorUsageOp : uint8_t {
   USE = 3,
 };
 
+void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
+
+void printTcgen05CollectorUsageOp(raw_ostream &OS, const Constant *ImmArgVal);
+
 inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::nvvm_f2i_rm_ftz:
@@ -661,10 +665,6 @@ inline APFloat::roundingMode GetFMARoundingMode(Intrinsic::ID IntrinsicID) {
   }
   llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM fma");
 }
-
-void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
-
-void printTcgen05CollectorUsageOp(raw_ostream &OS, const Constant *ImmArgVal);
 
 } // namespace nvvm
 } // namespace llvm
