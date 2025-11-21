@@ -362,7 +362,6 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
 
 void ImplicitBoolConversionCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   if (const auto *CastToBool =
           Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastToBool")) {
     const auto *Parent = Result.Nodes.getNodeAs<Stmt>("parentStmt");
@@ -416,7 +415,6 @@ void ImplicitBoolConversionCheck::handleCastFromBool(
 
   if (const auto *BoolLiteral =
           dyn_cast<CXXBoolLiteralExpr>(Cast->getSubExpr()->IgnoreParens())) {
-
     const auto EquivalentForBoolLiteral =
         getEquivalentForBoolLiteral(BoolLiteral, DestType, Context);
     if (UseUpperCaseLiteralSuffix)

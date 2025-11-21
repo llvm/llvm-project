@@ -70,7 +70,6 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
 
   if (const auto SpecializationLoc =
           TheType.getAs<TemplateSpecializationTypeLoc>()) {
-
     const auto *Specialization =
         dyn_cast<TemplateSpecializationType>(SpecializationLoc.getTypePtr());
     if (!Specialization)
@@ -101,7 +100,6 @@ static std::optional<TemplateSpecializationTypeLoc>
 matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
   if (const auto SpecializationLoc =
           TheType.getAs<TemplateSpecializationTypeLoc>()) {
-
     const auto *Specialization =
         dyn_cast<TemplateSpecializationType>(SpecializationLoc.getTypePtr());
     if (!Specialization)
@@ -182,7 +180,6 @@ matchTrailingTemplateParam(const FunctionTemplateDecl *FunctionTemplate) {
       TemplateParams->getParam(TemplateParams->size() - 1);
   if (const auto *LastTemplateParam =
           dyn_cast<NonTypeTemplateParmDecl>(LastParam)) {
-
     if (!LastTemplateParam->hasDefaultArgument() ||
         !LastTemplateParam->getName().empty())
       return {};

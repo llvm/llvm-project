@@ -15,7 +15,6 @@ namespace clang::tidy::bugprone {
 
 void NondeterministicPointerIterationOrderCheck::registerMatchers(
     MatchFinder *Finder) {
-
   auto LoopVariable = varDecl(hasType(
       qualType(hasCanonicalType(anyOf(referenceType(), pointerType())))));
 

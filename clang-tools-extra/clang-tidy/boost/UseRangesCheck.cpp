@@ -201,7 +201,6 @@ private:
 } // namespace
 
 utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
-
   ReplacerMap Results;
   static const Signature SingleSig = {{0}};
   static const Signature TwoSig = {{0}, {2}};

@@ -77,7 +77,6 @@ void PreferStaticOverAnonymousNamespaceCheck::registerMatchers(
 
 void PreferStaticOverAnonymousNamespaceCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   if (const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("function")) {
     if (Func->isCXXClassMember())
       diag(Func->getLocation(),

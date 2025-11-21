@@ -305,7 +305,6 @@ static SourceRange
 findReturnTypeAndCVSourceRange(const FunctionDecl &F, const TypeLoc &ReturnLoc,
                                const ASTContext &Ctx, const SourceManager &SM,
                                const LangOptions &LangOpts, Preprocessor *PP) {
-
   // We start with the range of the return type and expand to neighboring
   // qualifiers (const, volatile and restrict).
   SourceRange ReturnTypeRange = F.getReturnTypeSourceRange();
@@ -459,7 +458,6 @@ UseTrailingReturnTypeCheck::UseTrailingReturnTypeCheck(
     : ClangTidyCheck(Name, Context),
       TransformFunctions(Options.get("TransformFunctions", true)),
       TransformLambdas(Options.get("TransformLambdas", TransformLambda::All)) {
-
   if (TransformFunctions == false && TransformLambdas == TransformLambda::None)
     this->configurationDiag(
         "The check 'modernize-use-trailing-return-type' will not perform any "
@@ -604,7 +602,6 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
 void UseTrailingReturnTypeCheck::diagOnLambda(
     const LambdaExpr *Lambda,
     const ast_matchers::MatchFinder::MatchResult &Result) {
-
   const CXXMethodDecl *Method = Lambda->getCallOperator();
   if (!Method || Lambda->hasExplicitResultType())
     return;

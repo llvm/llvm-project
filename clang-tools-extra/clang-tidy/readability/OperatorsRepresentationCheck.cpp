@@ -275,7 +275,6 @@ void OperatorsRepresentationCheck::registerMatchers(MatchFinder *Finder) {
 
 void OperatorsRepresentationCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   SourceLocation Loc;
 
   if (const auto *Op = Result.Nodes.getNodeAs<BinaryOperator>("binary_op"))

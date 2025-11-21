@@ -890,7 +890,6 @@ static bool areStringsSameIgnoreSpaces(const llvm::StringRef Left,
 
 static bool areExprsSameMacroOrLiteral(const BinaryOperator *BinOp,
                                        const ASTContext *Context) {
-
   if (!BinOp)
     return false;
 
