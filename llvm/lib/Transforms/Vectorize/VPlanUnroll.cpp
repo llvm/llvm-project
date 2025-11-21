@@ -636,8 +636,17 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       for (VPUser *U : to_vector(DefR->users())) {
         auto *VPI = dyn_cast<VPInstruction>(U);
         if (!VPI || (VPI->getOpcode() != VPInstruction::BuildVector &&
-                     VPI->getOpcode() != VPInstruction::BuildStructVector))
+                     VPI->getOpcode() != VPInstruction::BuildStructVector &&
+                     VPI->getOpcode() != Instruction::ExtractElement))
           continue;
+
+        uint64_t Idx;
+        if (match(VPI,
+                  m_ExtractElement(m_Specific(DefR), m_ConstantInt(Idx)))) {
+          VPI->replaceAllUsesWith(LaneDefs[Idx]);
+          VPI->eraseFromParent();
+          continue;
+        }
         assert(VPI->getNumOperands() == 1 &&
                "Build(Struct)Vector must have a single operand before "
                "replicating by VF");
