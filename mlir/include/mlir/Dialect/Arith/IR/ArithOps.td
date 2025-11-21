@@ -1042,6 +1042,7 @@ def Arith_MaxNumFOp : Arith_FloatBinaryOp<"maxnumf", [Commutative]> {
 def Arith_MaxSIOp : Arith_TotalIntBinaryOp<"maxsi", [Commutative]> {
   let summary = "signed integer maximum operation";
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1051,6 +1052,7 @@ def Arith_MaxSIOp : Arith_TotalIntBinaryOp<"maxsi", [Commutative]> {
 def Arith_MaxUIOp : Arith_TotalIntBinaryOp<"maxui", [Commutative]> {
   let summary = "unsigned integer maximum operation";
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1101,6 +1103,7 @@ def Arith_MinNumFOp : Arith_FloatBinaryOp<"minnumf", [Commutative]> {
 def Arith_MinSIOp : Arith_TotalIntBinaryOp<"minsi", [Commutative]> {
   let summary = "signed integer minimum operation";
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1110,6 +1113,7 @@ def Arith_MinSIOp : Arith_TotalIntBinaryOp<"minsi", [Commutative]> {
 def Arith_MinUIOp : Arith_TotalIntBinaryOp<"minui", [Commutative]> {
   let summary = "unsigned integer minimum operation";
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 
