@@ -202,7 +202,7 @@ public:
   BuiltinTypeMethodBuilder &declareLocalVar(LocalVar &Var);
   template <typename... Ts>
   BuiltinTypeMethodBuilder &callBuiltin(StringRef BuiltinName,
-                                        QualType ReturnType, Ts... ArgSpecs);
+                                        QualType ReturnType, Ts &&...ArgSpecs);
   template <typename TLHS, typename TRHS>
   BuiltinTypeMethodBuilder &assign(TLHS LHS, TRHS RHS);
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr);
@@ -572,7 +572,7 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnThis() {
 template <typename... Ts>
 BuiltinTypeMethodBuilder &
 BuiltinTypeMethodBuilder::callBuiltin(StringRef BuiltinName,
-                                      QualType ReturnType, Ts... ArgSpecs) {
+                                      QualType ReturnType, Ts &&...ArgSpecs) {
   ensureCompleteDecl();
 
   std::array<Expr *, sizeof...(ArgSpecs)> Args{
