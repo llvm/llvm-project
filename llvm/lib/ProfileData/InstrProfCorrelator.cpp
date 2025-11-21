@@ -25,8 +25,8 @@
 using namespace llvm;
 
 /// Get profile section.
-Expected<object::SectionRef> getInstrProfSection(const object::ObjectFile &Obj,
-                                                 InstrProfSectKind IPSK) {
+static Expected<object::SectionRef>
+getInstrProfSection(const object::ObjectFile &Obj, InstrProfSectKind IPSK) {
   // On COFF, the getInstrProfSectionName returns the section names may followed
   // by "$M". The linker removes the dollar and everything after it in the final
   // binary. Do the same to match.
@@ -173,11 +173,10 @@ InstrProfCorrelator::get(std::unique_ptr<MemoryBuffer> Buffer,
 }
 
 std::optional<size_t> InstrProfCorrelator::getDataSize() const {
-  if (auto *C = dyn_cast<InstrProfCorrelatorImpl<uint32_t>>(this)) {
+  if (auto *C = dyn_cast<InstrProfCorrelatorImpl<uint32_t>>(this))
     return C->getDataSize();
-  } else if (auto *C = dyn_cast<InstrProfCorrelatorImpl<uint64_t>>(this)) {
+  if (auto *C = dyn_cast<InstrProfCorrelatorImpl<uint64_t>>(this))
     return C->getDataSize();
-  }
   return {};
 }
 
@@ -318,9 +317,9 @@ DwarfInstrProfCorrelator<IntPtrT>::getLocation(const DWARFDie &Die) const {
     DataExtractor Data(Location.Expr, DICtx->isLittleEndian(), AddressSize);
     DWARFExpression Expr(Data, AddressSize);
     for (auto &Op : Expr) {
-      if (Op.getCode() == dwarf::DW_OP_addr) {
+      if (Op.getCode() == dwarf::DW_OP_addr)
         return Op.getRawOperand(0);
-      } else if (Op.getCode() == dwarf::DW_OP_addrx) {
+      if (Op.getCode() == dwarf::DW_OP_addrx) {
         uint64_t Index = Op.getRawOperand(0);
         if (auto SA = DU.getAddrOffsetSectionItem(Index))
           return SA->Address;
@@ -352,7 +351,7 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
   bool UnlimitedWarnings = (MaxWarnings == 0);
   // -N suppressed warnings means we can emit up to N (unsuppressed) warnings
   int NumSuppressedWarnings = -MaxWarnings;
-  auto maybeAddProbe = [&](DWARFDie Die) {
+  auto MaybeAddProbe = [&](DWARFDie Die) {
     if (!isDIEOfProbe(Die))
       return;
     std::optional<const char *> FunctionName;
@@ -385,6 +384,9 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
         NumCounters = AnnotationFormValue->getAsUnsignedConstant();
       }
     }
+    // If there is no function and no counter, assume it was dead-stripped
+    if (!FunctionPtr && !CounterPtr)
+      return;
     if (!FunctionName || !CFGHash || !CounterPtr || !NumCounters) {
       if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
         WithColor::warning()
@@ -418,7 +420,7 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
     if (Data) {
       InstrProfCorrelator::Probe P;
       P.FunctionName = *FunctionName;
-      if (auto Name = FnDie.getName(DINameKind::LinkageName))
+      if (const char *Name = FnDie.getName(DINameKind::LinkageName))
         P.LinkageName = Name;
       P.CFGHash = *CFGHash;
       P.CounterOffset = CounterOffset;
@@ -438,10 +440,10 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
   };
   for (auto &CU : DICtx->normal_units())
     for (const auto &Entry : CU->dies())
-      maybeAddProbe(DWARFDie(CU.get(), &Entry));
+      MaybeAddProbe(DWARFDie(CU.get(), &Entry));
   for (auto &CU : DICtx->dwo_units())
     for (const auto &Entry : CU->dies())
-      maybeAddProbe(DWARFDie(CU.get(), &Entry));
+      MaybeAddProbe(DWARFDie(CU.get(), &Entry));
 
   if (!UnlimitedWarnings && NumSuppressedWarnings > 0)
     WithColor::warning() << format("Suppressed %d additional warnings\n",

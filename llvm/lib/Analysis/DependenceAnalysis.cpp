@@ -442,13 +442,6 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
             if (NormalizeResults && D->normalize(&SE))
               OS << "normalized - ";
             D->dump(OS);
-            for (unsigned Level = 1; Level <= D->getLevels(); Level++) {
-              if (D->isSplitable(Level)) {
-                OS << "  da analyze - split level = " << Level;
-                OS << ", iteration = " << *DA->getSplitIteration(*D, Level);
-                OS << "!\n";
-              }
-            }
           } else
             OS << "none!\n";
         }
@@ -609,11 +602,6 @@ bool FullDependence::isPeelFirst(unsigned Level, bool IsSameSD) const {
 // loop level will break this dependence.
 bool FullDependence::isPeelLast(unsigned Level, bool IsSameSD) const {
   return getDVEntry(Level, IsSameSD).PeelLast;
-}
-
-// Returns true if splitting loop will break the dependence.
-bool FullDependence::isSplitable(unsigned Level, bool IsSameSD) const {
-  return getDVEntry(Level, IsSameSD).Splitable;
 }
 
 // inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
@@ -1015,7 +1003,6 @@ void Dependence::dump(raw_ostream &OS) const {
 // For debugging purposes. Dumps a dependence to OS with or without considering
 // the SameSD levels.
 void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
-  bool Splitable = false;
   unsigned Levels = getLevels();
   unsigned SameSDLevels = getSameSDLevels();
   bool OnSameSD = false;
@@ -1026,8 +1013,6 @@ void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
   for (unsigned II = 1; II <= LevelNum; ++II) {
     if (!OnSameSD && inSameSDLoops(II))
       OnSameSD = true;
-    if (isSplitable(II, OnSameSD))
-      Splitable = true;
     if (isPeelFirst(II, OnSameSD))
       OS << 'p';
     const SCEV *Distance = getDistance(II, OnSameSD);
@@ -1056,8 +1041,6 @@ void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
   if (isLoopIndependent())
     OS << "|<";
   OS << "]";
-  if (Splitable)
-    OS << " splitable";
 }
 
 // Returns NoAlias/MayAliass/MustAlias for two memory locations based upon their
@@ -1825,8 +1808,7 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
 bool DependenceInfo::weakCrossingSIVtest(
     const SCEV *Coeff, const SCEV *SrcConst, const SCEV *DstConst,
     const Loop *CurSrcLoop, const Loop *CurDstLoop, unsigned Level,
-    FullDependence &Result, Constraint &NewConstraint,
-    const SCEV *&SplitIter) const {
+    FullDependence &Result, Constraint &NewConstraint) const {
   if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
     return false;
 
@@ -1856,7 +1838,6 @@ bool DependenceInfo::weakCrossingSIVtest(
   if (!ConstCoeff)
     return false;
 
-  Result.DV[Level].Splitable = true;
   if (SE->isKnownNegative(ConstCoeff)) {
     ConstCoeff = dyn_cast<SCEVConstant>(SE->getNegativeSCEV(ConstCoeff));
     assert(ConstCoeff &&
@@ -1864,12 +1845,6 @@ bool DependenceInfo::weakCrossingSIVtest(
     Delta = SE->getNegativeSCEV(Delta);
   }
   assert(SE->isKnownPositive(ConstCoeff) && "ConstCoeff should be positive");
-
-  // compute SplitIter for use by DependenceInfo::getSplitIteration()
-  SplitIter = SE->getUDivExpr(
-      SE->getSMaxExpr(SE->getZero(Delta->getType()), Delta),
-      SE->getMulExpr(SE->getConstant(Delta->getType(), 2), ConstCoeff));
-  LLVM_DEBUG(dbgs() << "\t    Split iter = " << *SplitIter << "\n");
 
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
   if (!ConstDelta)
@@ -1910,7 +1885,6 @@ bool DependenceInfo::weakCrossingSIVtest(
         ++WeakCrossingSIVindependence;
         return true;
       }
-      Result.DV[Level].Splitable = false;
       Result.DV[Level].Distance = SE->getZero(Delta->getType());
       return false;
     }
@@ -2731,8 +2705,8 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
 //
 // Return true if dependence disproved.
 bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
-                             FullDependence &Result, Constraint &NewConstraint,
-                             const SCEV *&SplitIter) const {
+                             FullDependence &Result,
+                             Constraint &NewConstraint) const {
   LLVM_DEBUG(dbgs() << "    src = " << *Src << "\n");
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
@@ -2754,8 +2728,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
                                 CurDstLoop, Level, Result, NewConstraint);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
       disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
-                                      CurDstLoop, Level, Result, NewConstraint,
-                                      SplitIter);
+                                      CurDstLoop, Level, Result, NewConstraint);
     else
       disproven =
           exactSIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurSrcLoop,
@@ -3951,8 +3924,6 @@ SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() const {
 //            Goff, Kennedy, Tseng
 //            PLDI 1991
 //
-// Care is required to keep the routine below, getSplitIteration(),
-// up to date with respect to this routine.
 std::unique_ptr<Dependence>
 DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                         bool UnderRuntimeAssumptions) {
@@ -4158,11 +4129,9 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     case Subscript::SIV: {
       LLVM_DEBUG(dbgs() << ", SIV\n");
       unsigned Level;
-      const SCEV *SplitIter = nullptr;
       Constraint NewConstraint;
       NewConstraint.setAny(SE);
-      if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
-                  SplitIter))
+      if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint))
         return nullptr;
       break;
     }
@@ -4255,134 +4224,4 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   }
 
   return std::make_unique<FullDependence>(std::move(Result));
-}
-
-//===----------------------------------------------------------------------===//
-// getSplitIteration -
-// Rather than spend rarely-used space recording the splitting iteration
-// during the Weak-Crossing SIV test, we re-compute it on demand.
-// The re-computation is basically a repeat of the entire dependence test,
-// though simplified since we know that the dependence exists.
-// It's tedious, since we must go through all propagations, etc.
-//
-// Care is required to keep this code up to date with respect to the routine
-// above, depends().
-//
-// Generally, the dependence analyzer will be used to build
-// a dependence graph for a function (basically a map from instructions
-// to dependences). Looking for cycles in the graph shows us loops
-// that cannot be trivially vectorized/parallelized.
-//
-// We can try to improve the situation by examining all the dependences
-// that make up the cycle, looking for ones we can break.
-// Sometimes, peeling the first or last iteration of a loop will break
-// dependences, and we've got flags for those possibilities.
-// Sometimes, splitting a loop at some other iteration will do the trick,
-// and we've got a flag for that case. Rather than waste the space to
-// record the exact iteration (since we rarely know), we provide
-// a method that calculates the iteration. It's a drag that it must work
-// from scratch, but wonderful in that it's possible.
-//
-// Here's an example:
-//
-//    for (i = 0; i < 10; i++)
-//        A[i] = ...
-//        ... = A[11 - i]
-//
-// There's a loop-carried flow dependence from the store to the load,
-// found by the weak-crossing SIV test. The dependence will have a flag,
-// indicating that the dependence can be broken by splitting the loop.
-// Calling getSplitIteration will return 5.
-// Splitting the loop breaks the dependence, like so:
-//
-//    for (i = 0; i <= 5; i++)
-//        A[i] = ...
-//        ... = A[11 - i]
-//    for (i = 6; i < 10; i++)
-//        A[i] = ...
-//        ... = A[11 - i]
-//
-// breaks the dependence and allows us to vectorize/parallelize
-// both loops.
-const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
-                                              unsigned SplitLevel) {
-  assert(Dep.isSplitable(SplitLevel) &&
-         "Dep should be splitable at SplitLevel");
-  Instruction *Src = Dep.getSrc();
-  Instruction *Dst = Dep.getDst();
-  assert(Src->mayReadFromMemory() || Src->mayWriteToMemory());
-  assert(Dst->mayReadFromMemory() || Dst->mayWriteToMemory());
-  assert(isLoadOrStore(Src));
-  assert(isLoadOrStore(Dst));
-  Value *SrcPtr = getLoadStorePointerOperand(Src);
-  Value *DstPtr = getLoadStorePointerOperand(Dst);
-  assert(underlyingObjectsAlias(
-             AA, F->getDataLayout(), MemoryLocation::get(Dst),
-             MemoryLocation::get(Src)) == AliasResult::MustAlias);
-
-  // establish loop nesting levels
-  establishNestingLevels(Src, Dst);
-
-  FullDependence Result(Src, Dst, Dep.Assumptions, false, CommonLevels);
-
-  unsigned Pairs = 1;
-  SmallVector<Subscript, 2> Pair(Pairs);
-  const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
-  const SCEV *DstSCEV = SE->getSCEV(DstPtr);
-  Pair[0].Src = SE->removePointerBase(SrcSCEV);
-  Pair[0].Dst = SE->removePointerBase(DstSCEV);
-
-  if (Delinearize) {
-    if (tryDelinearize(Src, Dst, Pair)) {
-      LLVM_DEBUG(dbgs() << "    delinearized\n");
-      Pairs = Pair.size();
-    }
-  }
-
-  for (unsigned P = 0; P < Pairs; ++P) {
-    assert(Pair[P].Src->getType()->isIntegerTy() && "Src must be an integer");
-    assert(Pair[P].Dst->getType()->isIntegerTy() && "Dst must be an integer");
-    Pair[P].Loops.resize(MaxLevels + 1);
-    Pair[P].GroupLoops.resize(MaxLevels + 1);
-    Pair[P].Group.resize(Pairs);
-    removeMatchingExtensions(&Pair[P]);
-    Pair[P].Classification =
-        classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()), Pair[P].Dst,
-                     LI->getLoopFor(Dst->getParent()), Pair[P].Loops);
-    Pair[P].GroupLoops = Pair[P].Loops;
-    Pair[P].Group.set(P);
-  }
-
-  Constraint NewConstraint;
-  NewConstraint.setAny(SE);
-
-  // Test each subscript individually for split iteration
-  for (unsigned SI = 0; SI < Pairs; ++SI) {
-    switch (Pair[SI].Classification) {
-    case Subscript::NonLinear:
-      // ignore these, but collect loops for later
-      collectCommonLoops(Pair[SI].Src, LI->getLoopFor(Src->getParent()),
-                         Pair[SI].Loops);
-      collectCommonLoops(Pair[SI].Dst, LI->getLoopFor(Dst->getParent()),
-                         Pair[SI].Loops);
-      Result.Consistent = false;
-      break;
-    case Subscript::SIV: {
-      unsigned Level;
-      const SCEV *SplitIter = nullptr;
-      (void)testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
-                    SplitIter);
-      if (Level == SplitLevel && SplitIter != nullptr) {
-        return SplitIter;
-      }
-      break;
-    }
-    case Subscript::ZIV:
-    case Subscript::RDIV:
-    case Subscript::MIV:
-      break;
-    }
-  }
-  // No split iteration found
-  return nullptr;
 }
