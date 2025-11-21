@@ -2770,6 +2770,53 @@ public:
     return Insts;
   }
 
+  InstructionListType materializeConstant(const MCInst &Inst,
+                                          StringRef ConstantData,
+                                          uint64_t Offset) const override {
+    struct InstInfo {
+      // Size in bytes that Inst loads from memory.
+      uint8_t DataSize;
+      // Number of instructions needed to materialize the constant.
+      uint8_t numInstrs;
+      // Opcode to use for materializing the constant.
+      unsigned Opcode;
+    };
+
+    InstInfo I;
+    InstructionListType Insts(0);
+    switch (Inst.getOpcode()) {
+    case AArch64::LDRWl:
+      I = {4, 2, AArch64::MOVKWi};
+      break;
+    case AArch64::LDRXl:
+      I = {8, 4, AArch64::MOVKXi};
+      break;
+    default:
+      llvm_unreachable("unexpected ldr instruction");
+      break;
+    }
+
+    if (ConstantData.size() - Offset < I.DataSize)
+      return Insts;
+
+    const uint64_t ImmVal =
+        DataExtractor(ConstantData, true, 8).getUnsigned(&Offset, I.DataSize);
+
+    Insts.resize(I.numInstrs);
+    unsigned shift = (Insts.size() - 1) * 16;
+    MCPhysReg Reg = Inst.getOperand(0).getReg();
+    for (unsigned i = 0; i < Insts.size(); i++, shift -= 16) {
+      Insts[i].setOpcode(I.Opcode);
+      Insts[i].clear();
+      Insts[i].addOperand(MCOperand::createReg(Reg));
+      Insts[i].addOperand(MCOperand::createReg(Reg));
+      Insts[i].addOperand(MCOperand::createImm((ImmVal >> shift) & 0xFFFF));
+      Insts[i].addOperand(MCOperand::createImm(shift));
+    }
+
+    return Insts;
+  }
+
   std::optional<Relocation>
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override {
