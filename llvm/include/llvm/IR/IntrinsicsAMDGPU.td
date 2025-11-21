@@ -2495,7 +2495,7 @@ def int_amdgcn_s_quadmask :
 def int_amdgcn_s_wqm :
   DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrConvergent]>;
 
-class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
+class AMDGPUWaveReduce<LLVMType data_ty = llvm_any_ty> : Intrinsic<
     [data_ty],
     [
       LLVMMatchType<0>,   // llvm value to reduce (SGPR/VGPR)
@@ -2507,7 +2507,7 @@ class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
 
 multiclass AMDGPUWaveReduceOps {
   foreach Op =
-      ["umin", "min", "umax", "max", "add", "sub", "and", "or", "xor"] in {
+      ["umin", "fmin", "min", "umax", "fmax", "max", "add", "sub", "and", "or", "xor"] in {
     def Op : AMDGPUWaveReduce;
   }
 }

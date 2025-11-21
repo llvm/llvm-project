@@ -276,14 +276,6 @@ body: |
     ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr245
     ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr246
     ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr247
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr256
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr257
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr258
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr259
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr260
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr261
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr262
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr263
     ; W32-NEXT: $m0 = S_MOV_B32 3
     ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.0, align 4, addrspace 5)
     ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr40, 32, $exec_lo, 32, 1024
@@ -392,14 +384,6 @@ body: |
     ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr245
     ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr246
     ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr247
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr256
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr257
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr258
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr259
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr260
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr261
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr262
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr263
     ; W64-NEXT: $m0 = S_MOV_B32 3
     ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.0, align 4, addrspace 5)
     ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr40, 32, $exec, 64, 2048

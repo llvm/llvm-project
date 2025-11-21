@@ -414,7 +414,6 @@ define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; use s[16:31]
 ; FLATSCR-NEXT:    ;;#ASMEND
-; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 16
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; use s[72:79]
 ; FLATSCR-NEXT:    ;;#ASMEND
@@ -424,6 +423,7 @@ define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; use s[0:15]
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 16
 ; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 17
 ; FLATSCR-NEXT:    v_readlane_b32 s67, v40, 15
 ; FLATSCR-NEXT:    v_readlane_b32 s66, v40, 14
@@ -1043,10 +1043,10 @@ define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
-; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; clobber nonpreserved initial VGPRs
 ; MUBUF-NEXT:    ;;#ASMEND
+; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
 ; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
 ; MUBUF-NEXT:    s_mov_b32 s32, s33
 ; MUBUF-NEXT:    s_or_saveexec_b64 s[4:5], -1
@@ -1072,10 +1072,10 @@ define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ;;#ASMEND
-; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; clobber nonpreserved initial VGPRs
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
 ; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
 ; FLATSCR-NEXT:    s_mov_b32 s32, s33
 ; FLATSCR-NEXT:    s_or_saveexec_b64 s[0:1], -1
@@ -1125,10 +1125,10 @@ define void @scratch_reg_needed_mubuf_offset(ptr addrspace(5) byval([4096 x i8])
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; clobber nonpreserved SGPRs
 ; MUBUF-NEXT:    ;;#ASMEND
-; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; clobber nonpreserved VGPRs
 ; MUBUF-NEXT:    ;;#ASMEND
+; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
 ; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
 ; MUBUF-NEXT:    s_mov_b32 s32, s33
 ; MUBUF-NEXT:    s_or_saveexec_b64 s[4:5], -1
@@ -1158,10 +1158,10 @@ define void @scratch_reg_needed_mubuf_offset(ptr addrspace(5) byval([4096 x i8])
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; clobber nonpreserved SGPRs
 ; FLATSCR-NEXT:    ;;#ASMEND
-; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; clobber nonpreserved VGPRs
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
 ; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
 ; FLATSCR-NEXT:    s_mov_b32 s32, s33
 ; FLATSCR-NEXT:    s_or_saveexec_b64 s[0:1], -1

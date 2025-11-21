@@ -1692,8 +1692,7 @@ unsigned SIInstrInfo::getVectorRegSpillSaveOpcode(
 
 void SIInstrInfo::storeRegToStackSlotImpl(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
+    bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
     MachineInstr::MIFlag Flags, bool NeedsCFI) const {
   MachineFunction *MF = MBB.getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
@@ -1750,10 +1749,9 @@ void SIInstrInfo::storeRegToStackSlotImpl(
 
 void SIInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    Register VReg,
+    bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
     MachineInstr::MIFlag Flags) const {
-  storeRegToStackSlotImpl(MBB, MI, SrcReg, isKill, FrameIndex, RC, &TRI, VReg,
+  storeRegToStackSlotImpl(MBB, MI, SrcReg, isKill, FrameIndex, RC, VReg,
                          Flags, false);
 }
 
@@ -1763,7 +1761,7 @@ void SIInstrInfo::storeRegToStackSlotCFI(MachineBasicBlock &MBB,
                                          int FrameIndex,
                                          const TargetRegisterClass *RC,
                                          const TargetRegisterInfo *TRI) const {
-  storeRegToStackSlotImpl(MBB, MI, SrcReg, isKill, FrameIndex, RC, TRI,
+  storeRegToStackSlotImpl(MBB, MI, SrcReg, isKill, FrameIndex, RC,
                           Register(), MachineInstr::NoFlags, true);
 }
 
@@ -2139,11 +2137,11 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     break;
 
   case AMDGPU::SI_SPILL_S32_TO_VGPR:
-    MI.setDesc(get(AMDGPU::V_WRITELANE_B32));
+    mutateAndCleanupImplicit(MI, get(AMDGPU::V_WRITELANE_B32));
     break;
 
   case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
-    MI.setDesc(get(AMDGPU::V_READLANE_B32));
+    mutateAndCleanupImplicit(MI, get(AMDGPU::V_READLANE_B32));
     break;
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO: {
     Register Dst = MI.getOperand(0).getReg();
@@ -4262,7 +4260,7 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
   if (NewMFMAOpc != -1) {
     MachineInstrBuilder MIB =
         BuildMI(MBB, MI, MI.getDebugLoc(), get(NewMFMAOpc));
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
+    for (unsigned I = 0, E = MI.getNumExplicitOperands(); I != E; ++I)
       MIB.add(MI.getOperand(I));
     return MIB;
   }
@@ -4271,7 +4269,7 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
     unsigned NewOpc = AMDGPU::mapWMMA2AddrTo3AddrOpcode(MI.getOpcode());
     MachineInstrBuilder MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
                                   .setMIFlags(MI.getFlags());
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
+    for (unsigned I = 0, E = MI.getNumExplicitOperands(); I != E; ++I)
       MIB->addOperand(MI.getOperand(I));
     return MIB;
   }

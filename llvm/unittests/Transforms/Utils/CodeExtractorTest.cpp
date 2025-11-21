@@ -711,7 +711,8 @@ TEST(CodeExtractor, OpenMPAggregateArgs) {
                    /* AssumptionCache */ nullptr,
                    /* AllowVarArgs */ true,
                    /* AllowAlloca */ true,
-                   /* AllocaBlock*/ &Func->getEntryBlock(),
+                   /* AllocationBlock*/ &Func->getEntryBlock(),
+                   /* DeallocationBlocks */ {},
                    /* Suffix */ ".outlined",
                    /* ArgsInZeroAddressSpace */ true);
 

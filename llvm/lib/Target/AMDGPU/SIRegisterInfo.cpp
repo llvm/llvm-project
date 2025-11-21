@@ -1948,6 +1948,17 @@ void SIRegisterInfo::buildSpillLoadStore(
       MIB.addImm(0); // swz
     MIB.addMemOperand(NewMMO);
 
+    if (FinalValueReg != ValueReg) {
+      // Extract 16-bit from the loaded 32-bit value.
+      ValueReg = getSubReg(ValueReg, AMDGPU::lo16);
+      MIB = BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_MOV_B16_t16_e64))
+                .addReg(FinalValueReg, getDefRegState(true))
+                .addImm(0)
+                .addReg(ValueReg, getKillRegState(true))
+                .addImm(0);
+      ValueReg = FinalValueReg;
+    }
+
     if (IsStore && NeedsCFI) {
       if (TII->isBlockLoadStore(LoadStoreOp)) {
         assert(RegOffset == 0 &&
@@ -1958,17 +1969,6 @@ void SIRegisterInfo::buildSpillLoadStore(
             MBB, MI, DebugLoc(), SubReg,
             (Offset + RegOffset) * ST.getWavefrontSize() + AdditionalCFIOffset);
       }
-    }
-
-    if (FinalValueReg != ValueReg) {
-      // Extract 16-bit from the loaded 32-bit value.
-      ValueReg = getSubReg(ValueReg, AMDGPU::lo16);
-      MIB = BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_MOV_B16_t16_e64))
-                .addReg(FinalValueReg, getDefRegState(true))
-                .addImm(0)
-                .addReg(ValueReg, getKillRegState(true))
-                .addImm(0);
-      ValueReg = FinalValueReg;
     }
 
     if (!IsAGPR && NeedSuperRegDef)
@@ -2579,7 +2579,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_AV64_CFI_SAVE:
     case AMDGPU::SI_SPILL_AV32_CFI_SAVE:
       NeedsCFI = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
     case AMDGPU::SI_SPILL_V1024_SAVE:
     case AMDGPU::SI_SPILL_V512_SAVE:
