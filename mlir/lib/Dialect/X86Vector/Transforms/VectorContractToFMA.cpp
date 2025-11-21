@@ -83,8 +83,8 @@ struct VectorContractToFMA : public OpRewritePattern<vector::ContractionOp> {
     llvm::copy_if(accShape, std::back_inserter(nonUnitDimAcc),
                   [](int64_t dim) { return dim != 1; });
     if (nonUnitDimAcc.size() != 1)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "A or B dimension should be non-unit.");
+      return rewriter.notifyMatchFailure(
+          contractOp, "A or B dimension should be non-unit.");
 
     // Lowers vector.contract into a broadcast+FMA sequence.
     auto loc = contractOp.getLoc();
