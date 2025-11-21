@@ -3898,6 +3898,12 @@ void CodeGenFunction::EmitCheck(
   Branch->setMetadata(llvm::LLVMContext::MD_prof, Node);
   EmitBlock(Handlers);
 
+  // Clear arguments for the MinimalRuntime handler.
+  if (CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
+    StaticArgs = {};
+    DynamicArgs = {};
+  }
+
   // Handler functions take an i8* pointing to the (handler-specific) static
   // information block, followed by a sequence of intptr_t arguments
   // representing operand values.
@@ -6628,6 +6634,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
 
   if (auto *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
     if (CalleeDecl->hasAttr<RestrictAttr>() ||
+        CalleeDecl->hasAttr<MallocSpanAttr>() ||
         CalleeDecl->hasAttr<AllocSizeAttr>()) {
       // Function has 'malloc' (aka. 'restrict') or 'alloc_size' attribute.
       if (SanOpts.has(SanitizerKind::AllocToken)) {
