@@ -1674,7 +1674,7 @@ def CIR_BinOpOverflowOp : CIR_Op<"binop.overflow", [Pure, SameTypeOperands]> {
   let results = (outs CIR_IntType:$result, CIR_BoolType:$overflow);
 
   let assemblyFormat = [{
-    `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `->`
+    `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
     `(` qualified(type($result)) `,` qualified(type($overflow)) `)`
     attr-dict
   }];
