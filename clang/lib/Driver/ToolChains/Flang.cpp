@@ -827,8 +827,7 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
                           clang::options::OPT_fno_fast_real_mod)) {
     if (A->getOption().matches(clang::options::OPT_ffast_real_mod))
       CmdArgs.push_back("-ffast-real-mod");
-    else if (A->getOption().matches(
-                 clang::options::OPT_fno_fast_real_mod))
+    else if (A->getOption().matches(clang::options::OPT_fno_fast_real_mod))
       CmdArgs.push_back("-fno-fast-real-mod");
   }
 
