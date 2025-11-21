@@ -253,10 +253,10 @@ private:
   // in the virtual table group.
   VTableIndicesTy VTableIndices;
 
-  OwningArrayRef<VTableComponent> VTableComponents;
+  std::vector<VTableComponent> VTableComponents;
 
   /// Contains thunks needed by vtables, sorted by indices.
-  OwningArrayRef<VTableThunkTy> VTableThunks;
+  std::vector<VTableThunkTy> VTableThunks;
 
   /// Address points for all vtables.
   AddressPointsMapTy AddressPoints;

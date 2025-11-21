@@ -22,10 +22,10 @@ struct CGDataPatchItem {
   // Where to patch.
   uint64_t Pos;
   // Source data.
-  OwningArrayRef<uint64_t> D;
+  std::vector<uint64_t> D;
 
   CGDataPatchItem(uint64_t Pos, const uint64_t *D, int N)
-      : Pos(Pos), D(ArrayRef<uint64_t>(D, N)) {}
+      : Pos(Pos), D(D, D + N) {}
 };
 
 } // namespace llvm
