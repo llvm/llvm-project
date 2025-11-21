@@ -9599,7 +9599,7 @@ public:
     }
 
     // Check defaultmap(firstprivate:all) for all types
-   return DefaultmapFirstprivateKinds.count(OMPC_DEFAULTMAP_all);
+    return DefaultmapFirstprivateKinds.count(OMPC_DEFAULTMAP_all);
   }
 
   /// Generate the default map information for a given capture \a CI,
