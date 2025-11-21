@@ -2178,35 +2178,6 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
   return true;
 }
 
-/// Test whether a vector type is viable for promotion.
-///
-/// This implements the necessary checking for \c checkVectorTypesForPromotion
-/// (and thus isVectorPromotionViable) over all slices of the alloca for the
-/// given VectorType.
-static bool checkVectorTypeForPromotion(Partition &P, VectorType *VTy,
-                                        const DataLayout &DL, unsigned VScale) {
-  uint64_t ElementSize =
-      DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
-
-  // While the definition of LLVM vectors is bitpacked, we don't support sizes
-  // that aren't byte sized.
-  if (ElementSize % 8)
-    return false;
-  assert((DL.getTypeSizeInBits(VTy).getFixedValue() % 8) == 0 &&
-         "vector size not a multiple of element size?");
-  ElementSize /= 8;
-
-  for (const Slice &S : P)
-    if (!isVectorPromotionViableForSlice(P, S, VTy, ElementSize, DL, VScale))
-      return false;
-
-  for (const Slice *S : P.splitSliceTails())
-    if (!isVectorPromotionViableForSlice(P, *S, VTy, ElementSize, DL, VScale))
-      return false;
-
-  return true;
-}
-
 /// Test whether any vector type in \p CandidateTys is viable for promotion.
 ///
 /// This implements the necessary checking for \c isVectorPromotionViable over
