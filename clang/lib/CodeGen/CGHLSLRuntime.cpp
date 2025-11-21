@@ -745,7 +745,8 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     }
   }
 
-  llvm_unreachable("non-handled system semantic. FIXME.");
+  llvm_unreachable(
+      "Load hasn't been implemented yet for this system semantic. FIXME");
 }
 
 static void createSPIRVBuiltinStore(IRBuilder<> &B, llvm::Module &M,
@@ -769,14 +770,21 @@ void CGHLSLRuntime::emitSystemSemanticStore(IRBuilder<> &B, llvm::Value *Source,
 
   std::string SemanticName = Semantic->getAttrName()->getName().upper();
   if (SemanticName == "SV_POSITION") {
-    if (CGM.getTarget().getTriple().isDXIL())
+    if (CGM.getTarget().getTriple().isDXIL()) {
       emitDXILUserSemanticStore(B, Source, Semantic, Index);
-    else if (CGM.getTarget().getTriple().isSPIRV())
+      return;
+    }
+
+    if (CGM.getTarget().getTriple().isSPIRV()) {
       createSPIRVBuiltinStore(B, CGM.getModule(), Source,
                               Semantic->getAttrName()->getName(),
                               /* BuiltIn::Position */ 0);
-  } else
-    llvm_unreachable("non-handled system semantic. FIXME.");
+      return;
+    }
+  }
+
+  llvm_unreachable(
+      "Store hasn't been implemented yet for this system semantic. FIXME");
 }
 
 llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(

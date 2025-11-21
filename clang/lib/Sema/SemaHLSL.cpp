@@ -967,10 +967,8 @@ void SemaHLSL::checkSemanticAnnotation(
   }
 
   if (SemanticName == "SV_POSITION") {
-    // SV_Position can is I/O for vertex shaders.
-    // For pixel shaders, only valid as input.
-    // Note: for SPIR-V, not backed by a builtin when used as input in a vertex
-    // shaders.
+    // SV_Position can be an input or output in vertex shaders,
+    // but only an input in pixel shaders.
     if (ST == llvm::Triple::Vertex || (ST == llvm::Triple::Pixel && IsInput))
       return;
     DiagnoseAttrStageMismatch(SemanticAttr, ST,
