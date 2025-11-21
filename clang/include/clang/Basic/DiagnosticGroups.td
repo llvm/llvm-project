@@ -1337,7 +1337,7 @@ def : DiagGroup<"int-conversions",
 def : DiagGroup<"vector-conversions",
                 [VectorConversion]>; // -Wvector-conversions = -Wvector-conversion
 def : DiagGroup<"matrix-conversions",
-                [MatrixConversion]>; // -Wvector-conversions = -Wmatrix-conversion
+                [MatrixConversion]>; // -Wmatrix-conversions = -Wmatrix-conversion
 def : DiagGroup<"unused-local-typedefs", [UnusedLocalTypedef]>;
                 // -Wunused-local-typedefs = -Wunused-local-typedef
 

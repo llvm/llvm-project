@@ -4361,7 +4361,7 @@ def warn_impcast_matrix_scalar : Warning<
   InGroup<MatrixConversion>, DefaultIgnore;
 def warn_impcast_vector_scalar : Warning<
   "implicit conversion turns vector to scalar: %0 to %1">,
-  InGroup<VectorConversion>, DefaultIgnore;
+  InGroup<Conversion>, DefaultIgnore;
 def warn_impcast_complex_scalar : Warning<
   "implicit conversion discards imaginary component: %0 to %1">,
   InGroup<Conversion>, DefaultIgnore;
