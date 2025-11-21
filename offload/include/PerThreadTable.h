@@ -71,7 +71,7 @@ template <typename ContainerTy> struct ContainerConcepts {
   template <typename Ty> using MappedTypeCheck = typename Ty::mapped_type;
   template <typename Ty> using ValueTypeCheck = typename Ty::value_type;
   template <typename Ty> using KeyTypeCheck = typename Ty::key_type;
-  template <typename Ty> using SizeTyCheck = typename Ty::size_type;
+  template <typename Ty> using SizeTypeCheck = typename Ty::size_type;
 
   template <typename Ty>
   using ClearCheck = decltype(std::declval<Ty>().clear());
@@ -103,7 +103,7 @@ template <typename ContainerTy> struct ContainerConcepts {
       typename has_type<ContainerTy, ValueTypeCheck>::type>;
   using key_type = typename std::conditional_t<
       isAssociative, typename has_type<ContainerTy, KeyTypeCheck>::type,
-      typename has_type<ContainerTy, SizeTyCheck>::type>;
+      typename has_type<ContainerTy, SizeTypeCheck>::type>;
 };
 
 // Using an STL container (such as std::vector) indexed by thread ID has
@@ -116,7 +116,7 @@ template <typename ContainerType, typename ObjectType> class PerThreadTable {
   using iterator = typename ContainerConcepts<ContainerType>::iterator;
 
   struct PerThreadData {
-    size_t NElements = 0;
+    size_t Size = 0;
     std::unique_ptr<ContainerType> ThreadEntry;
   };
 
@@ -142,14 +142,14 @@ protected:
     return *ThreadData.ThreadEntry;
   }
 
-  size_t &getThreadNElements() {
+  size_t &getThreadSize() {
     PerThreadData &ThreadData = getThreadData();
-    return ThreadData.NElements;
+    return ThreadData.Size;
   }
 
-  void setNElements(size_t Size) {
-    size_t &NElements = getThreadNElements();
-    NElements = Size;
+  void setSize(size_t Size) {
+    size_t &SizeRef = getThreadSize();
+    SizeRef = Size;
   }
 
 public:
@@ -167,19 +167,19 @@ public:
 
   void add(ObjectType obj) {
     ContainerType &Entry = getThreadEntry();
-    size_t &NElements = getThreadNElements();
-    NElements++;
+    size_t &SizeRef = getThreadSize();
+    SizeRef++;
     Entry.add(obj);
   }
 
   iterator erase(iterator it) {
     ContainerType &Entry = getThreadEntry();
-    size_t &NElements = getThreadNElements();
-    NElements--;
+    size_t &SizeRef = getThreadSize();
+    SizeRef--;
     return Entry.erase(it);
   }
 
-  size_t size() { return getThreadNElements(); }
+  size_t size() { return getThreadSize(); }
 
   // Iterators to traverse objects owned by
   // the current thread
@@ -196,7 +196,7 @@ public:
     assert(Mutex.try_lock() && (Mutex.unlock(), true) &&
            "Clear cannot be called while other threads are adding entries");
     for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
-      if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
+      if (!ThreadData->ThreadEntry || ThreadData->Size == 0)
         continue;
       if constexpr (ContainerConcepts<ContainerType>::hasIterator &&
                     ContainerConcepts<ContainerType>::hasClear) {
@@ -211,7 +211,7 @@ public:
       } else {
         static_assert(true, "Container type not supported");
       }
-      ThreadData->NElements = 0;
+      ThreadData->Size = 0;
     }
     ThreadDataList.clear();
   }
@@ -220,7 +220,7 @@ public:
     assert(Mutex.try_lock() && (Mutex.unlock(), true) &&
            "Deinit cannot be called while other threads are adding entries");
     for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
-      if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
+      if (!ThreadData->ThreadEntry || ThreadData->Size == 0)
         continue;
       for (auto &Obj : *ThreadData->ThreadEntry) {
         if constexpr (ContainerConcepts<ContainerType>::isAssociative) {
@@ -261,7 +261,7 @@ public:
       }
     }
     ObjectType &Ret = Entry[Index];
-    this->setNElements(Entry.size());
+    this->setSize(Entry.size());
     return Ret;
   }
 };
