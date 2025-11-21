@@ -64,6 +64,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <array>
 #include <cinttypes>
@@ -5459,10 +5460,14 @@ void ELFDumper<ELFT>::getCallGraphRelocations(
   auto IsMatch = [&](const Elf_Shdr &Sec) { return &Sec == CGSection; };
   Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
       Obj.getSectionAndRelocations(IsMatch);
-  if (MapOrErr && !MapOrErr->empty()) {
-    CGRelSection = MapOrErr->front().second;
-  }
 
+  if (!MapOrErr || MapOrErr->empty())
+    reportWarning(createError(".llvm.callgraph (" + describe(*CGSection) +
+                              ") does not have a corresponding "
+                              "relocation section"),
+                  FileName);
+
+  CGRelSection = MapOrErr->front().second;
   if (CGRelSection) {
     forEachRelocationDo(*CGRelSection,
                         [&](const Relocation<ELFT> &R, unsigned Ndx,
@@ -8311,47 +8316,53 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   if (!this->processCallGraphSection() || this->FuncCGInfos.empty())
     return;
 
-  std::vector<Relocation<ELFT>> Relocations;
-  const Elf_Shdr *RelocSymTab = nullptr;
-  this->getCallGraphRelocations(Relocations, RelocSymTab);
-
-  auto PrintFunc = [](uint64_t FuncEntryPC, ArrayRef<std::string> FuncNames,
-                      ScopedPrinter &W) {
-    if (!FuncNames.empty())
-      W.printList("Names", FuncNames);
+  auto PrintNonRelocatableFuncSymbol = [&](uint64_t FuncEntryPC) {
+    SmallVector<std::string> FuncSymNames = this->getFunctionNames(FuncEntryPC);
+    if (!FuncSymNames.empty())
+      W.printList("Names", FuncSymNames);
     W.printHex("Address", FuncEntryPC);
   };
 
-  auto PrintReloc = [&](uint64_t RelocOffset) {
-    auto Reloc = llvm::find_if(Relocations, [&](const Relocation<ELFT> &R) {
+  std::vector<Relocation<ELFT>> Relocations;
+  const Elf_Shdr *RelocSymTab = nullptr;
+  if (this->Obj.getHeader().e_type == ELF::ET_REL)
+    this->getCallGraphRelocations(Relocations, RelocSymTab);
+
+  auto PrintRelocatableFuncSymbol = [&](uint64_t RelocOffset) {
+    auto R = llvm::find_if(Relocations, [&](const Relocation<ELFT> &R) {
       return R.Offset == RelocOffset;
     });
-    if (Reloc == Relocations.end()) {
-      W.printHex("Offset", RelocOffset);
+    if (R == Relocations.end()) {
+      this->reportUniqueWarning("unknown relocation at offset " +
+                                Twine(RelocOffset));
       return;
     }
     Expected<RelSymbol<ELFT>> RelSymOrErr =
-        this->getRelocationTarget(*Reloc, RelocSymTab);
+        this->getRelocationTarget(*R, RelocSymTab);
     if (!RelSymOrErr) {
       this->reportUniqueWarning(RelSymOrErr.takeError());
       return;
     }
-    if (!RelSymOrErr->Name.empty())
+    if (!RelSymOrErr->Name.empty()) {
       W.printString("Name", RelSymOrErr->Name);
+    }
   };
 
-  auto PrintFunctionInfo = [&](uint64_t FuncEntryPC) {
-    if (this->Obj.getHeader().e_type != ELF::ET_REL) {
-      PrintFunc(FuncEntryPC, this->getFunctionNames(FuncEntryPC), W);
-      return;
-    }
-    PrintReloc(FuncEntryPC);
+  auto PrintFunc = [&](uint64_t FuncPC) {
+    uint64_t FuncEntryPC = FuncPC;
+    // Clear Thumb bit if it was set before symbol lookup.
+    if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
+      FuncEntryPC = FuncPC & ~1;
+    if (this->Obj.getHeader().e_type == ELF::ET_REL)
+      PrintRelocatableFuncSymbol(FuncEntryPC);
+    else
+      PrintNonRelocatableFuncSymbol(FuncEntryPC);
   };
 
   ListScope CGI(W, "CallGraph");
   for (const auto &CGInfo : this->FuncCGInfos) {
     DictScope D(W, "Function");
-    PrintFunctionInfo(CGInfo.FunctionAddress);
+    PrintFunc(CGInfo.FunctionAddress);
     W.printNumber("Version", CGInfo.FormatVersionNumber);
     W.printBoolean("IsIndirectTarget", CGInfo.IsIndirectTarget);
     W.printHex("TypeId", CGInfo.FunctionTypeId);
@@ -8360,7 +8371,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       ListScope DCs(W, "DirectCallees");
       for (auto CalleePC : CGInfo.DirectCallees) {
         DictScope D(W);
-        PrintFunctionInfo(CalleePC);
+        PrintFunc(CalleePC);
       }
     }
     W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());

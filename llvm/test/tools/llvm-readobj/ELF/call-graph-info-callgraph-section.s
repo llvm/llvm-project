@@ -14,21 +14,21 @@
 # LLVM: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 2 indirect targets.
 # LLVM-NEXT: CallGraph [
 # LLVM-NEXT:   Function {
-# LLVM-NEXT:     Offset: 0x2
+# LLVM-NEXT:     warning: '[[FILE]]': unknown relocation at offset 2
 # LLVM-NEXT:     Version: 0
 # LLVM-NEXT:     IsIndirectTarget: Yes
 # LLVM-NEXT:     TypeId: 0x0
 # LLVM-NEXT:     NumDirectCallees: 1
 # LLVM-NEXT:     DirectCallees [
-# LLVM-NEXT:       {
-# LLVM-NEXT:         Offset: 0x13
-# LLVM-NEXT:       }
+# LLVM-NEXT:        {
+# LLVM-NEXT:     warning: '[[FILE]]':  unknown relocation at offset 19
+# LLVM-NEXT:        }
 # LLVM-NEXT:     ]
 # LLVM-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-NEXT:     IndirectTypeIDs: []
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Function {
-# LLVM-NEXT:     Offset: 0x1D
+# LLVM-NEXT:     warning: '[[FILE]]':  unknown relocation at offset 29
 # LLVM-NEXT:     Version: 0
 # LLVM-NEXT:     IsIndirectTarget: Yes
 # LLVM-NEXT:     TypeId: 0x0
@@ -39,7 +39,7 @@
 # LLVM-NEXT:     IndirectTypeIDs: [0x10]
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Function {
-# LLVM-NEXT:     Offset: 0x38
+# LLVM-NEXT:     warning: '[[FILE]]':  unknown relocation at offset 56
 # LLVM-NEXT:     Version: 0
 # LLVM-NEXT:     IsIndirectTarget: Yes
 # LLVM-NEXT:     TypeId: 0x20
@@ -55,15 +55,15 @@
 # JSON:     "CallGraph": [
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Offset": 2,
-# JSON-NEXT:          "Version": 0,
+# JSON-SAME:     warning: '[[FILE]]': unknown relocation at offset 2
+# JSON:               "Version": 0,
 # JSON-NEXT:          "IsIndirectTarget": true,
 # JSON-NEXT:          "TypeId": 0,
 # JSON-NEXT:          "NumDirectCallees": 1,
 # JSON-NEXT:          "DirectCallees": [
 # JSON-NEXT:            {
-# JSON-NEXT:              "Offset": 19
-# JSON-NEXT:            }
+# JSON-SAME:     warning: '[[FILE]]':  unknown relocation at offset 19
+# JSON:                 }
 # JSON-NEXT:          ],
 # JSON-NEXT:          "NumIndirectTargetTypeIDs": 0,
 # JSON-NEXT:          "IndirectTypeIDs": []
@@ -71,8 +71,8 @@
 # JSON-NEXT:      },
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Offset": 29,
-# JSON-NEXT:          "Version": 0,
+# JSON-SAME:     warning: '[[FILE]]':  unknown relocation at offset 29
+# JSON:               "Version": 0,
 # JSON-NEXT:          "IsIndirectTarget": true,
 # JSON-NEXT:          "TypeId": 0,
 # JSON-NEXT:          "NumDirectCallees": 0,
@@ -85,8 +85,8 @@
 # JSON-NEXT:      },
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Offset": 56,
-# JSON-NEXT:          "Version": 0,
+# JSON-SAME:     warning: '[[FILE]]':  unknown relocation at offset 56
+# JSON:               "Version": 0,
 # JSON-NEXT:          "IsIndirectTarget": true,
 # JSON-NEXT:          "TypeId": 32,
 # JSON-NEXT:          "NumDirectCallees": 0,
