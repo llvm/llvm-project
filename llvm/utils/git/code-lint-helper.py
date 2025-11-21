@@ -18,6 +18,7 @@ https://llvm.org/docs/CodingStandards.html
 """
 
 import argparse
+from operator import attrgetter
 import os
 import subprocess
 import sys
@@ -107,7 +108,7 @@ View the output from {self.name} here.
 
     # TODO: Refactor this
     def find_comment(self, pr: any) -> any:
-        all_linter_names = [l.name for l in ALL_LINTERS]
+        all_linter_names = list(map(attrgetter("name"), ALL_LINTERS))
         other_linter_names = [name for name in all_linter_names if name != self.name]
 
         other_tags = [
@@ -116,9 +117,10 @@ View the output from {self.name} here.
 
         for comment in pr.as_issue().get_comments():
             body = comment.body
-            if self.comment_tag in body:
-                if not any(other_tag in body for other_tag in other_tags):
-                    return comment
+            if self.comment_tag in body and not any(
+                other_tag in body for other_tag in other_tags
+            ):
+                return comment
         return None
 
     def update_pr(self, comment_text: str, args: LintArgs, create_new: bool) -> None:
@@ -139,7 +141,13 @@ View the output from {self.name} here.
 
 
     def run(self, args: LintArgs) -> bool:
+        if args.verbose:
+            print(f"got changed files: {args.changed_files}")
+
         files_to_lint = self.filter_changed_files(args.changed_files)
+
+        if not files_to_lint and args.verbose:
+            print("no modified files found")
 
         is_success = True
         linter_output = None
@@ -237,10 +245,12 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \\
 
         if diff_proc.returncode != 0:
             print(f"Git diff failed: {diff_proc.stderr}")
-            return "Git diff failed"
+            return None
 
         diff_content = diff_proc.stdout
         if not diff_content.strip():
+            if args.verbose:
+                print("No diff content found")
             return None
 
         tidy_diff_cmd = [
@@ -290,7 +300,7 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \\
 
 class Doc8LintHelper(LintHelper):
     name = "doc8"
-    friendly_name = "Documentation linter"
+    friendly_name = "documentation linter"
 
     def instructions(self, doc_files: List[str], args: LintArgs) -> str:
         files_str = " ".join(doc_files)
@@ -393,31 +403,45 @@ if __name__ == "__main__":
     parsed_args = parser.parse_args()
     args = LintArgs(parsed_args)
 
-    if args.verbose:
-        print("Running all linters.")
-
     overall_success = True
+    failed_linters = []
     all_comments = []
 
     for linter in ALL_LINTERS:
         if args.verbose:
-            print(f"Running linter: {linter.name}")
+            print(f"running linter {linter.name}")
 
         linter_passed = linter.run(args)
         if not linter_passed:
             overall_success = False
+            failed_linters.append(linter.name)
+            if args.verbose:
+                print(f"linter {linter.name} failed")
 
         if linter.comment:
+            if args.verbose:
+                print(f"linter {linter.name} has comment: {linter.comment}")
             all_comments.append(linter.comment)
 
     if len(all_comments):
         import json
 
+        existing_comments = []
+        if os.path.exists("comments"):
+            try:
+                with open("comments", "r") as f:
+                    existing_comments = json.load(f)
+                    if not isinstance(existing_comments, list):
+                        existing_comments = []
+            except Exception:
+                existing_comments = []
+
+        existing_comments.extend(all_comments)
+
         with open("comments", "w") as f:
-            json.dump(all_comments, f)
+            json.dump(existing_comments, f)
 
     if not overall_success:
-        print("error: Some linters failed.")
+        for name in failed_linters:
+            print(f"error: linter {name} failed")
         sys.exit(1)
-    else:
-        print("All linters passed.")
