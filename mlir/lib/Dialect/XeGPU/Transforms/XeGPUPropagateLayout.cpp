@@ -572,8 +572,12 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
                           "one broadcasted dimension.");
     return;
   }
+  xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
+      broadcast->getContext(),
+      cast<xegpu::DistributeLayoutAttr>(resultLayout.get()),
+      DenseI64ArrayAttr::get(broadcast->getContext(), {broadcastUnitDims[0]}));
   // Propagate the result layout to the source operand.
-  propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
 }
 
 void LayoutInfoPropagation::visitShapeCastOp(
@@ -593,10 +597,19 @@ void LayoutInfoPropagation::visitShapeCastOp(
     return;
   }
   int64_t slicedDim = resultTy.getShape()[0] == 1 ? 0 : 1;
-  xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
-      shapeCast->getContext(), cast<xegpu::LayoutAttr>(resultLayout.get()),
-      DenseI64ArrayAttr::get(shapeCast->getContext(), {slicedDim}));
-  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
+  LayoutInfo operandLayout;
+  if (auto sliceResultAttr = dyn_cast<xegpu::SliceAttr>(resultLayout.get())) {
+    auto sliceDims = sliceResultAttr.getDims().asArrayRef();
+    if (sliceDims.size() == 1 && sliceDims[0] == slicedDim)
+      operandLayout = resultLayout;
+  } else {
+    xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
+        shapeCast->getContext(),
+        cast<xegpu::DistributeLayoutAttr>(resultLayout.get()),
+        DenseI64ArrayAttr::get(shapeCast->getContext(), {slicedDim}));
+    operandLayout = LayoutInfo(sliceLayout);
+  }
+  propagateIfChanged(operands[0], operands[0]->meet(operandLayout));
 }
 
 /// Propagate the layout of the result tensor to the source tensor descriptor
