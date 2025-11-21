@@ -10,11 +10,11 @@
 #define __CLC_OPENCL_MATH_HALF_TAN_H__
 
 #define __CLC_BODY <clc/math/unary_decl.inc>
-#define FUNCTION half_tan
-#define __FLOAT_ONLY
+#define __CLC_FUNCTION half_tan
+#define __CLC_FLOAT_ONLY
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_MATH_HALF_TAN_H__

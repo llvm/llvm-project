@@ -396,6 +396,16 @@ SourceLocation CXXPseudoDestructorExpr::getEndLoc() const {
   return End;
 }
 
+static bool UnresolvedLookupExprIsVariableOrConceptParameterPack(
+    UnresolvedSetIterator Begin, UnresolvedSetIterator End) {
+  if (std::distance(Begin, End) != 1)
+    return false;
+  NamedDecl *ND = *Begin;
+  if (const auto *TTP = llvm::dyn_cast<TemplateTemplateParmDecl>(ND))
+    return TTP->isParameterPack();
+  return false;
+}
+
 // UnresolvedLookupExpr
 UnresolvedLookupExpr::UnresolvedLookupExpr(
     const ASTContext &Context, CXXRecordDecl *NamingClass,
@@ -404,9 +414,11 @@ UnresolvedLookupExpr::UnresolvedLookupExpr(
     const TemplateArgumentListInfo *TemplateArgs, UnresolvedSetIterator Begin,
     UnresolvedSetIterator End, bool KnownDependent,
     bool KnownInstantiationDependent)
-    : OverloadExpr(UnresolvedLookupExprClass, Context, QualifierLoc,
-                   TemplateKWLoc, NameInfo, TemplateArgs, Begin, End,
-                   KnownDependent, KnownInstantiationDependent, false),
+    : OverloadExpr(
+          UnresolvedLookupExprClass, Context, QualifierLoc, TemplateKWLoc,
+          NameInfo, TemplateArgs, Begin, End, KnownDependent,
+          KnownInstantiationDependent,
+          UnresolvedLookupExprIsVariableOrConceptParameterPack(Begin, End)),
       NamingClass(NamingClass) {
   UnresolvedLookupExprBits.RequiresADL = RequiresADL;
 }
@@ -1307,7 +1319,7 @@ LambdaExpr *LambdaExpr::Create(const ASTContext &Context, CXXRecordDecl *Class,
                                bool ContainsUnexpandedParameterPack) {
   // Determine the type of the expression (i.e., the type of the
   // function object we're creating).
-  QualType T = Context.getTypeDeclType(Class);
+  CanQualType T = Context.getCanonicalTagType(Class);
 
   unsigned Size = totalSizeToAlloc<Stmt *>(CaptureInits.size() + 1);
   void *Mem = Context.Allocate(Size);
@@ -1675,10 +1687,9 @@ CXXRecordDecl *UnresolvedMemberExpr::getNamingClass() {
   // It can't be dependent: after all, we were actually able to do the
   // lookup.
   CXXRecordDecl *Record = nullptr;
-  auto *NNS = getQualifier();
-  if (NNS && NNS->getKind() != NestedNameSpecifier::Super) {
-    const Type *T = getQualifier()->getAsType();
-    assert(T && "qualifier in member expression does not name type");
+  if (NestedNameSpecifier Qualifier = getQualifier();
+      Qualifier.getKind() == NestedNameSpecifier::Kind::Type) {
+    const Type *T = getQualifier().getAsType();
     Record = T->getAsCXXRecordDecl();
     assert(Record && "qualifier in member expression does not name record");
   }
@@ -1716,7 +1727,7 @@ SizeOfPackExpr *SizeOfPackExpr::CreateDeserialized(ASTContext &Context,
 
 NonTypeTemplateParmDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
   return cast<NonTypeTemplateParmDecl>(
-      getReplacedTemplateParameterList(getAssociatedDecl())->asArray()[Index]);
+      std::get<0>(getReplacedTemplateParameter(getAssociatedDecl(), Index)));
 }
 
 PackIndexingExpr *PackIndexingExpr::Create(
@@ -1758,9 +1769,12 @@ QualType SubstNonTypeTemplateParmExpr::getParameterType(
     const ASTContext &Context) const {
   // Note that, for a class type NTTP, we will have an lvalue of type 'const
   // T', so we can't just compute this from the type and value category.
+
+  QualType Type = getType();
+
   if (isReferenceParameter())
-    return Context.getLValueReferenceType(getType());
-  return getType().getUnqualifiedType();
+    return Context.getLValueReferenceType(Type);
+  return Type.getUnqualifiedType();
 }
 
 SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
@@ -1779,7 +1793,7 @@ SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
 NonTypeTemplateParmDecl *
 SubstNonTypeTemplateParmPackExpr::getParameterPack() const {
   return cast<NonTypeTemplateParmDecl>(
-      getReplacedTemplateParameterList(getAssociatedDecl())->asArray()[Index]);
+      std::get<0>(getReplacedTemplateParameter(getAssociatedDecl(), Index)));
 }
 
 TemplateArgument SubstNonTypeTemplateParmPackExpr::getArgumentPack() const {
@@ -1997,9 +2011,10 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
       NumExpansions(NumExpansions) {
   CXXFoldExprBits.Opcode = Opcode;
   // We rely on asserted invariant to distinguish left and right folds.
-  assert(((LHS && LHS->containsUnexpandedParameterPack()) !=
-          (RHS && RHS->containsUnexpandedParameterPack())) &&
-         "Exactly one of LHS or RHS should contain an unexpanded pack");
+  if (LHS && RHS)
+    assert(LHS->containsUnexpandedParameterPack() !=
+               RHS->containsUnexpandedParameterPack() &&
+           "Exactly one of LHS or RHS should contain an unexpanded pack");
   SubExprs[SubExpr::Callee] = Callee;
   SubExprs[SubExpr::LHS] = LHS;
   SubExprs[SubExpr::RHS] = RHS;

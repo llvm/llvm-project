@@ -129,16 +129,6 @@ static cl::opt<bool> OutputAssembly("S",
                                     cl::desc("Write output as LLVM assembly"),
                                     cl::Hidden, cl::cat(ExtractCat));
 
-static cl::opt<bool> PreserveBitcodeUseListOrder(
-    "preserve-bc-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden, cl::cat(ExtractCat));
-
-static cl::opt<bool> PreserveAssemblyUseListOrder(
-    "preserve-ll-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden, cl::cat(ExtractCat));
-
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
@@ -421,9 +411,11 @@ int main(int argc, char **argv) {
   }
 
   if (OutputAssembly)
-    PM.addPass(PrintModulePass(Out.os(), "", PreserveAssemblyUseListOrder));
+    PM.addPass(
+        PrintModulePass(Out.os(), "", /* ShouldPreserveUseListOrder */ false));
   else if (Force || !CheckBitcodeOutputToConsole(Out.os()))
-    PM.addPass(BitcodeWriterPass(Out.os(), PreserveBitcodeUseListOrder));
+    PM.addPass(
+        BitcodeWriterPass(Out.os(), /* ShouldPreserveUseListOrder */ true));
 
   PM.run(*M, MAM);
 

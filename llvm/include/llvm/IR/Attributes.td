@@ -183,6 +183,11 @@ def NoCallback : EnumAttr<"nocallback", IntersectAnd, [FnAttr]>;
 /// Specify how the pointer may be captured.
 def Captures : IntAttr<"captures", IntersectCustom, [ParamAttr]>;
 
+/// Result will not be undef or poison if all arguments are not undef and not
+/// poison.
+def NoCreateUndefOrPoison
+    : EnumAttr<"nocreateundeforpoison", IntersectAnd, [FnAttr]>;
+
 /// Function is not a source of divergence.
 def NoDivergenceSource : EnumAttr<"nodivergencesource", IntersectAnd, [FnAttr]>;
 
@@ -342,6 +347,9 @@ def SanitizeRealtime : EnumAttr<"sanitize_realtime", IntersectPreserve, [FnAttr]
 /// during a real-time sanitized function (see `sanitize_realtime`).
 def SanitizeRealtimeBlocking : EnumAttr<"sanitize_realtime_blocking", IntersectPreserve, [FnAttr]>;
 
+/// Allocation token instrumentation is on.
+def SanitizeAllocToken : EnumAttr<"sanitize_alloc_token", IntersectPreserve, [FnAttr]>;
+
 /// Speculative Load Hardening is enabled.
 ///
 /// Note that this uses the default compatibility (always compatible during
@@ -406,9 +414,7 @@ def AllowDirectAccessInHotPatchFunction
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;
 def NoNansFPMath : StrBoolAttr<"no-nans-fp-math">;
-def ApproxFuncFPMath : StrBoolAttr<"approx-func-fp-math">;
 def NoSignedZerosFPMath : StrBoolAttr<"no-signed-zeros-fp-math">;
-def UnsafeFPMath : StrBoolAttr<"unsafe-fp-math">;
 def NoJumpTables : StrBoolAttr<"no-jump-tables">;
 def NoInlineLineTables : StrBoolAttr<"no-inline-line-tables">;
 def ProfileSampleAccurate : StrBoolAttr<"profile-sample-accurate">;
@@ -471,9 +477,7 @@ class MergeRule<string F> {
 def : MergeRule<"setAND<LessPreciseFPMADAttr>">;
 def : MergeRule<"setAND<NoInfsFPMathAttr>">;
 def : MergeRule<"setAND<NoNansFPMathAttr>">;
-def : MergeRule<"setAND<ApproxFuncFPMathAttr>">;
 def : MergeRule<"setAND<NoSignedZerosFPMathAttr>">;
-def : MergeRule<"setAND<UnsafeFPMathAttr>">;
 def : MergeRule<"setOR<NoImplicitFloatAttr>">;
 def : MergeRule<"setOR<NoJumpTablesAttr>">;
 def : MergeRule<"setOR<ProfileSampleAccurateAttr>">;

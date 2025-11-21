@@ -14,40 +14,39 @@
 namespace llvm {
 namespace orc {
 
-ThreadSafeModule cloneToContext(const ThreadSafeModule &TSM,
-                                ThreadSafeContext TSCtx,
-                                GVPredicate ShouldCloneDef,
-                                GVModifier UpdateClonedDefSource) {
-  assert(TSM && "Can not clone null module");
-
-  if (!ShouldCloneDef)
-    ShouldCloneDef = [](const GlobalValue &) { return true; };
-
-  // First copy the source module into a buffer.
+static std::pair<std::string, SmallVector<char, 1>>
+serializeModule(const Module &M, GVPredicate ShouldCloneDef,
+                GVModifier UpdateClonedDefSource) {
   std::string ModuleName;
   SmallVector<char, 1> ClonedModuleBuffer;
-  TSM.withModuleDo([&](Module &M) {
-    ModuleName = M.getModuleIdentifier();
-    std::set<GlobalValue *> ClonedDefsInSrc;
-    ValueToValueMapTy VMap;
-    auto Tmp = CloneModule(M, VMap, [&](const GlobalValue *GV) {
-      if (ShouldCloneDef(*GV)) {
-        ClonedDefsInSrc.insert(const_cast<GlobalValue *>(GV));
-        return true;
-      }
-      return false;
-    });
 
-    if (UpdateClonedDefSource)
-      for (auto *GV : ClonedDefsInSrc)
-        UpdateClonedDefSource(*GV);
-
-    BitcodeWriter BCWriter(ClonedModuleBuffer);
-    BCWriter.writeModule(*Tmp);
-    BCWriter.writeSymtab();
-    BCWriter.writeStrtab();
+  ModuleName = M.getModuleIdentifier();
+  std::set<GlobalValue *> ClonedDefsInSrc;
+  ValueToValueMapTy VMap;
+  auto Tmp = CloneModule(M, VMap, [&](const GlobalValue *GV) {
+    if (ShouldCloneDef(*GV)) {
+      ClonedDefsInSrc.insert(const_cast<GlobalValue *>(GV));
+      return true;
+    }
+    return false;
   });
 
+  if (UpdateClonedDefSource)
+    for (auto *GV : ClonedDefsInSrc)
+      UpdateClonedDefSource(*GV);
+
+  BitcodeWriter BCWriter(ClonedModuleBuffer);
+  BCWriter.writeModule(*Tmp);
+  BCWriter.writeSymtab();
+  BCWriter.writeStrtab();
+
+  return {std::move(ModuleName), std::move(ClonedModuleBuffer)};
+}
+
+ThreadSafeModule
+deserializeModule(std::string ModuleName,
+                  const SmallVector<char, 1> &ClonedModuleBuffer,
+                  ThreadSafeContext TSCtx) {
   MemoryBufferRef ClonedModuleBufferRef(
       StringRef(ClonedModuleBuffer.data(), ClonedModuleBuffer.size()),
       "cloned module buffer");
@@ -61,6 +60,40 @@ ThreadSafeModule cloneToContext(const ThreadSafeModule &TSM,
   });
 
   return ThreadSafeModule(std::move(M), std::move(TSCtx));
+}
+
+ThreadSafeModule
+cloneExternalModuleToContext(const Module &M, ThreadSafeContext TSCtx,
+                             GVPredicate ShouldCloneDef,
+                             GVModifier UpdateClonedDefSource) {
+
+  if (!ShouldCloneDef)
+    ShouldCloneDef = [](const GlobalValue &) { return true; };
+
+  auto [ModuleName, ClonedModuleBuffer] = serializeModule(
+      M, std::move(ShouldCloneDef), std::move(UpdateClonedDefSource));
+
+  return deserializeModule(std::move(ModuleName), ClonedModuleBuffer,
+                           std::move(TSCtx));
+}
+
+ThreadSafeModule cloneToContext(const ThreadSafeModule &TSM,
+                                ThreadSafeContext TSCtx,
+                                GVPredicate ShouldCloneDef,
+                                GVModifier UpdateClonedDefSource) {
+  assert(TSM && "Can not clone null module");
+
+  if (!ShouldCloneDef)
+    ShouldCloneDef = [](const GlobalValue &) { return true; };
+
+  // First copy the source module into a buffer.
+  auto [ModuleName, ClonedModuleBuffer] = TSM.withModuleDo([&](Module &M) {
+    return serializeModule(M, std::move(ShouldCloneDef),
+                           std::move(UpdateClonedDefSource));
+  });
+
+  return deserializeModule(std::move(ModuleName), ClonedModuleBuffer,
+                           std::move(TSCtx));
 }
 
 ThreadSafeModule cloneToNewContext(const ThreadSafeModule &TSM,

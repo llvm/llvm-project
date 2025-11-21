@@ -1,4 +1,4 @@
-//===--- SpecialMemberFunctionsCheck.cpp - clang-tidy----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -109,7 +109,7 @@ join(ArrayRef<SpecialMemberFunctionsCheck::SpecialMemberFunctionKind> SMFS,
   llvm::raw_string_ostream Stream(Buffer);
 
   Stream << toString(SMFS[0]);
-  size_t LastIndex = SMFS.size() - 1;
+  const size_t LastIndex = SMFS.size() - 1;
   for (size_t I = 1; I < LastIndex; ++I) {
     Stream << ", " << toString(SMFS[I]);
   }
@@ -146,7 +146,7 @@ void SpecialMemberFunctionsCheck::check(
     StoreMember({DestructorType, Dtor->isDeleted()});
   }
 
-  std::initializer_list<std::pair<std::string, SpecialMemberFunctionKind>>
+  const std::initializer_list<std::pair<std::string, SpecialMemberFunctionKind>>
       Matchers = {{"copy-ctor", SpecialMemberFunctionKind::CopyConstructor},
                   {"copy-assign", SpecialMemberFunctionKind::CopyAssignment},
                   {"move-ctor", SpecialMemberFunctionKind::MoveConstructor},
@@ -202,7 +202,7 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
       MissingMembers.push_back(Kind2);
   };
 
-  bool RequireThree =
+  const bool RequireThree =
       HasMember(SpecialMemberFunctionKind::NonDefaultDestructor) ||
       (!AllowSoleDefaultDtor &&
        (HasMember(SpecialMemberFunctionKind::Destructor) ||
@@ -212,10 +212,11 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
       HasMember(SpecialMemberFunctionKind::MoveConstructor) ||
       HasMember(SpecialMemberFunctionKind::MoveAssignment);
 
-  bool RequireFive = (!AllowMissingMoveFunctions && RequireThree &&
-                      getLangOpts().CPlusPlus11) ||
-                     HasMember(SpecialMemberFunctionKind::MoveConstructor) ||
-                     HasMember(SpecialMemberFunctionKind::MoveAssignment);
+  const bool RequireFive =
+      (!AllowMissingMoveFunctions && RequireThree &&
+       getLangOpts().CPlusPlus11) ||
+      HasMember(SpecialMemberFunctionKind::MoveConstructor) ||
+      HasMember(SpecialMemberFunctionKind::MoveAssignment);
 
   if (RequireThree) {
     if (!HasMember(SpecialMemberFunctionKind::Destructor) &&

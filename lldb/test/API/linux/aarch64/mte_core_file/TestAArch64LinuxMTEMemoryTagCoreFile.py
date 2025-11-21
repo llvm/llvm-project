@@ -10,8 +10,8 @@ from lldbsuite.test.lldbtest import *
 class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    MTE_BUF_ADDR = hex(0xFFFF82C74000)
-    BUF_ADDR = hex(0xFFFF82C73000)
+    MTE_BUF_ADDR = hex(0xFFFFA733B000)
+    BUF_ADDR = hex(0xFFFFA733A000)
 
     @skipIfLLVMTargetMissing("AArch64")
     def test_mte_tag_core_file_memory_region(self):
@@ -215,7 +215,7 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
         self.expect(
             "bt",
             substrs=[
-                "* thread #1, name = 'a.out.mte', stop reason = SIGSEGV: sync tag check fault (fault address=0xffff82c74010)"
+                "* thread #1, name = 'a.out.mte', stop reason = SIGSEGV: sync tag check fault (fault address=0xffffa733b010)"
             ],
         )
 
@@ -231,12 +231,15 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
         self.runCmd("target create --core core.mte")
         # The expected value is:
         # * Allowed tags value of 0xFFFF, shifted up by 3 resulting in 0x7fff8.
+        # * Bit 19 set to 0, which means that store only checking is disabled.
         # * Bit 1 set to enable synchronous tag faults.
         # * Bit 0 set to enable the tagged address ABI.
         expected = ["mte_ctrl = 0x000000000007fffb"]
 
         if self.hasXMLSupport():
-            expected.append("(TAGS = 65535, TCF = TCF_SYNC, TAGGED_ADDR_ENABLE = 1)")
+            expected.append(
+                "(STORE_ONLY = 0, TAGS = 65535, TCF = TCF_SYNC, TAGGED_ADDR_ENABLE = 1)"
+            )
 
         self.expect("register read mte_ctrl", substrs=expected)
 

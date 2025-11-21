@@ -91,22 +91,18 @@ void SelfExecutorProcessControl::lookupSymbolsAsync(
 
   for (auto &Elem : Request) {
     sys::DynamicLibrary Dylib(Elem.Handle.toPtr<void *>());
-    R.push_back(std::vector<ExecutorSymbolDef>());
+    R.push_back(tpctypes::LookupResult());
     for (auto &KV : Elem.Symbols) {
       auto &Sym = KV.first;
       std::string Tmp((*Sym).data() + !!GlobalManglingPrefix,
                       (*Sym).size() - !!GlobalManglingPrefix);
       void *Addr = Dylib.getAddressOfSymbol(Tmp.c_str());
-      if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol) {
-        // FIXME: Collect all failing symbols before erroring out.
-        SymbolNameVector MissingSymbols;
-        MissingSymbols.push_back(Sym);
-        return Complete(
-            make_error<SymbolsNotFound>(SSP, std::move(MissingSymbols)));
-      }
-      // FIXME: determine accurate JITSymbolFlags.
-      R.back().push_back(
-          {ExecutorAddr::fromPtr(Addr), JITSymbolFlags::Exported});
+      if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol)
+        R.back().emplace_back();
+      else
+        // FIXME: determine accurate JITSymbolFlags.
+        R.back().emplace_back(ExecutorSymbolDef(ExecutorAddr::fromPtr(Addr),
+                                                JITSymbolFlags::Exported));
     }
   }
 

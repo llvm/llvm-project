@@ -14,7 +14,8 @@
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_dap;
+
+namespace lldb_dap {
 
 Transport::Transport(llvm::StringRef client_name, lldb_dap::Log *log,
                      lldb::IOObjectSP input, lldb::IOObjectSP output)
@@ -24,3 +25,5 @@ Transport::Transport(llvm::StringRef client_name, lldb_dap::Log *log,
 void Transport::Log(llvm::StringRef message) {
   DAP_LOG(m_log, "({0}) {1}", m_client_name, message);
 }
+
+} // namespace lldb_dap

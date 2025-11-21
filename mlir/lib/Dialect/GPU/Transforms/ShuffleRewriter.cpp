@@ -60,14 +60,12 @@ struct GpuShuffleRewriter : public OpRewritePattern<gpu::ShuffleOp> {
 
     // Shuffle the values.
     ValueRange loRes =
-        rewriter
-            .create<gpu::ShuffleOp>(op.getLoc(), lo, op.getOffset(),
-                                    op.getWidth(), op.getMode())
+        gpu::ShuffleOp::create(rewriter, op.getLoc(), lo, op.getOffset(),
+                               op.getWidth(), op.getMode())
             .getResults();
     ValueRange hiRes =
-        rewriter
-            .create<gpu::ShuffleOp>(op.getLoc(), hi, op.getOffset(),
-                                    op.getWidth(), op.getMode())
+        gpu::ShuffleOp::create(rewriter, op.getLoc(), hi, op.getOffset(),
+                               op.getWidth(), op.getMode())
             .getResults();
 
     // Convert lo back to i64.

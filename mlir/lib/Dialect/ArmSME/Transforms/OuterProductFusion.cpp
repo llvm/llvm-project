@@ -136,7 +136,7 @@ public:
 
     auto loc = op.getLoc();
     auto packInputs = [&](Value lhs, Value rhs) {
-      return rewriter.create<vector::InterleaveOp>(loc, lhs, rhs);
+      return vector::InterleaveOp::create(rewriter, loc, lhs, rhs);
     };
 
     auto lhs = packInputs(op1.getLhs().getDefiningOp()->getOperand(0),
@@ -170,7 +170,7 @@ public:
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Default([&](auto) { llvm_unreachable("unexpected extend op!"); });
+          .DefaultUnreachable("unexpected extend op!");
     } else if (kind == arm_sme::CombiningKind::Sub) {
       TypeSwitch<Operation *>(extOp)
           .Case<arith::ExtFOp>([&](auto) {
@@ -188,7 +188,7 @@ public:
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Default([&](auto) { llvm_unreachable("unexpected extend op!"); });
+          .DefaultUnreachable("unexpected extend op!");
     } else {
       llvm_unreachable("unexpected arm_sme::CombiningKind!");
     }
@@ -284,7 +284,7 @@ public:
 
     auto loc = op.getLoc();
     auto packInputs = [&](Value lhs, Value rhs) {
-      return rewriter.create<vector::InterleaveOp>(loc, lhs, rhs);
+      return vector::InterleaveOp::create(rewriter, loc, lhs, rhs);
     };
 
     auto lhs0 = packInputs(op1.getLhs().getDefiningOp()->getOperand(0),
@@ -445,7 +445,7 @@ struct SwapVectorExtractOfArithExtend
       return rewriter.notifyMatchFailure(
           extractOp, "extracted type is not a 1-D scalable vector type");
 
-    auto *extendOp = extractOp.getVector().getDefiningOp();
+    auto *extendOp = extractOp.getSource().getDefiningOp();
     if (!isa_and_present<arith::ExtSIOp, arith::ExtUIOp, arith::ExtFOp>(
             extendOp))
       return rewriter.notifyMatchFailure(extractOp,
@@ -456,8 +456,8 @@ struct SwapVectorExtractOfArithExtend
     Value extendSource = extendOp->getOperand(0);
 
     // Create new extract from source of extend.
-    Value newExtract = rewriter.create<vector::ExtractOp>(
-        loc, extendSource, extractOp.getMixedPosition());
+    Value newExtract = vector::ExtractOp::create(rewriter, loc, extendSource,
+                                                 extractOp.getMixedPosition());
 
     // Extend new extract to original result type.
     Operation *newExtend =
@@ -503,8 +503,9 @@ struct SwapVectorScalableExtractOfArithExtend
     // Create new extract from source of extend.
     VectorType extractResultVectorType =
         resultType.clone(extendSourceVectorType.getElementType());
-    Value newExtract = rewriter.create<vector::ScalableExtractOp>(
-        loc, extractResultVectorType, extendSource, extractOp.getPos());
+    Value newExtract = vector::ScalableExtractOp::create(
+        rewriter, loc, extractResultVectorType, extendSource,
+        extractOp.getPos());
 
     // Extend new extract to original result type.
     Operation *newExtend =

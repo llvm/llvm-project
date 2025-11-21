@@ -1,4 +1,4 @@
-//===--- FormatStringConverter.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -207,13 +207,9 @@ FormatStringConverter::FormatStringConverter(
       ArgsOffset(FormatArgOffset + 1), LangOpts(LO) {
   assert(ArgsOffset <= NumArgs);
   FormatExpr = llvm::dyn_cast<StringLiteral>(
-      Args[FormatArgOffset]->IgnoreImplicitAsWritten());
+      Args[FormatArgOffset]->IgnoreUnlessSpelledInSource());
 
-  if (!FormatExpr || !FormatExpr->isOrdinary()) {
-    // Function must have a narrow string literal as its first argument.
-    conversionNotPossible("first argument is not a narrow string literal");
-    return;
-  }
+  assert(FormatExpr && FormatExpr->isOrdinary());
 
   if (const std::optional<StringRef> MaybeMacroName =
           formatStringContainsUnreplaceableMacro(Call, FormatExpr, SM, PP);
@@ -249,7 +245,7 @@ FormatStringConverter::formatStringContainsUnreplaceableMacro(
   // inhibit conversion. The whole format string will appear to come from that
   // macro, as will the function call.
   std::optional<StringRef> MaybeSurroundingMacroName;
-  if (SourceLocation BeginCallLoc = Call->getBeginLoc();
+  if (const SourceLocation BeginCallLoc = Call->getBeginLoc();
       BeginCallLoc.isMacroID())
     MaybeSurroundingMacroName =
         Lexer::getImmediateMacroName(BeginCallLoc, SM, PP.getLangOpts());
@@ -287,7 +283,8 @@ FormatStringConverter::formatStringContainsUnreplaceableMacro(
 
 void FormatStringConverter::emitAlignment(const PrintfSpecifier &FS,
                                           std::string &FormatSpec) {
-  ConversionSpecifier::Kind ArgKind = FS.getConversionSpecifier().getKind();
+  const ConversionSpecifier::Kind ArgKind =
+      FS.getConversionSpecifier().getKind();
 
   // We only care about alignment if a field width is specified
   if (FS.getFieldWidth().getHowSpecified() != OptionalAmount::NotSpecified) {
@@ -464,9 +461,9 @@ bool FormatStringConverter::emitIntegerArgument(
     // be passed as its underlying type. However, printf will have forced
     // the signedness based on the format string, so we need to do the
     // same.
-    if (const auto *ET = ArgType->getAs<EnumType>()) {
+    if (const auto *ED = ArgType->getAsEnumDecl()) {
       if (const std::optional<std::string> MaybeCastType =
-              castTypeForArgument(ArgKind, ET->getDecl()->getIntegerType()))
+              castTypeForArgument(ArgKind, ED->getIntegerType()))
         ArgFixes.emplace_back(
             ArgIndex, (Twine("static_cast<") + *MaybeCastType + ">(").str());
       else
@@ -503,7 +500,8 @@ bool FormatStringConverter::emitIntegerArgument(
 /// @returns true on success, false on failure
 bool FormatStringConverter::emitType(const PrintfSpecifier &FS, const Expr *Arg,
                                      std::string &FormatSpec) {
-  ConversionSpecifier::Kind ArgKind = FS.getConversionSpecifier().getKind();
+  const ConversionSpecifier::Kind ArgKind =
+      FS.getConversionSpecifier().getKind();
   switch (ArgKind) {
   case ConversionSpecifier::Kind::sArg:
     emitStringArgument(FS.getArgIndex() + ArgsOffset, Arg);
@@ -802,7 +800,7 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
   }
 
   for (const auto &[ArgIndex, Replacement] : ArgFixes) {
-    SourceLocation AfterOtherSide =
+    const SourceLocation AfterOtherSide =
         Lexer::findNextToken(Args[ArgIndex]->getEndLoc(), SM, LangOpts)
             ->getLocation();
 

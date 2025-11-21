@@ -99,28 +99,138 @@ def generate_cpp_merge_test(n: int) -> str:
     return cpp_code
 
 
-def analyze_trace_file(trace_path: str) -> tuple[float, float]:
+def generate_cpp_nested_loop_test(n: int) -> str:
     """
-    Parses the -ftime-trace JSON output to find durations.
+    Generates C++ code with N levels of nested loops.
+    This pattern tests how analysis performance scales with loop nesting depth,
+    which is a key factor in the complexity of dataflow analyses on structured
+    control flow.
 
-    Returns:
-        A tuple of (lifetime_analysis_duration_us, total_clang_duration_us).
+    Example (n=3):
+        struct MyObj { int id; ~MyObj() {} };
+        void nested_loops_3() {
+            MyObj* p = nullptr;
+            for(int i0=0; i0<2; ++i0) {
+                MyObj s0;
+                p = &s0;
+                for(int i1=0; i1<2; ++i1) {
+                    MyObj s1;
+                    p = &s1;
+                    for(int i2=0; i2<2; ++i2) {
+                        MyObj s2;
+                        p = &s2;
+                    }
+                }
+            }
+        }
     """
-    lifetime_duration = 0.0
-    total_duration = 0.0
+    if n <= 0:
+        return "// Nesting depth must be positive."
+
+    cpp_code = "struct MyObj { int id; ~MyObj() {} };\n\n"
+    cpp_code += f"void nested_loops_{n}() {{\n"
+    cpp_code += "    MyObj* p = nullptr;\n"
+
+    for i in range(n):
+        indent = "    " * (i + 1)
+        cpp_code += f"{indent}for(int i{i}=0; i{i}<2; ++i{i}) {{\n"
+        cpp_code += f"{indent}    MyObj s{i}; p = &s{i};\n"
+
+    for i in range(n - 1, -1, -1):
+        indent = "    " * (i + 1)
+        cpp_code += f"{indent}}}\n"
+
+    cpp_code += "}\n"
+    cpp_code += f"\nint main() {{ nested_loops_{n}(); return 0; }}\n"
+    return cpp_code
+
+
+def generate_cpp_switch_fan_out_test(n: int) -> str:
+    """
+    Generates C++ code with a switch statement with N branches.
+    Each branch 'i' 'uses' (reads) a single, unique pointer 'pi'.
+    This pattern creates a "fan-in" join point for the backward
+    liveness analysis, stressing the LivenessMap::join operation
+    by forcing it to merge N disjoint, single-element sets of live origins.
+    The resulting complexity for LiveOrigins should be O(n log n) or higher.
+
+    Example (n=3):
+        struct MyObj { int id; ~MyObj() {} };
+
+        void switch_fan_out_3(int condition) {
+            MyObj v1{1}; MyObj v2{1}; MyObj v3{1};
+            MyObj* p1 = &v1; MyObj* p2 = &v2; MyObj* p3 = &v3;
+
+            switch (condition % 3) {
+                case 0:
+                    p1->id = 1;
+                    break;
+                case 1:
+                    p2->id = 1;
+                    break;
+                case 2:
+                    p3->id = 1;
+                    break;
+            }
+        }
+    """
+    if n <= 0:
+        return "// Number of variables must be positive."
+
+    cpp_code = "struct MyObj { int id; ~MyObj() {} };\n\n"
+    cpp_code += f"void switch_fan_out{n}(int condition) {{\n"
+    # Generate N distinct objects
+    for i in range(1, n + 1):
+        cpp_code += f"  MyObj v{i}{{1}};\n"
+    cpp_code += "\n"
+    # Generate N distinct pointers, each as a separate variable
+    for i in range(1, n + 1):
+        cpp_code += f"  MyObj* p{i} = &v{i};\n"
+    cpp_code += "\n"
+
+    cpp_code += f"  switch (condition % {n}) {{\n"
+    for case_num in range(n):
+        cpp_code += f"    case {case_num}:\n"
+        cpp_code += f"      p{case_num + 1}->id = 1;\n"
+        cpp_code += "      break;\n"
+
+    cpp_code += "  }\n}\n"
+    cpp_code += f"\nint main() {{ switch_fan_out{n}(0); return 0; }}\n"
+    return cpp_code
+
+
+def analyze_trace_file(trace_path: str) -> dict:
+    """
+    Parses the -ftime-trace JSON output to find durations for the lifetime
+    analysis and its sub-phases.
+    Returns a dictionary of durations in microseconds.
+    """
+    durations = {
+        "lifetime_us": 0.0,
+        "total_us": 0.0,
+        "fact_gen_us": 0.0,
+        "loan_prop_us": 0.0,
+        "live_origins_us": 0.0,
+    }
+    event_name_map = {
+        "LifetimeSafetyAnalysis": "lifetime_us",
+        "ExecuteCompiler": "total_us",
+        "FactGenerator": "fact_gen_us",
+        "LoanPropagation": "loan_prop_us",
+        "LiveOrigins": "live_origins_us",
+    }
     try:
         with open(trace_path, "r") as f:
             trace_data = json.load(f)
             for event in trace_data.get("traceEvents", []):
-                if event.get("name") == "LifetimeSafetyAnalysis":
-                    lifetime_duration += float(event.get("dur", 0))
-                if event.get("name") == "ExecuteCompiler":
-                    total_duration += float(event.get("dur", 0))
-
+                event_name = event.get("name")
+                if event_name in event_name_map:
+                    key = event_name_map[event_name]
+                    durations[key] += float(event.get("dur", 0))
     except (IOError, json.JSONDecodeError) as e:
         print(f"Error reading or parsing trace file {trace_path}: {e}", file=sys.stderr)
-        return 0.0, 0.0
-    return lifetime_duration, total_duration
+        return {key: 0.0 for key in durations}
+    return durations
 
 
 def power_law(n, c, k):
@@ -135,8 +245,29 @@ def human_readable_time(ms: float) -> str:
     return f"{ms:.2f} ms"
 
 
+def calculate_complexity(n_data, y_data) -> tuple[float | None, float | None]:
+    """
+    Calculates the exponent 'k' for the power law fit y = c * n^k.
+    Returns a tuple of (k, k_standard_error).
+    """
+    try:
+        if len(n_data) < 3 or np.all(y_data < 1e-6) or np.var(y_data) < 1e-6:
+            return None, None
+
+        non_zero_indices = y_data > 0
+        if np.sum(non_zero_indices) < 3:
+            return None, None
+
+        n_fit, y_fit = n_data[non_zero_indices], y_data[non_zero_indices]
+        popt, pcov = curve_fit(power_law, n_fit, y_fit, p0=[0, 1], maxfev=5000)
+        k_stderr = np.sqrt(np.diag(pcov))[1]
+        return popt[1], k_stderr
+    except (RuntimeError, ValueError):
+        return None, None
+
+
 def generate_markdown_report(results: dict) -> str:
-    """Generates a Markdown-formatted report from the benchmark results."""
+    """Generates a concise, Markdown-formatted report from the benchmark results."""
     report = []
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S %Z")
     report.append(f"# Lifetime Analysis Performance Report")
@@ -146,54 +277,52 @@ def generate_markdown_report(results: dict) -> str:
     for test_name, data in results.items():
         title = data["title"]
         report.append(f"## Test Case: {title}")
-        report.append("")
+        report.append("\n**Timing Results:**\n")
 
         # Table header
-        report.append("| N   | Analysis Time | Total Clang Time |")
-        report.append("|:----|--------------:|-----------------:|")
+        report.append(
+            "| N (Input Size) | Total Time | Analysis Time (%) | Fact Generator (%) | Loan Propagation (%) | Live Origins (%) |"
+        )
+        report.append(
+            "|:---------------|-----------:|------------------:|-------------------:|---------------------:|------------------:|"
+        )
 
         # Table rows
         n_data = np.array(data["n"])
-        analysis_data = np.array(data["lifetime_ms"])
-        total_data = np.array(data["total_ms"])
+        total_ms_data = np.array(data["total_ms"])
         for i in range(len(n_data)):
-            analysis_str = human_readable_time(analysis_data[i])
-            total_str = human_readable_time(total_data[i])
-            report.append(f"| {n_data[i]:<3} | {analysis_str:>13} | {total_str:>16} |")
+            total_t = total_ms_data[i]
+            if total_t < 1e-6:
+                total_t = 1.0  # Avoid division by zero
 
-        report.append("")
+            row = [
+                f"| {n_data[i]:<14} |",
+                f"{human_readable_time(total_t):>10} |",
+                f"{data['lifetime_ms'][i] / total_t * 100:>17.2f}% |",
+                f"{data['fact_gen_ms'][i] / total_t * 100:>18.2f}% |",
+                f"{data['loan_prop_ms'][i] / total_t * 100:>20.2f}% |",
+                f"{data['live_origins_ms'][i] / total_t * 100:>17.2f}% |",
+            ]
+            report.append(" ".join(row))
 
-        # Complexity analysis
-        report.append(f"**Complexity Analysis:**")
-        try:
-            # Curve fitting requires at least 3 points
-            if len(n_data) < 3:
-                raise ValueError("Not enough data points to perform curve fitting.")
+        report.append("\n**Complexity Analysis:**\n")
+        report.append("| Analysis Phase    | Complexity O(n<sup>k</sup>) | ")
+        report.append("|:------------------|:--------------------------|")
 
-            popt, pcov = curve_fit(
-                power_law, n_data, analysis_data, p0=[0, 2], maxfev=5000
-            )
-            _, k = popt
+        analysis_phases = {
+            "Total Analysis": data["lifetime_ms"],
+            "FactGenerator": data["fact_gen_ms"],
+            "LoanPropagation": data["loan_prop_ms"],
+            "LiveOrigins": data["live_origins_ms"],
+        }
 
-            # Confidence Interval for k
-            alpha = 0.05  # 95% confidence
-            dof = max(0, len(n_data) - len(popt))  # degrees of freedom
-            t_val = t.ppf(1.0 - alpha / 2.0, dof)
-            # Standard error of the parameters
-            perr = np.sqrt(np.diag(pcov))
-            k_stderr = perr[1]
-            k_ci_lower = k - t_val * k_stderr
-            k_ci_upper = k + t_val * k_stderr
-
-            report.append(
-                f"- The performance for this case scales approx. as **O(n<sup>{k:.2f}</sup>)**."
-            )
-            report.append(
-                f"- **95% Confidence interval for exponent:** `[{k_ci_lower:.2f}, {k_ci_upper:.2f}]`."
-            )
-
-        except (RuntimeError, ValueError) as e:
-            report.append(f"- Could not determine a best-fit curve for the data: {e}")
+        for phase_name, y_data in analysis_phases.items():
+            k, delta = calculate_complexity(n_data, np.array(y_data))
+            if k is not None and delta is not None:
+                complexity_str = f"O(n<sup>{k:.2f}</sup> &pm; {delta:.2f})"
+            else:
+                complexity_str = "(Negligible)"
+            report.append(f"| {phase_name:<17} | {complexity_str:<25} |")
 
         report.append("\n---\n")
 
@@ -202,7 +331,7 @@ def generate_markdown_report(results: dict) -> str:
 
 def run_single_test(
     clang_binary: str, output_dir: str, test_name: str, generator_func, n: int
-) -> tuple[float, float]:
+) -> dict:
     """Generates, compiles, and benchmarks a single test case."""
     print(f"--- Running Test: {test_name.capitalize()} with N={n} ---")
 
@@ -221,21 +350,29 @@ def run_single_test(
         "-o",
         "/dev/null",
         "-ftime-trace=" + trace_file,
-        "-Wexperimental-lifetime-safety",
+        "-Xclang",
+        "-fexperimental-lifetime-safety",
         "-std=c++17",
         source_file,
     ]
 
-    result = subprocess.run(clang_command, capture_output=True, text=True)
+    try:
+        result = subprocess.run(
+            clang_command, capture_output=True, text=True, timeout=60
+        )
+    except subprocess.TimeoutExpired:
+        print(f"Compilation timed out for N={n}!", file=sys.stderr)
+        return {}
 
     if result.returncode != 0:
         print(f"Compilation failed for N={n}!", file=sys.stderr)
         print(result.stderr, file=sys.stderr)
-        return 0.0, 0.0
+        return {}
 
-    lifetime_us, total_us = analyze_trace_file(trace_file)
-
-    return lifetime_us / 1000.0, total_us / 1000.0
+    durations_us = analyze_trace_file(trace_file)
+    return {
+        key.replace("_us", "_ms"): value / 1000.0 for key, value in durations_us.items()
+    }
 
 
 if __name__ == "__main__":
@@ -257,18 +394,31 @@ if __name__ == "__main__":
     os.makedirs(args.output_dir, exist_ok=True)
     print(f"Benchmark files will be saved in: {os.path.abspath(args.output_dir)}\n")
 
+    # Maximize 'n' values while keeping execution time under 10s.
     test_configurations = [
         {
             "name": "cycle",
             "title": "Pointer Cycle in Loop",
             "generator_func": generate_cpp_cycle_test,
-            "n_values": [10, 25, 50, 75, 100, 150],
+            "n_values": [50, 75, 100, 200, 300],
         },
         {
             "name": "merge",
             "title": "CFG Merges",
             "generator_func": generate_cpp_merge_test,
-            "n_values": [10, 50, 100, 200, 400, 800],
+            "n_values": [400, 1000, 2000, 5000],
+        },
+        {
+            "name": "nested_loops",
+            "title": "Deeply Nested Loops",
+            "generator_func": generate_cpp_nested_loop_test,
+            "n_values": [50, 100, 150, 200],
+        },
+        {
+            "name": "switch_fan_out",
+            "title": "Switch Fan-out",
+            "generator_func": generate_cpp_switch_fan_out_test,
+            "n_values": [500, 1000, 2000, 4000],
         },
     ]
 
@@ -282,21 +432,28 @@ if __name__ == "__main__":
             "n": [],
             "lifetime_ms": [],
             "total_ms": [],
+            "fact_gen_ms": [],
+            "loan_prop_ms": [],
+            "live_origins_ms": [],
         }
         for n in config["n_values"]:
-            lifetime_ms, total_ms = run_single_test(
+            durations_ms = run_single_test(
                 args.clang_binary,
                 args.output_dir,
                 test_name,
                 config["generator_func"],
                 n,
             )
-            if total_ms > 0:
+            if durations_ms:
                 results[test_name]["n"].append(n)
-                results[test_name]["lifetime_ms"].append(lifetime_ms)
-                results[test_name]["total_ms"].append(total_ms)
+                for key, value in durations_ms.items():
+                    results[test_name][key].append(value)
+
                 print(
-                    f"    Total: {human_readable_time(total_ms)} | Analysis: {human_readable_time(lifetime_ms)}"
+                    f"    Total Analysis: {human_readable_time(durations_ms['lifetime_ms'])} | "
+                    f"FactGen: {human_readable_time(durations_ms['fact_gen_ms'])} | "
+                    f"LoanProp: {human_readable_time(durations_ms['loan_prop_ms'])} | "
+                    f"LiveOrigins: {human_readable_time(durations_ms['live_origins_ms'])}"
                 )
 
     print("\n\n" + "=" * 80)
@@ -305,3 +462,8 @@ if __name__ == "__main__":
 
     markdown_report = generate_markdown_report(results)
     print(markdown_report)
+
+    report_filename = os.path.join(args.output_dir, "performance_report.md")
+    with open(report_filename, "w") as f:
+        f.write(markdown_report)
+    print(f"Report saved to: {report_filename}")

@@ -237,8 +237,7 @@ class InductiveRangeCheckElimination {
   DominatorTree &DT;
   LoopInfo &LI;
 
-  using GetBFIFunc =
-      std::optional<llvm::function_ref<llvm::BlockFrequencyInfo &()>>;
+  using GetBFIFunc = llvm::function_ref<llvm::BlockFrequencyInfo &()>;
   GetBFIFunc GetBFI;
 
   // Returns the estimated number of iterations based on block frequency info if
@@ -249,7 +248,7 @@ class InductiveRangeCheckElimination {
 public:
   InductiveRangeCheckElimination(ScalarEvolution &SE,
                                  BranchProbabilityInfo *BPI, DominatorTree &DT,
-                                 LoopInfo &LI, GetBFIFunc GetBFI = std::nullopt)
+                                 LoopInfo &LI, GetBFIFunc GetBFI = nullptr)
       : SE(SE), BPI(BPI), DT(DT), LI(LI), GetBFI(GetBFI) {}
 
   bool run(Loop *L, function_ref<void(Loop *, bool)> LPMAddNewLoop);
@@ -959,7 +958,7 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
 std::optional<uint64_t>
 InductiveRangeCheckElimination::estimatedTripCount(const Loop &L) {
   if (GetBFI) {
-    BlockFrequencyInfo &BFI = (*GetBFI)();
+    BlockFrequencyInfo &BFI = GetBFI();
     uint64_t hFreq = BFI.getBlockFreq(L.getHeader()).getFrequency();
     uint64_t phFreq = BFI.getBlockFreq(L.getLoopPreheader()).getFrequency();
     if (phFreq == 0 || hFreq == 0)

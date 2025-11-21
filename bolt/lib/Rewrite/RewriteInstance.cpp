@@ -82,8 +82,11 @@ extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
 extern cl::opt<bool> KeepNops;
 extern cl::opt<bool> Lite;
+extern cl::list<std::string> PrintOnly;
+extern cl::opt<std::string> PrintOnlyFile;
 extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
+extern cl::opt<bool> TerminalHLT;
 extern cl::opt<bool> TerminalTrap;
 extern cl::opt<bool> TimeBuild;
 extern cl::opt<bool> TimeRewrite;
@@ -113,6 +116,35 @@ cl::opt<bool> DumpDotAll(
     cl::desc("dump function CFGs to graphviz format after each stage;"
              "enable '-print-loops' for color-coded blocks"),
     cl::Hidden, cl::cat(BoltCategory));
+
+cl::list<std::string> DumpDotFunc(
+    "dump-dot-func", cl::CommaSeparated,
+    cl::desc(
+        "dump function CFGs to graphviz format for specified functions only;"
+        "takes function name patterns (regex supported)"),
+    cl::value_desc("func1,func2,func3,..."), cl::Hidden, cl::cat(BoltCategory));
+
+bool shouldDumpDot(const bolt::BinaryFunction &Function) {
+  // If dump-dot-all is enabled, dump all functions
+  if (DumpDotAll)
+    return !Function.isIgnored();
+
+  // If no specific functions specified in dump-dot-func, don't dump any
+  if (DumpDotFunc.empty())
+    return false;
+
+  if (Function.isIgnored())
+    return false;
+
+  // Check if function matches any of the specified patterns
+  for (const std::string &Name : DumpDotFunc) {
+    if (Function.hasNameRegex(Name)) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 static cl::list<std::string>
 ForceFunctionNames("funcs",
@@ -265,7 +297,6 @@ cl::bits<GadgetScannerKind> GadgetScannersToRun(
 } // namespace opts
 
 // FIXME: implement a better way to mark sections for replacement.
-constexpr const char *RewriteInstance::SectionsToOverwrite[];
 std::vector<std::string> RewriteInstance::DebugSectionsToOverwrite = {
     ".debug_abbrev", ".debug_aranges",  ".debug_line",   ".debug_line_str",
     ".debug_loc",    ".debug_loclists", ".debug_ranges", ".debug_rnglists",
@@ -701,6 +732,8 @@ Error RewriteInstance::run() {
              << "\n";
   BC->outs() << "BOLT-INFO: BOLT version: " << BoltRevision << "\n";
 
+  selectFunctionsToPrint();
+
   if (Error E = discoverStorage())
     return E;
   if (Error E = readSpecialSections())
@@ -713,21 +746,6 @@ Error RewriteInstance::run() {
       return E;
 
   preprocessProfileData();
-
-  // Skip disassembling if we have a translation table and we are running an
-  // aggregation job.
-  if (opts::AggregateOnly && BAT->enabledFor(InputFile)) {
-    // YAML profile in BAT mode requires CFG for .bolt.org.text functions
-    if (!opts::SaveProfile.empty() ||
-        opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
-      selectFunctionsToProcess();
-      disassembleFunctions();
-      processMetadataPreCFG();
-      buildFunctionsCFG();
-    }
-    processProfileData();
-    return Error::success();
-  }
 
   selectFunctionsToProcess();
 
@@ -895,31 +913,43 @@ void RewriteInstance::discoverFileObjects() {
   // code section (see IHI0056B). $d identifies data contents.
   // Compilers usually merge multiple data objects in a single $d-$x interval,
   // but we need every data object to be marked with $d. Because of that we
-  // create a vector of MarkerSyms with all locations of data objects.
+  // keep track of marker symbols with all locations of data objects.
 
-  struct MarkerSym {
-    uint64_t Address;
-    MarkerSymType Type;
-  };
-
-  std::vector<MarkerSym> SortedMarkerSymbols;
+  DenseMap<uint64_t, MarkerSymType> MarkerSymbols;
   auto addExtraDataMarkerPerSymbol = [&]() {
     bool IsData = false;
     uint64_t LastAddr = 0;
     for (const auto &SymInfo : SortedSymbols) {
-      if (LastAddr == SymInfo.Address) // don't repeat markers
-        continue;
-
       MarkerSymType MarkerType = BC->getMarkerType(SymInfo.Symbol);
+
+      // Treat ST_Function as code.
+      Expected<object::SymbolRef::Type> TypeOrError = SymInfo.Symbol.getType();
+      consumeError(TypeOrError.takeError());
+      if (TypeOrError && *TypeOrError == SymbolRef::ST_Function) {
+        if (IsData) {
+          Expected<StringRef> NameOrError = SymInfo.Symbol.getName();
+          consumeError(NameOrError.takeError());
+          if (LastAddr == SymInfo.Address) {
+            BC->errs() << "BOLT-WARNING: ignoring data marker conflicting with "
+                          "function symbol "
+                       << *NameOrError << '\n';
+          } else {
+            BC->errs() << "BOLT-WARNING: function symbol " << *NameOrError
+                       << " lacks code marker\n";
+          }
+        }
+        MarkerType = MarkerSymType::CODE;
+      }
+
       if (MarkerType != MarkerSymType::NONE) {
-        SortedMarkerSymbols.push_back(MarkerSym{SymInfo.Address, MarkerType});
+        MarkerSymbols[SymInfo.Address] = MarkerType;
         LastAddr = SymInfo.Address;
         IsData = MarkerType == MarkerSymType::DATA;
         continue;
       }
 
       if (IsData) {
-        SortedMarkerSymbols.push_back({SymInfo.Address, MarkerSymType::DATA});
+        MarkerSymbols[SymInfo.Address] = MarkerSymType::DATA;
         LastAddr = SymInfo.Address;
       }
     }
@@ -1060,7 +1090,7 @@ void RewriteInstance::discoverFileObjects() {
 
     if (SymbolAddress == Section->getAddress() + Section->getSize()) {
       assert(SymbolSize == 0 &&
-             "unexpect non-zero sized symbol at end of section");
+             "unexpected non-zero sized symbol at end of section");
       LLVM_DEBUG(
           dbgs()
           << "BOLT-DEBUG: rejecting as symbol points to end of its section\n");
@@ -1284,27 +1314,26 @@ void RewriteInstance::discoverFileObjects() {
   BC->setHasSymbolsWithFileName(FileSymbols.size());
 
   // Now that all the functions were created - adjust their boundaries.
-  adjustFunctionBoundaries();
+  adjustFunctionBoundaries(MarkerSymbols);
 
   // Annotate functions with code/data markers in AArch64
-  for (auto ISym = SortedMarkerSymbols.begin();
-       ISym != SortedMarkerSymbols.end(); ++ISym) {
-
-    auto *BF =
-        BC->getBinaryFunctionContainingAddress(ISym->Address, true, true);
+  for (auto &[Address, Type] : MarkerSymbols) {
+    auto *BF = BC->getBinaryFunctionContainingAddress(Address,
+                                                      /*CheckPastEnd*/ false,
+                                                      /*UseMaxSize*/ true);
 
     if (!BF) {
       // Stray marker
       continue;
     }
-    const auto EntryOffset = ISym->Address - BF->getAddress();
-    if (ISym->Type == MarkerSymType::CODE) {
+    const auto EntryOffset = Address - BF->getAddress();
+    if (Type == MarkerSymType::CODE) {
       BF->markCodeAtOffset(EntryOffset);
       continue;
     }
-    if (ISym->Type == MarkerSymType::DATA) {
+    if (Type == MarkerSymType::DATA) {
       BF->markDataAtOffset(EntryOffset);
-      BC->AddressToConstantIslandMap[ISym->Address] = BF;
+      BC->AddressToConstantIslandMap[Address] = BF;
       continue;
     }
     llvm_unreachable("Unknown marker");
@@ -1488,6 +1517,12 @@ void RewriteInstance::registerFragments() {
       }
       if (BD) {
         BinaryFunction *BF = BC->getFunctionForSymbol(BD->getSymbol());
+        if (BF == &Function) {
+          BC->errs()
+              << "BOLT-WARNING: fragment maps to the same function as parent: "
+              << Function << '\n';
+          continue;
+        }
         if (BF) {
           BC->registerFragment(Function, *BF);
           continue;
@@ -1833,7 +1868,8 @@ void RewriteInstance::disassemblePLT() {
   }
 }
 
-void RewriteInstance::adjustFunctionBoundaries() {
+void RewriteInstance::adjustFunctionBoundaries(
+    DenseMap<uint64_t, MarkerSymType> &MarkerSyms) {
   for (auto BFI = BC->getBinaryFunctions().begin(),
             BFE = BC->getBinaryFunctions().end();
        BFI != BFE; ++BFI) {
@@ -1871,12 +1907,15 @@ void RewriteInstance::adjustFunctionBoundaries() {
         continue;
       }
 
-      // This is potentially another entry point into the function.
-      uint64_t EntryOffset = NextSymRefI->first - Function.getAddress();
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: adding entry point to function "
-                        << Function << " at offset 0x"
-                        << Twine::utohexstr(EntryOffset) << '\n');
-      Function.addEntryPointAtOffset(EntryOffset);
+      auto It = MarkerSyms.find(NextSymRefI->first);
+      if (It == MarkerSyms.end() || It->second != MarkerSymType::DATA) {
+        // This is potentially another entry point into the function.
+        uint64_t EntryOffset = NextSymRefI->first - Function.getAddress();
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: adding entry point to function "
+                          << Function << " at offset 0x"
+                          << Twine::utohexstr(EntryOffset) << '\n');
+        Function.addEntryPointAtOffset(EntryOffset);
+      }
 
       ++NextSymRefI;
     }
@@ -2088,6 +2127,13 @@ void RewriteInstance::adjustCommandLineOptions() {
     opts::SplitEH = false;
   }
 
+  if (BC->isAArch64() && !opts::CompactCodeModel &&
+      opts::SplitStrategy == opts::SplitFunctionsStrategy::CDSplit) {
+    BC->errs() << "BOLT-ERROR: CDSplit is not supported with LongJmp. Try with "
+                  "'--compact-code-model'\n";
+    exit(1);
+  }
+
   if (opts::StrictMode && !BC->HasRelocations) {
     BC->errs()
         << "BOLT-WARNING: disabling strict mode (-strict) in non-relocation "
@@ -2178,7 +2224,9 @@ void RewriteInstance::adjustCommandLineOptions() {
     if (!opts::KeepNops.getNumOccurrences())
       opts::KeepNops = true;
 
-    // Linux kernel may resume execution after a trap instruction in some cases.
+    // Linux kernel may resume execution after a trap or x86 HLT instruction.
+    if (!opts::TerminalHLT.getNumOccurrences())
+      opts::TerminalHLT = false;
     if (!opts::TerminalTrap.getNumOccurrences())
       opts::TerminalTrap = false;
   }
@@ -2245,8 +2293,7 @@ uint32_t getRelocationSymbol(const ELFObjectFileBase *Obj,
 bool RewriteInstance::analyzeRelocation(
     const RelocationRef &Rel, uint32_t &RType, std::string &SymbolName,
     bool &IsSectionRelocation, uint64_t &SymbolAddress, int64_t &Addend,
-    uint64_t &ExtractedValue, bool &Skip) const {
-  Skip = false;
+    uint64_t &ExtractedValue) const {
   if (!Relocation::isSupported(RType))
     return false;
 
@@ -2396,7 +2443,7 @@ void RewriteInstance::processDynamicRelocations() {
   }
 
   // The rest of dynamic relocations - DT_RELA.
-  // The static executable might have .rela.dyn secion and not have PT_DYNAMIC
+  // The static executable might have .rela.dyn section and not have PT_DYNAMIC
   if (!DynamicRelocationsSize && BC->IsStaticExecutable) {
     ErrorOr<BinarySection &> DynamicRelSectionOrErr =
         BC->getUniqueSectionByName(getRelaDynSectionName());
@@ -2621,8 +2668,9 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
     return;
   }
   const bool SkipRelocs = StringSwitch<bool>(RelocatedSectionName)
-                              .Cases(".plt", ".rela.plt", ".got.plt",
-                                     ".eh_frame", ".gcc_except_table", true)
+                              .Cases({".plt", ".rela.plt", ".got.plt",
+                                      ".eh_frame", ".gcc_except_table"},
+                                     true)
                               .Default(false);
   if (SkipRelocs) {
     LLVM_DEBUG(
@@ -2678,22 +2726,13 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   int64_t Addend;
   uint64_t ExtractedValue;
   bool IsSectionRelocation;
-  bool Skip;
   if (!analyzeRelocation(Rel, RType, SymbolName, IsSectionRelocation,
-                         SymbolAddress, Addend, ExtractedValue, Skip)) {
+                         SymbolAddress, Addend, ExtractedValue)) {
     LLVM_DEBUG({
       dbgs() << "BOLT-WARNING: failed to analyze relocation @ offset = "
              << formatv("{0:x}; type name = {1}\n", Rel.getOffset(), TypeName);
     });
     ++NumFailedRelocations;
-    return;
-  }
-
-  if (Skip) {
-    LLVM_DEBUG({
-      dbgs() << "BOLT-DEBUG: skipping relocation @ offset = "
-             << formatv("{0:x}; type name = {1}\n", Rel.getOffset(), TypeName);
-    });
     return;
   }
 
@@ -2908,20 +2947,21 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
         ReferencedSymbol = nullptr;
         ExtractedValue = Address;
       } else if (RefFunctionOffset) {
-        if (ContainingBF && ContainingBF != ReferencedBF) {
+        if (ContainingBF && ContainingBF != ReferencedBF &&
+            !ReferencedBF->isInConstantIsland(Address)) {
           ReferencedSymbol =
               ReferencedBF->addEntryPointAtOffset(RefFunctionOffset);
         } else {
-          ReferencedSymbol =
-              ReferencedBF->getOrCreateLocalLabel(Address,
-                                                  /*CreatePastEnd =*/true);
+          ReferencedSymbol = ReferencedBF->getOrCreateLocalLabel(Address);
 
           // If ContainingBF != nullptr, it equals ReferencedBF (see
           // if-condition above) so we're handling a relocation from a function
           // to itself. RISC-V uses such relocations for branches, for example.
           // These should not be registered as externally references offsets.
-          if (!ContainingBF)
-            ReferencedBF->registerReferencedOffset(RefFunctionOffset);
+          if (!ContainingBF && !ReferencedBF->isInConstantIsland(Address)) {
+            ReferencedBF->registerInternalRefDataRelocation(RefFunctionOffset,
+                                                            Rel.getOffset());
+          }
         }
         if (opts::Verbosity > 1 &&
             BinarySection(*BC, RelocatedSection).isWritable())
@@ -3064,17 +3104,22 @@ static BinaryFunction *getInitFunctionIfStaticBinary(BinaryContext &BC) {
   return BC.getBinaryFunctionAtAddress(BD->getAddress());
 }
 
+static void populateFunctionNames(cl::opt<std::string> &FunctionNamesFile,
+                                  cl::list<std::string> &FunctionNames) {
+  if (FunctionNamesFile.empty())
+    return;
+  std::ifstream FuncsFile(FunctionNamesFile, std::ios::in);
+  std::string FuncName;
+  while (std::getline(FuncsFile, FuncName))
+    FunctionNames.push_back(FuncName);
+}
+
+void RewriteInstance::selectFunctionsToPrint() {
+  populateFunctionNames(opts::PrintOnlyFile, opts::PrintOnly);
+}
+
 void RewriteInstance::selectFunctionsToProcess() {
   // Extend the list of functions to process or skip from a file.
-  auto populateFunctionNames = [](cl::opt<std::string> &FunctionNamesFile,
-                                  cl::list<std::string> &FunctionNames) {
-    if (FunctionNamesFile.empty())
-      return;
-    std::ifstream FuncsFile(FunctionNamesFile, std::ios::in);
-    std::string FuncName;
-    while (std::getline(FuncsFile, FuncName))
-      FunctionNames.push_back(FuncName);
-  };
   populateFunctionNames(opts::FunctionNamesFile, opts::ForceFunctionNames);
   populateFunctionNames(opts::SkipFunctionNamesFile, opts::SkipFunctionNames);
   populateFunctionNames(opts::FunctionNamesFileNR, opts::ForceFunctionNamesNR);
@@ -3310,7 +3355,11 @@ void RewriteInstance::initializeMetadataManager() {
 
   MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
 
+  MetadataManager.registerRewriter(createRSeqRewriter(*BC));
+
   MetadataManager.registerRewriter(createSDTRewriter(*BC));
+
+  MetadataManager.registerRewriter(createGNUPropertyRewriter(*BC));
 }
 
 void RewriteInstance::processSectionMetadata() {
@@ -3492,6 +3541,17 @@ void RewriteInstance::disassembleFunctions() {
       }
     }
 
+    // Check if fillCFIInfoFor removed any OpNegateRAState CFIs from the
+    // function.
+    if (Function.containedNegateRAState()) {
+      if (!opts::UpdateBranchProtection) {
+        BC->errs()
+            << "BOLT-ERROR: --update-branch-protection is set to false, but "
+            << Function.getPrintName() << " contains .cfi-negate-ra-state\n";
+        exit(1);
+      }
+    }
+
     // Parse LSDA.
     if (Function.getLSDAAddress() != 0 &&
         !BC->getFragmentsToSkip().count(&Function)) {
@@ -3571,7 +3631,7 @@ void RewriteInstance::postProcessFunctions() {
     if (opts::PrintAll || opts::PrintCFG)
       Function.print(BC->outs(), "after building cfg");
 
-    if (opts::DumpDotAll)
+    if (opts::shouldDumpDot(Function))
       Function.dumpGraphForPass("00_build-cfg");
 
     if (opts::PrintLoopInfo) {
@@ -3962,10 +4022,12 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
       BC->outs() << '\n';
       AllocationDone = true;
     } else {
-      BC->errs() << "BOLT-WARNING: original .text too small to fit the new code"
-                 << " using 0x" << Twine::utohexstr(opts::AlignText)
-                 << " alignment. " << CodeSize << " bytes needed, have "
-                 << BC->OldTextSectionSize << " bytes available.\n";
+      BC->errs() << "BOLT-WARNING: --use-old-text failed. The original .text "
+                    "too small to fit the new code using 0x"
+                 << Twine::utohexstr(opts::AlignText) << " alignment. "
+                 << CodeSize << " bytes needed, have " << BC->OldTextSectionSize
+                 << " bytes available. Rebuilding without --use-old-text may "
+                    "produce a smaller binary\n";
       opts::UseOldText = false;
     }
   }
@@ -4260,31 +4322,25 @@ void RewriteInstance::patchELFPHDRTable() {
   const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
   raw_fd_ostream &OS = Out->os();
 
-  // Write/re-write program headers.
   Phnum = Obj.getHeader().e_phnum;
-  if (PHDRTableOffset) {
-    // Writing new pheader table and adding one new entry for R+X segment.
-    Phnum += 1;
-    if (NewWritableSegmentSize) {
-      // Adding one more entry for R+W segment.
-      Phnum += 1;
-    }
-  } else {
-    assert(!PHDRTableAddress && "unexpected address for program header table");
-    PHDRTableOffset = Obj.getHeader().e_phoff;
-    if (NewWritableSegmentSize) {
-      BC->errs() << "BOLT-ERROR: unable to add writable segment\n";
-      exit(1);
-    }
-  }
-
-  if (opts::Instrument)
-    Phnum += 2;
 
   if (BC->NewSegments.empty()) {
     BC->outs() << "BOLT-INFO: not adding new segments\n";
     return;
   }
+
+  if (opts::UseGnuStack) {
+    assert(!PHDRTableAddress && "unexpected address for program header table");
+    if (BC->NewSegments.size() > 1) {
+      BC->errs() << "BOLT-ERROR: unable to add writable segment\n";
+      exit(1);
+    }
+  } else {
+    Phnum += BC->NewSegments.size();
+  }
+
+  if (!PHDRTableOffset)
+    PHDRTableOffset = Obj.getHeader().e_phoff;
 
   const uint64_t SavedPos = OS.tell();
   OS.seek(PHDRTableOffset);
@@ -4972,7 +5028,7 @@ void RewriteInstance::updateELFSymbolTable(
     if (!Section)
       return false;
 
-    // Remove the section symbol iif the corresponding section was stripped.
+    // Remove the section symbol if the corresponding section was stripped.
     if (Symbol.getType() == ELF::STT_SECTION) {
       if (!getNewSectionIndex(Symbol.st_shndx))
         return true;

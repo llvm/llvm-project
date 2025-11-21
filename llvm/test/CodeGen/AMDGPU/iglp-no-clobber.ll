@@ -9,9 +9,9 @@ define amdgpu_kernel void @func(ptr addrspace(1) %in, ptr addrspace(3) %out) {
 ; CHECK:       ; %bb.0: ; %.lr.ph
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:    s_mov_b64 s[10:11], 0
 ; CHECK-NEXT:    s_mov_b32 s3, 32
 ; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:    s_mov_b64 s[10:11], 0
 ; CHECK-NEXT:    s_mov_b64 s[12:13], 0
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -43,7 +43,7 @@ loop:                                                ; preds = %1, %.lr.ph
   %addr = phi ptr addrspace(1) [ null, %.lr.ph ], [ %gep, %loop ]
   %offset = phi i64 [ 0, %.lr.ph ], [ %nextOff, %loop ]
   %inc = phi i32 [0, %.lr.ph], [ %incCond, %loop ]
-  %rsrc = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) %addr, i16 0, i32 0, i32 0)
+  %rsrc = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) %addr, i16 0, i64 0, i32 0)
   %load = tail call <2 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v2i32(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   %load.bc = bitcast <2 x i32> %load to <8 x i8>
   %load.elem = extractelement <8 x i8> %load.bc, i64 0
@@ -63,6 +63,6 @@ end:
   ret void
 }
 
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) readnone, i16, i32, i32) #0
+declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) readnone, i16, i64, i32) #0
 
 declare <2 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v2i32(ptr addrspace(8) nocapture readonly, i32, i32, i32 immarg) #1

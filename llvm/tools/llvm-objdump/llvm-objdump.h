@@ -36,6 +36,7 @@ class ELFObjectFileBase;
 class MachOObjectFile;
 class WasmObjectFile;
 class XCOFFObjectFile;
+class DXContainer;
 } // namespace object
 
 namespace objdump {
@@ -83,7 +84,7 @@ protected:
 
 public:
   Dumper(const object::ObjectFile &O);
-  virtual ~Dumper() {}
+  virtual ~Dumper() = default;
 
   void reportUniqueWarning(Error Err);
   void reportUniqueWarning(const Twine &Msg);
@@ -105,6 +106,8 @@ std::unique_ptr<Dumper> createELFDumper(const object::ELFObjectFileBase &Obj);
 std::unique_ptr<Dumper> createMachODumper(const object::MachOObjectFile &Obj);
 std::unique_ptr<Dumper> createWasmDumper(const object::WasmObjectFile &Obj);
 std::unique_ptr<Dumper> createXCOFFDumper(const object::XCOFFObjectFile &Obj);
+std::unique_ptr<Dumper>
+createDXContainerDumper(const object::DXContainerObjectFile &Obj);
 
 // Various helper functions.
 

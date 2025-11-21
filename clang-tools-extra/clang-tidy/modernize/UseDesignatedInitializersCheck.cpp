@@ -1,4 +1,4 @@
-//===--- UseDesignatedInitializersCheck.cpp - clang-tidy ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,6 +40,12 @@ static constexpr char StrictCppStandardComplianceName[] =
     "StrictCppStandardCompliance";
 static constexpr bool StrictCppStandardComplianceDefault = true;
 
+static unsigned getNumberOfDesignated(const InitListExpr *SyntacticInitList) {
+  return llvm::count_if(*SyntacticInitList, [](auto *InitExpr) {
+    return isa<DesignatedInitExpr>(InitExpr);
+  });
+}
+
 namespace {
 
 struct Designators {
@@ -74,12 +80,6 @@ private:
   }
 };
 
-unsigned getNumberOfDesignated(const InitListExpr *SyntacticInitList) {
-  return llvm::count_if(*SyntacticInitList, [](auto *InitExpr) {
-    return isa<DesignatedInitExpr>(InitExpr);
-  });
-}
-
 AST_MATCHER(CXXRecordDecl, isAggregate) {
   return Node.hasDefinition() && Node.isAggregate();
 }
@@ -108,8 +108,7 @@ UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
                                          IgnoreSingleElementAggregatesDefault)),
       RestrictToPODTypes(
           Options.get(RestrictToPODTypesName, RestrictToPODTypesDefault)),
-      IgnoreMacros(
-          Options.getLocalOrGlobal(IgnoreMacrosName, IgnoreMacrosDefault)),
+      IgnoreMacros(Options.get(IgnoreMacrosName, IgnoreMacrosDefault)),
       StrictCStandardCompliance(Options.get(StrictCStandardComplianceName,
                                             StrictCStandardComplianceDefault)),
       StrictCppStandardCompliance(
@@ -121,10 +120,11 @@ void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
       hasAnyBase(hasType(cxxRecordDecl(has(fieldDecl()))));
   Finder->addMatcher(
       initListExpr(
-          hasType(cxxRecordDecl(
-                      RestrictToPODTypes ? isPOD() : isAggregate(),
-                      unless(anyOf(HasBaseWithFields, hasName("::std::array"))))
-                      .bind("type")),
+          hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
+              cxxRecordDecl(
+                  RestrictToPODTypes ? isPOD() : isAggregate(),
+                  unless(anyOf(HasBaseWithFields, hasName("::std::array"))))
+                  .bind("type"))))),
           IgnoreSingleElementAggregates ? hasMoreThanOneElement() : anything(),
           unless(isFullyDesignated()))
           .bind("init"),
@@ -152,10 +152,10 @@ void UseDesignatedInitializersCheck::check(
     if (IgnoreMacros && InitList->getBeginLoc().isMacroID())
       return;
     {
-      DiagnosticBuilder Diag =
+      const DiagnosticBuilder Diag =
           diag(InitList->getLBraceLoc(),
                "use designated initializer list to initialize %0");
-      Diag << Type << InitList->getSourceRange();
+      Diag << InitList->getType() << InitList->getSourceRange();
       for (const Stmt *InitExpr : *SyntacticInitList) {
         const auto Designator = Designators[InitExpr->getBeginLoc()];
         if (Designator && !Designator->empty())

@@ -26,9 +26,10 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Type.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Error.h"
+
+#include "LLVMDialectBytecode.h"
 
 #include <numeric>
 #include <optional>
@@ -140,6 +141,38 @@ static ParseResult parseLLVMLinkage(OpAsmParser &p, LinkageAttr &val) {
       p.getContext(),
       parseOptionalLLVMKeyword<LLVM::Linkage>(p, LLVM::Linkage::External));
   return success();
+}
+
+static ArrayAttr getLLVMAlignParamForCompressExpand(OpBuilder &builder,
+                                                    bool isExpandLoad,
+                                                    uint64_t alignment = 1) {
+  // From
+  // https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics
+  // https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics
+  //
+  //   The pointer alignment defaults to 1.
+  if (alignment == 1) {
+    return nullptr;
+  }
+
+  auto emptyDictAttr = builder.getDictionaryAttr({});
+  auto alignmentAttr = builder.getI64IntegerAttr(alignment);
+  auto namedAttr =
+      builder.getNamedAttr(LLVMDialect::getAlignAttrName(), alignmentAttr);
+  SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
+  auto alignDictAttr = builder.getDictionaryAttr(attrs);
+  // From
+  // https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics
+  // https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics
+  //
+  //   The align parameter attribute can be provided for [expandload]'s first
+  //   argument. The align parameter attribute can be provided for
+  //   [compressstore]'s second argument.
+  int pos = isExpandLoad ? 0 : 1;
+  return pos == 0 ? builder.getArrayAttr(
+                        {alignDictAttr, emptyDictAttr, emptyDictAttr})
+                  : builder.getArrayAttr(
+                        {emptyDictAttr, alignDictAttr, emptyDictAttr});
 }
 
 //===----------------------------------------------------------------------===//
@@ -607,8 +640,6 @@ SuccessorOperands SwitchOp::getSuccessorOperands(unsigned index) {
 // Code for LLVM::GEPOp.
 //===----------------------------------------------------------------------===//
 
-constexpr int32_t GEPOp::kDynamicIndex;
-
 GEPIndicesAdaptor<ValueRange> GEPOp::getIndices() {
   return GEPIndicesAdaptor<ValueRange>(getRawConstantIndicesAttr(),
                                        getDynamicIndices());
@@ -665,7 +696,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
                        return structType.getBody()[memberIndex];
                      return nullptr;
                    })
-                   .Default(Type(nullptr));
+                   .Default(nullptr);
   }
 }
 
@@ -822,8 +853,8 @@ void LoadOp::getEffects(
 /// Returns true if the given type is supported by atomic operations. All
 /// integer, float, and pointer types with a power-of-two bitsize and a minimal
 /// size of 8 bits are supported.
-static bool isTypeCompatibleWithAtomicOp(Type type,
-                                         const DataLayout &dataLayout) {
+bool LLVM::isTypeCompatibleWithAtomicOp(Type type,
+                                        const DataLayout &dataLayout) {
   if (!isa<IntegerType, LLVMPointerType>(type))
     if (!isCompatibleFloatingPointType(type))
       return false;
@@ -837,8 +868,9 @@ static bool isTypeCompatibleWithAtomicOp(Type type,
 
 /// Verifies the attributes and the type of atomic memory access operations.
 template <typename OpTy>
-LogicalResult verifyAtomicMemOp(OpTy memOp, Type valueType,
-                                ArrayRef<AtomicOrdering> unsupportedOrderings) {
+static LogicalResult
+verifyAtomicMemOp(OpTy memOp, Type valueType,
+                  ArrayRef<AtomicOrdering> unsupportedOrderings) {
   if (memOp.getOrdering() != AtomicOrdering::not_atomic) {
     DataLayout dataLayout = DataLayout::closest(memOp);
     if (!isTypeCompatibleWithAtomicOp(valueType, dataLayout))
@@ -1088,7 +1120,7 @@ static LogicalResult verifyCallOpDebugInfo(CallOp callOp, LLVMFuncOp callee) {
 /// Verify that the parameter and return types of the variadic callee type match
 /// the `callOp` argument and result types.
 template <typename OpTy>
-LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
+static LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
   std::optional<LLVMFunctionType> varCalleeType = callOp.getVarCalleeType();
   if (!varCalleeType)
     return success();
@@ -1335,7 +1367,7 @@ static ParseResult parseCallTypeAndResolveOperands(
   if (parser.resolveOperands(operands, types, parser.getNameLoc(),
                              result.operands))
     return failure();
-  if (resTypes.size() != 0)
+  if (!resTypes.empty())
     result.addTypes(resTypes);
 
   return success();
@@ -2501,7 +2533,7 @@ LogicalResult GlobalOp::verifyRegions() {
 // LLVM::GlobalCtorsOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult checkGlobalXtorData(Operation *op, ArrayAttr data) {
+static LogicalResult checkGlobalXtorData(Operation *op, ArrayAttr data) {
   if (data.empty())
     return success();
 
@@ -2707,7 +2739,7 @@ LogicalResult IFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   while (alias) {
     Block &initBlock = alias.getInitializerBlock();
     auto returnOp = cast<ReturnOp>(initBlock.getTerminator());
-    auto addrOp = dyn_cast<AddressOfOp>(returnOp.getArg().getDefiningOp());
+    auto addrOp = returnOp.getArg().getDefiningOp<AddressOfOp>();
     // FIXME: This is a best effort solution. The AliasOp body might be more
     // complex and in that case we bail out with success. To completely match
     // the LLVM IR logic it would be necessary to implement proper alias and
@@ -2790,6 +2822,20 @@ LogicalResult ShuffleVectorOp::verify() {
       llvm::any_of(getMask(), [](int32_t v) { return v != 0; }))
     return emitOpError("expected a splat operation for scalable vectors");
   return success();
+}
+
+// Folding for shufflevector op when v1 is single element 1D vector
+// and the mask is a single zero. OpFoldResult will be v1 in this case.
+OpFoldResult ShuffleVectorOp::fold(FoldAdaptor adaptor) {
+  // Check if operand 0 is a single element vector.
+  auto vecType = llvm::dyn_cast<VectorType>(getV1().getType());
+  if (!vecType || vecType.getRank() != 1 || vecType.getNumElements() != 1)
+    return {};
+  // Check if the mask is a single zero.
+  // Note: The mask is guaranteed to be non-empty.
+  if (getMask().size() != 1 || getMask()[0] != 0)
+    return {};
+  return getV1();
 }
 
 //===----------------------------------------------------------------------===//
@@ -4054,6 +4100,25 @@ printIndirectBrOpSucessors(OpAsmPrinter &p, IndirectBrOp op, Type flagType,
 }
 
 //===----------------------------------------------------------------------===//
+// SincosOp (intrinsic)
+//===----------------------------------------------------------------------===//
+
+LogicalResult LLVM::SincosOp::verify() {
+  auto operandType = getOperand().getType();
+  auto resultType = getResult().getType();
+  auto resultStructType =
+      mlir::dyn_cast<mlir::LLVM::LLVMStructType>(resultType);
+  if (!resultStructType || resultStructType.getBody().size() != 2 ||
+      resultStructType.getBody()[0] != operandType ||
+      resultStructType.getBody()[1] != operandType) {
+    return emitOpError("expected result type to be an homogeneous struct with "
+                       "two elements matching the operand type, but got ")
+           << resultType;
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // AssumeOp (intrinsic)
 //===----------------------------------------------------------------------===//
 
@@ -4064,28 +4129,9 @@ void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
 }
 
 void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
-                           Value cond,
-                           ArrayRef<llvm::OperandBundleDefT<Value>> opBundles) {
-  SmallVector<ValueRange> opBundleOperands;
-  SmallVector<Attribute> opBundleTags;
-  opBundleOperands.reserve(opBundles.size());
-  opBundleTags.reserve(opBundles.size());
-
-  for (const llvm::OperandBundleDefT<Value> &bundle : opBundles) {
-    opBundleOperands.emplace_back(bundle.inputs());
-    opBundleTags.push_back(
-        StringAttr::get(builder.getContext(), bundle.getTag()));
-  }
-
-  auto opBundleTagsAttr = ArrayAttr::get(builder.getContext(), opBundleTags);
-  return build(builder, state, cond, opBundleOperands, opBundleTagsAttr);
-}
-
-void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
                            Value cond, llvm::StringRef tag, ValueRange args) {
-  llvm::OperandBundleDefT<Value> opBundle(
-      tag.str(), SmallVector<Value>(args.begin(), args.end()));
-  return build(builder, state, cond, opBundle);
+  return build(builder, state, cond, ArrayRef<ValueRange>(args),
+               builder.getStrArrayAttr(tag));
 }
 
 void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
@@ -4137,6 +4183,32 @@ LogicalResult LLVM::masked_scatter::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// masked_expandload (intrinsic)
+//===----------------------------------------------------------------------===//
+
+void LLVM::masked_expandload::build(OpBuilder &builder, OperationState &state,
+                                    mlir::TypeRange resTys, Value ptr,
+                                    Value mask, Value passthru,
+                                    uint64_t align) {
+  ArrayAttr argAttrs = getLLVMAlignParamForCompressExpand(builder, true, align);
+  build(builder, state, resTys, ptr, mask, passthru, /*arg_attrs=*/argAttrs,
+        /*res_attrs=*/nullptr);
+}
+
+//===----------------------------------------------------------------------===//
+// masked_compressstore (intrinsic)
+//===----------------------------------------------------------------------===//
+
+void LLVM::masked_compressstore::build(OpBuilder &builder,
+                                       OperationState &state, Value value,
+                                       Value ptr, Value mask, uint64_t align) {
+  ArrayAttr argAttrs =
+      getLLVMAlignParamForCompressExpand(builder, false, align);
+  build(builder, state, value, ptr, mask, /*arg_attrs=*/argAttrs,
+        /*res_attrs=*/nullptr);
+}
+
+//===----------------------------------------------------------------------===//
 // InlineAsmOp
 //===----------------------------------------------------------------------===//
 
@@ -4149,6 +4221,34 @@ LogicalResult InlineAsmOp::verify() {
         "tail call kind 'musttail' is not supported by this operation");
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// UDivOp
+//===----------------------------------------------------------------------===//
+Speculation::Speculatability UDivOp::getSpeculatability() {
+  // X / 0 => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroU()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
+// SDivOp
+//===----------------------------------------------------------------------===//
+Speculation::Speculatability SDivOp::getSpeculatability() {
+  // This function conservatively assumes that all signed division by -1 are
+  // not speculatable.
+  // X / 0 => UB
+  // INT_MIN / -1 => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4179,6 +4279,7 @@ void LLVMDialect::initialize() {
   // Support unknown operations because not all LLVM operations are registered.
   allowUnknownOperations();
   declarePromisedInterface<DialectInlinerInterface, LLVMDialect>();
+  detail::addBytecodeInterface(this);
 }
 
 #define GET_OP_CLASSES

@@ -41,6 +41,11 @@
 // OpenBSD has no indirect syscalls
 #  define _LIBCPP_FUTEX(...) futex(__VA_ARGS__)
 
+#elif defined(_WIN32)
+
+#  include <memory>
+#  include <windows.h>
+
 #else // <- Add other operating systems here
 
 // Baseline needs no new headers
@@ -101,6 +106,70 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
   _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAKE, __notify_one ? 1 : INT_MAX, nullptr, nullptr);
 }
 
+#elif defined(_WIN32)
+
+static void* win32_get_synch_api_function(const char* function_name) {
+  // Attempt to load the API set. Note that as per the Microsoft STL implementation, we assume this API is already
+  // loaded and accessible. While this isn't explicitly guaranteed by publicly available Win32 API documentation, it is
+  // true in practice, and may be guaranteed by internal documentation not released publicly. In any case the fact that
+  // the Microsoft STL made this assumption is reasonable basis to say that we can too. The alternative to this would be
+  // to use LoadLibrary, but then leak the module handle. We can't call FreeLibrary, as this would have to be triggered
+  // by a global static destructor, which would hang off DllMain, and calling FreeLibrary from DllMain is explicitly
+  // mentioned as not being allowed:
+  // https://learn.microsoft.com/en-us/windows/win32/dlls/dllmain
+  // Given the range of bad options here, we have chosen to mirror what Microsoft did, as it seems fair to assume that
+  // Microsoft will guarantee compatibility for us, as we are exposed to the same conditions as all existing Windows
+  // apps using the Microsoft STL VS2015/2017/2019/2022 runtimes, where Windows 7 support has not been excluded at
+  // compile time.
+  static auto module_handle = GetModuleHandleW(L"api-ms-win-core-synch-l1-2-0.dll");
+  if (module_handle == nullptr) {
+    return nullptr;
+  }
+
+  // Attempt to locate the function in the API and return the result to the caller. Note that the NULL return from this
+  // method is documented as being interchangeable with nullptr.
+  // https://devblogs.microsoft.com/oldnewthing/20180307-00/?p=98175
+  return reinterpret_cast<void*>(GetProcAddress(module_handle, function_name));
+}
+
+static void
+__libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
+  // WaitOnAddress was added in Windows 8 (build 9200)
+  static auto wait_on_address = reinterpret_cast<BOOL(WINAPI*)(volatile void*, PVOID, SIZE_T, DWORD)>(
+      win32_get_synch_api_function("WaitOnAddress"));
+  if (wait_on_address != nullptr) {
+    wait_on_address(const_cast<__cxx_atomic_contention_t*>(__ptr), &__val, sizeof(__val), INFINITE);
+  } else {
+    __libcpp_thread_poll_with_backoff(
+        [=]() -> bool { return !__cxx_nonatomic_compare_equal(__cxx_atomic_load(__ptr, memory_order_relaxed), __val); },
+        __libcpp_timed_backoff_policy());
+  }
+}
+
+static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
+  if (__notify_one) {
+    // WakeByAddressSingle was added in Windows 8 (build 9200)
+    static auto wake_by_address_single =
+        reinterpret_cast<void(WINAPI*)(PVOID)>(win32_get_synch_api_function("WakeByAddressSingle"));
+    if (wake_by_address_single != nullptr) {
+      wake_by_address_single(const_cast<__cxx_atomic_contention_t*>(__ptr));
+    } else {
+      // The fallback implementation of waking does nothing, as the fallback wait implementation just does polling, so
+      // there's nothing to do here.
+    }
+  } else {
+    // WakeByAddressAll was added in Windows 8 (build 9200)
+    static auto wake_by_address_all =
+        reinterpret_cast<void(WINAPI*)(PVOID)>(win32_get_synch_api_function("WakeByAddressAll"));
+    if (wake_by_address_all != nullptr) {
+      wake_by_address_all(const_cast<__cxx_atomic_contention_t*>(__ptr));
+    } else {
+      // The fallback implementation of waking does nothing, as the fallback wait implementation just does polling, so
+      // there's nothing to do here.
+    }
+  }
+}
+
 #else // <- Add other operating systems here
 
 // Baseline is just a timed backoff
@@ -152,7 +221,7 @@ static void __libcpp_contention_wait(__cxx_atomic_contention_t volatile* __conte
                                      __cxx_atomic_contention_t const volatile* __platform_state,
                                      __cxx_contention_t __old_value) {
   __cxx_atomic_fetch_add(__contention_state, __cxx_contention_t(1), memory_order_relaxed);
-  // https://github.com/llvm/llvm-project/issues/109290
+  // https://llvm.org/PR109290
   // There are no platform guarantees of a memory barrier in the platform wait implementation
   __cxx_atomic_thread_fence(memory_order_seq_cst);
   // We sleep as long as the monitored value hasn't changed.

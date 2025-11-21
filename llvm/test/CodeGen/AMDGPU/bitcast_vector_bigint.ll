@@ -201,11 +201,6 @@ define <10 x i16> @bitcast_i160_to_v10i16(i160 %int) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.l
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v2.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_bfi_b32 v0, 0xffff, v5, v0
-; GFX12-TRUE16-NEXT:    v_bfi_b32 v2, 0xffff, v6, v2
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: bitcast_i160_to_v10i16:

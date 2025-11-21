@@ -752,16 +752,25 @@ TEST_F(RtsanOpenedFileTest, RewindDieWhenRealtime) {
 }
 #endif
 
-TEST(TestRtsanInterceptors, IoctlDiesWhenRealtime) {
-  auto Func = []() { ioctl(0, FIONREAD); };
+TEST_F(RtsanOpenedFileTest, IoctlDiesWhenRealtime) {
+  auto Func = [this]() {
+    int arg{};
+    ioctl(GetOpenFd(), FIONREAD, &arg);
+    EXPECT_THAT(arg, Ge(0));
+  };
   ExpectRealtimeDeath(Func, "ioctl");
   ExpectNonRealtimeSurvival(Func);
 }
 
+TEST_F(RtsanOpenedFileTest, IoctlBehavesWithoutOutputArg) {
+  const int result = ioctl(GetOpenFd(), FIONCLEX);
+  EXPECT_THAT(result, Ne(-1));
+}
+
 TEST_F(RtsanOpenedFileTest, IoctlBehavesWithOutputArg) {
   int arg{};
-  ioctl(GetOpenFd(), FIONREAD, &arg);
-
+  const int result = ioctl(GetOpenFd(), FIONREAD, &arg);
+  ASSERT_THAT(result, Ne(-1));
   EXPECT_THAT(arg, Ge(0));
 }
 
@@ -1231,6 +1240,24 @@ TEST(TestRtsanInterceptors, SpinLockLockDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 #endif
+
+TEST(TestRtsanInterceptors, PthreadCondInitDiesWhenRealtime) {
+  pthread_cond_t cond{};
+  auto Func = [&cond]() { pthread_cond_init(&cond, nullptr); };
+  ExpectRealtimeDeath(Func, "pthread_cond_init");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, PthreadCondDestroyDiesWhenRealtime) {
+  pthread_cond_t cond{};
+  ASSERT_EQ(0, pthread_cond_init(&cond, nullptr));
+
+  auto Func = [&cond]() { pthread_cond_destroy(&cond); };
+  ExpectRealtimeDeath(Func, "pthread_cond_destroy");
+  ExpectNonRealtimeSurvival(Func);
+
+  pthread_cond_destroy(&cond);
+}
 
 TEST(TestRtsanInterceptors, PthreadCondSignalDiesWhenRealtime) {
   pthread_cond_t cond{};

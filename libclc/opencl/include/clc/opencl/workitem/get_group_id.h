@@ -11,6 +11,6 @@
 
 #include <clc/opencl/opencl-base.h>
 
-_CLC_DECL _CLC_OVERLOAD size_t get_group_id(uint dim);
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL size_t get_group_id(uint dim);
 
 #endif // __CLC_OPENCL_WORKITEM_GET_GROUP_ID_H__

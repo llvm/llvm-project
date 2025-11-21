@@ -1190,7 +1190,12 @@ Error LVCodeViewReader::loadTargetInfo(const ObjectFile &Obj) {
     FeaturesValue = SubtargetFeatures();
   }
   FeaturesValue = *Features;
-  return loadGenericTargetInfo(TT.str(), FeaturesValue.getString());
+
+  StringRef CPU;
+  if (auto OptCPU = Obj.tryGetCPUName())
+    CPU = *OptCPU;
+
+  return loadGenericTargetInfo(TT.str(), FeaturesValue.getString(), CPU);
 }
 
 Error LVCodeViewReader::loadTargetInfo(const PDBFile &Pdb) {
@@ -1200,8 +1205,9 @@ Error LVCodeViewReader::loadTargetInfo(const PDBFile &Pdb) {
   TT.setOS(Triple::Win32);
 
   StringRef TheFeature = "";
+  StringRef TheCPU = "";
 
-  return loadGenericTargetInfo(TT.str(), TheFeature);
+  return loadGenericTargetInfo(TT.str(), TheFeature, TheCPU);
 }
 
 std::string LVCodeViewReader::getRegisterName(LVSmall Opcode,

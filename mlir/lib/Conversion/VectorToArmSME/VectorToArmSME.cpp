@@ -44,7 +44,7 @@ namespace {
 ///   arm_sme.tile_load ... layout<vertical>
 struct TransferReadToArmSMELowering
     : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp transferReadOp,
                                 PatternRewriter &rewriter) const final {
@@ -120,7 +120,7 @@ struct TransferReadToArmSMELowering
 ///     : memref<?x?xi8>, vector<[16]x[16]xi8>
 struct TransferWriteToArmSMELowering
     : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const final {
@@ -157,7 +157,7 @@ struct TransferWriteToArmSMELowering
 
 /// Conversion pattern for vector.load.
 struct VectorLoadToArmSMELowering : public OpRewritePattern<vector::LoadOp> {
-  using OpRewritePattern<vector::LoadOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::LoadOp load,
                                 PatternRewriter &rewriter) const override {
@@ -173,7 +173,7 @@ struct VectorLoadToArmSMELowering : public OpRewritePattern<vector::LoadOp> {
 
 /// Conversion pattern for vector.store.
 struct VectorStoreToArmSMELowering : public OpRewritePattern<vector::StoreOp> {
-  using OpRewritePattern<vector::StoreOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::StoreOp store,
                                 PatternRewriter &rewriter) const override {
@@ -208,7 +208,7 @@ struct VectorStoreToArmSMELowering : public OpRewritePattern<vector::StoreOp> {
 /// Supports scalar, 0-d vector, and 1-d vector broadcasts.
 struct BroadcastOpToArmSMELowering
     : public OpRewritePattern<vector::BroadcastOp> {
-  using OpRewritePattern<vector::BroadcastOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::BroadcastOp broadcastOp,
                                 PatternRewriter &rewriter) const final {
@@ -255,66 +255,6 @@ struct BroadcastOpToArmSMELowering
   }
 };
 
-/// Conversion pattern for vector.splat.
-///
-/// Example:
-///
-///   %splat_to_tile = vector.splat %src : i32 to vector<[4]x[4]xi32>
-///
-/// is converted to:
-///
-///   %broadcast_to_1d = vector.broadcast %src : i32 to vector<[4]xi32>
-///   %broadcast_to_tile = scf.for %tile_slice_index = %c0 to %num_tile_slices
-///       step %c1 iter_args(%iter_tile = %init_tile) -> (vector<[4]x[4]xi32>)
-///   {
-///     %tile_update = arm_sme.insert_tile_slice
-///        %broadcast_to_1d, %iter_tile[%tile_slice_index] :
-///        vector<[4]xi32> into vector<[4]x[4]xi32>
-///     scf.yield %tile_update : vector<[4]x[4]xi32>
-///   }
-///
-/// This is identical to vector.broadcast of a scalar.
-struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
-  using OpRewritePattern<vector::SplatOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::SplatOp splatOp,
-                                PatternRewriter &rewriter) const final {
-    auto tileType = splatOp.getResult().getType();
-    if (!tileType || !arm_sme::isValidSMETileVectorType(tileType))
-      return failure();
-
-    auto loc = splatOp.getLoc();
-    auto srcType = splatOp.getOperand().getType();
-
-    assert(srcType.isIntOrFloat() && "Invalid source type for vector.splat");
-    // Avoid unused-variable warning when building without assertions.
-    (void)srcType;
-
-    // First, broadcast the scalar to a 1-d vector.
-    VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
-    Value broadcastOp1D = vector::BroadcastOp::create(
-        rewriter, loc, tileSliceType, splatOp.getInput());
-
-    auto initTile = arm_sme::GetTileOp::create(rewriter, loc, tileType);
-
-    auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
-                            Value currentTile) {
-      auto nextTile = arm_sme::InsertTileSliceOp::create(
-          b, loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
-      return nextTile.getResult();
-    };
-
-    // Next, create a loop over ZA tile slices and "move" the generated 1-d
-    // vector to each slice.
-    auto forOp =
-        createLoopOverTileSlices(rewriter, loc, initTile, makeLoopBody);
-
-    rewriter.replaceOp(splatOp, forOp.getResult(0));
-
-    return success();
-  }
-};
-
 /// Conversion pattern for vector.transpose.
 ///
 /// Stores the input tile to memory and reloads vertically.
@@ -339,7 +279,7 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
 /// implementation, perhaps with tile <-> vector (MOVA) ops.
 struct TransposeOpToArmSMELowering
     : public OpRewritePattern<vector::TransposeOp> {
-  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const final {
@@ -432,7 +372,7 @@ struct TransposeOpToArmSMELowering
 struct VectorOuterProductToArmSMELowering
     : public OpRewritePattern<vector::OuterProductOp> {
 
-  using OpRewritePattern<vector::OuterProductOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::OuterProductOp outerProductOp,
                                 PatternRewriter &rewriter) const override {
@@ -511,7 +451,7 @@ struct VectorOuterProductToArmSMELowering
 /// ```
 struct VectorExtractToArmSMELowering
     : public OpRewritePattern<vector::ExtractOp> {
-  using OpRewritePattern<vector::ExtractOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
@@ -522,7 +462,7 @@ struct VectorExtractToArmSMELowering
     auto loc = extractOp.getLoc();
     auto position = extractOp.getMixedPosition();
 
-    Value sourceVector = extractOp.getVector();
+    Value sourceVector = extractOp.getSource();
 
     // Extract entire vector. Should be handled by folder, but just to be safe.
     if (position.empty()) {
@@ -567,7 +507,7 @@ struct VectorExtractToArmSMELowering
 /// ```
 struct VectorInsertToArmSMELowering
     : public OpRewritePattern<vector::InsertOp> {
-  using OpRewritePattern<vector::InsertOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::InsertOp insertOp,
                                 PatternRewriter &rewriter) const override {
@@ -628,7 +568,7 @@ struct VectorInsertToArmSMELowering
 ///  }
 ///  ```
 struct VectorPrintToArmSMELowering : public OpRewritePattern<vector::PrintOp> {
-  using OpRewritePattern<vector::PrintOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::PrintOp printOp,
                                 PatternRewriter &rewriter) const override {
@@ -683,7 +623,7 @@ struct VectorPrintToArmSMELowering : public OpRewritePattern<vector::PrintOp> {
 ///  ```
 struct FoldTransferWriteOfExtractTileSlice
     : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const final {
@@ -739,7 +679,7 @@ struct FoldTransferWriteOfExtractTileSlice
 /// ```
 struct ExtractFromCreateMaskToPselLowering
     : public OpRewritePattern<vector::ExtractOp> {
-  using OpRewritePattern<vector::ExtractOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
@@ -752,7 +692,7 @@ struct ExtractFromCreateMaskToPselLowering
       return rewriter.notifyMatchFailure(extractOp, "result not VectorType");
 
     auto createMaskOp =
-        extractOp.getVector().getDefiningOp<vector::CreateMaskOp>();
+        extractOp.getSource().getDefiningOp<vector::CreateMaskOp>();
     if (!createMaskOp)
       return rewriter.notifyMatchFailure(extractOp, "source not CreateMaskOp");
 
@@ -795,10 +735,10 @@ struct ExtractFromCreateMaskToPselLowering
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
-  patterns.add<BroadcastOpToArmSMELowering, SplatOpToArmSMELowering,
-               TransferReadToArmSMELowering, TransferWriteToArmSMELowering,
-               TransposeOpToArmSMELowering, VectorLoadToArmSMELowering,
-               VectorStoreToArmSMELowering, VectorOuterProductToArmSMELowering,
+  patterns.add<BroadcastOpToArmSMELowering, TransferReadToArmSMELowering,
+               TransferWriteToArmSMELowering, TransposeOpToArmSMELowering,
+               VectorLoadToArmSMELowering, VectorStoreToArmSMELowering,
+               VectorOuterProductToArmSMELowering,
                VectorExtractToArmSMELowering, VectorInsertToArmSMELowering,
                VectorPrintToArmSMELowering, FoldTransferWriteOfExtractTileSlice,
                ExtractFromCreateMaskToPselLowering>(&ctx);

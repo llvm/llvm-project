@@ -2222,11 +2222,11 @@ def t2MOVr : T2sTwoReg<(outs GPRnopc:$Rd), (ins GPRnopc:$Rm), IIC_iMOVr,
   let Inst{7-4} = 0b0000;
 }
 def : t2InstAlias<"mov${p}.w $Rd, $Rm", (t2MOVr GPRnopc:$Rd, GPRnopc:$Rm,
-                                                pred:$p, zero_reg)>;
+                                                pred:$p, (cc_out zero_reg))>;
 def : t2InstAlias<"movs${p}.w $Rd, $Rm", (t2MOVr GPRnopc:$Rd, GPRnopc:$Rm,
-                                                 pred:$p, CPSR)>;
+                                                 pred:$p, (cc_out CPSR))>;
 def : t2InstAlias<"movs${p} $Rd, $Rm", (t2MOVr GPRnopc:$Rd, GPRnopc:$Rm,
-                                               pred:$p, CPSR)>;
+                                               pred:$p, (cc_out CPSR))>;
 
 // AddedComplexity to ensure isel tries t2MOVi before t2MOVi16.
 let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1,
@@ -2244,14 +2244,14 @@ def t2MOVi : T2sOneRegImm<(outs rGPR:$Rd), (ins t2_so_imm:$imm), IIC_iMOVi,
 // cc_out is handled as part of the explicit mnemonic in the parser for 'mov'.
 // Use aliases to get that to play nice here.
 def : t2InstAlias<"movs${p}.w $Rd, $imm", (t2MOVi rGPR:$Rd, t2_so_imm:$imm,
-                                                pred:$p, CPSR)>;
+                                                pred:$p, (cc_out CPSR))>;
 def : t2InstAlias<"movs${p} $Rd, $imm", (t2MOVi rGPR:$Rd, t2_so_imm:$imm,
-                                                pred:$p, CPSR)>;
+                                                pred:$p, (cc_out CPSR))>;
 
 def : t2InstAlias<"mov${p}.w $Rd, $imm", (t2MOVi rGPR:$Rd, t2_so_imm:$imm,
-                                                 pred:$p, zero_reg)>;
+                                                 pred:$p, (cc_out zero_reg))>;
 def : t2InstAlias<"mov${p} $Rd, $imm", (t2MOVi rGPR:$Rd, t2_so_imm:$imm,
-                                               pred:$p, zero_reg)>;
+                                               pred:$p, (cc_out zero_reg))>;
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in
 def t2MOVi16 : T2I<(outs rGPR:$Rd), (ins imm0_65535_expr:$imm), IIC_iMOVi,
@@ -4393,13 +4393,6 @@ def t2LDRpci_pic : PseudoInst<(outs rGPR:$dst), (ins i32imm:$addr, pclabel:$cp),
                                            imm:$cp))]>,
                Requires<[IsThumb2]>;
 
-// Pseudo instruction that combines movs + predicated rsbmi
-// to implement integer ABS
-let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
-def t2ABS : PseudoInst<(outs rGPR:$dst), (ins rGPR:$src),
-                       NoItinerary, []>, Requires<[IsThumb2]>;
-}
-
 //===----------------------------------------------------------------------===//
 // Coprocessor load/store -- for disassembly only
 //
@@ -5122,8 +5115,10 @@ def : InstAlias<"isb${p}.w", (t2ISB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 
 // Non-predicable aliases of a predicable DSB: the predicate is (14, zero_reg) where
 // 14 = AL (always execute) and zero_reg = "instruction doesn't read the CPSR".
-def : InstAlias<"ssbb", (t2DSB 0x0, 14, zero_reg), 1>, Requires<[HasDB, IsThumb2]>;
-def : InstAlias<"pssbb", (t2DSB 0x4, 14, zero_reg), 1>, Requires<[HasDB, IsThumb2]>;
+def : InstAlias<"ssbb", (t2DSB 0x0, (pred 14, zero_reg)), 1>,
+      Requires<[HasDB, IsThumb2]>;
+def : InstAlias<"pssbb", (t2DSB 0x4, (pred 14, zero_reg)), 1>,
+      Requires<[HasDB, IsThumb2]>;
 
 // Armv8-R 'Data Full Barrier'
 def : InstAlias<"dfb${p}", (t2DSB 0xc, pred:$p), 1>, Requires<[HasDFB]>;
@@ -5340,7 +5335,8 @@ def : t2InstAlias<"sxth${p} $Rd, $Rm$rot",
 // "mov Rd, t2_so_imm_not" can be handled via "mvn" in assembly, just like
 // for isel.
 def : t2InstSubst<"mov${p} $Rd, $imm",
-                  (t2MVNi rGPR:$Rd, t2_so_imm_not:$imm, pred:$p, zero_reg)>;
+                  (t2MVNi rGPR:$Rd, t2_so_imm_not:$imm, pred:$p,
+                          (cc_out zero_reg))>;
 def : t2InstSubst<"mvn${s}${p} $Rd, $imm",
                   (t2MOVi rGPR:$Rd, t2_so_imm_not:$imm, pred:$p, s_cc_out:$s)>;
 // Same for AND <--> BIC
@@ -5585,6 +5581,24 @@ class t2LOL<dag oops, dag iops, string asm, string ops>
   let Predicates = [IsThumb2, HasV8_1MMainline, HasLOB];
 }
 
+// Setup for the iteration count of a WLS. See t2WhileLoopSetup.
+def arm_wlssetup
+    : SDNode<"ARMISD::WLSSETUP",
+             SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<1, 0>]>>;
+
+// Low-overhead loops, While Loop Start branch. See t2WhileLoopStart
+def arm_wls : SDNode<"ARMISD::WLS",
+                     SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisVT<1, OtherVT>]>,
+                     [SDNPHasChain]>;
+
+// Really a part of LE, performs the sub
+def arm_loop_dec : SDNode<"ARMISD::LOOP_DEC", SDTIntBinOp, [SDNPHasChain]>;
+
+// Low-overhead loops, Loop End
+def arm_le : SDNode<"ARMISD::LE",
+                    SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisVT<1, OtherVT>]>,
+                    [SDNPHasChain]>;
+
 let isNotDuplicable = 1 in {
 def t2WLS : t2LOL<(outs GPRlr:$LR),
                   (ins rGPR:$Rn, wlslabel_u11:$label),
@@ -5655,15 +5669,17 @@ def t2DoLoopStartTP :
 // valid after reg alloc, as it should be lowered during MVETPAndVPTOptimisations
 // into a t2WhileLoopStartLR (or expanded).
 def t2WhileLoopSetup :
-  t2PseudoInst<(outs GPRlr:$lr), (ins rGPR:$tc), 4, IIC_Br, []>;
+    t2PseudoInst<(outs GPRlr:$lr), (ins rGPR:$tc), 4, IIC_Br,
+                 [(set i32:$lr, (arm_wlssetup i32:$tc))]>;
 
 // A pseudo to represent the decrement in a low overhead loop. A t2LoopDec and
 // t2LoopEnd together represent a LE instruction. Ideally these are converted
 // to a t2LoopEndDec which is lowered as a single instruction.
 let hasSideEffects = 0 in
 def t2LoopDec :
-  t2PseudoInst<(outs GPRlr:$Rm), (ins GPRlr:$Rn, imm0_7:$size),
-               4, IIC_Br, []>, Sched<[WriteBr]>;
+    t2PseudoInst<(outs GPRlr:$Rm), (ins GPRlr:$Rn, imm0_7:$size), 4, IIC_Br,
+                 [(set i32:$Rm, (arm_loop_dec i32:$Rn, timm:$size))]>,
+    Sched<[WriteBr]>;
 
 let isBranch = 1, isTerminator = 1, hasSideEffects = 1, Defs = [CPSR] in {
 // The branch in a t2WhileLoopSetup/t2WhileLoopStart pair, eventually turned
@@ -5671,8 +5687,8 @@ let isBranch = 1, isTerminator = 1, hasSideEffects = 1, Defs = [CPSR] in {
 def t2WhileLoopStart :
     t2PseudoInst<(outs),
                  (ins GPRlr:$tc, brtarget:$target),
-                 4, IIC_Br, []>,
-                 Sched<[WriteBr]>;
+                 4, IIC_Br, [(arm_wls i32:$tc, bb:$target)]>,
+    Sched<[WriteBr]>;
 
 // WhileLoopStartLR that sets up LR and branches on zero, equivalent to WLS. It
 // is lowered in the ARMLowOverheadLoops pass providing the branches are within
@@ -5694,8 +5710,9 @@ def t2WhileLoopStartTP :
 
 // t2LoopEnd - the branch half of a t2LoopDec/t2LoopEnd pair.
 def t2LoopEnd :
-  t2PseudoInst<(outs), (ins GPRlr:$tc, brtarget:$target),
-  8, IIC_Br, []>, Sched<[WriteBr]>;
+    t2PseudoInst<(outs), (ins GPRlr:$tc, brtarget:$target),
+                 8, IIC_Br, [(arm_le i32:$tc, bb:$target)]>,
+    Sched<[WriteBr]>;
 
 // The combination of a t2LoopDec and t2LoopEnd, performing both the LR
 // decrement and branch as a single instruction. Is lowered to a LE or
@@ -5877,6 +5894,7 @@ def t2AUT    : PACBTIHintSpaceUseInst<"aut", 0b00101101> {
   let hasSideEffects = 1;
 }
 
+// Thumb function call followed by BTI instruction.
 def ARMt2CallBTI : SDNode<"ARMISD::t2CALL_BTI", SDT_ARMcall,
                    [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 

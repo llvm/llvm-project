@@ -21,7 +21,7 @@ std::basic_fstream<char, std::char_traits<wchar_t> > f;
 // expected-error-re@*:* {{static assertion failed{{.*}}traits_type::char_type must be the same type as CharT}}
 // expected-error-re@*:* {{static assertion failed{{.*}}traits_type::char_type must be the same type as CharT}}
 
-// expected-error@*:* 11 {{only virtual member functions can be marked 'override'}}
+// expected-error@*:* 13 {{only virtual member functions can be marked 'override'}}
 
 // FIXME: As of commit r324062 Clang incorrectly generates a diagnostic about mismatching
 // exception specifications for types which are already invalid for one reason or another.

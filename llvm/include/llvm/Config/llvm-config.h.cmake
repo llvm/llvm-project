@@ -101,6 +101,9 @@
 /* Define if LLVM is using tflite */
 #cmakedefine LLVM_HAVE_TFLITE
 
+/* Define if we want to check profile consistency in lit tests */
+#cmakedefine LLVM_ENABLE_PROFCHECK
+
 /* Define to 1 if you have the <sysexits.h> header file. */
 #cmakedefine HAVE_SYSEXITS_H ${HAVE_SYSEXITS_H}
 
@@ -142,5 +145,8 @@
 /* Define to 1 to enable expensive tracking of the origin of debug location
    coverage bugs, and to 0 otherwise. */
 #cmakedefine01 LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+
+/* Define to 1 to enable LLVM OnDisk Content Addressable Storage */
+#cmakedefine01 LLVM_ENABLE_ONDISK_CAS
 
 #endif

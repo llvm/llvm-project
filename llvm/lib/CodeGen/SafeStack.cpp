@@ -69,14 +69,11 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::safestack;
 
 #define DEBUG_TYPE "safe-stack"
-
-namespace llvm {
 
 STATISTIC(NumFunctions, "Total number of functions");
 STATISTIC(NumUnsafeStackFunctions, "Number of functions with unsafe stack");
@@ -88,8 +85,6 @@ STATISTIC(NumUnsafeStaticAllocas, "Number of unsafe static allocas");
 STATISTIC(NumUnsafeDynamicAllocas, "Number of unsafe dynamic allocas");
 STATISTIC(NumUnsafeByValArguments, "Number of unsafe byval arguments");
 STATISTIC(NumUnsafeStackRestorePoints, "Number of setjmps and landingpads");
-
-} // namespace llvm
 
 /// Use __safestack_pointer_address even if the platform has a faster way of
 /// access safe stack pointer.
@@ -200,8 +195,6 @@ public:
   bool run();
 };
 
-constexpr Align SafeStack::StackAlignment;
-
 uint64_t SafeStack::getStaticAllocaAllocationSize(const AllocaInst* AI) {
   uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
   if (AI->isArrayAllocation()) {
@@ -262,7 +255,7 @@ bool SafeStack::IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
       return true;
   }
 
-  const auto *Len = dyn_cast<ConstantInt>(MI->getLength());
+  auto Len = MI->getLengthInBytes();
   // Non-constant size => unsafe. FIXME: try SCEV getRange.
   if (!Len) return false;
   return IsAccessSafe(U, Len->getZExtValue(), AllocaPtr, AllocaSize);

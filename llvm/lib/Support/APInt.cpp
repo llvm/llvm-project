@@ -15,10 +15,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1377,7 +1377,7 @@ static void KnuthDiv(uint32_t *u, uint32_t *v, uint32_t *q, uint32_t* r,
     // the true value, and a "borrow" to the left should be remembered.
     int64_t borrow = 0;
     for (unsigned i = 0; i < n; ++i) {
-      uint64_t p = uint64_t(qp) * uint64_t(v[i]);
+      uint64_t p = qp * uint64_t(v[i]);
       int64_t subres = int64_t(u[j+i]) - borrow - Lo_32(p);
       u[j+i] = Lo_32(subres);
       borrow = Hi_32(p) - Hi_32(subres);
@@ -3136,6 +3136,22 @@ APInt APIntOps::mulhu(const APInt &C1, const APInt &C2) {
   return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
 }
 
+APInt APIntOps::mulsExtended(const APInt &C1, const APInt &C2) {
+  assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
+  unsigned FullWidth = C1.getBitWidth() * 2;
+  APInt C1Ext = C1.sext(FullWidth);
+  APInt C2Ext = C2.sext(FullWidth);
+  return C1Ext * C2Ext;
+}
+
+APInt APIntOps::muluExtended(const APInt &C1, const APInt &C2) {
+  assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
+  unsigned FullWidth = C1.getBitWidth() * 2;
+  APInt C1Ext = C1.zext(FullWidth);
+  APInt C2Ext = C2.zext(FullWidth);
+  return C1Ext * C2Ext;
+}
+
 APInt APIntOps::pow(const APInt &X, int64_t N) {
   assert(N >= 0 && "negative exponents not supported.");
   APInt Acc = APInt(X.getBitWidth(), 1);
@@ -3152,4 +3168,42 @@ APInt APIntOps::pow(const APInt &X, int64_t N) {
     Acc *= Base;
   }
   return Acc;
+}
+
+APInt llvm::APIntOps::fshl(const APInt &Hi, const APInt &Lo,
+                           const APInt &Shift) {
+  assert(Hi.getBitWidth() == Lo.getBitWidth());
+  unsigned ShiftAmt = rotateModulo(Hi.getBitWidth(), Shift);
+  if (ShiftAmt == 0)
+    return Hi;
+  return Hi.shl(ShiftAmt) | Lo.lshr(Hi.getBitWidth() - ShiftAmt);
+}
+
+APInt llvm::APIntOps::fshr(const APInt &Hi, const APInt &Lo,
+                           const APInt &Shift) {
+  assert(Hi.getBitWidth() == Lo.getBitWidth());
+  unsigned ShiftAmt = rotateModulo(Hi.getBitWidth(), Shift);
+  if (ShiftAmt == 0)
+    return Lo;
+  return Hi.shl(Hi.getBitWidth() - ShiftAmt) | Lo.lshr(ShiftAmt);
+}
+
+APInt llvm::APIntOps::clmul(const APInt &LHS, const APInt &RHS) {
+  assert(LHS.getBitWidth() == RHS.getBitWidth());
+  unsigned BW = LHS.getBitWidth();
+  APInt Result(BW, 0);
+  for (unsigned I : seq<unsigned>(BW))
+    if (RHS[I])
+      Result ^= LHS.shl(I);
+  return Result;
+}
+
+APInt llvm::APIntOps::clmulr(const APInt &LHS, const APInt &RHS) {
+  assert(LHS.getBitWidth() == RHS.getBitWidth());
+  return clmul(LHS.reverseBits(), RHS.reverseBits()).reverseBits();
+}
+
+APInt llvm::APIntOps::clmulh(const APInt &LHS, const APInt &RHS) {
+  assert(LHS.getBitWidth() == RHS.getBitWidth());
+  return clmulr(LHS, RHS).lshr(1);
 }

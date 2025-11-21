@@ -55,12 +55,12 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 2
       - name: Get subprojects that have doc changes
         id: docs-changed-subprojects
-        uses: step-security/changed-files@3dbe17c78367e7d60f00d78ae6781a35be47b4a1 # v45.0.1
+        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47.0.0
         with:
           skip_initial_fetch: true
           base_sha: 'HEAD~1'
@@ -95,9 +95,9 @@ jobs:
             workflow:
               - '.github/workflows/docs.yml'
       - name: Setup Python env
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with:
-          python-version: '3.11'
+          python-version: '3.14'
           cache: 'pip'
           cache-dependency-path: 'llvm/docs/requirements-hashed.txt'
       - name: Install python dependencies
@@ -209,7 +209,7 @@ jobs:
           mkdir built-docs/flang
           cp -r flang-build/docs/* built-docs/flang/
       - name: Upload docs
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: docs-output
           path: built-docs/

@@ -6,16 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/libc_errno.h"
 #include "src/math/sinf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <stdint.h>
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 3
+#define FP_ASSERT ASSERT_MPFR_MATCH
+#else
+#define TOLERANCE 0
+#define FP_ASSERT ASSERT_MPFR_MATCH_ALL_ROUNDING
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcSinfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -24,16 +31,19 @@ using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcSinfTest, SpecialNumbers) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
+// When accuracy is not required, signed zeros might not be preserved.
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  EXPECT_TRUE(0.0f == LIBC_NAMESPACE::sinf(-0.0f));
+#else
   EXPECT_FP_EQ(-0.0f, LIBC_NAMESPACE::sinf(-0.0f));
   EXPECT_MATH_ERRNO(0);
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinf(inf));
   EXPECT_MATH_ERRNO(EDOM);
@@ -49,8 +59,8 @@ TEST_F(LlvmLibcSinfTest, InFloatRange) {
     float x = FPBits(v).get_val();
     if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
-    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sin, x,
-                                   LIBC_NAMESPACE::sinf(x), 0.5);
+    FP_ASSERT(mpfr::Operation::Sin, x, LIBC_NAMESPACE::sinf(x),
+              TOLERANCE + 0.5);
   }
 }
 
@@ -97,22 +107,20 @@ TEST_F(LlvmLibcSinfTest, SpecificBitPatterns) {
 
   for (int i = 0; i < N; ++i) {
     float x = FPBits(INPUTS[i]).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sin, x,
-                                   LIBC_NAMESPACE::sinf(x), 0.5);
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sin, -x,
-                                   LIBC_NAMESPACE::sinf(-x), 0.5);
+    FP_ASSERT(mpfr::Operation::Sin, x, LIBC_NAMESPACE::sinf(x),
+              TOLERANCE + 0.5);
+    FP_ASSERT(mpfr::Operation::Sin, -x, LIBC_NAMESPACE::sinf(-x),
+              TOLERANCE + 0.5);
   }
 }
 
 // For small values, sin(x) is x.
 TEST_F(LlvmLibcSinfTest, SmallValues) {
   float x = FPBits(0x1780'0000U).get_val();
-  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sin, x,
-                                 LIBC_NAMESPACE::sinf(x), 0.5);
+  FP_ASSERT(mpfr::Operation::Sin, x, LIBC_NAMESPACE::sinf(x), 0.5);
 
   x = FPBits(0x0040'0000U).get_val();
-  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sin, x,
-                                 LIBC_NAMESPACE::sinf(x), 0.5);
+  FP_ASSERT(mpfr::Operation::Sin, x, LIBC_NAMESPACE::sinf(x), 0.5);
 }
 
 // SDCOMP-26094: check sinf in the cases for which the range reducer
@@ -120,7 +128,7 @@ TEST_F(LlvmLibcSinfTest, SmallValues) {
 TEST_F(LlvmLibcSinfTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {
     float x = FPBits((v)).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sin, x,
-                                   LIBC_NAMESPACE::sinf(x), 0.5);
+    FP_ASSERT(mpfr::Operation::Sin, x, LIBC_NAMESPACE::sinf(x),
+              TOLERANCE + 0.5);
   }
 }

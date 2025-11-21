@@ -31,8 +31,10 @@ Since ``std::move()`` is a library function declared in ``<utility>`` it may be
 necessary to add this include. The check will add the include directive when
 necessary.
 
-Known Limitations
------------------
+
+Limitations
+-----------
+
 * If headers modification is not activated or if a header is not allowed to be
   changed this check will produce broken code (compilation error), where the
   headers' code will stay unchanged while the code using them will be changed.

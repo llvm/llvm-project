@@ -616,6 +616,9 @@ public:
   convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
   std::optional<int64_t> convertInitializerToInt() const;
 
+  // Returns the set of known bits as a 64-bit integer.
+  uint64_t convertKnownBitsToInt() const;
+
   bool isComplete() const override;
   bool allInComplete() const;
   bool isConcrete() const override;
@@ -841,6 +844,7 @@ public:
     SIZE,
     EMPTY,
     GETDAGOP,
+    GETDAGOPNAME,
     LOG2,
     REPR,
     LISTFLATTEN,
@@ -910,6 +914,7 @@ public:
     GETDAGARG,
     GETDAGNAME,
     SETDAGOP,
+    SETDAGOPNAME
   };
 
 private:
@@ -1572,7 +1577,7 @@ public:
   }
 
   /// Get the source location of the point where the field was defined.
-  const SMLoc &getLoc() const { return Loc; }
+  SMLoc getLoc() const { return Loc; }
 
   /// Is this a field where nonconcrete values are okay?
   bool isNonconcreteOK() const {

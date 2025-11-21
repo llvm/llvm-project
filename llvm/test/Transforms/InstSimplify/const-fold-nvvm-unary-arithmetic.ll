@@ -416,6 +416,54 @@ define float @test_round_ftz_f_neg_1_5() {
   ret float %res
 }
 
+define double @test_round_d_2_5() {
+; CHECK-LABEL: define double @test_round_d_2_5() {
+; CHECK-NEXT:    ret double 2.000000e+00
+;
+  %res = call double @llvm.nvvm.round.d(double 2.5)
+  ret double %res
+}
+
+define float @test_round_f_2_5() {
+; CHECK-LABEL: define float @test_round_f_2_5() {
+; CHECK-NEXT:    ret float 2.000000e+00
+;
+  %res = call float @llvm.nvvm.round.f(float 2.5)
+  ret float %res
+}
+
+define float @test_round_ftz_f_2_5() {
+; CHECK-LABEL: define float @test_round_ftz_f_2_5() {
+; CHECK-NEXT:    ret float 2.000000e+00
+;
+  %res = call float @llvm.nvvm.round.ftz.f(float 2.5)
+  ret float %res
+}
+
+define double @test_round_d_neg_2_5() {
+; CHECK-LABEL: define double @test_round_d_neg_2_5() {
+; CHECK-NEXT:    ret double -2.000000e+00
+;
+  %res = call double @llvm.nvvm.round.d(double -2.5)
+  ret double %res
+}
+
+define float @test_round_f_neg_2_5() {
+; CHECK-LABEL: define float @test_round_f_neg_2_5() {
+; CHECK-NEXT:    ret float -2.000000e+00
+;
+  %res = call float @llvm.nvvm.round.f(float -2.5)
+  ret float %res
+}
+
+define float @test_round_ftz_f_neg_2_5() {
+; CHECK-LABEL: define float @test_round_ftz_f_neg_2_5() {
+; CHECK-NEXT:    ret float -2.000000e+00
+;
+  %res = call float @llvm.nvvm.round.ftz.f(float -2.5)
+  ret float %res
+}
+
 define double @test_round_d_neg_subnorm() {
 ; CHECK-LABEL: define double @test_round_d_neg_subnorm() {
 ; CHECK-NEXT:    ret double -0.000000e+00

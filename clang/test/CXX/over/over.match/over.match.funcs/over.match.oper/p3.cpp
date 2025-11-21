@@ -13,6 +13,7 @@ enum class E { e };
 
 template<typename T> int f(T t) { return ~t; } // expected-error {{invalid argument type}}
 template<typename T, typename U> int f(T t, U u) { return t % u; } // expected-error {{invalid operands to}}
+                                                                   // expected-note@-1 {{no implicit conversion for scoped enum}}
 
 int b1 = ~E::e; // expected-error {{invalid argument type}}
 int b2 = f(E::e); // expected-note {{in instantiation of}}

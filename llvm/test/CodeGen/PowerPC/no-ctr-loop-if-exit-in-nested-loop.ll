@@ -40,9 +40,10 @@ define signext i32 @test(ptr noalias %PtrA, ptr noalias %PtrB, i32 signext %LenA
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_4: # %if.end9
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwzx 10, 6, 9
+; CHECK-NEXT:    add 9, 3, 9
+; CHECK-NEXT:    lwz 10, 4(9)
 ; CHECK-NEXT:    addi 10, 10, 1
-; CHECK-NEXT:    stwx 10, 6, 9
+; CHECK-NEXT:    stw 10, 4(9)
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_5: # %if.then
 ; CHECK-NEXT:    lwax 3, 9, 3

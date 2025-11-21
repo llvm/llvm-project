@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #define __CLC_DECLARE_ATOMIC(ADDRSPACE, TYPE)                                  \
-  _CLC_OVERLOAD _CLC_DECL TYPE FUNCTION(volatile ADDRSPACE TYPE *, TYPE);
+  _CLC_OVERLOAD _CLC_DECL TYPE __CLC_FUNCTION(volatile ADDRSPACE TYPE *, TYPE);
 
 #define __CLC_DECLARE_ATOMIC_ADDRSPACE(TYPE)                                   \
   __CLC_DECLARE_ATOMIC(global, TYPE)                                           \
@@ -19,4 +19,4 @@ __CLC_DECLARE_ATOMIC_ADDRSPACE(uint)
 #undef __CLC_DECLARE_ATOMIC_ADDRSPACE
 #undef __CLC_DECLARE_ATOMIC
 
-#undef FUNCTION
+#undef __CLC_FUNCTION

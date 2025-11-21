@@ -15,6 +15,7 @@ add_header_library(
   HDRS
     block.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.new
@@ -86,6 +87,7 @@ add_header_library(
     blockstore.h
   DEPENDS
     .libc_assert
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.new
 )
 
@@ -95,8 +97,11 @@ add_header_library(
     common.h
     endian_internal.h
     macros/properties/architectures.h
+    macros/properties/compiler.h
     macros/attributes.h
     macros/config.h
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 add_header_library(
@@ -156,6 +161,7 @@ add_header_library(
   HDRS
     wctype_utils.h
   DEPENDS
+    libc.hdr.types.wchar_t
     libc.hdr.types.wint_t
 )
 
@@ -174,19 +180,7 @@ add_header_library(
   DEPENDS
     .ctype_utils
     .str_to_num_result
-    libc.hdr.errno_macros
-    libc.src.__support.CPP.limits
-    libc.src.__support.CPP.type_traits
-    libc.src.__support.common
-)
-
-add_header_library(
-  wcs_to_integer
-  HDRS
-    wcs_to_integer.h
-  DEPENDS
     .wctype_utils
-    .str_to_num_result
     libc.hdr.errno_macros
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
@@ -199,6 +193,7 @@ add_header_library(
     integer_to_string.h
   DEPENDS
     .big_int
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
@@ -215,6 +210,7 @@ add_header_library(
     ryu_long_double_constants.h
   DEPENDS
     .libc_assert
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.common
@@ -225,7 +221,10 @@ add_header_library(
   HDRS
     high_precision_decimal.h
   DEPENDS
+    .ctype_utils
     .str_to_integer
+    .wctype_utils
+    libc.hdr.stdint_proxy
 )
 
 add_header_library(
@@ -239,7 +238,9 @@ add_header_library(
     .str_to_integer
     .str_to_num_result
     .uint128
+    .wctype_utils
     libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
@@ -257,6 +258,7 @@ add_header_library(
     integer_literals.h
   DEPENDS
     .uint128
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.limits
 )
 
@@ -290,7 +292,9 @@ add_header_library(
   HDRS
     arg_list.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.common
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_header_library(
@@ -329,6 +333,7 @@ add_header_library(
   DEPENDS
     .math_extras
     .number_pair
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.array
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
@@ -361,6 +366,7 @@ add_header_library(
     hash.h
   DEPENDS
     .uint128
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.macros.attributes

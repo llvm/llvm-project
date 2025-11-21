@@ -54,8 +54,6 @@ using llvm::support::endian::read32le;
 using llvm::support::endian::write32le;
 using llvm::support::endian::write64le;
 
-constexpr size_t MergeNoTailSection::numShards;
-
 static uint64_t readUint(Ctx &ctx, uint8_t *buf) {
   return ctx.arg.is64 ? read64(ctx, buf) : read32(ctx, buf);
 }
@@ -403,12 +401,12 @@ EhFrameSection::EhFrameSection(Ctx &ctx)
 // Search for an existing CIE record or create a new one.
 // CIE records from input object files are uniquified by their contents
 // and where their relocations point to.
-template <class ELFT, class RelTy>
-CieRecord *EhFrameSection::addCie(EhSectionPiece &cie, ArrayRef<RelTy> rels) {
+CieRecord *EhFrameSection::addCie(EhSectionPiece &cie,
+                                  ArrayRef<Relocation> rels) {
   Symbol *personality = nullptr;
   unsigned firstRelI = cie.firstRelocation;
   if (firstRelI != (unsigned)-1)
-    personality = &cie.sec->file->getRelocTargetSym(rels[firstRelI]);
+    personality = rels[firstRelI].sym;
 
   // Search for an existing CIE by CIE contents/relocation target pair.
   CieRecord *&rec = cieMap[{cie.data(), personality}];
@@ -424,25 +422,20 @@ CieRecord *EhFrameSection::addCie(EhSectionPiece &cie, ArrayRef<RelTy> rels) {
 
 // There is one FDE per function. Returns a non-null pointer to the function
 // symbol if the given FDE points to a live function.
-template <class ELFT, class RelTy>
-Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
-  auto *sec = cast<EhInputSection>(fde.sec);
-  unsigned firstRelI = fde.firstRelocation;
-
+Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde,
+                                   ArrayRef<Relocation> rels) {
   // An FDE should point to some function because FDEs are to describe
   // functions. That's however not always the case due to an issue of
   // ld.gold with -r. ld.gold may discard only functions and leave their
   // corresponding FDEs, which results in creating bad .eh_frame sections.
   // To deal with that, we ignore such FDEs.
+  unsigned firstRelI = fde.firstRelocation;
   if (firstRelI == (unsigned)-1)
     return nullptr;
 
-  const RelTy &rel = rels[firstRelI];
-  Symbol &b = sec->file->getRelocTargetSym(rel);
-
   // FDEs for garbage-collected or merged-by-ICF sections, or sections in
   // another partition, are dead.
-  if (auto *d = dyn_cast<Defined>(&b))
+  if (auto *d = dyn_cast<Defined>(rels[firstRelI].sym))
     if (!d->folded && d->section && d->section->partition == partition)
       return d;
   return nullptr;
@@ -452,41 +445,29 @@ Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
 // is one CIE record per input object file which is followed by
 // a list of FDEs. This function searches an existing CIE or create a new
 // one and associates FDEs to the CIE.
-template <class ELFT, class RelTy>
-void EhFrameSection::addRecords(EhInputSection *sec, ArrayRef<RelTy> rels) {
+template <endianness e> void EhFrameSection::addRecords(EhInputSection *sec) {
+  auto rels = sec->rels;
   offsetToCie.clear();
   for (EhSectionPiece &cie : sec->cies)
-    offsetToCie[cie.inputOff] = addCie<ELFT>(cie, rels);
+    offsetToCie[cie.inputOff] = addCie(cie, rels);
   for (EhSectionPiece &fde : sec->fdes) {
-    uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
+    uint32_t id = endian::read32<e>(fde.data().data() + 4);
     CieRecord *rec = offsetToCie[fde.inputOff + 4 - id];
     if (!rec)
       Fatal(ctx) << sec << ": invalid CIE reference";
 
-    if (!isFdeLive<ELFT>(fde, rels))
+    if (!isFdeLive(fde, rels))
       continue;
     rec->fdes.push_back(&fde);
     numFdes++;
   }
 }
 
-template <class ELFT>
-void EhFrameSection::addSectionAux(EhInputSection *sec) {
-  if (!sec->isLive())
-    return;
-  const RelsOrRelas<ELFT> rels =
-      sec->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
-  if (rels.areRelocsRel())
-    addRecords<ELFT>(sec, rels.rels);
-  else
-    addRecords<ELFT>(sec, rels.relas);
-}
-
 // Used by ICF<ELFT>::handleLSDA(). This function is very similar to
 // EhFrameSection::addRecords().
-template <class ELFT, class RelTy>
+template <class ELFT>
 void EhFrameSection::iterateFDEWithLSDAAux(
-    EhInputSection &sec, ArrayRef<RelTy> rels, DenseSet<size_t> &ciesWithLSDA,
+    EhInputSection &sec, DenseSet<size_t> &ciesWithLSDA,
     llvm::function_ref<void(InputSection &)> fn) {
   for (EhSectionPiece &cie : sec.cies)
     if (hasLSDA(cie))
@@ -497,7 +478,7 @@ void EhFrameSection::iterateFDEWithLSDAAux(
       continue;
 
     // The CIE has a LSDA argument. Call fn with d's section.
-    if (Defined *d = isFdeLive<ELFT>(fde, rels))
+    if (Defined *d = isFdeLive(fde, sec.rels))
       if (auto *s = dyn_cast_or_null<InputSection>(d->section))
         fn(*s);
   }
@@ -509,12 +490,7 @@ void EhFrameSection::iterateFDEWithLSDA(
   DenseSet<size_t> ciesWithLSDA;
   for (EhInputSection *sec : sections) {
     ciesWithLSDA.clear();
-    const RelsOrRelas<ELFT> rels =
-        sec->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
-    if (rels.areRelocsRel())
-      iterateFDEWithLSDAAux<ELFT>(*sec, rels.rels, ciesWithLSDA, fn);
-    else
-      iterateFDEWithLSDAAux<ELFT>(*sec, rels.relas, ciesWithLSDA, fn);
+    iterateFDEWithLSDAAux<ELFT>(*sec, ciesWithLSDA, fn);
   }
 }
 
@@ -531,20 +507,16 @@ void EhFrameSection::finalizeContents() {
   case ELFNoneKind:
     llvm_unreachable("invalid ekind");
   case ELF32LEKind:
-    for (EhInputSection *sec : sections)
-      addSectionAux<ELF32LE>(sec);
-    break;
-  case ELF32BEKind:
-    for (EhInputSection *sec : sections)
-      addSectionAux<ELF32BE>(sec);
-    break;
   case ELF64LEKind:
     for (EhInputSection *sec : sections)
-      addSectionAux<ELF64LE>(sec);
+      if (sec->isLive())
+        addRecords<endianness::little>(sec);
     break;
+  case ELF32BEKind:
   case ELF64BEKind:
     for (EhInputSection *sec : sections)
-      addSectionAux<ELF64BE>(sec);
+      if (sec->isLive())
+        addRecords<endianness::big>(sec);
     break;
   }
 
@@ -662,7 +634,7 @@ void EhFrameSection::writeTo(uint8_t *buf) {
   // in the output buffer, but relocateAlloc() still works because
   // getOffset() takes care of discontiguous section pieces.
   for (EhInputSection *s : sections)
-    ctx.target->relocateAlloc(*s, buf);
+    ctx.target->relocateEh(*s, buf);
 
   if (getPartition(ctx).ehFrameHdr && getPartition(ctx).ehFrameHdr->getParent())
     getPartition(ctx).ehFrameHdr->write();
@@ -769,10 +741,6 @@ void GotSection::writeTo(uint8_t *buf) {
   }
 }
 
-static uint64_t getMipsPageAddr(uint64_t addr) {
-  return (addr + 0x8000) & ~0xffff;
-}
-
 static uint64_t getMipsPageCount(uint64_t size) {
   return (size + 0xfffe) / 0xffff + 1;
 }
@@ -786,7 +754,7 @@ void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
   FileGot &g = getGot(file);
   if (expr == RE_MIPS_GOT_LOCAL_PAGE) {
     if (const OutputSection *os = sym.getOutputSection())
-      g.pagesMap.insert({os, {}});
+      g.pagesMap.insert({os, {&sym}});
     else
       g.local16.insert({{nullptr, getMipsPageAddr(sym.getVA(ctx, addend))}, 0});
   } else if (sym.isTls())
@@ -1066,8 +1034,7 @@ void MipsGotSection::build() {
       // be allocated before us in the static TLS block.
       if (s->isPreemptible || ctx.arg.shared)
         ctx.mainPart->relaDyn->addReloc(
-            {ctx.target->tlsGotRel, this, offset,
-             DynamicReloc::AgainstSymbolWithTargetVA, *s, 0, R_ABS});
+            {ctx.target->tlsGotRel, this, offset, true, *s, 0, R_ABS});
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
@@ -1115,15 +1082,16 @@ void MipsGotSection::build() {
       size_t pageCount = l.second.count;
       for (size_t pi = 0; pi < pageCount; ++pi) {
         uint64_t offset = (l.second.firstIndex + pi) * ctx.arg.wordsize;
-        ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this, offset,
-                                         l.first, int64_t(pi * 0x10000)});
+        ctx.mainPart->relaDyn->addReloc(
+            {ctx.target->relativeRel, this, offset, false, *l.second.repSym,
+             int64_t(pi * 0x10000), RE_MIPS_OSEC_LOCAL_PAGE});
       }
     }
     for (const std::pair<GotEntry, size_t> &p : got.local16) {
       uint64_t offset = p.second * ctx.arg.wordsize;
       ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this, offset,
-                                       DynamicReloc::AddendOnlyWithTargetVA,
-                                       *p.first.first, p.first.second, R_ABS});
+                                       false, *p.first.first, p.first.second,
+                                       R_ABS});
     }
   }
 }
@@ -1646,24 +1614,10 @@ uint64_t DynamicReloc::getOffset() const {
 }
 
 int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
-  switch (kind) {
-  case AddendOnly:
-    assert(sym == nullptr);
-    return addend;
-  case AgainstSymbol:
-    assert(sym != nullptr);
-    return addend;
-  case AddendOnlyWithTargetVA:
-  case AgainstSymbolWithTargetVA: {
-    uint64_t ca = inputSec->getRelocTargetVA(
-        ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
-    return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
-  }
-  case MipsMultiGotPage:
-    assert(sym == nullptr);
-    return getMipsPageAddr(outputSec->addr) + addend;
-  }
-  llvm_unreachable("Unknown DynamicReloc::Kind enum");
+  assert(!isFinal && "addend already computed");
+  uint64_t ca = inputSec->getRelocTargetVA(
+      ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
+  return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
 }
 
 uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
@@ -1691,8 +1645,8 @@ RelocationBaseSection::RelocationBaseSection(Ctx &ctx, StringRef name,
 void RelocationBaseSection::addSymbolReloc(
     RelType dynType, InputSectionBase &isec, uint64_t offsetInSec, Symbol &sym,
     int64_t addend, std::optional<RelType> addendRelType) {
-  addReloc(DynamicReloc::AgainstSymbol, dynType, isec, offsetInSec, sym, addend,
-           R_ADDEND, addendRelType ? *addendRelType : ctx.target->noneRel);
+  addReloc(true, dynType, isec, offsetInSec, sym, addend, R_ADDEND,
+           addendRelType ? *addendRelType : ctx.target->noneRel);
 }
 
 void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
@@ -1700,11 +1654,9 @@ void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
     RelType addendRelType) {
   // No need to write an addend to the section for preemptible symbols.
   if (sym.isPreemptible)
-    addReloc({dynType, &isec, offsetInSec, DynamicReloc::AgainstSymbol, sym, 0,
-              R_ABS});
+    addReloc({dynType, &isec, offsetInSec, true, sym, 0, R_ADDEND});
   else
-    addReloc(DynamicReloc::AddendOnlyWithTargetVA, dynType, isec, offsetInSec,
-             sym, 0, R_ABS, addendRelType);
+    addReloc(false, dynType, isec, offsetInSec, sym, 0, R_ABS, addendRelType);
 }
 
 void RelocationBaseSection::mergeRels() {
@@ -1744,17 +1696,17 @@ void RelocationBaseSection::finalizeContents() {
   }
 }
 
-void DynamicReloc::computeRaw(Ctx &ctx, SymbolTableBaseSection *symt) {
+void DynamicReloc::finalize(Ctx &ctx, SymbolTableBaseSection *symt) {
   r_offset = getOffset();
   r_sym = getSymIndex(symt);
   addend = computeAddend(ctx);
-  kind = AddendOnly; // Catch errors
+  isFinal = true; // Catch errors
 }
 
 void RelocationBaseSection::computeRels() {
   SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
   parallelForEach(relocs, [&ctx = ctx, symTab](DynamicReloc &rel) {
-    rel.computeRaw(ctx, symTab);
+    rel.finalize(ctx, symTab);
   });
 
   auto irelative = std::stable_partition(
@@ -2795,14 +2747,13 @@ RelroPaddingSection::RelroPaddingSection(Ctx &ctx)
     : SyntheticSection(ctx, ".relro_padding", SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
                        1) {}
 
-RandomizePaddingSection::RandomizePaddingSection(Ctx &ctx, uint64_t size,
-                                                 OutputSection *parent)
-    : SyntheticSection(ctx, ".randomize_padding", SHT_PROGBITS, SHF_ALLOC, 1),
-      size(size) {
+PaddingSection::PaddingSection(Ctx &ctx, uint64_t amount, OutputSection *parent)
+    : SyntheticSection(ctx, ".padding", SHT_PROGBITS, SHF_ALLOC, 1) {
+  size = amount;
   this->parent = parent;
 }
 
-void RandomizePaddingSection::writeTo(uint8_t *buf) {
+void PaddingSection::writeTo(uint8_t *buf) {
   std::array<uint8_t, 4> filler = getParent()->getFiller(ctx);
   uint8_t *end = buf + size;
   for (; buf + 4 <= end; buf += 4)

@@ -40,7 +40,7 @@ struct DeviceTypeClauseOps {
 /// Clauses that correspond to operations other than omp.target, but might have
 /// to be evaluated outside of a parent target region.
 using HostEvaluatedOperands =
-    detail::Clauses<LoopRelatedClauseOps, NumTeamsClauseOps,
+    detail::Clauses<CollapseClauseOps, LoopRelatedClauseOps, NumTeamsClauseOps,
                     NumThreadsClauseOps, ThreadLimitClauseOps>;
 
 // TODO: Add `indirect` clause.

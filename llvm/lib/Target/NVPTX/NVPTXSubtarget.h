@@ -73,6 +73,18 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
+  // Checks PTX version and family-specific and architecture-specific SM
+  // versions. For example, sm_100{f/a} and any future variants in the same
+  // family will match for any PTX version greater than or equal to
+  // `PTXVersion`.
+  bool hasPTXWithFamilySMs(unsigned PTXVersion,
+                           ArrayRef<unsigned> SMVersions) const;
+  // Checks PTX version and architecture-specific SM versions.
+  // For example, sm_100{a} will match for any PTX version greater than or equal
+  // to `PTXVersion`.
+  bool hasPTXWithAccelSMs(unsigned PTXVersion,
+                          ArrayRef<unsigned> SMVersions) const;
+
   bool has256BitVectorLoadStore(unsigned AS) const {
     return SmVersion >= 100 && PTXVersion >= 88 &&
            AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
@@ -82,6 +94,7 @@ public:
   bool hasAtomBitwise64() const { return SmVersion >= 32; }
   bool hasAtomMinMax64() const { return SmVersion >= 32; }
   bool hasAtomCas16() const { return SmVersion >= 70 && PTXVersion >= 63; }
+  bool hasAtomSwap128() const { return SmVersion >= 90 && PTXVersion >= 83; }
   bool hasClusters() const { return SmVersion >= 90 && PTXVersion >= 78; }
   bool hasLDG() const { return SmVersion >= 32; }
   bool hasHWROT32() const { return SmVersion >= 32; }
@@ -105,6 +118,7 @@ public:
   // Tcgen05 instructions in Blackwell family
   bool hasTcgen05Instructions() const {
     bool HasTcgen05 = false;
+    unsigned MinPTXVersion = 86;
     switch (FullSmVersion) {
     default:
       break;
@@ -112,27 +126,55 @@ public:
     case 1013: // sm_101a
       HasTcgen05 = true;
       break;
+    case 1103: // sm_110a
+      HasTcgen05 = true;
+      MinPTXVersion = 90;
+      break;
+    case 1033: // sm_103a
+      HasTcgen05 = true;
+      MinPTXVersion = 88;
+      break;
     }
 
-    return HasTcgen05 && PTXVersion >= 86;
+    return HasTcgen05 && PTXVersion >= MinPTXVersion;
+  }
+
+  // Checks following instructions support:
+  // - tcgen05.ld/st
+  // - tcgen05.alloc/dealloc/relinquish
+  // - tcgen05.cp
+  // - tcgen05.fence/wait
+  // - tcgen05.commit
+  bool hasTcgen05InstSupport() const {
+    // sm_101 renamed to sm_110 in PTX 9.0
+    return hasPTXWithFamilySMs(90, {100, 110}) ||
+           hasPTXWithFamilySMs(88, {100, 101}) ||
+           hasPTXWithAccelSMs(86, {100, 101});
+  }
+
+  // Checks tcgen05.shift instruction support.
+  bool hasTcgen05ShiftSupport() const {
+    // sm_101 renamed to sm_110 in PTX 9.0
+    return hasPTXWithAccelSMs(90, {100, 110, 103}) ||
+           hasPTXWithAccelSMs(88, {100, 101, 103}) ||
+           hasPTXWithAccelSMs(86, {100, 101});
+  }
+
+  bool hasTcgen05MMAScaleInputDImm() const {
+    return FullSmVersion == 1003 && PTXVersion >= 86;
   }
   // f32x2 instructions in Blackwell family
-  bool hasF32x2Instructions() const {
-    return SmVersion >= 100 && PTXVersion >= 86;
-  }
+  bool hasF32x2Instructions() const;
 
-  // TMA G2S copy with cta_group::1/2 support
-  bool hasCpAsyncBulkTensorCTAGroupSupport() const {
-    // TODO: Update/tidy-up after the family-conditional support arrives
-    switch (FullSmVersion) {
-    case 1003:
-    case 1013:
-      return PTXVersion >= 86;
-    case 1033:
-      return PTXVersion >= 88;
-    default:
-      return false;
-    }
+  // Checks support for following in TMA:
+  //  - cta_group::1/2 support
+  //  - im2col_w/w_128 mode support
+  //  - tile_gather4 mode support
+  //  - tile_scatter4 mode support
+  bool hasTMABlackwellSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110}) ||
+           hasPTXWithFamilySMs(88, {100, 101}) ||
+           hasPTXWithAccelSMs(86, {100, 101});
   }
 
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
@@ -146,6 +188,7 @@ public:
   bool hasCvtaParam() const { return SmVersion >= 70 && PTXVersion >= 77; }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
   unsigned int getSmVersion() const { return getFullSmVersion() / 10; }
+  unsigned int getSmFamilyVersion() const { return getFullSmVersion() / 100; }
   // GPUs with "a" suffix have architecture-accelerated features that are
   // supported on the specified architecture only, hence such targets do not
   // follow the onion layer model. hasArchAccelFeatures() allows distinguishing

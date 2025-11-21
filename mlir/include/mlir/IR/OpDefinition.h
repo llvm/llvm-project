@@ -889,7 +889,7 @@ public:
         continue;
 
       // Non-empty regions must contain a single basic block.
-      if (!llvm::hasSingleElement(region))
+      if (!region.hasOneBlock())
         return op->emitOpError("expects region #")
                << i << " to have 0 or 1 blocks";
 

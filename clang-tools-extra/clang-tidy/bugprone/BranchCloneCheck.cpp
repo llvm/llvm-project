@@ -1,4 +1,4 @@
-//===--- BranchCloneCheck.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -281,8 +281,8 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
     const auto *IntLit1 = cast<IntegerLiteral>(Stmt1);
     const auto *IntLit2 = cast<IntegerLiteral>(Stmt2);
 
-    llvm::APInt I1 = IntLit1->getValue();
-    llvm::APInt I2 = IntLit2->getValue();
+    const llvm::APInt I1 = IntLit1->getValue();
+    const llvm::APInt I2 = IntLit2->getValue();
     if (I1.getBitWidth() != I2.getBitWidth())
       return false;
     return I1 == I2;
@@ -352,7 +352,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
       }
     }
 
-    size_t N = Branches.size();
+    const size_t N = Branches.size();
     llvm::BitVector KnownAsClone(N);
 
     for (size_t I = 0; I + 1 < N; I++) {
@@ -375,7 +375,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
           // We report the first occurrence only when we find the second one.
           diag(Branches[I]->getBeginLoc(),
                "repeated branch body in conditional chain");
-          SourceLocation End =
+          const SourceLocation End =
               Lexer::getLocForEndOfToken(Branches[I]->getEndLoc(), 0,
                                          *Result.SourceManager, getLangOpts());
           if (End.isValid()) {

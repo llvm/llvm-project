@@ -122,7 +122,9 @@ public:
     Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
     NoUSWrap = 1 << 20,      // Instruction supports geps
                              // no unsigned signed wrap.
-    SameSign = 1 << 21       // Both operands have the same sign.
+    SameSign = 1 << 21,      // Both operands have the same sign.
+    InBounds = 1 << 22       // Pointer arithmetic remains inbounds.
+                             // Implies NoUSWrap.
   };
 
 private:
@@ -183,8 +185,7 @@ private:
                     HasHeapAllocMarker, HasPCSections, HasCFIType, HasMMRAs);
 
       // Copy the actual data into the trailing objects.
-      std::copy(MMOs.begin(), MMOs.end(),
-                Result->getTrailingObjects<MachineMemOperand *>());
+      llvm::copy(MMOs, Result->getTrailingObjects<MachineMemOperand *>());
 
       unsigned MDNodeIdx = 0;
 
@@ -1227,7 +1228,7 @@ public:
 
   /// Returns true if this instruction is a candidate for remat.
   /// This flag is deprecated, please don't use it anymore.  If this
-  /// flag is set, the isReallyTriviallyReMaterializable() method is called to
+  /// flag is set, the isReMaterializableImpl() method is called to
   /// verify the instruction is really rematerializable.
   bool isRematerializable(QueryType Type = AllInBundle) const {
     // It's only possible to re-mat a bundle if all bundled instructions are
@@ -1997,6 +1998,15 @@ public:
   /// Find all DBG_VALUEs that point to the register def in this instruction
   /// and point them to \p Reg instead.
   LLVM_ABI void changeDebugValuesDefReg(Register Reg);
+
+  /// Remove all incoming values of Phi instruction for the given block.
+  ///
+  /// Return deleted operands count.
+  ///
+  /// Method does not erase PHI instruction even if it has single income or does
+  /// not have incoming values at all. It is a caller responsibility to make
+  /// decision how to process PHI instruction after incoming values removed.
+  LLVM_ABI unsigned removePHIIncomingValueFor(const MachineBasicBlock &MBB);
 
   /// Sets all register debug operands in this debug value instruction to be
   /// undef.

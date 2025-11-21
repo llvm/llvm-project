@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t -debug-only=mc-dump-pre,mc-dump 2>&1 | FileCheck %s --match-full-lines --strict-whitespace
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t -debug-only=mc-dump-pre,mc-dump -stats 2>&1 | FileCheck %s --match-full-lines --strict-whitespace
 
 #CHECK-LABEL:assembler backend - pre-layout
 #      CHECK:MCSection Name:.text
@@ -29,6 +29,9 @@
 # CHECK-NEXT:4 Fill Value:0 ValueSize:1 NumValues:1
 # CHECK-NEXT:5 LEB Size:0+1 [15] Value:.Ltmp0-_start Signed:0
 #      CHECK:]
+
+# CHECK:  2 assembler         - Number of fixup evaluations for relaxation
+# CHECK:  8 assembler         - Number of fixups
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t -debug-only=mc-dump -save-temp-labels -g 2>&1 | FileCheck %s --check-prefix=CHECK2
 

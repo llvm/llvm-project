@@ -45,15 +45,18 @@ std::pair<tooling::Replacements, unsigned>
 IntegerLiteralSeparatorFixer::process(const Environment &Env,
                                       const FormatStyle &Style) {
   switch (Style.Language) {
-  case FormatStyle::LK_Cpp:
-  case FormatStyle::LK_ObjC:
-    Separator = '\'';
-    break;
   case FormatStyle::LK_CSharp:
   case FormatStyle::LK_Java:
   case FormatStyle::LK_JavaScript:
     Separator = '_';
     break;
+  case FormatStyle::LK_Cpp:
+  case FormatStyle::LK_ObjC:
+    if (Style.Standard >= FormatStyle::LS_Cpp14) {
+      Separator = '\'';
+      break;
+    }
+    [[fallthrough]];
   default:
     return {};
   }
@@ -114,7 +117,7 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
     }
     if (Style.isCpp()) {
       // Hex alpha digits a-f/A-F must be at the end of the string literal.
-      StringRef Suffixes = "_himnsuyd";
+      static constexpr StringRef Suffixes("_himnsuyd");
       if (const auto Pos =
               Text.find_first_of(IsBase16 ? Suffixes.drop_back() : Suffixes);
           Pos != StringRef::npos) {

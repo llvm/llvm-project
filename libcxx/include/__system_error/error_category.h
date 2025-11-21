@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_EXPORTED_FROM_ABI error_condition;
+class error_condition;
 class _LIBCPP_EXPORTED_FROM_ABI error_code;
 
 class _LIBCPP_HIDDEN __do_message;

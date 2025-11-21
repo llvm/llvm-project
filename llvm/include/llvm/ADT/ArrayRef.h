@@ -10,8 +10,8 @@
 #define LLVM_ADT_ARRAYREF_H
 
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <array>
@@ -19,7 +19,6 @@
 #include <cstddef>
 #include <initializer_list>
 #include <iterator>
-#include <memory>
 #include <type_traits>
 #include <vector>
 
@@ -65,10 +64,6 @@ namespace llvm {
 
     /// Construct an empty ArrayRef.
     /*implicit*/ ArrayRef() = default;
-
-    /// Construct an empty ArrayRef from std::nullopt.
-    /*implicit*/ LLVM_DEPRECATED("Use {} or ArrayRef<T>() instead", "{}")
-    ArrayRef(std::nullopt_t) {}
 
     /// Construct an ArrayRef from a single element.
     /*implicit*/ ArrayRef(const T &OneElt LLVM_LIFETIME_BOUND)
@@ -317,10 +312,6 @@ namespace llvm {
     /// Construct an empty MutableArrayRef.
     /*implicit*/ MutableArrayRef() = default;
 
-    /// Construct an empty MutableArrayRef from std::nullopt.
-    /*implicit*/ LLVM_DEPRECATED("Use {} or MutableArrayRef<T>() instead", "{}")
-    MutableArrayRef(std::nullopt_t) : ArrayRef<T>() {}
-
     /// Construct a MutableArrayRef from a single element.
     /*implicit*/ MutableArrayRef(T &OneElt) : ArrayRef<T>(OneElt) {}
 
@@ -551,7 +542,8 @@ namespace llvm {
   }
 
   template <typename T>
-  inline bool operator==(SmallVectorImpl<T> &LHS, ArrayRef<T> RHS) {
+  [[nodiscard]] inline bool operator==(const SmallVectorImpl<T> &LHS,
+                                       ArrayRef<T> RHS) {
     return ArrayRef<T>(LHS).equals(RHS);
   }
 
@@ -561,7 +553,8 @@ namespace llvm {
   }
 
   template <typename T>
-  inline bool operator!=(SmallVectorImpl<T> &LHS, ArrayRef<T> RHS) {
+  [[nodiscard]] inline bool operator!=(const SmallVectorImpl<T> &LHS,
+                                       ArrayRef<T> RHS) {
     return !(LHS == RHS);
   }
 

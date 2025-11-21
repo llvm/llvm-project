@@ -868,7 +868,8 @@ VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
   QualType T = Ex->getTypeOfArgument();
 
   for (ExplodedNode *N : CheckedSet) {
-    if (Ex->getKind() == UETT_SizeOf) {
+    if (Ex->getKind() == UETT_SizeOf || Ex->getKind() == UETT_DataSizeOf ||
+        Ex->getKind() == UETT_CountOf) {
       if (!T->isIncompleteType() && !T->isConstantSizeType()) {
         assert(T->isVariableArrayType() && "Unknown non-constant-sized type.");
 

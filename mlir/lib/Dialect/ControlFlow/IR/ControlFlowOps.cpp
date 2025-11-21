@@ -15,7 +15,6 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -24,10 +23,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/raw_ostream.h"
 #include <numeric>
 
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOpsDialect.cpp.inc"
@@ -126,6 +122,16 @@ static LogicalResult collapseBranch(Block *&successor,
   Block *successorDest = successorBranch.getDest();
   if (successorDest == successor)
     return failure();
+  // Don't try to collapse branches which participate in a cycle.
+  BranchOp nextBranch = dyn_cast<BranchOp>(successorDest->getTerminator());
+  llvm::DenseSet<Block *> visited{successor, successorDest};
+  while (nextBranch) {
+    Block *nextBranchDest = nextBranch.getDest();
+    if (visited.contains(nextBranchDest))
+      return failure();
+    visited.insert(nextBranchDest);
+    nextBranch = dyn_cast<BranchOp>(nextBranchDest->getTerminator());
+  }
 
   // Update the operands to the successor. If the branch parent has no
   // arguments, we can use the branch operands directly.

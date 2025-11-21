@@ -36,10 +36,10 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cassert>
 #include <optional>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::at;
@@ -246,7 +246,7 @@ void DebugInfoFinder::processType(DIType *DT) {
   }
 }
 
-void DebugInfoFinder::processImportedEntity(DIImportedEntity *Import) {
+void DebugInfoFinder::processImportedEntity(const DIImportedEntity *Import) {
   auto *Entity = Import->getEntity();
   if (auto *T = dyn_cast<DIType>(Entity))
     processType(T);
@@ -293,9 +293,9 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   // just DISubprogram's, referenced from anywhere within the Function being
   // cloned prior to calling MapMetadata / RemapInstruction to avoid their
   // duplication later as DICompileUnit's are also directly referenced by
-  // llvm.dbg.cu list. Thefore we need to collect DICompileUnit's here as well.
-  // Also, DICompileUnit's may reference DISubprogram's too and therefore need
-  // to be at least looked through.
+  // llvm.dbg.cu list. Therefore we need to collect DICompileUnit's here as
+  // well. Also, DICompileUnit's may reference DISubprogram's too and therefore
+  // need to be at least looked through.
   processCompileUnit(SP->getUnit());
   processType(SP->getType());
   for (auto *Element : SP->getTemplateParams()) {
@@ -306,15 +306,13 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
     }
   }
 
-  for (auto *N : SP->getRetainedNodes()) {
-    if (auto *Var = dyn_cast_or_null<DILocalVariable>(N))
-      processVariable(Var);
-    else if (auto *Import = dyn_cast_or_null<DIImportedEntity>(N))
-      processImportedEntity(Import);
-  }
+  SP->forEachRetainedNode(
+      [this](const DILocalVariable *LV) { processVariable(LV); },
+      [](const DILabel *L) {},
+      [this](const DIImportedEntity *IE) { processImportedEntity(IE); });
 }
 
-void DebugInfoFinder::processVariable(DILocalVariable *DV) {
+void DebugInfoFinder::processVariable(const DILocalVariable *DV) {
   if (!NodesSeen.insert(DV).second)
     return;
   processScope(DV->getScope());
@@ -374,6 +372,38 @@ bool DebugInfoFinder::addScope(DIScope *Scope) {
   return true;
 }
 
+/// Recursively handle DILocations in followup metadata etc.
+///
+/// TODO: If for example a followup loop metadata would reference itself this
+/// function would go into infinite recursion. We do not expect such cycles in
+/// the loop metadata (except for the self-referencing first element
+/// "LoopID"). However, we could at least handle such situations more gracefully
+/// somehow (e.g. by keeping track of visited nodes and dropping metadata).
+static Metadata *updateLoopMetadataDebugLocationsRecursive(
+    Metadata *MetadataIn, function_ref<Metadata *(Metadata *)> Updater) {
+  const MDTuple *M = dyn_cast_or_null<MDTuple>(MetadataIn);
+  // The loop metadata options should start with a MDString.
+  if (!M || M->getNumOperands() < 1 || !isa<MDString>(M->getOperand(0)))
+    return MetadataIn;
+
+  bool Updated = false;
+  SmallVector<Metadata *, 4> MDs{M->getOperand(0)};
+  for (Metadata *MD : llvm::drop_begin(M->operands())) {
+    if (!MD) {
+      MDs.push_back(nullptr);
+      continue;
+    }
+    Metadata *NewMD =
+        Updater(updateLoopMetadataDebugLocationsRecursive(MD, Updater));
+    if (NewMD)
+      MDs.push_back(NewMD);
+    Updated |= NewMD != MD;
+  }
+
+  assert(!M->isDistinct() && "M should not be distinct.");
+  return Updated ? MDNode::get(M->getContext(), MDs) : MetadataIn;
+}
+
 static MDNode *updateLoopMetadataDebugLocationsImpl(
     MDNode *OrigLoopID, function_ref<Metadata *(Metadata *)> Updater) {
   assert(OrigLoopID && OrigLoopID->getNumOperands() > 0 &&
@@ -384,11 +414,11 @@ static MDNode *updateLoopMetadataDebugLocationsImpl(
   // Save space for the self-referential LoopID.
   SmallVector<Metadata *, 4> MDs = {nullptr};
 
-  for (unsigned i = 1; i < OrigLoopID->getNumOperands(); ++i) {
-    Metadata *MD = OrigLoopID->getOperand(i);
+  for (Metadata *MD : llvm::drop_begin(OrigLoopID->operands())) {
     if (!MD)
       MDs.push_back(nullptr);
-    else if (Metadata *NewMD = Updater(MD))
+    else if (Metadata *NewMD = Updater(
+                 updateLoopMetadataDebugLocationsRecursive(MD, Updater)))
       MDs.push_back(NewMD);
   }
 
@@ -563,6 +593,7 @@ bool llvm::stripDebugInfo(Function &F) {
 }
 
 bool llvm::StripDebugInfo(Module &M) {
+  llvm::TimeTraceScope timeScope("Strip debug info");
   bool Changed = false;
 
   for (NamedMDNode &NMD : llvm::make_early_inc_range(M.named_metadata())) {
@@ -645,7 +676,7 @@ private:
     auto Variables = nullptr;
     auto TemplateParams = nullptr;
 
-    // Make a distinct DISubprogram, for situations that warrent it.
+    // Make a distinct DISubprogram, for situations that warrant it.
     auto distinctMDSubprogram = [&]() {
       return DISubprogram::getDistinct(
           MDS->getContext(), FileAndScope, MDS->getName(), LinkageName,
@@ -755,7 +786,7 @@ private:
 
       return getReplacementMDNode(N);
     };
-    // Seperate recursive doRemap and operator [] into 2 lines to avoid
+    // Separate recursive doRemap and operator [] into 2 lines to avoid
     // out-of-order evaluations since both of them can access the same memory
     // location in map Replacements.
     auto Value = doRemap(N);
@@ -1044,7 +1075,7 @@ LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
   auto File = unwrapDI<DIFile>(FileRef);
 
   return wrap(unwrap(Builder)->createCompileUnit(
-      map_from_llvmDWARFsourcelanguage(Lang), File,
+      DISourceLanguageName(map_from_llvmDWARFsourcelanguage(Lang)), File,
       StringRef(Producer, ProducerLen), isOptimized, StringRef(Flags, FlagsLen),
       RuntimeVer, StringRef(SplitName, SplitNameLen),
       static_cast<DICompileUnit::DebugEmissionKind>(Kind), DWOId,
@@ -1059,6 +1090,35 @@ LLVMDIBuilderCreateFile(LLVMDIBuilderRef Builder, const char *Filename,
                         size_t DirectoryLen) {
   return wrap(unwrap(Builder)->createFile(StringRef(Filename, FilenameLen),
                                           StringRef(Directory, DirectoryLen)));
+}
+
+static llvm::DIFile::ChecksumKind
+map_from_llvmChecksumKind(LLVMChecksumKind CSKind) {
+  switch (CSKind) {
+  case LLVMChecksumKind::CSK_MD5:
+    return llvm::DIFile::CSK_MD5;
+  case LLVMChecksumKind::CSK_SHA1:
+    return llvm::DIFile::CSK_SHA1;
+  case LLVMChecksumKind::CSK_SHA256:
+    return llvm::DIFile::CSK_SHA256;
+  }
+  llvm_unreachable("Unhandled Checksum Kind");
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateFileWithChecksum(
+    LLVMDIBuilderRef Builder, const char *Filename, size_t FilenameLen,
+    const char *Directory, size_t DirectoryLen, LLVMChecksumKind ChecksumKind,
+    const char *Checksum, size_t ChecksumLen, const char *Source,
+    size_t SourceLen) {
+  StringRef ChkSum = StringRef(Checksum, ChecksumLen);
+  auto CSK = map_from_llvmChecksumKind(ChecksumKind);
+  llvm::DIFile::ChecksumInfo<StringRef> CSInfo(CSK, ChkSum);
+  std::optional<StringRef> Src;
+  if (SourceLen > 0)
+    Src = StringRef(Source, SourceLen);
+  return wrap(unwrap(Builder)->createFile(StringRef(Filename, FilenameLen),
+                                          StringRef(Directory, DirectoryLen),
+                                          CSInfo, Src));
 }
 
 LLVMMetadataRef
@@ -1896,29 +1956,8 @@ AssignmentInstRange at::getAssignmentInsts(DIAssignID *ID) {
   return make_range(MapIt->second.begin(), MapIt->second.end());
 }
 
-AssignmentMarkerRange at::getAssignmentMarkers(DIAssignID *ID) {
-  assert(ID && "Expected non-null ID");
-  LLVMContext &Ctx = ID->getContext();
-
-  auto *IDAsValue = MetadataAsValue::getIfExists(Ctx, ID);
-
-  // The ID is only used wrapped in MetadataAsValue(ID), so lets check that
-  // one of those already exists first.
-  if (!IDAsValue)
-    return make_range(Value::user_iterator(), Value::user_iterator());
-
-  return make_range(IDAsValue->user_begin(), IDAsValue->user_end());
-}
-
 void at::deleteAssignmentMarkers(const Instruction *Inst) {
-  auto Range = getAssignmentMarkers(Inst);
-  SmallVector<DbgVariableRecord *> DVRAssigns = getDVRAssignmentMarkers(Inst);
-  if (Range.empty() && DVRAssigns.empty())
-    return;
-  SmallVector<DbgAssignIntrinsic *> ToDelete(Range.begin(), Range.end());
-  for (auto *DAI : ToDelete)
-    DAI->eraseFromParent();
-  for (auto *DVR : DVRAssigns)
+  for (auto *DVR : getDVRAssignmentMarkers(Inst))
     DVR->eraseFromParent();
 }
 
@@ -1936,31 +1975,21 @@ void at::RAUW(DIAssignID *Old, DIAssignID *New) {
 }
 
 void at::deleteAll(Function *F) {
-  SmallVector<DbgAssignIntrinsic *, 12> ToDelete;
-  SmallVector<DbgVariableRecord *, 12> DPToDelete;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
-      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
+      for (DbgVariableRecord &DVR :
+           make_early_inc_range(filterDbgVars(I.getDbgRecordRange())))
         if (DVR.isDbgAssign())
-          DPToDelete.push_back(&DVR);
-      if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
-        ToDelete.push_back(DAI);
-      else
-        I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+          DVR.eraseFromParent();
+
+      I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
     }
   }
-  for (auto *DAI : ToDelete)
-    DAI->eraseFromParent();
-  for (auto *DVR : DPToDelete)
-    DVR->eraseFromParent();
 }
 
-/// FIXME: Remove this wrapper function and call
-/// DIExpression::calculateFragmentIntersect directly.
-template <typename T>
-bool calculateFragmentIntersectImpl(
+bool at::calculateFragmentIntersect(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
-    uint64_t SliceSizeInBits, const T *AssignRecord,
+    uint64_t SliceSizeInBits, const DbgVariableRecord *AssignRecord,
     std::optional<DIExpression::FragmentInfo> &Result) {
   // No overlap if this DbgRecord describes a killed location.
   if (AssignRecord->isKillAddress())
@@ -1989,26 +2018,6 @@ bool calculateFragmentIntersectImpl(
       BitExtractOffsetInBits, VarFrag, Result, OffsetFromLocationInBits);
 }
 
-/// FIXME: Remove this wrapper function and call
-/// DIExpression::calculateFragmentIntersect directly.
-bool at::calculateFragmentIntersect(
-    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
-    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DbgAssign,
-    std::optional<DIExpression::FragmentInfo> &Result) {
-  return calculateFragmentIntersectImpl(DL, Dest, SliceOffsetInBits,
-                                        SliceSizeInBits, DbgAssign, Result);
-}
-
-/// FIXME: Remove this wrapper function and call
-/// DIExpression::calculateFragmentIntersect directly.
-bool at::calculateFragmentIntersect(
-    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
-    uint64_t SliceSizeInBits, const DbgVariableRecord *DVRAssign,
-    std::optional<DIExpression::FragmentInfo> &Result) {
-  return calculateFragmentIntersectImpl(DL, Dest, SliceOffsetInBits,
-                                        SliceSizeInBits, DVRAssign, Result);
-}
-
 /// Update inlined instructions' DIAssignID metadata. We need to do this
 /// otherwise a function inlined more than once into the same function
 /// will cause DIAssignID to be shared by many instructions.
@@ -2029,11 +2038,9 @@ void at::remapAssignID(DenseMap<DIAssignID *, DIAssignID *> &Map,
   }
   if (auto *ID = I.getMetadata(LLVMContext::MD_DIAssignID))
     I.setMetadata(LLVMContext::MD_DIAssignID, GetNewID(ID));
-  else if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
-    DAI->setAssignId(GetNewID(DAI->getAssignID()));
 }
 
-/// Collect constant properies (base, size, offset) of \p StoreDest.
+/// Collect constant properties (base, size, offset) of \p StoreDest.
 /// Return std::nullopt if any properties are not constants or the
 /// offset from the base pointer is negative.
 static std::optional<AssignmentInfo>
@@ -2319,7 +2326,7 @@ PreservedAnalyses AssignmentTrackingPass::run(Function &F,
     return PreservedAnalyses::all();
 
   // Record that this module uses assignment tracking. It doesn't matter that
-  // some functons in the module may not use it - the debug info in those
+  // some functions in the module may not use it - the debug info in those
   // functions will still be handled properly.
   setAssignmentTrackingModuleFlag(*F.getParent());
 

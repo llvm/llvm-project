@@ -397,8 +397,8 @@ def DotOp : AVX_LowOp<"dot", [Pure,
 
     ```mlir
     %0 = x86vector.avx.intr.dot %a, %b : vector<8xf32>
-    %1 = vector.extractelement %0[%i0 : i32]: vector<8xf32>
-    %2 = vector.extractelement %0[%i4 : i32]: vector<8xf32>
+    %1 = vector.extract %0[%i0] : f32 from vector<8xf32>
+    %2 = vector.extract %0[%i4] : f32 from vector<8xf32>
     %d = arith.addf %1, %2 : f32
     ```
   }];
@@ -468,11 +468,6 @@ def DotInt8Op : AVX_Op<"dot.i8", [Pure,
       intr += "." + std::to_string(opBitWidth);
       return intr;
     }
-
-    SmallVector<Value> getIntrinsicOperands(
-        ::mlir::ArrayRef<Value> operands,
-        const ::mlir::LLVMTypeConverter &typeConverter,
-        ::mlir::RewriterBase &rewriter);
   }];
 }
 

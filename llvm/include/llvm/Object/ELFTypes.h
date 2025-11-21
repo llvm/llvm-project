@@ -832,29 +832,34 @@ struct BBAddrMap {
     bool BrProb : 1;
     bool MultiBBRange : 1;
     bool OmitBBEntries : 1;
-    bool CallsiteOffsets : 1;
+    bool CallsiteEndOffsets : 1;
+    bool BBHash : 1;
+    bool PostLinkCfg : 1;
 
     bool hasPGOAnalysis() const { return FuncEntryCount || BBFreq || BrProb; }
 
     bool hasPGOAnalysisBBData() const { return BBFreq || BrProb; }
 
     // Encodes to minimum bit width representation.
-    uint8_t encode() const {
-      return (static_cast<uint8_t>(FuncEntryCount) << 0) |
-             (static_cast<uint8_t>(BBFreq) << 1) |
-             (static_cast<uint8_t>(BrProb) << 2) |
-             (static_cast<uint8_t>(MultiBBRange) << 3) |
-             (static_cast<uint8_t>(OmitBBEntries) << 4) |
-             (static_cast<uint8_t>(CallsiteOffsets) << 5);
+    uint16_t encode() const {
+      return (static_cast<uint16_t>(FuncEntryCount) << 0) |
+             (static_cast<uint16_t>(BBFreq) << 1) |
+             (static_cast<uint16_t>(BrProb) << 2) |
+             (static_cast<uint16_t>(MultiBBRange) << 3) |
+             (static_cast<uint16_t>(OmitBBEntries) << 4) |
+             (static_cast<uint16_t>(CallsiteEndOffsets) << 5) |
+             (static_cast<uint16_t>(BBHash) << 6) |
+             (static_cast<uint16_t>(PostLinkCfg) << 7);
     }
 
     // Decodes from minimum bit width representation and validates no
     // unnecessary bits are used.
-    static Expected<Features> decode(uint8_t Val) {
+    static Expected<Features> decode(uint16_t Val) {
       Features Feat{
           static_cast<bool>(Val & (1 << 0)), static_cast<bool>(Val & (1 << 1)),
           static_cast<bool>(Val & (1 << 2)), static_cast<bool>(Val & (1 << 3)),
-          static_cast<bool>(Val & (1 << 4)), static_cast<bool>(Val & (1 << 5))};
+          static_cast<bool>(Val & (1 << 4)), static_cast<bool>(Val & (1 << 5)),
+          static_cast<bool>(Val & (1 << 6)), static_cast<bool>(Val & (1 << 7))};
       if (Feat.encode() != Val)
         return createStringError(
             std::error_code(), "invalid encoding for BBAddrMap::Features: 0x%x",
@@ -864,10 +869,11 @@ struct BBAddrMap {
 
     bool operator==(const Features &Other) const {
       return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange,
-                      OmitBBEntries, CallsiteOffsets) ==
+                      OmitBBEntries, CallsiteEndOffsets, BBHash, PostLinkCfg) ==
              std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb,
                       Other.MultiBBRange, Other.OmitBBEntries,
-                      Other.CallsiteOffsets);
+                      Other.CallsiteEndOffsets, Other.BBHash,
+                      Other.PostLinkCfg);
     }
   };
 
@@ -918,20 +924,21 @@ struct BBAddrMap {
     uint32_t Size = 0;   // Size of the basic block.
     Metadata MD = {false, false, false, false,
                    false}; // Metdata for this basic block.
-    // Offsets of callsites (beginning of call instructions), relative to the
-    // basic block start.
-    SmallVector<uint32_t, 1> CallsiteOffsets;
+    // Offsets of end of call instructions, relative to the basic block start.
+    SmallVector<uint32_t, 1> CallsiteEndOffsets;
+    uint64_t Hash = 0; // Hash for this basic block.
 
     BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, Metadata MD,
-            SmallVector<uint32_t, 1> CallsiteOffsets)
+            SmallVector<uint32_t, 1> CallsiteEndOffsets, uint64_t Hash)
         : ID(ID), Offset(Offset), Size(Size), MD(MD),
-          CallsiteOffsets(std::move(CallsiteOffsets)) {}
+          CallsiteEndOffsets(std::move(CallsiteEndOffsets)), Hash(Hash) {}
 
     UniqueBBID getID() const { return {ID, 0}; }
 
     bool operator==(const BBEntry &Other) const {
       return ID == Other.ID && Offset == Other.Offset && Size == Other.Size &&
-             MD == Other.MD && CallsiteOffsets == Other.CallsiteOffsets;
+             MD == Other.MD && CallsiteEndOffsets == Other.CallsiteEndOffsets &&
+             Hash == Other.Hash;
     }
 
     bool hasReturn() const { return MD.HasReturn; }
@@ -1006,23 +1013,30 @@ struct PGOAnalysisMap {
     /// probability associated with it.
     struct SuccessorEntry {
       /// Unique ID of this successor basic block.
-      uint32_t ID;
+      uint32_t ID = 0;
       /// Branch Probability of the edge to this successor taken from MBPI.
       BranchProbability Prob;
+      /// Raw edge count from the post link profile (e.g., from bolt or
+      /// propeller).
+      uint64_t PostLinkFreq = 0;
 
       bool operator==(const SuccessorEntry &Other) const {
-        return std::tie(ID, Prob) == std::tie(Other.ID, Other.Prob);
+        return std::tie(ID, Prob, PostLinkFreq) ==
+               std::tie(Other.ID, Other.Prob, Other.PostLinkFreq);
       }
     };
 
     /// Block frequency taken from MBFI
     BlockFrequency BlockFreq;
+    /// Raw block count taken from the post link profile (e.g., from bolt or
+    /// propeller).
+    uint64_t PostLinkBlockFreq = 0;
     /// List of successors of the current block
     llvm::SmallVector<SuccessorEntry, 2> Successors;
 
     bool operator==(const PGOBBEntry &Other) const {
-      return std::tie(BlockFreq, Successors) ==
-             std::tie(Other.BlockFreq, Other.Successors);
+      return std::tie(BlockFreq, PostLinkBlockFreq, Successors) ==
+             std::tie(Other.BlockFreq, PostLinkBlockFreq, Other.Successors);
     }
   };
 

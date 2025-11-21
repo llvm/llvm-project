@@ -83,8 +83,7 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
     if (I.isVirtual()) continue;
 
     // Skip base classes with trivial destructors.
-    const auto *Base =
-        cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
+    const auto *Base = I.getType()->castAsCXXRecordDecl();
     if (Base->hasTrivialDestructor()) continue;
 
     // If we've already found a base class with a non-trivial
@@ -175,7 +174,6 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   // requires explicit comdat support in the IL.
   if (llvm::GlobalValue::isWeakForLinker(TargetLinkage))
     return true;
-
   // Create the alias with no name.
   auto *Alias = llvm::GlobalAlias::create(AliasValueType, 0, Linkage, "",
                                           Aliasee, &getModule());
@@ -199,6 +197,42 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   SetCommonAttributes(AliasDecl, Alias);
 
   return false;
+}
+
+/// Emit a definition as a global alias for another definition, unconditionally.
+void CodeGenModule::EmitDefinitionAsAlias(GlobalDecl AliasDecl,
+                                          GlobalDecl TargetDecl) {
+
+  llvm::Type *AliasValueType = getTypes().GetFunctionType(AliasDecl);
+
+  StringRef MangledName = getMangledName(AliasDecl);
+  llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+  if (Entry && !Entry->isDeclaration())
+    return;
+  auto *Aliasee = cast<llvm::GlobalValue>(GetAddrOfGlobal(TargetDecl));
+
+  // Determine the linkage type for the alias.
+  llvm::GlobalValue::LinkageTypes Linkage = getFunctionLinkage(AliasDecl);
+
+  // Create the alias with no name.
+  auto *Alias = llvm::GlobalAlias::create(AliasValueType, 0, Linkage, "",
+                                          Aliasee, &getModule());
+  // Destructors are always unnamed_addr.
+  Alias->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
+  if (Entry) {
+    assert(Entry->getValueType() == AliasValueType &&
+           Entry->getAddressSpace() == Alias->getAddressSpace() &&
+           "declaration exists with different type");
+    Alias->takeName(Entry);
+    Entry->replaceAllUsesWith(Alias);
+    Entry->eraseFromParent();
+  } else {
+    Alias->setName(MangledName);
+  }
+
+  // Set any additional necessary attributes for the alias.
+  SetCommonAttributes(AliasDecl, Alias);
 }
 
 llvm::Function *CodeGenModule::codegenCXXStructor(GlobalDecl GD) {
@@ -277,19 +311,11 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
 /// BuildAppleKextVirtualCall - This routine is to support gcc's kext ABI making
 /// indirect call to virtual functions. It makes the call through indexing
 /// into the vtable.
-CGCallee
-CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
-                                           NestedNameSpecifier *Qual,
-                                           llvm::Type *Ty) {
-  assert((Qual->getKind() == NestedNameSpecifier::TypeSpec) &&
-         "BuildAppleKextVirtualCall - bad Qual kind");
-
-  const Type *QTy = Qual->getAsType();
-  QualType T = QualType(QTy, 0);
-  const RecordType *RT = T->getAs<RecordType>();
-  assert(RT && "BuildAppleKextVirtualCall - Qual type must be record");
-  const auto *RD = cast<CXXRecordDecl>(RT->getDecl());
-
+CGCallee CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
+                                                    NestedNameSpecifier Qual,
+                                                    llvm::Type *Ty) {
+  const CXXRecordDecl *RD = Qual.getAsRecordDecl();
+  assert(RD && "BuildAppleKextVirtualCall - Qual must be record");
   if (const auto *DD = dyn_cast<CXXDestructorDecl>(MD))
     return BuildAppleKextVirtualDestructorCall(DD, Dtor_Complete, RD);
 

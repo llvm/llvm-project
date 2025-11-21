@@ -293,6 +293,9 @@ void populateVectorBitCastLoweringPatterns(RewritePatternSet &patterns,
                                            int64_t targetRank = 1,
                                            PatternBenefit benefit = 1);
 
+void populateVectorShuffleLoweringPatterns(RewritePatternSet &patterns,
+                                           PatternBenefit benefit = 1);
+
 /// Populates a pattern that rank-reduces n-D FMAs into (n-1)-D FMAs where
 /// n > 1.
 void populateVectorRankReducingFMAPattern(RewritePatternSet &patterns);

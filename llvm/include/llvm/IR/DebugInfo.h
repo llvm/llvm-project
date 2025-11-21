@@ -108,7 +108,7 @@ public:
   LLVM_ABI void processInstruction(const Module &M, const Instruction &I);
 
   /// Process a DILocalVariable.
-  LLVM_ABI void processVariable(DILocalVariable *DVI);
+  LLVM_ABI void processVariable(const DILocalVariable *DVI);
   /// Process debug info location.
   LLVM_ABI void processLocation(const Module &M, const DILocation *Loc);
   /// Process a DbgRecord.
@@ -124,7 +124,7 @@ private:
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
-  void processImportedEntity(DIImportedEntity *Import);
+  void processImportedEntity(const DIImportedEntity *Import);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);
   bool addScope(DIScope *Scope);
@@ -140,25 +140,17 @@ public:
   using type_iterator = SmallVectorImpl<DIType *>::const_iterator;
   using scope_iterator = SmallVectorImpl<DIScope *>::const_iterator;
 
-  iterator_range<compile_unit_iterator> compile_units() const {
-    return make_range(CUs.begin(), CUs.end());
-  }
+  iterator_range<compile_unit_iterator> compile_units() const { return CUs; }
 
-  iterator_range<subprogram_iterator> subprograms() const {
-    return make_range(SPs.begin(), SPs.end());
-  }
+  iterator_range<subprogram_iterator> subprograms() const { return SPs; }
 
   iterator_range<global_variable_expression_iterator> global_variables() const {
-    return make_range(GVs.begin(), GVs.end());
+    return GVs;
   }
 
-  iterator_range<type_iterator> types() const {
-    return make_range(TYs.begin(), TYs.end());
-  }
+  iterator_range<type_iterator> types() const { return TYs; }
 
-  iterator_range<scope_iterator> scopes() const {
-    return make_range(Scopes.begin(), Scopes.end());
-  }
+  iterator_range<scope_iterator> scopes() const { return Scopes; }
 
   unsigned compile_unit_count() const { return CUs.size(); }
   unsigned global_variable_count() const { return GVs.size(); }
@@ -195,38 +187,8 @@ inline AssignmentInstRange getAssignmentInsts(const DbgVariableRecord *DVR) {
   return getAssignmentInsts(DVR->getAssignID());
 }
 
-//
-// Utilities for enumerating llvm.dbg.assign intrinsic from an assignment ID.
-//
-/// High level: this is an iterator for llvm.dbg.assign intrinsics.
-/// Implementation details: this is a wrapper around Value's User iterator that
-/// dereferences to a DbgAssignIntrinsic ptr rather than a User ptr.
-class DbgAssignIt
-    : public iterator_adaptor_base<DbgAssignIt, Value::user_iterator,
-                                   typename std::iterator_traits<
-                                       Value::user_iterator>::iterator_category,
-                                   DbgAssignIntrinsic *, std::ptrdiff_t,
-                                   DbgAssignIntrinsic **,
-                                   DbgAssignIntrinsic *&> {
-public:
-  DbgAssignIt(Value::user_iterator It) : iterator_adaptor_base(It) {}
-  DbgAssignIntrinsic *operator*() const { return cast<DbgAssignIntrinsic>(*I); }
-};
-/// A range of llvm.dbg.assign intrinsics.
-using AssignmentMarkerRange = iterator_range<DbgAssignIt>;
-/// Return a range of dbg.assign intrinsics which use \ID as an operand.
-/// Iterators invalidated by deleting an intrinsic contained in this range.
-LLVM_ABI AssignmentMarkerRange getAssignmentMarkers(DIAssignID *ID);
-/// Return a range of dbg.assign intrinsics for which \p Inst performs the
+/// Return a range of dbg_assign records for which \p Inst performs the
 /// assignment they encode.
-/// Iterators invalidated by deleting an intrinsic contained in this range.
-inline AssignmentMarkerRange getAssignmentMarkers(const Instruction *Inst) {
-  if (auto *ID = Inst->getMetadata(LLVMContext::MD_DIAssignID))
-    return getAssignmentMarkers(cast<DIAssignID>(ID));
-  else
-    return make_range(Value::user_iterator(), Value::user_iterator());
-}
-
 inline SmallVector<DbgVariableRecord *>
 getDVRAssignmentMarkers(const Instruction *Inst) {
   if (auto *ID = Inst->getMetadata(LLVMContext::MD_DIAssignID))
@@ -252,11 +214,6 @@ LLVM_ABI void deleteAll(Function *F);
 /// variable size) in DAI.
 ///
 /// Result contains a zero-sized fragment if there's no intersect.
-LLVM_ABI bool
-calculateFragmentIntersect(const DataLayout &DL, const Value *Dest,
-                           uint64_t SliceOffsetInBits, uint64_t SliceSizeInBits,
-                           const DbgAssignIntrinsic *DbgAssign,
-                           std::optional<DIExpression::FragmentInfo> &Result);
 LLVM_ABI bool
 calculateFragmentIntersect(const DataLayout &DL, const Value *Dest,
                            uint64_t SliceOffsetInBits, uint64_t SliceSizeInBits,

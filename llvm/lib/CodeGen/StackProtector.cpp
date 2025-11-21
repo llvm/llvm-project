@@ -49,7 +49,6 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <optional>
-#include <utility>
 
 using namespace llvm;
 
@@ -588,7 +587,14 @@ bool InsertStackProtectors(const TargetMachine *TM, Function *F,
       continue;
     Instruction *CheckLoc = dyn_cast<ReturnInst>(BB.getTerminator());
     if (!CheckLoc && !DisableCheckNoReturn)
-      for (auto &Inst : BB)
+      for (auto &Inst : BB) {
+        if (IntrinsicInst *IB = dyn_cast<IntrinsicInst>(&Inst);
+            IB && (IB->getIntrinsicID() == Intrinsic::eh_sjlj_callsite)) {
+          // eh_sjlj_callsite has to be in same BB as the
+          // bb terminator. Don't insert within this range.
+          CheckLoc = IB;
+          break;
+        }
         if (auto *CB = dyn_cast<CallBase>(&Inst))
           // Do stack check before noreturn calls that aren't nounwind (e.g:
           // __cxa_throw).
@@ -596,6 +602,7 @@ bool InsertStackProtectors(const TargetMachine *TM, Function *F,
             CheckLoc = CB;
             break;
           }
+      }
 
     if (!CheckLoc)
       continue;

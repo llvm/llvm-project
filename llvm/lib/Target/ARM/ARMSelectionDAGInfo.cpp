@@ -10,9 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ARMSelectionDAGInfo.h"
 #include "ARMTargetTransformInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/Support/CommandLine.h"
+
+#define GET_SDNODE_DESC
+#include "ARMGenSDNodeInfo.inc"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "arm-selectiondag-info"
@@ -30,9 +35,83 @@ static cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
                           "Allow (may be subject to certain conditions) "
                           "conversion of memcpy to TP loop.")));
 
+ARMSelectionDAGInfo::ARMSelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(ARMGenSDNodeInfo) {}
+
+const char *ARMSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
+#define MAKE_CASE(V)                                                           \
+  case V:                                                                      \
+    return #V;
+
+  // These nodes don't have corresponding entries in *.td files yet.
+  switch (static_cast<ARMISD::NodeType>(Opcode)) {
+    MAKE_CASE(ARMISD::DYN_ALLOC)
+    MAKE_CASE(ARMISD::MVESEXT)
+    MAKE_CASE(ARMISD::MVEZEXT)
+    MAKE_CASE(ARMISD::MVETRUNC)
+    MAKE_CASE(ARMISD::BUILD_VECTOR)
+    MAKE_CASE(ARMISD::VLD1DUP)
+    MAKE_CASE(ARMISD::VLD2DUP)
+    MAKE_CASE(ARMISD::VLD3DUP)
+    MAKE_CASE(ARMISD::VLD4DUP)
+    MAKE_CASE(ARMISD::VLD1_UPD)
+    MAKE_CASE(ARMISD::VLD2_UPD)
+    MAKE_CASE(ARMISD::VLD3_UPD)
+    MAKE_CASE(ARMISD::VLD4_UPD)
+    MAKE_CASE(ARMISD::VLD1x2_UPD)
+    MAKE_CASE(ARMISD::VLD1x3_UPD)
+    MAKE_CASE(ARMISD::VLD1x4_UPD)
+    MAKE_CASE(ARMISD::VLD2LN_UPD)
+    MAKE_CASE(ARMISD::VLD3LN_UPD)
+    MAKE_CASE(ARMISD::VLD4LN_UPD)
+    MAKE_CASE(ARMISD::VLD1DUP_UPD)
+    MAKE_CASE(ARMISD::VLD2DUP_UPD)
+    MAKE_CASE(ARMISD::VLD3DUP_UPD)
+    MAKE_CASE(ARMISD::VLD4DUP_UPD)
+    MAKE_CASE(ARMISD::VST1_UPD)
+    MAKE_CASE(ARMISD::VST3_UPD)
+    MAKE_CASE(ARMISD::VST1x2_UPD)
+    MAKE_CASE(ARMISD::VST1x3_UPD)
+    MAKE_CASE(ARMISD::VST1x4_UPD)
+    MAKE_CASE(ARMISD::VST2LN_UPD)
+    MAKE_CASE(ARMISD::VST3LN_UPD)
+    MAKE_CASE(ARMISD::VST4LN_UPD)
+  }
+#undef MAKE_CASE
+
+  return SelectionDAGGenTargetInfo::getTargetNodeName(Opcode);
+}
+
 bool ARMSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
-  return Opcode >= ARMISD::FIRST_MEMORY_OPCODE &&
-         Opcode <= ARMISD::LAST_MEMORY_OPCODE;
+  // These nodes don't have corresponding entries in *.td files yet.
+  if (Opcode >= ARMISD::FIRST_MEMORY_OPCODE &&
+      Opcode <= ARMISD::LAST_MEMORY_OPCODE)
+    return true;
+
+  return SelectionDAGGenTargetInfo::isTargetMemoryOpcode(Opcode);
+}
+
+void ARMSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
+                                           const SDNode *N) const {
+  switch (N->getOpcode()) {
+  default:
+    break;
+  case ARMISD::WIN__DBZCHK:
+    // invalid number of results; expected 2, got 1
+  case ARMISD::WIN__CHKSTK:
+    // invalid number of results; expected 1, got 2
+  case ARMISD::COPY_STRUCT_BYVAL:
+    // invalid number of operands; expected 6, got 5
+  case ARMISD::MEMCPY:
+    // invalid number of operands; expected 5, got 4
+  case ARMISD::VMOVRRD:
+    // operand #0 must have type f64, but has type v1i64/v4f16/v8i8
+  case ARMISD::VMOVIMM:
+    // operand #0 must have type i32, but has type i16
+    return;
+  }
+
+  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
 }
 
 // Emit, if possible, a specialized version of the given Libcall. Typically this
@@ -47,9 +126,7 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
 
   // Only use a specialized AEABI function if the default version of this
   // Libcall is an AEABI function.
-  if (std::strncmp(TLI->getLibcallName(LC), "__aeabi", 7) != 0)
-    return SDValue();
-
+  //
   // Translate RTLIB::Libcall to AEABILibcall. We only do this in order to be
   // able to translate memset to memclr and use the value to index the function
   // name array.
@@ -61,12 +138,21 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
   } AEABILibcall;
   switch (LC) {
   case RTLIB::MEMCPY:
+    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memcpy)
+      return SDValue();
+
     AEABILibcall = AEABI_MEMCPY;
     break;
   case RTLIB::MEMMOVE:
+    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memmove)
+      return SDValue();
+
     AEABILibcall = AEABI_MEMMOVE;
     break;
   case RTLIB::MEMSET:
+    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memset)
+      return SDValue();
+
     AEABILibcall = AEABI_MEMSET;
     if (isNullConstant(Src))
       AEABILibcall = AEABI_MEMCLR;
@@ -89,19 +175,15 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
     AlignVariant = ALIGN1;
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
-  Entry.Node = Dst;
-  Args.push_back(Entry);
+  Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+  Args.emplace_back(Dst, IntPtrTy);
   if (AEABILibcall == AEABI_MEMCLR) {
-    Entry.Node = Size;
-    Args.push_back(Entry);
+    Args.emplace_back(Size, IntPtrTy);
   } else if (AEABILibcall == AEABI_MEMSET) {
     // Adjust parameters for memset, EABI uses format (ptr, size, value),
     // GNU library uses (ptr, value, size)
     // See RTABI section 4.3.4
-    Entry.Node = Size;
-    Args.push_back(Entry);
+    Args.emplace_back(Size, IntPtrTy);
 
     // Extend or truncate the argument to be an i32 value for the call.
     if (Src.getValueType().bitsGT(MVT::i32))
@@ -109,16 +191,13 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
     else if (Src.getValueType().bitsLT(MVT::i32))
       Src = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, Src);
 
-    Entry.Node = Src;
-    Entry.Ty = Type::getInt32Ty(*DAG.getContext());
+    TargetLowering::ArgListEntry Entry(Src,
+                                       Type::getInt32Ty(*DAG.getContext()));
     Entry.IsSExt = false;
     Args.push_back(Entry);
   } else {
-    Entry.Node = Src;
-    Args.push_back(Entry);
-
-    Entry.Node = Size;
-    Args.push_back(Entry);
+    Args.emplace_back(Src, IntPtrTy);
+    Args.emplace_back(Size, IntPtrTy);
   }
 
   static const RTLIB::Libcall FunctionImpls[4][3] = {

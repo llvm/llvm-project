@@ -33,8 +33,13 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
     ShapedType weightType = cast<ShapedType>(weight.getType());
     ShapedType resultType = cast<ShapedType>(op.getOutput().getType());
 
-    if (!(inputType.hasStaticShape() && weightType.hasStaticShape() &&
-          resultType.hasStaticShape())) {
+    // Any dimensions other than batchSize cannot be dynamic for input/output
+    for (unsigned int i = 1; i < 4; ++i) {
+      if (inputType.isDynamicDim(i) || resultType.isDynamicDim(i))
+        return failure();
+    }
+
+    if (!weightType.hasStaticShape()) {
       return failure();
     }
 
@@ -81,9 +86,8 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
         dyn_cast<RankedTensorType>(input.getType()).getElementType());
     auto revisedInputShapeValue =
         getTosaConstShape(rewriter, op.getLoc(), revisedInputShape);
-    input = rewriter
-                .create<tosa::ReshapeOp>(op.getLoc(), inputType, input,
-                                         revisedInputShapeValue)
+    input = tosa::ReshapeOp::create(rewriter, op.getLoc(), inputType, input,
+                                    revisedInputShapeValue)
                 .getResult();
 
     Type resultETy = resultType.getElementType();
@@ -162,9 +166,8 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
         shiftType, rewriter.getIntegerAttr(shiftElementType, 0));
     Value constZero =
         tosa::ConstOp::create(rewriter, op.getLoc(), shiftType, shiftZeroAttr);
-    Value mulValue = rewriter
-                         .create<tosa::MulOp>(op.getLoc(), mulShapeType, input,
-                                              weight, constZero)
+    Value mulValue = tosa::MulOp::create(rewriter, op.getLoc(), mulShapeType,
+                                         input, weight, constZero)
                          .getResult();
 
     // Reshape output to [N, H, W, C * M].

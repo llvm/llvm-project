@@ -125,6 +125,11 @@ static void resolveTopLevelMetadata(llvm::Function *Fn,
   if (!DIS)
     return;
   auto *NewDIS = llvm::MDNode::replaceWithDistinct(DIS->clone());
+  // As DISubprogram remapping is avoided, clear retained nodes list of
+  // cloned DISubprogram from retained nodes local to original DISubprogram.
+  // FIXME: Thunk function signature is produced wrong in DWARF, as retained
+  // nodes are not remapped.
+  NewDIS->replaceRetainedNodes(llvm::MDTuple::get(Fn->getContext(), {}));
   VMap.MD()[DIS].reset(NewDIS);
 
   // Find all llvm.dbg.declare intrinsics and resolve the DILocalVariable nodes
@@ -770,7 +775,9 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
   case VTableComponent::CK_FunctionPointer:
   case VTableComponent::CK_CompleteDtorPointer:
   case VTableComponent::CK_DeletingDtorPointer: {
-    GlobalDecl GD = component.getGlobalDecl();
+    GlobalDecl GD = component.getGlobalDecl(
+        CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+            CGM.getContext().getLangOpts()));
 
     const bool IsThunk =
         nextVTableThunkIndex < layout.vtable_thunks().size() &&
@@ -971,7 +978,7 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
   VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Constant *RTTI = CGM.GetAddrOfRTTIDescriptor(
-      CGM.getContext().getTagDeclType(Base.getBase()));
+      CGM.getContext().getCanonicalTagType(Base.getBase()));
 
   // Create and set the initializer.
   ConstantInitBuilder builder(CGM);
@@ -1382,8 +1389,8 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
                        AP.second.AddressPointIndex,
                    {}};
     llvm::raw_string_ostream Stream(N.TypeName);
-    getCXXABI().getMangleContext().mangleCanonicalTypeName(
-        QualType(N.Base->getTypeForDecl(), 0), Stream);
+    CanQualType T = getContext().getCanonicalTagType(N.Base);
+    getCXXABI().getMangleContext().mangleCanonicalTypeName(T, Stream);
     AddressPoints.push_back(std::move(N));
   }
 
@@ -1404,7 +1411,7 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
         continue;
       llvm::Metadata *MD = CreateMetadataIdentifierForVirtualMemPtrType(
           Context.getMemberPointerType(Comps[I].getFunctionDecl()->getType(),
-                                       /*Qualifier=*/nullptr, AP.Base));
+                                       /*Qualifier=*/std::nullopt, AP.Base));
       VTable->addTypeMetadata((ComponentWidth * I).getQuantity(), MD);
     }
   }
