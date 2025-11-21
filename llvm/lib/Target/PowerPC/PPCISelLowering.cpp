@@ -15563,8 +15563,8 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
   assert(N->getOpcode() == ISD::SETCC && "Should be called with a SETCC node");
 
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  assert(CC == ISD::SETNE ||
-         CC == ISD::SETEQ && "CC mus be ISD::SETNE or ISD::SETEQ");
+  assert((CC == ISD::SETNE || CC == ISD::SETEQ) &&
+         "CC mus be ISD::SETNE or ISD::SETEQ");
 
   auto getV16i8Load = [&](const SDValue &Operand) {
     if (Operand.getOpcode() == ISD::Constant)
