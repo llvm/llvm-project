@@ -179,6 +179,8 @@ Changes to the LLVM tools
 * `llvm-readelf` now dumps all hex format values in lower-case mode.
 * Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
 * Support for `%T` in lit has been removed.
+* `llvm-objdump` now supports using `--mcpu=help` with the `--triple` option
+  without requiring an input file or the `-d` (disassemble) flag.
 
 Changes to LLDB
 ---------------------------------
