@@ -22,6 +22,7 @@
 #include "DXILOpLowering.h"
 #include "DXILPostOptimizationValidation.h"
 #include "DXILPrettyPrinter.h"
+#include "DXILRefineTypes.h"
 #include "DXILResourceAccess.h"
 #include "DXILResourceImplicitBinding.h"
 #include "DXILRootSignature.h"
@@ -37,10 +38,12 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCSectionDXContainer.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -147,6 +150,11 @@ DirectXTargetMachine::~DirectXTargetMachine() {}
 void DirectXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "DirectXPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
+
+  PB.registerPeepholeEPCallback(
+      [](FunctionPassManager &FPM, OptimizationLevel) {
+        FPM.addPass(DXILRefineTypesPass());
+      });
 }
 
 bool DirectXTargetMachine::addPassesToEmitFile(
