@@ -72,7 +72,9 @@ else()
       OBJECT_LIBS RTInterception
                   RTSanitizerCommon
                   RTSanitizerCommonLibc
+                  RTSanitizerCommonCoverage
                   RTSanitizerCommonSymbolizer
+                  RTUbsan
       CFLAGS ${TYSAN_CFLAGS}
       PARENT_TARGET tysan)
   endforeach()
