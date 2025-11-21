@@ -73,8 +73,8 @@ bool GlobalVariableModel::isConstant(mlir::Operation *op) const {
 
 // Helper to recursively process address-of operations in derived type
 // descriptors and collect all needed fir.globals.
-static void processAddrOfOpInDerivedTypeDescriptor(fir::AddrOfOp addrOfOp,
-    mlir::SymbolTable &symTab,
+static void processAddrOfOpInDerivedTypeDescriptor(
+    fir::AddrOfOp addrOfOp, mlir::SymbolTable &symTab,
     llvm::SmallSet<mlir::Operation *, 16> &globalsSet,
     llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols) {
   if (auto globalOp = symTab.lookup<fir::GlobalOp>(
@@ -85,8 +85,7 @@ static void processAddrOfOpInDerivedTypeDescriptor(fir::AddrOfOp addrOfOp,
     globalsSet.insert(globalOp);
     symbols.push_back(addrOfOp.getSymbolAttr());
     globalOp.walk([&](fir::AddrOfOp op) {
-      processAddrOfOpInDerivedTypeDescriptor(
-          op, symTab, globalsSet, symbols);
+      processAddrOfOpInDerivedTypeDescriptor(op, symTab, globalsSet, symbols);
     });
   }
 }
@@ -94,7 +93,8 @@ static void processAddrOfOpInDerivedTypeDescriptor(fir::AddrOfOp addrOfOp,
 // Utility to collect referenced symbols for type descriptors of derived types.
 // This is the common logic for operations that may require type descriptor
 // globals.
-static void collectReferencedSymbolsForType(mlir::Type ty, mlir::Operation *op,
+static void collectReferencedSymbolsForType(
+    mlir::Type ty, mlir::Operation *op,
     llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
     mlir::SymbolTable *symbolTable) {
   ty = fir::getDerivedType(fir::unwrapRefType(ty));
@@ -103,7 +103,8 @@ static void collectReferencedSymbolsForType(mlir::Type ty, mlir::Operation *op,
   if (auto recTy = mlir::dyn_cast_if_present<fir::RecordType>(ty)) {
     // If no symbol table provided, simply add the type descriptor name
     if (!symbolTable) {
-      symbols.push_back(mlir::SymbolRefAttr::get(op->getContext(),
+      symbols.push_back(mlir::SymbolRefAttr::get(
+          op->getContext(),
           fir::NameUniquer::getTypeDescriptorName(recTy.getName())));
       return;
     }
@@ -119,11 +120,11 @@ static void collectReferencedSymbolsForType(mlir::Type ty, mlir::Operation *op,
     }
     if (globalOp) {
       globalsSet.insert(globalOp);
-      symbols.push_back(mlir::SymbolRefAttr::get(
-          op->getContext(), globalOp.getSymName()));
+      symbols.push_back(
+          mlir::SymbolRefAttr::get(op->getContext(), globalOp.getSymName()));
       globalOp.walk([&](fir::AddrOfOp addrOp) {
-        processAddrOfOpInDerivedTypeDescriptor(
-            addrOp, *symbolTable, globalsSet, symbols);
+        processAddrOfOpInDerivedTypeDescriptor(addrOp, *symbolTable, globalsSet,
+                                               symbols);
       });
     }
   }
@@ -131,8 +132,7 @@ static void collectReferencedSymbolsForType(mlir::Type ty, mlir::Operation *op,
 
 template <>
 void IndirectGlobalAccessModel<fir::AllocaOp>::getReferencedSymbols(
-    mlir::Operation *op,
-    llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
+    mlir::Operation *op, llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
     mlir::SymbolTable *symbolTable) const {
   auto allocaOp = mlir::cast<fir::AllocaOp>(op);
   collectReferencedSymbolsForType(allocaOp.getType(), op, symbols, symbolTable);
@@ -140,32 +140,29 @@ void IndirectGlobalAccessModel<fir::AllocaOp>::getReferencedSymbols(
 
 template <>
 void IndirectGlobalAccessModel<fir::EmboxOp>::getReferencedSymbols(
-    mlir::Operation *op,
-    llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
+    mlir::Operation *op, llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
     mlir::SymbolTable *symbolTable) const {
   auto emboxOp = mlir::cast<fir::EmboxOp>(op);
   collectReferencedSymbolsForType(emboxOp.getMemref().getType(), op, symbols,
-                                   symbolTable);
+                                  symbolTable);
 }
 
 template <>
 void IndirectGlobalAccessModel<fir::ReboxOp>::getReferencedSymbols(
-    mlir::Operation *op,
-    llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
+    mlir::Operation *op, llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
     mlir::SymbolTable *symbolTable) const {
   auto reboxOp = mlir::cast<fir::ReboxOp>(op);
   collectReferencedSymbolsForType(reboxOp.getBox().getType(), op, symbols,
-                                   symbolTable);
+                                  symbolTable);
 }
 
 template <>
 void IndirectGlobalAccessModel<fir::TypeDescOp>::getReferencedSymbols(
-    mlir::Operation *op,
-    llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
+    mlir::Operation *op, llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
     mlir::SymbolTable *symbolTable) const {
   auto typeDescOp = mlir::cast<fir::TypeDescOp>(op);
   collectReferencedSymbolsForType(typeDescOp.getInType(), op, symbols,
-                                   symbolTable);
+                                  symbolTable);
 }
 
 } // namespace fir::acc

@@ -71,10 +71,9 @@ template <typename Op>
 struct IndirectGlobalAccessModel
     : public mlir::acc::IndirectGlobalAccessOpInterface::ExternalModel<
           IndirectGlobalAccessModel<Op>, Op> {
-  void getReferencedSymbols(
-      mlir::Operation *op,
-      llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
-      mlir::SymbolTable *symbolTable) const;
+  void getReferencedSymbols(mlir::Operation *op,
+                            llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
+                            mlir::SymbolTable *symbolTable) const;
 };
 
 } // namespace fir::acc

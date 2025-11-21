@@ -59,8 +59,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         *ctx);
     fir::ReboxOp::attachInterface<IndirectGlobalAccessModel<fir::ReboxOp>>(
         *ctx);
-    fir::TypeDescOp::attachInterface<IndirectGlobalAccessModel<fir::TypeDescOp>>(
-        *ctx);
+    fir::TypeDescOp::attachInterface<
+        IndirectGlobalAccessModel<fir::TypeDescOp>>(*ctx);
   });
 
   // Register HLFIR operation interfaces
