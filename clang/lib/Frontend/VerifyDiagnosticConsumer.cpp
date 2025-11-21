@@ -666,7 +666,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
       }
     } else if (PH.Next("+")) {
       // '+' on its own means "1 or more".
-      if (OneDiagPerDirective && D.Max != 1) {
+      if (OneDiagPerDirective) {
         Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
                      diag::err_verify_non_singular_match);
         continue;
