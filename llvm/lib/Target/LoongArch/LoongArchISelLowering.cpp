@@ -481,6 +481,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasExtLSX()) {
     setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
     setTargetDAGCombine(ISD::BITCAST);
+    setTargetDAGCombine(ISD::MUL);
   }
 
   // Set DAG combine for 'LASX' feature.
@@ -6749,6 +6750,136 @@ performEXTRACT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const LoongArchSubtarget &Subtarget) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT ResTy = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // Note: v2i128 is an unsupported MVT vector type (see
+  // MachineValueType.h::getVectorVT()), use NumElements and SizeInBits to
+  // identify it.
+  bool HasLSXOnly = Subtarget.hasExtLSX() && !Subtarget.hasExtLASX();
+  bool Isv2i128 = ResTy.isVector() && ResTy.getVectorNumElements() == 2 &&
+                  ResTy.getScalarSizeInBits() == 128;
+  if (ResTy != MVT::v8i16 && ResTy != MVT::v4i32 && ResTy != MVT::v2i64 &&
+      ResTy != MVT::i128 && ResTy != MVT::v16i16 && ResTy != MVT::v8i32 &&
+      ResTy != MVT::v4i64 && !Isv2i128)
+    return SDValue();
+  if (HasLSXOnly && (ResTy.is256BitVector() || Isv2i128))
+    return SDValue();
+
+  // Combine:
+  //   ti,tii,...,tx = extract_vector_elt t0, {0,2,4,.../1,3,5,...}
+  //   tj,tjj,...,ty = extract_vector_elt t1, {0,2,4,.../1,3,5,...}
+  //   tm = BUILD_VECTOR ti,tii,...,tx (Only when ResTy != MVT::i128)
+  //   tn = BUILD_VECTOR tj,tjj,...,ty (Only when ResTy != MVT::i128)
+  //   ta = {sign/zero}_extend tm
+  //   tb = {sign/zero}_extend tn
+  //   tr = mul ta, tb
+  // to:
+  //   tr = VMULW{EV/OD}[U/US] t0, t1
+  auto getExtType = [](unsigned Op0, unsigned Op1) -> unsigned {
+    if (Op0 == ISD::SIGN_EXTEND && Op1 == ISD::SIGN_EXTEND)
+      return 0;
+    if (Op0 == ISD::ZERO_EXTEND && Op1 == ISD::ZERO_EXTEND)
+      return 1;
+    if (Op0 == ISD::ZERO_EXTEND && Op1 == ISD::SIGN_EXTEND)
+      return 2;
+    if (Op0 == ISD::SIGN_EXTEND && Op1 == ISD::ZERO_EXTEND)
+      return 3;
+    return -1;
+  };
+
+  unsigned ExtType = getExtType(N0.getOpcode(), N1.getOpcode());
+  if (ExtType < 0)
+    return SDValue();
+
+  SDValue Src0 = N0.getOperand(0);
+  SDValue Src1 = N1.getOperand(0);
+  bool IsScalar = (ResTy == MVT::i128);
+  if (IsScalar && (Src0.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+                   Src1.getOpcode() != ISD::EXTRACT_VECTOR_ELT))
+    return SDValue();
+  if (!IsScalar && (Src0.getOpcode() != ISD::BUILD_VECTOR ||
+                    Src1.getOpcode() != ISD::BUILD_VECTOR))
+    return SDValue();
+
+  unsigned ResBits = ResTy.getScalarSizeInBits();
+  unsigned Src0Bits = Src0.getValueType().getScalarSizeInBits();
+  unsigned Src1Bits = Src1.getValueType().getScalarSizeInBits();
+  if (Src0Bits != Src1Bits || ResBits != Src0Bits * 2)
+    return SDValue();
+
+  // Collect all EXTRACT_VECTOR_ELT.
+  SmallVector<std::pair<SDValue, SDValue>> Elems;
+  if (IsScalar) {
+    Elems.emplace_back(Src0, Src1);
+  } else {
+    for (unsigned i = 0; i < Src0.getNumOperands(); ++i)
+      Elems.emplace_back(Src0.getOperand(i), Src1.getOperand(i));
+  }
+
+  unsigned Index;
+  SDValue OrigN0, OrigN1;
+  bool First = true;
+  for (auto &[Op0, Op1] : Elems) {
+    // Each element must be EXTRACT_VECTOR_ELT.
+    if (Op0.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+        Op1.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return SDValue();
+
+    // Check each EXTRACT_VECTOR_ELT's source vector and index.
+    if (Op0.getOperand(1) != Op1.getOperand(1))
+      return SDValue();
+
+    auto *IdxC = dyn_cast<ConstantSDNode>(Op0.getOperand(1));
+    if (!IdxC)
+      return SDValue();
+
+    unsigned CurIdx = IdxC->getZExtValue();
+    if (First) {
+      if (CurIdx != 0 && CurIdx != 1)
+        return SDValue();
+      OrigN0 = Op0.getOperand(0);
+      OrigN1 = Op1.getOperand(0);
+      First = false;
+    } else {
+      if (CurIdx != Index + 2 || Op0.getOperand(0) != OrigN0 ||
+          Op1.getOperand(0) != OrigN1)
+        return SDValue();
+    }
+    Index = CurIdx;
+  }
+
+  if (OrigN0.getValueType() != OrigN1.getValueType())
+    return SDValue();
+  if (OrigN0.getValueType().getVectorNumElements() !=
+      (IsScalar ? 1 : ResTy.getVectorNumElements()) * 2)
+    return SDValue();
+
+  SDValue Result;
+  EVT OrigTy = OrigN0.getValueType();
+  bool IsEven = (Index % 2 == 0);
+
+  static const unsigned OpcTable[3][2] = {
+      {LoongArchISD::VMULWOD, LoongArchISD::VMULWEV},
+      {LoongArchISD::VMULWODU, LoongArchISD::VMULWEVU},
+      {LoongArchISD::VMULWODUS, LoongArchISD::VMULWEVUS}};
+
+  if (ExtType == 3)
+    Result = DAG.getNode(OpcTable[2][IsEven], DL, OrigTy, OrigN1, OrigN0);
+  else
+    Result = DAG.getNode(OpcTable[ExtType][IsEven], DL, OrigTy, OrigN0, OrigN1);
+
+  return DAG.getBitcast(ResTy, Result);
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -6784,6 +6915,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performSPLIT_PAIR_F64Combine(N, DAG, DCI, Subtarget);
   case ISD::EXTRACT_VECTOR_ELT:
     return performEXTRACT_VECTOR_ELTCombine(N, DAG, DCI, Subtarget);
+  case ISD::MUL:
+    return performMULCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
 }
