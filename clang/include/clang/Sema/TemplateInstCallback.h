@@ -51,7 +51,7 @@ void initialize(TemplateInstantiationCallbackPtrs &Callbacks,
 template <class TemplateInstantiationCallbackPtrs>
 void finalize(TemplateInstantiationCallbackPtrs &Callbacks,
               const Sema &TheSema) {
-  for (auto &C : Callbacks) {
+  for (auto &C  : Callbacks) {
     if (C)
       C->finalize(TheSema);
   }

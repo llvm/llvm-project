@@ -293,6 +293,7 @@ void CIRGenFunction::popCleanupBlock() {
   Address normalActiveFlag = scope.shouldTestFlagInNormalCleanup()
                                  ? scope.getActiveFlag()
                                  : Address::invalid();
+  [[maybe_unused]]
   Address ehActiveFlag = scope.shouldTestFlagInEHCleanup()
                              ? scope.getActiveFlag()
                              : Address::invalid();

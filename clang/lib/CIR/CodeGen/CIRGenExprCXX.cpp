@@ -801,9 +801,42 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   // interesting initializer will be running sanitizers on the initialization.
   bool nullCheck = e->shouldNullCheckAllocation() &&
                    (!allocType.isPODType(getContext()) || e->hasInitializer());
-  assert(!cir::MissingFeatures::exprNewNullCheck());
-  if (nullCheck)
-    cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: null check");
+
+  // The null-check means that the initializer is conditionally
+  // evaluated.
+  mlir::OpBuilder::InsertPoint ifBody, postIfBody, preIfBody;
+  mlir::Value nullCmpResult;
+  mlir::Location loc = getLoc(e->getSourceRange());
+
+  if (nullCheck) {
+    mlir::Value nullPtr =
+        builder.getNullPtr(allocation.getPointer().getType(), loc);
+    nullCmpResult = builder.createCompare(loc, cir::CmpOpKind::ne,
+                                          allocation.getPointer(), nullPtr);
+    preIfBody = builder.saveInsertionPoint();
+    cir::IfOp::create(builder, loc, nullCmpResult,
+                      /*withElseRegion=*/false,
+                      [&](mlir::OpBuilder &, mlir::Location) {
+                        ifBody = builder.saveInsertionPoint();
+                      });
+    postIfBody = builder.saveInsertionPoint();
+  }
+
+  // Make sure the conditional evaluation uses the insertion
+  // point right before the if check.
+  mlir::OpBuilder::InsertPoint ip = builder.saveInsertionPoint();
+  if (ifBody.isSet()) {
+    builder.setInsertionPointAfterValue(nullCmpResult);
+    ip = builder.saveInsertionPoint();
+  }
+
+  // All the actual work to be done should be placed inside the IfOp above,
+  // so change the insertion point over there.
+  ConditionalEvaluation conditional{*this, ip};
+  if (ifBody.isSet()) {
+    conditional.beginEvaluation();
+    builder.restoreInsertionPoint(ifBody);
+  }
 
   // If there's an operator delete, enter a cleanup to call it if an
   // exception is thrown.
@@ -840,7 +873,20 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
   emitNewInitializer(*this, e, allocType, elementTy, result, numElements,
                      allocSizeWithoutCookie);
-  return result.getPointer();
+
+  mlir::Value resultPtr = result.getPointer();
+
+  if (nullCheck) {
+    conditional.endEvaluation();
+    // resultPtr is already updated in the first null check phase.
+    // Reset insertion point to resume back to post ifOp.
+    if (postIfBody.isSet()) {
+      cir::YieldOp::create(builder, loc);
+      builder.restoreInsertionPoint(postIfBody);
+    }
+  }
+
+  return resultPtr;
 }
 
 void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
