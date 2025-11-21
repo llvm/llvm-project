@@ -282,7 +282,6 @@ define i32 @ashr_var_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-NEXT:    orb $1, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    sarl %cl, %edi
-; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovel %edx, %eax
 ; CHECK-NEXT:    retq
   %a = or i32 %a1, 1
@@ -301,7 +300,6 @@ define i32 @lshr_var_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-NEXT:    orb $1, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrl %cl, %edi
-; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovel %edx, %eax
 ; CHECK-NEXT:    retq
   %a = or i32 %a1, 1
@@ -320,7 +318,6 @@ define i32 @shl_var_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-NEXT:    orb $1, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %edi
-; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovel %edx, %eax
 ; CHECK-NEXT:    retq
   %a = or i32 %a1, 1
@@ -339,7 +336,6 @@ define i32 @ashr_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %
 ; CHECK-NEXT:    orb $1, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrl %cl, %eax
-; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    cmovnel %edx, %eax
 ; CHECK-NEXT:    retq
   %a = or i32 %a1, 1
@@ -358,7 +354,6 @@ define i32 @lshr_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %
 ; CHECK-NEXT:    orb $1, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrl %cl, %eax
-; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    cmovnel %edx, %eax
 ; CHECK-NEXT:    retq
   %a = or i32 %a1, 1
@@ -377,7 +372,6 @@ define i32 @shl_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a
 ; CHECK-NEXT:    orb $1, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrl %cl, %eax
-; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    cmovnel %edx, %eax
 ; CHECK-NEXT:    retq
   %a = or i32 %a1, 1
@@ -385,4 +379,21 @@ define i32 @shl_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a
   %c = icmp eq i32 %s, 0
   %r = select i1 %c, i32 %s, i32 %a2
   ret i32 %r
+}
+
+define range(i8 0, 2) i8 @no_test_emitted_when_assume_shift_amt_gt_zero(i64 noundef %0, i32 noundef %1) {
+; CHECK-LABEL: no_test_emitted_when_assume_shift_amt_gt_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shlq %cl, %rdi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %3 = icmp sgt i32 %1, 0
+  tail call void @llvm.assume(i1 %3)
+  %4 = zext nneg i32 %1 to i64
+  %5 = shl i64 %0, %4
+  %6 = icmp eq i64 %5, 0
+  %7 = zext i1 %6 to i8
+  ret i8 %7
 }
