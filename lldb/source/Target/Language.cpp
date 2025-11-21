@@ -701,7 +701,7 @@ GetFuncToLocalVariablesMap(llvm::ArrayRef<Function *> funcs) {
 
 /// Returns the first line associated with `function`.
 static uint32_t GetLineNumberForFunction(Function &function) {
-  SupportFileSP func_decl_file_sp;
+  SupportFileNSP func_decl_file_sp = std::make_shared<SupportFile>();
   uint32_t line_num = 0;
   function.GetStartLineSourceInfo(func_decl_file_sp, line_num);
   return line_num;
