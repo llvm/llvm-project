@@ -550,10 +550,6 @@ constexpr FeatureBitset ImpliedFeaturesRETPOLINE_INDIRECT_BRANCHES = {};
 constexpr FeatureBitset ImpliedFeaturesRETPOLINE_INDIRECT_CALLS = {};
 constexpr FeatureBitset ImpliedFeaturesLVI_CFI = {};
 constexpr FeatureBitset ImpliedFeaturesLVI_LOAD_HARDENING = {};
-constexpr FeatureBitset ImpliedFeaturesX86_64_BASELINE = {};
-constexpr FeatureBitset ImpliedFeaturesX86_64_V2 = {};
-constexpr FeatureBitset ImpliedFeaturesX86_64_V3 = {};
-constexpr FeatureBitset ImpliedFeaturesX86_64_V4 = {};
 
 // XSAVE features are dependent on basic XSAVE.
 constexpr FeatureBitset ImpliedFeaturesXSAVEC = FeatureXSAVE;
@@ -664,8 +660,9 @@ constexpr FeatureBitset ImpliedFeaturesAPXF =
 
 constexpr FeatureBitset ImpliedFeaturesMOVRS = {};
 
-constexpr FeatureInfo FeatureInfos[CPU_FEATURE_MAX] = {
+constexpr FeatureInfo FeatureInfos[] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE)
 #include "llvm/TargetParser/X86TargetParser.def"
 };
 
@@ -765,6 +762,7 @@ llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   for (StringRef FeatureStr : FeatureStrs) {
     unsigned Feature = StringSwitch<unsigned>(FeatureStr)
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, ABI_VALUE)
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, ABI_VALUE)
 #include "llvm/TargetParser/X86TargetParser.def"
         ;
     assert(Feature / 32 < FeatureMask.size());

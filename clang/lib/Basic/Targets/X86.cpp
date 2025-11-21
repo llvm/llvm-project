@@ -1303,6 +1303,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
 bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   return llvm::StringSwitch<bool>(FeatureStr)
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, true)
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, true)
 #include "llvm/TargetParser/X86TargetParser.def"
       .Default(false);
 }

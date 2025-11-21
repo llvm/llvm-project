@@ -135,6 +135,10 @@ X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_PANTHERLAKE, "wildcatlake")
 #define X86_FEATURE(ENUM, STR)
 #endif
 
+#ifndef X86_MICROARCH_LEVEL
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE)
+#endif
+
 X86_FEATURE_COMPAT(CMOV,            "cmov",                  0,   0)
 X86_FEATURE_COMPAT(MMX,             "mmx",                   1,   1)
 X86_FEATURE_COMPAT(POPCNT,          "popcnt",                9,   2)
@@ -231,10 +235,10 @@ X86_FEATURE       (FXSR,            "fxsr")
 X86_FEATURE_COMPAT(WIDEKL,          "widekl",                 0, 92)
 X86_FEATURE_COMPAT(AVXVNNI,         "avxvnni",                0, 93)
 X86_FEATURE_COMPAT(AVX512FP16,      "avx512fp16",             0, 94)
-X86_FEATURE_COMPAT(X86_64_BASELINE,"x86-64",                  0, 95)
-X86_FEATURE_COMPAT(X86_64_V2,      "x86-64-v2",               0, 96)
-X86_FEATURE_COMPAT(X86_64_V3,      "x86-64-v3",               0, 97)
-X86_FEATURE_COMPAT(X86_64_V4,      "x86-64-v4",               0, 98)
+X86_MICROARCH_LEVEL(X86_64_BASELINE,"x86-64",                 0, 95)
+X86_MICROARCH_LEVEL(X86_64_V2,      "x86-64-v2",              0, 96)
+X86_MICROARCH_LEVEL(X86_64_V3,      "x86-64-v3",              0, 97)
+X86_MICROARCH_LEVEL(X86_64_V4,      "x86-64-v4",              0, 98)
 X86_FEATURE       (CCMP,            "ccmp")
 X86_FEATURE       (Push2Pop2,       "push2pop2")
 X86_FEATURE       (PPX,             "ppx")
@@ -275,3 +279,4 @@ X86_FEATURE       (LVI_LOAD_HARDENING,          "lvi-load-hardening")
 
 #undef X86_FEATURE_COMPAT
 #undef X86_FEATURE
+#undef X86_MICROARCH_LEVEL
