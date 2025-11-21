@@ -8313,8 +8313,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
-  if (!this->processCallGraphSection() || this->FuncCGInfos.empty())
+  if (!this->processCallGraphSection() || this->FuncCGInfos.empty()) {
+    ListScope CGI(W, "CallGraph");
     return;
+  }
 
   auto PrintNonRelocatableFuncSymbol = [&](uint64_t FuncEntryPC) {
     SmallVector<std::string> FuncSymNames = this->getFunctionNames(FuncEntryPC);
@@ -8375,7 +8377,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       }
     }
     W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());
-    auto IndirectTypeIdsList = SmallVector<uint64_t, 4>(
+    SmallVector<uint64_t, 4> IndirectTypeIdsList = SmallVector<uint64_t, 4>(
         CGInfo.IndirectTypeIDs.begin(), CGInfo.IndirectTypeIDs.end());
     W.printHexList("IndirectTypeIDs", ArrayRef(IndirectTypeIdsList));
   }

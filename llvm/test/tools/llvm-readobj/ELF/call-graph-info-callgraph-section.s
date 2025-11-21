@@ -3,13 +3,9 @@
 # REQUIRES: x86-registered-target
 
 # RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
-# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s --allow-empty -DFILE=%t
+# RUN: llvm-readelf --call-graph-info %t 2>&1 | count 0
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=LLVM
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=JSON
-
-
-## We do not support GNU format console output for --call-graph-info as it is an LLVM only info.
-# CHECK-NOT: .
 
 # LLVM: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 2 indirect targets.
 # LLVM-NEXT: CallGraph [
