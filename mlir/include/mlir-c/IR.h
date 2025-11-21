@@ -1051,6 +1051,10 @@ MLIR_CAPI_EXPORTED intptr_t mlirBlockArgumentGetArgNumber(MlirValue value);
 MLIR_CAPI_EXPORTED void mlirBlockArgumentSetType(MlirValue value,
                                                  MlirType type);
 
+/// Sets the location of the block argument to the given location.
+MLIR_CAPI_EXPORTED void mlirBlockArgumentSetLocation(MlirValue value,
+                                                     MlirLocation loc);
+
 /// Returns an operation that produced this value as its result. Asserts if the
 /// value is not an op result.
 MLIR_CAPI_EXPORTED MlirOperation mlirOpResultGetOwner(MlirValue value);

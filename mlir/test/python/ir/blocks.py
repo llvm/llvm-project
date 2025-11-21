@@ -191,3 +191,18 @@ def testBlockEraseArgs():
         blocks[0].erase_argument(0)
         # CHECK: ^bb0:
         op.print(enable_debug_info=True)
+
+
+# CHECK-LABEL: TEST: testBlockArgSetLocation
+# CHECK: ^bb0(%{{.+}}: f32 loc("new_loc")):
+@run
+def testBlockArgSetLocation():
+    with Context() as ctx, Location.unknown(ctx) as loc:
+        ctx.allow_unregistered_dialects = True
+        f32 = F32Type.get()
+        op = Operation.create("test", regions=1, loc=Location.unknown())
+        blocks = op.regions[0].blocks
+        blocks.append(f32)
+        arg = blocks[0].arguments[0]
+        arg.set_location(Location.name("new_loc"))
+        op.print(enable_debug_info=True)

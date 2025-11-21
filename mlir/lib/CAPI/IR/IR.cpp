@@ -1129,6 +1129,11 @@ void mlirBlockArgumentSetType(MlirValue value, MlirType type) {
     blockArg.setType(unwrap(type));
 }
 
+void mlirBlockArgumentSetLocation(MlirValue value, MlirLocation loc) {
+  if (auto blockArg = llvm::dyn_cast<BlockArgument>(unwrap(value)))
+    blockArg.setLoc(unwrap(loc));
+}
+
 MlirOperation mlirOpResultGetOwner(MlirValue value) {
   return wrap(llvm::dyn_cast<OpResult>(unwrap(value)).getOwner());
 }

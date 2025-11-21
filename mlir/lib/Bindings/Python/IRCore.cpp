@@ -2347,6 +2347,12 @@ public:
           return mlirBlockArgumentSetType(self.get(), type);
         },
         nb::arg("type"), "Sets the type of this block argument.");
+    c.def(
+        "set_location",
+        [](PyBlockArgument &self, PyLocation loc) {
+          return mlirBlockArgumentSetLocation(self.get(), loc);
+        },
+        nb::arg("loc"), "Sets the location of this block argument.");
   }
 };
 
