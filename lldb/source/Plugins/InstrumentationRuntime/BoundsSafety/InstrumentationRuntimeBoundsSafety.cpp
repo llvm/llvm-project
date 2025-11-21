@@ -135,10 +135,9 @@ InstrumentationBoundsSafetyStopInfo::ComputeStopReasonAndSuggestedStackFrame(
     return {};
   }
 
-  if (parent_sf->HasDebugInformation()) {
+  if (parent_sf->HasDebugInformation()) 
     return ComputeStopReasonAndSuggestedStackFrameWithDebugInfo(
         parent_sf, debugger_id, warning_emitted_for_failure);
-  }
 
   // If the debug info is missing we can still get some information
   // from the parameter in the soft trap runtime call.
