@@ -454,9 +454,7 @@ public:
   /// Returns a reference to the type cast instructions in the induction
   /// update chain, that are redundant when guarded with a runtime
   /// SCEV overflow check.
-  const SmallVectorImpl<Instruction *> &getCastInsts() const {
-    return RedundantCasts;
-  }
+  ArrayRef<Instruction *> getCastInsts() const { return RedundantCasts; }
 
 private:
   /// Private constructor - used by \c isInductionPHI.
