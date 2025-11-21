@@ -12,6 +12,7 @@
 
 #include "CGBuiltin.h"
 #include "CodeGenFunction.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/Analysis/ValueTracking.h"
