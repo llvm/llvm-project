@@ -16,10 +16,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SERIALIZE_H
 
 #include "Representation.h"
-#include "clang/AST/AST.h"
-#include "clang/AST/CommentVisitor.h"
 #include <string>
-#include <vector>
 
 using namespace clang::comments;
 
