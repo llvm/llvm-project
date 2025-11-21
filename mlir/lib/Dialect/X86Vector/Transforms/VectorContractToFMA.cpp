@@ -42,7 +42,7 @@ struct VectorContractToFMA : public OpRewritePattern<vector::ContractionOp> {
 
     if (contractOp.getKind() != vector::CombiningKind::ADD)
       return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind");
+                                         "Expects add combining kind.");
 
     VectorType lhsTy = contractOp.getLhsType();
     if (!lhsTy.getElementType().isF32())
@@ -50,50 +50,60 @@ struct VectorContractToFMA : public OpRewritePattern<vector::ContractionOp> {
                                          "Only F32 lowering is supported.");
 
     ArrayRef<int64_t> lhsShape = lhsTy.getShape();
-    llvm::SmallVector<int64_t> dimsLhs;
-    llvm::copy_if(lhsShape, std::back_inserter(dimsLhs),
+    llvm::SmallVector<int64_t> nonUnitDimLhs;
+    llvm::copy_if(lhsShape, std::back_inserter(nonUnitDimLhs),
                   [](int64_t dim) { return dim != 1; });
 
     VectorType rhsTy = contractOp.getRhsType();
     ArrayRef<int64_t> rhsShape = rhsTy.getShape();
-    llvm::SmallVector<int64_t> dimsRhs;
-    llvm::copy_if(rhsShape, std::back_inserter(dimsRhs),
+    llvm::SmallVector<int64_t> nonUnitDimRhs;
+    llvm::copy_if(rhsShape, std::back_inserter(nonUnitDimRhs),
                   [](int64_t dim) { return dim != 1; });
 
-    if (dimsLhs.size() > 0 && dimsRhs.size() > 0)
+    if (nonUnitDimLhs.size() > 0 && nonUnitDimRhs.size() > 0)
       return rewriter.notifyMatchFailure(
           contractOp, "Excepts unit dimensions for either LHS or RHS shape.");
 
-    if (dimsLhs.size() != 1 && dimsRhs.size() != 1)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Irregular LHS or RHS shape.");
+    if (nonUnitDimLhs.size() != 1 && nonUnitDimRhs.size() != 1)
+      return rewriter.notifyMatchFailure(
+          contractOp,
+          "Excepts a one non-unit A/B dimension for either LHS or RHS shape.");
 
     VectorType accTy = dyn_cast<VectorType>(contractOp.getAccType());
     if (!accTy)
-      return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type");
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Accmulator is not a vector type");
+
+    if (!accTy.getElementType().isF32())
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Accmulator should be F32 type.");
 
     ArrayRef<int64_t> accShape = accTy.getShape();
-    llvm::SmallVector<int64_t> dimsAcc;
-    llvm::copy_if(accShape, std::back_inserter(dimsAcc),
+    llvm::SmallVector<int64_t> nonUnitDimAcc;
+    llvm::copy_if(accShape, std::back_inserter(nonUnitDimAcc),
                   [](int64_t dim) { return dim != 1; });
-    if (dimsAcc.size() != 1)
-      return rewriter.notifyMatchFailure(contractOp, "Irregular ACC shape");
+    if (nonUnitDimAcc.size() != 1)
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "A or B dimension should be non-unit.");
 
     // Lowers vector.contract into a broadcast+FMA sequence.
     auto loc = contractOp.getLoc();
     auto castAcc = vector::ShapeCastOp::create(
-        rewriter, loc, VectorType::get(dimsAcc.front(), accTy.getElementType()),
+        rewriter, loc,
+        VectorType::get(nonUnitDimAcc.front(), accTy.getElementType()),
         contractOp.getAcc());
 
     vector::FMAOp fma;
 
-    if (dimsRhs.size() > 0) {
+    // LHS shape is unit dimension. Broadcast into vector-size of non-unit
+    // dimension in RHS shape.
+    if (nonUnitDimRhs.size() > 0) {
       auto castLhs = vector::ShapeCastOp::create(
           rewriter, loc, VectorType::get(1, lhsTy.getElementType()),
           contractOp.getLhs());
       auto castRhs = vector::ShapeCastOp::create(
           rewriter, loc,
-          VectorType::get(dimsRhs.front(), rhsTy.getElementType()),
+          VectorType::get(nonUnitDimRhs.front(), rhsTy.getElementType()),
           contractOp.getRhs());
       auto broadcastLhs = vector::BroadcastOp::create(
           rewriter, loc, castRhs.getResult().getType(), castLhs);
@@ -102,7 +112,7 @@ struct VectorContractToFMA : public OpRewritePattern<vector::ContractionOp> {
     } else {
       auto castLhs = vector::ShapeCastOp::create(
           rewriter, loc,
-          VectorType::get(dimsLhs.front(), lhsTy.getElementType()),
+          VectorType::get(nonUnitDimLhs.front(), lhsTy.getElementType()),
           contractOp.getLhs());
       auto castRhs = vector::ShapeCastOp::create(
           rewriter, loc, VectorType::get(1, rhsTy.getElementType()),

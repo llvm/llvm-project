@@ -129,7 +129,7 @@ struct VectorContractToPackedTypeDotProduct
 
     if (contractOp.getKind() != vector::CombiningKind::ADD)
       return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind");
+                                         "Expects add combining kind.");
 
     VectorType lhsTy = contractOp.getLhsType();
     if (!lhsTy.getElementType().isBF16() &&
@@ -137,40 +137,36 @@ struct VectorContractToPackedTypeDotProduct
       return rewriter.notifyMatchFailure(
           contractOp, "Only BF16/Int8 lowering is supported.");
 
-    if (lhsTy.getElementType().isBF16() &&
-        !isInVnniLayout(contractOp.getOperation(),
-                        contractOp.getIndexingMapsArray(), 2))
+    unsigned int blockingFactor = lhsTy.getElementType().isBF16() ? 2 : 4;
+    if (!isInVnniLayout(contractOp.getOperation(),
+                        contractOp.getIndexingMapsArray(), blockingFactor))
       return rewriter.notifyMatchFailure(contractOp,
-                                         "Input matrices not in VNNI format");
-
-    if (lhsTy.getElementType().isSignlessInteger(8) &&
-        !isInVnniLayout(contractOp.getOperation(),
-                        contractOp.getIndexingMapsArray(), 4))
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Input matrices not in VNNI format");
+                                         "Input matrices not in VNNI format.");
 
     ArrayRef<int64_t> lhsShape = lhsTy.getShape();
-    llvm::SmallVector<int64_t> dimsLhs;
-    llvm::copy_if(lhsShape, std::back_inserter(dimsLhs),
+    llvm::SmallVector<int64_t> nonUnitDimLhs;
+    llvm::copy_if(lhsShape, std::back_inserter(nonUnitDimLhs),
                   [](int64_t dim) { return dim != 1; });
 
     VectorType rhsTy = contractOp.getRhsType();
     ArrayRef<int64_t> rhsShape = rhsTy.getShape();
-    llvm::SmallVector<int64_t> dimsRhs;
-    llvm::copy_if(rhsShape, std::back_inserter(dimsRhs),
+    llvm::SmallVector<int64_t> nonUnitDimRhs;
+    llvm::copy_if(rhsShape, std::back_inserter(nonUnitDimRhs),
                   [](int64_t dim) { return dim != 1; });
 
-    if ((dimsLhs.size() - 1) > 0 && (dimsRhs.size() - 1) > 0)
-      return rewriter.notifyMatchFailure(
-          contractOp, "Excepts unit dimensions for either LHS or RHS shape.");
-
-    if ((dimsLhs.size() - 1) != 1 && (dimsRhs.size() - 1) != 1)
+    if ((nonUnitDimLhs.size() - 1) > 0 && (nonUnitDimRhs.size() - 1) > 0)
       return rewriter.notifyMatchFailure(contractOp,
-                                         "Irregular LHS or RHS shape.");
+                                         "Excepts unit dimensions for either "
+                                         "LHS or RHS shape other than VNNI.");
+
+    if ((nonUnitDimLhs.size() - 1) != 1 && (nonUnitDimRhs.size() - 1) != 1)
+      return rewriter.notifyMatchFailure(
+          contractOp,
+          "Excepts a one non-unit A/B dimension for either LHS or RHS shape.");
 
     VectorType accTy = dyn_cast<VectorType>(contractOp.getAccType());
     if (!accTy)
-      return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type");
+      return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type.");
 
     if ((lhsTy.getElementType().isBF16() && !accTy.getElementType().isF32()) ||
         (lhsTy.getElementType().isSignlessInteger(8) &&
@@ -180,35 +176,55 @@ struct VectorContractToPackedTypeDotProduct
                                          "accumulation type is supported.");
 
     ArrayRef<int64_t> accShape = accTy.getShape();
-    llvm::SmallVector<int64_t> dimsAcc;
-    llvm::copy_if(accShape, std::back_inserter(dimsAcc),
+    llvm::SmallVector<int64_t> nonUnitDimAcc;
+    llvm::copy_if(accShape, std::back_inserter(nonUnitDimAcc),
                   [](int64_t dim) { return dim != 1; });
-    if (dimsAcc.size() != 1)
-      return rewriter.notifyMatchFailure(contractOp, "Irregular ACC shape");
+    if (nonUnitDimAcc.size() != 1)
+      return rewriter.notifyMatchFailure(
+          contractOp, "A or B should be a non-unit dim in acc.");
+
+    // Non-unit dimensions should match the vector length of BF16 or Int8
+    // dot-product.
+    unsigned int nonUnitDim = nonUnitDimLhs.size() == 2 ? nonUnitDimLhs.front()
+                                                        : nonUnitDimRhs.front();
+    if (lhsTy.getElementType().isBF16() && nonUnitDim != 4 && nonUnitDim != 8 &&
+        nonUnitDim != 16 && nonUnitDimAcc.front() == nonUnitDim)
+      return rewriter.notifyMatchFailure(
+          contractOp, "BF16 dot-product operation expects non-unit (LHR or "
+                      "RHS) dim and acc dim of size 4/8/16.");
+
+    if (lhsTy.getElementType().isSignlessInteger(8) && nonUnitDim != 4 &&
+        nonUnitDim != 8 && nonUnitDimAcc.front() == nonUnitDim)
+      return rewriter.notifyMatchFailure(
+          contractOp, "Int8 dot-product operation expects non-unit (LHR or "
+                      "RHS) dim and acc dim of size 4/8.");
 
     auto loc = contractOp.getLoc();
     auto castAcc = vector::ShapeCastOp::create(
-        rewriter, loc, VectorType::get(dimsAcc.front(), accTy.getElementType()),
+        rewriter, loc,
+        VectorType::get(nonUnitDimAcc.front(), accTy.getElementType()),
         contractOp.getAcc());
 
     Value dp;
 
-    if ((dimsRhs.size() - 1) > 0) {
+    // LHS shape is unit dimension. Broadcast into vector-size of non-unit
+    // dimension in RHS shape. Subtract one to remove VNNI dim.
+    if ((nonUnitDimRhs.size() - 1) > 0) {
       auto castRhs = vector::ShapeCastOp::create(
           rewriter, loc,
-          VectorType::get(dimsRhs.front() * dimsRhs.back(),
+          VectorType::get(nonUnitDimRhs.front() * nonUnitDimRhs.back(),
                           rhsTy.getElementType()),
           contractOp.getRhs());
       auto castLhs = vector::ShapeCastOp::create(
           rewriter, loc,
-          VectorType::get(dimsLhs.front(), lhsTy.getElementType()),
+          VectorType::get(nonUnitDimLhs.front(), lhsTy.getElementType()),
           contractOp.getLhs());
       auto bitcastLhs = vector::BitCastOp::create(
           rewriter, loc, VectorType::get({1}, rewriter.getIntegerType(32)),
           castLhs);
       auto broadcastLhs = vector::BroadcastOp::create(
           rewriter, loc,
-          VectorType::get({dimsRhs.front()}, rewriter.getIntegerType(32)),
+          VectorType::get({nonUnitDimRhs.front()}, rewriter.getIntegerType(32)),
           bitcastLhs);
       auto bitcastLhsPkType = vector::BitCastOp::create(
           rewriter, loc, castRhs.getResult().getType(), broadcastLhs);
@@ -216,32 +232,32 @@ struct VectorContractToPackedTypeDotProduct
       if (lhsTy.getElementType().isBF16()) {
         dp = x86vector::DotBF16Op::create(
             rewriter, loc,
-            VectorType::get(dimsRhs.front(), rewriter.getF32Type()), castAcc,
-            bitcastLhsPkType, castRhs);
+            VectorType::get(nonUnitDimRhs.front(), rewriter.getF32Type()),
+            castAcc, bitcastLhsPkType, castRhs);
       }
 
       if (lhsTy.getElementType().isSignlessInteger(8)) {
         dp = x86vector::DotInt8Op::create(
             rewriter, loc,
-            VectorType::get(dimsRhs.front(), rewriter.getIntegerType(32)),
+            VectorType::get(nonUnitDimRhs.front(), rewriter.getIntegerType(32)),
             castAcc, bitcastLhsPkType, castRhs);
       }
-    } else {
+    } else { // RHS shape is unit dimension.
       auto castLhs = vector::ShapeCastOp::create(
           rewriter, loc,
-          VectorType::get(dimsLhs.front() * dimsLhs.back(),
+          VectorType::get(nonUnitDimLhs.front() * nonUnitDimLhs.back(),
                           lhsTy.getElementType()),
           contractOp.getLhs());
       auto castRhs = vector::ShapeCastOp::create(
           rewriter, loc,
-          VectorType::get(dimsRhs.front(), rhsTy.getElementType()),
+          VectorType::get(nonUnitDimRhs.front(), rhsTy.getElementType()),
           contractOp.getRhs());
       auto bitcastRhs = vector::BitCastOp::create(
           rewriter, loc, VectorType::get({1}, rewriter.getIntegerType(32)),
           castRhs);
       auto broadcastRhs = vector::BroadcastOp::create(
           rewriter, loc,
-          VectorType::get({dimsLhs.front()}, rewriter.getIntegerType(32)),
+          VectorType::get({nonUnitDimLhs.front()}, rewriter.getIntegerType(32)),
           bitcastRhs);
       auto bitcastRhsPkType = vector::BitCastOp::create(
           rewriter, loc, castLhs.getResult().getType(), broadcastRhs);
@@ -249,14 +265,14 @@ struct VectorContractToPackedTypeDotProduct
       if (lhsTy.getElementType().isBF16()) {
         dp = x86vector::DotBF16Op::create(
             rewriter, loc,
-            VectorType::get(dimsLhs.front(), rewriter.getF32Type()), castAcc,
-            castLhs, bitcastRhsPkType);
+            VectorType::get(nonUnitDimLhs.front(), rewriter.getF32Type()),
+            castAcc, castLhs, bitcastRhsPkType);
       }
 
       if (lhsTy.getElementType().isSignlessInteger(8)) {
         dp = x86vector::DotInt8Op::create(
             rewriter, loc,
-            VectorType::get(dimsLhs.front(), rewriter.getIntegerType(32)),
+            VectorType::get(nonUnitDimLhs.front(), rewriter.getIntegerType(32)),
             castAcc, castLhs, bitcastRhsPkType);
       }
     }
