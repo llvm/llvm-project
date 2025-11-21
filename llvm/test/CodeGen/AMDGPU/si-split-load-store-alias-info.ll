@@ -3,17 +3,17 @@
 ; This test verifies that instruction selection will propagate alias metadata
 ; to split loads and stores.
 
-; CHECK:      %{{[0-9]+}}:vreg_128 = DS_READ_B128_gfx9 {{.*}} :: (load (s128) from %{{.*}}, align 32, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}}, addrspace 3)
-; CHECK-NEXT: %{{[0-9]+}}:vreg_128 = DS_READ_B128_gfx9 {{.*}} :: (load (s128) from %{{.*}}, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}}, addrspace 3)
-; CHECK-NEXT: %{{[0-9]+}}:vreg_128 = DS_READ_B128_gfx9 {{.*}} :: (load (s128) from %{{.*}}, align 32, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}}, addrspace 3)
-; CHECK-NEXT: %{{[0-9]+}}:vreg_128 = DS_READ_B128_gfx9 {{.*}} :: (load (s128) from %{{.*}}, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}}, addrspace 3)
-; CHECK:      DS_WRITE_B128_gfx9 {{.*}} :: (store (s128) into %{{.*}}, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}}, addrspace 3)
+; CHECK:      %{{[0-9]+}}:vreg_128 = DS_READ_B128_gfx9 {{.*}} :: (load (s128) from %{{.*}}, align 32, !alias.scope ![[IN:[0-9]+]], !noalias ![[OUT:[0-9]+]], addrspace 3)
+; CHECK-NEXT: %{{[0-9]+}}:vreg_128 = DS_READ_B128_gfx9 {{.*}} :: (load (s128) from %{{.*}}, !alias.scope ![[IN]], !noalias ![[OUT]], addrspace 3)
+; CHECK-NEXT: %{{[0-9]+}}:vreg_128 = DS_READ_B128_gfx9 {{.*}} :: (load (s128) from %{{.*}}, align 32, !alias.scope ![[IN]], !noalias ![[OUT]], addrspace 3)
+; CHECK-NEXT: %{{[0-9]+}}:vreg_128 = DS_READ_B128_gfx9 {{.*}} :: (load (s128) from %{{.*}}, !alias.scope ![[IN]], !noalias ![[OUT]], addrspace 3)
+; CHECK:      DS_WRITE_B128_gfx9 {{.*}} :: (store (s128) into %{{.*}}, !alias.scope ![[OUT]], !noalias ![[IN]], addrspace 3)
 ; CHECK-NEXT: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE
-; CHECK-NEXT: DS_WRITE_B128_gfx9 {{.*}} :: (store (s128) into %{{.*}}, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}}, addrspace 3)
+; CHECK-NEXT: DS_WRITE_B128_gfx9 {{.*}} :: (store (s128) into %{{.*}}, !alias.scope ![[OUT]], !noalias ![[IN]], addrspace 3)
 ; CHECK-NEXT: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE
-; CHECK-NEXT: DS_WRITE_B128_gfx9 {{.*}} :: (store (s128) into %{{.*}}, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}}, addrspace 3)
+; CHECK-NEXT: DS_WRITE_B128_gfx9 {{.*}} :: (store (s128) into %{{.*}}, !alias.scope ![[OUT]], !noalias ![[IN]], addrspace 3)
 ; CHECK-NEXT: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE
-; CHECK-NEXT: DS_WRITE_B128_gfx9 {{.*}} :: (store (s128) into %{{.*}}, !alias.scope !{{[0-9]+}}, !noalias !{{[0-9]+}}, addrspace 3)
+; CHECK-NEXT: DS_WRITE_B128_gfx9 {{.*}} :: (store (s128) into %{{.*}}, !alias.scope ![[OUT]], !noalias ![[IN]], addrspace 3)
 
 define amdgpu_kernel void @test(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) {
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
