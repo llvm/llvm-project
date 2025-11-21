@@ -23,4 +23,22 @@ def PrepareForOMPOffloadPrivatizationPass : Pass<"omp-offload-privatization-prep
     }];
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
+
+def StackToSharedPass : Pass<"omp-stack-to-shared", "mlir::LLVM::LLVMFuncOp"> {
+  let summary = "Replaces stack allocations target devices with shared memory.";
+  let description = [{
+    `llvm.alloca` operations defining values in a non-SPMD target region and
+    then potentially used inside of an `omp.parallel` region are replaced by
+    this pass with `omp.alloc_shared_mem` and `omp.free_shared_mem`. This is
+    also done for top-level function `llvm.alloca`s used in the same way when
+    the parent function is a target device function.
+
+    This ensures that explicit private allocations, intended to be shared across
+    threads, use the proper memory space on a target device while supporting the
+    case of parallel regions indirectly reached from within a target region via
+    function calls.
+  }];
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
 #endif // MLIR_DIALECT_OPENMP_TRANSFORMS_PASSES
