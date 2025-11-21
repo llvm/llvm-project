@@ -3687,6 +3687,7 @@ void SelectionDAGBuilder::visitShift(const User &I, unsigned Opcode) {
   bool nuw = false;
   bool nsw = false;
   bool exact = false;
+  bool noZero = false;
 
   if (Opcode == ISD::SRL || Opcode == ISD::SRA || Opcode == ISD::SHL) {
 
@@ -3698,11 +3699,30 @@ void SelectionDAGBuilder::visitShift(const User &I, unsigned Opcode) {
     if (const PossiblyExactOperator *ExactOp =
             dyn_cast<const PossiblyExactOperator>(&I))
       exact = ExactOp->isExact();
+
+    const Value *ShiftAmt = I.getOperand(1);
+
+    // Look through zext as computeConstantRange does not do this.
+    const Value *InnerVal = ShiftAmt;
+    if (auto *ZExt = dyn_cast<ZExtInst>(ShiftAmt)) {
+      InnerVal = ZExt->getOperand(0);
+    }
+
+    // Get the constant range and check it excludes 0
+    ConstantRange CR = llvm::computeConstantRange(
+        InnerVal, true, true, AC, dyn_cast<Instruction>(&I), nullptr);
+
+    if (!CR.isEmptySet() && !CR.contains(APInt(CR.getBitWidth(), 0))) {
+      // We can guarantee that that we will not be shifted by 0
+      noZero = true;
+    }
   }
+
   SDNodeFlags Flags;
   Flags.setExact(exact);
   Flags.setNoSignedWrap(nsw);
   Flags.setNoUnsignedWrap(nuw);
+  Flags.setNoZero(noZero);
   SDValue Res = DAG.getNode(Opcode, getCurSDLoc(), Op1.getValueType(), Op1, Op2,
                             Flags);
   setValue(&I, Res);
