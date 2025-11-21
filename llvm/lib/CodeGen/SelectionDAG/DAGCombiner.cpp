@@ -11763,12 +11763,12 @@ SDValue DAGCombiner::visitBITREVERSE(SDNode *N) {
 
   // fold (bitreverse (lshr (bitreverse x), y)) -> (shl x, y)
   if ((!LegalOperations || TLI.isOperationLegal(ISD::SHL, VT)) &&
-      sd_match(N, m_BitReverse(m_Srl(m_BitReverse(m_Value(X)), m_Value(Y)))))
+      sd_match(N0, m_Srl(m_BitReverse(m_Value(X)), m_Value(Y))))
     return DAG.getNode(ISD::SHL, DL, VT, X, Y);
 
   // fold (bitreverse (shl (bitreverse x), y)) -> (lshr x, y)
   if ((!LegalOperations || TLI.isOperationLegal(ISD::SRL, VT)) &&
-      sd_match(N, m_BitReverse(m_Shl(m_BitReverse(m_Value(X)), m_Value(Y)))))
+      sd_match(N0, m_Shl(m_BitReverse(m_Value(X)), m_Value(Y))))
     return DAG.getNode(ISD::SRL, DL, VT, X, Y);
 
   return SDValue();
