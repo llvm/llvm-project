@@ -125,6 +125,8 @@ LLVM_ABI llvm::EABI getEABIVersion();
 
 LLVM_ABI llvm::DebuggerKind getDebuggerTuningOpt();
 
+LLVM_ABI llvm::VectorLibrary getVectorLibrary();
+
 LLVM_ABI bool getEnableStackSizeSection();
 
 LLVM_ABI bool getEnableAddrsig();

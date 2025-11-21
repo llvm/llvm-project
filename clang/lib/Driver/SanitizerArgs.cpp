@@ -1176,6 +1176,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         options::OPT_fno_sanitize_alloc_token_extended, AllocTokenExtended);
   }
 
+  if (AllAddedKinds & SanitizerKind::Type) {
+    TysanOutlineInstrumentation =
+        Args.hasFlag(options::OPT_fsanitize_type_outline_instrumentation,
+                     options::OPT_fno_sanitize_type_outline_instrumentation,
+                     TysanOutlineInstrumentation);
+  }
+
   LinkRuntimes = Args.hasFlag(options::OPT_fsanitize_link_runtime,
                               options::OPT_fno_sanitize_link_runtime,
                               !Args.hasArg(options::OPT_r));
@@ -1498,6 +1505,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (AsanOutlineInstrumentation) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-asan-instrumentation-with-call-threshold=0");
+  }
+
+  if (!TysanOutlineInstrumentation) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-tysan-outline-instrumentation=false");
   }
 
   // When emitting Stable ABI instrumentation, force outlining calls and avoid

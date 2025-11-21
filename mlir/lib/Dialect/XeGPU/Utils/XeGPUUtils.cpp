@@ -308,7 +308,7 @@ xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
   int64_t rankDiff = srcShapeRank - targetShapeRank;
   std::fill(adjustedTargetShape.begin(), adjustedTargetShape.begin() + rankDiff,
             1);
-  std::copy(shape.begin(), shape.end(), adjustedTargetShape.begin() + rankDiff);
+  llvm::copy(shape, adjustedTargetShape.begin() + rankDiff);
 
   SmallVector<Value> result;
   for (SmallVector<int64_t> offsets :

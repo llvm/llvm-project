@@ -39,6 +39,7 @@ def get_comment(
 ) -> dict[str, str]:
     repo = github.Github(github_token).get_repo("llvm/llvm-project")
     pr = repo.get_issue(pr_number).as_pull_request()
+    body = COMMENT_TAG.format(platform=platform.system()) + "\n" + body
     comment = {"body": body}
     comment_id = get_comment_id(platform.system(), pr)
     if comment_id:
@@ -128,7 +129,7 @@ def main(
                 ),
             )
         ]
-        with open("comment", "w") as comment_file_handle:
+        with open("comments", "w") as comment_file_handle:
             json.dump(comments, comment_file_handle)
     else:
         print(advisor_response.reason)
@@ -147,7 +148,7 @@ if __name__ == "__main__":
 
     # Skip looking for results on AArch64 for now because the premerge advisor
     # service is not available on AWS currently.
-    if platform.machine() == "arm64":
+    if platform.machine() == "arm64" or platform.machine() == "aarch64":
         sys.exit(0)
 
     main(
