@@ -15,10 +15,29 @@ FileHeader:
   Type:            ET_EXEC
   Machine:         EM_X86_64
 
-# RUN: llvm-objdump --triple=x86_64 --mcpu=help 2>&1 \
+# RUN: cp %t a.out
+# RUN: llvm-objdump -d --mcpu=help 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-DEFAULT-FILE
+# RUN: rm a.out
+
+# CHECK-DEFAULT-FILE: Available CPUs for this target:
+# CHECK-DEFAULT-FILE: Available features for this target:
+
+# RUN: llvm-objdump --triple=arm --mcpu=help %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-TRIPLE-PRIORITY
+
+# CHECK-TRIPLE-PRIORITY: Available CPUs for this target:
+# CHECK-TRIPLE-PRIORITY: Available features for this target:
+# CHECK-TRIPLE-PRIORITY: arm
+
+# RUN: not llvm-objdump --triple=x86_64 --mcpu=help 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-WITHOUT-FILE
+
+# CHECK-WITHOUT-FILE: Available CPUs for this target:
+# CHECK-WITHOUT-FILE: Available features for this target:
+
+# RUN: llvm-objdump --mcpu=help %t 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-WITHOUT-DISASSEMBLING
 
 # CHECK-WITHOUT-DISASSEMBLING: Available CPUs for this target:
 # CHECK-WITHOUT-DISASSEMBLING: Available features for this target:
-
-; XFAIL: *

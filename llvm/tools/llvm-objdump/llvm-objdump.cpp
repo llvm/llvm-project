@@ -3534,16 +3534,29 @@ commaSeparatedValues(const llvm::opt::InputArgList &InputArgs, int ID) {
 }
 
 static void mcpuHelp() {
-  if (!TripleName.empty()) {
-    std::string Error;
-    Triple DummyTriple(TripleName);
-    const Target *DummyTarget =
-        TargetRegistry::lookupTarget(DummyTriple, Error);
-    if (!DummyTarget)
-      reportCmdLineError(Error);
-    // createMCSubtargetInfo prints the mcpu help text when called with "help"
-    DummyTarget->createMCSubtargetInfo(DummyTriple, "help", "");
+  std::string Error;
+  Triple DummyTriple;
+
+  if (!TripleName.empty())
+    DummyTriple.setTriple(TripleName);
+  else {
+    // If the target triple is derived from the files, we display help message
+    // when disassembling them.
+    if (Disassemble)
+      return;
+    for (std::string Filename : InputFilenames) {
+      OwningBinary<Binary> OBinary =
+          unwrapOrError(createBinary(Filename), Filename);
+      Binary *Obj = OBinary.getBinary();
+      DummyTriple = dyn_cast<ObjectFile>(Obj)->makeTriple();
+    }
   }
+
+  const Target *DummyTarget = TargetRegistry::lookupTarget(DummyTriple, Error);
+  if (!DummyTarget)
+    reportCmdLineError(Error);
+  // We need to access the Help() through the corresponding MCSubtargetInfo.
+  DummyTarget->createMCSubtargetInfo(DummyTriple, "help", "");
 }
 
 static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
@@ -3854,7 +3867,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
     return 2;
   }
 
-  if (!Disassemble && MCPU == "help")
+  if (MCPU == "help")
     mcpuHelp();
 
   DisasmSymbolSet.insert_range(DisassembleSymbols);
