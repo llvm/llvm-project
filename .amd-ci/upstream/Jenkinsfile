@@ -7,7 +7,8 @@ String releaseBranchPrefix = 'aocc_'
 
 Boolean targetIsRelBranch = actualTarget.startsWith(releaseBranchPrefix)
 
-Boolean dualFlangBuild = actualTarget != upstreamBranch
+// Code smell: should be enabled for staging once the underlying llvm code catches up:
+Boolean dualFlangBuild = actualTarget != upstreamBranch && actualTarget != stagingBranch
 
 /**
  * Coerce Result enums to String, seems to
