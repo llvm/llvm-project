@@ -73,8 +73,6 @@ using namespace llvm;
 // statistics
 
 STATISTIC(TotalArrayPairs, "Array pairs tested");
-STATISTIC(SeparableSubscriptPairs, "Separable subscript pairs");
-STATISTIC(CoupledSubscriptPairs, "Coupled subscript pairs");
 STATISTIC(NonlinearSubscriptPairs, "Nonlinear subscript pairs");
 STATISTIC(ZIVapplications, "ZIV applications");
 STATISTIC(ZIVindependence, "ZIV independence");
@@ -96,8 +94,6 @@ STATISTIC(SymbolicRDIVapplications, "Symbolic RDIV applications");
 STATISTIC(SymbolicRDIVindependence, "Symbolic RDIV independence");
 STATISTIC(DeltaApplications, "Delta applications");
 STATISTIC(DeltaSuccesses, "Delta successes");
-STATISTIC(DeltaIndependence, "Delta independence");
-STATISTIC(DeltaPropagations, "Delta propagations");
 STATISTIC(GCDapplications, "GCD applications");
 STATISTIC(GCDsuccesses, "GCD successes");
 STATISTIC(GCDindependence, "GCD independence");
@@ -446,13 +442,6 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
             if (NormalizeResults && D->normalize(&SE))
               OS << "normalized - ";
             D->dump(OS);
-            for (unsigned Level = 1; Level <= D->getLevels(); Level++) {
-              if (D->isSplitable(Level)) {
-                OS << "  da analyze - split level = " << Level;
-                OS << ", iteration = " << *DA->getSplitIteration(*D, Level);
-                OS << "!\n";
-              }
-            }
           } else
             OS << "none!\n";
         }
@@ -613,11 +602,6 @@ bool FullDependence::isPeelFirst(unsigned Level, bool IsSameSD) const {
 // loop level will break this dependence.
 bool FullDependence::isPeelLast(unsigned Level, bool IsSameSD) const {
   return getDVEntry(Level, IsSameSD).PeelLast;
-}
-
-// Returns true if splitting loop will break the dependence.
-bool FullDependence::isSplitable(unsigned Level, bool IsSameSD) const {
-  return getDVEntry(Level, IsSameSD).Splitable;
 }
 
 // inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
@@ -1019,7 +1003,6 @@ void Dependence::dump(raw_ostream &OS) const {
 // For debugging purposes. Dumps a dependence to OS with or without considering
 // the SameSD levels.
 void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
-  bool Splitable = false;
   unsigned Levels = getLevels();
   unsigned SameSDLevels = getSameSDLevels();
   bool OnSameSD = false;
@@ -1030,8 +1013,6 @@ void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
   for (unsigned II = 1; II <= LevelNum; ++II) {
     if (!OnSameSD && inSameSDLoops(II))
       OnSameSD = true;
-    if (isSplitable(II, OnSameSD))
-      Splitable = true;
     if (isPeelFirst(II, OnSameSD))
       OS << 'p';
     const SCEV *Distance = getDistance(II, OnSameSD);
@@ -1060,8 +1041,6 @@ void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
   if (isLoopIndependent())
     OS << "|<";
   OS << "]";
-  if (Splitable)
-    OS << " splitable";
 }
 
 // Returns NoAlias/MayAliass/MustAlias for two memory locations based upon their
@@ -1829,8 +1808,7 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
 bool DependenceInfo::weakCrossingSIVtest(
     const SCEV *Coeff, const SCEV *SrcConst, const SCEV *DstConst,
     const Loop *CurSrcLoop, const Loop *CurDstLoop, unsigned Level,
-    FullDependence &Result, Constraint &NewConstraint,
-    const SCEV *&SplitIter) const {
+    FullDependence &Result, Constraint &NewConstraint) const {
   if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
     return false;
 
@@ -1860,7 +1838,6 @@ bool DependenceInfo::weakCrossingSIVtest(
   if (!ConstCoeff)
     return false;
 
-  Result.DV[Level].Splitable = true;
   if (SE->isKnownNegative(ConstCoeff)) {
     ConstCoeff = dyn_cast<SCEVConstant>(SE->getNegativeSCEV(ConstCoeff));
     assert(ConstCoeff &&
@@ -1868,12 +1845,6 @@ bool DependenceInfo::weakCrossingSIVtest(
     Delta = SE->getNegativeSCEV(Delta);
   }
   assert(SE->isKnownPositive(ConstCoeff) && "ConstCoeff should be positive");
-
-  // compute SplitIter for use by DependenceInfo::getSplitIteration()
-  SplitIter = SE->getUDivExpr(
-      SE->getSMaxExpr(SE->getZero(Delta->getType()), Delta),
-      SE->getMulExpr(SE->getConstant(Delta->getType(), 2), ConstCoeff));
-  LLVM_DEBUG(dbgs() << "\t    Split iter = " << *SplitIter << "\n");
 
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
   if (!ConstDelta)
@@ -1914,7 +1885,6 @@ bool DependenceInfo::weakCrossingSIVtest(
         ++WeakCrossingSIVindependence;
         return true;
       }
-      Result.DV[Level].Splitable = false;
       Result.DV[Level].Distance = SE->getZero(Delta->getType());
       return false;
     }
@@ -2735,8 +2705,8 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
 //
 // Return true if dependence disproved.
 bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
-                             FullDependence &Result, Constraint &NewConstraint,
-                             const SCEV *&SplitIter) const {
+                             FullDependence &Result,
+                             Constraint &NewConstraint) const {
   LLVM_DEBUG(dbgs() << "    src = " << *Src << "\n");
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
@@ -2758,8 +2728,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
                                 CurDstLoop, Level, Result, NewConstraint);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
       disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
-                                      CurDstLoop, Level, Result, NewConstraint,
-                                      SplitIter);
+                                      CurDstLoop, Level, Result, NewConstraint);
     else
       disproven =
           exactSIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurSrcLoop,
@@ -3633,157 +3602,6 @@ const SCEV *DependenceInfo::addToCoefficient(const SCEV *Expr,
       AddRec->getNoWrapFlags());
 }
 
-// Review the constraints, looking for opportunities
-// to simplify a subscript pair (Src and Dst).
-// Return true if some simplification occurs.
-// If the simplification isn't exact (that is, if it is conservative
-// in terms of dependence), set consistent to false.
-// Corresponds to Figure 5 from the paper
-//
-//            Practical Dependence Testing
-//            Goff, Kennedy, Tseng
-//            PLDI 1991
-bool DependenceInfo::propagate(const SCEV *&Src, const SCEV *&Dst,
-                               SmallBitVector &Loops,
-                               SmallVectorImpl<Constraint> &Constraints,
-                               bool &Consistent) {
-  bool Result = false;
-  for (unsigned LI : Loops.set_bits()) {
-    LLVM_DEBUG(dbgs() << "\t    Constraint[" << LI << "] is");
-    LLVM_DEBUG(Constraints[LI].dump(dbgs()));
-    if (Constraints[LI].isDistance())
-      Result |= propagateDistance(Src, Dst, Constraints[LI], Consistent);
-    else if (Constraints[LI].isLine())
-      Result |= propagateLine(Src, Dst, Constraints[LI], Consistent);
-    else if (Constraints[LI].isPoint())
-      Result |= propagatePoint(Src, Dst, Constraints[LI]);
-  }
-  return Result;
-}
-
-// Attempt to propagate a distance
-// constraint into a subscript pair (Src and Dst).
-// Return true if some simplification occurs.
-// If the simplification isn't exact (that is, if it is conservative
-// in terms of dependence), set consistent to false.
-bool DependenceInfo::propagateDistance(const SCEV *&Src, const SCEV *&Dst,
-                                       Constraint &CurConstraint,
-                                       bool &Consistent) {
-  const Loop *CurSrcLoop = CurConstraint.getAssociatedSrcLoop();
-  const Loop *CurDstLoop = CurConstraint.getAssociatedDstLoop();
-  LLVM_DEBUG(dbgs() << "\t\tSrc is " << *Src << "\n");
-  const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
-  if (A_K->isZero())
-    return false;
-  const SCEV *DA_K = SE->getMulExpr(A_K, CurConstraint.getD());
-  Src = SE->getMinusSCEV(Src, DA_K);
-  Src = zeroCoefficient(Src, CurSrcLoop);
-  LLVM_DEBUG(dbgs() << "\t\tnew Src is " << *Src << "\n");
-  LLVM_DEBUG(dbgs() << "\t\tDst is " << *Dst << "\n");
-  Dst = addToCoefficient(Dst, CurDstLoop, SE->getNegativeSCEV(A_K));
-  LLVM_DEBUG(dbgs() << "\t\tnew Dst is " << *Dst << "\n");
-  if (!findCoefficient(Dst, CurDstLoop)->isZero())
-    Consistent = false;
-  return true;
-}
-
-// Attempt to propagate a line
-// constraint into a subscript pair (Src and Dst).
-// Return true if some simplification occurs.
-// If the simplification isn't exact (that is, if it is conservative
-// in terms of dependence), set consistent to false.
-bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
-                                   Constraint &CurConstraint,
-                                   bool &Consistent) {
-  const Loop *CurSrcLoop = CurConstraint.getAssociatedSrcLoop();
-  const Loop *CurDstLoop = CurConstraint.getAssociatedDstLoop();
-  const SCEV *A = CurConstraint.getA();
-  const SCEV *B = CurConstraint.getB();
-  const SCEV *C = CurConstraint.getC();
-  LLVM_DEBUG(dbgs() << "\t\tA = " << *A << ", B = " << *B << ", C = " << *C
-                    << "\n");
-  LLVM_DEBUG(dbgs() << "\t\tSrc = " << *Src << "\n");
-  LLVM_DEBUG(dbgs() << "\t\tDst = " << *Dst << "\n");
-  if (A->isZero()) {
-    const SCEVConstant *Bconst = dyn_cast<SCEVConstant>(B);
-    const SCEVConstant *Cconst = dyn_cast<SCEVConstant>(C);
-    if (!Bconst || !Cconst)
-      return false;
-    APInt Beta = Bconst->getAPInt();
-    APInt Charlie = Cconst->getAPInt();
-    APInt CdivB = Charlie.sdiv(Beta);
-    assert(Charlie.srem(Beta) == 0 && "C should be evenly divisible by B");
-    const SCEV *AP_K = findCoefficient(Dst, CurDstLoop);
-    Src = SE->getMinusSCEV(Src, SE->getMulExpr(AP_K, SE->getConstant(CdivB)));
-    Dst = zeroCoefficient(Dst, CurDstLoop);
-    if (!findCoefficient(Src, CurSrcLoop)->isZero())
-      Consistent = false;
-  } else if (B->isZero()) {
-    const SCEVConstant *Aconst = dyn_cast<SCEVConstant>(A);
-    const SCEVConstant *Cconst = dyn_cast<SCEVConstant>(C);
-    if (!Aconst || !Cconst)
-      return false;
-    APInt Alpha = Aconst->getAPInt();
-    APInt Charlie = Cconst->getAPInt();
-    APInt CdivA = Charlie.sdiv(Alpha);
-    assert(Charlie.srem(Alpha) == 0 && "C should be evenly divisible by A");
-    const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
-    Src = SE->getAddExpr(Src, SE->getMulExpr(A_K, SE->getConstant(CdivA)));
-    Src = zeroCoefficient(Src, CurSrcLoop);
-    if (!findCoefficient(Dst, CurDstLoop)->isZero())
-      Consistent = false;
-  } else if (isKnownPredicate(CmpInst::ICMP_EQ, A, B)) {
-    const SCEVConstant *Aconst = dyn_cast<SCEVConstant>(A);
-    const SCEVConstant *Cconst = dyn_cast<SCEVConstant>(C);
-    if (!Aconst || !Cconst)
-      return false;
-    APInt Alpha = Aconst->getAPInt();
-    APInt Charlie = Cconst->getAPInt();
-    APInt CdivA = Charlie.sdiv(Alpha);
-    assert(Charlie.srem(Alpha) == 0 && "C should be evenly divisible by A");
-    const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
-    Src = SE->getAddExpr(Src, SE->getMulExpr(A_K, SE->getConstant(CdivA)));
-    Src = zeroCoefficient(Src, CurSrcLoop);
-    Dst = addToCoefficient(Dst, CurDstLoop, A_K);
-    if (!findCoefficient(Dst, CurDstLoop)->isZero())
-      Consistent = false;
-  } else {
-    // paper is incorrect here, or perhaps just misleading
-    const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
-    Src = SE->getMulExpr(Src, A);
-    Dst = SE->getMulExpr(Dst, A);
-    Src = SE->getAddExpr(Src, SE->getMulExpr(A_K, C));
-    Src = zeroCoefficient(Src, CurSrcLoop);
-    Dst = addToCoefficient(Dst, CurDstLoop, SE->getMulExpr(A_K, B));
-    if (!findCoefficient(Dst, CurDstLoop)->isZero())
-      Consistent = false;
-  }
-  LLVM_DEBUG(dbgs() << "\t\tnew Src = " << *Src << "\n");
-  LLVM_DEBUG(dbgs() << "\t\tnew Dst = " << *Dst << "\n");
-  return true;
-}
-
-// Attempt to propagate a point
-// constraint into a subscript pair (Src and Dst).
-// Return true if some simplification occurs.
-bool DependenceInfo::propagatePoint(const SCEV *&Src, const SCEV *&Dst,
-                                    Constraint &CurConstraint) {
-  const Loop *CurSrcLoop = CurConstraint.getAssociatedSrcLoop();
-  const Loop *CurDstLoop = CurConstraint.getAssociatedDstLoop();
-  const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
-  const SCEV *AP_K = findCoefficient(Dst, CurDstLoop);
-  const SCEV *XA_K = SE->getMulExpr(A_K, CurConstraint.getX());
-  const SCEV *YAP_K = SE->getMulExpr(AP_K, CurConstraint.getY());
-  LLVM_DEBUG(dbgs() << "\t\tSrc is " << *Src << "\n");
-  Src = SE->getAddExpr(Src, SE->getMinusSCEV(XA_K, YAP_K));
-  Src = zeroCoefficient(Src, CurSrcLoop);
-  LLVM_DEBUG(dbgs() << "\t\tnew Src is " << *Src << "\n");
-  LLVM_DEBUG(dbgs() << "\t\tDst is " << *Dst << "\n");
-  Dst = zeroCoefficient(Dst, CurDstLoop);
-  LLVM_DEBUG(dbgs() << "\t\tnew Dst is " << *Dst << "\n");
-  return true;
-}
-
 // Update direction vector entry based on the current constraint.
 void DependenceInfo::updateDirection(Dependence::DVEntry &Level,
                                      const Constraint &CurConstraint) const {
@@ -4106,8 +3924,6 @@ SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() const {
 //            Goff, Kennedy, Tseng
 //            PLDI 1991
 //
-// Care is required to keep the routine below, getSplitIteration(),
-// up to date with respect to this routine.
 std::unique_ptr<Dependence>
 DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                         bool UnderRuntimeAssumptions) {
@@ -4292,68 +4108,11 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     LLVM_DEBUG(dumpSmallBitVector(Pair[P].Loops));
   }
 
-  SmallBitVector Separable(Pairs);
-  SmallBitVector Coupled(Pairs);
-
-  // Partition subscripts into separable and minimally-coupled groups
-  // Algorithm in paper is algorithmically better;
-  // this may be faster in practice. Check someday.
-  //
-  // Here's an example of how it works. Consider this code:
-  //
-  //   for (i = ...) {
-  //     for (j = ...) {
-  //       for (k = ...) {
-  //         for (l = ...) {
-  //           for (m = ...) {
-  //             A[i][j][k][m] = ...;
-  //             ... = A[0][j][l][i + j];
-  //           }
-  //         }
-  //       }
-  //     }
-  //   }
-  //
-  // There are 4 subscripts here:
-  //    0 [i] and [0]
-  //    1 [j] and [j]
-  //    2 [k] and [l]
-  //    3 [m] and [i + j]
-  //
-  // We've already classified each subscript pair as ZIV, SIV, etc.,
-  // and collected all the loops mentioned by pair P in Pair[P].Loops.
-  // In addition, we've initialized Pair[P].GroupLoops to Pair[P].Loops
-  // and set Pair[P].Group = {P}.
-  //
-  //      Src Dst    Classification Loops  GroupLoops Group
-  //    0 [i] [0]         SIV       {1}      {1}        {0}
-  //    1 [j] [j]         SIV       {2}      {2}        {1}
-  //    2 [k] [l]         RDIV      {3,4}    {3,4}      {2}
-  //    3 [m] [i + j]     MIV       {1,2,5}  {1,2,5}    {3}
-  //
-  // For each subscript SI 0 .. 3, we consider each remaining subscript, SJ.
-  // So, 0 is compared against 1, 2, and 3; 1 is compared against 2 and 3, etc.
-  //
-  // We begin by comparing 0 and 1. The intersection of the GroupLoops is empty.
-  // Next, 0 and 2. Again, the intersection of their GroupLoops is empty.
-  // Next 0 and 3. The intersection of their GroupLoop = {1}, not empty,
-  // so Pair[3].Group = {0,3} and Done = false (that is, 0 will not be added
-  // to either Separable or Coupled).
-  //
-  // Next, we consider 1 and 2. The intersection of the GroupLoops is empty.
-  // Next, 1 and 3. The intersection of their GroupLoops = {2}, not empty,
-  // so Pair[3].Group = {0, 1, 3} and Done = false.
-  //
-  // Next, we compare 2 against 3. The intersection of the GroupLoops is empty.
-  // Since Done remains true, we add 2 to the set of Separable pairs.
-  //
-  // Finally, we consider 3. There's nothing to compare it with,
-  // so Done remains true and we add it to the Coupled set.
-  // Pair[3].Group = {0, 1, 3} and GroupLoops = {1, 2, 5}.
-  //
-  // In the end, we've got 1 separable subscript and 1 coupled group.
+  // Test each subscript individually
   for (unsigned SI = 0; SI < Pairs; ++SI) {
-    if (Pair[SI].Classification == Subscript::NonLinear) {
+    LLVM_DEBUG(dbgs() << "testing subscript " << SI);
+    switch (Pair[SI].Classification) {
+    case Subscript::NonLinear:
       // ignore these, but collect loops for later
       ++NonlinearSubscriptPairs;
       collectCommonLoops(Pair[SI].Src, LI->getLoopFor(Src->getParent()),
@@ -4361,47 +4120,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       collectCommonLoops(Pair[SI].Dst, LI->getLoopFor(Dst->getParent()),
                          Pair[SI].Loops);
       Result.Consistent = false;
-    } else if (Pair[SI].Classification == Subscript::ZIV) {
-      // always separable
-      Separable.set(SI);
-    } else {
-      // SIV, RDIV, or MIV, so check for coupled group
-      bool Done = true;
-      for (unsigned SJ = SI + 1; SJ < Pairs; ++SJ) {
-        SmallBitVector Intersection = Pair[SI].GroupLoops;
-        Intersection &= Pair[SJ].GroupLoops;
-        if (Intersection.any()) {
-          // accumulate set of all the loops in group
-          Pair[SJ].GroupLoops |= Pair[SI].GroupLoops;
-          // accumulate set of all subscripts in group
-          Pair[SJ].Group |= Pair[SI].Group;
-          Done = false;
-        }
-      }
-      if (Done) {
-        if (Pair[SI].Group.count() == 1) {
-          Separable.set(SI);
-          ++SeparableSubscriptPairs;
-        } else {
-          Coupled.set(SI);
-          ++CoupledSubscriptPairs;
-        }
-      }
-    }
-  }
-
-  LLVM_DEBUG(dbgs() << "    Separable = ");
-  LLVM_DEBUG(dumpSmallBitVector(Separable));
-  LLVM_DEBUG(dbgs() << "    Coupled = ");
-  LLVM_DEBUG(dumpSmallBitVector(Coupled));
-
-  Constraint NewConstraint;
-  NewConstraint.setAny(SE);
-
-  // test separable subscripts
-  for (unsigned SI : Separable.set_bits()) {
-    LLVM_DEBUG(dbgs() << "testing subscript " << SI);
-    switch (Pair[SI].Classification) {
+      break;
     case Subscript::ZIV:
       LLVM_DEBUG(dbgs() << ", ZIV\n");
       if (testZIV(Pair[SI].Src, Pair[SI].Dst, Result))
@@ -4410,9 +4129,9 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     case Subscript::SIV: {
       LLVM_DEBUG(dbgs() << ", SIV\n");
       unsigned Level;
-      const SCEV *SplitIter = nullptr;
-      if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
-                  SplitIter))
+      Constraint NewConstraint;
+      NewConstraint.setAny(SE);
+      if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint))
         return nullptr;
       break;
     }
@@ -4426,125 +4145,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       if (testMIV(Pair[SI].Src, Pair[SI].Dst, Pair[SI].Loops, Result))
         return nullptr;
       break;
-    default:
-      llvm_unreachable("subscript has unexpected classification");
-    }
-  }
-
-  if (Coupled.count()) {
-    // test coupled subscript groups
-    LLVM_DEBUG(dbgs() << "starting on coupled subscripts\n");
-    LLVM_DEBUG(dbgs() << "MaxLevels + 1 = " << MaxLevels + 1 << "\n");
-    SmallVector<Constraint, 4> Constraints(MaxLevels + 1);
-    for (unsigned II = 0; II <= MaxLevels; ++II)
-      Constraints[II].setAny(SE);
-    for (unsigned SI : Coupled.set_bits()) {
-      LLVM_DEBUG(dbgs() << "testing subscript group " << SI << " { ");
-      SmallBitVector Group(Pair[SI].Group);
-      SmallBitVector Sivs(Pairs);
-      SmallBitVector Mivs(Pairs);
-      SmallBitVector ConstrainedLevels(MaxLevels + 1);
-      SmallVector<Subscript *, 4> PairsInGroup;
-      for (unsigned SJ : Group.set_bits()) {
-        LLVM_DEBUG(dbgs() << SJ << " ");
-        if (Pair[SJ].Classification == Subscript::SIV)
-          Sivs.set(SJ);
-        else
-          Mivs.set(SJ);
-        PairsInGroup.push_back(&Pair[SJ]);
-      }
-      unifySubscriptType(PairsInGroup);
-      LLVM_DEBUG(dbgs() << "}\n");
-      while (Sivs.any()) {
-        bool Changed = false;
-        for (unsigned SJ : Sivs.set_bits()) {
-          LLVM_DEBUG(dbgs() << "testing subscript " << SJ << ", SIV\n");
-          // SJ is an SIV subscript that's part of the current coupled group
-          unsigned Level;
-          const SCEV *SplitIter = nullptr;
-          LLVM_DEBUG(dbgs() << "SIV\n");
-          if (testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result, NewConstraint,
-                      SplitIter))
-            return nullptr;
-          ConstrainedLevels.set(Level);
-          if (intersectConstraints(&Constraints[Level], &NewConstraint)) {
-            if (Constraints[Level].isEmpty()) {
-              ++DeltaIndependence;
-              return nullptr;
-            }
-            Changed = true;
-          }
-          Sivs.reset(SJ);
-        }
-        if (Changed) {
-          // propagate, possibly creating new SIVs and ZIVs
-          LLVM_DEBUG(dbgs() << "    propagating\n");
-          LLVM_DEBUG(dbgs() << "\tMivs = ");
-          LLVM_DEBUG(dumpSmallBitVector(Mivs));
-          for (unsigned SJ : Mivs.set_bits()) {
-            // SJ is an MIV subscript that's part of the current coupled group
-            LLVM_DEBUG(dbgs() << "\tSJ = " << SJ << "\n");
-            if (propagate(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops,
-                          Constraints, Result.Consistent)) {
-              LLVM_DEBUG(dbgs() << "\t    Changed\n");
-              ++DeltaPropagations;
-              Pair[SJ].Classification = classifyPair(
-                  Pair[SJ].Src, LI->getLoopFor(Src->getParent()), Pair[SJ].Dst,
-                  LI->getLoopFor(Dst->getParent()), Pair[SJ].Loops);
-              switch (Pair[SJ].Classification) {
-              case Subscript::ZIV:
-                LLVM_DEBUG(dbgs() << "ZIV\n");
-                if (testZIV(Pair[SJ].Src, Pair[SJ].Dst, Result))
-                  return nullptr;
-                Mivs.reset(SJ);
-                break;
-              case Subscript::SIV:
-                Sivs.set(SJ);
-                Mivs.reset(SJ);
-                break;
-              case Subscript::RDIV:
-              case Subscript::MIV:
-                break;
-              default:
-                llvm_unreachable("bad subscript classification");
-              }
-            }
-          }
-        }
-      }
-
-      // test & propagate remaining RDIVs
-      for (unsigned SJ : Mivs.set_bits()) {
-        if (Pair[SJ].Classification == Subscript::RDIV) {
-          LLVM_DEBUG(dbgs() << "RDIV test\n");
-          if (testRDIV(Pair[SJ].Src, Pair[SJ].Dst, Result))
-            return nullptr;
-          // I don't yet understand how to propagate RDIV results
-          Mivs.reset(SJ);
-        }
-      }
-
-      // test remaining MIVs
-      // This code is temporary.
-      // Better to somehow test all remaining subscripts simultaneously.
-      for (unsigned SJ : Mivs.set_bits()) {
-        if (Pair[SJ].Classification == Subscript::MIV) {
-          LLVM_DEBUG(dbgs() << "MIV test\n");
-          if (testMIV(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops, Result))
-            return nullptr;
-        } else
-          llvm_unreachable("expected only MIV subscripts at this point");
-      }
-
-      // update Result.DV from constraint vector
-      LLVM_DEBUG(dbgs() << "    updating\n");
-      for (unsigned SJ : ConstrainedLevels.set_bits()) {
-        if (SJ > CommonLevels)
-          break;
-        updateDirection(Result.DV[SJ - 1], Constraints[SJ]);
-        if (Result.DV[SJ - 1].Direction == Dependence::DVEntry::NONE)
-          return nullptr;
-      }
     }
   }
 
@@ -4624,226 +4224,4 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   }
 
   return std::make_unique<FullDependence>(std::move(Result));
-}
-
-//===----------------------------------------------------------------------===//
-// getSplitIteration -
-// Rather than spend rarely-used space recording the splitting iteration
-// during the Weak-Crossing SIV test, we re-compute it on demand.
-// The re-computation is basically a repeat of the entire dependence test,
-// though simplified since we know that the dependence exists.
-// It's tedious, since we must go through all propagations, etc.
-//
-// Care is required to keep this code up to date with respect to the routine
-// above, depends().
-//
-// Generally, the dependence analyzer will be used to build
-// a dependence graph for a function (basically a map from instructions
-// to dependences). Looking for cycles in the graph shows us loops
-// that cannot be trivially vectorized/parallelized.
-//
-// We can try to improve the situation by examining all the dependences
-// that make up the cycle, looking for ones we can break.
-// Sometimes, peeling the first or last iteration of a loop will break
-// dependences, and we've got flags for those possibilities.
-// Sometimes, splitting a loop at some other iteration will do the trick,
-// and we've got a flag for that case. Rather than waste the space to
-// record the exact iteration (since we rarely know), we provide
-// a method that calculates the iteration. It's a drag that it must work
-// from scratch, but wonderful in that it's possible.
-//
-// Here's an example:
-//
-//    for (i = 0; i < 10; i++)
-//        A[i] = ...
-//        ... = A[11 - i]
-//
-// There's a loop-carried flow dependence from the store to the load,
-// found by the weak-crossing SIV test. The dependence will have a flag,
-// indicating that the dependence can be broken by splitting the loop.
-// Calling getSplitIteration will return 5.
-// Splitting the loop breaks the dependence, like so:
-//
-//    for (i = 0; i <= 5; i++)
-//        A[i] = ...
-//        ... = A[11 - i]
-//    for (i = 6; i < 10; i++)
-//        A[i] = ...
-//        ... = A[11 - i]
-//
-// breaks the dependence and allows us to vectorize/parallelize
-// both loops.
-const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
-                                              unsigned SplitLevel) {
-  assert(Dep.isSplitable(SplitLevel) &&
-         "Dep should be splitable at SplitLevel");
-  Instruction *Src = Dep.getSrc();
-  Instruction *Dst = Dep.getDst();
-  assert(Src->mayReadFromMemory() || Src->mayWriteToMemory());
-  assert(Dst->mayReadFromMemory() || Dst->mayWriteToMemory());
-  assert(isLoadOrStore(Src));
-  assert(isLoadOrStore(Dst));
-  Value *SrcPtr = getLoadStorePointerOperand(Src);
-  Value *DstPtr = getLoadStorePointerOperand(Dst);
-  assert(underlyingObjectsAlias(
-             AA, F->getDataLayout(), MemoryLocation::get(Dst),
-             MemoryLocation::get(Src)) == AliasResult::MustAlias);
-
-  // establish loop nesting levels
-  establishNestingLevels(Src, Dst);
-
-  FullDependence Result(Src, Dst, Dep.Assumptions, false, CommonLevels);
-
-  unsigned Pairs = 1;
-  SmallVector<Subscript, 2> Pair(Pairs);
-  const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
-  const SCEV *DstSCEV = SE->getSCEV(DstPtr);
-  Pair[0].Src = SE->removePointerBase(SrcSCEV);
-  Pair[0].Dst = SE->removePointerBase(DstSCEV);
-
-  if (Delinearize) {
-    if (tryDelinearize(Src, Dst, Pair)) {
-      LLVM_DEBUG(dbgs() << "    delinearized\n");
-      Pairs = Pair.size();
-    }
-  }
-
-  for (unsigned P = 0; P < Pairs; ++P) {
-    assert(Pair[P].Src->getType()->isIntegerTy() && "Src must be an integer");
-    assert(Pair[P].Dst->getType()->isIntegerTy() && "Dst must be an integer");
-    Pair[P].Loops.resize(MaxLevels + 1);
-    Pair[P].GroupLoops.resize(MaxLevels + 1);
-    Pair[P].Group.resize(Pairs);
-    removeMatchingExtensions(&Pair[P]);
-    Pair[P].Classification =
-        classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()), Pair[P].Dst,
-                     LI->getLoopFor(Dst->getParent()), Pair[P].Loops);
-    Pair[P].GroupLoops = Pair[P].Loops;
-    Pair[P].Group.set(P);
-  }
-
-  SmallBitVector Separable(Pairs);
-  SmallBitVector Coupled(Pairs);
-
-  // partition subscripts into separable and minimally-coupled groups
-  for (unsigned SI = 0; SI < Pairs; ++SI) {
-    if (Pair[SI].Classification == Subscript::NonLinear) {
-      // ignore these, but collect loops for later
-      collectCommonLoops(Pair[SI].Src, LI->getLoopFor(Src->getParent()),
-                         Pair[SI].Loops);
-      collectCommonLoops(Pair[SI].Dst, LI->getLoopFor(Dst->getParent()),
-                         Pair[SI].Loops);
-      Result.Consistent = false;
-    } else if (Pair[SI].Classification == Subscript::ZIV)
-      Separable.set(SI);
-    else {
-      // SIV, RDIV, or MIV, so check for coupled group
-      bool Done = true;
-      for (unsigned SJ = SI + 1; SJ < Pairs; ++SJ) {
-        SmallBitVector Intersection = Pair[SI].GroupLoops;
-        Intersection &= Pair[SJ].GroupLoops;
-        if (Intersection.any()) {
-          // accumulate set of all the loops in group
-          Pair[SJ].GroupLoops |= Pair[SI].GroupLoops;
-          // accumulate set of all subscripts in group
-          Pair[SJ].Group |= Pair[SI].Group;
-          Done = false;
-        }
-      }
-      if (Done) {
-        if (Pair[SI].Group.count() == 1)
-          Separable.set(SI);
-        else
-          Coupled.set(SI);
-      }
-    }
-  }
-
-  Constraint NewConstraint;
-  NewConstraint.setAny(SE);
-
-  // test separable subscripts
-  for (unsigned SI : Separable.set_bits()) {
-    switch (Pair[SI].Classification) {
-    case Subscript::SIV: {
-      unsigned Level;
-      const SCEV *SplitIter = nullptr;
-      (void)testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
-                    SplitIter);
-      if (Level == SplitLevel) {
-        assert(SplitIter != nullptr);
-        return SplitIter;
-      }
-      break;
-    }
-    case Subscript::ZIV:
-    case Subscript::RDIV:
-    case Subscript::MIV:
-      break;
-    default:
-      llvm_unreachable("subscript has unexpected classification");
-    }
-  }
-
-  assert(!Coupled.empty() && "coupled expected non-empty");
-
-  // test coupled subscript groups
-  SmallVector<Constraint, 4> Constraints(MaxLevels + 1);
-  for (unsigned II = 0; II <= MaxLevels; ++II)
-    Constraints[II].setAny(SE);
-  for (unsigned SI : Coupled.set_bits()) {
-    SmallBitVector Group(Pair[SI].Group);
-    SmallBitVector Sivs(Pairs);
-    SmallBitVector Mivs(Pairs);
-    SmallBitVector ConstrainedLevels(MaxLevels + 1);
-    for (unsigned SJ : Group.set_bits()) {
-      if (Pair[SJ].Classification == Subscript::SIV)
-        Sivs.set(SJ);
-      else
-        Mivs.set(SJ);
-    }
-    while (Sivs.any()) {
-      bool Changed = false;
-      for (unsigned SJ : Sivs.set_bits()) {
-        // SJ is an SIV subscript that's part of the current coupled group
-        unsigned Level;
-        const SCEV *SplitIter = nullptr;
-        (void)testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result, NewConstraint,
-                      SplitIter);
-        if (Level == SplitLevel && SplitIter)
-          return SplitIter;
-        ConstrainedLevels.set(Level);
-        if (intersectConstraints(&Constraints[Level], &NewConstraint))
-          Changed = true;
-        Sivs.reset(SJ);
-      }
-      if (!Changed)
-        continue;
-      // propagate, possibly creating new SIVs and ZIVs
-      for (unsigned SJ : Mivs.set_bits()) {
-        // SJ is an MIV subscript that's part of the current coupled group
-        if (!propagate(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops, Constraints,
-                       Result.Consistent))
-          continue;
-        Pair[SJ].Classification = classifyPair(
-            Pair[SJ].Src, LI->getLoopFor(Src->getParent()), Pair[SJ].Dst,
-            LI->getLoopFor(Dst->getParent()), Pair[SJ].Loops);
-        switch (Pair[SJ].Classification) {
-        case Subscript::ZIV:
-          Mivs.reset(SJ);
-          break;
-        case Subscript::SIV:
-          Sivs.set(SJ);
-          Mivs.reset(SJ);
-          break;
-        case Subscript::RDIV:
-        case Subscript::MIV:
-          break;
-        default:
-          llvm_unreachable("bad subscript classification");
-        }
-      }
-    }
-  }
-  llvm_unreachable("somehow reached end of routine");
 }
