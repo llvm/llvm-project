@@ -2528,47 +2528,41 @@ mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
     }
   }
 
-  std::string intrinName = getLLVMIntrinName(
-      arithKind, encompassedTyInfo.sign, encompassedTyInfo.width);
-  auto intrinNameAttr =
-      mlir::StringAttr::get(op.getContext(), intrinName);
+  std::string intrinName = getLLVMIntrinName(arithKind, encompassedTyInfo.sign,
+                                             encompassedTyInfo.width);
+  auto intrinNameAttr = mlir::StringAttr::get(op.getContext(), intrinName);
 
   mlir::IntegerType overflowLLVMTy = rewriter.getI1Type();
-  auto intrinRetTy =
-      mlir::LLVM::LLVMStructType::getLiteral(
-          rewriter.getContext(), {encompassedLLVMTy, overflowLLVMTy});
+  auto intrinRetTy = mlir::LLVM::LLVMStructType::getLiteral(
+      rewriter.getContext(), {encompassedLLVMTy, overflowLLVMTy});
 
-  auto callLLVMIntrinOp =
-      mlir::LLVM::CallIntrinsicOp::create(rewriter, loc, intrinRetTy,
-                                          intrinNameAttr, mlir::ValueRange{lhs, rhs});
+  auto callLLVMIntrinOp = mlir::LLVM::CallIntrinsicOp::create(
+      rewriter, loc, intrinRetTy, intrinNameAttr, mlir::ValueRange{lhs, rhs});
   mlir::Value intrinRet = callLLVMIntrinOp.getResult(0);
 
-  mlir::Value result =
-      mlir::LLVM::ExtractValueOp::create(rewriter, loc, intrinRet,
-                                         ArrayRef<int64_t>{0})
-          .getResult();
-  mlir::Value overflow =
-      mlir::LLVM::ExtractValueOp::create(rewriter, loc, intrinRet,
-                                         ArrayRef<int64_t>{1})
-          .getResult();
+  mlir::Value result = mlir::LLVM::ExtractValueOp::create(
+                           rewriter, loc, intrinRet, ArrayRef<int64_t>{0})
+                           .getResult();
+  mlir::Value overflow = mlir::LLVM::ExtractValueOp::create(
+                             rewriter, loc, intrinRet, ArrayRef<int64_t>{1})
+                             .getResult();
 
   if (resultTy.getWidth() < encompassedTyInfo.width) {
     mlir::Type resultLLVMTy = getTypeConverter()->convertType(resultTy);
-    auto mlir::Value truncResult =
+    auto truncResult =
         mlir::LLVM::TruncOp::create(rewriter, loc, resultLLVMTy, result);
 
     // Extend the truncated result back to the encompassing type to check for
     // any overflows during the truncation.
     mlir::Value truncResultExt;
     if (resultTy.isSigned())
-      truncResultExt = mlir::LLVM::SExtOp::create(rewriter, loc,
-                                                  encompassedLLVMTy, truncResult);
+      truncResultExt = mlir::LLVM::SExtOp::create(
+          rewriter, loc, encompassedLLVMTy, truncResult);
     else
-      truncResultExt = mlir::LLVM::ZExtOp::create(rewriter, loc,
-                                                  encompassedLLVMTy, truncResult);
-    auto truncOverflow =
-        mlir::LLVM::ICmpOp::create(rewriter, loc, mlir::LLVM::ICmpPredicate::ne,
-                                   truncResultExt, result);
+      truncResultExt = mlir::LLVM::ZExtOp::create(
+          rewriter, loc, encompassedLLVMTy, truncResult);
+    auto truncOverflow = mlir::LLVM::ICmpOp::create(
+        rewriter, loc, mlir::LLVM::ICmpPredicate::ne, truncResultExt, result);
 
     result = truncResult;
     overflow = mlir::LLVM::OrOp::create(rewriter, loc, overflow, truncOverflow);
@@ -2617,8 +2611,9 @@ CIRToLLVMBinOpOverflowOpLowering::EncompassedTypeInfo
 CIRToLLVMBinOpOverflowOpLowering::computeEncompassedTypeWidth(
     cir::IntType operandTy, cir::IntType resultTy) {
   bool sign = operandTy.getIsSigned() || resultTy.getIsSigned();
-  unsigned width = std::max(operandTy.getWidth() + (sign && operandTy.isUnsigned()),
-                        resultTy.getWidth() + (sign && resultTy.isUnsigned()));
+  unsigned width =
+      std::max(operandTy.getWidth() + (sign && operandTy.isUnsigned()),
+               resultTy.getWidth() + (sign && resultTy.isUnsigned()));
   return {sign, width};
 }
 
