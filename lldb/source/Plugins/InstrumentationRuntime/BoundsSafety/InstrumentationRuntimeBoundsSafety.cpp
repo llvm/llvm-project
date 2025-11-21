@@ -104,7 +104,7 @@ InstrumentationBoundsSafetyStopInfo::InstrumentationBoundsSafetyStopInfo(
     m_value = MaybeSuggestedStackIndex.value();
 
   // Emit warning about the failure to compute the stop info if one wasn't
-  // already emitted
+  // already emitted.
   if ((!Description.has_value()) && !warning_emitted_for_failure) {
     if (auto thread_sp = GetThread()) {
       lldb::user_id_t debugger_id =
