@@ -78,17 +78,7 @@ class AbiTagStructorsTestCase(TestBase):
         Test that without linkage names on structor declarations we can't call
         ABI-tagged structors.
         """
-        # In older versions of Clang the -gno-structor-decl-linkage-names
-        # behaviour was the default.
-        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
-            [">=", "22.0"]
-        ):
-            self.build(
-                dictionary={"CXXFLAGS_EXTRAS": "-gno-structor-decl-linkage-names"}
-            )
-        else:
-            self.build()
-
+        self.build(dictionary={"CXXFLAGS_EXTRAS": "-gno-structor-decl-linkage-names"})
         lldbutil.run_to_source_breakpoint(
             self, "Break here", lldb.SBFileSpec("main.cpp", False)
         )
@@ -127,15 +117,6 @@ class AbiTagStructorsTestCase(TestBase):
 
     @expectedFailureAll(oslist=["windows"])
     def test_nested_no_structor_linkage_names(self):
-        # In older versions of Clang the -gno-structor-decl-linkage-names
-        # behaviour was the default.
-        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
-            [">=", "22.0"]
-        ):
-            self.build(
-                dictionary={"CXXFLAGS_EXTRAS": "-gno-structor-decl-linkage-names"}
-            )
-        else:
-            self.build()
+        self.build(dictionary={"CXXFLAGS_EXTRAS": "-gno-structor-decl-linkage-names"})
 
         self.do_nested_structor_test()
