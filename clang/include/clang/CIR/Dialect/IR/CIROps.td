@@ -3210,6 +3210,44 @@ def CIR_ArrayDtor : CIR_ArrayInitDestroy<"array.dtor"> {
 }
 
 //===----------------------------------------------------------------------===//
+// IsConstantOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IsConstantOp : CIR_Op<"is_constant", [Pure]> {
+  let summary = "Check if a value is a compile-time constant";
+  let description = [{
+    The `cir.is_constant` operation checks whether its input value is a
+    compile-time constant. This operation models the `__builtin_constant_p`
+    builtin function.
+
+    The operation takes a single operand of any CIR type and returns a signed
+    32-bit integer. The result is 1 if the operand is a compile-time constant,
+    and 0 otherwise.
+
+    If the value can be determined to be constant at compile time, this
+    operation may be folded to a constant value. Otherwise, it will be lowered
+    to the `llvm.is.constant` intrinsic.
+
+    Example:
+
+    ```mlir
+    %0 = cir.is_constant %expr : i32 -> !s32i
+    %1 = cir.is_constant %ptr : !cir.ptr<i32> -> !s32i
+    ```
+  }];
+
+  let arguments = (ins CIR_AnyType:$value);
+  let results = (outs CIR_BoolType:$result);
+
+  let assemblyFormat = [{
+    `(` $value `:` type($value) `)` `:` type($result) attr-dict
+  }];
+
+  // let hasFolder = 1;
+  // let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // VecCreate
 //===----------------------------------------------------------------------===//
 

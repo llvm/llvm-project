@@ -204,6 +204,43 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(builder.createBitcast(
         allocaAddr, builder.getVoidPtrTy(getCIRAllocaAddressSpace())));
   }
+  
+  case Builtin::BI__builtin_constant_p: { 
+    mlir::Location loc = getLoc(e->getSourceRange());
+    mlir::Type ResultType = convertType(e->getType());
+
+    const Expr *Arg = e->getArg(0);
+    QualType ArgType = Arg->getType();
+    // FIXME: The allowance for Obj-C pointers and block pointers is historical
+    // and likely a mistake.
+    if (!ArgType->isIntegralOrEnumerationType() && !ArgType->isFloatingType() &&
+        !ArgType->isObjCObjectPointerType() && !ArgType->isBlockPointerType())
+      // Per the GCC documentation, only numeric constants are recognized after
+      // inlining.
+      return RValue::get(
+          builder.getConstInt(getLoc(e->getSourceRange()),
+                              mlir::cast<cir::IntType>(ResultType), 0));
+
+    if (Arg->HasSideEffects(getContext()))
+      // The argument is unevaluated, so be conservative if it might have
+      // side-effects.
+      return RValue::get(
+          builder.getConstInt(getLoc(e->getSourceRange()),
+                              mlir::cast<cir::IntType>(ResultType), 0));
+
+    mlir::Value ArgValue = emitScalarExpr(Arg);
+    if (ArgType->isObjCObjectPointerType())
+      // Convert Objective-C objects to id because we cannot distinguish between
+      // LLVM types for Obj-C classes as they are opaque.
+      ArgType = cgm.getASTContext().getObjCIdType();
+    ArgValue = builder.createBitcast(ArgValue, convertType(ArgType));
+
+    mlir::Value Result = cir::IsConstantOp::create(
+        builder, getLoc(e->getSourceRange()), ArgValue);
+    if (Result.getType() != ResultType)
+      Result = builder.createBoolToInt(Result, ResultType);
+    return RValue::get(Result);
+  }
 
   case Builtin::BIcos:
   case Builtin::BIcosf:
