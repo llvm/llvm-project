@@ -122,6 +122,9 @@ declare void @external_barrier(ptr)
 
 ;--- folded.ll
 
+; This tests that when there is no function call to prevent folding, the type
+; will still successfully be replaced.
+
 ; FOLDED-LABEL: @test_folded(
 ; FOLDED: %[[#TO:]] = load %struct.PromotedStruct, ptr %get_access
 ; FOLDED: store %struct.PromotedStruct %[[#TO]], ptr %set_access

@@ -8,7 +8,6 @@
 
 #include "DXILRefineTypes.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -32,9 +31,6 @@ static Type *inferType(Value *Operand) {
   return nullptr;
 }
 
-// Attempt to merge two inferred types.
-//
-// Returns nullptr, if an inferred can't be concluded
 static Type *mergeInferredTypes(Type *A, Type *B) {
   if (!A)
     return B;
