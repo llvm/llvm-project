@@ -53,8 +53,6 @@
 #include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <memory>
-#include <optional>
-#include <string>
 
 using namespace llvm;
 

@@ -47,7 +47,7 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
     Option<
     "layoutKind", "layout-kind", "std::string",
     /*default=*/"\"lane\"",
-    "Propagate a `sg` / `inst` / `lane` level of xegpu layouts.">
+    "Propagate `inst` / `lane` level of xegpu layouts.">
   ];
 }
 
@@ -83,6 +83,18 @@ def XeGPUVectorLinearize : Pass<"xegpu-vector-linearize"> {
   }];
   let dependentDialects = ["arith::ArithDialect", "memref::MemRefDialect",
                            "scf::SCFDialect", "ub::UBDialect", "vector::VectorDialect"];
+}
+
+def XeGPUOptimizeBlockLoads : Pass<"xegpu-optimize-block-loads"> {
+  let summary = "Optimize XeGPU block load operations";
+  let description = [{
+    This pass rewrites XeGPU loadNd operations into more optimal forms
+    to improve performance. This includes,
+    - Rewriting transpose B loads into more optimal forms to use HW block
+      transpose instructions for better performance.
+  }];
+  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
+                           "vector::VectorDialect"];
 }
 
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD

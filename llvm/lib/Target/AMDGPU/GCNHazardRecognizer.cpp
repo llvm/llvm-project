@@ -435,7 +435,7 @@ void GCNHazardRecognizer::RecedeCycle() {
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
-using HazardFnResult = enum { HazardFound, HazardExpired, NoHazardFound };
+enum HazardFnResult { HazardFound, HazardExpired, NoHazardFound };
 
 using IsExpiredFn = function_ref<bool(const MachineInstr &, int WaitStates)>;
 using GetNumWaitStatesFn = function_ref<unsigned int(const MachineInstr &)>;
@@ -643,7 +643,7 @@ int GCNHazardRecognizer::getWaitStatesSinceSetReg(IsHazardFn IsHazard,
 static void addRegUnits(const SIRegisterInfo &TRI, BitVector &BV,
                         MCRegister Reg) {
   for (MCRegUnit Unit : TRI.regunits(Reg))
-    BV.set(Unit);
+    BV.set(static_cast<unsigned>(Unit));
 }
 
 static void addRegsToSet(const SIRegisterInfo &TRI,
@@ -1502,9 +1502,8 @@ static bool shouldRunLdsBranchVmemWARHazardFixup(const MachineFunction &MF,
   bool HasVmem = false;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      HasLds |= SIInstrInfo::isDS(MI);
-      HasVmem |= (SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
-                 SIInstrInfo::isSegmentSpecificFLAT(MI);
+      HasLds |= SIInstrInfo::isDS(MI) || SIInstrInfo::isLDSDMA(MI);
+      HasVmem |= SIInstrInfo::isVMEM(MI);
       if (HasLds && HasVmem)
         return true;
     }
@@ -1526,10 +1525,9 @@ bool GCNHazardRecognizer::fixLdsBranchVmemWARHazard(MachineInstr *MI) {
   assert(!ST.hasExtendedWaitCounts());
 
   auto IsHazardInst = [](const MachineInstr &MI) {
-    if (SIInstrInfo::isDS(MI))
+    if (SIInstrInfo::isDS(MI) || SIInstrInfo::isLDSDMA(MI))
       return 1;
-    if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
-        SIInstrInfo::isSegmentSpecificFLAT(MI))
+    if (SIInstrInfo::isVMEM(MI))
       return 2;
     return 0;
   };

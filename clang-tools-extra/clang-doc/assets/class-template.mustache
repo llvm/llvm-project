@@ -50,18 +50,21 @@
                 <li class="sidebar-section">
                     <a class="sidebar-item" href="#PublicMembers">Public Members</a>
                 </li>
-                <ul>
-                    {{#PublicMembers}}
-                    <li class="sidebar-item-container">
-                        <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
-                    </li>
-                    {{/PublicMembers}}
-                </ul>
+                <li>
+                    <ul>
+                        {{#PublicMembers}}
+                        <li class="sidebar-item-container">
+                            <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
+                        </li>
+                        {{/PublicMembers}}
+                    </ul>
+                </li>
                 {{/HasPublicMembers}}
                 {{#ProtectedMembers}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#PublicMethods">Protected Members</a>
-                    </li>
+                <li class="sidebar-section">
+                    <a class="sidebar-item" href="#PublicMethods">Protected Members</a>
+                </li>
+                <li>
                     <ul>
                         {{#Obj}}
                             <li class="sidebar-item-container">
@@ -69,42 +72,49 @@
                             </li>
                         {{/Obj}}
                     </ul>
+                </li>
                 {{/ProtectedMembers}}
                 {{#HasPublicFunctions}}
                 <li class="sidebar-section">
                     <a class="sidebar-item" href="#PublicMethods">Public Method</a>
                 </li>
-                <ul>
-                    {{#PublicFunctions}}
-                    <li class="sidebar-item-container">
-                        <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
-                    </li>
-                    {{/PublicFunctions}}
-                </ul>
+                <li>
+                    <ul>
+                        {{#PublicFunctions}}
+                        <li class="sidebar-item-container">
+                            <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                        </li>
+                        {{/PublicFunctions}}
+                    </ul>
+                </li>
                 {{/HasPublicFunctions}}
                 {{#ProtectedFunction}}
                 <li class="sidebar-section">
                     <a class="sidebar-item" href="#ProtectedFunction">Protected Method</a>
                 </li>
-                <ul>
-                    {{#Obj}}
-                    <li class="sidebar-item-container">
-                        <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
-                    </li>
-                    {{/Obj}}
-                </ul>
+                <li>
+                    <ul>
+                        {{#Obj}}
+                        <li class="sidebar-item-container">
+                            <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                        </li>
+                        {{/Obj}}
+                    </ul>
+                </li>
                 {{/ProtectedFunction}}
                 {{#Enums}}
                 <li class="sidebar-section">
                     <a class="sidebar-item" href="#Enums">Enums</a>
                 </li>
-                <ul>
-                    {{#Obj}}
-                    <li class="sidebar-item-container">
-                        <a class="sidebar-item" href="#{{USR}}">{{EnumName}}</a>
-                    </li>
-                    {{/Obj}}
-                </ul>
+                <li>
+                    <ul>
+                        {{#Obj}}
+                        <li class="sidebar-item-container">
+                            <a class="sidebar-item" href="#{{USR}}">{{EnumName}}</a>
+                        </li>
+                        {{/Obj}}
+                    </ul>
+                </li>
                 {{/Enums}}
                 {{#Typedef}}
                 <li class="sidebar-section">Typedef</li>
@@ -113,13 +123,15 @@
                 <li class="sidebar-section">
                     <a class="sidebar-item" href="#Classes">Inner Classes</a>
                 </li>
-                <ul>
-                    {{#Links}}
-                    <li class="sidebar-item-container">
-                        <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
-                    </li>
-                    {{/Links}}
-                </ul>
+                <li>
+                    <ul>
+                        {{#Links}}
+                        <li class="sidebar-item-container">
+                            <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                        </li>
+                        {{/Links}}
+                    </ul>
+                </li>
                 {{/Record}}
             </ul>
         </div>
@@ -141,9 +153,7 @@
                 <div>
                     {{#PublicMembers}}
                     <div id="{{Name}}" class="delimiter-container">
-                        <pre>
-                            <code class="language-cpp code-clang-doc" >{{Type}} {{Name}}</code>
-                        </pre>
+                        <pre><code class="language-cpp code-clang-doc" >{{Type}} {{Name}}</code></pre>
                         {{#MemberComments}}
                         <div>
                             {{>Comments}}
@@ -160,9 +170,7 @@
                 <div>
                     {{#Obj}}
                     <div id="{{Name}}" class="delimiter-container">
-                        <pre>
-<code class="language-cpp code-clang-doc" >{{Type}} {{Name}}</code>
-                        </pre>
+                        <pre><code class="language-cpp code-clang-doc" >{{Type}} {{Name}}</code></pre>
                         {{#MemberComments}}
                         <div>
                             {{>Comments}}
@@ -178,7 +186,7 @@
                 <h2>Public Methods</h2>
                 <div>
                     {{#PublicFunctions}}
-{{>FunctionPartial}}
+                    {{>FunctionPartial}}
                     {{/PublicFunctions}}
                 </div>
             </section>

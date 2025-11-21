@@ -104,6 +104,25 @@ void nb8c()
 	};
 }
 
+void nb8d() [[clang::nonblocking]]
+{
+	// Blocking methods of a local CXXRecordDecl do not generate diagnostics
+	// for the outer function.
+	struct F1 {
+        void method() { void* ptr = new int; }
+	};
+
+	// Skipping the CXXRecordDecl does not skip a following VarDecl.
+	struct F2 {
+        F2() { void* ptr = new int; } // expected-note {{constructor cannot be inferred 'nonblocking' because it allocates or deallocates memory}}
+	} f2; // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' constructor 'nb8d()::F2::F2'}}
+
+	// Nonblocking methods of a local CXXRecordDecl are verified independently.
+	struct F3 {
+		void method() [[clang::nonblocking]] { void* ptr = new int; }// expected-warning {{function with 'nonblocking' attribute must not allocate or deallocate memory}}
+	};
+}
+
 // Make sure template expansions are found and verified.
 	template <typename T>
 	struct Adder {
@@ -372,6 +391,33 @@ struct Unsafe {
   // Delegating initializer.
   Unsafe(float y) [[clang::nonblocking]] : Unsafe(int(y)) {} // expected-warning {{constructor with 'nonblocking' attribute must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
 };
+
+// Exercise cases of a temporary with a safe constructor and unsafe destructor.
+void nb23()
+{
+	struct X {
+		int *ptr = nullptr;
+		X() {}
+		~X() { delete ptr; } // expected-note 2 {{destructor cannot be inferred 'nonblocking' because it allocates or deallocates memory}}
+	};
+
+	auto inner = []() [[clang::nonblocking]] {
+		X(); // expected-warning {{lambda with 'nonblocking' attribute must not call non-'nonblocking' destructor 'nb23()::X::~X'}}
+	};
+
+	auto inner2 = [](X x) [[clang::nonblocking]] { // expected-warning {{lambda with 'nonblocking' attribute must not call non-'nonblocking' destructor 'nb23()::X::~X'}}
+	};
+
+}
+
+struct S2 { ~S2(); }; // expected-note 2 {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+void nb24() {
+    S2 s;
+    [&]() [[clang::nonblocking]] {
+        [s]{ auto x = &s; }(); // expected-warning {{lambda with 'nonblocking' attribute must not call non-'nonblocking' destructor}} expected-note {{destructor cannot be inferred 'nonblocking' because it calls non-'nonblocking' destructor 'S2::~S2'}}
+        [=]{ auto x = &s; }(); // expected-warning {{lambda with 'nonblocking' attribute must not call non-'nonblocking' destructor}} expected-note {{destructor cannot be inferred 'nonblocking' because it calls non-'nonblocking' destructor 'S2::~S2'}}
+    }();
+}
 
 struct DerivedFromUnsafe : public Unsafe {
   DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{constructor with 'nonblocking' attribute must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
