@@ -12,7 +12,7 @@ struct [[gsl::Pointer()]] View {
   void use() const;
 };
 
-class S {
+class TriviallyDestructedClass {
   View a, b;
 };
 
@@ -400,7 +400,7 @@ void loan_from_previous_iteration(MyObj safe, bool condition) {
   }             // expected-note {{destroyed here}}
 }
 
-void trivial_uaf(){
+void trivial_int_uaf(){
   int * a;
     {
         int b = 1;
@@ -410,9 +410,9 @@ void trivial_uaf(){
 }
 
 void trivial_class_uaf() {
-  S* ptr;
+  TriviallyDestructedClass* ptr;
   {
-      S s;
+      TriviallyDestructedClass s;
       ptr = &s; // expected-warning {{object whose reference is captured does not live long enough}}
   }             // expected-note {{destroyed here}}
   (void)ptr;    // expected-note {{later used here}}
@@ -515,18 +515,41 @@ MyObj& reference_return_of_local() {
                     // expected-note@-1 {{returned here}}
 }
 
-int* trivial_uar() {
+int* trivial_int_uar() {
   int *a;
   int b = 1;
   a = &b;          // expected-warning {{address of stack memory is returned later}}
   return a;        // expected-note {{returned here}}
 }
 
-S* trivial_class_uar () {
-  S *ptr;
-  S s;
+TriviallyDestructedClass* trivial_class_uar () {
+  TriviallyDestructedClass *ptr;
+  TriviallyDestructedClass s;
   ptr = &s;       // expected-warning {{address of stack memory is returned later}}
   return ptr;     // expected-note {{returned here}}
+}
+
+// FIXME: No lifetime warning for this as no loans are issued for paramters
+const int& return_parameter(int a) { 
+  return a; 
+}
+
+// FIXME: No lifetime warning for this as no loans are issued for paramters
+int* return_pointer_to_parameter(int a) {
+    return &a;
+}
+
+const int& return_reference_to_parameter(int a)
+{
+    const int &b = a; 
+    return b;         // expected-warning {{address of stack memory is returned later}}
+                      // expected-note@-1 {{returned here}}
+}
+
+const int& get_ref_to_local() {
+    int local_var = 42;
+    return local_var;  // expected-warning {{address of stack memory is returned later}}
+                       // expected-note@-1 {{returned here}}
 }
 
 //===----------------------------------------------------------------------===//
@@ -724,7 +747,8 @@ void lifetimebound_partial_safety(bool cond) {
   v.use();                // expected-note {{later used here}}
 }
 
-// FIXME: Creating reference from lifetimebound call doesn't propagate loans.
+// FIXME: Warning should be on the 'GetObject' call, not the assignment to 'ptr'. 
+// The loan from the lifetimebound argument is not propagated to the call expression itself.
 const MyObj& GetObject(View v [[clang::lifetimebound]]);
 void lifetimebound_return_reference() {
   View v;
@@ -732,7 +756,7 @@ void lifetimebound_return_reference() {
   {
     MyObj obj;
     View temp_v = obj;
-    const MyObj& ref = GetObject(temp_v);   
+    const MyObj& ref = GetObject(temp_v);
     ptr = &ref;           // expected-warning {{object whose reference is captured does not live long enough}}
   }                       // expected-note {{destroyed here}}
   (void)*ptr;             // expected-note {{later used here}}

@@ -63,12 +63,9 @@ void FactsGenerator::run() {
       const CFGElement &Element = Block->Elements[I];
       if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
         Visit(CS->getStmt());
-      else if (std::optional<CFGAutomaticObjDtor> DtorOpt =
-                   Element.getAs<CFGAutomaticObjDtor>())
-        handleDestructor(*DtorOpt);
       else if (std::optional<CFGLifetimeEnds> LifetimeEnds =
                    Element.getAs<CFGLifetimeEnds>())
-        handleTrivialDestructors(*LifetimeEnds);
+        handleLifetimeEnds(*LifetimeEnds);
     }
     CurrentBlockFacts.append(EscapesInCurrentBlock.begin(),
                              EscapesInCurrentBlock.end());
@@ -232,31 +229,11 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   killAndFlowOrigin(*MTE, *MTE->getSubExpr());
 }
 
-void FactsGenerator::handleDestructor(const CFGAutomaticObjDtor &DtorOpt) {
-  /// TODO: Handle loans to temporaries.
-  const VarDecl *DestructedVD = DtorOpt.getVarDecl();
-  if (!DestructedVD)
-    return;
-  // Iterate through all loans to see if any expire.
-  /// TODO(opt): Do better than a linear search to find loans associated with
-  /// 'DestructedVD'.
-  for (const Loan &L : FactMgr.getLoanMgr().getLoans()) {
-    const AccessPath &LoanPath = L.Path;
-    // Check if the loan is for a stack variable and if that variable
-    // is the one being destructed.
-    if (LoanPath.D == DestructedVD)
-      CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-          L.ID, DtorOpt.getTriggerStmt()->getEndLoc()));
-  }
-}
-
-void FactsGenerator::handleTrivialDestructors(
-    const CFGLifetimeEnds &LifetimeEnds) {
+void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   for (const auto &Loan : FactMgr.getLoanMgr().getLoans()) {
     if (Loan.Path.D == LifetimeEnds.getVarDecl()) {
       CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
           Loan.ID, LifetimeEnds.getTriggerStmt()->getEndLoc()));
-      break;
     }
   }
 }

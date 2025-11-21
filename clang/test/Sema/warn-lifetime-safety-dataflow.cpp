@@ -59,7 +59,7 @@ int return_int_val() {
   int x = 10;
 // CHECK: Block B{{[0-9]+}}:
 // CHECK:   Issue ([[L_X:[0-9]+]] (Path: x), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr))
-// CHECK:   Expire (0 (Path: x))
+// CHECK:   Expire ([[L_X:[0-9]+]] (Path: x))
   return x;
 }
 // CHECK-NEXT: End of Block
@@ -86,7 +86,7 @@ void loan_expires_trivial() {
 // CHECK:   OriginFlow (Dest: [[O_ADDR_TRIVIAL_OBJ:[0-9]+]] (Expr: UnaryOperator), Src: [[O_DRE_TRIVIAL]] (Expr: DeclRefExpr))
   int* pTrivialObj = &trivial_obj;
 // CHECK:   OriginFlow (Dest: {{[0-9]+}} (Decl: pTrivialObj), Src: [[O_ADDR_TRIVIAL_OBJ]] (Expr: UnaryOperator))
-// CHECK:   Expire (0 (Path: trivial_obj))
+// CHECK:   Expire ([[L_TRIVIAL_OBJ:[0-9]+]] (Path: trivial_obj))
 // CHECK-NEXT: End of Block
 }
 
