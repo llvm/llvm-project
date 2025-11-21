@@ -2940,6 +2940,11 @@ SDValue MipsTargetLowering::lowerSTRICT_FP_TO_INT(SDValue Op,
   return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
 }
 
+ArrayRef<MCPhysReg> MipsTargetLowering::getRoundingControlRegisters() const {
+  static const MCPhysReg RCRegs[] = {Mips::FCR31};
+  return RCRegs;
+}
+
 //===----------------------------------------------------------------------===//
 //                      Calling Convention Implementation
 //===----------------------------------------------------------------------===//
