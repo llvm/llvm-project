@@ -391,29 +391,39 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 
 #undef CHECK_ALIGN_CONSECUTIVE
 
-  Style.PointerAlignment = FormatStyle::PAS_Middle;
+  Style.PointerAlignment = {/*Default=*/FormatStyle::PAS_Middle};
   CHECK_PARSE("PointerAlignment: Left", PointerAlignment,
-              FormatStyle::PAS_Left);
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Left}));
   CHECK_PARSE("PointerAlignment: Right", PointerAlignment,
-              FormatStyle::PAS_Right);
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Right}));
   CHECK_PARSE("PointerAlignment: Middle", PointerAlignment,
-              FormatStyle::PAS_Middle);
-  Style.ReferenceAlignment = FormatStyle::RAS_Middle;
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Middle}));
+  Style.ReferenceAlignment = {/*Default=*/FormatStyle::RAS_Middle};
   CHECK_PARSE("ReferenceAlignment: Pointer", ReferenceAlignment,
-              FormatStyle::RAS_Pointer);
+              FormatStyle::ReferenceAlignmentOptions(
+                  {/*Default=*/FormatStyle::RAS_Pointer}));
   CHECK_PARSE("ReferenceAlignment: Left", ReferenceAlignment,
-              FormatStyle::RAS_Left);
+              FormatStyle::ReferenceAlignmentOptions(
+                  {/*Default=*/FormatStyle::RAS_Left}));
   CHECK_PARSE("ReferenceAlignment: Right", ReferenceAlignment,
-              FormatStyle::RAS_Right);
+              FormatStyle::ReferenceAlignmentOptions(
+                  {/*Default=*/FormatStyle::RAS_Right}));
   CHECK_PARSE("ReferenceAlignment: Middle", ReferenceAlignment,
-              FormatStyle::RAS_Middle);
+              FormatStyle::ReferenceAlignmentOptions(
+                  {/*Default=*/FormatStyle::RAS_Middle}));
   // For backward compatibility:
   CHECK_PARSE("PointerBindsToType: Left", PointerAlignment,
-              FormatStyle::PAS_Left);
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Left}));
   CHECK_PARSE("PointerBindsToType: Right", PointerAlignment,
-              FormatStyle::PAS_Right);
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Right}));
   CHECK_PARSE("PointerBindsToType: Middle", PointerAlignment,
-              FormatStyle::PAS_Middle);
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Middle}));
 
   Style.ReflowComments = FormatStyle::RCS_Always;
   CHECK_PARSE("ReflowComments: Never", ReflowComments, FormatStyle::RCS_Never);

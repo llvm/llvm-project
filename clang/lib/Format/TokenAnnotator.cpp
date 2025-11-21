@@ -4732,7 +4732,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (BeforeLeft->is(tok::coloncolon)) {
       if (Left.isNot(tok::star))
         return false;
-      assert(Style.PointerAlignment != FormatStyle::PAS_Right);
+      assert(Style.PointerAlignment.Default != FormatStyle::PAS_Right);
       if (!Right.startsSequence(tok::identifier, tok::r_paren))
         return true;
       assert(Right.Next);
@@ -4744,7 +4744,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   // Ensure right pointer alignment with ellipsis e.g. int *...P
   if (Left.is(tok::ellipsis) && BeforeLeft &&
       BeforeLeft->isPointerOrReference()) {
-    return Style.PointerAlignment != FormatStyle::PAS_Right;
+    return Style.PointerAlignment.Default != FormatStyle::PAS_Right;
   }
 
   if (Right.is(tok::star) && Left.is(tok::l_paren))
@@ -4782,9 +4782,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // dependent on PointerAlignment style.
     if (Previous) {
       if (Previous->endsSequence(tok::kw_operator))
-        return Style.PointerAlignment != FormatStyle::PAS_Left;
+        return Style.PointerAlignment.Default != FormatStyle::PAS_Left;
       if (Previous->isOneOf(tok::kw_const, tok::kw_volatile)) {
-        return (Style.PointerAlignment != FormatStyle::PAS_Left) ||
+        return (Style.PointerAlignment.Default != FormatStyle::PAS_Left) ||
                (Style.SpaceAroundPointerQualifiers ==
                 FormatStyle::SAPQ_After) ||
                (Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Both);
@@ -6543,9 +6543,9 @@ void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) const {
 FormatStyle::PointerAlignmentStyle
 TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) const {
   assert(Reference.isOneOf(tok::amp, tok::ampamp));
-  switch (Style.ReferenceAlignment) {
+  switch (Style.ReferenceAlignment.Default) {
   case FormatStyle::RAS_Pointer:
-    return Style.PointerAlignment;
+    return Style.PointerAlignment.Default;
   case FormatStyle::RAS_Left:
     return FormatStyle::PAS_Left;
   case FormatStyle::RAS_Right:
@@ -6554,7 +6554,7 @@ TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) const {
     return FormatStyle::PAS_Middle;
   }
   assert(0); //"Unhandled value of ReferenceAlignment"
-  return Style.PointerAlignment;
+  return Style.PointerAlignment.Default;
 }
 
 FormatStyle::PointerAlignmentStyle
@@ -6563,7 +6563,7 @@ TokenAnnotator::getTokenPointerOrReferenceAlignment(
   if (PointerOrReference.isOneOf(tok::amp, tok::ampamp))
     return getTokenReferenceAlignment(PointerOrReference);
   assert(PointerOrReference.is(tok::star));
-  return Style.PointerAlignment;
+  return Style.PointerAlignment.Default;
 }
 
 } // namespace format
