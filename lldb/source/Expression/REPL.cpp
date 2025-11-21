@@ -615,6 +615,6 @@ Status REPL::RunLoop() {
   // Restore the default file and line
   if (default_file_line)
     m_target.GetSourceManager().SetDefaultFileAndLine(
-        default_file_line->support_file_sp, default_file_line->line);
+        default_file_line->support_file_nsp, default_file_line->line);
   return error;
 }
