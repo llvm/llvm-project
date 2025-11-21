@@ -127,8 +127,7 @@ static int WriteOutput(const TGParser &Parser, const char *argv0,
   return 0;
 }
 
-int llvm::TableGenMain(const char *argv0,
-                       std::function<MultiFileTableGenMainFn> MainFn) {
+int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   RecordKeeper Records;
   TGTimer &Timer = Records.getTimer();
 
@@ -167,12 +166,11 @@ int llvm::TableGenMain(const char *argv0,
 
   // Write output to memory.
   Timer.startBackendTimer("Backend overall");
-  SmallString<128> FilenamePrefix(OutputFilename);
-  sys::path::replace_extension(FilenamePrefix, "");
   TableGenOutputFiles OutFiles;
   unsigned status = 0;
   // ApplyCallback will return true if it did not apply any callback. In that
   // case, attempt to apply the MainFn.
+  StringRef FilenamePrefix(sys::path::stem(OutputFilename));
   if (TableGen::Emitter::ApplyCallback(Records, OutFiles, FilenamePrefix))
     status = MainFn ? MainFn(OutFiles, Records) : 1;
   Timer.stopBackendTimer();
@@ -195,7 +193,7 @@ int llvm::TableGenMain(const char *argv0,
     SmallString<128> Filename(OutputFilename);
     // TODO: Format using the split-file convention when writing to stdout?
     if (Filename != "-") {
-      Filename = FilenamePrefix;
+      sys::path::replace_extension(Filename, "");
       Filename.append(Suffix);
     }
     if (int Ret = WriteOutput(Parser, argv0, Filename, Content))
@@ -210,8 +208,7 @@ int llvm::TableGenMain(const char *argv0,
   return 0;
 }
 
-int llvm::TableGenMain(const char *argv0,
-                       std::function<TableGenMainFn> MainFn) {
+int llvm::TableGenMain(const char *argv0, TableGenMainFn MainFn) {
   return TableGenMain(argv0, [&MainFn](TableGenOutputFiles &OutFiles,
                                        const RecordKeeper &Records) {
     std::string S;

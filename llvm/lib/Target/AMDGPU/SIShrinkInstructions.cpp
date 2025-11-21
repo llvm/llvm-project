@@ -586,7 +586,7 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
     if (SrcReg->isReg() && SrcReg->getReg() == Dest->getReg()) {
       const bool IsUndef = SrcReg->isUndef();
       const bool IsKill = SrcReg->isKill();
-      MI.setDesc(TII->get(Opc));
+      TII->mutateAndCleanupImplicit(MI, TII->get(Opc));
       if (Opc == AMDGPU::S_BITSET0_B32 ||
           Opc == AMDGPU::S_BITSET1_B32) {
         Src0->ChangeToImmediate(NewImm);
