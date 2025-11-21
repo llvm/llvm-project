@@ -390,42 +390,36 @@ LogicalResult ConvertF4x2ToF16x2Op::verify() {
 // Stochastic Rounding Conversion Ops
 //===----------------------------------------------------------------------===//
 
-LogicalResult ConvertF32x2ToF16x2Op::verify() {
-  switch (getRnd()) {
+static LogicalResult verifyConvertF32x2ToFPx2Op(Twine dstType,
+                                                FPRoundingMode rnd,
+                                                bool hasRandomBits,
+                                                Operation *op) {
+  switch (rnd) {
   case FPRoundingMode::RN:
   case FPRoundingMode::RZ:
-    if (getRbits())
-      return emitOpError("rbits not supported for RN and RZ rounding modes.");
+    if (hasRandomBits)
+      return op->emitOpError(
+          "random_bits not supported for RN and RZ rounding modes.");
     break;
   case FPRoundingMode::RS:
-    if (!getRbits())
-      return emitOpError("rbits is required for RS rounding mode.");
+    if (!hasRandomBits)
+      return op->emitOpError("random_bits is required for RS rounding mode.");
     break;
   default:
-    return emitOpError("Only RN, RZ, and RS rounding modes are supported for "
-                       "conversions from f32x2 to f16x2.");
+    return op->emitOpError(
+               "Only RN, RZ, and RS rounding modes are supported for "
+               "conversions from f32x2 to ")
+           << dstType << ".";
   }
-
   return success();
 }
 
-LogicalResult ConvertF32x2ToBF16x2Op::verify() {
-  switch (getRnd()) {
-  case FPRoundingMode::RN:
-  case FPRoundingMode::RZ:
-    if (getRbits())
-      return emitOpError("rbits not supported for RN and RZ rounding modes.");
-    break;
-  case FPRoundingMode::RS:
-    if (!getRbits())
-      return emitOpError("rbits is required for RS rounding mode.");
-    break;
-  default:
-    return emitOpError("Only RN, RZ, and RS rounding modes are supported for "
-                       "conversions from f32x2 to bf16x2.");
-  }
+LogicalResult ConvertF32x2ToF16x2Op::verify() {
+  return verifyConvertF32x2ToFPx2Op("f16x2", getRnd(), getRandomBits(), *this);
+}
 
-  return success();
+LogicalResult ConvertF32x2ToBF16x2Op::verify() {
+  return verifyConvertF32x2ToFPx2Op("bf16x2", getRnd(), getRandomBits(), *this);
 }
 
 LogicalResult ConvertF32x4ToF8x4Op::verify() {
@@ -2774,8 +2768,9 @@ ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
       llvm::Intrinsic::nvvm_ff2f16x2_rs_relu_satfinite,
   };
 
-  bool hasRelu = op.getRelu();
-  bool hasSatFinite = (op.getSat() == NVVM::SaturationMode::SATFINITE);
+  unsigned hasRelu = op.getRelu() ? 1 : 0;
+  unsigned hasSatFinite =
+      (op.getSat() == NVVM::SaturationMode::SATFINITE) ? 1 : 0;
   // idx: bit-0 - relu
   //      bit-1 - satfinite
   unsigned idx = (hasSatFinite << 1) | hasRelu;
@@ -2821,8 +2816,9 @@ ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
       llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu_satfinite,
   };
 
-  bool hasRelu = op.getRelu();
-  bool hasSatFinite = (op.getSat() == NVVM::SaturationMode::SATFINITE);
+  unsigned hasRelu = op.getRelu() ? 1 : 0;
+  unsigned hasSatFinite =
+      (op.getSat() == NVVM::SaturationMode::SATFINITE) ? 1 : 0;
   // idx: bit-0 - relu
   //      bit-1 - satfinite
   unsigned idx = (hasSatFinite << 1) | hasRelu;

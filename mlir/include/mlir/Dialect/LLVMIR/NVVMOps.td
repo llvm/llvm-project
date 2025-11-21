@@ -1915,7 +1915,8 @@ def NVVM_ConvertF4x2ToF16x2Op :
 class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstType> :
   NVVM_Op<mnemonic, [Pure]>,
   Results<(outs dstType:$dst)>,
-  Arguments<(ins F32:$src_hi, F32:$src_lo, Optional<I32>:$rbits,
+  Arguments<(ins F32:$src_hi, F32:$src_lo,
+                 Optional<I32>:$random_bits,
                  DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
                  DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
                  DefaultValuedAttr<BoolAttr, "false">:$relu)> {
@@ -1925,7 +1926,12 @@ class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstT
     the specified rounding mode. The `src_hi` and `src_lo` parameters 
     correspond to operands `a` and `b` in the PTX ISA, respectively.
     
-    The `rbits` parameter is required for stochastic rounding.
+    The `random_bits` parameter is required for stochastic rounding and 
+    provides the [random bits](}] #
+    !if(!eq(dstFormat, "F16x2"),
+    "https://docs.nvidia.com/cuda/parallel-thread-execution/#cvt-rs-rbits-layout-f16",
+    "https://docs.nvidia.com/cuda/parallel-thread-execution/#cvt-rs-rbits-layout-bf16") #
+    [{) to be used for the conversion.
 
     The `relu` attribute clamps negative results to 0.
 
@@ -1934,7 +1940,7 @@ class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstT
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
   
-  let assemblyFormat = "$src_hi `,` $src_lo (`,` $rbits^)? attr-dict `:` type($dst)";
+  let assemblyFormat = "$src_hi `,` $src_lo (`,` $random_bits^)? attr-dict `:` type($dst)";
 
   let hasVerifier = 1;
   
