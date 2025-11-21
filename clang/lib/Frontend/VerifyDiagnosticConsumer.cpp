@@ -1037,15 +1037,13 @@ PrintPartial(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
   for (const auto &[D, DiagText] : DL) {
     assert(!D->MatchAnyLine && !D->MatchAnyFileAndLine &&
            "Wildcards should not be allowed in strict verify mode");
-    OS << "\n  Directive at " << SourceMgr.getFilename(D->DirectiveLoc) << ":"
-       << SourceMgr.getPresumedLineNumber(D->DirectiveLoc) << " \'"
-       << D->Spelling << "\': " << D->Text
-       << "\n    does not fully match diagnostic at ";
-    if (IsFromSameFile(SourceMgr, D->DirectiveLoc, D->DiagnosticLoc)) {
-      OS << "line " << SourceMgr.getPresumedLineNumber(D->DiagnosticLoc);
-    } else {
-      OS << SourceMgr.getFilename(D->DiagnosticLoc) << ":"
-         << SourceMgr.getPresumedLineNumber(D->DiagnosticLoc);
+    OS << "\n  '" << D->Spelling << "' at line "
+       << SourceMgr.getPresumedLineNumber(D->DirectiveLoc) << " in "
+       << SourceMgr.getFilename(D->DiagnosticLoc) << ": " << D->Text
+       << "\n    does not fully match diagnostic at line "
+       << SourceMgr.getPresumedLineNumber(D->DiagnosticLoc);
+    if (!IsFromSameFile(SourceMgr, D->DirectiveLoc, D->DiagnosticLoc)) {
+      OS << " in " << SourceMgr.getFilename(D->DiagnosticLoc);
     }
     OS << ": " << DiagText;
   }
