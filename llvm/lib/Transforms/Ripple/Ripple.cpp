@@ -20,6 +20,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Constant.h"
@@ -28,6 +29,8 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/FMF.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
@@ -40,15 +43,18 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/CFGUpdate.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GenericDomTree.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Evaluator.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include <array>
 #include <bitset>
 #include <cassert>
@@ -58,6 +64,7 @@
 #include <optional>
 #include <queue>
 #include <string>
+#include <system_error>
 #include <vector>
 
 using namespace llvm;
@@ -112,6 +119,14 @@ public:
     return (expr).takeError();                                                 \
   }
 
+/// @brief: Sets the insert points in `IRB` after the instruction "I".
+void setInsertPointAfter(llvm::IRBuilder<> &IRB, llvm::Instruction *I) {
+  if (isa<PHINode>(I) || isa<LandingPadInst>(I))
+    IRB.SetInsertPoint(I->getParent()->getFirstInsertionPt());
+  else
+    IRB.SetInsertPoint(std::next(I->getIterator()));
+}
+
 std::optional<uint64_t> getConstantOperandValue(const Instruction *I,
                                                 unsigned index) {
   if (index >= I->getNumOperands())
@@ -142,6 +157,16 @@ IntrinsicInst *intrinsicWithId(Instruction *I,
       intrinsicWithId(const_cast<const Instruction *>(I), ids));
 }
 
+Constant *getRippleNeutralReductionElement(Intrinsic::ID ID, Type *EltTy,
+                                           FastMathFlags FMF) {
+  assert(VPReductionIntrinsic::isVPReduction(ID) &&
+         "Expecting a vp reduction intrinsic ID");
+  if (auto OptIntinsic = VPIntrinsic::getFunctionalIntrinsicIDForVP(ID))
+    return dyn_cast<Constant>(getReductionIdentity(*OptIntinsic, EltTy, FMF));
+  else
+    return nullptr;
+}
+
 /// If the debug location is the result of inlining some code, returns the
 /// location where it has been inlined from, else returns the debug location
 /// unchanged.
@@ -154,6 +179,19 @@ DebugLoc stripInliningFromDebugLoc(DebugLoc DL) {
   while (DL && DL->getInlinedAt())
     DL = DL->getInlinedAt();
   return DL;
+}
+
+/// @brief Creates a SelectInst (not attached to any BasicBlock) taking a vector
+/// of @p Count i1 booleans and outputing a vector of integer type @p OutType
+/// with values 1 when true and 0 when false.
+SelectInst *createMaskSelectToTrueFalse(IntegerType *OutType,
+                                        ElementCount Count,
+                                        const Twine &Name = "") {
+  auto &Context = OutType->getContext();
+  return SelectInst::Create(
+      ConstantVector::getSplat(Count, ConstantInt::getTrue(Context)),
+      ConstantVector::getSplat(Count, ConstantInt::get(OutType, 1)),
+      ConstantVector::getSplat(Count, ConstantInt::get(OutType, 0)), Name);
 }
 
 /** @brief Returns the set, S, of basic blocks such that for every X in S, there
@@ -502,6 +540,243 @@ Expected<TensorShapeAny<SizeTy>> TensorShapeAny<SizeTy>::broadcastShapeFromAll(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+///                           NDLoadStoreAttr                                ///
+////////////////////////////////////////////////////////////////////////////////
+
+void NDLoadStoreAttr::print(raw_ostream &O) const {
+  // NIY
+}
+
+NDLoadStoreAttr NDLoadStoreAttr::fromString(StringRef AttrName) {
+  // NIY
+  return NDLoadStoreAttr();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///                         NDLoadStoreFactory                               ///
+////////////////////////////////////////////////////////////////////////////////
+
+bool NDLoadStoreFactory::analyzeCoalescing(Type *ElementTy,
+                                           LinearSeries &AddressSeries,
+                                           BitVector &StrideDims) {
+
+  assert(PointerType::isValidElementType(ElementTy) &&
+         "Internal type inference error");
+  DataLayout const &DL = Mod.getDataLayout();
+
+  uint64_t ElemByteSize = DL.getTypeAllocSize(ElementTy);
+
+  // Gather address tensor slice sizes, so we can compare them with slope sizes
+  // 0-dimensional slice is one element, then one rod, plane, etc.
+  const TensorShape &SlopeShape = AddressSeries.getSlopeShape();
+  SmallVector<uint64_t, 3> SliceSize(SlopeShape.rank());
+  uint64_t CurSliceSize = ElemByteSize;
+  for (int i = 0, n = SlopeShape.rank(); i < n; ++i) {
+    SliceSize[i] = CurSliceSize;
+    CurSliceSize *= AddressSeries.getShape(i);
+  }
+  LLVM_DEBUG(dbgs() << "slice sizes for " << AddressSeries << ": ";
+             for_each(SliceSize, [](auto size) { dbgs() << size << ' '; });
+             dbgs() << '\n');
+
+  const TensorShape &BaseShape = AddressSeries.getBaseShape();
+  bool Contiguous = true;
+  // We're contiguous up to dimension i of the Address series
+  // if the address tensor is made of slopes up to i and these slopes
+  // correspond to a slice of the address tensor.
+  int k = 0;
+  for (int i = 0, n = SlopeShape.rank(); i < n; ++i) {
+    // There aren't any strides as long as the slopes match the slice of
+    // the load's tensor shape.
+    // If the stride comes from a collection of bases,
+    // we assume that this match isn't happening.
+    if (BaseShape[i] > 1) {
+      Contiguous = false;
+      continue;
+    }
+    if (SlopeShape[i] == 1)
+      // stride is unchanged.
+      // keep trying to match the same slice shape with the next stride
+      continue;
+    if (Constant *ConstSlope = dyn_cast<Constant>(AddressSeries.getSlope(i))) {
+      // Skip trivial and broadcast values
+      assert(!ConstSlope->isZeroValue() &&
+             "Unexpected splat/broadcast in linear series");
+      const APInt &ApSlope = ConstSlope->getUniqueInteger();
+      const APInt ApSliceSize(ApSlope.getBitWidth(), SliceSize[k],
+                              /*signed=*/false);
+      LLVM_DEBUG(dbgs() << "slope " << ApSlope << " compares to slice size "
+                        << ApSliceSize << '\n');
+      // Slopes become load/store strides from the moment that contiguity
+      // is broken
+      if (!Contiguous || ApSlope != ApSliceSize) {
+        Contiguous = false;
+        StrideDims.set(i);
+      }
+    } else { // non-constant slope
+      Contiguous = false;
+      StrideDims.set(i);
+    }
+    k++;
+  }
+  return Contiguous;
+}
+
+std::string NDLoadStoreFactory::ndFunctionName(StringRef LoadOrStore, int nDims,
+                                               NDLoadStoreAttr &Attr) {
+  std::string FunName;
+  raw_string_ostream OS(FunName);
+  OS << LoadOrStore << "." << nDims << "d" << LoadOrStore;
+  if (!Attr.empty()) {
+    OS << "." << Attr;
+  }
+  OS.flush();
+  return FunName;
+}
+
+Value *NDLoadStoreFactory::genUnstructuredLoad(LoadInst *Load, Value *Address,
+                                               const TensorShape &ToShape) {
+  IrBuilder.SetInsertPoint(Load);
+  if (ToShape.isScalar()) {
+    // Base case, load
+    Value *LoadVal =
+        IrBuilder.CreateLoad(Load->getType(), Address, Load->getName());
+    MyRipple.setRippleShape(LoadVal, ToShape);
+    return LoadVal;
+  } else if (AllocaInst *Alloca = dyn_cast<AllocaInst>(Address)) {
+    assert(MyRipple.getRippleShape(static_cast<Value *>(Alloca)).flatShape() >=
+           ToShape.flatShape());
+    // Allocas that have been promoted don't require a gather
+    Type *LoadVectorTy =
+        VectorType::get(Alloca->getAllocatedType()->getArrayElementType(),
+                        ToShape.flatShape(), /*Scalable*/ false);
+    Value *LoadVal = IrBuilder.CreateLoad(LoadVectorTy, Alloca,
+                                          Twine(Load->getName()) + ".ripple");
+    MyRipple.setRippleShape(LoadVal, ToShape);
+    return LoadVal;
+  }
+
+  LLVM_DEBUG(dbgs() << "Generating gather"
+                    << " from addresses " << *Address << "\n");
+  Type *ElementTy = Load->getType();
+  int NElements = ToShape.flatShape();
+  assert(NElements > 1);
+  Type *VecTy = VectorType::get(ElementTy, NElements, /*scalable=*/false);
+  Value *GatheredVal =
+      IrBuilder.CreateMaskedGather(VecTy, Address,
+                                   // Aligned on element boundaries
+                                   Load->getAlign());
+  MyRipple.setRippleShape(GatheredVal, ToShape);
+  return GatheredVal;
+}
+
+Value *NDLoadStoreFactory::genLoadNoSplat(LoadInst *Load,
+                                          LinearSeries &AddressSeries,
+                                          Value *DefaultAddress,
+                                          const TensorShape &ToShape) {
+  // TODO: check that AddressSeries is splat-free
+  // TODO: With opaque types, I'm not sure this will always work. Check.
+  Type *ElementTy = Load->getType();
+  BitVector StrideDims(AddressSeries.rank());
+  bool Contiguous = analyzeCoalescing(ElementTy, AddressSeries, StrideDims);
+  int NElements = ToShape.flatShape();
+  Type *LoadTy = ToShape.isScalar() ? ElementTy
+                                    : VectorType::get(ElementTy, NElements,
+                                                      /*scalable=*/false);
+  IrBuilder.SetInsertPoint(Load);
+  assert(ToShape.isVector() || ToShape.isScalar() && Contiguous);
+  if (Contiguous) {
+    LoadInst *VectorLoad =
+        IrBuilder.CreateLoad(LoadTy, AddressSeries.getBase());
+    MyRipple.setRippleShape(static_cast<Value *>(VectorLoad), ToShape);
+    VectorLoad->takeName(Load);
+    // TODO: Take ripple_aligned() into account.
+    VectorLoad->setAlignment(Load->getAlign());
+    return VectorLoad;
+  } else {
+    return genUnstructuredLoad(Load, DefaultAddress, ToShape);
+  }
+}
+
+Value *NDLoadStoreFactory::genLoad(LoadInst *Load, LinearSeries &AddressSeries,
+                                   Value *DefaultAddress,
+                                   const TensorShape &ToShape) {
+  // Deal with broadcasts: load(a + 0*k along d) = broadcast(load(a), d)
+  // So we first build the broadcast-free load, and broadcast it.
+  // The reason why we expose broadcasts at this moment is that
+  // it can simplify the application of masks during if-conversion.
+  // A smaller-dimensional mask can apply before broadcast,
+  // as opposed to having to broadcast the mask.
+  BitVector SeriesSplat = AddressSeries.getSplatDims();
+  // There may also be an implicit broadcast
+  const TensorShape &AddressShape = AddressSeries.getShape();
+  BitVector SplatDims = AddressShape.requiredSplat(ToShape);
+  SplatDims |= SeriesSplat;
+  Value *VectorLoad;
+  if (!SplatDims.empty()) {
+    // LLVM_DEBUG(dbgs() << "Splat dims: " << SplatDims << '\n');
+    // Create a load without the splatting/broadcasting
+    LinearSeries SplatFreeSeries = AddressSeries.removeSlopes(SeriesSplat);
+    // Temporary local LS used for load optimization needs to be instantiated
+    // w/o the cache
+    IrBuilder.SetInsertPoint(Load);
+    auto SplatFreeAddress =
+        MyRipple.instantiateLinearSeriesNoCache(SplatFreeSeries);
+    const TensorShape &LoadShape = SplatFreeSeries.getShape();
+    LLVM_DEBUG(dbgs() << "Loaded series shape " << LoadShape << '\n');
+    Value *CoreGather =
+        genLoadNoSplat(Load, SplatFreeSeries, SplatFreeAddress, LoadShape);
+    auto Splatted = MyRipple.tensorBcast(CoreGather, LoadShape, ToShape);
+    // Checked during shape propagation
+    if (!Splatted)
+      report_fatal_error("Broadcast failure during codegen");
+    VectorLoad = *Splatted;
+  } else {
+    VectorLoad = genLoadNoSplat(Load, AddressSeries, DefaultAddress, ToShape);
+  }
+  return VectorLoad;
+}
+
+Value *NDLoadStoreFactory::genUnstructuredStore(StoreInst *Store, Value *Val,
+                                                Value *Address,
+                                                const TensorShape &ToShape) {
+  int NElements = ToShape.flatShape();
+  // No implicit broadcasts are expected here
+  assertNumElements(Val, NElements);
+  assertNumElements(Address, NElements);
+  LLVM_DEBUG(dbgs() << "Generating scatter w/ " << *Val << " to addresses "
+                    << *Address << "\n");
+
+  IrBuilder.SetInsertPoint(Store);
+  Value *StoredVal =
+      IrBuilder.CreateMaskedScatter(Val, Address, Store->getAlign());
+  MyRipple.setRippleShape(StoredVal, ToShape);
+  return StoredVal;
+}
+
+Value *NDLoadStoreFactory::genStore(StoreInst *Store, Value *Val,
+                                    LinearSeries &AddressSeries,
+                                    Value *DefaultAddress,
+                                    const TensorShape &ToShape) {
+  Type *ElementTy = Store->getValueOperand()->getType();
+  BitVector StrideDims(AddressSeries.rank());
+  bool Contiguous = analyzeCoalescing(ElementTy, AddressSeries, StrideDims);
+  IrBuilder.SetInsertPoint(Store);
+  Value *VectorStore;
+  if (Contiguous) {
+    StoreInst *VecStore = IrBuilder.CreateStore(Val, AddressSeries.getBase());
+    MyRipple.setRippleShape(static_cast<Value *>(VecStore), ToShape);
+    VecStore->setAlignment(Store->getAlign());
+    VectorStore = VecStore;
+  } else {
+    return genUnstructuredStore(Store, Val, DefaultAddress, ToShape);
+  }
+  VectorStore->takeName(Store);
+  MyRipple.setRippleShape(VectorStore, ToShape);
+  return VectorStore;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 ///                               Ripple                                     ///
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -577,6 +852,84 @@ static bool unifyReturnBlocks(Function &F,
       DTU->push_back({DominatorTree::Insert, BB, NewRetBlock});
   }
   return true;
+}
+
+void Ripple::setReplacementFor(Instruction *I, Value *V,
+                               const TensorShape &Shape) {
+  if (InstructionReplacementMapping.contains(I)) {
+    LLVM_DEBUG(dbgs() << "Re-defining the mapping between " << *I << " and "
+                      << *InstructionReplacementMapping[I] << " to " << *V
+                      << "\n");
+  }
+  InstructionReplacementMapping[I] = V;
+  setRippleShape(V, Shape);
+}
+
+std::pair<Value *, const TensorShape *>
+Ripple::replacementValueAndShape(Value *V) const {
+  if (Instruction *I = dyn_cast<Instruction>(V)) {
+    ConstructedSeries CS = getCachedSeries(I);
+    if (Value *Replacement = InstructionReplacementMapping.lookup(I)) {
+      LLVM_DEBUG(dbgs() << "Replacement tensor value for " << *V
+                        << " found: " << *Replacement << "\n");
+      // During vectorization (genVectorInstruction), linear series with a
+      // tensor base get a "replacement" base.
+      // This method always returns the "replacement" of the base, irrespective
+      // of the context. It's crucial to use the method getTensorUse to obtain
+      // the expected tensor for all kinds of users (LS or not). This is because
+      // an LS instantiation doesn't "replace" a value, it "creates" a tensor
+      // value using an existing base and slopes, which getTensorUse handles!
+      if (CS)
+        return {Replacement, &CS.LS->getBaseShape()};
+      else
+        return {Replacement, &getRippleShape(V)};
+    } else if (CS) {
+      assert(CS.LS->getBaseShape() == ScalarShape &&
+             "Tensor LinearSeries base has not been generated");
+      return {V, &ScalarShape};
+    }
+  }
+  LLVM_DEBUG(dbgs() << "No replacement tensor value for " << *V << "\n");
+  return {V, &getRippleShape(V)};
+}
+
+std::pair<Value *, const TensorShape *> Ripple::getTensorUse(const Use &U) {
+  // Ripple generates tensors for Instructions only
+  Instruction *User = cast<Instruction>(U.getUser());
+  Value *UseVal = U.get();
+  // If the Use is a LS, we may have to instantiate it
+  if (Instruction *UseI = dyn_cast<Instruction>(UseVal)) {
+    if (auto UseCS = getCachedSeries(UseI)) {
+      auto UserCS = getCachedSeries(User);
+      // When both UserCS and UseCS are valid linear series we have two cases:
+      // 1) if UserCS and UseCS have the same base shape, we return the
+      //    (tensorized) base. This is because the only case, other than
+      //    reduction and slicing, where we are asking for such getTensorUse is
+      //    when we are generating the "Replacement" of UserCS's base. Hence we
+      //    skip instantiation and fall back to getting the replacement below.
+      // 2) In other cases we want to generate the instance of UseCS for the
+      //    user and thus enter this condition's block
+      if (!UserCS || UseCS.LS->getBaseShape() != UserCS.LS->getBaseShape() ||
+          rippleReduceIntrinsics(User) || rippleSliceIntrinsic(User)) {
+        auto InstantiatedLS = instantiateCachedSeries(UseCS, UseI);
+        return std::make_pair(InstantiatedLS, &UseCS.LS->getShape());
+      }
+      // else returns the replacement below
+    }
+  }
+  auto RepAndShape = replacementValueAndShape(UseVal);
+  auto &[RepValue, RepShape] = RepAndShape;
+  // Handle Alloca vector expansion shape-shifting
+  if (isa<AllocaInst>(RepValue) && RepShape->isVector()) {
+    auto &UserShape = getRippleShape(User);
+    // That's always true assuming we don't allow taking the address of scalar
+    // Alloca (which is part of Ripple pre-requisite for now). Otherwise, to
+    // allow disambiguation, the fix would be to set TensorShapes to the
+    // Use of AllocaInst instead.
+    assert(UserShape <= *RepShape);
+    RepShape = &UserShape;
+  }
+  return RepAndShape;
 }
 
 const TensorShape &Ripple::getRippleShape(const Value *V,
@@ -900,6 +1253,17 @@ void Ripple::initFuncRPOT() {
   FuncRPOT = new ReversePostOrderTraversal<Function *>(&F);
 }
 
+BitVector Ripple::reductionTensorDimensions(const IntrinsicInst *I) const {
+  // All we need are the dimensions of Input that are not in the result of the
+  // reduction
+  auto InputSet = getRippleShape(I->getArgOperand(1)).nonEmptyDims();
+  auto ResultSet = getRippleShape(I).nonEmptyDims();
+  for (auto SetOutput : ResultSet.set_bits()) {
+    InputSet.reset(SetOutput);
+  }
+  return InputSet;
+}
+
 unsigned Ripple::lastVectorIdx(const IntrinsicInst *I,
                                const TensorShape &IShape,
                                const unsigned SpecialArgIdx,
@@ -1086,6 +1450,1050 @@ void Ripple::printTensorInstructions(raw_ostream &oss) const {
   }
 }
 
+void Ripple::genVectorInstructions() {
+  /// State to store if any changes were done to the CFG that made
+  /// this->FuncRPOT to be invalidated *after* generating vector instructions.
+  bool isFuncRPOTValid = true;
+
+  auto vectorizedName = [](Instruction *I) -> Twine {
+    return Twine(I->getName()) + ".ripple.vectorized";
+  };
+
+  auto processFreeze = [&](FreezeInst *Freeze,
+                           const TensorShape &ToShape) -> void {
+    irBuilder.SetInsertPoint(Freeze);
+    auto [FreezeVal, FreezeShape] = getTensorUse(Freeze->getOperandUse(0));
+    assert(*FreezeShape == ToShape);
+    auto *Freezed = irBuilder.CreateFreeze(
+        FreezeVal, tensorizedName(Freeze->getName(), ToShape));
+    setReplacementFor(Freeze, Freezed, ToShape);
+  };
+
+  // TODO: We should probably implement ValueMaterializer and use a ValueMapper
+  // to remap the values instead of this function followed by a cleanup.
+  auto processRippleBlock = [&](IntrinsicInst *rippleDim,
+                                const TensorShape &toShape) -> void {
+    switch (rippleDim->getIntrinsicID()) {
+    case Intrinsic::ripple_block_index: {
+      // The propagation is handled by Linear Series, here we replace the
+      // instruction by the value zero.
+      assert(getCachedSeries(rippleDim));
+      Constant *c = ConstantInt::get(rippleDim->getType(), 0);
+      setReplacementFor(rippleDim, c, toShape);
+    } break;
+    case Intrinsic::ripple_block_getsize: {
+      // Replace ripple.block.getsize calls by a constant
+      auto size = getRippleGetSizeValue(rippleDim);
+      Constant *c = ConstantInt::get(rippleDim->getType(), size);
+      setReplacementFor(rippleDim, c, toShape);
+    } break;
+    case Intrinsic::ripple_block_setshape: {
+      // Erase this intrinsic
+      setReplacementFor(rippleDim, nullptr, toShape);
+    } break;
+    }
+  };
+
+  auto processRippleBroadcast = [&](IntrinsicInst *RippleBcast,
+                                    const TensorShape &ToShape) -> void {
+    // Broadcast the first argument to RippleBcast's shape
+    irBuilder.SetInsertPoint(RippleBcast);
+    auto VectorizedArg =
+        getTensorUseAndBcast(RippleBcast->getArgOperandUse(2), ToShape);
+    setReplacementFor(RippleBcast, VectorizedArg, ToShape);
+  };
+
+  auto processRippleSlice = [&](IntrinsicInst *RippleSlice,
+                                const TensorShape &ToShape) -> void {
+    irBuilder.SetInsertPoint(RippleSlice);
+    // Expected signature: T ripple_slice(T x, int64_t idx0, int64_t idx1, ...,
+    // int64_t idx9); where idx0 ... idx9 are constants
+    auto [Slicee, FromShape] = getTensorUse(RippleSlice->getArgOperandUse(0));
+    // No slicing -> ripple_slice is the identity
+    if (ToShape == *FromShape) {
+      setReplacementFor(RippleSlice, Slicee, ToShape);
+      return;
+    }
+    SmallVector<int64_t, RippleIntrinsicsMaxDims> SliceArgs;
+    llvm::transform(
+        make_range(&RippleSlice->getArgOperandUse(1),
+                   &RippleSlice->getArgOperandUse(1 + FromShape->rank())),
+        std::back_inserter(SliceArgs), [](Use &U) -> int64_t {
+          ConstantInt *Arg = cast<ConstantInt>(U.get());
+          return Arg->getSExtValue();
+        });
+    std::vector<int> ShuffleIndices;
+    Value *SliceInst;
+    if (ToShape.isScalar()) {
+      SmallVector<size_t, RippleIntrinsicsMaxDims> SliceIndex;
+      for (unsigned Idx = 0, n = SliceArgs.size(); Idx < n; ++Idx) {
+        assert(SliceArgs[Idx] != -1);
+        SliceIndex.push_back((size_t)SliceArgs[Idx]);
+      }
+      ShuffleIndices.push_back(FromShape->getOffsetAt(SliceIndex));
+      SliceInst = irBuilder.CreateExtractElement(Slicee, ShuffleIndices[0],
+                                                 "ripple.slice");
+    } else {
+      // Capture of struct binding (FromShape) is c++20, use a copy
+      auto *FromShapePtr = FromShape;
+      auto computeShuffleIndices =
+          [&, FromShapePtr](ArrayRef<size_t> index) -> void {
+        SmallVector<size_t, RippleIntrinsicsMaxDims> SliceIndex;
+        for (unsigned Idx = 0, n = FromShapePtr->rank(); Idx < n; ++Idx) {
+          int64_t SliceArg = SliceArgs[Idx];
+          SliceIndex.push_back(SliceArg < 0 ? (size_t)index[Idx]
+                                            : (size_t)SliceArg);
+        }
+        ShuffleIndices.push_back(FromShapePtr->getOffsetAt(SliceIndex));
+      };
+      ToShape.foreachIndex(computeShuffleIndices);
+      SliceInst =
+          irBuilder.CreateShuffleVector(Slicee, ShuffleIndices, "ripple.slice");
+    }
+    setReplacementFor(RippleSlice, SliceInst, ToShape);
+  };
+
+  auto processRippleReductions = [&](IntrinsicInst *rippleReduction,
+                                     const TensorShape &toShape) -> void {
+    auto rippleToVPReduce = [](Intrinsic::ID rippleReduction) -> Intrinsic::ID {
+      switch (rippleReduction) {
+      default:
+        llvm_unreachable("Not a Ripple reduction instruction");
+      case Intrinsic::ripple_reduce_add:
+        return Intrinsic::vp_reduce_add;
+      case Intrinsic::ripple_reduce_mul:
+        return Intrinsic::vp_reduce_mul;
+      case Intrinsic::ripple_reduce_and:
+        return Intrinsic::vp_reduce_and;
+      case Intrinsic::ripple_reduce_or:
+        return Intrinsic::vp_reduce_or;
+      case Intrinsic::ripple_reduce_xor:
+        return Intrinsic::vp_reduce_xor;
+      case Intrinsic::ripple_reduce_smax:
+        return Intrinsic::vp_reduce_smax;
+      case Intrinsic::ripple_reduce_smin:
+        return Intrinsic::vp_reduce_smin;
+      case Intrinsic::ripple_reduce_umax:
+        return Intrinsic::vp_reduce_umax;
+      case Intrinsic::ripple_reduce_umin:
+        return Intrinsic::vp_reduce_umin;
+      case Intrinsic::ripple_reduce_fadd:
+        return Intrinsic::vp_reduce_fadd;
+      case Intrinsic::ripple_reduce_fmul:
+        return Intrinsic::vp_reduce_fmul;
+      case Intrinsic::ripple_reduce_fmin:
+        return Intrinsic::vp_reduce_fmin;
+      case Intrinsic::ripple_reduce_fmax:
+        return Intrinsic::vp_reduce_fmax;
+      case Intrinsic::ripple_reduce_fminimum:
+        return Intrinsic::vp_reduce_fminimum;
+      case Intrinsic::ripple_reduce_fmaximum:
+        return Intrinsic::vp_reduce_fmaximum;
+      }
+    };
+    irBuilder.SetInsertPoint(rippleReduction);
+
+    auto [RedValue, RedValueShape] =
+        getTensorUse(rippleReduction->getArgOperandUse(1));
+    auto ReductionShape = getRippleShape(rippleReduction);
+
+    if (*RedValueShape == ReductionShape) {
+      // The reduction has the same shape as the input value; nothing to reduce!
+      setReplacementFor(rippleReduction, RedValue, *RedValueShape);
+    } else {
+      auto VPReductionID = rippleToVPReduce(rippleReduction->getIntrinsicID());
+      BitVector ReductionDims = reductionTensorDimensions(rippleReduction);
+      FastMathFlags FMFRed = isa<FPMathOperator>(rippleReduction)
+                                 ? rippleReduction->getFastMathFlags()
+                                 : FastMathFlags();
+
+      // Ripple reductions allow reassoc
+      FMFRed.setAllowReassoc();
+      Value *ReductionResult = genMultiDimReduction(
+          VPReductionID, RedValue, *RedValueShape, ReductionDims, FMFRed);
+      setReplacementFor(rippleReduction, ReductionResult, ReductionShape);
+    }
+  };
+
+  auto createVectorPHI = [&](PHINode *oldPhi,
+                             const TensorShape &toShape) -> void {
+    // We create a dummy vector PHI and will fix its arguments later, once we
+    // all the vector values have been generated
+    Type *newPhiType = VectorType::get(oldPhi->getType()->getScalarType(),
+                                       toShape.flatShape(), /*scalable*/ false);
+    irBuilder.SetInsertPoint(oldPhi);
+    PHINode *newPhi = irBuilder.CreatePHI(
+        newPhiType, oldPhi->getNumIncomingValues(), vectorizedName(oldPhi));
+    setReplacementFor(oldPhi, newPhi, toShape);
+  };
+
+  auto processComparisons = [&](CmpInst *cmp,
+                                const TensorShape &toShape) -> void {
+    auto bcastOps = tensorizedOperandsAndBroadcast(cmp, toShape);
+    assert(bcastOps.size() == 2);
+    irBuilder.SetInsertPoint(cmp);
+    Value *vectorCompare = irBuilder.CreateCmp(
+        cmp->getPredicate(), bcastOps[0], bcastOps[1], vectorizedName(cmp));
+    setReplacementFor(cmp, vectorCompare, toShape);
+  };
+
+  auto processSelects = [&](SelectInst *Select,
+                            const TensorShape &toShape) -> void {
+    auto BcastOps = tensorizedOperandsAndBroadcast(Select, toShape);
+    irBuilder.SetInsertPoint(Select);
+    Value *VecSelect = irBuilder.CreateSelect(
+        BcastOps[0], BcastOps[1], BcastOps[2], vectorizedName(Select));
+    setReplacementFor(Select, VecSelect, toShape);
+  };
+
+  auto processBinaryOps = [&](BinaryOperator *binOp,
+                              const TensorShape &toShape) -> void {
+    auto bcastedOperands = tensorizedOperandsAndBroadcast(binOp, toShape);
+    assert(bcastedOperands.size() == 2);
+    irBuilder.SetInsertPoint(binOp);
+    IRBuilder<>::FastMathFlagGuard FMFGuard(irBuilder);
+    FastMathFlags FMF = isa<FPMathOperator>(binOp) ? binOp->getFastMathFlags()
+                                                   : FastMathFlags{};
+    irBuilder.setFastMathFlags(FMF);
+    Value *newBinop = irBuilder.CreateBinOp(
+        binOp->getOpcode(), bcastedOperands[0], bcastedOperands[1],
+        vectorizedName(binOp), binOp->getMetadata(LLVMContext::MD_fpmath));
+    setReplacementFor(binOp, newBinop, toShape);
+  };
+
+  auto processCasts = [&](CastInst *castInst,
+                          const TensorShape &toShape) -> void {
+    Type *toType = VectorType::get(castInst->getType()->getScalarType(),
+                                   toShape.flatShape(), /*scalable*/ false);
+    auto [cachedVal, _] = getTensorUse(castInst->getOperandUse(0));
+
+    assert(cachedVal && "Did not visit the predecessor of a vector cast");
+    assert(isa<VectorType>(cachedVal->getType()) &&
+           cast<VectorType>(cachedVal->getType())
+                   ->getElementCount()
+                   .getKnownMinValue() == toShape.flatShape());
+    irBuilder.SetInsertPoint(castInst);
+    Value *vectorCast = irBuilder.CreateCast(castInst->getOpcode(), cachedVal,
+                                             toType, vectorizedName(castInst));
+    setReplacementFor(castInst, vectorCast, toShape);
+  };
+
+  auto processGEP = [&](GetElementPtrInst *Gep,
+                        const TensorShape &toShape) -> void {
+    auto BcastedPtr = getTensorUseAndBcast(
+        Gep->getOperandUse(Gep->getPointerOperandIndex()), toShape);
+
+    unsigned FirstIndex = std::distance(Gep->op_begin(), Gep->idx_begin());
+    auto BcastedIndices = tensorizedOperandsAndBroadcast(
+        Gep, toShape, FirstIndex, FirstIndex + Gep->getNumIndices());
+
+    irBuilder.SetInsertPoint(Gep);
+    Value *vecGEP = irBuilder.CreateGEP(Gep->getSourceElementType(), BcastedPtr,
+                                        BcastedIndices, vectorizedName(Gep),
+                                        Gep->isInBounds());
+    LLVM_DEBUG(dbgs() << "Created GEP " << *vecGEP << " of type "
+                      << *vecGEP->getType() << " source type "
+                      << *Gep->getSourceElementType() << " Ptr " << *BcastedPtr
+                      << " indices: ";
+               std::for_each(BcastedIndices.begin(), BcastedIndices.end(),
+                             [](auto *V) { dbgs() << V << " "; });
+               dbgs() << "\n");
+    setReplacementFor(Gep, vecGEP, toShape);
+  };
+
+  auto processLoad = [&](LoadInst *Load, const TensorShape &ToShape) -> void {
+    auto [LoadPtr, LoadShape] =
+        getTensorUse(Load->getOperandUse(Load->getPointerOperandIndex()));
+
+    ConstructedSeries PointerOpSeries;
+
+    if (AllocaInst *ThisAlloca =
+            aliasesWithPromotableAlloca(MemoryLocation::get(Load))) {
+      // Loads of promotable Alloca have shape-shifting capabilities
+
+      // getRippleShape(LoadPtr) returns the maximum size of the alloca
+      // used in the function, however here we want this load's shape instead
+      // since we broadcasted before the store(s) that clobbers this load
+      PointerOpSeries = getSplatSeries(ThisAlloca, ToShape, ToShape);
+    } else {
+      PointerOpSeries =
+          getCachedSeries(dyn_cast<Instruction>(Load->getPointerOperand()));
+      if (!PointerOpSeries) {
+        PointerOpSeries = getSplatSeries(LoadPtr, *LoadShape, ToShape);
+        assert(PointerOpSeries && "A load pointer can always become a series");
+      }
+    }
+
+    // Here we Load from a set of addresses defined by a Linear Series.
+    // The result is a tensor whose shape is that of the Linear Series.
+    LinearSeries *AddressSeries = PointerOpSeries.LS;
+    LLVM_DEBUG(dbgs() << "Generating series load for " << *Load << ':'
+                      << *AddressSeries << '\n');
+    auto NewLoad =
+        NdLoadStoreFac.genLoad(Load, *AddressSeries, LoadPtr, ToShape);
+
+    setReplacementFor(Load, NewLoad, ToShape);
+  };
+
+  auto processStore = [&](StoreInst *Store,
+                          const TensorShape &ToShape) -> void {
+    auto [VectorPtr, VectorShape] =
+        getTensorUse(Store->getOperandUse(Store->getPointerOperandIndex()));
+    if (VectorPtr == Store->getPointerOperand())
+      report_fatal_error("Missing vector replacement for vectorized store");
+
+    LLVM_DEBUG(dbgs() << "Storing to " << *VectorPtr << "\n");
+
+    // TODO: broadcasting and storing the broadcasted value is not the most
+    //       efficient way to do a broadcast store.
+    //       It's best to not duplicate the regs and just store multiple times.
+    //       Incorporate the broadcast dimensions into the store attributes.
+    auto *VectorValue = getTensorUseAndBcast(Store->getOperandUse(0), ToShape);
+
+    AllocaInst *AllocaPtr = dyn_cast<AllocaInst>(VectorPtr);
+    // Could be an alloca promotion!
+    if (AllocaPtr && VectorShape) {
+      // We can issue an aligned store to the alloca!
+      irBuilder.SetInsertPoint(Store);
+      Value *AllocaStore = irBuilder.CreateStore(VectorValue, AllocaPtr);
+      setReplacementFor(Store, AllocaStore, ToShape);
+      return;
+    }
+
+    if (!(VectorPtr->getType()->isVectorTy() &&
+          VectorPtr->getType()->getScalarType()->isPointerTy()))
+      report_fatal_error("Expected a vector of pointers for vector store");
+
+    // Here we load from a set of addresses defined by a Linear Series.
+    // The result is a tensor whose shape is that of the Linear Series.
+    auto Series =
+        getCachedSeries(cast<Instruction>(Store->getPointerOperand()));
+    Value *NewStore;
+
+    if (*VectorShape != ToShape) {
+      auto Bcasted = tensorBcast(VectorPtr, *VectorShape, ToShape);
+      if (!Bcasted)
+        report_fatal_error("Broadcast failure during codegen");
+      VectorPtr = *Bcasted;
+    }
+
+    if (!Series || !Series.isValid()) {
+      NewStore = NdLoadStoreFac.genUnstructuredStore(Store, VectorValue,
+                                                     VectorPtr, ToShape);
+    } else {
+      LinearSeries *AddressSeries = Series.LS;
+      NewStore = NdLoadStoreFac.genStore(Store, VectorValue, *AddressSeries,
+                                         VectorPtr, ToShape);
+    }
+
+    setReplacementFor(Store, NewStore, ToShape);
+  };
+
+  auto processRippleShuffles = [&](IntrinsicInst *rippleShuffle,
+                                   const TensorShape &toShape) -> void {
+    auto [VecToShuffle, ShuffleShape] =
+        getTensorUse(rippleShuffle->getArgOperandUse(0));
+    auto VecToShuffleWith =
+        getTensorUseAndBcast(rippleShuffle->getArgOperandUse(1), toShape);
+
+    bool IsPairShuffle =
+        !cast<ConstantInt>(rippleShuffle->getArgOperand(2))->isZero();
+
+    if (IsPairShuffle) {
+      // Pair may require an extra broadcast
+      auto Bcasted = tensorBcast(VecToShuffle, *ShuffleShape, toShape);
+      // Checked during shape propagation
+      if (!Bcasted)
+        report_fatal_error("Broadcast failure during codegen");
+      VecToShuffle = *Bcasted;
+    }
+
+    // For PairShuffle we need to "select" the LHS or RHS depending on the index
+    // value (0 or 1)
+    if (!IsPairShuffle) {
+      if (toShape.isScalar() && !IsPairShuffle) {
+        assert(ShuffleShape->isScalar() &&
+               VecToShuffle == rippleShuffle->getArgOperand(0));
+
+        setReplacementFor(rippleShuffle, VecToShuffle, toShape);
+        return;
+      }
+      assert(VecToShuffle != rippleShuffle->getArgOperand(0));
+    }
+
+    // We made sure that this is a valid function earlier
+    Function *ShuffleFunc = cast<Function>(rippleShuffle->getArgOperand(3));
+    FunctionType *ShuffleFuncType = ShuffleFunc->getFunctionType();
+
+    irBuilder.SetInsertPoint(rippleShuffle);
+    DimSize BlockSize = toShape.flatShape();
+    std::vector<int> PermIdxs(BlockSize, 0);
+
+    Evaluator Evaler(DL, &targetLibraryInfo);
+
+    for (DimSize IIdx = 0; IIdx < BlockSize; ++IIdx) {
+      Constant *RetVal;
+      Constant *IdxArg =
+          ConstantInt::get(ShuffleFuncType->getParamType(0), IIdx);
+      Constant *BlockSizeArg =
+          ConstantInt::get(ShuffleFuncType->getParamType(1), BlockSize);
+      SmallVector<Constant *, 2> Args = {IdxArg, BlockSizeArg};
+
+      if (!Evaler.EvaluateFunction(ShuffleFunc, RetVal, Args)) {
+        // This is checked by checkRippleShuffleIntrinsics
+        report_fatal_error("Unexpected Evaler failure");
+      }
+      ConstantInt *RetIntVal = cast<ConstantInt>(RetVal);
+      PermIdxs[IIdx] = RetIntVal->getSExtValue();
+    }
+
+    if (IsPairShuffle && toShape.isScalar()) {
+      // This case is similar to a select
+      assert(PermIdxs.size() == 1);
+      setReplacementFor(rippleShuffle,
+                        PermIdxs[0] == 0 ? VecToShuffle : VecToShuffleWith,
+                        toShape);
+      return;
+    }
+
+    Value *ShuffledVec = irBuilder.CreateShuffleVector(
+        VecToShuffle,
+        IsPairShuffle ? VecToShuffleWith
+                      : PoisonValue::get(VecToShuffle->getType()),
+        PermIdxs, vectorizedName(rippleShuffle));
+
+    setReplacementFor(rippleShuffle, ShuffledVec, toShape);
+  };
+
+  auto ProcessIntrinsicCall = [&](CallInst *Call, const TensorShape &ToShape,
+                                  Intrinsic::ID VectorIntrId) -> void {
+    // Replace the Call with its corresponding vector intrinsic
+
+    // Create a vector type with the target shape and broadcast the Call
+    // arguments to match the shape
+    unsigned FirstArgIdx = std::distance(Call->op_begin(), Call->arg_begin());
+
+    auto BcastedArgs = tensorizedOperandsAndBroadcast(
+        Call, ToShape, FirstArgIdx, FirstArgIdx + Call->arg_size());
+    irBuilder.SetInsertPoint(Call);
+
+    // Get the Declaration of the intrinsic to verify all types of arguments
+    SmallVector<Type *> BcastedArgsTypes;
+    BcastedArgsTypes.reserve(Call->arg_size());
+    llvm::transform(BcastedArgs, std::back_inserter(BcastedArgsTypes),
+                    [](Value *V) { return V->getType(); });
+    FunctionType *FTy =
+        Intrinsic::getType(Call->getContext(), VectorIntrId, BcastedArgsTypes);
+
+    // Check each arguments is overloaded type or not
+    SmallVector<Value *, 8> BcastedArgsChecked;
+    BcastedArgsChecked.reserve(FTy->getNumParams());
+    for (unsigned Idx = 0; Idx < FTy->getNumParams(); ++Idx) {
+      if (FTy->getParamType(Idx) == BcastedArgs[Idx]->getType()) {
+        BcastedArgsChecked.push_back(BcastedArgs[Idx]);
+      } else {
+        auto *Val = Call->getOperand(Idx);
+        assert(FTy->getParamType(Idx) == Val->getType());
+        BcastedArgsChecked.push_back(Val);
+      }
+    }
+
+    // Create a vectorized Intrinsic with arguments that should be vectorized
+    CallInst *VecCall = irBuilder.CreateIntrinsic(
+        FTy->getReturnType(), VectorIntrId, BcastedArgsChecked,
+        isa<FPMathOperator>(Call) ? Call : nullptr, vectorizedName(Call));
+
+    setReplacementFor(Call, VecCall, ToShape);
+  };
+
+  auto ProcessGeneralFunctionCall = [&](CallInst *Call,
+                                        const TensorShape &ToShape) -> void {
+    LLVM_DEBUG(dbgs() << "\nFunction before ProcessGeneralFunctionCall:\n\n";
+               F.print(dbgs(), nullptr); dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "Sequentializing this Call " << *Call << "\n");
+    // Sequentialize the Call by extracting each element of the vector operands,
+    // running the scalar function on them, and insert the scalar result into
+    // the output vector.
+
+    // The Index type for GEP of the Alloca buffers
+    Type *AllocaIndexType =
+        DL.getIndexType(F.getContext(), DL.getAllocaAddrSpace());
+
+    SmallVector<Value *, 4> CallRippleArgs;
+    for (auto &Arg : Call->args()) {
+      if (getRippleShape(Arg).isScalar()) {
+        CallRippleArgs.push_back(Arg);
+      } else {
+        auto BcastedVal = getTensorUseAndBcast(Arg, ToShape);
+        CallRippleArgs.push_back(BcastedVal);
+      }
+    }
+
+    // Setup loop blocks
+    BasicBlock *BeforeLoop = Call->getParent();
+    BasicBlock *LoopPreHeader =
+        SplitBlock(Call->getParent(), Call->getIterator(), &DTU, nullptr,
+                   nullptr, Twine(Call->getName()) + ".ripple.call.loop.pre");
+    setRippleShape(BeforeLoop->getTerminator(), ScalarShape);
+    assert(Call->getParent() == LoopPreHeader);
+    BasicBlock *LoopHeader =
+        SplitBlock(LoopPreHeader, Call->getIterator(), &DTU, nullptr, nullptr,
+                   Twine(Call->getName()) + ".ripple.call.loop.header");
+    setRippleShape(LoopPreHeader->getTerminator(), ScalarShape);
+    assert(Call->getParent() == LoopHeader);
+    BasicBlock *LoopBody =
+        SplitBlock(LoopHeader, Call->getIterator(), &DTU, nullptr, nullptr,
+                   Twine(Call->getName()) + ".ripple.call.loop.body");
+    setRippleShape(LoopHeader->getTerminator(), ScalarShape);
+    assert(Call->getParent() == LoopBody);
+    BasicBlock *CallBlock = SplitBlock(
+        LoopBody, Call->getIterator(), &DTU, nullptr, nullptr,
+        Twine(Call->getName()) + ".ripple.call.loop.body.call.block");
+    setRippleShape(LoopBody->getTerminator(), ScalarShape);
+    assert(Call->getParent() == CallBlock);
+
+    BasicBlock *ContinueBlock = SplitBlock(
+        CallBlock, std::next(Call->getIterator()), &DTU, nullptr, nullptr,
+        Twine(Call->getName()) + ".ripple.call.loop.body.continue.block");
+    setRippleShape(CallBlock->getTerminator(), ScalarShape);
+
+    BasicBlock *AfterLoop =
+        SplitBlock(ContinueBlock, ContinueBlock->begin(), &DTU, nullptr,
+                   nullptr, Twine(Call->getName()) + ".ripple.call.loop.end");
+    setRippleShape(ContinueBlock->getTerminator(), ScalarShape);
+
+    cast<BranchInst>(ContinueBlock->getTerminator())
+        ->setSuccessor(0, LoopHeader);
+    DTU.applyUpdates({{DominatorTree::Delete, ContinueBlock, AfterLoop},
+                      {DominatorTree::Insert, ContinueBlock, LoopHeader}});
+
+    // Create induction variable
+    irBuilder.SetInsertPoint(LoopHeader->begin());
+    irBuilder.SetInstDebugLocation(Call);
+    PHINode *InductionVar =
+        irBuilder.CreatePHI(AllocaIndexType, 2, "ripple.scalarcall.iterator");
+    setRippleShape(InductionVar, ScalarShape);
+    InductionVar->addIncoming(ConstantInt::get(AllocaIndexType, 0),
+                              LoopPreHeader);
+    VectorType *MaskVectorType = VectorType::get(
+        irBuilder.getInt8Ty(), ElementCount::getFixed(ToShape.flatShape()));
+
+    // Increment induction variable
+    irBuilder.SetInsertPoint(ContinueBlock->getTerminator());
+    irBuilder.SetInstDebugLocation(Call);
+    Value *IncrementedInductionVar =
+        irBuilder.CreateAdd(InductionVar, ConstantInt::get(AllocaIndexType, 1));
+    setRippleShape(IncrementedInductionVar, ScalarShape);
+    InductionVar->addIncoming(IncrementedInductionVar, ContinueBlock);
+
+    // Initialize function call mask with as select(True, True, False)
+    // which ensures getting a value of 1 for active vector
+    // lanes and 0 for the rest after IfConvert is applied
+    irBuilder.SetInsertPoint(LoopHeader->getTerminator());
+    SelectInst *MaskSelect = irBuilder.Insert(
+        createMaskSelectToTrueFalse(irBuilder.getInt8Ty(),
+                                    MaskVectorType->getElementCount()),
+        "zeroinit.select");
+    setRippleShape(MaskSelect, ToShape);
+    // Enable masking for this select
+    SelectToMaskWhenIfConvert.insert(MaskSelect);
+
+    Value *MaskVal;
+    irBuilder.SetInsertPoint(LoopBody->getTerminator());
+    MaskVal = irBuilder.CreateExtractElement(MaskSelect, InductionVar);
+    setRippleShape(MaskVal, ScalarShape);
+
+    // Add mask condition in LoopBody
+    irBuilder.SetInsertPoint(LoopBody->getTerminator());
+    irBuilder.SetInstDebugLocation(Call);
+    Value *MaskCond = irBuilder.CreateICmpEQ(
+        MaskVal, ConstantInt::get(irBuilder.getInt8Ty(), 1));
+    setRippleShape(MaskCond, ScalarShape);
+    Value *BranchInst =
+        irBuilder.CreateCondBr(MaskCond, CallBlock, ContinueBlock);
+    setRippleShape(BranchInst, ScalarShape);
+    invalidateRippleDataFor(LoopBody->getTerminator());
+    LoopBody->getTerminator()->eraseFromParent();
+
+    // Create loop condition
+    irBuilder.SetInsertPoint(LoopHeader->getTerminator());
+    irBuilder.SetInstDebugLocation(Call);
+    Value *LoopCond = irBuilder.CreateICmpULT(
+        InductionVar, ConstantInt::get(AllocaIndexType, ToShape.flatShape()));
+    setRippleShape(LoopCond, ScalarShape);
+
+    // Create loop branch
+    irBuilder.SetInsertPoint(LoopHeader);
+    irBuilder.SetInstDebugLocation(Call);
+    Instruction *OldTerminator = LoopHeader->getTerminator();
+    Value *LoopBranchInst =
+        irBuilder.CreateCondBr(LoopCond, LoopBody, AfterLoop);
+    setRippleShape(LoopBranchInst, ScalarShape);
+    invalidateRippleDataFor(OldTerminator);
+    OldTerminator->eraseFromParent();
+    DTU.applyUpdates({{DominatorTree::Insert, LoopHeader, AfterLoop}});
+    DTU.flush();
+
+    PHINode *ResValue = nullptr;
+
+    Type *VectorCallType = Call->getType();
+    if (!VectorCallType->isVoidTy()) {
+      assert(VectorType::isValidElementType(VectorCallType));
+      VectorCallType = VectorType::get(Call->getType(), ToShape.flatShape(),
+                                       /*Scalable*/ false);
+      // generate a PHI: init with Poison from the LoopPreHeader and the
+      // result of InsertElement from the LoopBody
+      irBuilder.SetInsertPoint(LoopHeader->begin());
+      irBuilder.SetInstDebugLocation(Call);
+      PHINode *ResultValue = irBuilder.CreatePHI(VectorCallType, 2u);
+      setRippleShape(ResultValue, ToShape);
+      ResultValue->addIncoming(PoisonValue::get(VectorCallType), LoopPreHeader);
+      ResValue = ResultValue;
+    }
+
+    // Create the scalar call inside the loop body w/ the extracted/buffer
+    // values
+    irBuilder.SetInsertPoint(CallBlock->getFirstNonPHIIt());
+
+    SmallVector<Value *, 4> ScalarArgs;
+    for (auto *Arg : CallRippleArgs) {
+      if (Arg->getType()->isVectorTy()) {
+        Value *Extracted = irBuilder.CreateExtractElement(Arg, InductionVar);
+        setRippleShape(Extracted, ScalarShape);
+        ScalarArgs.push_back(Extracted);
+      } else
+        ScalarArgs.push_back(Arg);
+    }
+    // Function call proper
+    Value *ScalarCall = irBuilder.CreateCall(
+        Call->getFunctionType(), Call->getCalledOperand(), ScalarArgs);
+    setRippleShape(ScalarCall, ScalarShape);
+    // If the function returns a value
+    if (ResValue) {
+      // Insert the element into the PHINode
+      Value *Inserted =
+          irBuilder.CreateInsertElement(ResValue, ScalarCall, InductionVar);
+      setRippleShape(Inserted, ToShape);
+
+      irBuilder.SetInsertPoint(ContinueBlock->begin());
+      irBuilder.SetInstDebugLocation(Call);
+      PHINode *UpdatedResPhi = irBuilder.CreatePHI(VectorCallType, 2u);
+      setRippleShape(UpdatedResPhi, ToShape);
+      UpdatedResPhi->addIncoming(Inserted, CallBlock);
+      UpdatedResPhi->addIncoming(ResValue, LoopBody);
+      // Which is the value coming back from the LoopBody
+      ResValue->addIncoming(UpdatedResPhi, ContinueBlock);
+      setReplacementFor(Call, ResValue, ToShape);
+    } else {
+      setReplacementFor(Call, nullptr, ToShape);
+    }
+    LLVM_DEBUG(dbgs() << "\nFunction after ProcessGeneralFunctionCall:\n\n";
+               F.print(dbgs(), nullptr); dbgs() << "\n");
+
+    // CFG has been changed => FuncRPOT is no longer valid.
+    isFuncRPOTValid = false;
+  };
+
+  auto processCallInst = [&](CallInst *call,
+                             const TensorShape &toShape) -> void {
+    // Check if the call matches any specific ripple intrinsic
+    if (IntrinsicInst *rippleDim = rippleBlockIntrinsics(call)) {
+      processRippleBlock(rippleDim, toShape);
+    } else if (IntrinsicInst *RippleBroadcast =
+                   rippleBroadcastIntrinsic(call)) {
+      processRippleBroadcast(RippleBroadcast, toShape);
+    } else if (IntrinsicInst *rippleReduction = rippleReduceIntrinsics(call)) {
+      processRippleReductions(rippleReduction, toShape);
+    } else if (IntrinsicInst *rippleSlice = rippleSliceIntrinsic(call)) {
+      processRippleSlice(rippleSlice, toShape);
+    } else if (IntrinsicInst *rippleShuffle = rippleShuffleIntrinsics(call)) {
+      processRippleShuffles(rippleShuffle, toShape);
+      // ToShape can be scalar because of reductions/slicing
+    } else if (toShape.isVector() || rippleVectorizeCall(*call)) {
+      Intrinsic::ID vectorIntrId =
+          getVectorIntrinsicIDForCall(call, &targetLibraryInfo);
+      if (toShape.isVector() &&
+                 vectorIntrId != Intrinsic::not_intrinsic) {
+        // We assume vectorizing an intrinsic call does not
+        // introduce approximations
+        ProcessIntrinsicCall(call, toShape, vectorIntrId);
+      } else {
+        {
+          assert(toShape.isVector() &&
+                 "ripple general function call has broadcast "
+                 "semantics and cannot return a scalar");
+          // Sequential execution for non-intrinsic function calls or floating
+          // point intrinsic-calls without fast math
+          ProcessGeneralFunctionCall(call, toShape);
+        }
+      }
+    }
+  };
+
+  auto processFneg = [&](UnaryInstruction *fneg,
+                         const TensorShape &toShape) -> void {
+    auto bcastOps = tensorizedOperandsAndBroadcast(fneg, toShape);
+    irBuilder.SetInsertPoint(fneg);
+    Value *newFneg =
+        irBuilder.CreateFNegFMF(bcastOps[0], fneg, vectorizedName(fneg));
+    setReplacementFor(fneg, newFneg, toShape);
+  };
+
+  auto processAlloca = [&](AllocaInst *Alloca,
+                           const TensorShape &ToShape) -> void {
+    irBuilder.SetInsertPoint(Alloca);
+    Type *AllocatedTy = Alloca->getAllocatedType();
+    assert(!AllocatedTy->isVectorTy() && "Ripple cannot promote vector types");
+    AllocaInst *AllocaVector = irBuilder.CreateAlloca(
+        ArrayType::get(AllocatedTy, ToShape.flatShape()),
+        /*ArraySize*/ nullptr, tensorizedName(Alloca->getName(), ToShape));
+    AllocaVector->setAlignment(std::max(
+        AllocaVector->getAlign(),
+        DL.getPrefTypeAlign(VectorType::get(AllocatedTy, ToShape.flatShape(),
+                                            /*Scalable*/ false))));
+    setReplacementFor(Alloca, AllocaVector, ToShape);
+  };
+
+  for (auto *BB : getFuncRPOT()) {
+    // Gather the instructions in the BB to vectorize
+    SmallVector<Instruction *, 16> toProcess;
+    for (auto &I : *BB) {
+      // For LinearSeries we need to process a vector base
+      auto CS = getCachedSeries(&I);
+      auto IShape = getRippleShape(&I);
+
+      bool ProcessLinSeries = CS && CS.LS->getBaseShape().isVector();
+      bool ProcessNonSeries = !CS && IShape.isVector();
+
+      // Process instructions that should be vectors, but not linear series
+      // Call instructions are special cases because they can be external ripple
+      // functions/specializations/ripple intrinsic with a scalar shape!
+      if (ProcessNonSeries || ProcessLinSeries || isa<CallInst>(&I)) {
+        // For PHI nodes, we generate empty vector PHIs and fix them at the end
+        if (PHINode *phi = dyn_cast<PHINode>(&I)) {
+          createVectorPHI(phi, CS ? CS.LS->getBaseShape() : IShape);
+        } else {
+          toProcess.push_back(&I);
+        }
+      }
+    }
+    // Generate the vectorized instructions
+    for (auto *I : toProcess) {
+      auto CS = getCachedSeries(I);
+      const TensorShape &toShape =
+          CS ? CS.LS->getBaseShape() : getRippleShape(I);
+      // TODO: Specialize for the different instruction kinds (InstrTypes.h +
+      // Instructions.h), e.g., UnaryOp, BinaryOp, Phi, etc.
+      LLVM_DEBUG(dbgs() << "Vectorizing instruction " << *I << " to shape "
+                        << toShape << "\n");
+
+      if (auto *binOp = dyn_cast<BinaryOperator>(I))
+        processBinaryOps(binOp, toShape);
+      else if (auto *castInst = dyn_cast<CastInst>(I))
+        processCasts(castInst, toShape);
+      else if (auto *gep = dyn_cast<GetElementPtrInst>(I))
+        processGEP(gep, toShape);
+      else if (auto *Load = dyn_cast<LoadInst>(I))
+        processLoad(Load, toShape);
+      else if (auto *Store = dyn_cast<StoreInst>(I))
+        processStore(Store, toShape);
+      else {
+        switch (I->getOpcode()) {
+        case Instruction::Call:
+          processCallInst(cast<CallInst>(I), toShape);
+          break;
+        case Instruction::ICmp:
+        case Instruction::FCmp:
+          processComparisons(cast<CmpInst>(I), toShape);
+          break;
+        case Instruction::FNeg:
+          processFneg(cast<UnaryInstruction>(I), toShape);
+          break;
+        case Instruction::Select:
+          processSelects(cast<SelectInst>(I), toShape);
+          break;
+        case Instruction::Br: {
+          // Branches are handled by the if-conversion function
+          BranchInst *Branch = cast<BranchInst>(I);
+          assert(Branch->isConditional());
+          auto [VectorCondVal, ConditionShape] =
+              getTensorUse(Branch->getOperandUse(0));
+          assert(*ConditionShape == toShape);
+          BranchAndSwitchVecCond[Branch] = VectorCondVal;
+        } break;
+        case Instruction::Switch: {
+          SwitchInst *Switch = cast<SwitchInst>(I);
+          auto [VectorCondVal, ConditionShape] =
+              getTensorUse(Switch->getOperandUse(0));
+          assert(*ConditionShape == toShape);
+          BranchAndSwitchVecCond[Switch] = VectorCondVal;
+        } break;
+        case Instruction::Ret: {
+          // Checked by checkRippleFunctionReturn
+          report_fatal_error("Unsupported return instruction vectorization");
+        } break;
+        case Instruction::Alloca:
+          processAlloca(cast<AllocaInst>(I), toShape);
+          break;
+        case Instruction::Freeze:
+          processFreeze(cast<FreezeInst>(I), toShape);
+          break;
+        default: {
+          std::string ErrMsg;
+          llvm::raw_string_ostream RSO(ErrMsg);
+          RSO << "instruction type not known by the ripple vectorizer; please "
+                 "fill up a support request to the Ripple team: "
+              << *I;
+          RSO.flush();
+          DiagnosticInfoRippleWithLoc DI(DS_Error, F, sanitizeRippleLocation(I),
+                                         ErrMsg);
+          F.getContext().diagnose(DI);
+          // Don't crash here to catch more potential issues; the error is
+          // diagnosed already
+          if (I->getType()->isVoidTy()) {
+            setReplacementFor(I, nullptr, toShape);
+          } else {
+            auto Shape = getRippleShape(I);
+            Value *Replacement = PoisonValue::get(
+                VectorType::get(I->getType()->getScalarType(),
+                                toShape.flatShape(), /*scalable*/ false));
+            setReplacementFor(I, Replacement, toShape);
+          }
+        } break;
+        }
+      }
+    }
+  }
+  // Fill the PHIs now that all the instructions are generated
+  for (auto &[From, To] : InstructionReplacementMapping) {
+    if (PHINode *OldPhi = dyn_cast<PHINode>(&*From)) {
+      PHINode *NewPhi = cast<PHINode>(&*To);
+      LLVM_DEBUG(dbgs() << "Fixing generated PHI: " << *NewPhi
+                        << " with value generated from " << *OldPhi << "\n");
+      auto PhiOperands =
+          tensorizedOperandsAndBroadcast(OldPhi, getRippleShape(NewPhi));
+      for (unsigned PhiIdx = 0; PhiIdx < OldPhi->getNumIncomingValues();
+           ++PhiIdx) {
+        NewPhi->addIncoming(PhiOperands[PhiIdx],
+                            OldPhi->getIncomingBlock(PhiIdx));
+      }
+    }
+  }
+
+  if (!isFuncRPOTValid) {
+    // We modified the control flow so FuncRPOT is not valid anymore.
+    // Note that using the FuncRPOT during the replacement of scalar values
+    // with vector values is sound as "isFuncRPOTValid" is supposed to store
+    // whether the FuncRPOT is invalid *after* the replacement.
+    invalidateFuncRPOT();
+  }
+}
+
+SmallVector<Value *, 8>
+Ripple::tensorizedOperandsAndBroadcast(Instruction *I,
+                                       const TensorShape &ToShape,
+                                       unsigned StartIdx, unsigned EndIdx) {
+  SmallVector<Value *, 8> BcastedOperands;
+  for (unsigned OpIdx = StartIdx, E = std::min(I->getNumOperands(), EndIdx);
+       OpIdx < E; ++OpIdx) {
+    auto ReplacementAndBcast =
+        getTensorUseAndBcast(I->getOperandUse(OpIdx), ToShape);
+    BcastedOperands.push_back(ReplacementAndBcast);
+  }
+  return BcastedOperands;
+}
+
+Value *Ripple::getTensorUseAndBcast(const Use &U, const TensorShape &ToShape) {
+  auto [Replacement, ReplacementShape] = getTensorUse(U);
+  auto Bcasted = tensorBcast(Replacement, *ReplacementShape, ToShape);
+  // Checked during shape propagation
+  if (!Bcasted)
+    report_fatal_error("Broadcast failure during codegen");
+  return *Bcasted;
+}
+
+Expected<Value *> Ripple::tensorBcast(Value *V, const TensorShape &FromShape,
+                                      const TensorShape &ToShape) {
+
+  auto broadcastConstantTensor =
+      [&](Constant *C, const TensorShape &fromShape,
+          const TensorShape &toShape) -> Expected<Value *> {
+    if (!C->getType()->isVectorTy() && toShape.isScalar())
+      return C;
+    if (auto *cstInt = dyn_cast<ConstantInt>(C)) {
+      auto &val = cstInt->getValue();
+      Type *baseTy = cstInt->getType()->getScalarType();
+      Type *vectorTy =
+          VectorType::get(baseTy, toShape.flatShape(), /*scalable*/ false);
+      return ConstantInt::get(vectorTy, val);
+    } else if (auto *cstFP = dyn_cast<ConstantFP>(C)) {
+      Type *baseTy = cstFP->getType()->getScalarType();
+      Type *vectorTy =
+          VectorType::get(baseTy, toShape.flatShape(), /*scalable*/ false);
+      auto &val = cstFP->getValue();
+      return ConstantFP::get(vectorTy, val);
+    } else if (C->isNullValue()) {
+      // isNullValue() handles ConstantPointerNull, ConstantAggregateZero,
+      // ConstantTokenNone, ConstantTargetNone
+      Type *baseTy = C->getType()->getScalarType();
+      if (baseTy->isVectorTy())
+        baseTy = cast<VectorType>(baseTy)->getElementType();
+      Type *vectorTy =
+          VectorType::get(baseTy, toShape.flatShape(), /*scalable*/ false);
+      return ConstantAggregateZero::get(vectorTy);
+    } else if (isa<UndefValue>(C)) {
+      Type *BaseTy = C->getType()->getScalarType();
+      if (BaseTy->isVectorTy())
+        BaseTy = cast<VectorType>(BaseTy)->getElementType();
+      Type *VectorTy =
+          VectorType::get(BaseTy, toShape.flatShape(), /*scalable*/ false);
+      return UndefValue::get(VectorTy);
+    } else if (auto *SplatVal =
+                   C->getType()->isVectorTy() ? C->getSplatValue() : nullptr) {
+      return ConstantVector::getSplat(
+          ElementCount::getFixed(toShape.flatShape()), SplatVal);
+    } else if (auto *cstDataVector = dyn_cast<ConstantDataVector>(C)) {
+      std::vector<int> shuffleMask;
+      auto addOffsetToMask = [&](ArrayRef<size_t> index) {
+        size_t offset = fromShape.getOffsetAt(index);
+        shuffleMask.push_back(offset);
+      };
+      toShape.foreachIndex(addOffsetToMask);
+      return ConstantExpr::getShuffleVector(
+          cstDataVector, PoisonValue::get(cstDataVector->getType()),
+          shuffleMask);
+    } else if (auto *CstVector = dyn_cast<ConstantVector>(C)) {
+      std::vector<Constant *> BcastedCstVectorVals(toShape.flatShape());
+
+      auto BuildBcastedVector =
+          [&](ArrayRef<TensorShape::DimSize> ToMultiIndex) {
+            SmallVector<TensorShape::DimSize> FromMultiIndex(fromShape.rank(),
+                                                             0);
+            int IDim = 0;
+            for (auto FromAxisLen : fromShape) {
+              FromMultiIndex[IDim] =
+                  (FromAxisLen == 1) ? 0 : ToMultiIndex[IDim];
+              IDim++;
+            }
+            BcastedCstVectorVals[toShape.getOffsetAt(ToMultiIndex)] =
+                CstVector->getOperand(fromShape.getOffsetAt(FromMultiIndex));
+          };
+
+      toShape.foreachIndex(BuildBcastedVector);
+      return ConstantVector::get(BcastedCstVectorVals);
+    } else if (isa<GlobalValue>(C)) {
+      // That's a global constant address splat
+      // TODO: there might be issues with global value's semantics (Linkage,
+      // thread_local, etc) and Ripple's semantics
+      return ConstantVector::getSplat(
+          ElementCount::getFixed(toShape.flatShape()), C);
+    } else {
+      // We don't support vectorization of ConstantStruct, ConstantArray,
+      // ConstantDataArray, ConstantTargetNone, ConstantTokenNone
+      std::string ErrMsg;
+      llvm::raw_string_ostream RSO(ErrMsg);
+      RSO << "ripple does not know how to broadcast the value " << *C
+          << " (only ConstantInt, ConstantFP, ConstantPointerNull, "
+             "ConstantAggregateZero, ConstantTokenNone, ConstantTargetNone, "
+             "Splats, ConstantDataVector and ConstantVector are supported)";
+      RSO.flush();
+      DiagnosticInfoRippleWithLoc DI(DS_Error, F, {}, ErrMsg);
+      F.getContext().diagnose(DI);
+      return createStringError(std::errc::invalid_argument,
+                               "Unsupported Constant type being broadcasted");
+    }
+  };
+
+  if (FromShape == ToShape) {
+    LLVM_DEBUG(dbgs() << "Reusing " << *V << " w/ shape " << ToShape << "\n");
+    return V;
+  }
+
+  if (Error e = FromShape.isBroadcastError(ToShape)) {
+    std::string ErrMsg;
+    llvm::raw_string_ostream RSO(ErrMsg);
+    RSO << "ripple cannot broadcast the value " << *V << " from shape "
+        << FromShape << " to shape " << ToShape;
+    llvm::handleAllErrors(std::move(e), [&](const StringError &SE) {
+      RSO << ": " << SE.getMessage();
+    });
+    RSO.flush();
+    DebugLoc DL = isa<Instruction>(V)
+                      ? sanitizeRippleLocation(cast<Instruction>(V))
+                      : DebugLoc();
+    DiagnosticInfoRippleWithLoc DI(DS_Error, F, DL, ErrMsg);
+    F.getContext().diagnose(DI);
+    return createStringError(std::errc::invalid_argument,
+                             "Broadcast shapes non compatible");
+  }
+
+  // TODO: We can probably keep a cache of broadcasted values
+  LLVM_DEBUG(dbgs() << "Broadcasting " << *V << " from shape " << FromShape
+                    << " to shape " << ToShape << "\n");
+
+  if (auto *C = dyn_cast<Constant>(V)) {
+    return broadcastConstantTensor(C, FromShape, ToShape);
+  } else if (isa<Instruction>(V) || isa<Argument>(V)) {
+    auto SaveIP = irBuilder.saveIP();
+    if (isa<Argument>(V)) {
+      auto InsertAt = F.getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+      irBuilder.SetInsertPoint(InsertAt);
+    } else {
+      auto *I = cast<Instruction>(V);
+      if (auto *Invoke = dyn_cast<InvokeInst>(I)) {
+        // Invokeinstruction is special because it is the only terminator that
+        // can have users. So we must set the insertion point in a different
+        // basic block.
+        irBuilder.SetInsertPoint(
+            Invoke->getNormalDest()->getFirstInsertionPt());
+      } else {
+        setInsertPointAfter(irBuilder, I);
+      }
+      if (I->getStableDebugLoc())
+        irBuilder.SetCurrentDebugLocation(I->getStableDebugLoc());
+    }
+
+    Value *BcastedValue = nullptr;
+    if (FromShape.isScalar()) {
+      // Simple vector splat
+      BcastedValue = irBuilder.CreateVectorSplat(
+          ToShape.flatShape(), V, Twine(V->getName()) + ".ripple.bcast");
+      // A Splat is an insert followed by a shuffle
+      if (ShuffleVectorInst *ShuffleInst =
+              dyn_cast<ShuffleVectorInst>(BcastedValue))
+        setRippleShape(ShuffleInst->getOperand(0), ToShape);
+    } else {
+      // To construct the shuffle mask we map each index from toShape to the
+      // offset in fromShape.
+      std::vector<int> shuffleMask;
+      auto addOffsetToMask = [&](ArrayRef<size_t> index) {
+        size_t offset = FromShape.getOffsetAt(index);
+        shuffleMask.push_back(offset);
+      };
+      ToShape.foreachIndex(addOffsetToMask);
+      assert(shuffleMask.size() == ToShape.flatShape());
+      BcastedValue = irBuilder.CreateShuffleVector(
+          V, shuffleMask, Twine(V->getName()) + ".ripple.bcast");
+    }
+    setRippleShape(BcastedValue, ToShape);
+    irBuilder.restoreIP(SaveIP);
+    return BcastedValue;
+  } else {
+    std::string ErrMsg;
+    llvm::raw_string_ostream RSO(ErrMsg);
+    RSO << "ripple does not know how to broadcast the value " << *V
+        << " (only Instructions, Arguments, and Constants are supported)";
+    RSO.flush();
+    DebugLoc DL = isa<Instruction>(V)
+                      ? sanitizeRippleLocation(cast<Instruction>(V))
+                      : DebugLoc();
+    DiagnosticInfoRippleWithLoc DI(DS_Error, F, DL, ErrMsg);
+    F.getContext().diagnose(DI);
+    return createStringError(std::errc::invalid_argument,
+                             "Unsupported Value type being broadcasted");
+  }
+}
+
 bool Ripple::maskInstructionWhenIfConvert(const Instruction *I) const {
   return isa<LoadInst>(I) || isa<StoreInst>(I) ||
          intrinsicWithId(I,
@@ -1113,6 +2521,227 @@ DenseSet<BasicBlock *> Ripple::allBasicBlocksFromTo(BasicBlock *from,
   }
   visited.erase(from);
   return visited;
+}
+
+Value *Ripple::genMultiDimReduction(Intrinsic::ID reductionId, Value *vector,
+                                    const TensorShape &vectorShape,
+                                    const BitVector &reductionDimensions,
+                                    FMFSource FMFSource) {
+  auto reductionBinOp =
+      [](Intrinsic::ID redId) -> std::optional<Instruction::BinaryOps> {
+    switch (redId) {
+    default:
+      return std::nullopt;
+    case Intrinsic::vp_reduce_add:
+      return Instruction::Add;
+    case Intrinsic::vp_reduce_or:
+      return Instruction::Or;
+    case Intrinsic::vp_reduce_xor:
+      return Instruction::Xor;
+    case Intrinsic::vp_reduce_mul:
+      return Instruction::Mul;
+    case Intrinsic::vp_reduce_and:
+      return Instruction::And;
+    case Intrinsic::vp_reduce_fadd:
+      return Instruction::FAdd;
+    case Intrinsic::vp_reduce_fmul:
+      return Instruction::FMul;
+    }
+  };
+  auto cmpReduction = [](Intrinsic::ID redId) -> std::optional<Intrinsic::ID> {
+    switch (redId) {
+    default:
+      return std::nullopt;
+    case Intrinsic::vp_reduce_umin:
+      return Intrinsic::umin;
+    case Intrinsic::vp_reduce_smin:
+      return Intrinsic::smin;
+    case Intrinsic::vp_reduce_umax:
+      return Intrinsic::umax;
+    case Intrinsic::vp_reduce_smax:
+      return Intrinsic::smax;
+    case Intrinsic::vp_reduce_fmin:
+      return Intrinsic::minnum;
+    case Intrinsic::vp_reduce_fmax:
+      return Intrinsic::maxnum;
+    case Intrinsic::vp_reduce_fminimum:
+      return Intrinsic::minimum;
+    case Intrinsic::vp_reduce_fmaximum:
+      return Intrinsic::maximum;
+    }
+  };
+  IRBuilder<>::FastMathFlagGuard FMFGuard(irBuilder);
+  irBuilder.setFastMathFlags(FMFSource.get({}));
+
+  Constant *NeutralElement = getRippleNeutralReductionElement(
+      reductionId, vector->getType()->getScalarType(),
+      irBuilder.getFastMathFlags());
+
+  ElementCount VectorCount =
+      cast<VectorType>(vector->getType())->getElementCount();
+  // Partial reductions
+  Constant *NeutralVector =
+      ConstantVector::getSplat(VectorCount, NeutralElement);
+  // Create a select to introduce a maskable instruction
+  Constant *TrueMask = ConstantVector::getSplat(
+      VectorCount, ConstantInt::getTrue(vector->getContext()));
+  TensorShape CurrentVectorShape = vectorShape;
+  SelectInst *SelectedValue = irBuilder.Insert(SelectInst::Create(
+      TrueMask, vector, NeutralVector,
+      Twine(vector->getName()) + ".ripple.reduction.partial.masking"));
+  setRippleShape(SelectedValue, CurrentVectorShape);
+  SelectToMaskWhenIfConvert.insert(SelectedValue);
+
+  // Full reduction, use well supported llvm reductions instead
+  if (vectorShape.reducedToScalarBy(reductionDimensions)) {
+    if (auto IntrinsicId =
+            VPIntrinsic::getFunctionalIntrinsicIDForVP(reductionId)) {
+      SmallVector<Value *, 2> Args;
+      if (*IntrinsicId == Intrinsic::vector_reduce_fadd ||
+          *IntrinsicId == Intrinsic::vector_reduce_fmul) {
+        Args.push_back(NeutralElement);
+      }
+      Args.push_back(SelectedValue);
+      CallInst *ReductionCall = irBuilder.CreateIntrinsic(
+          vector->getType()->getScalarType(), *IntrinsicId, Args, {},
+          Twine(vector->getName()) + ".ripple.reduction");
+      setRippleShape(ReductionCall, ScalarShape);
+      return ReductionCall;
+    }
+  }
+
+  Value *CurrentVectorValue = SelectedValue;
+
+  std::vector<int> ShuffleMask;
+  ShuffleMask.reserve(CurrentVectorShape.flatShape());
+  for (auto RedDim : reductionDimensions.set_bits()) {
+    NeutralVector = ConstantVector::getSplat(
+        ElementCount::getFixed(CurrentVectorShape.flatShape()), NeutralElement);
+    // Each non-empty inner dimension that is not being reduced adds a
+    // multiple to the number of elements we start shuffling to reduce:
+    // normally we reduce by shuffling at distance 1, 2, ..., 2^n
+    unsigned ReductionIterCount = Log2_64_Ceil(CurrentVectorShape[RedDim]);
+    for (unsigned RedIter = 0; RedIter < ReductionIterCount; ++RedIter) {
+      ShuffleMask.clear();
+      // Build the shuffle indices vector
+      SmallVector<size_t, 0> RotateIndices(tensorRank());
+      CurrentVectorShape.foreachIndex([&](auto Indices) {
+        auto ReduceWith = Indices[RedDim] + (1 << RedIter);
+        if (ReduceWith >= CurrentVectorShape[RedDim])
+          // use the neutral element at the same offset
+          ShuffleMask.push_back(CurrentVectorShape.getOffsetAt(Indices) +
+                                CurrentVectorShape.flatShape());
+        else {
+          std::copy(Indices.begin(), Indices.end(), RotateIndices.begin());
+          RotateIndices[RedDim] = ReduceWith;
+          ShuffleMask.push_back(CurrentVectorShape.getOffsetAt(RotateIndices));
+        }
+      });
+      Value *Shuff = irBuilder.CreateShuffleVector(
+          CurrentVectorValue, NeutralVector, ShuffleMask,
+          Twine(vector->getName()) + ".ripple.reducelog2.shuffle");
+      setRippleShape(Shuff, CurrentVectorShape);
+      auto BinRedOp = reductionBinOp(reductionId);
+      if (BinRedOp) {
+        CurrentVectorValue = irBuilder.CreateBinOp(
+            *BinRedOp, CurrentVectorValue, Shuff,
+            Twine(vector->getName()) + ".ripple.reducelog2.operator");
+        setRippleShape(CurrentVectorValue, CurrentVectorShape);
+      } else {
+        auto CmpPred = cmpReduction(reductionId);
+        assert(CmpPred);
+        CurrentVectorValue = irBuilder.CreateIntrinsic(
+            CurrentVectorValue->getType(), *CmpPred,
+            {CurrentVectorValue, Shuff}, {},
+            Twine(vector->getName()) + ".ripple.reducelog2.compare.op");
+        setRippleShape(CurrentVectorValue, CurrentVectorShape);
+      }
+    }
+    // Now extract the reduced value that is at index 0 (or anywhere really) in
+    // the reduced dimension
+    ShuffleMask.clear();
+    CurrentVectorShape.foreachIndex([&](auto Indices) {
+      if (Indices[RedDim] == 0)
+        ShuffleMask.push_back(CurrentVectorShape.getOffsetAt(Indices));
+    });
+    // Get the new shape
+    BitVector RedCurrentDim(reductionDimensions.size());
+    RedCurrentDim.set(RedDim);
+    CurrentVectorShape.reduceDimensions(RedCurrentDim);
+
+    if (CurrentVectorShape.isScalar()) {
+      CurrentVectorValue = irBuilder.CreateExtractElement(
+          CurrentVectorValue, static_cast<uint64_t>(0), "ripple.red.extract");
+    } else {
+      CurrentVectorValue = irBuilder.CreateShuffleVector(
+          CurrentVectorValue, ShuffleMask,
+          Twine(vector->getName()) + ".ripple.reducelog2.dim.final");
+    }
+    setRippleShape(CurrentVectorValue, CurrentVectorShape);
+  }
+
+  assert(CurrentVectorShape.reduceDimensions(reductionDimensions) == false &&
+         "The shape should already be a fully reduced tensor");
+  return CurrentVectorValue;
+}
+
+Value *Ripple::buildLinearSeriesSlope(const LinearSeries *LS) {
+  assert(LS->getSlopeShape().isVector());
+  const TensorShape &LinearSeriesShape = LS->getShape();
+
+  if (LS->hasZeroSlopes())
+    return ConstantAggregateZero::get(
+        VectorType::get(LS->getSlope(0)->getType(),
+                        LinearSeriesShape.flatShape(), /*Scalable*/ false));
+
+  const TensorShape &SlopeShape = LS->getSlopeShape();
+  // Slope should be an integer type by construction
+  Value *SlopeValue = nullptr;
+  for (unsigned RankIdx = 0; RankIdx < SlopeShape.rank(); ++RankIdx) {
+    auto size = SlopeShape[RankIdx];
+    if (size > 1) {
+      TensorShape SlopeShape =
+          TensorShape(LinearSeriesShape.rank(), RankIdx, size);
+      // Series [0, 1, ..., size - 1]
+      Constant *BaseSeries = LinearSeries::constructLinearSeriesVector(
+          cast<IntegerType>(LS->getSlope(RankIdx)->getType()), size);
+
+      // Slope as vector
+      Value *SlopeBcast = irBuilder.CreateVectorSplat(
+          size, LS->getSlope(RankIdx),
+          Twine(LS->getBase()->getName()) + ".ripple.LS.dim.slope.bcast");
+      // A Splat is an insert followed by a shuffle
+      setRippleShape(SlopeBcast, SlopeShape);
+      if (ShuffleVectorInst *ShuffleInst =
+              dyn_cast<ShuffleVectorInst>(SlopeBcast))
+        setRippleShape(ShuffleInst->getOperand(0), SlopeShape);
+
+      // Slope Series [0, slope, ..., slope * (size - 1)]
+      Value *SlopeSeries = irBuilder.CreateBinOp(
+          Instruction::Mul, BaseSeries, SlopeBcast,
+          Twine(LS->getBase()->getName()) + ".ripple.LS.dim.slope");
+      setRippleShape(SlopeSeries, SlopeShape);
+
+      auto BcastedSeries =
+          tensorBcast(SlopeSeries, SlopeShape, LinearSeriesShape);
+      // Checked during shape propagation
+      if (!BcastedSeries)
+        report_fatal_error("Broadcast failure during LinearSeries codegen");
+      setRippleShape(*BcastedSeries, LinearSeriesShape);
+
+      if (SlopeValue) {
+        SlopeValue = irBuilder.CreateBinOp(
+            Instruction::Add, SlopeValue, *BcastedSeries,
+            Twine(LS->getBase()->getName()) + ".ripple.LS.slope.combine");
+        setRippleShape(SlopeValue, LinearSeriesShape);
+      } else {
+        SlopeValue = *BcastedSeries;
+      }
+    }
+  }
+  SlopeValue->setName(Twine(LS->getBase()->getName()) + ".ripple.LS.slope");
+  assert(SlopeValue != nullptr);
+  return SlopeValue;
 }
 
 Constant *LinearSeries::constructLinearSeriesVector(IntegerType *intTy,
@@ -2172,6 +3801,81 @@ void Ripple::clearLinearSeriesCache() {
   LsCache.GeneratedSeries.clear();
 }
 
+Value *Ripple::instantiateLinearSeries(const LinearSeries *LS,
+                                       bool UseLSCache) {
+  Value *CachedValue = LsCache.GeneratedSeries.lookup(LS);
+  if (UseLSCache && CachedValue)
+    return CachedValue;
+  LLVM_DEBUG(dbgs() << "Instantiating " << *LS << "\n");
+
+  const TensorShape &LinearSeriesShape = LS->getShape();
+  // Unused RepShape when assert is gone
+  [[maybe_unused]] auto [BaseReplacement, RepShape] =
+      replacementValueAndShape(LS->getBase());
+  // Alloca have shape-shifting capabilities
+  assert(*RepShape == LS->getBaseShape() ||
+         (isa<AllocaInst>(BaseReplacement) && *RepShape >= LS->getBaseShape()));
+
+  Value *Series = nullptr;
+  if (LS->getBase()->getType()->getScalarType()->isPointerTy() &&
+      LS->getBaseShape().isScalar() && !LS->getSlopeShape().isScalar()) {
+    // Use the fact that GEP auto-splats scalar bases to keep them as scalar
+    // (helps hardware scatter/gather needing a base ptr + offset vector)
+    auto SlopeValue = buildLinearSeriesSlope(LS);
+    Series =
+        irBuilder.CreateGEP(irBuilder.getInt8Ty(), LS->getBase(), {SlopeValue});
+  } else {
+    auto BaseBcast =
+        tensorBcast(BaseReplacement, LS->getBaseShape(), LinearSeriesShape);
+    if (!BaseBcast)
+      report_fatal_error("Broadcast failure during codegen");
+
+    // Return the Broadcast of the base when the slope is 0 or absent
+    if (LS->hasZeroSlopes()) {
+      Series = *BaseBcast;
+    } else {
+      setRippleShape(*BaseBcast, LinearSeriesShape);
+      // Create the Slope
+      auto SlopeValue = buildLinearSeriesSlope(LS);
+
+      if (LS->getBase()->getType()->getScalarType()->isPointerTy()) {
+        // Use a GEP to compute the final vector of addresses
+        Series = irBuilder.CreateGEP(irBuilder.getInt8Ty(), *BaseBcast,
+                                     {SlopeValue});
+      } else {
+        LLVM_DEBUG(dbgs() << "Adding base " << **BaseBcast << "\n\tto slope "
+                          << *SlopeValue << "\n");
+        Series =
+            irBuilder.CreateBinOp(Instruction::Add, *BaseBcast, SlopeValue);
+      }
+    }
+  }
+  Series->setName(Twine(LS->getBase()->getName()) + ".ripple.LS.instance");
+  LLVM_DEBUG(dbgs() << "Instantiated Linear Series: " << *LS << " as "
+                    << *Series << "\n");
+  setRippleShape(Series, LinearSeriesShape);
+  if (UseLSCache)
+    LsCache.GeneratedSeries.insert({LS, Series});
+  return Series;
+}
+
+Value *Ripple::instantiateCachedSeries(ConstructedSeries &CS,
+                                       Instruction *AfterI) {
+  auto IP = irBuilder.saveIP();
+  setInsertPointAfter(irBuilder, AfterI);
+  irBuilder.SetCurrentDebugLocation(AfterI->getDebugLoc());
+  auto SeriesVal = instantiateLinearSeries(CS.LS);
+  irBuilder.restoreIP(IP);
+  return SeriesVal;
+}
+
+Value *Ripple::getCachedInstantiationFor(const Instruction *I) const {
+  auto CS = getCachedSeries(I);
+  if (CS)
+    return LsCache.GeneratedSeries.lookup(CS.LS);
+  else
+    return nullptr;
+}
 
 bool Ripple::setRippleShape(const Value *V, const TensorShape &Shape) {
   return setRippleShape(dyn_cast_if_present<Instruction>(V), Shape);
@@ -2202,7 +3906,13 @@ void Ripple::invalidateRippleDataFor(const Value *V) {
   SlopeInstructions.erase(I);
   clearValidSerie(I);
 
-  if (auto *Call = dyn_cast<CallInst>(I))
+  // If-convert
+  ToSkipMaskingWhenIfConvert.erase(I);
+
+  // Type-specific
+  if (auto *Select = dyn_cast<SelectInst>(I))
+    SelectToMaskWhenIfConvert.erase(Select);
+  else if (auto *Call = dyn_cast<CallInst>(I))
     MaskedCalls.erase(Call);
   else if (auto *Alloca = dyn_cast<AllocaInst>(I))
     PromotableAlloca.erase(Alloca);
@@ -2737,6 +4447,20 @@ Error Ripple::checkRippleSemantics() {
   return AllErrors;
 }
 
+std::string Ripple::tensorizedName(StringRef Name, const TensorShape &Shape) {
+  std::string TensorName;
+  raw_string_ostream RSO(TensorName);
+  RSO << Name << ".ripple";
+  if (Shape.rank() > 0) {
+    RSO << ".t" << Shape[Shape.rank() - 1];
+    for (unsigned RankIdx = Shape.rank() - 2, E = Shape.rank(); RankIdx < E;
+         --RankIdx)
+      RSO << "x" << Shape[RankIdx];
+  }
+  RSO.flush();
+  return TensorName;
+}
+
 Expected<TensorShape> Ripple::combineShapeBcastWithErrorReporting(
     const TensorShape &ShapeToBeBroadcasted, const TensorShape &OtherShape,
     StringRef ShapeToBeBcastedMsg, DebugLoc ShapeToBeBroadcastedLocation,
@@ -2777,6 +4501,10 @@ Expected<TensorShape> Ripple::combineShapeBcastWithErrorReporting(
                              "CombineShapeBcast failure");
   }
   return Bcasted;
+}
+
+Value *Ripple::instantiateLinearSeriesNoCache(const LinearSeries &LS) {
+  return instantiateLinearSeries(&LS, false);
 }
 
 void Ripple::visitAllInstructionsBeingClobberedBy(
@@ -3066,4 +4794,11 @@ Error Ripple::checkBlockShapeUsage(const Function &F) {
     }
   }
   return Error::success();
+}
+
+bool Ripple::rippleVectorizeCall(const CallInst &CI) const {
+  return none_of(CI.args(),
+                 [](auto &Use) { return Use->getType()->isVectorTy(); }) &&
+         any_of(CI.args(),
+                [&](auto &Use) { return getRippleShape(Use).isVector(); });
 }

@@ -33,7 +33,9 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -41,12 +43,15 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -54,9 +59,11 @@
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
+#include <limits>
 #include <map>
 #include <memory>
 #include <numeric>
+#include <string>
 #include <utility>
 #include <variant>
 
@@ -64,14 +71,11 @@ namespace llvm {
 
 class Argument;
 class DataLayout;
-class IntegerType;
 class IntrinsicInst;
 class MDNode;
 class MemoryLocation;
 class TargetMachine;
-class Value;
 class DbgRecord;
-class Type;
 
 /// @brief Tensor shape (shape w/ fixed number of dimensions)
 /// @tparam SizeTy The type used to store dimension sizes
@@ -505,6 +509,166 @@ private:
   }
 };
 
+// _____________________________________________________________________________
+
+/// @brief A data class for n-dimensional load / store attributes
+struct NDLoadStoreAttr {
+public:
+  /// @brief whether each of the memory accesses constituting
+  ///        this n-d memory access are aligned.
+  bool Aligned;
+
+  /// @brief whether the load or store is masked.
+  ///        The mask is always the last n-d load/store argument
+  bool Masked;
+
+  /// @brief  dimensions along which a broadcast / splat is performed along
+  ///         with the load / store.
+  BitVector SplatDims;
+
+  /// @brief dimensions associated with strides.
+  ///        A stride paarameter corresponds to each of them,
+  ///        in increasing dimensions.
+  ///        Note: here we use "stride" as opposed to "slope",
+  ///        because it represents a memory stride (in bytes).
+  BitVector StrideDims;
+
+  /// @brief when the base addresses of a n-d load or store are represented in
+  ///        a tensor, baseDims represents the dimensions of that base
+  ///        tensor that are non-1.
+  BitVector BaseDims;
+
+  NDLoadStoreAttr(LinearSeries &AddressSeries, BitVector &StrideDims)
+      : SplatDims(AddressSeries.getSplatDims()), StrideDims(StrideDims),
+        BaseDims(AddressSeries.getBaseShape().nonEmptyDims()) {}
+
+  NDLoadStoreAttr() = default;
+
+  /// @brief Prints the attribute
+  void print(raw_ostream &O) const;
+
+  /// @brief Converts a string to an attribute set
+  static NDLoadStoreAttr fromString(StringRef AttrName);
+
+  /// @brief True if no attributes are set, false otherwise
+  bool empty() const {
+    return !Aligned && !Masked && SplatDims.empty() && StrideDims.empty() &&
+           BaseDims.empty();
+  }
+};
+
+inline raw_ostream &operator<<(raw_ostream &OS, const NDLoadStoreAttr &LSAttr) {
+  LSAttr.print(OS);
+  return OS;
+}
+
+// Fwd decl
+class Ripple;
+
+/// @brief A factory for calls to the
+///        Ripple multi-dimensional load and store API.
+/// In the tensor expansion phase of its algorithm, Ripple turns scalar loads
+/// and stores into a tensorial (n-dimensional) version.
+/// These go through the whole algorithm, and their equivalent in terms of
+/// traditional (vector) loads and stores is rendered at the end.
+/// This allows us to work on a more homogeneous representation of operations
+/// throughout the algorithm.
+// The naming convention is:
+// nd_load.1d.attr for a 1-d load with attributes
+// nd_load.2d for a 2-d load w/o attributes
+// nd_store.3d.attr for a 3-d store w/ attributes, etc.
+// The syntax of the 'attr' part of the name is defined in NDLoadStoreAttr
+class NDLoadStoreFactory {
+public:
+  NDLoadStoreFactory(IRBuilder<> &IrBuilder, Module &Mod, Ripple &MyRipple)
+      : IrBuilder(IrBuilder), Mod(Mod), MyRipple(MyRipple) {};
+
+  /// @brief Generates a n-d load of a data set described by AddressSeries
+  /// @param AddressSeries represents the sequence of addresses to be loaded
+  ///        into a tensor value
+  /// @param ToShape the expected shape of that tensor value
+  Value *genLoad(LoadInst *Load, LinearSeries &AddressSeries,
+                 Value *DefaultAddress, const TensorShape &ToShape);
+
+  /// @brief Generates a n-d store into a data set described by AddressSeries
+  /// @param AddressSeries represents the sequence of addresses to be stored to
+  /// @param Val the tensor value to store
+  /// @param ToShape the expected shape of that tensor
+  Value *genStore(StoreInst *Store, Value *Val, LinearSeries &AddressSeries,
+                  Value *DefaultAddress, const TensorShape &ToShape);
+
+  /// @brief Generates a generic, structure-less vector scatter
+  ///        of @p Val to @p Address.
+  /// @param Store the original store instruction to be replaced by the scatter
+  /// @param ToShape the expected shape of the input tensor type.
+  /// TODO: Make this private and only leave genStore as public interface
+  Value *genUnstructuredStore(StoreInst *Load, Value *Val, Value *Address,
+                              const TensorShape &ToShape);
+
+private:
+  /// @brief Generates a generic, structure-less vector gather from @p Address.
+  /// @param Load the original load instruction to be replaced by the gather
+  /// @param ToShape the expected shape of the output tensor type.
+  Value *genUnstructuredLoad(LoadInst *Load, Value *Address,
+                             const TensorShape &ToShape);
+
+  /// @brief Applies mask @p mask to @p NdLoadStore, a n-d load or store.
+  /// If \pNdLoadStore is already masked, use the and-combination of its
+  /// current mask with @p NdLoadStore 's mask.
+  Value *applyMask(Value *NdLoadStore, Value *mask);
+
+  /// Returns a fixed true mask of @p NElements elements.
+  Value *getTrueMask(int NElements) {
+    ElementCount FixedNElements = ElementCount::getFixed(NElements);
+    return ConstantVector::getSplat(FixedNElements,
+                                    ConstantInt::getTrue(Mod.getContext()));
+  }
+
+  /// Asserts that @p Val is a fixed vector of @p NElements elements.
+  void assertNumElements(Value *Val, int NElements) {
+    ElementCount FixedNElements = ElementCount::getFixed(NElements);
+    Type *ValType = Val->getType();
+    assert(isa<VectorType>(ValType) && "Expecting a vector\n");
+    VectorType *ValVectorType = cast<VectorType>(ValType);
+    if (ValVectorType->getElementCount() != FixedNElements) {
+      errs() << "Expected a vector of " << NElements << " but has value "
+             << *Val << " of type " << *ValType << "\n";
+      llvm_unreachable("Vector type with wrong element count");
+    }
+  }
+
+  /// @brief Underlying IR Builder used to generate n-d loads and stores
+  IRBuilder<> &IrBuilder;
+
+  /// @brief Underlying module
+  Module &Mod;
+
+  /// @brief Ripple instance associated with us
+  Ripple &MyRipple;
+
+  // Checks if a series of addresses corresponds to a contiguous memory zone.
+  // @param type of the elements of the tensor being addressed
+  // @param AddressSeries a linear series representing the sequence of addresses
+  //        being accessed
+  // @param StrideDims (output) will indicate which
+  //        dimensions have regular non-unit strides, according to AddressSeries
+  bool analyzeCoalescing(Type *ElementTy, LinearSeries &AddressSeries,
+                         BitVector &StrideDims);
+
+  /// @brief Generates a n-d load of a data set described by AddressSeries,
+  ///        With the assumption that AddressSeries doesn't contain a splat /
+  ///        broadcast.
+  /// @param AddressSeries represents the sequence of addresses to be loaded
+  ///        into a tensor value
+  /// @param ToShape the expected shape of that tensor value
+  Value *genLoadNoSplat(LoadInst *Load, LinearSeries &AddressSeries,
+                        Value *DefaultAddress, const TensorShape &ToShape);
+
+  /// Naming convention for the n-d load-store API
+  static std::string ndFunctionName(StringRef LoadOrStore, int nDims,
+                                    NDLoadStoreAttr &Attr);
+};
+
 class Ripple {
   TargetMachine *TM;
 
@@ -549,7 +713,8 @@ public:
         TensorDimIDMap(buildPEIdMap()),
         AssumptionCache(AM.getResult<AssumptionAnalysis>(F)),
         SQ(DL, &targetLibraryInfo, &domTree, &AssumptionCache),
-        ScalarShape(TensorShape(tensorRank())), PS(PS),
+        ScalarShape(TensorShape(tensorRank())),
+        NdLoadStoreFac(irBuilder, *F.getParent(), *this), PS(PS),
         SpecializationsPending(SpecializationsPending),
         SpecializationsAvailable(SpecializationsAvailable) {
     // Set the types
@@ -598,6 +763,21 @@ public:
   /// @brief Prints scalar instruction's that were promoted to Linear Series
   /// @param os the output stream
   void printValidSeries(raw_ostream &oss) const;
+
+  /// @brief Multi-dimensional tensor broadcast of value *V* of shape
+  /// *fromShape* to *toShape*.
+  Expected<Value *> tensorBcast(Value *V, const TensorShape &FromShape,
+                                const TensorShape &ToShape);
+
+  /// @brief Creates a tensorized name for a variable
+  ///
+  /// An example output is "name.t32x12" for a TensorShape[32][12]
+  /// or "Name.ripple.tensor.8" for a TensorShape[8] or "Name.ripple" if
+  /// Shape.rank() == 0.
+  static std::string tensorizedName(StringRef Name, const TensorShape &Shape);
+
+  /// @brief Non-cached instantiation of a linear series
+  Value *instantiateLinearSeriesNoCache(const LinearSeries &LS);
 
   /// @brief Convenience function to query the shape of Instruction, Constants
   /// or Arguments.
@@ -747,6 +927,13 @@ private:
   /// @brief A mapping between IR Instructions to a ripple shape
   std::map<AssertingVH<const Instruction>, TensorShape> InstructionRippleShapes;
 
+  /// @brief A map from values to vector instructions
+  DenseMap<PoisoningVH<Instruction>, AssertingVH<Value>>
+      InstructionReplacementMapping;
+
+  /// @brief Branch or switch instructions to vector conditions
+  DenseMap<AssertingVH<Instruction>, AssertingVH<Value>> BranchAndSwitchVecCond;
+
   /// @brief A cache used by SimplifyQuery
   AssumptionAnalysis::Result &AssumptionCache;
 
@@ -766,6 +953,9 @@ private:
   /// @brief A cache of constructed slope instructions
   DenseSet<AssertingVH<Instruction>> SlopeInstructions;
 
+  /// A n-dimensional load/store factory associated with the current module.
+  NDLoadStoreFactory NdLoadStoreFac;
+
   DenseSet<AssertingVH<AllocaInst>> PromotableAlloca;
   DenseSet<AssertingVH<AllocaInst>> NonPromotableAlloca;
 
@@ -780,10 +970,53 @@ private:
   /// @brief Combines two states for a binary operator
   static CSState combineStatesBinaryOp(CSState S, CSState S2);
 
+  /// @brief Register a mapping between a scalar Instruction to a vector value
+  /// This also sets the shape of the replacement
+  void setReplacementFor(Instruction *ToReplace, Value *Replacement,
+                         const TensorShape &Shape);
+
+  /// @brief Returns \p U's tensor value and it's shape, i.e., the value can
+  /// either be a "replacement Tensor value", a "LinearSeries instantiation" or
+  /// the "original Use value".
+  ///
+  /// @pre Valid during/after genVectorInstructions and before ifConvert
+  ///
+  /// This method takes care of instantiating LinearSeries for users of LS.
+  ///
+  /// If both the Use and the User are LinearSeries with the same base shape
+  /// returns the replacement value instead of the instantiation since we
+  /// are building the replacement base and are not using the Series's value.
+  std::pair<Value *, const TensorShape *> getTensorUse(const Use &U);
+
+  /// DON'T USE THIS METHOD, use @ref getTensorUse(const Use&) instead!
+  ///
+  /// @brief Gets the "replacement" Tensor value of V and its shape.
+  /// 1) The replacement of @p V if it exists
+  /// 2) If @p V is a LinearSeries, returns the base replacement if it exists
+  /// 3) None of 1) and 2) have replacement, returns @p V
+  ///
+  /// @warning If the return value is a Tensor AllocaInst, the shape should not
+  /// be trusted because their shape depends on the User Instruction location.
+  ///
+  /// @pre Valid during/after genVectorInstructions and before ifConvert
+  std::pair<Value *, const TensorShape *>
+  replacementValueAndShape(Value *V) const;
+
   /// @brief Initializes *idRanks* with data extracted from ripple intrinsics in
   /// the function
   static DenseMap<PEIdentifier, DimSize>
   gatherRippleFunctionUsage(const Function &F);
+
+  /// @brief The set of select instructions that requires masking when
+  /// if-converting.
+  /// For example multi-dimensional reductions are generated with a select as
+  /// first instruction Select(true, vector, neutral_elem) so that we can mask
+  /// them later.
+  DenseSet<AssertingVH<SelectInst>> SelectToMaskWhenIfConvert;
+
+  /// @brief The set of instructions that should not
+  /// be masked when if-converting.
+  DenseSet<AssertingVH<Instruction>> ToSkipMaskingWhenIfConvert;
 
   /// @brief CallInsts that are inside a vector conditional region and requires
   /// masking
@@ -864,6 +1097,38 @@ private:
   /// ShapeIgnoredByRipple for Arguments having vector types
   const TensorShape &getRippleShape(const Argument *C,
                                     bool ShapePropagation = false) const;
+
+  /// @brief Generates vector instructions for each vector Ripple shape
+  void genVectorInstructions();
+
+  /// @brief Get the tensorUse of \p I's operands, indexed in range [StartIdx,
+  /// EndIdx[, broadcast each of them to \p ToShape and return the resulting
+  /// vector of broadcasted operands
+  ///
+  /// Functionally equivalent to:
+  ///   map(getTensorUseAndBcast,
+  ///       map(I->getOperandUse,
+  ///           range(startIdx, EndIdx)
+  ///       )
+  ///   )
+  ///
+  /// @see getTensorUseAndBcast
+  /// @pre Valid during/after genVectorInstructions and before ifConvert
+  SmallVector<Value *, 8> tensorizedOperandsAndBroadcast(
+      Instruction *I, const TensorShape &ToShape,
+      unsigned StartIdx = std::numeric_limits<unsigned>().min(),
+      unsigned EndIdx = std::numeric_limits<unsigned>().max());
+
+  /// @brief Returns \p U value generated during Ripple's vector codegen
+  /// phase being broadcasted \p ToShape.
+  ///
+  /// Functionally equivalent to (with automatic bcast error diagnostic
+  /// reporting):
+  ///   tensorBcast(getTensorUse(U), ToShape)
+  ///
+  /// @see getTensorUse
+  /// @pre Valid during/after genVectorInstructions and before ifConvert
+  Value *getTensorUseAndBcast(const Use &U, const TensorShape &ToShape);
 
   /// @brief Returns an IntrinsicInst pointer if I is a ripple.dim,
   /// ripple.dim.size or ripple.dim.setsize intrinsics
@@ -977,6 +1242,19 @@ private:
   DenseSet<BasicBlock *> allBasicBlocksFromTo(BasicBlock *from,
                                               BasicBlock *to) const;
 
+  /// @brief Generates the instructions for a multi-dimensional reduction.
+  /// The algorithm generates log2 shuffle and reduction instruction per
+  /// dimension being reduced.
+  /// @param reductionId the vp_reduction intrinsic ID
+  /// @param vector the vector to reduce
+  /// @param vectorShape the vector multi-dimensional shape
+  /// @param reductionDimensions the dimensions indices that are reduced
+  /// @return the output of the reduction
+  Value *genMultiDimReduction(Intrinsic::ID reductionId, Value *vector,
+                              const TensorShape &vectorShape,
+                              const BitVector &reductionDimensions,
+                              FMFSource FMFSource = {});
+
   /// @brief Returns the range of operands that can be vectorized
   ///
   /// For call instructions, only the call arguments are visited
@@ -1021,12 +1299,28 @@ private:
   /// be promoted or a non-series otherwise.
   ConstructedSeries tryToPromoteLinearSeries(LinearSeries *LS);
 
+  /// @brief Create the Value representing *this* linear series
+  /// Prefer using instantiateCachedSeries instead of this function
+  Value *instantiateLinearSeries(const LinearSeries *LS,
+                                 bool UseLSCache = true);
+
+  /// @brief Instantiate the linear series represented by CS after the
+  /// instuction AfterI
+  Value *instantiateCachedSeries(ConstructedSeries &CS, Instruction *AfterI);
+
   /// @brief Returns a caches LinearSeries for the instruction I
   ConstructedSeries getCachedSeries(const Instruction *I) const;
 
   /// @brief Simplify slopes which are empty with the value zero.
   /// @param Cache the cache of linear series
   void simplifySlopes();
+
+  /// @brief Builds the value representing the slope of this LinearSeries
+  Value *buildLinearSeriesSlope(const LinearSeries *LS);
+
+  /// @brief Returns the cached linear series instantiation for the instruction
+  /// I or nullptr if not a linear series or not instantiated
+  Value *getCachedInstantiationFor(const Instruction *I) const;
 
   /// Clears a specified Instruction's valid linear series
   void clearValidSerie(const Instruction *I);
