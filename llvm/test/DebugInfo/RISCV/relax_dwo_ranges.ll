@@ -21,12 +21,12 @@
 ; RUN: llc -dwarf-version=5 -split-dwarf-file=foo.dwo -O0 -mtriple=riscv64-unknown-linux-gnu -filetype=obj relax_dwo_ranges.ll -o %t.o
 ; RUN: llvm-dwarfdump -v %t.o | FileCheck --check-prefix=DWARF5 %s
 ; RUN: llvm-dwarfdump --debug-info %t.o > /dev/null 2>&1 | count 0
-; RUN: llvm-objdump -h %t | FileCheck --check-prefix=HDR %s
+; RUN: llvm-objdump -h %t.o | FileCheck --check-prefix=HDR %s
 
 ; RUN: llc -dwarf-version=4 -split-dwarf-file=foo.dwo -O0 -mtriple=riscv64-unknown-linux-gnu -filetype=obj relax_dwo_ranges.ll -o %t.o
 ; RUN: llvm-dwarfdump -v %t.o | FileCheck --check-prefix=DWARF4 %s
 ; RUN: llvm-dwarfdump --debug-info %t.o > /dev/null 2>&1 | count 0
-; RUN: llvm-objdump -h %t | FileCheck --check-prefix=HDR %s
+; RUN: llvm-objdump -h %t.o | FileCheck --check-prefix=HDR %s
 
 ; Make sure we don't produce any relocations in any .dwo section
 ; HDR-NOT: .rela.{{.*}}.dwo
@@ -35,7 +35,7 @@
 ; DWARF5: .debug_info.dwo contents:
 ; DWARF5: DW_TAG_subprogram
 ; DWARF5-NEXT: DW_AT_low_pc  [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000000000 ".text")
-; DWARF5-NEXT: DW_AT_high_pc [DW_FORM_addrx]    (indexed (00000001) address = 0x0000000000000044 ".text")
+; DWARF5-NEXT: DW_AT_high_pc [DW_FORM_addrx]    (indexed (00000001) address = 0x000000000000002c ".text")
 ; DWARF5: DW_AT_name {{.*}} "square") 
 ; DWARF5: DW_TAG_formal_parameter
 
@@ -45,6 +45,7 @@
 ; DWARF5: .debug_addr contents:
 ; DWARF5: Addrs: [
 ; DWARF5-NEXT: 0x0000000000000000
+; DWARF5-NEXT: 0x000000000000002c
 ; DWARF5-NEXT: 0x000000000000002c
 ; DWARF5-NEXT: 0x000000000000003e
 ; DWARF5-NEXT: 0x000000000000006e
@@ -56,10 +57,9 @@
 ; entries respectively
 ; DWARF5: .debug_rnglists.dwo contents:
 ; DWARF5: ranges:
-; DWARF5-NEXT: 0x00000014: [DW_RLE_startx_length]:  0x0000000000000001, 0x0000000000000012 => [0x000000000000002c, 0x000000000000003e)
+; DWARF5-NEXT: 0x00000014: [DW_RLE_startx_length]:  0x0000000000000002, 0x0000000000000012 => [0x000000000000002c, 0x000000000000003e)
 ; DWARF5-NEXT: 0x00000017: [DW_RLE_end_of_list  ]
-; DWARF5-NEXT: 0x00000018: [DW_RLE_startx_endx  ]:  0x0000000000000002, 0x0000000000000003 => [0x000000000000003e, 0x000000000000006e)
-; DWARF5-NEXT: 0x00000017: [DW_RLE_end_of_list  ]
+; DWARF5-NEXT: 0x00000018: [DW_RLE_startx_endx  ]:  0x0000000000000003, 0x0000000000000004 => [0x000000000000003e, 0x000000000000006e)
 ; DWARF5-NEXT: 0x0000001b: [DW_RLE_end_of_list  ]
 ; DWARF5-EMPTY:
 
@@ -68,17 +68,17 @@
 ; DWARF4: .debug_info.dwo contents:
 ; DWARF4: DW_TAG_subprogram
 ; DWARF4-NEXT: DW_AT_low_pc  [DW_FORM_GNU_addr_index]	(indexed (00000000) address = 0x0000000000000000 ".text")
-; DWARF4-NEXT: DW_AT_high_pc [DW_FORM_GNU_addr_index] (indexed (00000001) address = 0x0000000000000044 ".text")
+; DWARF4-NEXT: DW_AT_high_pc [DW_FORM_GNU_addr_index] (indexed (00000001) address = 0x000000000000002c ".text")
 ; DWARF4: DW_AT_name {{.*}} "square") 
 
 ; DWARF4: DW_TAG_subprogram
-; DWARF4-NEXT: DW_AT_low_pc [DW_FORM_GNU_addr_index]	(indexed (00000002) address = 0x0000000000000046 ".text")
-; DWARF4-NEXT: DW_AT_high_pc [DW_FORM_data4]	(0x00000024)
+; DWARF4-NEXT: DW_AT_low_pc [DW_FORM_GNU_addr_index]	(indexed (00000002) address = 0x000000000000002c ".text")
+; DWARF4-NEXT: DW_AT_high_pc [DW_FORM_data4]	(0x00000012)
 ; DWARF4: DW_AT_name {{.*}} "boo") 
 
 ; DWARF4: DW_TAG_subprogram
-; DWARF4-NEXT: DW_AT_low_pc  [DW_FORM_GNU_addr_index] (indexed (00000003) address = 0x000000000000006c ".text")
-; DWARF4-NEXT: DW_AT_high_pc [DW_FORM_GNU_addr_index] (indexed (00000004) address = 0x00000000000000b0 ".text")
+; DWARF4-NEXT: DW_AT_low_pc  [DW_FORM_GNU_addr_index] (indexed (00000003) address = 0x000000000000003e ".text")
+; DWARF4-NEXT: DW_AT_high_pc [DW_FORM_GNU_addr_index] (indexed (00000004) address = 0x000000000000006e ".text")
 ; DWARF4: DW_AT_name {{.*}} "main") 
 
 ; HDR-NOT: .rela.{{.*}}.dwo
@@ -88,11 +88,9 @@
 ; DWARF4: Addrs: [
 ; DWARF4-NEXT: 0x0000000000000000
 ; DWARF4-NEXT: 0x000000000000002c
+; DWARF4-NEXT: 0x000000000000002c
 ; DWARF4-NEXT: 0x000000000000003e
-; DWARF4-NEXT: 0x0000000000000044
-; DWARF4-NEXT: 0x0000000000000046
-; DWARF4-NEXT: 0x000000000000006c
-; DWARF4-NEXT: 0x00000000000000b0
+; DWARF4-NEXT: 0x000000000000006e
 ; DWARF4-NEXT: ]
 
 ; HDR-NOT: .rela.{{.*}}.dwo
