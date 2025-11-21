@@ -81,32 +81,19 @@ jobs:
           pip install doc8 --break-system-packages
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Run clang-tidy linter
+      - name: Run linters
         env:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           echo "[]" > comments &&
           python3 llvm/utils/git/code-lint-helper.py \
-            --linter clang-tidy \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
             --start-rev HEAD~1 \
             --end-rev HEAD \
             --verbose \
             --changed-files "$CHANGED_FILES"
-
-      - name: Run doc8 linter
-        env:
-          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          python3 llvm/utils/git/code-lint-helper.py \
-            --linter doc8 \
-            --token ${{ secrets.GITHUB_TOKEN }} \
-            --issue-number $GITHUB_PR_NUMBER \
-            --start-rev HEAD~1 \
-            --end-rev HEAD \
-            --verbose
 
       - name: Upload results
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
