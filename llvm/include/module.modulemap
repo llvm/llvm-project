@@ -10,7 +10,6 @@ module LLVM_Analysis {
 
   // This is intended for (repeated) textual inclusion.
   textual header "llvm/Analysis/ScalarFuncs.def"
-  textual header "llvm/Analysis/TargetLibraryInfo.def"
   textual header "llvm/Analysis/VecFuncs.def"
 }
 
