@@ -19280,6 +19280,49 @@ static SDValue combineADDToMAT_PCREL_ADDR(SDNode *N, SelectionDAG &DAG,
   return MatPCRel;
 }
 
+// Transform (add X, (build_vector (T 1), (T 1), ...)) -> (sub X, (XXLEQVOnes))
+// XXLEQVOnes creates an all-1s vector (0xFFFFFFFF...) efficiently via xxleqv
+// Mathematical identity: X + 1 = X - (-1)
+// Applies to v4i32, v2i64, v8i16, v16i8 where all elements are constant 1
+// Requirement: VSX feature for efficient xxleqv generation
+static SDValue combineADDToSUB(SDNode *N, SelectionDAG &DAG,
+                               const PPCSubtarget &Subtarget) {
+
+  EVT VT = N->getValueType(0);
+  if (!Subtarget.hasVSX())
+    return SDValue();
+
+  // Handle v2i64, v4i32, v8i16 and v16i8 types
+  if (!(VT == MVT::v8i16 || VT == MVT::v16i8 || VT == MVT::v4i32 ||
+        VT == MVT::v2i64))
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // Check if RHS is BUILD_VECTOR
+  if (RHS.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  // Check if all the elements are 1
+  unsigned NumOfEles = RHS.getNumOperands();
+  for (unsigned i = 0; i < NumOfEles; ++i) {
+    auto *CN = dyn_cast<ConstantSDNode>(RHS.getOperand(i));
+    if (!CN || CN->getSExtValue() != 1)
+      return SDValue();
+  }
+  SDLoc DL(N);
+
+  SDValue MinusOne = DAG.getConstant(APInt::getAllOnes(32), DL, MVT::i32);
+  SmallVector<SDValue, 4> Ops(4, MinusOne);
+  SDValue AllOnesVec = DAG.getBuildVector(MVT::v4i32, DL, Ops);
+
+  // Bitcast to the target vector type
+  SDValue Bitcast = DAG.getNode(ISD::BITCAST, DL, VT, AllOnesVec);
+
+  return DAG.getNode(ISD::SUB, DL, VT, LHS, Bitcast);
+}
+
 SDValue PPCTargetLowering::combineADD(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = combineADDToADDZE(N, DCI.DAG, Subtarget))
     return Value;
@@ -19287,6 +19330,8 @@ SDValue PPCTargetLowering::combineADD(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = combineADDToMAT_PCREL_ADDR(N, DCI.DAG, Subtarget))
     return Value;
 
+  if (auto Value = combineADDToSUB(N, DCI.DAG, Subtarget))
+    return Value;
   return SDValue();
 }
 
