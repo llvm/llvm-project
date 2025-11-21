@@ -58,7 +58,6 @@ enum ProcessorSubtypes : unsigned {
 // by clang as a proxy for what's in libgcc/compiler-rt.
 enum ProcessorFeatures {
 #define X86_FEATURE(ENUM, STRING) FEATURE_##ENUM,
-#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE)
 #include "llvm/TargetParser/X86TargetParser.def"
   CPU_FEATURE_MAX,
 #define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE) FEATURE_##ENUM,

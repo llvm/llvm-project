@@ -662,7 +662,6 @@ constexpr FeatureBitset ImpliedFeaturesMOVRS = {};
 
 constexpr FeatureInfo FeatureInfos[] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},
-#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE)
 #include "llvm/TargetParser/X86TargetParser.def"
 };
 
