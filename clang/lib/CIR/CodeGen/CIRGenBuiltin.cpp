@@ -93,6 +93,83 @@ static RValue emitUnaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
   return RValue::get(call->getResult(0));
 }
 
+static RValue errorBuiltinNYI(CIRGenFunction &cgf, const CallExpr *e,
+                              unsigned builtinID) {
+
+  if (cgf.getContext().BuiltinInfo.isLibFunction(builtinID)) {
+    cgf.cgm.errorNYI(
+        e->getSourceRange(),
+        std::string("unimplemented X86 library function builtin call: ") +
+            cgf.getContext().BuiltinInfo.getName(builtinID));
+  } else {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     std::string("unimplemented X86 builtin call: ") +
+                         cgf.getContext().BuiltinInfo.getName(builtinID));
+  }
+
+  return cgf.getUndefRValue(e->getType());
+}
+
+static RValue emitBuiltinAlloca(CIRGenFunction &cgf, const CallExpr *e,
+                                unsigned builtinID) {
+  assert(builtinID == Builtin::BI__builtin_alloca ||
+         builtinID == Builtin::BI__builtin_alloca_uninitialized ||
+         builtinID == Builtin::BIalloca || builtinID == Builtin::BI_alloca);
+
+  // Get alloca size input
+  mlir::Value size = cgf.emitScalarExpr(e->getArg(0));
+
+  // The alignment of the alloca should correspond to __BIGGEST_ALIGNMENT__.
+  const TargetInfo &ti = cgf.getContext().getTargetInfo();
+  const CharUnits suitableAlignmentInBytes =
+      cgf.getContext().toCharUnitsFromBits(ti.getSuitableAlign());
+
+  // Emit the alloca op with type `u8 *` to match the semantics of
+  // `llvm.alloca`. We later bitcast the type to `void *` to match the
+  // semantics of C/C++
+  // FIXME(cir): It may make sense to allow AllocaOp of type `u8` to return a
+  // pointer of type `void *`. This will require a change to the allocaOp
+  // verifier.
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Value allocaAddr = builder.createAlloca(
+      cgf.getLoc(e->getSourceRange()), builder.getUInt8PtrTy(),
+      builder.getUInt8Ty(), "bi_alloca", suitableAlignmentInBytes, size);
+
+  // Initialize the allocated buffer if required.
+  if (builtinID != Builtin::BI__builtin_alloca_uninitialized) {
+    // Initialize the alloca with the given size and alignment according to
+    // the lang opts. Only the trivial non-initialization is supported for
+    // now.
+
+    switch (cgf.getLangOpts().getTrivialAutoVarInit()) {
+    case LangOptions::TrivialAutoVarInitKind::Uninitialized:
+      // Nothing to initialize.
+      break;
+    case LangOptions::TrivialAutoVarInitKind::Zero:
+    case LangOptions::TrivialAutoVarInitKind::Pattern:
+      cgf.cgm.errorNYI("trivial auto var init");
+      break;
+    }
+  }
+
+  // An alloca will always return a pointer to the alloca (stack) address
+  // space. This address space need not be the same as the AST / Language
+  // default (e.g. in C / C++ auto vars are in the generic address space). At
+  // the AST level this is handled within CreateTempAlloca et al., but for the
+  // builtin / dynamic alloca we have to handle it here.
+
+  if (!cir::isMatchingAddressSpace(
+          cgf.getCIRAllocaAddressSpace(),
+          e->getType()->getPointeeType().getAddressSpace())) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "Non-default address space for alloca");
+  }
+
+  // Bitcast the alloca to the expected type.
+  return RValue::get(builder.createBitcast(
+      allocaAddr, builder.getVoidPtrTy(cgf.getCIRAllocaAddressSpace())));
+}
+
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                        const CallExpr *e,
                                        ReturnValueSlot returnValue) {
@@ -148,62 +225,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_va_end:
     emitVAEnd(emitVAListRef(e->getArg(0)).getPointer());
     return {};
-
-  case Builtin::BIalloca:
-  case Builtin::BI_alloca:
-  case Builtin::BI__builtin_alloca_uninitialized:
-  case Builtin::BI__builtin_alloca: {
-    // Get alloca size input
-    mlir::Value size = emitScalarExpr(e->getArg(0));
-
-    // The alignment of the alloca should correspond to __BIGGEST_ALIGNMENT__.
-    const TargetInfo &ti = getContext().getTargetInfo();
-    const CharUnits suitableAlignmentInBytes =
-        getContext().toCharUnitsFromBits(ti.getSuitableAlign());
-
-    // Emit the alloca op with type `u8 *` to match the semantics of
-    // `llvm.alloca`. We later bitcast the type to `void *` to match the
-    // semantics of C/C++
-    // FIXME(cir): It may make sense to allow AllocaOp of type `u8` to return a
-    // pointer of type `void *`. This will require a change to the allocaOp
-    // verifier.
-    mlir::Value allocaAddr = builder.createAlloca(
-        getLoc(e->getSourceRange()), builder.getUInt8PtrTy(),
-        builder.getUInt8Ty(), "bi_alloca", suitableAlignmentInBytes, size);
-
-    // Initialize the allocated buffer if required.
-    if (builtinID != Builtin::BI__builtin_alloca_uninitialized) {
-      // Initialize the alloca with the given size and alignment according to
-      // the lang opts. Only the trivial non-initialization is supported for
-      // now.
-
-      switch (getLangOpts().getTrivialAutoVarInit()) {
-      case LangOptions::TrivialAutoVarInitKind::Uninitialized:
-        // Nothing to initialize.
-        break;
-      case LangOptions::TrivialAutoVarInitKind::Zero:
-      case LangOptions::TrivialAutoVarInitKind::Pattern:
-        cgm.errorNYI("trivial auto var init");
-        break;
-      }
-    }
-
-    // An alloca will always return a pointer to the alloca (stack) address
-    // space. This address space need not be the same as the AST / Language
-    // default (e.g. in C / C++ auto vars are in the generic address space). At
-    // the AST level this is handled within CreateTempAlloca et al., but for the
-    // builtin / dynamic alloca we have to handle it here.
-
-    if (!cir::isMatchingAddressSpace(
-            getCIRAllocaAddressSpace(),
-            e->getType()->getPointeeType().getAddressSpace())) {
-      cgm.errorNYI(e->getSourceRange(), "Non-default address space for alloca");
-    }
-
-    // Bitcast the alloca to the expected type.
-    return RValue::get(builder.createBitcast(
-        allocaAddr, builder.getVoidPtrTy(getCIRAllocaAddressSpace())));
-  }
 
   case Builtin::BIcos:
   case Builtin::BIcosf:
@@ -425,36 +446,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_rotateright64:
     return emitRotate(e, /*isRotateLeft=*/false);
 
-  case Builtin::BI__builtin_return_address:
-  case Builtin::BI__builtin_frame_address: {
-    mlir::Location loc = getLoc(e->getExprLoc());
-    llvm::APSInt level = e->getArg(0)->EvaluateKnownConstInt(getContext());
-    if (builtinID == Builtin::BI__builtin_return_address) {
-      return RValue::get(cir::ReturnAddrOp::create(
-          builder, loc,
-          builder.getConstAPInt(loc, builder.getUInt32Ty(), level)));
-    }
-    return RValue::get(cir::FrameAddrOp::create(
-        builder, loc,
-        builder.getConstAPInt(loc, builder.getUInt32Ty(), level)));
-  }
-
-  case Builtin::BI__builtin_trap:
-    emitTrap(loc, /*createNewBlock=*/true);
-    return RValue::get(nullptr);
-
-  case Builtin::BI__builtin_unreachable:
-    emitUnreachable(e->getExprLoc(), /*createNewBlock=*/true);
-    return RValue::get(nullptr);
-
-  case Builtin::BI__builtin_elementwise_acos:
-    return emitUnaryFPBuiltin<cir::ACosOp>(*this, *e);
-  case Builtin::BI__builtin_elementwise_asin:
-    return emitUnaryFPBuiltin<cir::ASinOp>(*this, *e);
-  case Builtin::BI__builtin_elementwise_atan:
-    return emitUnaryFPBuiltin<cir::ATanOp>(*this, *e);
-  case Builtin::BI__builtin_elementwise_cos:
-    return emitUnaryFPBuiltin<cir::CosOp>(*this, *e);
   case Builtin::BI__builtin_coro_id:
   case Builtin::BI__builtin_coro_promise:
   case Builtin::BI__builtin_coro_resume:
@@ -520,8 +511,40 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     cir::PrefetchOp::create(builder, loc, address, locality, isWrite);
     return RValue::get(nullptr);
   }
+  case Builtin::BI__builtin_readcyclecounter:
+  case Builtin::BI__builtin_readsteadycounter:
+  case Builtin::BI__builtin___clear_cache:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_trap:
+    emitTrap(loc, /*createNewBlock=*/true);
+    return RValue::getIgnored();
+  case Builtin::BI__builtin_verbose_trap:
+  case Builtin::BI__debugbreak:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_unreachable:
+    emitUnreachable(e->getExprLoc(), /*createNewBlock=*/true);
+    return RValue::getIgnored();
+  case Builtin::BI__builtin_powi:
+  case Builtin::BI__builtin_powif:
+  case Builtin::BI__builtin_powil:
+  case Builtin::BI__builtin_frexpl:
+  case Builtin::BI__builtin_frexp:
+  case Builtin::BI__builtin_frexpf:
+  case Builtin::BI__builtin_frexpf128:
+  case Builtin::BI__builtin_frexpf16:
+  case Builtin::BImodf:
+  case Builtin::BImodff:
+  case Builtin::BImodfl:
+  case Builtin::BI__builtin_modf:
+  case Builtin::BI__builtin_modff:
+  case Builtin::BI__builtin_modfl:
+  case Builtin::BI__builtin_isgreater:
+  case Builtin::BI__builtin_isgreaterequal:
+  case Builtin::BI__builtin_isless:
+  case Builtin::BI__builtin_islessequal:
+  case Builtin::BI__builtin_islessgreater:
+  case Builtin::BI__builtin_isunordered:
   // From https://clang.llvm.org/docs/LanguageExtensions.html#builtin-isfpclass
-  // :
   //
   //  The `__builtin_isfpclass()` builtin is a generalization of functions
   //  isnan, isinf, isfinite and some others defined by the C standard. It tests
@@ -555,7 +578,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         builder.createIsFPClass(loc, v, cir::FPClassTest::Infinity),
         convertType(e->getType())));
   }
-
   case Builtin::BIfinite:
   case Builtin::BI__finite:
   case Builtin::BIfinitef:
@@ -612,6 +634,432 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         builder.createIsFPClass(loc, v, cir::FPClassTest(test)),
         convertType(e->getType())));
   }
+  case Builtin::BI__builtin_nondeterministic_value:
+  case Builtin::BI__builtin_elementwise_abs:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_elementwise_acos:
+    return emitUnaryFPBuiltin<cir::ACosOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_asin:
+    return emitUnaryFPBuiltin<cir::ASinOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_atan:
+    return emitUnaryFPBuiltin<cir::ATanOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_atan2:
+  case Builtin::BI__builtin_elementwise_ceil:
+  case Builtin::BI__builtin_elementwise_exp:
+  case Builtin::BI__builtin_elementwise_exp2:
+  case Builtin::BI__builtin_elementwise_exp10:
+  case Builtin::BI__builtin_elementwise_ldexp:
+  case Builtin::BI__builtin_elementwise_log:
+  case Builtin::BI__builtin_elementwise_log2:
+  case Builtin::BI__builtin_elementwise_log10:
+  case Builtin::BI__builtin_elementwise_pow:
+  case Builtin::BI__builtin_elementwise_bitreverse:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_elementwise_cos:
+    return emitUnaryFPBuiltin<cir::CosOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_cosh:
+  case Builtin::BI__builtin_elementwise_floor:
+  case Builtin::BI__builtin_elementwise_popcount:
+  case Builtin::BI__builtin_elementwise_roundeven:
+  case Builtin::BI__builtin_elementwise_round:
+  case Builtin::BI__builtin_elementwise_rint:
+  case Builtin::BI__builtin_elementwise_nearbyint:
+  case Builtin::BI__builtin_elementwise_sin:
+  case Builtin::BI__builtin_elementwise_sinh:
+  case Builtin::BI__builtin_elementwise_tan:
+  case Builtin::BI__builtin_elementwise_tanh:
+  case Builtin::BI__builtin_elementwise_trunc:
+  case Builtin::BI__builtin_elementwise_canonicalize:
+  case Builtin::BI__builtin_elementwise_copysign:
+  case Builtin::BI__builtin_elementwise_fma:
+  case Builtin::BI__builtin_elementwise_fshl:
+  case Builtin::BI__builtin_elementwise_fshr:
+  case Builtin::BI__builtin_elementwise_add_sat:
+  case Builtin::BI__builtin_elementwise_sub_sat:
+  case Builtin::BI__builtin_elementwise_max:
+  case Builtin::BI__builtin_elementwise_min:
+  case Builtin::BI__builtin_elementwise_maxnum:
+  case Builtin::BI__builtin_elementwise_minnum:
+  case Builtin::BI__builtin_elementwise_maximum:
+  case Builtin::BI__builtin_elementwise_minimum:
+  case Builtin::BI__builtin_elementwise_maximumnum:
+  case Builtin::BI__builtin_elementwise_minimumnum:
+  case Builtin::BI__builtin_reduce_max:
+  case Builtin::BI__builtin_reduce_min:
+  case Builtin::BI__builtin_reduce_add:
+  case Builtin::BI__builtin_reduce_mul:
+  case Builtin::BI__builtin_reduce_xor:
+  case Builtin::BI__builtin_reduce_or:
+  case Builtin::BI__builtin_reduce_and:
+  case Builtin::BI__builtin_reduce_maximum:
+  case Builtin::BI__builtin_reduce_minimum:
+  case Builtin::BI__builtin_matrix_transpose:
+  case Builtin::BI__builtin_matrix_column_major_load:
+  case Builtin::BI__builtin_matrix_column_major_store:
+  case Builtin::BI__builtin_masked_load:
+  case Builtin::BI__builtin_masked_expand_load:
+  case Builtin::BI__builtin_masked_gather:
+  case Builtin::BI__builtin_masked_store:
+  case Builtin::BI__builtin_masked_compress_store:
+  case Builtin::BI__builtin_masked_scatter:
+  case Builtin::BI__builtin_isinf_sign:
+  case Builtin::BI__builtin_flt_rounds:
+  case Builtin::BI__builtin_set_flt_rounds:
+  case Builtin::BI__builtin_fpclassify:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BIalloca:
+  case Builtin::BI_alloca:
+  case Builtin::BI__builtin_alloca_uninitialized:
+  case Builtin::BI__builtin_alloca:
+    return emitBuiltinAlloca(*this, e, builtinID);
+  case Builtin::BI__builtin_alloca_with_align_uninitialized:
+  case Builtin::BI__builtin_alloca_with_align:
+  case Builtin::BI__builtin_infer_alloc_token:
+  case Builtin::BIbzero:
+  case Builtin::BI__builtin_bzero:
+  case Builtin::BIbcopy:
+  case Builtin::BI__builtin_bcopy:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BImemcpy:
+  case Builtin::BI__builtin_memcpy:
+  case Builtin::BImempcpy:
+  case Builtin::BI__builtin_mempcpy:
+  case Builtin::BI__builtin_memcpy_inline:
+  case Builtin::BI__builtin_char_memchr:
+  case Builtin::BI__builtin___memcpy_chk:
+  case Builtin::BI__builtin_objc_memmove_collectable:
+  case Builtin::BI__builtin___memmove_chk:
+  case Builtin::BI__builtin_trivially_relocate:
+  case Builtin::BImemmove:
+  case Builtin::BI__builtin_memmove:
+  case Builtin::BImemset:
+  case Builtin::BI__builtin_memset:
+  case Builtin::BI__builtin_memset_inline:
+  case Builtin::BI__builtin___memset_chk:
+  case Builtin::BI__builtin_wmemchr:
+  case Builtin::BI__builtin_wmemcmp:
+    break; // Handled as library calls below.
+  case Builtin::BI__builtin_dwarf_cfa:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_return_address:
+  case Builtin::BI_ReturnAddress:
+  case Builtin::BI__builtin_frame_address: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    llvm::APSInt level = e->getArg(0)->EvaluateKnownConstInt(getContext());
+    if (builtinID == Builtin::BI__builtin_return_address) {
+      return RValue::get(cir::ReturnAddrOp::create(
+          builder, loc,
+          builder.getConstAPInt(loc, builder.getUInt32Ty(), level)));
+    }
+    return RValue::get(cir::FrameAddrOp::create(
+        builder, loc,
+        builder.getConstAPInt(loc, builder.getUInt32Ty(), level)));
+  }
+  case Builtin::BI__builtin_extract_return_addr:
+  case Builtin::BI__builtin_frob_return_addr:
+  case Builtin::BI__builtin_dwarf_sp_column:
+  case Builtin::BI__builtin_init_dwarf_reg_size_table:
+  case Builtin::BI__builtin_eh_return:
+  case Builtin::BI__builtin_unwind_init:
+  case Builtin::BI__builtin_extend_pointer:
+  case Builtin::BI__builtin_setjmp:
+  case Builtin::BI__builtin_longjmp:
+  case Builtin::BI__builtin_launder:
+  case Builtin::BI__sync_fetch_and_add:
+  case Builtin::BI__sync_fetch_and_sub:
+  case Builtin::BI__sync_fetch_and_or:
+  case Builtin::BI__sync_fetch_and_and:
+  case Builtin::BI__sync_fetch_and_xor:
+  case Builtin::BI__sync_fetch_and_nand:
+  case Builtin::BI__sync_add_and_fetch:
+  case Builtin::BI__sync_sub_and_fetch:
+  case Builtin::BI__sync_and_and_fetch:
+  case Builtin::BI__sync_or_and_fetch:
+  case Builtin::BI__sync_xor_and_fetch:
+  case Builtin::BI__sync_nand_and_fetch:
+  case Builtin::BI__sync_val_compare_and_swap:
+  case Builtin::BI__sync_bool_compare_and_swap:
+  case Builtin::BI__sync_lock_test_and_set:
+  case Builtin::BI__sync_lock_release:
+  case Builtin::BI__sync_swap:
+  case Builtin::BI__sync_fetch_and_add_1:
+  case Builtin::BI__sync_fetch_and_add_2:
+  case Builtin::BI__sync_fetch_and_add_4:
+  case Builtin::BI__sync_fetch_and_add_8:
+  case Builtin::BI__sync_fetch_and_add_16:
+  case Builtin::BI__sync_fetch_and_sub_1:
+  case Builtin::BI__sync_fetch_and_sub_2:
+  case Builtin::BI__sync_fetch_and_sub_4:
+  case Builtin::BI__sync_fetch_and_sub_8:
+  case Builtin::BI__sync_fetch_and_sub_16:
+  case Builtin::BI__sync_fetch_and_or_1:
+  case Builtin::BI__sync_fetch_and_or_2:
+  case Builtin::BI__sync_fetch_and_or_4:
+  case Builtin::BI__sync_fetch_and_or_8:
+  case Builtin::BI__sync_fetch_and_or_16:
+  case Builtin::BI__sync_fetch_and_and_1:
+  case Builtin::BI__sync_fetch_and_and_2:
+  case Builtin::BI__sync_fetch_and_and_4:
+  case Builtin::BI__sync_fetch_and_and_8:
+  case Builtin::BI__sync_fetch_and_and_16:
+  case Builtin::BI__sync_fetch_and_xor_1:
+  case Builtin::BI__sync_fetch_and_xor_2:
+  case Builtin::BI__sync_fetch_and_xor_4:
+  case Builtin::BI__sync_fetch_and_xor_8:
+  case Builtin::BI__sync_fetch_and_xor_16:
+  case Builtin::BI__sync_fetch_and_nand_1:
+  case Builtin::BI__sync_fetch_and_nand_2:
+  case Builtin::BI__sync_fetch_and_nand_4:
+  case Builtin::BI__sync_fetch_and_nand_8:
+  case Builtin::BI__sync_fetch_and_nand_16:
+  case Builtin::BI__sync_fetch_and_min:
+  case Builtin::BI__sync_fetch_and_max:
+  case Builtin::BI__sync_fetch_and_umin:
+  case Builtin::BI__sync_fetch_and_umax:
+  case Builtin::BI__sync_add_and_fetch_1:
+  case Builtin::BI__sync_add_and_fetch_2:
+  case Builtin::BI__sync_add_and_fetch_4:
+  case Builtin::BI__sync_add_and_fetch_8:
+  case Builtin::BI__sync_add_and_fetch_16:
+  case Builtin::BI__sync_sub_and_fetch_1:
+  case Builtin::BI__sync_sub_and_fetch_2:
+  case Builtin::BI__sync_sub_and_fetch_4:
+  case Builtin::BI__sync_sub_and_fetch_8:
+  case Builtin::BI__sync_sub_and_fetch_16:
+  case Builtin::BI__sync_and_and_fetch_1:
+  case Builtin::BI__sync_and_and_fetch_2:
+  case Builtin::BI__sync_and_and_fetch_4:
+  case Builtin::BI__sync_and_and_fetch_8:
+  case Builtin::BI__sync_and_and_fetch_16:
+  case Builtin::BI__sync_or_and_fetch_1:
+  case Builtin::BI__sync_or_and_fetch_2:
+  case Builtin::BI__sync_or_and_fetch_4:
+  case Builtin::BI__sync_or_and_fetch_8:
+  case Builtin::BI__sync_or_and_fetch_16:
+  case Builtin::BI__sync_xor_and_fetch_1:
+  case Builtin::BI__sync_xor_and_fetch_2:
+  case Builtin::BI__sync_xor_and_fetch_4:
+  case Builtin::BI__sync_xor_and_fetch_8:
+  case Builtin::BI__sync_xor_and_fetch_16:
+  case Builtin::BI__sync_nand_and_fetch_1:
+  case Builtin::BI__sync_nand_and_fetch_2:
+  case Builtin::BI__sync_nand_and_fetch_4:
+  case Builtin::BI__sync_nand_and_fetch_8:
+  case Builtin::BI__sync_nand_and_fetch_16:
+  case Builtin::BI__sync_val_compare_and_swap_1:
+  case Builtin::BI__sync_val_compare_and_swap_2:
+  case Builtin::BI__sync_val_compare_and_swap_4:
+  case Builtin::BI__sync_val_compare_and_swap_8:
+  case Builtin::BI__sync_val_compare_and_swap_16:
+  case Builtin::BI__sync_bool_compare_and_swap_1:
+  case Builtin::BI__sync_bool_compare_and_swap_2:
+  case Builtin::BI__sync_bool_compare_and_swap_4:
+  case Builtin::BI__sync_bool_compare_and_swap_8:
+  case Builtin::BI__sync_bool_compare_and_swap_16:
+  case Builtin::BI__sync_swap_1:
+  case Builtin::BI__sync_swap_2:
+  case Builtin::BI__sync_swap_4:
+  case Builtin::BI__sync_swap_8:
+  case Builtin::BI__sync_swap_16:
+  case Builtin::BI__sync_lock_test_and_set_1:
+  case Builtin::BI__sync_lock_test_and_set_2:
+  case Builtin::BI__sync_lock_test_and_set_4:
+  case Builtin::BI__sync_lock_test_and_set_8:
+  case Builtin::BI__sync_lock_test_and_set_16:
+  case Builtin::BI__sync_lock_release_1:
+  case Builtin::BI__sync_lock_release_2:
+  case Builtin::BI__sync_lock_release_4:
+  case Builtin::BI__sync_lock_release_8:
+  case Builtin::BI__sync_lock_release_16:
+  case Builtin::BI__sync_synchronize:
+  case Builtin::BI__builtin_nontemporal_load:
+  case Builtin::BI__builtin_nontemporal_store:
+  case Builtin::BI__c11_atomic_is_lock_free:
+  case Builtin::BI__atomic_is_lock_free:
+  case Builtin::BI__atomic_test_and_set:
+  case Builtin::BI__atomic_clear:
+  case Builtin::BI__atomic_thread_fence:
+  case Builtin::BI__atomic_signal_fence:
+  case Builtin::BI__c11_atomic_thread_fence:
+  case Builtin::BI__c11_atomic_signal_fence:
+  case Builtin::BI__scoped_atomic_thread_fence:
+  case Builtin::BI__builtin_signbit:
+  case Builtin::BI__builtin_signbitf:
+  case Builtin::BI__builtin_signbitl:
+  case Builtin::BI__warn_memset_zero_len:
+  case Builtin::BI__annotation:
+  case Builtin::BI__builtin_annotation:
+  case Builtin::BI__builtin_addcb:
+  case Builtin::BI__builtin_addcs:
+  case Builtin::BI__builtin_addc:
+  case Builtin::BI__builtin_addcl:
+  case Builtin::BI__builtin_addcll:
+  case Builtin::BI__builtin_subcb:
+  case Builtin::BI__builtin_subcs:
+  case Builtin::BI__builtin_subc:
+  case Builtin::BI__builtin_subcl:
+  case Builtin::BI__builtin_subcll:
+  case Builtin::BI__builtin_add_overflow:
+  case Builtin::BI__builtin_sub_overflow:
+  case Builtin::BI__builtin_mul_overflow:
+  case Builtin::BI__builtin_uadd_overflow:
+  case Builtin::BI__builtin_uaddl_overflow:
+  case Builtin::BI__builtin_uaddll_overflow:
+  case Builtin::BI__builtin_usub_overflow:
+  case Builtin::BI__builtin_usubl_overflow:
+  case Builtin::BI__builtin_usubll_overflow:
+  case Builtin::BI__builtin_umul_overflow:
+  case Builtin::BI__builtin_umull_overflow:
+  case Builtin::BI__builtin_umulll_overflow:
+  case Builtin::BI__builtin_sadd_overflow:
+  case Builtin::BI__builtin_saddl_overflow:
+  case Builtin::BI__builtin_saddll_overflow:
+  case Builtin::BI__builtin_ssub_overflow:
+  case Builtin::BI__builtin_ssubl_overflow:
+  case Builtin::BI__builtin_ssubll_overflow:
+  case Builtin::BI__builtin_smul_overflow:
+  case Builtin::BI__builtin_smull_overflow:
+  case Builtin::BI__builtin_smulll_overflow:
+  case Builtin::BIaddressof:
+  case Builtin::BI__addressof:
+  case Builtin::BI__builtin_addressof:
+  case Builtin::BI__builtin_function_start:
+  case Builtin::BI__builtin_operator_new:
+  case Builtin::BI__builtin_operator_delete:
+  case Builtin::BI__builtin_is_aligned:
+  case Builtin::BI__builtin_align_up:
+  case Builtin::BI__builtin_align_down:
+  case Builtin::BI__noop:
+  case Builtin::BI__builtin_call_with_static_chain:
+  case Builtin::BI_InterlockedExchange8:
+  case Builtin::BI_InterlockedExchange16:
+  case Builtin::BI_InterlockedExchange:
+  case Builtin::BI_InterlockedExchangePointer:
+  case Builtin::BI_InterlockedCompareExchangePointer:
+  case Builtin::BI_InterlockedCompareExchangePointer_nf:
+  case Builtin::BI_InterlockedCompareExchange8:
+  case Builtin::BI_InterlockedCompareExchange16:
+  case Builtin::BI_InterlockedCompareExchange:
+  case Builtin::BI_InterlockedCompareExchange64:
+  case Builtin::BI_InterlockedIncrement16:
+  case Builtin::BI_InterlockedIncrement:
+  case Builtin::BI_InterlockedDecrement16:
+  case Builtin::BI_InterlockedDecrement:
+  case Builtin::BI_InterlockedAnd8:
+  case Builtin::BI_InterlockedAnd16:
+  case Builtin::BI_InterlockedAnd:
+  case Builtin::BI_InterlockedExchangeAdd8:
+  case Builtin::BI_InterlockedExchangeAdd16:
+  case Builtin::BI_InterlockedExchangeAdd:
+  case Builtin::BI_InterlockedExchangeSub8:
+  case Builtin::BI_InterlockedExchangeSub16:
+  case Builtin::BI_InterlockedExchangeSub:
+  case Builtin::BI_InterlockedOr8:
+  case Builtin::BI_InterlockedOr16:
+  case Builtin::BI_InterlockedOr:
+  case Builtin::BI_InterlockedXor8:
+  case Builtin::BI_InterlockedXor16:
+  case Builtin::BI_InterlockedXor:
+  case Builtin::BI_bittest64:
+  case Builtin::BI_bittest:
+  case Builtin::BI_bittestandcomplement64:
+  case Builtin::BI_bittestandcomplement:
+  case Builtin::BI_bittestandreset64:
+  case Builtin::BI_bittestandreset:
+  case Builtin::BI_bittestandset64:
+  case Builtin::BI_bittestandset:
+  case Builtin::BI_interlockedbittestandreset:
+  case Builtin::BI_interlockedbittestandreset64:
+  case Builtin::BI_interlockedbittestandreset64_acq:
+  case Builtin::BI_interlockedbittestandreset64_rel:
+  case Builtin::BI_interlockedbittestandreset64_nf:
+  case Builtin::BI_interlockedbittestandset64:
+  case Builtin::BI_interlockedbittestandset64_acq:
+  case Builtin::BI_interlockedbittestandset64_rel:
+  case Builtin::BI_interlockedbittestandset64_nf:
+  case Builtin::BI_interlockedbittestandset:
+  case Builtin::BI_interlockedbittestandset_acq:
+  case Builtin::BI_interlockedbittestandset_rel:
+  case Builtin::BI_interlockedbittestandset_nf:
+  case Builtin::BI_interlockedbittestandreset_acq:
+  case Builtin::BI_interlockedbittestandreset_rel:
+  case Builtin::BI_interlockedbittestandreset_nf:
+  case Builtin::BI__iso_volatile_load8:
+  case Builtin::BI__iso_volatile_load16:
+  case Builtin::BI__iso_volatile_load32:
+  case Builtin::BI__iso_volatile_load64:
+  case Builtin::BI__iso_volatile_store8:
+  case Builtin::BI__iso_volatile_store16:
+  case Builtin::BI__iso_volatile_store32:
+  case Builtin::BI__iso_volatile_store64:
+  case Builtin::BI__builtin_ptrauth_sign_constant:
+  case Builtin::BI__builtin_ptrauth_auth:
+  case Builtin::BI__builtin_ptrauth_auth_and_resign:
+  case Builtin::BI__builtin_ptrauth_blend_discriminator:
+  case Builtin::BI__builtin_ptrauth_sign_generic_data:
+  case Builtin::BI__builtin_ptrauth_sign_unauthenticated:
+  case Builtin::BI__builtin_ptrauth_strip:
+  case Builtin::BI__builtin_get_vtable_pointer:
+  case Builtin::BI__exception_code:
+  case Builtin::BI_exception_code:
+  case Builtin::BI__exception_info:
+  case Builtin::BI_exception_info:
+  case Builtin::BI__abnormal_termination:
+  case Builtin::BI_abnormal_termination:
+  case Builtin::BI_setjmpex:
+  case Builtin::BI_setjmp:
+  case Builtin::BImove:
+  case Builtin::BImove_if_noexcept:
+  case Builtin::BIforward:
+  case Builtin::BIforward_like:
+  case Builtin::BIas_const:
+  case Builtin::BI__GetExceptionInfo:
+  case Builtin::BI__fastfail:
+  case Builtin::BIread_pipe:
+  case Builtin::BIwrite_pipe:
+  case Builtin::BIreserve_read_pipe:
+  case Builtin::BIreserve_write_pipe:
+  case Builtin::BIwork_group_reserve_read_pipe:
+  case Builtin::BIwork_group_reserve_write_pipe:
+  case Builtin::BIsub_group_reserve_read_pipe:
+  case Builtin::BIsub_group_reserve_write_pipe:
+  case Builtin::BIcommit_read_pipe:
+  case Builtin::BIcommit_write_pipe:
+  case Builtin::BIwork_group_commit_read_pipe:
+  case Builtin::BIwork_group_commit_write_pipe:
+  case Builtin::BIsub_group_commit_read_pipe:
+  case Builtin::BIsub_group_commit_write_pipe:
+  case Builtin::BIget_pipe_num_packets:
+  case Builtin::BIget_pipe_max_packets:
+  case Builtin::BIto_global:
+  case Builtin::BIto_local:
+  case Builtin::BIto_private:
+  case Builtin::BIenqueue_kernel:
+  case Builtin::BIget_kernel_work_group_size:
+  case Builtin::BIget_kernel_preferred_work_group_size_multiple:
+  case Builtin::BIget_kernel_max_sub_group_size_for_ndrange:
+  case Builtin::BIget_kernel_sub_group_count_for_ndrange:
+  case Builtin::BI__builtin_store_half:
+  case Builtin::BI__builtin_store_halff:
+  case Builtin::BI__builtin_load_half:
+  case Builtin::BI__builtin_load_halff:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_printf:
+  case Builtin::BIprintf:
+    break;
+  case Builtin::BI__builtin_canonicalize:
+  case Builtin::BI__builtin_canonicalizef:
+  case Builtin::BI__builtin_canonicalizef16:
+  case Builtin::BI__builtin_canonicalizel:
+  case Builtin::BI__builtin_thread_pointer:
+  case Builtin::BI__builtin_os_log_format:
+  case Builtin::BI__xray_customevent:
+  case Builtin::BI__xray_typedevent:
+  case Builtin::BI__builtin_ms_va_start:
+  case Builtin::BI__builtin_ms_va_end:
+  case Builtin::BI__builtin_ms_va_copy:
+  case Builtin::BI__builtin_get_device_side_mangled_name:
+    return errorBuiltinNYI(*this, e, builtinID);
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
