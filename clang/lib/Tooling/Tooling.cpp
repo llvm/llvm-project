@@ -13,6 +13,7 @@
 
 #include "clang/Tooling/Tooling.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
@@ -21,17 +22,16 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Options/Options.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -270,17 +270,15 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
                                     StringRef InvokedAs) {
   if (CommandLine.empty() || InvokedAs.empty())
     return;
-  const auto &Table = driver::getDriverOptTable();
+  const auto &Table = getDriverOptTable();
   // --target=X
-  StringRef TargetOPT =
-      Table.getOption(driver::options::OPT_target).getPrefixedName();
+  StringRef TargetOPT = Table.getOption(options::OPT_target).getPrefixedName();
   // -target X
   StringRef TargetOPTLegacy =
-      Table.getOption(driver::options::OPT_target_legacy_spelling)
-          .getPrefixedName();
+      Table.getOption(options::OPT_target_legacy_spelling).getPrefixedName();
   // --driver-mode=X
   StringRef DriverModeOPT =
-      Table.getOption(driver::options::OPT_driver_mode).getPrefixedName();
+      Table.getOption(options::OPT_driver_mode).getPrefixedName();
   auto TargetMode =
       driver::ToolChain::getTargetAndModeFromProgramName(InvokedAs);
   // No need to search for target args if we don't have a target/mode to insert.

@@ -156,7 +156,7 @@ define ptr @test_memmove(ptr noundef %destination, ptr noundef %source, i64 noun
 ; CHECK-AIX-64-P9-NEXT:    std r3, 128(r1)
 ; CHECK-AIX-64-P9-NEXT:    std r4, 120(r1)
 ; CHECK-AIX-64-P9-NEXT:    std r5, 112(r1)
-; CHECK-AIX-64-P9-NEXT:    bl .memmove[PR]
+; CHECK-AIX-64-P9-NEXT:    bl .___memmove64[PR]
 ; CHECK-AIX-64-P9-NEXT:    nop
 ; CHECK-AIX-64-P9-NEXT:    mr r3, r31
 ; CHECK-AIX-64-P9-NEXT:    ld r31, 136(r1) # 8-byte Folded Reload

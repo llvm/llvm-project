@@ -228,7 +228,7 @@ static cl::opt<bool> EnableLoopHeaderDuplication(
 static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
-                           cl::init(true), cl::Hidden);
+                           cl::init(false), cl::Hidden);
 
 static cl::opt<bool>
     EnableHotColdSplit("hot-cold-split",

@@ -120,6 +120,14 @@ functions:
     return_type: int
     arguments:
       - type: int
+  - name: fchown
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: uid_t
+      - type: gid_t
   - name: fork
     standards:
       - POSIX

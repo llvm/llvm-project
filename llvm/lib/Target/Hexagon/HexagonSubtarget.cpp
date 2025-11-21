@@ -76,8 +76,7 @@ HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
       OptLevel(TM.getOptLevel()),
       CPUString(std::string(Hexagon_MC::selectHexagonCPU(CPU))),
       TargetTriple(TT), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
-      RegInfo(getHwMode()), TLInfo(TM, *this),
-      InstrItins(getInstrItineraryForCPU(CPUString)) {
+      TLInfo(TM, *this), InstrItins(getInstrItineraryForCPU(CPUString)) {
   Hexagon_MC::addArchSubtarget(this, FS);
   // Beware of the default constructor of InstrItineraryData: it will
   // reset all members to 0.

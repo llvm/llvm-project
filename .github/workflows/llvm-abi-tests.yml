@@ -10,13 +10,13 @@ on:
       - 'release/**'
     paths:
       - 'llvm/**'
-      - '.github/workflows/llvm-tests.yml'
+      - '.github/workflows/llvm-abi-tests.yml'
   pull_request:
     branches:
       - 'release/**'
     paths:
       - 'llvm/**'
-      - '.github/workflows/llvm-tests.yml'
+      - '.github/workflows/llvm-abi-tests.yml'
 
 concurrency:
   # Skip intermediate builds: always.
@@ -72,6 +72,8 @@ jobs:
     if: github.repository_owner == 'llvm'
     needs: abi-dump-setup
     runs-on: ubuntu-24.04
+    container:
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:f80125c0f767e29b8616210c0fd5cea2cd1f4fb6f2ca86d89f6016b6329b8d7f" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b"
     strategy:
       matrix:
         name:
@@ -87,19 +89,6 @@ jobs:
             ref: ${{ github.sha }}
             repo: ${{ github.repository }}
     steps:
-      - name: Install Ninja
-        uses: llvm/actions/install-ninja@42d80571b13f4599bbefbc7189728b64723c7f78 # main
-      - name: Install abi-compliance-checker
-        run: |
-          sudo apt-get update
-          sudo apt-get -y install abi-dumper autoconf pkg-config
-      - name: Install universal-ctags
-        run: |
-          git clone https://github.com/universal-ctags/ctags.git
-          cd ctags
-          ./autogen.sh
-          ./configure
-          sudo make install
       - name: Download source code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -143,6 +132,8 @@ jobs:
   abi-compare:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-24.04
+    container:
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:f80125c0f767e29b8616210c0fd5cea2cd1f4fb6f2ca86d89f6016b6329b8d7f" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b
     needs:
       - abi-dump-setup
       - abi-dump
@@ -163,10 +154,6 @@ jobs:
           name: symbol-list
           path: symbol-list
 
-      - name: Install abi-compliance-checker
-        run: |
-          sudo apt-get update
-          sudo apt-get -y install abi-compliance-checker
       - name: Compare ABI
         run: |
           if [ -s symbol-list/llvm.symbols ]; then

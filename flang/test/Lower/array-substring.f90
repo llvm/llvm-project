@@ -46,5 +46,5 @@ function test(C)
   logical :: test(1)
   character*12  C(1)
 
-  test = C(1:1)(1:8) == (/'ABCDabcd'/) 
+  test = C(1:1)(1:8) == (/'ABCDabcd'/)
 end function test

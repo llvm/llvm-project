@@ -252,7 +252,6 @@ template <class... Types>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_reference.h>
-#  include <__type_traits/is_replaceable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
 #  include <__type_traits/is_trivially_relocatable.h>
@@ -596,7 +595,6 @@ class _LIBCPP_NO_SPECIALIZATIONS tuple {
 public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
       __conditional_t<_And<__libcpp_is_trivially_relocatable<_Tp>...>::value, tuple, void>;
-  using __replaceable _LIBCPP_NODEBUG = __conditional_t<_And<__is_replaceable<_Tp>...>::value, tuple, void>;
 
   // [tuple.cnstr]
 
