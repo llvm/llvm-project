@@ -37,6 +37,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
@@ -47,6 +48,7 @@
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "llvm/ABI/TargetCodegenInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -72,6 +74,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
+#include <memory>
 #include <optional>
 #include <set>
 
@@ -103,6 +106,64 @@ static CGCXXABI *createCXXABI(CodeGenModule &CGM) {
   }
 
   llvm_unreachable("invalid C++ ABI kind");
+}
+
+const llvm::abi::ABIInfo &
+CodeGenModule::fetchABIInfo(llvm::abi::TypeBuilder &TB) {
+  if (getTriple().getArch() == llvm::Triple::x86_64) {
+    StringRef ABI = Target.getABI();
+    llvm::abi::X86AVXABILevel AVXLevel =
+        (ABI == "avx512" ? llvm::abi::X86AVXABILevel::AVX512
+         : ABI == "avx"  ? llvm::abi::X86AVXABILevel::AVX
+                         : llvm::abi::X86AVXABILevel::None);
+    llvm::abi::ABICompatInfo CompatInfo;
+    bool classifyIntegerMMXAsSSE = [&]() {
+      if (getContext().getLangOpts().getClangABICompat() <=
+          LangOptions::ClangABI::Ver3_8)
+        return false;
+
+      const llvm::Triple &Triple = getTarget().getTriple();
+      if (Triple.isOSDarwin() || Triple.isPS() || Triple.isOSFreeBSD())
+        return false;
+      return true;
+    }();
+    bool honorsRevision0_98 = !getTarget().getTriple().isOSDarwin();
+
+    bool passInt128VectorsInMem = [&]() {
+      if (getContext().getLangOpts().getClangABICompat() <=
+          LangOptions::ClangABI::Ver9)
+        return false;
+
+      const llvm::Triple &T = getTarget().getTriple();
+      return T.isOSLinux() || T.isOSNetBSD();
+    }();
+
+    bool returnCXXRecordGreaterThan128InMem = [&]() {
+      if (getContext().getLangOpts().getClangABICompat() <=
+          LangOptions::ClangABI::Ver20)
+        return false;
+
+      return true;
+    }();
+
+    CompatInfo.Flags.ClassifyIntegerMMXAsSSE = classifyIntegerMMXAsSSE;
+    CompatInfo.Flags.HonorsRevision98 = honorsRevision0_98;
+    CompatInfo.Flags.PassInt128VectorsInMem = passInt128VectorsInMem;
+    CompatInfo.Flags.ReturnCXXRecordGreaterThan128InMem =
+        returnCXXRecordGreaterThan128InMem;
+    CompatInfo.Flags.Clang11Compat =
+        getContext().getLangOpts().getClangABICompat() <=
+            LangOptions::ClangABI::Ver11 ||
+        getContext().getTargetInfo().getTriple().isPS();
+
+    newTargetCodeGenInfo = llvm::abi::createX8664TargetCodeGenInfo(
+        TB, getTriple(), AVXLevel,
+        getContext().getTargetInfo().getPointerWidth(LangAS::Default) == 64,
+        CompatInfo);
+
+  } else
+    newTargetCodeGenInfo = llvm::abi::createBPFTargetCodeGenInfo(TB);
+  return newTargetCodeGenInfo->getABIInfo();
 }
 
 static std::unique_ptr<TargetCodeGenInfo>
@@ -409,6 +470,11 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       SanitizerMD(new SanitizerMetadata(*this)),
       AtomicOpts(Target.getAtomicOpts()) {
 
+  // Flag to use the new LLVM ABI Library :)
+  const llvm::Triple &Triple = Target.getTriple();
+  ShouldUseLLVMABI =
+      Triple.isBPF() ||
+      (Triple.getArch() == llvm::Triple::x86_64 && Triple.isOSLinux());
   // Initialize the type cache.
   Types.reset(new CodeGenTypes(*this));
   llvm::LLVMContext &LLVMContext = M.getContext();
