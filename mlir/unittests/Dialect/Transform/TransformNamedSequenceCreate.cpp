@@ -36,7 +36,7 @@ TEST(NamedSequenceOpTest, ArgAttrsAreHonoredByBuilder) {
               builder.getNamedAttr(TransformDialect::kArgConsumedAttrName,
                                    builder.getUnitAttr())})});
 
-  // 检查 body argument 上有没有 transform.consumed
+  // check if body argument contains any attributes
   Block &body = seqOp.getBody().front();
   ASSERT_EQ(body.getNumArguments(), 1u);
 
