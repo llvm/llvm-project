@@ -315,6 +315,7 @@ public:
   void VisitRequiresExpr(const RequiresExpr *RE);
   void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node);
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node);
+  void VisitLambdaExpr(const LambdaExpr *LE);
 
   void VisitObjCEncodeExpr(const ObjCEncodeExpr *OEE);
   void VisitObjCMessageExpr(const ObjCMessageExpr *OME);
