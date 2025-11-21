@@ -2992,6 +2992,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
   bool EnableLifetimeSafetyAnalysis = S.getLangOpts().EnableLifetimeSafety;
 
+  if (EnableLifetimeSafetyAnalysis) {
+    AC.getCFGBuildOptions().AddLifetime = true;
+  }
+
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.
   // FIXME: This isn't the right factoring.  This is here for initial
@@ -3002,7 +3006,6 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       P.enableConsumedAnalysis || EnableLifetimeSafetyAnalysis) {
     // Unreachable code analysis and thread safety require a linearized CFG.
     AC.getCFGBuildOptions().setAllAlwaysAdd();
-    AC.getCFGBuildOptions().AddLifetime = true;
   } else {
     AC.getCFGBuildOptions()
       .setAlwaysAdd(Stmt::BinaryOperatorClass)

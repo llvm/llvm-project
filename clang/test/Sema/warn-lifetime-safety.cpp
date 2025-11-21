@@ -400,13 +400,13 @@ void loan_from_previous_iteration(MyObj safe, bool condition) {
   }             // expected-note {{destroyed here}}
 }
 
-void trivial_int_uaf(){
+void trivial_int_uaf() {
   int * a;
-    {
-        int b = 1;
-        a = &b; // expected-warning {{object whose reference is captured does not live long enough}}
-    }           // expected-note {{destroyed here}}
-    (void)*a;   // expected-note {{later used here}}
+  {
+      int b = 1;
+      a = &b;  // expected-warning {{object whose reference is captured does not live long enough}}
+  }            // expected-note {{destroyed here}}
+  (void)*a;    // expected-note {{later used here}}
 }
 
 void trivial_class_uaf() {
@@ -529,12 +529,12 @@ TriviallyDestructedClass* trivial_class_uar () {
   return ptr;     // expected-note {{returned here}}
 }
 
-// FIXME: No lifetime warning for this as no loans are issued for paramters
+// FIXME: No lifetime warning for this as no expire facts are generated for parameters
 const int& return_parameter(int a) { 
   return a; 
 }
 
-// FIXME: No lifetime warning for this as no loans are issued for paramters
+// FIXME: No lifetime warning for this as no expire facts are generated for parameters
 int* return_pointer_to_parameter(int a) {
     return &a;
 }
@@ -547,9 +547,9 @@ const int& return_reference_to_parameter(int a)
 }
 
 const int& get_ref_to_local() {
-    int local_var = 42;
-    return local_var;  // expected-warning {{address of stack memory is returned later}}
-                       // expected-note@-1 {{returned here}}
+    int a = 42;
+    return a;         // expected-warning {{address of stack memory is returned later}}
+                      // expected-note@-1 {{returned here}}
 }
 
 //===----------------------------------------------------------------------===//

@@ -230,8 +230,16 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
 }
 
 void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
+  /// TODO: Handle loans to temporaries.
+  const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
+  if (!LifetimeEndsVD)
+    return;
+  // Iterate through all loans to see if any expire.
   for (const auto &Loan : FactMgr.getLoanMgr().getLoans()) {
-    if (Loan.Path.D == LifetimeEnds.getVarDecl()) {
+    const AccessPath &LoanPath = Loan.Path;
+    // Check if the loan is for a stack variable and if that variable
+    // is the one being destructed.
+    if (LoanPath.D == LifetimeEndsVD) {
       CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
           Loan.ID, LifetimeEnds.getTriggerStmt()->getEndLoc()));
     }
