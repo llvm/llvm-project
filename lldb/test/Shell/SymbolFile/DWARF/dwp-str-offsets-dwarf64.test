@@ -14,7 +14,7 @@
 # CHECK:      (lldb) image lookup --verbose --address 0x0000000000201172
 # CHECK-NEXT:      Address: dwp-str-offsets-dwarf64.test.tmp[0x0000000000201172] (dwp-str-offsets-dwarf64.test.tmp.PT_LOAD[1]..text + 18)
 # CHECK-NEXT:      Summary: dwp-str-offsets-dwarf64.test.tmp`main + 18 at main.minimal.cpp:2:3
-# CHECK-NEXT:       Module: file = "{{.*}}/dwp-str-offsets-dwarf64.test.tmp", arch = "x86_64"
+# CHECK-NEXT:       Module: file = "{{.*[\\/]}}dwp-str-offsets-dwarf64.test.tmp", arch = "x86_64"
 # CHECK-NEXT:  CompileUnit: id = {0x00000000}, file = "main.minimal.cpp", language = "<not loaded>"
 # CHECK-NEXT:     Function: id = {0x7fffff000000001a}, name = "main", range = [0x0000000000201160-0x0000000000201176)
 # CHECK-NEXT:     FuncType: id = {0x7fffff000000001a}, byte-size = 0, decl = main.minimal.cpp:1, compiler_type = "int (int, const char **)"

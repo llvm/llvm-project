@@ -6016,10 +6016,37 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
   for (const SwitchCase *SC = S->getSwitchCaseList(); SC;
        SC = SC->getNextSwitchCase()) {
     if (const auto *CS = dyn_cast<CaseStmt>(SC)) {
-      // FIXME: Implement ranges.
-      if (CS->caseStmtIsGNURange())
-        return false;
       CaseLabels[SC] = this->getLabel();
+
+      if (CS->caseStmtIsGNURange()) {
+        LabelTy EndOfRangeCheck = this->getLabel();
+        const Expr *Low = CS->getLHS();
+        const Expr *High = CS->getRHS();
+        if (Low->isValueDependent() || High->isValueDependent())
+          return false;
+
+        if (!this->emitGetLocal(CondT, CondVar, CS))
+          return false;
+        if (!this->visit(Low))
+          return false;
+        PrimType LT = this->classifyPrim(Low->getType());
+        if (!this->emitGE(LT, S))
+          return false;
+        if (!this->jumpFalse(EndOfRangeCheck))
+          return false;
+
+        if (!this->emitGetLocal(CondT, CondVar, CS))
+          return false;
+        if (!this->visit(High))
+          return false;
+        PrimType HT = this->classifyPrim(High->getType());
+        if (!this->emitLE(HT, S))
+          return false;
+        if (!this->jumpTrue(CaseLabels[CS]))
+          return false;
+        this->emitLabel(EndOfRangeCheck);
+        continue;
+      }
 
       const Expr *Value = CS->getLHS();
       if (Value->isValueDependent())
@@ -6057,6 +6084,7 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
                           DefaultLabel);
   if (!this->visitStmt(S->getBody()))
     return false;
+  this->fallthrough(EndLabel);
   this->emitLabel(EndLabel);
 
   return LS.destroyLocals();
@@ -6064,6 +6092,7 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitCaseStmt(const CaseStmt *S) {
+  this->fallthrough(CaseLabels[S]);
   this->emitLabel(CaseLabels[S]);
   return this->visitStmt(S->getSubStmt());
 }

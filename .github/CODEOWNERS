@@ -60,6 +60,11 @@
 /mlir/lib/Conversion/*ToROCDL @krzysz00 @kuhar
 /mlir/include/mlir/Dialect/LLVMIR/ROCDL* @krzysz00 @kuhar
 
+# Arith dialect in MLIR.
+/mlir/include/mlir/Dialect/Arith @kuhar
+/mlir/lib/Dialect/Arith @kuhar
+/mlir/lib/Conversion/ArithTo* @kuhar
+
 # XeGPU and XeVM dialects in MLIR.
 /mlir/include/mlir/Dialect/XeGPU @charithaintc @Jianhui-Li
 /mlir/lib/Dialect/XeGPU @charithaintc @Jianhui-Li
