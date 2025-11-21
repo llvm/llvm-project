@@ -40,7 +40,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
         self.expect("run")
 
         self.expect(
-            "trace save", substrs=["error: Process is not being traced"], error=True
+            "trace save", substrs=["error: process is not being traced"], error=True
         )
 
     @skipIfNoIntelPT
