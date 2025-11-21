@@ -11425,15 +11425,16 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     // Fold clmul(zext(x), zext(y)) >> (BW - 1 | BW) -> clmul(r|h)(x, y).
     uint64_t HalfBW = VT.getScalarSizeInBits() / 2;
     if (sd_match(N0, m_Clmul(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
-        sd_match(N1, m_SpecificInt(HalfBW - 1)) &&
-        X.getScalarValueSizeInBits() == HalfBW)
-      return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
-                         DAG.getNode(ISD::CLMULR, DL, X.getValueType(), X, Y));
-    if (sd_match(N0, m_Clmul(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
-        sd_match(N1, m_SpecificInt(HalfBW)) &&
-        X.getScalarValueSizeInBits() == HalfBW)
-      return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
-                         DAG.getNode(ISD::CLMULH, DL, X.getValueType(), X, Y));
+        X.getScalarValueSizeInBits() == HalfBW) {
+      if (sd_match(N1, m_SpecificInt(HalfBW - 1)))
+        return DAG.getNode(
+            ISD::ZERO_EXTEND, DL, VT,
+            DAG.getNode(ISD::CLMULR, DL, X.getValueType(), X, Y));
+      if (sd_match(N1, m_SpecificInt(HalfBW)))
+        return DAG.getNode(
+            ISD::ZERO_EXTEND, DL, VT,
+            DAG.getNode(ISD::CLMULH, DL, X.getValueType(), X, Y));
+    }
   }
 
   // Fold bitreverse(clmul(bitreverse(x), bitreverse(y))) >> 1 ->
