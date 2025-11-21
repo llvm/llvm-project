@@ -214,6 +214,25 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
+// Load with status method
+// CHECK: CXXMethodDecl {{.*}} Load 'element_type (unsigned int, out unsigned int)'
+// CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CallExpr {{.*}} 'element_type'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_with_status' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Status' 'unsigned int &__restrict'
+// CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+
 // GetDimensions method
 
 // CHECK-NEXT: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int)'

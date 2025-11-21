@@ -852,7 +852,7 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
                                bool IsThrownVarInScope) {
   const llvm::Triple &T = Context.getTargetInfo().getTriple();
   const bool IsOpenMPGPUTarget =
-      getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
+      getLangOpts().OpenMPIsTargetDevice && T.isGPU();
 
   DiagnoseExceptionUse(OpLoc, /* IsTry= */ false);
 

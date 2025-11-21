@@ -6,6 +6,22 @@
 // RUN:   -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - \
 // RUN:   -fexceptions -fcxx-exceptions -ferror-limit 100
 
+// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown \
+// RUN:   -verify=host -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc \
+// RUN:   %s -o %t-ppc-host-amd.bc -fexceptions -fcxx-exceptions
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple amdgcn-amd-amdhsa \
+// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s \
+// RUN:   -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-amd.bc -o - \
+// RUN:   -fexceptions -fcxx-exceptions -ferror-limit 100
+
+// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown \
+// RUN:   -verify=host -fopenmp-targets=spirv64-intel -emit-llvm-bc \
+// RUN:   %s -o %t-ppc-host-spirv.bc -fexceptions -fcxx-exceptions
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple spirv64-intel \
+// RUN:   -fopenmp-targets=spirv64-intel -emit-llvm %s \
+// RUN:   -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-spirv.bc -o - \
+// RUN:   -fexceptions -fcxx-exceptions -ferror-limit 100
+
 #ifndef HEADER
 #define HEADER
 
@@ -34,7 +50,7 @@ T FA() {
 #pragma omp declare target
 struct S {
   int a;
-  S(int a) : a(a) { throw 1; } // expected-warning {{target 'nvptx64-unknown-unknown' does not support exception handling; 'throw' is assumed to be never reached}}
+  S(int a) : a(a) { throw 1; } // expected-warning-re {{target '{{.*}}' does not support exception handling; 'throw' is assumed to be never reached}}
 };
 
 int foo() { return 0; }
@@ -57,7 +73,7 @@ int maini1() {
     static long aaa = 23;
     a = foo() + bar() + b + c + d + aa + aaa + FA<int>(); // expected-note{{called by 'maini1'}}
     if (!a)
-      throw "Error"; // expected-warning {{target 'nvptx64-unknown-unknown' does not support exception handling; 'throw' is assumed to be never reached}}
+      throw "Error"; // expected-warning-re {{target '{{.*}}' does not support exception handling; 'throw' is assumed to be never reached}}
   }
   } catch(...) {
   }
@@ -67,14 +83,14 @@ int maini1() {
 int baz3() { return 2 + baz2(); }
 int baz2() {
 #pragma omp target
-  try { // expected-warning {{target 'nvptx64-unknown-unknown' does not support exception handling; 'catch' block is ignored}}
+  try { // expected-warning-re {{target '{{.*}}' does not support exception handling; 'catch' block is ignored}}
   ++c;
   } catch (...) {
   }
   return 2 + baz3();
 }
 
-int baz1() { throw 1; } // expected-warning {{target 'nvptx64-unknown-unknown' does not support exception handling; 'throw' is assumed to be never reached}}
+int baz1() { throw 1; } // expected-warning-re {{target '{{.*}}' does not support exception handling; 'throw' is assumed to be never reached}}
 
 int foobar1();
 int foobar2();
@@ -85,7 +101,7 @@ int (*B)() = &foobar2;
 #pragma omp end declare target
 
 int foobar1() { throw 1; }
-int foobar2() { throw 1; } // expected-warning {{target 'nvptx64-unknown-unknown' does not support exception handling; 'throw' is assumed to be never reached}}
+int foobar2() { throw 1; } // expected-warning-re {{target '{{.*}}' does not support exception handling; 'throw' is assumed to be never reached}}
 
 
 int foobar3();
@@ -95,7 +111,7 @@ int (*C)() = &foobar3; // expected-warning {{declaration is not declared in any 
 int (*D)() = C; // expected-note {{used here}}
                 // host-note@-1 {{used here}}
 #pragma omp end declare target
-int foobar3() { throw 1; } // expected-warning {{target 'nvptx64-unknown-unknown' does not support exception handling; 'throw' is assumed to be never reached}}
+int foobar3() { throw 1; } // expected-warning-re {{target '{{.*}}' does not support exception handling; 'throw' is assumed to be never reached}}
 
 // Check no infinite recursion in deferred diagnostic emitter.
 long E = (long)&E;
