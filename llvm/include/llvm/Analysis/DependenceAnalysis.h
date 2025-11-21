@@ -107,11 +107,9 @@ public:
     bool Scalar : 1;             // Init to true.
     bool PeelFirst : 1; // Peeling the first iteration will break dependence.
     bool PeelLast : 1;  // Peeling the last iteration will break the dependence.
-    bool Splitable : 1; // Splitting the loop will break dependence.
     const SCEV *Distance = nullptr; // NULL implies no distance available.
     DVEntry()
-        : Direction(ALL), Scalar(true), PeelFirst(false), PeelLast(false),
-          Splitable(false) {}
+        : Direction(ALL), Scalar(true), PeelFirst(false), PeelLast(false) {}
   };
 
   /// getSrc - Returns the source instruction for this dependence.
@@ -193,12 +191,6 @@ public:
   /// isPeelLast - Returns true if peeling the last iteration from
   /// this regular or SameSD loop level will break this dependence.
   virtual bool isPeelLast(unsigned Level, bool SameSD = false) const {
-    return false;
-  }
-
-  /// isSplitable - Returns true if splitting the loop will break
-  /// the dependence.
-  virtual bool isSplitable(unsigned Level, bool SameSD = false) const {
     return false;
   }
 
@@ -320,10 +312,6 @@ public:
   /// this regular or SameSD loop level will break this dependence.
   bool isPeelLast(unsigned Level, bool SameSD = false) const override;
 
-  /// isSplitable - Returns true if splitting the loop will break
-  /// the dependence.
-  bool isSplitable(unsigned Level, bool SameSD = false) const override;
-
   /// inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
   /// performed across two separate loop nests that have the Same Iteration and
   /// Depth.
@@ -364,48 +352,6 @@ public:
   LLVM_ABI std::unique_ptr<Dependence>
   depends(Instruction *Src, Instruction *Dst,
           bool UnderRuntimeAssumptions = false);
-
-  /// getSplitIteration - Give a dependence that's splittable at some
-  /// particular level, return the iteration that should be used to split
-  /// the loop.
-  ///
-  /// Generally, the dependence analyzer will be used to build
-  /// a dependence graph for a function (basically a map from instructions
-  /// to dependences). Looking for cycles in the graph shows us loops
-  /// that cannot be trivially vectorized/parallelized.
-  ///
-  /// We can try to improve the situation by examining all the dependences
-  /// that make up the cycle, looking for ones we can break.
-  /// Sometimes, peeling the first or last iteration of a loop will break
-  /// dependences, and there are flags for those possibilities.
-  /// Sometimes, splitting a loop at some other iteration will do the trick,
-  /// and we've got a flag for that case. Rather than waste the space to
-  /// record the exact iteration (since we rarely know), we provide
-  /// a method that calculates the iteration. It's a drag that it must work
-  /// from scratch, but wonderful in that it's possible.
-  ///
-  /// Here's an example:
-  ///
-  ///    for (i = 0; i < 10; i++)
-  ///        A[i] = ...
-  ///        ... = A[11 - i]
-  ///
-  /// There's a loop-carried flow dependence from the store to the load,
-  /// found by the weak-crossing SIV test. The dependence will have a flag,
-  /// indicating that the dependence can be broken by splitting the loop.
-  /// Calling getSplitIteration will return 5.
-  /// Splitting the loop breaks the dependence, like so:
-  ///
-  ///    for (i = 0; i <= 5; i++)
-  ///        A[i] = ...
-  ///        ... = A[11 - i]
-  ///    for (i = 6; i < 10; i++)
-  ///        A[i] = ...
-  ///        ... = A[11 - i]
-  ///
-  /// breaks the dependence and allows us to vectorize/parallelize
-  /// both loops.
-  LLVM_ABI const SCEV *getSplitIteration(const Dependence &Dep, unsigned Level);
 
   Function *getFunction() const { return F; }
 
@@ -713,8 +659,7 @@ private:
   /// If the dependence isn't proven to exist,
   /// marks the Result as inconsistent.
   bool testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
-               FullDependence &Result, Constraint &NewConstraint,
-               const SCEV *&SplitIter) const;
+               FullDependence &Result, Constraint &NewConstraint) const;
 
   /// testRDIV - Tests the RDIV subscript pair (Src and Dst) for dependence.
   /// Things of the form [c1 + a1*i] and [c2 + a2*j]
@@ -755,12 +700,11 @@ private:
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
   /// Set consistent to false.
-  /// Marks the dependence as splitable.
   bool weakCrossingSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
                            const SCEV *DstConst, const Loop *CurrentSrcLoop,
                            const Loop *CurrentDstLoop, unsigned Level,
-                           FullDependence &Result, Constraint &NewConstraint,
-                           const SCEV *&SplitIter) const;
+                           FullDependence &Result,
+                           Constraint &NewConstraint) const;
 
   /// ExactSIVtest - Tests the SIV subscript pair
   /// (Src and Dst) for dependence.
