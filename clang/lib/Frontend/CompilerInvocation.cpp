@@ -703,52 +703,6 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
 // Deserialization (from args)
 //===----------------------------------------------------------------------===//
 
-static unsigned getOptimizationLevel(ArgList &Args, InputKind IK,
-                                     DiagnosticsEngine &Diags) {
-  unsigned DefaultOpt = 0;
-  if ((IK.getLanguage() == Language::OpenCL ||
-       IK.getLanguage() == Language::OpenCLCXX) &&
-      !Args.hasArg(OPT_cl_opt_disable))
-    DefaultOpt = 2;
-
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    if (A->getOption().matches(options::OPT_O0))
-      return 0;
-
-    if (A->getOption().matches(options::OPT_Ofast))
-      return 3;
-
-    assert(A->getOption().matches(options::OPT_O));
-
-    StringRef S(A->getValue());
-    if (S == "s" || S == "z")
-      return 2;
-
-    if (S == "g")
-      return 1;
-
-    return getLastArgIntValue(Args, OPT_O, DefaultOpt, Diags);
-  }
-
-  return DefaultOpt;
-}
-
-static unsigned getOptimizationLevelSize(ArgList &Args) {
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    if (A->getOption().matches(options::OPT_O)) {
-      switch (A->getValue()[0]) {
-      default:
-        return 0;
-      case 's':
-        return 1;
-      case 'z':
-        return 2;
-      }
-    }
-  }
-  return 0;
-}
-
 static void GenerateArg(ArgumentConsumer Consumer,
                         llvm::opt::OptSpecifier OptSpecifier) {
   Option Opt = getDriverOptTable().getOption(OptSpecifier);
@@ -1859,17 +1813,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                                           const LangOptions &LangOptsRef) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
-  unsigned OptimizationLevel = getOptimizationLevel(Args, IK, Diags);
-  // TODO: This could be done in Driver
-  unsigned MaxOptLevel = 3;
-  if (OptimizationLevel > MaxOptLevel) {
-    // If the optimization level is not supported, fall back on the default
-    // optimization
-    Diags.Report(diag::warn_drv_optimization_value)
-        << Args.getLastArg(OPT_O)->getAsString(Args) << "-O" << MaxOptLevel;
-    OptimizationLevel = MaxOptLevel;
-  }
-  Opts.OptimizationLevel = OptimizationLevel;
+  Opts.OptimizationLevel = getOptimizationLevel(Args, IK, Diags);
 
   // The key paths of codegen options defined in Options.td start with
   // "CodeGenOpts.". Let's provide the expected variable name and type.
@@ -2726,6 +2670,61 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   addDiagnosticArgs(Args, OPT_R_Group, OPT_R_value_Group, Opts.Remarks);
 
   return Diags->getNumErrors() == NumErrorsBefore;
+}
+
+unsigned clang::getOptimizationLevel(ArgList &Args, InputKind IK,
+                                     DiagnosticsEngine &Diags) {
+  unsigned DefaultOpt = 0;
+  if ((IK.getLanguage() == Language::OpenCL ||
+       IK.getLanguage() == Language::OpenCLCXX) &&
+      !Args.hasArg(OPT_cl_opt_disable))
+    DefaultOpt = 2;
+
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (A->getOption().matches(options::OPT_O0))
+      return 0;
+
+    if (A->getOption().matches(options::OPT_Ofast))
+      return 3;
+
+    assert(A->getOption().matches(options::OPT_O));
+
+    StringRef S(A->getValue());
+    if (S == "s" || S == "z")
+      return 2;
+
+    if (S == "g")
+      return 1;
+
+    DefaultOpt = getLastArgIntValue(Args, OPT_O, DefaultOpt, Diags);
+  }
+
+  unsigned MaxOptLevel = 3;
+  if (DefaultOpt > MaxOptLevel) {
+    // If the optimization level is not supported, fall back on the default
+    // optimization
+    Diags.Report(diag::warn_drv_optimization_value)
+        << Args.getLastArg(OPT_O)->getAsString(Args) << "-O" << MaxOptLevel;
+    DefaultOpt = MaxOptLevel;
+  }
+
+  return DefaultOpt;
+}
+
+unsigned clang::getOptimizationLevelSize(ArgList &Args) {
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (A->getOption().matches(options::OPT_O)) {
+      switch (A->getValue()[0]) {
+      default:
+        return 0;
+      case 's':
+        return 1;
+      case 'z':
+        return 2;
+      }
+    }
+  }
+  return 0;
 }
 
 /// Parse the argument to the -ftest-module-file-extension
