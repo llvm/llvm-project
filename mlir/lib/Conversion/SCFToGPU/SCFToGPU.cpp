@@ -453,10 +453,24 @@ static LogicalResult processParallelLoop(
           1, 2,
           rewriter.getAffineDimExpr(0) * rewriter.getAffineSymbolExpr(0) +
               rewriter.getAffineSymbolExpr(1));
+      // Map through cloningMap first so we use values valid at the launch
+      // scope, then ensure they are launch-independent (or cloned constants).
+      Value mappedStep = cloningMap.lookupOrDefault(step);
+      Value mappedLowerBound = cloningMap.lookupOrDefault(lowerBound);
+
+      mappedStep = ensureLaunchIndependent(mappedStep);
+      mappedLowerBound = ensureLaunchIndependent(mappedLowerBound);
+
+      // If either cannot be made available above the launch, fail gracefully.
+      if (!mappedStep || !mappedLowerBound) {
+        return rewriter.notifyMatchFailure(
+            parallelOp, "lower bound / step must be constant or defined above "
+                        "the gpu.launch");
+      }
+
       newIndex = AffineApplyOp::create(
           rewriter, loc, annotation.getMap().compose(lowerAndStep),
-          ValueRange{operand, ensureLaunchIndependent(step),
-                     ensureLaunchIndependent(lowerBound)});
+          ValueRange{operand, mappedStep, mappedLowerBound});
       // If there was also a bound, insert that, too.
       // TODO: Check that we do not assign bounds twice.
       if (annotation.getBound()) {
