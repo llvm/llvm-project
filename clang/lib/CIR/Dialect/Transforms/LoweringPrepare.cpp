@@ -740,7 +740,7 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
   SmallString<256> fnName("__cxx_global_array_dtor");
   uint32_t cnt = dynamicInitializerNames[fnName]++;
   if (cnt)
-    fnName += "." + llvm::Twine(cnt).str();
+    fnName += "." + std::to_string(cnt);
 
   // Create the helper function.
   auto fnType = cir::FuncType::get({voidPtrTy}, voidTy);
@@ -799,7 +799,7 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   // Get a unique name
   uint32_t cnt = dynamicInitializerNames[fnName]++;
   if (cnt)
-    fnName += "." + llvm::Twine(cnt).str();
+    fnName += "." + std::to_string(cnt);
 
   // Create a variable initialization function.
   CIRBaseBuilderTy builder(getContext());

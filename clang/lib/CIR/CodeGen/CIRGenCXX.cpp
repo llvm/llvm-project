@@ -135,10 +135,9 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // call right here.
     auto gd = GlobalDecl(dtor, Dtor_Complete);
     fnOp = cgm.getAddrAndTypeOfCXXStructor(gd).second;
-    cgf.getBuilder().createCallOp(
-        cgf.getLoc(vd->getSourceRange()),
-        mlir::FlatSymbolRefAttr::get(fnOp.getSymNameAttr()),
-        mlir::ValueRange{cgm.getAddrOfGlobalVar(vd)});
+    builder.createCallOp(cgf.getLoc(vd->getSourceRange()),
+                         mlir::FlatSymbolRefAttr::get(fnOp.getSymNameAttr()),
+                         mlir::ValueRange{cgm.getAddrOfGlobalVar(vd)});
     assert(fnOp && "expected cir.func");
     // TODO(cir): This doesn't do anything but check for unhandled conditions.
     // What it is meant to do should really be happening in LoweringPrepare.
@@ -149,7 +148,10 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // called from __cxa_atexit.
     // In CIR, we just emit the destroy into the dtor region. It will be moved
     // into a separate function during the LoweringPrepare pass.
-    mlir::Value globalVal = cgf.getBuilder().createGetGlobal(addr);
+    // FIXME(cir): We should create a new operation here to explicitly get the
+    // address of the global into whose dtor region we are emiiting the destroy.
+    // The same applies to code above where it is calling getAddrOfGlobalVar.
+    mlir::Value globalVal = builder.createGetGlobal(addr);
     CharUnits alignment = cgf.getContext().getDeclAlign(vd);
     Address globalAddr{globalVal, cgf.convertTypeForMem(type), alignment};
     cgf.emitDestroy(globalAddr, type, cgf.getDestroyer(dtorKind));
