@@ -5865,10 +5865,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (KernelOrKext && RawTriple.isOSDarwin())
     CmdArgs.push_back("-fforbid-guard-variables");
 
-  if (Args.hasArg(options::OPT_mms_bitfields) ||
-      Args.hasArg(options::OPT_mno_ms_bitfields)) {
-    if (Args.hasFlag(options::OPT_mms_bitfields, options::OPT_mno_ms_bitfields,
-                     false))
+  if (Arg *A = Args.getLastArg(options::OPT_mms_bitfields,
+                               options::OPT_mno_ms_bitfields)) {
+    if (A->getOption().matches(options::OPT_mms_bitfields))
       CmdArgs.push_back("-fms-layout-compatibility=microsoft");
     else
       CmdArgs.push_back("-fms-layout-compatibility=itanium");
