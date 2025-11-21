@@ -2071,34 +2071,36 @@ def : Pat<(int_nvvm_ull2d_rp i64:$a), (CVT_f64_u64 $a, CvtRP)>;
 def : Pat<(int_nvvm_f2h_rn_ftz f32:$a), (CVT_f16_f32 $a, CvtRN_FTZ)>;
 def : Pat<(int_nvvm_f2h_rn f32:$a), (CVT_f16_f32 $a, CvtRN)>;
 
-def : Pat<(int_nvvm_ff_to_e4m3x2_rn f32:$a, f32:$b),
-          (CVT_e4m3x2_f32 $a, $b, CvtRN)>;
-def : Pat<(int_nvvm_ff_to_e4m3x2_rn_relu f32:$a, f32:$b),
-          (CVT_e4m3x2_f32 $a, $b, CvtRN_RELU)>;
-def : Pat<(int_nvvm_ff_to_e5m2x2_rn f32:$a, f32:$b),
-          (CVT_e5m2x2_f32 $a, $b, CvtRN)>;
-def : Pat<(int_nvvm_ff_to_e5m2x2_rn_relu f32:$a, f32:$b),
-          (CVT_e5m2x2_f32 $a, $b, CvtRN_RELU)>;
+let Predicates = [callSubtarget<"hasFP8ConversionSupport">] in {
+  def : Pat<(int_nvvm_ff_to_e4m3x2_rn f32:$a, f32:$b),
+            (CVT_e4m3x2_f32 $a, $b, CvtRN)>;
+  def : Pat<(int_nvvm_ff_to_e4m3x2_rn_relu f32:$a, f32:$b),
+            (CVT_e4m3x2_f32 $a, $b, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_ff_to_e5m2x2_rn f32:$a, f32:$b),
+            (CVT_e5m2x2_f32 $a, $b, CvtRN)>;
+  def : Pat<(int_nvvm_ff_to_e5m2x2_rn_relu f32:$a, f32:$b),
+            (CVT_e5m2x2_f32 $a, $b, CvtRN_RELU)>;
 
-def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn v2f16:$a),
-          (CVT_e4m3x2_f16x2 $a, CvtRN)>;
-def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn_relu v2f16:$a),
-          (CVT_e4m3x2_f16x2 $a, CvtRN_RELU)>;
-def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn v2f16:$a),
-          (CVT_e5m2x2_f16x2 $a, CvtRN)>;
-def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn_relu v2f16:$a),
-          (CVT_e5m2x2_f16x2 $a, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn v2f16:$a),
+            (CVT_e4m3x2_f16x2 $a, CvtRN)>;
+  def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn_relu v2f16:$a),
+            (CVT_e4m3x2_f16x2 $a, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn v2f16:$a),
+            (CVT_e5m2x2_f16x2 $a, CvtRN)>;
+  def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn_relu v2f16:$a),
+            (CVT_e5m2x2_f16x2 $a, CvtRN_RELU)>;
 
-def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn i16:$a),
-          (CVT_f16x2_e4m3x2 $a, CvtRN)>;
-def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn_relu i16:$a),
-          (CVT_f16x2_e4m3x2 $a, CvtRN_RELU)>;
-def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn i16:$a),
-          (CVT_f16x2_e5m2x2 $a, CvtRN)>;
-def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn_relu i16:$a),
-          (CVT_f16x2_e5m2x2 $a, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn i16:$a),
+            (CVT_f16x2_e4m3x2 $a, CvtRN)>;
+  def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn_relu i16:$a),
+            (CVT_f16x2_e4m3x2 $a, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn i16:$a),
+            (CVT_f16x2_e5m2x2 $a, CvtRN)>;
+  def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn_relu i16:$a),
+            (CVT_f16x2_e5m2x2 $a, CvtRN_RELU)>;
+}
 
-let Predicates = [hasPTX<86>, hasSM<100>, hasArchAccelFeatures] in {
+let Predicates = [callSubtarget<"hasNarrowFPConversionSupport">] in {
   def : Pat<(int_nvvm_ff_to_e2m3x2_rn_satfinite f32:$a, f32:$b),
             (CVT_e2m3x2_f32_sf $a, $b, CvtRN)>;
   def : Pat<(int_nvvm_ff_to_e2m3x2_rn_relu_satfinite f32:$a, f32:$b),
