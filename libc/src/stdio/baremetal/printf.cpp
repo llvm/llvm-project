@@ -41,9 +41,9 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   static constexpr size_t BUFF_SIZE = 1024;
   char buffer[BUFF_SIZE];
 
-  printf_core::WriteBuffer<printf_core::WriteMode::FLUSH_TO_STREAM> wb(
-      buffer, BUFF_SIZE, &stdout_write_hook, nullptr);
-  printf_core::Writer<printf_core::WriteMode::FLUSH_TO_STREAM> writer(wb);
+  printf_core::FlushingBuffer wb(buffer, BUFF_SIZE, &stdout_write_hook,
+                                 nullptr);
+  printf_core::Writer writer(wb);
 
   auto retval = printf_core::printf_main(&writer, format, args);
   if (!retval.has_value()) {
@@ -51,7 +51,7 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
     return -1;
   }
 
-  int flushval = wb.overflow_write("");
+  int flushval = wb.flush_to_stream();
   if (flushval != printf_core::WRITE_OK) {
     libc_errno = printf_core::internal_error_to_errno(-flushval);
     return -1;
