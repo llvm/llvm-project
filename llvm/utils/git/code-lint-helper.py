@@ -256,7 +256,6 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \\
         clean_output = self._clean_clang_tidy_output(proc.stdout.strip())
         return clean_output
 
-
     def _clean_clang_tidy_output(self, output: str) -> Optional[str]:
         if not output or output == "No relevant changes found.":
             return None
@@ -325,7 +324,6 @@ ALL_LINTERS = (ClangTidyLintHelper(), Doc8LintHelper())
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--token", type=str, required=True, help="GitHub authentication token"

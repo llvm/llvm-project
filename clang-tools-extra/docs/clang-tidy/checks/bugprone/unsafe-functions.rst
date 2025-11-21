@@ -3,6 +3,7 @@
 bugprone-unsafe-functions
 =========================
 
+
 Checks for functions that have safer, more secure replacements available, or
 are considered deprecated due to design flaws.
 The check heavily relies on the functions from the
