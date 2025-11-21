@@ -4526,13 +4526,13 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(
   MiddleTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
-/// Create and return a ResumePhi for \p WideIV, unless it is truncated. If the
-/// induction recipe is not canonical, creates a VPDerivedIVRecipe to compute
-/// the end value of the induction.
-static VPValue *addResumePhiRecipeForInduction(VPWidenInductionRecipe *WideIV,
-                                               VPBuilder &VectorPHBuilder,
-                                               VPTypeAnalysis &TypeInfo,
-                                               VPValue *VectorTC) {
+/// Compute and return the end value for \p WideIV, unless it is truncated. If
+/// the induction recipe is not canonical, creates a VPDerivedIVRecipe to
+/// compute the end value of the induction.
+static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
+                                                 VPBuilder &VectorPHBuilder,
+                                                 VPTypeAnalysis &TypeInfo,
+                                                 VPValue *VectorTC) {
   auto *WideIntOrFp = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
   // Truncated wide inductions resume from the last lane of their vector value
   // in the last vector iteration which is handled elsewhere.
@@ -4561,9 +4561,8 @@ static VPValue *addResumePhiRecipeForInduction(VPWidenInductionRecipe *WideIV,
   return EndValue;
 }
 
-void VPlanTransforms::addScalarResumePhis(
-    VPlan &Plan, VPRecipeBuilder &Builder,
-    DenseMap<VPValue *, VPValue *> &IVEndValues) {
+void VPlanTransforms::updateScalarResumePhis(
+    VPlan &Plan, DenseMap<VPValue *, VPValue *> &IVEndValues) {
   VPTypeAnalysis TypeInfo(Plan);
   auto *ScalarPH = Plan.getScalarPreheader();
   auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getPredecessors()[0]);
@@ -4578,10 +4577,10 @@ void VPlanTransforms::addScalarResumePhis(
     // pre-computed end value together in optimizeInductionExitUsers.
     auto *VectorPhiR = cast<VPHeaderPHIRecipe>(ResumePhiR->getOperand(0));
     if (auto *WideIVR = dyn_cast<VPWidenInductionRecipe>(VectorPhiR)) {
-      if (VPValue *ResumeV = addResumePhiRecipeForInduction(
+      if (VPValue *EndValue = tryToComputeEndValueForInduction(
               WideIVR, VectorPHBuilder, TypeInfo, &Plan.getVectorTripCount())) {
-        IVEndValues[WideIVR] = ResumeV;
-        ResumePhiR->setOperand(0, ResumeV);
+        IVEndValues[WideIVR] = EndValue;
+        ResumePhiR->setOperand(0, EndValue);
         ResumePhiR->setName("bc.resume.val");
         continue;
       }
