@@ -61,6 +61,8 @@ extern cl::OptionCategory BoltOptCategory;
 
 extern cl::opt<bool> EnableBAT;
 extern cl::opt<bool> Instrument;
+extern cl::list<std::string> PrintOnly;
+extern cl::opt<std::string> PrintOnlyFile;
 extern cl::opt<bool> StrictMode;
 extern cl::opt<bool> UpdateDebugSections;
 extern cl::opt<unsigned> Verbosity;
@@ -130,14 +132,6 @@ static cl::opt<bool>
 PrintDynoStatsOnly("print-dyno-stats-only",
   cl::desc("while printing functions output dyno-stats and skip instructions"),
   cl::init(false),
-  cl::Hidden,
-  cl::cat(BoltCategory));
-
-static cl::list<std::string>
-PrintOnly("print-only",
-  cl::CommaSeparated,
-  cl::desc("list of functions to print"),
-  cl::value_desc("func1,func2,func3,..."),
   cl::Hidden,
   cl::cat(BoltCategory));
 

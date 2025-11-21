@@ -169,7 +169,7 @@ define <16 x i8> @smulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; NONEON-NOSVE-LABEL: smulh_v16i8:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #160
-; NONEON-NOSVE-NEXT:    str x27, [sp, #80] // 8-byte Folded Spill
+; NONEON-NOSVE-NEXT:    str x27, [sp, #80] // 8-byte Spill
 ; NONEON-NOSVE-NEXT:    stp x26, x25, [sp, #96] // 16-byte Folded Spill
 ; NONEON-NOSVE-NEXT:    stp x24, x23, [sp, #112] // 16-byte Folded Spill
 ; NONEON-NOSVE-NEXT:    stp x22, x21, [sp, #128] // 16-byte Folded Spill
@@ -260,7 +260,7 @@ define <16 x i8> @smulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    strb w3, [sp, #74]
 ; NONEON-NOSVE-NEXT:    lsr w13, w13, #8
 ; NONEON-NOSVE-NEXT:    strb w2, [sp, #73]
-; NONEON-NOSVE-NEXT:    ldr x27, [sp, #80] // 8-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr x27, [sp, #80] // 8-byte Reload
 ; NONEON-NOSVE-NEXT:    lsr w10, w10, #8
 ; NONEON-NOSVE-NEXT:    strb w0, [sp, #72]
 ; NONEON-NOSVE-NEXT:    lsr w8, w8, #8
@@ -427,7 +427,7 @@ define void @smulh_v32i8(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #216]
 ; NONEON-NOSVE-NEXT:    strb w14, [sp, #287]
 ; NONEON-NOSVE-NEXT:    lsr w14, w25, #8
-; NONEON-NOSVE-NEXT:    ldr w25, [sp, #24] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w25, [sp, #24] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #16] // 8-byte Folded Spill
 ; NONEON-NOSVE-NEXT:    ldrsb w8, [sp, #241]
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #240]
@@ -435,19 +435,19 @@ define void @smulh_v32i8(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    lsr w14, w28, #8
 ; NONEON-NOSVE-NEXT:    ldrsb w11, [sp, #254]
 ; NONEON-NOSVE-NEXT:    mul w8, w25, w8
-; NONEON-NOSVE-NEXT:    ldr w25, [sp, #28] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w25, [sp, #28] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    ldrsb w13, [sp, #252]
 ; NONEON-NOSVE-NEXT:    strb w14, [sp, #283]
-; NONEON-NOSVE-NEXT:    ldr w14, [sp, #40] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w14, [sp, #40] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w9, w25, w9
-; NONEON-NOSVE-NEXT:    ldr w25, [sp, #32] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w25, [sp, #32] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w17, [sp, #286]
 ; NONEON-NOSVE-NEXT:    mul w12, w14, w12
 ; NONEON-NOSVE-NEXT:    lsr w8, w8, #8
 ; NONEON-NOSVE-NEXT:    lsr w17, w26, #8
 ; NONEON-NOSVE-NEXT:    mul w10, w25, w10
-; NONEON-NOSVE-NEXT:    ldr w25, [sp, #36] // 4-byte Folded Reload
-; NONEON-NOSVE-NEXT:    ldr w14, [sp, #44] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w25, [sp, #36] // 4-byte Reload
+; NONEON-NOSVE-NEXT:    ldr w14, [sp, #44] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    lsr w9, w9, #8
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #281]
 ; NONEON-NOSVE-NEXT:    mul w11, w25, w11
@@ -455,84 +455,84 @@ define void @smulh_v32i8(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    lsr w17, w30, #8
 ; NONEON-NOSVE-NEXT:    mul w13, w14, w13
 ; NONEON-NOSVE-NEXT:    lsr w8, w10, #8
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #48] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #48] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #280]
 ; NONEON-NOSVE-NEXT:    ldp x26, x25, [sp, #320] // 16-byte Folded Reload
 ; NONEON-NOSVE-NEXT:    lsr w9, w11, #8
 ; NONEON-NOSVE-NEXT:    mul w10, w10, w15
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #52] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #52] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #279]
 ; NONEON-NOSVE-NEXT:    lsr w8, w12, #8
-; NONEON-NOSVE-NEXT:    ldr w12, [sp, #56] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w12, [sp, #56] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w11, w11, w16
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #278]
 ; NONEON-NOSVE-NEXT:    lsr w9, w13, #8
 ; NONEON-NOSVE-NEXT:    mul w12, w12, w18
-; NONEON-NOSVE-NEXT:    ldr w13, [sp, #60] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w13, [sp, #60] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #277]
 ; NONEON-NOSVE-NEXT:    lsr w8, w10, #8
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #64] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #64] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #276]
 ; NONEON-NOSVE-NEXT:    mul w13, w13, w0
 ; NONEON-NOSVE-NEXT:    lsr w9, w11, #8
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #68] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #68] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w10, w10, w1
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #275]
 ; NONEON-NOSVE-NEXT:    lsr w8, w12, #8
 ; NONEON-NOSVE-NEXT:    mul w11, w11, w2
-; NONEON-NOSVE-NEXT:    ldr w12, [sp, #72] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w12, [sp, #72] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #274]
 ; NONEON-NOSVE-NEXT:    lsr w9, w13, #8
-; NONEON-NOSVE-NEXT:    ldr w13, [sp, #76] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w13, [sp, #76] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #273]
 ; NONEON-NOSVE-NEXT:    mul w12, w12, w3
 ; NONEON-NOSVE-NEXT:    lsr w8, w10, #8
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #80] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #80] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w13, w13, w4
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #272]
 ; NONEON-NOSVE-NEXT:    lsr w9, w11, #8
 ; NONEON-NOSVE-NEXT:    mul w10, w10, w5
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #84] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #84] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #271]
 ; NONEON-NOSVE-NEXT:    lsr w8, w12, #8
-; NONEON-NOSVE-NEXT:    ldr w12, [sp, #88] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w12, [sp, #88] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #270]
 ; NONEON-NOSVE-NEXT:    mul w11, w11, w6
 ; NONEON-NOSVE-NEXT:    lsr w9, w13, #8
-; NONEON-NOSVE-NEXT:    ldr w13, [sp, #92] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w13, [sp, #92] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w12, w12, w7
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #269]
 ; NONEON-NOSVE-NEXT:    lsr w8, w10, #8
 ; NONEON-NOSVE-NEXT:    mul w13, w13, w19
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #96] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #96] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #268]
 ; NONEON-NOSVE-NEXT:    lsr w9, w11, #8
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #100] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #100] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #267]
 ; NONEON-NOSVE-NEXT:    mul w10, w10, w20
 ; NONEON-NOSVE-NEXT:    lsr w8, w12, #8
-; NONEON-NOSVE-NEXT:    ldr w12, [sp, #104] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w12, [sp, #104] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w11, w11, w21
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #266]
 ; NONEON-NOSVE-NEXT:    lsr w9, w13, #8
-; NONEON-NOSVE-NEXT:    ldr w13, [sp, #108] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w13, [sp, #108] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w12, w12, w22
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #265]
 ; NONEON-NOSVE-NEXT:    lsr w8, w10, #8
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #112] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #112] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #264]
 ; NONEON-NOSVE-NEXT:    mul w13, w13, w23
 ; NONEON-NOSVE-NEXT:    lsr w9, w11, #8
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #116] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #116] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    ldp w15, w14, [sp, #16] // 8-byte Folded Reload
 ; NONEON-NOSVE-NEXT:    mul w10, w10, w24
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #263]
 ; NONEON-NOSVE-NEXT:    lsr w8, w12, #8
 ; NONEON-NOSVE-NEXT:    mul w11, w11, w27
-; NONEON-NOSVE-NEXT:    ldr w12, [sp, #120] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w12, [sp, #120] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #262]
 ; NONEON-NOSVE-NEXT:    lsr w9, w13, #8
-; NONEON-NOSVE-NEXT:    ldr w13, [sp, #124] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w13, [sp, #124] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #261]
 ; NONEON-NOSVE-NEXT:    mul w12, w12, w15
 ; NONEON-NOSVE-NEXT:    lsr w8, w10, #8
@@ -1365,7 +1365,7 @@ define <16 x i8> @umulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; NONEON-NOSVE-LABEL: umulh_v16i8:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #160
-; NONEON-NOSVE-NEXT:    str x27, [sp, #80] // 8-byte Folded Spill
+; NONEON-NOSVE-NEXT:    str x27, [sp, #80] // 8-byte Spill
 ; NONEON-NOSVE-NEXT:    stp x26, x25, [sp, #96] // 16-byte Folded Spill
 ; NONEON-NOSVE-NEXT:    stp x24, x23, [sp, #112] // 16-byte Folded Spill
 ; NONEON-NOSVE-NEXT:    stp x22, x21, [sp, #128] // 16-byte Folded Spill
@@ -1456,7 +1456,7 @@ define <16 x i8> @umulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    strb w3, [sp, #74]
 ; NONEON-NOSVE-NEXT:    lsr w13, w13, #8
 ; NONEON-NOSVE-NEXT:    strb w2, [sp, #73]
-; NONEON-NOSVE-NEXT:    ldr x27, [sp, #80] // 8-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr x27, [sp, #80] // 8-byte Reload
 ; NONEON-NOSVE-NEXT:    lsr w10, w10, #8
 ; NONEON-NOSVE-NEXT:    strb w0, [sp, #72]
 ; NONEON-NOSVE-NEXT:    lsr w8, w8, #8
@@ -1623,7 +1623,7 @@ define void @umulh_v32i8(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #216]
 ; NONEON-NOSVE-NEXT:    strb w14, [sp, #287]
 ; NONEON-NOSVE-NEXT:    lsr w14, w25, #8
-; NONEON-NOSVE-NEXT:    ldr w25, [sp, #24] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w25, [sp, #24] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #16] // 8-byte Folded Spill
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #241]
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #240]
@@ -1631,19 +1631,19 @@ define void @umulh_v32i8(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    lsr w14, w28, #8
 ; NONEON-NOSVE-NEXT:    ldrb w11, [sp, #254]
 ; NONEON-NOSVE-NEXT:    mul w8, w25, w8
-; NONEON-NOSVE-NEXT:    ldr w25, [sp, #28] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w25, [sp, #28] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    ldrb w13, [sp, #252]
 ; NONEON-NOSVE-NEXT:    strb w14, [sp, #283]
-; NONEON-NOSVE-NEXT:    ldr w14, [sp, #40] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w14, [sp, #40] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w9, w25, w9
-; NONEON-NOSVE-NEXT:    ldr w25, [sp, #32] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w25, [sp, #32] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w17, [sp, #286]
 ; NONEON-NOSVE-NEXT:    mul w12, w14, w12
 ; NONEON-NOSVE-NEXT:    lsr w8, w8, #8
 ; NONEON-NOSVE-NEXT:    lsr w17, w26, #8
 ; NONEON-NOSVE-NEXT:    mul w10, w25, w10
-; NONEON-NOSVE-NEXT:    ldr w25, [sp, #36] // 4-byte Folded Reload
-; NONEON-NOSVE-NEXT:    ldr w14, [sp, #44] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w25, [sp, #36] // 4-byte Reload
+; NONEON-NOSVE-NEXT:    ldr w14, [sp, #44] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    lsr w9, w9, #8
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #281]
 ; NONEON-NOSVE-NEXT:    mul w11, w25, w11
@@ -1651,84 +1651,84 @@ define void @umulh_v32i8(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    lsr w17, w30, #8
 ; NONEON-NOSVE-NEXT:    mul w13, w14, w13
 ; NONEON-NOSVE-NEXT:    lsr w8, w10, #8
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #48] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #48] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #280]
 ; NONEON-NOSVE-NEXT:    ldp x26, x25, [sp, #320] // 16-byte Folded Reload
 ; NONEON-NOSVE-NEXT:    lsr w9, w11, #8
 ; NONEON-NOSVE-NEXT:    mul w10, w10, w15
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #52] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #52] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #279]
 ; NONEON-NOSVE-NEXT:    lsr w8, w12, #8
-; NONEON-NOSVE-NEXT:    ldr w12, [sp, #56] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w12, [sp, #56] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w11, w11, w16
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #278]
 ; NONEON-NOSVE-NEXT:    lsr w9, w13, #8
 ; NONEON-NOSVE-NEXT:    mul w12, w12, w18
-; NONEON-NOSVE-NEXT:    ldr w13, [sp, #60] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w13, [sp, #60] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #277]
 ; NONEON-NOSVE-NEXT:    lsr w8, w10, #8
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #64] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #64] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #276]
 ; NONEON-NOSVE-NEXT:    mul w13, w13, w0
 ; NONEON-NOSVE-NEXT:    lsr w9, w11, #8
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #68] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #68] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w10, w10, w1
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #275]
 ; NONEON-NOSVE-NEXT:    lsr w8, w12, #8
 ; NONEON-NOSVE-NEXT:    mul w11, w11, w2
-; NONEON-NOSVE-NEXT:    ldr w12, [sp, #72] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w12, [sp, #72] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #274]
 ; NONEON-NOSVE-NEXT:    lsr w9, w13, #8
-; NONEON-NOSVE-NEXT:    ldr w13, [sp, #76] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w13, [sp, #76] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #273]
 ; NONEON-NOSVE-NEXT:    mul w12, w12, w3
 ; NONEON-NOSVE-NEXT:    lsr w8, w10, #8
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #80] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #80] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w13, w13, w4
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #272]
 ; NONEON-NOSVE-NEXT:    lsr w9, w11, #8
 ; NONEON-NOSVE-NEXT:    mul w10, w10, w5
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #84] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #84] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #271]
 ; NONEON-NOSVE-NEXT:    lsr w8, w12, #8
-; NONEON-NOSVE-NEXT:    ldr w12, [sp, #88] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w12, [sp, #88] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #270]
 ; NONEON-NOSVE-NEXT:    mul w11, w11, w6
 ; NONEON-NOSVE-NEXT:    lsr w9, w13, #8
-; NONEON-NOSVE-NEXT:    ldr w13, [sp, #92] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w13, [sp, #92] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w12, w12, w7
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #269]
 ; NONEON-NOSVE-NEXT:    lsr w8, w10, #8
 ; NONEON-NOSVE-NEXT:    mul w13, w13, w19
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #96] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #96] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #268]
 ; NONEON-NOSVE-NEXT:    lsr w9, w11, #8
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #100] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #100] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #267]
 ; NONEON-NOSVE-NEXT:    mul w10, w10, w20
 ; NONEON-NOSVE-NEXT:    lsr w8, w12, #8
-; NONEON-NOSVE-NEXT:    ldr w12, [sp, #104] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w12, [sp, #104] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w11, w11, w21
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #266]
 ; NONEON-NOSVE-NEXT:    lsr w9, w13, #8
-; NONEON-NOSVE-NEXT:    ldr w13, [sp, #108] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w13, [sp, #108] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    mul w12, w12, w22
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #265]
 ; NONEON-NOSVE-NEXT:    lsr w8, w10, #8
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #112] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #112] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #264]
 ; NONEON-NOSVE-NEXT:    mul w13, w13, w23
 ; NONEON-NOSVE-NEXT:    lsr w9, w11, #8
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #116] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #116] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    ldp w15, w14, [sp, #16] // 8-byte Folded Reload
 ; NONEON-NOSVE-NEXT:    mul w10, w10, w24
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #263]
 ; NONEON-NOSVE-NEXT:    lsr w8, w12, #8
 ; NONEON-NOSVE-NEXT:    mul w11, w11, w27
-; NONEON-NOSVE-NEXT:    ldr w12, [sp, #120] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w12, [sp, #120] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w9, [sp, #262]
 ; NONEON-NOSVE-NEXT:    lsr w9, w13, #8
-; NONEON-NOSVE-NEXT:    ldr w13, [sp, #124] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w13, [sp, #124] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #261]
 ; NONEON-NOSVE-NEXT:    mul w12, w12, w15
 ; NONEON-NOSVE-NEXT:    lsr w8, w10, #8
