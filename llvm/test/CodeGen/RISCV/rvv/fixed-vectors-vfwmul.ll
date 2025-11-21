@@ -423,7 +423,7 @@ define <2 x double> @vfwmul_squared_v2f16_v2f64(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwmul.vv v8, v9, v9
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, ptr %x

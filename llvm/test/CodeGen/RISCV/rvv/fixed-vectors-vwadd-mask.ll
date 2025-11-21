@@ -10,7 +10,7 @@ define <8 x i64> @vwadd_wv_mask_v8i32(<8 x i32> %x, <8 x i64> %y) {
 ; CHECK-NEXT:    li a0, 42
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    vmv4r.v v8, v12
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, mu
 ; CHECK-NEXT:    vwadd.wv v8, v8, v16, v0.t
 ; CHECK-NEXT:    ret
     %mask = icmp slt <8 x i32> %x, <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>
@@ -28,7 +28,7 @@ define <8 x i64> @vwaddu_wv_mask_v8i32(<8 x i32> %x, <8 x i64> %y) {
 ; CHECK-NEXT:    li a0, 42
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    vmv4r.v v8, v12
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, mu
 ; CHECK-NEXT:    vwaddu.wv v8, v8, v16, v0.t
 ; CHECK-NEXT:    ret
     %mask = icmp slt <8 x i32> %x, <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>
@@ -65,7 +65,7 @@ define <8 x i64> @vwadd_wv_mask_v8i32_commutative(<8 x i32> %x, <8 x i64> %y) {
 ; CHECK-NEXT:    li a0, 42
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    vmv4r.v v8, v12
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, mu
 ; CHECK-NEXT:    vwadd.wv v8, v8, v16, v0.t
 ; CHECK-NEXT:    ret
     %mask = icmp slt <8 x i32> %x, <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>

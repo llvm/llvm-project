@@ -47,6 +47,11 @@ static cl::opt<bool> EnsureWholeVectorRegisterMoveValidVTYPE(
              "vill is cleared"),
     cl::init(true));
 
+static cl::opt<bool> UseVsetivliForImmAVL(
+    DEBUG_TYPE "-use-vsetivli-for-imm-avl", cl::Hidden,
+    cl::desc("Use vsetivli to replace x0,x0 form when AVL is an immediate."),
+    cl::init(true));
+
 namespace {
 
 /// Given a virtual register \p Reg, return the corresponding VNInfo for it.
@@ -1167,7 +1172,13 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     // Use X0, X0 form if the AVL is the same and the SEW+LMUL gives the same
     // VLMAX.
     if (Info.hasSameAVL(PrevInfo) && Info.hasSameVLMAX(PrevInfo)) {
-      auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0X0))
+      auto MI =
+          UseVsetivliForImmAVL && Info.hasAVLImm()
+              ? BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETIVLI))
+                    .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                    .addImm(PrevInfo.getAVLImm())
+                    .addImm(Info.encodeVTYPE())
+              : BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0X0))
                     .addReg(RISCV::X0, RegState::Define | RegState::Dead)
                     .addReg(RISCV::X0, RegState::Kill)
                     .addImm(Info.encodeVTYPE())
@@ -1734,35 +1745,47 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
   // demanded, or b) we can't rewrite the former to be the later for
   // implementation reasons.
   if (!RISCVInstrInfo::isVLPreservingConfig(MI)) {
-    if (Used.VLAny)
-      return false;
-
-    if (Used.VLZeroness) {
-      if (RISCVInstrInfo::isVLPreservingConfig(PrevMI))
+    bool Skip = false;
+    if (MI.getOpcode() == RISCV::PseudoVSETIVLI &&
+        PrevMI.getOpcode() == RISCV::PseudoVSETIVLI &&
+        PrevMI.getOperand(0).isDead()) {
+      VSETVLIInfo PrevInfo = getInfoForVSETVLI(PrevMI);
+      VSETVLIInfo Info = getInfoForVSETVLI(MI);
+      if (PrevInfo.hasAVLImm() && Info.hasAVLImm() &&
+          PrevInfo.getAVLImm() == Info.getAVLImm())
+        Skip = true;
+    }
+    if (!Skip) {
+      if (Used.VLAny)
         return false;
-      if (!getInfoForVSETVLI(PrevMI).hasEquallyZeroAVL(getInfoForVSETVLI(MI),
-                                                       LIS))
+
+      if (Used.VLZeroness) {
+        if (RISCVInstrInfo::isVLPreservingConfig(PrevMI))
+          return false;
+        if (!getInfoForVSETVLI(PrevMI).hasEquallyZeroAVL(getInfoForVSETVLI(MI),
+                                                         LIS))
+          return false;
+      }
+
+      auto &AVL = MI.getOperand(1);
+
+      // If the AVL is a register, we need to make sure its definition is the
+      // same at PrevMI as it was at MI.
+      if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
+        VNInfo *VNI = getVNInfoFromReg(AVL.getReg(), MI, LIS);
+        VNInfo *PrevVNI = getVNInfoFromReg(AVL.getReg(), PrevMI, LIS);
+        if (!VNI || !PrevVNI || VNI != PrevVNI)
+          return false;
+      }
+
+      // If we define VL and need to move the definition up, check we can extend
+      // the live interval upwards from MI to PrevMI.
+      Register VL = MI.getOperand(0).getReg();
+      if (VL.isVirtual() && LIS &&
+          LIS->getInterval(VL).overlaps(LIS->getInstructionIndex(PrevMI),
+                                        LIS->getInstructionIndex(MI)))
         return false;
     }
-
-    auto &AVL = MI.getOperand(1);
-
-    // If the AVL is a register, we need to make sure its definition is the same
-    // at PrevMI as it was at MI.
-    if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
-      VNInfo *VNI = getVNInfoFromReg(AVL.getReg(), MI, LIS);
-      VNInfo *PrevVNI = getVNInfoFromReg(AVL.getReg(), PrevMI, LIS);
-      if (!VNI || !PrevVNI || VNI != PrevVNI)
-        return false;
-    }
-
-    // If we define VL and need to move the definition up, check we can extend
-    // the live interval upwards from MI to PrevMI.
-    Register VL = MI.getOperand(0).getReg();
-    if (VL.isVirtual() && LIS &&
-        LIS->getInterval(VL).overlaps(LIS->getInstructionIndex(PrevMI),
-                                      LIS->getInstructionIndex(MI)))
-      return false;
   }
 
   assert(PrevMI.getOperand(2).isImm() && MI.getOperand(2).isImm());

@@ -43,7 +43,7 @@ define void @ctlz_v16i8(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vzext.vf2 v12, v8
 ; RVF-NEXT:    vfwcvt.f.xu.v v8, v12
 ; RVF-NEXT:    vnsrl.wi v12, v8, 23
-; RVF-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; RVF-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RVF-NEXT:    vnsrl.wi v8, v12, 0
 ; RVF-NEXT:    vrsub.vx v8, v8, a1
 ; RVF-NEXT:    li a1, 8
@@ -59,7 +59,7 @@ define void @ctlz_v16i8(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vzext.vf2 v12, v8
 ; RVD-NEXT:    vfwcvt.f.xu.v v8, v12
 ; RVD-NEXT:    vnsrl.wi v12, v8, 23
-; RVD-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; RVD-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RVD-NEXT:    vnsrl.wi v8, v12, 0
 ; RVD-NEXT:    vrsub.vx v8, v8, a1
 ; RVD-NEXT:    li a1, 8
@@ -359,7 +359,7 @@ define void @ctlz_v2i64(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vsrl.vi v8, v10, 23
 ; RVF-NEXT:    vwsubu.vv v10, v9, v8
 ; RVF-NEXT:    li a1, 64
-; RVF-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; RVF-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RVF-NEXT:    vminu.vx v8, v10, a1
 ; RVF-NEXT:    vse64.v v8, (a0)
 ; RVF-NEXT:    ret
@@ -750,7 +750,7 @@ define void @ctlz_v4i64(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vsrl.vi v11, v11, 23
 ; RVF-NEXT:    vwsubu.vv v8, v10, v11
 ; RVF-NEXT:    li a1, 64
-; RVF-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; RVF-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RVF-NEXT:    vminu.vx v8, v8, a1
 ; RVF-NEXT:    vse64.v v8, (a0)
 ; RVF-NEXT:    ret
@@ -820,7 +820,7 @@ define void @ctlz_zero_undef_v16i8(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vzext.vf2 v12, v8
 ; RVF-NEXT:    vfwcvt.f.xu.v v8, v12
 ; RVF-NEXT:    vnsrl.wi v12, v8, 23
-; RVF-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; RVF-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RVF-NEXT:    vnsrl.wi v8, v12, 0
 ; RVF-NEXT:    li a1, 134
 ; RVF-NEXT:    vrsub.vx v8, v8, a1
@@ -834,7 +834,7 @@ define void @ctlz_zero_undef_v16i8(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vzext.vf2 v12, v8
 ; RVD-NEXT:    vfwcvt.f.xu.v v8, v12
 ; RVD-NEXT:    vnsrl.wi v12, v8, 23
-; RVD-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; RVD-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RVD-NEXT:    vnsrl.wi v8, v12, 0
 ; RVD-NEXT:    li a1, 134
 ; RVD-NEXT:    vrsub.vx v8, v8, a1

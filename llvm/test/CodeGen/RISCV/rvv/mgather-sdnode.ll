@@ -2415,7 +2415,7 @@ define <4 x i32> @scalar_prefix_with_splat(ptr %base, i32 %index, <4 x i32> %vec
 ; RV64-NEXT:    li a2, 1024
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vmv.v.x v10, a0
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v9, a2
 ; RV64-NEXT:    vwmaccsu.vx v10, a1, v9
 ; RV64-NEXT:    li a0, 4
@@ -2471,7 +2471,7 @@ define <4 x i32> @reassociate(ptr %base, i32 %index, <4 x i32> %vecidx) {
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vmv.v.x v10, a0
 ; RV64-NEXT:    li a0, 1024
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vwmaccus.vx v10, a0, v8
 ; RV64-NEXT:    vmv.v.i v8, 4
 ; RV64-NEXT:    vwmaccsu.vx v10, a1, v8
@@ -2499,7 +2499,7 @@ define <4 x i32> @reassociate_with_splat(ptr %base, i32 %index, <4 x i32> %vecid
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vmv.v.x v10, a0
 ; RV64-NEXT:    li a0, 1024
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vwmaccus.vx v10, a0, v8
 ; RV64-NEXT:    vmv.v.i v8, 4
 ; RV64-NEXT:    vwmaccsu.vx v10, a1, v8
@@ -2554,7 +2554,7 @@ define <4 x i32> @diagonal(ptr %base, <4 x i64> %vecidx) {
 ; RV64-NEXT:    vadd.vx v10, v10, a0
 ; RV64-NEXT:    vsll.vi v8, v8, 2
 ; RV64-NEXT:    vadd.vv v10, v10, v8
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vluxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %gep = getelementptr inbounds nuw [256 x [256 x float]], ptr %base, i64 0, <4 x i64> %vecidx, <4 x i64> %vecidx
@@ -2581,7 +2581,7 @@ define <4 x i32> @diagonal_i32(ptr %base, <4 x i32> %vecidx) {
 ; RV64-NEXT:    vadd.vx v8, v8, a0
 ; RV64-NEXT:    vsll.vi v10, v10, 2
 ; RV64-NEXT:    vadd.vv v10, v8, v10
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vluxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %gep = getelementptr inbounds nuw [256 x [256 x float]], ptr %base, i64 0, <4 x i32> %vecidx, <4 x i32> %vecidx

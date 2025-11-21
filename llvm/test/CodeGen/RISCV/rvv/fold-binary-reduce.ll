@@ -408,7 +408,7 @@ define i64 @two_reduce_scalar_bypass_zext(<4 x i64> %v, <4 x i32> %v2) {
 ; CHECK-NEXT:    vmv.x.s a0, v10
 ; CHECK-NEXT:    slli a0, a0, 32
 ; CHECK-NEXT:    srli a0, a0, 32
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -428,7 +428,7 @@ define i64 @two_reduce_scalar_bypass_sext(<4 x i64> %v, <4 x i32> %v2) {
 ; CHECK-NEXT:    vmv.s.x v11, zero
 ; CHECK-NEXT:    vredsum.vs v10, v10, v11
 ; CHECK-NEXT:    vmv.x.s a0, v10
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8

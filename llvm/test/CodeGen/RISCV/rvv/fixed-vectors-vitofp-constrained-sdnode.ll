@@ -1478,7 +1478,7 @@ define <1 x half> @vsitofp_v1i64_v1f16(<1 x i64> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.x.w v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v9
 ; CHECK-NEXT:    ret
   %evec = call <1 x half> @llvm.experimental.constrained.sitofp.v1f16.v1i64(<1 x i64> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1491,7 +1491,7 @@ define <1 x half> @vuitofp_v1i64_v1f16(<1 x i64> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.xu.w v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v9
 ; CHECK-NEXT:    ret
   %evec = call <1 x half> @llvm.experimental.constrained.uitofp.v1f16.v1i64(<1 x i64> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1551,7 +1551,7 @@ define <2 x half> @vsitofp_v2i64_v2f16(<2 x i64> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.x.w v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v9
 ; CHECK-NEXT:    ret
   %evec = call <2 x half> @llvm.experimental.constrained.sitofp.v2f16.v2i64(<2 x i64> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1564,7 +1564,7 @@ define <2 x half> @vuitofp_v2i64_v2f16(<2 x i64> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.xu.w v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v9
 ; CHECK-NEXT:    ret
   %evec = call <2 x half> @llvm.experimental.constrained.uitofp.v2f16.v2i64(<2 x i64> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1623,7 +1623,7 @@ define <4 x half> @vsitofp_v4i64_v4f16(<4 x i64> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfncvt.f.x.w v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v10
 ; CHECK-NEXT:    ret
   %evec = call <4 x half> @llvm.experimental.constrained.sitofp.v4f16.v4i64(<4 x i64> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1636,7 +1636,7 @@ define <4 x half> @vuitofp_v4i64_v4f16(<4 x i64> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfncvt.f.xu.w v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v10
 ; CHECK-NEXT:    ret
   %evec = call <4 x half> @llvm.experimental.constrained.uitofp.v4f16.v4i64(<4 x i64> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1695,7 +1695,7 @@ define <8 x half> @vsitofp_v8i64_v8f16(<8 x i64> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.x.w v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v12
 ; CHECK-NEXT:    ret
   %evec = call <8 x half> @llvm.experimental.constrained.sitofp.v8f16.v8i64(<8 x i64> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1708,7 +1708,7 @@ define <8 x half> @vuitofp_v8i64_v8f16(<8 x i64> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.xu.w v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v12
 ; CHECK-NEXT:    ret
   %evec = call <8 x half> @llvm.experimental.constrained.uitofp.v8f16.v8i64(<8 x i64> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")

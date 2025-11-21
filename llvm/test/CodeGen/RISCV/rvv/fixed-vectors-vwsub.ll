@@ -669,7 +669,7 @@ define <8 x i16> @vwsub_vx_v8i16_i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vwsub.wv v8, v8, v9
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %x
@@ -726,7 +726,7 @@ define <4 x i32> @vwsub_vx_v4i32_i32(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vwsub.wv v8, v8, v9
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %x
@@ -817,7 +817,7 @@ define <2 x i64> @vwsub_vx_v2i64_i64(ptr %x, ptr %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle32.v v9, (a0)
 ; RV64-NEXT:    vmv.v.x v8, a1
-; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vwsub.wv v8, v8, v9
 ; RV64-NEXT:    ret
   %a = load <2 x i32>, ptr %x

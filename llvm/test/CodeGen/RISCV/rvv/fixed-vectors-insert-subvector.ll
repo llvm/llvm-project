@@ -554,7 +554,7 @@ define <vscale x 2 x i1> @insert_nxv2i1_v4i1_0(<vscale x 2 x i1> %v, ptr %svp) {
 ; VLA-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; VLA-NEXT:    vmv.v.i v10, 0
 ; VLA-NEXT:    vmv1r.v v0, v8
-; VLA-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
+; VLA-NEXT:    vsetivli zero, 4, e8, mf4, tu, ma
 ; VLA-NEXT:    vmerge.vim v9, v10, 1, v0
 ; VLA-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; VLA-NEXT:    vmsne.vi v0, v9, 0
@@ -567,9 +567,9 @@ define <vscale x 2 x i1> @insert_nxv2i1_v4i1_0(<vscale x 2 x i1> %v, ptr %svp) {
 ; VLS-NEXT:    vmv.v.i v9, 0
 ; VLS-NEXT:    vmerge.vim v10, v9, 1, v0
 ; VLS-NEXT:    vmv1r.v v0, v8
-; VLS-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
+; VLS-NEXT:    vsetivli zero, 4, e8, mf4, tu, ma
 ; VLS-NEXT:    vmerge.vim v10, v9, 1, v0
-; VLS-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; VLS-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; VLS-NEXT:    vmsne.vi v0, v10, 0
 ; VLS-NEXT:    ret
   %sv = load <4 x i1>, ptr %svp

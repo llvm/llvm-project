@@ -1863,11 +1863,11 @@ define <8 x float> @buildvec_vfredusum_slideup_leading_undef(float %start, <8 x 
 ; CHECK-NEXT:    vfredusum.vs v8, v10, v17
 ; CHECK-NEXT:    vfredusum.vs v10, v12, v17
 ; CHECK-NEXT:    vfredusum.vs v12, v14, v17
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v10, v12, 1
 ; CHECK-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-NEXT:    vslideup.vi v16, v8, 1
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v16, 4
 ; CHECK-NEXT:    ret
   %252 = tail call reassoc float @llvm.vector.reduce.fadd.v8f32(float %start, <8 x float> %arg1)
@@ -1890,7 +1890,7 @@ define <8 x float> @buildvec_vfredusum_slideup_trailing_undef(float %start, <8 x
 ; CHECK-NEXT:    vfredusum.vs v10, v10, v16
 ; CHECK-NEXT:    vfredusum.vs v12, v12, v16
 ; CHECK-NEXT:    vfredusum.vs v14, v14, v16
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v12, v14, 1
 ; CHECK-NEXT:    vslideup.vi v10, v12, 1
 ; CHECK-NEXT:    vslideup.vi v8, v10, 1
@@ -1942,11 +1942,11 @@ define <8 x float> @buildvec_vfredusum_slideup_mid_undef(float %start, <8 x floa
 ; CHECK-NEXT:    vfredusum.vs v10, v10, v16
 ; CHECK-NEXT:    vfredusum.vs v12, v12, v16
 ; CHECK-NEXT:    vfredusum.vs v14, v14, v16
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v12, v14, 1
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v14, v12, 4
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v10, v14, 1
 ; CHECK-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-NEXT:    ret

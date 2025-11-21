@@ -22,7 +22,7 @@ define <2 x double> @vfpext_v2f16_v2f64(<2 x half> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v8, v9
 ; CHECK-NEXT:    ret
   %evec = call <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f16(<2 x half> %va, metadata !"fpexcept.strict")
@@ -47,7 +47,7 @@ define <4 x double> @vfpext_v4f16_v4f64(<4 x half> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v8, v10
 ; CHECK-NEXT:    ret
   %evec = call <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f16(<4 x half> %va, metadata !"fpexcept.strict")
@@ -72,7 +72,7 @@ define <8 x double> @vfpext_v8f16_v8f64(<8 x half> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v8, v12
 ; CHECK-NEXT:    ret
   %evec = call <8 x double> @llvm.experimental.constrained.fpext.v8f64.v8f16(<8 x half> %va, metadata !"fpexcept.strict")
@@ -133,7 +133,7 @@ define <2 x double> @vfpext_v2bf16_v2f64(<2 x bfloat> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v8, v9
 ; CHECK-NEXT:    ret
   %evec = call <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2bf16(<2 x bfloat> %va, metadata !"fpexcept.strict")
@@ -158,7 +158,7 @@ define <4 x double> @vfpext_v4bf16_v4f64(<4 x bfloat> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v8, v10
 ; CHECK-NEXT:    ret
   %evec = call <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4bf16(<4 x bfloat> %va, metadata !"fpexcept.strict")
@@ -183,7 +183,7 @@ define <8 x double> @vfpext_v8bf16_v8f64(<8 x bfloat> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v8, v12
 ; CHECK-NEXT:    ret
   %evec = call <8 x double> @llvm.experimental.constrained.fpext.v8f64.v8bf16(<8 x bfloat> %va, metadata !"fpexcept.strict")

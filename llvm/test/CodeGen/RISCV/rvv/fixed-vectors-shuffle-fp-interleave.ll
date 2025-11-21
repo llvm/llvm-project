@@ -344,9 +344,9 @@ define <4 x double> @unary_interleave_v4f64(<4 x double> %x) {
 ; V128-NEXT:    addi a0, a0, 512
 ; V128-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; V128-NEXT:    vmv.s.x v10, a0
-; V128-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; V128-NEXT:    vsext.vf2 v12, v10
-; V128-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; V128-NEXT:    vrgatherei16.vv v10, v8, v12
 ; V128-NEXT:    vmv.v.v v8, v10
 ; V128-NEXT:    ret
@@ -359,7 +359,7 @@ define <4 x double> @unary_interleave_v4f64(<4 x double> %x) {
 ; RV32-V512-NEXT:    vmv.s.x v9, a0
 ; RV32-V512-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
 ; RV32-V512-NEXT:    vsext.vf2 v10, v9
-; RV32-V512-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; RV32-V512-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; RV32-V512-NEXT:    vrgatherei16.vv v9, v8, v10
 ; RV32-V512-NEXT:    vmv.v.v v8, v9
 ; RV32-V512-NEXT:    ret

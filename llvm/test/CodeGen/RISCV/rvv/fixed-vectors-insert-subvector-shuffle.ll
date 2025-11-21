@@ -32,7 +32,7 @@ define <4 x i32> @insert_subvector_load_unfoldable_passthru_v4i32_v4i32(<4 x i32
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v9, (a0), v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %v2 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %p, i32 4, <4 x i1> %mask, <4 x i32> %passthru)
@@ -57,7 +57,7 @@ define <4 x i32> @insert_subvector_add_v4i32_v4i32(<4 x i32> %v1, <4 x i32> %v2)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; CHECK-NEXT:    vadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %v3 = add <4 x i32> %v2, <i32 0, i32 1, i32 2, i32 3>
@@ -168,7 +168,7 @@ define <4 x i32> @insert_subvector_add_v4i32_v8i32(<4 x i32> %v1, <8 x i32> %v2)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; CHECK-NEXT:    vadd.vv v8, v10, v9
 ; CHECK-NEXT:    ret
   %v3 = add <8 x i32> %v2, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

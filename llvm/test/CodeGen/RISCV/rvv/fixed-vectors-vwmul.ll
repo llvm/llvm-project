@@ -27,7 +27,7 @@ define <2 x i16> @vwmul_v2i16_multiple_users(ptr %x, ptr %y, ptr %z) {
 ; CHECK-NEXT:    vle8.v v10, (a2)
 ; CHECK-NEXT:    vwmul.vv v11, v8, v9
 ; CHECK-NEXT:    vwmul.vv v9, v8, v10
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vor.vv v8, v11, v9
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, ptr %x

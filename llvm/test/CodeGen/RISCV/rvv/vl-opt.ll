@@ -339,7 +339,7 @@ define <vscale x 2 x i64> @dead_vsmul() {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 0, e64, m2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vsmul.vx v10, v10, zero
 ; CHECK-NEXT:    ret
 entry:

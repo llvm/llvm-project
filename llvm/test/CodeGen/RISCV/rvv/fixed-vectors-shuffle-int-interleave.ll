@@ -723,7 +723,7 @@ define <4 x i8> @unary_interleave_v4i8_invalid(<4 x i8> %x) {
 ; V128-NEXT:    addi a0, a0, 768
 ; V128-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; V128-NEXT:    vmv.s.x v10, a0
-; V128-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; V128-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; V128-NEXT:    vrgather.vv v9, v8, v10
 ; V128-NEXT:    vmv1r.v v8, v9
 ; V128-NEXT:    ret
@@ -745,7 +745,7 @@ define <4 x i8> @unary_interleave_v4i8_invalid(<4 x i8> %x) {
 ; ZIP-NEXT:    addi a0, a0, 768
 ; ZIP-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; ZIP-NEXT:    vmv.s.x v10, a0
-; ZIP-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; ZIP-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; ZIP-NEXT:    vrgather.vv v9, v8, v10
 ; ZIP-NEXT:    vmv1r.v v8, v9
 ; ZIP-NEXT:    ret
@@ -829,9 +829,9 @@ define <4 x i64> @unary_interleave_v4i64(<4 x i64> %x) {
 ; V128-NEXT:    addi a0, a0, 512
 ; V128-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; V128-NEXT:    vmv.s.x v10, a0
-; V128-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; V128-NEXT:    vsext.vf2 v12, v10
-; V128-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; V128-NEXT:    vrgatherei16.vv v10, v8, v12
 ; V128-NEXT:    vmv.v.v v8, v10
 ; V128-NEXT:    ret
@@ -844,7 +844,7 @@ define <4 x i64> @unary_interleave_v4i64(<4 x i64> %x) {
 ; RV32-V512-NEXT:    vmv.s.x v9, a0
 ; RV32-V512-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
 ; RV32-V512-NEXT:    vsext.vf2 v10, v9
-; RV32-V512-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; RV32-V512-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; RV32-V512-NEXT:    vrgatherei16.vv v9, v8, v10
 ; RV32-V512-NEXT:    vmv.v.v v8, v9
 ; RV32-V512-NEXT:    ret

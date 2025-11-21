@@ -125,7 +125,7 @@ define <1 x i64> @llrint_v1i64_v1f16(<1 x half> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <1 x i64> @llvm.llrint.v1i64.v1f16(<1 x half> %x)
@@ -138,7 +138,7 @@ define <2 x i64> @llrint_v2i64_v2f16(<2 x half> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <2 x i64> @llvm.llrint.v2i64.v2f16(<2 x half> %x)
@@ -151,7 +151,7 @@ define <3 x i64> @llrint_v3i64_v3f16(<3 x half> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v8, v10
 ; CHECK-NEXT:    ret
   %a = call <3 x i64> @llvm.llrint.v3i64.v3f16(<3 x half> %x)
@@ -164,7 +164,7 @@ define <4 x i64> @llrint_v4i64_v4f16(<4 x half> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v8, v10
 ; CHECK-NEXT:    ret
   %a = call <4 x i64> @llvm.llrint.v4i64.v4f16(<4 x half> %x)
@@ -177,7 +177,7 @@ define <8 x i64> @llrint_v8i64_v8f16(<8 x half> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v8, v12
 ; CHECK-NEXT:    ret
   %a = call <8 x i64> @llvm.llrint.v8i64.v8f16(<8 x half> %x)
@@ -190,7 +190,7 @@ define <16 x i64> @llrint_v16i64_v16f16(<16 x half> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v8, v16
 ; CHECK-NEXT:    ret
   %a = call <16 x i64> @llvm.llrint.v16i64.v16f16(<16 x half> %x)
@@ -203,7 +203,7 @@ define <1 x i64> @llrint_v1i64_v1bf16(<1 x bfloat> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <1 x i64> @llvm.llrint.v1i64.v1bf16(<1 x bfloat> %x)
@@ -216,7 +216,7 @@ define <2 x i64> @llrint_v2i64_v2bf16(<2 x bfloat> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <2 x i64> @llvm.llrint.v2i64.v2bf16(<2 x bfloat> %x)
@@ -229,7 +229,7 @@ define <3 x i64> @llrint_v3i64_v3bf16(<3 x bfloat> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v8, v10
 ; CHECK-NEXT:    ret
   %a = call <3 x i64> @llvm.llrint.v3i64.v3bf16(<3 x bfloat> %x)
@@ -242,7 +242,7 @@ define <4 x i64> @llrint_v4i64_v4bf16(<4 x bfloat> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v8, v10
 ; CHECK-NEXT:    ret
   %a = call <4 x i64> @llvm.llrint.v4i64.v4bf16(<4 x bfloat> %x)
@@ -255,7 +255,7 @@ define <8 x i64> @llrint_v8i64_v8bf16(<8 x bfloat> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v8, v12
 ; CHECK-NEXT:    ret
   %a = call <8 x i64> @llvm.llrint.v8i64.v8bf16(<8 x bfloat> %x)
@@ -268,7 +268,7 @@ define <16 x i64> @llrint_v16i64_v16bf16(<16 x bfloat> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v8, v16
 ; CHECK-NEXT:    ret
   %a = call <16 x i64> @llvm.llrint.v16i64.v16bf16(<16 x bfloat> %x)

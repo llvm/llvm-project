@@ -74,7 +74,7 @@ define <8 x i32> @m2_pair_swap_vl8(<8 x i32> %v1) vscale_range(2,2) {
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    li a1, 63
 ; RV32-NEXT:    vwsubu.vx v10, v12, a0
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vand.vx v10, v10, a1
 ; RV32-NEXT:    vand.vx v12, v12, a1
@@ -310,7 +310,7 @@ define <16 x i32> @m4_square_num_of_shuffles_in_chunks(<16 x i32> %0) vscale_ran
 ; CHECK-NEXT:    vl1r.v v12, (a0)
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vsext.vf2 v16, v12
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -342,7 +342,7 @@ define i64 @multi_chunks_shuffle(<32 x i32> %0) vscale_range(8,8) {
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    li a1, 63
 ; RV32-NEXT:    vwsubu.vx v10, v12, a0
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e64, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    lui a0, 61681
 ; RV32-NEXT:    addi a0, a0, -241

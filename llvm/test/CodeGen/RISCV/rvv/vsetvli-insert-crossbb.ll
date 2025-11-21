@@ -850,9 +850,10 @@ for.end:                                          ; preds = %for.body
 define <vscale x 4 x i32> @cross_block_mutate(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b,
 ; CHECK-LABEL: cross_block_mutate:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli a0, 6, e32, m2, tu, ma
+; CHECK-NEXT:    vsetivli a0, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
                                          <vscale x 4 x i1> %mask) {
@@ -936,7 +937,7 @@ define <vscale x 2 x i32> @test_ratio_only_vmv_s_x(ptr %x, ptr %y, i1 %cond) nou
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:  .LBB21_3: # %if.end
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    ret
 entry:
@@ -968,7 +969,7 @@ define <vscale x 2 x i32> @test_ratio_only_vmv_s_x2(ptr %x, ptr %y, i1 %cond) no
 ; CHECK-NEXT:    vle16.v v9, (a1)
 ; CHECK-NEXT:    vwcvt.x.x.v v8, v9
 ; CHECK-NEXT:  .LBB22_3: # %if.end
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    ret
 entry:

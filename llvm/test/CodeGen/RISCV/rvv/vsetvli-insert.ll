@@ -352,7 +352,7 @@ define <vscale x 1 x double> @test18(<vscale x 1 x double> %a, double %b) nounwi
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 6, e64, m1, ta, ma
 ; CHECK-NEXT:    vfadd.vv v9, v8, v8
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 6, e64, m1, tu, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
@@ -903,7 +903,7 @@ define void @coalesce_vl_clobber(ptr %p) {
 ; CHECK-NEXT:    srli a1, a1, 32
 ; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
 ; CHECK-NEXT:    vslideup.vx v10, v9, a1, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
