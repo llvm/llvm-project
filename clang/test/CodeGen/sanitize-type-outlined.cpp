@@ -1,4 +1,4 @@
-// UNSUPPORTED: target={{.*}}-windows-{{.*}}
+// REQUIRES: target=x86_64-linux-gnu
 
 // RUN: %clang -S -fsanitize=type -emit-llvm -o - -fsanitize=type %s \
 // RUN:     -fno-sanitize-type-outline-instrumentation \
