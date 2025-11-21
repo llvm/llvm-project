@@ -1594,49 +1594,49 @@ vfslide1up.vf v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
@@ -2354,7 +2354,7 @@ vfslide1up.vf v8, v16, ft0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]
-# CHECK-NEXT:  -     572.00  -      -      -     225.00 5481.00  -
+# CHECK-NEXT:  -     572.00  -      -      -     225.00 5585.00  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]    Instructions:
@@ -2761,43 +2761,43 @@ vfslide1up.vf v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
