@@ -27,7 +27,6 @@ template<typename T> std::string printToString(const T &Value) {
   llvm::raw_string_ostream OS(res);
   OS.SetBuffered();
   OS << Value;
-  OS.flush();
   return res;
 }
 
@@ -134,17 +133,6 @@ TEST(raw_ostreamTest, BufferEdge) {
   EXPECT_EQ("1.20", printToString(format("%.2f", 1.2), 3));
   EXPECT_EQ("1.20", printToString(format("%.2f", 1.2), 4));
   EXPECT_EQ("1.20", printToString(format("%.2f", 1.2), 10));
-}
-
-TEST(raw_ostreamTest, TinyBuffer) {
-  std::string Str;
-  raw_string_ostream OS(Str);
-  OS.SetBufferSize(1);
-  OS << "hello";
-  OS << 1;
-  OS << 'w' << 'o' << 'r' << 'l' << 'd';
-  OS.flush();
-  EXPECT_EQ("hello1world", Str);
 }
 
 TEST(raw_ostreamTest, WriteEscaped) {
@@ -256,7 +244,6 @@ formatted_bytes_str(ArrayRef<uint8_t> Bytes,
   std::string S;
   raw_string_ostream Str(S);
   Str << format_bytes(Bytes, Offset, NumPerLine, ByteGroupSize);
-  Str.flush();
   return S;
 }
 
@@ -266,7 +253,6 @@ static std::string format_bytes_with_ascii_str(
   std::string S;
   raw_string_ostream Str(S);
   Str << format_bytes_with_ascii(Bytes, Offset, NumPerLine, ByteGroupSize);
-  Str.flush();
   return S;
 }
 
@@ -491,7 +477,6 @@ TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
   TiedStream << "0";
   EXPECT_EQ("acego", TiedToBuffer);
 
-  TiedTo.flush();
   TiedStream.flush();
 }
 
@@ -553,7 +538,6 @@ TEST(raw_ostreamTest, reserve_stream) {
   OS << "hello";
   OS << 1;
   OS << 'w' << 'o' << 'r' << 'l' << 'd';
-  OS.flush();
   EXPECT_EQ("11111111111111111111hello1world", Str);
 }
 

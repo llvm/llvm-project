@@ -544,7 +544,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     Result += '(';
     raw_string_ostream OS(Result);
     getValueAsType()->print(OS, false, true);
-    OS.flush();
     Result += ')';
     return Result;
   }
@@ -666,7 +665,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       OS << getModRefStr(MR);
     }
     OS << ")";
-    OS.flush();
     return Result;
   }
 
@@ -692,7 +690,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     OS << "i" << CR.getBitWidth() << " ";
     OS << CR.getLower() << ", " << CR.getUpper();
     OS << ")";
-    OS.flush();
     return Result;
   }
 
@@ -703,7 +700,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     OS << "initializes(";
     CRL.print(OS);
     OS << ")";
-    OS.flush();
     return Result;
   }
 
