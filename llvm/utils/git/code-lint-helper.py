@@ -36,7 +36,7 @@ class LintArgs:
     clang_tidy_binary: str = "clang-tidy"
     doc8_binary: str = "doc8"
 
-    def __init__(self, args: argparse.Namespace = None) -> None:
+    def __init__(self, args: argparse.Namespace) -> None:
         if not args is None:
             self.start_rev = args.start_rev
             self.end_rev = args.end_rev
@@ -315,9 +315,18 @@ class Doc8LintHelper(LintHelper):
             check=False,
         )
 
+        if proc.returncode == 0:
+            return None
+
         output = proc.stdout.strip()
-        if proc.returncode != 0 and not output:
-            return proc.stderr.strip()
+        if output:
+            return output
+
+        error_output = proc.stderr.strip()
+        if error_output:
+            return error_output
+
+        return f"doc8 exited with return code {proc.returncode} but no output."
 
 
 ALL_LINTERS = (ClangTidyLintHelper(), Doc8LintHelper())
