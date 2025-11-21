@@ -236,6 +236,11 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Removed OpenCL header-only feature macros (previously unconditionally enabled
+  on SPIR-V and only selectively disabled via ``-D__undef_<feature>``). All
+  OpenCL extensions and features are now centralized in OpenCLExtensions.def,
+  allowing consistent control via ``getSupportedOpenCLOpts`` and ``-cl-ext``.
+
 - Added ``__builtin_elementwise_ldexp``.
 
 - Added ``__builtin_elementwise_fshl`` and ``__builtin_elementwise_fshr``.
@@ -440,6 +445,10 @@ Improvements to Clang's diagnostics
   attributes are used with a negative size (#GH165463).
 - Clang no longer emits ``-Wmissing-noreturn`` for virtual methods where
   the function body consists of a `throw` expression (#GH167247).
+
+- A new warning ``-Wenum-compare-typo`` has been added to detect potential erroneous
+  comparison operators when mixed with bitwise operators in enum value initializers.
+  This can be locally disabled by explicitly casting the initializer value.
 
 Improvements to Clang's time-trace
 ----------------------------------
