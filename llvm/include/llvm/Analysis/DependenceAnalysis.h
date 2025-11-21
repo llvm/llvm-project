@@ -107,11 +107,9 @@ public:
     bool Scalar : 1;             // Init to true.
     bool PeelFirst : 1; // Peeling the first iteration will break dependence.
     bool PeelLast : 1;  // Peeling the last iteration will break the dependence.
-    bool Splitable : 1; // Splitting the loop will break dependence.
     const SCEV *Distance = nullptr; // NULL implies no distance available.
     DVEntry()
-        : Direction(ALL), Scalar(true), PeelFirst(false), PeelLast(false),
-          Splitable(false) {}
+        : Direction(ALL), Scalar(true), PeelFirst(false), PeelLast(false) {}
   };
 
   /// getSrc - Returns the source instruction for this dependence.
@@ -193,12 +191,6 @@ public:
   /// isPeelLast - Returns true if peeling the last iteration from
   /// this regular or SameSD loop level will break this dependence.
   virtual bool isPeelLast(unsigned Level, bool SameSD = false) const {
-    return false;
-  }
-
-  /// isSplitable - Returns true if splitting the loop will break
-  /// the dependence.
-  virtual bool isSplitable(unsigned Level, bool SameSD = false) const {
     return false;
   }
 
@@ -319,10 +311,6 @@ public:
   /// isPeelLast - Returns true if peeling the last iteration from
   /// this regular or SameSD loop level will break this dependence.
   bool isPeelLast(unsigned Level, bool SameSD = false) const override;
-
-  /// isSplitable - Returns true if splitting the loop will break
-  /// the dependence.
-  bool isSplitable(unsigned Level, bool SameSD = false) const override;
 
   /// inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
   /// performed across two separate loop nests that have the Same Iteration and
@@ -712,7 +700,6 @@ private:
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
   /// Set consistent to false.
-  /// Marks the dependence as splitable.
   bool weakCrossingSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
                            const SCEV *DstConst, const Loop *CurrentSrcLoop,
                            const Loop *CurrentDstLoop, unsigned Level,

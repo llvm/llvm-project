@@ -442,12 +442,6 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
             if (NormalizeResults && D->normalize(&SE))
               OS << "normalized - ";
             D->dump(OS);
-            for (unsigned Level = 1; Level <= D->getLevels(); Level++) {
-              if (D->isSplitable(Level)) {
-                OS << "  da analyze - split level = " << Level;
-                OS << "!\n";
-              }
-            }
           } else
             OS << "none!\n";
         }
@@ -608,11 +602,6 @@ bool FullDependence::isPeelFirst(unsigned Level, bool IsSameSD) const {
 // loop level will break this dependence.
 bool FullDependence::isPeelLast(unsigned Level, bool IsSameSD) const {
   return getDVEntry(Level, IsSameSD).PeelLast;
-}
-
-// Returns true if splitting loop will break the dependence.
-bool FullDependence::isSplitable(unsigned Level, bool IsSameSD) const {
-  return getDVEntry(Level, IsSameSD).Splitable;
 }
 
 // inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
@@ -1014,7 +1003,6 @@ void Dependence::dump(raw_ostream &OS) const {
 // For debugging purposes. Dumps a dependence to OS with or without considering
 // the SameSD levels.
 void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
-  bool Splitable = false;
   unsigned Levels = getLevels();
   unsigned SameSDLevels = getSameSDLevels();
   bool OnSameSD = false;
@@ -1025,8 +1013,6 @@ void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
   for (unsigned II = 1; II <= LevelNum; ++II) {
     if (!OnSameSD && inSameSDLoops(II))
       OnSameSD = true;
-    if (isSplitable(II, OnSameSD))
-      Splitable = true;
     if (isPeelFirst(II, OnSameSD))
       OS << 'p';
     const SCEV *Distance = getDistance(II, OnSameSD);
@@ -1055,8 +1041,6 @@ void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
   if (isLoopIndependent())
     OS << "|<";
   OS << "]";
-  if (Splitable)
-    OS << " splitable";
 }
 
 // Returns NoAlias/MayAliass/MustAlias for two memory locations based upon their
@@ -1854,7 +1838,6 @@ bool DependenceInfo::weakCrossingSIVtest(
   if (!ConstCoeff)
     return false;
 
-  Result.DV[Level].Splitable = true;
   if (SE->isKnownNegative(ConstCoeff)) {
     ConstCoeff = dyn_cast<SCEVConstant>(SE->getNegativeSCEV(ConstCoeff));
     assert(ConstCoeff &&
@@ -1902,7 +1885,6 @@ bool DependenceInfo::weakCrossingSIVtest(
         ++WeakCrossingSIVindependence;
         return true;
       }
-      Result.DV[Level].Splitable = false;
       Result.DV[Level].Distance = SE->getZero(Delta->getType());
       return false;
     }
