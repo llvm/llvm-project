@@ -21,8 +21,9 @@ using namespace clang::tidy;
 
 namespace clang::tidy::misc {
 
-template <typename R> static auto makeCannonicalTypesRange(R &&r) {
-  return llvm::map_range(r, [](const ParmVarDecl *Param) {
+template <typename ContainerTy>
+static auto makeCannonicalTypesRange(ContainerTy &&C) {
+  return llvm::map_range(C, [](const ParmVarDecl *Param) {
     return Param->getType().getCanonicalType();
   });
 }
