@@ -3641,8 +3641,8 @@ processReductionCombiner(lower::AbstractConverter &converter,
   return genCombinerCB;
 }
 
-// Checks that the reduction type is either a trivial type or a derived type
-// of trivial types.
+// Checks that the reduction type is either a trivial type or a derived type of
+// trivial types.
 static bool isSimpleReductionType(mlir::Type reductionType) {
   if (fir::isa_trivial(reductionType))
     return true;
