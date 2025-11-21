@@ -28,7 +28,9 @@ jobs:
           python-version: '3.9'
           pip-install: packaging psutil
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1A
-      - run: |
+      - env:
+          LDFLAGS: "-Wl,--verbose"
+        run: |
           subst S: ${{ github.workspace }}
           cd S:\llvm\utils\release\
           .\build_llvm_release.bat --x64 --version 22.0.0 --local-python --skip-checkout

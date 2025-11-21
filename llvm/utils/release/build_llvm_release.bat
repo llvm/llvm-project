@@ -322,7 +322,7 @@ cmake --trace-expand -GNinja %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
   %common_lldb_flags% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
-ninja  exit /b 1
+ninja -v || ninja -v || ninja -v ||  exit /b 1
 ninja check-llvm || exit /b 1
 ninja check-clang || exit /b 1
 ninja check-lld || exit /b 1
