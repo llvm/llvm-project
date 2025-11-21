@@ -236,6 +236,7 @@ void matOrVec2(float2x3 F) {} // expected-note{{candidate function}}
 
 export void Case8(float2x3 f23, float4x4 f44, float3x3 f33, float3x2 f32) {
   int2x2 i22 = f23;
+  // expected-warning@-1{{implicit conversion truncates matrix: 'float2x3' (aka 'matrix<float, 2, 3>') to 'int2x2' (aka 'matrix<int, 2, 2>')}}
   //CHECK: VarDecl {{.*}} i22 'int2x2':'matrix<int, 2, 2>' cinit
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'int2x2':'matrix<int, 2, 2>' <FloatingToIntegral>
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2x3':'matrix<float, 2, 3>' <LValueToRValue>
@@ -245,6 +246,7 @@ export void Case8(float2x3 f23, float4x4 f44, float3x3 f33, float3x2 f32) {
 #endif
   
   fn2x2(f23);
+  // expected-warning@-1{{implicit conversion truncates matrix: 'float2x3' (aka 'matrix<float, 2, 3>') to 'matrix<float, 2, 2>'}}
   //CHECK: DeclRefExpr {{.*}} 'void (float2x2)' lvalue Function {{.*}} 'fn2x2' 'void (float2x2)'
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'matrix<float, 2, 2>' <HLSLMatrixTruncation>
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2x3':'matrix<float, 2, 3>' <LValueToRValue>
@@ -255,11 +257,13 @@ export void Case8(float2x3 f23, float4x4 f44, float3x3 f33, float3x2 f32) {
 #endif
 
   matOrVec(f23);
+  // expected-warning@-1{{implicit conversion truncates matrix: 'float2x3' (aka 'matrix<float, 2, 3>') to 'matrix<float, 2, 2>'}}
   //CHECK: DeclRefExpr {{.*}} 'void (float2x2)' lvalue Function {{.*}} 'matOrVec' 'void (float2x2)'
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'matrix<float, 2, 2>' <HLSLMatrixTruncation>
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2x3':'matrix<float, 2, 3>' <LValueToRValue>
 
   matOrVec(f44);
+  // expected-warning@-1{{implicit conversion truncates matrix: 'float4x4' (aka 'matrix<float, 4, 4>') to 'matrix<float, 2, 2>'}}
   //CHECK: DeclRefExpr {{.*}} 'void (float2x2)' lvalue Function {{.*}} 'matOrVec' 'void (float2x2)'
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'matrix<float, 2, 2>' <HLSLMatrixTruncation>
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4x4':'matrix<float, 4, 4>' <LValueToRValue>
@@ -272,11 +276,13 @@ export void Case8(float2x3 f23, float4x4 f44, float3x3 f33, float3x2 f32) {
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2x3':'matrix<float, 2, 3>' <LValueToRValue>
 
   matOrVec2(f44);
+  // expected-warning@-1{{implicit conversion truncates matrix: 'float4x4' (aka 'matrix<float, 4, 4>') to 'matrix<float, 2, 3>'}}
   //CHECK: DeclRefExpr {{.*}} 'void (float2x3)' lvalue Function {{.*}} 'matOrVec2' 'void (float2x3)'
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'matrix<float, 2, 3>' <HLSLMatrixTruncation>
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4x4':'matrix<float, 4, 4>' <LValueToRValue>
 
   matOrVec2(f33);
+  // expected-warning@-1{{implicit conversion truncates matrix: 'float3x3' (aka 'matrix<float, 3, 3>') to 'matrix<float, 2, 3>'}}
   //CHECK: DeclRefExpr {{.*}} 'void (float2x3)' lvalue Function {{.*}} 'matOrVec2' 'void (float2x3)'
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'matrix<float, 2, 3>' <HLSLMatrixTruncation>
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'float3x3':'matrix<float, 3, 3>' <LValueToRValue>
