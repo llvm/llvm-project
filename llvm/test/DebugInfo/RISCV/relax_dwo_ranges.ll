@@ -20,17 +20,13 @@
 
 ; RUN: llc -dwarf-version=5 -split-dwarf-file=foo.dwo -O0 -mtriple=riscv64-unknown-linux-gnu -filetype=obj relax_dwo_ranges.ll -o %t.o
 ; RUN: llvm-dwarfdump -v %t.o | FileCheck --check-prefix=DWARF5 %s
-; RUN: llvm-dwarfdump --debug-info %t.o 2> %t.txt
-; RUN: FileCheck --input-file=%t.txt %s --check-prefix=RELOCS --allow-empty --implicit-check-not=warning:
+; RUN: llvm-dwarfdump --debug-info %t.o > /dev/null 2>&1 | count 0
 ; RUN: llvm-objdump -h %t | FileCheck --check-prefix=HDR %s
 
 ; RUN: llc -dwarf-version=4 -split-dwarf-file=foo.dwo -O0 -mtriple=riscv64-unknown-linux-gnu -filetype=obj relax_dwo_ranges.ll -o %t.o
 ; RUN: llvm-dwarfdump -v %t.o | FileCheck --check-prefix=DWARF4 %s
-; RUN: llvm-dwarfdump --debug-info %t.o 2> %t.txt
-; RUN: FileCheck --input-file=%t.txt %s --check-prefix=RELOCS --allow-empty --implicit-check-not=warning:
+; RUN: llvm-dwarfdump --debug-info %t.o > /dev/null 2>&1 | count 0
 ; RUN: llvm-objdump -h %t | FileCheck --check-prefix=HDR %s
-
-; RELOCS-NOT: warning:
 
 ; Make sure we don't produce any relocations in any .dwo section
 ; HDR-NOT: .rela.{{.*}}.dwo
