@@ -888,6 +888,72 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
       .addImm(0);
 }
 
+unsigned getLoadPredicatedOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  case RISCV::LB:
+    return RISCV::PseudoCCLB;
+  case RISCV::LBU:
+    return RISCV::PseudoCCLBU;
+  case RISCV::LH:
+    return RISCV::PseudoCCLH;
+  case RISCV::LHU:
+    return RISCV::PseudoCCLHU;
+  case RISCV::LW:
+    return RISCV::PseudoCCLW;
+  default:
+    return 0;
+  }
+}
+
+MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
+    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
+    MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
+    LiveIntervals *LIS) const {
+  assert(MI.getOpcode() == RISCV::PseudoCCMOVGPR &&
+         "Unknown select instruction");
+  if (!STI.hasShortForwardBranchILoad() ||
+      (LoadMI.getOpcode() != RISCV::LB && LoadMI.getOpcode() != RISCV::LBU &&
+       LoadMI.getOpcode() != RISCV::LH && LoadMI.getOpcode() != RISCV::LHU &&
+       LoadMI.getOpcode() != RISCV::LW))
+    return nullptr;
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  bool Invert =
+      (MRI.getVRegDef(MI.getOperand(4).getReg()) == &LoadMI) ? true : false;
+  MachineOperand FalseReg = MI.getOperand(Invert ? 5 : 4);
+  Register DestReg = MI.getOperand(0).getReg();
+  const TargetRegisterClass *PreviousClass = MRI.getRegClass(FalseReg.getReg());
+  if (!MRI.constrainRegClass(DestReg, PreviousClass))
+    return nullptr;
+
+  unsigned PredOpc = getLoadPredicatedOpcode(LoadMI.getOpcode());
+  assert(PredOpc != 0 && "Unexpected opcode!");
+
+  // Create a new predicated version of DefMI.
+  MachineInstrBuilder NewMI = BuildMI(*MI.getParent(), InsertPt,
+                                      MI.getDebugLoc(), get(PredOpc), DestReg);
+
+  // Copy the condition portion.
+  NewMI.add(MI.getOperand(1));
+  NewMI.add(MI.getOperand(2));
+
+  // Add condition code, inverting if necessary.
+  auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
+  if (Invert)
+    CC = RISCVCC::getInverseBranchCondition(CC);
+  NewMI.addImm(CC);
+
+  // Copy the false register.
+  NewMI.add(FalseReg);
+
+  // Copy all the DefMI operands.
+  const MCInstrDesc &DefDesc = LoadMI.getDesc();
+  for (unsigned i = 1, e = DefDesc.getNumOperands(); i != e; ++i)
+    NewMI.add(LoadMI.getOperand(i));
+
+  return NewMI;
+}
+
 void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
                             const DebugLoc &DL, Register DstReg, uint64_t Val,
@@ -1708,11 +1774,6 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   case RISCV::MINU:  return RISCV::PseudoCCMINU;
   case RISCV::MUL:   return RISCV::PseudoCCMUL;
   case RISCV::LUI:   return RISCV::PseudoCCLUI;
-  case RISCV::LB:    return RISCV::PseudoCCLB;
-  case RISCV::LBU:   return RISCV::PseudoCCLBU;
-  case RISCV::LH:    return RISCV::PseudoCCLH;
-  case RISCV::LHU:   return RISCV::PseudoCCLHU;
-  case RISCV::LW:    return RISCV::PseudoCCLW;
   case RISCV::QC_LI:   return RISCV::PseudoCCQC_LI;
   case RISCV::QC_E_LI:   return RISCV::PseudoCCQC_E_LI;
 
@@ -1767,12 +1828,6 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
        MI->getOpcode() == RISCV::MINU || MI->getOpcode() == RISCV::MAXU))
     return nullptr;
 
-  if (!STI.hasShortForwardBranchILoad() &&
-      (MI->getOpcode() == RISCV::LB || MI->getOpcode() == RISCV::LBU ||
-       MI->getOpcode() == RISCV::LW || MI->getOpcode() == RISCV::LH ||
-       MI->getOpcode() == RISCV::LHU))
-    return nullptr;
-
   if (!STI.hasShortForwardBranchIMul() && MI->getOpcode() == RISCV::MUL)
     return nullptr;
 
@@ -1800,37 +1855,6 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
       return nullptr;
   }
   bool DontMoveAcrossStores = true;
-
-  if (MI->getOpcode() == RISCV::LB || MI->getOpcode() == RISCV::LBU ||
-      MI->getOpcode() == RISCV::LW || MI->getOpcode() == RISCV::LH ||
-      MI->getOpcode() == RISCV::LHU) {
-    if (MI && UseMI && MI->getParent() == UseMI->getParent()) {
-      // For the simple case, when both the def and use of Load are in the same
-      // basic block, instructions can be scanned linearly if there are any
-      // stores between def and use.
-      auto &MBB = *MI->getParent();
-      DontMoveAcrossStores = false;
-
-      auto DefIt = MBB.begin();
-      auto UseIt = MBB.begin();
-
-      for (auto It = MBB.begin(); It != MBB.end(); ++It) {
-        if (&*It == MI)
-          DefIt = It;
-        if (&*It == UseMI)
-          UseIt = It;
-      }
-      if (DefIt != MBB.end() && UseIt != MBB.end() && DefIt != UseIt) {
-        for (auto I = std::next(DefIt); I != UseIt; ++I) {
-          if (I->mayStore()) {
-            DontMoveAcrossStores = true;
-            LLVM_DEBUG(dbgs() << "Store found between def and use\n");
-          }
-        }
-      }
-    }
-  }
-
   if (!MI->isSafeToMove(DontMoveAcrossStores))
     return nullptr;
   return MI;
