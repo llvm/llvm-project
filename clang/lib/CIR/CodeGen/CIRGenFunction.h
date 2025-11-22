@@ -960,8 +960,12 @@ public:
     using CleanupType = EHScopeStack::ConditionalCleanup<T, As...>;
     ehStack.pushCleanupTuple<CleanupType>(kind, savedTuple);
 
-    /// Set up the last cleanup that was pushed as a conditional
-    /// full-expression cleanup
+    initFullExprCleanup();
+  }
+
+  /// Set up the last cleanup that was pushed as a conditional
+  /// full-expression cleanup.
+  void initFullExprCleanup() {
     initFullExprCleanupWithFlag(createCleanupActiveFlag());
   }
 
@@ -2089,6 +2093,127 @@ public:
 
 private:
   QualType getVarArgType(const Expr *arg);
+};
+
+/// Helper class with most of the code for saving a value for a
+/// conditional expression cleanup.
+struct DominatingCIRValue {
+  using saved_type = llvm::PointerIntPair<mlir::Value, 1, bool>;
+
+  /// Answer whether the given value needs extra work to be saved.
+  static bool needsSaving(mlir::Value value) {
+    if (!value)
+      return false;
+
+    // If it's a block argument, we don't need to save.
+    mlir::Operation *definingOp = value.getDefiningOp();
+    if (!definingOp)
+      return false;
+
+    // If value is defined the function or a global init entry block, we don't
+    // need to save.
+    mlir::Block *currBlock = definingOp->getBlock();
+    if (!currBlock->isEntryBlock() || !definingOp->getParentOp())
+      return false;
+
+    if (auto fnOp = definingOp->getParentOfType<cir::FuncOp>()) {
+      return &fnOp.getBody().front() == currBlock;
+    }
+
+    if (auto globalOp = definingOp->getParentOfType<cir::GlobalOp>()) {
+      assert(globalOp.getNumRegions() == 2 && "other regions NYI");
+      if (&globalOp.getCtorRegion().front() == currBlock)
+        return true;
+      if (&globalOp.getDtorRegion().front() == currBlock)
+        return true;
+      return false;
+    }
+
+    return false;
+  }
+
+  static saved_type save(CIRGenFunction &cgf, mlir::Value value);
+  static mlir::Value restore(CIRGenFunction &cgf, saved_type value);
+};
+
+inline DominatingCIRValue::saved_type
+DominatingCIRValue::save(CIRGenFunction &cgf, mlir::Value value) {
+  if (!needsSaving(value))
+    return saved_type(value, false);
+
+  // Otherwise, we need an alloca.
+  auto align = CharUnits::fromQuantity(
+      cgf.cgm.getDataLayout().getPrefTypeAlign(value.getType()));
+  mlir::Location loc = value.getLoc();
+  Address alloca =
+      cgf.createTempAlloca(value.getType(), align, loc, "cond-cleanup.save");
+  cgf.getBuilder().createStore(loc, value, alloca);
+
+  return saved_type(alloca.emitRawPointer(), true);
+}
+
+inline mlir::Value DominatingCIRValue::restore(CIRGenFunction &cgf,
+                                               saved_type value) {
+  // If the value says it wasn't saved, trust that it's still dominating.
+  if (!value.getInt())
+    return value.getPointer();
+
+  // Otherwise, it should be an alloca instruction, as set up in save().
+  auto alloca = value.getPointer().getDefiningOp<cir::AllocaOp>();
+  mlir::Value val = cgf.getBuilder().createAlignedLoad(
+      alloca.getLoc(), alloca.getType(), alloca);
+  cir::LoadOp loadOp = val.getDefiningOp<cir::LoadOp>();
+  loadOp.setAlignment(alloca.getAlignment());
+  return val;
+}
+
+/// A specialization of DominatingValue for RValue.
+template <> struct DominatingValue<RValue> {
+  class SavedType {
+    enum Kind {
+      ScalarLiteral,
+      ScalarAddress,
+      AggregateLiteral,
+      AggregateAddress,
+      ComplexAddress
+    };
+    union {
+      struct {
+        DominatingCIRValue::saved_type first, second;
+      } vals;
+      DominatingValue<Address>::saved_type aggregateAddr;
+    };
+    LLVM_PREFERRED_TYPE(Kind)
+    unsigned kind : 3;
+
+    SavedType(DominatingCIRValue::saved_type val1, unsigned kind)
+        : vals{val1, DominatingCIRValue::saved_type()}, kind(kind) {}
+
+    SavedType(DominatingCIRValue::saved_type val1,
+              DominatingCIRValue::saved_type val2)
+        : vals{val1, val2}, kind(ComplexAddress) {}
+
+    SavedType(DominatingValue<Address>::saved_type aggregateAddr, unsigned kind)
+        : aggregateAddr(aggregateAddr), kind(kind) {}
+
+  public:
+    static bool needsSaving(RValue value);
+    static SavedType save(CIRGenFunction &cgf, RValue value);
+    RValue restore(CIRGenFunction &cgf);
+  };
+
+  using type = RValue;
+  using saved_type = SavedType;
+
+  static bool needsSaving(type value) { return SavedType::needsSaving(value); }
+
+  static SavedType save(CIRGenFunction &cgf, type value) {
+    return SavedType::save(cgf, value);
+  }
+
+  static type restore(CIRGenFunction &cgf, SavedType value) {
+    return value.restore(cgf);
+  }
 };
 
 } // namespace clang::CIRGen

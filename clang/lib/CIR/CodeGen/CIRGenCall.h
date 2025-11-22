@@ -211,6 +211,10 @@ public:
   CallArg(LValue lv, clang::QualType ty)
       : lv(lv), hasLV(true), isUsed(false), ty(ty) {}
 
+  /// \returns an independent RValue. If the CallArg contains an LValue,
+  /// a temporary copy is returned.
+  RValue getAsRValue(CIRGenFunction &cgf, mlir::Location loc) const;
+
   bool hasLValue() const { return hasLV; }
 
   LValue getKnownLValue() const {

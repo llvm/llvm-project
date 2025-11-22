@@ -13,10 +13,12 @@
 #include "CIRGenCXXABI.h"
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
+#include "EHScopeStack.h"
 
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/Interpreter/Value.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -679,6 +681,207 @@ static void emitObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
   cgf.popCleanupBlock();
 }
 
+// FIXME(cir): this should be shared with LLVM codegen
+static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *funcDecl) {
+  UsualDeleteParams params;
+
+  const FunctionProtoType *fpt =
+      funcDecl->getType()->castAs<FunctionProtoType>();
+  const auto *AI = fpt->param_type_begin();
+  const auto *AE = fpt->param_type_end();
+
+  // The first argument is always a void*.
+  ++AI;
+
+  // The next parameter may be a std::destroying_delete_t.
+  if (funcDecl->isDestroyingOperatorDelete()) {
+    params.DestroyingDelete = true;
+    assert(AI != AE);
+    ++AI;
+  }
+
+  // Figure out what other parameters we should be implicitly passing.
+  if (AI != AE && (*AI)->isIntegerType()) {
+    params.Size = true;
+    ++AI;
+  }
+
+  if (AI != AE && (*AI)->isAlignValT()) {
+    params.Alignment = AlignedAllocationMode::Yes;
+    ++AI;
+  }
+
+  assert(AI == AE && "unexpected usual deallocation function parameter");
+  return params;
+}
+
+namespace {
+/// A cleanup to call the given 'operator delete' function upon abnormal
+/// exit from a new expression. Templated on a traits type that deals with
+/// ensuring that the arguments dominate the cleanup if necessary.
+template <typename Traits>
+class CallDeleteDuringNew final : public EHScopeStack::Cleanup {
+  /// Type used to hold llvm::Value*s.
+  using ValueTy = typename Traits::ValueTy;
+  /// Type used to hold RValues.
+  using RValueTy = typename Traits::RValueTy;
+  struct PlacementArg {
+    RValueTy argValue;
+    QualType argType;
+  };
+
+  unsigned numPlacementArgs : 31;
+  unsigned passAlignmentToPlacementDelete : 1;
+  const FunctionDecl *operatorDelete;
+  ValueTy ptr;
+  ValueTy allocSize;
+  CharUnits allocAlign;
+
+  PlacementArg *getPlacementArgs() {
+    return reinterpret_cast<PlacementArg *>(this + 1);
+  }
+
+public:
+  static size_t getExtraSize(size_t numPlacementArgs) {
+    return numPlacementArgs * sizeof(PlacementArg);
+  }
+
+  CallDeleteDuringNew(size_t numPlacementArgs,
+                      const FunctionDecl *operatorDelete, ValueTy ptr,
+                      ValueTy allocSize, bool passAlignmentToPlacementDelete,
+                      CharUnits allocAlign)
+      : numPlacementArgs(numPlacementArgs),
+        passAlignmentToPlacementDelete(passAlignmentToPlacementDelete),
+        operatorDelete(operatorDelete), ptr(ptr), allocSize(allocSize),
+        allocAlign(allocAlign) {}
+
+  void setPlacementArg(unsigned index, RValueTy arg, QualType type) {
+    assert(index < numPlacementArgs && "index out of range");
+    getPlacementArgs()[index] = {arg, type};
+  }
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    const auto *fpt = operatorDelete->getType()->castAs<FunctionProtoType>();
+    CallArgList deleteArgs;
+
+    // The first argument is always a void* (or C* for a destroying operator
+    // delete for class type C).
+    deleteArgs.add(Traits::get(cgf, ptr), fpt->getParamType(0));
+
+    // Figure out what other parameters we should be implicitly passing.
+    UsualDeleteParams params;
+    if (numPlacementArgs) {
+      // A placement deallocation function is implicitly passed an alignment
+      // if the placement allocation function was, but is never passed a size.
+      params.Alignment = passAlignmentToPlacementDelete == 0
+                             ? AlignedAllocationMode::No
+                             : AlignedAllocationMode::Yes;
+    } else {
+      // For a non-placement new-expression, 'operator delete' can take a
+      // size and/or an alignment if it has the right parameters.
+      params = getUsualDeleteParams(operatorDelete);
+    }
+
+    assert(!params.DestroyingDelete &&
+           "should not call destroying delete in a new-expression");
+
+    // The second argument can be a std::size_t (for non-placement delete).
+    if (params.Size)
+      deleteArgs.add(Traits::get(cgf, allocSize),
+                     cgf.getContext().getSizeType());
+
+    // The next (second or third) argument can be a std::align_val_t, which
+    // is an enum whose underlying type is std::size_t.
+    // FIXME: Use the right type as the parameter type. Note that in a call
+    // to operator delete(size_t, ...), we may not have it available.
+    if (params.Alignment == AlignedAllocationMode::Yes) {
+      llvm_unreachable("NYI");
+    }
+
+    // Pass the rest of the arguments, which must match exactly.
+    for (unsigned i : llvm::seq<unsigned>(0, numPlacementArgs)) {
+      const PlacementArg arg = getPlacementArgs()[i];
+      deleteArgs.add(Traits::get(cgf, arg.argValue), arg.argType);
+    }
+
+    // Call 'operator delete'.
+    emitNewDeleteCall(cgf, operatorDelete, fpt, deleteArgs);
+  }
+};
+} // namespace
+
+/// Enter a cleanup to call 'operator delete' if the initializer in a
+/// new-expression throws.
+static void enterNewDeleteCleanup(CIRGenFunction &cgf,
+                                  const CXXNewExpr *newExpr, Address newPtr,
+                                  mlir::Value allocSize, CharUnits allocAlign,
+                                  const CallArgList &newArgs) {
+  unsigned numNonPlacementArgs = newExpr->passAlignment() ? 2 : 1;
+
+  assert(newExpr->getNumPlacementArgs() + numNonPlacementArgs <
+             newArgs.size() &&
+         "Not enough arguments for new expression?");
+  // If we're not inside a conditional branch, then the cleanup will
+  // dominate and we can do the easier (and more efficient) thing.
+  if (!cgf.isInConditionalBranch()) {
+    struct DirectCleanupTraits {
+      using ValueTy = mlir::Value;
+      using RValueTy = RValue;
+      static RValue get(CIRGenFunction &, ValueTy value) {
+        return RValue::get(value);
+      }
+      static RValue get(CIRGenFunction &, RValueTy value) { return value; }
+    };
+
+    using DirectCleanup = CallDeleteDuringNew<DirectCleanupTraits>;
+
+    DirectCleanup *cleanup = cgf.ehStack.pushCleanupWithExtra<DirectCleanup>(
+        EHCleanup, newExpr->getNumPlacementArgs(), newExpr->getOperatorDelete(),
+        newPtr.getPointer(), allocSize, newExpr->passAlignment(), allocAlign);
+
+    for (unsigned i : llvm::seq<unsigned>(0, newExpr->getNumPlacementArgs())) {
+      const CallArg &arg = newArgs[i + numNonPlacementArgs];
+      cleanup->setPlacementArg(
+          i, arg.getAsRValue(cgf, cgf.getLoc(newExpr->getSourceRange())),
+          arg.ty);
+    }
+
+    return;
+  }
+
+  // Otherwise, we need to save all this stuff.
+  DominatingValue<RValue>::saved_type savedNewPtr =
+      DominatingValue<RValue>::save(cgf, RValue::get(newPtr.getPointer()));
+  DominatingValue<RValue>::saved_type savedAllocSize =
+      DominatingValue<RValue>::save(cgf, RValue::get(allocSize));
+
+  struct ConditionalCleanupTraits {
+    using ValueTy = DominatingValue<RValue>::saved_type;
+    using RValueTy = DominatingValue<RValue>::saved_type;
+    static RValue get(CIRGenFunction &cgf, ValueTy value) {
+      return value.restore(cgf);
+    }
+  };
+  using ConditionalCleanup = CallDeleteDuringNew<ConditionalCleanupTraits>;
+
+  ConditionalCleanup *cleanup =
+      cgf.ehStack.pushCleanupWithExtra<ConditionalCleanup>(
+          EHCleanup, newExpr->getNumPlacementArgs(),
+          newExpr->getOperatorDelete(), savedNewPtr, savedAllocSize,
+          newExpr->passAlignment(), allocAlign);
+
+  for (unsigned i : llvm::seq<unsigned>(0, newExpr->getNumPlacementArgs())) {
+    const CallArg &arg = newArgs[i + numNonPlacementArgs];
+    cleanup->setPlacementArg(
+        i,
+        DominatingValue<RValue>::save(
+            cgf, arg.getAsRValue(cgf, cgf.getLoc(newExpr->getSourceRange()))),
+        arg.ty);
+  }
+
+  cgf.initFullExprCleanup();
+}
+
 void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   const Expr *arg = e->getArgument();
   Address ptr = emitPointerWithAlignment(arg);
@@ -840,9 +1043,17 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
   // If there's an operator delete, enter a cleanup to call it if an
   // exception is thrown.
+  EHScopeStack::stable_iterator operatorDeleteCleanup;
+  [[maybe_unused]] mlir::Operation *cleanupDominator = nullptr;
   if (e->getOperatorDelete() &&
-      !e->getOperatorDelete()->isReservedGlobalPlacementOperator())
-    cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: operator delete");
+      !e->getOperatorDelete()->isReservedGlobalPlacementOperator()) {
+    enterNewDeleteCleanup(*this, e, allocation, allocSize, allocAlign,
+                          allocatorArgs);
+    operatorDeleteCleanup = ehStack.stable_begin();
+    cleanupDominator =
+        cir::UnreachableOp::create(builder, getLoc(e->getSourceRange()))
+            .getOperation();
+  }
 
   if (allocSize != allocSizeWithoutCookie) {
     assert(e->isArray());

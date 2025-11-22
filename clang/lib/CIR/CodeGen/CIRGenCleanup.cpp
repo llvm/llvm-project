@@ -240,7 +240,8 @@ void CIRGenFunction::initFullExprCleanupWithFlag(Address activeFlag) {
 }
 
 static void emitCleanup(CIRGenFunction &cgf, EHScopeStack::Cleanup *cleanup,
-      EHScopeStack::Cleanup::Flags flags, Address activeFlag) {
+                        EHScopeStack::Cleanup::Flags flags,
+                        Address activeFlag) {
   auto emitCleanup = [&]() {
     // Ask the cleanup to emit itself.
     assert(cgf.haveInsertPoint() && "expected insertion point");
@@ -294,9 +295,9 @@ void CIRGenFunction::popCleanupBlock() {
                                  ? scope.getActiveFlag()
                                  : Address::invalid();
   [[maybe_unused]]
-  Address ehActiveFlag = scope.shouldTestFlagInEHCleanup()
-                             ? scope.getActiveFlag()
-                             : Address::invalid();
+  Address ehActiveFlag =
+      scope.shouldTestFlagInEHCleanup() ? scope.getActiveFlag()
+                                        : Address::invalid();
 
   // - whether there are branch fix-ups through this cleanup
   unsigned fixupDepth = scope.getFixupDepth();
@@ -471,4 +472,40 @@ void CIRGenFunction::popCleanupBlocks(
   while (ehStack.stable_begin() != oldCleanupStackDepth) {
     popCleanupBlock();
   }
+}
+
+DominatingValue<RValue>::saved_type
+DominatingValue<RValue>::SavedType::save(CIRGenFunction &cgf, RValue rv) {
+  if (rv.isScalar()) {
+    mlir::Value val = rv.getValue();
+    return saved_type(DominatingCIRValue::save(cgf, val),
+                      DominatingCIRValue::needsSaving(val) ? ScalarAddress
+                                                           : ScalarLiteral);
+  }
+
+  if (rv.isComplex()) {
+    llvm_unreachable("complex NYI");
+  }
+
+  llvm_unreachable("aggregate NYI");
+}
+
+/// Given a saved r-value produced by SaveRValue, perform the code
+/// necessary to restore it to usability at the current insertion
+/// point.
+RValue DominatingValue<RValue>::SavedType::restore(CIRGenFunction &cgf) {
+  switch (kind) {
+  case ScalarLiteral:
+  case ScalarAddress:
+    return RValue::get(DominatingCIRValue::restore(cgf, vals.first));
+  case AggregateLiteral:
+  case AggregateAddress:
+    return RValue::getAggregate(
+        DominatingValue<Address>::restore(cgf, aggregateAddr));
+  case ComplexAddress: {
+    llvm_unreachable("NYI");
+  }
+  }
+
+  llvm_unreachable("bad saved r-value kind");
 }

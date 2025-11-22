@@ -43,6 +43,10 @@ public:
     return getAlignment(ty, true);
   }
 
+  llvm::Align getPrefTypeAlign(mlir::Type ty) const {
+    return getAlignment(ty, false);
+  }
+
   /// Returns the maximum number of bytes that may be overwritten by
   /// storing the specified type.
   ///
