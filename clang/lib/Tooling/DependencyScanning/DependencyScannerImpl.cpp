@@ -432,7 +432,7 @@ dependencies::createCompilerInvocation(ArrayRef<std::string> CommandLine,
 }
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
-dependencies::initVFSForTUBuferScanning(
+dependencies::initVFSForTUBufferScanning(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
     ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
     llvm::MemoryBufferRef TUBuffer) {

@@ -3401,9 +3401,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
-  context_.Say(GetContext().clauseSource,
-      "LOOPRANGE clause is not implemented yet"_err_en_US,
-      ContextDirectiveAsFortran());
+  CheckAllowedClause(llvm::omp::Clause::OMPC_looprange);
+  auto &first = std::get<0>(x.v.t);
+  auto &count = std::get<1>(x.v.t);
+  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, count);
+  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, first);
 }
 
 // Restrictions specific to each clause are implemented apart from the
