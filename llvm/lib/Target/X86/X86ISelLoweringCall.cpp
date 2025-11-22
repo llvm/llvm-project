@@ -2285,7 +2285,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         if (ShadowReg)
           RegsToPass.push_back(std::make_pair(ShadowReg, Arg));
       }
-    } else if (!IsSibcall && (!isTailCall || isByVal)) {
+    } else if (!IsSibcall && (!isTailCall || (isByVal && !IsMustTail))) {
       assert(VA.isMemLoc());
       if (!StackPtr.getNode())
         StackPtr = DAG.getCopyFromReg(Chain, dl, RegInfo->getStackRegister(),
