@@ -1366,15 +1366,15 @@ let Features = "avx512cd", Attributes = [NoThrow, Const, Constexpr, RequiredVect
   def vpconflictsi_512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>)">;
 }
 
-let Features = "avx512vl,avx512bitalg", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl,avx512bitalg", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def vpshufbitqmb128_mask : X86Builtin<"unsigned short(_Vector<16, char>, _Vector<16, char>, unsigned short)">;
 }
 
-let Features = "avx512vl,avx512bitalg", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl,avx512bitalg", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def vpshufbitqmb256_mask : X86Builtin<"unsigned int(_Vector<32, char>, _Vector<32, char>, unsigned int)">;
 }
 
-let Features = "avx512bitalg", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512bitalg", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def vpshufbitqmb512_mask : X86Builtin<"unsigned long long int(_Vector<64, char>, _Vector<64, char>, unsigned long long int)">;
 }
 
