@@ -144,10 +144,13 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    // The x86 definition of "undef" is not the same as the LLVM definition
+    // (PR32176). We leave optimizing away an unnecessary zero constant to the
+    // IR optimizer and backend.
+    // TODO: If we had a "freeze" IR instruction to generate a fixed undef
+    //  value, we should use that here instead of a zero.
+    return builder.getNullValue(convertType(expr->getType()),
+                                getLoc(expr->getExprLoc()));
   case X86::BI__builtin_ia32_vec_ext_v4hi:
   case X86::BI__builtin_ia32_vec_ext_v16qi:
   case X86::BI__builtin_ia32_vec_ext_v8hi:
