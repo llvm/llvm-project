@@ -15,12 +15,14 @@
 // LLVM: @needsCtor = global %struct.NeedsCtor zeroinitializer, align 1
 // LLVM: @needsDtor = global %struct.NeedsDtor zeroinitializer, align 1
 // LLVM: @needsCtorDtor = global %struct.NeedsCtorDtor zeroinitializer, align 1
+// LLVM: @arrDtor = global [16 x %struct.ArrayDtor] zeroinitializer, align 16
 // LLVM: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_[[FILENAME:.*]], ptr null }]
 
 // OGCG: @needsCtor = global %struct.NeedsCtor zeroinitializer, align 1
 // OGCG: @needsDtor = global %struct.NeedsDtor zeroinitializer, align 1
 // OGCG: @__dso_handle = external hidden global i8
 // OGCG: @needsCtorDtor = global %struct.NeedsCtorDtor zeroinitializer, align 1
+// OGCG: @arrDtor = global [16 x %struct.ArrayDtor] zeroinitializer, align 16
 // OGCG: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_[[FILENAME:.*]], ptr null }]
 
 struct NeedsCtor {
@@ -145,11 +147,11 @@ float fp;
 int i = (int)fp;
 
 // CIR-BEFORE-LPP: cir.global external @i = ctor : !s32i {
-// CIR-BEFORE-LPP:   %0 = cir.get_global @i : !cir.ptr<!s32i>
-// CIR-BEFORE-LPP:   %1 = cir.get_global @fp : !cir.ptr<!cir.float>
-// CIR-BEFORE-LPP:   %2 = cir.load{{.*}} %1 : !cir.ptr<!cir.float>, !cir.float
-// CIR-BEFORE-LPP:   %3 = cir.cast float_to_int %2 : !cir.float -> !s32i
-// CIR-BEFORE-LPP:   cir.store{{.*}} %3, %0 : !s32i, !cir.ptr<!s32i>
+// CIR-BEFORE-LPP:   %[[I:.*]] = cir.get_global @i : !cir.ptr<!s32i>
+// CIR-BEFORE-LPP:   %[[FP:.*]] = cir.get_global @fp : !cir.ptr<!cir.float>
+// CIR-BEFORE-LPP:   %[[FP_VAL:.*]] = cir.load{{.*}} %[[FP]] : !cir.ptr<!cir.float>, !cir.float
+// CIR-BEFORE-LPP:   %[[FP_I32:.*]] = cir.cast float_to_int %[[FP_VAL]] : !cir.float -> !s32i
+// CIR-BEFORE-LPP:   cir.store{{.*}} %[[FP_I32]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR-BEFORE-LPP: }
 
 // CIR: cir.func internal private @__cxx_global_var_init.4()
@@ -169,6 +171,97 @@ int i = (int)fp;
 // OGCG:   %[[FP_I32:.*]] = fptosi float %[[TMP_FP]] to i32
 // OGCG:   store i32 %[[FP_I32]], ptr @i, align 4
 
+struct ArrayDtor {
+  ~ArrayDtor();
+};
+
+ArrayDtor arrDtor[16];
+
+// CIR-BEFORE-LPP:      cir.global external @arrDtor = #cir.zero : !cir.array<!rec_ArrayDtor x 16>
+// CIR-BEFORE-LPP-SAME:   dtor {
+// CIR-BEFORE-LPP:          %[[THIS:.*]] = cir.get_global @arrDtor : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>>
+// CIR-BEFORE-LPP:          cir.array.dtor %[[THIS]] : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>> {
+// CIR-BEFORE-LPP:          ^bb0(%[[ELEM:.*]]: !cir.ptr<!rec_ArrayDtor>):
+// CIR-BEFORE-LPP:            cir.call @_ZN9ArrayDtorD1Ev(%[[ELEM]]) nothrow : (!cir.ptr<!rec_ArrayDtor>) -> ()
+// CIR-BEFORE-LPP:            cir.yield
+// CIR-BEFORE-LPP:          }
+// CIR-BEFORE-LPP:        }
+
+// CIR: cir.global external @arrDtor = #cir.zero : !cir.array<!rec_ArrayDtor x 16> {alignment = 16 : i64}
+// CIR: cir.func internal private @__cxx_global_array_dtor(%[[ARR_ARG:.*]]: !cir.ptr<!void> {{.*}}) {
+// CIR:   %[[CONST15:.*]] = cir.const #cir.int<15> : !u64i
+// CIR:   %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR_ARG]] : !cir.ptr<!void> -> !cir.ptr<!rec_ArrayDtor>
+// CIR:   %[[END:.*]] = cir.ptr_stride %[[BEGIN]], %[[CONST15]] : (!cir.ptr<!rec_ArrayDtor>, !u64i) -> !cir.ptr<!rec_ArrayDtor>
+// CIR:   %[[CUR_ADDR:.*]] = cir.alloca !cir.ptr<!rec_ArrayDtor>, !cir.ptr<!cir.ptr<!rec_ArrayDtor>>, ["__array_idx"]
+// CIR:   cir.store %[[END]], %[[CUR_ADDR]] : !cir.ptr<!rec_ArrayDtor>, !cir.ptr<!cir.ptr<!rec_ArrayDtor>>
+// CIR:   cir.do {
+// CIR:     %[[CUR:.*]] = cir.load %[[CUR_ADDR]] : !cir.ptr<!cir.ptr<!rec_ArrayDtor>>, !cir.ptr<!rec_ArrayDtor>
+// CIR:     cir.call @_ZN9ArrayDtorD1Ev(%[[CUR]]) nothrow : (!cir.ptr<!rec_ArrayDtor>) -> ()
+// CIR:     %[[NEG_ONE:.*]] = cir.const #cir.int<-1> : !s64i
+// CIR:     %[[NEXT:.*]] = cir.ptr_stride %[[CUR]], %[[NEG_ONE]] : (!cir.ptr<!rec_ArrayDtor>, !s64i) -> !cir.ptr<!rec_ArrayDtor>
+// CIR:     cir.store %[[NEXT]], %[[CUR_ADDR]] : !cir.ptr<!rec_ArrayDtor>, !cir.ptr<!cir.ptr<!rec_ArrayDtor>>
+// CIR:     cir.yield
+// CIR:   } while {
+// CIR:     %[[CUR:.*]] = cir.load %[[CUR_ADDR]] : !cir.ptr<!cir.ptr<!rec_ArrayDtor>>, !cir.ptr<!rec_ArrayDtor>
+// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[BEGIN]]) : !cir.ptr<!rec_ArrayDtor>, !cir.bool
+// CIR:     cir.condition(%[[CMP]])
+// CIR:   }
+// CIR:   cir.return
+// CIR: }
+//
+// CIR: cir.func internal private @__cxx_global_var_init.5() {
+// CIR:   %[[ARR:.*]] = cir.get_global @arrDtor : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>>
+// CIR:   %[[DTOR:.*]] = cir.get_global @__cxx_global_array_dtor : !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
+// CIR:   %[[DTOR_CAST:.*]] = cir.cast bitcast %[[DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!void>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
+// CIR:   %[[ARR_CAST:.*]] = cir.cast bitcast %[[ARR]] : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>> -> !cir.ptr<!void>
+// CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
+// CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[ARR_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+
+// LLVM: define internal void @__cxx_global_array_dtor(ptr %[[ARR_ARG:.*]]) {
+// LLVM:   %[[BEGIN:.*]] = getelementptr %struct.ArrayDtor, ptr %[[ARR_ARG]], i32 0
+// LLVM:   %[[END:.*]] = getelementptr %struct.ArrayDtor, ptr %[[BEGIN]], i64 15
+// LLVM:   %[[CUR_ADDR:.*]] = alloca ptr
+// LLVM:   store ptr %[[END]], ptr %[[CUR_ADDR]]
+// LLVM:   br label %[[LOOP_BODY:.*]]
+// LLVM: [[LOOP_COND:.*]]:
+// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[CUR_ADDR]]
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR]], %[[BEGIN]]
+// LLVM:   br i1 %[[CMP]], label %[[LOOP_BODY]], label %[[LOOP_END:.*]]
+// LLVM: [[LOOP_BODY]]:
+// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[CUR_ADDR]]
+// LLVM:   call void @_ZN9ArrayDtorD1Ev(ptr %[[CUR]]) #0
+// LLVM:   %[[PREV:.*]] = getelementptr %struct.ArrayDtor, ptr %[[CUR]], i64 -1
+// LLVM:   store ptr %[[PREV]], ptr %[[CUR_ADDR]]
+// LLVM:   br label %[[LOOP_COND]]
+// LLVM: [[LOOP_END]]:
+// LLVM:   ret void
+// LLVM: }
+//
+// LLVM: define internal void @__cxx_global_var_init.5() {
+// LLVM:   call void @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr @arrDtor, ptr @__dso_handle)
+
+// Note: OGCG defines these functions in reverse order of CIR->LLVM.
+// Note also: OGCG doesn't pass the address of the array to the destructor function.
+//            Instead, it uses the global directly in the helper function.
+
+// OGCG: define internal void @__cxx_global_var_init.5() {{.*}} section ".text.startup" {
+// OGCG:   call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle)
+
+// OGCG: define internal void @__cxx_global_array_dtor(ptr noundef %[[ARG:.*]]) {{.*}} section ".text.startup" {
+// OGCG: entry:
+// OGCG:   %[[UNUSED_ADDR:.*]] = alloca ptr
+// OGCG:   store ptr %[[ARG]], ptr %[[UNUSED_ADDR]]
+// OGCG:   br label %[[LOOP_BODY:.*]]
+// OGCG: [[LOOP_BODY]]:
+// OGCG:   %[[PREV:.*]] = phi ptr [ getelementptr inbounds (%struct.ArrayDtor, ptr @arrDtor, i64 16), %entry ], [ %[[CUR:.*]], %[[LOOP_BODY]] ]
+// OGCG:   %[[CUR]] = getelementptr inbounds %struct.ArrayDtor, ptr %[[PREV]], i64 -1
+// OGCG:   call void @_ZN9ArrayDtorD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
+// OGCG:   %[[DONE:.*]] = icmp eq ptr %[[CUR]], @arrDtor
+// OGCG:   br i1 %[[DONE]], label %[[LOOP_END:.*]], label %[[LOOP_BODY]]
+// OGCG: [[LOOP_END]]:
+// OGCG:   ret void
+// OGCG: }
+
 // Common init function for all globals with default priority
 
 // CIR: cir.func private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
@@ -177,6 +270,7 @@ int i = (int)fp;
 // CIR:   cir.call @__cxx_global_var_init.2() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.3() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.4() : () -> ()
+// CIR:   cir.call @__cxx_global_var_init.5() : () -> ()
 
 // LLVM: define void @_GLOBAL__sub_I_[[FILENAME]]()
 // LLVM:   call void @__cxx_global_var_init()
@@ -184,6 +278,7 @@ int i = (int)fp;
 // LLVM:   call void @__cxx_global_var_init.2()
 // LLVM:   call void @__cxx_global_var_init.3()
 // LLVM:   call void @__cxx_global_var_init.4()
+// LLVM:   call void @__cxx_global_var_init.5()
 
 // OGCG: define internal void @_GLOBAL__sub_I_[[FILENAME]]() {{.*}} section ".text.startup" {
 // OGCG:   call void @__cxx_global_var_init()
@@ -191,3 +286,4 @@ int i = (int)fp;
 // OGCG:   call void @__cxx_global_var_init.2()
 // OGCG:   call void @__cxx_global_var_init.3()
 // OGCG:   call void @__cxx_global_var_init.4()
+// OGCG:   call void @__cxx_global_var_init.5()
