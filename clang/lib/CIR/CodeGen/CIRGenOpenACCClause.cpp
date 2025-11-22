@@ -933,7 +933,8 @@ public:
 
   void VisitDevicePtrClause(const OpenACCDevicePtrClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
+                               mlir::acc::KernelsOp, mlir::acc::DataOp,
+                               mlir::acc::DeclareEnterOp>) {
       for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::DevicePtrOp>(
             var, mlir::acc::DataClause::acc_deviceptr, {},
@@ -942,9 +943,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. declare remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitDevicePtrClause");
     }
   }
 
