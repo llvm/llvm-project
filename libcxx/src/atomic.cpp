@@ -240,10 +240,10 @@ __contention_wait(__cxx_atomic_contention_t* __waiter_count, void const* __addre
   __cxx_atomic_fetch_sub(__waiter_count, __cxx_contention_t(1), memory_order_release);
 }
 
-#if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
-static constexpr size_t __cache_line_size = std::hardware_constructive_interference_size;
-#elif defined(__APPLE__) && defined(__aarch64__)
+#if defined(__APPLE__) && defined(__aarch64__)
 static constexpr size_t __cache_line_size = 128;
+#elif defined(__cpp_lib_hardware_interference_size)
+static constexpr size_t __cache_line_size = std::hardware_constructive_interference_size;
 #else
 static constexpr size_t __cache_line_size = 64;
 #endif

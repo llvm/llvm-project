@@ -21,6 +21,7 @@
 #include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 #include <cstring>
@@ -139,7 +140,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __has_native_atomic_wait_impl(size_t __size
 
 template <class _Tp>
 concept __has_native_atomic_wait =
-    has_unique_object_representations_v<_Tp> && __has_native_atomic_wait_impl(sizeof(_Tp));
+    has_unique_object_representations_v<_Tp> && is_trivially_copyable_v<_Tp> &&
+    __has_native_atomic_wait_impl(sizeof(_Tp));
 
 #    else // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
