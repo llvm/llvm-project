@@ -2547,25 +2547,28 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
         .addReg(SrcHiReg, getKillRegState(SrcIsKill))
         .setMIFlags(Flags);
 
-  } else { // Disable interrupts for older devices (3 extra instructions)
+  } else { // Disable interrupts for older devices with SPH (3 extra
+           // instructions)
 
-    buildMI(MBB, MBBI, AVR::INRdA)
-        .addReg(STI.getTmpRegister(), RegState::Define)
-        .addImm(STI.getIORegSREG())
-        .setMIFlags(Flags);
+    if (STI.getIORegSPH() != -1) {
 
-    buildMI(MBB, MBBI, AVR::BCLRs).addImm(0x07).setMIFlags(Flags);
+      buildMI(MBB, MBBI, AVR::INRdA)
+          .addReg(STI.getTmpRegister(), RegState::Define)
+          .addImm(STI.getIORegSREG())
+          .setMIFlags(Flags);
 
-    if (STI.getIORegSPH() != -1)
+      buildMI(MBB, MBBI, AVR::BCLRs).addImm(0x07).setMIFlags(Flags);
+
       buildMI(MBB, MBBI, AVR::OUTARr)
           .addImm(STI.getIORegSPH())
           .addReg(SrcHiReg, getKillRegState(SrcIsKill))
           .setMIFlags(Flags);
 
-    buildMI(MBB, MBBI, AVR::OUTARr)
-        .addImm(STI.getIORegSREG())
-        .addReg(STI.getTmpRegister(), RegState::Kill)
-        .setMIFlags(Flags);
+      buildMI(MBB, MBBI, AVR::OUTARr)
+          .addImm(STI.getIORegSREG())
+          .addReg(STI.getTmpRegister(), RegState::Kill)
+          .setMIFlags(Flags);
+    }
 
     buildMI(MBB, MBBI, AVR::OUTARr)
         .addImm(STI.getIORegSPL())
