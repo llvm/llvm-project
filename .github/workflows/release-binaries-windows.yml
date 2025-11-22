@@ -2,6 +2,16 @@ name: Release Binaries Windows
 
 on:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: 'Release Version'
+        required: false
+        type: string
+      upload:
+        description: 'Upload binaries to the release page'
+        required: true
+        default: false
 
 
 permissions:
@@ -28,9 +38,32 @@ jobs:
           python-version: '3.9'
           pip-install: packaging psutil
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1A
+        with:
+          ref: ${{ (inputs.release-version && format('llvmorg-{0}', inputs.release-version)) || github.sha }}
+      - id: version
+        uses: ./.github/workflows/get-llvm-version
+      - id: variables
+        shell: bash
+        run: |
+          if [ -z "${{ inputs.release-version }} ]; then;
+            version_string="${{ format('{0}.{1}.{2}', steps.version.outputs.major, steps.version.outputs.minor, steps.version.outputs.patch) }}"
+          else
+            version_string="${{inputs.release-version }}
+          fi
+          echo "version-string=$version_string" >> $GITHUB_OUTPUT
       - env:
           LDFLAGS: "-Wl,--verbose"
         run: |
           subst S: ${{ github.workspace }}
           cd S:\llvm\utils\release\
-          .\build_llvm_release.bat --x64 --version 22.0.0 --local-python --skip-checkout
+          .\build_llvm_release.bat --x64 --version ${{ steps.variables.outputs.version-string }} --local-python --skip-checkout
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: ${{ runner.os }}-${{ runner.arch }}-release-binaries
+          # Due to path differences on Windows when running in bash vs running on node,
+          # we need to search for files in the current workspace.
+          path: |
+            S:\llvm\utils\release\llvm_package_${{ steps.variables.outputs.version-string }}\build_amd64\LLVM-${{ steps.variables.outputs.version-string }}-win64.exe
+            S:\llvm\utils\release\llvm_package_${{ steps.variables.outputs.version-string}}\clang+llvm-${{ steps.variables.outputs.version-string }}-x86_64-pc-windows-msvc.tar.xz
+
+
