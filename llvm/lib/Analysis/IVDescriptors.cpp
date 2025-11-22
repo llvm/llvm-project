@@ -222,6 +222,7 @@ static bool isMinMaxReductionWithLoopUsersOutsideReductionChain(
   BasicBlock *Latch = TheLoop->getLoopLatch();
   if (!Latch)
     return false;
+
   assert(Phi->getNumIncomingValues() == 2 && "phi must have 2 incoming values");
   Value *Inc = Phi->getIncomingValueForBlock(Latch);
   if (Phi->hasOneUse() || !Inc->hasOneUse() ||
