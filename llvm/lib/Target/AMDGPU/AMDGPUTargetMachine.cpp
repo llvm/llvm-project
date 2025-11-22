@@ -2040,12 +2040,12 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
       // Create a minimal valid source range
       SMLoc Loc = SMLoc::getFromPointer(Buffer.getBufferStart());
       SMRange Range(Loc, Loc);
-      
-      Error = SMDiagnostic(*PFS.SM, Loc, Buffer.getBufferIdentifier(), 1, 0,
-                           SourceMgr::DK_Error,
-                           "firstKernArgPreloadReg must be a register, not a stack location",
-                           "", {}, {});
-      
+
+      Error = SMDiagnostic(
+          *PFS.SM, Loc, Buffer.getBufferIdentifier(), 1, 0, SourceMgr::DK_Error,
+          "firstKernArgPreloadReg must be a register, not a stack location", "",
+          {}, {});
+
       SourceRange = Range;
       return true;
     }
