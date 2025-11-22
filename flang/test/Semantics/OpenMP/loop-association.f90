@@ -33,6 +33,7 @@
   END DO outer
 
   ! Accept directives between parallel do and actual loop.
+  !ERROR: A DO loop must follow the PARALLEL DO directive
   !$OMP PARALLEL DO
   !WARNING: Unrecognized compiler directive was ignored [-Wignored-directive]
   !ERROR: Compiler directives are not allowed inside OpenMP loop constructs
@@ -99,8 +100,8 @@
   !$omp parallel do private(c)
   do i = 1, N
      do j = 1, N
+        !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
         !$omp parallel do shared(b)
-        !ERROR: OpenMP loop construct can only contain DO loops or loop-nest-generating OpenMP constructs
         a = 3.14
      enddo
   enddo
@@ -113,8 +114,8 @@
      enddo
   enddo
 
+  !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp parallel do private(c)
-  !ERROR: OpenMP loop construct can only contain DO loops or loop-nest-generating OpenMP constructs
 5 FORMAT (1PE12.4, I10)
   do i=1, N
      a = 3.14
@@ -126,8 +127,8 @@
   enddo
   !$omp end parallel do simd
 
+  !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp simd
-    !ERROR: OpenMP loop construct can only contain DO loops or loop-nest-generating OpenMP constructs
-    a = i + 1
   !$omp end simd
+   a = i + 1
 end
