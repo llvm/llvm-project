@@ -481,6 +481,10 @@ operator%(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2
 inline namespace literals {
 inline namespace chrono_literals {
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wuser-defined-literals")
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wliteral-suffix")
+
 _LIBCPP_HIDE_FROM_ABI constexpr chrono::hours operator""h(unsigned long long __h) {
   return chrono::hours(static_cast<chrono::hours::rep>(__h));
 }
@@ -528,6 +532,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr chrono::nanoseconds operator""ns(unsigned long l
 _LIBCPP_HIDE_FROM_ABI constexpr chrono::duration<long double, nano> operator""ns(long double __ns) {
   return chrono::duration<long double, nano>(__ns);
 }
+
+_LIBCPP_DIAGNOSTIC_POP
 
 } // namespace chrono_literals
 } // namespace literals

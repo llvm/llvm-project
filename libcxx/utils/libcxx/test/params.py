@@ -35,10 +35,6 @@ _warningFlags = [
     # GCC warns about places where we might want to add sized allocation/deallocation
     # functions, but we know better what we're doing/testing in the test suite.
     "-Wno-sized-deallocation",
-    # Turn off warnings about user-defined literals with reserved suffixes. Those are
-    # just noise since we are testing the Standard Library itself.
-    "-Wno-literal-suffix",  # GCC
-    "-Wno-user-defined-literals",  # Clang
     # GCC warns about this when TEST_IS_CONSTANT_EVALUATED is used on a non-constexpr
     # function. (This mostly happens in C++11 mode.)
     # TODO(mordante) investigate a solution for this issue.
