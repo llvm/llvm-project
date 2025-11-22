@@ -22,7 +22,6 @@ use_repo(
     "gmp",
     "llvm-raw",
     "llvm_zlib",
-    "llvm_zstd",
     "mpc",
     "mpfr",
     "nanobind",
@@ -33,6 +32,8 @@ use_repo(
     "vulkan_headers",
     "vulkan_sdk",
 )
+
+bazel_dep(name = "zstd", version = "1.5.7", repo_name = "llvm_zstd")
 
 llvm_configure = use_repo_rule("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure")
 
