@@ -5939,8 +5939,10 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
   assert(TargetLabel);
 
   for (VariableScope<Emitter> *C = this->VarScope; C != BreakScope;
-       C = C->getParent())
-    C->emitDestruction();
+       C = C->getParent()) {
+    if (!C->destroyLocals())
+      return false;
+  }
 
   return this->jump(*TargetLabel);
 }
@@ -5974,8 +5976,10 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
   assert(TargetLabel);
 
   for (VariableScope<Emitter> *C = VarScope; C != ContinueScope;
-       C = C->getParent())
-    C->emitDestruction();
+       C = C->getParent()) {
+    if (!C->destroyLocals())
+      return false;
+  }
 
   return this->jump(*TargetLabel);
 }
@@ -7159,9 +7163,12 @@ bool Compiler<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   return this->visitDeclRef(D, E);
 }
 
-template <class Emitter> void Compiler<Emitter>::emitCleanup() {
-  for (VariableScope<Emitter> *C = VarScope; C; C = C->getParent())
-    C->emitDestruction();
+template <class Emitter> bool Compiler<Emitter>::emitCleanup() {
+  for (VariableScope<Emitter> *C = VarScope; C; C = C->getParent()) {
+    if (!C->destroyLocals())
+      return false;
+  }
+  return true;
 }
 
 template <class Emitter>
