@@ -407,8 +407,6 @@ define i1 @shl1_trunc_ne0_use2(i37 %a) {
   ret i1 %r
 }
 
-; TODO: A > 4
-
 define i1 @shl2_trunc_eq0(i9 %a) {
 ; CHECK-LABEL: @shl2_trunc_eq0(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i9 2, [[A:%.*]]
@@ -461,6 +459,18 @@ define <2 x i1> @shl4_trunc_ne0(<2 x i8> %a) {
   ret <2 x i1> %r
 }
 
+define i1 @shl5_trunc_ne0(i9 %a) {
+; CHECK-LABEL: @shl5_trunc_ne0(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i9 4, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i9 [[SHL]] to i6
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i6 [[T]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i9 4, %a
+  %t = trunc i9 %shl to i6
+  %r = icmp ne i6 %t, 0
+  ret i1 %r
+}
 
 ; TODO: A < 5
 
@@ -541,6 +551,26 @@ define i1 @shl2_trunc_ne8_i32(i32 %a) {
   %shl = shl i32 2, %a
   %t = trunc i32 %shl to i16
   %r = icmp ne i16 %t, 8
+  ret i1 %r
+}
+
+define i1 @neg_shl2_trunc_eq0_i8(i8 %a) {
+; CHECK-LABEL: @neg_shl2_trunc_eq0_i8(
+; CHECK-NEXT:    ret i1 true
+;
+  %shl = shl i8 256, %a
+  %t = trunc i8 %shl to i6
+  %r = icmp eq i6 %t, 0
+  ret i1 %r
+}
+
+define i1 @neg_shl2_trunc_ne0_i8(i8 %a) {
+; CHECK-LABEL: @neg_shl2_trunc_ne0_i8(
+; CHECK-NEXT:    ret i1 false
+;
+  %shl = shl i8 128, %a
+  %t = trunc i8 %shl to i6
+  %r = icmp ne i6 %t, 0
   ret i1 %r
 }
 
