@@ -2731,6 +2731,12 @@ __mmask64 test_mm512_kunpackd(__m512i __A, __m512i __B, __m512i __C, __m512i __D
   return _mm512_mask_cmpneq_epu8_mask(_mm512_kunpackd(_mm512_cmpneq_epu8_mask(__B, __A),_mm512_cmpneq_epu8_mask(__C, __D)), __E, __F); 
 }
 
+TEST_CONSTEXPR(_mm512_kunpackd(0xFFFFFFFF00000000ull, 0x00000000FFFFFFFFull) == 0x00000000FFFFFFFFull);
+TEST_CONSTEXPR(_mm512_kunpackd(0xABCDEF0123456789ull, 0x0123456789ABCDEFull) == 0x2345678989ABCDEFull);
+TEST_CONSTEXPR(_mm512_kunpackd(0x00000000FFFFFFFFull, 0xFFFFFFFF00000000ull) == 0xFFFFFFFF00000000ull);
+TEST_CONSTEXPR(_mm512_kunpackd(0xAAAA5555AAAA5555ull, 0x5555AAAA5555AAAAull) == 0xAAAA55555555AAAAull);
+TEST_CONSTEXPR(_mm512_kunpackd(0x123456789ABCDEFull, 0xFEDCBA9876543210ull) == 0x89ABCDEF76543210ull);
+
 __mmask32 test_mm512_kunpackw(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_mm512_kunpackw
   // CHECK: [[LHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
@@ -2740,6 +2746,12 @@ __mmask32 test_mm512_kunpackw(__m512i __A, __m512i __B, __m512i __C, __m512i __D
   // CHECK: [[CONCAT:%.*]] = shufflevector <16 x i1> [[RHS2]], <16 x i1> [[LHS2]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   return _mm512_mask_cmpneq_epu16_mask(_mm512_kunpackw(_mm512_cmpneq_epu16_mask(__B, __A),_mm512_cmpneq_epu16_mask(__C, __D)), __E, __F); 
 }
+
+TEST_CONSTEXPR(_mm512_kunpackw(0xFFFF0000u, 0x0000FFFFu) == 0x0000FFFFu);
+TEST_CONSTEXPR(_mm512_kunpackw(0xABCD1234u, 0x56789ABCu) == 0x12349ABCu);
+TEST_CONSTEXPR(_mm512_kunpackw(0x0000FFFFu, 0xFFFF0000u) == 0xFFFF0000u);
+TEST_CONSTEXPR(_mm512_kunpackw(0xAAAA5555u, 0x5555AAAAu) == 0x5555AAAAu);
+TEST_CONSTEXPR(_mm512_kunpackw(0x12345678u, 0xABCDEF12u) == 0x5678EF12u);
 
 __m512i test_mm512_loadu_epi16 (void *__P)
 {
@@ -2868,12 +2880,36 @@ __mmask64 test_mm512_movepi8_mask(__m512i __A) {
   return _mm512_movepi8_mask(__A); 
 }
 
+TEST_CONSTEXPR(_mm512_movepi8_mask(
+    ((__m512i)(__v64qi){0, 1, char(129), 3, 4, 5, 6, 7,
+                        8, 9, 10, 11, 12, 13, 14, 15,
+                        16, 17, 18, 19, 20, 21, 22, 23,
+                        24, 25, 26, 27, 28, 29, 30, 31,
+                        32, 33, 34, 35, 36, 37, 38, 39,
+                        40, 41, 42, 43, 44, 45, 46, 47,
+                        48, 49, 50, 51, 52, 53, 54, 55,
+                        56, 57, 58, 59, 60, 61, 62, char(255)})
+) == (__mmask64)0x8000000000000004);
+
+
 __m512i test_mm512_movm_epi8(__mmask64 __A) {
   // CHECK-LABEL: test_mm512_movm_epi8
   // CHECK:  %{{.*}} = bitcast i64 %{{.*}} to <64 x i1>
   // CHECK:  %vpmovm2.i = sext <64 x i1> %{{.*}} to <64 x i8>
   return _mm512_movm_epi8(__A); 
 }
+
+TEST_CONSTEXPR(_mm512_movepi8_mask(
+    ((__m512i)(__v64qi){0, 1, char(129), 3, 4, 5, 6, 7,
+                        8, 9, 10, 11, 12, 13, 14, 15,
+                        16, 17, 18, 19, 20, 21, 22, 23,
+                        24, 25, 26, 27, 28, 29, 30, 31,
+                        32, 33, 34, 35, 36, 37, 38, 39,
+                        40, 41, 42, 43, 44, 45, 46, 47,
+                        48, 49, 50, 51, 52, 53, 54, 55,
+                        56, 57, 58, 59, 60, 61, 62, char(255)})
+) == (__mmask64)0x8000000000000004);
+
 
 __m512i test_mm512_movm_epi16(__mmask32 __A) {
   // CHECK-LABEL: test_mm512_movm_epi16
@@ -3119,6 +3155,13 @@ __mmask32 test_mm512_movepi16_mask(__m512i __A) {
   // CHECK: [[CMP:%.*]] = icmp slt <32 x i16> %{{.*}}, zeroinitializer
   return _mm512_movepi16_mask(__A); 
 }
+
+TEST_CONSTEXPR(_mm512_movepi16_mask(
+    ((__m512i)(__v32hi){0, 1, short(32768), 3, 4, 5, 6, 7,
+                        8, 9, 10, 11, 12, 13, 14, 15,
+                        16, 17, 18, 19, 20, 21, 22, 23,
+                        24, 25, 26, 27, 28, 29, 30, short(32768)})
+) == (__mmask32)0x80000004);
 
 void test_mm512_mask_cvtepi16_storeu_epi8 (void * __P, __mmask32 __M, __m512i __A)
 {

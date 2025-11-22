@@ -84,12 +84,6 @@ Potentially Breaking Changes
 - Downstream projects that previously linked only against ``clangDriver`` may
   now (also) need to link against the new ``clangOptions`` library, since
   options-related code has been moved out of the Driver into a separate library.
-- Clang now supports MSVC vector deleting destructors when targeting Windows.
-  This means that vtables of classes with virtual destructors will contain a
-  pointer to vector deleting destructor (instead of scalar deleting destructor)
-  which in fact is a different symbol with different name and linkage. This
-  may cause runtime failures if two binaries using the same class defining a
-  virtual destructor are compiled with different versions of clang.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -236,6 +230,11 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Removed OpenCL header-only feature macros (previously unconditionally enabled
+  on SPIR-V and only selectively disabled via ``-D__undef_<feature>``). All
+  OpenCL extensions and features are now centralized in OpenCLExtensions.def,
+  allowing consistent control via ``getSupportedOpenCLOpts`` and ``-cl-ext``.
+
 - Added ``__builtin_elementwise_ldexp``.
 
 - Added ``__builtin_elementwise_fshl`` and ``__builtin_elementwise_fshr``.
@@ -312,6 +311,10 @@ Non-comprehensive list of changes in this release
   allocator-level heap organization strategies. A feature to instrument all
   allocation functions with a token ID can be enabled via the
   ``-fsanitize=alloc-token`` flag.
+ 
+- A new generic byte swap builtin function ``__builtin_bswapg`` that extends the existing 
+  __builtin_bswap{16,32,64} function family to support all standard integer types.
+
 - A builtin ``__builtin_infer_alloc_token(<args>, ...)`` is provided to allow
   compile-time querying of allocation token IDs, where the builtin arguments
   mirror those normally passed to an allocation function.
@@ -348,6 +351,10 @@ Attribute Changes in Clang
 
 - New format attributes ``gnu_printf``, ``gnu_scanf``, ``gnu_strftime`` and ``gnu_strfmon`` are added
   as aliases for ``printf``, ``scanf``, ``strftime`` and ``strfmon``. (#GH16219)
+
+- New function attribute `malloc_span` is added. It has semantics similar to that of the `malloc`
+  attribute, but `malloc_span` applies not to functions returning pointers, but to functions returning
+  span-like structures (i.e. those that contain a pointer field and a size integer field or two pointers).
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -430,6 +437,12 @@ Improvements to Clang's diagnostics
   or continue (#GH166013)
 - Clang now emits a diagnostic in case `vector_size` or `ext_vector_type`
   attributes are used with a negative size (#GH165463).
+- Clang no longer emits ``-Wmissing-noreturn`` for virtual methods where
+  the function body consists of a `throw` expression (#GH167247).
+
+- A new warning ``-Wenum-compare-typo`` has been added to detect potential erroneous
+  comparison operators when mixed with bitwise operators in enum value initializers.
+  This can be locally disabled by explicitly casting the initializer value.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -474,6 +487,7 @@ Bug Fixes in This Version
 - Fixed a failed assertion with empty filename in ``#embed`` directive. (#GH162951)
 - Fixed a crash triggered by unterminated ``__has_embed``. (#GH162953)
 - Accept empty enumerations in MSVC-compatible C mode. (#GH114402)
+- Fix a bug leading to incorrect code generation with complex number compound assignment and bitfield values, which also caused a crash with UBsan. (#GH166798)
 - Fixed false-positive shadow diagnostics for lambdas in explicit object member functions. (#GH163731)
 
 Bug Fixes to Compiler Builtins
@@ -496,6 +510,7 @@ Bug Fixes to Attribute Support
 - Fixes crashes or missing diagnostics with the `device_kernel` attribute. (#GH161905)
 - Fix handling of parameter indexes when an attribute is applied to a C++23 explicit object member function.
 - Fixed several false positives and false negatives in function effect (`nonblocking`) analysis. (#GH166078) (#GH166101) (#GH166110)
+- Fix ``cleanup`` attribute by delaying type checks until after the type is deduced. (#GH129631)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -600,8 +615,6 @@ Windows Support
 - clang-cl now supports /arch:AVX10.1 and /arch:AVX10.2.
 - clang-cl now supports /vlen, /vlen=256 and /vlen=512.
 
-- Clang now supports MSVC vector deleting destructors (GH19772).
-
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 - Enable linker relaxation by default for loongarch64.
@@ -663,6 +676,9 @@ AST Matchers
 
 - ``hasConditionVariableStatement`` now supports ``for`` loop, ``while`` loop
   and ``switch`` statements.
+- Fixed detection of explicit parameter lists in ``LambdaExpr``. (#GH168452)
+- Added ``hasExplicitParameters`` for ``LambdaExpr`` as an output attribute to
+  AST JSON dumps.
 
 clang-format
 ------------

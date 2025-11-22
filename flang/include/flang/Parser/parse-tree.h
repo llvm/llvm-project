@@ -271,7 +271,6 @@ struct OpenACCRoutineConstruct;
 struct OpenMPConstruct;
 struct OpenMPLoopConstruct;
 struct OpenMPDeclarativeConstruct;
-struct OmpEndLoopDirective;
 struct CUFKernelDoConstruct;
 
 // Cooked character stream locations
@@ -539,7 +538,6 @@ struct ExecutableConstruct {
       common::Indirection<OpenACCConstruct>,
       common::Indirection<AccEndCombinedDirective>,
       common::Indirection<OpenMPConstruct>,
-      common::Indirection<OmpEndLoopDirective>,
       common::Indirection<CUFKernelDoConstruct>>
       u;
 };
@@ -5345,12 +5343,10 @@ struct OmpEndLoopDirective : public OmpEndDirective {
 };
 
 // OpenMP directives enclosing do loop
-using NestedConstruct =
-    std::variant<DoConstruct, common::Indirection<OpenMPLoopConstruct>>;
 struct OpenMPLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
   OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
-      : t({std::move(a), std::nullopt, std::nullopt}) {}
+      : t({std::move(a), Block{}, std::nullopt}) {}
 
   const OmpBeginLoopDirective &BeginDir() const {
     return std::get<OmpBeginLoopDirective>(t);
@@ -5358,8 +5354,11 @@ struct OpenMPLoopConstruct {
   const std::optional<OmpEndLoopDirective> &EndDir() const {
     return std::get<std::optional<OmpEndLoopDirective>>(t);
   }
-  std::tuple<OmpBeginLoopDirective, std::optional<NestedConstruct>,
-      std::optional<OmpEndLoopDirective>>
+  const DoConstruct *GetNestedLoop() const;
+  const OpenMPLoopConstruct *GetNestedConstruct() const;
+
+  CharBlock source;
+  std::tuple<OmpBeginLoopDirective, Block, std::optional<OmpEndLoopDirective>>
       t;
 };
 

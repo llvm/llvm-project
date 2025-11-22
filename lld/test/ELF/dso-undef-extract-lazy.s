@@ -58,8 +58,8 @@ Sections:
     Address:         0x0000000000200210
     AddressAlign:    0x0000000000000002
     EntSize:         0x0000000000000002
-## We use both index 0 and 1 for unversioned undefined symbols.
-## Index 1 simulates older LLD and GNU ld versions between 2.35 and 2.45.
+## Test both index 0 and 1 for unversioned undefined symbols.
+## https://sourceware.org/PR33577
     Entries:         [ 0, 0, 1 ]
   - Name:            .gnu.version_r
     Type:            SHT_GNU_verneed

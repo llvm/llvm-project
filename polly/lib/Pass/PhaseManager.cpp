@@ -25,8 +25,10 @@
 #include "polly/ScopInfo.h"
 #include "polly/Simplify.h"
 #include "polly/Support/PollyDebug.h"
+#include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "polly-pass"
@@ -77,10 +79,13 @@ public:
     // TODO: Setting ModifiedIR will invalidate any analysis, even if DT, LI are
     // preserved.
     if (Opts.isPhaseEnabled(PassPhase::Prepare)) {
-      PreservedAnalyses PA = CodePreparationPass().run(F, FAM);
-      FAM.invalidate(F, PA);
-      if (!PA.areAllPreserved())
+      if (runCodePreparation(F, &DT, &LI, nullptr)) {
+        PreservedAnalyses PA;
+        PA.preserve<DominatorTreeAnalysis>();
+        PA.preserve<LoopAnalysis>();
+        FAM.invalidate(F, PA);
         ModifiedIR = true;
+      }
     }
 
     // Can't do anything without detection
