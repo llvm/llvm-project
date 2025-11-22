@@ -1331,3 +1331,15 @@ template <typename T> int t() {
 
 int v = t<int>();
 }  // namespace GH118187
+
+namespace GH156579 {
+template <class>
+auto f{[] (auto...) {
+    if constexpr ([] (auto) { return true; }(0))
+        return 0;
+}};
+
+void g() {
+    f<int>();
+}
+}  // namespace GH156579
