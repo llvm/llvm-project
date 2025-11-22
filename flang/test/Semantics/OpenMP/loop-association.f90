@@ -143,6 +143,7 @@
 
   !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp simd
+    a = i + 1
+  !ERROR: Misplaced OpenMP end-directive
   !$omp end simd
-   a = i + 1
 end
