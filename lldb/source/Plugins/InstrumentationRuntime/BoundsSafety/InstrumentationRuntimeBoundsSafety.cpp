@@ -124,7 +124,7 @@ InstrumentationBoundsSafetyStopInfo::ComputeStopReasonAndSuggestedStackFrame(
   Log *log_category = GetLog(LLDBLog::InstrumentationRuntime);
   ThreadSP thread_sp = GetThread();
   if (!thread_sp) {
-    LLDB_LOGF(log_category, "failed to get thread while stopped");
+    LLDB_LOG(log_category, "failed to get thread while stopped");
     return {};
   }
 
@@ -133,7 +133,7 @@ InstrumentationBoundsSafetyStopInfo::ComputeStopReasonAndSuggestedStackFrame(
 
   StackFrameSP parent_sf = thread_sp->GetStackFrameAtIndex(1);
   if (!parent_sf) {
-    LLDB_LOGF(log_category, "got nullptr when fetching stackframe at index 1");
+    LLDB_LOG(log_category, "got nullptr when fetching stackframe at index 1");
     return {};
   }
 
@@ -166,9 +166,9 @@ InstrumentationBoundsSafetyStopInfo::
   auto MaybeTrapReason =
       clang::CodeGen::DemangleTrapReasonInDebugInfo(TrapReasonFuncName);
   if (!MaybeTrapReason.has_value()) {
-    LLDB_LOGF(
+    LLDB_LOG(
         GetLog(LLDBLog::InstrumentationRuntime),
-        "clang::CodeGen::DemangleTrapReasonInDebugInfo(\"%s\") call failed",
+        "clang::CodeGen::DemangleTrapReasonInDebugInfo(\"{0}\") call failed",
         TrapReasonFuncName);
     return {};
   }
@@ -207,7 +207,7 @@ InstrumentationBoundsSafetyStopInfo::
   Log *log_category = GetLog(LLDBLog::InstrumentationRuntime);
   StackFrameSP softtrap_sf = thread_sp->GetStackFrameAtIndex(0);
   if (!softtrap_sf) {
-    LLDB_LOGF(log_category, "got nullptr when fetching stackframe at index 0");
+    LLDB_LOG(log_category, "got nullptr when fetching stackframe at index 0");
     return {};
   }
   llvm::StringRef trap_reason_func_name = softtrap_sf->GetFunctionName();
@@ -242,16 +242,16 @@ InstrumentationBoundsSafetyStopInfo::
   // __bounds_safety_soft_trap_s has one argument which is a pointer to a string
   // describing the trap or a nullptr.
   if (trap_reason_func_name != BoundsSafetySoftTrapStr) {
-    LLDB_LOGF(log_category,
-              "unexpected function name. Expected \"%s\" but got \"%s\"",
-              BoundsSafetySoftTrapStr.data(), trap_reason_func_name.data());
+    LLDB_LOG(log_category,
+             "unexpected function name. Expected \"{0}\" but got \"{1}\"",
+             BoundsSafetySoftTrapStr.data(), trap_reason_func_name.data());
     assert(0 && "hit breakpoint for unexpected function name");
     return {};
   }
 
   RegisterContextSP rc = thread_sp->GetRegisterContext();
   if (!rc) {
-    LLDB_LOGF(log_category, "failed to get register context");
+    LLDB_LOG(log_category, "failed to get register context");
     return {};
   }
 
@@ -262,7 +262,7 @@ InstrumentationBoundsSafetyStopInfo::
   // work.
   ProcessSP process = thread_sp->GetProcess();
   if (!process) {
-    LLDB_LOGF(log_category, "failed to get process");
+    LLDB_LOG(log_category, "failed to get process");
     return {};
   }
   switch (process->GetTarget().GetArchitecture().GetCore()) {
@@ -289,19 +289,19 @@ InstrumentationBoundsSafetyStopInfo::
   const RegisterInfo *arg0_info = rc->GetRegisterInfo(
       lldb::RegisterKind::eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
   if (!arg0_info) {
-    LLDB_LOGF(log_category,
-              "failed to get register info for LLDB_REGNUM_GENERIC_ARG1");
+    LLDB_LOG(log_category,
+             "failed to get register info for LLDB_REGNUM_GENERIC_ARG1");
     return {};
   }
   RegisterValue reg_value;
   if (!rc->ReadRegister(arg0_info, reg_value)) {
-    LLDB_LOGF(log_category, "failed to read register %s", arg0_info->name);
+    LLDB_LOG(log_category, "failed to read register {0}", arg0_info->name);
     return {};
   }
   uint64_t reg_value_as_int = reg_value.GetAsUInt64(UINT64_MAX);
   if (reg_value_as_int == UINT64_MAX) {
-    LLDB_LOGF(log_category, "failed to read register %s as a UInt64",
-              arg0_info->name);
+    LLDB_LOG(log_category, "failed to read register {0} as a UInt64",
+             arg0_info->name);
     return {};
   }
 
@@ -323,12 +323,13 @@ InstrumentationBoundsSafetyStopInfo::
   thread_sp->GetProcess()->ReadCStringFromMemory(reg_value_as_int, out_string,
                                                  error_status);
   if (error_status.Fail()) {
-    LLDB_LOGF(log_category, "failed to read C string from address %p",
-              (void *)reg_value_as_int);
+    LLDB_LOG(log_category, "failed to read C string from address {0}",
+             (void *)reg_value_as_int);
     return {};
   }
-  LLDB_LOGF(log_category, "read C string from %p found in register %s: \"%s\"",
-            (void *)reg_value_as_int, arg0_info->name, out_string.c_str());
+  LLDB_LOG(log_category,
+           "read C string from {0} found in register {1}: \"{2}\"",
+           (void *)reg_value_as_int, arg0_info->name, out_string.c_str());
   std::string stop_reason;
   llvm::raw_string_ostream SS(stop_reason);
   SS << SOFT_TRAP_FALLBACK_CATEGORY;
@@ -380,14 +381,14 @@ bool InstrumentationRuntimeBoundsSafety::CheckIfRuntimeIsValid(
 
     if (module_sp->FindFirstSymbolWithNameAndType(test_sym,
                                                   lldb::eSymbolTypeAny)) {
-      LLDB_LOGF(log_category, "found \"%s\" in %s", SoftTrapFunc.c_str(),
-                module_sp->GetObjectName().AsCString("<unknown>"));
+      LLDB_LOG(log_category, "found \"{0}\" in {1}", SoftTrapFunc.c_str(),
+               module_sp->GetObjectName().AsCString("<unknown>"));
       return true;
     }
   }
-  LLDB_LOGF(log_category,
-            "did not findFound BoundsSafety soft trap functions in %s",
-            module_sp->GetObjectName().AsCString("<unknown>"));
+  LLDB_LOG(log_category,
+           "did not find BoundsSafety soft trap functions in module {0}",
+           module_sp->GetObjectName().AsCString("<unknown>"));
   return false;
 }
 
@@ -404,26 +405,26 @@ bool InstrumentationRuntimeBoundsSafety::NotifyBreakpointHit(
   Log *log_category = GetLog(LLDBLog::InstrumentationRuntime);
   ProcessSP process_sp = instance->GetProcessSP();
   if (!process_sp) {
-    LLDB_LOGF(log_category, "failed to get process from baton");
+    LLDB_LOG(log_category, "failed to get process from baton");
     return false;
   }
   ThreadSP thread_sp = context->exe_ctx_ref.GetThreadSP();
   if (!thread_sp) {
-    LLDB_LOGF(log_category,
-              "failed to get thread from StoppointCallbackContext");
+    LLDB_LOG(log_category,
+             "failed to get thread from StoppointCallbackContext");
     return false;
   }
   if (process_sp != context->exe_ctx_ref.GetProcessSP()) {
-    LLDB_LOGF(log_category,
-              "process from baton (%p) and StoppointCallbackContext (%p) do "
-              "not match",
-              (void *)process_sp.get(),
-              (void *)context->exe_ctx_ref.GetProcessSP().get());
+    LLDB_LOG(log_category,
+             "process from baton ({0}) and StoppointCallbackContext ({1}) do "
+             "not match",
+             (void *)process_sp.get(),
+             (void *)context->exe_ctx_ref.GetProcessSP().get());
     return false;
   }
 
   if (process_sp->GetModIDRef().IsLastResumeForUserExpression()) {
-    LLDB_LOGF(log_category, "IsLastResumeForUserExpression is true");
+    LLDB_LOG(log_category, "IsLastResumeForUserExpression is true");
     return false;
   }
 
@@ -442,7 +443,7 @@ void InstrumentationRuntimeBoundsSafety::Activate() {
   Log *log_category = GetLog(LLDBLog::InstrumentationRuntime);
   ProcessSP process_sp = GetProcessSP();
   if (!process_sp) {
-    LLDB_LOGF(log_category, "could not get process during Activate()");
+    LLDB_LOG(log_category, "could not get process during Activate()");
     return;
   }
 
@@ -458,10 +459,10 @@ void InstrumentationRuntimeBoundsSafety::Activate() {
   if (!breakpoint)
     return;
   if (!breakpoint->HasResolvedLocations()) {
-    LLDB_LOGF(log_category,
-              "breakpoint %d for BoundsSafety soft traps did not resolve to "
-              "any locations",
-              breakpoint->GetID());
+    LLDB_LOG(log_category,
+             "breakpoint {0} for BoundsSafety soft traps did not resolve to "
+             "any locations",
+             breakpoint->GetID());
     assert(0 && "breakpoint has no resolved locations");
     process_sp->GetTarget().RemoveBreakpointByID(breakpoint->GetID());
     return;
@@ -474,8 +475,8 @@ void InstrumentationRuntimeBoundsSafety::Activate() {
       /*sync=*/false);
   breakpoint->SetBreakpointKind("bounds-safety-soft-trap");
   SetBreakpointID(breakpoint->GetID());
-  LLDB_LOGF(log_category, "created breakpoint %d for BoundsSafety soft traps",
-            breakpoint->GetID());
+  LLDB_LOG(log_category, "created breakpoint {0} for BoundsSafety soft traps",
+           breakpoint->GetID());
   SetActive(true);
 }
 
@@ -485,11 +486,11 @@ void InstrumentationRuntimeBoundsSafety::Deactivate() {
   if (ProcessSP process_sp = GetProcessSP()) {
     bool success =
         process_sp->GetTarget().RemoveBreakpointByID(GetBreakpointID());
-    LLDB_LOGF(log_category,
-              "%sremoved breakpoint %llu for BoundsSafety soft traps",
-              success ? "" : "failed to ", GetBreakpointID());
+    LLDB_LOG(log_category,
+             "{0}removed breakpoint {1} for BoundsSafety soft traps",
+             success ? "" : "failed to ", GetBreakpointID());
   } else {
-    LLDB_LOGF(log_category, "no process available during Deactivate()");
+    LLDB_LOG(log_category, "no process available during Deactivate()");
   }
 
   SetBreakpointID(LLDB_INVALID_BREAK_ID);
