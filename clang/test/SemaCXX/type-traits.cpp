@@ -4047,6 +4047,7 @@ struct TriviallyEqualityComparableContains {
 };
 
 static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int&>));
 static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<float>));
 static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<double>));
 static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<long double>));
@@ -4186,13 +4187,6 @@ struct NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct {
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct));
 
-struct NotTriviallyEqualityComparableHasReferenceMember {
-  int& i;
-
-  bool operator==(const NotTriviallyEqualityComparableHasReferenceMember&) const = default;
-};
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasReferenceMember));
-
 struct NotTriviallyEqualityComparableNonTriviallyComparableBaseBase {
   int i;
 
@@ -4303,6 +4297,7 @@ struct TriviallyEqualityComparableContains {
 };
 
 static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int&>));
 static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<float>));
 static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<double>));
 static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<long double>));
@@ -4441,19 +4436,6 @@ struct NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct {
   friend bool operator==(const NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct&, const NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct&) = default;
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct));
-
-struct NotTriviallyEqualityComparableHasReferenceMember {
-  int& i;
-
-  friend bool operator==(const NotTriviallyEqualityComparableHasReferenceMember&, const NotTriviallyEqualityComparableHasReferenceMember&) = default;
-};
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasReferenceMember));
-
-struct NotTriviallyEqualityComparableHasEnum {
-  Enum e;
-  friend bool operator==(const NotTriviallyEqualityComparableHasEnum&, const NotTriviallyEqualityComparableHasEnum&) = default;
-};
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasEnum));
 
 struct NonTriviallyEqualityComparableValueComparisonNonTriviallyCopyable {
   int i;
