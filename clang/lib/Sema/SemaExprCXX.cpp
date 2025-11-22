@@ -5658,20 +5658,13 @@ static bool ConvertForConditional(Sema &Self, ExprResult &E, QualType T) {
 // extension.
 static bool isValidVectorForConditionalCondition(ASTContext &Ctx,
                                                  QualType CondTy) {
-  if (!CondTy->isVectorType() && !CondTy->isExtVectorType())
+  bool IsSVEVectorType = CondTy->isSveVLSBuiltinType();
+  if (!CondTy->isVectorType() && !CondTy->isExtVectorType() && !IsSVEVectorType)
     return false;
   const QualType EltTy =
-      cast<VectorType>(CondTy.getCanonicalType())->getElementType();
-  assert(!EltTy->isEnumeralType() && "Vectors cant be enum types");
-  return EltTy->isIntegralType(Ctx);
-}
-
-static bool isValidSizelessVectorForConditionalCondition(ASTContext &Ctx,
-                                                         QualType CondTy) {
-  if (!CondTy->isSveVLSBuiltinType())
-    return false;
-  const QualType EltTy =
-      cast<BuiltinType>(CondTy.getCanonicalType())->getSveEltType(Ctx);
+      IsSVEVectorType
+          ? cast<BuiltinType>(CondTy.getCanonicalType())->getSveEltType(Ctx)
+          : cast<VectorType>(CondTy.getCanonicalType())->getElementType();
   assert(!EltTy->isEnumeralType() && "Vectors cant be enum types");
   return EltTy->isIntegralType(Ctx);
 }
@@ -5806,9 +5799,7 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   VK = VK_PRValue;
   OK = OK_Ordinary;
   bool IsVectorConditional =
-      isValidVectorForConditionalCondition(Context, Cond.get()->getType()) ||
-      isValidSizelessVectorForConditionalCondition(Context,
-                                                   Cond.get()->getType());
+      isValidVectorForConditionalCondition(Context, Cond.get()->getType());
 
   // C++11 [expr.cond]p1
   //   The first expression is contextually converted to bool.
