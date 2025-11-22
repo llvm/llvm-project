@@ -330,7 +330,7 @@ AST_POLYMORPHIC_MATCHER_REGEX(isExpansionInFileMatching,
 /// appearances of the macro.
 AST_POLYMORPHIC_MATCHER_P(isExpandedFromMacro,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc),
-                          std::string, MacroName) {
+                          StringRef, MacroName) {
   // Verifies that the statement' beginning and ending are both expanded from
   // the same instance of the given macro.
   auto& Context = Finder->getASTContext();

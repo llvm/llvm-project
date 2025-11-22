@@ -177,6 +177,27 @@ public:
            hasPTXWithAccelSMs(86, {100, 101});
   }
 
+  // Checks support for conversions involving e4m3x2 and e5m2x2.
+  bool hasFP8ConversionSupport() const {
+    if (PTXVersion >= 81)
+      return SmVersion >= 89;
+
+    if (PTXVersion >= 78)
+      return SmVersion >= 90;
+
+    return false;
+  }
+
+  // Checks support for conversions involving the following types:
+  // - e2m3x2/e3m2x2
+  // - e2m1x2
+  // - ue8m0x2
+  bool hasNarrowFPConversionSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 120});
+  }
+
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
   // terminates a basic block. Instead, it would assume that control flow
   // continued to the next instruction. The next instruction could be in the
