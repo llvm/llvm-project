@@ -5684,18 +5684,12 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
 
   auto GetVectorInfo =
       [&](QualType Type) -> std::pair<QualType, llvm::ElementCount> {
-    QualType ElementTy;
-    llvm::ElementCount EC;
-    if (const auto *VT = Type->getAs<VectorType>()) {
-      ElementTy = VT->getElementType();
-      EC = llvm::ElementCount::getFixed(VT->getNumElements());
-    } else {
-      ASTContext::BuiltinVectorTypeInfo VectorInfo =
-          Context.getBuiltinVectorTypeInfo(Type->castAs<BuiltinType>());
-      ElementTy = VectorInfo.ElementType;
-      EC = VectorInfo.EC;
-    }
-    return std::make_pair(ElementTy, EC);
+    if (const auto *VT = Type->getAs<VectorType>())
+      return std::make_pair(VT->getElementType(),
+                            llvm::ElementCount::getFixed(VT->getNumElements()));
+    ASTContext::BuiltinVectorTypeInfo VectorInfo =
+        Context.getBuiltinVectorTypeInfo(Type->castAs<BuiltinType>());
+    return std::make_pair(VectorInfo.ElementType, VectorInfo.EC);
   };
 
   auto [CondElementTy, CondElementCount] = GetVectorInfo(CondType);
@@ -5704,7 +5698,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
   if (LHSIsVector && RHSIsVector) {
     if (CondType->isExtVectorType() != LHSType->isExtVectorType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_cond_result_mismatch)
-          << /*isExtVector*/ isa<ExtVectorType>(CondType);
+          << /*isExtVector*/ CondType->isExtVectorType();
       return {};
     }
 
