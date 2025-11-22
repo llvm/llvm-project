@@ -591,19 +591,17 @@ static bool HasNoThrowOperator(CXXRecordDecl *RD, OverloadedOperatorKind Op,
   return false;
 }
 
-static bool EqualityComparisonIsDefaulted(Sema &S, const TypeDecl *Decl,
+static bool EqualityComparisonIsDefaulted(Sema &S, const TagDecl *Decl,
                                           SourceLocation KeyLoc) {
   CanQualType T = S.Context.getCanonicalTagType(Decl);
 
   EnterExpressionEvaluationContext UnevaluatedContext(
       S, Sema::ExpressionEvaluationContext::Unevaluated);
-  Sema::SFINAETrap SFINAE(S, /*ForValidityCheck=*/true);
+  Sema::SFINAETrap SFINAE(S, /*WithAccessChecking=*/true);
   Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
   // const ClassT& obj;
-  OpaqueValueExpr Operand(
-      KeyLoc, T.withConst(),
-      ExprValueKind::VK_LValue);
+  OpaqueValueExpr Operand(KeyLoc, T.withConst(), ExprValueKind::VK_LValue);
   UnresolvedSet<16> Functions;
   // obj == obj;
   S.LookupBinOp(S.TUScope, {}, BinaryOperatorKind::BO_EQ, Functions);
@@ -671,7 +669,9 @@ static bool isTriviallyEqualityComparableType(Sema &S, QualType Type,
     return false;
 
   if (CanonicalType->isEnumeralType()) {
-    EnumDecl *ED = CanonicalType->castAs<EnumType>()->getOriginalDecl()->getDefinitionOrSelf();
+    EnumDecl *ED = CanonicalType->castAs<EnumType>()
+                       ->getOriginalDecl()
+                       ->getDefinitionOrSelf();
     return EqualityComparisonIsDefaulted(S, ED, KeyLoc);
   }
 
