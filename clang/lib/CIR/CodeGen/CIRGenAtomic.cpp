@@ -286,6 +286,31 @@ void AtomicInfo::emitCopyIntoMemory(RValue rvalue) const {
   }
 }
 
+static void emitMemOrderDefaultCaseLabel(CIRGenBuilderTy &builder,
+                                         mlir::Location loc) {
+  mlir::ArrayAttr ordersAttr = builder.getArrayAttr({});
+  mlir::OpBuilder::InsertPoint insertPoint;
+  cir::CaseOp::create(builder, loc, ordersAttr, cir::CaseOpKind::Default,
+                      insertPoint);
+  builder.restoreInsertionPoint(insertPoint);
+}
+
+// Create a "case" operation with the given list of orders as its values. Also
+// create the region that will hold the body of the switch-case label.
+static void emitMemOrderCaseLabel(CIRGenBuilderTy &builder, mlir::Location loc,
+                                  mlir::Type orderType,
+                                  llvm::ArrayRef<cir::MemOrder> orders) {
+  llvm::SmallVector<mlir::Attribute, 2> orderAttrs;
+  for (cir::MemOrder order : orders)
+    orderAttrs.push_back(cir::IntAttr::get(orderType, static_cast<int>(order)));
+  mlir::ArrayAttr ordersAttr = builder.getArrayAttr(orderAttrs);
+
+  mlir::OpBuilder::InsertPoint insertPoint;
+  cir::CaseOp::create(builder, loc, ordersAttr, cir::CaseOpKind::Anyof,
+                      insertPoint);
+  builder.restoreInsertionPoint(insertPoint);
+}
+
 static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
                               Address dest, Address ptr, Address val1,
                               Address val2, uint64_t size,
@@ -657,6 +682,70 @@ static bool isMemOrderValid(uint64_t order, bool isStore, bool isLoad) {
   return true;
 }
 
+static void emitAtomicExprWithDynamicMemOrder(
+    CIRGenFunction &cgf, mlir::Value order, AtomicExpr *e, Address dest,
+    Address ptr, Address val1, Address val2, Expr *isWeakExpr,
+    Expr *orderFailExpr, uint64_t size, bool isStore, bool isLoad) {
+  // The memory order is not known at compile-time.  The atomic operations
+  // can't handle runtime memory orders; the memory order must be hard coded.
+  // Generate a "switch" statement that converts a runtime value into a
+  // compile-time value.
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  cir::SwitchOp::create(
+      builder, order.getLoc(), order,
+      [&](mlir::OpBuilder &, mlir::Location loc, mlir::OperationState &) {
+        mlir::Block *switchBlock = builder.getBlock();
+
+        auto emitMemOrderCase = [&](llvm::ArrayRef<cir::MemOrder> caseOrders,
+                                    cir::MemOrder actualOrder) {
+          if (caseOrders.empty())
+            emitMemOrderDefaultCaseLabel(builder, loc);
+          else
+            emitMemOrderCaseLabel(builder, loc, order.getType(), caseOrders);
+          emitAtomicOp(cgf, e, dest, ptr, val1, val2, isWeakExpr, orderFailExpr,
+                       size, actualOrder);
+          builder.createBreak(loc);
+          builder.setInsertionPointToEnd(switchBlock);
+        };
+
+        // default:
+        // Use memory_order_relaxed for relaxed operations and for any memory
+        // order value that is not supported.  There is no good way to report
+        // an unsupported memory order at runtime, hence the fallback to
+        // memory_order_relaxed.
+        emitMemOrderCase(/*caseOrders=*/{}, cir::MemOrder::Relaxed);
+
+        if (!isStore) {
+          // case consume:
+          // case acquire:
+          // memory_order_consume is not implemented; it is always treated
+          // like memory_order_acquire.  These memory orders are not valid for
+          // write-only operations.
+          emitMemOrderCase({cir::MemOrder::Consume, cir::MemOrder::Acquire},
+                           cir::MemOrder::Acquire);
+        }
+
+        if (!isLoad) {
+          // case release:
+          // memory_order_release is not valid for read-only operations.
+          emitMemOrderCase({cir::MemOrder::Release}, cir::MemOrder::Release);
+        }
+
+        if (!isLoad && !isStore) {
+          // case acq_rel:
+          // memory_order_acq_rel is only valid for read-write operations.
+          emitMemOrderCase({cir::MemOrder::AcquireRelease},
+                           cir::MemOrder::AcquireRelease);
+        }
+
+        // case seq_cst:
+        emitMemOrderCase({cir::MemOrder::SequentiallyConsistent},
+                         cir::MemOrder::SequentiallyConsistent);
+
+        builder.createYield(loc);
+      });
+}
+
 RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   QualType atomicTy = e->getPtr()->getType()->getPointeeType();
   QualType memTy = atomicTy;
@@ -844,9 +933,9 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
       emitAtomicOp(*this, e, dest, ptr, val1, val2, isWeakExpr, orderFailExpr,
                    size, static_cast<cir::MemOrder>(ord));
   } else {
-    assert(!cir::MissingFeatures::atomicExpr());
-    cgm.errorNYI(e->getSourceRange(), "emitAtomicExpr: dynamic memory order");
-    return RValue::get(nullptr);
+    emitAtomicExprWithDynamicMemOrder(*this, order, e, dest, ptr, val1, val2,
+                                      isWeakExpr, orderFailExpr, size, isStore,
+                                      isLoad);
   }
 
   if (resultTy->isVoidType())

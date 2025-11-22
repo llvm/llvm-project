@@ -55,7 +55,7 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack |
     SanitizerKind::Thread | SanitizerKind::ObjCCast | SanitizerKind::KCFI |
     SanitizerKind::NumericalStability | SanitizerKind::Vptr |
-    SanitizerKind::CFI;
+    SanitizerKind::CFI | SanitizerKind::AllocToken;
 static const SanitizerMask RecoverableByDefault =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
