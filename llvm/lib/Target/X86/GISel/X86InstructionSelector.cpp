@@ -315,7 +315,7 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
     const int RegBankSize = 16;
 
     // Special case GPR16 -> XMM
-    if (SrcSize == RegBankSize && SrcRegBank.getID() == X86::GPRRegBankID &&
+    if (SrcSize == 16 && SrcRegBank.getID() == X86::GPRRegBankID &&
         (DstRegBank.getID() == X86::VECRRegBankID)) {
 
       const DebugLoc &DL = I.getDebugLoc();
@@ -336,7 +336,7 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
     }
 
     // Special case XMM -> GR16
-    if (DstSize == RegBankSize && DstRegBank.getID() == X86::GPRRegBankID &&
+    if (DstSize == 16 && DstRegBank.getID() == X86::GPRRegBankID &&
         (SrcRegBank.getID() == X86::VECRRegBankID)) {
 
       const DebugLoc &DL = I.getDebugLoc();
