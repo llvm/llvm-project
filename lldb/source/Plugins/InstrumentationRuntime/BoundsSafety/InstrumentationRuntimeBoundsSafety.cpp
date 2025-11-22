@@ -98,17 +98,17 @@ InstrumentationBoundsSafetyStopInfo::InstrumentationBoundsSafetyStopInfo(
   m_description = SOFT_TRAP_FALLBACK_CATEGORY;
 
   bool warning_emitted_for_failure = false;
-  auto [Description, MaybeSuggestedStackIndex] =
+  auto [MaybeDescription, MaybeSuggestedStackIndex] =
       ComputeStopReasonAndSuggestedStackFrame(warning_emitted_for_failure);
-  if (Description)
-    m_description = Description.value();
+  if (MaybeDescription)
+    m_description = MaybeDescription.value();
   if (MaybeSuggestedStackIndex)
     m_value = MaybeSuggestedStackIndex.value();
 
   // Emit warning about the failure to compute the stop info if one wasn't
   // already emitted.
-  if ((!Description.has_value()) && !warning_emitted_for_failure) {
-    if (auto thread_sp = GetThread()) {
+  if ((!MaybeDescription.has_value()) && !warning_emitted_for_failure) {
+    if (ThreadSP thread_sp = GetThread()) {
       lldb::user_id_t debugger_id =
           thread_sp->GetProcess()->GetTarget().GetDebugger().GetID();
       Debugger::ReportWarning(
@@ -121,7 +121,7 @@ InstrumentationBoundsSafetyStopInfo::InstrumentationBoundsSafetyStopInfo(
 std::pair<std::optional<std::string>, std::optional<uint32_t>>
 InstrumentationBoundsSafetyStopInfo::ComputeStopReasonAndSuggestedStackFrame(
     bool &warning_emitted_for_failure) {
-  auto *log_category = GetLog(LLDBLog::InstrumentationRuntime);
+  Log *log_category = GetLog(LLDBLog::InstrumentationRuntime);
   ThreadSP thread_sp = GetThread();
   if (!thread_sp) {
     LLDB_LOGF(log_category, "failed to get thread while stopped");
@@ -131,7 +131,7 @@ InstrumentationBoundsSafetyStopInfo::ComputeStopReasonAndSuggestedStackFrame(
   lldb::user_id_t debugger_id =
       thread_sp->GetProcess()->GetTarget().GetDebugger().GetID();
 
-  auto parent_sf = thread_sp->GetStackFrameAtIndex(1);
+  StackFrameSP parent_sf = thread_sp->GetStackFrameAtIndex(1);
   if (!parent_sf) {
     LLDB_LOGF(log_category, "got nullptr when fetching stackframe at index 1");
     return {};
@@ -161,7 +161,7 @@ InstrumentationBoundsSafetyStopInfo::
   // frame #2: `bad_read(index=10)
   // ```
   // ....
-  const auto *TrapReasonFuncName = parent_sf->GetFunctionName();
+  const char *TrapReasonFuncName = parent_sf->GetFunctionName();
 
   auto MaybeTrapReason =
       clang::CodeGen::DemangleTrapReasonInDebugInfo(TrapReasonFuncName);
@@ -172,8 +172,8 @@ InstrumentationBoundsSafetyStopInfo::
         TrapReasonFuncName);
     return {};
   }
-  auto category = MaybeTrapReason.value().first;
-  auto message = MaybeTrapReason.value().second;
+  llvm::StringRef category = MaybeTrapReason.value().first;
+  llvm::StringRef message = MaybeTrapReason.value().second;
 
   // TODO: Clang should probably be changed to emit the "Soft " prefix itself
   std::string stop_reason;
@@ -204,8 +204,8 @@ InstrumentationBoundsSafetyStopInfo::
         ThreadSP thread_sp, lldb::user_id_t debugger_id,
         bool &warning_emitted_for_failure) {
 
-  auto *log_category = GetLog(LLDBLog::InstrumentationRuntime);
-  auto softtrap_sf = thread_sp->GetStackFrameAtIndex(0);
+  Log *log_category = GetLog(LLDBLog::InstrumentationRuntime);
+  StackFrameSP softtrap_sf = thread_sp->GetStackFrameAtIndex(0);
   if (!softtrap_sf) {
     LLDB_LOGF(log_category, "got nullptr when fetching stackframe at index 0");
     return {};
@@ -249,7 +249,7 @@ InstrumentationBoundsSafetyStopInfo::
     return {};
   }
 
-  auto rc = thread_sp->GetRegisterContext();
+  RegisterContextSP rc = thread_sp->GetRegisterContext();
   if (!rc) {
     LLDB_LOGF(log_category, "failed to get register context");
     return {};
@@ -260,7 +260,7 @@ InstrumentationBoundsSafetyStopInfo::
   // https://github.com/llvm/llvm-project/issues/168602
   // Don't try for architectures where examining the first register won't
   // work.
-  auto process = thread_sp->GetProcess();
+  ProcessSP process = thread_sp->GetProcess();
   if (!process) {
     LLDB_LOGF(log_category, "failed to get process");
     return {};
@@ -286,7 +286,7 @@ InstrumentationBoundsSafetyStopInfo::
   };
 
   // Examine the register for the first argument.
-  auto *arg0_info = rc->GetRegisterInfo(
+  const RegisterInfo *arg0_info = rc->GetRegisterInfo(
       lldb::RegisterKind::eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
   if (!arg0_info) {
     LLDB_LOGF(log_category,
@@ -374,7 +374,7 @@ InstrumentationRuntimeBoundsSafety::GetPatternForRuntimeLibrary() {
 
 bool InstrumentationRuntimeBoundsSafety::CheckIfRuntimeIsValid(
     const lldb::ModuleSP module_sp) {
-  auto *log_category = GetLog(LLDBLog::InstrumentationRuntime);
+  Log *log_category = GetLog(LLDBLog::InstrumentationRuntime);
   for (const auto &SoftTrapFunc : getBoundsSafetySoftTrapRuntimeFuncs()) {
     ConstString test_sym(SoftTrapFunc);
 
@@ -401,7 +401,7 @@ bool InstrumentationRuntimeBoundsSafety::NotifyBreakpointHit(
   InstrumentationRuntimeBoundsSafety *const instance =
       static_cast<InstrumentationRuntimeBoundsSafety *>(baton);
 
-  auto *log_category = GetLog(LLDBLog::InstrumentationRuntime);
+  Log *log_category = GetLog(LLDBLog::InstrumentationRuntime);
   ProcessSP process_sp = instance->GetProcessSP();
   if (!process_sp) {
     LLDB_LOGF(log_category, "failed to get process from baton");
@@ -439,14 +439,14 @@ void InstrumentationRuntimeBoundsSafety::Activate() {
   if (IsActive())
     return;
 
-  auto *log_category = GetLog(LLDBLog::InstrumentationRuntime);
+  Log *log_category = GetLog(LLDBLog::InstrumentationRuntime);
   ProcessSP process_sp = GetProcessSP();
   if (!process_sp) {
     LLDB_LOGF(log_category, "could not get process during Activate()");
     return;
   }
 
-  auto breakpoint = process_sp->GetTarget().CreateBreakpoint(
+  BreakpointSP breakpoint = process_sp->GetTarget().CreateBreakpoint(
       /*containingModules=*/nullptr,
       /*containingSourceFiles=*/nullptr, getBoundsSafetySoftTrapRuntimeFuncs(),
       eFunctionNameTypeFull, eLanguageTypeUnknown,
@@ -481,7 +481,7 @@ void InstrumentationRuntimeBoundsSafety::Activate() {
 
 void InstrumentationRuntimeBoundsSafety::Deactivate() {
   SetActive(false);
-  auto *log_category = GetLog(LLDBLog::InstrumentationRuntime);
+  Log *log_category = GetLog(LLDBLog::InstrumentationRuntime);
   if (ProcessSP process_sp = GetProcessSP()) {
     bool success =
         process_sp->GetTarget().RemoveBreakpointByID(GetBreakpointID());
