@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load(":cc_library_wrapper.bzl", "cc_library_wrapper")
 
 cc_library(name = "empty_lib")
 
@@ -16,8 +17,8 @@ config_setting(
     flag_values = {":llvm_enable_zstd": "true"},
 )
 
-cc_library(
-    name = "zstd_wrapper",
+cc_library_wrapper(
+    name = "zstd",
     defines = select({
         ":llvm_zstd_enabled": [
             "LLVM_ENABLE_ZSTD=1",
@@ -25,16 +26,11 @@ cc_library(
         ],
         "//conditions:default": [],
     }),
-    deps = [
-        "@llvm_zstd//:zstd",
-    ],
-)
-
-alias(
-    name = "zstd",
-    actual = select({
-        ":llvm_zstd_enabled": ":zstd_wrapper",
-        "//conditions:default": ":empty_lib",
-    }),
     visibility = ["//visibility:public"],
+    deps = select({
+        ":llvm_zstd_enabled": [
+            "@llvm_zstd//:zstd",
+        ],
+        "//conditions:default": [],
+    }),
 )
