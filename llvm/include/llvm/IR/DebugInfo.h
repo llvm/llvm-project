@@ -46,6 +46,8 @@ LLVM_ABI TinyPtrVector<DbgDeclareInst *> findDbgDeclares(Value *V);
 LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRDeclares(Value *V);
 /// As above, for DVRValues.
 LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRValues(Value *V);
+/// As above, for DVRDeclareValues.
+LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRDeclareValues(Value *V);
 
 /// Finds the llvm.dbg.value intrinsics describing a value.
 LLVM_ABI void findDbgValues(
