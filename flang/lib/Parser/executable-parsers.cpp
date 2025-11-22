@@ -49,7 +49,6 @@ constexpr auto executableConstruct{first(
     construct<ExecutableConstruct>(indirect(Parser<SelectTypeConstruct>{})),
     construct<ExecutableConstruct>(indirect(whereConstruct)),
     construct<ExecutableConstruct>(indirect(forallConstruct)),
-    construct<ExecutableConstruct>(indirect(ompEndLoopDirective)),
     construct<ExecutableConstruct>(indirect(openmpConstruct)),
     construct<ExecutableConstruct>(indirect(Parser<OpenACCConstruct>{})),
     construct<ExecutableConstruct>(indirect(compilerDirective)),
