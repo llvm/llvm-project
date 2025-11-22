@@ -2,10 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
-load("@rules_cc//cc:defs.bzl", "cc_library")
 load(":cc_library_wrapper.bzl", "cc_library_wrapper")
-
-cc_library(name = "empty_lib")
 
 bool_flag(
     name = "llvm_enable_zstd",
