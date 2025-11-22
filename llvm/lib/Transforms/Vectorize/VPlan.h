@@ -1134,7 +1134,7 @@ private:
   OpcodeTy Opcode;
 
   /// An optional name that can be used for the generated IR instruction.
-  const std::string Name;
+  std::string Name;
 
   /// Returns true if we can generate a scalar for the first lane only if
   /// needed.
@@ -1224,6 +1224,9 @@ public:
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
+
+  /// Set the symbolic name for the VPInstruction.
+  void setName(StringRef NewName) { Name = NewName.str(); }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
