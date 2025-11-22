@@ -271,23 +271,21 @@ void Matrix<T>::moveColumns(unsigned srcPos, unsigned num, unsigned dstPos) {
          "move destination range exceeds matrix columns");
 
   unsigned numRows = getNumRows();
-  unsigned numCols = getNumReservedColumns();
 
   if (offset > 0) {
-    // shift the matrix left, see
-    // https://en.cppreference.com/w/cpp/algorithm/rotate.html.
+    // Shift the matrix left, because start < end, that std::rotate(start,
+    // middle, end) turns the range [start, end] to [middle, end) + [start,
+    // middle).
     for (unsigned i = 0; i < numRows; ++i) {
-      auto begin = data.begin() + i * numCols + srcPos;
-      auto end = data.begin() + i * numCols + dstPos + num;
-      std::rotate(begin, begin + num, end);
+      std::rotate(&at(i, srcPos), &at(i, srcPos) + num, &at(i, dstPos) + num);
     }
-  } else {
-    // shift the matrix right.
-    for (unsigned i = 0; i < numRows; ++i) {
-      auto begin = data.begin() + i * numCols + srcPos + num;
-      auto end = data.begin() + i * numCols + dstPos;
-      std::rotate(end, begin - num, begin);
-    }
+    return;
+  }
+  // Shift the matrix right. because end < start, that std::rotate(start,
+  // middle, end) turns the range [start, end] to [middle, start) + [end,
+  // middle).
+  for (unsigned i = 0; i < numRows; ++i) {
+    std::rotate(&at(i, dstPos), &at(i, srcPos), &at(i, srcPos) + num);
   }
 }
 
