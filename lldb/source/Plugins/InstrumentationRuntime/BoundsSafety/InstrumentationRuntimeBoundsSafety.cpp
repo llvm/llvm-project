@@ -35,12 +35,14 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(InstrumentationRuntimeBoundsSafety)
 
-#define BOUNDS_SAFETY_SOFT_TRAP_MINIMAL "__bounds_safety_soft_trap"
-#define BOUNDS_SAFETY_SOFT_TRAP_S "__bounds_safety_soft_trap_s"
+constexpr llvm::StringLiteral
+    BoundsSafetySoftTrapMinimal("__bounds_safety_soft_trap");
+constexpr llvm::StringLiteral
+    BoundsSafetySoftTrapStr("__bounds_safety_soft_trap_s");
 
 const std::vector<std::string> &getBoundsSafetySoftTrapRuntimeFuncs() {
-  static std::vector<std::string> Funcs = {BOUNDS_SAFETY_SOFT_TRAP_MINIMAL,
-                                           BOUNDS_SAFETY_SOFT_TRAP_S};
+  static std::vector<std::string> Funcs = {BoundsSafetySoftTrapMinimal.str(),
+                                           BoundsSafetySoftTrapStr.str()};
 
   return Funcs;
 }
@@ -210,7 +212,7 @@ InstrumentationBoundsSafetyStopInfo::
   }
   llvm::StringRef trap_reason_func_name = softtrap_sf->GetFunctionName();
 
-  if (trap_reason_func_name == BOUNDS_SAFETY_SOFT_TRAP_MINIMAL) {
+  if (trap_reason_func_name == BoundsSafetySoftTrapMinimal) {
     // This function has no arguments so there's no additional information
     // that would allow us to identify the trap reason.
     //
@@ -227,21 +229,22 @@ InstrumentationBoundsSafetyStopInfo::
     // This makes it look we stopped after finishing the call to
     // `__bounds_safety_soft_trap` but actually we are in the middle of the
     // call. To avoid this confusion just use the current frame.
-    Debugger::ReportWarning(
-        "specific BoundsSafety trap reason is not available because debug "
-        "info is missing on the caller of '" BOUNDS_SAFETY_SOFT_TRAP_MINIMAL
-        "'",
-        debugger_id);
+    std::string warning;
+    llvm::raw_string_ostream ss(warning);
+    ss << "specific BoundsSafety trap reason is not available because debug "
+          "info is missing on the caller of '"
+       << BoundsSafetySoftTrapMinimal << "'";
+    Debugger::ReportWarning(warning.c_str(), debugger_id);
     warning_emitted_for_failure = true;
     return {};
   }
 
-  // BOUNDS_SAFETY_SOFT_TRAP_S has one argument which is a pointer to a string
+  // __bounds_safety_soft_trap_s has one argument which is a pointer to a string
   // describing the trap or a nullptr.
-  if (trap_reason_func_name != BOUNDS_SAFETY_SOFT_TRAP_S) {
+  if (trap_reason_func_name != BoundsSafetySoftTrapStr) {
     LLDB_LOGF(log_category,
               "unexpected function name. Expected \"%s\" but got \"%s\"",
-              BOUNDS_SAFETY_SOFT_TRAP_S, trap_reason_func_name.data());
+              BoundsSafetySoftTrapStr.data(), trap_reason_func_name.data());
     assert(0 && "hit breakpoint for unexpected function name");
     return {};
   }
@@ -266,15 +269,18 @@ InstrumentationBoundsSafetyStopInfo::
   case ArchSpec::eCore_x86_32_i386:
   case ArchSpec::eCore_x86_32_i486:
   case ArchSpec::eCore_x86_32_i486sx:
-  case ArchSpec::eCore_x86_32_i686:
+  case ArchSpec::eCore_x86_32_i686: {
     // Technically some x86 calling conventions do use a register for
     // passing the first argument but let's ignore that for now.
-    Debugger::ReportWarning(
-        "specific BoundsSafety trap reason cannot be inferred on x86 when "
-        "the caller of '" BOUNDS_SAFETY_SOFT_TRAP_S "' is missing debug info",
-        debugger_id);
+    std::string warning;
+    llvm::raw_string_ostream ss(warning);
+    ss << "specific BoundsSafety trap reason cannot be inferred on x86 when "
+          "the caller of '"
+       << BoundsSafetySoftTrapStr << "' is missing debug info";
+    Debugger::ReportWarning(warning.c_str(), debugger_id);
     warning_emitted_for_failure = true;
     return {};
+  }
   default: {
   }
   };
@@ -330,7 +336,7 @@ InstrumentationBoundsSafetyStopInfo::
     SS << ": " << out_string;
   }
   // Use the current frame as the suggested frame for the same reason as for
-  // `BOUNDS_SAFETY_SOFT_TRAP_MINIMAL`.
+  // `__bounds_safety_soft_trap`.
   return {stop_reason, 0};
 }
 
