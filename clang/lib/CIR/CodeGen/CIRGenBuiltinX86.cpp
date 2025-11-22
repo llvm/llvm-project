@@ -73,7 +73,7 @@ static mlir::Value getMaskVecValue(CIRGenFunction &cgf, const CallExpr *expr,
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
   auto maskTy = cir::VectorType::get(
-      builder.getBoolTy(), cast<cir::IntType>(mask.getType()).getWidth());
+      builder.getUIntNTy(1), cast<cir::IntType>(mask.getType()).getWidth());
   mlir::Value maskVec = builder.createBitcast(mask, maskTy);
 
   // If we have less than 8 elements, then the starting mask was an i8 and
