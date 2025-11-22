@@ -248,16 +248,7 @@ exit:
 
 define i8 @cyclesInPaths1(i1 %call12, i1 %cmp18) {
 ; CHECK-LABEL: DFA Jump threading: cyclesInPaths1
-; CHECK: < switchPhiDef.for.body, detBB1, if.end20, if.end23, detBB2, switchPhiDef.for.body, detBB1, if.end20, switchBB > [ 2, detBB1 ]
-; CHECK-NEXT: < switchPhiDef.for.body, detBB1, if.end20, if.end23, detBB2, switchPhiDef.for.body, if.else, detBB1, if.end20, switchBB > [ 2, detBB1 ]
-; CHECK-NEXT: < switchPhiDef.for.body, detBB1, if.end20, switchBB, if.end23, detBB2, switchPhiDef.for.body, detBB1, if.end20, switchBB > [ 2, detBB1 ]
-; CHECK-NEXT: < switchPhiDef.for.body, detBB1, if.end20, switchBB, if.end23, detBB2, switchPhiDef.for.body, if.else, detBB1, if.end20, switchBB > [ 2, detBB1 ]
-; CHECK-NEXT: < if.else, detBB1, if.end20, if.end23, detBB2, switchPhiDef.for.body, detBB1, if.end20, switchBB > [ 4, detBB1 ]
-; CHECK-NEXT: < if.else, detBB1, if.end20, if.end23, detBB2, switchPhiDef.for.body, if.else, detBB1, if.end20, switchBB > [ 4, detBB1 ]
-; CHECK-NEXT: < if.else, detBB1, if.end20, switchBB, if.end23, detBB2, switchPhiDef.for.body, detBB1, if.end20, switchBB > [ 4, detBB1 ]
-; CHECK-NEXT: < if.else, detBB1, if.end20, switchBB, if.end23, detBB2, switchPhiDef.for.body, if.else, detBB1, if.end20, switchBB > [ 4, detBB1 ]
-; CHECK-NEXT: < detBB1, detBB2, switchPhiDef.for.body, detBB1, if.end20, switchBB > [ 0, detBB2 ]
-; CHECK-NEXT: < detBB1, detBB2, switchPhiDef.for.body, if.else, detBB1, if.end20, switchBB > [ 0, detBB2 ]
+; CHECK-NOT: <{{.*}}> [{{.*}}]
 
 entry:
   br label %switchPhiDef.for.body
@@ -299,7 +290,6 @@ detBB2:                                          ; preds = %if.end23, %detBB1
 define void @cyclesInPaths2(i1 %tobool5.not.i, ptr %P.sroa.0.050) {
 ; CHECK-LABEL: DFA Jump threading: cyclesInPaths2
 ; CHECK: < sw.bb.i, bb.exit, if.end5, if.end.i > [ 1, bb.exit ]
-; CHECK-NEXT: < if.end5, bb.exit, if.end5, if.end.i > [ 0, bb.exit ]
 ; CHECK-NEXT: < bb.exit, if.end5, if.end.i > [ 0, bb.exit ]
 
 entry:
