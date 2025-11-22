@@ -534,7 +534,7 @@ define i1 @neg_shl2_trunc_eq0_i8(i8 %a) {
 ; CHECK-LABEL: @neg_shl2_trunc_eq0_i8(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %shl = shl i8 256, %a
+  %shl = shl i8 128, %a
   %t = trunc i8 %shl to i6
   %r = icmp eq i6 %t, 0
   ret i1 %r
