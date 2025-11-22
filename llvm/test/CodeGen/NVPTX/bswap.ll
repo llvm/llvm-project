@@ -66,7 +66,22 @@ define i64 @bswap64(i64 %a) {
   ret i64 %b
 }
 
+define <2 x i32> @bswapv2i32(<2 x i32> %a) {
+; CHECK-LABEL: bswapv2i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [bswapv2i32_param_0];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x123U;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x123U;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-NEXT:    ret;
+  %b = tail call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %a)
+  ret <2 x i32> %b
+}
 declare i16 @llvm.bswap.i16(i16)
 declare i32 @llvm.bswap.i32(i32)
 declare <2 x i16> @llvm.bswap.v2i16(<2 x i16>)
 declare i64 @llvm.bswap.i64(i64)
+declare <2 x i32> @llvm.bswap.v2i32(<2 x i32>)
