@@ -46,4 +46,5 @@ cc_library_wrapper = rule(
         ),
     },
     doc = "Re-export a cc_library with added LLVM specific settings.",
+    provides = [CcInfo],
 )
