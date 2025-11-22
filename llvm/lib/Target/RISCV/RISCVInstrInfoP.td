@@ -1539,9 +1539,6 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : LdPat<load, LW, v2i16>;
 
   // Build vector patterns
-  def : Pat<(v4i8 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
-                                (XLenVT GPR:$c), (XLenVT GPR:$d))),
-            (PACK (PPACK_H GPR:$a, GPR:$b), (PPACK_H GPR:$c, GPR:$d))>;
   def : Pat<(v2i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (PACK GPR:$a, GPR:$b)>;
 } // Predicates = [HasStdExtP, IsRV32]
