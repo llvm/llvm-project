@@ -75,9 +75,11 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
+#include <cstdint>
 #include <numeric>
 #include <optional>
 #include <string>
+#include <tuple>
 
 using namespace llvm;
 
@@ -13717,10 +13719,6 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     const DataLayout &DL = A.getDataLayout();
     const auto AllocationSize = findInitialAllocationSize(I, DL);
 
-    llvm::dbgs() << "Print Allocation Size: " << AllocationSize << "\n";
-    PI->dumpState(dbgs());
-    llvm::dbgs() << "End printing size and AAPointerInfo\n";
-
     // If allocation size is nullopt, we give up.
     if (!AllocationSize)
       return indicatePessimisticFixpoint();
@@ -13738,43 +13736,103 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
       return ChangeStatus::CHANGED;
     }
 
+    // Algorithm:
+    // For all the accessed ranges in AAPointerInfo, we need to find the minimum
+    // longest range that contains all the accessed offsets.
+    // In case, disjoint ranges exist, we want to merge them since we want to
+    // make a packed Alloca. For this we need to calculate the minimum size of
+    // the new allocation. Then adjust all the old offsets and map them to their
+    // new offsets.
+
+    // A tuple to store a cluster, a cluster is a maximal unique range.
+    // Different Clusters are meant to be disjoint, but we eventually merge them
+    // together. A bigger cluster can subsume a smaller cluster inside it.
+    using ClusterTy = std::tuple<int64_t, int64_t>;
+    using ClustersTy = SmallVector<ClusterTy, 4>;
+
+    // BinInterval is an interval to keep track of the Start and
+    // End of a RangeTy. Since RangeTy stores the Offset and the
+    // Corresponding size but not the end of the range.
+    //(StartOffset, EndOffset, RangeTy struct)
+    using AccessedInterval = std::tuple<int64_t, int64_t, AA::RangeTy>;
+    using AccessedIntervals = SmallVector<AccessedInterval, 4>;
+
+    // Obtain all the offset bins that exists in AAPointerInfo.
+    SmallVector<AA::RangeTy, 4> OldBins;
+    for (AAPointerInfo::OffsetBinsTy::const_iterator It = PI->begin();
+         It != PI->end(); It++) {
+      const AA::RangeTy &Bin = It->getFirst();
+      // In case unknown or unassigned bins exists,
+      // We don't want to change the allocation size and return a
+      // pessimistic fixpoint.
+      if (Bin.offsetOrSizeAreUnknown() || Bin.isUnassigned())
+        return indicatePessimisticFixpoint();
+      OldBins.push_back(Bin);
+    }
+
+    AccessedIntervals Intervals;
+    // Obtain the intervals from the ranges.
+    for (auto &OldBin : OldBins) {
+      AccessedInterval Interval =
+          std::make_tuple(OldBin.Offset, OldBin.Offset + OldBin.Size, OldBin);
+      Intervals.push_back(Interval);
+    }
+
+    // sort the intervals to push the largest interval to the beginning.
+    llvm::sort(Intervals,
+               [](const AccessedInterval &A, const AccessedInterval &B) {
+                 return get<0>(A) < get<0>(B);
+               });
+
+    ClustersTy Clusters;
+    int64_t CurrentClusterStart = get<0>(Intervals[0]);
+    int64_t CurrentClusterEnd = get<1>(Intervals[0]);
+
+    for (uint I = 1; I < Intervals.size(); I++) {
+      if (get<0>(Intervals[I]) <= CurrentClusterEnd) {
+        CurrentClusterEnd = std::max(CurrentClusterEnd, get<1>(Intervals[I]));
+      } else {
+        Clusters.push_back({CurrentClusterStart, CurrentClusterEnd});
+        CurrentClusterStart = get<0>(Intervals[I]);
+        CurrentClusterEnd = get<1>(Intervals[I]);
+      }
+    }
+    Clusters.push_back({CurrentClusterStart, CurrentClusterEnd});
+
+    int64_t PackedRangeSize = 0;
+    // Sum up each cluster to get the total size of the packed Alloca.
+    for (ClusterTy &Cluster : Clusters)
+      PackedRangeSize += (get<1>(Cluster) - get<0>(Cluster));
+
     // For each access bin we compute its new start offset
     // and store the results in a new map (NewOffsetBins).
     // NewOffsetsBins is a Map from AA::RangeTy OldRange to AA::RangeTy
-    // NewRange. 
-    
-    // Algorithm Logic:
-    // For all the ranges in AAPointerInfo, we need to find the minimum 
-    // longest range that contains all the accessed offsets. 
-    // In case, disjoint ranges exist, we want to merge them. 
-    // For this we need to calculate the minimum size of the new allocation. 
-    // Then adjust all the old offsets and map them to their new offsets.
-
-    unsigned long PrevBinEndOffset = 0;
+    // NewRange
+    int64_t PackedCursorStart = 0;
     bool ChangedOffsets = false;
-    for (AAPointerInfo::OffsetBinsTy::const_iterator It = PI->begin();
-         It != PI->end(); It++) {
-      const AA::RangeTy &OldRange = It->getFirst();
+    for (ClusterTy &Cluster : Clusters) {
+      auto &ClusterStart = get<0>(Cluster);
+      auto &ClusterEnd = get<1>(Cluster);
+      for (AccessedInterval &Interval : Intervals) {
+        auto &InterValStart = get<0>(Interval);
+        auto &InterValEnd = get<1>(Interval);
+        if (InterValStart >= ClusterStart && InterValEnd <= ClusterEnd) {
+          int64_t NewRangeStart =
+              PackedCursorStart + (InterValStart - ClusterStart);
+          int64_t NewRangeSize = InterValEnd - InterValStart;
+          auto &OldRange = get<2>(Interval);
 
-      // If any byte range has an unknown offset or size, we should leave the
-      // original allocation unmodified.
-      if (OldRange.offsetOrSizeAreUnknown())
-        return indicatePessimisticFixpoint();
-
-      unsigned long NewStartOffset = PrevBinEndOffset;
-      unsigned long NewEndOffset = NewStartOffset + OldRange.Size;
-      PrevBinEndOffset = NewEndOffset;
-
-      dbgs() << "Print the Start, End, PrevBinEndOffset: " << NewStartOffset << "," << NewEndOffset << "," << PrevBinEndOffset << "\n";
-
-      ChangedOffsets |= setNewOffsets(OldRange, OldRange.Offset, NewStartOffset,
-                                      OldRange.Size);
+          ChangedOffsets |= setNewOffsets(OldRange, OldRange.Offset,
+                                          NewRangeStart, NewRangeSize);
+        }
+      }
+      PackedCursorStart += ClusterEnd - ClusterStart;
     }
 
     // Set the new size of the allocation. The new size of the Allocation should
     // be the size of PrevBinEndOffset * 8 in bits.
     auto NewAllocationSize =
-        std::optional<TypeSize>(TypeSize(PrevBinEndOffset * 8, false));
+        std::optional<TypeSize>(TypeSize(PackedRangeSize * 8, false));
 
     if (!changeAllocationSize(NewAllocationSize))
       return ChangeStatus::UNCHANGED;
