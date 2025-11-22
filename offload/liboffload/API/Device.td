@@ -131,3 +131,12 @@ def olGetDeviceInfoSize : Function {
     Return<"OL_ERRC_INVALID_DEVICE">
   ];
 }
+
+def olGetHostDevice : Function {
+  let desc = "Returns the host device.";
+  let details = [];
+  let params = [
+    Param<"ol_device_handle_t*", "Device", "handle of the device instance", PARAM_OUT>,
+  ];
+  let returns = [];
+}

@@ -263,6 +263,8 @@ constexpr ol_platform_backend_t pluginNameToBackend(StringRef Name) {
     return OL_PLATFORM_BACKEND_AMDGPU;
   } else if (Name == "cuda") {
     return OL_PLATFORM_BACKEND_CUDA;
+  } else if (Name == "host") {
+    return OL_PLATFORM_BACKEND_HOST;
   } else {
     return OL_PLATFORM_BACKEND_UNKNOWN;
   }
@@ -276,7 +278,6 @@ Error initPlugins(OffloadContext &Context) {
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    if (StringRef(#Name) != "host")                                            \
       Context.Platforms.emplace_back(std::make_unique<ol_platform_impl_t>(     \
           std::unique_ptr<GenericPluginTy>(createPlugin_##Name()),             \
           pluginNameToBackend(#Name)));                                        \
@@ -349,7 +350,7 @@ Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
                                   ol_platform_info_t PropName, size_t PropSize,
                                   void *PropValue, size_t *PropSizeRet) {
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
-  bool IsHost = Platform->BackendType == OL_PLATFORM_BACKEND_HOST;
+  bool IsHost = Platform->Plugin == nullptr;
 
   // Note that the plugin is potentially uninitialized here. It will need to be
   // initialized once info is added that requires it to be initialized.
@@ -1212,6 +1213,11 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
                                 void *UserData) {
   return Queue->Device->Device->enqueueHostCall(Callback, UserData,
                                                 Queue->AsyncInfo);
+}
+
+Error olGetHostDevice_impl(ol_device_handle_t *Device) {
+  *Device = OffloadContext::get().HostDevice;
+  return Error::success();
 }
 
 } // namespace offload
