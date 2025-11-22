@@ -182,6 +182,8 @@ bool AArch64FunctionInfo::shouldSignReturnAddress(SignReturnAddress Condition,
     return IsLRSpilled;
   case SignReturnAddress::All:
     return true;
+  default:
+    return false;
   }
 }
 
