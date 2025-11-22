@@ -440,7 +440,7 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
     const Record *Op = Dst.getOperator();
     if (!Op->isSubClassOf("Instruction"))
       continue;
-    CodeGenInstruction &Inst = CGP.getTargetInfo().getInstruction(Op);
+    const CodeGenInstruction &Inst = CGP.getTargetInfo().getInstruction(Op);
     if (Inst.Operands.empty())
       continue;
 
