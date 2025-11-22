@@ -107,7 +107,8 @@ subroutine test_logical
 
   call show_descriptor(la2)
   call show_descriptor(pla2)
-! CHECK:           %[[EMBOX_3:.*]] = fir.embox %[[DECLARE_2]](%[[SHAPE_0]]) : (!fir.ref<!fir.array<2x!fir.logical<2>>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[DECLARE_2]] : (!fir.ref<!fir.array<2x!fir.logical<2>>>) -> !fir.ref<!fir.array<?x!fir.logical<2>>>
+! CHECK:           %[[EMBOX_3:.*]] = fir.embox %[[CONVERT_0]](%[[SHAPE_0]]) : (!fir.ref<!fir.array<?x!fir.logical<2>>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>
 ! CHECK:           fir.store %[[EMBOX_3]] to %[[DECLARE_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>>
 ! CHECK:           %[[EMBOX_4:.*]] = fir.embox %[[DECLARE_2]](%[[SHAPE_0]]) : (!fir.ref<!fir.array<2x!fir.logical<2>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.logical<2>>>
 ! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_4]]) fastmath<contract> : (!fir.box<!fir.array<2x!fir.logical<2>>>) -> ()
