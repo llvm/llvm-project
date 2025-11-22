@@ -88,8 +88,6 @@ jobs:
         # We use ubuntu-22.04 rather than the latest version to make the built
         # binaries more portable (eg functional aginast older glibc).
         runs-on:
-          - ubuntu-22.04
-          - ubuntu-22.04-arm
           - macos-14
 
     uses: ./.github/workflows/release-binaries.yml
