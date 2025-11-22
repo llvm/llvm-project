@@ -1151,14 +1151,10 @@ void ProfiledBinary::loadSymbolsFromPseudoProbe() {
     auto Func = Range.Func;
     if (!Range.IsFuncEntry || Func->NameStatus != DwarfNameStatus::Mismatch)
       continue;
-#ifndef NDEBUG
-    if (PseudoProbeNames.count(Func))
-      continue;
-#endif
-    const auto &Probe = Address2ProbesMap.find(Addr).begin();
-    if (Probe != Address2ProbesMap.end()) {
+    const auto &Probe = Address2ProbesMap.find(Addr, Range.EndAddress);
+    if (Probe.begin() != Probe.end()) {
       const MCDecodedPseudoProbeInlineTree *InlineTreeNode =
-          Probe->get().getInlineTreeNode();
+          Probe.begin()->get().getInlineTreeNode();
       while (!InlineTreeNode->isTopLevelFunc())
         InlineTreeNode = static_cast<MCDecodedPseudoProbeInlineTree *>(
             InlineTreeNode->Parent);
