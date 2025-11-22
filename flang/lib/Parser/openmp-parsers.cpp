@@ -1956,7 +1956,7 @@ struct OmpLoopConstructParser {
         }
       } else if (assoc == llvm::omp::Association::LoopSeq) {
         // Parse loop sequence as a block.
-        if (auto &&body{block.Parse(state)}) {
+        if (auto &&body{validBlock.Parse(state)}) {
           auto end{maybe(OmpEndDirectiveParser{loopDir}).Parse(state)};
           return OpenMPLoopConstruct{OmpBeginLoopDirective(std::move(*begin)),
               std::move(*body),
