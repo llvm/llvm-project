@@ -209,9 +209,10 @@ bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *MI0,
 
   // Check that the two destination/source registers are different for
   // load/store respectively.
+  // The only case two destinations/sources can be same is (x0, x0).
   Register FirstReg = MI0->getOperand(0).getReg();
   Register SecondReg = MI1->getOperand(0).getReg();
-  if (FirstReg == SecondReg)
+  if (FirstReg == SecondReg && FirstReg != RISCV::X0)
     return false;
 
   return true;
