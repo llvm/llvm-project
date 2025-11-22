@@ -2047,23 +2047,11 @@ X86TargetLowering::ByValCopyKind X86TargetLowering::ByValNeedsCopyForTailCall(
   int64_t SrcOffset = MFI.getObjectOffset(SrcFI);
   int64_t DstOffset = MFI.getObjectOffset(DstFI);
 
-  // FIXME:
-
-  //  // If the source is in the local frame, then the copy to the argument
-  //  memory
-  //  // is always valid.
-  //  bool FixedSrc = MFI.isFixedObjectIndex(SrcFI);
-  //  if (!FixedSrc ||
-  //      (FixedSrc && SrcOffset < -(int64_t)AFI->getArgRegsSaveSize()))
-  //    return CopyOnce;
-
-  // In the case of byval arguments split between registers and the stack,
-  // computeAddrForCallArg returns a FrameIndex which corresponds only to the
-  // stack portion, but the Src SDValue will refer to the full value, including
-  // the local stack memory that the register portion gets stored into. We only
-  // need to compare them for equality, so normalise on the full value version.
-  uint64_t RegSize = Flags.getByValSize() - MFI.getObjectSize(DstFI);
-  DstOffset -= RegSize;
+  // If the source is in the local frame, then the copy to the argument
+  // memory is always valid.
+  bool FixedSrc = MFI.isFixedObjectIndex(SrcFI);
+  if (!FixedSrc || (FixedSrc && SrcOffset < 0))
+    return CopyOnce;
 
   // If the value is already in the correct location, then no copying is
   // needed. If not, then we need to copy via a temporary.
@@ -2201,6 +2189,74 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   unsigned NumBytesToPush = NumBytes;
   unsigned NumBytesToPop = NumBytes;
 
+  SDValue StackPtr;
+  const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+
+  // If we are doing a tail-call, any byval arguments will be written to stack
+  // space which was used for incoming arguments. If any the values being used
+  // are incoming byval arguments to this function, then they might be
+  // overwritten by the stores of the outgoing arguments. To avoid this, we
+  // need to make a temporary copy of them in local stack space, then copy back
+  // to the argument area.
+  DenseMap<unsigned, SDValue> ByValTemporaries;
+  SDValue ByValTempChain;
+  if (isTailCall) {
+    SmallVector<SDValue, 8> ByValCopyChains;
+    for (const CCValAssign &VA : ArgLocs) {
+      unsigned ArgIdx = VA.getValNo();
+      SDValue Src = OutVals[ArgIdx];
+      ISD::ArgFlagsTy Flags = Outs[ArgIdx].Flags;
+
+      if (!Flags.isByVal())
+        continue;
+
+      auto PtrVT = getPointerTy(DAG.getDataLayout());
+
+      if (!StackPtr.getNode())
+        StackPtr =
+            DAG.getCopyFromReg(Chain, dl, RegInfo->getStackRegister(), PtrVT);
+
+      // Destination: where this byval should live in the callee’s frame
+      // after the tail call.
+      int32_t Offset = VA.getLocMemOffset() + FPDiff;
+      int Size = VA.getLocVT().getFixedSizeInBits() / 8;
+      int FI = MF.getFrameInfo().CreateFixedObject(Size, Offset, true);
+      SDValue Dst = DAG.getFrameIndex(FI, PtrVT);
+
+      ByValCopyKind Copy = ByValNeedsCopyForTailCall(DAG, Src, Dst, Flags);
+
+      if (Copy == NoCopy) {
+        // If the argument is already at the correct offset on the stack
+        // (because we are forwarding a byval argument from our caller), we
+        // don't need any copying.
+        continue;
+      } else if (Copy == CopyOnce) {
+        // If the argument is in our local stack frame, no other argument
+        // preparation can clobber it, so we can copy it to the final location
+        // later.
+        ByValTemporaries[ArgIdx] = Src;
+      } else {
+        assert(Copy == CopyViaTemp && "unexpected enum value");
+        // If we might be copying this argument from the outgoing argument
+        // stack area, we need to copy via a temporary in the local stack
+        // frame.
+        MachineFrameInfo &MFI = MF.getFrameInfo();
+        int TempFrameIdx = MFI.CreateStackObject(Flags.getByValSize(),
+                                                 Flags.getNonZeroByValAlign(),
+                                                 /*isSS=*/false);
+        SDValue Temp =
+            DAG.getFrameIndex(TempFrameIdx, getPointerTy(DAG.getDataLayout()));
+
+        SDValue CopyChain =
+            CreateCopyOfByValArgument(Src, Temp, Chain, Flags, DAG, dl);
+        ByValCopyChains.push_back(CopyChain);
+      }
+    }
+    if (!ByValCopyChains.empty())
+      ByValTempChain =
+          DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ByValCopyChains);
+  }
+
   // If we have an inalloca argument, all stack space has already been allocated
   // for us and be right at the top of the stack.  We don't support multiple
   // arguments passed in memory when using inalloca.
@@ -2241,7 +2297,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   SmallVector<std::pair<Register, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
-  SDValue StackPtr;
 
   // The next loop assumes that the locations are in the same order of the
   // input arguments.
@@ -2250,7 +2305,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Walk the register/memloc assignments, inserting copies/loads.  In the case
   // of tail call optimization arguments are handle later.
-  const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   for (unsigned I = 0, OutIndex = 0, E = ArgLocs.size(); I != E;
        ++I, ++OutIndex) {
     assert(OutIndex < Outs.size() && "Invalid Out index");
@@ -2427,6 +2481,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // would clobber.
     Chain = DAG.getStackArgumentTokenFactor(Chain);
 
+    if (ByValTempChain)
+      Chain =
+          DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chain, ByValTempChain);
+
     SmallVector<SDValue, 8> MemOpChains2;
     SDValue FIN;
     int FI = 0;
@@ -2459,16 +2517,24 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
 
       if (Flags.isByVal()) {
-        // Copy relative to framepointer.
-        SDValue Source = DAG.getIntPtrConstant(VA.getLocMemOffset(), dl);
-        if (!StackPtr.getNode())
-          StackPtr = DAG.getCopyFromReg(Chain, dl, RegInfo->getStackRegister(),
-                                        getPointerTy(DAG.getDataLayout()));
-        Source = DAG.getNode(ISD::ADD, dl, getPointerTy(DAG.getDataLayout()),
-                             StackPtr, Source);
+        SDValue ByValSrc;
+        bool NeedsStackCopy;
+        if (auto It = ByValTemporaries.find(OutsIndex);
+            It != ByValTemporaries.end()) {
+          ByValSrc = It->second;
+          NeedsStackCopy = true;
+        } else {
+          ByValSrc = Arg;
+          NeedsStackCopy = false;
+        }
 
-        MemOpChains2.push_back(
-            CreateCopyOfByValArgument(Source, FIN, Chain, Flags, DAG, dl));
+        if (NeedsStackCopy) {
+          auto PtrVT = getPointerTy(DAG.getDataLayout());
+          SDValue DstAddr = DAG.getFrameIndex(FI, PtrVT);
+
+          MemOpChains2.push_back(CreateCopyOfByValArgument(
+              ByValSrc, DstAddr, Chain, Flags, DAG, dl));
+        }
       } else {
         // Store relative to framepointer.
         MemOpChains2.push_back(DAG.getStore(
