@@ -499,6 +499,142 @@ cleanup:                                       ; preds = %for.inc, %switchblock,
   ret i16 0
 }
 
+define i8 @cyclesInPaths1(i1 %call12, i1 %cmp18) {
+; CHECK-LABEL: @cyclesInPaths1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[SWITCHPHIDEF_FOR_BODY:%.*]]
+; CHECK:       switchPhiDef.for.body:
+; CHECK-NEXT:    [[SWITCHPHI_CURSTATE:%.*]] = phi i32 [ [[CURSTATE_1:%.*]], [[DETBB2:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br i1 [[CALL12:%.*]], label [[DETBB1:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[DETBB1]]
+; CHECK:       detBB1:
+; CHECK-NEXT:    [[NEWSTATE_02:%.*]] = phi i32 [ 2, [[SWITCHPHIDEF_FOR_BODY]] ], [ 4, [[IF_ELSE]] ]
+; CHECK-NEXT:    br i1 [[CMP18:%.*]], label [[DETBB2]], label [[IF_END20:%.*]]
+; CHECK:       if.end20:
+; CHECK-NEXT:    br i1 [[CALL12]], label [[IF_END23:%.*]], label [[SWITCHBB:%.*]]
+; CHECK:       switchBB:
+; CHECK-NEXT:    switch i32 [[SWITCHPHI_CURSTATE]], label [[IF_END23]] [
+; CHECK-NEXT:      i32 4, label [[RET1:%.*]]
+; CHECK-NEXT:      i32 0, label [[RET2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       ret1:
+; CHECK-NEXT:    ret i8 1
+; CHECK:       ret2:
+; CHECK-NEXT:    ret i8 2
+; CHECK:       if.end23:
+; CHECK-NEXT:    br label [[DETBB2]]
+; CHECK:       detBB2:
+; CHECK-NEXT:    [[CURSTATE_1]] = phi i32 [ [[NEWSTATE_02]], [[IF_END23]] ], [ 0, [[DETBB1]] ]
+; CHECK-NEXT:    br label [[SWITCHPHIDEF_FOR_BODY]]
+;
+entry:
+  br label %switchPhiDef.for.body
+
+switchPhiDef.for.body:                                         ; preds = %detBB2, %entry
+  %switchPhi.curState = phi i32 [ %curState.1, %detBB2 ], [ 0, %entry ]
+  br i1 %call12, label %detBB1, label %if.else
+
+if.else:                                          ; preds = %switchPhiDef.for.body
+  br label %detBB1
+
+detBB1:                                         ; preds = %if.else, %switchPhiDef.for.body
+  %newState.02 = phi i32 [ 2, %switchPhiDef.for.body ], [ 4, %if.else ]
+  br i1 %cmp18, label %detBB2, label %if.end20
+
+if.end20:                                         ; preds = %detBB1
+  br i1 %call12, label %if.end23, label %switchBB
+
+switchBB:                                        ; preds = %if.end20
+  switch i32 %switchPhi.curState, label %if.end23 [
+  i32 4, label %ret1
+  i32 0, label %ret2
+  ]
+
+ret1:                                       ; preds = %switchBB
+  ret i8 1
+
+ret2:                                       ; preds = %switchBB
+  ret i8 2
+
+if.end23:                                         ; preds = %switchBB, %if.end20
+  br label %detBB2
+
+detBB2:                                          ; preds = %if.end23, %detBB1
+  %curState.1 = phi i32 [ %newState.02, %if.end23 ], [ 0, %detBB1 ]
+  br label %switchPhiDef.for.body
+}
+
+define void @cyclesInPaths2(i1 %tobool) {
+; CHECK-LABEL: @cyclesInPaths2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[IF_END5:%.*]]
+; CHECK:       if.end5:
+; CHECK-NEXT:    [[P_SROA_8_051:%.*]] = phi i16 [ [[RETVAL_SROA_6_0_I:%.*]], [[BB_EXIT:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 3)
+; CHECK-NEXT:    br i1 [[TOBOOL:%.*]], label [[IF_END_I:%.*]], label [[BB_EXIT]]
+; CHECK:       if.end5.jt0:
+; CHECK-NEXT:    [[P_SROA_8_051_JT0:%.*]] = phi i16 [ [[RETVAL_SROA_6_0_I_JT0:%.*]], [[BB_EXIT_JT0:%.*]] ]
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 3)
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END_I_JT0:%.*]], label [[BB_EXIT]]
+; CHECK:       if.end5.jt1:
+; CHECK-NEXT:    [[P_SROA_8_051_JT1:%.*]] = phi i16 [ [[RETVAL_SROA_6_0_I_JT1:%.*]], [[BB_EXIT_JT1:%.*]] ]
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 3)
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END_I_JT1:%.*]], label [[BB_EXIT]]
+; CHECK:       if.end.i:
+; CHECK-NEXT:    switch i16 [[P_SROA_8_051]], label [[SW_DEFAULT_I:%.*]] [
+; CHECK-NEXT:      i16 1, label [[SW_BB_I:%.*]]
+; CHECK-NEXT:      i16 0, label [[BB_EXIT_JT0]]
+; CHECK-NEXT:    ]
+; CHECK:       if.end.i.jt0:
+; CHECK-NEXT:    br label [[BB_EXIT_JT0]]
+; CHECK:       if.end.i.jt1:
+; CHECK-NEXT:    br label [[SW_BB_I]]
+; CHECK:       sw.bb.i:
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 1)
+; CHECK-NEXT:    br label [[BB_EXIT_JT1]]
+; CHECK:       sw.default.i:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb.exit:
+; CHECK-NEXT:    [[RETVAL_SROA_6_0_I]] = phi i16 [ 0, [[IF_END5]] ], [ 0, [[IF_END5_JT1:%.*]] ], [ 0, [[IF_END5_JT0:%.*]] ]
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 2)
+; CHECK-NEXT:    br label [[IF_END5]]
+; CHECK:       bb.exit.jt0:
+; CHECK-NEXT:    [[RETVAL_SROA_6_0_I_JT0]] = phi i16 [ 0, [[IF_END_I]] ], [ 0, [[IF_END_I_JT0]] ]
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 2)
+; CHECK-NEXT:    br label [[IF_END5_JT0]]
+; CHECK:       bb.exit.jt1:
+; CHECK-NEXT:    [[RETVAL_SROA_6_0_I_JT1]] = phi i16 [ 1, [[SW_BB_I]] ]
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 2)
+; CHECK-NEXT:    br label [[IF_END5_JT1]]
+;
+entry:
+  br label %if.end5
+
+if.end5:                                          ; preds = %bb.exit, %entry
+  %P.sroa.8.051 = phi i16 [ %retval.sroa.6.0.i, %bb.exit ], [ 0, %entry ]
+  call void (...) @llvm.fake.use(i32 3)
+  br i1 %tobool, label %if.end.i, label %bb.exit
+
+if.end.i:                                         ; preds = %if.end5
+  switch i16 %P.sroa.8.051, label %sw.default.i [
+  i16 1, label %sw.bb.i
+  i16 0, label %bb.exit
+  ]
+
+sw.bb.i:                                          ; preds = %if.end.i
+  call void (...) @llvm.fake.use(i32 1)
+  br label %bb.exit
+
+sw.default.i:                                     ; preds = %if.end.i
+  unreachable
+
+bb.exit: ; preds = %sw.bb.i, %if.end.i, %if.end5
+  %retval.sroa.6.0.i = phi i16 [ 1, %sw.bb.i ], [ 0, %if.end5 ], [ 0, %if.end.i ]
+  call void (...) @llvm.fake.use(i32 2)
+  br label %if.end5
+}
+
 declare void @llvm.fake.use(...)
 
 !0 = !{!"function_entry_count", i32 10}
