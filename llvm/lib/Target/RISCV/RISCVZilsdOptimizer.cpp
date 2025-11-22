@@ -275,6 +275,16 @@ bool RISCVPreAllocZilsdOpt::isSafeToMove(MachineInstr *MI, MachineInstr *Target,
       LLVM_DEBUG(dbgs() << "Memory operation interference detected\n");
       return false;
     }
+
+    // Don't move across instructions if they are guaranteed to be ordered, e.g.
+    // volatile and ordered atomic
+    if (MI->hasOrderedMemoryRef() && It->hasOrderedMemoryRef()) {
+      LLVM_DEBUG(
+          dbgs()
+          << "Cannot move across instruction that is guaranteed to be ordered: "
+          << *It);
+      return false;
+    }
   }
 
   return true;
@@ -332,6 +342,10 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
                                    : MI2LocMap[MI0] - MI2LocMap[MI1];
     if (!isSafeToMove(MoveInstr, TargetInstr, !IsLoad) ||
         Distance > MaxRescheduleDistance)
+      continue;
+
+    // If MI0 comes later, it's not able fold if the memory order matters.
+    if (!MI1IsLater && MI0->hasOrderedMemoryRef() && MI1->hasOrderedMemoryRef())
       continue;
 
     // Move the instruction to the target position
@@ -400,13 +414,8 @@ bool RISCVPreAllocZilsdOpt::isMemoryOp(const MachineInstr &MI) {
     return false;
 
   // When no memory operands are present, conservatively assume unaligned,
-  // volatile, unfoldable.
+  // unfoldable.
   if (!MI.hasOneMemOperand())
-    return false;
-
-  const MachineMemOperand *MMO = *MI.memoperands_begin();
-
-  if (MMO->isVolatile() || MMO->isAtomic())
     return false;
 
   // sw <undef> could probably be eliminated entirely, but for now we just want
