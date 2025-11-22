@@ -31,7 +31,7 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
     auto outOp =
         OutTy::create(cgf.getBuilder(), inOp.getLoc(), inOp, inOp.getVarPtr(),
                       inOp.getStructured(), inOp.getImplicit(),
-                      inOp.getName() ? *inOp.getName() : "", inOp.getBounds());
+                      llvm::Twine(inOp.getNameAttr()), inOp.getBounds());
     outOp.setDataClause(inOp.getDataClause());
     outOp.setModifiers(inOp.getModifiers());
   }
