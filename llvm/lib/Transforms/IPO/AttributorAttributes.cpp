@@ -13717,6 +13717,10 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     const DataLayout &DL = A.getDataLayout();
     const auto AllocationSize = findInitialAllocationSize(I, DL);
 
+    llvm::dbgs() << "Print Allocation Size: " << AllocationSize << "\n";
+    PI->dumpState(dbgs());
+    llvm::dbgs() << "End printing size and AAPointerInfo\n";
+
     // If allocation size is nullopt, we give up.
     if (!AllocationSize)
       return indicatePessimisticFixpoint();
@@ -13737,7 +13741,15 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     // For each access bin we compute its new start offset
     // and store the results in a new map (NewOffsetBins).
     // NewOffsetsBins is a Map from AA::RangeTy OldRange to AA::RangeTy
-    // NewRange.
+    // NewRange. 
+    
+    // Algorithm Logic:
+    // For all the ranges in AAPointerInfo, we need to find the minimum 
+    // longest range that contains all the accessed offsets. 
+    // In case, disjoint ranges exist, we want to merge them. 
+    // For this we need to calculate the minimum size of the new allocation. 
+    // Then adjust all the old offsets and map them to their new offsets.
+
     unsigned long PrevBinEndOffset = 0;
     bool ChangedOffsets = false;
     for (AAPointerInfo::OffsetBinsTy::const_iterator It = PI->begin();
@@ -13752,6 +13764,8 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
       unsigned long NewStartOffset = PrevBinEndOffset;
       unsigned long NewEndOffset = NewStartOffset + OldRange.Size;
       PrevBinEndOffset = NewEndOffset;
+
+      dbgs() << "Print the Start, End, PrevBinEndOffset: " << NewStartOffset << "," << NewEndOffset << "," << PrevBinEndOffset << "\n";
 
       ChangedOffsets |= setNewOffsets(OldRange, OldRange.Offset, NewStartOffset,
                                       OldRange.Size);
