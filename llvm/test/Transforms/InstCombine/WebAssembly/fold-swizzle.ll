@@ -27,14 +27,14 @@ define <16 x i8> @swizzle_reverse(<16 x i8> %v) {
   ret <16 x i8> %result
 }
 
-; undef elements
-define <16 x i8> @swizzle_with_undef(<16 x i8> %v) {
-; CHECK-LABEL: define <16 x i8> @swizzle_with_undef(
+; poison elements
+define <16 x i8> @swizzle_with_poison(<16 x i8> %v) {
+; CHECK-LABEL: define <16 x i8> @swizzle_with_poison(
 ; CHECK-SAME: <16 x i8> [[V:%.*]]) {
 ; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <16 x i8> [[V]], <16 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    ret <16 x i8> [[RESULT]]
 ;
-  %result = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %v, <16 x i8> <i8 0, i8 undef, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
+  %result = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %v, <16 x i8> <i8 0, i8 poison, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
   ret <16 x i8> %result
 }
 
