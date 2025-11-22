@@ -268,7 +268,8 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
                        OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint,
+                       OptionalAttr<DistributeLayoutAttr>:$anchor_layout);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     xegpu::TensorDescType getTensorDescType() {
@@ -360,7 +361,8 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
                        OptionalAttr<DenseI64ArrayAttr>: $transpose,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint, 
+                       OptionalAttr<DistributeLayoutAttr>:$anchor_layout);
 
   let results = (outs XeGPU_ValueType: $value);
 
@@ -454,7 +456,8 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
                        OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint,
+                       OptionalAttr<DistributeLayoutAttr>:$anchor_layout);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     VectorType getValueType() {
@@ -1046,7 +1049,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint,
-                    "xegpu::DistributeLayoutAttr": $layout)>
+                    "xegpu::DistributeLayoutAttr": $anchor_layout)>
    ];
 
   let hasVerifier = 1;
@@ -1133,7 +1136,11 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
   let arguments = (ins
     XeGPU_DpasOprType : $lhs,
     XeGPU_DpasOprType : $rhs,
-    Optional<XeGPU_DpasResType>: $acc);
+    Optional<XeGPU_DpasResType>: $acc, 
+    OptionalAttr<DistributeLayoutAttr>:$anchor_layout_a,
+    OptionalAttr<DistributeLayoutAttr>:$anchor_layout_b,
+    OptionalAttr<DistributeLayoutAttr>:$anchor_layout_cd
+  );
   let results = (outs XeGPU_DpasResType: $result);
 
   let extraClassDeclaration = [{
@@ -1319,7 +1326,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
     OptionalAttr<UnitAttr>:$subgroup_block_io,
-    OptionalAttr<DistributeLayoutAttr>:$layout
+    OptionalAttr<DistributeLayoutAttr>:$anchor_layout
   );
   let results = (outs AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$res);  
   let assemblyFormat = [{
@@ -1338,7 +1345,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
      - `subgroup_block_io`: [optional] An attribute indicating that the operation can be 
                  lowered to a subgroup block load. When this attribute is present, 
                  the offsets are subgroup-uniform across all lanes.
-     - `layout`: [optional] An attribute for guiding distributions among
+     - `anchor_layout`: [optional] An attribute for guiding distributions among
                  subgroups and/or work-items. It currently can accept either
                  LayoutAttr or SliceAttr.
     Results:
@@ -1347,7 +1354,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
 
   let builders = [
     OpBuilder<(ins "Type":$res, "TypedValue<MemDescType>": $mem_desc,
-                    "llvm::ArrayRef<OpFoldResult>": $offsets, "DistributeLayoutAttr": $layout)>,
+                    "llvm::ArrayRef<OpFoldResult>": $offsets, "DistributeLayoutAttr": $anchor_layout)>,
   ];
   let extraClassDeclaration = [{
     SmallVector<OpFoldResult> getMixedOffsets() {
@@ -1373,7 +1380,7 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
     OptionalAttr<UnitAttr>:$subgroup_block_io,
-    OptionalAttr<DistributeLayoutAttr>:$layout
+    OptionalAttr<DistributeLayoutAttr>:$anchor_layout
   );
   let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
                           prop-dict attr-dict `` `:` type(operands)}];
@@ -1389,13 +1396,13 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
      - `subgroup_block_io`: [optional] An attribute indicating that the operation can be 
                  lowered to a subgroup block store. When this attribute is present, 
                  the offsets are subgroup-uniform across all lanes.     
-     - `layout`: [optional] An attribute for guiding distributions among
+     - `anchor_layout`: [optional] An attribute for guiding distributions among
                  subgroups and/or work-items. It currently can accept either
                  LayoutAttr or SliceAttr.
   }];
   let builders = [
     OpBuilder<(ins "Value" : $data, "TypedValue<MemDescType>": $mem_desc,
-                   "llvm::ArrayRef<OpFoldResult>": $offsets, "DistributeLayoutAttr": $layout)>,
+                   "llvm::ArrayRef<OpFoldResult>": $offsets, "DistributeLayoutAttr": $anchor_layout)>,
   ];
   let extraClassDeclaration = [{
     SmallVector<OpFoldResult> getMixedOffsets() {

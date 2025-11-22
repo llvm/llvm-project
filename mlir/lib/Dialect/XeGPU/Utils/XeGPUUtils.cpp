@@ -135,12 +135,11 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
 
     // for LoadMatrixOp, the layout is attached to the property of the op
     if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(defOp))
-      return loadOp.getLayoutAttr();
+      return loadOp.getAnchorLayoutAttr();
 
     // for StoreMatrixOp, the layout is attached to the property of the op
     if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(defOp))
-      return storeOp.getLayoutAttr();
-
+      return storeOp.getAnchorLayoutAttr();
     std::string layoutName = getLayoutName(result);
     if (defOp->hasAttr(layoutName))
       return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
@@ -168,10 +167,10 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();
 
   if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(op))
-    return loadOp.getLayoutAttr();
+    return loadOp.getAnchorLayoutAttr();
 
   if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(op))
-    return storeOp.getLayoutAttr();
+    return storeOp.getAnchorLayoutAttr();
 
   std::string layoutName = xegpu::getLayoutName(opr);
   if (op->hasAttr(layoutName))

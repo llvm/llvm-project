@@ -86,8 +86,16 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
   if (origOffsets.empty())
     return failure();
 
+  // if op is xegpu::CreateNdDescOp, call op.getLayoutAttr()
+  xegpu::DistributeLayoutAttr layout;
+  if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp> ||
+                std::is_same_v<OpType, xegpu::StoreMatrixOp>) {
+    layout = op.getAnchorLayoutAttr();
+  } else {
+    layout = op.getLayoutAttr();
+  }
+
   // not applicable to ops without workgroup layout attributes
-  xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
   if (!layout || !layout.isForWorkgroup())
     return failure();
 
@@ -190,7 +198,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     xegpu::TensorDescType tdescTy = op.getType();
     ArrayRef<int64_t> wgShape = tdescTy.getShape();
     Type elemTy = tdescTy.getElementType();
-    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = tdescTy.getLayoutAttr();
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     auto newTdescTy =
         xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
@@ -999,7 +1007,7 @@ struct WgToSgLoadMatrixOp : public OpConversionPattern<xegpu::LoadMatrixOp> {
     assert(valueTy && "the value type must be vector type!");
     Type elemTy = valueTy.getElementType();
 
-    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = op.getAnchorLayoutAttr();
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType newResTy = VectorType::get(sgShape, elemTy);
     SmallVector<Value> newOps;
@@ -1025,7 +1033,7 @@ struct WgToSgStoreMatrixOp : public OpConversionPattern<xegpu::StoreMatrixOp> {
     if (failed(genOffsetsList(rewriter, op, offsetsList)))
       return failure();
 
-    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = op.getAnchorLayoutAttr();
     for (auto [v, offsets] : llvm::zip(adaptor.getData(), offsetsList))
       xegpu::StoreMatrixOp::create(rewriter, op.getLoc(), v, op.getMemDesc(),
                                    offsets, layout.dropSgLayoutAndData());
@@ -1409,12 +1417,12 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<xegpu::LoadMatrixOp>(
       [=](xegpu::LoadMatrixOp op) -> bool {
-        return isLegal(op.getLayoutAttr());
+        return isLegal(op.getAnchorLayoutAttr());
       });
 
   target.addDynamicallyLegalOp<xegpu::StoreMatrixOp>(
       [=](xegpu::StoreMatrixOp op) -> bool {
-        return isLegal(op.getLayoutAttr());
+        return isLegal(op.getAnchorLayoutAttr());
       });
 
   target.addDynamicallyLegalOp<arith::ConstantOp>(

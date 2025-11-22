@@ -954,7 +954,7 @@ struct UnrollLoadMatrixOp : public UnrollPattern<xegpu::LoadMatrixOp> {
 
     Type elemTy = valueTy.getElementType();
     ArrayRef<int64_t> shape = valueTy.getShape();
-    auto layout = dyn_cast<xegpu::LayoutAttr>(op.getLayoutAttr());
+    auto layout = dyn_cast<xegpu::LayoutAttr>(op.getAnchorLayoutAttr());
 
     VectorType newValueTy = valueTy.cloneWith(*targetShape, elemTy);
 
@@ -993,7 +993,7 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getData().getType());
     assert(valueTy && "the value type must be vector type!");
     ArrayRef<int64_t> shape = valueTy.getShape();
-    auto layout = dyn_cast<xegpu::LayoutAttr>(op.getLayoutAttr());
+    auto layout = dyn_cast<xegpu::LayoutAttr>(op.getAnchorLayoutAttr());
 
     SmallVector<Type> convertedValTypes =
         getUnrolledTypes(valueTy, *targetShape);
