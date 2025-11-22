@@ -15,6 +15,7 @@
 #include "flang/Common/indirection.h"
 #include "flang/Common/template.h"
 #include "flang/Common/visit.h"
+#include "flang/Parser/tools.h"
 
 #include <tuple>
 #include <type_traits>
@@ -75,6 +76,44 @@ static std::optional<Label> GetStatementLabelHelper(const T &stmt) {
 
 std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &x) {
   return GetStatementLabelHelper(x);
+}
+
+static std::optional<Label> GetFinalLabel(const Block &x) {
+  if (!x.empty()) {
+    const ExecutionPartConstruct &last{x.back()};
+    if (auto *omp{Unwrap<OpenMPConstruct>(last)}) {
+      return GetFinalLabel(*omp);
+    } else if (auto *doLoop{Unwrap<DoConstruct>(last)}) {
+      return GetFinalLabel(std::get<Block>(doLoop->t));
+    } else {
+      return GetStatementLabel(x.back());
+    }
+  } else {
+    return std::nullopt;
+  }
+}
+
+std::optional<Label> GetFinalLabel(const OpenMPConstruct &x) {
+  return common::visit(
+      [](auto &&s) -> std::optional<Label> {
+        using TypeS = llvm::remove_cvref_t<decltype(s)>;
+        if constexpr (std::is_same_v<TypeS, OpenMPSectionsConstruct>) {
+          auto &list{std::get<std::list<OpenMPConstruct>>(s.t)};
+          if (!list.empty()) {
+            return GetFinalLabel(list.back());
+          } else {
+            return std::nullopt;
+          }
+        } else if constexpr ( //
+            std::is_same_v<TypeS, OpenMPLoopConstruct> ||
+            std::is_same_v<TypeS, OpenMPSectionConstruct> ||
+            std::is_base_of_v<OmpBlockConstruct, TypeS>) {
+          return GetFinalLabel(std::get<Block>(s.t));
+        } else {
+          return std::nullopt;
+        }
+      },
+      x.u);
 }
 
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause) {
