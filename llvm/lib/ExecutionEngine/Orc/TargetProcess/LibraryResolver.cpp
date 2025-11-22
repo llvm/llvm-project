@@ -302,22 +302,8 @@ void LibraryResolver::searchSymbolsInLibraries(
       const LibraryInfo *Lib = Cur.nextValidLib();
       // Cursor not valid?
       if (!Lib) {
-        bool NewLibAdded = false;
-
-        // Scan as long as there is paths to scan
-        while (ScanHelper.leftToScan(K)) {
-          scanLibrariesIfNeeded(K, scanBatchSize);
-
-          // NOW check any new libraries added
-          if (Cur.hasMoreValidLib()) {
-            NewLibAdded = true;
-            break;
-          }
-        }
-
-        if (!NewLibAdded)
-          break; // No new libs found
-
+        if (!scanForNewLibraries(K, Cur))
+          break;  // nothing new was added
         continue; // Try to resolve next library
       }
 
@@ -344,6 +330,19 @@ void LibraryResolver::searchSymbolsInLibraries(
   });
 
   OnComplete(Q);
+}
+
+bool LibraryResolver::scanForNewLibraries(PathType K, LibraryCursor &Cur) {
+  while (ScanHelper.leftToScan(K)) {
+    scanLibrariesIfNeeded(K, scanBatchSize);
+
+    // Check if scanning added new libraries
+    if (Cur.hasMoreValidLib())
+      return true;
+  }
+
+  // No new libraries were added
+  return false;
 }
 
 bool LibraryResolver::scanLibrariesIfNeeded(PathType PK, size_t BatchSize) {

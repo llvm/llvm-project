@@ -577,6 +577,7 @@ public:
 
 private:
   bool scanLibrariesIfNeeded(PathType K, size_t BatchSize = 0);
+  bool scanForNewLibraries(PathType K, LibraryCursor &Cur);
   void resolveSymbolsInLibrary(LibraryInfo *Lib, SymbolQuery &Q,
                                const SymbolEnumeratorOptions &Opts);
 
