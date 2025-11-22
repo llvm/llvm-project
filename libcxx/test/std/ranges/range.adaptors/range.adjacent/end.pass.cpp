@@ -13,6 +13,7 @@
 
 #include <array>
 #include <cassert>
+#include <iterator>
 #include <ranges>
 #include <type_traits>
 #include <utility>
@@ -31,8 +32,10 @@ constexpr void test_one() {
     auto cendIt = std::as_const(v).end();
     assert(it != endIt);
     assert(cit != cendIt);
-    assert(it + (8 - (N - 1)) == endIt);
-    assert(cit + (8 - (N - 1)) == cendIt);
+    std::ranges::advance(it, 8 - (N - 1));
+    std::ranges::advance(cit, 8 - (N - 1));
+    assert(it == endIt);
+    assert(cit == cendIt);
   }
   {
     // empty range
@@ -58,6 +61,37 @@ constexpr void test_one() {
   }
 }
 
+template <class Underlying, std::size_t N>
+constexpr void test_decrement_back() {
+  int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+  std::ranges::adjacent_view<Underlying, N> v{Underlying{buffer}};
+  auto endIt  = v.end();
+  auto cendIt = std::as_const(v).end();
+
+  --endIt;
+  --cendIt;
+  auto tuple  = *endIt;
+  auto ctuple = *cendIt;
+  assert(std::get<0>(tuple) == buffer[8 - N]);
+  assert(std::get<0>(ctuple) == buffer[8 - N]);
+  if constexpr (N >= 2) {
+    assert(std::get<1>(tuple) == buffer[9 - N]);
+    assert(std::get<1>(ctuple) == buffer[9 - N]);
+  }
+  if constexpr (N >= 3) {
+    assert(std::get<2>(tuple) == buffer[10 - N]);
+    assert(std::get<2>(ctuple) == buffer[10 - N]);
+  }
+  if constexpr (N >= 4) {
+    assert(std::get<3>(tuple) == buffer[11 - N]);
+    assert(std::get<3>(ctuple) == buffer[11 - N]);
+  }
+  if constexpr (N >= 5) {
+    assert(std::get<4>(tuple) == buffer[12 - N]);
+    assert(std::get<4>(ctuple) == buffer[12 - N]);
+  }
+}
+
 template <std::size_t N>
 constexpr void test_simple_common_types() {
   using NonConstView = std::ranges::adjacent_view<SimpleCommon, N>;
@@ -68,6 +102,7 @@ constexpr void test_simple_common_types() {
   static_assert(std::is_same_v<std::ranges::sentinel_t<NonConstView>, std::ranges::sentinel_t<ConstView>>);
 
   test_one<SimpleCommon, N>();
+  test_decrement_back<SimpleCommon, N>();
 }
 
 template <std::size_t N>
@@ -92,6 +127,7 @@ constexpr void test_non_simple_common_types() {
   static_assert(!std::is_same_v<std::ranges::sentinel_t<NonConstView>, std::ranges::sentinel_t<ConstView>>);
 
   test_one<NonSimpleCommon, N>();
+  test_decrement_back<NonSimpleCommon, N>();
 }
 
 template <std::size_t N>
@@ -116,6 +152,7 @@ constexpr void test_forward_only() {
   static_assert(!std::is_same_v<std::ranges::sentinel_t<NonConstView>, std::ranges::sentinel_t<ConstView>>);
 
   test_one<NonSimpleForwardSizedNonCommon, N>();
+  test_one<ForwardSizedView, N>();
 }
 
 template <std::size_t N>
@@ -124,6 +161,7 @@ constexpr void test() {
   test_simple_non_common_types<N>();
   test_non_simple_common_types<N>();
   test_non_simple_non_common_types<N>();
+  test_forward_only<N>();
 }
 
 constexpr bool test() {

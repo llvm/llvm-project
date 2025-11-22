@@ -1948,9 +1948,6 @@ module std [system] {
       header "__ranges/zip_view.h"
       export std.utility.pair
     }
-    module zip_utils {
-      header "__ranges/zip_utils.h"
-    }
     module zip_transform_view {
       header "__ranges/zip_transform_view.h"
     }
@@ -2123,6 +2120,7 @@ module std [system] {
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }
     module tuple_size               { header "__tuple/tuple_size.h" }
+    module tuple_trasnform          { header "__tuple/tuple_transform.h" }
     module tuple_types              { header "__tuple/tuple_types.h" }
 
     header "tuple"

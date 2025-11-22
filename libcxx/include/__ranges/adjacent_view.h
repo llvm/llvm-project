@@ -35,7 +35,7 @@
 #include <__ranges/range_adaptor.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
-#include <__ranges/zip_utils.h>
+#include <__tuple/tuple_transform.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/make_unsigned.h>
@@ -151,7 +151,7 @@ class adjacent_view<_View, _Np>::__iterator {
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(iterator_t<_Base> __first, sentinel_t<_Base> __last) {
     __current_[0] = __first;
-    for (int __i = 1; __i < static_cast<int>(_Np); ++__i) {
+    for (size_t __i = 1; __i < _Np; ++__i) {
       __current_[__i] = ranges::next(__current_[__i - 1], 1, __last);
     }
   }
@@ -195,7 +195,7 @@ public:
       : __iterator(std::move(__i), make_index_sequence<_Np>{}) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator*() const {
-    return ranges::__tuple_transform([](auto& __i) -> decltype(auto) { return *__i; }, __current_);
+    return std::__tuple_transform([](auto& __i) -> decltype(auto) { return *__i; }, __current_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
@@ -249,7 +249,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator[](difference_type __n) const
     requires random_access_range<_Base>
   {
-    return ranges::__tuple_transform([&](auto& __i) -> decltype(auto) { return __i[__n]; }, __current_);
+    return std::__tuple_transform([&](auto& __i) -> decltype(auto) { return __i[__n]; }, __current_);
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y) {
@@ -317,7 +317,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto iter_move(const __iterator& __i) noexcept(
       noexcept(ranges::iter_move(std::declval<const iterator_t<_Base>&>())) &&
       is_nothrow_move_constructible_v<range_rvalue_reference_t<_Base>>) {
-    return ranges::__tuple_transform(ranges::iter_move, __i.__current_);
+    return std::__tuple_transform(ranges::iter_move, __i.__current_);
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr void iter_swap(const __iterator& __l, const __iterator& __r) noexcept(

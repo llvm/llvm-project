@@ -14,6 +14,7 @@
 #include <ranges>
 #include <cassert>
 
+#include "../helpers.h"
 #include "../../range_adaptor_types.h"
 
 template <std::size_t N>
@@ -26,8 +27,9 @@ constexpr void test() {
     auto it = v.begin();
     assert(it[0] == *it);
     assert(it[2] == *(it + 2));
+    assert(&std::get<0>(it[2]) == &buffer[2]);
 
-    static_assert(std::is_same_v<decltype(it[0]), decltype(*it)>);
+    static_assert(std::is_same_v<decltype(it[0]), expectedTupleType<N, int&>>);
   }
 
   {
@@ -36,8 +38,24 @@ constexpr void test() {
     auto it = v.begin();
     assert(it[0] == *it);
     assert(it[2] == *(it + 2));
+    assert(&std::get<0>(it[0]) == &buffer[0]);
 
-    static_assert(std::is_same_v<decltype(it[0]), decltype(*it)>);
+    static_assert(std::is_same_v<decltype(it[0]), expectedTupleType<N, int&>>);
+  }
+
+  {
+    // underlying range with prvalue range_reference_t
+    auto v                                                     = std::views::iota(0, 8) | std::views::adjacent<N>;
+    std::same_as<expectedTupleType<N, int>> decltype(auto) res = v.begin()[2];
+    assert(std::get<0>(res) == 2);
+    if constexpr (N >= 2)
+      assert(std::get<1>(res) == 3);
+    if constexpr (N >= 3)
+      assert(std::get<2>(res) == 4);
+    if constexpr (N >= 4)
+      assert(std::get<3>(res) == 5);
+    if constexpr (N >= 5)
+      assert(std::get<4>(res) == 6);
   }
 
   {

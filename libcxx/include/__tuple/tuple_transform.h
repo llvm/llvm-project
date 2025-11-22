@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_ZIP_VIEW_H
-#define _LIBCPP___RANGES_ZIP_VIEW_H
+#ifndef _LIBCPP___TUPLE_TUPLE_TRANSFORM_H
+#define _LIBCPP___TUPLE_TUPLE_TRANSFORM_H
 
 #include <__config>
 
@@ -27,8 +27,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 23
 
-namespace ranges {
-
 template <class _Fun, class _Tuple>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __tuple_transform(_Fun&& __f, _Tuple&& __tuple) {
   return std::apply(
@@ -38,11 +36,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __tuple_transform(_Fun&& __f, _Tuple&& __tu
       std::forward<_Tuple>(__tuple));
 }
 
-} // namespace ranges
 #endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANGES_ZIP_VIEW_H
+#endif // _LIBCPP___TUPLE_TUPLE_TRANSFORM_H

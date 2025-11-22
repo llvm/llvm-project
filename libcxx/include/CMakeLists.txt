@@ -740,7 +740,6 @@ set(files
   __ranges/view_interface.h
   __ranges/views.h
   __ranges/zip_transform_view.h
-  __ranges/zip_utils.h
   __ranges/zip_view.h
   __split_buffer
   __std_mbstate_t.h
@@ -787,6 +786,7 @@ set(files
   __tuple/tuple_like_ext.h
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
+  __tuple/tuple_transform.h
   __tuple/tuple_types.h
   __type_traits/add_cv_quals.h
   __type_traits/add_pointer.h
