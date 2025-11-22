@@ -5748,6 +5748,29 @@ the configuration (without a prefix: ``Auto``).
         int * a(void);
 
 
+  * ``CastAlignmentStyle CStyleCast``
+    The alignment for pointers in C-style casts.
+
+    Possible values:
+
+    * ``CAS_Default`` (in configuration: ``Default``)
+      Use default alignment.
+
+    * ``CAS_Left`` (in configuration: ``Left``)
+      Align pointer/reference to the left.
+
+      .. code-block:: c++
+
+        (char*)s;
+
+    * ``CAS_Right`` (in configuration: ``Right``)
+      Align pointer/reference to the right.
+
+      .. code-block:: c++
+
+        (char *)s;
+
+
 
 .. _QualifierAlignment:
 
@@ -5959,6 +5982,29 @@ the configuration (without a prefix: ``Auto``).
       .. code-block:: c++
 
         int * a(void);
+
+
+  * ``CastAlignmentStyle CStyleCast``
+    The alignment for references in C-style casts.
+
+    Possible values:
+
+    * ``CAS_Default`` (in configuration: ``Default``)
+      Use default alignment.
+
+    * ``CAS_Left`` (in configuration: ``Left``)
+      Align pointer/reference to the left.
+
+      .. code-block:: c++
+
+        (char*)s;
+
+    * ``CAS_Right`` (in configuration: ``Right``)
+      Align pointer/reference to the right.
+
+      .. code-block:: c++
+
+        (char *)s;
 
 
 

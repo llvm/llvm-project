@@ -6586,6 +6586,29 @@ static bool isReturnType(const FormatToken &Tok, const LangOptions &LangOpts) {
   return false;
 }
 
+static bool isCStyleCast(const FormatToken &Tok, const LangOptions &LangOpts) {
+  // Look forward to see if there's a TT_CastRParen.
+  for (const FormatToken *Next = Tok.Next; Next;
+       Next = Next->getNextNonComment()) {
+    if (Next->is(TT_CastRParen))
+      return true;
+
+    if (Next->is(TT_TemplateOpener) && Next->MatchingParen) {
+      Next = Next->MatchingParen;
+      continue;
+    }
+
+    if (Next->isPointerOrReference() || Next->isTypeName(LangOpts) ||
+        Next->isOneOf(tok::identifier, tok::coloncolon) ||
+        Next->canBePointerOrReferenceQualifier()) {
+      continue;
+    }
+
+    break;
+  }
+  return false;
+}
+
 static FormatStyle::PointerAlignmentStyle
 mapReturnTypeAlignmentStyle(FormatStyle::ReturnTypeAlignmentStyle Style) {
   switch (Style) {
@@ -6601,6 +6624,19 @@ mapReturnTypeAlignmentStyle(FormatStyle::ReturnTypeAlignmentStyle Style) {
   llvm_unreachable("Unknown FormatStyle::ReturnTypeAlignmentStyle enum");
 }
 
+static FormatStyle::PointerAlignmentStyle
+mapCastAlignmentStyle(FormatStyle::CastAlignmentStyle Style) {
+  switch (Style) {
+  case FormatStyle::CAS_Left:
+    return FormatStyle::PAS_Left;
+  case FormatStyle::CAS_Right:
+    return FormatStyle::PAS_Right;
+  case FormatStyle::CAS_Default:
+    assert(false);
+  }
+  llvm_unreachable("Unknown FormatStyle::CastAlignmentStyle enum");
+}
+
 FormatStyle::PointerAlignmentStyle
 TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) const {
   assert(Reference.isOneOf(tok::amp, tok::ampamp));
@@ -6608,6 +6644,11 @@ TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) const {
   if (Style.ReferenceAlignment.ReturnType != FormatStyle::RTAS_Default &&
       isReturnType(Reference, LangOpts)) {
     return mapReturnTypeAlignmentStyle(Style.ReferenceAlignment.ReturnType);
+  }
+
+  if (Style.ReferenceAlignment.CStyleCast != FormatStyle::CAS_Default &&
+      isCStyleCast(Reference, LangOpts)) {
+    return mapCastAlignmentStyle(Style.ReferenceAlignment.CStyleCast);
   }
 
   switch (Style.ReferenceAlignment.Default) {
@@ -6633,6 +6674,11 @@ TokenAnnotator::getTokenPointerOrReferenceAlignment(
   if (Style.PointerAlignment.ReturnType != FormatStyle::RTAS_Default &&
       isReturnType(PointerOrReference, LangOpts)) {
     return mapReturnTypeAlignmentStyle(Style.PointerAlignment.ReturnType);
+  }
+
+  if (Style.PointerAlignment.CStyleCast != FormatStyle::CAS_Default &&
+      isCStyleCast(PointerOrReference, LangOpts)) {
+    return mapCastAlignmentStyle(Style.PointerAlignment.CStyleCast);
   }
 
   return Style.PointerAlignment.Default;

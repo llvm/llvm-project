@@ -4057,14 +4057,33 @@ struct FormatStyle {
     RTAS_Middle
   };
 
+  /// \brief The pointer/reference alignment style for C-style casts.
+  enum CastAlignmentStyle : int8_t {
+    /// Use default alignment.
+    CAS_Default,
+    /// Align pointer/reference to the left.
+    /// \code
+    ///   (char*)s;
+    /// \endcode
+    CAS_Left,
+    /// Align pointer/reference to the right.
+    /// \code
+    ///   (char *)s;
+    /// \endcode
+    CAS_Right,
+  };
+
   /// Pointer and reference alignment options.
   struct PointerAlignmentOptions {
     /// The default alignment for pointers and references.
     PointerAlignmentStyle Default;
     /// The alignment for pointers in function return types.
     ReturnTypeAlignmentStyle ReturnType;
+    /// The alignment for pointers in C-style casts.
+    CastAlignmentStyle CStyleCast;
     bool operator==(const PointerAlignmentOptions &R) const {
-      return Default == R.Default && ReturnType == R.ReturnType;
+      return Default == R.Default && ReturnType == R.ReturnType &&
+             CStyleCast == R.CStyleCast;
     }
     bool operator!=(const PointerAlignmentOptions &R) const {
       return !(*this == R);
@@ -4264,8 +4283,11 @@ struct FormatStyle {
     ReferenceAlignmentStyle Default;
     /// The alignment for references in function return types.
     ReturnTypeAlignmentStyle ReturnType;
+    /// The alignment for references in C-style casts.
+    CastAlignmentStyle CStyleCast;
     bool operator==(const ReferenceAlignmentOptions &R) const {
-      return Default == R.Default && ReturnType == R.ReturnType;
+      return Default == R.Default && ReturnType == R.ReturnType &&
+             CStyleCast == R.CStyleCast;
     }
     bool operator!=(const ReferenceAlignmentOptions &R) const {
       return !(*this == R);

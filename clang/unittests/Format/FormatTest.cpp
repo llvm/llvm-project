@@ -2497,6 +2497,104 @@ TEST_F(FormatTest, ReturnTypeAlignment) {
   verifyFormat("auto f3(int &&a, int *b) -> int &&;", Style);
 }
 
+TEST_F(FormatTest, CStyleCastAlignment) {
+  // Test that CStyleCast overrides PointerAlignment for C-style casts.
+  FormatStyle Style = getLLVMStyle();
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.CStyleCast = FormatStyle::CAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.CStyleCast = FormatStyle::CAS_Left;
+
+  // Basic C-style casts with pointers should be left-aligned despite PAS_Right.
+  verifyFormat("int *a = (int*)b;", Style);
+  verifyFormat("int &c = (int&)d;", Style);
+  verifyFormat("int &&e = (int&&)f;", Style);
+
+  // Multiple pointers in C-style casts.
+  verifyFormat("int **a = (int**)b;", Style);
+  verifyFormat("const int *c = (const int*)d;", Style);
+  verifyFormat("int ***e = (int***)f;", Style);
+
+  // Multiple pointers with const qualifiers.
+  verifyFormat("const int **a = (const int**)b;", Style);
+  verifyFormat("int *const *c = (int* const*)d;", Style);
+  verifyFormat("const int *const *e = (const int* const*)f;", Style);
+  verifyFormat("int **const g = (int** const)h;", Style);
+  verifyFormat("const int **const i = (const int** const)j;", Style);
+
+  // Complex types in C-style casts.
+  verifyFormat("std::vector<int> *a = (std::vector<int>*)b;", Style);
+  verifyFormat("const char *c = (const char*)d;", Style);
+  verifyFormat("const char **e = (const char**)f;", Style);
+  verifyFormat("char *const *g = (char* const*)h;", Style);
+
+  // Variables should still follow the default alignment.
+  verifyFormat("int *a = nullptr;", Style);
+  verifyFormat("int *b = (int*)c;", Style);
+
+  // Now test with PAS_Left base and CAS_Right cast.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+  Style.PointerAlignment.CStyleCast = FormatStyle::CAS_Right;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.CStyleCast = FormatStyle::CAS_Right;
+
+  // C-style casts should be right-aligned despite PAS_Left.
+  verifyFormat("int* a = (int *)b;", Style);
+  verifyFormat("int& c = (int &)d;", Style);
+  verifyFormat("int&& e = (int &&)f;", Style);
+
+  // Multiple pointers with right alignment in casts.
+  verifyFormat("int** a = (int **)b;", Style);
+  verifyFormat("const int* c = (const int *)d;", Style);
+  verifyFormat("int*** e = (int ***)f;", Style);
+
+  // Multiple pointers with const qualifiers, right-aligned casts.
+  verifyFormat("const int** a = (const int **)b;", Style);
+  verifyFormat("int* const* c = (int *const *)d;", Style);
+  verifyFormat("const int* const* e = (const int *const *)f;", Style);
+  verifyFormat("int** const g = (int **const)h;", Style);
+  verifyFormat("const char** i = (const char **)j;", Style);
+
+  // Variables should still follow PointerAlignment (PAS_Left).
+  verifyFormat("int* a = nullptr;", Style);
+  verifyFormat("int* b = (int *)c;", Style);
+
+  // Test that default alignment is used when CStyleCast is CAS_Default.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+  Style.PointerAlignment.CStyleCast = FormatStyle::CAS_Default;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.CStyleCast = FormatStyle::CAS_Default;
+
+  verifyFormat("int* a = (int*)b;", Style);
+  verifyFormat("int& c = (int&)d;", Style);
+
+  // Test with ReferenceAlignment override.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.CStyleCast = FormatStyle::CAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.CStyleCast = FormatStyle::CAS_Right;
+
+  verifyFormat("int *a = (int*)b;", Style);
+  verifyFormat("int &c = (int &)d;", Style);
+  verifyFormat("int &&e = (int &&)f;", Style);
+
+  // Chained casts.
+  verifyFormat("int *a = (int*)(void*)b;", Style);
+  verifyFormat("const char *c = (const char*)(void*)d;", Style);
+
+  // Casts with arithmetic.
+  verifyFormat("int *a = (int*)b + 1;", Style);
+  verifyFormat("void *c = (void*)(d + sizeof(int));", Style);
+
+  // Test function calls with casts.
+  verifyFormat("foo((int*)bar);", Style);
+  verifyFormat("foo((int &)bar, (int*)baz);", Style);
+
+  // Test C-style casts in expressions.
+  verifyFormat("if ((int*)a == b)\n  return;", Style);
+  verifyFormat("return (int*)a;", Style);
+}
+
 TEST_F(FormatTest, FormatsForLoop) {
   verifyFormat(
       "for (int VeryVeryLongLoopVariable = 0; VeryVeryLongLoopVariable < 10;\n"
