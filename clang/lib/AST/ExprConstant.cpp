@@ -13043,6 +13043,23 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(R, E);
   }
 
+  case X86::BI__builtin_ia32_vpermilvarpd:
+  case X86::BI__builtin_ia32_vpermilvarpd256:
+  case X86::BI__builtin_ia32_vpermilvarpd512: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
+              unsigned NumElemPerLane = 2;
+              unsigned Lane = DstIdx / NumElemPerLane;
+              unsigned Offset = Mask & 0b10 ? 1 : 0;
+              return std::make_pair(
+                  0, static_cast<int>(Lane * NumElemPerLane + Offset));
+            }))
+      return false;
+    return Success(R, E);
+  }
+
   case X86::BI__builtin_ia32_vpermilpd:
   case X86::BI__builtin_ia32_vpermilpd256:
   case X86::BI__builtin_ia32_vpermilpd512: {
@@ -13058,6 +13075,23 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
           unsigned Index = (Control >> BitIndex) & IndexMask;
           return std::make_pair(0, static_cast<int>(LaneOffset + Index));
         }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_vpermilvarps:
+  case X86::BI__builtin_ia32_vpermilvarps256:
+  case X86::BI__builtin_ia32_vpermilvarps512: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
+              unsigned NumElemPerLane = 4;
+              unsigned Lane = DstIdx / NumElemPerLane;
+              unsigned Offset = Mask & 0b11;
+              return std::make_pair(
+                  0, static_cast<int>(Lane * NumElemPerLane + Offset));
+            }))
       return false;
     return Success(R, E);
   }
