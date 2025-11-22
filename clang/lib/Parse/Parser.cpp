@@ -1107,16 +1107,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     if (DeclSpec::isDeclRep(TKind)) {
       if (TKind == DeclSpec::TST_enum) {
         if (const auto *ED = dyn_cast_or_null<EnumDecl>(DS.getRepAsDecl())) {
-          if (ED->getIdentifier()) {
-            CorrectLocationForAttributes = ED->getLocation();
-          } else {
-            SourceLocation Begin = ED->getBraceRange().getBegin();
-            CorrectLocationForAttributes =
-                Begin.isValid() ? Begin :
-                                // If there is no brace, fall back to the end
-                                // location, which corresponds to the semicolon.
-                    ED->getEndLoc();
-          }
+          CorrectLocationForAttributes =
+              PP.getLocForEndOfToken(ED->getEnumKeyRange().getEnd());
         }
       }
       if (CorrectLocationForAttributes.isInvalid()) {
