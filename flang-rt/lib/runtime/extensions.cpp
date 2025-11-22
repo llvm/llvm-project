@@ -398,6 +398,15 @@ std::int64_t RTNAME(time)() { return time(nullptr); }
 // MCLOCK: returns accumulated CPU time in ticks
 std::int32_t FORTRAN_PROCEDURE_NAME(mclock)() { return std::clock(); }
 
+void RTNAME(ShowDescriptor)(const char *descr) {
+  if (descr) {
+    reinterpret_cast<const Fortran::runtime::Descriptor *>(descr)->Dump(
+        stderr, /*dumpRawType=*/false);
+  } else {
+    std::fprintf(stderr, "NULL\n");
+  }
+}
+
 // Extension procedures related to I/O
 
 namespace io {
