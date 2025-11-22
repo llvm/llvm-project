@@ -123,6 +123,9 @@ template <typename T> OmpDirectiveName GetOmpDirectiveName(const T &x) {
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x);
 const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x);
 
+const OpenMPLoopConstruct *GetOmpLoop(const ExecutionPartConstruct &x);
+const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x);
+
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause);
 
 template <typename T>
@@ -137,6 +140,8 @@ const T *GetFirstArgument(const OmpDirectiveSpecification &spec) {
 
 const BlockConstruct *GetFortranBlockConstruct(
     const ExecutionPartConstruct &epc);
+const Block &GetInnermostExecPart(const Block &block);
+bool IsStrictlyStructuredBlock(const Block &block);
 
 const OmpCombinerExpression *GetCombinerExpr(
     const OmpReductionSpecifier &rspec);
