@@ -124,7 +124,7 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
       })) {
     return {true,
             {},
-            ReqExts,
+            std::move(ReqExts),
             VersionTuple(),
             VersionTuple()}; // TODO: add versions to extensions.
   }
@@ -248,6 +248,23 @@ static InstrSignature instrToSignature(const MachineInstr &MI,
   Register DefReg;
   InstrSignature Signature{MI.getOpcode()};
   for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
+    // The only decorations that can be applied more than once to a given <id>
+    // or structure member are FuncParamAttr (38), UserSemantic (5635),
+    // CacheControlLoadINTEL (6442), and CacheControlStoreINTEL (6443). For all
+    // the rest of decorations, we will only add to the signature the Opcode,
+    // the id to which it applies, and the decoration id, disregarding any
+    // decoration flags. This will ensure that any subsequent decoration with
+    // the same id will be deemed as a duplicate. Then, at the call site, we
+    // will be able to handle duplicates in the best way.
+    unsigned Opcode = MI.getOpcode();
+    if ((Opcode == SPIRV::OpDecorate) && i >= 2) {
+      unsigned DecorationID = MI.getOperand(1).getImm();
+      if (DecorationID != SPIRV::Decoration::FuncParamAttr &&
+          DecorationID != SPIRV::Decoration::UserSemantic &&
+          DecorationID != SPIRV::Decoration::CacheControlLoadINTEL &&
+          DecorationID != SPIRV::Decoration::CacheControlStoreINTEL)
+        continue;
+    }
     const MachineOperand &MO = MI.getOperand(i);
     size_t h;
     if (MO.isReg()) {
@@ -531,9 +548,9 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
   if (MI.getOpcode() == SPIRV::OpDecorate) {
     // If it's got Import linkage.
     auto Dec = MI.getOperand(1).getImm();
-    if (Dec == static_cast<unsigned>(SPIRV::Decoration::LinkageAttributes)) {
+    if (Dec == SPIRV::Decoration::LinkageAttributes) {
       auto Lnk = MI.getOperand(MI.getNumOperands() - 1).getImm();
-      if (Lnk == static_cast<unsigned>(SPIRV::LinkageType::Import)) {
+      if (Lnk == SPIRV::LinkageType::Import) {
         // Map imported function name to function ID register.
         const Function *ImportedFunc =
             F->getParent()->getFunction(getStringImm(MI, 2));
@@ -559,8 +576,53 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
   MAI.setSkipEmission(&MI);
   InstrSignature MISign = instrToSignature(MI, MAI, true);
   auto FoundMI = IS.insert(std::move(MISign));
-  if (!FoundMI.second)
+  if (!FoundMI.second) {
+    if (MI.getOpcode() == SPIRV::OpDecorate) {
+      assert(MI.getNumOperands() >= 2 &&
+             "Decoration instructions must have at least 2 operands");
+      assert(MSType == SPIRV::MB_Annotations &&
+             "Only OpDecorate instructions can be duplicates");
+      // For FPFastMathMode decoration, we need to merge the flags of the
+      // duplicate decoration with the original one, so we need to find the
+      // original instruction that has the same signature. For the rest of
+      // instructions, we will simply skip the duplicate.
+      if (MI.getOperand(1).getImm() != SPIRV::Decoration::FPFastMathMode)
+        return; // Skip duplicates of other decorations.
+
+      const SPIRV::InstrList &Decorations = MAI.MS[MSType];
+      for (const MachineInstr *OrigMI : Decorations) {
+        if (instrToSignature(*OrigMI, MAI, true) == MISign) {
+          assert(OrigMI->getNumOperands() == MI.getNumOperands() &&
+                 "Original instruction must have the same number of operands");
+          assert(
+              OrigMI->getNumOperands() == 3 &&
+              "FPFastMathMode decoration must have 3 operands for OpDecorate");
+          unsigned OrigFlags = OrigMI->getOperand(2).getImm();
+          unsigned NewFlags = MI.getOperand(2).getImm();
+          if (OrigFlags == NewFlags)
+            return; // No need to merge, the flags are the same.
+
+          // Emit warning about possible conflict between flags.
+          unsigned FinalFlags = OrigFlags | NewFlags;
+          llvm::errs()
+              << "Warning: Conflicting FPFastMathMode decoration flags "
+                 "in instruction: "
+              << *OrigMI << "Original flags: " << OrigFlags
+              << ", new flags: " << NewFlags
+              << ". They will be merged on a best effort basis, but not "
+                 "validated. Final flags: "
+              << FinalFlags << "\n";
+          MachineInstr *OrigMINonConst = const_cast<MachineInstr *>(OrigMI);
+          MachineOperand &OrigFlagsOp = OrigMINonConst->getOperand(2);
+          OrigFlagsOp = MachineOperand::CreateImm(FinalFlags);
+          return; // Merge done, so we found a duplicate; don't add it to MAI.MS
+        }
+      }
+      assert(false && "No original instruction found for the duplicate "
+                      "OpDecorate, but we found one in IS.");
+    }
     return; // insert failed, so we found a duplicate; don't add it to MAI.MS
+  }
   // No duplicates, so add it.
   if (Append)
     MAI.MS[MSType].push_back(&MI);
@@ -573,7 +635,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
 void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
   InstrTraces IS;
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    if ((*F).isDeclaration())
+    if (F->isDeclaration())
       continue;
     MachineFunction *MF = MMI->getMachineFunction(*F);
     assert(MF);
@@ -872,7 +934,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::UniformBufferArrayDynamicIndexing,
                     Capability::SampledImageArrayDynamicIndexing,
                     Capability::StorageBufferArrayDynamicIndexing,
-                    Capability::StorageImageArrayDynamicIndexing});
+                    Capability::StorageImageArrayDynamicIndexing,
+                    Capability::DerivativeControl});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -934,6 +997,11 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
   } else if (Dec == SPIRV::Decoration::FPMaxErrorDecorationINTEL) {
     Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
+  } else if (Dec == SPIRV::Decoration::FPFastMathMode) {
+    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
+      Reqs.addRequirements(SPIRV::Capability::FloatControls2);
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls2);
+    }
   }
 }
 
@@ -992,6 +1060,13 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
   }
 }
 
+static bool isBFloat16Type(const SPIRVType *TypeDef) {
+  return TypeDef && TypeDef->getNumOperands() == 3 &&
+         TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
+         TypeDef->getOperand(1).getImm() == 16 &&
+         TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
+}
+
 // Add requirements for handling atomic float instructions
 #define ATOM_FLT_REQ_EXT_MSG(ExtName)                                          \
   "The atomic float instruction requires the following SPIR-V "                \
@@ -1015,11 +1090,21 @@ static void AddAtomicFloatRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_add);
     switch (BitWidth) {
     case 16:
-      if (!ST.canUseExtension(
-              SPIRV::Extension::SPV_EXT_shader_atomic_float16_add))
-        report_fatal_error(ATOM_FLT_REQ_EXT_MSG("16_add"), false);
-      Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float16_add);
-      Reqs.addCapability(SPIRV::Capability::AtomicFloat16AddEXT);
+      if (isBFloat16Type(TypeDef)) {
+        if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics))
+          report_fatal_error(
+              "The atomic bfloat16 instruction requires the following SPIR-V "
+              "extension: SPV_INTEL_16bit_atomics",
+              false);
+        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics);
+        Reqs.addCapability(SPIRV::Capability::AtomicBFloat16AddINTEL);
+      } else {
+        if (!ST.canUseExtension(
+                SPIRV::Extension::SPV_EXT_shader_atomic_float16_add))
+          report_fatal_error(ATOM_FLT_REQ_EXT_MSG("16_add"), false);
+        Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float16_add);
+        Reqs.addCapability(SPIRV::Capability::AtomicFloat16AddEXT);
+      }
       break;
     case 32:
       Reqs.addCapability(SPIRV::Capability::AtomicFloat32AddEXT);
@@ -1038,7 +1123,17 @@ static void AddAtomicFloatRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_min_max);
     switch (BitWidth) {
     case 16:
-      Reqs.addCapability(SPIRV::Capability::AtomicFloat16MinMaxEXT);
+      if (isBFloat16Type(TypeDef)) {
+        if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics))
+          report_fatal_error(
+              "The atomic bfloat16 instruction requires the following SPIR-V "
+              "extension: SPV_INTEL_16bit_atomics",
+              false);
+        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics);
+        Reqs.addCapability(SPIRV::Capability::AtomicBFloat16MinMaxINTEL);
+      } else {
+        Reqs.addCapability(SPIRV::Capability::AtomicFloat16MinMaxEXT);
+      }
       break;
     case 32:
       Reqs.addCapability(SPIRV::Capability::AtomicFloat32MinMaxEXT);
@@ -1133,6 +1228,23 @@ void addOpAccessChainReqs(const MachineInstr &Instr,
     return;
   }
 
+  bool IsNonUniform =
+      hasNonUniformDecoration(Instr.getOperand(0).getReg(), MRI);
+
+  auto FirstIndexReg = Instr.getOperand(3).getReg();
+  bool FirstIndexIsConstant =
+      Subtarget.getInstrInfo()->isConstantInstr(*MRI.getVRegDef(FirstIndexReg));
+
+  if (StorageClass == SPIRV::StorageClass::StorageClass::StorageBuffer) {
+    if (IsNonUniform)
+      Handler.addRequirements(
+          SPIRV::Capability::StorageBufferArrayNonUniformIndexingEXT);
+    else if (!FirstIndexIsConstant)
+      Handler.addRequirements(
+          SPIRV::Capability::StorageBufferArrayDynamicIndexing);
+    return;
+  }
+
   Register PointeeTypeReg = ResTypeInst->getOperand(2).getReg();
   MachineInstr *PointeeType = MRI.getUniqueVRegDef(PointeeTypeReg);
   if (PointeeType->getOpcode() != SPIRV::OpTypeImage &&
@@ -1141,27 +1253,25 @@ void addOpAccessChainReqs(const MachineInstr &Instr,
     return;
   }
 
-  bool IsNonUniform =
-      hasNonUniformDecoration(Instr.getOperand(0).getReg(), MRI);
   if (isUniformTexelBuffer(PointeeType)) {
     if (IsNonUniform)
       Handler.addRequirements(
           SPIRV::Capability::UniformTexelBufferArrayNonUniformIndexingEXT);
-    else
+    else if (!FirstIndexIsConstant)
       Handler.addRequirements(
           SPIRV::Capability::UniformTexelBufferArrayDynamicIndexingEXT);
   } else if (isInputAttachment(PointeeType)) {
     if (IsNonUniform)
       Handler.addRequirements(
           SPIRV::Capability::InputAttachmentArrayNonUniformIndexingEXT);
-    else
+    else if (!FirstIndexIsConstant)
       Handler.addRequirements(
           SPIRV::Capability::InputAttachmentArrayDynamicIndexingEXT);
   } else if (isStorageTexelBuffer(PointeeType)) {
     if (IsNonUniform)
       Handler.addRequirements(
           SPIRV::Capability::StorageTexelBufferArrayNonUniformIndexingEXT);
-    else
+    else if (!FirstIndexIsConstant)
       Handler.addRequirements(
           SPIRV::Capability::StorageTexelBufferArrayDynamicIndexingEXT);
   } else if (isSampledImage(PointeeType) ||
@@ -1170,14 +1280,14 @@ void addOpAccessChainReqs(const MachineInstr &Instr,
     if (IsNonUniform)
       Handler.addRequirements(
           SPIRV::Capability::SampledImageArrayNonUniformIndexingEXT);
-    else
+    else if (!FirstIndexIsConstant)
       Handler.addRequirements(
           SPIRV::Capability::SampledImageArrayDynamicIndexing);
   } else if (isStorageImage(PointeeType)) {
     if (IsNonUniform)
       Handler.addRequirements(
           SPIRV::Capability::StorageImageArrayNonUniformIndexingEXT);
-    else
+    else if (!FirstIndexIsConstant)
       Handler.addRequirements(
           SPIRV::Capability::StorageImageArrayDynamicIndexing);
   }
@@ -1222,9 +1332,35 @@ static void AddDotProductRequirements(const MachineInstr &MI,
   }
 }
 
+void addPrintfRequirements(const MachineInstr &MI,
+                           SPIRV::RequirementHandler &Reqs,
+                           const SPIRVSubtarget &ST) {
+  SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+  const SPIRVType *PtrType = GR->getSPIRVTypeForVReg(MI.getOperand(4).getReg());
+  if (PtrType) {
+    MachineOperand ASOp = PtrType->getOperand(1);
+    if (ASOp.isImm()) {
+      unsigned AddrSpace = ASOp.getImm();
+      if (AddrSpace != SPIRV::StorageClass::UniformConstant) {
+        if (!ST.canUseExtension(
+                SPIRV::Extension::
+                    SPV_EXT_relaxed_printf_string_address_space)) {
+          report_fatal_error("SPV_EXT_relaxed_printf_string_address_space is "
+                             "required because printf uses a format string not "
+                             "in constant address space.",
+                             false);
+        }
+        Reqs.addExtension(
+            SPIRV::Extension::SPV_EXT_relaxed_printf_string_address_space);
+      }
+    }
+  }
+}
+
 void addInstrRequirements(const MachineInstr &MI,
-                          SPIRV::RequirementHandler &Reqs,
+                          SPIRV::ModuleAnalysisInfo &MAI,
                           const SPIRVSubtarget &ST) {
+  SPIRV::RequirementHandler &Reqs = MAI.Reqs;
   switch (MI.getOpcode()) {
   case SPIRV::OpMemoryModel: {
     int64_t Addr = MI.getOperand(0).getImm();
@@ -1261,12 +1397,29 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Int8);
     break;
   }
+  case SPIRV::OpDot: {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if (isBFloat16Type(TypeDef))
+      Reqs.addCapability(SPIRV::Capability::BFloat16DotProductKHR);
+    break;
+  }
   case SPIRV::OpTypeFloat: {
     unsigned BitWidth = MI.getOperand(1).getImm();
     if (BitWidth == 64)
       Reqs.addCapability(SPIRV::Capability::Float64);
-    else if (BitWidth == 16)
-      Reqs.addCapability(SPIRV::Capability::Float16);
+    else if (BitWidth == 16) {
+      if (isBFloat16Type(&MI)) {
+        if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_bfloat16))
+          report_fatal_error("OpTypeFloat type with bfloat requires the "
+                             "following SPIR-V extension: SPV_KHR_bfloat16",
+                             false);
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_bfloat16);
+        Reqs.addCapability(SPIRV::Capability::BFloat16TypeKHR);
+      } else {
+        Reqs.addCapability(SPIRV::Capability::Float16);
+      }
+    }
     break;
   }
   case SPIRV::OpTypeVector: {
@@ -1286,8 +1439,9 @@ void addInstrRequirements(const MachineInstr &MI,
     assert(MI.getOperand(2).isReg());
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(2).getReg());
-    if (TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
-        TypeDef->getOperand(1).getImm() == 16)
+    if ((TypeDef->getNumOperands() == 2) &&
+        (TypeDef->getOpcode() == SPIRV::OpTypeFloat) &&
+        (TypeDef->getOperand(1).getImm() == 16))
       Reqs.addCapability(SPIRV::Capability::Float16Buffer);
     break;
   }
@@ -1296,7 +1450,15 @@ void addInstrRequirements(const MachineInstr &MI,
         static_cast<int64_t>(
             SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100)) {
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
+      break;
     }
+    if (MI.getOperand(3).getImm() ==
+        static_cast<int64_t>(SPIRV::OpenCLExtInst::printf)) {
+      addPrintfRequirements(MI, Reqs, ST);
+      break;
+    }
+    // TODO: handle bfloat16 extended instructions when
+    // SPV_INTEL_bfloat16_arithmetic is enabled.
     break;
   }
   case SPIRV::OpAliasDomainDeclINTEL:
@@ -1593,7 +1755,7 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::AsmINTEL);
     }
     break;
-  case SPIRV::OpTypeCooperativeMatrixKHR:
+  case SPIRV::OpTypeCooperativeMatrixKHR: {
     if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix))
       report_fatal_error(
           "OpTypeCooperativeMatrixKHR type requires the "
@@ -1601,7 +1763,12 @@ void addInstrRequirements(const MachineInstr &MI,
           false);
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
     Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if (isBFloat16Type(TypeDef))
+      Reqs.addCapability(SPIRV::Capability::BFloat16CooperativeMatrixKHR);
     break;
+  }
   case SPIRV::OpArithmeticFenceEXT:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_arithmetic_fence))
       report_fatal_error("OpArithmeticFenceEXT requires the "
@@ -1740,6 +1907,13 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(
         SPIRV::Capability::CooperativeMatrixCheckedInstructionsINTEL);
     break;
+  case SPIRV::OpReadPipeBlockingALTERA:
+  case SPIRV::OpWritePipeBlockingALTERA:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_ALTERA_blocking_pipes)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_ALTERA_blocking_pipes);
+      Reqs.addCapability(SPIRV::Capability::BlockingPipesALTERA);
+    }
+    break;
   case SPIRV::OpCooperativeMatrixGetElementCoordINTEL:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
       report_fatal_error("OpCooperativeMatrixGetElementCoordINTEL requires the "
@@ -1751,15 +1925,45 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   case SPIRV::OpConvertHandleToImageINTEL:
   case SPIRV::OpConvertHandleToSamplerINTEL:
-  case SPIRV::OpConvertHandleToSampledImageINTEL:
+  case SPIRV::OpConvertHandleToSampledImageINTEL: {
     if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bindless_images))
       report_fatal_error("OpConvertHandleTo[Image/Sampler/SampledImage]INTEL "
                          "instructions require the following SPIR-V extension: "
                          "SPV_INTEL_bindless_images",
                          false);
+    SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+    SPIRV::AddressingModel::AddressingModel AddrModel = MAI.Addr;
+    SPIRVType *TyDef = GR->getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+    if (MI.getOpcode() == SPIRV::OpConvertHandleToImageINTEL &&
+        TyDef->getOpcode() != SPIRV::OpTypeImage) {
+      report_fatal_error("Incorrect return type for the instruction "
+                         "OpConvertHandleToImageINTEL",
+                         false);
+    } else if (MI.getOpcode() == SPIRV::OpConvertHandleToSamplerINTEL &&
+               TyDef->getOpcode() != SPIRV::OpTypeSampler) {
+      report_fatal_error("Incorrect return type for the instruction "
+                         "OpConvertHandleToSamplerINTEL",
+                         false);
+    } else if (MI.getOpcode() == SPIRV::OpConvertHandleToSampledImageINTEL &&
+               TyDef->getOpcode() != SPIRV::OpTypeSampledImage) {
+      report_fatal_error("Incorrect return type for the instruction "
+                         "OpConvertHandleToSampledImageINTEL",
+                         false);
+    }
+    SPIRVType *SpvTy = GR->getSPIRVTypeForVReg(MI.getOperand(2).getReg());
+    unsigned Bitwidth = GR->getScalarOrVectorBitWidth(SpvTy);
+    if (!(Bitwidth == 32 && AddrModel == SPIRV::AddressingModel::Physical32) &&
+        !(Bitwidth == 64 && AddrModel == SPIRV::AddressingModel::Physical64)) {
+      report_fatal_error(
+          "Parameter value must be a 32-bit scalar in case of "
+          "Physical32 addressing model or a 64-bit scalar in case of "
+          "Physical64 addressing model",
+          false);
+    }
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bindless_images);
     Reqs.addCapability(SPIRV::Capability::BindlessImagesINTEL);
     break;
+  }
   case SPIRV::OpSubgroup2DBlockLoadINTEL:
   case SPIRV::OpSubgroup2DBlockLoadTransposeINTEL:
   case SPIRV::OpSubgroup2DBlockLoadTransformINTEL:
@@ -1876,6 +2080,80 @@ void addInstrRequirements(const MachineInstr &MI,
     // TODO: Add UntypedPointersKHR when implemented.
     break;
   }
+  case SPIRV::OpPredicatedLoadINTEL:
+  case SPIRV::OpPredicatedStoreINTEL: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_predicated_io))
+      report_fatal_error(
+          "OpPredicated[Load/Store]INTEL instructions require "
+          "the following SPIR-V extension: SPV_INTEL_predicated_io",
+          false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_predicated_io);
+    Reqs.addCapability(SPIRV::Capability::PredicatedIOINTEL);
+    break;
+  }
+  case SPIRV::OpFAddS:
+  case SPIRV::OpFSubS:
+  case SPIRV::OpFMulS:
+  case SPIRV::OpFDivS:
+  case SPIRV::OpFRemS:
+  case SPIRV::OpFMod:
+  case SPIRV::OpFNegate:
+  case SPIRV::OpFAddV:
+  case SPIRV::OpFSubV:
+  case SPIRV::OpFMulV:
+  case SPIRV::OpFDivV:
+  case SPIRV::OpFRemV:
+  case SPIRV::OpFNegateV: {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+      TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
+    if (isBFloat16Type(TypeDef)) {
+      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
+        report_fatal_error(
+            "Arithmetic instructions with bfloat16 arguments require the "
+            "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
+            false);
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
+      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
+    }
+    break;
+  }
+  case SPIRV::OpOrdered:
+  case SPIRV::OpUnordered:
+  case SPIRV::OpFOrdEqual:
+  case SPIRV::OpFOrdNotEqual:
+  case SPIRV::OpFOrdLessThan:
+  case SPIRV::OpFOrdLessThanEqual:
+  case SPIRV::OpFOrdGreaterThan:
+  case SPIRV::OpFOrdGreaterThanEqual:
+  case SPIRV::OpFUnordEqual:
+  case SPIRV::OpFUnordNotEqual:
+  case SPIRV::OpFUnordLessThan:
+  case SPIRV::OpFUnordLessThanEqual:
+  case SPIRV::OpFUnordGreaterThan:
+  case SPIRV::OpFUnordGreaterThanEqual: {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    MachineInstr *OperandDef = MRI.getVRegDef(MI.getOperand(2).getReg());
+    SPIRVType *TypeDef = MRI.getVRegDef(OperandDef->getOperand(1).getReg());
+    if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+      TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
+    if (isBFloat16Type(TypeDef)) {
+      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
+        report_fatal_error(
+            "Relational instructions with bfloat16 arguments require the "
+            "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
+            false);
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
+      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
+    }
+    break;
+  }
+  case SPIRV::OpDPdxCoarse:
+  case SPIRV::OpDPdyCoarse: {
+    Reqs.addCapability(SPIRV::Capability::DerivativeControl);
+    break;
+  }
 
   default:
     break;
@@ -1897,15 +2175,18 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       continue;
     for (const MachineBasicBlock &MBB : *MF)
       for (const MachineInstr &MI : MBB)
-        addInstrRequirements(MI, MAI.Reqs, ST);
+        addInstrRequirements(MI, MAI, ST);
   }
   // Collect requirements for OpExecutionMode instructions.
   auto Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
-    bool RequireFloatControls = false, RequireFloatControls2 = false,
+    bool RequireFloatControls = false, RequireIntelFloatControls2 = false,
+         RequireKHRFloatControls2 = false,
          VerLower14 = !ST.isAtLeastSPIRVVer(VersionTuple(1, 4));
-    bool HasFloatControls2 =
+    bool HasIntelFloatControls2 =
         ST.canUseExtension(SPIRV::Extension::SPV_INTEL_float_controls2);
+    bool HasKHRFloatControls2 =
+        ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2);
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
       MDNode *MDN = cast<MDNode>(Node->getOperand(i));
       const MDOperand &MDOp = MDN->getOperand(1);
@@ -1918,7 +2199,6 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           switch (EM) {
           case SPIRV::ExecutionMode::DenormPreserve:
           case SPIRV::ExecutionMode::DenormFlushToZero:
-          case SPIRV::ExecutionMode::SignedZeroInfNanPreserve:
           case SPIRV::ExecutionMode::RoundingModeRTE:
           case SPIRV::ExecutionMode::RoundingModeRTZ:
             RequireFloatControls = VerLower14;
@@ -1929,8 +2209,28 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           case SPIRV::ExecutionMode::RoundingModeRTNINTEL:
           case SPIRV::ExecutionMode::FloatingPointModeALTINTEL:
           case SPIRV::ExecutionMode::FloatingPointModeIEEEINTEL:
-            if (HasFloatControls2) {
-              RequireFloatControls2 = true;
+            if (HasIntelFloatControls2) {
+              RequireIntelFloatControls2 = true;
+              MAI.Reqs.getAndAddRequirements(
+                  SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
+            }
+            break;
+          case SPIRV::ExecutionMode::FPFastMathDefault: {
+            if (HasKHRFloatControls2) {
+              RequireKHRFloatControls2 = true;
+              MAI.Reqs.getAndAddRequirements(
+                  SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
+            }
+            break;
+          }
+          case SPIRV::ExecutionMode::ContractionOff:
+          case SPIRV::ExecutionMode::SignedZeroInfNanPreserve:
+            if (HasKHRFloatControls2) {
+              RequireKHRFloatControls2 = true;
+              MAI.Reqs.getAndAddRequirements(
+                  SPIRV::OperandCategory::ExecutionModeOperand,
+                  SPIRV::ExecutionMode::FPFastMathDefault, ST);
+            } else {
               MAI.Reqs.getAndAddRequirements(
                   SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
             }
@@ -1945,8 +2245,10 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
     if (RequireFloatControls &&
         ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls))
       MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls);
-    if (RequireFloatControls2)
+    if (RequireIntelFloatControls2)
       MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_float_controls2);
+    if (RequireKHRFloatControls2)
+      MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls2);
   }
   for (auto FI = M.begin(), E = M.end(); FI != E; ++FI) {
     const Function &F = *FI;
@@ -1961,6 +2263,9 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::LocalSize, ST);
     }
+    if (F.getFnAttribute("enable-maximal-reconvergence").getValueAsBool()) {
+      MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence);
+    }
     if (F.getMetadata("work_group_size_hint"))
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
@@ -1969,6 +2274,10 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::SubgroupSize, ST);
+    if (F.getMetadata("max_work_group_size"))
+      MAI.Reqs.getAndAddRequirements(
+          SPIRV::OperandCategory::ExecutionModeOperand,
+          SPIRV::ExecutionMode::MaxWorkgroupSizeINTEL, ST);
     if (F.getMetadata("vec_type_hint"))
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
@@ -1986,8 +2295,11 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
   }
 }
 
-static unsigned getFastMathFlags(const MachineInstr &I) {
+static unsigned getFastMathFlags(const MachineInstr &I,
+                                 const SPIRVSubtarget &ST) {
   unsigned Flags = SPIRV::FPFastMathMode::None;
+  bool CanUseKHRFloatControls2 =
+      ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2);
   if (I.getFlag(MachineInstr::MIFlag::FmNoNans))
     Flags |= SPIRV::FPFastMathMode::NotNaN;
   if (I.getFlag(MachineInstr::MIFlag::FmNoInfs))
@@ -1996,12 +2308,45 @@ static unsigned getFastMathFlags(const MachineInstr &I) {
     Flags |= SPIRV::FPFastMathMode::NSZ;
   if (I.getFlag(MachineInstr::MIFlag::FmArcp))
     Flags |= SPIRV::FPFastMathMode::AllowRecip;
-  if (I.getFlag(MachineInstr::MIFlag::FmReassoc))
-    Flags |= SPIRV::FPFastMathMode::Fast;
+  if (I.getFlag(MachineInstr::MIFlag::FmContract) && CanUseKHRFloatControls2)
+    Flags |= SPIRV::FPFastMathMode::AllowContract;
+  if (I.getFlag(MachineInstr::MIFlag::FmReassoc)) {
+    if (CanUseKHRFloatControls2)
+      // LLVM reassoc maps to SPIRV transform, see
+      // https://github.com/KhronosGroup/SPIRV-Registry/issues/326 for details.
+      // Because we are enabling AllowTransform, we must enable AllowReassoc and
+      // AllowContract too, as required by SPIRV spec. Also, we used to map
+      // MIFlag::FmReassoc to FPFastMathMode::Fast, which now should instead by
+      // replaced by turning all the other bits instead. Therefore, we're
+      // enabling every bit here except None and Fast.
+      Flags |= SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
+               SPIRV::FPFastMathMode::NSZ | SPIRV::FPFastMathMode::AllowRecip |
+               SPIRV::FPFastMathMode::AllowTransform |
+               SPIRV::FPFastMathMode::AllowReassoc |
+               SPIRV::FPFastMathMode::AllowContract;
+    else
+      Flags |= SPIRV::FPFastMathMode::Fast;
+  }
+
+  if (CanUseKHRFloatControls2) {
+    // Error out if SPIRV::FPFastMathMode::Fast is enabled.
+    assert(!(Flags & SPIRV::FPFastMathMode::Fast) &&
+           "SPIRV::FPFastMathMode::Fast is deprecated and should not be used "
+           "anymore.");
+
+    // Error out if AllowTransform is enabled without AllowReassoc and
+    // AllowContract.
+    assert((!(Flags & SPIRV::FPFastMathMode::AllowTransform) ||
+            ((Flags & SPIRV::FPFastMathMode::AllowReassoc &&
+              Flags & SPIRV::FPFastMathMode::AllowContract))) &&
+           "SPIRV::FPFastMathMode::AllowTransform requires AllowReassoc and "
+           "AllowContract flags to be enabled as well.");
+  }
+
   return Flags;
 }
 
-static bool isFastMathMathModeAvailable(const SPIRVSubtarget &ST) {
+static bool isFastMathModeAvailable(const SPIRVSubtarget &ST) {
   if (ST.isKernel())
     return true;
   if (ST.getSPIRVVersion() < VersionTuple(1, 2))
@@ -2009,9 +2354,10 @@ static bool isFastMathMathModeAvailable(const SPIRVSubtarget &ST) {
   return ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2);
 }
 
-static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
-                                   const SPIRVInstrInfo &TII,
-                                   SPIRV::RequirementHandler &Reqs) {
+static void handleMIFlagDecoration(
+    MachineInstr &I, const SPIRVSubtarget &ST, const SPIRVInstrInfo &TII,
+    SPIRV::RequirementHandler &Reqs, const SPIRVGlobalRegistry *GR,
+    SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec) {
   if (I.getFlag(MachineInstr::MIFlag::NoSWrap) && TII.canUseNSW(I) &&
       getSymbolicOperandRequirements(SPIRV::OperandCategory::DecorationOperand,
                                      SPIRV::Decoration::NoSignedWrap, ST, Reqs)
@@ -2027,13 +2373,53 @@ static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
     buildOpDecorate(I.getOperand(0).getReg(), I, TII,
                     SPIRV::Decoration::NoUnsignedWrap, {});
   }
-  if (!TII.canUseFastMathFlags(I))
-    return;
-  unsigned FMFlags = getFastMathFlags(I);
-  if (FMFlags == SPIRV::FPFastMathMode::None)
+  if (!TII.canUseFastMathFlags(
+          I, ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)))
     return;
 
-  if (isFastMathMathModeAvailable(ST)) {
+  unsigned FMFlags = getFastMathFlags(I, ST);
+  if (FMFlags == SPIRV::FPFastMathMode::None) {
+    // We also need to check if any FPFastMathDefault info was set for the
+    // types used in this instruction.
+    if (FPFastMathDefaultInfoVec.empty())
+      return;
+
+    // There are three types of instructions that can use fast math flags:
+    // 1. Arithmetic instructions (FAdd, FMul, FSub, FDiv, FRem, etc.)
+    // 2. Relational instructions (FCmp, FOrd, FUnord, etc.)
+    // 3. Extended instructions (ExtInst)
+    // For arithmetic instructions, the floating point type can be in the
+    // result type or in the operands, but they all must be the same.
+    // For the relational and logical instructions, the floating point type
+    // can only be in the operands 1 and 2, not the result type. Also, the
+    // operands must have the same type. For the extended instructions, the
+    // floating point type can be in the result type or in the operands. It's
+    // unclear if the operands and the result type must be the same. Let's
+    // assume they must be. Therefore, for 1. and 2., we can check the first
+    // operand type, and for 3. we can check the result type.
+    assert(I.getNumOperands() >= 3 && "Expected at least 3 operands");
+    Register ResReg = I.getOpcode() == SPIRV::OpExtInst
+                          ? I.getOperand(1).getReg()
+                          : I.getOperand(2).getReg();
+    SPIRVType *ResType = GR->getSPIRVTypeForVReg(ResReg, I.getMF());
+    const Type *Ty = GR->getTypeForSPIRVType(ResType);
+    Ty = Ty->isVectorTy() ? cast<VectorType>(Ty)->getElementType() : Ty;
+
+    // Match instruction type with the FPFastMathDefaultInfoVec.
+    bool Emit = false;
+    for (SPIRV::FPFastMathDefaultInfo &Elem : FPFastMathDefaultInfoVec) {
+      if (Ty == Elem.Ty) {
+        FMFlags = Elem.FastMathFlags;
+        Emit = Elem.ContractionOff || Elem.SignedZeroInfNanPreserve ||
+               Elem.FPFastMathDefault;
+        break;
+      }
+    }
+
+    if (FMFlags == SPIRV::FPFastMathMode::None && !Emit)
+      return;
+  }
+  if (isFastMathModeAvailable(ST)) {
     Register DstReg = I.getOperand(0).getReg();
     buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode,
                     {FMFlags});
@@ -2043,14 +2429,17 @@ static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
 // Walk all functions and add decorations related to MI flags.
 static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
                            MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
-                           SPIRV::ModuleAnalysisInfo &MAI) {
+                           SPIRV::ModuleAnalysisInfo &MAI,
+                           const SPIRVGlobalRegistry *GR) {
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
     MachineFunction *MF = MMI->getMachineFunction(*F);
     if (!MF)
       continue;
+
     for (auto &MBB : *MF)
       for (auto &MI : MBB)
-        handleMIFlagDecoration(MI, ST, TII, MAI.Reqs);
+        handleMIFlagDecoration(MI, ST, TII, MAI.Reqs, GR,
+                               MAI.FPFastMathDefaultInfoMap[&(*F)]);
   }
 }
 
@@ -2096,6 +2485,111 @@ static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
   }
 }
 
+static SPIRV::FPFastMathDefaultInfoVector &getOrCreateFPFastMathDefaultInfoVec(
+    const Module &M, SPIRV::ModuleAnalysisInfo &MAI, const Function *F) {
+  auto it = MAI.FPFastMathDefaultInfoMap.find(F);
+  if (it != MAI.FPFastMathDefaultInfoMap.end())
+    return it->second;
+
+  // If the map does not contain the entry, create a new one. Initialize it to
+  // contain all 3 elements sorted by bit width of target type: {half, float,
+  // double}.
+  SPIRV::FPFastMathDefaultInfoVector FPFastMathDefaultInfoVec;
+  FPFastMathDefaultInfoVec.emplace_back(Type::getHalfTy(M.getContext()),
+                                        SPIRV::FPFastMathMode::None);
+  FPFastMathDefaultInfoVec.emplace_back(Type::getFloatTy(M.getContext()),
+                                        SPIRV::FPFastMathMode::None);
+  FPFastMathDefaultInfoVec.emplace_back(Type::getDoubleTy(M.getContext()),
+                                        SPIRV::FPFastMathMode::None);
+  return MAI.FPFastMathDefaultInfoMap[F] = std::move(FPFastMathDefaultInfoVec);
+}
+
+static SPIRV::FPFastMathDefaultInfo &getFPFastMathDefaultInfo(
+    SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec,
+    const Type *Ty) {
+  size_t BitWidth = Ty->getScalarSizeInBits();
+  int Index =
+      SPIRV::FPFastMathDefaultInfoVector::computeFPFastMathDefaultInfoVecIndex(
+          BitWidth);
+  assert(Index >= 0 && Index < 3 &&
+         "Expected FPFastMathDefaultInfo for half, float, or double");
+  assert(FPFastMathDefaultInfoVec.size() == 3 &&
+         "Expected FPFastMathDefaultInfoVec to have exactly 3 elements");
+  return FPFastMathDefaultInfoVec[Index];
+}
+
+static void collectFPFastMathDefaults(const Module &M,
+                                      SPIRV::ModuleAnalysisInfo &MAI,
+                                      const SPIRVSubtarget &ST) {
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2))
+    return;
+
+  // Store the FPFastMathDefaultInfo in the FPFastMathDefaultInfoMap.
+  // We need the entry point (function) as the key, and the target
+  // type and flags as the value.
+  // We also need to check ContractionOff and SignedZeroInfNanPreserve
+  // execution modes, as they are now deprecated and must be replaced
+  // with FPFastMathDefaultInfo.
+  auto Node = M.getNamedMetadata("spirv.ExecutionMode");
+  if (!Node)
+    return;
+
+  for (unsigned i = 0; i < Node->getNumOperands(); i++) {
+    MDNode *MDN = cast<MDNode>(Node->getOperand(i));
+    assert(MDN->getNumOperands() >= 2 && "Expected at least 2 operands");
+    const Function *F = cast<Function>(
+        cast<ConstantAsMetadata>(MDN->getOperand(0))->getValue());
+    const auto EM =
+        cast<ConstantInt>(
+            cast<ConstantAsMetadata>(MDN->getOperand(1))->getValue())
+            ->getZExtValue();
+    if (EM == SPIRV::ExecutionMode::FPFastMathDefault) {
+      assert(MDN->getNumOperands() == 4 &&
+             "Expected 4 operands for FPFastMathDefault");
+
+      const Type *T = cast<ValueAsMetadata>(MDN->getOperand(2))->getType();
+      unsigned Flags =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(MDN->getOperand(3))->getValue())
+              ->getZExtValue();
+      SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec =
+          getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
+      SPIRV::FPFastMathDefaultInfo &Info =
+          getFPFastMathDefaultInfo(FPFastMathDefaultInfoVec, T);
+      Info.FastMathFlags = Flags;
+      Info.FPFastMathDefault = true;
+    } else if (EM == SPIRV::ExecutionMode::ContractionOff) {
+      assert(MDN->getNumOperands() == 2 &&
+             "Expected no operands for ContractionOff");
+
+      // We need to save this info for every possible FP type, i.e. {half,
+      // float, double, fp128}.
+      SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec =
+          getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
+      for (SPIRV::FPFastMathDefaultInfo &Info : FPFastMathDefaultInfoVec) {
+        Info.ContractionOff = true;
+      }
+    } else if (EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve) {
+      assert(MDN->getNumOperands() == 3 &&
+             "Expected 1 operand for SignedZeroInfNanPreserve");
+      unsigned TargetWidth =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(MDN->getOperand(2))->getValue())
+              ->getZExtValue();
+      // We need to save this info only for the FP type with TargetWidth.
+      SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec =
+          getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
+      int Index = SPIRV::FPFastMathDefaultInfoVector::
+          computeFPFastMathDefaultInfoVecIndex(TargetWidth);
+      assert(Index >= 0 && Index < 3 &&
+             "Expected FPFastMathDefaultInfo for half, float, or double");
+      assert(FPFastMathDefaultInfoVec.size() == 3 &&
+             "Expected FPFastMathDefaultInfoVec to have exactly 3 elements");
+      FPFastMathDefaultInfoVec[Index].SignedZeroInfNanPreserve = true;
+    }
+  }
+}
+
 struct SPIRV::ModuleAnalysisInfo SPIRVModuleAnalysis::MAI;
 
 void SPIRVModuleAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -2117,7 +2611,8 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
   patchPhis(M, GR, *TII, MMI);
 
   addMBBNames(M, *TII, MMI, *ST, MAI);
-  addDecorations(M, *TII, MMI, *ST, MAI);
+  collectFPFastMathDefaults(M, MAI, *ST);
+  addDecorations(M, *TII, MMI, *ST, MAI, GR);
 
   collectReqs(M, MAI, MMI, *ST);
 

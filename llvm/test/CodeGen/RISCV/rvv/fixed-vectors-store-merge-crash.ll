@@ -13,13 +13,13 @@ define void @baz() nounwind {
 ; CHECK-LABEL: baz:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(foo)
-; CHECK-NEXT:    addi a1, a0, %lo(foo)
-; CHECK-NEXT:    lw a1, 4(a1)
-; CHECK-NEXT:    lw a0, %lo(foo)(a0)
+; CHECK-NEXT:    addi a0, a0, %lo(foo)
+; CHECK-NEXT:    lw a1, 4(a0)
+; CHECK-NEXT:    lw a0, 0(a0)
 ; CHECK-NEXT:    lui a2, %hi(bar)
-; CHECK-NEXT:    sw a1, %lo(bar)(a2)
-; CHECK-NEXT:    addi a1, a2, %lo(bar)
-; CHECK-NEXT:    sw a0, 4(a1)
+; CHECK-NEXT:    addi a2, a2, %lo(bar)
+; CHECK-NEXT:    sw a1, 0(a2)
+; CHECK-NEXT:    sw a0, 4(a2)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i32, ptr getelementptr inbounds ([2 x i32], ptr @foo, i64 0, i64 1), align 4

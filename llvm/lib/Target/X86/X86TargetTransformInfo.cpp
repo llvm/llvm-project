@@ -161,19 +161,26 @@ std::optional<unsigned> X86TTIImpl::getCacheAssociativity(
   llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
 }
 
+enum ClassIDEnum { GPRClass = 0, VectorClass = 1, ScalarFPClass = 2 };
+
+unsigned X86TTIImpl::getRegisterClassForType(bool Vector, Type *Ty) const {
+  return Vector                          ? VectorClass
+         : Ty && Ty->isFloatingPointTy() ? ScalarFPClass
+                                         : GPRClass;
+}
+
 unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
-  bool Vector = (ClassID == 1);
-  if (Vector && !ST->hasSSE1())
+  if (ClassID == VectorClass && !ST->hasSSE1())
     return 0;
 
-  if (ST->is64Bit()) {
-    if (Vector && ST->hasAVX512())
-      return 32;
-    if (!Vector && ST->hasEGPR())
-      return 32;
-    return 16;
-  }
-  return 8;
+  if (!ST->is64Bit())
+    return 8;
+
+  if ((ClassID == GPRClass && ST->hasEGPR()) ||
+      (ClassID != GPRClass && ST->hasAVX512()))
+    return 32;
+
+  return 16;
 }
 
 bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
@@ -206,7 +213,7 @@ X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(ST->is64Bit() ? 64 : 32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (ST->hasAVX512() && ST->hasEVEX512() && PreferVectorWidth >= 512)
+    if (ST->hasAVX512() && PreferVectorWidth >= 512)
       return TypeSize::getFixed(512);
     if (ST->hasAVX() && PreferVectorWidth >= 256)
       return TypeSize::getFixed(256);
@@ -1198,6 +1205,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,     MVT::v8i32,   {  5,  8,  5, 10 } }, // pmulld + split
     { ISD::MUL,     MVT::v4i32,   {  2,  5,  1,  3 } }, // pmulld
     { ISD::MUL,     MVT::v4i64,   { 12, 15, 19, 20 } },
+
+    { X86ISD::PMULUDQ, MVT::v4i64, { 3,  5, 5, 6 } }, // pmuludq + split
 
     { ISD::AND,     MVT::v32i8,   {  1,  1, 1, 2 } }, // vandps
     { ISD::AND,     MVT::v16i16,  {  1,  1, 1, 2 } }, // vandps
@@ -5402,9 +5411,14 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 InstructionCost
-X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
-                                  unsigned AddressSpace,
+X86TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                   TTI::TargetCostKind CostKind) const {
+  unsigned Opcode = MICA.getID() == Intrinsic::masked_load ? Instruction::Load
+                                                           : Instruction::Store;
+  Type *SrcTy = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  unsigned AddressSpace = MICA.getAddressSpace();
+
   bool IsLoad = (Instruction::Load == Opcode);
   bool IsStore = (Instruction::Store == Opcode);
 
@@ -5488,9 +5502,10 @@ InstructionCost X86TTIImpl::getPointersChainCost(
   return BaseT::getPointersChainCost(Ptrs, Base, Info, AccessTy, CostKind);
 }
 
-InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
-                                                      ScalarEvolution *SE,
-                                                      const SCEV *Ptr) const {
+InstructionCost
+X86TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
+                                      const SCEV *Ptr,
+                                      TTI::TargetCostKind CostKind) const {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
@@ -5504,7 +5519,7 @@ InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
   // Even in the case of (loop invariant) stride whose value is not known at
   // compile time, the address computation will not incur more than one extra
   // ADD instruction.
-  if (Ty->isVectorTy() && SE && !ST->hasAVX2()) {
+  if (PtrTy->isVectorTy() && SE && !ST->hasAVX2()) {
     // TODO: AVX2 is the current cut-off because we don't have correct
     //       interleaving costs for prior ISA's.
     if (!BaseT::isStridedAccess(Ptr))
@@ -5513,7 +5528,7 @@ InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
       return 1;
   }
 
-  return BaseT::getAddressComputationCost(Ty, SE, Ptr);
+  return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
 }
 
 InstructionCost
@@ -6525,8 +6540,8 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 
   for (const Instruction &I : instructions(Callee)) {
     if (const auto *CB = dyn_cast<CallBase>(&I)) {
-      // Having more target features is fine for inline ASM.
-      if (CB->isInlineAsm())
+      // Having more target features is fine for inline ASM and intrinsics.
+      if (CB->isInlineAsm() || CB->getIntrinsicID() != Intrinsic::not_intrinsic)
         continue;
 
       SmallVector<Type *, 8> Types;
@@ -6542,19 +6557,9 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
       if (all_of(Types, IsSimpleTy))
         continue;
 
-      if (Function *NestedCallee = CB->getCalledFunction()) {
-        // Assume that intrinsics are always ABI compatible.
-        if (NestedCallee->isIntrinsic())
-          continue;
-
-        // Do a precise compatibility check.
-        if (!areTypesABICompatible(Caller, NestedCallee, Types))
-          return false;
-      } else {
-        // We don't know the target features of the callee,
-        // assume it is incompatible.
+      // Do a precise compatibility check.
+      if (!areTypesABICompatible(Caller, Callee, Types))
         return false;
-      }
     }
   }
   return true;
@@ -6562,7 +6567,7 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 
 bool X86TTIImpl::areTypesABICompatible(const Function *Caller,
                                        const Function *Callee,
-                                       const ArrayRef<Type *> &Types) const {
+                                       ArrayRef<Type *> Types) const {
   if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
     return false;
 
@@ -6593,7 +6598,7 @@ X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     // Only enable vector loads for equality comparison. Right now the vector
     // version is not as fast for three way compare (see #33329).
     const unsigned PreferredWidth = ST->getPreferVectorWidth();
-    if (PreferredWidth >= 512 && ST->hasAVX512() && ST->hasEVEX512())
+    if (PreferredWidth >= 512 && ST->hasAVX512())
       Options.LoadSizes.push_back(64);
     if (PreferredWidth >= 256 && ST->hasAVX()) Options.LoadSizes.push_back(32);
     if (PreferredWidth >= 128 && ST->hasSSE2()) Options.LoadSizes.push_back(16);
@@ -6647,10 +6652,12 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
                                              LegalVT.getVectorNumElements());
   InstructionCost MemOpCost;
   bool UseMaskedMemOp = UseMaskForCond || UseMaskForGaps;
-  if (UseMaskedMemOp)
-    MemOpCost = getMaskedMemoryOpCost(Opcode, SingleMemOpTy, Alignment,
-                                      AddressSpace, CostKind);
-  else
+  if (UseMaskedMemOp) {
+    unsigned IID = Opcode == Instruction::Load ? Intrinsic::masked_load
+                                               : Intrinsic::masked_store;
+    MemOpCost = getMaskedMemoryOpCost(
+        {IID, SingleMemOpTy, Alignment, AddressSpace}, CostKind);
+  } else
     MemOpCost = getMemoryOpCost(Opcode, SingleMemOpTy, Alignment, AddressSpace,
                                 CostKind);
 

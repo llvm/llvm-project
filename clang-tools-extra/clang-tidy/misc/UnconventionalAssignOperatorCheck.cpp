@@ -1,4 +1,4 @@
-//===--- UnconventionalAssignOperatorCheck.cpp - clang-tidy -----*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace {
 
 AST_MATCHER_P(CXXMethodDecl, firstParameter,
               ast_matchers::internal::Matcher<ParmVarDecl>, InnerMatcher) {
-  unsigned N = Node.isExplicitObjectMemberFunction() ? 1 : 0;
+  const unsigned N = Node.isExplicitObjectMemberFunction() ? 1 : 0;
   return (N < Node.parameters().size() &&
           InnerMatcher.matches(*Node.parameters()[N], Finder, Builder));
 }
@@ -29,11 +29,13 @@ void UnconventionalAssignOperatorCheck::registerMatchers(
   const auto HasGoodReturnType =
       cxxMethodDecl(returns(hasCanonicalType(lValueReferenceType(pointee(
           unless(isConstQualified()),
-          anyOf(autoType(), hasDeclaration(equalsBoundNode("class"))))))));
+          anyOf(autoType(),
+                hasDeclaration(declaresSameEntityAsBoundNode("class"))))))));
 
   const auto IsSelf = qualType(hasCanonicalType(
-      anyOf(hasDeclaration(equalsBoundNode("class")),
-            referenceType(pointee(hasDeclaration(equalsBoundNode("class")))))));
+      anyOf(hasDeclaration(declaresSameEntityAsBoundNode("class")),
+            referenceType(pointee(
+                hasDeclaration(declaresSameEntityAsBoundNode("class")))))));
   const auto IsAssign =
       cxxMethodDecl(unless(anyOf(isDeleted(), isPrivate(), isImplicit())),
                     hasName("operator="), ofClass(recordDecl().bind("class")))

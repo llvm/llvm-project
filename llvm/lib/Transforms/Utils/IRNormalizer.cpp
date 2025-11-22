@@ -427,7 +427,7 @@ void IRNormalizer::reorderInstructions(Function &F) const {
       // Process the remaining instructions.
       //
       // TODO: Do more a intelligent sorting of these instructions. For example,
-      // seperate between dead instructinos and instructions used in another
+      // separate between dead instructinos and instructions used in another
       // block. Use properties of the CFG the order instructions that are used
       // in another block.
       if (Visited.contains(&I))

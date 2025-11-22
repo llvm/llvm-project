@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt -verify-roundtrip %s
 
 
 // CHECK-LABEL: func @baz
@@ -122,8 +122,8 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.call @baz() {will_return} : () -> ()
   llvm.call @baz() {will_return} : () -> ()
 
-// CHECK: llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write>} : () -> ()
-  llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write>} : () -> ()
+// CHECK: llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
+  llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
 
 // Terminator operations and their successors.
 //
@@ -685,10 +685,10 @@ func.func @fastmathFlags(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: vector<2 x f
 // CHECK-LABEL: @lifetime
 // CHECK-SAME: %[[P:.*]]: !llvm.ptr
 llvm.func @lifetime(%p: !llvm.ptr) {
-  // CHECK: llvm.intr.lifetime.start 16, %[[P]]
-  llvm.intr.lifetime.start 16, %p : !llvm.ptr
-  // CHECK: llvm.intr.lifetime.end 16, %[[P]]
-  llvm.intr.lifetime.end 16, %p : !llvm.ptr
+  // CHECK: llvm.intr.lifetime.start %[[P]]
+  llvm.intr.lifetime.start %p : !llvm.ptr
+  // CHECK: llvm.intr.lifetime.end %[[P]]
+  llvm.intr.lifetime.end %p : !llvm.ptr
   llvm.return
 }
 
@@ -757,7 +757,7 @@ llvm.func @stackrestore(%arg0: !llvm.ptr)  {
 
 // CHECK-LABEL: @experimental_noalias_scope_decl
 llvm.func @experimental_noalias_scope_decl() {
-  // CHECK: llvm.intr.experimental.noalias.scope.decl #{{.*}}
+  // CHECK: llvm.intr.experimental.noalias.scope.decl #alias_scope{{.*}}
   llvm.intr.experimental.noalias.scope.decl #alias_scope
   llvm.return
 }
@@ -767,7 +767,7 @@ llvm.func @experimental_noalias_scope_decl() {
 
 // CHECK-LABEL: @experimental_noalias_scope_with_string_id
 llvm.func @experimental_noalias_scope_with_string_id() {
-  // CHECK: llvm.intr.experimental.noalias.scope.decl #{{.*}}
+  // CHECK: llvm.intr.experimental.noalias.scope.decl #alias_scope{{.*}}
   llvm.intr.experimental.noalias.scope.decl #alias_scope2
   llvm.return
 }

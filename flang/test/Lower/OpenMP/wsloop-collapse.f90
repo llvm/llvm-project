@@ -57,7 +57,7 @@ program wsloop_collapse
 !CHECK:           %[[VAL_31:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<i32>
 !CHECK:           %[[VAL_32:.*]] = arith.constant 1 : i32
 !CHECK:           omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_4:.*]], @{{.*}} %{{.*}}#0 -> %[[VAL_2:.*]], @{{.*}} %{{.*}}#0 -> %[[VAL_0:.*]] : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
-!CHECK-NEXT:        omp.loop_nest (%[[VAL_33:.*]], %[[VAL_34:.*]], %[[VAL_35:.*]]) : i32 = (%[[VAL_24]], %[[VAL_27]], %[[VAL_30]]) to (%[[VAL_25]], %[[VAL_28]], %[[VAL_31]]) inclusive step (%[[VAL_26]], %[[VAL_29]], %[[VAL_32]]) {
+!CHECK-NEXT:        omp.loop_nest (%[[VAL_33:.*]], %[[VAL_34:.*]], %[[VAL_35:.*]]) : i32 = (%[[VAL_24]], %[[VAL_27]], %[[VAL_30]]) to (%[[VAL_25]], %[[VAL_28]], %[[VAL_31]]) inclusive step (%[[VAL_26]], %[[VAL_29]], %[[VAL_32]]) collapse(3) {
   !$omp do collapse(3)
   do i = 1, a
      do j= 1, b

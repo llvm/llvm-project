@@ -35,7 +35,7 @@
 
 using namespace clang;
 using namespace clang::installapi;
-using namespace clang::driver::options;
+using namespace clang::options;
 using namespace llvm::opt;
 using namespace llvm::MachO;
 
@@ -71,7 +71,7 @@ static bool runFrontend(StringRef ProgName, Twine Label, bool Verbose,
 static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   // Setup Diagnostics engine.
   DiagnosticOptions DiagOpts;
-  const llvm::opt::OptTable &ClangOpts = clang::driver::getDriverOptTable();
+  const llvm::opt::OptTable &ClangOpts = getDriverOptTable();
   unsigned MissingArgIndex, MissingArgCount;
   llvm::opt::InputArgList ParsedArgs = ClangOpts.ParseArgs(
       ArrayRef(Args).slice(1), MissingArgIndex, MissingArgCount);
@@ -114,8 +114,9 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
 
   // Set up compilation.
   std::unique_ptr<CompilerInstance> CI(new CompilerInstance());
+  CI->setVirtualFileSystem(FM->getVirtualFileSystemPtr());
   CI->setFileManager(FM);
-  CI->createDiagnostics(FM->getVirtualFileSystem());
+  CI->createDiagnostics();
   if (!CI->hasDiagnostics())
     return EXIT_FAILURE;
 
@@ -153,12 +154,15 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
     return EXIT_FAILURE;
 
   // After symbols have been collected, prepare to write output.
-  auto Out = CI->createOutputFile(Ctx.OutputLoc, /*Binary=*/false,
-                                  /*RemoveFileOnSignal=*/false,
-                                  /*UseTemporary=*/false,
-                                  /*CreateMissingDirectories=*/false);
-  if (!Out)
+  auto Out = CI->getOrCreateOutputManager().createFile(
+      Ctx.OutputLoc, llvm::vfs::OutputConfig()
+                         .setTextWithCRLF()
+                         .setNoImplyCreateDirectories()
+                         .setNoAtomicWrite());
+  if (!Out) {
+    Diag->Report(diag::err_cannot_open_file) << Ctx.OutputLoc;
     return EXIT_FAILURE;
+  }
 
   // Assign attributes for serialization.
   InterfaceFile IF(Ctx.Verifier->takeExports());
@@ -186,11 +190,15 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   if (auto Err = TextAPIWriter::writeToStream(*Out, IF, Ctx.FT)) {
     Diag->Report(diag::err_cannot_write_file)
         << Ctx.OutputLoc << std::move(Err);
-    CI->clearOutputFiles(/*EraseFiles=*/true);
+    if (auto Err = Out->discard())
+      llvm::consumeError(std::move(Err));
     return EXIT_FAILURE;
   }
-
-  CI->clearOutputFiles(/*EraseFiles=*/false);
+  if (auto Err = Out->keep()) {
+    Diag->Report(diag::err_cannot_write_file)
+        << Ctx.OutputLoc << std::move(Err);
+    return EXIT_FAILURE;
+  }
   return EXIT_SUCCESS;
 }
 

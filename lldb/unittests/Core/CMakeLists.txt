@@ -7,6 +7,7 @@ add_lldb_unittest(LLDBCoreTests
   DumpRegisterInfoTest.cpp
   FormatEntityTest.cpp
   MangledTest.cpp
+  ModuleListTest.cpp
   ModuleSpecTest.cpp
   PluginManagerTest.cpp
   ProgressReportTest.cpp
@@ -15,6 +16,7 @@ add_lldb_unittest(LLDBCoreTests
   SourceManagerTest.cpp
   TelemetryTest.cpp
   UniqueCStringMapTest.cpp
+  Value.cpp
 
   LINK_COMPONENTS
     Support

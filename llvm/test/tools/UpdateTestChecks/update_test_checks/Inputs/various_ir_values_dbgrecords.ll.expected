@@ -16,7 +16,7 @@ define dso_local void @foo(ptr %A) #0 !dbg !7 {
 ; CHECK-NEXT:      #dbg_assign(i1 undef, [[META13:![0-9]+]], !DIExpression(), [[DIASSIGNID16]], ptr [[A_ADDR]], !DIExpression(), [[META17:![0-9]+]])
 ; CHECK-NEXT:    store ptr [[A:%.*]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA18:![0-9]+]]
 ; CHECK-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META13]], !DIExpression(), [[META17]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[I]]) #[[ATTR2:[0-9]+]], !dbg [[DBG22:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]]) #[[ATTR2:[0-9]+]], !dbg [[DBG22:![0-9]+]]
 ; CHECK-NEXT:      #dbg_declare(ptr [[I]], [[META14:![0-9]+]], !DIExpression(), [[META23:![0-9]+]])
 ; CHECK-NEXT:    store i32 0, ptr [[I]], align 4, !dbg [[META23]], !tbaa [[TBAA24:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]], !dbg [[DBG22]]
@@ -27,7 +27,7 @@ define dso_local void @foo(ptr %A) #0 !dbg !7 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], [[TMP2]], !dbg [[DBG30:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]], !dbg [[DBG31:![0-9]+]], !prof [[PROF32:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[I]]) #[[ATTR2]], !dbg [[DBG33:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I]]) #[[ATTR2]], !dbg [[DBG33:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !dbg [[DBG34:![0-9]+]], !tbaa [[TBAA18]]
@@ -50,7 +50,7 @@ entry:
     #dbg_assign(i1 undef, !13, !DIExpression(), !16, ptr %A.addr, !DIExpression(), !17)
   store ptr %A, ptr %A.addr, align 8, !tbaa !18
     #dbg_declare(ptr %A.addr, !13, !DIExpression(), !17)
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #2, !dbg !22
+  call void @llvm.lifetime.start.p0(ptr %i) #2, !dbg !22
     #dbg_declare(ptr %i, !14, !DIExpression(), !23)
   store i32 0, ptr %i, align 4, !dbg !23, !tbaa !24
   br label %for.cond, !dbg !22
@@ -63,7 +63,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !31, !prof !32
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #2, !dbg !33
+  call void @llvm.lifetime.end.p0(ptr %i) #2, !dbg !33
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
@@ -85,10 +85,10 @@ for.end:                                          ; preds = %for.cond.cleanup
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind uwtable
 define dso_local void @bar(ptr %A) #0 !dbg !41 {
@@ -98,7 +98,7 @@ define dso_local void @bar(ptr %A) #0 !dbg !41 {
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store ptr [[A:%.*]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA18]]
 ; CHECK-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META43:![0-9]+]], !DIExpression(), [[META46:![0-9]+]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[I]]) #[[ATTR2]], !dbg [[DBG47:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]]) #[[ATTR2]], !dbg [[DBG47:![0-9]+]]
 ; CHECK-NEXT:      #dbg_declare(ptr [[I]], [[META44:![0-9]+]], !DIExpression(), [[META48:![0-9]+]])
 ; CHECK-NEXT:    store i32 0, ptr [[I]], align 4, !dbg [[META48]], !tbaa [[TBAA24]]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]], !dbg [[DBG47]]
@@ -109,7 +109,7 @@ define dso_local void @bar(ptr %A) #0 !dbg !41 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], [[TMP2]], !dbg [[DBG53:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]], !dbg [[DBG54:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[I]]) #[[ATTR2]], !dbg [[DBG55:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I]]) #[[ATTR2]], !dbg [[DBG55:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !dbg [[DBG56:![0-9]+]], !tbaa [[TBAA18]]
@@ -131,7 +131,7 @@ entry:
   %i = alloca i32, align 4
   store ptr %A, ptr %A.addr, align 8, !tbaa !18
     #dbg_declare(ptr %A.addr, !43, !DIExpression(), !46)
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #2, !dbg !47
+  call void @llvm.lifetime.start.p0(ptr %i) #2, !dbg !47
     #dbg_declare(ptr %i, !44, !DIExpression(), !48)
   store i32 0, ptr %i, align 4, !dbg !48, !tbaa !24
   br label %for.cond, !dbg !47
@@ -144,7 +144,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !54
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #2, !dbg !55
+  call void @llvm.lifetime.end.p0(ptr %i) #2, !dbg !55
   br label %for.end
 
 for.body:                                         ; preds = %for.cond

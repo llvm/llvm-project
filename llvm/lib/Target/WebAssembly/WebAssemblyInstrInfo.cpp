@@ -34,23 +34,23 @@ using namespace llvm;
 #include "WebAssemblyGenInstrInfo.inc"
 
 WebAssemblyInstrInfo::WebAssemblyInstrInfo(const WebAssemblySubtarget &STI)
-    : WebAssemblyGenInstrInfo(WebAssembly::ADJCALLSTACKDOWN,
+    : WebAssemblyGenInstrInfo(STI, RI, WebAssembly::ADJCALLSTACKDOWN,
                               WebAssembly::ADJCALLSTACKUP,
                               WebAssembly::CATCHRET),
       RI(STI.getTargetTriple()) {}
 
-bool WebAssemblyInstrInfo::isReallyTriviallyReMaterializable(
+bool WebAssemblyInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case WebAssembly::CONST_I32:
   case WebAssembly::CONST_I64:
   case WebAssembly::CONST_F32:
   case WebAssembly::CONST_F64:
-    // TargetInstrInfo::isReallyTriviallyReMaterializable misses these
+    // TargetInstrInfo::isReMaterializableImpl misses these
     // because of the ARGUMENTS implicit def, so we manualy override it here.
     return true;
   default:
-    return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+    return TargetInstrInfo::isReMaterializableImpl(MI);
   }
 }
 

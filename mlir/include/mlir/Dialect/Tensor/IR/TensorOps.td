@@ -131,7 +131,9 @@ def Tensor_CastOp : Tensor_Op<"cast", [
 def Tensor_ConcatOp : Tensor_Op<"concat",
     [Pure,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+       "reifyResultShapes"]>,
+     ]> {
   let summary = "tensor concatenation operation";
   let description = [{
     The "concat" operation constructs a tensor out of a variadic list of input
@@ -261,7 +263,8 @@ def Tensor_DimOp : Tensor_Op<"dim", [
 
 def Tensor_EmptyOp : Tensor_Op<"empty",
     [Pure,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+       "reifyResultShapes"]>]> {
   let summary = "empty tensor operation";
 
   let description = [{
@@ -358,7 +361,8 @@ def Tensor_ExtractOp : Tensor_Op<"extract", [
 
 def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+      "reifyResultShapes"]>,
     AttrSizedOperandSegments,
     Pure,
     OffsetSizeAndStrideOpInterface
@@ -740,7 +744,8 @@ def Tensor_GatherOp : Tensor_Op<"gather", [
 def Tensor_GenerateOp : Tensor_Op<"generate", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     RecursiveMemoryEffects,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+      "reifyResultShapes"]>,
     SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {
   let summary = "Creates a dynamically sized tensor from elements";
   let description = [{
@@ -835,7 +840,8 @@ def Tensor_InsertOp : Tensor_Op<"insert", [
 
 def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+      "reifyResultShapes"]>,
     AttrSizedOperandSegments,
     DestinationStyleOpInterface,
     Pure,
@@ -1256,7 +1262,8 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
 
 def Tensor_PadOp : Tensor_Op<"pad", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+      "reifyResultShapes"]>,
     AttrSizedOperandSegments,
     Pure,
     SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {
@@ -1470,24 +1477,25 @@ def Tensor_PadOp : Tensor_Op<"pad", [
 // ParallelInsertSliceOp
 //===----------------------------------------------------------------------===//
 
-// TODO: Implement InParallelOpInterface.
 def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
        AttrSizedOperandSegments,
        OffsetSizeAndStrideOpInterface,
+       DeclareOpInterfaceMethods<ParallelCombiningOpInterface,
+          ["getUpdatedDestinations", "getIteratingParent"]>,
        // TODO: Cannot use an interface here atm, verify this manually for now.
-       // HasParent<"ParallelCombiningOpInterface">
+       // HasParent<"InParallelOpInterface">
   ]> {
   let summary = [{
     Specify the tensor slice update of a single thread of a parent
-    ParallelCombiningOpInterface op.
+    InParallelOpInterface op.
   }];
   let description = [{
     The `parallel_insert_slice` yields a subset tensor value to its parent
-    ParallelCombiningOpInterface. These subset tensor values are aggregated to
+    InParallelOpInterface. These subset tensor values are aggregated to
     in some unspecified order into a full tensor value returned by the parent
     parallel iterating op.
     The `parallel_insert_slice` is one such op allowed in the
-    ParallelCombiningOpInterface op.
+    InParallelOpInterface op.
 
     Conflicting writes result in undefined semantics, in that the indices written
     to by multiple parallel updates might contain data from any of the updates,
@@ -1569,8 +1577,8 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
       return ::llvm::cast<RankedTensorType>(getDest().getType());
     }
 
-    ParallelCombiningOpInterface getParallelCombiningParent() {
-      return dyn_cast<ParallelCombiningOpInterface>(
+    InParallelOpInterface getParallelCombiningParent() {
+      return dyn_cast<InParallelOpInterface>(
         getOperation()->getParentOp());
     }
 
@@ -1763,7 +1771,8 @@ def Tensor_ScatterOp : Tensor_Op<"scatter", [
 
 def Tensor_SplatOp : Tensor_Op<"splat", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+      ["reifyResultShapes"]>,
     Pure,
     TypesMatchWith<"operand type matches element type of result",
                    "aggregate", "input",

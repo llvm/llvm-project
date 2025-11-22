@@ -8,7 +8,7 @@ define void @test() {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  call void @llvm.lifetime.start.p0(i64 4, ptr poison)
-  call void @llvm.lifetime.end.p0(i64 4, ptr poison)
+  call void @llvm.lifetime.start.p0(ptr poison)
+  call void @llvm.lifetime.end.p0(ptr poison)
   ret void
 }

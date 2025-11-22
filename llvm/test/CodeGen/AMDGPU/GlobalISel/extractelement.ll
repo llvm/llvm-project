@@ -3202,7 +3202,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(ptr addrspace(1) %out, i32 %sel
 ; GFX10-NEXT:     kernel_code_entry_byte_offset = 256
 ; GFX10-NEXT:     kernel_code_prefetch_byte_size = 0
 ; GFX10-NEXT:     granulated_workitem_vgpr_count = 0
-; GFX10-NEXT:     granulated_wavefront_sgpr_count = 1
+; GFX10-NEXT:     granulated_wavefront_sgpr_count = 0
 ; GFX10-NEXT:     priority = 0
 ; GFX10-NEXT:     float_mode = 240
 ; GFX10-NEXT:     priv = 0
@@ -4206,7 +4206,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX10-NEXT:     kernel_code_entry_byte_offset = 256
 ; GFX10-NEXT:     kernel_code_prefetch_byte_size = 0
 ; GFX10-NEXT:     granulated_workitem_vgpr_count = 0
-; GFX10-NEXT:     granulated_wavefront_sgpr_count = 1
+; GFX10-NEXT:     granulated_wavefront_sgpr_count = 0
 ; GFX10-NEXT:     priority = 0
 ; GFX10-NEXT:     float_mode = 240
 ; GFX10-NEXT:     priv = 0
@@ -4560,7 +4560,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX10-NEXT:     kernel_code_entry_byte_offset = 256
 ; GFX10-NEXT:     kernel_code_prefetch_byte_size = 0
 ; GFX10-NEXT:     granulated_workitem_vgpr_count = 0
-; GFX10-NEXT:     granulated_wavefront_sgpr_count = 1
+; GFX10-NEXT:     granulated_wavefront_sgpr_count = 0
 ; GFX10-NEXT:     priority = 0
 ; GFX10-NEXT:     float_mode = 240
 ; GFX10-NEXT:     priv = 0

@@ -470,31 +470,6 @@ function(add_entrypoint_external target_name)
 
 endfunction(add_entrypoint_external)
 
-# Rule build a redirector object file.
-function(add_redirector_object target_name)
-  cmake_parse_arguments(
-    "REDIRECTOR_OBJECT"
-    "" # No optional arguments
-    "SRC" # The cpp file in which the redirector is defined.
-    "" # No multivalue arguments
-    ${ARGN}
-  )
-  if(NOT REDIRECTOR_OBJECT_SRC)
-    message(FATAL_ERROR "'add_redirector_object' rule requires SRC option listing one source file.")
-  endif()
-
-  add_library(
-    ${target_name}
-    EXCLUDE_FROM_ALL
-    OBJECT
-    ${REDIRECTOR_OBJECT_SRC}
-  )
-  target_compile_options(
-    ${target_name}
-    BEFORE PRIVATE -fPIC ${LIBC_COMPILE_OPTIONS_DEFAULT}
-  )
-endfunction(add_redirector_object)
-
 # Helper to define a function with multiple implementations
 # - Computes flags to satisfy required/rejected features and arch,
 # - Declares an entry point,

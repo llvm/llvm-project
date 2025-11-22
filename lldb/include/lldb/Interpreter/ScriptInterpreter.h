@@ -11,10 +11,12 @@
 
 #include "lldb/API/SBAttachInfo.h"
 #include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBExecutionContext.h"
+#include "lldb/API/SBFrameList.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
@@ -26,6 +28,8 @@
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/Interfaces/OperatingSystemInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
@@ -350,7 +354,7 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  virtual llvm::Expected<int>
+  virtual llvm::Expected<uint32_t>
   GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
                           const char *child_name) {
     return llvm::createStringError("Type has no child named '%s'", child_name);
@@ -531,6 +535,15 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() {
+    return {};
+  }
+
+  virtual lldb::ScriptedFrameProviderInterfaceSP
+  CreateScriptedFrameProviderInterface() {
+    return {};
+  }
+
   virtual lldb::ScriptedThreadPlanInterfaceSP
   CreateScriptedThreadPlanInterface() {
     return {};
@@ -567,11 +580,16 @@ public:
 
   lldb::StreamSP GetOpaqueTypeFromSBStream(const lldb::SBStream &stream) const;
 
+  lldb::StackFrameSP GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const;
+
   SymbolContext
   GetOpaqueTypeFromSBSymbolContext(const lldb::SBSymbolContext &sym_ctx) const;
 
   lldb::BreakpointSP
   GetOpaqueTypeFromSBBreakpoint(const lldb::SBBreakpoint &breakpoint) const;
+
+  lldb::BreakpointLocationSP GetOpaqueTypeFromSBBreakpointLocation(
+      const lldb::SBBreakpointLocation &break_loc) const;
 
   lldb::ProcessAttachInfoSP
   GetOpaqueTypeFromSBAttachInfo(const lldb::SBAttachInfo &attach_info) const;
@@ -584,6 +602,9 @@ public:
 
   lldb::ExecutionContextRefSP GetOpaqueTypeFromSBExecutionContext(
       const lldb::SBExecutionContext &exe_ctx) const;
+
+  lldb::StackFrameListSP
+  GetOpaqueTypeFromSBFrameList(const lldb::SBFrameList &exe_ctx) const;
 
 protected:
   Debugger &m_debugger;

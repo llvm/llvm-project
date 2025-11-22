@@ -54,11 +54,11 @@ CODEGENOPT(SeparateNamedSections, 1, 0, Benign) ///< Set for -fseparate-named-se
 CODEGENOPT(EnableAIXExtendedAltivecABI, 1, 0, Benign) ///< Set for -mabi=vec-extabi. Enables the extended Altivec ABI on AIX.
 CODEGENOPT(XCOFFReadOnlyPointers, 1, 0, Benign) ///< Set for -mxcoff-roptr.
 CODEGENOPT(AllTocData, 1, 0, Benign) ///< AIX -mtocdata
-ENUM_CODEGENOPT(FramePointer, FramePointerKind, 2, FramePointerKind::None, Benign) /// frame-pointer: all,non-leaf,reserved,none
+ENUM_CODEGENOPT(FramePointer, FramePointerKind, 3, FramePointerKind::None, Benign) /// frame-pointer: all,non-leaf,non-leaf-no-reserve,reserved,none
 
 ENUM_CODEGENOPT(ExceptionHandling, ExceptionHandlingKind, 3, ExceptionHandlingKind::None, NotCompatible)
 
-CODEGENOPT(ClearASTBeforeBackend , 1, 0, Benign) ///< Free the AST before running backend code generation. Only works with -disable-free.
+CODEGENOPT(ClearASTBeforeBackend , 1, 0, Benign) ///< Free the AST before running backend code generation.
 CODEGENOPT(DisableFree       , 1, 0, Benign) ///< Don't free memory.
 CODEGENOPT(DiscardValueNames , 1, 0, Benign) ///< Discard Value Names from the IR (LLVMContext flag)
 CODEGENOPT(DisableLLVMPasses , 1, 0, Benign) ///< Don't run any LLVM IR passes to get
@@ -72,6 +72,8 @@ CODEGENOPT(EnableNoundefAttrs, 1, 0, Benign) ///< Enable emitting `noundef` attr
 CODEGENOPT(DebugPassManager, 1, 0, Benign) ///< Prints debug information for the new
                                            ///< pass manager.
 CODEGENOPT(DisableRedZone    , 1, 0, Benign) ///< Set when -mno-red-zone is enabled.
+CODEGENOPT(CallGraphSection, 1, 0, Benign) ///< Emit a call graph section into the
+                                           ///< object file.
 CODEGENOPT(EmitCallSiteInfo, 1, 0, Benign) ///< Emit call site info only in the case of
                                            ///< '-g' + 'O>0' level.
 CODEGENOPT(IndirectTlsSegRefs, 1, 0, Benign) ///< Set when -mno-tls-direct-seg-refs
@@ -306,8 +308,10 @@ CODEGENOPT(SanitizeBinaryMetadataCovered, 1, 0, Benign) ///< Emit PCs for covere
 CODEGENOPT(SanitizeBinaryMetadataAtomics, 1, 0, Benign) ///< Emit PCs for atomic operations.
 CODEGENOPT(SanitizeBinaryMetadataUAR, 1, 0, Benign) ///< Emit PCs for start of functions
                                                     ///< that are subject for use-after-return checking.
+CODEGENOPT(SanitizeAllocTokenFastABI, 1, 0, Benign) ///< Use the AllocToken fast ABI.
+CODEGENOPT(SanitizeAllocTokenExtended, 1, 0, Benign) ///< Extend coverage to custom allocation functions.
 CODEGENOPT(SanitizeStats     , 1, 0, Benign) ///< Collect statistics for sanitizers.
-CODEGENOPT(SanitizeDebugTrapReasons, 1, 1 , Benign) ///< Enable UBSan trapping messages
+ENUM_CODEGENOPT(SanitizeDebugTrapReasons, SanitizeDebugTrapReasonKind, 2, SanitizeDebugTrapReasonKind::Detailed, Benign) ///< Control how "trap reasons" are emitted in debug info
 CODEGENOPT(SimplifyLibCalls  , 1, 1, Benign) ///< Set when -fbuiltin is enabled.
 CODEGENOPT(SoftFloat         , 1, 0, Benign) ///< -soft-float.
 CODEGENOPT(SpeculativeLoadHardening, 1, 0, Benign) ///< Enable speculative load hardening.
@@ -322,6 +326,7 @@ CODEGENOPT(TimeTrace         , 1, 0, Benign) ///< Set when -ftime-trace is enabl
 VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500, Benign) ///< Minimum time granularity (in microseconds),
                                                         ///< traced by time profiler
 CODEGENOPT(InterchangeLoops  , 1, 0, Benign) ///< Run loop-interchange.
+CODEGENOPT(FuseLoops         , 1, 0, Benign) ///< Run loop-fusion.
 CODEGENOPT(UnrollLoops       , 1, 0, Benign) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0, Benign) ///< Control whether loops are rerolled.
 CODEGENOPT(NoUseJumpTables   , 1, 0, Benign) ///< Set when -fno-jump-tables is enabled.

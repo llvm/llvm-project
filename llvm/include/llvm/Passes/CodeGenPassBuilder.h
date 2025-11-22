@@ -20,6 +20,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -127,7 +128,6 @@
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
 #include <cassert>
-#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -638,6 +638,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
               /*Force=*/true);
     addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>(),
               /*Force=*/true);
+    addIRPass(RequireAnalysisPass<RuntimeLibraryAnalysis, Module>(),
+              /*Force=*/true);
     addISelPasses(addIRPass);
   }
 
@@ -736,8 +738,8 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
     addPass(LowerEmuTLSPass());
 
   addPass(PreISelIntrinsicLoweringPass(&TM));
-  addPass(ExpandLargeDivRemPass(&TM));
-  addPass(ExpandFpPass(&TM));
+  addPass(ExpandLargeDivRemPass(TM));
+  addPass(ExpandFpPass(TM, getOptLevel()));
 
   derived().addIRPasses(addPass);
   derived().addCodeGenPrepare(addPass);
@@ -773,7 +775,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
     // target lowering hook.
     if (!Opt.DisableMergeICmps)
       addPass(MergeICmpsPass());
-    addPass(ExpandMemCmpPass(&TM));
+    addPass(ExpandMemCmpPass(TM));
   }
 
   // Run GC lowering passes for builtin collectors
@@ -812,7 +814,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
 
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableSelectOptimize)
-    addPass(SelectOptimizePass(&TM));
+    addPass(SelectOptimizePass(TM));
 
   if (Opt.EnableGlobalMergeFunc)
     addPass(GlobalMergeFuncPass());
@@ -839,14 +841,14 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addPassesToHandleExceptions(
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
   case ExceptionHandling::ZOS:
-    addPass(DwarfEHPreparePass(&TM));
+    addPass(DwarfEHPreparePass(TM));
     break;
   case ExceptionHandling::WinEH:
     // We support using both GCC-style and MSVC-style exceptions on Windows, so
     // add both preparation passes. Each pass will only actually run if it
     // recognizes the personality function.
     addPass(WinEHPreparePass());
-    addPass(DwarfEHPreparePass(&TM));
+    addPass(DwarfEHPreparePass(TM));
     break;
   case ExceptionHandling::Wasm:
     // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
@@ -871,7 +873,7 @@ template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addCodeGenPrepare(
     AddIRPass &addPass) const {
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableCGP)
-    addPass(CodeGenPreparePass(&TM));
+    addPass(CodeGenPreparePass(TM));
   // TODO: Default ctor'd RewriteSymbolPass is no-op.
   // addPass(RewriteSymbolPass());
 }
@@ -892,8 +894,8 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPrepare(
   addPass(CallBrPreparePass());
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
-  addPass(SafeStackPass(&TM));
-  addPass(StackProtectorPass(&TM));
+  addPass(SafeStackPass(TM));
+  addPass(StackProtectorPass(TM));
 
   if (Opt.PrintISelInput)
     addPass(PrintFunctionPass(dbgs(),
@@ -1095,11 +1097,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   if (TM.Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
       Opt.EnableMachineOutliner != RunOutliner::NeverOutline) {
-    bool RunOnAllFunctions =
-        (Opt.EnableMachineOutliner == RunOutliner::AlwaysOutline);
-    bool AddOutliner = RunOnAllFunctions || TM.Options.SupportsDefaultOutlining;
-    if (AddOutliner)
-      addPass(MachineOutlinerPass(RunOnAllFunctions));
+    if (Opt.EnableMachineOutliner != RunOutliner::TargetDefault ||
+        TM.Options.SupportsDefaultOutlining)
+      addPass(MachineOutlinerPass(Opt.EnableMachineOutliner));
   }
 
   addPass(StackFrameLayoutAnalysisPass());

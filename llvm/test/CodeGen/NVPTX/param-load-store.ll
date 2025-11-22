@@ -523,8 +523,7 @@ define <9 x half> @test_v9f16(<9 x half> %a) {
 ; CHECK: .func  (.param .b32 func_retval0)
 ; CHECK-LABEL: test_i19(
 ; CHECK-NEXT: .param .b32 test_i19_param_0
-; CHECK-DAG:  ld.param.b16    {{%r[0-9]+}}, [test_i19_param_0];
-; CHECK-DAG:  ld.param.b8     {{%r[0-9]+}}, [test_i19_param_0+2];
+; CHECK:      ld.param.b32    {{%r[0-9]+}}, [test_i19_param_0];
 ; CHECK:      .param .b32 param0;
 ; CHECK:      .param .b32 retval0;
 ; CHECK:      st.param.b32    [param0], {{%r[0-9]+}};
@@ -540,8 +539,7 @@ define i19 @test_i19(i19 %a) {
 ; CHECK: .func  (.param .b32 func_retval0)
 ; CHECK-LABEL: test_i23(
 ; CHECK-NEXT: .param .b32 test_i23_param_0
-; CHECK-DAG:  ld.param.b16    {{%r[0-9]+}}, [test_i23_param_0];
-; CHECK-DAG:  ld.param.b8     {{%r[0-9]+}}, [test_i23_param_0+2];
+; CHECK:      ld.param.b32    {{%r[0-9]+}}, [test_i23_param_0];
 ; CHECK:      .param .b32 param0;
 ; CHECK:      .param .b32 retval0;
 ; CHECK:      st.param.b32    [param0], {{%r[0-9]+}};
@@ -557,8 +555,7 @@ define i23 @test_i23(i23 %a) {
 ; CHECK: .func  (.param .b32 func_retval0)
 ; CHECK-LABEL: test_i24(
 ; CHECK-NEXT: .param .b32 test_i24_param_0
-; CHECK-DAG:  ld.param.b8     {{%r[0-9]+}}, [test_i24_param_0+2];
-; CHECK-DAG:  ld.param.b16    {{%r[0-9]+}}, [test_i24_param_0];
+; CHECK:      ld.param.b32    {{%r[0-9]+}}, [test_i24_param_0];
 ; CHECK:      .param .b32 param0;
 ; CHECK:      .param .b32 retval0;
 ; CHECK:      st.param.b32    [param0], {{%r[0-9]+}};
@@ -678,8 +675,7 @@ define float @test_f32(float %a) {
 ; CHECK: .func  (.param .b64 func_retval0)
 ; CHECK-LABEL: test_i40(
 ; CHECK-NEXT: .param .b64 test_i40_param_0
-; CHECK-DAG:  ld.param.b8    {{%rd[0-9]+}}, [test_i40_param_0+4];
-; CHECK-DAG:  ld.param.b32   {{%rd[0-9]+}}, [test_i40_param_0];
+; CHECK:      ld.param.b64    {{%rd[0-9]+}}, [test_i40_param_0];
 ; CHECK:      .param .b64 param0;
 ; CHECK:      .param .b64 retval0;
 ; CHECK:      st.param.b64    [param0], {{%rd[0-9]+}};
@@ -695,8 +691,7 @@ define i40 @test_i40(i40 %a) {
 ; CHECK: .func  (.param .b64 func_retval0)
 ; CHECK-LABEL: test_i47(
 ; CHECK-NEXT: .param .b64 test_i47_param_0
-; CHECK-DAG:  ld.param.b16   {{%rd[0-9]+}}, [test_i47_param_0+4];
-; CHECK-DAG:  ld.param.b32   {{%rd[0-9]+}}, [test_i47_param_0];
+; CHECK:      ld.param.b64    {{%rd[0-9]+}}, [test_i47_param_0];
 ; CHECK:      .param .b64 param0;
 ; CHECK:      .param .b64 retval0;
 ; CHECK:      st.param.b64    [param0], {{%rd[0-9]+}};
@@ -712,8 +707,7 @@ define i47 @test_i47(i47 %a) {
 ; CHECK: .func  (.param .b64 func_retval0)
 ; CHECK-LABEL: test_i48(
 ; CHECK-NEXT: .param .b64 test_i48_param_0
-; CHECK-DAG:  ld.param.b16   {{%rd[0-9]+}}, [test_i48_param_0+4];
-; CHECK-DAG:  ld.param.b32   {{%rd[0-9]+}}, [test_i48_param_0];
+; CHECK:      ld.param.b64    {{%rd[0-9]+}}, [test_i48_param_0];
 ; CHECK:      .param .b64 param0;
 ; CHECK:      .param .b64 retval0;
 ; CHECK:      st.param.b64    [param0], {{%rd[0-9]+}};
@@ -729,9 +723,7 @@ define i48 @test_i48(i48 %a) {
 ; CHECK: .func  (.param .b64 func_retval0)
 ; CHECK-LABEL: test_i51(
 ; CHECK-NEXT: .param .b64 test_i51_param_0
-; CHECK-DAG:  ld.param.b8    {{%rd[0-9]+}}, [test_i51_param_0+6];
-; CHECK-DAG:  ld.param.b16   {{%rd[0-9]+}}, [test_i51_param_0+4];
-; CHECK-DAG:  ld.param.b32   {{%rd[0-9]+}}, [test_i51_param_0];
+; CHECK:      ld.param.b64    {{%rd[0-9]+}}, [test_i51_param_0];
 ; CHECK:      .param .b64 param0;
 ; CHECK:      .param .b64 retval0;
 ; CHECK:      st.param.b64    [param0], {{%rd[0-9]+}};
@@ -747,9 +739,7 @@ define i51 @test_i51(i51 %a) {
 ; CHECK: .func  (.param .b64 func_retval0)
 ; CHECK-LABEL: test_i56(
 ; CHECK-NEXT: .param .b64 test_i56_param_0
-; CHECK-DAG:  ld.param.b8    {{%rd[0-9]+}}, [test_i56_param_0+6];
-; CHECK-DAG:  ld.param.b16   {{%rd[0-9]+}}, [test_i56_param_0+4];
-; CHECK-DAG:  ld.param.b32   {{%rd[0-9]+}}, [test_i56_param_0];
+; CHECK:      ld.param.b64    {{%rd[0-9]+}}, [test_i56_param_0];
 ; CHECK:      .param .b64 param0;
 ; CHECK:      .param .b64 retval0;
 ; CHECK:      st.param.b64    [param0], {{%rd[0-9]+}};

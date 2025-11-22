@@ -5,8 +5,8 @@ define void @strip_bitcast() {
 ; CHECK-LABEL: define void @strip_bitcast() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[B:%.*]] = bitcast ptr [[A]] to ptr
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i8
@@ -20,8 +20,8 @@ define void @strip_addrspacecast() {
 ; CHECK-LABEL: define void @strip_addrspacecast() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr [[A]] to ptr addrspace(1)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i8
@@ -35,8 +35,8 @@ define void @strip_gep() {
 ; CHECK-LABEL: define void @strip_gep() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [2 x i8], align 1
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr [2 x i8], ptr [[A]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [2 x i8]
@@ -55,3 +55,47 @@ define void @remove_unanalyzable(ptr %p) {
   call void @llvm.lifetime.end.p0(i64 1, ptr %p)
   ret void
 }
+
+define void @no_declaration() {
+; CHECK-LABEL: define void @no_declaration() {
+; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1, addrspace(2)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p2(ptr addrspace(2) [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p2(ptr addrspace(2) [[A]])
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i8, addrspace(2)
+  call void @llvm.lifetime.start.p2(i64 1, ptr addrspace(2) %a)
+  call void @llvm.lifetime.end.p2(i64 1, ptr addrspace(2) %a)
+  ret void
+}
+
+define void @no_suffix1() {
+; CHECK-LABEL: define void @no_suffix1() {
+; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1, addrspace(3)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p3(ptr addrspace(3) [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p3(ptr addrspace(3) [[A]])
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i8, addrspace(3)
+  call void @llvm.lifetime.start(i64 1, ptr addrspace(3) %a)
+  call void @llvm.lifetime.end(i64 1, ptr addrspace(3) %a)
+  ret void
+}
+
+define void @no_suffix2() {
+; CHECK-LABEL: define void @no_suffix2() {
+; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1, addrspace(4)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p4(ptr addrspace(4) [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p4(ptr addrspace(4) [[A]])
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i8, addrspace(4)
+  call void @llvm.lifetime.start(i64 1, ptr addrspace(4) %a)
+  call void @llvm.lifetime.end(i64 1, ptr addrspace(4) %a)
+  ret void
+}
+
+declare void @llvm.lifetime.start.p0(i64, ptr)
+declare void @llvm.lifetime.end.p0(i64, ptr)
+declare void @llvm.lifetime.start.p1(i64, ptr addrspace(1))
+declare void @llvm.lifetime.end.p1(i64, ptr addrspace(1))

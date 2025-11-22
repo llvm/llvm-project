@@ -15,6 +15,7 @@
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -23,10 +24,7 @@ namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
-char GenericRSMetadataError::ID;
-char InvalidRSMetadataFormat::ID;
-char InvalidRSMetadataValue::ID;
-template <typename T> char RootSignatureValidationError<T>::ID;
+char RootSignatureValidationError::ID;
 
 static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
                                                  unsigned int OpId) {
@@ -51,13 +49,6 @@ static std::optional<StringRef> extractMdStringValue(MDNode *Node,
   return NodeText->getString();
 }
 
-static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
-    {"CBV", dxil::ResourceClass::CBuffer},
-    {"SRV", dxil::ResourceClass::SRV},
-    {"UAV", dxil::ResourceClass::UAV},
-    {"Sampler", dxil::ResourceClass::Sampler},
-};
-
 namespace {
 
 // We use the OverloadVisit with std::visit to ensure the compiler catches if a
@@ -68,7 +59,51 @@ template <class... Ts> struct OverloadedVisit : Ts... {
 };
 template <class... Ts> OverloadedVisit(Ts...) -> OverloadedVisit<Ts...>;
 
+struct FmtRange {
+  dxil::ResourceClass Type;
+  uint32_t Register;
+  uint32_t Space;
+
+  FmtRange(const mcdxbc::DescriptorRange &Range)
+      : Type(Range.RangeType), Register(Range.BaseShaderRegister),
+        Space(Range.RegisterSpace) {}
+};
+
+raw_ostream &operator<<(llvm::raw_ostream &OS, const FmtRange &Range) {
+  OS << getResourceClassName(Range.Type) << "(register=" << Range.Register
+     << ", space=" << Range.Space << ")";
+  return OS;
+}
+
+struct FmtMDNode {
+  const MDNode *Node;
+
+  FmtMDNode(const MDNode *Node) : Node(Node) {}
+};
+
+raw_ostream &operator<<(llvm::raw_ostream &OS, FmtMDNode Fmt) {
+  Fmt.Node->printTree(OS);
+  return OS;
+}
+
+static Error makeRSError(const Twine &Msg) {
+  return make_error<RootSignatureValidationError>(Msg);
+}
 } // namespace
+
+template <typename T, typename = std::enable_if_t<
+                          std::is_enum_v<T> &&
+                          std::is_same_v<std::underlying_type_t<T>, uint32_t>>>
+static Expected<T>
+extractEnumValue(MDNode *Node, unsigned int OpId, StringRef ErrText,
+                 llvm::function_ref<bool(uint32_t)> VerifyFn) {
+  if (std::optional<uint32_t> Val = extractMdIntValue(Node, OpId)) {
+    if (!VerifyFn(*Val))
+      return makeRSError(formatv("Invalid value for {0}: {1}", ErrText, Val));
+    return static_cast<T>(*Val);
+  }
+  return makeRSError(formatv("Invalid value for {0}:", ErrText));
+}
 
 MDNode *MetadataBuilder::BuildRootSignature() {
   const auto Visitor = OverloadedVisit{
@@ -126,9 +161,7 @@ MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
 
 MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
   IRBuilder<> Builder(Ctx);
-  StringRef ResName =
-      enumToStringRef(dxil::ResourceClass(to_underlying(Descriptor.Type)),
-                      ArrayRef(ResourceClassNames));
+  StringRef ResName = dxil::getResourceClassName(Descriptor.Type);
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   SmallString<7> Name({"Root", ResName});
   Metadata *Operands[] = {
@@ -168,9 +201,7 @@ MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
 MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
   IRBuilder<> Builder(Ctx);
-  StringRef ResName =
-      enumToStringRef(dxil::ResourceClass(to_underlying(Clause.Type)),
-                      ArrayRef(ResourceClassNames));
+  StringRef ResName = dxil::getResourceClassName(Clause.Type);
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   Metadata *Operands[] = {
       MDString::get(Ctx, ResName),
@@ -209,6 +240,7 @@ MDNode *MetadataBuilder::BuildStaticSampler(const StaticSampler &Sampler) {
       ConstantAsMetadata::get(Builder.getInt32(Sampler.Space)),
       ConstantAsMetadata::get(
           Builder.getInt32(to_underlying(Sampler.Visibility))),
+      ConstantAsMetadata::get(Builder.getInt32(to_underlying(Sampler.Flags))),
   };
   return MDNode::get(Ctx, Operands);
 }
@@ -216,12 +248,12 @@ MDNode *MetadataBuilder::BuildStaticSampler(const StaticSampler &Sampler) {
 Error MetadataParser::parseRootFlags(mcdxbc::RootSignatureDesc &RSD,
                                      MDNode *RootFlagNode) {
   if (RootFlagNode->getNumOperands() != 2)
-    return make_error<InvalidRSMetadataFormat>("RootFlag Element");
+    return makeRSError("Invalid format for RootFlags Element");
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootFlagNode, 1))
     RSD.Flags = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("RootFlag");
+    return makeRSError("Invalid value for RootFlag");
 
   return Error::success();
 }
@@ -229,35 +261,33 @@ Error MetadataParser::parseRootFlags(mcdxbc::RootSignatureDesc &RSD,
 Error MetadataParser::parseRootConstants(mcdxbc::RootSignatureDesc &RSD,
                                          MDNode *RootConstantNode) {
   if (RootConstantNode->getNumOperands() != 5)
-    return make_error<InvalidRSMetadataFormat>("RootConstants Element");
+    return makeRSError("Invalid format for RootConstants Element");
 
-  dxbc::RTS0::v1::RootParameterHeader Header;
-  // The parameter offset doesn't matter here - we recalculate it during
-  // serialization  Header.ParameterOffset = 0;
-  Header.ParameterType = to_underlying(dxbc::RootParameterType::Constants32Bit);
+  Expected<dxbc::ShaderVisibility> Visibility =
+      extractEnumValue<dxbc::ShaderVisibility>(RootConstantNode, 1,
+                                               "ShaderVisibility",
+                                               dxbc::isValidShaderVisibility);
+  if (auto E = Visibility.takeError())
+    return Error(std::move(E));
 
-  if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 1))
-    Header.ShaderVisibility = *Val;
-  else
-    return make_error<InvalidRSMetadataValue>("ShaderVisibility");
-
-  dxbc::RTS0::v1::RootConstants Constants;
+  mcdxbc::RootConstants Constants;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 2))
     Constants.ShaderRegister = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("ShaderRegister");
+    return makeRSError("Invalid value for ShaderRegister");
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 3))
     Constants.RegisterSpace = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("RegisterSpace");
+    return makeRSError("Invalid value for RegisterSpace");
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 4))
     Constants.Num32BitValues = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("Num32BitValues");
+    return makeRSError("Invalid value for Num32BitValues");
 
-  RSD.ParametersContainer.addParameter(Header, Constants);
+  RSD.ParametersContainer.addParameter(dxbc::RootParameterType::Constants32Bit,
+                                       *Visibility, Constants);
 
   return Error::success();
 }
@@ -271,106 +301,101 @@ Error MetadataParser::parseRootDescriptors(
          "parseRootDescriptors should only be called with RootDescriptor "
          "element kind.");
   if (RootDescriptorNode->getNumOperands() != 5)
-    return make_error<InvalidRSMetadataFormat>("Root Descriptor Element");
+    return makeRSError("Invalid format for Root Descriptor Element");
 
-  dxbc::RTS0::v1::RootParameterHeader Header;
+  dxbc::RootParameterType Type;
   switch (ElementKind) {
   case RootSignatureElementKind::SRV:
-    Header.ParameterType = to_underlying(dxbc::RootParameterType::SRV);
+    Type = dxbc::RootParameterType::SRV;
     break;
   case RootSignatureElementKind::UAV:
-    Header.ParameterType = to_underlying(dxbc::RootParameterType::UAV);
+    Type = dxbc::RootParameterType::UAV;
     break;
   case RootSignatureElementKind::CBV:
-    Header.ParameterType = to_underlying(dxbc::RootParameterType::CBV);
+    Type = dxbc::RootParameterType::CBV;
     break;
   default:
     llvm_unreachable("invalid Root Descriptor kind");
     break;
   }
 
-  if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 1))
-    Header.ShaderVisibility = *Val;
-  else
-    return make_error<InvalidRSMetadataValue>("ShaderVisibility");
+  Expected<dxbc::ShaderVisibility> Visibility =
+      extractEnumValue<dxbc::ShaderVisibility>(RootDescriptorNode, 1,
+                                               "ShaderVisibility",
+                                               dxbc::isValidShaderVisibility);
+  if (auto E = Visibility.takeError())
+    return Error(std::move(E));
 
-  dxbc::RTS0::v2::RootDescriptor Descriptor;
+  mcdxbc::RootDescriptor Descriptor;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 2))
     Descriptor.ShaderRegister = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("ShaderRegister");
+    return makeRSError("Invalid value for ShaderRegister");
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 3))
     Descriptor.RegisterSpace = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("RegisterSpace");
-
-  if (RSD.Version == 1) {
-    RSD.ParametersContainer.addParameter(Header, Descriptor);
-    return Error::success();
-  }
-  assert(RSD.Version > 1);
+    return makeRSError("Invalid value for RegisterSpace");
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 4))
     Descriptor.Flags = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("Root Descriptor Flags");
+    return makeRSError("Invalid value for Root Descriptor Flags");
 
-  RSD.ParametersContainer.addParameter(Header, Descriptor);
+  RSD.ParametersContainer.addParameter(Type, *Visibility, Descriptor);
   return Error::success();
 }
 
 Error MetadataParser::parseDescriptorRange(mcdxbc::DescriptorTable &Table,
                                            MDNode *RangeDescriptorNode) {
   if (RangeDescriptorNode->getNumOperands() != 6)
-    return make_error<InvalidRSMetadataFormat>("Descriptor Range");
+    return makeRSError("Invalid format for Descriptor Range");
 
-  dxbc::RTS0::v2::DescriptorRange Range;
+  mcdxbc::DescriptorRange Range;
 
   std::optional<StringRef> ElementText =
       extractMdStringValue(RangeDescriptorNode, 0);
 
   if (!ElementText.has_value())
-    return make_error<InvalidRSMetadataFormat>("Descriptor Range");
+    return makeRSError("Invalid format for Descriptor Range");
 
-  Range.RangeType =
-      StringSwitch<uint32_t>(*ElementText)
-          .Case("CBV", to_underlying(dxbc::DescriptorRangeType::CBV))
-          .Case("SRV", to_underlying(dxbc::DescriptorRangeType::SRV))
-          .Case("UAV", to_underlying(dxbc::DescriptorRangeType::UAV))
-          .Case("Sampler", to_underlying(dxbc::DescriptorRangeType::Sampler))
-          .Default(~0U);
-
-  if (Range.RangeType == ~0U)
-    return make_error<GenericRSMetadataError>("Invalid Descriptor Range type.",
-                                              RangeDescriptorNode);
+  if (*ElementText == "CBV")
+    Range.RangeType = dxil::ResourceClass::CBuffer;
+  else if (*ElementText == "SRV")
+    Range.RangeType = dxil::ResourceClass::SRV;
+  else if (*ElementText == "UAV")
+    Range.RangeType = dxil::ResourceClass::UAV;
+  else if (*ElementText == "Sampler")
+    Range.RangeType = dxil::ResourceClass::Sampler;
+  else
+    return makeRSError(formatv("Invalid Descriptor Range type.\n{0}",
+                               FmtMDNode{RangeDescriptorNode}));
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 1))
     Range.NumDescriptors = *Val;
   else
-    return make_error<GenericRSMetadataError>("Number of Descriptor in Range",
-                                              RangeDescriptorNode);
+    return makeRSError(formatv("Invalid number of Descriptor in Range.\n{0}",
+                               FmtMDNode{RangeDescriptorNode}));
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 2))
     Range.BaseShaderRegister = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("BaseShaderRegister");
+    return makeRSError("Invalid value for BaseShaderRegister");
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 3))
     Range.RegisterSpace = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("RegisterSpace");
+    return makeRSError("Invalid value for RegisterSpace");
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 4))
     Range.OffsetInDescriptorsFromTableStart = *Val;
   else
-    return make_error<InvalidRSMetadataValue>(
-        "OffsetInDescriptorsFromTableStart");
+    return makeRSError("Invalid value for OffsetInDescriptorsFromTableStart");
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 5))
     Range.Flags = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("Descriptor Range Flags");
+    return makeRSError("Invalid value for Descriptor Range Flags");
 
   Table.Ranges.push_back(Range);
   return Error::success();
@@ -380,102 +405,122 @@ Error MetadataParser::parseDescriptorTable(mcdxbc::RootSignatureDesc &RSD,
                                            MDNode *DescriptorTableNode) {
   const unsigned int NumOperands = DescriptorTableNode->getNumOperands();
   if (NumOperands < 2)
-    return make_error<InvalidRSMetadataFormat>("Descriptor Table");
+    return makeRSError("Invalid format for Descriptor Table");
 
-  dxbc::RTS0::v1::RootParameterHeader Header;
-  if (std::optional<uint32_t> Val = extractMdIntValue(DescriptorTableNode, 1))
-    Header.ShaderVisibility = *Val;
-  else
-    return make_error<InvalidRSMetadataValue>("ShaderVisibility");
+  Expected<dxbc::ShaderVisibility> Visibility =
+      extractEnumValue<dxbc::ShaderVisibility>(DescriptorTableNode, 1,
+                                               "ShaderVisibility",
+                                               dxbc::isValidShaderVisibility);
+  if (auto E = Visibility.takeError())
+    return Error(std::move(E));
 
   mcdxbc::DescriptorTable Table;
-  Header.ParameterType =
-      to_underlying(dxbc::RootParameterType::DescriptorTable);
 
   for (unsigned int I = 2; I < NumOperands; I++) {
     MDNode *Element = dyn_cast<MDNode>(DescriptorTableNode->getOperand(I));
     if (Element == nullptr)
-      return make_error<GenericRSMetadataError>(
-          "Missing Root Element Metadata Node.", DescriptorTableNode);
+      return makeRSError(formatv("Missing Root Element Metadata Node.\n{0}",
+                                 FmtMDNode{DescriptorTableNode}));
 
     if (auto Err = parseDescriptorRange(Table, Element))
       return Err;
   }
 
-  RSD.ParametersContainer.addParameter(Header, Table);
+  RSD.ParametersContainer.addParameter(dxbc::RootParameterType::DescriptorTable,
+                                       *Visibility, Table);
   return Error::success();
 }
 
 Error MetadataParser::parseStaticSampler(mcdxbc::RootSignatureDesc &RSD,
                                          MDNode *StaticSamplerNode) {
-  if (StaticSamplerNode->getNumOperands() != 14)
-    return make_error<InvalidRSMetadataFormat>("Static Sampler");
+  if (StaticSamplerNode->getNumOperands() != 15)
+    return makeRSError("Invalid format for Static Sampler");
 
-  dxbc::RTS0::v1::StaticSampler Sampler;
-  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 1))
-    Sampler.Filter = *Val;
-  else
-    return make_error<InvalidRSMetadataValue>("Filter");
+  mcdxbc::StaticSampler Sampler;
 
-  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 2))
-    Sampler.AddressU = *Val;
-  else
-    return make_error<InvalidRSMetadataValue>("AddressU");
+  Expected<dxbc::SamplerFilter> Filter = extractEnumValue<dxbc::SamplerFilter>(
+      StaticSamplerNode, 1, "Filter", dxbc::isValidSamplerFilter);
+  if (auto E = Filter.takeError())
+    return Error(std::move(E));
+  Sampler.Filter = *Filter;
 
-  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 3))
-    Sampler.AddressV = *Val;
-  else
-    return make_error<InvalidRSMetadataValue>("AddressV");
+  Expected<dxbc::TextureAddressMode> AddressU =
+      extractEnumValue<dxbc::TextureAddressMode>(
+          StaticSamplerNode, 2, "AddressU", dxbc::isValidAddress);
+  if (auto E = AddressU.takeError())
+    return Error(std::move(E));
+  Sampler.AddressU = *AddressU;
 
-  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 4))
-    Sampler.AddressW = *Val;
-  else
-    return make_error<InvalidRSMetadataValue>("AddressW");
+  Expected<dxbc::TextureAddressMode> AddressV =
+      extractEnumValue<dxbc::TextureAddressMode>(
+          StaticSamplerNode, 3, "AddressV", dxbc::isValidAddress);
+  if (auto E = AddressV.takeError())
+    return Error(std::move(E));
+  Sampler.AddressV = *AddressV;
+
+  Expected<dxbc::TextureAddressMode> AddressW =
+      extractEnumValue<dxbc::TextureAddressMode>(
+          StaticSamplerNode, 4, "AddressW", dxbc::isValidAddress);
+  if (auto E = AddressW.takeError())
+    return Error(std::move(E));
+  Sampler.AddressW = *AddressW;
 
   if (std::optional<float> Val = extractMdFloatValue(StaticSamplerNode, 5))
     Sampler.MipLODBias = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("MipLODBias");
+    return makeRSError("Invalid value for MipLODBias");
 
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 6))
     Sampler.MaxAnisotropy = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("MaxAnisotropy");
+    return makeRSError("Invalid value for MaxAnisotropy");
 
-  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 7))
-    Sampler.ComparisonFunc = *Val;
-  else
-    return make_error<InvalidRSMetadataValue>("ComparisonFunc");
+  Expected<dxbc::ComparisonFunc> ComparisonFunc =
+      extractEnumValue<dxbc::ComparisonFunc>(
+          StaticSamplerNode, 7, "ComparisonFunc", dxbc::isValidComparisonFunc);
+  if (auto E = ComparisonFunc.takeError())
+    return Error(std::move(E));
+  Sampler.ComparisonFunc = *ComparisonFunc;
 
-  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 8))
-    Sampler.BorderColor = *Val;
-  else
-    return make_error<InvalidRSMetadataValue>("ComparisonFunc");
+  Expected<dxbc::StaticBorderColor> BorderColor =
+      extractEnumValue<dxbc::StaticBorderColor>(
+          StaticSamplerNode, 8, "BorderColor", dxbc::isValidBorderColor);
+  if (auto E = BorderColor.takeError())
+    return Error(std::move(E));
+  Sampler.BorderColor = *BorderColor;
 
   if (std::optional<float> Val = extractMdFloatValue(StaticSamplerNode, 9))
     Sampler.MinLOD = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("MinLOD");
+    return makeRSError("Invalid value for MinLOD");
 
   if (std::optional<float> Val = extractMdFloatValue(StaticSamplerNode, 10))
     Sampler.MaxLOD = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("MaxLOD");
+    return makeRSError("Invalid value for MaxLOD");
 
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 11))
     Sampler.ShaderRegister = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("ShaderRegister");
+    return makeRSError("Invalid value for ShaderRegister");
 
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 12))
     Sampler.RegisterSpace = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("RegisterSpace");
+    return makeRSError("Invalid value for RegisterSpace");
 
-  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 13))
-    Sampler.ShaderVisibility = *Val;
+  Expected<dxbc::ShaderVisibility> Visibility =
+      extractEnumValue<dxbc::ShaderVisibility>(StaticSamplerNode, 13,
+                                               "ShaderVisibility",
+                                               dxbc::isValidShaderVisibility);
+  if (auto E = Visibility.takeError())
+    return Error(std::move(E));
+  Sampler.ShaderVisibility = *Visibility;
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 14))
+    Sampler.Flags = *Val;
   else
-    return make_error<InvalidRSMetadataValue>("ShaderVisibility");
+    return makeRSError("Invalid value for Static Sampler Flags");
 
   RSD.StaticSamplers.push_back(Sampler);
   return Error::success();
@@ -485,7 +530,7 @@ Error MetadataParser::parseRootSignatureElement(mcdxbc::RootSignatureDesc &RSD,
                                                 MDNode *Element) {
   std::optional<StringRef> ElementText = extractMdStringValue(Element, 0);
   if (!ElementText.has_value())
-    return make_error<InvalidRSMetadataFormat>("Root Element");
+    return makeRSError("Invalid format for Root Element");
 
   RootSignatureElementKind ElementKind =
       StringSwitch<RootSignatureElementKind>(*ElementText)
@@ -513,178 +558,205 @@ Error MetadataParser::parseRootSignatureElement(mcdxbc::RootSignatureDesc &RSD,
   case RootSignatureElementKind::StaticSamplers:
     return parseStaticSampler(RSD, Element);
   case RootSignatureElementKind::Error:
-    return make_error<GenericRSMetadataError>("Invalid Root Signature Element",
-                                              Element);
+    return makeRSError(
+        formatv("Invalid Root Signature Element\n{0}", FmtMDNode{Element}));
   }
 
   llvm_unreachable("Unhandled RootSignatureElementKind enum.");
+}
+
+static Error
+validateDescriptorTableSamplerMixin(const mcdxbc::DescriptorTable &Table,
+                                    uint32_t Location) {
+  dxil::ResourceClass CurrRC = dxil::ResourceClass::Sampler;
+  for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
+    if (Range.RangeType == dxil::ResourceClass::Sampler &&
+        CurrRC != dxil::ResourceClass::Sampler)
+      return makeRSError(
+          formatv("Samplers cannot be mixed with other resource types in a "
+                  "descriptor table, {0}(location={1})",
+                  getResourceClassName(CurrRC), Location));
+    CurrRC = Range.RangeType;
+  }
+  return Error::success();
+}
+
+static Error
+validateDescriptorTableRegisterOverflow(const mcdxbc::DescriptorTable &Table,
+                                        uint32_t Location) {
+  uint64_t Offset = 0;
+  bool IsPrevUnbound = false;
+  for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
+    // Validation of NumDescriptors should have happened by this point.
+    if (Range.NumDescriptors == 0)
+      continue;
+
+    const uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
+        Range.BaseShaderRegister, Range.NumDescriptors);
+
+    if (!verifyNoOverflowedOffset(RangeBound))
+      return makeRSError(
+          formatv("Overflow for shader register range: {0}", FmtRange{Range}));
+
+    bool IsAppending =
+        Range.OffsetInDescriptorsFromTableStart == DescriptorTableOffsetAppend;
+    if (!IsAppending)
+      Offset = Range.OffsetInDescriptorsFromTableStart;
+
+    if (IsPrevUnbound && IsAppending)
+      return makeRSError(
+          formatv("Range {0} cannot be appended after an unbounded range",
+                  FmtRange{Range}));
+
+    const uint64_t OffsetBound =
+        llvm::hlsl::rootsig::computeRangeBound(Offset, Range.NumDescriptors);
+
+    if (!verifyNoOverflowedOffset(OffsetBound))
+      return makeRSError(formatv("Offset overflow for descriptor range: {0}.",
+                                 FmtRange{Range}));
+
+    Offset = OffsetBound + 1;
+    IsPrevUnbound =
+        Range.NumDescriptors == llvm::hlsl::rootsig::NumDescriptorsUnbounded;
+  }
+
+  return Error::success();
 }
 
 Error MetadataParser::validateRootSignature(
     const mcdxbc::RootSignatureDesc &RSD) {
   Error DeferredErrs = Error::success();
   if (!hlsl::rootsig::verifyVersion(RSD.Version)) {
-    DeferredErrs =
-        joinErrors(std::move(DeferredErrs),
-                   make_error<RootSignatureValidationError<uint32_t>>(
-                       "Version", RSD.Version));
+    DeferredErrs = joinErrors(
+        std::move(DeferredErrs),
+        makeRSError(formatv("Invalid value for Version: {0}", RSD.Version)));
   }
 
   if (!hlsl::rootsig::verifyRootFlag(RSD.Flags)) {
-    DeferredErrs =
-        joinErrors(std::move(DeferredErrs),
-                   make_error<RootSignatureValidationError<uint32_t>>(
-                       "RootFlags", RSD.Flags));
+    DeferredErrs = joinErrors(
+        std::move(DeferredErrs),
+        makeRSError(formatv("Invalid value for RootFlags: {0}", RSD.Flags)));
   }
 
   for (const mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
-    if (!dxbc::isValidShaderVisibility(Info.Header.ShaderVisibility))
-      DeferredErrs =
-          joinErrors(std::move(DeferredErrs),
-                     make_error<RootSignatureValidationError<uint32_t>>(
-                         "ShaderVisibility", Info.Header.ShaderVisibility));
 
-    assert(dxbc::isValidParameterType(Info.Header.ParameterType) &&
-           "Invalid value for ParameterType");
+    switch (Info.Type) {
+    case dxbc::RootParameterType::Constants32Bit:
+      break;
 
-    switch (Info.Header.ParameterType) {
-
-    case to_underlying(dxbc::RootParameterType::CBV):
-    case to_underlying(dxbc::RootParameterType::UAV):
-    case to_underlying(dxbc::RootParameterType::SRV): {
-      const dxbc::RTS0::v2::RootDescriptor &Descriptor =
+    case dxbc::RootParameterType::CBV:
+    case dxbc::RootParameterType::UAV:
+    case dxbc::RootParameterType::SRV: {
+      const mcdxbc::RootDescriptor &Descriptor =
           RSD.ParametersContainer.getRootDescriptor(Info.Location);
       if (!hlsl::rootsig::verifyRegisterValue(Descriptor.ShaderRegister))
-        DeferredErrs =
-            joinErrors(std::move(DeferredErrs),
-                       make_error<RootSignatureValidationError<uint32_t>>(
-                           "ShaderRegister", Descriptor.ShaderRegister));
+        DeferredErrs = joinErrors(
+            std::move(DeferredErrs),
+            makeRSError(formatv("Invalid value for ShaderRegister: {0}",
+                                Descriptor.ShaderRegister)));
 
       if (!hlsl::rootsig::verifyRegisterSpace(Descriptor.RegisterSpace))
-        DeferredErrs =
-            joinErrors(std::move(DeferredErrs),
-                       make_error<RootSignatureValidationError<uint32_t>>(
-                           "RegisterSpace", Descriptor.RegisterSpace));
+        DeferredErrs = joinErrors(
+            std::move(DeferredErrs),
+            makeRSError(formatv("Invalid value for RegisterSpace: {0}",
+                                Descriptor.RegisterSpace)));
 
-      if (RSD.Version > 1) {
-        if (!hlsl::rootsig::verifyRootDescriptorFlag(RSD.Version,
-                                                     Descriptor.Flags))
-          DeferredErrs =
-              joinErrors(std::move(DeferredErrs),
-                         make_error<RootSignatureValidationError<uint32_t>>(
-                             "RootDescriptorFlag", Descriptor.Flags));
-      }
+      bool IsValidFlag =
+          dxbc::isValidRootDesciptorFlags(Descriptor.Flags) &&
+          hlsl::rootsig::verifyRootDescriptorFlag(
+              RSD.Version, dxbc::RootDescriptorFlags(Descriptor.Flags));
+      if (!IsValidFlag)
+        DeferredErrs = joinErrors(
+            std::move(DeferredErrs),
+            makeRSError(formatv("Invalid value for RootDescriptorFlag: {0}",
+                                Descriptor.Flags)));
       break;
     }
-    case to_underlying(dxbc::RootParameterType::DescriptorTable): {
+    case dxbc::RootParameterType::DescriptorTable: {
       const mcdxbc::DescriptorTable &Table =
           RSD.ParametersContainer.getDescriptorTable(Info.Location);
-      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table) {
-        if (!hlsl::rootsig::verifyRangeType(Range.RangeType))
-          DeferredErrs =
-              joinErrors(std::move(DeferredErrs),
-                         make_error<RootSignatureValidationError<uint32_t>>(
-                             "RangeType", Range.RangeType));
-
+      for (const mcdxbc::DescriptorRange &Range : Table) {
         if (!hlsl::rootsig::verifyRegisterSpace(Range.RegisterSpace))
-          DeferredErrs =
-              joinErrors(std::move(DeferredErrs),
-                         make_error<RootSignatureValidationError<uint32_t>>(
-                             "RegisterSpace", Range.RegisterSpace));
+          DeferredErrs = joinErrors(
+              std::move(DeferredErrs),
+              makeRSError(formatv("Invalid value for RegisterSpace: {0}",
+                                  Range.RegisterSpace)));
 
         if (!hlsl::rootsig::verifyNumDescriptors(Range.NumDescriptors))
-          DeferredErrs =
-              joinErrors(std::move(DeferredErrs),
-                         make_error<RootSignatureValidationError<uint32_t>>(
-                             "NumDescriptors", Range.NumDescriptors));
+          DeferredErrs = joinErrors(
+              std::move(DeferredErrs),
+              makeRSError(formatv("Invalid value for NumDescriptors: {0}",
+                                  Range.NumDescriptors)));
 
-        if (!hlsl::rootsig::verifyDescriptorRangeFlag(
-                RSD.Version, Range.RangeType, Range.Flags))
-          DeferredErrs =
-              joinErrors(std::move(DeferredErrs),
-                         make_error<RootSignatureValidationError<uint32_t>>(
-                             "DescriptorFlag", Range.Flags));
+        bool IsValidFlag = dxbc::isValidDescriptorRangeFlags(Range.Flags) &&
+                           hlsl::rootsig::verifyDescriptorRangeFlag(
+                               RSD.Version, Range.RangeType,
+                               dxbc::DescriptorRangeFlags(Range.Flags));
+        if (!IsValidFlag)
+          DeferredErrs = joinErrors(
+              std::move(DeferredErrs),
+              makeRSError(formatv("Invalid value for DescriptorFlag: {0}",
+                                  Range.Flags)));
+
+        if (Error Err =
+                validateDescriptorTableSamplerMixin(Table, Info.Location))
+          DeferredErrs = joinErrors(std::move(DeferredErrs), std::move(Err));
+
+        if (Error Err =
+                validateDescriptorTableRegisterOverflow(Table, Info.Location))
+          DeferredErrs = joinErrors(std::move(DeferredErrs), std::move(Err));
       }
       break;
     }
     }
   }
 
-  for (const dxbc::RTS0::v1::StaticSampler &Sampler : RSD.StaticSamplers) {
-    if (!hlsl::rootsig::verifySamplerFilter(Sampler.Filter))
-      DeferredErrs =
-          joinErrors(std::move(DeferredErrs),
-                     make_error<RootSignatureValidationError<uint32_t>>(
-                         "Filter", Sampler.Filter));
-
-    if (!hlsl::rootsig::verifyAddress(Sampler.AddressU))
-      DeferredErrs =
-          joinErrors(std::move(DeferredErrs),
-                     make_error<RootSignatureValidationError<uint32_t>>(
-                         "AddressU", Sampler.AddressU));
-
-    if (!hlsl::rootsig::verifyAddress(Sampler.AddressV))
-      DeferredErrs =
-          joinErrors(std::move(DeferredErrs),
-                     make_error<RootSignatureValidationError<uint32_t>>(
-                         "AddressV", Sampler.AddressV));
-
-    if (!hlsl::rootsig::verifyAddress(Sampler.AddressW))
-      DeferredErrs =
-          joinErrors(std::move(DeferredErrs),
-                     make_error<RootSignatureValidationError<uint32_t>>(
-                         "AddressW", Sampler.AddressW));
+  for (const mcdxbc::StaticSampler &Sampler : RSD.StaticSamplers) {
 
     if (!hlsl::rootsig::verifyMipLODBias(Sampler.MipLODBias))
-      DeferredErrs = joinErrors(std::move(DeferredErrs),
-                                make_error<RootSignatureValidationError<float>>(
-                                    "MipLODBias", Sampler.MipLODBias));
+      DeferredErrs =
+          joinErrors(std::move(DeferredErrs),
+                     makeRSError(formatv("Invalid value for MipLODBias: {0:e}",
+                                         Sampler.MipLODBias)));
 
     if (!hlsl::rootsig::verifyMaxAnisotropy(Sampler.MaxAnisotropy))
       DeferredErrs =
           joinErrors(std::move(DeferredErrs),
-                     make_error<RootSignatureValidationError<uint32_t>>(
-                         "MaxAnisotropy", Sampler.MaxAnisotropy));
-
-    if (!hlsl::rootsig::verifyComparisonFunc(Sampler.ComparisonFunc))
-      DeferredErrs =
-          joinErrors(std::move(DeferredErrs),
-                     make_error<RootSignatureValidationError<uint32_t>>(
-                         "ComparisonFunc", Sampler.ComparisonFunc));
-
-    if (!hlsl::rootsig::verifyBorderColor(Sampler.BorderColor))
-      DeferredErrs =
-          joinErrors(std::move(DeferredErrs),
-                     make_error<RootSignatureValidationError<uint32_t>>(
-                         "BorderColor", Sampler.BorderColor));
+                     makeRSError(formatv("Invalid value for MaxAnisotropy: {0}",
+                                         Sampler.MaxAnisotropy)));
 
     if (!hlsl::rootsig::verifyLOD(Sampler.MinLOD))
-      DeferredErrs = joinErrors(std::move(DeferredErrs),
-                                make_error<RootSignatureValidationError<float>>(
-                                    "MinLOD", Sampler.MinLOD));
-
-    if (!hlsl::rootsig::verifyLOD(Sampler.MaxLOD))
-      DeferredErrs = joinErrors(std::move(DeferredErrs),
-                                make_error<RootSignatureValidationError<float>>(
-                                    "MaxLOD", Sampler.MaxLOD));
-
-    if (!hlsl::rootsig::verifyRegisterValue(Sampler.ShaderRegister))
       DeferredErrs =
           joinErrors(std::move(DeferredErrs),
-                     make_error<RootSignatureValidationError<uint32_t>>(
-                         "ShaderRegister", Sampler.ShaderRegister));
+                     makeRSError(formatv("Invalid value for MinLOD: {0}",
+                                         Sampler.MinLOD)));
+
+    if (!hlsl::rootsig::verifyLOD(Sampler.MaxLOD))
+      DeferredErrs =
+          joinErrors(std::move(DeferredErrs),
+                     makeRSError(formatv("Invalid value for MaxLOD: {0}",
+                                         Sampler.MaxLOD)));
+
+    if (!hlsl::rootsig::verifyRegisterValue(Sampler.ShaderRegister))
+      DeferredErrs = joinErrors(
+          std::move(DeferredErrs),
+          makeRSError(formatv("Invalid value for ShaderRegister: {0}",
+                              Sampler.ShaderRegister)));
 
     if (!hlsl::rootsig::verifyRegisterSpace(Sampler.RegisterSpace))
       DeferredErrs =
           joinErrors(std::move(DeferredErrs),
-                     make_error<RootSignatureValidationError<uint32_t>>(
-                         "RegisterSpace", Sampler.RegisterSpace));
-
-    if (!dxbc::isValidShaderVisibility(Sampler.ShaderVisibility))
-      DeferredErrs =
-          joinErrors(std::move(DeferredErrs),
-                     make_error<RootSignatureValidationError<uint32_t>>(
-                         "ShaderVisibility", Sampler.ShaderVisibility));
+                     makeRSError(formatv("Invalid value for RegisterSpace: {0}",
+                                         Sampler.RegisterSpace)));
+    bool IsValidFlag =
+        dxbc::isValidStaticSamplerFlags(Sampler.Flags) &&
+        hlsl::rootsig::verifyStaticSamplerFlags(
+            RSD.Version, dxbc::StaticSamplerFlags(Sampler.Flags));
+    if (!IsValidFlag)
+      DeferredErrs = joinErrors(
+          std::move(DeferredErrs),
+          makeRSError(formatv("Invalid value for Static Sampler Flag: {0}",
+                              Sampler.Flags)));
   }
 
   return DeferredErrs;
@@ -698,9 +770,9 @@ MetadataParser::ParseRootSignature(uint32_t Version) {
   for (const auto &Operand : Root->operands()) {
     MDNode *Element = dyn_cast<MDNode>(Operand);
     if (Element == nullptr)
-      return joinErrors(std::move(DeferredErrs),
-                        make_error<GenericRSMetadataError>(
-                            "Missing Root Element Metadata Node.", nullptr));
+      return joinErrors(
+          std::move(DeferredErrs),
+          makeRSError(formatv("Missing Root Element Metadata Node.")));
 
     if (auto Err = parseRootSignatureElement(RSD, Element))
       DeferredErrs = joinErrors(std::move(DeferredErrs), std::move(Err));

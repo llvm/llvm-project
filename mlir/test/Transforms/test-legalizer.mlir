@@ -1,9 +1,14 @@
-// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns -verify-diagnostics -profile-actions-to=- %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=1" -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=1" -verify-diagnostics -profile-actions-to=- %s | FileCheck %s --check-prefix=CHECK-PROFILER
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=0" -verify-diagnostics %s | FileCheck %s
 
-//      CHECK: "name": "pass-execution", "cat": "PERF", "ph": "B"
-//      CHECK: "name": "apply-conversion", "cat": "PERF", "ph": "B"
-//      CHECK: "name": "apply-pattern", "cat": "PERF", "ph": "B"
-//      CHECK: "name": "apply-pattern", "cat": "PERF", "ph": "E"
+// CHECK-PROFILER: "name": "pass-execution", "cat": "PERF", "ph": "B"
+// CHECK-PROFILER: "name": "apply-conversion", "cat": "PERF", "ph": "B"
+// CHECK-PROFILER: "name": "apply-pattern", "cat": "PERF", "ph": "B"
+// CHECK-PROFILER: "name": "apply-pattern", "cat": "PERF", "ph": "E"
+// CHECK-PROFILER: "name": "apply-conversion", "cat": "PERF", "ph": "E"
+// CHECK-PROFILER: "name": "pass-execution", "cat": "PERF", "ph": "E"
+
 // Note: Listener notifications appear after the pattern application because
 // the conversion driver sends all notifications at the end of the conversion
 // in bulk.
@@ -11,8 +16,6 @@
 // CHECK-NEXT: notifyOperationReplaced: test.illegal_op_a
 // CHECK-NEXT: notifyOperationModified: func.return
 // CHECK-NEXT: notifyOperationErased: test.illegal_op_a
-//      CHECK: "name": "apply-conversion", "cat": "PERF", "ph": "E"
-//      CHECK: "name": "pass-execution", "cat": "PERF", "ph": "E"
 // CHECK-LABEL: verifyDirectPattern
 func.func @verifyDirectPattern() -> i32 {
   // CHECK-NEXT:  "test.legal_op_a"() <{status = "Success"}
@@ -29,7 +32,9 @@ func.func @verifyDirectPattern() -> i32 {
 // CHECK-NEXT: notifyOperationErased: test.illegal_op_c
 // CHECK-NEXT: notifyOperationInserted: test.legal_op_a, was unlinked
 // CHECK-NEXT: notifyOperationReplaced: test.illegal_op_e
-// CHECK-NEXT: notifyOperationErased: test.illegal_op_e
+// Note: func.return is modified a second time when running in no-rollback
+//       mode.
+//      CHECK: notifyOperationErased: test.illegal_op_e
 
 // CHECK-LABEL: verifyLargerBenefit
 func.func @verifyLargerBenefit() -> i32 {
@@ -70,7 +75,7 @@ func.func @remap_call_1_to_1(%arg0: i64) {
 // CHECK:      notifyBlockInserted into func.func: was unlinked
 
 // Contents of the old block are moved to the new block.
-// CHECK-NEXT: notifyOperationInserted: test.return, was linked, exact position unknown
+// CHECK-NEXT: notifyOperationInserted: test.return
 
 // The old block is erased.
 // CHECK-NEXT: notifyBlockErased
@@ -140,36 +145,6 @@ func.func @no_remap_nested() {
 
 // -----
 
-// CHECK-LABEL: func @remap_moved_region_args
-func.func @remap_moved_region_args() {
-  // CHECK-NEXT: return
-  // CHECK-NEXT: ^bb1(%{{.*}}: f64, %{{.*}}: f64, %{{.*}}: f16, %{{.*}}: f16):
-  // CHECK-NEXT: "test.cast"{{.*}} : (f16, f16) -> f32
-  // CHECK-NEXT: "test.valid"{{.*}} : (f64, f64, f32)
-  "test.region"() ({
-    ^bb1(%i0: i64, %unused: i16, %i1: i64, %2: f32):
-      "test.invalid"(%i0, %i1, %2) : (i64, i64, f32) -> ()
-  }) : () -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
-  return
-}
-
-// -----
-
-// CHECK-LABEL: func @remap_cloned_region_args
-func.func @remap_cloned_region_args() {
-  // CHECK-NEXT: return
-  // CHECK-NEXT: ^bb1(%{{.*}}: f64, %{{.*}}: f64, %{{.*}}: f16, %{{.*}}: f16):
-  // CHECK-NEXT: "test.cast"{{.*}} : (f16, f16) -> f32
-  // CHECK-NEXT: "test.valid"{{.*}} : (f64, f64, f32)
-  "test.region"() ({
-    ^bb1(%i0: i64, %unused: i16, %i1: i64, %2: f32):
-      "test.invalid"(%i0, %i1, %2) : (i64, i64, f32) -> ()
-  }) {legalizer.should_clone} : () -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
-  return
-}
-
 // CHECK-LABEL: func @remap_drop_region
 func.func @remap_drop_region() {
   // CHECK-NEXT: return
@@ -186,8 +161,8 @@ func.func @remap_drop_region() {
 
 // CHECK-LABEL: func @dropped_input_in_use
 func.func @dropped_input_in_use(%arg: i16, %arg2: i64) {
-  // CHECK-NEXT: "test.cast"{{.*}} : () -> i16
-  // CHECK-NEXT: "work"{{.*}} : (i16)
+  // CHECK-NEXT: %[[cast:.*]] = "test.cast"() : () -> i16
+  // CHECK-NEXT: "work"(%[[cast]]) : (i16)
   // expected-remark@+1 {{op 'work' is not legalizable}}
   "work"(%arg) : (i16) -> ()
 }
@@ -260,15 +235,33 @@ builtin.module {
 
 // CHECK-LABEL: @replace_block_arg_1_to_n
 func.func @replace_block_arg_1_to_n() {
-  // CHECK: "test.block_arg_replace"
-  "test.block_arg_replace"() ({
+  // CHECK: "test.legal_op"
+  "test.legal_op"() ({
   ^bb0(%arg0: i32, %arg1: i16):
-    // CHECK: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16):
-    // CHECK: %[[cast:.*]] = "test.cast"(%[[ARG1]], %[[ARG1]]) : (i16, i16) -> i32
+    // CHECK-NEXT: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16):
+    // CHECK-NEXT: %[[cast:.*]] = "test.cast"(%[[ARG1]], %[[ARG1]]) : (i16, i16) -> i32
+    // CHECK-NEXT: "test.value_replace"(%[[cast]], %[[ARG1]]) {is_legal} : (i32, i16) -> ()
     // CHECK-NEXT: "test.return"(%[[cast]]) : (i32)
+    "test.value_replace"(%arg0, %arg1) : (i32, i16) -> ()
     "test.return"(%arg0) : (i32) -> ()
   }) : () -> ()
   "test.return"() : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: @replace_op_result_1_to_n
+func.func @replace_op_result_1_to_n() {
+  // CHECK: %[[orig:.*]] = "test.legal_op"() : () -> i32
+  // CHECK: %[[repl:.*]] = "test.legal_op"() : () -> i16
+  %0 = "test.legal_op"() : () -> i32
+  %1 = "test.legal_op"() : () -> i16
+
+  // CHECK-NEXT: %[[cast:.*]] = "test.cast"(%[[repl]], %[[repl]]) : (i16, i16) -> i32
+  // CHECK-NEXT: "test.value_replace"(%[[cast]], %[[repl]]) {is_legal} : (i32, i16) -> ()
+  // CHECK-NEXT: "test.return"(%[[cast]]) : (i32)
+  "test.value_replace"(%0, %1) : (i32, i16) -> ()
+  "test.return"(%0) : (i32) -> ()
 }
 
 // -----
@@ -409,8 +402,10 @@ func.func @test_remap_block_arg() {
 
 // CHECK-LABEL: func @test_multiple_1_to_n_replacement()
 //       CHECK:   %[[legal_op:.*]]:4 = "test.legal_op"() : () -> (f16, f16, f16, f16)
-//       CHECK:   %[[cast:.*]] = "test.cast"(%[[legal_op]]#0, %[[legal_op]]#1, %[[legal_op]]#2, %[[legal_op]]#3) : (f16, f16, f16, f16) -> f16
-//       CHECK:   "test.valid"(%[[cast]]) : (f16) -> ()
+// Note: There is a bug in the rollback-based conversion driver: it emits a
+// "test.cast" : (f16, f16, f16, f16) -> f16, when it should be emitting
+// three consecutive casts of (f16, f16) -> f16.
+//       CHECK:   "test.valid"(%{{.*}}) : (f16) -> ()
 func.func @test_multiple_1_to_n_replacement() {
   %0 = "test.multiple_1_to_n_replacement"() : () -> (f16)
   "test.invalid"(%0) : (f16) -> ()
@@ -430,5 +425,58 @@ func.func @test_lookup_without_converter() {
   // lookup the materialization that was created for the above op.
   "test.replace_with_valid_consumer"(%0) : (i64) -> ()
   // expected-remark@+1 {{op 'func.return' is not legalizable}}
+  return
+}
+
+// -----
+// expected-remark@-1 {{applyPartialConversion failed}}
+
+func.func @test_skip_1to1_pattern(%arg0: f32) {
+  // expected-error@+1 {{failed to legalize operation 'test.type_consumer'}}
+  "test.type_consumer"(%arg0) : (f32) -> ()
+  return
+}
+
+// -----
+
+// Demonstrate that the pattern generally works, but only for 1:1 type
+// conversions.
+
+// CHECK-LABEL: @test_working_1to1_pattern(
+func.func @test_working_1to1_pattern(%arg0: f16) {
+  // CHECK-NEXT: "test.return"() : () -> ()
+  "test.type_consumer"(%arg0) : (f16) -> ()
+  "test.return"() : () -> ()
+}
+
+// -----
+
+// The region of "test.post_order_legalization" is converted before the op.
+
+// CHECK: notifyBlockInserted into test.post_order_legalization: was unlinked
+// CHECK: notifyOperationInserted: test.invalid
+// CHECK: notifyBlockErased
+// CHECK: notifyOperationInserted: test.valid, was unlinked
+// CHECK: notifyOperationReplaced: test.invalid
+// CHECK: notifyOperationErased: test.invalid
+// CHECK: notifyOperationModified: test.post_order_legalization
+
+// CHECK-LABEL: func @test_preorder_legalization
+//       CHECK:   "test.post_order_legalization"() ({
+//       CHECK:   ^{{.*}}(%[[arg0:.*]]: f64):
+// Note: The survival of a not-explicitly-invalid operation does *not* cause
+// a conversion failure in when applying a partial conversion.
+//       CHECK:     %[[cast:.*]] = "test.cast"(%[[arg0]]) : (f64) -> i64
+//       CHECK:     "test.remaining_consumer"(%[[cast]]) : (i64) -> ()
+//       CHECK:     "test.valid"(%[[arg0]]) : (f64) -> ()
+//       CHECK:   }) {is_legal} : () -> ()
+func.func @test_preorder_legalization() {
+  "test.post_order_legalization"() ({
+  ^bb0(%arg0: i64):
+    // expected-remark @+1 {{'test.remaining_consumer' is not legalizable}}
+    "test.remaining_consumer"(%arg0) : (i64) -> ()
+    "test.invalid"(%arg0) : (i64) -> ()
+  }) : () -> ()
+  // expected-remark @+1 {{'func.return' is not legalizable}}
   return
 }

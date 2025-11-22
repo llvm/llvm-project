@@ -69,6 +69,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBFileSpecList.cpp
   SBFormat.cpp
   SBFrame.cpp
+  SBFrameList.cpp
   SBFunction.cpp
   SBHostOS.cpp
   SBInstruction.cpp
@@ -299,6 +300,8 @@ set(generated_public_headers ${LLDB_OBJ_DIR}/include/lldb/API/SBLanguages.h)
 file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
 file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
 list(REMOVE_ITEM root_public_headers ${root_private_headers})
+# Skip the initial copy of lldb-defines.h. The fixed version is generated at build time.
+list(REMOVE_ITEM root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h)
 
 find_program(unifdef_EXECUTABLE unifdef)
 

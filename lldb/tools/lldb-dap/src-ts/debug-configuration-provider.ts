@@ -69,6 +69,10 @@ const configurations: Record<string, DefaultConfig> = {
   terminateCommands: { type: "stringArray", default: [] },
 };
 
+export function getDefaultConfigKey(key: string): string | number | boolean | string[] | undefined {
+  return configurations[key]?.default;
+}
+
 export class LLDBDapConfigurationProvider
   implements vscode.DebugConfigurationProvider
 {
@@ -203,10 +207,15 @@ export class LLDBDapConfigurationProvider
           config.get<boolean>("serverMode", false) &&
           (await isServerModeSupported(executable.command))
         ) {
+          const connectionTimeoutSeconds = config.get<number | undefined>(
+            "connectionTimeout",
+            undefined,
+          );
           const serverInfo = await this.server.start(
             executable.command,
             executable.args,
             executable.options,
+            connectionTimeoutSeconds,
           );
           if (!serverInfo) {
             return undefined;

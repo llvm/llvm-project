@@ -19,6 +19,7 @@
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Endian.h"
 #include <optional>
 
@@ -1119,9 +1120,8 @@ static bool isValidIntOrFloat(Type type, int64_t dataEltSize, bool isInt,
   auto denseEltBitWidth = getDenseElementBitWidth(type);
   auto dataSize = static_cast<size_t>(dataEltSize * CHAR_BIT);
   if (denseEltBitWidth != dataSize) {
-    LLVM_DEBUG(llvm::dbgs() << "expected dense element bit width "
-                            << denseEltBitWidth << " to match data size "
-                            << dataSize << " for type " << type << "\n");
+    LDBG() << "expected dense element bit width " << denseEltBitWidth
+           << " to match data size " << dataSize << " for type " << type;
     return false;
   }
 
@@ -1129,9 +1129,7 @@ static bool isValidIntOrFloat(Type type, int64_t dataEltSize, bool isInt,
   if (!isInt) {
     bool valid = llvm::isa<FloatType>(type);
     if (!valid)
-      LLVM_DEBUG(llvm::dbgs()
-                 << "expected float type when isInt is false, but found "
-                 << type << "\n");
+      LDBG() << "expected float type when isInt is false, but found " << type;
     return valid;
   }
   if (type.isIndex())
@@ -1139,9 +1137,7 @@ static bool isValidIntOrFloat(Type type, int64_t dataEltSize, bool isInt,
 
   auto intType = llvm::dyn_cast<IntegerType>(type);
   if (!intType) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "expected integer type when isInt is true, but found " << type
-               << "\n");
+    LDBG() << "expected integer type when isInt is true, but found " << type;
     return false;
   }
 
@@ -1151,8 +1147,7 @@ static bool isValidIntOrFloat(Type type, int64_t dataEltSize, bool isInt,
 
   bool valid = intType.isSigned() == isSigned;
   if (!valid)
-    LLVM_DEBUG(llvm::dbgs() << "expected signedness " << isSigned
-                            << " to match type " << type << "\n");
+    LDBG() << "expected signedness " << isSigned << " to match type " << type;
   return valid;
 }
 

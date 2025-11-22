@@ -172,8 +172,8 @@ define dso_local i32 @pow2minuspow2(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; RV32IM-LABEL: pow2minuspow2:
 ; RV32IM:       # %bb.0: # %entry
 ; RV32IM-NEXT:    slli a2, a1, 7
-; RV32IM-NEXT:    slli a1, a1, 9
-; RV32IM-NEXT:    sub a1, a1, a2
+; RV32IM-NEXT:    slli a1, a1, 8
+; RV32IM-NEXT:    add a1, a1, a2
 ; RV32IM-NEXT:    add a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
@@ -259,7 +259,7 @@ define dso_local i32 @shxadd(i32 %a, i32 %b) local_unnamed_addr #0 {
 ;
 ; RV32IZBAMXQCIAC-LABEL: shxadd:
 ; RV32IZBAMXQCIAC:       # %bb.0: # %entry
-; RV32IZBAMXQCIAC-NEXT:    sh1add a0, a1, a0
+; RV32IZBAMXQCIAC-NEXT:    qc.c.muliadd a0, a1, 2
 ; RV32IZBAMXQCIAC-NEXT:    ret
 entry:
   %mul = mul nsw i32 %b, 2
@@ -361,8 +361,8 @@ define dso_local i32 @shladdc1c2(i32 %a, i32 %b) local_unnamed_addr #0 {
 ;
 ; RV32IMXQCIAC-LABEL: shladdc1c2:
 ; RV32IMXQCIAC:       # %bb.0: # %entry
-; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a1, 5
-; RV32IMXQCIAC-NEXT:    slli a0, a0, 26
+; RV32IMXQCIAC-NEXT:    slli a1, a1, 26
+; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a1, 31
 ; RV32IMXQCIAC-NEXT:    ret
 ;
 ; RV32IZBAMXQCIAC-LABEL: shladdc1c2:
@@ -489,4 +489,133 @@ define i32 @testmuliaddnegimm(i32 %a) {
   %mul = mul i32 %a, -3
   %add = add i32 %mul, 3
   ret i32 %add
+}
+
+define i32 @add_shl_OneUse_1(i32 %x) {
+; RV32IM-LABEL: add_shl_OneUse_1:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    ori a1, a0, 1
+; RV32IM-NEXT:    slli a0, a0, 4
+; RV32IM-NEXT:    ori a0, a0, 16
+; RV32IM-NEXT:    add a0, a0, a1
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: add_shl_OneUse_1:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    ori a0, a0, 1
+; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 4
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: add_shl_OneUse_1:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    ori a0, a0, 1
+; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 4
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %or = or i32 %x, 1
+  %mul = shl i32 %or, 4
+  %add = add i32 %mul, %or
+  ret i32 %add
+}
+
+define i32 @add_shl_OneUse_2(i32 %x) {
+; RV32IM-LABEL: add_shl_OneUse_2:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    ori a1, a0, 1
+; RV32IM-NEXT:    slli a0, a0, 10
+; RV32IM-NEXT:    ori a0, a0, 1024
+; RV32IM-NEXT:    add a0, a0, a1
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: add_shl_OneUse_2:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    ori a0, a0, 1
+; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 10
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: add_shl_OneUse_2:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    ori a0, a0, 1
+; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 10
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %or = or i32 %x, 1
+  %mul = shl i32 %or, 10
+  %add = add i32 %mul, %or
+  ret i32 %add
+}
+
+; For shifts greater than 10 the ori immediate cannot fit within 12 bits so
+; we don't commute with shift and generate qc.shaldd
+define i32 @add_shl_OneUse_3(i32 %x) {
+; RV32IM-LABEL: add_shl_OneUse_3:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    ori a0, a0, 1
+; RV32IM-NEXT:    slli a1, a0, 11
+; RV32IM-NEXT:    add a0, a1, a0
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: add_shl_OneUse_3:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    ori a0, a0, 1
+; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 11
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: add_shl_OneUse_3:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    ori a0, a0, 1
+; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 11
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %or = or i32 %x, 1
+  %mul = shl i32 %or, 11
+  %add = add i32 %mul, %or
+  ret i32 %add
+}
+
+; The shift left gets converted early and as a result we cannot
+; generate the qc.shladd.
+; FIXME: Should we handle this case and generate qc.shladd if possible?
+define i32 @add_shl_moreOneUse_4(i32 %x) {
+; RV32IM-LABEL: add_shl_moreOneUse_4:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    ori a0, a0, 7
+; RV32IM-NEXT:    lui a1, 524288
+; RV32IM-NEXT:    add a0, a0, a1
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: add_shl_moreOneUse_4:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    ori a0, a0, 7
+; RV32IMXQCIAC-NEXT:    lui a1, 524288
+; RV32IMXQCIAC-NEXT:    add a0, a0, a1
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: add_shl_moreOneUse_4:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    ori a0, a0, 7
+; RV32IZBAMXQCIAC-NEXT:    lui a1, 524288
+; RV32IZBAMXQCIAC-NEXT:    add a0, a0, a1
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %or = or i32 %x, 7
+  %mul = shl i32 %or, 31
+  %add = add i32 %mul, %or
+  ret i32 %add
+}
+
+define i32 @select65(i1 zeroext %x) {
+; RV32IM-LABEL: select65:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    neg a0, a0
+; RV32IM-NEXT:    andi a0, a0, 65
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: select65:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 6
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: select65:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 6
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %select = select i1 %x, i32 65, i32 0
+  ret i32 %select
 }

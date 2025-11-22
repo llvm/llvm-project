@@ -103,11 +103,6 @@ public:
     unsigned MIOperandNo;
     unsigned MINumOperands; // The number of operands.
 
-    /// DoNotEncode - Bools are set to true in this vector for each operand in
-    /// the DisableEncoding list.  These should not be emitted by the code
-    /// emitter.
-    BitVector DoNotEncode;
-
     /// MIOperandInfo - Default MI operand type. Note an operand may be made
     /// up of multiple MI operands.
     const DagInit *MIOperandInfo;
@@ -122,7 +117,7 @@ public:
         : Rec(R), Name(Name), SubOpNames(MINO),
           PrinterMethodName(PrinterMethodName), EncoderMethodNames(MINO),
           OperandType(OT), MIOperandNo(MION), MINumOperands(MINO),
-          DoNotEncode(MINO), MIOperandInfo(MIOI), Constraints(MINO) {}
+          MIOperandInfo(MIOI), Constraints(MINO) {}
 
     /// getTiedOperand - If this operand is tied to another one, return the
     /// other operand number.  Otherwise, return -1.
@@ -163,8 +158,8 @@ public:
   OperandInfo &back() { return OperandList.back(); }
   const OperandInfo &back() const { return OperandList.back(); }
 
-  typedef std::vector<OperandInfo>::iterator iterator;
-  typedef std::vector<OperandInfo>::const_iterator const_iterator;
+  using iterator = std::vector<OperandInfo>::iterator;
+  using const_iterator = std::vector<OperandInfo>::const_iterator;
   iterator begin() { return OperandList.begin(); }
   const_iterator begin() const { return OperandList.begin(); }
   iterator end() { return OperandList.end(); }
@@ -183,12 +178,12 @@ public:
   std::optional<std::pair<unsigned, unsigned>>
   findSubOperandAlias(StringRef Name) const;
 
-  /// ParseOperandName - Parse an operand name like "$foo" or "$foo.bar",
+  /// Parses an operand name like "$foo" or "$foo.bar",
   /// where $foo is a whole operand and $foo.bar refers to a suboperand.
   /// This aborts if the name is invalid.  If AllowWholeOp is true, references
   /// to operands with suboperands are allowed, otherwise not.
-  std::pair<unsigned, unsigned> ParseOperandName(StringRef Op,
-                                                 bool AllowWholeOp = true);
+  std::pair<unsigned, unsigned>
+  parseOperandName(StringRef Op, bool AllowWholeOp = true) const;
 
   /// getFlattenedOperandNumber - Flatten a operand/suboperand pair into a
   /// flat machineinstr operand #.
@@ -205,17 +200,6 @@ public:
         return {i, Op - OperandList[i].MIOperandNo};
     }
   }
-
-  /// isFlatOperandNotEmitted - Return true if the specified flat operand #
-  /// should not be emitted with the code emitter.
-  bool isFlatOperandNotEmitted(unsigned FlatOpNo) const {
-    std::pair<unsigned, unsigned> Op = getSubOperandNumber(FlatOpNo);
-    if (OperandList[Op.first].DoNotEncode.size() > Op.second)
-      return OperandList[Op.first].DoNotEncode[Op.second];
-    return false;
-  }
-
-  void ProcessDisableEncoding(StringRef Value);
 };
 
 class CodeGenInstruction {
@@ -335,6 +319,8 @@ public:
     const RecordVal *RV = TheDef->getValue("Inst");
     return RV && isa<DagInit>(RV->getValue());
   }
+
+  StringRef getName() const { return TheDef->getName(); }
 
 private:
   bool isOperandImpl(StringRef OpListName, unsigned i,

@@ -129,7 +129,6 @@ handleInlinedAllocas(Operation *call,
       OpBuilder::InsertionGuard insertionGuard(builder);
       builder.setInsertionPoint(allocaOp);
       LLVM::LifetimeStartOp::create(builder, allocaOp.getLoc(),
-                                    arraySize.getValue().getLimitedValue(),
                                     allocaOp.getResult());
     }
     allocaOp->moveAfter(newConstant);
@@ -147,7 +146,6 @@ handleInlinedAllocas(Operation *call,
     for (auto &[allocaOp, arraySize, shouldInsertLifetime] : allocasToMove) {
       if (shouldInsertLifetime)
         LLVM::LifetimeEndOp::create(builder, allocaOp.getLoc(),
-                                    arraySize.getValue().getLimitedValue(),
                                     allocaOp.getResult());
     }
   }
@@ -237,8 +235,10 @@ getUnderlyingObjectSet(Value pointerValue) {
   WalkContinuation walkResult = walkSlice(pointerValue, [&](Value val) {
     // Attempt to advance to the source of the underlying view-like operation.
     // Examples of view-like operations include GEPOp and AddrSpaceCastOp.
-    if (auto viewOp = val.getDefiningOp<ViewLikeOpInterface>())
-      return WalkContinuation::advanceTo(viewOp.getViewSource());
+    if (auto viewOp = val.getDefiningOp<ViewLikeOpInterface>()) {
+      if (val == viewOp.getViewDest())
+        return WalkContinuation::advanceTo(viewOp.getViewSource());
+    }
 
     // Attempt to advance to control flow predecessors.
     std::optional<SmallVector<Value>> controlFlowPredecessors =
@@ -755,10 +755,8 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
 
   bool allowSingleBlockOptimization(
       iterator_range<Region::iterator> inlinedBlocks) const final {
-    if (!inlinedBlocks.empty() &&
-        isa<LLVM::UnreachableOp>(inlinedBlocks.begin()->getTerminator()))
-      return false;
-    return true;
+    return !(!inlinedBlocks.empty() &&
+             isa<LLVM::UnreachableOp>(inlinedBlocks.begin()->getTerminator()));
   }
 
   /// Handle the given inlined return by replacing the uses of the call with the

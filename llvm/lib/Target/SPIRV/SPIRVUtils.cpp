@@ -105,6 +105,8 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     uint32_t LowBits = FullImm & 0xffffffff;
     uint32_t HighBits = (FullImm >> 32) & 0xffffffff;
     MIB.addImm(LowBits).addImm(HighBits);
+    // Asm Printer needs this info to print 64-bit operands correctly
+    MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH64);
     return;
   }
   report_fatal_error("Unsupported constant bitwidth");
@@ -181,7 +183,7 @@ void buildOpMemberDecorate(Register Reg, MachineInstr &I,
 }
 
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
-                             const MDNode *GVarMD) {
+                             const MDNode *GVarMD, const SPIRVSubtarget &ST) {
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
     auto *OpMD = dyn_cast<MDNode>(GVarMD->getOperand(I));
     if (!OpMD)
@@ -193,6 +195,20 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
     if (!DecorationId)
       report_fatal_error("Expect SPIR-V <Decoration> operand to be the first "
                          "element of the decoration");
+
+    // The goal of `spirv.Decorations` metadata is to provide a way to
+    // represent SPIR-V entities that do not map to LLVM in an obvious way.
+    // FP flags do have obvious matches between LLVM IR and SPIR-V.
+    // Additionally, we have no guarantee at this point that the flags passed
+    // through the decoration are not violated already in the optimizer passes.
+    // Therefore, we simply ignore FP flags, including NoContraction, and
+    // FPFastMathMode.
+    if (DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::NoContraction) ||
+        DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
+      continue; // Ignored.
+    }
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                    .addUse(Reg)
                    .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
@@ -369,6 +385,12 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
   const MachineInstr *MI = getDefInstrMaybeConstant(ConstReg, MRI);
   assert(MI && MI->getOpcode() == TargetOpcode::G_CONSTANT);
   return MI->getOperand(1).getCImm()->getValue().getZExtValue();
+}
+
+int64_t getIConstValSext(Register ConstReg, const MachineRegisterInfo *MRI) {
+  const MachineInstr *MI = getDefInstrMaybeConstant(ConstReg, MRI);
+  assert(MI && MI->getOpcode() == TargetOpcode::G_CONSTANT);
+  return MI->getOperand(1).getCImm()->getSExtValue();
 }
 
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
@@ -1018,6 +1040,21 @@ getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
   // or after OpFunction, if no parameters.
   return VarPos != BB.end() && VarPos->getOpcode() == SPIRV::OpLabel ? ++VarPos
                                                                      : VarPos;
+}
+
+std::optional<SPIRV::LinkageType::LinkageType>
+getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
+  if (GV.hasLocalLinkage() || GV.hasHiddenVisibility())
+    return std::nullopt;
+
+  if (GV.isDeclarationForLinker())
+    return SPIRV::LinkageType::Import;
+
+  if (GV.hasLinkOnceODRLinkage() &&
+      ST.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr))
+    return SPIRV::LinkageType::LinkOnceODR;
+
+  return SPIRV::LinkageType::Export;
 }
 
 } // namespace llvm

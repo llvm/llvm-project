@@ -8,7 +8,7 @@ static void TestImplicitFunctionDeclaration(int a) {
   printf("%d", a);
 }
 
-typedef _Bool bool;
+#define bool _Bool
 
 static bool ispositive(int a) { return a > 0; }
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: static function named 'ispositive'

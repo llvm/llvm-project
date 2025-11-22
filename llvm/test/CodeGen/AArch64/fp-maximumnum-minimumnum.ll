@@ -1431,6 +1431,7 @@ define <9 x half> @max_v9f16(<9 x half> %a, <9 x half> %b) {
 ; FULLFP16-NEXT:    add x9, sp, #16
 ; FULLFP16-NEXT:    // kill: def $h3 killed $h3 def $q3
 ; FULLFP16-NEXT:    // kill: def $h4 killed $h4 def $q4
+; FULLFP16-NEXT:    add x10, sp, #40
 ; FULLFP16-NEXT:    // kill: def $h5 killed $h5 def $q5
 ; FULLFP16-NEXT:    // kill: def $h6 killed $h6 def $q6
 ; FULLFP16-NEXT:    // kill: def $h7 killed $h7 def $q7
@@ -1439,30 +1440,30 @@ define <9 x half> @max_v9f16(<9 x half> %a, <9 x half> %b) {
 ; FULLFP16-NEXT:    ld1 { v1.h }[1], [x9]
 ; FULLFP16-NEXT:    add x9, sp, #24
 ; FULLFP16-NEXT:    mov v0.h[2], v2.h[0]
-; FULLFP16-NEXT:    ldr h2, [sp]
 ; FULLFP16-NEXT:    ld1 { v1.h }[2], [x9]
 ; FULLFP16-NEXT:    add x9, sp, #32
-; FULLFP16-NEXT:    fminnm v2.8h, v2.8h, v2.8h
 ; FULLFP16-NEXT:    mov v0.h[3], v3.h[0]
 ; FULLFP16-NEXT:    ld1 { v1.h }[3], [x9]
-; FULLFP16-NEXT:    add x9, sp, #40
-; FULLFP16-NEXT:    ldr h3, [sp, #72]
-; FULLFP16-NEXT:    ld1 { v1.h }[4], [x9]
+; FULLFP16-NEXT:    ldr h2, [x10]
 ; FULLFP16-NEXT:    add x9, sp, #48
+; FULLFP16-NEXT:    ldr h3, [sp, #72]
+; FULLFP16-NEXT:    ld1 { v2.h }[1], [x9]
+; FULLFP16-NEXT:    add x9, sp, #56
 ; FULLFP16-NEXT:    fminnm v3.8h, v3.8h, v3.8h
 ; FULLFP16-NEXT:    mov v0.h[4], v4.h[0]
-; FULLFP16-NEXT:    ld1 { v1.h }[5], [x9]
-; FULLFP16-NEXT:    add x9, sp, #56
-; FULLFP16-NEXT:    fmaxnm v2.8h, v2.8h, v3.8h
-; FULLFP16-NEXT:    mov v0.h[5], v5.h[0]
-; FULLFP16-NEXT:    ld1 { v1.h }[6], [x9]
+; FULLFP16-NEXT:    ld1 { v2.h }[2], [x9]
 ; FULLFP16-NEXT:    add x9, sp, #64
-; FULLFP16-NEXT:    str h2, [x8, #16]
+; FULLFP16-NEXT:    mov v0.h[5], v5.h[0]
+; FULLFP16-NEXT:    ld1 { v2.h }[3], [x9]
+; FULLFP16-NEXT:    zip1 v1.2d, v1.2d, v2.2d
+; FULLFP16-NEXT:    ldr h2, [sp]
 ; FULLFP16-NEXT:    mov v0.h[6], v6.h[0]
-; FULLFP16-NEXT:    ld1 { v1.h }[7], [x9]
+; FULLFP16-NEXT:    fminnm v2.8h, v2.8h, v2.8h
 ; FULLFP16-NEXT:    fminnm v1.8h, v1.8h, v1.8h
 ; FULLFP16-NEXT:    mov v0.h[7], v7.h[0]
+; FULLFP16-NEXT:    fmaxnm v2.8h, v2.8h, v3.8h
 ; FULLFP16-NEXT:    fminnm v0.8h, v0.8h, v0.8h
+; FULLFP16-NEXT:    str h2, [x8, #16]
 ; FULLFP16-NEXT:    fmaxnm v0.8h, v0.8h, v1.8h
 ; FULLFP16-NEXT:    str q0, [x8]
 ; FULLFP16-NEXT:    ret
@@ -2012,6 +2013,7 @@ define <9 x half> @min_v9f16(<9 x half> %a, <9 x half> %b) {
 ; FULLFP16-NEXT:    add x9, sp, #16
 ; FULLFP16-NEXT:    // kill: def $h3 killed $h3 def $q3
 ; FULLFP16-NEXT:    // kill: def $h4 killed $h4 def $q4
+; FULLFP16-NEXT:    add x10, sp, #40
 ; FULLFP16-NEXT:    // kill: def $h5 killed $h5 def $q5
 ; FULLFP16-NEXT:    // kill: def $h6 killed $h6 def $q6
 ; FULLFP16-NEXT:    // kill: def $h7 killed $h7 def $q7
@@ -2020,30 +2022,30 @@ define <9 x half> @min_v9f16(<9 x half> %a, <9 x half> %b) {
 ; FULLFP16-NEXT:    ld1 { v1.h }[1], [x9]
 ; FULLFP16-NEXT:    add x9, sp, #24
 ; FULLFP16-NEXT:    mov v0.h[2], v2.h[0]
-; FULLFP16-NEXT:    ldr h2, [sp]
 ; FULLFP16-NEXT:    ld1 { v1.h }[2], [x9]
 ; FULLFP16-NEXT:    add x9, sp, #32
-; FULLFP16-NEXT:    fminnm v2.8h, v2.8h, v2.8h
 ; FULLFP16-NEXT:    mov v0.h[3], v3.h[0]
 ; FULLFP16-NEXT:    ld1 { v1.h }[3], [x9]
-; FULLFP16-NEXT:    add x9, sp, #40
-; FULLFP16-NEXT:    ldr h3, [sp, #72]
-; FULLFP16-NEXT:    ld1 { v1.h }[4], [x9]
+; FULLFP16-NEXT:    ldr h2, [x10]
 ; FULLFP16-NEXT:    add x9, sp, #48
+; FULLFP16-NEXT:    ldr h3, [sp, #72]
+; FULLFP16-NEXT:    ld1 { v2.h }[1], [x9]
+; FULLFP16-NEXT:    add x9, sp, #56
 ; FULLFP16-NEXT:    fminnm v3.8h, v3.8h, v3.8h
 ; FULLFP16-NEXT:    mov v0.h[4], v4.h[0]
-; FULLFP16-NEXT:    ld1 { v1.h }[5], [x9]
-; FULLFP16-NEXT:    add x9, sp, #56
-; FULLFP16-NEXT:    fminnm v2.8h, v2.8h, v3.8h
-; FULLFP16-NEXT:    mov v0.h[5], v5.h[0]
-; FULLFP16-NEXT:    ld1 { v1.h }[6], [x9]
+; FULLFP16-NEXT:    ld1 { v2.h }[2], [x9]
 ; FULLFP16-NEXT:    add x9, sp, #64
-; FULLFP16-NEXT:    str h2, [x8, #16]
+; FULLFP16-NEXT:    mov v0.h[5], v5.h[0]
+; FULLFP16-NEXT:    ld1 { v2.h }[3], [x9]
+; FULLFP16-NEXT:    zip1 v1.2d, v1.2d, v2.2d
+; FULLFP16-NEXT:    ldr h2, [sp]
 ; FULLFP16-NEXT:    mov v0.h[6], v6.h[0]
-; FULLFP16-NEXT:    ld1 { v1.h }[7], [x9]
+; FULLFP16-NEXT:    fminnm v2.8h, v2.8h, v2.8h
 ; FULLFP16-NEXT:    fminnm v1.8h, v1.8h, v1.8h
 ; FULLFP16-NEXT:    mov v0.h[7], v7.h[0]
+; FULLFP16-NEXT:    fminnm v2.8h, v2.8h, v3.8h
 ; FULLFP16-NEXT:    fminnm v0.8h, v0.8h, v0.8h
+; FULLFP16-NEXT:    str h2, [x8, #16]
 ; FULLFP16-NEXT:    fminnm v0.8h, v0.8h, v1.8h
 ; FULLFP16-NEXT:    str q0, [x8]
 ; FULLFP16-NEXT:    ret

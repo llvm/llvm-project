@@ -1,4 +1,4 @@
-//===--- AvoidUnconditionalPreprocessorIfCheck.cpp - clang-tidy -----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,6 @@ namespace clang::tidy::readability {
 
 namespace {
 struct AvoidUnconditionalPreprocessorIfPPCallbacks : public PPCallbacks {
-
   explicit AvoidUnconditionalPreprocessorIfPPCallbacks(ClangTidyCheck &Check,
                                                        Preprocessor &PP)
       : Check(Check), PP(PP) {}
@@ -40,7 +39,7 @@ struct AvoidUnconditionalPreprocessorIfPPCallbacks : public PPCallbacks {
 
   bool isImmutable(SourceManager &SM, const LangOptions &LangOpts,
                    SourceRange ConditionRange) {
-    SourceLocation Loc = ConditionRange.getBegin();
+    const SourceLocation Loc = ConditionRange.getBegin();
     if (Loc.isMacroID())
       return false;
 

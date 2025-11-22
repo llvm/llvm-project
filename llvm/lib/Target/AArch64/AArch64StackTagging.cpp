@@ -46,7 +46,6 @@
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include <cassert>
 #include <memory>
-#include <utility>
 
 using namespace llvm;
 
@@ -585,8 +584,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
                                    ClMaxLifetimes);
     if (StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
-      uint64_t Size =
-          cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
+      uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Size = alignTo(Size, kTagGranuleSize);
       tagAlloca(AI, Start->getNextNode(), TagPCall, Size);
 

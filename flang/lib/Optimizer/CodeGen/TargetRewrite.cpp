@@ -143,7 +143,8 @@ public:
         llvm::SmallVector<mlir::Type> operandsTypes;
         for (auto arg : gpuLaunchFunc.getKernelOperands())
           operandsTypes.push_back(arg.getType());
-        auto fctTy = mlir::FunctionType::get(&context, operandsTypes, {});
+        auto fctTy = mlir::FunctionType::get(&context, operandsTypes,
+                                             gpuLaunchFunc.getResultTypes());
         if (!hasPortableSignature(fctTy, op))
           convertCallOp(gpuLaunchFunc, fctTy);
       } else if (auto addr = mlir::dyn_cast<fir::AddrOfOp>(op)) {
@@ -520,10 +521,14 @@ public:
     llvm::SmallVector<mlir::Value, 1> newCallResults;
     // TODO propagate/update call argument and result attributes.
     if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>) {
+      mlir::Value asyncToken = callOp.getAsyncToken();
       auto newCall = A::create(*rewriter, loc, callOp.getKernel(),
                                callOp.getGridSizeOperandValues(),
                                callOp.getBlockSizeOperandValues(),
-                               callOp.getDynamicSharedMemorySize(), newOpers);
+                               callOp.getDynamicSharedMemorySize(), newOpers,
+                               asyncToken ? asyncToken.getType() : nullptr,
+                               callOp.getAsyncDependencies(),
+                               /*clusterSize=*/std::nullopt);
       if (callOp.getClusterSizeX())
         newCall.getClusterSizeXMutable().assign(callOp.getClusterSizeX());
       if (callOp.getClusterSizeY())
@@ -872,6 +877,14 @@ public:
       }
     }
 
+    // Count the number of arguments that have to stay in place at the end of
+    // the argument list.
+    unsigned trailingArgs = 0;
+    if constexpr (std::is_same_v<FuncOpTy, mlir::gpu::GPUFuncOp>) {
+      trailingArgs =
+          func.getNumWorkgroupAttributions() + func.getNumPrivateAttributions();
+    }
+
     // Convert return value(s)
     for (auto ty : funcTy.getResults())
       llvm::TypeSwitch<mlir::Type>(ty)
@@ -980,6 +993,16 @@ public:
              rewriter->getNamedAttr("llvm.nest", rewriter->getUnitAttr())});
       }
     }
+
+    // Add the argument at the end if the number of trailing arguments is 0,
+    // otherwise insert the argument at the appropriate index.
+    auto addOrInsertArgument = [&](mlir::Type ty, mlir::Location loc) {
+      unsigned inputIndex = func.front().getArguments().size() - trailingArgs;
+      auto newArg = trailingArgs == 0
+                        ? func.front().addArgument(ty, loc)
+                        : func.front().insertArgument(inputIndex, ty, loc);
+      return newArg;
+    };
 
     if (!func.empty()) {
       // If the function has a body, then apply the fixups to the arguments and
@@ -1117,8 +1140,7 @@ public:
           // original arguments. (Boxchar arguments.)
           auto newBufArg =
               func.front().insertArgument(fixup.index, fixupType, loc);
-          auto newLenArg =
-              func.front().addArgument(trailingTys[fixup.second], loc);
+          auto newLenArg = addOrInsertArgument(trailingTys[fixup.second], loc);
           auto boxTy = oldArgTys[fixup.index - offset];
           rewriter->setInsertionPointToStart(&func.front());
           auto box = fir::EmboxCharOp::create(*rewriter, loc, boxTy, newBufArg,
@@ -1133,8 +1155,7 @@ public:
           // appended after all the original arguments.
           auto newProcPointerArg =
               func.front().insertArgument(fixup.index, fixupType, loc);
-          auto newLenArg =
-              func.front().addArgument(trailingTys[fixup.second], loc);
+          auto newLenArg = addOrInsertArgument(trailingTys[fixup.second], loc);
           auto tupleType = oldArgTys[fixup.index - offset];
           rewriter->setInsertionPointToStart(&func.front());
           fir::FirOpBuilder builder(*rewriter, getModule());
@@ -1336,7 +1357,15 @@ public:
 private:
   // Replace `op` and remove it.
   void replaceOp(mlir::Operation *op, mlir::ValueRange newValues) {
-    op->replaceAllUsesWith(newValues);
+    llvm::SmallVector<mlir::Value> casts;
+    for (auto [oldValue, newValue] : llvm::zip(op->getResults(), newValues)) {
+      if (oldValue.getType() == newValue.getType())
+        casts.push_back(newValue);
+      else
+        casts.push_back(fir::ConvertOp::create(*rewriter, op->getLoc(),
+                                               oldValue.getType(), newValue));
+    }
+    op->replaceAllUsesWith(casts);
     op->dropAllReferences();
     op->erase();
   }

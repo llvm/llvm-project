@@ -35,6 +35,7 @@ class MCInstrInfo;
 class MCRegisterClass;
 class MCRegisterInfo;
 class MCSubtargetInfo;
+class MDNode;
 class StringRef;
 class Triple;
 class raw_ostream;
@@ -908,7 +909,7 @@ private:
   const ComponentInfo CompInfo[COMPONENTS_NUM];
 
 public:
-  using RegIndices = std::array<unsigned, Component::MAX_OPR_NUM>;
+  using RegIndices = std::array<MCRegister, Component::MAX_OPR_NUM>;
 
   InstInfo(const MCInstrDesc &OpX, const MCInstrDesc &OpY)
       : CompInfo{OpX, OpY} {}
@@ -931,9 +932,10 @@ public:
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
-  bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
-                         const MCRegisterInfo &MRI, bool SkipSrc = false,
-                         bool AllowSameVGPR = false, bool VOPD3 = false) const {
+  bool
+  hasInvalidOperand(std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
+                    const MCRegisterInfo &MRI, bool SkipSrc = false,
+                    bool AllowSameVGPR = false, bool VOPD3 = false) const {
     return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR,
                                       VOPD3)
         .has_value();
@@ -948,14 +950,14 @@ public:
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
   std::optional<unsigned> getInvalidCompOperandIndex(
-      std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+      std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
       const MCRegisterInfo &MRI, bool SkipSrc = false,
       bool AllowSameVGPR = false, bool VOPD3 = false) const;
 
 private:
   RegIndices
   getRegIndices(unsigned ComponentIdx,
-                std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
                 bool VOPD3) const;
 };
 
@@ -1013,6 +1015,13 @@ bool isReadOnlySegment(const GlobalValue *GV);
 bool shouldEmitConstantsToTextSection(const Triple &TT);
 
 /// Returns a valid charcode or 0 in the first entry if this is a valid physical
+/// register name. Followed by the start register number, and the register
+/// width. Does not validate the number of registers exists in the class. Unlike
+/// parseAsmConstraintPhysReg, this does not expect the name to be wrapped in
+/// "{}".
+std::tuple<char, unsigned, unsigned> parseAsmPhysRegName(StringRef TupleString);
+
+/// Returns a valid charcode or 0 in the first entry if this is a valid physical
 /// register constraint. Followed by the start register number, and the register
 /// width. Does not validate the number of registers exists in the class.
 std::tuple<char, unsigned, unsigned>
@@ -1063,6 +1072,9 @@ SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
 /// Similar to the function above, but returns std::nullopt if any error occurs.
 std::optional<SmallVector<unsigned>>
 getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
+
+/// Checks if \p Val is inside \p MD, a !range-like metadata.
+bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
@@ -1513,6 +1525,7 @@ constexpr bool mayTailCallThisCC(CallingConv::ID CC) {
   switch (CC) {
   case CallingConv::C:
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
     return true;
   default:
     return canGuaranteeTCO(CC);
@@ -1549,6 +1562,7 @@ bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
 bool isGFX1250(const MCSubtargetInfo &STI);
+bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);
@@ -1562,6 +1576,11 @@ bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
+
+inline bool supportsWave32(const MCSubtargetInfo &STI) {
+  return AMDGPU::isGFX10Plus(STI) && !AMDGPU::isGFX1250(STI);
+}
+
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
@@ -1581,11 +1600,18 @@ LLVM_READNONE
 MCRegister mc2PseudoReg(MCRegister Reg);
 
 LLVM_READNONE
-bool isInlineValue(unsigned Reg);
+bool isInlineValue(MCRegister Reg);
 
 /// Is this an AMDGPU specific source operand? These include registers,
 /// inline constants, literals and mandatory literals (KImm).
-bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo);
+constexpr bool isSISrcOperand(const MCOperandInfo &OpInfo) {
+  return OpInfo.OperandType >= AMDGPU::OPERAND_SRC_FIRST &&
+         OpInfo.OperandType <= AMDGPU::OPERAND_SRC_LAST;
+}
+
+inline bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
+  return isSISrcOperand(Desc.operands()[OpNo]);
+}
 
 /// Is this a KImm operand?
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo);
@@ -1601,10 +1627,6 @@ unsigned getRegBitWidth(unsigned RCID);
 
 /// Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(const MCRegisterClass &RC);
-
-/// Get size of register operand
-unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
-                           unsigned OpNo);
 
 LLVM_READNONE
 inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
@@ -1676,9 +1698,6 @@ LLVM_READNONE
 bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
-bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
-
-LLVM_READNONE
 bool isInlinableLiteralI16(int32_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
@@ -1705,9 +1724,14 @@ bool isInlinableLiteralV2F16(uint32_t Literal);
 LLVM_READNONE
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
 
+LLVM_READNONE
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit);
+
 bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
+
+LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
 
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
@@ -1748,21 +1772,49 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST);
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 
 LLVM_READNONE
-inline bool isLegalDPALU_DPPControl(unsigned DC) {
-  return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
+inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
+  if (isGFX12(ST))
+    return DC >= DPP::ROW_SHARE_FIRST && DC <= DPP::ROW_SHARE_LAST;
+  if (isGFX90A(ST))
+    return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
+  return false;
 }
 
 /// \returns true if an instruction may have a 64-bit VGPR operand.
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc);
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc,
+                             const MCSubtargetInfo &ST);
+
+/// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.
+bool isDPALU_DPP32BitOpc(unsigned Opc);
 
 /// \returns true if an instruction is a DP ALU DPP.
-bool isDPALU_DPP(const MCInstrDesc &OpDesc);
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
+                 const MCSubtargetInfo &ST);
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
+/// \returns a register class for the physical register \p Reg if it is a VGPR
+/// or nullptr otherwise.
+const MCRegisterClass *getVGPRPhysRegClass(MCRegister Reg,
+                                           const MCRegisterInfo &MRI);
+
+/// \returns the MODE bits which have to be set by the S_SET_VGPR_MSB for the
+/// physical register \p Reg.
+unsigned getVGPREncodingMSBs(MCRegister Reg, const MCRegisterInfo &MRI);
+
+/// If \p Reg is a low VGPR return a corresponding high VGPR with \p MSBs set.
+MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
+                           const MCRegisterInfo &MRI);
+
+// Returns a table for the opcode with a given \p Desc to map the VGPR MSB
+// set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2
+// maps, one for X and one for Y component.
+std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
+getVGPRLoweringOperandTables(const MCInstrDesc &Desc);
 
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
@@ -1771,6 +1823,50 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
 /// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
 /// must be defined in terms of bytes.
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
+
+class ClusterDimsAttr {
+public:
+  enum class Kind { Unknown, NoCluster, VariableDims, FixedDims };
+
+  ClusterDimsAttr() = default;
+
+  Kind getKind() const { return AttrKind; }
+
+  bool isUnknown() const { return getKind() == Kind::Unknown; }
+
+  bool isNoCluster() const { return getKind() == Kind::NoCluster; }
+
+  bool isFixedDims() const { return getKind() == Kind::FixedDims; }
+
+  bool isVariableDims() const { return getKind() == Kind::VariableDims; }
+
+  void setUnknown() { *this = ClusterDimsAttr(Kind::Unknown); }
+
+  void setNoCluster() { *this = ClusterDimsAttr(Kind::NoCluster); }
+
+  void setVariableDims() { *this = ClusterDimsAttr(Kind::VariableDims); }
+
+  /// \returns the dims stored. Note that this function can only be called if
+  /// the kind is \p Fixed.
+  const std::array<unsigned, 3> &getDims() const;
+
+  bool operator==(const ClusterDimsAttr &RHS) const {
+    return AttrKind == RHS.AttrKind && Dims == RHS.Dims;
+  }
+
+  std::string to_string() const;
+
+  static ClusterDimsAttr get(const Function &F);
+
+private:
+  enum Encoding { EncoNoCluster = 0, EncoVariableDims = 1024 };
+
+  ClusterDimsAttr(Kind AttrKind) : AttrKind(AttrKind) {}
+
+  std::array<unsigned, 3> Dims = {0, 0, 0};
+
+  Kind AttrKind = Kind::Unknown;
+};
 
 } // end namespace AMDGPU
 

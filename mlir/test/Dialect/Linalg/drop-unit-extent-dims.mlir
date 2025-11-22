@@ -915,7 +915,7 @@ func.func @sparse_case(%arg0: tensor<8x8xf32, #CSR>, %arg1: tensor<8xf32>) -> te
 
 // -----
 
-func.func @reduce_dispatch_0() -> tensor<4x2xf32> {
+func.func @parallel_insert_slice() -> tensor<4x2xf32> {
   %c2 = arith.constant 2 : index
   %c4 = arith.constant 4 : index
   %cst = arith.constant 0.000000e+00 : f32
@@ -923,6 +923,7 @@ func.func @reduce_dispatch_0() -> tensor<4x2xf32> {
   %res = scf.forall (%arg0, %arg1) in (%c4, %c2) shared_outs(%o = %0) -> (tensor<4x2xf32>) {
     %1 = tensor.empty() : tensor<1x1xf32>
     %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<1x1xf32>) -> tensor<1x1xf32>
+    // CHECK: scf.forall.in_parallel
     scf.forall.in_parallel {
       //      CHECK: tensor.parallel_insert_slice %{{[0-9a-z]*}} into %{{[0-9a-z]*}}
       // CHECK-SAME: [%{{.*}}, %{{.*}}] [1, 1] [1, 1] : tensor<f32> into tensor<4x2xf32>

@@ -30,7 +30,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   LLVM_APPEND_VC_REV
   LLVM_HAS_LOGF128
-  LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
+  LLVM_ENABLE_ONDISK_CAS
   )
 
 configure_lit_site_cfg(
@@ -60,99 +60,106 @@ configure_lit_site_cfg(
 
 # Set the depends list as a variable so that it can grow conditionally.
 # NOTE: Sync the substitutions in test/lit.cfg when adding to this list.
+
+set(LLVM_TEST_DEPENDS_COMMON
+  FileCheck
+  count
+  llvm-config
+  not
+  )
+
 set(LLVM_TEST_DEPENDS
-          BugpointPasses
-          FileCheck
-          LLVMWindowsDriver
-          UnitTests
-          bugpoint
-          count
-          llc
-          lli
-          lli-child-target
-          llvm-addr2line
-          llvm-ar
-          llvm-as
-          llvm-bcanalyzer
-          llvm-bitcode-strip
-          llvm-c-test
-          llvm-cat
-          llvm-cfi-verify
-          llvm-cgdata
-          llvm-config
-          llvm-cov
-          llvm-ctxprof-util
-          llvm-cvtres
-          llvm-cxxdump
-          llvm-cxxfilt
-          llvm-cxxmap
-          llvm-debuginfo-analyzer
-          llvm-debuginfod-find
-          llvm-diff
-          llvm-dis
-          llvm-dlltool
-          dsymutil
-          llvm-dwarfdump
-          llvm-dwarfutil
-          llvm-dwp
-          llvm-exegesis
-          llvm-extract
-          llvm-gsymutil
-          llvm-ir2vec
-          llvm-isel-fuzzer
-          llvm-ifs
-          llvm-install-name-tool
-          llvm-jitlink
-          llvm-lib
-          llvm-libtool-darwin
-          llvm-link
-          llvm-lipo
-          llvm-locstats
-          llvm-lto2
-          llvm-mc
-          llvm-mca
-          llvm-ml
-          llvm-ml64
-          llvm-modextract
-          llvm-nm
-          llvm-objcopy
-          llvm-objdump
-          llvm-opt-fuzzer
-          llvm-opt-report
-          llvm-otool
-          llvm-pdbutil
-          llvm-profdata
-          llvm-profgen
-          llvm-ranlib
-          llvm-rc
-          llvm-readobj
-          llvm-readelf
-          llvm-reduce
-          llvm-remarkutil
-          llvm-rtdyld
-          llvm-sim
-          llvm-size
-          llvm-split
-          llvm-stress
-          llvm-strings
-          llvm-strip
-          llvm-symbolizer
-          llvm-tblgen
-          llvm-readtapi
-          llvm-tli-checker
-          llvm-undname
-          llvm-windres
-          llvm-xray
-          not
-          obj2yaml
-          opt
-          sancov
-          sanstats
-          split-file
-          verify-uselistorder
-          yaml-bench
-          yaml2obj
-        )
+  ${LLVM_TEST_DEPENDS_COMMON}
+  BugpointPasses
+  LLVMWindowsDriver
+  bugpoint
+  llc
+  lli
+  lli-child-target
+  llvm-addr2line
+  llvm-ar
+  llvm-as
+  llvm-bcanalyzer
+  llvm-bitcode-strip
+  llvm-c-test
+  llvm-cas
+  llvm-cat
+  llvm-cfi-verify
+  llvm-cgdata
+  llvm-cov
+  llvm-ctxprof-util
+  llvm-cvtres
+  llvm-cxxdump
+  llvm-cxxfilt
+  llvm-cxxmap
+  llvm-debuginfo-analyzer
+  llvm-debuginfod-find
+  llvm-diff
+  llvm-dis
+  llvm-dlltool
+  dsymutil
+  llvm-dwarfdump
+  llvm-dwarfutil
+  llvm-dwp
+  llvm-exegesis
+  llvm-extract
+  llvm-gsymutil
+  llvm-ir2vec
+  llvm-isel-fuzzer
+  llvm-ifs
+  llvm-install-name-tool
+  llvm-jitlink
+  llvm-lib
+  llvm-libtool-darwin
+  llvm-link
+  llvm-lipo
+  llvm-locstats
+  llvm-lto2
+  llvm-mc
+  llvm-mca
+  llvm-ml
+  llvm-ml64
+  llvm-modextract
+  llvm-nm
+  llvm-objcopy
+  llvm-objdump
+  llvm-opt-fuzzer
+  llvm-opt-report
+  llvm-offload-binary
+  llvm-offload-wrapper
+  llvm-otool
+  llvm-pdbutil
+  llvm-profdata
+  llvm-profgen
+  llvm-ranlib
+  llvm-rc
+  llvm-readobj
+  llvm-readelf
+  llvm-reduce
+  llvm-remarkutil
+  llvm-rtdyld
+  llvm-sim
+  llvm-size
+  llvm-split
+  llvm-stress
+  llvm-strings
+  llvm-strip
+  llvm-symbolizer
+  llvm-tblgen
+  llvm-readtapi
+  llvm-tli-checker
+  llvm-undname
+  llvm-windres
+  llvm-xray
+  obj2yaml
+  opt
+  sancov
+  sanstats
+  split-file
+  verify-uselistorder
+  yaml-bench
+  yaml2obj
+  )
 
 if(TARGET llvm-lto)
   set(LLVM_TEST_DEPENDS ${LLVM_TEST_DEPENDS} llvm-lto)
@@ -243,7 +250,7 @@ if (LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
   list(APPEND LLVM_TEST_DEPENDS spirv-link)
 endif()
 
-add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS})
+add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS} UnitTests)
 set_target_properties(llvm-test-depends PROPERTIES FOLDER "LLVM/Tests")
 
 if(LLVM_BUILD_TOOLS)
@@ -255,15 +262,21 @@ endif()
 add_lit_testsuite(check-llvm "Running the LLVM regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   ${exclude_from_check_all}
-  DEPENDS ${LLVM_TEST_DEPENDS}
+  DEPENDS ${LLVM_TEST_DEPENDS} UnitTests
   )
 set_target_properties(check-llvm PROPERTIES FOLDER "LLVM/Tests")
 
+# Note, exclude TableGen and FileCheck directories as we define them with a
+# reduced set of dependencies in their individual CMakeLists.txt
 add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
   ${exclude_from_check_all}
   DEPENDS ${LLVM_TEST_DEPENDS}
   FOLDER "Tests/Subdirectories"
+  SKIP "^FileCheck" "^TableGen" "^Unit"
   )
+add_subdirectory(FileCheck)
+add_subdirectory(TableGen)
+add_subdirectory(Unit)
 
 # Setup an alias for 'check-all'.
 add_custom_target(check)

@@ -28,7 +28,12 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -37,6 +42,10 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "aggressive-instcombine"
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 STATISTIC(NumAnyOrAllBitsSet, "Number of any/all-bits-set patterns folded");
 STATISTIC(NumGuardedRotates,
@@ -83,8 +92,8 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
     //  == (ShVal0 << ShAmt) | (ShVal1 >> (Width -ShAmt))
     if (match(V, m_OneUse(m_c_Or(
                      m_Shl(m_Value(ShVal0), m_Value(ShAmt)),
-                     m_LShr(m_Value(ShVal1),
-                            m_Sub(m_SpecificInt(Width), m_Deferred(ShAmt))))))) {
+                     m_LShr(m_Value(ShVal1), m_Sub(m_SpecificInt(Width),
+                                                   m_Deferred(ShAmt))))))) {
       return Intrinsic::fshl;
     }
 
@@ -598,6 +607,14 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
     auto Cmp = B.CreateICmpEQ(X1, ConstantInt::get(XType, 0));
     auto Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Cttz);
 
+    // The true branch of select handles the cttz(0) case, which is rare.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+        SelectI->setMetadata(
+            LLVMContext::MD_prof,
+            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
+    }
+
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
     // it should be handled as: `cttz(x) & (typeSize - 1)`.
 
@@ -617,7 +634,7 @@ struct LoadOps {
   LoadInst *RootInsert = nullptr;
   bool FoundRoot = false;
   uint64_t LoadSize = 0;
-  const APInt *Shift = nullptr;
+  uint64_t Shift = 0;
   Type *ZextType;
   AAMDNodes AATags;
 };
@@ -627,17 +644,15 @@ struct LoadOps {
 // (ZExt(L1) << shift1) | ZExt(L2) -> ZExt(L3)
 static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
                                AliasAnalysis &AA) {
-  const APInt *ShAmt2 = nullptr;
+  uint64_t ShAmt2;
   Value *X;
   Instruction *L1, *L2;
 
   // Go to the last node with loads.
-  if (match(V, m_OneUse(m_c_Or(
-                   m_Value(X),
-                   m_OneUse(m_Shl(m_OneUse(m_ZExt(m_OneUse(m_Instruction(L2)))),
-                                  m_APInt(ShAmt2)))))) ||
-      match(V, m_OneUse(m_Or(m_Value(X),
-                             m_OneUse(m_ZExt(m_OneUse(m_Instruction(L2)))))))) {
+  if (match(V,
+            m_OneUse(m_c_Or(m_Value(X), m_OneUse(m_ShlOrSelf(
+                                            m_OneUse(m_ZExt(m_Instruction(L2))),
+                                            ShAmt2)))))) {
     if (!foldLoadsRecursive(X, LOps, DL, AA) && LOps.FoundRoot)
       // Avoid Partial chain merge.
       return false;
@@ -646,11 +661,10 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
 
   // Check if the pattern has loads
   LoadInst *LI1 = LOps.Root;
-  const APInt *ShAmt1 = LOps.Shift;
+  uint64_t ShAmt1 = LOps.Shift;
   if (LOps.FoundRoot == false &&
-      (match(X, m_OneUse(m_ZExt(m_Instruction(L1)))) ||
-       match(X, m_OneUse(m_Shl(m_OneUse(m_ZExt(m_OneUse(m_Instruction(L1)))),
-                               m_APInt(ShAmt1)))))) {
+      match(X, m_OneUse(
+                   m_ShlOrSelf(m_OneUse(m_ZExt(m_Instruction(L1))), ShAmt1)))) {
     LI1 = dyn_cast<LoadInst>(L1);
   }
   LoadInst *LI2 = dyn_cast<LoadInst>(L2);
@@ -726,13 +740,6 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if (IsBigEndian)
     std::swap(ShAmt1, ShAmt2);
 
-  // Find Shifts values.
-  uint64_t Shift1 = 0, Shift2 = 0;
-  if (ShAmt1)
-    Shift1 = ShAmt1->getZExtValue();
-  if (ShAmt2)
-    Shift2 = ShAmt2->getZExtValue();
-
   // First load is always LI1. This is where we put the new load.
   // Use the merged load size available from LI1 for forward loads.
   if (LOps.FoundRoot) {
@@ -747,7 +754,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   uint64_t ShiftDiff = IsBigEndian ? LoadSize2 : LoadSize1;
   uint64_t PrevSize =
       DL.getTypeStoreSize(IntegerType::get(LI1->getContext(), LoadSize1));
-  if ((Shift2 - Shift1) != ShiftDiff || (Offset2 - Offset1) != PrevSize)
+  if ((ShAmt2 - ShAmt1) != ShiftDiff || (Offset2 - Offset1) != PrevSize)
     return false;
 
   // Update LOps
@@ -824,7 +831,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   // Check if shift needed. We need to shift with the amount of load1
   // shift if not zero.
   if (LOps.Shift)
-    NewOp = Builder.CreateShl(NewOp, ConstantInt::get(I.getContext(), *LOps.Shift));
+    NewOp = Builder.CreateShl(NewOp, LOps.Shift);
   I.replaceAllUsesWith(NewOp);
 
   return true;
@@ -860,11 +867,9 @@ static std::optional<PartStore> matchPartStore(Instruction &I,
     return std::nullopt;
 
   uint64_t ValWidth = StoredTy->getPrimitiveSizeInBits();
-  uint64_t ValOffset = 0;
+  uint64_t ValOffset;
   Value *Val;
-  if (!match(StoredVal, m_CombineOr(m_Trunc(m_LShr(m_Value(Val),
-                                                   m_ConstantInt(ValOffset))),
-                                    m_Trunc(m_Value(Val)))))
+  if (!match(StoredVal, m_Trunc(m_LShrOrSelf(m_Value(Val), ValOffset))))
     return std::nullopt;
 
   Value *Ptr = Store->getPointerOperand();
@@ -902,10 +907,20 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
   StoreInst *Store = Builder.CreateAlignedStore(
       Val, First.Store->getPointerOperand(), First.Store->getAlign());
 
+  // Merge various metadata onto the new store.
   AAMDNodes AATags = First.Store->getAAMetadata();
-  for (const PartStore &Part : drop_begin(Parts))
+  SmallVector<Instruction *> Stores = {First.Store};
+  Stores.reserve(Parts.size());
+  SmallVector<DebugLoc> DbgLocs = {First.Store->getDebugLoc()};
+  DbgLocs.reserve(Parts.size());
+  for (const PartStore &Part : drop_begin(Parts)) {
     AATags = AATags.concat(Part.Store->getAAMetadata());
+    Stores.push_back(Part.Store);
+    DbgLocs.push_back(Part.Store->getDebugLoc());
+  }
   Store->setAAMetadata(AATags);
+  Store->mergeDIAssignID(Stores);
+  Store->setDebugLoc(DebugLoc::getMergedLocations(DbgLocs));
 
   // Remove the old stores.
   for (const PartStore &Part : Parts)
@@ -1295,11 +1310,19 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
     Value *VR =
         ConstantInt::get(CI->getType(), static_cast<unsigned char>(RHS[i]));
     Value *Sub = Swapped ? B.CreateSub(VR, VL) : B.CreateSub(VL, VR);
-    if (i < N - 1)
-      B.CreateCondBr(B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)),
-                     BBNE, BBSubs[i + 1]);
-    else
+    if (i < N - 1) {
+      BranchInst *CondBrInst = B.CreateCondBr(
+          B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)), BBNE,
+          BBSubs[i + 1]);
+
+      Function *F = CI->getFunction();
+      assert(F && "Instruction does not belong to a function!");
+      std::optional<Function::ProfileCount> EC = F->getEntryCount();
+      if (EC && EC->getCount() > 0)
+        setExplicitlyUnknownBranchWeights(*CondBrInst, DEBUG_TYPE);
+    } else {
       B.CreateBr(BBNE);
+    }
 
     Phi->addIncoming(Sub, BBSubs[i]);
   }
@@ -1353,6 +1376,9 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
   BB->getTerminator()->eraseFromParent();
   SwitchInst *SI = IRB.CreateSwitch(
       IRB.CreateTrunc(Call->getArgOperand(1), ByteTy), BBNext, N);
+  // We can't know the precise weights here, as they would depend on the value
+  // distribution of Call->getArgOperand(1). So we just mark it as "unknown".
+  setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
   Type *IndexTy = DL.getIndexType(Call->getType());
   SmallVector<DominatorTree::UpdateType, 8> Updates;
 

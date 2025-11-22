@@ -199,7 +199,7 @@ void SemaSYCL::handleKernelAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  handleSimpleAttribute<DeviceKernelAttr>(*this, D, AL);
+  handleSimpleAttribute<SYCLKernelAttr>(*this, D, AL);
 }
 
 void SemaSYCL::handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL) {
@@ -222,7 +222,7 @@ static SourceLocation SourceLocationForUserDeclaredType(QualType QT) {
   const Type *T = QT->getUnqualifiedDesugaredType();
   if (const TagType *TT = dyn_cast<TagType>(T))
     Loc = TT->getDecl()->getLocation();
-  else if (const ObjCInterfaceType *ObjCIT = dyn_cast<ObjCInterfaceType>(T))
+  else if (const auto *ObjCIT = dyn_cast<ObjCInterfaceType>(T))
     Loc = ObjCIT->getDecl()->getLocation();
   return Loc;
 }
@@ -248,6 +248,23 @@ static bool CheckSYCLKernelName(Sema &S, SourceLocation Loc,
   }
 
   return false;
+}
+
+void SemaSYCL::CheckSYCLExternalFunctionDecl(FunctionDecl *FD) {
+  const auto *SEAttr = FD->getAttr<SYCLExternalAttr>();
+  assert(SEAttr && "Missing sycl_external attribute");
+  if (!FD->isInvalidDecl() && !FD->isTemplated()) {
+    if (!FD->isExternallyVisible())
+      if (!FD->isFunctionTemplateSpecialization() ||
+          FD->getTemplateSpecializationInfo()->isExplicitSpecialization())
+        Diag(SEAttr->getLocation(), diag::err_sycl_external_invalid_linkage)
+            << SEAttr;
+  }
+  if (FD->isDeletedAsWritten()) {
+    Diag(SEAttr->getLocation(),
+         diag::err_sycl_external_invalid_deleted_function)
+        << SEAttr;
+  }
 }
 
 void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {

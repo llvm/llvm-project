@@ -13,7 +13,7 @@ void test_qualifiers(int x, const int y, int * restrict z) {
   static auto c = 1UL;
   int* pa = &a; // expected-warning {{initializing 'int *' with an expression of type 'const int *' discards qualifiers}}
   const int* pb = &b;
-  int* pc = &c; // expected-warning {{incompatible pointer types initializing 'int *' with an expression of type 'unsigned long *'}}
+  int* pc = &c; // expected-error {{incompatible pointer types initializing 'int *' with an expression of type 'unsigned long *'}}
 
   const int ci = 12;
   auto yup = ci;

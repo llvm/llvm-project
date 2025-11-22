@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <clc/atomic/clc_atomic_fetch_and.h>
 #include <clc/opencl/atomic/atomic_and.h>
 
-#define IMPL(TYPE, AS)                                                         \
+#define __CLC_IMPL(TYPE, AS)                                                   \
   _CLC_OVERLOAD _CLC_DEF TYPE atomic_and(volatile AS TYPE *p, TYPE val) {      \
-    return __sync_fetch_and_and(p, val);                                       \
+    return __clc_atomic_fetch_and(p, val, __ATOMIC_RELAXED,                    \
+                                  __MEMORY_SCOPE_DEVICE);                      \
   }
 
-IMPL(int, global)
-IMPL(unsigned int, global)
-IMPL(int, local)
-IMPL(unsigned int, local)
-#undef IMPL
+__CLC_IMPL(int, global)
+__CLC_IMPL(unsigned int, global)
+__CLC_IMPL(int, local)
+__CLC_IMPL(unsigned int, local)
+#undef __CLC_IMPL

@@ -12,9 +12,10 @@ class JSONGenerator : public Generator {
 public:
   static const char *Format;
 
-  Error generateDocs(StringRef RootDir,
-                     llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                     const ClangDocContext &CDCtx) override;
+  Error generateDocumentation(StringRef RootDir,
+                              llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+                              const ClangDocContext &CDCtx,
+                              std::string DirName) override;
   Error createResources(ClangDocContext &CDCtx) override;
   Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                            const ClangDocContext &CDCtx) override;
@@ -140,6 +141,13 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
       insertComment(Description, TextCommentsArray, "BriefComments");
     else if (I.Name == "return")
       insertComment(Description, TextCommentsArray, "ReturnComments");
+    else if (I.Name == "throws" || I.Name == "throw") {
+      json::Value ThrowsVal = Object();
+      auto &ThrowsObj = *ThrowsVal.getAsObject();
+      ThrowsObj["Exception"] = I.Args.front();
+      ThrowsObj["Children"] = TextCommentsArray;
+      insertComment(Description, ThrowsVal, "ThrowsComments");
+    }
     return Obj;
   }
 
@@ -468,7 +476,6 @@ static void insertArray(Object &Obj, json::Value &Array, StringRef Key) {
 static void serializeInfo(const RecordInfo &I, json::Object &Obj,
                           const std::optional<StringRef> &RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
-  Obj["FullName"] = I.FullName;
   Obj["TagType"] = getTagType(I.TagType);
   Obj["IsTypedef"] = I.IsTypeDef;
   Obj["MangledName"] = I.MangledName;
@@ -582,25 +589,27 @@ static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
   if (I->IT == InfoType::IT_record) {
     auto *RecordSymbolInfo = static_cast<SymbolInfo *>(I);
     FileName = RecordSymbolInfo->MangledName;
-  } else if (I->IT == InfoType::IT_namespace && I->Name != "")
-    // Serialize the global namespace as index.json
+  } else if (I->IT == InfoType::IT_namespace) {
+    FileName = "index";
+  } else
     FileName = I->Name;
-  else
-    FileName = I->getFileBaseName();
   sys::path::append(Path, FileName + ".json");
   return FileName;
 }
 
-Error JSONGenerator::generateDocs(
+Error JSONGenerator::generateDocumentation(
     StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-    const ClangDocContext &CDCtx) {
+    const ClangDocContext &CDCtx, std::string DirName) {
   StringSet<> CreatedDirs;
   StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
     Info *Info = Group.getValue().get();
 
     SmallString<128> Path;
-    sys::path::native(RootDir, Path);
+    auto RootDirStr = RootDir.str() + "/json";
+    StringRef JSONDir = StringRef(RootDirStr);
+    sys::path::native(JSONDir, Path);
+    sys::path::append(Path, Info->getRelativeFilePath(""));
     if (!CreatedDirs.contains(Path)) {
       if (std::error_code Err = sys::fs::create_directories(Path);
           Err != std::error_code())

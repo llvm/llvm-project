@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/internal/clc.h>
 
 _CLC_DEF _CLC_OVERLOAD float __clc_fmax(float x, float y) {
@@ -27,6 +26,6 @@ _CLC_DEF _CLC_OVERLOAD half __clc_fmax(half x, half y) {
 }
 #endif
 
-#define FUNCTION __clc_fmax
+#define __CLC_FUNCTION __clc_fmax
 #define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
 #include <clc/math/gentype.inc>

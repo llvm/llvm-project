@@ -1,0 +1,45 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+      - Index:           1
+        ParamTypes:      []
+        ReturnTypes:
+          - I64
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 1, 0, 1 ]
+  - Type:            EXPORT
+    Exports:
+      - Name:            rem_u_i32
+        Kind:            FUNCTION
+        Index:           0
+      - Name:            rem_u_i64
+        Kind:            FUNCTION
+        Index:           1
+      - Name:            rem_s_i32
+        Kind:            FUNCTION
+        Index:           2
+      - Name:            rem_s_i64
+        Kind:            FUNCTION
+        Index:           3
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            410A4103700B
+      - Index:           1
+        Locals:          []
+        Body:            420A4203820B
+      - Index:           2
+        Locals:          []
+        Body:            410A41036F0B
+      - Index:           3
+        Locals:          []
+        Body:            420A4203810B
+...

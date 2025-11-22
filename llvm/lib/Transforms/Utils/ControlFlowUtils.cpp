@@ -12,8 +12,8 @@
 
 #include "llvm/Transforms/Utils/ControlFlowUtils.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
@@ -276,13 +276,15 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
     DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
     const StringRef Prefix, std::optional<unsigned> MaxControlFlowBooleans) {
 #ifndef NDEBUG
-  SmallSet<BasicBlock *, 8> Incoming;
+  SmallPtrSet<BasicBlock *, 8> Incoming;
 #endif
   SetVector<BasicBlock *> Outgoing;
 
   for (auto [BB, Succ0, Succ1] : Branches) {
 #ifndef NDEBUG
-    assert(Incoming.insert(BB).second && "Duplicate entry for incoming block.");
+    assert(
+        (Incoming.insert(BB).second || isa<CallBrInst>(BB->getTerminator())) &&
+        "Duplicate entry for incoming block.");
 #endif
     if (Succ0)
       Outgoing.insert(Succ0);

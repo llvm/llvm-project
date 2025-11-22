@@ -36,6 +36,7 @@ namespace {
 
 struct SCFToControlFlowPass
     : public impl::SCFToControlFlowPassBase<SCFToControlFlowPass> {
+  using Base::Base;
   void runOnOperation() override;
 };
 
@@ -382,8 +383,11 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
 
   // With the body block done, we can fill in the condition block.
   rewriter.setInsertionPointToEnd(conditionBlock);
-  auto comparison = arith::CmpIOp::create(
-      rewriter, loc, arith::CmpIPredicate::slt, iv, upperBound);
+  arith::CmpIPredicate predicate = forOp.getUnsignedCmp()
+                                       ? arith::CmpIPredicate::ult
+                                       : arith::CmpIPredicate::slt;
+  auto comparison =
+      arith::CmpIOp::create(rewriter, loc, predicate, iv, upperBound);
 
   cf::CondBranchOp::create(rewriter, loc, comparison, firstBodyBlock,
                            ArrayRef<Value>(), endBlock, ArrayRef<Value>());
@@ -733,7 +737,9 @@ void SCFToControlFlowPass::runOnOperation() {
   target.addIllegalOp<scf::ForallOp, scf::ForOp, scf::IfOp, scf::IndexSwitchOp,
                       scf::ParallelOp, scf::WhileOp, scf::ExecuteRegionOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
-  if (failed(
-          applyPartialConversion(getOperation(), target, std::move(patterns))))
+  ConversionConfig config;
+  config.allowPatternRollback = allowPatternRollback;
+  if (failed(applyPartialConversion(getOperation(), target, std::move(patterns),
+                                    config)))
     signalPassFailure();
 }

@@ -13,25 +13,6 @@
 using namespace clang;
 using namespace clang::interp;
 
-// FIXME: There is a peculiar problem with the way we track pointers
-// to blocks and the way we allocate dynamic memory.
-//
-// When we have code like this:
-// while (true) {
-//   char *buffer = new char[1024];
-//   delete[] buffer;
-// }
-//
-// We have a local variable 'buffer' pointing to the heap allocated memory.
-// When deallocating the memory via delete[], that local variable still
-// points to the memory, which means we will create a DeadBlock for it and move
-// it over to that block, essentially duplicating the allocation. Moving
-// the data is also slow.
-//
-// However, when we actually try to access the allocation after it has been
-// freed, we need the block to still exist (alive or dead) so we can tell
-// that it's a dynamic allocation.
-
 DynamicAllocator::~DynamicAllocator() { cleanup(); }
 
 void DynamicAllocator::cleanup() {
@@ -42,12 +23,15 @@ void DynamicAllocator::cleanup() {
   for (auto &Iter : AllocationSites) {
     auto &AllocSite = Iter.second;
     for (auto &Alloc : AllocSite.Allocations) {
-      Block *B = reinterpret_cast<Block *>(Alloc.Memory.get());
+      Block *B = Alloc.block();
+      assert(!B->isDead());
+      assert(B->isInitialized());
       B->invokeDtor();
+
       if (B->hasPointers()) {
         while (B->Pointers) {
           Pointer *Next = B->Pointers->asBlockPointer().Next;
-          B->Pointers->PointeeStorage.BS.Pointee = nullptr;
+          B->Pointers->BS.Pointee = nullptr;
           B->Pointers = Next;
         }
         B->Pointers = nullptr;
@@ -89,6 +73,12 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
   assert(D);
   assert(D->asExpr());
 
+  // Garbage collection. Remove all dead allocations that don't have pointers to
+  // them anymore.
+  llvm::erase_if(DeadAllocations, [](Allocation &Alloc) -> bool {
+    return !Alloc.block()->hasPointers();
+  });
+
   auto Memory =
       std::make_unique<std::byte[]>(sizeof(Block) + D->getAllocSize());
   auto *B = new (Memory.get()) Block(EvalID, D, /*isStatic=*/false);
@@ -111,13 +101,17 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
     ID->LifeState =
         AllocForm == Form::Operator ? Lifetime::Ended : Lifetime::Started;
 
-  B->IsDynamic = true;
-
-  if (auto It = AllocationSites.find(D->asExpr()); It != AllocationSites.end())
+  if (auto It = AllocationSites.find(D->asExpr());
+      It != AllocationSites.end()) {
     It->second.Allocations.emplace_back(std::move(Memory));
-  else
+    B->setDynAllocId(It->second.NumAllocs);
+    ++It->second.NumAllocs;
+  } else {
     AllocationSites.insert(
         {D->asExpr(), AllocationSite(std::move(Memory), AllocForm)});
+    B->setDynAllocId(0);
+  }
+  assert(B->isDynamic());
   return B;
 }
 
@@ -131,19 +125,35 @@ bool DynamicAllocator::deallocate(const Expr *Source,
   assert(!Site.empty());
 
   // Find the Block to delete.
-  auto AllocIt = llvm::find_if(Site.Allocations, [&](const Allocation &A) {
-    const Block *B = reinterpret_cast<const Block *>(A.Memory.get());
-    return BlockToDelete == B;
+  auto *AllocIt = llvm::find_if(Site.Allocations, [&](const Allocation &A) {
+    return BlockToDelete == A.block();
   });
 
   assert(AllocIt != Site.Allocations.end());
 
-  Block *B = reinterpret_cast<Block *>(AllocIt->Memory.get());
+  Block *B = AllocIt->block();
+  assert(B->isInitialized());
+  assert(!B->isDead());
   B->invokeDtor();
 
-  S.deallocate(B);
-  Site.Allocations.erase(AllocIt);
+  // Almost all our dynamic allocations have a pointer pointing to them
+  // when we deallocate them, since otherwise we can't call delete() at all.
+  // This means that we would usually need to create DeadBlocks for all of them.
+  // To work around that, we instead mark them as dead without moving the data
+  // over to a DeadBlock and simply keep the block in a separate DeadAllocations
+  // list.
+  if (B->hasPointers()) {
+    B->AccessFlags |= Block::DeadFlag;
+    DeadAllocations.push_back(std::move(*AllocIt));
+    Site.Allocations.erase(AllocIt);
 
+    if (Site.size() == 0)
+      AllocationSites.erase(It);
+    return true;
+  }
+
+  // Get rid of the allocation altogether.
+  Site.Allocations.erase(AllocIt);
   if (Site.empty())
     AllocationSites.erase(It);
 

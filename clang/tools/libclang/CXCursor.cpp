@@ -687,6 +687,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OMPInterchangeDirectiveClass:
     K = CXCursor_OMPInterchangeDirective;
     break;
+  case Stmt::OMPFuseDirectiveClass:
+    K = CXCursor_OMPFuseDirective;
+    break;
   case Stmt::OMPForDirectiveClass:
     K = CXCursor_OMPForDirective;
     break;
@@ -1331,12 +1334,6 @@ CXCursor cxcursor::getTypeRefCursor(CXCursor cursor) {
   QualType Ty = Type->getType();
   TypeLoc TL = Type->getTypeLoc();
   SourceLocation Loc = TL.getBeginLoc();
-
-  if (const ElaboratedType *ElabT = Ty->getAs<ElaboratedType>()) {
-    Ty = ElabT->getNamedType();
-    ElaboratedTypeLoc ElabTL = TL.castAs<ElaboratedTypeLoc>();
-    Loc = ElabTL.getNamedTypeLoc().getBeginLoc();
-  }
 
   if (const TypedefType *Typedef = Ty->getAs<TypedefType>())
     return MakeCursorTypeRef(Typedef->getDecl(), Loc, TU);

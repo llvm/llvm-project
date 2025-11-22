@@ -137,6 +137,14 @@ else()
   set(MLIR_ENABLE_ROCM_CONVERSIONS 0)
 endif()
 
+# Build the XeVM conversions and run according tests if the SPIRV backend
+# is available.
+if ("SPIRV" IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(MLIR_ENABLE_XEVM_CONVERSIONS 1)
+else()
+  set(MLIR_ENABLE_XEVM_CONVERSIONS 0)
+endif()
+
 set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the MLIR CUDA runner")
 set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the MLIR ROCm runner")
 set(MLIR_ENABLE_SYCL_RUNNER 0 CACHE BOOL "Enable building the MLIR SYCL runner")
@@ -183,6 +191,10 @@ configure_file(
 
 set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir"
   CACHE STRING "nanobind domain for MLIR python bindings.")
+set(MLIR_PYTHON_PACKAGE_PREFIX "mlir"
+  CACHE STRING "Specifies that all MLIR packages are co-located under the
+  `MLIR_PYTHON_PACKAGE_PREFIX` top level package (the API has been
+  embedded in a relocatable way).")
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
 set(MLIR_BINDINGS_PYTHON_INSTALL_PREFIX "python_packages/mlir_core/mlir" CACHE STRING
@@ -197,6 +209,19 @@ set(MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES 0 CACHE BOOL
        must perform an appropriate find_package of Python3 with \
        'Development.Module' and ensure that find_package(pybind11) is \
        satisfied (and keep up to date as requirements evolve).")
+
+set(_mlir_python_stubgen_enabled ON)
+# Stubgen doesn't work when cross-compiling (stubgen will run in the host interpreter and then fail
+# to find the extension module for the host arch).
+# Note: Stubgen requires some extra handling to work properly when sanitizers are enabled,
+# so we skip running it in that case now.
+if(CMAKE_CROSSCOMPILING OR (NOT LLVM_USE_SANITIZER STREQUAL ""))
+  set(_mlir_python_stubgen_enabled OFF)
+endif()
+
+option(MLIR_PYTHON_STUBGEN_ENABLED
+       "Generate Python type stubs for the MLIR Python bindings."
+       ${_mlir_python_stubgen_enabled})
 
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   include(MLIRDetectPythonEnv)

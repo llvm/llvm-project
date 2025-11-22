@@ -65,18 +65,19 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   GPU = OffloadArch::UNUSED;
 
   // PTX supports f16 as a fundamental type.
-  HasLegalHalfType = true;
+  HasFastHalfType = true;
   HasFloat16 = true;
 
   if (TargetPointerWidth == 32)
-    resetDataLayout(
-        "e-p:32:32-p6:32:32-p7:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
+    resetDataLayout("e-p:32:32-p6:32:32-p7:32:32-i64:64-i128:128-i256:256-v16:"
+                    "16-v32:32-n16:32:64");
   else if (Opts.NVPTXUseShortPointers)
-    resetDataLayout(
-        "e-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32-i64:64-i128:128-v16:"
-        "16-v32:32-n16:32:64");
+    resetDataLayout("e-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32-i64:64-"
+                    "i128:128-i256:256-v16:"
+                    "16-v32:32-n16:32:64");
   else
-    resetDataLayout("e-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
+    resetDataLayout(
+        "e-p6:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64");
 
   // If possible, get a TargetInfo for our host triple, so we can match its
   // types.
@@ -170,7 +171,7 @@ ArrayRef<const char *> NVPTXTargetInfo::getGCCRegNames() const {
 
 bool NVPTXTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
-      .Cases("ptx", "nvptx", true)
+      .Cases({"ptx", "nvptx"}, true)
       .Default(false);
 }
 
@@ -239,6 +240,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
       case OffloadArch::GFX1250:
+      case OffloadArch::GFX1251:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
       case OffloadArch::GRANITERAPIDS:

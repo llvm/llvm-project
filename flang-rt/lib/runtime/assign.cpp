@@ -88,23 +88,32 @@ static inline RT_API_ATTRS bool MustDeallocateLHS(
 // originally deallocated or because it required reallocation
 static RT_API_ATTRS int AllocateAssignmentLHS(
     Descriptor &to, const Descriptor &from, Terminator &terminator, int flags) {
-  to.raw().type = from.raw().type;
-  if (!(flags & ExplicitLengthCharacterLHS)) {
-    to.raw().elem_len = from.ElementBytes();
-  }
-  const typeInfo::DerivedType *derived{nullptr};
   DescriptorAddendum *toAddendum{to.Addendum()};
+  const typeInfo::DerivedType *derived{nullptr};
+  if (toAddendum) {
+    derived = toAddendum->derivedType();
+  }
   if (const DescriptorAddendum * fromAddendum{from.Addendum()}) {
-    derived = fromAddendum->derivedType();
-    if (toAddendum) {
-      toAddendum->set_derivedType(derived);
-      std::size_t lenParms{derived ? derived->LenParameters() : 0};
+    if (!derived || (flags & PolymorphicLHS)) {
+      derived = fromAddendum->derivedType();
+    }
+    if (toAddendum && derived) {
+      std::size_t lenParms{derived->LenParameters()};
       for (std::size_t j{0}; j < lenParms; ++j) {
         toAddendum->SetLenParameterValue(j, fromAddendum->LenParameterValue(j));
       }
     }
-  } else if (toAddendum) {
-    toAddendum->set_derivedType(nullptr);
+  } else {
+    derived = nullptr;
+  }
+  if (toAddendum) {
+    toAddendum->set_derivedType(derived);
+  }
+  to.raw().type = from.raw().type;
+  if (derived) {
+    to.raw().elem_len = derived->sizeInBytes();
+  } else if (!(flags & ExplicitLengthCharacterLHS)) {
+    to.raw().elem_len = from.ElementBytes();
   }
   // subtle: leave bounds in place when "from" is scalar (10.2.1.3(3))
   int rank{from.rank()};
@@ -235,7 +244,7 @@ static RT_API_ATTRS void BlankPadCharacterAssignment(Descriptor &to,
   for (; elements-- > 0;
        to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
     CHAR *p{to.Element<CHAR>(toAt)};
-    Fortran::runtime::memmove(
+    runtime::memmove(
         p, from.Element<std::add_const_t<CHAR>>(fromAt), fromElementBytes);
     p += copiedCharacters;
     for (auto n{padding}; n-- > 0;) {
@@ -279,7 +288,7 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
     if (mustDeallocateLHS) {
       // Convert the LHS into a temporary, then make it look deallocated.
       toDeallocate_ = &tempDescriptor_.descriptor();
-      std::memcpy(
+      runtime::memcpy(
           reinterpret_cast<void *>(toDeallocate_), &to_, to_.SizeInBytes());
       to_.set_base_addr(nullptr);
       if (toDerived_ && (flags_ & NeedFinalization)) {
@@ -298,7 +307,7 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
       auto descBytes{from_->SizeInBytes()};
       Descriptor &newFrom{tempDescriptor_.descriptor()};
       persist_ = true; // tempDescriptor_ state must outlive child tickets
-      std::memcpy(reinterpret_cast<void *>(&newFrom), from_, descBytes);
+      runtime::memcpy(reinterpret_cast<void *>(&newFrom), from_, descBytes);
       // Pretend the temporary descriptor is for an ALLOCATABLE
       // entity, otherwise, the Deallocate() below will not
       // free the descriptor memory.
@@ -369,6 +378,9 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
         return status;
       }
     } else if (!toDerived_->noDestructionNeeded()) {
+      // F'2023 9.7.3.2 p7: "When an intrinsic assignment statement (10.2.1.3)
+      // is executed, any noncoarray allocated allocatable subobject of the
+      // variable is deallocated before the assignment takes place."
       if (int status{
               workQueue.BeginDestroy(to_, *toDerived_, /*finalize=*/false)};
           status != StatOk && status != StatContinue) {
@@ -636,7 +648,8 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
         }
       }
       break;
-    case typeInfo::Component::Genre::Pointer: {
+    case typeInfo::Component::Genre::Pointer:
+    case typeInfo::Component::Genre::PointerDevice: {
       std::size_t componentByteSize{
           this->component_->SizeInBytes(this->instance_)};
       if (IS_COMPONENTWISE && toIsContiguous_ && fromIsContiguous_) {
@@ -668,6 +681,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
       }
     } break;
     case typeInfo::Component::Genre::Allocatable:
+    case typeInfo::Component::Genre::AllocatableDevice:
     case typeInfo::Component::Genre::Automatic: {
       auto *toDesc{reinterpret_cast<Descriptor *>(
           this->instance_.template Element<char>(this->subscripts_) +
@@ -731,22 +745,35 @@ RT_API_ATTRS void DoFromSourceAssign(Descriptor &alloc,
   if (alloc.rank() > 0 && source.rank() == 0) {
     // The value of each element of allocate object becomes the value of source.
     DescriptorAddendum *allocAddendum{alloc.Addendum()};
-    const typeInfo::DerivedType *allocDerived{
-        allocAddendum ? allocAddendum->derivedType() : nullptr};
     SubscriptValue allocAt[maxRank];
     alloc.GetLowerBounds(allocAt);
-    if (allocDerived) {
+    std::size_t allocElementBytes{alloc.ElementBytes()};
+    if (const typeInfo::DerivedType *allocDerived{
+            allocAddendum ? allocAddendum->derivedType() : nullptr}) {
+      // Handle derived type or short character source
       for (std::size_t n{alloc.InlineElements()}; n-- > 0;
           alloc.IncrementSubscripts(allocAt)) {
-        Descriptor allocElement{*Descriptor::Create(*allocDerived,
-            reinterpret_cast<void *>(alloc.Element<char>(allocAt)), 0)};
+        StaticDescriptor<maxRank, true, 8 /*?*/> statDesc;
+        Descriptor &allocElement{statDesc.descriptor()};
+        allocElement.Establish(*allocDerived,
+            reinterpret_cast<void *>(alloc.Element<char>(allocAt)), 0);
         Assign(allocElement, source, terminator, NoAssignFlags, memmoveFct);
       }
-    } else { // intrinsic type
+    } else if (allocElementBytes > source.ElementBytes()) {
+      // Scalar expansion of short character source
+      for (std::size_t n{alloc.InlineElements()}; n-- > 0;
+          alloc.IncrementSubscripts(allocAt)) {
+        StaticDescriptor<maxRank, true, 8 /*?*/> statDesc;
+        Descriptor &allocElement{statDesc.descriptor()};
+        allocElement.Establish(source.type(), allocElementBytes,
+            reinterpret_cast<void *>(alloc.Element<char>(allocAt)), 0);
+        Assign(allocElement, source, terminator, NoAssignFlags, memmoveFct);
+      }
+    } else { // intrinsic type scalar expansion, same data size
       for (std::size_t n{alloc.InlineElements()}; n-- > 0;
           alloc.IncrementSubscripts(allocAt)) {
         memmoveFct(alloc.Element<char>(allocAt), source.raw().base_addr,
-            alloc.ElementBytes());
+            allocElementBytes);
       }
     }
   } else {
