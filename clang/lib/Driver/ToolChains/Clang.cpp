@@ -7636,7 +7636,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fcuda-include-gpubinary");
     CmdArgs.push_back(CudaDeviceInput->getFilename());
   } else if (!HostOffloadingInputs.empty()) {
-    if (IsCuda && !IsRDCMode) {
+    if ((IsCuda || IsHIP) && !IsRDCMode) {
       assert(HostOffloadingInputs.size() == 1 && "Only one input expected");
       CmdArgs.push_back("-fcuda-include-gpubinary");
       CmdArgs.push_back(HostOffloadingInputs.front().getFilename());
@@ -9093,7 +9093,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A,
                            const ToolChain &TC) {
     // CMake hack to avoid printing verbose informatoin for HIP non-RDC mode.
-    if (A->getOption().matches(OPT_v) && JA.getType() == types::TY_Object)
+    if (A->getOption().matches(OPT_v) && JA.getType() == types::TY_HIP_FATBIN)
       return false;
     return (Set.contains(A->getOption().getID()) ||
             (A->getOption().getGroup().isValid() &&
@@ -9175,7 +9175,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // non-RDC mode compilation. This confuses default CMake implicit linker
   // argument parsing when the language is set to HIP and the system linker is
   // also `ld.lld`.
-  if (Args.hasArg(options::OPT_v) && JA.getType() != types::TY_Object)
+  if (Args.hasArg(options::OPT_v) && JA.getType() != types::TY_HIP_FATBIN)
     CmdArgs.push_back("--wrapper-verbose");
   if (Arg *A = Args.getLastArg(options::OPT_cuda_path_EQ))
     CmdArgs.push_back(
@@ -9247,14 +9247,14 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
   // We use action type to differentiate two use cases of the linker wrapper.
   // TY_Image for normal linker wrapper work.
-  // TY_Object for HIP fno-gpu-rdc embedding device binary in a relocatable
-  // object.
-  assert(JA.getType() == types::TY_Object || JA.getType() == types::TY_Image);
-  if (JA.getType() == types::TY_Object) {
+  // TY_HIP_FATBIN for HIP fno-gpu-rdc emitting a fat binary without wrapping.
+  assert(JA.getType() == types::TY_HIP_FATBIN ||
+         JA.getType() == types::TY_Image);
+  if (JA.getType() == types::TY_HIP_FATBIN) {
+    CmdArgs.push_back("--emit-fatbin-only");
     CmdArgs.append({"-o", Output.getFilename()});
     for (auto Input : Inputs)
       CmdArgs.push_back(Input.getFilename());
-    CmdArgs.push_back("-r");
   } else
     for (const char *LinkArg : LinkCommand->getArguments())
       CmdArgs.push_back(LinkArg);

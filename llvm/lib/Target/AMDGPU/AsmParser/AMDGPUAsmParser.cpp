@@ -7044,6 +7044,12 @@ ParseStatus AMDGPUAsmParser::parseNamedBit(StringRef Name,
   if (Name == "a16" && !hasA16())
     return Error(S, "a16 modifier is not supported on this GPU");
 
+  if (Bit == 0 && Name == "gds") {
+    StringRef Mnemo = ((AMDGPUOperand &)*Operands[0]).getToken();
+    if (Mnemo.starts_with("ds_gws"))
+      return Error(S, "nogds is not allowed");
+  }
+
   if (isGFX9() && ImmTy == AMDGPUOperand::ImmTyA16)
     ImmTy = AMDGPUOperand::ImmTyR128A16;
 

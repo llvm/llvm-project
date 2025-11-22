@@ -921,6 +921,15 @@ def merge_of_x_and_zero : GICombineRule <
          [{ return Helper.matchMergeXAndZero(*${MI}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${MI}, ${matchinfo}); }])>;
 
+// Transform build_vector(unmerge(src, 0), ... unmerge(src, n), undef, ..., undef)
+// => concat_vectors(src, undef)
+def combine_build_unmerge : GICombineRule<
+  (defs root:$root, register_matchinfo:$unmergeSrc),
+  (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
+         [{ return Helper.matchCombineBuildUnmerge(*${root}, MRI, ${unmergeSrc}); }]),
+  (apply [{ Helper.applyCombineBuildUnmerge(*${root}, MRI, B, ${unmergeSrc}); }])
+>;
+
 def merge_combines: GICombineGroup<[
   unmerge_anyext_build_vector,
   unmerge_merge,
@@ -930,7 +939,8 @@ def merge_combines: GICombineGroup<[
   unmerge_dead_to_trunc,
   unmerge_zext_to_zext,
   merge_of_x_and_undef,
-  merge_of_x_and_zero
+  merge_of_x_and_zero,
+  combine_build_unmerge
 ]>;
 
 // Under certain conditions, transform:

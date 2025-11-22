@@ -1184,7 +1184,7 @@ def AArch64msrr : SDNode<"AArch64ISD::MSRR",
                                                SDTCisVT<2, i64>]>,
                           [SDNPHasChain]>;
 
-def SD_AArch64rshrnb : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<2>]>;
+def SD_AArch64rshrnb : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVT<2, i32>]>;
 // Vector narrowing shift by immediate (bottom)
 def AArch64rshrnb : SDNode<"AArch64ISD::RSHRNB_I", SD_AArch64rshrnb>;
 def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
@@ -11318,23 +11318,37 @@ let Predicates = [HasCMPBR] in {
  defm : CmpBranchWRegisterAlias<"cbhlt", "CBHGT">;
 
   // Pseudos for codegen
-  def CBWPrr : CmpBranchRegisterPseudo<GPR32>;
-  def CBXPrr : CmpBranchRegisterPseudo<GPR64>;
-  def CBWPri : CmpBranchImmediatePseudo<GPR32, uimm6_32b>;
-  def CBXPri : CmpBranchImmediatePseudo<GPR64, uimm6_64b>;
+ def CBBAssertExt : CmpBranchExtRegisterPseudo;
+ def CBHAssertExt : CmpBranchExtRegisterPseudo;
+ def CBWPrr : CmpBranchRegisterPseudo<GPR32>;
+ def CBXPrr : CmpBranchRegisterPseudo<GPR64>;
+ def CBWPri : CmpBranchImmediatePseudo<GPR32, uimm6_32b>;
+ def CBXPri : CmpBranchImmediatePseudo<GPR64, uimm6_64b>;
 
-  def : Pat<(AArch64CB i32:$Cond, GPR32:$Rn, CmpBranchUImm6Operand_32b:$Imm,
-                bb:$Target),
-            (CBWPri i32:$Cond, GPR32:$Rn, uimm6_32b:$Imm,
-                am_brcmpcond:$Target)>;
-  def : Pat<(AArch64CB i32:$Cond, GPR64:$Rn, CmpBranchUImm6Operand_64b:$Imm,
-                bb:$Target),
-            (CBXPri i32:$Cond, GPR64:$Rn, uimm6_64b:$Imm,
-                am_brcmpcond:$Target)>;
-  def : Pat<(AArch64CB i32:$Cond, GPR32:$Rn, GPR32:$Rt, bb:$Target),
-            (CBWPrr ccode:$Cond, GPR32:$Rn, GPR32:$Rt, am_brcmpcond:$Target)>;
-  def : Pat<(AArch64CB i32:$Cond, GPR64:$Rn, GPR64:$Rt, bb:$Target),
-            (CBXPrr ccode:$Cond, GPR64:$Rn, GPR64:$Rt, am_brcmpcond:$Target)>;
+ def : Pat<(AArch64CB i32:$Cond, GPR32:$Rn, CmpBranchUImm6Operand_32b:$Imm,
+               bb:$Target),
+           (CBWPri i32:$Cond, GPR32:$Rn, uimm6_32b:$Imm, am_brcmpcond:$Target)>;
+ def : Pat<(AArch64CB i32:$Cond, GPR64:$Rn, CmpBranchUImm6Operand_64b:$Imm,
+               bb:$Target),
+           (CBXPri i32:$Cond, GPR64:$Rn, uimm6_64b:$Imm, am_brcmpcond:$Target)>;
+ def : Pat<(AArch64CB i32:$Cond, GPR32:$Rn, GPR32:$Rt, bb:$Target),
+           (CBWPrr ccode:$Cond, GPR32:$Rn, GPR32:$Rt, am_brcmpcond:$Target)>;
+ def : Pat<(AArch64CB i32:$Cond, GPR64:$Rn, GPR64:$Rt, bb:$Target),
+           (CBXPrr ccode:$Cond, GPR64:$Rn, GPR64:$Rt, am_brcmpcond:$Target)>;
+
+ def : Pat<(AArch64CB i32:$Cond,
+               (CmpBranchBExtOperand GPR32:$Rn, simm8_32b:$ExtTypeRn),
+               (CmpBranchBExtOperand GPR32:$Rt, simm8_32b:$ExtTypeRt),
+               bb:$Target),
+           (CBBAssertExt ccode:$Cond, GPR32:$Rn, GPR32:$Rt, bb:$Target,
+               simm8_32b:$ExtTypeRn, simm8_32b:$ExtTypeRt)>;
+
+ def : Pat<(AArch64CB i32:$Cond,
+               (CmpBranchHExtOperand GPR32:$Rn, simm8_32b:$ExtTypeRn),
+               (CmpBranchHExtOperand GPR32:$Rt, simm8_32b:$ExtTypeRt),
+               bb:$Target),
+           (CBHAssertExt ccode:$Cond, GPR32:$Rn, GPR32:$Rt, bb:$Target,
+               simm8_32b:$ExtTypeRn, simm8_32b:$ExtTypeRt)>;
 } // HasCMPBR
 
 
