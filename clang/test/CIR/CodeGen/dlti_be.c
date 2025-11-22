@@ -1,5 +1,5 @@
 // REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=BIG
 
 void foo() {}
