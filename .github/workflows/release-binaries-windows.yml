@@ -48,7 +48,7 @@ jobs:
           if [ -z "${{ inputs.release-version }} ]; then
             version_string="${{ format('{0}.{1}.{2}', steps.version.outputs.major, steps.version.outputs.minor, steps.version.outputs.patch) }}"
           else
-            version_string="${{inputs.release-version }}
+            version_string="${{inputs.release-version }}"
           fi
           echo "version-string=$version_string" >> $GITHUB_OUTPUT
       - env:
