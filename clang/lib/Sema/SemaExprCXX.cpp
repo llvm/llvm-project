@@ -3612,9 +3612,11 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   return Result.FD;
 }
 
-FunctionDecl *Sema::FindDeallocationFunctionForDestructor(
-    SourceLocation Loc, CXXRecordDecl *RD, bool Diagnose, bool LookForGlobal,
-    DeclarationName Name) {
+FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
+                                                          CXXRecordDecl *RD,
+                                                          bool Diagnose,
+                                                          bool LookForGlobal) {
+  DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
 
   FunctionDecl *OperatorDelete = nullptr;
   CanQualType DeallocType = Context.getCanonicalTagType(RD);
@@ -3647,11 +3649,8 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
   // Try to find operator delete/operator delete[] in class scope.
   LookupQualifiedName(Found, RD);
 
-  if (Found.isAmbiguous()) {
-    if (!Diagnose)
-      Found.suppressDiagnostics();
+  if (Found.isAmbiguous())
     return true;
-  }
 
   Found.suppressDiagnostics();
 
