@@ -120,9 +120,9 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
   // "Poison" __VA_ARGS__, __VA_OPT__ which can only appear in the expansion of
   // a macro. They get unpoisoned where it is allowed.
   (Ident__VA_ARGS__ = getIdentifierInfo("__VA_ARGS__"))->setIsPoisoned();
-  SetPoisonReason(Ident__VA_ARGS__,diag::ext_pp_bad_vaargs_use);
+  SetPoisonReason(Ident__VA_ARGS__, diag::ext_pp_bad_vaargs_use);
   (Ident__VA_OPT__ = getIdentifierInfo("__VA_OPT__"))->setIsPoisoned();
-  SetPoisonReason(Ident__VA_OPT__,diag::ext_pp_bad_vaopt_use);
+  SetPoisonReason(Ident__VA_OPT__, diag::ext_pp_bad_vaopt_use);
 
   // Initialize the pragma handlers.
   RegisterBuiltinPragmas();
@@ -130,16 +130,16 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
   // Initialize builtin macros like __LINE__ and friends.
   RegisterBuiltinMacros();
 
-  if(LangOpts.Borland) {
-    Ident__exception_info        = getIdentifierInfo("_exception_info");
-    Ident___exception_info       = getIdentifierInfo("__exception_info");
-    Ident_GetExceptionInfo       = getIdentifierInfo("GetExceptionInformation");
-    Ident__exception_code        = getIdentifierInfo("_exception_code");
-    Ident___exception_code       = getIdentifierInfo("__exception_code");
-    Ident_GetExceptionCode       = getIdentifierInfo("GetExceptionCode");
-    Ident__abnormal_termination  = getIdentifierInfo("_abnormal_termination");
+  if (LangOpts.Borland) {
+    Ident__exception_info = getIdentifierInfo("_exception_info");
+    Ident___exception_info = getIdentifierInfo("__exception_info");
+    Ident_GetExceptionInfo = getIdentifierInfo("GetExceptionInformation");
+    Ident__exception_code = getIdentifierInfo("_exception_code");
+    Ident___exception_code = getIdentifierInfo("__exception_code");
+    Ident_GetExceptionCode = getIdentifierInfo("GetExceptionCode");
+    Ident__abnormal_termination = getIdentifierInfo("_abnormal_termination");
     Ident___abnormal_termination = getIdentifierInfo("__abnormal_termination");
-    Ident_AbnormalTermination    = getIdentifierInfo("AbnormalTermination");
+    Ident_AbnormalTermination = getIdentifierInfo("AbnormalTermination");
   } else {
     Ident__exception_info = Ident__exception_code = nullptr;
     Ident__abnormal_termination = Ident___exception_info = nullptr;
@@ -201,7 +201,8 @@ void Preprocessor::Initialize(const TargetInfo &Target,
   BuiltinInfo->InitializeTarget(Target, AuxTarget);
   HeaderInfo.setTarget(Target);
 
-  // Populate the identifier table with info about keywords for the current language.
+  // Populate the identifier table with info about keywords for the current
+  // language.
   Identifiers.AddKeywords(LangOpts);
 
   // Initialize the __FTL_EVAL_METHOD__ macro to the TargetInfo.
@@ -239,7 +240,8 @@ void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
   if (!Tok.isAnnotation())
     llvm::errs() << " '" << getSpelling(Tok) << "'";
 
-  if (!DumpFlags) return;
+  if (!DumpFlags)
+    return;
 
   llvm::errs() << "\t";
   if (Tok.isAtStartOfLine())
@@ -250,8 +252,7 @@ void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
     llvm::errs() << " [ExpandDisabled]";
   if (Tok.needsCleaning()) {
     const char *Start = SourceMgr.getCharacterData(Tok.getLocation());
-    llvm::errs() << " [UnClean='" << StringRef(Start, Tok.getLength())
-                 << "']";
+    llvm::errs() << " [UnClean='" << StringRef(Start, Tok.getLength()) << "']";
   }
 
   llvm::errs() << "\tLoc=<";
@@ -279,7 +280,8 @@ void Preprocessor::PrintStats() {
   llvm::errs() << "  " << NumUndefined << " #undef.\n";
   llvm::errs() << "  #include/#include_next/#import:\n";
   llvm::errs() << "    " << NumEnteredSourceFiles << " source files entered.\n";
-  llvm::errs() << "    " << MaxIncludeStackDepth << " max include stack depth\n";
+  llvm::errs() << "    " << MaxIncludeStackDepth
+               << " max include stack depth\n";
   llvm::errs() << "  " << NumIf << " #if/#ifndef/#ifdef.\n";
   llvm::errs() << "  " << NumElse << " #else/#elif/#elifdef/#elifndef.\n";
   llvm::errs() << "  " << NumEndif << " #endif.\n";
@@ -287,11 +289,11 @@ void Preprocessor::PrintStats() {
   llvm::errs() << NumSkipped << " #if/#ifndef#ifdef regions skipped\n";
 
   llvm::errs() << NumMacroExpanded << "/" << NumFnMacroExpanded << "/"
-             << NumBuiltinMacroExpanded << " obj/fn/builtin macros expanded, "
-             << NumFastMacroExpanded << " on the fast path.\n";
-  llvm::errs() << (NumFastTokenPaste+NumTokenPaste)
-             << " token paste (##) operations performed, "
-             << NumFastTokenPaste << " on the fast path.\n";
+               << NumBuiltinMacroExpanded << " obj/fn/builtin macros expanded, "
+               << NumFastMacroExpanded << " on the fast path.\n";
+  llvm::errs() << (NumFastTokenPaste + NumTokenPaste)
+               << " token paste (##) operations performed, "
+               << NumFastTokenPaste << " on the fast path.\n";
 
   llvm::errs() << "\nPreprocessor Memory: " << getTotalMemory() << "B total";
 
@@ -326,15 +328,14 @@ Preprocessor::macro_begin(bool IncludeExternalMacros) const {
 }
 
 size_t Preprocessor::getTotalMemory() const {
-  return BP.getTotalMemory()
-    + llvm::capacity_in_bytes(MacroExpandedTokens)
-    + Predefines.capacity() /* Predefines buffer. */
-    // FIXME: Include sizes from all submodules, and include MacroInfo sizes,
-    // and ModuleMacros.
-    + llvm::capacity_in_bytes(CurSubmoduleState->Macros)
-    + llvm::capacity_in_bytes(PragmaPushMacroInfo)
-    + llvm::capacity_in_bytes(PoisonReasons)
-    + llvm::capacity_in_bytes(CommentHandlers);
+  return BP.getTotalMemory() + llvm::capacity_in_bytes(MacroExpandedTokens) +
+         Predefines.capacity() /* Predefines buffer. */
+         // FIXME: Include sizes from all submodules, and include MacroInfo
+         // sizes, and ModuleMacros.
+         + llvm::capacity_in_bytes(CurSubmoduleState->Macros) +
+         llvm::capacity_in_bytes(PragmaPushMacroInfo) +
+         llvm::capacity_in_bytes(PoisonReasons) +
+         llvm::capacity_in_bytes(CommentHandlers);
 }
 
 Preprocessor::macro_iterator
@@ -352,18 +353,18 @@ Preprocessor::macro_end(bool IncludeExternalMacros) const {
 static bool MacroDefinitionEquals(const MacroInfo *MI,
                                   ArrayRef<TokenValue> Tokens) {
   return Tokens.size() == MI->getNumTokens() &&
-      std::equal(Tokens.begin(), Tokens.end(), MI->tokens_begin());
+         std::equal(Tokens.begin(), Tokens.end(), MI->tokens_begin());
 }
 
-StringRef Preprocessor::getLastMacroWithSpelling(
-                                    SourceLocation Loc,
-                                    ArrayRef<TokenValue> Tokens) const {
+StringRef
+Preprocessor::getLastMacroWithSpelling(SourceLocation Loc,
+                                       ArrayRef<TokenValue> Tokens) const {
   SourceLocation BestLocation;
   StringRef BestSpelling;
-  for (Preprocessor::macro_iterator I = macro_begin(), E = macro_end();
-       I != E; ++I) {
-    const MacroDirective::DefInfo
-      Def = I->second.findDirectiveAtLoc(Loc, SourceMgr);
+  for (Preprocessor::macro_iterator I = macro_begin(), E = macro_end(); I != E;
+       ++I) {
+    const MacroDirective::DefInfo Def =
+        I->second.findDirectiveAtLoc(Loc, SourceMgr);
     if (!Def || !Def.getMacroInfo())
       continue;
     if (!Def.getMacroInfo()->isObjectLike())
@@ -442,7 +443,7 @@ bool Preprocessor::SetCodeCompletionPoint(FileEntryRef File,
   char *NewBuf = NewBuffer->getBufferStart();
   char *NewPos = std::copy(Buffer->getBufferStart(), Position, NewBuf);
   *NewPos = '\0';
-  std::copy(Position, Buffer->getBufferEnd(), NewPos+1);
+  std::copy(Position, Buffer->getBufferEnd(), NewPos + 1);
   SourceMgr.overrideFileContents(File, std::move(NewBuffer));
 
   return false;
@@ -465,8 +466,8 @@ void Preprocessor::CodeCompleteNaturalLanguage() {
 /// SmallVector. Note that the returned StringRef may not point to the
 /// supplied buffer if a copy can be avoided.
 StringRef Preprocessor::getSpelling(const Token &Tok,
-                                          SmallVectorImpl<char> &Buffer,
-                                          bool *Invalid) const {
+                                    SmallVectorImpl<char> &Buffer,
+                                    bool *Invalid) const {
   // NOTE: this has to be checked *before* testing for an IdentifierInfo.
   if (Tok.isNot(tok::raw_identifier) && !Tok.hasUCN()) {
     // Try the fast path.
@@ -495,8 +496,8 @@ void Preprocessor::CreateString(StringRef Str, Token &Tok,
   SourceLocation Loc = ScratchBuf->getToken(Str.data(), Str.size(), DestPtr);
 
   if (ExpansionLocStart.isValid())
-    Loc = SourceMgr.createExpansionLoc(Loc, ExpansionLocStart,
-                                       ExpansionLocEnd, Str.size());
+    Loc = SourceMgr.createExpansionLoc(Loc, ExpansionLocStart, ExpansionLocEnd,
+                                       Str.size());
   Tok.setLocation(Loc);
 
   // If this is a raw identifier or a literal token, set the pointer data.
@@ -561,8 +562,8 @@ void Preprocessor::EnterMainSourceFile() {
       CurLexer->SetByteOffset(SkipMainFilePreamble.first,
                               SkipMainFilePreamble.second);
 
-    // Tell the header info that the main file was entered.  If the file is later
-    // #imported, it won't be re-entered.
+    // Tell the header info that the main file was entered.  If the file is
+    // later #imported, it won't be re-entered.
     if (OptionalFileEntryRef FE = SourceMgr.getFileEntryRefForID(MainFileID))
       markIncluded(*FE);
 
@@ -587,7 +588,7 @@ void Preprocessor::EnterMainSourceFile() {
 
   // Preprocess Predefines to populate the initial preprocessor state.
   std::unique_ptr<llvm::MemoryBuffer> SB =
-    llvm::MemoryBuffer::getMemBufferCopy(Predefines, "<built-in>");
+      llvm::MemoryBuffer::getMemBufferCopy(Predefines, "<built-in>");
   assert(SB && "Cannot create predefined source buffer");
   FileID FID = SourceMgr.createFileID(std::move(SB));
   assert(FID.isValid() && "Could not create FileID for predefines?");
@@ -765,15 +766,15 @@ void Preprocessor::PoisonSEHIdentifiers(bool Poison) {
   Ident_AbnormalTermination->setIsPoisoned(Poison);
 }
 
-void Preprocessor::HandlePoisonedIdentifier(Token & Identifier) {
+void Preprocessor::HandlePoisonedIdentifier(Token &Identifier) {
   assert(Identifier.getIdentifierInfo() &&
          "Can't handle identifiers without identifier info!");
-  llvm::DenseMap<IdentifierInfo*,unsigned>::const_iterator it =
-    PoisonReasons.find(Identifier.getIdentifierInfo());
-  if(it == PoisonReasons.end())
+  llvm::DenseMap<IdentifierInfo *, unsigned>::const_iterator it =
+      PoisonReasons.find(Identifier.getIdentifierInfo());
+  if (it == PoisonReasons.end())
     Diag(Identifier, diag::err_pp_used_poisoned_id);
   else
-    Diag(Identifier,it->second) << Identifier.getIdentifierInfo();
+    Diag(Identifier, it->second) << Identifier.getIdentifierInfo();
 }
 
 void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
@@ -849,7 +850,8 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   // FIXME: This warning is disabled in cases where it shouldn't be, like
   //   "#define constexpr constexpr", "int constexpr;"
   if (II.isFutureCompatKeyword() && !DisableMacroExpansion) {
-    Diag(Identifier, getIdentifierTable().getFutureCompatDiagKind(II, getLangOpts()))
+    Diag(Identifier,
+         getIdentifierTable().getFutureCompatDiagKind(II, getLangOpts()))
         << II.getName();
     // Don't diagnose this keyword again in this translation unit.
     II.setIsFutureCompatKeyword(false);
@@ -911,15 +913,18 @@ void Preprocessor::Lex(Token &Result) {
   // Update StdCXXImportSeqState to track our position within a C++20 import-seq
   // if this token is being produced as a result of phase 4 of translation.
   // Update TrackGMFState to decide if we are currently in a Global Module
-  // Fragment. GMF state updates should precede StdCXXImportSeq ones, since GMF state
-  // depends on the prevailing StdCXXImportSeq state in two cases.
+  // Fragment. GMF state updates should precede StdCXXImportSeq ones, since GMF
+  // state depends on the prevailing StdCXXImportSeq state in two cases.
   if (getLangOpts().CPlusPlusModules && LexLevel == 1 &&
       !Result.getFlag(Token::IsReinjected)) {
     switch (Result.getKind()) {
-    case tok::l_paren: case tok::l_square: case tok::l_brace:
+    case tok::l_paren:
+    case tok::l_square:
+    case tok::l_brace:
       StdCXXImportSeqState.handleOpenBracket();
       break;
-    case tok::r_paren: case tok::r_square:
+    case tok::r_paren:
+    case tok::r_square:
       StdCXXImportSeqState.handleCloseBracket();
       break;
     case tok::r_brace:
@@ -1039,6 +1044,32 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
   else
     Lex(FilenameTok);
 
+  if (FilenameTok.is(tok::header_name) && !FilenameTok.isAnnotation()) {
+    SmallString<128> FilenameBuffer;
+    StringRef Str = getSpelling(FilenameTok, FilenameBuffer);
+
+    char Terminator = Str.front(); 
+    if (Terminator == '<') Terminator = '>';
+    
+    // Find the last non-whitespace char before the end.
+    size_t End = Str.size() - 2;
+    while (End > 0 && (Str[End] == ' ' || Str[End] == '\t')) {
+      --End;
+    }
+
+    if (End < Str.size() - 2) {
+        SourceLocation SpaceLoc = FilenameTok.getLocation().getLocWithOffset(End + 1);
+        Diag(SpaceLoc, diag::warn_trailing_space_in_include);
+
+        SmallString<128> CleanedStr;
+        CleanedStr += Str.front(); // < or "
+        CleanedStr += Str.slice(1, End + 1); // The "foo.h" part
+        CleanedStr += Str.back(); // > or "
+
+        CreateString(CleanedStr, FilenameTok, FilenameTok.getLocation(), 
+                     FilenameTok.getEndLoc());
+    }
+  }
   // This could be a <foo/bar.h> file coming from a macro expansion.  In this
   // case, glue the tokens together into an angle_string_literal token.
   SmallString<128> FilenameBuffer;
@@ -1051,12 +1082,16 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
     SourceLocation End;
     FilenameBuffer.push_back('<');
 
+    bool HasTrailingSpace = false;
+    SourceLocation TrailingSpaceLoc;
+
     // Consume tokens until we find a '>'.
     // FIXME: A header-name could be formed starting or ending with an
     // alternative token. It's not clear whether that's ill-formed in all
     // cases.
     while (FilenameTok.isNot(tok::greater)) {
       Lex(FilenameTok);
+
       if (FilenameTok.isOneOf(tok::eod, tok::eof)) {
         Diag(FilenameTok.getLocation(), diag::err_expected) << tok::greater;
         Diag(Start, diag::note_matching) << tok::less;
@@ -1072,8 +1107,20 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
         continue;
       }
 
-      // Append the spelling of this token to the buffer. If there was a space
-      // before it, add it now.
+      if (FilenameTok.is(tok::greater)) {
+        if (FilenameTok.hasLeadingSpace()) {
+          HasTrailingSpace = true;
+          TrailingSpaceLoc = FilenameTok.getLocation();
+
+          while (!FilenameBuffer.empty() && (FilenameBuffer.back() == ' ' ||
+                                             FilenameBuffer.back() == '\t')) {
+            FilenameBuffer.pop_back();
+          }
+        }
+        break; 
+      }
+
+      // Add leading space if present
       if (FilenameTok.hasLeadingSpace())
         FilenameBuffer.push_back(' ');
 
@@ -1094,6 +1141,12 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
         FilenameBuffer.resize(PreAppendSize + ActualLen);
     }
 
+    // Give warning about trailing space after we've processed the filename
+    if (HasTrailingSpace) {
+      Diag(TrailingSpaceLoc, diag::warn_trailing_space_in_include);
+    }
+
+    FilenameBuffer.push_back('>');
     FilenameTok.startToken();
     FilenameTok.setKind(tok::header_name);
     FilenameTok.setFlagValue(Token::StartOfLine, StartOfLine);
@@ -1101,20 +1154,10 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
     FilenameTok.setFlagValue(Token::LeadingEmptyMacro, LeadingEmptyMacro);
     CreateString(FilenameBuffer, FilenameTok, Start, End);
   } else if (FilenameTok.is(tok::string_literal) && AllowMacroExpansion) {
-    // Convert a string-literal token of the form " h-char-sequence "
-    // (produced by macro expansion) into a header-name token.
-    //
-    // The rules for header-names don't quite match the rules for
-    // string-literals, but all the places where they differ result in
-    // undefined behavior, so we can and do treat them the same.
-    //
-    // A string-literal with a prefix or suffix is not translated into a
-    // header-name. This could theoretically be observable via the C++20
-    // context-sensitive header-name formation rules.
     StringRef Str = getSpelling(FilenameTok, FilenameBuffer);
-    if (Str.size() >= 2 && Str.front() == '"' && Str.back() == '"')
-      FilenameTok.setKind(tok::header_name);
-  }
+     if (Str.size() >= 2 && Str.front() == '"' && Str.back() == '"')
+       FilenameTok.setKind(tok::header_name);
+      }
 
   return false;
 }
@@ -1130,11 +1173,15 @@ void Preprocessor::CollectPpImportSuffix(SmallVectorImpl<Token> &Toks) {
     Lex(Toks.back());
 
     switch (Toks.back().getKind()) {
-    case tok::l_paren: case tok::l_square: case tok::l_brace:
+    case tok::l_paren:
+    case tok::l_square:
+    case tok::l_brace:
       ++BracketDepth;
       break;
 
-    case tok::r_paren: case tok::r_square: case tok::r_brace:
+    case tok::r_paren:
+    case tok::r_square:
+    case tok::r_brace:
       if (BracketDepth == 0)
         return;
       --BracketDepth;
@@ -1143,7 +1190,7 @@ void Preprocessor::CollectPpImportSuffix(SmallVectorImpl<Token> &Toks) {
     case tok::semi:
       if (BracketDepth == 0)
         return;
-    break;
+      break;
 
     case tok::eof:
       return;
@@ -1153,7 +1200,6 @@ void Preprocessor::CollectPpImportSuffix(SmallVectorImpl<Token> &Toks) {
     }
   }
 }
-
 
 /// Lex a token following the 'import' contextual keyword.
 ///
@@ -1346,8 +1392,7 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   // We don't/shouldn't load the standard c++20 modules when preprocessing.
   if (getLangOpts().Modules && !isInImportingCXXNamedModules()) {
     Imported = TheModuleLoader.loadModule(ModuleImportLoc,
-                                          NamedModuleImportPath,
-                                          Module::Hidden,
+                                          NamedModuleImportPath, Module::Hidden,
                                           /*IsInclusionDirective=*/false);
     if (Imported)
       makeModuleVisible(Imported, SemiLoc);
@@ -1371,8 +1416,7 @@ void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
         // FIXME: Include the path in the diagnostic.
         // FIXME: Include the import location for the conflicting module.
         Diag(ModuleImportLoc, diag::warn_module_conflict)
-            << Path[0]->getFullModuleName()
-            << Conflict->getFullModuleName()
+            << Path[0]->getFullModuleName() << Conflict->getFullModuleName()
             << Message;
       });
 
@@ -1387,7 +1431,7 @@ bool Preprocessor::FinishLexStringLiteral(Token &Result, std::string &String,
   // We need at least one string literal.
   if (Result.isNot(tok::string_literal)) {
     Diag(Result, diag::err_expected_string_literal)
-      << /*Source='in...'*/0 << DiagnosticTag;
+        << /*Source='in...'*/ 0 << DiagnosticTag;
     return false;
   }
 
@@ -1414,7 +1458,7 @@ bool Preprocessor::FinishLexStringLiteral(Token &Result, std::string &String,
 
   if (Literal.Pascal) {
     Diag(StrToks[0].getLocation(), diag::err_expected_string_literal)
-      << /*Source='in...'*/0 << DiagnosticTag;
+        << /*Source='in...'*/ 0 << DiagnosticTag;
     return false;
   }
 
@@ -1459,7 +1503,7 @@ void Preprocessor::removeCommentHandler(CommentHandler *Handler) {
 bool Preprocessor::HandleComment(Token &result, SourceRange Comment) {
   bool AnyPendingTokens = false;
   for (std::vector<CommentHandler *>::iterator H = CommentHandlers.begin(),
-       HEnd = CommentHandlers.end();
+                                               HEnd = CommentHandlers.end();
        H != HEnd; ++H) {
     if ((*H)->HandleComment(*this, Comment))
       AnyPendingTokens = true;
@@ -1716,3 +1760,4 @@ void NoTrivialPPDirectiveTracer::MacroExpands(const Token &MacroNameTok,
   if (!MD.getMacroInfo()->isBuiltinMacro())
     setSeenNoTrivialPPDirective();
 }
+

@@ -532,7 +532,7 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingInitializerList,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
-
+def G_TrailingSpaceInInclude : DiagGroup<"trailing-space-in-include">;
 def LifetimeSafetyPermissive : DiagGroup<"experimental-lifetime-safety-permissive">;
 def LifetimeSafetyStrict : DiagGroup<"experimental-lifetime-safety-strict">;
 def LifetimeSafety : DiagGroup<"experimental-lifetime-safety",
