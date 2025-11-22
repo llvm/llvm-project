@@ -1,4 +1,4 @@
-echo off
+@echo off
 
 REM Filter out tests that are known to fail.
 set "LIT_FILTER_OUT=gh110231.cpp|crt_initializers.cpp|init-order-atexit.cpp|use_after_return_linkage.cpp|initialization-bug.cpp|initialization-bug-no-global.cpp|trace-malloc-unbalanced.test|trace-malloc-2.test|TraceMallocTest"
@@ -220,14 +220,15 @@ set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
   -DLLVM_ENABLE_RPMALLOC=OFF ^
+  -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
 
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
-ninja || exit /b 1
+ninja || ninja || ninja || exit /b 1
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
-ninja check-lld || exit /b 1
+ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
 REM ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
 REM ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 cd..
@@ -238,6 +239,7 @@ set all_cmake_flags=^
   %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;" ^
   %common_lldb_flags% ^
+  -DPYTHON_HOME=%PYTHONHOME% ^
   -DCMAKE_C_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
   -DCMAKE_CXX_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
   -DCMAKE_LINKER=%stage0_bin_dir%/lld-link.exe ^
@@ -248,10 +250,10 @@ set cmake_flags=%all_cmake_flags:\=/%
 mkdir build32
 cd build32
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
-ninja || ninja || ninja || ninja || exit /b 1
+ninja || ninja || ninja || exit /b 1
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
-ninja check-lld || exit /b 1
+ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
 REM ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
 REM ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 ninja package || exit /b 1
@@ -278,6 +280,7 @@ REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build_%arch%_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
+  -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
   -DCLANG_DEFAULT_LINKER=lld
@@ -289,15 +292,15 @@ if "%arch%"=="arm64" (
 cmake -GNinja %cmake_flags% ^
   -DLLVM_TARGETS_TO_BUILD=Native ^
   %llvm_src%\llvm || exit /b 1
-ninja || exit /b 1
-ninja check-llvm || exit /b 1
-ninja check-clang || exit /b 1
-ninja check-lld || exit /b 1
+ninja || ninja || ninja || exit /b 1
+ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
+ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
+ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
 if "%arch%"=="amd64" (
-  ninja check-runtimes || exit /b 1
+  ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
 )
-REM ninja check-clang-tools || exit /b 1
-REM ninja check-clangd || exit /b 1
+ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
+ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
 cd..
 
 REM CMake expects the paths that specifies the compiler and linker to be
@@ -318,19 +321,20 @@ set cmake_flags=%all_cmake_flags:\=/%
 mkdir build_%arch%
 cd build_%arch%
 call :do_generate_profile || exit /b 1
-cmake --trace-expand -GNinja %cmake_flags% ^
+cmake -GNinja %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
   %common_lldb_flags% ^
+  -DPYTHON_HOME=%PYTHONHOME% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
-ninja -v || ninja -v || ninja -v ||  exit /b 1
-ninja check-llvm || exit /b 1
-ninja check-clang || exit /b 1
-ninja check-lld || exit /b 1
+ninja || ninja || ninja || exit /b 1
+ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
+ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
+ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
 if "%arch%"=="amd64" (
-  ninja check-runtimes || exit /b 1
+  ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
 )
-REM ninja check-clang-tools || exit /b 1
-REM ninja check-clangd || exit /b 1
+ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
+ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
 REM ninja check-flang || ninja check-flang || ninja check-flang || exit /b 1
 REM ninja check-mlir || ninja check-mlir || ninja check-mlir || exit /b 1
 REM ninja check-lldb || ninja check-lldb || ninja check-lldb || exit /b 1
@@ -362,14 +366,14 @@ set PATH=%OLDPATH%
 set python_dir=%1
 
 REM Set Python environment
-::if "%local-python%" == "true" (
-::  FOR /F "delims=" %%i IN ('where python.exe ^| head -1') DO set python_exe=%%i
-::  set PYTHONHOME=!python_exe:~0,-11!
-::) else (
-::  %python_dir%/python.exe --version || exit /b 1
-::  set PYTHONHOME=%python_dir%
-::)
-::set PATH=%PYTHONHOME%;%PATH%
+if "%local-python%" == "true" (
+  FOR /F "delims=" %%i IN ('where python.exe ^| head -1') DO set python_exe=%%i
+  set PYTHONHOME=!python_exe:~0,-11!
+) else (
+  %python_dir%/python.exe --version || exit /b 1
+  set PYTHONHOME=%python_dir%
+)
+set PATH=%PYTHONHOME%;%PATH%
 
 set "VSCMD_START_DIR=%build_dir%"
 
