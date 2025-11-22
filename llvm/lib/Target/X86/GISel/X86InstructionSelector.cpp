@@ -312,8 +312,6 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
       }
     }
 
-    const int RegBankSize = 16;
-
     // Special case GPR16 -> XMM
     if (SrcSize == 16 && SrcRegBank.getID() == X86::GPRRegBankID &&
         (DstRegBank.getID() == X86::VECRRegBankID)) {
