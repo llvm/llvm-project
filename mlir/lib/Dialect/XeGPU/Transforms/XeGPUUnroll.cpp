@@ -678,7 +678,7 @@ struct UnrollLoadGatherOpWithOffset
           pack(offsets, convertedOffsetTypes, *targetShape, loc, rewriter);
     }
 
-    auto layout = op.getLayoutAttr();
+    auto layout = op.getAnchorLayoutAttr();
     if (layout)
       layout = layout.dropInstData();
 
@@ -778,7 +778,7 @@ struct UnrollStoreScatterOpWithOffsets
     SmallVector<Value> convertedValues =
         pack(op.getValue(), convertedValTypes, *targetShape, loc, rewriter);
 
-    auto layout = op.getLayoutAttr();
+    auto layout = op.getAnchorLayoutAttr();
     if (layout)
       layout = layout.dropInstData();
 
