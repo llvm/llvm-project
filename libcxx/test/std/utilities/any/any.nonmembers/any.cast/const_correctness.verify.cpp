@@ -27,7 +27,7 @@
 struct TestType {};
 struct TestType2 {};
 
-void f() {
+void test() {
   std::any a;
 
   // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be a const lvalue reference or a CopyConstructible type}}
