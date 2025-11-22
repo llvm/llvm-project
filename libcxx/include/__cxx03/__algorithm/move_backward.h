@@ -53,12 +53,12 @@ struct __move_backward_impl {
     auto __slast  = _Traits::__segment(__last);
     if (__sfirst == __slast) {
       auto __iters =
-          std::__move_backward<_AlgPolicy>(_Traits::__local(__first), _Traits::__local(__last), std::move(__result));
+          std::__move_backward<_AlgPolicy>(_Traits::__local_it(__first), _Traits::__local_it(__last), std::move(__result));
       return std::make_pair(__last, __iters.second);
     }
 
     __result =
-        std::__move_backward<_AlgPolicy>(_Traits::__begin(__slast), _Traits::__local(__last), std::move(__result))
+        std::__move_backward<_AlgPolicy>(_Traits::__begin(__slast), _Traits::__local_it(__last), std::move(__result))
             .second;
     --__slast;
     while (__sfirst != __slast) {
@@ -67,7 +67,7 @@ struct __move_backward_impl {
               .second;
       --__slast;
     }
-    __result = std::__move_backward<_AlgPolicy>(_Traits::__local(__first), _Traits::__end(__slast), std::move(__result))
+    __result = std::__move_backward<_AlgPolicy>(_Traits::__local_it(__first), _Traits::__end(__slast), std::move(__result))
                    .second;
     return std::make_pair(__last, std::move(__result));
   }
@@ -87,7 +87,7 @@ struct __move_backward_impl {
 
     auto __orig_last = __last;
 
-    auto __local_last       = _Traits::__local(__result);
+    auto __local_last       = _Traits::__local_it(__result);
     auto __segment_iterator = _Traits::__segment(__result);
     while (true) {
       auto __local_first = _Traits::__begin(__segment_iterator);

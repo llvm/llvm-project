@@ -408,18 +408,18 @@ static void __matches(istream& __input, string_view __expected) {
 [[nodiscard]] static __tz::__clock __parse_clock(istream& __input) {
   switch (__input.get()) { // case sensitive
   case 'w':
-    return __tz::__clock::__local;
+    return __tz::__clock::__local_tm;
   case 's':
-    return __tz::__clock::__standard;
+    return __tz::__clock::__standard_tm;
 
   case 'u':
   case 'g':
   case 'z':
-    return __tz::__clock::__universal;
+    return __tz::__clock::__universal_tm;
   }
 
   __input.unget();
-  return __tz::__clock::__local;
+  return __tz::__clock::__local_tm;
 }
 
 [[nodiscard]] static bool __parse_dst(istream& __input, seconds __offset) {
