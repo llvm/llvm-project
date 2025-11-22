@@ -23634,8 +23634,10 @@ static SDValue EmitTest(SDValue Op, X86::CondCode X86CC, const SDLoc &dl,
     if (isa<ConstantSDNode>(Amt))
       break;
 
-    // Check we can make this optimization
-    if (ArithOp->getFlags().hasNoZero() || DAG.isKnownNeverZero(Amt)) {
+    // If optimising for size and can guarantee the shift amt is never zero
+    // the test.
+    bool OptForSize = DAG.getMachineFunction().getFunction().hasOptSize();
+    if (OptForSize && DAG.isKnownNeverZero(Amt)) {
       SDLoc DL(ArithOp);
 
       // CopyToReg(CL, Amt)
