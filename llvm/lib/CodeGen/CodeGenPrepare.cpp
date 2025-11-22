@@ -786,32 +786,8 @@ bool CodeGenPrepare::eliminateAssumptions(Function &F) {
       if (auto *Assume = dyn_cast<AssumeInst>(I)) {
         MadeChange = true;
         Value *Operand = Assume->getOperand(0);
-        if (ICmpInst *Cmp = dyn_cast<ICmpInst>(Operand)) {
-          // Check if we are comparing an Argument against a Constant
-          if (Argument *Arg = dyn_cast<Argument>(Cmp->getOperand(0))) {
-            if (ConstantInt *C = dyn_cast<ConstantInt>(Cmp->getOperand(1))) {
-              // We found "assume(Arg <pred> Constant)"
-              ConstantRange Constraint = ConstantRange::makeAllowedICmpRegion(
-                  Cmp->getPredicate(), C->getValue());
-              // If the argument already has a range attribute, intersect with
-              // it
-              ConstantRange FinalRange = Constraint;
-              Attribute ExistingRangeAttr = Arg->getAttribute(Attribute::Range);
-              if (ExistingRangeAttr.isValid()) {
-                FinalRange =
-                    FinalRange.intersectWith(ExistingRangeAttr.getRange());
-              }
-              // If the range provides new information (and isn't empty), save
-              // it.
-              if (!FinalRange.isFullSet() && !FinalRange.isEmptySet()) {
-                AttrBuilder AB(Arg->getContext());
-                AB.addRangeAttr(FinalRange);
-                Arg->addAttrs(AB);
-              }
-            }
-          }
-        }
         Assume->eraseFromParent();
+
         resetIteratorIfInvalidatedWhileCalling(&BB, [&]() {
           RecursivelyDeleteTriviallyDeadInstructions(Operand, TLInfo, nullptr);
         });
