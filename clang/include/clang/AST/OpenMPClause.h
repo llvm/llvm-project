@@ -91,8 +91,7 @@ public:
 
   child_range children();
   const_child_range children() const {
-    auto Children = const_cast<OMPClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPClause *>(this)->children();
   }
 
   /// Get the iterator range for the expressions used in the clauses. Used
@@ -100,8 +99,7 @@ public:
   /// runtime before entering the construct.
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPClause *>(this)->children();
   }
 
   static bool classof(const OMPClause *) { return true; }
@@ -650,8 +648,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPAllocateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPAllocateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -758,8 +755,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPIfClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPIfClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -808,8 +804,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPFinalClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFinalClause *>(this)->used_children();
   }
 };
 /// This represents 'num_threads' clause in the '#pragma omp ...'
@@ -2256,8 +2251,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPScheduleClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPScheduleClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -2426,8 +2420,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPNowaitClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNowaitClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -3427,8 +3420,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPPrivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPPrivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -3566,8 +3558,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPFirstprivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFirstprivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -3575,8 +3566,7 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
   const_child_range used_children() const {
-    auto Children = const_cast<OMPFirstprivateClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFirstprivateClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -3807,8 +3797,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPLastprivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPLastprivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -3879,8 +3868,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPSharedClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPSharedClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -4270,8 +4258,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPReductionClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPReductionClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -4279,8 +4266,7 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
   const_child_range used_children() const {
-    auto Children = const_cast<OMPReductionClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPReductionClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -4504,8 +4490,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPTaskReductionClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPTaskReductionClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -4759,8 +4744,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPInReductionClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPInReductionClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5049,15 +5033,13 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPLinearClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPLinearClause *>(this)->children();
   }
 
   child_range used_children();
 
   const_child_range used_children() const {
-    auto Children = const_cast<OMPLinearClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPLinearClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -5148,8 +5130,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPAlignedClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPAlignedClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5324,8 +5305,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPCopyinClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPCopyinClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5488,8 +5468,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPCopyprivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPCopyprivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5565,8 +5544,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPFlushClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFlushClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5652,8 +5630,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDepobjClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDepobjClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5806,8 +5783,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDependClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDependClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -6954,8 +6930,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPMapClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPMapClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -6965,8 +6940,7 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
   const_child_range used_children() const {
-    auto Children = const_cast<OMPMapClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPMapClause *>(this)->used_children();
   }
 
 
@@ -7052,8 +7026,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPNumTeamsClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNumTeamsClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -7146,8 +7119,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPThreadLimitClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPThreadLimitClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -7227,8 +7199,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPPriorityClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPPriorityClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -7319,8 +7290,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPGrainsizeClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPGrainsizeClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -7451,8 +7421,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPNumTasksClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNumTasksClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -7626,8 +7595,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDistScheduleClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDistScheduleClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -7940,8 +7908,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPToClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPToClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8140,8 +8107,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPFromClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFromClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8304,8 +8270,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPUseDevicePtrClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPUseDevicePtrClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8408,8 +8373,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPUseDeviceAddrClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPUseDeviceAddrClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8511,8 +8475,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPIsDevicePtrClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPIsDevicePtrClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8615,8 +8578,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPHasDeviceAddrClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPHasDeviceAddrClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8702,8 +8664,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPNontemporalClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNontemporalClause *>(this)->children();
   }
 
   child_range private_refs() {
@@ -8712,8 +8673,7 @@ public:
   }
 
   const_child_range private_refs() const {
-    auto Children = const_cast<OMPNontemporalClause *>(this)->private_refs();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNontemporalClause *>(this)->private_refs();
   }
 
   child_range used_children() {
@@ -8923,8 +8883,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPInitClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPInitClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -9156,8 +9115,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPNovariantsClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNovariantsClause *>(this)->used_children();
   }
 };
 
@@ -9202,8 +9160,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPNocontextClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNocontextClause *>(this)->used_children();
   }
 };
 
@@ -9297,8 +9254,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPInclusiveClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPInclusiveClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -9371,8 +9327,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPExclusiveClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPExclusiveClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -9593,8 +9548,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPAffinityClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPAffinityClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -10198,8 +10152,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDynGroupprivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDynGroupprivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -10324,8 +10277,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDoacrossClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDoacrossClause *>(this)->children();
   }
 
   child_range used_children() {

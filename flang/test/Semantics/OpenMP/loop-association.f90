@@ -146,4 +146,5 @@
     a = i + 1
   !ERROR: Misplaced OpenMP end-directive
   !$omp end simd
+   a = i + 1
 end
