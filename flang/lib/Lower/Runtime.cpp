@@ -90,8 +90,7 @@ void Fortran::lower::genStopStatement(
           operands.push_back(cast);
         },
         [&](auto) {
-          mlir::emitError(loc, "unhandled expression in STOP");
-          std::exit(1);
+          fir::emitFatalError(loc, "unhandled expression in STOP");
         });
   } else {
     callee = fir::runtime::getRuntimeFunc<mkRTKey(StopStatement)>(loc, builder);
