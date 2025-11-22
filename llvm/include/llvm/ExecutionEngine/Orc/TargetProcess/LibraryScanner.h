@@ -338,14 +338,14 @@ public:
   addBasePath(const std::string &P,
               PathType Kind =
                   PathType::Unknown); // Add a canonical directory for scanning
-  std::vector<std::shared_ptr<LibrarySearchPath>>
-  getNextBatch(PathType Kind, size_t batchSize);
+  std::vector<const LibrarySearchPath *> getNextBatch(PathType Kind,
+                                                      size_t batchSize);
 
   bool leftToScan(PathType K) const;
   void resetToScan();
 
   bool isTrackedBasePath(StringRef P) const;
-  std::vector<std::shared_ptr<LibrarySearchPath>> getAllUnits() const;
+  std::vector<const LibrarySearchPath *> getAllUnits() const;
 
   SmallVector<StringRef> getSearchPaths() const {
     SmallVector<StringRef> SearchPaths;
@@ -374,7 +374,7 @@ private:
   std::shared_ptr<LibraryPathCache> LibPathCache;
   std::shared_ptr<PathResolver> LibPathResolver;
 
-  StringMap<std::shared_ptr<LibrarySearchPath>>
+  StringMap<std::unique_ptr<LibrarySearchPath>>
       LibSearchPaths; // key: canonical path
   std::deque<StringRef> UnscannedUsr;
   std::deque<StringRef> UnscannedSys;
@@ -461,7 +461,7 @@ private:
 
   void handleLibrary(StringRef P, PathType K, int level = 1);
 
-  void scanBaseDir(std::shared_ptr<LibrarySearchPath> U);
+  void scanBaseDir(LibrarySearchPath *U);
 };
 
 using LibraryDepsInfo = LibraryScanner::LibraryDepsInfo;
