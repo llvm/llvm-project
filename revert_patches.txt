@@ -8,3 +8,6 @@ breaks build of ROCmValidationSuite
 Shore will help land downstream
 [AMDGPU] Adding instruction specific features (#167809)
 ---
+breaks nekbone accel2023 hpc2021
+[OpenMP] Fix firstprivate pointer handling in target regions (#167879)
+---
