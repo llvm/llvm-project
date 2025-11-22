@@ -41,7 +41,7 @@ class CodeGenRegisterClass;
 class CodeGenSchedModels;
 class CodeGenSubRegIndex;
 
-/// getValueType - Return the MVT::SimpleValueType that the specified TableGen
+/// Returns the MVT that the specified TableGen
 /// record corresponds to.
 MVT getValueType(const Record *Rec);
 
