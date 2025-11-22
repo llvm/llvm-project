@@ -7818,15 +7818,13 @@ mlir::Value IntrinsicLibrary::genShiftA(mlir::Type resultType,
   return result;
 }
 
-void
-IntrinsicLibrary::genShowDescriptor(
-                           llvm::ArrayRef<fir::ExtendedValue> args) {
+void IntrinsicLibrary::genShowDescriptor(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
   const mlir::Value descriptor = fir::getBase(args[0]);
 
   assert(fir::isa_box_type(descriptor.getType()) &&
          "argument must have been lowered to box type");
-  //  mlir::Value descrAddr = fir::BoxAddrOp::create(builder, loc, descriptor);
   fir::runtime::genShowDescriptor(builder, loc, descriptor);
 }
 

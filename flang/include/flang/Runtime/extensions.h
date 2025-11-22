@@ -102,7 +102,7 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime);
 float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line);
 
 // Extension subroutine SHOW_DESCRIPTOR(D)
-void RTNAME(ShowDescriptor)(const char* descr);
+void RTNAME(ShowDescriptor)(const char *descr);
 
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_
