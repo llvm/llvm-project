@@ -45,7 +45,7 @@ jobs:
       - id: variables
         shell: bash
         run: |
-          if [ -z "${{ inputs.release-version }} ]; then;
+          if [ -z "${{ inputs.release-version }} ]; then
             version_string="${{ format('{0}.{1}.{2}', steps.version.outputs.major, steps.version.outputs.minor, steps.version.outputs.patch) }}"
           else
             version_string="${{inputs.release-version }}
