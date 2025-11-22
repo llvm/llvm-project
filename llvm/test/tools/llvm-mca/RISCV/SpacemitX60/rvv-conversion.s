@@ -1189,7 +1189,7 @@ vfwcvt.xu.f.v v8, v16
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]
-# CHECK-NEXT:  -     281.00  -      -      -     1473.00 224.00  -
+# CHECK-NEXT:  -     281.00  -      -      -     1473.00 368.00  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]    Instructions:

@@ -2354,7 +2354,7 @@ vfslide1up.vf v8, v16, ft0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]
-# CHECK-NEXT:  -     572.00  -      -      -     123.00 923.00  -
+# CHECK-NEXT:  -     572.00  -      -      -     303.00 5585.00  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]    Instructions:
