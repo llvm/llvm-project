@@ -5709,7 +5709,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
 
   QualType ResultType;
   if (LHSIsVector && RHSIsVector) {
-    if (isa<ExtVectorType>(CondType) != isa<ExtVectorType>(LHSType)) {
+    if (CondType->isExtVectorType() != LHSType->isExtVectorType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_cond_result_mismatch)
           << /*isExtVector*/ isa<ExtVectorType>(CondType);
       return {};
