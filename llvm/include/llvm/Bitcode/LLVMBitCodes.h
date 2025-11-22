@@ -688,6 +688,8 @@ enum FunctionCodes {
   FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE =
       64, // [DILocation, DILocalVariable, DIExpression, Value]
   FUNC_CODE_DEBUG_RECORD_LABEL = 65, // [DILocation, DILabel]
+  FUNC_CODE_DEBUG_RECORD_DECLARE_VALUE =
+      66, // [DILocation, DILocalVariable, DIExpression, ValueAsMetadata]
 };
 
 enum UseListCodes {

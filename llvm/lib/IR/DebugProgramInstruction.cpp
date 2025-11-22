@@ -211,6 +211,22 @@ DbgVariableRecord::createDVRDeclare(Value *Address, DILocalVariable *DV,
   return NewDVRDeclare;
 }
 
+DbgVariableRecord *
+DbgVariableRecord::createDVRDeclareValue(Value *Address, DILocalVariable *DV,
+                                         DIExpression *Expr,
+                                         const DILocation *DI) {
+  return new DbgVariableRecord(ValueAsMetadata::get(Address), DV, Expr, DI,
+                               LocationType::DeclareValue);
+}
+
+DbgVariableRecord *DbgVariableRecord::createDVRDeclareValue(
+    Value *Address, DILocalVariable *DV, DIExpression *Expr,
+    const DILocation *DI, DbgVariableRecord &InsertBefore) {
+  auto *NewDVRCoro = createDVRDeclareValue(Address, DV, Expr, DI);
+  NewDVRCoro->insertBefore(&InsertBefore);
+  return NewDVRCoro;
+}
+
 DbgVariableRecord *DbgVariableRecord::createDVRAssign(
     Value *Val, DILocalVariable *Variable, DIExpression *Expression,
     DIAssignID *AssignID, Value *Address, DIExpression *AddressExpression,
@@ -427,6 +443,10 @@ DbgVariableRecord::createDebugIntrinsic(Module *M,
   case DbgVariableRecord::LocationType::End:
   case DbgVariableRecord::LocationType::Any:
     llvm_unreachable("Invalid LocationType");
+    break;
+  case DbgVariableRecord::LocationType::DeclareValue:
+    llvm_unreachable(
+        "#dbg_declare_value should never be converted to an intrinsic");
   }
 
   // Create the intrinsic from this DbgVariableRecord's information, optionally
