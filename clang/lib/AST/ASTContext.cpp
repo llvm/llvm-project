@@ -4512,25 +4512,25 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
                             ElBits, NF, IsSigned)                              \
   if (EltTy->hasIntegerRepresentation() && !EltTy->isBooleanType() &&          \
       EltTy->hasSignedIntegerRepresentation() == IsSigned &&                   \
-      EltTySize == ElBits && NumElts == NumEls && NumFields == NF) {           \
+      EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
     return ScalableVecTyMap[K] = SingletonId;                                  \
   }
 #define SVE_VECTOR_TYPE_FLOAT(Name, MangledName, Id, SingletonId, NumEls,      \
                               ElBits, NF)                                      \
   if (EltTy->hasFloatingRepresentation() && !EltTy->isBFloat16Type() &&        \
-      EltTySize == ElBits && NumElts == NumEls && NumFields == NF) {           \
+      EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
     return ScalableVecTyMap[K] = SingletonId;                                  \
   }
 #define SVE_VECTOR_TYPE_BFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
                                ElBits, NF)                                     \
   if (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&         \
-      EltTySize == ElBits && NumElts == NumEls && NumFields == NF) {           \
+      EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
     return ScalableVecTyMap[K] = SingletonId;                                  \
   }
 #define SVE_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
                                ElBits, NF)                                     \
-  if (EltTy->isMFloat8Type() && EltTySize == ElBits && NumElts == NumEls &&    \
-      NumFields == NF) {                                                       \
+  if (EltTy->isMFloat8Type() && EltTySize == ElBits &&                         \
+      NumElts == (NumEls * NF) && NumFields == 1) {                            \
     return ScalableVecTyMap[K] = SingletonId;                                  \
   }
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \

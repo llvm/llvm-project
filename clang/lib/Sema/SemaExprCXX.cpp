@@ -5697,8 +5697,10 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
       ElementTy = VT->getElementType();
       EC = llvm::ElementCount::getFixed(VT->getNumElements());
     } else {
-      ElementTy = Type->getSizelessVectorEltType(Context);
-      EC = Context.getBuiltinVectorTypeInfo(Type->castAs<BuiltinType>()).EC;
+      ASTContext::BuiltinVectorTypeInfo VectorInfo =
+          Context.getBuiltinVectorTypeInfo(Type->castAs<BuiltinType>());
+      ElementTy = VectorInfo.ElementType;
+      EC = VectorInfo.EC;
     }
     return std::make_pair(ElementTy, EC);
   };
