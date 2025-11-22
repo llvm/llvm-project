@@ -56,7 +56,6 @@ public:
   using Base::operator*;
   using Base::operator->;
   using Base::get;
-  using Base::unique;
   using Base::use_count;
   using Base::operator bool;
 
