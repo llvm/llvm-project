@@ -137,7 +137,7 @@ InstrumentationBoundsSafetyStopInfo::ComputeStopReasonAndSuggestedStackFrame(
     return {};
   }
 
-  if (parent_sf->HasDebugInformation()) 
+  if (parent_sf->HasDebugInformation())
     return ComputeStopReasonAndSuggestedStackFrameWithDebugInfo(
         parent_sf, debugger_id, warning_emitted_for_failure);
 
