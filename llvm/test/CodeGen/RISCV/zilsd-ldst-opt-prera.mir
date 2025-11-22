@@ -333,19 +333,22 @@ body: |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: SW $x0, [[COPY]], 0 :: (store (s32))
-    ; CHECK-NEXT: SW $x0, [[COPY]], 4 :: (store (s32))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x0
+    ; CHECK-NEXT: SW [[COPY1]], [[COPY]], 0 :: (store (s32))
+    ; CHECK-NEXT: SW [[COPY1]], [[COPY]], 4 :: (store (s32))
     ; CHECK-NEXT: PseudoRET
     ;
     ; CHECK-4BYTE-LABEL: name: basic_store_zero_combine
     ; CHECK-4BYTE: liveins: $x10
     ; CHECK-4BYTE-NEXT: {{  $}}
     ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-4BYTE-NEXT: PseudoSD_RV32_OPT $x0, $x0, [[COPY]], 0 :: (store (s32))
+    ; CHECK-4BYTE-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x0
+    ; CHECK-4BYTE-NEXT: PseudoSD_RV32_OPT [[COPY1]], [[COPY1]], [[COPY]], 0 :: (store (s32))
     ; CHECK-4BYTE-NEXT: PseudoRET
     %0:gpr = COPY $x10
-    SW $x0, %0, 0 :: (store (s32))
-    SW $x0, %0, 4 :: (store (s32))
+    %1:gpr = COPY $x0
+    SW %1, %0, 0 :: (store (s32))
+    SW %1, %0, 4 :: (store (s32))
     PseudoRET
 
 ...
