@@ -44,7 +44,7 @@
 // TCHECK: [[ENTTY:%.+]] = type { i64, i16, i16, i32, ptr, ptr, i64, i64, ptr }
 
 // CHECK-DAG: [[SIZET:@.+]] = private unnamed_addr constant [3 x i64] [i64 0, i64 4, i64 {{16|12}}]
-// CHECK-DAG: [[MAPT:@.+]] = private unnamed_addr constant [3 x i64] [i64 800, i64 800, i64 3]
+// CHECK-DAG: [[MAPT:@.+]] = private unnamed_addr constant [3 x i64] [i64 544, i64 800, i64 3]
 // CHECK-DAG: @{{.*}} = weak constant i8 0
 
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]

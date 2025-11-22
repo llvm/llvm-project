@@ -293,6 +293,17 @@ class LLVMConfig(object):
         except OSError:
             self.lit_config.fatal("Could not run process %s" % command)
 
+    def check_process_success(self, command):
+        cp = subprocess.run(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=self.config.environment,
+        )
+        if cp.returncode == 0:
+            return True
+        return False
+
     def feature_config(self, features):
         # Ask llvm-config about the specified feature.
         arguments = [x for (x, _) in features]
@@ -333,6 +344,25 @@ class LLVMConfig(object):
             clang_dir = clang_dir.replace("\\", "/")
         # Ensure the result is an ascii string, across Python2.5+ - Python3.
         return clang_dir
+
+    def clang_has_bounds_safety(self, additional_flags=None):
+        """
+        Return True iff `self.config.clang` supports -fbounds-safety
+        """
+        if not self.config.clang:
+            return False
+        if not os.path.exists(self.config.clang):
+            return False
+        if additional_flags is None:
+            additional_flags = []
+        # Invoke the clang driver to see if it supports the `-fbounds-safety`
+        # flag. Only the downstream implementation has this flag so this is
+        # a simple way to check if the full implementation is available or not.
+        cmd = [self.config.clang] + additional_flags
+        cmd += ["-fbounds-safety", "-###"]
+        if self.check_process_success(cmd):
+            return True
+        return False
 
     # On macOS, LSan is only supported on clang versions 5 and higher
     def get_clang_has_lsan(self, clang, triple):
