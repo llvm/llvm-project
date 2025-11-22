@@ -61,7 +61,7 @@ public:
       m_bytes_left -= size;
     }
 
-    memset(buf, 'B', num_bytes_to_write);
+    memset(buf, m_filler, num_bytes_to_write);
     return num_bytes_to_write;
   }
   bool DoUpdateThreadList(ThreadList &old_thread_list,
@@ -72,8 +72,11 @@ public:
 
   // Test-specific additions
   size_t m_bytes_left;
+  int m_filler = 'B';
   MemoryCache &GetMemoryCache() { return m_memory_cache; }
   void SetMaxReadSize(size_t size) { m_bytes_left = size; }
+  void SetFiller(int filler) { m_filler = filler; }
+  using Process::SetPrivateState;
 };
 } // namespace
 
@@ -83,6 +86,13 @@ TargetSP CreateTarget(DebuggerSP &debugger_sp, ArchSpec &arch) {
   debugger_sp->GetTargetList().CreateTarget(
       *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
   return target_sp;
+}
+
+static void OverrideTargetProcess(Target *target, lldb::ProcessSP process) {
+  struct TargetHack : public Target {
+    void SetProcess(lldb::ProcessSP process) { m_process_sp = process; }
+  };
+  static_cast<TargetHack *>(target)->SetProcess(process);
 }
 
 TEST_F(MemoryTest, TesetMemoryCacheRead) {
@@ -225,6 +235,56 @@ TEST_F(MemoryTest, TesetMemoryCacheRead) {
   ASSERT_TRUE(process->m_bytes_left == l2_cache_size); // Verify that we re-read
                                                        // instead of using an
                                                        // old cache
+}
+
+TEST_F(MemoryTest, TestProcessReadSignedInteger) {
+  ArchSpec arch("x86_64-apple-macosx-");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp = std::make_shared<DummyProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+
+  DummyProcess *process = static_cast<DummyProcess *>(process_sp.get());
+  process->SetFiller(0xff);
+  process->SetMaxReadSize(4);
+
+  Status error;
+  int64_t val = process->ReadSignedIntegerFromMemory(0, 4, 0, error);
+  EXPECT_EQ(val, -1);
+}
+
+TEST_F(MemoryTest, TestTargetReadSignedInteger) {
+  ArchSpec arch("x86_64-apple-macosx-");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp = std::make_shared<DummyProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+  OverrideTargetProcess(target_sp.get(), process_sp);
+
+  DummyProcess *process = static_cast<DummyProcess *>(process_sp.get());
+  process->SetFiller(0xff);
+  process->SetMaxReadSize(4);
+  process->SetPrivateState(eStateStopped);
+
+  Status error;
+  int64_t val = target_sp->ReadSignedIntegerFromMemory(Address(0), 4, 0, error);
+  EXPECT_EQ(val, -1);
 }
 
 /// A process class that, when asked to read memory from some address X, returns

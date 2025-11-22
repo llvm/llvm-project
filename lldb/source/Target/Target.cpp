@@ -2282,8 +2282,10 @@ size_t Target::ReadScalarIntegerFromMemory(const Address &addr, uint32_t byte_si
       else
         scalar = data.GetMaxU64(&offset, byte_size);
 
-      if (is_signed)
+      if (is_signed) {
+        scalar.MakeSigned();
         scalar.SignExtend(byte_size * 8);
+      }
       return bytes_read;
     }
   } else {
@@ -2298,7 +2300,7 @@ int64_t Target::ReadSignedIntegerFromMemory(const Address &addr,
                                             int64_t fail_value, Status &error,
                                             bool force_live_memory) {
   Scalar scalar;
-  if (ReadScalarIntegerFromMemory(addr, integer_byte_size, false, scalar, error,
+  if (ReadScalarIntegerFromMemory(addr, integer_byte_size, true, scalar, error,
                                   force_live_memory))
     return scalar.SLongLong(fail_value);
   return fail_value;
