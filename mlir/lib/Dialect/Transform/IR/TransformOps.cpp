@@ -2572,7 +2572,7 @@ void transform::NamedSequenceOp::build(OpBuilder &builder,
                                                      rootType, resultTypes)));
   state.attributes.append(attrs.begin(), attrs.end());
   if (!argAttrs.empty()) {
-    SmallVector<Attribute> argAttrsVec(argAttrs.begin(), argAttrs.end());
+    SmallVector<Attribute> argAttrsVec(argAttrs);
     state.getOrAddProperties<Properties>().arg_attrs =
         ArrayAttr::get(builder.getContext(), argAttrsVec);
   }

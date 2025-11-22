@@ -14,20 +14,17 @@ TEST(NamedSequenceOpTest, ArgAttrsAreHonoredByBuilder) {
   ctx.loadDialect<TransformDialect>();
 
   OpBuilder builder(&ctx);
-  auto module = ModuleOp::create(UnknownLoc::get(&ctx));
+  Location loc = UnknownLoc::get(&ctx);
+  auto module = ModuleOp::create(loc);
   builder.setInsertionPointToEnd(module.getBody());
 
-  Location loc = UnknownLoc::get(&ctx);
-
-  static constexpr StringLiteral kMainSequenceName = "__transform_main";
-
-  NamedSequenceOp seqOp = builder.create<NamedSequenceOp>(
-      loc,
-      /*sym_name=*/kMainSequenceName,
+  NamedSequenceOp seqOp = NamedSequenceOp::create(
+      builder, loc,
+      /*sym_name=*/transform::TransformDialect::kTransformEntryPointSymbolName,
       /*rootType=*/builder.getType<AnyOpType>(),
       /*resultType=*/TypeRange{},
       [](OpBuilder &b, Location nested, Value rootH) {
-        b.create<YieldOp>(nested, ValueRange());
+        YieldOp::create(b, nested, ValueRange());
       },
       /*args=*/ArrayRef<NamedAttribute>{},
       /*attrArgs=*/
@@ -36,10 +33,19 @@ TEST(NamedSequenceOpTest, ArgAttrsAreHonoredByBuilder) {
               builder.getNamedAttr(TransformDialect::kArgConsumedAttrName,
                                    builder.getUnitAttr())})});
 
-  // check if body argument contains any attributes
+  // Check if body argument contains any attributes.
   Block &body = seqOp.getBody().front();
   ASSERT_EQ(body.getNumArguments(), 1u);
 
-  StringAttr arg0Name = seqOp.getArgAttrsAttrName();
-  EXPECT_TRUE(arg0Name);
+  auto arg0Attr = seqOp.getArgAttrDict(0);
+  EXPECT_TRUE(arg0Attr);
+
+  auto arg0Name = arg0Attr.getNamed(TransformDialect::kArgConsumedAttrName);
+  EXPECT_TRUE(arg0Name.has_value());
+
+  EXPECT_EQ(arg0Name.value().getName(), TransformDialect::kArgConsumedAttrName);
+
+  auto expectedFalse =
+      arg0Attr.getNamed(TransformDialect::kArgReadOnlyAttrName);
+  EXPECT_FALSE(expectedFalse.has_value());
 }
