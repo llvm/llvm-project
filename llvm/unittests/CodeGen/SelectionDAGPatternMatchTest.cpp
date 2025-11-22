@@ -551,6 +551,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   SDValue PoisonVInt32VT = DAG->getPOISON(VInt32VT);
   EXPECT_TRUE(sd_match(PoisonInt32VT, m_Poison()));
   EXPECT_TRUE(sd_match(PoisonVInt32VT, m_Poison()));
+  EXPECT_TRUE(sd_match(PoisonInt32VT, m_Undef()));
+  EXPECT_TRUE(sd_match(PoisonVInt32VT, m_Undef()));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, patternCombinators) {
