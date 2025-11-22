@@ -287,7 +287,7 @@ detBB2:                                          ; preds = %if.end23, %detBB1
   br label %switchPhiDef.for.body
 }
 
-define void @cyclesInPaths2(i1 %tobool5.not.i, ptr %P.sroa.0.050) {
+define void @cyclesInPaths2(i1 %tobool5.not.i) {
 ; CHECK-LABEL: DFA Jump threading: cyclesInPaths2
 ; CHECK: < sw.bb.i, bb.exit, if.end5, if.end.i > [ 1, bb.exit ]
 ; CHECK-NEXT: < bb.exit, if.end5, if.end.i > [ 0, bb.exit ]
