@@ -91,6 +91,11 @@ bool llvm::convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
 
   // Replace those expandable operands with instructions
   bool Changed = false;
+  // We need to cache the instructions we've already expanded to avoid expanding
+  // the same constant multiple times in the same basic block, which is
+  // problematic when the same constant is used in a phi node multiple times.
+  DenseMap<std::pair<Constant *, BasicBlock *>, SmallVector<Instruction *, 4>>
+      ConstantToInstructionMap;
   while (!InstructionWorklist.empty()) {
     Instruction *I = InstructionWorklist.pop_back_val();
     DebugLoc Loc = I->getDebugLoc();
@@ -105,7 +110,10 @@ bool llvm::convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
       if (auto *C = dyn_cast<Constant>(U.get())) {
         if (ExpandableUsers.contains(C)) {
           Changed = true;
-          auto NewInsts = expandUser(BI, C);
+          SmallVector<Instruction *, 4> &NewInsts =
+              ConstantToInstructionMap[std::make_pair(C, BI->getParent())];
+          if (NewInsts.empty())
+            NewInsts = expandUser(BI, C);
           for (auto *NI : NewInsts)
             NI->setDebugLoc(Loc);
           InstructionWorklist.insert_range(NewInsts);
