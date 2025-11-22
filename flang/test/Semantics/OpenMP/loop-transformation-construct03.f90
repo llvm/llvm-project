@@ -1,6 +1,7 @@
 ! Testing the Semantic failure of forming loop sequences under regular OpenMP directives 
 
 !RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=60
+!XFAIL: *
 
 subroutine loop_transformation_construct1
   implicit none

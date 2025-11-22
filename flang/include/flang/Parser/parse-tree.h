@@ -271,7 +271,6 @@ struct OpenACCRoutineConstruct;
 struct OpenMPConstruct;
 struct OpenMPLoopConstruct;
 struct OpenMPDeclarativeConstruct;
-struct OmpEndLoopDirective;
 struct CUFKernelDoConstruct;
 
 // Cooked character stream locations
@@ -539,7 +538,6 @@ struct ExecutableConstruct {
       common::Indirection<OpenACCConstruct>,
       common::Indirection<AccEndCombinedDirective>,
       common::Indirection<OpenMPConstruct>,
-      common::Indirection<OmpEndLoopDirective>,
       common::Indirection<CUFKernelDoConstruct>>
       u;
 };
@@ -5359,6 +5357,7 @@ struct OpenMPLoopConstruct {
   const DoConstruct *GetNestedLoop() const;
   const OpenMPLoopConstruct *GetNestedConstruct() const;
 
+  CharBlock source;
   std::tuple<OmpBeginLoopDirective, Block, std::optional<OmpEndLoopDirective>>
       t;
 };
