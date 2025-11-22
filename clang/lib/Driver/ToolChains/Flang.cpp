@@ -822,8 +822,14 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
                                          complexRangeKindToStr(Range)));
   }
 
-  if (Args.hasArg(options::OPT_fno_fast_real_mod))
-    CmdArgs.push_back("-fno-fast-real-mod");
+  if (llvm::opt::Arg *A =
+          Args.getLastArg(clang::options::OPT_ffast_real_mod,
+                          clang::options::OPT_fno_fast_real_mod)) {
+    if (A->getOption().matches(clang::options::OPT_ffast_real_mod))
+      CmdArgs.push_back("-ffast-real-mod");
+    else if (A->getOption().matches(clang::options::OPT_fno_fast_real_mod))
+      CmdArgs.push_back("-fno-fast-real-mod");
+  }
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
