@@ -409,9 +409,7 @@ define i1 @shl1_trunc_ne0_use2(i37 %a) {
 
 define i1 @shl2_trunc_eq0(i9 %a) {
 ; CHECK-LABEL: @shl2_trunc_eq0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i9 2, [[A:%.*]]
-; CHECK-NEXT:    [[T:%.*]] = trunc i9 [[SHL]] to i6
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i6 [[T]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i9 [[A:%.*]], 4
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i9 2, %a
@@ -422,9 +420,7 @@ define i1 @shl2_trunc_eq0(i9 %a) {
 
 define i1 @shl2_trunc_ne0(i9 %a) {
 ; CHECK-LABEL: @shl2_trunc_ne0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i9 2, [[A:%.*]]
-; CHECK-NEXT:    [[T:%.*]] = trunc i9 [[SHL]] to i6
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i6 [[T]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i9 [[A:%.*]], 5
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i9 2, %a
@@ -448,9 +444,7 @@ define i1 @shl3_trunc_eq0(i9 %a) {
 
 define <2 x i1> @shl4_trunc_ne0(<2 x i8> %a) {
 ; CHECK-LABEL: @shl4_trunc_ne0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 4, i8 poison>, [[A:%.*]]
-; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i8> [[SHL]] to <2 x i5>
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[T]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[A:%.*]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %shl = shl <2 x i8> <i8 4, i8 poison>, %a
@@ -461,9 +455,7 @@ define <2 x i1> @shl4_trunc_ne0(<2 x i8> %a) {
 
 define i1 @shl5_trunc_ne0(i9 %a) {
 ; CHECK-LABEL: @shl5_trunc_ne0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i9 4, [[A:%.*]]
-; CHECK-NEXT:    [[T:%.*]] = trunc i9 [[SHL]] to i6
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i6 [[T]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i9 [[A:%.*]], 4
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i9 4, %a
@@ -517,17 +509,9 @@ define i1 @shl1_trunc_ne32(i8 %a) {
 }
 
 define i1 @shl2_trunc_eq8_i32(i32 %a) {
-; DL64-LABEL: @shl2_trunc_eq8_i32(
-; DL64-NEXT:    [[SHL:%.*]] = shl i32 2, [[A:%.*]]
-; DL64-NEXT:    [[TMP1:%.*]] = and i32 [[SHL]], 65534
-; DL64-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 8
-; DL64-NEXT:    ret i1 [[R]]
-;
-; DL8-LABEL: @shl2_trunc_eq8_i32(
-; DL8-NEXT:    [[SHL:%.*]] = shl i32 2, [[A:%.*]]
-; DL8-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i16
-; DL8-NEXT:    [[R:%.*]] = icmp eq i16 [[T]], 8
-; DL8-NEXT:    ret i1 [[R]]
+; CHECK-LABEL: @shl2_trunc_eq8_i32(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[A:%.*]], 2
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i32 2, %a
   %t = trunc i32 %shl to i16
@@ -536,17 +520,9 @@ define i1 @shl2_trunc_eq8_i32(i32 %a) {
 }
 
 define i1 @shl2_trunc_ne8_i32(i32 %a) {
-; DL64-LABEL: @shl2_trunc_ne8_i32(
-; DL64-NEXT:    [[SHL:%.*]] = shl i32 2, [[A:%.*]]
-; DL64-NEXT:    [[TMP1:%.*]] = and i32 [[SHL]], 65534
-; DL64-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP1]], 8
-; DL64-NEXT:    ret i1 [[R]]
-;
-; DL8-LABEL: @shl2_trunc_ne8_i32(
-; DL8-NEXT:    [[SHL:%.*]] = shl i32 2, [[A:%.*]]
-; DL8-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i16
-; DL8-NEXT:    [[R:%.*]] = icmp ne i16 [[T]], 8
-; DL8-NEXT:    ret i1 [[R]]
+; CHECK-LABEL: @shl2_trunc_ne8_i32(
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[A:%.*]], 2
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i32 2, %a
   %t = trunc i32 %shl to i16
