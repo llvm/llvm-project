@@ -18,6 +18,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/FormattedStream.h"
+#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -98,6 +99,14 @@ class LiveElementPrinter {
 
     static constexpr unsigned NullElementIdx =
         std::numeric_limits<unsigned>::max();
+
+    // Clear the column's data.
+    void clear() {
+      ElementIdx = NullElementIdx;
+      LiveIn = false;
+      LiveOut = false;
+      MustDrawLabel = false;
+    }
   };
 
   // Vector that owns all LiveElement objects for memory management.

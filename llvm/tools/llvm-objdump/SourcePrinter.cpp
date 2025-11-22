@@ -124,15 +124,18 @@ void LiveElementPrinter::addInlinedFunction(DWARFDie FuncDie,
   // Add the new element to the main vector.
   LiveElements.emplace_back(std::make_unique<InlinedFunction>(
       InlinedFuncName, U, FuncDie, InlinedFuncDie, Range));
+
+  LiveElement *LE = LiveElements.back().get();
+
   // Map the element's low address (LowPC) to its pointer for fast range start
   // lookup.
-  LiveElementsByAddress[FuncLowPC].push_back(LiveElements.back().get());
+  LiveElementsByAddress[FuncLowPC].push_back(LE);
   // Map the element's high address (HighPC) to its pointer for fast range end
   // lookup.
-  LiveElementsByEndAddress[FuncHighPC].push_back(LiveElements.back().get());
+  LiveElementsByEndAddress[FuncHighPC].push_back(LE);
   // Map the pointer to its DWARF discovery index for deterministic
   // ordering.
-  ElementPtrToIndex[LiveElements.back().get()] = LiveElements.size() - 1;
+  ElementPtrToIndex[LE] = LiveElements.size() - 1;
 }
 
 /// Registers the most recently added LiveVariable into all data structures.
@@ -142,13 +145,18 @@ void LiveElementPrinter::registerNewVariable() {
       "registerNewVariable called before element was added to LiveElements.");
   LiveVariable *CurrentVar =
       static_cast<LiveVariable *>(LiveElements.back().get());
+  assert(ElementPtrToIndex.count(CurrentVar) == 0 &&
+         "Element already registered!");
+
   // Map from a LiveElement pointer to its index in the LiveElements.
   ElementPtrToIndex[CurrentVar] = LiveElements.size() - 1;
 
-  if (const auto &Range = CurrentVar->getLocExpr().Range) {
+  if (const std::optional<DWARFAddressRange> &RangeOpt =
+          CurrentVar->getLocExpr().Range) {
+    const DWARFAddressRange &Range = *RangeOpt;
     // Add the variable to address-based maps.
-    LiveElementsByAddress[Range->LowPC].push_back(CurrentVar);
-    LiveElementsByEndAddress[Range->HighPC].push_back(CurrentVar);
+    LiveElementsByAddress[Range.LowPC].push_back(CurrentVar);
+    LiveElementsByEndAddress[Range.HighPC].push_back(CurrentVar);
   }
 }
 
@@ -169,7 +177,6 @@ void LiveElementPrinter::addVariable(DWARFDie FuncDie, DWARFDie VarDie) {
   }
 
   for (const DWARFLocationExpression &LocExpr : *Locs) {
-    std::unique_ptr<LiveVariable> NewVar;
     if (LocExpr.Range) {
       LiveElements.emplace_back(
           std::make_unique<LiveVariable>(LocExpr, VarName, U, FuncDie));
@@ -184,7 +191,7 @@ void LiveElementPrinter::addVariable(DWARFDie FuncDie, DWARFDie VarDie) {
           std::make_unique<LiveVariable>(WholeFuncExpr, VarName, U, FuncDie));
     }
 
-    // Register the new variable to all data structures.
+    // Register the new variable with all data structures.
     registerNewVariable();
   }
 }
@@ -256,23 +263,19 @@ unsigned LiveElementPrinter::getOrCreateColumn(unsigned ElementIdx) {
 }
 
 void LiveElementPrinter::freeColumn(unsigned ColIdx) {
-  unsigned ElementIdx = ActiveCols[ColIdx].ElementIdx;
-
-  // Clear the column's data and add it to the free list.
-  ActiveCols[ColIdx].ElementIdx = Column::NullElementIdx;
-  ActiveCols[ColIdx].LiveIn = false;
-  ActiveCols[ColIdx].LiveOut = false;
-  ActiveCols[ColIdx].MustDrawLabel = false;
+  // Clear the column's data.
+  ActiveCols[ColIdx].clear();
 
   // Remove the element's entry from the map and add the column to the free
   // list.
+  unsigned ElementIdx = ActiveCols[ColIdx].ElementIdx;
   ElementToColumn.erase(ElementIdx);
   FreeCols.insert(ColIdx);
 }
 
 std::vector<unsigned>
 LiveElementPrinter::getSortedActiveElementIndices() const {
-  // Get all element indexes that currently have an assigned column.
+  // Get all element indices that currently have an assigned column.
   std::vector<unsigned> Indices;
   for (const auto &Pair : ElementToColumn)
     Indices.push_back(Pair.first);
