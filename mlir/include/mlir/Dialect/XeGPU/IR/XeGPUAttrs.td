@@ -635,6 +635,8 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
       parent = parent.dropSgLayoutAndData();
+      if (!parent)
+        return nullptr;
       return SliceAttr::get(getContext(), parent, attr.getDims());
     }
 
@@ -642,6 +644,8 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
       parent = parent.dropInstData();
+      if (!parent)
+        return nullptr;
       return SliceAttr::get(getContext(), parent, attr.getDims());
     }
 
