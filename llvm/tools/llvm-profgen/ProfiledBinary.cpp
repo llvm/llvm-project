@@ -539,7 +539,9 @@ void ProfiledBinary::setIsFuncEntry(FuncRange *FuncRange,
   // Set IsFuncEntry to ture if there is only one range in the function or the
   // RangeSymName from ELF is equal to its DWARF-based function name.
   if (FuncRange->Func->Ranges.size() == 1 ||
-      (!FuncRange->IsFuncEntry && FuncRange->getFuncName() == RangeSymName))
+      (!FuncRange->IsFuncEntry &&
+       (FuncRange->getFuncName() == RangeSymName ||
+        FuncRange->Func->NameStatus != DwarfNameStatus::Matched)))
     FuncRange->IsFuncEntry = true;
 }
 
