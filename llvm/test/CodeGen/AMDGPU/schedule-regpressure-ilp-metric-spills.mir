@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -start-before=machine-scheduler -stop-after=greedy,2 -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -start-before=machine-scheduler -stop-after=greedy,2 -amdgpu-use-amdgpu-trackers=0 -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -start-before=machine-scheduler -stop-after=greedy,2 -amdgpu-use-amdgpu-trackers=1 -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN-GCNTRACKER %s
 
 --- |

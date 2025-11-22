@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -amdgpu-use-amdgpu-trackers=0 < %s | FileCheck %s
 
 define protected amdgpu_kernel void @excess_soft_clause_reg_pressure(ptr addrspace(4) %wei_ptr, ptr addrspace(1) %out_ptr, ptr addrspace(1) %in) {
 ; CHECK-LABEL: excess_soft_clause_reg_pressure:

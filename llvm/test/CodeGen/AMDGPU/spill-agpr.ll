@@ -45,10 +45,10 @@ define amdgpu_kernel void @max_12regs_13a_used(i32 %cond, ptr addrspace(1) %arg,
 ; GFX908-NEXT:    v_accvgpr_write_b32 a6, v3
 ; GFX908-NEXT:    v_accvgpr_write_b32 a5, v2
 ; GFX908-NEXT:    v_accvgpr_write_b32 a4, v1
+; GFX908-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX908-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX908-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX908-NEXT:    v_mov_b32_e32 v3, v0
-; GFX908-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX908-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    ;;#ASMSTART
