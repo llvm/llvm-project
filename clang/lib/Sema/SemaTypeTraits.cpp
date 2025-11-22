@@ -653,7 +653,8 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
            if (Type->isReferenceType())
              return false;
            if (Type->isEnumeralType()) {
-             EnumDecl *ED = Type->castAs<EnumType>()->getOriginalDecl()->getDefinitionOrSelf();
+             EnumDecl *ED =
+                 Type->castAs<EnumType>()->getDecl()->getDefinitionOrSelf();
              return EqualityComparisonIsDefaulted(S, ED, KeyLoc);
            } else if (const auto *RD = Type->getAsCXXRecordDecl())
              return HasNonDeletedDefaultedEqualityComparison(S, RD, KeyLoc);
@@ -669,9 +670,8 @@ static bool isTriviallyEqualityComparableType(Sema &S, QualType Type,
     return false;
 
   if (CanonicalType->isEnumeralType()) {
-    EnumDecl *ED = CanonicalType->castAs<EnumType>()
-                       ->getOriginalDecl()
-                       ->getDefinitionOrSelf();
+    EnumDecl *ED =
+        CanonicalType->castAs<EnumType>()->getDecl()->getDefinitionOrSelf();
     return EqualityComparisonIsDefaulted(S, ED, KeyLoc);
   }
 
