@@ -174,8 +174,10 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
     m_inst_emulator_up->SetInstruction(inst->GetOpcode(), inst->GetAddress(),
                                        nullptr);
+    const EmulateInstruction::InstructionCondition new_condition =
+        m_inst_emulator_up->GetInstructionCondition();
 
-    if (last_condition != m_inst_emulator_up->GetInstructionCondition()) {
+    if (last_condition != new_condition) {
       // If the last instruction was conditional with a different condition
       // than the current condition then restore the state.
       if (last_condition != EmulateInstruction::UnconditionalCondition) {
@@ -190,7 +192,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
       condition_block_start_state = it;
     }
 
-    last_condition = m_inst_emulator_up->GetInstructionCondition();
+    last_condition = new_condition;
 
     m_inst_emulator_up->EvaluateInstruction(
         eEmulateInstructionOptionIgnoreConditions);
@@ -505,12 +507,12 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
   case EmulateInstruction::eContextRelativeBranchImmediate: {
     if (context.GetInfoType() == EmulateInstruction::eInfoTypeISAAndImmediate &&
         context.info.ISAAndImmediate.unsigned_data32 > 0) {
-      m_forward_branch_offset =
-          context.info.ISAAndImmediateSigned.signed_data32;
+      m_forward_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeISAAndImmediateSigned &&
                context.info.ISAAndImmediateSigned.signed_data32 > 0) {
-      m_forward_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
+      m_forward_branch_offset =
+          context.info.ISAAndImmediateSigned.signed_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeImmediate &&
                context.info.unsigned_immediate > 0) {

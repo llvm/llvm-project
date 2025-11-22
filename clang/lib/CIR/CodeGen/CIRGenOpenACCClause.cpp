@@ -876,6 +876,18 @@ public:
     }
   }
 
+  void VisitLinkClause(const OpenACCLinkClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::DeclareEnterOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::DeclareLinkOp>(
+            var, mlir::acc::DataClause::acc_declare_link, {},
+            /*structured=*/true,
+            /*implicit=*/false);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitLinkClause");
+    }
+  }
+
   void VisitDeleteClause(const OpenACCDeleteClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ExitDataOp>) {
       for (const Expr *var : clause.getVarList())
@@ -921,7 +933,8 @@ public:
 
   void VisitDevicePtrClause(const OpenACCDevicePtrClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
+                               mlir::acc::KernelsOp, mlir::acc::DataOp,
+                               mlir::acc::DeclareEnterOp>) {
       for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::DevicePtrOp>(
             var, mlir::acc::DataClause::acc_deviceptr, {},
@@ -930,9 +943,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. declare remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitDevicePtrClause");
     }
   }
 
@@ -1151,6 +1162,7 @@ EXPL_SPEC(mlir::acc::AtomicReadOp)
 EXPL_SPEC(mlir::acc::AtomicWriteOp)
 EXPL_SPEC(mlir::acc::AtomicCaptureOp)
 EXPL_SPEC(mlir::acc::AtomicUpdateOp)
+EXPL_SPEC(mlir::acc::DeclareEnterOp)
 #undef EXPL_SPEC
 
 template <typename ComputeOp, typename LoopOp>
