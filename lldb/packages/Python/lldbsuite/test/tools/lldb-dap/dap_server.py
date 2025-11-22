@@ -987,17 +987,23 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
+    def request_evaluate(
+        self,
+        expression: str,
+        frameIndex=0,
+        threadId: Optional[int] = None,
+        context: Optional[
+            Literal["watch", "repl", "hover", "clipboard", "variables"]
+        ] = None,
+    ) -> Optional[Response]:
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
-        if stackFrame is None:
-            return []
         args_dict = {
             "expression": expression,
             "frameId": stackFrame["id"],
         }
         if context:
             args_dict["context"] = context
-        command_dict = {
+        command_dict: Request = {
             "command": "evaluate",
             "type": "request",
             "arguments": args_dict,

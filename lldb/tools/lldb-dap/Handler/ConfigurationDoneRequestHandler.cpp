@@ -13,6 +13,7 @@
 #include "Protocol/ProtocolRequests.h"
 #include "ProtocolUtils.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBCommandInterpreterRunOptions.h"
 #include "lldb/API/SBDebugger.h"
 
 using namespace llvm;
@@ -42,13 +43,15 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
         "any debugger command scripts are not resuming the process during the "
         "launch sequence.");
 
-  // Waiting until 'configurationDone' to send target based capabilities in case
-  // the launch or attach scripts adjust the target. The initial dummy target
-  // may have different capabilities than the final target.
-
-  /// Also send here custom capabilities to the client, which is consumed by the
-  /// lldb-dap specific editor extension.
+  // Send custom capabilities to the client, which is consumed by the lldb-dap
+  // specific editor extension.
   SendExtraCapabilities(dap);
+
+  PrintIntroductionMessage();
+
+  // Spawn the IOHandler thread.
+  dap.debugger.RunCommandInterpreter(/*auto_handle_events=*/false,
+                                     /*spawn_thread=*/true);
 
   // Clients can request a baseline of currently existing threads after
   // we acknowledge the configurationDone request.

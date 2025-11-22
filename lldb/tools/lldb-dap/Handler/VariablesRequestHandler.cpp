@@ -106,8 +106,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
 
         if (stop_return_value.MightHaveChildren() ||
             stop_return_value.IsSynthetic()) {
-          return_var_ref = dap.variables.InsertVariable(stop_return_value,
-                                                        /*is_permanent=*/false);
+          return_var_ref = dap.variables.InsertVariable(stop_return_value);
         }
         variables.emplace_back(CreateVariable(
             renamed_return_value, return_var_ref, hex,
@@ -123,8 +122,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
       if (!variable.IsValid())
         break;
 
-      const int64_t frame_var_ref =
-          dap.variables.InsertVariable(variable, /*is_permanent=*/false);
+      const int64_t frame_var_ref = dap.variables.InsertVariable(variable);
       variables.emplace_back(CreateVariable(
           variable, frame_var_ref, hex,
           dap.configuration.enableAutoVariableSummaries,
@@ -135,35 +133,36 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     // We are expanding a variable that has children, so we will return its
     // children.
     lldb::SBValue variable = dap.variables.GetVariable(var_ref);
-    if (variable.IsValid()) {
-      const bool is_permanent =
-          dap.variables.IsPermanentVariableReference(var_ref);
-      auto addChild = [&](lldb::SBValue child,
-                          std::optional<std::string> custom_name = {}) {
-        if (!child.IsValid())
-          return;
-        const int64_t child_var_ref =
-            dap.variables.InsertVariable(child, is_permanent);
-        variables.emplace_back(
-            CreateVariable(child, child_var_ref, hex,
-                           dap.configuration.enableAutoVariableSummaries,
-                           dap.configuration.enableSyntheticChildDebugging,
-                           /*is_name_duplicated=*/false, custom_name));
-      };
-      const int64_t num_children = variable.GetNumChildren();
-      const int64_t end_idx = start + ((count == 0) ? num_children : count);
-      int64_t i = start;
-      for (; i < end_idx && i < num_children; ++i)
-        addChild(variable.GetChildAtIndex(i));
-
-      // If we haven't filled the count quota from the request, we insert a new
-      // "[raw]" child that can be used to inspect the raw version of a
-      // synthetic member. That eliminates the need for the user to go to the
-      // debug console and type `frame var <variable> to get these values.
-      if (dap.configuration.enableSyntheticChildDebugging &&
-          variable.IsSynthetic() && i == num_children)
-        addChild(variable.GetNonSyntheticValue(), "[raw]");
+    if (!variable.IsValid()) {
+      return llvm::make_error<DAPError>(llvm::formatv("").str(),
+                                        llvm::inconvertibleErrorCode(),
+                                        /*show_user=*/false);
     }
+
+    auto addChild = [&](lldb::SBValue child,
+                        std::optional<std::string> custom_name = {}) {
+      if (!child.IsValid())
+        return;
+      const int64_t child_var_ref = dap.variables.InsertVariable(child);
+      variables.emplace_back(
+          CreateVariable(child, child_var_ref, hex,
+                         dap.configuration.enableAutoVariableSummaries,
+                         dap.configuration.enableSyntheticChildDebugging,
+                         /*is_name_duplicated=*/false, custom_name));
+    };
+    const int64_t num_children = variable.GetNumChildren();
+    const int64_t end_idx = start + ((count == 0) ? num_children : count);
+    int64_t i = start;
+    for (; i < end_idx && i < num_children; ++i)
+      addChild(variable.GetChildAtIndex(i));
+
+    // If we haven't filled the count quota from the request, we insert a new
+    // "[raw]" child that can be used to inspect the raw version of a
+    // synthetic member. That eliminates the need for the user to go to the
+    // debug console and type `frame var <variable> to get these values.
+    if (dap.configuration.enableSyntheticChildDebugging &&
+        variable.IsSynthetic() && i == num_children)
+      addChild(variable.GetNonSyntheticValue(), "[raw]");
   }
 
   return VariablesResponseBody{variables};

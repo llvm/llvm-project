@@ -10,6 +10,7 @@
 #include "EventHelper.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBAttachInfo.h"
@@ -77,7 +78,7 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
   if ((args.pid == LLDB_INVALID_PROCESS_ID ||
        args.gdbRemotePort == LLDB_DAP_INVALID_PORT) &&
       args.waitFor) {
-    dap.SendOutput(OutputType::Console,
+    dap.SendOutput(eOutputCategoryConsole,
                    llvm::formatv("Waiting to attach to \"{0}\"...",
                                  dap.target.GetExecutable().GetFilename())
                        .str());

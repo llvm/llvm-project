@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "CommandPlugins.h"
 #include "DAPLog.h"
 #include "EventHelper.h"
 #include "ExceptionBreakpoint.h"
@@ -20,21 +21,23 @@
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "ProtocolUtils.h"
-#include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBMutex.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Host/JSONTransport.h"
+#include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
+#include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -47,7 +50,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <condition_variable>
@@ -55,11 +57,12 @@
 #include <cstdint>
 #include <cstdio>
 #include <functional>
-#include <future>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <ratio>
 #include <string>
+#include <sys/fcntl.h>
 #include <thread>
 #include <utility>
 #include <variant>
@@ -76,14 +79,6 @@
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 using namespace lldb_private;
-
-namespace {
-#ifdef _WIN32
-const char DEV_NULL[] = "nul";
-#else
-const char DEV_NULL[] = "/dev/null";
-#endif
-} // namespace
 
 namespace lldb_dap {
 
@@ -117,6 +112,95 @@ static std::string capitalize(llvm::StringRef str) {
   if (str.empty())
     return "";
   return ((llvm::Twine)llvm::toUpper(str[0]) + str.drop_front()).str();
+}
+
+ReplContext::ReplContext(DAP &dap, llvm::StringRef line_ref)
+    : line_ref(line_ref), dap(dap),
+      progress(lldb::SBProgress("Evaluating expression", line_ref.str().c_str(),
+                                dap.debugger)) {
+  assert(dap.repl_context == nullptr);
+  dap.repl_context = this;
+  UpdateWantsMore();
+}
+
+ReplContext::~ReplContext() {
+  assert(dap.repl_context == this);
+  dap.repl_context = nullptr;
+}
+
+bool ReplContext::WantsRawInput() {
+  return !dap.debugger.GetCommandInterpreter().IsActive();
+}
+
+void ReplContext::UpdateWantsMore() {
+  if (!WantsRawInput())
+    return;
+
+  stop_on_next_write = true;
+  // If the command interpreter is not active, we're in a raw input. However,
+  // the input handler may not write any new output after receiving the input
+  // for example, if the continuation prompt has no `... ` indicator.
+  //
+  // ```
+  // (lldb) script
+  // >>> sys.ps1 = ''
+  // <no prompt>
+  // ````
+  //
+  // Use a timeout to ensure we don't hang forever if the command entered raw
+  // input mode. We may exit the loop early if output is produced, but we don't
+  // want to hang forever.
+  loop.AddCallback([](auto &loop) { loop.RequestTermination(); },
+                   kRawInputTimeout);
+}
+
+llvm::Error ReplContext::Run() {
+  // Ensure the command is terminated.
+  std::string line = line_ref.str() + "\n";
+
+  size_t num_bytes = line.size();
+  if (llvm::Error err =
+          dap.pty_primary->Write(line.data(), num_bytes).takeError())
+    return err;
+
+  // Unblock the IOThread from handling the input.
+  dap.GetAPIMutex().unlock();
+  llvm::Error err = loop.Run().takeError();
+  dap.GetAPIMutex().lock();
+
+  return err;
+}
+
+void ReplContext::Write(llvm::StringRef str) {
+  // Skip the line if its the input echo.
+  if (str == std::string(line_ref) + "\r\n")
+    return;
+
+  output.append(str);
+  if (stop_on_next_write)
+    loop.AddPendingCallback([](auto &loop) { loop.RequestTermination(); });
+}
+
+void ReplContext::Write(lldb::SBCommandReturnObject &result) {
+  if (result.GetOutputSize())
+    output.append(result.GetOutput());
+  if (result.GetErrorSize())
+    output.append(result.GetError());
+
+  if (!result.Succeeded())
+    succeeded = false;
+
+  if (result.GetStatus() == lldb::eReturnStatusSuccessFinishResult) {
+    lldb::SBValueList v = result.GetValues(lldb::eNoDynamicValues);
+    for (uint32_t i = 0; i < v.GetSize(); ++i)
+      if (v.GetValueAtIndex(i).IsValid())
+        values.Append(v.GetValueAtIndex(i));
+  }
+
+  UpdateWantsMore();
+
+  if (!WantsRawInput())
+    loop.AddPendingCallback([](auto &loop) { loop.RequestTermination(); });
 }
 
 llvm::StringRef DAP::debug_adapter_path = "";
@@ -226,15 +310,13 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
 }
 
 llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
-  in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
-
   if (auto Error = out.RedirectTo(overrideOut, [this](llvm::StringRef output) {
-        SendOutput(OutputType::Console, output);
+        SendOutput(eOutputCategoryConsole, output);
       }))
     return Error;
 
   if (auto Error = err.RedirectTo(overrideErr, [this](llvm::StringRef output) {
-        SendOutput(OutputType::Console, output);
+        SendOutput(eOutputCategoryConsole, output);
       }))
     return Error;
 
@@ -272,7 +354,7 @@ Id DAP::Send(const Message &message) {
   Message msg = std::visit(
       [this](auto &&msg) -> Message {
         if (msg.seq == kCalculateSeq)
-          msg.seq = seq++;
+          msg.seq = ++seq;
         return msg;
       },
       Message(message));
@@ -315,104 +397,31 @@ Id DAP::Send(const Message &message) {
   llvm_unreachable("Unexpected message type");
 }
 
-// "OutputEvent": {
-//   "allOf": [ { "$ref": "#/definitions/Event" }, {
-//     "type": "object",
-//     "description": "Event message for 'output' event type. The event
-//                     indicates that the target has produced some output.",
-//     "properties": {
-//       "event": {
-//         "type": "string",
-//         "enum": [ "output" ]
-//       },
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "category": {
-//             "type": "string",
-//             "description": "The output category. If not specified,
-//                             'console' is assumed.",
-//             "_enum": [ "console", "stdout", "stderr", "telemetry" ]
-//           },
-//           "output": {
-//             "type": "string",
-//             "description": "The output to report."
-//           },
-//           "variablesReference": {
-//             "type": "number",
-//             "description": "If an attribute 'variablesReference' exists
-//                             and its value is > 0, the output contains
-//                             objects which can be retrieved by passing
-//                             variablesReference to the VariablesRequest."
-//           },
-//           "source": {
-//             "$ref": "#/definitions/Source",
-//             "description": "An optional source location where the output
-//                             was produced."
-//           },
-//           "line": {
-//             "type": "integer",
-//             "description": "An optional source location line where the
-//                             output was produced."
-//           },
-//           "column": {
-//             "type": "integer",
-//             "description": "An optional source location column where the
-//                             output was produced."
-//           },
-//           "data": {
-//             "type":["array","boolean","integer","null","number","object",
-//                     "string"],
-//             "description": "Optional data to report. For the 'telemetry'
-//                             category the data will be sent to telemetry, for
-//                             the other categories the data is shown in JSON
-//                             format."
-//           }
-//         },
-//         "required": ["output"]
-//       }
-//     },
-//     "required": [ "event", "body" ]
-//   }]
-// }
-void DAP::SendOutput(OutputType o, const llvm::StringRef output) {
+void DAP::SendOutput(OutputCategory cat, const llvm::StringRef output) {
   if (output.empty())
     return;
-
-  const char *category = nullptr;
-  switch (o) {
-  case OutputType::Console:
-    category = "console";
-    break;
-  case OutputType::Important:
-    category = "important";
-    break;
-  case OutputType::Stdout:
-    category = "stdout";
-    break;
-  case OutputType::Stderr:
-    category = "stderr";
-    break;
-  case OutputType::Telemetry:
-    category = "telemetry";
-    break;
-  }
 
   // Send each line of output as an individual event, including the newline if
   // present.
   ::size_t idx = 0;
   do {
     ::size_t end = output.find('\n', idx);
+    protocol::OutputEventBody body;
+    body.category = cat;
     if (end == llvm::StringRef::npos)
       end = output.size() - 1;
-    llvm::json::Object event(CreateEventObject("output"));
-    llvm::json::Object body;
-    body.try_emplace("category", category);
-    EmplaceSafeString(body, "output", output.slice(idx, end + 1).str());
-    event.try_emplace("body", std::move(body));
-    SendJSON(llvm::json::Value(std::move(event)));
+    body.output = output.slice(idx, end + 1).str();
+    SendOutput(body);
     idx = end + 1;
   } while (idx < output.size());
+}
+
+void DAP::SendOutput(const protocol::OutputEventBody &body) {
+  protocol::Event event{/*event=*/"output",
+                        /*body=*/body};
+  if (body.group != protocol::eOutputGroupNone) {
+  }
+  Send(event);
 }
 
 // interface ProgressStartEvent extends Event {
@@ -507,21 +516,9 @@ void DAP::SendOutput(OutputType o, const llvm::StringRef output) {
 //     message?: string;
 //   };
 // }
-
 void DAP::SendProgressEvent(uint64_t progress_id, const char *message,
                             uint64_t completed, uint64_t total) {
   progress_event_reporter.Push(progress_id, message, completed, total);
-}
-
-void __attribute__((format(printf, 3, 4)))
-DAP::SendFormattedOutput(OutputType o, const char *format, ...) {
-  char buffer[1024];
-  va_list args;
-  va_start(args, format);
-  int actual_length = vsnprintf(buffer, sizeof(buffer), format, args);
-  va_end(args);
-  SendOutput(
-      o, llvm::StringRef(buffer, std::min<int>(actual_length, sizeof(buffer))));
 }
 
 int32_t DAP::CreateSourceReference(lldb::addr_t address) {
@@ -603,6 +600,14 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
     expression = expression.substr(configuration.commandEscapePrefix.size());
     return ReplMode::Command;
   }
+
+  // If the command interpreter is not active then its waiting on raw input,
+  // (e.g. `breakpoint command add`).
+  if (!debugger.GetCommandInterpreter().IsActive())
+    return ReplMode::Command;
+
+  if (expression.empty())
+    return ReplMode::Command;
 
   switch (repl_mode) {
   case ReplMode::Variable:
@@ -721,7 +726,7 @@ bool DAP::RunLLDBCommands(llvm::StringRef prefix,
   std::string output = ::RunLLDBCommands(
       debugger, prefix, commands, required_command_failed,
       /*parse_command_directives*/ true, /*echo_commands*/ true);
-  SendOutput(OutputType::Console, output);
+  SendOutput(eOutputCategoryConsole, output);
   return !required_command_failed;
 }
 
@@ -1077,10 +1082,14 @@ llvm::Error DAP::Loop() {
   auto thread = std::thread(std::bind(&DAP::TransportHandler, this));
 
   auto cleanup = llvm::make_scope_exit([this]() {
-    // FIXME: Merge these into the MainLoop handler.
+    DAP_LOG(log, "Cleanup DAP handlers");
     out.Stop();
     err.Stop();
     StopEventHandlers();
+
+    // Close the pty before destroying the debugger to ensure the IOThread
+    // closes.
+    pty_primary.reset();
 
     // Destroy the debugger when the session ends. This will trigger the
     // debugger's destroy callbacks for earlier logging and clean-ups, rather
@@ -1194,7 +1203,7 @@ void DAP::SetFrameFormat(llvm::StringRef format) {
   lldb::SBError error;
   frame_format = lldb::SBFormat(format.str().c_str(), error);
   if (error.Fail()) {
-    SendOutput(OutputType::Console,
+    SendOutput(eOutputCategoryConsole,
                llvm::formatv(
                    "The provided frame format '{0}' couldn't be parsed: {1}\n",
                    format, error.GetCString())
@@ -1206,7 +1215,7 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
   lldb::SBError error;
   thread_format = lldb::SBFormat(format.str().c_str(), error);
   if (error.Fail()) {
-    SendOutput(OutputType::Console,
+    SendOutput(eOutputCategoryConsole,
                llvm::formatv(
                    "The provided thread format '{0}' couldn't be parsed: {1}\n",
                    format, error.GetCString())
@@ -1306,6 +1315,148 @@ void DAP::StartEventThread() {
   event_thread = std::thread(&DAP::EventThread, this);
 }
 
+llvm::Error DAP::CreateDebugger(const llvm::DenseSet<ClientFeature> &features) {
+  client_features = features;
+  // Setup the PTY that used for evaluating user repl commands.
+  lldb_private::PseudoTerminal pty;
+  if (auto err = pty.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY | O_NONBLOCK))
+    return err;
+
+  if (auto err = pty.OpenSecondary(O_RDWR | O_NOCTTY))
+    return err;
+
+  pty_primary = std::make_shared<lldb_private::NativeFile>(
+      pty.ReleasePrimaryFileDescriptor(),
+      lldb_private::NativeFile::eOpenOptionReadWrite |
+          lldb_private::NativeFile::eOpenOptionNonBlocking,
+      NativeFile::Owned);
+
+  int pty_replica = pty.ReleaseSecondaryFileDescriptor();
+  lldb::FileSP in = std::make_shared<lldb_private::NativeFile>(
+      pty_replica, lldb_private::NativeFile::eOpenOptionReadOnly,
+      NativeFile::Owned);
+  lldb::FileSP out = std::make_shared<lldb_private::NativeFile>(
+      pty_replica, lldb_private::NativeFile::eOpenOptionWriteOnly,
+      NativeFile::Unowned);
+
+  lldb_private::Terminal term(pty_primary->GetDescriptor());
+  if (llvm::Error err = term.SetCanonical(true))
+    return err;
+
+  // Do not source init files until in/out/err are configured.
+  debugger = lldb::SBDebugger::Create(false);
+  target = debugger.GetDummyTarget();
+
+  debugger.SetInputFile(in);
+  debugger.SetOutputFile(out);
+  debugger.SetErrorFile(out);
+
+  // Disable the prompt in the Debug Console, otherwise the console has a number
+  // of prompts that clutter the output and we don't have direct control over
+  // where they show up in the output.
+  debugger.SetPrompt(nullptr);
+
+  if (client_features.contains(eClientFeatureProgressReporting))
+    StartProgressEventThread();
+
+  // Start our event thread so we can receive events from the debugger, target,
+  // process and more.
+  StartEventThread();
+
+  Status error;
+  m_pty_handle = m_loop.RegisterReadObject(
+      pty_primary,
+      [this](MainLoopBase &loop) {
+        lldb::SBMutex lock = GetAPIMutex();
+        std::lock_guard<lldb::SBMutex> guard(lock);
+
+        char buffer[4096] = {0};
+        size_t bytes_read = sizeof(buffer);
+        if (auto err = pty_primary->Read(buffer, bytes_read).takeError())
+          DAP_LOG_ERROR(log, std::move(err), "Reading from pty failed {0}");
+        if (bytes_read == 0) { // EOF
+          loop.RequestTermination();
+          return;
+        }
+        std::string str(buffer, bytes_read);
+
+        if (repl_context)
+          repl_context->Write(str);
+        else
+          SendOutput(eOutputCategoryConsole, str);
+      },
+      error);
+  if (error.Fail())
+    DAP_LOG_ERROR(log, error.takeError(),
+                  "Failed to register pty read handler: {0}");
+
+  // Register the print callback helper to print to the debug console.
+  debugger.GetCommandInterpreter().SetPrintCallback(
+      [](lldb::SBCommandReturnObject &result, void *baton) {
+        if (!result.GetCommand()) // skip internal commands.
+          return lldb::eCommandReturnObjectPrintCallbackSkipped;
+
+        DAP *dap = static_cast<DAP *>(baton);
+        lldb::SBMutex lock = dap->GetAPIMutex();
+        std::lock_guard<lldb::SBMutex> guard(lock);
+
+        if (dap->repl_context) {
+          dap->repl_context->Write(result);
+          return lldb::eCommandReturnObjectPrintCallbackHandled;
+        }
+
+        lldb::SBValueList variables = result.GetValues(lldb::eNoDynamicValues);
+
+        // Check if we have something to output.
+        if (result.GetOutputSize() == 0 && result.GetErrorSize() == 0 &&
+            !variables)
+          return lldb::eCommandReturnObjectPrintCallbackHandled;
+
+        protocol::OutputEventBody body;
+        body.output = "print_callback: ";
+        body.category = eOutputCategoryConsole;
+        if (result.GetOutputSize())
+          body.output += result.GetOutput();
+        if (result.GetErrorSize())
+          body.output += result.GetError();
+        if (variables && variables.GetSize() > 0) {
+          if (variables.GetSize() == 1) {
+            lldb::SBValue v = variables.GetValueAtIndex(0);
+            if (!is_permanent(v))
+              v = v.Persist();
+            VariableDescription desc(
+                v, dap->configuration.enableAutoVariableSummaries);
+            if (v.MightHaveChildren() || ValuePointsToCode(v))
+              body.variablesReference = dap->variables.InsertVariable(v);
+          } else {
+            body.variablesReference = dap->variables.InsertVariables(variables);
+          }
+        }
+
+        dap->SendOutput(body);
+
+        return lldb::eCommandReturnObjectPrintCallbackHandled;
+      },
+      this);
+
+  auto cmd = debugger.GetCommandInterpreter().AddMultiwordCommand(
+      "lldb-dap", "Commands for managing lldb-dap.");
+  if (client_features.contains(eClientFeatureStartDebuggingRequest)) {
+    cmd.AddCommand(
+        "start-debugging", new StartDebuggingCommand(*this),
+        "Sends a startDebugging request from the debug adapter to the client "
+        "to start a child debug session of the same type as the caller.");
+  }
+
+  cmd.AddCommand(
+      "repl-mode", new ReplModeCommand(*this),
+      "Get or set the repl behavior of lldb-dap evaluation requests.");
+  cmd.AddCommand("send-event", new SendEventCommand(*this),
+                 "Sends an DAP event to the client.");
+
+  return llvm::Error::success();
+}
+
 void DAP::StartProgressEventThread() {
   progress_event_thread = std::thread(&DAP::ProgressEventThread, this);
 }
@@ -1338,9 +1489,9 @@ void DAP::ProgressEventThread() {
 
         if (completed == 0) {
           if (total == UINT64_MAX) {
-            // This progress is non deterministic and won't get updated until it
-            // is completed. Send the "message" which will be the combined title
-            // and detail. The only other progress event for thus
+            // This progress is non deterministic and won't get updated until
+            // it is completed. Send the "message" which will be the combined
+            // title and detail. The only other progress event for thus
             // non-deterministic progress will be the completed event So there
             // will be no need to update the detail.
             const std::string message =
@@ -1349,9 +1500,9 @@ void DAP::ProgressEventThread() {
           } else {
             // This progress is deterministic and will receive updates,
             // on the progress creation event VSCode will save the message in
-            // the create packet and use that as the title, so we send just the
-            // title in the progressCreate packet followed immediately by a
-            // detail packet, if there is any detail.
+            // the create packet and use that as the title, so we send just
+            // the title in the progressCreate packet followed immediately by
+            // a detail packet, if there is any detail.
             const std::string title =
                 GetStringFromStructuredData(data, "title");
             SendProgressEvent(progress_id, title.c_str(), completed, total);
@@ -1359,10 +1510,10 @@ void DAP::ProgressEventThread() {
               SendProgressEvent(progress_id, details.c_str(), completed, total);
           }
         } else {
-          // This progress event is either the end of the progress dialog, or an
-          // update with possible detail. The "detail" string we send to VS Code
-          // will be appended to the progress dialog's initial text from when it
-          // was created.
+          // This progress event is either the end of the progress dialog, or
+          // an update with possible detail. The "detail" string we send to VS
+          // Code will be appended to the progress dialog's initial text from
+          // when it was created.
           SendProgressEvent(progress_id, details.c_str(), completed, total);
         }
       }
@@ -1446,7 +1597,7 @@ void DAP::HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited) {
     case lldb::eStateExited:
       lldb::SBStream stream;
       process.GetStatus(stream);
-      SendOutput(OutputType::Console, stream.GetData());
+      SendOutput(eOutputCategoryConsole, stream.GetData());
 
       // When restarting, we can get an "exited" event for the process we
       // just killed with the old PID, or even with no PID. In that case
@@ -1573,7 +1724,7 @@ void DAP::HandleDiagnosticEvent(const lldb::SBEvent &event) {
 
   std::string type = GetStringValue(data.GetValueForKey("type"));
   std::string message = GetStringValue(data.GetValueForKey("message"));
-  SendOutput(OutputType::Important,
+  SendOutput(eOutputCategoryImportant,
              llvm::formatv("{0}: {1}", type, message).str());
 }
 

@@ -188,9 +188,9 @@ bool operator==(const Response &a, const Response &b) {
 json::Value toJSON(const ErrorMessage &EM) {
   json::Object Result{{"id", EM.id}, {"format", EM.format}};
 
-  if (EM.variables) {
+  if (!EM.variables.empty()) {
     json::Object variables;
-    for (auto &var : *EM.variables)
+    for (auto &var : EM.variables)
       variables[var.first] = var.second;
     Result.insert({"variables", std::move(variables)});
   }
@@ -198,9 +198,9 @@ json::Value toJSON(const ErrorMessage &EM) {
     Result.insert({"sendTelemetry", EM.sendTelemetry});
   if (EM.showUser)
     Result.insert({"showUser", EM.showUser});
-  if (EM.url)
+  if (!EM.url.empty())
     Result.insert({"url", EM.url});
-  if (EM.urlLabel)
+  if (!EM.urlLabel.empty())
     Result.insert({"urlLabel", EM.urlLabel});
 
   return std::move(Result);
@@ -209,10 +209,10 @@ json::Value toJSON(const ErrorMessage &EM) {
 bool fromJSON(json::Value const &Params, ErrorMessage &EM, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("id", EM.id) && O.map("format", EM.format) &&
-         O.map("variables", EM.variables) &&
-         O.map("sendTelemetry", EM.sendTelemetry) &&
-         O.map("showUser", EM.showUser) && O.map("url", EM.url) &&
-         O.map("urlLabel", EM.urlLabel);
+         O.mapOptional("variables", EM.variables) &&
+         O.mapOptional("sendTelemetry", EM.sendTelemetry) &&
+         O.mapOptional("showUser", EM.showUser) &&
+         O.mapOptional("url", EM.url) && O.mapOptional("urlLabel", EM.urlLabel);
 }
 
 json::Value toJSON(const Event &E) {

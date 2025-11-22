@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolRequests.h"
+#include "DAP.h"
 #include "JSONUtils.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/lldb-defines.h"

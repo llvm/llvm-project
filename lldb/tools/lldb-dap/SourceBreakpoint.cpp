@@ -10,6 +10,7 @@
 #include "BreakpointBase.h"
 #include "DAP.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolEvents.h"
 #include "ProtocolUtils.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBFileSpec.h"
@@ -377,7 +378,7 @@ void SourceBreakpoint::SetLogMessage() {
 void SourceBreakpoint::NotifyLogMessageError(llvm::StringRef error) {
   std::string message = "Log message has error: ";
   message += error;
-  m_dap.SendOutput(OutputType::Console, message);
+  m_dap.SendOutput(protocol::eOutputCategoryConsole, message);
 }
 
 /*static*/
@@ -411,7 +412,7 @@ bool SourceBreakpoint::BreakpointHitCallback(
   }
   if (!output.empty() && output.back() != '\n')
     output.push_back('\n'); // Ensure log message has line break.
-  bp->m_dap.SendOutput(OutputType::Console, output.c_str());
+  bp->m_dap.SendOutput(protocol::eOutputCategoryConsole, output.c_str());
 
   // Do not stop.
   return false;

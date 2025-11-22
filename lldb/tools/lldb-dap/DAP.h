@@ -16,27 +16,26 @@
 #include "OutputRedirector.h"
 #include "ProgressEvent.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "SourceBreakpoint.h"
 #include "Transport.h"
 #include "Variables.h"
 #include "lldb/API/SBBroadcaster.h"
-#include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBError.h"
-#include "lldb/API/SBFile.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBMutex.h"
+#include "lldb/API/SBProgress.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/Host/MainLoop.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -44,12 +43,15 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
+#include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -65,8 +67,7 @@ typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
 
 using AdapterFeature = protocol::AdapterFeature;
 using ClientFeature = protocol::ClientFeature;
-
-enum class OutputType { Console, Important, Stdout, Stderr, Telemetry };
+using OutputCategory = protocol::OutputCategory;
 
 /// Buffer size for handling output events.
 constexpr uint64_t OutputBufferSize = (1u << 12);
@@ -77,6 +78,34 @@ enum DAPBroadcasterBits {
 };
 
 enum class ReplMode { Variable = 0, Command, Auto };
+struct ReplContext {
+  llvm::StringRef line_ref;
+  bool succeeded = true;
+  bool did_timeout = false;
+  bool stop_on_next_write = false;
+  static constexpr std::chrono::milliseconds kRawInputTimeout =
+      std::chrono::milliseconds(250);
+  DAP &dap;
+  lldb_private::MainLoop loop;
+  llvm::SmallString<256> output;
+  lldb::SBValueList values;
+
+  // FIXME: It would be nice to be able to cancel this operation, at the
+  // moment we do not support progress cancellation.
+  lldb::SBProgress progress;
+
+  explicit ReplContext(DAP &dap, llvm::StringRef line);
+  ~ReplContext();
+
+  bool WantsRawInput();
+
+  void UpdateWantsMore();
+
+  void Write(llvm::StringRef str);
+  void Write(lldb::SBCommandReturnObject &result);
+
+  llvm::Error Run();
+};
 
 using DAPTransport = lldb_private::transport::JSONTransport<ProtocolDescriptor>;
 
@@ -86,7 +115,7 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   Log *log;
   DAPTransport &transport;
-  lldb::SBFile in;
+  lldb::FileSP pty_primary;
   OutputRedirector out;
   OutputRedirector err;
 
@@ -141,6 +170,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
   ReplMode repl_mode;
+  ReplContext *repl_context = nullptr;
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
 
@@ -152,7 +182,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   std::string last_nonempty_var_expression;
 
   /// The set of features supported by the connected client.
-  llvm::DenseSet<ClientFeature> clientFeatures;
+  llvm::DenseSet<ClientFeature> client_features;
 
   /// Whether to disable sourcing .lldbinit files.
   bool no_lldbinit;
@@ -223,13 +253,12 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// Send the given message to the client.
   protocol::Id Send(const protocol::Message &message);
 
-  void SendOutput(OutputType o, const llvm::StringRef output);
+  /// Send output to the client.
+  void SendOutput(OutputCategory o, const llvm::StringRef output);
+  void SendOutput(const protocol::OutputEventBody &);
 
   void SendProgressEvent(uint64_t progress_id, const char *message,
                          uint64_t completed, uint64_t total);
-
-  void __attribute__((format(printf, 3, 4)))
-  SendFormattedOutput(OutputType o, const char *format, ...);
 
   int32_t CreateSourceReference(lldb::addr_t address);
 
@@ -410,6 +439,7 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   void StartEventThread();
   void StartProgressEventThread();
+  llvm::Error CreateDebugger(const llvm::DenseSet<ClientFeature> &);
 
   /// Sets the given protocol `breakpoints` in the given `source`, while
   /// removing any existing breakpoints in the given source if they are not in
@@ -480,6 +510,7 @@ private:
 
   // Loop for managing reading from the client.
   lldb_private::MainLoop &m_loop;
+  lldb_private::MainLoop::ReadHandleUP m_pty_handle;
 
   std::mutex m_cancelled_requests_mutex;
   llvm::SmallSet<int64_t, 4> m_cancelled_requests;

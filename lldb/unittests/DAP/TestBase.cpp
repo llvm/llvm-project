@@ -55,8 +55,9 @@ void TransportBase::SetUp() {
 }
 
 void TransportBase::Run() {
-  bool addition_succeeded = loop.AddPendingCallback(
-      [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  bool addition_succeeded = loop.AddCallback(
+      [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); },
+      std::chrono::milliseconds(5000));
   EXPECT_TRUE(addition_succeeded);
   EXPECT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
 }
@@ -93,10 +94,6 @@ bool DAPTestBase::GetDebuggerSupportsTarget(StringRef platform) {
 }
 
 void DAPTestBase::CreateDebugger() {
-  dap->debugger = lldb::SBDebugger::Create();
-  ASSERT_TRUE(dap->debugger);
-  dap->target = dap->debugger.GetDummyTarget();
-
   Expected<lldb::FileUP> dev_null = FileSystem::Instance().Open(
       FileSpec(FileSystem::DEV_NULL), File::eOpenOptionReadWrite);
   ASSERT_THAT_EXPECTED(dev_null, Succeeded());
@@ -106,13 +103,9 @@ void DAPTestBase::CreateDebugger() {
   ASSERT_THAT_ERROR(dap->ConfigureIO(dev_null_stream, dev_null_stream),
                     Succeeded());
 
-  dap->debugger.SetInputFile(dap->in);
-  auto out_fd = dap->out.GetWriteFileDescriptor();
-  ASSERT_THAT_EXPECTED(out_fd, Succeeded());
-  dap->debugger.SetOutputFile(lldb::SBFile(*out_fd, "w", false));
-  auto err_fd = dap->out.GetWriteFileDescriptor();
-  ASSERT_THAT_EXPECTED(err_fd, Succeeded());
-  dap->debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
+  ASSERT_THAT_ERROR(dap->CreateDebugger({}), Succeeded());
+  dap->debugger.RunCommandInterpreter(/*auto_handle_events=*/false,
+                                      /*spawn_thread=*/true);
 }
 
 void DAPTestBase::LoadCore() {

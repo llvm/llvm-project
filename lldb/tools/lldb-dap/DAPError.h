@@ -22,25 +22,31 @@ class DAPError : public llvm::ErrorInfo<DAPError> {
 public:
   static char ID;
 
-  DAPError(std::string message,
-           std::error_code EC = llvm::inconvertibleErrorCode(),
-           bool show_user = true, std::optional<std::string> url = std::nullopt,
-           std::optional<std::string> url_label = std::nullopt);
+  explicit DAPError(std::string message);
+
+  DAPError(std::string message, std::error_code EC);
+
+  DAPError(std::string message, bool show_user);
+
+  DAPError(std::string message, std::error_code EC, bool show_user);
+
+  DAPError(std::string message, std::error_code EC, bool show_user,
+           std::string url, std::string url_label);
 
   void log(llvm::raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override;
 
   const std::string &getMessage() const { return m_message; }
   bool getShowUser() const { return m_show_user; }
-  const std::optional<std::string> &getURL() const { return m_url; }
-  const std::optional<std::string> &getURLLabel() const { return m_url_label; }
+  const std::string &getURL() const { return m_url; }
+  const std::string &getURLLabel() const { return m_url_label; }
 
 private:
   std::string m_message;
   std::error_code m_ec;
   bool m_show_user;
-  std::optional<std::string> m_url;
-  std::optional<std::string> m_url_label;
+  std::string m_url;
+  std::string m_url_label;
 };
 
 /// An error that indicates the current request handler cannot execute because
