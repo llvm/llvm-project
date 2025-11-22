@@ -24,6 +24,8 @@ public:
     ExtraOpts.push_back("separate-code");
   }
 
+  CXXStdlibType GetDefaultCXXStdlibType() const override;
+
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
 };

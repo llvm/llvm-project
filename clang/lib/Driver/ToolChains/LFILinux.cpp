@@ -7,21 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "LFILinux.h"
+#include "clang/Driver/Driver.h"
 
+using namespace clang::driver;
 using namespace clang::driver::toolchains;
 using namespace llvm::opt;
 
+ToolChain::CXXStdlibType LFILinuxToolChain::GetDefaultCXXStdlibType() const {
+  return ToolChain::CST_Libstdcxx;
+}
+
 void LFILinuxToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
                                             ArgStringList &CmdArgs) const {
-  switch (GetCXXStdlibType(Args)) {
-  case ToolChain::CST_Libcxx:
-    CmdArgs.push_back("-lc++");
-    if (Args.hasArg(options::OPT_fexperimental_library))
-      CmdArgs.push_back("-lc++experimental");
-    CmdArgs.push_back("-lc++abi");
-    break;
-  case ToolChain::CST_Libstdcxx:
-    CmdArgs.push_back("-lstdc++");
-    break;
-  }
+  ToolChain::AddCXXStdlibLibArgs(Args, CmdArgs);
+  CmdArgs.push_back("-lc++abi");
 }
