@@ -41,13 +41,13 @@ static cl::opt<unsigned>
 
 /// getValueType - Return the MVT::SimpleValueType that the specified TableGen
 /// record corresponds to.
-MVT::SimpleValueType llvm::getValueType(const Record *Rec) {
+MVT llvm::getValueType(const Record *Rec) {
   return (MVT::SimpleValueType)Rec->getValueAsInt("Value");
 }
 
-StringRef llvm::getEnumName(MVT::SimpleValueType T) {
+StringRef llvm::getEnumName(MVT T) {
   // clang-format off
-  switch (T) {
+  switch (T.SimpleTy) {
 #define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)   \
   case MVT::Ty: return "MVT::" # Ty;
 #include "llvm/CodeGen/GenVT.inc"

@@ -43,9 +43,9 @@ class CodeGenSubRegIndex;
 
 /// getValueType - Return the MVT::SimpleValueType that the specified TableGen
 /// record corresponds to.
-MVT::SimpleValueType getValueType(const Record *Rec);
+MVT getValueType(const Record *Rec);
 
-StringRef getEnumName(MVT::SimpleValueType T);
+StringRef getEnumName(MVT T);
 
 /// getQualifiedName - Return the name of the specified record, with a
 /// namespace qualifier if the record contains one.
