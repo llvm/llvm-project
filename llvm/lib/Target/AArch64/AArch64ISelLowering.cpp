@@ -26421,7 +26421,7 @@ static SDValue performSETCCCombine(SDNode *N,
   if (Subtarget->hasCSSC() && Cond == ISD::SETNE && isNullConstant(RHS)) {
     SDValue One = DAG.getConstant(1, DL, LHS.getValueType());
     auto UMin = DAG.getNode(ISD::UMIN, DL, LHS.getValueType(), LHS, One);
-    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, UMin);
+    return DAG.getNode(ISD::TRUNCATE, DL, VT, UMin);
   }
 
   // setcc (iN (bitcast (vNi1 X))), 0, (eq|ne)
