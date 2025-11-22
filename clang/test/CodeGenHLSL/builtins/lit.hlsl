@@ -11,7 +11,8 @@
 // CHECK: %mul.i = fmul reassoc nnan ninf nsz arcp afn half [[LOG]], %{{.*}}
 // CHECK: [[EXP:%.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.exp.f16(half %mul.i)
 // CHECK: %hlsl.select7.i = select reassoc nnan ninf nsz arcp afn i1 %{{.*}}, half 0xH0000, half %{{.*}}
-// CHECK: %vecins.i = insertelement <4 x half> %{{.*}}, half %hlsl.select7.i, i32 2
+// CHECK: [[PTR:%.*]] = getelementptr <4 x half>, ptr %Result.i, i32 0, i32 2
+// CHECK: store half %hlsl.select7.i, ptr [[PTR]], align 2
 // CHECK: ret <4 x half> %{{.*}}
 half4 test_lit_half(half NDotL, half NDotH, half M) { return lit(NDotL, NDotH, M); }
 
@@ -26,6 +27,7 @@ half4 test_lit_half(half NDotL, half NDotH, half M) { return lit(NDotL, NDotH, M
 // CHECK: %mul.i = fmul reassoc nnan ninf nsz arcp afn float [[LOG]], %{{.*}}
 // CHECK: [[EXP:%.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.exp.f32(float %mul.i)
 // CHECK: %hlsl.select7.i = select reassoc nnan ninf nsz arcp afn i1 %{{.*}}, float 0.000000e+00, float %{{.*}}
-// CHECK: %vecins.i = insertelement <4 x float> %{{.*}}, float %hlsl.select7.i, i32 2
+// CHECK: [[PTR:%.*]] = getelementptr <4 x float>, ptr %Result.i, i32 0, i32 2
+// CHECK: store float %hlsl.select7.i, ptr [[PTR]], align 4
 // CHECK: ret <4 x float> %{{.*}}
 float4 test_lit_float(float NDotL, float NDotH, float M) { return lit(NDotL, NDotH, M); }
