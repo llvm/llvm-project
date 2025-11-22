@@ -1114,6 +1114,18 @@ namespace ZeroSizeArray {
   static_assert(foo() == 0);
 }
 
+namespace NonLiteralType {
+  /// This used to crash.
+  constexpr void foo() {
+    struct O {};
+
+    struct S {
+      O *s;
+      constexpr S() : s{std::allocator<O>{}.allocate(1)} {}
+    };
+  }
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

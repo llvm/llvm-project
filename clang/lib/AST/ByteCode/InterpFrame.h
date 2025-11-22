@@ -109,6 +109,7 @@ public:
   /// Returns the 'this' pointer.
   const Pointer &getThis() const {
     assert(hasThisPointer());
+    assert(!isBottomFrame());
     return stackRef<Pointer>(ThisPointerOffset);
   }
 
@@ -116,6 +117,7 @@ public:
   const Pointer &getRVOPtr() const {
     assert(Func);
     assert(Func->hasRVO());
+    assert(!isBottomFrame());
     return stackRef<Pointer>(0);
   }
 
