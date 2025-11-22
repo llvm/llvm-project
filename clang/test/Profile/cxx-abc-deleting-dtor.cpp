@@ -24,14 +24,15 @@ DerivedABC *useABCVTable() { return new DerivedABC(); }
 // MSVC: @"__profn_??1ABC@@{{.*}}" =
 // MSVC-NOT: @"__profn_??_G{{.*}}" =
 
+// MSVC-LABEL: define linkonce_odr dso_local noundef ptr @"??_GDerivedABC@@UEAAPEAXI@Z"(ptr {{[^,]*}} %this, {{.*}})
+// MSVC-NOT:   call void @llvm.instrprof.increment({{.*}})
+// MSVC:   call void @"??1DerivedABC@@UEAA@XZ"({{.*}})
+// MSVC:   ret void
+
 // MSVC-LABEL: define linkonce_odr dso_local noundef ptr @"??_GABC@@UEAAPEAXI@Z"(ptr {{[^,]*}} %this, {{.*}})
 // MSVC-NOT:   call void @llvm.instrprof.increment({{.*}})
 // MSVC:   call void @llvm.trap()
 // MSVC-NEXT:   unreachable
-
-// MSVC-LABEL: define linkonce_odr dso_local noundef ptr @"??_GDerivedABC@@UEAAPEAXI@Z"(ptr {{[^,]*}} %this, {{.*}})
-// MSVC-NOT:   call void @llvm.instrprof.increment({{.*}})
-// MSVC:   call void @"??1DerivedABC@@UEAA@XZ"({{.*}})
 
 // MSVC-LABEL: define linkonce_odr dso_local void @"??1DerivedABC@@UEAA@XZ"({{.*}})
 // MSVC:   call void @llvm.instrprof.increment({{.*}})

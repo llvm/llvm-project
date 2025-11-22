@@ -84,12 +84,6 @@ Potentially Breaking Changes
 - Downstream projects that previously linked only against ``clangDriver`` may
   now (also) need to link against the new ``clangOptions`` library, since
   options-related code has been moved out of the Driver into a separate library.
-- Clang now supports MSVC vector deleting destructors when targeting Windows.
-  This means that vtables of classes with virtual destructors will contain a
-  pointer to vector deleting destructor (instead of scalar deleting destructor)
-  which in fact is a different symbol with different name and linkage. This
-  may cause runtime failures if two binaries using the same class defining a
-  virtual destructor are compiled with different versions of clang.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -620,8 +614,6 @@ Windows Support
 ^^^^^^^^^^^^^^^
 - clang-cl now supports /arch:AVX10.1 and /arch:AVX10.2.
 - clang-cl now supports /vlen, /vlen=256 and /vlen=512.
-
-- Clang now supports MSVC vector deleting destructors (GH19772).
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
