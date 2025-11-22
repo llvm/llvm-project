@@ -1560,7 +1560,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     CXXRecordDecl *crd = cast<CXXRecordDecl>(decl);
     assert(!cir::MissingFeatures::generateDebugInfo());
     for (auto *childDecl : crd->decls())
-      if (isa<VarDecl>(childDecl) || isa<CXXRecordDecl>(childDecl))
+      if (isa<VarDecl, CXXRecordDecl, EnumDecl>(childDecl))
         emitTopLevelDecl(childDecl);
     break;
   }
