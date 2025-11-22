@@ -4036,12 +4036,35 @@ struct FormatStyle {
     PAS_Middle
   };
 
+  /// \brief The pointer/reference alignment style for function return types.
+  enum ReturnTypeAlignmentStyle : int8_t {
+    /// Use default alignment.
+    RTAS_Default,
+    /// Align pointer/reference to the left.
+    /// \code
+    ///   int* a(void);
+    /// \endcode
+    RTAS_Left,
+    /// Align pointer/reference to the right.
+    /// \code
+    ///   int *a(void);
+    /// \endcode
+    RTAS_Right,
+    /// Align pointer/reference in the middle.
+    /// \code
+    ///   int * a(void);
+    /// \endcode
+    RTAS_Middle
+  };
+
   /// Pointer and reference alignment options.
   struct PointerAlignmentOptions {
     /// The default alignment for pointers and references.
     PointerAlignmentStyle Default;
+    /// The alignment for pointers in function return types.
+    ReturnTypeAlignmentStyle ReturnType;
     bool operator==(const PointerAlignmentOptions &R) const {
-      return Default == R.Default;
+      return Default == R.Default && ReturnType == R.ReturnType;
     }
     bool operator!=(const PointerAlignmentOptions &R) const {
       return !(*this == R);
@@ -4239,8 +4262,10 @@ struct FormatStyle {
   struct ReferenceAlignmentOptions {
     /// The default alignment for references.
     ReferenceAlignmentStyle Default;
+    /// The alignment for references in function return types.
+    ReturnTypeAlignmentStyle ReturnType;
     bool operator==(const ReferenceAlignmentOptions &R) const {
-      return Default == R.Default;
+      return Default == R.Default && ReturnType == R.ReturnType;
     }
     bool operator!=(const ReferenceAlignmentOptions &R) const {
       return !(*this == R);

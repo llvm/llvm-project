@@ -5718,6 +5718,36 @@ the configuration (without a prefix: ``Auto``).
         int * a;
 
 
+  * ``ReturnTypeAlignmentStyle ReturnType``
+    The alignment for pointers in function return types.
+
+    Possible values:
+
+    * ``RTAS_Default`` (in configuration: ``Default``)
+      Use default alignment.
+
+    * ``RTAS_Left`` (in configuration: ``Left``)
+      Align pointer/reference to the left.
+
+      .. code-block:: c++
+
+        int* a(void);
+
+    * ``RTAS_Right`` (in configuration: ``Right``)
+      Align pointer/reference to the right.
+
+      .. code-block:: c++
+
+        int *a(void);
+
+    * ``RTAS_Middle`` (in configuration: ``Middle``)
+      Align pointer/reference in the middle.
+
+      .. code-block:: c++
+
+        int * a(void);
+
+
 
 .. _QualifierAlignment:
 
@@ -5899,6 +5929,36 @@ the configuration (without a prefix: ``Auto``).
       .. code-block:: c++
 
         int & a;
+
+
+  * ``ReturnTypeAlignmentStyle ReturnType``
+    The alignment for references in function return types.
+
+    Possible values:
+
+    * ``RTAS_Default`` (in configuration: ``Default``)
+      Use default alignment.
+
+    * ``RTAS_Left`` (in configuration: ``Left``)
+      Align pointer/reference to the left.
+
+      .. code-block:: c++
+
+        int* a(void);
+
+    * ``RTAS_Right`` (in configuration: ``Right``)
+      Align pointer/reference to the right.
+
+      .. code-block:: c++
+
+        int *a(void);
+
+    * ``RTAS_Middle`` (in configuration: ``Middle``)
+      Align pointer/reference in the middle.
+
+      .. code-block:: c++
+
+        int * a(void);
 
 
 

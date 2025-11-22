@@ -6540,9 +6540,76 @@ void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) const {
   llvm::errs() << "----\n";
 }
 
+static bool isReturnType(const FormatToken &Tok, const LangOptions &LangOpts) {
+  // Look forward to see if there's a function declaration paren.
+  for (const FormatToken *Next = Tok.Next; Next;
+       Next = Next->getNextNonComment()) {
+    if (Next->isOneOf(TT_FunctionDeclarationName, TT_FunctionDeclarationLParen,
+                      TT_FunctionTypeLParen)) {
+      return true;
+    }
+
+    if (Next->is(TT_TemplateOpener) && Next->MatchingParen) {
+      Next = Next->MatchingParen;
+      continue;
+    }
+
+    if (Next->isPointerOrReference() || Next->isTypeName(LangOpts) ||
+        Next->isOneOf(tok::identifier, tok::coloncolon) ||
+        Next->canBePointerOrReferenceQualifier()) {
+      continue;
+    }
+
+    break;
+  }
+
+  // Look backward to see if there's a trailing return arrow.
+  for (const FormatToken *Prev = Tok.Previous; Prev;
+       Prev = Prev->getPreviousNonComment()) {
+    if (Prev->is(TT_TrailingReturnArrow))
+      return true;
+
+    if (Prev->is(TT_TemplateCloser) && Prev->MatchingParen) {
+      Prev = Prev->MatchingParen;
+      continue;
+    }
+
+    if (Prev->isPointerOrReference() || Prev->isTypeName(LangOpts) ||
+        Prev->isOneOf(tok::identifier, tok::coloncolon) ||
+        Prev->canBePointerOrReferenceQualifier()) {
+      continue;
+    }
+
+    break;
+  }
+
+  return false;
+}
+
+static FormatStyle::PointerAlignmentStyle
+mapReturnTypeAlignmentStyle(FormatStyle::ReturnTypeAlignmentStyle Style) {
+  switch (Style) {
+  case FormatStyle::RTAS_Left:
+    return FormatStyle::PAS_Left;
+  case FormatStyle::RTAS_Right:
+    return FormatStyle::PAS_Right;
+  case FormatStyle::RTAS_Middle:
+    return FormatStyle::PAS_Middle;
+  case FormatStyle::RTAS_Default:
+    assert(false);
+  }
+  llvm_unreachable("Unknown FormatStyle::ReturnTypeAlignmentStyle enum");
+}
+
 FormatStyle::PointerAlignmentStyle
 TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) const {
   assert(Reference.isOneOf(tok::amp, tok::ampamp));
+
+  if (Style.ReferenceAlignment.ReturnType != FormatStyle::RTAS_Default &&
+      isReturnType(Reference, LangOpts)) {
+    return mapReturnTypeAlignmentStyle(Style.ReferenceAlignment.ReturnType);
+  }
+
   switch (Style.ReferenceAlignment.Default) {
   case FormatStyle::RAS_Pointer:
     return Style.PointerAlignment.Default;
@@ -6553,8 +6620,7 @@ TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) const {
   case FormatStyle::RAS_Middle:
     return FormatStyle::PAS_Middle;
   }
-  assert(0); //"Unhandled value of ReferenceAlignment"
-  return Style.PointerAlignment.Default;
+  llvm_unreachable("Unknown FormatStyle::ReferenceAlignmentStyle enum");
 }
 
 FormatStyle::PointerAlignmentStyle
@@ -6563,6 +6629,12 @@ TokenAnnotator::getTokenPointerOrReferenceAlignment(
   if (PointerOrReference.isOneOf(tok::amp, tok::ampamp))
     return getTokenReferenceAlignment(PointerOrReference);
   assert(PointerOrReference.is(tok::star));
+
+  if (Style.PointerAlignment.ReturnType != FormatStyle::RTAS_Default &&
+      isReturnType(PointerOrReference, LangOpts)) {
+    return mapReturnTypeAlignmentStyle(Style.PointerAlignment.ReturnType);
+  }
+
   return Style.PointerAlignment.Default;
 }
 

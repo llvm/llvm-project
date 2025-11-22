@@ -2296,6 +2296,207 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   // verifyFormat("int Add2(BTree * &Root, char * szToAdd)", Style);
 }
 
+TEST_F(FormatTest, ReturnTypeAlignment) {
+  // Test that ReturnType overrides PointerAlignment for return types.
+  FormatStyle Style = getLLVMStyle();
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Left;
+
+  // Return type pointers should be left-aligned despite PAS_Right.
+  verifyFormat("int* f1(int *a, int *b);", Style);
+  verifyFormat("int& f2(int &a, int &b);", Style);
+  verifyFormat("int&& f3(int &&a, int &&b);", Style);
+
+  // Multiple pointers in return type.
+  verifyFormat("int** f4(int **a);", Style);
+  verifyFormat("const int* f5(const int *a);", Style);
+  verifyFormat("int*** f6(int ***a);", Style);
+
+  // Multiple pointers with const qualifiers.
+  verifyFormat("const int** f7(const int **a);", Style);
+  verifyFormat("int* const* f8(int *const *a);", Style);
+  verifyFormat("const int* const* f9(const int *const *a);", Style);
+  verifyFormat("int** const f10(int **const a);", Style);
+  verifyFormat("const int** const f11(const int **const a);", Style);
+
+  // Complex return types.
+  verifyFormat("std::vector<int>* f16(std::vector<int> *a);", Style);
+  verifyFormat("const char* f17(const char *str);", Style);
+  verifyFormat("const char** f18(const char **argv);", Style);
+  verifyFormat("char* const* f19(char *const *envp);", Style);
+
+  // Member functions.
+  verifyFormat("int* Class::method(int *a);", Style);
+  verifyFormat("int& Class::method(int &a);", Style);
+  verifyFormat("int* (*f8())(int *a);", Style);
+
+  // Variables should still follow the default alignment.
+  verifyFormat("int *a = nullptr;", Style);
+  verifyFormat("int *b = f1(a, a);", Style);
+
+  // Now test with PAS_Left base and RTAS_Right return type.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Right;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Right;
+
+  // Return type pointers should be right-aligned despite PAS_Left.
+  verifyFormat("int *f1(int* a, int* b);", Style);
+  verifyFormat("int &f2(int& a, int& b);", Style);
+  verifyFormat("int &&f3(int&& a, int&& b);", Style);
+
+  // Multiple pointers with right alignment in return type.
+  verifyFormat("int **f4(int** a);", Style);
+  verifyFormat("const int *f5(const int* a);", Style);
+  verifyFormat("int ***f6(int*** a);", Style);
+
+  // Multiple pointers with const qualifiers, right-aligned return type.
+  verifyFormat("const int **f7(const int** a);", Style);
+  verifyFormat("int *const *f8(int* const* a);", Style);
+  verifyFormat("const int *const *f9(const int* const* a);", Style);
+  verifyFormat("int **const f10(int** const a);", Style);
+  verifyFormat("const char **f11(const char** argv);", Style);
+
+  // Variables should still follow PointerAlignment (PAS_Left).
+  verifyFormat("int* a = nullptr;", Style);
+  verifyFormat("int* b = f1(a, a);", Style);
+
+  // Test with RTAS_Middle.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Middle;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Middle;
+
+  verifyFormat("int * f1(int *a, int *b);", Style);
+  verifyFormat("int & f2(int &a, int &b);", Style);
+  verifyFormat("int && f3(int &&a, int &&b);", Style);
+
+  // Multiple pointers with const qualifiers, middle-aligned return type.
+  verifyFormat("const int * f6(const int *a);", Style);
+  verifyFormat("const int ** f7(const int **a);", Style);
+  verifyFormat("int * const * f8(int *const *a);", Style);
+  verifyFormat("const int * const * f9(const int *const *a);", Style);
+  verifyFormat("int ** const f10(int **const a);", Style);
+  verifyFormat("const char ** f11(const char **argv);", Style);
+
+  // Variables should still follow PointerAlignment (PAS_Right).
+  verifyFormat("int *a = nullptr;", Style);
+
+  // Test that default alignment is used when ReturnType is RTAS_Default.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Default;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Default;
+
+  verifyFormat("int* f1(int* a, int* b);", Style);
+  verifyFormat("int& f2(int& a, int& b);", Style);
+
+  // Test with ReferenceAlignment override.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Right;
+
+  verifyFormat("int* f1(int *a, int &b);", Style);
+  verifyFormat("int &f2(int &a, int *b);", Style);
+  verifyFormat("int &&f3(int &&a, int *b);", Style);
+
+  // Test trailing return types with PAS_Right and RTAS_Left.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Left;
+
+  verifyFormat("auto f1(int *a, int *b) -> int*;", Style);
+  verifyFormat("auto f2(int &a, int &b) -> int&;", Style);
+  verifyFormat("auto f3(int &&a, int &&b) -> int&&;", Style);
+
+  // Multiple pointers in trailing return type.
+  verifyFormat("auto f4(int **a) -> int**;", Style);
+  verifyFormat("auto f5(const int *a) -> const int*;", Style);
+  verifyFormat("auto f6(int ***a) -> int***;", Style);
+
+  // Multiple pointers with const qualifiers.
+  verifyFormat("auto f7(const int **a) -> const int**;", Style);
+  verifyFormat("auto f8(int *const *a) -> int* const*;", Style);
+  verifyFormat("auto f9(const int *const *a) -> const int* const*;", Style);
+  verifyFormat("auto f10(int **const a) -> int** const;", Style);
+  verifyFormat("auto f11(const int **const a) -> const int** const;", Style);
+
+  // Complex trailing return types.
+  verifyFormat("auto f16(std::vector<int> *a) -> std::vector<int>*;", Style);
+  verifyFormat("auto f17(const char *str) -> const char*;", Style);
+  verifyFormat("auto f18(const char **argv) -> const char**;", Style);
+  verifyFormat("auto f19(char *const *envp) -> char* const*;", Style);
+
+  // Member functions with trailing return types.
+  verifyFormat("auto Class::method(int *a) -> int*;", Style);
+  verifyFormat("auto Class::method(int &a) -> int&;", Style);
+
+  // Now test with PAS_Left base and RTAS_Right trailing return type.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Right;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Right;
+
+  verifyFormat("auto f1(int* a, int* b) -> int *;", Style);
+  verifyFormat("auto f2(int& a, int& b) -> int &;", Style);
+  verifyFormat("auto f3(int&& a, int&& b) -> int &&;", Style);
+
+  // Multiple pointers with right alignment in trailing return type.
+  verifyFormat("auto f4(int** a) -> int **;", Style);
+  verifyFormat("auto f5(const int* a) -> const int *;", Style);
+  verifyFormat("auto f6(int*** a) -> int ***;", Style);
+
+  // Multiple pointers with const qualifiers, right-aligned trailing return
+  // type.
+  verifyFormat("auto f7(const int** a) -> const int **;", Style);
+  verifyFormat("auto f8(int* const* a) -> int *const *;", Style);
+  verifyFormat("auto f9(const int* const* a) -> const int *const *;", Style);
+  verifyFormat("auto f10(int** const a) -> int **const;", Style);
+  verifyFormat("auto f11(const char** argv) -> const char **;", Style);
+
+  // Test with RTAS_Middle trailing return type.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Middle;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Middle;
+
+  verifyFormat("auto f1(int *a, int *b) -> int *;", Style);
+  verifyFormat("auto f2(int &a, int &b) -> int &;", Style);
+  verifyFormat("auto f3(int &&a, int &&b) -> int &&;", Style);
+
+  // Multiple pointers with const qualifiers, middle-aligned trailing return
+  // type.
+  verifyFormat("auto f6(const int *a) -> const int *;", Style);
+  verifyFormat("auto f7(const int **a) -> const int **;", Style);
+  verifyFormat("auto f8(int *const *a) -> int * const *;", Style);
+  verifyFormat("auto f9(const int *const *a) -> const int * const *;", Style);
+  verifyFormat("auto f10(int **const a) -> int ** const;", Style);
+  verifyFormat("auto f11(const char **argv) -> const char **;", Style);
+
+  // Test that default alignment is used when ReturnType is RTAS_Default.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Left;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Default;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Default;
+
+  verifyFormat("auto f1(int* a, int* b) -> int*;", Style);
+  verifyFormat("auto f2(int& a, int& b) -> int&;", Style);
+
+  // Test with ReferenceAlignment override for trailing return types.
+  Style.PointerAlignment.Default = FormatStyle::PAS_Right;
+  Style.PointerAlignment.ReturnType = FormatStyle::RTAS_Left;
+  Style.ReferenceAlignment.Default = FormatStyle::RAS_Pointer;
+  Style.ReferenceAlignment.ReturnType = FormatStyle::RTAS_Right;
+
+  verifyFormat("auto f1(int *a, int &b) -> int*;", Style);
+  verifyFormat("auto f2(int &a, int *b) -> int &;", Style);
+  verifyFormat("auto f3(int &&a, int *b) -> int &&;", Style);
+}
+
 TEST_F(FormatTest, FormatsForLoop) {
   verifyFormat(
       "for (int VeryVeryLongLoopVariable = 0; VeryVeryLongLoopVariable < 10;\n"
