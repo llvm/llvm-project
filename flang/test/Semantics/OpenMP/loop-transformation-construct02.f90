@@ -2,7 +2,6 @@
 ! nested Loop Transformation Constructs
 
 !RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=60
-!XFAIL: *
 
 subroutine loop_transformation_construct1
   implicit none
