@@ -4,7 +4,6 @@
 """YAML serialization is routed through here to centralize common logic."""
 
 import sys
-import warnings
 
 
 def multiline_str_representer(dumper, data):
