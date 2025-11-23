@@ -87,7 +87,11 @@ class TestSBFrameExtensions(TestBase):
         # Test block property
         block = frame.block
         self.assertTrue(block.IsValid(), "block should be valid")
-        self.assertEqual(block, frame.GetBlock(), "block should match GetBlock()")
+        block_direct = frame.GetBlock()
+        self.assertTrue(
+            block.IsEqual(block_direct),
+            "block should match GetBlock()",
+        )
 
     def test_properties_is_inlined_name_line_entry_thread(self):
         """Test SBFrame extension properties: is_inlined, name, line_entry, thread"""
@@ -256,18 +260,23 @@ class TestSBFrameExtensions(TestBase):
 
         # Test registers property
         registers = frame.registers
-        self.assertIsInstance(registers, list, "registers should be a list")
+        # registers returns an SBValueList that can be iterated
+        self.assertTrue(hasattr(registers, "__iter__"), "registers should be iterable")
         registers_direct = frame.GetRegisters()
+        # Compare by iterating and counting
+        registers_count = sum(1 for _ in registers)
+        registers_direct_count = sum(1 for _ in registers_direct)
         self.assertEqual(
-            len(registers),
-            len(registers_direct),
+            registers_count,
+            registers_direct_count,
             "registers should match GetRegisters()",
         )
 
         # Test regs property (alias for registers)
         regs = frame.regs
-        self.assertIsInstance(regs, list, "regs should be a list")
-        self.assertEqual(len(regs), len(registers), "regs should match registers")
+        self.assertTrue(hasattr(regs, "__iter__"), "regs should be iterable")
+        regs_count = sum(1 for _ in regs)
+        self.assertEqual(regs_count, registers_count, "regs should match registers")
 
         # Test register property (flattened view)
         register = frame.register
