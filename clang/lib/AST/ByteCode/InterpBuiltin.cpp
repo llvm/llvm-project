@@ -2746,13 +2746,13 @@ static bool interp__builtin_ia32_addsub(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_ia32_pclmulqdq(InterpState &S, CodePtr OpPC,
-                                            const CallExpr *Call) {
+                                           const CallExpr *Call) {
   // PCLMULQDQ: carry-less multiplication of selected 64-bit halves
   // imm8 bit 0: selects lower (0) or upper (1) 64 bits of first operand
   // imm8 bit 4: selects lower (0) or upper (1) 64 bits of second operand
   assert(Call->getArg(0)->getType()->isVectorType() &&
          Call->getArg(1)->getType()->isVectorType());
-  
+
   // Extract imm8 argument
   APSInt Imm8 = popToAPSInt(S, Call->getArg(2));
   unsigned Imm8Val = static_cast<unsigned>(Imm8.getZExtValue());
