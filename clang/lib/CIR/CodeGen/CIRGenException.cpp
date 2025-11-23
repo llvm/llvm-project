@@ -425,7 +425,7 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
     assert(!cir::MissingFeatures::incrementProfileCounter());
 
     // Perform the body of the catch.
-    mlir::LogicalResult emitResult =
+    [[maybe_unused]] mlir::LogicalResult emitResult =
         emitStmt(catchStmt->getHandlerBlock(), /*useCurrentScope=*/true);
     assert(emitResult.succeeded() && "failed to emit catch handler block");
 

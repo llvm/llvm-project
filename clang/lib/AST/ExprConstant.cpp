@@ -12202,6 +12202,24 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         return Success(APValue(ResultElements.data(), SourceLen), E);
       };
 
+  auto EvalSelectScalar = [&](unsigned Len) -> bool {
+    APSInt Mask;
+    APValue AVal, WVal;
+    if (!EvaluateInteger(E->getArg(0), Mask, Info) ||
+        !EvaluateAsRValue(Info, E->getArg(1), AVal) ||
+        !EvaluateAsRValue(Info, E->getArg(2), WVal))
+      return false;
+
+    bool TakeA0 = (Mask.getZExtValue() & 1u) != 0;
+    SmallVector<APValue, 4> Res;
+    Res.reserve(Len);
+    Res.push_back(TakeA0 ? AVal.getVectorElt(0) : WVal.getVectorElt(0));
+    for (unsigned I = 1; I < Len; ++I)
+      Res.push_back(WVal.getVectorElt(I));
+    APValue V(Res.data(), Res.size());
+    return Success(V, E);
+  };
+
   switch (E->getBuiltinCallee()) {
   default:
     return false;
@@ -12505,6 +12523,13 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         return APInt((Src).trunc(DstBits));
       return APInt::getAllOnes(DstBits);
     });
+  case clang::X86::BI__builtin_ia32_selectss_128:
+    return EvalSelectScalar(4);
+  case clang::X86::BI__builtin_ia32_selectsd_128:
+    return EvalSelectScalar(2);
+  case clang::X86::BI__builtin_ia32_selectsh_128:
+  case clang::X86::BI__builtin_ia32_selectsbf_128:
+    return EvalSelectScalar(8);
   case clang::X86::BI__builtin_ia32_pmuldq128:
   case clang::X86::BI__builtin_ia32_pmuldq256:
   case clang::X86::BI__builtin_ia32_pmuldq512:
@@ -12998,7 +13023,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
   case X86::BI__builtin_ia32_pshufd:
   case X86::BI__builtin_ia32_pshufd256:
-  case X86::BI__builtin_ia32_pshufd512: {
+  case X86::BI__builtin_ia32_pshufd512:
+  case X86::BI__builtin_ia32_vpermilps:
+  case X86::BI__builtin_ia32_vpermilps256:
+  case X86::BI__builtin_ia32_vpermilps512: {
     APValue R;
     if (!evalShuffleGeneric(
             Info, E, R,
@@ -13010,6 +13038,59 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
               unsigned LaneIdx = DstIdx % LaneElts;
               unsigned Sel = (Mask >> (2 * LaneIdx)) & 0x3;
               return std::make_pair(0, static_cast<int>(LaneBase + Sel));
+            }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_vpermilvarpd:
+  case X86::BI__builtin_ia32_vpermilvarpd256:
+  case X86::BI__builtin_ia32_vpermilvarpd512: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
+              unsigned NumElemPerLane = 2;
+              unsigned Lane = DstIdx / NumElemPerLane;
+              unsigned Offset = Mask & 0b10 ? 1 : 0;
+              return std::make_pair(
+                  0, static_cast<int>(Lane * NumElemPerLane + Offset));
+            }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_vpermilpd:
+  case X86::BI__builtin_ia32_vpermilpd256:
+  case X86::BI__builtin_ia32_vpermilpd512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R, [](unsigned DstIdx, unsigned Control) {
+          unsigned NumElemPerLane = 2;
+          unsigned BitsPerElem = 1;
+          unsigned MaskBits = 8;
+          unsigned IndexMask = 0x1;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned LaneOffset = Lane * NumElemPerLane;
+          unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+          unsigned Index = (Control >> BitIndex) & IndexMask;
+          return std::make_pair(0, static_cast<int>(LaneOffset + Index));
+        }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_vpermilvarps:
+  case X86::BI__builtin_ia32_vpermilvarps256:
+  case X86::BI__builtin_ia32_vpermilvarps512: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
+              unsigned NumElemPerLane = 4;
+              unsigned Lane = DstIdx / NumElemPerLane;
+              unsigned Offset = Mask & 0b11;
+              return std::make_pair(
+                  0, static_cast<int>(Lane * NumElemPerLane + Offset));
             }))
       return false;
     return Success(R, E);
@@ -13577,6 +13658,28 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
           return std::pair<unsigned, int>{VecIdx, ElemIdx};
         }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_alignd128:
+  case X86::BI__builtin_ia32_alignd256:
+  case X86::BI__builtin_ia32_alignd512:
+  case X86::BI__builtin_ia32_alignq128:
+  case X86::BI__builtin_ia32_alignq256:
+  case X86::BI__builtin_ia32_alignq512: {
+    APValue R;
+    unsigned NumElems = E->getType()->castAs<VectorType>()->getNumElements();
+    if (!evalShuffleGeneric(Info, E, R,
+                            [NumElems](unsigned DstIdx, unsigned Shift) {
+                              unsigned Imm = Shift & 0xFF;
+                              unsigned EffectiveShift = Imm & (NumElems - 1);
+                              unsigned SourcePos = DstIdx + EffectiveShift;
+                              unsigned VecIdx = SourcePos < NumElems ? 1 : 0;
+                              unsigned ElemIdx = SourcePos & (NumElems - 1);
+
+                              return std::pair<unsigned, int>{
+                                  VecIdx, static_cast<int>(ElemIdx)};
+                            }))
       return false;
     return Success(R, E);
   }
@@ -15534,8 +15637,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     auto Mode =
         Info.getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
     uint64_t BitWidth = Info.Ctx.getTypeSize(Info.Ctx.getSizeType());
+    auto MaxTokensOpt = Info.getLangOpts().AllocTokenMax;
     uint64_t MaxTokens =
-        Info.getLangOpts().AllocTokenMax.value_or(~0ULL >> (64 - BitWidth));
+        MaxTokensOpt.value_or(0) ? *MaxTokensOpt : (~0ULL >> (64 - BitWidth));
     auto MaybeToken = llvm::getAllocToken(Mode, *ATMD, MaxTokens);
     if (!MaybeToken)
       return Error(E, diag::note_constexpr_infer_alloc_token_stateful_mode);
@@ -16545,6 +16649,37 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Vec.getVectorElt(Idx).getInt(), E);
   }
 
+  case clang::X86::BI__builtin_ia32_cvtb2mask128:
+  case clang::X86::BI__builtin_ia32_cvtb2mask256:
+  case clang::X86::BI__builtin_ia32_cvtb2mask512:
+  case clang::X86::BI__builtin_ia32_cvtw2mask128:
+  case clang::X86::BI__builtin_ia32_cvtw2mask256:
+  case clang::X86::BI__builtin_ia32_cvtw2mask512:
+  case clang::X86::BI__builtin_ia32_cvtd2mask128:
+  case clang::X86::BI__builtin_ia32_cvtd2mask256:
+  case clang::X86::BI__builtin_ia32_cvtd2mask512:
+  case clang::X86::BI__builtin_ia32_cvtq2mask128:
+  case clang::X86::BI__builtin_ia32_cvtq2mask256:
+  case clang::X86::BI__builtin_ia32_cvtq2mask512: {
+    assert(E->getNumArgs() == 1);
+    APValue Vec;
+    if (!EvaluateVector(E->getArg(0), Vec, Info))
+      return false;
+
+    unsigned VectorLen = Vec.getVectorLength();
+    unsigned RetWidth = Info.Ctx.getIntWidth(E->getType());
+    llvm::APInt Bits(RetWidth, 0);
+
+    for (unsigned ElemNum = 0; ElemNum != VectorLen; ++ElemNum) {
+      const APSInt &A = Vec.getVectorElt(ElemNum).getInt();
+      unsigned MSB = A[A.getBitWidth() - 1];
+      Bits.setBitVal(ElemNum, MSB);
+    }
+
+    APSInt RetMask(Bits, /*isUnsigned=*/true);
+    return Success(APValue(RetMask), E);
+  }
+
   case clang::X86::BI__builtin_ia32_cmpb128_mask:
   case clang::X86::BI__builtin_ia32_cmpw128_mask:
   case clang::X86::BI__builtin_ia32_cmpd128_mask:
@@ -16625,6 +16760,48 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       RetMask.setBitVal(ElemNum, Mask[ElemNum] && Result);
     }
 
+    return Success(APValue(RetMask), E);
+  }
+  case X86::BI__builtin_ia32_vpshufbitqmb128_mask:
+  case X86::BI__builtin_ia32_vpshufbitqmb256_mask:
+  case X86::BI__builtin_ia32_vpshufbitqmb512_mask: {
+    assert(E->getNumArgs() == 3);
+
+    APValue Source, ShuffleMask;
+    APSInt ZeroMask;
+    if (!EvaluateVector(E->getArg(0), Source, Info) ||
+        !EvaluateVector(E->getArg(1), ShuffleMask, Info) ||
+        !EvaluateInteger(E->getArg(2), ZeroMask, Info))
+      return false;
+
+    assert(Source.getVectorLength() == ShuffleMask.getVectorLength());
+    assert(ZeroMask.getBitWidth() == Source.getVectorLength());
+
+    unsigned NumBytesInQWord = 8;
+    unsigned NumBitsInByte = 8;
+    unsigned NumBytes = Source.getVectorLength();
+    unsigned NumQWords = NumBytes / NumBytesInQWord;
+    unsigned RetWidth = ZeroMask.getBitWidth();
+    APSInt RetMask(llvm::APInt(RetWidth, 0), /*isUnsigned=*/true);
+
+    for (unsigned QWordId = 0; QWordId != NumQWords; ++QWordId) {
+      APInt SourceQWord(64, 0);
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        uint64_t Byte = Source.getVectorElt(QWordId * NumBytesInQWord + ByteIdx)
+                            .getInt()
+                            .getZExtValue();
+        SourceQWord.insertBits(APInt(8, Byte & 0xFF), ByteIdx * NumBitsInByte);
+      }
+
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        unsigned SelIdx = QWordId * NumBytesInQWord + ByteIdx;
+        unsigned M =
+            ShuffleMask.getVectorElt(SelIdx).getInt().getZExtValue() & 0x3F;
+        if (ZeroMask[SelIdx]) {
+          RetMask.setBitVal(SelIdx, SourceQWord[M]);
+        }
+      }
+    }
     return Success(APValue(RetMask), E);
   }
   }
