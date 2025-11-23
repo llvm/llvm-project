@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: std-at-least-c++17
 // <optional>
 
 // constexpr optional(nullopt_t) noexcept;
@@ -19,49 +19,56 @@
 
 #include "test_macros.h"
 
-using std::nullopt;
-using std::nullopt_t;
-using std::optional;
+template <class T>
+constexpr void test() {
+  static_assert(std::is_nothrow_constructible_v<std::optional<T>, std::nullopt_t&>);
+  static_assert(std::is_trivially_destructible_v<T> == std::is_trivially_destructible_v<std::optional<T>>);
+  static_assert(
+      std::is_trivially_destructible_v<T> == std::is_trivially_destructible_v<typename std::optional<T>::value_type>);
 
-template <class Opt>
-void test_constexpr() {
-  static_assert(std::is_nothrow_constructible<Opt, nullopt_t&>::value, "");
-  static_assert(std::is_trivially_destructible<Opt>::value, "");
-  static_assert(std::is_trivially_destructible<typename Opt::value_type>::value, "");
+  constexpr std::optional<T> opt(std::nullopt);
+  assert(!static_cast<bool>(opt));
 
-  constexpr Opt opt(nullopt);
-  static_assert(static_cast<bool>(opt) == false, "");
-
-  struct test_constexpr_ctor : public Opt {
+  struct test_constexpr_ctor : public std::optional<T> {
     constexpr test_constexpr_ctor() {}
   };
 }
 
-template <class Opt>
-void test() {
-  static_assert(std::is_nothrow_constructible<Opt, nullopt_t&>::value, "");
-  static_assert(!std::is_trivially_destructible<Opt>::value, "");
-  static_assert(!std::is_trivially_destructible<typename Opt::value_type>::value, "");
-  {
-    Opt opt(nullopt);
-    assert(static_cast<bool>(opt) == false);
-  }
-  {
-    const Opt opt(nullopt);
-    assert(static_cast<bool>(opt) == false);
-  }
-  struct test_constexpr_ctor : public Opt {
-    constexpr test_constexpr_ctor() {}
-  };
+template <class T>
+TEST_CONSTEXPR_CXX23 void rt_test() {
+  static_assert(std::is_nothrow_constructible_v<std::optional<T>, std::nullopt_t&>);
+  static_assert(std::is_trivially_destructible_v<T> == std::is_trivially_destructible_v<std::optional<T>>);
+  static_assert(
+      std::is_trivially_destructible_v<T> == std::is_trivially_destructible_v<typename std::optional<T>::value_type>);
+
+  const std::optional<T> opt(std::nullopt);
+  assert(!static_cast<bool>(opt));
+}
+
+TEST_CONSTEXPR_CXX23 bool test_non_literal() {
+  rt_test<NonLiteralTypes::NoCtors>();
+  return true;
+}
+
+constexpr bool test() {
+  test<int>();
+  test<int*>();
+  test<ImplicitTypes::NoCtors>();
+  test<NonTrivialTypes::NoCtors>();
+  test<NonConstexprTypes::NoCtors>();
+#if TEST_STD_VER >= 23
+  test_non_literal();
+#endif
+  return true;
 }
 
 int main(int, char**) {
-  test_constexpr<optional<int>>();
-  test_constexpr<optional<int*>>();
-  test_constexpr<optional<ImplicitTypes::NoCtors>>();
-  test_constexpr<optional<NonTrivialTypes::NoCtors>>();
-  test_constexpr<optional<NonConstexprTypes::NoCtors>>();
-  test<optional<NonLiteralTypes::NoCtors>>();
+  assert(test());
+  static_assert(test());
+
+  {
+    test_non_literal();
+  }
 
   return 0;
 }
