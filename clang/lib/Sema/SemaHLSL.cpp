@@ -3332,7 +3332,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     QualType ArgTyExpr = Expr.get()->getType();
     auto *VTy = ArgTyExpr->getAs<VectorType>();
     if (!(ArgTyExpr->isIntegerType() ||
-         (VTy && VTy->getElementType()->isIntegerType()))) {
+          (VTy && VTy->getElementType()->isIntegerType()))) {
       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                    diag::err_builtin_invalid_arg_type)
           << ArgTyExpr << SemaRef.Context.UnsignedIntTy << 1 << 0 << 0;
