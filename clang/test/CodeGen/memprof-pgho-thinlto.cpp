@@ -5,11 +5,11 @@
 // RUN: llvm-profdata merge %t/memprof.yaml -o %t/use.memprofdata
 //
 // RUN: %clangxx -O2 -flto=thin -g -fmemory-profile-use=%t/use.memprofdata %t/src.cpp -c -o %t.o
-// RUN: llvm-lto2 run %t.o -supports-hot-cold-new -r=%t.o,main,plx -r=%t.o,_Z3foov,plx -r=%t.o,_Znam, -o %t.out
+// RUN: llvm-lto2 run %t.o -thinlto-distributed-indexes -supports-hot-cold-new -r=%t.o,main,plx -r=%t.o,_Z3foov,plx -r=%t.o,_Znam, -o %t.out
 // RUN: %clang_cc1 -O2 -x ir %t.o -fthinlto-index=%t.o.thinlto.bc -mllvm -optimize-hot-cold-new -emit-llvm -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,DEFAULT
 //
 // RUN: %clangxx -O2 -flto=thin -g -fsanitize=alloc-token -fmemory-profile-use=%t/use.memprofdata %t/src.cpp -c -o %t.o
-// RUN: llvm-lto2 run %t.o -supports-hot-cold-new -r=%t.o,main,plx -r=%t.o,_Z3foov,plx -r=%t.o,_Znam, -o %t.out
+// RUN: llvm-lto2 run %t.o -thinlto-distributed-indexes -supports-hot-cold-new -r=%t.o,main,plx -r=%t.o,_Z3foov,plx -r=%t.o,_Znam, -o %t.out
 // RUN: %clang_cc1 -O2 -x ir %t.o -fsanitize=alloc-token -fthinlto-index=%t.o.thinlto.bc -mllvm -optimize-hot-cold-new -emit-llvm -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,ALLOCTOKEN
 
 //--- memprof.yaml
