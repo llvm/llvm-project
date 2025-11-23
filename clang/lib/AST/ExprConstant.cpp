@@ -13499,9 +13499,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
 
     // Extract bits 0 and 4 from imm8
-    unsigned Imm8Val = static_cast<unsigned>(Imm8.getZExtValue());
-    bool SelectUpperA = (Imm8Val & 0x01) != 0;
-    bool SelectUpperB = (Imm8Val & 0x10) != 0;
+    bool SelectUpperA = (Imm8.getZExtValue() & 0x01) != 0;
+    bool SelectUpperB = (Imm8.getZExtValue() & 0x10) != 0;
 
     unsigned NumElems = SourceLHS.getVectorLength();
     SmallVector<APValue, 8> ResultElements;
