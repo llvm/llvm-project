@@ -13,6 +13,7 @@
 
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "mlir/IR/ValueRange.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -21,12 +22,12 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 template <typename... Operands>
-static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
-                                       const std::string &str,
-                                       const mlir::Type &resTy,
-                                       Operands &&...op) {
+static mlir::Value
+emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *expr,
+                    const std::string &str, const mlir::Type &resTy,
+                    Operands &&...op) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Location location = cgf.getLoc(e->getExprLoc());
+  mlir::Location location = cgf.getLoc(expr->getExprLoc());
   return cir::LLVMIntrinsicCallOp::create(builder, location,
                                           builder.getStringAttr(str), resTy,
                                           std::forward<Operands>(op)...)
@@ -84,7 +85,8 @@ static mlir::Value emitX86FunnelShift(CIRGenFunction &cgf, const CallExpr *e,
   }
 
   const std::string intrinsicName = isRight ? "fshr" : "fshl";
-  return emitIntrinsicCallOp(cgf, e, intrinsicName, ty, op0, op1, amt);
+  return emitIntrinsicCallOp(cgf, e, intrinsicName, ty,
+                             mlir::ValueRange{op0, op1, amt});
 }
 
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
@@ -603,6 +605,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_kshiftrihi:
   case X86::BI__builtin_ia32_kshiftrisi:
   case X86::BI__builtin_ia32_kshiftridi:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_vprotbi:
   case X86::BI__builtin_ia32_vprotwi:
   case X86::BI__builtin_ia32_vprotdi:
@@ -613,14 +619,14 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_prolq128:
   case X86::BI__builtin_ia32_prolq256:
   case X86::BI__builtin_ia32_prolq512:
-    return emitX86FunnelShift(*this, e, ops[0], ops[1], ops[1], false);
+    return emitX86FunnelShift(*this, expr, ops[0], ops[1], ops[1], false);
   case X86::BI__builtin_ia32_prord128:
   case X86::BI__builtin_ia32_prord256:
   case X86::BI__builtin_ia32_prord512:
   case X86::BI__builtin_ia32_prorq128:
   case X86::BI__builtin_ia32_prorq256:
   case X86::BI__builtin_ia32_prorq512:
-    return emitX86FunnelShift(*this, e, ops[0], ops[1], ops[1], true);
+    return emitX86FunnelShift(*this, expr, ops[0], ops[1], ops[1], true);
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
   case X86::BI__builtin_ia32_selectb_512:
