@@ -22,12 +22,12 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 template <typename... Operands>
-static mlir::Value
-emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *expr,
-                    const std::string &str, const mlir::Type &resTy,
-                    Operands &&...op) {
+static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
+                                       const std::string &str,
+                                       const mlir::Type &resTy,
+                                       Operands &&...op) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Location location = cgf.getLoc(expr->getExprLoc());
+  mlir::Location location = cgf.getLoc(e->getExprLoc());
   return cir::LLVMIntrinsicCallOp::create(builder, location,
                                           builder.getStringAttr(str), resTy,
                                           std::forward<Operands>(op)...)
@@ -108,15 +108,14 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   // evaluation.
   assert(!cir::MissingFeatures::msvcBuiltins());
 
-  // Find out if any arguments are required to be integer constant
-  // expressions.
+  // Find out if any arguments are required to be integer constant expressions.
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());
 
   // The operands of the builtin call
   llvm::SmallVector<mlir::Value> ops;
 
-  // `ICEArguments` is a bitmap indicating whether the argument at the i-th
-  // bit is required to be a constant integer expression.
+  // `ICEArguments` is a bitmap indicating whether the argument at the i-th bit
+  // is required to be a constant integer expression.
   unsigned iceArguments = 0;
   ASTContext::GetBuiltinTypeError error;
   getContext().GetBuiltinType(builtinID, error, &iceArguments);
