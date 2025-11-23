@@ -69,7 +69,7 @@ public:
   MockMemory(Map memory) : m_memory(std::move(memory)) {
     // Make sure the requested memory size matches the returned value.
     for ([[maybe_unused]] auto [&req, &byes] : m_memory) {
-        assert(bytes.size() == req.size);
+      assert(bytes.size() == req.size);
     }
   }
 
