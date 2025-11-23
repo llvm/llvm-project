@@ -72,6 +72,11 @@ static void applySpaceInBlockComment(const FormatToken &Tok,
   if (Body.empty())
     return;
 
+  if (OpeningMode == FormatStyle::CommentSpaceMode::Leave &&
+      ClosingMode == FormatStyle::CommentSpaceMode::Leave) {
+    return;
+  }
+
   const auto applyReplacement = [&](unsigned Offset, unsigned Length,
                                     StringRef Replacement) {
     Whitespaces.replaceWhitespaceInToken(Tok, Offset, Length, "", Replacement,
