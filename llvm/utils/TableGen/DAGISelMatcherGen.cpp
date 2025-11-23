@@ -23,10 +23,9 @@ using namespace llvm;
 /// getRegisterValueType - Look up and return the ValueType of the specified
 /// register. If the register is a member of multiple register classes, they
 /// must all have the same type.
-static MVT::SimpleValueType getRegisterValueType(const Record *R,
-                                                 const CodeGenTarget &T) {
+static MVT getRegisterValueType(const Record *R, const CodeGenTarget &T) {
   bool FoundRC = false;
-  MVT::SimpleValueType VT = MVT::Other;
+  MVT VT = MVT::Other;
   const CodeGenRegister *Reg = T.getRegBank().getReg(R);
 
   for (const auto &RC : T.getRegBank().getRegClasses()) {
@@ -37,14 +36,14 @@ static MVT::SimpleValueType getRegisterValueType(const Record *R,
       FoundRC = true;
       const ValueTypeByHwMode &VVT = RC.getValueTypeNum(0);
       assert(VVT.isSimple());
-      VT = VVT.getSimple().SimpleTy;
+      VT = VVT.getSimple();
       continue;
     }
 
 #ifndef NDEBUG
     // If this occurs in multiple register classes, they all have to agree.
     const ValueTypeByHwMode &VVT = RC.getValueTypeNum(0);
-    assert(VVT.isSimple() && VVT.getSimple().SimpleTy == VT &&
+    assert(VVT.isSimple() && VVT.getSimple() == VT &&
            "ValueType mismatch between register classes for this register");
 #endif
   }
@@ -687,7 +686,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
     }
 
     if (Def->getName() == "undef_tied_input") {
-      MVT::SimpleValueType ResultVT = N.getSimpleType(0);
+      MVT ResultVT = N.getSimpleType(0);
       auto IDOperandNo = NextRecordedOperandNo++;
       const Record *ImpDef = Def->getRecords().getDef("IMPLICIT_DEF");
       const CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(ImpDef);
@@ -896,7 +895,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
   // Result order: node results, chain, glue
 
   // Determine the result types.
-  SmallVector<MVT::SimpleValueType, 4> ResultVTs;
+  SmallVector<MVT, 4> ResultVTs;
   for (unsigned i = 0, e = N.getNumTypes(); i != e; ++i)
     ResultVTs.push_back(N.getSimpleType(i));
 
@@ -973,7 +972,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
                                  NumFixedArityOperands, NextRecordedOperandNo));
 
   // The non-chain and non-glue results of the newly emitted node get recorded.
-  for (MVT::SimpleValueType ResultVT : ResultVTs) {
+  for (MVT ResultVT : ResultVTs) {
     if (ResultVT == MVT::Other || ResultVT == MVT::Glue)
       break;
     OutputOps.push_back(NextRecordedOperandNo++);

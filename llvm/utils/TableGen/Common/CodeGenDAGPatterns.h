@@ -191,8 +191,7 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
   TypeSetByHwMode &operator=(const TypeSetByHwMode &) = default;
-  TypeSetByHwMode(MVT::SimpleValueType VT)
-      : TypeSetByHwMode(ValueTypeByHwMode(VT)) {}
+  TypeSetByHwMode(MVT VT) : TypeSetByHwMode(ValueTypeByHwMode(VT)) {}
   TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList);
 
   SetType &getOrCreate(unsigned Mode) { return Map[Mode]; }
@@ -259,7 +258,7 @@ struct TypeInfer {
   /// otherwise.
 
   bool MergeInTypeInfo(TypeSetByHwMode &Out, const TypeSetByHwMode &In) const;
-  bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT::SimpleValueType InVT) const {
+  bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT InVT) const {
     return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
   }
   bool MergeInTypeInfo(TypeSetByHwMode &Out,
@@ -451,8 +450,8 @@ public:
 
   /// getKnownType - If the type constraints on this node imply a fixed type
   /// (e.g. all stores return void, etc), then return it as an
-  /// MVT::SimpleValueType.  Otherwise, return MVT::Other.
-  MVT::SimpleValueType getKnownType(unsigned ResNo) const;
+  /// MVT.  Otherwise, return MVT::Other.
+  MVT getKnownType(unsigned ResNo) const;
 
   unsigned getProperties() const { return Properties; }
 
@@ -698,8 +697,8 @@ public:
   }
   TypeSetByHwMode &getExtType(unsigned ResNo) { return Types[ResNo]; }
   void setType(unsigned ResNo, const TypeSetByHwMode &T) { Types[ResNo] = T; }
-  MVT::SimpleValueType getSimpleType(unsigned ResNo) const {
-    return Types[ResNo].getMachineValueType().SimpleTy;
+  MVT getSimpleType(unsigned ResNo) const {
+    return Types[ResNo].getMachineValueType();
   }
 
   bool hasConcreteType(unsigned ResNo) const {
@@ -850,8 +849,7 @@ public: // Higher level manipulation routines.
   ///
   bool UpdateNodeType(unsigned ResNo, const TypeSetByHwMode &InTy,
                       TreePattern &TP);
-  bool UpdateNodeType(unsigned ResNo, MVT::SimpleValueType InTy,
-                      TreePattern &TP);
+  bool UpdateNodeType(unsigned ResNo, MVT InTy, TreePattern &TP);
   bool UpdateNodeType(unsigned ResNo, const ValueTypeByHwMode &InTy,
                       TreePattern &TP);
 
@@ -1001,8 +999,7 @@ inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
   return TP.getInfer().MergeInTypeInfo(Types[ResNo], VTS);
 }
 
-inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
-                                            MVT::SimpleValueType InTy,
+inline bool TreePatternNode::UpdateNodeType(unsigned ResNo, MVT InTy,
                                             TreePattern &TP) {
   TypeSetByHwMode VTS(InTy);
   TP.getInfer().expandOverloads(VTS);
