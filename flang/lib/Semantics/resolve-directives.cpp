@@ -532,6 +532,9 @@ public:
   void Post(const parser::OmpBeginLoopDirective &) {
     GetContext().withinConstruct = true;
   }
+  bool Pre(const parser::OpenMPMisplacedEndDirective &x) { return false; }
+  bool Pre(const parser::OpenMPInvalidDirective &x) { return false; }
+
   bool Pre(const parser::DoConstruct &);
 
   bool Pre(const parser::OpenMPSectionsConstruct &);
