@@ -8,6 +8,7 @@
 // CHECK-NEXT:     bf16                FEAT_BF16                                              Enable BFloat16 Extension
 // CHECK-NEXT:     brbe                FEAT_BRBE                                              Enable Branch Record Buffer Extension
 // CHECK-NEXT:     bti                 FEAT_BTI                                               Enable Branch Target Identification
+// CHECK-NEXT:     btie                FEAT_BTIE                                              Enable Enhanced Branch Target Identification extension
 // CHECK-NEXT:     cmh                 FEAT_CMH                                               Enable Armv9.7-A Contention Management Hints
 // CHECK-NEXT:     cmpbr               FEAT_CMPBR                                             Enable Armv9.6-A base compare and branch instructions
 // CHECK-NEXT:     fcma                FEAT_FCMA                                              Enable Armv8.3-A Floating-point complex number support
@@ -59,6 +60,7 @@
 // CHECK-NEXT:     pauth-lr            FEAT_PAuth_LR                                          Enable Armv9.5-A PAC enhancements
 // CHECK-NEXT:     pcdphint            FEAT_PCDPHINT                                          Enable Armv9.6-A Producer Consumer Data Placement hints
 // CHECK-NEXT:     pmuv3               FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
+// CHECK-NEXT:     poe2                FEAT_S1POE2                                            Enable Stage 1 Permission Overlays Extension 2 instructions
 // CHECK-NEXT:     pops                FEAT_PoPS                                              Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions
 // CHECK-NEXT:     predres             FEAT_SPECRES                                           Enable Armv8.5-A execution and data prediction invalidation instructions
 // CHECK-NEXT:     rng                 FEAT_RNG                                               Enable Random Number generation instructions
@@ -113,8 +115,8 @@
 // CHECK-NEXT:     sve2p1              FEAT_SVE2p1                                            Enable Scalable Vector Extension 2.1 instructions
 // CHECK-NEXT:     sve2p2              FEAT_SVE2p2                                            Enable Armv9.6-A Scalable Vector Extension 2.2 instructions
 // CHECK-NEXT:     sve2p3              FEAT_SVE2p3                                            Enable Armv9.7-A Scalable Vector Extension 2.3 instructions
+// CHECK-NEXT:     tev                 FEAT_TEV                                               Enable TIndex Exception-like Vector instructions
 // CHECK-NEXT:     the                 FEAT_THE                                               Enable Armv8.9-A Translation Hardening Extension
 // CHECK-NEXT:     tlbid               FEAT_TLBID                                             Enable Armv9.7-A TLBI Domains extension
 // CHECK-NEXT:     tlbiw               FEAT_TLBIW                                             Enable Armv9.5-A TLBI VMALL for Dirty State
-// CHECK-NEXT:     tme                 FEAT_TME                                               Enable Transactional Memory Extension
 // CHECK-NEXT:     wfxt                FEAT_WFxT                                              Enable Armv8.7-A WFET and WFIT instruction

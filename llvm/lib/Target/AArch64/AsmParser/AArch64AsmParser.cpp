@@ -268,6 +268,7 @@ private:
   ParseStatus tryParsePSBHint(OperandVector &Operands);
   ParseStatus tryParseBTIHint(OperandVector &Operands);
   ParseStatus tryParseCMHPriorityHint(OperandVector &Operands);
+  ParseStatus tryParseTIndexHint(OperandVector &Operands);
   ParseStatus tryParseAdrpLabel(OperandVector &Operands);
   ParseStatus tryParseAdrLabel(OperandVector &Operands);
   template <bool AddFPZeroAsLiteral>
@@ -373,6 +374,7 @@ private:
     k_PHint,
     k_BTIHint,
     k_CMHPriorityHint,
+    k_TIndexHint,
   } Kind;
 
   SMLoc StartLoc, EndLoc;
@@ -507,6 +509,11 @@ private:
     unsigned Length;
     unsigned Val;
   };
+  struct TIndexHintOp {
+    const char *Data;
+    unsigned Length;
+    unsigned Val;
+  };
 
   struct SVCROp {
     const char *Data;
@@ -534,6 +541,7 @@ private:
     struct PHintOp PHint;
     struct BTIHintOp BTIHint;
     struct CMHPriorityHintOp CMHPriorityHint;
+    struct TIndexHintOp TIndexHint;
     struct ShiftExtendOp ShiftExtend;
     struct SVCROp SVCR;
   };
@@ -606,6 +614,9 @@ public:
       break;
     case k_CMHPriorityHint:
       CMHPriorityHint = o.CMHPriorityHint;
+      break;
+    case k_TIndexHint:
+      TIndexHint = o.TIndexHint;
       break;
     case k_ShiftExtend:
       ShiftExtend = o.ShiftExtend;
@@ -789,6 +800,16 @@ public:
   StringRef getCMHPriorityHintName() const {
     assert(Kind == k_CMHPriorityHint && "Invalid access!");
     return StringRef(CMHPriorityHint.Data, CMHPriorityHint.Length);
+  }
+
+  unsigned getTIndexHint() const {
+    assert(Kind == k_TIndexHint && "Invalid access!");
+    return TIndexHint.Val;
+  }
+
+  StringRef getTIndexHintName() const {
+    assert(Kind == k_TIndexHint && "Invalid access!");
+    return StringRef(TIndexHint.Data, TIndexHint.Length);
   }
 
   StringRef getSVCR() const {
@@ -1534,6 +1555,7 @@ public:
   bool isPHint() const { return Kind == k_PHint; }
   bool isBTIHint() const { return Kind == k_BTIHint; }
   bool isCMHPriorityHint() const { return Kind == k_CMHPriorityHint; }
+  bool isTIndexHint() const { return Kind == k_TIndexHint; }
   bool isShiftExtend() const { return Kind == k_ShiftExtend; }
   bool isShifter() const {
     if (!isShiftExtend())
@@ -2224,6 +2246,11 @@ public:
     Inst.addOperand(MCOperand::createImm(getCMHPriorityHint()));
   }
 
+  void addTIndexHintOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getTIndexHint()));
+  }
+
   void addShifterOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     unsigned Imm =
@@ -2583,6 +2610,17 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
+  CreateTIndexHint(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
+    auto Op = std::make_unique<AArch64Operand>(k_TIndexHint, Ctx);
+    Op->TIndexHint.Val = Val;
+    Op->TIndexHint.Data = Str.data();
+    Op->TIndexHint.Length = Str.size();
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+
+  static std::unique_ptr<AArch64Operand>
   CreateMatrixRegister(MCRegister Reg, unsigned ElementWidth, MatrixKind Kind,
                        SMLoc S, SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_MatrixRegister, Ctx);
@@ -2694,6 +2732,9 @@ void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     break;
   case k_CMHPriorityHint:
     OS << getCMHPriorityHintName();
+    break;
+  case k_TIndexHint:
+    OS << getTIndexHintName();
     break;
   case k_MatrixRegister:
     OS << "<matrix " << getMatrixReg().id() << ">";
@@ -3336,6 +3377,23 @@ ParseStatus AArch64AsmParser::tryParseCMHPriorityHint(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
+/// tryParseTIndexHint - Try to parse a TIndex operand
+ParseStatus AArch64AsmParser::tryParseTIndexHint(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  const AsmToken &Tok = getTok();
+  if (Tok.isNot(AsmToken::Identifier))
+    return TokError("invalid operand for instruction");
+
+  auto TIndex = AArch64TIndexHint::lookupTIndexByName(Tok.getString());
+  if (!TIndex)
+    return TokError("invalid operand for instruction");
+
+  Operands.push_back(AArch64Operand::CreateTIndexHint(
+      TIndex->Encoding, Tok.getString(), S, getContext()));
+  Lex(); // Eat identifier token.
+  return ParseStatus::Success;
+}
+
 /// tryParseAdrpLabel - Parse and validate a source label for the ADRP
 /// instruction.
 ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
@@ -3847,7 +3905,6 @@ static const struct Extension {
     {"rdma", {AArch64::FeatureRDM}},
     {"sb", {AArch64::FeatureSB}},
     {"ssbs", {AArch64::FeatureSSBS}},
-    {"tme", {AArch64::FeatureTME}},
     {"fp8", {AArch64::FeatureFP8}},
     {"faminmax", {AArch64::FeatureFAMINMAX}},
     {"fp8fma", {AArch64::FeatureFP8FMA}},
@@ -3894,6 +3951,9 @@ static const struct Extension {
     {"f16f32dot", {AArch64::FeatureF16F32DOT}},
     {"f16f32mm", {AArch64::FeatureF16F32MM}},
     {"mops-go", {AArch64::FeatureMOPS_GO}},
+    {"poe2", {AArch64::FeatureS1POE2}},
+    {"tev", {AArch64::FeatureTEV}},
+    {"btie", {AArch64::FeatureBTIE}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -3983,6 +4043,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
   bool ExpectRegister = true;
   bool OptionalRegister = false;
   bool hasAll = getSTI().hasFeature(AArch64::FeatureAll);
+  bool hasTLBID = getSTI().hasFeature(AArch64::FeatureTLBID);
 
   if (Mnemonic == "ic") {
     const AArch64IC::IC *IC = AArch64IC::lookupICByName(Op);
@@ -4050,7 +4111,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(GIC->getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    ExpectRegister = true;
+    ExpectRegister = GIC->NeedsReg;
     createSysAlias(GIC->Encoding, Operands, S);
   } else if (Mnemonic == "gsb") {
     const AArch64GSB::GSB *GSB = AArch64GSB::lookupGSBByName(Op);
@@ -4063,6 +4124,20 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     }
     ExpectRegister = false;
     createSysAlias(GSB->Encoding, Operands, S);
+  } else if (Mnemonic == "plbi") {
+    const AArch64PLBI::PLBI *PLBI = AArch64PLBI::lookupPLBIByName(Op);
+    if (!PLBI)
+      return TokError("invalid operand for PLBI instruction");
+    else if (!PLBI->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("PLBI " + std::string(PLBI->Name) + " requires: ");
+      setRequiredFeatureString(PLBI->getRequiredFeatures(), Str);
+      return TokError(Str);
+    }
+    ExpectRegister = PLBI->NeedsReg;
+    if (hasAll || hasTLBID) {
+      OptionalRegister = PLBI->OptionalReg;
+    }
+    createSysAlias(PLBI->Encoding, Operands, S);
   } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" ||
              Mnemonic == "cosp") {
 
@@ -5437,11 +5512,11 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
   size_t Start = 0, Next = Name.find('.');
   StringRef Head = Name.slice(Start, Next);
 
-  // IC, DC, AT, TLBI, MLBI, GIC{R}, GSB and Prediction invalidation
+  // IC, DC, AT, TLBI, MLBI, PLBI, GIC{R}, GSB and Prediction invalidation
   // instructions are aliases for the SYS instruction.
   if (Head == "ic" || Head == "dc" || Head == "at" || Head == "tlbi" ||
       Head == "cfp" || Head == "dvp" || Head == "cpp" || Head == "cosp" ||
-      Head == "mlbi" || Head == "gic" || Head == "gsb")
+      Head == "mlbi" || Head == "plbi" || Head == "gic" || Head == "gsb")
     return parseSysAlias(Head, NameLoc, Operands);
 
   // GICR instructions are aliases for the SYSL instruction.
@@ -5923,21 +5998,15 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::CPYETWN:
   case AArch64::CPYETRN:
   case AArch64::CPYETN: {
-    MCRegister Xd_wb = Inst.getOperand(0).getReg();
-    MCRegister Xs_wb = Inst.getOperand(1).getReg();
-    MCRegister Xn_wb = Inst.getOperand(2).getReg();
+    // Xd_wb == op0, Xs_wb == op1, Xn_wb == op2
     MCRegister Xd = Inst.getOperand(3).getReg();
     MCRegister Xs = Inst.getOperand(4).getReg();
     MCRegister Xn = Inst.getOperand(5).getReg();
-    if (Xd_wb != Xd)
-      return Error(Loc[0],
-                   "invalid CPY instruction, Xd_wb and Xd do not match");
-    if (Xs_wb != Xs)
-      return Error(Loc[0],
-                   "invalid CPY instruction, Xs_wb and Xs do not match");
-    if (Xn_wb != Xn)
-      return Error(Loc[0],
-                   "invalid CPY instruction, Xn_wb and Xn do not match");
+
+    assert(Xd == Inst.getOperand(0).getReg() && "Xd_wb and Xd do not match");
+    assert(Xs == Inst.getOperand(1).getReg() && "Xs_wb and Xs do not match");
+    assert(Xn == Inst.getOperand(2).getReg() && "Xn_wb and Xn do not match");
+
     if (Xd == Xs)
       return Error(Loc[0], "invalid CPY instruction, destination and source"
                            " registers are the same");
@@ -5973,17 +6042,14 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::MOPSSETGET:
   case AArch64::MOPSSETGEN:
   case AArch64::MOPSSETGETN: {
-    MCRegister Xd_wb = Inst.getOperand(0).getReg();
-    MCRegister Xn_wb = Inst.getOperand(1).getReg();
+    // Xd_wb == op0, Xn_wb == op1
     MCRegister Xd = Inst.getOperand(2).getReg();
     MCRegister Xn = Inst.getOperand(3).getReg();
     MCRegister Xm = Inst.getOperand(4).getReg();
-    if (Xd_wb != Xd)
-      return Error(Loc[0],
-                   "invalid SET instruction, Xd_wb and Xd do not match");
-    if (Xn_wb != Xn)
-      return Error(Loc[0],
-                   "invalid SET instruction, Xn_wb and Xn do not match");
+
+    assert(Xd == Inst.getOperand(0).getReg() && "Xd_wb and Xd do not match");
+    assert(Xn == Inst.getOperand(1).getReg() && "Xn_wb and Xn do not match");
+
     if (Xd == Xn)
       return Error(Loc[0], "invalid SET instruction, destination and size"
                            " registers are the same");
@@ -6007,16 +6073,13 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::SETGOET:
   case AArch64::SETGOEN:
   case AArch64::SETGOETN: {
-    MCRegister Xd_wb = Inst.getOperand(0).getReg();
-    MCRegister Xn_wb = Inst.getOperand(1).getReg();
+    // Xd_wb == op0, Xn_wb == op1
     MCRegister Xd = Inst.getOperand(2).getReg();
     MCRegister Xn = Inst.getOperand(3).getReg();
-    if (Xd_wb != Xd)
-      return Error(Loc[0],
-                   "invalid SET instruction, Xd_wb and Xd do not match");
-    if (Xn_wb != Xn)
-      return Error(Loc[0],
-                   "invalid SET instruction, Xn_wb and Xn do not match");
+
+    assert(Xd == Inst.getOperand(0).getReg() && "Xd_wb and Xd do not match");
+    assert(Xn == Inst.getOperand(1).getReg() && "Xn_wb and Xn do not match");
+
     if (Xd == Xn)
       return Error(Loc[0], "invalid SET instruction, destination and size"
                            " registers are the same");

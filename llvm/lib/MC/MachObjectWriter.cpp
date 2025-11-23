@@ -570,8 +570,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
     //
     // FIXME: Do not hardcode.
     if (Asm.registerSymbol(*ISD.Symbol))
-      static_cast<MCSymbolMachO *>(ISD.Symbol)
-          ->setReferenceTypeUndefinedLazy(true);
+      ISD.Symbol->setReferenceTypeUndefinedLazy(true);
   }
 }
 

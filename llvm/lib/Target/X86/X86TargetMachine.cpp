@@ -76,7 +76,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeFixupBWInstPassPass(PR);
   initializeCompressEVEXPassPass(PR);
   initializeFixupLEAPassPass(PR);
-  initializeFPSPass(PR);
+  initializeX86FPStackifierLegacyPass(PR);
   initializeX86FixupSetCCPassPass(PR);
   initializeX86CallFrameOptimizationPass(PR);
   initializeX86CmovConverterPassPass(PR);
@@ -531,7 +531,7 @@ void X86PassConfig::addMachineSSAOptimization() {
 
 void X86PassConfig::addPostRegAlloc() {
   addPass(createX86LowerTileCopyPass());
-  addPass(createX86FloatingPointStackifierPass());
+  addPass(createX86FPStackifierLegacyPass());
   // When -O0 is enabled, the Load Value Injection Hardening pass will fall back
   // to using the Speculative Execution Side Effect Suppression pass for
   // mitigation. This is to prevent slow downs due to
@@ -563,8 +563,6 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupVectorConstants());
   }
   addPass(createX86CompressEVEXPass());
-  addPass(createX86DiscriminateMemOpsPass());
-  addPass(createX86InsertPrefetchPass());
   addPass(createX86InsertX87waitPass());
 }
 

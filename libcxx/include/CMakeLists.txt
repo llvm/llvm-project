@@ -822,7 +822,6 @@ set(files
   __type_traits/is_array.h
   __type_traits/is_assignable.h
   __type_traits/is_base_of.h
-  __type_traits/is_bounded_array.h
   __type_traits/is_callable.h
   __type_traits/is_char_like_type.h
   __type_traits/is_class.h
@@ -872,7 +871,6 @@ set(files
   __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
   __type_traits/is_trivially_relocatable.h
-  __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
   __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h

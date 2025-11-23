@@ -30,6 +30,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
@@ -823,6 +824,11 @@ public:
       llvm::iterator_range<CastExpr::path_const_iterator> path,
       bool nullCheckValue, SourceLocation loc);
 
+  Address getAddressOfDerivedClass(
+      mlir::Location loc, Address baseAddr, const CXXRecordDecl *derived,
+      llvm::iterator_range<CastExpr::path_const_iterator> path,
+      bool nullCheckValue);
+
   /// Return the VTT parameter that should be passed to a base
   /// constructor/destructor with virtual bases.
   /// FIXME: VTTs are Itanium ABI-specific, so the definition should move
@@ -929,9 +935,15 @@ public:
     return false;
   }
 
+  void populateEHCatchRegions(EHScopeStack::stable_iterator scope,
+                              cir::TryOp tryOp);
+
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
   EHScopeStack::stable_iterator prologueCleanupDepth;
+
+  bool isCatchOrCleanupRequired();
+  void populateCatchHandlersIfRequired(cir::TryOp tryOp);
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
@@ -1076,7 +1088,7 @@ public:
     bool isSwitch() { return scopeKind == Kind::Switch; }
     bool isTernary() { return scopeKind == Kind::Ternary; }
     bool isTry() { return scopeKind == Kind::Try; }
-
+    cir::TryOp getClosestTryParent();
     void setAsGlobalInit() { scopeKind = Kind::GlobalInit; }
     void setAsSwitch() { scopeKind = Kind::Switch; }
     void setAsTernary() { scopeKind = Kind::Ternary; }
@@ -1277,6 +1289,8 @@ public:
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
+  LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
+
   Address emitArrayToPointerDecay(const Expr *e,
                                   LValueBaseInfo *baseInfo = nullptr);
 
@@ -1341,6 +1355,8 @@ public:
                                               cir::IntType resType,
                                               mlir::Value emittedE,
                                               bool isDynamic);
+
+  int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
@@ -1472,6 +1488,10 @@ public:
 
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
 
+  RValue emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
+                                    const CallExpr *callExpr,
+                                    OverloadedOperatorKind op);
+
   void emitCXXTemporary(const CXXTemporary *temporary, QualType tempType,
                         Address ptr);
 
@@ -1561,6 +1581,9 @@ public:
   void emitForwardingCallToLambda(const CXXMethodDecl *lambdaCallOperator,
                                   CallArgList &callArgs);
 
+  RValue emitCoawaitExpr(const CoawaitExpr &e,
+                         AggValueSlot aggSlot = AggValueSlot::ignored(),
+                         bool ignoreResult = false);
   /// Emit the computation of the specified expression of complex type,
   /// returning the result.
   mlir::Value emitComplexExpr(const Expr *e);
@@ -1626,6 +1649,8 @@ public:
   void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);
   void emitLambdaStaticInvokeBody(const CXXMethodDecl *md);
 
+  void populateCatchHandlers(cir::TryOp tryOp);
+
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
   /// Emit code to compute the specified expression,
@@ -1636,6 +1661,8 @@ public:
 
   /// Load a complex number from the specified l-value.
   mlir::Value emitLoadOfComplex(LValue src, SourceLocation loc);
+
+  RValue emitLoadOfExtVectorElementLValue(LValue lv);
 
   /// Given an expression that represents a value lvalue, this method emits
   /// the address of the lvalue, then loads the result as an rvalue,
@@ -1711,6 +1738,9 @@ public:
 
   void emitScalarInit(const clang::Expr *init, mlir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
+
+  mlir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned idx,
+                                          const Expr *argExpr);
 
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
 

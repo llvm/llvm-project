@@ -310,6 +310,8 @@ private:
                          MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitSBCS(Register Dst, MachineOperand &LHS, MachineOperand &RHS,
                          MachineIRBuilder &MIRBuilder) const;
+  MachineInstr *emitCMP(MachineOperand &LHS, MachineOperand &RHS,
+                        MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitCMN(MachineOperand &LHS, MachineOperand &RHS,
                         MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitTST(MachineOperand &LHS, MachineOperand &RHS,
@@ -4413,6 +4415,15 @@ AArch64InstructionSelector::emitSBCS(Register Dst, MachineOperand &LHS,
 }
 
 MachineInstr *
+AArch64InstructionSelector::emitCMP(MachineOperand &LHS, MachineOperand &RHS,
+                                    MachineIRBuilder &MIRBuilder) const {
+  MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
+  bool Is32Bit = MRI.getType(LHS.getReg()).getSizeInBits() == 32;
+  auto RC = Is32Bit ? &AArch64::GPR32RegClass : &AArch64::GPR64RegClass;
+  return emitSUBS(MRI.createVirtualRegister(RC), LHS, RHS, MIRBuilder);
+}
+
+MachineInstr *
 AArch64InstructionSelector::emitCMN(MachineOperand &LHS, MachineOperand &RHS,
                                     MachineIRBuilder &MIRBuilder) const {
   MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
@@ -4464,8 +4475,7 @@ MachineInstr *AArch64InstructionSelector::emitIntegerCompare(
   // Fold the compare into a cmn or tst if possible.
   if (auto FoldCmp = tryFoldIntegerCompare(LHS, RHS, Predicate, MIRBuilder))
     return FoldCmp;
-  auto Dst = MRI.cloneVirtualRegister(LHS.getReg());
-  return emitSUBS(Dst, LHS, RHS, MIRBuilder);
+  return emitCMP(LHS, RHS, MIRBuilder);
 }
 
 MachineInstr *AArch64InstructionSelector::emitCSetForFCmp(
@@ -4870,9 +4880,8 @@ MachineInstr *AArch64InstructionSelector::emitConjunctionRec(
 
     // Produce a normal comparison if we are first in the chain
     if (!CCOp) {
-      auto Dst = MRI.cloneVirtualRegister(LHS);
       if (isa<GICmp>(Cmp))
-        return emitSUBS(Dst, Cmp->getOperand(2), Cmp->getOperand(3), MIB);
+        return emitCMP(Cmp->getOperand(2), Cmp->getOperand(3), MIB);
       return emitFPCompare(Cmp->getOperand(2).getReg(),
                            Cmp->getOperand(3).getReg(), MIB);
     }

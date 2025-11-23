@@ -602,10 +602,7 @@ static Option *LookupNearestOption(StringRef Arg,
   // Find the closest match.
   Option *Best = nullptr;
   unsigned BestDistance = 0;
-  for (StringMap<Option *>::const_iterator it = OptionsMap.begin(),
-                                           ie = OptionsMap.end();
-       it != ie; ++it) {
-    Option *O = it->second;
+  for (const auto &[_, O] : OptionsMap) {
     // Do not suggest really hidden options (not shown in any help).
     if (O->getOptionHiddenFlag() == ReallyHidden)
       continue;

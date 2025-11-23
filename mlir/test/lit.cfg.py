@@ -208,12 +208,16 @@ tools = [
     add_runtime("mlir_c_runner_utils"),
     add_runtime("mlir_async_runtime"),
     add_runtime("mlir_float16_utils"),
-    add_runtime("mlir_apfloat_wrappers"),
     "mlir-linalg-ods-yaml-gen",
     "mlir-reduce",
     "mlir-pdll",
     "not",
 ]
+
+if "Linux" in config.host_os:
+    # TODO: Run only on Linux until we figure out how to build
+    # mlir_apfloat_wrappers in a platform-independent way.
+    tools.extend([add_runtime("mlir_apfloat_wrappers")])
 
 if config.enable_vulkan_runner:
     tools.extend([add_runtime("mlir_vulkan_runtime")])
