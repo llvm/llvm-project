@@ -130,60 +130,6 @@ if (LLVM_LIBRARY_DIR AND LLVM_TOOLS_BINARY_DIR AND PACKAGE_VERSION)
   set(LLVM_TREE_AVAILABLE ON)
 endif()
 
-if(LLVM_TREE_AVAILABLE)
-  # In a bootstrap build emit the libraries into a default search path in the
-  # build directory of the just-built compiler. This allows using the
-  # just-built compiler without specifying paths to runtime libraries.
-  # LLVM_LIBRARY_OUTPUT_INTDIR/LLVM_RUNTIME_OUTPUT_INTDIR is used by
-  # AddLLVM.cmake as artifact output locations.
-  set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
-  set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_TOOLS_BINARY_DIR})
-
-  # Despite Clang in the name, get_clang_resource_dir does not depend on Clang
-  # being added to the build. Flang uses the same resource dir as Clang.
-  include(GetClangResourceDir)
-  get_clang_resource_dir(RUNTIMES_OUTPUT_RESOURCE_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/..")
-  get_clang_resource_dir(RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT)
-else()
-  # In a standalone runtimes build, do not write into LLVM_BINARY_DIR. It may be
-  # read-only and/or shared by multiple runtimes with different build
-  # configurations (e.g. Debug/Release). Use the runtime's own lib dir like any
-  # non-toolchain library. Use own build directory for artifact output.
-  set(LLVM_LIBRARY_OUTPUT_INTDIR "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX}")
-  set(LLVM_RUNTIME_OUTPUT_INTDIR "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin")
-
-  # For the install prefix, still use the resource dir assuming that Flang will
-  # be installed there using the same prefix. This is to not have a difference
-  # between bootstrap and standalone runtimes builds.
-  set(RUNTIMES_OUTPUT_RESOURCE_DIR "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
-  set(RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
-endif()
-
-# Determine build and install paths.
-# The build path is absolute, but the install dir is relative, CMake's install
-# command has to apply CMAKE_INSTALL_PREFIX itself.
-# FIXME: For shared libraries, the toolchain resource lib dir is not a good
-#        destination because it is not a ld.so default search path.
-#        The machine where the executable is eventually executed may not be the
-#        machine where the Flang compiler and its resource dir is installed, so
-#        setting RPath by the driver is not an solution. It should belong into
-#        /usr/lib/<triple>/lib<name>.so, like e.g. libgcc_s.so.
-#        But the linker as invoked by the Flang driver also requires
-#        libflang_rt.so to be found when linking and the resource lib dir is
-#        the only reliable location.
-include(GetToolchainDirs)
-get_toolchain_library_subdir(toolchain_lib_subdir)
-extend_path(RUNTIMES_OUTPUT_RESOURCE_LIB_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_lib_subdir}")
-
-set(RUNTIMES_INSTALL_RESOURCE_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT}" CACHE PATH "Path to install headers, runtime libraries, and Fortran modules to (default: Clang resource dir)")
-extend_path(RUNTIMES_INSTALL_RESOURCE_LIB_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "${toolchain_lib_subdir}")
-
-cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_DIR)
-cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_PATH)
-cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_LIB_DIR)
-cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
-
-
 # CMake omits default compiler include paths, but in runtimes build, we use
 # -nostdinc and -nostdinc++ and control include paths manually so this behavior
 # is undesirable. Filtering CMAKE_{LANG}_IMPLICIT_INCLUDE_DIRECTORIES to remove
@@ -295,6 +241,61 @@ set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING
 message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
+
+
+if(LLVM_TREE_AVAILABLE)
+  # In a bootstrap build emit the libraries into a default search path in the
+  # build directory of the just-built compiler. This allows using the
+  # just-built compiler without specifying paths to runtime libraries.
+  # LLVM_LIBRARY_OUTPUT_INTDIR/LLVM_RUNTIME_OUTPUT_INTDIR is used by
+  # AddLLVM.cmake as artifact output locations.
+  set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
+  set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_TOOLS_BINARY_DIR})
+
+  # Despite Clang in the name, get_clang_resource_dir does not depend on Clang
+  # being added to the build. Flang uses the same resource dir as Clang.
+  include(GetClangResourceDir)
+  get_clang_resource_dir(RUNTIMES_OUTPUT_RESOURCE_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/..")
+  get_clang_resource_dir(RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT)
+else()
+  # In a standalone runtimes build, do not write into LLVM_BINARY_DIR. It may be
+  # read-only and/or shared by multiple runtimes with different build
+  # configurations (e.g. Debug/Release). Use the runtime's own lib dir like any
+  # non-toolchain library. Use own build directory for artifact output.
+  set(LLVM_LIBRARY_OUTPUT_INTDIR "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX}")
+  set(LLVM_RUNTIME_OUTPUT_INTDIR "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin")
+
+  # For the install prefix, still use the resource dir assuming that Flang will
+  # be installed there using the same prefix. This is to not have a difference
+  # between bootstrap and standalone runtimes builds.
+  set(RUNTIMES_OUTPUT_RESOURCE_DIR "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
+  set(RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
+endif()
+
+# Determine build and install paths.
+# The build path is absolute, but the install dir is relative, CMake's install
+# command has to apply CMAKE_INSTALL_PREFIX itself.
+# FIXME: For shared libraries, the toolchain resource lib dir is not a good
+#        destination because it is not a ld.so default search path.
+#        The machine where the executable is eventually executed may not be the
+#        machine where the Flang compiler and its resource dir is installed, so
+#        setting RPath by the driver is not an solution. It should belong into
+#        /usr/lib/<triple>/lib<name>.so, like e.g. libgcc_s.so.
+#        But the linker as invoked by the Flang driver also requires
+#        libflang_rt.so to be found when linking and the resource lib dir is
+#        the only reliable location.
+include(GetToolchainDirs)
+get_toolchain_library_subdir(toolchain_lib_subdir)
+extend_path(RUNTIMES_OUTPUT_RESOURCE_LIB_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_lib_subdir}")
+
+set(RUNTIMES_INSTALL_RESOURCE_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT}" CACHE PATH "Path to install headers, runtime libraries, and Fortran modules to (default: Clang resource dir)")
+extend_path(RUNTIMES_INSTALL_RESOURCE_LIB_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "${toolchain_lib_subdir}")
+
+cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_DIR)
+cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_PATH)
+cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_LIB_DIR)
+cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
+
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
   set(option_prefix "")
