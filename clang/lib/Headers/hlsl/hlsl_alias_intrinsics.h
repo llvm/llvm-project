@@ -2925,7 +2925,6 @@ _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
 __attribute__((convergent)) double4 WaveActiveProduct(double4);
 
-
 //===----------------------------------------------------------------------===//
 // sign builtins
 //===----------------------------------------------------------------------===//

@@ -229,7 +229,7 @@ private:
                            MachineInstr &I) const;
 
   bool selectWaveReduceProduct(Register ResVReg, const SPIRVType *ResType,
-                           MachineInstr &I) const;
+                               MachineInstr &I) const;
 
   bool selectConst(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;

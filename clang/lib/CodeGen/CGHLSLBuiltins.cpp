@@ -259,7 +259,8 @@ static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
 
 // Return wave active product that corresponds to the QT scalar type
 static Intrinsic::ID getWaveActiveProductIntrinsic(llvm::Triple::ArchType Arch,
-                                                   CGHLSLRuntime &RT, QualType QT) {
+                                                   CGHLSLRuntime &RT,
+                                                   QualType QT) {
   switch (Arch) {
   case llvm::Triple::spirv:
     return Intrinsic::spv_wave_reduce_product;
