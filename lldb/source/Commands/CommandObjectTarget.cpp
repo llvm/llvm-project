@@ -60,6 +60,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"

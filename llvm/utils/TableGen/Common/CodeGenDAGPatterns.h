@@ -71,7 +71,7 @@ struct MachineValueTypeSet {
     return Count;
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  void clear() { std::memset(Words.data(), 0, NumWords * sizeof(WordType)); }
+  void clear() { Words.fill(0); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool empty() const {
     for (WordType W : Words)
