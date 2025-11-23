@@ -68,13 +68,7 @@ TEST_CONSTEXPR_CXX20 bool test_all() {
   return true;
 }
 
-int main(int, char**) {
-  test_all<short, int>();
-  test_all<int, X>();
-#if TEST_STD_VER > 17
-  static_assert(test_all<short, int>());
-  static_assert(test_all<int, X>());
-#endif
+TEST_CONSTEXPR_CXX26 void test_throw() {
   {
     optional<int> rhs;
     test<Z>(std::move(rhs));
@@ -85,6 +79,27 @@ int main(int, char**) {
   }
 
   static_assert(!(std::is_constructible<optional<X>, optional<Z>>::value), "");
+}
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_all<short, int>();
+  test_all<int, X>();
+
+#if TEST_STD_VER >= 26 && 0
+  test_throw();
+#endif
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 20
+  static_assert(test());
+#endif
+
+  {
+    test_throw();
+  }
 
   return 0;
 }
