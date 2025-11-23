@@ -9,10 +9,10 @@ target triple = "thumbv6m-none-none-eabi"
 define void @arm_mean_q7(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef %pResult) #0 {
 ; CHECK-LABEL: @arm_mean_q7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP_NOT10:%.*]] = icmp ult i32 [[BLOCKSIZE:%.*]], 16
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[BLOCKSIZE:%.*]], 4
+; CHECK-NEXT:    [[CMP_NOT10:%.*]] = icmp eq i32 [[SHR]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT10]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[BLOCKSIZE]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[BLOCKSIZE]], -16
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]

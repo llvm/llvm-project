@@ -162,7 +162,6 @@ class IndVarSimplify {
                                  const SCEV *ExitCount,
                                  PHINode *IndVar, SCEVExpander &Rewriter);
 
-
 public:
   IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
                  const DataLayout &DL, TargetLibraryInfo *TLI,
@@ -1998,7 +1997,6 @@ bool IndVarSimplify::run(Loop *L) {
   }
 
   // The Rewriter may not be used from this point on.
-
 
   // rewriteFirstIterationLoopExitValues does not rely on the computation of
   // trip count and therefore can further simplify exit values in addition to
