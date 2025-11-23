@@ -599,8 +599,9 @@ class VariableAnnotator {
   static const std::string kUndefLocationFormatted;
 
 public:
-  /// Compute annotation strings for a single instruction and update `Live_`.
-  /// Returns only the events that should be printed *at this instruction*.
+  /// Compute annotation strings for a single instruction and update
+  /// `m_live_vars`. Returns only the events that should be printed *at this
+  /// instruction*.
   std::vector<std::string> Annotate(Instruction &inst);
 
   /// Returns structured data for all variables relevant at this instruction.

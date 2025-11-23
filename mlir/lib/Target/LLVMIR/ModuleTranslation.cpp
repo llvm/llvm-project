@@ -1637,6 +1637,15 @@ static void convertFunctionMemoryAttributes(LLVMFuncOp func,
   newMemEffects |=
       llvm::MemoryEffects(llvm::MemoryEffects::Location::Other,
                           convertModRefInfoToLLVM(memEffects.getOther()));
+  newMemEffects |=
+      llvm::MemoryEffects(llvm::MemoryEffects::Location::ErrnoMem,
+                          convertModRefInfoToLLVM(memEffects.getErrnoMem()));
+  newMemEffects |=
+      llvm::MemoryEffects(llvm::MemoryEffects::Location::TargetMem0,
+                          convertModRefInfoToLLVM(memEffects.getTargetMem0()));
+  newMemEffects |=
+      llvm::MemoryEffects(llvm::MemoryEffects::Location::TargetMem1,
+                          convertModRefInfoToLLVM(memEffects.getTargetMem1()));
   llvmFunc->setMemoryEffects(newMemEffects);
 }
 
@@ -2254,8 +2263,11 @@ llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
         /* HasRequiresUnifiedSharedMemory = */ false,
         /* HasRequiresDynamicAllocators = */ false);
     unsigned int defaultAS =
-        getLLVMModule()->getDataLayout().getProgramAddressSpace();
+        llvmModule->getDataLayout().getProgramAddressSpace();
     config.setDefaultTargetAS(defaultAS);
+    config.setRuntimeCC(llvmModule->getTargetTriple().isSPIRV()
+                            ? llvm::CallingConv::SPIR_FUNC
+                            : llvm::CallingConv::C);
     ompBuilder->setConfig(std::move(config));
     ompBuilder->initialize();
   }

@@ -208,7 +208,7 @@ Disassembler::GetFunctionDeclLineEntry(const SymbolContext &sc) {
     return {};
 
   LineEntry prologue_end_line = sc.line_entry;
-  SupportFileSP func_decl_file_sp;
+  SupportFileNSP func_decl_file_sp = std::make_shared<SupportFile>();
   uint32_t func_decl_line;
   sc.function->GetStartLineSourceInfo(func_decl_file_sp, func_decl_line);
 
@@ -360,7 +360,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
     return annotations;
   }
 
-  // Collect in-scope variables for this instruction into Current.
+  // Collect in-scope variables for this instruction into current_vars.
   VariableList var_list;
   // Innermost block containing iaddr.
   if (Block *B = sc.block) {
@@ -599,7 +599,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                 LineEntry prologue_end_line = sc.line_entry;
                 if (!ElideMixedSourceAndDisassemblyLine(exe_ctx, sc,
                                                         prologue_end_line)) {
-                  SupportFileSP func_decl_file_sp;
+                  SupportFileNSP func_decl_file_sp =
+                      std::make_shared<SupportFile>();
                   uint32_t func_decl_line;
                   sc.function->GetStartLineSourceInfo(func_decl_file_sp,
                                                       func_decl_line);

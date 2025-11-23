@@ -222,14 +222,14 @@ static void convertLinkerOptionsOp(ArrayAttr options,
   llvm::LLVMContext &context = llvmModule->getContext();
   llvm::NamedMDNode *linkerMDNode =
       llvmModule->getOrInsertNamedMetadata("llvm.linker.options");
-  SmallVector<llvm::Metadata *> MDNodes;
-  MDNodes.reserve(options.size());
+  SmallVector<llvm::Metadata *> mdNodes;
+  mdNodes.reserve(options.size());
   for (auto s : options.getAsRange<StringAttr>()) {
-    auto *MDNode = llvm::MDString::get(context, s.getValue());
-    MDNodes.push_back(MDNode);
+    auto *mdNode = llvm::MDString::get(context, s.getValue());
+    mdNodes.push_back(mdNode);
   }
 
-  auto *listMDNode = llvm::MDTuple::get(context, MDNodes);
+  auto *listMDNode = llvm::MDTuple::get(context, mdNodes);
   linkerMDNode->addOperand(listMDNode);
 }
 
@@ -439,7 +439,14 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
               llvm::MemoryEffects::Location::InaccessibleMem,
               convertModRefInfoToLLVM(memAttr.getInaccessibleMem())) |
           llvm::MemoryEffects(llvm::MemoryEffects::Location::Other,
-                              convertModRefInfoToLLVM(memAttr.getOther()));
+                              convertModRefInfoToLLVM(memAttr.getOther())) |
+          llvm::MemoryEffects(llvm::MemoryEffects::Location::ErrnoMem,
+                              convertModRefInfoToLLVM(memAttr.getErrnoMem())) |
+          llvm::MemoryEffects(
+              llvm::MemoryEffects::Location::TargetMem0,
+              convertModRefInfoToLLVM(memAttr.getTargetMem0())) |
+          llvm::MemoryEffects(llvm::MemoryEffects::Location::TargetMem1,
+                              convertModRefInfoToLLVM(memAttr.getTargetMem1()));
       call->setMemoryEffects(memEffects);
     }
 
