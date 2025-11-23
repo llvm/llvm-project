@@ -480,8 +480,8 @@ class RegisterOperandsCollector {
       collectOperand(*OperI);
 
     // Remove redundant physreg dead defs.
-    for (const VRegMaskOrUnit &P : RegOpers.Defs)
-      removeRegLanes(RegOpers.DeadDefs, P);
+    for (const VRegMaskOrUnit &P : RegOpers.DeadDefs)
+      removeRegLanes(RegOpers.Defs, P);
   }
 
   void collectInstrLanes(const MachineInstr &MI) const {
@@ -489,8 +489,8 @@ class RegisterOperandsCollector {
       collectOperandLanes(*OperI);
 
     // Remove redundant physreg dead defs.
-    for (const VRegMaskOrUnit &P : RegOpers.Defs)
-      removeRegLanes(RegOpers.DeadDefs, P);
+    for (const VRegMaskOrUnit &P : RegOpers.DeadDefs)
+      removeRegLanes(RegOpers.Defs, P);
   }
 
   /// Push this operand's register onto the correct vectors.
