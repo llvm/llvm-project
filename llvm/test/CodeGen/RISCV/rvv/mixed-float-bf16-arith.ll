@@ -159,13 +159,13 @@ entry:
 define <vscale x 1 x bfloat> @test_bf16_i16(<vscale x 1 x bfloat> %0, <vscale x 1 x bfloat> %1, iXLen %2, <vscale x 1 x i16> %3, <vscale x 1 x i16> %4, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_bf16_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a2, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf4, ta, ma
+; CHECK-NEXT:    vadd.vv v10, v10, v11
+; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    vadd.vv v9, v10, v11
-; CHECK-NEXT:    fsrm a2
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16alt, mf4, ta, ma
-; CHECK-NEXT:    vse16.v v9, (a1)
+; CHECK-NEXT:    vse16.v v10, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x bfloat> @llvm.riscv.vfadd.nxv1bf16.nxv1bf16(

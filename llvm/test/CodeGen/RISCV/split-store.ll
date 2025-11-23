@@ -129,8 +129,8 @@ define void @int32_int32_pair(i32 %tmp1, i32 %tmp2, ptr %ref.tmp) {
 ;
 ; RV64-LABEL: int32_int32_pair:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 32
 ; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    slli a1, a1, 32
 ; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    or a0, a1, a0
 ; RV64-NEXT:    sd a0, 0(a2)
@@ -138,8 +138,8 @@ define void @int32_int32_pair(i32 %tmp1, i32 %tmp2, ptr %ref.tmp) {
 ;
 ; RV64D-LABEL: int32_int32_pair:
 ; RV64D:       # %bb.0:
-; RV64D-NEXT:    slli a1, a1, 32
 ; RV64D-NEXT:    slli a0, a0, 32
+; RV64D-NEXT:    slli a1, a1, 32
 ; RV64D-NEXT:    srli a0, a0, 32
 ; RV64D-NEXT:    or a0, a1, a0
 ; RV64D-NEXT:    sd a0, 0(a2)

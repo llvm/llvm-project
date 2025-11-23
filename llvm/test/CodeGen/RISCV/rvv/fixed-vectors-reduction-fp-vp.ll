@@ -121,9 +121,9 @@ declare float @llvm.vp.reduce.fadd.v64f32(float, <64 x float>, <64 x i1>, i32)
 define float @vpreduce_fadd_v64f32(float %s, <64 x float> %v, <64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fadd_v64f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v24, v0, 4
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB8_2
 ; CHECK-NEXT:  # %bb.1:
@@ -149,9 +149,9 @@ define float @vpreduce_fadd_v64f32(float %s, <64 x float> %v, <64 x i1> %m, i32 
 define float @vpreduce_ord_fadd_v64f32(float %s, <64 x float> %v, <64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_ord_fadd_v64f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v24, v0, 4
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB9_2
 ; CHECK-NEXT:  # %bb.1:
@@ -261,9 +261,9 @@ define double @vpreduce_ord_fadd_v4f64(double %s, <4 x double> %v, <4 x i1> %m, 
 define float @vpreduce_fminimum_v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fminimum_v4f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    feq.s a1, fa0, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmfne.vv v9, v8, v8, v0.t
-; CHECK-NEXT:    feq.s a1, fa0, fa0
 ; CHECK-NEXT:    vcpop.m a2, v9, v0.t
 ; CHECK-NEXT:    xori a1, a1, 1
 ; CHECK-NEXT:    or a1, a2, a1
@@ -286,9 +286,9 @@ define float @vpreduce_fminimum_v4f32(float %start, <4 x float> %val, <4 x i1> %
 define float @vpreduce_fmaximum_v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fmaximum_v4f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    feq.s a1, fa0, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmfne.vv v9, v8, v8, v0.t
-; CHECK-NEXT:    feq.s a1, fa0, fa0
 ; CHECK-NEXT:    vcpop.m a2, v9, v0.t
 ; CHECK-NEXT:    xori a1, a1, 1
 ; CHECK-NEXT:    or a1, a2, a1

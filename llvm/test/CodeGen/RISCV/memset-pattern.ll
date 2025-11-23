@@ -24,9 +24,9 @@ define void @memset_1(ptr %a, i128 %value) nounwind {
 ; RV32-BOTH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-BOTH-NEXT:    slli a7, a2, 4
 ; RV32-BOTH-NEXT:    addi a2, a2, 1
-; RV32-BOTH-NEXT:    add a7, a0, a7
 ; RV32-BOTH-NEXT:    seqz t0, a2
 ; RV32-BOTH-NEXT:    add a6, a6, t0
+; RV32-BOTH-NEXT:    add a7, a0, a7
 ; RV32-BOTH-NEXT:    or t0, a2, a6
 ; RV32-BOTH-NEXT:    sw a3, 0(a7)
 ; RV32-BOTH-NEXT:    sw a4, 4(a7)
@@ -84,7 +84,6 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-NEXT:    slli s4, a2, 4
 ; RV32-NEXT:    addi a2, a2, 1
 ; RV32-NEXT:    add s4, a0, s4
-; RV32-NEXT:    seqz s5, a2
 ; RV32-NEXT:    sb a4, 4(s4)
 ; RV32-NEXT:    sb t1, 5(s4)
 ; RV32-NEXT:    sb t0, 6(s4)
@@ -93,11 +92,12 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-NEXT:    sb t4, 1(s4)
 ; RV32-NEXT:    sb t3, 2(s4)
 ; RV32-NEXT:    sb t2, 3(s4)
+; RV32-NEXT:    seqz s5, a2
+; RV32-NEXT:    add a3, a3, s5
 ; RV32-NEXT:    sb a6, 8(s4)
 ; RV32-NEXT:    sb s0, 9(s4)
 ; RV32-NEXT:    sb t6, 10(s4)
 ; RV32-NEXT:    sb t5, 11(s4)
-; RV32-NEXT:    add a3, a3, s5
 ; RV32-NEXT:    or s5, a2, a3
 ; RV32-NEXT:    sb a1, 12(s4)
 ; RV32-NEXT:    sb s3, 13(s4)
@@ -174,9 +174,9 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-FAST-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-FAST-NEXT:    slli a7, a2, 4
 ; RV32-FAST-NEXT:    addi a2, a2, 1
-; RV32-FAST-NEXT:    add a7, a0, a7
 ; RV32-FAST-NEXT:    seqz t0, a2
 ; RV32-FAST-NEXT:    add a6, a6, t0
+; RV32-FAST-NEXT:    add a7, a0, a7
 ; RV32-FAST-NEXT:    or t0, a2, a6
 ; RV32-FAST-NEXT:    sw a3, 0(a7)
 ; RV32-FAST-NEXT:    sw a4, 4(a7)
@@ -215,10 +215,10 @@ define void @memset_4(ptr %a, i128 %value) nounwind {
 ; RV32-BOTH-NEXT:    slli a7, a2, 4
 ; RV32-BOTH-NEXT:    addi a2, a2, 1
 ; RV32-BOTH-NEXT:    seqz t0, a2
-; RV32-BOTH-NEXT:    sltiu t1, a2, 4
 ; RV32-BOTH-NEXT:    add a6, a6, t0
-; RV32-BOTH-NEXT:    seqz t0, a6
-; RV32-BOTH-NEXT:    and t0, t0, t1
+; RV32-BOTH-NEXT:    sltiu t0, a2, 4
+; RV32-BOTH-NEXT:    seqz t1, a6
+; RV32-BOTH-NEXT:    and t0, t1, t0
 ; RV32-BOTH-NEXT:    add a7, a0, a7
 ; RV32-BOTH-NEXT:    sw a3, 0(a7)
 ; RV32-BOTH-NEXT:    sw a4, 4(a7)
@@ -285,9 +285,9 @@ define void @memset_x(ptr %a, i128 %value, i64 %x) nounwind {
 ; RV64-BOTH-NEXT:    li a4, 0
 ; RV64-BOTH-NEXT:  .LBB3_2: # %loadstoreloop
 ; RV64-BOTH-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64-BOTH-NEXT:    addi a4, a4, 1
 ; RV64-BOTH-NEXT:    sd a1, 0(a0)
 ; RV64-BOTH-NEXT:    sd a2, 8(a0)
-; RV64-BOTH-NEXT:    addi a4, a4, 1
 ; RV64-BOTH-NEXT:    addi a0, a0, 16
 ; RV64-BOTH-NEXT:    bltu a4, a3, .LBB3_2
 ; RV64-BOTH-NEXT:  .LBB3_3: # %split

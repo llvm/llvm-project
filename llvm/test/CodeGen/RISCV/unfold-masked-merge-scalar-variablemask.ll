@@ -659,8 +659,8 @@ define i32 @out_constant_varx_42(i32 %x, i32 %y, i32 %mask) {
 ;
 ; CHECK-ZBB-LABEL: out_constant_varx_42:
 ; CHECK-ZBB:       # %bb.0:
-; CHECK-ZBB-NEXT:    and a0, a2, a0
 ; CHECK-ZBB-NEXT:    li a1, 42
+; CHECK-ZBB-NEXT:    and a0, a2, a0
 ; CHECK-ZBB-NEXT:    andn a1, a1, a2
 ; CHECK-ZBB-NEXT:    or a0, a0, a1
 ; CHECK-ZBB-NEXT:    ret
@@ -980,9 +980,9 @@ define i32 @in_multiuse_B(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 define i32 @n0_badmask(i32 %x, i32 %y, i32 %mask, i32 %mask2) {
 ; CHECK-I-LABEL: n0_badmask:
 ; CHECK-I:       # %bb.0:
+; CHECK-I-NEXT:    not a3, a3
 ; CHECK-I-NEXT:    and a0, a0, a2
-; CHECK-I-NEXT:    not a2, a3
-; CHECK-I-NEXT:    and a1, a1, a2
+; CHECK-I-NEXT:    and a1, a1, a3
 ; CHECK-I-NEXT:    or a0, a0, a1
 ; CHECK-I-NEXT:    ret
 ;
@@ -1002,9 +1002,9 @@ define i32 @n0_badmask(i32 %x, i32 %y, i32 %mask, i32 %mask2) {
 define i32 @n0_badxor(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: n0_badxor:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    xori a3, a2, 1
 ; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    xori a2, a2, 1
-; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    and a1, a1, a3
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    ret
   %mx = and i32 %x, %mask

@@ -145,9 +145,9 @@ define void @pr128468(ptr %0, i32 signext %1, i32 signext %2) {
 ; RV32-NEXT:    add a1, a0, a1
 ; RV32-NEXT:    lw a4, 0(a1)
 ; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    slli a2, a2, 3
 ; RV32-NEXT:    sw a4, 0(a3)
-; RV32-NEXT:    slli a3, a2, 3
-; RV32-NEXT:    add a3, a0, a3
+; RV32-NEXT:    add a3, a0, a2
 ; RV32-NEXT:    lw a2, 4(a3)
 ; RV32-NEXT:    bgez a2, .LBB7_3
 ; RV32-NEXT:  # %bb.5: # in Loop: Header=BB7_4 Depth=1
@@ -181,9 +181,9 @@ define void @pr128468(ptr %0, i32 signext %1, i32 signext %2) {
 ; RV64-NEXT:    lw a4, 0(a1)
 ; RV64-NEXT:    mv a1, a2
 ; RV64-NEXT:    slliw a2, a2, 1
+; RV64-NEXT:    slli a5, a2, 2
 ; RV64-NEXT:    sw a4, 0(a3)
-; RV64-NEXT:    slli a3, a2, 2
-; RV64-NEXT:    add a3, a0, a3
+; RV64-NEXT:    add a3, a0, a5
 ; RV64-NEXT:    lw a4, 4(a3)
 ; RV64-NEXT:    bgez a4, .LBB7_3
 ; RV64-NEXT:  # %bb.5: # in Loop: Header=BB7_4 Depth=1

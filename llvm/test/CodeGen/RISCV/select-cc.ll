@@ -91,35 +91,35 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV32IXQCI-NEXT:    lw a3, 0(a1)
 ; RV32IXQCI-NEXT:    lw a4, 0(a1)
 ; RV32IXQCI-NEXT:    lw a5, 0(a1)
+; RV32IXQCI-NEXT:    lw a6, 0(a1)
+; RV32IXQCI-NEXT:    lw a7, 0(a1)
+; RV32IXQCI-NEXT:    lw t0, 0(a1)
+; RV32IXQCI-NEXT:    lw t1, 0(a1)
 ; RV32IXQCI-NEXT:    qc.mvne a0, a0, a2, a2
 ; RV32IXQCI-NEXT:    qc.mveq a0, a0, a3, a3
-; RV32IXQCI-NEXT:    lw a2, 0(a1)
 ; RV32IXQCI-NEXT:    qc.mvgeu a0, a4, a0, a4
-; RV32IXQCI-NEXT:    lw a3, 0(a1)
 ; RV32IXQCI-NEXT:    qc.mvltu a0, a0, a5, a5
-; RV32IXQCI-NEXT:    lw a4, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvgeu a0, a0, a2, a2
+; RV32IXQCI-NEXT:    qc.mvgeu a0, a0, a6, a6
 ; RV32IXQCI-NEXT:    lw a2, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvltu a0, a3, a0, a3
+; RV32IXQCI-NEXT:    qc.mvltu a0, a7, a0, a7
 ; RV32IXQCI-NEXT:    lw a3, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvge a0, a4, a0, a4
+; RV32IXQCI-NEXT:    qc.mvge a0, t0, a0, t0
 ; RV32IXQCI-NEXT:    lw a4, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvlt a0, a0, a2, a2
+; RV32IXQCI-NEXT:    qc.mvlt a0, a0, t1, t1
+; RV32IXQCI-NEXT:    lw a5, 0(a1)
+; RV32IXQCI-NEXT:    qc.mvge a0, a0, a2, a2
 ; RV32IXQCI-NEXT:    lw a2, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvge a0, a0, a3, a3
-; RV32IXQCI-NEXT:    lw a3, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvlt a0, a4, a0, a4
-; RV32IXQCI-NEXT:    lw a4, 0(a1)
+; RV32IXQCI-NEXT:    qc.mvlt a0, a3, a0, a3
 ; RV32IXQCI-NEXT:    lw a1, 0(a1)
-; RV32IXQCI-NEXT:    blez a2, .LBB0_2
+; RV32IXQCI-NEXT:    blez a4, .LBB0_2
 ; RV32IXQCI-NEXT:  # %bb.1:
-; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    mv a0, a4
 ; RV32IXQCI-NEXT:  .LBB0_2:
-; RV32IXQCI-NEXT:    qc.mvlti a0, a2, 0, a3
+; RV32IXQCI-NEXT:    qc.mvlti a0, a4, 0, a5
 ; RV32IXQCI-NEXT:    li a3, 1024
-; RV32IXQCI-NEXT:    qc.mvge a0, a3, a4, a4
-; RV32IXQCI-NEXT:    li a3, 2046
-; RV32IXQCI-NEXT:    qc.mvgeu a0, a3, a2, a1
+; RV32IXQCI-NEXT:    qc.mvge a0, a3, a2, a2
+; RV32IXQCI-NEXT:    li a2, 2046
+; RV32IXQCI-NEXT:    qc.mvgeu a0, a2, a4, a1
 ; RV32IXQCI-NEXT:    ret
 ;
 ; RV64I-LABEL: foo:
@@ -204,47 +204,47 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
 ; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
 ; RV64I-CCMOV-NEXT:    lw a5, 0(a1)
-; RV64I-CCMOV-NEXT:    xor a6, a0, a2
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a6, a2, a0
+; RV64I-CCMOV-NEXT:    lw a6, 0(a1)
+; RV64I-CCMOV-NEXT:    lw a7, 0(a1)
+; RV64I-CCMOV-NEXT:    lw t0, 0(a1)
+; RV64I-CCMOV-NEXT:    lw t1, 0(a1)
+; RV64I-CCMOV-NEXT:    xor t2, a0, a2
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, t2, a2, a0
 ; RV64I-CCMOV-NEXT:    xor a2, a0, a3
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a0, a3
+; RV64I-CCMOV-NEXT:    sltu a2, a4, a0
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a0, a4
+; RV64I-CCMOV-NEXT:    sltu a2, a0, a5
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a5, a0
+; RV64I-CCMOV-NEXT:    sltu a2, a0, a6
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a0, a6
+; RV64I-CCMOV-NEXT:    sltu a2, a7, a0
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a7, a0
+; RV64I-CCMOV-NEXT:    sext.w a2, a0
+; RV64I-CCMOV-NEXT:    slt a2, t0, a2
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a0, t0
 ; RV64I-CCMOV-NEXT:    lw a2, 0(a1)
-; RV64I-CCMOV-NEXT:    sltu a3, a4, a0
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a3, a0, a4
+; RV64I-CCMOV-NEXT:    sext.w a3, a0
+; RV64I-CCMOV-NEXT:    slt a3, a3, t1
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a3, t1, a0
 ; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
-; RV64I-CCMOV-NEXT:    sltu a4, a0, a5
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a4, a5, a0
-; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
-; RV64I-CCMOV-NEXT:    sltu a5, a0, a2
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a2
+; RV64I-CCMOV-NEXT:    sext.w a4, a0
+; RV64I-CCMOV-NEXT:    slt a4, a4, a2
+; RV64I-CCMOV-NEXT:    lw a5, 0(a1)
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a4, a0, a2
 ; RV64I-CCMOV-NEXT:    lw a2, 0(a1)
-; RV64I-CCMOV-NEXT:    sltu a5, a3, a0
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a3, a0
-; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
-; RV64I-CCMOV-NEXT:    sext.w a5, a0
-; RV64I-CCMOV-NEXT:    slt a5, a4, a5
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a4
-; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
-; RV64I-CCMOV-NEXT:    sext.w a5, a0
-; RV64I-CCMOV-NEXT:    slt a5, a5, a2
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a2, a0
-; RV64I-CCMOV-NEXT:    lw a2, 0(a1)
-; RV64I-CCMOV-NEXT:    sext.w a5, a0
-; RV64I-CCMOV-NEXT:    slt a5, a5, a3
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a3
-; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
-; RV64I-CCMOV-NEXT:    sext.w a5, a0
-; RV64I-CCMOV-NEXT:    slt a5, a4, a5
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a4, a0
-; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
-; RV64I-CCMOV-NEXT:    slti a5, a2, 1
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a2
-; RV64I-CCMOV-NEXT:    srli a5, a2, 63
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a3, a0
+; RV64I-CCMOV-NEXT:    sext.w a4, a0
+; RV64I-CCMOV-NEXT:    lw a6, 0(a1)
+; RV64I-CCMOV-NEXT:    slt a4, a3, a4
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a4, a3, a0
+; RV64I-CCMOV-NEXT:    slti a3, a5, 1
 ; RV64I-CCMOV-NEXT:    lw a1, 0(a1)
-; RV64I-CCMOV-NEXT:    slti a3, a4, 1025
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a3, a4, a0
-; RV64I-CCMOV-NEXT:    sltiu a2, a2, 2047
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a3, a0, a5
+; RV64I-CCMOV-NEXT:    srli a3, a5, 63
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a3, a2, a0
+; RV64I-CCMOV-NEXT:    slti a2, a6, 1025
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a6, a0
+; RV64I-CCMOV-NEXT:    sltiu a2, a5, 2047
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a1, a0
 ; RV64I-CCMOV-NEXT:    sext.w a0, a0
 ; RV64I-CCMOV-NEXT:    ret
@@ -466,10 +466,10 @@ define i64 @select_sge_int32min(i64 %x, i64 %y, i64 %z) {
 ;
 ; RV32IXQCI-LABEL: select_sge_int32min:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    srli a6, a0, 31
-; RV32IXQCI-NEXT:    srli a0, a1, 31
-; RV32IXQCI-NEXT:    xori a0, a0, 1
-; RV32IXQCI-NEXT:    qc.mveqi a0, a1, -1, a6
+; RV32IXQCI-NEXT:    srli a6, a1, 31
+; RV32IXQCI-NEXT:    srli a7, a0, 31
+; RV32IXQCI-NEXT:    xori a0, a6, 1
+; RV32IXQCI-NEXT:    qc.mveqi a0, a1, -1, a7
 ; RV32IXQCI-NEXT:    qc.mveqi a2, a0, 0, a4
 ; RV32IXQCI-NEXT:    qc.mveqi a3, a0, 0, a5
 ; RV32IXQCI-NEXT:    mv a0, a2

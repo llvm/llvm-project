@@ -426,8 +426,8 @@ entry:
 define i64 @sh6_sh3_add2(i64 noundef %x, i64 noundef %y, i64 noundef %z) {
 ; RV64I-LABEL: sh6_sh3_add2:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    slli a2, a2, 3
 ; RV64I-NEXT:    slli a1, a1, 6
+; RV64I-NEXT:    slli a2, a2, 3
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    ret
@@ -479,8 +479,8 @@ define i64 @sh6_sh3_add4(i64 noundef %x, i64 noundef %y, i64 noundef %z) {
 ;
 ; RV64ZBA-LABEL: sh6_sh3_add4:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    slli a1, a1, 6
 ; RV64ZBA-NEXT:    sh3add a0, a2, a0
+; RV64ZBA-NEXT:    slli a1, a1, 6
 ; RV64ZBA-NEXT:    add a0, a0, a1
 ; RV64ZBA-NEXT:    ret
 entry:
@@ -1014,18 +1014,18 @@ define i64 @pack_i64(i64 %a, i64 %b) nounwind {
 define i64 @pack_i64_2(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: pack_i64_2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a1, a1, 32
+; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    slli a1, a1, 32
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: pack_i64_2:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    zext.w a0, a0
 ; RV64ZBA-NEXT:    zext.w a1, a1
+; RV64ZBA-NEXT:    zext.w a0, a0
 ; RV64ZBA-NEXT:    slli a1, a1, 32
 ; RV64ZBA-NEXT:    or a0, a1, a0
 ; RV64ZBA-NEXT:    ret

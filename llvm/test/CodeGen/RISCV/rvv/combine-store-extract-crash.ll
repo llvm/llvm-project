@@ -15,10 +15,10 @@ define void @test(ptr %ref_array, ptr %sad_array) {
 ; RV32-NEXT:    vmv.s.x v12, zero
 ; RV32-NEXT:    vredsum.vs v8, v8, v12
 ; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:    th.swia a0, (a1), 4, 0
 ; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vle8.v v13, (a3)
 ; RV32-NEXT:    vmv.v.i v8, 0
+; RV32-NEXT:    th.swia a0, (a1), 4, 0
+; RV32-NEXT:    vle8.v v13, (a3)
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32-NEXT:    vslideup.vi v13, v8, 4
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
@@ -38,10 +38,10 @@ define void @test(ptr %ref_array, ptr %sad_array) {
 ; RV64-NEXT:    vmv.s.x v12, zero
 ; RV64-NEXT:    vredsum.vs v8, v8, v12
 ; RV64-NEXT:    vmv.x.s a0, v8
-; RV64-NEXT:    th.swia a0, (a1), 4, 0
 ; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV64-NEXT:    vle8.v v13, (a3)
 ; RV64-NEXT:    vmv.v.i v8, 0
+; RV64-NEXT:    th.swia a0, (a1), 4, 0
+; RV64-NEXT:    vle8.v v13, (a3)
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64-NEXT:    vslideup.vi v13, v8, 4
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma

@@ -244,11 +244,11 @@ define <vscale x 1 x i64> @intrinsic_vmv.s.x_x_nxv1i64(<vscale x 1 x i64> %0, i6
 ; RV32-LABEL: intrinsic_vmv.s.x_x_nxv1i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; RV32-NEXT:    vid.v v9
 ; RV32-NEXT:    vmseq.vi v0, v9, 0
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
@@ -270,11 +270,11 @@ define <vscale x 2 x i64> @intrinsic_vmv.s.x_x_nxv2i64(<vscale x 2 x i64> %0, i6
 ; RV32-LABEL: intrinsic_vmv.s.x_x_nxv2i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; RV32-NEXT:    vid.v v10
 ; RV32-NEXT:    vmseq.vi v0, v10, 0
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
@@ -296,11 +296,11 @@ define <vscale x 4 x i64> @intrinsic_vmv.s.x_x_nxv4i64(<vscale x 4 x i64> %0, i6
 ; RV32-LABEL: intrinsic_vmv.s.x_x_nxv4i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; RV32-NEXT:    vid.v v12
 ; RV32-NEXT:    vmseq.vi v0, v12, 0
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
@@ -322,11 +322,11 @@ define <vscale x 8 x i64> @intrinsic_vmv.s.x_x_nxv8i64(<vscale x 8 x i64> %0, i6
 ; RV32-LABEL: intrinsic_vmv.s.x_x_nxv8i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
 ; RV32-NEXT:    vid.v v16
 ; RV32-NEXT:    vmseq.vi v0, v16, 0
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero, v0.t
 ; RV32-NEXT:    addi sp, sp, 16

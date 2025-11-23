@@ -121,21 +121,21 @@ define void @test3(ptr %t) {
 ; RV32I-LABEL: test3:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, 20
-; RV32I-NEXT:    li a2, 2
 ; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    li a1, 3
-; RV32I-NEXT:    sw a2, -1916(a0)
-; RV32I-NEXT:    sw a1, -1912(a0)
+; RV32I-NEXT:    li a1, 2
+; RV32I-NEXT:    li a2, 3
+; RV32I-NEXT:    sw a1, -1916(a0)
+; RV32I-NEXT:    sw a2, -1912(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test3:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    lui a1, 20
-; RV64I-NEXT:    li a2, 2
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    li a1, 3
-; RV64I-NEXT:    sw a2, -1916(a0)
-; RV64I-NEXT:    sw a1, -1912(a0)
+; RV64I-NEXT:    li a1, 2
+; RV64I-NEXT:    li a2, 3
+; RV64I-NEXT:    sw a1, -1916(a0)
+; RV64I-NEXT:    sw a2, -1912(a0)
 ; RV64I-NEXT:    ret
 entry:
   %splitgep = getelementptr i8, ptr %t, i64 80000

@@ -237,8 +237,8 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    call __addsf3
 ; RV32I-NEXT:    lui a1, 524288
-; RV32I-NEXT:    slli s0, s0, 1
 ; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    slli s0, s0, 1
 ; RV32I-NEXT:    srli s0, s0, 1
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    or a0, s0, a0
@@ -255,8 +255,8 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    call __addsf3
 ; RV64I-NEXT:    lui a1, 524288
-; RV64I-NEXT:    slli s0, s0, 33
 ; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    slli s0, s0, 33
 ; RV64I-NEXT:    srli s0, s0, 33
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    or a0, s0, a0
@@ -965,8 +965,8 @@ define float @fnmadd_s_contract(float %a, float %b, float %c) nounwind {
 ; CHECKIF-NEXT:    fmv.w.x fa5, zero
 ; CHECKIF-NEXT:    fadd.s fa4, fa0, fa5
 ; CHECKIF-NEXT:    fadd.s fa3, fa1, fa5
-; CHECKIF-NEXT:    fadd.s fa5, fa2, fa5
 ; CHECKIF-NEXT:    fmul.s fa4, fa4, fa3
+; CHECKIF-NEXT:    fadd.s fa5, fa2, fa5
 ; CHECKIF-NEXT:    fneg.s fa4, fa4
 ; CHECKIF-NEXT:    fsub.s fa0, fa4, fa5
 ; CHECKIF-NEXT:    ret

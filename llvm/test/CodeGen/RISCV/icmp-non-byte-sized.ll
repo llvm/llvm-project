@@ -9,16 +9,16 @@ define i1 @icmp_non_byte_type(ptr %p1, ptr %p2) nounwind {
 ; CHECK-RV32-NEXT:    lw a3, 4(a0)
 ; CHECK-RV32-NEXT:    lw a4, 8(a0)
 ; CHECK-RV32-NEXT:    lw a0, 12(a0)
-; CHECK-RV32-NEXT:    lw a5, 12(a1)
-; CHECK-RV32-NEXT:    lw a6, 4(a1)
-; CHECK-RV32-NEXT:    lw a7, 8(a1)
-; CHECK-RV32-NEXT:    lw a1, 0(a1)
-; CHECK-RV32-NEXT:    xor a0, a0, a5
-; CHECK-RV32-NEXT:    xor a3, a3, a6
-; CHECK-RV32-NEXT:    xor a4, a4, a7
-; CHECK-RV32-NEXT:    xor a1, a2, a1
+; CHECK-RV32-NEXT:    lw a5, 4(a1)
+; CHECK-RV32-NEXT:    lw a6, 12(a1)
+; CHECK-RV32-NEXT:    lw a7, 0(a1)
+; CHECK-RV32-NEXT:    lw a1, 8(a1)
+; CHECK-RV32-NEXT:    xor a0, a0, a6
+; CHECK-RV32-NEXT:    xor a3, a3, a5
+; CHECK-RV32-NEXT:    xor a1, a4, a1
+; CHECK-RV32-NEXT:    xor a2, a2, a7
 ; CHECK-RV32-NEXT:    or a0, a3, a0
-; CHECK-RV32-NEXT:    or a1, a1, a4
+; CHECK-RV32-NEXT:    or a1, a2, a1
 ; CHECK-RV32-NEXT:    or a0, a1, a0
 ; CHECK-RV32-NEXT:    seqz a0, a0
 ; CHECK-RV32-NEXT:    ret
@@ -27,11 +27,11 @@ define i1 @icmp_non_byte_type(ptr %p1, ptr %p2) nounwind {
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    ld a2, 0(a0)
 ; CHECK-RV64-NEXT:    ld a0, 8(a0)
-; CHECK-RV64-NEXT:    ld a3, 8(a1)
-; CHECK-RV64-NEXT:    ld a1, 0(a1)
-; CHECK-RV64-NEXT:    xor a0, a0, a3
-; CHECK-RV64-NEXT:    xor a1, a2, a1
-; CHECK-RV64-NEXT:    or a0, a1, a0
+; CHECK-RV64-NEXT:    ld a3, 0(a1)
+; CHECK-RV64-NEXT:    ld a1, 8(a1)
+; CHECK-RV64-NEXT:    xor a0, a0, a1
+; CHECK-RV64-NEXT:    xor a2, a2, a3
+; CHECK-RV64-NEXT:    or a0, a2, a0
 ; CHECK-RV64-NEXT:    seqz a0, a0
 ; CHECK-RV64-NEXT:    ret
   %v1 = load i127, ptr %p1

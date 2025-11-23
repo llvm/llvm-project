@@ -1078,11 +1078,11 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32I-NEXT:    addi s5, s5, 1
 ; RV32I-NEXT:    seqz a2, s5
 ; RV32I-NEXT:    add s6, s6, a2
-; RV32I-NEXT:    xor a2, s5, s2
 ; RV32I-NEXT:    add a1, a1, s4
+; RV32I-NEXT:    add s3, a0, s3
+; RV32I-NEXT:    xor a2, s5, s2
 ; RV32I-NEXT:    xor a3, s6, s1
 ; RV32I-NEXT:    or a2, a2, a3
-; RV32I-NEXT:    add s3, a0, s3
 ; RV32I-NEXT:    sltu s4, s3, a0
 ; RV32I-NEXT:    add s4, a1, s4
 ; RV32I-NEXT:    bnez a2, .LBB20_5
@@ -1143,11 +1143,11 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32IXQCILI-NEXT:    addi s1, s1, 1
 ; RV32IXQCILI-NEXT:    seqz a2, s1
 ; RV32IXQCILI-NEXT:    add s0, s0, a2
-; RV32IXQCILI-NEXT:    xor a2, s1, s3
 ; RV32IXQCILI-NEXT:    add a1, a1, s5
+; RV32IXQCILI-NEXT:    add s6, s6, a0
+; RV32IXQCILI-NEXT:    xor a2, s1, s3
 ; RV32IXQCILI-NEXT:    xor a3, s0, s4
 ; RV32IXQCILI-NEXT:    or a2, a2, a3
-; RV32IXQCILI-NEXT:    add s6, s6, a0
 ; RV32IXQCILI-NEXT:    sltu s5, s6, a0
 ; RV32IXQCILI-NEXT:    add s5, s5, a1
 ; RV32IXQCILI-NEXT:    bnez a2, .LBB20_5
@@ -1208,11 +1208,11 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32I-MEDIUM-NEXT:    addi s5, s5, 1
 ; RV32I-MEDIUM-NEXT:    seqz a2, s5
 ; RV32I-MEDIUM-NEXT:    add s6, s6, a2
-; RV32I-MEDIUM-NEXT:    xor a2, s5, s2
 ; RV32I-MEDIUM-NEXT:    add a1, a1, s4
+; RV32I-MEDIUM-NEXT:    add s3, a0, s3
+; RV32I-MEDIUM-NEXT:    xor a2, s5, s2
 ; RV32I-MEDIUM-NEXT:    xor a3, s6, s1
 ; RV32I-MEDIUM-NEXT:    or a2, a2, a3
-; RV32I-MEDIUM-NEXT:    add s3, a0, s3
 ; RV32I-MEDIUM-NEXT:    sltu s4, s3, a0
 ; RV32I-MEDIUM-NEXT:    add s4, a1, s4
 ; RV32I-MEDIUM-NEXT:    bnez a2, .LBB20_5
@@ -1454,61 +1454,61 @@ define i1 @pr134525() nounwind {
 ; RV32I-NEXT:    lui a0, %hi(ki_end)
 ; RV32I-NEXT:    addi a0, a0, %lo(ki_end)
 ; RV32I-NEXT:    lui a1, 523776
-; RV32I-NEXT:    lui a2, 32
 ; RV32I-NEXT:    add a1, a0, a1
+; RV32I-NEXT:    lui a2, 32
 ; RV32I-NEXT:    addi a2, a2, 1
-; RV32I-NEXT:    sltu a2, a1, a2
 ; RV32I-NEXT:    sltu a0, a1, a0
+; RV32I-NEXT:    sltu a1, a1, a2
 ; RV32I-NEXT:    not a0, a0
-; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCILI-LABEL: pr134525:
 ; RV32IXQCILI:       # %bb.0: # %entry
 ; RV32IXQCILI-NEXT:    qc.e.li a0, ki_end
 ; RV32IXQCILI-NEXT:    lui a1, 523776
-; RV32IXQCILI-NEXT:    qc.li a2, 131073
 ; RV32IXQCILI-NEXT:    add a1, a1, a0
-; RV32IXQCILI-NEXT:    sltu a2, a1, a2
+; RV32IXQCILI-NEXT:    qc.li a2, 131073
 ; RV32IXQCILI-NEXT:    sltu a0, a1, a0
+; RV32IXQCILI-NEXT:    sltu a1, a1, a2
 ; RV32IXQCILI-NEXT:    not a0, a0
-; RV32IXQCILI-NEXT:    and a0, a0, a2
+; RV32IXQCILI-NEXT:    and a0, a0, a1
 ; RV32IXQCILI-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: pr134525:
 ; RV32I-MEDIUM:       # %bb.0: # %entry
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi15:
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ki_end)
-; RV32I-MEDIUM-NEXT:    lui a1, 523776
-; RV32I-MEDIUM-NEXT:    lui a2, 32
 ; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi15)
-; RV32I-MEDIUM-NEXT:    addi a2, a2, 1
+; RV32I-MEDIUM-NEXT:    lui a1, 523776
 ; RV32I-MEDIUM-NEXT:    add a1, a0, a1
-; RV32I-MEDIUM-NEXT:    sltu a2, a1, a2
+; RV32I-MEDIUM-NEXT:    lui a2, 32
+; RV32I-MEDIUM-NEXT:    addi a2, a2, 1
 ; RV32I-MEDIUM-NEXT:    sltu a0, a1, a0
+; RV32I-MEDIUM-NEXT:    sltu a1, a1, a2
 ; RV32I-MEDIUM-NEXT:    not a0, a0
-; RV32I-MEDIUM-NEXT:    and a0, a0, a2
+; RV32I-MEDIUM-NEXT:    and a0, a0, a1
 ; RV32I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LABEL: pr134525:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    lui a0, %hi(ki_end+2145386496)
-; RV64I-NEXT:    addi a0, a0, %lo(ki_end+2145386496)
-; RV64I-NEXT:    lui a1, 32
-; RV64I-NEXT:    addi a1, a1, 1
-; RV64I-NEXT:    sltu a0, a0, a1
+; RV64I-NEXT:    lui a0, 32
+; RV64I-NEXT:    lui a1, %hi(ki_end+2145386496)
+; RV64I-NEXT:    addi a1, a1, %lo(ki_end+2145386496)
+; RV64I-NEXT:    addi a0, a0, 1
+; RV64I-NEXT:    sltu a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-MEDIUM-LABEL: pr134525:
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi15:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ki_end)
-; RV64I-MEDIUM-NEXT:    lui a1, 523776
 ; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi15)
+; RV64I-MEDIUM-NEXT:    lui a1, 523776
+; RV64I-MEDIUM-NEXT:    lui a2, 32
 ; RV64I-MEDIUM-NEXT:    add a0, a0, a1
-; RV64I-MEDIUM-NEXT:    lui a1, 32
-; RV64I-MEDIUM-NEXT:    addi a1, a1, 1
-; RV64I-MEDIUM-NEXT:    sltu a0, a0, a1
+; RV64I-MEDIUM-NEXT:    addi a2, a2, 1
+; RV64I-MEDIUM-NEXT:    sltu a0, a0, a2
 ; RV64I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LARGE-LABEL: pr134525:
@@ -1517,10 +1517,10 @@ define i1 @pr134525() nounwind {
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI22_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi16)(a0)
 ; RV64I-LARGE-NEXT:    lui a1, 523776
+; RV64I-LARGE-NEXT:    lui a2, 32
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
-; RV64I-LARGE-NEXT:    lui a1, 32
-; RV64I-LARGE-NEXT:    addi a1, a1, 1
-; RV64I-LARGE-NEXT:    sltu a0, a0, a1
+; RV64I-LARGE-NEXT:    addi a2, a2, 1
+; RV64I-LARGE-NEXT:    sltu a0, a0, a2
 ; RV64I-LARGE-NEXT:    ret
 entry:
   %cmp = icmp ult i64 sub (i64 ptrtoint (ptr @ki_end to i64), i64 -2145386496), 131073

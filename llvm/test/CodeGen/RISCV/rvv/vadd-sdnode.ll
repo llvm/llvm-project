@@ -870,10 +870,10 @@ define <vscale x 1 x i64> @vadd_vx_imm64_to_sub(<vscale x 1 x i64> %va) nounwind
 ; RV32-LABEL: vadd_vx_imm64_to_sub:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    li a0, -256
-; RV32-NEXT:    li a1, 1
-; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    li a0, 1
+; RV32-NEXT:    li a1, -256
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -896,10 +896,10 @@ define <vscale x 1 x i64> @vadd_vx_imm64_to_sub_swapped(<vscale x 1 x i64> %va) 
 ; RV32-LABEL: vadd_vx_imm64_to_sub_swapped:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    li a0, -256
-; RV32-NEXT:    li a1, 1
-; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    li a0, 1
+; RV32-NEXT:    li a1, -256
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero

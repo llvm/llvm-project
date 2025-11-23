@@ -138,11 +138,11 @@ define void @trunc_sat_u8u16_minmax(ptr %x, ptr %y) {
 define void @trunc_sat_i16i32_notopt(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_i16i32_notopt:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a2, 1048568
 ; CHECK-NEXT:    vl2re32.v v8, (a0)
-; CHECK-NEXT:    lui a0, 1048568
-; CHECK-NEXT:    addi a0, a0, 1
-; CHECK-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmax.vx v8, v8, a0
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmax.vx v8, v8, a2
 ; CHECK-NEXT:    lui a0, 8
 ; CHECK-NEXT:    vmin.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -192,11 +192,11 @@ define void @trunc_sat_i16i32_minmax(ptr %x, ptr %y) {
 define void @trunc_sat_u16u32_notopt(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u16u32_notopt:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a2, 8
 ; CHECK-NEXT:    vl2re32.v v8, (a0)
-; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vminu.vx v8, v8, a0
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vminu.vx v8, v8, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v10, v8, 0
 ; CHECK-NEXT:    vs1r.v v10, (a1)
@@ -265,11 +265,11 @@ define void @trunc_sat_u16u32_minmax(ptr %x, ptr %y) {
 define void @trunc_sat_i32i64_notopt(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_i32i64_notopt:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a2, 524288
 ; CHECK-NEXT:    vl4re64.v v8, (a0)
-; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    addi a0, a0, 1
-; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vmax.vx v8, v8, a0
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vmax.vx v8, v8, a2
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    slli a0, a0, 31
 ; CHECK-NEXT:    vmin.vx v8, v8, a0
@@ -321,11 +321,11 @@ define void @trunc_sat_i32i64_minmax(ptr %x, ptr %y) {
 define void @trunc_sat_u32u64_notopt(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u32u64_notopt:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a2, 524288
 ; CHECK-NEXT:    vl4re64.v v8, (a0)
-; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    addiw a0, a0, -1
-; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vminu.vx v8, v8, a0
+; CHECK-NEXT:    addiw a2, a2, -1
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vminu.vx v8, v8, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v12, v8, 0
 ; CHECK-NEXT:    vs2r.v v12, (a1)

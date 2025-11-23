@@ -77,8 +77,8 @@ define half @fneg(half %a) nounwind {
 ;
 ; RVIZHINXMIN-LABEL: fneg:
 ; RVIZHINXMIN:       # %bb.0:
-; RVIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RVIZHINXMIN-NEXT:    lui a1, 1048568
+; RVIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RVIZHINXMIN-NEXT:    xor a0, a0, a1
 ; RVIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RVIZHINXMIN-NEXT:    ret

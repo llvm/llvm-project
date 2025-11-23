@@ -6,10 +6,10 @@
 define i32 @add(i32 %a, i32 %b) {
 ; RV32I-LABEL: add:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 65536
-; RV32I-NEXT:    add a0, a0, a2
 ; RV32I-NEXT:    lui a2, 573
+; RV32I-NEXT:    lui a3, 65536
 ; RV32I-NEXT:    addi a2, a2, -1330
+; RV32I-NEXT:    add a0, a0, a3
 ; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    addi a0, a0, 13
@@ -32,10 +32,10 @@ define i32 @add(i32 %a, i32 %b) {
 define i32 @and(i32 %a, i32 %b) {
 ; RV32I-LABEL: and:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 65536
-; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    lui a2, 573
+; RV32I-NEXT:    lui a3, 65536
 ; RV32I-NEXT:    addi a2, a2, -1330
+; RV32I-NEXT:    and a0, a0, a3
 ; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    srl a0, a1, a0
 ; RV32I-NEXT:    andi a0, a0, 10
@@ -58,10 +58,10 @@ define i32 @and(i32 %a, i32 %b) {
 define i32 @or(i32 %a, i32 %b) {
 ; RV32I-LABEL: or:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 65536
-; RV32I-NEXT:    or a0, a0, a2
 ; RV32I-NEXT:    lui a2, 573
+; RV32I-NEXT:    lui a3, 65536
 ; RV32I-NEXT:    addi a2, a2, -1330
+; RV32I-NEXT:    or a0, a0, a3
 ; RV32I-NEXT:    or a1, a1, a2
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    ori a0, a0, 13
@@ -84,10 +84,10 @@ define i32 @or(i32 %a, i32 %b) {
 define i32 @xor(i32 %a, i32 %b) {
 ; RV32I-LABEL: xor:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 65536
-; RV32I-NEXT:    xor a0, a0, a2
 ; RV32I-NEXT:    lui a2, 573
+; RV32I-NEXT:    lui a3, 65536
 ; RV32I-NEXT:    addi a2, a2, -1330
+; RV32I-NEXT:    xor a0, a0, a3
 ; RV32I-NEXT:    xor a1, a1, a2
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    xori a0, a0, 13

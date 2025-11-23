@@ -61,9 +61,9 @@ define void @test(i32 signext %i) nounwind {
 ; RV64-NEXT:  .LBB0_2: # %bb
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    slli a4, a1, 32
+; RV64-NEXT:    addw a1, a1, a0
 ; RV64-NEXT:    srli a4, a4, 32
 ; RV64-NEXT:    add a4, a2, a4
-; RV64-NEXT:    addw a1, a1, a0
 ; RV64-NEXT:    sb zero, 0(a4)
 ; RV64-NEXT:    blt a1, a3, .LBB0_2
 ; RV64-NEXT:  .LBB0_3: # %return

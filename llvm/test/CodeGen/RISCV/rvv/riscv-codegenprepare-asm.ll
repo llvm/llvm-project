@@ -7,18 +7,18 @@ declare float @llvm.vector.reduce.fadd.nxv4f32(float, <vscale x 4 x float>)
 define float @reduce_fadd(ptr %f) {
 ; CHECK-LABEL: reduce_fadd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    srli a1, a2, 1
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    li a3, 1024
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vl2re32.v v10, (a0)
-; CHECK-NEXT:    sub a3, a3, a1
 ; CHECK-NEXT:    vsetvli a4, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfredosum.vs v8, v10, v8
+; CHECK-NEXT:    sub a3, a3, a1
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    bnez a3, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit
@@ -56,8 +56,8 @@ define i32 @vp_reduce_add(ptr %a) {
 ; CHECK-NEXT:    slli a4, a1, 2
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    vredsum.vs v8, v10, v8
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -98,8 +98,8 @@ define i32 @vp_reduce_and(ptr %a) {
 ; CHECK-NEXT:    slli a4, a1, 2
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    vredand.vs v8, v10, v8
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB2_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -139,8 +139,8 @@ define i32 @vp_reduce_or(ptr %a) {
 ; CHECK-NEXT:    slli a4, a1, 2
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    vredor.vs v8, v10, v8
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB3_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -180,8 +180,8 @@ define i32 @vp_reduce_xor(ptr %a) {
 ; CHECK-NEXT:    slli a4, a1, 2
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    vredxor.vs v8, v10, v8
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB4_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -222,8 +222,8 @@ define i32 @vp_reduce_smax(ptr %a) {
 ; CHECK-NEXT:    slli a4, a1, 2
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    vredmax.vs v8, v10, v8
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB5_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -265,8 +265,8 @@ define i32 @vp_reduce_smin(ptr %a) {
 ; CHECK-NEXT:    slli a4, a1, 2
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    vredmin.vs v8, v10, v8
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB6_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -306,8 +306,8 @@ define i32 @vp_reduce_umax(ptr %a) {
 ; CHECK-NEXT:    slli a4, a1, 2
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    vredmaxu.vs v8, v10, v8
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB7_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -348,8 +348,8 @@ define i32 @vp_reduce_umin(ptr %a) {
 ; CHECK-NEXT:    slli a4, a1, 2
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    vredminu.vs v8, v10, v8
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB8_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -389,8 +389,8 @@ define float @vp_reduce_fadd(ptr %a) {
 ; CHECK-NEXT:    slli a4, a1, 2
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    vfredosum.vs v8, v10, v8
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB9_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -430,8 +430,8 @@ define float @vp_reduce_fmax(ptr %a) {
 ; CHECK-NEXT:    slli a4, a1, 2
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    vfredmax.vs v8, v10, v8
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB10_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -471,8 +471,8 @@ define float @vp_reduce_fmin(ptr %a) {
 ; CHECK-NEXT:    slli a4, a1, 2
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    vfredmin.vs v8, v10, v8
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB11_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup

@@ -3579,10 +3579,10 @@ define i64 @rmw64_umax_seq_cst(ptr %p) nounwind {
 ; RV32-NEXT:    bnez a0, .LBB51_4
 ; RV32-NEXT:  .LBB51_2: # %atomicrmw.start
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    snez a0, a1
-; RV32-NEXT:    sltiu a2, a4, 2
-; RV32-NEXT:    xori a2, a2, 1
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    sltiu a0, a4, 2
+; RV32-NEXT:    snez a2, a1
+; RV32-NEXT:    xori a0, a0, 1
+; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    mv a2, a4
 ; RV32-NEXT:    bnez a0, .LBB51_1
 ; RV32-NEXT:  # %bb.3: # %atomicrmw.start
@@ -4531,28 +4531,28 @@ define i128 @rmw128(ptr %p) nounwind {
 ; RV32-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv s0, a1
-; RV32-NEXT:    lw a4, 0(a1)
+; RV32-NEXT:    lw a2, 0(a1)
 ; RV32-NEXT:    lw a3, 4(a1)
-; RV32-NEXT:    lw a1, 8(a1)
-; RV32-NEXT:    lw a2, 12(s0)
+; RV32-NEXT:    lw a4, 8(a1)
+; RV32-NEXT:    lw a1, 12(a1)
 ; RV32-NEXT:    mv s1, a0
 ; RV32-NEXT:  .LBB62_1: # %atomicrmw.start
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    addi a0, a4, 1
-; RV32-NEXT:    sw a4, 16(sp)
+; RV32-NEXT:    addi a0, a2, 1
+; RV32-NEXT:    seqz a5, a0
+; RV32-NEXT:    add a5, a3, a5
+; RV32-NEXT:    or a6, a0, a5
+; RV32-NEXT:    seqz a6, a6
+; RV32-NEXT:    add a6, a4, a6
+; RV32-NEXT:    sltu a7, a6, a4
+; RV32-NEXT:    sw a2, 16(sp)
 ; RV32-NEXT:    sw a3, 20(sp)
-; RV32-NEXT:    sw a1, 24(sp)
-; RV32-NEXT:    sw a2, 28(sp)
-; RV32-NEXT:    seqz a4, a0
-; RV32-NEXT:    add a3, a3, a4
-; RV32-NEXT:    or a4, a0, a3
-; RV32-NEXT:    seqz a4, a4
-; RV32-NEXT:    add a4, a1, a4
-; RV32-NEXT:    sltu a1, a4, a1
-; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    sw a4, 24(sp)
+; RV32-NEXT:    sw a1, 28(sp)
+; RV32-NEXT:    add a1, a1, a7
 ; RV32-NEXT:    sw a0, 0(sp)
-; RV32-NEXT:    sw a3, 4(sp)
-; RV32-NEXT:    sw a4, 8(sp)
+; RV32-NEXT:    sw a5, 4(sp)
+; RV32-NEXT:    sw a6, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    li a0, 16
 ; RV32-NEXT:    addi a2, sp, 16
@@ -4561,16 +4561,16 @@ define i128 @rmw128(ptr %p) nounwind {
 ; RV32-NEXT:    li a5, 5
 ; RV32-NEXT:    mv a1, s0
 ; RV32-NEXT:    call __atomic_compare_exchange
-; RV32-NEXT:    lw a4, 16(sp)
+; RV32-NEXT:    lw a2, 16(sp)
 ; RV32-NEXT:    lw a3, 20(sp)
-; RV32-NEXT:    lw a1, 24(sp)
-; RV32-NEXT:    lw a2, 28(sp)
+; RV32-NEXT:    lw a4, 24(sp)
+; RV32-NEXT:    lw a1, 28(sp)
 ; RV32-NEXT:    beqz a0, .LBB62_1
 ; RV32-NEXT:  # %bb.2: # %atomicrmw.end
-; RV32-NEXT:    sw a4, 0(s1)
+; RV32-NEXT:    sw a2, 0(s1)
 ; RV32-NEXT:    sw a3, 4(s1)
-; RV32-NEXT:    sw a1, 8(s1)
-; RV32-NEXT:    sw a2, 12(s1)
+; RV32-NEXT:    sw a4, 8(s1)
+; RV32-NEXT:    sw a1, 12(s1)
 ; RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload

@@ -27,11 +27,11 @@ entry:
 define i1 @ssub(i32 %a, i32 %b, ptr %c) nounwind {
 ; RV32I-LABEL: ssub:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    sgtz a3, a1
-; RV32I-NEXT:    sub a1, a0, a1
-; RV32I-NEXT:    slt a0, a1, a0
-; RV32I-NEXT:    xor a0, a3, a0
-; RV32I-NEXT:    sw a1, 0(a2)
+; RV32I-NEXT:    sub a3, a0, a1
+; RV32I-NEXT:    sgtz a1, a1
+; RV32I-NEXT:    slt a0, a3, a0
+; RV32I-NEXT:    xor a0, a1, a0
+; RV32I-NEXT:    sw a3, 0(a2)
 ; RV32I-NEXT:    ret
 entry:
   %x = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 %b)

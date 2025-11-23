@@ -146,17 +146,17 @@ define <vscale x 32 x bfloat> @vsitofp_nxv32i1_nxv32bf16(<vscale x 32 x i1> %va)
 ; CHECK-LABEL: vsitofp_nxv32i1_nxv32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v12, v8, -1, v0
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vmerge.vim v8, v12, -1, v0
 ; CHECK-NEXT:    srli a0, a0, 2
-; CHECK-NEXT:    vfwcvt.f.x.v v16, v8
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
-; CHECK-NEXT:    vmerge.vim v12, v12, -1, v0
+; CHECK-NEXT:    vmerge.vim v24, v8, -1, v0
 ; CHECK-NEXT:    vfwcvt.f.x.v v16, v12
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
+; CHECK-NEXT:    vfwcvt.f.x.v v16, v24
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v16
 ; CHECK-NEXT:    ret
   %evec = sitofp <vscale x 32 x i1> %va to <vscale x 32 x bfloat>
@@ -167,17 +167,17 @@ define <vscale x 32 x bfloat> @vuitofp_nxv32i1_nxv32bf16(<vscale x 32 x i1> %va)
 ; CHECK-LABEL: vuitofp_nxv32i1_nxv32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v12, v8, 1, v0
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vmerge.vim v8, v12, 1, v0
 ; CHECK-NEXT:    srli a0, a0, 2
-; CHECK-NEXT:    vfwcvt.f.xu.v v16, v8
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
-; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0
+; CHECK-NEXT:    vmerge.vim v24, v8, 1, v0
 ; CHECK-NEXT:    vfwcvt.f.xu.v v16, v12
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
+; CHECK-NEXT:    vfwcvt.f.xu.v v16, v24
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v16
 ; CHECK-NEXT:    ret
   %evec = uitofp <vscale x 32 x i1> %va to <vscale x 32 x bfloat>
@@ -1154,17 +1154,17 @@ define <vscale x 32 x half> @vsitofp_nxv32i1_nxv32f16(<vscale x 32 x i1> %va) {
 ; ZVFHMIN-LABEL: vsitofp_nxv32i1_nxv32f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vmv.v.i v12, 0
+; ZVFHMIN-NEXT:    vmv.v.i v8, 0
+; ZVFHMIN-NEXT:    vmerge.vim v12, v8, -1, v0
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    vmerge.vim v8, v12, -1, v0
 ; ZVFHMIN-NEXT:    srli a0, a0, 2
-; ZVFHMIN-NEXT:    vfwcvt.f.x.v v16, v8
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vslidedown.vx v0, v0, a0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
-; ZVFHMIN-NEXT:    vmerge.vim v12, v12, -1, v0
+; ZVFHMIN-NEXT:    vmerge.vim v24, v8, -1, v0
 ; ZVFHMIN-NEXT:    vfwcvt.f.x.v v16, v12
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
+; ZVFHMIN-NEXT:    vfwcvt.f.x.v v16, v24
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
 ; ZVFHMIN-NEXT:    ret
   %evec = sitofp <vscale x 32 x i1> %va to <vscale x 32 x half>
@@ -1183,17 +1183,17 @@ define <vscale x 32 x half> @vuitofp_nxv32i1_nxv32f16(<vscale x 32 x i1> %va) {
 ; ZVFHMIN-LABEL: vuitofp_nxv32i1_nxv32f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vmv.v.i v12, 0
+; ZVFHMIN-NEXT:    vmv.v.i v8, 0
+; ZVFHMIN-NEXT:    vmerge.vim v12, v8, 1, v0
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
-; ZVFHMIN-NEXT:    vmerge.vim v8, v12, 1, v0
 ; ZVFHMIN-NEXT:    srli a0, a0, 2
-; ZVFHMIN-NEXT:    vfwcvt.f.xu.v v16, v8
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vslidedown.vx v0, v0, a0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
-; ZVFHMIN-NEXT:    vmerge.vim v12, v12, 1, v0
+; ZVFHMIN-NEXT:    vmerge.vim v24, v8, 1, v0
 ; ZVFHMIN-NEXT:    vfwcvt.f.xu.v v16, v12
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
+; ZVFHMIN-NEXT:    vfwcvt.f.xu.v v16, v24
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
 ; ZVFHMIN-NEXT:    ret
   %evec = uitofp <vscale x 32 x i1> %va to <vscale x 32 x half>

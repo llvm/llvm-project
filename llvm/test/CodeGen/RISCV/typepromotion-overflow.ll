@@ -378,9 +378,9 @@ define i8 @underflow_if_sub_signext(i32 %arg, i8 signext %arg1) {
 ; CHECK-LABEL: underflow_if_sub_signext:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.w a2, a0
-; CHECK-NEXT:    zext.b a1, a1
 ; CHECK-NEXT:    sgtz a2, a2
 ; CHECK-NEXT:    and a0, a2, a0
+; CHECK-NEXT:    zext.b a1, a1
 ; CHECK-NEXT:    addi a0, a0, 245
 ; CHECK-NEXT:    bltu a0, a1, .LBB21_2
 ; CHECK-NEXT:  # %bb.1:

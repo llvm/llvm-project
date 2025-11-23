@@ -5,12 +5,12 @@
 define <vscale x 1 x i32> @fshr(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c) {
 ; CHECK-LABEL: fshr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 31
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnot.v v11, v10
-; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    li a0, 31
 ; CHECK-NEXT:    vand.vx v10, v10, a0
 ; CHECK-NEXT:    vand.vx v11, v11, a0
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vsrl.vv v9, v9, v10
 ; CHECK-NEXT:    vsll.vv v8, v8, v11
 ; CHECK-NEXT:    vor.vv v8, v8, v9
@@ -22,12 +22,12 @@ define <vscale x 1 x i32> @fshr(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <v
 define <vscale x 1 x i32> @fshl(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c) {
 ; CHECK-LABEL: fshl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 31
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnot.v v11, v10
-; CHECK-NEXT:    vsrl.vi v9, v9, 1
+; CHECK-NEXT:    li a0, 31
 ; CHECK-NEXT:    vand.vx v10, v10, a0
 ; CHECK-NEXT:    vand.vx v11, v11, a0
+; CHECK-NEXT:    vsrl.vi v9, v9, 1
 ; CHECK-NEXT:    vsll.vv v8, v8, v10
 ; CHECK-NEXT:    vsrl.vv v9, v9, v11
 ; CHECK-NEXT:    vor.vv v8, v8, v9

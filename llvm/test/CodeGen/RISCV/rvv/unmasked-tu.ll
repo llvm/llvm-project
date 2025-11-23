@@ -2522,10 +2522,10 @@ define <vscale x 8 x i64> @intrinsic_vmerge_vim_nxv8i64_nxv8i64_i64(<vscale x 8 
 ; RV32-LABEL: intrinsic_vmerge_vim_nxv8i64_nxv8i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    li a1, 15
-; RV32-NEXT:    li a2, -1
-; RV32-NEXT:    sw a2, 8(sp)
-; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    li a1, -1
+; RV32-NEXT:    li a2, 15
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a2, 12(sp)
 ; RV32-NEXT:    addi a1, sp, 8
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a1), zero

@@ -45,17 +45,17 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -48
 ; RV32-NEXT:    .cfi_def_cfa_offset 48
+; RV32-NEXT:    addi a0, sp, 20
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    lw a0, 12(sp)
 ; RV32-NEXT:    sw a1, 20(sp)
 ; RV32-NEXT:    sw a2, 24(sp)
 ; RV32-NEXT:    sw a3, 28(sp)
 ; RV32-NEXT:    sw a4, 32(sp)
-; RV32-NEXT:    addi a0, sp, 20
-; RV32-NEXT:    sw a0, 12(sp)
-; RV32-NEXT:    lw a0, 12(sp)
+; RV32-NEXT:    addi a1, a0, 4
 ; RV32-NEXT:    sw a5, 36(sp)
 ; RV32-NEXT:    sw a6, 40(sp)
 ; RV32-NEXT:    sw a7, 44(sp)
-; RV32-NEXT:    addi a1, a0, 4
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    lw a0, 0(a0)
 ; RV32-NEXT:    addi sp, sp, 48
@@ -66,21 +66,21 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
 ; RV64-NEXT:    .cfi_def_cfa_offset 80
+; RV64-NEXT:    addi a0, sp, 24
+; RV64-NEXT:    addi t0, sp, 8
+; RV64-NEXT:    sd a0, 8(sp)
+; RV64-NEXT:    lw a0, 4(t0)
+; RV64-NEXT:    lwu t0, 8(sp)
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    or a0, a0, t0
 ; RV64-NEXT:    sd a1, 24(sp)
 ; RV64-NEXT:    sd a2, 32(sp)
 ; RV64-NEXT:    sd a3, 40(sp)
 ; RV64-NEXT:    sd a4, 48(sp)
-; RV64-NEXT:    addi a0, sp, 8
-; RV64-NEXT:    addi a1, sp, 24
-; RV64-NEXT:    sd a1, 8(sp)
-; RV64-NEXT:    lw a0, 4(a0)
-; RV64-NEXT:    lwu a1, 8(sp)
+; RV64-NEXT:    addi a1, a0, 4
 ; RV64-NEXT:    sd a5, 56(sp)
 ; RV64-NEXT:    sd a6, 64(sp)
 ; RV64-NEXT:    sd a7, 72(sp)
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    or a0, a0, a1
-; RV64-NEXT:    addi a1, a0, 4
 ; RV64-NEXT:    srli a2, a1, 32
 ; RV64-NEXT:    sw a1, 8(sp)
 ; RV64-NEXT:    sw a2, 12(sp)
@@ -99,17 +99,17 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV32-WITHFP-NEXT:    .cfi_offset s0, -40
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa s0, 32
+; RV32-WITHFP-NEXT:    addi a0, s0, 4
+; RV32-WITHFP-NEXT:    sw a0, -12(s0)
+; RV32-WITHFP-NEXT:    lw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    sw a1, 4(s0)
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
 ; RV32-WITHFP-NEXT:    sw a3, 12(s0)
 ; RV32-WITHFP-NEXT:    sw a4, 16(s0)
-; RV32-WITHFP-NEXT:    addi a0, s0, 4
-; RV32-WITHFP-NEXT:    sw a0, -12(s0)
-; RV32-WITHFP-NEXT:    lw a0, -12(s0)
+; RV32-WITHFP-NEXT:    addi a1, a0, 4
 ; RV32-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 28(s0)
-; RV32-WITHFP-NEXT:    addi a1, a0, 4
 ; RV32-WITHFP-NEXT:    sw a1, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, 0(a0)
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 48
@@ -131,21 +131,21 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    .cfi_offset s0, -80
 ; RV64-WITHFP-NEXT:    addi s0, sp, 32
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa s0, 64
+; RV64-WITHFP-NEXT:    addi a0, s0, 8
+; RV64-WITHFP-NEXT:    addi t0, s0, -24
+; RV64-WITHFP-NEXT:    sd a0, -24(s0)
+; RV64-WITHFP-NEXT:    lw a0, 4(t0)
+; RV64-WITHFP-NEXT:    lwu t0, -24(s0)
+; RV64-WITHFP-NEXT:    slli a0, a0, 32
+; RV64-WITHFP-NEXT:    or a0, a0, t0
 ; RV64-WITHFP-NEXT:    sd a1, 8(s0)
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
 ; RV64-WITHFP-NEXT:    sd a3, 24(s0)
 ; RV64-WITHFP-NEXT:    sd a4, 32(s0)
-; RV64-WITHFP-NEXT:    addi a0, s0, -24
-; RV64-WITHFP-NEXT:    addi a1, s0, 8
-; RV64-WITHFP-NEXT:    sd a1, -24(s0)
-; RV64-WITHFP-NEXT:    lw a0, 4(a0)
-; RV64-WITHFP-NEXT:    lwu a1, -24(s0)
+; RV64-WITHFP-NEXT:    addi a1, a0, 4
 ; RV64-WITHFP-NEXT:    sd a5, 40(s0)
 ; RV64-WITHFP-NEXT:    sd a6, 48(s0)
 ; RV64-WITHFP-NEXT:    sd a7, 56(s0)
-; RV64-WITHFP-NEXT:    slli a0, a0, 32
-; RV64-WITHFP-NEXT:    or a0, a0, a1
-; RV64-WITHFP-NEXT:    addi a1, a0, 4
 ; RV64-WITHFP-NEXT:    srli a2, a1, 32
 ; RV64-WITHFP-NEXT:    sw a1, -24(s0)
 ; RV64-WITHFP-NEXT:    sw a2, -20(s0)
@@ -176,10 +176,10 @@ define iXLen @va1_va_arg(ptr %fmt, ...) nounwind {
 ; RV32-NEXT:    sw a2, 24(sp)
 ; RV32-NEXT:    sw a3, 28(sp)
 ; RV32-NEXT:    sw a4, 32(sp)
+; RV32-NEXT:    addi a0, sp, 20
 ; RV32-NEXT:    sw a5, 36(sp)
 ; RV32-NEXT:    sw a6, 40(sp)
 ; RV32-NEXT:    sw a7, 44(sp)
-; RV32-NEXT:    addi a0, sp, 20
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    lw a0, 12(sp)
 ; RV32-NEXT:    addi a0, a0, 3
@@ -197,10 +197,10 @@ define iXLen @va1_va_arg(ptr %fmt, ...) nounwind {
 ; RV64-NEXT:    sd a2, 32(sp)
 ; RV64-NEXT:    sd a3, 40(sp)
 ; RV64-NEXT:    sd a4, 48(sp)
+; RV64-NEXT:    addi a0, sp, 24
 ; RV64-NEXT:    sd a5, 56(sp)
 ; RV64-NEXT:    sd a6, 64(sp)
 ; RV64-NEXT:    sd a7, 72(sp)
-; RV64-NEXT:    addi a0, sp, 24
 ; RV64-NEXT:    sd a0, 8(sp)
 ; RV64-NEXT:    ld a0, 8(sp)
 ; RV64-NEXT:    addi a0, a0, 7
@@ -221,10 +221,10 @@ define iXLen @va1_va_arg(ptr %fmt, ...) nounwind {
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
 ; RV32-WITHFP-NEXT:    sw a3, 12(s0)
 ; RV32-WITHFP-NEXT:    sw a4, 16(s0)
+; RV32-WITHFP-NEXT:    addi a0, s0, 4
 ; RV32-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 28(s0)
-; RV32-WITHFP-NEXT:    addi a0, s0, 4
 ; RV32-WITHFP-NEXT:    sw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    addi a0, a0, 3
@@ -247,10 +247,10 @@ define iXLen @va1_va_arg(ptr %fmt, ...) nounwind {
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
 ; RV64-WITHFP-NEXT:    sd a3, 24(s0)
 ; RV64-WITHFP-NEXT:    sd a4, 32(s0)
+; RV64-WITHFP-NEXT:    addi a0, s0, 8
 ; RV64-WITHFP-NEXT:    sd a5, 40(s0)
 ; RV64-WITHFP-NEXT:    sd a6, 48(s0)
 ; RV64-WITHFP-NEXT:    sd a7, 56(s0)
-; RV64-WITHFP-NEXT:    addi a0, s0, 8
 ; RV64-WITHFP-NEXT:    sd a0, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, -24(s0)
 ; RV64-WITHFP-NEXT:    addi a0, a0, 7
@@ -283,10 +283,10 @@ define iXLen @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; RV32-NEXT:    sw a2, 8(s0)
 ; RV32-NEXT:    sw a3, 12(s0)
 ; RV32-NEXT:    sw a4, 16(s0)
+; RV32-NEXT:    addi a0, s0, 4
 ; RV32-NEXT:    sw a5, 20(s0)
 ; RV32-NEXT:    sw a6, 24(s0)
 ; RV32-NEXT:    sw a7, 28(s0)
-; RV32-NEXT:    addi a0, s0, 4
 ; RV32-NEXT:    sw a0, -16(s0)
 ; RV32-NEXT:    lw a0, -16(s0)
 ; RV32-NEXT:    addi a0, a0, 3
@@ -318,10 +318,10 @@ define iXLen @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; RV64-NEXT:    sd a2, 16(s0)
 ; RV64-NEXT:    sd a3, 24(s0)
 ; RV64-NEXT:    sd a4, 32(s0)
+; RV64-NEXT:    addi a0, s0, 8
 ; RV64-NEXT:    sd a5, 40(s0)
 ; RV64-NEXT:    sd a6, 48(s0)
 ; RV64-NEXT:    sd a7, 56(s0)
-; RV64-NEXT:    addi a0, s0, 8
 ; RV64-NEXT:    sd a0, -32(s0)
 ; RV64-NEXT:    ld a0, -32(s0)
 ; RV64-NEXT:    addi a0, a0, 7
@@ -353,10 +353,10 @@ define iXLen @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
 ; RV32-WITHFP-NEXT:    sw a3, 12(s0)
 ; RV32-WITHFP-NEXT:    sw a4, 16(s0)
+; RV32-WITHFP-NEXT:    addi a0, s0, 4
 ; RV32-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 28(s0)
-; RV32-WITHFP-NEXT:    addi a0, s0, 4
 ; RV32-WITHFP-NEXT:    sw a0, -16(s0)
 ; RV32-WITHFP-NEXT:    lw a0, -16(s0)
 ; RV32-WITHFP-NEXT:    addi a0, a0, 3
@@ -388,10 +388,10 @@ define iXLen @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
 ; RV64-WITHFP-NEXT:    sd a3, 24(s0)
 ; RV64-WITHFP-NEXT:    sd a4, 32(s0)
+; RV64-WITHFP-NEXT:    addi a0, s0, 8
 ; RV64-WITHFP-NEXT:    sd a5, 40(s0)
 ; RV64-WITHFP-NEXT:    sd a6, 48(s0)
 ; RV64-WITHFP-NEXT:    sd a7, 56(s0)
-; RV64-WITHFP-NEXT:    addi a0, s0, 8
 ; RV64-WITHFP-NEXT:    sd a0, -32(s0)
 ; RV64-WITHFP-NEXT:    ld a0, -32(s0)
 ; RV64-WITHFP-NEXT:    addi a0, a0, 7
@@ -513,13 +513,13 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; ILP32-LABEL: va2:
 ; ILP32:       # %bb.0:
 ; ILP32-NEXT:    addi sp, sp, -48
+; ILP32-NEXT:    addi a0, sp, 20
+; ILP32-NEXT:    sw a0, 12(sp)
+; ILP32-NEXT:    lw a0, 12(sp)
 ; ILP32-NEXT:    sw a1, 20(sp)
 ; ILP32-NEXT:    sw a2, 24(sp)
 ; ILP32-NEXT:    sw a3, 28(sp)
 ; ILP32-NEXT:    sw a4, 32(sp)
-; ILP32-NEXT:    addi a0, sp, 20
-; ILP32-NEXT:    sw a0, 12(sp)
-; ILP32-NEXT:    lw a0, 12(sp)
 ; ILP32-NEXT:    sw a5, 36(sp)
 ; ILP32-NEXT:    sw a6, 40(sp)
 ; ILP32-NEXT:    sw a7, 44(sp)
@@ -535,17 +535,17 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; RV32D-ILP32-LABEL: va2:
 ; RV32D-ILP32:       # %bb.0:
 ; RV32D-ILP32-NEXT:    addi sp, sp, -48
+; RV32D-ILP32-NEXT:    addi a0, sp, 20
+; RV32D-ILP32-NEXT:    sw a0, 12(sp)
+; RV32D-ILP32-NEXT:    lw a0, 12(sp)
 ; RV32D-ILP32-NEXT:    sw a1, 20(sp)
 ; RV32D-ILP32-NEXT:    sw a2, 24(sp)
 ; RV32D-ILP32-NEXT:    sw a3, 28(sp)
 ; RV32D-ILP32-NEXT:    sw a4, 32(sp)
-; RV32D-ILP32-NEXT:    addi a0, sp, 20
-; RV32D-ILP32-NEXT:    sw a0, 12(sp)
-; RV32D-ILP32-NEXT:    lw a0, 12(sp)
+; RV32D-ILP32-NEXT:    addi a1, a0, 7
 ; RV32D-ILP32-NEXT:    sw a5, 36(sp)
 ; RV32D-ILP32-NEXT:    sw a6, 40(sp)
 ; RV32D-ILP32-NEXT:    sw a7, 44(sp)
-; RV32D-ILP32-NEXT:    addi a1, a0, 7
 ; RV32D-ILP32-NEXT:    andi a1, a1, -8
 ; RV32D-ILP32-NEXT:    fld fa5, 0(a1)
 ; RV32D-ILP32-NEXT:    addi a0, a0, 15
@@ -559,17 +559,17 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; RV32D-ILP32F-LABEL: va2:
 ; RV32D-ILP32F:       # %bb.0:
 ; RV32D-ILP32F-NEXT:    addi sp, sp, -48
+; RV32D-ILP32F-NEXT:    addi a0, sp, 20
+; RV32D-ILP32F-NEXT:    sw a0, 12(sp)
+; RV32D-ILP32F-NEXT:    lw a0, 12(sp)
 ; RV32D-ILP32F-NEXT:    sw a1, 20(sp)
 ; RV32D-ILP32F-NEXT:    sw a2, 24(sp)
 ; RV32D-ILP32F-NEXT:    sw a3, 28(sp)
 ; RV32D-ILP32F-NEXT:    sw a4, 32(sp)
-; RV32D-ILP32F-NEXT:    addi a0, sp, 20
-; RV32D-ILP32F-NEXT:    sw a0, 12(sp)
-; RV32D-ILP32F-NEXT:    lw a0, 12(sp)
+; RV32D-ILP32F-NEXT:    addi a1, a0, 7
 ; RV32D-ILP32F-NEXT:    sw a5, 36(sp)
 ; RV32D-ILP32F-NEXT:    sw a6, 40(sp)
 ; RV32D-ILP32F-NEXT:    sw a7, 44(sp)
-; RV32D-ILP32F-NEXT:    addi a1, a0, 7
 ; RV32D-ILP32F-NEXT:    andi a1, a1, -8
 ; RV32D-ILP32F-NEXT:    fld fa5, 0(a1)
 ; RV32D-ILP32F-NEXT:    addi a0, a0, 15
@@ -583,17 +583,17 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; RV32D-ILP32D-LABEL: va2:
 ; RV32D-ILP32D:       # %bb.0:
 ; RV32D-ILP32D-NEXT:    addi sp, sp, -48
+; RV32D-ILP32D-NEXT:    addi a0, sp, 20
+; RV32D-ILP32D-NEXT:    sw a0, 12(sp)
+; RV32D-ILP32D-NEXT:    lw a0, 12(sp)
 ; RV32D-ILP32D-NEXT:    sw a1, 20(sp)
 ; RV32D-ILP32D-NEXT:    sw a2, 24(sp)
 ; RV32D-ILP32D-NEXT:    sw a3, 28(sp)
 ; RV32D-ILP32D-NEXT:    sw a4, 32(sp)
-; RV32D-ILP32D-NEXT:    addi a0, sp, 20
-; RV32D-ILP32D-NEXT:    sw a0, 12(sp)
-; RV32D-ILP32D-NEXT:    lw a0, 12(sp)
+; RV32D-ILP32D-NEXT:    addi a1, a0, 7
 ; RV32D-ILP32D-NEXT:    sw a5, 36(sp)
 ; RV32D-ILP32D-NEXT:    sw a6, 40(sp)
 ; RV32D-ILP32D-NEXT:    sw a7, 44(sp)
-; RV32D-ILP32D-NEXT:    addi a1, a0, 7
 ; RV32D-ILP32D-NEXT:    andi a1, a1, -8
 ; RV32D-ILP32D-NEXT:    fld fa5, 0(a1)
 ; RV32D-ILP32D-NEXT:    addi a0, a0, 15
@@ -607,13 +607,13 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; RV64-LABEL: va2:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
+; RV64-NEXT:    addi a0, sp, 24
+; RV64-NEXT:    sd a0, 8(sp)
+; RV64-NEXT:    ld a0, 8(sp)
 ; RV64-NEXT:    sd a1, 24(sp)
 ; RV64-NEXT:    sd a2, 32(sp)
 ; RV64-NEXT:    sd a3, 40(sp)
 ; RV64-NEXT:    sd a4, 48(sp)
-; RV64-NEXT:    addi a0, sp, 24
-; RV64-NEXT:    sd a0, 8(sp)
-; RV64-NEXT:    ld a0, 8(sp)
 ; RV64-NEXT:    sd a5, 56(sp)
 ; RV64-NEXT:    sd a6, 64(sp)
 ; RV64-NEXT:    sd a7, 72(sp)
@@ -631,13 +631,13 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
+; RV32-WITHFP-NEXT:    addi a0, s0, 4
+; RV32-WITHFP-NEXT:    sw a0, -12(s0)
+; RV32-WITHFP-NEXT:    lw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    sw a1, 4(s0)
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
 ; RV32-WITHFP-NEXT:    sw a3, 12(s0)
 ; RV32-WITHFP-NEXT:    sw a4, 16(s0)
-; RV32-WITHFP-NEXT:    addi a0, s0, 4
-; RV32-WITHFP-NEXT:    sw a0, -12(s0)
-; RV32-WITHFP-NEXT:    lw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 28(s0)
@@ -658,13 +658,13 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 32
+; RV64-WITHFP-NEXT:    addi a0, s0, 8
+; RV64-WITHFP-NEXT:    sd a0, -24(s0)
+; RV64-WITHFP-NEXT:    ld a0, -24(s0)
 ; RV64-WITHFP-NEXT:    sd a1, 8(s0)
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
 ; RV64-WITHFP-NEXT:    sd a3, 24(s0)
 ; RV64-WITHFP-NEXT:    sd a4, 32(s0)
-; RV64-WITHFP-NEXT:    addi a0, s0, 8
-; RV64-WITHFP-NEXT:    sd a0, -24(s0)
-; RV64-WITHFP-NEXT:    ld a0, -24(s0)
 ; RV64-WITHFP-NEXT:    sd a5, 40(s0)
 ; RV64-WITHFP-NEXT:    sd a6, 48(s0)
 ; RV64-WITHFP-NEXT:    sd a7, 56(s0)
@@ -704,10 +704,10 @@ define iXLen @va2_va_arg(ptr %fmt, ...) nounwind {
 ; RV32-NEXT:    sw a2, 24(sp)
 ; RV32-NEXT:    sw a3, 28(sp)
 ; RV32-NEXT:    sw a4, 32(sp)
+; RV32-NEXT:    addi a0, sp, 20
 ; RV32-NEXT:    sw a5, 36(sp)
 ; RV32-NEXT:    sw a6, 40(sp)
 ; RV32-NEXT:    sw a7, 44(sp)
-; RV32-NEXT:    addi a0, sp, 20
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    lw a0, 12(sp)
 ; RV32-NEXT:    addi a0, a0, 3
@@ -725,10 +725,10 @@ define iXLen @va2_va_arg(ptr %fmt, ...) nounwind {
 ; RV64-NEXT:    sd a2, 32(sp)
 ; RV64-NEXT:    sd a3, 40(sp)
 ; RV64-NEXT:    sd a4, 48(sp)
+; RV64-NEXT:    addi a0, sp, 24
 ; RV64-NEXT:    sd a5, 56(sp)
 ; RV64-NEXT:    sd a6, 64(sp)
 ; RV64-NEXT:    sd a7, 72(sp)
-; RV64-NEXT:    addi a0, sp, 24
 ; RV64-NEXT:    sd a0, 8(sp)
 ; RV64-NEXT:    ld a0, 8(sp)
 ; RV64-NEXT:    addi a0, a0, 7
@@ -749,10 +749,10 @@ define iXLen @va2_va_arg(ptr %fmt, ...) nounwind {
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
 ; RV32-WITHFP-NEXT:    sw a3, 12(s0)
 ; RV32-WITHFP-NEXT:    sw a4, 16(s0)
+; RV32-WITHFP-NEXT:    addi a0, s0, 4
 ; RV32-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 28(s0)
-; RV32-WITHFP-NEXT:    addi a0, s0, 4
 ; RV32-WITHFP-NEXT:    sw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    addi a0, a0, 3
@@ -775,10 +775,10 @@ define iXLen @va2_va_arg(ptr %fmt, ...) nounwind {
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
 ; RV64-WITHFP-NEXT:    sd a3, 24(s0)
 ; RV64-WITHFP-NEXT:    sd a4, 32(s0)
+; RV64-WITHFP-NEXT:    addi a0, s0, 8
 ; RV64-WITHFP-NEXT:    sd a5, 40(s0)
 ; RV64-WITHFP-NEXT:    sd a6, 48(s0)
 ; RV64-WITHFP-NEXT:    sd a7, 56(s0)
-; RV64-WITHFP-NEXT:    addi a0, s0, 8
 ; RV64-WITHFP-NEXT:    sd a0, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, -24(s0)
 ; RV64-WITHFP-NEXT:    addi a0, a0, 7
@@ -885,8 +885,8 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; RV32D-ILP32-NEXT:    sw a4, 32(sp)
 ; RV32D-ILP32-NEXT:    sw a5, 36(sp)
 ; RV32D-ILP32-NEXT:    sw a6, 40(sp)
-; RV32D-ILP32-NEXT:    sw a7, 44(sp)
 ; RV32D-ILP32-NEXT:    addi a3, a0, 7
+; RV32D-ILP32-NEXT:    sw a7, 44(sp)
 ; RV32D-ILP32-NEXT:    andi a3, a3, -8
 ; RV32D-ILP32-NEXT:    fld fa5, 0(a3)
 ; RV32D-ILP32-NEXT:    addi a0, a0, 15
@@ -911,8 +911,8 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; RV32D-ILP32F-NEXT:    sw a4, 32(sp)
 ; RV32D-ILP32F-NEXT:    sw a5, 36(sp)
 ; RV32D-ILP32F-NEXT:    sw a6, 40(sp)
-; RV32D-ILP32F-NEXT:    sw a7, 44(sp)
 ; RV32D-ILP32F-NEXT:    addi a3, a0, 7
+; RV32D-ILP32F-NEXT:    sw a7, 44(sp)
 ; RV32D-ILP32F-NEXT:    andi a3, a3, -8
 ; RV32D-ILP32F-NEXT:    fld fa5, 0(a3)
 ; RV32D-ILP32F-NEXT:    addi a0, a0, 15
@@ -937,8 +937,8 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; RV32D-ILP32D-NEXT:    sw a4, 32(sp)
 ; RV32D-ILP32D-NEXT:    sw a5, 36(sp)
 ; RV32D-ILP32D-NEXT:    sw a6, 40(sp)
-; RV32D-ILP32D-NEXT:    sw a7, 44(sp)
 ; RV32D-ILP32D-NEXT:    addi a3, a0, 7
+; RV32D-ILP32D-NEXT:    sw a7, 44(sp)
 ; RV32D-ILP32D-NEXT:    andi a3, a3, -8
 ; RV32D-ILP32D-NEXT:    fld fa5, 0(a3)
 ; RV32D-ILP32D-NEXT:    addi a0, a0, 15
@@ -1056,9 +1056,9 @@ define iXLen @va3_va_arg(iXLen %a, iXLen %b, ...) nounwind {
 ; RV32-NEXT:    sw a3, 12(sp)
 ; RV32-NEXT:    sw a4, 16(sp)
 ; RV32-NEXT:    sw a5, 20(sp)
+; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    sw a6, 24(sp)
 ; RV32-NEXT:    sw a7, 28(sp)
-; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    sw a0, 4(sp)
 ; RV32-NEXT:    lw a0, 4(sp)
 ; RV32-NEXT:    addi a0, a0, 3
@@ -1077,9 +1077,9 @@ define iXLen @va3_va_arg(iXLen %a, iXLen %b, ...) nounwind {
 ; RV64-NEXT:    sd a3, 24(sp)
 ; RV64-NEXT:    sd a4, 32(sp)
 ; RV64-NEXT:    sd a5, 40(sp)
+; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    sd a6, 48(sp)
 ; RV64-NEXT:    sd a7, 56(sp)
-; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    sd a0, 8(sp)
 ; RV64-NEXT:    ld a0, 8(sp)
 ; RV64-NEXT:    addi a0, a0, 7
@@ -1101,9 +1101,9 @@ define iXLen @va3_va_arg(iXLen %a, iXLen %b, ...) nounwind {
 ; RV32-WITHFP-NEXT:    sw a3, 4(s0)
 ; RV32-WITHFP-NEXT:    sw a4, 8(s0)
 ; RV32-WITHFP-NEXT:    sw a5, 12(s0)
+; RV32-WITHFP-NEXT:    mv a0, s0
 ; RV32-WITHFP-NEXT:    sw a6, 16(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 20(s0)
-; RV32-WITHFP-NEXT:    mv a0, s0
 ; RV32-WITHFP-NEXT:    sw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    addi a0, a0, 3
@@ -1127,9 +1127,9 @@ define iXLen @va3_va_arg(iXLen %a, iXLen %b, ...) nounwind {
 ; RV64-WITHFP-NEXT:    sd a3, 8(s0)
 ; RV64-WITHFP-NEXT:    sd a4, 16(s0)
 ; RV64-WITHFP-NEXT:    sd a5, 24(s0)
+; RV64-WITHFP-NEXT:    mv a0, s0
 ; RV64-WITHFP-NEXT:    sd a6, 32(s0)
 ; RV64-WITHFP-NEXT:    sd a7, 40(s0)
-; RV64-WITHFP-NEXT:    mv a0, s0
 ; RV64-WITHFP-NEXT:    sd a0, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, -24(s0)
 ; RV64-WITHFP-NEXT:    addi a0, a0, 7
@@ -1169,9 +1169,9 @@ define void @va3_caller() nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    lui a1, 5
+; RV64-NEXT:    lui a2, 5
+; RV64-NEXT:    addi a2, a2, -480
 ; RV64-NEXT:    li a0, 2
-; RV64-NEXT:    addi a2, a1, -480
 ; RV64-NEXT:    li a1, 1111
 ; RV64-NEXT:    call va3
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -1201,9 +1201,9 @@ define void @va3_caller() nounwind {
 ; RV64-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 16
-; RV64-WITHFP-NEXT:    lui a1, 5
+; RV64-WITHFP-NEXT:    lui a2, 5
+; RV64-WITHFP-NEXT:    addi a2, a2, -480
 ; RV64-WITHFP-NEXT:    li a0, 2
-; RV64-WITHFP-NEXT:    addi a2, a1, -480
 ; RV64-WITHFP-NEXT:    li a1, 1111
 ; RV64-WITHFP-NEXT:    call va3
 ; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -1227,10 +1227,10 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32-NEXT:    sw a2, 40(sp)
 ; RV32-NEXT:    sw a3, 44(sp)
 ; RV32-NEXT:    sw a4, 48(sp)
+; RV32-NEXT:    addi a0, sp, 36
 ; RV32-NEXT:    sw a5, 52(sp)
 ; RV32-NEXT:    sw a6, 56(sp)
 ; RV32-NEXT:    sw a7, 60(sp)
-; RV32-NEXT:    addi a0, sp, 36
 ; RV32-NEXT:    sw a0, 16(sp)
 ; RV32-NEXT:    lw a0, 16(sp)
 ; RV32-NEXT:    addi a0, a0, 3
@@ -1249,16 +1249,16 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32-NEXT:    addi a1, a0, 4
 ; RV32-NEXT:    sw a1, 16(sp)
 ; RV32-NEXT:    lw a1, 16(sp)
-; RV32-NEXT:    lw a0, 0(a0)
 ; RV32-NEXT:    addi a1, a1, 3
 ; RV32-NEXT:    and a1, a1, s0
 ; RV32-NEXT:    addi a2, a1, 4
+; RV32-NEXT:    lw a0, 0(a0)
 ; RV32-NEXT:    sw a2, 16(sp)
 ; RV32-NEXT:    lw a2, 16(sp)
-; RV32-NEXT:    lw a1, 0(a1)
 ; RV32-NEXT:    addi a2, a2, 3
 ; RV32-NEXT:    andi a2, a2, -4
 ; RV32-NEXT:    addi a3, a2, 4
+; RV32-NEXT:    lw a1, 0(a1)
 ; RV32-NEXT:    sw a3, 16(sp)
 ; RV32-NEXT:    lw a2, 0(a2)
 ; RV32-NEXT:    add a0, a0, s1
@@ -1280,10 +1280,10 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV64-NEXT:    sd a2, 64(sp)
 ; RV64-NEXT:    sd a3, 72(sp)
 ; RV64-NEXT:    sd a4, 80(sp)
+; RV64-NEXT:    addi a0, sp, 56
 ; RV64-NEXT:    sd a5, 88(sp)
 ; RV64-NEXT:    sd a6, 96(sp)
 ; RV64-NEXT:    sd a7, 104(sp)
-; RV64-NEXT:    addi a0, sp, 56
 ; RV64-NEXT:    sd a0, 16(sp)
 ; RV64-NEXT:    ld a0, 16(sp)
 ; RV64-NEXT:    addi a0, a0, 7
@@ -1305,16 +1305,16 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV64-NEXT:    addi a1, a0, 8
 ; RV64-NEXT:    sd a1, 16(sp)
 ; RV64-NEXT:    ld a1, 16(sp)
-; RV64-NEXT:    ld a0, 0(a0)
 ; RV64-NEXT:    addi a1, a1, 7
 ; RV64-NEXT:    and a1, a1, s0
 ; RV64-NEXT:    addi a2, a1, 8
+; RV64-NEXT:    ld a0, 0(a0)
 ; RV64-NEXT:    sd a2, 16(sp)
 ; RV64-NEXT:    ld a2, 16(sp)
-; RV64-NEXT:    ld a1, 0(a1)
 ; RV64-NEXT:    addi a2, a2, 7
 ; RV64-NEXT:    andi a2, a2, -8
 ; RV64-NEXT:    addi a3, a2, 8
+; RV64-NEXT:    ld a1, 0(a1)
 ; RV64-NEXT:    sd a3, 16(sp)
 ; RV64-NEXT:    ld a2, 0(a2)
 ; RV64-NEXT:    add a0, a0, s1
@@ -1338,10 +1338,10 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
 ; RV32-WITHFP-NEXT:    sw a3, 12(s0)
 ; RV32-WITHFP-NEXT:    sw a4, 16(s0)
+; RV32-WITHFP-NEXT:    addi a0, s0, 4
 ; RV32-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 28(s0)
-; RV32-WITHFP-NEXT:    addi a0, s0, 4
 ; RV32-WITHFP-NEXT:    sw a0, -20(s0)
 ; RV32-WITHFP-NEXT:    lw a0, -20(s0)
 ; RV32-WITHFP-NEXT:    addi a0, a0, 3
@@ -1360,16 +1360,16 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32-WITHFP-NEXT:    addi a1, a0, 4
 ; RV32-WITHFP-NEXT:    sw a1, -20(s0)
 ; RV32-WITHFP-NEXT:    lw a1, -20(s0)
-; RV32-WITHFP-NEXT:    lw a0, 0(a0)
 ; RV32-WITHFP-NEXT:    addi a1, a1, 3
 ; RV32-WITHFP-NEXT:    and a1, a1, s1
 ; RV32-WITHFP-NEXT:    addi a2, a1, 4
+; RV32-WITHFP-NEXT:    lw a0, 0(a0)
 ; RV32-WITHFP-NEXT:    sw a2, -20(s0)
 ; RV32-WITHFP-NEXT:    lw a2, -20(s0)
-; RV32-WITHFP-NEXT:    lw a1, 0(a1)
 ; RV32-WITHFP-NEXT:    addi a2, a2, 3
 ; RV32-WITHFP-NEXT:    andi a2, a2, -4
 ; RV32-WITHFP-NEXT:    addi a3, a2, 4
+; RV32-WITHFP-NEXT:    lw a1, 0(a1)
 ; RV32-WITHFP-NEXT:    sw a3, -20(s0)
 ; RV32-WITHFP-NEXT:    lw a2, 0(a2)
 ; RV32-WITHFP-NEXT:    add a0, a0, s2
@@ -1394,10 +1394,10 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
 ; RV64-WITHFP-NEXT:    sd a3, 24(s0)
 ; RV64-WITHFP-NEXT:    sd a4, 32(s0)
+; RV64-WITHFP-NEXT:    addi a0, s0, 8
 ; RV64-WITHFP-NEXT:    sd a5, 40(s0)
 ; RV64-WITHFP-NEXT:    sd a6, 48(s0)
 ; RV64-WITHFP-NEXT:    sd a7, 56(s0)
-; RV64-WITHFP-NEXT:    addi a0, s0, 8
 ; RV64-WITHFP-NEXT:    sd a0, -40(s0)
 ; RV64-WITHFP-NEXT:    ld a0, -40(s0)
 ; RV64-WITHFP-NEXT:    addi a0, a0, 7
@@ -1419,16 +1419,16 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV64-WITHFP-NEXT:    addi a1, a0, 8
 ; RV64-WITHFP-NEXT:    sd a1, -40(s0)
 ; RV64-WITHFP-NEXT:    ld a1, -40(s0)
-; RV64-WITHFP-NEXT:    ld a0, 0(a0)
 ; RV64-WITHFP-NEXT:    addi a1, a1, 7
 ; RV64-WITHFP-NEXT:    and a1, a1, s1
 ; RV64-WITHFP-NEXT:    addi a2, a1, 8
+; RV64-WITHFP-NEXT:    ld a0, 0(a0)
 ; RV64-WITHFP-NEXT:    sd a2, -40(s0)
 ; RV64-WITHFP-NEXT:    ld a2, -40(s0)
-; RV64-WITHFP-NEXT:    ld a1, 0(a1)
 ; RV64-WITHFP-NEXT:    addi a2, a2, 7
 ; RV64-WITHFP-NEXT:    andi a2, a2, -8
 ; RV64-WITHFP-NEXT:    addi a3, a2, 8
+; RV64-WITHFP-NEXT:    ld a1, 0(a1)
 ; RV64-WITHFP-NEXT:    sd a3, -40(s0)
 ; RV64-WITHFP-NEXT:    ld a2, 0(a2)
 ; RV64-WITHFP-NEXT:    add a0, a0, s2
@@ -1474,11 +1474,11 @@ define iXLen @va6_no_fixed_args(...) nounwind {
 ; RV32-NEXT:    sw a1, 20(sp)
 ; RV32-NEXT:    sw a2, 24(sp)
 ; RV32-NEXT:    sw a3, 28(sp)
+; RV32-NEXT:    addi a0, sp, 16
 ; RV32-NEXT:    sw a4, 32(sp)
 ; RV32-NEXT:    sw a5, 36(sp)
 ; RV32-NEXT:    sw a6, 40(sp)
 ; RV32-NEXT:    sw a7, 44(sp)
-; RV32-NEXT:    addi a0, sp, 16
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    lw a0, 12(sp)
 ; RV32-NEXT:    addi a0, a0, 3
@@ -1496,11 +1496,11 @@ define iXLen @va6_no_fixed_args(...) nounwind {
 ; RV64-NEXT:    sd a1, 24(sp)
 ; RV64-NEXT:    sd a2, 32(sp)
 ; RV64-NEXT:    sd a3, 40(sp)
+; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    sd a4, 48(sp)
 ; RV64-NEXT:    sd a5, 56(sp)
 ; RV64-NEXT:    sd a6, 64(sp)
 ; RV64-NEXT:    sd a7, 72(sp)
-; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    sd a0, 8(sp)
 ; RV64-NEXT:    ld a0, 8(sp)
 ; RV64-NEXT:    addi a0, a0, 7
@@ -1521,11 +1521,11 @@ define iXLen @va6_no_fixed_args(...) nounwind {
 ; RV32-WITHFP-NEXT:    sw a1, 4(s0)
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
 ; RV32-WITHFP-NEXT:    sw a3, 12(s0)
+; RV32-WITHFP-NEXT:    mv a0, s0
 ; RV32-WITHFP-NEXT:    sw a4, 16(s0)
 ; RV32-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 28(s0)
-; RV32-WITHFP-NEXT:    mv a0, s0
 ; RV32-WITHFP-NEXT:    sw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    addi a0, a0, 3
@@ -1548,11 +1548,11 @@ define iXLen @va6_no_fixed_args(...) nounwind {
 ; RV64-WITHFP-NEXT:    sd a1, 8(s0)
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
 ; RV64-WITHFP-NEXT:    sd a3, 24(s0)
+; RV64-WITHFP-NEXT:    mv a0, s0
 ; RV64-WITHFP-NEXT:    sd a4, 32(s0)
 ; RV64-WITHFP-NEXT:    sd a5, 40(s0)
 ; RV64-WITHFP-NEXT:    sd a6, 48(s0)
 ; RV64-WITHFP-NEXT:    sd a7, 56(s0)
-; RV64-WITHFP-NEXT:    mv a0, s0
 ; RV64-WITHFP-NEXT:    sd a0, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, -24(s0)
 ; RV64-WITHFP-NEXT:    addi a0, a0, 7
@@ -1581,32 +1581,32 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV32-NEXT:    sub sp, sp, a0
 ; RV32-NEXT:    .cfi_def_cfa_offset 100000048
 ; RV32-NEXT:    lui a0, 24414
-; RV32-NEXT:    add a0, sp, a0
-; RV32-NEXT:    sw a1, 276(a0)
-; RV32-NEXT:    lui a0, 24414
-; RV32-NEXT:    add a0, sp, a0
-; RV32-NEXT:    sw a2, 280(a0)
-; RV32-NEXT:    lui a0, 24414
-; RV32-NEXT:    add a0, sp, a0
-; RV32-NEXT:    sw a3, 284(a0)
-; RV32-NEXT:    lui a0, 24414
-; RV32-NEXT:    add a0, sp, a0
-; RV32-NEXT:    sw a4, 288(a0)
-; RV32-NEXT:    lui a0, 24414
 ; RV32-NEXT:    addi a0, a0, 276
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    lw a0, 12(sp)
+; RV32-NEXT:    lui t0, 24414
+; RV32-NEXT:    add t0, sp, t0
+; RV32-NEXT:    sw a1, 276(t0)
 ; RV32-NEXT:    lui a1, 24414
 ; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    sw a5, 292(a1)
+; RV32-NEXT:    sw a2, 280(a1)
 ; RV32-NEXT:    lui a1, 24414
 ; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    sw a6, 296(a1)
+; RV32-NEXT:    sw a3, 284(a1)
 ; RV32-NEXT:    lui a1, 24414
 ; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    sw a7, 300(a1)
+; RV32-NEXT:    sw a4, 288(a1)
 ; RV32-NEXT:    addi a1, a0, 4
+; RV32-NEXT:    lui a2, 24414
+; RV32-NEXT:    add a2, sp, a2
+; RV32-NEXT:    sw a5, 292(a2)
+; RV32-NEXT:    lui a2, 24414
+; RV32-NEXT:    add a2, sp, a2
+; RV32-NEXT:    sw a6, 296(a2)
+; RV32-NEXT:    lui a2, 24414
+; RV32-NEXT:    add a2, sp, a2
+; RV32-NEXT:    sw a7, 300(a2)
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    lw a0, 0(a0)
 ; RV32-NEXT:    lui a1, 24414
@@ -1622,24 +1622,27 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-NEXT:    sub sp, sp, a0
 ; RV64-NEXT:    .cfi_def_cfa_offset 100000080
 ; RV64-NEXT:    lui a0, 24414
+; RV64-NEXT:    addi a0, a0, 280
 ; RV64-NEXT:    add a0, sp, a0
-; RV64-NEXT:    sd a1, 280(a0)
-; RV64-NEXT:    lui a0, 24414
-; RV64-NEXT:    add a0, sp, a0
-; RV64-NEXT:    sd a2, 288(a0)
-; RV64-NEXT:    lui a0, 24414
-; RV64-NEXT:    add a0, sp, a0
-; RV64-NEXT:    sd a3, 296(a0)
-; RV64-NEXT:    lui a0, 24414
-; RV64-NEXT:    add a0, sp, a0
-; RV64-NEXT:    sd a4, 304(a0)
-; RV64-NEXT:    addi a0, sp, 8
+; RV64-NEXT:    addi t0, sp, 8
+; RV64-NEXT:    sd a0, 8(sp)
+; RV64-NEXT:    lw a0, 4(t0)
+; RV64-NEXT:    lwu t0, 8(sp)
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    or a0, a0, t0
+; RV64-NEXT:    lui t0, 24414
+; RV64-NEXT:    add t0, sp, t0
+; RV64-NEXT:    sd a1, 280(t0)
 ; RV64-NEXT:    lui a1, 24414
-; RV64-NEXT:    addi a1, a1, 280
 ; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    sd a1, 8(sp)
-; RV64-NEXT:    lw a0, 4(a0)
-; RV64-NEXT:    lwu a1, 8(sp)
+; RV64-NEXT:    sd a2, 288(a1)
+; RV64-NEXT:    lui a1, 24414
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    sd a3, 296(a1)
+; RV64-NEXT:    lui a1, 24414
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    sd a4, 304(a1)
+; RV64-NEXT:    addi a1, a0, 4
 ; RV64-NEXT:    lui a2, 24414
 ; RV64-NEXT:    add a2, sp, a2
 ; RV64-NEXT:    sd a5, 312(a2)
@@ -1649,9 +1652,6 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-NEXT:    lui a2, 24414
 ; RV64-NEXT:    add a2, sp, a2
 ; RV64-NEXT:    sd a7, 328(a2)
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    or a0, a0, a1
-; RV64-NEXT:    addi a1, a0, 4
 ; RV64-NEXT:    srli a2, a1, 32
 ; RV64-NEXT:    sw a1, 8(sp)
 ; RV64-NEXT:    sw a2, 12(sp)
@@ -1678,19 +1678,19 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV32-WITHFP-NEXT:    lui a0, 24414
 ; RV32-WITHFP-NEXT:    addi a0, a0, 272
 ; RV32-WITHFP-NEXT:    sub a0, s0, a0
+; RV32-WITHFP-NEXT:    addi t0, s0, 4
+; RV32-WITHFP-NEXT:    sw t0, 0(a0)
+; RV32-WITHFP-NEXT:    lw t0, 0(a0)
 ; RV32-WITHFP-NEXT:    sw a1, 4(s0)
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
 ; RV32-WITHFP-NEXT:    sw a3, 12(s0)
 ; RV32-WITHFP-NEXT:    sw a4, 16(s0)
-; RV32-WITHFP-NEXT:    addi a1, s0, 4
-; RV32-WITHFP-NEXT:    sw a1, 0(a0)
-; RV32-WITHFP-NEXT:    lw a1, 0(a0)
+; RV32-WITHFP-NEXT:    addi a1, t0, 4
 ; RV32-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 28(s0)
-; RV32-WITHFP-NEXT:    addi a2, a1, 4
-; RV32-WITHFP-NEXT:    sw a2, 0(a0)
-; RV32-WITHFP-NEXT:    lw a0, 0(a1)
+; RV32-WITHFP-NEXT:    sw a1, 0(a0)
+; RV32-WITHFP-NEXT:    lw a0, 0(t0)
 ; RV32-WITHFP-NEXT:    lui a1, 24414
 ; RV32-WITHFP-NEXT:    addi a1, a1, -1728
 ; RV32-WITHFP-NEXT:    add sp, sp, a1
@@ -1719,24 +1719,24 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    lui a0, 24414
 ; RV64-WITHFP-NEXT:    addi a0, a0, 288
 ; RV64-WITHFP-NEXT:    sub a0, s0, a0
+; RV64-WITHFP-NEXT:    addi t0, s0, 8
+; RV64-WITHFP-NEXT:    sd t0, 0(a0)
+; RV64-WITHFP-NEXT:    lw t0, 4(a0)
+; RV64-WITHFP-NEXT:    lwu t1, 0(a0)
+; RV64-WITHFP-NEXT:    slli t0, t0, 32
+; RV64-WITHFP-NEXT:    or t0, t0, t1
 ; RV64-WITHFP-NEXT:    sd a1, 8(s0)
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
 ; RV64-WITHFP-NEXT:    sd a3, 24(s0)
 ; RV64-WITHFP-NEXT:    sd a4, 32(s0)
-; RV64-WITHFP-NEXT:    addi a1, s0, 8
-; RV64-WITHFP-NEXT:    sd a1, 0(a0)
-; RV64-WITHFP-NEXT:    lwu a1, 0(a0)
-; RV64-WITHFP-NEXT:    lw a2, 4(a0)
+; RV64-WITHFP-NEXT:    addi a1, t0, 4
 ; RV64-WITHFP-NEXT:    sd a5, 40(s0)
 ; RV64-WITHFP-NEXT:    sd a6, 48(s0)
 ; RV64-WITHFP-NEXT:    sd a7, 56(s0)
-; RV64-WITHFP-NEXT:    slli a2, a2, 32
-; RV64-WITHFP-NEXT:    or a1, a2, a1
-; RV64-WITHFP-NEXT:    addi a2, a1, 4
-; RV64-WITHFP-NEXT:    srli a3, a2, 32
-; RV64-WITHFP-NEXT:    sw a2, 0(a0)
-; RV64-WITHFP-NEXT:    sw a3, 4(a0)
-; RV64-WITHFP-NEXT:    lw a0, 0(a1)
+; RV64-WITHFP-NEXT:    srli a2, a1, 32
+; RV64-WITHFP-NEXT:    sw a1, 0(a0)
+; RV64-WITHFP-NEXT:    sw a2, 4(a0)
+; RV64-WITHFP-NEXT:    lw a0, 0(t0)
 ; RV64-WITHFP-NEXT:    lui a1, 24414
 ; RV64-WITHFP-NEXT:    addi a1, a1, -1680
 ; RV64-WITHFP-NEXT:    add sp, sp, a1
@@ -1865,16 +1865,17 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV32-NEXT:    .cfi_def_cfa_offset 48
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -36
+; RV32-NEXT:    addi t0, sp, 20
+; RV32-NEXT:    sw t0, 8(sp)
+; RV32-NEXT:    lw t0, 8(sp)
 ; RV32-NEXT:    sw a1, 20(sp)
 ; RV32-NEXT:    sw a2, 24(sp)
 ; RV32-NEXT:    sw a3, 28(sp)
 ; RV32-NEXT:    sw a4, 32(sp)
-; RV32-NEXT:    addi a1, sp, 20
-; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    lw a1, 8(sp)
 ; RV32-NEXT:    sw a5, 36(sp)
 ; RV32-NEXT:    sw a6, 40(sp)
 ; RV32-NEXT:    sw a7, 44(sp)
+; RV32-NEXT:    mv a1, t0
 ; RV32-NEXT:    call va_vprintf
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
@@ -1888,16 +1889,17 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -72
+; RV64-NEXT:    addi t0, sp, 24
+; RV64-NEXT:    sd t0, 0(sp)
+; RV64-NEXT:    ld t0, 0(sp)
 ; RV64-NEXT:    sd a1, 24(sp)
 ; RV64-NEXT:    sd a2, 32(sp)
 ; RV64-NEXT:    sd a3, 40(sp)
 ; RV64-NEXT:    sd a4, 48(sp)
-; RV64-NEXT:    addi a1, sp, 24
-; RV64-NEXT:    sd a1, 0(sp)
-; RV64-NEXT:    ld a1, 0(sp)
 ; RV64-NEXT:    sd a5, 56(sp)
 ; RV64-NEXT:    sd a6, 64(sp)
 ; RV64-NEXT:    sd a7, 72(sp)
+; RV64-NEXT:    mv a1, t0
 ; RV64-NEXT:    call va_vprintf
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
@@ -1915,16 +1917,17 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV32-WITHFP-NEXT:    .cfi_offset s0, -40
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa s0, 32
+; RV32-WITHFP-NEXT:    addi t0, s0, 4
+; RV32-WITHFP-NEXT:    sw t0, -12(s0)
+; RV32-WITHFP-NEXT:    lw t0, -12(s0)
 ; RV32-WITHFP-NEXT:    sw a1, 4(s0)
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
 ; RV32-WITHFP-NEXT:    sw a3, 12(s0)
 ; RV32-WITHFP-NEXT:    sw a4, 16(s0)
-; RV32-WITHFP-NEXT:    addi a1, s0, 4
-; RV32-WITHFP-NEXT:    sw a1, -12(s0)
-; RV32-WITHFP-NEXT:    lw a1, -12(s0)
 ; RV32-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 28(s0)
+; RV32-WITHFP-NEXT:    mv a1, t0
 ; RV32-WITHFP-NEXT:    call va_vprintf
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -1945,16 +1948,17 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    .cfi_offset s0, -80
 ; RV64-WITHFP-NEXT:    addi s0, sp, 32
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa s0, 64
+; RV64-WITHFP-NEXT:    addi t0, s0, 8
+; RV64-WITHFP-NEXT:    sd t0, -24(s0)
+; RV64-WITHFP-NEXT:    ld t0, -24(s0)
 ; RV64-WITHFP-NEXT:    sd a1, 8(s0)
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
 ; RV64-WITHFP-NEXT:    sd a3, 24(s0)
 ; RV64-WITHFP-NEXT:    sd a4, 32(s0)
-; RV64-WITHFP-NEXT:    addi a1, s0, 8
-; RV64-WITHFP-NEXT:    sd a1, -24(s0)
-; RV64-WITHFP-NEXT:    ld a1, -24(s0)
 ; RV64-WITHFP-NEXT:    sd a5, 40(s0)
 ; RV64-WITHFP-NEXT:    sd a6, 48(s0)
 ; RV64-WITHFP-NEXT:    sd a7, 56(s0)
+; RV64-WITHFP-NEXT:    mv a1, t0
 ; RV64-WITHFP-NEXT:    call va_vprintf
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa sp, 96
 ; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload

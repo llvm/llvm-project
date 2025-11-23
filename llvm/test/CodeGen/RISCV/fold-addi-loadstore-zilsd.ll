@@ -53,8 +53,8 @@ define double @fold_addi_from_different_bb(i32 %k, i32 %n, ptr %a) nounwind {
 ; CHECK-NEXT:    mv a0, s2
 ; CHECK-NEXT:    call f
 ; CHECK-NEXT:    ld a0, 8(s4)
-; CHECK-NEXT:    addi s3, s3, -1
 ; CHECK-NEXT:    fadd.d s0, a0, s0
+; CHECK-NEXT:    addi s3, s3, -1
 ; CHECK-NEXT:    bnez s3, .LBB2_2
 ; CHECK-NEXT:    j .LBB2_4
 ; CHECK-NEXT:  .LBB2_3:

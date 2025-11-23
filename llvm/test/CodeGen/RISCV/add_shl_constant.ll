@@ -31,30 +31,30 @@ define i32 @add_shl_oneUse(i32 %x, i32 %y) nounwind {
 define void @add_shl_moreOneUse_inStore(ptr %array1, i32 %a, i32 %b)  {
 ; NO-ZBA-LABEL: add_shl_moreOneUse_inStore:
 ; NO-ZBA:       # %bb.0: # %entry
-; NO-ZBA-NEXT:    addi a3, a1, 5
-; NO-ZBA-NEXT:    slli a1, a1, 2
-; NO-ZBA-NEXT:    add a0, a0, a1
+; NO-ZBA-NEXT:    slli a3, a1, 2
+; NO-ZBA-NEXT:    add a0, a0, a3
+; NO-ZBA-NEXT:    addi a1, a1, 5
 ; NO-ZBA-NEXT:    sw a2, 20(a0)
 ; NO-ZBA-NEXT:    sw a2, 24(a0)
-; NO-ZBA-NEXT:    sw a3, 140(a0)
+; NO-ZBA-NEXT:    sw a1, 140(a0)
 ; NO-ZBA-NEXT:    ret
 ;
 ; ZBA-LABEL: add_shl_moreOneUse_inStore:
 ; ZBA:       # %bb.0: # %entry
-; ZBA-NEXT:    addi a3, a1, 5
 ; ZBA-NEXT:    sh2add a0, a1, a0
+; ZBA-NEXT:    addi a1, a1, 5
 ; ZBA-NEXT:    sw a2, 20(a0)
 ; ZBA-NEXT:    sw a2, 24(a0)
-; ZBA-NEXT:    sw a3, 140(a0)
+; ZBA-NEXT:    sw a1, 140(a0)
 ; ZBA-NEXT:    ret
 ;
 ; XANDESPERF-LABEL: add_shl_moreOneUse_inStore:
 ; XANDESPERF:       # %bb.0: # %entry
-; XANDESPERF-NEXT:    addi a3, a1, 5
 ; XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
+; XANDESPERF-NEXT:    addi a1, a1, 5
 ; XANDESPERF-NEXT:    sw a2, 20(a0)
 ; XANDESPERF-NEXT:    sw a2, 24(a0)
-; XANDESPERF-NEXT:    sw a3, 140(a0)
+; XANDESPERF-NEXT:    sw a1, 140(a0)
 ; XANDESPERF-NEXT:    ret
 entry:
   %add = add nsw i32 %a, 5
@@ -71,38 +71,38 @@ entry:
 define void @add_shl_moreOneUse_inStore_addexceedsign12(ptr %array1, i32 %a, i32 %b)  {
 ; NO-ZBA-LABEL: add_shl_moreOneUse_inStore_addexceedsign12:
 ; NO-ZBA:       # %bb.0: # %entry
-; NO-ZBA-NEXT:    addi a3, a1, 2047
+; NO-ZBA-NEXT:    slli a3, a1, 2
 ; NO-ZBA-NEXT:    lui a4, 2
-; NO-ZBA-NEXT:    slli a1, a1, 2
-; NO-ZBA-NEXT:    addi a3, a3, 1
-; NO-ZBA-NEXT:    add a0, a0, a1
+; NO-ZBA-NEXT:    add a0, a0, a3
+; NO-ZBA-NEXT:    addi a1, a1, 2047
 ; NO-ZBA-NEXT:    add a0, a0, a4
+; NO-ZBA-NEXT:    addi a1, a1, 1
 ; NO-ZBA-NEXT:    sw a2, 0(a0)
-; NO-ZBA-NEXT:    sw a3, 4(a0)
+; NO-ZBA-NEXT:    sw a1, 4(a0)
 ; NO-ZBA-NEXT:    sw a2, 120(a0)
 ; NO-ZBA-NEXT:    ret
 ;
 ; ZBA-LABEL: add_shl_moreOneUse_inStore_addexceedsign12:
 ; ZBA:       # %bb.0: # %entry
-; ZBA-NEXT:    addi a3, a1, 2047
-; ZBA-NEXT:    lui a4, 2
 ; ZBA-NEXT:    sh2add a0, a1, a0
-; ZBA-NEXT:    addi a3, a3, 1
-; ZBA-NEXT:    add a0, a0, a4
+; ZBA-NEXT:    lui a3, 2
+; ZBA-NEXT:    addi a1, a1, 2047
+; ZBA-NEXT:    add a0, a0, a3
+; ZBA-NEXT:    addi a1, a1, 1
 ; ZBA-NEXT:    sw a2, 0(a0)
-; ZBA-NEXT:    sw a3, 4(a0)
+; ZBA-NEXT:    sw a1, 4(a0)
 ; ZBA-NEXT:    sw a2, 120(a0)
 ; ZBA-NEXT:    ret
 ;
 ; XANDESPERF-LABEL: add_shl_moreOneUse_inStore_addexceedsign12:
 ; XANDESPERF:       # %bb.0: # %entry
-; XANDESPERF-NEXT:    addi a3, a1, 2047
-; XANDESPERF-NEXT:    lui a4, 2
+; XANDESPERF-NEXT:    lui a3, 2
 ; XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
-; XANDESPERF-NEXT:    addi a3, a3, 1
-; XANDESPERF-NEXT:    add a0, a0, a4
+; XANDESPERF-NEXT:    addi a1, a1, 2047
+; XANDESPERF-NEXT:    add a0, a0, a3
+; XANDESPERF-NEXT:    addi a1, a1, 1
 ; XANDESPERF-NEXT:    sw a2, 0(a0)
-; XANDESPERF-NEXT:    sw a3, 4(a0)
+; XANDESPERF-NEXT:    sw a1, 4(a0)
 ; XANDESPERF-NEXT:    sw a2, 120(a0)
 ; XANDESPERF-NEXT:    ret
 entry:
@@ -184,8 +184,8 @@ define void @add_shl_moreOneUse_inSelect_addexceedsign12(ptr %array1, i32 %a, i3
 ; NO-ZBA-NEXT:  # %bb.1: # %entry
 ; NO-ZBA-NEXT:    mv a5, a2
 ; NO-ZBA-NEXT:  .LBB4_2: # %entry
-; NO-ZBA-NEXT:    lui a2, 2
 ; NO-ZBA-NEXT:    slli a1, a1, 2
+; NO-ZBA-NEXT:    lui a2, 2
 ; NO-ZBA-NEXT:    add a0, a0, a1
 ; NO-ZBA-NEXT:    add a0, a0, a2
 ; NO-ZBA-NEXT:    sw a5, 0(a0)
@@ -202,9 +202,9 @@ define void @add_shl_moreOneUse_inSelect_addexceedsign12(ptr %array1, i32 %a, i3
 ; ZBA-NEXT:  # %bb.1: # %entry
 ; ZBA-NEXT:    mv a5, a2
 ; ZBA-NEXT:  .LBB4_2: # %entry
-; ZBA-NEXT:    lui a2, 2
 ; ZBA-NEXT:    sh2add a0, a1, a0
-; ZBA-NEXT:    add a0, a0, a2
+; ZBA-NEXT:    lui a1, 2
+; ZBA-NEXT:    add a0, a0, a1
 ; ZBA-NEXT:    sw a5, 0(a0)
 ; ZBA-NEXT:    sw a5, 4(a0)
 ; ZBA-NEXT:    sw a4, 120(a0)
@@ -243,10 +243,10 @@ entry:
 define i32 @add_shl_moreOneUse_sh1add(i32 %x) {
 ; NO-ZBA-LABEL: add_shl_moreOneUse_sh1add:
 ; NO-ZBA:       # %bb.0:
-; NO-ZBA-NEXT:    ori a1, a0, 1
-; NO-ZBA-NEXT:    slli a0, a0, 1
-; NO-ZBA-NEXT:    ori a0, a0, 2
-; NO-ZBA-NEXT:    add a0, a0, a1
+; NO-ZBA-NEXT:    slli a1, a0, 1
+; NO-ZBA-NEXT:    ori a0, a0, 1
+; NO-ZBA-NEXT:    ori a1, a1, 2
+; NO-ZBA-NEXT:    add a0, a1, a0
 ; NO-ZBA-NEXT:    ret
 ;
 ; ZBA-LABEL: add_shl_moreOneUse_sh1add:
@@ -269,10 +269,10 @@ define i32 @add_shl_moreOneUse_sh1add(i32 %x) {
 define i32 @add_shl_moreOneUse_sh2add(i32 %x) {
 ; NO-ZBA-LABEL: add_shl_moreOneUse_sh2add:
 ; NO-ZBA:       # %bb.0:
-; NO-ZBA-NEXT:    ori a1, a0, 1
-; NO-ZBA-NEXT:    slli a0, a0, 2
-; NO-ZBA-NEXT:    ori a0, a0, 4
-; NO-ZBA-NEXT:    add a0, a0, a1
+; NO-ZBA-NEXT:    slli a1, a0, 2
+; NO-ZBA-NEXT:    ori a0, a0, 1
+; NO-ZBA-NEXT:    ori a1, a1, 4
+; NO-ZBA-NEXT:    add a0, a1, a0
 ; NO-ZBA-NEXT:    ret
 ;
 ; ZBA-LABEL: add_shl_moreOneUse_sh2add:
@@ -295,10 +295,10 @@ define i32 @add_shl_moreOneUse_sh2add(i32 %x) {
 define i32 @add_shl_moreOneUse_sh3add(i32 %x) {
 ; NO-ZBA-LABEL: add_shl_moreOneUse_sh3add:
 ; NO-ZBA:       # %bb.0:
-; NO-ZBA-NEXT:    ori a1, a0, 1
-; NO-ZBA-NEXT:    slli a0, a0, 3
-; NO-ZBA-NEXT:    ori a0, a0, 8
-; NO-ZBA-NEXT:    add a0, a0, a1
+; NO-ZBA-NEXT:    slli a1, a0, 3
+; NO-ZBA-NEXT:    ori a0, a0, 1
+; NO-ZBA-NEXT:    ori a1, a1, 8
+; NO-ZBA-NEXT:    add a0, a1, a0
 ; NO-ZBA-NEXT:    ret
 ;
 ; ZBA-LABEL: add_shl_moreOneUse_sh3add:
@@ -321,10 +321,10 @@ define i32 @add_shl_moreOneUse_sh3add(i32 %x) {
 define i32 @add_shl_moreOneUse_sh4add(i32 %x) {
 ; RV32-LABEL: add_shl_moreOneUse_sh4add:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    ori a1, a0, 1
-; RV32-NEXT:    slli a0, a0, 4
-; RV32-NEXT:    ori a0, a0, 16
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    slli a1, a0, 4
+; RV32-NEXT:    ori a0, a0, 1
+; RV32-NEXT:    ori a1, a1, 16
+; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    ret
   %or = or i32 %x, 1
   %mul = shl i32 %or, 4

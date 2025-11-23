@@ -459,12 +459,12 @@ define <vscale x 1 x float> @test5(<vscale x 1 x float> %0, <vscale x 1 x float>
 ; CHECK-NEXT:    fsrmi a2, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    lui a0, 66
 ; CHECK-NEXT:    fsrm a2
-; CHECK-NEXT:    addi a0, a0, 769
-; CHECK-NEXT:    frrm a2
-; CHECK-NEXT:    slli a2, a2, 2
-; CHECK-NEXT:    srl a0, a0, a2
+; CHECK-NEXT:    frrm a0
+; CHECK-NEXT:    lui a2, 66
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    addi a2, a2, 769
+; CHECK-NEXT:    srl a0, a2, a0
 ; CHECK-NEXT:    andi a0, a0, 7
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
 ; CHECK-NEXT:    sw a0, 0(a1)
@@ -475,12 +475,12 @@ define <vscale x 1 x float> @test5(<vscale x 1 x float> %0, <vscale x 1 x float>
 ; UNOPT-NEXT:    fsrmi a2, 0
 ; UNOPT-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; UNOPT-NEXT:    vfadd.vv v8, v8, v9
-; UNOPT-NEXT:    lui a0, 66
 ; UNOPT-NEXT:    fsrm a2
-; UNOPT-NEXT:    addi a0, a0, 769
-; UNOPT-NEXT:    frrm a2
-; UNOPT-NEXT:    slli a2, a2, 2
-; UNOPT-NEXT:    srl a0, a0, a2
+; UNOPT-NEXT:    frrm a0
+; UNOPT-NEXT:    lui a2, 66
+; UNOPT-NEXT:    slli a0, a0, 2
+; UNOPT-NEXT:    addi a2, a2, 769
+; UNOPT-NEXT:    srl a0, a2, a0
 ; UNOPT-NEXT:    andi a0, a0, 7
 ; UNOPT-NEXT:    vfadd.vv v8, v8, v8
 ; UNOPT-NEXT:    sw a0, 0(a1)

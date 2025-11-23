@@ -183,9 +183,9 @@ define void @optimize_ternary_use(<vscale x 4 x i16> %a, <vscale x 4 x i32> %b, 
 define void @fadd_fcmp_select_copy(<vscale x 4 x float> %v, <vscale x 4 x i1> %c, ptr %p, iXLen %vl) {
 ; CHECK-LABEL: fadd_fcmp_select_copy:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.w.x fa5, zero
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
-; CHECK-NEXT:    fmv.w.x fa5, zero
 ; CHECK-NEXT:    vmflt.vf v10, v8, fa5
 ; CHECK-NEXT:    vmand.mm v10, v0, v10
 ; CHECK-NEXT:    vse32.v v8, (a0)
@@ -246,8 +246,8 @@ define void @recurrence(<vscale x 4 x i32> %v, ptr %p, iXLen %n, iXLen %vl) {
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:  .LBB16_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vadd.vv v10, v10, v8
+; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    bnez a1, .LBB16_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    vse32.v v10, (a0)
@@ -276,8 +276,8 @@ define void @recurrence_vleff(<vscale x 4 x i32> %v, ptr %p, iXLen %n, iXLen %vl
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32ff.v v10, (a3)
-; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vadd.vv v8, v8, v10
+; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    addi a3, a3, 4
 ; CHECK-NEXT:    bnez a1, .LBB17_1
@@ -304,9 +304,9 @@ exit:
 define <vscale x 4 x i32> @join(<vscale x 4 x i32> %v, i1 %cond, iXLen %vl) {
 ; CHECK-LABEL: join:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, 1
+; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    beqz a0, .LBB18_2
 ; CHECK-NEXT:  # %bb.1: # %foo
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
@@ -334,13 +334,13 @@ define <vscale x 2 x i64> @dead_vsmul() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vsetivli zero, 0, e64, m2, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, ma
+; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetivli zero, 0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vsmul.vx v10, v10, zero
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, tu, ma
+; CHECK-NEXT:    vmv.v.v v8, v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 2 x i16> @llvm.riscv.vsmul(<vscale x 2 x i16> zeroinitializer, <vscale x 2 x i16> zeroinitializer, i16 0, iXLen 0, iXLen 0)

@@ -170,8 +170,8 @@ define signext i32 @test4(i32 signext %x, i32 signext %y, i32 signext %z) {
 ;
 ; CMOV-NOZICOND-LABEL: test4:
 ; CMOV-NOZICOND:       # %bb.0:
-; CMOV-NOZICOND-NEXT:    li a1, 0
 ; CMOV-NOZICOND-NEXT:    li a0, 3
+; CMOV-NOZICOND-NEXT:    li a1, 0
 ; CMOV-NOZICOND-NEXT:    beqz a2, .LBB3_2
 ; CMOV-NOZICOND-NEXT:  # %bb.1:
 ; CMOV-NOZICOND-NEXT:    mv a0, a1

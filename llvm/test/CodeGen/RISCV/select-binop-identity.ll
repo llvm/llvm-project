@@ -667,8 +667,8 @@ define i64 @add_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; RV32I-LABEL: add_select_all_zeros_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    neg a0, a0
-; RV32I-NEXT:    and a2, a0, a2
 ; RV32I-NEXT:    and a1, a0, a1
+; RV32I-NEXT:    and a2, a0, a2
 ; RV32I-NEXT:    add a0, a1, a3
 ; RV32I-NEXT:    sltu a1, a0, a1
 ; RV32I-NEXT:    add a2, a2, a4
@@ -699,8 +699,8 @@ define i64 @add_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ;
 ; ZICOND32-LABEL: add_select_all_zeros_i64:
 ; ZICOND32:       # %bb.0:
-; ZICOND32-NEXT:    czero.eqz a2, a2, a0
 ; ZICOND32-NEXT:    czero.eqz a1, a1, a0
+; ZICOND32-NEXT:    czero.eqz a2, a2, a0
 ; ZICOND32-NEXT:    add a0, a1, a3
 ; ZICOND32-NEXT:    sltu a1, a0, a1
 ; ZICOND32-NEXT:    add a2, a2, a4

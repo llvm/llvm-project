@@ -47,8 +47,8 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32I-LABEL: func2:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    add a3, a1, a3
 ; RV32I-NEXT:    add a2, a0, a2
+; RV32I-NEXT:    add a3, a1, a3
 ; RV32I-NEXT:    sltu a0, a2, a0
 ; RV32I-NEXT:    add a3, a3, a0
 ; RV32I-NEXT:    beq a3, a1, .LBB1_2
@@ -70,8 +70,8 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ;
 ; RV32IZbb-LABEL: func2:
 ; RV32IZbb:       # %bb.0:
-; RV32IZbb-NEXT:    add a3, a1, a3
 ; RV32IZbb-NEXT:    add a2, a0, a2
+; RV32IZbb-NEXT:    add a3, a1, a3
 ; RV32IZbb-NEXT:    sltu a0, a2, a0
 ; RV32IZbb-NEXT:    add a3, a3, a0
 ; RV32IZbb-NEXT:    beq a3, a1, .LBB1_2
@@ -96,9 +96,9 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; RV32I-LABEL: func16:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 16
 ; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    addi a1, a2, -1
 ; RV32I-NEXT:    bltu a0, a1, .LBB2_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    mv a0, a1
@@ -107,9 +107,9 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ;
 ; RV64I-LABEL: func16:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    addi a1, a2, -1
 ; RV64I-NEXT:    bltu a0, a1, .LBB2_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
@@ -118,18 +118,18 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ;
 ; RV32IZbb-LABEL: func16:
 ; RV32IZbb:       # %bb.0:
+; RV32IZbb-NEXT:    lui a2, 16
 ; RV32IZbb-NEXT:    add a0, a0, a1
-; RV32IZbb-NEXT:    lui a1, 16
-; RV32IZbb-NEXT:    addi a1, a1, -1
-; RV32IZbb-NEXT:    minu a0, a0, a1
+; RV32IZbb-NEXT:    addi a2, a2, -1
+; RV32IZbb-NEXT:    minu a0, a0, a2
 ; RV32IZbb-NEXT:    ret
 ;
 ; RV64IZbb-LABEL: func16:
 ; RV64IZbb:       # %bb.0:
+; RV64IZbb-NEXT:    lui a2, 16
 ; RV64IZbb-NEXT:    add a0, a0, a1
-; RV64IZbb-NEXT:    lui a1, 16
-; RV64IZbb-NEXT:    addi a1, a1, -1
-; RV64IZbb-NEXT:    minu a0, a0, a1
+; RV64IZbb-NEXT:    addi a2, a2, -1
+; RV64IZbb-NEXT:    minu a0, a0, a2
 ; RV64IZbb-NEXT:    ret
   %tmp = call i16 @llvm.uadd.sat.i16(i16 %x, i16 %y);
   ret i16 %tmp;

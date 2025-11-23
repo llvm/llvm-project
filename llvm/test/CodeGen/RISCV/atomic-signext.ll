@@ -521,37 +521,37 @@ define signext i8 @atomicrmw_and_i8_monotonic(ptr %a, i8 %b) nounwind {
 ;
 ; RV32IA-LABEL: atomicrmw_and_i8_monotonic:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
+; RV32IA-NEXT:    slli a2, a0, 3
 ; RV32IA-NEXT:    li a3, 255
+; RV32IA-NEXT:    sll a3, a3, a2
 ; RV32IA-NEXT:    zext.b a1, a1
-; RV32IA-NEXT:    sll a3, a3, a0
 ; RV32IA-NEXT:    not a3, a3
-; RV32IA-NEXT:    sll a1, a1, a0
+; RV32IA-NEXT:    sll a1, a1, a2
+; RV32IA-NEXT:    andi a0, a0, -4
 ; RV32IA-NEXT:    or a1, a1, a3
-; RV32IA-NEXT:    amoand.w a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
+; RV32IA-NEXT:    amoand.w a0, a1, (a0)
+; RV32IA-NEXT:    srl a0, a0, a2
 ; RV32IA-NEXT:    slli a0, a0, 24
 ; RV32IA-NEXT:    srai a0, a0, 24
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: atomicrmw_and_i8_monotonic:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV32I-ZALRSC-NEXT:    slli a2, a0, 3
 ; RV32I-ZALRSC-NEXT:    li a3, 255
+; RV32I-ZALRSC-NEXT:    sll a3, a3, a2
 ; RV32I-ZALRSC-NEXT:    zext.b a1, a1
-; RV32I-ZALRSC-NEXT:    sll a3, a3, a0
 ; RV32I-ZALRSC-NEXT:    not a3, a3
-; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
+; RV32I-ZALRSC-NEXT:    sll a1, a1, a2
+; RV32I-ZALRSC-NEXT:    andi a0, a0, -4
 ; RV32I-ZALRSC-NEXT:    or a1, a1, a3
 ; RV32I-ZALRSC-NEXT:  .LBB6_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a3, (a2)
+; RV32I-ZALRSC-NEXT:    lr.w a3, (a0)
 ; RV32I-ZALRSC-NEXT:    and a4, a3, a1
-; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a2)
+; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV32I-ZALRSC-NEXT:    bnez a4, .LBB6_1
 ; RV32I-ZALRSC-NEXT:  # %bb.2:
-; RV32I-ZALRSC-NEXT:    srl a0, a3, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a3, a2
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 24
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 24
 ; RV32I-ZALRSC-NEXT:    ret
@@ -570,37 +570,37 @@ define signext i8 @atomicrmw_and_i8_monotonic(ptr %a, i8 %b) nounwind {
 ;
 ; RV64IA-LABEL: atomicrmw_and_i8_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slli a2, a0, 3
 ; RV64IA-NEXT:    li a3, 255
+; RV64IA-NEXT:    sllw a3, a3, a2
 ; RV64IA-NEXT:    zext.b a1, a1
-; RV64IA-NEXT:    sllw a3, a3, a0
 ; RV64IA-NEXT:    not a3, a3
-; RV64IA-NEXT:    sllw a1, a1, a0
+; RV64IA-NEXT:    sllw a1, a1, a2
+; RV64IA-NEXT:    andi a0, a0, -4
 ; RV64IA-NEXT:    or a1, a1, a3
-; RV64IA-NEXT:    amoand.w a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
+; RV64IA-NEXT:    amoand.w a0, a1, (a0)
+; RV64IA-NEXT:    srlw a0, a0, a2
 ; RV64IA-NEXT:    slli a0, a0, 56
 ; RV64IA-NEXT:    srai a0, a0, 56
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_and_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slli a2, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
+; RV64I-ZALRSC-NEXT:    sllw a3, a3, a2
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
-; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
 ; RV64I-ZALRSC-NEXT:    not a3, a3
-; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
+; RV64I-ZALRSC-NEXT:    sllw a1, a1, a2
+; RV64I-ZALRSC-NEXT:    andi a0, a0, -4
 ; RV64I-ZALRSC-NEXT:    or a1, a1, a3
 ; RV64I-ZALRSC-NEXT:  .LBB6_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a3, (a2)
+; RV64I-ZALRSC-NEXT:    lr.w a3, (a0)
 ; RV64I-ZALRSC-NEXT:    and a4, a3, a1
-; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a2)
+; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a4, .LBB6_1
 ; RV64I-ZALRSC-NEXT:  # %bb.2:
-; RV64I-ZALRSC-NEXT:    srlw a0, a3, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a3, a2
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 56
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 56
 ; RV64I-ZALRSC-NEXT:    ret
@@ -743,29 +743,29 @@ define signext i8 @atomicrmw_or_i8_monotonic(ptr %a, i8 %b) nounwind {
 ;
 ; RV32IA-LABEL: atomicrmw_or_i8_monotonic:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
+; RV32IA-NEXT:    slli a2, a0, 3
 ; RV32IA-NEXT:    zext.b a1, a1
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoor.w a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
+; RV32IA-NEXT:    andi a0, a0, -4
+; RV32IA-NEXT:    sll a1, a1, a2
+; RV32IA-NEXT:    amoor.w a0, a1, (a0)
+; RV32IA-NEXT:    srl a0, a0, a2
 ; RV32IA-NEXT:    slli a0, a0, 24
 ; RV32IA-NEXT:    srai a0, a0, 24
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: atomicrmw_or_i8_monotonic:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV32I-ZALRSC-NEXT:    slli a2, a0, 3
 ; RV32I-ZALRSC-NEXT:    zext.b a1, a1
-; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
+; RV32I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV32I-ZALRSC-NEXT:    sll a1, a1, a2
 ; RV32I-ZALRSC-NEXT:  .LBB8_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a3, (a2)
+; RV32I-ZALRSC-NEXT:    lr.w a3, (a0)
 ; RV32I-ZALRSC-NEXT:    or a4, a3, a1
-; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a2)
+; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV32I-ZALRSC-NEXT:    bnez a4, .LBB8_1
 ; RV32I-ZALRSC-NEXT:  # %bb.2:
-; RV32I-ZALRSC-NEXT:    srl a0, a3, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a3, a2
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 24
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 24
 ; RV32I-ZALRSC-NEXT:    ret
@@ -784,29 +784,29 @@ define signext i8 @atomicrmw_or_i8_monotonic(ptr %a, i8 %b) nounwind {
 ;
 ; RV64IA-LABEL: atomicrmw_or_i8_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slli a2, a0, 3
 ; RV64IA-NEXT:    zext.b a1, a1
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoor.w a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
+; RV64IA-NEXT:    andi a0, a0, -4
+; RV64IA-NEXT:    sllw a1, a1, a2
+; RV64IA-NEXT:    amoor.w a0, a1, (a0)
+; RV64IA-NEXT:    srlw a0, a0, a2
 ; RV64IA-NEXT:    slli a0, a0, 56
 ; RV64IA-NEXT:    srai a0, a0, 56
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_or_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slli a2, a0, 3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
-; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
+; RV64I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV64I-ZALRSC-NEXT:    sllw a1, a1, a2
 ; RV64I-ZALRSC-NEXT:  .LBB8_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a3, (a2)
+; RV64I-ZALRSC-NEXT:    lr.w a3, (a0)
 ; RV64I-ZALRSC-NEXT:    or a4, a3, a1
-; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a2)
+; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a4, .LBB8_1
 ; RV64I-ZALRSC-NEXT:  # %bb.2:
-; RV64I-ZALRSC-NEXT:    srlw a0, a3, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a3, a2
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 56
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 56
 ; RV64I-ZALRSC-NEXT:    ret
@@ -829,29 +829,29 @@ define signext i8 @atomicrmw_xor_i8_monotonic(ptr %a, i8 %b) nounwind {
 ;
 ; RV32IA-LABEL: atomicrmw_xor_i8_monotonic:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
+; RV32IA-NEXT:    slli a2, a0, 3
 ; RV32IA-NEXT:    zext.b a1, a1
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoxor.w a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
+; RV32IA-NEXT:    andi a0, a0, -4
+; RV32IA-NEXT:    sll a1, a1, a2
+; RV32IA-NEXT:    amoxor.w a0, a1, (a0)
+; RV32IA-NEXT:    srl a0, a0, a2
 ; RV32IA-NEXT:    slli a0, a0, 24
 ; RV32IA-NEXT:    srai a0, a0, 24
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: atomicrmw_xor_i8_monotonic:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV32I-ZALRSC-NEXT:    slli a2, a0, 3
 ; RV32I-ZALRSC-NEXT:    zext.b a1, a1
-; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
+; RV32I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV32I-ZALRSC-NEXT:    sll a1, a1, a2
 ; RV32I-ZALRSC-NEXT:  .LBB9_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a3, (a2)
+; RV32I-ZALRSC-NEXT:    lr.w a3, (a0)
 ; RV32I-ZALRSC-NEXT:    xor a4, a3, a1
-; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a2)
+; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV32I-ZALRSC-NEXT:    bnez a4, .LBB9_1
 ; RV32I-ZALRSC-NEXT:  # %bb.2:
-; RV32I-ZALRSC-NEXT:    srl a0, a3, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a3, a2
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 24
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 24
 ; RV32I-ZALRSC-NEXT:    ret
@@ -870,29 +870,29 @@ define signext i8 @atomicrmw_xor_i8_monotonic(ptr %a, i8 %b) nounwind {
 ;
 ; RV64IA-LABEL: atomicrmw_xor_i8_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slli a2, a0, 3
 ; RV64IA-NEXT:    zext.b a1, a1
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoxor.w a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
+; RV64IA-NEXT:    andi a0, a0, -4
+; RV64IA-NEXT:    sllw a1, a1, a2
+; RV64IA-NEXT:    amoxor.w a0, a1, (a0)
+; RV64IA-NEXT:    srlw a0, a0, a2
 ; RV64IA-NEXT:    slli a0, a0, 56
 ; RV64IA-NEXT:    srai a0, a0, 56
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_xor_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slli a2, a0, 3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
-; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
+; RV64I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV64I-ZALRSC-NEXT:    sllw a1, a1, a2
 ; RV64I-ZALRSC-NEXT:  .LBB9_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a3, (a2)
+; RV64I-ZALRSC-NEXT:    lr.w a3, (a0)
 ; RV64I-ZALRSC-NEXT:    xor a4, a3, a1
-; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a2)
+; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a4, .LBB9_1
 ; RV64I-ZALRSC-NEXT:  # %bb.2:
-; RV64I-ZALRSC-NEXT:    srlw a0, a3, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a3, a2
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 56
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 56
 ; RV64I-ZALRSC-NEXT:    ret
@@ -949,8 +949,8 @@ define signext i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32IA-NEXT:    andi a2, a0, -4
 ; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    li a3, 255
-; RV32IA-NEXT:    slli a1, a1, 24
 ; RV32IA-NEXT:    andi a4, a0, 24
+; RV32IA-NEXT:    slli a1, a1, 24
 ; RV32IA-NEXT:    sll a3, a3, a0
 ; RV32IA-NEXT:    srai a1, a1, 24
 ; RV32IA-NEXT:    sll a1, a1, a0
@@ -980,8 +980,8 @@ define signext i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
 ; RV32I-ZALRSC-NEXT:    li a3, 255
-; RV32I-ZALRSC-NEXT:    slli a1, a1, 24
 ; RV32I-ZALRSC-NEXT:    andi a4, a0, 24
+; RV32I-ZALRSC-NEXT:    slli a1, a1, 24
 ; RV32I-ZALRSC-NEXT:    sll a3, a3, a0
 ; RV32I-ZALRSC-NEXT:    srai a1, a1, 24
 ; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
@@ -1054,8 +1054,8 @@ define signext i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
-; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    andi a4, a0, 24
+; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    sllw a3, a3, a0
 ; RV64IA-NEXT:    srai a1, a1, 56
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -1085,8 +1085,8 @@ define signext i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
-; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
+; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
 ; RV64I-ZALRSC-NEXT:    srai a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
@@ -1163,8 +1163,8 @@ define signext i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32IA-NEXT:    andi a2, a0, -4
 ; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    li a3, 255
-; RV32IA-NEXT:    slli a1, a1, 24
 ; RV32IA-NEXT:    andi a4, a0, 24
+; RV32IA-NEXT:    slli a1, a1, 24
 ; RV32IA-NEXT:    sll a3, a3, a0
 ; RV32IA-NEXT:    srai a1, a1, 24
 ; RV32IA-NEXT:    sll a1, a1, a0
@@ -1194,8 +1194,8 @@ define signext i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
 ; RV32I-ZALRSC-NEXT:    li a3, 255
-; RV32I-ZALRSC-NEXT:    slli a1, a1, 24
 ; RV32I-ZALRSC-NEXT:    andi a4, a0, 24
+; RV32I-ZALRSC-NEXT:    slli a1, a1, 24
 ; RV32I-ZALRSC-NEXT:    sll a3, a3, a0
 ; RV32I-ZALRSC-NEXT:    srai a1, a1, 24
 ; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
@@ -1268,8 +1268,8 @@ define signext i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
-; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    andi a4, a0, 24
+; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    sllw a3, a3, a0
 ; RV64IA-NEXT:    srai a1, a1, 56
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -1299,8 +1299,8 @@ define signext i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
-; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
+; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
 ; RV64I-ZALRSC-NEXT:    srai a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
@@ -1723,46 +1723,46 @@ define signext i16 @atomicrmw_xchg_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV32IA-LABEL: atomicrmw_xchg_i16_monotonic:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
+; RV32IA-NEXT:    lui a2, 16
+; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    addi a2, a2, -1
 ; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a3, 16
-; RV32IA-NEXT:    addi a3, a3, -1
-; RV32IA-NEXT:    sll a4, a3, a0
-; RV32IA-NEXT:    and a1, a1, a3
+; RV32IA-NEXT:    and a1, a1, a2
+; RV32IA-NEXT:    sll a2, a2, a0
 ; RV32IA-NEXT:    sll a1, a1, a0
 ; RV32IA-NEXT:  .LBB14_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a3, (a2)
+; RV32IA-NEXT:    lr.w a4, (a3)
 ; RV32IA-NEXT:    mv a5, a1
-; RV32IA-NEXT:    xor a5, a3, a5
-; RV32IA-NEXT:    and a5, a5, a4
-; RV32IA-NEXT:    xor a5, a3, a5
-; RV32IA-NEXT:    sc.w a5, a5, (a2)
+; RV32IA-NEXT:    xor a5, a4, a5
+; RV32IA-NEXT:    and a5, a5, a2
+; RV32IA-NEXT:    xor a5, a4, a5
+; RV32IA-NEXT:    sc.w a5, a5, (a3)
 ; RV32IA-NEXT:    bnez a5, .LBB14_1
 ; RV32IA-NEXT:  # %bb.2:
-; RV32IA-NEXT:    srl a0, a3, a0
+; RV32IA-NEXT:    srl a0, a4, a0
 ; RV32IA-NEXT:    slli a0, a0, 16
 ; RV32IA-NEXT:    srai a0, a0, 16
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: atomicrmw_xchg_i16_monotonic:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
+; RV32I-ZALRSC-NEXT:    lui a2, 16
+; RV32I-ZALRSC-NEXT:    andi a3, a0, -4
+; RV32I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV32I-ZALRSC-NEXT:    lui a3, 16
-; RV32I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV32I-ZALRSC-NEXT:    sll a4, a3, a0
-; RV32I-ZALRSC-NEXT:    and a1, a1, a3
+; RV32I-ZALRSC-NEXT:    and a1, a1, a2
+; RV32I-ZALRSC-NEXT:    sll a2, a2, a0
 ; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
 ; RV32I-ZALRSC-NEXT:  .LBB14_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a3, (a2)
+; RV32I-ZALRSC-NEXT:    lr.w a4, (a3)
 ; RV32I-ZALRSC-NEXT:    mv a5, a1
-; RV32I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV32I-ZALRSC-NEXT:    and a5, a5, a4
-; RV32I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a2)
+; RV32I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV32I-ZALRSC-NEXT:    and a5, a5, a2
+; RV32I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
 ; RV32I-ZALRSC-NEXT:    bnez a5, .LBB14_1
 ; RV32I-ZALRSC-NEXT:  # %bb.2:
-; RV32I-ZALRSC-NEXT:    srl a0, a3, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a4, a0
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    ret
@@ -1781,46 +1781,46 @@ define signext i16 @atomicrmw_xchg_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV64IA-LABEL: atomicrmw_xchg_i16_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
+; RV64IA-NEXT:    lui a2, 16
+; RV64IA-NEXT:    andi a3, a0, -4
+; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addi a3, a3, -1
-; RV64IA-NEXT:    sllw a4, a3, a0
-; RV64IA-NEXT:    and a1, a1, a3
+; RV64IA-NEXT:    and a1, a1, a2
+; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:  .LBB14_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a3, (a2)
+; RV64IA-NEXT:    lr.w a4, (a3)
 ; RV64IA-NEXT:    mv a5, a1
-; RV64IA-NEXT:    xor a5, a3, a5
-; RV64IA-NEXT:    and a5, a5, a4
-; RV64IA-NEXT:    xor a5, a3, a5
-; RV64IA-NEXT:    sc.w a5, a5, (a2)
+; RV64IA-NEXT:    xor a5, a4, a5
+; RV64IA-NEXT:    and a5, a5, a2
+; RV64IA-NEXT:    xor a5, a4, a5
+; RV64IA-NEXT:    sc.w a5, a5, (a3)
 ; RV64IA-NEXT:    bnez a5, .LBB14_1
 ; RV64IA-NEXT:  # %bb.2:
-; RV64IA-NEXT:    srlw a0, a3, a0
+; RV64IA-NEXT:    srlw a0, a4, a0
 ; RV64IA-NEXT:    slli a0, a0, 48
 ; RV64IA-NEXT:    srai a0, a0, 48
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
+; RV64I-ZALRSC-NEXT:    lui a2, 16
+; RV64I-ZALRSC-NEXT:    andi a3, a0, -4
+; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV64I-ZALRSC-NEXT:    lui a3, 16
-; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
-; RV64I-ZALRSC-NEXT:    and a1, a1, a3
+; RV64I-ZALRSC-NEXT:    and a1, a1, a2
+; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:  .LBB14_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a3, (a2)
+; RV64I-ZALRSC-NEXT:    lr.w a4, (a3)
 ; RV64I-ZALRSC-NEXT:    mv a5, a1
-; RV64I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV64I-ZALRSC-NEXT:    and a5, a5, a4
-; RV64I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a2)
+; RV64I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV64I-ZALRSC-NEXT:    and a5, a5, a2
+; RV64I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
 ; RV64I-ZALRSC-NEXT:    bnez a5, .LBB14_1
 ; RV64I-ZALRSC-NEXT:  # %bb.2:
-; RV64I-ZALRSC-NEXT:    srlw a0, a3, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a4, a0
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    ret
@@ -1843,46 +1843,46 @@ define signext i16 @atomicrmw_add_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV32IA-LABEL: atomicrmw_add_i16_monotonic:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
+; RV32IA-NEXT:    lui a2, 16
+; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    addi a2, a2, -1
 ; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a3, 16
-; RV32IA-NEXT:    addi a3, a3, -1
-; RV32IA-NEXT:    sll a4, a3, a0
-; RV32IA-NEXT:    and a1, a1, a3
+; RV32IA-NEXT:    and a1, a1, a2
+; RV32IA-NEXT:    sll a2, a2, a0
 ; RV32IA-NEXT:    sll a1, a1, a0
 ; RV32IA-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a3, (a2)
-; RV32IA-NEXT:    add a5, a3, a1
-; RV32IA-NEXT:    xor a5, a3, a5
-; RV32IA-NEXT:    and a5, a5, a4
-; RV32IA-NEXT:    xor a5, a3, a5
-; RV32IA-NEXT:    sc.w a5, a5, (a2)
+; RV32IA-NEXT:    lr.w a4, (a3)
+; RV32IA-NEXT:    add a5, a4, a1
+; RV32IA-NEXT:    xor a5, a4, a5
+; RV32IA-NEXT:    and a5, a5, a2
+; RV32IA-NEXT:    xor a5, a4, a5
+; RV32IA-NEXT:    sc.w a5, a5, (a3)
 ; RV32IA-NEXT:    bnez a5, .LBB15_1
 ; RV32IA-NEXT:  # %bb.2:
-; RV32IA-NEXT:    srl a0, a3, a0
+; RV32IA-NEXT:    srl a0, a4, a0
 ; RV32IA-NEXT:    slli a0, a0, 16
 ; RV32IA-NEXT:    srai a0, a0, 16
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: atomicrmw_add_i16_monotonic:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
+; RV32I-ZALRSC-NEXT:    lui a2, 16
+; RV32I-ZALRSC-NEXT:    andi a3, a0, -4
+; RV32I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV32I-ZALRSC-NEXT:    lui a3, 16
-; RV32I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV32I-ZALRSC-NEXT:    sll a4, a3, a0
-; RV32I-ZALRSC-NEXT:    and a1, a1, a3
+; RV32I-ZALRSC-NEXT:    and a1, a1, a2
+; RV32I-ZALRSC-NEXT:    sll a2, a2, a0
 ; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
 ; RV32I-ZALRSC-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a3, (a2)
-; RV32I-ZALRSC-NEXT:    add a5, a3, a1
-; RV32I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV32I-ZALRSC-NEXT:    and a5, a5, a4
-; RV32I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a2)
+; RV32I-ZALRSC-NEXT:    lr.w a4, (a3)
+; RV32I-ZALRSC-NEXT:    add a5, a4, a1
+; RV32I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV32I-ZALRSC-NEXT:    and a5, a5, a2
+; RV32I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
 ; RV32I-ZALRSC-NEXT:    bnez a5, .LBB15_1
 ; RV32I-ZALRSC-NEXT:  # %bb.2:
-; RV32I-ZALRSC-NEXT:    srl a0, a3, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a4, a0
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    ret
@@ -1901,46 +1901,46 @@ define signext i16 @atomicrmw_add_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV64IA-LABEL: atomicrmw_add_i16_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
+; RV64IA-NEXT:    lui a2, 16
+; RV64IA-NEXT:    andi a3, a0, -4
+; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addi a3, a3, -1
-; RV64IA-NEXT:    sllw a4, a3, a0
-; RV64IA-NEXT:    and a1, a1, a3
+; RV64IA-NEXT:    and a1, a1, a2
+; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a3, (a2)
-; RV64IA-NEXT:    add a5, a3, a1
-; RV64IA-NEXT:    xor a5, a3, a5
-; RV64IA-NEXT:    and a5, a5, a4
-; RV64IA-NEXT:    xor a5, a3, a5
-; RV64IA-NEXT:    sc.w a5, a5, (a2)
+; RV64IA-NEXT:    lr.w a4, (a3)
+; RV64IA-NEXT:    add a5, a4, a1
+; RV64IA-NEXT:    xor a5, a4, a5
+; RV64IA-NEXT:    and a5, a5, a2
+; RV64IA-NEXT:    xor a5, a4, a5
+; RV64IA-NEXT:    sc.w a5, a5, (a3)
 ; RV64IA-NEXT:    bnez a5, .LBB15_1
 ; RV64IA-NEXT:  # %bb.2:
-; RV64IA-NEXT:    srlw a0, a3, a0
+; RV64IA-NEXT:    srlw a0, a4, a0
 ; RV64IA-NEXT:    slli a0, a0, 48
 ; RV64IA-NEXT:    srai a0, a0, 48
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_add_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
+; RV64I-ZALRSC-NEXT:    lui a2, 16
+; RV64I-ZALRSC-NEXT:    andi a3, a0, -4
+; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV64I-ZALRSC-NEXT:    lui a3, 16
-; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
-; RV64I-ZALRSC-NEXT:    and a1, a1, a3
+; RV64I-ZALRSC-NEXT:    and a1, a1, a2
+; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a3, (a2)
-; RV64I-ZALRSC-NEXT:    add a5, a3, a1
-; RV64I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV64I-ZALRSC-NEXT:    and a5, a5, a4
-; RV64I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a2)
+; RV64I-ZALRSC-NEXT:    lr.w a4, (a3)
+; RV64I-ZALRSC-NEXT:    add a5, a4, a1
+; RV64I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV64I-ZALRSC-NEXT:    and a5, a5, a2
+; RV64I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
 ; RV64I-ZALRSC-NEXT:    bnez a5, .LBB15_1
 ; RV64I-ZALRSC-NEXT:  # %bb.2:
-; RV64I-ZALRSC-NEXT:    srlw a0, a3, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a4, a0
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    ret
@@ -1963,46 +1963,46 @@ define signext i16 @atomicrmw_sub_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV32IA-LABEL: atomicrmw_sub_i16_monotonic:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
+; RV32IA-NEXT:    lui a2, 16
+; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    addi a2, a2, -1
 ; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a3, 16
-; RV32IA-NEXT:    addi a3, a3, -1
-; RV32IA-NEXT:    sll a4, a3, a0
-; RV32IA-NEXT:    and a1, a1, a3
+; RV32IA-NEXT:    and a1, a1, a2
+; RV32IA-NEXT:    sll a2, a2, a0
 ; RV32IA-NEXT:    sll a1, a1, a0
 ; RV32IA-NEXT:  .LBB16_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a3, (a2)
-; RV32IA-NEXT:    sub a5, a3, a1
-; RV32IA-NEXT:    xor a5, a3, a5
-; RV32IA-NEXT:    and a5, a5, a4
-; RV32IA-NEXT:    xor a5, a3, a5
-; RV32IA-NEXT:    sc.w a5, a5, (a2)
+; RV32IA-NEXT:    lr.w a4, (a3)
+; RV32IA-NEXT:    sub a5, a4, a1
+; RV32IA-NEXT:    xor a5, a4, a5
+; RV32IA-NEXT:    and a5, a5, a2
+; RV32IA-NEXT:    xor a5, a4, a5
+; RV32IA-NEXT:    sc.w a5, a5, (a3)
 ; RV32IA-NEXT:    bnez a5, .LBB16_1
 ; RV32IA-NEXT:  # %bb.2:
-; RV32IA-NEXT:    srl a0, a3, a0
+; RV32IA-NEXT:    srl a0, a4, a0
 ; RV32IA-NEXT:    slli a0, a0, 16
 ; RV32IA-NEXT:    srai a0, a0, 16
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: atomicrmw_sub_i16_monotonic:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
+; RV32I-ZALRSC-NEXT:    lui a2, 16
+; RV32I-ZALRSC-NEXT:    andi a3, a0, -4
+; RV32I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV32I-ZALRSC-NEXT:    lui a3, 16
-; RV32I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV32I-ZALRSC-NEXT:    sll a4, a3, a0
-; RV32I-ZALRSC-NEXT:    and a1, a1, a3
+; RV32I-ZALRSC-NEXT:    and a1, a1, a2
+; RV32I-ZALRSC-NEXT:    sll a2, a2, a0
 ; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
 ; RV32I-ZALRSC-NEXT:  .LBB16_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a3, (a2)
-; RV32I-ZALRSC-NEXT:    sub a5, a3, a1
-; RV32I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV32I-ZALRSC-NEXT:    and a5, a5, a4
-; RV32I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a2)
+; RV32I-ZALRSC-NEXT:    lr.w a4, (a3)
+; RV32I-ZALRSC-NEXT:    sub a5, a4, a1
+; RV32I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV32I-ZALRSC-NEXT:    and a5, a5, a2
+; RV32I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
 ; RV32I-ZALRSC-NEXT:    bnez a5, .LBB16_1
 ; RV32I-ZALRSC-NEXT:  # %bb.2:
-; RV32I-ZALRSC-NEXT:    srl a0, a3, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a4, a0
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    ret
@@ -2021,46 +2021,46 @@ define signext i16 @atomicrmw_sub_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV64IA-LABEL: atomicrmw_sub_i16_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
+; RV64IA-NEXT:    lui a2, 16
+; RV64IA-NEXT:    andi a3, a0, -4
+; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addi a3, a3, -1
-; RV64IA-NEXT:    sllw a4, a3, a0
-; RV64IA-NEXT:    and a1, a1, a3
+; RV64IA-NEXT:    and a1, a1, a2
+; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:  .LBB16_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a3, (a2)
-; RV64IA-NEXT:    sub a5, a3, a1
-; RV64IA-NEXT:    xor a5, a3, a5
-; RV64IA-NEXT:    and a5, a5, a4
-; RV64IA-NEXT:    xor a5, a3, a5
-; RV64IA-NEXT:    sc.w a5, a5, (a2)
+; RV64IA-NEXT:    lr.w a4, (a3)
+; RV64IA-NEXT:    sub a5, a4, a1
+; RV64IA-NEXT:    xor a5, a4, a5
+; RV64IA-NEXT:    and a5, a5, a2
+; RV64IA-NEXT:    xor a5, a4, a5
+; RV64IA-NEXT:    sc.w a5, a5, (a3)
 ; RV64IA-NEXT:    bnez a5, .LBB16_1
 ; RV64IA-NEXT:  # %bb.2:
-; RV64IA-NEXT:    srlw a0, a3, a0
+; RV64IA-NEXT:    srlw a0, a4, a0
 ; RV64IA-NEXT:    slli a0, a0, 48
 ; RV64IA-NEXT:    srai a0, a0, 48
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_sub_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
+; RV64I-ZALRSC-NEXT:    lui a2, 16
+; RV64I-ZALRSC-NEXT:    andi a3, a0, -4
+; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV64I-ZALRSC-NEXT:    lui a3, 16
-; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
-; RV64I-ZALRSC-NEXT:    and a1, a1, a3
+; RV64I-ZALRSC-NEXT:    and a1, a1, a2
+; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:  .LBB16_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a3, (a2)
-; RV64I-ZALRSC-NEXT:    sub a5, a3, a1
-; RV64I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV64I-ZALRSC-NEXT:    and a5, a5, a4
-; RV64I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a2)
+; RV64I-ZALRSC-NEXT:    lr.w a4, (a3)
+; RV64I-ZALRSC-NEXT:    sub a5, a4, a1
+; RV64I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV64I-ZALRSC-NEXT:    and a5, a5, a2
+; RV64I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
 ; RV64I-ZALRSC-NEXT:    bnez a5, .LBB16_1
 ; RV64I-ZALRSC-NEXT:  # %bb.2:
-; RV64I-ZALRSC-NEXT:    srlw a0, a3, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a4, a0
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    ret
@@ -2083,39 +2083,39 @@ define signext i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV32IA-LABEL: atomicrmw_and_i16_monotonic:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a3, 16
-; RV32IA-NEXT:    addi a3, a3, -1
-; RV32IA-NEXT:    sll a4, a3, a0
-; RV32IA-NEXT:    and a1, a1, a3
-; RV32IA-NEXT:    not a3, a4
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    or a1, a1, a3
-; RV32IA-NEXT:    amoand.w a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
+; RV32IA-NEXT:    lui a2, 16
+; RV32IA-NEXT:    slli a3, a0, 3
+; RV32IA-NEXT:    addi a2, a2, -1
+; RV32IA-NEXT:    sll a4, a2, a3
+; RV32IA-NEXT:    and a1, a1, a2
+; RV32IA-NEXT:    not a2, a4
+; RV32IA-NEXT:    sll a1, a1, a3
+; RV32IA-NEXT:    andi a0, a0, -4
+; RV32IA-NEXT:    or a1, a1, a2
+; RV32IA-NEXT:    amoand.w a0, a1, (a0)
+; RV32IA-NEXT:    srl a0, a0, a3
 ; RV32IA-NEXT:    slli a0, a0, 16
 ; RV32IA-NEXT:    srai a0, a0, 16
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: atomicrmw_and_i16_monotonic:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV32I-ZALRSC-NEXT:    lui a3, 16
-; RV32I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV32I-ZALRSC-NEXT:    sll a4, a3, a0
-; RV32I-ZALRSC-NEXT:    and a1, a1, a3
-; RV32I-ZALRSC-NEXT:    not a3, a4
-; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
-; RV32I-ZALRSC-NEXT:    or a1, a1, a3
+; RV32I-ZALRSC-NEXT:    lui a2, 16
+; RV32I-ZALRSC-NEXT:    slli a3, a0, 3
+; RV32I-ZALRSC-NEXT:    addi a2, a2, -1
+; RV32I-ZALRSC-NEXT:    sll a4, a2, a3
+; RV32I-ZALRSC-NEXT:    and a1, a1, a2
+; RV32I-ZALRSC-NEXT:    not a2, a4
+; RV32I-ZALRSC-NEXT:    sll a1, a1, a3
+; RV32I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV32I-ZALRSC-NEXT:    or a1, a1, a2
 ; RV32I-ZALRSC-NEXT:  .LBB17_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a3, (a2)
-; RV32I-ZALRSC-NEXT:    and a4, a3, a1
-; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a2)
+; RV32I-ZALRSC-NEXT:    lr.w a2, (a0)
+; RV32I-ZALRSC-NEXT:    and a4, a2, a1
+; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV32I-ZALRSC-NEXT:    bnez a4, .LBB17_1
 ; RV32I-ZALRSC-NEXT:  # %bb.2:
-; RV32I-ZALRSC-NEXT:    srl a0, a3, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a2, a3
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    ret
@@ -2134,39 +2134,39 @@ define signext i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV64IA-LABEL: atomicrmw_and_i16_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addi a3, a3, -1
-; RV64IA-NEXT:    sllw a4, a3, a0
-; RV64IA-NEXT:    and a1, a1, a3
-; RV64IA-NEXT:    not a3, a4
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    or a1, a1, a3
-; RV64IA-NEXT:    amoand.w a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
+; RV64IA-NEXT:    lui a2, 16
+; RV64IA-NEXT:    slli a3, a0, 3
+; RV64IA-NEXT:    addi a2, a2, -1
+; RV64IA-NEXT:    sllw a4, a2, a3
+; RV64IA-NEXT:    and a1, a1, a2
+; RV64IA-NEXT:    not a2, a4
+; RV64IA-NEXT:    sllw a1, a1, a3
+; RV64IA-NEXT:    andi a0, a0, -4
+; RV64IA-NEXT:    or a1, a1, a2
+; RV64IA-NEXT:    amoand.w a0, a1, (a0)
+; RV64IA-NEXT:    srlw a0, a0, a3
 ; RV64IA-NEXT:    slli a0, a0, 48
 ; RV64IA-NEXT:    srai a0, a0, 48
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_and_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV64I-ZALRSC-NEXT:    lui a3, 16
-; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
-; RV64I-ZALRSC-NEXT:    and a1, a1, a3
-; RV64I-ZALRSC-NEXT:    not a3, a4
-; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
-; RV64I-ZALRSC-NEXT:    or a1, a1, a3
+; RV64I-ZALRSC-NEXT:    lui a2, 16
+; RV64I-ZALRSC-NEXT:    slli a3, a0, 3
+; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
+; RV64I-ZALRSC-NEXT:    sllw a4, a2, a3
+; RV64I-ZALRSC-NEXT:    and a1, a1, a2
+; RV64I-ZALRSC-NEXT:    not a2, a4
+; RV64I-ZALRSC-NEXT:    sllw a1, a1, a3
+; RV64I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV64I-ZALRSC-NEXT:    or a1, a1, a2
 ; RV64I-ZALRSC-NEXT:  .LBB17_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a3, (a2)
-; RV64I-ZALRSC-NEXT:    and a4, a3, a1
-; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a2)
+; RV64I-ZALRSC-NEXT:    lr.w a2, (a0)
+; RV64I-ZALRSC-NEXT:    and a4, a2, a1
+; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a4, .LBB17_1
 ; RV64I-ZALRSC-NEXT:  # %bb.2:
-; RV64I-ZALRSC-NEXT:    srlw a0, a3, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a2, a3
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    ret
@@ -2189,48 +2189,48 @@ define signext i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV32IA-LABEL: atomicrmw_nand_i16_monotonic:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
+; RV32IA-NEXT:    lui a2, 16
+; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    addi a2, a2, -1
 ; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a3, 16
-; RV32IA-NEXT:    addi a3, a3, -1
-; RV32IA-NEXT:    sll a4, a3, a0
-; RV32IA-NEXT:    and a1, a1, a3
+; RV32IA-NEXT:    and a1, a1, a2
+; RV32IA-NEXT:    sll a2, a2, a0
 ; RV32IA-NEXT:    sll a1, a1, a0
 ; RV32IA-NEXT:  .LBB18_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a3, (a2)
-; RV32IA-NEXT:    and a5, a3, a1
+; RV32IA-NEXT:    lr.w a4, (a3)
+; RV32IA-NEXT:    and a5, a4, a1
 ; RV32IA-NEXT:    not a5, a5
-; RV32IA-NEXT:    xor a5, a3, a5
-; RV32IA-NEXT:    and a5, a5, a4
-; RV32IA-NEXT:    xor a5, a3, a5
-; RV32IA-NEXT:    sc.w a5, a5, (a2)
+; RV32IA-NEXT:    xor a5, a4, a5
+; RV32IA-NEXT:    and a5, a5, a2
+; RV32IA-NEXT:    xor a5, a4, a5
+; RV32IA-NEXT:    sc.w a5, a5, (a3)
 ; RV32IA-NEXT:    bnez a5, .LBB18_1
 ; RV32IA-NEXT:  # %bb.2:
-; RV32IA-NEXT:    srl a0, a3, a0
+; RV32IA-NEXT:    srl a0, a4, a0
 ; RV32IA-NEXT:    slli a0, a0, 16
 ; RV32IA-NEXT:    srai a0, a0, 16
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: atomicrmw_nand_i16_monotonic:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
+; RV32I-ZALRSC-NEXT:    lui a2, 16
+; RV32I-ZALRSC-NEXT:    andi a3, a0, -4
+; RV32I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV32I-ZALRSC-NEXT:    lui a3, 16
-; RV32I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV32I-ZALRSC-NEXT:    sll a4, a3, a0
-; RV32I-ZALRSC-NEXT:    and a1, a1, a3
+; RV32I-ZALRSC-NEXT:    and a1, a1, a2
+; RV32I-ZALRSC-NEXT:    sll a2, a2, a0
 ; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
 ; RV32I-ZALRSC-NEXT:  .LBB18_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a3, (a2)
-; RV32I-ZALRSC-NEXT:    and a5, a3, a1
+; RV32I-ZALRSC-NEXT:    lr.w a4, (a3)
+; RV32I-ZALRSC-NEXT:    and a5, a4, a1
 ; RV32I-ZALRSC-NEXT:    not a5, a5
-; RV32I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV32I-ZALRSC-NEXT:    and a5, a5, a4
-; RV32I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a2)
+; RV32I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV32I-ZALRSC-NEXT:    and a5, a5, a2
+; RV32I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
 ; RV32I-ZALRSC-NEXT:    bnez a5, .LBB18_1
 ; RV32I-ZALRSC-NEXT:  # %bb.2:
-; RV32I-ZALRSC-NEXT:    srl a0, a3, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a4, a0
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    ret
@@ -2249,48 +2249,48 @@ define signext i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV64IA-LABEL: atomicrmw_nand_i16_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
+; RV64IA-NEXT:    lui a2, 16
+; RV64IA-NEXT:    andi a3, a0, -4
+; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addi a3, a3, -1
-; RV64IA-NEXT:    sllw a4, a3, a0
-; RV64IA-NEXT:    and a1, a1, a3
+; RV64IA-NEXT:    and a1, a1, a2
+; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:  .LBB18_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a3, (a2)
-; RV64IA-NEXT:    and a5, a3, a1
+; RV64IA-NEXT:    lr.w a4, (a3)
+; RV64IA-NEXT:    and a5, a4, a1
 ; RV64IA-NEXT:    not a5, a5
-; RV64IA-NEXT:    xor a5, a3, a5
-; RV64IA-NEXT:    and a5, a5, a4
-; RV64IA-NEXT:    xor a5, a3, a5
-; RV64IA-NEXT:    sc.w a5, a5, (a2)
+; RV64IA-NEXT:    xor a5, a4, a5
+; RV64IA-NEXT:    and a5, a5, a2
+; RV64IA-NEXT:    xor a5, a4, a5
+; RV64IA-NEXT:    sc.w a5, a5, (a3)
 ; RV64IA-NEXT:    bnez a5, .LBB18_1
 ; RV64IA-NEXT:  # %bb.2:
-; RV64IA-NEXT:    srlw a0, a3, a0
+; RV64IA-NEXT:    srlw a0, a4, a0
 ; RV64IA-NEXT:    slli a0, a0, 48
 ; RV64IA-NEXT:    srai a0, a0, 48
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_nand_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
+; RV64I-ZALRSC-NEXT:    lui a2, 16
+; RV64I-ZALRSC-NEXT:    andi a3, a0, -4
+; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV64I-ZALRSC-NEXT:    lui a3, 16
-; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
-; RV64I-ZALRSC-NEXT:    and a1, a1, a3
+; RV64I-ZALRSC-NEXT:    and a1, a1, a2
+; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:  .LBB18_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a3, (a2)
-; RV64I-ZALRSC-NEXT:    and a5, a3, a1
+; RV64I-ZALRSC-NEXT:    lr.w a4, (a3)
+; RV64I-ZALRSC-NEXT:    and a5, a4, a1
 ; RV64I-ZALRSC-NEXT:    not a5, a5
-; RV64I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV64I-ZALRSC-NEXT:    and a5, a5, a4
-; RV64I-ZALRSC-NEXT:    xor a5, a3, a5
-; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a2)
+; RV64I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV64I-ZALRSC-NEXT:    and a5, a5, a2
+; RV64I-ZALRSC-NEXT:    xor a5, a4, a5
+; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
 ; RV64I-ZALRSC-NEXT:    bnez a5, .LBB18_1
 ; RV64I-ZALRSC-NEXT:  # %bb.2:
-; RV64I-ZALRSC-NEXT:    srlw a0, a3, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a4, a0
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    ret
@@ -2313,31 +2313,31 @@ define signext i16 @atomicrmw_or_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV32IA-LABEL: atomicrmw_or_i16_monotonic:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    slli a1, a1, 16
+; RV32IA-NEXT:    slli a2, a0, 3
 ; RV32IA-NEXT:    srli a1, a1, 16
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoor.w a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
+; RV32IA-NEXT:    andi a0, a0, -4
+; RV32IA-NEXT:    sll a1, a1, a2
+; RV32IA-NEXT:    amoor.w a0, a1, (a0)
+; RV32IA-NEXT:    srl a0, a0, a2
 ; RV32IA-NEXT:    slli a0, a0, 16
 ; RV32IA-NEXT:    srai a0, a0, 16
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: atomicrmw_or_i16_monotonic:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
 ; RV32I-ZALRSC-NEXT:    slli a1, a1, 16
+; RV32I-ZALRSC-NEXT:    slli a2, a0, 3
 ; RV32I-ZALRSC-NEXT:    srli a1, a1, 16
-; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
+; RV32I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV32I-ZALRSC-NEXT:    sll a1, a1, a2
 ; RV32I-ZALRSC-NEXT:  .LBB19_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a3, (a2)
+; RV32I-ZALRSC-NEXT:    lr.w a3, (a0)
 ; RV32I-ZALRSC-NEXT:    or a4, a3, a1
-; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a2)
+; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV32I-ZALRSC-NEXT:    bnez a4, .LBB19_1
 ; RV32I-ZALRSC-NEXT:  # %bb.2:
-; RV32I-ZALRSC-NEXT:    srl a0, a3, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a3, a2
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    ret
@@ -2356,31 +2356,31 @@ define signext i16 @atomicrmw_or_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV64IA-LABEL: atomicrmw_or_i16_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
+; RV64IA-NEXT:    slli a2, a0, 3
 ; RV64IA-NEXT:    srli a1, a1, 48
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoor.w a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
+; RV64IA-NEXT:    andi a0, a0, -4
+; RV64IA-NEXT:    sllw a1, a1, a2
+; RV64IA-NEXT:    amoor.w a0, a1, (a0)
+; RV64IA-NEXT:    srlw a0, a0, a2
 ; RV64IA-NEXT:    slli a0, a0, 48
 ; RV64IA-NEXT:    srai a0, a0, 48
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_or_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
+; RV64I-ZALRSC-NEXT:    slli a2, a0, 3
 ; RV64I-ZALRSC-NEXT:    srli a1, a1, 48
-; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
+; RV64I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV64I-ZALRSC-NEXT:    sllw a1, a1, a2
 ; RV64I-ZALRSC-NEXT:  .LBB19_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a3, (a2)
+; RV64I-ZALRSC-NEXT:    lr.w a3, (a0)
 ; RV64I-ZALRSC-NEXT:    or a4, a3, a1
-; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a2)
+; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a4, .LBB19_1
 ; RV64I-ZALRSC-NEXT:  # %bb.2:
-; RV64I-ZALRSC-NEXT:    srlw a0, a3, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a3, a2
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    ret
@@ -2403,31 +2403,31 @@ define signext i16 @atomicrmw_xor_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV32IA-LABEL: atomicrmw_xor_i16_monotonic:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    slli a1, a1, 16
+; RV32IA-NEXT:    slli a2, a0, 3
 ; RV32IA-NEXT:    srli a1, a1, 16
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    amoxor.w a1, a1, (a2)
-; RV32IA-NEXT:    srl a0, a1, a0
+; RV32IA-NEXT:    andi a0, a0, -4
+; RV32IA-NEXT:    sll a1, a1, a2
+; RV32IA-NEXT:    amoxor.w a0, a1, (a0)
+; RV32IA-NEXT:    srl a0, a0, a2
 ; RV32IA-NEXT:    slli a0, a0, 16
 ; RV32IA-NEXT:    srai a0, a0, 16
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: atomicrmw_xor_i16_monotonic:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
 ; RV32I-ZALRSC-NEXT:    slli a1, a1, 16
+; RV32I-ZALRSC-NEXT:    slli a2, a0, 3
 ; RV32I-ZALRSC-NEXT:    srli a1, a1, 16
-; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
+; RV32I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV32I-ZALRSC-NEXT:    sll a1, a1, a2
 ; RV32I-ZALRSC-NEXT:  .LBB20_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a3, (a2)
+; RV32I-ZALRSC-NEXT:    lr.w a3, (a0)
 ; RV32I-ZALRSC-NEXT:    xor a4, a3, a1
-; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a2)
+; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV32I-ZALRSC-NEXT:    bnez a4, .LBB20_1
 ; RV32I-ZALRSC-NEXT:  # %bb.2:
-; RV32I-ZALRSC-NEXT:    srl a0, a3, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a3, a2
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    ret
@@ -2446,31 +2446,31 @@ define signext i16 @atomicrmw_xor_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV64IA-LABEL: atomicrmw_xor_i16_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
+; RV64IA-NEXT:    slli a2, a0, 3
 ; RV64IA-NEXT:    srli a1, a1, 48
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    amoxor.w a1, a1, (a2)
-; RV64IA-NEXT:    srlw a0, a1, a0
+; RV64IA-NEXT:    andi a0, a0, -4
+; RV64IA-NEXT:    sllw a1, a1, a2
+; RV64IA-NEXT:    amoxor.w a0, a1, (a0)
+; RV64IA-NEXT:    srlw a0, a0, a2
 ; RV64IA-NEXT:    slli a0, a0, 48
 ; RV64IA-NEXT:    srai a0, a0, 48
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_xor_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
+; RV64I-ZALRSC-NEXT:    slli a2, a0, 3
 ; RV64I-ZALRSC-NEXT:    srli a1, a1, 48
-; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
+; RV64I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV64I-ZALRSC-NEXT:    sllw a1, a1, a2
 ; RV64I-ZALRSC-NEXT:  .LBB20_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a3, (a2)
+; RV64I-ZALRSC-NEXT:    lr.w a3, (a0)
 ; RV64I-ZALRSC-NEXT:    xor a4, a3, a1
-; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a2)
+; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a4, .LBB20_1
 ; RV64I-ZALRSC-NEXT:  # %bb.2:
-; RV64I-ZALRSC-NEXT:    srlw a0, a3, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a3, a2
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    ret
@@ -2527,30 +2527,30 @@ define signext i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32IA-NEXT:    andi a2, a0, -4
 ; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    lui a3, 16
-; RV32IA-NEXT:    slli a1, a1, 16
-; RV32IA-NEXT:    li a4, 16
-; RV32IA-NEXT:    andi a5, a0, 24
+; RV32IA-NEXT:    andi a4, a0, 24
 ; RV32IA-NEXT:    addi a3, a3, -1
-; RV32IA-NEXT:    srai a1, a1, 16
 ; RV32IA-NEXT:    sll a3, a3, a0
+; RV32IA-NEXT:    slli a1, a1, 16
+; RV32IA-NEXT:    srai a1, a1, 16
+; RV32IA-NEXT:    li a5, 16
 ; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    sub a4, a4, a5
+; RV32IA-NEXT:    sub a5, a5, a4
 ; RV32IA-NEXT:  .LBB21_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a5, (a2)
-; RV32IA-NEXT:    and a7, a5, a3
-; RV32IA-NEXT:    mv a6, a5
-; RV32IA-NEXT:    sll a7, a7, a4
-; RV32IA-NEXT:    sra a7, a7, a4
+; RV32IA-NEXT:    lr.w a4, (a2)
+; RV32IA-NEXT:    and a7, a4, a3
+; RV32IA-NEXT:    mv a6, a4
+; RV32IA-NEXT:    sll a7, a7, a5
+; RV32IA-NEXT:    sra a7, a7, a5
 ; RV32IA-NEXT:    bge a7, a1, .LBB21_3
 ; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB21_1 Depth=1
-; RV32IA-NEXT:    xor a6, a5, a1
+; RV32IA-NEXT:    xor a6, a4, a1
 ; RV32IA-NEXT:    and a6, a6, a3
-; RV32IA-NEXT:    xor a6, a5, a6
+; RV32IA-NEXT:    xor a6, a4, a6
 ; RV32IA-NEXT:  .LBB21_3: # in Loop: Header=BB21_1 Depth=1
 ; RV32IA-NEXT:    sc.w a6, a6, (a2)
 ; RV32IA-NEXT:    bnez a6, .LBB21_1
 ; RV32IA-NEXT:  # %bb.4:
-; RV32IA-NEXT:    srl a0, a5, a0
+; RV32IA-NEXT:    srl a0, a4, a0
 ; RV32IA-NEXT:    slli a0, a0, 16
 ; RV32IA-NEXT:    srai a0, a0, 16
 ; RV32IA-NEXT:    ret
@@ -2560,30 +2560,30 @@ define signext i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
 ; RV32I-ZALRSC-NEXT:    lui a3, 16
-; RV32I-ZALRSC-NEXT:    slli a1, a1, 16
-; RV32I-ZALRSC-NEXT:    li a4, 16
-; RV32I-ZALRSC-NEXT:    andi a5, a0, 24
+; RV32I-ZALRSC-NEXT:    andi a4, a0, 24
 ; RV32I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV32I-ZALRSC-NEXT:    srai a1, a1, 16
 ; RV32I-ZALRSC-NEXT:    sll a3, a3, a0
+; RV32I-ZALRSC-NEXT:    slli a1, a1, 16
+; RV32I-ZALRSC-NEXT:    srai a1, a1, 16
+; RV32I-ZALRSC-NEXT:    li a5, 16
 ; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
-; RV32I-ZALRSC-NEXT:    sub a4, a4, a5
+; RV32I-ZALRSC-NEXT:    sub a5, a5, a4
 ; RV32I-ZALRSC-NEXT:  .LBB21_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a5, (a2)
-; RV32I-ZALRSC-NEXT:    and a7, a5, a3
-; RV32I-ZALRSC-NEXT:    mv a6, a5
-; RV32I-ZALRSC-NEXT:    sll a7, a7, a4
-; RV32I-ZALRSC-NEXT:    sra a7, a7, a4
+; RV32I-ZALRSC-NEXT:    lr.w a4, (a2)
+; RV32I-ZALRSC-NEXT:    and a7, a4, a3
+; RV32I-ZALRSC-NEXT:    mv a6, a4
+; RV32I-ZALRSC-NEXT:    sll a7, a7, a5
+; RV32I-ZALRSC-NEXT:    sra a7, a7, a5
 ; RV32I-ZALRSC-NEXT:    bge a7, a1, .LBB21_3
 ; RV32I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB21_1 Depth=1
-; RV32I-ZALRSC-NEXT:    xor a6, a5, a1
+; RV32I-ZALRSC-NEXT:    xor a6, a4, a1
 ; RV32I-ZALRSC-NEXT:    and a6, a6, a3
-; RV32I-ZALRSC-NEXT:    xor a6, a5, a6
+; RV32I-ZALRSC-NEXT:    xor a6, a4, a6
 ; RV32I-ZALRSC-NEXT:  .LBB21_3: # in Loop: Header=BB21_1 Depth=1
 ; RV32I-ZALRSC-NEXT:    sc.w a6, a6, (a2)
 ; RV32I-ZALRSC-NEXT:    bnez a6, .LBB21_1
 ; RV32I-ZALRSC-NEXT:  # %bb.4:
-; RV32I-ZALRSC-NEXT:    srl a0, a5, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a4, a0
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    ret
@@ -2636,30 +2636,30 @@ define signext i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    slli a1, a1, 48
-; RV64IA-NEXT:    li a4, 48
-; RV64IA-NEXT:    andi a5, a0, 24
+; RV64IA-NEXT:    andi a4, a0, 24
 ; RV64IA-NEXT:    addi a3, a3, -1
-; RV64IA-NEXT:    srai a1, a1, 48
 ; RV64IA-NEXT:    sllw a3, a3, a0
+; RV64IA-NEXT:    slli a1, a1, 48
+; RV64IA-NEXT:    srai a1, a1, 48
+; RV64IA-NEXT:    li a5, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    sub a4, a4, a5
+; RV64IA-NEXT:    sub a5, a5, a4
 ; RV64IA-NEXT:  .LBB21_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a5, (a2)
-; RV64IA-NEXT:    and a7, a5, a3
-; RV64IA-NEXT:    mv a6, a5
-; RV64IA-NEXT:    sll a7, a7, a4
-; RV64IA-NEXT:    sra a7, a7, a4
+; RV64IA-NEXT:    lr.w a4, (a2)
+; RV64IA-NEXT:    and a7, a4, a3
+; RV64IA-NEXT:    mv a6, a4
+; RV64IA-NEXT:    sll a7, a7, a5
+; RV64IA-NEXT:    sra a7, a7, a5
 ; RV64IA-NEXT:    bge a7, a1, .LBB21_3
 ; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB21_1 Depth=1
-; RV64IA-NEXT:    xor a6, a5, a1
+; RV64IA-NEXT:    xor a6, a4, a1
 ; RV64IA-NEXT:    and a6, a6, a3
-; RV64IA-NEXT:    xor a6, a5, a6
+; RV64IA-NEXT:    xor a6, a4, a6
 ; RV64IA-NEXT:  .LBB21_3: # in Loop: Header=BB21_1 Depth=1
 ; RV64IA-NEXT:    sc.w a6, a6, (a2)
 ; RV64IA-NEXT:    bnez a6, .LBB21_1
 ; RV64IA-NEXT:  # %bb.4:
-; RV64IA-NEXT:    srlw a0, a5, a0
+; RV64IA-NEXT:    srlw a0, a4, a0
 ; RV64IA-NEXT:    slli a0, a0, 48
 ; RV64IA-NEXT:    srai a0, a0, 48
 ; RV64IA-NEXT:    ret
@@ -2669,30 +2669,30 @@ define signext i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
-; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
-; RV64I-ZALRSC-NEXT:    li a4, 48
-; RV64I-ZALRSC-NEXT:    andi a5, a0, 24
+; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV64I-ZALRSC-NEXT:    srai a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
+; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
+; RV64I-ZALRSC-NEXT:    srai a1, a1, 48
+; RV64I-ZALRSC-NEXT:    li a5, 48
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
-; RV64I-ZALRSC-NEXT:    sub a4, a4, a5
+; RV64I-ZALRSC-NEXT:    sub a5, a5, a4
 ; RV64I-ZALRSC-NEXT:  .LBB21_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a5, (a2)
-; RV64I-ZALRSC-NEXT:    and a7, a5, a3
-; RV64I-ZALRSC-NEXT:    mv a6, a5
-; RV64I-ZALRSC-NEXT:    sll a7, a7, a4
-; RV64I-ZALRSC-NEXT:    sra a7, a7, a4
+; RV64I-ZALRSC-NEXT:    lr.w a4, (a2)
+; RV64I-ZALRSC-NEXT:    and a7, a4, a3
+; RV64I-ZALRSC-NEXT:    mv a6, a4
+; RV64I-ZALRSC-NEXT:    sll a7, a7, a5
+; RV64I-ZALRSC-NEXT:    sra a7, a7, a5
 ; RV64I-ZALRSC-NEXT:    bge a7, a1, .LBB21_3
 ; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB21_1 Depth=1
-; RV64I-ZALRSC-NEXT:    xor a6, a5, a1
+; RV64I-ZALRSC-NEXT:    xor a6, a4, a1
 ; RV64I-ZALRSC-NEXT:    and a6, a6, a3
-; RV64I-ZALRSC-NEXT:    xor a6, a5, a6
+; RV64I-ZALRSC-NEXT:    xor a6, a4, a6
 ; RV64I-ZALRSC-NEXT:  .LBB21_3: # in Loop: Header=BB21_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w a6, a6, (a2)
 ; RV64I-ZALRSC-NEXT:    bnez a6, .LBB21_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    srlw a0, a5, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a4, a0
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    ret
@@ -2749,30 +2749,30 @@ define signext i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32IA-NEXT:    andi a2, a0, -4
 ; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    lui a3, 16
-; RV32IA-NEXT:    slli a1, a1, 16
-; RV32IA-NEXT:    li a4, 16
-; RV32IA-NEXT:    andi a5, a0, 24
+; RV32IA-NEXT:    andi a4, a0, 24
 ; RV32IA-NEXT:    addi a3, a3, -1
-; RV32IA-NEXT:    srai a1, a1, 16
 ; RV32IA-NEXT:    sll a3, a3, a0
+; RV32IA-NEXT:    slli a1, a1, 16
+; RV32IA-NEXT:    srai a1, a1, 16
+; RV32IA-NEXT:    li a5, 16
 ; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    sub a4, a4, a5
+; RV32IA-NEXT:    sub a5, a5, a4
 ; RV32IA-NEXT:  .LBB22_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a5, (a2)
-; RV32IA-NEXT:    and a7, a5, a3
-; RV32IA-NEXT:    mv a6, a5
-; RV32IA-NEXT:    sll a7, a7, a4
-; RV32IA-NEXT:    sra a7, a7, a4
+; RV32IA-NEXT:    lr.w a4, (a2)
+; RV32IA-NEXT:    and a7, a4, a3
+; RV32IA-NEXT:    mv a6, a4
+; RV32IA-NEXT:    sll a7, a7, a5
+; RV32IA-NEXT:    sra a7, a7, a5
 ; RV32IA-NEXT:    bge a1, a7, .LBB22_3
 ; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB22_1 Depth=1
-; RV32IA-NEXT:    xor a6, a5, a1
+; RV32IA-NEXT:    xor a6, a4, a1
 ; RV32IA-NEXT:    and a6, a6, a3
-; RV32IA-NEXT:    xor a6, a5, a6
+; RV32IA-NEXT:    xor a6, a4, a6
 ; RV32IA-NEXT:  .LBB22_3: # in Loop: Header=BB22_1 Depth=1
 ; RV32IA-NEXT:    sc.w a6, a6, (a2)
 ; RV32IA-NEXT:    bnez a6, .LBB22_1
 ; RV32IA-NEXT:  # %bb.4:
-; RV32IA-NEXT:    srl a0, a5, a0
+; RV32IA-NEXT:    srl a0, a4, a0
 ; RV32IA-NEXT:    slli a0, a0, 16
 ; RV32IA-NEXT:    srai a0, a0, 16
 ; RV32IA-NEXT:    ret
@@ -2782,30 +2782,30 @@ define signext i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
 ; RV32I-ZALRSC-NEXT:    lui a3, 16
-; RV32I-ZALRSC-NEXT:    slli a1, a1, 16
-; RV32I-ZALRSC-NEXT:    li a4, 16
-; RV32I-ZALRSC-NEXT:    andi a5, a0, 24
+; RV32I-ZALRSC-NEXT:    andi a4, a0, 24
 ; RV32I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV32I-ZALRSC-NEXT:    srai a1, a1, 16
 ; RV32I-ZALRSC-NEXT:    sll a3, a3, a0
+; RV32I-ZALRSC-NEXT:    slli a1, a1, 16
+; RV32I-ZALRSC-NEXT:    srai a1, a1, 16
+; RV32I-ZALRSC-NEXT:    li a5, 16
 ; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
-; RV32I-ZALRSC-NEXT:    sub a4, a4, a5
+; RV32I-ZALRSC-NEXT:    sub a5, a5, a4
 ; RV32I-ZALRSC-NEXT:  .LBB22_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a5, (a2)
-; RV32I-ZALRSC-NEXT:    and a7, a5, a3
-; RV32I-ZALRSC-NEXT:    mv a6, a5
-; RV32I-ZALRSC-NEXT:    sll a7, a7, a4
-; RV32I-ZALRSC-NEXT:    sra a7, a7, a4
+; RV32I-ZALRSC-NEXT:    lr.w a4, (a2)
+; RV32I-ZALRSC-NEXT:    and a7, a4, a3
+; RV32I-ZALRSC-NEXT:    mv a6, a4
+; RV32I-ZALRSC-NEXT:    sll a7, a7, a5
+; RV32I-ZALRSC-NEXT:    sra a7, a7, a5
 ; RV32I-ZALRSC-NEXT:    bge a1, a7, .LBB22_3
 ; RV32I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB22_1 Depth=1
-; RV32I-ZALRSC-NEXT:    xor a6, a5, a1
+; RV32I-ZALRSC-NEXT:    xor a6, a4, a1
 ; RV32I-ZALRSC-NEXT:    and a6, a6, a3
-; RV32I-ZALRSC-NEXT:    xor a6, a5, a6
+; RV32I-ZALRSC-NEXT:    xor a6, a4, a6
 ; RV32I-ZALRSC-NEXT:  .LBB22_3: # in Loop: Header=BB22_1 Depth=1
 ; RV32I-ZALRSC-NEXT:    sc.w a6, a6, (a2)
 ; RV32I-ZALRSC-NEXT:    bnez a6, .LBB22_1
 ; RV32I-ZALRSC-NEXT:  # %bb.4:
-; RV32I-ZALRSC-NEXT:    srl a0, a5, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a4, a0
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    ret
@@ -2858,30 +2858,30 @@ define signext i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    slli a1, a1, 48
-; RV64IA-NEXT:    li a4, 48
-; RV64IA-NEXT:    andi a5, a0, 24
+; RV64IA-NEXT:    andi a4, a0, 24
 ; RV64IA-NEXT:    addi a3, a3, -1
-; RV64IA-NEXT:    srai a1, a1, 48
 ; RV64IA-NEXT:    sllw a3, a3, a0
+; RV64IA-NEXT:    slli a1, a1, 48
+; RV64IA-NEXT:    srai a1, a1, 48
+; RV64IA-NEXT:    li a5, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    sub a4, a4, a5
+; RV64IA-NEXT:    sub a5, a5, a4
 ; RV64IA-NEXT:  .LBB22_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a5, (a2)
-; RV64IA-NEXT:    and a7, a5, a3
-; RV64IA-NEXT:    mv a6, a5
-; RV64IA-NEXT:    sll a7, a7, a4
-; RV64IA-NEXT:    sra a7, a7, a4
+; RV64IA-NEXT:    lr.w a4, (a2)
+; RV64IA-NEXT:    and a7, a4, a3
+; RV64IA-NEXT:    mv a6, a4
+; RV64IA-NEXT:    sll a7, a7, a5
+; RV64IA-NEXT:    sra a7, a7, a5
 ; RV64IA-NEXT:    bge a1, a7, .LBB22_3
 ; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB22_1 Depth=1
-; RV64IA-NEXT:    xor a6, a5, a1
+; RV64IA-NEXT:    xor a6, a4, a1
 ; RV64IA-NEXT:    and a6, a6, a3
-; RV64IA-NEXT:    xor a6, a5, a6
+; RV64IA-NEXT:    xor a6, a4, a6
 ; RV64IA-NEXT:  .LBB22_3: # in Loop: Header=BB22_1 Depth=1
 ; RV64IA-NEXT:    sc.w a6, a6, (a2)
 ; RV64IA-NEXT:    bnez a6, .LBB22_1
 ; RV64IA-NEXT:  # %bb.4:
-; RV64IA-NEXT:    srlw a0, a5, a0
+; RV64IA-NEXT:    srlw a0, a4, a0
 ; RV64IA-NEXT:    slli a0, a0, 48
 ; RV64IA-NEXT:    srai a0, a0, 48
 ; RV64IA-NEXT:    ret
@@ -2891,30 +2891,30 @@ define signext i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
-; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
-; RV64I-ZALRSC-NEXT:    li a4, 48
-; RV64I-ZALRSC-NEXT:    andi a5, a0, 24
+; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV64I-ZALRSC-NEXT:    srai a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
+; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
+; RV64I-ZALRSC-NEXT:    srai a1, a1, 48
+; RV64I-ZALRSC-NEXT:    li a5, 48
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
-; RV64I-ZALRSC-NEXT:    sub a4, a4, a5
+; RV64I-ZALRSC-NEXT:    sub a5, a5, a4
 ; RV64I-ZALRSC-NEXT:  .LBB22_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a5, (a2)
-; RV64I-ZALRSC-NEXT:    and a7, a5, a3
-; RV64I-ZALRSC-NEXT:    mv a6, a5
-; RV64I-ZALRSC-NEXT:    sll a7, a7, a4
-; RV64I-ZALRSC-NEXT:    sra a7, a7, a4
+; RV64I-ZALRSC-NEXT:    lr.w a4, (a2)
+; RV64I-ZALRSC-NEXT:    and a7, a4, a3
+; RV64I-ZALRSC-NEXT:    mv a6, a4
+; RV64I-ZALRSC-NEXT:    sll a7, a7, a5
+; RV64I-ZALRSC-NEXT:    sra a7, a7, a5
 ; RV64I-ZALRSC-NEXT:    bge a1, a7, .LBB22_3
 ; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB22_1 Depth=1
-; RV64I-ZALRSC-NEXT:    xor a6, a5, a1
+; RV64I-ZALRSC-NEXT:    xor a6, a4, a1
 ; RV64I-ZALRSC-NEXT:    and a6, a6, a3
-; RV64I-ZALRSC-NEXT:    xor a6, a5, a6
+; RV64I-ZALRSC-NEXT:    xor a6, a4, a6
 ; RV64I-ZALRSC-NEXT:  .LBB22_3: # in Loop: Header=BB22_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    sc.w a6, a6, (a2)
 ; RV64I-ZALRSC-NEXT:    bnez a6, .LBB22_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    srlw a0, a5, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a4, a0
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    ret
@@ -2931,34 +2931,34 @@ define signext i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s0, a1
-; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    lhu a1, 0(a0)
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    lhu a3, 0(a0)
 ; RV32I-NEXT:    lui s2, 16
 ; RV32I-NEXT:    addi s2, s2, -1
-; RV32I-NEXT:    and s3, s0, s2
+; RV32I-NEXT:    mv s1, a1
+; RV32I-NEXT:    and s3, a1, s2
 ; RV32I-NEXT:    j .LBB23_2
 ; RV32I-NEXT:  .LBB23_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB23_2 Depth=1
-; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    sh a3, 10(sp)
 ; RV32I-NEXT:    addi a1, sp, 10
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
 ; RV32I-NEXT:    call __atomic_compare_exchange_2
-; RV32I-NEXT:    lh a1, 10(sp)
+; RV32I-NEXT:    lh a3, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB23_4
 ; RV32I-NEXT:  .LBB23_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s2
-; RV32I-NEXT:    mv a2, a1
+; RV32I-NEXT:    and a0, a3, s2
+; RV32I-NEXT:    mv a2, a3
 ; RV32I-NEXT:    bltu s3, a0, .LBB23_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB23_2 Depth=1
-; RV32I-NEXT:    mv a2, s0
+; RV32I-NEXT:    mv a2, s1
 ; RV32I-NEXT:    j .LBB23_1
 ; RV32I-NEXT:  .LBB23_4: # %atomicrmw.end
-; RV32I-NEXT:    slli a0, a1, 16
+; RV32I-NEXT:    slli a0, a3, 16
 ; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -2970,54 +2970,54 @@ define signext i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV32IA-LABEL: atomicrmw_umax_i16_monotonic:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
+; RV32IA-NEXT:    lui a2, 16
+; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    addi a2, a2, -1
 ; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a3, 16
-; RV32IA-NEXT:    addi a3, a3, -1
-; RV32IA-NEXT:    sll a4, a3, a0
-; RV32IA-NEXT:    and a1, a1, a3
+; RV32IA-NEXT:    and a1, a1, a2
+; RV32IA-NEXT:    sll a2, a2, a0
 ; RV32IA-NEXT:    sll a1, a1, a0
 ; RV32IA-NEXT:  .LBB23_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a3, (a2)
-; RV32IA-NEXT:    and a6, a3, a4
-; RV32IA-NEXT:    mv a5, a3
+; RV32IA-NEXT:    lr.w a4, (a3)
+; RV32IA-NEXT:    and a6, a4, a2
+; RV32IA-NEXT:    mv a5, a4
 ; RV32IA-NEXT:    bgeu a6, a1, .LBB23_3
 ; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB23_1 Depth=1
-; RV32IA-NEXT:    xor a5, a3, a1
-; RV32IA-NEXT:    and a5, a5, a4
-; RV32IA-NEXT:    xor a5, a3, a5
+; RV32IA-NEXT:    xor a5, a4, a1
+; RV32IA-NEXT:    and a5, a5, a2
+; RV32IA-NEXT:    xor a5, a4, a5
 ; RV32IA-NEXT:  .LBB23_3: # in Loop: Header=BB23_1 Depth=1
-; RV32IA-NEXT:    sc.w a5, a5, (a2)
+; RV32IA-NEXT:    sc.w a5, a5, (a3)
 ; RV32IA-NEXT:    bnez a5, .LBB23_1
 ; RV32IA-NEXT:  # %bb.4:
-; RV32IA-NEXT:    srl a0, a3, a0
+; RV32IA-NEXT:    srl a0, a4, a0
 ; RV32IA-NEXT:    slli a0, a0, 16
 ; RV32IA-NEXT:    srai a0, a0, 16
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: atomicrmw_umax_i16_monotonic:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
+; RV32I-ZALRSC-NEXT:    lui a2, 16
+; RV32I-ZALRSC-NEXT:    andi a3, a0, -4
+; RV32I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV32I-ZALRSC-NEXT:    lui a3, 16
-; RV32I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV32I-ZALRSC-NEXT:    sll a4, a3, a0
-; RV32I-ZALRSC-NEXT:    and a1, a1, a3
+; RV32I-ZALRSC-NEXT:    and a1, a1, a2
+; RV32I-ZALRSC-NEXT:    sll a2, a2, a0
 ; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
 ; RV32I-ZALRSC-NEXT:  .LBB23_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a3, (a2)
-; RV32I-ZALRSC-NEXT:    and a6, a3, a4
-; RV32I-ZALRSC-NEXT:    mv a5, a3
+; RV32I-ZALRSC-NEXT:    lr.w a4, (a3)
+; RV32I-ZALRSC-NEXT:    and a6, a4, a2
+; RV32I-ZALRSC-NEXT:    mv a5, a4
 ; RV32I-ZALRSC-NEXT:    bgeu a6, a1, .LBB23_3
 ; RV32I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB23_1 Depth=1
-; RV32I-ZALRSC-NEXT:    xor a5, a3, a1
-; RV32I-ZALRSC-NEXT:    and a5, a5, a4
-; RV32I-ZALRSC-NEXT:    xor a5, a3, a5
+; RV32I-ZALRSC-NEXT:    xor a5, a4, a1
+; RV32I-ZALRSC-NEXT:    and a5, a5, a2
+; RV32I-ZALRSC-NEXT:    xor a5, a4, a5
 ; RV32I-ZALRSC-NEXT:  .LBB23_3: # in Loop: Header=BB23_1 Depth=1
-; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a2)
+; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
 ; RV32I-ZALRSC-NEXT:    bnez a5, .LBB23_1
 ; RV32I-ZALRSC-NEXT:  # %bb.4:
-; RV32I-ZALRSC-NEXT:    srl a0, a3, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a4, a0
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    ret
@@ -3030,34 +3030,34 @@ define signext i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    mv s0, a1
-; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    lhu a1, 0(a0)
+; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    lhu a3, 0(a0)
 ; RV64I-NEXT:    lui s2, 16
 ; RV64I-NEXT:    addi s2, s2, -1
-; RV64I-NEXT:    and s3, s0, s2
+; RV64I-NEXT:    mv s1, a1
+; RV64I-NEXT:    and s3, a1, s2
 ; RV64I-NEXT:    j .LBB23_2
 ; RV64I-NEXT:  .LBB23_1: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB23_2 Depth=1
-; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    sh a3, 6(sp)
 ; RV64I-NEXT:    addi a1, sp, 6
-; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
 ; RV64I-NEXT:    call __atomic_compare_exchange_2
-; RV64I-NEXT:    lh a1, 6(sp)
+; RV64I-NEXT:    lh a3, 6(sp)
 ; RV64I-NEXT:    bnez a0, .LBB23_4
 ; RV64I-NEXT:  .LBB23_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    and a0, a1, s2
-; RV64I-NEXT:    mv a2, a1
+; RV64I-NEXT:    and a0, a3, s2
+; RV64I-NEXT:    mv a2, a3
 ; RV64I-NEXT:    bltu s3, a0, .LBB23_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB23_2 Depth=1
-; RV64I-NEXT:    mv a2, s0
+; RV64I-NEXT:    mv a2, s1
 ; RV64I-NEXT:    j .LBB23_1
 ; RV64I-NEXT:  .LBB23_4: # %atomicrmw.end
-; RV64I-NEXT:    slli a0, a1, 48
+; RV64I-NEXT:    slli a0, a3, 48
 ; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
@@ -3069,54 +3069,54 @@ define signext i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV64IA-LABEL: atomicrmw_umax_i16_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
+; RV64IA-NEXT:    lui a2, 16
+; RV64IA-NEXT:    andi a3, a0, -4
+; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addi a3, a3, -1
-; RV64IA-NEXT:    sllw a4, a3, a0
-; RV64IA-NEXT:    and a1, a1, a3
+; RV64IA-NEXT:    and a1, a1, a2
+; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:  .LBB23_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a3, (a2)
-; RV64IA-NEXT:    and a6, a3, a4
-; RV64IA-NEXT:    mv a5, a3
+; RV64IA-NEXT:    lr.w a4, (a3)
+; RV64IA-NEXT:    and a6, a4, a2
+; RV64IA-NEXT:    mv a5, a4
 ; RV64IA-NEXT:    bgeu a6, a1, .LBB23_3
 ; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB23_1 Depth=1
-; RV64IA-NEXT:    xor a5, a3, a1
-; RV64IA-NEXT:    and a5, a5, a4
-; RV64IA-NEXT:    xor a5, a3, a5
+; RV64IA-NEXT:    xor a5, a4, a1
+; RV64IA-NEXT:    and a5, a5, a2
+; RV64IA-NEXT:    xor a5, a4, a5
 ; RV64IA-NEXT:  .LBB23_3: # in Loop: Header=BB23_1 Depth=1
-; RV64IA-NEXT:    sc.w a5, a5, (a2)
+; RV64IA-NEXT:    sc.w a5, a5, (a3)
 ; RV64IA-NEXT:    bnez a5, .LBB23_1
 ; RV64IA-NEXT:  # %bb.4:
-; RV64IA-NEXT:    srlw a0, a3, a0
+; RV64IA-NEXT:    srlw a0, a4, a0
 ; RV64IA-NEXT:    slli a0, a0, 48
 ; RV64IA-NEXT:    srai a0, a0, 48
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
+; RV64I-ZALRSC-NEXT:    lui a2, 16
+; RV64I-ZALRSC-NEXT:    andi a3, a0, -4
+; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV64I-ZALRSC-NEXT:    lui a3, 16
-; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
-; RV64I-ZALRSC-NEXT:    and a1, a1, a3
+; RV64I-ZALRSC-NEXT:    and a1, a1, a2
+; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:  .LBB23_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a3, (a2)
-; RV64I-ZALRSC-NEXT:    and a6, a3, a4
-; RV64I-ZALRSC-NEXT:    mv a5, a3
+; RV64I-ZALRSC-NEXT:    lr.w a4, (a3)
+; RV64I-ZALRSC-NEXT:    and a6, a4, a2
+; RV64I-ZALRSC-NEXT:    mv a5, a4
 ; RV64I-ZALRSC-NEXT:    bgeu a6, a1, .LBB23_3
 ; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB23_1 Depth=1
-; RV64I-ZALRSC-NEXT:    xor a5, a3, a1
-; RV64I-ZALRSC-NEXT:    and a5, a5, a4
-; RV64I-ZALRSC-NEXT:    xor a5, a3, a5
+; RV64I-ZALRSC-NEXT:    xor a5, a4, a1
+; RV64I-ZALRSC-NEXT:    and a5, a5, a2
+; RV64I-ZALRSC-NEXT:    xor a5, a4, a5
 ; RV64I-ZALRSC-NEXT:  .LBB23_3: # in Loop: Header=BB23_1 Depth=1
-; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a2)
+; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
 ; RV64I-ZALRSC-NEXT:    bnez a5, .LBB23_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    srlw a0, a3, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a4, a0
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    ret
@@ -3133,34 +3133,34 @@ define signext i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s0, a1
-; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    lhu a1, 0(a0)
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    lhu a3, 0(a0)
 ; RV32I-NEXT:    lui s2, 16
 ; RV32I-NEXT:    addi s2, s2, -1
-; RV32I-NEXT:    and s3, s0, s2
+; RV32I-NEXT:    mv s1, a1
+; RV32I-NEXT:    and s3, a1, s2
 ; RV32I-NEXT:    j .LBB24_2
 ; RV32I-NEXT:  .LBB24_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB24_2 Depth=1
-; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    sh a3, 10(sp)
 ; RV32I-NEXT:    addi a1, sp, 10
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
 ; RV32I-NEXT:    call __atomic_compare_exchange_2
-; RV32I-NEXT:    lh a1, 10(sp)
+; RV32I-NEXT:    lh a3, 10(sp)
 ; RV32I-NEXT:    bnez a0, .LBB24_4
 ; RV32I-NEXT:  .LBB24_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s2
-; RV32I-NEXT:    mv a2, a1
+; RV32I-NEXT:    and a0, a3, s2
+; RV32I-NEXT:    mv a2, a3
 ; RV32I-NEXT:    bgeu s3, a0, .LBB24_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB24_2 Depth=1
-; RV32I-NEXT:    mv a2, s0
+; RV32I-NEXT:    mv a2, s1
 ; RV32I-NEXT:    j .LBB24_1
 ; RV32I-NEXT:  .LBB24_4: # %atomicrmw.end
-; RV32I-NEXT:    slli a0, a1, 16
+; RV32I-NEXT:    slli a0, a3, 16
 ; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -3172,54 +3172,54 @@ define signext i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV32IA-LABEL: atomicrmw_umin_i16_monotonic:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a0, -4
+; RV32IA-NEXT:    lui a2, 16
+; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    addi a2, a2, -1
 ; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a3, 16
-; RV32IA-NEXT:    addi a3, a3, -1
-; RV32IA-NEXT:    sll a4, a3, a0
-; RV32IA-NEXT:    and a1, a1, a3
+; RV32IA-NEXT:    and a1, a1, a2
+; RV32IA-NEXT:    sll a2, a2, a0
 ; RV32IA-NEXT:    sll a1, a1, a0
 ; RV32IA-NEXT:  .LBB24_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a3, (a2)
-; RV32IA-NEXT:    and a6, a3, a4
-; RV32IA-NEXT:    mv a5, a3
+; RV32IA-NEXT:    lr.w a4, (a3)
+; RV32IA-NEXT:    and a6, a4, a2
+; RV32IA-NEXT:    mv a5, a4
 ; RV32IA-NEXT:    bgeu a1, a6, .LBB24_3
 ; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB24_1 Depth=1
-; RV32IA-NEXT:    xor a5, a3, a1
-; RV32IA-NEXT:    and a5, a5, a4
-; RV32IA-NEXT:    xor a5, a3, a5
+; RV32IA-NEXT:    xor a5, a4, a1
+; RV32IA-NEXT:    and a5, a5, a2
+; RV32IA-NEXT:    xor a5, a4, a5
 ; RV32IA-NEXT:  .LBB24_3: # in Loop: Header=BB24_1 Depth=1
-; RV32IA-NEXT:    sc.w a5, a5, (a2)
+; RV32IA-NEXT:    sc.w a5, a5, (a3)
 ; RV32IA-NEXT:    bnez a5, .LBB24_1
 ; RV32IA-NEXT:  # %bb.4:
-; RV32IA-NEXT:    srl a0, a3, a0
+; RV32IA-NEXT:    srl a0, a4, a0
 ; RV32IA-NEXT:    slli a0, a0, 16
 ; RV32IA-NEXT:    srai a0, a0, 16
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: atomicrmw_umin_i16_monotonic:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a2, a0, -4
+; RV32I-ZALRSC-NEXT:    lui a2, 16
+; RV32I-ZALRSC-NEXT:    andi a3, a0, -4
+; RV32I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV32I-ZALRSC-NEXT:    lui a3, 16
-; RV32I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV32I-ZALRSC-NEXT:    sll a4, a3, a0
-; RV32I-ZALRSC-NEXT:    and a1, a1, a3
+; RV32I-ZALRSC-NEXT:    and a1, a1, a2
+; RV32I-ZALRSC-NEXT:    sll a2, a2, a0
 ; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
 ; RV32I-ZALRSC-NEXT:  .LBB24_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a3, (a2)
-; RV32I-ZALRSC-NEXT:    and a6, a3, a4
-; RV32I-ZALRSC-NEXT:    mv a5, a3
+; RV32I-ZALRSC-NEXT:    lr.w a4, (a3)
+; RV32I-ZALRSC-NEXT:    and a6, a4, a2
+; RV32I-ZALRSC-NEXT:    mv a5, a4
 ; RV32I-ZALRSC-NEXT:    bgeu a1, a6, .LBB24_3
 ; RV32I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB24_1 Depth=1
-; RV32I-ZALRSC-NEXT:    xor a5, a3, a1
-; RV32I-ZALRSC-NEXT:    and a5, a5, a4
-; RV32I-ZALRSC-NEXT:    xor a5, a3, a5
+; RV32I-ZALRSC-NEXT:    xor a5, a4, a1
+; RV32I-ZALRSC-NEXT:    and a5, a5, a2
+; RV32I-ZALRSC-NEXT:    xor a5, a4, a5
 ; RV32I-ZALRSC-NEXT:  .LBB24_3: # in Loop: Header=BB24_1 Depth=1
-; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a2)
+; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
 ; RV32I-ZALRSC-NEXT:    bnez a5, .LBB24_1
 ; RV32I-ZALRSC-NEXT:  # %bb.4:
-; RV32I-ZALRSC-NEXT:    srl a0, a3, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a4, a0
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    ret
@@ -3232,34 +3232,34 @@ define signext i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    mv s0, a1
-; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    lhu a1, 0(a0)
+; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    lhu a3, 0(a0)
 ; RV64I-NEXT:    lui s2, 16
 ; RV64I-NEXT:    addi s2, s2, -1
-; RV64I-NEXT:    and s3, s0, s2
+; RV64I-NEXT:    mv s1, a1
+; RV64I-NEXT:    and s3, a1, s2
 ; RV64I-NEXT:    j .LBB24_2
 ; RV64I-NEXT:  .LBB24_1: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB24_2 Depth=1
-; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    sh a3, 6(sp)
 ; RV64I-NEXT:    addi a1, sp, 6
-; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
 ; RV64I-NEXT:    call __atomic_compare_exchange_2
-; RV64I-NEXT:    lh a1, 6(sp)
+; RV64I-NEXT:    lh a3, 6(sp)
 ; RV64I-NEXT:    bnez a0, .LBB24_4
 ; RV64I-NEXT:  .LBB24_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    and a0, a1, s2
-; RV64I-NEXT:    mv a2, a1
+; RV64I-NEXT:    and a0, a3, s2
+; RV64I-NEXT:    mv a2, a3
 ; RV64I-NEXT:    bgeu s3, a0, .LBB24_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB24_2 Depth=1
-; RV64I-NEXT:    mv a2, s0
+; RV64I-NEXT:    mv a2, s1
 ; RV64I-NEXT:    j .LBB24_1
 ; RV64I-NEXT:  .LBB24_4: # %atomicrmw.end
-; RV64I-NEXT:    slli a0, a1, 48
+; RV64I-NEXT:    slli a0, a3, 48
 ; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
@@ -3271,54 +3271,54 @@ define signext i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ;
 ; RV64IA-LABEL: atomicrmw_umin_i16_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a0, -4
+; RV64IA-NEXT:    lui a2, 16
+; RV64IA-NEXT:    andi a3, a0, -4
+; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a3, 16
-; RV64IA-NEXT:    addi a3, a3, -1
-; RV64IA-NEXT:    sllw a4, a3, a0
-; RV64IA-NEXT:    and a1, a1, a3
+; RV64IA-NEXT:    and a1, a1, a2
+; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:  .LBB24_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a3, (a2)
-; RV64IA-NEXT:    and a6, a3, a4
-; RV64IA-NEXT:    mv a5, a3
+; RV64IA-NEXT:    lr.w a4, (a3)
+; RV64IA-NEXT:    and a6, a4, a2
+; RV64IA-NEXT:    mv a5, a4
 ; RV64IA-NEXT:    bgeu a1, a6, .LBB24_3
 ; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB24_1 Depth=1
-; RV64IA-NEXT:    xor a5, a3, a1
-; RV64IA-NEXT:    and a5, a5, a4
-; RV64IA-NEXT:    xor a5, a3, a5
+; RV64IA-NEXT:    xor a5, a4, a1
+; RV64IA-NEXT:    and a5, a5, a2
+; RV64IA-NEXT:    xor a5, a4, a5
 ; RV64IA-NEXT:  .LBB24_3: # in Loop: Header=BB24_1 Depth=1
-; RV64IA-NEXT:    sc.w a5, a5, (a2)
+; RV64IA-NEXT:    sc.w a5, a5, (a3)
 ; RV64IA-NEXT:    bnez a5, .LBB24_1
 ; RV64IA-NEXT:  # %bb.4:
-; RV64IA-NEXT:    srlw a0, a3, a0
+; RV64IA-NEXT:    srlw a0, a4, a0
 ; RV64IA-NEXT:    slli a0, a0, 48
 ; RV64IA-NEXT:    srai a0, a0, 48
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
+; RV64I-ZALRSC-NEXT:    lui a2, 16
+; RV64I-ZALRSC-NEXT:    andi a3, a0, -4
+; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV64I-ZALRSC-NEXT:    lui a3, 16
-; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
-; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
-; RV64I-ZALRSC-NEXT:    and a1, a1, a3
+; RV64I-ZALRSC-NEXT:    and a1, a1, a2
+; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:  .LBB24_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a3, (a2)
-; RV64I-ZALRSC-NEXT:    and a6, a3, a4
-; RV64I-ZALRSC-NEXT:    mv a5, a3
+; RV64I-ZALRSC-NEXT:    lr.w a4, (a3)
+; RV64I-ZALRSC-NEXT:    and a6, a4, a2
+; RV64I-ZALRSC-NEXT:    mv a5, a4
 ; RV64I-ZALRSC-NEXT:    bgeu a1, a6, .LBB24_3
 ; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB24_1 Depth=1
-; RV64I-ZALRSC-NEXT:    xor a5, a3, a1
-; RV64I-ZALRSC-NEXT:    and a5, a5, a4
-; RV64I-ZALRSC-NEXT:    xor a5, a3, a5
+; RV64I-ZALRSC-NEXT:    xor a5, a4, a1
+; RV64I-ZALRSC-NEXT:    and a5, a5, a2
+; RV64I-ZALRSC-NEXT:    xor a5, a4, a5
 ; RV64I-ZALRSC-NEXT:  .LBB24_3: # in Loop: Header=BB24_1 Depth=1
-; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a2)
+; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
 ; RV64I-ZALRSC-NEXT:    bnez a5, .LBB24_1
 ; RV64I-ZALRSC-NEXT:  # %bb.4:
-; RV64I-ZALRSC-NEXT:    srlw a0, a3, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a4, a0
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    ret
@@ -5599,52 +5599,52 @@ define signext i8 @cmpxchg_i8_monotonic_monotonic_val0(ptr %ptr, i8 signext %cmp
 ;
 ; RV32IA-LABEL: cmpxchg_i8_monotonic_monotonic_val0:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a3, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
+; RV32IA-NEXT:    slli a3, a0, 3
 ; RV32IA-NEXT:    li a4, 255
+; RV32IA-NEXT:    andi a0, a0, -4
+; RV32IA-NEXT:    sll a4, a4, a3
 ; RV32IA-NEXT:    zext.b a1, a1
 ; RV32IA-NEXT:    zext.b a2, a2
-; RV32IA-NEXT:    sll a4, a4, a0
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    sll a2, a2, a0
+; RV32IA-NEXT:    sll a1, a1, a3
+; RV32IA-NEXT:    sll a2, a2, a3
 ; RV32IA-NEXT:  .LBB47_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a5, (a3)
+; RV32IA-NEXT:    lr.w a5, (a0)
 ; RV32IA-NEXT:    and a6, a5, a4
 ; RV32IA-NEXT:    bne a6, a1, .LBB47_3
 ; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB47_1 Depth=1
 ; RV32IA-NEXT:    xor a6, a5, a2
 ; RV32IA-NEXT:    and a6, a6, a4
 ; RV32IA-NEXT:    xor a6, a5, a6
-; RV32IA-NEXT:    sc.w a6, a6, (a3)
+; RV32IA-NEXT:    sc.w a6, a6, (a0)
 ; RV32IA-NEXT:    bnez a6, .LBB47_1
 ; RV32IA-NEXT:  .LBB47_3:
-; RV32IA-NEXT:    srl a0, a5, a0
+; RV32IA-NEXT:    srl a0, a5, a3
 ; RV32IA-NEXT:    slli a0, a0, 24
 ; RV32IA-NEXT:    srai a0, a0, 24
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: cmpxchg_i8_monotonic_monotonic_val0:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a3, a0, -4
-; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV32I-ZALRSC-NEXT:    slli a3, a0, 3
 ; RV32I-ZALRSC-NEXT:    li a4, 255
+; RV32I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV32I-ZALRSC-NEXT:    sll a4, a4, a3
 ; RV32I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV32I-ZALRSC-NEXT:    zext.b a2, a2
-; RV32I-ZALRSC-NEXT:    sll a4, a4, a0
-; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
-; RV32I-ZALRSC-NEXT:    sll a2, a2, a0
+; RV32I-ZALRSC-NEXT:    sll a1, a1, a3
+; RV32I-ZALRSC-NEXT:    sll a2, a2, a3
 ; RV32I-ZALRSC-NEXT:  .LBB47_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a5, (a3)
+; RV32I-ZALRSC-NEXT:    lr.w a5, (a0)
 ; RV32I-ZALRSC-NEXT:    and a6, a5, a4
 ; RV32I-ZALRSC-NEXT:    bne a6, a1, .LBB47_3
 ; RV32I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB47_1 Depth=1
 ; RV32I-ZALRSC-NEXT:    xor a6, a5, a2
 ; RV32I-ZALRSC-NEXT:    and a6, a6, a4
 ; RV32I-ZALRSC-NEXT:    xor a6, a5, a6
-; RV32I-ZALRSC-NEXT:    sc.w a6, a6, (a3)
+; RV32I-ZALRSC-NEXT:    sc.w a6, a6, (a0)
 ; RV32I-ZALRSC-NEXT:    bnez a6, .LBB47_1
 ; RV32I-ZALRSC-NEXT:  .LBB47_3:
-; RV32I-ZALRSC-NEXT:    srl a0, a5, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a5, a3
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 24
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 24
 ; RV32I-ZALRSC-NEXT:    ret
@@ -5665,52 +5665,52 @@ define signext i8 @cmpxchg_i8_monotonic_monotonic_val0(ptr %ptr, i8 signext %cmp
 ;
 ; RV64IA-LABEL: cmpxchg_i8_monotonic_monotonic_val0:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slli a3, a0, 3
 ; RV64IA-NEXT:    li a4, 255
+; RV64IA-NEXT:    andi a0, a0, -4
+; RV64IA-NEXT:    sllw a4, a4, a3
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    zext.b a2, a2
-; RV64IA-NEXT:    sllw a4, a4, a0
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    sllw a2, a2, a0
+; RV64IA-NEXT:    sllw a1, a1, a3
+; RV64IA-NEXT:    sllw a2, a2, a3
 ; RV64IA-NEXT:  .LBB47_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a5, (a3)
+; RV64IA-NEXT:    lr.w a5, (a0)
 ; RV64IA-NEXT:    and a6, a5, a4
 ; RV64IA-NEXT:    bne a6, a1, .LBB47_3
 ; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB47_1 Depth=1
 ; RV64IA-NEXT:    xor a6, a5, a2
 ; RV64IA-NEXT:    and a6, a6, a4
 ; RV64IA-NEXT:    xor a6, a5, a6
-; RV64IA-NEXT:    sc.w a6, a6, (a3)
+; RV64IA-NEXT:    sc.w a6, a6, (a0)
 ; RV64IA-NEXT:    bnez a6, .LBB47_1
 ; RV64IA-NEXT:  .LBB47_3:
-; RV64IA-NEXT:    srlw a0, a5, a0
+; RV64IA-NEXT:    srlw a0, a5, a3
 ; RV64IA-NEXT:    slli a0, a0, 56
 ; RV64IA-NEXT:    srai a0, a0, 56
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: cmpxchg_i8_monotonic_monotonic_val0:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a3, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slli a3, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a4, 255
+; RV64I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV64I-ZALRSC-NEXT:    sllw a4, a4, a3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    zext.b a2, a2
-; RV64I-ZALRSC-NEXT:    sllw a4, a4, a0
-; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
-; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
+; RV64I-ZALRSC-NEXT:    sllw a1, a1, a3
+; RV64I-ZALRSC-NEXT:    sllw a2, a2, a3
 ; RV64I-ZALRSC-NEXT:  .LBB47_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a5, (a3)
+; RV64I-ZALRSC-NEXT:    lr.w a5, (a0)
 ; RV64I-ZALRSC-NEXT:    and a6, a5, a4
 ; RV64I-ZALRSC-NEXT:    bne a6, a1, .LBB47_3
 ; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB47_1 Depth=1
 ; RV64I-ZALRSC-NEXT:    xor a6, a5, a2
 ; RV64I-ZALRSC-NEXT:    and a6, a6, a4
 ; RV64I-ZALRSC-NEXT:    xor a6, a5, a6
-; RV64I-ZALRSC-NEXT:    sc.w a6, a6, (a3)
+; RV64I-ZALRSC-NEXT:    sc.w a6, a6, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a6, .LBB47_1
 ; RV64I-ZALRSC-NEXT:  .LBB47_3:
-; RV64I-ZALRSC-NEXT:    srlw a0, a5, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a5, a3
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 56
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 56
 ; RV64I-ZALRSC-NEXT:    ret
@@ -5735,53 +5735,53 @@ define i1 @cmpxchg_i8_monotonic_monotonic_val1(ptr %ptr, i8 signext %cmp, i8 sig
 ;
 ; RV32IA-LABEL: cmpxchg_i8_monotonic_monotonic_val1:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a3, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
+; RV32IA-NEXT:    slli a3, a0, 3
 ; RV32IA-NEXT:    li a4, 255
+; RV32IA-NEXT:    andi a0, a0, -4
+; RV32IA-NEXT:    sll a4, a4, a3
 ; RV32IA-NEXT:    zext.b a1, a1
 ; RV32IA-NEXT:    zext.b a2, a2
-; RV32IA-NEXT:    sll a4, a4, a0
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    sll a0, a2, a0
+; RV32IA-NEXT:    sll a1, a1, a3
+; RV32IA-NEXT:    sll a2, a2, a3
 ; RV32IA-NEXT:  .LBB48_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a2, (a3)
-; RV32IA-NEXT:    and a5, a2, a4
+; RV32IA-NEXT:    lr.w a3, (a0)
+; RV32IA-NEXT:    and a5, a3, a4
 ; RV32IA-NEXT:    bne a5, a1, .LBB48_3
 ; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB48_1 Depth=1
-; RV32IA-NEXT:    xor a5, a2, a0
+; RV32IA-NEXT:    xor a5, a3, a2
 ; RV32IA-NEXT:    and a5, a5, a4
-; RV32IA-NEXT:    xor a5, a2, a5
-; RV32IA-NEXT:    sc.w a5, a5, (a3)
+; RV32IA-NEXT:    xor a5, a3, a5
+; RV32IA-NEXT:    sc.w a5, a5, (a0)
 ; RV32IA-NEXT:    bnez a5, .LBB48_1
 ; RV32IA-NEXT:  .LBB48_3:
-; RV32IA-NEXT:    and a2, a2, a4
-; RV32IA-NEXT:    xor a1, a1, a2
+; RV32IA-NEXT:    and a3, a3, a4
+; RV32IA-NEXT:    xor a1, a1, a3
 ; RV32IA-NEXT:    seqz a0, a1
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: cmpxchg_i8_monotonic_monotonic_val1:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a3, a0, -4
-; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV32I-ZALRSC-NEXT:    slli a3, a0, 3
 ; RV32I-ZALRSC-NEXT:    li a4, 255
+; RV32I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV32I-ZALRSC-NEXT:    sll a4, a4, a3
 ; RV32I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV32I-ZALRSC-NEXT:    zext.b a2, a2
-; RV32I-ZALRSC-NEXT:    sll a4, a4, a0
-; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
-; RV32I-ZALRSC-NEXT:    sll a0, a2, a0
+; RV32I-ZALRSC-NEXT:    sll a1, a1, a3
+; RV32I-ZALRSC-NEXT:    sll a2, a2, a3
 ; RV32I-ZALRSC-NEXT:  .LBB48_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a2, (a3)
-; RV32I-ZALRSC-NEXT:    and a5, a2, a4
+; RV32I-ZALRSC-NEXT:    lr.w a3, (a0)
+; RV32I-ZALRSC-NEXT:    and a5, a3, a4
 ; RV32I-ZALRSC-NEXT:    bne a5, a1, .LBB48_3
 ; RV32I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB48_1 Depth=1
-; RV32I-ZALRSC-NEXT:    xor a5, a2, a0
+; RV32I-ZALRSC-NEXT:    xor a5, a3, a2
 ; RV32I-ZALRSC-NEXT:    and a5, a5, a4
-; RV32I-ZALRSC-NEXT:    xor a5, a2, a5
-; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
+; RV32I-ZALRSC-NEXT:    xor a5, a3, a5
+; RV32I-ZALRSC-NEXT:    sc.w a5, a5, (a0)
 ; RV32I-ZALRSC-NEXT:    bnez a5, .LBB48_1
 ; RV32I-ZALRSC-NEXT:  .LBB48_3:
-; RV32I-ZALRSC-NEXT:    and a2, a2, a4
-; RV32I-ZALRSC-NEXT:    xor a1, a1, a2
+; RV32I-ZALRSC-NEXT:    and a3, a3, a4
+; RV32I-ZALRSC-NEXT:    xor a1, a1, a3
 ; RV32I-ZALRSC-NEXT:    seqz a0, a1
 ; RV32I-ZALRSC-NEXT:    ret
 ;
@@ -5800,53 +5800,53 @@ define i1 @cmpxchg_i8_monotonic_monotonic_val1(ptr %ptr, i8 signext %cmp, i8 sig
 ;
 ; RV64IA-LABEL: cmpxchg_i8_monotonic_monotonic_val1:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slli a3, a0, 3
 ; RV64IA-NEXT:    li a4, 255
+; RV64IA-NEXT:    andi a0, a0, -4
+; RV64IA-NEXT:    sllw a4, a4, a3
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    zext.b a2, a2
-; RV64IA-NEXT:    sllw a4, a4, a0
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    sllw a0, a2, a0
+; RV64IA-NEXT:    sllw a1, a1, a3
+; RV64IA-NEXT:    sllw a2, a2, a3
 ; RV64IA-NEXT:  .LBB48_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a2, (a3)
-; RV64IA-NEXT:    and a5, a2, a4
+; RV64IA-NEXT:    lr.w a3, (a0)
+; RV64IA-NEXT:    and a5, a3, a4
 ; RV64IA-NEXT:    bne a5, a1, .LBB48_3
 ; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB48_1 Depth=1
-; RV64IA-NEXT:    xor a5, a2, a0
+; RV64IA-NEXT:    xor a5, a3, a2
 ; RV64IA-NEXT:    and a5, a5, a4
-; RV64IA-NEXT:    xor a5, a2, a5
-; RV64IA-NEXT:    sc.w a5, a5, (a3)
+; RV64IA-NEXT:    xor a5, a3, a5
+; RV64IA-NEXT:    sc.w a5, a5, (a0)
 ; RV64IA-NEXT:    bnez a5, .LBB48_1
 ; RV64IA-NEXT:  .LBB48_3:
-; RV64IA-NEXT:    and a2, a2, a4
-; RV64IA-NEXT:    xor a1, a1, a2
+; RV64IA-NEXT:    and a3, a3, a4
+; RV64IA-NEXT:    xor a1, a1, a3
 ; RV64IA-NEXT:    seqz a0, a1
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: cmpxchg_i8_monotonic_monotonic_val1:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a3, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slli a3, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a4, 255
+; RV64I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV64I-ZALRSC-NEXT:    sllw a4, a4, a3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    zext.b a2, a2
-; RV64I-ZALRSC-NEXT:    sllw a4, a4, a0
-; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
-; RV64I-ZALRSC-NEXT:    sllw a0, a2, a0
+; RV64I-ZALRSC-NEXT:    sllw a1, a1, a3
+; RV64I-ZALRSC-NEXT:    sllw a2, a2, a3
 ; RV64I-ZALRSC-NEXT:  .LBB48_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a2, (a3)
-; RV64I-ZALRSC-NEXT:    and a5, a2, a4
+; RV64I-ZALRSC-NEXT:    lr.w a3, (a0)
+; RV64I-ZALRSC-NEXT:    and a5, a3, a4
 ; RV64I-ZALRSC-NEXT:    bne a5, a1, .LBB48_3
 ; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB48_1 Depth=1
-; RV64I-ZALRSC-NEXT:    xor a5, a2, a0
+; RV64I-ZALRSC-NEXT:    xor a5, a3, a2
 ; RV64I-ZALRSC-NEXT:    and a5, a5, a4
-; RV64I-ZALRSC-NEXT:    xor a5, a2, a5
-; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a3)
+; RV64I-ZALRSC-NEXT:    xor a5, a3, a5
+; RV64I-ZALRSC-NEXT:    sc.w a5, a5, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a5, .LBB48_1
 ; RV64I-ZALRSC-NEXT:  .LBB48_3:
-; RV64I-ZALRSC-NEXT:    and a2, a2, a4
-; RV64I-ZALRSC-NEXT:    xor a1, a1, a2
+; RV64I-ZALRSC-NEXT:    and a3, a3, a4
+; RV64I-ZALRSC-NEXT:    xor a1, a1, a3
 ; RV64I-ZALRSC-NEXT:    seqz a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
   %1 = cmpxchg ptr %ptr, i8 %cmp, i8 %val monotonic monotonic
@@ -5871,54 +5871,54 @@ define signext i16 @cmpxchg_i16_monotonic_monotonic_val0(ptr %ptr, i16 signext %
 ;
 ; RV32IA-LABEL: cmpxchg_i16_monotonic_monotonic_val0:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a3, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a4, 16
-; RV32IA-NEXT:    addi a4, a4, -1
-; RV32IA-NEXT:    sll a5, a4, a0
-; RV32IA-NEXT:    and a1, a1, a4
-; RV32IA-NEXT:    and a2, a2, a4
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    sll a2, a2, a0
+; RV32IA-NEXT:    lui a3, 16
+; RV32IA-NEXT:    slli a4, a0, 3
+; RV32IA-NEXT:    addi a3, a3, -1
+; RV32IA-NEXT:    andi a0, a0, -4
+; RV32IA-NEXT:    sll a5, a3, a4
+; RV32IA-NEXT:    and a1, a1, a3
+; RV32IA-NEXT:    and a2, a2, a3
+; RV32IA-NEXT:    sll a1, a1, a4
+; RV32IA-NEXT:    sll a2, a2, a4
 ; RV32IA-NEXT:  .LBB49_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a4, (a3)
-; RV32IA-NEXT:    and a6, a4, a5
+; RV32IA-NEXT:    lr.w a3, (a0)
+; RV32IA-NEXT:    and a6, a3, a5
 ; RV32IA-NEXT:    bne a6, a1, .LBB49_3
 ; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB49_1 Depth=1
-; RV32IA-NEXT:    xor a6, a4, a2
+; RV32IA-NEXT:    xor a6, a3, a2
 ; RV32IA-NEXT:    and a6, a6, a5
-; RV32IA-NEXT:    xor a6, a4, a6
-; RV32IA-NEXT:    sc.w a6, a6, (a3)
+; RV32IA-NEXT:    xor a6, a3, a6
+; RV32IA-NEXT:    sc.w a6, a6, (a0)
 ; RV32IA-NEXT:    bnez a6, .LBB49_1
 ; RV32IA-NEXT:  .LBB49_3:
-; RV32IA-NEXT:    srl a0, a4, a0
+; RV32IA-NEXT:    srl a0, a3, a4
 ; RV32IA-NEXT:    slli a0, a0, 16
 ; RV32IA-NEXT:    srai a0, a0, 16
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: cmpxchg_i16_monotonic_monotonic_val0:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a3, a0, -4
-; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV32I-ZALRSC-NEXT:    lui a4, 16
-; RV32I-ZALRSC-NEXT:    addi a4, a4, -1
-; RV32I-ZALRSC-NEXT:    sll a5, a4, a0
-; RV32I-ZALRSC-NEXT:    and a1, a1, a4
-; RV32I-ZALRSC-NEXT:    and a2, a2, a4
-; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
-; RV32I-ZALRSC-NEXT:    sll a2, a2, a0
+; RV32I-ZALRSC-NEXT:    lui a3, 16
+; RV32I-ZALRSC-NEXT:    slli a4, a0, 3
+; RV32I-ZALRSC-NEXT:    addi a3, a3, -1
+; RV32I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV32I-ZALRSC-NEXT:    sll a5, a3, a4
+; RV32I-ZALRSC-NEXT:    and a1, a1, a3
+; RV32I-ZALRSC-NEXT:    and a2, a2, a3
+; RV32I-ZALRSC-NEXT:    sll a1, a1, a4
+; RV32I-ZALRSC-NEXT:    sll a2, a2, a4
 ; RV32I-ZALRSC-NEXT:  .LBB49_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a4, (a3)
-; RV32I-ZALRSC-NEXT:    and a6, a4, a5
+; RV32I-ZALRSC-NEXT:    lr.w a3, (a0)
+; RV32I-ZALRSC-NEXT:    and a6, a3, a5
 ; RV32I-ZALRSC-NEXT:    bne a6, a1, .LBB49_3
 ; RV32I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB49_1 Depth=1
-; RV32I-ZALRSC-NEXT:    xor a6, a4, a2
+; RV32I-ZALRSC-NEXT:    xor a6, a3, a2
 ; RV32I-ZALRSC-NEXT:    and a6, a6, a5
-; RV32I-ZALRSC-NEXT:    xor a6, a4, a6
-; RV32I-ZALRSC-NEXT:    sc.w a6, a6, (a3)
+; RV32I-ZALRSC-NEXT:    xor a6, a3, a6
+; RV32I-ZALRSC-NEXT:    sc.w a6, a6, (a0)
 ; RV32I-ZALRSC-NEXT:    bnez a6, .LBB49_1
 ; RV32I-ZALRSC-NEXT:  .LBB49_3:
-; RV32I-ZALRSC-NEXT:    srl a0, a4, a0
+; RV32I-ZALRSC-NEXT:    srl a0, a3, a4
 ; RV32I-ZALRSC-NEXT:    slli a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    srai a0, a0, 16
 ; RV32I-ZALRSC-NEXT:    ret
@@ -5939,54 +5939,54 @@ define signext i16 @cmpxchg_i16_monotonic_monotonic_val0(ptr %ptr, i16 signext %
 ;
 ; RV64IA-LABEL: cmpxchg_i16_monotonic_monotonic_val0:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a4, 16
-; RV64IA-NEXT:    addi a4, a4, -1
-; RV64IA-NEXT:    sllw a5, a4, a0
-; RV64IA-NEXT:    and a1, a1, a4
-; RV64IA-NEXT:    and a2, a2, a4
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    sllw a2, a2, a0
+; RV64IA-NEXT:    lui a3, 16
+; RV64IA-NEXT:    slli a4, a0, 3
+; RV64IA-NEXT:    addi a3, a3, -1
+; RV64IA-NEXT:    andi a0, a0, -4
+; RV64IA-NEXT:    sllw a5, a3, a4
+; RV64IA-NEXT:    and a1, a1, a3
+; RV64IA-NEXT:    and a2, a2, a3
+; RV64IA-NEXT:    sllw a1, a1, a4
+; RV64IA-NEXT:    sllw a2, a2, a4
 ; RV64IA-NEXT:  .LBB49_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a4, (a3)
-; RV64IA-NEXT:    and a6, a4, a5
+; RV64IA-NEXT:    lr.w a3, (a0)
+; RV64IA-NEXT:    and a6, a3, a5
 ; RV64IA-NEXT:    bne a6, a1, .LBB49_3
 ; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB49_1 Depth=1
-; RV64IA-NEXT:    xor a6, a4, a2
+; RV64IA-NEXT:    xor a6, a3, a2
 ; RV64IA-NEXT:    and a6, a6, a5
-; RV64IA-NEXT:    xor a6, a4, a6
-; RV64IA-NEXT:    sc.w a6, a6, (a3)
+; RV64IA-NEXT:    xor a6, a3, a6
+; RV64IA-NEXT:    sc.w a6, a6, (a0)
 ; RV64IA-NEXT:    bnez a6, .LBB49_1
 ; RV64IA-NEXT:  .LBB49_3:
-; RV64IA-NEXT:    srlw a0, a4, a0
+; RV64IA-NEXT:    srlw a0, a3, a4
 ; RV64IA-NEXT:    slli a0, a0, 48
 ; RV64IA-NEXT:    srai a0, a0, 48
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: cmpxchg_i16_monotonic_monotonic_val0:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a3, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV64I-ZALRSC-NEXT:    lui a4, 16
-; RV64I-ZALRSC-NEXT:    addi a4, a4, -1
-; RV64I-ZALRSC-NEXT:    sllw a5, a4, a0
-; RV64I-ZALRSC-NEXT:    and a1, a1, a4
-; RV64I-ZALRSC-NEXT:    and a2, a2, a4
-; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
-; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
+; RV64I-ZALRSC-NEXT:    lui a3, 16
+; RV64I-ZALRSC-NEXT:    slli a4, a0, 3
+; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
+; RV64I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV64I-ZALRSC-NEXT:    sllw a5, a3, a4
+; RV64I-ZALRSC-NEXT:    and a1, a1, a3
+; RV64I-ZALRSC-NEXT:    and a2, a2, a3
+; RV64I-ZALRSC-NEXT:    sllw a1, a1, a4
+; RV64I-ZALRSC-NEXT:    sllw a2, a2, a4
 ; RV64I-ZALRSC-NEXT:  .LBB49_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a4, (a3)
-; RV64I-ZALRSC-NEXT:    and a6, a4, a5
+; RV64I-ZALRSC-NEXT:    lr.w a3, (a0)
+; RV64I-ZALRSC-NEXT:    and a6, a3, a5
 ; RV64I-ZALRSC-NEXT:    bne a6, a1, .LBB49_3
 ; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB49_1 Depth=1
-; RV64I-ZALRSC-NEXT:    xor a6, a4, a2
+; RV64I-ZALRSC-NEXT:    xor a6, a3, a2
 ; RV64I-ZALRSC-NEXT:    and a6, a6, a5
-; RV64I-ZALRSC-NEXT:    xor a6, a4, a6
-; RV64I-ZALRSC-NEXT:    sc.w a6, a6, (a3)
+; RV64I-ZALRSC-NEXT:    xor a6, a3, a6
+; RV64I-ZALRSC-NEXT:    sc.w a6, a6, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a6, .LBB49_1
 ; RV64I-ZALRSC-NEXT:  .LBB49_3:
-; RV64I-ZALRSC-NEXT:    srlw a0, a4, a0
+; RV64I-ZALRSC-NEXT:    srlw a0, a3, a4
 ; RV64I-ZALRSC-NEXT:    slli a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    srai a0, a0, 48
 ; RV64I-ZALRSC-NEXT:    ret
@@ -6011,55 +6011,55 @@ define i1 @cmpxchg_i16_monotonic_monotonic_val1(ptr %ptr, i16 signext %cmp, i16 
 ;
 ; RV32IA-LABEL: cmpxchg_i16_monotonic_monotonic_val1:
 ; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a3, a0, -4
-; RV32IA-NEXT:    slli a0, a0, 3
-; RV32IA-NEXT:    lui a4, 16
-; RV32IA-NEXT:    addi a4, a4, -1
-; RV32IA-NEXT:    sll a5, a4, a0
-; RV32IA-NEXT:    and a1, a1, a4
-; RV32IA-NEXT:    and a2, a2, a4
-; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    sll a0, a2, a0
+; RV32IA-NEXT:    lui a3, 16
+; RV32IA-NEXT:    slli a4, a0, 3
+; RV32IA-NEXT:    addi a3, a3, -1
+; RV32IA-NEXT:    andi a0, a0, -4
+; RV32IA-NEXT:    sll a5, a3, a4
+; RV32IA-NEXT:    and a1, a1, a3
+; RV32IA-NEXT:    and a2, a2, a3
+; RV32IA-NEXT:    sll a1, a1, a4
+; RV32IA-NEXT:    sll a2, a2, a4
 ; RV32IA-NEXT:  .LBB50_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a2, (a3)
-; RV32IA-NEXT:    and a4, a2, a5
+; RV32IA-NEXT:    lr.w a3, (a0)
+; RV32IA-NEXT:    and a4, a3, a5
 ; RV32IA-NEXT:    bne a4, a1, .LBB50_3
 ; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB50_1 Depth=1
-; RV32IA-NEXT:    xor a4, a2, a0
+; RV32IA-NEXT:    xor a4, a3, a2
 ; RV32IA-NEXT:    and a4, a4, a5
-; RV32IA-NEXT:    xor a4, a2, a4
-; RV32IA-NEXT:    sc.w a4, a4, (a3)
+; RV32IA-NEXT:    xor a4, a3, a4
+; RV32IA-NEXT:    sc.w a4, a4, (a0)
 ; RV32IA-NEXT:    bnez a4, .LBB50_1
 ; RV32IA-NEXT:  .LBB50_3:
-; RV32IA-NEXT:    and a2, a2, a5
-; RV32IA-NEXT:    xor a1, a1, a2
+; RV32IA-NEXT:    and a3, a3, a5
+; RV32IA-NEXT:    xor a1, a1, a3
 ; RV32IA-NEXT:    seqz a0, a1
 ; RV32IA-NEXT:    ret
 ;
 ; RV32I-ZALRSC-LABEL: cmpxchg_i16_monotonic_monotonic_val1:
 ; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    andi a3, a0, -4
-; RV32I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV32I-ZALRSC-NEXT:    lui a4, 16
-; RV32I-ZALRSC-NEXT:    addi a4, a4, -1
-; RV32I-ZALRSC-NEXT:    sll a5, a4, a0
-; RV32I-ZALRSC-NEXT:    and a1, a1, a4
-; RV32I-ZALRSC-NEXT:    and a2, a2, a4
-; RV32I-ZALRSC-NEXT:    sll a1, a1, a0
-; RV32I-ZALRSC-NEXT:    sll a0, a2, a0
+; RV32I-ZALRSC-NEXT:    lui a3, 16
+; RV32I-ZALRSC-NEXT:    slli a4, a0, 3
+; RV32I-ZALRSC-NEXT:    addi a3, a3, -1
+; RV32I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV32I-ZALRSC-NEXT:    sll a5, a3, a4
+; RV32I-ZALRSC-NEXT:    and a1, a1, a3
+; RV32I-ZALRSC-NEXT:    and a2, a2, a3
+; RV32I-ZALRSC-NEXT:    sll a1, a1, a4
+; RV32I-ZALRSC-NEXT:    sll a2, a2, a4
 ; RV32I-ZALRSC-NEXT:  .LBB50_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w a2, (a3)
-; RV32I-ZALRSC-NEXT:    and a4, a2, a5
+; RV32I-ZALRSC-NEXT:    lr.w a3, (a0)
+; RV32I-ZALRSC-NEXT:    and a4, a3, a5
 ; RV32I-ZALRSC-NEXT:    bne a4, a1, .LBB50_3
 ; RV32I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB50_1 Depth=1
-; RV32I-ZALRSC-NEXT:    xor a4, a2, a0
+; RV32I-ZALRSC-NEXT:    xor a4, a3, a2
 ; RV32I-ZALRSC-NEXT:    and a4, a4, a5
-; RV32I-ZALRSC-NEXT:    xor a4, a2, a4
-; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a3)
+; RV32I-ZALRSC-NEXT:    xor a4, a3, a4
+; RV32I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV32I-ZALRSC-NEXT:    bnez a4, .LBB50_1
 ; RV32I-ZALRSC-NEXT:  .LBB50_3:
-; RV32I-ZALRSC-NEXT:    and a2, a2, a5
-; RV32I-ZALRSC-NEXT:    xor a1, a1, a2
+; RV32I-ZALRSC-NEXT:    and a3, a3, a5
+; RV32I-ZALRSC-NEXT:    xor a1, a1, a3
 ; RV32I-ZALRSC-NEXT:    seqz a0, a1
 ; RV32I-ZALRSC-NEXT:    ret
 ;
@@ -6078,55 +6078,55 @@ define i1 @cmpxchg_i16_monotonic_monotonic_val1(ptr %ptr, i16 signext %cmp, i16 
 ;
 ; RV64IA-LABEL: cmpxchg_i16_monotonic_monotonic_val1:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    lui a4, 16
-; RV64IA-NEXT:    addi a4, a4, -1
-; RV64IA-NEXT:    sllw a5, a4, a0
-; RV64IA-NEXT:    and a1, a1, a4
-; RV64IA-NEXT:    and a2, a2, a4
-; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    sllw a0, a2, a0
+; RV64IA-NEXT:    lui a3, 16
+; RV64IA-NEXT:    slli a4, a0, 3
+; RV64IA-NEXT:    addi a3, a3, -1
+; RV64IA-NEXT:    andi a0, a0, -4
+; RV64IA-NEXT:    sllw a5, a3, a4
+; RV64IA-NEXT:    and a1, a1, a3
+; RV64IA-NEXT:    and a2, a2, a3
+; RV64IA-NEXT:    sllw a1, a1, a4
+; RV64IA-NEXT:    sllw a2, a2, a4
 ; RV64IA-NEXT:  .LBB50_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a2, (a3)
-; RV64IA-NEXT:    and a4, a2, a5
+; RV64IA-NEXT:    lr.w a3, (a0)
+; RV64IA-NEXT:    and a4, a3, a5
 ; RV64IA-NEXT:    bne a4, a1, .LBB50_3
 ; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB50_1 Depth=1
-; RV64IA-NEXT:    xor a4, a2, a0
+; RV64IA-NEXT:    xor a4, a3, a2
 ; RV64IA-NEXT:    and a4, a4, a5
-; RV64IA-NEXT:    xor a4, a2, a4
-; RV64IA-NEXT:    sc.w a4, a4, (a3)
+; RV64IA-NEXT:    xor a4, a3, a4
+; RV64IA-NEXT:    sc.w a4, a4, (a0)
 ; RV64IA-NEXT:    bnez a4, .LBB50_1
 ; RV64IA-NEXT:  .LBB50_3:
-; RV64IA-NEXT:    and a2, a2, a5
-; RV64IA-NEXT:    xor a1, a1, a2
+; RV64IA-NEXT:    and a3, a3, a5
+; RV64IA-NEXT:    xor a1, a1, a3
 ; RV64IA-NEXT:    seqz a0, a1
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: cmpxchg_i16_monotonic_monotonic_val1:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a3, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
-; RV64I-ZALRSC-NEXT:    lui a4, 16
-; RV64I-ZALRSC-NEXT:    addi a4, a4, -1
-; RV64I-ZALRSC-NEXT:    sllw a5, a4, a0
-; RV64I-ZALRSC-NEXT:    and a1, a1, a4
-; RV64I-ZALRSC-NEXT:    and a2, a2, a4
-; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
-; RV64I-ZALRSC-NEXT:    sllw a0, a2, a0
+; RV64I-ZALRSC-NEXT:    lui a3, 16
+; RV64I-ZALRSC-NEXT:    slli a4, a0, 3
+; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
+; RV64I-ZALRSC-NEXT:    andi a0, a0, -4
+; RV64I-ZALRSC-NEXT:    sllw a5, a3, a4
+; RV64I-ZALRSC-NEXT:    and a1, a1, a3
+; RV64I-ZALRSC-NEXT:    and a2, a2, a3
+; RV64I-ZALRSC-NEXT:    sllw a1, a1, a4
+; RV64I-ZALRSC-NEXT:    sllw a2, a2, a4
 ; RV64I-ZALRSC-NEXT:  .LBB50_1: # =>This Inner Loop Header: Depth=1
-; RV64I-ZALRSC-NEXT:    lr.w a2, (a3)
-; RV64I-ZALRSC-NEXT:    and a4, a2, a5
+; RV64I-ZALRSC-NEXT:    lr.w a3, (a0)
+; RV64I-ZALRSC-NEXT:    and a4, a3, a5
 ; RV64I-ZALRSC-NEXT:    bne a4, a1, .LBB50_3
 ; RV64I-ZALRSC-NEXT:  # %bb.2: # in Loop: Header=BB50_1 Depth=1
-; RV64I-ZALRSC-NEXT:    xor a4, a2, a0
+; RV64I-ZALRSC-NEXT:    xor a4, a3, a2
 ; RV64I-ZALRSC-NEXT:    and a4, a4, a5
-; RV64I-ZALRSC-NEXT:    xor a4, a2, a4
-; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a3)
+; RV64I-ZALRSC-NEXT:    xor a4, a3, a4
+; RV64I-ZALRSC-NEXT:    sc.w a4, a4, (a0)
 ; RV64I-ZALRSC-NEXT:    bnez a4, .LBB50_1
 ; RV64I-ZALRSC-NEXT:  .LBB50_3:
-; RV64I-ZALRSC-NEXT:    and a2, a2, a5
-; RV64I-ZALRSC-NEXT:    xor a1, a1, a2
+; RV64I-ZALRSC-NEXT:    and a3, a3, a5
+; RV64I-ZALRSC-NEXT:    xor a1, a1, a3
 ; RV64I-ZALRSC-NEXT:    seqz a0, a1
 ; RV64I-ZALRSC-NEXT:    ret
   %1 = cmpxchg ptr %ptr, i16 %cmp, i16 %val monotonic monotonic
