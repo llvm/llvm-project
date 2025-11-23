@@ -1144,7 +1144,12 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (!IsThinLTOPostLink) {
       addSanitizers(TargetTriple, CodeGenOpts, LangOpts, PB);
       addKCFIPass(TargetTriple, LangOpts, PB);
-      addAllocTokenPass(TargetTriple, CodeGenOpts, LangOpts, PB);
+
+      // If this is a ThinLTO pre-link compile, skip AllocTokenPass; it will be
+      // added during ThinLTO backend compile phase to enable optimizations such
+      // as MemProf to remain compatible with AllocToken instrumentation.
+      if (!CodeGenOpts.PrepareForThinLTO)
+        addAllocTokenPass(TargetTriple, CodeGenOpts, LangOpts, PB);
     }
 
     if (std::optional<GCOVOptions> Options =
@@ -1425,6 +1430,12 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   Conf.RemarksFormat = CGOpts.OptRecordFormat;
   Conf.SplitDwarfFile = CGOpts.SplitDwarfFile;
   Conf.SplitDwarfOutput = CGOpts.SplitDwarfOutput;
+  Conf.PassBuilderCallback = [&](PassBuilder &PB) {
+    // Skipped during pre-link phase to avoid instrumentation interfering with
+    // backend optimizations, and instead we run it as late as possible in the
+    // backend phase.
+    addAllocTokenPass(CI.getTarget().getTriple(), CGOpts, CI.getLangOpts(), PB);
+  };
   switch (Action) {
   case Backend_EmitNothing:
     Conf.PreCodeGenModuleHook = [](size_t Task, const llvm::Module &Mod) {

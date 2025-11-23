@@ -275,6 +275,8 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   SI.registerCallbacks(PIC, &MAM);
   PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
 
+  if (Conf.PassBuilderCallback)
+    Conf.PassBuilderCallback(PB);
   RegisterPassPlugins(Conf.PassPlugins, PB);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
