@@ -68,11 +68,13 @@ public:
   MockMemory() = default;
   MockMemory(Map memory) : m_memory(std::move(memory)) {
     // Make sure the requested memory size matches the returned value.
+#ifndef NDEBUG
     for (auto &kv : m_memory) {
       auto &req = kv.first;
       auto &bytes = kv.second;
       assert(bytes.size() == req.size);
     }
+#endif
   }
 
   llvm::Expected<std::vector<uint8_t>> ReadMemory(lldb::addr_t addr,
