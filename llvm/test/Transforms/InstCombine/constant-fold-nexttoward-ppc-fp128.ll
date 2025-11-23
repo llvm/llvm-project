@@ -45,7 +45,7 @@ define float @nexttowardf_down_direction() {
 define double @nexttoward_pos_overflow() {
 ; CHECK-LABEL: define double @nexttoward_pos_overflow() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nexttoward(double 0x7FEFFFFFFFFFFFFF, ppc_fp128 0xM7FF00000000000000000000000000000)
-; CHECK-NEXT:    ret double 0x7FF0000000000000
+; CHECK-NEXT:    ret double [[NEXT]]
 ;
   %pos_max = load double, double* @dbl_pos_max
   %pos_inf = load double, double* @dbl_pos_infinity
@@ -57,7 +57,7 @@ define double @nexttoward_pos_overflow() {
 define float @nexttowardf_pos_overflow () {
 ; CHECK-LABEL: define float @nexttowardf_pos_overflow() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nexttowardf(float 0x47EFFFFFE0000000, ppc_fp128 0xM7FF00000000000000000000000000000)
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float [[NEXT]]
 ;
   %pos_max = load float, float* @flt_pos_max
   %pos_inf = load float, float* @flt_pos_infinity
@@ -69,7 +69,7 @@ define float @nexttowardf_pos_overflow () {
 define double @nexttoward_neg_overflow() {
 ; CHECK-LABEL: define double @nexttoward_neg_overflow() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nexttoward(double 0xFFEFFFFFFFFFFFFF, ppc_fp128 0xMFFF00000000000000000000000000000)
-; CHECK-NEXT:    ret double 0xFFF0000000000000
+; CHECK-NEXT:    ret double [[NEXT]]
 ;
   %neg_max = load double, double* @dbl_neg_max
   %neg_inf = load double, double* @dbl_neg_infinity
@@ -81,7 +81,7 @@ define double @nexttoward_neg_overflow() {
 define float @nexttowardf_neg_overflow() {
 ; CHECK-LABEL: define float @nexttowardf_neg_overflow() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nexttowardf(float 0xC7EFFFFFE0000000, ppc_fp128 0xMFFF00000000000000000000000000000)
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float [[NEXT]]
 ;
   %neg_max = load float, float* @flt_neg_max
   %neg_inf = load float, float* @flt_neg_infinity
@@ -93,7 +93,7 @@ define float @nexttowardf_neg_overflow() {
 define double @nexttoward_subnormal() {
 ; CHECK-LABEL: define double @nexttoward_subnormal() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nexttoward(double 4.940660e-324, ppc_fp128 0xM3FF00000000000000000000000000000)
-; CHECK-NEXT:    ret double 9.881310e-324
+; CHECK-NEXT:    ret double [[NEXT]]
 ;
   %subnormal = load double, double* @dbl_pos_min_subnormal
   %target = fpext double 1.0 to ppc_fp128
@@ -104,7 +104,7 @@ define double @nexttoward_subnormal() {
 define float @nexttowardf_subnormal() {
 ; CHECK-LABEL: define float @nexttowardf_subnormal() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nexttowardf(float 0x36A0000000000000, ppc_fp128 0xM3FF00000000000000000000000000000)
-; CHECK-NEXT:    ret float 0x36B0000000000000
+; CHECK-NEXT:    ret float [[NEXT]]
 ;
   %subnormal = load float, float* @flt_pos_min_subnormal
   %target = fpext float 1.0 to ppc_fp128
