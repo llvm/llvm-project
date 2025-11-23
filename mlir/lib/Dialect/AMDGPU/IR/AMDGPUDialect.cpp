@@ -339,46 +339,101 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// ScaledExtPacked816Op
+//===----------------------------------------------------------------------===//
+LogicalResult ScaledExtPacked816Op::verify() {
+  int blockSize = getBlockSize();
+  assert(llvm::is_contained({16, 32}, blockSize) && "invalid block size");
+
+  int firstScaleByte = getFirstScaleByte();
+  int firstScaleLane = getFirstScaleLane();
+  auto sourceType = cast<VectorType>(getSource().getType());
+  Type elementType = sourceType.getElementType();
+  auto floatType = cast<FloatType>(elementType);
+  unsigned bitWidth = floatType.getWidth();
+
+  assert(llvm::is_contained(llvm::ArrayRef<unsigned>{4, 6, 8}, bitWidth));
+
+  const bool is_fp8 = bitWidth == 8;
+  const bool is_block_16 = blockSize == 16;
+
+  if (!is_fp8) {
+    if (is_block_16) {
+      if (!llvm::is_contained({0, 1}, firstScaleByte)) {
+        return emitOpError("blockSize of 16 can only have firstScaleByte be 0 "
+                           "or 1 for f4 and f6.");
+      }
+    } else {
+      if (!llvm::is_contained({0, 2}, firstScaleByte)) {
+        return emitOpError("blockSize of 32 can only have firstScaleByte be 0 "
+                           "or 2 for f4 and f6.");
+      }
+    }
+  } else {
+    if (is_block_16) {
+      bool is_valid = ((firstScaleLane == 0) && (firstScaleByte == 0)) ||
+                      ((firstScaleLane == 1) && (firstScaleByte == 2));
+      if (!is_valid) {
+        return emitOpError("blockSize of 16 can only have (firstScaleLane, "
+                           "firstScaleByte) be (0, 0) or (1, 2) for f8.");
+      }
+    }
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // WMMAOp
 //===----------------------------------------------------------------------===//
+
+ParseResult mlir::amdgpu::parseMNKDimensionList(OpAsmParser &parser,
+                                                IntegerAttr &m, IntegerAttr &n,
+                                                IntegerAttr &k) {
+  SmallVector<int64_t, 3> dimensions;
+  if (parser.parseDimensionList(dimensions, false, false))
+    return failure();
+  if (dimensions.size() != 3)
+    return parser.emitError(parser.getCurrentLocation())
+           << "expected 3 dimensions in MNK dimension list";
+
+  m = parser.getBuilder().getI32IntegerAttr(dimensions[0]);
+  n = parser.getBuilder().getI32IntegerAttr(dimensions[1]);
+  k = parser.getBuilder().getI32IntegerAttr(dimensions[2]);
+  return success();
+}
+
 LogicalResult WMMAOp::verify() {
-  Type sourceAType = getSourceA().getType();
-  Type sourceBType = getSourceB().getType();
-  Type destType = getDestC().getType();
+  auto sourceAType = cast<VectorType>(getSourceA().getType());
+  auto sourceBType = cast<VectorType>(getSourceB().getType());
+  auto destType = cast<VectorType>(getDestC().getType());
 
-  VectorType sourceVectorAType = dyn_cast<VectorType>(sourceAType);
-  VectorType sourceVectorBType = dyn_cast<VectorType>(sourceBType);
-  VectorType destVectorType = dyn_cast<VectorType>(destType);
-
-  Type sourceAElemType = sourceVectorAType.getElementType();
-  Type sourceBElemType = sourceVectorBType.getElementType();
-  Type destElemType = destVectorType.getElementType();
-
-  if (sourceVectorAType.getNumElements() !=
-      sourceVectorBType.getNumElements()) {
+  Type sourceAElemType = sourceAType.getElementType();
+  Type sourceBElemType = sourceBType.getElementType();
+  if (sourceAType.getNumElements() != sourceBType.getNumElements()) {
     return emitOpError("source vectors have different lengths: ")
-           << sourceVectorAType << " vs. " << sourceVectorBType;
+           << sourceAType << " vs. " << sourceBType;
   }
 
-  bool isDestFloat = isa<Float32Type, Float16Type, BFloat16Type>(destElemType);
-  bool isSrcFloat =
-      isa<Float16Type, BFloat16Type, Float8E4M3FNType, Float8E5M2Type>(
-          sourceAElemType);
+  bool isDestFloat = destType.getElementType().isFloat();
+  bool isSrcFloat = sourceAElemType.isFloat();
 
-  if (isDestFloat && !isSrcFloat) {
-    return emitOpError("Expected float sources with float destination");
-  }
+  if (isDestFloat && !isSrcFloat)
+    return emitOpError("expected float sources with float destination");
+  if (!isDestFloat && isSrcFloat)
+    return emitOpError("expected int sources with int destination");
 
-  if (!isDestFloat && isSrcFloat) {
-    return emitOpError("Expected int sources with int destination");
-  }
-
-  if (sourceAElemType != sourceBElemType &&
-      !(isa<Float8E5M2Type, Float8E4M3FNType>(sourceAElemType) &&
-        isa<Float8E5M2Type, Float8E4M3FNType>(sourceBElemType))) {
+  if (!sourceAElemType.isFloat(8) && sourceAElemType != sourceBElemType) {
     return emitOpError(
-               "source element types much match (except for fp8) but have ")
+               "source element types must match (except for fp8/bf8) but have ")
            << sourceAType << " and " << sourceBType;
+  }
+
+  if (isSrcFloat) {
+    if (getClamp())
+      return emitOpError("clamp flag is not supported for float types");
+    if (getUnsignedA() || getUnsignedB())
+      return emitOpError("unsigned flags are not supported for float types");
   }
   return success();
 }
@@ -395,11 +450,11 @@ LogicalResult MFMAOp::verify() {
 
   Type sourceElem = sourceType, destElem = destType;
   uint32_t sourceLen = 1, destLen = 1;
-  if (auto sourceVector = llvm::dyn_cast<VectorType>(sourceType)) {
+  if (auto sourceVector = dyn_cast<VectorType>(sourceType)) {
     sourceLen = sourceVector.getNumElements();
     sourceElem = sourceVector.getElementType();
   }
-  if (auto destVector = llvm::dyn_cast<VectorType>(destType)) {
+  if (auto destVector = dyn_cast<VectorType>(destType)) {
     destLen = destVector.getNumElements();
     destElem = destVector.getElementType();
   }
@@ -424,7 +479,7 @@ LogicalResult MFMAOp::verify() {
       return emitOpError("expected both non-small-float source operand types "
                          "to match exactly");
   }
-  // Normalize the wider integer types the compiler expects to i8
+  // Normalize the wider integer types the compiler expects to i8.
   if (sourceElem.isInteger(32)) {
     sourceLen *= 4;
     sourceElem = b.getI8Type();

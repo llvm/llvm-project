@@ -15,15 +15,15 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <2 x float> [[WIDE_LOAD]], splat (float 1.000000e+02)
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ogt <2 x float> [[WIDE_LOAD1]], splat (float 1.000000e+02)
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP4]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP5]])
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP6]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP13]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x float> [[WIDE_LOAD1]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
@@ -161,7 +161,7 @@ define void @predicated_assume(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    store <2 x float> [[TMP6]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

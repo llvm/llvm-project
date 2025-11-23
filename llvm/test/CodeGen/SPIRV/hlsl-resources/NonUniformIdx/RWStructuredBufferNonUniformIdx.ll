@@ -3,6 +3,7 @@
 
 ; CHECK-DAG: OpCapability Shader
 ; CHECK-DAG: OpCapability ShaderNonUniformEXT
+; CHECK-DAG: OpCapability StorageBufferArrayNonUniformIndexingEXT
 ; CHECK-DAG: OpDecorate {{%[0-9]+}} NonUniformEXT
 ; CHECK-DAG: OpDecorate {{%[0-9]+}} NonUniformEXT
 ; CHECK-DAG: OpDecorate {{%[0-9]+}} NonUniformEXT

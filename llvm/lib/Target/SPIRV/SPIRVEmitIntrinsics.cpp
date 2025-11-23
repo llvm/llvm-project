@@ -767,6 +767,8 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     Type *RefTy = deduceElementTypeHelper(Ref->getPointerOperand(), Visited,
                                           UnknownElemTypeI8);
     maybeAssignPtrType(Ty, I, RefTy, UnknownElemTypeI8);
+  } else if (auto *Ref = dyn_cast<IntToPtrInst>(I)) {
+    maybeAssignPtrType(Ty, I, Ref->getDestTy(), UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<BitCastInst>(I)) {
     if (Type *Src = Ref->getSrcTy(), *Dest = Ref->getDestTy();
         isPointerTy(Src) && isPointerTy(Dest))
@@ -835,9 +837,6 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
         if (Ty->isArrayTy())
           Ty = Ty->getArrayElementType();
         else {
-          TargetExtType *BufferTy = cast<TargetExtType>(Ty);
-          assert(BufferTy->getTargetExtName() == "spirv.Layout");
-          Ty = BufferTy->getTypeParameter(0);
           assert(Ty && Ty->isStructTy());
           uint32_t Index = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
           Ty = cast<StructType>(Ty)->getElementType(Index);
@@ -1392,19 +1391,19 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
       Constant *AggrConst = nullptr;
       Type *ResTy = nullptr;
       if (auto *COp = dyn_cast<ConstantVector>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = COp->getType();
       } else if (auto *COp = dyn_cast<ConstantArray>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = B.getInt32Ty();
       } else if (auto *COp = dyn_cast<ConstantStruct>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = B.getInt32Ty();
       } else if (auto *COp = dyn_cast<ConstantDataArray>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = B.getInt32Ty();
       } else if (auto *COp = dyn_cast<ConstantAggregateZero>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = Op->getType()->isVectorTy() ? COp->getType() : B.getInt32Ty();
       }
       if (AggrConst) {
@@ -2149,7 +2148,9 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
   for (const auto &Op : I->operands()) {
     if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op) ||
         // Check GetElementPtrConstantExpr case.
-        (isa<ConstantExpr>(Op) && isa<GEPOperator>(Op))) {
+        (isa<ConstantExpr>(Op) &&
+         (isa<GEPOperator>(Op) ||
+          (cast<ConstantExpr>(Op)->getOpcode() == CastInst::IntToPtr)))) {
       setInsertPointSkippingPhis(B, I);
       Type *OpTy = Op->getType();
       if (isa<UndefValue>(Op) && OpTy->isAggregateType()) {

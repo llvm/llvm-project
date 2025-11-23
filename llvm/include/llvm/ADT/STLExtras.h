@@ -674,7 +674,7 @@ using zip_traits = iterator_facade_base<
     ReferenceTupleType *, ReferenceTupleType>;
 
 template <typename ZipType, typename ReferenceTupleType, typename... Iters>
-struct zip_common : public zip_traits<ZipType, ReferenceTupleType, Iters...> {
+struct zip_common : zip_traits<ZipType, ReferenceTupleType, Iters...> {
   using Base = zip_traits<ZipType, ReferenceTupleType, Iters...>;
   using IndexSequence = std::index_sequence_for<Iters...>;
   using value_type = typename Base::value_type;
@@ -1516,8 +1516,8 @@ template <class Iterator, class RNG>
 void shuffle(Iterator first, Iterator last, RNG &&g) {
   // It would be better to use a std::uniform_int_distribution,
   // but that would be stdlib dependent.
-  typedef
-      typename std::iterator_traits<Iterator>::difference_type difference_type;
+  using difference_type =
+      typename std::iterator_traits<Iterator>::difference_type;
   for (auto size = last - first; size > 1; ++first, (void)--size) {
     difference_type offset = g() % size;
     // Avoid self-assignment due to incorrect assertions in libstdc++
@@ -2599,16 +2599,6 @@ template <typename ContainerTy>
 bool hasNItemsOrLess(ContainerTy &&C, unsigned N) {
   return hasNItemsOrLess(adl_begin(C), adl_end(C), N);
 }
-
-/// Returns a raw pointer that represents the same address as the argument.
-///
-/// This implementation can be removed once we move to C++20 where it's defined
-/// as std::to_address().
-///
-/// The std::pointer_traits<>::to_address(p) variations of these overloads has
-/// not been implemented.
-template <class Ptr> auto to_address(const Ptr &P) { return P.operator->(); }
-template <class T> constexpr T *to_address(T *P) { return P; }
 
 // Detect incomplete types, relying on the fact that their size is unknown.
 namespace detail {

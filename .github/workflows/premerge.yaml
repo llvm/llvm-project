@@ -62,7 +62,11 @@ jobs:
         with:
           fetch-depth: 2
       - name: Build and Test
+        timeout-minutes: 120
         continue-on-error: ${{ runner.arch == 'ARM64' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           git config --global --add safe.directory '*'
 
@@ -109,12 +113,20 @@ jobs:
         # https://github.com/actions/upload-artifact/issues/569
         continue-on-error: true
         if: '!cancelled()'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: Premerge Artifacts (Linux ${{ runner.arch }})
           path: artifacts/
           retention-days: 5
           include-hidden-files: 'true'
+      - name: Upload Comment
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ always() && !startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') }}
+        continue-on-error: true
+        with:
+          name: workflow-args
+          path: |
+            comments
 
   premerge-checks-windows:
     name: Build and Test Windows
@@ -149,8 +161,12 @@ jobs:
           echo "windows-runtimes=${runtimes_to_build}" >> $GITHUB_OUTPUT
           echo "windows-runtimes-check-targets=${runtimes_check_targets}" >> $GITHUB_OUTPUT
       - name: Build and Test
+        timeout-minutes: 180
         if: ${{ steps.vars.outputs.windows-projects != '' }}
         shell: cmd
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           # See the comments above in the Linux job for why we define each of
@@ -163,7 +179,7 @@ jobs:
         # https://github.com/actions/upload-artifact/issues/569
         continue-on-error: true
         if: '!cancelled()'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: Premerge Artifacts (Windows)
           path: artifacts/
@@ -188,10 +204,11 @@ jobs:
         with:
           max-size: "2000M"
       - name: Install Ninja
-        uses: llvm/actions/install-ninja@main
+        run: |
+          brew install ninja
       - name: Build and Test
         run: |
-          source <(git diff --name-only HEAD~2..HEAD | python3 .ci/compute_projects.py)
+          source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
 
           if [[ "${projects_to_build}" == "" ]]; then
             echo "No projects to build"

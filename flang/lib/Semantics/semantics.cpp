@@ -452,6 +452,15 @@ void SemanticsContext::UpdateScopeIndex(
   }
 }
 
+void SemanticsContext::DumpScopeIndex(llvm::raw_ostream &out) const {
+  out << "scopeIndex_:\n";
+  for (const auto &[source, scope] : scopeIndex_) {
+    out << "source '" << source.ToString() << "' -> scope " << scope
+        << "... whose source range is '" << scope.sourceRange().ToString()
+        << "'\n";
+  }
+}
+
 bool SemanticsContext::IsInModuleFile(parser::CharBlock source) const {
   for (const Scope *scope{&FindScope(source)}; !scope->IsGlobal();
        scope = &scope->parent()) {
