@@ -3129,8 +3129,11 @@ private:
 
     // It is very unlikely that we are going to find a pointer or reference type
     // definition on the RHS of an assignment.
-    if (IsExpression && !Contexts.back().CaretFound)
+    if (IsExpression && !Contexts.back().CaretFound &&
+        Line.getFirstNonComment()->isNot(
+            TT_RequiresClauseInARequiresExpression)) {
       return TT_BinaryOperator;
+    }
 
     // Opeartors at class scope are likely pointer or reference members.
     if (!Scopes.empty() && Scopes.back() == ST_Class)
