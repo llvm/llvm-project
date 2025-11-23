@@ -32,6 +32,28 @@
 #include <optional>
 #include <vector>
 
+#define GENERATE_HLSL_INTRINSIC_CASE(Arch, ArchPrefix, IntrinsicPostfix, HasUnsignedVariant) \
+    case llvm::Triple::Arch: {                                                               \
+        if (HasUnsignedVariant && QT->isUnsignedIntegerType())                               \
+            return llvm::Intrinsic::##ArchPrefix##_u##IntrinsicPostfix;                      \
+        return llvm::Intrinsic::##ArchPrefix##_##IntrinsicPostfix;                           \
+    }
+
+#define GENERATE_DX_INTRINSIC_CASE(IntrinsicPostfix, HasUnsignedVariant) \
+  GENERATE_HLSL_INTRINSIC_CASE(dxil, dx, IntrinsicPostfix, HasUnsignedVariant)
+
+#define GENERATE_SPV_INTRINSIC_CASE(IntrinsicPostfix, HasUnsignedVariant) \
+  GENERATE_HLSL_INTRINSIC_CASE(spirv, spv, IntrinsicPostfix, HasUnsignedVariant)
+
+#define GENERATE_HLSL_INTRINSIC_FUNCTION_UNSIGNED(FunctionName, IntrinsicPostfix, DxHasUnsignedVariant, SpvHasUnsignedVariant) \
+    llvm::Intrinsic::ID get##FunctionName##Intrinsic(QualType QT) { \
+        llvm::Triple::ArchType Arch = getArch(); \
+        switch (Arch) { \
+          GENERATE_DX_INTRINSIC_CASE(IntrinsicPostfix, DxHasUnsignedVariant) \
+          GENERATE_SPV_INTRINSIC_CASE(IntrinsicPostfix, SpvHasUnsignedVariant) \
+        } \
+    }
+
 // A function generator macro for picking the right intrinsic
 // for the target backend
 #define GENERATE_HLSL_INTRINSIC_FUNCTION(FunctionName, IntrinsicPostfix)       \
@@ -146,7 +168,6 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Dot4AddU8Packed, dot4add_u8packed)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAllTrue, wave_all)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAnyTrue, wave_any)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitOr, wave_reduce_or)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveCountBits, wave_active_countbits)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveGetLaneCount, wave_get_lane_count)
