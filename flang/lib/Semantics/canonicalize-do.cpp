@@ -9,6 +9,7 @@
 #include "canonicalize-do.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree-visitor.h"
+#include "flang/Parser/tools.h"
 
 namespace Fortran::parser {
 
