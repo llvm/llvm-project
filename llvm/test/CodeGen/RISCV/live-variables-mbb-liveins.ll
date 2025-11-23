@@ -1,8 +1,12 @@
+; Pre-regalloc test
 ; RUN: llc -mtriple=riscv64 -riscv-enable-live-variables -verify-machineinstrs \
 ; RUN: -riscv-liveness-update-kills -stop-after=riscv-live-variables \
 ; RUN: -riscv-liveness-update-mbb-liveins < %s | FileCheck %s
 
-; Test that updateMBBLiveIns correctly updates the live-in sets of basic blocks
+; Post-regalloc test
+; RUN: llc -mtriple=riscv64 -riscv-enable-live-variables -verify-machineinstrs \
+; RUN: -riscv-liveness-update-kills -stop-after=riscv-live-variables,1 \
+; RUN: -riscv-liveness-update-mbb-liveins < %s | FileCheck %s --check-prefix=CHECK-PR
 
 ; Basic test: simple function with two arguments
 ; CHECK-LABEL: name: test_mbb_liveins
@@ -21,30 +25,27 @@ entry:
 }
 
 ; Test with control flow: verify live-ins are correct for entry block with multiple args
-; CHECK-LABEL: name: test_control_flow
-; CHECK: bb.0.entry:
-; CHECK:   successors: %bb.1(0x30000000), %bb.2(0x50000000); %bb.1(37.50%), %bb.2(62.50%)
-; CHECK:   liveins: $x10, $x11, $x12
-; CHECK:   BNE killed renamable $x12, killed $x0, %bb.2
-; CHECK:   PseudoBR %bb.1
-; CHECK:
-; CHECK: bb.1.then:
-; CHECK: ; predecessors: %bb.0
-; CHECK:   successors: %bb.3(0x80000000); %bb.3(100.00%)
-; CHECK:   liveins: $x10, $x11
-; CHECK:   renamable $x10 = ADD killed renamable $x10, killed renamable $x11
-; CHECK:   PseudoBR %bb.3
-; CHECK:
-; CHECK: bb.2.else:
-; CHECK: ; predecessors: %bb.0
-; CHECK:   successors: %bb.3(0x80000000); %bb.3(100.00%)
-; CHECK:   liveins: $x10, $x11
-; CHECK:   renamable $x10 = SUB killed renamable $x10, killed renamable $x11
-; CHECK:
-; CHECK: bb.3.end:
-; CHECK: ; predecessors: %bb.2, %bb.1
-; CHECK:   liveins: $x10
-; CHECK:   PseudoRET implicit killed $x10
+; CHECK-PR-LABEL: name{{.*}}test_control_flow
+; CHECK-PR: bb.0.entry:
+; CHECK-PR:   successors:
+; CHECK-PR:   liveins: $x10, $x11, $x12
+; CHECK-PR:   BNE killed renamable $x12, killed $x0, %bb.2
+; CHECK-PR:   PseudoBR %bb.1
+
+; CHECK-PR: bb.1.then:
+; CHECK-PR:   successors:
+; CHECK-PR:   liveins: $x10, $x11
+; CHECK-PR:   renamable $x10 = ADD killed renamable $x10, killed renamable $x11
+; CHECK-PR:   PseudoBR %bb.3
+
+; CHECK-PR: bb.2.else:
+; CHECK-PR:   successors:
+; CHECK-PR:   liveins: $x10, $x11
+; CHECK-PR:   renamable $x10 = SUB killed renamable $x10, killed renamable $x11
+
+; CHECK-PR: bb.3.end:
+; CHECK-PR:   liveins: $x10
+; CHECK-PR:   PseudoRET implicit killed $x10
 
 define i64 @test_control_flow(i64 %a, i64 %b, i64 %cond) {
 entry:
@@ -353,6 +354,60 @@ exit:
 ; CHECK-LABEL: name: test_loop_multiple_exits
 ; CHECK: bb.0.entry:
 ; CHECK:   liveins: $x10, $x11, $x12
+; CHECK:   %10:gpr = COPY killed %11
+
+; CHECK: bb.3.loop_continue:
+; CHECK:   %4:gpr = ADD killed %3, %9
+; CHECK:   %5:gpr = ADDI killed %2, 1
+; CHECK:   %6:gpr = ADD killed %1, %0
+; CHECK:   PseudoBR %bb.1
+
+; CHECK: bb.4.exit1:
+; CHECK:   $x10 = COPY killed %3
+; CHECK:   PseudoRET implicit $x10
+
+; CHECK: bb.5.exit2:
+; CHECK:   $x10 = COPY killed %1
+; CHECK:   PseudoRET implicit $x10
+
+; CHECK-PR-LABEL: test_loop_multiple_exits
+; CHECK-PR:  bb.0.entry:
+; CHECK-PR:    successors:
+; CHECK-PR:    liveins: $x10, $x11, $x12
+; CHECK-PR:    renamable $x13 = COPY killed $x10
+; CHECK-PR:    renamable $x10 = COPY $x0
+; CHECK-PR:    renamable $x15 = COPY $x0
+; CHECK-PR:    renamable $x14 = COPY killed $x0
+; CHECK-PR:    renamable $x16 = SLLI renamable $x12, 1
+
+; CHECK-PR:  bb.1.loop:
+; CHECK-PR:    successors:
+; CHECK-PR:    liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16
+; CHECK-PR:    BLTU renamable $x11, renamable $x14, %bb.4
+; CHECK-PR:    PseudoBR %bb.2
+
+; CHECK-PR:  bb.2.check2:
+; CHECK-PR:    successors:
+; CHECK-PR:    liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16
+; CHECK-PR:    BLTU renamable $x13, renamable $x15, %bb.5
+; CHECK-PR:    PseudoBR %bb.3
+
+; CHECK-PR:  bb.3.loop_continue:
+; CHECK-PR:    successors:
+; CHECK-PR:    liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16
+; CHECK-PR:    renamable $x14 = ADD killed renamable $x14, renamable $x12
+; CHECK-PR:    renamable $x15 = ADDI killed renamable $x15, 1
+; CHECK-PR:    renamable $x10 = ADD killed renamable $x10, renamable $x16
+; CHECK-PR:    PseudoBR %bb.1
+
+; CHECK-PR:  bb.4.exit1:
+; CHECK-PR:    liveins: $x14
+; CHECK-PR:    $x10 = COPY killed renamable $x14
+; CHECK-PR:    PseudoRET implicit killed $x10
+
+; CHECK-PR:  bb.5.exit2:
+; CHECK-PR:    liveins: $x10
+; CHECK-PR:    PseudoRET implicit killed $x10
 
 define i64 @test_loop_multiple_exits(i64 %n, i64 %threshold, i64 %increment) {
 entry:
@@ -362,12 +417,10 @@ loop:
   %i = phi i64 [ 0, %entry ], [ %i_next, %loop_continue ]
   %sum = phi i64 [ 0, %entry ], [ %sum_next, %loop_continue ]
 
-  ; Check for exit condition 1
   %cmp1 = icmp ugt i64 %sum, %threshold
   br i1 %cmp1, label %exit1, label %check2
 
 check2:
-  ; Check for exit condition 2
   %cmp2 = icmp ugt i64 %i, %n
   br i1 %cmp2, label %exit2, label %loop_continue
 
