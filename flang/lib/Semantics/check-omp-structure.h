@@ -94,6 +94,11 @@ public:
   void Enter(const parser::OpenMPDeclarativeConstruct &);
   void Leave(const parser::OpenMPDeclarativeConstruct &);
 
+  void Enter(const parser::OpenMPMisplacedEndDirective &);
+  void Leave(const parser::OpenMPMisplacedEndDirective &);
+  void Enter(const parser::OpenMPInvalidDirective &);
+  void Leave(const parser::OpenMPInvalidDirective &);
+
   void Enter(const parser::OpenMPLoopConstruct &);
   void Leave(const parser::OpenMPLoopConstruct &);
   void Enter(const parser::OmpEndLoopDirective &);

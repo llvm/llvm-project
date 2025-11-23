@@ -269,8 +269,9 @@ struct AccEndCombinedDirective;
 struct OpenACCDeclarativeConstruct;
 struct OpenACCRoutineConstruct;
 struct OpenMPConstruct;
-struct OpenMPLoopConstruct;
 struct OpenMPDeclarativeConstruct;
+struct OpenMPInvalidDirective;
+struct OpenMPMisplacedEndDirective;
 struct CUFKernelDoConstruct;
 
 // Cooked character stream locations
@@ -406,6 +407,8 @@ struct SpecificationConstruct {
       common::Indirection<StructureDef>,
       common::Indirection<OpenACCDeclarativeConstruct>,
       common::Indirection<OpenMPDeclarativeConstruct>,
+      common::Indirection<OpenMPMisplacedEndDirective>,
+      common::Indirection<OpenMPInvalidDirective>,
       common::Indirection<CompilerDirective>>
       u;
 };
@@ -538,6 +541,8 @@ struct ExecutableConstruct {
       common::Indirection<OpenACCConstruct>,
       common::Indirection<AccEndCombinedDirective>,
       common::Indirection<OpenMPConstruct>,
+      common::Indirection<OpenMPMisplacedEndDirective>,
+      common::Indirection<OpenMPInvalidDirective>,
       common::Indirection<CUFKernelDoConstruct>>
       u;
 };
@@ -5377,6 +5382,19 @@ struct OpenMPConstruct {
       OpenMPUtilityConstruct, OpenMPAllocatorsConstruct, OpenMPAssumeConstruct,
       OpenMPCriticalConstruct>
       u;
+};
+
+// Orphaned !$OMP END <directive>, i.e. not being a part of a valid OpenMP
+// construct.
+struct OpenMPMisplacedEndDirective : public OmpEndDirective {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(
+      OpenMPMisplacedEndDirective, OmpEndDirective);
+};
+
+// Unrecognized string after the !$OMP sentinel.
+struct OpenMPInvalidDirective {
+  using EmptyTrait = std::true_type;
+  CharBlock source;
 };
 
 // Parse tree nodes for OpenACC 3.3 directives and clauses
