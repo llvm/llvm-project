@@ -56,7 +56,7 @@ define float @nextafterf_equal_args() {
 
 define double @nextafter_pos_zero_neg_zero() {
 ; CHECK-LABEL: define double @nextafter_pos_zero_neg_zero() {
-; CHECK-NEXT:    ret double 0.000000e+00
+; CHECK-NEXT:    ret double -0.000000e+00
 ;
   %next = call double @nextafter(double 0.0, double -0.0)
   ret double %next
@@ -64,7 +64,7 @@ define double @nextafter_pos_zero_neg_zero() {
 
 define float @nextafterf_pos_zero_neg_zero() {
 ; CHECK-LABEL: define float @nextafterf_pos_zero_neg_zero() {
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float -0.000000e+00
 ;
   %next = call float @nextafterf(float 0.0, float -0.0)
   ret float %next
@@ -72,7 +72,7 @@ define float @nextafterf_pos_zero_neg_zero() {
 
 define double @nextafter_neg_zero_pos_zero() {
 ; CHECK-LABEL: define double @nextafter_neg_zero_pos_zero() {
-; CHECK-NEXT:    ret double -0.000000e+00
+; CHECK-NEXT:    ret double 0.000000e+00
 ;
   %next = call double @nextafter(double -0.0, double 0.0)
   ret double %next
@@ -80,7 +80,7 @@ define double @nextafter_neg_zero_pos_zero() {
 
 define float @nextafterf_neg_zero_pos_zero() {
 ; CHECK-LABEL: define float @nextafterf_neg_zero_pos_zero() {
-; CHECK-NEXT:    ret float -0.000000e+00
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %next = call float @nextafterf(float -0.0, float 0.0)
   ret float %next

@@ -3209,13 +3209,19 @@ static Constant *ConstantFoldNextToward(const APFloat &Op0, const APFloat &Op1,
   const APFloat::cmpResult Result = PromotedOp0.compare(Op1);
   assert(Result != APFloat::cmpUnordered && "Unexpected NaN");
 
-  if (Result == detail::cmpEqual)
-    return ConstantFP::get(RetTy->getContext(), Op0);
+  // When equal, the standard says we must return the second argument.
+  // This allows nice behavior such as nexttoward(0.0, -0.0) = -0.0 and
+  // nexttoward(-0.0, 0.0) = 0.0
+  if (Result == detail::cmpEqual) {
+    APFloat Ret(Op1);
+    Ret.convert(RetTy->getFltSemantics(), detail::rmNearestTiesToEven,
+                &LosesInfo);
+    return ConstantFP::get(RetTy->getContext(), Ret);
+  }
 
   APFloat Next(Op0);
-  Next.next(/*nextDown=*/ Result == APFloat::cmpGreaterThan);
+  Next.next(/*nextDown=*/Result == APFloat::cmpGreaterThan);
   const bool DidOverflow = !Op0.isInfinity() && Next.isInfinity();
-
   if (Next.isZero() || Next.isDenormal() || DidOverflow)
     return nullptr;
   return ConstantFP::get(RetTy->getContext(), Next);
