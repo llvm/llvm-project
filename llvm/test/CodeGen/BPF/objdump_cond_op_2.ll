@@ -25,8 +25,7 @@ define i32 @test(i32, i32) local_unnamed_addr #0 {
   %11 = sub nsw i32 %7, %9
   %12 = icmp slt i32 %10, %11
   br i1 %12, label %5, label %13
-; CHECK: r1 = r3
-; CHECK: if r2 s> r3 goto -10 <test+0x40>
+; CHECK: if r2 s> r1 goto -10 <test+0x40>
 
 ; <label>:13:                                     ; preds = %5, %2
   %14 = phi i32 [ 0, %2 ], [ %9, %5 ]

@@ -102,20 +102,20 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:  .LBB0_13: # %vector.body
 ; RV32-NEXT:    # Parent Loop BB0_10 Depth=1
 ; RV32-NEXT:    # => This Inner Loop Header: Depth=2
-; RV32-NEXT:    add s0, a2, t6
-; RV32-NEXT:    add s1, a4, t6
-; RV32-NEXT:    vl2r.v v8, (s0)
-; RV32-NEXT:    add s0, a0, t6
+; RV32-NEXT:    mv s0, t6
+; RV32-NEXT:    add t6, a2, t6
+; RV32-NEXT:    add s1, a4, s0
+; RV32-NEXT:    vl2r.v v8, (t6)
+; RV32-NEXT:    add s2, a0, s0
 ; RV32-NEXT:    vl2r.v v10, (s1)
-; RV32-NEXT:    add s1, t6, t2
-; RV32-NEXT:    sltu t6, s1, t6
-; RV32-NEXT:    add t5, t5, t6
-; RV32-NEXT:    xor t6, s1, t4
+; RV32-NEXT:    add t6, s0, t2
+; RV32-NEXT:    sltu s0, t6, s0
+; RV32-NEXT:    add t5, t5, s0
+; RV32-NEXT:    xor s0, t6, t4
 ; RV32-NEXT:    vaaddu.vv v8, v8, v10
-; RV32-NEXT:    or s2, t6, t5
-; RV32-NEXT:    vs2r.v v8, (s0)
-; RV32-NEXT:    mv t6, s1
-; RV32-NEXT:    bnez s2, .LBB0_13
+; RV32-NEXT:    or s0, s0, t5
+; RV32-NEXT:    vs2r.v v8, (s2)
+; RV32-NEXT:    bnez s0, .LBB0_13
 ; RV32-NEXT:  # %bb.14: # %middle.block
 ; RV32-NEXT:    # in Loop: Header=BB0_10 Depth=1
 ; RV32-NEXT:    beq t4, a6, .LBB0_9

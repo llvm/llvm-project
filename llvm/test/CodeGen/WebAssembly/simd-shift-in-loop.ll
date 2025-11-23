@@ -15,16 +15,15 @@ define void @shl_loop(ptr %a, i8 %shift, i32 %count) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    loop # label0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.tee 3
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.tee 3
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    v128.load 0:p2align=0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.shl
 ; CHECK-NEXT:    v128.store 0
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i32.const -1
 ; CHECK-NEXT:    i32.add
@@ -64,10 +63,11 @@ define void @shl_phi_loop(ptr %a, i8 %shift, i32 %count) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    loop # label1:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.tee 3
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.tee 3
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    v128.load 0:p2align=0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.shl
@@ -76,8 +76,6 @@ define void @shl_phi_loop(ptr %a, i8 %shift, i32 %count) {
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    local.set 1
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i32.const -1
 ; CHECK-NEXT:    i32.add
