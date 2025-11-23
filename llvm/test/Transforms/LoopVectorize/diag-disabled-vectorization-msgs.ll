@@ -6,10 +6,10 @@
 ; RUN: opt -S -passes=loop-vectorize -pass-remarks=loop-vectorize \
 ; RUN:     -pass-remarks-missed=loop-vectorize \
 ; RUN:     -pass-remarks-analysis=loop-vectorize -debug \
-; RUN:     < %s 2>&1 | FileCheck --check-prefixes=METADATA,BOTH %s
+; RUN:     < %s 2>&1 | FileCheck --check-prefixes=METADATA,ALL %s
 ; TEST 2
 ; Checks that we emit only the correct debug messages and
-; optimization remark when the loop is not vectorized due to the 
+; optimization remark when the loop is not vectorized due to the
 ; vectorize-forced-only pass option being set.
 ; Strip metadata for FORCEDONLY run, keep it for METADATA run
 ; RUN: sed 's/,[[:space:]]*!llvm\.loop[[:space:]]*!0//' %s | \
@@ -17,7 +17,7 @@
 ; RUN:   -pass-remarks=loop-vectorize \
 ; RUN:   -pass-remarks-missed=loop-vectorize \
 ; RUN:   -pass-remarks-analysis=loop-vectorize -debug \
-; RUN:   2>&1 | FileCheck --check-prefixes=FORCEDONLY,BOTH %s
+; RUN:   2>&1 | FileCheck --check-prefixes=FORCEDONLY,ALL %s
 ; TEST 3
 ; Checks that we emit only the correct debug messages and
 ; optimization remark when the loop vectorizer is disabled by loop metadata
@@ -26,13 +26,13 @@
 ; RUN:     -pass-remarks-missed=loop-vectorize \
 ; RUN:     -pass-remarks-analysis=loop-vectorize -debug \
 ; RUN:     -force-vector-interleave=1 -force-vector-width=2 \
-; RUN:     < %s 2>&1 | FileCheck %s
+; RUN:     < %s 2>&1 | FileCheck --check-prefix=ALL %s
 
-; BOTH-LABEL: 'disabled_loop_vectorization' from <stdin>
-; BOTH-NOT: LV: We can vectorize this loop
-; BOTH-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
-; BOTH-NOT: LV: Not vectorizing: Disabled/already vectorized
-; BOTH-NOT: LV: Not vectorizing: Cannot prove legality
+; ALL-LABEL: 'disabled_loop_vectorization' from <stdin>
+; ALL-NOT: LV: We can vectorize this loop
+; ALL-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
+; ALL-NOT: LV: Not vectorizing: Disabled/already vectorized
+; ALL-NOT: LV: Not vectorizing: Cannot prove legality
 ;
 ; METADATA-NOT: LV: Not vectorizing: VectorizeOnlyWhenForced is set
 ; METADATA: LV: Loop hints: force=disabled
@@ -46,7 +46,7 @@
 ; FORCEDONLY: remark:
 ; FORCEDONLY-SAME: loop not vectorized: only vectorizing loops that explicitly request it
 ;
-; BOTH: LV: Loop hints prevent vectorization
+; ALL: LV: Loop hints prevent vectorization
 define void @disabled_loop_vectorization(ptr %src) {
 entry:
   br label %loop
@@ -65,17 +65,17 @@ exit:
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.enable", i1 false}
 
-; CHECK-LABEL: 'disable_nonforced' from <stdin>
-; CHECK-NOT: LV: We can vectorize this loop
-; CHECK-NOT: LV: Not vectorizing: #pragma vectorize disable.
-; CHECK-NOT: LV: Not vectorizing: VectorizeOnlyWhenForced is set
-; CHECK-NOT: LV: Not vectorizing: Disabled/already vectorized
-; CHECK-NOT: LV: Not vectorizing: Cannot prove legality
-; CHECK: LV: Loop hints: force=disabled
-; CHECK: LV: Not vectorizing: loop hasDisableAllTransformsHint.
-; CHECK: remark:
-; CHECK-SAME: loop not vectorized: loop transformations are disabled
-; CHECK: LV: Loop hints prevent vectorization
+; ALL-LABEL: 'disable_nonforced' from <stdin>
+; ALL-NOT: LV: We can vectorize this loop
+; ALL-NOT: LV: Not vectorizing: #pragma vectorize disable.
+; ALL-NOT: LV: Not vectorizing: VectorizeOnlyWhenForced is set
+; ALL-NOT: LV: Not vectorizing: Disabled/already vectorized
+; ALL-NOT: LV: Not vectorizing: Cannot prove legality
+; ALL: LV: Loop hints: force=disabled
+; ALL: LV: Not vectorizing: loop hasDisableAllTransformsHint.
+; ALL: remark:
+; ALL-SAME: loop not vectorized: loop transformations are disabled
+; ALL: LV: Loop hints prevent vectorization
 define void @disable_nonforced(ptr nocapture %a, i32 %n) {
 entry:
   br label %loop
