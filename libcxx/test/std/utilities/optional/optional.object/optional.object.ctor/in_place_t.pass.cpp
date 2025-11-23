@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRED: std-at-least-c++17
 
 // <optional>
 
@@ -16,6 +16,7 @@
 #include <cassert>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -28,25 +29,13 @@ class X {
   int j_ = 0;
 
 public:
-  X() : i_(0) {}
-  X(int i) : i_(i) {}
-  X(int i, int j) : i_(i), j_(j) {}
+  constexpr X() : i_(0) {}
+  constexpr X(int i) : i_(i) {}
+  constexpr X(int i, int j) : i_(i), j_(j) {}
 
-  ~X() {}
+  ~X() = default;
 
-  friend bool operator==(const X& x, const X& y) { return x.i_ == y.i_ && x.j_ == y.j_; }
-};
-
-class Y {
-  int i_;
-  int j_ = 0;
-
-public:
-  constexpr Y() : i_(0) {}
-  constexpr Y(int i) : i_(i) {}
-  constexpr Y(int i, int j) : i_(i), j_(j) {}
-
-  friend constexpr bool operator==(const Y& x, const Y& y) { return x.i_ == y.i_ && x.j_ == y.j_; }
+  friend constexpr bool operator==(const X& x, const X& y) { return x.i_ == y.i_ && x.j_ == y.j_; }
 };
 
 class Z {
@@ -54,62 +43,18 @@ public:
   Z(int) { TEST_THROW(6); }
 };
 
-int main(int, char**) {
-  {
-    constexpr optional<int> opt(in_place, 5);
-    static_assert(static_cast<bool>(opt) == true, "");
-    static_assert(*opt == 5, "");
+template <typename T, typename... Args>
+constexpr void test_inplace(Args... args) {
+  optional<T> opt(in_place, args...);
+  assert(bool(opt));
+  assert(*opt == T(args...));
 
-    struct test_constexpr_ctor : public optional<int> {
-      constexpr test_constexpr_ctor(in_place_t, int i) : optional<int>(in_place, i) {}
-    };
-  }
-  {
-    optional<const int> opt(in_place, 5);
-    assert(*opt == 5);
-  }
-  {
-    const optional<X> opt(in_place);
-    assert(static_cast<bool>(opt) == true);
-    assert(*opt == X());
-  }
-  {
-    const optional<X> opt(in_place, 5);
-    assert(static_cast<bool>(opt) == true);
-    assert(*opt == X(5));
-  }
-  {
-    const optional<X> opt(in_place, 5, 4);
-    assert(static_cast<bool>(opt) == true);
-    assert(*opt == X(5, 4));
-  }
-  {
-    constexpr optional<Y> opt(in_place);
-    static_assert(static_cast<bool>(opt) == true, "");
-    static_assert(*opt == Y(), "");
+  struct test_constexpr_ctor : public optional<int> {
+    constexpr test_constexpr_ctor(in_place_t, int i) : optional<int>(in_place, i) {}
+  };
+}
 
-    struct test_constexpr_ctor : public optional<Y> {
-      constexpr test_constexpr_ctor(in_place_t) : optional<Y>(in_place) {}
-    };
-  }
-  {
-    constexpr optional<Y> opt(in_place, 5);
-    static_assert(static_cast<bool>(opt) == true, "");
-    static_assert(*opt == Y(5), "");
-
-    struct test_constexpr_ctor : public optional<Y> {
-      constexpr test_constexpr_ctor(in_place_t, int i) : optional<Y>(in_place, i) {}
-    };
-  }
-  {
-    constexpr optional<Y> opt(in_place, 5, 4);
-    static_assert(static_cast<bool>(opt) == true, "");
-    static_assert(*opt == Y(5, 4), "");
-
-    struct test_constexpr_ctor : public optional<Y> {
-      constexpr test_constexpr_ctor(in_place_t, int i, int j) : optional<Y>(in_place, i, j) {}
-    };
-  }
+TEST_CONSTEXPR_CXX26 void test_throwing() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   {
     try {
@@ -120,6 +65,26 @@ int main(int, char**) {
     }
   }
 #endif
+}
 
+constexpr bool test() {
+  test_inplace<int>(5);
+  test_inplace<const int>(5);
+  test_inplace<X>();
+  test_inplace<X>(5);
+  test_inplace<X>(5, 4);
+#if TEST_STD_VER >= 26 && 0
+  test_throwing();
+#endif
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  static_assert(test());
+
+  {
+    test_throwing();
+  }
   return 0;
 }
