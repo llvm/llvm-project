@@ -1,4 +1,27 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s
+
+void clang_analyzer_warnIfReached();
+
+struct Clazz {
+  template <typename T>
+  static void templated_memfn();
+};
+
+// This must come before the 'templated_memfn' is defined!
+static void instantiate() {
+  Clazz::templated_memfn<int>();
+}
+
+template <typename T>
+void Clazz::templated_memfn() {
+  // When we report a bug in a function, we traverse the lexical decl context
+  // of it while looking for suppression attributes to record what source
+  // ranges should the suppression apply to.
+  // In the past, that traversal didn't follow template instantiations, only
+  // primary templates.
+  [[clang::suppress]] clang_analyzer_warnIfReached(); // no-warning
+
+}
 
 namespace [[clang::suppress]]
 suppressed_namespace {
