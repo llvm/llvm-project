@@ -533,6 +533,7 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 ### Inactive or former component maintainers
 
 Paul C. Anagnostopoulos (paul@windfall.com, [Paul-C-Anagnostopoulos](https://github.com/Paul-C-Anagnostopoulos)) -- TableGen \
+Owen Anderson (resistor@mac.com, [resistor](https://github.com/resistor)) -- SelectionDAG \
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
 Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support, Inlining, CMake and library layering \
 Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \
