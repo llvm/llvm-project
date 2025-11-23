@@ -27,7 +27,6 @@
 #include "clang/Basic/Version.h"
 #include "clang/Basic/XRayInstr.h"
 #include "clang/Config/config.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendOptions.h"
@@ -96,7 +95,6 @@
 #include <vector>
 
 using namespace clang;
-using namespace driver;
 using namespace options;
 using namespace llvm::opt;
 
@@ -3272,13 +3270,6 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.DashX = DashX;
 
   return Diags.getNumErrors() == NumErrorsBefore;
-}
-
-std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
-                                                 void *MainAddr) {
-  std::string ClangExecutable =
-      llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
-  return Driver::GetResourcesPath(ClangExecutable);
 }
 
 static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,

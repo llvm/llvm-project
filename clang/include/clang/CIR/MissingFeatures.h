@@ -200,6 +200,7 @@ struct MissingFeatures {
   static bool aggValueSlotMayOverlap() { return false; }
   static bool aggValueSlotVolatile() { return false; }
   static bool alignCXXRecordDecl() { return false; }
+  static bool allocToken() { return false; }
   static bool appleKext() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
   static bool asmGoto() { return false; }
