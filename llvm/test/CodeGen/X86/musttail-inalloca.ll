@@ -18,7 +18,6 @@ define dso_local x86_thiscallcc void @methodWithVtorDisp_thunk(ptr %0, ptr inall
 ; CHECK-LABEL: methodWithVtorDisp_thunk:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    subl $20, %esp
 ; CHECK-NEXT:    movl %ecx, %esi
 ; CHECK-NEXT:    subl -4(%ecx), %esi
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
@@ -26,7 +25,6 @@ define dso_local x86_thiscallcc void @methodWithVtorDisp_thunk(ptr %0, ptr inall
 ; CHECK-NEXT:    calll ___cyg_profile_func_exit
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    addl $20, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    jmp _methodWithVtorDisp # TAILCALL
   %3 = getelementptr inbounds i8, ptr %0, i32 -4
