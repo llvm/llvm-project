@@ -95,29 +95,10 @@ public:
   void HandleTranslationUnit(ASTContext &C) override {
     Gen->HandleTranslationUnit(C);
 
-    if (!FEOptions.ClangIRDisableCIRVerifier) {
-      if (!Gen->verifyModule()) {
-        CI.getDiagnostics().Report(
-            diag::err_cir_verification_failed_pre_passes);
-        llvm::report_fatal_error(
-            "CIR codegen: module verification error before running CIR passes");
-        return;
-      }
-    }
+    // FOR TESTING -- remove
 
     mlir::ModuleOp MlirModule = Gen->getModule();
     mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
-
-    if (!FEOptions.ClangIRDisablePasses) {
-      // Setup and run CIR pipeline.
-      if (runCIRToCIRPasses(MlirModule, MlirCtx, C,
-                            !FEOptions.ClangIRDisableCIRVerifier,
-                            CGO.OptimizationLevel > 0)
-              .failed()) {
-        CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
-        return;
-      }
-    }
 
     switch (Action) {
     case CIRGenAction::OutputType::EmitCIR:

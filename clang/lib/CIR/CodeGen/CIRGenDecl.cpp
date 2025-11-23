@@ -314,8 +314,8 @@ void CIRGenFunction::emitAutoVarInit(
         RValue::get(builder.getConstant(initLoc, typedConstant)), lv);
   }
 
-  emitStoresForConstant(cgm, d, addr, type.isVolatileQualified(), builder,
-                        typedConstant);
+  ::emitStoresForConstant(cgm, d, addr, type.isVolatileQualified(), builder,
+                          typedConstant);
 }
 
 void CIRGenFunction::emitAutoVarCleanups(
@@ -797,7 +797,8 @@ namespace {
 struct DestroyObject final : EHScopeStack::Cleanup {
   DestroyObject(Address addr, QualType type,
                 CIRGenFunction::Destroyer *destroyer, bool useEHCleanupForArray)
-      : addr(addr), type(type), destroyer(destroyer), useEHCleanupForArray(useEHCleanupForArray) {}
+      : addr(addr), type(type), destroyer(destroyer),
+        useEHCleanupForArray(useEHCleanupForArray) {}
 
   Address addr;
   QualType type;
@@ -831,12 +832,15 @@ void CIRGenFunction::pushDestroy(QualType::DestructionKind dtorKind,
   assert(dtorKind && "cannot push destructor for trivial type");
 
   CleanupKind cleanupKind = getCleanupKind(dtorKind);
-  pushDestroy(cleanupKind, addr, type, getDestroyer(dtorKind), cleanupKind & EHCleanup);
+  pushDestroy(cleanupKind, addr, type, getDestroyer(dtorKind),
+              cleanupKind & EHCleanup);
 }
 
 void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
-                                 QualType type, Destroyer *destroyer, bool useEHCleanupForArray) {
-  pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer, useEHCleanupForArray);
+                                 QualType type, Destroyer *destroyer,
+                                 bool useEHCleanupForArray) {
+  pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer,
+                                     useEHCleanupForArray);
 }
 
 /// Destroys all the elements of the given array, beginning from last to first.
@@ -990,7 +994,8 @@ void CIRGenFunction::emitAutoVarTypeCleanup(
   // Use an EH cleanup in array destructors iff the destructor itself
   // is being pushed as an EH cleanup.
   bool useEHCleanup = (cleanupKind & EHCleanup);
-  ehStack.pushCleanup<DestroyObject>(cleanupKind, addr, type, destroyer, useEHCleanup);
+  ehStack.pushCleanup<DestroyObject>(cleanupKind, addr, type, destroyer,
+                                     useEHCleanup);
 }
 
 void CIRGenFunction::maybeEmitDeferredVarDeclInit(const VarDecl *vd) {

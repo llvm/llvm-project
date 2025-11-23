@@ -18,6 +18,7 @@
 #include "CIRGenModule.h"
 #include "EHScopeStack.h"
 #include "mlir/IR/Value.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 namespace clang::CIRGen {
 
@@ -30,6 +31,9 @@ struct CatchTypeInfo {
 
 /// A protected scope for zero-cost EH handling.
 class EHScope {
+  mlir::Operation *cachedLandingPad;
+  mlir::Block *cachedEHDispatchBlock;
+
   EHScopeStack::stable_iterator enclosingEHScope;
 
   class CommonBitFields {
@@ -82,7 +86,8 @@ public:
   enum Kind { Cleanup, Catch, Terminate, Filter };
 
   EHScope(Kind kind, EHScopeStack::stable_iterator enclosingEHScope)
-      : enclosingEHScope(enclosingEHScope) {
+      : cachedLandingPad(nullptr), cachedEHDispatchBlock(nullptr),
+        enclosingEHScope(enclosingEHScope) {
     commonBits.kind = kind;
   }
 
@@ -93,6 +98,27 @@ public:
     // in CIRGen the block content is not important, just used as a way to
     // signal `hasEHBranches`.
     assert(!cir::MissingFeatures::ehstackBranches());
+    return false;
+  }
+
+  mlir::Operation *getCachedLandingPad() const { return cachedLandingPad; }
+
+  void setCachedLandingPad(mlir::Operation *op) { cachedLandingPad = op; }
+
+  mlir::Block *getCachedEHDispatchBlock() const {
+    return cachedEHDispatchBlock;
+  }
+
+  void setCachedEHDispatchBlock(mlir::Block *block) {
+    cachedEHDispatchBlock = block;
+  }
+
+  bool hasEHBranches() const {
+    // Traditional LLVM codegen also checks for `!block->use_empty()`, but
+    // in CIRGen the block content is not important, just used as a way to
+    // signal `hasEHBranches`.
+    if ([[maybe_unused]] mlir::Block *block = getCachedEHDispatchBlock())
+      return true;
     return false;
   }
 
@@ -189,6 +215,64 @@ class alignas(EHScopeStack::ScopeStackAlignment) EHCleanupScope
   /// activated yet.
   Address activeFlag;
 
+  /// Extra information required for cleanups that have resolved
+  /// branches through them.  This has to be allocated on the side
+  /// because everything on the cleanup stack has be trivially
+  /// movable.
+  struct ExtInfo {
+    /// The destinations of normal branch-afters and branch-throughs.
+    llvm::SmallPtrSet<mlir::Block *, 4> branches;
+
+    /// Normal branch-afters.
+    SmallVector<std::pair<mlir::Block *, cir::ConstantOp *>, 4> branchAfters;
+  };
+  mutable struct ExtInfo *extInfo;
+
+  /// Erases auxillary allocas and their usages for an unused cleanup.
+  /// Cleanups should mark these allocas as 'used' if the cleanup is
+  /// emitted, otherwise these instructions would be erased.
+  struct AuxillaryAllocas {
+    SmallVector<cir::AllocaOp *, 1> auxAllocas;
+    bool used = false;
+
+    // Records a potentially unused instruction to be erased later.
+    void add(cir::AllocaOp *alloca) { auxAllocas.push_back(alloca); }
+
+    // Mark all recorded instructions as used. These will not be erased later.
+    void markUsed() {
+      used = true;
+      auxAllocas.clear();
+    }
+
+    ~AuxillaryAllocas() {
+      if (used)
+        return;
+      llvm::SetVector<mlir::Operation *> uses;
+      for (auto *op : llvm::reverse(auxAllocas))
+        collectUses(op->getOperation(), uses);
+      // Delete uses in the reverse order of insertion.
+      for (auto *use : llvm::reverse(uses))
+        use->erase();
+    }
+
+  private:
+    void collectUses(mlir::Operation *op,
+                     llvm::SetVector<mlir::Operation *> &Uses) {
+      if (!op || !Uses.insert(op))
+        return;
+      for (auto *user : op->getUsers())
+        collectUses(user, Uses);
+    }
+  };
+
+  mutable AuxillaryAllocas *auxAllocas;
+
+  AuxillaryAllocas &getAuxillaryAllocas() {
+    if (!auxAllocas) {
+      auxAllocas = new AuxillaryAllocas();
+    }
+    return *auxAllocas;
+  }
   /// The number of fixups required by enclosing scopes (not including
   /// this one).  If this is the top cleanup scope, all the fixups
   /// from this index onwards belong to this scope.
@@ -224,9 +308,21 @@ public:
     assert(cleanupBits.cleanupSize == cleanupSize && "cleanup size overflow");
   }
 
-  void destroy() {}
   // Objects of EHCleanupScope are not destructed. Use destroy().
   ~EHCleanupScope() = delete;
+
+  void destroy() {
+    if (auxAllocas)
+      delete auxAllocas;
+    delete extInfo;
+  }
+
+  void addAuxAllocas(const llvm::SmallVector<cir::AllocaOp *> &allocas) {
+    for (auto *alloca : allocas)
+      getAuxillaryAllocas().add(alloca);
+  }
+
+  void markEmitted() { getAuxillaryAllocas().markUsed(); }
 
   mlir::Block *getNormalBlock() const { return normalBlock; }
   void setNormalBlock(mlir::Block *bb) { normalBlock = bb; }
@@ -273,8 +369,6 @@ public:
   static bool classof(const EHScope *scope) {
     return (scope->getKind() == Cleanup);
   }
-
-  void markEmitted() {}
 };
 
 /// A non-stable pointer into the scope stack.

@@ -18,6 +18,7 @@
 
 #include "CIRGenCleanup.h"
 #include "Address.h"
+#include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
 #include "EHScopeStack.h"
 
@@ -109,6 +110,25 @@ Address CIRGenFunction::createCleanupActiveFlag() {
 //===----------------------------------------------------------------------===//
 
 void EHScopeStack::Cleanup::anchor() {}
+
+static cir::StoreOp createStoreInstBefore(mlir::Value value, Address addr,
+                                          mlir::Operation *beforeOp,
+                                          CIRGenFunction &cgf) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(beforeOp);
+  mlir::Location loc = beforeOp->getLoc();
+  return builder.createStore(loc, value, addr);
+}
+
+static cir::LoadOp createLoadInstBefore(Address addr, mlir::Operation *beforeOp,
+                                        CIRGenFunction &cgf) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(beforeOp);
+  mlir::Location loc = beforeOp->getLoc();
+  return builder.createLoad(loc, addr);
+}
 
 EHScopeStack::stable_iterator
 EHScopeStack::getInnermostActiveNormalCleanup() const {
@@ -237,6 +257,131 @@ void CIRGenFunction::initFullExprCleanupWithFlag(Address activeFlag) {
     cleanup.setTestFlagInNormalCleanup();
   if (cleanup.isEHCleanup())
     cleanup.setTestFlagInEHCleanup();
+}
+
+static bool IsUsedAsEHCleanup(EHScopeStack &EHStack,
+                              EHScopeStack::stable_iterator cleanup) {
+  // If we needed an EH block for any reason, that counts.
+  if (EHStack.find(cleanup)->hasEHBranches())
+    return true;
+
+  // Check whether any enclosed cleanups were needed.
+  for (EHScopeStack::stable_iterator i = EHStack.getInnermostEHScope();
+       i != cleanup;) {
+    assert(cleanup.strictlyEncloses(i));
+
+    EHScope &scope = *EHStack.find(i);
+    if (scope.hasEHBranches())
+      return true;
+
+    i = scope.getEnclosingEHScope();
+  }
+
+  return false;
+}
+
+enum ForActivation_t { ForActivation, ForDeactivation };
+
+/// The given cleanup block is changing activation state.  Configure a
+/// cleanup variable if necessary.
+///
+/// It would be good if we had some way of determining if there were
+/// extra uses *after* the change-over point.
+static void setupCleanupBlockActivation(CIRGenFunction &CGF,
+                                        EHScopeStack::stable_iterator C,
+                                        ForActivation_t kind,
+                                        mlir::Operation *dominatingIP) {
+  EHCleanupScope &Scope = cast<EHCleanupScope>(*CGF.ehStack.find(C));
+
+  // We always need the flag if we're activating the cleanup in a
+  // conditional context, because we have to assume that the current
+  // location doesn't necessarily dominate the cleanup's code.
+  bool isActivatedInConditional =
+      (kind == ForActivation && CGF.isInConditionalBranch());
+
+  bool needFlag = false;
+
+  // Calculate whether the cleanup was used:
+
+  //   - as a normal cleanup
+  if (Scope.isNormalCleanup()) {
+    Scope.setTestFlagInNormalCleanup();
+    needFlag = true;
+  }
+
+  //  - as an EH cleanup
+  if (Scope.isEHCleanup() &&
+      (isActivatedInConditional || IsUsedAsEHCleanup(CGF.ehStack, C))) {
+    Scope.setTestFlagInEHCleanup();
+    needFlag = true;
+  }
+
+  // If it hasn't yet been used as either, we're done.
+  if (!needFlag)
+    return;
+
+  auto builder = CGF.getBuilder();
+  Address var = Scope.getActiveFlag();
+  mlir::Location loc = var.getPointer().getLoc();
+  if (!var.isValid()) {
+    CIRGenFunction::AllocaTrackerRAII allocaTracker(CGF);
+    var =
+        CGF.createTempAlloca(builder.getIntegerType(1), CharUnits::One(), loc);
+    Scope.setActiveFlag(var);
+    Scope.addAuxAllocas(allocaTracker.take());
+
+    assert(dominatingIP && "no existing variable and no dominating IP!");
+
+    // Initialize to true or false depending on whether it was
+    // active up to this point.
+    mlir::Value value = builder.getConstantInt(loc, builder.getIntegerType(1),
+                                               kind == ForDeactivation);
+
+    // If we're in a conditional block, ignore the dominating IP and
+    // use the outermost conditional branch.
+    if (CGF.isInConditionalBranch()) {
+      CGF.setBeforeOutermostConditional(value, var);
+    } else {
+      createStoreInstBefore(value, var, dominatingIP, CGF);
+    }
+  }
+
+  mlir::Value trueOrFalse =
+      kind == ForActivation ? builder.getTrue(loc) : builder.getFalse(loc);
+  CGF.getBuilder().createStore(loc, trueOrFalse, var);
+}
+
+/// Deactive a cleanup that was created in an active state.
+void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator C,
+                                            mlir::Operation *dominatingIP) {
+  assert(C != ehStack.stable_end() && "deactivating bottom of stack?");
+  EHCleanupScope &Scope = cast<EHCleanupScope>(*ehStack.find(C));
+  assert(Scope.isActive() && "double deactivation");
+
+  // If it's the top of the stack, just pop it, but do so only if it belongs
+  // to the current RunCleanupsScope.
+  if (C == ehStack.stable_begin() &&
+      currentCleanupStackDepth.strictlyEncloses(C)) {
+    // Per comment below, checking EHAsynch is not really necessary
+    // it's there to assure zero-impact w/o EHAsynch option
+    if (!Scope.isNormalCleanup() && getLangOpts().EHAsynch) {
+      llvm_unreachable("NYI");
+    } else {
+      // From LLVM: If it's a normal cleanup, we need to pretend that the
+      // fallthrough is unreachable.
+      // CIR remarks: LLVM uses an empty insertion point to signal behavior
+      // change to other codegen paths (triggered by PopCleanupBlock).
+      // CIRGen doesn't do that yet, but let's mimic just in case.
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.clearInsertionPoint();
+      popCleanupBlock();
+    }
+    return;
+  }
+
+  // Otherwise, follow the general case.
+  setupCleanupBlockActivation(*this, C, ForDeactivation, dominatingIP);
+  Scope.setActive(false);
 }
 
 static void emitCleanup(CIRGenFunction &cgf, EHScopeStack::Cleanup *cleanup,

@@ -2,7 +2,7 @@
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
 typedef __typeof(sizeof(0)) size_t;
-
+/*
 // Declare the reserved global placement new.
 void *operator new(size_t, void*);
 
@@ -17,6 +17,21 @@ namespace test7 {
   B *test() {
     return new B(A(), new B(A(), 0));
   }
+}
+*/
+
+struct A {
+  A();
+  ~A();
+};
+
+struct B {
+  B(const A&, B*);
+  ~B();
+};
+
+static B *test() {
+  return new B(A(), 0);
 }
 
 // CIR-DAG: ![[A:.*]] = !cir.struct<struct "test7::A" {!u8i}

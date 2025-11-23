@@ -66,7 +66,8 @@ template <class T, bool mightBeInstruction =
                        (std::is_base_of<mlir::Value, T>::value ||
                         std::is_base_of<mlir::Operation, T>::value) &&
                        !std::is_base_of<cir::ConstantOp, T>::value &&
-                       !std::is_base_of<mlir::Block, T>::value> struct DominatingPointer;
+                       !std::is_base_of<mlir::Block, T>::value>
+struct DominatingPointer;
 template <class T> struct DominatingPointer<T, false> : InvariantValue<T *> {};
 
 // template <class T> struct DominatingPointer<T,true> at end of file

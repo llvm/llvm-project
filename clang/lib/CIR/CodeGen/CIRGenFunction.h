@@ -973,6 +973,9 @@ public:
 
   Address createCleanupActiveFlag();
 
+  void deactivateCleanupBlock(EHScopeStack::stable_iterator it,
+                              mlir::Operation *dominatingIP);
+
   /// Enters a new scope for capturing cleanups, all of which
   /// will be executed once the scope is exited.
   class RunCleanupsScope {
@@ -1962,6 +1965,43 @@ public:
   Address createMemTemp(QualType t, CharUnits align, mlir::Location loc,
                         const Twine &name = "tmp", Address *alloca = nullptr,
                         mlir::OpBuilder::InsertPoint ip = {});
+
+private:
+  struct AllocaTracker {
+    void add(cir::AllocaOp *op) { allocas.push_back(op); }
+    llvm::SmallVector<cir::AllocaOp *> take() { return std::move(allocas); }
+
+  private:
+    llvm::SmallVector<cir::AllocaOp *> allocas;
+  };
+  AllocaTracker *allocas = nullptr;
+
+  /// CGDecl helper.
+  void emitStoresForConstant(const VarDecl &D, Address Loc, bool isVolatile,
+                             cir::ConstantOp *constant, bool IsAutoInit);
+  /// CGDecl helper.
+  void emitStoresForZeroInit(const VarDecl &D, Address Loc, bool isVolatile);
+  /// CGDecl helper.
+  void emitStoresForPatternInit(const VarDecl &D, Address Loc, bool isVolatile);
+  /// CGDecl helper.
+  void emitStoresForInitAfterBZero(cir::ConstantOp *Init, Address Loc,
+                                   bool isVolatile, bool IsAutoInit);
+
+public:
+  // Captures all the allocas created during the scope of its RAII object.
+  struct AllocaTrackerRAII {
+    AllocaTrackerRAII(CIRGenFunction &cgf) : cgf(cgf), oldTracker(cgf.allocas) {
+      cgf.allocas = &tracker;
+    }
+    ~AllocaTrackerRAII() { cgf.allocas = oldTracker; }
+
+    llvm::SmallVector<cir::AllocaOp *> take() { return tracker.take(); }
+
+  private:
+    CIRGenFunction &cgf;
+    AllocaTracker *oldTracker;
+    AllocaTracker tracker;
+  };
 
   //===--------------------------------------------------------------------===//
   //                         OpenACC Emission

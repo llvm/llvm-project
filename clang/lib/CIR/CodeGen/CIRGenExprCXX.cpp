@@ -818,7 +818,7 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf,
                                   const CallArgList &newArgs) {
   unsigned numNonPlacementArgs = newExpr->passAlignment() ? 2 : 1;
 
-  assert(newExpr->getNumPlacementArgs() + numNonPlacementArgs <
+  assert(newExpr->getNumPlacementArgs() + numNonPlacementArgs <=
              newArgs.size() &&
          "Not enough arguments for new expression?");
   // If we're not inside a conditional branch, then the cleanup will
@@ -1086,6 +1086,15 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
                      allocSizeWithoutCookie);
 
   mlir::Value resultPtr = result.getPointer();
+
+  // Deactivate the 'operator delete' cleanup if we finished
+  // initialization.
+  if (operatorDeleteCleanup.isValid()) {
+    // FIXME: enable cleanupDominator above before implementing this.
+    deactivateCleanupBlock(operatorDeleteCleanup, cleanupDominator);
+    if (cleanupDominator)
+      cleanupDominator->erase();
+  }
 
   if (nullCheck) {
     conditional.endEvaluation();
