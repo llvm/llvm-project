@@ -36,21 +36,19 @@ IntTy getLastArgIntValueImpl(const ArgList &Args, OptSpecifier Id,
 }
 } // namespace
 
-namespace clang {
-
-int getLastArgIntValue(const ArgList &Args, OptSpecifier Id, int Default,
-                       DiagnosticsEngine *Diags, unsigned Base) {
+int clang::getLastArgIntValue(const ArgList &Args, OptSpecifier Id, int Default,
+                              DiagnosticsEngine *Diags, unsigned Base) {
   return getLastArgIntValueImpl<int>(Args, Id, Default, Diags, Base);
 }
 
-uint64_t getLastArgUInt64Value(const ArgList &Args, OptSpecifier Id,
-                               uint64_t Default, DiagnosticsEngine *Diags,
-                               unsigned Base) {
+uint64_t clang::getLastArgUInt64Value(const ArgList &Args, OptSpecifier Id,
+                                      uint64_t Default,
+                                      DiagnosticsEngine *Diags, unsigned Base) {
   return getLastArgIntValueImpl<uint64_t>(Args, Id, Default, Diags, Base);
 }
 
-StringRef parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
-                                        const llvm::opt::ArgList &Args) {
+StringRef clang::parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
+                                               const llvm::opt::ArgList &Args) {
   const Arg *A = Args.getLastArg(options::OPT_mprefer_vector_width_EQ);
   if (!A)
     return "";
@@ -100,8 +98,8 @@ static bool getRefinementStep(StringRef In, clang::DiagnosticsEngine &Diags,
   return true;
 }
 
-StringRef parseMRecipOption(clang::DiagnosticsEngine &Diags,
-                            const ArgList &Args) {
+StringRef clang::parseMRecipOption(clang::DiagnosticsEngine &Diags,
+                                   const ArgList &Args) {
   StringRef DisabledPrefixIn = "!";
   StringRef DisabledPrefixOut = "!";
   StringRef EnabledPrefixOut = "";
@@ -208,7 +206,7 @@ StringRef parseMRecipOption(clang::DiagnosticsEngine &Diags,
   return Out;
 }
 
-std::string GetResourcesPath(StringRef BinaryPath) {
+std::string clang::GetResourcesPath(StringRef BinaryPath) {
   // Since the resource directory is embedded in the module hash, it's important
   // that all places that need it call this function, so that they get the
   // exact same string ("a/../b/" and "b/" get different hashes, for example).
@@ -241,10 +239,8 @@ std::string GetResourcesPath(StringRef BinaryPath) {
   return std::string(P);
 }
 
-std::string GetResourcesPath(const char *Argv0, void *MainAddr) {
+std::string clang::GetResourcesPath(const char *Argv0, void *MainAddr) {
   const std::string ClangExecutable =
       llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
   return GetResourcesPath(ClangExecutable);
 }
-
-} // namespace clang

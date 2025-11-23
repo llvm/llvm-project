@@ -17,7 +17,7 @@
 #include "clang/Serialization/ModuleCache.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 
-namespace clang {
+using namespace clang;
 
 /// Create an ASTUnit from a vector of command line arguments, which must
 /// specify exactly one source file.
@@ -55,7 +55,7 @@ namespace clang {
 ///
 // FIXME: Move OnlyLocalDecls, UseBumpAllocator to setters on the ASTUnit, we
 // shouldn't need to specify them at construction time.
-std::unique_ptr<ASTUnit> CreateASTUnitFromCommandLine(
+std::unique_ptr<ASTUnit> clang::CreateASTUnitFromCommandLine(
     const char **ArgBegin, const char **ArgEnd,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     std::shared_ptr<DiagnosticOptions> DiagOpts,
@@ -164,5 +164,3 @@ std::unique_ptr<ASTUnit> CreateASTUnitFromCommandLine(
 
   return AST;
 }
-
-} // namespace clang
