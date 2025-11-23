@@ -21,6 +21,7 @@
 
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "mlir/Support/LLVM.h"
 namespace cir {
 class FuncOp;
@@ -28,7 +29,7 @@ class FuncOp;
 
 namespace clang {
 class Sema;
-
+Decl *getDeclByName(ASTContext &context, StringRef name);
 enum ControlFlowKind {
   UnknownFallThrough,
   NeverFallThrough,
@@ -45,9 +46,16 @@ struct CheckFallThroughDiagnostics {
   unsigned funKind = 0;
   SourceLocation funcLoc;
 
+  static CheckFallThroughDiagnostics makeForFunction(Sema &s,
+                                                     const Decl *func); 
+  static CheckFallThroughDiagnostics makeForCoroutine(const Decl *func);
+  static CheckFallThroughDiagnostics makeForBlock();
+  static CheckFallThroughDiagnostics makeForLambda();
   bool checkDiagnostics(DiagnosticsEngine &d, bool returnsVoid,
                         bool hasNoReturn) const;
 };
+/// Check if a return operation returns a phony value (uninitialized __retval)
+bool isPhonyReturn(cir::ReturnOp returnOp);
 
 /// Pass for analyzing fall-through behavior in CIR functions
 class FallThroughWarningPass {

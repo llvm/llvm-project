@@ -119,10 +119,8 @@ public:
     // Run CIR analysis passes if requested
     if (!FEOptions.ClangIRAnalysisList.empty()) {
       CIRAnalysisSet AnalysisSet = parseCIRAnalysisList(FEOptions.ClangIRAnalysisList);
-      AnalysisSet.print(llvm::errs());
 
       if (AnalysisSet.has(CIRAnalysisKind::FallThrough)) {
-        // Get Sema for diagnostics
         if (CI.hasSema()) {
           Sema &S = CI.getSema();
           FallThroughWarningPass FallThroughPass;
@@ -135,10 +133,17 @@ public:
             QualType FuncType;
 
             // Set up diagnostics configuration
-            CheckFallThroughDiagnostics Diags;
-
+            // INFO: This is not full
+            Decl *D = getDeclByName(S.getASTContext(), FuncOp.getName());
+            const CheckFallThroughDiagnostics &CD =
+                (isa<BlockDecl>(D) ? CheckFallThroughDiagnostics::makeForBlock()
+                 : (isa<CXXMethodDecl>(D) &&
+                    cast<CXXMethodDecl>(D)->getOverloadedOperator() == OO_Call &&
+                    cast<CXXMethodDecl>(D)->getParent()->isLambda())
+                     ? CheckFallThroughDiagnostics::makeForLambda()
+                     :  CheckFallThroughDiagnostics::makeForFunction(S, D));
             // Run fall-through analysis on this function
-            FallThroughPass.checkFallThroughForFuncBody(S, FuncOp, FuncType, Diags);
+            FallThroughPass.checkFallThroughForFuncBody(S, FuncOp, FuncType, CD);
           });
         }
       }

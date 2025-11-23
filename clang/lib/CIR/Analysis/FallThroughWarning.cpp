@@ -27,7 +27,7 @@ namespace clang {
 /// WARN: I have to say, we only use this because a lot of the time, attribute
 /// that we might need are not port to CIR currently so this function is
 /// basically a crutch for that
-static Decl *getDeclByName(ASTContext &context, StringRef name) {
+Decl *getDeclByName(ASTContext &context, StringRef name) {
   // Get the identifier for the name
   IdentifierInfo *ii = &context.Idents.get(name);
 
@@ -45,6 +45,122 @@ static Decl *getDeclByName(ASTContext &context, StringRef name) {
   return result.front();
 }
 
+CheckFallThroughDiagnostics CheckFallThroughDiagnostics::makeForFunction(Sema &s,
+                                                   const Decl *func) {
+  CheckFallThroughDiagnostics d;
+  d.funcLoc = func->getLocation();
+  d.diagFallThroughHasNoReturn = diag::warn_noreturn_has_return_expr;
+  d.diagFallThroughReturnsNonVoid = diag::warn_falloff_nonvoid;
+
+  // Don't suggest that virtual functions be marked "noreturn", since they
+  // might be overridden by non-noreturn functions.
+  bool isVirtualMethod = false;
+  if (const CXXMethodDecl *method = dyn_cast<CXXMethodDecl>(func))
+    isVirtualMethod = method->isVirtual();
+
+  // Don't suggest that template instantiations be marked "noreturn"
+  bool isTemplateInstantiation = false;
+  if (const FunctionDecl *function = dyn_cast<FunctionDecl>(func)) {
+    isTemplateInstantiation = function->isTemplateInstantiation();
+    if (!s.getLangOpts().CPlusPlus && !s.getLangOpts().C99 &&
+        function->isMain()) {
+      d.diagFallThroughReturnsNonVoid = diag::ext_main_no_return;
+    }
+  }
+
+  if (!isVirtualMethod && !isTemplateInstantiation)
+    d.diagNeverFallThroughOrReturn = diag::warn_suggest_noreturn_function;
+
+  d.funKind = diag::FalloffFunctionKind::Function;
+  return d;
+}
+
+CheckFallThroughDiagnostics CheckFallThroughDiagnostics::makeForCoroutine(const Decl *func) {
+  CheckFallThroughDiagnostics d;
+  d.funcLoc = func->getLocation();
+  d.diagFallThroughReturnsNonVoid = diag::warn_falloff_nonvoid;
+  d.funKind = diag::FalloffFunctionKind::Coroutine;
+  return d;
+}
+
+CheckFallThroughDiagnostics CheckFallThroughDiagnostics::makeForBlock() {
+  CheckFallThroughDiagnostics D;
+  D.diagFallThroughHasNoReturn = diag::err_noreturn_has_return_expr;
+  D.diagFallThroughReturnsNonVoid = diag::err_falloff_nonvoid;
+  D.funKind = diag::FalloffFunctionKind::Block;
+  return D;
+}
+
+CheckFallThroughDiagnostics CheckFallThroughDiagnostics::makeForLambda() {
+  CheckFallThroughDiagnostics d;
+  d.diagFallThroughHasNoReturn = diag::err_noreturn_has_return_expr;
+  d.diagFallThroughReturnsNonVoid = diag::warn_falloff_nonvoid;
+  d.funKind = diag::FalloffFunctionKind::Lambda;
+  return d;
+}
+
+
+//===----------------------------------------------------------------------===//
+// Check for phony return values (returning uninitialized __retval)
+//===----------------------------------------------------------------------===//
+
+/// Check if a return operation returns a phony value.
+/// A phony return is when a function returns a value loaded from an
+/// uninitialized __retval alloca, which indicates the function doesn't
+/// actually return a meaningful value.
+///
+/// Example of phony return:
+/// \code
+///   cir.func @test1() -> !s32i {
+///     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+///     %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+///     cir.return %1 : !s32i
+///   }
+/// \endcode
+///
+/// \param returnOp The return operation to check
+/// \return true if this is a phony return, false otherwise
+bool isPhonyReturn(cir::ReturnOp returnOp) {
+  if (!returnOp)
+    return false;
+
+  // Get the returned value - return operations use $input as the operand
+  if (!returnOp.hasOperand())
+    return false;
+
+  auto returnValue = returnOp.getInput()[0];
+
+  // Check if the return value comes from a load operation
+  auto loadOp = returnValue.getDefiningOp<cir::LoadOp>();
+  if (!loadOp)
+    return false;
+
+  // Check if the load is from an alloca
+  auto allocaOp = loadOp.getAddr().getDefiningOp<cir::AllocaOp>();
+  if (!allocaOp)
+    return false;
+
+  // Check if the alloca is named "__retval"
+  auto name = allocaOp.getName();
+  if (name != "__retval")
+    return false;
+
+  // Check if the alloca has any stores to it (if not, it's uninitialized)
+  // We need to search for store operations that write to this alloca
+  mlir::Value allocaResult = allocaOp.getResult();
+
+  for (auto *user : allocaResult.getUsers()) {
+    if (auto storeOp = dyn_cast<cir::StoreOp>(user)) {
+      // If there's a store to this alloca, it's not phony
+      // (assuming the store happens before the load in control flow)
+      return false;
+    }
+  }
+
+  // No stores found to __retval alloca - this is a phony return
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Check for missing return value.
 //===----------------------------------------------------------------------===//
@@ -52,19 +168,21 @@ static Decl *getDeclByName(ASTContext &context, StringRef name) {
 bool CheckFallThroughDiagnostics::checkDiagnostics(DiagnosticsEngine &d,
                                                    bool returnsVoid,
                                                    bool hasNoReturn) const {
-  if (funKind == diag::FalloffFunctionKind::Function) {
-    return (returnsVoid || d.isIgnored(diag::warn_falloff_nonvoid, funcLoc)) &&
-           (!hasNoReturn ||
-            d.isIgnored(diag::warn_noreturn_has_return_expr, funcLoc)) &&
-           (!returnsVoid ||
-            d.isIgnored(diag::warn_suggest_noreturn_block, funcLoc));
-  }
-  if (funKind == diag::FalloffFunctionKind::Coroutine) {
-    return (returnsVoid || d.isIgnored(diag::warn_falloff_nonvoid, funcLoc)) &&
-           (!hasNoReturn);
-  }
-  // For blocks / lambdas.
-  return returnsVoid && !hasNoReturn;
+    if (funKind == diag::FalloffFunctionKind::Function) {
+      return (returnsVoid ||
+              d.isIgnored(diag::warn_falloff_nonvoid, funcLoc)) &&
+             (d.isIgnored(diag::warn_noreturn_has_return_expr, funcLoc) ||
+              !hasNoReturn) &&
+             (!returnsVoid ||
+              d.isIgnored(diag::warn_suggest_noreturn_block, funcLoc));
+    }
+    if (funKind == diag::FalloffFunctionKind::Coroutine) {
+      return (returnsVoid ||
+              d.isIgnored(diag::warn_falloff_nonvoid, funcLoc)) &&
+             (!hasNoReturn);
+    }
+    // For blocks / lambdas.
+    return returnsVoid && !hasNoReturn;
 }
 
 // TODO: Add a class for fall through config later
@@ -72,41 +190,83 @@ bool CheckFallThroughDiagnostics::checkDiagnostics(DiagnosticsEngine &d,
 void FallThroughWarningPass::checkFallThroughForFuncBody(
     Sema &s, cir::FuncOp cfg, QualType blockType,
     const CheckFallThroughDiagnostics &cd) {
-  llvm::errs() << "Hello world, you're in CIR sema analysis\n";
 
   auto *d = getDeclByName(s.getASTContext(), cfg.getName());
+  auto *body = d->getBody();
   assert(d && "we need non null decl");
 
   bool returnsVoid = false;
   bool hasNoReturn = false;
 
+  SourceLocation lBrace = body->getBeginLoc(), rBrace = body->getEndLoc();
   // Supposedly all function in cir is FuncOp
   // 1. If normal function (FunctionDecl), check if it's coroutine.
   // 1a. if coroutine -> check the fallthrough handler (idk what this means,
   // TODO for now)
-  if (cfg.getCoroutine()) {
-    // TODO: Let's not worry about coroutine for now
-  } else
-    returnsVoid = isa<cir::VoidType>(cfg.getFunctionType().getReturnType());
-
-  // TODO: Do we need to check for InferredNoReturnAttr just like in OG?
-  hasNoReturn = cfg.getFunctionType().getReturnTypes().empty();
+  if (const auto *fd = dyn_cast<FunctionDecl>(d)) {
+    if (const auto *cBody = dyn_cast<CoroutineBodyStmt>(d->getBody()))
+      returnsVoid = cBody->getFallthroughHandler() != nullptr;
+    else
+      returnsVoid = fd->getReturnType()->isVoidType();
+    hasNoReturn = fd->isNoReturn() || fd->hasAttr<InferredNoReturnAttr>();
+  }
+  else if (const auto *md = dyn_cast<ObjCMethodDecl>(d)) {
+    returnsVoid = md->getReturnType()->isVoidType();
+    hasNoReturn = md->hasAttr<NoReturnAttr>();
+  }
+  else if (isa<BlockDecl>(d)) {
+    if (const FunctionType *ft =
+          blockType->getPointeeType()->getAs<FunctionType>()) {
+      if (ft->getReturnType()->isVoidType())
+        returnsVoid = true;
+      if (ft->getNoReturnAttr())
+        hasNoReturn = true;
+    }
+  }
 
   DiagnosticsEngine &diags = s.getDiagnostics();
-  if (cd.checkDiagnostics(diags, returnsVoid, hasNoReturn)) {
-    return;
-  }
+
+  // Short circuit for compilation speed.
+  if (cd.checkDiagnostics(diags, returnsVoid, hasNoReturn))
+      return;
 
   // cpu_dispatch functions permit empty function bodies for ICC compatibility.
   // TODO: Do we have isCPUDispatchMultiVersion?
 
   switch (ControlFlowKind fallThroughType = checkFallThrough(cfg)) {
   case UnknownFallThrough:
+    [[fallthrough]];
   case MaybeFallThrough:
+    [[fallthrough]];
   case AlwaysFallThrough:
     if (hasNoReturn && cd.diagFallThroughHasNoReturn) {
 
     } else if (!returnsVoid && cd.diagFallThroughReturnsNonVoid) {
+      // If the final statement is a call to an always-throwing function,
+      // don't warn about the fall-through.
+      if (d->getAsFunction()) {
+        if (const auto *cs = dyn_cast<CompoundStmt>(body);
+            cs && !cs->body_empty()) {
+          const Stmt *lastStmt = cs->body_back();
+          // Unwrap ExprWithCleanups if necessary.
+          if (const auto *ewc = dyn_cast<ExprWithCleanups>(lastStmt)) {
+            lastStmt = ewc->getSubExpr();
+          }
+          if (const auto *ce = dyn_cast<CallExpr>(lastStmt)) {
+            if (const FunctionDecl *callee = ce->getDirectCallee();
+                callee && callee->hasAttr<InferredNoReturnAttr>()) {
+              return; // Don't warn about fall-through.
+            }
+          }
+          // Direct throw.
+          if (isa<CXXThrowExpr>(lastStmt)) {
+            return; // Don't warn about fall-through.
+          }
+        }
+      }
+      bool notInAllControlPaths = fallThroughType == MaybeFallThrough;
+      s.Diag(rBrace, cd.diagFallThroughReturnsNonVoid)
+          << cd.funKind << notInAllControlPaths;
 
     }
     break;
@@ -129,7 +289,7 @@ FallThroughWarningPass::getLiveSet(cir::FuncOp cfg) {
   auto &first = cfg.getBody().getBlocks().front();
 
   for (auto &block : cfg.getBody()) {
-    if (first.isReachable(&block))
+    if (&first == &block || first.isReachable(&block))
       liveSet.insert(&block);
   }
   return liveSet;
@@ -171,10 +331,8 @@ ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
       continue;
 
     mlir::Operation *term = pred.getTerminator();
-    if (isa<cir::ReturnOp>(term)) {
-      hasAbnormalEdge = true;
-      continue;
-    }
+
+    // TODO: hasNoReturnElement() in OG here, not sure how to work it in here yet
 
     // INFO: In OG, we'll be looking for destructor since it can appear past
     // return but i guess not in CIR? In this case we'll only be examining the
@@ -189,9 +347,11 @@ ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
     // is true only when a block only has the terminator, or its size is 1.
     hasPlainEdge = std::distance(pred.begin(), pred.end()) == 1;
 
-    if (isa<cir::ReturnOp>(term)) {
-      hasLiveReturn = true;
-      continue;
+    if (auto returnOp = dyn_cast<cir::ReturnOp>(term)) {
+      if (!isPhonyReturn(returnOp))  {
+        hasLiveReturn = true;
+        continue;
+      }
     }
     if (isa<cir::TryOp>(term)) {
       hasLiveReturn = true;
@@ -217,6 +377,8 @@ ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
   // This says AlwaysFallThrough for calls to functions that are not marked
   // noreturn, that don't return.  If people would like this warning to be more
   // accurate, such functions should be marked as noreturn.
+  //
+  // llvm_unreachable("");
   return AlwaysFallThrough;
 }
 } // namespace clang
