@@ -50,12 +50,19 @@ LIST_DOC = os.path.join(CHECKS_DOCS_DIR, "list.rst")
 RELEASE_NOTES_DOC = os.path.join(DOCS_DIR, "ReleaseNotes.rst")
 
 
+# Label extracted from :doc:`...`.
 CheckLabel = str
 Lines = List[str]
 BulletBlock = List[str]
+
+# Pair of the extracted label and its block
 BulletItem = Tuple[CheckLabel, BulletBlock]
+
+# Index of the first line of a bullet block within the full lines list.
 BulletStart = int
 
+# All occurrences for a given label.
+DuplicateOccurrences = List[Tuple[BulletStart, BulletBlock]]
 
 class BulletBlocks(NamedTuple):
     """Structured result of parsing a bullet-list section.
@@ -217,7 +224,7 @@ def sort_blocks(blocks: List[BulletItem]) -> List[BulletBlock]:
 
 def find_duplicate_entries(
     lines: Sequence[str], title: str
-) -> List[Tuple[str, List[Tuple[int, List[str]]]]]:
+) -> List[Tuple[CheckLabel, DuplicateOccurrences]]:
     """Return detailed duplicate info as (key, [(start_idx, block_lines), ...]).
 
     start_idx is the 0-based index of the first line of the bullet block in
@@ -235,17 +242,17 @@ def find_duplicate_entries(
     while i < n and not _is_bullet_start(lines[i]):
         i += 1
 
-    blocks_with_pos: List[Tuple[str, int, List[str]]] = []
+    blocks_with_pos: List[Tuple[CheckLabel, BulletStart, BulletBlock]] = []
     res = _scan_bullet_blocks(lines, i, n)
     for bstart, block in res.blocks_with_pos:
         key = extract_label(block[0])
         blocks_with_pos.append((key, bstart, block))
 
-    grouped: Dict[str, List[Tuple[int, List[str]]]] = {}
+    grouped: Dict[CheckLabel, DuplicateOccurrences] = {}
     for key, start, block in blocks_with_pos:
         grouped.setdefault(key, []).append((start, block))
 
-    result: List[Tuple[str, List[Tuple[int, List[str]]]]] = []
+    result: List[Tuple[CheckLabel, DuplicateOccurrences]] = []
     for key, occs in grouped.items():
         if len(occs) > 1:
             result.append((key, occs))
