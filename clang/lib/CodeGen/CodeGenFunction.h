@@ -39,6 +39,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Debug.h"
@@ -5555,6 +5556,10 @@ private:
   llvm::Value *FormAArch64ResolverCondition(const FMVResolverOption &RO);
   llvm::Value *EmitAArch64CpuSupports(const CallExpr *E);
   llvm::Value *EmitAArch64CpuSupports(ArrayRef<StringRef> FeatureStrs);
+
+  std::optional<llvm::ConstantRange>
+  getRangeForType(QualType Ty, unsigned BitWidth, bool ForceStrictEnums,
+                  bool AssumeBooleanRepresentation);
 };
 
 inline DominatingLLVMValue::saved_type

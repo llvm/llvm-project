@@ -37,6 +37,7 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/InlineAsm.h"
@@ -3226,6 +3227,17 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
     case ABIArgInfo::Direct: {
       auto AI = Fn->getArg(FirstIRArg);
       llvm::Type *LTy = ConvertType(Arg->getType());
+
+      bool HasBoolCheck = SanOpts.has(SanitizerKind::Bool);
+      bool HasEnumCheck = SanOpts.has(SanitizerKind::Enum);
+      if (!HasBoolCheck && !HasEnumCheck && LTy->isIntegerTy()) {
+        const std::optional<llvm::ConstantRange> Range = getRangeForType(
+            Arg->getType(), LTy->getIntegerBitWidth(),
+            /*ForceStrictEnums=*/false, /*AssumeBooleanRepresentation=*/false);
+        if (Range && !Range->isFullSet())
+          AI->addAttr(llvm::Attribute::get(getLLVMContext(),
+                                           llvm::Attribute::Range, *Range));
+      }
 
       // Prepare parameter attributes. So far, only attributes for pointer
       // parameters are prepared. See
