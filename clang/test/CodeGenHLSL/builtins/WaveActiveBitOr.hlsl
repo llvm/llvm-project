@@ -11,7 +11,7 @@
 // CHECK-LABEL: test_uint
 uint test_uint(uint expr) {
   // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF:dx]].wave.reduce.or.i32([[TY]] %[[#]])
-  // SPVCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF:spv]].wave.reduce.or.i32([[TY]] %[[#]])
+  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF:spv]].wave.reduce.or.i32([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveActiveBitOr(expr);
 }
@@ -21,7 +21,7 @@ uint test_uint(uint expr) {
 // CHECK-LABEL: test_uint64_t
 uint64_t test_uint64_t(uint64_t expr) {
   // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF:dx]].wave.reduce.or.i64([[TY]] %[[#]])
-  // SPVCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF:spv]].wave.reduce.or.i64([[TY]] %[[#]])
+  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF:spv]].wave.reduce.or.i64([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveActiveBitOr(expr);
 }
