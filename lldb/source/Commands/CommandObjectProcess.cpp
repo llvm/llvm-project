@@ -1615,14 +1615,14 @@ public:
 
     str.Format("{0, -11}  ", sig_name);
     if (signals_sp->GetSignalInfo(signo, suppress, stop, notify)) {
-      bool pass = !suppress;
-      str.Printf("%s  %s  %s  ", (pass ? "true " : "false"),
+      const bool pass = !suppress;
+      str.Printf("%s  %s  %s", (pass ? "true " : "false"),
                  (stop ? "true " : "false"), (notify ? "true " : "false"));
 
-      llvm::StringRef sig_description =
+      const llvm::StringRef sig_description =
           signals_sp->GetSignalNumberDescription(signo);
       if (!sig_description.empty()) {
-        str.PutCString(" ");
+        str.PutCString("   ");
         str.PutCString(sig_description);
       }
     }
