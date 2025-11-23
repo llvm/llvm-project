@@ -13,13 +13,13 @@ __m128i test_mm_clmulepi64_si128(__m128i a, __m128i b) {
 // Test constexpr evaluation for _mm_clmulepi64_si128
 // imm8=0x00: lower 64 bits of both operands
 // Test case: 0x1 * 0x3 = 0x3 (carry-less multiplication)
-TEST_CONSTEXPR(match_m128i(_mm_clmulepi64_si128((__m128i){0x1ULL, 0x0ULL}, (__m128i){0x3ULL, 0x0ULL}, 0x00), 0x3ULL, 0x0ULL));
+TEST_CONSTEXPR(match_m128i(_mm_clmulepi64_si128(((__m128i){0x1ULL, 0x0ULL}), ((__m128i){0x3ULL, 0x0ULL}), 0x00), 0x3ULL, 0x0ULL));
 
 // imm8=0x01: upper 64 bits of first operand, lower 64 bits of second
-TEST_CONSTEXPR(match_m128i(_mm_clmulepi64_si128((__m128i){0x0ULL, 0x1ULL}, (__m128i){0x3ULL, 0x0ULL}, 0x01), 0x3ULL, 0x0ULL));
+TEST_CONSTEXPR(match_m128i(_mm_clmulepi64_si128(((__m128i){0x0ULL, 0x1ULL}), ((__m128i){0x3ULL, 0x0ULL}), 0x01), 0x3ULL, 0x0ULL));
 
 // imm8=0x10: lower 64 bits of first operand, upper 64 bits of second
-TEST_CONSTEXPR(match_m128i(_mm_clmulepi64_si128((__m128i){0x1ULL, 0x0ULL}, (__m128i){0x0ULL, 0x3ULL}, 0x10), 0x3ULL, 0x0ULL));
+TEST_CONSTEXPR(match_m128i(_mm_clmulepi64_si128(((__m128i){0x1ULL, 0x0ULL}), ((__m128i){0x0ULL, 0x3ULL}), 0x10), 0x3ULL, 0x0ULL));
 
 // imm8=0x11: upper 64 bits of both operands
-TEST_CONSTEXPR(match_m128i(_mm_clmulepi64_si128((__m128i){0x0ULL, 0x1ULL}, (__m128i){0x0ULL, 0x3ULL}, 0x11), 0x3ULL, 0x0ULL));
+TEST_CONSTEXPR(match_m128i(_mm_clmulepi64_si128(((__m128i){0x0ULL, 0x1ULL}), ((__m128i){0x0ULL, 0x3ULL}), 0x11), 0x3ULL, 0x0ULL));
