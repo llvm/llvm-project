@@ -221,6 +221,14 @@ public:
 
   /// at - Return the entry for the specified key, or abort if no such
   /// entry exists.
+  [[nodiscard]] ValueT &at(const_arg_type_t<KeyT> Val) {
+    auto Iter = this->find(std::move(Val));
+    assert(Iter != this->end() && "DenseMap::at failed due to a missing key");
+    return Iter->second;
+  }
+
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.
   [[nodiscard]] const ValueT &at(const_arg_type_t<KeyT> Val) const {
     auto Iter = this->find(std::move(Val));
     assert(Iter != this->end() && "DenseMap::at failed due to a missing key");

@@ -292,6 +292,21 @@ TEST(MapVectorTest, GetArrayRef) {
   EXPECT_TRUE(MV.getArrayRef().equals({std::pair(100, 99), std::pair(99, 98)}));
 }
 
+TEST(MapVectorTest, AtTest) {
+  MapVector<int, int> MV;
+  MV[0] = 10;
+  MV[1] = 11;
+  EXPECT_EQ(MV.at(0), 10);
+  EXPECT_EQ(MV.at(1), 11);
+
+  MV.at(1) = 12;
+  EXPECT_EQ(MV.at(1), 12);
+
+  const auto &ConstMV = MV;
+  EXPECT_EQ(ConstMV.at(0), 10);
+  EXPECT_EQ(ConstMV.at(1), 12);
+}
+
 template <class IntType> struct MapVectorMappedTypeTest : ::testing::Test {
   using int_type = IntType;
 };

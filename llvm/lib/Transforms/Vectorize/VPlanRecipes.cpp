@@ -554,7 +554,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::ExtractValue:
   case Instruction::Freeze:
   case Instruction::Load:
-  case VPInstruction::AnyOf:
   case VPInstruction::BranchOnCond:
   case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
@@ -594,6 +593,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::GetElementPtr:
   case Instruction::PHI:
   case Instruction::Switch:
+  case VPInstruction::AnyOf:
   case VPInstruction::SLPLoad:
   case VPInstruction::SLPStore:
     // Cannot determine the number of operands from the opcode.
