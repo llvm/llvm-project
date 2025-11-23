@@ -2443,8 +2443,9 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
   return Result;
 }
 
-bool SPIRVInstructionSelector::selectWaveReduceOr(
-    Register ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+bool SPIRVInstructionSelector::selectWaveReduceOr(Register ResVReg,
+                                                  const SPIRVType *ResType,
+                                                  MachineInstr &I) const {
 
   assert(I.getNumOperands() == 3);
   assert(I.getOperand(2).isReg());
