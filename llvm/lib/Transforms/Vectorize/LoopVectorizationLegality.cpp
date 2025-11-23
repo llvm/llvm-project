@@ -460,10 +460,8 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   const auto &Strides =
     LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
 
-  bool CanAddPredicate = !llvm::shouldOptimizeForSize(
-      TheLoop->getHeader(), PSI, BFI, PGSOQueryType::IRPass);
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides,
-                            CanAddPredicate, false)
+                            AllowRuntimeSCEVChecks, false)
                    .value_or(0);
   if (Stride == 1 || Stride == -1)
     return Stride;
@@ -2096,6 +2094,24 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 
   for (const auto &Reduction : getReductionVars())
     ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
+
+  // TODO: handle non-reduction outside users when tail is folded by masking.
+  for (auto *AE : AllowedExit) {
+    // Check that all users of allowed exit values are inside the loop or
+    // are the live-out of a reduction.
+    if (ReductionLiveOuts.count(AE))
+      continue;
+    for (User *U : AE->users()) {
+      Instruction *UI = cast<Instruction>(U);
+      if (TheLoop->contains(UI))
+        continue;
+      LLVM_DEBUG(
+          dbgs()
+          << "LV: Cannot fold tail by masking, loop has an outside user for "
+          << *UI << "\n");
+      return false;
+    }
+  }
 
   for (const auto &Entry : getInductionVars()) {
     PHINode *OrigPhi = Entry.first;

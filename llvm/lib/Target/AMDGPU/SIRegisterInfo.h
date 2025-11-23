@@ -346,14 +346,6 @@ public:
   ArrayRef<int16_t> getRegSplitParts(const TargetRegisterClass *RC,
                                      unsigned EltSize) const;
 
-  bool shouldCoalesce(MachineInstr *MI,
-                      const TargetRegisterClass *SrcRC,
-                      unsigned SubReg,
-                      const TargetRegisterClass *DstRC,
-                      unsigned DstSubReg,
-                      const TargetRegisterClass *NewRC,
-                      LiveIntervals &LIS) const override;
-
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
 
@@ -439,11 +431,6 @@ public:
   // the subtarget.
   bool isProperlyAlignedRC(const TargetRegisterClass &RC) const;
 
-  // Given \p RC returns corresponding aligned register class if required
-  // by the subtarget.
-  const TargetRegisterClass *
-  getProperlyAlignedRC(const TargetRegisterClass *RC) const;
-
   /// Return all SGPR128 which satisfy the waves per execution unit requirement
   /// of the subtarget.
   ArrayRef<MCPhysReg> getAllSGPR128(const MachineFunction &MF) const;
@@ -501,6 +488,17 @@ public:
 
   SmallVector<StringLiteral>
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const override;
+
+  float
+  getSpillWeightScaleFactor(const TargetRegisterClass *RC) const override {
+    // Prioritize VGPR_32_Lo256 over other classes which may occupy registers
+    // beyond v256.
+    return AMDGPUGenRegisterInfo::getSpillWeightScaleFactor(RC) *
+           ((RC == &AMDGPU::VGPR_32_Lo256RegClass ||
+             RC == &AMDGPU::VReg_64_Lo256_Align2RegClass)
+                ? 2.0
+                : 1.0);
+  }
 };
 
 namespace AMDGPU {

@@ -1011,9 +1011,9 @@ supported for the ``amdgcn`` target.
   bounds checking may be disabled, buffer fat pointers may choose to enable
   it or not). The cache swizzle support introduced in gfx942 may be used.
 
-  These pointers can be created by `addrspacecast` from a buffer resource
-  (`ptr addrspace(8)`) or by using `llvm.amdgcn.make.buffer.rsrc` to produce a
-  `ptr addrspace(7)` directly, which produces a buffer fat pointer with an initial
+  These pointers can be created by ``addrspacecast`` from a buffer resource
+  (``ptr addrspace(8)```) or by using `llvm.amdgcn.make.buffer.rsrc` to produce a
+  ``ptr addrspace(7)`` directly, which produces a buffer fat pointer with an initial
   offset of 0 and prevents the address space cast from being rewritten away.
 
   The ``align`` attribute on operations from buffer fat pointers is deemed to apply
@@ -1028,25 +1028,32 @@ supported for the ``amdgcn`` target.
 **Buffer Resource**
   The buffer resource pointer, in address space 8, is the newer form
   for representing buffer descriptors in AMDGPU IR, replacing their
-  previous representation as `<4 x i32>`. It is a non-integral pointer
-  that represents a 128-bit buffer descriptor resource (`V#`).
+  previous representation as ``<4 x i32>``. It is a non-integral pointer
+  that represents a 128-bit buffer descriptor resource (``V#``).
 
   Since, in general, a buffer resource supports complex addressing modes that cannot
   be easily represented in LLVM (such as implicit swizzled access to structured
-  buffers), it is **illegal** to perform non-trivial address computations, such as
-  ``getelementptr`` operations, on buffer resources. They may be passed to
-  AMDGPU buffer intrinsics, and they may be converted to and from ``i128``.
+  buffers), performing address computations such as ``getelementptr`` is not
+  recommended on ``ptr addrspace(8)``s (if such computations are performed, the
+  offset must be wavefront-uniform.) Note that such a usage of GEP is currently
+  **unimplemented** in the backend, as it would require a wrapping 48-bit
+  addition. Buffer resources may be passed to AMDGPU buffer intrinsics, and they
+  may be converted to and from ``i128``.
 
   Casting a buffer resource to a buffer fat pointer is permitted and adds an offset
   of 0.
 
   Buffer resources can be created from 64-bit pointers (which should be either
-  generic or global) using the `llvm.amdgcn.make.buffer.rsrc` intrinsic, which
+  generic or global) using the ``llvm.amdgcn.make.buffer.rsrc`` intrinsic, which
   takes the pointer, which becomes the base of the resource,
   the 16-bit stride (and swzizzle control) field stored in bits `63:48` of a `V#`,
   the 32-bit NumRecords/extent field (bits `95:64`), and the 32-bit flags field
   (bits `127:96`). The specific interpretation of these fields varies by the
   target architecture and is detailed in the ISA descriptions.
+
+  On gfx1250, the base pointer is instead truncated to 57 bits and the NumRecords
+  field is 45 bits, which necessitated a change to ``make.buffer.rsrcs``'s arguments
+  in order to make that field an ``i64``.
 
   When buffer resources are passed to buffer intrinsics such as
   ``llvm.amdgcn.raw.ptr.buffer.load`` or
@@ -1079,9 +1086,9 @@ supported for the ``amdgcn`` target.
   the stride is the size of a structured element, the "add tid" flag must be 0,
   and the swizzle enable bits must be off.
 
-  These pointers can be created by `addrspacecast` from a buffer resource
-  (`ptr addrspace(8)`) or by using `llvm.amdgcn.make.buffer.rsrc` to produce a
-  `ptr addrspace(9)` directly, which produces a buffer strided pointer whose initial
+  These pointers can be created by ``addrspacecast`` from a buffer resource
+  (``ptr addrspace(8)``) or by using ``llvm.amdgcn.make.buffer.rsrc`` to produce a
+  ``ptr addrspace(9)``` directly, which produces a buffer strided pointer whose initial
   index and offset values are both 0. This prevents the address space cast from
   being rewritten away.
 
@@ -5889,7 +5896,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      GFX950
                                                        roundup(lds-size / (320 * 4))
                                                      GFX125*
-                                                       roundup(lds-size / (256 * 4))
+                                                       roundup(lds-size / (512 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
                      _INVALID_OPERATION              with specified exceptions
@@ -18979,8 +18986,8 @@ On entry to a function:
     objects and to convert this address to a flat address by adding the flat
     scratch aperture base address.
 
-    The swizzled SP value is always 4 bytes aligned for the ``r600``
-    architecture and 16 byte aligned for the ``amdgcn`` architecture.
+    The swizzled SP value is always 4-byte aligned for the ``r600``
+    architecture and 16-byte aligned for the ``amdgcn`` architecture.
 
     .. note::
 
@@ -19271,7 +19278,7 @@ describes how the AMDGPU implements function calls:
       The CFI will reflect the changed calculation needed to compute the CFA
       from SP.
 
-7.  4 byte spill slots are used in the stack frame. One slot is allocated for an
+7.  4-byte spill slots are used in the stack frame. One slot is allocated for an
     emergency spill slot. Buffer instructions are used for stack accesses and
     not the ``flat_scratch`` instruction.
 

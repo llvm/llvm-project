@@ -258,7 +258,7 @@ protected:
 
 protected:
   /// Emits scope cleanup instructions.
-  void emitCleanup();
+  bool emitCleanup();
 
   /// Returns a record type from a record or pointer type.
   const RecordType *getRecordTy(QualType Ty);
@@ -524,7 +524,6 @@ public:
     this->addLocal(Local);
   }
 
-  virtual void emitDestruction() {}
   virtual bool emitDestructors(const Expr *E = nullptr) { return true; }
   virtual bool destroyLocals(const Expr *E = nullptr) { return true; }
   VariableScope *getParent() const { return Parent; }
@@ -553,15 +552,6 @@ public:
       return;
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
     removeStoredOpaqueValues();
-  }
-
-  /// Overriden to support explicit destruction.
-  void emitDestruction() override {
-    if (!Idx)
-      return;
-
-    this->emitDestructors();
-    this->Ctx->emitDestroy(*Idx, SourceInfo{});
   }
 
   /// Explicit destruction of local variables.

@@ -67,6 +67,11 @@ bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
                          DiagnosticsEngine *Diags = nullptr,
                          bool DefaultDiagColor = true);
 
+unsigned getOptimizationLevel(llvm::opt::ArgList &Args, InputKind IK,
+                              DiagnosticsEngine &Diags);
+
+unsigned getOptimizationLevelSize(llvm::opt::ArgList &Args);
+
 /// The base class of CompilerInvocation. It keeps individual option objects
 /// behind reference-counted pointers, which is useful for clients that want to
 /// keep select option objects alive (even after CompilerInvocation gets

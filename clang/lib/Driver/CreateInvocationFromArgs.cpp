@@ -17,6 +17,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/Utils.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"

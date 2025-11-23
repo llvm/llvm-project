@@ -31,6 +31,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -38,6 +40,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
@@ -48,7 +51,7 @@
 #include <bitset>
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-codegen"
+#define DEBUG_TYPE "x86-fp-stackifier"
 
 STATISTIC(NumFXCH, "Number of fxch instructions inserted");
 STATISTIC(NumFP, "Number of floating point instructions");
@@ -56,25 +59,10 @@ STATISTIC(NumFP, "Number of floating point instructions");
 namespace {
 const unsigned ScratchFPReg = 7;
 
-struct FPS : public MachineFunctionPass {
-  static char ID;
-  FPS() : MachineFunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<EdgeBundlesWrapperLegacy>();
-    AU.addPreservedID(MachineLoopInfoID);
-    AU.addPreservedID(MachineDominatorsID);
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().setNoVRegs();
-  }
-
-  StringRef getPassName() const override { return "X86 FP Stackifier"; }
+class FPS {
+public:
+  bool shouldRun(MachineFunction &MF);
+  bool run(MachineFunction &MF, EdgeBundles *EdgeBundles);
 
 private:
   const TargetInstrInfo *TII = nullptr; // Machine instruction info.
@@ -292,15 +280,43 @@ private:
 
   void setKillFlags(MachineBasicBlock &MBB) const;
 };
+
+class X86FPStackifierLegacy : public MachineFunctionPass {
+public:
+  X86FPStackifierLegacy() : MachineFunctionPass(ID) {}
+
+  static char ID;
+
+private:
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<EdgeBundlesWrapperLegacy>();
+    AU.addPreservedID(MachineLoopInfoID);
+    AU.addPreservedID(MachineDominatorsID);
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+
+  StringRef getPassName() const override { return "X86 FP Stackifier"; }
+};
 } // namespace
 
-char FPS::ID = 0;
+char X86FPStackifierLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(FPS, DEBUG_TYPE, "X86 FP Stackifier", false, false)
+INITIALIZE_PASS_BEGIN(X86FPStackifierLegacy, DEBUG_TYPE, "X86 FP Stackifier",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundlesWrapperLegacy)
-INITIALIZE_PASS_END(FPS, DEBUG_TYPE, "X86 FP Stackifier", false, false)
+INITIALIZE_PASS_END(X86FPStackifierLegacy, DEBUG_TYPE, "X86 FP Stackifier",
+                    false, false)
 
-FunctionPass *llvm::createX86FloatingPointStackifierPass() { return new FPS(); }
+FunctionPass *llvm::createX86FPStackifierLegacyPass() {
+  return new X86FPStackifierLegacy();
+}
 
 /// getFPReg - Return the X86::FPx register number for the specified operand.
 /// For example, this returns 3 for X86::FP3.
@@ -311,28 +327,25 @@ static unsigned getFPReg(const MachineOperand &MO) {
   return Reg - X86::FP0;
 }
 
-/// runOnMachineFunction - Loop over all of the basic blocks, transforming FP
-/// register references into FP stack references.
-///
-bool FPS::runOnMachineFunction(MachineFunction &MF) {
+bool FPS::shouldRun(MachineFunction &MF) {
   // We only need to run this pass if there are any FP registers used in this
   // function.  If it is all integer, there is nothing for us to do!
-  bool FPIsUsed = false;
-
   static_assert(X86::FP6 == X86::FP0 + 6,
                 "Register enums aren't sorted right!");
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (unsigned i = 0; i <= 6; ++i)
-    if (!MRI.reg_nodbg_empty(X86::FP0 + i)) {
-      FPIsUsed = true;
-      break;
+  for (unsigned I = 0; I <= 6; ++I)
+    if (!MRI.reg_nodbg_empty(X86::FP0 + I)) {
+      return true;
     }
 
-  // Early exit.
-  if (!FPIsUsed)
-    return false;
+  return false;
+}
 
-  Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
+/// runOnMachineFunction - Loop over all of the basic blocks, transforming FP
+/// register references into FP stack references.
+///
+bool FPS::run(MachineFunction &MF, EdgeBundles *FunctionBundles) {
+  Bundles = FunctionBundles;
   TII = MF.getSubtarget().getInstrInfo();
 
   // Prepare cross-MBB liveness.
@@ -1811,4 +1824,30 @@ void FPS::setKillFlags(MachineBasicBlock &MBB) const {
 
     LPR.stepBackward(MI);
   }
+}
+
+bool X86FPStackifierLegacy::runOnMachineFunction(MachineFunction &MF) {
+  FPS Impl;
+  if (!Impl.shouldRun(MF))
+    return false;
+
+  EdgeBundles *Bundles =
+      &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
+  return FPS().run(MF, Bundles);
+}
+
+PreservedAnalyses
+X86FPStackifierPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  FPS Impl;
+  if (!Impl.shouldRun(MF))
+    return PreservedAnalyses::all();
+
+  EdgeBundles *Bundles = &MFAM.getResult<EdgeBundlesAnalysis>(MF);
+  bool Changed = Impl.run(MF, Bundles);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
