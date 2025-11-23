@@ -13523,8 +13523,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
       // Perform carry-less multiplication (polynomial multiplication in
       // GF(2^64)) This multiplies two 64-bit values to produce a 128-bit result
-      APInt AVal = A.extOrTrunc(64);
-      APInt BVal = B.extOrTrunc(64);
+      APInt AVal = static_cast<const APInt &>(A).zextOrTrunc(64);
+      APInt BVal = static_cast<const APInt &>(B).zextOrTrunc(64);
       APInt Result(128, 0);
 
       // For each bit in A, if set, XOR B shifted left by that bit position
