@@ -36,9 +36,8 @@ ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
       BT && BT->getKind() == BuiltinType::LongDouble)
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
-  if (Ty->isAnyComplexType()) {
+  if (Ty->isAnyComplexType())
     return ABIArgInfo::getDirectInReg();
-  }
 
   return DefaultABIInfo::classifyReturnType(Ty);
 }
