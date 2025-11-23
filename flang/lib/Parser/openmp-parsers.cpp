@@ -71,7 +71,7 @@ template <typename ExecParser> struct AsBlockParser {
     if (auto &&exec{attempt(epc_).Parse(state)}) {
       Block body;
       body.push_back(std::move(*exec));
-      return body;
+      return std::move(body); // std::move for GCC 7.5.0
     }
     return std::nullopt;
   }
@@ -1728,30 +1728,6 @@ struct NonBlockDoConstructParser {
 
     if (!body.empty()) {
       return std::move(body);
-    }
-    return std::nullopt;
-  }
-
-private:
-  // Is the template argument "Statement<T>" for some T?
-  template <typename T> struct IsStatement {
-    static constexpr bool value{false};
-  };
-  template <typename T> struct IsStatement<Statement<T>> {
-    static constexpr bool value{true};
-  };
-
-  // Get the Label from a Statement<...> contained in an ExecutionPartConstruct,
-  // or std::nullopt, if there is no Statement<...> contained in there.
-  template <typename T>
-  static std::optional<Label> GetStatementLabel(const T &stmt) {
-    if constexpr (IsStatement<T>::value) {
-      return stmt.label;
-    } else if constexpr (WrapperTrait<T>) {
-      return GetStatementLabel(stmt.v);
-    } else if constexpr (UnionTrait<T>) {
-      return common::visit(
-          [&](auto &&s) { return GetStatementLabel(s); }, stmt.u);
     }
     return std::nullopt;
   }
