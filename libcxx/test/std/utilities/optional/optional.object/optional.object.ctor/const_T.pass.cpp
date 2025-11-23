@@ -20,35 +20,38 @@
 #include "archetypes.h"
 
 using std::optional;
+template <typename T, typename... Args>
+constexpr void test_ctor(Args... args) {
+  const T t(args...);
+  const std::optional<T> opt(t);
+
+  assert(static_cast<bool>(opt));
+  assert(*opt == t);
+
+  struct test_constexpr_ctor : public optional<T> {
+    constexpr test_constexpr_ctor(const T&) {}
+  };
+}
+
+constexpr bool test() {
+  test_ctor<int>(5);
+  test_ctor<double>(3.0);
+  test_ctor<const int>(42);
+  test_ctor<ConstexprTestTypes::TestType>(3);
+
+  {
+    using T = ExplicitConstexprTestTypes::TestType;
+    static_assert(!std::is_convertible_v<const T&, optional<T>>);
+    test_ctor<T>(3);
+  }
+
+  return true;
+}
 
 int main(int, char**) {
-  {
-    typedef int T;
-    constexpr T t(5);
-    constexpr optional<T> opt(t);
-    static_assert(static_cast<bool>(opt) == true, "");
-    static_assert(*opt == 5, "");
+  test();
+  static_assert(test());
 
-    struct test_constexpr_ctor : public optional<T> {
-      constexpr test_constexpr_ctor(const T&) {}
-    };
-  }
-  {
-    typedef double T;
-    constexpr T t(3);
-    constexpr optional<T> opt(t);
-    static_assert(static_cast<bool>(opt) == true, "");
-    static_assert(*opt == 3, "");
-
-    struct test_constexpr_ctor : public optional<T> {
-      constexpr test_constexpr_ctor(const T&) {}
-    };
-  }
-  {
-    const int x = 42;
-    optional<const int> o(x);
-    assert(*o == x);
-  }
   {
     typedef TestTypes::TestType T;
     T::reset();
@@ -59,6 +62,7 @@ int main(int, char**) {
     assert(static_cast<bool>(opt) == true);
     assert(opt.value().value == 3);
   }
+
   {
     typedef ExplicitTestTypes::TestType T;
     static_assert(!std::is_convertible<T const&, optional<T>>::value, "");
@@ -70,29 +74,7 @@ int main(int, char**) {
     assert(static_cast<bool>(opt) == true);
     assert(opt.value().value == 3);
   }
-  {
-    typedef ConstexprTestTypes::TestType T;
-    constexpr T t(3);
-    constexpr optional<T> opt = {t};
-    static_assert(static_cast<bool>(opt) == true, "");
-    static_assert(opt.value().value == 3, "");
 
-    struct test_constexpr_ctor : public optional<T> {
-      constexpr test_constexpr_ctor(const T&) {}
-    };
-  }
-  {
-    typedef ExplicitConstexprTestTypes::TestType T;
-    static_assert(!std::is_convertible<const T&, optional<T>>::value, "");
-    constexpr T t(3);
-    constexpr optional<T> opt(t);
-    static_assert(static_cast<bool>(opt) == true, "");
-    static_assert(opt.value().value == 3, "");
-
-    struct test_constexpr_ctor : public optional<T> {
-      constexpr test_constexpr_ctor(const T&) {}
-    };
-  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   {
     struct Z {
