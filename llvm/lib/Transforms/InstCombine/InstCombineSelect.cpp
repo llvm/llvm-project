@@ -1956,55 +1956,6 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
 }
 
 // Transform
-//
-// select(icmp(eq, X, Y), Z, select(icmp(ult, X, Y), -1, 1))
-// ->
-// select(icmp(eq, X, Y), Z, llvm.ucmp(freeze(X), freeze(Y)))
-//
-// or
-//
-// select(icmp(eq, X, Y), Z, select(icmp(slt, X, Y), -1, 1))
-// ->
-//  select(icmp(eq, X, Y), Z, llvm.scmp(freeze(X), freeze(Y)))
-static Value *foldSelectToInstrincCmp(SelectInst &SI, const ICmpInst *ICI,
-                                      Value *TrueVal, Value *FalseVal,
-                                      InstCombiner::BuilderTy &Builder) {
-  ICmpInst::Predicate Pred = ICI->getPredicate();
-
-  if (Pred != ICmpInst::ICMP_EQ)
-    return nullptr;
-
-  CmpPredicate IPred;
-  Value *X = ICI->getOperand(0);
-  Value *Y = ICI->getOperand(1);
-  if (match(FalseVal, m_Select(m_ICmp(IPred, m_Specific(X), m_Specific(Y)),
-                               m_AllOnes(), m_One())) &&
-      (IPred == ICmpInst::ICMP_ULT || IPred == ICmpInst::ICMP_SLT)) {
-
-    // icmp(ult, ptr %X, ptr %Y) -> cannot be folded because
-    // there is no intrinsic for a pointer comparison.
-    if (!X->getType()->isIntegerTy() || !Y->getType()->isIntegerTy())
-      return nullptr;
-
-    Builder.SetInsertPoint(&SI);
-    auto IID = IPred == ICmpInst::ICMP_ULT ? Intrinsic::ucmp : Intrinsic::scmp;
-
-    // Edge Case: if Z is the constant 0 then the select can be folded
-    // to just the instrinsic comparison.
-    if (match(TrueVal, m_Zero()))
-      return Builder.CreateIntrinsic(SI.getType(), IID, {X, Y});
-
-    Value *FrozenX = Builder.CreateFreeze(X, X->getName() + ".frz");
-    Value *FrozenY = Builder.CreateFreeze(Y, Y->getName() + ".frz");
-    Value *Cmp =
-        Builder.CreateIntrinsic(FalseVal->getType(), IID, {FrozenX, FrozenY});
-    return Builder.CreateSelect(SI.getCondition(), TrueVal, Cmp, "select.ucmp");
-  }
-
-  return nullptr;
-}
-
-// Transform
 // select(icmp(eq, X, Y), 0, llvm.cmp(X, Y))
 // ->
 // llvm.cmp(X, Y)
@@ -2257,9 +2208,6 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectWithConstOpToBinOp(ICI, TrueVal, FalseVal))
-    return replaceInstUsesWith(SI, V);
-
-  if (Value *V = foldSelectToInstrincCmp(SI, ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldInstrincCmp(SI, ICI, TrueVal, FalseVal, Builder))
