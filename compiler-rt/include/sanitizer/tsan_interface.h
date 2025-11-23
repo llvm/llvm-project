@@ -70,7 +70,8 @@ enum : unsigned {
 
   // Convenient composed constants.
   __tsan_mutex_try_read_lock = __tsan_mutex_read_lock | __tsan_mutex_try_lock,
-  __tsan_mutex_try_read_lock_failed = __tsan_mutex_try_read_lock | __tsan_mutex_try_lock_failed
+  __tsan_mutex_try_read_lock_failed =
+      __tsan_mutex_try_read_lock | __tsan_mutex_try_lock_failed
 };
 
 // Annotate creation of a mutex.
