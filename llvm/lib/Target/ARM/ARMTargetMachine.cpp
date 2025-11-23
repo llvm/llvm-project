@@ -311,6 +311,7 @@ public:
   bool addPreISel() override;
   bool addInstSelector() override;
   bool addIRTranslator() override;
+  bool addILPOpts() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
@@ -473,6 +474,11 @@ void ARMPassConfig::addPreRegAlloc() {
     if (!DisableA15SDOptimization)
       addPass(createA15SDOptimizerPass());
   }
+}
+
+bool ARMPassConfig::addILPOpts() {
+  addPass(&MachineCombinerID);
+  return true;
 }
 
 void ARMPassConfig::addPreSched2() {
