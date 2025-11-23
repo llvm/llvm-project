@@ -35,8 +35,8 @@ TEST_P(ASTMatchersTest, IsExpandedFromMacro_ConstructedMacroName) {
 #define MY_MACRO(a) (4 + (a))
     void Test() { MY_MACRO(4); }
   )cc";
-  EXPECT_TRUE(matches(input, binaryOperator(isExpandedFromMacro(
-                                 constructMacroName("MY", "MACRO")))));
+  auto matcher = isExpandedFromMacro(constructMacroName("MY", "MACRO"));
+  EXPECT_TRUE(matches(input, binaryOperator(matcher)));
 }
 
 TEST_P(ASTMatchersTest, IsExpandedFromMacro_MatchesNested) {
