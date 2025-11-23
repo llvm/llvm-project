@@ -84,6 +84,8 @@ Potentially Breaking Changes
 - Downstream projects that previously linked only against ``clangDriver`` may
   now (also) need to link against the new ``clangOptions`` library, since
   options-related code has been moved out of the Driver into a separate library.
+- The ``clangFrontend`` library no longer depends on ``clangDriver``, which may
+  break downstream projects that relied on this transitive dependency.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -559,6 +561,7 @@ Bug Fixes to C++ Support
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
 - Fix a crash when extracting unavailable member type from alias in template deduction. (#GH165560)
 - Fix incorrect diagnostics for lambdas with init-captures inside braced initializers. (#GH163498)
+- Fixed spurious diagnoses of certain nested lambda expressions. (#GH149121) (#GH156579)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
