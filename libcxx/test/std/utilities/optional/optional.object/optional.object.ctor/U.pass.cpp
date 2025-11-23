@@ -5,19 +5,18 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: c++03, c++11, c++14
+
+// REQUIRED: std-at-least-c++17
 
 // <optional>
 
 // template <class U>
-//   constexpr EXPLICIT optional(U&& u);
+//   constexpr explicit optional(U&& u);
 
 #include <cassert>
 #include <optional>
 #include <type_traits>
 
-#include "test_macros.h"
 #include "archetypes.h"
 #include "test_convertible.h"
 
