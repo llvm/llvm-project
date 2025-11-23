@@ -690,7 +690,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
       MVT::SimpleValueType ResultVT = N.getSimpleType(0);
       auto IDOperandNo = NextRecordedOperandNo++;
       const Record *ImpDef = Def->getRecords().getDef("IMPLICIT_DEF");
-      CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(ImpDef);
+      const CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(ImpDef);
       AddMatcher(new EmitNodeMatcher(II, ResultVT, {}, false, false, false,
                                      false, -1, IDOperandNo));
       ResultOps.push_back(IDOperandNo);
@@ -749,7 +749,7 @@ static bool mayInstNodeLoadOrStore(const TreePatternNode &N,
                                    const CodeGenDAGPatterns &CGP) {
   const Record *Op = N.getOperator();
   const CodeGenTarget &CGT = CGP.getTargetInfo();
-  CodeGenInstruction &II = CGT.getInstruction(Op);
+  const CodeGenInstruction &II = CGT.getInstruction(Op);
   return II.mayLoad || II.mayStore;
 }
 
@@ -776,7 +776,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
     const TreePatternNode &N, SmallVectorImpl<unsigned> &OutputOps) {
   const Record *Op = N.getOperator();
   const CodeGenTarget &CGT = CGP.getTargetInfo();
-  CodeGenInstruction &II = CGT.getInstruction(Op);
+  const CodeGenInstruction &II = CGT.getInstruction(Op);
   const DAGInstruction &Inst = CGP.getInstruction(Op);
 
   bool isRoot = &N == &Pattern.getDstPattern();
@@ -1046,7 +1046,7 @@ void MatcherGen::EmitResultCode() {
     const TreePatternNode &DstPat = Pattern.getDstPattern();
     if (!DstPat.isLeaf() && DstPat.getOperator()->isSubClassOf("Instruction")) {
       const CodeGenTarget &CGT = CGP.getTargetInfo();
-      CodeGenInstruction &II = CGT.getInstruction(DstPat.getOperator());
+      const CodeGenInstruction &II = CGT.getInstruction(DstPat.getOperator());
 
       if (II.HasOneImplicitDefWithKnownVT(CGT) != MVT::Other)
         HandledReg = II.ImplicitDefs[0];
