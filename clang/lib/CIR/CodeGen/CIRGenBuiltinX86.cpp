@@ -126,15 +126,14 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   // evaluation.
   assert(!cir::MissingFeatures::msvcBuiltins());
 
-  // Find out if any arguments are required to be integer constant
-  // expressions.
+  // Find out if any arguments are required to be integer constant expressions.
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());
 
   // The operands of the builtin call
   llvm::SmallVector<mlir::Value> ops;
 
-  // `ICEArguments` is a bitmap indicating whether the argument at the i-th
-  // bit is required to be a constant integer expression.
+  // `ICEArguments` is a bitmap indicating whether the argument at the i-th bit
+  // is required to be a constant integer expression.
   unsigned iceArguments = 0;
   ASTContext::GetBuiltinTypeError error;
   getContext().GetBuiltinType(builtinID, error, &iceArguments);
