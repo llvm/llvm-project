@@ -62,7 +62,7 @@ define float @nexttowardf_equal_args() {
 
 define double @nexttoward_pos_zero_neg_zero() {
 ; CHECK-LABEL: define double @nexttoward_pos_zero_neg_zero() {
-; CHECK-NEXT:    ret double 0.000000e+00
+; CHECK-NEXT:    ret double -0.000000e+00
 ;
   %neg_zero_ext = fpext double -0.0 to fp128
   %next = call double @nexttoward(double 0.0, fp128 %neg_zero_ext)
@@ -71,7 +71,7 @@ define double @nexttoward_pos_zero_neg_zero() {
 
 define float @nexttowardf_pos_zero_neg_zero() {
 ; CHECK-LABEL: define float @nexttowardf_pos_zero_neg_zero() {
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float -0.000000e+00
 ;
   %neg_zero_ext = fpext float -0.0 to fp128
   %next = call float @nexttowardf(float 0.0, fp128 %neg_zero_ext)
@@ -80,7 +80,7 @@ define float @nexttowardf_pos_zero_neg_zero() {
 
 define double @nexttoward_neg_zero_pos_zero() {
 ; CHECK-LABEL: define double @nexttoward_neg_zero_pos_zero() {
-; CHECK-NEXT:    ret double -0.000000e+00
+; CHECK-NEXT:    ret double 0.000000e+00
 ;
   %pos_zero_ext = fpext double 0.0 to fp128
   %next = call double @nexttoward(double -0.0, fp128 %pos_zero_ext)
@@ -89,7 +89,7 @@ define double @nexttoward_neg_zero_pos_zero() {
 
 define float @nexttowardf_neg_zero_pos_zero() {
 ; CHECK-LABEL: define float @nexttowardf_neg_zero_pos_zero() {
-; CHECK-NEXT:    ret float -0.000000e+00
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %pos_zero_ext = fpext float 0.0 to fp128
   %next = call float @nexttowardf(float -0.0, fp128 %pos_zero_ext)
