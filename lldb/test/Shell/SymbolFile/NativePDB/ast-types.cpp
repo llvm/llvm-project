@@ -175,9 +175,9 @@ int SI::*mp9 = nullptr;
 // CHECK: | |-CXXRecordDecl {{.*}} struct Anonymous<int> definition
 // CHECK: | | `-FieldDecl {{.*}} AnonymousMember 'int'
 // CHECK: | `-CXXRecordDecl {{.*}} struct Anonymous<A::B::C<void>> definition
-// CHECK: |   |-FieldDecl {{.*}} AnonymousMember 'int'
-// CHECK: |   `-CXXRecordDecl {{.*}} struct D definition
-// CHECK: |     `-FieldDecl {{.*}} AnonymousDMember 'int'
+// CHECK: |   |-CXXRecordDecl {{.*}} struct D definition
+// CHECK: |   |  `-FieldDecl {{.*}} AnonymousDMember 'int'
+// CHECK: |   `-FieldDecl {{.*}} AnonymousMember 'int'
 
 int main(int argc, char **argv) {
   AnonInt.AnonymousMember = 1;
