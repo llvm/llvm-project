@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "canonicalize-do.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree-visitor.h"
+#include "flang/Parser/tools.h"
 
 namespace Fortran::parser {
 
@@ -87,6 +89,12 @@ public:
                 [&](Statement<ActionStmt> &actionStmt) {
                   CanonicalizeIfMatch(block, stack, i, actionStmt);
                 },
+                [&](common::Indirection<OpenMPConstruct> &construct) {
+                  // If the body of the OpenMP construct ends with a label,
+                  // treat the label as ending the construct itself.
+                  CanonicalizeIfMatch(
+                      block, stack, i, omp::GetFinalLabel(construct.value()));
+                },
             },
             executableConstruct->u);
       }
@@ -97,10 +105,14 @@ private:
   template <typename T>
   void CanonicalizeIfMatch(Block &originalBlock, std::vector<LabelInfo> &stack,
       Block::iterator &i, Statement<T> &statement) {
-    if (!stack.empty() && statement.label &&
-        stack.back().label == *statement.label) {
+    CanonicalizeIfMatch(originalBlock, stack, i, statement.label);
+  }
+
+  void CanonicalizeIfMatch(Block &originalBlock, std::vector<LabelInfo> &stack,
+      Block::iterator &i, std::optional<Label> label) {
+    if (!stack.empty() && label && stack.back().label == *label) {
       auto currentLabel{stack.back().label};
-      if constexpr (std::is_same_v<T, common::Indirection<EndDoStmt>>) {
+      if (Unwrap<EndDoStmt>(*i)) {
         std::get<ExecutableConstruct>(i->u).u = Statement<ActionStmt>{
             std::optional<Label>{currentLabel}, ContinueStmt{}};
       }

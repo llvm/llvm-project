@@ -852,10 +852,9 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
   // Compares two lists of arguments.
   auto Equal = [](const ArrayRef<const char *> A,
                   const ArrayRef<const char *> B) {
-    return std::equal(A.begin(), A.end(), B.begin(), B.end(),
-                      [](const char *AElem, const char *BElem) {
-                        return StringRef(AElem) == StringRef(BElem);
-                      });
+    return llvm::equal(A, B, [](const char *AElem, const char *BElem) {
+      return StringRef(AElem) == StringRef(BElem);
+    });
   };
 
   // If we generated different arguments from what we assume are two
