@@ -64,6 +64,7 @@ BulletStart = int
 # All occurrences for a given label.
 DuplicateOccurrences = List[Tuple[BulletStart, BulletBlock]]
 
+
 class BulletBlocks(NamedTuple):
     """Structured result of parsing a bullet-list section.
 
