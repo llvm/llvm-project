@@ -22,26 +22,20 @@
 using std::optional;
 
 template <class T, class... InitArgs>
-void test(InitArgs&&... args) {
+constexpr bool test(InitArgs&&... args) {
+  static_assert(std::is_trivially_move_constructible_v<T> == std::is_trivially_move_constructible_v<std::optional<T>>);
   const optional<T> orig(std::forward<InitArgs>(args)...);
-  optional<T> rhs(orig);
-  bool rhs_engaged = static_cast<bool>(rhs);
-  optional<T> lhs  = std::move(rhs);
-  assert(static_cast<bool>(lhs) == rhs_engaged);
-  if (rhs_engaged)
-    assert(*lhs == *orig);
+
+  optional<T> lhs(orig);
+  optional<T> rhs(std::move(lhs));
+
+  assert(lhs.has_value() == rhs.has_value());
+  assert(lhs.has_value() ? *rhs == *orig : true);
+
+  return true;
 }
 
-template <class T, class... InitArgs>
-constexpr bool constexpr_test(InitArgs&&... args) {
-  static_assert(std::is_trivially_copy_constructible_v<T>, ""); // requirement
-  const optional<T> orig(std::forward<InitArgs>(args)...);
-  optional<T> rhs(orig);
-  optional<T> lhs = std::move(rhs);
-  return (lhs.has_value() == orig.has_value()) && (lhs.has_value() ? *lhs == *orig : true);
-}
-
-void test_throwing_ctor() {
+TEST_CONSTEXPR_CXX26 void test_throwing_ctor() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   struct Z {
     Z() : count(0) {}
@@ -72,6 +66,7 @@ void test_ref(InitArgs&&... args) {
     assert(&(*lhs) == &(*rhs));
 }
 
+// TODO: Add constexpr tests
 void test_reference_extension() {
 #if TEST_STD_VER >= 26
   using T = TestTypes::TestType;
@@ -137,17 +132,27 @@ void test_reference_extension() {
 #endif
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<int>();
   test<int>(3);
-  static_assert(constexpr_test<int>(), "");
-  static_assert(constexpr_test<int>(3), "");
+  test<const int>(42);
 
   {
-    optional<const int> o(42);
-    optional<const int> o2(std::move(o));
-    assert(*o2 == 42);
+    using T = TrivialTestTypes::TestType;
+    test<T>();
+    test<T>(42);
   }
+
+#if TEST_STD_VER >= 26 && 0
+  {
+    test_throwing_ctor();
+  }
+#endif
+
+  return true;
+}
+
+bool rt_test() {
   {
     using T = TestTypes::TestType;
     T::reset();
@@ -158,7 +163,9 @@ int main(int, char**) {
     assert(rhs.has_value() == false);
     assert(T::alive == 0);
   }
+
   TestTypes::TestType::reset();
+
   {
     using T = TestTypes::TestType;
     T::reset();
@@ -174,20 +181,15 @@ int main(int, char**) {
     assert(T::move_constructed == 1);
     assert(T::alive == 2);
   }
+
   TestTypes::TestType::reset();
-  {
+
+  { // TODO: Why doesn't this pass in a C++17 constexpr context?
     using namespace ConstexprTestTypes;
     test<TestType>();
     test<TestType>(42);
   }
-  {
-    using namespace TrivialTestTypes;
-    test<TestType>();
-    test<TestType>(42);
-  }
-  {
-    test_throwing_ctor();
-  }
+
   {
     struct ThrowsMove {
       ThrowsMove() noexcept(false) {}
@@ -202,13 +204,24 @@ int main(int, char**) {
     };
     static_assert(std::is_nothrow_move_constructible<optional<NoThrowMove>>::value, "");
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+  static_assert(test());
+
+  {
+    rt_test();
+  }
+
+  {
+    test_throwing_ctor();
+  }
+
   {
     test_reference_extension();
-  }
-  {
-    constexpr std::optional<int> o1{4};
-    constexpr std::optional<int> o2 = std::move(o1);
-    static_assert(*o2 == 4, "");
   }
 
   return 0;
