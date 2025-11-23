@@ -11,11 +11,14 @@
 
 ; Function Attrs: noinline nounwind optnone uwtable
 ;.
-; CHECK: @.str = private unnamed_addr constant [17 x i8] c"The value is %d\0A\00", align 1
-; CHECK: @.str.1 = private unnamed_addr constant [32 x i8] c"value of the first field is %d\0A\00", align 1
+; TUNIT: @.str = private unnamed_addr constant [17 x i8] c"The value is %d\0A\00", align 1
+; TUNIT: @.str.1 = private unnamed_addr constant [32 x i8] c"value of the first field is %d\0A\00", align 1
 ;.
-define dso_local void @accessBarFromFoo(ptr noundef %val) #0 {
-; CHECK-LABEL: define dso_local void @accessBarFromFoo
+; CGSCC: @.str = private unnamed_addr constant [17 x i8] c"The value is %d\0A\00", align 1
+; CGSCC: @.str.1 = private unnamed_addr constant [32 x i8] c"value of the first field is %d\0A\00", align 1
+;.
+define dso_local void @reduceNestedStruct(ptr noundef %val) #0 {
+; CHECK-LABEL: define dso_local void @reduceNestedStruct
 ; CHECK-SAME: (ptr nofree noundef readonly captures(none) [[VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca ptr, align 8
@@ -108,6 +111,69 @@ entry:
   %call = call i32 (ptr, ...) @printf(ptr noundef @.str, i32 noundef %add3)
   ret void
 }
+
+
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local void @nestedStruct() #0 {
+; CHECK-LABEL: define dso_local void @nestedStruct() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B1:%.*]] = alloca [12 x i8], align 4
+; CHECK-NEXT:    [[F_COERCE:%.*]] = alloca { i64, i8 }, align 4
+; CHECK-NEXT:    [[NEWGEP:%.*]] = getelementptr [12 x i8], ptr [[B1]], i64 0
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noalias nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(12) [[F_COERCE]], ptr nofree nonnull readonly align 4 captures(none) dereferenceable(12) [[NEWGEP]], i64 noundef 12, i1 noundef false) #[[ATTR3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[F_COERCE]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64, i8 }, ptr [[F_COERCE]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
+; CHECK-NEXT:    call void @nestedStructAccessfoo(i64 [[TMP0]], i8 [[TMP2]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %b = alloca %struct.Bar, align 4
+  %f.coerce = alloca { i64, i8 }, align 4
+  %f = getelementptr inbounds nuw %struct.Bar, ptr %b, i32 0, i32 2
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %f.coerce, ptr align 4 %f, i64 12, i1 false)
+  %0 = getelementptr inbounds nuw { i64, i8 }, ptr %f.coerce, i32 0, i32 0
+  %1 = load i64, ptr %0, align 4
+  %2 = getelementptr inbounds nuw { i64, i8 }, ptr %f.coerce, i32 0, i32 1
+  %3 = load i8, ptr %2, align 4
+  call void @nestedStructAccessfoo(i64 %1, i8 %3)
+  ret void
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local void @nestedStructAccessfoo(i64 %f.coerce0, i8 %f.coerce1) #0 {
+; CHECK-LABEL: define dso_local void @nestedStructAccessfoo
+; CHECK-SAME: (i64 [[F_COERCE0:%.*]], i8 [[F_COERCE1:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    [[COERCE:%.*]] = alloca { i64, i8 }, align 4
+; CHECK-NEXT:    store i64 [[F_COERCE0]], ptr [[COERCE]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { i64, i8 }, ptr [[COERCE]], i32 0, i32 1
+; CHECK-NEXT:    store i8 [[F_COERCE1]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noalias nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(12) [[F]], ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(12) [[COERCE]], i64 noundef 12, i1 noundef false) #[[ATTR3]]
+; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds nuw [[STRUCT_FOO]], ptr [[F]], i32 0, i32 2
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef 10)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %f = alloca %struct.Foo, align 4
+  %coerce = alloca { i64, i8 }, align 4
+  %0 = getelementptr inbounds nuw { i64, i8 }, ptr %coerce, i32 0, i32 0
+  store i64 %f.coerce0, ptr %0, align 4
+  %1 = getelementptr inbounds nuw { i64, i8 }, ptr %coerce, i32 0, i32 1
+  store i8 %f.coerce1, ptr %1, align 4
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %f, ptr align 4 %coerce, i64 12, i1 false)
+  %a = getelementptr inbounds nuw %struct.Foo, ptr %f, i32 0, i32 0
+  store i32 10, ptr %a, align 4
+  %c = getelementptr inbounds nuw %struct.Foo, ptr %f, i32 0, i32 2
+  store i8 10, ptr %c, align 4
+  %c1 = getelementptr inbounds nuw %struct.Foo, ptr %f, i32 0, i32 2
+  %2 = load i8, ptr %c1, align 4
+  %conv = sext i8 %2 to i32
+  %call = call i32 (ptr, ...) @printf(ptr noundef @.str, i32 noundef %conv)
+  ret void
+}
+
 
 ; TODO: change malloc like call
 ; Function Attrs: noinline nounwind uwtable
@@ -241,11 +307,11 @@ define dso_local void @positive_test_not_a_single_start_offset(i32 noundef %val)
 ; CHECK-NEXT:    store i32 [[MUL]], ptr [[F1]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[F1]], align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP0]])
-; CHECK-NEXT:    [[NEWGEP:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
-; CHECK-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP0]] to i8
-; CHECK-NEXT:    store i8 [[CONV1]], ptr [[NEWGEP]], align 4
 ; CHECK-NEXT:    [[NEWGEP2:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[NEWGEP2]], align 4
+; CHECK-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP0]] to i8
+; CHECK-NEXT:    store i8 [[CONV1]], ptr [[NEWGEP2]], align 4
+; CHECK-NEXT:    [[NEWGEP:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[NEWGEP]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[CALL3:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[CONV]])
 ; CHECK-NEXT:    ret void
