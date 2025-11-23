@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: std-at-least-c++17
 // <optional>
 
 // constexpr optional() noexcept;
@@ -18,56 +18,64 @@
 #include "test_macros.h"
 #include "archetypes.h"
 
-using std::optional;
+template <class T>
+constexpr void test() {
+  static_assert(std::is_nothrow_default_constructible_v<std::optional<T>>);
+  static_assert(std::is_trivially_destructible_v<T> == std::is_trivially_destructible_v<std::optional<T>>);
 
-template <class Opt>
-void test_constexpr() {
-  static_assert(std::is_nothrow_default_constructible<Opt>::value, "");
-  static_assert(std::is_trivially_destructible<Opt>::value, "");
-  static_assert(std::is_trivially_destructible<typename Opt::value_type>::value, "");
+  if constexpr (!std::is_lvalue_reference_v<T>) {
+    static_assert(
+        std::is_trivially_destructible_v<T> == std::is_trivially_destructible_v<typename std::optional<T>::value_type>);
+  }
 
-  constexpr Opt opt;
-  static_assert(static_cast<bool>(opt) == false, "");
+  {
+    std::optional<T> opt;
+    assert(static_cast<bool>(opt) == false);
+  }
+  {
+    const std::optional<T> opt;
+    assert(static_cast<bool>(opt) == false);
+  }
 
-  struct test_constexpr_ctor : public Opt {
+  struct test_constexpr_ctor : public std::optional<T> {
     constexpr test_constexpr_ctor() {}
   };
 }
 
-template <class Opt>
-void test() {
-  static_assert(std::is_nothrow_default_constructible<Opt>::value, "");
-  static_assert(!std::is_trivially_destructible<Opt>::value, "");
-  static_assert(!std::is_trivially_destructible<typename Opt::value_type>::value, "");
-  {
-    Opt opt;
-    assert(static_cast<bool>(opt) == false);
-  }
-  {
-    const Opt opt;
-    assert(static_cast<bool>(opt) == false);
-  }
+TEST_CONSTEXPR_CXX23 void non_literal_test() {
+  test<NonLiteralTypes::NoCtors>();
+  test<NonLiteralTypes::NoCtors>();
+}
 
-  struct test_constexpr_ctor : public Opt {
-    constexpr test_constexpr_ctor() {}
-  };
+constexpr bool test() {
+  test<int>();
+  test<int*>();
+  test<ImplicitTypes::NoCtors>();
+  test<NonTrivialTypes::NoCtors>();
+  test<NonConstexprTypes::NoCtors>();
+#if TEST_STD_VER >= 23
+  non_literal_test();
+#endif
+#if TEST_STD_VER >= 26
+  test<int&>();
+  test<const int&>();
+  test<int&>();
+  test<NonLiteralTypes::NoCtors&>();
+// TODO: optional<T&&> is not allowed.
+#  if 0
+  test<NonLiteralTypes::NoCtors&&>();
+#  endif
+#endif
+
+  return true;
 }
 
 int main(int, char**) {
-  test_constexpr<optional<int>>();
-  test_constexpr<optional<int*>>();
-  test_constexpr<optional<ImplicitTypes::NoCtors>>();
-  test_constexpr<optional<NonTrivialTypes::NoCtors>>();
-  test_constexpr<optional<NonConstexprTypes::NoCtors>>();
-  test<optional<NonLiteralTypes::NoCtors>>();
-  // EXTENSIONS
-#if defined(_LIBCPP_VERSION) && 0 // FIXME these extensions are currently disabled.
-  test_constexpr<optional<int&>>();
-  test_constexpr<optional<const int&>>();
-  test_constexpr<optional<int&>>();
-  test_constexpr<optional<NonLiteralTypes::NoCtors&>>();
-  test_constexpr<optional<NonLiteralTypes::NoCtors&&>>();
-#endif
+  assert(test());
+  static_assert(test());
 
+  {
+    non_literal_test();
+  }
   return 0;
 }
