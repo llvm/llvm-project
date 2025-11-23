@@ -419,6 +419,13 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
         
         ]]#pragma endregion
       )cpp",
+      R"cpp(
+        #pragma region[[
+        ]]#pragma endregion
+
+        #pragma /*comment1*/ region /*comment2*/name[[
+        ]]#pragma endregion
+      )cpp",
   };
   for (const char *Test : Tests) {
     auto T = Annotations(Test);

@@ -167,9 +167,9 @@ llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos) {
 class PragmaRegionFinder {
   // Record the token range of a region:
   //
-  //   #pragma region [[name
+  //   #pragma region name[[
   //   ...
-  //   ]]#pragma region
+  //   ]]#pragma endregion
   std::vector<Token::Range> &Ranges;
   const TokenStream &Code;
   // Stack of starting token (the name of the region) indices for nested #pragma
@@ -201,9 +201,12 @@ public:
 
     // Handle "#pragma region name"
     if (Value.text() == "region") {
-      // Record the name token.
-      if (&Value < Tokens.end())
-        Stack.push_back((&Value + 1)->OriginalIndex);
+      // Find the last token at the same line.
+      const Token *T = &Value.next();
+      while (T < Tokens.end() && T->Line == Pragma.Line)
+        T = &T->next();
+      --T;
+      Stack.push_back(T->OriginalIndex);
       return;
     }
 
