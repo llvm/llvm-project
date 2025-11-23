@@ -30,19 +30,19 @@ int main(int, char**) {
 
     auto wait = [&]() {
       for (int i = 0; i < num_iterations; ++i) {
-        auto old_state = state.load(std::memory_order_acquire);
-        waiter_ready.fetch_add(1, std::memory_order_acq_rel);
-        state.wait(old_state, std::memory_order_acquire);
+        auto old_state = state.load();
+        waiter_ready.fetch_add(1);
+        state.wait(old_state);
       }
     };
 
     auto notify = [&] {
       for (int i = 0; i < num_iterations; ++i) {
-        while (waiter_ready.load(std::memory_order_acquire) < num_waiters) {
+        while (waiter_ready.load() < num_waiters) {
           std::this_thread::yield();
         }
-        waiter_ready.store(0, std::memory_order_release);
-        state.fetch_add(1, std::memory_order_acq_rel);
+        waiter_ready.store(0);
+        state.fetch_add(1);
         state.notify_all();
       }
     };
