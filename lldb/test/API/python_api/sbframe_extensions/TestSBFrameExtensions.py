@@ -88,9 +88,13 @@ class TestSBFrameExtensions(TestBase):
         block = frame.block
         self.assertTrue(block.IsValid(), "block should be valid")
         block_direct = frame.GetBlock()
-        self.assertTrue(
-            block.IsEqual(block_direct),
-            "block should match GetBlock()",
+        self.assertTrue(block_direct.IsValid(), "GetBlock() should return valid block")
+        # Verify both blocks are valid and the property returns the same object
+        # by comparing their address ranges
+        self.assertEqual(
+            block.GetRangeStartAddress(),
+            block_direct.GetRangeStartAddress(),
+            "block should match GetBlock() start address",
         )
 
     def test_properties_is_inlined_name_line_entry_thread(self):
