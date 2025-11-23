@@ -708,6 +708,11 @@ private:
         IsCpp && !IsCpp11AttributeSpecifier && !IsCSharpAttributeSpecifier &&
         Contexts.back().CanBeExpression && Left->isNot(TT_LambdaLSquare) &&
         CurrentToken->isNoneOf(tok::l_brace, tok::r_square) &&
+        // Do not consider '[' after a comma inside a braced initializer the
+        // start of an ObjC method expression. In braced initializer lists,
+        // commas are list separators and should not trigger ObjC parsing.
+        (!Parent || !Parent->is(tok::comma) ||
+         Contexts.back().ContextKind != tok::l_brace) &&
         (!Parent ||
          Parent->isOneOf(tok::colon, tok::l_square, tok::l_paren,
                          tok::kw_return, tok::kw_throw) ||
