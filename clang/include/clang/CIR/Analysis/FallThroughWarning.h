@@ -21,8 +21,8 @@
 
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "mlir/Support/LLVM.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 namespace cir {
 class FuncOp;
 } // namespace cir
@@ -46,8 +46,7 @@ struct CheckFallThroughDiagnostics {
   unsigned funKind = 0;
   SourceLocation funcLoc;
 
-  static CheckFallThroughDiagnostics makeForFunction(Sema &s,
-                                                     const Decl *func); 
+  static CheckFallThroughDiagnostics makeForFunction(Sema &s, const Decl *func);
   static CheckFallThroughDiagnostics makeForCoroutine(const Decl *func);
   static CheckFallThroughDiagnostics makeForBlock();
   static CheckFallThroughDiagnostics makeForLambda();

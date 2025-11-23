@@ -45,8 +45,8 @@ Decl *getDeclByName(ASTContext &context, StringRef name) {
   return result.front();
 }
 
-CheckFallThroughDiagnostics CheckFallThroughDiagnostics::makeForFunction(Sema &s,
-                                                   const Decl *func) {
+CheckFallThroughDiagnostics
+CheckFallThroughDiagnostics::makeForFunction(Sema &s, const Decl *func) {
   CheckFallThroughDiagnostics d;
   d.funcLoc = func->getLocation();
   d.diagFallThroughHasNoReturn = diag::warn_noreturn_has_return_expr;
@@ -75,7 +75,8 @@ CheckFallThroughDiagnostics CheckFallThroughDiagnostics::makeForFunction(Sema &s
   return d;
 }
 
-CheckFallThroughDiagnostics CheckFallThroughDiagnostics::makeForCoroutine(const Decl *func) {
+CheckFallThroughDiagnostics
+CheckFallThroughDiagnostics::makeForCoroutine(const Decl *func) {
   CheckFallThroughDiagnostics d;
   d.funcLoc = func->getLocation();
   d.diagFallThroughReturnsNonVoid = diag::warn_falloff_nonvoid;
@@ -98,7 +99,6 @@ CheckFallThroughDiagnostics CheckFallThroughDiagnostics::makeForLambda() {
   d.funKind = diag::FalloffFunctionKind::Lambda;
   return d;
 }
-
 
 //===----------------------------------------------------------------------===//
 // Check for phony return values (returning uninitialized __retval)
@@ -168,21 +168,19 @@ bool isPhonyReturn(cir::ReturnOp returnOp) {
 bool CheckFallThroughDiagnostics::checkDiagnostics(DiagnosticsEngine &d,
                                                    bool returnsVoid,
                                                    bool hasNoReturn) const {
-    if (funKind == diag::FalloffFunctionKind::Function) {
-      return (returnsVoid ||
-              d.isIgnored(diag::warn_falloff_nonvoid, funcLoc)) &&
-             (d.isIgnored(diag::warn_noreturn_has_return_expr, funcLoc) ||
-              !hasNoReturn) &&
-             (!returnsVoid ||
-              d.isIgnored(diag::warn_suggest_noreturn_block, funcLoc));
-    }
-    if (funKind == diag::FalloffFunctionKind::Coroutine) {
-      return (returnsVoid ||
-              d.isIgnored(diag::warn_falloff_nonvoid, funcLoc)) &&
-             (!hasNoReturn);
-    }
-    // For blocks / lambdas.
-    return returnsVoid && !hasNoReturn;
+  if (funKind == diag::FalloffFunctionKind::Function) {
+    return (returnsVoid || d.isIgnored(diag::warn_falloff_nonvoid, funcLoc)) &&
+           (d.isIgnored(diag::warn_noreturn_has_return_expr, funcLoc) ||
+            !hasNoReturn) &&
+           (!returnsVoid ||
+            d.isIgnored(diag::warn_suggest_noreturn_block, funcLoc));
+  }
+  if (funKind == diag::FalloffFunctionKind::Coroutine) {
+    return (returnsVoid || d.isIgnored(diag::warn_falloff_nonvoid, funcLoc)) &&
+           (!hasNoReturn);
+  }
+  // For blocks / lambdas.
+  return returnsVoid && !hasNoReturn;
 }
 
 // TODO: Add a class for fall through config later
@@ -209,14 +207,12 @@ void FallThroughWarningPass::checkFallThroughForFuncBody(
     else
       returnsVoid = fd->getReturnType()->isVoidType();
     hasNoReturn = fd->isNoReturn() || fd->hasAttr<InferredNoReturnAttr>();
-  }
-  else if (const auto *md = dyn_cast<ObjCMethodDecl>(d)) {
+  } else if (const auto *md = dyn_cast<ObjCMethodDecl>(d)) {
     returnsVoid = md->getReturnType()->isVoidType();
     hasNoReturn = md->hasAttr<NoReturnAttr>();
-  }
-  else if (isa<BlockDecl>(d)) {
+  } else if (isa<BlockDecl>(d)) {
     if (const FunctionType *ft =
-          blockType->getPointeeType()->getAs<FunctionType>()) {
+            blockType->getPointeeType()->getAs<FunctionType>()) {
       if (ft->getReturnType()->isVoidType())
         returnsVoid = true;
       if (ft->getNoReturnAttr())
@@ -228,14 +224,14 @@ void FallThroughWarningPass::checkFallThroughForFuncBody(
 
   // Short circuit for compilation speed.
   if (cd.checkDiagnostics(diags, returnsVoid, hasNoReturn))
-      return;
+    return;
 
   // cpu_dispatch functions permit empty function bodies for ICC compatibility.
   // TODO: Do we have isCPUDispatchMultiVersion?
 
   switch (ControlFlowKind fallThroughType = checkFallThrough(cfg)) {
   case UnknownFallThrough:
-    [[fallthrough]];
+    break;
   case MaybeFallThrough:
     [[fallthrough]];
   case AlwaysFallThrough:
@@ -267,7 +263,6 @@ void FallThroughWarningPass::checkFallThroughForFuncBody(
       bool notInAllControlPaths = fallThroughType == MaybeFallThrough;
       s.Diag(rBrace, cd.diagFallThroughReturnsNonVoid)
           << cd.funKind << notInAllControlPaths;
-
     }
     break;
   case NeverFallThroughOrReturn:
@@ -332,7 +327,8 @@ ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
 
     mlir::Operation *term = pred.getTerminator();
 
-    // TODO: hasNoReturnElement() in OG here, not sure how to work it in here yet
+    // TODO: hasNoReturnElement() in OG here, not sure how to work it in here
+    // yet
 
     // INFO: In OG, we'll be looking for destructor since it can appear past
     // return but i guess not in CIR? In this case we'll only be examining the
@@ -348,7 +344,7 @@ ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
     hasPlainEdge = std::distance(pred.begin(), pred.end()) == 1;
 
     if (auto returnOp = dyn_cast<cir::ReturnOp>(term)) {
-      if (!isPhonyReturn(returnOp))  {
+      if (!isPhonyReturn(returnOp)) {
         hasLiveReturn = true;
         continue;
       }

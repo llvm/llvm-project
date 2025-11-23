@@ -118,7 +118,8 @@ public:
 
     // Run CIR analysis passes if requested
     if (!FEOptions.ClangIRAnalysisList.empty()) {
-      CIRAnalysisSet AnalysisSet = parseCIRAnalysisList(FEOptions.ClangIRAnalysisList);
+      CIRAnalysisSet AnalysisSet =
+          parseCIRAnalysisList(FEOptions.ClangIRAnalysisList);
 
       if (AnalysisSet.has(CIRAnalysisKind::FallThrough)) {
         if (CI.hasSema()) {
@@ -138,12 +139,14 @@ public:
             const CheckFallThroughDiagnostics &CD =
                 (isa<BlockDecl>(D) ? CheckFallThroughDiagnostics::makeForBlock()
                  : (isa<CXXMethodDecl>(D) &&
-                    cast<CXXMethodDecl>(D)->getOverloadedOperator() == OO_Call &&
+                    cast<CXXMethodDecl>(D)->getOverloadedOperator() ==
+                        OO_Call &&
                     cast<CXXMethodDecl>(D)->getParent()->isLambda())
                      ? CheckFallThroughDiagnostics::makeForLambda()
-                     :  CheckFallThroughDiagnostics::makeForFunction(S, D));
+                     : CheckFallThroughDiagnostics::makeForFunction(S, D));
             // Run fall-through analysis on this function
-            FallThroughPass.checkFallThroughForFuncBody(S, FuncOp, FuncType, CD);
+            FallThroughPass.checkFallThroughForFuncBody(S, FuncOp, FuncType,
+                                                        CD);
           });
         }
       }
