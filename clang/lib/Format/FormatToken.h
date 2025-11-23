@@ -418,10 +418,7 @@ private:
 
 public:
   CommentKind getBlockCommentKind() const { return BlockCommentKind; }
-  void setBlockCommentKind(CommentKind Kind) {
-    BlockCommentKind = Kind;
-    assert(getBlockCommentKind() == Kind && "CommentKind overflow!");
-  }
+  void setBlockCommentKind(CommentKind Kind) { BlockCommentKind = Kind; }
 
 private:
   /// Contains the kind of block if this token is a brace.
