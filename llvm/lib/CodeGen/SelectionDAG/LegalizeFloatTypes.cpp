@@ -70,6 +70,8 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::EXTRACT_VECTOR_ELT:
       R = SoftenFloatRes_EXTRACT_VECTOR_ELT(N, ResNo); break;
     case ISD::FABS:        R = SoftenFloatRes_FABS(N); break;
+    case ISD::FCANONICALIZE:
+      R = SoftenFloatRes_FCANONICALIZE(N); break;
     case ISD::STRICT_FMINNUM:
     case ISD::FMINNUM:     R = SoftenFloatRes_FMINNUM(N); break;
     case ISD::STRICT_FMAXNUM:
@@ -309,6 +311,12 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
   SDValue Mask = DAG.getConstant(API, SDLoc(N), NVT);
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   return DAG.getNode(ISD::AND, SDLoc(N), NVT, Op, Mask);
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FCANONICALIZE(SDNode *N) {
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::FMIN_F32, RTLIB::FMIN_F64,
+                      RTLIB::FMIN_F80, RTLIB::FMIN_F128, RTLIB::FMIN_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMINNUM(SDNode *N) {
