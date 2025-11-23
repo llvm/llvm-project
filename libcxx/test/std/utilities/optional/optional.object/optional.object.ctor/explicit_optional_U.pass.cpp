@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: std-at-least-c++17
 // <optional>
 
 // template <class U>
@@ -22,7 +22,7 @@ using std::optional;
 
 template <class T, class U>
 TEST_CONSTEXPR_CXX20 void test(optional<U>&& rhs, bool is_going_to_throw = false) {
-  static_assert(!(std::is_convertible<optional<U>&&, optional<T>>::value), "");
+  static_assert(!(std::is_convertible<optional<U>&&, optional<T>>::value));
   bool rhs_engaged = static_cast<bool>(rhs);
 #ifndef TEST_HAS_NO_EXCEPTIONS
   try {
@@ -57,6 +57,19 @@ public:
   explicit Z(int) { TEST_THROW(6); }
 };
 
+TEST_CONSTEXPR_CXX26 bool test_throwing() {
+  {
+    optional<int> rhs;
+    test<Z>(std::move(rhs));
+  }
+  {
+    optional<int> rhs(3);
+    test<Z>(std::move(rhs), true);
+  }
+
+  return true;
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
   {
     optional<int> rhs;
@@ -67,21 +80,23 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test<X>(std::move(rhs));
   }
 
+  {
+// TODO: Enable once P3068R6 is implemented
+#if TEST_STD_VER >= 26 && 0
+    test_throwing();
+#endif
+  }
+
   return true;
 }
 
 int main(int, char**) {
-#if TEST_STD_VER > 17
+  test();
+#if TEST_STD_VER >= 20
   static_assert(test());
 #endif
-  test();
   {
-    optional<int> rhs;
-    test<Z>(std::move(rhs));
-  }
-  {
-    optional<int> rhs(3);
-    test<Z>(std::move(rhs), true);
+    test_throwing();
   }
 
   return 0;

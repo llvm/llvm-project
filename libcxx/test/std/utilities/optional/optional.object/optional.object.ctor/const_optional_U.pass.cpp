@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: std-at-least-c++17
 // <optional>
 
 // template <class U>
@@ -68,7 +68,7 @@ class Z {
   int i_;
 
 public:
-  Z(int i) : i_(i) { TEST_THROW(6); }
+  constexpr Z(int i) : i_(i) { TEST_THROW(6); }
 
   friend bool operator==(const Z& x, const Z& y) { return x.i_ == y.i_; }
 };
@@ -86,15 +86,20 @@ constexpr bool test_all() {
   return true;
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test_all<int, short>();
   test_all<X, int>();
   test_all<Y, int>();
-#if TEST_STD_VER > 17
-  static_assert(test_all<int, short>());
-  static_assert(test_all<X, int>());
-  static_assert(test_all<Y, int>());
+
+// TODO: Enable once P3068R6 is implemented
+#if TEST_STD_VER >= 26 && 0
+  test_throwing();
 #endif
+
+  return true;
+}
+
+TEST_CONSTEXPR_CXX26 bool test_throwing() {
   {
     typedef Z T;
     typedef int U;
@@ -108,7 +113,19 @@ int main(int, char**) {
     test<T>(rhs, true);
   }
 
-  static_assert(!(std::is_constructible<optional<X>, const optional<Y>&>::value), "");
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 20
+  static_assert(test());
+#endif
+
+  {
+    test_throwing();
+  }
+
+  static_assert(!(std::is_constructible<optional<X>, const optional<Y>&>::value));
   return 0;
 }

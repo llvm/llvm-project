@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRED: std-at-least-c++17
 // <optional>
 
 // template <class U>
@@ -22,7 +22,7 @@ using std::optional;
 
 template <class T, class U>
 TEST_CONSTEXPR_CXX20 void test(const optional<U>& rhs, bool is_going_to_throw = false) {
-  static_assert(!(std::is_convertible<const optional<U>&, optional<T>>::value), "");
+  static_assert(!(std::is_convertible<const optional<U>&, optional<T>>::value));
   bool rhs_engaged = static_cast<bool>(rhs);
 #ifndef TEST_HAS_NO_EXCEPTIONS
   try {
@@ -69,9 +69,9 @@ class Z {
   int i_;
 
 public:
-  explicit Z(int i) : i_(i) { TEST_THROW(6); }
+  constexpr explicit Z(int i) : i_(i) { TEST_THROW(6); }
 
-  friend bool operator==(const Z& x, const Z& y) { return x.i_ == y.i_; }
+  friend constexpr bool operator==(const Z& x, const Z& y) { return x.i_ == y.i_; }
 };
 
 template <class T, class U>
@@ -87,13 +87,7 @@ constexpr bool test_all() {
   return true;
 }
 
-int main(int, char**) {
-  test_all<X, int>();
-  test_all<Y, int>();
-#if TEST_STD_VER > 17
-  static_assert(test_all<X, int>());
-  static_assert(test_all<Y, int>());
-#endif
+TEST_CONSTEXPR_CXX26 bool test_throwing() {
   {
     typedef Z T;
     typedef int U;
@@ -107,5 +101,28 @@ int main(int, char**) {
     test<T>(rhs, true);
   }
 
+  return true;
+}
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_all<X, int>();
+  test_all<Y, int>();
+
+// TODO: Enable once P3068R6 is implemented
+#if TEST_STD_VER >= 26 && 0
+  test_throwing();
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 20
+  static_assert(test());
+#endif
+  {
+    test_throwing();
+  }
   return 0;
 }
