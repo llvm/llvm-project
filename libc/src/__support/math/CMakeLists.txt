@@ -248,6 +248,7 @@ add_header_library(
 add_header_library(
   atanf
   HDRS
+    atanf_float.h
     atanf.h
   DEPENDS
     .inv_trigf_utils

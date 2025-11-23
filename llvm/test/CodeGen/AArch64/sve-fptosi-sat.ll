@@ -454,18 +454,17 @@ declare <vscale x 4 x i64> @llvm.fptosi.sat.nxv4f16.nxv4i64(<vscale x 4 x half>)
 define <vscale x 2 x i32> @test_signed_v2f16_v2i32(<vscale x 2 x half> %f) {
 ; CHECK-LABEL: test_signed_v2f16_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #64511 // =0xfbff
+; CHECK-NEXT:    mov z1.h, #-1025 // =0xfffffffffffffbff
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    mov w8, #31743 // =0x7bff
-; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    mov z2.d, #0xffffffff80000000
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z1.d, #0xffffffff80000000
-; CHECK-NEXT:    fcmgt p2.h, p0/z, z0.h, z2.h
-; CHECK-NEXT:    mov z2.d, #0x7fffffff
+; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    fcvtzs z2.d, p1/m, z0.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    mov z1.d, #0x7fffffff
 ; CHECK-NEXT:    fcmuo p0.h, p0/z, z0.h, z0.h
-; CHECK-NEXT:    fcvtzs z1.d, p1/m, z0.h
-; CHECK-NEXT:    sel z0.d, p2, z2.d, z1.d
+; CHECK-NEXT:    sel z0.d, p1, z1.d, z2.d
 ; CHECK-NEXT:    mov z0.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret
     %x = call <vscale x 2 x i32> @llvm.fptosi.sat.nxv2f16.nxv2i32(<vscale x 2 x half> %f)
@@ -475,18 +474,17 @@ define <vscale x 2 x i32> @test_signed_v2f16_v2i32(<vscale x 2 x half> %f) {
 define <vscale x 4 x i32> @test_signed_v4f16_v4i32(<vscale x 4 x half> %f) {
 ; CHECK-LABEL: test_signed_v4f16_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #64511 // =0xfbff
+; CHECK-NEXT:    mov z1.h, #-1025 // =0xfffffffffffffbff
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    mov w8, #31743 // =0x7bff
-; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    mov z2.s, #0x80000000
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z1.s, #0x80000000
-; CHECK-NEXT:    fcmgt p2.h, p0/z, z0.h, z2.h
-; CHECK-NEXT:    mov z2.s, #0x7fffffff
+; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    fcvtzs z2.s, p1/m, z0.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    mov z1.s, #0x7fffffff
 ; CHECK-NEXT:    fcmuo p0.h, p0/z, z0.h, z0.h
-; CHECK-NEXT:    fcvtzs z1.s, p1/m, z0.h
-; CHECK-NEXT:    sel z0.s, p2, z2.s, z1.s
+; CHECK-NEXT:    sel z0.s, p1, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret
     %x = call <vscale x 4 x i32> @llvm.fptosi.sat.nxv4f16.nxv4i32(<vscale x 4 x half> %f)
@@ -496,26 +494,25 @@ define <vscale x 4 x i32> @test_signed_v4f16_v4i32(<vscale x 4 x half> %f) {
 define <vscale x 8 x i32> @test_signed_v8f16_v8i32(<vscale x 8 x half> %f) {
 ; CHECK-LABEL: test_signed_v8f16_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #64511 // =0xfbff
-; CHECK-NEXT:    uunpklo z1.s, z0.h
-; CHECK-NEXT:    uunpkhi z0.s, z0.h
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z1.h, #-1025 // =0xfffffffffffffbff
+; CHECK-NEXT:    uunpklo z2.s, z0.h
 ; CHECK-NEXT:    mov w8, #31743 // =0x7bff
+; CHECK-NEXT:    uunpkhi z0.s, z0.h
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z3.s, #0x80000000
 ; CHECK-NEXT:    mov z4.s, #0x80000000
 ; CHECK-NEXT:    mov z5.h, w8
-; CHECK-NEXT:    fcmge p1.h, p0/z, z1.h, z2.h
-; CHECK-NEXT:    fcmge p2.h, p0/z, z0.h, z2.h
-; CHECK-NEXT:    mov z2.s, #0x7fffffff
+; CHECK-NEXT:    fcmge p1.h, p0/z, z2.h, z1.h
+; CHECK-NEXT:    fcmge p2.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    mov z1.s, #0x7fffffff
 ; CHECK-NEXT:    fcmgt p3.h, p0/z, z0.h, z5.h
-; CHECK-NEXT:    fcvtzs z3.s, p1/m, z1.h
-; CHECK-NEXT:    fcmgt p1.h, p0/z, z1.h, z5.h
+; CHECK-NEXT:    fcvtzs z3.s, p1/m, z2.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z2.h, z5.h
 ; CHECK-NEXT:    fcvtzs z4.s, p2/m, z0.h
-; CHECK-NEXT:    fcmuo p2.h, p0/z, z1.h, z1.h
+; CHECK-NEXT:    fcmuo p2.h, p0/z, z2.h, z2.h
 ; CHECK-NEXT:    fcmuo p0.h, p0/z, z0.h, z0.h
-; CHECK-NEXT:    sel z0.s, p1, z2.s, z3.s
-; CHECK-NEXT:    sel z1.s, p3, z2.s, z4.s
+; CHECK-NEXT:    sel z0.s, p1, z1.s, z3.s
+; CHECK-NEXT:    sel z1.s, p3, z1.s, z4.s
 ; CHECK-NEXT:    mov z0.s, p2/m, #0 // =0x0
 ; CHECK-NEXT:    mov z1.s, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret
@@ -526,18 +523,17 @@ define <vscale x 8 x i32> @test_signed_v8f16_v8i32(<vscale x 8 x half> %f) {
 define <vscale x 4 x i16> @test_signed_v4f16_v4i16(<vscale x 4 x half> %f) {
 ; CHECK-LABEL: test_signed_v4f16_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63488 // =0xf800
+; CHECK-NEXT:    dupm z1.h, #0xf800
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov z2.s, #-32768 // =0xffffffffffff8000
-; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    mov w8, #30719 // =0x77ff
+; CHECK-NEXT:    mov z2.h, w8
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z1.h, w8
-; CHECK-NEXT:    fcmgt p2.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z1.s, #32767 // =0x7fff
-; CHECK-NEXT:    fcvtzs z2.s, p1/m, z0.h
+; CHECK-NEXT:    mov z1.s, #-32768 // =0xffffffffffff8000
+; CHECK-NEXT:    fcvtzs z1.s, p1/m, z0.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z0.h, z2.h
+; CHECK-NEXT:    mov z2.s, #32767 // =0x7fff
 ; CHECK-NEXT:    fcmuo p0.h, p0/z, z0.h, z0.h
-; CHECK-NEXT:    sel z0.s, p2, z1.s, z2.s
+; CHECK-NEXT:    sel z0.s, p1, z2.s, z1.s
 ; CHECK-NEXT:    mov z0.s, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret
     %x = call <vscale x 4 x i16> @llvm.fptosi.sat.nxv4f16.nxv4i16(<vscale x 4 x half> %f)
@@ -547,18 +543,17 @@ define <vscale x 4 x i16> @test_signed_v4f16_v4i16(<vscale x 4 x half> %f) {
 define <vscale x 8 x i16> @test_signed_v8f16_v8i16(<vscale x 8 x half> %f) {
 ; CHECK-LABEL: test_signed_v8f16_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63488 // =0xf800
+; CHECK-NEXT:    dupm z1.h, #0xf800
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mov z2.h, #-32768 // =0xffffffffffff8000
-; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    mov w8, #30719 // =0x77ff
+; CHECK-NEXT:    mov z2.h, w8
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z1.h, w8
-; CHECK-NEXT:    fcmgt p2.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z1.h, #32767 // =0x7fff
-; CHECK-NEXT:    fcvtzs z2.h, p1/m, z0.h
+; CHECK-NEXT:    mov z1.h, #-32768 // =0xffffffffffff8000
+; CHECK-NEXT:    fcvtzs z1.h, p1/m, z0.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z0.h, z2.h
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
 ; CHECK-NEXT:    fcmuo p0.h, p0/z, z0.h, z0.h
-; CHECK-NEXT:    sel z0.h, p2, z1.h, z2.h
+; CHECK-NEXT:    sel z0.h, p1, z2.h, z1.h
 ; CHECK-NEXT:    mov z0.h, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret
     %x = call <vscale x 8 x i16> @llvm.fptosi.sat.nxv8f16.nxv8i16(<vscale x 8 x half> %f)
@@ -568,18 +563,17 @@ define <vscale x 8 x i16> @test_signed_v8f16_v8i16(<vscale x 8 x half> %f) {
 define <vscale x 2 x i64> @test_signed_v2f16_v2i64(<vscale x 2 x half> %f) {
 ; CHECK-LABEL: test_signed_v2f16_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #64511 // =0xfbff
+; CHECK-NEXT:    mov z1.h, #-1025 // =0xfffffffffffffbff
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    mov w8, #31743 // =0x7bff
-; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    mov z2.d, #0x8000000000000000
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z1.d, #0x8000000000000000
-; CHECK-NEXT:    fcmgt p2.h, p0/z, z0.h, z2.h
-; CHECK-NEXT:    mov z2.d, #0x7fffffffffffffff
+; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    fcvtzs z2.d, p1/m, z0.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    mov z1.d, #0x7fffffffffffffff
 ; CHECK-NEXT:    fcmuo p0.h, p0/z, z0.h, z0.h
-; CHECK-NEXT:    fcvtzs z1.d, p1/m, z0.h
-; CHECK-NEXT:    sel z0.d, p2, z2.d, z1.d
+; CHECK-NEXT:    sel z0.d, p1, z1.d, z2.d
 ; CHECK-NEXT:    mov z0.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret
     %x = call <vscale x 2 x i64> @llvm.fptosi.sat.nxv2f16.nxv2i64(<vscale x 2 x half> %f)
@@ -589,26 +583,25 @@ define <vscale x 2 x i64> @test_signed_v2f16_v2i64(<vscale x 2 x half> %f) {
 define <vscale x 4 x i64> @test_signed_v4f16_v4i64(<vscale x 4 x half> %f) {
 ; CHECK-LABEL: test_signed_v4f16_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #64511 // =0xfbff
-; CHECK-NEXT:    uunpklo z1.d, z0.s
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z1.h, #-1025 // =0xfffffffffffffbff
+; CHECK-NEXT:    uunpklo z2.d, z0.s
 ; CHECK-NEXT:    mov w8, #31743 // =0x7bff
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z3.d, #0x8000000000000000
 ; CHECK-NEXT:    mov z4.d, #0x8000000000000000
 ; CHECK-NEXT:    mov z5.h, w8
-; CHECK-NEXT:    fcmge p1.h, p0/z, z1.h, z2.h
-; CHECK-NEXT:    fcmge p2.h, p0/z, z0.h, z2.h
-; CHECK-NEXT:    mov z2.d, #0x7fffffffffffffff
+; CHECK-NEXT:    fcmge p1.h, p0/z, z2.h, z1.h
+; CHECK-NEXT:    fcmge p2.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    mov z1.d, #0x7fffffffffffffff
 ; CHECK-NEXT:    fcmgt p3.h, p0/z, z0.h, z5.h
-; CHECK-NEXT:    fcvtzs z3.d, p1/m, z1.h
-; CHECK-NEXT:    fcmgt p1.h, p0/z, z1.h, z5.h
+; CHECK-NEXT:    fcvtzs z3.d, p1/m, z2.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z2.h, z5.h
 ; CHECK-NEXT:    fcvtzs z4.d, p2/m, z0.h
-; CHECK-NEXT:    fcmuo p2.h, p0/z, z1.h, z1.h
+; CHECK-NEXT:    fcmuo p2.h, p0/z, z2.h, z2.h
 ; CHECK-NEXT:    fcmuo p0.h, p0/z, z0.h, z0.h
-; CHECK-NEXT:    sel z0.d, p1, z2.d, z3.d
-; CHECK-NEXT:    sel z1.d, p3, z2.d, z4.d
+; CHECK-NEXT:    sel z0.d, p1, z1.d, z3.d
+; CHECK-NEXT:    sel z1.d, p3, z1.d, z4.d
 ; CHECK-NEXT:    mov z0.d, p2/m, #0 // =0x0
 ; CHECK-NEXT:    mov z1.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret

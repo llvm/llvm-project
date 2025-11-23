@@ -432,8 +432,8 @@ define double @test_pow_fast_f64integral_y(double %x, i32 %y.i) #0 {
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_readlane_b32 s30, v43, 12
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX9-NEXT:    v_readlane_b32 s30, v43, 12
 ; GFX9-NEXT:    v_readlane_b32 s31, v43, 13
 ; GFX9-NEXT:    v_readlane_b32 s53, v43, 11
 ; GFX9-NEXT:    v_readlane_b32 s52, v43, 10

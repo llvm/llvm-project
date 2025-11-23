@@ -469,10 +469,10 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i3
 ; GCN-NEXT:    v_mov_b32_e32 v1, v40
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; GCN-NEXT:    v_readlane_b32 s30, v42, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, sibling_call_i32_fastcc_i32_i32@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, sibling_call_i32_fastcc_i32_i32@rel32@hi+12
+; GCN-NEXT:    v_readlane_b32 s30, v42, 0
 ; GCN-NEXT:    v_readlane_b32 s31, v42, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s6, v42, 2
@@ -657,8 +657,8 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; FIJI-NEXT:    s_cbranch_execnz .LBB18_1
 ; FIJI-NEXT:  ; %bb.2:
 ; FIJI-NEXT:    s_mov_b64 exec, s[54:55]
-; FIJI-NEXT:    v_readlane_b32 s30, v40, 16
 ; FIJI-NEXT:    v_mov_b32_e32 v0, v4
+; FIJI-NEXT:    v_readlane_b32 s30, v40, 16
 ; FIJI-NEXT:    v_readlane_b32 s31, v40, 17
 ; FIJI-NEXT:    v_readlane_b32 s65, v40, 15
 ; FIJI-NEXT:    v_readlane_b32 s64, v40, 14
@@ -748,8 +748,8 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; HAWAII-NEXT:    s_cbranch_execnz .LBB18_1
 ; HAWAII-NEXT:  ; %bb.2:
 ; HAWAII-NEXT:    s_mov_b64 exec, s[54:55]
-; HAWAII-NEXT:    v_readlane_b32 s30, v40, 16
 ; HAWAII-NEXT:    v_mov_b32_e32 v0, v4
+; HAWAII-NEXT:    v_readlane_b32 s30, v40, 16
 ; HAWAII-NEXT:    v_readlane_b32 s31, v40, 17
 ; HAWAII-NEXT:    v_readlane_b32 s65, v40, 15
 ; HAWAII-NEXT:    v_readlane_b32 s64, v40, 14
@@ -839,8 +839,8 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; GFX9-NEXT:    s_cbranch_execnz .LBB18_1
 ; GFX9-NEXT:  ; %bb.2:
 ; GFX9-NEXT:    s_mov_b64 exec, s[54:55]
-; GFX9-NEXT:    v_readlane_b32 s30, v40, 16
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
+; GFX9-NEXT:    v_readlane_b32 s30, v40, 16
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 17
 ; GFX9-NEXT:    v_readlane_b32 s65, v40, 15
 ; GFX9-NEXT:    v_readlane_b32 s64, v40, 14

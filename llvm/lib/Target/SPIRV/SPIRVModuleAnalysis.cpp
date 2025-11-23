@@ -934,7 +934,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::UniformBufferArrayDynamicIndexing,
                     Capability::SampledImageArrayDynamicIndexing,
                     Capability::StorageBufferArrayDynamicIndexing,
-                    Capability::StorageImageArrayDynamicIndexing});
+                    Capability::StorageImageArrayDynamicIndexing,
+                    Capability::DerivativeControl});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -2148,6 +2149,12 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   }
+  case SPIRV::OpDPdxCoarse:
+  case SPIRV::OpDPdyCoarse: {
+    Reqs.addCapability(SPIRV::Capability::DerivativeControl);
+    break;
+  }
+
   default:
     break;
   }

@@ -455,10 +455,10 @@ define amdgpu_gfx void @test_call_void_func_void_preserves_s33(ptr addrspace(1) 
 ; GFX9-NEXT:    s_mov_b32 s4, s33
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[34:35]
 ; GFX9-NEXT:    s_mov_b32 s33, s4
-; GFX9-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use s33
 ; GFX9-NEXT:    ;;#ASMEND
+; GFX9-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 2
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 0
 ; GFX9-NEXT:    s_mov_b32 s32, s33
@@ -492,10 +492,10 @@ define amdgpu_gfx void @test_call_void_func_void_preserves_s33(ptr addrspace(1) 
 ; GFX10-NEXT:    s_mov_b32 s4, s33
 ; GFX10-NEXT:    s_swappc_b64 s[30:31], s[34:35]
 ; GFX10-NEXT:    s_mov_b32 s33, s4
-; GFX10-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ; use s33
 ; GFX10-NEXT:    ;;#ASMEND
+; GFX10-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX10-NEXT:    v_readlane_b32 s31, v40, 2
 ; GFX10-NEXT:    v_readlane_b32 s4, v40, 0
 ; GFX10-NEXT:    s_mov_b32 s32, s33
@@ -529,10 +529,10 @@ define amdgpu_gfx void @test_call_void_func_void_preserves_s33(ptr addrspace(1) 
 ; GFX11-NEXT:    s_mov_b32 s4, s33
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s33, s4
-; GFX11-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ; use s33
 ; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 2
 ; GFX11-NEXT:    v_readlane_b32 s4, v40, 0
 ; GFX11-NEXT:    s_mov_b32 s32, s33
@@ -571,10 +571,10 @@ define amdgpu_gfx void @test_call_void_func_void_preserves_s34(ptr addrspace(1) 
 ; GFX9-NEXT:    s_mov_b32 s34, external_void_func_void@abs32@lo
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[34:35]
 ; GFX9-NEXT:    s_mov_b32 s34, s4
-; GFX9-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use s34
 ; GFX9-NEXT:    ;;#ASMEND
+; GFX9-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 2
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 0
 ; GFX9-NEXT:    s_mov_b32 s32, s33
@@ -608,10 +608,10 @@ define amdgpu_gfx void @test_call_void_func_void_preserves_s34(ptr addrspace(1) 
 ; GFX10-NEXT:    s_mov_b32 s34, external_void_func_void@abs32@lo
 ; GFX10-NEXT:    s_swappc_b64 s[30:31], s[34:35]
 ; GFX10-NEXT:    s_mov_b32 s34, s4
-; GFX10-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ; use s34
 ; GFX10-NEXT:    ;;#ASMEND
+; GFX10-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX10-NEXT:    v_readlane_b32 s31, v40, 2
 ; GFX10-NEXT:    v_readlane_b32 s4, v40, 0
 ; GFX10-NEXT:    s_mov_b32 s32, s33
@@ -644,11 +644,11 @@ define amdgpu_gfx void @test_call_void_func_void_preserves_s34(ptr addrspace(1) 
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    s_mov_b32 s4, s34
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX11-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX11-NEXT:    s_mov_b32 s34, s4
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ; use s34
 ; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 2
 ; GFX11-NEXT:    v_readlane_b32 s4, v40, 0
 ; GFX11-NEXT:    s_mov_b32 s32, s33
@@ -1022,10 +1022,10 @@ define amdgpu_gfx void @callee_saved_sgpr_kernel() #1 {
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_mov_b32 s4, s40
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[34:35]
-; GFX9-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use s4
 ; GFX9-NEXT:    ;;#ASMEND
+; GFX9-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 2
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 0
 ; GFX9-NEXT:    s_mov_b32 s32, s33
@@ -1058,10 +1058,10 @@ define amdgpu_gfx void @callee_saved_sgpr_kernel() #1 {
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_mov_b32 s4, s40
 ; GFX10-NEXT:    s_swappc_b64 s[30:31], s[34:35]
-; GFX10-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ; use s4
 ; GFX10-NEXT:    ;;#ASMEND
+; GFX10-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX10-NEXT:    v_readlane_b32 s31, v40, 2
 ; GFX10-NEXT:    v_readlane_b32 s4, v40, 0
 ; GFX10-NEXT:    s_mov_b32 s32, s33
@@ -1094,10 +1094,10 @@ define amdgpu_gfx void @callee_saved_sgpr_kernel() #1 {
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    s_mov_b32 s4, s40
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX11-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ; use s4
 ; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 2
 ; GFX11-NEXT:    v_readlane_b32 s4, v40, 0
 ; GFX11-NEXT:    s_mov_b32 s32, s33

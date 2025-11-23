@@ -160,6 +160,18 @@ constexpr K firstbithigh_impl(T X) {
   return FBH;
 }
 
+template <typename T> constexpr T fwidth_impl(T input) {
+#if (__has_builtin(__builtin_spirv_fwidth))
+  return __builtin_spirv_fwidth(input);
+#else
+  T derivCoarseX = ddx_coarse(input);
+  derivCoarseX = abs(derivCoarseX);
+  T derivCoarseY = ddy_coarse(input);
+  derivCoarseY = abs(derivCoarseY);
+  return derivCoarseX + derivCoarseY;
+#endif
+}
+
 } // namespace __detail
 } // namespace hlsl
 

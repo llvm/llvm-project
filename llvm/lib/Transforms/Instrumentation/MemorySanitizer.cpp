@@ -6065,8 +6065,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     case Intrinsic::x86_avx2_phadd_w:
     case Intrinsic::x86_avx2_phsub_w:
-      // TODO: Shards = 2
-      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/1,
+      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/2,
                                       /*ReinterpretElemWidth=*/16);
       break;
 
@@ -6081,8 +6080,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     case Intrinsic::x86_avx2_phadd_d:
     case Intrinsic::x86_avx2_phsub_d:
-      // TODO: Shards = 2
-      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/1,
+      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/2,
                                       /*ReinterpretElemWidth=*/32);
       break;
 
@@ -6097,8 +6095,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     case Intrinsic::x86_avx2_phadd_sw:
     case Intrinsic::x86_avx2_phsub_sw:
-      // TODO: Shards = 2
-      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/1,
+      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/2,
                                       /*ReinterpretElemWidth=*/16);
       break;
 
@@ -6114,8 +6111,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx_hadd_ps_256:
     case Intrinsic::x86_avx_hsub_pd_256:
     case Intrinsic::x86_avx_hsub_ps_256:
-      // TODO: Shards = 2
-      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/1);
+      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/2);
       break;
 
     case Intrinsic::x86_avx_maskstore_ps:

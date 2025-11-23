@@ -31,7 +31,6 @@ handleFrom(const ast_matchers::internal::Matcher<RecordDecl> &IsAHandle,
 
 static ast_matchers::internal::Matcher<Stmt> handleFromTemporaryValue(
     const ast_matchers::internal::Matcher<RecordDecl> &IsAHandle) {
-
   const auto TemporaryExpr = anyOf(
       cxxBindTemporaryExpr(),
       cxxFunctionalCastExpr(

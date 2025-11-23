@@ -60,6 +60,11 @@ BranchProbability::getBranchProbability(uint64_t Numerator,
   return BranchProbability(Numerator >> Scale, Denominator);
 }
 
+BranchProbability BranchProbability::getBranchProbability(double Prob) {
+  assert(0 <= Prob && Prob <= 1 && "Probability must be between 0 and 1!");
+  return BranchProbability(std::round(Prob * D), D);
+}
+
 // If ConstD is not zero, then replace D by ConstD so that division and modulo
 // operations by D can be optimized, in case this function is not inlined by the
 // compiler.

@@ -507,12 +507,12 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
   case EmulateInstruction::eContextRelativeBranchImmediate: {
     if (context.GetInfoType() == EmulateInstruction::eInfoTypeISAAndImmediate &&
         context.info.ISAAndImmediate.unsigned_data32 > 0) {
-      m_forward_branch_offset =
-          context.info.ISAAndImmediateSigned.signed_data32;
+      m_forward_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeISAAndImmediateSigned &&
                context.info.ISAAndImmediateSigned.signed_data32 > 0) {
-      m_forward_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
+      m_forward_branch_offset =
+          context.info.ISAAndImmediateSigned.signed_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeImmediate &&
                context.info.unsigned_immediate > 0) {

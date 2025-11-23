@@ -111,6 +111,8 @@ co_invoke_fn co_invoke;
 // CIR-DAG: ![[VoidPromisse:.*]] = !cir.record<struct "folly::coro::Task<void>::promise_type" padded {!u8i}>
 // CIR-DAG: ![[IntPromisse:.*]] = !cir.record<struct "folly::coro::Task<int>::promise_type" padded {!u8i}>
 // CIR-DAG: ![[StdString:.*]] = !cir.record<struct "std::string" padded {!u8i}>
+// CIR-DAG: ![[SuspendAlways:.*]] = !cir.record<struct "std::suspend_always" padded {!u8i}>
+
 // CIR: module {{.*}} {
 // CIR-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !rec_folly3A3Acoro3A3Aco_invoke_fn
 
@@ -153,6 +155,33 @@ VoidTask silly_task() {
 
 // CIR: %[[RetObj:.*]] = cir.call @_ZN5folly4coro4TaskIvE12promise_type17get_return_objectEv(%[[VoidPromisseAddr]]) nothrow : {{.*}} -> ![[VoidTask]]
 // CIR: cir.store{{.*}} %[[RetObj]], %[[VoidTaskAddr]] : ![[VoidTask]]
+// Start a new scope for the actual codegen for co_await, create temporary allocas for
+// holding coroutine handle and the suspend_always struct.
+
+// CIR: cir.scope {
+// CIR:   %[[SuspendAlwaysAddr:.*]] = cir.alloca ![[SuspendAlways]], {{.*}} ["ref.tmp0"] {alignment = 1 : i64}
+
+// Effectively execute `coawait promise_type::initial_suspend()` by calling initial_suspend() and getting
+// the suspend_always struct to use for cir.await. Note that we return by-value since we defer ABI lowering
+// to later passes, same is done elsewhere.
+
+// CIR:   %[[Tmp0:.*]] = cir.call @_ZN5folly4coro4TaskIvE12promise_type15initial_suspendEv(%[[VoidPromisseAddr]])
+// CIR:   cir.store{{.*}} %[[Tmp0:.*]], %[[SuspendAlwaysAddr]]
+
+//
+// Here we start mapping co_await to cir.await.
+//
+
+// First regions `ready` has a special cir.yield code to veto suspension.
+
+// CIR:   cir.await(init, ready : {
+// CIR:     cir.condition({{.*}})
+// CIR:   }, suspend : {
+// CIR:     cir.yield
+// CIR:   }, resume : {
+// CIR:     cir.yield
+// CIR:   },)
+// CIR: }
 
 folly::coro::Task<int> byRef(const std::string& s) {
   co_return s.size();
@@ -172,3 +201,13 @@ folly::coro::Task<int> byRef(const std::string& s) {
 // CIR:    cir.store {{.*}} %[[LOAD]], %[[AllocaFnUse]] : !cir.ptr<![[StdString]]>, !cir.ptr<!cir.ptr<![[StdString]]>>
 // CIR:    %[[RetObj:.*]] = cir.call @_ZN5folly4coro4TaskIiE12promise_type17get_return_objectEv(%4) nothrow : {{.*}} -> ![[IntTask]]
 // CIR:    cir.store {{.*}} %[[RetObj]], %[[IntTaskAddr]] : ![[IntTask]]
+// CIR:    cir.scope {
+// CIR:      %[[SuspendAlwaysAddr:.*]] = cir.alloca ![[SuspendAlways]], {{.*}} ["ref.tmp0"] {alignment = 1 : i64}
+// CIR:      %[[Tmp0:.*]] = cir.call @_ZN5folly4coro4TaskIiE12promise_type15initial_suspendEv(%[[IntPromisseAddr]])
+// CIR:      cir.await(init, ready : {
+// CIR:        cir.condition({{.*}})
+// CIR:      }, suspend : {
+// CIR:        cir.yield
+// CIR:      }, resume : {
+// CIR:        cir.yield
+// CIR:      },)

@@ -576,7 +576,7 @@ LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return failure();
   }
   if (mlir::ShapedType::isDynamicShape(grid->getShape()) &&
-      getStaticShardedDimsOffsets().size() > 0) {
+      !getStaticShardedDimsOffsets().empty()) {
     return emitError() << "sharded dims offsets are not allowed for "
                           "device grids with dynamic shape.";
   }

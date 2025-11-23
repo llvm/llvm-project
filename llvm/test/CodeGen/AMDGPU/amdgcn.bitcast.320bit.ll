@@ -16815,8 +16815,8 @@ define inreg <40 x i8> @bitcast_v20i16_to_v40i8_scalar(<20 x i16> inreg %a, i32 
 ; SI-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 36, v0
 ; SI-NEXT:    v_mov_b32_e32 v1, s4
-; SI-NEXT:    v_readlane_b32 s30, v8, 9
 ; SI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+; SI-NEXT:    v_readlane_b32 s30, v8, 9
 ; SI-NEXT:    v_readlane_b32 s31, v8, 10
 ; SI-NEXT:    v_readlane_b32 s50, v8, 8
 ; SI-NEXT:    v_readlane_b32 s49, v8, 7

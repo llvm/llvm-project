@@ -40,6 +40,7 @@ add_flangrt_unittest(RuntimeTests
   Time.cpp
   TemporaryStack.cpp
   Transformational.cpp
+  TypeCode.cpp
 
   LINK_LIBS
     flang_rt.runtime.unittest

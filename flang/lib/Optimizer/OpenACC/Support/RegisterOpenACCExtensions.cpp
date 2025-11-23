@@ -49,6 +49,9 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         PartialEntityAccessModel<fir::CoordinateOp>>(*ctx);
     fir::DeclareOp::attachInterface<PartialEntityAccessModel<fir::DeclareOp>>(
         *ctx);
+
+    fir::AddrOfOp::attachInterface<AddressOfGlobalModel>(*ctx);
+    fir::GlobalOp::attachInterface<GlobalVariableModel>(*ctx);
   });
 
   // Register HLFIR operation interfaces

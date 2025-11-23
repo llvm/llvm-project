@@ -666,5 +666,45 @@ smoothstep(__detail::HLSL_FIXED_VECTOR<float, N> Min,
   return __detail::smoothstep_vec_impl(Min, Max, X);
 }
 
+//===----------------------------------------------------------------------===//
+// fwidth builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T fwidth(T x)
+/// \brief Computes the sum of the absolute values of the partial derivatives
+/// with regard to the x and y screen space coordinates.
+/// \param x [in] The floating-point scalar or vector to process.
+///
+/// The return value is a floating-point scalar or vector where each element
+/// holds the computation of the matching element in the input.
+
+template <typename T>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> fwidth(T input) {
+  return __detail::fwidth_impl(input);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+fwidth(T input) {
+  return __detail::fwidth_impl(input);
+}
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::HLSL_FIXED_VECTOR<half, N> fwidth(
+    __detail::HLSL_FIXED_VECTOR<half, N> input) {
+  return __detail::fwidth_impl(input);
+}
+
+template <int N>
+const inline __detail::HLSL_FIXED_VECTOR<float, N>
+fwidth(__detail::HLSL_FIXED_VECTOR<float, N> input) {
+  return __detail::fwidth_impl(input);
+}
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

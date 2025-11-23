@@ -7,8 +7,8 @@ Diagnoses every integer to pointer cast.
 
 While casting an (integral) pointer to an integer is obvious - you just get
 the integral value of the pointer, casting an integer to an (integral) pointer
-is deceivingly different. While you will get a pointer with that integral value,
-if you got that integral value via a pointer-to-integer cast originally,
+is deceivingly different. While you will get a pointer with that integral
+value, if you got that integral value via a pointer-to-integer cast originally,
 the new pointer will lack the provenance information from the original pointer.
 
 So while (integral) pointer to integer casts are effectively no-ops,

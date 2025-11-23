@@ -979,7 +979,7 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v0
 ; GCN-NEXT:    s_mov_b64 s[8:9], 0
-; GCN-NEXT:    v_mov_b32_e32 v7, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0
 ; GCN-NEXT:    s_branch .LBB5_3
 ; GCN-NEXT:  .LBB5_1: ; %Flow
@@ -1002,36 +1002,36 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:  ; %bb.4: ; %bb2
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GCN-NEXT:    v_mov_b32_e32 v8, v7
-; GCN-NEXT:    v_mov_b32_e32 v2, v7
-; GCN-NEXT:    v_mov_b32_e32 v6, v7
+; GCN-NEXT:    v_mov_b32_e32 v1, v0
+; GCN-NEXT:    v_mov_b32_e32 v2, v0
+; GCN-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[10:11], s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB5_2
 ; GCN-NEXT:  ; %bb.5: ; %bb4
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
-; GCN-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GCN-NEXT:    v_mov_b32_e32 v8, v7
-; GCN-NEXT:    v_mov_b32_e32 v2, v7
-; GCN-NEXT:    v_mov_b32_e32 v6, v7
+; GCN-NEXT:    buffer_load_dword v3, v0, s[0:3], 0 offen
+; GCN-NEXT:    v_mov_b32_e32 v1, v0
+; GCN-NEXT:    v_mov_b32_e32 v2, v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_cmp_gt_f32_e64 s[6:7], 0, v0
+; GCN-NEXT:    v_cmp_gt_f32_e64 s[6:7], 0, v3
+; GCN-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[12:13], s[6:7]
 ; GCN-NEXT:    s_cbranch_execz .LBB5_1
 ; GCN-NEXT:  ; %bb.6: ; %bb8
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
-; GCN-NEXT:    v_mov_b32_e32 v8, v7
-; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GCN-NEXT:    ; implicit-def: $vgpr3_vgpr4_vgpr5_vgpr6
+; GCN-NEXT:    v_mov_b32_e32 v1, v0
+; GCN-NEXT:    ; implicit-def: $vgpr2
+; GCN-NEXT:    ; implicit-def: $vgpr3
 ; GCN-NEXT:    s_branch .LBB5_1
 ; GCN-NEXT:  .LBB5_7: ; %bb12
 ; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]
-; GCN-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v0, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;

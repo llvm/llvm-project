@@ -18,8 +18,8 @@ MyObj* return_local_addr() {
   return p;
 // CHECK:   Use ([[O_P]] (Decl: p), Read)
 // CHECK:   OriginFlow (Dest: [[O_RET_VAL:[0-9]+]] (Expr: ImplicitCastExpr), Src: [[O_P]] (Decl: p))
-// CHECK:   ReturnOfOrigin ([[O_RET_VAL]] (Expr: ImplicitCastExpr))
 // CHECK:   Expire ([[L_X]] (Path: x))
+// CHECK:   OriginEscapes ([[O_RET_VAL]] (Expr: ImplicitCastExpr))
 }
 
 
@@ -49,8 +49,8 @@ MyObj* assign_and_return_local_addr() {
   return ptr2;
 // CHECK:   Use ([[O_PTR2]] (Decl: ptr2), Read)
 // CHECK:   OriginFlow (Dest: [[O_RET_VAL:[0-9]+]] (Expr: ImplicitCastExpr), Src: [[O_PTR2]] (Decl: ptr2))
-// CHECK:   ReturnOfOrigin ([[O_RET_VAL]] (Expr: ImplicitCastExpr))
 // CHECK:   Expire ([[L_Y]] (Path: y))
+// CHECK:   OriginEscapes ([[O_RET_VAL]] (Expr: ImplicitCastExpr))
 }
 
 // Return of Non-Pointer Type

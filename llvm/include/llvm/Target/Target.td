@@ -1579,6 +1579,99 @@ def CONVERGENCECTRL_GLUE : StandardPseudoInstruction {
 }
 }
 
+/// Allow a target to replace the instruction definition of a
+/// StandardPseudoInstruction. A target should only define one
+/// instance of this per instruction.
+///
+/// This is intended to allow targets to specify the register class
+/// used for pointers. It should not be used to change the fundamental
+/// operand structure (e.g., this should not add or remove operands,
+/// or change the operand types).
+class TargetSpecializedStandardPseudoInstruction<
+  StandardPseudoInstruction base_inst> : Instruction {
+
+  StandardPseudoInstruction Instruction = base_inst;
+  let OutOperandList = base_inst.OutOperandList;
+  let InOperandList = base_inst.InOperandList;
+
+  // TODO: Copy everything
+  let usesCustomInserter = base_inst.usesCustomInserter;
+  let hasSideEffects = base_inst.hasSideEffects;
+  let mayLoad = base_inst.mayLoad;
+  let mayStore = base_inst.mayStore;
+  let isTerminator = base_inst.isTerminator;
+  let isBranch = base_inst.isBranch;
+  let isIndirectBranch = base_inst.isIndirectBranch;
+  let isEHScopeReturn = base_inst.isEHScopeReturn;
+  let isReturn = base_inst.isReturn;
+  let isCall = base_inst.isCall;
+  let hasCtrlDep = base_inst.hasCtrlDep;
+  let isReMaterializable = base_inst.isReMaterializable;
+  let isMeta = base_inst.isMeta;
+  let Size = base_inst.Size;
+  let isAsCheapAsAMove = base_inst.isAsCheapAsAMove;
+  let isPseudo = true;
+  let hasNoSchedulingInfo = true;
+  let isNotDuplicable = base_inst.isNotDuplicable;
+  let isConvergent = base_inst.isConvergent;
+  let hasExtraSrcRegAllocReq = base_inst.hasExtraSrcRegAllocReq;
+  let hasExtraDefRegAllocReq = base_inst.hasExtraDefRegAllocReq;
+}
+
+// All pseudo instructions which need a pointer register class, which
+// should be specialized by a target.
+defvar PseudosWithPtrOps = [
+  LOAD_STACK_GUARD,
+  PREALLOCATED_ARG,
+  PATCHABLE_EVENT_CALL,
+  PATCHABLE_TYPED_EVENT_CALL
+];
+
+
+/// Replace PointerLikeRegClass operands in OperandList with new_rc.
+class RemapPointerOperandList<dag OperandList, RegisterClassLike new_rc> {
+  // Collect the set of names so we can query and rewrite them.
+  list<string> op_names = !foreach(i, !range(!size(OperandList)),
+                                      !getdagname(OperandList, i));
+
+  // Beautiful language. This would be a lot easier if !getdagarg
+  // didn't require a specific type. We can't just collect a list of
+  // the operand values and reconstruct the dag, since there isn't a
+  // common base class for all the field kinds used in
+  // pseudoinstruction definitions; therefore everything must be
+  // maintained as a dag, so use a foldl. Additionally, ? doesn't
+  // evaluate as false so we get even more noise.
+  dag ret =
+    !foldl(OperandList, op_names, acc, name,
+      !cond(
+        !initialized(!getdagarg<PointerLikeRegClass>(OperandList, name))
+          : !setdagarg(acc, name, new_rc),
+        !initialized(!getdagarg<unknown_class>(OperandList, name)) : acc,
+        !initialized(!getdagarg<DAGOperand>(OperandList, name)) : acc
+      )
+    );
+}
+
+/// Define an override for a pseudoinstruction which uses a pointer
+/// register class, specialized to the target's pointer type.
+class RemapPointerOperands<StandardPseudoInstruction inst,
+                           RegisterClassLike new_rc> :
+  TargetSpecializedStandardPseudoInstruction<inst> {
+  let OutOperandList =
+    RemapPointerOperandList<inst.OutOperandList, new_rc>.ret;
+  let InOperandList =
+    RemapPointerOperandList<inst.InOperandList, new_rc>.ret;
+}
+
+/// Helper to replace all pseudoinstructions using pointers to a
+/// target register class. Most targets should use this.
+multiclass RemapAllTargetPseudoPointerOperands<
+  RegisterClassLike default_ptr_rc> {
+  foreach inst = PseudosWithPtrOps in {
+    def : RemapPointerOperands<inst, default_ptr_rc>;
+  }
+}
+
 // Generic opcodes used in GlobalISel.
 include "llvm/Target/GenericOpcodes.td"
 

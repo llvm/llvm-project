@@ -104,7 +104,6 @@ void TaggedUnionMemberCountCheck::storeOptions(
 }
 
 void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
-
   auto NotFromSystemHeaderOrStdNamespace =
       unless(anyOf(isExpansionInSystemHeader(), isInStdNamespace()));
 

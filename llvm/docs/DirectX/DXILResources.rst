@@ -277,7 +277,7 @@ Examples:
 Accessing Resources as Memory
 -----------------------------
 
-*relevant types: Buffers and Textures*
+*relevant types: Buffers, Textures, and CBuffers*
 
 Loading and storing from resources is generally represented in LLVM using
 operations on memory that is only accessible via a handle object. Given a
@@ -302,14 +302,14 @@ stores are described later in this document.
      -
      - Pointer
      - A pointer to an object in the buffer
-   * - ``%buffer``
+   * - ``%resource``
      - 0
-     - ``target(dx.TypedBuffer, ...)``
-     - The buffer to access
+     - Any buffer, texture, or cbuffer type
+     - The resource to access
    * - ``%index``
      - 1
      - ``i32``
-     - Index into the buffer
+     - Index into the resource
 
 Examples:
 

@@ -13,7 +13,6 @@
 def XSfmmVTypeAsmOperand : AsmOperandClass {
   let Name = "XSfmmVType";
   let ParserMethod = "parseXSfmmVType";
-  let DiagnosticType = "InvalidXSfmmVType";
   let RenderMethod = "addVTypeIOperands";
 }
 
