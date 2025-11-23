@@ -111,8 +111,10 @@ set(host_sources
 )
 
 if (LLVM_TARGET_TRIPLE MATCHES "^ppc|^powerpc")
-  list(APPEND host_sources
+  list(APPEND intrinsics_sources
     __ppc_types.f90
+  )
+  list(APPEND host_sources
     __ppc_intrinsics.f90
     mma.f90
   )
@@ -229,7 +231,7 @@ if (NOT WIN32)
   # CMake ignores intrinsic USE dependencies
   # CMake has an option Fortran_BUILDING_INSTRINSIC_MODULES/Fortran_BUILDING_INTRINSIC_MODULES
   # to disable this behavior, unfortunately it does not work with Ninja
-  # (https://gitlab.kitware.com/cmake/cmake/-/issues/26803) 
+  # (https://gitlab.kitware.com/cmake/cmake/-/issues/26803)
   # As a workaround, we build those intrinsic modules first such that the main
   # runtime can depend on it.
   add_flangrt_library(flang_rt.intrinsics.obj OBJECT
