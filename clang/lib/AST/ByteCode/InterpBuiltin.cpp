@@ -2785,8 +2785,8 @@ static bool interp__builtin_ia32_pclmulqdq(InterpState &S, CodePtr OpPC,
 
     // Perform carry-less multiplication (polynomial multiplication in GF(2^64))
     // This multiplies two 64-bit values to produce a 128-bit result
-    APInt AVal = A.getValue().zextOrTrunc(64);
-    APInt BVal = B.getValue().zextOrTrunc(64);
+    APInt AVal = A.extOrTrunc(64);
+    APInt BVal = B.extOrTrunc(64);
     APInt Result(128, 0);
 
     // For each bit in A, if set, XOR B shifted left by that bit position
