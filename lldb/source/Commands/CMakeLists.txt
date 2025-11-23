@@ -60,6 +60,7 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
     lldbVersion
   CLANG_LIBS
     clangFrontend
+    clangSerialization
   )
 
 add_dependencies(lldbCommands LLDBOptionsGen)

@@ -164,7 +164,7 @@ public:
   VocabStorage() = default;
 
   /// Create a VocabStorage with pre-organized section data
-  VocabStorage(std::vector<std::vector<Embedding>> &&SectionData);
+  LLVM_ABI VocabStorage(std::vector<std::vector<Embedding>> &&SectionData);
 
   VocabStorage(VocabStorage &&) = default;
   VocabStorage &operator=(VocabStorage &&) = default;

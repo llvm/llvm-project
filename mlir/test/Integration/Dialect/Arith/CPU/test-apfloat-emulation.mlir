@@ -1,3 +1,7 @@
+// REQUIRES: system-linux
+// TODO: Run only on Linux until we figure out how to build
+// mlir_apfloat_wrappers in a platform-independent way.
+
 // Case 1: All floating-point arithmetics is lowered through APFloat.
 // RUN: mlir-opt %s --convert-arith-to-apfloat --convert-to-llvm | \
 // RUN: mlir-runner -e entry --entry-point-result=void \
