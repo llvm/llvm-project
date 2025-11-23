@@ -13,16 +13,17 @@
 //   and shall satisfy the Cpp17Destructible requirements.
 // Note: array types do not satisfy the Cpp17Destructible requirements.
 
+#include <cassert>
 #include <optional>
 #include <type_traits>
-#include <cassert>
 
 #include "test_macros.h"
 
-struct NonDestructible { ~NonDestructible() = delete; };
+struct NonDestructible {
+  ~NonDestructible() = delete;
+};
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
 #if TEST_STD_VER >= 26
     std::optional<int&&>
@@ -38,18 +39,26 @@ int main(int, char**)
   }
 
   {
-    std::optional<               std::in_place_t> o1; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with in_place_t is ill-formed}}
-    std::optional<const          std::in_place_t> o2; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with in_place_t is ill-formed}}
-    std::optional<      volatile std::in_place_t> o3; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with in_place_t is ill-formed}}
-    std::optional<const volatile std::in_place_t> o4; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with in_place_t is ill-formed}}
+    std::optional< std::in_place_t>
+        o1; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with in_place_t is ill-formed}}
+    std::optional<const std::in_place_t>
+        o2; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with in_place_t is ill-formed}}
+    std::optional< volatile std::in_place_t>
+        o3; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with in_place_t is ill-formed}}
+    std::optional<const volatile std::in_place_t>
+        o4; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with in_place_t is ill-formed}}
   }
 
-    {
-    std::optional<               std::nullopt_t> o1; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with nullopt_t is ill-formed}}
-    std::optional<const          std::nullopt_t> o2; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with nullopt_t is ill-formed}}
-    std::optional<      volatile std::nullopt_t> o3; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with nullopt_t is ill-formed}}
-    std::optional<const volatile std::nullopt_t> o4; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with nullopt_t is ill-formed}}
-    }
+  {
+    std::optional< std::nullopt_t>
+        o1; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with nullopt_t is ill-formed}}
+    std::optional<const std::nullopt_t>
+        o2; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with nullopt_t is ill-formed}}
+    std::optional< volatile std::nullopt_t>
+        o3; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with nullopt_t is ill-formed}}
+    std::optional<const volatile std::nullopt_t>
+        o4; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with nullopt_t is ill-formed}}
+  }
 
-    return 0;
+  return 0;
 }
