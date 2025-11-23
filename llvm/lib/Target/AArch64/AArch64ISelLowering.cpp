@@ -14726,8 +14726,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   if (isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::ZIP1 : AArch64ISD::ZIP2;
     return DAG.getNode(Opc, DL, V1.getValueType(),
-                       (OperandOrder == 0) ? V1 : V2,
-                       (OperandOrder == 0) ? V2 : V1);
+                       OperandOrder == 0 ? V1 : V2,
+                       OperandOrder == 0 ? V2 : V1);
   }
   if (isUZPMask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
