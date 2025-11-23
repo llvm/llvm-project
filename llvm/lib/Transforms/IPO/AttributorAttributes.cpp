@@ -75,6 +75,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <numeric>
 #include <optional>
@@ -13788,7 +13789,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     int64_t CurrentClusterStart = get<0>(Intervals[0]);
     int64_t CurrentClusterEnd = get<1>(Intervals[0]);
 
-    for (uint I = 1; I < Intervals.size(); I++) {
+    for (size_t I = 1; I < Intervals.size(); I++) {
       if (get<0>(Intervals[I]) <= CurrentClusterEnd) {
         CurrentClusterEnd = std::max(CurrentClusterEnd, get<1>(Intervals[I]));
       } else {
