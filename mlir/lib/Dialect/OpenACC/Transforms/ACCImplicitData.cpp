@@ -571,7 +571,7 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
                                          /*structured=*/true, /*implicit=*/true,
                                          accSupport.getVariableName(var));
       newDataOp->setAttr(acc::getFromDefaultClauseAttrName(),
-                         builder.getBoolAttr(true));
+                         builder.getUnitAttr());
     } else {
       auto copyinOp =
           acc::CopyinOp::create(builder, loc, var,
