@@ -133,7 +133,7 @@ class counting_semaphore {
 public:
   static_assert(__least_max_value >= 0, "The least maximum value must be a positive number");
 
-  static constexpr ptrdiff_t max() noexcept { return __least_max_value; }
+  [[nodiscard]] static constexpr ptrdiff_t max() noexcept { return __least_max_value; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit counting_semaphore(ptrdiff_t __count) : __semaphore_(__count) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
