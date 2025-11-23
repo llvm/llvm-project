@@ -39,9 +39,9 @@ enum ControlFlowKind {
 
 /// Configuration for fall-through diagnostics
 struct CheckFallThroughDiagnostics {
-  unsigned diagFallThrough = 0;
-  unsigned diagReturn = 0;
-  unsigned diagFallThroughAttr = 0;
+  unsigned diagFallThroughHasNoReturn = 0;
+  unsigned diagFallThroughReturnsNonVoid = 0;
+  unsigned diagNeverFallThroughOrReturn = 0;
   unsigned funKind = 0;
   SourceLocation funcLoc;
 

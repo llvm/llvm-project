@@ -1,4 +1,4 @@
-#include "clang/CIR/Sema/FallThroughWarning.h"
+#include "clang/CIR/Analysis/FallThroughWarning.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
@@ -6,6 +6,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
@@ -13,6 +14,36 @@ using namespace cir;
 using namespace clang;
 
 namespace clang {
+
+//===----------------------------------------------------------------------===//
+// Helper function to lookup a Decl by name from ASTContext
+//===----------------------------------------------------------------------===//
+
+/// Lookup a declaration by name in the translation unit.
+/// \param Context The ASTContext to search in
+/// \param Name The name of the declaration to find
+/// \return The found Decl, or nullptr if not found
+
+/// WARN: I have to say, we only use this because a lot of the time, attribute
+/// that we might need are not port to CIR currently so this function is
+/// basically a crutch for that
+static Decl *getDeclByName(ASTContext &context, StringRef name) {
+  // Get the identifier for the name
+  IdentifierInfo *ii = &context.Idents.get(name);
+
+  // Create a DeclarationName from the identifier
+  DeclarationName dName(ii);
+
+  // Lookup in the translation unit
+  TranslationUnitDecl *tu = context.getTranslationUnitDecl();
+  DeclContext::lookup_result result = tu->lookup(dName);
+
+  // Return the first match, or nullptr if not found
+  if (result.empty())
+    return nullptr;
+
+  return result.front();
+}
 
 //===----------------------------------------------------------------------===//
 // Check for missing return value.
@@ -41,8 +72,11 @@ bool CheckFallThroughDiagnostics::checkDiagnostics(DiagnosticsEngine &d,
 void FallThroughWarningPass::checkFallThroughForFuncBody(
     Sema &s, cir::FuncOp cfg, QualType blockType,
     const CheckFallThroughDiagnostics &cd) {
-
   llvm::errs() << "Hello world, you're in CIR sema analysis\n";
+
+  auto *d = getDeclByName(s.getASTContext(), cfg.getName());
+  assert(d && "we need non null decl");
+
   bool returnsVoid = false;
   bool hasNoReturn = false;
 
@@ -65,7 +99,25 @@ void FallThroughWarningPass::checkFallThroughForFuncBody(
 
   // cpu_dispatch functions permit empty function bodies for ICC compatibility.
   // TODO: Do we have isCPUDispatchMultiVersion?
-  checkFallThrough(cfg);
+
+  switch (ControlFlowKind fallThroughType = checkFallThrough(cfg)) {
+  case UnknownFallThrough:
+  case MaybeFallThrough:
+  case AlwaysFallThrough:
+    if (hasNoReturn && cd.diagFallThroughHasNoReturn) {
+
+    } else if (!returnsVoid && cd.diagFallThroughReturnsNonVoid) {
+
+    }
+    break;
+  case NeverFallThroughOrReturn:
+    if (returnsVoid && !hasNoReturn && cd.diagNeverFallThroughOrReturn) {
+    }
+    break;
+
+  case NeverFallThrough: {
+  } break;
+  }
 }
 
 mlir::DenseSet<mlir::Block *>
