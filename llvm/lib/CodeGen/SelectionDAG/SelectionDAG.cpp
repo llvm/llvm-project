@@ -3956,6 +3956,76 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = Known.trunc(BitWidth);
     break;
   }
+  case ISD::TRUNCATE_SSAT_S: {
+      // Pass through DemandedElts to the recursive call
+      KnownBits InputKnown = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+      unsigned InputBits = InputKnown.getBitWidth();
+
+      APInt MinInRange = APInt::getSignedMinValue(BitWidth).sext(InputBits);
+      APInt MaxInRange = APInt::getSignedMaxValue(BitWidth).sext(InputBits);
+      APInt InputMin = InputKnown.getSignedMinValue();
+      APInt InputMax = InputKnown.getSignedMaxValue();
+
+      if (InputMin.sge(MinInRange) && InputMax.sle(MaxInRange)) {
+        Known = InputKnown.trunc(BitWidth);
+      } else if (InputMax.slt(MinInRange)) {
+        Known.makeConstant(APInt::getSignedMinValue(BitWidth));
+      } else if (InputMin.sgt(MaxInRange)) {
+        Known.makeConstant(APInt::getSignedMaxValue(BitWidth));
+      } else {
+        Known.resetAll();
+        if (InputKnown.isNegative()) {
+          Known.makeNegative();
+          Known.Zero = InputKnown.Zero.trunc(BitWidth);
+          Known.Zero.clearSignBit();
+        } else if (InputKnown.isNonNegative()) {
+          Known.makeNonNegative();
+          Known.One = InputKnown.One.trunc(BitWidth);
+        }
+      }
+      break;
+  }
+  case ISD::TRUNCATE_SSAT_U: {
+    // Signed -> Unsigned saturating truncation
+    KnownBits InputKnown = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    unsigned InputBits = InputKnown.getBitWidth();
+
+    APInt MaxInRange = APInt::getAllOnes(BitWidth).zext(InputBits);
+    APInt InputMin = InputKnown.getSignedMinValue();
+    APInt InputMax = InputKnown.getSignedMaxValue();
+
+    if (InputKnown.isNegative()) {
+      Known.setAllZero();
+    } else if (InputMin.isNonNegative() && InputMax.ule(MaxInRange)) {
+      Known = InputKnown.trunc(BitWidth);
+    } else if (InputMin.isNonNegative() && InputMin.ugt(MaxInRange)) {
+      Known.setAllOnes();
+    } else {
+      // Mixed positive/negative, or positive but might saturate.
+      // We can't assume much here.
+      Known.resetAll();
+    }
+    break;
+  }
+  case ISD::TRUNCATE_USAT_U: {
+    // Unsigned -> Unsigned saturating truncation
+    KnownBits InputKnown = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    unsigned InputBits = InputKnown.getBitWidth();
+
+    APInt MaxInRange = APInt::getLowBitsSet(InputBits, BitWidth);
+    APInt InputMax = InputKnown.getMaxValue();
+    APInt InputMin = InputKnown.getMinValue();
+
+    if (InputMax.ule(MaxInRange)) {
+      Known = InputKnown.trunc(BitWidth);
+    } else if (InputMin.ugt(MaxInRange)) {
+      Known.setAllOnes();
+    } else {
+      Known.resetAll();
+      Known.One = InputKnown.One.trunc(BitWidth);
+    }
+    break;
+  }
   case ISD::AssertZext: {
     EVT VT = cast<VTSDNode>(Op.getOperand(1))->getVT();
     APInt InMask = APInt::getLowBitsSet(BitWidth, VT.getSizeInBits());
@@ -5664,8 +5734,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FP_EXTEND:
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
-  case ISD::TRUNCATE_SSAT_U:
   case ISD::TRUNCATE_SSAT_S:
+  case ISD::TRUNCATE_SSAT_U:
   case ISD::TRUNCATE_USAT_U:
     // No poison except from flags (which is handled above)
     return false;
