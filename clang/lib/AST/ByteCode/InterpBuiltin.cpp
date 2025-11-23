@@ -2780,13 +2780,13 @@ static bool interp__builtin_ia32_pclmulqdq(InterpState &S, CodePtr OpPC,
     });
 
     // Select the appropriate 64-bit values based on imm8
-    APSInt A = SelectUpperA ? A1 : A0;
-    APSInt B = SelectUpperB ? B1 : B0;
+    APInt A = SelectUpperA ? A1 : A0;
+    APInt B = SelectUpperB ? B1 : B0;
 
     // Perform carry-less multiplication (polynomial multiplication in GF(2^64))
     // This multiplies two 64-bit values to produce a 128-bit result
-    APInt AVal = static_cast<const APInt &>(A).zextOrTrunc(64);
-    APInt BVal = static_cast<const APInt &>(B).zextOrTrunc(64);
+    APInt AVal = A.zextOrTrunc(64);;
+    APInt BVal = B.zextOrTrunc(64);
     APInt Result(128, 0);
 
     // For each bit in A, if set, XOR B shifted left by that bit position
