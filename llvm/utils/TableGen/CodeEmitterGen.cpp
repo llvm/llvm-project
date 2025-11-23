@@ -103,7 +103,7 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
                                              const std::string &VarName,
                                              std::string &Case,
                                              std::string &BitOffsetCase) {
-  CodeGenInstruction &CGI = Target.getInstruction(R);
+  const CodeGenInstruction &CGI = Target.getInstruction(R);
 
   // Determine if VarName actually contributes to the Inst encoding.
   int Bit = BI->getNumBits() - 1;
