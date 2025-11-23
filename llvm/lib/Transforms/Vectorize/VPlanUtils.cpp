@@ -185,7 +185,8 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
                                      all_of(Rep->operands(), isSingleScalar));
   }
   if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe,
-          VPWidenSelectRecipe>(VPV))
+          VPWidenSelectRecipe, VPVectorPointerRecipe, VPVectorEndPointerRecipe>(
+          VPV))
     return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
     return preservesUniformity(WidenR->getOpcode()) &&
