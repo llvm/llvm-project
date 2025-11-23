@@ -2755,8 +2755,8 @@ static bool interp__builtin_ia32_pclmulqdq(InterpState &S, CodePtr OpPC,
 
   // Extract imm8 argument
   APSInt Imm8 = popToAPSInt(S, Call->getArg(2));
-  bool SelectUpperA = (Imm8.getZExtValue() & 0x01) != 0;
-  bool SelectUpperB = (Imm8.getZExtValue() & 0x10) != 0;
+  bool SelectUpperA = (Imm8 & 0x01) != 0;
+  bool SelectUpperB = (Imm8 & 0x10) != 0;
 
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
