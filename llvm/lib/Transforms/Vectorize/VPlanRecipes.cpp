@@ -50,8 +50,13 @@ bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
-  case VPInstructionSC:
-    return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
+  case VPInstructionSC: {
+    auto *VPI = cast<VPInstruction>(this);
+    // Loads read from memory but don't write to memory.
+    if (VPI->getOpcode() == Instruction::Load)
+      return false;
+    return VPI->opcodeMayReadOrWriteFromMemory();
+  }
   case VPInterleaveEVLSC:
   case VPInterleaveSC:
     return cast<VPInterleaveBase>(this)->getNumStoreOperands() > 0;
@@ -1278,6 +1283,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return false;
   switch (getOpcode()) {
+  case Instruction::GetElementPtr:
   case Instruction::ExtractElement:
   case Instruction::Freeze:
   case Instruction::FCmp:
