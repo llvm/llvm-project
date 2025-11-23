@@ -21,14 +21,14 @@ define void @divergent_i1_phi_used_outside_loop(float %val, float %pre.cond.val,
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v1, s6
 ; GFX10-NEXT:    s_mov_b32 s8, exec_lo
-; GFX10-NEXT:    s_mov_b32 s9, s5
 ; GFX10-NEXT:    s_add_i32 s6, s6, 1
-; GFX10-NEXT:    s_xor_b32 s5, s5, s8
+; GFX10-NEXT:    s_xor_b32 s8, s5, s8
 ; GFX10-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v1, v0
 ; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX10-NEXT:    s_andn2_b32 s7, s7, exec_lo
-; GFX10-NEXT:    s_and_b32 s8, exec_lo, s9
-; GFX10-NEXT:    s_or_b32 s7, s7, s8
+; GFX10-NEXT:    s_and_b32 s9, exec_lo, s5
+; GFX10-NEXT:    s_mov_b32 s5, s8
+; GFX10-NEXT:    s_or_b32 s7, s7, s9
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX10-NEXT:  ; %bb.2: ; %exit
