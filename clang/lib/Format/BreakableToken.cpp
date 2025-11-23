@@ -46,7 +46,6 @@ resolveCommentSpaceMode(CommentKind Kind,
     return GeneralMode;
   case CommentKind::Parameter:
     return ParamMode;
-
   case CommentKind::DocString:
     return FormatStyle::CommentSpaceMode::Leave;
   }
@@ -80,7 +79,7 @@ static void applySpaceInBlockComment(const FormatToken &Tok,
                                          /*Newlines=*/0, /*Spaces=*/0);
   };
 
-  if (Body.find_first_not_of(Blanks) == StringRef::npos) {
+  if (!lineContainsContent(Body)) {
     if (OpeningMode == FormatStyle::CommentSpaceMode::Never ||
         ClosingMode == FormatStyle::CommentSpaceMode::Never) {
       applyReplacement(2, Body.size(), "");
