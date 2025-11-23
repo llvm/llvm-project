@@ -144,7 +144,8 @@ static rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
     return rpc::RPC_ERROR;
 }
 
-static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer) {
+static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer,
+                             bool &ClientInUse) {
   uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
   rpc::Server Server(NumPorts, Buffer);
@@ -153,6 +154,7 @@ static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer) {
   if (!Port)
     return rpc::RPC_SUCCESS;
 
+  ClientInUse = true;
   rpc::Status Status =
       handleOffloadOpcodes(Device, *Port, Device.getWarpSize());
 
@@ -160,7 +162,6 @@ static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer) {
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
     Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port,
                                                          Device.getWarpSize());
-
   Port->close();
 
   return Status;
@@ -183,7 +184,11 @@ void RPCServerTy::ServerThread::shutDown() {
 }
 
 void RPCServerTy::ServerThread::run() {
+  static constexpr auto IdleTime = std::chrono::microseconds(25);
+  static constexpr auto IdleSleep = std::chrono::microseconds(250);
   std::unique_lock<decltype(Mutex)> Lock(Mutex);
+
+  auto LastUse = std::chrono::steady_clock::now();
   for (;;) {
     CV.wait(Lock, [&]() {
       return NumUsers.load(std::memory_order_acquire) > 0 ||
@@ -194,15 +199,25 @@ void RPCServerTy::ServerThread::run() {
       return;
 
     Lock.unlock();
+    bool ClientInUse = false;
     while (NumUsers.load(std::memory_order_relaxed) > 0 &&
            Running.load(std::memory_order_relaxed)) {
+
+      // Suspend this thread briefly if there is no current work.
+      auto Now = std::chrono::steady_clock::now();
+      if (!ClientInUse && Now - LastUse >= IdleTime)
+        std::this_thread::sleep_for(IdleSleep);
+      else if (ClientInUse)
+        LastUse = Now;
+
+      ClientInUse = false;
       std::lock_guard<decltype(Mutex)> Lock(BufferMutex);
       for (const auto &[Buffer, Device] : llvm::zip_equal(Buffers, Devices)) {
         if (!Buffer || !Device)
           continue;
 
         // If running the server failed, print a message but keep running.
-        if (runServer(*Device, Buffer) != rpc::RPC_SUCCESS)
+        if (runServer(*Device, Buffer, ClientInUse) != rpc::RPC_SUCCESS)
           FAILURE_MESSAGE("Unhandled or invalid RPC opcode!");
       }
     }

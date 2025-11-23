@@ -1244,7 +1244,8 @@ void ClauseProcessor::processMapObjects(
     std::string mapperIdName =
         typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
     if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName)) {
-      mapperIdName = converter.mangleName(mapperIdName, sym->owner());
+      mapperIdName =
+          converter.mangleName(mapperIdName, sym->GetUltimate().owner());
     } else {
       mapperIdName = converter.mangleName(mapperIdName, *typeSpec->GetScope());
     }

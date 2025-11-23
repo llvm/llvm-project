@@ -245,8 +245,7 @@ struct TargetAllocMemOpConversion
       size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size, scaleSize);
     for (mlir::Value opnd : adaptor.getOperands().drop_front())
       size = mlir::LLVM::MulOp::create(
-          rewriter, loc, ity, size,
-          integerCast(lowerTy(), loc, rewriter, ity, opnd));
+          rewriter, loc, ity, size, integerCast(lowerTy(), loc, rewriter, ity, opnd));
     auto mallocTyWidth = lowerTy().getIndexTypeBitwidth();
     auto mallocTy =
         mlir::IntegerType::get(rewriter.getContext(), mallocTyWidth);

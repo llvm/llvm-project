@@ -798,6 +798,58 @@ static void printNumTasksClause(OpAsmPrinter &p, Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Parser and printer for Heap Alloc Clause
+//===----------------------------------------------------------------------===//
+
+/// operation ::= $in_type ( `(` $typeparams `)` )? ( `,` $shape )?
+static ParseResult parseHeapAllocClause(
+    OpAsmParser &parser, TypeAttr &inTypeAttr,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &typeparams,
+    SmallVectorImpl<Type> &typeparamsTypes,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &shape,
+    SmallVectorImpl<Type> &shapeTypes) {
+  mlir::Type inType;
+  if (parser.parseType(inType))
+    return mlir::failure();
+  inTypeAttr = TypeAttr::get(inType);
+
+  if (!parser.parseOptionalLParen()) {
+    // parse the LEN params of the derived type. (<params> : <types>)
+    if (parser.parseOperandList(typeparams, OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(typeparamsTypes) || parser.parseRParen())
+      return failure();
+  }
+
+  if (!parser.parseOptionalComma()) {
+    // parse size to scale by, vector of n dimensions of type index
+    if (parser.parseOperandList(shape, OpAsmParser::Delimiter::None))
+      return failure();
+
+    // TODO: This overrides the actual types of the operands, which might cause
+    // issues when they don't match. At the moment this is done in place of
+    // making the corresponding operand type `Variadic<Index>` because index
+    // types are lowered to I64 prior to LLVM IR translation.
+    shapeTypes.append(shape.size(), IndexType::get(parser.getContext()));
+  }
+
+  return success();
+}
+
+static void printHeapAllocClause(OpAsmPrinter &p, Operation *op,
+                                 TypeAttr inType, ValueRange typeparams,
+                                 TypeRange typeparamsTypes, ValueRange shape,
+                                 TypeRange shapeTypes) {
+  p << inType;
+  if (!typeparams.empty()) {
+    p << '(' << typeparams << " : " << typeparamsTypes << ')';
+  }
+  for (auto sh : shape) {
+    p << ", ";
+    p.printOperand(sh);
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Parsers for operations including clauses that define entry block arguments.
 //===----------------------------------------------------------------------===//
 
@@ -2234,8 +2286,9 @@ LogicalResult TargetOp::verifyRegions() {
     return emitError("target containing multiple 'omp.teams' nested ops");
 
   // Check that host_eval values are only used in legal ways.
+  bool hostEvalTripCount;
   Operation *capturedOp = getInnermostCapturedOmpOp();
-  TargetRegionFlags execFlags = getKernelExecFlags(capturedOp);
+  TargetExecMode execMode = getKernelExecFlags(capturedOp, &hostEvalTripCount);
   for (Value hostEvalArg :
        cast<BlockArgOpenMPOpInterface>(getOperation()).getHostEvalBlockArgs()) {
     for (Operation *user : hostEvalArg.getUsers()) {
@@ -2250,7 +2303,7 @@ LogicalResult TargetOp::verifyRegions() {
                                 "and 'thread_limit' in 'omp.teams'";
       }
       if (auto parallelOp = dyn_cast<ParallelOp>(user)) {
-        if (bitEnumContainsAny(execFlags, TargetRegionFlags::spmd) &&
+        if (execMode == TargetExecMode::spmd &&
             parallelOp->isAncestor(capturedOp) &&
             hostEvalArg == parallelOp.getNumThreads())
           continue;
@@ -2260,8 +2313,7 @@ LogicalResult TargetOp::verifyRegions() {
                   "'omp.parallel' when representing target SPMD";
       }
       if (auto loopNestOp = dyn_cast<LoopNestOp>(user)) {
-        if (bitEnumContainsAny(execFlags, TargetRegionFlags::trip_count) &&
-            loopNestOp.getOperation() == capturedOp &&
+        if (hostEvalTripCount && loopNestOp.getOperation() == capturedOp &&
             (llvm::is_contained(loopNestOp.getLoopLowerBounds(), hostEvalArg) ||
              llvm::is_contained(loopNestOp.getLoopUpperBounds(), hostEvalArg) ||
              llvm::is_contained(loopNestOp.getLoopSteps(), hostEvalArg)))
@@ -2387,7 +2439,9 @@ static bool canPromoteToNoLoop(Operation *capturedOp, TeamsOp teamsOp,
          ompFlags.getAssumeThreadsOversubscription();
 }
 
-TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
+TargetExecMode TargetOp::getKernelExecFlags(Operation *capturedOp,
+                                            bool *hostEvalTripCount) {
+  // TODO: Support detection of bare kernel mode.
   // A non-null captured op is only valid if it resides inside of a TargetOp
   // and is the result of calling getInnermostCapturedOmpOp() on it.
   TargetOp targetOp =
@@ -2396,9 +2450,12 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
           (targetOp && targetOp.getInnermostCapturedOmpOp() == capturedOp)) &&
          "unexpected captured op");
 
+  if (hostEvalTripCount)
+    *hostEvalTripCount = false;
+
   // If it's not capturing a loop, it's a default target region.
   if (!isa_and_present<LoopNestOp>(capturedOp))
-    return TargetRegionFlags::generic;
+    return TargetExecMode::generic;
 
   // Get the innermost non-simd loop wrapper.
   SmallVector<LoopWrapperInterface> loopWrappers;
@@ -2411,31 +2468,32 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
 
   auto numWrappers = std::distance(innermostWrapper, loopWrappers.end());
   if (numWrappers != 1 && numWrappers != 2)
-    return TargetRegionFlags::generic;
+    return TargetExecMode::generic;
 
   // Detect target-teams-distribute-parallel-wsloop[-simd].
   if (numWrappers == 2) {
     WsloopOp *wsloopOp = dyn_cast<WsloopOp>(innermostWrapper);
     if (!wsloopOp)
-      return TargetRegionFlags::generic;
+      return TargetExecMode::generic;
 
     innermostWrapper = std::next(innermostWrapper);
     if (!isa<DistributeOp>(innermostWrapper))
-      return TargetRegionFlags::generic;
+      return TargetExecMode::generic;
 
     Operation *parallelOp = (*innermostWrapper)->getParentOp();
     if (!isa_and_present<ParallelOp>(parallelOp))
-      return TargetRegionFlags::generic;
+      return TargetExecMode::generic;
 
     TeamsOp teamsOp = dyn_cast<TeamsOp>(parallelOp->getParentOp());
     if (!teamsOp)
-      return TargetRegionFlags::generic;
+      return TargetExecMode::generic;
 
     if (teamsOp->getParentOp() == targetOp.getOperation()) {
-      TargetRegionFlags result =
-          TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+      TargetExecMode result = TargetExecMode::spmd;
       if (canPromoteToNoLoop(capturedOp, teamsOp, wsloopOp))
-        result = result | TargetRegionFlags::no_loop;
+        result = TargetExecMode::no_loop;
+      if (hostEvalTripCount)
+        *hostEvalTripCount = true;
       return result;
     }
   }
@@ -2443,43 +2501,30 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
   else if (isa<DistributeOp, LoopOp>(innermostWrapper)) {
     Operation *teamsOp = (*innermostWrapper)->getParentOp();
     if (!isa_and_present<TeamsOp>(teamsOp))
-      return TargetRegionFlags::generic;
+      return TargetExecMode::generic;
 
     if (teamsOp->getParentOp() != targetOp.getOperation())
-      return TargetRegionFlags::generic;
+      return TargetExecMode::generic;
+
+    if (hostEvalTripCount)
+      *hostEvalTripCount = true;
 
     if (isa<LoopOp>(innermostWrapper))
-      return TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+      return TargetExecMode::spmd;
 
-    // Add spmd flag if there's a nested omp.parallel (generic-spmd case).
-    //
-    // TODO: This shouldn't have to be done here, as it is too easy to break.
-    // The openmp-opt pass should be updated to be able to promote kernels like
-    // this from "Generic" to "Generic-SPMD". However, the use of the
-    // `kmpc_distribute_static_loop` family of functions produced by the
-    // OMPIRBuilder for these kernels prevents that from working.
-    bool hasParallel = capturedOp
-                           ->walk<WalkOrder::PreOrder>([](ParallelOp) {
-                             return WalkResult::interrupt();
-                           })
-                           .wasInterrupted();
-
-    TargetRegionFlags result =
-        TargetRegionFlags::generic | TargetRegionFlags::trip_count;
-
-    return hasParallel ? result | TargetRegionFlags::spmd : result;
+    return TargetExecMode::generic;
   }
   // Detect target-parallel-wsloop[-simd].
   else if (isa<WsloopOp>(innermostWrapper)) {
     Operation *parallelOp = (*innermostWrapper)->getParentOp();
     if (!isa_and_present<ParallelOp>(parallelOp))
-      return TargetRegionFlags::generic;
+      return TargetExecMode::generic;
 
     if (parallelOp->getParentOp() == targetOp.getOperation())
-      return TargetRegionFlags::spmd;
+      return TargetExecMode::spmd;
   }
 
-  return TargetRegionFlags::generic;
+  return TargetExecMode::generic;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4278,118 +4323,37 @@ LogicalResult ScanOp::verify() {
 }
 
 /// Verifies align clause in allocate directive
-
-LogicalResult AllocateDirOp::verify() {
-  std::optional<uint64_t> align = this->getAlign();
-
-  if (align.has_value()) {
-    if ((align.value() > 0) && !llvm::has_single_bit(align.value()))
-      return emitError() << "ALIGN value : " << align.value()
-                         << " must be power of 2";
+LogicalResult verifyAlignment(Operation &op,
+                              std::optional<uint64_t> alignment) {
+  if (alignment.has_value()) {
+    if ((alignment.value() != 0) && !llvm::has_single_bit(alignment.value()))
+      return op.emitError()
+             << "ALIGN value : " << alignment.value() << " must be power of 2";
   }
-
   return success();
 }
 
+LogicalResult AllocateDirOp::verify() {
+  return verifyAlignment(*getOperation(), getAlign());
+}
+
 //===----------------------------------------------------------------------===//
-// TargetAllocMemOp
+// AllocSharedMemOp
 //===----------------------------------------------------------------------===//
 
-mlir::Type omp::TargetAllocMemOp::getAllocatedType() {
-  return getInTypeAttr().getValue();
+LogicalResult AllocSharedMemOp::verify() {
+  return verifyAlignment(*getOperation(), getAlignment());
 }
 
-/// operation ::= %res = (`omp.target_alloc_mem`) $device : devicetype,
-///                      $in_type ( `(` $typeparams `)` )? ( `,` $shape )?
-///                      attr-dict-without-keyword
-static mlir::ParseResult parseTargetAllocMemOp(mlir::OpAsmParser &parser,
-                                               mlir::OperationState &result) {
-  auto &builder = parser.getBuilder();
-  bool hasOperands = false;
-  std::int32_t typeparamsSize = 0;
+//===----------------------------------------------------------------------===//
+// FreeSharedMemOp
+//===----------------------------------------------------------------------===//
 
-  // Parse device number as a new operand
-  mlir::OpAsmParser::UnresolvedOperand deviceOperand;
-  mlir::Type deviceType;
-  if (parser.parseOperand(deviceOperand) || parser.parseColonType(deviceType))
-    return mlir::failure();
-  if (parser.resolveOperand(deviceOperand, deviceType, result.operands))
-    return mlir::failure();
-  if (parser.parseComma())
-    return mlir::failure();
-
-  mlir::Type intype;
-  if (parser.parseType(intype))
-    return mlir::failure();
-  result.addAttribute("in_type", mlir::TypeAttr::get(intype));
-  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
-  llvm::SmallVector<mlir::Type> typeVec;
-  if (!parser.parseOptionalLParen()) {
-    // parse the LEN params of the derived type. (<params> : <types>)
-    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None) ||
-        parser.parseColonTypeList(typeVec) || parser.parseRParen())
-      return mlir::failure();
-    typeparamsSize = operands.size();
-    hasOperands = true;
-  }
-  std::int32_t shapeSize = 0;
-  if (!parser.parseOptionalComma()) {
-    // parse size to scale by, vector of n dimensions of type index
-    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None))
-      return mlir::failure();
-    shapeSize = operands.size() - typeparamsSize;
-    auto idxTy = builder.getIndexType();
-    for (std::int32_t i = typeparamsSize, end = operands.size(); i != end; ++i)
-      typeVec.push_back(idxTy);
-    hasOperands = true;
-  }
-  if (hasOperands &&
-      parser.resolveOperands(operands, typeVec, parser.getNameLoc(),
-                             result.operands))
-    return mlir::failure();
-
-  mlir::Type restype = builder.getIntegerType(64);
-  if (!restype) {
-    parser.emitError(parser.getNameLoc(), "invalid allocate type: ") << intype;
-    return mlir::failure();
-  }
-  llvm::SmallVector<std::int32_t> segmentSizes{1, typeparamsSize, shapeSize};
-  result.addAttribute("operandSegmentSizes",
-                      builder.getDenseI32ArrayAttr(segmentSizes));
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.addTypeToList(restype, result.types))
-    return mlir::failure();
-  return mlir::success();
-}
-
-mlir::ParseResult omp::TargetAllocMemOp::parse(mlir::OpAsmParser &parser,
-                                               mlir::OperationState &result) {
-  return parseTargetAllocMemOp(parser, result);
-}
-
-void omp::TargetAllocMemOp::print(mlir::OpAsmPrinter &p) {
-  p << " ";
-  p.printOperand(getDevice());
-  p << " : ";
-  p << getDevice().getType();
-  p << ", ";
-  p << getInType();
-  if (!getTypeparams().empty()) {
-    p << '(' << getTypeparams() << " : " << getTypeparams().getTypes() << ')';
-  }
-  for (auto sh : getShape()) {
-    p << ", ";
-    p.printOperand(sh);
-  }
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {"in_type", "operandSegmentSizes"});
-}
-
-llvm::LogicalResult omp::TargetAllocMemOp::verify() {
-  mlir::Type outType = getType();
-  if (!mlir::dyn_cast<IntegerType>(outType))
-    return emitOpError("must be a integer type");
-  return mlir::success();
+LogicalResult FreeSharedMemOp::verify() {
+  return getHeapref().getDefiningOp<AllocSharedMemOp>()
+             ? success()
+             : emitOpError() << "'heapref' operand must be defined by an "
+                                "'omp.alloc_shared_memory' op";
 }
 
 //===----------------------------------------------------------------------===//

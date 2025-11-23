@@ -255,7 +255,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 ; GFX942-NEXT:    v_writelane_b32 v23, s54, 13
 ; GFX942-NEXT:    v_writelane_b32 v23, s55, 14
 ; GFX942-NEXT:    v_writelane_b32 v23, s30, 15
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_writelane_b32 v23, s31, 16
 ; GFX942-NEXT:    s_add_i32 s0, s32, 64
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
@@ -806,7 +805,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX942-NEXT:    v_writelane_b32 v21, s54, 13
 ; GFX942-NEXT:    v_writelane_b32 v21, s55, 14
 ; GFX942-NEXT:    v_writelane_b32 v21, s30, 15
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_writelane_b32 v21, s31, 16
 ; GFX942-NEXT:    s_and_b64 s[60:61], 0, exec
 ; GFX942-NEXT:    ;;#ASMSTART
@@ -1361,7 +1359,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX942-NEXT:    v_writelane_b32 v22, s54, 13
 ; GFX942-NEXT:    v_writelane_b32 v22, s55, 14
 ; GFX942-NEXT:    v_writelane_b32 v22, s30, 15
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_writelane_b32 v22, s31, 16
 ; GFX942-NEXT:    s_add_i32 s0, s32, 64
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0

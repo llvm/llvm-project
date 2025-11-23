@@ -49,9 +49,9 @@ define void @test() #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readlane_b32 s4, v39, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_readlane_b32 s30, v40, 0
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_readlane_b32 s30, v40, 0
 ; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 4

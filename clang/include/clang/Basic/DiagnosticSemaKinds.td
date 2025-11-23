@@ -3445,6 +3445,24 @@ def err_attribute_integers_only : Error<
 def warn_attribute_return_pointers_only : Warning<
   "%0 attribute only applies to return values that are pointers">,
   InGroup<IgnoredAttributes>;
+def warn_attribute_return_span_only
+    : Warning<"%0 attribute only applies to functions that return span-like "
+              "structures">,
+      InGroup<IgnoredAttributes>;
+def note_returned_not_struct : Note<"returned type is not a struct type">;
+def note_returned_incomplete_type : Note<"returned type is incomplete">;
+def note_returned_not_two_field_struct
+    : Note<"returned struct has %0 fields, expected 2">;
+def note_returned_not_span_struct
+    : Note<"returned struct fields are not a supported combination for a "
+           "span-like type (expected pointer/integer or pointer/pointer)">;
+def note_returned_not_integer_field
+    : Note<"%ordinal0 field is expected to be an integer">;
+def note_returned_not_wide_enough_field
+    : Note<"%ordinal0 field of span-like type is not a wide enough integer "
+           "(minimum width: %1)">;
+def note_type_inherits_from_base
+    : Note<"returned type inherits from a base class">;
 def warn_attribute_return_pointers_refs_only : Warning<
   "%0 attribute only applies to return values that are pointers or references">,
   InGroup<IgnoredAttributes>;
@@ -10740,8 +10758,19 @@ def warn_lifetime_safety_loan_expires_permissive : Warning<
 def warn_lifetime_safety_loan_expires_strict : Warning<
    "object whose reference is captured may not live long enough">,
    InGroup<LifetimeSafetyStrict>, DefaultIgnore;
+
+def warn_lifetime_safety_return_stack_addr_permissive
+    : Warning<"address of stack memory is returned later">,
+      InGroup<LifetimeSafetyPermissive>,
+      DefaultIgnore;
+def warn_lifetime_safety_return_stack_addr_strict
+    : Warning<"address of stack memory may be returned later">,
+      InGroup<LifetimeSafetyStrict>,
+      DefaultIgnore;
+
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
+def note_lifetime_safety_returned_here : Note<"returned here">;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -13731,4 +13760,12 @@ def note_amdgcn_protected_by_predicate : Note<"jump enters statement controlled"
                                               " by AMDGPU feature predicate">;
 
 def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
+
+def warn_comparison_in_enum_initializer : Warning<
+  "comparison operator '%0' is potentially a typo for a shift operator '%1'">,
+  InGroup<DiagGroup<"enum-compare-typo">>;
+
+def note_enum_compare_typo_suggest : Note<
+  "use '%0' to perform a bitwise shift">;
+
 } // end of sema component.

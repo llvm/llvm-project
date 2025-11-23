@@ -31368,9 +31368,6 @@ define inreg <32 x i8> @bitcast_v16i16_to_v32i8_scalar(<16 x i16> inreg %a, i32 
 ; SI-NEXT:    s_lshr_b32 s31, s11, 16
 ; SI-NEXT:    s_lshr_b32 s95, s11, 8
 ; SI-NEXT:  .LBB97_3: ; %end
-; SI-NEXT:    v_mov_b32_e32 v23, s30
-; SI-NEXT:    v_mov_b32_e32 v30, s31
-; SI-NEXT:    v_readlane_b32 s30, v32, 1
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    v_mov_b32_e32 v1, s40
 ; SI-NEXT:    v_mov_b32_e32 v2, s14
@@ -31394,13 +31391,16 @@ define inreg <32 x i8> @bitcast_v16i16_to_v32i8_scalar(<16 x i16> inreg %a, i32 
 ; SI-NEXT:    v_mov_b32_e32 v20, s9
 ; SI-NEXT:    v_mov_b32_e32 v21, s92
 ; SI-NEXT:    v_mov_b32_e32 v22, s94
+; SI-NEXT:    v_mov_b32_e32 v23, s30
 ; SI-NEXT:    v_mov_b32_e32 v24, s10
 ; SI-NEXT:    v_mov_b32_e32 v25, s74
 ; SI-NEXT:    v_mov_b32_e32 v26, s62
 ; SI-NEXT:    v_mov_b32_e32 v27, s72
 ; SI-NEXT:    v_mov_b32_e32 v28, s11
 ; SI-NEXT:    v_mov_b32_e32 v29, s95
+; SI-NEXT:    v_mov_b32_e32 v30, s31
 ; SI-NEXT:    v_mov_b32_e32 v31, s34
+; SI-NEXT:    v_readlane_b32 s30, v32, 1
 ; SI-NEXT:    v_readlane_b32 s31, v32, 2
 ; SI-NEXT:    v_readlane_b32 s34, v32, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[4:5], -1

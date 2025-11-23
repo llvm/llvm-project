@@ -463,10 +463,10 @@ define void @callee_saved_sgpr_func() #2 {
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    s_mov_b32 s34, s40
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; MUBUF-NEXT:    v_readlane_b32 s30, v40, 1
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; use s34
 ; MUBUF-NEXT:    ;;#ASMEND
+; MUBUF-NEXT:    v_readlane_b32 s30, v40, 1
 ; MUBUF-NEXT:    v_readlane_b32 s31, v40, 2
 ; MUBUF-NEXT:    v_readlane_b32 s34, v40, 0
 ; MUBUF-NEXT:    s_mov_b32 s32, s33
@@ -499,10 +499,10 @@ define void @callee_saved_sgpr_func() #2 {
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    s_mov_b32 s34, s40
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 1
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; use s34
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 1
 ; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 2
 ; FLATSCR-NEXT:    v_readlane_b32 s34, v40, 0
 ; FLATSCR-NEXT:    s_mov_b32 s32, s33

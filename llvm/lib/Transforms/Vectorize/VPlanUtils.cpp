@@ -11,6 +11,7 @@
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 using namespace llvm;
@@ -58,13 +59,21 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 
   VPValue *A, *B;
 
+  auto m_CanonicalScalarIVSteps =
+      m_ScalarIVSteps(m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
+                      m_One(), m_Specific(&Plan.getVF()));
+
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
-           (match(A,
-                  m_ScalarIVSteps(
-                      m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
-                      m_One(), m_Specific(&Plan.getVF()))) ||
-            IsWideCanonicalIV(A));
+           (match(A, m_CanonicalScalarIVSteps) || IsWideCanonicalIV(A));
+
+  // For scalar plans, the header mask uses the scalar steps.
+  if (match(V, m_ICmp(m_CanonicalScalarIVSteps,
+                      m_Specific(Plan.getBackedgeTakenCount())))) {
+    assert(Plan.hasScalarVFOnly() &&
+           "Non-scalar VF using scalar IV steps for header mask?");
+    return true;
+  }
 
   return match(V, m_ICmp(m_VPValue(A), m_VPValue(B))) && IsWideCanonicalIV(A) &&
          B == Plan.getBackedgeTakenCount();
@@ -384,4 +393,21 @@ bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
   // successor.
   return VPB->getNumSuccessors() == 2 &&
          VPBlockUtils::isHeader(VPB->getSuccessors()[1], VPDT);
+}
+
+std::optional<MemoryLocation>
+vputils::getMemoryLocation(const VPRecipeBase &R) {
+  return TypeSwitch<const VPRecipeBase *, std::optional<MemoryLocation>>(&R)
+      .Case<VPWidenMemoryRecipe, VPInterleaveBase, VPReplicateRecipe>(
+          [](auto *S) {
+            MemoryLocation Loc;
+            // Populate noalias metadata from VPIRMetadata.
+            if (MDNode *NoAliasMD = S->getMetadata(LLVMContext::MD_noalias))
+              Loc.AATags.NoAlias = NoAliasMD;
+            if (MDNode *AliasScopeMD =
+                    S->getMetadata(LLVMContext::MD_alias_scope))
+              Loc.AATags.Scope = AliasScopeMD;
+            return Loc;
+          })
+      .Default([](auto *) { return std::nullopt; });
 }
