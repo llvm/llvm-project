@@ -138,6 +138,55 @@ static void applySpaceInBlockComment(const FormatToken &Tok,
   }
 }
 
+static StringRef
+getReflowedCommentLine(const bool IsStartLine, const bool IsEndLine,
+                       const CommentKind Kind, const StringRef Line,
+                       const FormatStyle &Style, int &StartOffsetAdjustment,
+                       std::string &Buffer) {
+  StartOffsetAdjustment = 0;
+  if ((!IsStartLine && !IsEndLine) || Line.empty())
+    return Line;
+  if (!lineContainsContent(Line))
+    return Line;
+
+  const size_t ContentStart = Line.find_first_not_of(Blanks);
+  const size_t ContentEnd = Line.find_last_not_of(Blanks) + 1;
+  const StringRef Content =
+      Line.substr(ContentStart, ContentEnd - ContentStart);
+  const StringRef OldPrefix = Line.substr(0, ContentStart);
+  const StringRef OldSuffix = Line.substr(ContentEnd);
+  auto GetNewWhitespace = [&](bool IsBoundary,
+                              FormatStyle::CommentSpaceMode Mode,
+                              StringRef Original) -> StringRef {
+    if (!IsBoundary)
+      return Original;
+    switch (Mode) {
+    case FormatStyle::CommentSpaceMode::Leave:
+      return Original;
+    case FormatStyle::CommentSpaceMode::Always:
+      return " ";
+    case FormatStyle::CommentSpaceMode::Never:
+      return "";
+    }
+    llvm_unreachable("Unhandled CommentSpaceMode");
+  };
+  const auto OpenMode =
+      resolveCommentSpaceMode(Kind, Style.SpaceInComments.AfterOpeningComment,
+                              Style.SpaceInComments.AfterOpeningParamComment);
+  const auto CloseMode =
+      resolveCommentSpaceMode(Kind, Style.SpaceInComments.BeforeClosingComment,
+                              Style.SpaceInComments.BeforeClosingParamComment);
+  const StringRef NewPrefix =
+      GetNewWhitespace(IsStartLine, OpenMode, OldPrefix);
+  const StringRef NewSuffix = GetNewWhitespace(IsEndLine, CloseMode, OldSuffix);
+
+  if (OldPrefix == NewPrefix && OldSuffix == NewSuffix)
+    return Line;
+  StartOffsetAdjustment =
+      static_cast<int>(OldPrefix.size()) - static_cast<int>(NewPrefix.size());
+  return Buffer = (NewPrefix + Content + NewSuffix).str();
+}
+
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
   static constexpr StringRef KnownCStylePrefixes[] = {"///<", "//!<", "///",
@@ -715,9 +764,20 @@ BreakableToken::Split BreakableBlockComment::getSplit(
   // Don't break lines matching the comment pragmas regex.
   if (!AlwaysReflow || CommentPragmasRegex.match(Content[LineIndex]))
     return Split(StringRef::npos, 0);
-  return getCommentSplit(Content[LineIndex].substr(TailOffset),
-                         ContentStartColumn, ColumnLimit, Style.TabWidth,
-                         Encoding, Style, Decoration.ends_with("*"));
+  int OffsetAdjustment = 0;
+  std::string ReflowedStorage;
+  const bool IsStartLine = LineIndex == 0;
+  const bool IsEndLine = LineIndex + 1 == Lines.size();
+  StringRef ReflowedLine =
+      getReflowedCommentLine(IsStartLine, IsEndLine, Tok.getBlockCommentKind(),
+                             Content[LineIndex].substr(TailOffset), Style,
+                             OffsetAdjustment, ReflowedStorage);
+  Split S = getCommentSplit(ReflowedLine, ContentStartColumn, ColumnLimit,
+                            Style.TabWidth, Encoding, Style,
+                            Decoration.ends_with("*"));
+  if (S.first != StringRef::npos && OffsetAdjustment != 0)
+    S.first += OffsetAdjustment;
+  return S;
 }
 
 void BreakableBlockComment::adjustWhitespace(unsigned LineIndex,
