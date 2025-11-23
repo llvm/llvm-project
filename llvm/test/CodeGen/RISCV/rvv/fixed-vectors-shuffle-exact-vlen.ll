@@ -44,9 +44,8 @@ define <4 x i64> @m2_splat_with_tail(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m2_splat_with_tail:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vrgather.vi v10, v8, 0
-; CHECK-NEXT:    vmv1r.v v11, v9
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vrgather.vi v8, v10, 0
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
   ret <4 x i64> %res
@@ -99,9 +98,8 @@ define <4 x i64> @m2_splat_into_identity(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m2_splat_into_identity:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vrgather.vi v10, v8, 0
-; CHECK-NEXT:    vmv1r.v v11, v9
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vrgather.vi v8, v10, 0
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
   ret <4 x i64> %res
