@@ -39,16 +39,16 @@ void SANITIZER_CDECL __tsan_release(void *addr);
 enum : unsigned {
   // Mutex has static storage duration and no-op constructor and destructor.
   // This effectively makes tsan ignore destroy annotation.
-  __tsan_mutex_linker_init      = 1 << 0,
+  __tsan_mutex_linker_init = 1 << 0,
   // Mutex is write reentrant.
-  __tsan_mutex_write_reentrant  = 1 << 1,
+  __tsan_mutex_write_reentrant = 1 << 1,
   // Mutex is read reentrant.
-  __tsan_mutex_read_reentrant   = 1 << 2,
+  __tsan_mutex_read_reentrant = 1 << 2,
   // Mutex does not have static storage duration, and must not be used after
   // its destructor runs.  The opposite of __tsan_mutex_linker_init.
   // If this flag is passed to __tsan_mutex_destroy, then the destruction
   // is ignored unless this flag was previously set on the mutex.
-  __tsan_mutex_not_static       = 1 << 8,
+  __tsan_mutex_not_static = 1 << 8,
 
   // Mutex operation flags:
 
@@ -69,10 +69,8 @@ enum : unsigned {
   __tsan_mutex_recursive_unlock = 1 << 7,
 
   // Convenient composed constants.
-  __tsan_mutex_try_read_lock = 
-      __tsan_mutex_read_lock | __tsan_mutex_try_lock,
-  __tsan_mutex_try_read_lock_failed =
-      __tsan_mutex_try_read_lock | __tsan_mutex_try_lock_failed
+  __tsan_mutex_try_read_lock = __tsan_mutex_read_lock | __tsan_mutex_try_lock,
+  __tsan_mutex_try_read_lock_failed = __tsan_mutex_try_read_lock | __tsan_mutex_try_lock_failed
 };
 
 // Annotate creation of a mutex.
