@@ -13,6 +13,8 @@
 
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/ValueRange.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -85,7 +87,8 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
   return maskVec;
 }
 
-static mlir::Value emitX86FunnelShift(CIRGenFunction &cgf, const CallExpr *e,
+static mlir::Value emitX86FunnelShift(CIRGenFunction &cgf,
+                                      const mlir::Location &location,
                                       mlir::Value &op0, mlir::Value &op1,
                                       mlir::Value &amt, bool isRight) {
   auto ty = op0.getType();
@@ -96,12 +99,12 @@ static mlir::Value emitX86FunnelShift(CIRGenFunction &cgf, const CallExpr *e,
   if (amt.getType() != ty) {
     amt = cgf.getBuilder().createIntCast(
         amt, mlir::cast<cir::VectorType>(ty).getElementType());
-    amt = cir::VecSplatOp::create(cgf.getBuilder(), cgf.getLoc(e->getExprLoc()),
-                                  ty, amt);
+    amt = cir::VecSplatOp::create(cgf.getBuilder(), location, ty, amt);
   }
 
   const std::string intrinsicName = isRight ? "fshr" : "fshl";
-  return emitIntrinsicCallOp(cgf, e, intrinsicName, ty, op0, op1, amt);
+  return emitIntrinsicCallOp(cgf.getBuilder(), location, intrinsicName, ty,
+                             mlir::ValueRange{op0, op1, amt});
 }
 
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
@@ -681,14 +684,16 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_prolq128:
   case X86::BI__builtin_ia32_prolq256:
   case X86::BI__builtin_ia32_prolq512:
-    return emitX86FunnelShift(*this, e, ops[0], ops[1], ops[1], false);
+    return emitX86FunnelShift(*this, getLoc(expr->getExprLoc()), ops[0], ops[1],
+                              ops[1], false);
   case X86::BI__builtin_ia32_prord128:
   case X86::BI__builtin_ia32_prord256:
   case X86::BI__builtin_ia32_prord512:
   case X86::BI__builtin_ia32_prorq128:
   case X86::BI__builtin_ia32_prorq256:
   case X86::BI__builtin_ia32_prorq512:
-    return emitX86FunnelShift(*this, e, ops[0], ops[1], ops[1], true);
+    return emitX86FunnelShift(*this, getLoc(expr->getExprLoc()), ops[0], ops[1],
+                              ops[1], true);
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
   case X86::BI__builtin_ia32_selectb_512:
