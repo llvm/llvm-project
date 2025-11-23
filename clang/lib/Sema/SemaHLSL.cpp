@@ -3305,6 +3305,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_wave_active_max:
+  case Builtin::BI__builtin_hlsl_wave_active_min:
   case Builtin::BI__builtin_hlsl_wave_active_sum:
   case Builtin::BI__builtin_hlsl_wave_active_product: {
     if (SemaRef.checkArgCount(TheCall, 1))
