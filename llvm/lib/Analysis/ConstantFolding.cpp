@@ -3194,15 +3194,10 @@ static Constant *TryConstantFoldNaN(ArrayRef<APFloat> Operands,
 }
 
 static Constant *ConstantFoldNextToward(const APFloat &Op0, const APFloat &Op1,
-                                        const Type *RetTy,
-                                        bool *WouldSetErrno) {
+                                        const Type *RetTy) {
   assert(RetTy != nullptr);
-  *WouldSetErrno = false;
-
-  Constant *RetNaN = TryConstantFoldNaN({Op0, Op1}, RetTy);
-  if (RetNaN != nullptr) {
+  if (Constant *RetNaN = TryConstantFoldNaN({Op0, Op1}, RetTy))
     return RetNaN;
-  }
 
   // Recall that the second argument of nexttoward is always a long double,
   // so we may need to promote the first argument for comparisons to be valid.
@@ -3211,15 +3206,18 @@ static Constant *ConstantFoldNextToward(const APFloat &Op0, const APFloat &Op1,
   PromotedOp0.convert(Op1.getSemantics(), detail::rmNearestTiesToEven,
                       &LosesInfo);
   assert(!LosesInfo && "Unexpected lossy promotion");
+  const APFloat::cmpResult Result = PromotedOp0.compare(Op1);
+  assert(Result != APFloat::cmpUnordered && "Unexpected NaN");
 
-  if (PromotedOp0 == Op1)
+  if (Result == detail::cmpEqual)
     return ConstantFP::get(RetTy->getContext(), Op0);
 
   APFloat Next(Op0);
-  Next.next(/*nextDown=*/PromotedOp0 > Op1);
+  Next.next(/*nextDown=*/ Result == APFloat::cmpGreaterThan);
   const bool DidOverflow = !Op0.isInfinity() && Next.isInfinity();
-  *WouldSetErrno = Next.isZero() || Next.isDenormal() || DidOverflow;
 
+  if (Next.isZero() || Next.isDenormal() || DidOverflow)
+    return nullptr;
   return ConstantFP::get(RetTy->getContext(), Next);
 }
 
@@ -3287,8 +3285,7 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   case LibFunc_nexttoward:
   case LibFunc_nexttowardf:
     if (TLI->has(Func)) {
-      bool Unused;
-      return ConstantFoldNextToward(Op1V, Op2V, Ty, &Unused);
+      return ConstantFoldNextToward(Op1V, Op2V, Ty);
     }
   }
 
@@ -4768,9 +4765,7 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_nexttoward:
       case LibFunc_nexttowardf:
       case LibFunc_nexttowardl: {
-        bool WouldSetErrno;
-        ConstantFoldNextToward(Op0, Op1, F->getReturnType(), &WouldSetErrno);
-        return !WouldSetErrno;
+        return ConstantFoldNextToward(Op0, Op1, F->getReturnType()) != nullptr;
       }
       default:
         break;
