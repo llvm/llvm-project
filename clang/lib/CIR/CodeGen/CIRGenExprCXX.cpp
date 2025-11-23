@@ -16,6 +16,7 @@
 
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -646,6 +647,36 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   /// We model such elidable calls with the 'builtin' attribute.
   assert(!cir::MissingFeatures::attributeBuiltin());
   return rv;
+}
+
+RValue CIRGenFunction::emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
+                                                  const CallExpr *callExpr,
+                                                  OverloadedOperatorKind op) {
+  CallArgList args;
+  emitCallArgs(args, type, callExpr->arguments());
+  // Find the allocation or deallocation function that we're calling.
+  ASTContext &astContext = getContext();
+  assert(op == OO_New || op == OO_Delete);
+  DeclarationName name = astContext.DeclarationNames.getCXXOperatorName(op);
+
+  clang::DeclContextLookupResult lookupResult =
+      astContext.getTranslationUnitDecl()->lookup(name);
+  for (const auto *decl : lookupResult) {
+    if (const auto *funcDecl = dyn_cast<FunctionDecl>(decl)) {
+      if (astContext.hasSameType(funcDecl->getType(), QualType(type, 0))) {
+        if (sanOpts.has(SanitizerKind::AllocToken)) {
+          // TODO: Set !alloc_token metadata.
+          assert(!cir::MissingFeatures::allocToken());
+          cgm.errorNYI("Alloc token sanitizer not yet supported!");
+        }
+
+        // Emit the call to operator new/delete.
+        return emitNewDeleteCall(*this, funcDecl, type, args);
+      }
+    }
+  }
+
+  llvm_unreachable("predeclared global operator new/delete is missing");
 }
 
 namespace {
