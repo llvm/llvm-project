@@ -67,13 +67,17 @@ class TestSBFrameExtensions(TestBase):
         compile_unit = frame.compile_unit
         self.assertTrue(compile_unit.IsValid(), "compile_unit should be valid")
         self.assertEqual(
-            compile_unit, frame.GetCompileUnit(), "compile_unit should match GetCompileUnit()"
+            compile_unit,
+            frame.GetCompileUnit(),
+            "compile_unit should match GetCompileUnit()",
         )
 
         # Test function property
         function = frame.function
         self.assertTrue(function.IsValid(), "function should be valid")
-        self.assertEqual(function, frame.GetFunction(), "function should match GetFunction()")
+        self.assertEqual(
+            function, frame.GetFunction(), "function should match GetFunction()"
+        )
 
         # Test symbol property
         symbol = frame.symbol
@@ -107,9 +111,13 @@ class TestSBFrameExtensions(TestBase):
         # Test name property
         name = frame.name
         self.assertIsInstance(name, str, "name should be a string")
-        self.assertEqual(name, frame.GetFunctionName(), "name should match GetFunctionName()")
+        self.assertEqual(
+            name, frame.GetFunctionName(), "name should match GetFunctionName()"
+        )
         # Should be one of our functions
-        self.assertIn(name, ["func1", "func2", "main"], "name should be a known function")
+        self.assertIn(
+            name, ["func1", "func2", "main"], "name should be a known function"
+        )
 
         # Test line_entry property
         line_entry = frame.line_entry
@@ -121,7 +129,9 @@ class TestSBFrameExtensions(TestBase):
         # Test thread property
         thread_prop = frame.thread
         self.assertTrue(thread_prop.IsValid(), "thread should be valid")
-        self.assertEqual(thread_prop, frame.GetThread(), "thread should match GetThread()")
+        self.assertEqual(
+            thread_prop, frame.GetThread(), "thread should match GetThread()"
+        )
         self.assertEqual(
             thread_prop.GetThreadID(),
             thread.GetThreadID(),
@@ -168,7 +178,9 @@ class TestSBFrameExtensions(TestBase):
 
         # Test variables property (alias for get_all_variables)
         variables = frame.variables
-        self.assertIsInstance(variables, lldb.SBValueList, "variables should be SBValueList")
+        self.assertIsInstance(
+            variables, lldb.SBValueList, "variables should be SBValueList"
+        )
         all_vars = frame.GetVariables(True, True, True, True)
         self.assertEqual(
             variables.GetSize(),
@@ -187,7 +199,9 @@ class TestSBFrameExtensions(TestBase):
 
         # Test locals property
         locals_prop = frame.locals
-        self.assertIsInstance(locals_prop, lldb.SBValueList, "locals should be SBValueList")
+        self.assertIsInstance(
+            locals_prop, lldb.SBValueList, "locals should be SBValueList"
+        )
         locals_direct = frame.GetVariables(False, True, False, False)
         self.assertEqual(
             locals_prop.GetSize(),
@@ -218,7 +232,9 @@ class TestSBFrameExtensions(TestBase):
 
         # Test statics property
         statics_prop = frame.statics
-        self.assertIsInstance(statics_prop, lldb.SBValueList, "statics should be SBValueList")
+        self.assertIsInstance(
+            statics_prop, lldb.SBValueList, "statics should be SBValueList"
+        )
         statics_direct = frame.GetVariables(False, False, True, False)
         self.assertEqual(
             statics_prop.GetSize(),
@@ -243,7 +259,9 @@ class TestSBFrameExtensions(TestBase):
         self.assertIsInstance(registers, list, "registers should be a list")
         registers_direct = frame.GetRegisters()
         self.assertEqual(
-            len(registers), len(registers_direct), "registers should match GetRegisters()"
+            len(registers),
+            len(registers_direct),
+            "registers should match GetRegisters()",
         )
 
         # Test regs property (alias for registers)
@@ -273,7 +291,9 @@ class TestSBFrameExtensions(TestBase):
             first_reg_name = list(reg_names)[0]
             reg_by_name = register[first_reg_name]
             self.assertTrue(reg_by_name.IsValid(), "Register by name should be valid")
-            self.assertEqual(reg_by_name.name, first_reg_name, "Register name should match")
+            self.assertEqual(
+                reg_by_name.name, first_reg_name, "Register name should match"
+            )
 
     def test_properties_parent_child(self):
         """Test SBFrame extension properties: parent, child"""
@@ -298,7 +318,9 @@ class TestSBFrameExtensions(TestBase):
                 frame1.GetFrameID(),
                 "parent should be the next frame",
             )
-            self.assertEqual(parent.pc, frame1.GetPC(), "parent PC should match frame 1")
+            self.assertEqual(
+                parent.pc, frame1.GetPC(), "parent PC should match frame 1"
+            )
 
         # Test child property (should be frame -1, which doesn't exist, so should return invalid)
         child = frame0.child
@@ -321,7 +343,9 @@ class TestSBFrameExtensions(TestBase):
 
         # Test get_all_variables method
         all_vars = frame.get_all_variables()
-        self.assertIsInstance(all_vars, lldb.SBValueList, "get_all_variables should return SBValueList")
+        self.assertIsInstance(
+            all_vars, lldb.SBValueList, "get_all_variables should return SBValueList"
+        )
         all_vars_direct = frame.GetVariables(True, True, True, True)
         self.assertEqual(
             all_vars.GetSize(),
@@ -331,7 +355,9 @@ class TestSBFrameExtensions(TestBase):
 
         # Test get_arguments method
         args = frame.get_arguments()
-        self.assertIsInstance(args, lldb.SBValueList, "get_arguments should return SBValueList")
+        self.assertIsInstance(
+            args, lldb.SBValueList, "get_arguments should return SBValueList"
+        )
         args_direct = frame.GetVariables(True, False, False, False)
         self.assertEqual(
             args.GetSize(),
@@ -341,7 +367,9 @@ class TestSBFrameExtensions(TestBase):
 
         # Test get_locals method
         locals = frame.get_locals()
-        self.assertIsInstance(locals, lldb.SBValueList, "get_locals should return SBValueList")
+        self.assertIsInstance(
+            locals, lldb.SBValueList, "get_locals should return SBValueList"
+        )
         locals_direct = frame.GetVariables(False, True, False, False)
         self.assertEqual(
             locals.GetSize(),
@@ -351,7 +379,9 @@ class TestSBFrameExtensions(TestBase):
 
         # Test get_statics method
         statics = frame.get_statics()
-        self.assertIsInstance(statics, lldb.SBValueList, "get_statics should return SBValueList")
+        self.assertIsInstance(
+            statics, lldb.SBValueList, "get_statics should return SBValueList"
+        )
         statics_direct = frame.GetVariables(False, False, True, False)
         self.assertEqual(
             statics.GetSize(),
@@ -393,7 +423,9 @@ class TestSBFrameExtensions(TestBase):
 
         # Test var() with non-existent variable
         invalid_var = frame.var("NonExistentVariable12345")
-        self.assertFalse(invalid_var.IsValid(), "var() with non-existent variable should be invalid")
+        self.assertFalse(
+            invalid_var.IsValid(), "var() with non-existent variable should be invalid"
+        )
 
     def test_method_get_parent_frame_get_child_frame(self):
         """Test SBFrame extension methods: get_parent_frame, get_child_frame"""
@@ -410,7 +442,9 @@ class TestSBFrameExtensions(TestBase):
         # Test get_parent_frame
         if thread.GetNumFrames() > 1:
             parent = frame0.get_parent_frame()
-            self.assertTrue(parent.IsValid(), "get_parent_frame should return valid frame")
+            self.assertTrue(
+                parent.IsValid(), "get_parent_frame should return valid frame"
+            )
             frame1 = thread.GetFrameAtIndex(1)
             self.assertEqual(
                 parent.GetFrameID(),
@@ -425,7 +459,9 @@ class TestSBFrameExtensions(TestBase):
         # Test get_child_frame (frame -1 doesn't exist, so should be invalid)
         child = frame0.get_child_frame()
         if thread.GetNumFrames() == 1:
-            self.assertFalse(child.IsValid(), "get_child_frame of only frame should be invalid")
+            self.assertFalse(
+                child.IsValid(), "get_child_frame of only frame should be invalid"
+            )
 
     def test_special_methods_eq_int_hex(self):
         """Test SBFrame extension special methods: __eq__, __int__, __hex__"""
@@ -442,7 +478,9 @@ class TestSBFrameExtensions(TestBase):
         # Test __int__ (converts frame to its frame ID)
         frame_id = int(frame0)
         self.assertIsInstance(frame_id, int, "__int__ should return an integer")
-        self.assertEqual(frame_id, frame0.GetFrameID(), "__int__ should return frame ID")
+        self.assertEqual(
+            frame_id, frame0.GetFrameID(), "__int__ should return frame ID"
+        )
 
         # Test __hex__ (converts frame to its PC)
         # Note: __hex__ returns the PC as an integer, not a hex string
@@ -480,4 +518,3 @@ class TestSBFrameExtensions(TestBase):
         pc = frame.pc
         self.assertIsInstance(pc, int, "pc should be readable")
         # Note: Setting pc might not be supported on all platforms, so we just test reading
-
