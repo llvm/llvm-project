@@ -18,9 +18,11 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1093,8 +1095,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
   case Builtin::BI__builtin_function_start:
+    return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_operator_new:
+    return emitNewOrDeleteBuiltinCall(
+        e->getCallee()->getType()->castAs<FunctionProtoType>(), e, OO_New);
   case Builtin::BI__builtin_operator_delete:
+    emitNewOrDeleteBuiltinCall(
+        e->getCallee()->getType()->castAs<FunctionProtoType>(), e, OO_Delete);
+    return RValue::get(nullptr);
   case Builtin::BI__builtin_is_aligned:
   case Builtin::BI__builtin_align_up:
   case Builtin::BI__builtin_align_down:
