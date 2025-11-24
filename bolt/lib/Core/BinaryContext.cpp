@@ -78,6 +78,11 @@ cl::opt<std::string> CompDirOverride(
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
 
+static cl::opt<bool> CloneConstantIsland("clone-constant-island",
+                                         cl::desc("clone constant islands"),
+                                         cl::Hidden, cl::init(true),
+                                         cl::ZeroOrMore, cl::cat(BoltCategory));
+
 static cl::opt<bool>
     FailOnInvalidPadding("fail-on-invalid-padding", cl::Hidden, cl::init(false),
                          cl::desc("treat invalid code padding as error"),
@@ -461,7 +466,8 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
       // of dynamic relocs, as we currently do not support cloning them.
       // Notice: we might fail to link because of this, if the original constant
       // island we are referring would be emitted too far away.
-      if (IslandIter->second->hasDynamicRelocationAtIsland()) {
+      if (IslandIter->second->hasDynamicRelocationAtIsland() ||
+          !opts::CloneConstantIsland) {
         MCSymbol *IslandSym =
             IslandIter->second->getOrCreateIslandAccess(Address);
         if (IslandSym)
@@ -469,6 +475,12 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
       } else if (MCSymbol *IslandSym =
                      IslandIter->second->getOrCreateProxyIslandAccess(Address,
                                                                       BF)) {
+        LLVM_DEBUG(
+            dbgs() << "BOLT-DEBUG: clone constant island at address 0x"
+                   << Twine::utohexstr(IslandIter->first) << " with size of 0x"
+                   << Twine::utohexstr(
+                          IslandIter->second->estimateConstantIslandSize())
+                   << " bytes, referenced by " << BF << "\n");
         BF.createIslandDependency(IslandSym, IslandIter->second);
         return std::make_pair(IslandSym, 0);
       }
@@ -516,6 +528,23 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
   MCSymbol *TargetSymbol = getOrCreateGlobalSymbol(Address, "DATAat");
   LLVM_DEBUG(dbgs() << "Created symbol " << TargetSymbol->getName() << '\n');
   return std::make_pair(TargetSymbol, 0);
+}
+
+MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
+                                                    BinaryFunction &BF) {
+  if (BF.isInConstantIsland(Address)) {
+    BF.setIgnored();
+    this->outs() << "BOLT-WARNING: ignoring entry point at address 0x"
+                 << Twine::utohexstr(Address)
+                 << " in constant island of function " << BF << '\n';
+    return nullptr;
+  }
+
+  const uint64_t Offset = Address - BF.getAddress();
+  assert(Offset < BF.getSize() &&
+         "Address should be inside the referenced function");
+
+  return Offset ? BF.addEntryPointAtOffset(Offset) : BF.getSymbol();
 }
 
 MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
@@ -761,13 +790,17 @@ void BinaryContext::populateJumpTables() {
   }
 
   if (opts::StrictMode && DataPCRelocations.size()) {
-    LLVM_DEBUG({
-      dbgs() << DataPCRelocations.size()
-             << " unclaimed PC-relative relocations left in data:\n";
-      for (uint64_t Reloc : DataPCRelocations)
-        dbgs() << Twine::utohexstr(Reloc) << '\n';
-    });
-    assert(0 && "unclaimed PC-relative relocations left in data\n");
+    this->errs() << "BOLT-ERROR: " << DataPCRelocations.size()
+                 << " unclaimed PC-relative relocation(s) left in data";
+    if (opts::Verbosity) {
+      this->errs() << ":\n";
+      for (uint64_t RelocOffset : DataPCRelocations)
+        this->errs() << "  @0x" << Twine::utohexstr(RelocOffset) << '\n';
+    } else {
+      this->errs() << ". Re-run with -v=1 to see the list\n";
+    }
+    this->errs() << "BOLT-ERROR: unable to proceed with --strict\n";
+    exit(1);
   }
   clearList(DataPCRelocations);
 }
@@ -977,14 +1010,12 @@ bool BinaryContext::hasValidCodePadding(const BinaryFunction &BF) {
     return Offset - StartOffset;
   };
 
-  // Skip a sequence of zero bytes. For AArch64 we only skip 4 bytes of zeros
-  // in case the following zeros belong to constant island or veneer.
+  // Skip a sequence of zero bytes. For AArch64 we only skip 4's exact
+  // multiple number of zeros in case the following zeros belong to veneer.
   auto skipZeros = [&]() {
     const uint64_t StartOffset = Offset;
     uint64_t CurrentOffset = Offset;
-    for (; CurrentOffset < BF.getMaxSize() &&
-           (!isAArch64() || CurrentOffset < StartOffset + 4);
-         ++CurrentOffset)
+    for (; CurrentOffset < BF.getMaxSize(); ++CurrentOffset)
       if ((*FunctionData)[CurrentOffset] != 0)
         break;
 
@@ -1399,17 +1430,10 @@ void BinaryContext::processInterproceduralReferences() {
             << Function.getPrintName() << " and "
             << TargetFunction->getPrintName() << '\n';
       }
-      if (uint64_t Offset = Address - TargetFunction->getAddress()) {
-        if (!TargetFunction->isInConstantIsland(Address)) {
-          TargetFunction->addEntryPointAtOffset(Offset);
-        } else {
-          TargetFunction->setIgnored();
-          this->outs() << "BOLT-WARNING: Ignoring entry point at address 0x"
-                       << Twine::utohexstr(Address)
-                       << " in constant island of function " << *TargetFunction
-                       << '\n';
-        }
-      }
+
+      // Create an extra entry point if needed. Can also render the target
+      // function ignored if the reference is invalid.
+      handleExternalBranchTarget(Address, *TargetFunction);
 
       continue;
     }
@@ -1495,6 +1519,17 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
     // NB: there's no need to update BinaryDataMap and GlobalSymbols.
   }
   ChildBF.getSymbols().clear();
+
+  // Reset function mapping for local symbols.
+  for (uint64_t RelOffset : ChildBF.getInternalRefDataRelocations()) {
+    const Relocation *Rel = getRelocationAt(RelOffset);
+    if (!Rel || !Rel->Symbol)
+      continue;
+
+    WriteSymbolMapLock.lock();
+    SymbolToFunctionMap[Rel->Symbol] = nullptr;
+    WriteSymbolMapLock.unlock();
+  }
 
   // Move other names the child function is known under.
   llvm::move(ChildBF.Aliases, std::back_inserter(ParentBF.Aliases));

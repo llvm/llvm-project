@@ -178,6 +178,8 @@ struct alignas(8) GlobalValueSummaryInfo {
   /// only be called prior to index-based internalization and promotion.
   inline void verifyLocal() const;
 
+  bool hasLocal() const { return HasLocal; }
+
 private:
   /// List of global value summary structures for a particular value held
   /// in the GlobalValueMap. Requires a vector in the case of multiple
@@ -238,6 +240,8 @@ struct ValueInfo {
   }
 
   void verifyLocal() const { getRef()->second.verifyLocal(); }
+
+  bool hasLocal() const { return getRef()->second.hasLocal(); }
 
   // Even if the index is built with GVs available, we may not have one for
   // summary entries synthesized for profiled indirect call targets.

@@ -526,7 +526,7 @@ define void @caller_in_memory() {
 ; CHECK-SD-LABEL: caller_in_memory:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sub sp, sp, #96
-; CHECK-SD-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #80] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    add x8, sp, #8
@@ -538,7 +538,7 @@ define void @caller_in_memory() {
 ; CHECK-SD-NEXT:    ldr d2, [sp, #72]
 ; CHECK-SD-NEXT:    ldur q3, [sp, #56]
 ; CHECK-SD-NEXT:    ldur q4, [sp, #40]
-; CHECK-SD-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #80] // 8-byte Reload
 ; CHECK-SD-NEXT:    stp q1, q0, [x8]
 ; CHECK-SD-NEXT:    str d2, [x8, #64]
 ; CHECK-SD-NEXT:    stp q4, q3, [x8, #32]
@@ -548,7 +548,7 @@ define void @caller_in_memory() {
 ; CHECK-GI-LABEL: caller_in_memory:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #96
-; CHECK-GI-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #80] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    add x8, sp, #8
@@ -612,7 +612,7 @@ define void @argument_in_memory() {
 ; CHECK-SD-LABEL: argument_in_memory:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sub sp, sp, #96
-; CHECK-SD-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #80] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    adrp x8, in_memory_store
@@ -624,14 +624,14 @@ define void @argument_in_memory() {
 ; CHECK-SD-NEXT:    stp q0, q1, [sp]
 ; CHECK-SD-NEXT:    stp q2, q3, [sp, #32]
 ; CHECK-SD-NEXT:    bl callee_in_memory
-; CHECK-SD-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #80] // 8-byte Reload
 ; CHECK-SD-NEXT:    add sp, sp, #96
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: argument_in_memory:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #96
-; CHECK-GI-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #80] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    adrp x9, in_memory_store
@@ -648,7 +648,7 @@ define void @argument_in_memory() {
 ; CHECK-GI-NEXT:    stp x15, x16, [sp, #48]
 ; CHECK-GI-NEXT:    str x9, [sp, #64]
 ; CHECK-GI-NEXT:    bl callee_in_memory
-; CHECK-GI-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #80] // 8-byte Reload
 ; CHECK-GI-NEXT:    add sp, sp, #96
 ; CHECK-GI-NEXT:    ret
   %1 = load %T_IN_MEMORY, ptr @in_memory_store

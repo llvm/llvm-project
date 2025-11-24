@@ -1975,10 +1975,9 @@ _mm256_shuffle_epi8(__m256i __a, __m256i __b) {
 /// \param __b
 ///    A 256-bit integer vector].
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sign_epi8(__m256i __a, __m256i __b)
-{
-    return (__m256i)__builtin_ia32_psignb256((__v32qi)__a, (__v32qi)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_sign_epi8(__m256i __a, __m256i __b) {
+  return (__m256i)__builtin_ia32_psignb256((__v32qi)__a, (__v32qi)__b);
 }
 
 /// Sets each element of the result to the corresponding element of the
@@ -1996,10 +1995,9 @@ _mm256_sign_epi8(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sign_epi16(__m256i __a, __m256i __b)
-{
-    return (__m256i)__builtin_ia32_psignw256((__v16hi)__a, (__v16hi)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_sign_epi16(__m256i __a, __m256i __b) {
+  return (__m256i)__builtin_ia32_psignw256((__v16hi)__a, (__v16hi)__b);
 }
 
 /// Sets each element of the result to the corresponding element of the
@@ -2017,10 +2015,9 @@ _mm256_sign_epi16(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sign_epi32(__m256i __a, __m256i __b)
-{
-    return (__m256i)__builtin_ia32_psignd256((__v8si)__a, (__v8si)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_sign_epi32(__m256i __a, __m256i __b) {
+  return (__m256i)__builtin_ia32_psignd256((__v8si)__a, (__v8si)__b);
 }
 
 /// Shifts each 128-bit half of the 256-bit integer vector \a a left by
@@ -3217,9 +3214,8 @@ _mm_broadcastq_epi64(__m128i __X) {
 ///    A 256-bit vector of [8 x i32] containing indexes of values to use from
 ///    \a __a.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_permutevar8x32_epi32(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_permutevar8x32_epi32(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_ia32_permvarsi256((__v8si)__a, (__v8si)__b);
 }
 
@@ -3275,9 +3271,8 @@ _mm256_permutevar8x32_epi32(__m256i __a, __m256i __b)
 ///    A 256-bit vector of [8 x i32] containing indexes of values to use from
 ///    \a __a.
 /// \returns A 256-bit vector of [8 x float] containing the result.
-static __inline__ __m256 __DEFAULT_FN_ATTRS256
-_mm256_permutevar8x32_ps(__m256 __a, __m256i __b)
-{
+static __inline__ __m256 __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_permutevar8x32_ps(__m256 __a, __m256i __b) {
   return (__m256)__builtin_ia32_permvarsf256((__v8sf)__a, (__v8si)__b);
 }
 

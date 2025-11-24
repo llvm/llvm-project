@@ -67,9 +67,10 @@ cl::opt<std::string> ClFuncPrefix("alloc-token-prefix",
                                   cl::desc("The allocation function prefix"),
                                   cl::Hidden, cl::init("__alloc_token_"));
 
-cl::opt<uint64_t> ClMaxTokens("alloc-token-max",
-                              cl::desc("Maximum number of tokens (0 = no max)"),
-                              cl::Hidden, cl::init(0));
+cl::opt<uint64_t>
+    ClMaxTokens("alloc-token-max",
+                cl::desc("Maximum number of tokens (0 = target SIZE_MAX)"),
+                cl::Hidden, cl::init(0));
 
 cl::opt<bool>
     ClFastABI("alloc-token-fast-abi",

@@ -287,7 +287,6 @@ module polymorphic_test
 ! First test is here to have a reference with non polymorphic on both sides.
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPpointer_assign_parent(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>> {fir.bindc_name = "p", fir.target}) {
-! CHECK: %[[TP:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>> {bindc_name = "tp", uniq_name = "_QMpolymorphic_testFpointer_assign_parentEtp"}
 ! CHECK: %[[PTR:.*]] = fir.alloca !fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {uniq_name = "_QMpolymorphic_testFpointer_assign_parentEtp.addr"}
 ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
 ! CHECK: fir.store %[[ZERO]] to %[[PTR]] : !fir.ref<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
@@ -302,7 +301,6 @@ module polymorphic_test
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPpointer_assign_non_poly(
 ! CHECK-SAME: %arg0: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "p", fir.target}) {
-! CHECK: %[[TP:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>> {bindc_name = "tp", uniq_name = "_QMpolymorphic_testFpointer_assign_non_polyEtp"}
 ! CHECK: %[[PTR:.*]] = fir.alloca !fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {uniq_name = "_QMpolymorphic_testFpointer_assign_non_polyEtp.addr"}
 ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
 ! CHECK: fir.store %[[ZERO]] to %[[PTR]] : !fir.ref<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
@@ -1103,11 +1101,9 @@ module polymorphic_test
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPclass_with_entry(
 ! CHECK-SAME: %[[A:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "a"}) {
-! CHECK: %[[B:.*]] = fir.alloca !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {bindc_name = "b", uniq_name = "_QMpolymorphic_testFclass_with_entryEb"}
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPd(
 ! CHECK-SAME: %[[B:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "b"}) {
-! CHECK: %[[A:.*]] = fir.alloca !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {bindc_name = "a", uniq_name = "_QMpolymorphic_testFclass_with_entryEa"}
 
   subroutine class_array_with_entry(a)
     class(p1) :: a(:), b(:)

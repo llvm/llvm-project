@@ -71,7 +71,7 @@ struct MachineValueTypeSet {
     return Count;
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  void clear() { std::memset(Words.data(), 0, NumWords * sizeof(WordType)); }
+  void clear() { Words.fill(0); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool empty() const {
     for (WordType W : Words)
@@ -86,7 +86,7 @@ struct MachineValueTypeSet {
   }
   std::pair<MachineValueTypeSet &, bool> insert(MVT T) {
     assert(T.SimpleTy < Capacity && "Capacity needs to be enlarged");
-    bool V = count(T.SimpleTy);
+    bool V = count(T);
     Words[T.SimpleTy / WordWidth] |= WordType(1) << (T.SimpleTy % WordWidth);
     return {*this, V};
   }
@@ -138,25 +138,19 @@ struct MachineValueTypeSet {
   private:
     unsigned find_from_pos(unsigned P) const {
       unsigned SkipWords = P / WordWidth;
-      unsigned SkipBits = P % WordWidth;
-      unsigned Count = SkipWords * WordWidth;
-
-      // If P is in the middle of a word, process it manually here, because
-      // the trailing bits need to be masked off to use findFirstSet.
-      if (SkipBits != 0) {
-        WordType W = Set->Words[SkipWords];
-        W &= maskLeadingOnes<WordType>(WordWidth - SkipBits);
-        if (W != 0)
-          return Count + llvm::countr_zero(W);
-        Count += WordWidth;
-        SkipWords++;
-      }
 
       for (unsigned i = SkipWords; i != NumWords; ++i) {
         WordType W = Set->Words[i];
+
+        // If P is in the middle of a word, process it manually here, because
+        // the trailing bits need to be masked off to use countr_zero.
+        if (i == SkipWords) {
+          unsigned SkipBits = P % WordWidth;
+          W &= maskTrailingZeros<WordType>(SkipBits);
+        }
+
         if (W != 0)
-          return Count + llvm::countr_zero(W);
-        Count += WordWidth;
+          return i * WordWidth + llvm::countr_zero(W);
       }
       return Capacity;
     }
@@ -191,8 +185,7 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
   TypeSetByHwMode &operator=(const TypeSetByHwMode &) = default;
-  TypeSetByHwMode(MVT::SimpleValueType VT)
-      : TypeSetByHwMode(ValueTypeByHwMode(VT)) {}
+  TypeSetByHwMode(MVT VT) : TypeSetByHwMode(ValueTypeByHwMode(VT)) {}
   TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList);
 
   SetType &getOrCreate(unsigned Mode) { return Map[Mode]; }
@@ -259,7 +252,7 @@ struct TypeInfer {
   /// otherwise.
 
   bool MergeInTypeInfo(TypeSetByHwMode &Out, const TypeSetByHwMode &In) const;
-  bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT::SimpleValueType InVT) const {
+  bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT InVT) const {
     return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
   }
   bool MergeInTypeInfo(TypeSetByHwMode &Out,
@@ -349,7 +342,7 @@ private:
 };
 
 /// Set type used to track multiply used variables in patterns
-typedef StringSet<> MultipleUseVarSet;
+using MultipleUseVarSet = StringSet<>;
 
 /// SDTypeConstraint - This is a discriminated union of constraints,
 /// corresponding to the SDTypeConstraint tablegen class in Target.td.
@@ -451,8 +444,8 @@ public:
 
   /// getKnownType - If the type constraints on this node imply a fixed type
   /// (e.g. all stores return void, etc), then return it as an
-  /// MVT::SimpleValueType.  Otherwise, return MVT::Other.
-  MVT::SimpleValueType getKnownType(unsigned ResNo) const;
+  /// MVT.  Otherwise, return MVT::Other.
+  MVT getKnownType(unsigned ResNo) const;
 
   unsigned getProperties() const { return Properties; }
 
@@ -698,8 +691,8 @@ public:
   }
   TypeSetByHwMode &getExtType(unsigned ResNo) { return Types[ResNo]; }
   void setType(unsigned ResNo, const TypeSetByHwMode &T) { Types[ResNo] = T; }
-  MVT::SimpleValueType getSimpleType(unsigned ResNo) const {
-    return Types[ResNo].getMachineValueType().SimpleTy;
+  MVT getSimpleType(unsigned ResNo) const {
+    return Types[ResNo].getMachineValueType();
   }
 
   bool hasConcreteType(unsigned ResNo) const {
@@ -850,8 +843,7 @@ public: // Higher level manipulation routines.
   ///
   bool UpdateNodeType(unsigned ResNo, const TypeSetByHwMode &InTy,
                       TreePattern &TP);
-  bool UpdateNodeType(unsigned ResNo, MVT::SimpleValueType InTy,
-                      TreePattern &TP);
+  bool UpdateNodeType(unsigned ResNo, MVT InTy, TreePattern &TP);
   bool UpdateNodeType(unsigned ResNo, const ValueTypeByHwMode &InTy,
                       TreePattern &TP);
 
@@ -1001,8 +993,7 @@ inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
   return TP.getInfer().MergeInTypeInfo(Types[ResNo], VTS);
 }
 
-inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
-                                            MVT::SimpleValueType InTy,
+inline bool TreePatternNode::UpdateNodeType(unsigned ResNo, MVT InTy,
                                             TreePattern &TP) {
   TypeSetByHwMode VTS(InTy);
   TP.getInfer().expandOverloads(VTS);
@@ -1217,15 +1208,15 @@ public:
   iterator_range<pf_iterator> ptfs() const { return PatternFragments; }
 
   // Patterns to match information.
-  typedef std::vector<PatternToMatch>::const_iterator ptm_iterator;
+  using ptm_iterator = std::vector<PatternToMatch>::const_iterator;
   ptm_iterator ptm_begin() const { return PatternsToMatch.begin(); }
   ptm_iterator ptm_end() const { return PatternsToMatch.end(); }
   iterator_range<ptm_iterator> ptms() const { return PatternsToMatch; }
 
   /// Parse the Pattern for an instruction, and insert the result in DAGInsts.
-  typedef std::map<const Record *, DAGInstruction, LessRecordByID> DAGInstMap;
-  void parseInstructionPattern(CodeGenInstruction &CGI, const ListInit *Pattern,
-                               DAGInstMap &DAGInsts);
+  using DAGInstMap = std::map<const Record *, DAGInstruction, LessRecordByID>;
+  void parseInstructionPattern(const CodeGenInstruction &CGI,
+                               const ListInit *Pattern, DAGInstMap &DAGInsts);
 
   const DAGInstruction &getInstruction(const Record *R) const {
     auto F = Instructions.find(R);
