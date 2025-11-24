@@ -5014,8 +5014,7 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
 }
 
 Value *
-InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI,
-                                                           bool PushThruPhis) {
+InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   // Try to push freeze through instructions that propagate but don't produce
   // poison as far as possible. If an operand of freeze does not produce poison
   // then push the freeze through to the operands that are not guaranteed
@@ -5028,8 +5027,8 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI,
   //   Op1.fr = Freeze(Op1)
   //   ... = Inst(Op1.fr, NonPoisonOps...)
 
-  auto CanPushFreeze = [&](Value *V) {
-    if (!isa<Instruction>(V) || (isa<PHINode>(V) && !PushThruPhis))
+  auto CanPushFreeze = [this](Value *V) {
+    if (!isa<Instruction>(V))
       return false;
 
     if (auto *PN = dyn_cast<PHINode>(V)) {
@@ -5232,19 +5231,15 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   if (Value *V = simplifyFreezeInst(Op0, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  bool PushThruPhis = false;
   // freeze (phi const, x) --> phi const, (freeze x)
   if (auto *PN = dyn_cast<PHINode>(Op0)) {
     if (Instruction *NV = foldOpIntoPhi(I, PN))
       return NV;
-    if (FreezePhisVisited.insert(PN).second) {
-      PushThruPhis = true;
-      if (Instruction *NV = foldFreezeIntoRecurrence(I, PN))
-        return NV;
-    }
+    if (Instruction *NV = foldFreezeIntoRecurrence(I, PN))
+      return NV;
   }
 
-  if (Value *NI = pushFreezeToPreventPoisonFromPropagating(I, PushThruPhis))
+  if (Value *NI = pushFreezeToPreventPoisonFromPropagating(I))
     return replaceInstUsesWith(I, NI);
 
   // If I is freeze(undef), check its uses and fold it to a fixed constant.
