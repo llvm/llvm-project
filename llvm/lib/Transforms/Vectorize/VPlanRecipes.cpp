@@ -50,8 +50,13 @@ bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
-  case VPInstructionSC:
-    return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
+  case VPInstructionSC: {
+    auto *VPI = cast<VPInstruction>(this);
+    // Loads read from memory but don't write to memory.
+    if (VPI->getOpcode() == Instruction::Load)
+      return false;
+    return VPI->opcodeMayReadOrWriteFromMemory();
+  }
   case VPInterleaveEVLSC:
   case VPInterleaveSC:
     return cast<VPInterleaveBase>(this)->getNumStoreOperands() > 0;
@@ -554,7 +559,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::ExtractValue:
   case Instruction::Freeze:
   case Instruction::Load:
-  case VPInstruction::AnyOf:
   case VPInstruction::BranchOnCond:
   case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
@@ -594,6 +598,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::GetElementPtr:
   case Instruction::PHI:
   case Instruction::Switch:
+  case VPInstruction::AnyOf:
   case VPInstruction::SLPLoad:
   case VPInstruction::SLPStore:
     // Cannot determine the number of operands from the opcode.
@@ -1010,7 +1015,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (getNumOperands() == 1) {
       Value *Mask = State.get(getOperand(0));
       return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
-                                                  true, Name);
+                                                  /*ZeroIsPoison=*/false, Name);
     }
     // If there are multiple operands, create a chain of selects to pick the
     // first operand with an active lane and add the number of lanes of the
@@ -1026,9 +1031,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
                     Builder.CreateICmpEQ(State.get(getOperand(Idx)),
                                          Builder.getFalse()),
                     Builder.getInt64Ty())
-              : Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(),
-                                                     State.get(getOperand(Idx)),
-                                                     true, Name);
+              : Builder.CreateCountTrailingZeroElems(
+                    Builder.getInt64Ty(), State.get(getOperand(Idx)),
+                    /*ZeroIsPoison=*/false, Name);
       Value *Current = Builder.CreateAdd(
           Builder.CreateMul(RuntimeVF, Builder.getInt64(Idx)), TrailingZeros);
       if (Res) {
@@ -1278,6 +1283,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return false;
   switch (getOpcode()) {
+  case Instruction::GetElementPtr:
   case Instruction::ExtractElement:
   case Instruction::Freeze:
   case Instruction::FCmp:
