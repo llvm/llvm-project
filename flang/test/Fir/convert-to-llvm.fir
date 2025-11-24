@@ -879,6 +879,7 @@ func.func @convert_record(%arg0 : !fir.type<_QMmod1Trec{i:i32,f:f64,c:!llvm.stru
 // CHECK-DAG:     %[[CSTR:.*]] = llvm.extractvalue %[[ARG0]][3] : [[MOD1_REC]]
 // CHECK-DAG:     %{{.*}} = llvm.insertvalue %[[CSTR]], %{{.*}}[3] : [[MOD2_REC]]
 // CHECK:         llvm.return %{{.*}} : [[MOD2_REC]]
+
 // -----
 
 // Test `fir.store` --> `llvm.store` conversion
