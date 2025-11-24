@@ -223,10 +223,6 @@ def FeaturePreciseMemory
     : SubtargetFeature<"precise-memory", "EnablePreciseMemory",
                        "true", "Enable precise memory mode">;
 
-def FeatureExpandWaitcntProfiling
-    : SubtargetFeature<"expand-waitcnt-profiling", "EnableExpandWaitcntProfiling",
-                       "true", "Expand waitcnt instructions for profiling">;
-
 def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
   "SGPRInitBug",
   "true",

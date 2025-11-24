@@ -90,7 +90,6 @@ protected:
   bool EnableCuMode = false;
   bool TrapHandler = false;
   bool EnablePreciseMemory = false;
-  bool EnableExpandWaitcntProfiling = false;
 
   // Used as options.
   bool EnableLoadStoreOpt = false;
@@ -674,10 +673,6 @@ public:
   }
 
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
-
-  bool isExpandWaitcntProfilingEnabled() const {
-    return EnableExpandWaitcntProfiling;
-  }
 
   bool hasFlatAddressSpace() const {
     return FlatAddressSpace;

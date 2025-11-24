@@ -5497,10 +5497,7 @@ defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
   " mode (AMDGPU only)">;
 defm amdgpu_precise_memory_op
     : SimpleMFlag<"amdgpu-precise-memory-op", "Enable", "Disable",
-                  " precise memory mode (AMDGPU only)", m_amdgpu_Features_Group>;
-defm amdgpu_expand_waitcnt_profiling
-    : SimpleMFlag<"amdgpu-expand-waitcnt-profiling", "Enable", "Disable",
-                  " waitcnt expansion for profiling (AMDGPU only)", m_amdgpu_Features_Group>;
+                  " precise memory mode (AMDGPU only)">;
 
 def munsafe_fp_atomics : Flag<["-"], "munsafe-fp-atomics">,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>, Alias<fatomic_ignore_denormal_mode>;
