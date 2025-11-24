@@ -74,3 +74,4 @@ pythonenv*
 # automodapi puts generated documentation files here.
 /lldb/docs/python_api/
 /llvm/out/build
+/llvm/out/build
