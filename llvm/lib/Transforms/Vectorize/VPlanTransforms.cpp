@@ -1476,33 +1476,37 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
       }
 
-      // Skip recipes that aren't single scalars or when conversion to
-      // single-scalar does not introduce additional broadcasts. That is, either
-      // only the scalars of the recipe are used, or at least one of the
-      // operands would require a broadcast. In the latter case, the
-      // single-scalar may need to be broadcasted, but another broadcast is
-      // removed. scalar results used. In the latter case, we would introduce
-      // extra broadcasts.
-      if (!vputils::isSingleScalar(RepOrWidenR) ||
-          (!all_of(RepOrWidenR->users(),
-                   [RepOrWidenR](const VPUser *U) {
-                     if (auto *VPI = dyn_cast<VPInstruction>(U)) {
-                       unsigned Opcode = VPI->getOpcode();
-                       if (Opcode == VPInstruction::ExtractLastElement ||
-                           Opcode == VPInstruction::ExtractLastLanePerPart ||
-                           Opcode == VPInstruction::ExtractPenultimateElement)
-                         return true;
-                     }
+      // Skip recipes that aren't single scalars.
+      if (!vputils::isSingleScalar(RepOrWidenR))
+        continue;
 
-                     return U->usesScalars(RepOrWidenR);
-                   }) &&
-           none_of(RepOrWidenR->operands(), [RepOrWidenR](VPValue *Op) {
-             return Op->getSingleUser() == RepOrWidenR &&
-                    ((Op->isLiveIn() &&
-                      !isa<Constant>(Op->getLiveInIRValue())) ||
-                     (isa<VPReplicateRecipe>(Op) &&
-                      cast<VPReplicateRecipe>(Op)->isSingleScalar()));
-           })))
+      // Skip recipes for which conversion to single-scalar does introduce
+      // additional broadcasts. No extra broadcasts are needed, if either only
+      // the scalars of the recipe are used, or at least one of the operands
+      // would require a broadcast. In the latter case, the single-scalar may
+      // need to be broadcasted, but another broadcast is removed.
+      if (!all_of(RepOrWidenR->users(),
+                  [RepOrWidenR](const VPUser *U) {
+                    if (auto *VPI = dyn_cast<VPInstruction>(U)) {
+                      unsigned Opcode = VPI->getOpcode();
+                      if (Opcode == VPInstruction::ExtractLastElement ||
+                          Opcode == VPInstruction::ExtractLastLanePerPart ||
+                          Opcode == VPInstruction::ExtractPenultimateElement)
+                        return true;
+                    }
+
+                    return U->usesScalars(RepOrWidenR);
+                  }) &&
+          none_of(RepOrWidenR->operands(), [RepOrWidenR](VPValue *Op) {
+            if (Op->getSingleUser() != RepOrWidenR)
+              return false;
+            // Non-constant live-ins require broadcasts, while constants do not
+            // need explicit broadcasts.
+            bool LiveInNeedsBroadcast =
+                Op->isLiveIn() && !isa<Constant>(Op->getLiveInIRValue());
+            auto *OpR = dyn_cast<VPReplicateRecipe>(Op);
+            return LiveInNeedsBroadcast || (OpR && OpR->isSingleScalar());
+          }))
         continue;
 
       auto *Clone = new VPReplicateRecipe(
