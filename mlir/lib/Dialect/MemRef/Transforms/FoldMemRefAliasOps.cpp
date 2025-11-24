@@ -347,28 +347,55 @@ LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
           loadOp.getLoc(), rewriter, expandShapeOp, indices, sourceIndices,
           isa<affine::AffineLoadOp, memref::LoadOp>(loadOp.getOperation()))))
     return failure();
-  llvm::TypeSwitch<Operation *, void>(loadOp)
+
+  return llvm::TypeSwitch<Operation *, LogicalResult>(loadOp)
       .Case([&](affine::AffineLoadOp op) {
         rewriter.replaceOpWithNewOp<affine::AffineLoadOp>(
             loadOp, expandShapeOp.getViewSource(), sourceIndices);
+        return success();
       })
       .Case([&](memref::LoadOp op) {
         rewriter.replaceOpWithNewOp<memref::LoadOp>(
             loadOp, expandShapeOp.getViewSource(), sourceIndices,
             op.getNontemporal());
+        return success();
       })
       .Case([&](vector::LoadOp op) {
         rewriter.replaceOpWithNewOp<vector::LoadOp>(
             op, op.getType(), expandShapeOp.getViewSource(), sourceIndices,
             op.getNontemporal());
+        return success();
       })
       .Case([&](vector::MaskedLoadOp op) {
         rewriter.replaceOpWithNewOp<vector::MaskedLoadOp>(
             op, op.getType(), expandShapeOp.getViewSource(), sourceIndices,
             op.getMask(), op.getPassThru());
+        return success();
+      })
+      .Case([&](vector::TransferReadOp op) {
+        // We only support minor identity maps in the permutation attribute.
+        if (!op.getPermutationMap().isMinorIdentity())
+          return failure();
+
+        // We only support the case where the source of the expand shape has
+        // rank greater than or equal to the vector rank.
+        const int64_t sourceRank = sourceIndices.size();
+        const int64_t vectorRank = op.getVectorType().getRank();
+        if (sourceRank < vectorRank)
+          return failure();
+
+        // We need to construct a new minor identity map since we will have lost
+        // some dimensions in folding away the expand shape.
+        auto minorIdMap = AffineMap::getMinorIdentityMap(sourceRank, vectorRank,
+                                                         op.getContext());
+
+        rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
+            op, op.getVectorType(), expandShapeOp.getViewSource(),
+            sourceIndices, minorIdMap, op.getPadding(), op.getMask(),
+            op.getInBounds());
+        return success();
       })
       .DefaultUnreachable("unexpected operation");
-  return success();
 }
 
 template <typename OpTy>
@@ -659,6 +686,7 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
                LoadOpOfExpandShapeOpFolder<memref::LoadOp>,
                LoadOpOfExpandShapeOpFolder<vector::LoadOp>,
                LoadOpOfExpandShapeOpFolder<vector::MaskedLoadOp>,
+               LoadOpOfExpandShapeOpFolder<vector::TransferReadOp>,
                StoreOpOfExpandShapeOpFolder<affine::AffineStoreOp>,
                StoreOpOfExpandShapeOpFolder<memref::StoreOp>,
                StoreOpOfExpandShapeOpFolder<vector::StoreOp>,
