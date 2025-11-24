@@ -188,6 +188,7 @@ cc_library(
         "//clang:basic",
         "//clang:codegen",
         "//clang:config",
+        "//clang:driver",
         "//clang:edit",
         "//clang:frontend",
         "//clang:frontend_rewrite",
