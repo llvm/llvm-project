@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include <queue>
 using namespace llvm;
 
@@ -1769,8 +1768,8 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
 
     auto &AVL = MI.getOperand(1);
 
-    // If the AVL is a register, we need to make sure its definition is the
-    // same at PrevMI as it was at MI.
+    // If the AVL is a register, we need to make sure its definition is the same
+    // at PrevMI as it was at MI.
     if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
       VNInfo *VNI = getVNInfoFromReg(AVL.getReg(), MI, LIS);
       VNInfo *PrevVNI = getVNInfoFromReg(AVL.getReg(), PrevMI, LIS);
