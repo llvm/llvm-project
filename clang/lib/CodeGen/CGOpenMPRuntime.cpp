@@ -8348,9 +8348,8 @@ private:
           // components (offset/length/stride) have a concrete element type to
           // work with. This makes pointer-backed sections behave consistently
           // with CAT/VAT/array bases.
-          if (const auto *PtrType = Ty->getAs<PointerType>()) {
+          if (const auto *PtrType = Ty->getAs<PointerType>())
             ElementType = PtrType->getPointeeType().getTypePtr();
-          }
         } else {
           // Any component after the first should never have a raw pointer type;
           // by this point. ElementType must already be known (set above or in
