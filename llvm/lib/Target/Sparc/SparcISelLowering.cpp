@@ -454,6 +454,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
   unsigned InIdx = 0;
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i, ++InIdx) {
     CCValAssign &VA = ArgLocs[i];
+    EVT LocVT = VA.getLocVT();
 
     if (Ins[InIdx].Flags.isSRet()) {
       if (InIdx != 0)
@@ -551,17 +552,11 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
         continue;
       }
 
-      int FI;
-      if (VA.getValVT() == MVT::i32 || VA.getValVT() == MVT::f32) {
-        FI = MF.getFrameInfo().CreateFixedObject(4, Offset, true);
-      } else {
-        // We shouldn't see any other value types here.
-        llvm_unreachable("Unexpected ValVT encountered in frame lowering.");
-      }
-
+      int FI = MF.getFrameInfo().CreateFixedObject(LocVT.getSizeInBits() / 8,
+                                                   Offset, true);
       SDValue FIPtr = DAG.getFrameIndex(FI, PtrVT);
-      SDValue Load =
-          DAG.getLoad(VA.getValVT(), dl, Chain, FIPtr, MachinePointerInfo());
+      SDValue Load = DAG.getLoad(LocVT, dl, Chain, FIPtr,
+                                 MachinePointerInfo::getFixedStack(MF, FI));
       if (VA.getLocInfo() != CCValAssign::Indirect) {
         InVals.push_back(Load);
         continue;
@@ -580,7 +575,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
     assert(ArgPartOffset == 0);
     while (i + 1 != e && Ins[InIdx + 1].OrigArgIndex == ArgIndex) {
       CCValAssign &PartVA = ArgLocs[i + 1];
-      unsigned PartOffset = Ins[InIdx + 1].PartOffset - ArgPartOffset;
+      unsigned PartOffset = Ins[InIdx + 1].PartOffset;
       SDValue Offset = DAG.getIntPtrConstant(PartOffset, dl);
       SDValue Address = DAG.getNode(ISD::ADD, dl, PtrVT, ArgValue, Offset);
       InVals.push_back(DAG.getLoad(PartVA.getValVT(), dl, Chain, Address,

@@ -270,3 +270,37 @@ define fp128 @f128_direct(fp128 %num) nounwind {
     ret fp128 %ret
 }
 declare fp128 @f128_callee(fp128 %a, fp128 %b)
+
+define fp128 @f128_direct_spill(i32 %o0, i32 %o1, i32 %o2, i32 %o3, i32 %o4, i32 %o5, i32 %ss0, fp128 %num) nounwind {
+; CHECK-LABEL: f128_direct_spill:
+; CHECK:       ! %bb.0:
+; CHECK-NEXT:  save %sp, -136, %sp
+; CHECK-NEXT:  ld [%fp+96], %g2
+; CHECK-NEXT:  ldd [%g2], %f0
+; CHECK-NEXT:  ldd [%g2+8], %f4
+; CHECK-NEXT:  ld [%fp+64], %l0
+; CHECK-NEXT:  mov %i5, %o5
+; CHECK-NEXT:  mov %i4, %o4
+; CHECK-NEXT:  mov %i3, %o3
+; CHECK-NEXT:  mov %i2, %o2
+; CHECK-NEXT:  mov %i1, %o1
+; CHECK-NEXT:  mov %i0, %o0
+; CHECK-NEXT:  add %fp, -32, %i0
+; CHECK-NEXT:  st %i0, [%sp+92]
+; CHECK-NEXT:  add %fp, -16, %i0
+; CHECK-NEXT:  st %i0, [%sp+64]
+; CHECK-NEXT:  std %f4, [%fp+-24]
+; CHECK-NEXT:  call f128_callee_spill
+; CHECK-NEXT:  std %f0, [%fp+-32]
+; CHECK-NEXT:  unimp 16
+; CHECK-NEXT:  ldd [%fp+-8], %f0
+; CHECK-NEXT:  ldd [%fp+-16], %f4
+; CHECK-NEXT:  std %f0, [%l0+8]
+; CHECK-NEXT:  std %f4, [%l0]
+; CHECK-NEXT:  ret
+; CHECK-NEXT:  restore
+
+    %ret = call fp128 @f128_callee_spill(i32 %o0, i32 %o1, i32 %o2, i32 %o3, i32 %o4, i32 %o5, fp128 %num)
+    ret fp128 %ret
+}
+declare fp128 @f128_callee_spill(i32 %o0, i32 %o1, i32 %o2, i32 %o3, i32 %o4, i32 %o5, fp128 %a)
