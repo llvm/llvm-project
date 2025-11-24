@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple riscv32 -mattr=+v,+vl-dependent-latency < %s | FileCheck %s
 ; RUN: llc -mtriple riscv64 -mattr=+v,+vl-dependent-latency < %s | FileCheck %s
 
-define <4 x i32> @splice_v4i32_slidedown(<4 x i32> %a, <4 x i32> %b) #0 {
+define <4 x i32> @splice_v4i32_slidedown(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: splice_v4i32_slidedown:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -15,7 +15,7 @@ define <4 x i32> @splice_v4i32_slidedown(<4 x i32> %a, <4 x i32> %b) #0 {
   ret <4 x i32> %res
 }
 
-define <4 x i32> @splice_4i32_slideup(<4 x i32> %a) #0 {
+define <4 x i32> @splice_4i32_slideup(<4 x i32> %a) {
 ; CHECK-LABEL: splice_4i32_slideup:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -26,7 +26,7 @@ define <4 x i32> @splice_4i32_slideup(<4 x i32> %a) #0 {
   ret <4 x i32> %res
 }
 
-define <8 x i32> @splice_v8i32_slidedown(<8 x i32> %a, <8 x i32> %b) #0 {
+define <8 x i32> @splice_v8i32_slidedown(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: splice_v8i32_slidedown:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -36,7 +36,7 @@ define <8 x i32> @splice_v8i32_slidedown(<8 x i32> %a, <8 x i32> %b) #0 {
   ret <8 x i32> %res
 }
 
-define <8 x i32> @splice_v8i32_slideup(<8 x i32> %a) #0 {
+define <8 x i32> @splice_v8i32_slideup(<8 x i32> %a) {
 ; CHECK-LABEL: splice_v8i32_slideup:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -47,3 +47,45 @@ define <8 x i32> @splice_v8i32_slideup(<8 x i32> %a) #0 {
   ret <8 x i32> %res
 }
 
+define <4 x i32> @splice_v4i32_slidedown_undef(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: splice_v4i32_slidedown_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vrgather.vi v9, v8, 3
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %res = call <4 x i32> @llvm.vector.splice(<4 x i32> %a, <4 x i32> undef, i32 3)
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @splice_4i32_slideup_undef(<4 x i32> %a) {
+; CHECK-LABEL: splice_4i32_slideup_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vrgather.vi v9, v8, 0
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %res = call <4 x i32> @llvm.vector.splice(<4 x i32> undef, <4 x i32> %a, i32 -3)
+  ret <4 x i32> %res
+}
+
+define <8 x i32> @splice_v8i32_slidedown_undef(<8 x i32> %a, <8 x i32> %b) {
+; CHECK-LABEL: splice_v8i32_slidedown_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 3
+; CHECK-NEXT:    ret
+  %res = call <8 x i32> @llvm.vector.splice(<8 x i32> %a, <8 x i32> undef, i32 3)
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @splice_v8i32_slideup_undef(<8 x i32> %a) {
+; CHECK-LABEL: splice_v8i32_slideup_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v10, v8, 3
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
+  %res = call <8 x i32> @llvm.vector.splice(<8 x i32> undef, <8 x i32> %a, i32 -3)
+  ret <8 x i32> %res
+}
