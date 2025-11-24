@@ -80,21 +80,17 @@ def AMDGPU_AddressSpaceAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_AddressSpace,
   let assemblyFormat = "`<` $value `>`";
 }
 
-class AMDGPU_Type<string name, string typeMnemonic, list<Trait> traits = []>
-    : TypeDef<AMDGPU_Dialect, name, traits> {
-  let mnemonic = typeMnemonic;
-}
 
 //===----------------------------------------------------------------------===//
 // AMDGPU Type definitions
 //===----------------------------------------------------------------------===//
 
-def AMDGPU_TDMBaseType : AMDGPU_Type<"TDMBase", "tdm_base"> {
-  // TODO:
-  // * Add verifiers such that one of the memrefs is from LDS and the other global.
-  // * Add verifiers to make sure that the type is in the correct direction.
-  // * Add verifiers to make sure that the number of indices do not exceed the number of dimensions.
+class AMDGPU_Type<string name, string typeMnemonic, list<Trait> traits = []>
+    : TypeDef<AMDGPU_Dialect, name, traits> {
+  let mnemonic = typeMnemonic;
+}
 
+def AMDGPU_TDMBaseType : AMDGPU_Type<"TDMBase", "tdm_base"> {
   let summary = "Pair of base addresses that move data between LDS and global storage.";
   let description = [{
     This type is opaque and it is used to represent a struct of two addresses.
@@ -107,6 +103,14 @@ def AMDGPU_TDMBaseType : AMDGPU_Type<"TDMBase", "tdm_base"> {
     }]>
   ];
   let assemblyFormat = "`<` $elementType `>`";
+}
+
+def AMDGPU_TDMDescriptorType : AMDGPU_Type<"TDMDescriptor", "tdm_descriptor"> {
+  let summary = "Descriptors used in tensor store/load operations.";
+  let description = [{
+    This type is opaque and corresponds to the two or four descriptor groups
+    used in tensor_load_to_lds or tensor_store_from_lds.
+  }];
 
 }
 
@@ -1233,6 +1237,10 @@ def AMDGPU_MakeDmaBaseOp :
                    Variadic<Index>:$dstIndices)>,
     Results<(outs AMDGPU_TDMBaseType: $base)> {
 
+  // TODO:
+  // * Add verifiers such that one of the memrefs is from LDS and the other global.
+  // * Add verifiers to make sure that the number of indices do not exceed the number of dimensions.
+
   let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
   let description = [{
     This operation creates a pair of addresses that will be used by tensor_load_to_lds
@@ -1244,6 +1252,24 @@ def AMDGPU_MakeDmaBaseOp :
 
   let assemblyFormat = [{
     $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` type($src) `,` type($dst) `to` type(results)
+  }];
+}
+
+def AMDGPU_MakeDmaDescriptorOp :
+  AMDGPU_Op<"make_dma_descriptor", [Pure]>,
+  Arguments<(ins
+    AMDGPU_TDMBaseType: $base,
+    Variadic<Index>: $dynamic_sizes,
+    OptionalAttr<DenseI64ArrayAttr>: $static_sizes)>,
+  Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
+
+  let summary = "TODO";
+  let description = [{
+    TODO
+  }];
+
+  let assemblyFormat = [{
+    $base `globalSize` custom<DynamicIndexList>($dynamic_sizes, $static_sizes) attr-dict `:` qualified(type($base)) `to` type(results)
   }];
 }
 
