@@ -972,6 +972,10 @@ public:
   ///  should use coldcc calling convention.
   LLVM_ABI bool useColdCCForColdCall(Function &F) const;
 
+  /// Return true if the input function is internal, should use fastcc calling
+  /// convention.
+  LLVM_ABI bool useFastCCForInternalCall(Function &F) const;
+
   LLVM_ABI bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
 
   /// Identifies if the vector form of the intrinsic has a scalar operand.
