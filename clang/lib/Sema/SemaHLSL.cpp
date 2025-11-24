@@ -1010,14 +1010,26 @@ void SemaHLSL::diagnoseSemanticStageMismatch(
     if (Case.Stage != Stage)
       continue;
 
-    if (IsInput && Case.Direction & IOType::In)
+    if (IsInput && Case.AllowedIOTypesMask & IOType::In)
       return;
-    if (!IsInput && Case.Direction & IOType::Out)
+    if (!IsInput && Case.AllowedIOTypesMask & IOType::Out)
       return;
 
-    Diag(A->getLoc(), diag::err_hlsl_semantic_unsupported_direction_for_stage)
+    SmallVector<std::string, 8> ValidCases;
+    llvm::transform(
+        Allowed, std::back_inserter(ValidCases), [](SemanticStageInfo Case) {
+          std::string Type =
+              Case.AllowedIOTypesMask == IOType::InOut
+                  ? " inout"
+                  : (Case.AllowedIOTypesMask & IOType::In ? " in" : " out");
+          return std::string(
+                     HLSLShaderAttr::ConvertEnvironmentTypeToStr(Case.Stage)) +
+                 Type;
+        });
+    Diag(A->getLoc(), diag::err_hlsl_semantic_unsupported_iotype_for_stage)
         << A->getAttrName() << (IsInput ? "input" : "output")
-        << llvm::Triple::getEnvironmentTypeName(Case.Stage);
+        << llvm::Triple::getEnvironmentTypeName(Case.Stage)
+        << join(ValidCases, ", ");
     return;
   }
 
