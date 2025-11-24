@@ -98,6 +98,9 @@ def testStructType():
     assert opaque.opaque
     # CHECK: !llvm.struct<"opaque", opaque>
 
+    typ = Type.parse('!llvm.struct<"zoo", (i32, i64)>')
+    assert isinstance(typ, llvm.StructType)
+
 
 # CHECK-LABEL: testSmoke
 @constructAndPrintInModule

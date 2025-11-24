@@ -31,8 +31,8 @@ static void populateDialectLLVMSubmodule(nanobind::module_ &m) {
   // StructType
   //===--------------------------------------------------------------------===//
 
-  auto llvmStructType =
-      mlir_type_subclass(m, "StructType", mlirTypeIsALLVMStructType);
+  auto llvmStructType = mlir_type_subclass(
+      m, "StructType", mlirTypeIsALLVMStructType, mlirLLVMStructTypeGetTypeID);
 
   llvmStructType
       .def_classmethod(

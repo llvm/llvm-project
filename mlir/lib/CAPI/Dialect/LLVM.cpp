@@ -73,6 +73,10 @@ bool mlirTypeIsALLVMStructType(MlirType type) {
   return isa<LLVM::LLVMStructType>(unwrap(type));
 }
 
+MlirTypeID mlirLLVMStructTypeGetTypeID() {
+  return wrap(LLVM::LLVMStructType::getTypeID());
+}
+
 bool mlirLLVMStructTypeIsLiteral(MlirType type) {
   return !cast<LLVM::LLVMStructType>(unwrap(type)).isIdentified();
 }
