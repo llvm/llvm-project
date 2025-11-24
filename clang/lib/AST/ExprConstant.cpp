@@ -13521,14 +13521,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       APInt A = SelectUpperA ? A1 : A0;
       APInt B = SelectUpperB ? B1 : B0;
 
-      // Perform carry-less multiplication (polynomial multiplication in
-      // GF(2^64)) This multiplies two 64-bit values to produce a 128-bit result
-      APInt AVal = A.zextOrTrunc(64);
-      APInt BVal = B.zextOrTrunc(64);
-
       // Extend both operands to 128 bits for carry-less multiplication
-      APInt A128 = AVal.zext(128);
-      APInt B128 = BVal.zext(128);
+      APInt A128 = A.zext(128);
+      APInt B128 = B.zext(128);
 
       // Use APIntOps::clmul for carry-less multiplication
       APInt Result = llvm::APIntOps::clmul(A128, B128);
