@@ -314,9 +314,14 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FCANONICALIZE(SDNode *N) {
-  return SoftenFloatRes_Unary(
-      N, GetFPLibCall(N->getValueType(0), RTLIB::FMIN_F32, RTLIB::FMIN_F64,
-                      RTLIB::FMIN_F80, RTLIB::FMIN_F128, RTLIB::FMIN_PPCF128));
+  SDLoc dl(N);
+  auto Node = DAG.getNode(ISD::FMINIMUMNUM, dl, N->getValueType(0),
+                          N->getOperand(0), N->getOperand(0));
+  return SoftenFloatRes_Binary(
+      Node.getNode(),
+      GetFPLibCall(N->getValueType(0), RTLIB::FMINIMUM_NUM_F32,
+                   RTLIB::FMINIMUM_NUM_F64, RTLIB::FMINIMUM_NUM_F80,
+                   RTLIB::FMINIMUM_NUM_F128, RTLIB::FMINIMUM_NUM_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMINNUM(SDNode *N) {
