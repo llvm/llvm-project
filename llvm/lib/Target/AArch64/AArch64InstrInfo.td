@@ -1184,7 +1184,7 @@ def AArch64msrr : SDNode<"AArch64ISD::MSRR",
                                                SDTCisVT<2, i64>]>,
                           [SDNPHasChain]>;
 
-def SD_AArch64rshrnb : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<2>]>;
+def SD_AArch64rshrnb : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVT<2, i32>]>;
 // Vector narrowing shift by immediate (bottom)
 def AArch64rshrnb : SDNode<"AArch64ISD::RSHRNB_I", SD_AArch64rshrnb>;
 def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
@@ -7012,6 +7012,19 @@ multiclass UIntToFPROLoadPat<ValueType DstTy, ValueType SrcTy,
            (UCVTF (INSERT_SUBREG (DstTy (IMPLICIT_DEF)),
                                  (LDRX GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend),
                                  sub))>;
+}
+
+let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
+defm : UIntToFPROLoadPat<f16, i32, zextloadi8,
+                         UCVTFv1i16, ro8, LDRBroW, LDRBroX, bsub>;
+def : Pat <(f16 (uint_to_fp (i32
+               (zextloadi8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
+           (UCVTFv1i16 (INSERT_SUBREG (f16 (IMPLICIT_DEF)),
+                          (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub))>;
+def : Pat <(f16 (uint_to_fp (i32
+                     (zextloadi8 (am_unscaled8 GPR64sp:$Rn, simm9:$offset))))),
+           (UCVTFv1i16 (INSERT_SUBREG (f16 (IMPLICIT_DEF)),
+                          (LDURBi GPR64sp:$Rn, simm9:$offset), bsub))>;
 }
 
 defm : UIntToFPROLoadPat<f32, i32, zextloadi8,
