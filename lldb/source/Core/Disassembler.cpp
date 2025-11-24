@@ -425,7 +425,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
         type_name = type_str;
 
     current_vars.try_emplace(
-        f v->GetID(),
+        v->GetID(),
         VariableAnnotation{std::string(name), std::string(loc), true,
                            entry.expr->GetRegisterKind(), entry.file_range,
                            decl_file, decl_line, type_name});
