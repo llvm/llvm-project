@@ -1133,3 +1133,269 @@ int c11_atomic_fetch_nand(_Atomic(int) *ptr, int value) {
   // OGCG:      %[[RES:.+]] = atomicrmw nand ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
 }
+
+int atomic_load_dynamic_order(int *ptr, int order) {
+  // CIR-LABEL: atomic_load_dynamic_order
+  // LLVM-LABEL: atomic_load_dynamic_order
+  // OGCG-LABEL: atomic_load_dynamic_order
+
+  return __atomic_load_n(ptr, order);
+  
+  // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  // CIR-NEXT: %[[ORDER:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT: cir.switch (%[[ORDER]] : !s32i) {
+  // CIR-NEXT:   cir.case(default, []) {
+  // CIR-NEXT:     %[[RES:.+]] = cir.load align(4) atomic(relaxed) %[[PTR]] : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT:.+]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.break
+  // CIR-NEXT:   }
+  // CIR-NEXT:   cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
+  // CIR-NEXT:     %[[RES:.+]] = cir.load align(4) atomic(acquire) %[[PTR]] : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.break
+  // CIR-NEXT:   }
+  // CIR-NEXT:   cir.case(anyof, [#cir.int<5> : !s32i]) {
+  // CIR-NEXT:     %[[RES:.+]] = cir.load align(4) atomic(seq_cst) %[[PTR]] : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.break
+  // CIR-NEXT:   }
+  // CIR-NEXT:   cir.yield
+  // CIR-NEXT: }
+  // CIR-NEXT: %{{.+}} = cir.load align(4) %[[RES_SLOT]] : !cir.ptr<!s32i>, !s32i
+
+  // LLVM:        %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT:   %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
+  // LLVM-NEXT:   br label %[[SWITCH_BLK:.+]]
+  // LLVM:      [[SWITCH_BLK]]:
+  // LLVM-NEXT:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // LLVM-NEXT:     i32 1, label %[[ACQUIRE_BLK:.+]]
+  // LLVM-NEXT:     i32 2, label %[[ACQUIRE_BLK]]
+  // LLVM-NEXT:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // LLVM-NEXT:   ]
+  // LLVM:      [[DEFAULT_BLK]]:
+  // LLVM-NEXT:   %[[RES:.+]] = load atomic i32, ptr %[[PTR]] monotonic, align 4
+  // LLVM-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT:.+]], align 4
+  // LLVM-NEXT:   br label %[[CONTINUE_BLK:.+]]
+  // LLVM:      [[ACQUIRE_BLK]]:
+  // LLVM-NEXT:   %[[RES:.+]] = load atomic i32, ptr %[[PTR]] acquire, align 4
+  // LLVM-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT]], align 4
+  // LLVM-NEXT:   br label %[[CONTINUE_BLK]]
+  // LLVM:      [[SEQ_CST_BLK]]:
+  // LLVM-NEXT:   %[[RES:.+]] = load atomic i32, ptr %[[PTR]] seq_cst, align 4
+  // LLVM-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT]], align 4
+  // LLVM-NEXT:   br label %[[CONTINUE_BLK]]
+  // LLVM:      [[CONTINUE_BLK]]:
+  // LLVM-NEXT:   %{{.+}} = load i32, ptr %[[RES_SLOT]], align 4
+
+  // OGCG:        %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // OGCG-NEXT:   %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
+  // OGCG-NEXT:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // OGCG-NEXT:     i32 1, label %[[ACQUIRE_BLK:.+]]
+  // OGCG-NEXT:     i32 2, label %[[ACQUIRE_BLK]]
+  // OGCG-NEXT:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // OGCG-NEXT:   ]
+  // OGCG:      [[DEFAULT_BLK]]:
+  // OGCG-NEXT:   %[[RES:.+]] = load atomic i32, ptr %[[PTR]] monotonic, align 4
+  // OGCG-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT:.+]], align 4
+  // OGCG-NEXT:   br label %[[CONTINUE_BLK:.+]]
+  // OGCG:      [[ACQUIRE_BLK]]:
+  // OGCG-NEXT:   %[[RES:.+]] = load atomic i32, ptr %[[PTR]] acquire, align 4
+  // OGCG-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT]], align 4
+  // OGCG-NEXT:   br label %[[CONTINUE_BLK]]
+  // OGCG:      [[SEQ_CST_BLK]]:
+  // OGCG-NEXT:   %[[RES:.+]] = load atomic i32, ptr %[[PTR]] seq_cst, align 4
+  // OGCG-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT]], align 4
+  // OGCG-NEXT:   br label %[[CONTINUE_BLK]]
+  // OGCG:      [[CONTINUE_BLK]]:
+  // OGCG-NEXT:   %{{.+}} = load i32, ptr %[[RES_SLOT]], align 4
+}
+
+void atomic_store_dynamic_order(int *ptr, int order) {
+  // CIR-LABEL: atomic_store_dynamic_order
+  // LLVM-LABEL: atomic_store_dynamic_order
+  // OGCG-LABEL: atomic_store_dynamic_order
+
+  __atomic_store_n(ptr, 10, order);
+
+  // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  // CIR-NEXT: %[[ORDER:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR:      cir.switch (%[[ORDER]] : !s32i) {
+  // CIR-NEXT:   cir.case(default, []) {
+  // CIR-NEXT:     %[[VALUE:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT:     cir.store align(4) atomic(relaxed) %[[VALUE]], %[[PTR]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.break
+  // CIR-NEXT:   }
+  // CIR-NEXT:   cir.case(anyof, [#cir.int<3> : !s32i]) {
+  // CIR-NEXT:     %[[VALUE:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT:     cir.store align(4) atomic(release) %[[VALUE]], %[[PTR]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.break
+  // CIR-NEXT:   }
+  // CIR-NEXT:   cir.case(anyof, [#cir.int<5> : !s32i]) {
+  // CIR-NEXT:     %[[VALUE:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT:     cir.store align(4) atomic(seq_cst) %[[VALUE]], %[[PTR]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.break
+  // CIR-NEXT:   }
+  // CIR-NEXT:   cir.yield
+  // CIR-NEXT: }
+
+  // LLVM:        %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT:   %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
+  // LLVM:        br label %[[SWITCH_BLK:.+]]
+  // LLVM:      [[SWITCH_BLK]]:
+  // LLVM-NEXT:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // LLVM-NEXT:     i32 3, label %[[RELEASE_BLK:.+]]
+  // LLVM-NEXT:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // LLVM-NEXT:   ]
+  // LLVM:      [[DEFAULT_BLK]]:
+  // LLVM-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // LLVM-NEXT:   store atomic i32 %[[VALUE]], ptr %[[PTR]] monotonic, align 4
+  // LLVM-NEXT:   br label %{{.+}}
+  // LLVM:      [[RELEASE_BLK]]:
+  // LLVM-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // LLVM-NEXT:   store atomic i32 %[[VALUE]], ptr %[[PTR]] release, align 4
+  // LLVM-NEXT:   br label %{{.+}}
+  // LLVM:      [[SEQ_CST_BLK]]:
+  // LLVM-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // LLVM-NEXT:   store atomic i32 %[[VALUE]], ptr %[[PTR]] seq_cst, align 4
+  // LLVM-NEXT:   br label %{{.+}}
+  
+  // OGCG:        %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // OGCG-NEXT:   %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
+  // OGCG:        switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // OGCG-NEXT:     i32 3, label %[[RELEASE_BLK:.+]]
+  // OGCG-NEXT:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // OGCG-NEXT:   ]
+  // OGCG:      [[DEFAULT_BLK]]:
+  // OGCG-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // OGCG-NEXT:   store atomic i32 %[[VALUE]], ptr %[[PTR]] monotonic, align 4
+  // OGCG-NEXT:   br label %{{.+}}
+  // OGCG:      [[RELEASE_BLK]]:
+  // OGCG-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // OGCG-NEXT:   store atomic i32 %[[VALUE]], ptr %[[PTR]] release, align 4
+  // OGCG-NEXT:   br label %{{.+}}
+  // OGCG:      [[SEQ_CST_BLK]]:
+  // OGCG-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // OGCG-NEXT:   store atomic i32 %[[VALUE]], ptr %[[PTR]] seq_cst, align 4
+  // OGCG-NEXT:   br label %{{.+}}
+}
+
+int atomic_load_and_store_dynamic_order(int *ptr, int order) {
+  // CIR-LABEL: atomic_load_and_store_dynamic_order
+  // LLVM-LABEL: atomic_load_and_store_dynamic_order
+  // OGCG-LABEL: atomic_load_and_store_dynamic_order
+
+  return __atomic_exchange_n(ptr, 20, order);
+
+  // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  // CIR-NEXT: %[[ORDER:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR:      cir.switch (%[[ORDER]] : !s32i) {
+  // CIR-NEXT:   cir.case(default, []) {
+  // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg relaxed %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT:.+]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.break
+  // CIR-NEXT:   }
+  // CIR-NEXT:   cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
+  // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg acquire %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.break
+  // CIR-NEXT:   }
+  // CIR-NEXT:   cir.case(anyof, [#cir.int<3> : !s32i]) {
+  // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg release %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.break
+  // CIR-NEXT:   }
+  // CIR-NEXT:   cir.case(anyof, [#cir.int<4> : !s32i]) {
+  // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg acq_rel %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.break
+  // CIR-NEXT:   }
+  // CIR-NEXT:   cir.case(anyof, [#cir.int<5> : !s32i]) {
+  // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg seq_cst %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.break
+  // CIR-NEXT:   }
+  // CIR-NEXT:   cir.yield
+  // CIR-NEXT: }
+  // CIR-NEXT: %{{.+}} = cir.load align(4) %[[RES_SLOT]] : !cir.ptr<!s32i>, !s32i
+
+  // LLVM:        %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT:   %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
+  // LLVM:        br label %[[SWITCH_BLK:.+]]
+  // LLVM:      [[SWITCH_BLK]]:
+  // LLVM-NEXT:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // LLVM-NEXT:     i32 1, label %[[ACQUIRE_BLK:.+]]
+  // LLVM-NEXT:     i32 2, label %[[ACQUIRE_BLK]]
+  // LLVM-NEXT:     i32 3, label %[[RELEASE_BLK:.+]]
+  // LLVM-NEXT:     i32 4, label %[[ACQ_REL_BLK:.+]]
+  // LLVM-NEXT:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // LLVM-NEXT:   ]
+  // LLVM:      [[DEFAULT_BLK]]:
+  // LLVM-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // LLVM-NEXT:   %[[RES:.+]] = atomicrmw xchg ptr %[[PTR]], i32 %[[VALUE]] monotonic, align 4
+  // LLVM-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT:.+]], align 4
+  // LLVM-NEXT:   br label %[[CONTINUE_BLK:.+]]
+  // LLVM:      [[ACQUIRE_BLK]]:
+  // LLVM-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // LLVM-NEXT:   %[[RES:.+]] = atomicrmw xchg ptr %[[PTR]], i32 %[[VALUE]] acquire, align 4
+  // LLVM-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT]], align 4
+  // LLVM-NEXT:   br label %[[CONTINUE_BLK]]
+  // LLVM:      [[RELEASE_BLK]]:
+  // LLVM-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // LLVM-NEXT:   %[[RES:.+]] = atomicrmw xchg ptr %[[PTR]], i32 %[[VALUE]] release, align 4
+  // LLVM-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT]], align 4
+  // LLVM-NEXT:   br label %[[CONTINUE_BLK]]
+  // LLVM:      [[ACQ_REL_BLK]]:
+  // LLVM-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // LLVM-NEXT:   %[[RES:.+]] = atomicrmw xchg ptr %[[PTR]], i32 %[[VALUE]] acq_rel, align 4
+  // LLVM-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT]], align 4
+  // LLVM-NEXT:   br label %[[CONTINUE_BLK]]
+  // LLVM:      [[SEQ_CST_BLK]]:
+  // LLVM-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // LLVM-NEXT:   %[[RES:.+]] = atomicrmw xchg ptr %[[PTR]], i32 %[[VALUE]] seq_cst, align 4
+  // LLVM-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT]], align 4
+  // LLVM-NEXT:   br label %[[CONTINUE_BLK]]
+  // LLVM:      [[CONTINUE_BLK]]:
+  // LLVM-NEXT:   %{{.+}} = load i32, ptr %[[RES_SLOT]], align 4
+  
+  // OGCG:        %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // OGCG-NEXT:   %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
+  // OGCG:        switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
+  // OGCG-NEXT:     i32 1, label %[[ACQUIRE_BLK:.+]]
+  // OGCG-NEXT:     i32 2, label %[[ACQUIRE_BLK]]
+  // OGCG-NEXT:     i32 3, label %[[RELEASE_BLK:.+]]
+  // OGCG-NEXT:     i32 4, label %[[ACQ_REL_BLK:.+]]
+  // OGCG-NEXT:     i32 5, label %[[SEQ_CST_BLK:.+]]
+  // OGCG-NEXT:   ]
+  // OGCG:      [[DEFAULT_BLK]]:
+  // OGCG-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // OGCG-NEXT:   %[[RES:.+]] = atomicrmw xchg ptr %[[PTR]], i32 %[[VALUE]] monotonic, align 4
+  // OGCG-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT:.+]], align 4
+  // OGCG-NEXT:   br label %[[CONTINUE_BLK:.+]]
+  // OGCG:      [[ACQUIRE_BLK]]:
+  // OGCG-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // OGCG-NEXT:   %[[RES:.+]] = atomicrmw xchg ptr %[[PTR]], i32 %[[VALUE]] acquire, align 4
+  // OGCG-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT]], align 4
+  // OGCG-NEXT:   br label %[[CONTINUE_BLK]]
+  // OGCG:      [[RELEASE_BLK]]:
+  // OGCG-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // OGCG-NEXT:   %[[RES:.+]] = atomicrmw xchg ptr %[[PTR]], i32 %[[VALUE]] release, align 4
+  // OGCG-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT]], align 4
+  // OGCG-NEXT:   br label %[[CONTINUE_BLK]]
+  // OGCG:      [[ACQ_REL_BLK]]:
+  // OGCG-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // OGCG-NEXT:   %[[RES:.+]] = atomicrmw xchg ptr %[[PTR]], i32 %[[VALUE]] acq_rel, align 4
+  // OGCG-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT]], align 4
+  // OGCG-NEXT:   br label %[[CONTINUE_BLK]]
+  // OGCG:      [[SEQ_CST_BLK]]:
+  // OGCG-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
+  // OGCG-NEXT:   %[[RES:.+]] = atomicrmw xchg ptr %[[PTR]], i32 %[[VALUE]] seq_cst, align 4
+  // OGCG-NEXT:   store i32 %[[RES]], ptr %[[RES_SLOT]], align 4
+  // OGCG-NEXT:   br label %[[CONTINUE_BLK]]
+  // OGCG:      [[CONTINUE_BLK]]:
+  // OGCG-NEXT:   %{{.+}} = load i32, ptr %[[RES_SLOT]], align 4
+}
