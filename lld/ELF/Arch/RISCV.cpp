@@ -68,12 +68,26 @@ public:
 
 } // end anonymous namespace
 
+// Bit 8 of RelType is used to indicate linker-internal relocations that are
+// not vendor-specific.
 // These are internal relocation numbers for GP/X0 relaxation. They aren't part
 // of the psABI spec.
-#define INTERNAL_R_RISCV_GPREL_I 256
-#define INTERNAL_R_RISCV_GPREL_S 257
-#define INTERNAL_R_RISCV_X0REL_I 258
-#define INTERNAL_R_RISCV_X0REL_S 259
+constexpr uint32_t INTERNAL_R_RISCV_GPREL_I = 256;
+constexpr uint32_t INTERNAL_R_RISCV_GPREL_S = 257;
+constexpr uint32_t INTERNAL_R_RISCV_X0REL_I = 258;
+constexpr uint32_t INTERNAL_R_RISCV_X0REL_S = 259;
+
+// Bits 9 -> 31 of RelType are used to indicate vendor-specific relocations.
+constexpr uint32_t INTERNAL_RISCV_VENDOR_MASK = 0xFFFFFFFF << 9;
+constexpr uint32_t INTERNAL_RISCV_VENDOR_QUALCOMM = 1 << 9;
+constexpr uint32_t INTERNAL_RISCV_VENDOR_ANDES = 2 << 9;
+
+static uint32_t getRISCVVendorRelMarker(StringRef rvVendor) {
+  return StringSwitch<uint32_t>(rvVendor)
+      .Case("QUALCOMM", INTERNAL_RISCV_VENDOR_QUALCOMM)
+      .Case("ANDES", INTERNAL_RISCV_VENDOR_ANDES)
+      .Default(0);
+}
 
 const uint64_t dtpOffset = 0x800;
 
@@ -344,8 +358,15 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB_ULEB128:
     return RE_RISCV_LEB128;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
-             << ") against symbol " << &s;
+    if (type.v & INTERNAL_RISCV_VENDOR_MASK) {
+      Err(ctx) << getErrorLoc(ctx, loc)
+               << "unsupported vendor-specific relocation " << type
+               << " against symbol " << &s;
+      return R_NONE;
+    }
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation ("
+             << (type.v & ~INTERNAL_RISCV_VENDOR_MASK) << ") against symbol "
+             << &s;
     return R_NONE;
   }
 }
@@ -370,12 +391,19 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       rvVendor = sym.getName();
       continue;
     } else if (!rvVendor.empty()) {
-      Err(ctx) << getErrorLoc(ctx, loc)
-               << "unknown vendor-specific relocation (" << type.v
-               << ") in namespace '" << rvVendor << "' against symbol '" << &sym
-               << "'";
+      uint32_t VendorFlag = getRISCVVendorRelMarker(rvVendor);
+      if (!VendorFlag) {
+        Err(ctx) << getErrorLoc(ctx, loc)
+                 << "unknown vendor-specific relocation (" << type.v
+                 << ") in namespace '" << rvVendor << "' against symbol '"
+                 << &sym << "'";
+        rvVendor = "";
+        continue;
+      }
+
       rvVendor = "";
-      continue;
+      assert((type.v < 256) && "Out of range relocation detected!");
+      type.v |= VendorFlag;
     }
 
     rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
@@ -1532,3 +1560,28 @@ void elf::mergeRISCVAttributesSections(Ctx &ctx) {
 }
 
 void elf::setRISCVTargetInfo(Ctx &ctx) { ctx.target.reset(new RISCV(ctx)); }
+
+static std::optional<StringRef> getRISCVVendorString(RelType ty) {
+  if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_QUALCOMM)
+    return "QUALCOMM";
+  if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_ANDES)
+    return "ANDES";
+  return std::nullopt;
+}
+
+namespace lld::elf {
+
+std::string riscvVendorRelocToStr(RelType type) {
+  auto VendorString = getRISCVVendorString(type);
+  if (!VendorString)
+    return "Unknown";
+
+  StringRef str = getRISCVVendorRelocationTypeName(
+      type & ~INTERNAL_RISCV_VENDOR_MASK, *VendorString);
+  if (str == "Unknown")
+    return ("Unknown vendor-specific (" + Twine(type) + ")").str();
+
+  return str.str();
+}
+
+} // namespace lld::elf
