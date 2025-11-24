@@ -1262,7 +1262,9 @@ def AMDGPU_MakeDmaDescriptorOp :
     Variadic<Index>: $global_dynamic_sizes,
     OptionalAttr<DenseI64ArrayAttr>: $global_static_sizes,
     Variadic<Index>: $global_dynamic_strides,
-    OptionalAttr<DenseI64ArrayAttr>: $global_static_strides)>,
+    OptionalAttr<DenseI64ArrayAttr>: $global_static_strides,
+    Variadic<Index>: $shared_dynamic_sizes,
+    OptionalAttr<DenseI64ArrayAttr>: $shared_static_sizes)>,
   Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
 
   let summary = "TODO";
@@ -1274,6 +1276,7 @@ def AMDGPU_MakeDmaDescriptorOp :
     $base
 	`globalSize` custom<DynamicIndexList>($global_dynamic_sizes, $global_static_sizes)
 	`globalStride` custom<DynamicIndexList>($global_dynamic_strides, $global_static_strides)
+	`sharedSize` custom<DynamicIndexList>($shared_dynamic_sizes, $shared_static_sizes)
 	attr-dict `:` qualified(type($base)) `to` type(results)
   }];
 

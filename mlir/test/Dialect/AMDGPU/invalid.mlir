@@ -361,6 +361,6 @@ func.func @scaled_mfma_invalid_k(%arg0 : vector<4xf8E8M0FNU>, %arg1 : vector<32x
 // CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
 func.func @make_dma_descriptor_invalid_strides(%base: !amdgpu.tdm_base<i32>) {
   // expected-error@+1 {{'amdgpu.make_dma_descriptor' op strides for the innermost dimension must be 1.}}
-  amdgpu.make_dma_descriptor %base globalSize [0] globalStride [1, 2] : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
+  amdgpu.make_dma_descriptor %base globalSize [0] globalStride [1, 2] sharedSize [0] : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
   func.return
 }
