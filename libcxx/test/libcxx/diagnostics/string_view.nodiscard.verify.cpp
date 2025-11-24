@@ -121,20 +121,11 @@ void test_members() {
 #endif
 }
 
-class TestHash {
-public:
-  template <typename CharT>
-  void operator()() {
-    using StringViewT = std::basic_string_view<CharT>;
-    std::hash<StringViewT> hash;
-    // expected-warning@+1 4-5 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    hash(StringViewT{});
-  }
-};
-
 void test_nonmembers() {
   // std::hash<>
-  types::for_each(types::character_types(), TestHash{});
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::hash<std::string_view> hash;
+  hash();
 
 #if TEST_STD_VER >= 14
   // string_view literals
