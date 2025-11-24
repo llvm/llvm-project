@@ -91,25 +91,25 @@ class BaseRef(ConstraintExpr):
         return _irdl.base(base_ref=self.ref)
 
 
-class FieldDef:
+class _FieldDef:
     def __set_name__(self, owner, name: str):
         self.name = name
 
 
 @dataclass
-class Operand(FieldDef):
+class Operand(_FieldDef):
     constraint: ConstraintExpr
     variadicity: Variadicity = Variadicity.single
 
 
 @dataclass
-class Result(FieldDef):
+class Result(_FieldDef):
     constraint: ConstraintExpr
     variadicity: Variadicity = Variadicity.single
 
 
 @dataclass
-class Attribute(FieldDef):
+class Attribute(_FieldDef):
     constraint: ConstraintExpr
 
     def __post_init__(self):
