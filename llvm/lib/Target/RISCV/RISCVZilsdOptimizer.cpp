@@ -146,9 +146,7 @@ bool RISCVPreAllocZilsdOpt::runOnMachineFunction(MachineFunction &MF) {
 
   // Check alignment: default is 8-byte, but allow 4-byte with tune feature
   // If unaligned scalar memory is enabled, allow any alignment
-  RequiredAlign = STI->enableUnalignedScalarMem() ? Align(1)
-                  : STI->allowZilsd4ByteAlign()   ? Align(4)
-                                                  : Align(8);
+  RequiredAlign = STI->getZilsdAlign();
   bool Modified = false;
   for (auto &MBB : MF) {
     Modified |= rescheduleLoadStoreInstrs(&MBB);

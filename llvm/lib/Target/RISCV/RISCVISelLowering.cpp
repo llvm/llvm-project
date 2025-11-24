@@ -8404,7 +8404,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       if (Store->isTruncatingStore())
         return SDValue();
 
-      if (!Subtarget.enableUnalignedScalarMem() && Store->getAlign() < 8)
+      if (Store->getAlign() < Subtarget.getZilsdAlign())
         return SDValue();
 
       SDLoc DL(Op);
@@ -14803,7 +14803,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       assert(Subtarget.hasStdExtZilsd() && !Subtarget.is64Bit() &&
              "Unexpected custom legalisation");
 
-      if (!Subtarget.enableUnalignedScalarMem() && Ld->getAlign() < 8)
+      if (Ld->getAlign() < Subtarget.getZilsdAlign())
         return;
 
       SDLoc DL(N);

@@ -237,6 +237,13 @@ public:
 
     return 0;
   }
+
+  Align getZilsdAlign() const {
+    return Align(enableUnalignedScalarMem() ? 1
+                 : allowZilsd4ByteAlign()   ? 4
+                                            : 8);
+  }
+
   unsigned getELen() const {
     assert(hasVInstructions() && "Expected V extension");
     return hasVInstructionsI64() ? 64 : 32;
