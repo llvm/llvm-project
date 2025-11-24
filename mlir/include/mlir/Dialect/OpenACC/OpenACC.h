@@ -177,6 +177,10 @@ static constexpr StringLiteral getRoutineInfoAttrName() {
   return StringLiteral("acc.routine_info");
 }
 
+static constexpr StringLiteral getFromDefaultClauseAttrName() {
+  return StringLiteral("acc.from_default");
+}
+
 static constexpr StringLiteral getVarNameAttrName() {
   return VarNameAttr::name;
 }
