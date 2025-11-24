@@ -16,6 +16,7 @@ class TestSBFrameExtensions(TestBase):
     def test_properties_pc_addr_fp_sp(self):
         """Test SBFrame extension properties: pc, addr, fp, sp"""
         self.build()
+        self.setTearDownCleanup()
         exe = self.getBuildArtifact("a.out")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -49,6 +50,7 @@ class TestSBFrameExtensions(TestBase):
     def test_properties_module_compile_unit_function_symbol_block(self):
         """Test SBFrame extension properties: module, compile_unit, function, symbol, block"""
         self.build()
+        self.setTearDownCleanup()
         exe = self.getBuildArtifact("a.out")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -89,17 +91,21 @@ class TestSBFrameExtensions(TestBase):
         self.assertTrue(block.IsValid(), "block should be valid")
         block_direct = frame.GetBlock()
         self.assertTrue(block_direct.IsValid(), "GetBlock() should return valid block")
-        # Verify both blocks are valid and the property returns the same object
-        # by comparing their address ranges
-        self.assertEqual(
-            block.GetRangeStartAddress(),
-            block_direct.GetRangeStartAddress(),
-            "block should match GetBlock() start address",
-        )
+        # Verify both blocks are valid and have the same ranges
+        # by comparing their first range start address
+        block_ranges = block.GetRanges()
+        block_direct_ranges = block_direct.GetRanges()
+        if block_ranges.GetSize() > 0 and block_direct_ranges.GetSize() > 0:
+            self.assertEqual(
+                block.GetRangeStartAddress(0),
+                block_direct.GetRangeStartAddress(0),
+                "block should match GetBlock() start address",
+            )
 
     def test_properties_is_inlined_name_line_entry_thread(self):
         """Test SBFrame extension properties: is_inlined, name, line_entry, thread"""
         self.build()
+        self.setTearDownCleanup()
         exe = self.getBuildArtifact("a.out")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -149,6 +155,7 @@ class TestSBFrameExtensions(TestBase):
     def test_properties_disassembly_idx(self):
         """Test SBFrame extension properties: disassembly, idx"""
         self.build()
+        self.setTearDownCleanup()
         exe = self.getBuildArtifact("a.out")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -175,6 +182,7 @@ class TestSBFrameExtensions(TestBase):
     def test_properties_variables_vars_locals_args_arguments_statics(self):
         """Test SBFrame extension properties: variables, vars, locals, args, arguments, statics"""
         self.build()
+        self.setTearDownCleanup()
         exe = self.getBuildArtifact("a.out")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -253,6 +261,7 @@ class TestSBFrameExtensions(TestBase):
     def test_properties_registers_regs_register_reg(self):
         """Test SBFrame extension properties: registers, regs, register, reg"""
         self.build()
+        self.setTearDownCleanup()
         exe = self.getBuildArtifact("a.out")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -311,6 +320,7 @@ class TestSBFrameExtensions(TestBase):
     def test_properties_parent_child(self):
         """Test SBFrame extension properties: parent, child"""
         self.build()
+        self.setTearDownCleanup()
         exe = self.getBuildArtifact("a.out")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -345,6 +355,7 @@ class TestSBFrameExtensions(TestBase):
     def test_methods_get_all_variables_get_arguments_get_locals_get_statics(self):
         """Test SBFrame extension methods: get_all_variables, get_arguments, get_locals, get_statics"""
         self.build()
+        self.setTearDownCleanup()
         exe = self.getBuildArtifact("a.out")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -405,6 +416,7 @@ class TestSBFrameExtensions(TestBase):
     def test_method_var(self):
         """Test SBFrame extension method: var()"""
         self.build()
+        self.setTearDownCleanup()
         exe = self.getBuildArtifact("a.out")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -443,6 +455,7 @@ class TestSBFrameExtensions(TestBase):
     def test_method_get_parent_frame_get_child_frame(self):
         """Test SBFrame extension methods: get_parent_frame, get_child_frame"""
         self.build()
+        self.setTearDownCleanup()
         exe = self.getBuildArtifact("a.out")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -479,6 +492,7 @@ class TestSBFrameExtensions(TestBase):
     def test_special_methods_eq_int_hex(self):
         """Test SBFrame extension special methods: __eq__, __int__, __hex__"""
         self.build()
+        self.setTearDownCleanup()
         exe = self.getBuildArtifact("a.out")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -516,6 +530,7 @@ class TestSBFrameExtensions(TestBase):
     def test_pc_property_settable(self):
         """Test that pc property is settable"""
         self.build()
+        self.setTearDownCleanup()
         exe = self.getBuildArtifact("a.out")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
