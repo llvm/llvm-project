@@ -156,8 +156,6 @@ static Status installExecutable(const Installer &installer) {
   return Status();
 }
 
-constexpr std::chrono::milliseconds EvaluateExpressionOptions::default_timeout;
-
 Target::Arch::Arch(const ArchSpec &spec)
     : m_spec(spec),
       m_plugin_up(PluginManager::CreateArchitectureInstance(spec)) {}
@@ -1855,6 +1853,9 @@ void Target::NotifyModulesRemoved(lldb_private::ModuleList &module_list) {
 }
 
 void Target::ModulesDidLoad(ModuleList &module_list) {
+  if (GetPreloadSymbols())
+    module_list.PreloadSymbols(GetParallelModuleLoad());
+
   const size_t num_images = module_list.GetSize();
   if (m_valid && num_images) {
     for (size_t idx = 0; idx < num_images; ++idx) {
@@ -2509,10 +2510,6 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         if (symbol_file_spec)
           module_sp->SetSymbolFileFileSpec(symbol_file_spec);
 
-        // Preload symbols outside of any lock, so hopefully we can do this for
-        // each library in parallel.
-        if (GetPreloadSymbols())
-          module_sp->PreloadSymbols();
         llvm::SmallVector<ModuleSP, 1> replaced_modules;
         for (ModuleSP &old_module_sp : old_modules) {
           if (m_images.GetIndexForModule(old_module_sp.get()) !=

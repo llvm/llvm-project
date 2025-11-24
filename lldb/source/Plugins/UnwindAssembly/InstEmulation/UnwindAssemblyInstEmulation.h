@@ -63,13 +63,17 @@ private:
   UnwindAssemblyInstEmulation(const lldb_private::ArchSpec &arch,
                               lldb_private::EmulateInstruction *inst_emulator)
       : UnwindAssembly(arch), m_inst_emulator_up(inst_emulator),
-        m_range_ptr(nullptr), m_unwind_plan_ptr(nullptr), m_initial_sp(0),
+        m_range_ptr(nullptr), m_unwind_plan_ptr(nullptr),
         m_curr_row_modified(false), m_forward_branch_offset(0) {
     if (m_inst_emulator_up) {
       m_inst_emulator_up->SetBaton(this);
       m_inst_emulator_up->SetCallbacks(ReadMemory, WriteMemory, ReadRegister,
                                        WriteRegister);
     }
+    // Initialize the CFA with a known value. In the 32 bit case it will be
+    // 0x80000000, and in the 64 bit case 0x8000000000000000. We use the address
+    // byte size to be safe for any future address sizes
+    m_initial_cfa = (1ull << ((m_arch.GetAddressByteSize() * 8) - 1));
   }
 
   static size_t
@@ -134,8 +138,8 @@ private:
   lldb_private::AddressRange *m_range_ptr;
   lldb_private::UnwindPlan *m_unwind_plan_ptr;
   UnwindState m_state;
+  uint64_t m_initial_cfa;
   typedef std::map<uint64_t, uint64_t> PushedRegisterToAddrMap;
-  uint64_t m_initial_sp;
   PushedRegisterToAddrMap m_pushed_regs;
 
   // While processing the instruction stream, we need to communicate some state

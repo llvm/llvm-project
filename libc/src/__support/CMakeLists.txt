@@ -221,7 +221,9 @@ add_header_library(
   HDRS
     high_precision_decimal.h
   DEPENDS
+    .ctype_utils
     .str_to_integer
+    .wctype_utils
     libc.hdr.stdint_proxy
 )
 
@@ -236,6 +238,7 @@ add_header_library(
     .str_to_integer
     .str_to_num_result
     .uint128
+    .wctype_utils
     libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.src.__support.common

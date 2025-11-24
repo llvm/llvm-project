@@ -340,6 +340,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"trim_name", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"get_team",
+     &I::genGetTeam,
+     {{{"level", asValue, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"getcwd",
      &I::genGetCwd,
      {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
@@ -749,6 +753,10 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"tand", &I::genTand},
     {"tanpi", &I::genTanpi},
+    {"team_number",
+     &I::genTeamNumber,
+     {{{"team", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"this_image",
      &I::genThisImage,
      {{{"coarray", asBox},
@@ -4013,6 +4021,15 @@ IntrinsicLibrary::genFtell(std::optional<mlir::Type> resultType,
   }
 }
 
+// GET_TEAM
+mlir::Value IntrinsicLibrary::genGetTeam(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 1);
+  return mif::GetTeamOp::create(builder, loc, fir::BoxType::get(resultType),
+                                /*level*/ args[0]);
+}
+
 // GETCWD
 fir::ExtendedValue
 IntrinsicLibrary::genGetCwd(std::optional<mlir::Type> resultType,
@@ -6509,11 +6526,9 @@ static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
   auto mod = builder.getModule();
-  bool dontUseFastRealMod = false;
-  bool canUseApprox = mlir::arith::bitEnumContainsAny(
-      builder.getFastMathFlags(), mlir::arith::FastMathFlags::afn);
-  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.no_fast_real_mod"))
-    dontUseFastRealMod = attr.getValue();
+  bool useFastRealMod = false;
+  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.fast_real_mod"))
+    useFastRealMod = attr.getValue();
 
   assert(args.size() == 2);
   if (resultType.isUnsignedInteger()) {
@@ -6526,7 +6541,7 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
   if (mlir::isa<mlir::IntegerType>(resultType))
     return mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
 
-  if (resultType.isFloat() && canUseApprox && !dontUseFastRealMod) {
+  if (resultType.isFloat() && useFastRealMod) {
     // Treat MOD as an approximate function and code-gen inline code
     // instead of calling into the Fortran runtime library.
     return builder.createConvert(loc, resultType,
@@ -7951,6 +7966,16 @@ mlir::Value IntrinsicLibrary::genTanpi(mlir::Type resultType,
   mlir::Value factor = builder.createRealConstant(loc, resultType, pi);
   mlir::Value arg = mlir::arith::MulFOp::create(builder, loc, args[0], factor);
   return getRuntimeCallGenerator("tan", ftype)(builder, loc, {arg});
+}
+
+// TEAM_NUMBER
+fir::ExtendedValue
+IntrinsicLibrary::genTeamNumber(mlir::Type,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 1);
+  return mif::TeamNumberOp::create(builder, loc,
+                                   /*team*/ fir::getBase(args[0]));
 }
 
 // THIS_IMAGE
