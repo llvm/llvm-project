@@ -184,6 +184,7 @@ bool AArch64FunctionInfo::shouldSignReturnAddress(SignReturnAddress Condition,
   case SignReturnAddress::All:
     return true;
   }
+  llvm_unreachable("Unknown SignReturnAddress enum");
 }
 
 bool AArch64FunctionInfo::shouldSignReturnAddress(const MachineFunction &MF) const {
