@@ -1,7 +1,7 @@
 # DSLLVM - DSMIL-Optimized LLVM Toolchain
 
-**Version**: 1.0
-**Status**: Initial Development
+**Version**: 1.4 (Feature 2.1 - Stealth Mode)
+**Status**: Active Development (v1.4 - Security Depth Phase)
 **Owner**: SWORDIntel / DSMIL Kernel Team
 
 ---
@@ -16,6 +16,9 @@ DSLLVM is a hardened LLVM/Clang toolchain specialized for the DSMIL kernel and u
 - **MLOps stage-awareness** for AI/LLM workloads
 - **CNSA 2.0 provenance** (SHA-384, ML-DSA-87, ML-KEM-1024)
 - **Quantum optimization hooks** (Device 46)
+- **Mission-aware compilation** (border_ops, cyber_defence, covert_ops)
+- **AI-assisted compilation** (Layer 5/7/8 integration)
+- **Operational stealth modes** for hostile environments (NEW in v1.4)
 - **Complete tooling** and pass pipelines
 
 ---
@@ -125,7 +128,44 @@ dsmil/
 
 ## Key Features
 
-### 1. DSMIL Target Integration
+### 1. Operational Stealth Mode (v1.4 - Feature 2.1) ⭐ NEW
+
+Compiler-level transformations for low-signature execution in hostile environments:
+
+```c
+#include <dsmil_attributes.h>
+
+// Aggressive stealth for covert operations
+DSMIL_LOW_SIGNATURE("aggressive")
+DSMIL_CONSTANT_RATE
+DSMIL_LAYER(7)
+void covert_data_collection(const uint8_t *data, size_t len) {
+    // Compiler applies:
+    // - Strip non-critical telemetry
+    // - Constant-rate execution (prevents timing analysis)
+    // - Jitter suppression (predictable timing)
+    // - Network fingerprint reduction
+    process_sensitive_data(data, len);
+}
+```
+
+**Stealth Levels**:
+- `minimal`: Basic telemetry reduction
+- `standard`: Timing normalization + reduced telemetry
+- `aggressive`: Maximum stealth (constant-rate, minimal signatures)
+
+**Mission Profiles with Stealth**:
+```bash
+# Covert operations (aggressive stealth)
+dsmil-clang -fdsmil-mission-profile=covert_ops -O3 -o covert.bin input.c
+
+# Border operations with stealth
+dsmil-clang -fdsmil-mission-profile=border_ops_stealth -O3 -o border.bin input.c
+```
+
+**Documentation**: [STEALTH-MODE.md](docs/STEALTH-MODE.md)
+
+### 2. DSMIL Target Integration
 
 Custom target triple `x86_64-dsmil-meteorlake-elf` with Meteor Lake optimizations:
 
@@ -134,7 +174,7 @@ Custom target triple `x86_64-dsmil-meteorlake-elf` with Meteor Lake optimization
 dsmil-clang -target x86_64-dsmil-meteorlake-elf ...
 ```
 
-### 2. Source-Level Attributes
+### 3. Source-Level Attributes
 
 Annotate code with DSMIL metadata:
 
@@ -149,7 +189,7 @@ void llm_inference(void) {
 }
 ```
 
-### 3. Compile-Time Verification
+### 4. Compile-Time Verification
 
 Layer boundary and policy enforcement:
 
@@ -168,7 +208,7 @@ int validated_entry(void *data) {
 }
 ```
 
-### 4. CNSA 2.0 Provenance
+### 5. CNSA 2.0 Provenance
 
 Every binary includes cryptographically-signed provenance:
 
@@ -185,7 +225,7 @@ $ dsmil-verify /usr/bin/llm_worker
     Stage: serve
 ```
 
-### 5. Automatic Sandboxing
+### 6. Automatic Sandboxing
 
 Zero-code sandboxing via attributes:
 
@@ -200,7 +240,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-### 6. Bandwidth-Aware Optimization
+### 7. Bandwidth-Aware Optimization
 
 Automatic memory tier recommendations:
 
@@ -277,36 +317,76 @@ dsmil-clang -O1 -fpass-pipeline=dsmil-lab -o output input.c
 
 ## Documentation
 
+### Core Documentation
 - **[DSLLVM-DESIGN.md](docs/DSLLVM-DESIGN.md)**: Complete design specification
+- **[DSLLVM-ROADMAP.md](docs/DSLLVM-ROADMAP.md)**: Strategic roadmap (v1.0 → v2.0)
 - **[ATTRIBUTES.md](docs/ATTRIBUTES.md)**: Attribute reference guide
 - **[PROVENANCE-CNSA2.md](docs/PROVENANCE-CNSA2.md)**: Provenance system deep dive
 - **[PIPELINES.md](docs/PIPELINES.md)**: Pass pipeline configurations
+
+### Feature Guides (v1.3+)
+- **[MISSION-PROFILES-GUIDE.md](docs/MISSION-PROFILES-GUIDE.md)**: Mission profile system (Feature 1.1)
+- **[FUZZ-HARNESS-SCHEMA.md](docs/FUZZ-HARNESS-SCHEMA.md)**: Auto-fuzz harness generation (Feature 1.2)
+- **[TELEMETRY-ENFORCEMENT.md](docs/TELEMETRY-ENFORCEMENT.md)**: Minimum telemetry enforcement (Feature 1.3)
+- **[STEALTH-MODE.md](docs/STEALTH-MODE.md)**: Operational stealth modes (Feature 2.1) ⭐ NEW
+
+### Integration Guides
+- **[AI-INTEGRATION.md](docs/AI-INTEGRATION.md)**: Layer 5/7/8 AI integration
+- **[FUZZ-CICD-INTEGRATION.md](docs/FUZZ-CICD-INTEGRATION.md)**: CI/CD fuzzing integration
 
 ---
 
 ## Development Status
 
-### ✅ Completed
+### ✅ Completed (v1.0-v1.2)
 
-- Design specification
-- Documentation structure
-- Header file definitions
-- Directory layout
+- ✅ Design specification
+- ✅ Documentation structure
+- ✅ Header file definitions (dsmil_attributes.h, dsmil_telemetry.h, dsmil_provenance.h)
+- ✅ Directory layout
+- ✅ CNSA 2.0 provenance framework
+- ✅ AI integration (Layer 5/7/8)
+- ✅ Constant-time enforcement (DSMIL_SECRET)
+- ✅ ONNX cost models
 
-### 🚧 In Progress
+### ✅ Completed (v1.3 - Operational Control)
 
-- LLVM pass implementations
-- Runtime library (sandbox, provenance)
-- Tool wrappers (dsmil-clang, dsmil-verify)
-- Test suite
+- ✅ **Feature 1.1**: Mission Profiles (border_ops, cyber_defence, exercise_only)
+- ✅ **Feature 1.2**: Auto-generated fuzz harnesses (dsmil-fuzz-export)
+- ✅ **Feature 1.3**: Minimum telemetry enforcement (safety/mission critical)
 
-### 📋 Planned
+### ✅ Completed (v1.4 - Security Depth)
 
-- CMake integration
-- CI/CD pipeline
-- Sample applications
-- Performance benchmarks
-- Security audit
+- ✅ **Feature 2.1**: Operational Stealth Modes ⭐ NEW
+  - ✅ Stealth attributes (DSMIL_LOW_SIGNATURE, DSMIL_CONSTANT_RATE, etc.)
+  - ✅ DsmilStealthPass implementation
+  - ✅ Stealth runtime support (timing, network batching)
+  - ✅ Mission profile integration (covert_ops, border_ops_stealth)
+  - ✅ Examples and test cases
+  - ✅ Comprehensive documentation
+
+### 🚧 In Progress (v1.4)
+
+- 🚧 **Feature 2.2**: Threat signature embedding for forensics
+- 🚧 **Feature 2.3**: Blue vs Red scenario simulation
+- 🚧 LLVM pass implementations (remaining passes)
+- 🚧 Runtime library completion (sandbox, provenance)
+- 🚧 Tool wrappers (dsmil-clang, dsmil-verify)
+
+### 📋 Planned (v1.5 - System Intelligence)
+
+- 📋 **Feature 3.1**: Schema compiler for exotic devices (104 devices)
+- 📋 **Feature 3.2**: Cross-binary invariant checking
+- 📋 **Feature 3.3**: Temporal profiles (bootstrap → stabilize → production)
+- 📋 CMake integration
+- 📋 CI/CD pipeline
+- 📋 Performance benchmarks
+
+### 🔬 Research (v2.0 - Adaptive Optimization)
+
+- 🔬 **Feature 4.1**: Compiler-level RL loop on real hardware
+- 🔬 Hardware-specific learned profiles
+- 🔬 Continuous improvement via RL
 
 ---
 

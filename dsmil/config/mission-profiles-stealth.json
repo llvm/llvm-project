@@ -1,0 +1,265 @@
+{
+  "$schema": "https://dsmil.swordint.el/schemas/mission-profiles-v1.4.json",
+  "version": "1.4.0",
+  "profiles": {
+    "covert_ops": {
+      "display_name": "Covert Operations",
+      "description": "Covert operations: minimal signature, stealth-first deployment",
+      "classification": "TS/SCI",
+      "operational_context": "hostile_network",
+      "pipeline": "dsmil-hardened",
+      "ai_mode": "local",
+      "sandbox_default": "l8_strict",
+      "allow_stages": ["quantized", "serve"],
+      "deny_stages": ["debug", "experimental", "pretrain"],
+      "quantum_export": false,
+      "ct_enforcement": "strict",
+      "telemetry_level": "stealth",
+      "provenance_required": true,
+      "max_deployment_days": null,
+      "clearance_floor": "0xFF080000",
+      "behavioral_constraints": {
+        "constant_rate_ops": true,
+        "jitter_suppression": true,
+        "network_fingerprint": "minimal"
+      },
+      "stealth_config": {
+        "mode": "aggressive",
+        "strip_telemetry": true,
+        "preserve_safety_critical": true,
+        "constant_rate_execution": true,
+        "constant_rate_target_ms": 100,
+        "jitter_suppression": true,
+        "network_fingerprint_reduction": true,
+        "network_batch_delay_ms": 50
+      },
+      "layer_policies": {
+        "7": {"allowed": true, "roe_required": "ANALYSIS_ONLY"},
+        "8": {"allowed": true, "roe_required": "ANALYSIS_ONLY"}
+      },
+      "security_flags": [
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2",
+        "-fPIE"
+      ],
+      "dsmil_specific_flags": [
+        "-fdsmil-mission-profile=covert_ops",
+        "-dsmil-stealth-mode=aggressive",
+        "-dsmil-stealth-strip-telemetry",
+        "-dsmil-stealth-constant-rate",
+        "-dsmil-stealth-jitter-suppress",
+        "-dsmil-stealth-network-reduce"
+      ],
+      "runtime_constraints": {
+        "max_memory_mb": 4096,
+        "max_cpu_cores": 4,
+        "network_egress_allowed": true,
+        "filesystem_write_allowed": false
+      }
+    },
+    "border_ops": {
+      "display_name": "Border Operations",
+      "description": "Border operations: max security, minimal telemetry",
+      "classification": "SECRET",
+      "operational_context": "border_security",
+      "pipeline": "dsmil-hardened",
+      "ai_mode": "local",
+      "sandbox_default": "l8_strict",
+      "allow_stages": ["quantized", "serve"],
+      "deny_stages": ["debug", "experimental"],
+      "quantum_export": false,
+      "ct_enforcement": "strict",
+      "telemetry_level": "minimal",
+      "provenance_required": true,
+      "max_deployment_days": null,
+      "clearance_floor": "0xFF080000",
+      "behavioral_constraints": {
+        "constant_rate_ops": false,
+        "jitter_suppression": false,
+        "network_fingerprint": "standard"
+      },
+      "stealth_config": {
+        "mode": "minimal",
+        "strip_telemetry": true,
+        "preserve_safety_critical": true,
+        "constant_rate_execution": false,
+        "jitter_suppression": false,
+        "network_fingerprint_reduction": false
+      },
+      "layer_policies": {
+        "7": {"allowed": true, "roe_required": "ANALYSIS_ONLY"},
+        "8": {"allowed": true, "roe_required": "ANALYSIS_ONLY"}
+      },
+      "security_flags": [
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2",
+        "-fPIE"
+      ],
+      "dsmil_specific_flags": [
+        "-fdsmil-mission-profile=border_ops",
+        "-dsmil-stealth-mode=minimal"
+      ],
+      "runtime_constraints": {
+        "max_memory_mb": 8192,
+        "max_cpu_cores": 8,
+        "network_egress_allowed": true,
+        "filesystem_write_allowed": true
+      }
+    },
+    "border_ops_stealth": {
+      "display_name": "Border Operations (Stealth Variant)",
+      "description": "Border operations with enhanced stealth capabilities",
+      "classification": "SECRET",
+      "operational_context": "border_security_hostile",
+      "pipeline": "dsmil-hardened",
+      "ai_mode": "local",
+      "sandbox_default": "l8_strict",
+      "allow_stages": ["quantized", "serve"],
+      "deny_stages": ["debug", "experimental"],
+      "quantum_export": false,
+      "ct_enforcement": "strict",
+      "telemetry_level": "stealth",
+      "provenance_required": true,
+      "max_deployment_days": null,
+      "clearance_floor": "0xFF080000",
+      "behavioral_constraints": {
+        "constant_rate_ops": true,
+        "jitter_suppression": true,
+        "network_fingerprint": "minimal"
+      },
+      "stealth_config": {
+        "mode": "standard",
+        "strip_telemetry": true,
+        "preserve_safety_critical": true,
+        "constant_rate_execution": true,
+        "constant_rate_target_ms": 200,
+        "jitter_suppression": true,
+        "network_fingerprint_reduction": true,
+        "network_batch_delay_ms": 25
+      },
+      "layer_policies": {
+        "7": {"allowed": true, "roe_required": "ANALYSIS_ONLY"},
+        "8": {"allowed": true, "roe_required": "ANALYSIS_ONLY"}
+      },
+      "security_flags": [
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2",
+        "-fPIE"
+      ],
+      "dsmil_specific_flags": [
+        "-fdsmil-mission-profile=border_ops_stealth",
+        "-dsmil-stealth-mode=standard",
+        "-dsmil-stealth-strip-telemetry",
+        "-dsmil-stealth-constant-rate",
+        "-dsmil-stealth-jitter-suppress",
+        "-dsmil-stealth-network-reduce"
+      ],
+      "runtime_constraints": {
+        "max_memory_mb": 4096,
+        "max_cpu_cores": 4,
+        "network_egress_allowed": true,
+        "filesystem_write_allowed": false
+      }
+    },
+    "cyber_defence": {
+      "display_name": "Cyber Defence",
+      "description": "Cyber defense: AI-enhanced, full telemetry",
+      "classification": "SECRET",
+      "operational_context": "cyber_operations",
+      "pipeline": "dsmil-default",
+      "ai_mode": "advisor",
+      "sandbox_default": "l8_standard",
+      "allow_stages": ["quantized", "serve", "distilled"],
+      "deny_stages": ["debug"],
+      "quantum_export": true,
+      "ct_enforcement": "strict",
+      "telemetry_level": "full",
+      "provenance_required": true,
+      "max_deployment_days": null,
+      "clearance_floor": "0xFF070000",
+      "behavioral_constraints": {
+        "constant_rate_ops": false,
+        "jitter_suppression": false,
+        "network_fingerprint": "standard"
+      },
+      "stealth_config": {
+        "mode": "off",
+        "strip_telemetry": false,
+        "preserve_safety_critical": true,
+        "constant_rate_execution": false,
+        "jitter_suppression": false,
+        "network_fingerprint_reduction": false
+      },
+      "layer_policies": {
+        "5": {"allowed": true, "roe_required": null},
+        "7": {"allowed": true, "roe_required": "ANALYSIS_ONLY"},
+        "8": {"allowed": true, "roe_required": "ANALYSIS_ONLY"}
+      },
+      "security_flags": [
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2"
+      ],
+      "dsmil_specific_flags": [
+        "-fdsmil-mission-profile=cyber_defence",
+        "-dsmil-ai-mode=advisor"
+      ],
+      "runtime_constraints": {
+        "max_memory_mb": 16384,
+        "max_cpu_cores": 16,
+        "network_egress_allowed": true,
+        "filesystem_write_allowed": true
+      }
+    },
+    "exercise_only": {
+      "display_name": "Training Exercise",
+      "description": "Training exercise: relaxed constraints, verbose logging",
+      "classification": "UNCLASSIFIED",
+      "operational_context": "training",
+      "pipeline": "dsmil-lab",
+      "ai_mode": "lab",
+      "sandbox_default": "permissive",
+      "allow_stages": ["*"],
+      "deny_stages": [],
+      "quantum_export": true,
+      "ct_enforcement": "warn",
+      "telemetry_level": "verbose",
+      "provenance_required": false,
+      "max_deployment_days": 30,
+      "clearance_floor": "0x00000000",
+      "behavioral_constraints": {
+        "constant_rate_ops": false,
+        "jitter_suppression": false,
+        "network_fingerprint": "standard"
+      },
+      "stealth_config": {
+        "mode": "off",
+        "strip_telemetry": false,
+        "preserve_safety_critical": true,
+        "constant_rate_execution": false,
+        "jitter_suppression": false,
+        "network_fingerprint_reduction": false
+      },
+      "layer_policies": {
+        "0": {"allowed": true, "roe_required": null},
+        "1": {"allowed": true, "roe_required": null},
+        "2": {"allowed": true, "roe_required": null},
+        "3": {"allowed": true, "roe_required": null},
+        "4": {"allowed": true, "roe_required": null},
+        "5": {"allowed": true, "roe_required": null},
+        "6": {"allowed": true, "roe_required": null},
+        "7": {"allowed": true, "roe_required": null},
+        "8": {"allowed": true, "roe_required": null}
+      },
+      "security_flags": [],
+      "dsmil_specific_flags": [
+        "-fdsmil-mission-profile=exercise_only"
+      ],
+      "runtime_constraints": {
+        "max_memory_mb": null,
+        "max_cpu_cores": null,
+        "network_egress_allowed": true,
+        "filesystem_write_allowed": true
+      }
+    }
+  }
+}
