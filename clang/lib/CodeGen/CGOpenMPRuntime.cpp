@@ -8258,7 +8258,7 @@ private:
         }
 
         // At this stage, if ElementType was a base pointer and we are in the
-        // first iteration, it has been computed. 
+        // first iteration, it has been computed.
         if (ElementType) {
           // For the case that having pointer as base, we need to remove one
           // level of indirection.
