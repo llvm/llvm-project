@@ -215,12 +215,11 @@ void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
           continue;
         }
 
-          if (BC.MIB->isPSignOnLR(PrevInst)) {
-            PrevRAState = true;
-          } else if (BC.MIB->isPAuthOnLR(PrevInst)) {
-            PrevRAState = false;
-          }
-          markUnknownBlock(BC, *BB, *PrevRAState);
+        if (BC.MIB->isPSignOnLR(PrevInst))
+          PrevRAState = true;
+        else if (BC.MIB->isPAuthOnLR(PrevInst))
+          PrevRAState = false;
+        markUnknownBlock(BC, *BB, *PrevRAState);
       }
       if (FirstIter) {
         FirstIter = false;
