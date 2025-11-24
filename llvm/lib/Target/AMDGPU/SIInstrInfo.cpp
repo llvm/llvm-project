@@ -9934,11 +9934,6 @@ void SIInstrInfo::fixImplicitOperands(MachineInstr &MI) const {
   }
 }
 
-bool SIInstrInfo::isVBUFFER(const MachineInstr &MI) const {
-  return (ST.getGeneration() == GCNSubtarget::GFX12) &&
-         (MI.getDesc().TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF));
-}
-
 bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
   if (!isSMRD(MI))
     return false;

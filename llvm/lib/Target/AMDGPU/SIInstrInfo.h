@@ -585,8 +585,9 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::MTBUF;
   }
 
-  /// \returns true if \p MI is a GFX12 VBUFFER instruction.
-  bool isVBUFFER(const MachineInstr &MI) const;
+  static bool isBUF(const MachineInstr &MI) {
+    return isMUBUF(MI) || isMTBUF(MI);
+  }
 
   static bool isSMRD(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SMRD;

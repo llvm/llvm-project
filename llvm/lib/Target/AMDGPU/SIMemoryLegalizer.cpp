@@ -779,8 +779,8 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   // FIXME: The MMO of buffer atomic instructions does not always have an atomic
   // ordering. We only need to handle VBUFFER atomics on GFX12+ so we can fix it
   // here, but the lowering should really be cleaned up at some point.
-  if (ST.getInstrInfo()->isVBUFFER(*MI) && SIInstrInfo::isAtomic(*MI) &&
-      Ordering == AtomicOrdering::NotAtomic)
+  if ((ST.getGeneration() >= GCNSubtarget::GFX12) && SIInstrInfo::isBUF(*MI) &&
+      SIInstrInfo::isAtomic(*MI) && Ordering == AtomicOrdering::NotAtomic)
     Ordering = AtomicOrdering::Monotonic;
 
   SIAtomicScope Scope = SIAtomicScope::NONE;
@@ -2067,7 +2067,7 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
     Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
 
     if (ST.requiresWaitXCntForSingleAccessInstructions() &&
-        (TII->isFLAT(*MI) || TII->isVBUFFER(*MI))) {
+        SIInstrInfo::isVMEM(*MI)) {
       MachineBasicBlock &MBB = *MI->getParent();
       BuildMI(MBB, MI, MI->getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
       Changed = true;
@@ -2092,7 +2092,7 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   bool Changed = false;
 
   if (Atomic && ST.requiresWaitXCntForSingleAccessInstructions() &&
-      (TII->isFLAT(MI) || TII->isVBUFFER(MI))) {
+      SIInstrInfo::isVMEM(MI)) {
     MachineBasicBlock &MBB = *MI.getParent();
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
     Changed = true;
