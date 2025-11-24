@@ -149,6 +149,9 @@ private:
   bool selectStackRestore(MachineInstr &I) const;
 
   bool selectMemOperation(Register ResVReg, MachineInstr &I) const;
+  Register getOrCreateMemSetGlobal(MachineInstr &I) const;
+  bool selectCopyMemory(MachineInstr &I, Register SrcReg) const;
+  bool selectCopyMemorySized(MachineInstr &I, Register SrcReg) const;
 
   bool selectAtomicRMW(Register ResVReg, const SPIRVType *ResType,
                        MachineInstr &I, unsigned NewOpcode,
@@ -1435,50 +1438,76 @@ bool SPIRVInstructionSelector::selectStackRestore(MachineInstr &I) const {
       .constrainAllUses(TII, TRI, RBI);
 }
 
-bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
-                                                  MachineInstr &I) const {
+Register
+SPIRVInstructionSelector::getOrCreateMemSetGlobal(MachineInstr &I) const {
+  MachineIRBuilder MIRBuilder(I);
+  assert(I.getOperand(1).isReg() && I.getOperand(2).isReg());
+  unsigned Val = getIConstVal(I.getOperand(1).getReg(), MRI);
+  unsigned Num = getIConstVal(I.getOperand(2).getReg(), MRI);
+  Type *ValTy = Type::getInt8Ty(I.getMF()->getFunction().getContext());
+  Type *ArrTy = ArrayType::get(ValTy, Num);
+  SPIRVType *VarTy = GR.getOrCreateSPIRVPointerType(
+      ArrTy, MIRBuilder, SPIRV::StorageClass::UniformConstant);
+
+  SPIRVType *SpvArrTy = GR.getOrCreateSPIRVType(
+      ArrTy, MIRBuilder, SPIRV::AccessQualifier::None, false);
+  Register Const = GR.getOrCreateConstIntArray(Val, Num, I, SpvArrTy, TII);
+  // TODO: check if we have such GV, add init, use buildGlobalVariable.
+  Function &CurFunction = GR.CurMF->getFunction();
+  Type *LLVMArrTy =
+      ArrayType::get(IntegerType::get(CurFunction.getContext(), 8), Num);
+  // Module takes ownership of the global var.
+  GlobalVariable *GV = new GlobalVariable(*CurFunction.getParent(), LLVMArrTy,
+                                          true, GlobalValue::InternalLinkage,
+                                          Constant::getNullValue(LLVMArrTy));
+  Register VarReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  auto MIBVar =
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
+          .addDef(VarReg)
+          .addUse(GR.getSPIRVTypeID(VarTy))
+          .addImm(SPIRV::StorageClass::UniformConstant)
+          .addUse(Const);
+  if (!MIBVar.constrainAllUses(TII, TRI, RBI))
+    return Register();
+
+  GR.add(GV, MIBVar);
+  GR.addGlobalObject(GV, GR.CurMF, VarReg);
+
+  buildOpDecorate(VarReg, I, TII, SPIRV::Decoration::Constant, {});
+  return VarReg;
+}
+
+bool SPIRVInstructionSelector::selectCopyMemory(MachineInstr &I,
+                                                Register SrcReg) const {
   MachineBasicBlock &BB = *I.getParent();
-  Register SrcReg = I.getOperand(1).getReg();
-  bool Result = true;
-  if (I.getOpcode() == TargetOpcode::G_MEMSET) {
+  Register DstReg = I.getOperand(0).getReg();
+  SPIRVType *DstTy = GR.getSPIRVTypeForVReg(DstReg);
+  SPIRVType *SrcTy = GR.getSPIRVTypeForVReg(SrcReg);
+  if (GR.getPointeeType(DstTy) != GR.getPointeeType(SrcTy))
+    report_fatal_error("OpCopyMemory requires operands to have the same type");
+  uint64_t CopySize = getIConstVal(I.getOperand(2).getReg(), MRI);
+  SPIRVType *PointeeTy = GR.getPointeeType(DstTy);
+  const Type *LLVMPointeeTy = GR.getTypeForSPIRVType(PointeeTy);
+  if (!LLVMPointeeTy)
+    report_fatal_error(
+        "Unable to determine pointee type size for OpCopyMemory");
+  const DataLayout &DL = I.getMF()->getFunction().getDataLayout();
+  if (CopySize != DL.getTypeStoreSize(const_cast<Type *>(LLVMPointeeTy)))
+    report_fatal_error(
+        "OpCopyMemory requires the size to match the pointee type size");
+  auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCopyMemory))
+                 .addUse(DstReg)
+                 .addUse(SrcReg);
+  if (I.getNumMemOperands()) {
     MachineIRBuilder MIRBuilder(I);
-    assert(I.getOperand(1).isReg() && I.getOperand(2).isReg());
-    unsigned Val = getIConstVal(I.getOperand(1).getReg(), MRI);
-    unsigned Num = getIConstVal(I.getOperand(2).getReg(), MRI);
-    Type *ValTy = Type::getInt8Ty(I.getMF()->getFunction().getContext());
-    Type *ArrTy = ArrayType::get(ValTy, Num);
-    SPIRVType *VarTy = GR.getOrCreateSPIRVPointerType(
-        ArrTy, MIRBuilder, SPIRV::StorageClass::UniformConstant);
-
-    SPIRVType *SpvArrTy = GR.getOrCreateSPIRVType(
-        ArrTy, MIRBuilder, SPIRV::AccessQualifier::None, false);
-    Register Const = GR.getOrCreateConstIntArray(Val, Num, I, SpvArrTy, TII);
-    // TODO: check if we have such GV, add init, use buildGlobalVariable.
-    Function &CurFunction = GR.CurMF->getFunction();
-    Type *LLVMArrTy =
-        ArrayType::get(IntegerType::get(CurFunction.getContext(), 8), Num);
-    // Module takes ownership of the global var.
-    GlobalVariable *GV = new GlobalVariable(*CurFunction.getParent(), LLVMArrTy,
-                                            true, GlobalValue::InternalLinkage,
-                                            Constant::getNullValue(LLVMArrTy));
-    Register VarReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
-    auto MIBVar =
-        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
-            .addDef(VarReg)
-            .addUse(GR.getSPIRVTypeID(VarTy))
-            .addImm(SPIRV::StorageClass::UniformConstant)
-            .addUse(Const);
-    Result &= MIBVar.constrainAllUses(TII, TRI, RBI);
-
-    GR.add(GV, MIBVar);
-    GR.addGlobalObject(GV, GR.CurMF, VarReg);
-
-    buildOpDecorate(VarReg, I, TII, SPIRV::Decoration::Constant, {});
-    SPIRVType *SourceTy = GR.getOrCreateSPIRVPointerType(
-        ValTy, I, SPIRV::StorageClass::UniformConstant);
-    SrcReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
-    selectOpWithSrcs(SrcReg, SourceTy, I, {VarReg}, SPIRV::OpBitcast);
+    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
   }
+  return MIB.constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectCopyMemorySized(MachineInstr &I,
+                                                     Register SrcReg) const {
+  MachineBasicBlock &BB = *I.getParent();
   auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCopyMemorySized))
                  .addUse(I.getOperand(0).getReg())
                  .addUse(SrcReg)
@@ -1487,9 +1516,30 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
     MachineIRBuilder MIRBuilder(I);
     addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
   }
-  Result &= MIB.constrainAllUses(TII, TRI, RBI);
-  if (ResVReg.isValid() && ResVReg != MIB->getOperand(0).getReg())
-    Result &= BuildCOPY(ResVReg, MIB->getOperand(0).getReg(), I);
+  return MIB.constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
+                                                  MachineInstr &I) const {
+  Register SrcReg = I.getOperand(1).getReg();
+  bool Result = true;
+  if (I.getOpcode() == TargetOpcode::G_MEMSET) {
+    Register VarReg = getOrCreateMemSetGlobal(I);
+    if (!VarReg.isValid())
+      return false;
+    Type *ValTy = Type::getInt8Ty(I.getMF()->getFunction().getContext());
+    SPIRVType *SourceTy = GR.getOrCreateSPIRVPointerType(
+        ValTy, I, SPIRV::StorageClass::UniformConstant);
+    SrcReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+    Result &= selectOpWithSrcs(SrcReg, SourceTy, I, {VarReg}, SPIRV::OpBitcast);
+  }
+  if (STI.isLogicalSPIRV()) {
+    Result &= selectCopyMemory(I, SrcReg);
+  } else {
+    Result &= selectCopyMemorySized(I, SrcReg);
+  }
+  if (ResVReg.isValid() && ResVReg != I.getOperand(0).getReg())
+    Result &= BuildCOPY(ResVReg, I.getOperand(0).getReg(), I);
   return Result;
 }
 
