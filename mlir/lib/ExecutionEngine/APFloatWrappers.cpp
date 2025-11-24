@@ -51,7 +51,7 @@
 
 /// Binary operations with rounding mode.
 #define APFLOAT_BINARY_OP_ROUNDING_MODE(OP, ROUNDING_MODE)                     \
-  MLIR_APFLOAT_WRAPPERS_EXPORT int64_t _mlir_apfloat_##OP(                     \
+  MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_##OP(                    \
       int32_t semantics, uint64_t a, uint64_t b) {                             \
     const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(        \
         static_cast<llvm::APFloatBase::Semantics>(semantics));                 \
@@ -85,5 +85,20 @@ MLIR_APFLOAT_WRAPPERS_EXPORT void printApFloat(int32_t semantics, uint64_t a) {
   llvm::APFloat x(sem, llvm::APInt(bitWidth, a));
   double d = x.convertToDouble();
   fprintf(stdout, "%lg", d);
+}
+
+MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t
+_mlir_apfloat_convert(int32_t inSemantics, int32_t outSemantics, uint64_t a) {
+  const llvm::fltSemantics &inSem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(inSemantics));
+  const llvm::fltSemantics &outSem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(outSemantics));
+  unsigned bitWidthIn = llvm::APFloatBase::semanticsSizeInBits(inSem);
+  llvm::APFloat val(inSem, llvm::APInt(bitWidthIn, a));
+  // TODO: Custom rounding modes are not supported yet.
+  bool losesInfo;
+  val.convert(outSem, llvm::RoundingMode::NearestTiesToEven, &losesInfo);
+  llvm::APInt result = val.bitcastToAPInt();
+  return result.getZExtValue();
 }
 }

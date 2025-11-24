@@ -27,14 +27,21 @@ func.func @entry() {
   %a1 = arith.constant 1.4 : f8E4M3FN
   %a2 = arith.constant 1.4 : f32
   %b1, %b2 = func.call @foo() : () -> (f8E4M3FN, f32)
-  %c1 = arith.addf %a1, %b1 : f8E4M3FN  // not supported by LLVM
-  %c2 = arith.addf %a2, %b2 : f32       // supported by LLVM
 
-  // CHECK: 3.5
+  // CHECK: 2.2
+  vector.print %b2 : f32
+
+  // CHECK-NEXT: 3.5
+  %c1 = arith.addf %a1, %b1 : f8E4M3FN  // not supported by LLVM
   vector.print %c1 : f8E4M3FN
 
-  // CHECK: 3.6
+  // CHECK-NEXT: 3.6
+  %c2 = arith.addf %a2, %b2 : f32       // supported by LLVM
   vector.print %c2 : f32
+
+  // CHECK-NEXT: 2.25
+  %cvt = arith.truncf %b2 : f32 to f8E4M3FN
+  vector.print %cvt : f8E4M3FN
 
   return
 }
