@@ -719,7 +719,7 @@ struct __init_with_sentinel_tag {};
 template <size_t _PaddingSize>
 struct __padding {
   char __padding_[_PaddingSize];
-  static constexpr __padding empty() {
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 __padding empty() {
     __padding __initialized = {0};
     return __initialized;
   }
@@ -727,7 +727,7 @@ struct __padding {
 
 template <>
 struct __padding<0> {
-  static constexpr __padding empty() {
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 __padding empty() {
     __padding __initialized;
     return __initialized;
   }
@@ -840,17 +840,17 @@ private:
   // The __short structure has a byte-sized bitfield container at the end, and
   // the rest of it can be taken up by value_type. We want at least two
   // value_type, or more if they will fit.
-  static constexpr size_t __fit_cap = (sizeof(__long_min) - 1) / sizeof(value_type);
-  static constexpr size_t __min_cap = __fit_cap > 2 ? __fit_cap : 2;
+  enum { __fit_cap = (sizeof(__long_min) - 1) / sizeof(value_type) };
+  enum { __min_cap = __fit_cap > 2 ? __fit_cap : 2 };
 
   // Now we know how many value_type will fit, calculate how much space they
   // take up in total; add one byte for the final bitfield container; and round
   // up to the nearest multiple of the alignment. That's the total size of the
   // structure.
-  static constexpr size_t __short_packed_size = sizeof(value_type) * __min_cap + 1;
+  enum { __short_packed_size = sizeof(value_type) * __min_cap + 1 };
   union __union_alignment_check { __long_min __long_; value_type v; };
-  static constexpr size_t __union_alignment = _LIBCPP_ALIGNOF(__union_alignment_check);
-  static constexpr size_t __full_size = (__short_packed_size + __union_alignment - 1) & -__union_alignment;
+  enum { __union_alignment = _LIBCPP_ALIGNOF(__union_alignment_check) };
+  enum { __full_size = (__short_packed_size + __union_alignment - 1) & -__union_alignment };
 
   // Now define both structures for real, with padding to ensure they are both
   // exactly the calculated size.
