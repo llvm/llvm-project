@@ -1264,7 +1264,10 @@ def AMDGPU_MakeDmaDescriptorOp :
     Variadic<Index>: $global_dynamic_strides,
     OptionalAttr<DenseI64ArrayAttr>: $global_static_strides,
     Variadic<Index>: $shared_dynamic_sizes,
-    OptionalAttr<DenseI64ArrayAttr>: $shared_static_sizes)>,
+    OptionalAttr<DenseI64ArrayAttr>: $shared_static_sizes,
+    Optional<AnyMemRef>: $atomic_barrier_address,
+    Variadic<Index>: $atomic_barrier_dynamic_indices,
+    OptionalAttr<DenseI64ArrayAttr>: $atomic_barrier_static_indices)>,
   Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
 
   let summary = "TODO";
@@ -1274,10 +1277,13 @@ def AMDGPU_MakeDmaDescriptorOp :
 
   let assemblyFormat = [{
     $base
-	`globalSize` custom<DynamicIndexList>($global_dynamic_sizes, $global_static_sizes)
-	`globalStride` custom<DynamicIndexList>($global_dynamic_strides, $global_static_strides)
-	`sharedSize` custom<DynamicIndexList>($shared_dynamic_sizes, $shared_static_sizes)
-	attr-dict `:` qualified(type($base)) `to` type(results)
+    `globalSize` custom<DynamicIndexList>($global_dynamic_sizes, $global_static_sizes)
+    `globalStride` custom<DynamicIndexList>($global_dynamic_strides, $global_static_strides)
+    `sharedSize` custom<DynamicIndexList>($shared_dynamic_sizes, $shared_static_sizes)
+    ( `atomicBarrier` `(` $atomic_barrier_address^
+                          custom<DynamicIndexList>($atomic_barrier_dynamic_indices, $atomic_barrier_static_indices)
+                      `:` type($atomic_barrier_address) `)`)?
+    attr-dict `:` qualified(type($base)) `to` type(results)
   }];
 
   let hasVerifier = 1;
