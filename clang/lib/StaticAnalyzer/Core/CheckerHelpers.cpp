@@ -142,7 +142,7 @@ std::optional<int> tryExpandAsInteger(StringRef Macro, const Preprocessor &PP) {
   if (InvalidSpelling)
     return std::nullopt;
 
-  llvm::APSInt IntValue(0, true);
+  llvm::APSInt IntValue(/*BitWidth=*/0, /*isUnsigned=*/true);
   constexpr unsigned AutoSenseRadix = 0;
   if (ValueStr.getAsInteger(AutoSenseRadix,
                             static_cast<llvm::APInt &>(IntValue)))
