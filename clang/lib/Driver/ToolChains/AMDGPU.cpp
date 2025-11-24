@@ -700,6 +700,10 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                    options::OPT_mno_amdgpu_precise_memory_op, false))
     Features.push_back("+precise-memory");
 
+  if (Args.hasFlag(options::OPT_mamdgpu_expand_waitcnt_profiling,
+                   options::OPT_mno_amdgpu_expand_waitcnt_profiling, false))
+    Features.push_back("+expand-waitcnt-profiling");
+
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_amdgpu_Features_Group);
 }

@@ -38,3 +38,9 @@
 
 // RUN: %clang -### -target amdgcn -mcpu=gfx1010 -mno-amdgpu-precise-memory-op %s 2>&1 | FileCheck --check-prefix=NO-PREC-MEM %s
 // NO-PREC-MEM-NOT: {{".*precise-memory"}}
+
+// RUN: %clang -### -target amdgcn -mcpu=gfx900 -mamdgpu-expand-waitcnt-profiling %s 2>&1 | FileCheck --check-prefix=EXPAND-WAITCNT %s
+// EXPAND-WAITCNT: "-target-feature" "+expand-waitcnt-profiling"
+
+// RUN: %clang -### -target amdgcn -mcpu=gfx900 -mno-amdgpu-expand-waitcnt-profiling %s 2>&1 | FileCheck --check-prefix=NO-EXPAND-WAITCNT %s
+// NO-EXPAND-WAITCNT-NOT: "{{[+]}}expand-waitcnt-profiling"
