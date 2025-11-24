@@ -2666,6 +2666,15 @@ defm sanitize_minimal_runtime : BoolOption<"f", "sanitize-minimal-runtime",
   PosFlag<SetTrue>,
   NegFlag<SetFalse>>,
   Group<f_clang_Group>;
+defm sanitize_handler_preserve_all_regs
+    : BoolOption<
+          "f", "sanitize-handler-preserve-all-regs",
+          CodeGenOpts<"SanitizeHandlerPreserveAllRegs">, DefaultFalse,
+          PosFlag<SetTrue, [], [],
+                  "Enable handlers with preserve_all calling convention">,
+          NegFlag<SetFalse, [], [],
+                  "Disable handlers with preserve_all calling convention">>,
+      Group<f_clang_Group>;
 def fsanitize_link_runtime : Flag<["-"], "fsanitize-link-runtime">,
                            Group<f_clang_Group>;
 def fno_sanitize_link_runtime : Flag<["-"], "fno-sanitize-link-runtime">,

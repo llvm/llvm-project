@@ -208,19 +208,6 @@ func.func @subview_negative_stride2(%arg0 : memref<7xf32>) -> memref<?xf32, stri
 
 // -----
 
-// CHECK-LABEL: func @dim_of_sized_view
-//  CHECK-SAME:   %{{[a-z0-9A-Z_]+}}: memref<?xi8>
-//  CHECK-SAME:   %[[SIZE:.[a-z0-9A-Z_]+]]: index
-//       CHECK:   return %[[SIZE]] : index
-func.func @dim_of_sized_view(%arg : memref<?xi8>, %size: index) -> index {
-  %c0 = arith.constant 0 : index
-  %0 = memref.reinterpret_cast %arg to offset: [0], sizes: [%size], strides: [1] : memref<?xi8> to memref<?xi8>
-  %1 = memref.dim %0, %c0 : memref<?xi8>
-  return %1 : index
-}
-
-// -----
-
 // CHECK-LABEL: func @no_fold_subview_negative_size
 //  CHECK:        %[[SUBVIEW:.+]] = memref.subview
 //  CHECK:        return %[[SUBVIEW]]

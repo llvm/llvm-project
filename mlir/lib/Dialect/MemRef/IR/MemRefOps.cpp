@@ -1074,13 +1074,6 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
     return subview.getDynamicSize(sourceIndex);
   }
 
-  if (auto sizeInterface =
-          dyn_cast_or_null<OffsetSizeAndStrideOpInterface>(definingOp)) {
-    assert(sizeInterface.isDynamicSize(unsignedIndex) &&
-           "Expected dynamic subview size");
-    return sizeInterface.getDynamicSize(unsignedIndex);
-  }
-
   // dim(memrefcast) -> dim
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
