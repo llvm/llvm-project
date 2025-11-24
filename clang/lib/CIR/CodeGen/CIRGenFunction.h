@@ -1673,7 +1673,8 @@ public:
   RValue emitLoadOfLValue(LValue lv, SourceLocation loc);
 
   Address emitLoadOfReference(LValue refLVal, mlir::Location loc,
-                              LValueBaseInfo *pointeeBaseInfo, TBAAAccessInfo *pointeeTbaaInfo);
+                              LValueBaseInfo *pointeeBaseInfo,
+                              TBAAAccessInfo *pointeeTbaaInfo);
   LValue emitLoadOfReferenceLValue(Address refAddr, mlir::Location loc,
                                    QualType refTy, AlignmentSource source);
 
@@ -1683,7 +1684,8 @@ public:
   /// l-value.
   mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
   mlir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
-                               SourceLocation loc, LValueBaseInfo baseInfo, TBAAAccessInfo tbaaInfo);
+                               SourceLocation loc, LValueBaseInfo baseInfo,
+                               TBAAAccessInfo tbaaInfo);
 
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
@@ -1723,7 +1725,7 @@ public:
   /// explicit source.
   Address emitPointerWithAlignment(const clang::Expr *expr,
                                    LValueBaseInfo *baseInfo = nullptr,
-                                  TBAAAccessInfo *tbaaInfo = nullptr);
+                                   TBAAAccessInfo *tbaaInfo = nullptr);
 
   /// Emits a reference binding to the passed in expression.
   RValue emitReferenceBindingToExpr(const Expr *e);
@@ -1752,8 +1754,9 @@ public:
                           bool isInit);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
-                         clang::QualType ty, LValueBaseInfo baseInfo, TBAAAccessInfo tbaaInfo,
-                         bool isInit = false, bool isNontemporal = false);
+                         clang::QualType ty, LValueBaseInfo baseInfo,
+                         TBAAAccessInfo tbaaInfo, bool isInit = false,
+                         bool isNontemporal = false);
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
   /// Store the specified rvalue into the specified

@@ -61,5 +61,4 @@ CIRGenTBAA::mergeTBAAInfoForMemoryTransfer(TBAAAccessInfo destInfo,
   return TBAAAccessInfo();
 }
 
-
 } // namespace clang::CIRGen

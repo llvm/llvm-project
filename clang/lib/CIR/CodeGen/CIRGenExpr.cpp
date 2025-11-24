@@ -71,7 +71,7 @@ Address CIRGenFunction::emitAddrOfFieldStorage(Address base,
 /// derive a more accurate bound on the alignment of the pointer.
 Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
                                                  LValueBaseInfo *baseInfo,
-                                                TBAAAccessInfo *tbaaInfo) {
+                                                 TBAAAccessInfo *tbaaInfo) {
   // We allow this with ObjC object pointers because of fragile ABIs.
   assert(expr->getType()->isPointerType() ||
          expr->getType()->isObjCObjectPointerType());
@@ -107,9 +107,9 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
               cgm.getNaturalTypeAlignment(pointeeType, &targetTypeBaseInfo);
 
           if (tbaaInfo) {
-            TBAAAccessInfo targetTypeTbaaInfo = cgm.getTBAAAccessInfo(pointeeType);
-            *tbaaInfo =
-                cgm.mergeTBAAInfoForCast(*tbaaInfo, targetTypeTbaaInfo);
+            TBAAAccessInfo targetTypeTbaaInfo =
+                cgm.getTBAAAccessInfo(pointeeType);
+            *tbaaInfo = cgm.mergeTBAAInfoForCast(*tbaaInfo, targetTypeTbaaInfo);
           }
 
           // If the source l-value is opaque, honor the alignment of the
@@ -323,8 +323,8 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isVolatile, QualType ty,
-                                       LValueBaseInfo baseInfo, TBAAAccessInfo tbaaInfo,
-                                       bool isInit,
+                                       LValueBaseInfo baseInfo,
+                                       TBAAAccessInfo tbaaInfo, bool isInit,
                                        bool isNontemporal) {
   assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
 
@@ -365,7 +365,8 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   }
 
   assert(currSrcLoc && "must pass in source location");
-  cir::StoreOp store = builder.createStore(*currSrcLoc, value, addr, isVolatile);
+  cir::StoreOp store =
+      builder.createStore(*currSrcLoc, value, addr, isVolatile);
   cgm.decorateOperationWithTBAA(store, tbaaInfo);
 
   if (isNontemporal) {
@@ -501,7 +502,8 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
   // If this is a reference field, load the reference right now.
   if (fieldType->isReferenceType()) {
     assert(!cir::MissingFeatures::opTBAA());
-    LValue refLVal = makeAddrLValue(addr, fieldType, fieldBaseInfo, fieldTbaaInfo);
+    LValue refLVal =
+        makeAddrLValue(addr, fieldType, fieldBaseInfo, fieldTbaaInfo);
     if (recordCVR & Qualifiers::Volatile)
       refLVal.getQuals().addVolatile();
     addr = emitLoadOfReference(refLVal, getLoc(field->getSourceRange()),
@@ -573,13 +575,15 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
   }
 
   emitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
-                    lvalue.getType(), lvalue.getBaseInfo(), lvalue.getTBAAInfo(), isInit,
+                    lvalue.getType(), lvalue.getBaseInfo(),
+                    lvalue.getTBAAInfo(), isInit,
                     /*isNontemporal=*/false);
 }
 
 mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
                                              QualType ty, SourceLocation loc,
-                                             LValueBaseInfo baseInfo, TBAAAccessInfo tbaaInfo) {
+                                             LValueBaseInfo baseInfo,
+                                             TBAAAccessInfo tbaaInfo) {
   assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
   mlir::Type eltTy = addr.getElementType();
 
@@ -613,7 +617,6 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
   if (!ty->isBooleanType() && ty->hasBooleanRepresentation())
     cgm.errorNYI("emitLoadOfScalar: boolean type with boolean representation");
 
-
   return loadOp;
 }
 
@@ -621,7 +624,8 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
                                              SourceLocation loc) {
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   return emitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
-                          lvalue.getType(), loc, lvalue.getBaseInfo(), lvalue.getTBAAInfo());
+                          lvalue.getType(), loc, lvalue.getBaseInfo(),
+                          lvalue.getTBAAInfo());
 }
 
 /// Given an expression that represents a value lvalue, this
@@ -2298,7 +2302,8 @@ RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {
 }
 
 Address CIRGenFunction::emitLoadOfReference(LValue refLVal, mlir::Location loc,
-                                            LValueBaseInfo *pointeeBaseInfo, TBAAAccessInfo *pointeeTbaaInfo) {
+                                            LValueBaseInfo *pointeeBaseInfo,
+                                            TBAAAccessInfo *pointeeTbaaInfo) {
   if (refLVal.isVolatile())
     cgm.errorNYI(loc, "load of volatile reference");
 
@@ -2322,7 +2327,8 @@ LValue CIRGenFunction::emitLoadOfReferenceLValue(Address refAddr,
   LValue refLVal = makeAddrLValue(refAddr, refTy, LValueBaseInfo(source));
   LValueBaseInfo pointeeBaseInfo;
   TBAAAccessInfo tbaaAccessInfo;
-  Address pointeeAddr = emitLoadOfReference(refLVal, loc, &pointeeBaseInfo, &tbaaAccessInfo);
+  Address pointeeAddr =
+      emitLoadOfReference(refLVal, loc, &pointeeBaseInfo, &tbaaAccessInfo);
   return makeAddrLValue(pointeeAddr, refLVal.getType()->getPointeeType(),
                         pointeeBaseInfo, tbaaAccessInfo);
 }

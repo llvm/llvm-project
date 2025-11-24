@@ -430,7 +430,8 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   Address vtableField = Address(vtablePtr, classAddr.getAlignment());
   builder.createStore(loc, vtableAddressPoint, vtableField);
 
-  cir::StoreOp storeOp = builder.createStore(loc, vtableAddressPoint, vtableField);
+  cir::StoreOp storeOp =
+      builder.createStore(loc, vtableAddressPoint, vtableField);
   TBAAAccessInfo tbaaInfo =
       cgm.getTBAAVTablePtrAccessInfo(vtableAddressPoint.getType());
   cgm.decorateOperationWithTBAA(storeOp, tbaaInfo);

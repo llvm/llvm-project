@@ -99,12 +99,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
               astContext.getTargetInfo().getPointerAlign(LangAS::Default))
           .getQuantity();
 
-
   // Enable TBAA unless it's suppressed. TSan and TySan need TBAA even at O0.
   if (langOpts.Sanitize.hasOneOf(SanitizerKind::Thread | SanitizerKind::Type) ||
       (!codeGenOpts.RelaxedAliasing && codeGenOpts.OptimizationLevel > 0))
-    tbaa = std::make_unique<CIRGenTBAA>(&mlirContext, astContext, getTypes(), theModule, codeGenOpts,
-                               getLangOpts());
+    tbaa = std::make_unique<CIRGenTBAA>(&mlirContext, astContext, getTypes(),
+                                        theModule, codeGenOpts, getLangOpts());
 
   const unsigned charSize = astContext.getTargetInfo().getCharWidth();
   uCharTy = cir::IntType::get(&getMLIRContext(), charSize, /*isSigned=*/false);
@@ -2570,4 +2569,3 @@ CIRGenModule::mergeTBAAInfoForMemoryTransfer(TBAAAccessInfo destInfo,
     return TBAAAccessInfo();
   return tbaa->mergeTBAAInfoForConditionalOperator(destInfo, srcInfo);
 }
-

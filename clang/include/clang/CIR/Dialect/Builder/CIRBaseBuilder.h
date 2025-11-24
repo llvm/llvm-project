@@ -205,7 +205,8 @@ public:
                          bool isVolatile = false, uint64_t alignment = 0) {
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false, isVolatile,
-                               alignmentAttr, cir::MemOrderAttr{}, /*tbaa=*/mlir::ArrayAttr{});
+                               alignmentAttr, cir::MemOrderAttr{},
+                               /*tbaa=*/mlir::ArrayAttr{});
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
@@ -321,14 +322,16 @@ public:
   /// Create a copy with inferred length.
   cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
                          bool isVolatile = false) {
-    return cir::CopyOp::create(*this, dst.getLoc(), dst, src, isVolatile, /*tbaa=*/mlir::ArrayAttr{});
+    return cir::CopyOp::create(*this, dst.getLoc(), dst, src, isVolatile,
+                               /*tbaa=*/mlir::ArrayAttr{});
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
                            bool isVolatile = false,
                            mlir::IntegerAttr align = {},
                            cir::MemOrderAttr order = {}) {
-    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, order, /*tbaa=*/mlir::ArrayAttr{});
+    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, order,
+                                /*tbaa=*/mlir::ArrayAttr{});
   }
 
   [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
