@@ -15646,6 +15646,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     DC = DC->getParent();
   if ((getSema().isUnevaluatedContext() ||
        getSema().isConstantEvaluatedContext()) &&
+      !(dyn_cast_or_null<CXXRecordDecl>(DC->getParent()) &&
+        cast<CXXRecordDecl>(DC->getParent())->isGenericLambda()) &&
       (DC->isFileContext() || !DC->getParent()->isDependentContext()))
     DependencyKind = CXXRecordDecl::LDK_NeverDependent;
 

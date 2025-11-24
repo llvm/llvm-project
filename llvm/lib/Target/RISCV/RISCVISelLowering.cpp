@@ -526,7 +526,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SSUBSAT, VTs, Legal);
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
     setOperationAction({ISD::ABDS, ISD::ABDU}, VTs, Legal);
-    setOperationAction(ISD::BUILD_VECTOR, VTs, Custom);
+    setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
     setOperationAction(ISD::BITCAST, VTs, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VTs, Custom);
   }
@@ -4433,37 +4433,6 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   MVT XLenVT = Subtarget.getXLenVT();
 
   SDLoc DL(Op);
-  // Handle P extension packed vector BUILD_VECTOR with PLI for splat constants
-  if (Subtarget.enablePExtCodeGen()) {
-    bool IsPExtVector =
-        (VT == MVT::v2i16 || VT == MVT::v4i8) ||
-        (Subtarget.is64Bit() &&
-         (VT == MVT::v4i16 || VT == MVT::v8i8 || VT == MVT::v2i32));
-    if (IsPExtVector) {
-      if (SDValue SplatValue = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
-        if (auto *C = dyn_cast<ConstantSDNode>(SplatValue)) {
-          int64_t SplatImm = C->getSExtValue();
-          bool IsValidImm = false;
-
-          // Check immediate range based on vector type
-          if (VT == MVT::v8i8 || VT == MVT::v4i8) {
-            // PLI_B uses 8-bit unsigned or unsigned immediate
-            IsValidImm = isUInt<8>(SplatImm) || isInt<8>(SplatImm);
-            if (isUInt<8>(SplatImm))
-              SplatImm = (int8_t)SplatImm;
-          } else {
-            // PLI_H and PLI_W use 10-bit signed immediate
-            IsValidImm = isInt<10>(SplatImm);
-          }
-
-          if (IsValidImm) {
-            SDValue Imm = DAG.getSignedTargetConstant(SplatImm, DL, XLenVT);
-            return DAG.getNode(RISCVISD::PLI, DL, VT, Imm);
-          }
-        }
-      }
-    }
-  }
 
   // Proper support for f16 requires Zvfh. bf16 always requires special
   // handling. We need to cast the scalar to integer and create an integer
@@ -8435,7 +8404,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       if (Store->isTruncatingStore())
         return SDValue();
 
-      if (!Subtarget.enableUnalignedScalarMem() && Store->getAlign() < 8)
+      if (Store->getAlign() < Subtarget.getZilsdAlign())
         return SDValue();
 
       SDLoc DL(Op);
@@ -14834,7 +14803,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       assert(Subtarget.hasStdExtZilsd() && !Subtarget.is64Bit() &&
              "Unexpected custom legalisation");
 
-      if (!Subtarget.enableUnalignedScalarMem() && Ld->getAlign() < 8)
+      if (Ld->getAlign() < Subtarget.getZilsdAlign())
         return;
 
       SDLoc DL(N);
@@ -21833,6 +21802,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return N->getOperand(0);
     break;
   }
+  case RISCVISD::VSLIDEDOWN_VL:
+  case RISCVISD::VSLIDEUP_VL:
+    if (N->getOperand(1)->isUndef())
+      return N->getOperand(0);
+    break;
   case RISCVISD::VSLIDE1UP_VL:
   case RISCVISD::VFSLIDE1UP_VL: {
     using namespace SDPatternMatch;
@@ -25752,4 +25726,18 @@ bool RISCVTargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {
     return false;
 
   return VT.getSizeInBits() <= Subtarget.getXLen();
+}
+
+bool RISCVTargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
+                                              SDValue N1) const {
+  if (!N0.hasOneUse())
+    return false;
+
+  // Avoid reassociating expressions that can be lowered to vector
+  // multiply accumulate (i.e. add (mul x, y), z)
+  if (N0.getOpcode() == ISD::ADD && N1.getOpcode() == ISD::MUL &&
+      (N0.getValueType().isVector() && Subtarget.hasVInstructions()))
+    return false;
+
+  return true;
 }

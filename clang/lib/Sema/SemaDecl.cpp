@@ -63,6 +63,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -20610,6 +20611,59 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
   return !(FlagMask & Val) || (AllowMask && !(FlagMask & ~Val));
 }
 
+// Emits a warning when a suspicious comparison operator is used along side
+// binary operators in enum initializers.
+static void CheckForComparisonInEnumInitializer(SemaBase &Sema,
+                                                const EnumDecl *Enum) {
+  bool HasBitwiseOp = false;
+  SmallVector<const BinaryOperator *, 4> SuspiciousCompares;
+
+  // Iterate over all the enum values, gather suspisious comparison ops and
+  // whether any enum initialisers contain a binary operator.
+  for (const auto *ECD : Enum->enumerators()) {
+    const Expr *InitExpr = ECD->getInitExpr();
+    if (!InitExpr)
+      continue;
+
+    const Expr *E = InitExpr->IgnoreParenImpCasts();
+
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
+      BinaryOperatorKind Op = BinOp->getOpcode();
+
+      // Check for bitwise ops (<<, >>, &, |)
+      if (BinOp->isBitwiseOp() || BinOp->isShiftOp()) {
+        HasBitwiseOp = true;
+      } else if (Op == BO_LT || Op == BO_GT) {
+        // Check for the typo pattern (Comparison < or >)
+        const Expr *LHS = BinOp->getLHS()->IgnoreParenImpCasts();
+        if (const auto *IntLiteral = dyn_cast<IntegerLiteral>(LHS)) {
+          // Specifically looking for accidental bitshifts "1 < X" or "1 > X"
+          if (IntLiteral->getValue() == 1)
+            SuspiciousCompares.push_back(BinOp);
+        }
+      }
+    }
+  }
+
+  // If we found a bitwise op and some sus compares, iterate over the compares
+  // and warn.
+  if (HasBitwiseOp) {
+    for (const auto *BinOp : SuspiciousCompares) {
+      StringRef SuggestedOp = (BinOp->getOpcode() == BO_LT)
+                                  ? BinaryOperator::getOpcodeStr(BO_Shl)
+                                  : BinaryOperator::getOpcodeStr(BO_Shr);
+      SourceLocation OperatorLoc = BinOp->getOperatorLoc();
+
+      Sema.Diag(OperatorLoc, diag::warn_comparison_in_enum_initializer)
+          << BinOp->getOpcodeStr() << SuggestedOp;
+
+      Sema.Diag(OperatorLoc, diag::note_enum_compare_typo_suggest)
+          << SuggestedOp
+          << FixItHint::CreateReplacement(OperatorLoc, SuggestedOp);
+    }
+  }
+}
+
 void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
                          Decl *EnumDeclX, ArrayRef<Decl *> Elements, Scope *S,
                          const ParsedAttributesView &Attrs) {
@@ -20747,6 +20801,7 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
                            NumPositiveBits, NumNegativeBits);
 
   CheckForDuplicateEnumValues(*this, Elements, Enum, EnumType);
+  CheckForComparisonInEnumInitializer(*this, Enum);
 
   if (Enum->isClosedFlag()) {
     for (Decl *D : Elements) {

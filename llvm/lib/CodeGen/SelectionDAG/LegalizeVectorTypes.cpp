@@ -1091,14 +1091,14 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_FP_ROUND(SDNode *N, unsigned OpNo) {
   return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Res);
 }
 
-SDValue DAGTypeLegalizer::ScalarizeVecOp_STRICT_FP_ROUND(SDNode *N, 
+SDValue DAGTypeLegalizer::ScalarizeVecOp_STRICT_FP_ROUND(SDNode *N,
                                                          unsigned OpNo) {
   assert(OpNo == 1 && "Wrong operand for scalarization!");
   SDValue Elt = GetScalarizedVector(N->getOperand(1));
-  SDValue Res = DAG.getNode(ISD::STRICT_FP_ROUND, SDLoc(N),
-                            { N->getValueType(0).getVectorElementType(), 
-                              MVT::Other },
-                            { N->getOperand(0), Elt, N->getOperand(2) });
+  SDValue Res =
+      DAG.getNode(ISD::STRICT_FP_ROUND, SDLoc(N),
+                  {N->getValueType(0).getVectorElementType(), MVT::Other},
+                  {N->getOperand(0), Elt, N->getOperand(2)});
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
@@ -3842,16 +3842,16 @@ SDValue DAGTypeLegalizer::SplitVecOp_UnaryOp(SDNode *N) {
                                InVT.getVectorElementCount());
 
   if (N->isStrictFPOpcode()) {
-    Lo = DAG.getNode(N->getOpcode(), dl, { OutVT, MVT::Other }, 
-                     { N->getOperand(0), Lo });
-    Hi = DAG.getNode(N->getOpcode(), dl, { OutVT, MVT::Other }, 
-                     { N->getOperand(0), Hi });
+    Lo = DAG.getNode(N->getOpcode(), dl, {OutVT, MVT::Other},
+                     {N->getOperand(0), Lo});
+    Hi = DAG.getNode(N->getOpcode(), dl, {OutVT, MVT::Other},
+                     {N->getOperand(0), Hi});
 
     // Build a factor node to remember that this operation is independent
     // of the other one.
     SDValue Ch = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo.getValue(1),
                              Hi.getValue(1));
-  
+
     // Legalize the chain result - switch anything that used the old chain to
     // use the new one.
     ReplaceValueWith(SDValue(N, 1), Ch);
@@ -4638,13 +4638,13 @@ SDValue DAGTypeLegalizer::SplitVecOp_FP_ROUND(SDNode *N) {
                                InVT.getVectorElementCount());
 
   if (N->isStrictFPOpcode()) {
-    Lo = DAG.getNode(N->getOpcode(), DL, { OutVT, MVT::Other }, 
-                     { N->getOperand(0), Lo, N->getOperand(2) });
-    Hi = DAG.getNode(N->getOpcode(), DL, { OutVT, MVT::Other }, 
-                     { N->getOperand(0), Hi, N->getOperand(2) });
+    Lo = DAG.getNode(N->getOpcode(), DL, {OutVT, MVT::Other},
+                     {N->getOperand(0), Lo, N->getOperand(2)});
+    Hi = DAG.getNode(N->getOpcode(), DL, {OutVT, MVT::Other},
+                     {N->getOperand(0), Hi, N->getOperand(2)});
     // Legalize the chain result - switch anything that used the old chain to
     // use the new one.
-    SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, 
+    SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
                                    Lo.getValue(1), Hi.getValue(1));
     ReplaceValueWith(SDValue(N, 1), NewChain);
   } else if (N->getOpcode() == ISD::VP_FP_ROUND) {
@@ -5517,7 +5517,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_StrictFP(SDNode *N) {
           EOps.push_back(Op);
         }
 
-        EVT WidenVT[] = {WidenEltVT, MVT::Other}; 
+        EVT WidenVT[] = {WidenEltVT, MVT::Other};
         SDValue Oper = DAG.getNode(Opcode, dl, WidenVT, EOps);
         ConcatOps[ConcatEnd++] = Oper;
         Chains.push_back(Oper.getValue(1));
