@@ -311,8 +311,9 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   /// If \p SubregToRegSrcInsts is not empty, we are coalescing a
   /// `DstReg = SUBREG_TO_REG SrcReg`, which should introduce an
   /// implicit-def of DstReg on instructions that define SrcReg.
-  void updateRegDefsUses(Register SrcReg, Register DstReg, unsigned SubIdx,
-                         ArrayRef<MachineInstr *> SubregToRegSrcInsts = {});
+  void updateRegDefsUses(
+      Register SrcReg, Register DstReg, unsigned SubIdx,
+      SmallPtrSetImpl<MachineInstr *> *SubregToRegSrcInsts = nullptr);
 
   /// If the given machine operand reads only undefined lanes add an undef
   /// flag.
@@ -1900,7 +1901,7 @@ void RegisterCoalescer::addUndefFlag(const LiveInterval &Int, SlotIndex UseIdx,
 
 void RegisterCoalescer::updateRegDefsUses(
     Register SrcReg, Register DstReg, unsigned SubIdx,
-    ArrayRef<MachineInstr *> SubregToRegSrcInsts) {
+    SmallPtrSetImpl<MachineInstr *> *SubregToRegSrcInsts) {
   bool DstIsPhys = DstReg.isPhysical();
   LiveInterval *DstInt = DstIsPhys ? nullptr : &LIS->getInterval(DstReg);
 
@@ -1955,7 +1956,7 @@ void RegisterCoalescer::updateRegDefsUses(
       Reads = DstInt->liveAt(LIS->getInstructionIndex(*UseMI));
 
     bool RequiresImplicitRedef = false;
-    if (!SubregToRegSrcInsts.empty()) {
+    if (SubregToRegSrcInsts && !SubregToRegSrcInsts->empty()) {
       // We can only add an implicit-def and undef if the sub registers match,
       // e.g.
       //  %0:gr32      = INSTX
@@ -1968,7 +1969,7 @@ void RegisterCoalescer::updateRegDefsUses(
       //
       // because the undef means that none of the bits of %1 are read, thus
       // thrashing the top 24 bits of %1.sub32.
-      if (is_contained(SubregToRegSrcInsts, UseMI) &&
+      if (SubregToRegSrcInsts->contains(UseMI) &&
           all_of(UseMI->defs(), [&SubIdx](const MachineOperand &MO) -> bool {
             if (MO.isUndef())
               return true;
@@ -2141,7 +2142,7 @@ void RegisterCoalescer::setUndefOnPrunedSubRegUses(LiveInterval &LI,
 
 /// For a given use of value \p Idx, it returns the def in the current block,
 /// or otherwise all possible defs in preceding blocks.
-static bool findPrecedingDefs(SmallVector<MachineInstr *> &Instrs,
+static bool findPrecedingDefs(SmallPtrSetImpl<MachineInstr *> &Instrs,
                               LiveIntervals *LIS, LiveInterval &SrcInt,
                               MachineBasicBlock *MBB, VNInfo *Idx) {
   auto IsPrecedingDef = [&](VNInfo *Idx) -> bool {
@@ -2149,7 +2150,7 @@ static bool findPrecedingDefs(SmallVector<MachineInstr *> &Instrs,
       return false;
     MachineInstr *Def = LIS->getInstructionFromIndex(Idx->def);
     assert(Def && "Unable to find a def for SUBREG_TO_REG source operand");
-    Instrs.push_back(Def);
+    Instrs.insert(Def);
     return true;
   };
 
@@ -2308,7 +2309,7 @@ bool RegisterCoalescer::joinCopy(
     });
   }
 
-  SmallVector<MachineInstr *> SubregToRegSrcInsts;
+  SmallPtrSet<MachineInstr *, 4> SubregToRegSrcInsts;
   Register SrcReg = CP.isFlipped() ? CP.getDstReg() : CP.getSrcReg();
   if (CopyMI->isSubregToReg() && !SrcReg.isPhysical()) {
     // For the case where the copy instruction is a SUBREG_TO_REG, e.g.
@@ -2407,7 +2408,7 @@ bool RegisterCoalescer::joinCopy(
   if (CP.getDstIdx())
     updateRegDefsUses(CP.getDstReg(), CP.getDstReg(), CP.getDstIdx());
   updateRegDefsUses(CP.getSrcReg(), CP.getDstReg(), CP.getSrcIdx(),
-                    SubregToRegSrcInsts);
+                    &SubregToRegSrcInsts);
 
   // Shrink subregister ranges if necessary.
   if (ShrinkMask.any()) {
