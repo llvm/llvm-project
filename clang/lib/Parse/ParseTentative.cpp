@@ -61,8 +61,26 @@ bool Parser::isCXXDeclarationStatement(
           // token is also an identifier and assume a declaration.
           // We cannot check if the scopes match because the declarations could
           // involve namespaces and friend declarations.
-          if (NextToken().is(tok::identifier))
+          //
+          // Also handle cases like "A::B *foo" or "A::B &foo" where the type
+          // is followed by ptr/ref declarator operators. These patterns are
+          // very likely to be declarations (e.g., out-of-line member function
+          // definitions with pointer/reference return types).
+          Token Next = NextToken();
+          if (Next.is(tok::identifier))
             return true;
+          // Check for pointer/reference patterns: A::B *id, A::B &id, A::B &&id
+          // Also handles multiple indirections like A::B **id
+          if (Next.isOneOf(tok::star, tok::amp, tok::ampamp)) {
+            // Look ahead to see if there's an identifier after ptr/ref ops
+            RevertingTentativeParsingAction PA(*this);
+            ConsumeToken(); // consume the identifier (type name)
+            // Skip all consecutive *, &, && tokens (for cases like A::B **)
+            while (Tok.isOneOf(tok::star, tok::amp, tok::ampamp))
+              ConsumeToken();
+            if (Tok.is(tok::identifier))
+              return true;
+          }
         }
         break;
       }
