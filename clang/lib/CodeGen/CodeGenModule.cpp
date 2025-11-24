@@ -6302,6 +6302,51 @@ CodeGenModule::getLLVMLinkageVarDefinition(const VarDecl *VD) {
   return getLLVMLinkageForDeclarator(VD, Linkage);
 }
 
+const VarDecl *CodeGenModule::materializeStaticDataMember(const VarDecl *VD) {
+  if (!VD)
+    return VD;
+
+  const VarDecl *DefinitionVD = VD->getDefinition();
+  if (!DefinitionVD)
+    DefinitionVD = VD;
+
+  // Only in-class static data members need materialization. Out-of-line
+  // definitions are emitted normally.
+  if (!DefinitionVD->isStaticDataMember() || DefinitionVD->isOutOfLine())
+    return DefinitionVD;
+
+  const VarDecl *InitVD = nullptr;
+  // Members without in-class initializers rely on out-of-class definitions.
+  if (!DefinitionVD->getAnyInitializer(InitVD) || !InitVD)
+    return DefinitionVD;
+
+  auto NeedsMaterialization = [](llvm::GlobalValue *GV) {
+    if (!GV)
+      return true;
+    if (GV->isDeclaration())
+      return true;
+    // Inline static members may be emitted as available_externally; upgrade
+    // to linkonce_odr so the JIT can resolve them.
+    if (auto *GVVar = llvm::dyn_cast<llvm::GlobalVariable>(GV))
+      return GVVar->hasAvailableExternallyLinkage();
+    return false;
+  };
+
+  GlobalDecl GD(InitVD);
+  StringRef MangledName = getMangledName(GD);
+  llvm::GlobalValue *GV = GetGlobalValue(MangledName);
+
+  if (NeedsMaterialization(GV)) {
+    EmitGlobalVarDefinition(InitVD, /*IsTentative=*/false);
+    GV = GetGlobalValue(MangledName);
+    if (auto *GVVar = llvm::dyn_cast_or_null<llvm::GlobalVariable>(GV))
+      if (GVVar->hasAvailableExternallyLinkage())
+        GVVar->setLinkage(llvm::GlobalValue::LinkOnceODRLinkage);
+  }
+
+  return InitVD;
+}
+
 /// Replace the uses of a function that was declared with a non-proto type.
 /// We want to silently drop extra arguments from call sites
 static void replaceUsesOfNonProtoConstant(llvm::Constant *old,

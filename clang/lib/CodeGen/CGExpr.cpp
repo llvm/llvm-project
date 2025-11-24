@@ -3111,6 +3111,12 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
       return CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);
   }
 
+  // In incremental mode, ensure static data members with in-class initializers
+  // are materialized before use. This handles lvalue references that bypass
+  // constant evaluation (e.g., passing by reference to a function).
+  if (CGF.CGM.getLangOpts().IncrementalExtensions && VD->isStaticDataMember())
+    VD = CGF.CGM.materializeStaticDataMember(VD);
+
   llvm::Value *V = CGF.CGM.GetAddrOfGlobalVar(VD);
 
   if (VD->getTLSKind() != VarDecl::TLS_None)

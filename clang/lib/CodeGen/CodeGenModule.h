@@ -1839,6 +1839,14 @@ public:
     return TrapReasonBuilder(&getDiags(), DiagID, TR);
   }
 
+  /// Materialize a static data member with an in-class initializer on demand.
+  ///
+  /// In incremental contexts (e.g. clang-repl) a class can be defined in an
+  /// earlier partial translation unit, while the first odr-use (such as taking
+  /// the address) happens later. Ensure we emit a usable definition so the JIT
+  /// can resolve the symbol.
+  const VarDecl *materializeStaticDataMember(const VarDecl *VD);
+
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 

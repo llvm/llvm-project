@@ -2243,6 +2243,10 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     }
 
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
+      // In incremental mode, ensure static data members with in-class
+      // initializers are materialized on first odr-use (e.g., &Foo::member).
+      if (CGM.getLangOpts().IncrementalExtensions && VD->isStaticDataMember())
+        VD = CGM.materializeStaticDataMember(VD);
       // We can never refer to a variable with local storage.
       if (!VD->hasLocalStorage()) {
         if (VD->isFileVarDecl() || VD->hasExternalStorage())
