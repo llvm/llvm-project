@@ -117,7 +117,12 @@ private:
     }
   }
 
-  CacheInitializer(Ranges &R) : Result(R) {}
+  CacheInitializer(Ranges &R) : Result(R) {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldWalkTypesOfTypeLocs = false;
+    ShouldVisitImplicitCode = false;
+    ShouldVisitLambdaBody = true;
+  }
   Ranges &Result;
 };
 
