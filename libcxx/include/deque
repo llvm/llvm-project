@@ -807,7 +807,11 @@ public:
 
   template <_ContainerCompatibleRange<_Tp> _Range>
   _LIBCPP_HIDE_FROM_ABI void append_range(_Range&& __range) {
-    insert_range(end(), std::forward<_Range>(__range));
+    if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
+      __append_with_size(ranges::begin(__range), ranges::distance(__range));
+    } else {
+      __append_with_sentinel(ranges::begin(__range), ranges::end(__range));
+    }
   }
 #    endif
 
@@ -1461,13 +1465,13 @@ _LIBCPP_HIDE_FROM_ABI void deque<_Tp, _Allocator>::__assign_with_size(_Iterator 
 
     auto __i = begin();
     for (auto __count = size(); __count != 0; --__count) {
-      *__i++ = *__f++;
+      *__i++ = *__f;
+      ++__f;
     }
 
-    __append_with_size(__f, __added_size);
-
+    __append_with_size(std::move(__f), __added_size);
   } else {
-    __erase_to_end(std::copy_n(__f, __n, begin()));
+    __erase_to_end(std::copy_n(std::move(__f), __n, begin()));
   }
 }
 
