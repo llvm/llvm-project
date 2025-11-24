@@ -50,9 +50,9 @@ public:
   static MockDwarfDelegate Dwarf2() { return MockDwarfDelegate(2); }
 
   MockDwarfDelegate() : MockDwarfDelegate(DEFAULT_DWARF_VERSION) {}
-  explicit MockDwarfDelegate(uint16_t version) : m_version(version) {}
+  explicit MockDwarfDelegate(uint16_t version) : m_dwarf_version(version) {}
 
-  uint16_t GetVersion() const override { return m_version; }
+  uint16_t GetVersion() const override { return m_dwarf_version; }
 
   dw_addr_t GetBaseAddress() const override { return 0; }
 
@@ -82,7 +82,7 @@ public:
   }
 
 private:
-  uint16_t m_version;
+  uint16_t m_dwarf_version;
 };
 
 /// Mock memory implementation for testing.
