@@ -174,3 +174,25 @@ entry:
   %cmp = icmp slt i64 %x, %y
   ret i1 %cmp
 }
+
+; Regression: After converting (ashr X, 3) u> 4 to X u> 32, we should still
+; be able to use the original condition to simplify icmp with ashr.
+define i1 @precond_icmp_ashr_and_constant_regression(i64 %x) {
+; CHECK-LABEL: define i1 @precond_icmp_ashr_and_constant_regression(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr exact i64 [[X]], 3
+; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i64 [[ASHR]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[ASHR]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[ADD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %ashr = ashr exact i64 %x, 3
+  %cond = icmp ugt i64 %ashr, 4
+  call void @llvm.assume(i1 %cond)
+  %add = add nsw i64 %ashr, -1
+  %cmp = icmp eq i64 %add, 0
+  ret i1 %cmp
+}
