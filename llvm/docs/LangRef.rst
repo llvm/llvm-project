@@ -17257,8 +17257,9 @@ LLVM Implementation:
 """"""""""""""""""""
 
 LLVM implements all ISO C flavors as listed in this table, except in the
-default floating-point environment exceptions are ignored. The constrained
-versions of the intrinsics respect the exception behavior.
+default floating-point environment exceptions are ignored and return value
+is non-deterministic if one or both inputs are sNaN. The constrained
+versions of the intrinsics respect the exception behavior and sNaN.
 
 .. list-table::
    :header-rows: 1
@@ -17335,15 +17336,15 @@ type.
 Semantics:
 """"""""""
 
-Follows the IEEE-754 semantics for minNum, except for handling of
+Follows the IEEE-754-2008 semantics for minNum, except for handling of
 signaling NaNs. This match's the behavior of libm's fmin.
 
 If either operand is a NaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN. If the operands compare equal,
 returns either one of the operands. For example, this means that
-fmin(+0.0, -0.0) returns either operand.
+fmin(+0.0, -0.0) returns non-deterministic value (either -0.0 or 0.0).
 
-Unlike the IEEE-754 2008 behavior, this does not distinguish between
+Unlike the IEEE-754-2008 behavior, this does not distinguish between
 signaling and quiet NaN inputs. If a target's implementation follows
 the standard and returns a quiet NaN if either input is a signaling
 NaN, the intrinsic lowering is responsible for quieting the inputs to
@@ -17385,15 +17386,15 @@ type.
 
 Semantics:
 """"""""""
-Follows the IEEE-754 semantics for maxNum except for the handling of
+Follows the IEEE-754-2008 semantics for maxNum except for the handling of
 signaling NaNs. This matches the behavior of libm's fmax.
 
 If either operand is a NaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN. If the operands compare equal,
 returns either one of the operands. For example, this means that
-fmax(+0.0, -0.0) returns either -0.0 or 0.0.
+fmax(+0.0, -0.0) returns non-deterministic value (either -0.0 or 0.0).
 
-Unlike the IEEE-754 2008 behavior, this does not distinguish between
+Unlike the IEEE-754-2008 behavior, this does not distinguish between
 signaling and quiet NaN inputs. If a target's implementation follows
 the standard and returns a quiet NaN if either input is a signaling
 NaN, the intrinsic lowering is responsible for quieting the inputs to
