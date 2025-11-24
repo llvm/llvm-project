@@ -5033,8 +5033,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return true;
     // Space between import <iostream>.
     // or import .....;
-    if (Left.is(Keywords.kw_import) && Right.isOneOf(tok::less, tok::ellipsis))
+    if (Left.is(Keywords.kw_import) &&
+        Right.isOneOf(tok::less, tok::ellipsis) &&
+        (!BeforeLeft || BeforeLeft->is(tok::kw_export))) {
       return true;
+    }
     // Space between `module :` and `import :`.
     if (Left.isOneOf(Keywords.kw_module, Keywords.kw_import) &&
         Right.is(TT_ModulePartitionColon)) {
