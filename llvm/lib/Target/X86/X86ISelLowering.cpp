@@ -23637,43 +23637,47 @@ static SDValue EmitTest(SDValue Op, X86::CondCode X86CC, const SDLoc &dl,
     // If optimising for size and can guarantee the shift amt is never zero
     // the test.
     bool OptForSize = DAG.getMachineFunction().getFunction().hasOptSize();
-    if (OptForSize && DAG.isKnownNeverZero(Amt)) {
-      SDLoc DL(ArithOp);
 
-      // CopyToReg(CL, Amt)
-      SDValue Chain = DAG.getEntryNode();
-      SDValue Glue;
+    if (!OptForSize)
+      break;
 
-      Chain = DAG.getCopyToReg(Chain, DL, X86::CL, Amt, Glue);
-      Glue = Chain.getValue(1);
+    if (!DAG.isKnownNeverZero(Amt))
+      break;
 
-      // Select Opcode
-      unsigned X86Opcode;
-      switch (ArithOp.getOpcode()) {
-      case ISD::SHL:
-        X86Opcode = X86ISD::SHL;
-        break;
-      case ISD::SRL:
-        X86Opcode = X86ISD::SRL;
-        break;
-      case ISD::SRA:
-        X86Opcode = X86ISD::SRA;
-        break;
-      default:
-        llvm_unreachable("Unexpected shift opcode");
-      }
+    SDLoc DL(ArithOp);
 
-      // Create Node [ValueToShift, Glue]
-      SDVTList VTs = DAG.getVTList(ArithOp.getValueType(), MVT::i32);
-      SDValue Ops[] = {ArithOp.getOperand(0), Glue};
+    // CopyToReg(CL, Amt)
+    SDValue Chain = DAG.getEntryNode();
+    SDValue Glue;
 
-      SDValue NewNode = DAG.getNode(X86Opcode, DL, VTs, Ops);
+    Chain = DAG.getCopyToReg(Chain, DL, X86::CL, Amt, Glue);
+    Glue = Chain.getValue(1);
 
-      // Replace and Return
-      DAG.ReplaceAllUsesOfValueWith(ArithOp, NewNode.getValue(0));
-      return NewNode.getValue(1);
+    // Select Opcode
+    unsigned X86Opcode;
+    switch (ArithOp.getOpcode()) {
+    case ISD::SHL:
+      X86Opcode = X86ISD::SHL;
+      break;
+    case ISD::SRL:
+      X86Opcode = X86ISD::SRL;
+      break;
+    case ISD::SRA:
+      X86Opcode = X86ISD::SRA;
+      break;
+    default:
+      llvm_unreachable("Unexpected shift opcode");
     }
-    break;
+
+    // Create Node [ValueToShift, Glue]
+    SDVTList VTs = DAG.getVTList(ArithOp.getValueType(), MVT::i32);
+    SDValue Ops[] = {ArithOp.getOperand(0), Glue};
+
+    SDValue NewNode = DAG.getNode(X86Opcode, DL, VTs, Ops);
+
+    // Replace and Return
+    DAG.ReplaceAllUsesOfValueWith(ArithOp, NewNode.getValue(0));
+    return NewNode.getValue(1);
   }
   default:
     break;

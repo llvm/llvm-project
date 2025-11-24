@@ -425,6 +425,9 @@ namespace llvm {
     OR,
     XOR,
     AND,
+    SHL,
+    SRL,
+    SRA,
 
     // Bit field extract.
     BEXTR,
@@ -996,9 +999,6 @@ namespace llvm {
     CLOAD,
     CSTORE,
     LAST_MEMORY_OPCODE = CSTORE,
-    SHL,
-    SRL,
-    SRA,
   };
   } // end namespace X86ISD
 
