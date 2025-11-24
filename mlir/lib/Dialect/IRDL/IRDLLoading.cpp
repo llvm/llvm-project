@@ -169,11 +169,8 @@ LogicalResult getSegmentSizes(Operation *op, StringRef elemName,
 LogicalResult getOperandSegmentSizes(Operation *op,
                                      ArrayRef<Variadicity> variadicities,
                                      SmallVectorImpl<int> &segmentSizes) {
-  StringRef attrName = op->getAttr("operandSegmentSizes")
-                           ? "operandSegmentSizes"
-                           : "operand_segment_sizes";
-  return getSegmentSizes(op, "operand", attrName, op->getNumOperands(),
-                         variadicities, segmentSizes);
+  return getSegmentSizes(op, "operand", "operandSegmentSizes",
+                         op->getNumOperands(), variadicities, segmentSizes);
 }
 
 /// Compute the segment sizes of the given results.
@@ -183,11 +180,8 @@ LogicalResult getOperandSegmentSizes(Operation *op,
 LogicalResult getResultSegmentSizes(Operation *op,
                                     ArrayRef<Variadicity> variadicities,
                                     SmallVectorImpl<int> &segmentSizes) {
-  StringRef attrName = op->getAttr("resultSegmentSizes")
-                           ? "resultSegmentSizes"
-                           : "result_segment_sizes";
-  return getSegmentSizes(op, "result", attrName, op->getNumResults(),
-                         variadicities, segmentSizes);
+  return getSegmentSizes(op, "result", "resultSegmentSizes",
+                         op->getNumResults(), variadicities, segmentSizes);
 }
 
 /// Verify that the given operation satisfies the given constraints.
