@@ -556,4 +556,8 @@ InstructionCost LoongArchTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   }
 }
 
+bool LoongArchTTIImpl::prefersVectorizedAddressing() const {
+  return false;
+}
+
 // TODO: Implement more hooks to provide TTI machinery for LoongArch.
