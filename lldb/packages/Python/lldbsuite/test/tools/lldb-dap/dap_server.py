@@ -988,7 +988,12 @@ class DebugCommunication(object):
         return self._send_recv(command_dict)
 
     def request_evaluate(
-        self, expression, frameIndex=0, threadId=None, context=None, is_hex=None
+        self,
+        expression,
+        frameIndex=0,
+        threadId=None,
+        context=None,
+        is_hex: Optional[bool] = None,
     ):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:

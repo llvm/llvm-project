@@ -84,9 +84,7 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
   if (value.GetError().Fail())
     return ToError(value.GetError(), /*show_user=*/false);
 
-  bool hex = false;
-  if (arguments.format)
-    hex = arguments.format->hex;
+  const bool hex = arguments.format ? arguments.format->hex : false;
 
   VariableDescription desc(value, dap.configuration.enableAutoVariableSummaries,
                            hex);
