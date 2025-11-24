@@ -17,6 +17,8 @@
 def CC_Sparc32 : CallingConv<[
   // Custom assign SRet to [sp+64].
   CCIfSRet<CCCustom<"CC_Sparc_Assign_SRet">>,
+  // f128 arguments are passed indirectly, using i32 pointers.
+  CCIfType<[f128], CCPassIndirect<i32>>,
   // i32 f32 arguments get passed in integer registers if there is space.
   CCIfType<[i32, f32], CCAssignToReg<[I0, I1, I2, I3, I4, I5]>>,
   // f64 arguments are split and passed through registers or through stack.
@@ -24,11 +26,10 @@ def CC_Sparc32 : CallingConv<[
   // As are v2i32 arguments (this would be the default behavior for
   // v2i32 if it wasn't allocated to the IntPair register-class)
   CCIfType<[v2i32], CCCustom<"CC_Sparc_Assign_Split_64">>,
-  // f128 arguments are passed indirectly.
-  CCIfType<[f128], CCPassIndirect<i32>>,
   // Alternatively, they are assigned to the stack in 4-byte aligned units.
   CCAssignToStack<4, 4>
 ]>;
+
 
 def RetCC_Sparc32 : CallingConv<[
   CCIfType<[i32], CCAssignToReg<[I0, I1, I2, I3, I4, I5]>>,
