@@ -9584,6 +9584,36 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (SDValue V = lowerSelectToBinOp(Op.getNode(), DAG, Subtarget))
     return V;
 
+  // When there is no cost for GPR <-> FGPR, we can use zicond select for
+  // floating value when CondV is int type
+  bool FPinGPR = Subtarget.hasStdExtZfinx() || Subtarget.hasStdExtZdinx();
+  bool UseZicondForFPSel = Subtarget.hasStdExtZicond() && FPinGPR &&
+                           VT.isFloatingPoint() &&
+                           CondV.getValueType().isInteger();
+  if (UseZicondForFPSel) {
+    MVT XLenIntVT = Subtarget.getXLenVT();
+
+    auto CastToInt = [&](SDValue V) -> SDValue {
+      if (VT == MVT::f32 && Subtarget.is64Bit()) {
+        return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenIntVT, V);
+      }
+      return DAG.getBitcast(XLenIntVT, V);
+    };
+
+    SDValue TrueVInt = CastToInt(TrueV);
+    SDValue FalseVInt = CastToInt(FalseV);
+
+    // Emit integer SELECT (lowers to Zicond)
+    SDValue ResultInt =
+        DAG.getNode(ISD::SELECT, DL, XLenIntVT, CondV, TrueVInt, FalseVInt);
+
+    // Convert back to floating VT
+    if (VT == MVT::f32 && Subtarget.is64Bit()) {
+      return DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, VT, ResultInt);
+    }
+    return DAG.getBitcast(VT, ResultInt);
+  }
+
   // When Zicond or XVentanaCondOps is present, emit CZERO_EQZ and CZERO_NEZ
   // nodes to implement the SELECT. Performing the lowering here allows for
   // greater control over when CZERO_{EQZ/NEZ} are used vs another branchless
