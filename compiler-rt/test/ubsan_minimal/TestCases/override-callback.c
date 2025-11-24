@@ -19,10 +19,12 @@ void __ubsan_report_error(const char *kind, uintptr_t caller) {
 #endif
 }
 
+#if defined(__aarch64__) || defined(__x86_64__)
 [[clang::preserve_all]] void __ubsan_report_error_preserve(const char *kind,
                                                            uintptr_t caller) {
   fprintf(stderr, "CUSTOM_CALLBACK_PRESERVE: %s\n", kind);
 }
+#endif
 
 #if OVERRIDE
 void __ubsan_report_error_fatal(const char *kind, uintptr_t caller) {
