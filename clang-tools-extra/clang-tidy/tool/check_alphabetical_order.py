@@ -29,7 +29,8 @@ import io
 import os
 import re
 import sys
-from typing import Dict, List, Optional, Sequence, Tuple, NamedTuple
+from typing import List, Optional, Sequence, Tuple, NamedTuple, DefaultDict
+from collections import defaultdict
 from operator import itemgetter
 
 # Matches a :doc:`label <path>` or :doc:`label` reference anywhere in text and
@@ -133,10 +134,9 @@ def _normalize_list_rst_lines(lines: Sequence[str]) -> List[str]:
     n = len(lines)
 
     def check_name(line: str):
-        m = DOC_LINE_RE.match(line)
-        if not m:
-            return (1, "")
-        return (0, m.group("label"))
+        if m := DOC_LINE_RE.match(line):
+            return (0, m.group("label"))
+        return (1, "")
 
     while i < n:
         line = lines[i]
@@ -182,8 +182,11 @@ def find_heading(lines: Sequence[str], title: str) -> Optional[int]:
     """
     for i in range(len(lines) - 1):
         if lines[i].rstrip("\n") == title:
-            underline = lines[i + 1].rstrip("\n")
-            if underline and set(underline) == {"^"} and len(underline) == len(title):
+            if (
+                (underline := lines[i + 1].rstrip("\n"))
+                and set(underline) == {"^"}
+                and len(underline) == len(title)
+            ):
                 return i
     return None
 
@@ -249,9 +252,9 @@ def find_duplicate_entries(
         key = extract_label(block[0])
         blocks_with_pos.append((key, bstart, block))
 
-    grouped: Dict[CheckLabel, DuplicateOccurrences] = {}
+    grouped: DefaultDict[CheckLabel, DuplicateOccurrences] = defaultdict(list)
     for key, start, block in blocks_with_pos:
-        grouped.setdefault(key, []).append((start, block))
+        grouped[key].append((start, block))
 
     result: List[Tuple[CheckLabel, DuplicateOccurrences]] = []
     for key, occs in grouped.items():
@@ -271,16 +274,14 @@ def _find_section_bounds(
     - sec_start: index of the first content line after underline
     - sec_end: index of the first line of the next section title (or end)
     """
-    h_start = find_heading(lines, title)
-    if h_start is None:
+    if (h_start := find_heading(lines, title)) is None:
         return None
 
     sec_start = h_start + 2
 
     # Determine end of section either from next_title or by scanning.
     if next_title is not None:
-        h_end = find_heading(lines, next_title)
-        if h_end is None:
+        if (h_end := find_heading(lines, next_title)) is None:
             # Scan forward to the next heading-like underline.
             h_end = sec_start
             while h_end + 1 < len(lines):
@@ -304,8 +305,7 @@ def _normalize_release_notes_section(
     lines: Sequence[str], title: str, next_title: Optional[str]
 ) -> List[str]:
     """Normalize a single release-notes section and return updated lines."""
-    bounds = _find_section_bounds(lines, title, next_title)
-    if bounds is None:
+    if (bounds := _find_section_bounds(lines, title, next_title)) is None:
         return list(lines)
     _, sec_start, sec_end = bounds
 
@@ -339,8 +339,7 @@ def normalize_release_notes(lines: Sequence[str]) -> str:
 
 
 def _emit_duplicate_report(lines: Sequence[str], title: str) -> Optional[str]:
-    dups_detail = find_duplicate_entries(lines, title)
-    if not dups_detail:
+    if not (dups_detail := find_duplicate_entries(lines, title)):
         return None
     out: List[str] = []
     out.append(f"Error: Duplicate entries in '{title}':\n")
@@ -367,8 +366,7 @@ def process_release_notes(out_path: str, rn_doc: str) -> int:
         return 0
 
     # Ordering is clean then enforce duplicates.
-    report = _emit_duplicate_report(lines, "Changes in existing checks")
-    if report:
+    if report := _emit_duplicate_report(lines, "Changes in existing checks"):
         sys.stderr.write(report)
         return 3
     return 0
