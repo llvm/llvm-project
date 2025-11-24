@@ -3782,6 +3782,9 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
          allocated by the initializer region. The region has an argument that
          contains the value of the thread-local reduction accumulator. This will
          be executed after the reduction has completed.
+      6. The DataPtrPtr region specifies how to access the base address of a
+         boxed-value. This is used, in particular, for GPU reductions in order
+         know where partial reduction resutls are stored in remote lanes.
 
     Note that the MLIR type system does not allow for type-polymorphic
     reductions. Separate reduction declarations should be created for different
@@ -3799,14 +3802,16 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
                         AnyRegion:$initializerRegion,
                         AnyRegion:$reductionRegion,
                         AnyRegion:$atomicReductionRegion,
-                        AnyRegion:$cleanupRegion);
+                        AnyRegion:$cleanupRegion,
+                        AnyRegion:$dataPtrPtrRegion);
 
   let assemblyFormat = "$sym_name `:` $type attr-dict-with-keyword "
                        "( `alloc` $allocRegion^ )? "
                        "`init` $initializerRegion "
                        "`combiner` $reductionRegion "
                        "( `atomic` $atomicReductionRegion^ )? "
-                       "( `cleanup` $cleanupRegion^ )? ";
+                       "( `cleanup` $cleanupRegion^ )? "
+                       "( `data_ptr_ptr` $dataPtrPtrRegion^ )? ";
 
   let extraClassDeclaration = [{
     mlir::BlockArgument getAllocMoldArg() {

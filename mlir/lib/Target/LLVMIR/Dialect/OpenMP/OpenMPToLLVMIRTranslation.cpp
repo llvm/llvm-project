@@ -953,6 +953,9 @@ using OwningAtomicReductionGen =
     std::function<llvm::OpenMPIRBuilder::InsertPointOrErrorTy(
         llvm::OpenMPIRBuilder::InsertPointTy, llvm::Type *, llvm::Value *,
         llvm::Value *)>;
+using OwningDataPtrPtrReductionGen =
+    std::function<llvm::OpenMPIRBuilder::InsertPointOrErrorTy(
+        llvm::OpenMPIRBuilder::InsertPointTy, llvm::Value *, llvm::Value *&)>;
 } // namespace
 
 /// Create an OpenMPIRBuilder-compatible reduction generator for the given
@@ -1015,6 +1018,31 @@ makeAtomicReductionGen(omp::DeclareReductionOp decl,
     return builder.saveIP();
   };
   return atomicGen;
+}
+
+static OwningDataPtrPtrReductionGen
+makeRefDataPtrGen(omp::DeclareReductionOp decl, llvm::IRBuilderBase &builder,
+                  LLVM::ModuleTranslation &moduleTranslation, bool isByRef) {
+  if (!isByRef)
+    return OwningDataPtrPtrReductionGen();
+
+  OwningDataPtrPtrReductionGen refDataPtrGen =
+      [&, decl](llvm::OpenMPIRBuilder::InsertPointTy insertPoint,
+                llvm::Value *byRefVal, llvm::Value *&result) mutable
+      -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
+    moduleTranslation.mapValue(decl.getDataPtrPtrRegionArg(), byRefVal);
+    builder.restoreIP(insertPoint);
+    SmallVector<llvm::Value *> phis;
+    if (failed(inlineConvertOmpRegions(decl.getDataPtrPtrRegion(),
+                                       "omp.data_ptr_ptr.body", builder,
+                                       moduleTranslation, &phis)))
+      return llvm::createStringError(
+          "failed to inline `data_ptr_ptr` region of `omp.declare_reduction`");
+    result = llvm::getSingleElement(phis);
+    return builder.saveIP();
+  };
+
+  return refDataPtrGen;
 }
 
 /// Converts an OpenMP 'ordered' operation into LLVM IR using OpenMPIRBuilder.
@@ -1320,6 +1348,7 @@ static void collectReductionInfo(
     SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls,
     SmallVectorImpl<OwningReductionGen> &owningReductionGens,
     SmallVectorImpl<OwningAtomicReductionGen> &owningAtomicReductionGens,
+    SmallVector<OwningDataPtrPtrReductionGen> &owningDataPtrPtrReductionGens,
     const ArrayRef<llvm::Value *> privateReductionVariables,
     SmallVectorImpl<llvm::OpenMPIRBuilder::ReductionInfo> &reductionInfos,
     ArrayRef<bool> isByRef) {
@@ -1330,6 +1359,8 @@ static void collectReductionInfo(
         makeReductionGen(reductionDecls[i], builder, moduleTranslation));
     owningAtomicReductionGens.push_back(
         makeAtomicReductionGen(reductionDecls[i], builder, moduleTranslation));
+    owningDataPtrPtrReductionGens.push_back(makeRefDataPtrGen(
+        reductionDecls[i], builder, moduleTranslation, isByRef[i]));
   }
 
   // Collect the reduction information.
@@ -1356,6 +1387,7 @@ static void collectReductionInfo(
          /*EvaluationKind=*/llvm::OpenMPIRBuilder::EvalKind::Scalar,
          owningReductionGens[i],
          /*ReductionGenClang=*/nullptr, atomicGen,
+         owningDataPtrPtrReductionGens[i],
          allocatedType ? moduleTranslation.convertType(allocatedType) : nullptr,
          reductionDecls[i].getByrefElementType()
              ? moduleTranslation.convertType(
@@ -1418,6 +1450,7 @@ static LogicalResult createReductionsAndCleanup(
 
   SmallVector<OwningReductionGen> owningReductionGens;
   SmallVector<OwningAtomicReductionGen> owningAtomicReductionGens;
+  SmallVector<OwningDataPtrPtrReductionGen> owningReductionGenRefDataPtrGens;
   SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> reductionInfos;
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
@@ -1426,6 +1459,7 @@ static LogicalResult createReductionsAndCleanup(
   // ReductionInfo only accepts references to the generators.
   collectReductionInfo(op, builder, moduleTranslation, reductionDecls,
                        owningReductionGens, owningAtomicReductionGens,
+                       owningReductionGenRefDataPtrGens,
                        privateReductionVariables, reductionInfos, isByRef);
 
   // The call to createReductions below expects the block to have a
@@ -2755,9 +2789,12 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       // Collect reduction info
       SmallVector<OwningReductionGen> owningReductionGens;
       SmallVector<OwningAtomicReductionGen> owningAtomicReductionGens;
+      SmallVector<OwningDataPtrPtrReductionGen>
+          owningReductionGenRefDataPtrGens;
       SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> reductionInfos;
       collectReductionInfo(opInst, builder, moduleTranslation, reductionDecls,
                            owningReductionGens, owningAtomicReductionGens,
+                           owningReductionGenRefDataPtrGens,
                            privateReductionVariables, reductionInfos, isByRef);
 
       // Move to region cont block

@@ -1780,7 +1780,8 @@ void CGOpenMPRuntimeGPU::emitReduction(
     };
     ReductionInfos.emplace_back(llvm::OpenMPIRBuilder::ReductionInfo(
         ElementType, Variable, PrivateVariable, EvalKind,
-        /*ReductionGen=*/nullptr, ReductionGen, AtomicReductionGen));
+        /*ReductionGen=*/nullptr, ReductionGen, AtomicReductionGen,
+        /*DataPtrPtrGen=*/nullptr));
     Idx++;
   }
 

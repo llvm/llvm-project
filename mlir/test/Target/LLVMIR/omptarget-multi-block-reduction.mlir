@@ -23,7 +23,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
   ^bb3:  // pred: ^bb1
     llvm.call @baz() : () -> ()
     omp.yield(%arg0 : !llvm.ptr)
+  } data_ptr_ptr {
+  ^bb0(%arg0: !llvm.ptr):
+    %0 = llvm.getelementptr %arg0[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+    omp.yield(%0 : !llvm.ptr)
   }
+
   llvm.func @foo_() {
     %c1 = llvm.mlir.constant(1 : i64) : i64
     %10 = llvm.alloca %c1 x !llvm.array<5 x f32> {bindc_name = "x"} : (i64) -> !llvm.ptr<5>

@@ -2548,7 +2548,7 @@ void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
   }
 }
 
-void OpenMPIRBuilder::emitReductionListCopy(
+Error OpenMPIRBuilder::emitReductionListCopy(
     InsertPointTy AllocaIP, CopyAction Action, Type *ReductionArrayTy,
     ArrayRef<ReductionInfo> ReductionInfos, Value *SrcBase, Value *DestBase,
     ArrayRef<bool> IsByRef, CopyOptionsTy CopyOptions) {
@@ -2615,7 +2615,6 @@ void OpenMPIRBuilder::emitReductionListCopy(
       Type *ShuffleType = RI.ElementType;
       Value *ShuffleSrcAddr = SrcElementAddr;
       Value *ShuffleDestAddr = DestElementAddr;
-      Value *Zero = ConstantInt::get(Builder.getInt32Ty(), 0);
       AllocaInst *LocalStorage = nullptr;
 
       if (IsByRefElem) {
@@ -2628,8 +2627,12 @@ void OpenMPIRBuilder::emitReductionListCopy(
         // pointer to the descriptor of the by-ref reduction element.
         ShuffleType = RI.ByRefElementType;
 
-        ShuffleSrcAddr = Builder.CreateGEP(RI.ByRefAllocatedType,
-                                           ShuffleSrcAddr, {Zero, Zero});
+        InsertPointOrErrorTy GenResult =
+            RI.DataPtrPtrGen(Builder.saveIP(), ShuffleSrcAddr, ShuffleSrcAddr);
+
+        if (!GenResult)
+          return GenResult.takeError();
+
         ShuffleSrcAddr = Builder.CreateLoad(Builder.getPtrTy(), ShuffleSrcAddr);
 
         {
@@ -2646,11 +2649,16 @@ void OpenMPIRBuilder::emitReductionListCopy(
                       RemoteLaneOffset, ReductionArrayTy, IsByRefElem);
 
       if (IsByRefElem) {
-        auto *GEP =
-            Builder.CreateGEP(RI.ByRefAllocatedType,
-                              Builder.CreatePointerBitCastOrAddrSpaceCast(
-                                  DestAlloca, Builder.getPtrTy(), ".ascast"),
-                              {Zero, Zero});
+        Value *GEP;
+        InsertPointOrErrorTy GenResult =
+            RI.DataPtrPtrGen(Builder.saveIP(),
+                             Builder.CreatePointerBitCastOrAddrSpaceCast(
+                                 DestAlloca, Builder.getPtrTy(), ".ascast"),
+                             GEP);
+
+        if (!GenResult)
+          return GenResult.takeError();
+
         Builder.CreateStore(Builder.CreatePointerBitCastOrAddrSpaceCast(
                                 LocalStorage, Builder.getPtrTy(), ".ascast"),
                             GEP);
@@ -2705,6 +2713,8 @@ void OpenMPIRBuilder::emitReductionListCopy(
       Builder.CreateStore(CastDestAddr, DestElementPtrAddr);
     }
   }
+
+  return Error::success();
 }
 
 Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
@@ -2857,10 +2867,12 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
       Value *ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtrPtr);
 
       if (IsByRefElem) {
-        Type *Int32Ty = Builder.getInt32Ty();
-        Constant *Zero = ConstantInt::get(Int32Ty, 0);
-        ElemPtr =
-            Builder.CreateGEP(RI.ByRefAllocatedType, ElemPtr, {Zero, Zero});
+        InsertPointOrErrorTy GenRes =
+            RI.DataPtrPtrGen(Builder.saveIP(), ElemPtr, ElemPtr);
+
+        if (!GenRes)
+          return GenRes.takeError();
+
         ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
       }
 
@@ -2921,10 +2933,12 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
       Value *TargetElemPtr = TargetElemPtrVal;
 
       if (IsByRefElem) {
-        Type *Int32Ty = Builder.getInt32Ty();
-        Constant *Zero = ConstantInt::get(Int32Ty, 0);
-        TargetElemPtr = Builder.CreateGEP(RI.ByRefAllocatedType, TargetElemPtr,
-                                          {Zero, Zero});
+        InsertPointOrErrorTy GenRes =
+            RI.DataPtrPtrGen(Builder.saveIP(), TargetElemPtr, TargetElemPtr);
+
+        if (!GenRes)
+          return GenRes.takeError();
+
         TargetElemPtr = Builder.CreateLoad(Builder.getPtrTy(), TargetElemPtr);
       }
 
@@ -2962,7 +2976,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
   return WcFunc;
 }
 
-Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
+Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
     AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
   LLVMContext &Ctx = M.getContext();
@@ -3043,10 +3057,13 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
   // This loop iterates through the list of reduce elements and copies,
   // element by element, from a remote lane in the warp to RemoteReduceList,
   // hosted on the thread's stack.
-  emitReductionListCopy(AllocaIP, CopyAction::RemoteLaneToThread,
-                        RedListArrayTy, ReductionInfos, ReduceList,
-                        RemoteListAddrCast, IsByRef,
-                        {RemoteLaneOffset, nullptr, nullptr});
+  Error EmitRedLsCpRes = emitReductionListCopy(
+      AllocaIP, CopyAction::RemoteLaneToThread, RedListArrayTy, ReductionInfos,
+      ReduceList, RemoteListAddrCast, IsByRef,
+      {RemoteLaneOffset, nullptr, nullptr});
+
+  if (EmitRedLsCpRes)
+    return EmitRedLsCpRes;
 
   // The actions to be performed on the Remote Reduce list is dependent
   // on the algorithm version.
@@ -3114,9 +3131,14 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
   Builder.CreateCondBr(CondCopy, CpyThenBB, CpyElseBB);
 
   emitBlock(CpyThenBB, Builder.GetInsertBlock()->getParent());
-  emitReductionListCopy(AllocaIP, CopyAction::ThreadCopy, RedListArrayTy,
-                        ReductionInfos, RemoteListAddrCast, ReduceList,
-                        IsByRef);
+
+  EmitRedLsCpRes = emitReductionListCopy(
+      AllocaIP, CopyAction::ThreadCopy, RedListArrayTy, ReductionInfos,
+      RemoteListAddrCast, ReduceList, IsByRef);
+
+  if (EmitRedLsCpRes)
+    return EmitRedLsCpRes;
+
   Builder.CreateBr(CpyMergeBB);
 
   emitBlock(CpyElseBB, Builder.GetInsertBlock()->getParent());
@@ -3745,8 +3767,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     Builder.CreateStore(CastElem, ElemPtr);
   }
   CodeGenIP = Builder.saveIP();
-  Function *SarFunc = emitShuffleAndReduceFunction(
+  Expected<Function *> SarFunc = emitShuffleAndReduceFunction(
       ReductionInfos, ReductionFunc, FuncAttrs, IsByRef);
+
+  if (!SarFunc)
+    return SarFunc.takeError();
+
   Expected<Function *> CopyResult =
       emitInterWarpCopyFunction(Loc, ReductionInfos, FuncAttrs, IsByRef);
   if (!CopyResult)
@@ -3768,7 +3794,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
       Builder.getInt64(MaxDataSize * ReductionInfos.size());
   if (!IsTeamsReduction) {
     Value *SarFuncCast =
-        Builder.CreatePointerBitCastOrAddrSpaceCast(SarFunc, FuncPtrTy);
+        Builder.CreatePointerBitCastOrAddrSpaceCast(*SarFunc, FuncPtrTy);
     Value *WcFuncCast =
         Builder.CreatePointerBitCastOrAddrSpaceCast(WcFunc, FuncPtrTy);
     Value *Args[] = {SrcLocInfo, ReductionDataSize, RL, SarFuncCast,
@@ -3800,7 +3826,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
                       Builder.getInt32(ReductionBufNum),
                       ReductionDataSize,
                       RL,
-                      SarFunc,
+                      *SarFunc,
                       WcFunc,
                       LtGCFunc,
                       LtGRFunc,

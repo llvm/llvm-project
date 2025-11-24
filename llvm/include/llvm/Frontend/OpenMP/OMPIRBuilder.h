@@ -1446,6 +1446,9 @@ public:
   using ReductionGenAtomicCBTy = std::function<InsertPointOrErrorTy(
       InsertPointTy, Type *, Value *, Value *)>;
 
+  using ReductionGenDataPtrPtrCBTy = std::function<InsertPointOrErrorTy(
+      InsertPointTy, Value *ByRefVal, Value *&Res)>;
+
   /// Enum class for reduction evaluation types scalar, complex and aggregate.
   enum class EvalKind { Scalar, Complex, Aggregate };
 
@@ -1455,18 +1458,21 @@ public:
                   EvalKind EvaluationKind, ReductionGenCBTy ReductionGen,
                   ReductionGenClangCBTy ReductionGenClang,
                   ReductionGenAtomicCBTy AtomicReductionGen,
+                  ReductionGenDataPtrPtrCBTy DataPtrPtrGen,
                   Type *ByRefAllocatedType = nullptr,
                   Type *ByRefElementType = nullptr)
         : ElementType(ElementType), Variable(Variable),
           PrivateVariable(PrivateVariable), EvaluationKind(EvaluationKind),
           ReductionGen(ReductionGen), ReductionGenClang(ReductionGenClang),
-          AtomicReductionGen(AtomicReductionGen),
+          AtomicReductionGen(AtomicReductionGen), DataPtrPtrGen(DataPtrPtrGen),
           ByRefAllocatedType(ByRefAllocatedType),
           ByRefElementType(ByRefElementType) {}
+
     ReductionInfo(Value *PrivateVariable)
         : ElementType(nullptr), Variable(nullptr),
           PrivateVariable(PrivateVariable), EvaluationKind(EvalKind::Scalar),
-          ReductionGen(), ReductionGenClang(), AtomicReductionGen() {}
+          ReductionGen(), ReductionGenClang(), AtomicReductionGen(),
+          DataPtrPtrGen() {}
 
     /// Reduction element type, must match pointee type of variable. For by-ref
     /// reductions, this would be just an opaque `ptr`.
@@ -1496,6 +1502,8 @@ public:
     /// reduction. If null, the implementation will use the non-atomic version
     /// along with the appropriate synchronization mechanisms.
     ReductionGenAtomicCBTy AtomicReductionGen;
+
+    ReductionGenDataPtrPtrCBTy DataPtrPtrGen;
 
     /// For by-ref reductions, we need to keep track of 2 extra types that are
     /// potentially different:
@@ -1558,7 +1566,7 @@ private:
 
   /// Emit instructions to copy a Reduce list, which contains partially
   /// aggregated values, in the specified direction.
-  void emitReductionListCopy(
+  Error emitReductionListCopy(
       InsertPointTy AllocaIP, CopyAction Action, Type *ReductionArrayTy,
       ArrayRef<ReductionInfo> ReductionInfos, Value *SrcBase, Value *DestBase,
       ArrayRef<bool> IsByRef,
@@ -1639,7 +1647,7 @@ private:
   ///                  or not.
   ///
   /// \return The ShuffleAndReduce function.
-  Function *emitShuffleAndReduceFunction(
+  Expected<Function *> emitShuffleAndReduceFunction(
       ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
       Function *ReduceFn, AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 

@@ -31,7 +31,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
     %14 = llvm.fadd %12, %13 {fastmathFlags = #llvm.fastmath<contract>} : f32
     llvm.store %14, %9 : f32, !llvm.ptr
     omp.yield(%arg0 : !llvm.ptr)
+  } data_ptr_ptr {
+  ^bb0(%arg0: !llvm.ptr):
+    %0 = llvm.getelementptr %arg0[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+    omp.yield(%0 : !llvm.ptr)
   }
+
   llvm.func @foo_() {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %4 = llvm.alloca %0 x i1 : (i64) -> !llvm.ptr<5>
