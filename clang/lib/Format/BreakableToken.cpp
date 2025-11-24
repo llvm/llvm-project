@@ -170,15 +170,16 @@ getReflowedCommentLine(const bool IsStartLine, const bool IsEndLine,
     }
     llvm_unreachable("Unhandled CommentSpaceMode");
   };
-  const auto OpenMode =
+  const auto OpeningMode =
       resolveCommentSpaceMode(Kind, Style.SpaceInComments.AfterOpeningComment,
                               Style.SpaceInComments.AfterOpeningParamComment);
-  const auto CloseMode =
+  const auto ClosingMode =
       resolveCommentSpaceMode(Kind, Style.SpaceInComments.BeforeClosingComment,
                               Style.SpaceInComments.BeforeClosingParamComment);
   const StringRef NewPrefix =
-      GetNewWhitespace(IsStartLine, OpenMode, OldPrefix);
-  const StringRef NewSuffix = GetNewWhitespace(IsEndLine, CloseMode, OldSuffix);
+      GetNewWhitespace(IsStartLine, OpeningMode, OldPrefix);
+  const StringRef NewSuffix =
+      GetNewWhitespace(IsEndLine, ClosingMode, OldSuffix);
 
   if (OldPrefix == NewPrefix && OldSuffix == NewSuffix)
     return Line;
