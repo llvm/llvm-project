@@ -4812,6 +4812,22 @@ TEST_F(FormatTestComments, SpaceInBlockComments) {
   verifyFormat("/*long long long long\n"
                " * long*/",
                "/*  long long long long long  */", Style);
+
+  Style = getLLVMStyleWithColumns(16);
+  Style.ReflowComments = FormatStyle::RCS_Always;
+  Style.SpaceInComments.AfterOpeningComment =
+      FormatStyle::CommentSpaceMode::Always;
+  verifyFormat("/* word word\n"
+               " * word*/",
+               "/*\tword word word*/", Style);
+
+  Style.SpaceInComments.AfterOpeningComment =
+      FormatStyle::CommentSpaceMode::Leave;
+  Style.SpaceInComments.BeforeClosingComment =
+      FormatStyle::CommentSpaceMode::Always;
+  verifyFormat("/*word word\n"
+               " * word */",
+               "/*word word word\t*/", Style);
 }
 
 TEST_F(FormatTestComments, SpaceInBlockCommentsParamOverrides) {

@@ -66,15 +66,6 @@ static StringRef getTargetWhitespace(FormatStyle::CommentSpaceMode Mode,
   llvm_unreachable("Unhandled CommentSpaceMode");
 }
 
-static std::pair<StringRef, int>
-getWhitespaceAdjustment(FormatStyle::CommentSpaceMode Mode,
-                        StringRef Original) {
-  const StringRef NewText = getTargetWhitespace(Mode, Original);
-  const int Delta =
-      static_cast<int>(NewText.size()) - static_cast<int>(Original.size());
-  return {NewText, Delta};
-}
-
 struct CommentLineParts {
   StringRef LeadingSpace;
   StringRef Content;
@@ -747,16 +738,25 @@ BreakableToken::Split BreakableBlockComment::getSplit(
   int LeadingSpaceDelta = 0;
   int TrailingSpaceDelta = 0;
   if (HasContent && IsStartLine) {
-    const auto [Adjusted, Delta] =
-        getWhitespaceAdjustment(OpeningMode, Parts.LeadingSpace);
-    NewLeadingSpace = Adjusted;
-    LeadingSpaceDelta = Delta;
+    NewLeadingSpace = getTargetWhitespace(OpeningMode, Parts.LeadingSpace);
+    LeadingSpaceDelta =
+        static_cast<int>(encoding::columnWidthWithTabs(
+            NewLeadingSpace, ContentStartColumn, Style.TabWidth, Encoding)) -
+        static_cast<int>(encoding::columnWidthWithTabs(
+            Parts.LeadingSpace, ContentStartColumn, Style.TabWidth, Encoding));
   }
   if (HasContent && IsEndLine) {
-    const auto [Adjusted, Delta] =
-        getWhitespaceAdjustment(ClosingMode, Parts.TrailingSpace);
-    NewTrailingSpace = Adjusted;
-    TrailingSpaceDelta = Delta;
+    NewTrailingSpace = getTargetWhitespace(ClosingMode, Parts.TrailingSpace);
+    const unsigned PrefixWidth = encoding::columnWidthWithTabs(
+        Text.drop_back(Parts.TrailingSpace.size()), ContentStartColumn,
+        Style.TabWidth, Encoding);
+    TrailingSpaceDelta =
+        static_cast<int>(encoding::columnWidthWithTabs(
+            NewTrailingSpace, ContentStartColumn + PrefixWidth, Style.TabWidth,
+            Encoding)) -
+        static_cast<int>(encoding::columnWidthWithTabs(
+            Parts.TrailingSpace, ContentStartColumn + PrefixWidth,
+            Style.TabWidth, Encoding));
   }
 
   if (LeadingSpaceDelta == 0 && TrailingSpaceDelta == 0) {
@@ -844,11 +844,28 @@ unsigned BreakableBlockComment::getRangeLength(unsigned LineIndex,
   int TrailingSpaceDelta = 0;
   if (HasContent && IsStartLine) {
     LeadingSpaceDelta =
-        getWhitespaceAdjustment(OpeningMode, Parts.LeadingSpace).second;
+        static_cast<int>(encoding::columnWidthWithTabs(
+            getTargetWhitespace(OpeningMode, Parts.LeadingSpace), StartColumn,
+            Style.TabWidth, Encoding)) -
+        static_cast<int>(encoding::columnWidthWithTabs(
+            Parts.LeadingSpace, StartColumn, Style.TabWidth, Encoding));
   }
   if (HasContent && IsEndLine) {
+    StringRef NewTrailingSpace =
+        getTargetWhitespace(ClosingMode, Parts.TrailingSpace);
+    const size_t TrailingStart =
+        Content[LineIndex].size() - Parts.TrailingSpace.size();
+    const size_t PrefixLength =
+        Offset < TrailingStart ? TrailingStart - Offset : 0;
+    const unsigned PrefixWidth = encoding::columnWidthWithTabs(
+        Content[LineIndex].substr(Offset, PrefixLength), StartColumn,
+        Style.TabWidth, Encoding);
+    const unsigned TrailingColumn = StartColumn + PrefixWidth;
     TrailingSpaceDelta =
-        getWhitespaceAdjustment(ClosingMode, Parts.TrailingSpace).second;
+        static_cast<int>(encoding::columnWidthWithTabs(
+            NewTrailingSpace, TrailingColumn, Style.TabWidth, Encoding)) -
+        static_cast<int>(encoding::columnWidthWithTabs(
+            Parts.TrailingSpace, TrailingColumn, Style.TabWidth, Encoding));
   }
 
   const unsigned BaseLength =
