@@ -573,15 +573,15 @@ static bool isBetterKnownHeader(const ModuleMap::KnownHeader &New,
   if (New.getModule()->isAvailable() && !Old.getModule()->isAvailable())
     return true;
 
-  // Prefer a public header over a private header.
-  if ((New.getRole() & ModuleMap::PrivateHeader) !=
-      (Old.getRole() & ModuleMap::PrivateHeader))
-    return !(New.getRole() & ModuleMap::PrivateHeader);
-
   // Prefer a non-textual header over a textual header.
   if ((New.getRole() & ModuleMap::TextualHeader) !=
       (Old.getRole() & ModuleMap::TextualHeader))
     return !(New.getRole() & ModuleMap::TextualHeader);
+
+  // Prefer a public header over a private header.
+  if ((New.getRole() & ModuleMap::PrivateHeader) !=
+      (Old.getRole() & ModuleMap::PrivateHeader))
+    return !(New.getRole() & ModuleMap::PrivateHeader);
 
   // Prefer a non-excluded header over an excluded header.
   if ((New.getRole() == ModuleMap::ExcludedHeader) !=
