@@ -1558,16 +1558,15 @@ operator<=>(const forward_list<_Tp, _Allocator>& __x, const forward_list<_Tp, _A
 #  endif // #if _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 inline
-    _LIBCPP_HIDE_FROM_ABI void swap(forward_list<_Tp, _Alloc>& __x, forward_list<_Tp, _Alloc>& __y)
-        _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 inline _LIBCPP_HIDE_FROM_ABI void
+swap(forward_list<_Tp, _Alloc>& __x, forward_list<_Tp, _Alloc>& __y) _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
   __x.swap(__y);
 }
 
 #  if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Allocator, class _Predicate>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 inline _LIBCPP_HIDE_FROM_ABI
-typename forward_list<_Tp, _Allocator>::size_type erase_if(forward_list<_Tp, _Allocator>& __c, _Predicate __pred) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 inline _LIBCPP_HIDE_FROM_ABI typename forward_list<_Tp, _Allocator>::size_type
+erase_if(forward_list<_Tp, _Allocator>& __c, _Predicate __pred) {
   return __c.remove_if(__pred);
 }
 
