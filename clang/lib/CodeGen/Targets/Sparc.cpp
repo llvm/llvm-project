@@ -32,12 +32,19 @@ private:
 } // end anonymous namespace
 
 ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
-  if (const auto *BT = Ty->getAs<BuiltinType>();
-      BT && BT->getKind() == BuiltinType::LongDouble)
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+  const auto *CT = Ty->getAs<ComplexType>();
+  const auto *BT = Ty->getAs<BuiltinType>();
+  if (CT)
+    BT = CT->getElementType()->getAs<BuiltinType>();
+  bool IsLongDouble = BT && BT->getKind() == BuiltinType::LongDouble;
 
-  if (Ty->isAnyComplexType())
-    return ABIArgInfo::getDirectInReg();
+  // long double _Complex is special in that it should be marked as inreg.
+  if (CT)
+    return IsLongDouble ? ABIArgInfo::getDirectInReg()
+                        : ABIArgInfo::getDirect();
+
+  if (IsLongDouble)
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
   return DefaultABIInfo::classifyReturnType(Ty);
 }
