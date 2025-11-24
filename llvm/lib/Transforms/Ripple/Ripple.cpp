@@ -20,6 +20,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_iterator.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -1400,6 +1401,63 @@ IntrinsicInst *Ripple::rippleIntrinsicsWithBlockShapeOperand(Instruction *I) {
                              Intrinsic::ripple_block_index});
 }
 
+PreservedAnalyses Ripple::cleanupRippleSingleLane(ProcessingStatus Status) {
+  for (auto &I : make_early_inc_range(instructions(F))) {
+    if (IntrinsicInst *BlockInst = rippleBlockIntrinsics(&I)) {
+      auto BlockIterator = BlockInst->getIterator();
+      switch (BlockInst->getIntrinsicID()) {
+      case Intrinsic::ripple_block_index: {
+        invalidateRippleDataFor(&I);
+        ReplaceInstWithValue(BlockIterator,
+                             ConstantInt::get(BlockInst->getType(), 0));
+      } break;
+      case Intrinsic::ripple_block_getsize: {
+        invalidateRippleDataFor(&I);
+        ReplaceInstWithValue(BlockIterator,
+                             ConstantInt::get(BlockInst->getType(), 1));
+      } break;
+      case Intrinsic::ripple_block_setshape: {
+        invalidateRippleDataFor(&I);
+        ReplaceInstWithValue(BlockIterator,
+                             PoisonValue::get(BlockInst->getType()));
+      } break;
+      }
+    } else if (IntrinsicInst *BroadcastInst = rippleBroadcastIntrinsic(&I)) {
+      auto BroadcastIterator = BroadcastInst->getIterator();
+      invalidateRippleDataFor(&I);
+      ReplaceInstWithValue(BroadcastIterator, BroadcastInst->getOperand(2));
+    } else if (IntrinsicInst *SliceInst = rippleSliceIntrinsic(&I)) {
+      auto SliceIterator = SliceInst->getIterator();
+      invalidateRippleDataFor(&I);
+      ReplaceInstWithValue(SliceIterator, SliceInst->getOperand(0));
+    } else if (IntrinsicInst *ReductionInst = rippleReduceIntrinsics(&I)) {
+      auto ReductionIterator = ReductionInst->getIterator();
+      invalidateRippleDataFor(&I);
+      ReplaceInstWithValue(ReductionIterator, ReductionInst->getOperand(1));
+    } else if (IntrinsicInst *ShuffleInst = rippleShuffleIntrinsics(&I)) {
+      auto ShuffleIterator = ShuffleInst->getIterator();
+      invalidateRippleDataFor(&I);
+      ReplaceInstWithValue(ShuffleIterator, ShuffleInst->getOperand(0));
+    } else {
+      assert(!isRippleIntrinsics(&I));
+    }
+  }
+
+  PS = Status;
+  if (Status != ProcessingStatus::Success)
+    return PreservedAnalyses::none();
+
+  // All we did is replace Ripple intrinsics by constants and remove some
+  // It may affect scalar evolution and loop analysis
+  PreservedAnalyses PA;
+  PA.preserve<AAManager>();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<PostDominatorTreeAnalysis>();
+  PA.preserve<TargetLibraryAnalysis>();
+  PA.preserve<GlobalsAA>();
+  return PA;
+}
+
 void Ripple::initFuncRPOT() {
   // Change the control flow to have only one ReturnInst and UnreachableInst in
   // the Function
@@ -1412,6 +1470,98 @@ void Ripple::initFuncRPOT() {
   }
 
   FuncRPOT = new ReversePostOrderTraversal<Function *>(&F);
+}
+
+PreservedAnalyses Ripple::run() {
+
+  LLVM_DEBUG(dbgs() << "[Ripple] Processing function " << F.getName() << "\n");
+  // There are no Ripple dimensions, nothing to be done!
+  if (tensorRank() == 0)
+    return cleanupRippleSingleLane(ProcessingStatus::Success);
+
+  // Expensive, only do once!
+  initFuncRPOT();
+
+  auto abortDiagnosticAndRippleCleanup =
+      [&](ProcessingStatus Status) -> PreservedAnalyses {
+    DiagnosticInfoRippleWithLoc Diag(
+        DS_Error, F, F.getSubprogram(),
+        "Ripple failed to vectorize this function");
+    F.getContext().diagnose(Diag);
+    return cleanupRippleSingleLane(Status);
+  };
+
+  // Look for external Ripple declarations
+  // This is required by propagateShapes and checkRippleSemantics
+  loadRippleLibDeclarations();
+
+  // Propagate vector shapes from instructions to users
+  bool WaitingForSpecialization = false;
+  if (Error e = propagateShapes(WaitingForSpecialization)) {
+    llvm::handleAllErrors(std::move(e), [&](const StringError &SE) {
+      LLVM_DEBUG(dbgs() << "Shape propagation error: " << SE.getMessage()
+                        << "\n");
+    });
+    return abortDiagnosticAndRippleCleanup(
+        ProcessingStatus::ShapePropagationFailure);
+  }
+  if (WaitingForSpecialization) {
+    LLVM_DEBUG(dbgs() << "Aborting waiting for specialization!\n");
+    PS = ProcessingStatus::WaitingForSpecialization;
+    return PreservedAnalyses::all();
+  }
+  LLVM_DEBUG(dbgs() << "Tensor shapes after propagation:\n";
+             printTensorInstructions(dbgs()));
+  LLVM_DEBUG(dbgs() << "\nValid linear series after propagation:\n";
+             printValidSeries(dbgs()); dbgs() << "\n");
+
+  if (Error e = checkRippleSemantics()) {
+    llvm::handleAllErrors(std::move(e), [&](const StringError &SE) {
+      LLVM_DEBUG(dbgs() << "Ripple semantics error: " << SE.getMessage()
+                        << "\n");
+    });
+    return abortDiagnosticAndRippleCleanup(
+        ProcessingStatus::SemanticsCheckFailure);
+  }
+
+  LLVM_DEBUG(dbgs() << "Function before vector instruction generation:\n";
+             F.print(dbgs()));
+  // Generate vector instructions for the instructions w/ vector shapes
+  genVectorInstructions();
+
+  assert(allInstructionsHaveRippleShapes() &&
+         "Some instruction has no Ripple shape");
+
+  vectorGenerationPostProcess();
+  assert(allInstructionsHaveRippleShapes() &&
+         "Some instruction has no Ripple shape");
+
+  LLVM_DEBUG(dbgs() << "Function after vector instruction generation:\n";
+             F.print(dbgs()));
+
+  // Flatten the control flow for branches that take a vector condition
+  ifConvert();
+  assert(allInstructionsHaveRippleShapes() &&
+         "Some instruction has no Ripple shape");
+
+  LLVM_DEBUG(dbgs() << "\nFunction after Ripple pass:\n\n"; F.print(dbgs());
+             dbgs() << "\n");
+
+  PS = ProcessingStatus::Success;
+
+  // Now that ripple is done with vectorizing the specialization, we can move
+  // all the basic block to a function with the correct prototype
+  if (isPendingRippleSpecialization(F)) {
+    finishSpecialization();
+    return PreservedAnalyses::none();
+  }
+
+  PreservedAnalyses PA;
+  PA.preserve<AAManager>();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<PostDominatorTreeAnalysis>();
+  PA.preserve<TargetLibraryAnalysis>();
+  return PA;
 }
 
 BitVector Ripple::reductionTensorDimensions(const IntrinsicInst *I) const {
@@ -8034,4 +8184,29 @@ bool Ripple::rippleVectorizeCall(const CallInst &CI) const {
                  [](auto &Use) { return Use->getType()->isVectorTy(); }) &&
          any_of(CI.args(),
                 [&](auto &Use) { return getRippleShape(Use).isVector(); });
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///                               RipplePass                                 ///
+////////////////////////////////////////////////////////////////////////////////
+
+PreservedAnalyses RipplePass::run(Function &F, FunctionAnalysisManager &AM) {
+  LLVM_DEBUG(dbgs() << "Applying Ripple pass to '" << F.getName() << "'\n");
+
+  // WIP machine model w/ 1 vector dimension
+  std::vector<std::pair<Ripple::PEIdentifier, Ripple::DimType>> dimensionTypes =
+      {{0, Ripple::VectorDimension}};
+
+  Ripple rippleExpander(TM, F, AM, dimensionTypes, PS, SpecializationsPending,
+                        SpecializationsAvailable);
+  // Check that the Ripple intrinsics are adhere to the specification
+  Error e = rippleExpander.validate();
+  if (e) {
+    std::string errMsg = toString(std::move(e));
+    report_fatal_error(StringRef(errMsg), false);
+  }
+
+  PreservedAnalyses PA = rippleExpander.run();
+
+  return PA;
 }
