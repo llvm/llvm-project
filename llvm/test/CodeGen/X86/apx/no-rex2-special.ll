@@ -4,16 +4,14 @@
 define void @test_xsave(ptr %ptr, i32 %hi, i32 %lo) nounwind {
 ; CHECK-LABEL: test_xsave:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %edx, %r16d
 ; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdi, %r17
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    movl %r16d, %eax
-; CHECK-NEXT:    xsave (%rbx)
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    xsave (%r17)
 ; CHECK-NEXT:    retq
   tail call void asm sideeffect "nop", "~{eax},~{ecx},~{esi},~{edi},~{r8},~{r9},~{r10},~{r11}"()
   call void @llvm.x86.xsave(ptr %ptr, i32 %hi, i32 %lo)
@@ -24,16 +22,14 @@ declare void @llvm.x86.xsave(ptr, i32, i32)
 define void @test_xsave64(ptr %ptr, i32 %hi, i32 %lo) nounwind {
 ; CHECK-LABEL: test_xsave64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %edx, %r16d
 ; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdi, %r17
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    movl %r16d, %eax
-; CHECK-NEXT:    xsave64 (%rbx)
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    xsave64 (%r17)
 ; CHECK-NEXT:    retq
   tail call void asm sideeffect "nop", "~{eax},~{ecx},~{esi},~{edi},~{r8},~{r9},~{r10},~{r11}"()
   call void @llvm.x86.xsave64(ptr %ptr, i32 %hi, i32 %lo)
@@ -44,16 +40,14 @@ declare void @llvm.x86.xsave64(ptr, i32, i32)
 define void @test_xrstor(ptr %ptr, i32 %hi, i32 %lo) nounwind {
 ; CHECK-LABEL: test_xrstor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %edx, %r16d
 ; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdi, %r17
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    movl %r16d, %eax
-; CHECK-NEXT:    xrstor (%rbx)
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    xrstor (%r17)
 ; CHECK-NEXT:    retq
   tail call void asm sideeffect "nop", "~{eax},~{ecx},~{esi},~{edi},~{r8},~{r9},~{r10},~{r11}"()
   call void @llvm.x86.xrstor(ptr %ptr, i32 %hi, i32 %lo)
@@ -64,16 +58,14 @@ declare void @llvm.x86.xrstor(ptr, i32, i32)
 define void @test_xrstor64(ptr %ptr, i32 %hi, i32 %lo) nounwind {
 ; CHECK-LABEL: test_xrstor64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %edx, %r16d
 ; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdi, %r17
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    movl %r16d, %eax
-; CHECK-NEXT:    xrstor64 (%rbx)
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    xrstor64 (%r17)
 ; CHECK-NEXT:    retq
   tail call void asm sideeffect "nop", "~{eax},~{ecx},~{esi},~{edi},~{r8},~{r9},~{r10},~{r11}"()
   call void @llvm.x86.xrstor64(ptr %ptr, i32 %hi, i32 %lo)
