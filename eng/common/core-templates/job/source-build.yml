@@ -60,10 +60,10 @@ jobs:
       pool:
         ${{ if eq(variables['System.TeamProject'], 'public') }}:
           name: $[replace(replace(eq(contains(coalesce(variables['System.PullRequest.TargetBranch'], variables['Build.SourceBranch'], 'refs/heads/main'), 'release'), 'true'), True, 'NetCore-Svc-Public' ), False, 'NetCore-Public')]
-          demands: ImageOverride -equals build.ubuntu.2004.amd64
+          demands: ImageOverride -equals build.ubuntu.2204.amd64
         ${{ if eq(variables['System.TeamProject'], 'internal') }}:
           name: $[replace(replace(eq(contains(coalesce(variables['System.PullRequest.TargetBranch'], variables['Build.SourceBranch'], 'refs/heads/main'), 'release'), 'true'), True, 'NetCore1ESPool-Svc-Internal'), False, 'NetCore1ESPool-Internal')]
-          image: 1es-mariner-2
+          image: 1es-azurelinux-3
           os: linux
     ${{ else }}:
       pool:

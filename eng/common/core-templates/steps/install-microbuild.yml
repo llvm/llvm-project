@@ -13,9 +13,8 @@ parameters:
   # Unfortunately, _SignType can't be used to exclude the use of the service connection in non-real sign scenarios. The
   # variable is not available in template expression. _SignType has a very large proliferation across .NET, so replacing it is tough.
   microbuildUseESRP: true
-  # Location of the MicroBuild output folder
-  # NOTE: There's something that relies on this being in the "default" source directory for tasks such as Signing to work properly.
-  microBuildOutputFolder: '$(Build.SourcesDirectory)'
+  # Microbuild installation directory
+  microBuildOutputFolder: $(Agent.TempDirectory)/MicroBuild
   # Microbuild version
   microbuildPluginVersion: 'latest'
 
@@ -30,8 +29,27 @@ steps:
         inputs:
           packageType: sdk
           version: 8.0.x
-          installationPath: ${{ parameters.microBuildOutputFolder }}/.dotnet
-          workingDirectory: ${{ parameters.microBuildOutputFolder }}
+          installationPath: ${{ parameters.microBuildOutputFolder }}/.dotnet-microbuild
+        condition: and(succeeded(), ne(variables['Agent.Os'], 'Windows_NT'))
+
+      - script: |
+          set -euo pipefail
+
+          # UseDotNet@2 prepends the dotnet executable path to the PATH variable, so we can call dotnet directly
+          version=$(dotnet --version)
+          cat << 'EOF' > ${{ parameters.microBuildOutputFolder }}/global.json
+          {
+            "sdk": {
+              "version": "$version",
+              "paths": [
+                "${{ parameters.microBuildOutputFolder }}/.dotnet-microbuild"
+              ],
+              "errorMessage": "The .NET SDK version $version is required to install the MicroBuild signing plugin."
+            }
+          }
+          EOF
+        displayName: 'Add global.json to MicroBuild Installation path'
+        workingDirectory: ${{ parameters.microBuildOutputFolder }}
         condition: and(succeeded(), ne(variables['Agent.Os'], 'Windows_NT'))
 
     - script: |
@@ -85,6 +103,7 @@ steps:
             zipSources: false
             feedSource: https://dnceng.pkgs.visualstudio.com/_packaging/MicroBuildToolset/nuget/v3/index.json
             version: ${{ parameters.microbuildPluginVersion }}
+            workingDirectory: ${{ parameters.microBuildOutputFolder }}
             ${{ if eq(parameters.microbuildUseESRP, true) }}:
               ConnectedServiceName: 'MicroBuild Signing Task (DevDiv)'
               ${{ if eq(variables['System.TeamProject'], 'DevDiv') }}:
