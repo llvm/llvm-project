@@ -15778,8 +15778,7 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
 // Detect whether there is a pattern like (setcc (and X, 1), 0, eq).
 // If it is , return true; otherwise return false.
 static bool canConvertSETCCToXori(SDNode *N) {
-  if (N->getOpcode() != ISD::SETCC)
-    return false;
+  assert(N->getOpcode() == ISD::SETCC && "Should ibe SETCC SDNode here.");
 
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
   if (CC != ISD::SETEQ)
@@ -15791,8 +15790,7 @@ static bool canConvertSETCCToXori(SDNode *N) {
   // Check the `SDValue &V` is from `and` with `1`.
   auto IsAndWithOne = [](SDValue &V) {
     if (V.getOpcode() == ISD::AND) {
-      SDNode *AndNode = V.getNode();
-      for (const SDValue &Op : AndNode->ops())
+      for (const SDValue &Op : V.getNode()->ops())
         if (auto *C = dyn_cast<ConstantSDNode>(Op))
           if (C->isOne())
             return true;
@@ -15817,7 +15815,7 @@ static bool canConvertSETCCToXori(SDNode *N) {
 // before calling the function; otherwise, it may produce incorrect results.
 static SDValue ConvertSETCCToXori(SDNode *N, SelectionDAG &DAG) {
 
-  assert(N->getOpcode() == ISD::SETCC && "Should SETCC SDNode here.");
+  assert(N->getOpcode() == ISD::SETCC && "Should ibe SETCC SDNode here.");
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   SDLoc DL(N);
