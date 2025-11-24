@@ -1256,11 +1256,13 @@ def AMDGPU_MakeDmaBaseOp :
 }
 
 def AMDGPU_MakeDmaDescriptorOp :
-  AMDGPU_Op<"make_dma_descriptor", [Pure]>,
+  AMDGPU_Op<"make_dma_descriptor", [Pure, AttrSizedOperandSegments]>,
   Arguments<(ins
     AMDGPU_TDMBaseType: $base,
     Variadic<Index>: $dynamic_sizes,
-    OptionalAttr<DenseI64ArrayAttr>: $static_sizes)>,
+    OptionalAttr<DenseI64ArrayAttr>: $static_sizes,
+    Variadic<Index>: $dynamic_strides,
+    OptionalAttr<DenseI64ArrayAttr>: $static_strides)>,
   Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
 
   let summary = "TODO";
@@ -1269,7 +1271,10 @@ def AMDGPU_MakeDmaDescriptorOp :
   }];
 
   let assemblyFormat = [{
-    $base `globalSize` custom<DynamicIndexList>($dynamic_sizes, $static_sizes) attr-dict `:` qualified(type($base)) `to` type(results)
+    $base
+	`globalSize` custom<DynamicIndexList>($dynamic_sizes, $static_sizes)
+	`globalStride` custom<DynamicIndexList>($dynamic_strides, $static_strides)
+	attr-dict `:` qualified(type($base)) `to` type(results)
   }];
 }
 

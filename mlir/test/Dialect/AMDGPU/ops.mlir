@@ -700,8 +700,8 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32>, %smem: memref<8xi32, 
 // CHECK-LABEL: func @make_dma_descriptor
 // CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
 func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) {
-  // CHECK: amdgpu.make_dma_descriptor %[[BASE]] globalSize [0] : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
-  amdgpu.make_dma_descriptor %base globalSize [0] : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]] globalSize [0] globalStride [1] : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
+  amdgpu.make_dma_descriptor %base globalSize [0] globalStride [1] : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
   func.return
 }
 
