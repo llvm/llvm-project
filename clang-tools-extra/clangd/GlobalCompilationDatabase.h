@@ -143,7 +143,7 @@ private:
   class DirectoryCache;
   // Keyed by possibly-case-folded directory path.
   // We can hand out pointers as they're stable and entries are never removed.
-  mutable llvm::StringMap<DirectoryCache> DirCaches;
+  mutable llvm::StringMap<std::unique_ptr<DirectoryCache>> DirCaches;
   mutable std::mutex DirCachesMutex;
 
   std::vector<DirectoryCache *>

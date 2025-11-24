@@ -398,8 +398,12 @@ DirectoryBasedGlobalCompilationDatabase::getDirectoryCaches(
   Ret.reserve(Dirs.size());
 
   std::lock_guard<std::mutex> Lock(DirCachesMutex);
-  for (unsigned I = 0; I < Dirs.size(); ++I)
-    Ret.push_back(&DirCaches.try_emplace(FoldedDirs[I], Dirs[I]).first->second);
+  for (unsigned I = 0; I < Dirs.size(); ++I) {
+    std::unique_ptr<DirectoryCache> &DC = DirCaches[FoldedDirs[I]];
+    if (!DC)
+      DC = std::make_unique<DirectoryCache>(Dirs[I]);
+    Ret.push_back(DC.get());
+  }
   return Ret;
 }
 
@@ -571,7 +575,7 @@ class DirectoryBasedGlobalCompilationDatabase::BroadcastThread::Filter {
     enum { Unknown, Missing, TargetCDB, OtherCDB } State = Unknown;
     DirInfo *Parent = nullptr;
   };
-  llvm::StringMap<DirInfo> Dirs;
+  llvm::StringMap<std::unique_ptr<DirInfo>> Dirs;
 
   // A search path starts at a directory, and either includes ancestors or not.
   using SearchPath = llvm::PointerIntPair<DirInfo *, 1>;
@@ -583,16 +587,18 @@ class DirectoryBasedGlobalCompilationDatabase::BroadcastThread::Filter {
     DirInfo *Child = nullptr;
     actOnAllParentDirectories(FilePath, [&](llvm::StringRef Dir) {
       auto &Info = Dirs[Dir];
+      if (!Info)
+        Info = std::make_unique<DirInfo>();
       // If this is the first iteration, then this node is the overall result.
       if (!Leaf)
-        Leaf = &Info;
+        Leaf = Info.get();
       // Fill in the parent link from the previous iteration to this parent.
       if (Child)
-        Child->Parent = &Info;
+        Child->Parent = Info.get();
       // Keep walking, whether we inserted or not, if parent link is missing.
       // (If it's present, parent links must be present up to the root, so stop)
-      Child = &Info;
-      return Info.Parent != nullptr;
+      Child = Info.get();
+      return Info->Parent != nullptr;
     });
     return Leaf;
   }
@@ -609,7 +615,7 @@ class DirectoryBasedGlobalCompilationDatabase::BroadcastThread::Filter {
     DirValues.reserve(Dirs.size());
     for (auto &E : Dirs) {
       DirKeys.push_back(E.first());
-      DirValues.push_back(&E.second);
+      DirValues.push_back(E.second.get());
     }
 
     // Also look up the cache entry for the CDB we're broadcasting.
@@ -677,7 +683,10 @@ public:
     std::vector<SearchPath> SearchPaths(AllFiles.size());
     for (unsigned I = 0; I < AllFiles.size(); ++I) {
       if (Parent.Opts.CompileCommandsDir) { // FIXME: unify with config
-        SearchPaths[I].setPointer(&Dirs[*Parent.Opts.CompileCommandsDir]);
+        std::unique_ptr<DirInfo> &Dir = Dirs[*Parent.Opts.CompileCommandsDir];
+        if (!Dir)
+          Dir = std::make_unique<DirInfo>();
+        SearchPaths[I].setPointer(Dir.get());
         continue;
       }
       if (ExitEarly()) // loading config may be slow
@@ -693,7 +702,10 @@ public:
         SearchPaths[I].setPointer(addParents(AllFiles[I]));
         break;
       case Config::CDBSearchSpec::FixedDir:
-        SearchPaths[I].setPointer(&Dirs[*Spec.FixedCDBPath]);
+        std::unique_ptr<DirInfo> &Dir = Dirs[*Spec.FixedCDBPath];
+        if (!Dir)
+          Dir = std::make_unique<DirInfo>();
+        SearchPaths[I].setPointer(Dir.get());
         break;
       }
     }
