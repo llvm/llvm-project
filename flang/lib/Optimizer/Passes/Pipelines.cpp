@@ -132,6 +132,7 @@ void addFIRToLLVMPass(mlir::PassManager &pm,
   options.typeDescriptorsRenamedForAssembly =
       !disableCompilerGeneratedNamesConversion;
   options.ComplexRange = config.ComplexRange;
+  options.LowerThroughCoreMLIR = config.LowerThroughCoreMLIR;
   pm.addPass(fir::createFIRToLLVMPass(options));
 
   // The dialect conversion framework may leave dead unrealized_conversion_cast

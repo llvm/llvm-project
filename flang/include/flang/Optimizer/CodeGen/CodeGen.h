@@ -60,6 +60,9 @@ struct FIRToLLVMPassOptions {
   // type's descriptor.
   bool typeDescriptorsRenamedForAssembly = false;
 
+  // Lower from FIR through core MLIR to LLVM
+  bool LowerThroughCoreMLIR = false;
+
   // Specify the calculation method for complex number division used by the
   // Conversion pass of the MLIR complex dialect.
   Fortran::frontend::CodeGenOptions::ComplexRangeKind ComplexRange =

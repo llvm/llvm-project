@@ -1008,29 +1008,6 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
         rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(convert, toTy, op0);
         return mlir::success();
       }
-      // Pointer to MemRef conversion.
-      if (mlir::isa<mlir::MemRefType>(toFirTy)) {
-        auto dstMemRef = mlir::MemRefDescriptor::poison(rewriter, loc, toTy);
-        dstMemRef.setAlignedPtr(rewriter, loc, op0);
-        dstMemRef.setOffset(
-            rewriter, loc,
-            createIndexAttrConstant(rewriter, loc, getIndexType(), 0));
-        rewriter.replaceOp(convert, {dstMemRef});
-        return mlir::success();
-      }
-    } else if (mlir::isa<mlir::MemRefType>(fromFirTy) &&
-               mlir::isa<mlir::LLVM::LLVMPointerType>(toTy)) {
-      // MemRef to pointer conversion.
-      auto srcMemRef = mlir::MemRefDescriptor(op0);
-      mlir::Type elementType = typeConverter->convertType(
-          mlir::cast<mlir::MemRefType>(fromFirTy).getElementType());
-      mlir::Value srcBasePtr = srcMemRef.alignedPtr(rewriter, loc);
-      mlir::Value srcOffset = srcMemRef.offset(rewriter, loc);
-      mlir::Value srcPtr =
-          mlir::LLVM::GEPOp::create(rewriter, loc, srcBasePtr.getType(),
-                                    elementType, srcBasePtr, srcOffset);
-      rewriter.replaceOp(convert, srcPtr);
-      return mlir::success();
     }
     return emitError(loc) << "cannot convert " << fromTy << " to " << toTy;
   }
@@ -4228,6 +4205,47 @@ public:
 } // namespace
 
 namespace {
+/// convert value between fir type and core mlir type.
+struct ConvertCoreMLIROpConversion
+    : public fir::FIROpConversion<fir::ConvertOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::ConvertOp convert, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto fromFirTy = convert.getValue().getType();
+    auto toFirTy = convert.getRes().getType();
+    auto fromTy = convertType(fromFirTy);
+    auto toTy = convertType(toFirTy);
+    mlir::Value op0 = adaptor.getOperands()[0];
+
+    auto loc = convert.getLoc();
+
+    if (mlir::isa<mlir::LLVM::LLVMPointerType>(fromTy) &&
+        mlir::isa<mlir::MemRefType>(toFirTy)) {
+      // Pointer to MemRef conversion.
+      auto dstMemRef = mlir::MemRefDescriptor::poison(rewriter, loc, toTy);
+      dstMemRef.setAlignedPtr(rewriter, loc, op0);
+      dstMemRef.setConstantOffset(rewriter, loc, 0);
+      rewriter.replaceOp(convert, {dstMemRef});
+      return mlir::success();
+    } else if (mlir::isa<mlir::MemRefType>(fromFirTy) &&
+               mlir::isa<mlir::LLVM::LLVMPointerType>(toTy)) {
+      // MemRef to pointer conversion.
+      auto srcMemRef = mlir::MemRefDescriptor(op0);
+      mlir::Value srcPtr =
+          srcMemRef.bufferPtr(rewriter, loc, *getTypeConverter(),
+                              mlir::cast<mlir::MemRefType>(fromFirTy));
+      rewriter.replaceOp(convert, srcPtr);
+      return mlir::success();
+    }
+
+    return mlir::failure();
+  }
+};
+} // namespace
+
+namespace {
 /// Convert FIR dialect to LLVM dialect
 ///
 /// This pass lowers all FIR dialect operations to LLVM IR dialect. An
@@ -4356,7 +4374,7 @@ public:
     target.addLegalDialect<mlir::gpu::GPUDialect>();
 
     // required NOPs for applying a full conversion
-    target.addLegalOp<mlir::ModuleOp, mlir::UnrealizedConversionCastOp>();
+    target.addLegalOp<mlir::ModuleOp>();
 
     // If we're on Windows, we might need to rename some libm calls.
     bool isMSVC = fir::getTargetTriple(mod).isOSMSVCRT();
@@ -4377,7 +4395,12 @@ public:
     }
 
     mlir::ConversionConfig config;
-    config.buildMaterializations = false;
+    if (options.LowerThroughCoreMLIR) {
+      pattern.insert<ConvertCoreMLIROpConversion>(typeConverter, options,
+                                                  /*benefit=*/2);
+      target.addLegalOp<mlir::UnrealizedConversionCastOp>();
+      config.buildMaterializations = false;
+    }
 
     // apply the patterns
     if (mlir::failed(mlir::applyFullConversion(getModule(), target,
