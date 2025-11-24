@@ -86,8 +86,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: coalesce_mov32r0_into_subreg_def_with_super_def_to_reg64
     ; CHECK: ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    ; CHECK-NEXT: undef [[MOV32r0_:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags, implicit-def [[MOV32r0_]], implicit-def [[MOV32r0_]]
-    ; CHECK-NEXT: dead $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi, implicit-def $rdi
+    ; CHECK-NEXT: undef [[MOV32r0_:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags, implicit-def [[MOV32r0_]]
+    ; CHECK-NEXT: dead $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
     ; CHECK-NEXT: CALL64r [[MOV32r0_]], csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
     ; CHECK-NEXT: ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     ; CHECK-NEXT: RET 0
@@ -139,8 +139,8 @@ body:             |
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   undef [[MOV32r0_:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags, implicit-def [[MOV32r0_]], implicit-def [[MOV32r0_]]
-  ; CHECK-NEXT:   undef [[MOV32r0_1:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags, implicit-def [[MOV32r0_1]], implicit-def [[MOV32r0_1]]
+  ; CHECK-NEXT:   undef [[MOV32r0_:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags, implicit-def [[MOV32r0_]]
+  ; CHECK-NEXT:   undef [[MOV32r0_1:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags, implicit-def [[MOV32r0_1]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)

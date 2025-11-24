@@ -1970,15 +1970,17 @@ void RegisterCoalescer::updateRegDefsUses(
       // because the undef means that none of the bits of %1 are read, thus
       // thrashing the top 24 bits of %1.sub32.
       if (SubregToRegSrcInsts->contains(UseMI) &&
-          all_of(UseMI->defs(), [&SubIdx](const MachineOperand &MO) -> bool {
-            if (MO.isUndef())
-              return true;
-            return SubIdx && (!MO.getSubReg() || SubIdx == MO.getSubReg());
-          })) {
+          all_of(UseMI->all_defs(),
+                 [&SubIdx, &SrcReg](const MachineOperand &MO) -> bool {
+                   if (MO.getReg() != SrcReg) // Ignore unrelated registers
+                     return true;
+                   return MO.isUndef() ||
+                          (SubIdx &&
+                           (!MO.getSubReg() || SubIdx == MO.getSubReg()));
+                 })) {
         // Add implicit-def of super-register to express that the whole
         // register is defined by the instruction.
-        MachineInstrBuilder MIB(*MF, UseMI);
-        MIB.addReg(DstReg, RegState::ImplicitDefine);
+        UseMI->addRegisterDefined(DstReg);
         RequiresImplicitRedef = true;
       }
 
