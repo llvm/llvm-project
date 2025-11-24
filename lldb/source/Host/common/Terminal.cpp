@@ -400,6 +400,21 @@ llvm::Error Terminal::SetHardwareFlowControl(bool enabled) {
 #endif // LLDB_ENABLE_TERMIOS
 }
 
+bool Terminal::SupportsUnicode() {
+  static std::optional<bool> result;
+  if (result)
+    return result.value();
+#ifdef _WIN32
+  return true;
+#else
+  const char *lang_var = std::getenv("LANG");
+  if (!lang_var)
+    return false;
+  result = llvm::StringRef(lang_var).lower().find("utf-8") != std::string::npos;
+#endif
+  return result.value();
+}
+
 TerminalState::TerminalState(Terminal term, bool save_process_group)
     : m_tty(term) {
   Save(term, save_process_group);
@@ -471,19 +486,4 @@ bool TerminalState::TTYStateIsValid() const { return bool(m_data); }
 
 bool TerminalState::ProcessGroupIsValid() const {
   return static_cast<int32_t>(m_process_group) != -1;
-}
-
-bool lldb_private::TerminalSupportsUnicode() {
-  static std::optional<bool> result;
-  if (result)
-    return result.value();
-#ifdef _WIN32
-  return true;
-#else
-  const char *lang_var = std::getenv("LANG");
-  if (!lang_var)
-    return false;
-  result = llvm::StringRef(lang_var).lower().find("utf-8") != std::string::npos;
-#endif
-  return result.value();
 }
