@@ -69,6 +69,7 @@
 ; CHECK-O-NEXT: Running pass: SROAPass on foo
 ; CHECK-O-NEXT: Running pass: EarlyCSEPass on foo
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass on foo
+; CHECK-O-NEXT: Running pass: LifetimeMovePass on foo
 ; CHECK-O-NEXT: Running pass: InstCombinePass on foo
 ; CHECK-O-NEXT: Invalidating analysis: InlineAdvisorAnalysis
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
@@ -181,6 +182,7 @@
 ; CHECK-O23SZ-NEXT: Running pass: LICMPass
 ; CHECK-O23SZ-NEXT: Running pass: CoroElidePass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O-NEXT: Running pass: LifetimeMovePass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: PostOrderFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ShouldNotRunFunctionPassesAnalysis
