@@ -123,12 +123,14 @@ void test_members() {
 
 void test_nonmembers() {
   // std::hash<>
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+
   std::hash<std::string_view> hash;
-  hash();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  hash(std::string_view{});
 
 #if TEST_STD_VER >= 14
   // string_view literals
+
   using namespace std::string_view_literals;
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
