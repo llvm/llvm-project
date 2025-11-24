@@ -2914,43 +2914,7 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX10-NEXT:    s_mov_b32 s38, s34
 ; GFX10-NEXT:    s_mov_b32 s34, s32
 ; GFX10-NEXT:    s_add_i32 s32, s32, 0x14000
-<<<<<<< HEAD
 ; GFX10-NEXT:    v_writelane_b32 v63, s30, 0
-||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
-; GFX10-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:56 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:52 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:48 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:44 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v44, off, s[0:3], s33 offset:40 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v45, off, s[0:3], s33 offset:36 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v46, off, s[0:3], s33 offset:32 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v47, off, s[0:3], s33 offset:28 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v56, off, s[0:3], s33 offset:24 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v57, off, s[0:3], s33 offset:20 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v58, off, s[0:3], s33 offset:16 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v59, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v60, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v61, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v62, off, s[0:3], s33 ; 4-byte Folded Spill
-; GFX10-NEXT:    v_writelane_b32 v63, s30, 0
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-=======
-; GFX10-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:56 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:52 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:48 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:44 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v44, off, s[0:3], s33 offset:40 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v45, off, s[0:3], s33 offset:36 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v46, off, s[0:3], s33 offset:32 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v47, off, s[0:3], s33 offset:28 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v56, off, s[0:3], s33 offset:24 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v57, off, s[0:3], s33 offset:20 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v58, off, s[0:3], s33 offset:16 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v59, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v60, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v61, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
-; GFX10-NEXT:    buffer_store_dword v62, off, s[0:3], s33 ; 4-byte Folded Spill
->>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s32
 ; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4
 ; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:8
@@ -2993,26 +2957,12 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:156
 ; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:160
 ; GFX10-NEXT:    v_lshrrev_b32_e64 v0, 5, s33
-<<<<<<< HEAD
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
-=======
-; GFX10-NEXT:    v_writelane_b32 v63, s30, 0
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
->>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, 0x200, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
-<<<<<<< HEAD
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, 0x200, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v5, 0
-||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
-; GFX10-NEXT:    v_mov_b32_e32 v5, 0
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, 0x200, v0
-=======
-; GFX10-NEXT:    v_mov_b32_e32 v5, 0
->>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX10-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v7, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v8, 0
@@ -3246,14 +3196,8 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    s_mov_b32 s3, s0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
-<<<<<<< HEAD
 ; GFX11-NEXT:    s_mov_b32 s39, s34
 ; GFX11-NEXT:    s_mov_b32 s34, s32
-||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
-=======
-; GFX11-NEXT:    s_mov_b32 s36, s34
-; GFX11-NEXT:    s_mov_b32 s34, s32
->>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX11-NEXT:    s_addk_i32 s32, 0xa00
 ; GFX11-NEXT:    s_clause 0xd ; 56-byte Folded Spill
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s33 offset:52
