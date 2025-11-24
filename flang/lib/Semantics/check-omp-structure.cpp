@@ -5476,6 +5476,25 @@ void OmpStructureChecker::CheckAllowedRequiresClause(llvmOmpClause clause) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPMisplacedEndDirective &x) {
+  context_.Say(x.DirName().source, "Misplaced OpenMP end-directive"_err_en_US);
+  PushContextAndClauseSets(
+      x.DirName().source, llvm::omp::Directive::OMPD_unknown);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPMisplacedEndDirective &x) {
+  dirContext_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPInvalidDirective &x) {
+  context_.Say(x.source, "Invalid OpenMP directive"_err_en_US);
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_unknown);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPInvalidDirective &x) {
+  dirContext_.pop_back();
+}
+
 // Use when clause falls under 'struct OmpClause' in 'parse-tree.h'.
 #define CHECK_SIMPLE_CLAUSE(X, Y) \
   void OmpStructureChecker::Enter(const parser::OmpClause::X &) { \
