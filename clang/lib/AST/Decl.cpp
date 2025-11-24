@@ -1790,7 +1790,9 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       else
         OS << *ND;
     } else if (const auto *RD = dyn_cast<RecordDecl>(DC)) {
-      if (!RD->getIdentifier())
+      if (TypedefNameDecl *Typedef = RD->getTypedefNameForAnonDecl())
+        OS << Typedef->getIdentifier()->getName();
+      else if (!RD->getIdentifier())
         OS << "(anonymous " << RD->getKindName() << ')';
       else
         OS << *RD;
