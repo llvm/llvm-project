@@ -84,15 +84,17 @@ ProgramStateRef processLoopEnd(const Stmt *LoopStmt, ProgramStateRef State) {
 
 static internal::Matcher<Stmt> simpleCondition(StringRef BindName,
                                                StringRef RefName) {
+  auto LoopVariable = ignoringParenImpCasts(
+      declRefExpr(to(varDecl(hasType(isInteger())).bind(BindName)))
+          .bind(RefName));
+  auto UpperBound = ignoringParenImpCasts(expr().bind("boundNum"));
+
   return binaryOperator(
              anyOf(hasOperatorName("<"), hasOperatorName(">"),
                    hasOperatorName("<="), hasOperatorName(">="),
                    hasOperatorName("!=")),
-             hasEitherOperand(ignoringParenImpCasts(
-                 declRefExpr(to(varDecl(hasType(isInteger())).bind(BindName)))
-                     .bind(RefName))),
-             hasEitherOperand(
-                 ignoringParenImpCasts(integerLiteral().bind("boundNum"))))
+             anyOf(binaryOperator(hasLHS(LoopVariable), hasRHS(UpperBound)),
+                   binaryOperator(hasRHS(LoopVariable), hasLHS(UpperBound))))
       .bind("conditionOperator");
 }
 
@@ -271,23 +273,26 @@ static bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
   if (!isLoopStmt(LoopStmt))
     return false;
 
-  // TODO: Match the cases where the bound is not a concrete literal but an
-  // integer with known value
   auto Matches = match(forLoopMatcher(), *LoopStmt, ASTCtx);
   if (Matches.empty())
     return false;
 
   const auto *CounterVarRef = Matches[0].getNodeAs<DeclRefExpr>("initVarRef");
-  llvm::APInt BoundNum =
-      Matches[0].getNodeAs<IntegerLiteral>("boundNum")->getValue();
+  const Expr *BoundNumExpr = Matches[0].getNodeAs<Expr>("boundNum");
+
+  Expr::EvalResult BoundNumResult;
+  if (!BoundNumExpr || !BoundNumExpr->EvaluateAsInt(BoundNumResult, ASTCtx,
+                                                    Expr::SE_NoSideEffects)) {
+    return false;
+  }
   llvm::APInt InitNum =
       Matches[0].getNodeAs<IntegerLiteral>("initNum")->getValue();
   auto CondOp = Matches[0].getNodeAs<BinaryOperator>("conditionOperator");
-  unsigned MaxWidth = std::max(InitNum.getBitWidth(), BoundNum.getBitWidth());
+  unsigned MaxWidth = std::max(InitNum.getBitWidth(),
+                               BoundNumResult.Val.getInt().getBitWidth());
 
   InitNum = InitNum.zext(MaxWidth);
-  BoundNum = BoundNum.zext(MaxWidth);
-
+  llvm::APInt BoundNum = BoundNumResult.Val.getInt().zext(MaxWidth);
   if (CondOp->getOpcode() == BO_GE || CondOp->getOpcode() == BO_LE)
     maxStep = (BoundNum - InitNum + 1).abs().getZExtValue();
   else
