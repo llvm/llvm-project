@@ -335,7 +335,7 @@ class Dialect:
         return self.namespace
 
     @staticmethod
-    def _op_name_to_python_id(name):
+    def _op_name_to_python_id(name: str) -> str:
         return name.replace(".", "_").replace("$", "_")
 
     def op(self, name: str) -> Callable[[type], type]:
