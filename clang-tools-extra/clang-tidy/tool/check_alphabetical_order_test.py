@@ -5,20 +5,18 @@
 # To run these tests:
 # python3 check_alphabetical_order_test.py -v
 
+import check_alphabetical_order as _mod
+from contextlib import redirect_stderr
 import io
 import os
 import tempfile
-import unittest
-from contextlib import redirect_stderr
-from typing import cast
 import textwrap
-
-
-import check_alphabetical_order as _mod
+from typing import cast
+import unittest
 
 
 class TestAlphabeticalOrderCheck(unittest.TestCase):
-    def test_normalize_list_rst_sorts_rows(self):
+    def test_normalize_list_rst_sorts_rows(self) -> None:
         input_text = textwrap.dedent(
             """\
             .. csv-table:: Clang-Tidy checks
@@ -46,7 +44,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
         out_str = _mod.normalize_list_rst(input_text)
         self.assertEqual(out_str, expected_text)
 
-    def test_find_heading(self):
+    def test_find_heading(self) -> None:
         text = textwrap.dedent(
             """\
             - Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
@@ -63,7 +61,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
         idx = _mod.find_heading(lines, "New checks")
         self.assertEqual(idx, 4)
 
-    def test_duplicate_detection_and_report(self):
+    def test_duplicate_detection_and_report(self) -> None:
         # Ensure duplicate detection works properly when sorting is incorrect.
         text = textwrap.dedent(
             """\
@@ -113,7 +111,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
         )
         self.assertEqual(report_str, expected_report)
 
-    def test_process_release_notes_with_unsorted_content(self):
+    def test_process_release_notes_with_unsorted_content(self) -> None:
         # When content is not normalized, the function writes normalized text and returns 0.
         rn_text = textwrap.dedent(
             """\
@@ -168,7 +166,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             self.assertEqual(out, expected_out)
             self.assertIn("not normalized", buf.getvalue())
 
-    def test_process_release_notes_prioritizes_sorting_over_duplicates(self):
+    def test_process_release_notes_prioritizes_sorting_over_duplicates(self) -> None:
         # Sorting is incorrect and duplicates exist, should report ordering issues first.
         rn_text = textwrap.dedent(
             """\
@@ -234,7 +232,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             )
             self.assertEqual(out, expected_out)
 
-    def test_process_release_notes_with_duplicates_fails(self):
+    def test_process_release_notes_with_duplicates_fails(self) -> None:
         # Sorting is already correct but duplicates exist, should return 3 and report.
         rn_text = textwrap.dedent(
             """\
@@ -295,7 +293,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
                 out = f.read()
             self.assertEqual(out, rn_text)
 
-    def test_release_notes_handles_nested_sub_bullets(self):
+    def test_release_notes_handles_nested_sub_bullets(self) -> None:
         rn_text = textwrap.dedent(
             """\
             Changes in existing checks
@@ -355,7 +353,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
         )
         self.assertEqual(out, expected_out)
 
-    def test_process_checks_list_normalizes_output(self):
+    def test_process_checks_list_normalizes_output(self) -> None:
         list_text = textwrap.dedent(
             """\
             .. csv-table:: List
