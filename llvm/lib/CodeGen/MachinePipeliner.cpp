@@ -1285,7 +1285,7 @@ void SwingSchedulerDAG::updatePhiDependences() {
               // resulting in bad IR as we do not have a value that can be used
               // by SU2.
 
-              if (SU->NodeNum < I.NodeNum && !I.isPred(SU))
+              if (SU->NodeNum < I.NodeNum && !SU->isPred(&I))
                 SU->addPred(SDep(&I, SDep::Barrier));
             }
           }
