@@ -37,6 +37,12 @@ ARM64X-SAME: -machine:arm64x
 ARM64X-SAME: -alternatename:__image_base__=__ImageBase
 ARM64X-SAME: foo.o
 
+RUN: ld.lld -### foo.o -m mipspe 2>&1 | FileCheck -check-prefix=MIPS %s
+MIPS:      -out:a.exe
+MIPS-SAME: -machine:mips
+MIPS-SAME: -alternatename:__image_base__=__ImageBase
+MIPS-SAME: foo.o
+
 RUN: ld.lld -### foo.o -m i386pep -shared 2>&1 | FileCheck -check-prefix=SHARED %s
 RUN: ld.lld -### foo.o -m i386pep --shared 2>&1 | FileCheck -check-prefix=SHARED %s
 RUN: ld.lld -### foo.o -m i386pep --dll 2>&1 | FileCheck -check-prefix=SHARED %s
