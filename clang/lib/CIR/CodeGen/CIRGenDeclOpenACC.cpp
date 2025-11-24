@@ -28,12 +28,21 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
 
   template <typename OutTy, typename InTy>
   void createOutOp(CIRGenFunction &cgf, InTy inOp) {
-    auto outOp =
-        OutTy::create(cgf.getBuilder(), inOp.getLoc(), inOp, inOp.getVarPtr(),
-                      inOp.getStructured(), inOp.getImplicit(),
-                      llvm::Twine(inOp.getNameAttr()), inOp.getBounds());
-    outOp.setDataClause(inOp.getDataClause());
-    outOp.setModifiers(inOp.getModifiers());
+    if constexpr (std::is_same_v<OutTy, mlir::acc::DeleteOp>) {
+      auto outOp =
+          OutTy::create(cgf.getBuilder(), inOp.getLoc(), inOp,
+                        inOp.getStructured(), inOp.getImplicit(),
+                        llvm::Twine(inOp.getNameAttr()), inOp.getBounds());
+      outOp.setDataClause(inOp.getDataClause());
+      outOp.setModifiers(inOp.getModifiers());
+    } else {
+      auto outOp =
+          OutTy::create(cgf.getBuilder(), inOp.getLoc(), inOp, inOp.getVarPtr(),
+                        inOp.getStructured(), inOp.getImplicit(),
+                        llvm::Twine(inOp.getNameAttr()), inOp.getBounds());
+      outOp.setDataClause(inOp.getDataClause());
+      outOp.setModifiers(inOp.getModifiers());
+    }
   }
 
   void emit(CIRGenFunction &cgf) override {
@@ -51,6 +60,9 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
           break;
         case mlir::acc::DataClause::acc_copy:
           createOutOp<mlir::acc::CopyoutOp>(cgf, copyin);
+          break;
+        case mlir::acc::DataClause::acc_copyin:
+          createOutOp<mlir::acc::DeleteOp>(cgf, copyin);
           break;
         }
       } else if (val.getDefiningOp<mlir::acc::DeclareLinkOp>()) {
