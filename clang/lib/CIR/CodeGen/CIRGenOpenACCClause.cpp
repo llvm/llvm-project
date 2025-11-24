@@ -800,12 +800,16 @@ public:
             var, mlir::acc::DataClause::acc_copy, clause.getModifierList(),
             /*structured=*/true,
             /*implicit=*/false);
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::DeclareEnterOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::CopyinOp>(
+            var, mlir::acc::DataClause::acc_copy, clause.getModifierList(),
+            /*structured=*/true,
+            /*implicit=*/false);
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. declare construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitCopyClause");
     }
   }
 
