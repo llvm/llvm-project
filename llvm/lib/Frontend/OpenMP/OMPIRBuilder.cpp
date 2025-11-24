@@ -710,20 +710,9 @@ Error OpenMPIRBuilder::FinalizationInfo::mergeFiniBB(IRBuilderBase &Builder,
   OtherFiniBB->splice(OtherFiniBB->getFirstNonPHIIt(), FiniBB, FiniBB->begin(),
                       EndIt);
 
-  // Replace FiniBB with OtherFiniBB.
-  for (User *U : make_early_inc_range(FiniBB->users())) {
-    auto *Instr = dyn_cast<Instruction>(U);
-    if (!Instr)
-      continue;
-    for (unsigned I = 0, E = Instr->getNumSuccessors(); I != E; ++I) {
-      if (Instr->getSuccessor(I) == FiniBB)
-        Instr->setSuccessor(I, OtherFiniBB);
-    }
-  }
-  assert(FiniBB->use_empty() && "Non branch use of FiniBB");
+  FiniBB->replaceAllUsesWith(OtherFiniBB);
   FiniBB->eraseFromParent();
   FiniBB = OtherFiniBB;
-
   return Error::success();
 }
 
