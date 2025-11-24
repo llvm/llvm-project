@@ -98,6 +98,9 @@ def testStructType():
     assert opaque.opaque
     # CHECK: !llvm.struct<"opaque", opaque>
 
+    typ = Type.parse('!llvm.struct<"zoo", (i32, i64)>')
+    assert isinstance(typ, llvm.StructType)
+
 
 # CHECK-LABEL: testSmoke
 @constructAndPrintInModule
@@ -119,6 +122,9 @@ def testPointerType():
     ptr_with_addr = llvm.PointerType.get(1)
     # CHECK: !llvm.ptr<1>
     print(ptr_with_addr)
+
+    typ = Type.parse("!llvm.ptr<1>")
+    assert isinstance(typ, llvm.PointerType)
 
 
 # CHECK-LABEL: testConstant

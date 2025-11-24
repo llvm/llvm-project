@@ -55,8 +55,8 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
       if (auto copyin = val.getDefiningOp<mlir::acc::CopyinOp>()) {
         switch (copyin.getDataClause()) {
         default:
-          cgf.cgm.errorNYI(declareRange,
-                           "OpenACC local declare clause copyin cleanup");
+          llvm_unreachable(
+              "OpenACC local declare clause copyin unexpected data clause");
           break;
         case mlir::acc::DataClause::acc_copy:
           createOutOp<mlir::acc::CopyoutOp>(cgf, copyin);
@@ -68,8 +68,8 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
       } else if (auto create = val.getDefiningOp<mlir::acc::CreateOp>()) {
         switch (create.getDataClause()) {
         default:
-          cgf.cgm.errorNYI(declareRange,
-                           "OpenACC local declare clause create cleanup");
+          llvm_unreachable(
+              "OpenACC local declare clause create unexpected data clause");
           break;
         case mlir::acc::DataClause::acc_copyout:
           createOutOp<mlir::acc::CopyoutOp>(cgf, create);
@@ -78,6 +78,8 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
           createOutOp<mlir::acc::DeleteOp>(cgf, create);
           break;
         }
+      } else if (auto create = val.getDefiningOp<mlir::acc::PresentOp>()) {
+        createOutOp<mlir::acc::DeleteOp>(cgf, create);
       } else if (val.getDefiningOp<mlir::acc::DeclareLinkOp>()) {
         // Link has no exit clauses, and shouldn't be copied.
         continue;

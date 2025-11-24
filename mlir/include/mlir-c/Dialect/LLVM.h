@@ -23,6 +23,8 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(LLVM, llvm);
 MLIR_CAPI_EXPORTED MlirType mlirLLVMPointerTypeGet(MlirContext ctx,
                                                    unsigned addressSpace);
 
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMPointerTypeGetTypeID(void);
+
 /// Returns `true` if the type is an LLVM dialect pointer type.
 MLIR_CAPI_EXPORTED bool mlirTypeIsALLVMPointerType(MlirType type);
 
@@ -57,6 +59,8 @@ MLIR_CAPI_EXPORTED MlirType mlirLLVMFunctionTypeGetReturnType(MlirType type);
 
 /// Returns `true` if the type is an LLVM dialect struct type.
 MLIR_CAPI_EXPORTED bool mlirTypeIsALLVMStructType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMStructTypeGetTypeID(void);
 
 /// Returns `true` if the type is a literal (unnamed) LLVM struct type.
 MLIR_CAPI_EXPORTED bool mlirLLVMStructTypeIsLiteral(MlirType type);
