@@ -961,7 +961,7 @@ def warn_framework_include_private_from_public : Warning<
   >, InGroup<FrameworkIncludePrivateFromPublic>;
 def warn_header_shadowing : Warning<
   "multiple candidates for header '%0' found; "
-  "directory '%1' chosen, ignoring '%2' and others">,
+  "directory '%1' chosen, ignoring others including '%2'">,
   InGroup<ShadowHeader>, DefaultIgnore;
 def warn_deprecated_module_dot_map : Warning<
   "'%0' as a module map name is deprecated, rename it to %select{module.modulemap|module.private.modulemap}1%select{| in the 'Modules' directory of the framework}2">,
