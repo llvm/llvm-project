@@ -381,9 +381,6 @@ FUNCTION_ANALYSIS("target-lib-info", TargetLibraryAnalysis())
 FUNCTION_ANALYSIS("uniformity", UniformityInfoAnalysis())
 FUNCTION_ANALYSIS("verify", VerifierAnalysis())
 
-// MyPass:
-FUNCTION_ANALYSIS("pointer-type-in-function", PointerTypeInFunctionPass())
-
 #ifndef FUNCTION_ALIAS_ANALYSIS
 #define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
   FUNCTION_ANALYSIS(NAME, CREATE_PASS)

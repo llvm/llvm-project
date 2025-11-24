@@ -3,22 +3,22 @@
 using namespace llvm;
 
 PreservedAnalyses PointerTypeTransformerPass::run(Module& M,
-    ModuleAnalysisManager& AM) {
-  PointerTypePrinter *printer = new PointerTypePrinter(outs());
+    ModuleAnalysisManager& MAM) {
+  PointerTypePrinter printer(outs());
+  PointerTypeHelpers helper;
 
-  auto &FAMProxy = AM.getResult<FunctionAnalysisManagerModuleProxy>(M);
-  FunctionAnalysisManager &FAM = FAMProxy.getManager();
+  helper.initializeGlobalInfo(M);
 
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
-    if (F.getName() == "main") {
-      auto &result = FAM.getResult<PointerTypeInFunctionPass>(F);
-      printer->loadPointerTypeMap(result.pointerTypeMap);
-    }
+    helper.processInFunction(F);
   }
 
-  printer->printModule(M);
+  printer.loadPointerTypeMap(helper.getPtm());
+  printer.printModule(M);
   
   return PreservedAnalyses::all();
 }
+
+// wllvm

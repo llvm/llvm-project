@@ -3,7 +3,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/PointerTypePrinter.h"
-#include "llvm/Transforms/Utils/PointerTypeInFunction.h"
+#include "llvm/Transforms/Utils/PointerTypeHelpers.h"
 
 namespace llvm {
     class PointerTypeTransformerPass

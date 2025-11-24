@@ -52,7 +52,7 @@ void PointerTypePrinter::printInstruction(Instruction& I) {
   OS << "  ";
 
   if (!I.getType()->isVoidTy()) {
-    Value *v = cast<Value>(&I);
+    Value *v = static_cast<Value *>(&I);
     printValue(v);
     OS << " = ";
   }
@@ -61,15 +61,15 @@ void PointerTypePrinter::printInstruction(Instruction& I) {
 
   if (!I.getType()->isVoidTy()) {
     if (I.getOpcode() == Instruction::GetElementPtr) {
-      auto *GI = cast<GetElementPtrInst>(&I);
+      auto *GI = static_cast<GetElementPtrInst *>(&I);
       OS << MyTy::ptr_cast<MyPointerTy>(pointerTypeMap[GI->getPointerOperand()])
                 ->getInner()->to_string();
     } else if (I.getOpcode() == Instruction::Alloca) {
-      Value *v = cast<Value>(&I);
+      Value *v = static_cast<Value *>(&I);
       OS << MyTy::ptr_cast<MyPointerTy>(pointerTypeMap[v])
                 ->getInner()->to_string();
     } else {
-      Value *v = cast<Value>(&I);
+      Value *v = static_cast<Value *>(&I);
       printType(v, I.getType());
     }
     OS << ", ";

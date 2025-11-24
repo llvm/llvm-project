@@ -5,6 +5,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace llvm {
 	class MyTy {
@@ -13,13 +14,14 @@ namespace llvm {
 		MyTy();
 		virtual std::string to_string();
 		virtual void update(std::shared_ptr<MyTy>);
-		MyTypeID getTypeID();
+		MyTypeID getTypeID() const;
 		void setTypeID(MyTypeID);
-        bool isBasic();
-        bool isPointer();
-        bool isVoid();
-        bool isArray();
-        bool isUnknown();
+        bool isBasic() const;
+        bool isPointer() const;
+        bool isVoid() const;
+        bool isArray() const;
+        bool isUnknown() const;
+        bool isStruct() const;
         bool compatibleWith(std::shared_ptr<MyTy>);
         static std::shared_ptr<MyTy> from(Type *);
         static std::shared_ptr<MyTy> leastCompatibleType(std::shared_ptr<MyTy>,
@@ -71,8 +73,22 @@ namespace llvm {
         MyArrayTy(Type *array);
         MyArrayTy(std::shared_ptr<MyTy> eTy, int eCnt);
         std::shared_ptr<MyTy> getElementTy();
-		int size();
+		int getElementCnt() const;
 		std::string to_string() override;
+        void update(std::shared_ptr<MyTy> inner) override;
+	};
+
+	class MyStructTy : public MyTy {
+    private:
+        SmallVector<std::shared_ptr<MyTy>> elementTy;
+        std::string name;
+
+	public:
+        MyStructTy(Type *, DenseMap<Type *, std::shared_ptr<MyTy>>);
+        std::shared_ptr<MyTy> getElementTy(int index = 0);
+        std::string to_string() override;
+        bool hasName() const;
+        int getElementCnt();
         void update(std::shared_ptr<MyTy> inner) override;
 	};
 }

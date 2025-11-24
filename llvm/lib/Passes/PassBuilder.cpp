@@ -380,7 +380,6 @@
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
 #include <optional>
 
-#include "llvm/Transforms/Utils/PointerTypeInFunction.h"
 #include "llvm/Transforms/Utils/PointerTypeTransformer.h"
 
 using namespace llvm;

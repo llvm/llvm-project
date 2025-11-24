@@ -14,7 +14,7 @@ namespace llvm {
   class PointerTypePrinter {
   private:
     raw_ostream &OS;
-    DenseMap< Value *, std::shared_ptr<MyTy> > pointerTypeMap;
+    DenseMap<Value *, std::shared_ptr<MyTy>> pointerTypeMap;
     void printFunction(Function &F);
     void printBasicBlock(BasicBlock &B);
     void printInstruction(Instruction &I);
@@ -23,7 +23,7 @@ namespace llvm {
 
   public:
     PointerTypePrinter(raw_ostream &Out) : OS(Out) {}
-    void loadPointerTypeMap(DenseMap< Value *, std::shared_ptr<MyTy> >);
+    void loadPointerTypeMap(DenseMap<Value *, std::shared_ptr<MyTy>>);
     void printModule(Module &M);
   };
 }
