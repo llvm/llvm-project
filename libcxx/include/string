@@ -853,7 +853,7 @@ private:
     value_type v;
   };
   enum { __union_alignment = _LIBCPP_ALIGNOF(__union_alignment_check) };
-  enum { __full_size = (__short_packed_size + __union_alignment - 1) & -__union_alignment };
+  enum { __full_size = (static_cast<size_t>(__short_packed_size) + static_cast<size_t>(__union_alignment) - 1) & -static_cast<size_t>(__union_alignment) };
 
   // Now define both structures for real, with padding to ensure they are both
   // exactly the calculated size.
@@ -868,14 +868,14 @@ private:
 
     pointer __data_;
     size_type __size_;
-    _LIBCPP_NO_UNIQUE_ADDRESS __padding<__full_size - sizeof(__long_min)> __padding_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<static_cast<size_t>(__full_size) - sizeof(__long_min)> __padding_;
     size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
     size_type __is_long_ : 1;
   };
 
   struct __short {
     value_type __data_[__min_cap];
-    _LIBCPP_NO_UNIQUE_ADDRESS __padding<__full_size - __short_packed_size> __padding_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<static_cast<size_t>(__full_size) - static_cast<size_t>(__short_packed_size)> __padding_;
     unsigned char __size_    : 7;
     unsigned char __is_long_ : 1;
   };
