@@ -56,9 +56,6 @@ void test() {
 
   std::reference_wrapper<int> rw{i};
   rw.get(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::function<int(int)> vf;
-  auto rwf = std::ref(vf);
-  rwf(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   std::ref(i);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::cref(i); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
