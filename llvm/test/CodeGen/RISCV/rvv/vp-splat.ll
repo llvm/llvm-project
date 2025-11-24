@@ -5,6 +5,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+d,+zvfhmin,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64,NOZFMIN,ZVFHMIN
 ; RUN: llc -mtriple=riscv32 -mattr=+v,+d,+zfhmin,+zfbfmin,+zvfhmin,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV32,ZFMIN
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+d,+zfhmin,+zfbfmin,+zvfhmin,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64,ZFMIN
+; RUN: llc -mtriple=riscv32 -mattr=+v,+d,+zfhmin,+zvfhmin,+experimental-zvfbfa -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV32,ZVFBFA
+; RUN: llc -mtriple=riscv64 -mattr=+v,+d,+zfhmin,+zvfhmin,+experimental-zvfbfa -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64,ZVFBFA
 
 define <vscale x 1 x i8> @vp_splat_nxv1i8(i8 %val, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_splat_nxv1i8:
@@ -292,6 +294,12 @@ define <vscale x 1 x bfloat> @vp_splat_nxv1bf16(bfloat %val, <vscale x 1 x i1> %
 ; ZFMIN-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; ZFMIN-NEXT:    vmv.v.x v8, a1
 ; ZFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vp_splat_nxv1bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, mf4, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    ret
   %splat = call <vscale x 1 x bfloat> @llvm.experimental.vp.splat.nxv1bf16(bfloat %val, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x bfloat> %splat
 }
@@ -310,6 +318,12 @@ define <vscale x 2 x bfloat> @vp_splat_nxv2bf16(bfloat %val, <vscale x 2 x i1> %
 ; ZFMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; ZFMIN-NEXT:    vmv.v.x v8, a1
 ; ZFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vp_splat_nxv2bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, mf2, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    ret
   %splat = call <vscale x 2 x bfloat> @llvm.experimental.vp.splat.nxv2bf16(bfloat %val, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x bfloat> %splat
 }
@@ -328,6 +342,12 @@ define <vscale x 4 x bfloat> @vp_splat_nxv4bf16(bfloat %val, <vscale x 4 x i1> %
 ; ZFMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZFMIN-NEXT:    vmv.v.x v8, a1
 ; ZFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vp_splat_nxv4bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, m1, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    ret
   %splat = call <vscale x 4 x bfloat> @llvm.experimental.vp.splat.nxv4bf16(bfloat %val, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x bfloat> %splat
 }
@@ -346,6 +366,12 @@ define <vscale x 8 x bfloat> @vp_splat_nxv8bf16(bfloat %val, <vscale x 8 x i1> %
 ; ZFMIN-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; ZFMIN-NEXT:    vmv.v.x v8, a1
 ; ZFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vp_splat_nxv8bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, m2, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    ret
   %splat = call <vscale x 8 x bfloat> @llvm.experimental.vp.splat.nxv8bf16(bfloat %val, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x bfloat> %splat
 }
@@ -364,6 +390,12 @@ define <vscale x 16 x bfloat> @vp_splat_nxv16bf16(bfloat %val, <vscale x 16 x i1
 ; ZFMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; ZFMIN-NEXT:    vmv.v.x v8, a1
 ; ZFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vp_splat_nxv16bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, m4, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    ret
   %splat = call <vscale x 16 x bfloat> @llvm.experimental.vp.splat.nxv16bf16(bfloat %val, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x bfloat> %splat
 }
@@ -382,6 +414,12 @@ define <vscale x 32 x bfloat> @vp_splat_nxv32bf16(bfloat %val, <vscale x 32 x i1
 ; ZFMIN-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; ZFMIN-NEXT:    vmv.v.x v8, a1
 ; ZFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vp_splat_nxv32bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, m8, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    ret
   %splat = call <vscale x 32 x bfloat> @llvm.experimental.vp.splat.nxv32bf16(bfloat %val, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x bfloat> %splat
 }
@@ -406,6 +444,13 @@ define <vscale x 1 x half> @vp_splat_nxv1f16(half %val, <vscale x 1 x i1> %m, i3
 ; ZFMIN-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; ZFMIN-NEXT:    vmv.v.x v8, a1
 ; ZFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vp_splat_nxv1f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a1, fa0
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v8, a1
+; ZVFBFA-NEXT:    ret
   %splat = call <vscale x 1 x half> @llvm.experimental.vp.splat.nxv1f16(half %val, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x half> %splat
 }
@@ -430,6 +475,13 @@ define <vscale x 2 x half> @vp_splat_nxv2f16(half %val, <vscale x 2 x i1> %m, i3
 ; ZFMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; ZFMIN-NEXT:    vmv.v.x v8, a1
 ; ZFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vp_splat_nxv2f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a1, fa0
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v8, a1
+; ZVFBFA-NEXT:    ret
   %splat = call <vscale x 2 x half> @llvm.experimental.vp.splat.nxv2f16(half %val, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x half> %splat
 }
@@ -454,6 +506,13 @@ define <vscale x 4 x half> @vp_splat_nxv4f16(half %val, <vscale x 4 x i1> %m, i3
 ; ZFMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZFMIN-NEXT:    vmv.v.x v8, a1
 ; ZFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vp_splat_nxv4f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a1, fa0
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v8, a1
+; ZVFBFA-NEXT:    ret
   %splat = call <vscale x 4 x half> @llvm.experimental.vp.splat.nxv4f16(half %val, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x half> %splat
 }
@@ -478,6 +537,13 @@ define <vscale x 8 x half> @vp_splat_nxv8f16(half %val, <vscale x 8 x i1> %m, i3
 ; ZFMIN-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; ZFMIN-NEXT:    vmv.v.x v8, a1
 ; ZFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vp_splat_nxv8f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a1, fa0
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v8, a1
+; ZVFBFA-NEXT:    ret
   %splat = call <vscale x 8 x half> @llvm.experimental.vp.splat.nxv8f16(half %val, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x half> %splat
 }
@@ -502,6 +568,13 @@ define <vscale x 16 x half> @vp_splat_nxv16f16(half %val, <vscale x 16 x i1> %m,
 ; ZFMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; ZFMIN-NEXT:    vmv.v.x v8, a1
 ; ZFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vp_splat_nxv16f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a1, fa0
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v8, a1
+; ZVFBFA-NEXT:    ret
   %splat = call <vscale x 16 x half> @llvm.experimental.vp.splat.nxv16f16(half %val, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x half> %splat
 }
@@ -526,6 +599,13 @@ define <vscale x 32 x half> @vp_splat_nxv32f16(half %val, <vscale x 32 x i1> %m,
 ; ZFMIN-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; ZFMIN-NEXT:    vmv.v.x v8, a1
 ; ZFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vp_splat_nxv32f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    fmv.x.h a1, fa0
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v8, a1
+; ZVFBFA-NEXT:    ret
   %splat = call <vscale x 32 x half> @llvm.experimental.vp.splat.nxv32f16(half %val, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x half> %splat
 }
