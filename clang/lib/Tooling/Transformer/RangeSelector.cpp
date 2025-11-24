@@ -178,6 +178,56 @@ RangeSelector transformer::encloseNodes(std::string BeginID,
   return transformer::enclose(node(std::move(BeginID)), node(std::move(EndID)));
 }
 
+RangeSelector transformer::merge(RangeSelector First, RangeSelector Second) {
+  return [First,
+          Second](const MatchResult &Result) -> Expected<CharSourceRange> {
+    Expected<CharSourceRange> FirstRange = First(Result);
+    if (!FirstRange)
+      return FirstRange.takeError();
+    Expected<CharSourceRange> SecondRange = Second(Result);
+    if (!SecondRange)
+      return SecondRange.takeError();
+    // Result begin loc is the minimum of the begin locs of the two ranges.
+    SourceLocation B = FirstRange->getBegin() < SecondRange->getBegin()
+                           ? FirstRange->getBegin()
+                           : SecondRange->getBegin();
+    if (FirstRange->isTokenRange() && SecondRange->isTokenRange()) {
+      // Both ranges are token ranges. Just take the maximum of their end locs.
+      SourceLocation E = FirstRange->getEnd() > SecondRange->getEnd()
+                             ? FirstRange->getEnd()
+                             : SecondRange->getEnd();
+      return CharSourceRange::getTokenRange(B, E);
+    }
+    SourceLocation FirstE = FirstRange->getEnd();
+    if (FirstRange->isTokenRange()) {
+      // The end of the first range is a token. Need to resolve the token to a
+      // char range.
+      CharSourceRange EndRange = Lexer::makeFileCharRange(
+          CharSourceRange::getTokenRange(FirstRange->getEnd()),
+          *Result.SourceManager, Result.Context->getLangOpts());
+      if (EndRange.isInvalid())
+        return invalidArgumentError(
+            "merge: can't resolve first token range to valid source range");
+      FirstE = EndRange.getEnd();
+    }
+    SourceLocation SecondE = SecondRange->getEnd();
+    if (SecondRange->isTokenRange()) {
+      // The end of the second range is a token. Need to resolve the token to a
+      // char range.
+      CharSourceRange EndRange = Lexer::makeFileCharRange(
+          CharSourceRange::getTokenRange(SecondRange->getEnd()),
+          *Result.SourceManager, Result.Context->getLangOpts());
+      if (EndRange.isInvalid())
+        return invalidArgumentError(
+            "merge: can't resolve second token range to valid source range");
+      SecondE = EndRange.getEnd();
+    }
+    // Result end loc is the maximum of the end locs of the two ranges.
+    SourceLocation E = FirstE > SecondE ? FirstE : SecondE;
+    return CharSourceRange::getCharRange(B, E);
+  };
+}
+
 RangeSelector transformer::member(std::string ID) {
   return [ID](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<DynTypedNode> Node = getNode(Result.Nodes, ID);
