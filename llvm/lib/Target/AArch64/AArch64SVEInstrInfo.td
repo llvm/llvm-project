@@ -240,8 +240,6 @@ def AArch64udiv_p : SDNode<"AArch64ISD::UDIV_PRED", SDT_AArch64Arith>;
 def AArch64umax_p : SDNode<"AArch64ISD::UMAX_PRED", SDT_AArch64Arith>;
 def AArch64umin_p : SDNode<"AArch64ISD::UMIN_PRED", SDT_AArch64Arith>;
 def AArch64umulh_p : SDNode<"AArch64ISD::MULHU_PRED", SDT_AArch64Arith>;
-def AArch64fnmla_p_node : SDNode<"AArch64ISD::FNMLA_PRED", SDT_AArch64FMA>;
-def AArch64fnmls_p_node : SDNode<"AArch64ISD::FNMLS_PRED", SDT_AArch64FMA>;
 
 def AArch64fadd_p_contract : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                      (AArch64fadd_p node:$op1, node:$op2, node:$op3), [{
@@ -462,13 +460,13 @@ def AArch64fmlsidx : PatFrags<(ops node:$acc, node:$op1, node:$op2, node:$idx),
 
 
 def AArch64fnmla_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
-                              [(AArch64fnmla_p_node node:$pg, node:$zn, node:$zm, node:$za),
-                               (int_aarch64_sve_fnmla_u node:$pg, node:$za, node:$zn, node:$zm),
+                              [(int_aarch64_sve_fnmla_u node:$pg, node:$za, node:$zn, node:$zm),
+                               (AArch64fma_p node:$pg, (AArch64fneg_mt node:$pg, node:$zn, (undef)), node:$zm, (AArch64fneg_mt node:$pg, node:$za, (undef))),
                                (AArch64fneg_mt_nsz node:$pg, (AArch64fma_p node:$pg, node:$zn, node:$zm, node:$za), (undef))]>;
 
 def AArch64fnmls_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
-                              [(AArch64fnmls_p_node node:$pg, node:$zn, node:$zm, node:$za),
-                               (int_aarch64_sve_fnmls_u node:$pg, node:$za, node:$zn, node:$zm)]>;
+                              [(int_aarch64_sve_fnmls_u node:$pg, node:$za, node:$zn, node:$zm),
+                               (AArch64fma_p node:$pg, node:$zn, node:$zm, (AArch64fneg_mt node:$pg, node:$za, (undef)))]>;
 
 def AArch64fsubr_p : PatFrag<(ops node:$pg, node:$op1, node:$op2),
                              (AArch64fsub_p node:$pg, node:$op2, node:$op1)>;

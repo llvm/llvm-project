@@ -176,6 +176,46 @@ entry:
   ret <vscale x 8 x half> %0
 }
 
+
+define <vscale x 2 x double> @fnmsub_negated_b_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c) {
+; CHECK-LABEL: fnmsub_negated_b_nxv2f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fnmad z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ret
+entry:
+  %neg = fneg <vscale x 2 x double> %b
+  %neg1 = fneg <vscale x 2 x double> %c
+  %0 = tail call <vscale x 2 x double> @llvm.fmuladd(<vscale x 2 x double> %a, <vscale x 2 x double> %neg, <vscale x 2 x double> %neg1)
+  ret <vscale x 2 x double> %0
+}
+
+define <vscale x 4 x float> @fnmsub_negated_b_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) {
+; CHECK-LABEL: fnmsub_negated_b_nxv4f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fnmad z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ret
+entry:
+  %neg = fneg <vscale x 4 x float> %b
+  %neg1 = fneg <vscale x 4 x float> %c
+  %0 = tail call <vscale x 4 x float> @llvm.fmuladd(<vscale x 4 x float> %a, <vscale x 4 x float> %neg, <vscale x 4 x float> %neg1)
+  ret <vscale x 4 x float> %0
+}
+
+define <vscale x 8 x half> @fnmsub_negated_b_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) {
+; CHECK-LABEL: fnmsub_negated_b_nxv8f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fnmad z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    ret
+entry:
+  %neg = fneg <vscale x 8 x half> %b
+  %neg1 = fneg <vscale x 8 x half> %c
+  %0 = tail call <vscale x 8 x half> @llvm.fmuladd(<vscale x 8 x half> %a, <vscale x 8 x half> %neg, <vscale x 8 x half> %neg1)
+  ret <vscale x 8 x half> %0
+}
+
 define <2 x double> @fnmsub_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: fnmsub_v2f64:
 ; CHECK:       // %bb.0: // %entry

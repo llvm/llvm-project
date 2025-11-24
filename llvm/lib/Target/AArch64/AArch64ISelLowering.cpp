@@ -20704,6 +20704,7 @@ static SDValue performFMACombine(SDNode *N,
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
+  // Convert FMA/FNEG nodes to SVE to enable the following patterns:
   // fma(a, b, neg(c)) -> fnmls(a, b, c)
   // fma(neg(a), b, neg(c)) -> fnmla(a, b, c)
   // fma(a, neg(b), neg(c)) -> fnmla(a, b, c)
@@ -20712,27 +20713,37 @@ static SDValue performFMACombine(SDNode *N,
       OpC.getOpcode() != ISD::FNEG) {
     return SDValue();
   }
-  unsigned int Opcode;
-  if (OpA.getOpcode() == ISD::FNEG) {
-    OpA = OpA.getOperand(0);
-    Opcode = AArch64ISD::FNMLA_PRED;
-  } else if (OpB.getOpcode() == ISD::FNEG) {
-    OpB = OpB.getOperand(0);
-    Opcode = AArch64ISD::FNMLA_PRED;
-  } else {
-    Opcode = AArch64ISD::FNMLS_PRED;
+
+  SDValue Pg = getPredicateForVector(DAG, DL, VT);
+  EVT ContainerVT =
+      VT.isFixedLengthVector() ? getContainerForFixedLengthVector(DAG, VT) : VT;
+  OpC = VT.isFixedLengthVector()
+            ? convertToScalableVector(DAG, ContainerVT, OpC.getOperand(0))
+            : OpC->getOperand(0);
+  OpC = DAG.getNode(AArch64ISD::FNEG_MERGE_PASSTHRU, DL, ContainerVT, Pg, OpC,
+                    DAG.getUNDEF(ContainerVT));
+
+  if (OpB.getOpcode() == ISD::FNEG) {
+    std::swap(OpA, OpB);
   }
-  OpC = OpC.getOperand(0);
-  auto Pg = getPredicateForVector(DAG, DL, VT);
-  if (VT.isFixedLengthVector()) {
-    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+
+  if (OpA.getOpcode() == ISD::FNEG) {
+    OpA = VT.isFixedLengthVector()
+              ? convertToScalableVector(DAG, ContainerVT, OpA.getOperand(0))
+              : OpA->getOperand(0);
+    OpA = DAG.getNode(AArch64ISD::FNEG_MERGE_PASSTHRU, DL, ContainerVT, Pg, OpA,
+                      DAG.getUNDEF(ContainerVT));
+  } else if (VT.isFixedLengthVector()) {
     OpA = convertToScalableVector(DAG, ContainerVT, OpA);
+  }
+
+  if (VT.isFixedLengthVector()) {
     OpB = convertToScalableVector(DAG, ContainerVT, OpB);
-    OpC = convertToScalableVector(DAG, ContainerVT, OpC);
-    auto ScalableRes = DAG.getNode(Opcode, DL, ContainerVT, Pg, OpA, OpB, OpC);
+    SDValue ScalableRes =
+        DAG.getNode(AArch64ISD::FMA_PRED, DL, ContainerVT, Pg, OpA, OpB, OpC);
     return convertFromScalableVector(DAG, VT, ScalableRes);
   }
-  return DAG.getNode(Opcode, DL, VT, Pg, OpA, OpB, OpC);
+  return DAG.getNode(AArch64ISD::FMA_PRED, DL, VT, Pg, OpA, OpB, OpC);
 }
 
 static bool hasPairwiseAdd(unsigned Opcode, EVT VT, bool FullFP16) {
