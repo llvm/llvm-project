@@ -37,7 +37,7 @@ private:
     DirectResultSenderImpl(ImplFn &&Fn) : Fn(std::forward<ImplFn>(Fn)) {}
     void send(orc_rt_SessionRef S,
               orc_rt::WrapperFunctionBuffer ResultBytes) override {
-      Fn(S, std::move(ResultBytes));
+      Fn(std::move(ResultBytes));
     }
 
   private:

@@ -431,6 +431,8 @@ public:
 
   virtual bool useColdCCForColdCall(Function &F) const { return false; }
 
+  virtual bool useFastCCForInternalCall(Function &F) const { return true; }
+
   virtual bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const {
     return false;
   }

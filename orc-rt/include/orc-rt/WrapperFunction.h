@@ -346,8 +346,8 @@ struct WrapperFunction {
 
     if (auto ArgBytes = Z.arguments().serialize(std::forward<ArgTs>(Args)...)) {
       C(
-          [RH = std::move(RH), Z = std::move(Z)](
-              orc_rt_SessionRef S, WrapperFunctionBuffer ResultBytes) mutable {
+          [RH = std::move(RH),
+           Z = std::move(Z)](WrapperFunctionBuffer ResultBytes) mutable {
             if (const char *ErrMsg = ResultBytes.getOutOfBandError())
               RH(make_error<StringError>(ErrMsg));
             else

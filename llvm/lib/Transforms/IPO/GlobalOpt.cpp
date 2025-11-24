@@ -2018,12 +2018,15 @@ OptimizeFunctions(Module &M,
 
     if (hasChangeableCC(&F, ChangeableCCCache)) {
       // If this function has a calling convention worth changing, is not a
-      // varargs function, and is only called directly, promote it to use the
-      // Fast calling convention.
-      F.setCallingConv(CallingConv::Fast);
-      ChangeCalleesToFastCall(&F);
-      ++NumFastCallFns;
-      Changed = true;
+      // varargs function, is only called directly, and is supported by the
+      // target, promote it to use the Fast calling convention.
+      TargetTransformInfo &TTI = GetTTI(F);
+      if (TTI.useFastCCForInternalCall(F)) {
+        F.setCallingConv(CallingConv::Fast);
+        ChangeCalleesToFastCall(&F);
+        ++NumFastCallFns;
+        Changed = true;
+      }
     }
 
     if (F.getAttributes().hasAttrSomewhere(Attribute::Nest) &&
