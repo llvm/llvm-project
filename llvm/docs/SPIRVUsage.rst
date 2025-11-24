@@ -167,12 +167,16 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
+   * - ``SPV_INTEL_16bit_atomics``
+     - Extends the SPV_EXT_shader_atomic_float_add and SPV_EXT_shader_atomic_float_min_max to support addition, minimum and maximum on 16-bit `bfloat16` floating-point numbers in memory.
    * - ``SPV_INTEL_2d_block_io``
      - Adds additional subgroup block prefetch, load, load transposed, load transformed and store instructions to read two-dimensional blocks of data from a two-dimensional region of memory, or to write two-dimensional blocks of data to a two dimensional region of memory.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bindless_images``
      - Adds instructions to convert convert unsigned integer handles to images, samplers and sampled images.
+   * - ``SPV_INTEL_bfloat16_arithmetic``
+     - Allows the use of 16-bit bfloat16 values in arithmetic and relational operators.
    * - ``SPV_INTEL_bfloat16_conversion``
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
    * - ``SPV_INTEL_cache_controls``
@@ -187,6 +191,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds decorations that can be applied to global (module scope) variables.
    * - ``SPV_INTEL_global_variable_fpga_decorations``
      - Adds decorations that can be applied to global (module scope) variables to help code generation for FPGA devices.
+   * - ``SPV_INTEL_kernel_attributes``
+     - Adds execution modes that can be applied to entry points to inform scheduling.
    * - ``SPV_INTEL_media_block_io``
      - Adds additional subgroup block read and write functionality that allow applications to flexibly specify the width and height of the block to read from or write to a 2D image.
    * - ``SPV_INTEL_memory_access_aliasing``
@@ -210,7 +216,7 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
    * - ``SPV_KHR_float_controls``
      - Provides new execution modes to control floating-point computations by overriding an implementation’s default behavior for rounding modes, denormals, signed zero, and infinities.
    * - ``SPV_KHR_integer_dot_product``
-     - Adds instructions for dot product operations on integer vectors with optional accumulation. Integer vectors includes 4-component vector of 8 bit integers and 4-component vectors of 8 bit integers packed into 32-bit integers.
+     - Adds instructions for dot product operations on integer vectors with optional accumulation. Integer vectors includes 4-component vector of 8-bit integers and 4-component vectors of 8-bit integers packed into 32-bit integers.
    * - ``SPV_KHR_linkonce_odr``
      - Allows to use the LinkOnceODR linkage type that lets a function or global variable to be merged with other functions or global variables of the same name when linkage occurs.
    * - ``SPV_KHR_no_integer_wrap_decoration``
@@ -226,13 +232,19 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
    * - ``SPV_INTEL_fp_max_error``
      - Adds the ability to specify the maximum error for floating-point operations.
    * - ``SPV_INTEL_ternary_bitwise_function``
-     - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform. 
+     - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform.
    * - ``SPV_INTEL_subgroup_matrix_multiply_accumulate``
-     - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix. 
+     - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix.
    * - ``SPV_INTEL_int4``
      - Adds support for 4-bit integer type, and allow this type to be used in cooperative matrices.
    * - ``SPV_KHR_float_controls2``
-     - Adds ability to specify the floating-point environment in shaders. It can be used on whole modules and individual instructions.
+     - Adds execution modes and decorations to control floating-point computations in both kernels and shaders. It can be used on whole modules and individual instructions.
+   * - ``SPV_INTEL_predicated_io``
+     - Adds predicated load and store instructions that conditionally read from or write to memory based on a boolean predicate.
+   * - ``SPV_KHR_maximal_reconvergence``
+     - Adds execution mode and capability to enable maximal reconvergence.
+   * - ``SPV_ALTERA_blocking_pipes``
+     - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
 
 SPIR-V representation in LLVM IR
 ================================
@@ -589,3 +601,31 @@ Group and Subgroup Operations
 For workgroup and subgroup operations, LLVM uses function calls to represent SPIR-V's
 group-based instructions. These builtins facilitate group synchronization, data sharing,
 and collective operations essential for efficient parallel computation.
+
+SPIR-V Instructions Mapped to LLVM Metadata
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Some SPIR-V instructions don't have a direct equivalent in the LLVM IR language. To
+address this, the SPIR-V Target uses different specific LLVM named metadata to convey
+the necessary information. The SPIR-V specification allows multiple module-scope
+instructions, where as LLVM named metadata must be unique. Therefore, the encoding of
+such instructions has the following format:
+
+.. code-block:: llvm
+
+  !spirv.<OpCodeName> = !{!<InstructionMetadata1>, !<InstructionMetadata2>, ..}
+  !<InstructionMetadata1> = !{<Operand1>, <Operand2>, ..}
+  !<InstructionMetadata2> = !{<Operand1>, <Operand2>, ..}
+
+Below, you will find the mappings between SPIR-V instruction and their corresponding
+LLVM IR representations.
+
++--------------------+---------------------------------------------------------+
+| SPIR-V instruction | LLVM IR                                                 |
++====================+=========================================================+
+| OpExecutionMode    | .. code-block:: llvm                                    |
+|                    |                                                         |
+|                    |    !spirv.ExecutionMode = !{!0}                         |
+|                    |    !0 = !{void @worker, i32 30, i32 262149}             |
+|                    |    ; Set execution mode with id 30 (VecTypeHint) and    |
+|                    |    ; literal `262149` operand.                          |
++--------------------+---------------------------------------------------------+

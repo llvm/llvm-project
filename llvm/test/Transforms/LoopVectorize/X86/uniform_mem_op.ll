@@ -278,10 +278,10 @@ define void @uniform_copy(ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4, !alias.scope [[META12:![0-9]+]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4, !alias.scope [[META12:![0-9]+]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[B]], align 4, !alias.scope [[META15:![0-9]+]], !noalias [[META12]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
@@ -398,27 +398,9 @@ define i32 @test_count_bits(ptr %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX13:%.*]] = add <4 x i32> [[TMP38]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX14:%.*]] = add <4 x i32> [[TMP39]], [[BIN_RDX13]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX14]])
-; CHECK-NEXT:    br label [[LOOP_EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[ACCUM:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[BYTE:%.*]] = udiv i64 [[IV]], 8
-; CHECK-NEXT:    [[TEST_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TEST_BASE]], i64 [[BYTE]]
-; CHECK-NEXT:    [[EARLYCND:%.*]] = load i8, ptr [[TEST_ADDR]], align 1
-; CHECK-NEXT:    [[BIT:%.*]] = urem i64 [[IV]], 8
-; CHECK-NEXT:    [[BIT_TRUNC:%.*]] = trunc i64 [[BIT]] to i8
-; CHECK-NEXT:    [[MASK:%.*]] = lshr i8 [[EARLYCND]], [[BIT_TRUNC]]
-; CHECK-NEXT:    [[TEST:%.*]] = and i8 [[MASK]], 1
-; CHECK-NEXT:    [[VAL:%.*]] = zext i8 [[TEST]] to i32
-; CHECK-NEXT:    [[ACCUM_NEXT]] = add i32 [[ACCUM]], [[VAL]]
-; CHECK-NEXT:    [[EXIT:%.*]] = icmp ugt i64 [[IV]], 4094
-; CHECK-NEXT:    br i1 [[EXIT]], label [[LOOP_EXIT]], label [[LOOP]]
 ; CHECK:       loop_exit:
-; CHECK-NEXT:    [[ACCUM_NEXT_LCSSA:%.*]] = phi i32 [ [[ACCUM_NEXT]], [[LOOP]] ], [ [[TMP41]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[ACCUM_NEXT_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP41]]
 ;
 entry:
   %alloca = alloca [4096 x i32]

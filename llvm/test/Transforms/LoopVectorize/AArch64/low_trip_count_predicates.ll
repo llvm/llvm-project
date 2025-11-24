@@ -403,9 +403,9 @@ define void @overflow_indvar_known_false(ptr nocapture noundef %p, i32 noundef %
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[TMP0]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP13]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP13]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP15]], ptr [[TMP13]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP15]], ptr align 1 [[TMP13]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[TMP1]])
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
@@ -474,19 +474,8 @@ define i32 @tc4(ptr noundef readonly captures(none) %tmp) vscale_range(1,16) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_0179:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[ADD]] = add i32 [[SUM_0179]], [[TMP5]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[FOR_BODY]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
 entry:
   br label %for.body
@@ -520,6 +509,7 @@ define i32 @tc4_from_profile(ptr noundef readonly captures(none) %tmp, i64 %N) v
 ; CHECK-NEXT:    [[ADD]] = add i32 [[SUM_0179]], [[TMP0]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]], !prof [[PROF9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
@@ -551,3 +541,22 @@ exit:                                 ; preds = %for.body
 ; CHECK-VS1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-VS1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-VS1: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-VS1: [[PROF3]] = !{!"branch_weights", i32 8, i32 8}
+; CHECK-VS1: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK-VS1: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; CHECK-VS1: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; CHECK-VS1: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
+; CHECK-VS1: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; CHECK-VS1: [[PROF9]] = !{!"branch_weights", i32 10, i32 30}
+;.
+; CHECK-VS2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK-VS2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK-VS2: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-VS2: [[PROF3]] = !{!"branch_weights", i32 8, i32 8}
+; CHECK-VS2: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK-VS2: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; CHECK-VS2: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; CHECK-VS2: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
+; CHECK-VS2: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; CHECK-VS2: [[PROF9]] = !{!"branch_weights", i32 10, i32 30}
+;.

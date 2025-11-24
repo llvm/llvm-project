@@ -25,6 +25,25 @@
 
 namespace llvm {
 
+// If Value is of the form C1<<C2, where C1 = 3, 5 or 9,
+// returns log2(C1 - 1) and assigns Shift = C2.
+// Otherwise, returns 0.
+template <typename T> int isShifted359(T Value, int &Shift) {
+  if (Value == 0)
+    return 0;
+  Shift = llvm::countr_zero(Value);
+  switch (Value >> Shift) {
+  case 3:
+    return 1;
+  case 5:
+    return 2;
+  case 9:
+    return 3;
+  default:
+    return 0;
+  }
+}
+
 class RISCVSubtarget;
 
 static const MachineMemOperand::Flags MONontemporalBit0 =
@@ -44,7 +63,7 @@ enum CondCode {
   COND_INVALID
 };
 
-CondCode getOppositeBranchCondition(CondCode);
+CondCode getInverseBranchCondition(CondCode);
 unsigned getBrCond(CondCode CC, unsigned SelectOpc = 0);
 
 } // end of namespace RISCVCC
@@ -60,9 +79,12 @@ enum RISCVMachineCombinerPattern : unsigned {
 };
 
 class RISCVInstrInfo : public RISCVGenInstrInfo {
+  const RISCVRegisterInfo RegInfo;
 
 public:
   explicit RISCVInstrInfo(const RISCVSubtarget &STI);
+
+  const RISCVRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
   MCInst getNop() const override;
 
@@ -94,13 +116,13 @@ public:
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
       bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+
+      Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DstReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   using TargetInstrInfo::foldMemoryOperandImpl;

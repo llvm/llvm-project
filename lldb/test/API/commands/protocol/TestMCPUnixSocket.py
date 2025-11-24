@@ -32,3 +32,16 @@ class MCPUnixSocketCommandTestCase(TestBase):
             startstr="MCP server started with connection listeners:",
             substrs=[f"unix-connect://{socket_file}"],
         )
+
+        self.expect(
+            "protocol-server get MCP",
+            startstr="MCP server connection listeners:",
+            substrs=[f"unix-connect://{socket_file}"],
+        )
+
+        self.runCmd("protocol-server stop MCP", check=False)
+        self.expect(
+            "protocol-server get MCP",
+            error=True,
+            substrs=["MCP server is not running"],
+        )

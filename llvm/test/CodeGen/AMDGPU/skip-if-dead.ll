@@ -1239,6 +1239,7 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x, i32 inreg %y) #0 
 ; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc
 ; GFX11-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v1
+; GFX11-NEXT:    s_waitcnt_depctr 0xfffd
 ; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB11_6
 ; GFX11-NEXT:  ; %bb.1: ; %bb
@@ -1796,8 +1797,8 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; GFX10-WAVE32-NEXT:    s_cbranch_scc1 .LBB15_7
 ; GFX10-WAVE32-NEXT:  ; %bb.1: ; %.lr.ph
 ; GFX10-WAVE32-NEXT:    s_mov_b32 s1, exec_lo
-; GFX10-WAVE32-NEXT:    s_mov_b32 s0, 0
 ; GFX10-WAVE32-NEXT:    s_mov_b32 s2, 0
+; GFX10-WAVE32-NEXT:    s_mov_b32 s0, 0
 ; GFX10-WAVE32-NEXT:    s_branch .LBB15_3
 ; GFX10-WAVE32-NEXT:  .LBB15_2: ; %latch
 ; GFX10-WAVE32-NEXT:    ; in Loop: Header=BB15_3 Depth=1
@@ -2066,6 +2067,7 @@ define amdgpu_ps void @scc_use_after_kill_inst(float inreg %x, i32 inreg %y) #0 
 ; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc
 ; GFX11-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v1
+; GFX11-NEXT:    s_waitcnt_depctr 0xfffd
 ; GFX11-NEXT:    s_and_not1_b64 s[2:3], s[2:3], vcc
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB17_6
 ; GFX11-NEXT:  ; %bb.1: ; %bb

@@ -225,7 +225,11 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
       (isTargetDarwin() || DM == DenormalMode::getPreserveSign()))
     HasNEONForFP = true;
 
-  if (isRWPI())
+  const ARM::ArchKind Arch = ARM::parseArch(TargetTriple.getArchName());
+  if (isRWPI() ||
+      (isTargetIOS() &&
+       (Arch == ARM::ArchKind::ARMV6K || Arch == ARM::ArchKind::ARMV6) &&
+       TargetTriple.isOSVersionLT(3, 0)))
     ReserveR9 = true;
 
   // If MVEVectorCostFactor is still 0 (has not been set to anything else), default it to 2
@@ -314,17 +318,7 @@ bool ARMSubtarget::isRWPI() const {
 }
 
 bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
-  if (!TM.shouldAssumeDSOLocal(GV))
-    return true;
-
-  // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
-  // the section that is being relocated. This means we have to use o load even
-  // for GVs that are known to be local to the dso.
-  if (isTargetMachO() && TM.isPositionIndependent() &&
-      (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
-    return true;
-
-  return false;
+  return TM.isGVIndirectSymbol(GV);
 }
 
 bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {

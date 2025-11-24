@@ -58,11 +58,17 @@ struct __get_wider_signed {
       return type_identity<int>{};
     else if constexpr (sizeof(_Int) < sizeof(long))
       return type_identity<long>{};
-    else
+    else if constexpr (sizeof(_Int) < sizeof(long long))
       return type_identity<long long>{};
-
-    static_assert(
-        sizeof(_Int) <= sizeof(long long), "Found integer-like type that is bigger than largest integer like type.");
+#  if _LIBCPP_HAS_INT128
+    else if constexpr (sizeof(_Int) <= sizeof(__int128))
+      return type_identity<__int128>{};
+#  else
+    else if constexpr (sizeof(_Int) <= sizeof(long long))
+      return type_identity<long long>{};
+#  endif
+    else
+      static_assert(false, "Found integer-like type that is bigger than the largest integer like type.");
   }
 
   using type = typename decltype(__call())::type;
@@ -393,6 +399,15 @@ struct __fn {
 inline namespace __cpo {
 inline constexpr auto iota = __iota::__fn{};
 } // namespace __cpo
+
+#  if _LIBCPP_STD_VER >= 26
+
+inline constexpr auto indices = [](__integer_like auto __size) static {
+  return ranges::views::iota(decltype(__size){}, __size);
+};
+
+#  endif
+
 } // namespace views
 } // namespace ranges
 

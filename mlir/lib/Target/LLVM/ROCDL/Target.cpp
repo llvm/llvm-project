@@ -289,7 +289,7 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
   llvm::Triple triple(llvm::Triple::normalize(targetTriple));
   std::string error;
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple.normalize(), error);
+      llvm::TargetRegistry::lookupTarget(triple, error);
   if (!target) {
     emitError(loc, Twine("failed to lookup target: ") + error);
     return std::nullopt;

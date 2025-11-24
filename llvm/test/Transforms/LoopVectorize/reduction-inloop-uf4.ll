@@ -35,11 +35,7 @@ define i32 @reduction_sum_single(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[DOT_CRIT_EDGE:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
-; CHECK:       .lr.ph:
-; CHECK-NEXT:    br i1 poison, label [[DOT_CRIT_EDGE]], label [[DOTLR_PH]]
 ; CHECK:       ._crit_edge:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[BIN_RDX7:%.*]] = add i32 [[TMP9]], [[BIN_RDX]]
@@ -114,11 +110,7 @@ define i64 @reduction_sum_chain(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i64 [[TMP19]], [[TMP17]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add i64 [[TMP21]], [[BIN_RDX]]
@@ -345,11 +337,7 @@ define i32 @predicated(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP111:%.*]] = icmp eq i64 [[INDEX_NEXT]], 272
 ; CHECK-NEXT:    br i1 [[TMP111]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[DOT_CRIT_EDGE:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
-; CHECK:       .lr.ph:
-; CHECK-NEXT:    br i1 poison, label [[DOT_CRIT_EDGE]], label [[DOTLR_PH]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       ._crit_edge:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP104]], [[TMP101]]
 ; CHECK-NEXT:    [[BIN_RDX34:%.*]] = add i32 [[TMP107]], [[BIN_RDX]]
@@ -581,17 +569,9 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP119:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP119]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP119]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    br i1 poison, label [[IF_THEN:%.*]], label [[FOR_INC:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    br label [[FOR_INC]]
-; CHECK:       for.inc:
-; CHECK-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5]]
+; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = mul i32 [[TMP112]], [[TMP109]]
 ; CHECK-NEXT:    [[BIN_RDX36:%.*]] = mul i32 [[TMP115]], [[BIN_RDX]]

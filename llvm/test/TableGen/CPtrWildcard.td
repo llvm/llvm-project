@@ -5,19 +5,19 @@
 
 // CHECK:        static const unsigned char MatcherTable[] = {
 // CHECK-NEXT: /*     0*/ OPC_CheckOpcode, TARGET_VAL(ISD::INTRINSIC_WO_CHAIN),
-// CHECK-NEXT:/*     3*/ OPC_CheckChild0Integer, 42,
+// CHECK-NEXT:/*     3*/ OPC_CheckChild0Integer, [[#]],
 // CHECK-NEXT:/*     5*/ OPC_RecordChild1, // #0 = $src
 // CHECK-NEXT:/*     6*/ OPC_Scope, 9, /*->17*/ // 2 children in Scope
 // CHECK-NEXT:/*     8*/  OPC_CheckChild1Type, /*MVT::c64*/126|128,1/*254*/,
 // CHECK-NEXT:/*    11*/  OPC_MorphNodeTo1None, TARGET_VAL(MyTarget::C64_TO_I64),
 // CHECK-NEXT:                /*MVT::i64*/8, 1/*#Ops*/, 0,
-// CHECK-NEXT:            // Src: (intrinsic_wo_chain:{ *:[i64] } 21:{ *:[iPTR] }, c64:{ *:[c64] }:$src) - Complexity = 8
+// CHECK-NEXT:            // Src: (intrinsic_wo_chain:{ *:[i64] } [[#]]:{ *:[iPTR] }, c64:{ *:[c64] }:$src) - Complexity = 8
 // CHECK-NEXT:            // Dst: (C64_TO_I64:{ *:[i64] } ?:{ *:[c64] }:$src)
 // CHECK-NEXT:/*    17*/ /*Scope*/ 9, /*->27*/
 // CHECK-NEXT:/*    18*/  OPC_CheckChild1Type, /*MVT::c128*/127|128,1/*255*/,
 // CHECK-NEXT:/*    21*/  OPC_MorphNodeTo1None, TARGET_VAL(MyTarget::C128_TO_I64),
 // CHECK-NEXT:                /*MVT::i64*/8, 1/*#Ops*/, 0,
-// CHECK-NEXT:            // Src: (intrinsic_wo_chain:{ *:[i64] } 21:{ *:[iPTR] }, c128:{ *:[c128] }:$src) - Complexity = 8
+// CHECK-NEXT:            // Src: (intrinsic_wo_chain:{ *:[i64] } [[#]]:{ *:[iPTR] }, c128:{ *:[c128] }:$src) - Complexity = 8
 // CHECK-NEXT:            // Dst: (C128_TO_I64:{ *:[i64] } ?:{ *:[c128] }:$src)
 // CHECK-NEXT:/*    27*/ 0, /*End of Scope*/
 // CHECK-NEXT:    0

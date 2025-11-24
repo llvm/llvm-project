@@ -4,7 +4,7 @@
 // validation flow.
 //--------------------------------------------------------------------------------------------------
 
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate="profile=pro_int,pro_fp extension=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,doubleround,inexactround strict-op-spec-alignment"
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="specification_version=1.1.draft profiles=pro_int,pro_fp extensions=int16,int4,int64,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,doubleround,inexactround" -tosa-validate="strict-op-spec-alignment"
 
 
 func.func @test_cast(%arg0: tensor<i1>) -> tensor<5xi32> {
@@ -306,6 +306,14 @@ func.func @test_concat_input_rank_mismatch(%arg0: tensor<1x2x3xf32>, %arg1: tens
 
 // -----
 
+func.func @test_concat_input_output_rank_mismatch(%arg0: tensor<2x2xf32>, %arg1: tensor<2x1xf32>) -> tensor<2xf32> {
+  // expected-error@+1 {{'tosa.concat' op expect output rank to match inputs rank, got 1 vs 2}}
+  %0 = tosa.concat %arg0, %arg1 {axis = 1 : i32} : (tensor<2x2xf32>, tensor<2x1xf32>) -> tensor<2xf32>
+  return %0 : tensor<2xf32>
+}
+
+// -----
+
 func.func @test_pad_invalid_padConst_rank(%arg0: tensor<13x21xf32>) {
   %0 = tosa.const_shape {values = dense<1> : tensor<4xindex>} : () -> !tosa.shape<4>
   %1 = "tosa.const"() {values = dense<3.14> : tensor<2xf32>} : () -> tensor<2xf32>
@@ -573,64 +581,61 @@ func.func @test_avg_pool2d_zero_dim_input(%arg0: tensor<1x0x?x9xf32>, %arg1: ten
 
 // -----
 
-func.func @test_variable_unranked(%arg0: tensor<2x4x8xi8>) -> () {
+module {
   tosa.variable @stored_var : tensor<*xi8>
   // expected-error@+1 {{custom op 'tosa.variable' expected ranked type}}
-  return
 }
 
 // -----
 
-func.func @test_variable_unranked_initial_value(%arg0: tensor<2x4x8xi8>) -> () {
+module {
   // expected-error@+1 {{elements literal type must have static shape}}
   tosa.variable @stored_var = dense<0> : tensor<*xi8>
   // expected-error@+1 {{custom op 'tosa.variable' expected attribute}}
-  return
 }
 
 // -----
 
-func.func @test_variable_duplicates(%arg0: tensor<2x4x8xi8>) -> () {
+module {
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  // expected-error@+1 {{'tosa.variable' op illegal to have multiple declaration of 'stored_var'}}
-  tosa.variable @stored_var = dense<3> : tensor<1x4x8xi8>
-  return
+  func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
+    // expected-error@+1 {{'tosa.variable_read' op require same element type for 'output1' ('i16') and the input tensor ('i8')}}
+    %0 = tosa.variable_read @stored_var : tensor<2x4x8xi16>
+    return
+  }
 }
 
 // -----
 
-func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
+module {
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  // expected-error@+1 {{'tosa.variable_read' op require same element type for 'output1' ('i16') and the input tensor ('i8')}}
-  %0 = tosa.variable_read @stored_var : tensor<2x4x8xi16>
-  return
+  func.func @test_variable_read_shape(%arg0: tensor<2x4x8xi8>) -> () {
+    // expected-error@+1 {{'tosa.variable_read' op require same element type for 'output1' ('i32') and the input tensor ('i8'}}
+    %0 = tosa.variable_read @stored_var : tensor<1x4x8xi32>
+    return
+  }
 }
 
 // -----
 
-func.func @test_variable_read_shape(%arg0: tensor<2x4x8xi8>) -> () {
+module {
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  // expected-error@+1 {{'tosa.variable_read' op require same element type for 'output1' ('i32') and the input tensor ('i8'}}
-  %0 = tosa.variable_read @stored_var : tensor<1x4x8xi32>
-  return
+  func.func @test_variable_write_type(%arg0: tensor<2x4x8xi16>) -> () {
+    // expected-error@+1 {{'tosa.variable_write' op require same element type for 'input1' ('i16') and the input tensor ('i8')}}
+    tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xi16>
+    return
+  }
 }
 
 // -----
 
-func.func @test_variable_write_type(%arg0: tensor<2x4x8xi16>) -> () {
+module {
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  // expected-error@+1 {{'tosa.variable_write' op require same element type for 'input1' ('i16') and the input tensor ('i8')}}
-  tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xi16>
-  return
-}
-
-// -----
-
-func.func @test_variable_write_shape(%arg0: tensor<1x4x8xi8>) -> () {
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  // expected-error@+1 {{'tosa.variable_write' op require same shapes for 'input1' ('tensor<1x4x8xi8>') and the input tensor ('tensor<2x4x8xi8>')}}
-  tosa.variable_write @stored_var, %arg0 : tensor<1x4x8xi8>
-  return
+  func.func @test_variable_write_shape(%arg0: tensor<1x4x8xi8>) -> () {
+    // expected-error@+1 {{'tosa.variable_write' op require same shapes for 'input1' ('tensor<1x4x8xi8>') and the input tensor ('tensor<2x4x8xi8>')}}
+    tosa.variable_write @stored_var, %arg0 : tensor<1x4x8xi8>
+    return
+  }
 }
 
 // -----
@@ -728,15 +733,6 @@ func.func @test_mul_missing_shift(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x1
   // expected-error@+1 {{'tosa.mul' op expected 3 operands, but found 2}}
   %0 = tosa.mul %arg0, %arg1 : (tensor<13x21x3xi32>, tensor<13x1x3xi32>) -> tensor<13x21x3xi32>
   return %0 : tensor<13x21x3xi32>
-}
-
-// -----
-
-// CHECK-LABEL: test_unsupported_int64_data_type
-func.func @test_unsupported_int64_data_type(%arg0: tensor<1x13x13x5xf32>) -> tensor<1x13x13xi64> {
-  // expected-error@+1 {{'tosa.argmax' op is not profile-aligned: element type 'i64' is not legal}}
-  %0 = tosa.argmax %arg0 {axis = 3 : i32} : (tensor<1x13x13x5xf32>) -> tensor<1x13x13xi64>
-  return %0 : tensor<1x13x13xi64>
 }
 
 // -----
@@ -2043,6 +2039,16 @@ func.func @test_scatter_duplicate_indices(%arg0: tensor<2x52x3xf32>, %arg2: tens
   %indices = "tosa.const"() { values = dense<[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], [1, 2, 3, 4, 5, 6, 7, 8, 9, 3, 11, 12]]> : tensor<2x12xi32> } : () -> tensor<2x12xi32>
   // expected-error@+1 {{'tosa.scatter' op indices values contain duplicates}}
   %0 = tosa.scatter %arg0, %indices, %arg2 : (tensor<2x52x3xf32>, tensor<2x12xi32>, tensor<2x12x3xf32>) -> tensor<2x52x3xf32>
+  return %0 : tensor<2x52x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_scatter_duplicate_indices_int64
+func.func @test_scatter_duplicate_indices_int64(%arg0: tensor<2x52x3xf32>, %arg2: tensor<2x12x3xf32>) -> tensor<2x52x3xf32> {
+  %indices = "tosa.const"() { values = dense<[[1, 2, 3, 4, 5, 6, 7, 8, 9, 3, 11, 12], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]]> : tensor<2x12xi64> } : () -> tensor<2x12xi64>
+  // expected-error@+1 {{'tosa.scatter' op indices values contain duplicates}}
+  %0 = tosa.scatter %arg0, %indices, %arg2 : (tensor<2x52x3xf32>, tensor<2x12xi64>, tensor<2x12x3xf32>) -> tensor<2x52x3xf32>
   return %0 : tensor<2x52x3xf32>
 }
 

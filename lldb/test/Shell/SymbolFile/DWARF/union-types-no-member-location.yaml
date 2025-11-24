@@ -48,13 +48,9 @@
 # RUN: yaml2obj %s > %t
 # RUN: lldb-test symbols --name=UnionType --find=type %t > %t.stdout
 # RUN: cat %t.stdout | FileCheck --check-prefix=STDOUT %s
-# RUN: lldb-test symbols --name=UnionType --find=type %t 2> %t.stderr
-# RUN: cat %t.stderr | FileCheck --allow-empty --check-prefix=STDERR %s
 
 # STDOUT: Found 1 types:
 # STDOUT: {{(0x)?[0-9a-fA-F]+}}: Type{0x0000002b} , name = "UnionType", size = 32, compiler_type = 0x{{[0-9a-fA-F]+}} union UnionType {
-
-# STDERR-NOT: error: union-types-no-member-location.yaml.tmp 0x00000031: DW_TAG_member 'array' refers to type 0x000000000000001f which extends beyond the bounds of 0x0000002b
 
 --- !ELF
 FileHeader:

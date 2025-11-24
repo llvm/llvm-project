@@ -16,8 +16,8 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[V:%.*]], i64 0
 ; VLENUNK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; VLENUNK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; VLENUNK-NEXT:    [[TMP8:%.*]] = mul <vscale x 4 x i64> [[TMP6]], splat (i64 1)
-; VLENUNK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP8]]
+; VLENUNK-NEXT:    [[TMP1:%.*]] = mul <vscale x 4 x i64> [[TMP6]], splat (i64 1)
+; VLENUNK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP1]]
 ; VLENUNK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VLENUNK:       vector.body:
 ; VLENUNK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -40,25 +40,7 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; VLENUNK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VLENUNK:       middle.block:
-; VLENUNK-NEXT:    br label [[FOR_END:%.*]]
-; VLENUNK:       scalar.ph:
-; VLENUNK-NEXT:    br label [[FOR_BODY:%.*]]
-; VLENUNK:       for.body:
-; VLENUNK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; VLENUNK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[IV]], 512
-; VLENUNK-NEXT:    br i1 [[ICMP]], label [[DO_LOAD:%.*]], label [[LATCH]]
-; VLENUNK:       do_load:
-; VLENUNK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; VLENUNK-NEXT:    [[ELEM:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; VLENUNK-NEXT:    br label [[LATCH]]
-; VLENUNK:       latch:
-; VLENUNK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ELEM]], [[DO_LOAD]] ], [ 0, [[FOR_BODY]] ]
-; VLENUNK-NEXT:    [[ADD:%.*]] = add i32 [[PHI]], [[V]]
-; VLENUNK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
-; VLENUNK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
-; VLENUNK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; VLENUNK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; VLENUNK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
+; VLENUNK-NEXT:    br label [[LATCH:%.*]]
 ; VLENUNK:       for.end:
 ; VLENUNK-NEXT:    ret void
 ;

@@ -513,6 +513,9 @@ private:
   bool SelectAnyPredicate(SDValue N);
 
   bool SelectCmpBranchUImm6Operand(SDNode *P, SDValue N, SDValue &Imm);
+
+  template <bool MatchCBB>
+  bool SelectCmpBranchExtOperand(SDValue N, SDValue &Reg, SDValue &ExtType);
 };
 
 class AArch64DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
@@ -2089,7 +2092,8 @@ void AArch64DAGToDAGISel::SelectMultiVectorLutiLane(SDNode *Node,
   if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
     return;
 
-  SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4)};
+  SDValue Chain = Node->getOperand(0);
+  SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4), Chain};
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
 
@@ -2110,14 +2114,15 @@ void AArch64DAGToDAGISel::SelectMultiVectorLutiLane(SDNode *Node,
 void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
                                                 unsigned NumOutVecs,
                                                 unsigned Opc) {
-
   SDValue ZtValue;
-  SmallVector<SDValue, 4> Ops;
   if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
     return;
 
-  Ops.push_back(ZtValue);
-  Ops.push_back(createZMulTuple({Node->getOperand(3), Node->getOperand(4)}));
+  SDValue Chain = Node->getOperand(0);
+  SDValue Ops[] = {ZtValue,
+                   createZMulTuple({Node->getOperand(3), Node->getOperand(4)}),
+                   Chain};
+
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
 
@@ -4398,43 +4403,46 @@ bool AArch64DAGToDAGISel::SelectSVEArithImm(SDValue N, MVT VT, SDValue &Imm) {
 
 bool AArch64DAGToDAGISel::SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm,
                                               bool Invert) {
-  if (auto CNode = dyn_cast<ConstantSDNode>(N)) {
-    uint64_t ImmVal = CNode->getZExtValue();
-    SDLoc DL(N);
+  uint64_t ImmVal;
+  if (auto CI = dyn_cast<ConstantSDNode>(N))
+    ImmVal = CI->getZExtValue();
+  else if (auto CFP = dyn_cast<ConstantFPSDNode>(N))
+    ImmVal = CFP->getValueAPF().bitcastToAPInt().getZExtValue();
+  else
+    return false;
 
-    if (Invert)
-      ImmVal = ~ImmVal;
+  if (Invert)
+    ImmVal = ~ImmVal;
 
-    // Shift mask depending on type size.
-    switch (VT.SimpleTy) {
-    case MVT::i8:
-      ImmVal &= 0xFF;
-      ImmVal |= ImmVal << 8;
-      ImmVal |= ImmVal << 16;
-      ImmVal |= ImmVal << 32;
-      break;
-    case MVT::i16:
-      ImmVal &= 0xFFFF;
-      ImmVal |= ImmVal << 16;
-      ImmVal |= ImmVal << 32;
-      break;
-    case MVT::i32:
-      ImmVal &= 0xFFFFFFFF;
-      ImmVal |= ImmVal << 32;
-      break;
-    case MVT::i64:
-      break;
-    default:
-      llvm_unreachable("Unexpected type");
-    }
-
-    uint64_t encoding;
-    if (AArch64_AM::processLogicalImmediate(ImmVal, 64, encoding)) {
-      Imm = CurDAG->getTargetConstant(encoding, DL, MVT::i64);
-      return true;
-    }
+  // Shift mask depending on type size.
+  switch (VT.SimpleTy) {
+  case MVT::i8:
+    ImmVal &= 0xFF;
+    ImmVal |= ImmVal << 8;
+    ImmVal |= ImmVal << 16;
+    ImmVal |= ImmVal << 32;
+    break;
+  case MVT::i16:
+    ImmVal &= 0xFFFF;
+    ImmVal |= ImmVal << 16;
+    ImmVal |= ImmVal << 32;
+    break;
+  case MVT::i32:
+    ImmVal &= 0xFFFFFFFF;
+    ImmVal |= ImmVal << 32;
+    break;
+  case MVT::i64:
+    break;
+  default:
+    llvm_unreachable("Unexpected type");
   }
-  return false;
+
+  uint64_t encoding;
+  if (!AArch64_AM::processLogicalImmediate(ImmVal, 64, encoding))
+    return false;
+
+  Imm = CurDAG->getTargetConstant(encoding, SDLoc(N), MVT::i64);
+  return true;
 }
 
 // SVE shift intrinsics allow shift amounts larger than the element's bitwidth.
@@ -7495,7 +7503,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     int FI = cast<FrameIndexSDNode>(N)->getIndex();
     // We can only encode VL scaled offsets, so only fold in frame indexes
     // referencing SVE objects.
-    if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+    if (MFI.hasScalableStackID(FI)) {
       Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
       OffImm = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
       return true;
@@ -7541,7 +7549,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     int FI = cast<FrameIndexSDNode>(Base)->getIndex();
     // We can only encode VL scaled offsets, so only fold in frame indexes
     // referencing SVE objects.
-    if (MFI.getStackID(FI) == TargetStackID::ScalableVector)
+    if (MFI.hasScalableStackID(FI))
       Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
   }
 
@@ -7691,6 +7699,34 @@ bool AArch64DAGToDAGISel::SelectCmpBranchUImm6Operand(SDNode *P, SDValue N,
       Imm = CurDAG->getTargetConstant(CN->getZExtValue(), DL, N.getValueType());
       return true;
     }
+  }
+
+  return false;
+}
+
+template <bool MatchCBB>
+bool AArch64DAGToDAGISel::SelectCmpBranchExtOperand(SDValue N, SDValue &Reg,
+                                                    SDValue &ExtType) {
+
+  // Use an invalid shift-extend value to indicate we don't need to extend later
+  if (N.getOpcode() == ISD::AssertZext || N.getOpcode() == ISD::AssertSext) {
+    EVT Ty = cast<VTSDNode>(N.getOperand(1))->getVT();
+    if (Ty != (MatchCBB ? MVT::i8 : MVT::i16))
+      return false;
+    Reg = N.getOperand(0);
+    ExtType = CurDAG->getSignedTargetConstant(AArch64_AM::InvalidShiftExtend,
+                                              SDLoc(N), MVT::i32);
+    return true;
+  }
+
+  AArch64_AM::ShiftExtendType ET = getExtendTypeForNode(N);
+
+  if ((MatchCBB && (ET == AArch64_AM::UXTB || ET == AArch64_AM::SXTB)) ||
+      (!MatchCBB && (ET == AArch64_AM::UXTH || ET == AArch64_AM::SXTH))) {
+    Reg = N.getOperand(0);
+    ExtType =
+        CurDAG->getTargetConstant(getExtendEncoding(ET), SDLoc(N), MVT::i32);
+    return true;
   }
 
   return false;

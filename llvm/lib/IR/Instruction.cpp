@@ -30,6 +30,8 @@
 #include "llvm/Support/Compiler.h"
 using namespace llvm;
 
+namespace llvm {
+
 // FIXME: Flag used for an ablation performance test, Issue #147390. Placing it
 // here because referencing IR should be feasible from anywhere. Will be
 // removed after the ablation test.
@@ -37,6 +39,8 @@ cl::opt<bool> ProfcheckDisableMetadataFixes(
     "profcheck-disable-metadata-fixes", cl::Hidden, cl::init(false),
     cl::desc(
         "Disable metadata propagation fixes discovered through Issue #147390"));
+
+} // end namespace llvm
 
 InsertPosition::InsertPosition(Instruction *InsertBefore)
     : InsertAt(InsertBefore ? InsertBefore->getIterator()

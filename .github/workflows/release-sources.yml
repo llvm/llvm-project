@@ -92,14 +92,14 @@ jobs:
       - name: Attest Build Provenance
         if: github.event_name != 'pull_request'
         id: provenance
-        uses: actions/attest-build-provenance@897ed5eab6ed058a474202017ada7f40bfa52940 # v1.0.0
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
         with:
           subject-path: "*.xz"
       - if: github.event_name != 'pull_request'
         run: |
           mv ${{ steps.provenance.outputs.bundle-path }} .
       - name: Create Tarball Artifacts
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 #v4.3.3
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           path: |
             *.xz

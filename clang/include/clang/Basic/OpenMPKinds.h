@@ -224,6 +224,20 @@ enum OpenMPGrainsizeClauseModifier {
   OMPC_GRAINSIZE_unknown
 };
 
+enum OpenMPDynGroupprivateClauseModifier {
+#define OPENMP_DYN_GROUPPRIVATE_MODIFIER(Name) OMPC_DYN_GROUPPRIVATE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DYN_GROUPPRIVATE_unknown
+};
+
+enum OpenMPDynGroupprivateClauseFallbackModifier {
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown = OMPC_DYN_GROUPPRIVATE_unknown,
+#define OPENMP_DYN_GROUPPRIVATE_FALLBACK_MODIFIER(Name)                        \
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_last
+};
+
 enum OpenMPNumTasksClauseModifier {
 #define OPENMP_NUMTASKS_MODIFIER(Name) OMPC_NUMTASKS_##Name,
 #include "clang/Basic/OpenMPKinds.def"
@@ -248,6 +262,13 @@ enum OpenMPAllocateClauseModifier {
 #define OPENMP_ALLOCATE_MODIFIER(Name) OMPC_ALLOCATE_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_ALLOCATE_unknown
+};
+
+/// OpenMP modifiers for 'threadset' clause.
+enum OpenMPThreadsetKind {
+#define OPENMP_THREADSET_KIND(Name) OMPC_THREADSET_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_THREADSET_unknown
 };
 
 /// Number of allowed allocate-modifiers.
@@ -389,6 +410,13 @@ bool isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind);
 /// \param DKind Specified directive.
 /// \return True iff the directive is a loop transformation.
 bool isOpenMPCanonicalLoopNestTransformationDirective(
+    OpenMPDirectiveKind DKind);
+
+/// Checks if the specified directive is a loop transformation directive that
+/// applies to a canonical loop sequence.
+/// \param DKind Specified directive.
+/// \return True iff the directive is a loop transformation.
+bool isOpenMPCanonicalLoopSequenceTransformationDirective(
     OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is a loop transformation directive.
