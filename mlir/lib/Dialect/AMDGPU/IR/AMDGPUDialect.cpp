@@ -52,16 +52,22 @@ struct AMDGPUInlinerInterface final : DialectInlinerInterface {
 
 static ParseResult
 parseDynamicIndex(OpAsmParser &parser,
-                  std::optional<OpAsmParser::UnresolvedOperand> dynamicSize,
+                  std::optional<OpAsmParser::UnresolvedOperand> &dynamicSize,
                   IntegerAttr &staticSize) {
 
-  int64_t staticVal = 0;
-  if (parser.parseOptionalInteger(staticVal).has_value()) {
+  int64_t staticVal;
+  OptionalParseResult parseResult = parser.parseOptionalInteger(staticVal);
+  if (parseResult.has_value()) {
     staticSize = parser.getBuilder().getIndexAttr(staticVal);
     return success();
   }
-  
-  return parser.parseOperand(dynamicSize.value());
+
+  OpAsmParser::UnresolvedOperand operand = OpAsmParser::UnresolvedOperand{};
+  if (parser.parseOperand(operand)) {
+    dynamicSize = operand;
+    return success();
+  }
+  return failure();
 }
 
 static void printDynamicIndex(OpAsmPrinter &printer, Operation *op,
