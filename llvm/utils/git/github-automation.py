@@ -306,7 +306,7 @@ class CommitRequestGreeter:
             * Top 3 Committers: {get_user_values_str(get_top_values(merged_by))}
             * Top 3 Reviewers: {get_user_values_str(get_top_values(reviewed_by))}
 
-            Reviewers should clearly state their reasoning for accepting or rejecting this request, and finish with a clear statement such as \"I approve of this request\" or \"I do not approve of this request\". Please review the instructions for [obtaining commit access](https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access).
+            Reviewers should clearly state their reasoning for accepting or rejecting this request, and finish with a clear statement such as \"I approve of this request\", \"LGTM\", or \"I do not approve of this request\". Please review the instructions for [obtaining commit access](https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access).
         """
         self.issue.create_comment(textwrap.dedent(comment))
 
