@@ -2359,7 +2359,6 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
 //     construct with multiple associated do-loops are lastprivate.
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     const parser::OpenMPLoopConstruct &x) {
-  unsigned version{context_.langOptions().OpenMPVersion};
   std::int64_t level{GetContext().associatedLoopLevel};
   if (level <= 0) {
     return;
@@ -2418,6 +2417,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
       }
       CheckAssocLoopLevel(level, GetAssociatedClause());
     } else {
+      unsigned version{context_.langOptions().OpenMPVersion};
       context_.Say(GetContext().directiveSource,
           "A DO loop must follow the %s directive"_err_en_US,
           parser::ToUpperCaseLetters(

@@ -245,6 +245,79 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
   }
 }
 
+static bool IsLoopTransforming(llvm::omp::Directive dir) {
+  switch (dir) {
+  // TODO case llvm::omp::Directive::OMPD_flatten:
+  case llvm::omp::Directive::OMPD_fuse:
+  case llvm::omp::Directive::OMPD_interchange:
+  case llvm::omp::Directive::OMPD_nothing:
+  case llvm::omp::Directive::OMPD_reverse:
+  // TODO case llvm::omp::Directive::OMPD_split:
+  case llvm::omp::Directive::OMPD_stripe:
+  case llvm::omp::Directive::OMPD_tile:
+  case llvm::omp::Directive::OMPD_unroll:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void OmpStructureChecker::CheckNestedBlock(const parser::OpenMPLoopConstruct &x,
+    const parser::Block &body, size_t &nestedCount) {
+  for (auto &stmt : body) {
+    if (auto *dir{parser::Unwrap<parser::CompilerDirective>(stmt)}) {
+      context_.Say(dir->source,
+          "Compiler directives are not allowed inside OpenMP loop constructs"_err_en_US);
+    } else if (parser::Unwrap<parser::DoConstruct>(stmt)) {
+      ++nestedCount;
+    } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(stmt)}) {
+      if (!IsLoopTransforming(omp->BeginDir().DirName().v)) {
+        context_.Say(omp->source,
+            "Only loop-transforming OpenMP constructs are allowed inside OpenMP loop constructs"_err_en_US);
+      }
+      ++nestedCount;
+    } else if (auto *block{parser::Unwrap<parser::BlockConstruct>(stmt)}) {
+      CheckNestedBlock(x, std::get<parser::Block>(block->t), nestedCount);
+    } else {
+      parser::CharBlock source{parser::GetSource(stmt).value_or(x.source)};
+      context_.Say(source,
+          "OpenMP loop construct can only contain DO loops or loop-nest-generating OpenMP constructs"_err_en_US);
+    }
+  }
+}
+
+void OmpStructureChecker::CheckNestedConstruct(
+    const parser::OpenMPLoopConstruct &x) {
+  size_t nestedCount{0};
+
+  auto &body{std::get<parser::Block>(x.t)};
+  if (body.empty()) {
+    context_.Say(x.source,
+        "OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct"_err_en_US);
+  } else {
+    CheckNestedBlock(x, body, nestedCount);
+  }
+}
+
+void OmpStructureChecker::CheckFullUnroll(
+    const parser::OpenMPLoopConstruct &x) {
+  // If the nested construct is a full unroll, then this construct is invalid
+  // since it won't contain a loop.
+  if (const parser::OpenMPLoopConstruct *nested{x.GetNestedConstruct()}) {
+    auto &nestedSpec{nested->BeginDir()};
+    if (nestedSpec.DirName().v == llvm::omp::Directive::OMPD_unroll) {
+      bool isPartial{
+          llvm::any_of(nestedSpec.Clauses().v, [](const parser::OmpClause &c) {
+            return c.Id() == llvm::omp::Clause::OMPC_partial;
+          })};
+      if (!isPartial) {
+        context_.Say(x.source,
+            "OpenMP loop construct cannot apply to a fully unrolled loop"_err_en_US);
+      }
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   loopStack_.push_back(&x);
 
@@ -292,6 +365,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
     }
   }
   CheckLoopItrVariableIsInt(x);
+  CheckNestedConstruct(x);
+  CheckFullUnroll(x);
   CheckAssociatedLoopConstraints(x);
   HasInvalidDistributeNesting(x);
   HasInvalidLoopBinding(x);
@@ -475,7 +550,9 @@ void OmpStructureChecker::CheckLooprangeBounds(
 void OmpStructureChecker::CheckNestedFuse(
     const parser::OpenMPLoopConstruct &x) {
   auto &loopConsList{std::get<parser::Block>(x.t)};
-  assert(loopConsList.size() == 1 && "Not Expecting a loop sequence");
+  if (loopConsList.empty()) {
+    return;
+  }
   const auto *ompConstruct{parser::omp::GetOmpLoop(loopConsList.front())};
   if (!ompConstruct) {
     return;
