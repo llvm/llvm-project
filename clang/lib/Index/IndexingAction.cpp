@@ -604,6 +604,7 @@ protected:
   }
 
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
+    llvm::PrettyStackTraceFormat trace("indexing");
     return IndexCtx->indexDeclGroupRef(DG);
   }
 
@@ -612,6 +613,7 @@ protected:
   }
 
   void HandleTopLevelDeclInObjCContainer(DeclGroupRef DG) override {
+    llvm::PrettyStackTraceFormat trace("indexing");
     IndexCtx->indexDeclGroupRef(DG);
   }
 
