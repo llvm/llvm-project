@@ -1507,12 +1507,13 @@ struct VectorExtractStridedSliceDistribution
     auto extractResultType = cast<VectorType>(operand->get().getType());
     auto distributedDims =
         getDistributedDims(extractResultType, distributedType);
-    // Source distributed type must be adjusted for the distributed case.
-    VectorType sourceDistType = extractOp.getSourceVectorType();
-    // Distributed sizes and offsets must be adjusted for distributed case.
-    SmallVector<Attribute> distributedSizes = llvm::map_to_vector(
+    // Collect updated source type, sizes and offsets. They may be adjusted
+    // later if the data is distributed to lanes (as opposed to being owned by
+    // all lanes uniformly).
+    VectorType updatedSourceType = extractOp.getSourceVectorType();
+    SmallVector<Attribute> updatedSizes = llvm::map_to_vector(
         extractOp.getSizes(), [](Attribute attr) { return attr; });
-    SmallVector<Attribute> distributedOffsets = llvm::map_to_vector(
+    SmallVector<Attribute> updatedOffsets = llvm::map_to_vector(
         extractOp.getOffsets(), [](Attribute attr) { return attr; });
     // If the result is distributed, it must be distributed in exactly one
     // dimension. In this case, we adjust the sourceDistType, distributedSizes
@@ -1554,31 +1555,30 @@ struct VectorExtractStridedSliceDistribution
         return rewriter.notifyMatchFailure(
             warpOp, "Offset along distributed dimension "
                     "is not a multiple of subgroup size.");
-      // Do the distribution by yielding the source of the extract op from
-      // the warp op and creating a new extract op outside the warp op.
-      sourceDistType = getDistVecTypeBasedOnLaneLayout(
-                           sourceLayout, extractOp.getSourceVectorType())
-                           .value();
+      updatedSourceType = getDistVecTypeBasedOnLaneLayout(
+                              sourceLayout, extractOp.getSourceVectorType())
+                              .value();
       // Update the distributed sizes to match the distributed type.
-      distributedSizes[distributedDim] = rewriter.getI64IntegerAttr(
+      updatedSizes[distributedDim] = rewriter.getI64IntegerAttr(
           distributedType.getDimSize(distributedDim));
       // Update the distributed offsets to match round robin distribution (i.e.
       // each lane owns data at `subgroupSize` stride given unit lane data).
-      distributedOffsets[distributedDim] =
+      updatedOffsets[distributedDim] =
           rewriter.getI64IntegerAttr(distrDimOffset / subgroupSize);
     }
-    // Create a new warp op that yields the source of the extract op.
+    // Do the distribution by yielding the source of the extract op from
+    // the warp op and creating a new extract op outside the warp op.
     SmallVector<size_t> newRetIndices;
     auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, {extractOp.getSource()}, {sourceDistType},
+        rewriter, warpOp, {extractOp.getSource()}, {updatedSourceType},
         newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
     Value source = newWarpOp.getResult(newRetIndices[0]);
     // Create a new extract op outside the warp op.
     Value newExtractOp = vector::ExtractStridedSliceOp::create(
         rewriter, extractOp.getLoc(), distributedType, source,
-        ArrayAttr::get(rewriter.getContext(), distributedOffsets),
-        ArrayAttr::get(rewriter.getContext(), distributedSizes),
+        ArrayAttr::get(rewriter.getContext(), updatedOffsets),
+        ArrayAttr::get(rewriter.getContext(), updatedSizes),
         extractOp.getStrides());
     rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx), newExtractOp);
     return success();
@@ -1608,7 +1608,7 @@ struct VectorInsertStridedSliceDistribution
     auto insertResultType = cast<VectorType>(operand->get().getType());
     auto destDistributedDims =
         getDistributedDims(insertResultType, distributedType);
-    // Collect updated offsets, source type and dest type. They may be updated
+    // Collect updated offsets, source type and dest type. They may be adjusted
     // later if the data is distributed to lanes (as opposed to being owned by
     // all lanes uniformly).
     SmallVector<Attribute> updatedOffsets = llvm::map_to_vector(
