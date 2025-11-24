@@ -1,0 +1,349 @@
+# GitHub Actions Workflow for DSLLVM Auto-Fuzz
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Version: 1.3.0
+#
+# Place this file at: .github/workflows/dsllvm-fuzz.yml
+
+name: DSLLVM Auto-Fuzz
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      fuzz_timeout:
+        description: 'Fuzz timeout per target (seconds)'
+        required: false
+        default: '3600'
+
+env:
+  DSMIL_MISSION_PROFILE: cyber_defence
+  FUZZ_TIMEOUT: ${{ github.event.inputs.fuzz_timeout || '3600' }}
+  FUZZ_MAX_LEN: 65536
+
+jobs:
+  build-with-fuzz-export:
+    name: Build with Fuzz Export
+    runs-on: ubuntu-latest
+    container:
+      image: dsllvm/toolchain:1.3.0
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build with fuzz export
+        run: |
+          echo "::group::Building with fuzz export"
+          dsmil-clang -fdsmil-fuzz-export \
+            -fdsmil-mission-profile=${DSMIL_MISSION_PROFILE} \
+            -O2 -g src/*.c -o bin/app
+          echo "::endgroup::"
+
+      - name: Check fuzz schema
+        run: |
+          echo "::group::Fuzz targets"
+          for schema in *.dsmilfuzz.json; do
+            echo "=== $schema ==="
+            jq '.fuzz_targets[] | {function, priority, l8_risk_score}' "$schema"
+          done
+          echo "::endgroup::"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-with-fuzz-schema
+          path: |
+            bin/app
+            *.dsmilfuzz.json
+          retention-days: 7
+
+  generate-harnesses:
+    name: Generate Fuzz Harnesses
+    runs-on: ubuntu-latest
+    needs: build-with-fuzz-export
+    container:
+      image: dsllvm/toolchain:1.3.0
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: app-with-fuzz-schema
+
+      - name: Generate harnesses
+        run: |
+          echo "::group::Generating harnesses"
+          mkdir -p fuzz_harnesses
+          for schema in *.dsmilfuzz.json; do
+            echo "Generating from $schema"
+            dsmil-fuzz-gen "$schema" --fuzzer=libFuzzer -o fuzz_harnesses/
+          done
+          ls -lh fuzz_harnesses/
+          echo "::endgroup::"
+
+      - name: Compile harnesses
+        run: |
+          echo "::group::Compiling harnesses"
+          cd fuzz_harnesses
+          for harness in *_fuzz.cpp; do
+            echo "Compiling $harness"
+            clang++ -fsanitize=fuzzer,address,undefined \
+              -g -O1 "$harness" ../bin/app -o "${harness%.cpp}"
+          done
+          ls -lh
+          echo "::endgroup::"
+
+      - name: Upload harnesses
+        uses: actions/upload-artifact@v3
+        with:
+          name: fuzz-harnesses
+          path: fuzz_harnesses/
+          retention-days: 7
+
+  fuzz-test-quick:
+    name: Quick Fuzz Test
+    runs-on: ubuntu-latest
+    needs: generate-harnesses
+    container:
+      image: dsllvm/toolchain:1.3.0
+    strategy:
+      fail-fast: false
+      matrix:
+        # Run multiple fuzz jobs in parallel
+        shard: [1, 2, 3, 4]
+
+    steps:
+      - name: Download harnesses
+        uses: actions/download-artifact@v3
+        with:
+          name: fuzz-harnesses
+          path: fuzz_harnesses/
+
+      - name: Run fuzzing
+        run: |
+          cd fuzz_harnesses
+          chmod +x *_fuzz
+          mkdir -p ../crashes
+
+          # Distribute targets across shards
+          targets=($(ls -1 *_fuzz))
+          shard_size=$(( (${#targets[@]} + ${{ matrix.shard }} - 1) / ${{ matrix.shard }} ))
+          start_idx=$(( (${{ matrix.shard }} - 1) * shard_size ))
+          end_idx=$(( start_idx + shard_size ))
+
+          for fuzz_bin in "${targets[@]:$start_idx:$shard_size}"; do
+            echo "::group::Fuzzing $fuzz_bin"
+            timeout ${FUZZ_TIMEOUT} "./$fuzz_bin" \
+              -max_total_time=${FUZZ_TIMEOUT} \
+              -max_len=${FUZZ_MAX_LEN} \
+              -print_final_stats=1 \
+              -artifact_prefix=../crashes/ || true
+            echo "::endgroup::"
+          done
+
+      - name: Upload crashes
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: crashes-shard-${{ matrix.shard }}
+          path: crashes/
+          retention-days: 30
+
+  fuzz-test-high-priority:
+    name: Extended Fuzz (High Priority)
+    runs-on: ubuntu-latest
+    needs: [build-with-fuzz-export, generate-harnesses]
+    if: github.event_name == 'schedule' || github.ref == 'refs/heads/main'
+    container:
+      image: dsllvm/toolchain:1.3.0
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: app-with-fuzz-schema
+
+      - name: Download harnesses
+        uses: actions/download-artifact@v3
+        with:
+          name: fuzz-harnesses
+          path: fuzz_harnesses/
+
+      - name: Extract high-priority targets
+        run: |
+          jq -r '.fuzz_targets[] | select(.priority == "high") | .function' \
+            *.dsmilfuzz.json > high_priority_targets.txt
+          echo "High-priority targets:"
+          cat high_priority_targets.txt
+
+      - name: Run extended fuzzing
+        run: |
+          cd fuzz_harnesses
+          chmod +x *_fuzz
+          mkdir -p ../crashes
+
+          while read -r target; do
+            fuzz_bin="${target}_fuzz"
+            if [ -x "$fuzz_bin" ]; then
+              echo "::group::Extended fuzzing: $fuzz_bin"
+              timeout $((FUZZ_TIMEOUT * 3)) "./$fuzz_bin" \
+                -max_total_time=$((FUZZ_TIMEOUT * 3)) \
+                -max_len=${FUZZ_MAX_LEN} \
+                -print_final_stats=1 \
+                -artifact_prefix=../crashes/ || true
+              echo "::endgroup::"
+            fi
+          done < ../high_priority_targets.txt
+
+      - name: Upload crashes
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: crashes-high-priority
+          path: crashes/
+          retention-days: 90
+
+  report:
+    name: Generate Report
+    runs-on: ubuntu-latest
+    needs: [fuzz-test-quick]
+    if: always()
+
+    steps:
+      - name: Download schema
+        uses: actions/download-artifact@v3
+        with:
+          name: app-with-fuzz-schema
+
+      - name: Download all crashes
+        uses: actions/download-artifact@v3
+        with:
+          path: all_crashes/
+
+      - name: Generate report
+        run: |
+          cat > fuzz_report.md <<EOF
+          # DSLLVM Fuzz Test Report
+
+          **Date:** $(date -Iseconds)
+          **Branch:** ${GITHUB_REF_NAME}
+          **Commit:** ${GITHUB_SHA:0:8}
+          **Mission Profile:** ${DSMIL_MISSION_PROFILE}
+          **Workflow:** ${GITHUB_RUN_ID}
+
+          ## Fuzz Targets
+
+          EOF
+
+          jq -r '.fuzz_targets[] | "- **\(.function)**: \(.priority) priority (risk: \(.l8_risk_score))"' \
+            *.dsmilfuzz.json >> fuzz_report.md
+
+          cat >> fuzz_report.md <<EOF
+
+          ## Results
+
+          - **Total Crashes:** $(find all_crashes -type f | wc -l)
+          - **Fuzz Timeout:** ${FUZZ_TIMEOUT}s per target
+
+          EOF
+
+          if [ "$(find all_crashes -type f | wc -l)" -gt 0 ]; then
+            echo "## Crashes Found" >> fuzz_report.md
+            echo "" >> fuzz_report.md
+            echo '```' >> fuzz_report.md
+            find all_crashes -type f | head -20 >> fuzz_report.md
+            echo '```' >> fuzz_report.md
+          else
+            echo "✅ No crashes found!" >> fuzz_report.md
+          fi
+
+          cat fuzz_report.md
+
+      - name: Comment PR with report
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('fuzz_report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: fuzz-report
+          path: fuzz_report.md
+          retention-days: 30
+
+      - name: Fail if crashes found
+        run: |
+          crash_count=$(find all_crashes -type f 2>/dev/null | wc -l)
+          if [ "$crash_count" -gt 0 ]; then
+            echo "::error::Found $crash_count crash(es)!"
+            exit 1
+          fi
+
+  corpus-management:
+    name: Manage Corpus
+    runs-on: ubuntu-latest
+    needs: fuzz-test-quick
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Download harnesses
+        uses: actions/download-artifact@v3
+        with:
+          name: fuzz-harnesses
+          path: fuzz_harnesses/
+
+      - name: Restore corpus cache
+        uses: actions/cache@v3
+        with:
+          path: fuzz_corpus/
+          key: fuzz-corpus-${{ github.sha }}
+          restore-keys: |
+            fuzz-corpus-
+
+      - name: Merge corpus
+        run: |
+          cd fuzz_harnesses
+          chmod +x *_fuzz
+          for fuzz_bin in *_fuzz; do
+            mkdir -p "../fuzz_corpus/$fuzz_bin"
+            echo "Merging corpus for $fuzz_bin"
+            "./$fuzz_bin" -merge=1 \
+              "../fuzz_corpus/$fuzz_bin" \
+              . || true
+          done
+
+      - name: Minimize corpus
+        run: |
+          cd fuzz_harnesses
+          for fuzz_bin in *_fuzz; do
+            corpus_dir="../fuzz_corpus/$fuzz_bin"
+            if [ -d "$corpus_dir" ]; then
+              echo "Minimizing corpus for $fuzz_bin"
+              "./$fuzz_bin" -merge=1 -minimize_crash=1 \
+                "$corpus_dir" "$corpus_dir" || true
+            fi
+          done
+
+      - name: Save corpus
+        uses: actions/cache@v3
+        with:
+          path: fuzz_corpus/
+          key: fuzz-corpus-${{ github.sha }}

@@ -23,6 +23,31 @@ Recommends execution target (CPU/NPU/GPU) and memory tier based on DSMIL metadat
 
 ### Verification Passes
 
+#### `DsmilTelemetryCheckPass.cpp` (NEW v1.3)
+Enforces telemetry requirements for safety-critical and mission-critical functions. Prevents "dark functions" with zero forensic trail by requiring telemetry calls.
+
+**Enforcement Levels**:
+- `dsmil_safety_critical`: Requires at least one telemetry call (counter or event)
+- `dsmil_mission_critical`: Requires both counter AND event telemetry, plus error path coverage
+
+**CLI Flags**:
+- `-mllvm -dsmil-telemetry-check-mode=<enforce|warn|disabled>` - Enforcement mode (default: enforce)
+- `-mllvm -dsmil-telemetry-check-callgraph` - Check entire call graph (default: true)
+
+**Validated Telemetry Functions**:
+- Counters: `dsmil_counter_inc`, `dsmil_counter_add`
+- Events: `dsmil_event_log*`
+- Performance: `dsmil_perf_*`
+- Forensics: `dsmil_forensic_*`
+
+**Example Violations**:
+```
+ERROR: Function 'ml_kem_encapsulate' is marked dsmil_safety_critical
+       but has no telemetry calls
+```
+
+**Integration**: Works with mission profiles to enforce telemetry_level requirements
+
 #### `DsmilMissionPolicyPass.cpp` (NEW v1.3)
 Enforces mission profile constraints at compile time. Mission profiles define operational context (border_ops, cyber_defence, exercise_only, lab_research) and control compilation behavior, security policies, and runtime constraints.
 
@@ -212,9 +237,10 @@ Each pass supports configuration via `-mllvm` flags:
 - [ ] `DsmilSandboxWrapPass.cpp` - Planned
 - [ ] `DsmilProvenancePass.cpp` - Planned
 
-**Mission Profile Passes** (v1.3):
+**Mission Profile & Phase 1 Passes** (v1.3):
 - [x] `DsmilMissionPolicyPass.cpp` - Implemented ✓
 - [x] `DsmilFuzzExportPass.cpp` - Implemented ✓
+- [x] `DsmilTelemetryCheckPass.cpp` - Implemented ✓
 
 **AI Integration Passes** (v1.1):
 - [ ] `DsmilAIAdvisorAnnotatePass.cpp` - Planned (Phase 4)

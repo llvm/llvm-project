@@ -1,0 +1,252 @@
+# GitLab CI Template for DSLLVM Auto-Fuzz
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Version: 1.3.0
+
+stages:
+  - build
+  - fuzz_export
+  - fuzz_generate
+  - fuzz_test
+  - report
+
+variables:
+  DSMIL_MISSION_PROFILE: "cyber_defence"
+  FUZZ_TIMEOUT: "3600"  # 1 hour
+  FUZZ_MAX_LEN: "65536"
+
+# Build with fuzz export enabled
+build:fuzz:
+  stage: build
+  image: dsllvm/toolchain:1.3.0
+  script:
+    - echo "[CI] Building with fuzz export enabled"
+    - dsmil-clang -fdsmil-fuzz-export
+        -fdsmil-mission-profile=${DSMIL_MISSION_PROFILE}
+        -O2 -g src/*.c -o bin/app
+    - ls -lh bin/app
+    - file bin/app
+  artifacts:
+    paths:
+      - bin/app
+      - "*.dsmilfuzz.json"
+    expire_in: 1 day
+
+# Analyze fuzz targets
+fuzz:analyze:
+  stage: fuzz_export
+  image: dsllvm/toolchain:1.3.0
+  dependencies:
+    - build:fuzz
+  script:
+    - echo "[CI] Analyzing fuzz targets"
+    - |
+      for schema in *.dsmilfuzz.json; do
+        echo "=== $schema ==="
+        jq '.fuzz_targets[] | {function, priority, l8_risk_score}' "$schema"
+      done
+    - echo "[CI] Total fuzz targets:"
+    - jq '.fuzz_targets | length' *.dsmilfuzz.json
+  artifacts:
+    reports:
+      junit: fuzz-analysis-report.xml
+
+# Generate fuzz harnesses
+fuzz:generate:
+  stage: fuzz_generate
+  image: dsllvm/toolchain:1.3.0
+  dependencies:
+    - build:fuzz
+  script:
+    - echo "[CI] Generating fuzz harnesses"
+    - mkdir -p fuzz_harnesses
+    - |
+      for schema in *.dsmilfuzz.json; do
+        echo "Generating harnesses from $schema"
+        dsmil-fuzz-gen "$schema" --fuzzer=libFuzzer -o fuzz_harnesses/
+      done
+    - ls -lh fuzz_harnesses/
+    - echo "[CI] Compiling fuzz harnesses"
+    - |
+      cd fuzz_harnesses
+      for harness in *_fuzz.cpp; do
+        echo "Compiling $harness"
+        clang++ -fsanitize=fuzzer,address,undefined
+          -g -O1 "$harness" ../bin/app -o "${harness%.cpp}"
+      done
+    - ls -lh
+  artifacts:
+    paths:
+      - fuzz_harnesses/
+    expire_in: 1 day
+
+# Run fuzzing (short run for CI)
+fuzz:test:quick:
+  stage: fuzz_test
+  image: dsllvm/toolchain:1.3.0
+  dependencies:
+    - fuzz:generate
+  script:
+    - echo "[CI] Running quick fuzz tests (${FUZZ_TIMEOUT}s per target)"
+    - mkdir -p fuzz_results crashes
+    - |
+      cd fuzz_harnesses
+      for fuzz_bin in *_fuzz; do
+        [ -x "$fuzz_bin" ] || continue
+        echo "=== Running $fuzz_bin ==="
+        timeout ${FUZZ_TIMEOUT} "./$fuzz_bin"
+          -max_total_time=${FUZZ_TIMEOUT}
+          -max_len=${FUZZ_MAX_LEN}
+          -print_final_stats=1
+          -artifact_prefix=../crashes/ || true
+      done
+    - echo "[CI] Fuzz test complete"
+    - ls -lh ../crashes/ || echo "No crashes found"
+  artifacts:
+    when: always
+    paths:
+      - crashes/
+      - fuzz_results/
+    expire_in: 7 days
+  allow_failure: true
+
+# Prioritize high-risk targets
+fuzz:test:high_priority:
+  stage: fuzz_test
+  image: dsllvm/toolchain:1.3.0
+  dependencies:
+    - build:fuzz
+    - fuzz:generate
+  script:
+    - echo "[CI] Running extended fuzzing on high-priority targets"
+    - |
+      # Extract high-priority targets (risk >= 0.7)
+      jq -r '.fuzz_targets[] | select(.priority == "high") | .function'
+        *.dsmilfuzz.json > high_priority_targets.txt
+    - |
+      cd fuzz_harnesses
+      while read -r target; do
+        fuzz_bin="${target}_fuzz"
+        if [ -x "$fuzz_bin" ]; then
+          echo "=== Extended fuzzing: $fuzz_bin ==="
+          timeout $((FUZZ_TIMEOUT * 3)) "./$fuzz_bin"
+            -max_total_time=$((FUZZ_TIMEOUT * 3))
+            -max_len=${FUZZ_MAX_LEN}
+            -print_final_stats=1
+            -artifact_prefix=../crashes/ || true
+        fi
+      done < ../high_priority_targets.txt
+  artifacts:
+    when: always
+    paths:
+      - crashes/
+    expire_in: 30 days
+  allow_failure: true
+  only:
+    - main
+    - develop
+
+# Generate fuzz report
+report:fuzz:
+  stage: report
+  image: dsllvm/toolchain:1.3.0
+  dependencies:
+    - build:fuzz
+    - fuzz:test:quick
+  script:
+    - echo "[CI] Generating fuzz report"
+    - |
+      cat > fuzz_report.md <<EOF
+      # DSLLVM Fuzz Test Report
+
+      **Date:** $(date -Iseconds)
+      **Branch:** ${CI_COMMIT_REF_NAME}
+      **Commit:** ${CI_COMMIT_SHORT_SHA}
+      **Mission Profile:** ${DSMIL_MISSION_PROFILE}
+
+      ## Fuzz Targets
+
+      EOF
+    - jq -r '.fuzz_targets[] | "- **\(.function)**: \(.priority) priority (risk: \(.l8_risk_score))"'
+        *.dsmilfuzz.json >> fuzz_report.md
+    - |
+      cat >> fuzz_report.md <<EOF
+
+      ## Results
+
+      - **Crashes Found:** $(ls -1 crashes/ 2>/dev/null | wc -l)
+      - **Fuzz Timeout:** ${FUZZ_TIMEOUT}s per target
+
+      EOF
+    - |
+      if [ -d crashes ] && [ "$(ls -A crashes)" ]; then
+        echo "## Crashes" >> fuzz_report.md
+        echo "" >> fuzz_report.md
+        ls -1 crashes/ | head -20 >> fuzz_report.md
+      else
+        echo "✅ No crashes found!" >> fuzz_report.md
+      fi
+    - cat fuzz_report.md
+  artifacts:
+    reports:
+      markdown: fuzz_report.md
+    paths:
+      - fuzz_report.md
+    expire_in: 30 days
+
+# Nightly extended fuzzing (optional)
+fuzz:nightly:
+  stage: fuzz_test
+  image: dsllvm/toolchain:1.3.0
+  dependencies:
+    - fuzz:generate
+  script:
+    - echo "[CI] Running nightly extended fuzzing (8 hours)"
+    - mkdir -p fuzz_corpus crashes
+    - |
+      cd fuzz_harnesses
+      for fuzz_bin in *_fuzz; do
+        [ -x "$fuzz_bin" ] || continue
+        echo "=== Nightly fuzzing: $fuzz_bin ==="
+        mkdir -p "../fuzz_corpus/$fuzz_bin"
+        timeout 28800 "./$fuzz_bin"
+          "../fuzz_corpus/$fuzz_bin"
+          -max_total_time=28800
+          -max_len=${FUZZ_MAX_LEN}
+          -print_final_stats=1
+          -artifact_prefix=../crashes/ || true
+      done
+  artifacts:
+    when: always
+    paths:
+      - crashes/
+      - fuzz_corpus/
+    expire_in: 90 days
+  only:
+    - schedules
+  allow_failure: true
+
+# Regression test with existing corpus
+fuzz:regression:
+  stage: fuzz_test
+  image: dsllvm/toolchain:1.3.0
+  dependencies:
+    - fuzz:generate
+  script:
+    - echo "[CI] Running regression tests with corpus"
+    - |
+      if [ -d fuzz_corpus ]; then
+        cd fuzz_harnesses
+        for fuzz_bin in *_fuzz; do
+          [ -x "$fuzz_bin" ] || continue
+          corpus_dir="../fuzz_corpus/$fuzz_bin"
+          if [ -d "$corpus_dir" ] && [ "$(ls -A $corpus_dir)" ]; then
+            echo "=== Regression: $fuzz_bin ==="
+            "./$fuzz_bin" "$corpus_dir" -runs=0 || exit 1
+          fi
+        done
+      else
+        echo "No corpus found, skipping regression"
+      fi
+  only:
+    - merge_requests
+    - main

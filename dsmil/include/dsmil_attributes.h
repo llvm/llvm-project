@@ -301,6 +301,115 @@
 /** @} */
 
 /**
+ * @defgroup DSMIL_TELEMETRY Telemetry Enforcement Attributes (v1.3)
+ * @{
+ */
+
+/**
+ * @brief Mark function as safety-critical requiring telemetry
+ * @param component Optional component identifier for telemetry routing
+ *
+ * Safety-critical functions must emit telemetry events to prevent "dark
+ * functions" with zero forensic trail. The compiler enforces that at least
+ * one telemetry call exists in the function body or its callees.
+ *
+ * Telemetry requirements:
+ * - At least one dsmil_counter_inc() or dsmil_event_log() call
+ * - No dead code paths without telemetry
+ * - Integrated with Layer 5 Performance AI and Layer 62 Forensics
+ *
+ * Example:
+ * @code
+ * DSMIL_SAFETY_CRITICAL("crypto")
+ * DSMIL_LAYER(3)
+ * DSMIL_DEVICE(30)
+ * void ml_kem_1024_encapsulate(const uint8_t *pk, uint8_t *ct, uint8_t *ss) {
+ *     dsmil_counter_inc("ml_kem_encapsulate_calls");  // Satisfies requirement
+ *     // ... crypto operations ...
+ *     dsmil_event_log("ml_kem_success");
+ * }
+ * @endcode
+ *
+ * @note Compile-time error if no telemetry calls found
+ * @note Use with mission profiles for telemetry level enforcement
+ */
+#define DSMIL_SAFETY_CRITICAL(component) \
+    __attribute__((dsmil_safety_critical(component)))
+
+/**
+ * @brief Simpler safety-critical annotation without component
+ */
+#define DSMIL_SAFETY_CRITICAL_SIMPLE \
+    __attribute__((dsmil_safety_critical))
+
+/**
+ * @brief Mark function as mission-critical requiring full telemetry
+ *
+ * Mission-critical functions require comprehensive telemetry including:
+ * - Entry/exit logging
+ * - Performance metrics
+ * - Error conditions
+ * - Security events
+ *
+ * Stricter than DSMIL_SAFETY_CRITICAL:
+ * - Requires both counter and event telemetry
+ * - All error paths must be logged
+ * - Performance metrics required for optimization
+ *
+ * Example:
+ * @code
+ * DSMIL_MISSION_CRITICAL
+ * DSMIL_LAYER(8)
+ * DSMIL_DEVICE(80)
+ * int detect_threat(const uint8_t *packet, size_t len, float *score) {
+ *     dsmil_counter_inc("threat_detection_calls");
+ *     dsmil_event_log("threat_detection_start");
+ *
+ *     int result = analyze_packet(packet, len, score);
+ *
+ *     if (result < 0) {
+ *         dsmil_event_log("threat_detection_error");
+ *         dsmil_counter_inc("threat_detection_errors");
+ *         return result;
+ *     }
+ *
+ *     if (*score > 0.8) {
+ *         dsmil_event_log("high_threat_detected");
+ *         dsmil_counter_inc("high_threats");
+ *     }
+ *
+ *     dsmil_event_log("threat_detection_complete");
+ *     return 0;
+ * }
+ * @endcode
+ *
+ * @note Enforced by mission profiles with telemetry_level >= "full"
+ * @note Violations are compile-time errors
+ */
+#define DSMIL_MISSION_CRITICAL \
+    __attribute__((dsmil_mission_critical))
+
+/**
+ * @brief Mark function as telemetry provider (exempted from checks)
+ *
+ * Functions that implement telemetry infrastructure itself should be
+ * marked to avoid circular enforcement.
+ *
+ * Example:
+ * @code
+ * DSMIL_TELEMETRY
+ * void dsmil_counter_inc(const char *counter_name) {
+ *     // Telemetry implementation
+ *     // No telemetry requirement on this function
+ * }
+ * @endcode
+ */
+#define DSMIL_TELEMETRY \
+    __attribute__((dsmil_telemetry))
+
+/** @} */
+
+/**
  * @defgroup DSMIL_MEMORY Memory and Performance Attributes
  * @{
  */
