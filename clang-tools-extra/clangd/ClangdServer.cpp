@@ -208,7 +208,7 @@ ClangdServer::Options::operator TUScheduler::Options() const {
   Opts.UpdateDebounce = UpdateDebounce;
   Opts.ContextProvider = ContextProvider;
   Opts.PreambleThrottler = PreambleThrottler;
-  Opts.FallbackProjectRoot = FallbackProjectRoot;
+  Opts.StrongWorkspaceMode = StrongWorkspaceMode;
   return Opts;
 }
 

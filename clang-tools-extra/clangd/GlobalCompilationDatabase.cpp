@@ -55,7 +55,7 @@ void actOnAllParentDirectories(PathRef FileName,
 } // namespace
 
 tooling::CompileCommand
-GlobalCompilationDatabase::getFallbackCommand(PathRef File, std::optional<std::string> ProjectRoot) const {
+GlobalCompilationDatabase::getFallbackCommand(PathRef File, bool StrongWorkspaceMode) const {
   std::vector<std::string> Argv = {"clang"};
   // Clang treats .h files as C by default and files without extension as linker
   // input, resulting in unhelpful diagnostics.
@@ -64,7 +64,12 @@ GlobalCompilationDatabase::getFallbackCommand(PathRef File, std::optional<std::s
   if (FileExtension.empty() || FileExtension == ".h")
     Argv.push_back("-xobjective-c++-header");
   Argv.push_back(std::string(File));
-  tooling::CompileCommand Cmd(ProjectRoot ? *ProjectRoot : llvm::sys::path::parent_path(File),
+  SmallString<256> WorkingDir;
+  if (StrongWorkspaceMode)
+    llvm::sys::fs::current_path(WorkingDir);
+  else
+    WorkingDir = llvm::sys::path::parent_path(File);
+  tooling::CompileCommand Cmd(WorkingDir,
                               llvm::sys::path::filename(File), std::move(Argv),
                               /*Output=*/"");
   Cmd.Heuristic = "clangd fallback";
@@ -797,8 +802,8 @@ OverlayCDB::getCompileCommand(PathRef File) const {
   return Cmd;
 }
 
-tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File, std::optional<std::string> ProjectRoot) const {
-  auto Cmd = DelegatingCDB::getFallbackCommand(File, ProjectRoot);
+tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File, bool StrongWorkspaceMode) const {
+  auto Cmd = DelegatingCDB::getFallbackCommand(File, StrongWorkspaceMode);
   std::lock_guard<std::mutex> Lock(Mutex);
   Cmd.CommandLine.insert(Cmd.CommandLine.end(), FallbackFlags.begin(),
                          FallbackFlags.end());
@@ -877,10 +882,10 @@ DelegatingCDB::getProjectModules(PathRef File) const {
   return Base->getProjectModules(File);
 }
 
-tooling::CompileCommand DelegatingCDB::getFallbackCommand(PathRef File, std::optional<std::string> ProjectRoot) const {
+tooling::CompileCommand DelegatingCDB::getFallbackCommand(PathRef File, bool StrongWorkspaceMode) const {
   if (!Base)
-    return GlobalCompilationDatabase::getFallbackCommand(File, ProjectRoot);
-  return Base->getFallbackCommand(File, ProjectRoot);
+    return GlobalCompilationDatabase::getFallbackCommand(File, StrongWorkspaceMode);
+  return Base->getFallbackCommand(File, StrongWorkspaceMode);
 }
 
 bool DelegatingCDB::blockUntilIdle(Deadline D) const {

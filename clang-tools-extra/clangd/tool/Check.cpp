@@ -187,7 +187,7 @@ public:
           Cmd.Heuristic.empty() ? "from CDB" : Cmd.Heuristic, Cmd.Directory,
           printArgv(Cmd.CommandLine));
     } else {
-      Cmd = CDB->getFallbackCommand(File, Opts.FallbackProjectRoot);
+      Cmd = CDB->getFallbackCommand(File, Opts.StrongWorkspaceMode);
       log("Generic fallback command is: [{0}] {1}", Cmd.Directory,
           printArgv(Cmd.CommandLine));
     }

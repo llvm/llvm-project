@@ -237,9 +237,8 @@ public:
     /// If the path is empty, context sholud be "generic".
     std::function<Context(PathRef)> ContextProvider;
 
-    /// If set, fallback command uses this path as its current working directory
-    /// instead of the file's parent path.
-    std::optional<std::string> FallbackProjectRoot;
+    /// Sets an alterante mode of operation. See ClangdServer::Options::StrongWorkspaceMode.
+    bool StrongWorkspaceMode;
   };
 
   TUScheduler(const GlobalCompilationDatabase &CDB, const Options &Opts,

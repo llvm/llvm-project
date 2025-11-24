@@ -500,12 +500,13 @@ opt<bool> EnableConfig{
     init(true),
 };
 
-opt<Path> ProjectRoot{
-    "project-root",
-    cat(Misc),
-    desc("Path to use as the current working directory for fallback commands."),
-    init(""),
-    ValueOptional,
+opt<bool> StrongWorkspaceMode{
+    "strong-workspace-mode",
+    cat(Features),
+    desc(
+        "An alternate mode of operation for clangd, operating more closely to the workspace.\n"
+        "When enabled, fallback commands use the workspace directory as their working directory instead of the parent folder."),
+    init(false),
 };
 
 opt<bool> UseDirtyHeaders{"use-dirty-headers", cat(Misc),
@@ -915,8 +916,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
-  if (!ProjectRoot.empty())
-    Opts.FallbackProjectRoot = ProjectRoot;
+  Opts.StrongWorkspaceMode = StrongWorkspaceMode;
   Opts.BuildDynamicSymbolIndex = true;
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {

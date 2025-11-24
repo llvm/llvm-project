@@ -723,7 +723,7 @@ private:
   const GlobalCompilationDatabase &CDB;
   /// Callback invoked when preamble or main file AST is built.
   ParsingCallbacks &Callbacks;
-  std::optional<std::string> FallbackProjectRoot;
+  bool StrongWorkspaceMode;
 
   Semaphore &Barrier;
   /// Whether the 'onMainAST' callback ran for the current FileInputs.
@@ -841,14 +841,14 @@ ASTWorker::ASTWorker(PathRef FileName, const GlobalCompilationDatabase &CDB,
     : IdleASTs(LRUCache), HeaderIncluders(HeaderIncluders), RunSync(RunSync),
       UpdateDebounce(Opts.UpdateDebounce), FileName(FileName),
       ContextProvider(Opts.ContextProvider), CDB(CDB), Callbacks(Callbacks),
-      FallbackProjectRoot(Opts.FallbackProjectRoot),
+      StrongWorkspaceMode(Opts.StrongWorkspaceMode),
       Barrier(Barrier), Done(false), Status(FileName, Callbacks),
       PreamblePeer(FileName, Callbacks, Opts.StorePreamblesInMemory, RunSync,
                    Opts.PreambleThrottler, Status, HeaderIncluders, *this) {
   // Set a fallback command because compile command can be accessed before
   // `Inputs` is initialized. Other fields are only used after initialization
   // from client inputs.
-  FileInputs.CompileCommand = CDB.getFallbackCommand(FileName, FallbackProjectRoot);
+  FileInputs.CompileCommand = CDB.getFallbackCommand(FileName, StrongWorkspaceMode);
 }
 
 ASTWorker::~ASTWorker() {
@@ -890,7 +890,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
     if (Cmd)
       Inputs.CompileCommand = std::move(*Cmd);
     else
-      Inputs.CompileCommand = CDB.getFallbackCommand(FileName, FallbackProjectRoot);
+      Inputs.CompileCommand = CDB.getFallbackCommand(FileName, StrongWorkspaceMode);
 
     bool InputsAreTheSame =
         std::tie(FileInputs.CompileCommand, FileInputs.Contents) ==
