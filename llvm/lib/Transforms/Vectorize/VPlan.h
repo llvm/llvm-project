@@ -1134,7 +1134,7 @@ private:
   OpcodeTy Opcode;
 
   /// An optional name that can be used for the generated IR instruction.
-  const std::string Name;
+  std::string Name;
 
   /// Returns true if we can generate a scalar for the first lane only if
   /// needed.
@@ -1224,6 +1224,9 @@ public:
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
+
+  /// Set the symbolic name for the VPInstruction.
+  void setName(StringRef NewName) { Name = NewName.str(); }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2281,19 +2284,15 @@ protected:
 };
 
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe {
-  bool IsScalarAfterVectorization;
-
 public:
   /// Create a new VPWidenPointerInductionRecipe for \p Phi with start value \p
   /// Start and the number of elements unrolled \p NumUnrolledElems, typically
   /// VF*UF.
   VPWidenPointerInductionRecipe(PHINode *Phi, VPValue *Start, VPValue *Step,
                                 VPValue *NumUnrolledElems,
-                                const InductionDescriptor &IndDesc,
-                                bool IsScalarAfterVectorization, DebugLoc DL)
+                                const InductionDescriptor &IndDesc, DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenPointerInductionSC, Phi, Start,
-                               Step, IndDesc, DL),
-        IsScalarAfterVectorization(IsScalarAfterVectorization) {
+                               Step, IndDesc, DL) {
     addOperand(NumUnrolledElems);
   }
 
@@ -2302,8 +2301,7 @@ public:
   VPWidenPointerInductionRecipe *clone() override {
     return new VPWidenPointerInductionRecipe(
         cast<PHINode>(getUnderlyingInstr()), getOperand(0), getOperand(1),
-        getOperand(2), getInductionDescriptor(), IsScalarAfterVectorization,
-        getDebugLoc());
+        getOperand(2), getInductionDescriptor(), getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenPointerInductionSC)

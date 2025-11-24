@@ -1461,7 +1461,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
 // Codegen patterns
 //===----------------------------------------------------------------------===//
 
-def riscv_absw : RVSDNode<"ABSW", SDTIntUnaryOp>;
+def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
 
 def SDT_RISCVPASUB : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                           SDTCisInt<0>,
