@@ -62,10 +62,10 @@ static cl::opt<std::string>
                cl::desc("Path of profiled executable binary."),
                cl::cat(ProfGenCategory));
 
-static cl::opt<uint32_t>
-    ProcessId("pid", cl::value_desc("process Id"), cl::init(0),
-              cl::desc("Process Id for the profiled executable binary."),
-              cl::cat(ProfGenCategory));
+static cl::list<int32_t> ProcessIds(
+    "pid", cl::CommaSeparated, cl::value_desc("process ID 1,process ID 2,..."),
+    cl::desc("Comma-separated process IDs for the profiled executable binary."),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<std::string> DebugBinPath(
     "debug-binary", cl::value_desc("debug-binary"),
@@ -177,9 +177,12 @@ int main(int argc, const char *argv[]) {
     Generator->generateProfile();
     Generator->write();
   } else {
-    std::optional<uint32_t> PIDFilter;
-    if (ProcessId.getNumOccurrences())
-      PIDFilter = ProcessId;
+    SmallSet<int32_t, 16> PIDFilter;
+
+    for (auto &PID : ProcessIds) {
+      PIDFilter.insert(PID);
+    }
+
     PerfInputFile PerfFile = getPerfInputFile();
     std::unique_ptr<PerfReaderBase> Reader =
         PerfReaderBase::create(Binary.get(), PerfFile, PIDFilter);
