@@ -113,3 +113,47 @@ entry:
   %sel = select i1 %cmp, double %c, double %d
   ret double %sel
 }
+
+; -----------------------------------------------------------------------------
+; half select with  i1 condition (cond ? a : b), Zfinx
+; -----------------------------------------------------------------------------
+
+define dso_local noundef half @select_half_i1(i1 %cond, half %a, half %b) nounwind {
+; RV64ZFINX_ZICOND-LABEL: select_half_i1:
+; RV64ZFINX_ZICOND: czero
+; RV64ZFINX_ZICOND: czero
+; RV64ZFINX_ZICOND: or
+; RV64ZFINX_ZICOND-NOT: b{{(eq|ne)z?}}
+; RV64ZFINX_ZICOND: ret
+
+; RV64ZFINX_NOZICOND-LABEL: select_half_i1:
+; RV64ZFINX_NOZICOND: b{{(eq|ne)z?}}
+; RV64ZFINX_NOZICOND-NOT: czero.eqz
+; RV64ZFINX_NOZICOND-NOT: czero.nez
+
+; RV64F-LABEL: select_half_i1:
+; RV64F: b{{(eq|ne)z?}}
+; RV64F-NOT: czero.eqz
+; RV64F-NOT: czero.nez
+
+; RV32ZFINX_ZICOND-LABEL: select_half_i1:
+; RV32ZFINX_ZICOND: czero
+; RV32ZFINX_ZICOND: czero
+; RV32ZFINX_ZICOND: or
+; RV32ZFINX_ZICOND-NOT: b{{(eq|ne)z?}}
+; RV32ZFINX_ZICOND: ret
+
+; RV32ZFINX_NOZICOND-LABEL: select_half_i1:
+; RV32ZFINX_NOZICOND: b{{(eq|ne)z?}}
+; RV32ZFINX_NOZICOND-NOT: czero.eqz
+; RV32ZFINX_NOZICOND-NOT: czero.nez
+
+; RV32F-LABEL: select_half_i1:
+; RV32F: b{{(eq|ne)z?}}
+; RV32F-NOT: czero.eqz
+; RV32F-NOT: czero.nez
+
+entry:
+  %sel = select i1 %cond, half %a, half %b
+  ret half %sel
+}
