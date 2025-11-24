@@ -81,11 +81,11 @@ void InsertNegateRAState::inferUnknownStates(BinaryFunction &BF) {
   for (BinaryBasicBlock &BB : BF) {
     fillUnknownStateInBB(BC, BB);
   }
-  // Some stubs have no predecessors. For those, we iterate once in the layout
-  // order to fill their RAState.
+  // BasicBlocks which are made entirely of "new instructions" (instructions
+  // without RAState annotation) are stubs, and do not have correct unwind info.
+  // We should iterate in layout order and fill them based on previous known
+  // RAState.
   fillUnknownStubs(BF);
-
-  fillUnknownBlocksInCFG(BF);
 }
 
 void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
@@ -206,16 +206,14 @@ void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
     for (BinaryBasicBlock *BB : FF) {
       if (!FirstIter && isUnknownBlock(BC, *BB)) {
-        // If we have no predecessors or successors, current BB is a Stub called
-        // from another BinaryFunction. As of #160989, we have to copy the
+        // As of #160989, we have to copy the
         // PrevInst's RAState, because CFIs are already incorrect here.
-        if (BB->pred_size() == 0 && BB->succ_size() == 0) {
-          auto PrevRAState = BC.MIB->getRAState(PrevInst);
-          if (!PrevRAState) {
-            llvm_unreachable(
-                "Previous Instruction has no RAState in fillUnknownStubs.");
-            continue;
-          }
+        auto PrevRAState = BC.MIB->getRAState(PrevInst);
+        if (!PrevRAState) {
+          llvm_unreachable(
+              "Previous Instruction has no RAState in fillUnknownStubs.");
+          continue;
+        }
 
           if (BC.MIB->isPSignOnLR(PrevInst)) {
             PrevRAState = true;
@@ -223,7 +221,6 @@ void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
             PrevRAState = false;
           }
           markUnknownBlock(BC, *BB, *PrevRAState);
-        }
       }
       if (FirstIter) {
         FirstIter = false;
@@ -236,88 +233,6 @@ void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
       auto Last = BB->getLastNonPseudo();
       if (Last != BB->rend())
         PrevInst = *Last;
-    }
-  }
-}
-
-std::optional<bool> InsertNegateRAState::getRAStateByCFG(BinaryBasicBlock &BB,
-                                                         BinaryFunction &BF) {
-  BinaryContext &BC = BF.getBinaryContext();
-
-  auto checkRAState = [&](std::optional<bool> &NeighborRAState, MCInst &Inst) {
-    auto RAState = BC.MIB->getRAState(Inst);
-    if (!RAState)
-      return;
-    if (!NeighborRAState) {
-      NeighborRAState = *RAState;
-      return;
-    }
-    if (NeighborRAState != *RAState) {
-      BC.outs() << "BOLT-WARNING: Conflicting RAState found in function "
-                << BF.getPrintName() << ". Function will not be optimized.\n";
-      BF.setIgnored();
-    }
-  };
-
-  // Holds the first found RAState from CFG neighbors.
-  std::optional<bool> NeighborRAState = std::nullopt;
-  if (BB.pred_size() != 0) {
-    for (BinaryBasicBlock *PredBB : BB.predecessors()) {
-      //  find last inst of Predecessor with known RA State.
-      auto LI = PredBB->getLastNonPseudo();
-      if (LI == PredBB->rend())
-        continue;
-      MCInst &LastInst = *LI;
-      checkRAState(NeighborRAState, LastInst);
-    }
-  } else if (BB.succ_size() != 0) {
-    for (BinaryBasicBlock *SuccBB : BB.successors()) {
-      //  find first inst of Successor with known RA State.
-      auto FI = SuccBB->getFirstNonPseudo();
-      if (FI == SuccBB->end())
-        continue;
-      MCInst &FirstInst = *FI;
-      checkRAState(NeighborRAState, FirstInst);
-    }
-  } else {
-    llvm_unreachable("Called getRAStateByCFG on a BB with no preds or succs.");
-  }
-
-  return NeighborRAState;
-}
-
-void InsertNegateRAState::fillUnknownBlocksInCFG(BinaryFunction &BF) {
-  BinaryContext &BC = BF.getBinaryContext();
-
-  auto fillUnknowns = [&](BinaryFunction &BF) -> std::pair<int, bool> {
-    int Unknowns = 0;
-    bool Updated = false;
-    for (BinaryBasicBlock &BB : BF) {
-      // Only try to iterate if the BB has either predecessors or successors.
-      if (isUnknownBlock(BC, BB) &&
-          (BB.pred_size() != 0 || BB.succ_size() != 0)) {
-        auto RAStateOpt = getRAStateByCFG(BB, BF);
-        if (RAStateOpt) {
-          markUnknownBlock(BC, BB, *RAStateOpt);
-          Updated = true;
-        } else {
-          Unknowns++;
-        }
-      }
-    }
-    return std::pair<int, bool>{Unknowns, Updated};
-  };
-
-  while (true) {
-    std::pair<int, bool> Iter = fillUnknowns(BF);
-    if (Iter.first == 0)
-      break;
-    if (!Iter.second) {
-      BC.errs() << "BOLT-WARNING: Could not infer RAState for " << Iter.first
-                << " BBs in function " << BF.getPrintName()
-                << ". Function will not be optimized.\n";
-      BF.setIgnored();
-      break;
     }
   }
 }
