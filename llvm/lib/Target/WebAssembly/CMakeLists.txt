@@ -32,7 +32,6 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyFixIrreducibleControlFlow.cpp
   WebAssemblyFixFunctionBitcasts.cpp
   WebAssemblyFrameLowering.cpp
-  WebAssemblyInstCombineIntrinsic.cpp
   WebAssemblyISelDAGToDAG.cpp
   WebAssemblyISelLowering.cpp
   WebAssemblyInstrInfo.cpp

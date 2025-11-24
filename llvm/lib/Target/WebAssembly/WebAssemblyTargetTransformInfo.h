@@ -90,8 +90,6 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index, const Value *Op0,
                                      const Value *Op1) const override;
-  std::optional<Instruction *>
-  instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override;
   InstructionCost getPartialReductionCost(
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
@@ -104,6 +102,9 @@ public:
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;
+
+  std::optional<Instruction *>
+  instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override;
 
   /// @}
 };
