@@ -2,6 +2,8 @@
 
 using namespace llvm;
 
+int MyTy::floatBitWidth[7] = {16, 16, 32, 64, 80, 128, 128};
+
 llvm::MyTy::MyTy() { typeId = MyTypeID::Unknown; }
 
 std::string llvm::MyTy::to_string() { return "unknown"; }
@@ -15,11 +17,15 @@ void llvm::MyTy::setTypeID(MyTypeID t) { typeId = t; }
 std::shared_ptr<MyTy> MyTy::from(Type *type) {
   switch (type->getTypeID()) {
   case Type::IntegerTyID:
+  case Type::FloatTyID:
+  case Type::DoubleTyID:
     return std::make_shared<MyBasicTy>(type);
   case Type::ArrayTyID:
     return std::make_shared<MyArrayTy>(type);
   case Type::PointerTyID:
     return std::make_shared<MyPointerTy>(std::make_shared<MyTy>());
+  case Type::StructTyID:
+    return std::make_shared<MyStructTy>(type);
   default:
     return nullptr;
   }
@@ -57,22 +63,35 @@ std::shared_ptr<MyTy> MyTy::int_with_int(Type* t1, Type* t2) {
   return std::make_shared<MyBasicTy>(i1->getBitWidth() > i2->getBitWidth() ? i1 : i2);
 }
 
-std::shared_ptr<MyTy> MyTy::basic_with_basic(std::shared_ptr<MyTy> t1,
-                                             std::shared_ptr<MyTy> t2) {
+std::shared_ptr<MyTy> MyTy::float_with_float(Type *t1, Type *t2) {
+  return std::make_shared<MyBasicTy>(
+      floatBitWidth[t1->getTypeID()] > floatBitWidth[t2->getTypeID()] ? t1 : t2);
+}
+
+std::shared_ptr<MyTy> MyTy::basic_with_basic(
+    std::shared_ptr<MyTy> t1,
+    std::shared_ptr<MyTy> t2) {
   auto b1 = ptr_cast<MyBasicTy>(t1)->getBasic();
   auto b2 = ptr_cast<MyBasicTy>(t2)->getBasic();
   if (b1->isIntegerTy()) {
     if (b2->isIntegerTy()) {
       return int_with_int(b1, b2);
     } else {
-      // Figure out whether I should add Float.
+      return std::make_shared<MyVoidTy>();
+    }
+  } else {
+    if (b2->isIntegerTy()) {
+      return std::make_shared<MyVoidTy>();
+    } else {
+      return float_with_float(b1, b2);
     }
   }
   return std::make_shared<MyTy>();
 }
 
-std::shared_ptr<MyTy> MyTy::ptr_with_array(std::shared_ptr<MyTy> t1,
-                                           std::shared_ptr<MyTy> t2) {
+std::shared_ptr<MyTy> MyTy::ptr_with_array(
+    std::shared_ptr<MyTy> t1,
+    std::shared_ptr<MyTy> t2) {
   auto pt1 = ptr_cast<MyPointerTy>(t1);
   auto pt2 = ptr_cast<MyArrayTy>(t2);
   if (pt2->getElementTy()->compatibleWith(pt1)) {
@@ -105,7 +124,14 @@ bool MyTy::compatibleWith(std::shared_ptr<MyTy> ty) {
           auto i2 = static_cast<IntegerType *>(b2);
           return i1->getBitWidth() >= i2->getBitWidth();
         } else {
-          // Figure out whether I should add Float.
+          return false;
+        }
+      } else {
+        if (b2->isIntegerTy()) {
+          return false;
+        } else {
+          return floatBitWidth[this->getTypeID()] >=
+                 floatBitWidth[ty->getTypeID()];
         }
       }
       return false;
@@ -117,8 +143,9 @@ bool MyTy::compatibleWith(std::shared_ptr<MyTy> ty) {
   }
 }
 
-std::shared_ptr<MyTy> llvm::MyTy::leastCompatibleType(std::shared_ptr<MyTy> t1,
-                                                      std::shared_ptr<MyTy> t2) {
+std::shared_ptr<MyTy> llvm::MyTy::leastCompatibleType(
+    std::shared_ptr<MyTy> t1,
+    std::shared_ptr<MyTy> t2) {
   std::shared_ptr<MyTy> ret;
   if (t1->isUnknown()) {
     ret = t2;
@@ -161,9 +188,17 @@ std::shared_ptr<MyTy> llvm::MyTy::leastCompatibleType(std::shared_ptr<MyTy> t1,
       auto pt2 = ptr_cast<MyArrayTy>(t2);
       ret = std::make_shared<MyArrayTy>(
           leastCompatibleType(pt1->getElementTy(), pt2->getElementTy()),
-          std::max(pt1->size(), pt2->size()));
+          std::max(pt1->getElementCnt(), pt2->getElementCnt()));
     } else {
       ret = std::make_shared<MyVoidTy>();
+    }
+  } else if (t1->isStruct()) {
+    if (t2->isUnknown()) {
+      ret = t1;
+    } else if (t2->isVoid()) {
+      ret = t2;
+    } else if (t2->isStruct()) {
+      ret = getStructLCA(t1, t2);
     }
   } else {
     ret = std::make_shared<MyVoidTy>();
@@ -182,7 +217,7 @@ MyPointerTy::MyPointerTy(std::shared_ptr<MyTy> inner) {
   setTypeID(MyTypeID::Pointer);
 }
 
-std::shared_ptr<MyTy> llvm::MyPointerTy::getInner() { return innerTy; }
+std::shared_ptr<MyTy> MyPointerTy::getInner() { return innerTy; }
 
 void MyPointerTy::update(std::shared_ptr<MyTy> inner) {
   errs() << "The pointer to update is " << this->to_string() << "\n";
@@ -192,13 +227,21 @@ void MyPointerTy::update(std::shared_ptr<MyTy> inner) {
     auto at = ptr_cast<MyArrayTy>(innerTy);
     if (at->getElementTy()->compatibleWith(inner)) {
       errs() << "Array pointer used as element pointer\n";
-      innerTy = std::make_shared<MyArrayTy>(
-          MyTy::leastCompatibleType(at->getElementTy(), inner), at->size());
+      at->update(inner);
     } else {
       errs() << "Array pointer used as array pointer\n";
       innerTy = MyTy::leastCompatibleType(innerTy, inner);
     }
-  } else {
+  } else if (innerTy->isStruct()) {
+    auto st = ptr_cast<MyStructTy>(innerTy);
+    if (st->getElementTy()->compatibleWith(inner)) {
+      errs() << "Struct pointer used as element pointer\n";
+      st->updateElement(MyTy::leastCompatibleType(st->getElementTy(), inner));
+    } else {
+      errs() << "Struct pointer used as struct pointer\n";
+      innerTy = MyTy::leastCompatibleType(innerTy, inner);
+    }
+  } else  {
     innerTy = MyTy::leastCompatibleType(innerTy, inner);
   }
   errs() << "Update to " << this->to_string() << "\n";
@@ -211,13 +254,19 @@ MyBasicTy::MyBasicTy(Type *basic) {
   setTypeID(MyTypeID::Basic);
 }
 
-Type *llvm::MyBasicTy::getBasic() { return basicTy; }
+Type *MyBasicTy::getBasic() { return basicTy; }
 
 std::string MyBasicTy::to_string() {
   switch (basicTy->getTypeID()) {
   case Type::IntegerTyID: {
     auto intTy = static_cast<IntegerType *>(basicTy);
     return "i" + std::to_string(intTy->getBitWidth());
+  }
+  case Type::FloatTyID: {
+    return "float";
+  }
+  case Type::DoubleTyID: {
+    return "double";
   }
   default:
     return "not_added";
@@ -231,7 +280,7 @@ MyArrayTy::MyArrayTy(Type *array) {
   setTypeID(MyTypeID::Array);
 }
 
-llvm::MyArrayTy::MyArrayTy(std::shared_ptr<MyTy> eTy, int eCnt) {
+MyArrayTy::MyArrayTy(std::shared_ptr<MyTy> eTy, int eCnt) {
   elementCnt = eCnt;
   elementTy = eTy;
   setTypeID(MyTypeID::Array);
@@ -239,7 +288,7 @@ llvm::MyArrayTy::MyArrayTy(std::shared_ptr<MyTy> eTy, int eCnt) {
 
 std::shared_ptr<MyTy> llvm::MyArrayTy::getElementTy() { return elementTy; }
 
-int llvm::MyArrayTy::size() { return elementCnt; }
+int MyArrayTy::getElementCnt() const { return elementCnt; }
 
 std::string MyArrayTy::to_string() {
   return "[" + std::to_string(elementCnt) + " x " + elementTy->to_string() +
@@ -312,3 +361,6 @@ MyTy::ptr_cast<MyArrayTy, MyTy>(std::shared_ptr<MyTy>);
 
 template std::shared_ptr<MyBasicTy>
 MyTy::ptr_cast<MyBasicTy, MyTy>(std::shared_ptr<MyTy>);
+
+template std::shared_ptr<MyStructTy>
+MyTy::ptr_cast<MyStructTy, MyTy>(std::shared_ptr<MyTy>);
