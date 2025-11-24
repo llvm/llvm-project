@@ -9586,7 +9586,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   // When there is no cost for GPR <-> FGPR, we can use zicond select for
   // floating value when CondV is int type
-  bool FPinGPR = Subtarget.hasStdExtZfinx() || Subtarget.hasStdExtZdinx();
+  bool FPinGPR = Subtarget.hasStdExtZfinx();
   bool UseZicondForFPSel = Subtarget.hasStdExtZicond() && FPinGPR &&
                            VT.isFloatingPoint() &&
                            CondV.getValueType().isInteger();
