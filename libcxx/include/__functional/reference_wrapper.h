@@ -128,25 +128,25 @@ reference_wrapper(_Tp&) -> reference_wrapper<_Tp>;
 #endif
 
 template <class _Tp>
-[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<_Tp> ref(_Tp& __t) _NOEXCEPT {
   return reference_wrapper<_Tp>(__t);
 }
 
 template <class _Tp>
-[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<_Tp>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<_Tp>
 ref(reference_wrapper<_Tp> __t) _NOEXCEPT {
   return __t;
 }
 
 template <class _Tp>
-[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<const _Tp>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<const _Tp>
 cref(const _Tp& __t) _NOEXCEPT {
   return reference_wrapper<const _Tp>(__t);
 }
 
 template <class _Tp>
-[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<const _Tp>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<const _Tp>
 cref(reference_wrapper<_Tp> __t) _NOEXCEPT {
   return __t;
 }
