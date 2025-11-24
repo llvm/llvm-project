@@ -174,3 +174,27 @@ func.func @fptoui(%arg0: f16) {
   %0 = arith.fptoui %arg0 : f16 to i4
   return
 }
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_convert_from_int(i32, i32, i1, i64) -> i64
+// CHECK: %[[sem_out:.*]] = arith.constant 18 : i32
+// CHECK: %[[in_width:.*]] = arith.constant 32 : i32
+// CHECK: %[[is_unsigned:.*]] = arith.constant false
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_convert_from_int(%[[sem_out]], %[[in_width]], %[[is_unsigned]], %{{.*}}) : (i32, i32, i1, i64) -> i64
+func.func @sitofp(%arg0: i32) {
+  %0 = arith.sitofp %arg0 : i32 to f4E2M1FN
+  return
+}
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_convert_from_int(i32, i32, i1, i64) -> i64
+// CHECK: %[[sem_out:.*]] = arith.constant 18 : i32
+// CHECK: %[[in_width:.*]] = arith.constant 32 : i32
+// CHECK: %[[is_unsigned:.*]] = arith.constant true
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_convert_from_int(%[[sem_out]], %[[in_width]], %[[is_unsigned]], %{{.*}}) : (i32, i32, i1, i64) -> i64
+func.func @uitofp(%arg0: i32) {
+  %0 = arith.uitofp %arg0 : i32 to f4E2M1FN
+  return
+}
