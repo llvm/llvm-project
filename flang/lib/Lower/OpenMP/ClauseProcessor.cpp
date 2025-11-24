@@ -279,6 +279,7 @@ bool ClauseProcessor::processCollapse(
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
 
   int64_t numCollapse = collectLoopRelatedInfo(converter, currentLocation, eval,
+                                               eval.getFirstNestedEvaluation(),
                                                clauses, loopResult, iv);
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   collapseResult.collapseNumLoops = firOpBuilder.getI64IntegerAttr(numCollapse);

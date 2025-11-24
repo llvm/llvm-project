@@ -1063,7 +1063,10 @@ Link make(const parser::OmpClause::Link &inp,
 
 LoopRange make(const parser::OmpClause::Looprange &inp,
                semantics::SemanticsContext &semaCtx) {
-  llvm_unreachable("Unimplemented: looprange");
+  auto &t0 = std::get<0>(inp.v.t);
+  auto &t1 = std::get<1>(inp.v.t);
+  return LoopRange{{/*First*/ makeExpr(t0, semaCtx),
+                    /*Count*/ makeExpr(t1, semaCtx)}};
 }
 
 Map make(const parser::OmpClause::Map &inp,
