@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -32,6 +33,8 @@
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -51,6 +54,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
@@ -72,7 +76,6 @@
 
 namespace llvm {
 
-class Argument;
 class DataLayout;
 class IntrinsicInst;
 class MDNode;
@@ -674,6 +677,204 @@ private:
                                     NDLoadStoreAttr &Attr);
 };
 
+// _____________________________________________________________________________
+
+class ExternalRippleFunction {
+  Function *F;
+  FunctionType *NormalizedFunType;
+  StringRef ScalarName;
+  TensorShape ReturnShape;
+  SmallVector<TensorShape, 0> ArgShapes;
+  bool ElementWiseFunction = false;
+  bool IsPureOtherThanSretAndByVal = false;
+  Argument *TensorMaskArgument = nullptr;
+
+public:
+  /// @brief Get the Function's return type seeing through StructRetAttr
+  /// (where the return value is allocated by the caller and passed by pointer).
+  static Type *getTrueReturnType(const Function *F);
+  Type *getTrueReturnType() const;
+
+  /// @brief Get the Function's argument types, skipping mask argument if
+  /// @p SkipMask is true and the return as argument (StructRet) if
+  /// @p SkipStructRet is true.
+  static SmallVector<Type *, 0>
+  getTrueArgumentTypes(const Function *F, const Argument *SkipMask = nullptr,
+                       bool SkipStructRet = true);
+  SmallVector<Type *, 0> getTrueArgumentTypes(bool SkipMask = true,
+                                              bool SkipStructRet = true) const;
+
+  /// @brief Sole constructor of ExternalRippleFunction
+  ///
+  /// Returns a nullptr unique_ptr if @p F does not follow Ripple's external
+  /// function naming convention.
+  static std::unique_ptr<ExternalRippleFunction>
+  createExternalFunction(Function *F, unsigned TensorRank);
+
+  /// @brief Checks if this external function is the same as another external
+  /// function
+  bool operator==(const ExternalRippleFunction &Other) const {
+    return getFunction() == Other.getFunction() &&
+           getReturnShape() == Other.getReturnShape() &&
+           isElementWiseFunction() == Other.isElementWiseFunction() &&
+           all_of_zip(argOperandShapes(), Other.argOperandShapes(),
+                      [](auto &Lhs, auto &Rhs) { return Lhs == Rhs; });
+  }
+
+  /// @brief Checks if this external function is different than another external
+  /// function
+  bool operator!=(const ExternalRippleFunction &Other) const {
+    return !(*this == Other);
+  }
+
+  /// @brief Get the shape of argument @p Idx's, skipping return as argument
+  /// (StructRet) if @p IgnoreStructRet is true.
+  const TensorShape &getArgOperandShape(unsigned Idx,
+                                        bool IgnoreStructRet = true) const {
+    if (!IgnoreStructRet) {
+      // The return as argument
+      if (getFunction()->getArg(Idx)->hasAttribute(Attribute::StructRet))
+        return ReturnShape;
+      // The return as argument is before, decrement arg index
+      else if (any_of(make_range(getFunction()->arg_begin(),
+                                 getFunction()->arg_begin() + Idx),
+                      [](auto &Arg) {
+                        return Arg.hasAttribute(Attribute::StructRet);
+                      }))
+        return ArgShapes[Idx - 1];
+      else
+        return ArgShapes[Idx];
+    } else {
+      return ArgShapes[Idx];
+    }
+  }
+
+  /// @brief Returns the shapes of all ArgOperands of this external function.
+  ArrayRef<TensorShape> argOperandShapes() const { return ArgShapes; }
+
+  /// @brief Get the shape that this function returns. Returns a scalar shape if
+  /// the function returns void.
+  const TensorShape &getReturnShape() const { return ReturnShape; }
+
+  /// @brief Returns the external function
+  ///
+  /// The function is most likely a declaration, used for type inspection.
+  const Function *getFunction() const { return F; }
+  Function *getFunction() { return F; }
+
+  /// @brief Returns the scalar sub-string that this external Ripple function's
+  /// name is targeting.
+  StringRef scalarFunctionName() const { return ScalarName; }
+
+  /// @brief Returns true whether this is an elementwise function.
+  ///
+  /// If true all arguments and the return have the same shape.
+  /// We can also safely split and extend input tensors to match this function's
+  /// argument type.
+  bool isElementWiseFunction() const { return ElementWiseFunction; }
+
+  /// @brief Returns the shape of this elementwise function.
+  //  This can either be vector type of any of the return or argument (they must
+  //  all match to be considered element-wise) or scalar.
+  /// @pre isElementWiseFunction() is true
+  const TensorShape &elementWiseShape() const;
+
+  /// @brief Checks if a call to scalar @p Fun with the @p ArgShapes shapes can
+  /// be emulated by this function.
+  ///
+  /// @pre Expects a normalized function type and argument shape list
+  /// This methods gracefully handles function attributes such as sret and byval
+  bool matchesFunction(StringRef FName, const FunctionType *FType,
+                       ArrayRef<const TensorShape *> CallArgShapes) const;
+
+  /// @brief Normalizes the function type by moving sret argument to the return
+  /// type and replace pointer byval argument by the byval type.
+  static FunctionType *
+  normalizeFunctionType(const Function *F,
+                        const Argument *MaskArgument = nullptr);
+  /// @brief If @p F has an sret argument, removes the value at the sret
+  /// argument index from @p C. Otherwise does nothing.
+  /// @pre C.size() == F->arg_size()
+  template <typename Container>
+  static void eraseValueAtSretIndex(const Function *F, Container &C);
+
+  /// @brief Infer the shape of the function's return given Call's tensor
+  /// arguments using Ripple object to get the tensor shapes
+  ///
+  /// If the function is element-wise, returns the largest broadcast shape
+  /// between the input operands, defaulting to the external function return
+  /// shape if all the operands are scalar.
+  ///
+  /// @pre matchesFunction(Fun, ArgShapes)
+  Expected<TensorShape> returnTensorShape(const CallInst *Call,
+                                          const Ripple &Ripple) const;
+
+  /// @brief for a masked external function call, return the expected mask shape
+  Expected<TensorShape> maskShape(const CallInst *Call,
+                                  const Ripple &Ripple) const;
+
+  /// @brief True whether this external function returns void, false otherwise.
+  bool returnsVoid() const {
+    return getTrueReturnType(getFunction())->isVoidTy();
+  }
+
+  /// @brief True if @p F follows Ripple naming convention, i.e., is prefixed by
+  /// "ripple_".
+  static bool usesRippleNamingConvention(const Function *F);
+
+  /// @brief Returns true if the external function has a tensor mask
+  bool hasTensorMaskArgument() const;
+
+  Argument *getTensorMaskArgument() const { return TensorMaskArgument; }
+
+  /// @brief Returns true if this external function can be used in a masked
+  /// region
+  bool isMaskable() const;
+
+  /// @brief Returns true if this external function is considered pure, even in
+  /// the presence of sret and byval arguments.
+  bool isPureOtherThanSretAndByval() const;
+
+  /// @brief Prints a summary of this external ripple function
+  void print(raw_ostream &ROS) const;
+
+  /// @brief returns the true mask type, i.e., if it is a pointer w/ the byval
+  /// attr,returns then returns the  byval type, else the type of the argument.
+  static Type *getTrueMaskType(const Argument *Mask);
+
+private:
+  /// @brief Remove the ripple prefix from \p Fun's name.
+  static StringRef removeRipplePrefix(const Function *Fun);
+
+  /// @brief Private ExternalRippleFunction constructor
+  ExternalRippleFunction(Function *Fun, StringRef ScalarName,
+                         const SmallVectorImpl<StringRef> &Options,
+                         size_t TensorRank, size_t DimOffset = 0);
+
+  static constexpr StringRef RipplePrefix = "ripple_";
+  static constexpr StringRef ElementWiseOption = "ew_";
+  static constexpr StringRef MaskedOption = "mask_";
+  static constexpr StringRef PureOption = "pure_";
+  static constexpr StringRef AllOptions[] = {ElementWiseOption, MaskedOption,
+                                             PureOption};
+
+  /// @brief Parse and toggle Ripple External function options, e.g.,
+  /// element-wise, multi-dimensional tensor shapes, etc
+  static std::pair<StringRef, SmallVector<StringRef, 0>>
+  splitOptions(StringRef Options);
+
+  /// Update this object w/ the option list
+  void applyOptions(const SmallVectorImpl<StringRef> &Options);
+};
+
+namespace {
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const ExternalRippleFunction &ExternF) {
+  ExternF.print(OS);
+  return OS;
+}
+} // namespace
+
 // ---------------------------------------------------------------------------//
 //                            Helper Functions                                //
 // ---------------------------------------------------------------------------//
@@ -820,6 +1021,25 @@ public:
   /// calling this method.
   std::map<AssertingVH<const Instruction>, TensorShape>
   getInstructionToRippleShape() const;
+
+  /// @brief Returns most common Intrinsic -> LibFunc mapping. If no mapping
+  /// exists, the function returns LifFunc::NotLibFunc.
+  static LibFunc intrinsicToLibFunc(const IntrinsicInst *II);
+
+  /// @brief Returns the C/C++ library name of an intrinsic (or empty string if
+  /// none exist)
+  ///
+  /// This function does not test if the target has library support, i.e.
+  /// TargetLibraryInfo::has, but is useful to lookup external ripple function
+  /// by name.
+  static StringRef intrinsicToLibName(const IntrinsicInst *II,
+                                      const TargetLibraryInfo &TLI);
+  /// @see StringRef intrinsicToLibName(const IntrinsicInst *II, const
+  /// TargetLibraryInfo &TLI)
+  StringRef intrinsicToLibName(const IntrinsicInst *II) const;
+
+  /// @brief Load declarations from libraries available as bitcode
+  void loadRippleLibDeclarations();
 
   /// @brief Erase ripple function-specialization related metadata that has been
   /// attached to the given function
@@ -1019,6 +1239,9 @@ private:
   DenseSet<AssertingVH<AllocaInst>> PromotableAlloca;
   DenseSet<AssertingVH<AllocaInst>> NonPromotableAlloca;
 
+  /// @brief Available external Ripple functions
+  std::vector<std::unique_ptr<ExternalRippleFunction>> ExternalRippleFunctions;
+
   /// @brief Argument shapes used for function specialization
   SmallVector<TensorShape, 8> ArgumentShapes;
 
@@ -1163,6 +1386,18 @@ private:
 
   /// @brief Generates vector instructions for each vector Ripple shape
   void genVectorInstructions();
+
+  /// @brief Generate a call to Externcall for @p Call
+  /// Handle StructRet and RetByVal attributes for both @p Call and @p ExtenCall
+  Value *genFunctionCallHandleArgAttributes(CallInst *CallSite,
+                                            ExternalRippleFunction &Calling,
+                                            const TensorShape &ToShape,
+                                            ArrayRef<Value *> FromArgs,
+                                            Value *MaskForExternalFunction);
+
+  /// @brief Replace LLVM math intrinsics with their HVX implementation for
+  /// Hexagon Target
+  Error replaceMathIntrinsics();
 
   /// @brief Post-process the function to remove scalar Instructions that have
   /// been vectorized.
@@ -1485,6 +1720,9 @@ private:
   /// @brief Checks that creating a vector type for I is valid
   Error checkTypeCanBeVectorized(const Instruction *I);
 
+  /// @brief Checks that the external calls that need to be masked are maskable
+  Error checkRippleExternCall(const CallInst *I);
+
   /// @brief Checks that vector store are valid
   Error checkRippleStore(const StoreInst *I) const;
 
@@ -1550,6 +1788,16 @@ private:
     return aliasesWithAlloca(Loc, NonPromotableAlloca, AliasResult::NoAlias)
         .second;
   }
+
+  /// @brief Register an external ripple function as available for
+  /// shape-propagation and target for codegen
+  void registerExternalRippleFunction(
+      std::unique_ptr<ExternalRippleFunction> ExternFun);
+
+  /// @brief Looks for a registered external ripple function that can be called
+  /// for an original @p Call instruction.
+  ExternalRippleFunction *
+  findExternalRippleFunctionFor(const CallInst *Call, bool RequiresMask) const;
 
   /// @brief Returns true if this instruction requires masking during the
   /// if-conversion process, false otherwise
@@ -1681,6 +1929,12 @@ inline raw_ostream &operator<<(raw_ostream &OS,
     OS << *CS.LS;
   return OS;
 }
+
+namespace RippleCL {
+
+extern llvm::cl::list<std::string> RippleLibs;
+
+} // namespace RippleCL
 
 /**
  * @brief Returns `true` iff BranchingBB has exactly size two (immediate)

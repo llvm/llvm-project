@@ -23,6 +23,8 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/AsmParser/Parser.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/AttributeMask.h"
@@ -56,8 +58,12 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/ModRef.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -83,6 +89,17 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "ripple"
+
+namespace llvm {
+namespace RippleCL {
+
+llvm::cl::list<std::string>
+    RippleLibs("ripple-lib",
+               llvm::cl::desc("Path to a ripple library file (LLVM IR)"),
+               llvm::cl::Hidden /* internal option for the time being */);
+
+} // namespace RippleCL
+} // namespace llvm
 
 namespace {
 
@@ -2040,6 +2057,179 @@ void Ripple::genVectorInstructions() {
     setReplacementFor(Call, VecCall, ToShape);
   };
 
+  auto replacebyExternalRippleFunctionCall =
+      [&](ExternalRippleFunction &ExternF, CallInst *CallToReplace,
+          Value *MaskForExternalFun, const TensorShape &ToShape) -> void {
+    // We replace the call by a call to the external function
+    SmallVector<Value *, 0> CallArguments;
+    for (unsigned ArgIdx = 0, E = CallToReplace->arg_size(); ArgIdx < E;
+         ++ArgIdx) {
+      Use &OriginalArg = CallToReplace->getArgOperandUse(ArgIdx);
+      auto [Replacement, ReplacementShape] = getTensorUse(OriginalArg);
+      assert(*ReplacementShape == ExternF.getArgOperandShape(ArgIdx) &&
+             "Expected matching Tensor shape to non-element wise "
+             "external ripple functions");
+      CallArguments.push_back(Replacement);
+    }
+    irBuilder.SetInsertPoint(CallToReplace);
+    Value *ExternFunCall = genFunctionCallHandleArgAttributes(
+        CallToReplace, ExternF, ToShape, CallArguments, MaskForExternalFun);
+    setReplacementFor(CallToReplace, ExternFunCall, ToShape);
+  };
+
+  auto processElementWiseCall = [&](ExternalRippleFunction &ExternF,
+                                    CallInst *Call, Value *MaskArgument,
+                                    const TensorShape &ToShape) -> void {
+    auto padWithZeros = [&](Value *Vector, uint64_t ToSize) -> Value * {
+      VectorType *VecTy = cast<VectorType>(Vector->getType());
+      uint64_t VecSize = VecTy->getElementCount().getKnownMinValue();
+      SmallVector<int, 0> ShuffleMask;
+      while (VecSize < ToSize) {
+        // ShuffleVector can only double the size of a vector!
+        uint64_t MaxShuffleSize = VecSize * 2;
+        ShuffleMask.resize(std::min(MaxShuffleSize, ToSize));
+        std::iota(ShuffleMask.begin(), ShuffleMask.end(), 0);
+        Vector = irBuilder.CreateShuffleVector(
+            Vector, ConstantAggregateZero::get(Vector->getType()), ShuffleMask);
+        TensorShape::Shape Shape(tensorRank());
+        Shape[0] = ShuffleMask.size();
+        setRippleShape(Vector, TensorShape(std::move(Shape)));
+        VecSize = ShuffleMask.size();
+      }
+      return Vector;
+    };
+
+    auto &ExternElemWiseShape = ExternF.elementWiseShape();
+    LLVM_DEBUG(dbgs() << "Extern call shape: " << ExternElemWiseShape << "\n");
+    unsigned ExternElemCount = ExternElemWiseShape.flatShape();
+    auto TensorArgShapes = ExternF.returnTensorShape(Call, *this);
+    // This is checked during the shape propagation phase, in
+    // inferShapeFromOperands, CallInst case
+    if (!TensorArgShapes)
+      report_fatal_error("Broadcast failure during codegen");
+    assert(ExternF.returnsVoid() ||
+           (!ExternF.returnsVoid() && *TensorArgShapes == ToShape));
+    irBuilder.SetInsertPoint(Call);
+    // We broadcast all tensors to the largest tensor shape between the operands
+    // and return
+    SmallVector<Value *, 0> TensorArgs;
+    for (unsigned ArgIdx = 0, E = Call->arg_size(); ArgIdx < E; ++ArgIdx) {
+      auto &ArgUse = Call->getArgOperandUse(ArgIdx);
+      if (ExternF.getArgOperandShape(ArgIdx).isScalar()) {
+        assert(getRippleShape(ArgUse).isScalar());
+        TensorArgs.push_back(ArgUse);
+      } else {
+        auto BcastOp = getTensorUseAndBcast(ArgUse, *TensorArgShapes);
+        // We need to pad to ceil(ExternElemCount / 2) for shuffle in the slice
+        // loop to succeed!
+        auto *Padded = padWithZeros(BcastOp, (ExternElemCount + 1) / 2);
+        TensorArgs.push_back(Padded);
+      }
+    }
+    // We place the mask as last argument so we can slice it w/ the operand
+    // tensors
+    if (MaskArgument)
+      TensorArgs.push_back(MaskArgument);
+
+    // TODO: when Call calls isa<Function> having some byval arguments we need
+    // to load the vectors before slicing (the shape of byval is scalar, it's a
+    // pointer, although it's a tensor under disguise). This is a low priority
+    // task since when compiling Ripple functions, these call have not yet been
+    // modified to match the target ABI, hence we shouldn't see byval at this
+    // compilation stage.
+    // This is checked in checkRippleExternCall
+    if (Function *CalledF = Call->getCalledFunction())
+      if (any_of(CalledF->args(),
+                 [](Argument &Arg) { return Arg.hasByValAttr(); }))
+        report_fatal_error(
+            "Unimplemented slicing of element-wise byval arguments");
+
+    SmallVector<int, 0> ShuffleIndices(ExternElemWiseShape.flatShape());
+    SmallVector<Value *, 0> SlicedCallArgs;
+    SmallVector<Value *, 0> ExternCallReturnSlices;
+    for (unsigned SliceIdx = 0, E = divideCeil(TensorArgShapes->flatShape(),
+                                               ExternElemWiseShape.flatShape());
+         SliceIdx < E; ++SliceIdx) {
+      SlicedCallArgs.clear();
+      for (unsigned ArgIdx = 0, E = TensorArgs.size(); ArgIdx < E; ++ArgIdx) {
+        if (ExternF.getArgOperandShape(ArgIdx).isScalar()) {
+          SlicedCallArgs.push_back(TensorArgs[ArgIdx]);
+        } else {
+          std::iota(ShuffleIndices.begin(), ShuffleIndices.end(),
+                    SliceIdx * ExternElemCount);
+          assert(ShuffleIndices.size() == ExternElemWiseShape.flatShape());
+          LLVM_DEBUG(dbgs()
+                     << "Shuffling " << *TensorArgs[ArgIdx] << " Mask length: "
+                     << ExternElemWiseShape.flatShape() << "\n");
+          Value *Shuffle = irBuilder.CreateShuffleVector(
+              TensorArgs[ArgIdx],
+              ConstantAggregateZero::get(TensorArgs[ArgIdx]->getType()),
+              ShuffleIndices);
+          setRippleShape(Shuffle, ExternElemWiseShape);
+          SlicedCallArgs.push_back(Shuffle);
+        }
+      }
+      // Extract the sliced mask
+      Value *SlicedMask = nullptr;
+      if (MaskArgument) {
+        SlicedMask = SlicedCallArgs.back();
+        SlicedCallArgs.pop_back();
+      }
+      Value *ResultVal = genFunctionCallHandleArgAttributes(
+          Call, ExternF, ToShape, SlicedCallArgs, SlicedMask);
+      setRippleShape(ResultVal, ExternElemWiseShape);
+
+      if (!ExternF.returnsVoid())
+        ExternCallReturnSlices.push_back(ResultVal);
+    }
+    uint64_t NumSlices = ExternCallReturnSlices.size();
+    if (NumSlices == 0)
+      return;
+
+    if (NumSlices >= 2) {
+      // We merge consecutive slices until we are left with the fully
+      // reconstructed tensor
+      uint64_t Pow2CeilSlicesForMerge =
+          isPowerOf2_64(NumSlices) ? NumSlices : NextPowerOf2(NumSlices);
+      unsigned MergeSteps = Log2_64(Pow2CeilSlicesForMerge);
+      LLVM_DEBUG(dbgs() << "Merging " << NumSlices << " slices using "
+                        << MergeSteps << " steps\n");
+
+      // Merge the Result slices in log2 shuffle steps
+      for (uint64_t Step = 0, E = MergeSteps, ShuffleRhsDist = 1,
+                    ShuffleSliceSize = ExternElemCount * 2;
+           Step < E; ++Step, ShuffleRhsDist *= 2, ShuffleSliceSize *= 2) {
+        TensorShape::Shape Shape(tensorRank());
+        Shape[0] = ShuffleSliceSize;
+        TensorShape SliceShape(std::move(Shape));
+        ShuffleIndices.resize(ShuffleSliceSize);
+        std::iota(ShuffleIndices.begin(), ShuffleIndices.end(), 0);
+        // Iterate over the indices of vectors to be shuffled
+        uint64_t NextPairStride = ShuffleRhsDist * 2;
+        for (uint64_t LhsIdx = 0, RhsIdx = ShuffleRhsDist; LhsIdx < NumSlices;
+             LhsIdx += NextPairStride, RhsIdx += NextPairStride) {
+          Value *Lhs = ExternCallReturnSlices[LhsIdx];
+          Value *Rhs = RhsIdx >= NumSlices ? PoisonValue::get(Lhs->getType())
+                                           : ExternCallReturnSlices[RhsIdx];
+          ExternCallReturnSlices[LhsIdx] =
+              irBuilder.CreateShuffleVector(Lhs, Rhs, ShuffleIndices);
+          setRippleShape(ExternCallReturnSlices[LhsIdx], SliceShape);
+        }
+      }
+    }
+    Value *ReturnVal = ExternCallReturnSlices[0];
+    if (ToShape.flatShape() < cast<VectorType>(ReturnVal->getType())
+                                  ->getElementCount()
+                                  .getKnownMinValue()) {
+      // We have to extract the padding values
+      ShuffleIndices.resize(ToShape.flatShape());
+      std::iota(ShuffleIndices.begin(), ShuffleIndices.end(), 0);
+      ReturnVal = irBuilder.CreateShuffleVector(
+          ReturnVal, ShuffleIndices, "ripple.extern_call.remove_padding");
+    }
+    setReplacementFor(Call, ReturnVal, ToShape);
+  };
+
   auto ProcessGeneralFunctionCall = [&](CallInst *Call,
                                         const TensorShape &ToShape) -> void {
     LLVM_DEBUG(dbgs() << "\nFunction before ProcessGeneralFunctionCall:\n\n";
@@ -2291,7 +2481,47 @@ void Ripple::genVectorInstructions() {
       Intrinsic::ID vectorIntrId =
           getVectorIntrinsicIDForCall(call, &targetLibraryInfo);
       bool IsMaskedCall = MaskedCalls.contains(call);
-      if (toShape.isVector() &&
+      if (auto *ExternFun = findExternalRippleFunctionFor(call, IsMaskedCall)) {
+        SelectInst *MaskArgument = nullptr;
+        if (IsMaskedCall) {
+          assert(ExternFun->isMaskable() &&
+                 "Cannot mask a non-maskable external ripple function");
+          if (Argument *MaskArg = ExternFun->getTensorMaskArgument()) {
+            // If the external ripple function has a mask argument, insert
+            // a dummy select to be masked by the if-conversion process
+            auto *MaskType = ExternalRippleFunction::getTrueMaskType(MaskArg);
+            // Checked when ExternalRippleFunction is created
+            assert(MaskType->isVectorTy() &&
+                   MaskType->getScalarType()->isIntegerTy() &&
+                   "Expecting a mask type as vector of integers");
+            VectorType *MaskVecTy = cast<VectorType>(MaskType);
+            IntegerType *MaskIntTy =
+                cast<IntegerType>(MaskVecTy->getElementType());
+
+            auto ExternFunMaskShape = ExternFun->maskShape(call, *this);
+            // Checked by checkVectorBranch
+            if (!ExternFunMaskShape)
+              report_fatal_error("Operands and return tensor shapes cannot be "
+                                 "broadcasted to mask shape");
+            irBuilder.SetInsertPoint(call);
+            MaskArgument = irBuilder.Insert(
+                createMaskSelectToTrueFalse(
+                    MaskIntTy,
+                    ElementCount::getFixed(ExternFunMaskShape->flatShape())),
+                "ripple.extern.mask");
+            setRippleShape(MaskArgument, *ExternFunMaskShape);
+
+            // Enable masking for this select
+            SelectToMaskWhenIfConvert.insert(MaskArgument);
+          }
+        }
+        if (!ExternFun->isElementWiseFunction()) {
+          replacebyExternalRippleFunctionCall(*ExternFun, call, MaskArgument,
+                                              toShape);
+        } else {
+          processElementWiseCall(*ExternFun, call, MaskArgument, toShape);
+        }
+      } else if (toShape.isVector() &&
                  vectorIntrId != Intrinsic::not_intrinsic) {
         // We assume vectorizing an intrinsic call does not
         // introduce approximations
@@ -4919,7 +5149,34 @@ Ripple::inferShapeFromOperands(const Instruction *I, bool AllowPartialPhi,
     }
   } else if (auto *Call = dyn_cast<CallInst>(I)) {
     if (rippleVectorizeCall(*Call)) {
-      if (canBeSpecialized(Call->getCalledFunction())) {
+      // Here we don't check for masks but we'll raise an error later if the
+      // function cannot be masked and requires one.
+      // The reason why is that we can't fall-back to non-external function call
+      // once we selected one because the shape may be different
+      if (auto *ExternalRippleMatch =
+              findExternalRippleFunctionFor(Call, /* RequiresMask */ false)) {
+        auto CallShape = ExternalRippleMatch->returnTensorShape(Call, *this);
+        if (!CallShape) {
+          // This can only fail if the call is element-wise and we cannot
+          // combine the shape of the operands for the call, otherwise it is the
+          // shape of the returned value
+          assert(ExternalRippleMatch->isElementWiseFunction());
+          std::string ErrMsg;
+          llvm::raw_string_ostream RSO(ErrMsg);
+          RSO << "call to an element-wise external ripple function with "
+                 "missmatching argument shapes: ";
+          for (unsigned i = 0u, e = Call->arg_size(); i < e; ++i) {
+            RSO << " Argument " << i << " "
+                << getRippleShape(Call->getArgOperand(i));
+          }
+          RSO.flush();
+          DiagnosticInfoRippleWithLoc DI(DS_Error, F,
+                                         sanitizeRippleLocation(Call), ErrMsg);
+          F.getContext().diagnose(DI);
+          return CallShape.takeError();
+        }
+        return *CallShape;
+      } else if (canBeSpecialized(Call->getCalledFunction())) {
         auto [Spec, RetShape] = getRippleSpecializationFor(*Call);
         if (Spec) {
           if (isPendingRippleSpecialization(*Spec))
@@ -5484,6 +5741,48 @@ Error Ripple::checkRippleStore(const StoreInst *Store) const {
   return Error::success();
 }
 
+Error Ripple::checkRippleExternCall(const CallInst *Call) {
+  if (getRippleShape(Call).isScalar())
+    return Error::success();
+  bool IsMaskedRippleCall = MaskedCalls.contains(Call);
+  if (IsMaskedRippleCall) {
+    // Warn when the call has to be masked but the external ripple function
+    // does not support masking
+    if (!findExternalRippleFunctionFor(Call, true)) {
+      if (auto *ExternalF = findExternalRippleFunctionFor(Call, false)) {
+        std::string ErrMsg;
+        llvm::raw_string_ostream RSO(ErrMsg);
+        RSO << "call to an external ripple function ("
+            << ExternalF->getFunction()->getName()
+            << ") requires masking but no maskable declaration is "
+               "available";
+        RSO.flush();
+        DiagnosticInfoRippleWithLoc DI(DS_Error, F,
+                                       sanitizeRippleLocation(Call), ErrMsg);
+        F.getContext().diagnose(DI);
+        return createStringError(
+            inconvertibleErrorCode(),
+            "External ripple function call site requires masking and no "
+            "masked declaration are available");
+      }
+    }
+  }
+
+  if (auto *ExternF = findExternalRippleFunctionFor(Call, IsMaskedRippleCall))
+    if (ExternF->isElementWiseFunction())
+      if (Function *CalledF = Call->getCalledFunction())
+        if (any_of(CalledF->args(),
+                   [](Argument &Arg) { return Arg.hasByValAttr(); })) {
+          DiagnosticInfoRippleWithLoc DI(
+              DS_Error, F, sanitizeRippleLocation(Call),
+              "ripple does not implement slicing of element-wise byval "
+              "arguments; please fill up a support request with the Ripple "
+              "team");
+          F.getContext().diagnose(DI);
+        }
+  return Error::success();
+}
+
 Error Ripple::checkVectorBranch(Instruction *BranchOrSwitch) {
   auto firstInstructionWithValidDebugLoc = [](BasicBlock *BB) -> Instruction * {
     for (auto &I : make_range(BB->getFirstNonPHIOrDbgOrAlloca(), BB->end())) {
@@ -5520,7 +5819,41 @@ Error Ripple::checkVectorBranch(Instruction *BranchOrSwitch) {
   for (auto *BB : BBsInBetween) {
     for (auto &I : *BB) {
       bool CheckInstruction = false;
-      CheckInstruction = maskInstructionWhenIfConvert(&I);
+      if (auto *Call = dyn_cast<CallInst>(&I)) {
+        if (auto *ExternFun =
+                findExternalRippleFunctionFor(Call, MaskedCalls.contains(Call)))
+          if (Argument *MaskArg = ExternFun->getTensorMaskArgument()) {
+            // For non element-wise functions, the mask must be the broadcast
+            // combination of the instruction shape (return shape) and operand
+            // shapes. For elementwise, the mask gets sliced
+            LLVM_DEBUG(dbgs() << "Mask argument: " << *MaskArg << "\n");
+            auto *MaskArgTy = ExternalRippleFunction::getTrueMaskType(MaskArg);
+            // We check that on external function creation
+            VectorType *MaskTy = cast<VectorType>(MaskArgTy);
+            auto MaskShape = ExternFun->maskShape(Call, *this);
+            if (!MaskShape ||
+                (!ExternFun->isElementWiseFunction() &&
+                 MaskShape->flatShape() !=
+                     MaskTy->getElementCount().getKnownMinValue())) {
+              std::string ErrMsg;
+              raw_string_ostream RSO(ErrMsg);
+              RSO << "the mask operand of the external ripple function '"
+                  << ExternFun->getFunction()->getName()
+                  << "' must be compatible with its return and non-mask "
+                     "operand shapes, i.e., all operands and return tensor "
+                     "shape can be broadcasted to the mask shape: expected "
+                     "mask of size "
+                  << MaskShape->flatShape() << " but have " << *MaskTy;
+              RSO.flush();
+              DiagnosticInfoRippleWithLoc DI(
+                  DS_Error, F, sanitizeRippleLocation(Call), ErrMsg);
+              F.getContext().diagnose(DI);
+              HasErrors = true;
+            }
+          }
+      } else {
+        CheckInstruction = maskInstructionWhenIfConvert(&I);
+      }
       // Check that maskable instructions agree w/ the mask shape
       if (CheckInstruction && !maskCanApplyToInstruction(&I)) {
         std::string ErrMsg;
@@ -5711,10 +6044,14 @@ Error Ripple::checkRippleSemantics() {
     } else if (IntrinsicInst *rippleShuffleI = rippleShuffleIntrinsics(&I)) {
       AllErrors = llvm::joinErrors(
           std::move(AllErrors), checkRippleShuffleIntrinsics(rippleShuffleI));
+    } else if (CallInst *CallI = dyn_cast<CallInst>(&I)) {
+      AllErrors =
+          llvm::joinErrors(std::move(AllErrors), checkRippleExternCall(CallI));
 
     } else if (StoreInst *Store = dyn_cast<StoreInst>(&I)) {
       AllErrors =
           llvm::joinErrors(std::move(AllErrors), checkRippleStore(Store));
+
     } else if (auto *Return = dyn_cast<ReturnInst>(&I)) {
       AllErrors = llvm::joinErrors(std::move(AllErrors),
                                    checkRippleFunctionReturn(Return));
@@ -5954,6 +6291,936 @@ Ripple::aliasesWithAlloca(const MemoryLocation &Loc,
         return {AAResult, Alloca};
     }
   return {AliasResult::NoAlias, nullptr};
+}
+
+StringRef ExternalRippleFunction::removeRipplePrefix(const Function *Fun) {
+  return Fun->getName().split(RipplePrefix).second;
+}
+
+bool ExternalRippleFunction::usesRippleNamingConvention(const Function *F) {
+  return F->getName().starts_with(RipplePrefix);
+}
+
+std::unique_ptr<ExternalRippleFunction>
+ExternalRippleFunction::createExternalFunction(Function *F,
+                                               unsigned TensorRank) {
+  if (!usesRippleNamingConvention(F))
+    return nullptr;
+  auto Options_and_Basename = removeRipplePrefix(F);
+  auto [BaseName, OptionList] = splitOptions(Options_and_Basename);
+  // Check vector-ness
+  bool AnyVectorType = isa<VectorType>(F->getReturnType());
+  for (auto &Arg : F->args()) {
+    Type *ArgTy = Arg.getType();
+    if (Arg.hasByValAttr() || Arg.hasStructRetAttr())
+      ArgTy = Arg.getPointeeInMemoryValueType();
+    AnyVectorType = AnyVectorType || isa<VectorType>(ArgTy);
+  }
+  if (!AnyVectorType)
+    return nullptr;
+
+  bool IsElementWise =
+      any_of(OptionList, [](StringRef S) { return S == ElementWiseOption; });
+  if (IsElementWise) {
+    // Check that all vectors have the same size
+    VectorType *SharedVectorTy = nullptr;
+    for (auto &Arg : F->args()) {
+      Type *ArgTy = Arg.getType();
+      if (Arg.hasByValAttr() || Arg.hasStructRetAttr())
+        ArgTy = Arg.getPointeeInMemoryValueType();
+
+      // Check that all vector have the same size for element-wise
+      if (VectorType *ArgVecTy = dyn_cast<VectorType>(ArgTy)) {
+        if (!SharedVectorTy)
+          SharedVectorTy = ArgVecTy;
+        else if (SharedVectorTy->getElementCount() !=
+                 ArgVecTy->getElementCount())
+          return nullptr;
+      }
+    }
+    // Check vector return
+    if (VectorType *VectorReturn = dyn_cast<VectorType>(F->getReturnType()))
+      if (SharedVectorTy &&
+          SharedVectorTy->getElementCount() != VectorReturn->getElementCount())
+        return nullptr;
+  }
+
+  // If the function is masked the last operand is vector of integer type, most
+  // likely i1 or i8 depending on the target or pointer to an integer type that
+  // the function can use as a mask.
+  bool HasMask =
+      any_of(OptionList, [](StringRef S) { return S == MaskedOption; });
+  if (HasMask) {
+    size_t NumArgs = F->arg_size();
+    if (NumArgs < 1)
+      return nullptr;
+    Argument *MaskArg = F->getArg(NumArgs - 1);
+    if (MaskArg->hasStructRetAttr()) {
+      if (NumArgs < 2)
+        return nullptr;
+      MaskArg = F->getArg(F->arg_size() - 2);
+    }
+    Type *MaskArgTy = getTrueMaskType(MaskArg);
+    if (!(MaskArgTy->isVectorTy() &&
+          MaskArgTy->getScalarType()->isIntegerTy())) {
+      // TODO: show a warning to the user that doesn't turn into an error!
+      return nullptr;
+    }
+  }
+
+  auto NewExternalF = std::unique_ptr<ExternalRippleFunction>(
+      new ExternalRippleFunction(F, BaseName, OptionList, TensorRank));
+
+  return NewExternalF;
+}
+
+const TensorShape &ExternalRippleFunction::elementWiseShape() const {
+  assert(isElementWiseFunction());
+  if (returnsVoid())
+    for (auto &ArgShape : argOperandShapes())
+      if (ArgShape.isVector())
+        return ArgShape;
+  return getReturnShape();
+}
+
+template <typename Container>
+void ExternalRippleFunction::eraseValueAtSretIndex(const Function *F,
+                                                   Container &C) {
+  assert(C.size() == F->arg_size());
+  // Remove the Sret argument shape
+  auto StructRetArgIt = find_if(
+      F->args(), [](const Argument &Arg) { return Arg.hasStructRetAttr(); });
+  if (StructRetArgIt != F->arg_end())
+    C.erase(C.begin() + StructRetArgIt->getArgNo());
+}
+
+FunctionType *
+ExternalRippleFunction::normalizeFunctionType(const Function *F,
+                                              const Argument *MaskArg) {
+  return FunctionType::get(getTrueReturnType(F),
+                           getTrueArgumentTypes(F, MaskArg, true),
+                           F->isVarArg());
+}
+
+bool ExternalRippleFunction::matchesFunction(
+    StringRef FName, const FunctionType *FType,
+    ArrayRef<const TensorShape *> CallArgShapes) const {
+  LLVM_DEBUG(dbgs() << "Checking " << FName << " against "
+                    << getFunction()->getName() << "'s scalar name "
+                    << scalarFunctionName() << "\n");
+
+  // Either both are void or both return something
+  bool NameMatch = scalarFunctionName() == FName;
+  LLVM_DEBUG(dbgs() << "Name matches: " << NameMatch << "\n");
+
+  // Match return-ness and element types
+  Type *ExternalRetTy = FType->getReturnType();
+  Type *FunRetTy = NormalizedFunType->getReturnType();
+  bool ReturnMatch =
+      ExternalRetTy->getScalarType() == FunRetTy->getScalarType();
+  LLVM_DEBUG(dbgs() << "Return matches: " << ReturnMatch << "\n");
+
+  // Match argumentCount and element types
+  bool ArgumentMatch = all_of_zip(FType->params(), NormalizedFunType->params(),
+                                  [](auto &ArgTy, auto &ExternArgTy) {
+                                    return ArgTy->getScalarType() ==
+                                           ExternArgTy->getScalarType();
+                                  });
+  LLVM_DEBUG(dbgs() << "Argument matches: " << ArgumentMatch << "\n");
+
+  if (!NameMatch || !ReturnMatch || !ArgumentMatch)
+    return false;
+
+  // Check tensor shape
+  for (size_t CallArgIdx = 0, E = CallArgShapes.size(); CallArgIdx < E;
+       ++CallArgIdx) {
+
+    auto &ArgShape = CallArgShapes[CallArgIdx];
+    auto &ExternalShape = getArgOperandShape(CallArgIdx);
+    LLVM_DEBUG(dbgs() << "Call arg " << CallArgIdx << " shape " << *ArgShape
+                      << "\n"
+                      << "External shape " << ExternalShape << "\n");
+
+    if (isElementWiseFunction()) {
+      if (!((ArgShape->isVector() && ExternalShape.isVector()) ||
+            /*we can bcast scalars if needed*/ ArgShape->isScalar()))
+        return false;
+    } else {
+      // Exact match required
+      if (*ArgShape != ExternalShape)
+        return false;
+    }
+  }
+  return true;
+}
+
+Expected<TensorShape>
+ExternalRippleFunction::maskShape(const CallInst *Call,
+                                  const Ripple &Ripple) const {
+  auto ReturnShape = returnTensorShape(Call, Ripple);
+  if (!ReturnShape || isElementWiseFunction())
+    return ReturnShape;
+  TensorShape RetAndOpBcastShape = *ReturnShape;
+  for (auto &Operand : Call->operands()) {
+    auto &OpShape = Ripple.getRippleShape(Operand);
+    if (Error E = RetAndOpBcastShape.combineShapeBcast(OpShape)) {
+      return std::move(E);
+    }
+  }
+  return RetAndOpBcastShape;
+}
+
+Expected<TensorShape>
+ExternalRippleFunction::returnTensorShape(const CallInst *Call,
+                                          const Ripple &R) const {
+  // If the external function is element-wise, find the largest broadcast shape
+  // of the operands and return this will be our return shape
+  if (isElementWiseFunction() && Call->arg_size() > 0) {
+    TensorShape BcastShape = R.getRippleShape(Call->getArgOperand(0));
+    for (unsigned ArgIdx = 1, E = Call->arg_size(); ArgIdx < E; ++ArgIdx) {
+      auto &TShape = R.getRippleShape(Call->getArgOperand(ArgIdx));
+      if (TShape.isVector())
+        if (Error Err = BcastShape.combineShapeBcast(TShape))
+          return std::move(Err);
+    }
+    // We shouldn't be looking for an external Ripple function if the inputs are
+    // all scalar but this could be useful later (for scalar in, tensor out
+    // exteral ripple functions).
+    if (BcastShape.isScalar())
+      return getReturnShape();
+    else
+      return BcastShape;
+  } else
+    return getReturnShape();
+}
+
+ExternalRippleFunction *
+Ripple::findExternalRippleFunctionFor(const CallInst *Call,
+                                      bool RequiresMask) const {
+  Function *CalledFunction = Call->getCalledFunction();
+  // We can only support Function with known number of arguments and Intrinsic
+  // calls
+  if (!CalledFunction || CalledFunction->isVarArg())
+    return nullptr;
+
+  LLVM_DEBUG(dbgs() << "Looking at external ripple candidates for " << *Call
+                    << "\n");
+
+  SmallVector<const TensorShape *, 0> CallArgShapes;
+  for (auto &Arg : Call->args()) {
+    // External ripple function spec does no have support for native vector
+    // operands for now
+    if (Arg.get()->getType()->isVectorTy())
+      return nullptr;
+    CallArgShapes.push_back(&getRippleShape(Arg));
+    LLVM_DEBUG(dbgs() << "CallInst Arg shape of " << *Arg << ": "
+                      << *CallArgShapes.back() << "\n");
+  }
+
+  StringRef FunName = Call->getCalledOperand()->getName();
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Call)) {
+    StringRef IntrinsicLibName = intrinsicToLibName(II);
+    if (!IntrinsicLibName.empty())
+      FunName = IntrinsicLibName;
+  }
+
+  // If it's a function we normalize the type and arguments
+  ExternalRippleFunction::eraseValueAtSretIndex(CalledFunction, CallArgShapes);
+  FunctionType *FunType = CalledFunction->getFunctionType();
+  FunType = ExternalRippleFunction::normalizeFunctionType(CalledFunction);
+
+  // Looking for existing matches
+  ExternalRippleFunction *MaskedF = nullptr, *UnmaskedF = nullptr;
+  for (auto &ExternalFunction : ExternalRippleFunctions) {
+    if (ExternalFunction->matchesFunction(FunName, FunType, CallArgShapes)) {
+      if (ExternalFunction->isMaskable()) {
+        MaskedF = MaskedF ? MaskedF : ExternalFunction.get();
+      } else {
+        UnmaskedF = UnmaskedF ? UnmaskedF : ExternalFunction.get();
+      }
+    }
+  }
+  if (RequiresMask) {
+    if (MaskedF) {
+      LLVM_DEBUG(dbgs() << "Found masked ripple external function match for "
+                        << FunName << " as "
+                        << MaskedF->getFunction()->getName() << "\n");
+      return MaskedF;
+    } else {
+      LLVM_DEBUG(
+          dbgs() << "Could not find masked ripple external function match for "
+                 << FunName << "\n");
+      if (UnmaskedF)
+        LLVM_DEBUG(dbgs() << "Found non-masked function match "
+                          << UnmaskedF->getFunction()->getName());
+      return nullptr;
+    }
+  } else {
+    // Prioritize unmasked function calls
+    if (UnmaskedF) {
+      LLVM_DEBUG(dbgs() << "Found Ripple external function match for "
+                        << FunName << " as "
+                        << UnmaskedF->getFunction()->getName() << "\n");
+      return UnmaskedF;
+    } else if (MaskedF) {
+      LLVM_DEBUG(
+          dbgs()
+          << "Found masked ripple external function match for unmasked call "
+          << FunName << " as " << MaskedF->getFunction()->getName() << "\n");
+      return MaskedF;
+    } else {
+      LLVM_DEBUG(dbgs() << "Found no Ripple external function match for "
+                        << FunName << "\n");
+      return nullptr;
+    }
+  }
+}
+
+void Ripple::registerExternalRippleFunction(
+    std::unique_ptr<ExternalRippleFunction> ExternFun) {
+  if (!ExternFun)
+    return;
+  LLVM_DEBUG(dbgs() << "Registered external Ripple function:\n"
+                    << *ExternFun << "\n");
+  auto Lookup = find_if(ExternalRippleFunctions,
+                        [&](auto &Other) { return *Other == *ExternFun; });
+  // The function has not already been registered
+  if (Lookup == ExternalRippleFunctions.end())
+    ExternalRippleFunctions.push_back(std::move(ExternFun));
+}
+
+void Ripple::loadRippleLibDeclarations() {
+  LLVMContext &Context = F.getContext();
+  auto &ThisModule = *F.getParent();
+  for (auto &Path : llvm::RippleCL::RippleLibs) {
+    if (Path.empty())
+      continue;
+    LLVM_DEBUG(dbgs() << "Loading ripple lib: " << Path << "\n");
+    auto BufferOrError = MemoryBuffer::getFile(Path);
+    if (!BufferOrError) {
+      // Report a warning and continue to next path
+      auto ErrCode = BufferOrError.getError();
+      Context.diagnose(
+          DiagnosticInfoRipple(DiagnosticSeverity::DS_Warning,
+                               "failed to load external Ripple library '" +
+                                   Path + "': " + ErrCode.message()));
+      continue;
+    }
+    // Parse the bitcode file
+    auto ModuleOrErr = getLazyBitcodeModule(
+        BufferOrError.get()->getMemBufferRef(), Context, true);
+    SMDiagnostic ParseDiag;
+    auto AssemblyModule = parseAssembly(BufferOrError.get()->getMemBufferRef(),
+                                        ParseDiag, Context);
+    const Module *OtherModule = nullptr;
+    if (ModuleOrErr) {
+      OtherModule = ModuleOrErr.get().get();
+    } else if (AssemblyModule) {
+      // We successfully loaded an assembly module, no need to report the
+      // failure of loading the library
+      consumeError(ModuleOrErr.takeError());
+      OtherModule = AssemblyModule.get();
+    } else {
+      // Report a warning and continue
+      std::string ErrMsg;
+      handleAllErrors(ModuleOrErr.takeError(),
+                      [&](const StringError &E) { ErrMsg = E.getMessage(); });
+      Context.diagnose(DiagnosticInfoRipple(
+          DiagnosticSeverity::DS_Warning,
+          "the Ripple external library '" + Path +
+              "' is neither a module nor LLVM bitcode. "
+              "Module load error: " +
+              ErrMsg + "; Bitcode load error: " + ParseDiag.getMessage()));
+      continue;
+    }
+
+    // The targets must match, otherwise we have a semantics problem
+    if (OtherModule->getDataLayout() != ThisModule.getDataLayout()) {
+      Context.diagnose(DiagnosticInfoRipple(
+          DiagnosticSeverity::DS_Warning,
+          "the Ripple external library datalayout mismatches with the current "
+          "target datalayout; ignoring '" +
+              Path + "'"));
+      continue;
+    }
+
+    // Now load the ripple functions declarations
+    for (const Function &Fun : *OtherModule)
+      if (ExternalRippleFunction::usesRippleNamingConvention(&Fun)) {
+        LLVM_DEBUG(dbgs() << "External module ripple function: " << Fun
+                          << "\n");
+        // Duplicate the declaration in this module
+        auto ExistingF = ThisModule.getOrInsertFunction(
+            Fun.getName(), Fun.getFunctionType(), Fun.getAttributes());
+        if (Function *ExistingFCallee =
+                dyn_cast<Function>(ExistingF.getCallee())) {
+
+          if (ExistingFCallee->getFunctionType() == Fun.getFunctionType()) {
+            LLVM_DEBUG(dbgs() << "Cloned function declaration"
+                              << *ExistingFCallee << "\n");
+            registerExternalRippleFunction(
+                ExternalRippleFunction::createExternalFunction(ExistingFCallee,
+                                                               tensorRank()));
+          } else {
+            std::string ErrStr;
+            raw_string_ostream OSS(ErrStr);
+            OSS << "A Ripple symbol with name \"" << Fun.getName()
+                << "\" is already defined in the current module with type \""
+                << *ExistingFCallee->getFunctionType()
+                << "\" and cannot be imported with type \""
+                << *Fun.getFunctionType() << "\" from the external library '"
+                << Path << "'";
+            OSS.flush();
+            Context.diagnose(
+                DiagnosticInfoRipple(DiagnosticSeverity::DS_Warning, ErrStr));
+            DiagnosticLocation DL(ExistingFCallee->getSubprogram());
+            if (DL.isValid())
+              Context.diagnose(DiagnosticInfoRippleWithLoc(
+                  DiagnosticSeverity::DS_Note, *ExistingFCallee, DL,
+                  "function declared here"));
+          }
+        }
+      }
+  }
+}
+
+void ExternalRippleFunction::applyOptions(
+    const SmallVectorImpl<StringRef> &Options) {
+  for (auto &Option : Options) {
+    if (Option == ElementWiseOption) {
+      LLVM_DEBUG(dbgs() << F->getName()
+                        << " is an element-wise Ripple function\n");
+      ElementWiseFunction = true;
+      [[maybe_unused]] auto &ElShape = elementWiseShape();
+      assert(ElShape.isVector() &&
+             (getTrueReturnType()->isVoidTy() || getReturnShape() == ElShape) &&
+             all_of(ArgShapes,
+                    [&](const auto &Shape) {
+                      return Shape.isScalar() || Shape == ElShape;
+                    }) &&
+             "This cannot possibly be element-wise!");
+    } else if (Option == MaskedOption) {
+      // We already check the argument size in the constructor wrapper
+      assert(F->arg_size() >= 1);
+      TensorMaskArgument = F->getArg(F->arg_size() - 1);
+      if (TensorMaskArgument->hasStructRetAttr()) {
+        assert(F->arg_size() >= 2);
+        TensorMaskArgument = F->getArg(F->arg_size() - 2);
+      }
+    } else if (Option == PureOption) {
+      IsPureOtherThanSretAndByVal = true;
+    }
+  }
+}
+
+std::pair<StringRef, SmallVector<StringRef, 0>>
+ExternalRippleFunction::splitOptions(StringRef OptionsAndBaseName) {
+  SmallVector<StringRef, 0> OptionList;
+  size_t LastSize;
+  do {
+    LastSize = OptionsAndBaseName.size();
+    for (auto &Option : AllOptions) {
+      if (OptionsAndBaseName.starts_with(Option)) {
+        OptionList.push_back(Option);
+        OptionsAndBaseName = OptionsAndBaseName.substr(Option.size());
+      }
+    }
+  } while (LastSize != OptionsAndBaseName.size());
+  // What's left after stripping all the options is the function base name
+  return {OptionsAndBaseName, std::move(OptionList)};
+}
+
+Type *ExternalRippleFunction::getTrueReturnType(const Function *F) {
+  for (auto &Arg : F->args()) {
+    if (Arg.hasStructRetAttr())
+      return Arg.getParamStructRetType();
+  }
+  return F->getReturnType();
+}
+
+Type *ExternalRippleFunction::getTrueReturnType() const {
+  return getTrueReturnType(getFunction());
+}
+
+SmallVector<Type *, 0> ExternalRippleFunction::getTrueArgumentTypes(
+    const Function *F, const Argument *SkipMask, bool SkipStructRet) {
+  SmallVector<Type *, 0> ArgTypes;
+  ArgTypes.reserve(F->arg_size());
+  for (auto &Arg : F->args()) {
+    if (SkipMask == &Arg)
+      continue;
+    if (Arg.hasStructRetAttr()) {
+      if (SkipStructRet)
+        continue;
+      else
+        ArgTypes.push_back(Arg.getParamStructRetType());
+    } else if (Arg.hasPassPointeeByValueCopyAttr())
+      ArgTypes.push_back(Arg.getPointeeInMemoryValueType());
+    else
+      ArgTypes.push_back(Arg.getType());
+  }
+  return ArgTypes;
+}
+
+SmallVector<Type *, 0>
+ExternalRippleFunction::getTrueArgumentTypes(bool SkipMask,
+                                             bool SkipStructRet) const {
+  return getTrueArgumentTypes(getFunction(),
+                              SkipMask ? getTensorMaskArgument() : nullptr,
+                              SkipStructRet);
+}
+
+Value *Ripple::genFunctionCallHandleArgAttributes(
+    CallInst *CallSite, ExternalRippleFunction &Calling,
+    const TensorShape &ToShape, ArrayRef<Value *> FromArgs,
+    Value *MaskForExternalFunction) {
+  auto getStructRetArg = [](const Function *Fun) -> const Argument * {
+    if (!Fun)
+      return nullptr;
+    for (auto &Arg : Fun->args()) {
+      if (Arg.hasStructRetAttr())
+        return &Arg;
+    }
+    return nullptr;
+  };
+
+  const Function *From = CallSite->getCalledFunction();
+  Function *To = Calling.getFunction();
+  auto *FromRetArg = getStructRetArg(From);
+  auto *ToRetArg = getStructRetArg(To);
+  Value *FunRetStorage;
+  if (ToRetArg) {
+    if (!FromRetArg) {
+      // We allocate a vector buffer for the return
+      irBuilder.SetInsertPoint(F.getEntryBlock().getFirstInsertionPt());
+      FunRetStorage = irBuilder.CreateAlloca(ToRetArg->getParamStructRetType());
+      setRippleShape(FunRetStorage, ScalarShape);
+    } else {
+      FunRetStorage = FromArgs[FromRetArg->getArgNo()];
+      assert(FunRetStorage->getType() == ToRetArg->getParamStructRetType());
+    }
+  }
+  // Get the call arguments right
+  SmallVector<Value *, 0> ToCallArgs;
+  for (unsigned FromIdx = 0, ToIdx = 0, E = To->arg_size();
+       FromIdx < E && ToIdx < E; ++ToIdx, ++FromIdx) {
+
+    Argument *ToArg = To->getArg(ToIdx);
+    if (ToArg->hasStructRetAttr()) {
+      ToCallArgs.push_back(FunRetStorage);
+      // Increment only ToIdx
+      --FromIdx;
+      continue;
+    }
+
+    Argument *FromArg = nullptr;
+    Value *ProcessingArg = nullptr;
+    if (ToArg == Calling.getTensorMaskArgument()) {
+      // We are processing the mask, not a FromArg
+      --FromIdx;
+      ProcessingArg = MaskForExternalFunction;
+    } else {
+      ProcessingArg = FromArgs[FromIdx];
+      if (From) {
+        FromArg = From->getArg(FromIdx);
+        if (FromArg->hasStructRetAttr()) {
+          // Increment only FromIdx
+          --ToIdx;
+          continue;
+        }
+      }
+    }
+
+    if (ToArg->hasPassPointeeByValueCopyAttr()) {
+      if (FromArg && FromArg->hasPassPointeeByValueCopyAttr()) {
+        ToCallArgs.push_back(ProcessingArg);
+      } else {
+        // We need to pass a pointer but have a value, store it!
+        irBuilder.SetInsertPoint(F.getEntryBlock().getFirstInsertionPt());
+        Value *ArgStorage =
+            irBuilder.CreateAlloca(ToArg->getPointeeInMemoryValueType());
+        setRippleShape(ArgStorage, ScalarShape);
+        irBuilder.SetInsertPoint(CallSite);
+        auto *StoreInst = irBuilder.CreateStore(ProcessingArg, ArgStorage);
+        setRippleShape(StoreInst, Calling.getArgOperandShape(ToIdx));
+        ToSkipMaskingWhenIfConvert.insert(StoreInst);
+        ToCallArgs.push_back(ArgStorage);
+      }
+    } else {
+      if (FromArg && FromArg->hasPassPointeeByValueCopyAttr()) {
+        // We need to pass by value but have a pointer, load it!
+        irBuilder.SetInsertPoint(CallSite);
+        auto *RegisterVal =
+            irBuilder.CreateLoad(ToArg->getType(), ProcessingArg);
+        setRippleShape(RegisterVal, Calling.getArgOperandShape(ToIdx));
+        ToSkipMaskingWhenIfConvert.insert(RegisterVal);
+        ToCallArgs.push_back(RegisterVal);
+      } else {
+        ToCallArgs.push_back(ProcessingArg);
+      }
+    }
+  }
+  assert(ToCallArgs.size() == To->arg_size());
+  irBuilder.SetInsertPoint(CallSite);
+  Value *Call = irBuilder.CreateCall(To->getFunctionType(), To, ToCallArgs);
+  setRippleShape(Call, Calling.getReturnShape());
+  if (ToRetArg && !FromRetArg) {
+    // The original call expects a register, load it!
+    auto *LoadedRet = irBuilder.CreateLoad(ToRetArg->getParamStructRetType(),
+                                           ToCallArgs[ToRetArg->getArgNo()]);
+    setRippleShape(LoadedRet, Calling.getReturnShape());
+    ToSkipMaskingWhenIfConvert.insert(LoadedRet);
+    return LoadedRet;
+  }
+  return Call;
+}
+
+std::map<AssertingVH<const Instruction>, TensorShape>
+Ripple::getInstructionToRippleShape() const {
+  return InstructionRippleShapes;
+}
+
+ExternalRippleFunction::ExternalRippleFunction(
+    Function *Fun, StringRef ScalarName,
+    const SmallVectorImpl<StringRef> &Options, size_t TensorRank,
+    size_t DimOffset)
+    : F(Fun), ScalarName(ScalarName) {
+
+  // 1D Shape from LLVM vector types
+  auto ShapeFromType = [TensorRank](const Type *Ty,
+                                    unsigned DimOffset) -> TensorShape::Shape {
+    TensorShape::Shape TypeShape(TensorRank, 1u);
+
+    if (const VectorType *VT = dyn_cast<VectorType>(Ty))
+      TypeShape[0 + DimOffset] = VT->getElementCount().getKnownMinValue();
+
+    return TypeShape;
+  };
+
+  ReturnShape = TensorShape(ShapeFromType(getTrueReturnType(), 0));
+  for (auto &Params : getTrueArgumentTypes()) {
+    ArgShapes.push_back(TensorShape(ShapeFromType(Params, 0)));
+    // LLVM_DEBUG(dbgs() << "Arg shape is " << ArgShapes.back() << "\n");
+  }
+
+  applyOptions(Options);
+
+  if (!IsPureOtherThanSretAndByVal) {
+    // Check for purity (in the presence of sret and byval) when the function
+    // doesn't use the "_pure" option.
+    if (F->hasFnAttribute(Attribute::ReadNone))
+      IsPureOtherThanSretAndByVal = true;
+    else {
+      MemoryEffects MemEff = F->getMemoryEffects();
+      if (MemEff.onlyAccessesArgPointees()) {
+        // Only derefs arguments:
+        // If only sret and byval are being deref, and byval is not passing a
+        // pointer (makes little sense but not impossible?), we can consider
+        // this function pure enough to be used in a masked call.
+        IsPureOtherThanSretAndByVal = all_of(F->args(), [](Argument &Arg) {
+          return !Arg.getType()->isPointerTy() || Arg.hasStructRetAttr() ||
+                 (Arg.hasByValAttr() &&
+                  !Arg.getPointeeInMemoryValueType()->isPointerTy());
+        });
+      }
+    }
+  }
+  NormalizedFunType = normalizeFunctionType(F, getTensorMaskArgument());
+}
+
+bool ExternalRippleFunction::hasTensorMaskArgument() const {
+  return TensorMaskArgument != nullptr;
+}
+
+bool ExternalRippleFunction::isPureOtherThanSretAndByval() const {
+  return IsPureOtherThanSretAndByVal;
+}
+
+bool ExternalRippleFunction::isMaskable() const {
+  return isPureOtherThanSretAndByval() || hasTensorMaskArgument();
+}
+
+void ExternalRippleFunction::print(raw_ostream &ROS) const {
+  auto *ExternF = getFunction();
+  ROS << "External ripple function \"" << ExternF->getName()
+      << "\" with scalar name \"" << scalarFunctionName() << "\":\n";
+  if (isMaskable()) {
+    ROS << "  Is a maskable";
+    if (Argument *MaskArgument = getTensorMaskArgument())
+      ROS << " function with mask argument " << *MaskArgument;
+    else {
+      assert(isPureOtherThanSretAndByval());
+      ROS << " pure function (except for sret/byval arguments)";
+    }
+  } else
+    ROS << " Is not maskable!";
+  ROS << "\n  Return type and shape: [" << *getTrueReturnType() << ", "
+      << getReturnShape() << "]\n"
+      << "  Arg types and shapes: (";
+  auto ArgTypes = getTrueArgumentTypes();
+  for (size_t Idx = 0, E = ArgTypes.size(); Idx < E; ++Idx) {
+    if (Idx > 0)
+      ROS << ", ";
+    ROS << "[" << *ArgTypes[Idx] << ", " << getArgOperandShape(Idx) << "]";
+  }
+  ROS << "\n  Normalized function type: " << *NormalizedFunType << "\n";
+}
+
+Type *ExternalRippleFunction::getTrueMaskType(const Argument *Mask) {
+  if (!Mask)
+    return nullptr;
+  Type *MaskType = Mask->getType();
+  if (Mask->hasByValAttr()) {
+    MaskType = Mask->getPointeeInMemoryValueType();
+  }
+  return MaskType;
+}
+
+LibFunc Ripple::intrinsicToLibFunc(const IntrinsicInst *II) {
+  // TODO: support constrained_ versions of math intrinsics. It affect
+  // rounding and exceptions. We will probably have have to expose that as FP
+  // metadata or naming convention?
+  // https://llvm.org/docs/LangRef.html#constrained-floating-point-intrinsics
+  auto FPIntrinsicLibFunc = [](const IntrinsicInst *II, LibFunc LS, LibFunc LD,
+                               LibFunc LL) -> LibFunc {
+    switch (II->getArgOperand(0)->getType()->getTypeID()) {
+    case Type::FloatTyID:
+      return LS;
+    case Type::DoubleTyID:
+      return LD;
+    case Type::X86_FP80TyID:
+    case Type::FP128TyID:
+    case Type::PPC_FP128TyID:
+      return LL;
+    case Type::HalfTyID:
+      return LibFunc::NotLibFunc;
+    default:
+      llvm_unreachable("Invalid type in intrinsic");
+    }
+  };
+  switch (II->getIntrinsicID()) {
+  default:
+    return LibFunc::NotLibFunc;
+  case Intrinsic::sqrt:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_sqrtf, LibFunc::LibFunc_sqrt,
+                              LibFunc::LibFunc_sqrtl);
+  // Intrinsic::powi does not have direct equivalent LibFunc function
+  case Intrinsic::asin:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_asinf, LibFunc::LibFunc_asin,
+                              LibFunc::LibFunc_asinl);
+  case Intrinsic::acos:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_acosf, LibFunc::LibFunc_acos,
+                              LibFunc::LibFunc_acosl);
+  case Intrinsic::atan:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_atanf, LibFunc::LibFunc_atan,
+                              LibFunc::LibFunc_atanl);
+  case Intrinsic::atan2:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_atan2f,
+                              LibFunc::LibFunc_atan2, LibFunc::LibFunc_atan2l);
+  case Intrinsic::sin:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_sinf, LibFunc::LibFunc_sin,
+                              LibFunc::LibFunc_sinl);
+  case Intrinsic::cos:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_cosf, LibFunc::LibFunc_cos,
+                              LibFunc::LibFunc_cosl);
+  case Intrinsic::tan:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_tanf, LibFunc::LibFunc_tan,
+                              LibFunc::LibFunc_tanl);
+  case Intrinsic::sinh:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_sinhf, LibFunc::LibFunc_sinh,
+                              LibFunc::LibFunc_sinhl);
+  case Intrinsic::cosh:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_coshf, LibFunc::LibFunc_cosh,
+                              LibFunc::LibFunc_coshl);
+  case Intrinsic::tanh:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_tanhf, LibFunc::LibFunc_tanh,
+                              LibFunc::LibFunc_tanhl);
+  case Intrinsic::pow:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_powf, LibFunc::LibFunc_pow,
+                              LibFunc::LibFunc_powl);
+  case Intrinsic::log:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_logf, LibFunc::LibFunc_log,
+                              LibFunc::LibFunc_logl);
+  case Intrinsic::log10:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_log10f,
+                              LibFunc::LibFunc_log10, LibFunc::LibFunc_log10l);
+  case Intrinsic::log2:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_log2f, LibFunc::LibFunc_log2,
+                              LibFunc::LibFunc_log2l);
+  case Intrinsic::exp:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_expf, LibFunc::LibFunc_exp,
+                              LibFunc::LibFunc_expl);
+  case Intrinsic::exp10:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_exp10f,
+                              LibFunc::LibFunc_exp10, LibFunc::LibFunc_exp10l);
+  case Intrinsic::exp2:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_exp2f, LibFunc::LibFunc_exp2,
+                              LibFunc::LibFunc_exp2l);
+  case Intrinsic::fabs:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_fabsf,
+                              LibFunc::LibFunc_exp10, LibFunc::LibFunc_fabsl);
+  case Intrinsic::copysign:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_copysignf,
+                              LibFunc::LibFunc_copysign,
+                              LibFunc::LibFunc_copysignl);
+  case Intrinsic::floor:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_floorf,
+                              LibFunc::LibFunc_floor, LibFunc::LibFunc_floorl);
+  case Intrinsic::ceil:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_ceilf, LibFunc::LibFunc_ceil,
+                              LibFunc::LibFunc_ceill);
+  case Intrinsic::trunc:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_truncf,
+                              LibFunc::LibFunc_trunc, LibFunc::LibFunc_truncl);
+  case Intrinsic::rint:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_rintf, LibFunc::LibFunc_rint,
+                              LibFunc::LibFunc_rintl);
+  case Intrinsic::nearbyint:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_nearbyintf,
+                              LibFunc::LibFunc_nearbyint,
+                              LibFunc::LibFunc_nearbyintl);
+  case Intrinsic::round:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_roundf,
+                              LibFunc::LibFunc_round, LibFunc::LibFunc_roundl);
+  case Intrinsic::roundeven:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_roundevenf,
+                              LibFunc::LibFunc_roundeven,
+                              LibFunc::LibFunc_roundevenl);
+  case Intrinsic::sincos:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_sincosf,
+                              LibFunc::LibFunc_sincos,
+                              LibFunc::LibFunc_sincosl);
+  // Intrinsic::sincospi has no direct mapping in LibFunc
+  case Intrinsic::modf:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_modff, LibFunc::LibFunc_modf,
+                              LibFunc::LibFunc_modfl);
+  // Intrinsic::fptrunc has no direct mapping to LibFunc
+  // Intrinsic::canonicalize has no direct mapping to LibFunc
+  // Intrinsic::arithmetic_fence has no direct mapping to LibFunc
+  // Intrinsic::lround has no direct mapping to LibFunc
+  // Intrinsic::llround has no direct mapping to LibFunc
+  // Intrinsic::lrint has no direct mapping to LibFunc
+  // Intrinsic::llrint has no direct mapping to LibFunc
+  case Intrinsic::ldexp:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_ldexpf,
+                              LibFunc::LibFunc_ldexp, LibFunc::LibFunc_ldexpl);
+  case Intrinsic::frexp:
+    return FPIntrinsicLibFunc(II, LibFunc::LibFunc_frexpf,
+                              LibFunc::LibFunc_frexp, LibFunc::LibFunc_frexpl);
+  }
+}
+StringRef Ripple::intrinsicToLibName(const IntrinsicInst *II,
+                                     const TargetLibraryInfo &TLI) {
+  auto FPIntrinsicName = [](const IntrinsicInst *II, StringRef LH = {},
+                            StringRef LS = {}, StringRef LD = {},
+                            StringRef LL = {}) -> StringRef {
+    switch (II->getArgOperand(0)->getType()->getTypeID()) {
+    default:
+      llvm_unreachable("Invalid type in intrinsic");
+    case Type::FloatTyID:
+      return LS;
+    case Type::DoubleTyID:
+      return LD;
+    case Type::HalfTyID:
+      return LH;
+    case Type::X86_FP80TyID:
+    case Type::FP128TyID:
+    case Type::PPC_FP128TyID:
+      return LL;
+    }
+  };
+  LibFunc LF = intrinsicToLibFunc(II);
+  if (LF != LibFunc::NotLibFunc) {
+    auto Name = TLI.getName(LF);
+    if (!Name.empty()) {
+      LLVM_DEBUG(dbgs() << "Libfunc name for " << *II << " found as " << Name
+                        << '\n');
+      return Name;
+    }
+  }
+  LLVM_DEBUG(dbgs() << "Libfunc name for " << *II << " not found!\n");
+  // Extrapolate for extra functions not part of TargetLibraryInfo
+#define LIB_MATH_NAMES(Name) Name "f16", Name "f", Name, Name "l"
+  switch (II->getIntrinsicID()) {
+  default:
+    break;
+  case Intrinsic::lround:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("lround"));
+  case Intrinsic::llround:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("llround"));
+  case Intrinsic::lrint:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("lrint"));
+  case Intrinsic::llrint:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("llrint"));
+  case Intrinsic::sqrt:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("sqrt"));
+  case Intrinsic::asin:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("asin"));
+  case Intrinsic::acos:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("acos"));
+  case Intrinsic::atan:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("atan"));
+  case Intrinsic::atan2:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("atan2"));
+  case Intrinsic::sin:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("sin"));
+  case Intrinsic::cos:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("cos"));
+  case Intrinsic::tan:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("tan"));
+  case Intrinsic::sinh:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("sinh"));
+  case Intrinsic::cosh:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("cosh"));
+  case Intrinsic::tanh:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("tanh"));
+  case Intrinsic::pow:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("pow"));
+  case Intrinsic::log:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("log"));
+  case Intrinsic::log10:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("log10"));
+  case Intrinsic::log2:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("log2"));
+  case Intrinsic::exp:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("exp"));
+  case Intrinsic::exp2:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("exp2"));
+  case Intrinsic::exp10:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("exp10"));
+  case Intrinsic::fabs:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("fabs"));
+  case Intrinsic::copysign:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("copysign"));
+  case Intrinsic::floor:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("floor"));
+  case Intrinsic::ceil:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("ceil"));
+  case Intrinsic::trunc:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("trunc"));
+  case Intrinsic::rint:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("rint"));
+  case Intrinsic::nearbyint:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("nearbyint"));
+  case Intrinsic::round:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("round"));
+  case Intrinsic::roundeven:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("roundeven"));
+  case Intrinsic::sincos:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("sincos"));
+  case Intrinsic::modf:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("modf"));
+  case Intrinsic::ldexp:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("ldexp"));
+  case Intrinsic::frexp:
+    return FPIntrinsicName(II, LIB_MATH_NAMES("frexp"));
+  }
+#undef LIB_MATH_NAMES
+  return StringRef();
+}
+
+StringRef Ripple::intrinsicToLibName(const IntrinsicInst *II) const {
+  return intrinsicToLibName(II, targetLibraryInfo);
 }
 
 static constexpr StringRef RippleFunShapeMetaKey("RippleFunctionShapeMetadata");
