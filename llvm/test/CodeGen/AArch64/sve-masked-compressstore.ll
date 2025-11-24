@@ -7,9 +7,8 @@
 define void @test_compressstore_nxv4i32(ptr %p, <vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_compressstore_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    cntp x8, p0, p0.s
 ; CHECK-NEXT:    compact z0.s, p0, z0.s
-; CHECK-NEXT:    cntp x8, p1, p0.s
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -20,9 +19,8 @@ define void @test_compressstore_nxv4i32(ptr %p, <vscale x 4 x i32> %vec, <vscale
 define void @test_compressstore_nxv2i64(ptr %p, <vscale x 2 x i64> %vec, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_compressstore_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    cntp x8, p0, p0.d
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
-; CHECK-NEXT:    cntp x8, p1, p0.d
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -33,9 +31,8 @@ define void @test_compressstore_nxv2i64(ptr %p, <vscale x 2 x i64> %vec, <vscale
 define void @test_compressstore_nxv4f32(ptr %p, <vscale x 4 x float> %vec, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_compressstore_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    cntp x8, p0, p0.s
 ; CHECK-NEXT:    compact z0.s, p0, z0.s
-; CHECK-NEXT:    cntp x8, p1, p0.s
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -46,9 +43,8 @@ define void @test_compressstore_nxv4f32(ptr %p, <vscale x 4 x float> %vec, <vsca
 define void @test_compressstore_nxv2f64(ptr %p, <vscale x 2 x double> %vec, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_compressstore_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    cntp x8, p0, p0.d
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
-; CHECK-NEXT:    cntp x8, p1, p0.d
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -61,9 +57,8 @@ define void @test_compressstore_nxv2f64(ptr %p, <vscale x 2 x double> %vec, <vsc
 define void @test_compressstore_nxv2f32(ptr %p, <vscale x 2 x float> %vec, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_compressstore_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    cntp x8, p0, p0.d
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
-; CHECK-NEXT:    cntp x8, p1, p0.d
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -76,9 +71,8 @@ define void @test_compressstore_nxv2f32(ptr %p, <vscale x 2 x float> %vec, <vsca
 define void @test_compressstore_nxv2i8(ptr %p, <vscale x 2 x i8> %vec, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_compressstore_nxv2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    cntp x8, p0, p0.d
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
-; CHECK-NEXT:    cntp x8, p1, p0.d
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -89,9 +83,8 @@ define void @test_compressstore_nxv2i8(ptr %p, <vscale x 2 x i8> %vec, <vscale x
 define void @test_compressstore_nxv4i16(ptr %p, <vscale x 4 x i16> %vec, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_compressstore_nxv4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    cntp x8, p0, p0.s
 ; CHECK-NEXT:    compact z0.s, p0, z0.s
-; CHECK-NEXT:    cntp x8, p1, p0.s
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -107,10 +100,9 @@ define void @test_compressstore_v2f64(ptr %p, <2 x double> %vec, <2 x i1> %mask)
 ; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    shl v1.2d, v1.2d, #63
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-NEXT:    cntp x8, p1, p0.d
+; CHECK-NEXT:    cntp x8, p0, p0.d
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
@@ -125,10 +117,9 @@ define void @test_compressstore_v4i32(ptr %p, <4 x i32> %vec, <4 x i1> %mask) {
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    shl v1.4s, v1.4s, #31
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
-; CHECK-NEXT:    cntp x8, p1, p0.s
+; CHECK-NEXT:    cntp x8, p0, p0.s
 ; CHECK-NEXT:    compact z0.s, p0, z0.s
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
@@ -143,10 +134,9 @@ define void @test_compressstore_v2i64(ptr %p, <2 x i64> %vec, <2 x i1> %mask) {
 ; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    shl v1.2d, v1.2d, #63
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-NEXT:    cntp x8, p1, p0.d
+; CHECK-NEXT:    cntp x8, p0, p0.d
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
@@ -216,12 +206,11 @@ define void @test_compressstore_v8i32(ptr %p, <8 x i32> %vec, <8 x i1> %mask) {
 ; CHECK-VL256-NEXT:    uunpklo z2.h, z2.b
 ; CHECK-VL256-NEXT:    ptrue p1.s, vl4
 ; CHECK-VL256-NEXT:    splice z0.s, p1, z0.s, z1.s
-; CHECK-VL256-NEXT:    ptrue p1.s
 ; CHECK-VL256-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-VL256-NEXT:    lsl z2.s, z2.s, #31
 ; CHECK-VL256-NEXT:    asr z2.s, z2.s, #31
 ; CHECK-VL256-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; CHECK-VL256-NEXT:    cntp x8, p1, p0.s
+; CHECK-VL256-NEXT:    cntp x8, p0, p0.s
 ; CHECK-VL256-NEXT:    compact z0.s, p0, z0.s
 ; CHECK-VL256-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-VL256-NEXT:    st1w { z0.s }, p0, [x0]
@@ -271,12 +260,11 @@ define void @test_compressstore_v4i64(ptr %p, <4 x i64> %vec, <4 x i1> %mask) {
 ; CHECK-VL256-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-VL256-NEXT:    ptrue p1.d, vl2
 ; CHECK-VL256-NEXT:    splice z0.d, p1, z0.d, z1.d
-; CHECK-VL256-NEXT:    ptrue p1.d
 ; CHECK-VL256-NEXT:    uunpklo z2.d, z2.s
 ; CHECK-VL256-NEXT:    lsl z2.d, z2.d, #63
 ; CHECK-VL256-NEXT:    asr z2.d, z2.d, #63
 ; CHECK-VL256-NEXT:    cmpne p0.d, p0/z, z2.d, #0
-; CHECK-VL256-NEXT:    cntp x8, p1, p0.d
+; CHECK-VL256-NEXT:    cntp x8, p0, p0.d
 ; CHECK-VL256-NEXT:    compact z0.d, p0, z0.d
 ; CHECK-VL256-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-VL256-NEXT:    st1d { z0.d }, p0, [x0]
