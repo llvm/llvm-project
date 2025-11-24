@@ -27,7 +27,7 @@ pipeline {
 
           mkdir -p "${BUILD_DIR}"
 
-          cmake -S llvm -B "${BUILD_DIR}" -G Ninja \
+          cmake3 -S llvm -B "${BUILD_DIR}" -G Ninja \
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
             -DLLVM_ENABLE_PROJECTS="${LLVM_PROJECTS}"
         '''
@@ -38,7 +38,7 @@ pipeline {
       steps {
         sh '''
           set -eux
-          cmake --build "${BUILD_DIR}" -j"$(nproc)"
+          cmake3 --build "${BUILD_DIR}" -j"$(nproc)"
         '''
       }
     }
