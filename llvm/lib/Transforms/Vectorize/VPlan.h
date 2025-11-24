@@ -2400,11 +2400,11 @@ struct RdxOrdered {};
 struct RdxInLoop {};
 // This reduction is normal with a >= 1 factor that the vector length is
 // scaled down by.
-struct RdxNormal {
+struct RdxUnordered {
   // The factor by which the output is scaled down from the VF.
   unsigned VFScaleFactor;
 };
-using ReductionStyle = std::variant<RdxOrdered, RdxInLoop, RdxNormal>;
+using ReductionStyle = std::variant<RdxOrdered, RdxInLoop, RdxUnordered>;
 
 static ReductionStyle getReductionStyle(bool InLoop, bool Ordered,
                                         unsigned ScaleFactor) {
@@ -2413,7 +2413,7 @@ static ReductionStyle getReductionStyle(bool InLoop, bool Ordered,
     return RdxOrdered{};
   if (InLoop)
     return RdxInLoop{};
-  return RdxNormal{/*VFScaleFactor=*/ScaleFactor};
+  return RdxUnordered{/*VFScaleFactor=*/ScaleFactor};
 }
 
 /// A recipe for handling reduction phis. The start value is the first operand
@@ -2451,7 +2451,7 @@ public:
   /// Get the factor that the VF of this recipe's output should be scaled by, or
   /// 1 if it isn't scaled.
   unsigned getVFScaleFactor() const {
-    auto *Partial = std::get_if<RdxNormal>(&Style);
+    auto *Partial = std::get_if<RdxUnordered>(&Style);
     return Partial ? Partial->VFScaleFactor : 1;
   }
 
@@ -2854,7 +2854,7 @@ public:
   /// Get the factor that the VF of this recipe's output should be scaled by, or
   /// 1 if it isn't scaled.
   unsigned getVFScaleFactor() const {
-    auto *Partial = std::get_if<RdxNormal>(&Style);
+    auto *Partial = std::get_if<RdxUnordered>(&Style);
     return Partial ? Partial->VFScaleFactor : 1;
   }
 

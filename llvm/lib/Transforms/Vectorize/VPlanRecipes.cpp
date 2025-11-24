@@ -2680,7 +2680,8 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
     InstructionCost CondCost = 0;
     if (isConditional()) {
       CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
-      auto *CondTy = Ctx.Types.inferScalarType(getCondOp());
+      auto *CondTy = cast<VectorType>(
+          toVectorTy(Ctx.Types.inferScalarType(getCondOp()), VF));
       CondCost = Ctx.TTI.getCmpSelInstrCost(Instruction::Select, VectorTy,
                                             CondTy, Pred, Ctx.CostKind);
     }

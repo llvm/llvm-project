@@ -8312,7 +8312,7 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
 
   return new VPReductionRecipe(
       RecurKind::Add, FastMathFlags(), ReductionI, Accumulator, BinOp, Cond,
-      RdxNormal{/*VFScaleFactor=*/ScaleFactor}, ReductionI->getDebugLoc());
+      RdxUnordered{/*VFScaleFactor=*/ScaleFactor}, ReductionI->getDebugLoc());
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
