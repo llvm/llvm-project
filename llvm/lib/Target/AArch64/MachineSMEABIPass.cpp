@@ -1091,16 +1091,18 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
     if (HasZT0State && To == ZAState::ACTIVE)
       emitZT0SaveRestore(Context, MBB, InsertPt, /*IsSave=*/false);
     break;
+
+  // This section handles transistions to OFF (not previously covered)
+  case transitionFrom(ZAState::ACTIVE).to(ZAState::OFF):
+  case transitionFrom(ZAState::ACTIVE_ZT0_SAVED).to(ZAState::OFF):
+  case transitionFrom(ZAState::LOCAL_SAVED).to(ZAState::OFF):
+    assert(SMEFnAttrs.hasPrivateZAInterface() &&
+           "Did not expect to turn ZA off in shared/agnostic ZA function");
+    emitZAMode(MBB, InsertPt, /*ClearTPIDR2=*/From == ZAState::LOCAL_SAVED,
+               /*On=*/false);
+    break;
+
   default:
-    if (To == ZAState::OFF) {
-      assert(From != ZAState::ENTRY &&
-             "ENTRY to OFF should have already been handled");
-      assert(SMEFnAttrs.hasPrivateZAInterface() &&
-             "Did not expect to turn ZA off in shared/agnostic ZA function");
-      emitZAMode(MBB, InsertPt, /*ClearTPIDR2=*/From == ZAState::LOCAL_SAVED,
-                 /*On=*/false);
-      break;
-    }
     dbgs() << "Error: Transition from " << getZAStateString(From) << " to "
            << getZAStateString(To) << '\n';
     llvm_unreachable("Unimplemented state transition");
