@@ -393,6 +393,8 @@ private:
   }
 
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
+  bool emitIntegralCast(PrimType FromT, PrimType ToT, QualType ToQT,
+                        const Expr *E);
   PrimType classifyComplexElementType(QualType T) const {
     assert(T->isAnyComplexType());
 
