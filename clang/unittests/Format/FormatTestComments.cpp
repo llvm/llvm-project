@@ -4768,14 +4768,13 @@ TEST_F(FormatTestComments, SpaceInBlockComments) {
                Style);
   verifyFormat("/**/", "/*   */", Style);
 
-  Style = getLLVMStyle();
+  Style = getLLVMStyleWithColumns(21);
   Style.ReflowComments = FormatStyle::RCS_Always;
-  Style.ColumnLimit = 22;
 
   Style.SpaceInComments.AfterOpeningComment =
       FormatStyle::CommentSpaceMode::Always;
-  verifyFormat("/* long long long long\n"
-               " * long */",
+  verifyFormat("/* long long long\n"
+               " * long long */",
                "/*long long long long long */", Style);
   Style.SpaceInComments.AfterOpeningComment =
       FormatStyle::CommentSpaceMode::Never;
@@ -4787,13 +4786,13 @@ TEST_F(FormatTestComments, SpaceInBlockComments) {
 
   Style.SpaceInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Always;
-  verifyFormat("/* long long long long\n"
-               " * long */",
+  verifyFormat("/* long long long\n"
+               " * long long */",
                "/* long long long long long*/", Style);
   Style.SpaceInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Never;
-  verifyFormat("/* long long long long\n"
-               " * long*/",
+  verifyFormat("/* long long long\n"
+               " * long long*/",
                "/* long long long long long */", Style);
   Style.SpaceInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Leave;
@@ -4802,8 +4801,8 @@ TEST_F(FormatTestComments, SpaceInBlockComments) {
       FormatStyle::CommentSpaceMode::Always;
   Style.SpaceInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Always;
-  verifyFormat("/* long long long long\n"
-               " * long */",
+  verifyFormat("/* long long long\n"
+               " * long long */",
                "/*long long long long long*/", Style);
 
   Style.SpaceInComments.AfterOpeningComment =
