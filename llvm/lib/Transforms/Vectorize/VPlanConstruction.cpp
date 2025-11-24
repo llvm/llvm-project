@@ -1014,17 +1014,26 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     if (!MinMaxPhiR || !MinMaxPhiR->hasLoopUsesOutsideReductionChain())
       continue;
 
+    // MinMaxPhiR has users outside the reduction cycle in the loop. Check if
+    // the only other user is a FindLastIV reduction. MinMaxPhiR must have
+    // exactly 3 users: 1) the min/max operation, the compare of a FindLastIV
+    // reduction and ComputeReductionResult. The comparisom must compare
+    // MinMaxPhiR against the min/max operand used for the min/max reduction
+    // and only be used by the select of the FindLastIV reduction.
     RecurKind RdxKind = MinMaxPhiR->getRecurrenceKind();
     assert(
         RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) &&
         "only min/max recurrences support users outside the reduction chain");
 
-    // One user of MinMaxPhiR is MinMaxOp, the other user must be a compare
-    // that's part of a FindLastIV chain.
     auto *MinMaxOp =
         dyn_cast<VPRecipeWithIRFlags>(MinMaxPhiR->getBackedgeValue());
-    if (!MinMaxOp || MinMaxOp->getNumUsers() != 2)
+    if (!MinMaxOp)
       return false;
+
+    // MinMaxOp must have 2 users: 1) MinMaxPhiR and 2) ComputeReductionResult
+    // (asserted below).
+    assert(MinMaxOp->getNumUsers() == 2 &&
+           "MinMaxOp must have exactly 2 users");
 
     assert((isa<VPWidenIntrinsicRecipe>(MinMaxOp) ||
             (isa<VPReplicateRecipe>(MinMaxOp) &&
@@ -1035,8 +1044,8 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     VPValue *MinMaxOpB = MinMaxOp->getOperand(1);
     if (MinMaxOpA != MinMaxPhiR)
       std::swap(MinMaxOpA, MinMaxOpB);
-    if (MinMaxOpA != MinMaxPhiR)
-      return false;
+    assert(MinMaxOpA == MinMaxPhiR &&
+           "one of MinMaxOp's operands must be the phi");
 
     VPValue *CmpOpA;
     VPValue *CmpOpB;
@@ -1047,15 +1056,30 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
         (CmpOpA != MinMaxOpB && CmpOpB != MinMaxOpB))
       return false;
 
+    // MinMaxPhiR must have exactly 3 users:
+    // * MinMaxOp,
+    // * Cmp (that's part of a FindLastIV chain),
+    // * ComputeReductionResult.
+    if (MinMaxPhiR->getNumUsers() != 3)
+      return false;
+
+    VPInstruction *MinMaxResult =
+        findUserOf<VPInstruction::ComputeReductionResult>(MinMaxPhiR);
+    assert(is_contained(MinMaxPhiR->users(), MinMaxOp) &&
+           "one user must be MinMaxOp");
+    assert(is_contained(MinMaxPhiR->users(), Cmp) && "one user must be Cmp");
+    assert(is_contained(MinMaxPhiR->users(), MinMaxResult) &&
+           "one user must be MinMaxResult");
+    assert(is_contained(MinMaxOp->users(), MinMaxPhiR) &&
+           "one user must be MinMaxPhiR");
+    assert(is_contained(MinMaxOp->users(), MinMaxResult) &&
+           "one user must be MinMaxResult");
+
     // TODO: Strict predicates need to find the first IV value for which the
     // predicate holds, not the last.
     if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE ||
         ICmpInst::isLT(Pred) || ICmpInst::isGT(Pred))
       return false;
-
-    // Normalize the predicate so MinMaxPhiR is on the right side.
-    if (CmpOpA == MinMaxPhiR)
-      Pred = CmpInst::getSwappedPredicate(Pred);
 
     // Cmp must be used by the select of a FindLastIV chain.
     VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
@@ -1079,23 +1103,39 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     // The reduction using MinMaxPhiR needs adjusting to compute the correct
     // result:
     //  1. We need to find the last IV for which the condition based on the
-    //  min/max recurrence is true,
+    //     min/max recurrence is true,
     //  2. Compare the partial min/max reduction result to its final value and,
     //  3. Select the lanes of the partial FindLastIV reductions which
-    //  correspond to the lanes matching the min/max reduction result.
+    //     correspond to the lanes matching the min/max reduction result.
+    //
+    // For example, this transforms
+    // vp<%min.result> = compute-reduction-result ir<%min.val>,
+    //                                            ir<%min.val.next>
+    // vp<%find.iv.result = compute-find-iv-result ir<%min.idx>, ir<0>,
+    //                                             SENTINEL, vp<%min.idx.next>
+    //
+    // into:
+    //
+    // vp<min.result> = compute-reduction-result ir<%min.val>, ir<%min.val.next>
+    // vp<%final.min.cmp> = icmp eq ir<%min.val.next>, vp<min.result>
+    // vp<%final.iv> = select vp<%final.min.cmp>, ir<%min.idx.next>, SENTINEL
+    // vp<%find.iv.result> = compute-find-iv-result ir<%min.idx>, ir<0>,
+    //                                             SENTINEL, vp<%final.iv>
     VPInstruction *FindIVResult =
         findUserOf<VPInstruction::ComputeFindIVResult>(FindIVPhiR);
-    VPInstruction *MinMaxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(MinMaxPhiR);
+    assert(FindIVResult->getParent() == MinMaxResult->getParent() &&
+           "both results must be computed in the same block");
     MinMaxResult->moveBefore(*FindIVResult->getParent(),
                              FindIVResult->getIterator());
 
     VPBuilder B(FindIVResult);
-    auto *FinalMinMaxCmp = B.createICmp(
-        CmpInst::ICMP_EQ, MinMaxResult->getOperand(1), MinMaxResult);
+    VPValue *MinMaxExiting = MinMaxResult->getOperand(1);
+    auto *FinalMinMaxCmp =
+        B.createICmp(CmpInst::ICMP_EQ, MinMaxExiting, MinMaxResult);
+    VPValue *Sentinel = FindIVResult->getOperand(2);
+    VPValue *LastIVExiting = FindIVResult->getOperand(3);
     auto *FinalIVSelect =
-        B.createSelect(FinalMinMaxCmp, FindIVResult->getOperand(3),
-                       FindIVResult->getOperand(2));
+        B.createSelect(FinalMinMaxCmp, LastIVExiting, Sentinel);
     FindIVResult->setOperand(3, FinalIVSelect);
   }
   return true;
