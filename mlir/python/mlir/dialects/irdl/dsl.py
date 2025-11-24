@@ -336,20 +336,20 @@ class Dialect:
 
     def op(self, name: str) -> Callable[[type], type]:
         def decorator(cls: type) -> type:
-            fields: List[Union[Operand, Attribute, Result]] = []
-
-            for field in cls.__dict__.values():
-                if isinstance(field, _FieldDef):
-                    fields.append(field)
-
+            fields = [
+                field for field in cls.__dict__.values() if isinstance(field, _FieldDef)
+            ]
             op_def = Operation(self.name, name, fields)
+
             op_view, builder = op_def._make_op_view_and_builder()
+            op_view.__name__ = cls.__name__
             setattr(op_def, "op_view", op_view)
             setattr(op_def, "builder", builder)
             self.operations.append(op_def)
+
             self.namespace.__dict__[cls.__name__] = op_view
-            op_view.__name__ = cls.__name__
             self.namespace.__dict__[name.replace(".", "_")] = builder
+
             return cls
 
         return decorator
