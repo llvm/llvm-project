@@ -1096,6 +1096,8 @@ public:
     // Calculates the first active lane index of the vector predicate operands.
     // It produces the lane index across all unrolled iterations. Unrolling will
     // add all copies of its original operand as additional operands.
+    // Implemented with @llvm.experimental.cttz.elts, but returns the expected
+    // result even with operands that are all zeroes.
     FirstActiveLane,
 
     // The opcodes below are used for VPInstructionWithType.
@@ -1134,7 +1136,7 @@ private:
   OpcodeTy Opcode;
 
   /// An optional name that can be used for the generated IR instruction.
-  const std::string Name;
+  std::string Name;
 
   /// Returns true if we can generate a scalar for the first lane only if
   /// needed.
@@ -1224,6 +1226,9 @@ public:
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
+
+  /// Set the symbolic name for the VPInstruction.
+  void setName(StringRef NewName) { Name = NewName.str(); }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
