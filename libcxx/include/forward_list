@@ -824,15 +824,15 @@ public:
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>
-  _LIBCPP_CONSTEXPR_SINCE_CXX26
-      _LIBCPP_HIDE_FROM_ABI iterator insert_range_after(const_iterator __position, _Range&& __range) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI iterator
+  insert_range_after(const_iterator __position, _Range&& __range) {
     return __insert_after_with_sentinel(__position, ranges::begin(__range), ranges::end(__range));
   }
 #  endif
 
   template <class _InputIterator, class _Sentinel>
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI
-  iterator __insert_after_with_sentinel(const_iterator __p, _InputIterator __f, _Sentinel __l);
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI iterator
+  __insert_after_with_sentinel(const_iterator __p, _InputIterator __f, _Sentinel __l);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI iterator erase_after(const_iterator __p);
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI iterator erase_after(const_iterator __f, const_iterator __l);
@@ -1518,8 +1518,8 @@ operator==(const forward_list<_Tp, _Alloc>& __x, const forward_list<_Tp, _Alloc>
 #  if _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 inline
-    _LIBCPP_HIDE_FROM_ABI bool operator!=(const forward_list<_Tp, _Alloc>& __x, const forward_list<_Tp, _Alloc>& __y) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 inline _LIBCPP_HIDE_FROM_ABI bool
+operator!=(const forward_list<_Tp, _Alloc>& __x, const forward_list<_Tp, _Alloc>& __y) {
   return !(__x == __y);
 }
 
