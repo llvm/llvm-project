@@ -1624,7 +1624,7 @@ public:
     if (UseMaskForCond || UseMaskForGaps) {
       unsigned IID = Opcode == Instruction::Load ? Intrinsic::masked_load
                                                  : Intrinsic::masked_store;
-      Cost = thisT()->getMaskedMemoryOpCost(
+      Cost = thisT()->getMemIntrinsicInstrCost(
           {IID, VecTy, Alignment, AddressSpace}, CostKind);
     } else
       Cost = thisT()->getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace,
@@ -1825,9 +1825,10 @@ public:
         if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
           Alignment = VPI->getPointerAlignment().valueOrOne();
         bool VarMask = isa<Constant>(ICA.getArgs()[2]);
-        return thisT()->getGatherScatterOpCost(
-            Instruction::Store, ICA.getArgTypes()[0], ICA.getArgs()[1], VarMask,
-            Alignment, CostKind, nullptr);
+        return thisT()->getMemIntrinsicInstrCost(
+            {Intrinsic::vp_scatter, ICA.getArgTypes()[0], ICA.getArgs()[1],
+             VarMask, Alignment, nullptr},
+            CostKind);
       }
       if (ICA.getID() == Intrinsic::vp_gather) {
         if (ICA.isTypeBasedOnly()) {
@@ -1841,9 +1842,10 @@ public:
         if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
           Alignment = VPI->getPointerAlignment().valueOrOne();
         bool VarMask = isa<Constant>(ICA.getArgs()[1]);
-        return thisT()->getGatherScatterOpCost(
-            Instruction::Load, ICA.getReturnType(), ICA.getArgs()[0], VarMask,
-            Alignment, CostKind, nullptr);
+        return thisT()->getMemIntrinsicInstrCost(
+            {Intrinsic::vp_gather, ICA.getReturnType(), ICA.getArgs()[0],
+             VarMask, Alignment, nullptr},
+            CostKind);
       }
 
       if (ICA.getID() == Intrinsic::vp_select ||
@@ -1948,31 +1950,35 @@ public:
       const Value *Mask = Args[2];
       bool VarMask = !isa<Constant>(Mask);
       Align Alignment = I->getParamAlign(1).valueOrOne();
-      return thisT()->getGatherScatterOpCost(Instruction::Store,
-                                             ICA.getArgTypes()[0], Args[1],
-                                             VarMask, Alignment, CostKind, I);
+      return thisT()->getMemIntrinsicInstrCost({Intrinsic::masked_scatter,
+                                                ICA.getArgTypes()[0], Args[1],
+                                                VarMask, Alignment, I},
+                                               CostKind);
     }
     case Intrinsic::masked_gather: {
       const Value *Mask = Args[1];
       bool VarMask = !isa<Constant>(Mask);
       Align Alignment = I->getParamAlign(0).valueOrOne();
-      return thisT()->getGatherScatterOpCost(Instruction::Load, RetTy, Args[0],
-                                             VarMask, Alignment, CostKind, I);
+      return thisT()->getMemIntrinsicInstrCost(
+          {Intrinsic::masked_gather, RetTy, Args[0], VarMask, Alignment, I},
+          CostKind);
     }
     case Intrinsic::masked_compressstore: {
       const Value *Data = Args[0];
       const Value *Mask = Args[2];
       Align Alignment = I->getParamAlign(1).valueOrOne();
-      return thisT()->getExpandCompressMemoryOpCost(
-          Instruction::Store, Data->getType(), !isa<Constant>(Mask), Alignment,
-          CostKind, I);
+      return thisT()->getMemIntrinsicInstrCost(
+          {Intrinsic::masked_compressstore, Data->getType(),
+           !isa<Constant>(Mask), Alignment, I},
+          CostKind);
     }
     case Intrinsic::masked_expandload: {
       const Value *Mask = Args[1];
       Align Alignment = I->getParamAlign(0).valueOrOne();
-      return thisT()->getExpandCompressMemoryOpCost(Instruction::Load, RetTy,
-                                                    !isa<Constant>(Mask),
-                                                    Alignment, CostKind, I);
+      return thisT()->getMemIntrinsicInstrCost({Intrinsic::masked_expandload,
+                                                RetTy, !isa<Constant>(Mask),
+                                                Alignment, I},
+                                               CostKind);
     }
     case Intrinsic::experimental_vp_strided_store: {
       const Value *Data = Args[0];
@@ -1983,9 +1989,8 @@ public:
       Type *EltTy = cast<VectorType>(Data->getType())->getElementType();
       Align Alignment =
           I->getParamAlign(1).value_or(thisT()->DL.getABITypeAlign(EltTy));
-      return thisT()->getStridedMemoryOpCost(Instruction::Store,
-                                             Data->getType(), Ptr, VarMask,
-                                             Alignment, CostKind, I);
+      return thisT()->getMemIntrinsicInstrCost(
+          {IID, Data->getType(), Ptr, VarMask, Alignment, I}, CostKind);
     }
     case Intrinsic::experimental_vp_strided_load: {
       const Value *Ptr = Args[0];
@@ -1995,8 +2000,8 @@ public:
       Type *EltTy = cast<VectorType>(RetTy)->getElementType();
       Align Alignment =
           I->getParamAlign(0).value_or(thisT()->DL.getABITypeAlign(EltTy));
-      return thisT()->getStridedMemoryOpCost(Instruction::Load, RetTy, Ptr,
-                                             VarMask, Alignment, CostKind, I);
+      return thisT()->getMemIntrinsicInstrCost(
+          {IID, RetTy, Ptr, VarMask, Alignment, I}, CostKind);
     }
     case Intrinsic::stepvector: {
       if (isa<ScalableVectorType>(RetTy))
@@ -2409,26 +2414,28 @@ public:
     case Intrinsic::masked_store: {
       Type *Ty = Tys[0];
       Align TyAlign = thisT()->DL.getABITypeAlign(Ty);
-      return thisT()->getMaskedMemoryOpCost({IID, Ty, TyAlign, 0}, CostKind);
+      return thisT()->getMemIntrinsicInstrCost({IID, Ty, TyAlign, 0}, CostKind);
     }
     case Intrinsic::masked_load: {
       Type *Ty = RetTy;
       Align TyAlign = thisT()->DL.getABITypeAlign(Ty);
-      return thisT()->getMaskedMemoryOpCost({IID, Ty, TyAlign, 0}, CostKind);
+      return thisT()->getMemIntrinsicInstrCost({IID, Ty, TyAlign, 0}, CostKind);
     }
     case Intrinsic::experimental_vp_strided_store: {
       auto *Ty = cast<VectorType>(ICA.getArgTypes()[0]);
       Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
-      return thisT()->getStridedMemoryOpCost(
-          Instruction::Store, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
-          Alignment, CostKind, ICA.getInst());
+      return thisT()->getMemIntrinsicInstrCost({IID, Ty, /*Ptr=*/nullptr,
+                                                /*VariableMask=*/true,
+                                                Alignment, ICA.getInst()},
+                                               CostKind);
     }
     case Intrinsic::experimental_vp_strided_load: {
       auto *Ty = cast<VectorType>(ICA.getReturnType());
       Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
-      return thisT()->getStridedMemoryOpCost(
-          Instruction::Load, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
-          Alignment, CostKind, ICA.getInst());
+      return thisT()->getMemIntrinsicInstrCost({IID, Ty, /*Ptr=*/nullptr,
+                                                /*VariableMask=*/true,
+                                                Alignment, ICA.getInst()},
+                                               CostKind);
     }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
@@ -3014,6 +3021,52 @@ public:
 
     // This is going to be turned into a library call, make it expensive.
     return SingleCallCost;
+  }
+
+  /// Get memory intrinsic cost based on arguments.
+  InstructionCost
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const override {
+    unsigned Id = MICA.getID();
+    Type *DataTy = MICA.getDataType();
+    const Value *Ptr = MICA.getPointer();
+    const Instruction *I = MICA.getInst();
+    bool VariableMask = MICA.getVariableMask();
+    Align Alignment = MICA.getAlignment();
+
+    switch (Id) {
+    case Intrinsic::experimental_vp_strided_load:
+    case Intrinsic::experimental_vp_strided_store: {
+      unsigned Opcode = Id == Intrinsic::experimental_vp_strided_load
+                            ? Instruction::Load
+                            : Instruction::Store;
+      return thisT()->getStridedMemoryOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                             Alignment, CostKind, I);
+    }
+    case Intrinsic::masked_scatter:
+    case Intrinsic::masked_gather:
+    case Intrinsic::vp_scatter:
+    case Intrinsic::vp_gather: {
+      unsigned Opcode =
+          (Id == Intrinsic::masked_gather || Id == Intrinsic::vp_gather)
+              ? Instruction::Load
+              : Instruction::Store;
+      return thisT()->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                             Alignment, CostKind, I);
+    }
+    case Intrinsic::masked_load:
+    case Intrinsic::masked_store:
+      return thisT()->getMaskedMemoryOpCost(MICA, CostKind);
+    case Intrinsic::masked_compressstore:
+    case Intrinsic::masked_expandload: {
+      unsigned Opcode = Id == Intrinsic::masked_expandload ? Instruction::Load
+                                                           : Instruction::Store;
+      return thisT()->getExpandCompressMemoryOpCost(
+          Opcode, DataTy, VariableMask, Alignment, CostKind, I);
+    }
+    default:
+      llvm_unreachable("unexpected intrinsic");
+    }
   }
 
   /// Compute a cost of the given call instruction.
