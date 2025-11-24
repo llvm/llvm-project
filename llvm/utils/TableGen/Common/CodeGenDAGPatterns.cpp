@@ -1990,7 +1990,8 @@ static unsigned GetNumNodeResults(const Record *Operator,
   }
 
   if (Operator->isSubClassOf("Instruction")) {
-    CodeGenInstruction &InstInfo = CDP.getTargetInfo().getInstruction(Operator);
+    const CodeGenInstruction &InstInfo =
+        CDP.getTargetInfo().getInstruction(Operator);
 
     unsigned NumDefsToAdd = InstInfo.Operands.NumDefs;
 
@@ -2657,7 +2658,7 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
 
   if (getOperator()->isSubClassOf("Instruction")) {
     const DAGInstruction &Inst = CDP.getInstruction(getOperator());
-    CodeGenInstruction &InstInfo =
+    const CodeGenInstruction &InstInfo =
         CDP.getTargetInfo().getInstruction(getOperator());
 
     bool MadeChange = false;
@@ -3871,7 +3872,7 @@ static void getInstructionsInTree(TreePatternNode &Tree,
 
 /// Check the class of a pattern leaf node against the instruction operand it
 /// represents.
-static bool checkOperandClass(CGIOperandList::OperandInfo &OI,
+static bool checkOperandClass(const CGIOperandList::OperandInfo &OI,
                               const Record *Leaf) {
   if (OI.Rec == Leaf)
     return true;
@@ -3888,7 +3889,7 @@ static bool checkOperandClass(CGIOperandList::OperandInfo &OI,
   return false;
 }
 
-void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
+void CodeGenDAGPatterns::parseInstructionPattern(const CodeGenInstruction &CGI,
                                                  const ListInit *Pat,
                                                  DAGInstMap &DAGInsts) {
 
@@ -3987,7 +3988,7 @@ void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
   std::vector<TreePatternNodePtr> ResultNodeOperands;
   std::vector<const Record *> Operands;
   for (unsigned i = NumResults, e = CGI.Operands.size(); i != e; ++i) {
-    CGIOperandList::OperandInfo &Op = CGI.Operands[i];
+    const CGIOperandList::OperandInfo &Op = CGI.Operands[i];
     StringRef OpName = Op.Name;
     if (OpName.empty()) {
       I.error("Operand #" + Twine(i) + " in operands list has no name!");
@@ -4093,7 +4094,7 @@ void CodeGenDAGPatterns::ParseInstructions() {
       std::vector<const Record *> Results;
       std::vector<const Record *> Operands;
 
-      CodeGenInstruction &InstInfo = Target.getInstruction(Instr);
+      const CodeGenInstruction &InstInfo = Target.getInstruction(Instr);
 
       if (InstInfo.Operands.size() != 0) {
         for (unsigned j = 0, e = InstInfo.Operands.NumDefs; j < e; ++j)
@@ -4112,7 +4113,7 @@ void CodeGenDAGPatterns::ParseInstructions() {
       continue; // no pattern.
     }
 
-    CodeGenInstruction &CGI = Target.getInstruction(Instr);
+    const CodeGenInstruction &CGI = Target.getInstruction(Instr);
     parseInstructionPattern(CGI, LI, Instructions);
   }
 

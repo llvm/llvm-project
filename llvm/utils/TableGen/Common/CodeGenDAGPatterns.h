@@ -1224,8 +1224,8 @@ public:
 
   /// Parse the Pattern for an instruction, and insert the result in DAGInsts.
   using DAGInstMap = std::map<const Record *, DAGInstruction, LessRecordByID>;
-  void parseInstructionPattern(CodeGenInstruction &CGI, const ListInit *Pattern,
-                               DAGInstMap &DAGInsts);
+  void parseInstructionPattern(const CodeGenInstruction &CGI,
+                               const ListInit *Pattern, DAGInstMap &DAGInsts);
 
   const DAGInstruction &getInstruction(const Record *R) const {
     auto F = Instructions.find(R);
