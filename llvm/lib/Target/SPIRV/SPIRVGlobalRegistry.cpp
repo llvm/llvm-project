@@ -21,6 +21,7 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
@@ -973,8 +974,12 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeFunction(
     const FunctionType *Ty, SPIRVType *RetType,
     const SmallVectorImpl<SPIRVType *> &ArgTypes,
     MachineIRBuilder &MIRBuilder) {
-  if (Ty->isVarArg())
-    reportFatalUsageError("SPIR-V does not support variadic functions");
+  if (Ty->isVarArg()) {
+    Function &Fn = MIRBuilder.getMF().getFunction();
+    Ty->getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "SPIR-V does not support variadic functions",
+        MIRBuilder.getDebugLoc()));
+  }
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeFunction)
                    .addDef(createTypeVReg(MIRBuilder))
