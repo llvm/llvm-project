@@ -138,25 +138,19 @@ struct MachineValueTypeSet {
   private:
     unsigned find_from_pos(unsigned P) const {
       unsigned SkipWords = P / WordWidth;
-      unsigned SkipBits = P % WordWidth;
-      unsigned Count = SkipWords * WordWidth;
-
-      // If P is in the middle of a word, process it manually here, because
-      // the trailing bits need to be masked off to use findFirstSet.
-      if (SkipBits != 0) {
-        WordType W = Set->Words[SkipWords];
-        W &= maskLeadingOnes<WordType>(WordWidth - SkipBits);
-        if (W != 0)
-          return Count + llvm::countr_zero(W);
-        Count += WordWidth;
-        SkipWords++;
-      }
 
       for (unsigned i = SkipWords; i != NumWords; ++i) {
         WordType W = Set->Words[i];
+
+        // If P is in the middle of a word, process it manually here, because
+        // the trailing bits need to be masked off to use countr_zero.
+        if (i == SkipWords) {
+          unsigned SkipBits = P % WordWidth;
+          W &= maskTrailingZeros<WordType>(SkipBits);
+        }
+
         if (W != 0)
-          return Count + llvm::countr_zero(W);
-        Count += WordWidth;
+          return i * WordWidth + llvm::countr_zero(W);
       }
       return Capacity;
     }
