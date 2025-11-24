@@ -1809,11 +1809,20 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     if (!Subtarget->hasSVEB16B16() ||
         !Subtarget->isNonStreamingSVEorSME2Available()) {
-      for (auto Opcode : {ISD::FADD, ISD::FMA, ISD::FMAXIMUM, ISD::FMAXNUM,
-                          ISD::FMINIMUM, ISD::FMINNUM, ISD::FMUL, ISD::FSUB}) {
-        setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
-        setOperationPromotedToType(Opcode, MVT::nxv4bf16, MVT::nxv4f32);
-        setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
+      for (MVT VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
+        MVT PromotedVT = VT.changeVectorElementType(MVT::f32);
+        setOperationPromotedToType(ISD::FADD, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMA, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMAXIMUM, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMAXNUM, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMINIMUM, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMINNUM, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FSUB, VT, PromotedVT);
+
+        if (VT != MVT::nxv2bf16 && Subtarget->hasBF16())
+          setOperationAction(ISD::FMUL, VT, Custom);
+        else
+          setOperationPromotedToType(ISD::FMUL, VT, PromotedVT);
       }
     }
 
@@ -7670,6 +7679,57 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
                      EndOfTrmp);
 }
 
+SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  if (VT.getScalarType() != MVT::bf16 ||
+      (Subtarget->hasSVEB16B16() &&
+       Subtarget->isNonStreamingSVEorSME2Available()))
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMUL_PRED);
+
+  assert(Subtarget->hasBF16() && "Expected +bf16 for custom FMUL lowering");
+  assert((VT == MVT::nxv4bf16 || VT == MVT::nxv8bf16) && "Unexpected FMUL VT");
+
+  auto MakeGetIntrinsic = [&](Intrinsic::ID IID) {
+    return [&, IID](EVT VT, auto... Ops) {
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
+                         DAG.getConstant(IID, DL, MVT::i32), Ops...);
+    };
+  };
+
+  auto ReinterpretCast = [&](SDValue Value, EVT VT) {
+    if (VT == Value.getValueType())
+      return Value;
+    return DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Value);
+  };
+
+  // Create helpers for building intrinsic calls.
+  auto BFMLALB = MakeGetIntrinsic(Intrinsic::aarch64_sve_bfmlalb);
+  auto BFMLALT = MakeGetIntrinsic(Intrinsic::aarch64_sve_bfmlalt);
+  auto FCVT = MakeGetIntrinsic(Intrinsic::aarch64_sve_fcvt_bf16f32_v2);
+  auto FCVTNT = MakeGetIntrinsic(Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2);
+
+  // All intrinsics expect to operate on full bf16 vector types.
+  SDValue LHS = ReinterpretCast(Op.getOperand(0), MVT::nxv8bf16);
+  SDValue RHS = ReinterpretCast(Op.getOperand(1), MVT::nxv8bf16);
+
+  SDValue Zero =
+      DAG.getNeutralElement(ISD::FADD, DL, MVT::nxv4f32, Op->getFlags());
+  SDValue Pg = DAG.getConstant(1, DL, MVT::nxv4i1);
+
+  // Lower bf16 FMUL as a pair (VT == nxv8bf16) of BFMLAL top/bottom
+  // instructions. These result in two f32 vectors, which can be converted back
+  // to bf16 with FCVT and FCVTNT.
+  SDValue BottomF32 = BFMLALB(MVT::nxv4f32, Zero, LHS, RHS);
+  SDValue BottomBF16 =
+      FCVT(MVT::nxv8bf16, DAG.getPOISON(MVT::nxv8bf16), Pg, BottomF32);
+  // Note: nxv4bf16 only uses even lanes.
+  if (VT == MVT::nxv4bf16)
+    return ReinterpretCast(BottomBF16, VT);
+  SDValue TopF32 = BFMLALT(MVT::nxv4f32, Zero, LHS, RHS);
+  return FCVTNT(VT, BottomBF16, Pg, TopF32);
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -7744,7 +7804,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::FSUB:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FSUB_PRED);
   case ISD::FMUL:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMUL_PRED);
+    return LowerFMUL(Op, DAG);
   case ISD::FMA:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
   case ISD::FDIV:
