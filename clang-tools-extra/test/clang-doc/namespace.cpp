@@ -58,7 +58,6 @@
 
 // COM: FIXME: Add global functions to the namespace template
 // COM: FIXME: Add namespaces to the namespace template
-// COM: FIXME: Add class definition location to class template
 
 // Anonymous Namespace
 namespace {
@@ -70,7 +69,7 @@ void anonFunction() {}
 class AnonClass {};
 // MD-ANON-CLASS-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
 // HTML-ANON-CLASS-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
-// MUSTACHE-ANON-CLASS-LINE-NOT: <p>Defined at line [[@LINE-3]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// MUSTACHE-ANON-CLASS-LINE: <p>Defined at line [[@LINE-3]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
 // MD-ANON-CLASS: # class AnonClass
 // HTML-ANON-CLASS: <h1>class AnonClass</h1>
@@ -117,7 +116,7 @@ void functionInPrimaryNamespace() {}
 class ClassInPrimaryNamespace {};
 // MD-PRIMARY-CLASS-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
 // HTML-PRIMARY-CLASS-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
-// MUSTACHE-PRIMARY-CLASS-LINE-NOT: <p>Defined at line [[@LINE-3]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// MUSTACHE-PRIMARY-CLASS-LINE: <p>Defined at line [[@LINE-3]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
 // MD-PRIMARY-CLASS: # class ClassInPrimaryNamespace
 // MD-PRIMARY-CLASS: Class in PrimaryNamespace
@@ -139,7 +138,7 @@ void functionInNestedNamespace() {}
 class ClassInNestedNamespace {};
 // MD-NESTED-CLASS-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
 // HTML-NESTED-CLASS-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
-// MUSTACHE-NESTED-CLASS-LINE-NOT: <p>Defined at line [[@LINE-3]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// MUSTACHE-NESTED-CLASS-LINE: <p>Defined at line [[@LINE-3]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
 // MD-NESTED-CLASS: # class ClassInNestedNamespace
 // MD-NESTED-CLASS: Class in NestedNamespace
@@ -233,7 +232,7 @@ void functionInAnotherNamespace() {}
 class ClassInAnotherNamespace {};
 // MD-ANOTHER-CLASS-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
 // HTML-ANOTHER-CLASS-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
-// MUSTACHE-ANOTHER-CLASS-LINE-NOT: <p>Defined at line [[@LINE-3]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// MUSTACHE-ANOTHER-CLASS-LINE: <p>Defined at line [[@LINE-3]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
 // MD-ANOTHER-CLASS: # class ClassInAnotherNamespace
 // MD-ANOTHER-CLASS:  Class in AnotherNamespace

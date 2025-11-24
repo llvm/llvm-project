@@ -11996,6 +11996,16 @@ static bool CheckMultiVersionAdditionalDecl(
     }
   }
 
+  // Redeclarations of a target_clones function may omit the attribute, in which
+  // case it will be inherited during declaration merging.
+  if (NewMVKind == MultiVersionKind::None &&
+      OldMVKind == MultiVersionKind::TargetClones) {
+    NewFD->setIsMultiVersion();
+    Redeclaration = true;
+    OldDecl = OldFD;
+    return false;
+  }
+
   // Else, this is simply a non-redecl case.  Checking the 'value' is only
   // necessary in the Target case, since The CPUSpecific/Dispatch cases are
   // handled in the attribute adding step.
@@ -12119,8 +12129,9 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
   }
 
   // At this point, we have a multiversion function decl (in OldFD) AND an
-  // appropriate attribute in the current function decl.  Resolve that these are
-  // still compatible with previous declarations.
+  // appropriate attribute in the current function decl (unless it's allowed to
+  // omit the attribute).  Resolve that these are still compatible with previous
+  // declarations.
   return CheckMultiVersionAdditionalDecl(S, OldFD, NewFD, NewCPUDisp,
                                          NewCPUSpec, NewClones, Redeclaration,
                                          OldDecl, Previous);

@@ -3370,6 +3370,11 @@ TEST_F(TokenAnnotatorTest, UnderstandDesignatedInitializers) {
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;
   EXPECT_TOKEN(Tokens[6], tok::l_square, TT_DesignatedInitializerLSquare);
   EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
+
+  Tokens = annotate("Foo foo[] = {[0] = 1, [1] = 2};");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_square, TT_DesignatedInitializerLSquare);
+  EXPECT_TOKEN(Tokens[12], tok::l_square, TT_DesignatedInitializerLSquare);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsJavaScript) {

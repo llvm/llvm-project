@@ -9257,6 +9257,7 @@ static InstructionCost calculateEarlyExitCost(VPCostContext &CostCtx,
 ///  2. In the case of loops with uncountable early exits, we may have to do
 ///     extra work when exiting the loop early, such as calculating the final
 ///     exit values of variables used outside the loop.
+///  3. The middle block, if expected TC <= VF.Width.
 static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
                                         VectorizationFactor &VF, Loop *L,
                                         PredicatedScalarEvolution &PSE,
@@ -9270,6 +9271,14 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // Add on the cost of any work required in the vector early exit block, if
   // one exists.
   TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
+
+  // If the expected trip count is less than the VF, the vector loop will only
+  // execute a single iteration. Then the middle block is executed the same
+  // number of times as the vector region.
+  // TODO: Extend logic to always account for the cost of the middle block.
+  auto ExpectedTC = getSmallBestKnownTC(PSE, L);
+  if (ExpectedTC && ElementCount::isKnownLE(*ExpectedTC, VF.Width))
+    TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
 
   // When interleaving only scalar and vector cost will be equal, which in turn
   // would lead to a divide by 0. Fall back to hard threshold.
@@ -9301,9 +9310,11 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   //  The total cost of the vector loop is
   //    RtC + VecC * (TC / VF) + EpiC
   //  where
-  //  * RtC is the cost of the generated runtime checks plus the cost of
-  //    performing any additional work in the vector.early.exit block for loops
-  //    with uncountable early exits.
+  //  * RtC is the sum of the costs cost of
+  //    - the generated runtime checks
+  //    - performing any additional work in the vector.early.exit block for
+  //      loops with uncountable early exits.
+  //    - the middle block, if ExpectedTC <=  VF.Width.
   //  * VecC is the cost of a single vector iteration.
   //  * TC is the actual trip count of the loop
   //  * VF is the vectorization factor

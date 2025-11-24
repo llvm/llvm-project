@@ -1135,6 +1135,18 @@ public:
       llvm_unreachable("Unknown construct kind in VisitReductionClause");
     }
   }
+
+  void VisitDeviceResidentClause(const OpenACCDeviceResidentClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::DeclareEnterOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::DeclareDeviceResidentOp>(
+            var, mlir::acc::DataClause::acc_declare_device_resident, {},
+            /*structured=*/true,
+            /*implicit=*/false);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitDeviceResidentClause");
+    }
+  }
 };
 
 template <typename OpTy>

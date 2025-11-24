@@ -84,11 +84,13 @@ public:
   DeclContext() : DefinedInClangModule(0), Parent(*this) {}
 
   DeclContext(unsigned Hash, uint32_t Line, uint32_t ByteSize, uint16_t Tag,
-              StringRef Name, StringRef File, const DeclContext &Parent,
-              DWARFDie LastSeenDIE = DWARFDie(), unsigned CUId = 0)
+              StringRef Name, StringRef NameForUniquing, StringRef File,
+              const DeclContext &Parent, DWARFDie LastSeenDIE = DWARFDie(),
+              unsigned CUId = 0)
       : QualifiedNameHash(Hash), Line(Line), ByteSize(ByteSize), Tag(Tag),
-        DefinedInClangModule(0), Name(Name), File(File), Parent(Parent),
-        LastSeenDIE(LastSeenDIE), LastSeenCompileUnitID(CUId) {}
+        DefinedInClangModule(0), Name(Name), NameForUniquing(NameForUniquing),
+        File(File), Parent(Parent), LastSeenDIE(LastSeenDIE),
+        LastSeenCompileUnitID(CUId) {}
 
   uint32_t getQualifiedNameHash() const { return QualifiedNameHash; }
 
@@ -100,6 +102,7 @@ public:
 
   uint32_t getCanonicalDIEOffset() const { return CanonicalDIEOffset; }
   void setCanonicalDIEOffset(uint32_t Offset) { CanonicalDIEOffset = Offset; }
+  llvm::StringRef getCanonicalName() const { return Name; }
 
   bool isDefinedInClangModule() const { return DefinedInClangModule; }
   void setDefinedInClangModule(bool Val) { DefinedInClangModule = Val; }
@@ -115,6 +118,7 @@ private:
   uint16_t Tag = dwarf::DW_TAG_compile_unit;
   unsigned DefinedInClangModule : 1;
   StringRef Name;
+  StringRef NameForUniquing;
   StringRef File;
   const DeclContext &Parent;
   DWARFDie LastSeenDIE;
@@ -180,7 +184,7 @@ struct DeclMapInfo : private DenseMapInfo<DeclContext *> {
       return RHS == LHS;
     return LHS->QualifiedNameHash == RHS->QualifiedNameHash &&
            LHS->Line == RHS->Line && LHS->ByteSize == RHS->ByteSize &&
-           LHS->Name.data() == RHS->Name.data() &&
+           LHS->NameForUniquing.data() == RHS->NameForUniquing.data() &&
            LHS->File.data() == RHS->File.data() &&
            LHS->Parent.QualifiedNameHash == RHS->Parent.QualifiedNameHash;
   }
