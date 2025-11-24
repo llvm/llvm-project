@@ -24,8 +24,6 @@ std::shared_ptr<MyTy> MyTy::from(Type *type) {
     return std::make_shared<MyArrayTy>(type);
   case Type::PointerTyID:
     return std::make_shared<MyPointerTy>(std::make_shared<MyTy>());
-  case Type::StructTyID:
-    return std::make_shared<MyStructTy>(type);
   default:
     return nullptr;
   }
