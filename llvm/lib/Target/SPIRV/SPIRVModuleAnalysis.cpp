@@ -249,17 +249,18 @@ static InstrSignature instrToSignature(const MachineInstr &MI,
   InstrSignature Signature{MI.getOpcode()};
   for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
     // The only decorations that can be applied more than once to a given <id>
-    // or structure member are UserSemantic(5635), CacheControlLoadINTEL (6442),
-    // and CacheControlStoreINTEL (6443). For all the rest of decorations, we
-    // will only add to the signature the Opcode, the id to which it applies,
-    // and the decoration id, disregarding any decoration flags. This will
-    // ensure that any subsequent decoration with the same id will be deemed as
-    // a duplicate. Then, at the call site, we will be able to handle duplicates
-    // in the best way.
+    // or structure member are FuncParamAttr (38), UserSemantic (5635),
+    // CacheControlLoadINTEL (6442), and CacheControlStoreINTEL (6443). For all
+    // the rest of decorations, we will only add to the signature the Opcode,
+    // the id to which it applies, and the decoration id, disregarding any
+    // decoration flags. This will ensure that any subsequent decoration with
+    // the same id will be deemed as a duplicate. Then, at the call site, we
+    // will be able to handle duplicates in the best way.
     unsigned Opcode = MI.getOpcode();
     if ((Opcode == SPIRV::OpDecorate) && i >= 2) {
       unsigned DecorationID = MI.getOperand(1).getImm();
-      if (DecorationID != SPIRV::Decoration::UserSemantic &&
+      if (DecorationID != SPIRV::Decoration::FuncParamAttr &&
+          DecorationID != SPIRV::Decoration::UserSemantic &&
           DecorationID != SPIRV::Decoration::CacheControlLoadINTEL &&
           DecorationID != SPIRV::Decoration::CacheControlStoreINTEL)
         continue;
@@ -493,8 +494,8 @@ MCRegister SPIRVModuleAnalysis::handleVariable(
 void SPIRVModuleAnalysis::collectDeclarations(const Module &M) {
   InstrGRegsMap SignatureToGReg;
   std::map<const Value *, unsigned> GlobalToGReg;
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+  for (const Function &F : M) {
+    MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
     const MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -633,10 +634,10 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
 // be correctly collected until these registers are globally numbered.
 void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
   InstrTraces IS;
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    if (F->isDeclaration())
+  for (const Function &F : M) {
+    if (F.isDeclaration())
       continue;
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+    MachineFunction *MF = MMI->getMachineFunction(F);
     assert(MF);
 
     for (MachineBasicBlock &MBB : *MF)
@@ -668,13 +669,13 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           collectOtherInstr(MI, MAI, SPIRV::MB_AliasingInsts, IS);
         } else if (TII->isDecorationInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_Annotations, IS);
-          collectFuncNames(MI, &*F);
+          collectFuncNames(MI, &F);
         } else if (TII->isConstantInstr(MI)) {
           // Now OpSpecConstant*s are not in DT,
           // but they need to be collected anyway.
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS);
         } else if (OpCode == SPIRV::OpFunction) {
-          collectFuncNames(MI, &*F);
+          collectFuncNames(MI, &F);
         } else if (OpCode == SPIRV::OpTypeForwardPointer) {
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS, false);
         }
@@ -686,10 +687,10 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
 // the result in global register alias table. Some registers are already
 // numbered.
 void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    if ((*F).isDeclaration())
+  for (const Function &F : M) {
+    if (F.isDeclaration())
       continue;
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+    MachineFunction *MF = MMI->getMachineFunction(F);
     assert(MF);
     for (MachineBasicBlock &MBB : *MF) {
       for (MachineInstr &MI : MBB) {
@@ -933,7 +934,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::UniformBufferArrayDynamicIndexing,
                     Capability::SampledImageArrayDynamicIndexing,
                     Capability::StorageBufferArrayDynamicIndexing,
-                    Capability::StorageImageArrayDynamicIndexing});
+                    Capability::StorageImageArrayDynamicIndexing,
+                    Capability::DerivativeControl});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1058,6 +1060,13 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
   }
 }
 
+static bool isBFloat16Type(const SPIRVType *TypeDef) {
+  return TypeDef && TypeDef->getNumOperands() == 3 &&
+         TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
+         TypeDef->getOperand(1).getImm() == 16 &&
+         TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
+}
+
 // Add requirements for handling atomic float instructions
 #define ATOM_FLT_REQ_EXT_MSG(ExtName)                                          \
   "The atomic float instruction requires the following SPIR-V "                \
@@ -1081,11 +1090,21 @@ static void AddAtomicFloatRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_add);
     switch (BitWidth) {
     case 16:
-      if (!ST.canUseExtension(
-              SPIRV::Extension::SPV_EXT_shader_atomic_float16_add))
-        report_fatal_error(ATOM_FLT_REQ_EXT_MSG("16_add"), false);
-      Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float16_add);
-      Reqs.addCapability(SPIRV::Capability::AtomicFloat16AddEXT);
+      if (isBFloat16Type(TypeDef)) {
+        if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics))
+          report_fatal_error(
+              "The atomic bfloat16 instruction requires the following SPIR-V "
+              "extension: SPV_INTEL_16bit_atomics",
+              false);
+        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics);
+        Reqs.addCapability(SPIRV::Capability::AtomicBFloat16AddINTEL);
+      } else {
+        if (!ST.canUseExtension(
+                SPIRV::Extension::SPV_EXT_shader_atomic_float16_add))
+          report_fatal_error(ATOM_FLT_REQ_EXT_MSG("16_add"), false);
+        Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float16_add);
+        Reqs.addCapability(SPIRV::Capability::AtomicFloat16AddEXT);
+      }
       break;
     case 32:
       Reqs.addCapability(SPIRV::Capability::AtomicFloat32AddEXT);
@@ -1104,7 +1123,17 @@ static void AddAtomicFloatRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_min_max);
     switch (BitWidth) {
     case 16:
-      Reqs.addCapability(SPIRV::Capability::AtomicFloat16MinMaxEXT);
+      if (isBFloat16Type(TypeDef)) {
+        if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics))
+          report_fatal_error(
+              "The atomic bfloat16 instruction requires the following SPIR-V "
+              "extension: SPV_INTEL_16bit_atomics",
+              false);
+        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics);
+        Reqs.addCapability(SPIRV::Capability::AtomicBFloat16MinMaxINTEL);
+      } else {
+        Reqs.addCapability(SPIRV::Capability::AtomicFloat16MinMaxEXT);
+      }
       break;
     case 32:
       Reqs.addCapability(SPIRV::Capability::AtomicFloat32MinMaxEXT);
@@ -1326,13 +1355,6 @@ void addPrintfRequirements(const MachineInstr &MI,
       }
     }
   }
-}
-
-static bool isBFloat16Type(const SPIRVType *TypeDef) {
-  return TypeDef && TypeDef->getNumOperands() == 3 &&
-         TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
-         TypeDef->getOperand(1).getImm() == 16 &&
-         TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
 }
 
 void addInstrRequirements(const MachineInstr &MI,
@@ -1885,6 +1907,13 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(
         SPIRV::Capability::CooperativeMatrixCheckedInstructionsINTEL);
     break;
+  case SPIRV::OpReadPipeBlockingALTERA:
+  case SPIRV::OpWritePipeBlockingALTERA:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_ALTERA_blocking_pipes)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_ALTERA_blocking_pipes);
+      Reqs.addCapability(SPIRV::Capability::BlockingPipesALTERA);
+    }
+    break;
   case SPIRV::OpCooperativeMatrixGetElementCoordINTEL:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
       report_fatal_error("OpCooperativeMatrixGetElementCoordINTEL requires the "
@@ -2120,6 +2149,12 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   }
+  case SPIRV::OpDPdxCoarse:
+  case SPIRV::OpDPdyCoarse: {
+    Reqs.addCapability(SPIRV::Capability::DerivativeControl);
+    break;
+  }
+
   default:
     break;
   }
@@ -2134,8 +2169,8 @@ void addInstrRequirements(const MachineInstr &MI,
 static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
                         MachineModuleInfo *MMI, const SPIRVSubtarget &ST) {
   // Collect requirements for existing instructions.
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+  for (const Function &F : M) {
+    MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
     for (const MachineBasicBlock &MBB : *MF)
@@ -2215,8 +2250,7 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
     if (RequireKHRFloatControls2)
       MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls2);
   }
-  for (auto FI = M.begin(), E = M.end(); FI != E; ++FI) {
-    const Function &F = *FI;
+  for (const Function &F : M) {
     if (F.isDeclaration())
       continue;
     if (F.getMetadata("reqd_work_group_size"))
@@ -2396,23 +2430,23 @@ static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
                            MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
                            SPIRV::ModuleAnalysisInfo &MAI,
                            const SPIRVGlobalRegistry *GR) {
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+  for (const Function &F : M) {
+    MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
 
     for (auto &MBB : *MF)
       for (auto &MI : MBB)
         handleMIFlagDecoration(MI, ST, TII, MAI.Reqs, GR,
-                               MAI.FPFastMathDefaultInfoMap[&(*F)]);
+                               MAI.FPFastMathDefaultInfoMap[&F]);
   }
 }
 
 static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
                         MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
                         SPIRV::ModuleAnalysisInfo &MAI) {
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+  for (const Function &F : M) {
+    MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
     MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -2432,8 +2466,8 @@ static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
 // patching Instruction::PHI to SPIRV::OpPhi
 static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
                       const SPIRVInstrInfo &TII, MachineModuleInfo *MMI) {
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+  for (const Function &F : M) {
+    MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
     for (auto &MBB : *MF) {

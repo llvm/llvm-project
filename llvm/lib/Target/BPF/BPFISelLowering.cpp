@@ -58,7 +58,7 @@ static void fail(const SDLoc &DL, SelectionDAG &DAG, const Twine &Msg,
 
 BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
                                      const BPFSubtarget &STI)
-    : TargetLowering(TM) {
+    : TargetLowering(TM, STI) {
 
   // Set up the register classes.
   addRegisterClass(MVT::i64, &BPF::GPRRegClass);
@@ -206,6 +206,26 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   HasJmp32 = STI.getHasJmp32();
   HasJmpExt = STI.getHasJmpExt();
   HasMovsx = STI.hasMovsx();
+
+  AllowsMisalignedMemAccess = STI.getAllowsMisalignedMemAccess();
+}
+
+bool BPFTargetLowering::allowsMisalignedMemoryAccesses(EVT VT, unsigned, Align,
+                                                       MachineMemOperand::Flags,
+                                                       unsigned *Fast) const {
+  // allows-misaligned-mem-access is disabled
+  if (!AllowsMisalignedMemAccess)
+    return false;
+
+  // only allow misalignment for simple value types
+  if (!VT.isSimple())
+    return false;
+
+  // always assume fast mode when misalignment is allowed
+  if (Fast)
+    *Fast = true;
+
+  return true;
 }
 
 bool BPFTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
@@ -801,26 +821,6 @@ SDValue BPFTargetLowering::LowerTRAP(SDValue Op, SelectionDAG &DAG) const {
 SDValue BPFTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   JumpTableSDNode *N = cast<JumpTableSDNode>(Op);
   return getAddr(N, DAG);
-}
-
-const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((BPFISD::NodeType)Opcode) {
-  case BPFISD::FIRST_NUMBER:
-    break;
-  case BPFISD::RET_GLUE:
-    return "BPFISD::RET_GLUE";
-  case BPFISD::CALL:
-    return "BPFISD::CALL";
-  case BPFISD::SELECT_CC:
-    return "BPFISD::SELECT_CC";
-  case BPFISD::BR_CC:
-    return "BPFISD::BR_CC";
-  case BPFISD::Wrapper:
-    return "BPFISD::Wrapper";
-  case BPFISD::MEMCPY:
-    return "BPFISD::MEMCPY";
-  }
-  return nullptr;
 }
 
 static SDValue getTargetNode(ConstantPoolSDNode *N, const SDLoc &DL, EVT Ty,

@@ -330,8 +330,7 @@ static void buildPartialUnswitchConditionalBranch(
       HasBranchWeights ? ComputeProfFrom.getMetadata(LLVMContext::MD_prof)
                        : nullptr);
   if (!HasBranchWeights)
-    setExplicitlyUnknownBranchWeightsIfProfiled(
-        *BR, *BR->getParent()->getParent(), DEBUG_TYPE);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*BR, DEBUG_TYPE);
 }
 
 /// Copy a set of loop invariant values, and conditionally branch on them.
@@ -389,8 +388,7 @@ static void buildPartialInvariantUnswitchConditionalBranch(
       IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
                        Direction ? &NormalSucc : &UnswitchedSucc, ProfData);
   if (!ProfData)
-    setExplicitlyUnknownBranchWeightsIfProfiled(*BR, *BR->getFunction(),
-                                                DEBUG_TYPE);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*BR, DEBUG_TYPE);
 }
 
 /// Rewrite the PHI nodes in an unswitched loop exit basic block.
@@ -2916,8 +2914,8 @@ static int CalculateUnswitchCostMultiplier(
     ParentLoopSizeMultiplier =
         std::max<int>(ParentL->getNumBlocks() / UnswitchParentBlocksDiv, 1);
 
-  int SiblingsCount = (ParentL ? ParentL->getSubLoopsVector().size()
-                               : std::distance(LI.begin(), LI.end()));
+  int SiblingsCount =
+      (ParentL ? ParentL->getSubLoopsVector().size() : llvm::size(LI));
   // Count amount of clones that all the candidates might cause during
   // unswitching. Branch/guard/select counts as 1, switch counts as log2 of its
   // cases.
@@ -3204,8 +3202,7 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
   auto *InvariantBr =
       Builder.CreateCondBr(InjectedCond, InLoopSucc, CheckBlock);
   // We don't know anything about the relation between the limits.
-  setExplicitlyUnknownBranchWeightsIfProfiled(
-      *InvariantBr, *InvariantBr->getParent()->getParent(), DEBUG_TYPE);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*InvariantBr, DEBUG_TYPE);
 
   Builder.SetInsertPoint(CheckBlock);
   Builder.CreateCondBr(

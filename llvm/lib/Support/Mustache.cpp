@@ -10,7 +10,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
-#include <optional>
 #include <sstream>
 
 #define DEBUG_TYPE "mustache"
@@ -76,7 +75,7 @@ static Accessor splitMustacheString(StringRef Str, MustacheContext &Ctx) {
   // Now, allocate memory for the array of StringRefs in the arena.
   StringRef *ArenaTokens = Ctx.Allocator.Allocate<StringRef>(Tokens.size());
   // Copy the StringRefs from the stack vector to the arena.
-  std::copy(Tokens.begin(), Tokens.end(), ArenaTokens);
+  llvm::copy(Tokens, ArenaTokens);
   // Return an ArrayRef pointing to the stable arena memory.
   return ArrayRef<StringRef>(ArenaTokens, Tokens.size());
 }

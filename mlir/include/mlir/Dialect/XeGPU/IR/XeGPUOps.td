@@ -844,7 +844,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
-      OptionalAttr<XeGPU_LayoutAttr>:$layout);
+      OptionalAttr<DistributeLayoutAttr>:$layout);
   let results = (outs AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$value);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -903,7 +903,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint,
-                    "xegpu::LayoutAttr": $layout)>
+                    "xegpu::DistributeLayoutAttr": $layout)>
    ];
 
   let hasVerifier = 1;
@@ -988,7 +988,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
-      OptionalAttr<XeGPU_LayoutAttr>:$layout);
+      OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
     Type getDestType() {
@@ -1046,7 +1046,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint,
-                    "xegpu::LayoutAttr": $layout)>
+                    "xegpu::DistributeLayoutAttr": $layout)>
    ];
 
   let hasVerifier = 1;
@@ -1282,12 +1282,6 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
     let hasCanonicalizer = 1;
 }
 
-def isSharedPred : CPred<"isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
-class StaticShared1DMemRefOf<list<Type> allowedTypes> :
-  ConfinedType<MemRefRankOf<allowedTypes, [1]>, [HasStaticShapePred, isSharedPred],
-     "statically shaped " # MemRefOf<allowedTypes>.summary # " for shared memory",
-     "mlir::MemRefType">;
-
 class SizeInBits<string name> :
   StrFunc<"llvm::cast<mlir::ShapedType>($" # name # ".getType()).getNumElements()"
           "*llvm::cast<mlir::ShapedType>($" # name # ".getType()).getElementTypeBitWidth()">;
@@ -1304,11 +1298,12 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
     as the underlying shared local memory.
 
     Arguments:
-     - `source` : a 1D statically shaped memref with element type i8, representing the raw SLM buffer.
+     - `source` : 1D or 2D statically shape memref, representing the raw SLM buffer. 
+                  The provided memref must be contiguous.  
     Results:
      - `mem_desc` : the memory descriptor.
   }];
-  let arguments = (ins StaticShared1DMemRefOf<[I8]>:$source);
+  let arguments = (ins AnyTypeOf<[StaticShared1DMemRefOf<[XeGPU_ScalarType]>, StaticShared2DMemRefOf<[XeGPU_ScalarType]>]>:$source);
   let results = (outs XeGPU_MemDesc:$mem_desc);
   let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($mem_desc))";
 }

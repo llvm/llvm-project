@@ -606,8 +606,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, CodeSynthesisContext::SynthesisKind Kind,
     SourceLocation PointOfInstantiation, SourceRange InstantiationRange,
-    Decl *Entity, NamedDecl *Template, ArrayRef<TemplateArgument> TemplateArgs,
-    sema::TemplateDeductionInfo *DeductionInfo)
+    Decl *Entity, NamedDecl *Template, ArrayRef<TemplateArgument> TemplateArgs)
     : SemaRef(SemaRef) {
   // Don't allow further instantiation if a fatal error and an uncompilable
   // error have occurred. Any diagnostics we might have raised will not be
@@ -625,7 +624,6 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
   Inst.Template = Template;
   Inst.TemplateArgs = TemplateArgs.data();
   Inst.NumTemplateArgs = TemplateArgs.size();
-  Inst.DeductionInfo = DeductionInfo;
   Inst.InstantiationRange = InstantiationRange;
   Inst.InConstraintSubstitution =
       Inst.Kind == CodeSynthesisContext::ConstraintSubstitution;
@@ -671,48 +669,40 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
     FunctionTemplateDecl *FunctionTemplate,
     ArrayRef<TemplateArgument> TemplateArgs,
-    CodeSynthesisContext::SynthesisKind Kind,
-    sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
+    CodeSynthesisContext::SynthesisKind Kind, SourceRange InstantiationRange)
     : InstantiatingTemplate(SemaRef, Kind, PointOfInstantiation,
                             InstantiationRange, FunctionTemplate, nullptr,
-                            TemplateArgs, &DeductionInfo) {
+                            TemplateArgs) {
   assert(Kind == CodeSynthesisContext::ExplicitTemplateArgumentSubstitution ||
          Kind == CodeSynthesisContext::DeducedTemplateArgumentSubstitution ||
          Kind == CodeSynthesisContext::BuildingDeductionGuides);
 }
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
-    Sema &SemaRef, SourceLocation PointOfInstantiation,
-    TemplateDecl *Template,
-    ArrayRef<TemplateArgument> TemplateArgs,
-    sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
+    Sema &SemaRef, SourceLocation PointOfInstantiation, TemplateDecl *Template,
+    ArrayRef<TemplateArgument> TemplateArgs, SourceRange InstantiationRange)
     : InstantiatingTemplate(
-          SemaRef,
-          CodeSynthesisContext::DeducedTemplateArgumentSubstitution,
+          SemaRef, CodeSynthesisContext::DeducedTemplateArgumentSubstitution,
           PointOfInstantiation, InstantiationRange, Template, nullptr,
-          TemplateArgs, &DeductionInfo) {}
+          TemplateArgs) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
     ClassTemplatePartialSpecializationDecl *PartialSpec,
-    ArrayRef<TemplateArgument> TemplateArgs,
-    sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
+    ArrayRef<TemplateArgument> TemplateArgs, SourceRange InstantiationRange)
     : InstantiatingTemplate(
-          SemaRef,
-          CodeSynthesisContext::DeducedTemplateArgumentSubstitution,
+          SemaRef, CodeSynthesisContext::DeducedTemplateArgumentSubstitution,
           PointOfInstantiation, InstantiationRange, PartialSpec, nullptr,
-          TemplateArgs, &DeductionInfo) {}
+          TemplateArgs) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
     VarTemplatePartialSpecializationDecl *PartialSpec,
-    ArrayRef<TemplateArgument> TemplateArgs,
-    sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
+    ArrayRef<TemplateArgument> TemplateArgs, SourceRange InstantiationRange)
     : InstantiatingTemplate(
-          SemaRef,
-          CodeSynthesisContext::DeducedTemplateArgumentSubstitution,
+          SemaRef, CodeSynthesisContext::DeducedTemplateArgumentSubstitution,
           PointOfInstantiation, InstantiationRange, PartialSpec, nullptr,
-          TemplateArgs, &DeductionInfo) {}
+          TemplateArgs) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation, ParmVarDecl *Param,
@@ -763,12 +753,11 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
-    concepts::Requirement *Req, sema::TemplateDeductionInfo &DeductionInfo,
-    SourceRange InstantiationRange)
+    concepts::Requirement *Req, SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::RequirementInstantiation,
           PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
-          /*Template=*/nullptr, /*TemplateArgs=*/{}, &DeductionInfo) {}
+          /*Template=*/nullptr, /*TemplateArgs=*/{}) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
@@ -781,11 +770,11 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation, const RequiresExpr *RE,
-    sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
+    SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::RequirementParameterInstantiation,
           PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
-          /*Template=*/nullptr, /*TemplateArgs=*/{}, &DeductionInfo) {}
+          /*Template=*/nullptr, /*TemplateArgs=*/{}) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
@@ -797,13 +786,11 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
           TemplateArgs) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
-    Sema &SemaRef, SourceLocation PointOfInstantiation,
-    ConstraintSubstitution, NamedDecl *Template,
-    sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
+    Sema &SemaRef, SourceLocation PointOfInstantiation, ConstraintSubstitution,
+    NamedDecl *Template, SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::ConstraintSubstitution,
-          PointOfInstantiation, InstantiationRange, Template, nullptr,
-          {}, &DeductionInfo) {}
+          PointOfInstantiation, InstantiationRange, Template, nullptr, {}) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
@@ -835,9 +822,6 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
                             ArgLoc, InstantiationRange, PArg) {}
 
 bool Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
-  Ctx.SavedInNonInstantiationSFINAEContext = InNonInstantiationSFINAEContext;
-  InNonInstantiationSFINAEContext = false;
-
   if (!Ctx.isInstantiationRecord()) {
     ++NonInstantiationEntries;
   } else {
@@ -870,8 +854,6 @@ void Sema::popCodeSynthesisContext() {
     assert(NonInstantiationEntries > 0);
     --NonInstantiationEntries;
   }
-
-  InNonInstantiationSFINAEContext = Active.SavedInNonInstantiationSFINAEContext;
 
   // Name lookup no longer looks in this template's defining module.
   assert(CodeSynthesisContexts.size() >=
@@ -1280,93 +1262,6 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
       break;
     }
   }
-}
-
-std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
-  if (InNonInstantiationSFINAEContext)
-    return std::optional<TemplateDeductionInfo *>(nullptr);
-
-  for (SmallVectorImpl<CodeSynthesisContext>::const_reverse_iterator
-         Active = CodeSynthesisContexts.rbegin(),
-         ActiveEnd = CodeSynthesisContexts.rend();
-       Active != ActiveEnd;
-       ++Active)
-  {
-    switch (Active->Kind) {
-    case CodeSynthesisContext::TypeAliasTemplateInstantiation:
-      // An instantiation of an alias template may or may not be a SFINAE
-      // context, depending on what else is on the stack.
-      if (isa<TypeAliasTemplateDecl>(Active->Entity))
-        break;
-      [[fallthrough]];
-    case CodeSynthesisContext::TemplateInstantiation:
-    case CodeSynthesisContext::DefaultFunctionArgumentInstantiation:
-    case CodeSynthesisContext::ExceptionSpecInstantiation:
-    case CodeSynthesisContext::ConstraintsCheck:
-    case CodeSynthesisContext::ParameterMappingSubstitution:
-    case CodeSynthesisContext::ConstraintNormalization:
-    case CodeSynthesisContext::NestedRequirementConstraintsCheck:
-      // This is a template instantiation, so there is no SFINAE.
-      return std::nullopt;
-    case CodeSynthesisContext::LambdaExpressionSubstitution:
-      // [temp.deduct]p9
-      // A lambda-expression appearing in a function type or a template
-      // parameter is not considered part of the immediate context for the
-      // purposes of template argument deduction.
-      // CWG2672: A lambda-expression body is never in the immediate context.
-      return std::nullopt;
-
-    case CodeSynthesisContext::DefaultTemplateArgumentInstantiation:
-    case CodeSynthesisContext::PriorTemplateArgumentSubstitution:
-    case CodeSynthesisContext::DefaultTemplateArgumentChecking:
-    case CodeSynthesisContext::RewritingOperatorAsSpaceship:
-    case CodeSynthesisContext::PartialOrderingTTP:
-      // A default template argument instantiation and substitution into
-      // template parameters with arguments for prior parameters may or may
-      // not be a SFINAE context; look further up the stack.
-      break;
-
-    case CodeSynthesisContext::ExplicitTemplateArgumentSubstitution:
-    case CodeSynthesisContext::DeducedTemplateArgumentSubstitution:
-      // We're either substituting explicitly-specified template arguments,
-      // deduced template arguments. SFINAE applies unless we are in a lambda
-      // body, see [temp.deduct]p9.
-    case CodeSynthesisContext::ConstraintSubstitution:
-    case CodeSynthesisContext::RequirementInstantiation:
-    case CodeSynthesisContext::RequirementParameterInstantiation:
-      // SFINAE always applies in a constraint expression or a requirement
-      // in a requires expression.
-      assert(Active->DeductionInfo && "Missing deduction info pointer");
-      return Active->DeductionInfo;
-
-    case CodeSynthesisContext::DeclaringSpecialMember:
-    case CodeSynthesisContext::DeclaringImplicitEqualityComparison:
-    case CodeSynthesisContext::DefiningSynthesizedFunction:
-    case CodeSynthesisContext::InitializingStructuredBinding:
-    case CodeSynthesisContext::MarkingClassDllexported:
-    case CodeSynthesisContext::BuildingBuiltinDumpStructCall:
-    case CodeSynthesisContext::BuildingDeductionGuides:
-      // This happens in a context unrelated to template instantiation, so
-      // there is no SFINAE.
-      return std::nullopt;
-
-    case CodeSynthesisContext::ExceptionSpecEvaluation:
-      // FIXME: This should not be treated as a SFINAE context, because
-      // we will cache an incorrect exception specification. However, clang
-      // bootstrap relies this! See PR31692.
-      break;
-
-    case CodeSynthesisContext::Memoization:
-      break;
-    }
-
-    // The inner context was transparent for SFINAE. If it occurred within a
-    // non-instantiation SFINAE context, then SFINAE applies.
-    if (Active->SavedInNonInstantiationSFINAEContext)
-      return std::optional<TemplateDeductionInfo *>(nullptr);
-  }
-
-  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===/
@@ -2674,10 +2569,9 @@ ExprResult TemplateInstantiator::TransformRequiresTypeParams(
     Sema::ExtParameterInfoBuilder &PInfos) {
 
   TemplateDeductionInfo Info(KWLoc);
-  Sema::InstantiatingTemplate TypeInst(SemaRef, KWLoc,
-                                       RE, Info,
+  Sema::InstantiatingTemplate TypeInst(SemaRef, KWLoc, RE,
                                        SourceRange{KWLoc, RBraceLoc});
-  Sema::SFINAETrap Trap(SemaRef);
+  Sema::SFINAETrap Trap(SemaRef, Info);
 
   unsigned ErrorIdx;
   if (getDerived().TransformFunctionTypeParams(
@@ -2709,10 +2603,10 @@ TemplateInstantiator::TransformTypeRequirement(concepts::TypeRequirement *Req) {
     return Req;
   }
 
-  Sema::SFINAETrap Trap(SemaRef);
   TemplateDeductionInfo Info(Req->getType()->getTypeLoc().getBeginLoc());
-  Sema::InstantiatingTemplate TypeInst(SemaRef,
-      Req->getType()->getTypeLoc().getBeginLoc(), Req, Info,
+  Sema::SFINAETrap Trap(SemaRef, Info);
+  Sema::InstantiatingTemplate TypeInst(
+      SemaRef, Req->getType()->getTypeLoc().getBeginLoc(), Req,
       Req->getType()->getTypeLoc().getSourceRange());
   if (TypeInst.isInvalid())
     return nullptr;
@@ -2730,8 +2624,6 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
   if (!Req->isDependent() && !AlwaysRebuild())
     return Req;
 
-  Sema::SFINAETrap Trap(SemaRef);
-
   llvm::PointerUnion<Expr *, concepts::Requirement::SubstitutionDiagnostic *>
       TransExpr;
   if (Req->isExprSubstitutionFailure())
@@ -2739,7 +2631,8 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
   else {
     Expr *E = Req->getExpr();
     TemplateDeductionInfo Info(E->getBeginLoc());
-    Sema::InstantiatingTemplate ExprInst(SemaRef, E->getBeginLoc(), Req, Info,
+    Sema::SFINAETrap Trap(SemaRef, Info);
+    Sema::InstantiatingTemplate ExprInst(SemaRef, E->getBeginLoc(), Req,
                                          E->getSourceRange());
     if (ExprInst.isInvalid())
       return nullptr;
@@ -2765,8 +2658,9 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
     TemplateParameterList *OrigTPL =
         RetReq.getTypeConstraintTemplateParameterList();
     TemplateDeductionInfo Info(OrigTPL->getTemplateLoc());
-    Sema::InstantiatingTemplate TPLInst(SemaRef, OrigTPL->getTemplateLoc(),
-                                        Req, Info, OrigTPL->getSourceRange());
+    Sema::SFINAETrap Trap(SemaRef, Info);
+    Sema::InstantiatingTemplate TPLInst(SemaRef, OrigTPL->getTemplateLoc(), Req,
+                                        OrigTPL->getSourceRange());
     if (TPLInst.isInvalid())
       return nullptr;
     TemplateParameterList *TPL = TransformTemplateParameterList(OrigTPL);
@@ -2830,11 +2724,9 @@ TemplateInstantiator::TransformNestedRequirement(
 
   bool Success;
   Expr *NewConstraint;
-  TemplateDeductionInfo Info(Constraint->getBeginLoc());
   {
     EnterExpressionEvaluationContext ContextRAII(
         SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-
     Sema::InstantiatingTemplate ConstrInst(
         SemaRef, Constraint->getBeginLoc(), Req,
         Sema::InstantiatingTemplate::ConstraintsCheck(),
@@ -2843,16 +2735,10 @@ TemplateInstantiator::TransformNestedRequirement(
     if (ConstrInst.isInvalid())
       return nullptr;
 
-    Sema::SFINAETrap Trap(SemaRef);
-
     Success = !SemaRef.CheckConstraintSatisfaction(
         Req, AssociatedConstraint(Constraint, SemaRef.ArgPackSubstIndex),
         TemplateArgs, Constraint->getSourceRange(), Satisfaction,
         /*TopLevelConceptId=*/nullptr, &NewConstraint);
-
-    assert((!Success || !Trap.hasErrorOccurred()) &&
-           "Substitution failures must be handled "
-           "by CheckConstraintSatisfaction.");
   }
 
   if (!Success || Satisfaction.HasSubstitutionFailure())
@@ -3306,7 +3192,7 @@ bool Sema::SubstDefaultArgument(
 
   EnterExpressionEvaluationContext EvalContext(
       *this, ExpressionEvaluationContext::PotentiallyEvaluated, Param);
-
+  NonSFINAEContext _(*this);
   InstantiatingTemplate Inst(*this, Loc, Param, TemplateArgs.getInnermost());
   if (Inst.isInvalid())
     return true;
@@ -3594,6 +3480,7 @@ bool Sema::InstantiateClassImpl(
     Spec->setPointOfInstantiation(PointOfInstantiation);
   }
 
+  NonSFINAEContext _(*this);
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Instantiation);
   if (Inst.isInvalid())
     return true;
@@ -3828,6 +3715,7 @@ bool Sema::InstantiateEnum(SourceLocation PointOfInstantiation,
     MSInfo->setPointOfInstantiation(PointOfInstantiation);
   }
 
+  NonSFINAEContext _(*this);
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Instantiation);
   if (Inst.isInvalid())
     return true;
@@ -3892,6 +3780,7 @@ bool Sema::InstantiateInClassInitializer(
     return true;
   }
 
+  NonSFINAEContext _(*this);
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Instantiation);
   if (Inst.isInvalid())
     return true;
@@ -3975,6 +3864,7 @@ static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
     Sema &S, SourceLocation PointOfInstantiation,
     ClassTemplateSpecializationDecl *ClassTemplateSpec,
     TemplateSpecializationKind TSK, bool PrimaryStrictPackMatch) {
+  std::optional<Sema::NonSFINAEContext> NSC(S);
   Sema::InstantiatingTemplate Inst(S, PointOfInstantiation, ClassTemplateSpec);
   if (Inst.isInvalid())
     return {/*Invalid=*/true};
@@ -4076,6 +3966,7 @@ static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
         if (Ambiguous) {
           // Partial ordering did not produce a clear winner. Complain.
           Inst.Clear();
+          NSC.reset();
           S.Diag(PointOfInstantiation,
                  diag::err_partial_spec_ordering_ambiguous)
               << ClassTemplateSpec;
@@ -4507,6 +4398,7 @@ ExprResult Sema::SubstConceptTemplateArguments(
   TemplateArgumentListInfo SubstArgs(ArgsAsWritten->getLAngleLoc(),
                                      ArgsAsWritten->getRAngleLoc());
 
+  NonSFINAEContext _(*this);
   Sema::InstantiatingTemplate Inst(
       *this, ArgsAsWritten->arguments().front().getSourceRange().getBegin(),
       Sema::InstantiatingTemplate::ConstraintNormalization{},

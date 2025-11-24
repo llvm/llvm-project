@@ -179,7 +179,7 @@ _mm512_permutex2var_pbh(__m512bh __A, __m512i __I, __m512bh __B) {
                                                   (__v32hi)__B);
 }
 
-static __inline__ __m512bh __DEFAULT_FN_ATTRS512
+static __inline__ __m512bh __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_permutexvar_pbh(__m512i __A, __m512bh __B) {
   return (__m512bh)__builtin_ia32_permvarhi512((__v32hi)__B, (__v32hi)__A);
 }
