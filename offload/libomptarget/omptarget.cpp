@@ -675,9 +675,37 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
        DataSize, DPxPTR(TgtPtrBegin), (TPR.Flags.IsNewEntry ? "" : " not"));
 
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_RETURN_PARAM) {
-      uintptr_t Delta = (uintptr_t)HstPtrBegin - (uintptr_t)HstPtrBase;
-      void *TgtPtrBase = (void *)((uintptr_t)TgtPtrBegin - Delta);
-      DP("Returning device pointer " DPxMOD "\n", DPxPTR(TgtPtrBase));
+      intptr_t Delta = reinterpret_cast<intptr_t>(HstPtrBegin) -
+                       reinterpret_cast<intptr_t>(HstPtrBase);
+      void *TgtPtrBase;
+      if (TgtPtrBegin) {
+        // Lookup succeeded, return device pointer adjusted by delta
+        TgtPtrBase = reinterpret_cast<void *>(
+            reinterpret_cast<intptr_t>(TgtPtrBegin) - Delta);
+        DP("Returning device pointer " DPxMOD "\n", DPxPTR(TgtPtrBase));
+      } else {
+        // Lookup failed. So we have to decide what to do based on the
+        // requested fallback behavior.
+        //
+        // Treat "preserve" as the default fallback behavior, since as per
+        // OpenMP 5.1, for use_device_ptr/addr, when there's no corresponding
+        // device pointer to translate into, it's the user's responsibility to
+        // ensure that the host address is device-accessible.
+        //
+        // OpenMP 5.1, sec 2.14.2, target data construct, p 188, l26-31:
+        // If a list item that appears in a use_device_ptr clause ... does not
+        // point to a mapped object, it must contain a valid device address for
+        // the target device, and the list item references are instead converted
+        // to references to a local device pointer that refers to this device
+        // address.
+        //
+        // TODO: Support OpenMP 6.1's "fb_nullify" and set the result to
+        // `null - Delta`.
+        TgtPtrBase = reinterpret_cast<void *>(
+            reinterpret_cast<intptr_t>(HstPtrBegin) - Delta);
+        DP("Returning host pointer " DPxMOD " as fallback (lookup failed).\n",
+           DPxPTR(TgtPtrBase));
+      }
       ArgsBase[I] = TgtPtrBase;
     }
 
