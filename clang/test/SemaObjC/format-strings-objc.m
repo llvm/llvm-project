@@ -203,7 +203,7 @@ void test_toll_free_bridging(CFStringRef x, id y) {
 }
 
 @interface Bar
-+ (void)log:(NSString *)fmt, ...;
++ (void)log:(NSString *)fmt, ...; // #log
 + (void)log2:(NSString *)fmt, ... __attribute__((format(NSString, 1, 2)));
 @end
 
@@ -212,7 +212,8 @@ void test_toll_free_bridging(CFStringRef x, id y) {
 + (void)log:(NSString *)fmt, ... {
   va_list ap;
   va_start(ap,fmt);
-  NSLogv(fmt, ap); // expected-warning{{format string is not a string literal}}
+  NSLogv(fmt, ap); // expected-warning{{diagnostic behavior may be improved by adding the 'format(NSString, 1, 2)' attribute to the declaration of 'log:'}}
+  // expected-note@#log {{'log:' declared here}}
   va_end(ap);
 }
 
