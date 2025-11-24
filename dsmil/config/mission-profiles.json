@@ -1,0 +1,264 @@
+{
+  "$schema": "https://dsmil.org/schemas/mission-profiles-v1.json",
+  "version": "1.3.0",
+  "description": "DSLLVM Mission Profile Configuration - First-class compile targets for operational context",
+  "profiles": {
+    "border_ops": {
+      "display_name": "Border Operations",
+      "description": "Border operations: max security, minimal telemetry, no external dependencies",
+      "classification": "RESTRICTED",
+      "operational_context": "hostile_environment",
+      "pipeline": "dsmil-hardened",
+      "ai_mode": "local",
+      "sandbox_default": "l8_strict",
+      "allow_stages": ["quantized", "serve"],
+      "deny_stages": ["debug", "experimental", "pretrain", "finetune"],
+      "quantum_export": false,
+      "ct_enforcement": "strict",
+      "telemetry_level": "minimal",
+      "provenance_required": true,
+      "max_deployment_days": null,
+      "clearance_floor": "0xFF080000",
+      "device_whitelist": [0, 1, 2, 3, 30, 31, 32, 33, 47, 50, 53],
+      "layer_policy": {
+        "0": {"allowed": true, "roe_required": "LIVE_CONTROL"},
+        "1": {"allowed": true, "roe_required": "LIVE_CONTROL"},
+        "2": {"allowed": true, "roe_required": "LIVE_CONTROL"},
+        "3": {"allowed": true, "roe_required": "CRYPTO_SIGN"},
+        "4": {"allowed": true, "roe_required": "NETWORK_EGRESS"},
+        "5": {"allowed": true, "roe_required": "ANALYSIS_ONLY"},
+        "6": {"allowed": true, "roe_required": "ANALYSIS_ONLY"},
+        "7": {"allowed": true, "roe_required": "ANALYSIS_ONLY"},
+        "8": {"allowed": true, "roe_required": "ANALYSIS_ONLY"}
+      },
+      "compiler_flags": {
+        "optimization": "-O3",
+        "security": ["-fstack-protector-strong", "-D_FORTIFY_SOURCE=2", "-fPIE"],
+        "warnings": ["-Wall", "-Wextra", "-Werror"],
+        "dsmil_specific": [
+          "-fdsmil-ct-check=strict",
+          "-fdsmil-layer-check=strict",
+          "-fdsmil-quantum-hints=false",
+          "-fdsmil-onnx-cost-model=compact",
+          "-fdsmil-provenance=full",
+          "-fdsmil-sandbox-default=l8_strict"
+        ]
+      },
+      "runtime_constraints": {
+        "max_memory_mb": 8192,
+        "max_cpu_cores": 16,
+        "network_egress_allowed": false,
+        "filesystem_write_allowed": false,
+        "ipc_allowed": true,
+        "device_access_policy": "whitelist_only"
+      },
+      "attestation": {
+        "required": true,
+        "algorithm": "ML-DSA-87",
+        "key_source": "tpm",
+        "include_mission_profile": true
+      }
+    },
+    "cyber_defence": {
+      "display_name": "Cyber Defence Operations",
+      "description": "Cyber defence: AI-enhanced, full telemetry, Layer 8 Security AI enabled",
+      "classification": "CONFIDENTIAL",
+      "operational_context": "defensive_operations",
+      "pipeline": "dsmil-enhanced",
+      "ai_mode": "hybrid",
+      "sandbox_default": "l7_llm_worker",
+      "allow_stages": ["quantized", "serve", "finetune"],
+      "deny_stages": ["debug", "experimental"],
+      "quantum_export": true,
+      "ct_enforcement": "strict",
+      "telemetry_level": "full",
+      "provenance_required": true,
+      "max_deployment_days": 90,
+      "clearance_floor": "0x07070000",
+      "device_whitelist": null,
+      "layer_policy": {
+        "0": {"allowed": true, "roe_required": "LIVE_CONTROL"},
+        "1": {"allowed": true, "roe_required": "LIVE_CONTROL"},
+        "2": {"allowed": true, "roe_required": "LIVE_CONTROL"},
+        "3": {"allowed": true, "roe_required": "CRYPTO_SIGN"},
+        "4": {"allowed": true, "roe_required": "NETWORK_EGRESS"},
+        "5": {"allowed": true, "roe_required": "ANALYSIS_ONLY"},
+        "6": {"allowed": true, "roe_required": null},
+        "7": {"allowed": true, "roe_required": "ANALYSIS_ONLY"},
+        "8": {"allowed": true, "roe_required": "ANALYSIS_ONLY"}
+      },
+      "compiler_flags": {
+        "optimization": "-O3",
+        "security": ["-fstack-protector-strong", "-D_FORTIFY_SOURCE=2", "-fPIE"],
+        "warnings": ["-Wall", "-Wextra"],
+        "dsmil_specific": [
+          "-fdsmil-ct-check=strict",
+          "-fdsmil-layer-check=strict",
+          "-fdsmil-quantum-hints=true",
+          "-fdsmil-onnx-cost-model=full",
+          "-fdsmil-provenance=full",
+          "-fdsmil-sandbox-default=l7_llm_worker",
+          "-fdsmil-l8-security-ai=enabled"
+        ]
+      },
+      "runtime_constraints": {
+        "max_memory_mb": 32768,
+        "max_cpu_cores": 64,
+        "network_egress_allowed": true,
+        "filesystem_write_allowed": true,
+        "ipc_allowed": true,
+        "device_access_policy": "default_deny"
+      },
+      "attestation": {
+        "required": true,
+        "algorithm": "ML-DSA-87",
+        "key_source": "tpm",
+        "include_mission_profile": true
+      },
+      "ai_config": {
+        "l5_performance_advisor": true,
+        "l7_llm_assist": true,
+        "l8_security_ai": true,
+        "l8_adversarial_defense": true
+      }
+    },
+    "exercise_only": {
+      "display_name": "Exercise/Training Operations",
+      "description": "Training exercises: relaxed constraints, verbose logging, simulation mode",
+      "classification": "UNCLASSIFIED",
+      "operational_context": "training_simulation",
+      "pipeline": "dsmil-standard",
+      "ai_mode": "cloud",
+      "sandbox_default": "l7_standard",
+      "allow_stages": ["quantized", "serve", "finetune", "debug"],
+      "deny_stages": ["experimental"],
+      "quantum_export": true,
+      "ct_enforcement": "relaxed",
+      "telemetry_level": "verbose",
+      "provenance_required": true,
+      "max_deployment_days": 30,
+      "clearance_floor": "0x00000000",
+      "device_whitelist": null,
+      "layer_policy": {
+        "0": {"allowed": true, "roe_required": null},
+        "1": {"allowed": true, "roe_required": null},
+        "2": {"allowed": true, "roe_required": null},
+        "3": {"allowed": true, "roe_required": null},
+        "4": {"allowed": true, "roe_required": null},
+        "5": {"allowed": true, "roe_required": null},
+        "6": {"allowed": true, "roe_required": null},
+        "7": {"allowed": true, "roe_required": null},
+        "8": {"allowed": true, "roe_required": null}
+      },
+      "compiler_flags": {
+        "optimization": "-O2",
+        "security": ["-fstack-protector"],
+        "warnings": ["-Wall"],
+        "dsmil_specific": [
+          "-fdsmil-ct-check=relaxed",
+          "-fdsmil-layer-check=warn",
+          "-fdsmil-quantum-hints=true",
+          "-fdsmil-onnx-cost-model=full",
+          "-fdsmil-provenance=basic",
+          "-fdsmil-sandbox-default=l7_standard"
+        ]
+      },
+      "runtime_constraints": {
+        "max_memory_mb": 16384,
+        "max_cpu_cores": 32,
+        "network_egress_allowed": true,
+        "filesystem_write_allowed": true,
+        "ipc_allowed": true,
+        "device_access_policy": "permissive"
+      },
+      "attestation": {
+        "required": false,
+        "algorithm": "ML-DSA-65",
+        "key_source": "software",
+        "include_mission_profile": true
+      },
+      "simulation": {
+        "enabled": true,
+        "blue_team_mode": true,
+        "red_team_mode": true,
+        "inject_faults": true
+      }
+    },
+    "lab_research": {
+      "display_name": "Laboratory Research",
+      "description": "Lab research: experimental features enabled, no production constraints",
+      "classification": "UNCLASSIFIED",
+      "operational_context": "research_development",
+      "pipeline": "dsmil-permissive",
+      "ai_mode": "cloud",
+      "sandbox_default": null,
+      "allow_stages": ["quantized", "serve", "finetune", "debug", "experimental", "pretrain", "distilled"],
+      "deny_stages": [],
+      "quantum_export": true,
+      "ct_enforcement": "disabled",
+      "telemetry_level": "verbose",
+      "provenance_required": false,
+      "max_deployment_days": null,
+      "clearance_floor": "0x00000000",
+      "device_whitelist": null,
+      "layer_policy": {
+        "0": {"allowed": true, "roe_required": null},
+        "1": {"allowed": true, "roe_required": null},
+        "2": {"allowed": true, "roe_required": null},
+        "3": {"allowed": true, "roe_required": null},
+        "4": {"allowed": true, "roe_required": null},
+        "5": {"allowed": true, "roe_required": null},
+        "6": {"allowed": true, "roe_required": null},
+        "7": {"allowed": true, "roe_required": null},
+        "8": {"allowed": true, "roe_required": null}
+      },
+      "compiler_flags": {
+        "optimization": "-O0",
+        "security": [],
+        "warnings": ["-Wall"],
+        "dsmil_specific": [
+          "-fdsmil-ct-check=disabled",
+          "-fdsmil-layer-check=disabled",
+          "-fdsmil-quantum-hints=true",
+          "-fdsmil-onnx-cost-model=full",
+          "-fdsmil-provenance=disabled"
+        ]
+      },
+      "runtime_constraints": {
+        "max_memory_mb": null,
+        "max_cpu_cores": null,
+        "network_egress_allowed": true,
+        "filesystem_write_allowed": true,
+        "ipc_allowed": true,
+        "device_access_policy": "permissive"
+      },
+      "attestation": {
+        "required": false,
+        "algorithm": null,
+        "key_source": null,
+        "include_mission_profile": false
+      },
+      "experimental_features": {
+        "rl_loop": true,
+        "quantum_offload": true,
+        "custom_passes": true,
+        "unsafe_optimizations": true
+      }
+    }
+  },
+  "validation": {
+    "schema_version": "1.3.0",
+    "supported_pipelines": ["dsmil-hardened", "dsmil-enhanced", "dsmil-standard", "dsmil-permissive"],
+    "supported_ai_modes": ["local", "hybrid", "cloud", "disabled"],
+    "supported_ct_enforcement": ["strict", "relaxed", "disabled"],
+    "supported_telemetry_levels": ["minimal", "standard", "full", "verbose"],
+    "supported_roe_policies": ["ANALYSIS_ONLY", "LIVE_CONTROL", "NETWORK_EGRESS", "CRYPTO_SIGN", "ADMIN_OVERRIDE"]
+  },
+  "metadata": {
+    "created": "2026-01-01T00:00:00Z",
+    "last_modified": "2026-01-01T00:00:00Z",
+    "author": "DSLLVM Toolchain Team",
+    "version_compatibility": "DSLLVM >= 1.3.0",
+    "documentation": "https://dsmil.org/docs/mission-profiles"
+  }
+}
