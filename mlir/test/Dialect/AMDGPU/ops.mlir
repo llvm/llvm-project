@@ -704,59 +704,59 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
         // CHECK-SAME: globalSize [0]
-	globalSize [0]
+        globalSize [0]
         // CHECK-SAME: globalStride [1]
-	globalStride [1]
+        globalStride [1]
         // CHECK-SAME: sharedSize [0] : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
-	sharedSize [0] : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
+        sharedSize [0] : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
         // CHECK-SAME: globalSize [0]
-	globalSize [0]
+        globalSize [0]
         // CHECK-SAME: globalStride [1]
-	globalStride [1]
+        globalStride [1]
         // CHECK-SAME: sharedSize [0]
-	sharedSize [0]
+        sharedSize [0]
         // CHECK-SAME: padShared(1 every 1)
-	padShared(1 every 1)
-	: !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
+        padShared(1 every 1)
+        : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
         // CHECK-SAME: globalSize [0]
-	globalSize [0]
+        globalSize [0]
         // CHECK-SAME: globalStride [1]
-	globalStride [1]
+        globalStride [1]
         // CHECK-SAME: sharedSize [0]
-	sharedSize [0]
+        sharedSize [0]
         // CHECK-SAME: padShared(1 every 1)
-	padShared(%idx every %idx)
-	: !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
+        padShared(%idx every %idx)
+        : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
         // CHECK-SAME: globalSize [0]
-	globalSize [0]
+        globalSize [0]
         // CHECK-SAME: globalStride [1]
-	globalStride [1]
+        globalStride [1]
         // CHECK-SAME: sharedSize [0]
-	sharedSize [0]
+        sharedSize [0]
         // CHECK-SAME: atomicBarrier(%[[BARRIER]] [0] : memref<8xi32>)
-	atomicBarrier(%barrier [0] : memref<8xi32>)
-	: !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
+        atomicBarrier(%barrier [0] : memref<8xi32>)
+        : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
         // CHECK-SAME: globalSize [0]
-	globalSize [0]
+        globalSize [0]
         // CHECK-SAME: globalStride [1]
-	globalStride [1]
+        globalStride [1]
         // CHECK-SAME: sharedSize [0]
-	sharedSize [0]
-        iterate %idx, %idx, %idx
+        sharedSize [0]
         // CHECK-SAME: iterate %[[IDX]], %[[IDX]], %[[IDX]]
-	: !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
+        iterate %idx, %idx, %idx
+        : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
 
 
   func.return
