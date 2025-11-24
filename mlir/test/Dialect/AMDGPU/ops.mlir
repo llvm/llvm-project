@@ -700,6 +700,7 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32>, %smem: memref<8xi32, 
 // CHECK-LABEL: func @make_dma_descriptor
 // CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[BARRIER:.+]]: memref<8xi32>, %[[IDX:.+]]: index)
 func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8xi32>, %idx: index) {
+
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
         // CHECK-SAME: globalSize [0]
@@ -708,6 +709,30 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x
 	globalStride [1]
         // CHECK-SAME: sharedSize [0] : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
 	sharedSize [0] : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [0]
+	globalSize [0]
+        // CHECK-SAME: globalStride [1]
+	globalStride [1]
+        // CHECK-SAME: sharedSize [0]
+	sharedSize [0]
+        // CHECK-SAME: padShared(1 every 1)
+	padShared(1 every 1)
+	: !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [0]
+	globalSize [0]
+        // CHECK-SAME: globalStride [1]
+	globalStride [1]
+        // CHECK-SAME: sharedSize [0]
+	sharedSize [0]
+        // CHECK-SAME: padShared(1 every 1)
+	padShared(%idx every %idx)
+	: !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
