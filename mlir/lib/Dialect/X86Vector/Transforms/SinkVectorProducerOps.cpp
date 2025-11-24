@@ -52,11 +52,18 @@ struct SinkVectorProducerOps final : public OpRewritePattern<producerOp> {
     for (OpResult result : nextOp->getResults())
       for (Operation *user : result.getUsers())
         nextOpUsers.push_back(user);
-    if (llvm::any_of(users, [&](Operation *x) {
-          return llvm::is_contained(nextOpUsers, x);
-        })) {
-      return failure();
+
+    Operation *nextFirstUser = nextOp->getNextNode();
+    while (nextFirstUser) {
+      if (llvm::is_contained(nextOpUsers, nextFirstUser))
+        break;
+
+      nextFirstUser = nextFirstUser->getNextNode();
     }
+
+    if (llvm::is_contained(users, nextFirstUser))
+      return failure();
+
 
     // Find the nearest user by scanning forward.
     while (nextOp) {
