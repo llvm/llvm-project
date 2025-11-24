@@ -42,7 +42,7 @@ struct TestChar {
 };
 
 template <typename Integer, size_t N>
-struct std::char_traits<TestChar<Integer, N>> {
+struct std::char_traits<TestChar<Integer, N> > {
   using char_type  = TestChar<Integer, N>;
   using int_type   = int;
   using off_type   = streamoff;
@@ -74,37 +74,37 @@ struct std::char_traits<TestChar<Integer, N>> {
 };
 
 int main(int, char**) {
-  test_string<TestChar<uint8_t, 1>>();
-  test_string<TestChar<uint8_t, 2>>();
-  test_string<TestChar<uint8_t, 3>>();
-  test_string<TestChar<uint8_t, 4>>();
-  test_string<TestChar<uint8_t, 5>>();
-  test_string<TestChar<uint8_t, 6>>();
-  test_string<TestChar<uint8_t, 7>>();
-  test_string<TestChar<uint8_t, 8>>();
-  test_string<TestChar<uint8_t, 9>>();
-  test_string<TestChar<uint8_t, 10>>();
-  test_string<TestChar<uint8_t, 11>>();
-  test_string<TestChar<uint8_t, 12>>();
-  test_string<TestChar<uint8_t, 13>>();
-  test_string<TestChar<uint8_t, 14>>();
-  test_string<TestChar<uint8_t, 15>>();
-  test_string<TestChar<uint8_t, 16>>();
+  test_string<TestChar<uint8_t, 1> >();
+  test_string<TestChar<uint8_t, 2> >();
+  test_string<TestChar<uint8_t, 3> >();
+  test_string<TestChar<uint8_t, 4> >();
+  test_string<TestChar<uint8_t, 5> >();
+  test_string<TestChar<uint8_t, 6> >();
+  test_string<TestChar<uint8_t, 7> >();
+  test_string<TestChar<uint8_t, 8> >();
+  test_string<TestChar<uint8_t, 9> >();
+  test_string<TestChar<uint8_t, 10> >();
+  test_string<TestChar<uint8_t, 11> >();
+  test_string<TestChar<uint8_t, 12> >();
+  test_string<TestChar<uint8_t, 13> >();
+  test_string<TestChar<uint8_t, 14> >();
+  test_string<TestChar<uint8_t, 15> >();
+  test_string<TestChar<uint8_t, 16> >();
 
-  test_string<TestChar<uint16_t, 1>>();
-  test_string<TestChar<uint16_t, 2>>();
-  test_string<TestChar<uint16_t, 3>>();
-  test_string<TestChar<uint16_t, 4>>();
-  test_string<TestChar<uint16_t, 5>>();
-  test_string<TestChar<uint16_t, 6>>();
-  test_string<TestChar<uint16_t, 7>>();
-  test_string<TestChar<uint16_t, 8>>();
+  test_string<TestChar<uint16_t, 1> >();
+  test_string<TestChar<uint16_t, 2> >();
+  test_string<TestChar<uint16_t, 3> >();
+  test_string<TestChar<uint16_t, 4> >();
+  test_string<TestChar<uint16_t, 5> >();
+  test_string<TestChar<uint16_t, 6> >();
+  test_string<TestChar<uint16_t, 7> >();
+  test_string<TestChar<uint16_t, 8> >();
 
-  test_string<TestChar<uint32_t, 1>>();
-  test_string<TestChar<uint32_t, 2>>();
-  test_string<TestChar<uint32_t, 3>>();
-  test_string<TestChar<uint32_t, 4>>();
+  test_string<TestChar<uint32_t, 1> >();
+  test_string<TestChar<uint32_t, 2> >();
+  test_string<TestChar<uint32_t, 3> >();
+  test_string<TestChar<uint32_t, 4> >();
 
-  test_string<TestChar<uint64_t, 1>>();
-  test_string<TestChar<uint64_t, 2>>();
+  test_string<TestChar<uint64_t, 1> >();
+  test_string<TestChar<uint64_t, 2> >();
 }
