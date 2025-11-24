@@ -139,6 +139,41 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
   return true;
 }
 
+// Check if a load can be hoisted by verifying it doesn't alias with any stores
+// in blocks between FirstBB and LastBB using scoped noalias metadata.
+static bool canHoistLoadWithNoAliasCheck(VPReplicateRecipe *Load,
+                                         VPBasicBlock *FirstBB,
+                                         VPBasicBlock *LastBB) {
+  // Get the load's memory location and check if it aliases with any stores
+  // using scoped noalias metadata.
+  auto LoadLoc = vputils::getMemoryLocation(*Load);
+  if (!LoadLoc || !LoadLoc->AATags.Scope)
+    return false;
+
+  const AAMDNodes &LoadAA = LoadLoc->AATags;
+  for (VPBlockBase *Block = FirstBB; Block;
+       Block = Block->getSingleSuccessor()) {
+    // This function assumes a simple linear chain of blocks. If there are
+    // multiple successors, we would need more complex analysis.
+    assert(Block->getNumSuccessors() <= 1 &&
+           "Expected at most one successor in block chain");
+    auto *VPBB = cast<VPBasicBlock>(Block);
+    for (VPRecipeBase &R : *VPBB) {
+      if (R.mayWriteToMemory()) {
+        auto Loc = vputils::getMemoryLocation(R);
+        // Bail out if we can't get the location or if the scoped noalias
+        // metadata indicates potential aliasing.
+        if (!Loc || ScopedNoAliasAAResult::mayAliasInScopes(
+                        LoadAA.Scope, Loc->AATags.NoAlias))
+          return false;
+      }
+    }
+    if (Block == LastBB)
+      break;
+  }
+  return true;
+}
+
 /// Return true if we do not know how to (mechanically) hoist or sink \p R out
 /// of a loop region.
 static bool cannotHoistOrSinkRecipe(const VPRecipeBase &R) {
@@ -4018,42 +4053,6 @@ static VPIRMetadata getCommonLoadMetadata(ArrayRef<VPReplicateRecipe *> Loads) {
   return CommonMetadata;
 }
 
-// Check if a load can be hoisted by verifying it doesn't alias with any stores
-// in blocks between FirstBB and LastBB using scoped noalias metadata.
-static bool canHoistLoadWithNoAliasCheck(VPReplicateRecipe *Load,
-                                         VPBasicBlock *FirstBB,
-                                         VPBasicBlock *LastBB) {
-  // Get the load's memory location and check if it aliases with any stores
-  // using scoped noalias metadata.
-  auto LoadLoc = vputils::getMemoryLocation(*Load);
-  if (!LoadLoc || !LoadLoc->AATags.Scope)
-    return false;
-
-  const AAMDNodes &LoadAA = LoadLoc->AATags;
-  for (VPBlockBase *Block = FirstBB; Block;
-       Block = Block->getSingleSuccessor()) {
-    // This function assumes a simple linear chain of blocks. If there are
-    // multiple successors, we would need more complex analysis.
-    assert(Block->getNumSuccessors() <= 1 &&
-           "Expected at most one successor in block chain");
-    auto *VPBB = cast<VPBasicBlock>(Block);
-    for (VPRecipeBase &R : *VPBB) {
-      if (R.mayWriteToMemory()) {
-        auto Loc = vputils::getMemoryLocation(R);
-        // Bail out if we can't get the location or if the scoped noalias
-        // metadata indicates potential aliasing.
-        if (!Loc || ScopedNoAliasAAResult::mayAliasInScopes(
-                        LoadAA.Scope, Loc->AATags.NoAlias))
-          return false;
-      }
-    }
-
-    if (Block == LastBB)
-      break;
-  }
-  return true;
-}
-
 void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
                                            const Loop *L) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
@@ -4061,7 +4060,7 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
   VPDominatorTree VPDT(Plan);
 
   // Group predicated loads by their address SCEV.
-  MapVector<const SCEV *, SmallVector<VPReplicateRecipe *>> LoadsByAddress;
+  DenseMap<const SCEV *, SmallVector<VPReplicateRecipe *>> LoadsByAddress;
   for (VPBlockBase *Block : vp_depth_first_shallow(LoopRegion->getEntry())) {
     auto *VPBB = cast<VPBasicBlock>(Block);
     for (VPRecipeBase &R : *VPBB) {
@@ -4135,16 +4134,22 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
       if (!canHoistLoadWithNoAliasCheck(EarliestLoad, FirstBB, LastBB))
         continue;
 
+      // Find the load with minimum alignment to use.
+      auto *LoadWithMinAlign =
+          *min_element(Group, [](VPReplicateRecipe *A, VPReplicateRecipe *B) {
+            return cast<LoadInst>(A->getUnderlyingInstr())->getAlign() <
+                   cast<LoadInst>(B->getUnderlyingInstr())->getAlign();
+          });
+
       // Collect common metadata from all loads in the group.
       VPIRMetadata CommonMetadata = getCommonLoadMetadata(Group);
 
-      // Create an unpredicated version of the earliest load with common
-      // metadata.
+      // Create an unpredicated load with minimum alignment using the earliest
+      // dominating address and common metadata.
       auto *UnpredicatedLoad = new VPReplicateRecipe(
-          EarliestLoad->getUnderlyingInstr(), {EarliestLoad->getOperand(0)},
+          LoadWithMinAlign->getUnderlyingInstr(), EarliestLoad->getOperand(0),
           /*IsSingleScalar=*/false, /*Mask=*/nullptr, /*Flags=*/{},
           CommonMetadata);
-
       UnpredicatedLoad->insertBefore(EarliestLoad);
 
       // Replace all loads in the group with the unpredicated load.

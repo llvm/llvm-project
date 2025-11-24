@@ -419,7 +419,7 @@ exit:
   ret void
 }
 
-; Positive test: Same address with different alignments - should hoist with minimum alignment
+; Make sure the minimum alignment is used when loads have different alignments.
 define void @different_alignments_same_address(ptr %dst, ptr %src, ptr %cond) {
 ; CHECK-LABEL: define void @different_alignments_same_address(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], ptr [[COND:%.*]]) {
@@ -448,14 +448,14 @@ define void @different_alignments_same_address(ptr %dst, ptr %src, ptr %cond) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[COND]], i32 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP20]], align 4, !alias.scope [[META36:![0-9]+]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 11)
-; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP8]], align 4, !alias.scope [[META39:![0-9]+]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP9]], align 4, !alias.scope [[META39]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP8]], align 2, !alias.scope [[META39:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP9]], align 2, !alias.scope [[META39]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i32 0
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x i32> [[TMP19]], i32 [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP25:%.*]] = add <2 x i32> [[TMP24]], splat (i32 10)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP15]], <2 x i32> [[TMP24]], <2 x i32> [[TMP25]]
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP4]]
-; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP34]], align 4, !alias.scope [[META41:![0-9]+]], !noalias [[META43:![0-9]+]]
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> [[TMP19]], i32 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP26:%.*]] = add <2 x i32> [[TMP25]], splat (i32 10)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP15]], <2 x i32> [[TMP25]], <2 x i32> [[TMP26]]
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP4]]
+; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP35]], align 4, !alias.scope [[META41:![0-9]+]], !noalias [[META43:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp eq i32 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP36]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP44:![0-9]+]]
