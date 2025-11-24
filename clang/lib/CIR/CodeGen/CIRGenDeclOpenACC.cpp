@@ -19,12 +19,9 @@ using namespace clang::CIRGen;
 
 namespace {
 struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
-  SourceRange declareRange;
   mlir::acc::DeclareEnterOp enterOp;
 
-  OpenACCDeclareCleanup(SourceRange declareRange,
-                        mlir::acc::DeclareEnterOp enterOp)
-      : declareRange(declareRange), enterOp(enterOp) {}
+  OpenACCDeclareCleanup(mlir::acc::DeclareEnterOp enterOp) : enterOp(enterOp) {}
 
   template <typename OutTy, typename InTy>
   void createOutOp(CIRGenFunction &cgf, InTy inOp) {
@@ -78,8 +75,11 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
           createOutOp<mlir::acc::DeleteOp>(cgf, create);
           break;
         }
-      } else if (auto create = val.getDefiningOp<mlir::acc::PresentOp>()) {
-        createOutOp<mlir::acc::DeleteOp>(cgf, create);
+      } else if (auto present = val.getDefiningOp<mlir::acc::PresentOp>()) {
+        createOutOp<mlir::acc::DeleteOp>(cgf, present);
+      } else if (auto dev_res =
+                     val.getDefiningOp<mlir::acc::DeclareDeviceResidentOp>()) {
+        createOutOp<mlir::acc::DeleteOp>(cgf, dev_res);
       } else if (val.getDefiningOp<mlir::acc::DeclareLinkOp>()) {
         // Link has no exit clauses, and shouldn't be copied.
         continue;
@@ -87,7 +87,7 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
         // DevicePtr has no exit clauses, and shouldn't be copied.
         continue;
       } else {
-        cgf.cgm.errorNYI(declareRange, "OpenACC local declare clause cleanup");
+        llvm_unreachable("OpenACC local declare clause unexpected defining op");
         continue;
       }
       exitOp.getDataClauseOperandsMutable().append(val);
@@ -106,7 +106,7 @@ void CIRGenFunction::emitOpenACCDeclare(const OpenACCDeclareDecl &d) {
                      d.clauses());
 
   ehStack.pushCleanup<OpenACCDeclareCleanup>(CleanupKind::NormalCleanup,
-                                             d.getSourceRange(), enterOp);
+                                             enterOp);
 }
 
 void CIRGenFunction::emitOpenACCRoutine(const OpenACCRoutineDecl &d) {
