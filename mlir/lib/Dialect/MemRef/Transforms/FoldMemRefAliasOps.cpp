@@ -377,11 +377,17 @@ LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
         if (!op.getPermutationMap().isMinorIdentity())
           return failure();
 
+        // We only support the case where the source of the expand shape has
+        // rank greater than or equal to the vector rank.
+        const int64_t sourceRank = sourceIndices.size();
+        const int64_t vectorRank = op.getVectorType().getRank();
+        if (sourceRank < vectorRank)
+          return failure();
+
         // We need to construct a new minor identity map since we will have lost
         // some dimensions in folding away the expand shape.
-        auto minorIdMap = AffineMap::getMinorIdentityMap(
-            sourceIndices.size(), op.getVectorType().getRank(),
-            op.getContext());
+        auto minorIdMap = AffineMap::getMinorIdentityMap(sourceRank, vectorRank,
+                                                         op.getContext());
 
         rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
             op, op.getVectorType(), expandShapeOp.getViewSource(),
