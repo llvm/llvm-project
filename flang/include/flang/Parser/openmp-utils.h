@@ -135,6 +135,7 @@ template <typename T> struct IsStatement<Statement<T>> {
 };
 
 std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &x);
+std::optional<Label> GetFinalLabel(const OpenMPConstruct &x);
 
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause);
 
