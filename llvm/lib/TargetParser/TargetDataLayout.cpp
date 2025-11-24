@@ -450,17 +450,35 @@ static std::string computeNVPTXDataLayout(const Triple &T, StringRef ABIName) {
 
 static std::string computeSPIRVDataLayout(const Triple &TT) {
   const auto Arch = TT.getArch();
-  // TODO: this probably needs to be revisited:
-  // Logical SPIR-V has no pointer size, so any fixed pointer size would be
-  // wrong. The choice to default to 32 or 64 is just motivated by another
-  // memory model used for graphics: PhysicalStorageBuffer64. But it shouldn't
-  // mean anything.
   if (Arch == Triple::spirv32)
     return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
            "v256:256-v512:512-v1024:1024-n8:16:32:64-G1";
+
+  // The data layout is intended to allow the least restrictive layout allowed
+  // by the Vulkan specification. This is the standard buffer layout when the
+  // scalarBlockLayout feature is enabled. See
+  // https://docs.vulkan.org/spec/latest/chapters/interfaces.html#interfaces-resources-layout.
+
+  // Bool is not allows in externally visible variables. They will be replaced
+  // with an i32. (i1:32). For vectors, we will make assumptions about the
+  // element for each vector size. We favor the most common element sizes.
+  // However, to get everything correct for HLSL, we will need to be able to
+  // specify the alighment more precisely.
+  // v16 -> 2 x 8-bits
+  // v24 -> 3 x 8-bits
+  // v32 -> 2 x 16-bits (ambiguous, could also be 4 x 8-bits)
+  // v48 -> 3 x 16-bits
+  // v64 -> 2 x 32-bits (ambiguous, could also be 4 x 16-bits)
+  // v96 -> 3 x 32-bits
+  // v128 -> 3 x 32-bits (ambiguous, could also be 2 x 64-bits)
+  // v192 -> 3 x 64-bits
+  // v256 -> 4 x 64-bits
+
+  // The choice for the pointer size is mean to alight with
+  // PhysicalStorageBuffer64 in case those pointer are exposed as pointers.
   if (Arch == Triple::spirv)
-    return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
-           "v512:512-v1024:1024-n8:16:32:64-G10";
+    return ("e-i1:32-i64:64-v16:8-v24:8-v32:16-v48:16-v64:32-v96:32-v128:32-"
+            "v192:64-v256:64-n8:16:32:64-G10");
   if (TT.getVendor() == Triple::VendorType::AMD &&
       TT.getOS() == Triple::OSType::AMDHSA)
     return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
