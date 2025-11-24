@@ -327,6 +327,9 @@ def use_support_substitutions(config):
         required=True,
         use_installed=True,
     )
+    if llvm_config.clang_has_bounds_safety():
+        llvm_config.lit_config.note("clang has -fbounds-safety support")
+        config.available_features.add("clang-bounds-safety")
 
     if sys.platform == "win32":
         _use_msvc_substitutions(config)
