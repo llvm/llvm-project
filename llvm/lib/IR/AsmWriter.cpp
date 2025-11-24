@@ -543,7 +543,8 @@ namespace {
 
 class TypePrinting {
 public:
-  TypePrinting(const Module *M = nullptr) : DeferredM(M) {}
+  TypePrinting(const Module *M = nullptr)
+      : M(M), TypesIncorporated(M == nullptr) {}
 
   TypePrinting(const TypePrinting &) = delete;
   TypePrinting &operator=(const TypePrinting &) = delete;
@@ -564,7 +565,8 @@ private:
   void incorporateTypes();
 
   /// A module to process lazily when needed. Set to nullptr as soon as used.
-  const Module *DeferredM;
+  const Module *M;
+  bool TypesIncorporated;
 
   TypeFinder NamedTypes;
 
@@ -605,11 +607,11 @@ bool TypePrinting::empty() {
 }
 
 void TypePrinting::incorporateTypes() {
-  if (!DeferredM)
+  if (TypesIncorporated)
     return;
 
-  NamedTypes.run(*DeferredM, false);
-  DeferredM = nullptr;
+  NamedTypes.run(*M, false);
+  TypesIncorporated = true;
 
   // The list of struct types we got back includes all the struct types, split
   // the unnamed ones out to a numbering and remove the anonymous structs.
@@ -628,6 +630,19 @@ void TypePrinting::incorporateTypes() {
   }
 
   NamedTypes.erase(NextToUse, NamedTypes.end());
+}
+
+static void printAddressSpace(const Module *M, unsigned AS, raw_ostream &OS,
+                              bool ForcePrint = false) {
+  if (AS == 0 && !ForcePrint)
+    return;
+  OS << " addrspace(";
+  StringRef ASName = M ? M->getTargetTriple().getAddressSpaceName(AS) : "";
+  if (!ASName.empty())
+    OS << "\"" << ASName << "\"";
+  else
+    OS << AS;
+  OS << ")";
 }
 
 /// Write the specified type to the specified raw_ostream, making use of type
@@ -686,8 +701,7 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   case Type::PointerTyID: {
     PointerType *PTy = cast<PointerType>(Ty);
     OS << "ptr";
-    if (unsigned AddressSpace = PTy->getAddressSpace())
-      OS << " addrspace(" << AddressSpace << ')';
+    printAddressSpace(M, PTy->getAddressSpace(), OS);
     return;
   }
   case Type::ArrayTyID: {
@@ -3894,12 +3908,12 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
   printThreadLocalModel(GV->getThreadLocalMode(), Out);
   StringRef UA = getUnnamedAddrEncoding(GV->getUnnamedAddr());
   if (!UA.empty())
-      Out << UA << ' ';
+    Out << UA;
 
   if (unsigned AddressSpace = GV->getType()->getAddressSpace())
-    Out << "addrspace(" << AddressSpace << ") ";
+    printAddressSpace(GV->getParent(), AddressSpace, Out);
   if (GV->isExternallyInitialized()) Out << "externally_initialized ";
-  Out << (GV->isConstant() ? "constant " : "global ");
+  Out << (GV->isConstant() ? " constant " : " global ");
   TypePrinter.print(GV->getValueType(), Out);
 
   if (GV->hasInitializer()) {
@@ -4172,9 +4186,9 @@ void AssemblyWriter::printFunction(const Function *F) {
   // a module with a non-zero program address space or if there is no valid
   // Module* so that the file can be parsed without the datalayout string.
   const Module *Mod = F->getParent();
-  if (F->getAddressSpace() != 0 || !Mod ||
-      Mod->getDataLayout().getProgramAddressSpace() != 0)
-    Out << " addrspace(" << F->getAddressSpace() << ")";
+  bool ForcePrintAddressSpace =
+      !Mod || Mod->getDataLayout().getProgramAddressSpace() != 0;
+  printAddressSpace(Mod, F->getAddressSpace(), Out, ForcePrintAddressSpace);
   if (Attrs.hasFnAttrs())
     Out << " #" << Machine.getAttributeGroupSlot(Attrs.getFnAttrs());
   if (F->hasSection()) {
@@ -4356,17 +4370,13 @@ static void maybePrintCallAddrSpace(const Value *Operand, const Instruction *I,
     return;
   }
   unsigned CallAddrSpace = Operand->getType()->getPointerAddressSpace();
-  bool PrintAddrSpace = CallAddrSpace != 0;
-  if (!PrintAddrSpace) {
-    const Module *Mod = getModuleFromVal(I);
-    // We also print it if it is zero but not equal to the program address space
-    // or if we can't find a valid Module* to make it possible to parse
-    // the resulting file even without a datalayout string.
-    if (!Mod || Mod->getDataLayout().getProgramAddressSpace() != 0)
-      PrintAddrSpace = true;
-  }
-  if (PrintAddrSpace)
-    Out << " addrspace(" << CallAddrSpace << ")";
+  const Module *Mod = getModuleFromVal(I);
+  // We also print it if it is zero but not equal to the program address space
+  // or if we can't find a valid Module* to make it possible to parse
+  // the resulting file even without a datalayout string.
+  bool ForcePrintAddrSpace =
+      !Mod || Mod->getDataLayout().getProgramAddressSpace() != 0;
+  printAddressSpace(Mod, CallAddrSpace, Out, ForcePrintAddrSpace);
 }
 
 // This member is called for each Instruction in a function..
@@ -4734,8 +4744,10 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     }
 
     unsigned AddrSpace = AI->getAddressSpace();
-    if (AddrSpace != 0)
-      Out << ", addrspace(" << AddrSpace << ')';
+    if (AddrSpace != 0) {
+      Out << ",";
+      printAddressSpace(AI->getModule(), AddrSpace, Out);
+    }
   } else if (isa<CastInst>(I)) {
     if (Operand) {
       Out << ' ';

@@ -17,6 +17,7 @@
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/NVPTXAddressSpaces.h"
 #include <cassert>
 #include <cstring>
 using namespace llvm;
@@ -2359,6 +2360,56 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
 
   // Default to none.
   return ExceptionHandling::None;
+}
+
+static StringRef getNVPTXAddressSpaceName(unsigned AS) {
+  switch (AS) {
+  case NVPTX::Generic:
+    return "generic";
+  case NVPTX::Global:
+    return "global";
+  case NVPTX::Shared:
+    return "shared";
+  case NVPTX::Const:
+    return "const";
+  case NVPTX::Local:
+    return "local";
+  case NVPTX::SharedCluster:
+    return "shared_cluster";
+  default:
+    return "";
+  }
+}
+
+static std::optional<unsigned> getNVPTXAddressSpaceNumber(StringRef Name) {
+  return StringSwitch<std::optional<unsigned>>(Name)
+      .Case("generic", NVPTX::Generic)
+      .Case("global", NVPTX::Global)
+      .Case("shared", NVPTX::Shared)
+      .Case("const", NVPTX::Const)
+      .Case("local", NVPTX::Local)
+      .Case("shared_cluster", NVPTX::SharedCluster)
+      .Default(std::nullopt);
+}
+
+StringRef Triple::getAddressSpaceName(unsigned AS) const {
+  switch (getArch()) {
+  case Triple::nvptx:
+  case Triple::nvptx64:
+    return getNVPTXAddressSpaceName(AS);
+  default:
+    return "";
+  }
+}
+
+std::optional<unsigned> Triple::getAddressSpaceNumber(StringRef Name) const {
+  switch (getArch()) {
+  case Triple::nvptx:
+  case Triple::nvptx64:
+    return getNVPTXAddressSpaceNumber(Name);
+  default:
+    return std::nullopt;
+  }
 }
 
 // HLSL triple environment orders are relied on in the front end
