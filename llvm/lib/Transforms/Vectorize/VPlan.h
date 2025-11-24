@@ -1095,12 +1095,8 @@ public:
     AnyOf,
     // Calculates the first active lane index of the vector predicate operands.
     // It produces the lane index across all unrolled iterations. Unrolling will
-    // add all copies of its original operand as additional operands. If any of
-    // the vector predicate operands are all zeroes then this returns poison.
+    // add all copies of its original operand as additional operands.
     FirstActiveLane,
-    // Similar to FirstActiveLane, but if any of the vector predicate operands
-    // are all zeros then the result is not poison.
-    FirstActiveLaneZeroNotPoison,
     // Calculates the last active lane index of the vector predicate operands.
     // The predicates must be prefix-masks (all 1s before all 0s). Used when
     // tail-folding to extract the correct live-out value from the last active
