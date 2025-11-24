@@ -2578,6 +2578,45 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "X86VectorTransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "X86VectorTransformOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.cpp.inc": ["-gen-op-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.td",
+    deps = [
+        ":X86VectorTransformOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "X86VectorTransformOps",
+    srcs = glob(["lib/Dialect/X86Vector/TransformOps/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/X86Vector/TransformOps/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":TransformDialect",
+        ":VectorDialect",
+        ":X86VectorTransformOpsIncGen",
+        ":X86VectorTransforms",
+    ],
+)
+
 cc_library(
     name = "X86VectorTransforms",
     srcs = glob(["lib/Dialect/X86Vector/Transforms/*.cpp"]),
@@ -2588,6 +2627,7 @@ cc_library(
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":LinalgDialect",
         ":VectorDialect",
         ":VectorUtils",
         ":X86VectorDialect",
@@ -9571,6 +9611,7 @@ cc_library(
         ":UBToLLVM",
         ":VectorToLLVM",
         ":VectorTransformOps",
+        ":X86VectorTransformOps",
         ":XeGPUTransformOps",
         ":XeVMToLLVM",
         ":XeVMToLLVMIRTranslation",

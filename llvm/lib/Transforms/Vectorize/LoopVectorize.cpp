@@ -6575,8 +6575,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   // detection.
   for (const auto &Induction : Legal->getInductionVars()) {
     const InductionDescriptor &IndDes = Induction.second;
-    const SmallVectorImpl<Instruction *> &Casts = IndDes.getCastInsts();
-    VecValuesToIgnore.insert_range(Casts);
+    VecValuesToIgnore.insert_range(IndDes.getCastInsts());
   }
 }
 
