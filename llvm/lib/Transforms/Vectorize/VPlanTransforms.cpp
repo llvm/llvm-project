@@ -1424,8 +1424,12 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         if (Mask)
           continue;
 
-        auto *Extract = new VPInstruction(VPInstruction::ExtractLastElement,
-                                          {WidenStoreR->getOperand(1)});
+        unsigned ExtractOps =
+            vputils::isUniformAcrossVFsAndUFs(WidenStoreR->getOperand(1))
+                ? VPInstruction::ExtractLastElement
+                : VPInstruction::ExtractLastLanePerPart;
+        auto *Extract =
+            new VPInstruction(ExtractOps, {WidenStoreR->getOperand(1)});
         Extract->insertBefore(WidenStoreR);
 
         // TODO: Sink the scalar store recipe to middle block if possible.
