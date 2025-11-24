@@ -1401,8 +1401,8 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
 }
 
 ConstantInt *InductionDescriptor::getConstIntStepValue() const {
-  if (auto *C = dyn_cast<SCEVConstant>(Step))
-    return dyn_cast<ConstantInt>(C->getValue());
+  if (isa<SCEVConstant>(Step))
+    return dyn_cast<ConstantInt>(cast<SCEVConstant>(Step)->getValue());
   return nullptr;
 }
 
@@ -1626,7 +1626,8 @@ bool InductionDescriptor::isInductionPHI(
   // know how to handled uniform PHIs.
   if (!match(PhiScev, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step),
                                           m_SpecificLoop(TheLoop)))) {
-    LLVM_DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
+    LLVM_DEBUG(
+        dbgs() << "LV: PHI is not a poly recurrence for requested loop.\n");
     return false;
   }
 
