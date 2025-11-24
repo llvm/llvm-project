@@ -2084,7 +2084,6 @@ cc_plugin_library(
         ":frontend",
         ":index",
         ":lex",
-        ":options",
         ":rewrite",
         ":sema",
         ":tooling",
