@@ -64,7 +64,6 @@ struct SinkVectorProducerOps final : public OpRewritePattern<producerOp> {
     if (llvm::is_contained(users, nextFirstUser))
       return failure();
 
-
     // Find the nearest user by scanning forward.
     while (nextOp) {
       if (llvm::is_contained(users, nextOp))
