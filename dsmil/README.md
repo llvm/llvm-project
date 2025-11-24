@@ -364,16 +364,26 @@ dsmil-clang -O1 -fpass-pipeline=dsmil-lab -o output input.c
   - ✅ Mission profile integration (covert_ops, border_ops_stealth)
   - ✅ Examples and test cases
   - ✅ Comprehensive documentation
-- ✅ **Feature 2.3**: Blue vs Red Scenario Simulation ⭐ NEW
+- ✅ **Feature 2.2**: Threat Signature Embedding for Forensics
+  - ✅ Threat signature structures (CFG hash, crypto patterns, protocol schemas)
+  - ✅ DsmilThreatSignaturePass implementation
+  - ✅ JSON signature generation for Layer 62 forensics/SIEM
+  - ✅ Non-identifying fingerprints for imposter detection
+- ✅ **Feature 2.3**: Blue vs Red Scenario Simulation
   - ✅ Blue/red attributes (DSMIL_RED_TEAM_HOOK, DSMIL_ATTACK_SURFACE, etc.)
   - ✅ DsmilBlueRedPass implementation
   - ✅ Red build runtime support (logging, scenario control)
   - ✅ Dual-build mission profiles (blue_production, red_stress_test)
   - ✅ Example code and integration guide
 
-### 🚧 In Progress (v1.4)
+### 🎯 v1.4 Security Depth Phase Complete!
 
-- 🚧 **Feature 2.2**: Threat signature embedding for forensics
+All three features from Phase 2 (v1.4) are now implemented:
+- Feature 2.1: Operational Stealth Modes ✅
+- Feature 2.2: Threat Signature Embedding ✅
+- Feature 2.3: Blue vs Red Scenario Simulation ✅
+
+### 🚧 In Progress
 - 🚧 LLVM pass implementations (remaining passes)
 - 🚧 Runtime library completion (sandbox, provenance)
 - 🚧 Tool wrappers (dsmil-clang, dsmil-verify)
