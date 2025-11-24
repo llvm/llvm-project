@@ -118,6 +118,7 @@ private:
   std::pair<Register, Register> unpackZExt(Register Reg);
   std::pair<Register, Register> unpackSExt(Register Reg);
   std::pair<Register, Register> unpackAExt(Register Reg);
+  std::pair<Register, Register> unpackAExtTruncS16(Register Reg);
   void lowerUnpackBitShift(MachineInstr &MI);
   void lowerV_BFE(MachineInstr &MI);
   void lowerS_BFE(MachineInstr &MI);
