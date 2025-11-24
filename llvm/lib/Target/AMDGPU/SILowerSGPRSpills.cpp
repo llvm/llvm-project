@@ -267,15 +267,16 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
 
     std::vector<CalleeSavedInfo> CSI;
     const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
-    Register RetAddrReg = TRI->getReturnAddressReg(MF);
+    MCRegister RetAddrReg = TRI->getReturnAddressReg(MF);
+    MCRegister RetAddrRegSub0 = TRI->getSubReg(RetAddrReg, AMDGPU::sub0);
+    MCRegister RetAddrRegSub1 = TRI->getSubReg(RetAddrReg, AMDGPU::sub1);
     bool SpillRetAddrReg = false;
 
     for (unsigned I = 0; CSRegs[I]; ++I) {
       MCRegister Reg = CSRegs[I];
 
       if (SavedRegs.test(Reg)) {
-        if (Reg == TRI->getSubReg(RetAddrReg, AMDGPU::sub0) ||
-            Reg == TRI->getSubReg(RetAddrReg, AMDGPU::sub1)) {
+        if (Reg == RetAddrRegSub0 || Reg == RetAddrRegSub1) {
           SpillRetAddrReg = true;
           continue;
         }
