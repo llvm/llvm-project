@@ -37,6 +37,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
@@ -96,7 +97,7 @@ static bool ignoreExtraCC1Commands(const driver::Compilation *Compilation) {
       OffloadCompilation = true;
 
   if (Jobs.size() > 1) {
-    for (auto *A : Actions){
+    for (auto *A : Actions) {
       // On MacOSX real actions may end up being wrapped in BindArchAction
       if (isa<driver::BindArchAction>(A))
         A = *A->input_begin();
@@ -413,8 +414,8 @@ bool ToolInvocation::run() {
       Driver->BuildCompilation(llvm::ArrayRef(Argv)));
   if (!Compilation)
     return false;
-  const llvm::opt::ArgStringList *const CC1Args = getCC1Arguments(
-      &*Diagnostics, Compilation.get());
+  const llvm::opt::ArgStringList *const CC1Args =
+      getCC1Arguments(&*Diagnostics, Compilation.get());
   if (!CC1Args)
     return false;
   std::unique_ptr<CompilerInvocation> Invocation(
@@ -497,9 +498,7 @@ void ClangTool::appendArgumentsAdjuster(ArgumentsAdjuster Adjuster) {
   ArgsAdjuster = combineAdjusters(std::move(ArgsAdjuster), std::move(Adjuster));
 }
 
-void ClangTool::clearArgumentsAdjusters() {
-  ArgsAdjuster = nullptr;
-}
+void ClangTool::clearArgumentsAdjusters() { ArgsAdjuster = nullptr; }
 
 static void injectResourceDir(CommandLineArguments &Args, const char *Argv0,
                               void *MainAddr) {
@@ -555,8 +554,9 @@ int ClangTool::run(ToolAction *Action) {
   }
 
   size_t NumOfTotalFiles = AbsolutePaths.size();
-  unsigned ProcessedFileCounter = 0;
+  unsigned CurrentFileIndex = 0;
   for (llvm::StringRef File : AbsolutePaths) {
+    ++CurrentFileIndex; // Increment file counter once per file.
     // Currently implementations of CompilationDatabase::getCompileCommands can
     // change the state of the file system (e.g.  prepare generated headers), so
     // this method needs to run right before we invoke the tool, as the next
@@ -571,6 +571,7 @@ int ClangTool::run(ToolAction *Action) {
       FileSkipped = true;
       continue;
     }
+    unsigned CurrentCommandIndexForFile = 0;
     for (CompileCommand &CompileCommand : CompileCommandsForFile) {
       // If the 'directory' field of the compilation database is empty, display
       // an error and use the working directory instead.
@@ -617,12 +618,16 @@ int ClangTool::run(ToolAction *Action) {
       // pass in made-up names here. Make sure this works on other platforms.
       injectResourceDir(CommandLine, "clang_tool", &StaticSymbol);
 
+      ++CurrentCommandIndexForFile;
+
       // FIXME: We need a callback mechanism for the tool writer to output a
       // customized message for each file.
-      if (NumOfTotalFiles > 1)
-        llvm::errs() << "[" + std::to_string(++ProcessedFileCounter) + "/" +
-                            std::to_string(NumOfTotalFiles) +
-                            "] Processing file " + File
+      if (NumOfTotalFiles > 1 || CompileCommandsForFile.size() > 1)
+        llvm::errs() << "[" + std::to_string(CurrentFileIndex) + "/" +
+                            std::to_string(NumOfTotalFiles) + "] (" +
+                            std::to_string(CurrentCommandIndexForFile) + "/" +
+                            std::to_string(CompileCommandsForFile.size()) +
+                            ") Processing file " + File
                      << ".\n";
       ToolInvocation Invocation(std::move(CommandLine), Action, Files.get(),
                                 PCHContainerOps);
