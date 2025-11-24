@@ -58,6 +58,25 @@ const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x) {
   return nullptr;
 }
 
+// Get the Label from a Statement<...> contained in an ExecutionPartConstruct,
+// or std::nullopt, if there is no Statement<...> contained in there.
+template <typename T>
+static std::optional<Label> GetStatementLabelHelper(const T &stmt) {
+  if constexpr (IsStatement<T>::value) {
+    return stmt.label;
+  } else if constexpr (WrapperTrait<T>) {
+    return GetStatementLabelHelper(stmt.v);
+  } else if constexpr (UnionTrait<T>) {
+    return common::visit(
+        [&](auto &&s) { return GetStatementLabelHelper(s); }, stmt.u);
+  }
+  return std::nullopt;
+}
+
+std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &x) {
+  return GetStatementLabelHelper(x);
+}
+
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause) {
   // Clauses with OmpObjectList as its data member
   using MemberObjectListClauses = std::tuple<OmpClause::Copyin,

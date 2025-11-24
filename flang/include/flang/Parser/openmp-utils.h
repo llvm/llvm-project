@@ -126,6 +126,16 @@ const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x);
 const OpenMPLoopConstruct *GetOmpLoop(const ExecutionPartConstruct &x);
 const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x);
 
+// Is the template argument "Statement<T>" for some T?
+template <typename T> struct IsStatement {
+  static constexpr bool value{false};
+};
+template <typename T> struct IsStatement<Statement<T>> {
+  static constexpr bool value{true};
+};
+
+std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &x);
+
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause);
 
 template <typename T>
