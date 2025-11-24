@@ -43,13 +43,37 @@
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=alloc-token -falloc-token-max=-1 %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-MAX %s
 // CHECK-INVALID-MAX: error: invalid value
 
-// RUN: %clang --target=x86_64-linux-gnu -Xclang -falloc-token-mode=increment %s -### 2>&1 | FileCheck -check-prefix=CHECK-MODE-INCREMENT %s
+// RUN: %clang --target=x86_64-linux-gnu -falloc-token-mode=increment %s -### 2>&1 | FileCheck -check-prefix=CHECK-MODE-INCREMENT %s
 // CHECK-MODE-INCREMENT: "-falloc-token-mode=increment"
-// RUN: %clang --target=x86_64-linux-gnu -Xclang -falloc-token-mode=random %s -### 2>&1 | FileCheck -check-prefix=CHECK-MODE-RANDOM %s
+// RUN: %clang --target=x86_64-linux-gnu -falloc-token-mode=random %s -### 2>&1 | FileCheck -check-prefix=CHECK-MODE-RANDOM %s
 // CHECK-MODE-RANDOM: "-falloc-token-mode=random"
-// RUN: %clang --target=x86_64-linux-gnu -Xclang -falloc-token-mode=typehash %s -### 2>&1 | FileCheck -check-prefix=CHECK-MODE-TYPEHASH %s
+// RUN: %clang --target=x86_64-linux-gnu -falloc-token-mode=typehash %s -### 2>&1 | FileCheck -check-prefix=CHECK-MODE-TYPEHASH %s
 // CHECK-MODE-TYPEHASH: "-falloc-token-mode=typehash"
-// RUN: %clang --target=x86_64-linux-gnu -Xclang -falloc-token-mode=typehashpointersplit %s -### 2>&1 | FileCheck -check-prefix=CHECK-MODE-TYPEHASHPTRSPLIT %s
+// RUN: %clang --target=x86_64-linux-gnu -falloc-token-mode=typehashpointersplit %s -### 2>&1 | FileCheck -check-prefix=CHECK-MODE-TYPEHASHPTRSPLIT %s
 // CHECK-MODE-TYPEHASHPTRSPLIT: "-falloc-token-mode=typehashpointersplit"
-// RUN: not %clang --target=x86_64-linux-gnu -Xclang -falloc-token-mode=asdf %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-MODE %s
+// RUN: not %clang --target=x86_64-linux-gnu -falloc-token-mode=asdf %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-MODE %s
 // CHECK-INVALID-MODE: error: invalid value 'asdf'
+
+// RUN: %clang --target=x86_64-linux-gnu -flto=thin -fsanitize=alloc-token %s -### 2>&1 | FileCheck --check-prefix=CHECK-LTO %s
+// RUN: %clang --target=x86_64-linux-gnu -flto=full -fsanitize=alloc-token %s -### 2>&1 | FileCheck --check-prefix=CHECK-LTO %s
+// RUN: %clang --target=x86_64-linux-gnu -flto=thin -fno-sanitize=alloc-token -fsanitize=alloc-token %s -### 2>&1 | FileCheck --check-prefix=CHECK-LTO %s
+// RUN: %clang --target=x86_64-linux-gnu -flto=full -fno-sanitize=alloc-token -fsanitize=alloc-token %s -### 2>&1 | FileCheck --check-prefix=CHECK-LTO %s
+// CHECK-LTO: "-plugin-opt=-lto-alloc-token-mode=default"
+
+// RUN: %clang --target=x86_64-linux-gnu -flto=thin -fsanitize=alloc-token -fno-sanitize=alloc-token %s -### 2>&1 | FileCheck --check-prefix=CHECK-LTO-NO %s
+// RUN: %clang --target=x86_64-linux-gnu -flto=full -fsanitize=alloc-token -fno-sanitize=alloc-token %s -### 2>&1 | FileCheck --check-prefix=CHECK-LTO-NO %s
+// CHECK-LTO-NO-NOT: "-plugin-opt=-lto-alloc-token-mode=default"
+
+// RUN: %clang --target=x86_64-linux-gnu -flto=thin -fsanitize=alloc-token -fsanitize-alloc-token-fast-abi %s -### 2>&1 | FileCheck --check-prefix=CHECK-LTO-FAST %s
+// RUN: %clang --target=x86_64-linux-gnu -flto=full -fsanitize=alloc-token -fsanitize-alloc-token-fast-abi %s -### 2>&1 | FileCheck --check-prefix=CHECK-LTO-FAST %s
+// CHECK-LTO-FAST: "-plugin-opt=-lto-alloc-token-mode=default"
+// CHECK-LTO-FAST: "-plugin-opt=-alloc-token-fast-abi"
+
+// RUN: %clang --target=x86_64-linux-gnu -flto=thin -fsanitize=alloc-token -falloc-token-max=100 %s -### 2>&1 | FileCheck --check-prefix=CHECK-LTO-MAX %s
+// RUN: %clang --target=x86_64-linux-gnu -flto=full -fsanitize=alloc-token -falloc-token-max=100 %s -### 2>&1 | FileCheck --check-prefix=CHECK-LTO-MAX %s
+// CHECK-LTO-MAX: "-plugin-opt=-lto-alloc-token-mode=default"
+// CHECK-LTO-MAX: "-plugin-opt=-alloc-token-max=100"
+
+// RUN: %clang --target=x86_64-linux-gnu -flto=thin -fsanitize=alloc-token -falloc-token-mode=random %s -### 2>&1 | FileCheck --check-prefix=CHECK-LTO-MODE %s
+// RUN: %clang --target=x86_64-linux-gnu -flto=full -fsanitize=alloc-token -falloc-token-mode=random %s -### 2>&1 | FileCheck --check-prefix=CHECK-LTO-MODE %s
+// CHECK-LTO-MODE: "-plugin-opt=-lto-alloc-token-mode=random"

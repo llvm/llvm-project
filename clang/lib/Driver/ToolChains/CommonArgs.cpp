@@ -1385,6 +1385,24 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
 
+  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
+  if (SanArgs.hasAllocToken()) {
+    StringRef Mode = "default";
+    if (Arg *A = Args.getLastArg(options::OPT_falloc_token_mode_EQ))
+      Mode = A->getValue();
+    CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
+                                         "-lto-alloc-token-mode=" + Mode));
+    if (Args.hasArg(options::OPT_fsanitize_alloc_token_fast_abi))
+      CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
+                                           "-alloc-token-fast-abi"));
+    if (Args.hasArg(options::OPT_fsanitize_alloc_token_extended))
+      CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
+                                           "-alloc-token-extended"));
+    if (Arg *A = Args.getLastArg(options::OPT_falloc_token_max_EQ))
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine(PluginOptPrefix) + "-alloc-token-max=" + A->getValue()));
+  }
+
   addDTLTOOptions(ToolChain, Args, CmdArgs);
 }
 
