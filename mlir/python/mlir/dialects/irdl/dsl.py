@@ -334,6 +334,10 @@ class Dialect:
             _ods_cext.register_operation(dialect_class)(op.op_view)
         return self.namespace
 
+    @staticmethod
+    def op_name_to_python_id(name):
+        return name.replace(".", "_").replace("$", "_")
+
     def op(self, name: str) -> Callable[[type], type]:
         def decorator(cls: type) -> type:
             fields = [
@@ -348,7 +352,7 @@ class Dialect:
             self.operations.append(op_def)
 
             self.namespace.__dict__[cls.__name__] = op_view
-            self.namespace.__dict__[name.replace(".", "_")] = builder
+            self.namespace.__dict__[Dialect.op_name_to_python_id(name)] = builder
 
             return cls
 
