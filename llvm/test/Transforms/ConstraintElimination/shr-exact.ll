@@ -8,8 +8,7 @@ define i1 @precond_icmp_ashr_and_rhsc(i64 %x) {
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i64 [[X]], 3
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[SHR]], 200
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], 9223372036854775800
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %shr = ashr exact i64 %x, 3
@@ -27,8 +26,7 @@ define i1 @precond_icmp_ashr_and_ashr(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[SHRY:%.*]] = ashr exact i64 [[Y]], 3
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[SHRX]], [[SHRY]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %shrx = ashr exact i64 %x, 3
@@ -47,8 +45,7 @@ define i1 @precond_icmp_lshr_and_lshr(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[SHRY:%.*]] = lshr exact i64 [[Y]], 3
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[SHRX]], [[SHRY]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %shrx = lshr exact i64 %x, 3
