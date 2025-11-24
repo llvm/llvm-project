@@ -41,6 +41,8 @@ public:
     unsigned Offset;
     /// Descriptor of the local.
     Descriptor *Desc;
+    /// If the cleanup for this local should be emitted.
+    bool EnabledByDefault = true;
   };
 
   using LocalVectorTy = llvm::SmallVector<Local, 8>;
