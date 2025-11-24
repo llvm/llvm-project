@@ -134,7 +134,7 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL) {
 
     // Collect underlying objects of pointer arguments.
     auto Scopes = SmallVector<Metadata *, 4u>();
-    auto ObjSet = SmallPtrSet<Value const*, 4u>();
+    auto ObjSet = SmallPtrSet<Value const *, 4u>();
     auto NoAliases = SmallVector<Metadata *, 4u>();
 
     for (auto &Ptr : PtrArgs) {
@@ -149,15 +149,13 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL) {
 
     for (auto *Val : ObjSet) {
       if (isa<ConstantPointerNull>(Val) || isa<ConstantDataVector>(Val) ||
-          isa<ConstantInt>(Val) || isa<ConstantFP>(Val) ||
-          isa<UndefValue>(Val))
+          isa<ConstantInt>(Val) || isa<ConstantFP>(Val) || isa<UndefValue>(Val))
         continue;
 
       if (auto *Arg = dyn_cast<Argument>(Val)) {
         if (!Arg->hasAttribute(Attribute::NoAlias))
           UsesAliasingPtr = true;
-      }
-      else
+      } else
         UsesAliasingPtr = true;
 
       if (isEscapeSource(Val))
@@ -174,7 +172,7 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL) {
       if (ObjSet.contains(Arg))
         continue;
 
-      if (!RequiresNoCaptureBefore || 
+      if (!RequiresNoCaptureBefore ||
           !capturesAnything(PointerMayBeCapturedBefore(
               Arg, false, I, &DT, false, CaptureComponents::Provenance)))
         NoAliases.push_back(NewScopes[Arg]);
@@ -182,9 +180,9 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL) {
 
     // Add noalias metadata to instruction.
     if (!NoAliases.empty()) {
-      auto *NewMD = MDNode::concatenate(
-          Inst->getMetadata(LLVMContext::MD_noalias),
-          MDNode::get(F.getContext(), NoAliases));
+      auto *NewMD =
+          MDNode::concatenate(Inst->getMetadata(LLVMContext::MD_noalias),
+                              MDNode::get(F.getContext(), NoAliases));
       Inst->setMetadata(LLVMContext::MD_noalias, NewMD);
     }
 
@@ -197,9 +195,9 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL) {
 
     // Add alias.scope metadata to instruction.
     if (!Scopes.empty()) {
-      auto *NewMD = MDNode::concatenate(
-          Inst->getMetadata(LLVMContext::MD_alias_scope),
-          MDNode::get(F.getContext(), Scopes));
+      auto *NewMD =
+          MDNode::concatenate(Inst->getMetadata(LLVMContext::MD_alias_scope),
+                              MDNode::get(F.getContext(), Scopes));
       Inst->setMetadata(LLVMContext::MD_alias_scope, NewMD);
     }
   }
