@@ -3957,37 +3957,39 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::TRUNCATE_SSAT_S: {
-      // Pass through DemandedElts to the recursive call
-      KnownBits InputKnown = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-      unsigned InputBits = InputKnown.getBitWidth();
+    // Pass through DemandedElts to the recursive call
+    KnownBits InputKnown =
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    unsigned InputBits = InputKnown.getBitWidth();
 
-      APInt MinInRange = APInt::getSignedMinValue(BitWidth).sext(InputBits);
-      APInt MaxInRange = APInt::getSignedMaxValue(BitWidth).sext(InputBits);
-      APInt InputMin = InputKnown.getSignedMinValue();
-      APInt InputMax = InputKnown.getSignedMaxValue();
+    APInt MinInRange = APInt::getSignedMinValue(BitWidth).sext(InputBits);
+    APInt MaxInRange = APInt::getSignedMaxValue(BitWidth).sext(InputBits);
+    APInt InputMin = InputKnown.getSignedMinValue();
+    APInt InputMax = InputKnown.getSignedMaxValue();
 
-      if (InputMin.sge(MinInRange) && InputMax.sle(MaxInRange)) {
-        Known = InputKnown.trunc(BitWidth);
-      } else if (InputMax.slt(MinInRange)) {
-        Known.makeConstant(APInt::getSignedMinValue(BitWidth));
-      } else if (InputMin.sgt(MaxInRange)) {
-        Known.makeConstant(APInt::getSignedMaxValue(BitWidth));
-      } else {
-        Known.resetAll();
-        if (InputKnown.isNegative()) {
-          Known.makeNegative();
-          Known.Zero = InputKnown.Zero.trunc(BitWidth);
-          Known.Zero.clearSignBit();
-        } else if (InputKnown.isNonNegative()) {
-          Known.makeNonNegative();
-          Known.One = InputKnown.One.trunc(BitWidth);
-        }
+    if (InputMin.sge(MinInRange) && InputMax.sle(MaxInRange)) {
+      Known = InputKnown.trunc(BitWidth);
+    } else if (InputMax.slt(MinInRange)) {
+      Known.makeConstant(APInt::getSignedMinValue(BitWidth));
+    } else if (InputMin.sgt(MaxInRange)) {
+      Known.makeConstant(APInt::getSignedMaxValue(BitWidth));
+    } else {
+      Known.resetAll();
+      if (InputKnown.isNegative()) {
+        Known.makeNegative();
+        Known.Zero = InputKnown.Zero.trunc(BitWidth);
+        Known.Zero.clearSignBit();
+      } else if (InputKnown.isNonNegative()) {
+        Known.makeNonNegative();
+        Known.One = InputKnown.One.trunc(BitWidth);
       }
-      break;
+    }
+    break;
   }
   case ISD::TRUNCATE_SSAT_U: {
     // Signed -> Unsigned saturating truncation
-    KnownBits InputKnown = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    KnownBits InputKnown =
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     unsigned InputBits = InputKnown.getBitWidth();
 
     APInt MaxInRange = APInt::getAllOnes(BitWidth).zext(InputBits);
@@ -4009,7 +4011,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::TRUNCATE_USAT_U: {
     // Unsigned -> Unsigned saturating truncation
-    KnownBits InputKnown = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    KnownBits InputKnown =
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     unsigned InputBits = InputKnown.getBitWidth();
 
     APInt MaxInRange = APInt::getLowBitsSet(InputBits, BitWidth);
