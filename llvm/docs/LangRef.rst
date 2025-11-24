@@ -17342,7 +17342,8 @@ signaling NaNs. This match's the behavior of libm's fmin.
 If either operand is a NaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN. If the operands compare equal,
 returns either one of the operands. For example, this means that
-fmin(+0.0, -0.0) returns non-deterministic value (either -0.0 or 0.0).
+fmin(+0.0, -0.0) non-deterministically returns either operand (-0.0
+or 0.0).
 
 Unlike the IEEE-754-2008 behavior, this does not distinguish between
 signaling and quiet NaN inputs. If a target's implementation follows
@@ -17392,7 +17393,8 @@ signaling NaNs. This matches the behavior of libm's fmax.
 If either operand is a NaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN. If the operands compare equal,
 returns either one of the operands. For example, this means that
-fmax(+0.0, -0.0) returns non-deterministic value (either -0.0 or 0.0).
+fmax(+0.0, -0.0) non-deterministically returns either operand (-0.0
+or 0.0).
 
 Unlike the IEEE-754-2008 behavior, this does not distinguish between
 signaling and quiet NaN inputs. If a target's implementation follows
