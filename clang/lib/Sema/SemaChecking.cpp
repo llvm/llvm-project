@@ -7013,19 +7013,6 @@ bool Sema::CheckFormatString(const FormatMatchesAttr *Format,
   return false;
 }
 
-std::string escapeFormatString(StringRef Input) {
-  std::string Result;
-  llvm::raw_string_ostream OS(Result);
-  for (char C : Input) {
-    StringRef Escaped = escapeCStyle<EscapeChar::Double>(C);
-    if (Escaped.empty())
-      OS << C;
-    else
-      OS << Escaped;
-  }
-  return Result;
-}
-
 static bool CheckMissingFormatAttribute(
     Sema *S, ArrayRef<const Expr *> Args, Sema::FormatArgumentPassingKind APK,
     StringLiteral *ReferenceFormatString, unsigned FormatIdx,
@@ -7094,15 +7081,17 @@ static bool CheckMissingFormatAttribute(
   NamedDecl *ND = dyn_cast<NamedDecl>(Caller);
   do {
     std::string Attr, Fixit;
-    if (APK != Sema::FormatArgumentPassingKind::FAPK_Elsewhere)
-      llvm::raw_string_ostream(Attr)
-          << "format(" << FormatTypeName << ", " << FormatStringIndex << ", "
-          << FirstArgumentIndex << ")";
-    else
-      llvm::raw_string_ostream(Attr)
-          << "format_matches(" << FormatTypeName << ", " << FormatStringIndex
-          << ", \"" << escapeFormatString(ReferenceFormatString->getString())
-          << "\")";
+    llvm::raw_string_ostream AttrOS(Attr);
+    if (APK != Sema::FormatArgumentPassingKind::FAPK_Elsewhere) {
+      AttrOS << "format(" << FormatTypeName << ", " << FormatStringIndex << ", "
+             << FirstArgumentIndex << ")";
+    } else {
+      AttrOS << "format_matches(" << FormatTypeName << ", " << FormatStringIndex
+             << ", \"";
+      AttrOS.write_escaped(ReferenceFormatString->getString());
+      AttrOS << "\")";
+    }
+    AttrOS.flush();
     auto DB = S->Diag(Loc, diag::warn_missing_format_attribute) << Attr;
     if (ND)
       DB << ND;
