@@ -40,6 +40,51 @@ using namespace lldb_private;
 using namespace llvm::dwarf;
 
 namespace {
+/// A mock implementation of DWARFExpression::Delegate for testing.
+/// This class provides default implementations of all delegate methods,
+/// with the DWARF version being configurable via the constructor.
+class MockDwarfDelegate : public DWARFExpression::Delegate {
+public:
+  static constexpr uint16_t DEFAULT_DWARF_VERSION = 5;
+  static MockDwarfDelegate Dwarf5() { return MockDwarfDelegate(5); }
+  static MockDwarfDelegate Dwarf2() { return MockDwarfDelegate(2); }
+
+  MockDwarfDelegate() : MockDwarfDelegate(DEFAULT_DWARF_VERSION) {}
+  explicit MockDwarfDelegate(uint16_t version) : m_dwarf_version(version) {}
+
+  uint16_t GetVersion() const override { return m_dwarf_version; }
+
+  dw_addr_t GetBaseAddress() const override { return 0; }
+
+  uint8_t GetAddressByteSize() const override { return 4; }
+
+  llvm::Expected<std::pair<uint64_t, bool>>
+  GetDIEBitSizeAndSign(uint64_t relative_die_offset) const override {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "GetDIEBitSizeAndSign not implemented");
+  }
+
+  dw_addr_t ReadAddressFromDebugAddrSection(uint32_t index) const override {
+    return 0;
+  }
+
+  lldb::offset_t GetVendorDWARFOpcodeSize(const DataExtractor &data,
+                                          const lldb::offset_t data_offset,
+                                          const uint8_t op) const override {
+    return LLDB_INVALID_OFFSET;
+  }
+
+  bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+                              lldb::offset_t &offset, RegisterContext *reg_ctx,
+                              lldb::RegisterKind reg_kind,
+                              DWARFExpression::Stack &stack) const override {
+    return false;
+  }
+
+private:
+  uint16_t m_dwarf_version;
+};
+
 /// Mock memory implementation for testing.
 /// Stores predefined memory contents indexed by {address, size} pairs.
 class MockMemory {
@@ -189,7 +234,7 @@ private:
 
 static llvm::Expected<Value> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                       lldb::ModuleSP module_sp = {},
-                                      DWARFUnit *unit = nullptr,
+                                      DWARFExpression::Delegate *unit = nullptr,
                                       ExecutionContext *exe_ctx = nullptr,
                                       RegisterContext *reg_ctx = nullptr) {
   DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
@@ -532,6 +577,23 @@ DWARF:
 
 TEST(DWARFExpression, DW_OP_stack_value) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_stack_value}), llvm::Failed());
+}
+
+// This test shows that the dwarf version is used by the expression evaluation.
+// Note that the different behavior tested here is not meant to imply that this
+// is the correct interpretation of dwarf2 vs. dwarf5, but rather it was picked
+// as an easy example that evaluates differently based on the dwarf version.
+TEST(DWARFExpression, dwarf_version) {
+  MockDwarfDelegate dwarf2 = MockDwarfDelegate::Dwarf2();
+  MockDwarfDelegate dwarf5 = MockDwarfDelegate::Dwarf5();
+
+  // In dwarf2 the constant on top of the stack is treated as a value.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1}, {}, &dwarf2), ExpectScalar(1));
+
+  // In dwarf5 the constant on top of the stack is implicitly converted to an
+  // address.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1}, {}, &dwarf5),
+                       ExpectLoadAddress(1));
 }
 
 TEST(DWARFExpression, DW_OP_piece) {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ALIGNED_ALLOC_H
-#define _LIBCPP___MEMORY_ALIGNED_ALLOC_H
+#ifndef _LIBCPP_SRC_ALIGNED_ALLOC_H
+#define _LIBCPP_SRC_ALIGNED_ALLOC_H
 
 #include <__config>
 #include <cstdlib>
@@ -29,7 +29,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 inline _LIBCPP_HIDE_FROM_ABI void* __libcpp_aligned_alloc(std::size_t __alignment, std::size_t __size) {
 #  if defined(_LIBCPP_MSVCRT_LIKE)
   return ::_aligned_malloc(__size, __alignment);
-#  elif _LIBCPP_STD_VER >= 17 && _LIBCPP_HAS_C11_ALIGNED_ALLOC
+
+// Android only provides aligned_alloc when targeting API 28 or higher.
+#  elif !defined(__ANDROID__) || __ANDROID_API__ >= 28
   // aligned_alloc() requires that __size is a multiple of __alignment,
   // but for C++ [new.delete.general], only states "if the value of an
   // alignment argument passed to any of these functions is not a valid
@@ -60,4 +62,4 @@ inline _LIBCPP_HIDE_FROM_ABI void __libcpp_aligned_free(void* __ptr) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ALIGNED_ALLOC_H
+#endif // _LIBCPP_SRC_ALIGNED_ALLOC_H
