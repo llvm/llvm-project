@@ -24,17 +24,25 @@ namespace llvm {
         bool isStruct() const;
         bool compatibleWith(std::shared_ptr<MyTy>);
         static std::shared_ptr<MyTy> from(Type *);
-        static std::shared_ptr<MyTy> leastCompatibleType(std::shared_ptr<MyTy>,
-                                                         std::shared_ptr<MyTy>);
+        static std::shared_ptr<MyTy> leastCompatibleType(
+			std::shared_ptr<MyTy>,
+            std::shared_ptr<MyTy>);
+        static std::shared_ptr<MyTy> getStructLCA(
+			std::shared_ptr<MyTy>,
+            std::shared_ptr<MyTy>);
 		template <typename T, typename U>
         static std::shared_ptr<T> ptr_cast(std::shared_ptr<U>);
 	protected:
 		MyTypeID typeId;
-        static std::shared_ptr<MyTy> basic_with_basic(std::shared_ptr<MyTy>,
-                                                      std::shared_ptr<MyTy>);
-        static std::shared_ptr<MyTy> ptr_with_array(std::shared_ptr<MyTy>,
-														std::shared_ptr<MyTy>);
+        static int floatBitWidth[7];
+        static std::shared_ptr<MyTy> basic_with_basic(
+			std::shared_ptr<MyTy>,
+            std::shared_ptr<MyTy>);
+        static std::shared_ptr<MyTy> ptr_with_array(
+			std::shared_ptr<MyTy>,
+			std::shared_ptr<MyTy>);
         static std::shared_ptr<MyTy> int_with_int(Type *, Type *);
+        static std::shared_ptr<MyTy> float_with_float(Type *, Type *);
 	};
 
 	class MyVoidTy : public MyTy {
@@ -90,6 +98,7 @@ namespace llvm {
         bool hasName() const;
         int getElementCnt();
         void update(std::shared_ptr<MyTy> inner) override;
+        void updateElement(std::shared_ptr<MyTy> ty, int index = 0);
 	};
 }
 #endif

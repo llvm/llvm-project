@@ -4,32 +4,31 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Transforms/Utils/MyTy.h"
+#include "llvm/Transforms/Utils/GlobalTypeInfo.h"
 
 namespace llvm {
 
-    class PointerTypeInFunctionPass : public AnalysisInfoMixin<PointerTypeInFunctionPass>,
-                                      public InstVisitor<PointerTypeInFunctionPass> {
+    class PointerTypeInFunctionPass : public AnalysisInfoMixin<PointerTypeInFunctionPass> {
     public:
       struct Result {
-        DenseMap< Value *, std::shared_ptr<MyTy> > pointerTypeMap;
+        DenseMap<Value *, std::shared_ptr<MyTy>> pointerTypeMap;
       };
       static llvm::AnalysisKey Key;
       Result run(Function &F, FunctionAnalysisManager &AM);
-      void visitAllocaInst(AllocaInst &AI);
-      void visitLoadInst(LoadInst &LI);
-      void visitStoreInst(StoreInst &LI);
-      void visitGetElementPtrInst(GetElementPtrInst &GI);
+      void visitAllocaInst(Result *result, AllocaInst &AI);
+      void visitLoadInst(Result *result, LoadInst &LI);
+      void visitStoreInst(Result *result, StoreInst &LI);
+      void visitGetElementPtrInst(Result *result, GetElementPtrInst &GI);
     
     private:
-      Result result;
-      DenseMap<Value *, std::string> ptmLastTurn;
-      void recordPtmForNext();
-      bool checkFixedPoint();
-      void addPointerTypeMap(Value *opr, Type *type);
-      void addPointerTypeMap(Value *opr, Value *val);
-      void testPrint(Function &F);
-      std::shared_ptr<MyTy> view_gep_index(Value *, Type *, int, int);
-      void view_gep_index(Value *, std::shared_ptr<MyTy>, int, int);
+      void visitFunction(Result *result, Function &F);
+      void recordPtmForNext(Result *, DenseMap<Value *, std::string> *);
+      bool hasChanged(Result, DenseMap<Value *, std::string>);
+      void addPointerTypeMap(Result *result, Value *opr, Type *type);
+      void addPointerTypeMap(Result *result, Value *opr, Value *val);
+      void testPrint(Result *result, Function &F);
+      std::shared_ptr<MyTy> view_gep_index(Result *, GetElementPtrInst &, Value *,
+          Type *, unsigned int);
       friend struct AnalysisInfoMixin<PointerTypeInFunctionPass>;
     };
 }
