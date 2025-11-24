@@ -20,7 +20,7 @@ struct __attribute__((internal_linkage)) S { // expected-warning{{'internal_link
 __attribute__((internal_linkage("foo"))) int g(void) {} // expected-error{{'internal_linkage' attribute takes no arguments}}
 
 int var6 [[clang::internal_linkage]];
-int var7 [[clang::internal_linkage]] __attribute__((common)); // expected-error{{'clang::internal_linkage' and 'common' attributes are not compatible}} \
+int var7 [[clang::internal_linkage]] __attribute__((common)); // expected-error{{'common' and 'clang::internal_linkage' attributes are not compatible}} \
                                                    // expected-note{{conflicting attribute is here}}
 __attribute__((common)) int var8 [[clang::internal_linkage]]; // expected-error{{'clang::internal_linkage' and 'common' attributes are not compatible}} \
                                                    // expected-note{{conflicting attribute is here}}

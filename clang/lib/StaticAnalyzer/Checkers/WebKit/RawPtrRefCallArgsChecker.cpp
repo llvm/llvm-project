@@ -29,12 +29,12 @@ namespace {
 class RawPtrRefCallArgsChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug;
-  mutable BugReporter *BR;
 
   TrivialFunctionAnalysis TFA;
   EnsureFunctionAnalysis EFA;
 
 protected:
+  mutable BugReporter *BR;
   mutable std::optional<RetainTypeChecker> RTC;
 
 public:
@@ -46,6 +46,7 @@ public:
   virtual bool isSafePtr(const CXXRecordDecl *Record) const = 0;
   virtual bool isSafePtrType(const QualType type) const = 0;
   virtual bool isSafeExpr(const Expr *) const { return false; }
+  virtual bool isSafeDecl(const Decl *) const { return false; }
   virtual const char *ptrKind() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -214,6 +215,7 @@ public:
         Arg, /*StopAtFirstRefCountedObj=*/true,
         [&](const clang::CXXRecordDecl *Record) { return isSafePtr(Record); },
         [&](const clang::QualType T) { return isSafePtrType(T); },
+        [&](const clang::Decl *D) { return isSafeDecl(D); },
         [&](const clang::Expr *ArgOrigin, bool IsSafe) {
           if (IsSafe)
             return true;
@@ -224,6 +226,8 @@ public:
             // foo(123)
             return true;
           }
+          if (isa<CXXBoolLiteralExpr>(ArgOrigin))
+            return true;
           if (isa<ObjCStringLiteral>(ArgOrigin))
             return true;
           if (isASafeCallArg(ArgOrigin))
@@ -384,7 +388,7 @@ public:
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
-    Os << "Reciever is " << ptrKind() << " and unsafe.";
+    Os << "Receiver is " << ptrKind() << " and unsafe.";
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -465,16 +469,21 @@ public:
   }
 
   bool isSafePtr(const CXXRecordDecl *Record) const final {
-    return isRetainPtr(Record);
+    return isRetainPtrOrOSPtr(Record);
   }
 
   bool isSafePtrType(const QualType type) const final {
-    return isRetainPtrType(type);
+    return isRetainPtrOrOSPtrType(type);
   }
 
   bool isSafeExpr(const Expr *E) const final {
     return ento::cocoa::isCocoaObjectRef(E->getType()) &&
            isa<ObjCMessageExpr>(E);
+  }
+
+  bool isSafeDecl(const Decl *D) const final {
+    // Treat NS/CF globals in system header as immortal.
+    return BR->getSourceManager().isInSystemHeader(D->getLocation());
   }
 
   const char *ptrKind() const final { return "unretained"; }

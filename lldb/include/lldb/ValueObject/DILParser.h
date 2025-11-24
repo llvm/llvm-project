@@ -9,8 +9,8 @@
 #ifndef LLDB_VALUEOBJECT_DILPARSER_H
 #define LLDB_VALUEOBJECT_DILPARSER_H
 
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Target/ExecutionContextScope.h"
-#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILLexer.h"
@@ -99,10 +99,13 @@ private:
   ASTNodeUP ParseNumericLiteral();
   ASTNodeUP ParseIntegerLiteral();
   ASTNodeUP ParseFloatingPointLiteral();
+  ASTNodeUP ParseBooleanLiteral();
 
   void BailOut(const std::string &error, uint32_t loc, uint16_t err_len);
 
   void Expect(Token::Kind kind);
+
+  void ExpectOneOf(std::vector<Token::Kind> kinds_vec);
 
   void TentativeParsingRollback(uint32_t saved_idx) {
     if (m_error)

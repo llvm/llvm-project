@@ -327,6 +327,8 @@ private:
   Ty Val;
   bool Active;
 };
+template <typename VTy, typename Ty>
+ValueRAII(VTy &, Ty, Ty, bool, IdentTy *, bool) -> ValueRAII<VTy, Ty>;
 
 /// TODO
 inline state::Value<uint32_t, state::VK_RunSchedChunk> RunSchedChunk;

@@ -1401,7 +1401,7 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
       OS << " -> ";
 
     const auto *RD = cast<CXXRecordDecl>(
-        Base->getType()->castAsCanonical<RecordType>()->getOriginalDecl());
+        Base->getType()->castAsCanonical<RecordType>()->getDecl());
 
     if (Base->isVirtual())
       OS << "virtual ";
@@ -2180,7 +2180,7 @@ void TextNodeDumper::VisitTagType(const TagType *T) {
       K != ElaboratedTypeKeyword::None)
     OS << ' ' << TypeWithKeyword::getKeywordName(K);
   dumpNestedNameSpecifier(T->getQualifier());
-  dumpDeclRef(T->getOriginalDecl());
+  dumpDeclRef(T->getDecl());
 }
 
 void TextNodeDumper::VisitTemplateTypeParmType(const TemplateTypeParmType *T) {
@@ -2232,7 +2232,7 @@ void TextNodeDumper::VisitTemplateSpecializationType(
 
 void TextNodeDumper::VisitInjectedClassNameType(
     const InjectedClassNameType *T) {
-  dumpDeclRef(T->getOriginalDecl());
+  dumpDeclRef(T->getDecl());
 }
 
 void TextNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *T) {
@@ -2273,7 +2273,7 @@ void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
   if (D->isFixed())
     dumpType(D->getIntegerType());
 
-  if (const auto *Instance = D->getInstantiatedFromMemberEnum()) {
+  if (const auto *Instance = D->getTemplateInstantiationPattern()) {
     OS << " instantiated_from";
     dumpPointer(Instance);
   }
@@ -2379,7 +2379,7 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (!D->param_empty() && !D->param_begin())
     OS << " <<<NULL params x " << D->getNumParams() << ">>>";
 
-  if (const auto *Instance = D->getInstantiatedFromMemberFunction()) {
+  if (const auto *Instance = D->getTemplateInstantiationPattern()) {
     OS << " instantiated_from";
     dumpPointer(Instance);
   }
@@ -2467,6 +2467,11 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
     OS << " destroyed";
   if (D->isParameterPack())
     OS << " pack";
+
+  if (const auto *Instance = D->getTemplateInstantiationPattern()) {
+    OS << " instantiated_from";
+    dumpPointer(Instance);
+  }
 
   if (D->hasInit()) {
     const Expr *E = D->getInit();
@@ -2615,7 +2620,7 @@ void TextNodeDumper::VisitTypeAliasTemplateDecl(
 
 void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
   VisitRecordDecl(D);
-  if (const auto *Instance = D->getInstantiatedFromMemberClass()) {
+  if (const auto *Instance = D->getTemplateInstantiationPattern()) {
     OS << " instantiated_from";
     dumpPointer(Instance);
   }
@@ -3089,6 +3094,9 @@ void TextNodeDumper::VisitHLSLRootSignatureDecl(
     break;
   case llvm::dxbc::RootSignatureVersion::V1_1:
     OS << "1.1";
+    break;
+  case llvm::dxbc::RootSignatureVersion::V1_2:
+    OS << "1.2";
     break;
   }
   OS << ", ";

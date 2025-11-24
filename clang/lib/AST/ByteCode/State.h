@@ -151,8 +151,6 @@ public:
   /// Directly reports a diagnostic message.
   DiagnosticBuilder report(SourceLocation Loc, diag::kind DiagId);
 
-  const LangOptions &getLangOpts() const;
-
   /// Whether or not we're in a context where the front end requires a
   /// constant value.
   bool InConstantContext = false;

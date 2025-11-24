@@ -12,8 +12,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
@@ -22,6 +22,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 #include <system_error>
 
@@ -322,27 +323,24 @@ RocmInstallationDetector::RocmInstallationDetector(
     const llvm::opt::ArgList &Args, bool DetectHIPRuntime, bool DetectDeviceLib)
     : D(D) {
   Verbose = Args.hasArg(options::OPT_v);
-  RocmPathArg = Args.getLastArgValue(clang::driver::options::OPT_rocm_path_EQ);
-  PrintROCmSearchDirs =
-      Args.hasArg(clang::driver::options::OPT_print_rocm_search_dirs);
+  RocmPathArg = Args.getLastArgValue(options::OPT_rocm_path_EQ);
+  PrintROCmSearchDirs = Args.hasArg(options::OPT_print_rocm_search_dirs);
   RocmDeviceLibPathArg =
-      Args.getAllArgValues(clang::driver::options::OPT_rocm_device_lib_path_EQ);
-  HIPPathArg = Args.getLastArgValue(clang::driver::options::OPT_hip_path_EQ);
-  HIPStdParPathArg =
-    Args.getLastArgValue(clang::driver::options::OPT_hipstdpar_path_EQ);
+      Args.getAllArgValues(options::OPT_rocm_device_lib_path_EQ);
+  HIPPathArg = Args.getLastArgValue(options::OPT_hip_path_EQ);
+  HIPStdParPathArg = Args.getLastArgValue(options::OPT_hipstdpar_path_EQ);
   HasHIPStdParLibrary =
     !HIPStdParPathArg.empty() && D.getVFS().exists(HIPStdParPathArg +
                                                    "/hipstdpar_lib.hpp");
   HIPRocThrustPathArg =
-    Args.getLastArgValue(clang::driver::options::OPT_hipstdpar_thrust_path_EQ);
+      Args.getLastArgValue(options::OPT_hipstdpar_thrust_path_EQ);
   HasRocThrustLibrary = !HIPRocThrustPathArg.empty() &&
                         D.getVFS().exists(HIPRocThrustPathArg + "/thrust");
-  HIPRocPrimPathArg =
-    Args.getLastArgValue(clang::driver::options::OPT_hipstdpar_prim_path_EQ);
+  HIPRocPrimPathArg = Args.getLastArgValue(options::OPT_hipstdpar_prim_path_EQ);
   HasRocPrimLibrary = !HIPRocPrimPathArg.empty() &&
                       D.getVFS().exists(HIPRocPrimPathArg + "/rocprim");
 
-  if (auto *A = Args.getLastArg(clang::driver::options::OPT_hip_version_EQ)) {
+  if (auto *A = Args.getLastArg(options::OPT_hip_version_EQ)) {
     HIPVersionArg = A->getValue();
     unsigned Major = ~0U;
     unsigned Minor = ~0U;
@@ -858,6 +856,20 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
 
+  // For SPIR-V we want to retain the pristine output of Clang CodeGen, since
+  // optimizations might lose structure / information that is necessary for
+  // generating optimal concrete AMDGPU code.
+  // TODO: using the below option is a temporary placeholder until Clang
+  //       provides the required functionality, which essentially boils down to
+  //       -O0 being refactored / reworked to not imply optnone / remove TBAA.
+  //       Once that is added, we should pivot to that functionality, being
+  //       mindful to not corrupt the user provided and subsequently embedded
+  //       command-line (i.e. if the user asks for -O3 this is what the
+  //       finalisation should use).
+  if (getTriple().isSPIRV() &&
+      !DriverArgs.hasArg(options::OPT_disable_llvm_optzns))
+    CC1Args.push_back("-disable-llvm-optzns");
+
   if (DeviceOffloadingKind == Action::OFK_None)
     addOpenCLBuiltinsLib(getDriver(), DriverArgs, CC1Args);
 }
@@ -866,6 +878,16 @@ void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
   // AMDGPU does not support atomic lib call. Treat atomic alignment
   // warnings as errors.
   CC1Args.push_back("-Werror=atomic-alignment");
+}
+
+void AMDGPUToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                                ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
 }
 
 StringRef
@@ -1052,36 +1074,40 @@ ROCMToolChain::getCommonDeviceLibNames(
 bool AMDGPUToolChain::shouldSkipSanitizeOption(
     const ToolChain &TC, const llvm::opt::ArgList &DriverArgs,
     StringRef TargetID, const llvm::opt::Arg *A) const {
-  // For actions without targetID, do nothing.
-  if (TargetID.empty())
-    return false;
-  Option O = A->getOption();
-
-  if (!O.matches(options::OPT_fsanitize_EQ))
-    return false;
-
-  if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                          options::OPT_fno_gpu_sanitize, true))
-    return true;
-
   auto &Diags = TC.getDriver().getDiags();
+  bool IsExplicitDevice =
+      A->getBaseArg().getOption().matches(options::OPT_Xarch_device);
 
-  // For simplicity, we only allow -fsanitize=address
-  SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
-  if (K != SanitizerKind::Address)
-    return true;
+  // Check 'xnack+' availability by default
+  llvm::StringRef Processor =
+      getProcessorFromTargetID(TC.getTriple(), TargetID);
+  auto ProcKind = TC.getTriple().isAMDGCN()
+                      ? llvm::AMDGPU::parseArchAMDGCN(Processor)
+                      : llvm::AMDGPU::parseArchR600(Processor);
+  auto Features = TC.getTriple().isAMDGCN()
+                      ? llvm::AMDGPU::getArchAttrAMDGCN(ProcKind)
+                      : llvm::AMDGPU::getArchAttrR600(ProcKind);
+  if (Features & llvm::AMDGPU::FEATURE_XNACK_ALWAYS)
+    return false;
 
+  // Look for the xnack feature in TargetID
   llvm::StringMap<bool> FeatureMap;
   auto OptionalGpuArch = parseTargetID(TC.getTriple(), TargetID, &FeatureMap);
-
   assert(OptionalGpuArch && "Invalid Target ID");
   (void)OptionalGpuArch;
   auto Loc = FeatureMap.find("xnack");
   if (Loc == FeatureMap.end() || !Loc->second) {
-    Diags.Report(
-        clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
-        << A->getAsString(DriverArgs) << TargetID << "xnack+";
+    if (IsExplicitDevice) {
+      Diags.Report(
+          clang::diag::err_drv_unsupported_option_for_offload_arch_req_feature)
+          << A->getAsString(DriverArgs) << TargetID << "xnack+";
+    } else {
+      Diags.Report(
+          clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
+          << A->getAsString(DriverArgs) << TargetID << "xnack+";
+    }
     return true;
   }
+
   return false;
 }

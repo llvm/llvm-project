@@ -1,4 +1,4 @@
-//===--- DurationRewriter.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,28 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <array>
 #include <cmath>
 #include <optional>
 
 #include "DurationRewriter.h"
 #include "clang/Tooling/FixIt.h"
-#include "llvm/ADT/IndexedMap.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::abseil {
 
-struct DurationScale2IndexFunctor {
-  using argument_type = DurationScale;
-  unsigned operator()(DurationScale Scale) const {
-    return static_cast<unsigned>(Scale);
-  }
-};
-
 /// Returns an integer if the fractional part of a `FloatingLiteral` is `0`.
 static std::optional<llvm::APSInt>
 truncateIfIntegral(const FloatingLiteral &FloatLiteral) {
-  double Value = FloatLiteral.getValueAsApproximateDouble();
+  const double Value = FloatLiteral.getValueAsApproximateDouble();
   if (std::fmod(Value, 1) == 0) {
     if (Value >= static_cast<double>(1U << 31))
       return std::nullopt;
@@ -39,31 +32,17 @@ truncateIfIntegral(const FloatingLiteral &FloatLiteral) {
 
 const std::pair<llvm::StringRef, llvm::StringRef> &
 getDurationInverseForScale(DurationScale Scale) {
-  static const llvm::IndexedMap<std::pair<llvm::StringRef, llvm::StringRef>,
-                                DurationScale2IndexFunctor>
-      InverseMap = []() {
-        // TODO: Revisit the immediately invoked lambda technique when
-        // IndexedMap gets an initializer list constructor.
-        llvm::IndexedMap<std::pair<llvm::StringRef, llvm::StringRef>,
-                         DurationScale2IndexFunctor>
-            InverseMap;
-        InverseMap.resize(6);
-        InverseMap[DurationScale::Hours] =
-            std::make_pair("::absl::ToDoubleHours", "::absl::ToInt64Hours");
-        InverseMap[DurationScale::Minutes] =
-            std::make_pair("::absl::ToDoubleMinutes", "::absl::ToInt64Minutes");
-        InverseMap[DurationScale::Seconds] =
-            std::make_pair("::absl::ToDoubleSeconds", "::absl::ToInt64Seconds");
-        InverseMap[DurationScale::Milliseconds] = std::make_pair(
-            "::absl::ToDoubleMilliseconds", "::absl::ToInt64Milliseconds");
-        InverseMap[DurationScale::Microseconds] = std::make_pair(
-            "::absl::ToDoubleMicroseconds", "::absl::ToInt64Microseconds");
-        InverseMap[DurationScale::Nanoseconds] = std::make_pair(
-            "::absl::ToDoubleNanoseconds", "::absl::ToInt64Nanoseconds");
-        return InverseMap;
-      }();
+  static constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 6>
+      InverseMap = {{
+          {"::absl::ToDoubleHours", "::absl::ToInt64Hours"},
+          {"::absl::ToDoubleMinutes", "::absl::ToInt64Minutes"},
+          {"::absl::ToDoubleSeconds", "::absl::ToInt64Seconds"},
+          {"::absl::ToDoubleMilliseconds", "::absl::ToInt64Milliseconds"},
+          {"::absl::ToDoubleMicroseconds", "::absl::ToInt64Microseconds"},
+          {"::absl::ToDoubleNanoseconds", "::absl::ToInt64Nanoseconds"},
+      }};
 
-  return InverseMap[Scale];
+  return InverseMap[llvm::to_underlying(Scale)];
 }
 
 /// If `Node` is a call to the inverse of `Scale`, return that inverse's
@@ -90,7 +69,7 @@ rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
 static std::optional<std::string>
 rewriteInverseTimeCall(const MatchFinder::MatchResult &Result,
                        DurationScale Scale, const Expr &Node) {
-  llvm::StringRef InverseFunction = getTimeInverseForScale(Scale);
+  const llvm::StringRef InverseFunction = getTimeInverseForScale(Scale);
   if (const auto *MaybeCallArg = selectFirst<const Expr>(
           "e", match(callExpr(callee(functionDecl(hasName(InverseFunction))),
                               hasArgument(0, expr().bind("e"))),
@@ -103,58 +82,31 @@ rewriteInverseTimeCall(const MatchFinder::MatchResult &Result,
 
 /// Returns the factory function name for a given `Scale`.
 llvm::StringRef getDurationFactoryForScale(DurationScale Scale) {
-  switch (Scale) {
-  case DurationScale::Hours:
-    return "absl::Hours";
-  case DurationScale::Minutes:
-    return "absl::Minutes";
-  case DurationScale::Seconds:
-    return "absl::Seconds";
-  case DurationScale::Milliseconds:
-    return "absl::Milliseconds";
-  case DurationScale::Microseconds:
-    return "absl::Microseconds";
-  case DurationScale::Nanoseconds:
-    return "absl::Nanoseconds";
-  }
-  llvm_unreachable("unknown scaling factor");
+  static constexpr std::array<llvm::StringRef, 6> FactoryMap = {
+      "absl::Hours",        "absl::Minutes",      "absl::Seconds",
+      "absl::Milliseconds", "absl::Microseconds", "absl::Nanoseconds",
+  };
+
+  return FactoryMap[llvm::to_underlying(Scale)];
 }
 
 llvm::StringRef getTimeFactoryForScale(DurationScale Scale) {
-  switch (Scale) {
-  case DurationScale::Hours:
-    return "absl::FromUnixHours";
-  case DurationScale::Minutes:
-    return "absl::FromUnixMinutes";
-  case DurationScale::Seconds:
-    return "absl::FromUnixSeconds";
-  case DurationScale::Milliseconds:
-    return "absl::FromUnixMillis";
-  case DurationScale::Microseconds:
-    return "absl::FromUnixMicros";
-  case DurationScale::Nanoseconds:
-    return "absl::FromUnixNanos";
-  }
-  llvm_unreachable("unknown scaling factor");
+  static constexpr std::array<llvm::StringRef, 6> FactoryMap = {
+      "absl::FromUnixHours",  "absl::FromUnixMinutes", "absl::FromUnixSeconds",
+      "absl::FromUnixMillis", "absl::FromUnixMicros",  "absl::FromUnixNanos",
+  };
+
+  return FactoryMap[llvm::to_underlying(Scale)];
 }
 
 /// Returns the Time factory function name for a given `Scale`.
 llvm::StringRef getTimeInverseForScale(DurationScale Scale) {
-  switch (Scale) {
-  case DurationScale::Hours:
-    return "absl::ToUnixHours";
-  case DurationScale::Minutes:
-    return "absl::ToUnixMinutes";
-  case DurationScale::Seconds:
-    return "absl::ToUnixSeconds";
-  case DurationScale::Milliseconds:
-    return "absl::ToUnixMillis";
-  case DurationScale::Microseconds:
-    return "absl::ToUnixMicros";
-  case DurationScale::Nanoseconds:
-    return "absl::ToUnixNanos";
-  }
-  llvm_unreachable("unknown scaling factor");
+  static constexpr std::array<llvm::StringRef, 6> InverseMap = {
+      "absl::ToUnixHours",  "absl::ToUnixMinutes", "absl::ToUnixSeconds",
+      "absl::ToUnixMillis", "absl::ToUnixMicros",  "absl::ToUnixNanos",
+  };
+
+  return InverseMap[llvm::to_underlying(Scale)];
 }
 
 /// Returns `true` if `Node` is a value which evaluates to a literal `0`.

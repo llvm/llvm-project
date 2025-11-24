@@ -1,4 +1,4 @@
-//===--- RedundantControlFlowCheck.h - clang-tidy----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_CONTROL_FLOW_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_CONTROL_FLOW_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTCONTROLFLOWCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTCONTROLFLOWCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -19,7 +19,7 @@ namespace clang::tidy::readability {
 /// Eliminates redundant `continue` statements at the end of a loop body.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-control-flow.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-control-flow.html
 class RedundantControlFlowCheck : public ClangTidyCheck {
 public:
   RedundantControlFlowCheck(StringRef Name, ClangTidyContext *Context)
@@ -47,4 +47,4 @@ private:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_CONTROL_FLOW_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTCONTROLFLOWCHECK_H

@@ -121,6 +121,12 @@ public:
 
   mlir::Operation *lastGlobalOp = nullptr;
 
+  /// Keep a map between lambda fields and names, this needs to be per module
+  /// since lambdas might get generated later as part of defered work, and since
+  /// the pointers are supposed to be uniqued, should be fine. Revisit this if
+  /// it ends up taking too much memory.
+  llvm::DenseMap<const clang::FieldDecl *, llvm::StringRef> lambdaFieldToName;
+
   /// Tell the consumer that this variable has been instantiated.
   void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
@@ -152,6 +158,13 @@ public:
                                       llvm::StringRef name, mlir::Type t,
                                       bool isConstant = false,
                                       mlir::Operation *insertPoint = nullptr);
+
+  /// Add a global constructor or destructor to the module.
+  /// The priority is optional, if not specified, the default priority is used.
+  void addGlobalCtor(cir::FuncOp ctor,
+                     std::optional<int> priority = std::nullopt);
+  void addGlobalDtor(cir::FuncOp dtor,
+                     std::optional<int> priority = std::nullopt);
 
   bool shouldZeroInitPadding() const {
     // In C23 (N3096) $6.7.10:
@@ -250,6 +263,26 @@ public:
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc, QualType ty,
                                           bool forEH = false);
 
+  static mlir::SymbolTable::Visibility getMLIRVisibility(Visibility v) {
+    switch (v) {
+    case DefaultVisibility:
+      return mlir::SymbolTable::Visibility::Public;
+    case HiddenVisibility:
+      return mlir::SymbolTable::Visibility::Private;
+    case ProtectedVisibility:
+      // The distinction between ProtectedVisibility and DefaultVisibility is
+      // that symbols with ProtectedVisibility, while visible to the dynamic
+      // linker like DefaultVisibility, are guaranteed to always dynamically
+      // resolve to a symbol in the current shared object. There is currently no
+      // equivalent MLIR visibility, so we fall back on the fact that the symbol
+      // is visible.
+      return mlir::SymbolTable::Visibility::Public;
+    }
+    llvm_unreachable("unknown visibility!");
+  }
+
+  llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
@@ -263,6 +296,12 @@ public:
   cir::GlobalViewAttr
   getAddrOfConstantStringFromLiteral(const StringLiteral *s,
                                      llvm::StringRef name = ".str");
+
+  /// Returns the address space for temporary allocations in the language. This
+  /// ensures that the allocated variable's address space matches the
+  /// expectations of the AST, rather than using the target's allocation address
+  /// space, which may lead to type mismatches in other parts of the IR.
+  LangAS getLangTempAllocaAddressSpace() const;
 
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).
@@ -396,11 +435,22 @@ public:
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
                              bool isIncompleteFunction, bool isThunk);
 
+  /// Set extra attributes (inline, etc.) for a function.
+  void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
+                                             cir::FuncOp f);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
+
+  /// Emit the function that initializes the specified global
+  void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                bool performInit);
+
+  void emitCXXGlobalVarDeclInitFunc(const VarDecl *vd, cir::GlobalOp addr,
+                                    bool performInit);
 
   void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
 
@@ -410,6 +460,12 @@ public:
   /// Return the result of value-initializing the given type, i.e. a null
   /// expression of the given type.
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
+
+  mlir::TypedAttr emitNullConstantAttr(QualType t);
+
+  /// Return a null constant appropriate for zero-initializing a base class with
+  /// the given type. This is usually, but not always, an LLVM null constant.
+  mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
 
@@ -441,6 +497,23 @@ public:
   cir::FuncOp createCIRFunction(mlir::Location loc, llvm::StringRef name,
                                 cir::FuncType funcType,
                                 const clang::FunctionDecl *funcDecl);
+
+  /// Create a CIR function with builtin attribute set.
+  cir::FuncOp createCIRBuiltinFunction(mlir::Location loc, llvm::StringRef name,
+                                       cir::FuncType ty,
+                                       const clang::FunctionDecl *fd);
+
+  /// Mark the function as a special member (e.g. constructor, destructor)
+  void setCXXSpecialMemberAttr(cir::FuncOp funcOp,
+                               const clang::FunctionDecl *funcDecl);
+
+  cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
+                                    mlir::ArrayAttr = {}, bool isLocal = false,
+                                    bool assumeConvergent = false);
+
+  static constexpr const char *builtinCoroId = "__builtin_coro_id";
+  static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
+  static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".

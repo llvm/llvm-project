@@ -21,6 +21,9 @@ def ol_alloc_type_t : Enum {
 
 def olMemAlloc : Function {
   let desc = "Creates a memory allocation on the specified device.";
+  let details = [
+      "All allocations through olMemAlloc regardless of source share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
+  ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
     Param<"ol_alloc_type_t", "Type", "type of the allocation", PARAM_IN>,
@@ -40,6 +43,56 @@ def olMemFree : Function {
     Param<"void*", "Address", "address of the allocation to free", PARAM_IN>,
   ];
   let returns = [];
+}
+
+def ol_mem_info_t : Enum {
+  let desc = "Supported memory info.";
+  let is_typed = 1;
+  let etors = [
+    TaggedEtor<"DEVICE", "ol_device_handle_t", "The handle of the device associated with the allocation.">,
+    TaggedEtor<"BASE", "void *", "Base address of this allocation.">,
+    TaggedEtor<"SIZE", "size_t", "Size of this allocation in bytes.">,
+    TaggedEtor<"TYPE", "ol_alloc_type_t", "Type of this allocation.">,
+  ];
+}
+
+def olGetMemInfo : Function {
+  let desc = "Queries the given property of a memory allocation allocated with olMemAlloc.";
+  let details = [
+    "`olGetMemInfoSize` can be used to query the storage size required for the given query.",
+    "The provided pointer can point to any location inside the allocation.",
+  ];
+  let params = [
+    Param<"const void *", "Ptr", "pointer to the allocated memory", PARAM_IN>,
+    Param<"ol_mem_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
+    Param<"size_t", "PropSize", "the number of bytes pointed to by PropValue.", PARAM_IN>,
+    TypeTaggedParam<"void*", "PropValue", "array of bytes holding the info. "
+      "If Size is not equal to or greater to the real number of bytes needed to return the info "
+      "then the OL_ERRC_INVALID_SIZE error is returned and pPlatformInfo is not used.", PARAM_OUT,
+      TypeInfo<"PropName" , "PropSize">>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_SIZE", [
+      "`PropSize == 0`",
+      "If `PropSize` is less than the real number of bytes needed to return the info."
+    ]>,
+    Return<"OL_ERRC_NOT_FOUND", ["memory was not allocated by liboffload"]>
+  ];
+}
+
+def olGetMemInfoSize : Function {
+  let desc = "Returns the storage size of the given queue query.";
+  let details = [
+    "The provided pointer can point to any location inside the allocation.",
+  ];
+  let params = [
+    Param<"const void *", "Ptr", "pointer to the allocated memory", PARAM_IN>,
+    Param<"ol_mem_info_t", "PropName", "type of the info to query", PARAM_IN>,
+    Param<"size_t*", "PropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
+  ];
+  let returns = [
+    Return<"OL_ERRC_NOT_FOUND", ["memory was not allocated by liboffload"]>
+  ];
 }
 
 def olMemcpy : Function {

@@ -2363,9 +2363,8 @@ _mm_max_pi16(__m64 __a, __m64 __b) {
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the comparison results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_max_pu8(__m64 __a, __m64 __b)
-{
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_max_pu8(__m64 __a, __m64 __b) {
   return (__m64)__builtin_elementwise_max((__v8qu)__a, (__v8qu)__b);
 }
 
@@ -2400,9 +2399,8 @@ _mm_min_pi16(__m64 __a, __m64 __b) {
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the comparison results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_min_pu8(__m64 __a, __m64 __b)
-{
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_min_pu8(__m64 __a, __m64 __b) {
   return (__m64)__builtin_elementwise_min((__v8qu)__a, (__v8qu)__b);
 }
 
@@ -2418,9 +2416,8 @@ _mm_min_pu8(__m64 __a, __m64 __b)
 ///    A 64-bit integer vector containing the values with bits to be extracted.
 /// \returns The most significant bit from each 8-bit element in \a __a,
 ///    written to bits [7:0].
-static __inline__ int __DEFAULT_FN_ATTRS_SSE2
-_mm_movemask_pi8(__m64 __a)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_movemask_pi8(__m64 __a) {
   return __builtin_ia32_pmovmskb128((__v16qi)__zext128(__a));
 }
 
@@ -2520,8 +2517,8 @@ _mm_maskmove_si64(__m64 __d, __m64 __n, char *__p)
     // If there's a risk of spurious trap due to a 128-bit write, back up the
     // pointer by 8 bytes and shift values in registers to match.
     __p -= 8;
-    __d128 = __builtin_ia32_pslldqi128_byteshift((__v2di)__d128, 8);
-    __n128 = __builtin_ia32_pslldqi128_byteshift((__v2di)__n128, 8);
+    __d128 = (__m128i)__builtin_ia32_pslldqi128_byteshift((__v16qi)__d128, 8);
+    __n128 = (__m128i)__builtin_ia32_pslldqi128_byteshift((__v16qi)__n128, 8);
   }
 
   __builtin_ia32_maskmovdqu((__v16qi)__d128, (__v16qi)__n128, __p);
@@ -3017,9 +3014,7 @@ _mm_cvtps_pi8(__m128 __a)
 /// \returns A 32-bit integer value. Bits [3:0] contain the sign bits from each
 ///    single-precision floating-point element of the parameter. Bits [31:4] are
 ///    set to zero.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_movemask_ps(__m128 __a)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_movemask_ps(__m128 __a) {
   return __builtin_ia32_movmskps((__v4sf)__a);
 }
 

@@ -36,7 +36,7 @@ concurrency:
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-next-runners
+    runs-on: llvm-premerge-libcxx-runners
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -60,7 +60,7 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
         with:
           name: ${{ matrix.config }}-${{ matrix.cxx }}-results
@@ -73,7 +73,7 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-next-runners
+    runs-on: llvm-premerge-libcxx-runners
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -105,7 +105,7 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
           name: ${{ matrix.config }}-${{ matrix.cxx }}-results
@@ -148,19 +148,19 @@ jobs:
           'generic-static',
           'bootstrapping-build'
         ]
-        machine: [ 'llvm-premerge-libcxx-next-runners' ]
+        machine: [ 'llvm-premerge-libcxx-runners' ]
         include:
         - config: 'generic-cxx26'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-asan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-tsan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-ubsan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
     runs-on: ${{ matrix.machine }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -169,7 +169,7 @@ jobs:
         env:
           CC: clang-22
           CXX: clang++-22
-      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
         with:
           name: ${{ matrix.config }}-results
@@ -215,15 +215,15 @@ jobs:
       - uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
         with:
           # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
-          xcode-version: '16.3'
+          xcode-version: '26.0'
       - uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
       - name: Build and test
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
           python -m pip install psutil
-          bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
-      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+          xcrun bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
           name: macos-${{ matrix.config }}-results
@@ -236,7 +236,6 @@ jobs:
             **/crash_diagnostics/*
 
   windows:
-    runs-on: windows-2022
     needs: [ stage2 ]
     strategy:
       fail-fast: false
@@ -251,11 +250,12 @@ jobs:
         - { config: mingw-static, mingw: true }
         - { config: mingw-dll-i686, mingw: true }
         - { config: mingw-incomplete-sysroot, mingw: true }
+        - { config: mingw-static, mingw: true, runner: windows-11-arm }
+    runs-on: ${{ matrix.runner != '' && matrix.runner || 'windows-2022' }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Install dependencies
         run: |
-          choco install -y ninja
           pip install psutil
       - name: Install a current LLVM
         if: ${{ matrix.mingw != true }}
@@ -264,7 +264,7 @@ jobs:
       - name: Install llvm-mingw
         if: ${{ matrix.mingw == true }}
         run: |
-          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20250709/llvm-mingw-20250709-ucrt-x86_64.zip
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20250709/llvm-mingw-20250709-ucrt-${{ matrix.runner == 'windows-11-arm' && 'aarch64' || 'x86_64' }}.zip
           powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
           del llvm-mingw*.zip
           mv llvm-mingw* c:\llvm-mingw
@@ -281,6 +281,10 @@ jobs:
       - name: Set up the MSVC dev environment
         if: ${{ matrix.mingw != true }}
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      - name: Add the installed Clang at the start of the path
+        if: ${{ matrix.mingw != true }}
+        run: |
+          echo "c:\Program Files\LLVM\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
       - name: Build and test
         run: |
           bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}

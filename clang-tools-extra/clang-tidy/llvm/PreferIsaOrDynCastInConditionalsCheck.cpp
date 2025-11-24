@@ -1,5 +1,4 @@
-//===--- PreferIsaOrDynCastInConditionalsCheck.cpp - clang-tidy
-//---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -69,8 +68,8 @@ void PreferIsaOrDynCastInConditionalsCheck::check(
   //   llvm::cast<T>(x)
   //         ^  ^
   //  StartLoc  EndLoc
-  SourceLocation StartLoc = Callee->getLocation();
-  SourceLocation EndLoc = Callee->getNameInfo().getEndLoc();
+  const SourceLocation StartLoc = Callee->getLocation();
+  const SourceLocation EndLoc = Callee->getNameInfo().getEndLoc();
 
   if (Result.Nodes.getNodeAs<VarDecl>("var")) {
     diag(StartLoc,

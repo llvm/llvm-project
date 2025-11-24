@@ -70,7 +70,7 @@ __attribute__((target("sm4"))) int regular_caller_sm4() { return bar(); }
 // CHECK-LABEL: define {{[^@]+}}@fmv_caller._Msve
 // CHECK-SAME: () #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @foo() #[[ATTR12:[0-9]+]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @foo() #[[ATTR13:[0-9]+]]
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -107,7 +107,7 @@ __attribute__((target("sm4"))) int regular_caller_sm4() { return bar(); }
 // CHECK-LABEL: define {{[^@]+}}@regular_caller_aes
 // CHECK-SAME: () local_unnamed_addr #[[ATTR10:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @bar() #[[ATTR12]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @bar() #[[ATTR13]]
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -119,7 +119,9 @@ __attribute__((target("sm4"))) int regular_caller_sm4() { return bar(); }
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@foo.resolver() comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@foo.resolver
+// CHECK-SAME: () #[[ATTR12:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    tail call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -140,7 +142,9 @@ __attribute__((target("sm4"))) int regular_caller_sm4() { return bar(); }
 // CHECK-NEXT:    br label [[COMMON_RET]]
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_caller.resolver() comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@fmv_caller.resolver
+// CHECK-SAME: () #[[ATTR12]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    tail call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -161,7 +165,9 @@ __attribute__((target("sm4"))) int regular_caller_sm4() { return bar(); }
 // CHECK-NEXT:    br label [[COMMON_RET]]
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@bar.resolver() comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@bar.resolver
+// CHECK-SAME: () #[[ATTR12]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    tail call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -186,8 +192,13 @@ __attribute__((target("sm4"))) int regular_caller_sm4() { return bar(); }
 // CHECK: attributes #[[ATTR9]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) "fmv-features"="P0,P2,sm4" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon,+sm4" }
 // CHECK: attributes #[[ATTR10]] = { noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+aes,+fp-armv8,+neon" }
 // CHECK: attributes #[[ATTR11]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon,+sm4" }
-// CHECK: attributes #[[ATTR12]] = { nounwind }
+// CHECK: attributes #[[ATTR12]] = { disable_sanitizer_instrumentation }
+// CHECK: attributes #[[ATTR13]] = { nounwind }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META2:![0-9]+]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
+// CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
 //.

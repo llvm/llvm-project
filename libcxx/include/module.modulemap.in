@@ -6,6 +6,8 @@ module std_config [system] {
   textual header "__configuration/abi.h"
   textual header "__configuration/availability.h"
   textual header "__configuration/compiler.h"
+  textual header "__configuration/experimental.h"
+  textual header "__configuration/hardening.h"
   textual header "__configuration/language.h"
   textual header "__configuration/platform.h"
   textual header "version"
@@ -103,10 +105,7 @@ module std_core [system] {
       header "__type_traits/is_aggregate.h"
       export std_core.type_traits.integral_constant
     }
-    module is_allocator {
-      header "__type_traits/is_allocator.h"
-      export std_core.type_traits.integral_constant
-    }
+    module is_allocator { header "__type_traits/is_allocator.h" }
     module is_always_bitcastable {
       header "__type_traits/is_always_bitcastable.h"
       export std_core.type_traits.integral_constant
@@ -125,10 +124,6 @@ module std_core [system] {
     }
     module is_base_of {
       header "__type_traits/is_base_of.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_bounded_array {
-      header "__type_traits/is_bounded_array.h"
       export std_core.type_traits.integral_constant
     }
     module is_callable {
@@ -203,6 +198,7 @@ module std_core [system] {
       header "__type_traits/is_fundamental.h"
       export std_core.type_traits.integral_constant
     }
+    module is_generic_transparent_comparator { header "__type_traits/is_generic_transparent_comparator.h" }
     module is_implicit_lifetime {
       header "__type_traits/is_implicit_lifetime.h"
       export std_core.type_traits.integral_constant
@@ -271,10 +267,6 @@ module std_core [system] {
       header "__type_traits/is_referenceable.h"
       export std_core.type_traits.integral_constant
     }
-    module is_replaceable {
-      header "__type_traits/is_replaceable.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_same {
       header "__type_traits/is_same.h"
       export std_core.type_traits.integral_constant
@@ -327,10 +319,6 @@ module std_core [system] {
       header "__type_traits/is_trivially_relocatable.h"
       export std_core.type_traits.integral_constant
     }
-    module is_unbounded_array {
-      header "__type_traits/is_unbounded_array.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_union {
       header "__type_traits/is_union.h"
       export std_core.type_traits.integral_constant
@@ -352,10 +340,12 @@ module std_core [system] {
       header "__type_traits/is_volatile.h"
       export std_core.type_traits.integral_constant
     }
+    module is_within_lifetime                         { header "__type_traits/is_within_lifetime.h" }
     module lazy                                       { header "__type_traits/lazy.h" }
     module make_32_64_or_128_bit                      { header "__type_traits/make_32_64_or_128_bit.h" }
     module make_const_lvalue_ref                      { header "__type_traits/make_const_lvalue_ref.h" }
     module make_signed                                { header "__type_traits/make_signed.h" }
+    module make_transparent                           { header "__type_traits/make_transparent.h" }
     module make_unsigned                              { header "__type_traits/make_unsigned.h" }
     module maybe_const                                { header "__type_traits/maybe_const.h" }
     module nat                                        { header "__type_traits/nat.h" }
@@ -885,6 +875,7 @@ module std [system] {
     module check_memory_order     { header "__atomic/check_memory_order.h" }
     module contention_t           { header "__atomic/contention_t.h" }
     module fence                  { header "__atomic/fence.h" }
+    module floating_point_helper  { header "__atomic/floating_point_helper.h" }
     module is_always_lock_free    { header "__atomic/is_always_lock_free.h" }
     module kill_dependency        { header "__atomic/kill_dependency.h" }
     module memory_order           { header "__atomic/memory_order.h" }
@@ -971,6 +962,10 @@ module std [system] {
     module high_resolution_clock {
       header "__chrono/high_resolution_clock.h"
       export *
+    }
+    module is_clock {
+      header "__chrono/is_clock.h"
+      export std_core.type_traits.integral_constant
     }
     module leap_second {
       header "__chrono/leap_second.h"
@@ -1227,6 +1222,7 @@ module std [system] {
     header "deque"
     export *
     export std.iterator.reverse_iterator
+    export std.algorithm.simd_utils // This is a workaround for https://llvm.org/PR120108.
   }
 
   module exception {
@@ -1586,6 +1582,7 @@ module std [system] {
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
+      textual header "__locale_dir/support/netbsd.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
       textual header "__locale_dir/support/windows.h"
@@ -1849,7 +1846,10 @@ module std [system] {
 
   module ranges {
     module access                         { header "__ranges/access.h" }
-    module all                            { header "__ranges/all.h" }
+    module all                            {
+      header "__ranges/all.h"
+      export std.ranges.ref_view
+    }
     module as_rvalue_view                 { header "__ranges/as_rvalue_view.h" }
     module chunk_by_view {
       header "__ranges/chunk_by_view.h"
@@ -2111,11 +2111,9 @@ module std [system] {
     module ignore                   { header "__tuple/ignore.h" }
     module sfinae_helpers           { header "__tuple/sfinae_helpers.h" }
     module tuple_element            { header "__tuple/tuple_element.h" }
-    module tuple_like_ext           { header "__tuple/tuple_like_ext.h" }
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }
     module tuple_size               { header "__tuple/tuple_size.h" }
-    module tuple_types              { header "__tuple/tuple_types.h" }
 
     header "tuple"
     export *
@@ -2237,6 +2235,7 @@ module std [system] {
     header "vector"
     export std.iterator.reverse_iterator
     export *
+    export std.algorithm.simd_utils // This is a workaround for https://llvm.org/PR120108.
   }
 
   // Experimental C++ Standard Library interfaces
@@ -2354,7 +2353,10 @@ module std [system] {
   module hash_table           { header "__hash_table" }
   module node_handle          { header "__node_handle" }
   module split_buffer         { header "__split_buffer" }
-  module tree                 { header "__tree" }
+  module tree                 {
+    header "__tree"
+    export std.memory.unique_ptr
+  }
   module std_mbstate_t {
     header "__std_mbstate_t.h"
     export *
@@ -2429,10 +2431,6 @@ module std_math_h [system] {
 module std_stdatomic_h [system] {
   header "stdatomic.h"
   export *
-}
-module std_stdbool_h [system] {
-  // <stdbool.h>'s __bool_true_false_are_defined macro requires textual inclusion.
-  textual header "stdbool.h"
 }
 module std_stddef_h [system] {
   // <stddef.h> supports being included multiple times with different pre-defined macros

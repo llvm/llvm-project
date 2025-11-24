@@ -6,11 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-def isWave32 : Predicate<"Subtarget->isWave32()">,
-  AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
-def isWave64 : Predicate<"Subtarget->isWave64()">,
-  AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
-
 class AMDGPUMnemonicAlias<string From, string To, string VariantName = "">
     : MnemonicAlias<From, To, VariantName>, PredicateControl;
 
@@ -55,6 +50,8 @@ def GFX10Gen : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
 // SI DAG Nodes
 //===----------------------------------------------------------------------===//
 
+// CLAMP value between 0.0 and 1.0. NaN clamped to 0, following clamp output
+// modifier behavior with dx10_enable.
 def AMDGPUclamp : SDNode<"AMDGPUISD::CLAMP", SDTFPUnaryOp>;
 
 def SDTSBufferLoad : SDTypeProfile<1, 3,
@@ -774,11 +771,7 @@ def xnor : PatFrag <
 foreach I = 1-4 in {
 def shl#I#_add : PatFrag <
   (ops node:$src0, node:$src1),
-  (add (shl_oneuse $src0, (i32 I)), $src1)> {
-  // FIXME: Poor substitute for disabling pattern in SelectionDAG
-  let PredicateCode = [{return false;}];
-  let GISelPredicateCode = [{return true;}];
-}
+  (add (shl_oneuse $src0, (i32 I)), $src1)>;
 }
 
 multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
@@ -1149,6 +1142,7 @@ def ExpSrc3 : RegisterOperand<VGPR_32> {
   let ParserMatchClass = VReg32OrOffClass;
 }
 
+// FIXME: Should change class based on hasSDWAScalar to exclude SGPRs
 class SDWASrc<ValueType vt> : RegisterOperand<VS_32> {
   let OperandNamespace = "AMDGPU";
   string Type = !if(vt.isFP, "FP", "INT");
@@ -1353,7 +1347,7 @@ def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
 def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
 
 def ScaleSel : NamedIntOperand<"scale_sel"> {
-  let Validator = "isUInt<3>";
+  let Validator = "isUInt<4>";
 }
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
@@ -1805,13 +1799,13 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
   defvar op16 = !if(IsTrue16, !if (IsVOP3Encoding, VOPDstOperand_t16,
                                    VOPDstOperand_t16Lo128),
                     VOPDstOperand<VGPR_32>);
-  RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024>,
-                              !eq(VT.Size, 512)  : VOPDstOperand<VReg_512>,
-                              !eq(VT.Size, 256)  : VOPDstOperand<VReg_256>,
-                              !eq(VT.Size, 192)  : VOPDstOperand<VReg_192>,
-                              !eq(VT.Size, 128)  : VOPDstOperand<VReg_128>,
-                              !eq(VT.Size, 96)   : VOPDstOperand<VReg_96>,
-                              !eq(VT.Size, 64)   : VOPDstOperand<VReg_64>,
+  RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024_AlignTarget>,
+                              !eq(VT.Size, 512)  : VOPDstOperand<VReg_512_AlignTarget>,
+                              !eq(VT.Size, 256)  : VOPDstOperand<VReg_256_AlignTarget>,
+                              !eq(VT.Size, 192)  : VOPDstOperand<VReg_192_AlignTarget>,
+                              !eq(VT.Size, 128)  : VOPDstOperand<VReg_128_AlignTarget>,
+                              !eq(VT.Size, 96)   : VOPDstOperand<VReg_96_AlignTarget>,
+                              !eq(VT.Size, 64)   : VOPDstOperand<VReg_64_AlignTarget>,
                               !eq(VT.Size, 32)   : VOPDstOperand<VGPR_32>,
                               !eq(VT.Size, 16)   : op16,
                               1                  : VOPDstS64orS32); // else VT == i1
@@ -1819,8 +1813,8 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
 
 class getVALUDstForVT_fake16<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32>,
-                          !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
-                            !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
+                          !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128_AlignTarget>,
+                            !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64_AlignTarget>,
                               !if(!eq(VT.Size, 16), VOPDstOperand<VGPR_32_Lo128>,
                               VOPDstS64orS32)))); // else VT == i1
 }
@@ -1888,19 +1882,36 @@ class getSOPSrcForVT<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 64), SSrc_b64, SSrc_b32);
 }
 
-// Returns the vreg register class to use for source operand given VT
+// Returns the vreg register operand to use for source operand given VT.
+// This should only be used for a target instruction's ins list.
 class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 1> {
   RegisterOperand ret =
-  !cond(!eq(VT.Size, 512) : RegisterOperand<VReg_512>,
-        !eq(VT.Size, 192) : RegisterOperand<VReg_192>,
-        !eq(VT.Size, 128) : RegisterOperand<VReg_128>,
-        !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
-        !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
-        !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+  !cond(!eq(VT.Size, 512) : RegisterOperand<VReg_512_AlignTarget>,
+        !eq(VT.Size, 192) : RegisterOperand<VReg_192_AlignTarget>,
+        !eq(VT.Size, 128) : RegisterOperand<VReg_128_AlignTarget>,
+        !eq(VT.Size, 96)  : RegisterOperand<VReg_96_AlignTarget>,
+        !eq(VT.Size, 64)  : RegisterOperand<VReg_64_AlignTarget>,
+        !eq(VT.Size, 48)  : RegisterOperand<VReg_64_AlignTarget>,
         !eq(VT.Size, 16)  : !if(IsTrue16,
                                 !if(IsFake16, VGPROp_32_Lo128, VGPROp_16_Lo128),
                                 RegisterOperand<VGPR_32>),
         1                 : RegisterOperand<VGPR_32>);
+}
+
+// Returns a concrete vgpr register class to use for a value type VT,
+// which exists separately from a real instruction use.
+class getVregClassForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 1> {
+  RegisterClass ret =
+  !cond(!eq(VT.Size, 512) : VReg_512,
+        !eq(VT.Size, 192) : VReg_192,
+        !eq(VT.Size, 128) : VReg_128,
+        !eq(VT.Size, 96)  : VReg_96,
+        !eq(VT.Size, 64)  : VReg_64,
+        !eq(VT.Size, 48)  : VReg_64,
+        !eq(VT.Size, 16)  : !if(IsTrue16,
+                                !if(IsFake16, VGPR_32_Lo128, VGPR_16_Lo128),
+                                VGPR_32),
+        1                 : VGPR_32);
 }
 
 class getSDWASrcForVT <ValueType VT> {
@@ -1969,6 +1980,7 @@ class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
   RegisterOperand ret =
   !cond(!eq(VT, i1)     : SSrc_i1,
         !eq(VT, i16)    : !if (IsFake16, VCSrc_b16, VCSrcT_b16),
+        !eq(VT, i64)    : VCSrc_b64,
         !eq(VT, f16)    : !if (IsFake16, VCSrc_f16, VCSrcT_f16),
         !eq(VT, bf16)   : !if (IsFake16, VCSrc_bf16, VCSrcT_bf16),
         !eq(VT, v2i16)  : VCSrc_v2b16,
@@ -2635,7 +2647,7 @@ class getAlign2RegOp<RegisterOperand RC> {
 }
 
 class getEquivalentAGPROperand<RegisterOperand RC> {
-  defvar Size = RC.RegClass.Size;
+  defvar Size = !cast<SIRegisterClassLike>(RC.RegClass).Size;
   RegisterOperand ret =
     !cond(!eq(Size, 32)   : RegisterOperand<AGPR_32>,
           !eq(Size, 64)   : RegisterOperand<AReg_64>,
@@ -2646,15 +2658,32 @@ class getEquivalentAGPROperand<RegisterOperand RC> {
 }
 
 class getEquivalentVGPROperand<RegisterOperand RC> {
-  defvar Size = RC.RegClass.Size;
+  defvar Size = !cast<SIRegisterClassLike>(RC.RegClass).Size;
   RegisterOperand ret =
-    !cond(!eq(Size, 32)   : RegisterOperand<VGPR_32>,
-          !eq(Size, 64)   : RegisterOperand<VReg_64>,
-          !eq(Size, 96)   : RegisterOperand<VReg_96>,
-          !eq(Size, 128)  : RegisterOperand<VReg_128>,
-          !eq(Size, 160)  : RegisterOperand<VReg_160>,
-          !eq(Size, 1024) : RegisterOperand<VReg_1024>);
+    !cond(
+      !eq(RC, VGPROp_32) : VGPROp_32,
+      !eq(RC, VGPROp_64) : VGPROp_64,
+
+      !eq(RC, AVLdSt_32) : VGPROp_32,
+      !eq(RC, AVLdSt_64) : VGPROp_64,
+      !eq(RC, AVLdSt_96) : VGPROp_96,
+      !eq(RC, AVLdSt_128) : VGPROp_128,
+      !eq(RC, AVLdSt_160) : VGPROp_160,
+      !eq(RC, AVLdSt_1024) : VGPROp_1024,
+
+      !eq(RC, AVLdSt_64_Align2) : VGPROp_64_Align2,
+      !eq(RC, AVLdSt_96_Align2) : VGPROp_96_Align2,
+      !eq(RC, AVLdSt_128_Align2) : VGPROp_128_Align2,
+      !eq(RC, AVLdSt_160_Align2) : VGPROp_160_Align2,
+      !eq(RC, AVLdSt_1024_Align2) : VGPROp_1024_Align2,
+
+      !eq(RC, AVLdSt_64_Align1) : VGPROp_64_Align1,
+      !eq(RC, AVLdSt_96_Align1) : VGPROp_96_Align1,
+      !eq(RC, AVLdSt_128_Align1) : VGPROp_128_Align1,
+      !eq(RC, AVLdSt_160_Align1) : VGPROp_160_Align1,
+      !eq(RC, AVLdSt_1024_Align1) : VGPROp_1024_Align1);
 }
+
 
 class getHasVOP3DPP <ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32, ValueType Src2VT = i32> {
@@ -3187,7 +3216,7 @@ class Commutable_REV <string revOp, bit isOrig> {
 // Interpolation opcodes
 //===----------------------------------------------------------------------===//
 
-class VINTRPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVINTRPDst">;
+class VINTRPDstOperand <RegisterClassLike rc> : RegisterOperand <rc, "printVINTRPDst">;
 
 class VINTRP_Pseudo <string opName, dag outs, dag ins, list<dag> pattern> :
   VINTRPCommon <outs, ins, "", pattern>,

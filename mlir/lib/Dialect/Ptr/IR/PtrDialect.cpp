@@ -15,6 +15,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -55,6 +56,12 @@ verifyAlignment(std::optional<int64_t> alignment,
     return emitError() << "alignment must be a power of 2";
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// ConstantOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 
 //===----------------------------------------------------------------------===//
 // FromPtrOp
@@ -383,6 +390,39 @@ LogicalResult PtrAddOp::inferReturnTypes(
   }
   inferredReturnTypes.push_back(baseType);
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// PtrDiffOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult PtrDiffOp::verify() {
+  // If the operands are not shaped early exit.
+  if (!isa<ShapedType>(getLhs().getType()))
+    return success();
+
+  // Just check the container type matches, `SameOperandsAndResultShape` handles
+  // the actual shape.
+  if (getResult().getType().getTypeID() != getLhs().getType().getTypeID()) {
+    return emitError() << "expected the result to have the same container "
+                          "type as the operands when operands are shaped";
+  }
+
+  return success();
+}
+
+ptr::PtrType PtrDiffOp::getPtrType() {
+  Type lhsType = getLhs().getType();
+  if (auto shapedType = dyn_cast<ShapedType>(lhsType))
+    return cast<ptr::PtrType>(shapedType.getElementType());
+  return cast<ptr::PtrType>(lhsType);
+}
+
+Type PtrDiffOp::getIntType() {
+  Type resultType = getResult().getType();
+  if (auto shapedType = dyn_cast<ShapedType>(resultType))
+    return shapedType.getElementType();
+  return resultType;
 }
 
 //===----------------------------------------------------------------------===//

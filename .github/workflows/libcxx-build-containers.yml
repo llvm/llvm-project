@@ -15,11 +15,11 @@ on:
     branches:
       - main
     paths:
-      - 'libcxx/utils/ci/**'
+      - 'libcxx/utils/ci/docker/**'
       - '.github/workflows/libcxx-build-containers.yml'
   pull_request:
     paths:
-      - 'libcxx/utils/ci/**'
+      - 'libcxx/utils/ci/docker/**'
       - '.github/workflows/libcxx-build-containers.yml'
 
 jobs:
@@ -40,40 +40,45 @@ jobs:
         echo '{ "data-root": "/mnt/docker" }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker
 
-    - name: Build the Linux builder image
-      working-directory: libcxx/utils/ci
-      run: |
-        docker compose build builder-base
-        docker compose build actions-builder
+    - name: Build the base image
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-linux-builder-base
+      env:
+        TAG: ${{ github.sha }}
+
+    - name: Build the Linux Github Actions image
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-linux-builder
       env:
         TAG: ${{ github.sha }}
 
     - name: Build the Android builder image
-      working-directory: libcxx/utils/ci
-      run: docker compose build android-buildkite-builder
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-android-builder
       env:
         TAG: ${{ github.sha }}
 
     - name: Log in to GitHub Container Registry
-      uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+      uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Push the Linux builder image
+    - name: Push the images
       if: github.event_name == 'push'
-      working-directory: libcxx/utils/ci
-      run: |
-        docker compose push builder-base
-        docker compose push actions-builder
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml push libcxx-linux-builder-base libcxx-linux-builder libcxx-android-builder
       env:
         TAG: ${{ github.sha }}
 
-    - name: Push the Android builder image
-      if: github.event_name == 'push'
-      working-directory: libcxx/utils/ci
+    # We create tarballs with the images and upload them as artifacts, since that's useful for testing
+    # the images when making changes.
+    - name: Create image tarballs
       run: |
-        docker compose push android-buildkite-builder
-      env:
-        TAG: ${{ github.sha }}
+        docker image save ghcr.io/llvm/libcxx-linux-builder-base:${{ github.sha }} | gzip > libcxx-linux-builder-base.tar.gz
+        docker image save ghcr.io/llvm/libcxx-linux-builder:${{ github.sha }} | gzip > libcxx-linux-builder.tar.gz
+        docker image save ghcr.io/llvm/libcxx-android-builder:${{ github.sha }} | gzip > libcxx-android-builder.tar.gz
+    - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      with:
+          name: libcxx-docker-images
+          path: |
+            libcxx-linux-builder-base.tar.gz
+            libcxx-linux-builder.tar.gz
+            libcxx-android-builder.tar.gz

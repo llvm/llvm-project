@@ -35,8 +35,6 @@ CC                  The C compiler to use, this value is used by CMake. This
 CXX                 The C++ compiler to use, this value is used by CMake. This
                     variable is optional.
 
-CMAKE               The CMake binary to use. This variable is optional.
-
 CLANG_FORMAT        The clang-format binary to use when generating the format
                     ignore list.
 
@@ -73,29 +71,6 @@ MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
 BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
 INSTALL_DIR="${BUILD_DIR}/install"
 
-# If we can find Ninja/CMake provided by Xcode, use those since we know their
-# version will generally work with the Clang shipped in Xcode (e.g. if Clang
-# knows about -std=c++20, the CMake bundled in Xcode will probably know about
-# that flag too).
-if xcrun --find ninja &>/dev/null; then
-    NINJA="$(xcrun --find ninja)"
-elif which ninja &>/dev/null; then
-    # The current implementation of modules needs the absolute path to the ninja
-    # binary.
-    # TODO MODULES Is this still needed when CMake has libc++ module support?
-    NINJA="$(which ninja)"
-else
-    NINJA="ninja"
-fi
-
-if [ -z "${CMAKE}" ]; then
-    if xcrun --find cmake &>/dev/null; then
-        CMAKE="$(xcrun --find cmake)"
-    else
-        CMAKE="cmake"
-    fi
-fi
-
 function step() {
   endstep
   set +x
@@ -129,10 +104,10 @@ function generate-cmake-base() {
     step "Generating CMake"
 
     # We can remove -DCMAKE_INSTALL_MESSAGE=NEVER once https://gitlab.kitware.com/cmake/cmake/-/issues/26085 is fixed.
-    ${CMAKE} \
+    cmake \
           -S "${MONOREPO_ROOT}/runtimes" \
           -B "${BUILD_DIR}" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+          -GNinja \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLIBCXX_ENABLE_WERROR=YES \
@@ -168,25 +143,25 @@ function generate-cmake-android() {
 
 function check-runtimes() {
     step "Building libc++ test dependencies"
-    ${NINJA} -vC "${BUILD_DIR}" cxx-test-depends
+    ninja -vC "${BUILD_DIR}" cxx-test-depends
 
     step "Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+    ninja -vC "${BUILD_DIR}" check-cxx
 
     step "Running the libc++abi tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxxabi
+    ninja -vC "${BUILD_DIR}" check-cxxabi
 
     step "Running the libunwind tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-unwind
+    ninja -vC "${BUILD_DIR}" check-unwind
 }
 
 # TODO: The goal is to test this against all configurations. We should also move
 #       this to the Lit test suite instead of being a separate CMake target.
 function check-abi-list() {
     step "Running the libc++ ABI list test"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx-abilist || (
+    ninja -vC "${BUILD_DIR}" check-cxx-abilist || (
         error "Generating the libc++ ABI list after failed check"
-        ${NINJA} -vC "${BUILD_DIR}" generate-cxx-abilist
+        ninja -vC "${BUILD_DIR}" generate-cxx-abilist
         false
     )
 }
@@ -212,10 +187,10 @@ function test-armv7m-picolibc() {
     # architecture name, which is not what Clang's driver expects to find.
     # The install location will however be wrong with
     # LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON, so we correct that below.
-    ${CMAKE} \
+    cmake \
         -S "${MONOREPO_ROOT}/compiler-rt" \
         -B "${BUILD_DIR}/compiler-rt" \
-        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -GNinja \
         -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
         -DCMAKE_C_FLAGS="${flags}" \
@@ -233,7 +208,7 @@ function test-armv7m-picolibc() {
         "${@}"
 
     step "Installing compiler-rt"
-    ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
+    ninja -vC "${BUILD_DIR}/compiler-rt" install
     # Move compiler-rt libs into the same directory as all the picolib objects.
     mv "${INSTALL_DIR}/lib/armv7m-unknown-none-eabi"/* "${INSTALL_DIR}/lib"
 
@@ -242,8 +217,8 @@ function test-armv7m-picolibc() {
 
 # Print the version of a few tools to aid diagnostics in some cases
 step "Diagnose tools in use"
-${CMAKE} --version
-${NINJA} --version
+cmake --version
+ninja --version
 if [ ! -z "${CXX}" ]; then ${CXX} --version; fi
 
 case "${BUILDER}" in
@@ -256,7 +231,7 @@ check-generated-output)
     # Reject patches that forgot to re-run the generator scripts.
     step "Making sure the generator scripts were run"
     set +x # Printing all the commands below just creates extremely confusing output
-    ${NINJA} -vC "${BUILD_DIR}" libcxx-generate-files
+    ninja -vC "${BUILD_DIR}" libcxx-generate-files
     git diff | tee ${BUILD_DIR}/generated_output.patch
     git ls-files -o --exclude-standard | tee ${BUILD_DIR}/generated_output.status
     ! grep -q '^--- a' ${BUILD_DIR}/generated_output.patch || false
@@ -383,30 +358,31 @@ bootstrapping-build)
     clean
 
     step "Generating CMake"
-    ${CMAKE} \
+    cmake \
           -S "${MONOREPO_ROOT}/llvm" \
           -B "${BUILD_DIR}" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+          -GNinja \
           -DCMAKE_CXX_COMPILER_LAUNCHER="ccache" \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_PROJECTS="clang;lldb" \
-          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
           -DLLVM_RUNTIME_TARGETS="$(${CXX} --print-target-triple)" \
           -DLLVM_HOST_TRIPLE="$(${CXX} --print-target-triple)" \
           -DLLVM_TARGETS_TO_BUILD="host" \
           -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
+          -DCOMPILER_RT_INCLUDE_TESTS=OFF \
           -DLLVM_ENABLE_ASSERTIONS=ON \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
     step "Running the libc++ and libc++abi tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-runtimes
+    ninja -vC "${BUILD_DIR}" check-runtimes
 
     step "Installing libc++ and libc++abi to a fake location"
-    ${NINJA} -vC "${BUILD_DIR}" install-runtimes
+    ninja -vC "${BUILD_DIR}" install-runtimes
 
     step "Running the LLDB libc++ data formatter tests"
-    ${NINJA} -vC "${BUILD_DIR}" lldb-api-test-deps
+    ninja -vC "${BUILD_DIR}" lldb-api-test-deps
     ${BUILD_DIR}/bin/llvm-lit -sv --param dotest-args='--category libc++' "${MONOREPO_ROOT}/lldb/test/API"
 
     ccache -s
@@ -572,10 +548,10 @@ apple-system|apple-system-hardened)
 
     # In the Apple system configuration, we build libc++ and libunwind separately.
     step "Installing libc++ and libc++abi in Apple-system configuration"
-    ${CMAKE} \
+    cmake \
         -S "${MONOREPO_ROOT}/runtimes" \
         -B "${BUILD_DIR}/cxx" \
-        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -GNinja \
         -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/cxx" \
         -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
@@ -588,10 +564,10 @@ apple-system|apple-system-hardened)
         -DLIBCXXABI_TEST_PARAMS="${params}"
 
     step "Installing libunwind in Apple-system configuration"
-    ${CMAKE} \
+    cmake \
         -S "${MONOREPO_ROOT}/runtimes" \
         -B "${BUILD_DIR}/unwind" \
-        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -GNinja \
         -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/unwind" \
         -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
@@ -601,13 +577,13 @@ apple-system|apple-system-hardened)
         -DCMAKE_INSTALL_NAME_DIR="/usr/lib/system"
 
     step "Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}/cxx" check-cxx
+    ninja -vC "${BUILD_DIR}/cxx" check-cxx
 
     step "Running the libc++abi tests"
-    ${NINJA} -vC "${BUILD_DIR}/cxx" check-cxxabi
+    ninja -vC "${BUILD_DIR}/cxx" check-cxxabi
 
     step "Running the libunwind tests"
-    ${NINJA} -vC "${BUILD_DIR}/unwind" check-unwind
+    ninja -vC "${BUILD_DIR}/unwind" check-unwind
 ;;
 aarch64)
     clean
@@ -665,13 +641,13 @@ clang-cl-dll)
     # setting when cmake and the test driver does the right thing automatically.
     generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False"
     step "Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+    ninja -vC "${BUILD_DIR}" check-cxx
 ;;
 clang-cl-static)
     clean
     generate-cmake-libcxx-win -DLIBCXX_ENABLE_SHARED=OFF
     step "Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+    ninja -vC "${BUILD_DIR}" check-cxx
 ;;
 clang-cl-no-vcruntime)
     clean
@@ -682,14 +658,14 @@ clang-cl-no-vcruntime)
     generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False" \
                               -DLIBCXX_TEST_CONFIG="llvm-libc++-shared-no-vcruntime-clangcl.cfg.in"
     step "Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+    ninja -vC "${BUILD_DIR}" check-cxx
 ;;
 clang-cl-debug)
     clean
     generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False" \
                               -DCMAKE_BUILD_TYPE=Debug
     step "Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+    ninja -vC "${BUILD_DIR}" check-cxx
 ;;
 clang-cl-static-crt)
     clean
@@ -698,7 +674,7 @@ clang-cl-static-crt)
     generate-cmake-libcxx-win -DLIBCXX_ENABLE_SHARED=OFF \
                               -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
     step "Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+    ninja -vC "${BUILD_DIR}" check-cxx
 ;;
 mingw-dll)
     clean
@@ -744,7 +720,7 @@ mingw-incomplete-sysroot)
     # Only test that building succeeds; there's not much extra value in running
     # the tests here, as it would be equivalent to the mingw-dll config above.
     step "Building the runtimes"
-    ${NINJA} -vC "${BUILD_DIR}"
+    ninja -vC "${BUILD_DIR}"
 ;;
 aix)
     clean
@@ -781,7 +757,7 @@ android-ndk-*)
                            -DLIBCXX_TEST_PARAMS="${PARAMS}" \
                            -DLIBCXXABI_TEST_PARAMS="${PARAMS}"
     check-abi-list
-    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
+    ninja -vC "${BUILD_DIR}" install-cxx install-cxxabi
 
     # Start the emulator and make sure we can connect to the adb server running
     # inside of it.
@@ -794,9 +770,9 @@ android-ndk-*)
     adb shell mkdir -p /data/local/tmp/adb_run
     adb push "${BUILD_DIR}/lib/libc++_shared.so" /data/local/tmp/libc++/libc++_shared.so
     step "Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+    ninja -vC "${BUILD_DIR}" check-cxx
     step "Running the libc++abi tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxxabi
+    ninja -vC "${BUILD_DIR}" check-cxxabi
 ;;
 #################################################################
 # Insert vendor-specific internal configurations below.

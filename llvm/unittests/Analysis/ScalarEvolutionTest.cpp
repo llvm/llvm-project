@@ -11,6 +11,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
@@ -25,6 +26,8 @@
 #include "gtest/gtest.h"
 
 namespace llvm {
+
+using namespace SCEVPatternMatch;
 
 // We use this fixture to ensure that we clean up ScalarEvolution before
 // deleting the PassManager.
@@ -63,11 +66,6 @@ static std::optional<APInt> computeConstantDifference(ScalarEvolution &SE,
                                                       const SCEV *RHS) {
   return SE.computeConstantDifference(LHS, RHS);
 }
-
-  static bool matchURem(ScalarEvolution &SE, const SCEV *Expr, const SCEV *&LHS,
-                        const SCEV *&RHS) {
-    return SE.matchURem(Expr, LHS, RHS);
-  }
 
   static bool isImpliedCond(
       ScalarEvolution &SE, ICmpInst::Predicate Pred, const SCEV *LHS,
@@ -1524,7 +1522,7 @@ TEST_F(ScalarEvolutionsTest, MatchURem) {
       auto *URemI = getInstructionByName(F, N);
       auto *S = SE.getSCEV(URemI);
       const SCEV *LHS, *RHS;
-      EXPECT_TRUE(matchURem(SE, S, LHS, RHS));
+      EXPECT_TRUE(match(S, m_scev_URem(m_SCEV(LHS), m_SCEV(RHS), SE)));
       EXPECT_EQ(LHS, SE.getSCEV(URemI->getOperand(0)));
       EXPECT_EQ(RHS, SE.getSCEV(URemI->getOperand(1)));
       EXPECT_EQ(LHS->getType(), S->getType());
@@ -1537,7 +1535,7 @@ TEST_F(ScalarEvolutionsTest, MatchURem) {
     auto *URem1 = getInstructionByName(F, "rem4");
     auto *S = SE.getSCEV(Ext);
     const SCEV *LHS, *RHS;
-    EXPECT_TRUE(matchURem(SE, S, LHS, RHS));
+    EXPECT_TRUE(match(S, m_scev_URem(m_SCEV(LHS), m_SCEV(RHS), SE)));
     EXPECT_NE(LHS, SE.getSCEV(URem1->getOperand(0)));
     // RHS and URem1->getOperand(1) have different widths, so compare the
     // integer values.
@@ -1766,6 +1764,143 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering3) {
   // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
   // crash if the comparator is inconsistent about global variable linkage.
   SE.getSCEV(Or1);
+}
+
+TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define i32 @foo(ptr %loc, i32 %a, i32 %b) {"
+                          "entry: "
+                          "  ret i32 %a "
+                          "} ",
+                          Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  // Remove common factor when there's no signed wrapping.
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *VS = SE.getVScale(A->getType());
+    const SCEV *VSxA = SE.getMulExpr(VS, A, SCEV::FlagNSW);
+    const SCEV *VSxB = SE.getMulExpr(VS, B, SCEV::FlagNSW);
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_ULT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_EQ;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_EQ);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    // Verify the common factor's position doesn't impede simplification.
+    {
+      const SCEV *C = SE.getConstant(A->getType(), 100);
+      const SCEV *CxVS = SE.getMulExpr(C, VS, SCEV::FlagNSW);
+
+      // Verify common factor is available at different indices.
+      ASSERT_TRUE(isa<SCEVVScale>(cast<SCEVMulExpr>(VSxA)->getOperand(0)) !=
+                  isa<SCEVVScale>(cast<SCEVMulExpr>(CxVS)->getOperand(0)));
+
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = CxVS;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, C);
+    }
+  });
+
+  // Remove common factor when there's no unsigned wrapping.
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *VS = SE.getVScale(A->getType());
+    const SCEV *VSxA = SE.getMulExpr(VS, A, SCEV::FlagNUW);
+    const SCEV *VSxB = SE.getMulExpr(VS, B, SCEV::FlagNUW);
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+    }
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_ULT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_EQ;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_EQ);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+  });
+
+  // Do not remove common factor due to wrap flag mismatch.
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *VS = SE.getVScale(A->getType());
+    const SCEV *VSxA = SE.getMulExpr(VS, A, SCEV::FlagNSW);
+    const SCEV *VSxB = SE.getMulExpr(VS, B, SCEV::FlagNUW);
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+    }
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_ULT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+    }
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_EQ;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+    }
+  });
 }
 
 }  // end namespace llvm

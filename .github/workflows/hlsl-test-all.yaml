@@ -52,11 +52,6 @@ jobs:
           repository: llvm/offload-golden-images
           ref: main
           path: golden-images
-      - name: Setup Windows
-        if: runner.os == 'Windows'
-        uses: llvm/actions/setup-windows@main
-        with:
-          arch: amd64
       - name: Build DXC
         run: |
             cd DXC
@@ -80,7 +75,7 @@ jobs:
             ninja check-hlsl-unit
             ninja ${{ inputs.TestTarget }}
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action/macos@170bf24d20d201b842d7a52403b73ed297e6645b # v2
+        uses: EnricoMi/publish-unit-test-result-action/macos@34d7c956a59aed1bfebf31df77b8de55db9bbaaf # v2.21.0
         if: always() && runner.os == 'macOS'
         with:
           comment_mode: off

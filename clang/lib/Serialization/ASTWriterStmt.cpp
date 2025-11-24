@@ -482,14 +482,20 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
   if (!Satisfaction.IsSatisfied) {
     Record.push_back(Satisfaction.NumRecords);
     for (const auto &DetailRecord : Satisfaction) {
-      auto *E = dyn_cast<Expr *>(DetailRecord);
-      Record.push_back(/* IsDiagnostic */ E == nullptr);
-      if (E)
-        Record.AddStmt(E);
-      else {
-        auto *Diag = cast<std::pair<SourceLocation, StringRef> *>(DetailRecord);
+      if (auto *Diag = dyn_cast<const ConstraintSubstitutionDiagnostic *>(
+              DetailRecord)) {
+        Record.push_back(/*Kind=*/0);
         Record.AddSourceLocation(Diag->first);
         Record.AddString(Diag->second);
+        continue;
+      }
+      if (auto *E = dyn_cast<const Expr *>(DetailRecord)) {
+        Record.push_back(/*Kind=*/1);
+        Record.AddStmt(const_cast<Expr *>(E));
+      } else {
+        Record.push_back(/*Kind=*/2);
+        auto *CR = cast<const ConceptReference *>(DetailRecord);
+        Record.AddConceptReference(CR);
       }
     }
   }
@@ -2459,7 +2465,7 @@ void ASTStmtWriter::VisitOMPSimdDirective(OMPSimdDirective *D) {
 void ASTStmtWriter::VisitOMPCanonicalLoopNestTransformationDirective(
     OMPCanonicalLoopNestTransformationDirective *D) {
   VisitOMPLoopBasedDirective(D);
-  Record.writeUInt32(D->getNumGeneratedLoops());
+  Record.writeUInt32(D->getNumGeneratedTopLevelLoops());
 }
 
 void ASTStmtWriter::VisitOMPTileDirective(OMPTileDirective *D) {
@@ -2485,6 +2491,18 @@ void ASTStmtWriter::VisitOMPReverseDirective(OMPReverseDirective *D) {
 void ASTStmtWriter::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
   Code = serialization::STMT_OMP_INTERCHANGE_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPCanonicalLoopSequenceTransformationDirective(
+    OMPCanonicalLoopSequenceTransformationDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Record.writeUInt32(D->getNumGeneratedTopLevelLoops());
+}
+
+void ASTStmtWriter::VisitOMPFuseDirective(OMPFuseDirective *D) {
+  VisitOMPCanonicalLoopSequenceTransformationDirective(D);
+  Code = serialization::STMT_OMP_FUSE_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPForDirective(OMPForDirective *D) {

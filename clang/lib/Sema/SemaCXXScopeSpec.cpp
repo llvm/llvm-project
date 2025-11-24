@@ -31,8 +31,7 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
   const TagType *TagTy = dyn_cast<TagType>(T->getCanonicalTypeInternal());
   if (!isa_and_present<RecordType, InjectedClassNameType>(TagTy))
     return nullptr;
-  auto *RD =
-      cast<CXXRecordDecl>(TagTy->getOriginalDecl())->getDefinitionOrSelf();
+  auto *RD = cast<CXXRecordDecl>(TagTy->getDecl())->getDefinitionOrSelf();
   if (isa<InjectedClassNameType>(TagTy) ||
       RD->isCurrentInstantiation(CurContext))
     return RD;
@@ -121,7 +120,7 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
         }
       } else if (const auto *RecordT = dyn_cast<RecordType>(NNSType)) {
         // The nested name specifier refers to a member of a class template.
-        return RecordT->getOriginalDecl()->getDefinitionOrSelf();
+        return RecordT->getDecl()->getDefinitionOrSelf();
       }
     }
 
@@ -220,10 +219,11 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
 ///
 bool Sema::RequireCompleteEnumDecl(EnumDecl *EnumD, SourceLocation L,
                                    CXXScopeSpec *SS) {
-  if (EnumD->isCompleteDefinition()) {
+  if (EnumDecl *Def = EnumD->getDefinition();
+      Def && Def->isCompleteDefinition()) {
     // If we know about the definition but it is not visible, complain.
     NamedDecl *SuggestedDef = nullptr;
-    if (!hasReachableDefinition(EnumD, &SuggestedDef,
+    if (!hasReachableDefinition(Def, &SuggestedDef,
                                 /*OnlyNeedComplete*/ false)) {
       // If the user is going to see an error here, recover by making the
       // definition visible.
@@ -780,6 +780,11 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
 
   if (!Found.empty()) {
     const auto *ND = Found.getAsSingle<NamedDecl>();
+    if (!ND) {
+      Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
+          << IdInfo.Identifier << getLangOpts().CPlusPlus;
+      return true;
+    }
     if (::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
                                     IdInfo.CCLoc)) {
       const Type *T = SS.getScopeRep().getAsType();

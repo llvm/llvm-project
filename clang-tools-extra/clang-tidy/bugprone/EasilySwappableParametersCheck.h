@@ -1,4 +1,4 @@
-//===--- EasilySwappableParametersCheck.h - clang-tidy ----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// swapped (or badly ordered) arguments.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/easily-swappable-parameters.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/easily-swappable-parameters.html
 class EasilySwappableParametersCheck : public ClangTidyCheck {
 public:
   EasilySwappableParametersCheck(StringRef Name, ClangTidyContext *Context);

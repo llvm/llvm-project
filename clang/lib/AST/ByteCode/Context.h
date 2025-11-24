@@ -59,12 +59,17 @@ public:
                 ConstantExprKind Kind);
 
   /// Evaluates a toplevel initializer.
-  bool evaluateAsInitializer(State &Parent, const VarDecl *VD, APValue &Result);
+  bool evaluateAsInitializer(State &Parent, const VarDecl *VD, const Expr *Init,
+                             APValue &Result);
 
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, APValue &Result);
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, std::string &Result);
+
+  /// Evaluate \param E and if it can be evaluated to a null-terminated string,
+  /// copy the result into \param Result.
+  bool evaluateString(State &Parent, const Expr *E, std::string &Result);
 
   /// Evalute \param E and if it can be evaluated to a string literal,
   /// run strlen() on it.
@@ -93,20 +98,22 @@ public:
     return classify(E->getType());
   }
 
-  bool canClassify(QualType T) {
+  bool canClassify(QualType T) const {
     if (const auto *BT = dyn_cast<BuiltinType>(T)) {
       if (BT->isInteger() || BT->isFloatingPoint())
         return true;
       if (BT->getKind() == BuiltinType::Bool)
         return true;
     }
+    if (T->isPointerOrReferenceType())
+      return true;
 
     if (T->isArrayType() || T->isRecordType() || T->isAnyComplexType() ||
         T->isVectorType())
       return false;
     return classify(T) != std::nullopt;
   }
-  bool canClassify(const Expr *E) {
+  bool canClassify(const Expr *E) const {
     if (E->isGLValue())
       return true;
     return canClassify(E->getType());

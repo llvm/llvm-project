@@ -22,13 +22,20 @@
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+
+#ifdef _WIN32
+#include "llvm/Support/Windows/WindowsSupport.h"
+#endif
 
 #include <algorithm>
 #include <atomic>
@@ -426,6 +433,91 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   return error;
 }
 
+#ifdef _WIN32
+#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
+/// Returns the full path to the lldb.exe executable.
+inline std::wstring GetPathToExecutableW() {
+  // Iterate until we reach the Windows API maximum path length (32,767).
+  std::vector<WCHAR> buffer;
+  buffer.resize(MAX_PATH /*=260*/);
+  while (buffer.size() < 32767) {
+    if (GetModuleFileNameW(NULL, buffer.data(), buffer.size()) < buffer.size())
+      return std::wstring(buffer.begin(), buffer.end());
+    buffer.resize(buffer.size() * 2);
+  }
+  return L"";
+}
+
+/// \brief Resolve the full path of the directory defined by
+/// LLDB_PYTHON_DLL_RELATIVE_PATH. If it exists, add it to the list of DLL
+/// search directories.
+/// \return `true` if the library was added to the search path.
+/// `false` otherwise.
+bool AddPythonDLLToSearchPath() {
+  std::wstring modulePath = GetPathToExecutableW();
+  if (modulePath.empty())
+    return false;
+
+  SmallVector<char, MAX_PATH> utf8Path;
+  if (sys::windows::UTF16ToUTF8(modulePath.c_str(), modulePath.length(),
+                                utf8Path))
+    return false;
+  sys::path::remove_filename(utf8Path);
+  sys::path::append(utf8Path, LLDB_PYTHON_DLL_RELATIVE_PATH);
+  sys::fs::make_absolute(utf8Path);
+
+  SmallVector<wchar_t, 1> widePath;
+  if (sys::windows::widenPath(utf8Path.data(), widePath))
+    return false;
+
+  if (sys::fs::exists(utf8Path))
+    return SetDllDirectoryW(widePath.data());
+  return false;
+}
+#endif
+
+#ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+/// Returns whether `python3x.dll` is in the DLL search path.
+bool IsPythonDLLInPath() {
+#define WIDEN2(x) L##x
+#define WIDEN(x) WIDEN2(x)
+  WCHAR foundPath[MAX_PATH];
+  DWORD result =
+      SearchPathW(nullptr, WIDEN(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME), nullptr,
+                  MAX_PATH, foundPath, nullptr);
+#undef WIDEN2
+#undef WIDEN
+
+  return result > 0;
+}
+#endif
+
+/// Try to setup the DLL search path for the Python Runtime Library
+/// (python3xx.dll).
+///
+/// If `LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME` is set, we first check if
+/// python3xx.dll is in the search path. If it's not, we try to add it and
+/// check for it a second time.
+/// If only `LLDB_PYTHON_DLL_RELATIVE_PATH` is set, we try to add python3xx.dll
+/// to the search path python.dll is already in the search path or not.
+void SetupPythonRuntimeLibrary() {
+#ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+  if (IsPythonDLLInPath())
+    return;
+#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
+  if (AddPythonDLLToSearchPath() && IsPythonDLLInPath())
+    return;
+#endif
+  WithColor::error() << "unable to find '"
+                     << LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME << "'.\n";
+  return;
+#elif defined(LLDB_PYTHON_DLL_RELATIVE_PATH)
+  if (!AddPythonDLLToSearchPath())
+    WithColor::error() << "unable to find the Python runtime library.\n";
+#endif
+}
+#endif
+
 std::string EscapeString(std::string arg) {
   std::string::size_type pos = 0;
   while ((pos = arg.find_first_of("\"\\", pos)) != std::string::npos) {
@@ -728,6 +820,10 @@ int main(int argc, char const *argv[]) {
                         "~/Library/Logs/DiagnosticReports/.\n");
 #endif
 
+#ifdef _WIN32
+  SetupPythonRuntimeLibrary();
+#endif
+
   // Parse arguments.
   LLDBOptTable T;
   unsigned MissingArgIndex;
@@ -850,9 +946,10 @@ int main(int argc, char const *argv[]) {
   }
 
 #if !defined(_WIN32)
-  signal_loop.AddPendingCallback(
-      [](MainLoopBase &loop) { loop.RequestTermination(); });
-  signal_thread.join();
+  // Try to interrupt the signal thread.  If that succeeds, wait for it to exit.
+  if (signal_loop.AddPendingCallback(
+          [](MainLoopBase &loop) { loop.RequestTermination(); }))
+    signal_thread.join();
 #endif
 
   return exit_code;
