@@ -420,6 +420,10 @@ public:
   /// Return the WebAssembly externref reference type.
   virtual llvm::Type *getWasmExternrefReferenceType() const { return nullptr; }
 
+  /// Return the WebAssembly externref reference type.
+  virtual llvm::Type *getWasmNonNullExternrefReferenceType() const {
+    return nullptr;
+  }
   /// Return the WebAssembly funcref reference type.
   virtual llvm::Type *getWasmFuncrefReferenceType() const { return nullptr; }
 
