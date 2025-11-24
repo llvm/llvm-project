@@ -61,6 +61,13 @@
 		{
 			"backtrace" : 5,
 			"id" : "ObjcopyOptsTableGen::@c5905f69fadc0487d333"
+<<<<<<<< Updated upstream:llvm/out/build/x64-Debug/.cmake/api/v1/reply/target-StripOptsTableGen-Debug-d156a7c4ffc705ea5556.json
+========
+		},
+		{
+			"backtrace" : 5,
+			"id" : "BitcodeStripOptsTableGen::@c5905f69fadc0487d333"
+>>>>>>>> Stashed changes:llvm/out/build/x64-Debug/.cmake/api/v1/reply/target-StripOptsTableGen-Debug-ee5be500093b5f304b1f.json
 		},
 		{
 			"backtrace" : 5,
