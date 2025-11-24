@@ -1489,6 +1489,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
               // operand against vputils::isSingleScalar.
               assert(RepOrWidenR != Store->getStoredValue() ||
                      vputils::isSingleScalar(Store->getStoredValue()));
+              (void)Store;
               return true;
             }
 
