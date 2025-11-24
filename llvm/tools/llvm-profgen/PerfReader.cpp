@@ -1234,7 +1234,7 @@ bool PerfScriptReader::isLBRSample(StringRef Line) {
 
   // Trim off the PID (and maybe part/all of the IP)
   StringRef Trimmed = Line.ltrim().ltrim("0123456789").trim();
-  
+
   // Split by spaces, handling duplicate whitespace using ltrim
   auto Temp = Trimmed.split(' ');
   StringRef FirstPart = Temp.first.ltrim();
@@ -1243,7 +1243,8 @@ bool PerfScriptReader::isLBRSample(StringRef Line) {
   // If we trimmed off the IP, or it's a hybrid profile, there could be a record
   // at the start
   // The 0 at the start of the 0x may have been removed
-  if ((FirstPart.starts_with("x") || FirstPart.starts_with("0x")) && FirstPart.contains('/'))
+  if ((FirstPart.starts_with("x") || FirstPart.starts_with("0x")) &&
+      FirstPart.contains('/'))
     return true;
 
   // Get the next part split by whitespace
