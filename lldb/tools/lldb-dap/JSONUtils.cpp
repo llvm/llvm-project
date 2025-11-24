@@ -678,7 +678,7 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
   } break;
   case lldb::eStopReasonWatchpoint:
   case lldb::eStopReasonInstrumentation:
-    body.try_emplace("reason", "breakpoint");
+    body.try_emplace("reason", "data breakpoint");
     break;
   case lldb::eStopReasonProcessorTrace:
     body.try_emplace("reason", "processor trace");

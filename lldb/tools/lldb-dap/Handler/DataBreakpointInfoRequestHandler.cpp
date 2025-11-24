@@ -10,6 +10,7 @@
 #include "EventHelper.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBAddress.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include <optional>
@@ -17,6 +18,8 @@
 namespace lldb_dap {
 
 static bool IsRW(DAP &dap, lldb::addr_t load_addr) {
+  if (!lldb::SBAddress(load_addr, dap.target).IsValid())
+    return false;
   lldb::SBMemoryRegionInfo region;
   lldb::SBError err =
       dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
@@ -84,15 +87,18 @@ DataBreakpointInfoRequestHandler::Run(
       }
     }
   } else if (args.asAddress) {
-    size = llvm::utostr(args.bytes.value_or(1));
-    if (llvm::StringRef(args.name).starts_with("0x"))
-      addr = args.name.substr(2);
-    else
-      addr = llvm::utohexstr(std::stoull(args.name));
-    if (!IsRW(dap, std::stoull(addr, 0, 16))) {
+    size = llvm::utostr(args.bytes.value_or(dap.target.GetAddressByteSize()));
+    lldb::addr_t load_addr;
+    if (llvm::StringRef(args.name).getAsInteger<lldb::addr_t>(0, load_addr)) {
       is_data_ok = false;
-      response.description = "memory region for address " + addr +
-                             " has no read or write permissions";
+      response.description = args.name + " is not a valid address";
+    } else {
+      addr = llvm::utohexstr(load_addr);
+      if (!IsRW(dap, load_addr)) {
+        is_data_ok = false;
+        response.description = "memory region for address " + addr +
+                               " has no read or write permissions";
+      }
     }
   } else {
     is_data_ok = false;
