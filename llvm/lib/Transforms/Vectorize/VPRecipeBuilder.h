@@ -96,8 +96,7 @@ class VPRecipeBuilder {
 
   /// Check if an induction recipe should be constructed for \p VPI. If so build
   /// and return it. If not, return null.
-  VPHeaderPHIRecipe *tryToOptimizeInductionPHI(VPInstruction *VPI,
-                                               VFRange &Range);
+  VPHeaderPHIRecipe *tryToOptimizeInductionPHI(VPInstruction *VPI);
 
   /// Optimize the special case where the operand of \p VPI is a constant
   /// integer induction variable.
