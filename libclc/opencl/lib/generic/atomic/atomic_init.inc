@@ -26,7 +26,7 @@
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
   _CLC_OVERLOAD _CLC_DEF void atomic_init(                                     \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value) {     \
-    *(volatile ADDRSPACE __CLC_GENTYPE *)Ptr = Value;                          \
+    *(ADDRSPACE __CLC_GENTYPE *)Ptr = Value;                                   \
   }
 
 __CLC_DEFINE_ATOMIC(global)

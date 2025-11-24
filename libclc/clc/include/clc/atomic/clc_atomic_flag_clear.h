@@ -13,7 +13,7 @@
 
 #define __CLC_DECLARE_ATOMIC_FLAG_CLEAR(ADDRSPACE)                             \
   _CLC_OVERLOAD _CLC_DECL void __clc_atomic_flag_clear(                        \
-      volatile ADDRSPACE int *Ptr, int MemoryOrder, int MemoryScope);
+      ADDRSPACE int *Ptr, int MemoryOrder, int MemoryScope);
 
 __CLC_DECLARE_ATOMIC_FLAG_CLEAR(global)
 __CLC_DECLARE_ATOMIC_FLAG_CLEAR(local)

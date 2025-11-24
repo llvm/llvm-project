@@ -13,7 +13,7 @@
 
 #define __CLC_DEFINE_ATOMIC_FLAG_TEST_AND_SET(ADDRSPACE)                       \
   _CLC_OVERLOAD _CLC_DEF bool __clc_atomic_flag_test_and_set(                  \
-      volatile ADDRSPACE int *Ptr, int MemoryOrder, int MemoryScope) {         \
+      ADDRSPACE int *Ptr, int MemoryOrder, int MemoryScope) {                  \
     return (bool)__clc_atomic_exchange(Ptr, __CLC_ATOMIC_FLAG_TRUE,            \
                                        MemoryOrder, MemoryScope);              \
   }
