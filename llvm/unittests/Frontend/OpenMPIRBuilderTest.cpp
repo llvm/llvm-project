@@ -5535,7 +5535,7 @@ TEST_F(OpenMPIRBuilderTest, ScanReduction) {
 
   EXPECT_EQ(ScanLoop->getAfter(), Builder.GetInsertBlock());
   EXPECT_EQ(NumBodiesGenerated, 2U);
-  SmallVector<OpenMPIRBuilder::ReductionInfo> ReductionInfos = {
+  SmallVector<OpenMPIRBuilder::ReductionInfo, 2> ReductionInfos = {
       {Builder.getFloatTy(), OrigVar, ScanVar,
        /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, sumReduction,
        /*ReductionGenClang=*/nullptr, sumAtomicReduction,

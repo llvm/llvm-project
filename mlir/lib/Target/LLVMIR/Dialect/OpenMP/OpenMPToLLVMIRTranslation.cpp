@@ -1451,7 +1451,7 @@ static LogicalResult createReductionsAndCleanup(
   SmallVector<OwningReductionGen> owningReductionGens;
   SmallVector<OwningAtomicReductionGen> owningAtomicReductionGens;
   SmallVector<OwningDataPtrPtrReductionGen> owningReductionGenRefDataPtrGens;
-  SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> reductionInfos;
+  SmallVector<llvm::OpenMPIRBuilder::ReductionInfo, 2> reductionInfos;
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
@@ -2791,7 +2791,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       SmallVector<OwningAtomicReductionGen> owningAtomicReductionGens;
       SmallVector<OwningDataPtrPtrReductionGen>
           owningReductionGenRefDataPtrGens;
-      SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> reductionInfos;
+      SmallVector<llvm::OpenMPIRBuilder::ReductionInfo, 2> reductionInfos;
       collectReductionInfo(opInst, builder, moduleTranslation, reductionDecls,
                            owningReductionGens, owningAtomicReductionGens,
                            owningReductionGenRefDataPtrGens,
