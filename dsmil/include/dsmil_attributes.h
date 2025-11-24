@@ -248,6 +248,134 @@
 /** @} */
 
 /**
+ * @defgroup DSMIL_STEALTH Stealth Mode Attributes (v1.4)
+ * @{
+ */
+
+/**
+ * @brief Mark function for low-signature/stealth execution
+ * @param stealth_level Stealth level: "minimal", "standard", "aggressive"
+ *
+ * Low-signature functions are optimized for minimal detectability in
+ * hostile network environments. The compiler applies transformations to:
+ * - Strip optional telemetry/logging
+ * - Enforce constant-rate execution patterns
+ * - Minimize timing variance (jitter suppression)
+ * - Reduce network fingerprints
+ *
+ * Stealth levels:
+ * - "minimal": Basic telemetry reduction, keep safety-critical hooks
+ * - "standard": Moderate stealth with timing normalization
+ * - "aggressive": Maximum stealth, constant-rate ops, minimal signatures
+ *
+ * Example:
+ * @code
+ * DSMIL_LOW_SIGNATURE("aggressive")
+ * DSMIL_LAYER(7)
+ * void covert_operation(const uint8_t *data, size_t len) {
+ *     // Optimized for minimal detectability:
+ *     // - Non-critical telemetry stripped
+ *     // - Constant-rate execution enforced
+ *     // - Network I/O batched/delayed
+ *     process_sensitive_data(data, len);
+ * }
+ * @endcode
+ *
+ * @warning Stealth mode reduces observability; pair with high-fidelity test builds
+ * @warning Safety-critical functions still require minimum telemetry (Feature 1.3)
+ * @note Use with mission profiles: covert_ops, border_ops (stealth variants)
+ * @note Layer 5/8 AI models detectability vs debugging trade-offs
+ */
+#define DSMIL_LOW_SIGNATURE(stealth_level) \
+    __attribute__((dsmil_low_signature(stealth_level)))
+
+/**
+ * @brief Simple low-signature annotation with default level
+ */
+#define DSMIL_LOW_SIGNATURE_SIMPLE \
+    __attribute__((dsmil_low_signature("standard")))
+
+/**
+ * @brief Mark function for stealth mode optimizations
+ *
+ * Alias for DSMIL_LOW_SIGNATURE_SIMPLE for compatibility.
+ */
+#define DSMIL_STEALTH \
+    __attribute__((dsmil_low_signature("standard")))
+
+/**
+ * @brief Require constant-rate execution for detectability reduction
+ *
+ * Beyond constant-time crypto (DSMIL_SECRET), this enforces constant-rate
+ * execution across the entire function to prevent timing pattern analysis.
+ *
+ * Transformations:
+ * - Pads operations to fixed time intervals
+ * - Normalizes branch execution times
+ * - Adds controlled delay to equalize paths
+ *
+ * Example:
+ * @code
+ * DSMIL_CONSTANT_RATE
+ * DSMIL_LOW_SIGNATURE("aggressive")
+ * void network_heartbeat(void) {
+ *     // Always takes exactly 100ms regardless of work
+ *     // Prevents activity pattern detection
+ *     do_network_check();
+ *     // Compiler adds padding to reach 100ms
+ * }
+ * @endcode
+ *
+ * @note Use with stealth mission profiles
+ * @note May degrade performance; only use where detectability is critical
+ */
+#define DSMIL_CONSTANT_RATE \
+    __attribute__((dsmil_constant_rate))
+
+/**
+ * @brief Suppress timing jitter for predictable execution
+ *
+ * Minimizes timing variance by:
+ * - Disabling dynamic frequency scaling hints
+ * - Pinning to specific CPU cores
+ * - Avoiding cache-timing variations
+ *
+ * Example:
+ * @code
+ * DSMIL_JITTER_SUPPRESS
+ * DSMIL_STEALTH
+ * void stealth_communication(void) {
+ *     // Predictable timing, low variance
+ *     send_covert_packet();
+ * }
+ * @endcode
+ */
+#define DSMIL_JITTER_SUPPRESS \
+    __attribute__((dsmil_jitter_suppress))
+
+/**
+ * @brief Mark network I/O for fingerprint reduction
+ *
+ * Network I/O is transformed to reduce detectability:
+ * - Batch operations to avoid patterns
+ * - Add controlled delays to mask activity
+ * - Normalize packet sizes/timing
+ *
+ * Example:
+ * @code
+ * DSMIL_NETWORK_STEALTH
+ * void send_status_update(const char *msg) {
+ *     // I/O batched and delayed to reduce fingerprint
+ *     network_send(msg);
+ * }
+ * @endcode
+ */
+#define DSMIL_NETWORK_STEALTH \
+    __attribute__((dsmil_network_stealth))
+
+/** @} */
+
+/**
  * @defgroup DSMIL_MISSION Mission Profile Attributes (v1.3)
  * @{
  */
