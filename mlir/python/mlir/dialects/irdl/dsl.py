@@ -127,13 +127,16 @@ class Operation:
     operands_and_attrs: List[Union[Operand, Attribute]]
     results: List[Result]
 
-    def _emit(self) -> None:
-        op = _irdl.operation_(self.name)
-        ctx = ConstraintLoweringContext()
-
+    def _partition_operands_and_attrs(self) -> Tuple[List[Operand], List[Attribute]]:
         operands = [i for i in self.operands_and_attrs if isinstance(i, Operand)]
         attrs = [i for i in self.operands_and_attrs if isinstance(i, Attribute)]
+        return operands, attrs
 
+    def _emit(self) -> None:
+        ctx = ConstraintLoweringContext()
+        operands, attrs = self._partition_operands_and_attrs()
+
+        op = _irdl.operation_(self.name)
         with _ods_ir.InsertionPoint(op.body):
             if operands:
                 _irdl.operands_(
@@ -153,27 +156,26 @@ class Operation:
                     [i.variadicity for i in self.results],
                 )
 
-    def _make_op_view_and_builder(self) -> Tuple[type, Callable]:
-        operands = [i for i in self.operands_and_attrs if isinstance(i, Operand)]
-        attrs = [i for i in self.operands_and_attrs if isinstance(i, Attribute)]
+    @staticmethod
+    def _variadicity_to_segment(variadicity: Variadicity) -> int:
+        if variadicity == Variadicity.variadic:
+            return -1
+        if variadicity == Variadicity.optional:
+            return 0
+        return 1
 
-        def variadicity_to_segment(variadicity: Variadicity) -> int:
-            if variadicity == Variadicity.variadic:
-                return -1
-            if variadicity == Variadicity.optional:
-                return 0
-            return 1
-
-        operand_segments = None
-        if any(i.variadicity != Variadicity.single for i in operands):
-            operand_segments = [variadicity_to_segment(i.variadicity) for i in operands]
-
-        result_segments = None
-        if any(i.variadicity != Variadicity.single for i in self.results):
-            result_segments = [
-                variadicity_to_segment(i.variadicity) for i in self.results
+    @staticmethod
+    def _generate_segments(
+        operands_or_results: List[Union[Operand, Result]],
+    ) -> List[int]:
+        if any(i.variadicity != Variadicity.single for i in operands_or_results):
+            return [
+                Operation._variadicity_to_segment(i.variadicity)
+                for i in operands_or_results
             ]
+        return None
 
+    def _generate_init_params(self) -> List[_Parameter]:
         args = self.results + self.operands_and_attrs
         positional_args = [
             i.name for i in args if i.variadicity != Variadicity.optional
@@ -188,7 +190,16 @@ class Operation:
         params.append(_Parameter("loc", _Parameter.KEYWORD_ONLY, default=None))
         params.append(_Parameter("ip", _Parameter.KEYWORD_ONLY, default=None))
 
-        sig = _Signature(params)
+        return params
+
+    def _make_op_view_and_builder(self) -> Tuple[type, Callable]:
+        operands, attrs = self._partition_operands_and_attrs()
+
+        operand_segments = Operation._generate_segments(operands)
+        result_segments = Operation._generate_segments(self.results)
+
+        params = self._generate_init_params()
+        init_sig = _Signature(params)
         op = self
 
         class _OpView(_ods_ir.OpView):
@@ -198,7 +209,7 @@ class Operation:
             _ODS_RESULT_SEGMENTS = result_segments
 
             def __init__(*args, **kwargs):
-                bound = sig.bind(*args, **kwargs)
+                bound = init_sig.bind(*args, **kwargs)
                 bound.apply_defaults()
                 args = bound.arguments
 
@@ -226,7 +237,7 @@ class Operation:
                     ip=args["ip"],
                 )
 
-            __init__.__signature__ = sig
+            __init__.__signature__ = init_sig
 
         for attr in attrs:
             setattr(
