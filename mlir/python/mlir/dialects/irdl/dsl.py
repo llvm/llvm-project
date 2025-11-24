@@ -124,17 +124,17 @@ class Operation:
     name: str
     # We store operands and attributes into one list to maintain relative orders
     # among them for generating OpView class.
-    operands_and_attrs: List[Union[Operand, Attribute]]
-    results: List[Result]
+    fields: List[Union[Operand, Attribute, Result]]
 
-    def _partition_operands_and_attrs(self) -> Tuple[List[Operand], List[Attribute]]:
-        operands = [i for i in self.operands_and_attrs if isinstance(i, Operand)]
-        attrs = [i for i in self.operands_and_attrs if isinstance(i, Attribute)]
-        return operands, attrs
+    def _partition_fields(self) -> Tuple[List[Operand], List[Attribute], List[Result]]:
+        operands = [i for i in self.fields if isinstance(i, Operand)]
+        attrs = [i for i in self.fields if isinstance(i, Attribute)]
+        results = [i for i in self.fields if isinstance(i, Result)]
+        return operands, attrs, results
 
     def _emit(self) -> None:
         ctx = ConstraintLoweringContext()
-        operands, attrs = self._partition_operands_and_attrs()
+        operands, attrs, results = self._partition_fields()
 
         op = _irdl.operation_(self.name)
         with _ods_ir.InsertionPoint(op.body):
@@ -149,11 +149,11 @@ class Operation:
                     [ctx.lower(i.constraint) for i in attrs],
                     [i.name for i in attrs],
                 )
-            if self.results:
+            if results:
                 _irdl.results_(
-                    [ctx.lower(i.constraint) for i in self.results],
-                    [i.name for i in self.results],
-                    [i.variadicity for i in self.results],
+                    [ctx.lower(i.constraint) for i in results],
+                    [i.name for i in results],
+                    [i.variadicity for i in results],
                 )
 
     @staticmethod
@@ -176,7 +176,11 @@ class Operation:
         return None
 
     def _generate_init_params(self) -> List[_Parameter]:
-        args = self.results + self.operands_and_attrs
+        # results are placed at the beginning of the parameter list,
+        # but operands and attributes can appear in any relative order.
+        args = [i for i in self.fields if isinstance(i, Result)] + [
+            i for i in self.fields if not isinstance(i, Result)
+        ]
         positional_args = [
             i.name for i in args if i.variadicity != Variadicity.optional
         ]
@@ -193,10 +197,10 @@ class Operation:
         return params
 
     def _make_op_view_and_builder(self) -> Tuple[type, Callable]:
-        operands, attrs = self._partition_operands_and_attrs()
+        operands, attrs, results = self._partition_fields()
 
         operand_segments = Operation._generate_segments(operands)
-        result_segments = Operation._generate_segments(self.results)
+        result_segments = Operation._generate_segments(results)
 
         params = self._generate_init_params()
         init_sig = _Signature(params)
@@ -214,7 +218,7 @@ class Operation:
                 args = bound.arguments
 
                 _operands = [args[operand.name] for operand in operands]
-                _results = [args[result.name] for result in op.results]
+                _results = [args[result.name] for result in results]
                 _attributes = dict(
                     (attr.name, args[attr.name])
                     for attr in attrs
@@ -272,7 +276,7 @@ class Operation:
                 setattr(
                     _OpView, operand.name, property(lambda self, i=i: self.operands[i])
                 )
-        for i, result in enumerate(self.results):
+        for i, result in enumerate(results):
             if result_segments:
 
                 def getter(self, i=i, result=result):
@@ -332,16 +336,13 @@ class Dialect:
 
     def op(self, name: str) -> Callable[[type], type]:
         def decorator(cls: type) -> type:
-            operands_and_attrs: List[Union[Operand, Attribute]] = []
-            results: List[Result] = []
+            fields: List[Union[Operand, Attribute, Result]] = []
 
             for field in cls.__dict__.values():
-                if isinstance(field, Operand) or isinstance(field, Attribute):
-                    operands_and_attrs.append(field)
-                elif isinstance(field, Result):
-                    results.append(field)
+                if isinstance(field, _FieldDef):
+                    fields.append(field)
 
-            op_def = Operation(self.name, name, operands_and_attrs, results)
+            op_def = Operation(self.name, name, fields)
             op_view, builder = op_def._make_op_view_and_builder()
             setattr(op_def, "op_view", op_view)
             setattr(op_def, "builder", builder)
