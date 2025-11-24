@@ -925,6 +925,7 @@
 // RUN: %clang --target=loongarch64 -mno-lasx -mlsx -x c -E -dM %s -o - \
 // RUN:   | FileCheck --match-full-lines --check-prefix=MLSX %s
 // MLSX-NOT: #define __loongarch_asx
+// MLSX-NOT: #define __loongarch_asx_sx_conv
 // MLSX: #define __loongarch_simd_width 128
 // MLSX: #define __loongarch_sx 1
 
@@ -937,6 +938,7 @@
 // RUN: %clang --target=loongarch64 -mno-lasx -mlasx -x c -E -dM %s -o - \
 // RUN:   | FileCheck --match-full-lines --check-prefix=MLASX %s
 // MLASX: #define __loongarch_asx 1
+// MLASX: #define __loongarch_asx_sx_conv 1
 // MLASX: #define __loongarch_simd_width 256
 // MLASX: #define __loongarch_sx 1
 
@@ -953,5 +955,6 @@
 // RUN: %clang --target=loongarch64 -mno-lsx -march=la464 -x c -E -dM %s -o - \
 // RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
 // MNO-LSX-NOT: #define __loongarch_asx
+// MNO-LSX-NOT: #define __loongarch_asx_sx_conv
 // MNO-LSX-NOT: #define __loongarch_simd_width
 // MNO-LSX-NOT: #define __loongarch_sx
