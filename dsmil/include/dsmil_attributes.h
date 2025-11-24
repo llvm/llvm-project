@@ -376,6 +376,143 @@
 /** @} */
 
 /**
+ * @defgroup DSMIL_BLUE_RED Blue vs Red Testing Attributes (v1.4)
+ * @{
+ */
+
+/**
+ * @brief Mark function as red team test instrumentation point
+ *
+ * Red build functions include extra instrumentation to simulate adversarial
+ * scenarios and test system defenses. Red builds are NEVER deployed to
+ * production and must be confined to isolated test environments.
+ *
+ * The compiler automatically defines DSMIL_RED_BUILD macro when building
+ * with -fdsmil-role=red flag.
+ *
+ * Example:
+ * @code
+ * DSMIL_RED_TEAM_HOOK("injection_point")
+ * void process_user_input(const char *input) {
+ *     #ifdef DSMIL_RED_BUILD
+ *         // Red build: log potential attack vector
+ *         dsmil_red_log("input_processing", "param=input");
+ *
+ *         // Simulate bypassing validation
+ *         if (dsmil_red_scenario("bypass_validation")) {
+ *             raw_process(input);  // Vulnerable path
+ *             return;
+ *         }
+ *     #endif
+ *
+ *     // Normal path (blue build and red build)
+ *     validate_and_process(input);
+ * }
+ * @endcode
+ *
+ * @warning RED BUILDS MUST NEVER BE DEPLOYED TO PRODUCTION
+ * @warning Red builds signed with separate key, runtime rejects them
+ * @note Use for adversarial testing and stress-testing only
+ */
+#define DSMIL_RED_TEAM_HOOK(hook_name) \
+    __attribute__((dsmil_red_team_hook(hook_name)))
+
+/**
+ * @brief Mark function as attack surface (exposed to untrusted input)
+ *
+ * Attack surface functions are analyzed by Layer 8 Security AI in red builds
+ * to identify potential vulnerabilities and blast radius.
+ *
+ * Example:
+ * @code
+ * DSMIL_ATTACK_SURFACE
+ * void handle_network_packet(const uint8_t *packet, size_t len) {
+ *     // Red build: map attack surface
+ *     // Blue build: normal execution
+ *     parse_packet(packet, len);
+ * }
+ * @endcode
+ */
+#define DSMIL_ATTACK_SURFACE \
+    __attribute__((dsmil_attack_surface))
+
+/**
+ * @brief Mark vulnerability injection point for testing defenses
+ * @param vuln_type Type of vulnerability to simulate
+ *
+ * Vulnerability injection points allow testing defense mechanisms against
+ * specific attack classes. Only active in red builds.
+ *
+ * Common vulnerability types:
+ * - "buffer_overflow": Buffer overflow simulation
+ * - "use_after_free": Use-after-free simulation
+ * - "race_condition": Race condition injection
+ * - "injection": SQL/command injection point
+ * - "auth_bypass": Authentication bypass simulation
+ *
+ * Example:
+ * @code
+ * DSMIL_VULN_INJECT("buffer_overflow")
+ * void copy_user_data(char *dest, const char *src, size_t len) {
+ *     #ifdef DSMIL_RED_BUILD
+ *         if (dsmil_red_scenario("trigger_overflow")) {
+ *             // Simulate overflow for testing
+ *             memcpy(dest, src, len + 100);  // Intentional overflow
+ *             return;
+ *         }
+ *     #endif
+ *
+ *     // Normal path: safe copy
+ *     memcpy(dest, src, len);
+ * }
+ * @endcode
+ *
+ * @warning FOR TESTING ONLY - Never enable in production
+ */
+#define DSMIL_VULN_INJECT(vuln_type) \
+    __attribute__((dsmil_vuln_inject(vuln_type)))
+
+/**
+ * @brief Mark function for blast radius analysis
+ *
+ * Functions marked for blast radius analysis are tracked in red builds
+ * to determine impact of compromise. Layer 5/9 AI models campaign-level
+ * effects of multi-binary compromise.
+ *
+ * Example:
+ * @code
+ * DSMIL_BLAST_RADIUS
+ * DSMIL_LAYER(8)
+ * void critical_security_function(void) {
+ *     // If compromised, what's the blast radius?
+ *     // L5/L9 AI analyzes cascading effects
+ * }
+ * @endcode
+ */
+#define DSMIL_BLAST_RADIUS \
+    __attribute__((dsmil_blast_radius))
+
+/**
+ * @brief Specify build role (blue or red)
+ * @param role Build role: "blue" (defender) or "red" (attacker)
+ *
+ * Applied at translation unit level to control build flavor.
+ *
+ * Example:
+ * @code
+ * DSMIL_BUILD_ROLE("blue")
+ * int main(int argc, char **argv) {
+ *     // Blue build: production configuration
+ *     return run_production();
+ * }
+ * @endcode
+ */
+#define DSMIL_BUILD_ROLE(role) \
+    __attribute__((dsmil_build_role(role)))
+
+/** @} */
+
+/**
  * @defgroup DSMIL_MISSION Mission Profile Attributes (v1.3)
  * @{
  */

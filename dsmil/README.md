@@ -357,18 +357,23 @@ dsmil-clang -O1 -fpass-pipeline=dsmil-lab -o output input.c
 
 ### ✅ Completed (v1.4 - Security Depth)
 
-- ✅ **Feature 2.1**: Operational Stealth Modes ⭐ NEW
+- ✅ **Feature 2.1**: Operational Stealth Modes
   - ✅ Stealth attributes (DSMIL_LOW_SIGNATURE, DSMIL_CONSTANT_RATE, etc.)
   - ✅ DsmilStealthPass implementation
   - ✅ Stealth runtime support (timing, network batching)
   - ✅ Mission profile integration (covert_ops, border_ops_stealth)
   - ✅ Examples and test cases
   - ✅ Comprehensive documentation
+- ✅ **Feature 2.3**: Blue vs Red Scenario Simulation ⭐ NEW
+  - ✅ Blue/red attributes (DSMIL_RED_TEAM_HOOK, DSMIL_ATTACK_SURFACE, etc.)
+  - ✅ DsmilBlueRedPass implementation
+  - ✅ Red build runtime support (logging, scenario control)
+  - ✅ Dual-build mission profiles (blue_production, red_stress_test)
+  - ✅ Example code and integration guide
 
 ### 🚧 In Progress (v1.4)
 
 - 🚧 **Feature 2.2**: Threat signature embedding for forensics
-- 🚧 **Feature 2.3**: Blue vs Red scenario simulation
 - 🚧 LLVM pass implementations (remaining passes)
 - 🚧 Runtime library completion (sandbox, provenance)
 - 🚧 Tool wrappers (dsmil-clang, dsmil-verify)

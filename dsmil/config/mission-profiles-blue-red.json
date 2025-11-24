@@ -1,0 +1,155 @@
+{
+  "$schema": "https://dsmil.swordint.el/schemas/mission-profiles-v1.4.json",
+  "version": "1.4.0",
+  "profiles": {
+    "blue_production": {
+      "display_name": "Blue Team (Production)",
+      "description": "Standard production build with full security enforcement",
+      "classification": "SECRET",
+      "operational_context": "production",
+      "build_role": "blue",
+      "pipeline": "dsmil-hardened",
+      "ai_mode": "advisor",
+      "sandbox_default": "l8_strict",
+      "allow_stages": ["quantized", "serve"],
+      "deny_stages": ["debug", "experimental"],
+      "quantum_export": false,
+      "ct_enforcement": "strict",
+      "telemetry_level": "full",
+      "provenance_required": true,
+      "max_deployment_days": null,
+      "clearance_floor": "0xFF080000",
+      "security_flags": [
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2",
+        "-fPIE"
+      ],
+      "dsmil_specific_flags": [
+        "-fdsmil-mission-profile=blue_production",
+        "-fdsmil-role=blue"
+      ]
+    },
+    "red_stress_test": {
+      "display_name": "Red Team (Stress Test)",
+      "description": "Red team build with adversarial instrumentation - TESTING ONLY",
+      "classification": "UNCLASSIFIED//TEST",
+      "operational_context": "testing",
+      "build_role": "red",
+      "pipeline": "dsmil-lab",
+      "ai_mode": "lab",
+      "sandbox_default": "lab_isolated",
+      "allow_stages": ["*"],
+      "deny_stages": [],
+      "quantum_export": false,
+      "ct_enforcement": "warn",
+      "telemetry_level": "verbose",
+      "provenance_required": true,
+      "max_deployment_days": 7,
+      "clearance_floor": "0x00000000",
+      "deployment_restrictions": {
+        "approved_networks": ["TEST_NET_ONLY"],
+        "never_production": true,
+        "max_deployment_days": 7,
+        "requires_isolation": true
+      },
+      "red_build_config": {
+        "instrument": true,
+        "attack_surface_mapping": true,
+        "vuln_injection": true,
+        "blast_radius_tracking": true,
+        "l8_what_if_analysis": true,
+        "campaign_level_modeling": true
+      },
+      "security_flags": [],
+      "dsmil_specific_flags": [
+        "-fdsmil-mission-profile=red_stress_test",
+        "-fdsmil-role=red",
+        "-dsmil-red-instrument",
+        "-dsmil-red-attack-surface",
+        "-dsmil-red-vuln-inject",
+        "-dsmil-red-output=red-analysis.json"
+      ],
+      "warnings": [
+        "RED BUILD - FOR TESTING ONLY",
+        "NEVER DEPLOY TO PRODUCTION",
+        "MUST BE CONFINED TO ISOLATED TEST ENVIRONMENT",
+        "SIGNED WITH SEPARATE KEY"
+      ]
+    },
+    "blue_cyber_defence": {
+      "display_name": "Blue Team (Cyber Defence)",
+      "description": "Blue team cyber defence operations",
+      "classification": "SECRET",
+      "operational_context": "cyber_operations",
+      "build_role": "blue",
+      "pipeline": "dsmil-default",
+      "ai_mode": "advisor",
+      "sandbox_default": "l8_standard",
+      "allow_stages": ["quantized", "serve", "distilled"],
+      "deny_stages": ["debug"],
+      "quantum_export": true,
+      "ct_enforcement": "strict",
+      "telemetry_level": "full",
+      "provenance_required": true,
+      "max_deployment_days": null,
+      "clearance_floor": "0xFF070000",
+      "security_flags": [
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2"
+      ],
+      "dsmil_specific_flags": [
+        "-fdsmil-mission-profile=blue_cyber_defence",
+        "-fdsmil-role=blue",
+        "-dsmil-ai-mode=advisor"
+      ]
+    },
+    "red_campaign_simulation": {
+      "display_name": "Red Team (Campaign Simulation)",
+      "description": "Multi-binary compromise simulation - Layer 5/9 campaign analysis",
+      "classification": "UNCLASSIFIED//TEST",
+      "operational_context": "testing",
+      "build_role": "red",
+      "pipeline": "dsmil-lab",
+      "ai_mode": "lab",
+      "sandbox_default": "lab_isolated",
+      "allow_stages": ["*"],
+      "deny_stages": [],
+      "quantum_export": false,
+      "ct_enforcement": "warn",
+      "telemetry_level": "verbose",
+      "provenance_required": true,
+      "max_deployment_days": 7,
+      "clearance_floor": "0x00000000",
+      "deployment_restrictions": {
+        "approved_networks": ["TEST_NET_ONLY"],
+        "never_production": true,
+        "max_deployment_days": 7,
+        "requires_isolation": true
+      },
+      "red_build_config": {
+        "instrument": true,
+        "attack_surface_mapping": true,
+        "vuln_injection": true,
+        "blast_radius_tracking": true,
+        "l8_what_if_analysis": true,
+        "campaign_level_modeling": true,
+        "l5_l9_campaign_effects": true,
+        "multi_binary_compromise": true
+      },
+      "security_flags": [],
+      "dsmil_specific_flags": [
+        "-fdsmil-mission-profile=red_campaign_simulation",
+        "-fdsmil-role=red",
+        "-dsmil-red-instrument",
+        "-dsmil-red-attack-surface",
+        "-dsmil-red-vuln-inject",
+        "-dsmil-red-output=campaign-analysis.json"
+      ],
+      "warnings": [
+        "RED BUILD - CAMPAIGN SIMULATION",
+        "FOR TESTING ONLY",
+        "NEVER DEPLOY TO PRODUCTION"
+      ]
+    }
+  }
+}
