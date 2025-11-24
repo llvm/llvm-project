@@ -387,7 +387,7 @@ private:
                         ArrayRef<LayoutInfoLattice *> operands,
                         ArrayRef<const LayoutInfoLattice *> results);
 
-  bool hasAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout);
+  bool hasParamsOfLayoutKind(xegpu::DistributeLayoutAttr anchorLayout);
 
 public:
   LayoutInfoPropagation(DataFlowSolver &solver,
@@ -477,7 +477,7 @@ LogicalResult LayoutInfoPropagation::visitOperation(
   return success();
 }
 
-bool LayoutInfoPropagation::hasAnchorLayout(
+bool LayoutInfoPropagation::hasParamsOfLayoutKind(
     xegpu::DistributeLayoutAttr anchorLayout) {
   if (anchorLayout == nullptr) {
     return false;
@@ -497,7 +497,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
 
   LayoutInfo prefetchLayout;
   xegpu::DistributeLayoutAttr anchorLayout = prefetch.getAnchorLayoutAttr();
-  if (hasAnchorLayout(anchorLayout)) {
+  if (hasParamsOfLayoutKind(anchorLayout)) {
     prefetchLayout = LayoutInfo(anchorLayout);
   } else {
     // Here we assign the default layout to the tensor descriptor operand of
@@ -648,12 +648,12 @@ void LayoutInfoPropagation::visitDpasOp(
   LayoutInfo dpasCLayout;
 
   xegpu::DistributeLayoutAttr anchorLayoutC = dpas.getAnchorLayoutCdAttr();
-  if (hasAnchorLayout(anchorLayoutC)) {
+  if (hasParamsOfLayoutKind(anchorLayoutC)) {
     xegpu::DistributeLayoutAttr anchorLayoutA = dpas.getAnchorLayoutAAttr();
     xegpu::DistributeLayoutAttr anchorLayoutB = dpas.getAnchorLayoutBAttr();
-    assert(hasAnchorLayout(anchorLayoutA) &&
+    assert(hasParamsOfLayoutKind(anchorLayoutA) &&
            "Expected anchor layout for DPAS A operand.");
-    assert(hasAnchorLayout(anchorLayoutB) &&
+    assert(hasParamsOfLayoutKind(anchorLayoutB) &&
            "Expected anchor layout for DPAS B operand.");
     dpasALayout = LayoutInfo(anchorLayoutA);
     dpasBLayout = LayoutInfo(anchorLayoutB);
@@ -743,7 +743,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
 
   LayoutInfo storeLayout;
   xegpu::DistributeLayoutAttr anchorLayout = store.getAnchorLayoutAttr();
-  if (hasAnchorLayout(anchorLayout)) {
+  if (hasParamsOfLayoutKind(anchorLayout)) {
     storeLayout = LayoutInfo(anchorLayout);
   } else {
     auto uArch = getUArch(getChipStr(store).value_or(""));
@@ -799,7 +799,7 @@ void LayoutInfoPropagation::visitLoadNdOp(
 
   LayoutInfo loadLayout;
   xegpu::DistributeLayoutAttr anchorLayout = load.getAnchorLayoutAttr();
-  if (hasAnchorLayout(anchorLayout)) {
+  if (hasParamsOfLayoutKind(anchorLayout)) {
     loadLayout = LayoutInfo(anchorLayout);
   } else {
 
@@ -914,7 +914,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   LayoutInfo loadLayout;
   LayoutInfo maskLayout;
   xegpu::DistributeLayoutAttr anchorLayout = load.getAnchorLayoutAttr();
-  if (hasAnchorLayout(anchorLayout)) {
+  if (hasParamsOfLayoutKind(anchorLayout)) {
     loadLayout = LayoutInfo(anchorLayout);
     maskLayout = loadLayout;
   } else {
@@ -984,7 +984,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   LayoutInfo payloadLayout;
   LayoutInfo maskLayout;
   xegpu::DistributeLayoutAttr anchorLayout = storeScatter.getAnchorLayoutAttr();
-  if (hasAnchorLayout(anchorLayout)) {
+  if (hasParamsOfLayoutKind(anchorLayout)) {
     payloadLayout = LayoutInfo(anchorLayout);
     maskLayout = payloadLayout;
   } else {

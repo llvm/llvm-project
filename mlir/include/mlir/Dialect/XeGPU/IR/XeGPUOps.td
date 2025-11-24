@@ -253,6 +253,22 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
     It issues an instruction to prefetch a block of data from continuous
     memory regions to each level of the cache based on their cache policy.
 
+    Arguments:
+    - `TensorDesc`: A tensor descriptor specifying the base nd-region of
+      memory and tensor tile to be prefetched.
+
+    - `offsets`: index values representing per-dimension offsets from the
+      base position encoded in `TensorDesc`. It is encoded via "offsets"
+      and "const_offsets".
+
+    - `l1_hint`, `l2_hint`, `l3_hint`: [optional] An cache-hint attribute
+      indicating the desired behavior at the L1, L2, and L3 cache levels.
+
+    - `anchor_layout`: [optional] An attribute that identifies the operation
+      as an anchor, enabling users to assign a layout that governs distribution
+      at the subgroup and/or work-item level. Only valid at workgroup and subgroup 
+      level.
+
     Example:
     ```mlir
       xegpu.prefetch_nd %tdesc {l1_hint = #xegpu.cache_hint<cached>,
@@ -326,15 +342,36 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
     a block of data from memory to register. It takes a set of optional cache
     hints for each level of cache, L1, L2 and L3. If hardware does not have a
     correspoding cache, Corresponding cache hint attribute will be masked.
-    VNNI transformation is an hardware feature for Intel GPU, which is used to
-    do data packing during the load for B operand of matrix operation, if
-    the bit width of the data type is less then 32 bits, e.g., fp16. And
-    transpose is another Intel hardware feature, which will do transpose
-    operation when loading the data if the bit width of the data type is
-    fp32 or fp64. It implies that vnni and transpose cannot exit at the
-    same time. It is only available to 1D or 2D blocked tensor_desc.
+
+    On Intel GPUs, hardware-supported packing rearranges data elements during
+    the load of the B operand when the element bit-width is less than 32 bits
+    (for example, fp16). The transpose feature reorders data during the load
+    when the element type is fp32 or fp64. These two features are mutually
+    exclusive and shall not be enabled simultaneously. Both features support only
+    2D blocked tensor_desc.
 
     In SIMT mode, result vector represents the data to be loaded by each work-item.
+
+    Arguments:
+
+    - `TensorDesc`: A tensor descriptor specifying the base nd-region of memory
+      and the tensor tile to be loaded.
+
+    - `offsets`: Index values representing per-dimension offsets from the base position
+      encoded in `TensorDesc`. They are encoded via `offsets` and `const_offsets`.
+
+    - `packed`: [optional] A unit attribute indicating that packing is applied
+      during the load when supported by the hardware. Only valid at lane level.
+
+    - `transpose`: [optional] An attribute describing a hardware-supported transpose
+      to be applied during the load. Only valid at Lane level.
+
+    - `l1_hint`, `l2_hint`, `l3_hint`: [optional] Cache-hint attributes indicating the
+      desired behavior at the L1, L2, and L3 cache levels.
+
+    - `anchor_layout`: [optional] An attribute that identifies the operation as an anchor,
+      enabling users to assign a layout that governs distribution at the subgroup and/or
+      work-item level. Only valid at workgroup and subgroup levels.
 
     Example 1:
     ```mlir
@@ -391,7 +428,6 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
       return getTensorDescType().getShape();
     }
 
-
   }];
 
   let assemblyFormat = [{
@@ -431,6 +467,23 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
     It is only available to 1D or 2D blocked tensor_desc.
 
     In SIMT mode, the input vector represents the data to be stored by each work-item.
+
+    Arguments:
+
+    - `value`: A vector value representing the tensor tile to be stored.
+
+    - `TensorDesc`: A tensor descriptor specifying the base nd-region of memory and
+      the tensor tile to be stored.
+
+    - `offsets`: Index values representing per-dimension offsets from the base position
+      encoded in `TensorDesc`. They are encoded via `offsets` and `const_offsets`.
+
+    - `l1_hint`, `l2_hint`, `l3_hint`: [optional] Cache-hint attributes indicating the
+      desired behavior at the L1, L2, and L3 cache levels.
+
+    - `anchor_layout`: [optional] An attribute that identifies the operation as an anchor,
+      enabling users to assign a layout that governs distribution at the subgroup and/or
+      work-item level. Only valid at workgroup and subgroup levels.
 
     Example 1:
     ```mlir
@@ -568,8 +621,10 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     It accepts the following parameters:
 
     Arguments:
+
     - `source`: a 1D memref or pointer (i64, i32, ui64, ui32) represents the flattened
       memory object.
+
     - `offsets`: a vector containing offsets of each access point. Its size
       is fixed to the hardware supportted subgroup size, e.g., 16 on PVC,
       implying each element in the vector corresponds to a work-item (SIMT lane)
@@ -668,16 +723,24 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
     it works on scattered TensorDesc instead.
 
     Arguments:
+
     - `source`: represents the memory region to be loaded from, which can be either a
         tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
         In case of tensor_desc, offsets come from the producer create_tdesc op.
         tensor_desc cannot be used in SIMT mode.
+
     - `offsets`: represents offsets from source. required if `source` in not a TensorDescType.
         offsets is a vector of `index` type and vector length is either the subgroup size
         or 1 in SIMT mode. scalar offset is also valid for SIMT mode.
-    - `l1_hint`, `l2_hint`, `l3_hint`: are optional cache hints for each level of cache.
-    - `offset_align_byte`: required if `source` is a pointer. If `source` is not a pointer,
+
+    - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
+
+    - `offset_align_byte`: [optional] required if `source` is a pointer. If `source` is not a pointer,
         it is not allowed. Represents the alignment in bytes of each offset in offsets.
+
+    - `anchor_layout`: [optional] An attribute that identifies the operation as an anchor,
+      enabling users to assign a layout that governs distribution at the subgroup and/or
+      work-item level. Only valid at workgroup and subgroup levels.
 
     Example 1:
     ```mlir
@@ -727,7 +790,8 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
-      OptionalAttr<I64Attr>:$offset_align_byte);
+      OptionalAttr<I64Attr>:$offset_align_byte,
+      OptionalAttr<DistributeLayoutAttr>:$anchor_layout);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     Type getSourceType() {
@@ -779,18 +843,27 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
     each work-item. If size is not 1, size should be equal to the chunk size,
 
     Arguments:
+
     - `source`: represents the memory region to be loaded from, which can be either a
         tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
         In case of tensor_desc, offsets come from the producer create_tdesc op.
         tensor_desc cannot be used in SIMT mode.
+
     - `offsets`: represents offsets from source. required if `source` in not a TensorDescType.
         offsets is a vector of `index` type and vector length is either the subgroup size
         or 1 in SIMT mode. scalar offset is also valid for SIMT mode.
+
     - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
         mask is a vector of size equal to the subgroup size, or 1 in SIMT mode.
         scalar mask is also valid for SIMT mode.
-    - `chunk_size`: (optional) represents contiguous number of elements to load from per work item.
-    - `l1_hint`, `l2_hint`, `l3_hint`: are optional cache hints for each level of cache.
+
+    - `chunk_size`: [optional] represents contiguous number of elements to load from per work item.
+
+    - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
+
+    - `anchor_layout`: [optional] An attribute that identifies the operation as an anchor,
+      enabling users to assign a layout that governs distribution at the subgroup and/or
+      work-item level. Only valid at workgroup and subgroup levels.
 
     Results:
     - `res`: represents loaded data
@@ -926,19 +999,30 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
   each work-item. If size is not 1, size should be equal to the chunk size.
 
     Arguments:
+
     - `value`: represents the data to be stored.
+
     - `dest`: represents the memory region to be stored to, which can be either a
         tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
         In case of tensor_desc, offsets come from the producer create_tdesc op.
         tensor_desc cannot be used in SIMT mode.
+
     - `offsets`: represents offsets from dest. required if `source` in not a TensorDescType.
         offsets is a vector of `index` type and vector length is either the subgroup size
         or 1 in SIMT mode. scalar offset is also valid for SIMT mode.
+
     - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
         mask is a vector of size equal to the subgroup size, or 1 in SIMT mode.
         scalar mask is also valid for SIMT mode.
-    - `chunk_size`: (optional) represents contiguous number of elements to store to per work item.
-    - `l1_hint`, `l2_hint`, `l3_hint`: are optional cache hints for each level of cache.
+
+    - `chunk_size`: [optional] represents contiguous number of elements to store to per work item.
+
+    - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
+
+    - `anchor_layout`: [optional] An attribute that identifies the operation as an anchor,
+      enabling users to assign a layout that governs distribution at the subgroup and/or
+      work-item level. Only valid at workgroup and subgroup levels.
+
 
   Example 1:
   ```mlir
@@ -1115,22 +1199,28 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
     size, B of `kxn` size, and accumulate on matrix C of `mxn` to the same size
     matrix , `m=8`, `n=16` and `k=8 * 32/bit_width_of_elem_type`. So for fp16
     data type, the matrices are `A: vector<8x16xf16>`, `B: vector<16x16xf16>`,
-    and `C/D: vector<8x16xf32>`. Besides the matrix size requirements, DPAS
-    also requires A and B to be loaded with the required data layout. Specially,
-    VNNI layout is required for B operand. It is achieved via adding `packed`
-    attribute to the `load_nd` operator.  Due to the VNNI transformation, B operands
-    can be represented as a 3D vector, with the last dimension representing the VNNI
-    factor, which is computed as `32/bit_width_of_elem_type`. Thus, `B: vector<16x16xf16>`
-    can be represented as `B: vector<8x16x2xf16>`.
+    and `C/D: vector<8x16xf32>`.
 
     In SIMT code, each work-item from a subgroup holds a data fragment for A, B, C and the result,
     which are represented as 1D vectors. Please refer to [OpenCL Intel extentions]
     (https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_matrix_multiply_accumulate.html)
     for more details about the fragment distribution.
 
-    Note: on PVC, the hardware can perform load with VNNI transformation when data
-          element type is 16-bit or lower precision, taking 2 or 4 elements from
-          the first dimension and inserted into the newly added innermost dimension.
+    Arguments:
+
+    - `lhs`: A vector value representing the left-hand-side matrix tile (A) participating in the
+      matrix multiply.
+
+    - `rhs`: A vector value representing the right-hand-side matrix tile (B). 
+
+    - `acc`: [optional] A vector value representing the accumulator matrix tile (C). When present, the
+      result is computed as `lhs * rhs + acc`; otherwise, the accumulator is implicitly assumed to be zero.
+
+    - `anchor_layout_a`, `anchor_layout_b`, `anchor_layout_cd`: [optional] Attributes that identify this
+      operation as anchors for operands A, B, and the accumulator/result, enabling users to assign layouts
+      that govern distribution at the subgroup and/or work-item level. Only valid at workgroup and subgroup
+      level.
+
   }];
 
   let arguments = (ins
@@ -1187,13 +1277,31 @@ def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
     has the same shape with `TensorDesc`, and is used to enable or disable specific
     data points of the `TensorDesc`. The `value` operand represents the new value to
     be applied during the modification.
+    Arguments:
+    - `kind`: An attribute that specifies the atomic operation to be performed
+      (e.g., add, min, max, exchange, etc.).
+
+    - `tensorDesc`: A `TensorDesc` describing the memory region on which the atomic
+      read-modify-write is performed.
+
+    - `mask`: A predicate mask with the same shape as `tensorDesc`. Only elements
+      with a true (non-zero) mask value participate in the atomic operation;
+      masked-out elements are not modified.
+
+    - `value`: The input values used by the atomic operation. It must have the same
+      shape and element type as `tensorDesc` and `result`.
+
+    - `anchor_layout`: [optional] An attribute that identifies the operation as an anchor,
+      enabling users to assign a layout that governs distribution at the subgroup
+      and/or work-item level. Only valid at workgroup and subgroup levels.
   }];
 
   let arguments = (ins
     AtomicRMWKindAttr:$kind,
     XeGPU_TensorDesc:$tensorDesc,
     XeGPU_MaskType:$mask,
-    XeGPU_ValueType:$value);
+    XeGPU_ValueType:$value,
+    OptionalAttr<DistributeLayoutAttr>:$anchor_layout);
 
   let results = (outs XeGPU_ValueType:$result);
 
@@ -1275,6 +1383,13 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
       the `target_layout`. Both `input_layout` and `target_layout` must correspond to the same programming
       scope, such as workgroup-level (wg) or subgroup-level (sg) code. This operation is not valid once
       the IR is lowered to WI level because that is the end result of all distributions.
+      Arguments:
+      - `source`: The input vector whose data is to be redistributed. The source and
+      result types must match.
+      - `input_layout`: The layout attribute describing the current distribution of `source`
+      across subgroups and/or work-items.
+      - `target_layout`: The layout attribute describing the desired distribution of the result
+      across subgroups and/or work-items.
     }];
     let arguments = (ins XeGPU_VectorType: $source,
                          DistributeLayoutAttr: $input_layout,
@@ -1342,12 +1457,13 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     Arguments:
      - `mem_desc`: the memory descriptor identifying the SLM region.
      - `offsets`: the coordinates within the matrix to read from.
-     - `subgroup_block_io`: [optional] An attribute indicating that the operation can be 
-                 lowered to a subgroup block load. When this attribute is present, 
-                 the offsets are subgroup-uniform across all lanes.
-     - `anchor_layout`: [optional] An attribute for guiding distributions among
-                 subgroups and/or work-items. It currently can accept either
-                 LayoutAttr or SliceAttr.
+     - `subgroup_block_io`: [optional] An attribute indicating that the operation can be lowered
+        to a subgroup block load. When this attribute is present, the offsets are subgroup-uniform
+        across all lanes. Only used on subgroup and lane level.
+     - `anchor_layout`: [optional] An attribute that identifies the operation as an anchor, enabling
+        users to assign a layout that governs distribution at the subgroup and/or work-item level.
+        Only valid at workgroup and subgroup levels.
+
     Results:
      - `res`: the matrix elements loaded from SLM.
   }];
@@ -1393,12 +1509,12 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
      - `mem_desc`: the memory descriptor specifying the SLM region.
      - `offsets`: the coordinates within the matrix where the data will be written.
      - `data`: the values to be stored in the matrix.
-     - `subgroup_block_io`: [optional] An attribute indicating that the operation can be 
-                 lowered to a subgroup block store. When this attribute is present, 
-                 the offsets are subgroup-uniform across all lanes.     
-     - `anchor_layout`: [optional] An attribute for guiding distributions among
-                 subgroups and/or work-items. It currently can accept either
-                 LayoutAttr or SliceAttr.
+     - `subgroup_block_io`: [optional] An attribute indicating that the operation can be lowered
+        to a subgroup block load. When this attribute is present, the offsets are subgroup-uniform
+        across all lanes. Only used on subgroup and lane level.
+     - `anchor_layout`: [optional] An attribute that identifies the operation as an anchor, enabling
+        users to assign a layout that governs distribution at the subgroup and/or work-item level.
+        Only valid at workgroup and subgroup levels.
   }];
   let builders = [
     OpBuilder<(ins "Value" : $data, "TypedValue<MemDescType>": $mem_desc,

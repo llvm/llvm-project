@@ -828,7 +828,7 @@ void PrefetchOp::build(OpBuilder &builder, OperationState &state, Value source,
                        xegpu::CachePolicyAttr l2_hint,
                        xegpu::CachePolicyAttr l3_hint) {
   build(builder, state, source, Value(), l1_hint, l2_hint, l3_hint,
-        IntegerAttr{});
+        IntegerAttr{}, /*anchor_layout=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
