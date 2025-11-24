@@ -349,8 +349,8 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
       // if the Callee does not end in a tailcall, the return will be removed
       // from the inlined block. If that return is RETA(A|B), we have to keep
       // the authentication part.
-      // RETAA -> AUTIASP + RET
-      // RETAB -> AUTIBSP + RET
+      // RETAA -> AUTIASP
+      // RETAB -> AUTIBSP
       if (!CSIsTailCall && BC.isAArch64() && BC.MIB->isPAuthAndRet(Inst)) {
         MCInst Auth;
         BC.MIB->createMatchingAuth(Inst, Auth);
