@@ -3789,8 +3789,12 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
   bool NeedsAbortSuffix =
       IsFatal && RecoverKind != CheckRecoverableKind::Unrecoverable;
   bool MinimalRuntime = CGF.CGM.getCodeGenOpts().SanitizeMinimalRuntime;
+  // The preserve-all logic is somewhat duplicated in BoundsChecking.cpp for
+  // local-bounds. Make sure to change that too.
+  const auto &T = CGF.CGM.getTriple();
   bool HandlerPreserveAllRegs =
-      CGF.CGM.getCodeGenOpts().SanitizeHandlerPreserveAllRegs;
+      CGF.CGM.getCodeGenOpts().SanitizeHandlerPreserveAllRegs &&
+      (T.isAArch64() || T.isX86_64());
   bool UsePreserveFn = false;
   const SanitizerHandlerInfo &CheckInfo = SanitizerHandlers[CheckHandler];
   const StringRef CheckName = CheckInfo.Name;
@@ -3911,18 +3915,8 @@ void CodeGenFunction::EmitCheck(
 
   // Clear arguments for the MinimalRuntime handler.
   if (CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
-    switch (CheckHandler) {
-    case SanitizerHandler::TypeMismatch:
-      // Pass value pointer only. It adds minimal overhead.
-      StaticArgs = {};
-      assert(DynamicArgs.size() == 1);
-      break;
-    default:
-      // No arguments for other checks.
-      StaticArgs = {};
-      DynamicArgs = {};
-      break;
-    }
+    StaticArgs = {};
+    DynamicArgs = {};
   }
 
   // Handler functions take an i8* pointing to the (handler-specific) static

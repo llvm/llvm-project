@@ -172,13 +172,14 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
 }
 
 static std::string
-getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts) {
+getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts,
+                   const Triple &T) {
   std::string Name = "__ubsan_handle_local_out_of_bounds";
   if (Opts.MinRuntime)
     Name += "_minimal";
   if (!Opts.MayReturn)
     Name += "_abort";
-  else if (Opts.HandlerPreserveAllRegs && Opts.MinRuntime)
+  if (Opts.shouldHandlerPreserveAllRegs(T))
     Name += "_preserve";
   return Name;
 }
@@ -230,16 +231,17 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     }
   }
 
+  auto Triple = F.getParent()->getTargetTriple();
   std::string Name;
   if (Opts.Rt)
-    Name = getRuntimeCallName(*Opts.Rt);
+    Name = getRuntimeCallName(*Opts.Rt, Triple);
 
   // Create a trapping basic block on demand using a callback. Depending on
   // flags, this will either create a single block for the entire function or
   // will create a fresh block every time it is called.
   BasicBlock *ReuseTrapBB = nullptr;
-  auto GetTrapBB = [&ReuseTrapBB, &Opts, &Name](BuilderTy &IRB,
-                                                BasicBlock *Cont) {
+  auto GetTrapBB = [&ReuseTrapBB, &Opts, &Name, &Triple](BuilderTy &IRB,
+                                                         BasicBlock *Cont) {
     Function *Fn = IRB.GetInsertBlock()->getParent();
     auto DebugLoc = IRB.getCurrentDebugLocation();
     IRBuilder<>::InsertPointGuard Guard(IRB);
@@ -265,13 +267,14 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     bool MayReturn = Opts.Rt && Opts.Rt->MayReturn;
     if (MayReturn) {
       IRB.CreateBr(Cont);
-      if (Opts.Rt && Opts.Rt->HandlerPreserveAllRegs && Opts.Rt->MinRuntime)
-        TrapCall->setCallingConv(CallingConv::PreserveAll);
     } else {
       TrapCall->setDoesNotReturn();
       IRB.CreateUnreachable();
     }
-
+    // The preserve-all logic is somewhat duplicated in CGExpr.cpp for
+    // local-bounds. Make sure to change that too.
+    if (Opts.Rt && Opts.Rt->shouldHandlerPreserveAllRegs(Triple))
+      TrapCall->setCallingConv(CallingConv::PreserveAll);
     if (!MayReturn && SingleTrapBB && !DebugTrapBB)
       ReuseTrapBB = TrapBB;
 

@@ -11,6 +11,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 namespace llvm {
@@ -29,6 +30,10 @@ public:
       bool MinRuntime;
       bool MayReturn;
       bool HandlerPreserveAllRegs;
+      bool shouldHandlerPreserveAllRegs(const Triple &T) const {
+        return HandlerPreserveAllRegs && MinRuntime && MayReturn &&
+               (T.isAArch64() || T.isX86_64());
+      };
     };
     std::optional<Runtime> Rt; // Trap if empty.
     bool Merge = false;
