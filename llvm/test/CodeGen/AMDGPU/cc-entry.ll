@@ -51,8 +51,8 @@ define void @caller() {
 ; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s0, v40, 2
 ; CHECK-NEXT:    s_or_saveexec_b32 s1, -1
