@@ -203,17 +203,16 @@ static mlir::TypeConverter prepareTypeConverter() {
         return mlir::MemRefType::get({}, eleTy, layout);
       });
 
-  // Use fir.convert as the bridge so that we don't need to pull in patterns for
-  // other dialects.
-  auto materializeProcedure = [](mlir::OpBuilder &builder, mlir::Type type,
-                                 mlir::ValueRange inputs,
-                                 mlir::Location loc) -> mlir::Value {
-    auto convertOp = fir::ConvertOp::create(builder, loc, type, inputs);
-    return convertOp;
+  auto addUnrealizedCast = [](mlir::OpBuilder &builder, mlir::Type type,
+                              mlir::ValueRange inputs,
+                              mlir::Location loc) -> mlir::Value {
+    auto cast =
+        mlir::UnrealizedConversionCastOp::create(builder, loc, type, inputs);
+    return cast.getResult(0);
   };
 
-  converter.addSourceMaterialization(materializeProcedure);
-  converter.addTargetMaterialization(materializeProcedure);
+  converter.addSourceMaterialization(addUnrealizedCast);
+  converter.addTargetMaterialization(addUnrealizedCast);
   return converter;
 }
 

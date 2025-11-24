@@ -4206,20 +4206,27 @@ public:
 
 namespace {
 /// convert value between fir type and core mlir type.
-struct ConvertCoreMLIROpConversion
-    : public fir::FIROpConversion<fir::ConvertOp> {
+struct UnrealizedConversionCastOpConversion
+    : public fir::FIROpConversion<mlir::UnrealizedConversionCastOp> {
   using FIROpConversion::FIROpConversion;
 
   llvm::LogicalResult
-  matchAndRewrite(fir::ConvertOp convert, OpAdaptor adaptor,
+  matchAndRewrite(mlir::UnrealizedConversionCastOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto fromFirTy = convert.getValue().getType();
-    auto toFirTy = convert.getRes().getType();
+    if (op.getNumOperands() != 1 || op.getNumResults() != 1)
+      return mlir::failure();
+
+    auto fromFirTy = op.getOperand(0).getType();
+    auto toFirTy = op.getResultTypes()[0];
     auto fromTy = convertType(fromFirTy);
     auto toTy = convertType(toFirTy);
     mlir::Value op0 = adaptor.getOperands()[0];
 
-    auto loc = convert.getLoc();
+    auto loc = op.getLoc();
+    if (fromTy == toTy) {
+      rewriter.replaceOp(op, {op0});
+      return mlir::success();
+    }
 
     if (mlir::isa<mlir::LLVM::LLVMPointerType>(fromTy) &&
         mlir::isa<mlir::MemRefType>(toFirTy)) {
@@ -4227,7 +4234,7 @@ struct ConvertCoreMLIROpConversion
       auto dstMemRef = mlir::MemRefDescriptor::poison(rewriter, loc, toTy);
       dstMemRef.setAlignedPtr(rewriter, loc, op0);
       dstMemRef.setConstantOffset(rewriter, loc, 0);
-      rewriter.replaceOp(convert, {dstMemRef});
+      rewriter.replaceOp(op, {dstMemRef});
       return mlir::success();
     } else if (mlir::isa<mlir::MemRefType>(fromFirTy) &&
                mlir::isa<mlir::LLVM::LLVMPointerType>(toTy)) {
@@ -4236,7 +4243,7 @@ struct ConvertCoreMLIROpConversion
       mlir::Value srcPtr =
           srcMemRef.bufferPtr(rewriter, loc, *getTypeConverter(),
                               mlir::cast<mlir::MemRefType>(fromFirTy));
-      rewriter.replaceOp(convert, srcPtr);
+      rewriter.replaceOp(op, srcPtr);
       return mlir::success();
     }
 
@@ -4394,17 +4401,14 @@ public:
           });
     }
 
-    mlir::ConversionConfig config;
     if (options.LowerThroughCoreMLIR) {
-      pattern.insert<ConvertCoreMLIROpConversion>(typeConverter, options,
-                                                  /*benefit=*/2);
-      target.addLegalOp<mlir::UnrealizedConversionCastOp>();
-      config.buildMaterializations = false;
+      pattern.insert<UnrealizedConversionCastOpConversion>(typeConverter,
+                                                           options);
     }
 
     // apply the patterns
     if (mlir::failed(mlir::applyFullConversion(getModule(), target,
-                                               std::move(pattern), config))) {
+                                               std::move(pattern)))) {
       signalPassFailure();
     }
 

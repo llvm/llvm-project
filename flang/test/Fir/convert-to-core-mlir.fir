@@ -1,4 +1,4 @@
-// RUN: fir-opt --split-input-file --fir-to-mlir %s | FileCheck %s
+// RUN: fir-opt --split-input-file --fir-to-core-mlir %s | FileCheck %s
 
 //===================================================
 // SUMMARY: Tests for FIR --> MLIR core dialects conversion
@@ -13,8 +13,8 @@ func.func @test_load_f32(%addr : !fir.ref<f32>) -> f32 {
 
 // CHECK-LABEL:   func.func @test_load_f32(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<f32>) -> f32 {
-// CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[ARG0]] : (!fir.ref<f32>) -> memref<f32, strided<[], offset: ?>>
-// CHECK:           %[[LOAD_0:.*]] = memref.load %[[CONVERT_0]][] : memref<f32, strided<[], offset: ?>>
+// CHECK:           %[[UNREALIZED_CONVERSION_CAST_0:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : !fir.ref<f32> to memref<f32, strided<[], offset: ?>>
+// CHECK:           %[[LOAD_0:.*]] = memref.load %[[UNREALIZED_CONVERSION_CAST_0]][] : memref<f32, strided<[], offset: ?>>
 // CHECK:           return %[[LOAD_0]] : f32
 // CHECK:         }
 
@@ -30,8 +30,8 @@ func.func @test_store_f32(%val : f32, %addr : !fir.ref<f32>) {
 // CHECK-LABEL:   func.func @test_store_f32(
 // CHECK-SAME:      %[[ARG0:.*]]: f32,
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<f32>) {
-// CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[ARG1]] : (!fir.ref<f32>) -> memref<f32, strided<[], offset: ?>>
-// CHECK:           memref.store %[[ARG0]], %[[CONVERT_0]][] : memref<f32, strided<[], offset: ?>>
+// CHECK:           %[[UNREALIZED_CONVERSION_CAST_0:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : !fir.ref<f32> to memref<f32, strided<[], offset: ?>>
+// CHECK:           memref.store %[[ARG0]], %[[UNREALIZED_CONVERSION_CAST_0]][] : memref<f32, strided<[], offset: ?>>
 // CHECK:           return
 // CHECK:         }
 
@@ -98,8 +98,8 @@ func.func @test_alloca_f32() -> !fir.ref<f32> {
 // CHECK-LABEL:   func.func @test_alloca_f32() -> !fir.ref<f32> {
 // CHECK:           %[[ALLOCA_0:.*]] = memref.alloca() {in_type = f32} : memref<f32>
 // CHECK:           %[[CAST_0:.*]] = memref.cast %[[ALLOCA_0]] : memref<f32> to memref<f32, strided<[], offset: ?>>
-// CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[CAST_0]] : (memref<f32, strided<[], offset: ?>>) -> !fir.ref<f32>
-// CHECK:           return %[[CONVERT_0]] : !fir.ref<f32>
+// CHECK:           %[[UNREALIZED_CONVERSION_CAST_0:.*]] = builtin.unrealized_conversion_cast %[[CAST_0]] : memref<f32, strided<[], offset: ?>> to !fir.ref<f32>
+// CHECK:           return %[[UNREALIZED_CONVERSION_CAST_0]] : !fir.ref<f32>
 // CHECK:         }
 
 // -----
@@ -117,10 +117,10 @@ func.func @test_ext_array_coor(%arg0: !fir.ref<!fir.array<100x200xf32>>, %i : i6
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100x200xf32>>,
 // CHECK-SAME:      %[[ARG1:.*]]: i64,
 // CHECK-SAME:      %[[ARG2:.*]]: i64) -> !fir.ref<f32> {
-// CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<100x200xf32>>) -> memref<f32, strided<[], offset: ?>>
+// CHECK:           %[[UNREALIZED_CONVERSION_CAST_0:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : !fir.ref<!fir.array<100x200xf32>> to memref<f32, strided<[], offset: ?>>
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 200 : index
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
-// CHECK:           %[[VAL_0:.*]], %[[EXTRACT_STRIDED_METADATA_0:.*]] = memref.extract_strided_metadata %[[CONVERT_0]] : memref<f32, strided<[], offset: ?>> -> memref<f32>, index
+// CHECK:           %[[VAL_0:.*]], %[[EXTRACT_STRIDED_METADATA_0:.*]] = memref.extract_strided_metadata %[[UNREALIZED_CONVERSION_CAST_0]] : memref<f32, strided<[], offset: ?>> -> memref<f32>, index
 // CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[MULI_0:.*]] = arith.muli %[[CONSTANT_2]], %[[CONSTANT_1]] : index
 // CHECK:           %[[REINTERPRET_CAST_0:.*]] = memref.reinterpret_cast %[[VAL_0]] to offset: {{\[}}%[[EXTRACT_STRIDED_METADATA_0]]], sizes: {{\[}}%[[CONSTANT_0]], %[[CONSTANT_1]]], strides: {{\[}}%[[MULI_0]], 1] : memref<f32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
@@ -130,6 +130,6 @@ func.func @test_ext_array_coor(%arg0: !fir.ref<!fir.array<100x200xf32>>, %i : i6
 // CHECK:           %[[INDEX_CAST_1:.*]] = arith.index_cast %[[ARG1]] : i64 to index
 // CHECK:           %[[SUBI_1:.*]] = arith.subi %[[INDEX_CAST_1]], %[[CONSTANT_3]] : index
 // CHECK:           %[[SUBVIEW_0:.*]] = memref.subview %[[REINTERPRET_CAST_0]]{{\[}}%[[SUBI_0]], %[[SUBI_1]]] [1, 1] [1, 1] : memref<?x?xf32, strided<[?, 1], offset: ?>> to memref<f32, strided<[], offset: ?>>
-// CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[SUBVIEW_0]] : (memref<f32, strided<[], offset: ?>>) -> !fir.ref<f32>
-// CHECK:           return %[[CONVERT_1]] : !fir.ref<f32>
+// CHECK:           %[[UNREALIZED_CONVERSION_CAST_1:.*]] = builtin.unrealized_conversion_cast %[[SUBVIEW_0]] : memref<f32, strided<[], offset: ?>> to !fir.ref<f32>
+// CHECK:           return %[[UNREALIZED_CONVERSION_CAST_1]] : !fir.ref<f32>
 // CHECK:         }

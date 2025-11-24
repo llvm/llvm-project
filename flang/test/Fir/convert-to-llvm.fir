@@ -879,46 +879,6 @@ func.func @convert_record(%arg0 : !fir.type<_QMmod1Trec{i:i32,f:f64,c:!llvm.stru
 // CHECK-DAG:     %[[CSTR:.*]] = llvm.extractvalue %[[ARG0]][3] : [[MOD1_REC]]
 // CHECK-DAG:     %{{.*}} = llvm.insertvalue %[[CSTR]], %{{.*}}[3] : [[MOD2_REC]]
 // CHECK:         llvm.return %{{.*}} : [[MOD2_REC]]
-
-// -----
-
-// Test `fir.convert` operation conversion between `memref` and `fir.ref`.
-
-func.func @convert_to_memref(%arg0 : !fir.ref<i32>) -> memref<i32, strided<[], offset: ?>>{
-  %0 = fir.convert %arg0 : (!fir.ref<i32>) -> memref<i32, strided<[], offset: ?>>
-  return %0 : memref<i32, strided<[], offset: ?>>
-}
-
-// CHECK-LABEL:   llvm.func @convert_to_memref(
-// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr) -> !llvm.struct<(ptr, ptr, i64)> {
-// CHECK:           %[[MLIR_0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[INSERTVALUE_0:.*]] = llvm.insertvalue %[[ARG0]], %[[MLIR_0]][1] : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[MLIR_1:.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK:           %[[INSERTVALUE_1:.*]] = llvm.insertvalue %[[MLIR_1]], %[[INSERTVALUE_0]][2] : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           llvm.return %[[INSERTVALUE_1]] : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:         }
-
-// -----
-
-// Test `fir.convert` operation conversion between `memref` and `fir.ref`.
-
-func.func @convert_from_memref(%arg0 : memref<i32, strided<[], offset: ?>>) -> !fir.ref<i32> {
-  %0 = fir.convert %arg0 : (memref<i32, strided<[], offset: ?>>) -> !fir.ref<i32>
-  return %0 : !fir.ref<i32>
-}
-
-// CHECK-LABEL:   llvm.func @convert_from_memref(
-// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: i64) -> !llvm.ptr {
-// CHECK:           %[[MLIR_0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[INSERTVALUE_0:.*]] = llvm.insertvalue %[[ARG0]], %[[MLIR_0]][0] : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[INSERTVALUE_1:.*]] = llvm.insertvalue %[[ARG1]], %[[INSERTVALUE_0]][1] : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[INSERTVALUE_2:.*]] = llvm.insertvalue %[[ARG2]], %[[INSERTVALUE_1]][2] : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[EXTRACTVALUE_0:.*]] = llvm.extractvalue %[[INSERTVALUE_2]][1] : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[EXTRACTVALUE_1:.*]] = llvm.extractvalue %[[INSERTVALUE_2]][2] : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[GETELEMENTPTR_0:.*]] = llvm.getelementptr %[[EXTRACTVALUE_0]]{{\[}}%[[EXTRACTVALUE_1]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
-// CHECK:           llvm.return %[[GETELEMENTPTR_0]] : !llvm.ptr
-// CHECK:         }
-
 // -----
 
 // Test `fir.store` --> `llvm.store` conversion
