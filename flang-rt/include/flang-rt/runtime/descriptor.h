@@ -511,7 +511,7 @@ public:
   RT_API_ATTRS void Check() const;
 
   // When dumpRawType, dumps stringified CFI_type_*, otherwise
-  // try to canonicalize and pront as a Fortran type.
+  // try to canonicalize and print as a Fortran type.
   void Dump(FILE * = stdout, bool dumpRawType = true) const;
 
   RT_API_ATTRS inline bool HasAddendum() const {

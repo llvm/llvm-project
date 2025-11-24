@@ -7820,7 +7820,7 @@ mlir::Value IntrinsicLibrary::genShiftA(mlir::Type resultType,
 
 void IntrinsicLibrary::genShowDescriptor(
     llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 1);
+  assert(args.size() == 1 && "expected single argument for show_descriptor");
   const mlir::Value descriptor = fir::getBase(args[0]);
 
   assert(fir::isa_box_type(descriptor.getType()) &&

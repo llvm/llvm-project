@@ -25,6 +25,11 @@ typedef std::uint32_t gid_t;
 #else
 #include "sys/types.h" //pid_t
 #endif
+namespace Fortran {
+namespace runtime {
+class Descriptor;
+}
+} // namespace Fortran
 
 extern "C" {
 
@@ -102,7 +107,7 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime);
 float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line);
 
 // Extension subroutine SHOW_DESCRIPTOR(D)
-void RTNAME(ShowDescriptor)(const char *descr);
+void RTNAME(ShowDescriptor)(const Fortran::runtime::Descriptor* descr);
 
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_
