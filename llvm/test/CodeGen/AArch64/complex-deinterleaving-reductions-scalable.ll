@@ -31,14 +31,14 @@ define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr z5, [x1]
 ; CHECK-NEXT:    add x1, x1, x10
 ; CHECK-NEXT:    add x0, x0, x10
-; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #0
-; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #0
-; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #90
-; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #90
+; CHECK-NEXT:    fcmla z1.d, p0/m, z5.d, z3.d, #0
+; CHECK-NEXT:    fcmla z0.d, p0/m, z4.d, z2.d, #0
+; CHECK-NEXT:    fcmla z1.d, p0/m, z5.d, z3.d, #90
+; CHECK-NEXT:    fcmla z0.d, p0/m, z4.d, z2.d, #90
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit.block
-; CHECK-NEXT:    uzp1 z2.d, z0.d, z1.d
-; CHECK-NEXT:    uzp2 z1.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z2.d, z1.d, z0.d
+; CHECK-NEXT:    uzp2 z1.d, z1.d, z0.d
 ; CHECK-NEXT:    faddv d0, p0, z2.d
 ; CHECK-NEXT:    faddv d1, p0, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -205,20 +205,20 @@ define %"class.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr z18, [x1, #3, mul vl]
 ; CHECK-NEXT:    ldr z19, [x1, #2, mul vl]
 ; CHECK-NEXT:    add x1, x1, x10
-; CHECK-NEXT:    fcmla z0.d, p0/m, z16.d, z5.d, #0
-; CHECK-NEXT:    fcmla z1.d, p0/m, z7.d, z4.d, #0
+; CHECK-NEXT:    fcmla z1.d, p0/m, z16.d, z5.d, #0
+; CHECK-NEXT:    fcmla z0.d, p0/m, z7.d, z4.d, #0
 ; CHECK-NEXT:    fcmla z3.d, p0/m, z18.d, z6.d, #0
 ; CHECK-NEXT:    fcmla z2.d, p0/m, z19.d, z17.d, #0
-; CHECK-NEXT:    fcmla z0.d, p0/m, z16.d, z5.d, #90
-; CHECK-NEXT:    fcmla z1.d, p0/m, z7.d, z4.d, #90
+; CHECK-NEXT:    fcmla z1.d, p0/m, z16.d, z5.d, #90
+; CHECK-NEXT:    fcmla z0.d, p0/m, z7.d, z4.d, #90
 ; CHECK-NEXT:    fcmla z3.d, p0/m, z18.d, z6.d, #90
 ; CHECK-NEXT:    fcmla z2.d, p0/m, z19.d, z17.d, #90
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %exit.block
 ; CHECK-NEXT:    uzp1 z4.d, z2.d, z3.d
-; CHECK-NEXT:    uzp1 z5.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z5.d, z1.d, z0.d
 ; CHECK-NEXT:    uzp2 z2.d, z2.d, z3.d
-; CHECK-NEXT:    uzp2 z0.d, z0.d, z1.d
+; CHECK-NEXT:    uzp2 z0.d, z1.d, z0.d
 ; CHECK-NEXT:    fadd z1.d, z4.d, z5.d
 ; CHECK-NEXT:    fadd z2.d, z2.d, z0.d
 ; CHECK-NEXT:    faddv d0, p0, z1.d
