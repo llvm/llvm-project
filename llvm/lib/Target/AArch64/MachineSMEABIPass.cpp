@@ -252,6 +252,11 @@ getInstNeededZAState(const TargetRegisterInfo &TRI, MachineInstr &MI,
                      SMEAttrs SMEFnAttrs) {
   MachineBasicBlock::iterator InsertPt(MI);
 
+  // Note: InOutZAUsePseudo, RequiresZASavePseudo, and RequiresZT0SavePseudo are
+  // intended to mark the position immediately before a call. Due to
+  // SelectionDAG constraints, these markers occur after the ADJCALLSTACKDOWN,
+  // so we use std::prev(InsertPt) to get the position before the call.
+
   if (MI.getOpcode() == AArch64::InOutZAUsePseudo)
     return {ZAState::ACTIVE, std::prev(InsertPt)};
 
