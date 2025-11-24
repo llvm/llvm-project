@@ -5633,6 +5633,7 @@ private:
     bool Finished;
   };
   ObjCImplParsingDataRAII *CurParsedObjCImpl;
+  ConversionAction ParserConversionAction;
 
   /// StashAwayMethodOrFunctionBodyTokens -  Consume the tokens and store them
   /// for later parsing.
