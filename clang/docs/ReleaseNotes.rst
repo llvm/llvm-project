@@ -186,6 +186,8 @@ C++ Language Changes
   ``<=>``. This makes it possible to optimize certain facilities by using the ``<=>`` operation directly instead of
   doing multiple comparisons.
 
+- ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
