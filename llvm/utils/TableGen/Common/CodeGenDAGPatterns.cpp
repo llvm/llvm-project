@@ -1921,8 +1921,8 @@ SDNodeInfo::SDNodeInfo(const Record *R, const CodeGenHwModes &CGH) : Def(R) {
 
 /// getKnownType - If the type constraints on this node imply a fixed type
 /// (e.g. all stores return void, etc), then return it as an
-/// MVT::SimpleValueType.  Otherwise, return EEVT::Other.
-MVT::SimpleValueType SDNodeInfo::getKnownType(unsigned ResNo) const {
+/// MVT.  Otherwise, return EEVT::Other.
+MVT SDNodeInfo::getKnownType(unsigned ResNo) const {
   unsigned NumResults = getNumResults();
   assert(NumResults <= 1 &&
          "We only work with nodes with zero or one result so far!");
@@ -2586,14 +2586,14 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
 
       ValueTypeByHwMode VVT = TP.getInfer().getConcrete(Types[0], false);
       for (auto &P : VVT) {
-        MVT::SimpleValueType VT = P.second.SimpleTy;
+        MVT VT = P.second;
         // Can only check for types of a known size
         if (VT == MVT::iPTR)
           continue;
 
         // Check that the value doesn't use more bits than we have. It must
         // either be a sign- or zero-extended equivalent of the original.
-        unsigned Width = MVT(VT).getFixedSizeInBits();
+        unsigned Width = VT.getFixedSizeInBits();
         int64_t Val = II->getValue();
         if (!isIntN(Width, Val) && !isUIntN(Width, Val)) {
           TP.error("Integer value '" + Twine(Val) +
@@ -2630,8 +2630,7 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
     for (unsigned i = 0, e = getNumChildren() - 1; i != e; ++i) {
       MadeChange |= getChild(i + 1).ApplyTypeConstraints(TP, NotRegisters);
 
-      MVT::SimpleValueType OpVT =
-          getValueType(Int->IS.ParamTys[i]->getValueAsDef("VT"));
+      MVT OpVT = getValueType(Int->IS.ParamTys[i]->getValueAsDef("VT"));
       assert(getChild(i + 1).getNumTypes() == 1 && "Unhandled case");
       MadeChange |= getChild(i + 1).UpdateNodeType(0, OpVT, TP);
     }
@@ -2677,8 +2676,7 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
 
       // FIXME: Generalize to multiple possible types and multiple possible
       // ImplicitDefs.
-      MVT::SimpleValueType VT =
-          InstInfo.HasOneImplicitDefWithKnownVT(CDP.getTargetInfo());
+      MVT VT = InstInfo.HasOneImplicitDefWithKnownVT(CDP.getTargetInfo());
 
       if (VT != MVT::Other)
         MadeChange |= UpdateNodeType(ResNo, VT, TP);

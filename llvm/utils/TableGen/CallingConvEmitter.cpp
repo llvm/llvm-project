@@ -271,9 +271,9 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
     O << Indent << "return false;\n";
   } else if (Action->isSubClassOf("CCPromoteToType")) {
     const Record *DestTy = Action->getValueAsDef("DestTy");
-    MVT::SimpleValueType DestVT = getValueType(DestTy);
+    MVT DestVT = getValueType(DestTy);
     O << Indent << "LocVT = " << getEnumName(DestVT) << ";\n";
-    if (MVT(DestVT).isFloatingPoint()) {
+    if (DestVT.isFloatingPoint()) {
       O << Indent << "LocInfo = CCValAssign::FPExt;\n";
     } else {
       O << Indent << "if (ArgFlags.isSExt())\n"
@@ -285,9 +285,9 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
     }
   } else if (Action->isSubClassOf("CCPromoteToUpperBitsInType")) {
     const Record *DestTy = Action->getValueAsDef("DestTy");
-    MVT::SimpleValueType DestVT = getValueType(DestTy);
+    MVT DestVT = getValueType(DestTy);
     O << Indent << "LocVT = " << getEnumName(DestVT) << ";\n";
-    if (MVT(DestVT).isFloatingPoint()) {
+    if (DestVT.isFloatingPoint()) {
       PrintFatalError(Action->getLoc(),
                       "CCPromoteToUpperBitsInType does not handle floating "
                       "point");
