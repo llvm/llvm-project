@@ -248,6 +248,59 @@
 /** @} */
 
 /**
+ * @defgroup DSMIL_MISSION Mission Profile Attributes (v1.3)
+ * @{
+ */
+
+/**
+ * @brief Assign function or binary to a mission profile
+ * @param profile_id Mission profile identifier string
+ *
+ * Mission profiles define operational context and enforce compile-time
+ * constraints for deployment environment. Profiles are defined in
+ * mission-profiles.json configuration file.
+ *
+ * Standard profiles:
+ * - "border_ops": Border operations (max security, minimal telemetry)
+ * - "cyber_defence": Cyber defence (AI-enhanced, full telemetry)
+ * - "exercise_only": Training exercises (relaxed, verbose logging)
+ * - "lab_research": Laboratory research (experimental features)
+ *
+ * Mission profiles control:
+ * - Pipeline selection (hardened/enhanced/standard/permissive)
+ * - AI mode (local/hybrid/cloud)
+ * - Sandbox defaults
+ * - Stage whitelist/blacklist
+ * - Telemetry requirements
+ * - Constant-time enforcement level
+ * - Provenance requirements
+ * - Device/layer access policies
+ *
+ * Example:
+ * @code
+ * DSMIL_MISSION_PROFILE("border_ops")
+ * DSMIL_LAYER(7)
+ * DSMIL_DEVICE(47)
+ * int main(int argc, char **argv) {
+ *     // Compiled with border_ops constraints:
+ *     // - Only "quantized" or "serve" stages allowed
+ *     // - Strict constant-time enforcement
+ *     // - Minimal telemetry
+ *     // - Local AI mode only
+ *     return run_llm_worker();
+ * }
+ * @endcode
+ *
+ * @note Mission profile must match -fdsmil-mission-profile=<id> CLI flag
+ * @note Violations are compile-time errors
+ * @note Applied at translation unit or function level
+ */
+#define DSMIL_MISSION_PROFILE(profile_id) \
+    __attribute__((dsmil_mission_profile(profile_id)))
+
+/** @} */
+
+/**
  * @defgroup DSMIL_MEMORY Memory and Performance Attributes
  * @{
  */

@@ -23,6 +23,24 @@ Recommends execution target (CPU/NPU/GPU) and memory tier based on DSMIL metadat
 
 ### Verification Passes
 
+#### `DsmilMissionPolicyPass.cpp` (NEW v1.3)
+Enforces mission profile constraints at compile time. Mission profiles define operational context (border_ops, cyber_defence, exercise_only, lab_research) and control compilation behavior, security policies, and runtime constraints.
+
+**Configuration**: Mission profiles defined in `/etc/dsmil/mission-profiles.json`
+**CLI Flag**: `-fdsmil-mission-profile=<profile_id>`
+**Policy Mode**: `-mllvm -dsmil-mission-policy-mode=<enforce|warn|disabled>`
+
+**Enforced Constraints**:
+- Stage whitelist/blacklist (pretrain, finetune, quantized, serve, debug, experimental)
+- Layer access policies with ROE requirements
+- Device whitelist enforcement
+- Quantum export restrictions
+- Constant-time enforcement level
+- Telemetry requirements
+- Provenance requirements
+
+**Output**: Module-level metadata with mission profile ID, classification, and pipeline
+
 #### `DsmilLayerCheckPass.cpp`
 Enforces DSMIL layer boundary policies. Walks call graph and rejects disallowed transitions without `dsmil_gateway` attribute. Emits detailed diagnostics on violations.
 
@@ -34,6 +52,43 @@ Validates MLOps stage usage. Ensures production binaries don't link debug/experi
 **Policy**: Configured via `DSMIL_POLICY` environment variable
 
 ### Export Passes
+
+#### `DsmilFuzzExportPass.cpp` (NEW v1.3)
+Automatically identifies untrusted input functions and exports fuzz harness specifications for fuzzing engines (libFuzzer, AFL++, etc.). Analyzes functions marked with `dsmil_untrusted_input` attribute and generates comprehensive parameter domain descriptions.
+
+**Features**:
+- Detects untrusted input functions via `dsmil_untrusted_input` attribute
+- Analyzes parameter types and domains (buffers, integers, structs)
+- Computes Layer 8 Security AI risk scores (0.0-1.0)
+- Prioritizes targets as high/medium/low based on risk
+- Links buffer parameters to their length parameters
+- Integrates with Layer 7 LLM for harness code generation
+
+**CLI Flags**:
+- `-fdsmil-fuzz-export` - Enable fuzz harness export (default: true)
+- `-dsmil-fuzz-export-path=<dir>` - Output directory (default: .)
+- `-dsmil-fuzz-risk-threshold=<float>` - Minimum risk score (default: 0.3)
+- `-dsmil-fuzz-l7-llm` - Enable L7 LLM harness generation (default: false)
+
+**Output**: `<module>.dsmilfuzz.json` - JSON fuzz target specifications
+
+**Example Output**:
+```json
+{
+  "schema": "dsmil-fuzz-v1",
+  "binary": "network_daemon",
+  "fuzz_targets": [{
+    "function": "parse_network_packet",
+    "untrusted_params": ["packet_data", "length"],
+    "parameter_domains": {
+      "packet_data": {"type": "bytes", "length_ref": "length"},
+      "length": {"type": "int64_t", "min": 0, "max": 65535}
+    },
+    "l8_risk_score": 0.87,
+    "priority": "high"
+  }]
+}
+```
 
 #### `DsmilQuantumExportPass.cpp`
 Extracts optimization problems from `dsmil_quantum_candidate` functions. Attempts QUBO/Ising formulation and exports to `.quantum.json` sidecar.
@@ -156,6 +211,10 @@ Each pass supports configuration via `-mllvm` flags:
 - [ ] `DsmilQuantumExportPass.cpp` - Planned
 - [ ] `DsmilSandboxWrapPass.cpp` - Planned
 - [ ] `DsmilProvenancePass.cpp` - Planned
+
+**Mission Profile Passes** (v1.3):
+- [x] `DsmilMissionPolicyPass.cpp` - Implemented ✓
+- [x] `DsmilFuzzExportPass.cpp` - Implemented ✓
 
 **AI Integration Passes** (v1.1):
 - [ ] `DsmilAIAdvisorAnnotatePass.cpp` - Planned (Phase 4)
