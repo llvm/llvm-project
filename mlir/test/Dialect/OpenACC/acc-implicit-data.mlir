@@ -110,7 +110,7 @@ func.func @test_array_parallel_defaultpresent() {
 }
 
 // CHECK-LABEL: func.func @test_array_parallel_defaultpresent
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : memref<10xf32>) -> memref<10xf32> {implicit = true, name = ""}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : memref<10xf32>) -> memref<10xf32> {acc.from_default, implicit = true, name = ""}
 // CHECK: acc.delete accPtr(%[[PRESENT]] : memref<10xf32>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = ""}
 
 // -----
