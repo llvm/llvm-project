@@ -406,8 +406,7 @@ void NVPTXInstPrinter::printUsedBytesMaskPragma(const MCInst *MI, int OpNum,
 }
 
 void NVPTXInstPrinter::printRegisterOrSinkSymbol(const MCInst *MI, int OpNum,
-                                                 raw_ostream &O,
-                                                 const char *Modifier) {
+                                                 raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
   if (Op.isReg() && Op.getReg() == MCRegister::NoRegister)
     O << "_";
