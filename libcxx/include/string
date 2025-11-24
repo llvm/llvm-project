@@ -848,7 +848,10 @@ private:
   // up to the nearest multiple of the alignment. That's the total size of the
   // structure.
   enum { __short_packed_size = sizeof(value_type) * __min_cap + 1 };
-  union __union_alignment_check { __long_min __long_; value_type v; };
+  union __union_alignment_check {
+    __long_min __long_;
+    value_type v;
+  };
   enum { __union_alignment = _LIBCPP_ALIGNOF(__union_alignment_check) };
   enum { __full_size = (__short_packed_size + __union_alignment - 1) & -__union_alignment };
 
