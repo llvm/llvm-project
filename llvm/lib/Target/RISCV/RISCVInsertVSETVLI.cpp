@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include <queue>
 using namespace llvm;
 
@@ -951,6 +952,7 @@ private:
   void doPRE(MachineBasicBlock &MBB);
   void insertReadVL(MachineBasicBlock &MBB);
 
+  bool isVLPreserving(const MachineInstr &PrevMI, const MachineInstr &MI) const;
   bool canMutatePriorConfig(const MachineInstr &PrevMI, const MachineInstr &MI,
                             const DemandedFields &Used) const;
   void coalesceVSETVLIs(MachineBasicBlock &MBB) const;
@@ -1736,6 +1738,14 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
                 AvailableInfo, OldExit);
 }
 
+bool RISCVInsertVSETVLI::isVLPreserving(const MachineInstr &PrevMI,
+                                        const MachineInstr &MI) const {
+  return MI.getOpcode() == RISCV::PseudoVSETIVLI &&
+         PrevMI.getOpcode() == RISCV::PseudoVSETIVLI &&
+         getInfoForVSETVLI(PrevMI).getAVLImm() ==
+             getInfoForVSETVLI(MI).getAVLImm();
+}
+
 // Return true if we can mutate PrevMI to match MI without changing any the
 // fields which would be observed.
 bool RISCVInsertVSETVLI::canMutatePriorConfig(
@@ -1744,48 +1754,37 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
   // If the VL values aren't equal, return false if either a) the former is
   // demanded, or b) we can't rewrite the former to be the later for
   // implementation reasons.
-  if (!RISCVInstrInfo::isVLPreservingConfig(MI)) {
-    bool Skip = false;
-    if (MI.getOpcode() == RISCV::PseudoVSETIVLI &&
-        PrevMI.getOpcode() == RISCV::PseudoVSETIVLI &&
-        PrevMI.getOperand(0).isDead()) {
-      VSETVLIInfo PrevInfo = getInfoForVSETVLI(PrevMI);
-      VSETVLIInfo Info = getInfoForVSETVLI(MI);
-      if (PrevInfo.hasAVLImm() && Info.hasAVLImm() &&
-          PrevInfo.getAVLImm() == Info.getAVLImm())
-        Skip = true;
-    }
-    if (!Skip) {
-      if (Used.VLAny)
+  if (!RISCVInstrInfo::isVLPreservingConfig(MI) &&
+      !isVLPreserving(PrevMI, MI)) {
+    if (Used.VLAny)
+      return false;
+
+    if (Used.VLZeroness) {
+      if (RISCVInstrInfo::isVLPreservingConfig(PrevMI))
         return false;
-
-      if (Used.VLZeroness) {
-        if (RISCVInstrInfo::isVLPreservingConfig(PrevMI))
-          return false;
-        if (!getInfoForVSETVLI(PrevMI).hasEquallyZeroAVL(getInfoForVSETVLI(MI),
-                                                         LIS))
-          return false;
-      }
-
-      auto &AVL = MI.getOperand(1);
-
-      // If the AVL is a register, we need to make sure its definition is the
-      // same at PrevMI as it was at MI.
-      if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
-        VNInfo *VNI = getVNInfoFromReg(AVL.getReg(), MI, LIS);
-        VNInfo *PrevVNI = getVNInfoFromReg(AVL.getReg(), PrevMI, LIS);
-        if (!VNI || !PrevVNI || VNI != PrevVNI)
-          return false;
-      }
-
-      // If we define VL and need to move the definition up, check we can extend
-      // the live interval upwards from MI to PrevMI.
-      Register VL = MI.getOperand(0).getReg();
-      if (VL.isVirtual() && LIS &&
-          LIS->getInterval(VL).overlaps(LIS->getInstructionIndex(PrevMI),
-                                        LIS->getInstructionIndex(MI)))
+      if (!getInfoForVSETVLI(PrevMI).hasEquallyZeroAVL(getInfoForVSETVLI(MI),
+                                                       LIS))
         return false;
     }
+
+    auto &AVL = MI.getOperand(1);
+
+    // If the AVL is a register, we need to make sure its definition is the
+    // same at PrevMI as it was at MI.
+    if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
+      VNInfo *VNI = getVNInfoFromReg(AVL.getReg(), MI, LIS);
+      VNInfo *PrevVNI = getVNInfoFromReg(AVL.getReg(), PrevMI, LIS);
+      if (!VNI || !PrevVNI || VNI != PrevVNI)
+        return false;
+    }
+
+    // If we define VL and need to move the definition up, check we can extend
+    // the live interval upwards from MI to PrevMI.
+    Register VL = MI.getOperand(0).getReg();
+    if (VL.isVirtual() && LIS &&
+        LIS->getInterval(VL).overlaps(LIS->getInstructionIndex(PrevMI),
+                                      LIS->getInstructionIndex(MI)))
+      return false;
   }
 
   assert(PrevMI.getOperand(2).isImm() && MI.getOperand(2).isImm());
@@ -1850,7 +1849,8 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
       }
 
       if (canMutatePriorConfig(MI, *NextMI, Used)) {
-        if (!RISCVInstrInfo::isVLPreservingConfig(*NextMI)) {
+        if (!RISCVInstrInfo::isVLPreservingConfig(*NextMI) &&
+            !isVLPreserving(MI, *NextMI)) {
           Register DefReg = NextMI->getOperand(0).getReg();
 
           MI.getOperand(0).setReg(DefReg);
