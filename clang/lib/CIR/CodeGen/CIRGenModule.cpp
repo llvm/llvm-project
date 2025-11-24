@@ -1556,10 +1556,14 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
 
   case Decl::ClassTemplateSpecialization:
-  case Decl::CXXRecord:
+  case Decl::CXXRecord: {
+    CXXRecordDecl *crd = cast<CXXRecordDecl>(decl);
     assert(!cir::MissingFeatures::generateDebugInfo());
-    assert(!cir::MissingFeatures::cxxRecordStaticMembers());
+    for (auto *childDecl : crd->decls())
+      if (isa<VarDecl, CXXRecordDecl, EnumDecl>(childDecl))
+        emitTopLevelDecl(childDecl);
     break;
+  }
 
   case Decl::FileScopeAsm:
     // File-scope asm is ignored during device-side CUDA compilation.
