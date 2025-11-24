@@ -3784,9 +3784,10 @@ void VersionTableSection::writeTo(uint8_t *buf) {
   buf += 2;
   for (const SymbolTableEntry &s : getPartition(ctx).dynSymTab->getSymbols()) {
     // For an unextracted lazy symbol (undefined weak), it must have been
-    // converted to Undefined and have VER_NDX_GLOBAL version here.
+    // converted to Undefined.
     assert(!s.sym->isLazy());
-    write16(ctx, buf, s.sym->versionId);
+    // Undefined symbols should use index 0 when unversioned.
+    write16(ctx, buf, s.sym->isUndefined() ? 0 : s.sym->versionId);
     buf += 2;
   }
 }
