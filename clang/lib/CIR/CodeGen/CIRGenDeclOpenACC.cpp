@@ -19,18 +19,52 @@ using namespace clang::CIRGen;
 
 namespace {
 struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
+  SourceRange declareRange;
   mlir::acc::DeclareEnterOp enterOp;
 
-  OpenACCDeclareCleanup(mlir::acc::DeclareEnterOp enterOp) : enterOp(enterOp) {}
+  OpenACCDeclareCleanup(SourceRange declareRange,
+                        mlir::acc::DeclareEnterOp enterOp)
+      : declareRange(declareRange), enterOp(enterOp) {}
+
+  template <typename OutTy, typename InTy>
+  void createOutOp(CIRGenFunction &cgf, InTy inOp) {
+    auto outOp =
+        OutTy::create(cgf.getBuilder(), inOp.getLoc(), inOp, inOp.getVarPtr(),
+                      inOp.getStructured(), inOp.getImplicit(),
+                      llvm::Twine(inOp.getNameAttr()), inOp.getBounds());
+    outOp.setDataClause(inOp.getDataClause());
+    outOp.setModifiers(inOp.getModifiers());
+  }
 
   void emit(CIRGenFunction &cgf) override {
-    mlir::acc::DeclareExitOp::create(cgf.getBuilder(), enterOp.getLoc(),
-                                     enterOp, {});
+    auto exitOp = mlir::acc::DeclareExitOp::create(
+        cgf.getBuilder(), enterOp.getLoc(), enterOp, {});
 
-    // TODO(OpenACC): Some clauses require that we add info about them to the
-    // DeclareExitOp.  However, we don't have any of those implemented yet, so
-    // we should add infrastructure here to do that once we have one
-    // implemented.
+    // Some data clauses need to be referenced in 'exit', AND need to have an
+    // operation after the exit.  Copy these from the enter operation.
+    for (mlir::Value val : enterOp.getDataClauseOperands()) {
+      if (auto copyin = val.getDefiningOp<mlir::acc::CopyinOp>()) {
+        switch (copyin.getDataClause()) {
+        default:
+          cgf.cgm.errorNYI(declareRange,
+                           "OpenACC local declare clause copyin cleanup");
+          break;
+        case mlir::acc::DataClause::acc_copy:
+          createOutOp<mlir::acc::CopyoutOp>(cgf, copyin);
+          break;
+        }
+      } else if (val.getDefiningOp<mlir::acc::DeclareLinkOp>()) {
+        // Link has no exit clauses, and shouldn't be copied.
+        continue;
+      } else if (val.getDefiningOp<mlir::acc::DevicePtrOp>()) {
+        // DevicePtr has no exit clauses, and shouldn't be copied.
+        continue;
+      } else {
+        cgf.cgm.errorNYI(declareRange, "OpenACC local declare clause cleanup");
+        continue;
+      }
+      exitOp.getDataClauseOperandsMutable().append(val);
+    }
   }
 };
 } // namespace
@@ -45,7 +79,7 @@ void CIRGenFunction::emitOpenACCDeclare(const OpenACCDeclareDecl &d) {
                      d.clauses());
 
   ehStack.pushCleanup<OpenACCDeclareCleanup>(CleanupKind::NormalCleanup,
-                                             enterOp);
+                                             d.getSourceRange(), enterOp);
 }
 
 void CIRGenFunction::emitOpenACCRoutine(const OpenACCRoutineDecl &d) {
