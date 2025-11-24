@@ -28,11 +28,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-extern cl::opt<std::string> OutputPrefix;
-extern cl::list<std::string> InputArgv;
-} // end namespace llvm
-
 static cl::opt<bool> DisableLoopExtraction(
     "disable-loop-extraction",
     cl::desc("Don't extract loops when searching for miscompilations"),
