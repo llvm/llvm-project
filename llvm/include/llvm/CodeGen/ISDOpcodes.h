@@ -655,8 +655,8 @@ enum NodeType {
 
   /// SCALAR_TO_VECTOR(VAL) - This represents the operation of loading a
   /// scalar value into element 0 of the resultant vector type.  The top
-  /// elements 1 to N-1 of the N-element vector are undefined.  The type
-  /// of the operand must match the vector element type, except when they
+  /// elements 1 to N-1 of the N-element vector are poison. The type of
+  /// the operand must match the vector element type, except when they
   /// are integer types.  In this case the operand is allowed to be wider
   /// than the vector element type, and is implicitly truncated to it.
   SCALAR_TO_VECTOR,

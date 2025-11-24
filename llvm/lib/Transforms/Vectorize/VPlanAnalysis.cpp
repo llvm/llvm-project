@@ -262,7 +262,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
     return CanonicalIVTy;
   }
 
-  if (auto *CanIV = dyn_cast<VPRegionValue>(V))
+  if (isa<VPRegionValue>(V))
     return CanonicalIVTy;
 
   Type *ResultTy =
