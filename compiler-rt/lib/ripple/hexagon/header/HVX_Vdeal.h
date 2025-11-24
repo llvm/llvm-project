@@ -78,7 +78,7 @@ _decl_hvx_vshuff(_Float16, f16);
 
 #ifndef __cplusplus
 
-#define __hvx_vdeal_anyint(X, Type, T, chunk_size, val)                        \
+#define __hvx_vdeal_anyint(Type, T, chunk_size, val)                           \
   ((Type)(sizeof(Type) == 1                                                    \
               ? hvx_vdeal_##T##8((val), (chunk_size))                          \
               : (sizeof(Type) == 2                                             \
@@ -158,9 +158,8 @@ _decl_hvx_vshuff(_Float16, f16);
       unsigned long: __hvx_vdeal_anyint(unsigned long, u, chunk_size, src),    \
       signed long long: __hvx_vdeal_anyint(signed long long, i, chunk_size,    \
                                            src),                               \
-      unsigned long long: __hvx_vdeal_anyint(                                  \
-               unsigned long long, u, chunk_size,                              \
-               src) float: hvx_vdeal_f32((src), (chunk_size)),                 \
+      unsigned long long: __hvx_vdeal_anyint(unsigned long long, u,            \
+                                             chunk_size, src),                 \
       float: hvx_vdeal_f32((src), (chunk_size)),                               \
       double: hvx_vdeal_f64((src), (chunk_size)),                              \
       __bf16: hvx_vdeal_bf16((src), (chunk_size)))
@@ -308,7 +307,7 @@ _decl_hvx_vshuff(_Float16, f16);
 [[gnu::always_inline]] static char hvx_vdeal(const char Val,
                                              size_t chunk_size) {
   return __ripple_char_is_signed ? hvx_vdeal_i8((Val), (chunk_size))
-    : hvx_vdeal_u8((Val), (chunk_size));
+                                 : hvx_vdeal_u8((Val), (chunk_size));
 }
 
 _decl_hvx_vdeal_spec_int(signed char, i);
@@ -329,17 +328,14 @@ _decl_hvx_vdeal_spec_int(unsigned long long, u);
 }
 #endif
 #if __has_bf16__
-[[gnu::always_inline]] static __bf16 hvx_vdeal(__bf16 Val,
-                                               size_t chunk_size) {
+[[gnu::always_inline]] static __bf16 hvx_vdeal(__bf16 Val, size_t chunk_size) {
   return hvx_vdeal_bf16((Val), (chunk_size));
 }
 #endif
-[[gnu::always_inline]] static float hvx_vdeal(float Val,
-                                              size_t chunk_size) {
+[[gnu::always_inline]] static float hvx_vdeal(float Val, size_t chunk_size) {
   return hvx_vdeal_f32((Val), (chunk_size));
 }
-[[gnu::always_inline]] static double hvx_vdeal(double Val,
-                                              size_t chunk_size) {
+[[gnu::always_inline]] static double hvx_vdeal(double Val, size_t chunk_size) {
   return hvx_vdeal_f64((Val), (chunk_size));
 }
 
@@ -357,7 +353,7 @@ _decl_hvx_vshuff_spec_int(unsigned long long, u);
 [[gnu::always_inline]] static char hvx_vshuff(const char Val,
                                               size_t chunk_size) {
   return __ripple_char_is_signed ? hvx_vshuff_i8((Val), (chunk_size))
-    : hvx_vshuff_u8((Val), (chunk_size));
+                                 : hvx_vshuff_u8((Val), (chunk_size));
 }
 
 #if __has_Float16__
@@ -367,17 +363,14 @@ _decl_hvx_vshuff_spec_int(unsigned long long, u);
 }
 #endif
 #if __has_bf16__
-[[gnu::always_inline]] static __bf16 hvx_vshuff(__bf16 Val,
-                                                size_t chunk_size) {
+[[gnu::always_inline]] static __bf16 hvx_vshuff(__bf16 Val, size_t chunk_size) {
   return hvx_vshuff_bf16((Val), (chunk_size));
 }
 #endif
-[[gnu::always_inline]] static float hvx_vshuff(float Val,
-                                               size_t chunk_size) {
+[[gnu::always_inline]] static float hvx_vshuff(float Val, size_t chunk_size) {
   return hvx_vshuff_f32((Val), (chunk_size));
 }
-[[gnu::always_inline]] static double hvx_vshuff(double Val,
-                                               size_t chunk_size) {
+[[gnu::always_inline]] static double hvx_vshuff(double Val, size_t chunk_size) {
   return hvx_vshuff_f64((Val), (chunk_size));
 }
 #endif
