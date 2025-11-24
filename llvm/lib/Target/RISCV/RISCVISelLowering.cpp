@@ -9587,19 +9587,19 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // When there is no cost for GPR <-> FGPR, we can use zicond select for
   // floating value when CondV is int type
   bool FPinGPR = Subtarget.hasStdExtZfinx();
-  bool UseZicondForFPSel = Subtarget.hasStdExtZicond() && FPinGPR &&
-                           VT.isFloatingPoint() &&
-                           CondV.getValueType().isInteger();
+  bool UseZicondForFPSel =
+      Subtarget.hasStdExtZicond() && FPinGPR && VT.isFloatingPoint();
+
   if (UseZicondForFPSel) {
     MVT XLenIntVT = Subtarget.getXLenVT();
 
     auto CastToInt = [&](SDValue V) -> SDValue {
-      if (VT == MVT::f16) {
+      if (VT == MVT::f16)
         return DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenIntVT, V);
-      }
-      if (VT == MVT::f32 && Subtarget.is64Bit()) {
+
+      if (VT == MVT::f32 && Subtarget.is64Bit())
         return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenIntVT, V);
-      }
+
       return DAG.getBitcast(XLenIntVT, V);
     };
 
@@ -9611,12 +9611,12 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         DAG.getNode(ISD::SELECT, DL, XLenIntVT, CondV, TrueVInt, FalseVInt);
 
     // Convert back to floating VT
-    if (VT == MVT::f32 && Subtarget.is64Bit()) {
+    if (VT == MVT::f32 && Subtarget.is64Bit())
       return DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, VT, ResultInt);
-    }
-    if (VT == MVT::f16) {
+
+    if (VT == MVT::f16)
       return DAG.getNode(RISCVISD::FMV_H_X, DL, VT, ResultInt);
-    }
+
     return DAG.getBitcast(VT, ResultInt);
   }
 
