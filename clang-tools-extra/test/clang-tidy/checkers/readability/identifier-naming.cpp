@@ -10,6 +10,8 @@
 // RUN:     readability-identifier-naming.ClassConstantCase: CamelCase, \
 // RUN:     readability-identifier-naming.ClassConstantPrefix: 'k', \
 // RUN:     readability-identifier-naming.ClassMemberCase: CamelCase, \
+// RUN:     readability-identifier-naming.ClassConstexprCase: CamelCase, \
+// RUN:     readability-identifier-naming.GlobalConstexprVariableCase: UPPER_CASE, \
 // RUN:     readability-identifier-naming.ClassMethodCase: camelBack, \
 // RUN:     readability-identifier-naming.ConceptCase: CamelCase, \
 // RUN:     readability-identifier-naming.ConstantCase: UPPER_CASE, \
@@ -27,6 +29,7 @@
 // RUN:     readability-identifier-naming.GlobalVariableCase: lower_case, \
 // RUN:     readability-identifier-naming.GlobalVariablePrefix: 'g_', \
 // RUN:     readability-identifier-naming.InlineNamespaceCase: lower_case, \
+// RUN:     readability-identifier-naming.LocalConstexprVariableCase: CamelCase, \
 // RUN:     readability-identifier-naming.LocalConstantCase: CamelCase, \
 // RUN:     readability-identifier-naming.LocalConstantPrefix: 'k', \
 // RUN:     readability-identifier-naming.LocalVariableCase: lower_case, \
@@ -47,6 +50,7 @@
 // RUN:     readability-identifier-naming.ParameterPackCase: camelBack, \
 // RUN:     readability-identifier-naming.PureFunctionCase: lower_case, \
 // RUN:     readability-identifier-naming.PureMethodCase: camelBack, \
+// RUN:     readability-identifier-naming.StaticConstexprVariableCase: UPPER_CASE, \
 // RUN:     readability-identifier-naming.StaticConstantCase: UPPER_CASE, \
 // RUN:     readability-identifier-naming.StaticVariableCase: camelBack, \
 // RUN:     readability-identifier-naming.StaticVariablePrefix: 's_', \
@@ -82,7 +86,9 @@
 // RUN:     readability-identifier-naming.LocalPointerPrefix: 'l_', \
 // RUN:     readability-identifier-naming.LocalConstantPointerCase: CamelCase, \
 // RUN:     readability-identifier-naming.LocalConstantPointerPrefix: 'lc_', \
-// RUN:   }}' -- -fno-delayed-template-parsing -Dbad_macro \
+// RUN:   }}' \
+// RUN:   -header-filter='' \
+// RUN:   -- -fno-delayed-template-parsing -Dbad_macro \
 // RUN:   -I%S/Inputs/identifier-naming \
 // RUN:   -isystem %S/Inputs/identifier-naming/system
 
@@ -91,8 +97,7 @@
 #include <system-header.h>
 #include <coroutines.h>
 #include "user-header.h"
-// NO warnings or fixes expected from declarations within header files without
-// the -header-filter= option
+// NO warnings or fixes expected from declarations with the -header-filter='' option
 
 namespace FOO_NS {
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for namespace 'FOO_NS' [readability-identifier-naming]
@@ -186,8 +191,8 @@ enum class EMyEnumeration {
 };
 
 constexpr int ConstExpr_variable = MyConstant;
-// CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for constexpr variable 'ConstExpr_variable'
-// CHECK-FIXES: constexpr int const_expr_variable = MY_CONSTANT;
+// CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for global constexpr variable 'ConstExpr_variable'
+// CHECK-FIXES: constexpr int CONST_EXPR_VARIABLE = MY_CONSTANT;
 
 class my_class {
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for class 'my_class'
@@ -208,7 +213,7 @@ public:
 private:
   const int MEMBER_one_1 = ConstExpr_variable;
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for constant member 'MEMBER_one_1'
-// CHECK-FIXES: const int member_one_1 = const_expr_variable;
+// CHECK-FIXES: const int member_one_1 = CONST_EXPR_VARIABLE;
   int member2 = 2;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for private member 'member2'
 // CHECK-FIXES: int __member2 = 2;
@@ -276,6 +281,9 @@ class CMyWellNamedClass2 : public my_class {
   int my_Other_Bad_Member = 42;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for private member 'my_Other_Bad_Member'
   // CHECK-FIXES: int __my_Other_Bad_Member = 42;
+  static constexpr int my_Other_Other_Bad_Member = 69;
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: invalid case style for class constexpr 'my_Other_Other_Bad_Member'
+  // CHECK-FIXES: static constexpr int MyOtherOtherBadMember = 69;
 public:
   CMyWellNamedClass2() = default;
   CMyWellNamedClass2(CMyWellNamedClass2 const&) = default;
@@ -447,12 +455,18 @@ void global_function(int PARAMETER_1, int const CONST_parameter) {
     static const int THIS_static_ConsTant = 4;
 // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: invalid case style for static constant 'THIS_static_ConsTant'
 // CHECK-FIXES: static const int THIS_STATIC_CONS_TANT = 4;
+    static constexpr int THIS_static_ConstExpr = 4;
+// CHECK-MESSAGES: :[[@LINE-1]]:26: warning: invalid case style for static constexpr variable 'THIS_static_ConstExpr'
+// CHECK-FIXES: static constexpr int THIS_STATIC_CONST_EXPR = 4;
     static int THIS_static_variable;
 // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for static variable 'THIS_static_variable'
 // CHECK-FIXES: static int s_thisStaticVariable;
     int const local_Constant = 3;
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for local constant 'local_Constant'
 // CHECK-FIXES: int const kLocalConstant = 3;
+    int constexpr local_Constexpr = 3;
+// CHECK-MESSAGES: :[[@LINE-1]]:19: warning: invalid case style for local constexpr variable 'local_Constexpr'
+// CHECK-FIXES: int constexpr LocalConstexpr = 3;
     int LOCAL_VARIABLE;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for local variable 'LOCAL_VARIABLE'
 // CHECK-FIXES: int local_variable;

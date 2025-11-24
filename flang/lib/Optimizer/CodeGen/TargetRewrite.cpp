@@ -143,7 +143,8 @@ public:
         llvm::SmallVector<mlir::Type> operandsTypes;
         for (auto arg : gpuLaunchFunc.getKernelOperands())
           operandsTypes.push_back(arg.getType());
-        auto fctTy = mlir::FunctionType::get(&context, operandsTypes, {});
+        auto fctTy = mlir::FunctionType::get(&context, operandsTypes,
+                                             gpuLaunchFunc.getResultTypes());
         if (!hasPortableSignature(fctTy, op))
           convertCallOp(gpuLaunchFunc, fctTy);
       } else if (auto addr = mlir::dyn_cast<fir::AddrOfOp>(op)) {
@@ -520,10 +521,14 @@ public:
     llvm::SmallVector<mlir::Value, 1> newCallResults;
     // TODO propagate/update call argument and result attributes.
     if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>) {
+      mlir::Value asyncToken = callOp.getAsyncToken();
       auto newCall = A::create(*rewriter, loc, callOp.getKernel(),
                                callOp.getGridSizeOperandValues(),
                                callOp.getBlockSizeOperandValues(),
-                               callOp.getDynamicSharedMemorySize(), newOpers);
+                               callOp.getDynamicSharedMemorySize(), newOpers,
+                               asyncToken ? asyncToken.getType() : nullptr,
+                               callOp.getAsyncDependencies(),
+                               /*clusterSize=*/std::nullopt);
       if (callOp.getClusterSizeX())
         newCall.getClusterSizeXMutable().assign(callOp.getClusterSizeX());
       if (callOp.getClusterSizeY())

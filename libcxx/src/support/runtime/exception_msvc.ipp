@@ -12,6 +12,8 @@
 #endif
 
 #include <__verbose_abort>
+#include <exception>
+#include <new>
 
 extern "C" {
 typedef void(__cdecl* terminate_handler)();

@@ -162,8 +162,7 @@ public:
                                           Register ScratchReg,
                                           AArch64PACKey::ID Key,
                                           AArch64PAuth::AuthCheckMethod Method,
-                                          bool ShouldTrap,
-                                          const MCSymbol *OnFailure);
+                                          const MCSymbol *OnFailure = nullptr);
 
   // Check authenticated LR before tail calling.
   void emitPtrauthTailCallHardening(const MachineInstr *TC);
@@ -1266,9 +1265,7 @@ void AArch64AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
   // Frame address.  Currently handles register +- offset only.
   assert(MI->isIndirectDebugValue());
   OS << '[';
-  for (unsigned I = 0, E = std::distance(MI->debug_operands().begin(),
-                                         MI->debug_operands().end());
-       I < E; ++I) {
+  for (unsigned I = 0, E = llvm::size(MI->debug_operands()); I < E; ++I) {
     if (I != 0)
       OS << ", ";
     printOperand(MI, I, OS);
@@ -1939,14 +1936,19 @@ Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
   return ScratchReg;
 }
 
-/// Emits a code sequence to check an authenticated pointer value.
+/// Emit a code sequence to check an authenticated pointer value.
 ///
-/// If OnFailure argument is passed, jump there on check failure instead
-/// of proceeding to the next instruction (only if ShouldTrap is false).
+/// This function emits a sequence of instructions that checks if TestedReg was
+/// authenticated successfully. On success, execution continues at the next
+/// instruction after the sequence.
+///
+/// The action performed on failure depends on the OnFailure argument:
+/// * if OnFailure is not nullptr, control is transferred to that label after
+///   clearing the PAC field
+/// * otherwise, BRK instruction is emitted to generate an error
 void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
     Register TestedReg, Register ScratchReg, AArch64PACKey::ID Key,
-    AArch64PAuth::AuthCheckMethod Method, bool ShouldTrap,
-    const MCSymbol *OnFailure) {
+    AArch64PAuth::AuthCheckMethod Method, const MCSymbol *OnFailure) {
   // Insert a sequence to check if authentication of TestedReg succeeded,
   // such as:
   //
@@ -1983,7 +1985,7 @@ void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
                        .addReg(getWRegFromXReg(ScratchReg))
                        .addReg(TestedReg)
                        .addImm(0));
-    assert(ShouldTrap && !OnFailure && "DummyLoad always traps on error");
+    assert(!OnFailure && "DummyLoad always traps on error");
     return;
   }
 
@@ -2037,15 +2039,14 @@ void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
     llvm_unreachable("Unsupported check method");
   }
 
-  if (ShouldTrap) {
-    assert(!OnFailure && "Cannot specify OnFailure with ShouldTrap");
+  if (!OnFailure) {
     // Trapping sequences do a 'brk'.
     //  brk #<0xc470 + aut key>
     EmitToStreamer(MCInstBuilder(AArch64::BRK).addImm(0xc470 | Key));
   } else {
     // Non-trapping checked sequences return the stripped result in TestedReg,
-    // skipping over success-only code (such as re-signing the pointer) if
-    // there is one.
+    // skipping over success-only code (such as re-signing the pointer) by
+    // jumping to OnFailure label.
     // Note that this can introduce an authentication oracle (such as based on
     // the high bits of the re-signed value).
 
@@ -2070,12 +2071,9 @@ void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
           MCInstBuilder(XPACOpc).addReg(TestedReg).addReg(TestedReg));
     }
 
-    if (OnFailure) {
-      //  b Lend
-      EmitToStreamer(
-          MCInstBuilder(AArch64::B)
-              .addExpr(MCSymbolRefExpr::create(OnFailure, OutContext)));
-    }
+    //  b Lend
+    const auto *OnFailureExpr = MCSymbolRefExpr::create(OnFailure, OutContext);
+    EmitToStreamer(MCInstBuilder(AArch64::B).addExpr(OnFailureExpr));
   }
 
   // If the auth check succeeds, we can continue.
@@ -2102,9 +2100,8 @@ void AArch64AsmPrinter::emitPtrauthTailCallHardening(const MachineInstr *TC) {
          "Neither x16 nor x17 is available as a scratch register");
   AArch64PACKey::ID Key =
       AArch64FI->shouldSignWithBKey() ? AArch64PACKey::IB : AArch64PACKey::IA;
-  emitPtrauthCheckAuthenticatedValue(
-      AArch64::LR, ScratchReg, Key, LRCheckMethod,
-      /*ShouldTrap=*/true, /*OnFailure=*/nullptr);
+  emitPtrauthCheckAuthenticatedValue(AArch64::LR, ScratchReg, Key,
+                                     LRCheckMethod);
 }
 
 void AArch64AsmPrinter::emitPtrauthAuthResign(
@@ -2178,9 +2175,8 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     if (IsAUTPAC && !ShouldTrap)
       EndSym = createTempSymbol("resign_end_");
 
-    emitPtrauthCheckAuthenticatedValue(AUTVal, Scratch, AUTKey,
-                                       AArch64PAuth::AuthCheckMethod::XPAC,
-                                       ShouldTrap, EndSym);
+    emitPtrauthCheckAuthenticatedValue(
+        AUTVal, Scratch, AUTKey, AArch64PAuth::AuthCheckMethod::XPAC, EndSym);
   }
 
   // We already emitted unchecked and checked-but-non-trapping AUTs.
@@ -2519,9 +2515,7 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
                                                      : AArch64PACKey::DA);
 
         emitPtrauthCheckAuthenticatedValue(AArch64::X16, AArch64::X17, AuthKey,
-                                           AArch64PAuth::AuthCheckMethod::XPAC,
-                                           /*ShouldTrap=*/true,
-                                           /*OnFailure=*/nullptr);
+                                           AArch64PAuth::AuthCheckMethod::XPAC);
       }
     } else {
       EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
@@ -2654,9 +2648,7 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
         (AuthOpcode == AArch64::AUTIA ? AArch64PACKey::IA : AArch64PACKey::DA);
 
     emitPtrauthCheckAuthenticatedValue(AuthResultReg, AArch64::X17, AuthKey,
-                                       AArch64PAuth::AuthCheckMethod::XPAC,
-                                       /*ShouldTrap=*/true,
-                                       /*OnFailure=*/nullptr);
+                                       AArch64PAuth::AuthCheckMethod::XPAC);
 
     emitMovXReg(DstReg, AuthResultReg);
   }
@@ -2677,23 +2669,32 @@ AArch64AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
 
 void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
   bool IsImm = false;
-  bool Is32Bit = false;
+  unsigned Width = 0;
 
   switch (MI->getOpcode()) {
   default:
     llvm_unreachable("This is not a CB pseudo instruction");
+  case AArch64::CBBAssertExt:
+    IsImm = false;
+    Width = 8;
+    break;
+  case AArch64::CBHAssertExt:
+    IsImm = false;
+    Width = 16;
+    break;
   case AArch64::CBWPrr:
-    Is32Bit = true;
+    Width = 32;
     break;
   case AArch64::CBXPrr:
-    Is32Bit = false;
+    Width = 64;
     break;
   case AArch64::CBWPri:
     IsImm = true;
-    Is32Bit = true;
+    Width = 32;
     break;
   case AArch64::CBXPri:
     IsImm = true;
+    Width = 64;
     break;
   }
 
@@ -2703,61 +2704,61 @@ void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
   bool NeedsImmDec = false;
   bool NeedsImmInc = false;
 
+#define GET_CB_OPC(IsImm, Width, ImmCond, RegCond)                             \
+  (IsImm                                                                       \
+       ? (Width == 32 ? AArch64::CB##ImmCond##Wri : AArch64::CB##ImmCond##Xri) \
+       : (Width == 8                                                           \
+              ? AArch64::CBB##RegCond##Wrr                                     \
+              : (Width == 16 ? AArch64::CBH##RegCond##Wrr                      \
+                             : (Width == 32 ? AArch64::CB##RegCond##Wrr        \
+                                            : AArch64::CB##RegCond##Xrr))))
+  unsigned MCOpC;
+
   // Decide if we need to either swap register operands or increment/decrement
   // immediate operands
-  unsigned MCOpC;
   switch (CC) {
   default:
     llvm_unreachable("Invalid CB condition code");
   case AArch64CC::EQ:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBEQWri : AArch64::CBEQXri)
-                  : (Is32Bit ? AArch64::CBEQWrr : AArch64::CBEQXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ EQ, /* Reg-Reg */ EQ);
     break;
   case AArch64CC::NE:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBNEWri : AArch64::CBNEXri)
-                  : (Is32Bit ? AArch64::CBNEWrr : AArch64::CBNEXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ NE, /* Reg-Reg */ NE);
     break;
   case AArch64CC::HS:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBHIWri : AArch64::CBHIXri)
-                  : (Is32Bit ? AArch64::CBHSWrr : AArch64::CBHSXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ HI, /* Reg-Reg */ HS);
     NeedsImmDec = IsImm;
     break;
   case AArch64CC::LO:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLOWri : AArch64::CBLOXri)
-                  : (Is32Bit ? AArch64::CBHIWrr : AArch64::CBHIXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ LO, /* Reg-Reg */ HI);
     NeedsRegSwap = !IsImm;
     break;
   case AArch64CC::HI:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBHIWri : AArch64::CBHIXri)
-                  : (Is32Bit ? AArch64::CBHIWrr : AArch64::CBHIXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ HI, /* Reg-Reg */ HI);
     break;
   case AArch64CC::LS:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLOWri : AArch64::CBLOXri)
-                  : (Is32Bit ? AArch64::CBHSWrr : AArch64::CBHSXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ LO, /* Reg-Reg */ HS);
     NeedsRegSwap = !IsImm;
     NeedsImmInc = IsImm;
     break;
   case AArch64CC::GE:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBGTWri : AArch64::CBGTXri)
-                  : (Is32Bit ? AArch64::CBGEWrr : AArch64::CBGEXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ GT, /* Reg-Reg */ GE);
     NeedsImmDec = IsImm;
     break;
   case AArch64CC::LT:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLTWri : AArch64::CBLTXri)
-                  : (Is32Bit ? AArch64::CBGTWrr : AArch64::CBGTXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ LT, /* Reg-Reg */ GT);
     NeedsRegSwap = !IsImm;
     break;
   case AArch64CC::GT:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBGTWri : AArch64::CBGTXri)
-                  : (Is32Bit ? AArch64::CBGTWrr : AArch64::CBGTXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ GT, /* Reg-Reg */ GT);
     break;
   case AArch64CC::LE:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLTWri : AArch64::CBLTXri)
-                  : (Is32Bit ? AArch64::CBGEWrr : AArch64::CBGEXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ LT, /* Reg-Reg */ GE);
     NeedsRegSwap = !IsImm;
     NeedsImmInc = IsImm;
     break;
   }
+#undef GET_CB_OPC
 
   MCInst Inst;
   Inst.setOpcode(MCOpC);
@@ -3364,6 +3365,22 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     TS->emitARM64WinCFIPACSignLR();
     return;
 
+  case AArch64::SEH_SaveAnyRegI:
+    assert(MI->getOperand(1).getImm() <= 1008 &&
+           "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
+    TS->emitARM64WinCFISaveAnyRegI(MI->getOperand(0).getImm(),
+                                   MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SaveAnyRegIP:
+    assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
+           "Non-consecutive registers not allowed for save_any_reg");
+    assert(MI->getOperand(2).getImm() <= 1008 &&
+           "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
+    TS->emitARM64WinCFISaveAnyRegIP(MI->getOperand(0).getImm(),
+                                    MI->getOperand(2).getImm());
+    return;
+
   case AArch64::SEH_SaveAnyRegQP:
     assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
            "Non-consecutive registers not allowed for save_any_reg");
@@ -3422,6 +3439,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
   case AArch64::CBWPri:
   case AArch64::CBXPri:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     emitCBPseudoExpansion(MI);

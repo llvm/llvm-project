@@ -231,21 +231,19 @@ v_cos_f16_e32 v5.l, lit(1.0)
 // NOGFX89: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
 // NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
 
-v_tanh_bf16 v5, 1.0
-// GFX1250-ASM: v_tanh_bf16_e32 v5, 1.0                 ; encoding: [0xf2,0x94,0x0a,0x7e]
-// GFX1250-DIS: v_tanh_bf16_e32 v5.l, 1.0               ; encoding: [0xf2,0x94,0x0a,0x7e]
-// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+v_tanh_bf16 v5.l, 1.0
+// GFX1250: v_tanh_bf16_e32 v5.l, 1.0               ; encoding: [0xf2,0x94,0x0a,0x7e]
+// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
 
-v_tanh_bf16 v5, lit(1.0)
-// GFX1250-ASM: v_tanh_bf16_e32 v5, lit(0x3f80)         ; encoding: [0xff,0x94,0x0a,0x7e,0x80,0x3f,0x00,0x00]
-// GFX1250-DIS: v_tanh_bf16_e32 v5.l, lit(0x3f80)       ; encoding: [0xff,0x94,0x0a,0x7e,0x80,0x3f,0x00,0x00]
-// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+v_tanh_bf16 v5.l, lit(1.0)
+// GFX1250: v_tanh_bf16_e32 v5.l, lit(0x3f80)       ; encoding: [0xff,0x94,0x0a,0x7e,0x80,0x3f,0x00,0x00]
+// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
 
 v_trunc_f32_e32 v0, 1.0
 // GFX11: v_trunc_f32_e32 v0, 1.0                 ; encoding: [0xf2,0x42,0x00,0x7e]
@@ -685,21 +683,19 @@ v_cos_f16_e32 v5.l, lit(1)
 // NOGFX89: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
 // NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
 
-v_tanh_bf16 v5, 1
-// GFX1250-ASM: v_tanh_bf16_e32 v5, 1                   ; encoding: [0x81,0x94,0x0a,0x7e]
-// GFX1250-DIS: v_tanh_bf16_e32 v5.l, 1                 ; encoding: [0x81,0x94,0x0a,0x7e]
-// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+v_tanh_bf16 v5.l, 1
+// GFX1250: v_tanh_bf16_e32 v5.l, 1                 ; encoding: [0x81,0x94,0x0a,0x7e]
+// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
 
-v_tanh_bf16 v5, lit(1)
-// GFX1250-ASM: v_tanh_bf16_e32 v5, lit(0x1)            ; encoding: [0xff,0x94,0x0a,0x7e,0x01,0x00,0x00,0x00]
-// GFX1250-DIS: v_tanh_bf16_e32 v5.l, lit(0x1)          ; encoding: [0xff,0x94,0x0a,0x7e,0x01,0x00,0x00,0x00]
-// NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU
-// NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU
-// NOGFX89: :[[@LINE-5]]:1: error: instruction not supported on this GPU
-// NOSICI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+v_tanh_bf16 v5.l, lit(1)
+// GFX1250: v_tanh_bf16_e32 v5.l, lit(0x1)          ; encoding: [0xff,0x94,0x0a,0x7e,0x01,0x00,0x00,0x00]
+// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
 
 v_trunc_f32_e32 v0, 1
 // GFX11: v_trunc_f32_e32 v0, 1                   ; encoding: [0x81,0x42,0x00,0x7e]

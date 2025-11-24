@@ -600,9 +600,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__ranges/from_range.h>
 #  include <__tree>
 #  include <__type_traits/container_traits.h>
-#  include <__type_traits/desugars_to.h>
 #  include <__type_traits/is_allocator.h>
-#  include <__type_traits/is_convertible.h>
 #  include <__type_traits/make_transparent.h>
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/type_identity.h>
@@ -997,7 +995,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI map(map&& __m) = default;
 
-  _LIBCPP_HIDE_FROM_ABI map(map&& __m, const allocator_type& __a);
+  _LIBCPP_HIDE_FROM_ABI map(map&& __m, const allocator_type& __a) : __tree_(std::move(__m.__tree_), __a) {}
 
   _LIBCPP_HIDE_FROM_ABI map& operator=(map&& __m) = default;
 
@@ -1025,10 +1023,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit map(const allocator_type& __a) : __tree_(typename __base::allocator_type(__a)) {}
 
-  _LIBCPP_HIDE_FROM_ABI map(const map& __m, const allocator_type& __a)
-      : __tree_(__m.__tree_.value_comp(), typename __base::allocator_type(__a)) {
-    insert(__m.begin(), __m.end());
-  }
+  _LIBCPP_HIDE_FROM_ABI map(const map& __m, const allocator_type& __alloc) : __tree_(__m.__tree_, __alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI ~map() { static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
 
@@ -1429,18 +1424,6 @@ map(initializer_list<pair<_Key, _Tp>>, _Allocator)
 
 #  ifndef _LIBCPP_CXX03_LANG
 template <class _Key, class _Tp, class _Compare, class _Allocator>
-map<_Key, _Tp, _Compare, _Allocator>::map(map&& __m, const allocator_type& __a)
-    : __tree_(std::move(__m.__tree_), typename __base::allocator_type(__a)) {
-  if (__a != __m.get_allocator()) {
-    const_iterator __e = cend();
-    while (!__m.empty()) {
-      __tree_.__insert_unique_from_orphaned_node(
-          __e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__get_value()));
-    }
-  }
-}
-
-template <class _Key, class _Tp, class _Compare, class _Allocator>
 _Tp& map<_Key, _Tp, _Compare, _Allocator>::operator[](const key_type& __k) {
   return __tree_.__emplace_unique(std::piecewise_construct, std::forward_as_tuple(__k), std::forward_as_tuple())
       .first->second;
@@ -1685,7 +1668,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m) = default;
 
-  _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m, const allocator_type& __a);
+  _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m, const allocator_type& __a) : __tree_(std::move(__m.__tree_), __a) {}
 
   _LIBCPP_HIDE_FROM_ABI multimap& operator=(multimap&& __m) = default;
 
@@ -1714,10 +1697,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit multimap(const allocator_type& __a) : __tree_(typename __base::allocator_type(__a)) {}
 
-  _LIBCPP_HIDE_FROM_ABI multimap(const multimap& __m, const allocator_type& __a)
-      : __tree_(__m.__tree_.value_comp(), typename __base::allocator_type(__a)) {
-    insert(__m.begin(), __m.end());
-  }
+  _LIBCPP_HIDE_FROM_ABI multimap(const multimap& __m, const allocator_type& __a) : __tree_(__m.__tree_, __a) {}
 
   _LIBCPP_HIDE_FROM_ABI ~multimap() {
     static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), "");
@@ -1990,19 +1970,6 @@ multimap(from_range_t, _Range&&, _Allocator)
 template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 multimap(initializer_list<pair<_Key, _Tp>>, _Allocator)
     -> multimap<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
-#  endif
-
-#  ifndef _LIBCPP_CXX03_LANG
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-multimap<_Key, _Tp, _Compare, _Allocator>::multimap(multimap&& __m, const allocator_type& __a)
-    : __tree_(std::move(__m.__tree_), typename __base::allocator_type(__a)) {
-  if (__a != __m.get_allocator()) {
-    const_iterator __e = cend();
-    while (!__m.empty())
-      __tree_.__insert_multi_from_orphaned_node(
-          __e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__get_value()));
-  }
-}
 #  endif
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
