@@ -2703,6 +2703,13 @@ def AllocAlign : InheritableAttr {
   let Documentation = [AllocAlignDocs];
 }
 
+def LLVMFuncAttr : DeclOrStmtAttr {
+  let Spellings = [Clang<"llvm_fn_attr">];
+  let Args = [StringArgument<"LLVMAttrName">, StringArgument<"LLVMAttrValue">];
+  let Documentation = [LLVMFuncAttrDocs];
+  let InheritEvenIfAlreadyPresent = 1;
+}
+
 def NoReturn : InheritableAttr {
   let Spellings = [GCC<"noreturn">, Declspec<"noreturn">];
   // FIXME: Does GCC allow this on the function instead?
