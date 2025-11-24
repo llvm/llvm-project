@@ -1251,7 +1251,7 @@ def AMDGPU_MakeDmaBaseOp :
   }];
 
   let assemblyFormat = [{
-    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` type($src) `,` type($dst) `to` type(results)
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` type($src) `,` type($dst) `->` type(results)
   }];
 }
 
@@ -1277,9 +1277,25 @@ def AMDGPU_MakeDmaDescriptorOp :
     Optional<Index>: $iteration_count)>,
   Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
 
-  let summary = "TODO";
+  let summary = "Make all descriptor groups needed by TensorLoadToLDS/TensorStoreFromLDS.";
   let description = [{
-    TODO
+     Make all descriptor groups needed by tensor memory operations.
+
+     The $base operand corresponds to the base pair addresses, one must be an address in LDS
+     while the other must be a global memory location.
+
+     $global_{static/dynamic}_sizes determine the size of the tensor.
+     $global_{static/dynamic}_strides determine the strides of the tensor.
+     $shared_{static/dynamic}_sizes determines the size of the tile.
+
+     Padding can be applied to the LDS address when copying from memory to LDS,
+     but not when copying from LDS to memory.
+     The values in the padded target addresses remain the same as before the operation was applied.
+
+     2D and 3D tensors may be iterated over by setting $global_increment, $lds_increment, and $iteration_count.
+     $global_increment determines how much to increment the starting global memory address per iteration in units of the $base's element type.
+     $lds_increment determines how much to increment the starting LDS address per iteration in units of the $base's element type.
+     $iterate_count determines how many times to iterate.
   }];
 
   let assemblyFormat = [{
@@ -1292,7 +1308,7 @@ def AMDGPU_MakeDmaDescriptorOp :
                           custom<DynamicIndexList>($atomic_barrier_dynamic_indices, $atomic_barrier_static_indices)
                       `:` type($atomic_barrier_address) `)`)?
     ( `iterate` $global_increment^ `,` $lds_increment `,` $iteration_count )?
-    attr-dict `:` qualified(type($base)) `to` type(results)
+    attr-dict `:` qualified(type($base)) `->` type(results)
   }];
 
   let hasVerifier = 1;
