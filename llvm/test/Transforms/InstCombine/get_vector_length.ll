@@ -3,8 +3,7 @@
 
 define i32 @cnt_known_lt() {
 ; CHECK-LABEL: define i32 @cnt_known_lt() {
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 1, i32 2, i1 false)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 1
 ;
   %x = call i32 @llvm.experimental.get.vector.length(i32 1, i32 2, i1 false)
   ret i32 %x
@@ -22,8 +21,7 @@ define i32 @cnt_not_known_lt() {
 define i32 @cnt_known_lt_scalable() vscale_range(2, 4) {
 ; CHECK-LABEL: define i32 @cnt_known_lt_scalable(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 2, i32 1, i1 true)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 2
 ;
   %x = call i32 @llvm.experimental.get.vector.length(i32 2, i32 1, i1 true)
   ret i32 %x
@@ -43,8 +41,7 @@ define i32 @cnt_known_lt_runtime(i32 %x) {
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i32 [[X]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ICMP]])
-; CHECK-NEXT:    [[Y:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[X]], i32 3, i1 false)
-; CHECK-NEXT:    ret i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %icmp = icmp ule i32 %x, 3
   call void @llvm.assume(i1 %icmp)
@@ -57,7 +54,7 @@ define i32 @cnt_known_lt_runtime_trunc(i64 %x) {
 ; CHECK-SAME: i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[X]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ICMP]])
-; CHECK-NEXT:    [[Y:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[X]], i32 3, i1 false)
+; CHECK-NEXT:    [[Y:%.*]] = trunc nuw nsw i64 [[X]] to i32
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
   %icmp = icmp ule i64 %x, 3
