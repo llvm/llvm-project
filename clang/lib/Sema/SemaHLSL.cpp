@@ -771,9 +771,12 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   }
 }
 
-bool SemaHLSL::determineActiveSemanticOnScalar(
-    FunctionDecl *FD, DeclaratorDecl *OutputDecl, DeclaratorDecl *D,
-    SemanticInfo &ActiveSemantic, llvm::StringSet<> &UsedSemantics) {
+bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
+                                               DeclaratorDecl *OutputDecl,
+                                               DeclaratorDecl *D,
+                                               SemanticInfo &ActiveSemantic,
+                                               llvm::StringSet<> &UsedSemantics,
+                                               bool IsInput) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
     if (ActiveSemantic.Semantic)
@@ -792,7 +795,7 @@ bool SemaHLSL::determineActiveSemanticOnScalar(
   if (!A)
     return false;
 
-  checkSemanticAnnotation(FD, D, A);
+  checkSemanticAnnotation(FD, D, A, IsInput);
   OutputDecl->addAttr(A);
 
   unsigned Location = ActiveSemantic.Index.value_or(0);
@@ -820,7 +823,8 @@ bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD,
                                        DeclaratorDecl *OutputDecl,
                                        DeclaratorDecl *D,
                                        SemanticInfo &ActiveSemantic,
-                                       llvm::StringSet<> &UsedSemantics) {
+                                       llvm::StringSet<> &UsedSemantics,
+                                       bool IsInput) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
     if (ActiveSemantic.Semantic)
@@ -833,12 +837,13 @@ bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD,
   const RecordType *RT = dyn_cast<RecordType>(T);
   if (!RT)
     return determineActiveSemanticOnScalar(FD, OutputDecl, D, ActiveSemantic,
-                                           UsedSemantics);
+                                           UsedSemantics, IsInput);
 
   const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *Field : RD->fields()) {
     SemanticInfo Info = ActiveSemantic;
-    if (!determineActiveSemantic(FD, OutputDecl, Field, Info, UsedSemantics)) {
+    if (!determineActiveSemantic(FD, OutputDecl, Field, Info, UsedSemantics,
+                                 IsInput)) {
       Diag(Field->getLocation(), diag::note_hlsl_semantic_used_here) << Field;
       return false;
     }
@@ -920,7 +925,7 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
 
     // FIXME: Verify output semantics in parameters.
     if (!determineActiveSemantic(FD, Param, Param, ActiveSemantic,
-                                 ActiveInputSemantics)) {
+                                 ActiveInputSemantics, /* IsInput= */ true)) {
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();
     }
@@ -932,12 +937,13 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   if (ActiveSemantic.Semantic)
     ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
   if (!FD->getReturnType()->isVoidType())
-    determineActiveSemantic(FD, FD, FD, ActiveSemantic, ActiveOutputSemantics);
+    determineActiveSemantic(FD, FD, FD, ActiveSemantic, ActiveOutputSemantics,
+                            /* IsInput= */ false);
 }
 
 void SemaHLSL::checkSemanticAnnotation(
     FunctionDecl *EntryPoint, const Decl *Param,
-    const HLSLAppliedSemanticAttr *SemanticAttr) {
+    const HLSLAppliedSemanticAttr *SemanticAttr, bool IsInput) {
   auto *ShaderAttr = EntryPoint->getAttr<HLSLShaderAttr>();
   assert(ShaderAttr && "Entry point has no shader attribute");
   llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
@@ -961,11 +967,12 @@ void SemaHLSL::checkSemanticAnnotation(
   }
 
   if (SemanticName == "SV_POSITION") {
-    // TODO(#143523): allow use on other shader types & output once the overall
-    // semantic logic is implemented.
-    if (ST == llvm::Triple::Pixel)
+    // SV_Position can be an input or output in vertex shaders,
+    // but only an input in pixel shaders.
+    if (ST == llvm::Triple::Vertex || (ST == llvm::Triple::Pixel && IsInput))
       return;
-    DiagnoseAttrStageMismatch(SemanticAttr, ST, {llvm::Triple::Pixel});
+    DiagnoseAttrStageMismatch(SemanticAttr, ST,
+                              {llvm::Triple::Pixel, llvm::Triple::Vertex});
     return;
   }
 
