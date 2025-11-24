@@ -59,7 +59,10 @@ private:
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
   const TargetLowering &TLI;
-  GISelValueTracking *VT;
+
+  // FIXME: Should probably make Libcalls mandatory
+  const LibcallLoweringInfo *Libcalls = nullptr;
+  GISelValueTracking *VT = nullptr;
 
 public:
   enum LegalizeResult {
@@ -78,12 +81,15 @@ public:
   /// Expose LegalizerInfo so the clients can re-use.
   const LegalizerInfo &getLegalizerInfo() const { return LI; }
   const TargetLowering &getTargetLowering() const { return TLI; }
+  const LibcallLoweringInfo *getLibcallLoweringInfo() { return Libcalls; }
   GISelValueTracking *getValueTracking() const { return VT; }
 
   LLVM_ABI LegalizerHelper(MachineFunction &MF, GISelChangeObserver &Observer,
-                           MachineIRBuilder &B);
+                           MachineIRBuilder &B,
+                           const LibcallLoweringInfo *Libcalls = nullptr);
   LLVM_ABI LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
                            GISelChangeObserver &Observer, MachineIRBuilder &B,
+                           const LibcallLoweringInfo *Libcalls = nullptr,
                            GISelValueTracking *VT = nullptr);
 
   /// Replace \p MI by a sequence of legal instructions that can implement the
@@ -177,6 +183,37 @@ public:
   /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   /// def by inserting a G_BITCAST from \p CastTy
   LLVM_ABI void bitcastDst(MachineInstr &MI, LLT CastTy, unsigned OpIdx);
+
+  // Useful for libcalls where all operands have the same type.
+  LLVM_ABI LegalizeResult
+  simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
+                Type *OpType, LostDebugLocObserver &LocObserver) const;
+
+  LLVM_ABI LegalizeResult conversionLibcall(MachineInstr &MI, Type *ToType,
+                                            Type *FromType,
+                                            LostDebugLocObserver &LocObserver,
+                                            bool IsSigned = false) const;
+
+  /// Helper function that creates a libcall to the given \p Name using the
+  /// given calling convention \p CC.
+  LLVM_ABI LegalizeResult createLibcall(const char *Name,
+                                        const CallLowering::ArgInfo &Result,
+                                        ArrayRef<CallLowering::ArgInfo> Args,
+                                        CallingConv::ID CC,
+                                        LostDebugLocObserver &LocObserver,
+                                        MachineInstr *MI = nullptr) const;
+
+  /// Helper function that creates the given libcall.
+  LLVM_ABI LegalizeResult createLibcall(RTLIB::Libcall Libcall,
+                                        const CallLowering::ArgInfo &Result,
+                                        ArrayRef<CallLowering::ArgInfo> Args,
+                                        LostDebugLocObserver &LocObserver,
+                                        MachineInstr *MI = nullptr) const;
+
+  /// Create a libcall to memcpy et al.
+  LLVM_ABI LegalizeResult
+  createMemLibcall(MachineRegisterInfo &MRI, MachineInstr &MI,
+                   LostDebugLocObserver &LocObserver) const;
 
 private:
   LegalizeResult
@@ -278,17 +315,13 @@ private:
                               bool IsVolatile);
 
   // Implements floating-point environment read/write via library function call.
-  LegalizeResult createGetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                       MachineInstr &MI,
+  LegalizeResult createGetStateLibcall(MachineInstr &MI,
                                        LostDebugLocObserver &LocObserver);
-  LegalizeResult createSetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                       MachineInstr &MI,
+  LegalizeResult createSetStateLibcall(MachineInstr &MI,
                                        LostDebugLocObserver &LocObserver);
-  LegalizeResult createResetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                         MachineInstr &MI,
+  LegalizeResult createResetStateLibcall(MachineInstr &MI,
                                          LostDebugLocObserver &LocObserver);
-  LegalizeResult createFCMPLibcall(MachineIRBuilder &MIRBuilder,
-                                   MachineInstr &MI,
+  LegalizeResult createFCMPLibcall(MachineInstr &MI,
                                    LostDebugLocObserver &LocObserver);
 
   MachineInstrBuilder
@@ -538,26 +571,6 @@ public:
                                             unsigned MaxLen = 0);
   LLVM_ABI LegalizeResult lowerVAArg(MachineInstr &MI);
 };
-
-/// Helper function that creates a libcall to the given \p Name using the given
-/// calling convention \p CC.
-LLVM_ABI LegalizerHelper::LegalizeResult
-createLibcall(MachineIRBuilder &MIRBuilder, const char *Name,
-              const CallLowering::ArgInfo &Result,
-              ArrayRef<CallLowering::ArgInfo> Args, CallingConv::ID CC,
-              LostDebugLocObserver &LocObserver, MachineInstr *MI = nullptr);
-
-/// Helper function that creates the given libcall.
-LLVM_ABI LegalizerHelper::LegalizeResult
-createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
-              const CallLowering::ArgInfo &Result,
-              ArrayRef<CallLowering::ArgInfo> Args,
-              LostDebugLocObserver &LocObserver, MachineInstr *MI = nullptr);
-
-/// Create a libcall to memcpy et al.
-LLVM_ABI LegalizerHelper::LegalizeResult
-createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                 MachineInstr &MI, LostDebugLocObserver &LocObserver);
 
 } // End namespace llvm.
 
