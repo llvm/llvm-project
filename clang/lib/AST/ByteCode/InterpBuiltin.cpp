@@ -3468,6 +3468,69 @@ static bool interp__builtin_ia32_shuffle_generic(
   return true;
 }
 
+static bool interp__builtin_ia32_shufbitqmb_mask(InterpState &S, CodePtr OpPC,
+                                                 const CallExpr *Call) {
+
+  assert(Call->getNumArgs() == 3);
+
+  QualType SourceType = Call->getArg(0)->getType();
+  QualType ShuffleMaskType = Call->getArg(1)->getType();
+  QualType ZeroMaskType = Call->getArg(2)->getType();
+  if (!SourceType->isVectorType() || !ShuffleMaskType->isVectorType() ||
+      !ZeroMaskType->isIntegerType()) {
+    return false;
+  }
+
+  Pointer Source, ShuffleMask;
+  APSInt ZeroMask = popToAPSInt(S, Call->getArg(2));
+  ShuffleMask = S.Stk.pop<Pointer>();
+  Source = S.Stk.pop<Pointer>();
+
+  const auto *SourceVecT = SourceType->castAs<VectorType>();
+  const auto *ShuffleMaskVecT = ShuffleMaskType->castAs<VectorType>();
+  assert(SourceVecT->getNumElements() == ShuffleMaskVecT->getNumElements());
+  assert(ZeroMask.getBitWidth() == SourceVecT->getNumElements());
+
+  PrimType SourceElemT = *S.getContext().classify(SourceVecT->getElementType());
+  PrimType ShuffleMaskElemT =
+      *S.getContext().classify(ShuffleMaskVecT->getElementType());
+
+  unsigned NumBytesInQWord = 8;
+  unsigned NumBitsInByte = 8;
+  unsigned NumBytes = SourceVecT->getNumElements();
+  unsigned NumQWords = NumBytes / NumBytesInQWord;
+  unsigned RetWidth = ZeroMask.getBitWidth();
+  APSInt RetMask(llvm::APInt(RetWidth, 0), /*isUnsigned=*/true);
+
+  for (unsigned QWordId = 0; QWordId != NumQWords; ++QWordId) {
+    APInt SourceQWord(64, 0);
+    for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+      uint64_t Byte = 0;
+      INT_TYPE_SWITCH(SourceElemT, {
+        Byte = static_cast<uint64_t>(
+            Source.elem<T>(QWordId * NumBytesInQWord + ByteIdx));
+      });
+      SourceQWord.insertBits(APInt(8, Byte & 0xFF), ByteIdx * NumBitsInByte);
+    }
+
+    for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+      unsigned SelIdx = QWordId * NumBytesInQWord + ByteIdx;
+      unsigned M = 0;
+      INT_TYPE_SWITCH(ShuffleMaskElemT, {
+        M = static_cast<unsigned>(ShuffleMask.elem<T>(SelIdx)) & 0x3F;
+      });
+
+      if (ZeroMask[SelIdx]) {
+        RetMask.setBitVal(SelIdx, SourceQWord[M]);
+      }
+    }
+  }
+
+  pushInteger(S, RetMask, Call->getType());
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -4653,6 +4716,30 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return std::make_pair(0, static_cast<int>(LaneBase + Sel));
         });
 
+  case X86::BI__builtin_ia32_vpermilvarpd:
+  case X86::BI__builtin_ia32_vpermilvarpd256:
+  case X86::BI__builtin_ia32_vpermilvarpd512:
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+          unsigned NumElemPerLane = 2;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned Offset = ShuffleMask & 0b10 ? 1 : 0;
+          return std::make_pair(
+              0, static_cast<int>(Lane * NumElemPerLane + Offset));
+        });
+
+  case X86::BI__builtin_ia32_vpermilvarps:
+  case X86::BI__builtin_ia32_vpermilvarps256:
+  case X86::BI__builtin_ia32_vpermilvarps512:
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+          unsigned NumElemPerLane = 4;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned Offset = ShuffleMask & 0b11;
+          return std::make_pair(
+              0, static_cast<int>(Lane * NumElemPerLane + Offset));
+        });
+
   case X86::BI__builtin_ia32_vpermilpd:
   case X86::BI__builtin_ia32_vpermilpd256:
   case X86::BI__builtin_ia32_vpermilpd512:
@@ -4844,6 +4931,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_ucmpq512_mask:
     return interp__builtin_ia32_cmp_mask(S, OpPC, Call, BuiltinID,
                                          /*IsUnsigned=*/true);
+
+  case X86::BI__builtin_ia32_vpshufbitqmb128_mask:
+  case X86::BI__builtin_ia32_vpshufbitqmb256_mask:
+  case X86::BI__builtin_ia32_vpshufbitqmb512_mask:
+    return interp__builtin_ia32_shufbitqmb_mask(S, OpPC, Call);
+
   case X86::BI__builtin_ia32_pslldqi128_byteshift:
   case X86::BI__builtin_ia32_pslldqi256_byteshift:
   case X86::BI__builtin_ia32_pslldqi512_byteshift:
@@ -4905,6 +4998,24 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
           return std::pair<unsigned, int>{VecIdx, ElemIdx};
         });
+
+  case X86::BI__builtin_ia32_alignd128:
+  case X86::BI__builtin_ia32_alignd256:
+  case X86::BI__builtin_ia32_alignd512:
+  case X86::BI__builtin_ia32_alignq128:
+  case X86::BI__builtin_ia32_alignq256:
+  case X86::BI__builtin_ia32_alignq512: {
+    unsigned NumElems = Call->getType()->castAs<VectorType>()->getNumElements();
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [NumElems](unsigned DstIdx, unsigned Shift) {
+          unsigned Imm = Shift & 0xFF;
+          unsigned EffectiveShift = Imm & (NumElems - 1);
+          unsigned SourcePos = DstIdx + EffectiveShift;
+          unsigned VecIdx = SourcePos < NumElems ? 1u : 0u;
+          unsigned ElemIdx = SourcePos & (NumElems - 1);
+          return std::pair<unsigned, int>{VecIdx, static_cast<int>(ElemIdx)};
+        });
+  }
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
