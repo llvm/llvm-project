@@ -3304,6 +3304,26 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
+  case Builtin::BI__builtin_hlsl_check_access_fully_mapped: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    Expr *Arg = TheCall->getArg(0);
+    QualType ArgTyA = Arg->getType();
+
+    if (CheckArgTypeMatches(&SemaRef, Arg,
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+
+    if (!ArgTyA->isScalarType()) {
+      SemaRef.Diag(Arg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+          << ArgTyA << SemaRef.getASTContext().UnsignedIntTy << 1 << 0 << 0;
+      return true;
+    }
+
+    QualType BoolType = getASTContext().BoolTy;
+    TheCall->setType(BoolType);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_wave_active_max:
   case Builtin::BI__builtin_hlsl_wave_active_min:
   case Builtin::BI__builtin_hlsl_wave_active_sum: {

@@ -886,6 +886,29 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
           "Intrinsic WaveGetLaneIndex not supported by target architecture");
     }
   }
+  case Builtin::BI__builtin_hlsl_check_access_fully_mapped: {
+    // We don't define a DXIL intrinsic, instead it is a cast from uint to bool.
+    switch (CGM.getTarget().getTriple().getArch()) {
+    case llvm::Triple::dxil: {
+      Value *Status = EmitScalarExpr(E->getArg(0));
+      return Builder.CreateICmpNE(
+          Status, ConstantInt::get(Status->getType(), 0), "BoolCast");
+    }
+
+    case llvm::Triple::spirv: {
+      // OpImageSparseTexelsResident consumes a uint residency code
+      Value *Status = EmitScalarExpr(E->getArg(0));
+
+      return Builder.CreateIntrinsic(
+          llvm::Intrinsic::spv_check_access_fully_mapped,
+          /* Overload types */ {},
+          /* Arguments      */ {Status});
+    }
+    default:
+      llvm_unreachable("Intrinsic CheckAccessFullyMapped not supported by "
+                       "target architecture");
+    }
+  }
   case Builtin::BI__builtin_hlsl_wave_is_first_lane: {
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveIsFirstLaneIntrinsic();
     return EmitRuntimeCall(

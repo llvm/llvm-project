@@ -3588,6 +3588,17 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdyCoarse);
   case Intrinsic::spv_fwidth:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpFwidth);
+  case Intrinsic::spv_check_access_fully_mapped: {
+    MachineBasicBlock &BB = *I.getParent();
+    Register StatusReg = I.getOperand(1).getReg();
+
+    return BuildMI(BB, I, I.getDebugLoc(),
+                   TII.get(SPIRV::OpImageSparseTexelsResident))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(StatusReg)
+        .constrainAllUses(TII, TRI, RBI);
+  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);

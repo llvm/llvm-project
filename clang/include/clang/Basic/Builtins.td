@@ -5084,6 +5084,12 @@ def HLSLWaveGetLaneCount : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "unsigned int()";
 }
 
+def HLSLCheckAccessFullyMapped : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_check_access_fully_mapped"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clamp"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
