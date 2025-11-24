@@ -570,8 +570,9 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       newDataOp = acc::PresentOp::create(builder, loc, var,
                                          /*structured=*/true, /*implicit=*/true,
                                          accSupport.getVariableName(var));
+      newDataOp->setAttr(acc::getFromDefaultClauseAttrName(),
+                         builder.getUnitAttr());
     } else {
-      SmallVector<Value> bounds;
       auto copyinOp =
           acc::CopyinOp::create(builder, loc, var,
                                 /*structured=*/true, /*implicit=*/true,

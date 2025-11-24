@@ -32,6 +32,10 @@ public:
   // with the given GlobalAddress is legal.
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
+  bool allowsMisalignedMemoryAccesses(EVT VT, unsigned, Align,
+                                      MachineMemOperand::Flags,
+                                      unsigned *) const override;
+
   BPFTargetLowering::ConstraintType
   getConstraintType(StringRef Constraint) const override;
 
@@ -60,6 +64,11 @@ private:
   bool HasJmp32;
   bool HasJmpExt;
   bool HasMovsx;
+
+  // Allows Misalignment
+  bool AllowsMisalignedMemAccess;
+
+  bool AllowBuiltinCalls;
 
   SDValue LowerSDIVSREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
@@ -156,6 +165,14 @@ private:
   MachineBasicBlock *
   EmitInstrWithCustomInserterLDimm64(MachineInstr &MI,
                                      MachineBasicBlock *BB) const;
+
+  // Returns true if arguments should be sign-extended in lib calls.
+  bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
+
+  bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                      bool IsVarArg,
+                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      LLVMContext &Context, const Type *RetTy) const override;
 };
 }
 

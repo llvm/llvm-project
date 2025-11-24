@@ -251,6 +251,16 @@ def InitScope : Opcode {
   let Args = [ArgUint32];
 }
 
+def GetLocalEnabled : Opcode {
+  let Args = [ArgUint32];
+  let HasCustomEval = 1;
+}
+
+def EnableLocal : Opcode {
+  let Args = [ArgUint32];
+  let HasCustomEval = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Constants
 //===----------------------------------------------------------------------===//
@@ -361,8 +371,14 @@ def NarrowPtr : Opcode;
 // [Pointer] -> [Pointer]
 def ExpandPtr : Opcode;
 // [Pointer, Offset] -> [Pointer]
-def ArrayElemPtr : AluOpcode;
-def ArrayElemPtrPop : AluOpcode;
+def ArrayElemPtr : Opcode {
+  let Types = [IntegralTypeClass];
+  let HasGroup = 1;
+}
+def ArrayElemPtrPop : Opcode {
+  let Types = [IntegralTypeClass];
+  let HasGroup = 1;
+}
 
 def ArrayElemPop : Opcode {
   let Args = [ArgUint32];
@@ -422,8 +438,8 @@ def CheckLiteralType : Opcode {
 }
 
 def CheckArraySize : Opcode { let Args = [ArgUint64]; }
-
 def CheckFunctionDecl : Opcode { let Args = [ArgFunctionDecl]; }
+def CheckBitCast : Opcode { let Args = [ArgTypePtr, ArgBool]; }
 
 // [] -> [Value]
 def GetGlobal : AccessOpcode;
@@ -536,13 +552,20 @@ def InitElemPop : Opcode {
 //===----------------------------------------------------------------------===//
 
 // [Pointer, Integral] -> [Pointer]
-def AddOffset : AluOpcode;
+def AddOffset : Opcode {
+  let Types = [IntegralTypeClass];
+  let HasGroup = 1;
+}
 // [Pointer, Integral] -> [Pointer]
-def SubOffset : AluOpcode;
+def SubOffset : Opcode {
+  let Types = [IntegralTypeClass];
+  let HasGroup = 1;
+}
 
 // [Pointer, Pointer] -> [Integral]
 def SubPtr : Opcode {
   let Types = [IntegerTypeClass];
+  let Args = [ArgBool];
   let HasGroup = 1;
 }
 

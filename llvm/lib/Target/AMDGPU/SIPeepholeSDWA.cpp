@@ -118,7 +118,7 @@ public:
   MachineInstr *getParentInst() const { return Target->getParent(); }
 
   MachineRegisterInfo *getMRI() const {
-    return &getParentInst()->getParent()->getParent()->getRegInfo();
+    return &getParentInst()->getMF()->getRegInfo();
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1284,7 +1284,7 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     // Clone the instruction to allow revoking changes
     // made to MI during the processing of the operands
     // if the conversion fails.
-    SDWAInst = MI.getParent()->getParent()->CloneMachineInstr(&MI);
+    SDWAInst = MI.getMF()->CloneMachineInstr(&MI);
     MI.getParent()->insert(MI.getIterator(), SDWAInst);
   } else {
     SDWAInst = createSDWAVersion(MI);
@@ -1346,7 +1346,7 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
       continue;
 
     unsigned I = Op.getOperandNo();
-    const TargetRegisterClass *OpRC = TII->getRegClass(Desc, I, TRI);
+    const TargetRegisterClass *OpRC = TII->getRegClass(Desc, I);
     if (!OpRC || !TRI->isVSSuperClass(OpRC))
       continue;
 

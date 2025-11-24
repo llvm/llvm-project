@@ -56,7 +56,7 @@ jobs:
       - build-ci-container-windows
     permissions:
       packages: write
-    runs-on: windows-2022
+    runs-on: ubuntu-24.04
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -66,8 +66,12 @@ jobs:
           name: container
       - name: Push Container
         run: |
-          docker load -i ${{ needs.build-ci-container-windows.outputs.container-filename }}
-          docker tag ${{ needs.build-ci-container-windows.outputs.container-name-tag }} ${{ needs.build-ci-container-windows.outputs.container-name }}:latest
-          docker login -u ${{ github.actor }} -p $env:GITHUB_TOKEN ghcr.io
-          docker push ${{ needs.build-ci-container-windows.outputs.container-name-tag }}
-          docker push ${{ needs.build-ci-container-windows.outputs.container-name }}:latest
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+          skopeo login -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} ghcr.io
+          skopeo copy docker-archive:${{ needs.build-ci-container-windows.outputs.container-filename }} \
+            --dest-compress-format zstd \
+            docker://${{ needs.build-ci-container-windows.outputs.container-name-tag }}
+          skopeo copy docker-archive:${{ needs.build-ci-container-windows.outputs.container-filename }} \
+            --dest-compress-format zstd \
+            docker://${{ needs.build-ci-container-windows.outputs.container-name }}:latest

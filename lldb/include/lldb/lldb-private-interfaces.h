@@ -15,6 +15,7 @@
 #include "lldb/lldb-types.h"
 #include <memory>
 #include <set>
+#include <vector>
 
 namespace llvm {
 namespace json {

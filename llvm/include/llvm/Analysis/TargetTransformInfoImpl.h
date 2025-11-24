@@ -431,6 +431,8 @@ public:
 
   virtual bool useColdCCForColdCall(Function &F) const { return false; }
 
+  virtual bool useFastCCForInternalCall(Function &F) const { return true; }
+
   virtual bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const {
     return false;
   }
@@ -842,8 +844,7 @@ public:
   }
 
   virtual InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const {
     return 1;
   }

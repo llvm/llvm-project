@@ -217,6 +217,11 @@ OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(GlobalMemSize, uint64_t,
                                     OL_DEVICE_INFO_GLOBAL_MEM_SIZE, 0);
 OL_DEVICE_INFO_TEST_HOST_SUCCESS(GlobalMemSize, uint64_t,
                                  OL_DEVICE_INFO_GLOBAL_MEM_SIZE);
+OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(SharedMemSize, uint64_t,
+                                    OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE,
+                                    0);
+OL_DEVICE_INFO_TEST_HOST_SUCCESS(SharedMemSize, uint64_t,
+                                 OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE);
 
 TEST_P(olGetDeviceInfoTest, InvalidNullHandleDevice) {
   ol_device_type_t DeviceType;

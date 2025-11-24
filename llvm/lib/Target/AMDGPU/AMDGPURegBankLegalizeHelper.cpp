@@ -437,6 +437,13 @@ std::pair<Register, Register> RegBankLegalizeHelper::unpackAExt(Register Reg) {
   return {Lo.getReg(0), Hi.getReg(0)};
 }
 
+std::pair<Register, Register>
+RegBankLegalizeHelper::unpackAExtTruncS16(Register Reg) {
+  auto [Lo32, Hi32] = unpackAExt(Reg);
+  return {B.buildTrunc(SgprRB_S16, Lo32).getReg(0),
+          B.buildTrunc(SgprRB_S16, Hi32).getReg(0)};
+}
+
 void RegBankLegalizeHelper::lowerUnpackBitShift(MachineInstr &MI) {
   Register Lo, Hi;
   switch (MI.getOpcode()) {
@@ -629,14 +636,21 @@ void RegBankLegalizeHelper::lowerSplitTo32(MachineInstr &MI) {
 void RegBankLegalizeHelper::lowerSplitTo16(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   assert(MRI.getType(Dst) == V2S16);
-  auto [Op1Lo32, Op1Hi32] = unpackAExt(MI.getOperand(1).getReg());
-  auto [Op2Lo32, Op2Hi32] = unpackAExt(MI.getOperand(2).getReg());
   unsigned Opc = MI.getOpcode();
   auto Flags = MI.getFlags();
-  auto Op1Lo = B.buildTrunc(SgprRB_S16, Op1Lo32);
-  auto Op1Hi = B.buildTrunc(SgprRB_S16, Op1Hi32);
-  auto Op2Lo = B.buildTrunc(SgprRB_S16, Op2Lo32);
-  auto Op2Hi = B.buildTrunc(SgprRB_S16, Op2Hi32);
+
+  if (MI.getNumOperands() == 2) {
+    auto [Op1Lo, Op1Hi] = unpackAExtTruncS16(MI.getOperand(1).getReg());
+    auto Lo = B.buildInstr(Opc, {SgprRB_S16}, {Op1Lo}, Flags);
+    auto Hi = B.buildInstr(Opc, {SgprRB_S16}, {Op1Hi}, Flags);
+    B.buildMergeLikeInstr(Dst, {Lo, Hi});
+    MI.eraseFromParent();
+    return;
+  }
+
+  assert(MI.getNumOperands() == 3);
+  auto [Op1Lo, Op1Hi] = unpackAExtTruncS16(MI.getOperand(1).getReg());
+  auto [Op2Lo, Op2Hi] = unpackAExtTruncS16(MI.getOperand(2).getReg());
   auto Lo = B.buildInstr(Opc, {SgprRB_S16}, {Op1Lo, Op2Lo}, Flags);
   auto Hi = B.buildInstr(Opc, {SgprRB_S16}, {Op1Hi, Op2Hi}, Flags);
   B.buildMergeLikeInstr(Dst, {Lo, Hi});
@@ -873,6 +887,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr128:
   case Vgpr128:
     return LLT::scalar(128);
+  case SgprP0:
   case VgprP0:
     return LLT::pointer(0, 64);
   case SgprP1:
@@ -887,6 +902,8 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case SgprP5:
   case VgprP5:
     return LLT::pointer(5, 32);
+  case SgprP8:
+    return LLT::pointer(8, 128);
   case SgprV2S16:
   case VgprV2S16:
   case UniInVgprV2S16:
@@ -972,10 +989,12 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32_WF:
   case Sgpr64:
   case Sgpr128:
+  case SgprP0:
   case SgprP1:
   case SgprP3:
   case SgprP4:
   case SgprP5:
+  case SgprP8:
   case SgprPtr32:
   case SgprPtr64:
   case SgprPtr128:
@@ -1055,10 +1074,12 @@ void RegBankLegalizeHelper::applyMappingDst(
     case Sgpr32:
     case Sgpr64:
     case Sgpr128:
+    case SgprP0:
     case SgprP1:
     case SgprP3:
     case SgprP4:
     case SgprP5:
+    case SgprP8:
     case SgprV2S16:
     case SgprV2S32:
     case SgprV4S32:
@@ -1198,10 +1219,12 @@ void RegBankLegalizeHelper::applyMappingSrc(
     case Sgpr32:
     case Sgpr64:
     case Sgpr128:
+    case SgprP0:
     case SgprP1:
     case SgprP3:
     case SgprP4:
     case SgprP5:
+    case SgprP8:
     case SgprV2S16:
     case SgprV2S32:
     case SgprV4S32: {

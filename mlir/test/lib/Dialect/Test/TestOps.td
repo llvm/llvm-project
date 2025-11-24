@@ -120,6 +120,13 @@ def SymbolOp : TEST_Op<"symbol", [NoMemoryEffect, Symbol]> {
                        OptionalAttr<StrAttr>:$sym_visibility);
 }
 
+def SymbolWithResultOp : TEST_Op<"symbol_with_result", [Symbol]> {
+  let summary = "invalid symbol operation that produces an SSA result";
+  let arguments = (ins StrAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
+  let results = (outs AnyType:$result);
+}
+
 def OverriddenSymbolVisibilityOp : TEST_Op<"overridden_symbol_visibility", [
   DeclareOpInterfaceMethods<Symbol, ["getVisibility", "setVisibility"]>,
 ]> {
@@ -915,11 +922,95 @@ def OpWithResultShapeInterfaceOp : TEST_Op<"op_with_result_shape_interface",
   let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
 }
 
-def OpWithResultShapePerDimInterfaceOp :
-    TEST_Op<"op_with_result_shape_per_dim_interface",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+def ReifyShapedTypeUsingReifyResultShapesOp :
+    TEST_Op<"reify_shaped_type_using_reify_result_shapes",
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+            ["reifyResultShapes"]>]> {
+  let description = [{
+    Test that when resolving a single dimension of a result for an operation
+    that doesnt implement `reifyShapeOfResult` nor implements `reifyDimOfResult`
+    calls into the implementation of `reifyResultShapes` to get the required value.
+    The op semantics is that the first result has the same shape as the second operand
+    and the second result has the same shape as the first operand.
+  }];
   let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
   let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
+}
+
+def ReifyShapedTypeUsingReifyShapeOfResultOp :
+    TEST_Op<"reify_shaped_type_using_reify_shape_of_result",
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+            ["reifyResultShapes", "reifyShapeOfResult"]>]> {
+  let description = [{
+    Test that when resolving a single dimension of a result for an operation
+    that doesnt implement `reifyDimOfResult` but implements `reifyShapeOfResult`, which
+    is used to get the required value. `reifyResultShapes` is implemented as a failure
+    (which is also the default implementation) to ensure it is not called.
+    The op semantics is that the first result has the same shape as the second operand
+    and the second result has the same shape as the first operand.
+  }];
+  let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
+  let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
+}
+
+def ReifyShapedTypeUsingReifyDimOfResultOp :
+    TEST_Op<"reify_shaped_type_using_reify_dim_of_result",
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+            ["reifyResultShapes", "reifyShapeOfResult", "reifyDimOfResult"]>]> {
+  let description = [{
+    Test that when resolving a single dimension of a result for an operation
+    that implements `reifyDimOfResult`, which is used to get the required value.
+    `reifyResultShapes` and `reifyShapeOfResult` are implemented as failures
+    to ensure they are not called. The op semantics is that the first result has
+    the same shape as the second operand and the second result has the same shape
+    as the first operand.
+  }];
+  let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
+  let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
+}
+
+def UnreifiableResultShapesOp : TEST_Op<"unreifiable_result_shapes",
+    [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+        ["reifyResultShapes"]>]> {
+  let description = [{
+    Test handling of case where some dimension of the result cannot be
+    reified. This tests the path when `reifyResultShapes` is implemented.
+
+    Expected that dim 0 of `result` is reifable as dim 0 of `operand`, but
+    dim 1 of `result` is not reifiable.
+  }];
+  let arguments = (ins 2DTensorOf<[AnyType]>:$operand);
+  let results = (outs 2DTensorOf<[AnyType]>:$result);
+}
+
+def UnreifiableResultShapeOp : TEST_Op<"unreifiable_result_shape",
+    [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+        ["reifyResultShapes", "reifyShapeOfResult"]>]> {
+  let description = [{
+    Test handling of case where some dimension of the result cannot be
+    reified. This tests the path when `reifyShapeOfResult` is implemented,
+    but not `reifyDimOfResult` with `reifyResultShapes` implemented as a failure.
+
+    Expected that dim 0 of `result` is reifable as dim 0 of `operand`, but
+    dim 1 of `result` is not reifiable.
+  }];
+  let arguments = (ins 2DTensorOf<[AnyType]>:$operand);
+  let results = (outs 2DTensorOf<[AnyType]>:$result);
+}
+
+def UnreifiableDimOfResultShapeOp : TEST_Op<"unreifiable_dim_of_result_shape",
+    [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+        ["reifyResultShapes", "reifyShapeOfResult", "reifyDimOfResult"]>]> {
+  let description = [{
+    Test handling of case where some dimension of the result cannot be
+    reified. This tests the path when `reifyDimOfResult` is implemented,
+    and `reifyDimOfResult` with `reifyResultShapes` are implemented as a failure.
+
+    Expected that dim 0 of `result` is reifable as dim 0 of `operand`, but
+    dim 1 of `result` is not reifiable.
+  }];
+  let arguments = (ins 2DTensorOf<[AnyType]>:$operand);
+  let results = (outs 2DTensorOf<[AnyType]>:$result);
 }
 
 def IsNotScalar : Constraint<CPred<"$0.getType().getRank() != 0">>;
@@ -1106,6 +1197,12 @@ def TestLocationSrcNoResOp : TEST_Op<"loc_src_no_res"> {
 def TestLocationDstNoResOp : TEST_Op<"loc_dst_no_res"> {
   let arguments = (ins I32:$input);
   let results = (outs);
+}
+
+def TestLocationAttrOp : TEST_Op<"op_with_loc_attr"> {
+  let arguments = (ins LocationAttr:$loc_attr);
+  let results = (outs );
+  let assemblyFormat = "$loc_attr attr-dict";
 }
 
 //===----------------------------------------------------------------------===//

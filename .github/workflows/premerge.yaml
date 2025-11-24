@@ -64,6 +64,9 @@ jobs:
       - name: Build and Test
         timeout-minutes: 120
         continue-on-error: ${{ runner.arch == 'ARM64' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           git config --global --add safe.directory '*'
 
@@ -116,6 +119,14 @@ jobs:
           path: artifacts/
           retention-days: 5
           include-hidden-files: 'true'
+      - name: Upload Comment
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ always() && !startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') }}
+        continue-on-error: true
+        with:
+          name: workflow-args
+          path: |
+            comments
 
   premerge-checks-windows:
     name: Build and Test Windows
@@ -153,6 +164,9 @@ jobs:
         timeout-minutes: 180
         if: ${{ steps.vars.outputs.windows-projects != '' }}
         shell: cmd
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           # See the comments above in the Linux job for why we define each of

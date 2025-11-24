@@ -134,7 +134,7 @@ private:
   BitVector ClobberedRegUnits;
 
   // Scratch pad for findInsertionPoint.
-  SparseSet<unsigned> LiveRegUnits;
+  SparseSet<MCRegUnit, MCRegUnit, MCRegUnitToIndex> LiveRegUnits;
 
   /// Insertion point in Head for speculatively executed instructions form TBB
   /// and FBB.
@@ -271,7 +271,7 @@ bool SSAIfConv::InstrDependenciesAllowIfConv(MachineInstr *I) {
     // Remember clobbered regunits.
     if (MO.isDef() && Reg.isPhysical())
       for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-        ClobberedRegUnits.set(Unit);
+        ClobberedRegUnits.set(static_cast<unsigned>(Unit));
 
     if (!MO.readsReg() || !Reg.isVirtual())
       continue;
@@ -409,7 +409,7 @@ bool SSAIfConv::findInsertionPoint() {
     // Anything read by I is live before I.
     while (!Reads.empty())
       for (MCRegUnit Unit : TRI->regunits(Reads.pop_back_val()))
-        if (ClobberedRegUnits.test(Unit))
+        if (ClobberedRegUnits.test(static_cast<unsigned>(Unit)))
           LiveRegUnits.insert(Unit);
 
     // We can't insert before a terminator.
@@ -421,7 +421,7 @@ bool SSAIfConv::findInsertionPoint() {
     if (!LiveRegUnits.empty()) {
       LLVM_DEBUG({
         dbgs() << "Would clobber";
-        for (unsigned LRU : LiveRegUnits)
+        for (MCRegUnit LRU : LiveRegUnits)
           dbgs() << ' ' << printRegUnit(LRU, TRI);
         dbgs() << " live before " << *I;
       });

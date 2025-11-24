@@ -347,10 +347,10 @@ class MapInfoFinalizationPass
   /// base address (BoxOffsetOp) and a MapInfoOp for it. The most
   /// important thing to note is that we normally move the bounds from
   /// the descriptor map onto the base address map.
-  mlir::omp::MapInfoOp genBaseAddrMap(mlir::Value descriptor,
-                                      mlir::OperandRange bounds,
-                                      mlir::omp::ClauseMapFlags mapType,
-                                      fir::FirOpBuilder &builder) {
+  mlir::omp::MapInfoOp
+  genBaseAddrMap(mlir::Value descriptor, mlir::OperandRange bounds,
+                 mlir::omp::ClauseMapFlags mapType, fir::FirOpBuilder &builder,
+                 mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr()) {
     mlir::Location loc = descriptor.getLoc();
     mlir::Value baseAddrAddr = fir::BoxOffsetOp::create(
         builder, loc, descriptor, fir::BoxFieldAttr::base_addr);
@@ -372,7 +372,7 @@ class MapInfoFinalizationPass
             mlir::omp::VariableCaptureKind::ByRef),
         baseAddrAddr, /*members=*/mlir::SmallVector<mlir::Value>{},
         /*membersIndex=*/mlir::ArrayAttr{}, bounds,
-        /*mapperId*/ mlir::FlatSymbolRefAttr(),
+        /*mapperId=*/mapperId,
         /*name=*/builder.getStringAttr(""),
         /*partial_map=*/builder.getBoolAttr(false));
   }
@@ -578,6 +578,7 @@ class MapInfoFinalizationPass
     // from the descriptor to be used verbatim, i.e. without additional
     // remapping. To avoid this remapping, simply don't generate any map
     // information for the descriptor members.
+    mlir::FlatSymbolRefAttr mapperId = op.getMapperIdAttr();
     if (!mapMemberUsers.empty()) {
       // Currently, there should only be one user per map when this pass
       // is executed. Either a parent map, holding the current map in its
@@ -588,8 +589,8 @@ class MapInfoFinalizationPass
       assert(mapMemberUsers.size() == 1 &&
              "OMPMapInfoFinalization currently only supports single users of a "
              "MapInfoOp");
-      auto baseAddr =
-          genBaseAddrMap(descriptor, op.getBounds(), op.getMapType(), builder);
+      auto baseAddr = genBaseAddrMap(descriptor, op.getBounds(),
+                                     op.getMapType(), builder, mapperId);
       ParentAndPlacement mapUser = mapMemberUsers[0];
       adjustMemberIndices(memberIndices, mapUser.index);
       llvm::SmallVector<mlir::Value> newMemberOps;
@@ -602,8 +603,8 @@ class MapInfoFinalizationPass
       mapUser.parent.setMembersIndexAttr(
           builder.create2DI64ArrayAttr(memberIndices));
     } else if (!isHasDeviceAddrFlag) {
-      auto baseAddr =
-          genBaseAddrMap(descriptor, op.getBounds(), op.getMapType(), builder);
+      auto baseAddr = genBaseAddrMap(descriptor, op.getBounds(),
+                                     op.getMapType(), builder, mapperId);
       newMembers.push_back(baseAddr);
       if (!op.getMembers().empty()) {
         for (auto &indices : memberIndices)
@@ -635,7 +636,7 @@ class MapInfoFinalizationPass
             getDescriptorMapType(mapType, target)),
         op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{}, newMembers,
         newMembersAttr, /*bounds=*/mlir::SmallVector<mlir::Value>{},
-        /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
+        /*mapperId=*/mlir::FlatSymbolRefAttr(), op.getNameAttr(),
         /*partial_map=*/builder.getBoolAttr(false));
     op.replaceAllUsesWith(newDescParentMapOp.getResult());
     op->erase();
@@ -942,38 +943,6 @@ class MapInfoFinalizationPass
       // iterations from previous function scopes.
       localBoxAllocas.clear();
       deferrableDesc.clear();
-
-      // First, walk `omp.map.info` ops to see if any of them have varPtrs
-      // with an underlying type of fir.char<k, ?>, i.e a character
-      // with dynamic length. If so, check if they need bounds added.
-      func->walk([&](mlir::omp::MapInfoOp op) {
-        if (!op.getBounds().empty())
-          return;
-
-        mlir::Value varPtr = op.getVarPtr();
-        mlir::Type underlyingVarType = fir::unwrapRefType(varPtr.getType());
-
-        if (!fir::characterWithDynamicLen(underlyingVarType))
-          return;
-
-        fir::factory::AddrAndBoundsInfo info =
-            fir::factory::getDataOperandBaseAddr(
-                builder, varPtr, /*isOptional=*/false, varPtr.getLoc());
-
-        fir::ExtendedValue extendedValue =
-            hlfir::translateToExtendedValue(varPtr.getLoc(), builder,
-                                            hlfir::Entity{info.addr},
-                                            /*continguousHint=*/true)
-                .first;
-        builder.setInsertionPoint(op);
-        llvm::SmallVector<mlir::Value> boundsOps =
-            fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                               mlir::omp::MapBoundsType>(
-                builder, info, extendedValue,
-                /*dataExvIsAssumedSize=*/false, varPtr.getLoc());
-
-        op.getBoundsMutable().append(boundsOps);
-      });
 
       // Next, walk `omp.map.info` ops to see if any record members should be
       // implicitly mapped.

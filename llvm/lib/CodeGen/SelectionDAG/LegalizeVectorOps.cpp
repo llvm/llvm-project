@@ -1270,18 +1270,23 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     break;
   case ISD::FSINCOS:
   case ISD::FSINCOSPI: {
-    EVT VT = Node->getValueType(0).getVectorElementType();
+    EVT VT = Node->getValueType(0);
     RTLIB::Libcall LC = Node->getOpcode() == ISD::FSINCOS
                             ? RTLIB::getSINCOS(VT)
                             : RTLIB::getSINCOSPI(VT);
-    if (DAG.expandMultipleResultFPLibCall(LC, Node, Results))
+    if (LC != RTLIB::UNKNOWN_LIBCALL &&
+        TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results))
       return;
+
+    // TODO: Try to see if there's a narrower call available to use before
+    // scalarizing.
     break;
   }
   case ISD::FMODF: {
-    RTLIB::Libcall LC =
-        RTLIB::getMODF(Node->getValueType(0).getVectorElementType());
-    if (DAG.expandMultipleResultFPLibCall(LC, Node, Results,
+    EVT VT = Node->getValueType(0);
+    RTLIB::Libcall LC = RTLIB::getMODF(VT);
+    if (LC != RTLIB::UNKNOWN_LIBCALL &&
+        TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results,
                                           /*CallRetResNo=*/0))
       return;
     break;
@@ -1824,7 +1829,7 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   // If the difference is positive then some elements may alias
   EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
                                      Diff.getValueType());
-  SDValue Zero = DAG.getTargetConstant(0, DL, PtrVT);
+  SDValue Zero = DAG.getConstant(0, DL, PtrVT);
   SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
                              IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
 
