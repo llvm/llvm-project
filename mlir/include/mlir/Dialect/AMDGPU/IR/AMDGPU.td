@@ -1267,7 +1267,10 @@ def AMDGPU_MakeDmaDescriptorOp :
     OptionalAttr<DenseI64ArrayAttr>: $shared_static_sizes,
     Optional<AnyMemRef>: $atomic_barrier_address,
     Variadic<Index>: $atomic_barrier_dynamic_indices,
-    OptionalAttr<DenseI64ArrayAttr>: $atomic_barrier_static_indices)>,
+    OptionalAttr<DenseI64ArrayAttr>: $atomic_barrier_static_indices,
+    Optional<Index>: $global_increment,
+    Optional<Index>: $lds_increment,
+    Optional<Index>: $iteration_count)>,
   Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
 
   let summary = "TODO";
@@ -1283,6 +1286,7 @@ def AMDGPU_MakeDmaDescriptorOp :
     ( `atomicBarrier` `(` $atomic_barrier_address^
                           custom<DynamicIndexList>($atomic_barrier_dynamic_indices, $atomic_barrier_static_indices)
                       `:` type($atomic_barrier_address) `)`)?
+    ( `iterate` $global_increment^ `,` $lds_increment `,` $iteration_count )?
     attr-dict `:` qualified(type($base)) `to` type(results)
   }];
 
