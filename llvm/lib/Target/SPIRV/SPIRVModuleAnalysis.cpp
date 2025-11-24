@@ -494,8 +494,8 @@ MCRegister SPIRVModuleAnalysis::handleVariable(
 void SPIRVModuleAnalysis::collectDeclarations(const Module &M) {
   InstrGRegsMap SignatureToGReg;
   std::map<const Value *, unsigned> GlobalToGReg;
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+  for (const Function &F : M) {
+    MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
     const MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -634,10 +634,10 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
 // be correctly collected until these registers are globally numbered.
 void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
   InstrTraces IS;
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    if (F->isDeclaration())
+  for (const Function &F : M) {
+    if (F.isDeclaration())
       continue;
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+    MachineFunction *MF = MMI->getMachineFunction(F);
     assert(MF);
 
     for (MachineBasicBlock &MBB : *MF)
@@ -669,13 +669,13 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           collectOtherInstr(MI, MAI, SPIRV::MB_AliasingInsts, IS);
         } else if (TII->isDecorationInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_Annotations, IS);
-          collectFuncNames(MI, &*F);
+          collectFuncNames(MI, &F);
         } else if (TII->isConstantInstr(MI)) {
           // Now OpSpecConstant*s are not in DT,
           // but they need to be collected anyway.
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS);
         } else if (OpCode == SPIRV::OpFunction) {
-          collectFuncNames(MI, &*F);
+          collectFuncNames(MI, &F);
         } else if (OpCode == SPIRV::OpTypeForwardPointer) {
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS, false);
         }
@@ -687,10 +687,10 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
 // the result in global register alias table. Some registers are already
 // numbered.
 void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    if ((*F).isDeclaration())
+  for (const Function &F : M) {
+    if (F.isDeclaration())
       continue;
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+    MachineFunction *MF = MMI->getMachineFunction(F);
     assert(MF);
     for (MachineBasicBlock &MBB : *MF) {
       for (MachineInstr &MI : MBB) {
@@ -2169,8 +2169,8 @@ void addInstrRequirements(const MachineInstr &MI,
 static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
                         MachineModuleInfo *MMI, const SPIRVSubtarget &ST) {
   // Collect requirements for existing instructions.
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+  for (const Function &F : M) {
+    MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
     for (const MachineBasicBlock &MBB : *MF)
@@ -2250,8 +2250,7 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
     if (RequireKHRFloatControls2)
       MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls2);
   }
-  for (auto FI = M.begin(), E = M.end(); FI != E; ++FI) {
-    const Function &F = *FI;
+  for (const Function &F : M) {
     if (F.isDeclaration())
       continue;
     if (F.getMetadata("reqd_work_group_size"))
@@ -2431,23 +2430,23 @@ static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
                            MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
                            SPIRV::ModuleAnalysisInfo &MAI,
                            const SPIRVGlobalRegistry *GR) {
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+  for (const Function &F : M) {
+    MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
 
     for (auto &MBB : *MF)
       for (auto &MI : MBB)
         handleMIFlagDecoration(MI, ST, TII, MAI.Reqs, GR,
-                               MAI.FPFastMathDefaultInfoMap[&(*F)]);
+                               MAI.FPFastMathDefaultInfoMap[&F]);
   }
 }
 
 static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
                         MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
                         SPIRV::ModuleAnalysisInfo &MAI) {
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+  for (const Function &F : M) {
+    MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
     MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -2467,8 +2466,8 @@ static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
 // patching Instruction::PHI to SPIRV::OpPhi
 static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
                       const SPIRVInstrInfo &TII, MachineModuleInfo *MMI) {
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    MachineFunction *MF = MMI->getMachineFunction(*F);
+  for (const Function &F : M) {
+    MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
     for (auto &MBB : *MF) {
