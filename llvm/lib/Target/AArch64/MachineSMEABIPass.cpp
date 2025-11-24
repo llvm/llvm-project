@@ -1062,9 +1062,10 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
     emitZT0SaveRestore(Context, MBB, InsertPt, /*IsSave=*/false);
     break;
 
-  // This section handles: ACTIVE -> LOCAL_SAVED
+  // This section handles: ACTIVE[_ZT0_SAVED] -> LOCAL_SAVED
   case transitionFrom(ZAState::ACTIVE).to(ZAState::LOCAL_SAVED):
-    if (HasZT0State)
+  case transitionFrom(ZAState::ACTIVE_ZT0_SAVED).to(ZAState::LOCAL_SAVED):
+    if (HasZT0State && From == ZAState::ACTIVE)
       emitZT0SaveRestore(Context, MBB, InsertPt, /*IsSave=*/true);
     if (HasZAState)
       emitZASave(Context, MBB, InsertPt, PhysLiveRegs);

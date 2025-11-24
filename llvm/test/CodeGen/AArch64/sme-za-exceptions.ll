@@ -1033,6 +1033,155 @@ exit:
   ret void
 }
 
+define void @try_catch_shared_za_callee_zt0_saved(ptr %callee) "aarch64_inout_za" "aarch64_in_zt0" personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: try_catch_shared_za_callee_zt0_saved:
+; CHECK:       .Lfunc_begin8:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
+; CHECK-NEXT:    .cfi_lsda 28, .Lexception8
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    .cfi_def_cfa w29, 32
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w20, -16
+; CHECK-NEXT:    .cfi_offset w30, -24
+; CHECK-NEXT:    .cfi_offset w29, -32
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
+; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    stp x9, x8, [x29, #-80]
+; CHECK-NEXT:  .Ltmp24: // EH_LABEL
+; CHECK-NEXT:    sub x20, x29, #64
+; CHECK-NEXT:    sub x8, x29, #80
+; CHECK-NEXT:    str zt0, [x20]
+; CHECK-NEXT:    msr TPIDR2_EL0, x8
+; CHECK-NEXT:    bl may_throw
+; CHECK-NEXT:  .Ltmp25: // EH_LABEL
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    sub x0, x29, #80
+; CHECK-NEXT:    cbnz x8, .LBB8_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    bl __arm_tpidr2_restore
+; CHECK-NEXT:  .LBB8_2:
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    ldr zt0, [x20]
+; CHECK-NEXT:  // %bb.3: // %return_normally
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB8_4: // %unwind_dtors
+; CHECK-NEXT:  .Ltmp26: // EH_LABEL
+; CHECK-NEXT:    mov x20, x0
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    sub x0, x29, #80
+; CHECK-NEXT:    cbnz x8, .LBB8_6
+; CHECK-NEXT:  // %bb.5: // %unwind_dtors
+; CHECK-NEXT:    bl __arm_tpidr2_restore
+; CHECK-NEXT:  .LBB8_6: // %unwind_dtors
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    blr x19
+; CHECK-NEXT:    sub x8, x29, #80
+; CHECK-NEXT:    mov x0, x20
+; CHECK-NEXT:    msr TPIDR2_EL0, x8
+; CHECK-NEXT:    bl _Unwind_Resume
+;
+; CHECK-SDAG-LABEL: try_catch_shared_za_callee_zt0_saved:
+; CHECK-SDAG:       .Lfunc_begin8:
+; CHECK-SDAG-NEXT:    .cfi_startproc
+; CHECK-SDAG-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
+; CHECK-SDAG-NEXT:    .cfi_lsda 28, .Lexception8
+; CHECK-SDAG-NEXT:  // %bb.0:
+; CHECK-SDAG-NEXT:    stp x29, x30, [sp, #-48]! // 16-byte Folded Spill
+; CHECK-SDAG-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
+; CHECK-SDAG-NEXT:    mov x29, sp
+; CHECK-SDAG-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-SDAG-NEXT:    sub sp, sp, #80
+; CHECK-SDAG-NEXT:    .cfi_def_cfa w29, 48
+; CHECK-SDAG-NEXT:    .cfi_offset w19, -8
+; CHECK-SDAG-NEXT:    .cfi_offset w20, -16
+; CHECK-SDAG-NEXT:    .cfi_offset w21, -24
+; CHECK-SDAG-NEXT:    .cfi_offset w22, -32
+; CHECK-SDAG-NEXT:    .cfi_offset w30, -40
+; CHECK-SDAG-NEXT:    .cfi_offset w29, -48
+; CHECK-SDAG-NEXT:    rdsvl x8, #1
+; CHECK-SDAG-NEXT:    mov x9, sp
+; CHECK-SDAG-NEXT:    mov x19, x0
+; CHECK-SDAG-NEXT:    msub x9, x8, x8, x9
+; CHECK-SDAG-NEXT:    mov sp, x9
+; CHECK-SDAG-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-SDAG-NEXT:  .Ltmp24: // EH_LABEL
+; CHECK-SDAG-NEXT:    sub x8, x29, #16
+; CHECK-SDAG-NEXT:    sub x20, x29, #80
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x8
+; CHECK-SDAG-NEXT:    str zt0, [x20]
+; CHECK-SDAG-NEXT:    bl may_throw
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    ldr zt0, [x20]
+; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-SDAG-NEXT:    sub x0, x29, #16
+; CHECK-SDAG-NEXT:    cbnz x8, .LBB8_2
+; CHECK-SDAG-NEXT:  // %bb.1:
+; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
+; CHECK-SDAG-NEXT:  .LBB8_2:
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:  .Ltmp25: // EH_LABEL
+; CHECK-SDAG-NEXT:  // %bb.3: // %return_normally
+; CHECK-SDAG-NEXT:    mov sp, x29
+; CHECK-SDAG-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-SDAG-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
+; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #48 // 16-byte Folded Reload
+; CHECK-SDAG-NEXT:    ret
+; CHECK-SDAG-NEXT:  .LBB8_4: // %unwind_dtors
+; CHECK-SDAG-NEXT:  .Ltmp26: // EH_LABEL
+; CHECK-SDAG-NEXT:    sub x21, x29, #80
+; CHECK-SDAG-NEXT:    sub x22, x29, #16
+; CHECK-SDAG-NEXT:    mov x20, x0
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    ldr zt0, [x21]
+; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-SDAG-NEXT:    sub x0, x29, #16
+; CHECK-SDAG-NEXT:    cbnz x8, .LBB8_6
+; CHECK-SDAG-NEXT:  // %bb.5: // %unwind_dtors
+; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
+; CHECK-SDAG-NEXT:  .LBB8_6: // %unwind_dtors
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:    str zt0, [x21]
+; CHECK-SDAG-NEXT:    blr x19
+; CHECK-SDAG-NEXT:    ldr zt0, [x21]
+; CHECK-SDAG-NEXT:    mov x0, x20
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x22
+; CHECK-SDAG-NEXT:    str zt0, [x21]
+; CHECK-SDAG-NEXT:    bl _Unwind_Resume
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    ldr zt0, [x21]
+; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-SDAG-NEXT:    sub x0, x29, #16
+; CHECK-SDAG-NEXT:    cbnz x8, .LBB8_8
+; CHECK-SDAG-NEXT:  // %bb.7: // %unwind_dtors
+; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
+; CHECK-SDAG-NEXT:  .LBB8_8: // %unwind_dtors
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+  invoke void @may_throw()
+          to label %return_normally unwind label %unwind_dtors
+
+unwind_dtors:
+  %5 = landingpad { ptr, i32 }
+          cleanup
+  call void %callee() "aarch64_inout_za"
+  resume { ptr, i32 } %5
+
+return_normally:
+  ret void
+}
+
 declare ptr @__cxa_allocate_exception(i64)
 declare void @__cxa_throw(ptr, ptr, ptr)
 declare ptr @__cxa_begin_catch(ptr)
