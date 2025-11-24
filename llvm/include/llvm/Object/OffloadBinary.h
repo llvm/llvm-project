@@ -67,7 +67,7 @@ public:
   using string_iterator_range = iterator_range<string_iterator>;
 
   /// The current version of the binary used for backwards compatibility.
-  static const uint32_t Version = 1;
+  static const uint32_t Version = 2;
 
   /// The offloading metadata that will be serialized to a memory buffer.
   struct OffloadingImage {
@@ -109,9 +109,12 @@ public:
   struct Header {
     uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
     uint32_t Version = OffloadBinary::Version;   // Version identifier.
-    uint64_t Size;        // Size in bytes of this entire binary.
-    uint64_t EntryOffset; // Offset of the metadata entry in bytes.
-    uint64_t EntrySize;   // Size of the metadata entry in bytes.
+    uint64_t Size;          // Size in bytes of this entire binary.
+    uint64_t EntriesCount;  // Number of metadata entries in the binary.
+    uint64_t EntriesOffset; // Offset in bytes to the start of entries block.
+    uint64_t EntriesSize;   // Size of the entries block in bytes.
+    uint64_t StringOffset;  // Offset in bytes to the global string map
+    uint64_t NumStrings;    // Number of entries in the global string map.
   };
 
   struct Entry {
@@ -127,6 +130,7 @@ public:
   struct StringEntry {
     uint64_t KeyOffset;
     uint64_t ValueOffset;
+    uint64_t ValueSize;   // Size of the value in bytes.
   };
 
 private:
