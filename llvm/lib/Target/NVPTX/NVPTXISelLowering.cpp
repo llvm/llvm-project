@@ -768,7 +768,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Register custom handling for illegal type loads/stores. We'll try to custom
   // lower almost all illegal types and logic in the lowering will discard cases
   // we can't handle.
-  setOperationAction({ISD::LOAD, ISD::STORE}, {MVT::i128, MVT::f128}, Custom);
+  setOperationAction({ISD::LOAD, ISD::STORE}, {MVT::i128, MVT::i256, MVT::f128},
+                     Custom);
   for (MVT VT : MVT::fixedlen_vector_valuetypes())
     if (!isTypeLegal(VT) && VT.getStoreSizeInBits() <= 256)
       setOperationAction({ISD::STORE, ISD::LOAD}, VT, Custom);
@@ -5520,8 +5521,7 @@ static SDValue combineSTORE(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     // Unfortunately, we can't do this in the legalizer because there is no
     // way to setOperationAction for an non-simple type.
     StoreSDNode *ST = cast<StoreSDNode>(N);
-    if (!ST->getValue().getValueType().isSimple() ||
-        ST->getValue().getScalarValueSizeInBits() >= 256)
+    if (!ST->getValue().getValueType().isSimple())
       return lowerSTOREVector(SDValue(ST, 0), DCI.DAG, STI);
   }
 
@@ -5534,8 +5534,7 @@ static SDValue combineLOAD(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     // Here is our chance to custom lower a load with a non-simple type.
     // Unfortunately, we can't do this in the legalizer because there is no
     // way to setOperationAction for an non-simple type.
-    if (!N->getValueType(0).isSimple() ||
-        N->getValueType(0).getScalarSizeInBits() >= 256)
+    if (!N->getValueType(0).isSimple())
       return lowerLoadVector(N, DCI.DAG, STI);
   }
 
