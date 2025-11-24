@@ -86,7 +86,7 @@ struct MachineValueTypeSet {
   }
   std::pair<MachineValueTypeSet &, bool> insert(MVT T) {
     assert(T.SimpleTy < Capacity && "Capacity needs to be enlarged");
-    bool V = count(T.SimpleTy);
+    bool V = count(T);
     Words[T.SimpleTy / WordWidth] |= WordType(1) << (T.SimpleTy % WordWidth);
     return {*this, V};
   }
