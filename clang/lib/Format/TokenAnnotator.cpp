@@ -3129,8 +3129,11 @@ private:
 
     // It is very unlikely that we are going to find a pointer or reference type
     // definition on the RHS of an assignment.
-    if (IsExpression && !Contexts.back().CaretFound)
+    if (IsExpression && !Contexts.back().CaretFound &&
+        Line.getFirstNonComment()->isNot(
+            TT_RequiresClauseInARequiresExpression)) {
       return TT_BinaryOperator;
+    }
 
     // Opeartors at class scope are likely pointer or reference members.
     if (!Scopes.empty() && Scopes.back() == ST_Class)
@@ -5030,8 +5033,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return true;
     // Space between import <iostream>.
     // or import .....;
-    if (Left.is(Keywords.kw_import) && Right.isOneOf(tok::less, tok::ellipsis))
+    if (Left.is(Keywords.kw_import) &&
+        Right.isOneOf(tok::less, tok::ellipsis) &&
+        (!BeforeLeft || BeforeLeft->is(tok::kw_export))) {
       return true;
+    }
     // Space between `module :` and `import :`.
     if (Left.isOneOf(Keywords.kw_module, Keywords.kw_import) &&
         Right.is(TT_ModulePartitionColon)) {
