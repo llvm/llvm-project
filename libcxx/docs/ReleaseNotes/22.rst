@@ -83,6 +83,8 @@ Improvements and New Features
   iterators, resulting in a performance improvement for ``std::deque<short>`` and
   ``std::join_view<vector<vector<short>>>`` iterators.
 
+- The ``num_get::do_get`` integral overloads have been optimized, resulting in a performance improvement of up to 2.8x.
+
 Deprecations and Removals
 -------------------------
 

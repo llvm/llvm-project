@@ -222,6 +222,9 @@ public:
   }
 
   void operator()(const DirectiveTree::Conditional &C) {
+    // C.Branches needs to see the DirectiveTree definition, otherwise build
+    // fails in C++20.
+    [[maybe_unused]] DirectiveTree Dummy;
     for (const auto &[_, SubTree] : C.Branches)
       walk(SubTree);
   }

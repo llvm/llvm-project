@@ -14,6 +14,11 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: clang-modules-build
 
+// FIXME: using `#warning` causes diagnostics from system headers which include deprecated headers. This can only be
+// enabled again once https://github.com/llvm/llvm-project/pull/168041 (or a similar feature) has landed, since that
+// allows suppression in system headers.
+// XFAIL: *
+
 #include <cstdbool>
 
 // expected-warning@cstdbool:* {{<cstdbool> is deprecated in C++17 and removed in C++20.}}

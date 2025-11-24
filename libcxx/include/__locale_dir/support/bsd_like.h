@@ -79,15 +79,6 @@ inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __
   return ::strtold_l(__nptr, __endptr, __loc);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long long __strtoll(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return ::strtoll_l(__nptr, __endptr, __base, __loc);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-__strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return ::strtoull_l(__nptr, __endptr, __base, __loc);
-}
-
 //
 // Character manipulation functions
 //
@@ -210,12 +201,6 @@ template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
     char** __s, __locale_t __loc, const char* __format, _Args&&... __args) {
   return ::asprintf_l(__s, __loc, __format, std::forward<_Args>(__args)...); // non-standard
-}
-
-template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __sscanf(
-    const char* __s, __locale_t __loc, const char* __format, _Args&&... __args) {
-  return ::sscanf_l(__s, __loc, __format, std::forward<_Args>(__args)...);
 }
 _LIBCPP_DIAGNOSTIC_POP
 #undef _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT

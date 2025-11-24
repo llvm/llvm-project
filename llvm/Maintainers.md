@@ -511,6 +511,8 @@ Some subprojects maintain their own list of per-component maintainers.
 
 [libclc maintainers](https://github.com/llvm/llvm-project/blob/main/libclc/Maintainers.md)
 
+[libsycl maintainers](https://github.com/llvm/llvm-project/blob/main/libsycl/Maintainers.md)
+
 [LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/Maintainers.md)
 
 [LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.md)

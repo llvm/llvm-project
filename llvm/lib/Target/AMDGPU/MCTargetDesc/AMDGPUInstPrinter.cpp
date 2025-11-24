@@ -12,6 +12,7 @@
 #include "SIDefines.h"
 #include "Utils/AMDGPUAsmUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -1341,12 +1342,9 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
     return;
 
   O << Name;
-  for (int I = 0; I < NumOps; ++I) {
-    if (I != 0)
-      O << ',';
-
-    O << !!(Ops[I] & Mod);
-  }
+  ListSeparator Sep(",");
+  for (int I = 0; I < NumOps; ++I)
+    O << Sep << !!(Ops[I] & Mod);
 
   if (HasDstSel) {
     O << ',' << !!(Ops[0] & SISrcMods::DST_OP_SEL);
@@ -1584,14 +1582,10 @@ void AMDGPUInstPrinter::printGPRIdxMode(const MCInst *MI, unsigned OpNo,
     O << formatHex(static_cast<uint64_t>(Val));
   } else {
     O << "gpr_idx(";
-    bool NeedComma = false;
+    ListSeparator Sep(",");
     for (unsigned ModeId = ID_MIN; ModeId <= ID_MAX; ++ModeId) {
-      if (Val & (1 << ModeId)) {
-        if (NeedComma)
-          O << ',';
-        O << IdSymbolic[ModeId];
-        NeedComma = true;
-      }
+      if (Val & (1 << ModeId))
+        O << Sep << IdSymbolic[ModeId];
     }
     O << ')';
   }
@@ -1798,25 +1792,16 @@ void AMDGPUInstPrinter::printSWaitCnt(const MCInst *MI, unsigned OpNo,
   bool IsDefaultLgkmcnt = Lgkmcnt == getLgkmcntBitMask(ISA);
   bool PrintAll = IsDefaultVmcnt && IsDefaultExpcnt && IsDefaultLgkmcnt;
 
-  bool NeedSpace = false;
+  ListSeparator Sep(" ");
 
-  if (!IsDefaultVmcnt || PrintAll) {
-    O << "vmcnt(" << Vmcnt << ')';
-    NeedSpace = true;
-  }
+  if (!IsDefaultVmcnt || PrintAll)
+    O << Sep << "vmcnt(" << Vmcnt << ')';
 
-  if (!IsDefaultExpcnt || PrintAll) {
-    if (NeedSpace)
-      O << ' ';
-    O << "expcnt(" << Expcnt << ')';
-    NeedSpace = true;
-  }
+  if (!IsDefaultExpcnt || PrintAll)
+    O << Sep << "expcnt(" << Expcnt << ')';
 
-  if (!IsDefaultLgkmcnt || PrintAll) {
-    if (NeedSpace)
-      O << ' ';
-    O << "lgkmcnt(" << Lgkmcnt << ')';
-  }
+  if (!IsDefaultLgkmcnt || PrintAll)
+    O << Sep << "lgkmcnt(" << Lgkmcnt << ')';
 }
 
 void AMDGPUInstPrinter::printDepCtr(const MCInst *MI, unsigned OpNo,
@@ -1832,14 +1817,10 @@ void AMDGPUInstPrinter::printDepCtr(const MCInst *MI, unsigned OpNo,
     StringRef Name;
     unsigned Val;
     bool IsDefault;
-    bool NeedSpace = false;
+    ListSeparator Sep(" ");
     while (decodeDepCtr(Imm16, Id, Name, Val, IsDefault, STI)) {
-      if (!IsDefault || !HasNonDefaultVal) {
-        if (NeedSpace)
-          O << ' ';
-        O << Name << '(' << Val << ')';
-        NeedSpace = true;
-      }
+      if (!IsDefault || !HasNonDefaultVal)
+        O << Sep << Name << '(' << Val << ')';
     }
   } else {
     O << formatHex(Imm16);

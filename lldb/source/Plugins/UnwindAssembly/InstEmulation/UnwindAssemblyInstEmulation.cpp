@@ -63,7 +63,7 @@ static void DumpUnwindRowsToLog(Log *log, AddressRange range,
 }
 
 static void DumpInstToLog(Log *log, Instruction &inst,
-                          InstructionList inst_list) {
+                          const InstructionList &inst_list) {
   if (!log || !log->GetVerbose())
     return;
   const bool show_address = true;
