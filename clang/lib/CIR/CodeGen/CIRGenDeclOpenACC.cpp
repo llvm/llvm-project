@@ -250,7 +250,8 @@ public:
   void VisitCreateClause(const OpenACCCreateClause &clause) {
     for (const Expr *var : clause.getVarList())
       cgm.emitGlobalOpenACCDeclareDataOperands<mlir::acc::CreateOp>(
-          var, mlir::acc::DataClause::acc_create, {}, /*structured=*/true,
+          var, mlir::acc::DataClause::acc_create, clause.getModifierList(),
+          /*structured=*/true,
           /*implicit=*/false, /*requiresDtor=*/true);
   }
 };

@@ -75,29 +75,29 @@ int NSInt1;
 #pragma acc declare create(zero: NSHSE1, NSInt1, NSHSEArr[1:1])
 // CHECK: acc.global_ctor @{{.*}}NSHSE1{{.*}}_acc_ctor {
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @{{.*}}NSHSE1{{.*}} : !cir.ptr<!rec_HasSideEffects>
-// CHECK-NEXT: %[[CREATE:.*]] = acc.create varPtr(%[[GET_GLOBAL]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "NSHSE1"}
+// CHECK-NEXT: %[[CREATE:.*]] = acc.create varPtr(%[[GET_GLOBAL]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {modifiers = #acc<data_clause_modifier zero>, name = "NSHSE1"}
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !cir.ptr<!rec_HasSideEffects>)
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
 // CHECK: acc.global_dtor @{{.*}}NSHSE1{{.*}}_acc_dtor {
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @{{.*}}NSHSE1{{.*}} : !cir.ptr<!rec_HasSideEffects>
-// CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[GET_GLOBAL]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {dataClause = #acc<data_clause acc_create>, name = "NSHSE1"}
+// CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[GET_GLOBAL]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {dataClause = #acc<data_clause acc_create>, modifiers = #acc<data_clause_modifier zero>, name = "NSHSE1"}
 // CHECK-NEXT: acc.declare_exit dataOperands(%[[GDP]] : !cir.ptr<!rec_HasSideEffects>)
-// CHECK-NEXT: acc.delete accPtr(%[[GDP]] : !cir.ptr<!rec_HasSideEffects>) {dataClause = #acc<data_clause acc_create>, name = "NSHSE1"}
+// CHECK-NEXT: acc.delete accPtr(%[[GDP]] : !cir.ptr<!rec_HasSideEffects>) {dataClause = #acc<data_clause acc_create>, modifiers = #acc<data_clause_modifier zero>, name = "NSHSE1"}
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
 //
 // CHECK: acc.global_ctor @{{.*}}NSInt1{{.*}}_acc_ctor {
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @{{.*}}NSInt1{{.*}} : !cir.ptr<!s32i>
-// CHECK-NEXT: %[[CREATE:.*]] = acc.create varPtr(%[[GET_GLOBAL]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "NSInt1"}
+// CHECK-NEXT: %[[CREATE:.*]] = acc.create varPtr(%[[GET_GLOBAL]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {modifiers = #acc<data_clause_modifier zero>, name = "NSInt1"}
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !cir.ptr<!s32i>)
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
 // CHECK: acc.global_dtor @{{.*}}NSInt1{{.*}}_acc_dtor {
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @{{.*}}NSInt1{{.*}} : !cir.ptr<!s32i>
-// CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[GET_GLOBAL]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_create>, name = "NSInt1"}
+// CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[GET_GLOBAL]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_create>, modifiers = #acc<data_clause_modifier zero>, name = "NSInt1"}
 // CHECK-NEXT: acc.declare_exit dataOperands(%[[GDP]] : !cir.ptr<!s32i>)
-// CHECK-NEXT: acc.delete accPtr(%[[GDP]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_create>, name = "NSInt1"}
+// CHECK-NEXT: acc.delete accPtr(%[[GDP]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_create>, modifiers = #acc<data_clause_modifier zero>, name = "NSInt1"}
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
 //
@@ -110,7 +110,7 @@ int NSInt1;
 // CHECK-NEXT: %[[STRIDE:.*]] = arith.constant 1 : i64
 // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[LB_CAST]] : si32) extent(%[[UB_CAST]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @{{.*}}NSHSEArr{{.*}} : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
-// CHECK-NEXT: %[[CREATE:.*]] = acc.create varPtr(%[[GET_GLOBAL]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {name = "NSHSEArr[1:1]"}
+// CHECK-NEXT: %[[CREATE:.*]] = acc.create varPtr(%[[GET_GLOBAL]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {modifiers = #acc<data_clause_modifier zero>, name = "NSHSEArr[1:1]"}
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
@@ -123,9 +123,9 @@ int NSInt1;
 // CHECK-NEXT: %[[STRIDE:.*]] = arith.constant 1 : i64
 // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[LB_CAST]] : si32) extent(%[[UB_CAST]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @{{.*}}NSHSEArr{{.*}} : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
-// CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[GET_GLOBAL]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {dataClause = #acc<data_clause acc_create>, name = "NSHSEArr[1:1]"}
+// CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[GET_GLOBAL]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {dataClause = #acc<data_clause acc_create>, modifiers = #acc<data_clause_modifier zero>, name = "NSHSEArr[1:1]"}
 // CHECK-NEXT: acc.declare_exit dataOperands(%[[GDP]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
-// CHECK-NEXT: acc.delete accPtr(%[[GDP]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) {dataClause = #acc<data_clause acc_create>, name = "NSHSEArr[1:1]"}
+// CHECK-NEXT: acc.delete accPtr(%[[GDP]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) {dataClause = #acc<data_clause acc_create>, modifiers = #acc<data_clause_modifier zero>, name = "NSHSEArr[1:1]"}
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
 
