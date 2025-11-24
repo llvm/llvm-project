@@ -59,21 +59,29 @@ _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
   // NOLINTEND(readability-identifier-naming)
 }
 
-inline _LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, double __x) { return std::__hermite(__n, __x); }
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, double __x) {
+  return std::__hermite(__n, __x);
+}
 
-inline _LIBCPP_HIDE_FROM_ABI float hermite(unsigned __n, float __x) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI float hermite(unsigned __n, float __x) {
   // use double internally -- float is too prone to overflow!
   return static_cast<float>(std::hermite(__n, static_cast<double>(__x)));
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double hermite(unsigned __n, long double __x) { return std::__hermite(__n, __x); }
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI long double hermite(unsigned __n, long double __x) {
+  return std::__hermite(__n, __x);
+}
 
-inline _LIBCPP_HIDE_FROM_ABI float hermitef(unsigned __n, float __x) { return std::hermite(__n, __x); }
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI float hermitef(unsigned __n, float __x) {
+  return std::hermite(__n, __x);
+}
 
-inline _LIBCPP_HIDE_FROM_ABI long double hermitel(unsigned __n, long double __x) { return std::hermite(__n, __x); }
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI long double hermitel(unsigned __n, long double __x) {
+  return std::hermite(__n, __x);
+}
 
 template <class _Integer, std::enable_if_t<std::is_integral_v<_Integer>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, _Integer __x) {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, _Integer __x) {
   return std::hermite(__n, static_cast<double>(__x));
 }
 

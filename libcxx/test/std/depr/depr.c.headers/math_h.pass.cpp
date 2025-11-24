@@ -859,7 +859,7 @@ struct test_two_args {
     (void)::remainder(T(), U());
     int ip;
     ASSERT_SAME_TYPE(decltype(::remquo(T(), U(), &ip)), PromoteResult);
-    ::remquo(T(), U(), &ip);
+    (void)::remquo(T(), U(), &ip);
   }
 };
 

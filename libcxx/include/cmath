@@ -586,21 +586,23 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Fp __lerp(_Fp __a, _Fp __b, _Fp __t) noexcept {
     return __x < __b ? __x : __b;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr float lerp(float __a, float __b, float __t) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline constexpr float lerp(float __a, float __b, float __t) _NOEXCEPT {
   return __lerp(__a, __b, __t);
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr double lerp(double __a, double __b, double __t) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline constexpr double lerp(double __a, double __b, double __t) _NOEXCEPT {
   return __lerp(__a, __b, __t);
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr long double lerp(long double __a, long double __b, long double __t) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline constexpr long double
+lerp(long double __a, long double __b, long double __t) _NOEXCEPT {
   return __lerp(__a, __b, __t);
 }
 
 template <class _A1, class _A2, class _A3>
   requires(is_arithmetic_v<_A1> && is_arithmetic_v<_A2> && is_arithmetic_v<_A3>)
-_LIBCPP_HIDE_FROM_ABI inline constexpr __promote_t<_A1, _A2, _A3> lerp(_A1 __a, _A2 __b, _A3 __t) noexcept {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline constexpr __promote_t<_A1, _A2, _A3>
+lerp(_A1 __a, _A2 __b, _A3 __t) noexcept {
   using __result_type = __promote_t<_A1, _A2, _A3>;
   static_assert(!(
       _IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value && _IsSame<_A3, __result_type>::value));

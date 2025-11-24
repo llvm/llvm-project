@@ -23,16 +23,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __math {
 
-inline _LIBCPP_HIDE_FROM_ABI float fma(float __x, float __y, float __z) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI float fma(float __x, float __y, float __z) _NOEXCEPT {
   return __builtin_fmaf(__x, __y, __z);
 }
 
 template <class = int>
-_LIBCPP_HIDE_FROM_ABI double fma(double __x, double __y, double __z) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double fma(double __x, double __y, double __z) _NOEXCEPT {
   return __builtin_fma(__x, __y, __z);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double fma(long double __x, long double __y, long double __z) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI long double
+fma(long double __x, long double __y, long double __z) _NOEXCEPT {
   return __builtin_fmal(__x, __y, __z);
 }
 
@@ -40,7 +41,7 @@ template <class _A1,
           class _A2,
           class _A3,
           __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value && is_arithmetic<_A3>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __promote_t<_A1, _A2, _A3> fma(_A1 __x, _A2 __y, _A3 __z) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __promote_t<_A1, _A2, _A3> fma(_A1 __x, _A2 __y, _A3 __z) _NOEXCEPT {
   using __result_type = __promote_t<_A1, _A2, _A3>;
   static_assert(
       !(_IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value && _IsSame<_A3, __result_type>::value),
