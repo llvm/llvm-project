@@ -1147,28 +1147,42 @@ void ProfiledBinary::loadSymbolsFromPseudoProbe() {
     return;
 
   const AddressProbesMap &Address2ProbesMap = getAddress2ProbesMap();
-  for (auto &[Addr, Range] : StartAddrToFuncRangeMap) {
-    auto Func = Range.Func;
-    if (!Range.IsFuncEntry || Func->NameStatus != DwarfNameStatus::Mismatch)
+  for (auto *Func : ProfiledFunctions) {
+    if (Func->NameStatus != DwarfNameStatus::Mismatch)
       continue;
-    const auto &Probe = Address2ProbesMap.find(Addr, Range.EndAddress);
-    if (Probe.begin() != Probe.end()) {
-      const MCDecodedPseudoProbeInlineTree *InlineTreeNode =
-          Probe.begin()->get().getInlineTreeNode();
-      while (!InlineTreeNode->isTopLevelFunc())
-        InlineTreeNode = static_cast<MCDecodedPseudoProbeInlineTree *>(
-            InlineTreeNode->Parent);
+    for (auto &[StartAddr, EndAddr] : Func->Ranges) {
+      auto Range = findFuncRangeForStartAddr(StartAddr);
+      if (!Range->IsFuncEntry)
+        continue;
+      const auto &Probe = Address2ProbesMap.find(StartAddr, EndAddr);
+      if (Probe.begin() != Probe.end()) {
+        const MCDecodedPseudoProbeInlineTree *InlineTreeNode =
+            Probe.begin()->get().getInlineTreeNode();
+        while (!InlineTreeNode->isTopLevelFunc())
+          InlineTreeNode = static_cast<MCDecodedPseudoProbeInlineTree *>(
+              InlineTreeNode->Parent);
 
-      auto TopLevelProbes = InlineTreeNode->getProbes();
-      auto TopProbe = TopLevelProbes.begin();
-      assert(TopProbe != TopLevelProbes.end() &&
-             TopProbe->getAddress() >= Addr &&
-             "Top level pseudo probe does not match function range");
+        auto TopLevelProbes = InlineTreeNode->getProbes();
+        auto TopProbe = TopLevelProbes.begin();
+        assert(TopProbe != TopLevelProbes.end() &&
+               TopProbe->getAddress() >= StartAddr &&
+               TopProbe->getAddress() < EndAddr &&
+               "Top level pseudo probe does not match function range");
 
-      const auto *ProbeDesc = getFuncDescForGUID(InlineTreeNode->Guid);
-      auto Ret = PseudoProbeNames.emplace(Func, ProbeDesc->FuncName);
-      assert((Ret.second || Ret.first->second == ProbeDesc->FuncName) &&
-             "Mismatched pseudo probe names");
+        const auto *ProbeDesc = getFuncDescForGUID(InlineTreeNode->Guid);
+        auto Ret = PseudoProbeNames.emplace(Func, ProbeDesc->FuncName);
+        if (!Ret.second && Ret.first->second != ProbeDesc->FuncName &&
+            ShowDetailedWarning)
+          WithColor::warning()
+              << "Mismatched pseudo probe names in function " << Func->FuncName
+              << " at range: (" << format("%8" PRIx64, StartAddr) << ", "
+              << format("%8" PRIx64, EndAddr) << "). "
+              << "The previously found pseudo probe name is "
+              << Ret.first->second << " but it conflicts with name "
+              << ProbeDesc->FuncName
+              << " This likely indicates a DWARF error that produces "
+                 "conflicting symbols at the same starting address.\n";
+      }
     }
   }
 }
