@@ -20,6 +20,7 @@
 // APFloatBase::Semantics enum value.
 //
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APSInt.h"
 
 #ifdef _WIN32
 #ifndef MLIR_APFLOAT_WRAPPERS_EXPORT
@@ -99,6 +100,19 @@ _mlir_apfloat_convert(int32_t inSemantics, int32_t outSemantics, uint64_t a) {
   bool losesInfo;
   val.convert(outSem, llvm::RoundingMode::NearestTiesToEven, &losesInfo);
   llvm::APInt result = val.bitcastToAPInt();
+  return result.getZExtValue();
+}
+
+MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_convert_to_int(
+    int32_t semantics, int32_t resultWidth, bool isUnsigned, uint64_t a) {
+  const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(semantics));
+  unsigned inputWidth = llvm::APFloatBase::semanticsSizeInBits(sem);
+  llvm::APFloat val(sem, llvm::APInt(inputWidth, a));
+  llvm::APSInt result(resultWidth, isUnsigned);
+  bool isExact;
+  // TODO: Custom rounding modes are not supported yet.
+  val.convertToInteger(result, llvm::RoundingMode::NearestTiesToEven, &isExact);
   return result.getZExtValue();
 }
 }
