@@ -52,8 +52,8 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
         MCInst &Inst = *It;
         if (BC.MIB->isCFI(Inst))
           continue;
-        auto RAState = BC.MIB->getRAState(Inst);
-        if (!RAState) {
+        std::optional<bool> RAState = BC.MIB->getRAState(Inst);
+        if (!RAState.has_value()) {
           BC.errs() << "BOLT-ERROR: unknown RAState after inferUnknownStates "
                     << " in function " << BF.getPrintName() << "\n";
           PassFailed = true;
@@ -106,8 +106,8 @@ void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
   // If a function is already split in the input, the first FF can also start
   // with Signed state. This covers that scenario as well.
   auto II = (*FirstNonEmpty)->getFirstNonPseudo();
-  auto RAState = BC.MIB->getRAState(*II);
-  if (!RAState) {
+  std::optional<bool> RAState = BC.MIB->getRAState(*II);
+  if (!RAState.has_value()) {
     BC.errs() << "BOLT-ERROR: unknown RAState after inferUnknownStates "
               << " in function " << BF.getPrintName() << "\n";
     PassFailed = true;
@@ -124,8 +124,8 @@ InsertNegateRAState::getFirstKnownRAState(BinaryContext &BC,
   for (const MCInst &Inst : BB) {
     if (BC.MIB->isCFI(Inst))
       continue;
-    auto RAStateOpt = BC.MIB->getRAState(Inst);
-    if (RAStateOpt)
+    std::optional<bool> RAStateOpt = BC.MIB->getRAState(Inst);
+    if (RAStateOpt.has_value())
       return RAStateOpt;
   }
   return std::nullopt;
@@ -139,8 +139,8 @@ void InsertNegateRAState::fillUnknownStateInBB(BinaryContext &BC,
     return;
   // If the first instruction has unknown RAState, we should copy the first
   // known RAState.
-  auto RAStateOpt = BC.MIB->getRAState(*First);
-  if (!RAStateOpt) {
+  std::optional<bool> RAStateOpt = BC.MIB->getRAState(*First);
+  if (!RAStateOpt.has_value()) {
     auto FirstRAState = getFirstKnownRAState(BC, BB);
     if (!FirstRAState)
       // We fill unknown BBs later.
@@ -160,7 +160,7 @@ void InsertNegateRAState::fillUnknownStateInBB(BinaryContext &BC,
     // No need to check for nullopt: we only entered this loop after the first
     // instruction had its RAState set, and RAState is always set for the
     // previous instruction in the previous iteration of the loop.
-    auto PrevRAState = BC.MIB->getRAState(Prev);
+    std::optional<bool> PrevRAState = BC.MIB->getRAState(Prev);
 
     auto RAState = BC.MIB->getRAState(Inst);
     if (!RAState) {
@@ -179,8 +179,8 @@ bool InsertNegateRAState::isUnknownBlock(BinaryContext &BC,
   for (const MCInst &Inst : BB) {
     if (BC.MIB->isCFI(Inst))
       continue;
-    auto RAState = BC.MIB->getRAState(Inst);
-    if (RAState)
+    std::optional<bool> RAState = BC.MIB->getRAState(Inst);
+    if (RAState.has_value())
       return false;
   }
   return true;
@@ -206,10 +206,12 @@ void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
     for (BinaryBasicBlock *BB : FF) {
       if (!FirstIter && isUnknownBlock(BC, *BB)) {
-        // As of #160989, we have to copy the
-        // PrevInst's RAState, because CFIs are already incorrect here.
-        auto PrevRAState = BC.MIB->getRAState(PrevInst);
-        if (!PrevRAState) {
+        // As exlained in issue #160989, the unwind info is incorrect for stubs.
+        // Indicating the correct RAState without the rest of the unwind info
+        // being correct is not useful. Instead, we copy the RAState from the
+        // previous instruction.
+        std::optional<bool> PrevRAState = BC.MIB->getRAState(PrevInst);
+        if (!PrevRAState.has_value()) {
           llvm_unreachable(
               "Previous Instruction has no RAState in fillUnknownStubs.");
           continue;
