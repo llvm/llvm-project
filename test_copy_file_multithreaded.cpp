@@ -78,7 +78,7 @@ void test_copy_file_multithreaded() {
     fs::remove_all(dest_dir);
 }
 
-int main() {
+int main(int, char**) {
     std::cout << "Testing copy_file in multithreaded environment (Issue #169261)\n";
     test_copy_file_multithreaded();
     std::cout << "Test finished\n";
