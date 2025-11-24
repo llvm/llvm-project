@@ -1,7 +1,7 @@
 # DSMIL Attributes Reference
 **Comprehensive Guide to DSMIL Source-Level Annotations**
 
-Version: v1.0
+Version: v1.2
 Last Updated: 2025-11-24
 
 ---
@@ -291,6 +291,221 @@ struct message *receive_ipc_message(void);
 
 ---
 
+### `dsmil_secret`
+
+**Purpose**: Mark cryptographic secrets and functions requiring constant-time execution to prevent side-channel attacks.
+
+**Parameters**: None
+
+**Applies to**: Function parameters, function return values, functions (entire body constant-time)
+
+**Example**:
+```c
+// Mark function for constant-time enforcement
+__attribute__((dsmil_secret))
+void aes_encrypt(const uint8_t *key, const uint8_t *plaintext, uint8_t *ciphertext) {
+    // All operations on key and derived values are constant-time
+    // No secret-dependent branches or memory accesses allowed
+}
+
+// Mark specific parameters as secrets
+void hmac_compute(
+    __attribute__((dsmil_secret)) const uint8_t *key,
+    size_t key_len,
+    const uint8_t *message,
+    size_t msg_len,
+    uint8_t *mac
+) {
+    // Only 'key' parameter is tainted as secret
+    // Branches on msg_len are allowed (public)
+}
+
+// Constant-time comparison
+__attribute__((dsmil_secret))
+int crypto_compare(const uint8_t *a, const uint8_t *b, size_t len) {
+    int result = 0;
+    for (size_t i = 0; i < len; i++) {
+        result |= a[i] ^ b[i];  // Constant-time
+    }
+    return result;
+}
+```
+
+**IR Lowering**:
+```llvm
+; On SSA values derived from secret parameters
+!dsmil.secret = !{i1 true}
+
+; After verification pass succeeds
+!dsmil.ct_verified = !{i1 true}
+```
+
+**Constant-Time Enforcement**:
+
+The `dsmil-ct-check` pass enforces strict constant-time guarantees:
+
+1. **No Secret-Dependent Branches**:
+   - ❌ `if (secret_byte & 0x01) { ... }`
+   - ✓ `mask = -(secret_byte & 0x01); result = (result & ~mask) | (alternative & mask);`
+
+2. **No Secret-Dependent Memory Access**:
+   - ❌ `value = table[secret_index];`
+   - ✓ Use constant-time lookup via masking or SIMD gather with fixed-time fallback
+
+3. **No Variable-Time Instructions**:
+   - ❌ `quotient = secret / divisor;` (division is variable-time)
+   - ❌ `remainder = secret % modulus;` (modulo is variable-time)
+   - ✓ Use whitelisted intrinsics: `__builtin_constant_time_select()`
+   - ✓ Hardware AES-NI: `_mm_aesenc_si128()` is constant-time
+
+**Violation Examples**:
+```c
+__attribute__((dsmil_secret))
+void bad_crypto(const uint8_t *key) {
+    // ERROR: secret-dependent branch
+    if (key[0] == 0x00) {
+        fast_path();
+    } else {
+        slow_path();
+    }
+
+    // ERROR: secret-dependent array indexing
+    uint8_t sbox_value = sbox[key[1]];
+
+    // ERROR: variable-time division
+    uint32_t derived = key[2] / key[3];
+}
+```
+
+**Allowed Patterns**:
+```c
+__attribute__((dsmil_secret))
+void good_crypto(const uint8_t *key, const uint8_t *plaintext, size_t len) {
+    // OK: Branching on public data (len)
+    if (len < 16) {
+        return;
+    }
+
+    // OK: Constant-time operations
+    for (size_t i = 0; i < len; i++) {
+        // XOR is constant-time
+        plaintext[i] ^= key[i % 16];
+    }
+
+    // OK: Hardware crypto intrinsics (whitelisted)
+    __m128i state = _mm_loadu_si128((__m128i*)plaintext);
+    __m128i round_key = _mm_loadu_si128((__m128i*)key);
+    state = _mm_aesenc_si128(state, round_key);
+}
+```
+
+**AI Integration**:
+
+* **Layer 8 Security AI** performs deep analysis of `dsmil_secret` functions:
+  - Identifies potential cache-timing vulnerabilities
+  - Detects power analysis risks
+  - Suggests constant-time alternatives for flagged patterns
+  - Validates that suggested mitigations are side-channel resistant
+
+* **Layer 5 Performance AI** balances security with performance:
+  - Recommends AVX-512 constant-time implementations where beneficial
+  - Suggests hardware-accelerated options (AES-NI, SHA extensions)
+  - Provides performance estimates for constant-time vs variable-time implementations
+
+**Policy Enforcement**:
+
+* Functions in **Layers 8–9** (Security/Executive) with `dsmil_sandbox("crypto_worker")` **must** use `dsmil_secret` for:
+  - All key material (symmetric keys, private keys)
+  - Key derivation operations
+  - Signature generation (not verification, which can be variable-time)
+  - Decryption operations (encryption can be variable-time for some schemes)
+
+* **Production builds** (`DSMIL_PRODUCTION=1`):
+  - Violations trigger **compile-time errors**
+  - No binary generated if constant-time check fails
+
+* **Lab builds** (`--ai-mode=lab`):
+  - Violations emit **warnings only**
+  - Binary generated with metadata marking unverified functions
+
+**Metadata**:
+
+After successful verification:
+```json
+{
+  "symbol": "aes_encrypt",
+  "layer": 8,
+  "device_id": 80,
+  "security": {
+    "constant_time": true,
+    "verified_by": "dsmil-ct-check v1.2",
+    "verification_date": "2025-11-24T10:30:00Z",
+    "l8_scan_score": 0.95,
+    "side_channel_resistant": true
+  }
+}
+```
+
+**Common Use Cases**:
+
+```c
+// Cryptographic primitives (Layer 8)
+DSMIL_LAYER(8) DSMIL_DEVICE(80)
+__attribute__((dsmil_secret))
+void sha384_compress(const uint8_t *key, uint8_t *state);
+
+// Key exchange (Layer 8)
+DSMIL_LAYER(8) DSMIL_DEVICE(81)
+__attribute__((dsmil_secret))
+int ml_kem_1024_decapsulate(const uint8_t *sk, const uint8_t *ct, uint8_t *shared);
+
+// Signature generation (Layer 9)
+DSMIL_LAYER(9) DSMIL_DEVICE(90)
+__attribute__((dsmil_secret))
+int ml_dsa_87_sign(const uint8_t *sk, const uint8_t *msg, size_t len, uint8_t *sig);
+
+// Constant-time string comparison
+DSMIL_LAYER(8)
+__attribute__((dsmil_secret))
+int secure_memcmp(const void *a, const void *b, size_t n);
+```
+
+**Relationship with Other Attributes**:
+
+* Combine with `dsmil_sandbox("crypto_worker")` for defense-in-depth:
+  ```c
+  DSMIL_LAYER(8) DSMIL_DEVICE(80) DSMIL_SANDBOX("crypto_worker")
+  __attribute__((dsmil_secret))
+  int main(void) {
+      // Sandboxed + constant-time enforced
+      return crypto_service_loop();
+  }
+  ```
+
+* Orthogonal to `dsmil_untrusted_input`:
+  - `dsmil_secret`: Protects secrets from leaking via timing
+  - `dsmil_untrusted_input`: Tracks untrusted data to prevent injection attacks
+  - Combined: Safe handling of secrets in presence of untrusted input
+
+**Performance Considerations**:
+
+* Constant-time enforcement typically adds **5-15% overhead** for crypto operations
+* Hardware-accelerated paths (AES-NI, SHA-NI) remain **near-zero overhead**
+* Layer 5 AI can identify cases where constant-time is unnecessary (e.g., already using hardware crypto)
+
+**Debugging**:
+
+Enable verbose constant-time checking:
+```bash
+dsmil-clang -mllvm -dsmil-ct-check-verbose=1 \
+  -mllvm -dsmil-ct-show-violations=1 \
+  crypto.c -o crypto.o
+```
+
+Output shows detailed taint propagation and violation locations with suggested fixes.
+
+---
+
 ## MLOps Stage Attributes
 
 ### `dsmil_stage(const char *stage_name)`
@@ -460,6 +675,7 @@ void job_scheduler(struct job *jobs, int count) {
 | `dsmil_gateway` | ✓ | ✗ | ✗ |
 | `dsmil_sandbox` | ✗ | ✗ | ✓ |
 | `dsmil_untrusted_input` | ✓ (params) | ✓ | ✗ |
+| `dsmil_secret` (v1.2) | ✓ (params/return) | ✗ | ✓ |
 | `dsmil_stage` | ✓ | ✗ | ✓ |
 | `dsmil_kv_cache` | ✓ | ✓ | ✗ |
 | `dsmil_hot_model` | ✓ | ✓ | ✗ |

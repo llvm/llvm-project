@@ -1,7 +1,7 @@
 # DSLLVM Design Specification
 **DSMIL-Optimized LLVM Toolchain for Intel Meteor Lake**
 
-Version: v1.1
+Version: v1.2
 Status: Draft
 Owner: SWORDIntel / DSMIL Kernel Team
 
@@ -24,6 +24,9 @@ Primary capabilities:
 8. **AI-assisted compilation via DSMIL Layers 3–9** (LLMs, security AI, forecasting).
 9. **AI-trained cost models & schedulers** for device/placement decisions.
 10. **AI integration modes & guardrails** to keep toolchain deterministic and auditable.
+11. **Constant-time enforcement (`dsmil_secret`)** for cryptographic side-channel safety.
+12. **Quantum optimization hints** integrated into AI advisor I/O pipeline.
+13. **Compact ONNX feature scoring** on Devices 43-58 for sub-millisecond cost model inference.
 
 DSLLVM does *not* invent a new language. It extends LLVM/Clang with attributes, metadata, passes, ELF extensions, AI-powered advisors, and sidecar outputs aligned with the DSMIL 9-layer / 104-device architecture.
 
@@ -741,6 +744,245 @@ Tool: `dsmil-abi-diff`:
 
 Useful for code review and change-approval workflows.
 
+### 10.4 Constant-Time / Side-Channel Annotations (`dsmil_secret`)
+
+Cryptographic code in Layers 8–9 requires **constant-time execution** to prevent timing side-channels. DSLLVM provides the `dsmil_secret` attribute to enforce this.
+
+**Attribute**:
+
+```c
+__attribute__((dsmil_secret))
+void aes_encrypt(const uint8_t *key, const uint8_t *plaintext, uint8_t *ciphertext);
+
+__attribute__((dsmil_secret))
+int crypto_compare(const uint8_t *a, const uint8_t *b, size_t len);
+```
+
+**Semantics**:
+
+* Parameters/return values marked with `dsmil_secret` are **tainted** in LLVM IR with `!dsmil.secret = i1 true`.
+* DSLLVM tracks data-flow of secret values through SSA graph.
+* Pass **`dsmil-ct-check`** (constant-time check) enforces:
+
+  * **No secret-dependent branches**: if/else/switch on secret data → error.
+  * **No secret-dependent memory access**: array indexing by secrets → error.
+  * **No variable-time instructions**: division, modulo with secret operands → error (unless whitelisted intrinsics like `crypto.*`).
+
+**AI Integration**:
+
+* **Layer 8 Security AI** analyzes functions marked `dsmil_secret`:
+
+  * Identifies potential side-channel leaks (cache timing, power analysis).
+  * Suggests mitigations: constant-time lookup tables, masking, assembly intrinsics.
+
+* **Layer 5 Performance AI** balances constant-time enforcement with performance:
+
+  * Suggests where to use AVX-512 constant-time implementations.
+  * Recommends hardware AES-NI vs software AES based on Device constraints.
+
+**Policy**:
+
+* Functions in Layers 8–9 with `dsmil_sandbox("crypto_worker")` **must** use `dsmil_secret` for all key material.
+* Violations trigger compile-time errors in production builds (`DSMIL_PRODUCTION`).
+* Lab builds (`--ai-mode=lab`) emit warnings only.
+
+**Metadata Output**:
+
+* `!dsmil.secret = i1 true` on SSA values.
+* `!dsmil.ct_verified = i1 true` after `dsmil-ct-check` pass succeeds.
+
+**Example**:
+
+```c
+DSMIL_LAYER(8) DSMIL_DEVICE(80) DSMIL_SANDBOX("crypto_worker")
+__attribute__((dsmil_secret))
+void hmac_sha384(const uint8_t *key, const uint8_t *msg, size_t len, uint8_t *mac) {
+    // All operations on 'key' are constant-time enforced
+    // Layer 8 Security AI validates no side-channel leaks
+}
+```
+
+### 10.5 Quantum Optimization Hints in AI I/O
+
+DSMIL Layer 7 Device 46 provides quantum optimization via QAOA/VQE. DSLLVM now integrates quantum hints directly into the **AI advisor I/O pipeline**.
+
+**Integration**:
+
+* When a function is marked `dsmil_quantum_candidate`, DSLLVM includes additional fields in the `*.dsmilai_request.json`:
+
+```json
+{
+  "schema": "dsmilai-request-v1.2",
+  "ir_summary": {
+    "functions": [
+      {
+        "name": "placement_solver",
+        "quantum_candidate": {
+          "enabled": true,
+          "problem_type": "placement",
+          "variables": 128,
+          "constraints": 45,
+          "estimated_qubit_requirement": 12
+        }
+      }
+    ]
+  }
+}
+```
+
+* **Layer 7 LLM Advisor** or **Layer 5 Performance AI** can now:
+
+  * Recommend whether to export QUBO (based on problem size, available quantum resources).
+  * Suggest hybrid classical/quantum strategies.
+  * Provide rationale: "Problem size (128 vars) exceeds current QPU capacity; recommend classical ILP solver on CPU."
+
+**Response Schema**:
+
+```json
+{
+  "schema": "dsmilai-response-v1.2",
+  "suggestions": [
+    {
+      "target": "placement_solver",
+      "quantum_export": {
+        "recommended": false,
+        "rationale": "Problem size exceeds QPU capacity; classical ILP preferred",
+        "alternative": "use_highs_solver_on_cpu"
+      }
+    }
+  ]
+}
+```
+
+**Pass Integration**:
+
+* **`dsmil-quantum-export`** pass now:
+
+  * Reads AI advisor response.
+  * Only exports `*.quantum.json` if `quantum_export.recommended == true`.
+  * Otherwise, emits metadata suggesting classical solver.
+
+**Benefits**:
+
+* **Unified workflow**: Single AI I/O pipeline for both performance and quantum decisions.
+* **Resource awareness**: L7/L5 advisors have real-time visibility into Device 46 availability and QPU queue depth.
+* **Hybrid optimization**: AI can recommend splitting problems (part quantum, part classical).
+
+### 10.6 Compact ONNX Schema for Feature Scoring on Devices 43-58
+
+DSLLVM embeds **tiny ONNX models** (~5–20 MB) for **fast feature scoring** during compilation. These models run on **Devices 43-58** (Layer 5 performance analytics accelerators, ~140 TOPS total).
+
+**Motivation**:
+
+* Full AI advisor calls (L7 LLM, L8 Security AI) have latency (~50-200ms per request).
+* For **per-function cost decisions** (inlining, unrolling, vectorization), need <1ms inference.
+* Solution: Use **compact ONNX models** for feature extraction + scoring, backed by AMX/NPU.
+
+**Architecture**:
+
+```
+┌─────────────────────────────────────────────────────┐
+│ DSLLVM Compilation Pass                            │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ Extract IR Features (per function)              │ │
+│ │  - Basic blocks, loop depth, memory ops, etc.   │ │
+│ └───────────────┬─────────────────────────────────┘ │
+│                 │ Feature Vector (64-256 floats)    │
+│                 ▼                                    │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ Tiny ONNX Model (5-20 MB)                       │ │
+│ │  Input: [batch, features]                       │ │
+│ │  Output: [batch, scores]                        │ │
+│ │   scores: [inline_score, unroll_factor,         │ │
+│ │            vectorize_width, device_preference]   │ │
+│ └───────────────┬─────────────────────────────────┘ │
+│                 │ Runs on Device 43-58 (AMX/NPU)    │
+│                 ▼                                    │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ Apply Scores to Optimization Decisions          │ │
+│ └─────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────┘
+```
+
+**ONNX Model Specification**:
+
+* **Input Shape**: `[batch_size, 128]` (128 float32 features per function)
+* **Output Shape**: `[batch_size, 16]` (16 float32 scores)
+* **Model Size**: 5–20 MB (quantized INT8 or FP16)
+* **Inference Time**: <0.5ms per function on Device 43 (NPU) or Device 50 (AMX)
+
+**Feature Vector (128 floats)**:
+
+| Index | Feature | Description |
+|-------|---------|-------------|
+| 0-7   | Complexity | Basic blocks, instructions, CFG depth, call count |
+| 8-15  | Memory | Load/store count, estimated bytes, stride patterns |
+| 16-23 | Control Flow | Branch count, loop nests, switch cases |
+| 24-31 | Arithmetic | Int ops, FP ops, vector ops, div/mod count |
+| 32-39 | Data Types | i8/i16/i32/i64/f32/f64 usage ratios |
+| 40-47 | DSMIL Metadata | Layer, device, clearance, stage encoded |
+| 48-63 | Call Graph | Caller/callee stats, recursion depth |
+| 64-127| Reserved | Future extensions |
+
+**Output Scores (16 floats)**:
+
+| Index | Score | Description |
+|-------|-------|-------------|
+| 0     | Inline Score | Probability to inline (0.0-1.0) |
+| 1     | Unroll Factor | Loop unroll factor (1-32) |
+| 2     | Vectorize Width | SIMD width (1/4/8/16/32) |
+| 3     | Device Preference CPU | Probability for CPU execution (0.0-1.0) |
+| 4     | Device Preference NPU | Probability for NPU execution (0.0-1.0) |
+| 5     | Device Preference GPU | Probability for iGPU execution (0.0-1.0) |
+| 6-7   | Memory Tier | Ramdisk/tmpfs/SSD preference |
+| 8-11  | Security Risk | Risk scores for various threat categories |
+| 12-15 | Reserved | Future extensions |
+
+**Pass Integration**:
+
+* **`DsmilAICostModelPass`** now supports two modes:
+
+  1. **Embedded Mode** (default): Uses compact ONNX model via OpenVINO on Devices 43-58.
+  2. **Advisor Mode**: Falls back to full L7/L5 AI advisors for complex cases.
+
+* Configuration:
+
+```bash
+# Use compact ONNX model (fast)
+dsmil-clang --ai-mode=local --ai-cost-model=/path/to/dsmil-cost-v1.onnx ...
+
+# Fallback to full advisors (slower, more accurate)
+dsmil-clang --ai-mode=advisor --ai-use-full-advisors ...
+```
+
+**Model Training**:
+
+* Trained offline on **JRTC1-5450** historical build data:
+
+  * Inputs: IR feature vectors from 1M+ functions.
+  * Labels: Ground-truth performance (latency, throughput, power).
+  * Training Stack: Layer 7 Device 47 (LLM feature engineering) + Layer 5 Devices 50-59 (regression training).
+
+* Models versioned and signed with TSK (Toolchain Signing Key).
+* Provenance includes model version: `"ai_cost_model": "dsmil-cost-v1.3-20251124.onnx"`.
+
+**Device Placement**:
+
+* ONNX inference automatically routed to fastest available device:
+
+  * Device 43 (NPU Tile 3, Layer 4) – primary.
+  * Device 50 (AMX on CPU, Layer 5) – fallback.
+  * Device 47 (LLM NPU, Layer 7) – if idle.
+
+* Scheduling handled by DSMIL Device Manager (transparent to DSLLVM).
+
+**Benefits**:
+
+* **Latency**: <1ms per function vs 50-200ms for full AI advisor.
+* **Throughput**: Can process entire compilation unit in parallel (batched inference).
+* **Accuracy**: Trained on real DSMIL hardware data; 85-95% agreement with human expert decisions.
+* **Determinism**: Fixed model version ensures reproducible builds.
+
 ---
 
 ## Appendix A – Attribute Summary
@@ -756,6 +998,7 @@ Useful for code review and change-approval workflows.
 * `dsmil_hot_model`
 * `dsmil_quantum_candidate(const char*)`
 * `dsmil_untrusted_input`
+* `dsmil_secret` (v1.2)
 
 ---
 
@@ -765,13 +1008,14 @@ Useful for code review and change-approval workflows.
 * `dsmil-device-placement` – CPU/NPU/GPU target + memory tier hints.
 * `dsmil-layer-check` – Layer/clearance/ROE enforcement.
 * `dsmil-stage-policy` – Stage policy enforcement.
-* `dsmil-quantum-export` – Export quantum optimization problems.
+* `dsmil-quantum-export` – Export quantum optimization problems (v1.2: AI-advisor-driven).
 * `dsmil-sandbox-wrap` – Sandbox wrapper insertion.
 * `dsmil-provenance-pass` – CNSA 2.0 provenance generation.
 * `dsmil-ai-advisor-annotate` – L7 advisor annotations.
 * `dsmil-ai-security-scan` – L8 security AI analysis.
 * `dsmil-ai-perf-forecast` – L5/6 performance forecasting (offline tool).
-* `DsmilAICostModelPass` – Embedded ML cost models for codegen decisions.
+* `DsmilAICostModelPass` – Embedded ML cost models for codegen decisions (v1.2: ONNX on Devices 43-58).
+* `dsmil-ct-check` – Constant-time enforcement for `dsmil_secret` (v1.2).
 
 ---
 
@@ -928,6 +1172,7 @@ Useful for code review and change-approval workflows.
 |---------|------|--------|---------|
 | v1.0 | 2025-11-24 | SWORDIntel/DSMIL Team | Initial specification |
 | v1.1 | 2025-11-24 | SWORDIntel/DSMIL Team | Added AI-assisted compilation features (§8-10), AI passes, new tools, extended roadmap |
+| v1.2 | 2025-11-24 | SWORDIntel/DSMIL Team | Added constant-time enforcement (§10.4), quantum hints in AI I/O (§10.5), compact ONNX schema (§10.6); new `dsmil_secret` attribute, `dsmil-ct-check` pass |
 
 ---
 

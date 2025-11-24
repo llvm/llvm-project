@@ -1,7 +1,7 @@
 # DSMIL AI-Assisted Compilation
 **Integration Guide for DSMIL Layers 3-9 AI Advisors**
 
-Version: 1.0
+Version: 1.2
 Last Updated: 2025-11-24
 
 ---
@@ -81,8 +81,8 @@ DSLLVM integrates with the DSMIL AI architecture (Layers 3-9, 48 AI devices, ~13
 
 ```json
 {
-  "schema": "dsmilai-request-v1",
-  "version": "1.0",
+  "schema": "dsmilai-request-v1.2",
+  "version": "1.2",
   "timestamp": "2025-11-24T15:30:45Z",
   "compiler": {
     "name": "dsmil-clang",
@@ -145,6 +145,10 @@ DSLLVM integrates with the DSMIL AI architecture (Layers 3-9, 48 AI devices, ~13
           "cyclomatic_complexity": 12,
           "branch_density": 0.08,
           "dominance_depth": 4
+        },
+        "quantum_candidate": {
+          "enabled": false,
+          "problem_type": null
         }
       }
     ],
@@ -199,8 +203,8 @@ DSLLVM integrates with the DSMIL AI architecture (Layers 3-9, 48 AI devices, ~13
 
 ```json
 {
-  "schema": "dsmilai-response-v1",
-  "version": "1.0",
+  "schema": "dsmilai-response-v1.2",
+  "version": "1.2",
   "timestamp": "2025-11-24T15:30:47Z",
   "request_id": "uuid-1234-5678-...",
   "advisor": {
@@ -289,6 +293,22 @@ DSLLVM integrates with the DSMIL AI architecture (Layers 3-9, 48 AI devices, ~13
         "suggested_value": 16,
         "confidence": 0.81,
         "rationale": "AVX-512 available on Meteor Lake; widening vectorization factor from 8 to 16 can improve throughput by ~18%"
+      }
+    ],
+    "quantum_export": [
+      {
+        "target": "function:optimize_placement",
+        "recommended": false,
+        "confidence": 0.89,
+        "rationale": "Problem size (128 variables, 45 constraints) exceeds current QPU capacity (Device 46: ~12 qubits available). Recommend classical ILP solver.",
+        "alternative": "use_highs_solver_on_cpu",
+        "estimated_runtime_classical_ms": 23,
+        "estimated_runtime_quantum_ms": null,
+        "qpu_availability": {
+          "device_46_status": "busy",
+          "queue_depth": 7,
+          "estimated_wait_time_s": 145
+        }
       }
     ]
   },
@@ -727,6 +747,291 @@ dsmil-clang --ai-mode=local \
 ```bash
 dsmil-clang --ai-mode=off -O3 -o output input.c
 ```
+
+### 6.5 Compact ONNX Feature Scoring (v1.2)
+
+**Purpose**: Ultra-fast per-function cost decisions using tiny ONNX models running on Devices 43-58.
+
+**Motivation**:
+
+Full AI advisor calls (Layer 7 LLM, Layer 8 Security) have latency of 50-200ms per request, which is too slow for per-function optimization decisions during compilation. Solution: Use **compact ONNX models** (~5-20 MB) for sub-millisecond feature scoring, backed by NPU/AMX accelerators (Devices 43-58, Layer 5 performance analytics, ~140 TOPS total).
+
+**Architecture**:
+
+```
+┌─────────────────────────────────────────────────┐
+│ DSLLVM DsmilAICostModelPass                     │
+│                                                 │
+│  Per Function:                                  │
+│  ┌────────────────────────────────────────────┐ │
+│  │ 1. Extract IR Features                     │ │
+│  │    - Basic blocks, loop depth, memory ops  │ │
+│  │    - CFG complexity, vectorization         │ │
+│  │    - DSMIL metadata (layer/device/stage)   │ │
+│  └─────────────┬──────────────────────────────┘ │
+│                │ Feature Vector (128 floats)    │
+│                ▼                                │
+│  ┌────────────────────────────────────────────┐ │
+│  │ 2. Batch Inference with Tiny ONNX Model   │ │
+│  │    Model: 5-20 MB (INT8/FP16 quantized)   │ │
+│  │    Input: [batch, 128]                     │ │
+│  │    Output: [batch, 16] scores              │ │
+│  │    Device: 43-58 (NPU/AMX)                 │ │
+│  │    Latency: <0.5ms per function            │ │
+│  └─────────────┬──────────────────────────────┘ │
+│                │ Output Scores                  │
+│                ▼                                │
+│  ┌────────────────────────────────────────────┐ │
+│  │ 3. Apply Scores to Optimization Decisions  │ │
+│  │    - Inline if score[0] > 0.7              │ │
+│  │    - Unroll by factor = round(score[1])    │ │
+│  │    - Vectorize with width = score[2]       │ │
+│  │    - Device preference: argmax(scores[3:6])│ │
+│  └────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────┘
+```
+
+**Feature Vector (128 floats)**:
+
+| Index Range | Feature Category | Description |
+|-------------|------------------|-------------|
+| 0-7         | Complexity | Basic blocks, instructions, CFG depth, call count |
+| 8-15        | Memory | Load/store count, estimated bytes, stride patterns |
+| 16-23       | Control Flow | Branch count, loop nests, switch cases |
+| 24-31       | Arithmetic | Int ops, FP ops, vector ops, div/mod count |
+| 32-39       | Data Types | i8/i16/i32/i64/f32/f64 usage ratios |
+| 40-47       | DSMIL Metadata | Layer, device, clearance, stage (encoded as floats) |
+| 48-63       | Call Graph | Caller/callee stats, recursion depth |
+| 64-95       | Vectorization | Vector width, alignment, gather/scatter patterns |
+| 96-127      | Reserved | Future extensions |
+
+**Feature Extraction Example**:
+```cpp
+// Function: matmul_kernel
+// Basic blocks: 8, Instructions: 142, Loops: 2
+float features[128] = {
+  8.0,    // [0] basic_blocks
+  142.0,  // [1] instructions
+  3.0,    // [2] cfg_depth
+  2.0,    // [3] call_count
+  // ... [4-7] more complexity metrics
+
+  64.0,   // [8] load_count
+  32.0,   // [9] store_count
+  262144.0, // [10] estimated_bytes (log scale)
+  1.0,    // [11] stride_pattern (contiguous)
+  // ... [12-15] more memory metrics
+
+  7.0,    // layer (encoded)
+  47.0,   // device_id (encoded)
+  0.8,    // stage: "quantized" → 0.8
+  0.7,    // clearance (normalized)
+  // ... more DSMIL metadata
+
+  // ... rest of features
+};
+```
+
+**Output Scores (16 floats)**:
+
+| Index | Score Name | Range | Description |
+|-------|-----------|-------|-------------|
+| 0     | inline_score | [0.0, 1.0] | Probability to inline this function |
+| 1     | unroll_factor | [1.0, 32.0] | Loop unroll factor |
+| 2     | vectorize_width | [1, 4, 8, 16, 32] | SIMD width (discrete values) |
+| 3     | device_cpu | [0.0, 1.0] | Probability for CPU execution |
+| 4     | device_npu | [0.0, 1.0] | Probability for NPU execution |
+| 5     | device_gpu | [0.0, 1.0] | Probability for iGPU execution |
+| 6     | memory_tier_ramdisk | [0.0, 1.0] | Probability for ramdisk |
+| 7     | memory_tier_ssd | [0.0, 1.0] | Probability for SSD |
+| 8     | security_risk_injection | [0.0, 1.0] | Risk score: injection attacks |
+| 9     | security_risk_overflow | [0.0, 1.0] | Risk score: buffer overflow |
+| 10    | security_risk_sidechannel | [0.0, 1.0] | Risk score: side-channel leaks |
+| 11    | security_risk_rop | [0.0, 1.0] | Risk score: ROP gadgets |
+| 12-15 | reserved | - | Future extensions |
+
+**ONNX Model Specification**:
+
+```python
+# Model architecture (PyTorch pseudo-code for training)
+class DsmilCostModel(nn.Module):
+    def __init__(self):
+        self.fc1 = nn.Linear(128, 256)
+        self.fc2 = nn.Linear(256, 128)
+        self.fc3 = nn.Linear(128, 16)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        # x: [batch, 128] feature vector
+        x = self.relu(self.fc1(x))
+        x = self.relu(self.fc2(x))
+        x = self.fc3(x)  # [batch, 16] output scores
+        return x
+
+# After training, export to ONNX
+torch.onnx.export(
+    model,
+    dummy_input,
+    "dsmil-cost-v1.2.onnx",
+    opset_version=14,
+    dynamic_axes={'input': {0: 'batch_size'}}
+)
+
+# Quantize to INT8 for faster inference
+onnxruntime.quantization.quantize_dynamic(
+    "dsmil-cost-v1.2.onnx",
+    "dsmil-cost-v1.2-int8.onnx",
+    weight_type=QuantType.QInt8
+)
+```
+
+**Inference Performance**:
+
+| Device | Hardware | Batch Size | Latency | Throughput |
+|--------|----------|------------|---------|------------|
+| Device 43 | NPU Tile 3 | 1 | 0.3 ms | 3333 functions/s |
+| Device 43 | NPU Tile 3 | 32 | 1.2 ms | 26667 functions/s |
+| Device 50 | CPU AMX | 1 | 0.5 ms | 2000 functions/s |
+| Device 50 | CPU AMX | 32 | 2.8 ms | 11429 functions/s |
+| CPU (fallback) | AVX2 | 1 | 1.8 ms | 556 functions/s |
+
+**Integration with DsmilAICostModelPass**:
+
+```cpp
+// DSLLVM pass pseudo-code
+class DsmilAICostModelPass : public PassInfoMixin<DsmilAICostModelPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
+    // Load ONNX model (once per compilation)
+    auto *model = loadONNXModel("/opt/dsmil/models/dsmil-cost-v1.2-int8.onnx");
+
+    std::vector<float> feature_batch;
+    std::vector<Function*> functions;
+
+    // Extract features for all functions in module
+    for (auto &F : M) {
+      float features[128];
+      extractFeatures(F, features);
+      feature_batch.insert(feature_batch.end(), features, features+128);
+      functions.push_back(&F);
+    }
+
+    // Batch inference (fast!)
+    std::vector<float> scores = model->infer(feature_batch, functions.size());
+
+    // Apply scores to optimization decisions
+    for (size_t i = 0; i < functions.size(); i++) {
+      float *func_scores = &scores[i * 16];
+
+      // Inlining decision
+      if (func_scores[0] > 0.7) {
+        functions[i]->addFnAttr(Attribute::AlwaysInline);
+      }
+
+      // Device placement
+      int device = argmax({func_scores[3], func_scores[4], func_scores[5]});
+      functions[i]->setMetadata("dsmil.placement.device", device);
+
+      // Security risk (forward to L8 if high)
+      float max_risk = *std::max_element(func_scores+8, func_scores+12);
+      if (max_risk > 0.8) {
+        // Flag for full L8 security scan
+        functions[i]->setMetadata("dsmil.security.needs_l8_scan", true);
+      }
+    }
+
+    return PreservedAnalyses::none();
+  }
+};
+```
+
+**Configuration**:
+
+```bash
+# Use compact ONNX model (default in --ai-mode=local)
+dsmil-clang --ai-mode=local \
+  --ai-cost-model=/opt/dsmil/models/dsmil-cost-v1.2-int8.onnx \
+  -O3 -o output input.c
+
+# Specify target device for ONNX inference
+dsmil-clang --ai-mode=local \
+  -mllvm -dsmil-onnx-device=43 \  # NPU Tile 3
+  -O3 -o output input.c
+
+# Fallback to full L7/L8 advisors (slower, more accurate)
+dsmil-clang --ai-mode=advisor \
+  --ai-use-full-advisors \
+  -O3 -o output input.c
+
+# Disable all AI (classical heuristics only)
+dsmil-clang --ai-mode=off -O3 -o output input.c
+```
+
+**Training Data Collection**:
+
+Models trained on **JRTC1-5450** historical build data:
+- **Inputs**: IR feature vectors from 1M+ functions across DSMIL kernel, drivers, and userland
+- **Labels**: Ground-truth performance measured on Meteor Lake hardware
+  - Execution time (latency)
+  - Throughput (ops/sec)
+  - Power consumption (watts)
+  - Memory bandwidth (GB/s)
+- **Training Infrastructure**: Layer 7 Device 47 (LLM for feature engineering) + Layer 5 Devices 50-59 (regression training)
+- **Validation**: 80/20 train/test split, 5-fold cross-validation
+
+**Model Versioning & Provenance**:
+
+```json
+{
+  "model_version": "dsmil-cost-v1.2-20251124",
+  "format": "ONNX",
+  "opset_version": 14,
+  "quantization": "INT8",
+  "size_bytes": 8388608,
+  "hash_sha384": "a7f3c2e9...",
+  "training_data": {
+    "dataset": "jrtc1-5450-production-builds",
+    "samples": 1247389,
+    "date_range": "2024-08-01 to 2025-11-20"
+  },
+  "performance": {
+    "mse_speedup": 0.023,
+    "accuracy_device_placement": 0.89,
+    "accuracy_inline_decision": 0.91
+  },
+  "signature": {
+    "algorithm": "ML-DSA-87",
+    "signer": "TSK (Toolchain Signing Key)",
+    "signature": "base64_encoded_signature..."
+  }
+}
+```
+
+Embedded in toolchain provenance:
+```json
+{
+  "compiler_version": "dsmil-clang 19.0.0-v1.2",
+  "ai_cost_model": "dsmil-cost-v1.2-20251124",
+  "ai_cost_model_hash": "a7f3c2e9...",
+  "ai_mode": "local"
+}
+```
+
+**Benefits**:
+
+- **Latency**: <0.5ms per function vs 50-200ms for full AI advisor (100-400× faster)
+- **Throughput**: Process entire compilation unit in parallel with batched inference
+- **Accuracy**: 85-95% agreement with human expert decisions
+- **Determinism**: Fixed model version ensures reproducible builds
+- **Transparency**: Model performance tracked in provenance metadata
+- **Scalability**: Can handle modules with 10,000+ functions efficiently
+
+**Fallback Strategy**:
+
+If ONNX model fails to load or device unavailable:
+1. Log warning with fallback reason
+2. Use classical LLVM heuristics (always available)
+3. Mark binary with `"ai_cost_model_fallback": true` in provenance
+4. Continue compilation (graceful degradation)
 
 ---
 

@@ -5,7 +5,7 @@
  * This header provides convenient macros for annotating C/C++ code with
  * DSMIL-specific metadata that is processed by the DSLLVM toolchain.
  *
- * Version: 1.0
+ * Version: 1.2
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
@@ -141,6 +141,78 @@
  */
 #define DSMIL_SANDBOX(profile_name) \
     __attribute__((dsmil_sandbox(profile_name)))
+
+/**
+ * @brief Mark function parameters or globals that ingest untrusted data
+ *
+ * Enables data-flow tracking by Layer 8 Security AI to detect flows
+ * into sensitive sinks (crypto operations, exec functions).
+ *
+ * Example:
+ * @code
+ * DSMIL_UNTRUSTED_INPUT
+ * void process_network_input(const char *user_data, size_t len) {
+ *     // Must validate user_data before use
+ *     if (!validate_input(user_data, len)) {
+ *         return;
+ *     }
+ *     // Safe processing
+ * }
+ *
+ * // Mark global as untrusted
+ * DSMIL_UNTRUSTED_INPUT
+ * char network_buffer[4096];
+ * @endcode
+ */
+#define DSMIL_UNTRUSTED_INPUT \
+    __attribute__((dsmil_untrusted_input))
+
+/**
+ * @brief Mark cryptographic secrets requiring constant-time execution
+ *
+ * Enforces constant-time execution to prevent timing side-channels.
+ * Applied to functions, parameters, or return values. The dsmil-ct-check
+ * pass enforces:
+ * - No secret-dependent branches
+ * - No secret-dependent memory access
+ * - No variable-time instructions (div/mod) on secrets
+ *
+ * Example:
+ * @code
+ * // Mark entire function for constant-time enforcement
+ * DSMIL_SECRET
+ * void aes_encrypt(const uint8_t *key, const uint8_t *plaintext, uint8_t *ciphertext) {
+ *     // All operations on key are constant-time
+ * }
+ *
+ * // Mark specific parameter as secret
+ * void hmac_compute(
+ *     DSMIL_SECRET const uint8_t *key,
+ *     size_t key_len,
+ *     const uint8_t *message,
+ *     size_t msg_len,
+ *     uint8_t *mac
+ * ) {
+ *     // Only 'key' parameter is tainted as secret
+ * }
+ *
+ * // Constant-time comparison
+ * DSMIL_SECRET
+ * int crypto_compare(const uint8_t *a, const uint8_t *b, size_t len) {
+ *     int result = 0;
+ *     for (size_t i = 0; i < len; i++) {
+ *         result |= a[i] ^ b[i];  // Constant-time XOR
+ *     }
+ *     return result;
+ * }
+ * @endcode
+ *
+ * @note Required for all key material in Layers 8-9 crypto functions
+ * @note Violations are compile-time errors in production builds
+ * @note Layer 8 Security AI validates side-channel resistance
+ */
+#define DSMIL_SECRET \
+    __attribute__((dsmil_secret))
 
 /** @} */
 
