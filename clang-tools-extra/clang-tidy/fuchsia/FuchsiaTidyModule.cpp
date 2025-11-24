@@ -15,6 +15,7 @@
 #include "MultipleInheritanceCheck.h"
 #include "OverloadedOperatorCheck.h"
 #include "StaticallyConstructedObjectsCheck.h"
+#include "TemporaryObjectsCheck.h"
 #include "TrailingReturnCheck.h"
 #include "VirtualInheritanceCheck.h"
 
@@ -39,6 +40,8 @@ public:
         "fuchsia-overloaded-operator");
     CheckFactories.registerCheck<StaticallyConstructedObjectsCheck>(
         "fuchsia-statically-constructed-objects");
+    CheckFactories.registerCheck<TemporaryObjectsCheck>(
+        "fuchsia-temporary-objects");
     CheckFactories.registerCheck<TrailingReturnCheck>(
         "fuchsia-trailing-return");
     CheckFactories.registerCheck<VirtualInheritanceCheck>(

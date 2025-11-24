@@ -64,16 +64,16 @@ define void @dynalloca2(i16 %x) {
 ; CHECK-NEXT: out 63, r0
 ; CHECK-NEXT: out 61, {{.*}}
 ; Store values on the stack
-; CHECK: ldi r20, 0
-; CHECK: ldi r21, 0
-; CHECK: std Z+8, r21
-; CHECK: std Z+7, r20
-; CHECK: std Z+6, r21
-; CHECK: std Z+5, r20
-; CHECK: std Z+4, r21
-; CHECK: std Z+3, r20
-; CHECK: std Z+2, r21
-; CHECK: std Z+1, r20
+; CHECK: ldi [[REG1:r[0-9]+]], 0
+; CHECK: ldi [[REG2:r[0-9]+]], 0
+; CHECK: std Z+8, [[REG2]]
+; CHECK: std Z+7, [[REG1]]
+; CHECK: std Z+6, [[REG2]]
+; CHECK: std Z+5, [[REG1]]
+; CHECK: std Z+4, [[REG2]]
+; CHECK: std Z+3, [[REG1]]
+; CHECK: std Z+2, [[REG2]]
+; CHECK: std Z+1, [[REG1]]
 ; CHECK: call
 ; Call frame restore
 ; CHECK-NEXT: in r30, 61

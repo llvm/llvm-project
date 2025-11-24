@@ -70,7 +70,7 @@ llvm::Triple::ArchType stringTo<llvm::Triple::ArchType>(llvm::StringRef Str) {
   using llvm::Triple;
   return llvm::StringSwitch<Triple::ArchType>(Str)
       .Case("arm", Triple::arm)
-      .Cases("arm64", "arm64e", Triple::aarch64)
+      .Cases({"arm64", "arm64e"}, Triple::aarch64)
       .Case("mips", Triple::mips)
       .Case("msp430", Triple::msp430)
       .Case("ppc", Triple::ppc)
@@ -79,7 +79,7 @@ llvm::Triple::ArchType stringTo<llvm::Triple::ArchType>(llvm::StringRef Str) {
       .Case("sparc", Triple::sparc)
       .Case("sparcv9", Triple::sparcv9)
       .Case("x86", Triple::x86)
-      .Cases("x86_64", "x86_64h", Triple::x86_64)
+      .Cases({"x86_64", "x86_64h"}, Triple::x86_64)
       .Default(Triple::UnknownArch);
 }
 

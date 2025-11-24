@@ -96,6 +96,9 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineSchedulerLegacyPass(Registry);
   initializeMachineSinkingLegacyPass(Registry);
   initializeMachineUniformityAnalysisPassPass(Registry);
+  initializeMIR2VecVocabLegacyAnalysisPass(Registry);
+  initializeMIR2VecVocabPrinterLegacyPassPass(Registry);
+  initializeMIR2VecPrinterLegacyPassPass(Registry);
   initializeMachineUniformityInfoPrinterPassPass(Registry);
   initializeMachineVerifierLegacyPassPass(Registry);
   initializeObjCARCContractLegacyPassPass(Registry);

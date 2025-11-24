@@ -131,8 +131,8 @@ define void @widen_ptr_induction_dbg(ptr %start, ptr %end) {
 ; DEBUGLOC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEBUGLOC-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG35:![0-9]+]]
 ; DEBUGLOC-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 8, i64 16, i64 24>, !dbg [[DBG35]]
-; DEBUGLOC-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0, !dbg [[DBG36:![0-9]+]]
-; DEBUGLOC-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[TMP6]], align 1, !dbg [[DBG36]]
+; DEBUGLOC-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
+; DEBUGLOC-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[TMP6]], align 1, !dbg [[DBG36:![0-9]+]]
 ; DEBUGLOC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; DEBUGLOC-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 32, !dbg [[DBG35]]
 ; DEBUGLOC-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG37:![0-9]+]]
@@ -224,7 +224,7 @@ define void @predicated_phi_dbg(i64 %n, ptr %x) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP21]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -304,7 +304,7 @@ define void @predicated_phi_dbg(i64 %n, ptr %x) {
 ; DEBUGLOC-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[X]], i64 [[INDEX]], !dbg [[DBG57:![0-9]+]]
 ; DEBUGLOC-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP21]], align 8, !dbg [[DBG58:![0-9]+]]
 ; DEBUGLOC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG53]]
-; DEBUGLOC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4), !dbg [[DBG53]]
+; DEBUGLOC-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4), !dbg [[DBG53]]
 ; DEBUGLOC-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG59:![0-9]+]]
 ; DEBUGLOC-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG59]], !llvm.loop [[LOOP60:![0-9]+]]
 ; DEBUGLOC:       [[MIDDLE_BLOCK]]:

@@ -1236,8 +1236,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
   if (auto *ILE = dyn_cast<InitListExpr>(Init)) {
     if (const RecordType *RType =
             ILE->getType()->getAsCanonical<RecordType>()) {
-      if (RType->getOriginalDecl()->isStruct()) {
-        const RecordDecl *RD = RType->getOriginalDecl()->getDefinitionOrSelf();
+      if (RType->getDecl()->isStruct()) {
+        const RecordDecl *RD = RType->getDecl()->getDefinitionOrSelf();
         unsigned NumElements = 0;
         if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
           NumElements = CXXRD->getNumBases();
@@ -1371,8 +1371,16 @@ RValue CodeGenFunction::EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
 
   for (auto *Decl : Ctx.getTranslationUnitDecl()->lookup(Name))
     if (auto *FD = dyn_cast<FunctionDecl>(Decl))
-      if (Ctx.hasSameType(FD->getType(), QualType(Type, 0)))
-        return EmitNewDeleteCall(*this, FD, Type, Args);
+      if (Ctx.hasSameType(FD->getType(), QualType(Type, 0))) {
+        RValue RV = EmitNewDeleteCall(*this, FD, Type, Args);
+        if (auto *CB = dyn_cast_if_present<llvm::CallBase>(RV.getScalarVal())) {
+          if (SanOpts.has(SanitizerKind::AllocToken)) {
+            // Set !alloc_token metadata.
+            EmitAllocToken(CB, TheCall);
+          }
+        }
+        return RV;
+      }
   llvm_unreachable("predeclared global operator new/delete is missing");
 }
 
@@ -1655,11 +1663,16 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     RValue RV =
       EmitNewDeleteCall(*this, allocator, allocatorType, allocatorArgs);
 
-    // Set !heapallocsite metadata on the call to operator new.
-    if (getDebugInfo())
-      if (auto *newCall = dyn_cast<llvm::CallBase>(RV.getScalarVal()))
-        getDebugInfo()->addHeapAllocSiteMetadata(newCall, allocType,
-                                                 E->getExprLoc());
+    if (auto *newCall = dyn_cast<llvm::CallBase>(RV.getScalarVal())) {
+      if (auto *CGDI = getDebugInfo()) {
+        // Set !heapallocsite metadata on the call to operator new.
+        CGDI->addHeapAllocSiteMetadata(newCall, allocType, E->getExprLoc());
+      }
+      if (SanOpts.has(SanitizerKind::AllocToken)) {
+        // Set !alloc_token metadata.
+        EmitAllocToken(newCall, allocType);
+      }
+    }
 
     // If this was a call to a global replaceable allocation function that does
     // not take an alignment argument, the allocator is known to produce

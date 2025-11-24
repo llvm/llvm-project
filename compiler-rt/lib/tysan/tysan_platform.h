@@ -21,24 +21,28 @@ struct Mapping {
   static const uptr kShadowAddr = 0x010000000000ull;
   static const uptr kAppAddr = 0x550000000000ull;
   static const uptr kAppMemMsk = ~0x780000000000ull;
+  static const uptr kPtrShift = 3;
 };
 #elif defined(__aarch64__)
 struct Mapping39 {
   static const uptr kShadowAddr = 0x0800000000ull;
   static const uptr kAppAddr = 0x5500000000ull;
   static const uptr kAppMemMsk = ~0x7800000000ull;
+  static const uptr kPtrShift = 3;
 };
 
 struct Mapping42 {
   static const uptr kShadowAddr = 0x10000000000ull;
   static const uptr kAppAddr = 0x2aa00000000ull;
   static const uptr kAppMemMsk = ~0x3c000000000ull;
+  static const uptr kPtrShift = 3;
 };
 
 struct Mapping48 {
   static const uptr kShadowAddr = 0x0002000000000ull;
   static const uptr kAppAddr = 0x0aaaa00000000ull;
   static const uptr kAppMemMsk = ~0x0fff800000000ull;
+  static const uptr kPtrShift = 3;
 };
 #define TYSAN_RUNTIME_VMA 1
 #elif defined(__s390x__)
@@ -55,7 +59,12 @@ struct Mapping {
 extern int vmaSize;
 #endif
 
-enum MappingType { MAPPING_SHADOW_ADDR, MAPPING_APP_ADDR, MAPPING_APP_MASK };
+enum MappingType {
+  MAPPING_SHADOW_ADDR,
+  MAPPING_APP_ADDR,
+  MAPPING_APP_MASK,
+  MAPPING_PTR_SHIFT
+};
 
 template <typename Mapping, int Type> uptr MappingImpl(void) {
   switch (Type) {
@@ -65,6 +74,8 @@ template <typename Mapping, int Type> uptr MappingImpl(void) {
     return Mapping::kAppAddr;
   case MAPPING_APP_MASK:
     return Mapping::kAppMemMsk;
+  case MAPPING_PTR_SHIFT:
+    return Mapping::kPtrShift;
   }
 }
 
@@ -93,6 +104,9 @@ uptr AppAddr() { return MappingArchImpl<MAPPING_APP_ADDR>(); }
 
 ALWAYS_INLINE
 uptr AppMask() { return MappingArchImpl<MAPPING_APP_MASK>(); }
+
+ALWAYS_INLINE
+uptr PtrShift() { return MappingArchImpl<MAPPING_PTR_SHIFT>(); }
 
 } // namespace __tysan
 

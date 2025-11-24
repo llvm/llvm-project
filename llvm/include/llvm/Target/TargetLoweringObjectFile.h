@@ -74,7 +74,7 @@ public:
   TargetLoweringObjectFile(const TargetLoweringObjectFile &) = delete;
   TargetLoweringObjectFile &
   operator=(const TargetLoweringObjectFile &) = delete;
-  virtual ~TargetLoweringObjectFile();
+  ~TargetLoweringObjectFile() override;
 
   Mangler &getMangler() const { return *Mang; }
 

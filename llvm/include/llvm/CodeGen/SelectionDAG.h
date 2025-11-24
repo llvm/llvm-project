@@ -1113,7 +1113,8 @@ public:
                                       SDValue Mask, SDValue EVL);
 
   /// Returns sum of the base pointer and offset.
-  /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap by default.
+  /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap and InBounds by
+  /// default.
   LLVM_ABI SDValue
   getMemBasePlusOffset(SDValue Base, TypeSize Offset, const SDLoc &DL,
                        const SDNodeFlags Flags = SDNodeFlags());
@@ -1123,15 +1124,18 @@ public:
 
   /// Create an add instruction with appropriate flags when used for
   /// addressing some offset of an object. i.e. if a load is split into multiple
-  /// components, create an add nuw from the base pointer to the offset.
+  /// components, create an add nuw (or ptradd nuw inbounds) from the base
+  /// pointer to the offset.
   SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, TypeSize Offset) {
-    return getMemBasePlusOffset(Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap);
+    return getMemBasePlusOffset(
+        Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap | SDNodeFlags::InBounds);
   }
 
   SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, SDValue Offset) {
     // The object itself can't wrap around the address space, so it shouldn't be
     // possible for the adds of the offsets to the split parts to overflow.
-    return getMemBasePlusOffset(Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap);
+    return getMemBasePlusOffset(
+        Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap | SDNodeFlags::InBounds);
   }
 
   /// Return a new CALLSEQ_START node, that starts new call frame, in which
@@ -1256,9 +1260,15 @@ public:
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
 
-  std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
-                                        SDValue Dst, SDValue Src, SDValue Size,
-                                        const CallInst *CI);
+  /// Lower a memcmp operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
+                                                 SDValue Dst, SDValue Src,
+                                                 SDValue Size,
+                                                 const CallInst *CI);
+
+  /// Lower a strlen operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue>
   getStrlen(SDValue Chain, const SDLoc &dl, SDValue Src, const CallInst *CI);
 
@@ -1708,16 +1718,6 @@ public:
   /// the target's desired shift amount type.
   LLVM_ABI SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
 
-  /// Expands a node with multiple results to an FP or vector libcall. The
-  /// libcall is expected to take all the operands of the \p Node followed by
-  /// output pointers for each of the results. \p CallRetResNo can be optionally
-  /// set to indicate that one of the results comes from the libcall's return
-  /// value.
-  LLVM_ABI bool
-  expandMultipleResultFPLibCall(RTLIB::Libcall LC, SDNode *Node,
-                                SmallVectorImpl<SDValue> &Results,
-                                std::optional<unsigned> CallRetResNo = {});
-
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   LLVM_ABI SDValue expandVAArg(SDNode *Node);
 
@@ -1850,9 +1850,11 @@ public:
   /// Get the specified node if it's already available, or else return NULL.
   LLVM_ABI SDNode *getNodeIfExists(unsigned Opcode, SDVTList VTList,
                                    ArrayRef<SDValue> Ops,
-                                   const SDNodeFlags Flags);
+                                   const SDNodeFlags Flags,
+                                   bool AllowCommute = false);
   LLVM_ABI SDNode *getNodeIfExists(unsigned Opcode, SDVTList VTList,
-                                   ArrayRef<SDValue> Ops);
+                                   ArrayRef<SDValue> Ops,
+                                   bool AllowCommute = false);
 
   /// Check if a node exists without modifying its flags.
   LLVM_ABI bool doesNodeExist(unsigned Opcode, SDVTList VTList,
@@ -2059,6 +2061,10 @@ public:
   /// Return true if the sign bit of Op is known to be zero.
   /// We use this predicate to simplify operations downstream.
   LLVM_ABI bool SignBitIsZero(SDValue Op, unsigned Depth = 0) const;
+
+  /// Return true if the sign bit of Op is known to be zero, for a
+  /// floating-point value.
+  LLVM_ABI bool SignBitIsZeroFP(SDValue Op, unsigned Depth = 0) const;
 
   /// Return true if 'Op & Mask' is known to be zero.  We
   /// use this predicate to simplify operations downstream.  Op and Mask are
