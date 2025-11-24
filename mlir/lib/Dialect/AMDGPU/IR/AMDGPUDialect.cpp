@@ -75,7 +75,7 @@ static void printDynamicIndex(OpAsmPrinter &printer, Operation *op,
   if (staticSize) {
     printer << staticSize.getValue();
     return;
-  } 
+  }
   printer << dynamicSize;
 }
 
