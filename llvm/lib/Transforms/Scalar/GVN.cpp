@@ -2035,13 +2035,16 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
     return false;
 
   SmallVector<ReachingMemVal, 64> MemVals;
+  MemVals.reserve(Deps.size());
+
   for (const NonLocalDepResult &Dep : Deps) {
+    const auto &R = Dep.getResult();
     Value *Address = Dep.getAddress();
     BasicBlock *BB = Dep.getBB();
-    Instruction *Inst = Dep.getResult().getInst();
-    if (Dep.getResult().isClobber())
+    Instruction *Inst = R.getInst();
+    if (R.isClobber())
       MemVals.emplace_back(ReachingMemVal::getClobber(Address, Inst));
-    else if (Dep.getResult().isDef())
+    else if (R.isDef())
       MemVals.emplace_back(ReachingMemVal::getDef(Address, Inst));
     else
       MemVals.emplace_back(ReachingMemVal::getUnknown(BB, Address, Inst));
