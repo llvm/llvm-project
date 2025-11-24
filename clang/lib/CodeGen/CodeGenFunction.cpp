@@ -1316,7 +1316,17 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       // fast register allocator would be happier...
       CXXThisValue = CXXABIThisValue;
     }
-
+    if (CGM.getCodeGenOpts().StrictVTablePointers) {
+      const CXXRecordDecl *ThisRecordDecl = MD->getParent();
+      bool IsPolymorphicObject = ThisRecordDecl->isPolymorphic();
+      bool IsStructor = isa<CXXDestructorDecl, CXXConstructorDecl>(MD);
+      bool IsFinal = ThisRecordDecl->isEffectivelyFinal();
+      // We do not care about whether this is a virtual method, because even
+      // if the current method is not virtual, it may be calling another method
+      // that calls a virtual function.
+      if (IsPolymorphicObject && !IsStructor && IsFinal)
+        EmitVTableAssumptionLoads(ThisRecordDecl, LoadCXXThisAddress());
+    }
     // Check the 'this' pointer once per function, if it's available.
     if (CXXABIThisValue) {
       SanitizerSet SkippedChecks;
