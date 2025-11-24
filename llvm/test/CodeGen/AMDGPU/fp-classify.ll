@@ -699,8 +699,9 @@ define amdgpu_kernel void @test_isfinite_pattern_4_f16(ptr addrspace(1) nocaptur
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_and_b32 s4, s6, 0x7fff
-; SI-NEXT:    s_cmpk_lt_i32 s4, 0x7c00
+; SI-NEXT:    s_lshl_b32 s4, s6, 1
+; SI-NEXT:    s_and_b32 s4, s4, 0xfffe
+; SI-NEXT:    s_cmpk_lt_u32 s4, 0xf800
 ; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0

@@ -310,18 +310,18 @@ entry:
 define i1 @isfinite_f(float %x) nounwind {
 ; X86-LABEL: isfinite_f:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X86-NEXT:    setl %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    cmpl $-16777216, %eax # imm = 0xFF000000
+; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: isfinite_f:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-NEXT:    setl %al
+; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    cmpl $-16777216, %eax # imm = 0xFF000000
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 ;
 ; X86-FASTISEL-LABEL: isfinite_f:
@@ -329,10 +329,10 @@ define i1 @isfinite_f(float %x) nounwind {
 ; X86-FASTISEL-NEXT:    pushl %eax
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
-; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-FASTISEL-NEXT:    andl (%esp), %eax
-; X86-FASTISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X86-FASTISEL-NEXT:    setl %al
+; X86-FASTISEL-NEXT:    movl (%esp), %eax
+; X86-FASTISEL-NEXT:    addl %eax, %eax
+; X86-FASTISEL-NEXT:    cmpl $-16777216, %eax # imm = 0xFF000000
+; X86-FASTISEL-NEXT:    setb %al
 ; X86-FASTISEL-NEXT:    popl %ecx
 ; X86-FASTISEL-NEXT:    retl
 entry:
@@ -343,18 +343,18 @@ entry:
 define i1 @not_isfinite_f(float %x) nounwind {
 ; X86-LABEL: not_isfinite_f:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X86-NEXT:    setge %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    cmpl $-16777216, %eax # imm = 0xFF000000
+; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: not_isfinite_f:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-NEXT:    setge %al
+; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    cmpl $-16777216, %eax # imm = 0xFF000000
+; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
 ;
 ; X86-FASTISEL-LABEL: not_isfinite_f:
@@ -362,10 +362,10 @@ define i1 @not_isfinite_f(float %x) nounwind {
 ; X86-FASTISEL-NEXT:    pushl %eax
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
-; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-FASTISEL-NEXT:    andl (%esp), %eax
-; X86-FASTISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X86-FASTISEL-NEXT:    setge %al
+; X86-FASTISEL-NEXT:    movl (%esp), %eax
+; X86-FASTISEL-NEXT:    addl %eax, %eax
+; X86-FASTISEL-NEXT:    cmpl $-16777216, %eax # imm = 0xFF000000
+; X86-FASTISEL-NEXT:    setae %al
 ; X86-FASTISEL-NEXT:    popl %ecx
 ; X86-FASTISEL-NEXT:    retl
 entry:
