@@ -38,12 +38,12 @@
 // CK2-LABEL: @.__omp_offloading_{{.*}}implicit_maps_reference{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK2: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
-// Map types: OMP_MAP_LITERAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
+// Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
 // CK2: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
 // CK2-LABEL: @.__omp_offloading_{{.*}}implicit_maps_reference{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK2: [[SIZES2:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
-// Map types: OMP_MAP_IS_PTR | OMP_MAP_LITERAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK2: [[TYPES2:@.+]] = {{.+}}constant [1 x i64] [i64 800]
+// Map types: OMP_MAP_IS_PTR | OMP_MAP_IMPLICIT = 544
+// CK2: [[TYPES2:@.+]] = {{.+}}constant [1 x i64] [i64 544]
 
 // CK2-LABEL: implicit_maps_reference{{.*}}(
 void implicit_maps_reference (int a, int *b){

@@ -78,7 +78,7 @@
 // code and have mapped arguments, and only 6 have all-constant map sizes.
 
 // CHECK-DAG: [[SIZET:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 4]
-// CHECK-DAG: [[MAPT:@.+]] = private unnamed_addr constant [2 x i64] [i64 800, i64 800]
+// CHECK-DAG: [[MAPT:@.+]] = private unnamed_addr constant [2 x i64] [i64 544, i64 800]
 // CHECK-DAG: [[SIZET2:@.+]] = private unnamed_addr constant [1 x i{{32|64}}] [i64 2]
 // CHECK-DAG: [[MAPT2:@.+]] = private unnamed_addr constant [1 x i64] [i64 800]
 // CHECK-DAG: [[SIZET3:@.+]] = private unnamed_addr constant [2 x i64] [i64 4, i64 2]
