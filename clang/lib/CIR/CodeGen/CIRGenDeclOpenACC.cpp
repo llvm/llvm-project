@@ -74,6 +74,9 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
         case mlir::acc::DataClause::acc_copyout:
           createOutOp<mlir::acc::CopyoutOp>(cgf, create);
           break;
+        case mlir::acc::DataClause::acc_create:
+          createOutOp<mlir::acc::DeleteOp>(cgf, create);
+          break;
         }
       } else if (val.getDefiningOp<mlir::acc::DeclareLinkOp>()) {
         // Link has no exit clauses, and shouldn't be copied.
