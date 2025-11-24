@@ -4247,4 +4247,64 @@ define <vscale x 8 x double> @splice_nxv8f64_offset_max(<vscale x 8 x double> %a
   ret <vscale x 8 x double> %res
 }
 
+define <vscale x 2 x i32> @splice_nxv2i32_slidedown(<vscale x 2 x i32> %a) #0 {
+; NOVLDEP-LABEL: splice_nxv2i32_slidedown:
+; NOVLDEP:       # %bb.0:
+; NOVLDEP-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; NOVLDEP-NEXT:    vslidedown.vi v8, v8, 3
+; NOVLDEP-NEXT:    ret
+;
+; VLDEP-LABEL: splice_nxv2i32_slidedown:
+; VLDEP:       # %bb.0:
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    srli a0, a0, 2
+; VLDEP-NEXT:    addi a0, a0, -3
+; VLDEP-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; VLDEP-NEXT:    vslidedown.vi v8, v8, 3
+; VLDEP-NEXT:    ret
+  %res = call <vscale x 2 x i32> @llvm.vector.splice(<vscale x 2 x i32> %a, <vscale x 2 x i32> poison, i32 3)
+  ret <vscale x 2 x i32> %res
+}
+
+define <vscale x 2 x i32> @splice_nxv2i32_slideup(<vscale x 2 x i32> %a) #0 {
+; CHECK-LABEL: splice_nxv2i32_slideup:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v9, v8, 3
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i32> @llvm.vector.splice(<vscale x 2 x i32> poison, <vscale x 2 x i32> %a, i32 -3)
+  ret <vscale x 2 x i32> %res
+}
+
+define <vscale x 2 x i32> @splice_nxv2i32_slidedown_undef(<vscale x 2 x i32> %a) #0 {
+; NOVLDEP-LABEL: splice_nxv2i32_slidedown_undef:
+; NOVLDEP:       # %bb.0:
+; NOVLDEP-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; NOVLDEP-NEXT:    vslidedown.vi v8, v8, 3
+; NOVLDEP-NEXT:    ret
+;
+; VLDEP-LABEL: splice_nxv2i32_slidedown_undef:
+; VLDEP:       # %bb.0:
+; VLDEP-NEXT:    csrr a0, vlenb
+; VLDEP-NEXT:    srli a0, a0, 2
+; VLDEP-NEXT:    addi a0, a0, -3
+; VLDEP-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; VLDEP-NEXT:    vslidedown.vi v8, v8, 3
+; VLDEP-NEXT:    ret
+  %res = call <vscale x 2 x i32> @llvm.vector.splice(<vscale x 2 x i32> %a, <vscale x 2 x i32> undef, i32 3)
+  ret <vscale x 2 x i32> %res
+}
+
+define <vscale x 2 x i32> @splice_nxv2i32_slideup_undef(<vscale x 2 x i32> %a) #0 {
+; CHECK-LABEL: splice_nxv2i32_slideup_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v9, v8, 3
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i32> @llvm.vector.splice(<vscale x 2 x i32> undef, <vscale x 2 x i32> %a, i32 -3)
+  ret <vscale x 2 x i32> %res
+}
+
 attributes #0 = { vscale_range(2,0) }
