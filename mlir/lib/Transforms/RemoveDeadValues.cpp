@@ -141,6 +141,33 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
   return false;
 }
 
+/// Return true iff at least one value in `values` is dead, given the liveness
+/// information in `la`.
+static bool hasDead(ValueRange values, const DenseSet<Value> &nonLiveSet,
+                    RunLivenessAnalysis &la) {
+  for (Value value : values) {
+    if (nonLiveSet.contains(value)) {
+      LDBG() << "Value " << value << " is already marked non-live (dead)";
+      return true;
+    }
+
+    const Liveness *liveness = la.getLiveness(value);
+    if (!liveness) {
+      LDBG() << "Value " << value
+             << " has no liveness info, conservatively considered live";
+      continue;
+    }
+    if (liveness->isLive) {
+      LDBG() << "Value " << value << " is live according to liveness analysis";
+      continue;
+    } else {
+      LDBG() << "Value " << value << " is dead according to liveness analysis";
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Return a BitVector of size `values.size()` where its i-th bit is 1 iff the
 /// i-th value in `values` is live, given the liveness information in `la`.
 static BitVector markLives(ValueRange values, const DenseSet<Value> &nonLiveSet,
@@ -260,6 +287,17 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
+  if (hasDead(op->getOperands(), nonLiveSet, la)) {
+    LDBG() << "Simple op has dead operands, so the op must be dead: "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
+    assert(!hasLive(op->getResults(), nonLiveSet, la) &&
+           "expected the op to have no live results");
+    cl.operations.push_back(op);
+    collectNonLiveValues(nonLiveSet, op->getResults(),
+                         BitVector(op->getNumResults(), true));
+    return;
+  }
+
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), nonLiveSet, la)) {
     LDBG() << "Simple op is not memory effect free or has live results, "
               "preserving it: "
