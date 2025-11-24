@@ -1392,6 +1392,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[19], tok::l_brace, TT_RequiresExpressionLBrace);
 
   Tokens =
+      annotate("template <typename... Ts>\n"
+               "  requires requires {\n"
+               "    requires std::same_as<int, SomeTemplate<void(Ts &&...)>>;\n"
+               "  }\n"
+               "void Foo();");
+  ASSERT_EQ(Tokens.size(), 34u) << Tokens;
+  EXPECT_TOKEN(Tokens[21], tok::ampamp, TT_PointerOrReference);
+
+  Tokens =
       annotate("template <class A, class B> concept C ="
                "std::same_as<std::iter_value_t<A>, std::iter_value_t<B>>;");
   ASSERT_EQ(Tokens.size(), 31u) << Tokens;
