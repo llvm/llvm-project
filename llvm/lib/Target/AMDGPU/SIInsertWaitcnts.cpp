@@ -494,6 +494,16 @@ public:
   bool isVMEMOrFlatVMEM(const MachineInstr &MI) const;
   bool run(MachineFunction &MF);
 
+  // Methods for expanding waitcnt instructions for profiling
+  bool expandWaitcntsForProfiling(MachineFunction &MF);
+  bool expandSingleWaitcnt(MachineInstr &MI, MachineBasicBlock &MBB);
+  bool expandSingleCounterWait(MachineInstr &MI, MachineBasicBlock &MBB,
+                               InstCounterType CT);
+  bool expandCounterSequence(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator InsertPos,
+                             InstCounterType CT, unsigned CountValue,
+                             DebugLoc DL);
+
   void setForceEmitWaitcnt() {
 // For non-debug builds, ForceEmitWaitcnt has been initialized to false;
 // For debug builds, get the debug counter info and adjust if need be
@@ -2731,6 +2741,156 @@ SIInsertWaitcntsPass::run(MachineFunction &MF,
       .preserve<AAManager>();
 }
 
+/// Expand waitcnt instructions for profiling by inserting a sequence of
+/// decreasing counter values. This helps identify which specific memory
+/// operation is a bottleneck during PC sampling.
+bool SIInsertWaitcnts::expandWaitcntsForProfiling(MachineFunction &MF) {
+  if (!ST->isExpandWaitcntProfilingEnabled())
+    return false;
+
+  bool Modified = false;
+
+  // Iterate through all basic blocks
+  for (MachineBasicBlock &MBB : MF) {
+    for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
+      MachineInstr &MI = *I;
+      ++I; // Advance iterator before potential expansion
+
+      if (ST->hasExtendedWaitCounts()) {
+        // GFX12+: Handle separate wait instructions
+        if (auto CT = counterTypeForInstr(MI.getOpcode())) {
+          Modified |= expandSingleCounterWait(MI, MBB, *CT);
+        }
+      } else {
+        // Pre-GFX12: Handle combined S_WAITCNT
+        if (MI.getOpcode() == AMDGPU::S_WAITCNT) {
+          Modified |= expandSingleWaitcnt(MI, MBB);
+        }
+      }
+    }
+  }
+
+  return Modified;
+}
+
+/// Expand a single S_WAITCNT instruction (pre-GFX12)
+bool SIInsertWaitcnts::expandSingleWaitcnt(MachineInstr &MI,
+                                           MachineBasicBlock &MBB) {
+  assert(MI.getOpcode() == AMDGPU::S_WAITCNT);
+
+  // Decode the waitcnt immediate
+  unsigned Imm = MI.getOperand(0).getImm();
+  AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
+  AMDGPU::Waitcnt Wait = AMDGPU::decodeWaitcnt(IV, Imm);
+
+  // Insert expanded waitcnts BEFORE the original instruction
+  auto InsertPos = MI.getIterator();
+  DebugLoc DL = MI.getDebugLoc();
+
+  bool Modified = false;
+
+  // Expand each counter independently
+  // For independent counters (Case 2 from requirements):
+  // vmcnt and lgkmcnt can be separated
+  Modified |= expandCounterSequence(MBB, InsertPos, LOAD_CNT, Wait.LoadCnt, DL);
+  Modified |= expandCounterSequence(MBB, InsertPos, DS_CNT, Wait.DsCnt, DL);
+  Modified |= expandCounterSequence(MBB, InsertPos, EXP_CNT, Wait.ExpCnt, DL);
+  Modified |=
+      expandCounterSequence(MBB, InsertPos, STORE_CNT, Wait.StoreCnt, DL);
+
+  // If we expanded anything, remove the original waitcnt
+  if (Modified) {
+    MI.eraseFromParent();
+  }
+
+  return Modified;
+}
+
+/// Expand a single counter wait instruction (GFX12+)
+bool SIInsertWaitcnts::expandSingleCounterWait(MachineInstr &MI,
+                                               MachineBasicBlock &MBB,
+                                               InstCounterType CT) {
+  // Get the counter value from the instruction
+  unsigned CountValue = MI.getOperand(0).getImm();
+
+  // Insert expanded waitcnts BEFORE the original instruction
+  auto InsertPos = MI.getIterator();
+  DebugLoc DL = MI.getDebugLoc();
+
+  bool Modified = expandCounterSequence(MBB, InsertPos, CT, CountValue, DL);
+
+  // If we expanded, remove the original instruction
+  if (Modified) {
+    MI.eraseFromParent();
+  }
+
+  return Modified;
+}
+
+/// Insert a sequence of wait instructions with decreasing counter values
+bool SIInsertWaitcnts::expandCounterSequence(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPos,
+    InstCounterType CT, unsigned CountValue, DebugLoc DL) {
+  // Skip if counter is already at zero, not active, or at max (wait not needed)
+  if (CountValue == 0 || CountValue == ~0u)
+    return false;
+
+  unsigned MaxCount = getWaitCountMax(CT);
+  if (CountValue >= MaxCount)
+    return false;
+
+  bool Modified = false;
+
+  // Generate decreasing sequence: CountValue-1, CountValue-2, ..., 1, 0
+  // We start from CountValue-1 because the original waitcnt already handles
+  // CountValue
+  for (int i = CountValue - 1; i >= 0; --i) {
+    if (ST->hasExtendedWaitCounts()) {
+      // GFX12+: Use separate wait instructions
+      unsigned Opcode = instrsForExtendedCounterTypes[CT];
+      BuildMI(MBB, InsertPos, DL, TII->get(Opcode)).addImm(i);
+    } else {
+      // Pre-GFX12: Use combined S_WAITCNT with only this counter set
+      AMDGPU::Waitcnt Wait;
+      switch (CT) {
+      case LOAD_CNT:
+        Wait.LoadCnt = i;
+        break;
+      case DS_CNT:
+        Wait.DsCnt = i;
+        break;
+      case EXP_CNT:
+        Wait.ExpCnt = i;
+        break;
+      case STORE_CNT:
+        Wait.StoreCnt = i;
+        break;
+      case SAMPLE_CNT:
+        Wait.SampleCnt = i;
+        break;
+      case BVH_CNT:
+        Wait.BvhCnt = i;
+        break;
+      case KM_CNT:
+        Wait.KmCnt = i;
+        break;
+      case X_CNT:
+        Wait.XCnt = i;
+        break;
+      default:
+        break;
+      }
+
+      AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
+      unsigned Enc = AMDGPU::encodeWaitcnt(IV, Wait);
+      BuildMI(MBB, InsertPos, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
+    }
+    Modified = true;
+  }
+
+  return Modified;
+}
+
 bool SIInsertWaitcnts::run(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
@@ -2968,6 +3128,11 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   ReleaseVGPRInsts.clear();
   PreheadersToFlush.clear();
   SLoadAddresses.clear();
+
+  // Expand waitcnts for profiling if requested
+  if (ST->isExpandWaitcntProfilingEnabled()) {
+    Modified |= expandWaitcntsForProfiling(MF);
+  }
 
   return Modified;
 }
