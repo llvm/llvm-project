@@ -867,7 +867,6 @@ void collectLoopRelatedInfo(
 
   // Collect the loops to collapse.
   lower::pft::Evaluation *doConstructEval = getNestedDoConstruct(eval);
-  assert(doConstructEval && "Expected do loop to be in the nested evaluation");
   if (doConstructEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
     TODO(currentLocation, "Do Concurrent in Worksharing loop construct");
   }
