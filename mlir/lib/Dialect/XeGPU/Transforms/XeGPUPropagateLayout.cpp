@@ -495,8 +495,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
   auto [bWidth, bHeight, bCount] = blockWHC.value();
   SmallVector<int> instData;
   int instWidth = xegpu::getLargestDivisor(
-      static_cast<int>(tdescTy.getDimSize(tdescTy.getRank() - 1)), bWidth,
-      bCount);
+      static_cast<int>(tdescTy.getDimSize(tdescTy.getRank() - 1)), bWidth);
   if (instWidth == -1)
     prefetch.emitWarning(
         "No suitable instruction multiple found for the given shape.");
@@ -702,8 +701,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
   auto [bWidth, bHeight, bCount] = blockWHC.value();
   SmallVector<int> instData;
   int instWidth = xegpu::getLargestDivisor(
-      static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 1)), bWidth,
-      bCount);
+      static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 1)), bWidth);
   if (instWidth == -1)
     store.emitWarning(
         "No suitable instruction multiple found for the given shape.");
