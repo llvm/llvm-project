@@ -26,11 +26,12 @@ define void @main() nounwind #0 {
 ; CHECK-NEXT:    mullw 4, 6, 6
 ; CHECK-NEXT:    addi 5, 6, 1
 ; CHECK-NEXT:    bdz .LBB0_3
-; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    mr 6, 5
 ; CHECK-NEXT:    stwu 4, 4(3)
-; CHECK-NEXT:    mullw 4, 5, 5
 ; CHECK-NEXT:    addi 5, 5, 1
+; CHECK-NEXT:    mullw 4, 6, 6
 ; CHECK-NEXT:    bdnz .LBB0_2
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    stwu 4, 4(3)
