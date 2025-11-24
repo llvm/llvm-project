@@ -233,9 +233,6 @@ bool DylibPathValidator::isSharedLibrary(StringRef Path) {
   if (MagicCode == file_magic::archive)
     return false;
 
-  if (MagicCode == file_magic::elf_shared_object)
-    return true;
-
   // Universal binary handling.
 #if defined(__APPLE__)
   if (MagicCode == file_magic::macho_universal_binary) {
