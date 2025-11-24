@@ -63,11 +63,18 @@ parseDynamicIndex(OpAsmParser &parser,
   }
 
   OpAsmParser::UnresolvedOperand operand = OpAsmParser::UnresolvedOperand{};
-  if (parser.parseOperand(operand)) {
-    dynamicSize = operand;
+  OptionalParseResult hasOperand = parser.parseOptionalOperand(operand);
+  if (!hasOperand.has_value()) {
+    dynamicSize = std::nullopt;
     return success();
   }
-  return failure();
+
+  if (failed(hasOperand.value())) {
+    return failure();
+  }
+
+  dynamicSize = operand;
+  return success();
 }
 
 static void printDynamicIndex(OpAsmPrinter &printer, Operation *op,
