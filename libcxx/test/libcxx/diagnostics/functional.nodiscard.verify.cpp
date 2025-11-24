@@ -35,7 +35,9 @@ void test() {
 
   // Identity
 
+#if TEST_STD_VER >= 20
   std::identity{}(i); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
 
   // Partial function application
 
@@ -51,6 +53,7 @@ void test() {
   std::bind<float>([](int a) { return a; }, 94);
 
   // Reference wrappers
+
   std::reference_wrapper<int> rw{i};
   rw.get(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::function<int(int)> vf;
