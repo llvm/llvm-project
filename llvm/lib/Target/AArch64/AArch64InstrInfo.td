@@ -2752,11 +2752,17 @@ def : Pat<(AArch64sub_flag GPR64:$Rn, neg_addsub_shifted_imm64:$imm),
           (ADDSXri GPR64:$Rn, neg_addsub_shifted_imm64:$imm)>;
 }
 
+
+def trunc_isWorthFoldingALU : PatFrag<(ops node:$src), (trunc $src)> {
+  let PredicateCode = [{ return isWorthFoldingALU(SDValue(N, 0)); }];
+  let GISelPredicateCode = [{ return isWorthFoldingIntoExtendedReg(MI, MRI, false); }];
+}
+
 // Patterns for (add X, trunc(shift(Y))), for which we can generate 64bit instructions.
-def : Pat<(add GPR32:$Rn, (trunc arith_shifted_reg64:$Rm)),
+def : Pat<(add GPR32:$Rn, (trunc_isWorthFoldingALU arith_shifted_reg64:$Rm)),
           (EXTRACT_SUBREG (ADDXrs (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Rn, sub_32),
                                   arith_shifted_reg64:$Rm), sub_32)>;
-def : Pat<(sub GPR32:$Rn, (trunc arith_shifted_reg64:$Rm)),
+def : Pat<(sub GPR32:$Rn, (trunc_isWorthFoldingALU arith_shifted_reg64:$Rm)),
           (EXTRACT_SUBREG (SUBXrs (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Rn, sub_32),
                                   arith_shifted_reg64:$Rm), sub_32)>;
 
