@@ -492,6 +492,13 @@ checkValidModifier(Op op, acc::DataClauseModifier validModifiers) {
 
 template <typename OpT, typename RecipeOpT>
 static LogicalResult checkRecipe(OpT op, llvm::StringRef operandName) {
+  // Mappable types do not need a recipe because it is possible to generate one
+  // from its API. Reject reductions though because no API is available for them
+  // at this time.
+  if (mlir::acc::isMappableType(op.getVar().getType()) &&
+      !std::is_same_v<OpT, acc::ReductionOp>)
+    return success();
+
   mlir::SymbolRefAttr operandRecipe = op.getRecipeAttr();
   if (!operandRecipe)
     return op->emitOpError() << "recipe expected for " << operandName;
