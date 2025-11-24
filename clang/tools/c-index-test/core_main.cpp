@@ -8,7 +8,6 @@
 
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"

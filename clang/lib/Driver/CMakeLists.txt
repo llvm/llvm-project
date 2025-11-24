@@ -17,8 +17,6 @@ endif()
 add_clang_library(clangDriver
   Action.cpp
   Compilation.cpp
-  CreateASTUnitFromArgs.cpp
-  CreateInvocationFromArgs.cpp
   Distro.cpp
   Driver.cpp
   Job.cpp
@@ -98,8 +96,6 @@ add_clang_library(clangDriver
 
   LINK_LIBS
   clangBasic
-  clangFrontend
-  clangSerialization
   clangLex
   clangOptions
   ${system_libs}

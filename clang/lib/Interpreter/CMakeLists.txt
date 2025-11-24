@@ -46,7 +46,6 @@ add_clang_library(clangInterpreter
   clangFrontend
   clangFrontendTool
   clangLex
-  clangOptions
   clangParse
   clangSema
   clangSerialization

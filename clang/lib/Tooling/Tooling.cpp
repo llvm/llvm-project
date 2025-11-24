@@ -31,7 +31,6 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
-#include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -511,7 +510,8 @@ static void injectResourceDir(CommandLineArguments &Args, const char *Argv0,
 
   // If there's no override in place add our resource dir.
   Args = getInsertArgumentAdjuster(
-      ("-resource-dir=" + GetResourcesPath(Argv0, MainAddr)).c_str())(Args, "");
+      ("-resource-dir=" + CompilerInvocation::GetResourcesPath(Argv0, MainAddr))
+          .c_str())(Args, "");
 }
 
 int ClangTool::run(ToolAction *Action) {

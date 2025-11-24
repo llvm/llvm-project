@@ -1,4 +1,4 @@
-//===--- CreateInvocationFromArgs.h - CompilerInvocation from Args --------===//
+//===--- CreateInvocationFromCommandLine.cpp - CompilerInvocation from Args ==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
@@ -24,13 +24,12 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
-
+using namespace clang;
 using namespace llvm::opt;
 
-namespace clang {
-
 std::unique_ptr<CompilerInvocation>
-createInvocation(ArrayRef<const char *> ArgList, CreateInvocationOptions Opts) {
+clang::createInvocation(ArrayRef<const char *> ArgList,
+                        CreateInvocationOptions Opts) {
   assert(!ArgList.empty());
   std::optional<DiagnosticOptions> LocalDiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
@@ -115,5 +114,3 @@ createInvocation(ArrayRef<const char *> ArgList, CreateInvocationOptions Opts) {
     return nullptr;
   return CI;
 }
-
-} // namespace clang

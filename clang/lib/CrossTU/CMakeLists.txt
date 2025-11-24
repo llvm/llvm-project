@@ -9,7 +9,6 @@ add_clang_library(clangCrossTU
   LINK_LIBS
   clangAST
   clangBasic
-  clangDriver
   clangFrontend
   clangIndex
   )
