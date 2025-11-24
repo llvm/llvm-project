@@ -7155,7 +7155,8 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
                               .Case("declare", RecordKind::ValueKind)
                               .Case("value", RecordKind::ValueKind)
                               .Case("assign", RecordKind::ValueKind)
-                              .Case("label", RecordKind::LabelKind);
+                              .Case("label", RecordKind::LabelKind)
+                              .Case("declare_value", RecordKind::ValueKind);
 
   // Parsing labels is trivial; parse here and early exit, otherwise go into the
   // full DbgVariableRecord processing stage.
@@ -7180,7 +7181,8 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
   LocType ValueType = StringSwitch<LocType>(Lex.getStrVal())
                           .Case("declare", LocType::Declare)
                           .Case("value", LocType::Value)
-                          .Case("assign", LocType::Assign);
+                          .Case("assign", LocType::Assign)
+                          .Case("declare_value", LocType::DeclareValue);
 
   Lex.Lex();
   if (parseToken(lltok::lparen, "Expected '(' here"))
