@@ -123,6 +123,9 @@ def testPointerType():
     # CHECK: !llvm.ptr<1>
     print(ptr_with_addr)
 
+    typ = Type.parse("!llvm.ptr<1>")
+    assert isinstance(typ, llvm.PointerType)
+
 
 # CHECK-LABEL: testConstant
 @constructAndPrintInModule

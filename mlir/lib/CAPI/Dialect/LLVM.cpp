@@ -27,6 +27,10 @@ MlirType mlirLLVMPointerTypeGet(MlirContext ctx, unsigned addressSpace) {
   return wrap(LLVMPointerType::get(unwrap(ctx), addressSpace));
 }
 
+MlirTypeID mlirLLVMPointerTypeGetTypeID() {
+  return wrap(LLVM::LLVMPointerType::getTypeID());
+}
+
 bool mlirTypeIsALLVMPointerType(MlirType type) {
   return isa<LLVM::LLVMPointerType>(unwrap(type));
 }
