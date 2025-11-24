@@ -5628,6 +5628,11 @@ public:
       FieldInfo.NameOrField = reinterpret_cast<uintptr_t>(FD);
     }
 
+    void clearFieldDecl() {
+      assert(isFieldDesignator() && "Only valid on a field designator");
+      FieldInfo.NameOrField = reinterpret_cast<uintptr_t>(getFieldName()) | 0x1;
+    }
+
     SourceLocation getDotLoc() const {
       assert(isFieldDesignator() && "Only valid on a field designator");
       return FieldInfo.DotLoc;
