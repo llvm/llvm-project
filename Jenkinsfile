@@ -8,14 +8,14 @@ pipeline {
 
   environment {
     BUILD_TYPE    = 'Release'
-    LLVM_PROJECTS = 'clang;lld'   // adjust if you want more/less
+    LLVM_PROJECTS = 'clang;lld'   // adjust if you want more or less
     BUILD_DIR     = 'build'
   }
 
   stages {
     stage('Checkout') {
       steps {
-        // Uses the same repo/branch that triggered the multibranch job
+        // Uses the same repo and branch that triggered the multibranch job
         checkout scm
       }
     }
@@ -29,7 +29,9 @@ pipeline {
 
           cmake3 -S llvm -B "${BUILD_DIR}" -G Ninja \
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
-            -DLLVM_ENABLE_PROJECTS="${LLVM_PROJECTS}"
+            -DLLVM_ENABLE_PROJECTS="${LLVM_PROJECTS}" \
+            -DCMAKE_C_COMPILER=/usr/bin/gcc10 \
+            -DCMAKE_CXX_COMPILER=/usr/bin/g++10
         '''
       }
     }
