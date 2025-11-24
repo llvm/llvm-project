@@ -9594,6 +9594,9 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     MVT XLenIntVT = Subtarget.getXLenVT();
 
     auto CastToInt = [&](SDValue V) -> SDValue {
+      if (VT == MVT::f16) {
+        return DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenIntVT, V);
+      }
       if (VT == MVT::f32 && Subtarget.is64Bit()) {
         return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenIntVT, V);
       }
@@ -9610,6 +9613,9 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     // Convert back to floating VT
     if (VT == MVT::f32 && Subtarget.is64Bit()) {
       return DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, VT, ResultInt);
+    }
+    if (VT == MVT::f16) {
+      return DAG.getNode(RISCVISD::FMV_H_X, DL, VT, ResultInt);
     }
     return DAG.getBitcast(VT, ResultInt);
   }
