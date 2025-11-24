@@ -333,45 +333,20 @@ public:
   }
 
   bool isElementTypeLegalForCompressStore(Type *Ty) const {
-    if (Ty->isFloatTy() || Ty->isDoubleTy())
-      return true;
-
-    if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16) || Ty->isIntegerTy(32) ||
-        Ty->isIntegerTy(64))
-      return true;
-
-    return false;
+    return Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isIntegerTy(32) ||
+           Ty->isIntegerTy(64);
   }
 
   bool isLegalMaskedCompressStore(Type *DataType,
                                   Align Alignment) const override {
-    auto VecTy = cast<VectorType>(DataType);
-    Type *ElTy = VecTy->getScalarType();
-    unsigned ElSizeInBits = ElTy->getScalarSizeInBits();
-    TypeSize VecSizeInBits = VecTy->getPrimitiveSizeInBits();
-
-    if (isa<FixedVectorType>(VecTy)) {
-      // Each 128-bit segment must contain 2 or 4 elements (packed).
-      if (ElSizeInBits != 32 && ElSizeInBits != 64)
-        return false;
-      if (VecSizeInBits % 128 != 0 ||
-          VecSizeInBits > std::max(128U, ST->getMinSVEVectorSizeInBits()))
-        return false;
-    } else {
-      // Each segment must contain 2 or 4 elements, but the segments can be
-      // < 128-bits for unpacked vector types.
-      if (VecSizeInBits.getKnownMinValue() > 128)
-        return false;
-      unsigned ElementsPerSegment =
-          VecSizeInBits.getKnownMinValue() / ElSizeInBits;
-      if (ElementsPerSegment != 2 && ElementsPerSegment != 4)
-        return false;
-    }
-
-    if (!isElementTypeLegalForCompressStore(DataType->getScalarType()))
+    if (!ST->isSVEAvailable())
       return false;
 
-    return isLegalMaskedLoadStore(DataType, Alignment);
+    if (isa<FixedVectorType>(DataType) &&
+        DataType->getPrimitiveSizeInBits() < 128)
+      return false;
+
+    return isElementTypeLegalForCompressStore(DataType->getScalarType());
   }
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {

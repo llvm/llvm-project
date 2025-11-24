@@ -52,6 +52,26 @@ define void @test_compressstore_nxv2f64(ptr %p, <vscale x 2 x double> %vec, <vsc
   ret void
 }
 
+;; SVE vectors that will be split
+
+define void @test_compressstore_nxv8i32(ptr %p, <vscale x 8 x i32> %vec, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: test_compressstore_nxv8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    cntp x8, p1, p1.s
+; CHECK-NEXT:    compact z1.s, p1, z1.s
+; CHECK-NEXT:    cntp x9, p0, p0.s
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    whilelo p1.s, xzr, x9
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x9, lsl #2]
+; CHECK-NEXT:    st1w { z0.s }, p1, [x0]
+; CHECK-NEXT:    ret
+  tail call void @llvm.masked.compressstore.nxv8i32(<vscale x 8 x i32> %vec, ptr align 4 %p, <vscale x 8 x i1> %mask)
+  ret void
+}
+
 ;; Unpacked SVE vector types
 
 define void @test_compressstore_nxv2f32(ptr %p, <vscale x 2 x float> %vec, <vscale x 2 x i1> %mask) {
@@ -148,53 +168,29 @@ define void @test_compressstore_v2i64(ptr %p, <2 x i64> %vec, <2 x i1> %mask) {
 define void @test_compressstore_v8i32(ptr %p, <8 x i32> %vec, <8 x i1> %mask) {
 ; CHECK-BASE-LABEL: test_compressstore_v8i32:
 ; CHECK-BASE:       // %bb.0:
-; CHECK-BASE-NEXT:    shl v2.8b, v2.8b, #7
-; CHECK-BASE-NEXT:    adrp x8, .LCPI10_0
-; CHECK-BASE-NEXT:    ldr d3, [x8, :lo12:.LCPI10_0]
-; CHECK-BASE-NEXT:    cmlt v2.8b, v2.8b, #0
-; CHECK-BASE-NEXT:    and v2.8b, v2.8b, v3.8b
-; CHECK-BASE-NEXT:    addv b2, v2.8b
-; CHECK-BASE-NEXT:    fmov w8, s2
-; CHECK-BASE-NEXT:    tbnz w8, #0, .LBB10_9
-; CHECK-BASE-NEXT:  // %bb.1: // %else
-; CHECK-BASE-NEXT:    tbnz w8, #1, .LBB10_10
-; CHECK-BASE-NEXT:  .LBB10_2: // %else2
-; CHECK-BASE-NEXT:    tbnz w8, #2, .LBB10_11
-; CHECK-BASE-NEXT:  .LBB10_3: // %else5
-; CHECK-BASE-NEXT:    tbnz w8, #3, .LBB10_12
-; CHECK-BASE-NEXT:  .LBB10_4: // %else8
-; CHECK-BASE-NEXT:    tbnz w8, #4, .LBB10_13
-; CHECK-BASE-NEXT:  .LBB10_5: // %else11
-; CHECK-BASE-NEXT:    tbnz w8, #5, .LBB10_14
-; CHECK-BASE-NEXT:  .LBB10_6: // %else14
-; CHECK-BASE-NEXT:    tbnz w8, #6, .LBB10_15
-; CHECK-BASE-NEXT:  .LBB10_7: // %else17
-; CHECK-BASE-NEXT:    tbnz w8, #7, .LBB10_16
-; CHECK-BASE-NEXT:  .LBB10_8: // %else20
-; CHECK-BASE-NEXT:    ret
-; CHECK-BASE-NEXT:  .LBB10_9: // %cond.store
-; CHECK-BASE-NEXT:    st1 { v0.s }[0], [x0], #4
-; CHECK-BASE-NEXT:    tbz w8, #1, .LBB10_2
-; CHECK-BASE-NEXT:  .LBB10_10: // %cond.store1
-; CHECK-BASE-NEXT:    st1 { v0.s }[1], [x0], #4
-; CHECK-BASE-NEXT:    tbz w8, #2, .LBB10_3
-; CHECK-BASE-NEXT:  .LBB10_11: // %cond.store4
-; CHECK-BASE-NEXT:    st1 { v0.s }[2], [x0], #4
-; CHECK-BASE-NEXT:    tbz w8, #3, .LBB10_4
-; CHECK-BASE-NEXT:  .LBB10_12: // %cond.store7
-; CHECK-BASE-NEXT:    st1 { v0.s }[3], [x0], #4
-; CHECK-BASE-NEXT:    tbz w8, #4, .LBB10_5
-; CHECK-BASE-NEXT:  .LBB10_13: // %cond.store10
-; CHECK-BASE-NEXT:    st1 { v1.s }[0], [x0], #4
-; CHECK-BASE-NEXT:    tbz w8, #5, .LBB10_6
-; CHECK-BASE-NEXT:  .LBB10_14: // %cond.store13
-; CHECK-BASE-NEXT:    st1 { v1.s }[1], [x0], #4
-; CHECK-BASE-NEXT:    tbz w8, #6, .LBB10_7
-; CHECK-BASE-NEXT:  .LBB10_15: // %cond.store16
-; CHECK-BASE-NEXT:    st1 { v1.s }[2], [x0], #4
-; CHECK-BASE-NEXT:    tbz w8, #7, .LBB10_8
-; CHECK-BASE-NEXT:  .LBB10_16: // %cond.store19
-; CHECK-BASE-NEXT:    st1 { v1.s }[3], [x0]
+; CHECK-BASE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-BASE-NEXT:    zip2 v3.8b, v2.8b, v0.8b
+; CHECK-BASE-NEXT:    zip1 v2.8b, v2.8b, v0.8b
+; CHECK-BASE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-BASE-NEXT:    movi v4.4s, #1
+; CHECK-BASE-NEXT:    ptrue p0.s, vl4
+; CHECK-BASE-NEXT:    ushll v3.4s, v3.4h, #0
+; CHECK-BASE-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-BASE-NEXT:    shl v3.4s, v3.4s, #31
+; CHECK-BASE-NEXT:    shl v5.4s, v2.4s, #31
+; CHECK-BASE-NEXT:    and v2.16b, v2.16b, v4.16b
+; CHECK-BASE-NEXT:    cmpne p1.s, p0/z, z3.s, #0
+; CHECK-BASE-NEXT:    cmpne p0.s, p0/z, z5.s, #0
+; CHECK-BASE-NEXT:    addv s2, v2.4s
+; CHECK-BASE-NEXT:    fmov w10, s2
+; CHECK-BASE-NEXT:    cntp x8, p1, p1.s
+; CHECK-BASE-NEXT:    compact z1.s, p1, z1.s
+; CHECK-BASE-NEXT:    compact z0.s, p0, z0.s
+; CHECK-BASE-NEXT:    cntp x9, p0, p0.s
+; CHECK-BASE-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-BASE-NEXT:    whilelo p1.s, xzr, x9
+; CHECK-BASE-NEXT:    st1w { z1.s }, p0, [x0, x10, lsl #2]
+; CHECK-BASE-NEXT:    st1w { z0.s }, p1, [x0]
 ; CHECK-BASE-NEXT:    ret
 ;
 ; CHECK-VL256-LABEL: test_compressstore_v8i32:
@@ -222,33 +218,28 @@ define void @test_compressstore_v8i32(ptr %p, <8 x i32> %vec, <8 x i1> %mask) {
 define void @test_compressstore_v4i64(ptr %p, <4 x i64> %vec, <4 x i1> %mask) {
 ; CHECK-BASE-LABEL: test_compressstore_v4i64:
 ; CHECK-BASE:       // %bb.0:
-; CHECK-BASE-NEXT:    shl v2.4h, v2.4h, #15
-; CHECK-BASE-NEXT:    adrp x8, .LCPI11_0
-; CHECK-BASE-NEXT:    ldr d3, [x8, :lo12:.LCPI11_0]
-; CHECK-BASE-NEXT:    cmlt v2.4h, v2.4h, #0
-; CHECK-BASE-NEXT:    and v2.8b, v2.8b, v3.8b
-; CHECK-BASE-NEXT:    addv h2, v2.4h
-; CHECK-BASE-NEXT:    fmov w8, s2
-; CHECK-BASE-NEXT:    tbnz w8, #0, .LBB11_5
-; CHECK-BASE-NEXT:  // %bb.1: // %else
-; CHECK-BASE-NEXT:    tbnz w8, #1, .LBB11_6
-; CHECK-BASE-NEXT:  .LBB11_2: // %else2
-; CHECK-BASE-NEXT:    tbnz w8, #2, .LBB11_7
-; CHECK-BASE-NEXT:  .LBB11_3: // %else5
-; CHECK-BASE-NEXT:    tbnz w8, #3, .LBB11_8
-; CHECK-BASE-NEXT:  .LBB11_4: // %else8
-; CHECK-BASE-NEXT:    ret
-; CHECK-BASE-NEXT:  .LBB11_5: // %cond.store
-; CHECK-BASE-NEXT:    st1 { v0.d }[0], [x0], #8
-; CHECK-BASE-NEXT:    tbz w8, #1, .LBB11_2
-; CHECK-BASE-NEXT:  .LBB11_6: // %cond.store1
-; CHECK-BASE-NEXT:    st1 { v0.d }[1], [x0], #8
-; CHECK-BASE-NEXT:    tbz w8, #2, .LBB11_3
-; CHECK-BASE-NEXT:  .LBB11_7: // %cond.store4
-; CHECK-BASE-NEXT:    st1 { v1.d }[0], [x0], #8
-; CHECK-BASE-NEXT:    tbz w8, #3, .LBB11_4
-; CHECK-BASE-NEXT:  .LBB11_8: // %cond.store7
-; CHECK-BASE-NEXT:    st1 { v1.d }[1], [x0]
+; CHECK-BASE-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-BASE-NEXT:    movi v5.2s, #1
+; CHECK-BASE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-BASE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-BASE-NEXT:    ptrue p0.d, vl2
+; CHECK-BASE-NEXT:    ushll2 v3.2d, v2.4s, #0
+; CHECK-BASE-NEXT:    ushll v4.2d, v2.2s, #0
+; CHECK-BASE-NEXT:    and v2.8b, v2.8b, v5.8b
+; CHECK-BASE-NEXT:    shl v3.2d, v3.2d, #63
+; CHECK-BASE-NEXT:    shl v4.2d, v4.2d, #63
+; CHECK-BASE-NEXT:    addp v2.2s, v2.2s, v2.2s
+; CHECK-BASE-NEXT:    cmpne p1.d, p0/z, z3.d, #0
+; CHECK-BASE-NEXT:    cmpne p0.d, p0/z, z4.d, #0
+; CHECK-BASE-NEXT:    fmov w10, s2
+; CHECK-BASE-NEXT:    cntp x8, p1, p1.d
+; CHECK-BASE-NEXT:    compact z1.d, p1, z1.d
+; CHECK-BASE-NEXT:    compact z0.d, p0, z0.d
+; CHECK-BASE-NEXT:    cntp x9, p0, p0.d
+; CHECK-BASE-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-BASE-NEXT:    whilelo p1.d, xzr, x9
+; CHECK-BASE-NEXT:    st1d { z1.d }, p0, [x0, x10, lsl #3]
+; CHECK-BASE-NEXT:    st1d { z0.d }, p1, [x0]
 ; CHECK-BASE-NEXT:    ret
 ;
 ; CHECK-VL256-LABEL: test_compressstore_v4i64:

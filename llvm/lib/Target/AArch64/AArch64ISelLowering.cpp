@@ -1986,11 +1986,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
                     MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
                     MVT::nxv4i32, MVT::nxv4f32}) {
-      setOperationAction(ISD::MSTORE, VT, Custom);
+      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
       // Use a custom lowering for masked stores that could be a supported
       // compressing store. Note: These types still use the normal (Legal)
       // lowering for non-compressing masked stores.
-      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+      setOperationAction(ISD::MSTORE, VT, Custom);
     }
 
     // If we have SVE, we can use SVE logic for legal (or smaller than legal)
