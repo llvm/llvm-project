@@ -32,7 +32,7 @@
   _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION_EXPLICIT(                \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, memory_order Order,        \
       memory_scope Scope) {                                                    \
-    return __CLC_IMPL_FUNCTION((volatile ADDRSPACE __CLC_GENTYPE *)Ptr, Order, \
+    return __CLC_IMPL_FUNCTION((ADDRSPACE __CLC_GENTYPE *)Ptr, Order,          \
                                __opencl_get_clang_memory_scope(Scope));        \
   }
 #elif defined(__CLC_RETURN_VOID)
@@ -40,7 +40,7 @@
   _CLC_OVERLOAD _CLC_DEF void __CLC_FUNCTION_EXPLICIT(                         \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value,       \
       memory_order Order, memory_scope Scope) {                                \
-    __CLC_IMPL_FUNCTION((volatile ADDRSPACE __CLC_GENTYPE *)Ptr, Value, Order, \
+    __CLC_IMPL_FUNCTION((ADDRSPACE __CLC_GENTYPE *)Ptr, Value, Order,          \
                         __opencl_get_clang_memory_scope(Scope));               \
   }
 #elif defined(__CLC_COMPARE_EXCHANGE)
@@ -50,9 +50,9 @@
       ADDRSPACE __CLC_GENTYPE *Expected, __CLC_GENTYPE Desired,                \
       memory_order Success, memory_order Failure, memory_scope Scope) {        \
     __CLC_GENTYPE Comparator = *Expected;                                      \
-    __CLC_GENTYPE RetValue = __clc_atomic_compare_exchange(                    \
-        (volatile ADDRSPACE __CLC_GENTYPE *)Ptr, Comparator, Desired, Success, \
-        Failure, __opencl_get_clang_memory_scope(Scope));                      \
+    __CLC_GENTYPE RetValue = __CLC_IMPL_FUNCTION(                              \
+        (ADDRSPACE __CLC_GENTYPE *)Ptr, Comparator, Desired, Success, Failure, \
+        __opencl_get_clang_memory_scope(Scope));                               \
     if (Comparator != RetValue) {                                              \
       *Expected = RetValue;                                                    \
       return false;                                                            \
@@ -64,8 +64,8 @@
   _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION_EXPLICIT(                \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value,       \
       memory_order Order, memory_scope Scope) {                                \
-    return __CLC_IMPL_FUNCTION((volatile ADDRSPACE __CLC_GENTYPE *)Ptr, Value, \
-                               Order, __opencl_get_clang_memory_scope(Scope)); \
+    return __CLC_IMPL_FUNCTION((ADDRSPACE __CLC_GENTYPE *)Ptr, Value, Order,   \
+                               __opencl_get_clang_memory_scope(Scope));        \
   }
 #endif
 

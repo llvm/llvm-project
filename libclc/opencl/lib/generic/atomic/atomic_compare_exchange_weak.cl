@@ -11,6 +11,7 @@
 #include <clc/opencl/utils.h>
 
 #define __CLC_FUNCTION atomic_compare_exchange_weak
+#define __CLC_IMPL_FUNCTION __clc_atomic_compare_exchange
 #define __CLC_COMPARE_EXCHANGE
 
 #define __CLC_BODY <atomic_def.inc>
