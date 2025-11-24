@@ -1018,13 +1018,14 @@ void SemaHLSL::diagnoseSemanticStageMismatch(
     SmallVector<std::string, 8> ValidCases;
     llvm::transform(
         Allowed, std::back_inserter(ValidCases), [](SemanticStageInfo Case) {
-          std::string Type =
-              Case.AllowedIOTypesMask == IOType::InOut
-                  ? " inout"
-                  : (Case.AllowedIOTypesMask & IOType::In ? " in" : " out");
+          SmallVector<std::string, 2> ValidType;
+          if (Case.AllowedIOTypesMask & IOType::In)
+            ValidType.push_back("input");
+          if (Case.AllowedIOTypesMask & IOType::Out)
+            ValidType.push_back("output");
           return std::string(
                      HLSLShaderAttr::ConvertEnvironmentTypeToStr(Case.Stage)) +
-                 Type;
+                 " " + join(ValidType, "/");
         });
     Diag(A->getLoc(), diag::err_hlsl_semantic_unsupported_iotype_for_stage)
         << A->getAttrName() << (IsInput ? "input" : "output")
