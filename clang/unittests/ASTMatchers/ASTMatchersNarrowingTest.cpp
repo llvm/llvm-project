@@ -26,6 +26,19 @@ TEST_P(ASTMatchersTest, IsExpandedFromMacro_MatchesInFile) {
   EXPECT_TRUE(matches(input, binaryOperator(isExpandedFromMacro("MY_MACRO"))));
 }
 
+static std::string constructMacroName(llvm::StringRef A, llvm::StringRef B) {
+  return (A + "_" + B).str();
+}
+
+TEST_P(ASTMatchersTest, IsExpandedFromMacro_ConstructedMacroName) {
+  StringRef input = R"cc(
+#define MY_MACRO(a) (4 + (a))
+    void Test() { MY_MACRO(4); }
+  )cc";
+  auto matcher = isExpandedFromMacro(constructMacroName("MY", "MACRO"));
+  EXPECT_TRUE(matches(input, binaryOperator(matcher)));
+}
+
 TEST_P(ASTMatchersTest, IsExpandedFromMacro_MatchesNested) {
   StringRef input = R"cc(
 #define MY_MACRO(a) (4 + (a))
