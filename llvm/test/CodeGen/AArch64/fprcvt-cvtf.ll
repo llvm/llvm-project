@@ -2,7 +2,8 @@
 ; RUN: llc -mattr=+neon,+fullfp16,+fprcvt -verify-machineinstrs %s -o - | FileCheck %s
 ; RUN: llc -mattr=+neon -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-NO-FPRCVT
 ; RUN: llc -mattr=+sme,+neon,+fullfp16,+fprcvt -force-streaming < %s | FileCheck %s --check-prefix=CHECK-STREAMING
-; RUN: llc -mattr=+sme,+neon,+fullfp16,+fprcvt -force-streaming < %s | FileCheck %s --check-prefix=CHECK-STREAMING-COMPATIBLE
+; RUN: llc -mattr=+sme,+neon,+fullfp16,+fprcvt -force-streaming-compatible < %s | FileCheck %s --check-prefix=CHECK-STREAMING-COMPATIBLE
+
 
 
 target triple = "aarch64-unknown-linux-gnu"
@@ -34,8 +35,9 @@ define half @scvtf_f16i32(<4 x i32> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: scvtf_f16i32:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov w8, s0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr w8, [sp], #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    scvtf h0, w8
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <4 x i32> %x, i64 0
@@ -67,10 +69,11 @@ define half @scvtf_f16i32_neg(<4 x i32> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: scvtf_f16i32_neg:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    mov z0.s, z0.s[1]
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov w8, s0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr w8, [sp, #4]
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    scvtf h0, w8
+; CHECK-STREAMING-COMPATIBLE-NEXT:    add sp, sp, #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <4 x i32> %x, i64 1
  %conv = sitofp i32 %extract to half
@@ -100,9 +103,12 @@ define <1 x half> @scvtf_f16i32_simple(<1 x i32> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: scvtf_f16i32_simple:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov w8, s0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    sub sp, sp, #16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str d0, [sp, #8]
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr w8, [sp, #8]
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    scvtf h0, w8
+; CHECK-STREAMING-COMPATIBLE-NEXT:    add sp, sp, #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %conv = sitofp <1 x i32> %x to <1 x half>
  ret <1 x half> %conv
@@ -129,8 +135,9 @@ define double @scvtf_f64i32(<4 x i32> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: scvtf_f64i32:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov w8, s0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr w8, [sp], #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    scvtf d0, w8
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <4 x i32> %x, i64 0
@@ -161,52 +168,15 @@ define double @scvtf_f64i32_neg(<4 x i32> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: scvtf_f64i32_neg:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    mov z0.s, z0.s[1]
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov w8, s0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr w8, [sp, #4]
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    scvtf d0, w8
+; CHECK-STREAMING-COMPATIBLE-NEXT:    add sp, sp, #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <4 x i32> %x, i64 1
  %conv = sitofp i32 %extract to double
  ret double %conv
-}
-
-define <1 x double> @scvtf_f64i32_simple(<1 x i32> %x) {
-; CHECK-LABEL: scvtf_f64i32_simple:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    scvtf d0, s0
-; CHECK-NEXT:    ret
-;
-; CHECK-NO-FPRCVT-LABEL: scvtf_f64i32_simple:
-; CHECK-NO-FPRCVT:       // %bb.0:
-; CHECK-NO-FPRCVT-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NO-FPRCVT-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NO-FPRCVT-NEXT:    ret
-;
-; CHECK-STREAMING-LABEL: scvtf_f64i32_simple:
-; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-STREAMING-NEXT:    ptrue p0.d, vl2
-; CHECK-STREAMING-NEXT:    sunpklo z0.d, z0.s
-; CHECK-STREAMING-NEXT:    scvtf z0.d, p0/m, z0.d
-; CHECK-STREAMING-NEXT:    str q0, [sp, #-16]!
-; CHECK-STREAMING-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-STREAMING-NEXT:    ldr d0, [sp], #16
-; CHECK-STREAMING-NEXT:    ret
-;
-; CHECK-STREAMING-COMPATIBLE-LABEL: scvtf_f64i32_simple:
-; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ptrue p0.d, vl2
-; CHECK-STREAMING-COMPATIBLE-NEXT:    sunpklo z0.d, z0.s
-; CHECK-STREAMING-COMPATIBLE-NEXT:    scvtf z0.d, p0/m, z0.d
-; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
-; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr d0, [sp], #16
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
- %conv = sitofp <1 x i32> %x to <1 x double>
- ret <1 x double> %conv
 }
 
 define half @scvtf_f16i64(<2 x i64> %x) {
@@ -231,8 +201,9 @@ define half @scvtf_f16i64(<2 x i64> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: scvtf_f16i64:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov x8, d0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr x8, [sp], #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    scvtf h0, x8
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <2 x i64> %x, i64 0
@@ -264,10 +235,11 @@ define half @scvtf_f16i64_neg(<2 x i64> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: scvtf_f16i64_neg:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    mov z0.d, z0.d[1]
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov x8, d0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr x8, [sp, #8]
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    scvtf h0, x8
+; CHECK-STREAMING-COMPATIBLE-NEXT:    add sp, sp, #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <2 x i64> %x, i64 1
  %conv = sitofp i64 %extract to half
@@ -298,7 +270,6 @@ define <1 x half> @scvtf_f16i64_simple(<1 x i64> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: scvtf_f16i64_simple:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov x8, d0
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    scvtf h0, x8
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
@@ -327,8 +298,9 @@ define float @scvtf_f32i64(<2 x i64> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: scvtf_f32i64:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov x8, d0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr x8, [sp], #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    scvtf s0, x8
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <2 x i64> %x, i64 0
@@ -359,59 +331,15 @@ define float @scvtf_f32i64_neg(<2 x i64> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: scvtf_f32i64_neg:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    mov z0.d, z0.d[1]
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov x8, d0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr x8, [sp, #8]
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    scvtf s0, x8
+; CHECK-STREAMING-COMPATIBLE-NEXT:    add sp, sp, #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <2 x i64> %x, i64 1
  %conv = sitofp i64 %extract to float
  ret float %conv
-}
-
-; This test does not give the indended result of scvtf s0, d0
-; This is due to the input being loaded as a 2 item vector and
-; therefore using vector inputs that do not match the pattern
-; This test will be fixed in a future revision
-define <1 x float> @scvtf_f32i64_simple(<1 x i64> %x) {
-; CHECK-LABEL: scvtf_f32i64_simple:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    scvtf s0, d0
-; CHECK-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
-;
-; CHECK-NO-FPRCVT-LABEL: scvtf_f32i64_simple:
-; CHECK-NO-FPRCVT:       // %bb.0:
-; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NO-FPRCVT-NEXT:    fmov x8, d0
-; CHECK-NO-FPRCVT-NEXT:    movi d1, #0000000000000000
-; CHECK-NO-FPRCVT-NEXT:    scvtf s0, x8
-; CHECK-NO-FPRCVT-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-NO-FPRCVT-NEXT:    fmov d0, d1
-; CHECK-NO-FPRCVT-NEXT:    ret
-;
-; CHECK-STREAMING-LABEL: scvtf_f32i64_simple:
-; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    ptrue p0.d, vl2
-; CHECK-STREAMING-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-STREAMING-NEXT:    scvtf z0.s, p0/m, z0.d
-; CHECK-STREAMING-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-STREAMING-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-STREAMING-NEXT:    ret
-;
-; CHECK-STREAMING-COMPATIBLE-LABEL: scvtf_f32i64_simple:
-; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ptrue p0.d, vl2
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    scvtf z0.s, p0/m, z0.d
-; CHECK-STREAMING-COMPATIBLE-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
- %conv = sitofp <1 x i64> %x to <1 x float>
- ret <1 x float> %conv
 }
 
 ; UCVTF
@@ -437,8 +365,9 @@ define half @ucvtf_f16i32(<4 x i32> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: ucvtf_f16i32:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov w8, s0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr w8, [sp], #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ucvtf h0, w8
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <4 x i32> %x, i64 0
@@ -470,10 +399,11 @@ define half @ucvtf_f16i32_neg(<4 x i32> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: ucvtf_f16i32_neg:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    mov z0.s, z0.s[1]
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov w8, s0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr w8, [sp, #4]
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ucvtf h0, w8
+; CHECK-STREAMING-COMPATIBLE-NEXT:    add sp, sp, #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <4 x i32> %x, i64 1
  %conv = uitofp i32 %extract to half
@@ -503,9 +433,12 @@ define <1 x half> @ucvtf_f16i32_simple(<1 x i32> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: ucvtf_f16i32_simple:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov w8, s0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    sub sp, sp, #16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str d0, [sp, #8]
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr w8, [sp, #8]
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ucvtf h0, w8
+; CHECK-STREAMING-COMPATIBLE-NEXT:    add sp, sp, #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %conv = uitofp <1 x i32> %x to <1 x half>
  ret <1 x half> %conv
@@ -532,8 +465,9 @@ define double @ucvtf_f64i32(<4 x i32> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: ucvtf_f64i32:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov w8, s0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr w8, [sp], #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ucvtf d0, w8
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <4 x i32> %x, i64 0
@@ -564,52 +498,15 @@ define double @ucvtf_f64i32_neg(<4 x i32> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: ucvtf_f64i32_neg:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    mov z0.s, z0.s[1]
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov w8, s0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr w8, [sp, #4]
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ucvtf d0, w8
+; CHECK-STREAMING-COMPATIBLE-NEXT:    add sp, sp, #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <4 x i32> %x, i64 1
  %conv = uitofp i32 %extract to double
  ret double %conv
-}
-
-define <1 x double> @ucvtf_f64i32_simple(<1 x i32> %x) {
-; CHECK-LABEL: ucvtf_f64i32_simple:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ucvtf d0, s0
-; CHECK-NEXT:    ret
-;
-; CHECK-NO-FPRCVT-LABEL: ucvtf_f64i32_simple:
-; CHECK-NO-FPRCVT:       // %bb.0:
-; CHECK-NO-FPRCVT-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NO-FPRCVT-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NO-FPRCVT-NEXT:    ret
-;
-; CHECK-STREAMING-LABEL: ucvtf_f64i32_simple:
-; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-STREAMING-NEXT:    ptrue p0.d, vl2
-; CHECK-STREAMING-NEXT:    uunpklo z0.d, z0.s
-; CHECK-STREAMING-NEXT:    ucvtf z0.d, p0/m, z0.d
-; CHECK-STREAMING-NEXT:    str q0, [sp, #-16]!
-; CHECK-STREAMING-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-STREAMING-NEXT:    ldr d0, [sp], #16
-; CHECK-STREAMING-NEXT:    ret
-;
-; CHECK-STREAMING-COMPATIBLE-LABEL: ucvtf_f64i32_simple:
-; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ptrue p0.d, vl2
-; CHECK-STREAMING-COMPATIBLE-NEXT:    uunpklo z0.d, z0.s
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ucvtf z0.d, p0/m, z0.d
-; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
-; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr d0, [sp], #16
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
- %conv = uitofp <1 x i32> %x to <1 x double>
- ret <1 x double> %conv
 }
 
 define half @ucvtf_f16i64(<2 x i64> %x) {
@@ -634,8 +531,9 @@ define half @ucvtf_f16i64(<2 x i64> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: ucvtf_f16i64:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov x8, d0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr x8, [sp], #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ucvtf h0, x8
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <2 x i64> %x, i64 0
@@ -667,10 +565,11 @@ define half @ucvtf_f16i64_neg(<2 x i64> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: ucvtf_f16i64_neg:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    mov z0.d, z0.d[1]
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov x8, d0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr x8, [sp, #8]
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ucvtf h0, x8
+; CHECK-STREAMING-COMPATIBLE-NEXT:    add sp, sp, #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <2 x i64> %x, i64 1
  %conv = uitofp i64 %extract to half
@@ -701,7 +600,6 @@ define <1 x half> @ucvtf_f16i64_simple(<1 x i64> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: ucvtf_f16i64_simple:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov x8, d0
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ucvtf h0, x8
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
@@ -730,8 +628,9 @@ define float @ucvtf_f32i64(<2 x i64> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: ucvtf_f32i64:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov x8, d0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr x8, [sp], #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ucvtf s0, x8
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <2 x i64> %x, i64 0
@@ -762,100 +661,14 @@ define float @ucvtf_f32i64_neg(<2 x i64> %x) {
 ;
 ; CHECK-STREAMING-COMPATIBLE-LABEL: ucvtf_f32i64_neg:
 ; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    mov z0.d, z0.d[1]
-; CHECK-STREAMING-COMPATIBLE-NEXT:    fmov x8, d0
+; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
+; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr x8, [sp, #8]
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ucvtf s0, x8
+; CHECK-STREAMING-COMPATIBLE-NEXT:    add sp, sp, #16
 ; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
  %extract = extractelement <2 x i64> %x, i64 1
  %conv = uitofp i64 %extract to float
  ret float %conv
-}
-
-; This test does not give the indended result of ucvtf s0, d0
-; This is due to the input being loaded as a 2 item vector and
-; therefore using vector inputs that do not match the pattern
-; This test will be fixed in a future revision
-define <1 x float> @ucvtf_f32i64_simple(<1 x i64> %x) {
-; CHECK-LABEL: ucvtf_f32i64_simple:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    ucvtf s0, d0
-; CHECK-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
-;
-; CHECK-NO-FPRCVT-LABEL: ucvtf_f32i64_simple:
-; CHECK-NO-FPRCVT:       // %bb.0:
-; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NO-FPRCVT-NEXT:    fmov x8, d0
-; CHECK-NO-FPRCVT-NEXT:    movi d1, #0000000000000000
-; CHECK-NO-FPRCVT-NEXT:    ucvtf s0, x8
-; CHECK-NO-FPRCVT-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-NO-FPRCVT-NEXT:    fmov d0, d1
-; CHECK-NO-FPRCVT-NEXT:    ret
-;
-; CHECK-STREAMING-LABEL: ucvtf_f32i64_simple:
-; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    ptrue p0.d, vl2
-; CHECK-STREAMING-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-STREAMING-NEXT:    ucvtf z0.s, p0/m, z0.d
-; CHECK-STREAMING-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-STREAMING-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-STREAMING-NEXT:    ret
-;
-; CHECK-STREAMING-COMPATIBLE-LABEL: ucvtf_f32i64_simple:
-; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ptrue p0.d, vl2
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ucvtf z0.s, p0/m, z0.d
-; CHECK-STREAMING-COMPATIBLE-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
- %conv = uitofp <1 x i64> %x to <1 x float>
- ret <1 x float> %conv
-}
-
-define <1 x double> @uitofp_sext_v2i32_extract_lane0(<2 x i32> %x) {
-; CHECK-LABEL: uitofp_sext_v2i32_extract_lane0:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    ret
-;
-; CHECK-NO-FPRCVT-LABEL: uitofp_sext_v2i32_extract_lane0:
-; CHECK-NO-FPRCVT:       // %bb.0:
-; CHECK-NO-FPRCVT-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NO-FPRCVT-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NO-FPRCVT-NEXT:    ret
-;
-; CHECK-STREAMING-LABEL: uitofp_sext_v2i32_extract_lane0:
-; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-STREAMING-NEXT:    ptrue p0.d, vl2
-; CHECK-STREAMING-NEXT:    sunpklo z0.d, z0.s
-; CHECK-STREAMING-NEXT:    ucvtf z0.d, p0/m, z0.d
-; CHECK-STREAMING-NEXT:    str q0, [sp, #-16]!
-; CHECK-STREAMING-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-STREAMING-NEXT:    ldr d0, [sp], #16
-; CHECK-STREAMING-NEXT:    ret
-;
-; CHECK-STREAMING-COMPATIBLE-LABEL: uitofp_sext_v2i32_extract_lane0:
-; CHECK-STREAMING-COMPATIBLE:       // %bb.0:
-; CHECK-STREAMING-COMPATIBLE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ptrue p0.d, vl2
-; CHECK-STREAMING-COMPATIBLE-NEXT:    sunpklo z0.d, z0.s
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ucvtf z0.d, p0/m, z0.d
-; CHECK-STREAMING-COMPATIBLE-NEXT:    str q0, [sp, #-16]!
-; CHECK-STREAMING-COMPATIBLE-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ldr d0, [sp], #16
-; CHECK-STREAMING-COMPATIBLE-NEXT:    ret
-  %wide  = sext <2 x i32> %x to <2 x i64>
-  %fpv2  = uitofp <2 x i64> %wide to <2 x double>
-  %lane0 = shufflevector <2 x double> %fpv2, <2 x double> poison, <1 x i32> zeroinitializer
-  ret <1 x double> %lane0
 }
 
