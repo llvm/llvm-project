@@ -2157,6 +2157,23 @@ lowerVECTOR_SHUFFLE_XVSHUF4I(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   return lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG, Subtarget);
 }
 
+/// Lower VECTOR_SHUFFLE into XVREPLVE0 (if possible).
+///
+/// It is a XVREPLVE0 when the VECTOR_SHUFFLE is a broadcast of element 0,
+/// i.e. the mask is:
+///   <0, 0, 0, ...>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above form.
+static SDValue lowerVECTOR_SHUFFLE_XVREPLVE0(const SDLoc &DL,
+                                             ArrayRef<int> Mask, MVT VT,
+                                             SDValue V1, SelectionDAG &DAG) {
+  if (!ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::XVREPLVE0, DL, VT, V1);
+}
+
 /// Lower VECTOR_SHUFFLE into XVPERMI (if possible).
 static SDValue
 lowerVECTOR_SHUFFLE_XVPERMI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
@@ -2672,6 +2689,8 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
       return Result;
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, Mask, VT, V1, V2, DAG,
                                                Subtarget)))
+      return Result;
+    if ((Result = lowerVECTOR_SHUFFLE_XVREPLVE0(DL, Mask, VT, V1, DAG)))
       return Result;
     // Try to widen vectors to gain more optimization opportunities.
     if (SDValue NewShuffle = widenShuffleMask(DL, Mask, VT, V1, V2, DAG))
