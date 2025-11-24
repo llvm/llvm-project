@@ -493,7 +493,11 @@ mlir::Value fir::runtime::genRand(fir::FirOpBuilder &builder,
   auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Rand)>(loc, builder);
   mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
 
-  llvm::SmallVector<mlir::Value> args =
-      fir::runtime::createArguments(builder, loc, runtimeFuncTy, i);
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(2));
+
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, runtimeFuncTy, i, sourceFile, sourceLine);
   return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
 }

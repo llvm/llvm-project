@@ -64,7 +64,6 @@ namespace Fortran::runtime {
 
 #define GFC_RAND_A 16807
 #define GFC_RAND_M 2147483647
-#define GFC_RAND_M1 (GFC_RAND_M - 1)
 static unsigned rand_seed = 1;
 static Lock rand_seed_lock;
 
@@ -454,16 +453,18 @@ int RTNAME(Irand)(int *i) {
 }
 
 // RAND(I)
-float RTNAME(Rand)(int *i) {
+float RTNAME(Rand)(int *i, const char *sourceFile, int line) {
   unsigned mask = 0;
-  auto radix = std::numeric_limits<float>::radix;
-  auto digits = std::numeric_limits<float>::digits;
-  if (radix == 2)
+  constexpr int radix = std::numeric_limits<float>::radix;
+  constexpr int digits = std::numeric_limits<float>::digits;
+  if (radix == 2) {
     mask = ~(unsigned)0u << (32 - digits + 1);
-  else if (radix == 16)
+  } else if (radix == 16) {
     mask = ~(unsigned)0u << ((8 - digits) * 4 + 1);
-  else
-    std::fprintf(stderr, "Radix unknown value");
+  } else {
+    Terminator terminator{sourceFile, line};
+    terminator.Crash("Radix unknown value.");
+  }
   return ((unsigned)(RTNAME(Irand)(i) - 1) & mask) * (float)0x1.p-31f;
 }
 
