@@ -1,6 +1,5 @@
-; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - 2>&1 | FileCheck %s
+; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers < %s 2>&1 | FileCheck %s
 
-; Function Attrs: mustprogress noinline norecurse optnone
 define void @bar() {
 entry:
   call spir_func void (i32, ...) @_Z3fooiz(i32 5, i32 3)
