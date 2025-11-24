@@ -71,7 +71,7 @@ template <typename ExecParser> struct AsBlockParser {
     if (auto &&exec{attempt(epc_).Parse(state)}) {
       Block body;
       body.push_back(std::move(*exec));
-      return body;
+      return std::move(body); // std::move for GCC 7.5.0
     }
     return std::nullopt;
   }
