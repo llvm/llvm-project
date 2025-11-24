@@ -249,7 +249,7 @@ private:
 
   struct SemanticStageInfo {
     llvm::Triple::EnvironmentType Stage;
-    IOType Direction;
+    IOType AllowedIOTypesMask;
   };
 
 private:
