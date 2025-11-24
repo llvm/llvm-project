@@ -6575,8 +6575,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   // detection.
   for (const auto &Induction : Legal->getInductionVars()) {
     const InductionDescriptor &IndDes = Induction.second;
-    const SmallVectorImpl<Instruction *> &Casts = IndDes.getCastInsts();
-    VecValuesToIgnore.insert_range(Casts);
+    VecValuesToIgnore.insert_range(IndDes.getCastInsts());
   }
 }
 
@@ -7660,7 +7659,7 @@ createWidenInductionRecipes(VPInstruction *PhiR,
 }
 
 VPHeaderPHIRecipe *
-VPRecipeBuilder::tryToOptimizeInductionPHI(VPInstruction *VPI, VFRange &Range) {
+VPRecipeBuilder::tryToOptimizeInductionPHI(VPInstruction *VPI) {
   auto *Phi = cast<PHINode>(VPI->getUnderlyingInstr());
 
   // Check if this is an integer or fp induction. If so, build the recipe that
@@ -7671,14 +7670,9 @@ VPRecipeBuilder::tryToOptimizeInductionPHI(VPInstruction *VPI, VFRange &Range) {
   // Check if this is pointer induction. If so, build the recipe for it.
   if (auto *II = Legal->getPointerInductionDescriptor(Phi)) {
     VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
-    return new VPWidenPointerInductionRecipe(
-        Phi, VPI->getOperand(0), Step, &Plan.getVFxUF(), *II,
-        LoopVectorizationPlanner::getDecisionAndClampRange(
-            [&](ElementCount VF) {
-              return CM.isScalarAfterVectorization(Phi, VF);
-            },
-            Range),
-        VPI->getDebugLoc());
+    return new VPWidenPointerInductionRecipe(Phi, VPI->getOperand(0), Step,
+                                             &Plan.getVFxUF(), *II,
+                                             VPI->getDebugLoc());
   }
   return nullptr;
 }
@@ -8199,7 +8193,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
            "Non-header phis should have been handled during predication");
     auto *Phi = cast<PHINode>(R->getUnderlyingInstr());
     assert(R->getNumOperands() == 2 && "Must have 2 operands for header phis");
-    if ((Recipe = tryToOptimizeInductionPHI(PhiR, Range)))
+    if ((Recipe = tryToOptimizeInductionPHI(PhiR)))
       return Recipe;
 
     VPHeaderPHIRecipe *PhiRecipe = nullptr;
@@ -8537,7 +8531,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // failures.
   VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
   DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::addScalarResumePhis(*Plan, RecipeBuilder, IVEndValues);
+  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -8635,23 +8629,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
           *TLI))
     return nullptr;
 
-  // Collect mapping of IR header phis to header phi recipes, to be used in
-  // addScalarResumePhis.
-  DenseMap<VPBasicBlock *, VPValue *> BlockMaskCache;
-  VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
-                                Builder, BlockMaskCache);
-  for (auto &R : Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
-      continue;
-    auto *HeaderR = cast<VPHeaderPHIRecipe>(&R);
-    RecipeBuilder.setRecipe(HeaderR->getUnderlyingInstr(), HeaderR);
-  }
-  DenseMap<VPValue *, VPValue *> IVEndValues;
   // TODO: IVEndValues are not used yet in the native path, to optimize exit
   // values.
   // TODO: We can't call runPass on the transform yet, due to verifier
   // failures.
-  VPlanTransforms::addScalarResumePhis(*Plan, RecipeBuilder, IVEndValues);
+  DenseMap<VPValue *, VPValue *> IVEndValues;
+  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
