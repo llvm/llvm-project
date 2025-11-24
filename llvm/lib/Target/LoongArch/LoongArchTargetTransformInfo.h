@@ -71,6 +71,8 @@ public:
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const override;
+  
+  bool prefersVectorizedAddressing() const override;
 
   // TODO: Implement more hooks to provide TTI machinery for LoongArch.
 };
