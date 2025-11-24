@@ -457,6 +457,10 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(&CI::genSyncWarp),
      {},
      /*isElemental=*/false},
+    {"this_cluster",
+     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(&CI::genThisCluster),
+     {},
+     /*isElemental=*/false},
     {"this_grid",
      static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(&CI::genThisGrid),
      {},
@@ -1120,6 +1124,44 @@ void CUDAIntrinsicLibrary::genSyncWarp(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
   mlir::NVVM::SyncWarpOp::create(builder, loc, fir::getBase(args[0]));
+}
+
+// THIS_CLUSTER
+mlir::Value
+CUDAIntrinsicLibrary::genThisCluster(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0);
+  auto recTy = mlir::cast<fir::RecordType>(resultType);
+  assert(recTy && "RecordType expepected");
+  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
+  mlir::Type i32Ty = builder.getI32Type();
+
+  // SIZE
+  mlir::Value size = mlir::NVVM::ClusterDim::create(builder, loc, i32Ty);
+  auto sizeFieldName = recTy.getTypeList()[1].first;
+  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
+  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
+  mlir::Value sizeFieldIndex = fir::FieldIndexOp::create(
+      builder, loc, fieldIndexType, sizeFieldName, recTy,
+      /*typeParams=*/mlir::ValueRange{});
+  mlir::Value sizeCoord = fir::CoordinateOp::create(
+      builder, loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
+  fir::StoreOp::create(builder, loc, size, sizeCoord);
+
+  // RANK
+  mlir::Value rank = mlir::NVVM::ClusterId::create(builder, loc, i32Ty);
+  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
+  rank = mlir::arith::AddIOp::create(builder, loc, rank, one);
+  auto rankFieldName = recTy.getTypeList()[2].first;
+  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
+  mlir::Value rankFieldIndex = fir::FieldIndexOp::create(
+      builder, loc, fieldIndexType, rankFieldName, recTy,
+      /*typeParams=*/mlir::ValueRange{});
+  mlir::Value rankCoord = fir::CoordinateOp::create(
+      builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
+  fir::StoreOp::create(builder, loc, rank, rankCoord);
+
+  return res;
 }
 
 // THIS_GRID
