@@ -1,0 +1,171 @@
+7. Local OpenAI-Compatible Shim
+7.1 Purpose
+
+Provide a local OpenAI-style API so:
+
+LangChain / LlamaIndex / VSCode / CLI tools / wrappers “just work”
+
+You don’t expose this surface externally
+
+All real work still flows through DSMIL’s L7 layer & policies
+
+7.2 Interface
+
+Service: dsmil-openai-shim
+Bind: 127.0.0.1:8001
+
+Endpoints:
+
+GET /v1/models
+
+Returns your local model list:
+
+e.g. dsmil-7b-amx, dsmil-1b-npu
+
+POST /v1/chat/completions
+
+Standard OpenAI chat schema:
+
+model, messages, temperature, max_tokens, stream (can ignore streaming initially)
+
+POST /v1/completions
+
+Legacy text completions
+
+Implemented by mapping prompt → single user message → chat handler
+
+Auth:
+
+Enforce Authorization: Bearer <DSMIL_OPENAI_API_KEY>
+
+Key stored as DSMIL_OPENAI_API_KEY env var
+
+Bound to 127.0.0.1 only, so “local but not anonymous”
+
+7.3 Integration with L7
+
+The shim is intentionally dumb:
+
+It does no policy decisions.
+
+For each request it:
+
+Validates API key.
+
+Converts OpenAI-style payload → internal structure.
+
+Calls L7 router (either via HTTP or direct function) with:
+
+model/profile name (e.g. dsmil-7b-amx)
+
+message list
+
+sampling params
+
+Receives structured result:
+
+text output
+
+prompt & completion token counts
+
+Wraps into OpenAI response shape.
+
+All logs tagged:
+
+SyslogIdentifier=dsmil-openai
+
+journald → /var/log/dsmil.log → SHRINK
+
+This way:
+
+L7 router still applies:
+
+safety prompts,
+
+ROE,
+
+tenant awareness (if you route with tenant),
+
+logging,
+
+hardware routing (AMX/NPU/etc.).
+
+The shim is just a compatibility adapter.
+
+8. Implementation Tracks
+
+OpenAPI design (external DSMIL API)
+
+Write /v1/soc, /v1/intel, /v1/llm, /v1/admin spec.
+
+Include schemas, roles, error models.
+
+Gateway + crypto
+
+Configure Caddy/Envoy/nginx with:
+
+TLS 1.3 + strong ciphers
+
+client cert support (optional)
+
+rate limiting + basic WAF
+
+Implement PQC handshake + token signing strategy.
+
+Policy/ROE service
+
+Stand up a small policy engine (OPA or custom) for:
+
+endpoint access decisions
+
+output filtering rules
+
+DSMIL API router
+
+Internal service that:
+
+validates/normalizes requests
+
+calls down into L3–L9
+
+assembles responses
+
+emits full audit logs
+
+OpenAI shim
+
+Deploy dsmil_openai_shim.py (or equivalent) on loopback.
+
+Wire run_l7_chat() implementation to your real L7 router/inference path.
+
+Register models in GET /v1/models.
+
+9. Phase 6 Completion Criteria (with Shim)
+
+Phase 6 is “done” when:
+
+ External /v1/... DSMIL API is live behind a gateway with TLS, tokens, and policies.
+
+ OpenAPI spec is versioned and can generate client stubs.
+
+ AuthN/Z flows work (roles, tenants, ROE attributes).
+
+ External callers can:
+
+retrieve SOC events,
+
+request intel analyses,
+
+use at least one L7 profile safely.
+
+ dsmil-openai-shim is running on 127.0.0.1:8001 with:
+
+/v1/models, /v1/chat/completions, /v1/completions implemented,
+
+DSMIL_OPENAI_API_KEY enforced,
+
+correct integration into L7 router.
+
+ All API and shim calls show up in /var/log/dsmil.log and SHRINK can surface anomalies in usage patterns.
+
+If you want, I can next give you a concrete run_l7_chat() implementation sketch that calls your L7 router (e.g. via HTTP) and passes through tenant/context so the shim remains purely an adapter.
