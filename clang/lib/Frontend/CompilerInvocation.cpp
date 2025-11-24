@@ -30,7 +30,6 @@
 #include "clang/CAS/IncludeTree.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/BoundsSafetyArgs.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Frontend/CompileJobCacheResult.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
