@@ -706,6 +706,17 @@ LogicalResult TransposeLoadOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// MakeDmaDescriptorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeDmaDescriptorOp::verify() {
+  if (getGlobalStaticStrides()->back() != 1) {
+    return emitOpError("strides for the innermost dimension must be 1.");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ScaledMFMAOp
 //===----------------------------------------------------------------------===//
 

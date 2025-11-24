@@ -354,3 +354,13 @@ func.func @scaled_mfma_invalid_k(%arg0 : vector<4xf8E8M0FNU>, %arg1 : vector<32x
   %0 = amdgpu.scaled_mfma 32x32x32 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2 : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<16xf32>
   func.return %0 : vector<16xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @make_dma_descriptor
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
+func.func @make_dma_descriptor_invalid_strides(%base: !amdgpu.tdm_base<i32>) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op strides for the innermost dimension must be 1.}}
+  amdgpu.make_dma_descriptor %base globalSize [0] globalStride [1, 2] : !amdgpu.tdm_base<i32> to !amdgpu.tdm_descriptor
+  func.return
+}
