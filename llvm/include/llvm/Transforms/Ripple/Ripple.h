@@ -1041,6 +1041,12 @@ public:
   /// @brief Load declarations from libraries available as bitcode
   void loadRippleLibDeclarations();
 
+  /// @brief Analyze the TensorShape from point of view of the target machine.
+  /// If we know that the back end is unable to support proposed shape fail
+  /// verification.
+  bool analyzeTensorShape(const TensorShape &TS, Instruction *I,
+                          Value *Data = nullptr, Value *Address = nullptr);
+
   /// @brief Erase ripple function-specialization related metadata that has been
   /// attached to the given function
   static void eraseFunctionSpecializationRelatedMetadata(Function &F);
