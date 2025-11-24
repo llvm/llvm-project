@@ -1096,6 +1096,8 @@ public:
     // Calculates the first active lane index of the vector predicate operands.
     // It produces the lane index across all unrolled iterations. Unrolling will
     // add all copies of its original operand as additional operands.
+    // Implemented with @llvm.experimental.cttz.elts, but returns the expected
+    // result even with operands that are all zeroes.
     FirstActiveLane,
 
     // The opcodes below are used for VPInstructionWithType.

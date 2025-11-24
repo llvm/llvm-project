@@ -28,7 +28,7 @@ define i64 @std_find_i16_constant_offset_with_assumptions(ptr %first.coerce, i16
 ; CHECK:       [[MIDDLE_SPLIT]]:
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP0]], i1 true)
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP0]], i1 false)
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 [[TMP7]]
@@ -149,13 +149,14 @@ define ptr @std_find_caller(ptr noundef %first, ptr noundef %last) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[LOOP_HEADER_I_PREHEADER2:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP3]], -8
-; CHECK:         [[TMP9:%.*]] = getelementptr
-; CHECK-NEXT:         br label %[[VECTOR_BODY:.*]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[XTRAITER]], 1
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[FIRST]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[PROL_ITER_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[FIRST]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP]], align 2
+; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[FIRST]], i64 [[OFFSET_IDX1]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP1]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR:%.*]] = freeze <8 x i16> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR]], splat (i16 1)
 ; CHECK-NEXT:    [[PROL_ITER_NEXT]] = add nuw i64 [[INDEX]], 8
@@ -170,10 +171,10 @@ define ptr @std_find_caller(ptr noundef %first, ptr noundef %last) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[STD_FIND_GENERIC_IMPL_EXIT]], label %[[LOOP_HEADER_I_PREHEADER2]]
 ; CHECK:       [[LOOP_HEADER_I_PREHEADER2]]:
-; CHECK-NEXT:    [[PTR_IV_I_PH:%.*]] = phi ptr [ [[FIRST]], %[[LOOP_HEADER_I_PREHEADER]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[PTR_IV_I_PH:%.*]] = phi ptr [ [[FIRST]], %[[LOOP_HEADER_I_PREHEADER]] ], [ [[NEXT_GEP]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER_I:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = tail call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP4]], i1 true)
+; CHECK-NEXT:    [[TMP11:%.*]] = tail call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP4]], i1 false)
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = shl i64 [[TMP12]], 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[FIRST]], i64 [[TMP13]]

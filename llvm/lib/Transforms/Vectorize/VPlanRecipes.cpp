@@ -1015,7 +1015,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (getNumOperands() == 1) {
       Value *Mask = State.get(getOperand(0));
       return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
-                                                  true, Name);
+                                                  /*ZeroIsPoison=*/false, Name);
     }
     // If there are multiple operands, create a chain of selects to pick the
     // first operand with an active lane and add the number of lanes of the
@@ -1031,9 +1031,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
                     Builder.CreateICmpEQ(State.get(getOperand(Idx)),
                                          Builder.getFalse()),
                     Builder.getInt64Ty())
-              : Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(),
-                                                     State.get(getOperand(Idx)),
-                                                     true, Name);
+              : Builder.CreateCountTrailingZeroElems(
+                    Builder.getInt64Ty(), State.get(getOperand(Idx)),
+                    /*ZeroIsPoison=*/false, Name);
       Value *Current = Builder.CreateAdd(
           Builder.CreateMul(RuntimeVF, Builder.getInt64(Idx)), TrailingZeros);
       if (Res) {
