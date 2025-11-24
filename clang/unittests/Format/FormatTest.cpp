@@ -27328,6 +27328,7 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   verifyFormat("export", Style);
 
   verifyFormat("import /* not keyword */ = val ? 2 : 1;");
+  verifyFormat("_world->import<engine_module>();");
 }
 
 TEST_F(FormatTest, CoroutineForCoawait) {
