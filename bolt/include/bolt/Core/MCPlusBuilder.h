@@ -632,6 +632,12 @@ public:
     return false;
   }
 
+  /// Generate the matching pointer authentication instruction from a fused
+  /// pauth-and-return instruction.
+  virtual void createMatchingAuth(const MCInst &AuthAndRet, MCInst &Auth) {
+    llvm_unreachable("not implemented");
+  }
+
   /// Returns the register used as a return address. Returns std::nullopt if
   /// not applicable, such as reading the return address from a system register
   /// or from the stack.
