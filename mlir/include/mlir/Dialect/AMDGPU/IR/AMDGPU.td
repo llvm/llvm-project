@@ -1227,9 +1227,9 @@ def AMDGPU_ScaledMFMAOp :
 def AMDGPU_MakeDmaBaseOp :
     AMDGPU_Op<"make_dma_base", [AttrSizedOperandSegments]>,
     Arguments<(ins
-                   Arg<AnyMemRef, "buffer to read from", [MemRead]>:$src,
+                   Arg<AnyMemRef, "buffer to read from">:$src,
                    Variadic<Index>:$srcIndices,
-                   Arg<AnyMemRef, "buffer to write to", [MemWrite]>:$dst,
+                   Arg<AnyMemRef, "buffer to write to">:$dst,
                    Variadic<Index>:$dstIndices)>,
     Results<(outs AMDGPU_TDMBaseType: $base)> {
 
