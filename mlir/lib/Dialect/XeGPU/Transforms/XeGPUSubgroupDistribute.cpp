@@ -1510,24 +1510,8 @@ struct VectorExtractStridedSliceDistribution
       return rewriter.notifyMatchFailure(
           warpOp, "Expecting source to be distributed in a single dimension.");
     int64_t distributedDim = distributedDims[0];
-    // Check if the distributed dimension is fully extracted. If so, we exit
-    // early becuase this case already handled by vector distribution patterns.
-    // Distributed dimension is fully extracted if:
-    //  1) Distributed dim comes after all the extracted dimensions.
-    //  2) Or, the size extacted along the distributed dimension is equal the
-    //  size of that dim in source vector.
-    auto extractedSizes = extractOp.getSizes();
-    if (distributedDim >= static_cast<int64_t>(extractedSizes.size()))
-      return rewriter.notifyMatchFailure(
-          warpOp, "Distributed dimension is fully extracted, skipping.");
-
-    int distrDimExtractedSize =
-        cast<IntegerAttr>(extractOp.getSizes()[distributedDim]).getInt();
     int sourceDistrDimSize =
         extractOp.getSourceVectorType().getShape()[distributedDim];
-    if (distrDimExtractedSize == sourceDistrDimSize)
-      return rewriter.notifyMatchFailure(
-          warpOp, "Distributed dimension is fully extracted, skipping.");
 
     auto sourceLayout =
         xegpu::getDistributeLayoutAttr(extractOp->getOpOperand(0));
@@ -1635,14 +1619,7 @@ struct VectorInsertStridedSliceDistribution
       return rewriter.notifyMatchFailure(
           insertOp, "distributed dimension must be in the last k (i.e. source "
                     "rank) dims of dest vector");
-    // If the distributed dimension is fully inserted, skip. This case is
-    // already handled by vector distribution patterns.
-    int64_t destDistrDimSize = destType.getDimSize(destDistributedDim);
     int64_t srcDistrDimSize = srcType.getDimSize(sourceDistributedDim);
-    if (srcDistrDimSize == destDistrDimSize)
-      return rewriter.notifyMatchFailure(
-          insertOp, "distributed dimension is fully inserted. This case "
-                    "is handled by vector distribution.");
     // Obtain the source and dest layouts.
     auto destLayout = xegpu::getDistributeLayoutAttr(insertOp->getOpOperand(1));
     auto sourceLayout =
