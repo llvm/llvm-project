@@ -500,7 +500,7 @@ private:
         if (I == SN->Deps.end())
           continue;
         for (auto &[DefElem, DefSN] : DefElems)
-          if (I->second.erase(DefElem))
+          if (I->second.erase(DefElem) && DefSN != SN.get())
             SNDeps.insert(DefSN);
         if (I->second.empty())
           SN->Deps.erase(I);
@@ -511,11 +511,13 @@ private:
   // Compute transitive closure of deps for each node.
   static void propagateSuperNodeDeps(SuperNodeDepsMap &SuperNodeDeps) {
     for (auto &[SN, Deps] : SuperNodeDeps) {
-      DenseSet<SuperNode *> Reachable({SN});
+      DenseSet<SuperNode *> Reachable;
       SmallVector<SuperNode *> Worklist(Deps.begin(), Deps.end());
 
       while (!Worklist.empty()) {
         auto *DepSN = Worklist.pop_back_val();
+        if (DepSN == SN)
+          continue;
         if (!Reachable.insert(DepSN).second)
           continue;
         auto I = SuperNodeDeps.find(DepSN);
@@ -537,9 +539,11 @@ private:
       if (I == SuperNodeDeps.end())
         continue;
 
-      for (auto *DepSN : I->second)
+      for (auto *DepSN : I->second) {
+        assert(DepSN != SN.get() && "Unexpected self-dependence for SN");
         for (auto &[Container, Elems] : DepSN->Deps)
           SN->Deps[Container].insert(Elems.begin(), Elems.end());
+      }
     }
   }
 

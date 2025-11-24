@@ -250,15 +250,20 @@ private:
                                                const RecordType *RT);
 
   void checkSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
-                               const HLSLAppliedSemanticAttr *SemanticAttr);
+                               const HLSLAppliedSemanticAttr *SemanticAttr,
+                               bool IsInput);
+
   bool determineActiveSemanticOnScalar(FunctionDecl *FD,
                                        DeclaratorDecl *OutputDecl,
                                        DeclaratorDecl *D,
                                        SemanticInfo &ActiveSemantic,
-                                       llvm::StringSet<> &ActiveInputSemantics);
+                                       llvm::StringSet<> &ActiveSemantics,
+                                       bool IsInput);
+
   bool determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *OutputDecl,
                                DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
-                               llvm::StringSet<> &ActiveInputSemantics);
+                               llvm::StringSet<> &ActiveSemantics,
+                               bool IsInput);
 
   void processExplicitBindingsOnDecl(VarDecl *D);
 
