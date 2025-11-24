@@ -357,9 +357,9 @@ TEST_F(SparsePropagationTest, GlobalVariableOverDefined) {
 
 /// Test that we propagate information through function returns.
 ///
-/// define internal i64 @f(i1* %cond) {
+/// define internal i64 @f(ptr %cond) {
 /// if:
-///   %0 = load i1, i1* %cond
+///   %0 = load i1, ptr %cond
 ///   br i1 %0, label %then, label %else
 ///
 /// then:
@@ -397,9 +397,9 @@ TEST_F(SparsePropagationTest, FunctionDefined) {
 
 /// Test that we propagate information through function returns.
 ///
-/// define internal i64 @f(i1* %cond) {
+/// define internal i64 @f(ptr %cond) {
 /// if:
-///   %0 = load i1, i1* %cond
+///   %0 = load i1, ptr %cond
 ///   br i1 %0, label %then, label %else
 ///
 /// then:

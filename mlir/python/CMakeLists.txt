@@ -322,6 +322,15 @@ declare_mlir_dialect_extension_python_bindings(
     "../../include/mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 )
 
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/XeGPUTransformOps.td
+  SOURCES
+    dialects/transform/xegpu.py
+  DIALECT_NAME transform
+  EXTENSION_NAME xegpu_transform)
+
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
@@ -886,17 +895,8 @@ add_mlir_python_common_capi_library(MLIRPythonCAPI
 ################################################################################
 
 _flatten_mlir_python_targets(mlir_python_sources_deps MLIRPythonSources)
-add_custom_target("mlir-python-sources" DEPENDS ${mlir_python_sources_deps})
-if(NOT LLVM_ENABLE_IDE)
-  add_llvm_install_targets(install-mlir-python-sources
-    DEPENDS mlir-python-sources
-    COMPONENT mlir-python-sources
-  )
-endif()
 
-# Stubgen doesn't work when cross-compiling (stubgen will run in the host interpreter and then fail
-# to find the extension module for the host arch).
-if(NOT CMAKE_CROSSCOMPILING)
+if(MLIR_PYTHON_STUBGEN_ENABLED)
   # _mlir stubgen
   # Note: All this needs to come before add_mlir_python_modules(MLIRPythonModules so that the install targets for the
   # generated type stubs get created.
@@ -949,6 +949,7 @@ if(NOT CMAKE_CROSSCOMPILING)
     ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs"
     SOURCES "${_core_type_stub_sources}"
   )
+  list(APPEND mlir_python_sources_deps MLIRPythonExtension.Core.type_stub_gen)
 
   # _mlirPythonTestNanobind stubgen
 
@@ -979,13 +980,21 @@ if(NOT CMAKE_CROSSCOMPILING)
   endif()
 endif()
 
+add_custom_target("mlir-python-sources" DEPENDS ${mlir_python_sources_deps})
+if(NOT LLVM_ENABLE_IDE)
+  add_llvm_install_targets(install-mlir-python-sources
+    DEPENDS mlir-python-sources
+    COMPONENT mlir-python-sources
+  )
+endif()
+
 ################################################################################
 # The fully assembled package of modules.
 # This must come last.
 ################################################################################
 
 set(_declared_sources MLIRPythonSources MLIRPythonExtension.RegisterEverything)
-if(NOT CMAKE_CROSSCOMPILING)
+if(MLIR_PYTHON_STUBGEN_ENABLED)
   list(APPEND _declared_sources MLIRPythonExtension.Core.type_stub_gen)
 endif()
 
@@ -998,7 +1007,7 @@ add_mlir_python_modules(MLIRPythonModules
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
 )
-if(NOT CMAKE_CROSSCOMPILING)
+if(MLIR_PYTHON_STUBGEN_ENABLED)
   add_dependencies(MLIRPythonModules "${_mlir_typestub_gen_target}")
   if(MLIR_INCLUDE_TESTS)
     add_dependencies(MLIRPythonModules "${_mlirPythonTestNanobind_typestub_gen_target}")

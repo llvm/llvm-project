@@ -102,10 +102,9 @@ define void @test_workgroup_id_x_non_kernel_optimized_fixed(ptr addrspace(1) %ou
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    s_lshl_b32 s0, ttmp9, 1
-; GFX1250-SDAG-NEXT:    s_and_b32 s1, ttmp6, 15
+; GFX1250-SDAG-NEXT:    s_and_b32 s0, ttmp6, 15
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_add_co_i32 s0, s1, s0
+; GFX1250-SDAG-NEXT:    s_lshl1_add_u32 s0, ttmp9, s0
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]

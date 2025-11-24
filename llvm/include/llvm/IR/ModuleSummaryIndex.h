@@ -172,9 +172,13 @@ struct alignas(8) GlobalValueSummaryInfo {
 
   /// Add a summary corresponding to a global value definition in a module with
   /// the corresponding GUID.
-  void addSummary(std::unique_ptr<GlobalValueSummary> Summary) {
-    return SummaryList.push_back(std::move(Summary));
-  }
+  inline void addSummary(std::unique_ptr<GlobalValueSummary> Summary);
+
+  /// Verify that the HasLocal flag is consistent with the SummaryList. Should
+  /// only be called prior to index-based internalization and promotion.
+  inline void verifyLocal() const;
+
+  bool hasLocal() const { return HasLocal; }
 
 private:
   /// List of global value summary structures for a particular value held
@@ -183,6 +187,22 @@ private:
   /// compiling without sufficient distinguishing path, or (theoretically) hash
   /// collisions. Each summary is from a different module.
   GlobalValueSummaryList SummaryList;
+
+  /// True if the SummaryList contains at least one summary with local linkage.
+  /// In most cases there should be only one, unless translation units with
+  /// same-named locals were compiled without distinguishing path. And generally
+  /// there should not be a mix of local and non-local summaries, because the
+  /// GUID for a local is computed with the path prepended and a ';' delimiter.
+  /// In extremely rare cases there could be a GUID hash collision. Having the
+  /// flag saves having to walk through all summaries to prove the existence or
+  /// not of any locals.
+  /// NOTE: this flag is set when the index is built. It does not reflect
+  /// index-based internalization and promotion decisions. Generally most
+  /// index-based analysis occurs before then, but any users should assert that
+  /// the withInternalizeAndPromote() flag is not set on the index.
+  /// TODO: Replace checks in various ThinLTO analyses that loop through all
+  /// summaries to handle the local case with a check of the flag.
+  bool HasLocal : 1;
 };
 
 /// Map from global value GUID to corresponding summary structures. Use a
@@ -218,6 +238,10 @@ struct ValueInfo {
   ArrayRef<std::unique_ptr<GlobalValueSummary>> getSummaryList() const {
     return getRef()->second.getSummaryList();
   }
+
+  void verifyLocal() const { getRef()->second.verifyLocal(); }
+
+  bool hasLocal() const { return getRef()->second.hasLocal(); }
 
   // Even if the index is built with GVs available, we may not have one for
   // summary entries synthesized for profiled indirect call targets.
@@ -649,7 +673,23 @@ public:
   friend class ModuleSummaryIndex;
 };
 
-GlobalValueSummaryInfo::GlobalValueSummaryInfo(bool HaveGVs) : U(HaveGVs) {}
+GlobalValueSummaryInfo::GlobalValueSummaryInfo(bool HaveGVs)
+    : U(HaveGVs), HasLocal(false) {}
+
+void GlobalValueSummaryInfo::addSummary(
+    std::unique_ptr<GlobalValueSummary> Summary) {
+  if (GlobalValue::isLocalLinkage(Summary->linkage()))
+    HasLocal = true;
+  return SummaryList.push_back(std::move(Summary));
+}
+
+void GlobalValueSummaryInfo::verifyLocal() const {
+  assert(HasLocal ==
+         llvm::any_of(SummaryList,
+                      [](const std::unique_ptr<GlobalValueSummary> &Summary) {
+                        return GlobalValue::isLocalLinkage(Summary->linkage());
+                      }));
+}
 
 /// Alias summary information.
 class AliasSummary : public GlobalValueSummary {
@@ -1449,6 +1489,9 @@ private:
   /// every summary of a GV is synchronized.
   bool WithDSOLocalPropagation = false;
 
+  /// Indicates that summary-based internalization and promotion has run.
+  bool WithInternalizeAndPromote = false;
+
   /// Indicates that we have whole program visibility.
   bool WithWholeProgramVisibility = false;
 
@@ -1652,6 +1695,9 @@ public:
 
   bool withDSOLocalPropagation() const { return WithDSOLocalPropagation; }
   void setWithDSOLocalPropagation() { WithDSOLocalPropagation = true; }
+
+  bool withInternalizeAndPromote() const { return WithInternalizeAndPromote; }
+  void setWithInternalizeAndPromote() { WithInternalizeAndPromote = true; }
 
   bool withWholeProgramVisibility() const { return WithWholeProgramVisibility; }
   void setWithWholeProgramVisibility() { WithWholeProgramVisibility = true; }

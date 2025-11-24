@@ -40,13 +40,13 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -146,8 +146,6 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
       return createWindowsAArch64TargetCodeGenInfo(CGM, AArch64ABIKind::Win64);
     else if (Target.getABI() == "aapcs-soft")
       Kind = AArch64ABIKind::AAPCSSoft;
-    else if (Target.getABI() == "pauthtest")
-      Kind = AArch64ABIKind::PAuthTest;
 
     return createAArch64TargetCodeGenInfo(CGM, Kind);
   }
@@ -1325,22 +1323,29 @@ void CodeGenModule::Release() {
                               "tag-stack-memory-buildattr", 1);
 
   if (T.isARM() || T.isThumb() || T.isAArch64()) {
+    // Previously 1 is used and meant for the backed to derive the function
+    // attribute form it. 2 now means function attributes already set for all
+    // functions in this module, so no need to propagate those from the module
+    // flag. Value is only used in case of LTO module merge because the backend
+    // will see all required function attribute set already. Value is used
+    // before modules got merged. Any posive value means the feature is active
+    // and required binary markings need to be emit accordingly.
     if (LangOpts.BranchTargetEnforcement)
       getModule().addModuleFlag(llvm::Module::Min, "branch-target-enforcement",
-                                1);
+                                2);
     if (LangOpts.BranchProtectionPAuthLR)
       getModule().addModuleFlag(llvm::Module::Min, "branch-protection-pauth-lr",
-                                1);
+                                2);
     if (LangOpts.GuardedControlStack)
-      getModule().addModuleFlag(llvm::Module::Min, "guarded-control-stack", 1);
+      getModule().addModuleFlag(llvm::Module::Min, "guarded-control-stack", 2);
     if (LangOpts.hasSignReturnAddress())
-      getModule().addModuleFlag(llvm::Module::Min, "sign-return-address", 1);
+      getModule().addModuleFlag(llvm::Module::Min, "sign-return-address", 2);
     if (LangOpts.isSignReturnAddressScopeAll())
       getModule().addModuleFlag(llvm::Module::Min, "sign-return-address-all",
-                                1);
+                                2);
     if (!LangOpts.isSignReturnAddressWithAKey())
       getModule().addModuleFlag(llvm::Module::Min,
-                                "sign-return-address-with-bkey", 1);
+                                "sign-return-address-with-bkey", 2);
 
     if (LangOpts.PointerAuthELFGOT)
       getModule().addModuleFlag(llvm::Module::Min, "ptrauth-elf-got", 1);
@@ -1506,6 +1511,9 @@ void CodeGenModule::Release() {
     break;
   case CodeGenOptions::FramePointerKind::Reserved:
     getModule().setFramePointer(llvm::FramePointerKind::Reserved);
+    break;
+  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+    getModule().setFramePointer(llvm::FramePointerKind::NonLeafNoReserve);
     break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     getModule().setFramePointer(llvm::FramePointerKind::NonLeaf);
@@ -2363,9 +2371,8 @@ static QualType GeneralizeTransparentUnion(QualType Ty) {
   const RecordDecl *UD = UT->getDecl()->getDefinitionOrSelf();
   if (!UD->hasAttr<TransparentUnionAttr>())
     return Ty;
-  for (const auto *it : UD->fields()) {
-    return it->getType();
-  }
+  if (!UD->fields().empty())
+    return UD->fields().begin()->getType();
   return Ty;
 }
 
@@ -4930,6 +4937,11 @@ void CodeGenModule::setMultiVersionResolverAttributes(llvm::Function *Resolver,
   setGlobalVisibility(Resolver, D);
 
   setDSOLocal(Resolver);
+
+  // The resolver must be exempt from sanitizer instrumentation, as it can run
+  // before the sanitizer is initialized.
+  // (https://github.com/llvm/llvm-project/issues/163369)
+  Resolver->addFnAttr(llvm::Attribute::DisableSanitizerInstrumentation);
 
   // Set the default target-specific attributes, such as PAC and BTI ones on
   // AArch64. Not passing Decl to prevent setting unrelated attributes,

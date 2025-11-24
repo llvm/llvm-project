@@ -34,7 +34,7 @@ module m_firstprivate_derived_ptr_comp
 ! CHECK-LABEL:   func.func @_QMm_firstprivate_derived_ptr_compPtest(
 ! CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>> {fir.bindc_name = "a"}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] {uniq_name = "_QMm_firstprivate_derived_ptr_compFtestEa"} : (!fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QMm_firstprivate_derived_ptr_compFtestEa"} : (!fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMm_firstprivate_derived_ptr_compFtestEi"}
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QMm_firstprivate_derived_ptr_compFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QMm_firstprivate_derived_ptr_compFtestEn"}
@@ -42,7 +42,7 @@ module m_firstprivate_derived_ptr_comp
 ! CHECK:           %[[VAL_6:.*]] = acc.firstprivate varPtr(%[[VAL_1]]#0 : !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>> {name = "a"}
 ! CHECK:           acc.parallel combined(loop) firstprivate(@firstprivatization_ref_rec__QMm_firstprivate_derived_ptr_compTpoint -> %[[VAL_6]] : !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) {
 ! CHECK:             %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] dummy_scope %[[VAL_7]] {uniq_name = "_QMm_firstprivate_derived_ptr_compFtestEa"} : (!fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>)
+! CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] dummy_scope %[[VAL_7]] {{.*}} {uniq_name = "_QMm_firstprivate_derived_ptr_compFtestEa"} : (!fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>)
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_10:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i32

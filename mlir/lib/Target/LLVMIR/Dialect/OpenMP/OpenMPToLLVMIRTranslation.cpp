@@ -357,14 +357,8 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("priority");
   };
   auto checkPrivate = [&todo](auto op, LogicalResult &result) {
-    if constexpr (std::is_same_v<std::decay_t<decltype(op)>, omp::TargetOp>) {
-      // Privatization is supported only for included target tasks.
-      if (!op.getPrivateVars().empty() && op.getNowait())
-        result = todo("privatization for deferred target tasks");
-    } else {
-      if (!op.getPrivateVars().empty() || op.getPrivateSyms())
-        result = todo("privatization");
-    }
+    if (!op.getPrivateVars().empty() || op.getPrivateSyms())
+      result = todo("privatization");
   };
   auto checkReduction = [&todo](auto op, LogicalResult &result) {
     if (isa<omp::TeamsOp>(op))
@@ -451,7 +445,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkDevice(op, result);
         checkInReduction(op, result);
         checkIsDevicePtr(op, result);
-        checkPrivate(op, result);
       })
       .Default([](Operation &) {
         // Assume all clauses for an operation can be translated unless they are
@@ -4091,12 +4084,13 @@ static omp::MapInfoOp getFirstOrLastMappedMemberPtr(omp::MapInfoOp mapInfo,
 ///
 /// Fortran
 ///     map(tofrom: array(2:5, 3:2))
-///   or
-/// C++
-///   map(tofrom: array[1:4][2:3])
+///
 /// We must calculate the initial pointer offset to pass across, this function
 /// performs this using bounds.
 ///
+/// TODO/WARNING: This only supports Fortran's column major indexing currently
+/// as is noted in the note below and comments in the function, we must extend
+/// this function when we add a C++ frontend.
 /// NOTE: which while specified in row-major order it currently needs to be
 /// flipped for Fortran's column order array allocation and access (as
 /// opposed to C++'s row-major, hence the backwards processing where order is
@@ -4132,46 +4126,28 @@ calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
     // with a pointer that's being treated like an array and we have the
     // underlying type e.g. an i32, or f64 etc, e.g. a fortran descriptor base
     // address (pointer pointing to the actual data) so we must caclulate the
-    // offset using a single index which the following two loops attempts to
-    // compute.
-
-    // Calculates the size offset we need to make per row e.g. first row or
-    // column only needs to be offset by one, but the next would have to be
-    // the previous row/column offset multiplied by the extent of current row.
+    // offset using a single index which the following loop attempts to
+    // compute using the standard column-major algorithm e.g for a 3D array:
     //
-    // For example ([1][10][100]):
+    // ((((c_idx * b_len) + b_idx) * a_len) + a_idx)
     //
-    //  - First row/column we move by 1 for each index increment
-    //  - Second row/column we move by 1 (first row/column) * 10 (extent/size of
-    //  current) for 10 for each index increment
-    //  - Third row/column we would move by 10 (second row/column) *
-    //  (extent/size of current) 100 for 1000 for each index increment
-    std::vector<llvm::Value *> dimensionIndexSizeOffset{builder.getInt64(1)};
-    for (size_t i = 1; i < bounds.size(); ++i) {
-      if (auto boundOp = dyn_cast_if_present<omp::MapBoundsOp>(
-              bounds[i].getDefiningOp())) {
-        dimensionIndexSizeOffset.push_back(builder.CreateMul(
-            moduleTranslation.lookupValue(boundOp.getExtent()),
-            dimensionIndexSizeOffset[i - 1]));
-      }
-    }
-
-    // Now that we have calculated how much we move by per index, we must
-    // multiply each lower bound offset in indexes by the size offset we
-    // have calculated in the previous and accumulate the results to get
-    // our final resulting offset.
+    // It is of note that it's doing column-major rather than row-major at the
+    // moment, but having a way for the frontend to indicate which major format
+    // to use or standardizing/canonicalizing the order of the bounds to compute
+    // the offset may be useful in the future when there's other frontends with
+    // different formats.
+    std::vector<llvm::Value *> dimensionIndexSizeOffset;
     for (int i = bounds.size() - 1; i >= 0; --i) {
       if (auto boundOp = dyn_cast_if_present<omp::MapBoundsOp>(
               bounds[i].getDefiningOp())) {
-        if (idx.empty())
-          idx.emplace_back(builder.CreateMul(
-              moduleTranslation.lookupValue(boundOp.getLowerBound()),
-              dimensionIndexSizeOffset[i]));
+        if (i == ((int)bounds.size() - 1))
+          idx.emplace_back(
+              moduleTranslation.lookupValue(boundOp.getLowerBound()));
         else
           idx.back() = builder.CreateAdd(
-              idx.back(), builder.CreateMul(moduleTranslation.lookupValue(
-                                                boundOp.getLowerBound()),
-                                            dimensionIndexSizeOffset[i]));
+              builder.CreateMul(idx.back(), moduleTranslation.lookupValue(
+                                                boundOp.getExtent())),
+              moduleTranslation.lookupValue(boundOp.getLowerBound()));
       }
     }
   }

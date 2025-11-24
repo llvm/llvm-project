@@ -78,7 +78,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <memory>
 #include <set>
 #include <string>
 #include <system_error>
@@ -1271,7 +1270,7 @@ bool LowerTypeTestsModule::hasBranchTargetEnforcement() {
     // the module flags.
     if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("branch-target-enforcement")))
-      HasBranchTargetEnforcement = (BTE->getZExtValue() != 0);
+      HasBranchTargetEnforcement = !BTE->isZero();
     else
       HasBranchTargetEnforcement = 0;
   }
@@ -1470,6 +1469,9 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
                                      Constant::getNullValue(F->getType()));
     Value *Select = Builder.CreateSelect(ICmp, JT,
                                          Constant::getNullValue(F->getType()));
+
+    if (auto *SI = dyn_cast<SelectInst>(Select))
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
     // For phi nodes, we need to update the incoming value for all operands
     // with the same predecessor.
     if (PN)
