@@ -18,6 +18,7 @@ add_llvm_component_library(LLVMTransformUtils
   CodeMoverUtils.cpp
   ControlFlowUtils.cpp
   CtorUtils.cpp
+  CountInstructions.cpp
   CountVisits.cpp
   Debugify.cpp
   DebugSSAUpdater.cpp
