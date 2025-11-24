@@ -153,7 +153,8 @@ entry:
   ret i1 %cmp
 }
 
-
+; LShr doesn't preserve the sign of the value, so we cannot perform
+; the transformation for signed comparisons.
 define i1 @precond_icmp_lshr_and_lshr_signed_pred(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i1 @precond_icmp_lshr_and_lshr_signed_pred(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
