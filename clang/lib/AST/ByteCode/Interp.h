@@ -2474,6 +2474,18 @@ inline bool InitScope(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+inline bool EnableLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
+  assert(!S.Current->isLocalEnabled(I));
+  S.Current->enableLocal(I);
+  return true;
+}
+
+inline bool GetLocalEnabled(InterpState &S, CodePtr OpPC, uint32_t I) {
+  assert(S.Current);
+  S.Stk.push<bool>(S.Current->isLocalEnabled(I));
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Cast, CastFP
 //===----------------------------------------------------------------------===//

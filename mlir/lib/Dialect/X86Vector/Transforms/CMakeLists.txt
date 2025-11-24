@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRX86VectorTransforms
   MLIRArithDialect
   MLIRX86VectorDialect
   MLIRIR
+  MLIRLinalgDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRVectorDialect
