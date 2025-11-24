@@ -703,15 +703,12 @@ Error OpenMPIRBuilder::FinalizationInfo::mergeFiniBB(IRBuilderBase &Builder,
   }
 
   // Move instructions from FiniBB to the start of OtherFiniBB.
-  auto InsertAfter = OtherFiniBB->getFirstNonPHIIt();
-  for (Instruction &I : make_early_inc_range(*FiniBB)) {
-    if (I.isTerminator()) {
-      I.eraseFromParent();
-      break;
-    }
-    I.insertAfter(InsertAfter);
-    InsertAfter = BasicBlock::iterator(&I);
-  }
+  auto EndIt = FiniBB->end();
+  if (FiniBB->size() >= 1)
+    if (auto Prev = std::prev(EndIt); Prev->isTerminator())
+      EndIt = Prev;
+  OtherFiniBB->splice(OtherFiniBB->getFirstNonPHIIt(), FiniBB, FiniBB->begin(),
+                      EndIt);
 
   // Replace FiniBB with OtherFiniBB.
   for (User *U : make_early_inc_range(FiniBB->users())) {
