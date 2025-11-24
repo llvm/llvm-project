@@ -1072,7 +1072,7 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
 
   // This section handles: ACTIVE -> LOCAL_COMMITTED
   case transitionFrom(ZAState::ACTIVE).to(ZAState::LOCAL_COMMITTED):
-    // Note: We could support ZA state here, but this transition is currently
+    // TODO: We could support ZA state here, but this transition is currently
     // only possible when we _don't_ have ZA state.
     assert(HasZT0State && !HasZAState && "Expect to only have ZT0 state.");
     emitZT0SaveRestore(Context, MBB, InsertPt, /*IsSave=*/true);
