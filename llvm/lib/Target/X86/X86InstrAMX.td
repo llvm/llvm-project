@@ -370,11 +370,11 @@ let Predicates = [HasAMXMOVRS, In64BitMode], SchedRW = [WriteSystem] in {
 multiclass m_tcvtrowd2ps {
   let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
     let SchedRW = [WriteSystem] in {
-      def rri : Ii8<0x7, MRMSrcReg, (outs VR512:$dst),
+      def rti : Ii8<0x7, MRMSrcReg, (outs VR512:$dst),
                     (ins TILE:$src1, i32u8imm:$src2),
                     "tcvtrowd2ps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                     []>, TA,XS, EVEX, EVEX_V512;
-      def rre : I<0x4A, MRMSrcReg4VOp3, (outs VR512:$dst),
+      def rte : I<0x4A, MRMSrcReg4VOp3, (outs VR512:$dst),
                   (ins TILE:$src1, GR32:$src2),
                   "tcvtrowd2ps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                   []>, T8,XS, EVEX, VVVV, EVEX_V512;
@@ -450,12 +450,12 @@ multiclass AMXAVX512_BASE<bits<8> Opcode1, bits<8> Opcode2, string Opstr,
                                 Prefix P1, Prefix P2> {
   let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode], SchedRW = [WriteSystem] in {
     let OpPrefix = P1 in
-      def rre : I<Opcode1, MRMSrcReg4VOp3, (outs VR512:$dst),
+      def rte : I<Opcode1, MRMSrcReg4VOp3, (outs VR512:$dst),
                   (ins TILE:$src1, GR32:$src2),
                   !strconcat(Opstr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                   []>, EVEX, VVVV, EVEX_V512, T8;
     let OpPrefix = P2 in
-      def rri : Ii8<Opcode2, MRMSrcReg, (outs VR512:$dst),
+      def rti : Ii8<Opcode2, MRMSrcReg, (outs VR512:$dst),
                     (ins TILE:$src1, i32u8imm:$src2),
                     !strconcat(Opstr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                     []>, EVEX, EVEX_V512, TA;
