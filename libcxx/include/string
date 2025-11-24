@@ -719,15 +719,18 @@ struct __init_with_sentinel_tag {};
 template <size_t _PaddingSize>
 struct __padding {
   char __padding_[_PaddingSize];
-  constexpr void clear() {
+  static constexpr __padding empty() {
     __padding __initialized = {0};
-    *this = __initialized;
+    return __initialized;
   }
 };
 
 template <>
 struct __padding<0> {
-  constexpr void clear() {}
+  static constexpr __padding empty() {
+    __padding __initialized;
+    return __initialized;
+  }
 };
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -928,7 +931,7 @@ private:
     // No padding is needed in this version of the structure, but we add a
     // zero-sized __padding_ member anyway to match the
     // `_LIBCPP_ABI_ALTERNATE_STRING_LAYOUT` version, so that
-    // `__padding_.clear()` can be performed unconditionally in code common to
+    // `__padding::empty()` can be used unconditionally in code common to
     // both layouts.
     _LIBCPP_NO_UNIQUE_ADDRESS __padding<0> __padding_;
   };
@@ -2817,7 +2820,7 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
   // This is -1 to make sure the caller sets the size properly, since old versions of this function didn't set the size
   // at all.
   __buffer.__size_ = -1;
-  __buffer.__padding_.clear();
+  __buffer.__padding_ = decltype(__buffer.__padding_)::empty();
   __reset_internal_buffer(__buffer);
 }
 
