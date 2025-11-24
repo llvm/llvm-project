@@ -124,9 +124,9 @@ InsertNegateRAState::getFirstKnownRAState(BinaryContext &BC,
   for (const MCInst &Inst : BB) {
     if (BC.MIB->isCFI(Inst))
       continue;
-    std::optional<bool> RAStateOpt = BC.MIB->getRAState(Inst);
-    if (RAStateOpt.has_value())
-      return RAStateOpt;
+    std::optional<bool> RAState = BC.MIB->getRAState(Inst);
+    if (RAState.has_value())
+      return RAState;
   }
   return std::nullopt;
 }
@@ -139,10 +139,10 @@ void InsertNegateRAState::fillUnknownStateInBB(BinaryContext &BC,
     return;
   // If the first instruction has unknown RAState, we should copy the first
   // known RAState.
-  std::optional<bool> RAStateOpt = BC.MIB->getRAState(*First);
-  if (!RAStateOpt.has_value()) {
-    auto FirstRAState = getFirstKnownRAState(BC, BB);
-    if (!FirstRAState)
+  std::optional<bool> RAState = BC.MIB->getRAState(*First);
+  if (!RAState.has_value()) {
+    std::optional<bool> FirstRAState = getFirstKnownRAState(BC, BB);
+    if (!FirstRAState.has_value())
       // We fill unknown BBs later.
       return;
 
@@ -162,8 +162,8 @@ void InsertNegateRAState::fillUnknownStateInBB(BinaryContext &BC,
     // previous instruction in the previous iteration of the loop.
     std::optional<bool> PrevRAState = BC.MIB->getRAState(Prev);
 
-    auto RAState = BC.MIB->getRAState(Inst);
-    if (!RAState) {
+    std::optional<bool> RAState = BC.MIB->getRAState(Inst);
+    if (!RAState.has_value()) {
       if (BC.MIB->isPSignOnLR(Prev))
         PrevRAState = true;
       else if (BC.MIB->isPAuthOnLR(Prev))
@@ -206,10 +206,10 @@ void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
     for (BinaryBasicBlock *BB : FF) {
       if (!FirstIter && isUnknownBlock(BC, *BB)) {
-        // As exlained in issue #160989, the unwind info is incorrect for stubs.
-        // Indicating the correct RAState without the rest of the unwind info
-        // being correct is not useful. Instead, we copy the RAState from the
-        // previous instruction.
+        // As explained in issue #160989, the unwind info is incorrect for
+        // stubs. Indicating the correct RAState without the rest of the unwind
+        // info being correct is not useful. Instead, we copy the RAState from
+        // the previous instruction.
         std::optional<bool> PrevRAState = BC.MIB->getRAState(PrevInst);
         if (!PrevRAState.has_value()) {
           llvm_unreachable(
