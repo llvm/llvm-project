@@ -446,7 +446,8 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
   if(implicit_it_flag)
     set(assembly_files
       arm/mulsf3.S
-      arm/divsf3.S)
+      arm/divsf3.S
+      )
     set_source_files_properties(${assembly_files}
       PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
     set(arm_or_thumb2_optimized_fp_SOURCES
@@ -879,6 +880,8 @@ set(ve_SOURCES
   ve/grow_stack_align.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES})
+
+set(m68k_SOURCES ${GENERIC_SOURCES})
 
 add_custom_target(builtins)
 set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT/Metatargets")

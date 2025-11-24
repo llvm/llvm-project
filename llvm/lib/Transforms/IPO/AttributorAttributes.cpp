@@ -665,7 +665,10 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
     return;
 
   SmallVector<const BranchInst *, 4> BrInsts;
+  SmallPtrSet<const Instruction *, 16> Visited;
   auto Pred = [&](const Instruction *I) {
+    if (!Visited.insert(I).second)
+      return false;
     if (const BranchInst *Br = dyn_cast<BranchInst>(I))
       if (Br->isConditional())
         BrInsts.push_back(Br);
@@ -684,28 +687,10 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
   // ParentS_m = ChildS_{m, 1} /\ ChildS_{m, 2} /\ ... /\ ChildS_{m, n_m}
   //
   // Known State |= ParentS_1 \/ ParentS_2 \/... \/ ParentS_m
-  //
-  // FIXME: Currently, recursive branches are not handled. For example, we
-  // can't deduce that ptr must be dereferenced in below function.
-  //
-  // void f(int a, int c, int *ptr) {
-  //    if(a)
-  //      if (b) {
-  //        *ptr = 0;
-  //      } else {
-  //        *ptr = 1;
-  //      }
-  //    else {
-  //      if (b) {
-  //        *ptr = 0;
-  //      } else {
-  //        *ptr = 1;
-  //      }
-  //    }
-  // }
 
   Explorer->checkForAllContext(&CtxI, Pred);
-  for (const BranchInst *Br : BrInsts) {
+  while (!BrInsts.empty()) {
+    const BranchInst *Br = BrInsts.pop_back_val();
     StateType ParentState;
 
     // The known state of the parent state is a conjunction of children's
@@ -714,15 +699,18 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
 
     for (const BasicBlock *BB : Br->successors()) {
       StateType ChildState;
-
       size_t BeforeSize = Uses.size();
-      followUsesInContext(AA, A, *Explorer, &BB->front(), Uses, ChildState);
+      const Instruction *I = &BB->front();
+      followUsesInContext(AA, A, *Explorer, I, Uses, ChildState);
 
       // Erase uses which only appear in the child.
       for (auto It = Uses.begin() + BeforeSize; It != Uses.end();)
         It = Uses.erase(It);
 
       ParentState &= ChildState;
+
+      // Check for recursive conditional branches.
+      Explorer->checkForAllContext(I, Pred);
     }
 
     // Use only known state.

@@ -25,8 +25,9 @@
 #include "clang/AST/HLSLResource.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -730,13 +731,22 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
   }
 
   if (SemanticName == "SV_POSITION") {
-    if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Pixel)
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                    Semantic->getAttrName()->getName(),
-                                    /* BuiltIn::FragCoord */ 15);
+    if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Pixel) {
+      if (CGM.getTarget().getTriple().isSPIRV())
+        return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                      Semantic->getAttrName()->getName(),
+                                      /* BuiltIn::FragCoord */ 15);
+      if (CGM.getTarget().getTriple().isDXIL())
+        return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
+    }
+
+    if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Vertex) {
+      return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
+    }
   }
 
-  llvm_unreachable("non-handled system semantic. FIXME.");
+  llvm_unreachable(
+      "Load hasn't been implemented yet for this system semantic. FIXME");
 }
 
 static void createSPIRVBuiltinStore(IRBuilder<> &B, llvm::Module &M,
@@ -759,12 +769,22 @@ void CGHLSLRuntime::emitSystemSemanticStore(IRBuilder<> &B, llvm::Value *Source,
                                             std::optional<unsigned> Index) {
 
   std::string SemanticName = Semantic->getAttrName()->getName().upper();
-  if (SemanticName == "SV_POSITION")
-    createSPIRVBuiltinStore(B, CGM.getModule(), Source,
-                            Semantic->getAttrName()->getName(),
-                            /* BuiltIn::Position */ 0);
-  else
-    llvm_unreachable("non-handled system semantic. FIXME.");
+  if (SemanticName == "SV_POSITION") {
+    if (CGM.getTarget().getTriple().isDXIL()) {
+      emitDXILUserSemanticStore(B, Source, Semantic, Index);
+      return;
+    }
+
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      createSPIRVBuiltinStore(B, CGM.getModule(), Source,
+                              Semantic->getAttrName()->getName(),
+                              /* BuiltIn::Position */ 0);
+      return;
+    }
+  }
+
+  llvm_unreachable(
+      "Store hasn't been implemented yet for this system semantic. FIXME");
 }
 
 llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
@@ -905,7 +925,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  std::unordered_map<const DeclaratorDecl *, llvm::Value *> OutputSemantic;
+  llvm::DenseMap<const DeclaratorDecl *, llvm::Value *> OutputSemantic;
 
   unsigned SRetOffset = 0;
   for (const auto &Param : Fn->args()) {
@@ -913,7 +933,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       SRetOffset = 1;
       llvm::Type *VarType = Param.getParamStructRetType();
       llvm::Value *Var = B.CreateAlloca(VarType);
-      OutputSemantic.emplace(FD, Var);
+      OutputSemantic.try_emplace(FD, Var);
       Args.push_back(Var);
       continue;
     }
@@ -949,7 +969,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   CI->setCallingConv(Fn->getCallingConv());
 
   if (Fn->getReturnType() != CGM.VoidTy)
-    OutputSemantic.emplace(FD, CI);
+    OutputSemantic.try_emplace(FD, CI);
 
   for (auto &[Decl, Source] : OutputSemantic) {
     AllocaInst *AI = dyn_cast<AllocaInst>(Source);
