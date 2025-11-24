@@ -778,6 +778,8 @@ bool X86InstrInfo::isReMaterializableImpl(
   case X86::AVX512_128_SET0:
   case X86::AVX512_256_SET0:
   case X86::AVX512_512_SET0:
+  case X86::AVX512_128_SETALLONES:
+  case X86::AVX512_256_SETALLONES:
   case X86::AVX512_512_SETALLONES:
   case X86::AVX512_FsFLD0SD:
   case X86::AVX512_FsFLD0SH:
@@ -6246,9 +6248,31 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MIB.addReg(Reg, RegState::Undef).addReg(Reg, RegState::Undef).addImm(0xf);
     return true;
   }
+  case X86::AVX512_128_SETALLONES:
+  case X86::AVX512_256_SETALLONES:
   case X86::AVX512_512_SETALLONES: {
     Register Reg = MIB.getReg(0);
-    MIB->setDesc(get(X86::VPTERNLOGDZrri));
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    case X86::AVX512_128_SETALLONES: {
+      if (X86::VR128RegClass.contains(Reg))
+        return Expand2AddrUndef(MIB, get(X86::VPCMPEQDrr));
+
+      Opc = X86::VPTERNLOGDZ128rri;
+      break;
+    }
+    case X86::AVX512_256_SETALLONES: {
+      if (X86::VR256RegClass.contains(Reg))
+        return Expand2AddrUndef(MIB, get(X86::VPCMPEQDYrr));
+
+      Opc = X86::VPTERNLOGDZ256rri;
+      break;
+    }
+    case X86::AVX512_512_SETALLONES:
+      Opc = X86::VPTERNLOGDZrri;
+      break;
+    }
+    MIB->setDesc(get(Opc));
     // VPTERNLOGD needs 3 register inputs and an immediate.
     // 0xff will return 1s for any input.
     MIB.addReg(Reg, RegState::Undef)
@@ -8190,6 +8214,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     case X86::AVX1_SETALLONES:
     case X86::AVX_SET0:
     case X86::AVX512_256_SET0:
+    case X86::AVX512_256_SETALLONES:
       Alignment = Align(32);
       break;
     case X86::V_SET0:
@@ -8197,6 +8222,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     case X86::AVX512_128_SET0:
     case X86::FsFLD0F128:
     case X86::AVX512_FsFLD0F128:
+    case X86::AVX512_128_SETALLONES:
       Alignment = Align(16);
       break;
     case X86::MMX_SET0:
@@ -8255,6 +8281,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   case X86::AVX512_128_SET0:
   case X86::AVX512_256_SET0:
   case X86::AVX512_512_SET0:
+  case X86::AVX512_128_SETALLONES:
+  case X86::AVX512_256_SETALLONES:
   case X86::AVX512_512_SETALLONES:
   case X86::FsFLD0SH:
   case X86::AVX512_FsFLD0SH:
@@ -8315,6 +8343,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       break;
     case X86::AVX1_SETALLONES:
     case X86::AVX2_SETALLONES:
+    case X86::AVX512_256_SETALLONES:
       IsAllOnes = true;
       [[fallthrough]];
     case X86::AVX512_256_SET0:
@@ -8328,6 +8357,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
                                 2);
       break;
     case X86::V_SETALLONES:
+    case X86::AVX512_128_SETALLONES:
       IsAllOnes = true;
       [[fallthrough]];
     case X86::V_SET0:
