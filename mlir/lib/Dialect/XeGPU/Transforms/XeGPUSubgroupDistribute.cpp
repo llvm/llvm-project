@@ -175,6 +175,8 @@ static bool requireTranspose(const xegpu::LayoutAttr layout,
   return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
 }
 
+/// Given a sequential and distributed vector type, return the list of
+/// dimensions that are distributed.
 static SmallVector<int64_t> getDistributedDims(VectorType sequentialType,
                                                VectorType distributedType) {
   assert(sequentialType.getRank() == distributedType.getRank() &&
