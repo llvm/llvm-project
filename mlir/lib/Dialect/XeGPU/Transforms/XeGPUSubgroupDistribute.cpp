@@ -1003,9 +1003,8 @@ struct LoadMatrixDistribution final : public gpu::WarpDistributionPattern {
     SmallVector<Value> newOperands = llvm::map_to_vector(
         newRetIndices, [&](size_t idx) { return newWarpOp.getResult(idx); });
 
-    SmallVector<int64_t> newConstOffsets{matrixOp.getConstOffsets()};
-    std::fill(newConstOffsets.begin(), newConstOffsets.end(),
-              ShapedType::kDynamic);
+    SmallVector<int64_t> newConstOffsets(matrixOp.getConstOffsets().size(),
+                                         ShapedType::kDynamic);
     DenseI64ArrayAttr newConstOffsetsAttr =
         rewriter.getDenseI64ArrayAttr(newConstOffsets);
     ValueRange currentOffsets =
@@ -1080,9 +1079,8 @@ struct StoreMatrixDistribution final : public gpu::WarpDistributionPattern {
     SmallVector<Value> newOperands = llvm::map_to_vector(
         newRetIndices, [&](size_t idx) { return newWarpOp.getResult(idx); });
 
-    SmallVector<int64_t> newConstOffsets{matrixOp.getConstOffsets()};
-    std::fill(newConstOffsets.begin(), newConstOffsets.end(),
-              ShapedType::kDynamic);
+    SmallVector<int64_t> newConstOffsets(matrixOp.getConstOffsets().size(),
+                                         ShapedType::kDynamic);
     DenseI64ArrayAttr newConstOffsetsAttr =
         rewriter.getDenseI64ArrayAttr(newConstOffsets);
     ValueRange currentOffsets =
