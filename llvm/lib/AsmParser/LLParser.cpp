@@ -1965,6 +1965,9 @@ bool LLParser::parseOptionalAddrSpace(unsigned &AddrSpace, unsigned DefaultAS) {
         AddrSpace = M->getDataLayout().getDefaultGlobalsAddressSpace();
       } else if (AddrSpaceStr == "P") {
         AddrSpace = M->getDataLayout().getProgramAddressSpace();
+      } else if (std::optional<unsigned> AS =
+                     M->getTargetTriple().getAddressSpaceNumber(AddrSpaceStr)) {
+        AddrSpace = *AS;
       } else {
         return tokError("invalid symbolic addrspace '" + AddrSpaceStr + "'");
       }

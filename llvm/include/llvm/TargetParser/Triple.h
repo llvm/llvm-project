@@ -1362,6 +1362,9 @@ public:
   /// Compute the LLVM IR data layout string based on the triple. Some targets
   /// customize the layout based on the ABIName string.
   LLVM_ABI std::string computeDataLayout(StringRef ABIName = "") const;
+
+  LLVM_ABI StringRef getAddressSpaceName(unsigned AS) const;
+  LLVM_ABI std::optional<unsigned> getAddressSpaceNumber(StringRef Name) const;
 };
 
 } // End llvm namespace
