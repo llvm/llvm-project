@@ -101,6 +101,10 @@ protected:
     UseAddrSpaceMapMangling = true;
     HasLegalHalfType = true;
     HasFloat16 = true;
+    HasBFloat16 = true;
+    HasFullBFloat16 = true;
+    BFloat16Width = BFloat16Align = 16;
+    BFloat16Format = &llvm::APFloat::BFloat();
     // Define available target features
     // These must be defined in sorted order!
     NoAsmVariants = true;
