@@ -18,6 +18,8 @@
 
 #if defined(_AIX)
   .toc
+#elif defined(__aarch64__) && defined(__ELF__) && defined(_LIBUNWIND_EXECUTE_ONLY_CODE)
+  .section .text,"axy",@progbits,unique,0
 #else
   .text
 #endif
@@ -25,6 +27,8 @@
 #if !defined(__USING_SJLJ_EXCEPTIONS__)
 
 #if defined(__i386__)
+.att_syntax
+
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
 #
 # extern "C" void __libunwind_Registers_x86_jumpto(Registers_x86 *);
@@ -69,6 +73,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
   # skip gs
 
 #elif defined(__x86_64__) && !defined(__arm64ec__)
+.att_syntax
 
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
 #
@@ -631,18 +636,35 @@ Lnovec:
 
 #elif defined(__aarch64__)
 
+#ifndef __has_feature
+#define __has_feature(__feature) 0
+#endif
+
 #if defined(__ARM_FEATURE_GCS_DEFAULT)
 .arch_extension gcs
 #endif
 
 //
-// extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *);
+// extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *, unsigned);
 //
 // On entry:
 //  thread_state pointer is in x0
+//  walked_frames counter is in x1
 //
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
+
+  #if defined(_LIBUNWIND_TRACE_RET_INJECT)
+    cbz     w1, 1f
+  0:
+    subs    w1, w1, #1
+    adr     x16, #8
+    ret     x16
+
+    b.ne    0b
+  1:
+  #endif
+
   // skip restore of x0,x1 for now
   ldp    x2, x3,  [x0, #0x010]
   ldp    x4, x5,  [x0, #0x020]

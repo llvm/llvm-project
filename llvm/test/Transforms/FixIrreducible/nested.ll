@@ -50,6 +50,69 @@ exit:
   ret void
 }
 
+define void @nested_irr_top_level_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %Pred4, i1 %Pred5) {
+; CHECK-LABEL: @nested_irr_top_level_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
+; CHECK-NEXT:            to label [[ENTRY_TARGET_A1:%.*]] [label %entry.target.A2]
+; CHECK:       A1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
+; CHECK-NEXT:            to label [[A1_TARGET_B1:%.*]] [label %A1.target.B2]
+; CHECK:       B1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
+; CHECK-NEXT:            to label [[B1_TARGET_B2:%.*]] [label %A3]
+; CHECK:       B2:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED3:%.*]])
+; CHECK-NEXT:            to label [[B1:%.*]] [label %A3]
+; CHECK:       A3:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED4:%.*]])
+; CHECK-NEXT:            to label [[A3_TARGET_A2:%.*]] [label %exit]
+; CHECK:       A2:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED5:%.*]])
+; CHECK-NEXT:            to label [[A1:%.*]] [label %exit]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A3.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       entry.target.A1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       entry.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[ENTRY_TARGET_A1]] ], [ true, [[ENTRY_TARGET_A2:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
+; CHECK:       B1.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1:%.*]]
+; CHECK:       A1.target.B1:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       A1.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       irr.guard1:
+; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[B1_TARGET_B2]] ], [ false, [[A1_TARGET_B1]] ], [ true, [[A1_TARGET_B2:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B2]], label [[B2:%.*]], label [[B1]]
+;
+entry:
+  callbr void asm "", "r,!i"(i1 %Pred0) to label %A1 [label %A2]
+
+A1:
+  callbr void asm "", "r,!i"(i1 %Pred1) to label %B1 [label %B2]
+
+B1:
+  callbr void asm "", "r,!i"(i1 %Pred2) to label %B2 [label %A3]
+
+B2:
+  callbr void asm "", "r,!i"(i1 %Pred3) to label %B1 [label %A3]
+
+A3:
+  callbr void asm "", "r,!i"(i1 %Pred4) to label %A2 [label %exit]
+
+A2:
+  callbr void asm "", "r,!i"(i1 %Pred5) to label %A1 [label %exit]
+
+exit:
+  ret void
+}
+
 define void @nested_irr_in_loop(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %Pred4, i1 %Pred5, i1 %Pred6) {
 ; CHECK-LABEL: @nested_irr_in_loop(
 ; CHECK-NEXT:  entry:
@@ -107,6 +170,80 @@ exit:
   ret void
 }
 
+define void @nested_irr_in_loop_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %Pred4, i1 %Pred5, i1 %Pred6) {
+; CHECK-LABEL: @nested_irr_in_loop_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[H1:%.*]]
+; CHECK:       H1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
+; CHECK-NEXT:            to label [[H1_TARGET_A1:%.*]] [label %H1.target.A2]
+; CHECK:       A1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
+; CHECK-NEXT:            to label [[A1_TARGET_B1:%.*]] [label %A1.target.B2]
+; CHECK:       B1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
+; CHECK-NEXT:            to label [[B1_TARGET_B2:%.*]] [label %A3]
+; CHECK:       B2:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED3:%.*]])
+; CHECK-NEXT:            to label [[B1:%.*]] [label %A3]
+; CHECK:       A3:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED4:%.*]])
+; CHECK-NEXT:            to label [[A3_TARGET_A2:%.*]] [label %L1]
+; CHECK:       A2:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED5:%.*]])
+; CHECK-NEXT:            to label [[A1:%.*]] [label %L1]
+; CHECK:       L1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED6:%.*]])
+; CHECK-NEXT:            to label [[EXIT:%.*]] [label %H1]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A3.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       H1.target.A1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       H1.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[H1_TARGET_A1]] ], [ true, [[H1_TARGET_A2:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
+; CHECK:       B1.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1:%.*]]
+; CHECK:       A1.target.B1:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       A1.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       irr.guard1:
+; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[B1_TARGET_B2]] ], [ false, [[A1_TARGET_B1]] ], [ true, [[A1_TARGET_B2:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B2]], label [[B2:%.*]], label [[B1]]
+;
+entry:
+  br label %H1
+
+H1:
+  callbr void asm "", "r,!i"(i1 %Pred0) to label %A1 [label %A2]
+
+A1:
+  callbr void asm "", "r,!i"(i1 %Pred1) to label %B1 [label %B2]
+
+B1:
+  callbr void asm "", "r,!i"(i1 %Pred2) to label %B2 [label %A3]
+
+B2:
+  callbr void asm "", "r,!i"(i1 %Pred3) to label %B1 [label %A3]
+
+A3:
+  callbr void asm "", "r,!i"(i1 %Pred4) to label %A2 [label %L1]
+
+A2:
+  callbr void asm "", "r,!i"(i1 %Pred5) to label %A1 [label %L1]
+
+L1:
+  callbr void asm "", "r,!i"(i1 %Pred6) to label %exit [label %H1]
+
+exit:
+  ret void
+}
+
 define void @loop_in_irr(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
 ; CHECK-LABEL: @loop_in_irr(
 ; CHECK-NEXT:  entry:
@@ -150,6 +287,60 @@ exit:
   ret void
 }
 
+define void @loop_in_irr_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
+; CHECK-LABEL: @loop_in_irr_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
+; CHECK-NEXT:            to label [[ENTRY_TARGET_A1:%.*]] [label %entry.target.A2]
+; CHECK:       A1:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[H1:%.*]] []
+; CHECK:       H1:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[L1:%.*]] []
+; CHECK:       L1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
+; CHECK-NEXT:            to label [[H1]] [label %A3]
+; CHECK:       A3:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
+; CHECK-NEXT:            to label [[A3_TARGET_A2:%.*]] [label %exit]
+; CHECK:       A2:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[A1:%.*]] []
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A3.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       entry.target.A1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       entry.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[ENTRY_TARGET_A1]] ], [ true, [[ENTRY_TARGET_A2:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
+;
+entry:
+  callbr void asm "", "r,!i"(i1 %Pred0) to label %A1 [label %A2]
+
+A1:
+  callbr void asm "", ""() to label %H1 []
+
+H1:
+  callbr void asm "", ""() to label %L1 []
+
+L1:
+  callbr void asm "", "r,!i"(i1 %Pred1) to label %H1 [label %A3]
+
+A3:
+  callbr void asm "", "r,!i"(i1 %Pred2) to label %A2 [label %exit]
+
+A2:
+  callbr void asm "", ""() to label %A1 []
+
+exit:
+  ret void
+}
+
 define void @loop_in_irr_shared_entry(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
 ; CHECK-LABEL: @loop_in_irr_shared_entry(
 ; CHECK-NEXT:  entry:
@@ -183,6 +374,54 @@ A3:
 
 A2:
   br label %H1
+
+exit:
+  ret void
+}
+
+define void @loop_in_irr_shared_entry_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
+; CHECK-LABEL: @loop_in_irr_shared_entry_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
+; CHECK-NEXT:            to label [[ENTRY_TARGET_H1:%.*]] [label %entry.target.A2]
+; CHECK:       H1:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[L1:%.*]] []
+; CHECK:       L1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
+; CHECK-NEXT:            to label [[H1:%.*]] [label %A3]
+; CHECK:       A3:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
+; CHECK-NEXT:            to label [[A3_TARGET_A2:%.*]] [label %exit]
+; CHECK:       A2:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[H1]] []
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A3.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       entry.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       entry.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[ENTRY_TARGET_H1]] ], [ true, [[ENTRY_TARGET_A2:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[H1]]
+;
+entry:
+  callbr void asm "", "r,!i"(i1 %Pred0) to label %H1 [label %A2]
+
+H1:
+  callbr void asm "", ""() to label %L1 []
+
+L1:
+  callbr void asm "", "r,!i"(i1 %Pred1) to label %H1 [label %A3]
+
+A3:
+  callbr void asm "", "r,!i"(i1 %Pred2) to label %A2 [label %exit]
+
+A2:
+  callbr void asm "", ""() to label %H1 []
 
 exit:
   ret void
@@ -226,6 +465,56 @@ exit:
   ret void
 }
 
+define void @loop_in_irr_shared_header_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
+; CHECK-LABEL: @loop_in_irr_shared_header_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
+; CHECK-NEXT:            to label [[ENTRY_TARGET_A2:%.*]] [label %entry.target.H1]
+; CHECK:       H1:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[L1:%.*]] []
+; CHECK:       L1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
+; CHECK-NEXT:            to label [[L1_TARGET_H1:%.*]] [label %A3]
+; CHECK:       A3:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
+; CHECK-NEXT:            to label [[A2:%.*]] [label %exit]
+; CHECK:       A2:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[A2_TARGET_H1:%.*]] []
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A2.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       L1.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       entry.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       entry.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_H1:%.*]] = phi i1 [ true, [[A2_TARGET_H1]] ], [ true, [[L1_TARGET_H1]] ], [ false, [[ENTRY_TARGET_A2]] ], [ true, [[ENTRY_TARGET_H1:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_H1]], label [[H1:%.*]], label [[A2]]
+;
+entry:
+  callbr void asm "", "r,!i"(i1 %Pred0) to label %A2 [label %H1]
+
+H1:
+  callbr void asm "", ""() to label %L1 []
+
+L1:
+  callbr void asm "", "r,!i"(i1 %Pred1) to label %H1 [label %A3]
+
+A3:
+  callbr void asm "", "r,!i"(i1 %Pred2) to label %A2 [label %exit]
+
+A2:
+  callbr void asm "", ""() to label %H1 []
+
+exit:
+  ret void
+}
+
 define void @loop_irr_loop_shared_header(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3) {
 ; CHECK-LABEL: @loop_irr_loop_shared_header(
 ; CHECK-NEXT:  entry:
@@ -264,6 +553,62 @@ A2:
 
 L2:
   br i1 %Pred3, label %H2, label %exit
+
+exit:
+  ret void
+}
+
+define void @loop_irr_loop_shared_header_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3) {
+; CHECK-LABEL: @loop_irr_loop_shared_header_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[H2:%.*]] []
+; CHECK:       H2:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
+; CHECK-NEXT:            to label [[H2_TARGET_A2:%.*]] [label %H2.target.H1]
+; CHECK:       H1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
+; CHECK-NEXT:            to label [[A3:%.*]] [label %H1.target.H1]
+; CHECK:       A3:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
+; CHECK-NEXT:            to label [[A2:%.*]] [label %L2]
+; CHECK:       A2:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[A2_TARGET_H1:%.*]] []
+; CHECK:       L2:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED3:%.*]])
+; CHECK-NEXT:            to label [[H2]] [label %exit]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A2.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       H1.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       H2.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       H2.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_H1:%.*]] = phi i1 [ true, [[A2_TARGET_H1]] ], [ true, [[H1_TARGET_H1:%.*]] ], [ false, [[H2_TARGET_A2]] ], [ true, [[H2_TARGET_H1:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_H1]], label [[H1:%.*]], label [[A2]]
+;
+entry:
+  callbr void asm "", ""() to label %H2 []
+
+H2:
+  callbr void asm "", "r,!i"(i1 %Pred0) to label %A2 [label %H1]
+
+H1:
+  callbr void asm "", "r,!i"(i1 %Pred1) to label %A3 [label %H1]
+
+A3:
+  callbr void asm "", "r,!i"(i1 %Pred2) to label %A2 [label %L2]
+
+A2:
+  callbr void asm "", ""() to label %H1 []
+
+L2:
+  callbr void asm "", "r,!i"(i1 %Pred3) to label %H2 [label %exit]
 
 exit:
   ret void
@@ -331,6 +676,93 @@ L2:
 
 B2:
   br i1 %Pred6, label %B1, label %exit
+
+exit:
+  ret void
+}
+
+define void @siblings_top_level_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %Pred4, i1 %Pred5, i1 %Pred6) {
+; CHECK-LABEL: @siblings_top_level_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
+; CHECK-NEXT:            to label [[H1:%.*]] [label %fork1]
+; CHECK:       H1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
+; CHECK-NEXT:            to label [[H1_TARGET_A1:%.*]] [label %H1.target.A2]
+; CHECK:       A1:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[A1_TARGET_A2:%.*]] []
+; CHECK:       A2:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
+; CHECK-NEXT:            to label [[A1:%.*]] [label %L1]
+; CHECK:       L1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED3:%.*]])
+; CHECK-NEXT:            to label [[H1]] [label %exit]
+; CHECK:       fork1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED4:%.*]])
+; CHECK-NEXT:            to label [[FORK1_TARGET_B1:%.*]] [label %fork1.target.B2]
+; CHECK:       B1:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[H2:%.*]] []
+; CHECK:       H2:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[L2:%.*]] []
+; CHECK:       L2:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED5:%.*]])
+; CHECK-NEXT:            to label [[H2]] [label %L2.target.B2]
+; CHECK:       B2:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED6:%.*]])
+; CHECK-NEXT:            to label [[B1:%.*]] [label %exit]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A1.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       H1.target.A1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       H1.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A1_TARGET_A2]] ], [ false, [[H1_TARGET_A1]] ], [ true, [[H1_TARGET_A2:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
+; CHECK:       L2.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1:%.*]]
+; CHECK:       fork1.target.B1:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       fork1.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       irr.guard1:
+; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[L2_TARGET_B2:%.*]] ], [ false, [[FORK1_TARGET_B1]] ], [ true, [[FORK1_TARGET_B2:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B2]], label [[B2:%.*]], label [[B1]]
+;
+entry:
+  callbr void asm "", "r,!i"(i1 %Pred0) to label %H1 [label %fork1]
+
+H1:
+  callbr void asm "", "r,!i"(i1 %Pred1) to label %A1 [label %A2]
+
+A1:
+  callbr void asm "", ""() to label %A2 []
+
+A2:
+  callbr void asm "", "r,!i"(i1 %Pred2) to label %A1 [label %L1]
+
+L1:
+  callbr void asm "", "r,!i"(i1 %Pred3) to label %H1 [label %exit]
+
+fork1:
+  callbr void asm "", "r,!i"(i1 %Pred4) to label %B1 [label %B2]
+
+B1:
+  callbr void asm "", ""() to label %H2 []
+
+H2:
+  callbr void asm "", ""() to label %L2 []
+
+L2:
+  callbr void asm "", "r,!i"(i1 %Pred5) to label %H2 [label %B2]
+
+B2:
+  callbr void asm "", "r,!i"(i1 %Pred6) to label %B1 [label %exit]
 
 exit:
   ret void
@@ -408,6 +840,105 @@ B2:
 
 L0:
   br i1 %Pred7, label %exit, label %H0
+
+exit:
+  ret void
+}
+
+define void @siblings_in_loop_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %Pred4, i1 %Pred5, i1 %Pred6, i1 %Pred7) {
+; CHECK-LABEL: @siblings_in_loop_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[H0:%.*]] []
+; CHECK:       H0:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
+; CHECK-NEXT:            to label [[H1:%.*]] [label %fork1]
+; CHECK:       H1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
+; CHECK-NEXT:            to label [[H1_TARGET_A1:%.*]] [label %H1.target.A2]
+; CHECK:       A1:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[A1_TARGET_A2:%.*]] []
+; CHECK:       A2:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
+; CHECK-NEXT:            to label [[A1:%.*]] [label %L1]
+; CHECK:       L1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED3:%.*]])
+; CHECK-NEXT:            to label [[H1]] [label %L0]
+; CHECK:       fork1:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED4:%.*]])
+; CHECK-NEXT:            to label [[FORK1_TARGET_B1:%.*]] [label %fork1.target.B2]
+; CHECK:       B1:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[H2:%.*]] []
+; CHECK:       H2:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[L2:%.*]] []
+; CHECK:       L2:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED5:%.*]])
+; CHECK-NEXT:            to label [[H2]] [label %L2.target.B2]
+; CHECK:       B2:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED6:%.*]])
+; CHECK-NEXT:            to label [[B1:%.*]] [label %L0]
+; CHECK:       L0:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED7:%.*]])
+; CHECK-NEXT:            to label [[EXIT:%.*]] [label %H0]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A1.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       H1.target.A1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       H1.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A1_TARGET_A2]] ], [ false, [[H1_TARGET_A1]] ], [ true, [[H1_TARGET_A2:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
+; CHECK:       L2.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1:%.*]]
+; CHECK:       fork1.target.B1:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       fork1.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       irr.guard1:
+; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[L2_TARGET_B2:%.*]] ], [ false, [[FORK1_TARGET_B1]] ], [ true, [[FORK1_TARGET_B2:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B2]], label [[B2:%.*]], label [[B1]]
+;
+entry:
+  callbr void asm "", ""() to label %H0 []
+
+H0:
+  callbr void asm "", "r,!i"(i1 %Pred0) to label %H1 [label %fork1]
+
+H1:
+  callbr void asm "", "r,!i"(i1 %Pred1) to label %A1 [label %A2]
+
+A1:
+  callbr void asm "", ""() to label %A2 []
+
+A2:
+  callbr void asm "", "r,!i"(i1 %Pred2) to label %A1 [label %L1]
+
+L1:
+  callbr void asm "", "r,!i"(i1 %Pred3) to label %H1 [label %L0]
+
+fork1:
+  callbr void asm "", "r,!i"(i1 %Pred4) to label %B1 [label %B2]
+
+B1:
+  callbr void asm "", ""() to label %H2 []
+
+H2:
+  callbr void asm "", ""() to label %L2 []
+
+L2:
+  callbr void asm "", "r,!i"(i1 %Pred5) to label %H2 [label %B2]
+
+B2:
+  callbr void asm "", "r,!i"(i1 %Pred6) to label %B1 [label %L0]
+
+L0:
+  callbr void asm "", "r,!i"(i1 %Pred7) to label %exit [label %H0]
 
 exit:
   ret void
@@ -523,6 +1054,151 @@ if.end.i:
 
 if.end8.i:
   br label %exit
+
+exit:
+  ret void
+}
+
+define void @irr_in_irr_shared_entry_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %Pred4, i1 %Pred5, i1 %Pred6, i1 %Pred7, i1 %Pred8, i1 %Pred9, i1 %Pred10, i1 %Pred11, i1 %Pred12, i1 %Pred13) {
+; CHECK-LABEL: @irr_in_irr_shared_entry_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
+; CHECK-NEXT:            to label [[IF_END:%.*]] [label %if.then]
+; CHECK:       if.end:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
+; CHECK-NEXT:            to label [[IF_THEN7:%.*]] [label %if.else]
+; CHECK:       if.then7:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[IF_END16:%.*]] []
+; CHECK:       if.else:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[IF_END16]] []
+; CHECK:       if.end16:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
+; CHECK-NEXT:            to label [[WHILE_COND_PREHEADER:%.*]] [label %if.then39]
+; CHECK:       while.cond.preheader:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[WHILE_COND:%.*]] []
+; CHECK:       while.cond:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED3:%.*]])
+; CHECK-NEXT:            to label [[WHILE_COND_TARGET_COND_TRUE49:%.*]] [label %lor.rhs]
+; CHECK:       cond.true49:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED4:%.*]])
+; CHECK-NEXT:            to label [[IF_THEN69:%.*]] [label %cond.true49.target.while.body63]
+; CHECK:       while.body63:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED5:%.*]])
+; CHECK-NEXT:            to label [[EXIT:%.*]] [label %while.cond47]
+; CHECK:       while.cond47:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED6:%.*]])
+; CHECK-NEXT:            to label [[COND_TRUE49:%.*]] [label %while.cond47.target.cond.end61]
+; CHECK:       cond.end61:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED7:%.*]])
+; CHECK-NEXT:            to label [[COND_END61_TARGET_WHILE_BODY63:%.*]] [label %while.cond]
+; CHECK:       if.then69:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED8:%.*]])
+; CHECK-NEXT:            to label [[EXIT]] [label %while.cond]
+; CHECK:       lor.rhs:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED9:%.*]])
+; CHECK-NEXT:            to label [[LOR_RHS_TARGET_COND_END61:%.*]] [label %while.end76]
+; CHECK:       while.end76:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[EXIT]] []
+; CHECK:       if.then39:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED10:%.*]])
+; CHECK-NEXT:            to label [[EXIT]] [label %if.end.i145]
+; CHECK:       if.end.i145:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED11:%.*]])
+; CHECK-NEXT:            to label [[EXIT]] [label %if.end8.i149]
+; CHECK:       if.end8.i149:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[EXIT]] []
+; CHECK:       if.then:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED12:%.*]])
+; CHECK-NEXT:            to label [[EXIT]] [label %if.end.i]
+; CHECK:       if.end.i:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED13:%.*]])
+; CHECK-NEXT:            to label [[EXIT]] [label %if.end8.i]
+; CHECK:       if.end8.i:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[EXIT]] []
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       while.cond47.target.cond.end61:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       lor.rhs.target.cond.end61:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       while.cond.target.cond.true49:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_COND_END61:%.*]] = phi i1 [ true, [[WHILE_COND47_TARGET_COND_END61:%.*]] ], [ true, [[LOR_RHS_TARGET_COND_END61]] ], [ false, [[WHILE_COND_TARGET_COND_TRUE49]] ]
+; CHECK-NEXT:    br i1 [[GUARD_COND_END61]], label [[COND_END61:%.*]], label [[IRR_GUARD1:%.*]]
+; CHECK:       cond.true49.target.while.body63:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       cond.end61.target.while.body63:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       irr.guard1:
+; CHECK-NEXT:    [[GUARD_WHILE_BODY63:%.*]] = phi i1 [ true, [[COND_TRUE49_TARGET_WHILE_BODY63:%.*]] ], [ true, [[COND_END61_TARGET_WHILE_BODY63]] ], [ false, [[IRR_GUARD]] ]
+; CHECK-NEXT:    br i1 [[GUARD_WHILE_BODY63]], label [[WHILE_BODY63:%.*]], label [[COND_TRUE49]]
+;
+entry:
+  callbr void asm "", "r,!i"(i1 %Pred0) to label %if.end [label %if.then]
+
+if.end:
+  callbr void asm "", "r,!i"(i1 %Pred1) to label %if.then7 [label %if.else]
+
+if.then7:
+  callbr void asm "", ""() to label %if.end16 []
+
+if.else:
+  callbr void asm "", ""() to label %if.end16 []
+
+if.end16:
+  callbr void asm "", "r,!i"(i1 %Pred2) to label %while.cond.preheader [label %if.then39]
+
+while.cond.preheader:
+  callbr void asm "", ""() to label %while.cond []
+
+while.cond:
+  callbr void asm "", "r,!i"(i1 %Pred3) to label %cond.true49 [label %lor.rhs]
+
+cond.true49:
+  callbr void asm "", "r,!i"(i1 %Pred4) to label %if.then69 [label %while.body63]
+
+while.body63:
+  callbr void asm "", "r,!i"(i1 %Pred5) to label %exit [label %while.cond47]
+
+while.cond47:
+  callbr void asm "", "r,!i"(i1 %Pred6) to label %cond.true49 [label %cond.end61]
+
+cond.end61:
+  callbr void asm "", "r,!i"(i1 %Pred7) to label %while.body63 [label %while.cond]
+
+if.then69:
+  callbr void asm "", "r,!i"(i1 %Pred8) to label %exit [label %while.cond]
+
+lor.rhs:
+  callbr void asm "", "r,!i"(i1 %Pred9) to label %cond.end61 [label %while.end76]
+
+while.end76:
+  callbr void asm "", ""() to label %exit []
+
+if.then39:
+  callbr void asm "", "r,!i"(i1 %Pred10) to label %exit [label %if.end.i145]
+
+if.end.i145:
+  callbr void asm "", "r,!i"(i1 %Pred11) to label %exit [label %if.end8.i149]
+
+if.end8.i149:
+  callbr void asm "", ""() to label %exit []
+
+if.then:
+  callbr void asm "", "r,!i"(i1 %Pred12) to label %exit [label %if.end.i]
+
+if.end.i:
+  callbr void asm "", "r,!i"(i1 %Pred13) to label %exit [label %if.end8.i]
+
+if.end8.i:
+  callbr void asm "", ""() to label %exit []
 
 exit:
   ret void

@@ -54,7 +54,9 @@ protected:
       return ContainerElementsMap();
 
     ContainerElementsMap Result = SNs[0]->defs();
+#ifndef NDEBUG
     const ContainerElementsMap &Deps = SNs[0]->deps();
+#endif // NDEBUG
 
     for (size_t I = 1; I != SNs.size(); ++I) {
       assert(!DepsMustMatch || SNs[I]->deps() == Deps);
@@ -394,6 +396,31 @@ TEST_F(WaitingOnGraphTest, Emit_TrivialSequence) {
   B.add(Defs1, Deps1);
   auto ER1 = emit(TestGraph::simplify(B.takeSuperNodes()));
   EXPECT_EQ(collapseDefs(ER1.Ready), Defs1);
+  EXPECT_EQ(ER1.Failed.size(), 0U);
+}
+
+TEST_F(WaitingOnGraphTest, Emit_SingleContainerSimpleCycle) {
+  // Test an emit of two nodes with a dependence cycle within a single
+  // container:
+  // N0: (0, 0) -> (0, 1)
+  // N1: (0, 1) -> (0, 0)
+  // We expect intra-simplify cycle elimination to clear both dependence sets,
+  // and coalescing to join them into one supernode covering both defs.
+  SuperNodeBuilder B;
+  ContainerElementsMap Defs0({{0, {0}}});
+  ContainerElementsMap Deps0({{0, {1}}});
+  B.add(Defs0, Deps0);
+
+  auto ER0 = emit(TestGraph::simplify(B.takeSuperNodes()));
+  EXPECT_EQ(ER0.Ready.size(), 0U);
+  EXPECT_EQ(ER0.Failed.size(), 0U);
+
+  ContainerElementsMap Defs1({{0, {1}}});
+  ContainerElementsMap Deps1({{0, {0}}});
+  B.add(Defs1, Deps1);
+  auto ER1 = emit(TestGraph::simplify(B.takeSuperNodes()));
+
+  EXPECT_EQ(collapseDefs(ER1.Ready), merge(Defs0, Defs1));
   EXPECT_EQ(ER1.Failed.size(), 0U);
 }
 

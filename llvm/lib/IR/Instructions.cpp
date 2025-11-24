@@ -2878,7 +2878,7 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
     { 99,99,99, 0, 0,99,99, 0, 0,99,99,99, 4, 0}, // FPTrunc        |
     { 99,99,99, 2, 2,99,99, 8, 2,99,99,99, 4, 0}, // FPExt          |
     {  1, 0, 0,99,99, 0, 0,99,99,99,99, 7, 3, 0}, // PtrToInt       |
-    {  1, 0, 0,99,99, 0, 0,99,99,99,99, 0, 3, 0}, // PtrToAddr      |
+    {  0, 0, 0,99,99, 0, 0,99,99,99,99, 0, 3, 0}, // PtrToAddr      |
     { 99,99,99,99,99,99,99,99,99,11,11,99,15, 0}, // IntToPtr       |
     {  5, 5, 5, 0, 0, 5, 5, 0, 0,16,16, 5, 1,14}, // BitCast        |
     {  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,13,12}, // AddrSpaceCast -+
@@ -4169,6 +4169,16 @@ SwitchInstProfUpdateWrapper::removeCase(SwitchInst::CaseIt I) {
     Weights->pop_back();
   }
   return SI.removeCase(I);
+}
+
+void SwitchInstProfUpdateWrapper::replaceDefaultDest(SwitchInst::CaseIt I) {
+  auto *DestBlock = I->getCaseSuccessor();
+  if (Weights) {
+    auto Weight = getSuccessorWeight(I->getCaseIndex() + 1);
+    (*Weights)[0] = Weight.value();
+  }
+
+  SI.setDefaultDest(DestBlock);
 }
 
 void SwitchInstProfUpdateWrapper::addCase(

@@ -13,7 +13,7 @@ target triple = "x86_64-apple-macosx10.7.0"
 ;   A[8] = y0; A[8+1] = y1;
 ; }
 
-define i32 @depth(ptr nocapture %A, i32 %m) #0 !dbg !4 {
+define i32 @depth(ptr nocapture %A, i32 %m) !dbg !4 {
 ; CHECK-LABEL: @depth(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:      #dbg_value(ptr [[A:%.*]], [[META12:![0-9]+]], !DIExpression(), [[META18:![0-9]+]])
@@ -60,10 +60,7 @@ for.end:                                          ; preds = %for.body.lr.ph, %en
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
-
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!18, !32}

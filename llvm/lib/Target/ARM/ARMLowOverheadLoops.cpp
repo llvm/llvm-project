@@ -1036,6 +1036,7 @@ bool LowOverheadLoop::ValidateLiveOuts() {
   while (!Worklist.empty()) {
     MachineInstr *MI = Worklist.pop_back_val();
     if (MI->getOpcode() == ARM::MQPRCopy) {
+      LLVM_DEBUG(dbgs() << " Must generate copy as VMOV: " << *MI);
       VMOVCopies.insert(MI);
       MachineInstr *CopySrc =
           RDI.getUniqueReachingMIDef(MI, MI->getOperand(1).getReg());
@@ -1045,6 +1046,19 @@ bool LowOverheadLoop::ValidateLiveOuts() {
       LLVM_DEBUG(dbgs() << " Unable to handle live out: " << *MI);
       VMOVCopies.clear();
       return false;
+    } else if (isVectorPredicated(MI)) {
+      // If this is a predicated instruction with merging semantics,
+      // check where it gets its false lanes from, if any.
+      int InactiveIdx = findVPTInactiveOperandIdx(*MI);
+      if (InactiveIdx != -1) {
+        MachineInstr *FalseSrc = RDI.getUniqueReachingMIDef(
+            MI, MI->getOperand(InactiveIdx).getReg());
+        if (FalseSrc) {
+          LLVM_DEBUG(dbgs()
+                     << " Must check source of false lanes for: " << *MI);
+          Worklist.push_back(FalseSrc);
+        }
+      }
     }
   }
 

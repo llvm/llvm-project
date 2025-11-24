@@ -1027,10 +1027,9 @@ static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
   return Result;
 }
 
-static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
-                                       InstCombiner::BuilderTy &Builder) {
-  if (!Cmp->hasOneUse())
-    return nullptr;
+static Value *
+canonicalizeSaturatedAddUnsigned(ICmpInst *Cmp, Value *TVal, Value *FVal,
+                                 InstCombiner::BuilderTy &Builder) {
 
   // Match unsigned saturated add with constant.
   Value *Cmp0 = Cmp->getOperand(0);
@@ -1126,6 +1125,94 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
     // ((X + Y) u< Y) ? -1 : (X + Y) --> uadd.sat(X, Y)
     return Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, Cmp1, Y);
   }
+
+  return nullptr;
+}
+
+static Value *canonicalizeSaturatedAddSigned(ICmpInst *Cmp, Value *TVal,
+                                             Value *FVal,
+                                             InstCombiner::BuilderTy &Builder) {
+  // Match saturated add with constant.
+  Value *Cmp0 = Cmp->getOperand(0);
+  Value *Cmp1 = Cmp->getOperand(1);
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+  Value *X;
+  const APInt *C;
+
+  // Canonicalize INT_MAX to true value of the select.
+  if (match(FVal, m_MaxSignedValue())) {
+    std::swap(TVal, FVal);
+    Pred = CmpInst::getInversePredicate(Pred);
+  }
+
+  if (!match(TVal, m_MaxSignedValue()))
+    return nullptr;
+
+  // sge maximum signed value is canonicalized to eq maximum signed value and
+  // requires special handling (a == INT_MAX) ? INT_MAX : a + 1 -> sadd.sat(a,
+  // 1)
+  if (Pred == ICmpInst::ICMP_EQ) {
+    if (match(FVal, m_Add(m_Specific(Cmp0), m_One())) && Cmp1 == TVal) {
+      return Builder.CreateBinaryIntrinsic(
+          Intrinsic::sadd_sat, Cmp0, ConstantInt::get(Cmp0->getType(), 1));
+    }
+    return nullptr;
+  }
+
+  // (X > Y) ? INT_MAX : (X + C) --> sadd.sat(X, C)
+  // (X >= Y) ? INT_MAX : (X + C) --> sadd.sat(X, C)
+  // where Y is INT_MAX - C or INT_MAX - C - 1, and C > 0
+  if ((Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE) &&
+      match(FVal, m_Add(m_Specific(Cmp0), m_StrictlyPositive(C)))) {
+    APInt IntMax =
+        APInt::getSignedMaxValue(Cmp1->getType()->getScalarSizeInBits());
+
+    // For SGE, try to flip to SGT to normalize the comparison constant.
+    if (Pred == ICmpInst::ICMP_SGE) {
+      if (auto Flipped = getFlippedStrictnessPredicateAndConstant(
+              Pred, cast<Constant>(Cmp1))) {
+        Pred = Flipped->first;
+        Cmp1 = Flipped->second;
+      }
+    }
+
+    // Check the pattern: X > INT_MAX - C or X > INT_MAX - C - 1
+    if (Pred == ICmpInst::ICMP_SGT &&
+        (match(Cmp1, m_SpecificIntAllowPoison(IntMax - *C)) ||
+         match(Cmp1, m_SpecificIntAllowPoison(IntMax - *C - 1))))
+      return Builder.CreateBinaryIntrinsic(
+          Intrinsic::sadd_sat, Cmp0, ConstantInt::get(Cmp0->getType(), *C));
+  }
+
+  // Canonicalize predicate to less-than or less-or-equal-than.
+  if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE) {
+    std::swap(Cmp0, Cmp1);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+  }
+
+  if (Pred != ICmpInst::ICMP_SLT && Pred != ICmpInst::ICMP_SLE)
+    return nullptr;
+
+  if (match(Cmp0, m_NSWSub(m_MaxSignedValue(), m_Value(X))) &&
+      match(FVal, m_c_Add(m_Specific(X), m_Specific(Cmp1)))) {
+    // (INT_MAX - X s< Y) ? INT_MAX : (X + Y) --> sadd.sat(X, Y)
+    // (INT_MAX - X s< Y) ? INT_MAX : (Y + X) --> sadd.sat(X, Y)
+    return Builder.CreateBinaryIntrinsic(Intrinsic::sadd_sat, X, Cmp1);
+  }
+
+  return nullptr;
+}
+
+static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
+                                       InstCombiner::BuilderTy &Builder) {
+  if (!Cmp->hasOneUse())
+    return nullptr;
+
+  if (Value *V = canonicalizeSaturatedAddUnsigned(Cmp, TVal, FVal, Builder))
+    return V;
+
+  if (Value *V = canonicalizeSaturatedAddSigned(Cmp, TVal, FVal, Builder))
+    return V;
 
   return nullptr;
 }
@@ -3455,27 +3542,45 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select a, false, b -> select !a, b, false
   if (match(TrueVal, m_Specific(Zero))) {
     Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
-    return SelectInst::Create(NotCond, FalseVal, Zero);
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
+    SelectInst *NewSI =
+        SelectInst::Create(NotCond, FalseVal, Zero, "", nullptr, MDFrom);
+    NewSI->swapProfMetadata();
+    return NewSI;
   }
   // select a, b, true -> select !a, true, b
   if (match(FalseVal, m_Specific(One))) {
     Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
-    return SelectInst::Create(NotCond, One, TrueVal);
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
+    SelectInst *NewSI =
+        SelectInst::Create(NotCond, One, TrueVal, "", nullptr, MDFrom);
+    NewSI->swapProfMetadata();
+    return NewSI;
   }
 
   // DeMorgan in select form: !a && !b --> !(a || b)
   // select !a, !b, false --> not (select a, true, b)
   if (match(&SI, m_LogicalAnd(m_Not(m_Value(A)), m_Not(m_Value(B)))) &&
       (CondVal->hasOneUse() || TrueVal->hasOneUse()) &&
-      !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr()))
-    return BinaryOperator::CreateNot(Builder.CreateSelect(A, One, B));
+      !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr())) {
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
+    SelectInst *NewSI =
+        cast<SelectInst>(Builder.CreateSelect(A, One, B, "", MDFrom));
+    NewSI->swapProfMetadata();
+    return BinaryOperator::CreateNot(NewSI);
+  }
 
   // DeMorgan in select form: !a || !b --> !(a && b)
   // select !a, true, !b --> not (select a, b, false)
   if (match(&SI, m_LogicalOr(m_Not(m_Value(A)), m_Not(m_Value(B)))) &&
       (CondVal->hasOneUse() || FalseVal->hasOneUse()) &&
-      !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr()))
-    return BinaryOperator::CreateNot(Builder.CreateSelect(A, B, Zero));
+      !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr())) {
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
+    SelectInst *NewSI =
+        cast<SelectInst>(Builder.CreateSelect(A, B, Zero, "", MDFrom));
+    NewSI->swapProfMetadata();
+    return BinaryOperator::CreateNot(NewSI);
+  }
 
   // select (select a, true, b), true, b -> select a, true, b
   if (match(CondVal, m_Select(m_Value(A), m_One(), m_Value(B))) &&
@@ -3581,6 +3686,21 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
                                  m_Not(m_Specific(SelCond->getTrueValue())));
       if (MayNeedFreeze)
         C = Builder.CreateFreeze(C);
+      if (!ProfcheckDisableMetadataFixes) {
+        Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
+        if (match(CondVal, m_LogicalAnd(m_Specific(C), m_Value(A2))) &&
+            SelCond) {
+          return SelectInst::Create(C, A, B, "", nullptr, SelCond);
+        } else if (match(FalseVal,
+                         m_LogicalAnd(m_Not(m_Value(C2)), m_Value(B2))) &&
+                   SelFVal) {
+          SelectInst *NewSI = SelectInst::Create(C, A, B, "", nullptr, SelFVal);
+          NewSI->swapProfMetadata();
+          return NewSI;
+        } else {
+          return createSelectInstWithUnknownProfile(C, A, B);
+        }
+      }
       return SelectInst::Create(C, A, B);
     }
 
@@ -3597,6 +3717,20 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
                                  m_Not(m_Specific(SelFVal->getTrueValue())));
       if (MayNeedFreeze)
         C = Builder.CreateFreeze(C);
+      if (!ProfcheckDisableMetadataFixes) {
+        Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
+        if (match(CondVal, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(A2))) &&
+            SelCond) {
+          SelectInst *NewSI = SelectInst::Create(C, B, A, "", nullptr, SelCond);
+          NewSI->swapProfMetadata();
+          return NewSI;
+        } else if (match(FalseVal, m_LogicalAnd(m_Specific(C), m_Value(B2))) &&
+                   SelFVal) {
+          return SelectInst::Create(C, B, A, "", nullptr, SelFVal);
+        } else {
+          return createSelectInstWithUnknownProfile(C, B, A);
+        }
+      }
       return SelectInst::Create(C, B, A);
     }
   }
@@ -4678,6 +4812,32 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                 TrueVal->getType(), MaskedLoadPtr,
                 cast<IntrinsicInst>(TrueVal)->getParamAlign(0).valueOrOne(),
                 CondVal, FalseVal));
+
+  // Canonicalize sign function ashr pattern: select (icmp slt X, 1), ashr X,
+  // bitwidth-1, 1 -> scmp(X, 0)
+  // Also handles: select (icmp sgt X, 0), 1, ashr X, bitwidth-1 -> scmp(X, 0)
+  unsigned BitWidth = SI.getType()->getScalarSizeInBits();
+  CmpPredicate Pred;
+  Value *CmpLHS, *CmpRHS;
+
+  // Canonicalize sign function ashr patterns:
+  // select (icmp slt X, 1), ashr X, bitwidth-1, 1 -> scmp(X, 0)
+  // select (icmp sgt X, 0), 1, ashr X, bitwidth-1 -> scmp(X, 0)
+  if (match(&SI, m_Select(m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS)),
+                          m_Value(TrueVal), m_Value(FalseVal))) &&
+      ((Pred == ICmpInst::ICMP_SLT && match(CmpRHS, m_One()) &&
+        match(TrueVal,
+              m_AShr(m_Specific(CmpLHS), m_SpecificInt(BitWidth - 1))) &&
+        match(FalseVal, m_One())) ||
+       (Pred == ICmpInst::ICMP_SGT && match(CmpRHS, m_Zero()) &&
+        match(TrueVal, m_One()) &&
+        match(FalseVal,
+              m_AShr(m_Specific(CmpLHS), m_SpecificInt(BitWidth - 1)))))) {
+
+    Function *Scmp = Intrinsic::getOrInsertDeclaration(
+        SI.getModule(), Intrinsic::scmp, {SI.getType(), SI.getType()});
+    return CallInst::Create(Scmp, {CmpLHS, ConstantInt::get(SI.getType(), 0)});
+  }
 
   return nullptr;
 }

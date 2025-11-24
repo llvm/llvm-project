@@ -13,8 +13,8 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -40,6 +40,15 @@ class MachineInstr;
 struct TPIDR2Object {
   int FrameIndex = std::numeric_limits<int>::max();
   unsigned Uses = 0;
+};
+
+/// Condition of signing the return address in a function.
+///
+/// Corresponds to possible values of "sign-return-address" function attribute.
+enum class SignReturnAddress {
+  None,
+  NonLeaf,
+  All,
 };
 
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
@@ -170,13 +179,8 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // CalleeSavedStackSize) to the address of the frame record.
   int CalleeSaveBaseToFrameRecordOffset = 0;
 
-  /// SignReturnAddress is true if PAC-RET is enabled for the function with
-  /// defaults being sign non-leaf functions only, with the B key.
-  bool SignReturnAddress = false;
-
-  /// SignReturnAddressAll modifies the default PAC-RET mode to signing leaf
-  /// functions as well.
-  bool SignReturnAddressAll = false;
+  /// SignCondition controls when PAC-RET protection should be used.
+  SignReturnAddress SignCondition = SignReturnAddress::None;
 
   /// SignWithBKey modifies the default PAC-RET mode to signing with the B key.
   bool SignWithBKey = false;
@@ -591,8 +595,14 @@ public:
     CalleeSaveBaseToFrameRecordOffset = Offset;
   }
 
+  static bool shouldSignReturnAddress(SignReturnAddress Condition,
+                                      bool IsLRSpilled);
+
   bool shouldSignReturnAddress(const MachineFunction &MF) const;
-  bool shouldSignReturnAddress(bool SpillsLR) const;
+
+  SignReturnAddress getSignReturnAddressCondition() const {
+    return SignCondition;
+  }
 
   bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) const;
 
@@ -651,7 +661,7 @@ struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~AArch64FunctionInfo() = default;
+  ~AArch64FunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<AArch64FunctionInfo> {

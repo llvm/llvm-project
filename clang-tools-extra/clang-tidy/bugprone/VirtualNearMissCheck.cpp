@@ -37,14 +37,14 @@ static bool isOverrideMethod(const CXXMethodDecl *MD) {
 static bool checkOverridingFunctionReturnType(const ASTContext *Context,
                                               const CXXMethodDecl *BaseMD,
                                               const CXXMethodDecl *DerivedMD) {
-  QualType BaseReturnTy = BaseMD->getType()
-                              ->castAs<FunctionType>()
-                              ->getReturnType()
-                              .getCanonicalType();
-  QualType DerivedReturnTy = DerivedMD->getType()
-                                 ->castAs<FunctionType>()
-                                 ->getReturnType()
-                                 .getCanonicalType();
+  const QualType BaseReturnTy = BaseMD->getType()
+                                    ->castAs<FunctionType>()
+                                    ->getReturnType()
+                                    .getCanonicalType();
+  const QualType DerivedReturnTy = DerivedMD->getType()
+                                       ->castAs<FunctionType>()
+                                       ->getReturnType()
+                                       .getCanonicalType();
 
   if (DerivedReturnTy->isDependentType() || BaseReturnTy->isDependentType())
     return false;
@@ -63,8 +63,8 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
   /// BTy is the class type in return type of BaseMD. For example,
   ///    B* Base::md()
   /// While BRD is the declaration of B.
-  QualType DTy = DerivedReturnTy->getPointeeType().getCanonicalType();
-  QualType BTy = BaseReturnTy->getPointeeType().getCanonicalType();
+  const QualType DTy = DerivedReturnTy->getPointeeType().getCanonicalType();
+  const QualType BTy = BaseReturnTy->getPointeeType().getCanonicalType();
 
   const CXXRecordDecl *DRD = DTy->getAsCXXRecordDecl();
   const CXXRecordDecl *BRD = BTy->getAsCXXRecordDecl();
@@ -94,7 +94,7 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
     // Check accessibility.
     // FIXME: We currently only support checking if B is accessible base class
     // of D, or D is the same class which DerivedMD is in.
-    bool IsItself =
+    const bool IsItself =
         DRD->getCanonicalDecl() == DerivedMD->getParent()->getCanonicalDecl();
     bool HasPublicAccess = false;
     for (const auto &Path : Paths) {
@@ -129,8 +129,8 @@ static QualType getDecayedType(QualType Type) {
 /// \returns true if the param types are the same.
 static bool checkParamTypes(const CXXMethodDecl *BaseMD,
                             const CXXMethodDecl *DerivedMD) {
-  unsigned NumParamA = BaseMD->getNumParams();
-  unsigned NumParamB = DerivedMD->getNumParams();
+  const unsigned NumParamA = BaseMD->getNumParams();
+  const unsigned NumParamB = DerivedMD->getNumParams();
   if (NumParamA != NumParamB)
     return false;
 
@@ -184,10 +184,10 @@ bool VirtualNearMissCheck::isPossibleToBeOverridden(
   if (!Inserted)
     return Iter->second;
 
-  bool IsPossible = !BaseMD->isImplicit() && !isa<CXXConstructorDecl>(BaseMD) &&
-                    !isa<CXXDestructorDecl>(BaseMD) && BaseMD->isVirtual() &&
-                    !BaseMD->isOverloadedOperator() &&
-                    !isa<CXXConversionDecl>(BaseMD);
+  const bool IsPossible =
+      !BaseMD->isImplicit() && !isa<CXXConstructorDecl>(BaseMD) &&
+      !isa<CXXDestructorDecl>(BaseMD) && BaseMD->isVirtual() &&
+      !BaseMD->isOverloadedOperator() && !isa<CXXConversionDecl>(BaseMD);
   Iter->second = IsPossible;
   return IsPossible;
 }
@@ -241,7 +241,7 @@ void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
         if (isOverriddenByDerivedClass(BaseMD, DerivedRD))
           continue;
 
-        unsigned EditDistance = BaseMD->getName().edit_distance(
+        const unsigned EditDistance = BaseMD->getName().edit_distance(
             DerivedMD->getName(), EditDistanceThreshold);
         if (EditDistance > 0 && EditDistance <= EditDistanceThreshold) {
           if (checkOverrideWithoutName(Context, BaseMD, DerivedMD)) {
@@ -249,8 +249,8 @@ void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
             auto Range = CharSourceRange::getTokenRange(
                 SourceRange(DerivedMD->getLocation()));
 
-            bool ApplyFix = !BaseMD->isTemplateInstantiation() &&
-                            !DerivedMD->isTemplateInstantiation();
+            const bool ApplyFix = !BaseMD->isTemplateInstantiation() &&
+                                  !DerivedMD->isTemplateInstantiation();
             auto Diag =
                 diag(DerivedMD->getBeginLoc(),
                      "method '%0' has a similar name and the same signature as "

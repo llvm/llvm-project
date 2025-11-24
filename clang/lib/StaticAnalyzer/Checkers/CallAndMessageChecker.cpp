@@ -233,14 +233,12 @@ template <> struct format_provider<FindUninitializedField::FieldChainTy> {
     else {
       Stream << "(e.g., via the field chain: '";
       bool First = true;
-      for (FindUninitializedField::FieldChainTy::const_iterator DI = V.begin(),
-                                                                DE = V.end();
-           DI != DE; ++DI) {
+      for (const FieldDecl *FD : V) {
         if (First)
           First = false;
         else
           Stream << '.';
-        Stream << **DI;
+        Stream << *FD;
       }
       Stream << "')";
     }

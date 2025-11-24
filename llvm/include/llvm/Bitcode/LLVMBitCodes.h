@@ -688,6 +688,8 @@ enum FunctionCodes {
   FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE =
       64, // [DILocation, DILocalVariable, DIExpression, Value]
   FUNC_CODE_DEBUG_RECORD_LABEL = 65, // [DILocation, DILabel]
+  FUNC_CODE_DEBUG_RECORD_DECLARE_VALUE =
+      66, // [DILocation, DILocalVariable, DIExpression, ValueAsMetadata]
 };
 
 enum UseListCodes {
@@ -801,6 +803,7 @@ enum AttributeKindCodes {
   ATTR_KIND_CAPTURES = 102,
   ATTR_KIND_DEAD_ON_RETURN = 103,
   ATTR_KIND_SANITIZE_ALLOC_TOKEN = 104,
+  ATTR_KIND_NO_CREATE_UNDEF_OR_POISON = 105,
 };
 
 enum ComdatSelectionKindCodes {

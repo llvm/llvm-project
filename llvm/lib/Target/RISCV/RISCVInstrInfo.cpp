@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -81,8 +82,9 @@ namespace llvm::RISCV {
 } // end namespace llvm::RISCV
 
 RISCVInstrInfo::RISCVInstrInfo(const RISCVSubtarget &STI)
-    : RISCVGenInstrInfo(STI, RISCV::ADJCALLSTACKDOWN, RISCV::ADJCALLSTACKUP),
-      STI(STI) {}
+    : RISCVGenInstrInfo(STI, RegInfo, RISCV::ADJCALLSTACKDOWN,
+                        RISCV::ADJCALLSTACKUP),
+      RegInfo(STI.getHwMode()), STI(STI) {}
 
 #define GET_INSTRINFO_HELPERS
 #include "RISCVGenInstrInfo.inc"
@@ -637,7 +639,6 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator I,
                                          Register SrcReg, bool IsKill, int FI,
                                          const TargetRegisterClass *RC,
-                                         const TargetRegisterInfo *TRI,
                                          Register VReg,
                                          MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
@@ -645,8 +646,8 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
   unsigned Opcode;
   if (RISCV::GPRRegClass.hasSubClassEq(RC)) {
-    Opcode = TRI->getRegSizeInBits(RISCV::GPRRegClass) == 32 ?
-             RISCV::SW : RISCV::SD;
+    Opcode = RegInfo.getRegSizeInBits(RISCV::GPRRegClass) == 32 ? RISCV::SW
+                                                                : RISCV::SD;
   } else if (RISCV::GPRF16RegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::SH_INX;
   } else if (RISCV::GPRF32RegClass.hasSubClassEq(RC)) {
@@ -703,7 +704,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         .addFrameIndex(FI)
         .addMemOperand(MMO)
         .setMIFlag(Flags);
-    NumVRegSpilled += TRI->getRegSizeInBits(*RC) / RISCV::RVVBitsPerBlock;
+    NumVRegSpilled += RegInfo.getRegSizeInBits(*RC) / RISCV::RVVBitsPerBlock;
   } else {
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
@@ -718,10 +719,12 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   }
 }
 
-void RISCVInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DstReg,
-    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator I,
+                                          Register DstReg, int FI,
+                                          const TargetRegisterClass *RC,
+                                          Register VReg,
+                                          MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
   DebugLoc DL =
@@ -729,8 +732,8 @@ void RISCVInstrInfo::loadRegFromStackSlot(
 
   unsigned Opcode;
   if (RISCV::GPRRegClass.hasSubClassEq(RC)) {
-    Opcode = TRI->getRegSizeInBits(RISCV::GPRRegClass) == 32 ?
-             RISCV::LW : RISCV::LD;
+    Opcode = RegInfo.getRegSizeInBits(RISCV::GPRRegClass) == 32 ? RISCV::LW
+                                                                : RISCV::LD;
   } else if (RISCV::GPRF16RegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::LH_INX;
   } else if (RISCV::GPRF32RegClass.hasSubClassEq(RC)) {
@@ -786,7 +789,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(
         .addFrameIndex(FI)
         .addMemOperand(MMO)
         .setMIFlag(Flags);
-    NumVRegReloaded += TRI->getRegSizeInBits(*RC) / RISCV::RVVBitsPerBlock;
+    NumVRegReloaded += RegInfo.getRegSizeInBits(*RC) / RISCV::RVVBitsPerBlock;
   } else {
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
@@ -869,7 +872,7 @@ std::optional<unsigned> getFoldedOpcode(MachineFunction &MF, MachineInstr &MI,
   }
 }
 
-// This is the version used during inline spilling
+// This is the version used during InlineSpiller::spillAroundUses
 MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
@@ -1377,14 +1380,14 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       report_fatal_error("underestimated function size");
 
     storeRegToStackSlot(MBB, MI, TmpGPR, /*IsKill=*/true, FrameIndex,
-                        &RISCV::GPRRegClass, TRI, Register());
+                        &RISCV::GPRRegClass, Register());
     TRI->eliminateFrameIndex(std::prev(MI.getIterator()),
                              /*SpAdj=*/0, /*FIOperandNum=*/1);
 
     MI.getOperand(1).setMBB(&RestoreBB);
 
     loadRegFromStackSlot(RestoreBB, RestoreBB.end(), TmpGPR, FrameIndex,
-                         &RISCV::GPRRegClass, TRI, Register());
+                         &RISCV::GPRRegClass, Register());
     TRI->eliminateFrameIndex(RestoreBB.back(),
                              /*SpAdj=*/0, /*FIOperandNum=*/1);
   }
@@ -1689,42 +1692,52 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
 // instruction opcode. Otherwise, return RISCV::INSTRUCTION_LIST_END.
 // TODO: Support more operations.
 unsigned getPredicatedOpcode(unsigned Opcode) {
+  // clang-format off
   switch (Opcode) {
-  case RISCV::ADD:   return RISCV::PseudoCCADD;   break;
-  case RISCV::SUB:   return RISCV::PseudoCCSUB;   break;
-  case RISCV::SLL:   return RISCV::PseudoCCSLL;   break;
-  case RISCV::SRL:   return RISCV::PseudoCCSRL;   break;
-  case RISCV::SRA:   return RISCV::PseudoCCSRA;   break;
-  case RISCV::AND:   return RISCV::PseudoCCAND;   break;
-  case RISCV::OR:    return RISCV::PseudoCCOR;    break;
-  case RISCV::XOR:   return RISCV::PseudoCCXOR;   break;
+  case RISCV::ADD:   return RISCV::PseudoCCADD;
+  case RISCV::SUB:   return RISCV::PseudoCCSUB;
+  case RISCV::SLL:   return RISCV::PseudoCCSLL;
+  case RISCV::SRL:   return RISCV::PseudoCCSRL;
+  case RISCV::SRA:   return RISCV::PseudoCCSRA;
+  case RISCV::AND:   return RISCV::PseudoCCAND;
+  case RISCV::OR:    return RISCV::PseudoCCOR;
+  case RISCV::XOR:   return RISCV::PseudoCCXOR;
+  case RISCV::MAX:   return RISCV::PseudoCCMAX;
+  case RISCV::MAXU:  return RISCV::PseudoCCMAXU;
+  case RISCV::MIN:   return RISCV::PseudoCCMIN;
+  case RISCV::MINU:  return RISCV::PseudoCCMINU;
+  case RISCV::MUL:   return RISCV::PseudoCCMUL;
+  case RISCV::LUI:   return RISCV::PseudoCCLUI;
+  case RISCV::QC_LI:   return RISCV::PseudoCCQC_LI;
+  case RISCV::QC_E_LI:   return RISCV::PseudoCCQC_E_LI;
 
-  case RISCV::ADDI:  return RISCV::PseudoCCADDI;  break;
-  case RISCV::SLLI:  return RISCV::PseudoCCSLLI;  break;
-  case RISCV::SRLI:  return RISCV::PseudoCCSRLI;  break;
-  case RISCV::SRAI:  return RISCV::PseudoCCSRAI;  break;
-  case RISCV::ANDI:  return RISCV::PseudoCCANDI;  break;
-  case RISCV::ORI:   return RISCV::PseudoCCORI;   break;
-  case RISCV::XORI:  return RISCV::PseudoCCXORI;  break;
+  case RISCV::ADDI:  return RISCV::PseudoCCADDI;
+  case RISCV::SLLI:  return RISCV::PseudoCCSLLI;
+  case RISCV::SRLI:  return RISCV::PseudoCCSRLI;
+  case RISCV::SRAI:  return RISCV::PseudoCCSRAI;
+  case RISCV::ANDI:  return RISCV::PseudoCCANDI;
+  case RISCV::ORI:   return RISCV::PseudoCCORI;
+  case RISCV::XORI:  return RISCV::PseudoCCXORI;
 
-  case RISCV::ADDW:  return RISCV::PseudoCCADDW;  break;
-  case RISCV::SUBW:  return RISCV::PseudoCCSUBW;  break;
-  case RISCV::SLLW:  return RISCV::PseudoCCSLLW;  break;
-  case RISCV::SRLW:  return RISCV::PseudoCCSRLW;  break;
-  case RISCV::SRAW:  return RISCV::PseudoCCSRAW;  break;
+  case RISCV::ADDW:  return RISCV::PseudoCCADDW;
+  case RISCV::SUBW:  return RISCV::PseudoCCSUBW;
+  case RISCV::SLLW:  return RISCV::PseudoCCSLLW;
+  case RISCV::SRLW:  return RISCV::PseudoCCSRLW;
+  case RISCV::SRAW:  return RISCV::PseudoCCSRAW;
 
-  case RISCV::ADDIW: return RISCV::PseudoCCADDIW; break;
-  case RISCV::SLLIW: return RISCV::PseudoCCSLLIW; break;
-  case RISCV::SRLIW: return RISCV::PseudoCCSRLIW; break;
-  case RISCV::SRAIW: return RISCV::PseudoCCSRAIW; break;
+  case RISCV::ADDIW: return RISCV::PseudoCCADDIW;
+  case RISCV::SLLIW: return RISCV::PseudoCCSLLIW;
+  case RISCV::SRLIW: return RISCV::PseudoCCSRLIW;
+  case RISCV::SRAIW: return RISCV::PseudoCCSRAIW;
 
-  case RISCV::ANDN:  return RISCV::PseudoCCANDN;  break;
-  case RISCV::ORN:   return RISCV::PseudoCCORN;   break;
-  case RISCV::XNOR:  return RISCV::PseudoCCXNOR;  break;
+  case RISCV::ANDN:  return RISCV::PseudoCCANDN;
+  case RISCV::ORN:   return RISCV::PseudoCCORN;
+  case RISCV::XNOR:  return RISCV::PseudoCCXNOR;
 
-  case RISCV::NDS_BFOS:  return RISCV::PseudoCCNDS_BFOS;  break;
-  case RISCV::NDS_BFOZ:  return RISCV::PseudoCCNDS_BFOZ;  break;
+  case RISCV::NDS_BFOS:  return RISCV::PseudoCCNDS_BFOS;
+  case RISCV::NDS_BFOZ:  return RISCV::PseudoCCNDS_BFOZ;
   }
+  // clang-format on
 
   return RISCV::INSTRUCTION_LIST_END;
 }
@@ -1733,7 +1746,8 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
 /// return the defining instruction.
 static MachineInstr *canFoldAsPredicatedOp(Register Reg,
                                            const MachineRegisterInfo &MRI,
-                                           const TargetInstrInfo *TII) {
+                                           const TargetInstrInfo *TII,
+                                           const RISCVSubtarget &STI) {
   if (!Reg.isVirtual())
     return nullptr;
   if (!MRI.hasOneNonDBGUse(Reg))
@@ -1741,6 +1755,15 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   MachineInstr *MI = MRI.getVRegDef(Reg);
   if (!MI)
     return nullptr;
+
+  if (!STI.hasShortForwardBranchIMinMax() &&
+      (MI->getOpcode() == RISCV::MAX || MI->getOpcode() == RISCV::MIN ||
+       MI->getOpcode() == RISCV::MINU || MI->getOpcode() == RISCV::MAXU))
+    return nullptr;
+
+  if (!STI.hasShortForwardBranchIMul() && MI->getOpcode() == RISCV::MUL)
+    return nullptr;
+
   // Check if MI can be predicated and folded into the CCMOV.
   if (getPredicatedOpcode(MI->getOpcode()) == RISCV::INSTRUCTION_LIST_END)
     return nullptr;
@@ -1804,10 +1827,10 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
 
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   MachineInstr *DefMI =
-      canFoldAsPredicatedOp(MI.getOperand(5).getReg(), MRI, this);
+      canFoldAsPredicatedOp(MI.getOperand(5).getReg(), MRI, this, STI);
   bool Invert = !DefMI;
   if (!DefMI)
-    DefMI = canFoldAsPredicatedOp(MI.getOperand(4).getReg(), MRI, this);
+    DefMI = canFoldAsPredicatedOp(MI.getOperand(4).getReg(), MRI, this, STI);
   if (!DefMI)
     return nullptr;
 
@@ -2895,6 +2918,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM9_LSB000:
           Ok = isShiftedUInt<6, 3>(Imm);
           break;
+        case RISCVOp::OPERAND_SIMM8_UNSIGNED:
+          Ok = isInt<8>(Imm);
+          break;
         case RISCVOp::OPERAND_SIMM10_LSB0000_NONZERO:
           Ok = isShiftedInt<6, 4>(Imm) && (Imm != 0);
           break;
@@ -2916,6 +2942,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           // clang-format off
         CASE_OPERAND_SIMM(5)
         CASE_OPERAND_SIMM(6)
+        CASE_OPERAND_SIMM(10)
         CASE_OPERAND_SIMM(11)
         CASE_OPERAND_SIMM(12)
         CASE_OPERAND_SIMM(26)
@@ -3509,6 +3536,27 @@ RISCVInstrInfo::getOutliningCandidateInfo(
       Candidate.getMF()->getSubtarget<RISCVSubtarget>().hasStdExtZca() ? 2 : 4;
   unsigned CallOverhead = 0, FrameOverhead = 0;
 
+  // Count the number of CFI instructions in the candidate, if present.
+  unsigned CFICount = 0;
+  for (auto &I : Candidate) {
+    if (I.isCFIInstruction())
+      CFICount++;
+  }
+
+  // Ensure CFI coverage matches: comparing the number of CFIs in the candidate
+  // with the total number of CFIs in the parent function for each candidate.
+  // Outlining only a subset of a function’s CFIs would split the unwind state
+  // across two code regions and lead to incorrect address offsets between the
+  // outlined body and the remaining code. To preserve correct unwind info, we
+  // only outline when all CFIs in the function can be outlined together.
+  for (outliner::Candidate &C : RepeatedSequenceLocs) {
+    std::vector<MCCFIInstruction> CFIInstructions =
+        C.getMF()->getFrameInstructions();
+
+    if (CFICount > 0 && CFICount != CFIInstructions.size())
+      return std::nullopt;
+  }
+
   MachineOutlinerConstructionID MOCI = MachineOutlinerDefault;
   if (Candidate.back().isReturn()) {
     MOCI = MachineOutlinerTailCall;
@@ -3523,6 +3571,11 @@ RISCVInstrInfo::getOutliningCandidateInfo(
     // jr t0 = 4 bytes, 2 bytes if compressed instructions are enabled.
     FrameOverhead = InstrSizeCExt;
   }
+
+  // If we have CFI instructions, we can only outline if the outlined section
+  // can be a tail call.
+  if (MOCI != MachineOutlinerTailCall && CFICount > 0)
+    return std::nullopt;
 
   for (auto &C : RepeatedSequenceLocs)
     C.setCallInfo(MOCI, CallOverhead);
@@ -3545,13 +3598,11 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
       MBB->getParent()->getSubtarget().getRegisterInfo();
   const auto &F = MI.getMF()->getFunction();
 
-  // We can manually strip out CFI instructions later.
+  // We can only outline CFI instructions if we will tail call the outlined
+  // function, or fix up the CFI offsets. Currently, CFI instructions are
+  // outlined only if in a tail call.
   if (MI.isCFIInstruction())
-    // If current function has exception handling code, we can't outline &
-    // strip these CFI instructions since it may break .eh_frame section
-    // needed in unwinding.
-    return F.needsUnwindTableEntry() ? outliner::InstrType::Illegal
-                                     : outliner::InstrType::Invisible;
+    return outliner::InstrType::Legal;
 
   if (cannotInsertTailCall(*MBB) &&
       (MI.isReturn() || isMIModifiesReg(MI, TRI, RISCV::X5)))
@@ -3577,21 +3628,6 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
 void RISCVInstrInfo::buildOutlinedFrame(
     MachineBasicBlock &MBB, MachineFunction &MF,
     const outliner::OutlinedFunction &OF) const {
-
-  // Strip out any CFI instructions
-  bool Changed = true;
-  while (Changed) {
-    Changed = false;
-    auto I = MBB.begin();
-    auto E = MBB.end();
-    for (; I != E; ++I) {
-      if (I->isCFIInstruction()) {
-        I->removeFromParent();
-        Changed = true;
-        break;
-      }
-    }
-  }
 
   if (OF.FrameConstructionID == MachineOutlinerTailCall)
     return;
