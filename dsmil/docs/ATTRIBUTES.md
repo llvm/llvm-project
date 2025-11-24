@@ -232,6 +232,65 @@ int main(int argc, char **argv) {
 
 ---
 
+### `dsmil_untrusted_input`
+
+**Purpose**: Mark function parameters or globals that ingest untrusted data.
+
+**Parameters**: None
+
+**Applies to**: Function parameters, global variables
+
+**Example**:
+```c
+// Mark parameter as untrusted
+__attribute__((dsmil_untrusted_input))
+void process_network_input(const char *user_data, size_t len) {
+    // Must validate user_data before use
+    if (!validate_input(user_data, len)) {
+        return;
+    }
+    // Safe processing
+}
+
+// Mark global as untrusted
+__attribute__((dsmil_untrusted_input))
+char network_buffer[4096];
+```
+
+**IR Lowering**:
+```llvm
+!dsmil.untrusted_input = !{i1 true}
+```
+
+**Integration with AI Advisors**:
+- Layer 8 Security AI can trace data flows from `dsmil_untrusted_input` sources
+- Automatically detect flows into sensitive sinks (crypto operations, exec functions)
+- Suggest additional validation or sandboxing for risky paths
+- Combined with `dsmil-layer-check` to enforce information flow control
+
+**Common Patterns**:
+```c
+// Network input
+__attribute__((dsmil_untrusted_input))
+ssize_t recv_from_network(void *buf, size_t len);
+
+// File input
+__attribute__((dsmil_untrusted_input))
+void *load_config_file(const char *path);
+
+// IPC input
+__attribute__((dsmil_untrusted_input))
+struct message *receive_ipc_message(void);
+```
+
+**Security Best Practices**:
+1. Always validate untrusted input before use
+2. Use sandboxed functions (`dsmil_sandbox`) to process untrusted data
+3. Combine with `dsmil_gateway` for controlled transitions
+4. Enable L8 security scan (`--ai-mode=advisor`) to detect flow violations
+
+---
+
 ## MLOps Stage Attributes
 
 ### `dsmil_stage(const char *stage_name)`
@@ -400,6 +459,7 @@ void job_scheduler(struct job *jobs, int count) {
 | `dsmil_roe` | ✓ | ✗ | ✓ |
 | `dsmil_gateway` | ✓ | ✗ | ✗ |
 | `dsmil_sandbox` | ✗ | ✗ | ✓ |
+| `dsmil_untrusted_input` | ✓ (params) | ✓ | ✗ |
 | `dsmil_stage` | ✓ | ✗ | ✓ |
 | `dsmil_kv_cache` | ✓ | ✓ | ✗ |
 | `dsmil_hot_model` | ✓ | ✓ | ✗ |

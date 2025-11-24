@@ -1,7 +1,7 @@
 # DSLLVM Design Specification
 **DSMIL-Optimized LLVM Toolchain for Intel Meteor Lake**
 
-Version: v1.0
+Version: v1.1
 Status: Draft
 Owner: SWORDIntel / DSMIL Kernel Team
 
@@ -9,18 +9,23 @@ Owner: SWORDIntel / DSMIL Kernel Team
 
 ## 0. Scope & Intent
 
-DSLLVM is a hardened LLVM/Clang toolchain specialized for the **DSMIL kernel + userland stack** on Intel Meteor Lake (CPU + NPU + Arc GPU), with:
+DSLLVM is a hardened LLVM/Clang toolchain specialized for the **DSMIL kernel + userland stack** on Intel Meteor Lake (CPU + NPU + Arc GPU), tightly integrated with the **DSMIL AI architecture (Layers 3–9, 48 AI devices, ~1338 TOPS INT8)**.
 
-1. **DSMIL-aware hardware target & optimal flags** tuned for Meteor Lake.
-2. **DSMIL semantic metadata** baked into LLVM IR (layers, devices, ROE, clearance).
-3. **Bandwidth & memory-aware optimization** tailored to realistic hardware limits.
-4. **MLOps stage-awareness** for AI/LLM workloads (pretrain/finetune/serve, quantized/distilled, etc.).
+Primary capabilities:
+
+1. **DSMIL-aware hardware target & optimal flags** for Meteor Lake.
+2. **DSMIL semantic metadata** in LLVM IR (layers, devices, ROE, clearance).
+3. **Bandwidth & memory-aware optimization** tuned to realistic hardware limits.
+4. **MLOps stage-awareness** for AI/LLM workloads.
 5. **CNSA 2.0–compatible provenance & sandbox integration**
-   - **SHA-384** (hash), **ML-DSA-87** (signature), **ML-KEM-1024** (KEM).
-6. **Quantum-assisted optimization hooks** (Device 46, Qiskit-compatible side outputs).
-7. **Complete packaging & tooling**: wrappers, pass pipelines, repo layout, and CI integration.
+   - SHA-384, ML-DSA-87, ML-KEM-1024.
+6. **Quantum-assisted optimization hooks** (Layer 7, Device 46).
+7. **Tooling/packaging** for passes, wrappers, and CI.
+8. **AI-assisted compilation via DSMIL Layers 3–9** (LLMs, security AI, forecasting).
+9. **AI-trained cost models & schedulers** for device/placement decisions.
+10. **AI integration modes & guardrails** to keep toolchain deterministic and auditable.
 
-DSLLVM does *not* invent a new language. It extends LLVM/Clang with attributes, metadata, passes, and ELF/sidecar outputs that align with the DSMIL 9-layer / 104-device architecture and its MLOps pipeline.
+DSLLVM does *not* invent a new language. It extends LLVM/Clang with attributes, metadata, passes, ELF extensions, AI-powered advisors, and sidecar outputs aligned with the DSMIL 9-layer / 104-device architecture.
 
 ---
 
@@ -28,58 +33,57 @@ DSLLVM does *not* invent a new language. It extends LLVM/Clang with attributes, 
 
 ### 1.1 Target Triple & Subtarget
 
-Introduce a dedicated target triple:
+Dedicated target triple:
 
 - `x86_64-dsmil-meteorlake-elf`
 
 Characteristics:
 
-- Base ABI: x86-64 SysV (compatible with mainstream Linux).
+- Base ABI: x86-64 SysV (Linux-compatible).
 - Default CPU: `meteorlake`.
-- Default features (`+dsmil-optimal`):
+- Default features (grouped as `+dsmil-optimal`):
 
   - AVX2, AVX-VNNI
   - AES, VAES, SHA, GFNI
   - BMI1/2, POPCNT, FMA
   - MOVDIRI, WAITPKG
-  - Other Meteor Lake–specific micro-optimizations when available.
 
-This matches and centralizes the "optimal flags" we otherwise would repeat in `CFLAGS/LDFLAGS`.
+This centralizes the "optimal flags" that would otherwise be replicated in `CFLAGS/LDFLAGS`.
 
 ### 1.2 Frontend Wrappers
 
-Provide thin wrappers that always select the DSMIL target:
+Thin wrappers:
 
 - `dsmil-clang`
 - `dsmil-clang++`
 - `dsmil-llc`
 
-Default options baked into wrappers:
+Default options baked in:
 
 - `-target x86_64-dsmil-meteorlake-elf`
 - `-march=meteorlake -mtune=meteorlake`
 - `-O3 -pipe -fomit-frame-pointer -funroll-loops -fstrict-aliasing -fno-plt`
 - `-ffunction-sections -fdata-sections -flto=auto`
 
-These wrappers become the **canonical toolchain** for DSMIL kernel, drivers, and userland components.
+These wrappers are the **canonical toolchain** for DSMIL kernel, drivers, agents, and userland.
 
 ### 1.3 Device-Aware Code Model
 
-DSMIL defines 9 layers and 104 devices. DSLLVM integrates this via a **DSMIL code model**:
+DSMIL defines **9 layers (3–9) and 104 devices**, with 48 AI devices and ~1338 TOPS across Layers 3–9.
 
-- Each function may carry:
+DSLLVM adds a **DSMIL code model**:
 
+- Per function, optional fields:
+
+  - `layer` (3–9)
   - `device_id` (0–103)
-  - `layer` (0–8 or 1–9)
   - `role` (e.g. `control`, `llm_worker`, `crypto`, `telemetry`)
 
-- Backend uses this to:
+Backend uses these to:
 
-  - Place functions in per-device/ per-layer sections:
-    - `.text.dsmil.dev47`, `.text.dsmil.layer7`, `.data.dsmil.dev12`, …
-  - Emit a sidecar mapping file (`*.dsmilmap`) describing symbol → layer/device/role.
-
-This enables the runtime, scheduler, and observability stack to understand code placement without extra scanning.
+- Place functions in device/layer-specific sections:
+  - `.text.dsmil.dev47`, `.data.dsmil.layer7`, etc.
+- Emit a sidecar map (`*.dsmilmap`) linking symbols to layer/device/role.
 
 ---
 
@@ -87,7 +91,7 @@ This enables the runtime, scheduler, and observability stack to understand code 
 
 ### 2.1 Source-Level Attributes
 
-Expose portable C/C++ attributes to encode DSMIL semantics at the source level:
+C/C++ attributes:
 
 ```c
 __attribute__((dsmil_layer(7)))
@@ -99,56 +103,57 @@ __attribute__((dsmil_sandbox("l7_llm_worker")))
 __attribute__((dsmil_stage("quantized")))
 __attribute__((dsmil_kv_cache))
 __attribute__((dsmil_hot_model))
+__attribute__((dsmil_quantum_candidate("placement")))
+__attribute__((dsmil_untrusted_input))
 ```
 
-Key attributes:
+Semantics:
 
-* `dsmil_layer(int)` – DSMIL layer index (0–8 or 1–9).
-* `dsmil_device(int)` – DSMIL device id (0–103).
-* `dsmil_clearance(uint32)` – 32-bit clearance / compartment mask.
-* `dsmil_roe(string)` – Rules of Engagement (e.g. `ANALYSIS_ONLY`, `LIVE_CONTROL`).
-* `dsmil_gateway` – function is authorized to cross layer or device boundaries.
-* `dsmil_sandbox(string)` – role-based sandbox profile name.
-* `dsmil_stage(string)` – MLOps stage (`pretrain`, `finetune`, `quantized`, `distilled`, `serve`, `debug`, etc.).
-* `dsmil_kv_cache` – marks KV-cache storage.
-* `dsmil_hot_model` – marks hot-path model weights.
+* `dsmil_layer(int)` – DSMIL layer index.
+* `dsmil_device(int)` – DSMIL device ID.
+* `dsmil_clearance(uint32)` – clearance/compartment mask.
+* `dsmil_roe(string)` – Rules of Engagement profile.
+* `dsmil_gateway` – legal cross-layer/device boundary.
+* `dsmil_sandbox(string)` – role-based sandbox profile.
+* `dsmil_stage(string)` – MLOps stage.
+* `dsmil_kv_cache` / `dsmil_hot_model` – memory-class hints.
+* `dsmil_quantum_candidate(string)` – candidate for quantum optimization.
+* `dsmil_untrusted_input` – marks parameters/globals that ingest untrusted data.
 
 ### 2.2 IR Metadata Schema
 
-Front-end lowers attributes to LLVM metadata:
+Front-end lowers to metadata:
 
-For functions:
+* Functions:
 
-* `!dsmil.layer = i32 7`
-* `!dsmil.device_id = i32 47`
-* `!dsmil.clearance = i32 0x07070707`
-* `!dsmil.roe = !"ANALYSIS_ONLY"`
-* `!dsmil.gateway = i1 true`
-* `!dsmil.sandbox = !"l7_llm_worker"`
-* `!dsmil.stage = !"quantized"`
-* `!dsmil.memory_class = !"kv_cache"` (for `dsmil_kv_cache`)
+  * `!dsmil.layer = i32 7`
+  * `!dsmil.device_id = i32 47`
+  * `!dsmil.clearance = i32 0x07070707`
+  * `!dsmil.roe = !"ANALYSIS_ONLY"`
+  * `!dsmil.gateway = i1 true`
+  * `!dsmil.sandbox = !"l7_llm_worker"`
+  * `!dsmil.stage = !"quantized"`
+  * `!dsmil.memory_class = !"kv_cache"`
+  * `!dsmil.untrusted_input = i1 true`
 
-For globals:
+* Globals:
 
-* `!dsmil.sensitivity = !"MODEL_WEIGHTS"`
-* `!dsmil.memory_class = !"hot_model"`
+  * `!dsmil.sensitivity = !"MODEL_WEIGHTS"`
 
 ### 2.3 Verification Pass: `dsmil-layer-check`
 
-Add a module pass: **`dsmil-layer-check`** that:
+Module pass **`dsmil-layer-check`**:
 
-* Walks the call graph and verifies:
+* Walks the call graph; rejects:
 
-  * Disallowed layer transitions (e.g. low → high without `dsmil_gateway`) are rejected.
-  * Functions with lower `dsmil_clearance` cannot call higher-clearance functions unless flagged as an explicit gateway with ROE.
-  * ROE transitions follow a policy (e.g. `ANALYSIS_ONLY` cannot escalate into `LIVE_CONTROL` code without explicit exemption metadata).
+  * Illegal layer transitions without `dsmil_gateway`.
+  * Clearance violations (low→high without gateway/ROE).
+  * ROE transitions that break policy (configurable).
 
-* On violation:
+* Outputs:
 
-  * Emit detailed diagnostics (file, function, caller→callee, layer/clearance values).
-  * Optionally generate a JSON report (`*.dsmilviolations.json`) for CI.
-
-This ensures DSMIL layering and clearance policies are enforced **at compile-time**, not just at runtime.
+  * Diagnostics (file/function, caller→callee, layer/clearance).
+  * Optional `*.dsmilviolations.json` for CI.
 
 ---
 
@@ -156,57 +161,46 @@ This ensures DSMIL layering and clearance policies are enforced **at compile-tim
 
 ### 3.1 Bandwidth Cost Model: `dsmil-bandwidth-estimate`
 
-Introduce mid-end analysis pass **`dsmil-bandwidth-estimate`**:
+Pass **`dsmil-bandwidth-estimate`**:
 
-* For each function, compute:
+* Estimates per function:
 
-  * Approximate `bytes_read`, `bytes_written` (per invocation).
-  * Vectorization characteristics (SSE, AVX2, AVX-VNNI use).
-  * Access patterns (contiguous vs strided, gather/scatter hints).
+  * `bytes_read`, `bytes_written`
+  * vectorization level (SSE/AVX/AMX)
+  * access patterns (contiguous/strided/gather-scatter)
 
-* Derive:
+* Derives:
 
-  * `bw_gbps_estimate` under an assumed memory model (e.g. 64 GB/s).
-  * `memory_class` labels such as:
+  * `bw_gbps_estimate` (for the known memory model).
+  * `memory_class` (`kv_cache`, `model_weights`, `hot_ram`, etc.).
 
-    * `kv_cache`
-    * `model_weights`
-    * `hot_ram`
-    * `cold_storage`
+* Attaches:
 
-* Attach metadata:
-
-  * `!dsmil.bw_bytes_read`
-  * `!dsmil.bw_bytes_written`
+  * `!dsmil.bw_bytes_read`, `!dsmil.bw_bytes_written`
   * `!dsmil.bw_gbps_estimate`
   * `!dsmil.memory_class`
 
 ### 3.2 Placement & Hints: `dsmil-device-placement`
 
-Add pass **`dsmil-device-placement`** (mid-end or LTO):
+Pass **`dsmil-device-placement`**:
 
 * Uses:
 
-  * DSMIL semantic metadata (layer, device, sensitivity).
+  * DSMIL semantic metadata.
   * Bandwidth estimates.
+  * (Optionally) AI-trained cost model, see §9.
 
-* Computes:
+* Computes recommended:
 
-  * Recommended execution target per function:
+  * `target`: `cpu`, `npu`, `gpu`, `hybrid`.
+  * `memory_tier`: `ramdisk`, `tmpfs`, `local_ssd`, etc.
 
-    * `"cpu"`, `"npu"`, `"gpu"`, `"hybrid"`
-  * Recommended memory tier:
+* Encodes in:
 
-    * `"ramdisk"`, `"tmpfs"`, `"local_ssd"`, `"remote_minio"`, etc.
-
-* Encodes this in:
-
-  * IR metadata: `!dsmil.placement` = !"{target: npu, memory: ramdisk}"
-  * Sidecar file (see next section).
+  * IR (`!dsmil.placement`)
+  * `*.dsmilmap` sidecar.
 
 ### 3.3 Sidecar Mapping File: `*.dsmilmap`
-
-For each linked binary, emit `binary_name.dsmilmap` (JSON or CBOR):
 
 Example entry:
 
@@ -226,211 +220,107 @@ Example entry:
 }
 ```
 
-This file is consumed by:
-
-* DSMIL orchestrator / scheduler.
-* MLOps stack.
-* Observability and audit tooling.
+Consumed by DSMIL orchestrator, MLOps, and observability tooling.
 
 ---
 
 ## 4. MLOps Stage-Aware Compilation
 
-### 4.1 Stage Semantics: `dsmil_stage`
+### 4.1 `dsmil_stage` Semantics
 
-`__attribute__((dsmil_stage("...")))` encodes MLOps lifecycle information:
+Stages (examples):
 
-Examples:
-
-* `"pretrain"` – Pre-training phase code/artifacts.
-* `"finetune"` – Fine-tuning for specific tasks.
-* `"quantized"` – Quantized model code (INT8/INT4, etc.).
-* `"distilled"` – Distilled/compact models.
-* `"serve"` – Serving / inference path.
-* `"debug"` – Debug-only diagnostics.
-* `"experimental"` – Non-production experiments.
+* `pretrain`, `finetune`
+* `quantized`, `distilled`
+* `serve`
+* `debug`, `experimental`
 
 ### 4.2 Policy Pass: `dsmil-stage-policy`
 
-Add pass **`dsmil-stage-policy`** that validates stage usage:
+Pass **`dsmil-stage-policy`** enforces rules, e.g.:
 
-Policy examples (configurable):
+* Production (`DSMIL_PRODUCTION`):
 
-* **Production binaries (`DSMIL_PRODUCTION`):**
+  * Disallow `debug` or `experimental`.
+  * Layers ≥3 must not link `pretrain` stage.
+  * LLM workloads in Layers 7/9 must be `quantized` or `distilled`.
 
-  * No `debug` or `experimental` stages allowed.
-  * L≥3 must not link untagged or `pretrain` code.
-  * L≥3 LLM workloads must be `quantized` or `distilled`.
+* Lab builds: warn only.
 
-* **Sandbox / lab binaries:**
+Violations:
 
-  * Allow more flexibility but log stage mixes.
-
-On violation:
-
-* Emit compile-time errors or warnings depending on policy strictness.
-* Generate `*.dsmilstage-report.json` for CI.
+* Compiler errors/warnings.
+* `*.dsmilstage-report.json` for CI.
 
 ### 4.3 Pipeline Integration
 
-The `*.dsmilmap` entries include `stage` per symbol. MLOps uses it to:
+`*.dsmilmap` includes `stage`. MLOps uses this to:
 
-* Select deployment targets (training cluster vs serving edge).
-* Enforce that only compliant artifacts are deployed to production.
-* Drive automated quantization/optimization pipelines (if `stage != quantized`, schedule quantization job).
+* Decide training vs serving deployment.
+* Enforce only compliant artifacts reach Layers 7–9 (LLMs, exec AI).
 
 ---
 
 ## 5. CNSA 2.0 Provenance & Sandbox Integration
 
-**Objectives:**
+### 5.1 Crypto Roles & Keys
 
-* Provide strong, CNSA 2.0–aligned provenance for each binary:
+* **TSK (Toolchain Signing Key)** – ML-DSA-87.
+* **PSK (Project Signing Key)** – ML-DSA-87 per project.
+* **RDK (Runtime Decryption Key)** – ML-KEM-1024.
 
-  * **Hash:** SHA-384
-  * **Signature:** ML-DSA-87
-  * **KEM:** ML-KEM-1024 (for optional confidentiality of provenance/policy data).
-* Provide standardized, attribute-driven sandboxing using libcap-ng + seccomp.
+All artifact hashing: **SHA-384**.
 
-### 5.1 Cryptographic Roles & Keys
+### 5.2 Provenance Record
 
-Logical key roles:
+Link-time pass **`dsmil-provenance-pass`**:
 
-1. **Toolchain Signing Key (TSK)**
+* Builds a canonical provenance object:
 
-   * Algorithm: ML-DSA-87
-   * Used to sign:
+  * Compiler info (name/version/target).
+  * Source VCS info (repo/commit/dirty).
+  * Build info (timestamp, builder ID, flags).
+  * DSMIL defaults (layer/device/roles).
+  * Hashes (SHA-384 of binary/sections).
 
-     * DSLLVM release manifests (optional).
-     * Toolchain provenance if desired.
+* Canonicalize → `prov_canonical`.
 
-2. **Project Signing Key (PSK)**
+* Compute `H = SHA-384(prov_canonical)`.
 
-   * Algorithm: ML-DSA-87
-   * One per project/product line.
-   * Used to sign each binary's provenance.
+* Sign with ML-DSA-87 (PSK) → `σ`.
 
-3. **Runtime Decryption Key (RDK)**
+* Embed in ELF `.note.dsmil.provenance` / `.dsmil_prov`.
 
-   * Algorithm: ML-KEM-1024
-   * Used by DSMIL runtime components (kernel/LSM/loader) to decapsulate symmetric keys for decrypting sensitive provenance/policy blobs.
+### 5.3 Optional ML-KEM-1024 Confidentiality
 
-All hashing: **SHA-384**.
+For high-sensitivity binaries:
 
-### 5.2 Provenance Record Lifecycle
+* Generate symmetric key `K`.
+* Encrypt `prov` using AEAD (e.g. AES-256-GCM).
+* Encapsulate `K` with ML-KEM-1024 (RDK) → `ct`.
+* Record:
 
-At link-time, DSLLVM produces a **provenance record**:
-
-1. Construct logical object:
-
-   ```json
-   {
-     "schema": "dsmil-provenance-v1",
-     "compiler": {
-       "name": "dsmil-clang",
-       "version": "X.Y.Z",
-       "target": "x86_64-dsmil-meteorlake-elf"
-     },
-     "source": {
-       "vcs": "git",
-       "repo": "https://github.com/SWORDIntel/...",
-       "commit": "abcd1234...",
-       "dirty": false
-     },
-     "build": {
-       "timestamp": "...",
-       "builder_id": "build-node-01",
-       "flags": ["-O3", "-march=meteorlake", "..."]
-     },
-     "dsmil": {
-       "default_layer": 7,
-       "default_device": 47,
-       "roles": ["llm_worker", "control_plane"]
-     },
-     "hashes": {
-       "binary_sha384": "…",
-       "sections": {
-         ".text": "…",
-         ".rodata": "…"
-       }
-     }
-   }
-   ```
-
-2. Canonicalize structure → `prov_canonical` (e.g., deterministic JSON or CBOR).
-
-3. Compute `H = SHA-384(prov_canonical)`.
-
-4. Sign `H` using ML-DSA-87 with PSK → signature `σ`.
-
-5. Produce final record:
-
-   ```json
-   {
-     "prov": { ... },
-     "hash_alg": "SHA-384",
-     "sig_alg": "ML-DSA-87",
-     "sig": "…"
-   }
-   ```
-
-6. Embed in ELF:
-
-   * `.note.dsmil.provenance` (compact format, possibly CBOR)
-   * Optionally a dedicated loadable segment `.dsmil_prov`.
-
-### 5.3 Optional Confidentiality With ML-KEM-1024
-
-For high-sensitivity environments:
-
-1. Generate symmetric key `K`.
-
-2. Encrypt `prov` (or part of it) using AEAD (e.g., AES-256-GCM) with key `K`.
-
-3. Encapsulate `K` using ML-KEM-1024 RDK public key → ciphertext `ct`.
-
-4. Wrap structure:
-
-   ```json
-   {
-     "enc_prov": "…",            // AEAD ciphertext + tag
-     "kem_alg": "ML-KEM-1024",
-     "kem_ct": "…",
-     "hash_alg": "SHA-384",
-     "sig_alg": "ML-DSA-87",
-     "sig": "…"
-   }
-   ```
-
-5. Embed into ELF sections as above.
-
-This ensures only entities that hold the **RDK private key** can decrypt provenance while validation remains globally verifiable.
+  ```json
+  {
+    "enc_prov": "…",
+    "kem_alg": "ML-KEM-1024",
+    "kem_ct": "…",
+    "hash_alg": "SHA-384",
+    "sig_alg": "ML-DSA-87",
+    "sig": "…"
+  }
+  ```
 
 ### 5.4 Runtime Validation
 
-On `execve` or kernel module load, DSMIL loader/LSM:
+DSMIL loader/LSM:
 
-1. Extract `.note.dsmil.provenance` / `.dsmil_prov`.
-
-2. If encrypted:
-
-   * Decapsulate `K` using ML-KEM-1024.
-   * Decrypt AEAD payload.
-
-3. Recompute SHA-384 hash over canonicalized provenance.
-
-4. Verify ML-DSA-87 signature against PSK (and optionally TSK trust chain).
-
-5. If validation fails:
-
-   * Deny execution or require explicit emergency override.
-
-6. If validation succeeds:
-
-   * Expose trusted provenance to:
-
-     * Policy engine for layer/role enforcement.
-     * Audit/forensics systems.
+1. Extract `.note.dsmil.provenance`.
+2. If encrypted: decapsulate `K` (ML-KEM-1024) and decrypt.
+3. Recompute SHA-384 hash.
+4. Verify ML-DSA-87 signature.
+5. If invalid: deny execution or require explicit override.
+6. If valid: feed provenance to policy engine and audit log.
 
 ### 5.5 Sandbox Wrapping: `dsmil_sandbox`
 
@@ -443,27 +333,23 @@ int main(int argc, char **argv);
 
 Link-time pass **`dsmil-sandbox-wrap`**:
 
-* Renames original `main` → `main_real`.
-* Injects wrapper `main` that:
+* Rename `main` → `main_real`.
+* Inject wrapper `main` that:
 
-  * Applies a role-specific **capability profile** using libcap-ng.
-  * Installs a role-specific **seccomp** filter (predefined profile tied to sandbox name).
-  * Optionally loads runtime policy derived from provenance (which may have been decrypted via ML-KEM-1024).
+  * Applies libcap-ng capability profile for the role.
+  * Installs seccomp filter for the role.
+  * Optionally consumes provenance-driven runtime policy.
   * Calls `main_real()`.
 
-Provenance record includes:
-
-* `sandbox_profile = "l7_llm_worker"`
-
-This provides standardized, role-based sandbox behavior across DSMIL binaries with **minimal developer burden**.
+Provenance includes `sandbox_profile`.
 
 ---
 
-## 6. Quantum-Assisted Optimization Hooks (Device 46)
+## 6. Quantum-Assisted Optimization Hooks (Layer 7, Device 46)
 
-Device 46 is reserved for **quantum integration / experimental optimization**. DSLLVM provides hooks without coupling production code to quantum tooling.
+Layer 7 Device 46 ("Quantum Integration") provides hybrid algorithms (QAOA, VQE).
 
-### 6.1 Quantum Candidate Tagging
+### 6.1 Tagging Quantum Candidates
 
 Attribute:
 
@@ -472,36 +358,17 @@ __attribute__((dsmil_quantum_candidate("placement")))
 void placement_solver(...);
 ```
 
-Semantics:
-
-* Marks a function as a **candidate for quantum optimization / offload**.
-* Optional string differentiates class of problem:
-
-  * `"placement"` (model/device placement).
-  * `"routing"` (network path selection).
-  * `"schedule"` (job scheduling).
-  * `"hyperparam_search"` (hyperparameter tuning).
-
-Lowered metadata:
+Metadata:
 
 * `!dsmil.quantum_candidate = !"placement"`
 
-### 6.2 Problem Extraction Pass: `dsmil-quantum-export`
+### 6.2 Problem Extraction: `dsmil-quantum-export`
 
-Pass **`dsmil-quantum-export`**:
+Pass:
 
-* For each `dsmil_quantum_candidate`:
+* Analyzes candidate functions; when patterns match known optimization templates, emits QUBO/Ising descriptions.
 
-  * Analyze function and extract:
-
-    * Variables and constraints representing optimization problem, where feasible.
-    * Map to QUBO/Ising style formulation when patterns match known templates.
-
-* Emit sidecar files per binary:
-
-  * `binary_name.quantum.json` (or `.yaml` / `.qubo`) describing problem instances.
-
-Example structure:
+Sidecar:
 
 ```json
 {
@@ -514,7 +381,7 @@ Example structure:
       "representation": "qubo",
       "qubo": {
         "Q": [[0, 1], [1, 0]],
-        "variables": ["model_1_device_47", "model_1_device_12"]
+        "variables": ["model_1_dev47", "model_1_dev12"]
       }
     }
   ]
@@ -523,105 +390,90 @@ Example structure:
 
 ### 6.3 External Quantum Flow
 
-* DSLLVM itself remains classical.
-* External **Quantum Orchestrator (Device 46)**:
+External Quantum Orchestrator (on Device 46):
 
-  * Consumes `*.quantum.json` / `.qubo`.
-  * Maps problems into Qiskit/other frameworks.
-  * Runs VQE/QAOA/other routines.
-  * Writes back improved parameters / mappings as:
+* Consumes `*.quantum.json`.
+* Runs QAOA/VQE using Qiskit or similar.
+* Writes back solutions (`*.quantum_solution.json`) for use by runtime or next build.
 
-    * `*.quantum_solution.json` that DSMIL runtime or next build can ingest.
-
-This allows iterative improvement of placement/scheduling/hyperparameters using quantum tooling without destabilizing the core toolchain.
+DSLLVM itself remains classical.
 
 ---
 
 ## 7. Tooling, Packaging & Repo Layout
 
-### 7.1 CLI Tools & Wrappers
+### 7.1 CLI Tools
 
-Provide the following user-facing tools:
-
-* `dsmil-clang`, `dsmil-clang++`, `dsmil-llc`
-
-  * Meteor Lake + DSMIL defaults baked in.
-
-* `dsmil-opt`
-
-  * Wrapper around `opt` with DSMIL pass pipeline presets.
-
-* `dsmil-verify`
-
-  * High-level command that:
-
-    * Runs provenance verification on binaries.
-    * Checks DSMIL layer policy, stage policy, and sandbox config.
-    * Outputs human-readable and JSON summaries.
+* `dsmil-clang`, `dsmil-clang++`, `dsmil-llc` – DSMIL target wrappers.
+* `dsmil-opt` – `opt` wrapper with DSMIL pass presets.
+* `dsmil-verify` – provenance + policy verifier.
+* `dsmil-policy-dryrun` – run passes without modifying binaries (see §10).
+* `dsmil-abi-diff` – compare DSMIL posture between builds (see §10).
 
 ### 7.2 Standard Pass Pipelines
 
-Recommended default pass pipeline for **production DSMIL binary**:
+Example production pipeline (`dsmil-default`):
 
-1. Standard LLVM optimization pipeline (`-O3`).
-2. DSMIL passes (order approximate):
+1. LLVM `-O3`.
+2. `dsmil-bandwidth-estimate`.
+3. `dsmil-device-placement` (optionally AI-enhanced, §9).
+4. `dsmil-layer-check`.
+5. `dsmil-stage-policy`.
+6. `dsmil-quantum-export`.
+7. `dsmil-sandbox-wrap`.
+8. `dsmil-provenance-pass`.
 
-   * `dsmil-bandwidth-estimate`
-   * `dsmil-device-placement`
-   * `dsmil-layer-check`
-   * `dsmil-stage-policy`
-   * `dsmil-quantum-export` (for tagged functions)
-   * `dsmil-sandbox-wrap` (LTO / link stage)
-   * `dsmil-provenance-emit` (CNSA 2.0 record generation)
+Other presets:
 
-Expose as shorthand:
+* `dsmil-debug` – weaker enforcement, more logging.
+* `dsmil-lab` – annotate only, do not fail builds.
 
-* `-fpass-pipeline=dsmil-default`
-* `-fpass-pipeline=dsmil-debug` (less strict)
-* `-fpass-pipeline=dsmil-lab` (no enforcement, just annotation).
-
-### 7.3 Repository Layout (Proposed)
+### 7.3 Repo Layout (Proposed)
 
 ```text
 DSLLVM/
-├─ dsmil/
-│  ├─ cmake/                      # CMake integration, target definitions
-│  ├─ docs/
-│  │  ├─ DSLLVM-DESIGN.md         # This specification
-│  │  ├─ PROVENANCE-CNSA2.md      # Deep dive on CNSA 2.0 crypto flows
-│  │  ├─ ATTRIBUTES.md            # Reference for dsmil_* attributes
-│  │  └─ PIPELINES.md             # Pass pipeline presets
-│  ├─ include/
-│  │  ├─ dsmil_attributes.h       # C/C++ attribute macros / annotations
-│  │  ├─ dsmil_provenance.h       # Structures / helpers for provenance
-│  │  └─ dsmil_sandbox.h          # Role-based sandbox helper declarations
-│  ├─ lib/
-│  │  ├─ Target/
-│  │  │  └─ X86/
-│  │  │     └─ DSMILTarget.cpp    # meteorlake+dsmil target integration
-│  │  ├─ Passes/
-│  │  │  ├─ DsmilBandwidthPass.cpp
-│  │  │  ├─ DsmilDevicePlacementPass.cpp
-│  │  │  ├─ DsmilLayerCheckPass.cpp
-│  │  │  ├─ DsmilStagePolicyPass.cpp
-│  │  │  ├─ DsmilQuantumExportPass.cpp
-│  │  │  ├─ DsmilSandboxWrapPass.cpp
-│  │  │  └─ DsmilProvenancePass.cpp
-│  │  └─ Runtime/
-│  │     ├─ dsmil_sandbox_runtime.c
-│  │     └─ dsmil_provenance_runtime.c
-│  ├─ tools/
-│  │  ├─ dsmil-clang/             # Wrapper frontends
-│  │  ├─ dsmil-llc/
-│  │  ├─ dsmil-opt/
-│  │  └─ dsmil-verify/
-│  └─ test/
-│     ├─ dsmil/
-│     │  ├─ layer_policies/
-│     │  ├─ stage_policies/
-│     │  ├─ provenance/
-│     │  └─ sandbox/
-│     └─ lit.cfg.py
+├─ cmake/
+├─ docs/
+│  ├─ DSLLVM-DESIGN.md
+│  ├─ PROVENANCE-CNSA2.md
+│  ├─ ATTRIBUTES.md
+│  ├─ PIPELINES.md
+│  └─ AI-INTEGRATION.md
+├─ include/
+│  ├─ dsmil_attributes.h
+│  ├─ dsmil_provenance.h
+│  ├─ dsmil_sandbox.h
+│  └─ dsmil_ai_advisor.h
+├─ lib/
+│  ├─ Target/X86/DSMILTarget.cpp
+│  ├─ Passes/
+│  │  ├─ DsmilBandwidthPass.cpp
+│  │  ├─ DsmilDevicePlacementPass.cpp
+│  │  ├─ DsmilLayerCheckPass.cpp
+│  │  ├─ DsmilStagePolicyPass.cpp
+│  │  ├─ DsmilQuantumExportPass.cpp
+│  │  ├─ DsmilSandboxWrapPass.cpp
+│  │  ├─ DsmilProvenancePass.cpp
+│  │  ├─ DsmilAICostModelPass.cpp
+│  │  └─ DsmilAISecurityScanPass.cpp
+│  └─ Runtime/
+│     ├─ dsmil_sandbox_runtime.c
+│     ├─ dsmil_provenance_runtime.c
+│     └─ dsmil_ai_advisor_runtime.c
+├─ tools/
+│  ├─ dsmil-clang/
+│  ├─ dsmil-llc/
+│  ├─ dsmil-opt/
+│  ├─ dsmil-verify/
+│  ├─ dsmil-policy-dryrun/
+│  └─ dsmil-abi-diff/
+└─ test/
+   └─ dsmil/
+      ├─ layer_policies/
+      ├─ stage_policies/
+      ├─ provenance/
+      ├─ sandbox/
+      └─ ai_advisor/
 ```
 
 ### 7.4 CI / CD & Policy Enforcement
@@ -655,9 +507,243 @@ DSLLVM/
 
 ---
 
-## Appendix A – Attribute Summary
+## 8. AI-Assisted Compilation via DSMIL Layers 3–9
 
-Quick reference:
+The DSMIL AI architecture provides rich AI capabilities per layer (LLMs in Layer 7, security AI in Layer 8, strategic planners in Layer 9, predictive analytics in Layers 4–6).
+
+DSLLVM uses these as **external advisors** via a defined request/response protocol.
+
+### 8.1 AI Advisor Overview
+
+DSLLVM can emit **AI advisory requests**:
+
+* Input:
+
+  * Summaries of modules/IR (statistics, CFG features).
+  * Existing DSMIL metadata (`layer`, `device`, `stage`, `bw_estimate`).
+  * Current build goals (latency targets, power budgets, security posture).
+
+* Output (AI suggestions):
+
+  * Suggested `dsmil_stage`, `dsmil_layer`, `dsmil_device` annotations.
+  * Pass pipeline tuning (e.g., "favor NPU for these kernels").
+  * Refactoring hints ("split function X; mark param Y as `dsmil_untrusted_input`").
+  * Risk flags ("this path appears security-sensitive; enable sandbox profile S").
+
+AI results are **never blindly trusted**: deterministic DSLLVM passes re-check constraints.
+
+### 8.2 Layer 7 LLM Advisor (Device 47)
+
+Layer 7 Device 47 hosts LLMs up to ~7B parameters with INT8 quantization.
+
+"L7 Advisor" roles:
+
+* Suggest code-level annotations:
+
+  * Infer `dsmil_stage` from project layout / comments.
+  * Guess appropriate `dsmil_layer`/`device` per module (e.g., security code → L8; exec support → L9).
+
+* Explainability:
+
+  * Generate human-readable rationales for policy decisions in `AI-REPORT.md`.
+  * Summarize complex IR into developer-friendly text for code reviews.
+
+DSLLVM integration:
+
+* Pass **`dsmil-ai-advisor-annotate`**:
+
+  * Serializes module summary → `*.dsmilai_request.json`.
+  * External L7 service writes `*.dsmilai_response.json`.
+  * DSLLVM merges suggestions into metadata (under a "suggested" namespace; actual enforcement still via normal passes).
+
+### 8.3 Layer 8 Security AI Advisor
+
+Layer 8 provides ~188 TOPS for security AI & adversarial ML defense.
+
+"L8 Advisor" roles:
+
+* Identify risky patterns:
+
+  * Untrusted input flows (paired with `dsmil_untrusted_input`, see §8.5).
+  * Potential side-channel patterns.
+  * Dangerous API use in security-critical layers (8–9).
+
+* Suggest:
+
+  * Where to enforce `dsmil_sandbox` roles more strictly.
+  * Additional logging / telemetry for security-critical paths.
+
+DSLLVM integration:
+
+* **`dsmil-ai-security-scan`** pass:
+
+  * Option 1: offline – uses pre-trained ML model embedded locally.
+  * Option 2: online – exports features to an L8 service.
+
+* Attaches:
+
+  * `!dsmil.security_risk_score` per function.
+  * `!dsmil.security_hints` describing suggested mitigations.
+
+### 8.4 Layer 5/6 Predictive AI for Performance
+
+Layers 5–6 handle advanced predictive analytics and strategic simulations.
+
+Roles:
+
+* Predict per-function/runtime performance under realistic workloads:
+
+  * Given call-frequency profiles and `*.dsmilmap` data.
+  * Use time-series and scenario models to predict "hot path" clusters.
+
+Integration:
+
+* **`dsmil-ai-perf-forecast`** tool:
+
+  * Consumes:
+
+    * History of `*.dsmilmap` + runtime metrics (latency, power).
+    * New build's `*.dsmilmap`.
+
+  * Produces:
+
+    * Forecasts: "Functions A,B,C will likely dominate latency in scenario S".
+    * Suggestions: move certain kernels from CPU AMX → NPU / GPU, or vice versa.
+
+* DSLLVM can fold this back by re-running `dsmil-device-placement` with updated targets.
+
+### 8.5 `dsmil_untrusted_input` & AI-Assisted IFC
+
+Add attribute:
+
+```c
+__attribute__((dsmil_untrusted_input))
+```
+
+* Mark function parameters / globals that ingest untrusted data.
+
+Combined with L8 advisor:
+
+* DSLLVM can:
+
+  * Identify flows from `dsmil_untrusted_input` into dangerous sinks.
+  * Emit warnings or suggest `dsmil_gateway` / `dsmil_sandbox` for those paths.
+  * Forward high-risk flows to L8 models for deeper analysis.
+
+---
+
+## 9. AI-Trained Cost Models & Schedulers
+
+Beyond "call out to the big LLMs", DSLLVM embeds **small, distilled ML models** as cost models, running locally on CPU/NPU.
+
+### 9.1 ML Cost Model Plugin
+
+Pass **`DsmilAICostModelPass`**:
+
+* Replaces or augments heuristic cost models for:
+
+  * Inlining
+  * Loop unrolling
+  * Vectorization choice (AVX2 vs AMX vs NPU/GPU offload)
+  * Device placement (CPU/NPU/GPU) for kernels
+
+Implementation:
+
+* Trained offline using:
+
+  * The DSMIL AI stack (L7 + L5 performance modeling).
+  * Historical build & runtime data from JRTC1-5450.
+
+* At compile-time:
+
+  * Uses a compact ONNX model executing via OpenVINO/AMX/NPU; no network needed.
+  * Takes as input static features (loop depth, memory access patterns, etc.) and outputs:
+
+    * Predicted speedup / penalty for each choice.
+    * Confidence scores.
+
+Outputs feed `dsmil-device-placement` and standard LLVM codegen decisions.
+
+### 9.2 Scheduler for Multi-Layer AI Deployment
+
+For models that can span multiple accelerators (e.g., LLMs split across AMX/iGPU/custom ASICs), DSLLVM provides a **multi-layer scheduler**:
+
+* Reads:
+
+  * `*.dsmilmap`
+  * AI cost model outputs
+  * High-level objectives (e.g., "min latency subject to ≤120W power")
+
+* Computes:
+
+  * Partition plan (which kernels run on which physical accelerators).
+  * Layer-specific deployment suggestions (e.g., route certain inference paths to Layer 7 vs Layer 9 depending on clearance).
+
+This is implemented as a post-link tool, but grounded in DSLLVM metadata.
+
+---
+
+## 10. AI Integration Modes & Guardrails
+
+### 10.1 AI Integration Modes
+
+Configurable mode:
+
+* `--ai-mode=off`
+
+  * No AI calls; deterministic, classic LLVM behavior.
+
+* `--ai-mode=local`
+
+  * Only embedded ML cost models run (no external services).
+
+* `--ai-mode=advisor`
+
+  * External L7/L8/L5 advisors used; suggestions applied only if they pass deterministic checks; all changes logged.
+
+* `--ai-mode=lab`
+
+  * Permissive; DSLLVM may auto-apply AI suggestions while still satisfying layer/clearance policies.
+
+### 10.2 Policy Dry-Run
+
+Tool: `dsmil-policy-dryrun`:
+
+* Runs all DSMIL/AI passes in **report-only** mode:
+
+  * Layer/clearance/ROE checks.
+  * Stage policy.
+  * Security scan.
+  * AI advisor hints.
+  * Placement & perf forecasts.
+
+* Emits:
+
+  * `policy-report.json`
+  * Optional Markdown summary for humans.
+
+No IR changes, no ELF modifications.
+
+### 10.3 Diff-Guard for Security Posture
+
+Tool: `dsmil-abi-diff`:
+
+* Compares two builds' DSMIL posture:
+
+  * Provenance contents.
+  * `*.dsmilmap` mappings.
+  * Sandbox profiles.
+  * AI risk scores and suggested mitigations.
+
+* Outputs:
+
+  * "This build added a new L8 sandbox, changed Device 47 workload, and raised risk score for function X from 0.2 → 0.6."
+
+Useful for code review and change-approval workflows.
+
+---
+
+## Appendix A – Attribute Summary
 
 * `dsmil_layer(int)`
 * `dsmil_device(int)`
@@ -669,38 +755,23 @@ Quick reference:
 * `dsmil_kv_cache`
 * `dsmil_hot_model`
 * `dsmil_quantum_candidate(const char*)`
+* `dsmil_untrusted_input`
 
 ---
 
-## Appendix B – DSMIL Pass Summary
+## Appendix B – DSMIL & AI Pass Summary
 
-* `dsmil-bandwidth-estimate`
-
-  * Estimate data movement and bandwidth per function.
-
-* `dsmil-device-placement`
-
-  * Suggest CPU/NPU/GPU target + memory tier.
-
-* `dsmil-layer-check`
-
-  * Enforce DSMIL layer/clearance/ROE constraints.
-
-* `dsmil-stage-policy`
-
-  * Enforce MLOps stage policies for binaries.
-
-* `dsmil-quantum-export`
-
-  * Export QUBO/Ising-style problems for quantum optimization.
-
-* `dsmil-sandbox-wrap`
-
-  * Insert sandbox setup wrappers around `main` based on `dsmil_sandbox`.
-
-* `dsmil-provenance-pass`
-
-  * Generate CNSA 2.0 provenance with SHA-384 + ML-DSA-87, optional ML-KEM-1024.
+* `dsmil-bandwidth-estimate` – BW and memory class estimation.
+* `dsmil-device-placement` – CPU/NPU/GPU target + memory tier hints.
+* `dsmil-layer-check` – Layer/clearance/ROE enforcement.
+* `dsmil-stage-policy` – Stage policy enforcement.
+* `dsmil-quantum-export` – Export quantum optimization problems.
+* `dsmil-sandbox-wrap` – Sandbox wrapper insertion.
+* `dsmil-provenance-pass` – CNSA 2.0 provenance generation.
+* `dsmil-ai-advisor-annotate` – L7 advisor annotations.
+* `dsmil-ai-security-scan` – L8 security AI analysis.
+* `dsmil-ai-perf-forecast` – L5/6 performance forecasting (offline tool).
+* `DsmilAICostModelPass` – Embedded ML cost models for codegen decisions.
 
 ---
 
@@ -739,27 +810,44 @@ Quick reference:
    * Implement `dsmil-sandbox-wrap`
    * Create runtime library components
 
-### Phase 4: Quantum & Tooling (Weeks 17-20)
+### Phase 4: Quantum & AI Integration (Weeks 17-22)
 
 1. **Quantum Hooks**
    * Implement `dsmil-quantum-export`
    * Define output formats
 
-2. **User Tools**
+2. **AI Advisor Integration**
+   * Implement `dsmil-ai-advisor-annotate` pass
+   * Define request/response JSON schemas
+   * Implement `dsmil-ai-security-scan` pass
+   * Create AI cost model plugin infrastructure
+
+### Phase 5: Tooling & Hardening (Weeks 23-28)
+
+1. **User Tools**
    * Implement `dsmil-verify`
+   * Implement `dsmil-policy-dryrun`
+   * Implement `dsmil-abi-diff`
    * Create comprehensive test suite
    * Documentation and examples
 
-### Phase 5: Hardening & Deployment (Weeks 21-24)
+2. **AI Cost Models**
+   * Train initial ML cost models on DSMIL hardware
+   * Integrate ONNX runtime for local inference
+   * Implement multi-layer scheduler
+
+### Phase 6: Deployment & Validation (Weeks 29-32)
 
 1. **Testing & Validation**
    * Comprehensive integration tests
+   * AI advisor validation against ground truth
    * Performance benchmarking
    * Security audit
 
 2. **CI/CD Integration**
    * Automated builds
    * Policy validation
+   * AI advisor quality gates
    * Release packaging
 
 ---
@@ -768,27 +856,41 @@ Quick reference:
 
 ### Threat Model
 
-1. **Supply Chain Attacks**
-   * Mitigation: CNSA 2.0 provenance with ML-DSA-87 signatures
-   * All binaries must have valid signatures from trusted PSK
+**Threats Mitigated**:
+- ✓ Binary tampering (integrity via signatures)
+- ✓ Supply chain attacks (provenance traceability)
+- ✓ Unauthorized execution (policy enforcement)
+- ✓ Quantum cryptanalysis (CNSA 2.0 algorithms)
+- ✓ Key compromise (rotation, certificate chains)
+- ✓ Untrusted input flows (IFC + L8 analysis)
 
-2. **Layer Boundary Violations**
-   * Mitigation: Compile-time `dsmil-layer-check` enforcement
-   * Runtime validation via provenance
+**Residual Risks**:
+- ⚠ Compromised build system (mitigation: secure build enclaves, TPM attestation)
+- ⚠ AI advisor poisoning (mitigation: deterministic re-checking, audit logs)
+- ⚠ Insider threats (mitigation: multi-party signing, audit logs)
+- ⚠ Zero-day in crypto implementation (mitigation: multiple algorithm support)
 
-3. **Privilege Escalation**
-   * Mitigation: `dsmil-sandbox-wrap` with libcap-ng + seccomp
-   * ROE policy enforcement
+### AI Security Considerations
 
-4. **Side-Channel Attacks**
-   * Consideration: Constant-time crypto operations in provenance system
-   * Metadata encryption via ML-KEM-1024 for sensitive deployments
+1. **AI Model Integrity**:
+   - Embedded ML cost models signed with TSK
+   - Version tracking for all AI components
+   - Fallback to heuristic models if AI fails
 
-### Compliance
+2. **AI Advisor Sandboxing**:
+   - External L7/L8/L5 advisors run in isolated containers
+   - Network-level restrictions on advisor communication
+   - Rate limiting on AI service calls
 
-* **CNSA 2.0**: SHA-384, ML-DSA-87, ML-KEM-1024
-* **FIPS 140-3**: When using approved crypto implementations
-* **Common Criteria**: EAL4+ target for provenance system
+3. **Determinism & Auditability**:
+   - All AI suggestions logged with timestamps
+   - Deterministic passes always validate AI outputs
+   - Diff-guard tracks AI-induced changes
+
+4. **AI Model Versioning**:
+   - Provenance includes AI model versions used
+   - Reproducible builds require fixed AI model versions
+   - CI validates AI suggestions against known-good baselines
 
 ---
 
@@ -799,18 +901,24 @@ Quick reference:
 * **Metadata Emission**: <1% overhead
 * **Analysis Passes**: 2-5% compilation time increase
 * **Provenance Generation**: 1-3% link time increase
-* **Total**: <10% increase in build times
+* **AI Advisor Calls** (when enabled):
+  * Local ML models: 3-8% overhead
+  * External services: 10-30% overhead (parallel/async)
+* **Total** (AI mode=local): <15% increase in build times
+* **Total** (AI mode=advisor): 20-40% increase in build times
 
 ### Runtime Overhead
 
 * **Provenance Validation**: One-time cost at program load (~10-50ms)
 * **Sandbox Setup**: One-time cost at program start (~5-20ms)
 * **Metadata Access**: Zero runtime overhead (compile-time only)
+* **AI-Enhanced Placement**: Can improve runtime by 10-40% for AI workloads
 
 ### Memory Overhead
 
 * **Binary Size**: +5-15% (metadata, provenance sections)
 * **Sidecar Files**: ~1-5 KB per binary (`.dsmilmap`, `.quantum.json`)
+* **AI Models**: ~50-200 MB for embedded cost models (one-time)
 
 ---
 
@@ -819,6 +927,7 @@ Quick reference:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | v1.0 | 2025-11-24 | SWORDIntel/DSMIL Team | Initial specification |
+| v1.1 | 2025-11-24 | SWORDIntel/DSMIL Team | Added AI-assisted compilation features (§8-10), AI passes, new tools, extended roadmap |
 
 ---
 
