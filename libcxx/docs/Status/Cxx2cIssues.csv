@@ -92,7 +92,7 @@
 "`LWG4085 <https://wg21.link/LWG4085>`__","``ranges::generate_random``'s helper lambda should specify the return type","2024-11 (Wrocław)","","","`#118347 <https://github.com/llvm/llvm-project/issues/118347>`__",""
 "`LWG4088 <https://wg21.link/LWG4088>`__","``println`` ignores the locale imbued in ``std::ostream``","2024-11 (Wrocław)","|Complete|","18","`#118348 <https://github.com/llvm/llvm-project/issues/118348>`__",""
 "`LWG4112 <https://wg21.link/LWG4112>`__","``has-arrow`` should required ``operator->()`` to be ``const``-qualified","2024-11 (Wrocław)","","","`#118349 <https://github.com/llvm/llvm-project/issues/118349>`__",""
-"`LWG4113 <https://wg21.link/LWG4113>`__","Disallow ``has_unique_object_representations<Incomplete[]>``","2024-11 (Wrocław)","|Complete|","","`#118350 <https://github.com/llvm/llvm-project/issues/118350>`__",""
+"`LWG4113 <https://wg21.link/LWG4113>`__","Disallow ``has_unique_object_representations<Incomplete[]>``","2024-11 (Wrocław)","|Complete|","6","`#118350 <https://github.com/llvm/llvm-project/issues/118350>`__",""
 "`LWG4119 <https://wg21.link/LWG4119>`__","``generator::promise_type::yield_value(ranges::elements_of<R, Alloc>)``'s nested ``generator`` may be ill-formed","2024-11 (Wrocław)","","","`#118351 <https://github.com/llvm/llvm-project/issues/118351>`__",""
 "`LWG4124 <https://wg21.link/LWG4124>`__","Cannot format ``zoned_time`` with resolution coarser than ``seconds``","2024-11 (Wrocław)","","","`#118352 <https://github.com/llvm/llvm-project/issues/118352>`__",""
 "`LWG4126 <https://wg21.link/LWG4126>`__","Some feature-test macros for fully freestanding features are not yet marked freestanding","2024-11 (Wrocław)","","","`#118353 <https://github.com/llvm/llvm-project/issues/118353>`__",""
