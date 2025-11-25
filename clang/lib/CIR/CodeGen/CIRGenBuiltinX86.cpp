@@ -33,6 +33,40 @@ static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
       .getResult();
 }
 
+// Convert the mask from an integer type to a vector of i1.
+static mlir::Value getMaskVecValue(CIRGenFunction &cgf, mlir::Value mask,
+                                   unsigned numElts, mlir::Location loc) {
+  cir::VectorType maskTy =
+      cir::VectorType::get(cgf.getBuilder().getSIntNTy(1),
+                           cast<cir::IntType>(mask.getType()).getWidth());
+
+  mlir::Value maskVec = cgf.getBuilder().createBitcast(mask, maskTy);
+
+  // If we have less than 8 elements, then the starting mask was an i8 and
+  // we need to extract down to the right number of elements.
+  if (numElts < 8) {
+    llvm::SmallVector<int64_t, 4> indices;
+    for (unsigned i = 0; i != numElts; ++i)
+      indices.push_back(i);
+    maskVec = cgf.getBuilder().createVecShuffle(loc, maskVec, maskVec, indices);
+  }
+
+  return maskVec;
+}
+
+static mlir::Value emitX86MaskedLoad(CIRGenFunction &cgf,
+                                     ArrayRef<mlir::Value> ops,
+                                     llvm::Align alignment,
+                                     mlir::Location loc) {
+  mlir::Type ty = ops[1].getType();
+  mlir::Value ptr = ops[0];
+  mlir::Value maskVec =
+      getMaskVecValue(cgf, ops[2], cast<cir::VectorType>(ty).getSize(), loc);
+
+  return cgf.getBuilder().createMaskedLoad(loc, ty, ptr, alignment, maskVec,
+                                           ops[1]);
+}
+
 // OG has unordered comparison as a form of optimization in addition to
 // ordered comparison, while CIR doesn't.
 //
@@ -327,6 +361,11 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_movdqa64store512_mask:
   case X86::BI__builtin_ia32_storeaps512_mask:
   case X86::BI__builtin_ia32_storeapd512_mask:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
+
   case X86::BI__builtin_ia32_loadups128_mask:
   case X86::BI__builtin_ia32_loadups256_mask:
   case X86::BI__builtin_ia32_loadups512_mask:
@@ -345,6 +384,9 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_loaddqudi128_mask:
   case X86::BI__builtin_ia32_loaddqudi256_mask:
   case X86::BI__builtin_ia32_loaddqudi512_mask:
+    return emitX86MaskedLoad(*this, ops, llvm::Align(1),
+                             getLoc(expr->getExprLoc()));
+
   case X86::BI__builtin_ia32_loadsbf16128_mask:
   case X86::BI__builtin_ia32_loadsh128_mask:
   case X86::BI__builtin_ia32_loadss128_mask:

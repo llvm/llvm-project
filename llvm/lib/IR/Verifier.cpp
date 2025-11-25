@@ -6275,10 +6275,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(Call.getType()->isVectorTy(), "masked_load: must return a vector",
           Call);
 
-    Value *Mask = Call.getArgOperand(1);
-    Value *PassThru = Call.getArgOperand(2);
+    ConstantInt *Alignment = cast<ConstantInt>(Call.getArgOperand(1));
+    Value *Mask = Call.getArgOperand(2);
+    Value *PassThru = Call.getArgOperand(3);
     Check(Mask->getType()->isVectorTy(), "masked_load: mask must be vector",
           Call);
+    Check(Alignment->getValue().isPowerOf2(),
+          "masked_load: alignment must be a power of 2", Call);
     Check(PassThru->getType() == Call.getType(),
           "masked_load: pass through and return type must match", Call);
     Check(cast<VectorType>(Mask->getType())->getElementCount() ==
