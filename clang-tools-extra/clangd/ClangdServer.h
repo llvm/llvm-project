@@ -153,7 +153,8 @@ public:
     std::optional<std::string> WorkspaceRoot;
 
     /// Sets an alterante mode of operation. Current effects are:
-    /// - Using the current working directory as the working directory for fallback commands
+    /// - Using the current working directory as the working directory for
+    /// fallback commands
     bool StrongWorkspaceMode;
 
     /// The resource directory is used to find internal headers, overriding

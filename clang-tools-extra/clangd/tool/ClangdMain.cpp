@@ -503,9 +503,10 @@ opt<bool> EnableConfig{
 opt<bool> StrongWorkspaceMode{
     "strong-workspace-mode",
     cat(Features),
-    desc(
-        "An alternate mode of operation for clangd, operating more closely to the workspace.\n"
-        "When enabled, fallback commands use the workspace directory as their working directory instead of the parent folder."),
+    desc("An alternate mode of operation for clangd, operating more closely to "
+         "the workspace.\n"
+         "When enabled, fallback commands use the workspace directory as their "
+         "working directory instead of the parent folder."),
     init(false),
 };
 
