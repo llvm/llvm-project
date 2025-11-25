@@ -1296,7 +1296,8 @@ bool DependenceInfo::testZIV(const SCEV *Src, const SCEV *Dst,
 bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
                                    const SCEV *DstConst, const Loop *CurSrcLoop,
                                    const Loop *CurDstLoop, unsigned Level,
-                                   FullDependence &Result) const {
+                                   FullDependence &Result,
+                                   bool UnderRuntimeAssumptions) {
   if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
     return false;
 
@@ -1368,7 +1369,38 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
       Result.DV[Level].Direction &= Dependence::DVEntry::EQ;
     ++StrongSIVsuccesses;
   } else if (Delta->isZero()) {
-    // since 0/X == 0
+    // Check if coefficient could be zero. If so, 0/0 is undefined and we
+    // cannot conclude that only same-iteration dependencies exist.
+    // When coeff=0, all iterations access the same location.
+    if (isa<SCEVUnknown>(Coeff)) {
+      // Use both isKnownNonZero and range analysis to prove coefficient != 0.
+      bool CoeffKnownNonZero = SE->isKnownNonZero(Coeff) ||
+                               isKnownPredicate(CmpInst::ICMP_NE, Coeff,
+                                                SE->getZero(Coeff->getType()));
+      if (!CoeffKnownNonZero) {
+        // Cannot prove at compile time, would need runtime assumption.
+        if (UnderRuntimeAssumptions) {
+          const SCEVPredicate *Pred = SE->getComparePredicate(
+              ICmpInst::ICMP_NE, Coeff, SE->getZero(Coeff->getType()));
+          SmallVector<const SCEVPredicate *, 4> NewPreds(
+              Result.Assumptions.getPredicates());
+          NewPreds.push_back(Pred);
+          Result.Assumptions = SCEVUnionPredicate(NewPreds, *SE);
+          LLVM_DEBUG(dbgs() << "\t    Added runtime assumption: " << *Coeff
+                            << " != 0\n");
+        } else {
+          // Cannot add runtime assumptions, this test cannot handle this case.
+          // Let more complex tests try.
+          LLVM_DEBUG(dbgs() << "\t    Would need runtime assumption " << *Coeff
+                            << " != 0, but not allowed. Failing this test.\n");
+          return false;
+        }
+      } else {
+        LLVM_DEBUG(
+            dbgs() << "\t    Coefficient proven non-zero by SCEV analysis\n");
+      }
+    }
+    // Since 0/X == 0 (where X is known non-zero or assumed non-zero).
     Result.DV[Level].Distance = Delta;
     Result.DV[Level].Direction &= Dependence::DVEntry::EQ;
     ++StrongSIVsuccesses;
@@ -2331,7 +2363,8 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
 //
 // Return true if dependence disproved.
 bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
-                             FullDependence &Result) const {
+                             FullDependence &Result,
+                             bool UnderRuntimeAssumptions) {
   LLVM_DEBUG(dbgs() << "    src = " << *Src << "\n");
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
@@ -2349,8 +2382,9 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     Level = mapSrcLoop(CurSrcLoop);
     bool disproven;
     if (SrcCoeff == DstCoeff)
-      disproven = strongSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
-                                CurDstLoop, Level, Result);
+      disproven =
+          strongSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop, CurDstLoop,
+                        Level, Result, UnderRuntimeAssumptions);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
       disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
                                       CurDstLoop, Level, Result);
@@ -3540,6 +3574,10 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
 
   FullDependence Result(Src, Dst, SCEVUnionPredicate(Assume, *SE),
                         PossiblyLoopIndependent, CommonLevels);
+  // Track assumptions before running dependence tests. If new assumptions are
+  // added during tests, we must return the result even if AllEqual to preserve
+  // those assumptions for the caller.
+  size_t AssumptionsBeforeTests = Result.Assumptions.getPredicates().size();
   ++TotalArrayPairs;
 
   for (unsigned P = 0; P < Pairs; ++P) {
@@ -3583,7 +3621,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     case Subscript::SIV: {
       LLVM_DEBUG(dbgs() << ", SIV\n");
       unsigned Level;
-      if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result))
+      if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result,
+                  UnderRuntimeAssumptions))
         return nullptr;
       break;
     }
@@ -3664,6 +3703,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   } else {
     // On the other hand, if all directions are equal and there's no
     // loop-independent dependence possible, then no dependence exists.
+    // However, if we added runtime assumptions during the dependence tests,
+    // we must return the result to preserve those assumptions for the caller.
     bool AllEqual = true;
     for (unsigned II = 1; II <= CommonLevels; ++II) {
       if (Result.getDirection(II) != Dependence::DVEntry::EQ) {
@@ -3671,7 +3712,9 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
         break;
       }
     }
-    if (AllEqual)
+    bool AddedAssumptionsDuringTests =
+        Result.Assumptions.getPredicates().size() > AssumptionsBeforeTests;
+    if (AllEqual && !AddedAssumptionsDuringTests)
       return nullptr;
   }
 
