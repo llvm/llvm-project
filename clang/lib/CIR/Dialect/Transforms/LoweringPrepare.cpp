@@ -1097,7 +1097,7 @@ void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
     llvm::outs() << "success \n";
     // Replace the trivial copy constructor call with a `CopyOp`
     CIRBaseBuilderTy builder(getContext());
-    auto operands = op.getOperands();
+    mlir::ValueRange operands = op.getOperands();
     mlir::Value dest = operands[0];
     mlir::Value src = operands[1];
     builder.setInsertionPoint(op);
