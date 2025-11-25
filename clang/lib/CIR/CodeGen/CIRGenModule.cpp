@@ -1513,10 +1513,10 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
   }
   case Decl::OpenACCRoutine:
-    emitGlobalOpenACCDecl(cast<OpenACCRoutineDecl>(decl));
+    emitGlobalOpenACCRoutineDecl(cast<OpenACCRoutineDecl>(decl));
     break;
   case Decl::OpenACCDeclare:
-    emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
+    emitGlobalOpenACCDeclareDecl(cast<OpenACCDeclareDecl>(decl));
     break;
   case Decl::Enum:
   case Decl::Using:          // using X; [C++]
@@ -1560,7 +1560,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     CXXRecordDecl *crd = cast<CXXRecordDecl>(decl);
     assert(!cir::MissingFeatures::generateDebugInfo());
     for (auto *childDecl : crd->decls())
-      if (isa<VarDecl, CXXRecordDecl, EnumDecl>(childDecl))
+      if (isa<VarDecl, CXXRecordDecl, EnumDecl, OpenACCDeclareDecl>(childDecl))
         emitTopLevelDecl(childDecl);
     break;
   }
