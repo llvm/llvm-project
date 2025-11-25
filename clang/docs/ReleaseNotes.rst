@@ -756,6 +756,8 @@ OpenMP Support
 - Updated parsing and semantic analysis support for ``nowait`` clause to accept
   optional argument in OpenMP >= 60.
 - Added support for ``default`` clause on ``target`` directive.
+- Added support for OpenMP 6.0 ``fb_nullify`` and ``fb_preserve`` fallback
+  modifiers used with the ``need_device_ptr`` map modifier.
 
 Improvements
 ^^^^^^^^^^^^

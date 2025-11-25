@@ -580,6 +580,8 @@ implementation.
 | need_device_addr modifier for adjust_args clause            | :part:`partial`           | :none:`unclaimed`         | Parsing/Sema: https://github.com/llvm/llvm-project/pull/143442           |
 |                                                             |                           |                           |               https://github.com/llvm/llvm-project/pull/149586           |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
+| need_device_ptr modifier for adjust_args clause             | :part:`partial`           | :none:`unclaimed`         | Parsing/Sema: https://github.com/llvm/llvm-project/pull/168905           |
++-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Prescriptive num_threads                                    | :good:`done`              | :none:`unclaimed`         |  https://github.com/llvm/llvm-project/pull/160659                        |
 |                                                             |                           |                           |  https://github.com/llvm/llvm-project/pull/146403                        |
 |                                                             |                           |                           |  https://github.com/llvm/llvm-project/pull/146404                        |
