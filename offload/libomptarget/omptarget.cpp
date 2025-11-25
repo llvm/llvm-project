@@ -675,13 +675,13 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
        DataSize, DPxPTR(TgtPtrBegin), (TPR.Flags.IsNewEntry ? "" : " not"));
 
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_RETURN_PARAM) {
-      intptr_t Delta = reinterpret_cast<intptr_t>(HstPtrBegin) -
-                       reinterpret_cast<intptr_t>(HstPtrBase);
+      uintptr_t Delta = reinterpret_cast<uintptr_t>(HstPtrBegin) -
+                        reinterpret_cast<uintptr_t>(HstPtrBase);
       void *TgtPtrBase;
       if (TgtPtrBegin) {
         // Lookup succeeded, return device pointer adjusted by delta
         TgtPtrBase = reinterpret_cast<void *>(
-            reinterpret_cast<intptr_t>(TgtPtrBegin) - Delta);
+            reinterpret_cast<uintptr_t>(TgtPtrBegin) - Delta);
         DP("Returning device pointer " DPxMOD "\n", DPxPTR(TgtPtrBase));
       } else {
         // Lookup failed. So we have to decide what to do based on the
@@ -699,10 +699,12 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         // to references to a local device pointer that refers to this device
         // address.
         //
-        // TODO: Support OpenMP 6.1's "fb_nullify" and set the result to
-        // `null - Delta`.
+        // TODO: Add a new map-type bit to support OpenMP 6.1's `fb_nullify`
+        // and set the result to `nullptr - Delta`. Note that `fb_nullify` is
+        // already the default for `need_device_ptr`, but clang/flang do not
+        // support its codegen yet.
         TgtPtrBase = reinterpret_cast<void *>(
-            reinterpret_cast<intptr_t>(HstPtrBegin) - Delta);
+            reinterpret_cast<uintptr_t>(HstPtrBegin) - Delta);
         DP("Returning host pointer " DPxMOD " as fallback (lookup failed).\n",
            DPxPTR(TgtPtrBase));
       }
