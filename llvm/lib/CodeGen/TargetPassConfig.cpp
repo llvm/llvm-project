@@ -966,8 +966,10 @@ void TargetPassConfig::addISelPrepare() {
   addPreISel();
 
   // Force codegen to run according to the callgraph.
-  if (requiresCodeGenSCCOrder())
+  if (requiresCodeGenSCCOrder()) {
     addPass(new DummyCGSCCPass);
+    addInitialCGSCCCodeGenPasses();
+  }
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createObjCARCContractPass());

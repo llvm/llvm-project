@@ -364,6 +364,15 @@ protected:
     return true;
   }
 
+  /// Add passes at the start of the function pass manager created after
+  /// enforcing CGSCC ordering. This hook is only called when
+  /// requiresCodeGenSCCOrder() returns true.
+  ///
+  /// Targets can use this to insert passes that need to run at the beginning
+  /// of the codegen function pass manager, after the CGSCC boundary has been
+  /// established.
+  virtual void addInitialCGSCCCodeGenPasses() {}
+
   /// addMachineSSAOptimization - Add standard passes that optimize machine
   /// instructions in SSA form.
   virtual void addMachineSSAOptimization();

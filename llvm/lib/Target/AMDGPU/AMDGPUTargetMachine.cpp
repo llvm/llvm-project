@@ -1245,6 +1245,7 @@ public:
   }
 
   bool addPreISel() override;
+  void addInitialCGSCCCodeGenPasses() override;
   void addMachineSSAOptimization() override;
   bool addILPOpts() override;
   bool addInstSelector() override;
@@ -1502,6 +1503,11 @@ bool GCNPassConfig::addPreISel() {
     addPass(&AMDGPUPerfHintAnalysisLegacyID);
 
   return false;
+}
+
+void GCNPassConfig::addInitialCGSCCCodeGenPasses() {
+  if (EnableAMDGPUMachineLevelInliner)
+    addPass(createAMDGPUInliningAnchorPass());
 }
 
 void GCNPassConfig::addMachineSSAOptimization() {
