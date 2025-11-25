@@ -35,7 +35,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/LogicalResult.h"
 
 namespace mlir {
 namespace xegpu {
@@ -175,7 +174,7 @@ static bool requireTranspose(const xegpu::LayoutAttr layout,
   return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
 }
 
-/// Given a sequential and distributed vector type, return the list of
+/// Given a vector type and its distributed vector type, return the list of
 /// dimensions that are distributed.
 static SmallVector<int64_t> getDistributedDims(VectorType originalType,
                                                VectorType distributedType) {
