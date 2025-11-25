@@ -807,7 +807,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
         cast<StructType>(State.TypeAnalysis.inferScalarType(getOperand(0)));
     Value *Res = PoisonValue::get(toVectorizedTy(StructTy, State.VF));
     for (const auto &[LaneIndex, Op] : enumerate(operands())) {
-      for (unsigned FieldIndex : seq<unsigned>(StructTy->getNumElements())) {
+      for (unsigned FieldIndex = 0; FieldIndex != StructTy->getNumElements();
+           FieldIndex++) {
         Value *ScalarValue =
             Builder.CreateExtractValue(State.get(Op, true), FieldIndex);
         Value *VectorValue = Builder.CreateExtractValue(Res, FieldIndex);
@@ -846,7 +847,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
     auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
     Value *ReducedPartRdx = State.get(getOperand(2));
-    for (unsigned Idx : seq<unsigned>(3, getNumOperands()))
+    for (unsigned Idx = 3; Idx < getNumOperands(); ++Idx)
       ReducedPartRdx =
           Builder.CreateBinOp(Instruction::Or, State.get(getOperand(Idx)),
                               ReducedPartRdx, "bin.rdx");
@@ -874,7 +875,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
       MinMaxKind = IsSigned ? RecurKind::SMax : RecurKind::UMax;
     else
       MinMaxKind = IsSigned ? RecurKind::SMin : RecurKind::UMin;
-    for (unsigned Part : seq<unsigned>(1, UF))
+    for (unsigned Part = 1; Part < UF; ++Part)
       ReducedPartRdx = createMinMaxOp(Builder, MinMaxKind, ReducedPartRdx,
                                       State.get(getOperand(3 + Part)));
 
@@ -897,7 +898,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // each part of the reduction.
     unsigned UF = getNumOperands() - 1;
     VectorParts RdxParts(UF);
-    for (unsigned Part : seq<unsigned>(UF))
+    for (unsigned Part = 0; Part < UF; ++Part)
       RdxParts[Part] = State.get(getOperand(1 + Part), PhiR->isInLoop());
 
     IRBuilderBase::FastMathFlagGuard FMFG(Builder);
