@@ -734,7 +734,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   if (const Record *RV = R->getValueAsOptionalDef("RegInfos"))
     RSI = RegSizeInfoByHwMode(RV, RegBank.getHwModes());
   unsigned Size = R->getValueAsInt("Size");
-  if (!(RSI.hasDefault() || Size != 0 || VTs[0].isSimple()))
+  if (!RSI.hasDefault() && Size == 0 && !VTs[0].isSimple())
     PrintFatalError(R->getLoc(), "Impossible to determine register size");
   if (!RSI.hasDefault()) {
     RegSizeInfo RI;
