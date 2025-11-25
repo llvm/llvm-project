@@ -66,14 +66,7 @@ public:
     }
   }
 
-  StringRef getName() const { return Name; }
-
-  StringRef getBuffer() {
-    MutableArrayRef<char> Buffer = getMutBuffer();
-    return StringRef(Buffer.data(), Buffer.size());
-  }
-
-  MutableArrayRef<char> getMutBuffer() {
+  MutableArrayRef<char> getBuffer() {
     auto SegInfo = WorkingMem.getSegInfo(MemProt::Read);
     return SegInfo.WorkingMem;
   }
@@ -94,8 +87,6 @@ public:
   void failMaterialization(Error Err) {
     FinalizePromise.set_value(std::move(Err));
   }
-
-  void reportError(Error Err) { ES.reportError(std::move(Err)); }
 
   using GetLoadAddressFn = llvm::unique_function<ExecutorAddr(StringRef)>;
   Error visitSections(GetLoadAddressFn Callback);
@@ -119,7 +110,9 @@ template <typename ELFT>
 Error DebugObject::visitSectionLoadAddresses(GetLoadAddressFn Callback) {
   using SectionHeader = typename ELFT::Shdr;
 
-  Expected<ELFFile<ELFT>> ObjRef = ELFFile<ELFT>::create(getBuffer());
+  MutableArrayRef<char> Buffer = getBuffer();
+  StringRef BufferRef(Buffer.data(), Buffer.size());
+  Expected<ELFFile<ELFT>> ObjRef = ELFFile<ELFT>::create(BufferRef);
   if (!ObjRef)
     return ObjRef.takeError();
 
@@ -139,7 +132,7 @@ Error DebugObject::visitSectionLoadAddresses(GetLoadAddressFn Callback) {
   }
 
   LLVM_DEBUG({
-    dbgs() << "Section load-addresses in debug object for \"" << getName()
+    dbgs() << "Section load-addresses in debug object for \"" << Name
            << "\":\n";
     for (const SectionHeader &Header : *Sections) {
       StringRef Name = cantFail(ObjRef->getSectionName(Header));
@@ -156,7 +149,8 @@ Error DebugObject::visitSectionLoadAddresses(GetLoadAddressFn Callback) {
 
 Error DebugObject::visitSections(GetLoadAddressFn Callback) {
   unsigned char Class, Endian;
-  std::tie(Class, Endian) = getElfArchType(getBuffer());
+  MutableArrayRef<char> Buf = getBuffer();
+  std::tie(Class, Endian) = getElfArchType(StringRef(Buf.data(), Buf.size()));
 
   switch (Class) {
   case ELF::ELFCLASS32:
@@ -232,7 +226,7 @@ void ELFDebugObjectPlugin::notifyMaterializing(
   PendingObjs[&MR] = std::make_unique<DebugObject>(
       InputObj.getBufferIdentifier(), std::move(*Alloc), Ctx, ES);
 
-  MutableArrayRef<char> Buffer = PendingObjs[&MR]->getMutBuffer();
+  MutableArrayRef<char> Buffer = PendingObjs[&MR]->getBuffer();
   memcpy(Buffer.data(), InputObj.getBufferStart(), Size);
 }
 
