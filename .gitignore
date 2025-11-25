@@ -83,3 +83,22 @@ pythonenv*
 lat5150drvmil/02-ai-engine/tpm2_compat/c_acceleration/target/
 lat5150drvmil/.cache/
 lat5150drvmil/Upgrades.zip
+
+#==============================================================================#
+# Security-sensitive files (private keys, certificates, secrets)
+#==============================================================================#
+*.pem
+*.key
+*.p12
+*.pfx
+*.der
+*.crt
+*.cer
+*.csr
+*_signing_key.*
+*_private_key.*
+*.env.local
+*.env.production
+.env
+secrets.json
+credentials.json
