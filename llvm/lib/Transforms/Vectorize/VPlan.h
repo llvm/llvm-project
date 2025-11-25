@@ -2325,9 +2325,9 @@ class LLVM_ABI_FOR_TEST VPWidenPHIRecipe : public VPHeaderPHIRecipe {
 
 protected:
   /// Constructor for the VPActiveLaneMaskPHIRecipe subclass.
-  VPWidenPHIRecipe(unsigned SC, VPValue *Start,
-                   DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
-      : VPHeaderPHIRecipe(SC, nullptr, Start, DL), Name(Name.str()) {}
+  VPWidenPHIRecipe(unsigned char VPDefID, VPValue *Start, DebugLoc DL,
+                   const Twine &Name)
+      : VPHeaderPHIRecipe(VPDefID, nullptr, Start, DL), Name(Name.str()) {}
 
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
@@ -2338,9 +2338,8 @@ public:
         Name(Name.str()) {}
 
   VPWidenPHIRecipe *clone() override {
-    auto *C =
-        new VPWidenPHIRecipe(cast_if_present<PHINode>(getUnderlyingValue()),
-                             getOperand(0), getDebugLoc(), Name);
+    auto *C = new VPWidenPHIRecipe(cast<PHINode>(getUnderlyingValue()),
+                                   getOperand(0), getDebugLoc(), Name);
     for (VPValue *Op : llvm::drop_begin(operands()))
       C->addOperand(Op);
     return C;
@@ -2348,7 +2347,10 @@ public:
 
   ~VPWidenPHIRecipe() override = default;
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenPHISC)
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPDef::VPWidenPHISC ||
+           R->getVPDefID() == VPDef::VPActiveLaneMaskPHISC;
+  }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
@@ -3624,10 +3626,10 @@ public:
   ~VPActiveLaneMaskPHIRecipe() override = default;
 
   VPActiveLaneMaskPHIRecipe *clone() override {
-    auto *C = new VPActiveLaneMaskPHIRecipe(getOperand(0), getDebugLoc());
-    for (VPValue *Op : llvm::drop_begin(operands()))
-      C->addOperand(Op);
-    return C;
+    auto *R = new VPActiveLaneMaskPHIRecipe(getOperand(0), getDebugLoc());
+    for (VPValue *Op : drop_begin(operands()))
+      R->addOperand(Op);
+    return R;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPActiveLaneMaskPHISC)
