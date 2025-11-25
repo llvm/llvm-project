@@ -25046,7 +25046,8 @@ EVT RISCVTargetLowering::getOptimalMemOpType(
   }
 
   if (Op.isMemset())
-    return EVT::getVectorVT(Context, PreferredVT, Op.size() / PreferredVT.getStoreSize());
+    return EVT::getVectorVT(Context, PreferredVT,
+                            Op.size() / PreferredVT.getStoreSize());
 
   return MVT::getVectorVT(PreferredVT, MinVLenInBytes/PreferredVT.getStoreSize());
 }
