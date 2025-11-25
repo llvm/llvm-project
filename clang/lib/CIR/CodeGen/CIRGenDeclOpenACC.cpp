@@ -247,6 +247,14 @@ public:
     this->VisitClauseList(clauses);
   }
 
+  void VisitCopyInClause(const OpenACCCopyInClause &clause) {
+    for (const Expr *var : clause.getVarList())
+      cgm.emitGlobalOpenACCDeclareDataOperands<mlir::acc::CopyinOp>(
+          var, mlir::acc::DataClause::acc_copyin, clause.getModifierList(),
+          /*structured=*/true,
+          /*implicit=*/false, /*requiresDtor=*/true);
+  }
+
   void VisitCreateClause(const OpenACCCreateClause &clause) {
     for (const Expr *var : clause.getVarList())
       cgm.emitGlobalOpenACCDeclareDataOperands<mlir::acc::CreateOp>(
