@@ -278,14 +278,14 @@ template <class _Rp, class _Fp, class... _BoundArgs>
 struct is_bind_expression<__bind_r<_Rp, _Fp, _BoundArgs...> > : public true_type {};
 
 template <class _Fp, class... _BoundArgs>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bind<_Fp, _BoundArgs...>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bind<_Fp, _BoundArgs...>
 bind(_Fp&& __f, _BoundArgs&&... __bound_args) {
   typedef __bind<_Fp, _BoundArgs...> type;
   return type(std::forward<_Fp>(__f), std::forward<_BoundArgs>(__bound_args)...);
 }
 
 template <class _Rp, class _Fp, class... _BoundArgs>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bind_r<_Rp, _Fp, _BoundArgs...>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bind_r<_Rp, _Fp, _BoundArgs...>
 bind(_Fp&& __f, _BoundArgs&&... __bound_args) {
   typedef __bind_r<_Rp, _Fp, _BoundArgs...> type;
   return type(std::forward<_Fp>(__f), std::forward<_BoundArgs>(__bound_args)...);

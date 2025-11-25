@@ -672,11 +672,11 @@ public:
 
 #  if _LIBCPP_HAS_RTTI
   // function target access:
-  _LIBCPP_HIDE_FROM_ABI const std::type_info& target_type() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const std::type_info& target_type() const _NOEXCEPT;
   template <typename _Tp>
-  _LIBCPP_HIDE_FROM_ABI _Tp* target() _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Tp* target() _NOEXCEPT;
   template <typename _Tp>
-  _LIBCPP_HIDE_FROM_ABI const _Tp* target() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Tp* target() const _NOEXCEPT;
 #  endif // _LIBCPP_HAS_RTTI
 };
 
