@@ -796,7 +796,7 @@ static void processTileSizesFromOpenMPConstruct(
   }
 }
 
-static pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
+pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
   for (pft::Evaluation &nested : eval.getNestedEvaluations()) {
     // In an OpenMPConstruct there can be compiler directives:
     // 1 <<OpenMPConstruct>>
