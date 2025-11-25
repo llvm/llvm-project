@@ -11,6 +11,7 @@ pipeline {
     LLVM_PROJECTS = 'clang;lld'
     BUILD_DIR     = 'build'
 
+    // Use GCC 10 toolchain installed on the AMI
     CC  = 'gcc10-gcc'
     CXX = 'gcc10-g++'
   }
@@ -61,6 +62,34 @@ pipeline {
           echo "=== pkg-config ==="
           which pkg-config || true
           pkg-config --version || true
+        '''
+      }
+    }
+
+    stage('Bootstrap Ninja') {
+      steps {
+        sh '''
+          set -eux
+
+          NINJA_VERSION=1.11.1
+
+          echo "Existing ninja (if any):"
+          command -v ninja || true
+          ninja --version || true
+
+          # Need unzip for the GitHub artifact
+          sudo yum -y install unzip || true
+
+          cd /tmp
+          curl -fsSLO "https://github.com/ninja-build/ninja/releases/download/v${NINJA_VERSION}/ninja-linux.zip"
+          unzip -o ninja-linux.zip
+
+          sudo mv ninja /usr/local/bin/ninja
+          sudo chmod +x /usr/local/bin/ninja
+
+          echo "Ninja after upgrade:"
+          command -v ninja
+          ninja --version
         '''
       }
     }
