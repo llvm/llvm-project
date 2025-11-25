@@ -5108,7 +5108,7 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   // it is in an `acc serial` construct.
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Operation *accRegionOp =
-      mlir::acc::getEnclosingComputeOp(converter.getFirOpBuilder().getRegion());
+      mlir::acc::getEnclosingComputeOp(builder.getRegion());
   mlir::acc::LoopParMode parMode =
       mlir::isa_and_present<mlir::acc::ParallelOp>(accRegionOp) &&
               doConstruct.IsDoConcurrent()
