@@ -478,11 +478,11 @@ defm TCVTROWPS2BF16L : AMXAVX512_BASE<0x6d, 0x77, "tcvtrowps2bf16l", XS, XS>;
 multiclass AMXAVX512_TILEMOVE<bits<8> Opcode1, bits<8> Opcode2, string Opstr> {
   let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
     let SchedRW = [WriteSystem] in {
-      def rti : Ii8<0x7, MRMSrcReg, (outs VR512:$dst),
+      def rti : Ii8<Opcode1, MRMSrcReg, (outs VR512:$dst),
                     (ins TILE:$src1, u8imm:$src2),
                     !strconcat(Opstr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                     []>, TA, PD, EVEX, EVEX_V512;
-      def rte : I<0x4A, MRMSrcReg4VOp3, (outs VR512:$dst),
+      def rte : I<Opcode2, MRMSrcReg4VOp3, (outs VR512:$dst),
                   (ins TILE:$src1, GR32:$src2),
                   !strconcat(Opstr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                   []>, T8, PD, EVEX, VVVV, EVEX_V512;
