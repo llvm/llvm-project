@@ -93,10 +93,10 @@ public:
   void reportError(Error Err) { ES.reportError(std::move(Err)); }
 
   using GetLoadAddressFn = llvm::unique_function<ExecutorAddr(StringRef)>;
-  void visitSections(GetLoadAddressFn Callback);
+  Error visitSections(GetLoadAddressFn Callback);
 
   template <typename ELFT>
-  void visitSectionLoadAddresses(GetLoadAddressFn Callback);
+  Error visitSectionLoadAddresses(GetLoadAddressFn Callback);
 
 private:
   std::string Name;
@@ -111,27 +111,21 @@ private:
 };
 
 template <typename ELFT>
-void DebugObject::visitSectionLoadAddresses(GetLoadAddressFn Callback) {
+Error DebugObject::visitSectionLoadAddresses(GetLoadAddressFn Callback) {
   using SectionHeader = typename ELFT::Shdr;
 
   Expected<ELFFile<ELFT>> ObjRef = ELFFile<ELFT>::create(getBuffer());
-  if (!ObjRef) {
-    reportError(ObjRef.takeError());
-    return;
-  }
+  if (!ObjRef)
+    return ObjRef.takeError();
 
   Expected<ArrayRef<SectionHeader>> Sections = ObjRef->sections();
-  if (!Sections) {
-    reportError(Sections.takeError());
-    return;
-  }
+  if (!Sections)
+    return Sections.takeError();
 
   for (const SectionHeader &Header : *Sections) {
     Expected<StringRef> Name = ObjRef->getSectionName(Header);
-    if (!Name) {
-      reportError(Name.takeError());
-      return;
-    }
+    if (!Name)
+      return Name.takeError();
     if (Name->empty())
       continue;
     ExecutorAddr LoadAddress = Callback(*Name);
@@ -151,9 +145,11 @@ void DebugObject::visitSectionLoadAddresses(GetLoadAddressFn Callback) {
       }
     }
   });
+
+  return Error::success();
 }
 
-void DebugObject::visitSections(GetLoadAddressFn Callback) {
+Error DebugObject::visitSections(GetLoadAddressFn Callback) {
   unsigned char Class, Endian;
   std::tie(Class, Endian) = getElfArchType(getBuffer());
 
@@ -163,23 +159,22 @@ void DebugObject::visitSections(GetLoadAddressFn Callback) {
       return visitSectionLoadAddresses<ELF32LE>(std::move(Callback));
     if (Endian == ELF::ELFDATA2MSB)
       return visitSectionLoadAddresses<ELF32BE>(std::move(Callback));
-    return reportError(createStringError(
-        object_error::invalid_file_type,
-        "Invalid endian in 32-bit ELF object file: %x", Endian));
+    return createStringError(object_error::invalid_file_type,
+                             "Invalid endian in 32-bit ELF object file: %x",
+                             Endian);
 
   case ELF::ELFCLASS64:
     if (Endian == ELF::ELFDATA2LSB)
       return visitSectionLoadAddresses<ELF64LE>(std::move(Callback));
     if (Endian == ELF::ELFDATA2MSB)
       return visitSectionLoadAddresses<ELF64BE>(std::move(Callback));
-    return reportError(createStringError(
-        object_error::invalid_file_type,
-        "Invalid endian in 64-bit ELF object file: %x", Endian));
+    return createStringError(object_error::invalid_file_type,
+                             "Invalid endian in 64-bit ELF object file: %x",
+                             Endian);
 
   default:
-    return reportError(createStringError(object_error::invalid_file_type,
-                                         "Invalid arch in ELF object file: %x",
-                                         Class));
+    return createStringError(object_error::invalid_file_type,
+                             "Invalid arch in ELF object file: %x", Class);
   }
 }
 
@@ -258,7 +253,7 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     // Step 2: Once the target memory layout is ready, we write the
     // addresses of the LinkGraph sections into the load-address fields of the
     // section headers in our debug object allocation
-    DebugObj->visitSections(
+    Error Err = DebugObj->visitSections(
         [&G, &SectionsPatched, &HasDebugSections](StringRef Name) {
           SectionsPatched += 1;
           if (isDwarfSection(Name))
@@ -268,6 +263,8 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
           return SectionRange(*S).getStart();
         });
 
+    if (Err)
+      return Err;
     if (!SectionsPatched) {
       LLVM_DEBUG(dbgs() << "Skipping debug registration for LinkGraph '"
                         << G.getName() << "': no debug info\n");
