@@ -418,7 +418,7 @@ define void @test_rev_loops_non_deref_loads(ptr nocapture noundef writeonly %des
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 -2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <2 x i64> [[VEC_IND]], splat (i64 -2)
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
@@ -480,8 +480,8 @@ define i16 @test_strided_access(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sge <2 x i8> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[ALLOCA]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[ALLOCA]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[ALLOCA]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[TMP6]], align 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i16, ptr [[TMP8]], align 2
@@ -551,8 +551,8 @@ define void @test_rev_loops_strided_deref_loads(ptr nocapture noundef writeonly 
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i32> [[REVERSE]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_SRC]], i64 0, i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_SRC]], i64 0, i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_SRC]], i64 0, i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP10]], align 4
@@ -577,7 +577,7 @@ define void @test_rev_loops_strided_deref_loads(ptr nocapture noundef writeonly 
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 -2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <2 x i64> [[VEC_IND]], splat (i64 -2)
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       middle.block:
@@ -684,7 +684,7 @@ define void @adding_offset_overflows(i32 %n, ptr %A) {
 ; CHECK:       pred.store.continue4:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -707,7 +707,7 @@ define void @adding_offset_overflows(i32 %n, ptr %A) {
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT_LOOPEXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT_LOOPEXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:

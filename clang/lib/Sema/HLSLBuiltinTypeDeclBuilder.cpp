@@ -57,6 +57,29 @@ CXXConstructorDecl *lookupCopyConstructor(QualType ResTy) {
       return CD;
   return nullptr;
 }
+
+ParameterABI
+convertParamModifierToParamABI(HLSLParamModifierAttr::Spelling Modifier) {
+  assert(Modifier != HLSLParamModifierAttr::Spelling::Keyword_in &&
+         "HLSL 'in' parameters modifier cannot be converted to ParameterABI");
+  switch (Modifier) {
+  case HLSLParamModifierAttr::Spelling::Keyword_out:
+    return ParameterABI::HLSLOut;
+  case HLSLParamModifierAttr::Spelling::Keyword_inout:
+    return ParameterABI::HLSLInOut;
+  default:
+    llvm_unreachable("Invalid HLSL parameter modifier");
+  }
+}
+
+QualType getInoutParameterType(ASTContext &AST, QualType Ty) {
+  assert(!Ty->isReferenceType() &&
+         "Pointer and reference types cannot be inout or out parameters");
+  Ty = AST.getLValueReferenceType(Ty);
+  Ty.addRestrict();
+  return Ty;
+}
+
 } // namespace
 
 // Builder for template arguments of builtin types. Used internally
@@ -179,7 +202,7 @@ public:
   BuiltinTypeMethodBuilder &declareLocalVar(LocalVar &Var);
   template <typename... Ts>
   BuiltinTypeMethodBuilder &callBuiltin(StringRef BuiltinName,
-                                        QualType ReturnType, Ts... ArgSpecs);
+                                        QualType ReturnType, Ts &&...ArgSpecs);
   template <typename TLHS, typename TRHS>
   BuiltinTypeMethodBuilder &assign(TLHS LHS, TRHS RHS);
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr);
@@ -430,19 +453,36 @@ BuiltinTypeMethodBuilder::addParam(StringRef Name, QualType Ty,
 void BuiltinTypeMethodBuilder::createDecl() {
   assert(Method == nullptr && "Method or constructor is already created");
 
-  // create method or constructor type
+  // create function prototype
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   SmallVector<QualType> ParamTypes;
-  for (Param &MP : Params)
+  SmallVector<FunctionType::ExtParameterInfo> ParamExtInfos(Params.size());
+  uint32_t ArgIndex = 0;
+
+  // Create function prototype.
+  bool UseParamExtInfo = false;
+  for (Param &MP : Params) {
+    if (MP.Modifier != HLSLParamModifierAttr::Keyword_in) {
+      UseParamExtInfo = true;
+      FunctionType::ExtParameterInfo &PI = ParamExtInfos[ArgIndex];
+      ParamExtInfos[ArgIndex] =
+          PI.withABI(convertParamModifierToParamABI(MP.Modifier));
+      if (!MP.Ty->isDependentType())
+        MP.Ty = getInoutParameterType(AST, MP.Ty);
+    }
     ParamTypes.emplace_back(MP.Ty);
+    ++ArgIndex;
+  }
 
   FunctionProtoType::ExtProtoInfo ExtInfo;
+  if (UseParamExtInfo)
+    ExtInfo.ExtParameterInfos = ParamExtInfos.data();
   if (IsConst)
     ExtInfo.TypeQuals.addConst();
 
   QualType FuncTy = AST.getFunctionType(ReturnTy, ParamTypes, ExtInfo);
 
-  // create method or constructor decl
+  // Create method or constructor declaration.
   auto *TSInfo = AST.getTrivialTypeSourceInfo(FuncTy, SourceLocation());
   DeclarationNameInfo NameInfo = DeclarationNameInfo(Name, SourceLocation());
   if (IsCtor)
@@ -455,7 +495,7 @@ void BuiltinTypeMethodBuilder::createDecl() {
         AST, DeclBuilder.Record, SourceLocation(), NameInfo, FuncTy, TSInfo, SC,
         false, false, ConstexprSpecKind::Unspecified, SourceLocation());
 
-  // create params & set them to the function prototype
+  // Create params & set them to the method/constructor and function prototype.
   SmallVector<ParmVarDecl *> ParmDecls;
   unsigned CurScopeDepth = DeclBuilder.SemaRef.getCurScope()->getDepth();
   auto FnProtoLoc =
@@ -532,7 +572,7 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnThis() {
 template <typename... Ts>
 BuiltinTypeMethodBuilder &
 BuiltinTypeMethodBuilder::callBuiltin(StringRef BuiltinName,
-                                      QualType ReturnType, Ts... ArgSpecs) {
+                                      QualType ReturnType, Ts &&...ArgSpecs) {
   ensureCompleteDecl();
 
   std::array<Expr *, sizeof...(ArgSpecs)> Args{
@@ -1100,6 +1140,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   DeclarationName Load(&II);
   // TODO: We also need versions with status for CheckAccessFullyMapped.
   addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
+  addLoadWithStatusFunction(Load, /*IsConst=*/false);
 
   return *this;
 }
@@ -1193,6 +1234,22 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
 }
 
 BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
+                                                  bool IsConst) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  QualType ReturnTy = getHandleElementType();
+  return BuiltinTypeMethodBuilder(*this, Name, ReturnTy, IsConst)
+      .addParam("Index", AST.UnsignedIntTy)
+      .addParam("Status", AST.UnsignedIntTy, HLSLParamModifierAttr::Keyword_out)
+      .callBuiltin("__builtin_hlsl_resource_load_with_status", ReturnTy,
+                   PH::Handle, PH::_0, PH::_1)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addHandleAccessFunction(DeclarationName &Name,
                                                 bool IsConst, bool IsRef) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
@@ -1255,6 +1312,38 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addConsumeMethod() {
                    AST.getPointerType(AddrSpaceElemTy), PH::Handle,
                    PH::LastStmt)
       .dereference(PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addGetDimensionsMethodForBuffer() {
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType UIntTy = AST.UnsignedIntTy;
+
+  QualType HandleTy = getResourceHandleField()->getType();
+  auto *AttrResTy = cast<HLSLAttributedResourceType>(HandleTy.getTypePtr());
+
+  // Structured buffers except {RW}ByteAddressBuffer have overload
+  // GetDimensions(out uint numStructs, out uint stride).
+  if (AttrResTy->getAttrs().RawBuffer &&
+      AttrResTy->getContainedType() != AST.Char8Ty) {
+    return BuiltinTypeMethodBuilder(*this, "GetDimensions", AST.VoidTy)
+        .addParam("numStructs", UIntTy, HLSLParamModifierAttr::Keyword_out)
+        .addParam("stride", UIntTy, HLSLParamModifierAttr::Keyword_out)
+        .callBuiltin("__builtin_hlsl_resource_getdimensions_x", QualType(),
+                     PH::Handle, PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_getstride", QualType(),
+                     PH::Handle, PH::_1)
+        .finalize();
+  }
+
+  // Typed buffers and {RW}ByteAddressBuffer have overload
+  // GetDimensions(out uint dim).
+  return BuiltinTypeMethodBuilder(*this, "GetDimensions", AST.VoidTy)
+      .addParam("dim", UIntTy, HLSLParamModifierAttr::Keyword_out)
+      .callBuiltin("__builtin_hlsl_resource_getdimensions_x", QualType(),
+                   PH::Handle, PH::_0)
       .finalize();
 }
 

@@ -122,15 +122,21 @@ static cl::opt<unsigned>
                   cl::desc("Maximum cost accepted for the transformation"),
                   cl::Hidden, cl::init(50));
 
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-
-} // namespace llvm
-
 static cl::opt<double> MaxClonedRate(
     "dfa-max-cloned-rate",
     cl::desc(
         "Maximum cloned instructions rate accepted for the transformation"),
     cl::Hidden, cl::init(7.5));
+
+static cl::opt<unsigned>
+    MaxOuterUseBlocks("dfa-max-out-use-blocks",
+                      cl::desc("Maximum unduplicated blocks with outer uses "
+                               "accepted for the transformation"),
+                      cl::Hidden, cl::init(40));
+
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+} // namespace llvm
 
 namespace {
 class SelectInstToUnfold {
@@ -619,8 +625,12 @@ private:
         NewPath.setDeterminator(PhiBB);
         NewPath.setExitValue(C);
         // Don't add SwitchBlock at the start, this is handled later.
-        if (IncomingBB != SwitchBlock)
+        if (IncomingBB != SwitchBlock) {
+          // Don't add a cycle to the path.
+          if (VB.contains(IncomingBB))
+            continue;
           NewPath.push_back(IncomingBB);
+        }
         NewPath.push_back(PhiBB);
         Res.push_back(NewPath);
         continue;
@@ -809,7 +819,12 @@ private:
 
     std::vector<ThreadingPath> TempList;
     for (const ThreadingPath &Path : PathsToPhiDef) {
+      SmallPtrSet<BasicBlock *, 32> PathSet(Path.getPath().begin(),
+                                            Path.getPath().end());
       for (const PathType &PathToSw : PathsToSwitchBB) {
+        if (any_of(llvm::drop_begin(PathToSw),
+                   [&](const BasicBlock *BB) { return PathSet.contains(BB); }))
+          continue;
         ThreadingPath PathCopy(Path);
         PathCopy.appendExcludingFirst(PathToSw);
         TempList.push_back(PathCopy);
@@ -965,14 +980,36 @@ private:
     // SLPVectorizer.
     // TODO: Thread the switch partially before reaching the threshold.
     uint64_t NumOrigInst = 0;
-    for (auto *BB : DuplicateMap.keys())
+    uint64_t NumOuterUseBlock = 0;
+    for (auto *BB : DuplicateMap.keys()) {
       NumOrigInst += BB->sizeWithoutDebug();
+      // Only unduplicated blocks with single predecessor require new phi
+      // nodes.
+      for (auto *Succ : successors(BB))
+        if (!DuplicateMap.count(Succ) && Succ->getSinglePredecessor())
+          NumOuterUseBlock++;
+    }
+
     if (double(NumClonedInst) / double(NumOrigInst) > MaxClonedRate) {
       LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, too much "
                            "instructions wll be cloned\n");
       ORE->emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "NotProfitable", Switch)
                << "Too much instructions will be cloned.";
+      });
+      return false;
+    }
+
+    // Too much unduplicated blocks with outer uses may cause too much
+    // insertions of phi nodes for duplicated definitions. TODO: Drop this
+    // threshold if we come up with another way to reduce the number of inserted
+    // phi nodes.
+    if (NumOuterUseBlock > MaxOuterUseBlocks) {
+      LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, too much "
+                           "blocks with outer uses\n");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NotProfitable", Switch)
+               << "Too much blocks with outer uses.";
       });
       return false;
     }

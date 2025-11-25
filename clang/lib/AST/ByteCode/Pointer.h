@@ -199,17 +199,19 @@ public:
       return Pointer(BS.Pointee, sizeof(InlineDescriptor),
                      Offset == 0 ? Offset : PastEndMark);
 
-    // Pointer is one past end - magic offset marks that.
-    if (isOnePastEnd())
-      return Pointer(BS.Pointee, Base, PastEndMark);
+    if (inArray()) {
+      // Pointer is one past end - magic offset marks that.
+      if (isOnePastEnd())
+        return Pointer(BS.Pointee, Base, PastEndMark);
 
-    if (Offset != Base) {
-      // If we're pointing to a primitive array element, there's nothing to do.
-      if (inPrimitiveArray())
-        return *this;
-      // Pointer is to a composite array element - enter it.
-      if (Offset != Base)
+      if (Offset != Base) {
+        // If we're pointing to a primitive array element, there's nothing to
+        // do.
+        if (inPrimitiveArray())
+          return *this;
+        // Pointer is to a composite array element - enter it.
         return Pointer(BS.Pointee, Offset, Offset);
+      }
     }
 
     // Otherwise, we're pointing to a non-array element or
@@ -219,6 +221,8 @@ public:
 
   /// Expands a pointer to the containing array, undoing narrowing.
   [[nodiscard]] Pointer expand() const {
+    if (!isBlockPointer())
+      return *this;
     assert(isBlockPointer());
     Block *Pointee = BS.Pointee;
 
@@ -830,6 +834,9 @@ private:
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   P.print(OS);
+  OS << ' ';
+  if (const Descriptor *D = P.getFieldDesc())
+    D->dump(OS);
   return OS;
 }
 

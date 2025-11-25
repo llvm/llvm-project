@@ -197,6 +197,12 @@ def G_SMULL : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_PMULL : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src1, type1:$src2);
+  let hasSideEffects = 0;
+}
+
 def G_UADDLP : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
@@ -273,6 +279,7 @@ def : GINodeEquiv<G_FCMGT, AArch64fcmgt>;
 
 def : GINodeEquiv<G_BSP, AArch64bsp>;
 
+def : GINodeEquiv<G_PMULL, AArch64pmull>;
 def : GINodeEquiv<G_UMULL, AArch64umull>;
 def : GINodeEquiv<G_SMULL, AArch64smull>;
 
@@ -507,7 +514,7 @@ let AddedComplexity = 19 in {
   defm : VecROStoreLane64_0Pat<ro32, store, v2i32, i32, ssub, STRSroW, STRSroX>;
 }
 
-def : Pat<(v8i8 (AArch64dup (i8 (load (am_indexed8 GPR64sp:$Rn))))),
+def : Pat<(v8i8 (AArch64dup (i8 (load GPR64sp:$Rn)))),
           (LD1Rv8b GPR64sp:$Rn)>;
 def : Pat<(v16i8 (AArch64dup (i8 (load GPR64sp:$Rn)))),
           (LD1Rv16b GPR64sp:$Rn)>;

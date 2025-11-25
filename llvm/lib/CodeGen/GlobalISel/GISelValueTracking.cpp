@@ -247,6 +247,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
       const MachineOperand &Src = MI.getOperand(Idx);
       Register SrcReg = Src.getReg();
+      LLT SrcTy = MRI.getType(SrcReg);
       // Look through trivial copies and phis but don't look through trivial
       // copies or phis of the form `%1:(s32) = OP %0:gpr32`, known-bits
       // analysis is currently unable to determine the bit width of a
@@ -255,9 +256,15 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       // We can't use NoSubRegister by name as it's defined by each target but
       // it's always defined to be 0 by tablegen.
       if (SrcReg.isVirtual() && Src.getSubReg() == 0 /*NoSubRegister*/ &&
-          MRI.getType(SrcReg).isValid()) {
+          SrcTy.isValid()) {
+        // In case we're forwarding from a vector register to a non-vector
+        // register we need to update the demanded elements to reflect this
+        // before recursing.
+        APInt NowDemandedElts = SrcTy.isFixedVector() && !DstTy.isFixedVector()
+                                    ? APInt::getAllOnes(SrcTy.getNumElements())
+                                    : DemandedElts; // Known to be APInt(1, 1)
         // For COPYs we don't do anything, don't increase the depth.
-        computeKnownBitsImpl(SrcReg, Known2, DemandedElts,
+        computeKnownBitsImpl(SrcReg, Known2, NowDemandedElts,
                              Depth + (Opcode != TargetOpcode::COPY));
         Known2 = Known2.anyextOrTrunc(BitWidth);
         Known = Known.intersectWith(Known2);
@@ -602,6 +609,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(3).getReg(), WidthKnown, DemandedElts,
                          Depth + 1);
+    OffsetKnown = OffsetKnown.sext(BitWidth);
+    WidthKnown = WidthKnown.sext(BitWidth);
     Known = extractBits(BitWidth, SrcOpKnown, OffsetKnown, WidthKnown);
     // Sign extend the extracted value using shift left and arithmetic shift
     // right.
@@ -639,6 +648,38 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     unsigned PossibleLZ = SrcOpKnown.countMaxLeadingZeros();
     unsigned LowBits = llvm::bit_width(PossibleLZ);
     Known.Zero.setBitsFrom(LowBits);
+    break;
+  }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
+    Register InVec = Extract.getVectorReg();
+    Register EltNo = Extract.getIndexReg();
+
+    auto ConstEltNo = getIConstantVRegVal(EltNo, MRI);
+
+    LLT VecVT = MRI.getType(InVec);
+    // computeKnownBits not yet implemented for scalable vectors.
+    if (VecVT.isScalableVector())
+      break;
+
+    const unsigned EltBitWidth = VecVT.getScalarSizeInBits();
+    const unsigned NumSrcElts = VecVT.getNumElements();
+    // A return type different from the vector's element type may lead to
+    // issues with pattern selection. Bail out to avoid that.
+    if (BitWidth > EltBitWidth)
+      break;
+
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+
+    // If we know the element index, just demand that vector element, else for
+    // an unknown element index, ignore DemandedElts and demand them all.
+    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+    if (ConstEltNo && ConstEltNo->ult(NumSrcElts))
+      DemandedSrcElts =
+          APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+
+    computeKnownBitsImpl(InVec, Known, DemandedSrcElts, Depth + 1);
     break;
   }
   case TargetOpcode::G_SHUFFLE_VECTOR: {

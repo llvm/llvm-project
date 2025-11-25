@@ -21,7 +21,7 @@ namespace mlir {
 template <typename ConcreteDialect>
 void registerDialect(DialectRegistry &registry);
 
-#define GEN_PASS_CLASSES
+#define GEN_PASS_DECL
 #include "clang/CIR/Dialect/Passes.h.inc"
 
 } // namespace mlir

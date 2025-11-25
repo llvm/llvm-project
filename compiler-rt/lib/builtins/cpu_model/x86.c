@@ -21,7 +21,9 @@
 
 #if defined(__GNUC__) || defined(__clang__) || defined(_MSC_VER)
 
+#if __STDC_HOSTED__
 #include <assert.h>
+#endif // __STDC_HOSTED__
 
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(_MSC_VER)
 #include <cpuid.h>
@@ -104,6 +106,7 @@ enum ProcessorSubtypes {
   INTEL_COREI7_PANTHERLAKE,
   AMDFAM1AH_ZNVER5,
   INTEL_COREI7_DIAMONDRAPIDS,
+  INTEL_COREI7_NOVALAKE,
   CPU_SUBTYPE_MAX
 };
 
@@ -226,13 +229,24 @@ enum ProcessorFeatures {
   FEATURE_SM4,
   FEATURE_APXF,
   FEATURE_USERMSR,
-  FEATURE_AVX10_1_256,
-  FEATURE_AVX10_1_512,
-  FEATURE_AVX10_2_256,
-  FEATURE_AVX10_2_512,
+  FEATURE_AVX10_1 = 114,
+  FEATURE_AVX10_2 = 116,
   FEATURE_MOVRS,
   CPU_FEATURE_MAX
 };
+
+#ifndef _WIN32
+__attribute__((visibility("hidden")))
+#endif
+struct __processor_model {
+  unsigned int __cpu_vendor;
+  unsigned int __cpu_type;
+  unsigned int __cpu_subtype;
+  unsigned int __cpu_features[1];
+} __cpu_model = {0, 0, 0, {0}};
+
+_Static_assert(sizeof(__cpu_model) == 16,
+               "Wrong size of __cpu_model will result in ABI break");
 
 // This code is copied from lib/Support/Host.cpp.
 // Changes to either file should be mirrored in the other.
@@ -318,14 +332,16 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
 
 #define testFeature(F) (Features[F / 32] & (1 << (F % 32))) != 0
 
-static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
-                                                   unsigned Model,
-                                                   const unsigned *Features,
-                                                   unsigned *Type,
-                                                   unsigned *Subtype) {
+static const char *
+getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
+                                const unsigned *Features,
+                                struct __processor_model *CpuModel) {
   // We select CPU strings to match the code in Host.cpp, but we don't use them
   // in compiler-rt.
   const char *CPU = 0;
+
+  enum ProcessorTypes Type = CPU_TYPE_MAX;
+  enum ProcessorSubtypes Subtype = CPU_SUBTYPE_MAX;
 
   switch (Family) {
   case 0x6:
@@ -338,7 +354,7 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     case 0x16: // Intel Celeron processor model 16h. All processors are
                // manufactured using the 65 nm process
       CPU = "core2";
-      *Type = INTEL_CORE2;
+      Type = INTEL_CORE2;
       break;
     case 0x17: // Intel Core 2 Extreme processor, Intel Xeon processor, model
                // 17h. All processors are manufactured using the 45 nm process.
@@ -347,7 +363,7 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     case 0x1d: // Intel Xeon processor MP. All processors are manufactured using
                // the 45 nm process.
       CPU = "penryn";
-      *Type = INTEL_CORE2;
+      Type = INTEL_CORE2;
       break;
     case 0x1a: // Intel Core i7 processor and Intel Xeon processor. All
                // processors are manufactured using the 45 nm process.
@@ -356,29 +372,29 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     case 0x1f:
     case 0x2e: // Nehalem EX
       CPU = "nehalem";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_NEHALEM;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_NEHALEM;
       break;
     case 0x25: // Intel Core i7, laptop version.
     case 0x2c: // Intel Core i7 processor and Intel Xeon processor. All
                // processors are manufactured using the 32 nm process.
     case 0x2f: // Westmere EX
       CPU = "westmere";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_WESTMERE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_WESTMERE;
       break;
     case 0x2a: // Intel Core i7 processor. All processors are manufactured
                // using the 32 nm process.
     case 0x2d:
       CPU = "sandybridge";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_SANDYBRIDGE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_SANDYBRIDGE;
       break;
     case 0x3a:
     case 0x3e: // Ivy Bridge EP
       CPU = "ivybridge";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_IVYBRIDGE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_IVYBRIDGE;
       break;
 
     // Haswell:
@@ -387,8 +403,8 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     case 0x45:
     case 0x46:
       CPU = "haswell";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_HASWELL;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_HASWELL;
       break;
 
     // Broadwell:
@@ -397,8 +413,8 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     case 0x4f:
     case 0x56:
       CPU = "broadwell";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_BROADWELL;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_BROADWELL;
       break;
 
     // Skylake:
@@ -409,61 +425,61 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     case 0xa5: // Comet Lake-H/S
     case 0xa6: // Comet Lake-U
       CPU = "skylake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_SKYLAKE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_SKYLAKE;
       break;
 
     // Rocketlake:
     case 0xa7:
       CPU = "rocketlake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ROCKETLAKE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_ROCKETLAKE;
       break;
 
     // Skylake Xeon:
     case 0x55:
-      *Type = INTEL_COREI7;
+      Type = INTEL_COREI7;
       if (testFeature(FEATURE_AVX512BF16)) {
         CPU = "cooperlake";
-        *Subtype = INTEL_COREI7_COOPERLAKE;
+        Subtype = INTEL_COREI7_COOPERLAKE;
       } else if (testFeature(FEATURE_AVX512VNNI)) {
         CPU = "cascadelake";
-        *Subtype = INTEL_COREI7_CASCADELAKE;
+        Subtype = INTEL_COREI7_CASCADELAKE;
       } else {
         CPU = "skylake-avx512";
-        *Subtype = INTEL_COREI7_SKYLAKE_AVX512;
+        Subtype = INTEL_COREI7_SKYLAKE_AVX512;
       }
       break;
 
     // Cannonlake:
     case 0x66:
       CPU = "cannonlake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_CANNONLAKE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_CANNONLAKE;
       break;
 
     // Icelake:
     case 0x7d:
     case 0x7e:
       CPU = "icelake-client";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ICELAKE_CLIENT;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_ICELAKE_CLIENT;
       break;
 
     // Tigerlake:
     case 0x8c:
     case 0x8d:
       CPU = "tigerlake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_TIGERLAKE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_TIGERLAKE;
       break;
 
     // Alderlake:
     case 0x97:
     case 0x9a:
       CPU = "alderlake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ALDERLAKE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_ALDERLAKE;
       break;
 
     // Raptorlake:
@@ -471,23 +487,23 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     case 0xba:
     case 0xbf:
       CPU = "raptorlake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ALDERLAKE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_ALDERLAKE;
       break;
 
     // Meteorlake:
     case 0xaa:
     case 0xac:
       CPU = "meteorlake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ALDERLAKE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_ALDERLAKE;
       break;
 
     // Gracemont:
     case 0xbe:
       CPU = "gracemont";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ALDERLAKE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_ALDERLAKE;
       break;
 
     // Arrowlake:
@@ -495,72 +511,72 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     // Arrowlake U:
     case 0xb5:
       CPU = "arrowlake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ARROWLAKE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_ARROWLAKE;
       break;
 
     // Arrowlake S:
     case 0xc6:
       CPU = "arrowlake-s";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ARROWLAKE_S;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_ARROWLAKE_S;
       break;
 
     // Lunarlake:
     case 0xbd:
       CPU = "lunarlake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ARROWLAKE_S;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_ARROWLAKE_S;
       break;
 
     // Pantherlake:
     case 0xcc:
       CPU = "pantherlake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_PANTHERLAKE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_PANTHERLAKE;
       break;
 
     // Wildcatlake:
     case 0xd5:
       CPU = "wildcatlake";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_PANTHERLAKE;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_PANTHERLAKE;
       break;
 
     // Icelake Xeon:
     case 0x6a:
     case 0x6c:
       CPU = "icelake-server";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_ICELAKE_SERVER;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_ICELAKE_SERVER;
       break;
 
     // Emerald Rapids:
     case 0xcf:
       CPU = "emeraldrapids";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_SAPPHIRERAPIDS;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_SAPPHIRERAPIDS;
       break;
 
     // Sapphire Rapids:
     case 0x8f:
       CPU = "sapphirerapids";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_SAPPHIRERAPIDS;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_SAPPHIRERAPIDS;
       break;
 
     // Granite Rapids:
     case 0xad:
       CPU = "graniterapids";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_GRANITERAPIDS;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_GRANITERAPIDS;
       break;
 
     // Granite Rapids D:
     case 0xae:
       CPU = "graniterapids-d";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_GRANITERAPIDS_D;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_GRANITERAPIDS_D;
       break;
 
     case 0x1c: // Most 45 nm Intel Atom processors
@@ -569,7 +585,7 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     case 0x35: // 32 nm Atom Midview
     case 0x36: // 32 nm Atom Midview
       CPU = "bonnell";
-      *Type = INTEL_BONNELL;
+      Type = INTEL_BONNELL;
       break;
 
     // Atom Silvermont codes from the Intel software optimization guide.
@@ -580,53 +596,52 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     case 0x5d:
     case 0x4c: // really airmont
       CPU = "silvermont";
-      *Type = INTEL_SILVERMONT;
+      Type = INTEL_SILVERMONT;
       break;
     // Goldmont:
     case 0x5c: // Apollo Lake
     case 0x5f: // Denverton
       CPU = "goldmont";
-      *Type = INTEL_GOLDMONT;
+      Type = INTEL_GOLDMONT;
       break; // "goldmont"
     case 0x7a:
       CPU = "goldmont-plus";
-      *Type = INTEL_GOLDMONT_PLUS;
+      Type = INTEL_GOLDMONT_PLUS;
       break;
     case 0x86:
     case 0x8a: // Lakefield
     case 0x96: // Elkhart Lake
     case 0x9c: // Jasper Lake
       CPU = "tremont";
-      *Type = INTEL_TREMONT;
+      Type = INTEL_TREMONT;
       break;
 
     // Sierraforest:
     case 0xaf:
       CPU = "sierraforest";
-      *Type = INTEL_SIERRAFOREST;
+      Type = INTEL_SIERRAFOREST;
       break;
 
     // Grandridge:
     case 0xb6:
       CPU = "grandridge";
-      *Type = INTEL_GRANDRIDGE;
+      Type = INTEL_GRANDRIDGE;
       break;
 
     // Clearwaterforest:
     case 0xdd:
       CPU = "clearwaterforest";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_CLEARWATERFOREST;
+      Type = INTEL_CLEARWATERFOREST;
       break;
 
     case 0x57:
       CPU = "knl";
-      *Type = INTEL_KNL;
+      Type = INTEL_KNL;
       break;
 
     case 0x85:
       CPU = "knm";
-      *Type = INTEL_KNM;
+      Type = INTEL_KNM;
       break;
 
     default: // Unknown family 6 CPU.
@@ -638,27 +653,47 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     // Diamond Rapids:
     case 0x01:
       CPU = "diamondrapids";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_DIAMONDRAPIDS;
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_DIAMONDRAPIDS;
       break;
 
     default: // Unknown family 19 CPU.
       break;
     }
     break;
+  case 0x12:
+    switch (Model) {
+    case 0x1:
+    case 0x3:
+      CPU = "novalake";
+      Type = INTEL_COREI7;
+      Subtype = INTEL_COREI7_NOVALAKE;
+      break;
+    default: // Unknown family 0x12 CPU.
+      break;
+    }
+    break;
+
   default:
     break; // Unknown.
   }
 
+  if (Type != CPU_TYPE_MAX)
+    CpuModel->__cpu_type = Type;
+  if (Subtype != CPU_SUBTYPE_MAX)
+    CpuModel->__cpu_subtype = Subtype;
+
   return CPU;
 }
 
-static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
-                                                 unsigned Model,
-                                                 const unsigned *Features,
-                                                 unsigned *Type,
-                                                 unsigned *Subtype) {
+static const char *
+getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
+                              const unsigned *Features,
+                              struct __processor_model *CpuModel) {
   const char *CPU = 0;
+
+  enum ProcessorTypes Type = CPU_TYPE_MAX;
+  enum ProcessorSubtypes Subtype = CPU_SUBTYPE_MAX;
 
   switch (Family) {
   case 4:
@@ -700,53 +735,53 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
   case 16:
   case 18:
     CPU = "amdfam10";
-    *Type = AMDFAM10H; // "amdfam10"
+    Type = AMDFAM10H; // "amdfam10"
     switch (Model) {
     case 2:
-      *Subtype = AMDFAM10H_BARCELONA;
+      Subtype = AMDFAM10H_BARCELONA;
       break;
     case 4:
-      *Subtype = AMDFAM10H_SHANGHAI;
+      Subtype = AMDFAM10H_SHANGHAI;
       break;
     case 8:
-      *Subtype = AMDFAM10H_ISTANBUL;
+      Subtype = AMDFAM10H_ISTANBUL;
       break;
     }
     break;
   case 20:
     CPU = "btver1";
-    *Type = AMD_BTVER1;
+    Type = AMD_BTVER1;
     break;
   case 21:
     CPU = "bdver1";
-    *Type = AMDFAM15H;
+    Type = AMDFAM15H;
     if (Model >= 0x60 && Model <= 0x7f) {
       CPU = "bdver4";
-      *Subtype = AMDFAM15H_BDVER4;
+      Subtype = AMDFAM15H_BDVER4;
       break; // 60h-7Fh: Excavator
     }
     if (Model >= 0x30 && Model <= 0x3f) {
       CPU = "bdver3";
-      *Subtype = AMDFAM15H_BDVER3;
+      Subtype = AMDFAM15H_BDVER3;
       break; // 30h-3Fh: Steamroller
     }
     if ((Model >= 0x10 && Model <= 0x1f) || Model == 0x02) {
       CPU = "bdver2";
-      *Subtype = AMDFAM15H_BDVER2;
+      Subtype = AMDFAM15H_BDVER2;
       break; // 02h, 10h-1Fh: Piledriver
     }
     if (Model <= 0x0f) {
-      *Subtype = AMDFAM15H_BDVER1;
+      Subtype = AMDFAM15H_BDVER1;
       break; // 00h-0Fh: Bulldozer
     }
     break;
   case 22:
     CPU = "btver2";
-    *Type = AMD_BTVER2;
+    Type = AMD_BTVER2;
     break;
   case 23:
     CPU = "znver1";
-    *Type = AMDFAM17H;
+    Type = AMDFAM17H;
     if ((Model >= 0x30 && Model <= 0x3f) || (Model == 0x47) ||
         (Model >= 0x60 && Model <= 0x67) || (Model >= 0x68 && Model <= 0x6f) ||
         (Model >= 0x70 && Model <= 0x7f) || (Model >= 0x84 && Model <= 0x87) ||
@@ -762,20 +797,20 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
       // Family 17h Models 98h-9Fh (Mero) Zen 2
       // Family 17h Models A0h-AFh (Mendocino) Zen 2
       CPU = "znver2";
-      *Subtype = AMDFAM17H_ZNVER2;
+      Subtype = AMDFAM17H_ZNVER2;
       break;
     }
     if ((Model >= 0x10 && Model <= 0x1f) || (Model >= 0x20 && Model <= 0x2f)) {
       // Family 17h Models 10h-1Fh (Raven1) Zen
       // Family 17h Models 10h-1Fh (Picasso) Zen+
       // Family 17h Models 20h-2Fh (Raven2 x86) Zen
-      *Subtype = AMDFAM17H_ZNVER1;
+      Subtype = AMDFAM17H_ZNVER1;
       break;
     }
     break;
   case 25:
     CPU = "znver3";
-    *Type = AMDFAM19H;
+    Type = AMDFAM19H;
     if (Model <= 0x0f || (Model >= 0x20 && Model <= 0x2f) ||
         (Model >= 0x30 && Model <= 0x3f) || (Model >= 0x40 && Model <= 0x4f) ||
         (Model >= 0x50 && Model <= 0x5f)) {
@@ -784,7 +819,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
       // Family 19h Models 30h-3Fh (Badami) Zen 3
       // Family 19h Models 40h-4Fh (Rembrandt) Zen 3+
       // Family 19h Models 50h-5Fh (Cezanne) Zen 3
-      *Subtype = AMDFAM19H_ZNVER3;
+      Subtype = AMDFAM19H_ZNVER3;
       break;
     }
     if ((Model >= 0x10 && Model <= 0x1f) || (Model >= 0x60 && Model <= 0x6f) ||
@@ -796,13 +831,13 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
       // Family 19h Models 78h-7Fh (Phoenix 2, Hawkpoint2) Zen 4
       // Family 19h Models A0h-AFh (Stones-Dense) Zen 4
       CPU = "znver4";
-      *Subtype = AMDFAM19H_ZNVER4;
+      Subtype = AMDFAM19H_ZNVER4;
       break; //  "znver4"
     }
     break; // family 19h
   case 26:
     CPU = "znver5";
-    *Type = AMDFAM1AH;
+    Type = AMDFAM1AH;
     if (Model <= 0x77) {
       // Models 00h-0Fh (Breithorn).
       // Models 10h-1Fh (Breithorn-Dense).
@@ -814,13 +849,18 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
       // Models 60h-6Fh (Krackan1).
       // Models 70h-77h (Sarlak).
       CPU = "znver5";
-      *Subtype = AMDFAM1AH_ZNVER5;
+      Subtype = AMDFAM1AH_ZNVER5;
       break; //  "znver5"
     }
     break;
   default:
     break; // Unknown AMD CPU.
   }
+
+  if (Type != CPU_TYPE_MAX)
+    CpuModel->__cpu_type = Type;
+  if (Subtype != CPU_SUBTYPE_MAX)
+    CpuModel->__cpu_subtype = Subtype;
 
   return CPU;
 }
@@ -1051,18 +1091,11 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   bool HasLeaf24 =
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
   if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24) {
-    bool Has512Len = (EBX >> 18) & 1;
     int AVX10Ver = EBX & 0xff;
-    if (AVX10Ver >= 2) {
-      setFeature(FEATURE_AVX10_2_256);
-      if (Has512Len)
-        setFeature(FEATURE_AVX10_2_512);
-    }
-    if (AVX10Ver >= 1) {
-      setFeature(FEATURE_AVX10_1_256);
-      if (Has512Len)
-        setFeature(FEATURE_AVX10_1_512);
-    }
+    if (AVX10Ver >= 1)
+      setFeature(FEATURE_AVX10_1);
+    if (AVX10Ver >= 2)
+      setFeature(FEATURE_AVX10_2);
   }
 
   unsigned MaxExtLevel = 0;
@@ -1146,16 +1179,6 @@ int __cpu_indicator_init(void) CONSTRUCTOR_ATTRIBUTE;
 #ifndef _WIN32
 __attribute__((visibility("hidden")))
 #endif
-struct __processor_model {
-  unsigned int __cpu_vendor;
-  unsigned int __cpu_type;
-  unsigned int __cpu_subtype;
-  unsigned int __cpu_features[1];
-} __cpu_model = {0, 0, 0, {0}};
-
-#ifndef _WIN32
-__attribute__((visibility("hidden")))
-#endif
 unsigned __cpu_features2[(CPU_FEATURE_MAX - 1) / 32];
 
 // A constructor function that is sets __cpu_model and __cpu_features2 with
@@ -1170,8 +1193,8 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   unsigned Vendor;
   unsigned Model, Family;
   unsigned Features[(CPU_FEATURE_MAX + 31) / 32] = {0};
-  static_assert(sizeof(Features) / sizeof(Features[0]) == 4, "");
-  static_assert(sizeof(__cpu_features2) / sizeof(__cpu_features2[0]) == 3, "");
+  _Static_assert(sizeof(Features) / sizeof(Features[0]) == 4, "");
+  _Static_assert(sizeof(__cpu_features2) / sizeof(__cpu_features2[0]) == 3, "");
 
   // This function needs to run just once.
   if (__cpu_model.__cpu_vendor)
@@ -1195,22 +1218,20 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
 
   if (Vendor == SIG_INTEL) {
     // Get CPU type.
-    getIntelProcessorTypeAndSubtype(Family, Model, &Features[0],
-                                    &(__cpu_model.__cpu_type),
-                                    &(__cpu_model.__cpu_subtype));
+    getIntelProcessorTypeAndSubtype(Family, Model, &Features[0], &__cpu_model);
     __cpu_model.__cpu_vendor = VENDOR_INTEL;
   } else if (Vendor == SIG_AMD) {
     // Get CPU type.
-    getAMDProcessorTypeAndSubtype(Family, Model, &Features[0],
-                                  &(__cpu_model.__cpu_type),
-                                  &(__cpu_model.__cpu_subtype));
+    getAMDProcessorTypeAndSubtype(Family, Model, &Features[0], &__cpu_model);
     __cpu_model.__cpu_vendor = VENDOR_AMD;
   } else
     __cpu_model.__cpu_vendor = VENDOR_OTHER;
 
+#if __STDC_HOSTED__
   assert(__cpu_model.__cpu_vendor < VENDOR_MAX);
   assert(__cpu_model.__cpu_type < CPU_TYPE_MAX);
   assert(__cpu_model.__cpu_subtype < CPU_SUBTYPE_MAX);
+#endif // __STDC_HOSTED__
 
   return 0;
 }

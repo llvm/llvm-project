@@ -395,7 +395,6 @@ public:
   /// Hook for derived classes willing to bind more methods.
   static void bindDerived(ClassTy &) {}
 
-private:
   intptr_t startIndex;
   intptr_t length;
   intptr_t step;
