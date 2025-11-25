@@ -106,7 +106,7 @@ TEST(WorkspaceSymbols, Unnamed) {
               ElementsAre(AllOf(qName("UnnamedStruct"),
                                 withKind(SymbolKind::Variable))));
   EXPECT_THAT(getSymbols(TU, "InUnnamed"),
-              ElementsAre(AllOf(qName("(anonymous struct)::InUnnamed"),
+              ElementsAre(AllOf(qName("(unnamed struct)::InUnnamed"),
                                 withKind(SymbolKind::Field))));
 }
 
