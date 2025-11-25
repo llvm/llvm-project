@@ -590,10 +590,6 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
   return ScratchRsrcReg;
 }
 
-static unsigned getScratchScaleFactor(const GCNSubtarget &ST) {
-  return ST.enableFlatScratch() ? 1 : ST.getWavefrontSize();
-}
-
 void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                                 MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
@@ -693,7 +689,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
   assert(ScratchWaveOffsetReg || !PreloadedScratchWaveOffsetReg);
 
-  unsigned Offset = FrameInfo.getStackSize() * getScratchScaleFactor(ST);
+  unsigned Offset = FrameInfo.getStackSize() * ST.getScratchScaleFactor();
   if (!mayReserveScratchForCWSR(MF)) {
     if (hasFP(MF)) {
       Register FPReg = MFI->getFrameOffsetReg();
@@ -1231,7 +1227,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       assert(StackPtrReg != AMDGPU::SP_REG);
 
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B32), StackPtrReg)
-          .addImm(MFI.getStackSize() * getScratchScaleFactor(ST));
+          .addImm(MFI.getStackSize() * ST.getScratchScaleFactor());
     }
   }
 
@@ -1292,12 +1288,12 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     // s_and_b32 s33, s33, 0b111...0000
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_I32), FramePtrReg)
         .addReg(StackPtrReg)
-        .addImm((Alignment - 1) * getScratchScaleFactor(ST))
+        .addImm((Alignment - 1) * ST.getScratchScaleFactor())
         .setMIFlag(MachineInstr::FrameSetup);
     auto And = BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_AND_B32), FramePtrReg)
-        .addReg(FramePtrReg, RegState::Kill)
-        .addImm(-Alignment * getScratchScaleFactor(ST))
-        .setMIFlag(MachineInstr::FrameSetup);
+                   .addReg(FramePtrReg, RegState::Kill)
+                   .addImm(-Alignment * ST.getScratchScaleFactor())
+                   .setMIFlag(MachineInstr::FrameSetup);
     And->getOperand(3).setIsDead(); // Mark SCC as dead.
     FuncInfo->setIsStackRealigned(true);
   } else if ((HasFP = hasFP(MF))) {
@@ -1326,9 +1322,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (HasFP && RoundedSize != 0) {
     auto Add = BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_I32), StackPtrReg)
-        .addReg(StackPtrReg)
-        .addImm(RoundedSize * getScratchScaleFactor(ST))
-        .setMIFlag(MachineInstr::FrameSetup);
+                   .addReg(StackPtrReg)
+                   .addImm(RoundedSize * ST.getScratchScaleFactor())
+                   .setMIFlag(MachineInstr::FrameSetup);
     Add->getOperand(3).setIsDead(); // Mark SCC as dead.
   }
 
@@ -2137,7 +2133,7 @@ MachineBasicBlock::iterator SIFrameLowering::eliminateCallFramePseudoInstr(
     const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
     Register SPReg = MFI->getStackPtrOffsetReg();
 
-    Amount *= getScratchScaleFactor(ST);
+    Amount *= ST.getScratchScaleFactor();
     if (IsDestroy)
       Amount = -Amount;
     auto Add = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_I32), SPReg)

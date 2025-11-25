@@ -1,0 +1,651 @@
+# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -amdgpu-enable-machine-level-inliner -run-pass=amdgpu-inlining-anchor,amdgpu-machine-level-inliner %s -o - | FileCheck %s
+
+# Test that the inliner correctly updates the MachineFunctionInfo
+
+--- |
+  ; Test that we update the frame info for the caller with info from the callee.
+  ; In particular, hasCalls should be false after inlining.
+  define amdgpu_gfx_whole_wave i32 @wwf_with_local_no_calls(i1 %mask, i32 %x) {
+    %local = alloca i32, addrspace(5)
+    ret i32 0
+  }
+  define amdgpu_cs void @inline_wwf_with_local_no_calls(i32 %y) {
+    %local = alloca i32, addrspace(5)
+    ret void
+  }
+  ; Same as above, but also make sure we reuse stack space between different callees.
+  define amdgpu_cs void @inline_wwf_with_local_twice(i32 %y) {
+    %local = alloca i32, addrspace(5)
+    ret void
+  }
+
+  ; Test callees with different stack sizes and alignments.
+  define amdgpu_gfx_whole_wave i32 @wwf_large_stack_small_align(i1 %mask) {
+    %local = alloca i32, i32 512, align 4, addrspace(5)
+    ret i32 0
+  }
+  define amdgpu_gfx_whole_wave i32 @wwf_small_stack_large_align(i1 %mask) {
+    %local = alloca i32, align 1024, addrspace(5)
+    ret i32 0
+  }
+  define amdgpu_cs void @inline_wwf_different_stack_shapes() {
+    ret void
+  }
+
+  ; Test dynamic stack allocations.
+  define amdgpu_gfx_whole_wave i32 @wwf_dyn_stack(i1 %mask, i32 inreg %size) {
+    %local = alloca i32, i32 %size, addrspace(5)
+    ret i32 0
+  }
+  define amdgpu_cs void @inline_wwf_dyn_stack_callee(i32 inreg %size, ptr addrspace(1) %output) { ret void }
+
+  ; Test that we correctly handle stack arguments.
+  define amdgpu_gfx_whole_wave i32 @wwf_with_stack_args(i1 %active, <33 x i32> %vec) { ret i32 0 }
+  define amdgpu_cs void @inline_wwf_with_stack_args(i32 %x, i32 %y, ptr addrspace(1) %output) { ret void }
+
+  ; Test that we update hasCalls if the callee contains its own calls.
+  define amdgpu_gfx_whole_wave i32 @wwf_with_calls(i1 %mask, i32 %x) { ret i32 0}
+  define amdgpu_cs void @inline_wwf_with_calls(i32 %y) { ret void }
+
+  ; Test that hasCalls is still correct if the caller has other calls.
+  define amdgpu_gfx i32 @wont_inline() { ret i32 0 }
+  define amdgpu_cs void @inline_wwf_without_calls(i32 %y) { ret void }
+...
+---
+name:            wwf_with_local_no_calls
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       16
+stack:
+  - { id: 0, name: local, type: default, offset: 0, size: 8, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: 0, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: 8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: default, offset: 12, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  isEntryFunction: false
+  isChainFunction: false
+  scratchRSrcReg:  '$private_rsrc_reg'
+  frameOffsetReg:  '$fp_reg'
+  stackPtrOffsetReg: '$sgpr32'
+  wwmReservedRegs:
+    - '$vgpr1'
+  scavengeFI:      '%stack.2'
+  isWholeWaveFunction: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    $exec_lo = S_MOV_B32 -1
+    $vgpr1 = V_MUL_LO_U32_e64 $vgpr0, 18, implicit $exec
+    SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (volatile store (s32) into %ir.local, addrspace 5)
+    $exec_lo = S_XOR_B32 $sgpr0, -1, implicit-def $scc
+    $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
+    $exec_lo = S_MOV_B32 $sgpr0
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
+...
+---
+name:            inline_wwf_with_local_no_calls
+# CHECK-LABEL: name: inline_wwf_with_local_no_calls
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+  stackSize:       8
+# CHECK: frameInfo:
+# CHECK: stackSize: 24
+# CHECK: offsetAdjustment: 0
+# CHECK: maxAlignment: 4
+# CHECK: adjustsStack: false
+# CHECK: hasCalls: false
+# CHECK: hasTailCall: false
+stack:
+  - { id: 0, name: local, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: 0, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: '', type: default, offset: 4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK: stack:
+# CHECK-NEXT: - { id: 0, name: local, type: default, offset: 0, size: 4, alignment: 4,
+# CHECK-NEXT: stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: local-offset: 0, debug-info-variable: '', debug-info-expression: '',
+# CHECK-NEXT: debug-info-location: '' }
+# CHECK-NEXT: - { id: 1, name: '', type: default, offset: 4, size: 4, alignment: 4,
+# CHECK-NEXT: stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK-NEXT: - { id: 2, name: '', type: default, offset: 8, size: 16, alignment: 1,
+# CHECK-NEXT: stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  isEntryFunction: true
+  isChainFunction: false
+  scratchRSrcReg:  '$private_rsrc_reg'
+  frameOffsetReg:  '$fp_reg'
+  stackPtrOffsetReg: '$sgpr32'
+  scavengeFI:      '%stack.1'
+  isWholeWaveFunction: false
+# CHECK: machineFunctionInfo:
+# CHECK: isEntryFunction: true
+# CHECK: isChainFunction: false
+# CHECK: scratchRSrcReg:  '$private_rsrc_reg'
+# CHECK  frameOffsetReg:  '$fp_reg'
+# CHECK  stackPtrOffsetReg: '$sgpr32'
+# CHECK  scavengeFI:      '%stack.1'
+# CHECK  isWholeWaveFunction: false
+
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    $sgpr32 = S_MOV_B32 16
+    $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @wwf_with_local_no_calls
+    $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @wwf_with_local_no_calls
+    dead $sgpr30_sgpr31 = SI_CALL killed $sgpr0_sgpr1, @wwf_with_local_no_calls, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+    SCRATCH_STORE_DWORD_ST killed $vgpr0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile store (s32) into %ir.local, addrspace 5)
+    S_ENDPGM 0
+...
+name:            inline_wwf_with_local_twice
+# CHECK-LABEL: name: inline_wwf_with_local_twice
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+  stackSize:       8
+# CHECK: frameInfo:
+# CHECK-NEXT: isFrameAddressTaken: false
+# CHECK-NEXT: isReturnAddressTaken: false
+# CHECK-NEXT: hasStackMap: false
+# CHECK-NEXT: hasPatchPoint: false
+# CHECK-NEXT: stackSize: 24
+# CHECK-NEXT: offsetAdjustment: 0
+# CHECK-NEXT: maxAlignment: 4
+# CHECK-NEXT: adjustsStack: false
+# CHECK-NEXT: hasCalls: false
+# CHECK-NEXT: stackProtector: ''
+# CHECK-NEXT: functionContext: ''
+# CHECK-NEXT: maxCallFrameSize: 4294967295
+# CHECK-NEXT: cvBytesOfCalleeSavedRegisters: 0
+# CHECK-NEXT: hasOpaqueSPAdjustment: false
+# CHECK-NEXT: hasVAStart: false
+# CHECK-NEXT: hasMustTailInVarArgFunc: false
+# CHECK-NEXT: hasTailCall: false
+# CHECK-NEXT: isCalleeSavedInfoValid: false
+# CHECK-NEXT: localFrameSize: 0
+stack:
+  - { id: 0, name: local, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: 0, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: '', type: default, offset: 4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK: stack:
+# CHECK-NEXT: - { id: 0, name: local, type: default, offset: 0, size: 4, alignment: 4,
+# CHECK-NEXT: stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: local-offset: 0, debug-info-variable: '', debug-info-expression: '',
+# CHECK-NEXT: debug-info-location: '' }
+# CHECK-NEXT: - { id: 1, name: '', type: default, offset: 4, size: 4, alignment: 4,
+# CHECK-NEXT: stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK-NEXT: - { id: 2, name: '', type: default, offset: 8, size: 16, alignment: 1,
+# CHECK-NEXT: stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    $sgpr32 = S_MOV_B32 16
+    $sgpr7 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @wwf_with_local_no_calls
+    $sgpr6 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @wwf_with_local_no_calls
+    dead $sgpr30_sgpr31 = SI_CALL $sgpr6_sgpr7, @wwf_with_local_no_calls, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+    SCRATCH_STORE_DWORD_ST $vgpr0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile store (s32) into %ir.local, addrspace 5)
+    dead $sgpr30_sgpr31 = SI_CALL killed $sgpr6_sgpr7, @wwf_with_local_no_calls, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+    S_ENDPGM 0
+...
+---
+name:            wwf_large_stack_small_align
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       2056
+stack:
+  - { id: 0, name: local, type: default, offset: 0, size: 2048, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: 0, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: 2048, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: default, offset: 2052, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  isEntryFunction: false
+  isChainFunction: false
+  scratchRSrcReg:  '$private_rsrc_reg'
+  frameOffsetReg:  '$fp_reg'
+  stackPtrOffsetReg: '$sgpr32'
+  wwmReservedRegs:
+    - '$vgpr1'
+  scavengeFI:      '%stack.2'
+  isWholeWaveFunction: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    $exec_lo = S_MOV_B32 -1
+    $vgpr1 = V_MUL_LO_U32_e64 $vgpr0, 18, implicit $exec
+    SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (volatile store (s32) into %ir.local, addrspace 5)
+    $exec_lo = S_XOR_B32 $sgpr0, -1, implicit-def $scc
+    $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
+    $exec_lo = S_MOV_B32 $sgpr0
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
+...
+---
+name:            wwf_small_stack_large_align
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       12
+stack:
+  - { id: 0, name: local, type: default, offset: 0, size: 4, alignment: 1024,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: 0, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: 4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: default, offset: 8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  isEntryFunction: false
+  isChainFunction: false
+  scratchRSrcReg:  '$private_rsrc_reg'
+  frameOffsetReg:  '$fp_reg'
+  stackPtrOffsetReg: '$sgpr32'
+  wwmReservedRegs:
+    - '$vgpr1'
+  scavengeFI:      '%stack.2'
+  isWholeWaveFunction: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    $exec_lo = S_MOV_B32 -1
+    $vgpr1 = V_MUL_LO_U32_e64 $vgpr0, 18, implicit $exec
+    SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (volatile store (s32) into %ir.local, addrspace 5)
+    $exec_lo = S_XOR_B32 $sgpr0, -1, implicit-def $scc
+    $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
+    $exec_lo = S_MOV_B32 $sgpr0
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
+...
+---
+name:            inline_wwf_different_stack_shapes
+# CHECK-LABEL: name: inline_wwf_different_stack_shapes
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+  stackSize:       4
+# CHECK: frameInfo:
+# CHECK-NEXT: isFrameAddressTaken: false
+# CHECK-NEXT: isReturnAddressTaken: false
+# CHECK-NEXT: hasStackMap: false
+# CHECK-NEXT: hasPatchPoint: false
+# CHECK-NEXT: stackSize: 2060
+# CHECK-NEXT: offsetAdjustment: 0
+# CHECK-NEXT: maxAlignment: 4
+# CHECK-NEXT: adjustsStack: false
+# CHECK-NEXT: hasCalls: false
+# CHECK-NEXT: stackProtector: ''
+# CHECK-NEXT: functionContext: ''
+# CHECK-NEXT: maxCallFrameSize: 4294967295
+# CHECK-NEXT: cvBytesOfCalleeSavedRegisters: 0
+# CHECK-NEXT: hasOpaqueSPAdjustment: false
+# CHECK-NEXT: hasVAStart: false
+# CHECK-NEXT: hasMustTailInVarArgFunc: false
+# CHECK-NEXT: hasTailCall: false
+# CHECK-NEXT: isCalleeSavedInfoValid: false
+# CHECK-NEXT: localFrameSize: 0
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK: stack:
+# CHECK-NEXT: - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+# CHECK-NEXT: stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK-NEXT: - { id: 1, name: '', type: default, offset: 4, size: 2056, alignment: 1,
+# CHECK-NEXT: stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    $sgpr32 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @wwf_large_stack_small_align
+    $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @wwf_large_stack_small_align
+    dead $sgpr30_sgpr31 = SI_CALL killed $sgpr0_sgpr1, @wwf_large_stack_small_align, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+    $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @wwf_small_stack_large_align
+    $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @wwf_small_stack_large_align
+    dead $sgpr30_sgpr31 = SI_CALL killed $sgpr0_sgpr1, @wwf_small_stack_large_align, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+    S_ENDPGM 0
+...
+---
+name:            wwf_dyn_stack
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        false
+stack:
+  - { id: 0, name: local, type: variable-sized, offset: 0, alignment: 1,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: 0, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: 4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: default, offset: 8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  scratchRSrcReg:  '$private_rsrc_reg'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $sgpr3, $sgpr4, $vgpr0, $vgpr1
+
+    $sgpr3 = S_MOV_B32 $sgpr33
+    $sgpr33 = S_MOV_B32 $sgpr32
+    $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
+    $exec_lo = S_MOV_B32 -1
+    $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 16, implicit-def dead $scc
+    renamable $sgpr1 = S_LSHL_B32 killed renamable $sgpr4, 2, implicit-def dead $scc
+    renamable $sgpr1 = nuw S_ADD_I32 killed renamable $sgpr1, 15, implicit-def dead $scc
+    $sgpr2 = S_MOV_B32 $sgpr32
+    renamable $sgpr1 = S_AND_B32 killed renamable $sgpr1, -16, implicit-def dead $scc
+    renamable $vgpr1 = V_ADD_U32_e32 100, $vgpr0, implicit $exec
+    renamable $sgpr1 = S_LSHL_B32 killed renamable $sgpr1, 5, implicit-def dead $scc
+    $sgpr32 = S_ADD_I32 renamable $sgpr2, killed renamable $sgpr1, implicit-def dead $scc
+    SCRATCH_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $sgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (volatile store (s32) into %ir.local, addrspace 5)
+    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec, implicit $exec
+    $sgpr32 = S_MOV_B32 $sgpr33
+    $exec_lo = S_XOR_B32 $sgpr0, -1, implicit-def $scc
+    $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr, implicit $vgpr0(tied-def 0) :: (load (s32) from %stack.1, addrspace 5)
+    $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.2, addrspace 5)
+    $exec_lo = S_MOV_B32 $sgpr0
+    $sgpr33 = S_MOV_B32 $sgpr3
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
+...
+---
+name:            inline_wwf_dyn_stack_callee
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       0
+  adjustsStack:    true
+  hasCalls:        true
+# CHECK: frameInfo:
+# CHECK: stackSize: 16
+# CHECK: offsetAdjustment: 0
+# CHECK: maxAlignment: 1
+# CHECK: adjustsStack: true
+# CHECK: hasCalls: false
+# CHECK: hasTailCall: false
+stack:           []
+# CHECK: stack:
+# CHECK-NEXT: - { id: 0, name: '', type: default, offset: 0, size: 16, alignment: 1,
+# CHECK-NEXT: stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  isEntryFunction: true
+  isChainFunction: false
+  scratchRSrcReg:  '$private_rsrc_reg'
+  frameOffsetReg:  '$fp_reg'
+  stackPtrOffsetReg: '$sgpr32'
+  isWholeWaveFunction: false
+# CHECK: machineFunctionInfo:
+# CHECK: isEntryFunction: true
+# CHECK: isChainFunction: false
+# CHECK: scratchRSrcReg:  '$private_rsrc_reg'
+# CHECK  frameOffsetReg:  '$fp_reg'
+# CHECK  stackPtrOffsetReg: '$sgpr32'
+# CHECK  isWholeWaveFunction: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2
+
+    $sgpr32 = S_MOV_B32 0
+    $vgpr41 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $exec
+    $vgpr40 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit $exec
+    renamable $sgpr3 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @wwf_dyn_stack
+    renamable $sgpr2 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @wwf_dyn_stack
+    $sgpr4 = S_MOV_B32 killed $sgpr0
+    dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr2_sgpr3, @wwf_dyn_stack, csr_amdgpu_si_gfx, implicit $sgpr4, implicit $vgpr0, implicit-def $vgpr0
+    GLOBAL_STORE_DWORD killed renamable $vgpr40_vgpr41, killed renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.output, addrspace 1)
+    S_ENDPGM 0
+...
+---
+name:            wwf_with_stack_args
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       16
+fixedStack:
+  - { id: 0, type: default, offset: 0, size: 4, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: 4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: 8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: default, offset: 12, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  isEntryFunction: false
+  isChainFunction: false
+  scratchRSrcReg:  '$private_rsrc_reg'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  bytesInStackArgArea: 4
+  wwmReservedRegs:
+    - '$vgpr1'
+  scavengeFI:      '%stack.2'
+  isWholeWaveFunction: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    $exec_lo = S_MOV_B32 -1
+    $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr1, $vgpr0, implicit $exec
+    $exec_lo = S_XOR_B32 $sgpr0, -1, implicit-def $scc
+    $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit $vgpr0(tied-def 0) :: (load (s32) from %stack.0, addrspace 5)
+    $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
+    $exec_lo = S_MOV_B32 $sgpr0
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
+...
+---
+name:            inline_wwf_with_stack_args
+# CHECK-LABEL: name: inline_wwf_with_stack_args
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       0
+  adjustsStack:    true
+  hasCalls:        true
+# CHECK: frameInfo:
+# CHECK: stackSize: 16
+# CHECK: offsetAdjustment: 0
+# CHECK: maxAlignment: 1
+# CHECK: adjustsStack: true
+# CHECK: hasCalls: false
+# CHECK: hasTailCall: false
+fixedStack:        []
+stack:             []
+# CHECK: stack:
+# CHECK-NEXT: - { id: 0, name: '', type: default, offset: 0, size: 16, alignment: 1,
+# CHECK-NEXT: stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  isEntryFunction: true
+  isChainFunction: false
+  scratchRSrcReg:  '$private_rsrc_reg'
+  frameOffsetReg:  '$fp_reg'
+  stackPtrOffsetReg: '$sgpr32'
+  isWholeWaveFunction: false
+# CHECK: machineFunctionInfo:
+# CHECK: isEntryFunction: true
+# CHECK: isChainFunction: false
+# CHECK: scratchRSrcReg:  '$private_rsrc_reg'
+# CHECK  frameOffsetReg:  '$fp_reg'
+# CHECK  stackPtrOffsetReg: '$sgpr32'
+# CHECK  scavengeFI:      '%stack.0'
+# CHECK  isWholeWaveFunction: false
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+
+    $sgpr32 = S_MOV_B32 0
+    $vgpr41 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit $exec
+    $vgpr40 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $exec
+    SCRATCH_STORE_DWORD_SADDR killed renamable $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack, align 16, addrspace 5)
+    $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr4 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr6 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr7 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr9 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr10 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr11 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr12 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr13 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr14 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr15 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr16 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr17 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr19 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr20 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr21 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr22 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr23 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr24 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr25 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr26 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr27 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr28 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr29 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr30 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr31 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @wwf_with_stack_args
+    $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @wwf_with_stack_args
+    dead $sgpr30_sgpr31 = SI_CALL killed $sgpr0_sgpr1, @wwf_with_stack_args, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31, implicit-def $vgpr0
+    GLOBAL_STORE_DWORD killed renamable $vgpr40_vgpr41, killed renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.output, addrspace 1)
+    S_ENDPGM 0
+...
+---
+name:            wwf_with_calls
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       8
+  hasCalls: true
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: default, offset: 4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  isEntryFunction: false
+  isChainFunction: false
+  scratchRSrcReg:  '$private_rsrc_reg'
+  frameOffsetReg:  '$fp_reg'
+  stackPtrOffsetReg: '$sgpr32'
+  wwmReservedRegs:
+    - '$vgpr1'
+  scavengeFI:      '%stack.1'
+  isWholeWaveFunction: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr2_sgpr3
+
+    $sgpr25 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    $exec_lo = S_MOV_B32 -1
+    dead $sgpr30_sgpr31 = SI_CALL killed $sgpr2_sgpr3, @wwf_with_local_no_calls, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+    $vgpr1 = V_MUL_LO_U32_e64 $vgpr0, 18, implicit $exec
+    $exec_lo = S_XOR_B32 $sgpr25, -1, implicit-def $scc
+    $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
+    $exec_lo = S_MOV_B32 $sgpr25
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
+...
+---
+name:            inline_wwf_with_calls
+# CHECK-LABEL: name: inline_wwf_with_calls
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+# CHECK: frameInfo:
+# CHECK: hasCalls: true
+
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    $sgpr32 = S_MOV_B32 16
+    $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @wwf_with_calls
+    $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @wwf_with_calls
+    dead $sgpr30_sgpr31 = SI_CALL killed $sgpr0_sgpr1, @wwf_with_calls, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+    S_ENDPGM 0
+...
+---
+name:            inline_wwf_without_calls
+# CHECK-LABEL: name: inline_wwf_without_calls
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+# CHECK: frameInfo:
+# CHECK: hasCalls: true
+
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    $sgpr32 = S_MOV_B32 16
+    $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @wwf_with_local_no_calls
+    $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @wwf_with_local_no_calls
+    dead $sgpr30_sgpr31 = SI_CALL killed $sgpr0_sgpr1, @wwf_with_local_no_calls, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+    $sgpr1 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @wont_inline
+    $sgpr0 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @wont_inline
+    dead $sgpr30_sgpr31 = SI_CALL killed $sgpr0_sgpr1, @wont_inline, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
+    S_ENDPGM 0
+...

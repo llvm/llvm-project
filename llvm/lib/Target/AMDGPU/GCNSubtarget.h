@@ -1057,6 +1057,10 @@ public:
   // dynamic realignment in common cases.
   Align getStackAlignment() const { return Align(16); }
 
+  unsigned getScratchScaleFactor() const {
+    return enableFlatScratch() ? 1 : getWavefrontSize();
+  }
+
   bool enableMachineScheduler() const override {
     return true;
   }

@@ -263,6 +263,129 @@ define amdgpu_cs void @inline_wwf_that_realigns_stack(i32 %y) {
   ret void
 }
 
+define amdgpu_gfx_whole_wave i32 @wwf_with_dynamic_alloca(i1 %active, i32 inreg %size, i32 %value) {
+  %dynamic_array = alloca i32, i32 %size, addrspace(5)
+  store volatile i32 %value, ptr addrspace(5) %dynamic_array
+  %result = add i32 %value, 100
+  ret i32 %result
+}
+
+define amdgpu_cs void @inline_wwf_with_dynamic_alloca(i32 inreg %array_size, i32 %val, ptr addrspace(1) %output) {
+; CHECK-LABEL: inline_wwf_with_dynamic_alloca:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_mov_b32 s4, s0
+; CHECK-NEXT:    s_mov_b32 s32, 0
+; CHECK-NEXT:    v_dual_mov_b32 v41, v2 :: v_dual_mov_b32 v40, v1
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    s_mov_b32 s3, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_xor_saveexec_b32 s0, -1
+; CHECK-NEXT:    global_wb scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
+; CHECK-NEXT:    global_wb scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    scratch_store_b32 off, v1, s33 offset:4 scope:SCOPE_SYS
+; CHECK-NEXT:    s_mov_b32 exec_lo, -1
+; CHECK-NEXT:    v_add_nc_u32_e32 v1, 0x64, v0
+; CHECK-NEXT:    s_add_co_i32 s32, s32, 16
+; CHECK-NEXT:    s_lshl2_add_u32 s1, s4, 15
+; CHECK-NEXT:    s_mov_b32 s2, s32
+; CHECK-NEXT:    s_and_b32 s1, s1, -16
+; CHECK-NEXT:    global_wb scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    scratch_store_b32 off, v0, s2 scope:SCOPE_SYS
+; CHECK-NEXT:    v_mov_b32_e32 v0, v1
+; CHECK-NEXT:    s_lshl_b32 s1, s1, 5
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_add_co_i32 s32, s2, s1
+; CHECK-NEXT:    s_mov_b32 s32, s33
+; CHECK-NEXT:    s_xor_b32 exec_lo, s0, -1
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    scratch_load_b32 v0, off, s33 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_inv scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    scratch_load_b32 v1, off, s33 offset:4 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_inv scope:SCOPE_SYS
+; CHECK-NEXT:    s_mov_b32 exec_lo, s0
+; CHECK-NEXT:    s_mov_b32 s33, s3
+; CHECK-NEXT:  ; %bb.2:
+; CHECK-NEXT:    global_store_b32 v[40:41], v0, off
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; CHECK-NEXT:    s_endpgm
+  %result = call i32(ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @wwf_with_dynamic_alloca, i32 inreg %array_size, i32 %val)
+  store i32 %result, ptr addrspace(1) %output
+  ret void
+}
+
+define amdgpu_gfx_whole_wave i32 @wwf_with_stack_args(i1 %active, <33 x i32> %vec) {
+  %elem0 = extractelement <33 x i32> %vec, i32 0
+  %elem32 = extractelement <33 x i32> %vec, i32 32
+  %sum = add i32 %elem0, %elem32
+  ret i32 %sum
+}
+
+define amdgpu_cs void @inline_wwf_with_stack_args(i32 %x, i32 %y, ptr addrspace(1) %output) {
+; CHECK-LABEL: inline_wwf_with_stack_args:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_mov_b32 s32, 0
+; CHECK-NEXT:    v_dual_mov_b32 v41, v3 :: v_dual_mov_b32 v40, v2
+; CHECK-NEXT:    scratch_store_b32 off, v1, s32
+; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
+; CHECK-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v4, 0
+; CHECK-NEXT:    v_dual_mov_b32 v5, 0 :: v_dual_mov_b32 v6, 0
+; CHECK-NEXT:    v_dual_mov_b32 v7, 0 :: v_dual_mov_b32 v8, 0
+; CHECK-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_mov_b32 v10, 0
+; CHECK-NEXT:    v_dual_mov_b32 v11, 0 :: v_dual_mov_b32 v12, 0
+; CHECK-NEXT:    v_dual_mov_b32 v13, 0 :: v_dual_mov_b32 v14, 0
+; CHECK-NEXT:    v_dual_mov_b32 v15, 0 :: v_dual_mov_b32 v16, 0
+; CHECK-NEXT:    v_dual_mov_b32 v17, 0 :: v_dual_mov_b32 v18, 0
+; CHECK-NEXT:    v_dual_mov_b32 v19, 0 :: v_dual_mov_b32 v20, 0
+; CHECK-NEXT:    v_dual_mov_b32 v21, 0 :: v_dual_mov_b32 v22, 0
+; CHECK-NEXT:    v_dual_mov_b32 v23, 0 :: v_dual_mov_b32 v24, 0
+; CHECK-NEXT:    v_dual_mov_b32 v25, 0 :: v_dual_mov_b32 v26, 0
+; CHECK-NEXT:    v_dual_mov_b32 v27, 0 :: v_dual_mov_b32 v28, 0
+; CHECK-NEXT:    v_dual_mov_b32 v29, 0 :: v_dual_mov_b32 v30, 0
+; CHECK-NEXT:    v_mov_b32_e32 v31, 0
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    s_xor_saveexec_b32 s0, -1
+; CHECK-NEXT:    global_wb scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    scratch_store_b32 off, v0, s32 offset:4 scope:SCOPE_SYS
+; CHECK-NEXT:    global_wb scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    scratch_store_b32 off, v1, s32 offset:8 scope:SCOPE_SYS
+; CHECK-NEXT:    s_mov_b32 exec_lo, -1
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    scratch_load_b32 v1, off, s32 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_inv scope:SCOPE_SYS
+; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; CHECK-NEXT:    s_xor_b32 exec_lo, s0, -1
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    scratch_load_b32 v0, off, s32 offset:4 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_inv scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    scratch_load_b32 v1, off, s32 offset:8 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_inv scope:SCOPE_SYS
+; CHECK-NEXT:    s_mov_b32 exec_lo, s0
+; CHECK-NEXT:  ; %bb.2:
+; CHECK-NEXT:    global_store_b32 v[40:41], v0, off
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; CHECK-NEXT:    s_endpgm
+  %vec = insertelement <33 x i32> zeroinitializer, i32 %x, i32 0
+  %vec2 = insertelement <33 x i32> %vec, i32 %y, i32 32
+  %result = call i32(ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @wwf_with_stack_args, <33 x i32> %vec2)
+  store i32 %result, ptr addrspace(1) %output
+  ret void
+}
+
 ; Regular function (not whole wave) - should not be inlined
 define amdgpu_gfx i32 @regular_function(i32 %x) {
 ; CHECK-LABEL: regular_function:

@@ -27,6 +27,7 @@
 
 namespace llvm {
 
+class GCNSubtarget;
 class SIInstrInfo;
 
 class AMDGPUMachineLevelInliner : public MachineFunctionPass {
@@ -52,6 +53,21 @@ private:
 
   void cleanupAfterInlining(MachineFunction *CallerMF, MachineInstr *CallMI,
                             const SIInstrInfo *TII) const;
+
+  void updateCallerFrameInfo(MachineFrameInfo &CallerMFI,
+                             const MachineFunction &CalleeMF);
+
+  /// Create a stack object representing the stacks of all the inlined callees.
+  /// Its size will be large enough to accomodate the callee with the largest
+  /// stack.
+  void createCalleeStackObject(MachineFrameInfo &CallerMFI);
+
+  /// The maximum stack size among all inlined callees (including any padding
+  /// required to ensure proper alignment).
+  uint64_t MaxInlinedCalleeStackSize = 0;
+
+  /// Whether any inlined callee has variable-sized stack objects.
+  bool HasInlinedVarSizedStack = false;
 };
 
 } // end namespace llvm
