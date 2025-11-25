@@ -645,10 +645,10 @@ void LayoutInfoPropagation::visitDpasOp(
 
   LayoutInfo dpasALayout;
   LayoutInfo dpasBLayout;
-  LayoutInfo dpasCLayout;
+  LayoutInfo dpasCDLayout;
 
-  xegpu::DistributeLayoutAttr anchorLayoutC = dpas.getAnchorLayoutCdAttr();
-  if (hasParamsOfLayoutKind(anchorLayoutC)) {
+  xegpu::DistributeLayoutAttr anchorLayoutCD = dpas.getAnchorLayoutCdAttr();
+  if (hasParamsOfLayoutKind(anchorLayoutCD)) {
     xegpu::DistributeLayoutAttr anchorLayoutA = dpas.getAnchorLayoutAAttr();
     xegpu::DistributeLayoutAttr anchorLayoutB = dpas.getAnchorLayoutBAttr();
     assert(hasParamsOfLayoutKind(anchorLayoutA) &&
@@ -657,7 +657,7 @@ void LayoutInfoPropagation::visitDpasOp(
            "Expected anchor layout for DPAS B operand.");
     dpasALayout = LayoutInfo(anchorLayoutA);
     dpasBLayout = LayoutInfo(anchorLayoutB);
-    dpasCLayout = LayoutInfo(anchorLayoutC);
+    dpasCDLayout = LayoutInfo(anchorLayoutCD);
 
   } else {
 
@@ -714,14 +714,14 @@ void LayoutInfoPropagation::visitDpasOp(
           dpas.emitWarning(
               "No suitable instruction multiple found for the given shape.");
         SmallVector<int> instDataC = {maxALen, maxCLen};
-        dpasCLayout =
+        dpasCDLayout =
             LayoutInfo(xegpu::LayoutAttr::get(dpas.getContext(), instDataC));
       } else
-        dpasCLayout = getSIMTLayoutInfoForDPASOperand(
+        dpasCDLayout = getSIMTLayoutInfoForDPASOperand(
             cTy, 2, uArch, uArchInstruction->getPackedFormatBitSizeB());
 
       dpas.setAnchorLayoutCdAttr(
-          dyn_cast<xegpu::DistributeLayoutAttr>(dpasCLayout.get()));
+          dyn_cast<xegpu::DistributeLayoutAttr>(dpasCDLayout.get()));
     }
     dpas.setAnchorLayoutAAttr(
         dyn_cast<xegpu::DistributeLayoutAttr>(dpasALayout.get()));
@@ -732,7 +732,7 @@ void LayoutInfoPropagation::visitDpasOp(
   propagateIfChanged(operands[0], operands[0]->meet(dpasALayout));
   propagateIfChanged(operands[1], operands[1]->meet(dpasBLayout));
   if (operands.size() > 2) {
-    propagateIfChanged(operands[2], operands[2]->meet(dpasCLayout));
+    propagateIfChanged(operands[2], operands[2]->meet(dpasCDLayout));
   }
 }
 
