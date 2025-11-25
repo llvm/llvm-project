@@ -18,24 +18,25 @@ https://llvm.org/docs/CodingStandards.html
 """
 
 import argparse
+import github
+import json
 from operator import attrgetter
 import os
 import subprocess
 import sys
-from typing import List, Optional
+from typing import Any, Dict, Final, List, Optional
 
 
 class LintArgs:
-    start_rev: str = None
-    end_rev: str = None
-    repo: str = None
-    changed_files: List[str] = []
-    token: str = None
+    start_rev: Optional[str] = None
+    end_rev: Optional[str] = None
+    repo: Optional[str] = None
+    changed_files: Optional[str] = None
+    token: Optional[str] = None
     verbose: bool = True
     issue_number: int = 0
     build_path: str = "build"
     clang_tidy_binary: str = "clang-tidy"
-    doc8_binary: str = "doc8"
 
     def __init__(self, args: argparse.Namespace) -> None:
         if not args is None:
@@ -43,43 +44,34 @@ class LintArgs:
             self.end_rev = args.end_rev
             self.repo = args.repo
             self.token = args.token
-            if args.changed_files:
-                self.changed_files = args.changed_files.split(",")
-            else:
-                self.changed_files = []
+            self.changed_files = args.changed_files
             self.issue_number = args.issue_number
             self.verbose = args.verbose
             self.build_path = args.build_path
             self.clang_tidy_binary = args.clang_tidy_binary
-            self.doc8_binary = args.doc8_binary
 
 
 class LintHelper:
     COMMENT_TAG = "<!--LLVM CODE LINT COMMENT: {linter}-->"
     name: str
     friendly_name: str
-    comment: dict = None
+    comment: Optional[Dict[str, Any]] = None
 
     @property
     def comment_tag(self) -> str:
         return self.COMMENT_TAG.format(linter=self.name)
 
-    @property
     def instructions(self) -> str:
         raise NotImplementedError()
 
-    def filter_changed_files(self, changed_files: List[str]) -> List[str]:
+    def filter_changed_files(self) -> List[str]:
         raise NotImplementedError()
 
-    def run_linter_tool(
-        self, files_to_lint: List[str], args: LintArgs
-    ) -> Optional[str]:
+    def run_linter_tool(self) -> Optional[str]:
         raise NotImplementedError()
 
-    def pr_comment_text_for_diff(
-        self, linter_output: str, files_to_lint: List[str], args: LintArgs
-    ) -> str:
-        instructions = self.instructions(files_to_lint, args)
+    def create_comment_text(self, linter_output: str) -> str:
+        instructions = self.instructions()
         return f"""
 :warning: {self.friendly_name}, {self.name} found issues in your code. :warning:
 
@@ -107,7 +99,7 @@ View the output from {self.name} here.
 """
 
     # TODO: Refactor this
-    def find_comment(self, pr: any) -> any:
+    def find_comment(self, pr: Any) -> Any:
         all_linter_names = list(map(attrgetter("name"), ALL_LINTERS))
         other_linter_names = [name for name in all_linter_names if name != self.name]
 
@@ -124,27 +116,25 @@ View the output from {self.name} here.
         return None
 
     def update_pr(self, comment_text: str, args: LintArgs, create_new: bool) -> None:
-        import github
-        from github import IssueComment, PullRequest
-
+        assert args.repo is not None
         repo = github.Github(args.token).get_repo(args.repo)
         pr = repo.get_issue(args.issue_number).as_pull_request()
 
-        comment_text = self.comment_tag + "\n\n" + comment_text
+        comment_text = f"{self.comment_tag}\n\n{comment_text}"
 
         existing_comment = self.find_comment(pr)
 
-        if create_new or existing_comment:
-            self.comment = {"body": comment_text}
         if existing_comment:
-            self.comment["id"] = existing_comment.id
+            self.comment = {"body": comment_text, "id": existing_comment.id}
+        elif create_new:
+            self.comment = {"body": comment_text}
 
 
-    def run(self, args: LintArgs) -> bool:
+    def run(self, changed_files: List[str], args: LintArgs) -> bool:
         if args.verbose:
-            print(f"got changed files: {args.changed_files}")
+            print(f"got changed files: {changed_files}")
 
-        files_to_lint = self.filter_changed_files(args.changed_files)
+        files_to_lint = self.filter_changed_files()
 
         if not files_to_lint and args.verbose:
             print("no modified files found")
@@ -153,7 +143,7 @@ View the output from {self.name} here.
         linter_output = None
 
         if files_to_lint:
-            linter_output = self.run_linter_tool(files_to_lint, args)
+            linter_output = self.run_linter_tool()
             if linter_output:
                 is_success = False
 
@@ -170,11 +160,11 @@ View the output from {self.name} here.
         else:
             if should_update_gh:
                 if linter_output:
-                    comment_text = self.pr_comment_text_for_diff(
-                        linter_output, files_to_lint, args
-                    )
+                    comment_text = self.create_comment_text(linter_output)
                     self.update_pr(comment_text, args, create_new=True)
                 else:
+                    # The linter failed but didn't output a result (e.g. some sort of
+                    # infrastructure failure).
                     comment_text = (
                         f":warning: The {self.friendly_name} failed without printing "
                         "an output. Check the logs for output. :warning:"
@@ -193,14 +183,14 @@ View the output from {self.name} here.
 
 
 class ClangTidyLintHelper(LintHelper):
-    name = "clang-tidy"
-    friendly_name = "C/C++ code linter"
+    name: Final[str] = "clang-tidy"
+    friendly_name: Final[str] = "C/C++ code linter"
 
     def instructions(self, cpp_files: List[str], args: LintArgs) -> str:
         files_str = " ".join(cpp_files)
         return f"""
 git diff -U0 origin/main...HEAD -- {files_str} |
-python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \\
+python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
   -path {args.build_path} -p1 -quiet"""
 
     def filter_changed_files(self, changed_files: List[str]) -> List[str]:
@@ -211,7 +201,7 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \\
         filtered_files = []
         for filepath in clang_tidy_changed_files:
             _, ext = os.path.splitext(filepath)
-            if ext not in (".cpp", ".c", ".h", ".hpp", ".hxx", ".cxx"):
+            if ext not in (".c", ".cpp", ".cxx", ".h", ".hpp", ".hxx"):
                 continue
             if not self._should_lint_file(filepath):
                 continue
@@ -277,6 +267,11 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \\
         return clean_output
 
     def _clean_clang_tidy_output(self, output: str) -> Optional[str]:
+        """
+        - Remove 'Running clang-tidy in X threads...' line
+        - Remove 'N warnings generated.' line
+        - Strip leading workspace path from file paths
+        """
         if not output or output == "No relevant changes found.":
             return None
 
@@ -287,6 +282,7 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \\
             if line.startswith("Running clang-tidy in") or line.endswith("generated."):
                 continue
 
+            # Remove everything up to rightmost "llvm-project/" for correct files names
             idx = line.rfind("llvm-project/")
             if idx != -1:
                 line = line[idx + len("llvm-project/") :]
@@ -298,58 +294,7 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \\
         return None
 
 
-class Doc8LintHelper(LintHelper):
-    name = "doc8"
-    friendly_name = "documentation linter"
-
-    def instructions(self, doc_files: List[str], args: LintArgs) -> str:
-        files_str = " ".join(doc_files)
-        return f"doc8 -q {files_str}"
-
-    def filter_changed_files(self, changed_files: List[str]) -> List[str]:
-        filtered_files = []
-        for filepath in changed_files:
-            _, ext = os.path.splitext(filepath)
-            if ext not in (".rst"):
-                continue
-            if not filepath.startswith("clang-tools-extra/docs/clang-tidy/checks/"):
-                continue
-            if os.path.exists(filepath):
-                filtered_files.append(filepath)
-        return filtered_files
-
-    def run_linter_tool(self, doc_files: List[str], args: LintArgs) -> Optional[str]:
-        if not doc_files:
-            return None
-
-        doc8_cmd = [args.doc8_binary, "-q"] + doc_files
-
-        if args.verbose:
-            print(f"Running doc8: {' '.join(doc8_cmd)}")
-
-        proc = subprocess.run(
-            doc8_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=False,
-        )
-
-        if proc.returncode == 0:
-            return None
-
-        output = proc.stdout.strip()
-        if output:
-            return output
-
-        error_output = proc.stderr.strip()
-        if error_output:
-            return error_output
-
-        return f"doc8 exited with return code {proc.returncode} but no output."
-
-
-ALL_LINTERS = (ClangTidyLintHelper(), Doc8LintHelper())
+ALL_LINTERS = (ClangTidyLintHelper(),)
 
 
 if __name__ == "__main__":
@@ -391,41 +336,38 @@ if __name__ == "__main__":
         help="Path to clang-tidy binary",
     )
     parser.add_argument(
-        "--doc8-binary",
-        type=str,
-        default="doc8",
-        help="Path to doc8 binary",
-    )
-    parser.add_argument(
         "--verbose", action="store_true", default=True, help="Verbose output"
     )
 
     parsed_args = parser.parse_args()
     args = LintArgs(parsed_args)
 
+    changed_files = []
+    if args.changed_files:
+        changed_files = args.changed_files.split(",")
+
     overall_success = True
-    failed_linters = []
-    all_comments = []
+    failed_linters: List[str] = []
+    all_comments: List[Dict[str, Any]] = []
 
     for linter in ALL_LINTERS:
         if args.verbose:
             print(f"running linter {linter.name}")
 
-        linter_passed = linter.run(args)
+        linter_passed = linter.run(changed_files, args)
         if not linter_passed:
             overall_success = False
             failed_linters.append(linter.name)
             if args.verbose:
                 print(f"linter {linter.name} failed")
 
+        # Write comments file if we have a comment
         if linter.comment:
             if args.verbose:
                 print(f"linter {linter.name} has comment: {linter.comment}")
             all_comments.append(linter.comment)
 
     if len(all_comments):
-        import json
-
         existing_comments = []
         if os.path.exists("comments"):
             try:
