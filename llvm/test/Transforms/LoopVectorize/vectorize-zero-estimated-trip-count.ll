@@ -2,6 +2,7 @@
 ; LoopVectorize behavior while it tries to create runtime memory checks inside
 ; an outer loop.
 
+; REQUIRES: x86-registered-target
 ; RUN: opt -passes=loop-vectorize -S %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
