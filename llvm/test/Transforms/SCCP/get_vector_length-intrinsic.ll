@@ -3,9 +3,7 @@
 
 define i1 @result_le_count() {
 ; CHECK-LABEL: define i1 @result_le_count() {
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 3, i32 4, i1 false)
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i32 [[X]], 3
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x = call i32 @llvm.experimental.get.vector.length(i32 3, i32 4, i1 false)
   %res = icmp ule i32 %x, 3
@@ -16,8 +14,7 @@ define i1 @result_le_max_lanes(i32 %count) {
 ; CHECK-LABEL: define i1 @result_le_max_lanes(
 ; CHECK-SAME: i32 [[COUNT:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[COUNT]], i32 3, i1 false)
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i32 [[X]], 3
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x = call i32 @llvm.experimental.get.vector.length(i32 %count, i32 3, i1 false)
   %res = icmp ule i32 %x, 3
@@ -28,8 +25,7 @@ define i1 @result_le_max_lanes_scalable(i32 %count) vscale_range(2, 4) {
 ; CHECK-LABEL: define i1 @result_le_max_lanes_scalable(
 ; CHECK-SAME: i32 [[COUNT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[COUNT]], i32 4, i1 true)
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i32 [[X]], 16
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x = call i32 @llvm.experimental.get.vector.length(i32 %count, i32 4, i1 true)
   %res = icmp ule i32 %x, 16
@@ -38,16 +34,12 @@ define i1 @result_le_max_lanes_scalable(i32 %count) vscale_range(2, 4) {
 
 define i32 @count_le_max_lanes() {
 ; CHECK-LABEL: define i32 @count_le_max_lanes() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 4, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[IV]], i32 4, i1 false)
-; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], [[X]]
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 4
 ;
 entry:
   br label %loop
@@ -65,7 +57,7 @@ exit:
 
 ; Can't simplify because %iv isn't <= max lanes.
 define i32 @count_not_le_max_lanes() {
-; CHECK-LABEL: define i32 @count_not_le_max_lanes() {
+; CHECK-LABEL: define range(i32 0, 5) i32 @count_not_le_max_lanes() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -94,16 +86,12 @@ exit:
 define i32 @count_le_max_lanes_scalable_known() vscale_range(4, 8) {
 ; CHECK-LABEL: define i32 @count_le_max_lanes_scalable_known(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 16, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[IV]], i32 4, i1 true)
-; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], [[X]]
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 16
 ;
 entry:
   br label %loop
@@ -121,7 +109,7 @@ exit:
 
 ; Can't simplify because %iv isn't guaranteed <= max lanes.
 define i32 @count_le_max_lanes_scalable_unknown() {
-; CHECK-LABEL: define i32 @count_le_max_lanes_scalable_unknown() {
+; CHECK-LABEL: define range(i32 0, -1) i32 @count_le_max_lanes_scalable_unknown() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
