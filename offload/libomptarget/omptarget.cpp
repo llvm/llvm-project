@@ -699,14 +699,20 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         // to references to a local device pointer that refers to this device
         // address.
         //
-        // TODO: Add a new map-type bit to support OpenMP 6.1's `fb_nullify`
-        // and set the result to `nullptr - Delta`. Note that `fb_nullify` is
-        // already the default for `need_device_ptr`, but clang/flang do not
-        // support its codegen yet.
-        TgtPtrBase = reinterpret_cast<void *>(
-            reinterpret_cast<uintptr_t>(HstPtrBegin) - Delta);
-        DP("Returning host pointer " DPxMOD " as fallback (lookup failed).\n",
-           DPxPTR(TgtPtrBase));
+        // OpenMP 6.1's `fb_nullify` fallback behavior: when the FB_NULLIFY bit
+        // is set by the compiler, e.g. for `use/need_device_ptr(fb_nullify)`),
+        // return `nullptr - Delta` when lookup fails.
+        if (ArgTypes[I] & OMP_TGT_MAPTYPE_FB_NULLIFY) {
+          TgtPtrBase = reinterpret_cast<void *>(
+              reinterpret_cast<uintptr_t>(nullptr) - Delta);
+          DP("Returning offsetted null pointer " DPxMOD " as fallback (lookup failed)\n",
+             DPxPTR(TgtPtrBase));
+        } else {
+          TgtPtrBase = reinterpret_cast<void *>(
+              reinterpret_cast<uintptr_t>(HstPtrBegin) - Delta);
+          DP("Returning host pointer " DPxMOD " as fallback (lookup failed)\n",
+             DPxPTR(TgtPtrBase));
+        }
       }
       ArgsBase[I] = TgtPtrBase;
     }
