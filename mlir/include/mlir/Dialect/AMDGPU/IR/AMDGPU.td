@@ -1237,7 +1237,6 @@ def AMDGPU_MakeDmaBaseOp :
     Results<(outs AMDGPU_TDMBaseType: $base)> {
 
   // TODO:
-  // * Add verifiers such that one of the memrefs is from LDS and the other global.
   // * Add verifiers to make sure that the number of indices do not exceed the number of dimensions.
 
   let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
@@ -1280,6 +1279,8 @@ def AMDGPU_MakeDmaBaseOp :
   let assemblyFormat = [{
     $src `[` $src_indices `]` `,` $dst `[` $dst_indices `]` attr-dict `:` type($src) `,` type($dst) `->` type(results)
   }];
+
+  let hasVerifier = 1;
 }
 
 def AMDGPU_MakeDmaDescriptorOp :
