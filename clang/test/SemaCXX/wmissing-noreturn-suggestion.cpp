@@ -53,3 +53,26 @@ int gnu_throws() {
 int cxx11_throws() {
     throw 0;
 }
+
+namespace GH167247 {
+struct S1 {
+  virtual ~S1() = default;
+  virtual void m() {
+    throw std::runtime_error("This method always throws");
+  }
+};
+
+struct S2 {
+  virtual ~S2() = default;
+
+  virtual void m() final { // expected-warning {{function 'm' could be declared with attribute 'noreturn'}}
+    throw std::runtime_error("This method always throws");
+  }
+};
+
+struct S3 final : S1 {
+  void m() { // expected-warning {{function 'm' could be declared with attribute 'noreturn'}}
+    throw std::runtime_error("This method always throws");
+  }
+};
+}

@@ -6285,12 +6285,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
                                        StringRef OrigBoundArch, bool AtTopLevel,
                                        bool MultipleArchs,
                                        StringRef OffloadingPrefix) const {
-  std::string BoundArch = OrigBoundArch.str();
-  if (is_style_windows(llvm::sys::path::Style::native)) {
-    // BoundArch may contains ':', which is invalid in file names on Windows,
-    // therefore replace it with '%'.
-    llvm::replace(BoundArch, ':', '@');
-  }
+  std::string BoundArch = sanitizeTargetIDInFileName(OrigBoundArch);
 
   llvm::PrettyStackTraceString CrashInfo("Computing output path");
   // Output to a user requested destination?
@@ -6606,6 +6601,17 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   llvm::sys::path::append(P, Name);
   if (llvm::sys::fs::exists(Twine(P)))
     return std::string(P);
+
+  // With Flang, also look for instrinsic modules
+  if (IsFlangMode()) {
+    if (std::optional<std::string> IntrPath =
+            TC.getDefaultIntrinsicModuleDir()) {
+      SmallString<128> P(*IntrPath);
+      llvm::sys::path::append(P, Name);
+      if (llvm::sys::fs::exists(Twine(P)))
+        return std::string(P);
+    }
+  }
 
   SmallString<128> D(Dir);
   llvm::sys::path::append(D, "..", Name);

@@ -5214,11 +5214,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_wave_reduce_add:
+    case Intrinsic::amdgcn_wave_reduce_fadd:
     case Intrinsic::amdgcn_wave_reduce_sub:
+    case Intrinsic::amdgcn_wave_reduce_fsub:
     case Intrinsic::amdgcn_wave_reduce_min:
     case Intrinsic::amdgcn_wave_reduce_umin:
+    case Intrinsic::amdgcn_wave_reduce_fmin:
     case Intrinsic::amdgcn_wave_reduce_max:
     case Intrinsic::amdgcn_wave_reduce_umax:
+    case Intrinsic::amdgcn_wave_reduce_fmax:
     case Intrinsic::amdgcn_wave_reduce_and:
     case Intrinsic::amdgcn_wave_reduce_or:
     case Intrinsic::amdgcn_wave_reduce_xor: {
