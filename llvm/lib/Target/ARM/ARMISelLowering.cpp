@@ -633,11 +633,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FMAXNUM, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FMINNUM, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FMAXNUM, MVT::f16, Legal);
-
-    if (Subtarget->hasVFPv3()) {
-      setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
-      setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
-    }
   }
 
   if (Subtarget->hasBF16()) {
@@ -967,6 +962,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   if (!Subtarget->hasFP16()) {
     setOperationAction(ISD::FP_EXTEND,  MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
+  } else {
+    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
   }
 
   computeRegisterProperties(Subtarget->getRegisterInfo());
@@ -1306,16 +1304,16 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     if (!Subtarget->hasFPARMv8Base() || !Subtarget->hasFP64()) {
       setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
       setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
-      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f64, LibCall);
-      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f64, LibCall);
+      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f64, Expand);
+      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f64, Expand);
     }
 
     // fp16 is a special v7 extension that adds f16 <-> f32 conversions.
     if (!Subtarget->hasFP16()) {
       setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
       setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
-      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, LibCall);
-      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, LibCall);
+      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, Expand);
+      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, Expand);
     }
 
     // Strict floating-point comparisons need custom lowering.
