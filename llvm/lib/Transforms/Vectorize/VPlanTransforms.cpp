@@ -512,7 +512,7 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
     // replace it with the original IV. Note that only the final cast is
     // expected to have users outside the cast-chain and the dead casts left
     // over will be cleaned up later.
-    auto &Casts = IV->getInductionDescriptor().getCastInsts();
+    ArrayRef<Instruction *> Casts = IV->getInductionDescriptor().getCastInsts();
     VPValue *FindMyCast = IV;
     for (Instruction *IRCast : reverse(Casts)) {
       VPSingleDefRecipe *FoundUserCast = nullptr;
@@ -1201,6 +1201,9 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(
         Builder.createLogicalAnd(X, Builder.createLogicalAnd(Y, Z)));
 
+  if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
+    return Def->replaceAllUsesWith(A);
+
   if (match(Def, m_c_Mul(m_VPValue(A), m_One())))
     return Def->replaceAllUsesWith(A);
 
@@ -1238,6 +1241,35 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
         if (!Cmp->getDebugLoc() && Def->getDebugLoc())
           Cmp->setDebugLoc(Def->getDebugLoc());
       }
+    }
+  }
+
+  // Fold any-of (fcmp uno %A, %A), (fcmp uno %B, %B), ... ->
+  //      any-of (fcmp uno %A, %B), ...
+  if (match(Def, m_AnyOf())) {
+    SmallVector<VPValue *, 4> NewOps;
+    VPRecipeBase *UnpairedCmp = nullptr;
+    for (VPValue *Op : Def->operands()) {
+      VPValue *X;
+      if (Op->getNumUsers() > 1 ||
+          !match(Op, m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(X),
+                                   m_Deferred(X)))) {
+        NewOps.push_back(Op);
+      } else if (!UnpairedCmp) {
+        UnpairedCmp = Op->getDefiningRecipe();
+      } else {
+        NewOps.push_back(Builder.createFCmp(CmpInst::FCMP_UNO,
+                                            UnpairedCmp->getOperand(0), X));
+        UnpairedCmp = nullptr;
+      }
+    }
+
+    if (UnpairedCmp)
+      NewOps.push_back(UnpairedCmp->getVPSingleValue());
+
+    if (NewOps.size() < Def->getNumOperands()) {
+      VPValue *NewAnyOf = Builder.createNaryOp(VPInstruction::AnyOf, NewOps);
+      return Def->replaceAllUsesWith(NewAnyOf);
     }
   }
 
@@ -1422,7 +1454,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPReplicateRecipe>(&R))
+      if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPWidenGEPRecipe,
+               VPReplicateRecipe>(&R))
         continue;
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
@@ -1460,6 +1493,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
               // operand against vputils::isSingleScalar.
               assert(RepOrWidenR != Store->getStoredValue() ||
                      vputils::isSingleScalar(Store->getStoredValue()));
+              (void)Store;
               return true;
             }
 

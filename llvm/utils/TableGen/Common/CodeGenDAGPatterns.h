@@ -71,7 +71,7 @@ struct MachineValueTypeSet {
     return Count;
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  void clear() { std::memset(Words.data(), 0, NumWords * sizeof(WordType)); }
+  void clear() { Words.fill(0); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool empty() const {
     for (WordType W : Words)
@@ -138,25 +138,19 @@ struct MachineValueTypeSet {
   private:
     unsigned find_from_pos(unsigned P) const {
       unsigned SkipWords = P / WordWidth;
-      unsigned SkipBits = P % WordWidth;
-      unsigned Count = SkipWords * WordWidth;
-
-      // If P is in the middle of a word, process it manually here, because
-      // the trailing bits need to be masked off to use findFirstSet.
-      if (SkipBits != 0) {
-        WordType W = Set->Words[SkipWords];
-        W &= maskLeadingOnes<WordType>(WordWidth - SkipBits);
-        if (W != 0)
-          return Count + llvm::countr_zero(W);
-        Count += WordWidth;
-        SkipWords++;
-      }
 
       for (unsigned i = SkipWords; i != NumWords; ++i) {
         WordType W = Set->Words[i];
+
+        // If P is in the middle of a word, process it manually here, because
+        // the trailing bits need to be masked off to use countr_zero.
+        if (i == SkipWords) {
+          unsigned SkipBits = P % WordWidth;
+          W &= maskTrailingZeros<WordType>(SkipBits);
+        }
+
         if (W != 0)
-          return Count + llvm::countr_zero(W);
-        Count += WordWidth;
+          return i * WordWidth + llvm::countr_zero(W);
       }
       return Capacity;
     }
@@ -923,6 +917,9 @@ public:
               CodeGenDAGPatterns &ise);
   TreePattern(const Record *TheRec, const DagInit *Pat, bool isInput,
               CodeGenDAGPatterns &ise);
+  TreePattern(const Record *TheRec, ArrayRef<const Init *> Args,
+              ArrayRef<const StringInit *> ArgNames, bool isInput,
+              CodeGenDAGPatterns &ise);
   TreePattern(const Record *TheRec, TreePatternNodePtr Pat, bool isInput,
               CodeGenDAGPatterns &ise);
 
@@ -987,6 +984,9 @@ public:
 
 private:
   TreePatternNodePtr ParseTreePattern(const Init *DI, StringRef OpName);
+  TreePatternNodePtr
+  ParseRootlessTreePattern(ArrayRef<const Init *> Args,
+                           ArrayRef<const StringInit *> ArgNames);
   void ComputeNamedNodes();
   void ComputeNamedNodes(TreePatternNode &N);
 };

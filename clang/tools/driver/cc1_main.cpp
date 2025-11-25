@@ -269,7 +269,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
       Clang->getHeaderSearchOpts().ResourceDir.empty())
     Clang->getHeaderSearchOpts().ResourceDir =
-      CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
+        CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
   /// Create the actual file system.
   Clang->createVirtualFileSystem(llvm::vfs::getRealFileSystem(), DiagsBuffer);

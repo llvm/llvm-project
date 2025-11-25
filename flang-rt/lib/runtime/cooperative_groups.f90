@@ -15,6 +15,12 @@ use :: cudadevice ! implicit dependency, made explicit for CMake
 
 implicit none
 
+type :: cluster_group
+  type(c_devptr), private :: handle
+  integer(4) :: size
+  integer(4) :: rank
+end type cluster_group
+
 type :: grid_group
   type(c_devptr), private :: handle
   integer(4) :: size
@@ -32,6 +38,27 @@ type :: thread_group
   integer(4) :: size
   integer(4) :: rank
 end type thread_group
+
+interface
+  attributes(device) function cluster_block_index()
+    import
+    type(dim3) :: cluster_block_index
+  end function
+end interface
+
+interface
+  attributes(device) function cluster_dim_blocks()
+    import
+    type(dim3) :: cluster_dim_blocks
+  end function
+end interface
+
+interface
+  attributes(device) function this_cluster()
+    import
+    type(cluster_group) :: this_cluster
+  end function
+end interface
 
 interface
   attributes(device) function this_grid()
