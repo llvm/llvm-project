@@ -17,32 +17,32 @@ void foo(int);
 
 template <typename T>
 void test(T t) {
-  // CHECK:      ExpansionStmtDecl
-  // CHECK-NEXT:   CXXEnumeratingExpansionStmt
-  // CHECK:        CXXExpansionInstantiationStmt
+  // CHECK:      CXXExpansionStmtDecl
+  // CHECK-NEXT:   CXXEnumeratingExpansionStmtPattern
+  // CHECK:        CXXExpansionStmtInstantiation
   template for (auto x : {1, 2, 3}) {
     foo(x);
   }
 
-  // CHECK:      ExpansionStmtDecl
-  // CHECK-NEXT:   CXXIteratingExpansionStmt
-  // CHECK:        CXXExpansionInstantiationStmt
+  // CHECK:      CXXExpansionStmtDecl
+  // CHECK-NEXT:   CXXIteratingExpansionStmtPattern
+  // CHECK:        CXXExpansionStmtInstantiation
   static constexpr Array<int, 3> a;
   template for (auto x : a) {
     foo(x);
   }
 
-  // CHECK:      ExpansionStmtDecl
-  // CHECK-NEXT:   CXXDestructuringExpansionStmt
-  // CHECK:        CXXExpansionInstantiationStmt
+  // CHECK:      CXXExpansionStmtDecl
+  // CHECK-NEXT:   CXXDestructuringExpansionStmtPattern
+  // CHECK:        CXXExpansionStmtInstantiation
   int arr[3]{1, 2, 3};
   template for (auto x : arr) {
     foo(x);
   }
 
-  // CHECK:      ExpansionStmtDecl
-  // CHECK-NEXT:   CXXDependentExpansionStmt
-  // CHECK-NOT:    CXXExpansionInstantiationStmt
+  // CHECK:      CXXExpansionStmtDecl
+  // CHECK-NEXT:   CXXDependentExpansionStmtPattern
+  // CHECK-NOT:    CXXExpansionStmtInstantiation
   template for (auto x : t) {
     foo(x);
   }

@@ -13395,7 +13395,7 @@ public:
 
     /// \brief Note that we are substituting the body of an expansion statement.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
-                          CXXExpansionStmt *ExpansionStmt,
+                          CXXExpansionStmtPattern *ExpansionStmt,
                           ArrayRef<TemplateArgument> TArgs,
                           SourceRange InstantiationRange);
 
@@ -15651,34 +15651,34 @@ public:
   /// Implementations are in SemaExpand.cpp
   ///@{
 public:
-  ExpansionStmtDecl *ActOnExpansionStmtDecl(unsigned TemplateDepth,
-                                            SourceLocation TemplateKWLoc);
+  CXXExpansionStmtDecl *ActOnCXXExpansionStmtDecl(unsigned TemplateDepth,
+                                                  SourceLocation TemplateKWLoc);
 
-  ExpansionStmtDecl *BuildExpansionStmtDecl(DeclContext *Ctx,
-                                            SourceLocation TemplateKWLoc,
-                                            NonTypeTemplateParmDecl *NTTP);
+  CXXExpansionStmtDecl *
+  BuildCXXExpansionStmtDecl(DeclContext *Ctx, SourceLocation TemplateKWLoc,
+                            NonTypeTemplateParmDecl *NTTP);
 
   ExprResult ActOnCXXExpansionInitList(MultiExprArg SubExprs,
                                        SourceLocation LBraceLoc,
                                        SourceLocation RBraceLoc);
 
-  StmtResult ActOnCXXExpansionStmt(
-      ExpansionStmtDecl *ESD, Stmt *Init, Stmt *ExpansionVarStmt,
+  StmtResult ActOnCXXExpansionStmtPattern(
+      CXXExpansionStmtDecl *ESD, Stmt *Init, Stmt *ExpansionVarStmt,
       Expr *ExpansionInitializer, SourceLocation LParenLoc,
       SourceLocation ColonLoc, SourceLocation RParenLoc,
       ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps);
 
   StmtResult FinishCXXExpansionStmt(Stmt *Expansion, Stmt *Body);
 
-  ExprResult BuildCXXExpansionInitializer(ExpansionStmtDecl *ESD,
+  ExprResult BuildCXXExpansionInitializer(CXXExpansionStmtDecl *ESD,
                                           Expr *ExpansionInitializer);
 
-  StmtResult BuildCXXEnumeratingExpansionStmt(Decl *ESD, Stmt *Init,
-                                              Stmt *ExpansionVar,
+  StmtResult BuildCXXEnumeratingExpansionStmtPattern(Decl *ESD, Stmt *Init,
+                                                     Stmt *ExpansionVar,
 
-                                              SourceLocation LParenLoc,
-                                              SourceLocation ColonLoc,
-                                              SourceLocation RParenLoc);
+                                                     SourceLocation LParenLoc,
+                                                     SourceLocation ColonLoc,
+                                                     SourceLocation RParenLoc);
 
   ExprResult
   BuildCXXExpansionInitListSelectExpr(CXXExpansionInitListExpr *Range,
@@ -15687,13 +15687,14 @@ public:
   ExprResult BuildCXXDestructuringExpansionSelectExpr(DecompositionDecl *DD,
                                                       Expr *Idx);
 
-  StmtResult BuildNonEnumeratingCXXExpansionStmt(
-      ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
+  StmtResult BuildNonEnumeratingCXXExpansionStmtPattern(
+      CXXExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
       Expr *ExpansionInitializer, SourceLocation LParenLoc,
       SourceLocation ColonLoc, SourceLocation RParenLoc,
       ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
 
-  std::optional<uint64_t> ComputeExpansionSize(CXXExpansionStmt *Expansion);
+  std::optional<uint64_t>
+  ComputeExpansionSize(CXXExpansionStmtPattern *Expansion);
   ///@}
 };
 

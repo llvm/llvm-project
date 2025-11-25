@@ -6038,7 +6038,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       if (VD && !CheckLocalVariableDeclaration(Info, VD))
         return ESR_Failed;
 
-      if (const auto *ESD = dyn_cast<ExpansionStmtDecl>(D)) {
+      if (const auto *ESD = dyn_cast<CXXExpansionStmtDecl>(D)) {
         assert(ESD->getInstantiations() && "not expanded?");
         return EvaluateStmt(Result, Info, ESD->getInstantiations(), Case);
       }
@@ -6315,9 +6315,9 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     return Scope.destroy() ? ESR_Succeeded : ESR_Failed;
   }
 
-  case Stmt::CXXExpansionInstantiationStmtClass: {
+  case Stmt::CXXExpansionStmtInstantiationClass: {
     BlockScopeRAII Scope(Info);
-    const auto *Expansion = cast<CXXExpansionInstantiationStmt>(S);
+    const auto *Expansion = cast<CXXExpansionStmtInstantiation>(S);
     for (const Stmt *Shared : Expansion->getSharedStmts()) {
       EvalStmtResult ESR = EvaluateStmt(Result, Info, Shared);
       if (ESR != ESR_Succeeded) {

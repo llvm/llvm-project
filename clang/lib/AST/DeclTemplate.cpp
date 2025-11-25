@@ -1717,9 +1717,9 @@ clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
     return getReplacedTemplateParameter(
         cast<FunctionDecl>(D)->getTemplateSpecializationInfo()->getTemplate(),
         Index);
-  case Decl::Kind::ExpansionStmt:
+  case Decl::Kind::CXXExpansionStmt:
     return {
-        cast<ExpansionStmtDecl>(D)->getTemplateParameters()->getParam(Index),
+        cast<CXXExpansionStmtDecl>(D)->getTemplateParameters()->getParam(Index),
         {}};
   default:
     llvm_unreachable("Unhandled templated declaration kind");
@@ -1793,21 +1793,21 @@ const Decl &clang::adjustDeclToTemplate(const Decl &D) {
   return D;
 }
 
-ExpansionStmtDecl::ExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
-                                     TemplateParameterList *TParams)
-    : Decl(ExpansionStmt, DC, Loc), DeclContext(ExpansionStmt),
+CXXExpansionStmtDecl::CXXExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
+                                           TemplateParameterList *TParams)
+    : Decl(CXXExpansionStmt, DC, Loc), DeclContext(CXXExpansionStmt),
       TParams(TParams) {}
 
-ExpansionStmtDecl *ExpansionStmtDecl::Create(ASTContext &C, DeclContext *DC,
-                                             SourceLocation Loc,
-                                             TemplateParameterList *TParams) {
-  return new (C, DC) ExpansionStmtDecl(DC, Loc, TParams);
+CXXExpansionStmtDecl *
+CXXExpansionStmtDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation Loc,
+                             TemplateParameterList *TParams) {
+  return new (C, DC) CXXExpansionStmtDecl(DC, Loc, TParams);
 }
-ExpansionStmtDecl *ExpansionStmtDecl::CreateDeserialized(ASTContext &C,
-                                                         GlobalDeclID ID) {
-  return new (C, ID) ExpansionStmtDecl(nullptr, SourceLocation(), nullptr);
+CXXExpansionStmtDecl *
+CXXExpansionStmtDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
+  return new (C, ID) CXXExpansionStmtDecl(nullptr, SourceLocation(), nullptr);
 }
 
-SourceRange ExpansionStmtDecl::getSourceRange() const {
+SourceRange CXXExpansionStmtDecl::getSourceRange() const {
   return Expansion ? Expansion->getSourceRange() : SourceRange();
 }

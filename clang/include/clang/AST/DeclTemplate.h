@@ -3361,17 +3361,19 @@ public:
 /// just regular template instantiation.
 ///
 /// Apart from a template parameter list that contains a template parameter used
-/// as the expansion index, this node contains a 'CXXExpansionStmt' as well as a
-/// 'CXXExpansionInstantiationStmt'. These two members correspond to distinct
-/// representations of the expansion statement: the former is used prior to
-/// expansion and contains all the parts needed to perform expansion; the latter
-/// holds the expanded/desugared AST nodes that result from the expansion.
+/// as the expansion index, this node contains a 'CXXExpansionStmtPattern' as
+/// well as a 'CXXExpansionStmtInstantiation'. These two members correspond to
+/// distinct representations of the expansion statement: the former is used
+/// prior to expansion and contains all the parts needed to perform expansion;
+/// the latter holds the expanded/desugared AST nodes that result from the
+/// expansion.
 ///
-/// After expansion, the 'CXXExpansionStmt' is no longer updated and left as-is;
-/// this also means that, if an already-expanded expansion statement is inside a
-/// template, and that template is then instantiated, the 'CXXExpansionStmt' is
-/// *not* instantiated; only the 'CXXExpansionInstantiationStmt' is. The latter
-/// is also what's used for codegen and constant evaluation.
+/// After expansion, the 'CXXExpansionStmtPattern' is no longer updated and left
+/// as-is; this also means that, if an already-expanded expansion statement is
+/// inside a template, and that template is then instantiated, the
+/// 'CXXExpansionStmtPattern' is *not* instantiated; only the
+/// 'CXXExpansionStmtInstantiation' is. The latter is also what's used for
+/// codegen and constant evaluation.
 ///
 /// For example, if the user writes the following expansion statement:
 /// \verbatim
@@ -3381,11 +3383,12 @@ public:
 ///   }
 /// \endverbatim
 ///
-/// The 'CXXExpansionStmt' of this particular 'ExpansionStmtDecl' is a
-/// 'CXXDestructuringExpansionStmt', which stores, amongst other things, the
-/// declaration of the variable 'x' as well as the expansion-initializer 'a'.
+/// The 'CXXExpansionStmtPattern' of this particular 'CXXExpansionStmtDecl' is a
+/// 'CXXDestructuringExpansionStmtPattern', which stores, amongst other things,
+/// the declaration of the variable 'x' as well as the expansion-initializer
+/// 'a'.
 ///
-/// After expansion, we end up with a 'CXXExpansionInstantiationStmt' that
+/// After expansion, we end up with a 'CXXExpansionStmtInstantiation' that
 /// contains a DecompositionDecl and 3 CompoundStmts, one for each expansion:
 ///
 /// \verbatim
@@ -3409,34 +3412,37 @@ public:
 /// The outer braces shown above are implicit; we don't actually create another
 /// CompoundStmt wrapping everything.
 ///
-/// \see CXXExpansionStmt
-/// \see CXXExpansionInstantiationStmt
-class ExpansionStmtDecl : public Decl, public DeclContext {
-  CXXExpansionStmt *Expansion = nullptr;
+/// \see CXXExpansionStmtPattern
+/// \see CXXExpansionStmtInstantiation
+class CXXExpansionStmtDecl : public Decl, public DeclContext {
+  CXXExpansionStmtPattern *Expansion = nullptr;
   TemplateParameterList *TParams;
-  CXXExpansionInstantiationStmt *Instantiations = nullptr;
+  CXXExpansionStmtInstantiation *Instantiations = nullptr;
 
-  ExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
-                    TemplateParameterList *TParams);
+  CXXExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
+                       TemplateParameterList *TParams);
 
 public:
   friend class ASTDeclReader;
 
-  static ExpansionStmtDecl *Create(ASTContext &C, DeclContext *DC,
-                                   SourceLocation Loc,
-                                   TemplateParameterList *TParams);
-  static ExpansionStmtDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
+  static CXXExpansionStmtDecl *Create(ASTContext &C, DeclContext *DC,
+                                      SourceLocation Loc,
+                                      TemplateParameterList *TParams);
+  static CXXExpansionStmtDecl *CreateDeserialized(ASTContext &C,
+                                                  GlobalDeclID ID);
 
-  CXXExpansionStmt *getExpansionPattern() { return Expansion; }
-  const CXXExpansionStmt *getExpansionPattern() const { return Expansion; }
-  void setExpansionPattern(CXXExpansionStmt *S) { Expansion = S; }
+  CXXExpansionStmtPattern *getExpansionPattern() { return Expansion; }
+  const CXXExpansionStmtPattern *getExpansionPattern() const {
+    return Expansion;
+  }
+  void setExpansionPattern(CXXExpansionStmtPattern *S) { Expansion = S; }
 
-  CXXExpansionInstantiationStmt *getInstantiations() { return Instantiations; }
-  const CXXExpansionInstantiationStmt *getInstantiations() const {
+  CXXExpansionStmtInstantiation *getInstantiations() { return Instantiations; }
+  const CXXExpansionStmtInstantiation *getInstantiations() const {
     return Instantiations;
   }
 
-  void setInstantiations(CXXExpansionInstantiationStmt *S) {
+  void setInstantiations(CXXExpansionStmtInstantiation *S) {
     Instantiations = S;
   }
 
@@ -3448,7 +3454,7 @@ public:
   SourceRange getSourceRange() const override LLVM_READONLY;
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
-  static bool classofKind(Kind K) { return K == ExpansionStmt; }
+  static bool classofKind(Kind K) { return K == CXXExpansionStmt; }
 };
 
 inline NamedDecl *getAsNamedDecl(TemplateParameter P) {

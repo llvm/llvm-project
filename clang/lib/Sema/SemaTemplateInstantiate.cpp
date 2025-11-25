@@ -762,7 +762,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
-    CXXExpansionStmt *ExpansionStmt, ArrayRef<TemplateArgument> TArgs,
+    CXXExpansionStmtPattern *ExpansionStmt, ArrayRef<TemplateArgument> TArgs,
     SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::ExpansionStmtInstantiation,
@@ -1907,7 +1907,7 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
       maybeInstantiateFunctionParameterToScope(PVD))
     return nullptr;
 
-  if (isa<ExpansionStmtDecl>(D)) {
+  if (isa<CXXExpansionStmtDecl>(D)) {
     assert(SemaRef.CurrentInstantiationScope);
     return cast<Decl *>(
         *SemaRef.CurrentInstantiationScope->findInstantiationOf(D));

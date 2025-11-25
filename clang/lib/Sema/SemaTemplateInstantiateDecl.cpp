@@ -2065,21 +2065,21 @@ Decl *TemplateDeclInstantiator::VisitStaticAssertDecl(StaticAssertDecl *D) {
       InstantiatedMessageExpr.get(), D->getRParenLoc(), D->isFailed());
 }
 
-Decl *
-TemplateDeclInstantiator::VisitExpansionStmtDecl(ExpansionStmtDecl *OldESD) {
+Decl *TemplateDeclInstantiator::VisitCXXExpansionStmtDecl(
+    CXXExpansionStmtDecl *OldESD) {
   Decl *Index = VisitNonTypeTemplateParmDecl(OldESD->getIndexTemplateParm());
-  ExpansionStmtDecl *NewESD = SemaRef.BuildExpansionStmtDecl(
+  CXXExpansionStmtDecl *NewESD = SemaRef.BuildCXXExpansionStmtDecl(
       Owner, OldESD->getBeginLoc(), cast<NonTypeTemplateParmDecl>(Index));
   SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldESD, NewESD);
 
   // If this was already expanded, only instantiate the expansion and
   // don't touch the unexpanded expansion statement.
-  if (CXXExpansionInstantiationStmt *OldInst = OldESD->getInstantiations()) {
+  if (CXXExpansionStmtInstantiation *OldInst = OldESD->getInstantiations()) {
     StmtResult NewInst = SemaRef.SubstStmt(OldInst, TemplateArgs);
     if (NewInst.isInvalid())
       return nullptr;
 
-    NewESD->setInstantiations(NewInst.getAs<CXXExpansionInstantiationStmt>());
+    NewESD->setInstantiations(NewInst.getAs<CXXExpansionStmtInstantiation>());
     NewESD->setExpansionPattern(OldESD->getExpansionPattern());
     return NewESD;
   }
@@ -2094,9 +2094,9 @@ TemplateDeclInstantiator::VisitExpansionStmtDecl(ExpansionStmtDecl *OldESD) {
   if (Expansion.isInvalid())
     return nullptr;
 
-  // The code that handles CXXExpansionStmt takes care of calling
+  // The code that handles CXXExpansionStmtPattern takes care of calling
   // setInstantiation() on the ESD if there was an expansion.
-  NewESD->setExpansionPattern(cast<CXXExpansionStmt>(Expansion.get()));
+  NewESD->setExpansionPattern(cast<CXXExpansionStmtPattern>(Expansion.get()));
   return NewESD;
 }
 

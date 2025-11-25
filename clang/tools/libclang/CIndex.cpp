@@ -7254,7 +7254,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::UnresolvedUsingIfExists:
   case Decl::OpenACCDeclare:
   case Decl::OpenACCRoutine:
-  case Decl::ExpansionStmt:
+  case Decl::CXXExpansionStmt:
     return C;
 
   // Declaration kinds that don't make any sense here, but are

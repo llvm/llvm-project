@@ -42,7 +42,7 @@ using namespace clang;
 namespace {
 
 static bool isLocalContainerContext(const DeclContext *DC) {
-  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, ExpansionStmtDecl>(DC);
+  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, CXXExpansionStmtDecl>(DC);
 }
 
 static const FunctionDecl *getStructor(const FunctionDecl *fn) {

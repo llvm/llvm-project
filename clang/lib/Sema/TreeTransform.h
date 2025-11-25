@@ -857,15 +857,15 @@ public:
 
   StmtResult TransformOMPInformationalDirective(OMPExecutableDirective *S);
 
-  struct TransformCXXExpansionStmtResult {
-    ExpansionStmtDecl *NewESD{};
+  struct TransformCXXExpansionStmtPatternResult {
+    CXXExpansionStmtDecl *NewESD{};
     Stmt *NewInit{};
     DeclStmt *NewExpansionVarDecl{};
     bool isValid() const { return NewESD != nullptr; }
   };
 
-  TransformCXXExpansionStmtResult
-  TransformCXXExpansionStmtCommonParts(CXXExpansionStmt *S) {
+  TransformCXXExpansionStmtPatternResult
+  TransformCXXExpansionStmtPatternCommonParts(CXXExpansionStmtPattern *S) {
     Decl *ESD =
         getDerived().TransformDecl(S->getDecl()->getLocation(), S->getDecl());
     if (!ESD || ESD->isInvalidDecl())
@@ -884,7 +884,8 @@ public:
     if (ExpansionVar.isInvalid())
       return {};
 
-    return {cast<ExpansionStmtDecl>(ESD), Init, ExpansionVar.getAs<DeclStmt>()};
+    return {cast<CXXExpansionStmtDecl>(ESD), Init,
+            ExpansionVar.getAs<DeclStmt>()};
   }
 
 // FIXME: We use LLVM_ATTRIBUTE_NOINLINE because inlining causes a ridiculous
@@ -9323,14 +9324,14 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
 }
 
 template <typename Derived>
-StmtResult TreeTransform<Derived>::TransformCXXEnumeratingExpansionStmt(
-    CXXEnumeratingExpansionStmt *S) {
-  TransformCXXExpansionStmtResult Common =
-      TransformCXXExpansionStmtCommonParts(S);
+StmtResult TreeTransform<Derived>::TransformCXXEnumeratingExpansionStmtPattern(
+    CXXEnumeratingExpansionStmtPattern *S) {
+  TransformCXXExpansionStmtPatternResult Common =
+      TransformCXXExpansionStmtPatternCommonParts(S);
   if (!Common.isValid())
     return StmtError();
 
-  auto *Expansion = new (SemaRef.Context) CXXEnumeratingExpansionStmt(
+  auto *Expansion = new (SemaRef.Context) CXXEnumeratingExpansionStmtPattern(
       Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl,
       S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc());
 
@@ -9342,10 +9343,10 @@ StmtResult TreeTransform<Derived>::TransformCXXEnumeratingExpansionStmt(
 }
 
 template <typename Derived>
-StmtResult TreeTransform<Derived>::TransformCXXIteratingExpansionStmt(
-    CXXIteratingExpansionStmt *S) {
-  TransformCXXExpansionStmtResult Common =
-      TransformCXXExpansionStmtCommonParts(S);
+StmtResult TreeTransform<Derived>::TransformCXXIteratingExpansionStmtPattern(
+    CXXIteratingExpansionStmtPattern *S) {
+  TransformCXXExpansionStmtPatternResult Common =
+      TransformCXXExpansionStmtPatternCommonParts(S);
   if (!Common.isValid())
     return StmtError();
 
@@ -9358,7 +9359,7 @@ StmtResult TreeTransform<Derived>::TransformCXXIteratingExpansionStmt(
   if (Begin.isInvalid() || End.isInvalid())
     return StmtError();
 
-  auto *Expansion = new (SemaRef.Context) CXXIteratingExpansionStmt(
+  auto *Expansion = new (SemaRef.Context) CXXIteratingExpansionStmtPattern(
       Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl,
       Range.getAs<DeclStmt>(), Begin.getAs<DeclStmt>(), End.getAs<DeclStmt>(),
       S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc());
@@ -9371,9 +9372,9 @@ StmtResult TreeTransform<Derived>::TransformCXXIteratingExpansionStmt(
 }
 
 template <typename Derived>
-StmtResult TreeTransform<Derived>::TransformCXXDependentExpansionStmt(
-    CXXDependentExpansionStmt *S) {
-  TransformCXXExpansionStmtResult Common;
+StmtResult TreeTransform<Derived>::TransformCXXDependentExpansionStmtPattern(
+    CXXDependentExpansionStmtPattern *S) {
+  TransformCXXExpansionStmtPatternResult Common;
   ExprResult ExpansionInitializer;
   SmallVector<MaterializeTemporaryExpr *, 8> LifetimeExtendTemps;
 
@@ -9385,7 +9386,7 @@ StmtResult TreeTransform<Derived>::TransformCXXDependentExpansionStmt(
     SemaRef.currentEvaluationContext().InLifetimeExtendingContext = true;
     SemaRef.currentEvaluationContext().RebuildDefaultArgOrDefaultInit = true;
 
-    Common = TransformCXXExpansionStmtCommonParts(S);
+    Common = TransformCXXExpansionStmtPatternCommonParts(S);
     if (!Common.isValid())
       return StmtError();
 
@@ -9398,7 +9399,7 @@ StmtResult TreeTransform<Derived>::TransformCXXDependentExpansionStmt(
         SemaRef.currentEvaluationContext().ForRangeLifetimeExtendTemps;
   }
 
-  StmtResult Expansion = SemaRef.BuildNonEnumeratingCXXExpansionStmt(
+  StmtResult Expansion = SemaRef.BuildNonEnumeratingCXXExpansionStmtPattern(
       Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl,
       ExpansionInitializer.get(), S->getLParenLoc(), S->getColonLoc(),
       S->getRParenLoc(), LifetimeExtendTemps);
@@ -9413,12 +9414,13 @@ StmtResult TreeTransform<Derived>::TransformCXXDependentExpansionStmt(
 }
 
 template <typename Derived>
-StmtResult TreeTransform<Derived>::TransformCXXDestructuringExpansionStmt(
-    CXXDestructuringExpansionStmt *) {
+StmtResult
+TreeTransform<Derived>::TransformCXXDestructuringExpansionStmtPattern(
+    CXXDestructuringExpansionStmtPattern *) {
   // The only time we instantiate an expansion statement is if its expansion
   // size is dependent (otherwise, we only instantiate the expansions and
-  // leave the underlying CXXExpansionStmt as-is). Since destructuring expansion
-  // statements never have a dependent size, we should never get here.
+  // leave the underlying CXXExpansionStmtPattern as-is). Since destructuring
+  // expansion statements never have a dependent size, we should never get here.
   llvm_unreachable("Should never be instantiated");
 }
 
@@ -9439,8 +9441,8 @@ ExprResult TreeTransform<Derived>::TransformCXXExpansionInitListExpr(
 }
 
 template <typename Derived>
-StmtResult TreeTransform<Derived>::TransformCXXExpansionInstantiationStmt(
-    CXXExpansionInstantiationStmt *S) {
+StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *S) {
   bool SubStmtChanged = false;
   auto TransformStmts = [&](SmallVectorImpl<Stmt *> &NewStmts,
                             ArrayRef<Stmt *> OldStmts) {
@@ -9484,7 +9486,7 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionInstantiationStmt(
   if (!getDerived().AlwaysRebuild() && !SubStmtChanged)
     return S;
 
-  return CXXExpansionInstantiationStmt::Create(
+  return CXXExpansionStmtInstantiation::Create(
       SemaRef.Context, S->getBeginLoc(), S->getEndLoc(), Instantiations,
       SharedStmts, S->shouldApplyLifetimeExtensionToSharedStmts());
 }
@@ -15854,7 +15856,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   // will be deemed as dependent even if there are no dependent template
   // arguments.
   // (A ClassTemplateSpecializationDecl is always a dependent context.)
-  while (DC->isRequiresExprBody() || isa<ExpansionStmtDecl>(DC))
+  while (DC->isRequiresExprBody() || isa<CXXExpansionStmtDecl>(DC))
     DC = DC->getParent();
   if ((getSema().isUnevaluatedContext() ||
        getSema().isConstantEvaluatedContext()) &&

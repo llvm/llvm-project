@@ -22,7 +22,7 @@
 namespace clang {
 
 class VarDecl;
-class ExpansionStmtDecl;
+class CXXExpansionStmtDecl;
 
 /// CXXCatchStmt - This represents a C++ catch block.
 ///
@@ -525,22 +525,23 @@ public:
   }
 };
 
-/// CXXExpansionStmt - Base class for an unexpanded C++ expansion statement.
+/// CXXExpansionStmtPattern - Base class for an unexpanded C++ expansion
+/// statement.
 ///
 /// The main purpose for this class is to store the AST nodes common to all
 /// variants of expansion statements; it also provides storage for additional
 /// subexpressions required by its derived classes. This is to simplify the
 /// implementation of 'children()' and friends.
 ///
-/// \see ExpansionStmtDecl
-/// \see CXXEnumeratingExpansionStmt
-/// \see CXXIteratingExpansionStmt
-/// \see CXXDestructuringExpansionStmt
-/// \see CXXDependentExpansionStmt
-class CXXExpansionStmt : public Stmt {
+/// \see CXXExpansionStmtDecl
+/// \see CXXEnumeratingExpansionStmtPattern
+/// \see CXXIteratingExpansionStmtPattern
+/// \see CXXDestructuringExpansionStmtPattern
+/// \see CXXDependentExpansionStmtPattern
+class CXXExpansionStmtPattern : public Stmt {
   friend class ASTStmtReader;
 
-  ExpansionStmtDecl *ParentDecl;
+  CXXExpansionStmtDecl *ParentDecl;
   SourceLocation LParenLoc;
   SourceLocation ColonLoc;
   SourceLocation RParenLoc;
@@ -552,21 +553,21 @@ protected:
     BODY,
     FIRST_CHILD_STMT,
 
-    // CXXDependentExpansionStmt
+    // CXXDependentExpansionStmtPattern
     EXPANSION_INITIALIZER = FIRST_CHILD_STMT,
-    COUNT_CXXDependentExpansionStmt,
+    COUNT_CXXDependentExpansionStmtPattern,
 
-    // CXXDestructuringExpansionStmt
+    // CXXDestructuringExpansionStmtPattern
     DECOMP_DECL = FIRST_CHILD_STMT,
-    COUNT_CXXDestructuringExpansionStmt,
+    COUNT_CXXDestructuringExpansionStmtPattern,
 
-    // CXXIteratingExpansionStmt
+    // CXXIteratingExpansionStmtPattern
     RANGE = FIRST_CHILD_STMT,
     BEGIN,
     END,
-    COUNT_CXXIteratingExpansionStmt,
+    COUNT_CXXIteratingExpansionStmtPattern,
 
-    MAX_COUNT = COUNT_CXXIteratingExpansionStmt,
+    MAX_COUNT = COUNT_CXXIteratingExpansionStmtPattern,
   };
 
   // Managing the memory for this properly would be rather complicated, and
@@ -574,10 +575,10 @@ protected:
   // maximum amount of substatements we could possibly have.
   Stmt *SubStmts[MAX_COUNT];
 
-  CXXExpansionStmt(StmtClass SC, EmptyShell Empty);
-  CXXExpansionStmt(StmtClass SC, ExpansionStmtDecl *ESD, Stmt *Init,
-                   DeclStmt *ExpansionVar, SourceLocation LParenLoc,
-                   SourceLocation ColonLoc, SourceLocation RParenLoc);
+  CXXExpansionStmtPattern(StmtClass SC, EmptyShell Empty);
+  CXXExpansionStmtPattern(StmtClass SC, CXXExpansionStmtDecl *ESD, Stmt *Init,
+                          DeclStmt *ExpansionVar, SourceLocation LParenLoc,
+                          SourceLocation ColonLoc, SourceLocation RParenLoc);
 
 public:
   SourceLocation getLParenLoc() const { return LParenLoc; }
@@ -591,8 +592,8 @@ public:
 
   bool hasDependentSize() const;
 
-  ExpansionStmtDecl *getDecl() { return ParentDecl; }
-  const ExpansionStmtDecl *getDecl() const { return ParentDecl; }
+  CXXExpansionStmtDecl *getDecl() { return ParentDecl; }
+  const CXXExpansionStmtDecl *getDecl() const { return ParentDecl; }
 
   Stmt *getInit() { return SubStmts[INIT]; }
   const Stmt *getInit() const { return SubStmts[INIT]; }
@@ -600,7 +601,7 @@ public:
 
   VarDecl *getExpansionVariable();
   const VarDecl *getExpansionVariable() const {
-    return const_cast<CXXExpansionStmt *>(this)->getExpansionVariable();
+    return const_cast<CXXExpansionStmtPattern *>(this)->getExpansionVariable();
   }
 
   DeclStmt *getExpansionVarStmt() { return cast<DeclStmt>(SubStmts[VAR]); }
@@ -615,8 +616,8 @@ public:
   void setBody(Stmt *S) { SubStmts[BODY] = S; }
 
   static bool classof(const Stmt *T) {
-    return T->getStmtClass() >= firstCXXExpansionStmtConstant &&
-           T->getStmtClass() <= lastCXXExpansionStmtConstant;
+    return T->getStmtClass() >= firstCXXExpansionStmtPatternConstant &&
+           T->getStmtClass() <= lastCXXExpansionStmtPatternConstant;
   }
 
   child_range children() {
@@ -659,29 +660,30 @@ public:
 /// example, during the 2nd expansion of '{ a, b, c }', I is equal to 1, and
 /// BuildCXXExpansionInitListSelectExpr(), when called via TreeTransform,
 /// 'instantiates' the expression '{ a, b, c }' to just 'b'.
-class CXXEnumeratingExpansionStmt : public CXXExpansionStmt {
+class CXXEnumeratingExpansionStmtPattern : public CXXExpansionStmtPattern {
   friend class ASTStmtReader;
 
 public:
-  CXXEnumeratingExpansionStmt(EmptyShell Empty);
-  CXXEnumeratingExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
-                              DeclStmt *ExpansionVar, SourceLocation LParenLoc,
-                              SourceLocation ColonLoc,
-                              SourceLocation RParenLoc);
+  CXXEnumeratingExpansionStmtPattern(EmptyShell Empty);
+  CXXEnumeratingExpansionStmtPattern(CXXExpansionStmtDecl *ESD, Stmt *Init,
+                                     DeclStmt *ExpansionVar,
+                                     SourceLocation LParenLoc,
+                                     SourceLocation ColonLoc,
+                                     SourceLocation RParenLoc);
 
   static bool classof(const Stmt *T) {
-    return T->getStmtClass() == CXXEnumeratingExpansionStmtClass;
+    return T->getStmtClass() == CXXEnumeratingExpansionStmtPatternClass;
   }
 };
 
 /// Represents an expansion statement whose expansion-initializer is
 /// type-dependent.
 ///
-/// This will be instantiated as either a 'CXXIteratingExpansionStmt' or a
-/// 'CXXDestructuringExpansionStmt'. Dependent expansion statements can never
-/// be enumerating; those are always stored as a 'CXXEnumeratingExpansionStmt',
-/// even if the expansion size is dependent because the expression-list contains
-/// a pack.
+/// This will be instantiated as either a 'CXXIteratingExpansionStmtPattern' or
+/// a 'CXXDestructuringExpansionStmtPattern'. Dependent expansion statements can
+/// never be enumerating; those are always stored as a
+/// 'CXXEnumeratingExpansionStmtPattern', even if the expansion size is
+/// dependent because the expression-list contains a pack.
 ///
 /// Example:
 /// \verbatim
@@ -692,15 +694,17 @@ public:
 ///     }
 ///   }
 /// \endverbatim
-class CXXDependentExpansionStmt : public CXXExpansionStmt {
+class CXXDependentExpansionStmtPattern : public CXXExpansionStmtPattern {
   friend class ASTStmtReader;
 
 public:
-  CXXDependentExpansionStmt(EmptyShell Empty);
-  CXXDependentExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
-                            DeclStmt *ExpansionVar, Expr *ExpansionInitializer,
-                            SourceLocation LParenLoc, SourceLocation ColonLoc,
-                            SourceLocation RParenLoc);
+  CXXDependentExpansionStmtPattern(EmptyShell Empty);
+  CXXDependentExpansionStmtPattern(CXXExpansionStmtDecl *ESD, Stmt *Init,
+                                   DeclStmt *ExpansionVar,
+                                   Expr *ExpansionInitializer,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation ColonLoc,
+                                   SourceLocation RParenLoc);
 
   Expr *getExpansionInitializer() {
     return cast<Expr>(SubStmts[EXPANSION_INITIALIZER]);
@@ -711,16 +715,17 @@ public:
   void setExpansionInitializer(Expr *S) { SubStmts[EXPANSION_INITIALIZER] = S; }
 
   child_range children() {
-    return child_range(SubStmts, SubStmts + COUNT_CXXDependentExpansionStmt);
+    return child_range(SubStmts,
+                       SubStmts + COUNT_CXXDependentExpansionStmtPattern);
   }
 
   const_child_range children() const {
     return const_child_range(SubStmts,
-                             SubStmts + COUNT_CXXDependentExpansionStmt);
+                             SubStmts + COUNT_CXXDependentExpansionStmtPattern);
   }
 
   static bool classof(const Stmt *T) {
-    return T->getStmtClass() == CXXDependentExpansionStmtClass;
+    return T->getStmtClass() == CXXDependentExpansionStmtPatternClass;
   }
 };
 
@@ -741,16 +746,17 @@ public:
 ///     // ...
 ///   }
 /// \endverbatim
-class CXXIteratingExpansionStmt : public CXXExpansionStmt {
+class CXXIteratingExpansionStmtPattern : public CXXExpansionStmtPattern {
   friend class ASTStmtReader;
 
 public:
-  CXXIteratingExpansionStmt(EmptyShell Empty);
-  CXXIteratingExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
-                            DeclStmt *ExpansionVar, DeclStmt *Range,
-                            DeclStmt *Begin, DeclStmt *End,
-                            SourceLocation LParenLoc, SourceLocation ColonLoc,
-                            SourceLocation RParenLoc);
+  CXXIteratingExpansionStmtPattern(EmptyShell Empty);
+  CXXIteratingExpansionStmtPattern(CXXExpansionStmtDecl *ESD, Stmt *Init,
+                                   DeclStmt *ExpansionVar, DeclStmt *Range,
+                                   DeclStmt *Begin, DeclStmt *End,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation ColonLoc,
+                                   SourceLocation RParenLoc);
 
   const DeclStmt *getRangeVarStmt() const {
     return cast<DeclStmt>(SubStmts[RANGE]);
@@ -795,16 +801,17 @@ public:
   }
 
   child_range children() {
-    return child_range(SubStmts, SubStmts + COUNT_CXXIteratingExpansionStmt);
+    return child_range(SubStmts,
+                       SubStmts + COUNT_CXXIteratingExpansionStmtPattern);
   }
 
   const_child_range children() const {
     return const_child_range(SubStmts,
-                             SubStmts + COUNT_CXXIteratingExpansionStmt);
+                             SubStmts + COUNT_CXXIteratingExpansionStmtPattern);
   }
 
   static bool classof(const Stmt *T) {
-    return T->getStmtClass() == CXXIteratingExpansionStmtClass;
+    return T->getStmtClass() == CXXIteratingExpansionStmtPatternClass;
   }
 };
 
@@ -830,18 +837,18 @@ public:
 /// Sema wraps the initializer with a CXXDestructuringExpansionSelectExpr, which
 /// selects a binding based on the current expansion index; this is analogous to
 /// how 'CXXExpansionInitListSelectExpr' is used; see the documentation of
-/// 'CXXEnumeratingExpansionStmt' for more details on this.
-class CXXDestructuringExpansionStmt : public CXXExpansionStmt {
+/// 'CXXEnumeratingExpansionStmtPattern' for more details on this.
+class CXXDestructuringExpansionStmtPattern : public CXXExpansionStmtPattern {
   friend class ASTStmtReader;
 
 public:
-  CXXDestructuringExpansionStmt(EmptyShell Empty);
-  CXXDestructuringExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
-                                DeclStmt *ExpansionVar,
-                                Stmt *DecompositionDeclStmt,
-                                SourceLocation LParenLoc,
-                                SourceLocation ColonLoc,
-                                SourceLocation RParenLoc);
+  CXXDestructuringExpansionStmtPattern(EmptyShell Empty);
+  CXXDestructuringExpansionStmtPattern(CXXExpansionStmtDecl *ESD, Stmt *Init,
+                                       DeclStmt *ExpansionVar,
+                                       Stmt *DecompositionDeclStmt,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation ColonLoc,
+                                       SourceLocation RParenLoc);
 
   Stmt *getDecompositionDeclStmt() { return SubStmts[DECOMP_DECL]; }
   const Stmt *getDecompositionDeclStmt() const { return SubStmts[DECOMP_DECL]; }
@@ -849,22 +856,22 @@ public:
 
   DecompositionDecl *getDecompositionDecl();
   const DecompositionDecl *getDecompositionDecl() const {
-    return const_cast<CXXDestructuringExpansionStmt *>(this)
+    return const_cast<CXXDestructuringExpansionStmtPattern *>(this)
         ->getDecompositionDecl();
   }
 
   child_range children() {
     return child_range(SubStmts,
-                       SubStmts + COUNT_CXXDestructuringExpansionStmt);
+                       SubStmts + COUNT_CXXDestructuringExpansionStmtPattern);
   }
 
   const_child_range children() const {
-    return const_child_range(SubStmts,
-                             SubStmts + COUNT_CXXDestructuringExpansionStmt);
+    return const_child_range(
+        SubStmts, SubStmts + COUNT_CXXDestructuringExpansionStmtPattern);
   }
 
   static bool classof(const Stmt *T) {
-    return T->getStmtClass() == CXXDestructuringExpansionStmtClass;
+    return T->getStmtClass() == CXXDestructuringExpansionStmtPatternClass;
   }
 };
 
@@ -890,7 +897,7 @@ public:
 /// and the 'CompoundStmt's that wrap the 'instantiations'. The outer braces
 /// shown above are implicit.
 ///
-/// For example, the CXXExpansionInstantiationStmt that corresponds to the
+/// For example, the CXXExpansionStmtInstantiation that corresponds to the
 /// following expansion statement
 ///
 /// \verbatim
@@ -919,9 +926,9 @@ public:
 ///   }
 /// }
 /// \endverbatim
-class CXXExpansionInstantiationStmt final
+class CXXExpansionStmtInstantiation final
     : public Stmt,
-      llvm::TrailingObjects<CXXExpansionInstantiationStmt, Stmt *> {
+      llvm::TrailingObjects<CXXExpansionStmtInstantiation, Stmt *> {
   friend class ASTStmtReader;
   friend TrailingObjects;
 
@@ -933,20 +940,20 @@ class CXXExpansionInstantiationStmt final
   const unsigned NumSharedStmts : 3;
   unsigned ShouldApplyLifetimeExtensionToSharedStmts : 1;
 
-  CXXExpansionInstantiationStmt(EmptyShell Empty, unsigned NumInstantiations,
+  CXXExpansionStmtInstantiation(EmptyShell Empty, unsigned NumInstantiations,
                                 unsigned NumSharedStmts);
-  CXXExpansionInstantiationStmt(SourceLocation BeginLoc, SourceLocation EndLoc,
+  CXXExpansionStmtInstantiation(SourceLocation BeginLoc, SourceLocation EndLoc,
                                 ArrayRef<Stmt *> Instantiations,
                                 ArrayRef<Stmt *> SharedStmts,
                                 bool ShouldApplyLifetimeExtensionToSharedStmts);
 
 public:
-  static CXXExpansionInstantiationStmt *
+  static CXXExpansionStmtInstantiation *
   Create(ASTContext &C, SourceLocation BeginLoc, SourceLocation EndLoc,
          ArrayRef<Stmt *> Instantiations, ArrayRef<Stmt *> SharedStmts,
          bool ShouldApplyLifetimeExtensionToSharedStmts);
 
-  static CXXExpansionInstantiationStmt *CreateEmpty(ASTContext &C,
+  static CXXExpansionStmtInstantiation *CreateEmpty(ASTContext &C,
                                                     EmptyShell Empty,
                                                     unsigned NumInstantiations,
                                                     unsigned NumSharedStmts);
@@ -991,7 +998,7 @@ public:
   }
 
   static bool classof(const Stmt *T) {
-    return T->getStmtClass() == CXXExpansionInstantiationStmtClass;
+    return T->getStmtClass() == CXXExpansionStmtInstantiationClass;
   }
 };
 

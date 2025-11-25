@@ -1704,7 +1704,7 @@ void ASTStmtWriter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   Code = serialization::STMT_CXX_FOR_RANGE;
 }
 
-void ASTStmtWriter::VisitCXXExpansionStmt(CXXExpansionStmt *S) {
+void ASTStmtWriter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
   VisitStmt(S);
   Record.AddSourceLocation(S->getLParenLoc());
   Record.AddSourceLocation(S->getColonLoc());
@@ -1715,8 +1715,8 @@ void ASTStmtWriter::VisitCXXExpansionStmt(CXXExpansionStmt *S) {
   Record.AddStmt(S->getBody());
 }
 
-void ASTStmtWriter::VisitCXXExpansionInstantiationStmt(
-    CXXExpansionInstantiationStmt *S) {
+void ASTStmtWriter::VisitCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *S) {
   VisitStmt(S);
   Record.push_back(S->getInstantiations().size());
   Record.push_back(S->getSharedStmts().size());
@@ -1728,31 +1728,31 @@ void ASTStmtWriter::VisitCXXExpansionInstantiationStmt(
   Code = serialization::STMT_CXX_EXPANSION_INSTANTIATION;
 }
 
-void ASTStmtWriter::VisitCXXEnumeratingExpansionStmt(
-    CXXEnumeratingExpansionStmt *S) {
-  VisitCXXExpansionStmt(S);
+void ASTStmtWriter::VisitCXXEnumeratingExpansionStmtPattern(
+    CXXEnumeratingExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
   Code = serialization::STMT_CXX_ENUMERATING_EXPANSION;
 }
 
-void ASTStmtWriter::VisitCXXIteratingExpansionStmt(
-    CXXIteratingExpansionStmt *S) {
-  VisitCXXExpansionStmt(S);
+void ASTStmtWriter::VisitCXXIteratingExpansionStmtPattern(
+    CXXIteratingExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
   Record.AddStmt(S->getRangeVarStmt());
   Record.AddStmt(S->getBeginVarStmt());
   Record.AddStmt(S->getEndVarStmt());
   Code = serialization::STMT_CXX_ITERATING_EXPANSION;
 }
 
-void ASTStmtWriter::VisitCXXDestructuringExpansionStmt(
-    CXXDestructuringExpansionStmt *S) {
-  VisitCXXExpansionStmt(S);
+void ASTStmtWriter::VisitCXXDestructuringExpansionStmtPattern(
+    CXXDestructuringExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
   Record.AddStmt(S->getDecompositionDeclStmt());
   Code = serialization::STMT_CXX_DESTRUCTURING_EXPANSION;
 }
 
-void ASTStmtWriter::VisitCXXDependentExpansionStmt(
-    CXXDependentExpansionStmt *S) {
-  VisitCXXExpansionStmt(S);
+void ASTStmtWriter::VisitCXXDependentExpansionStmtPattern(
+    CXXDependentExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
   Record.AddStmt(S->getExpansionInitializer());
   Code = serialization::STMT_CXX_DEPENDENT_EXPANSION;
 }

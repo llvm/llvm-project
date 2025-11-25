@@ -3691,7 +3691,7 @@ public:
                            ArrayRef<const Attr *> Attrs = {});
 
   void
-  EmitCXXExpansionInstantiationStmt(const CXXExpansionInstantiationStmt &S);
+  EmitCXXExpansionStmtInstantiation(const CXXExpansionStmtInstantiation &S);
 
   /// Controls insertion of cancellation exit blocks in worksharing constructs.
   class OMPCancelStackRAII {

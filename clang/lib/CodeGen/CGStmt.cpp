@@ -204,13 +204,13 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::CXXForRangeStmtClass:
     EmitCXXForRangeStmt(cast<CXXForRangeStmt>(*S), Attrs);
     break;
-  case Stmt::CXXEnumeratingExpansionStmtClass:
-  case Stmt::CXXIteratingExpansionStmtClass:
-  case Stmt::CXXDestructuringExpansionStmtClass:
-  case Stmt::CXXDependentExpansionStmtClass:
+  case Stmt::CXXEnumeratingExpansionStmtPatternClass:
+  case Stmt::CXXIteratingExpansionStmtPatternClass:
+  case Stmt::CXXDestructuringExpansionStmtPatternClass:
+  case Stmt::CXXDependentExpansionStmtPatternClass:
     llvm_unreachable("unexpanded expansion statements should not be emitted");
-  case Stmt::CXXExpansionInstantiationStmtClass:
-    EmitCXXExpansionInstantiationStmt(cast<CXXExpansionInstantiationStmt>(*S));
+  case Stmt::CXXExpansionStmtInstantiationClass:
+    EmitCXXExpansionStmtInstantiation(cast<CXXExpansionStmtInstantiation>(*S));
     break;
   case Stmt::SEHTryStmtClass:
     EmitSEHTryStmt(cast<SEHTryStmt>(*S));
@@ -1564,8 +1564,8 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   }
 }
 
-void CodeGenFunction::EmitCXXExpansionInstantiationStmt(
-    const CXXExpansionInstantiationStmt &S) {
+void CodeGenFunction::EmitCXXExpansionStmtInstantiation(
+    const CXXExpansionStmtInstantiation &S) {
   // FIXME: For reasons beyond my understanding, two scopes are required to emit
   // the destructors of lifetime-extended temporaries in the right place, but
   // only in some templates. There are some other issues with lifetime-extended

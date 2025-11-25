@@ -144,7 +144,7 @@ namespace clang {
     void VisitFriendDecl(FriendDecl *D);
     void VisitFriendTemplateDecl(FriendTemplateDecl *D);
     void VisitStaticAssertDecl(StaticAssertDecl *D);
-    void VisitExpansionStmtDecl(ExpansionStmtDecl *D);
+    void VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D);
     void VisitBlockDecl(BlockDecl *D);
     void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
     void VisitCapturedDecl(CapturedDecl *D);
@@ -2189,7 +2189,7 @@ void ASTDeclWriter::VisitStaticAssertDecl(StaticAssertDecl *D) {
   Code = serialization::DECL_STATIC_ASSERT;
 }
 
-void ASTDeclWriter::VisitExpansionStmtDecl(ExpansionStmtDecl *D) {
+void ASTDeclWriter::VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D) {
   VisitDecl(D);
   Record.AddStmt(D->getExpansionPattern());
   Record.AddStmt(D->getInstantiations());

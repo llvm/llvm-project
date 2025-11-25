@@ -364,32 +364,33 @@ void StmtProfiler::VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
   VisitStmt(S);
 }
 
-void StmtProfiler::VisitCXXExpansionStmt(const CXXExpansionStmt *S) {
+void StmtProfiler::VisitCXXExpansionStmtPattern(
+    const CXXExpansionStmtPattern *S) {
   VisitStmt(S);
 }
 
-void StmtProfiler::VisitCXXEnumeratingExpansionStmt(
-    const CXXEnumeratingExpansionStmt *S) {
-  VisitCXXExpansionStmt(S);
+void StmtProfiler::VisitCXXEnumeratingExpansionStmtPattern(
+    const CXXEnumeratingExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
 }
 
-void StmtProfiler::VisitCXXIteratingExpansionStmt(
-    const CXXIteratingExpansionStmt *S) {
-  VisitCXXExpansionStmt(S);
+void StmtProfiler::VisitCXXIteratingExpansionStmtPattern(
+    const CXXIteratingExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
 }
 
-void StmtProfiler::VisitCXXDestructuringExpansionStmt(
-    const CXXDestructuringExpansionStmt *S) {
-  VisitCXXExpansionStmt(S);
+void StmtProfiler::VisitCXXDestructuringExpansionStmtPattern(
+    const CXXDestructuringExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
 }
 
-void StmtProfiler::VisitCXXDependentExpansionStmt(
-    const CXXDependentExpansionStmt *S) {
-  VisitCXXExpansionStmt(S);
+void StmtProfiler::VisitCXXDependentExpansionStmtPattern(
+    const CXXDependentExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
 }
 
-void StmtProfiler::VisitCXXExpansionInstantiationStmt(
-    const CXXExpansionInstantiationStmt *S) {
+void StmtProfiler::VisitCXXExpansionStmtInstantiation(
+    const CXXExpansionStmtInstantiation *S) {
   VisitStmt(S);
   ID.AddBoolean(S->shouldApplyLifetimeExtensionToSharedStmts());
 }

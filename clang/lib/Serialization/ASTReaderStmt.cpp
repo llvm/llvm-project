@@ -1730,19 +1730,19 @@ void ASTStmtReader::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   S->setBody(Record.readSubStmt());
 }
 
-void ASTStmtReader::VisitCXXExpansionStmt(CXXExpansionStmt *S) {
+void ASTStmtReader::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
   VisitStmt(S);
   S->LParenLoc = readSourceLocation();
   S->ColonLoc = readSourceLocation();
   S->RParenLoc = readSourceLocation();
-  S->ParentDecl = cast<ExpansionStmtDecl>(Record.readDeclRef());
+  S->ParentDecl = cast<CXXExpansionStmtDecl>(Record.readDeclRef());
   S->setInit(Record.readSubStmt());
   S->setExpansionVarStmt(Record.readSubStmt());
   S->setBody(Record.readSubStmt());
 }
 
-void ASTStmtReader::VisitCXXExpansionInstantiationStmt(
-    CXXExpansionInstantiationStmt *S) {
+void ASTStmtReader::VisitCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *S) {
   VisitStmt(S);
   Record.skipInts(2);
   S->BeginLoc = readSourceLocation();
@@ -1752,28 +1752,28 @@ void ASTStmtReader::VisitCXXExpansionInstantiationStmt(
   S->setShouldApplyLifetimeExtensionToSharedStmts(Record.readBool());
 }
 
-void ASTStmtReader::VisitCXXEnumeratingExpansionStmt(
-    CXXEnumeratingExpansionStmt *S) {
-  VisitCXXExpansionStmt(S);
+void ASTStmtReader::VisitCXXEnumeratingExpansionStmtPattern(
+    CXXEnumeratingExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
 }
 
-void ASTStmtReader::VisitCXXIteratingExpansionStmt(
-    CXXIteratingExpansionStmt *S) {
-  VisitCXXExpansionStmt(S);
+void ASTStmtReader::VisitCXXIteratingExpansionStmtPattern(
+    CXXIteratingExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
   S->setRangeVarStmt(cast<DeclStmt>(Record.readSubStmt()));
   S->setBeginVarStmt(cast<DeclStmt>(Record.readSubStmt()));
   S->setEndVarStmt(cast<DeclStmt>(Record.readSubStmt()));
 }
 
-void ASTStmtReader::VisitCXXDestructuringExpansionStmt(
-    CXXDestructuringExpansionStmt *S) {
-  VisitCXXExpansionStmt(S);
+void ASTStmtReader::VisitCXXDestructuringExpansionStmtPattern(
+    CXXDestructuringExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
   S->setDecompositionDeclStmt(Record.readSubStmt());
 }
 
-void ASTStmtReader::VisitCXXDependentExpansionStmt(
-    CXXDependentExpansionStmt *S) {
-  VisitCXXExpansionStmt(S);
+void ASTStmtReader::VisitCXXDependentExpansionStmtPattern(
+    CXXDependentExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
   S->setExpansionInitializer(Record.readSubExpr());
 }
 
@@ -3638,23 +3638,23 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case STMT_CXX_ENUMERATING_EXPANSION:
-      S = new (Context) CXXEnumeratingExpansionStmt(Empty);
+      S = new (Context) CXXEnumeratingExpansionStmtPattern(Empty);
       break;
 
     case STMT_CXX_ITERATING_EXPANSION:
-      S = new (Context) CXXIteratingExpansionStmt(Empty);
+      S = new (Context) CXXIteratingExpansionStmtPattern(Empty);
       break;
 
     case STMT_CXX_DESTRUCTURING_EXPANSION:
-      S = new (Context) CXXDestructuringExpansionStmt(Empty);
+      S = new (Context) CXXDestructuringExpansionStmtPattern(Empty);
       break;
 
     case STMT_CXX_DEPENDENT_EXPANSION:
-      S = new (Context) CXXDependentExpansionStmt(Empty);
+      S = new (Context) CXXDependentExpansionStmtPattern(Empty);
       break;
 
     case STMT_CXX_EXPANSION_INSTANTIATION:
-      S = CXXExpansionInstantiationStmt::CreateEmpty(
+      S = CXXExpansionStmtInstantiation::CreateEmpty(
           Context, Empty, Record[ASTStmtReader::NumStmtFields],
           Record[ASTStmtReader::NumStmtFields + 1]);
       break;

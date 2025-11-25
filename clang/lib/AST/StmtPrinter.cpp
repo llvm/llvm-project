@@ -160,8 +160,8 @@ namespace {
     }
 
     void VisitCXXNamedCastExpr(CXXNamedCastExpr *Node);
-    void VisitCXXExpansionStmt(CXXExpansionStmt *Node,
-                               Expr *Initializer = nullptr);
+    void VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *Node,
+                                      Expr *Initializer = nullptr);
 
 #define ABSTRACT_STMT(CLASS)
 #define STMT(CLASS, PARENT) \
@@ -265,7 +265,7 @@ void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
   PrintRawDeclStmt(Node);
   // Certain pragma declarations shouldn't have a semi-colon after them.
   if (!Node->isSingleDecl() ||
-      !isa<ExpansionStmtDecl, OpenACCDeclareDecl, OpenACCRoutineDecl>(
+      !isa<CXXExpansionStmtDecl, OpenACCDeclareDecl, OpenACCRoutineDecl>(
           Node->getSingleDecl()))
     OS << ";";
   OS << NL;
@@ -450,8 +450,8 @@ void StmtPrinter::VisitCXXForRangeStmt(CXXForRangeStmt *Node) {
   PrintControlledStmt(Node->getBody());
 }
 
-void StmtPrinter::VisitCXXExpansionStmt(CXXExpansionStmt *Node,
-                                        Expr *Initializer) {
+void StmtPrinter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *Node,
+                                               Expr *Initializer) {
   OS << "template for (";
   if (Node->getInit())
     PrintInitStmt(Node->getInit(), 14);
@@ -465,28 +465,28 @@ void StmtPrinter::VisitCXXExpansionStmt(CXXExpansionStmt *Node,
   PrintControlledStmt(Node->getBody());
 }
 
-void StmtPrinter::VisitCXXEnumeratingExpansionStmt(
-    CXXEnumeratingExpansionStmt *Node) {
-  VisitCXXExpansionStmt(Node);
+void StmtPrinter::VisitCXXEnumeratingExpansionStmtPattern(
+    CXXEnumeratingExpansionStmtPattern *Node) {
+  VisitCXXExpansionStmtPattern(Node);
 }
 
-void StmtPrinter::VisitCXXIteratingExpansionStmt(
-    CXXIteratingExpansionStmt *Node) {
-  VisitCXXExpansionStmt(Node, Node->getRangeVar()->getInit());
+void StmtPrinter::VisitCXXIteratingExpansionStmtPattern(
+    CXXIteratingExpansionStmtPattern *Node) {
+  VisitCXXExpansionStmtPattern(Node, Node->getRangeVar()->getInit());
 }
 
-void StmtPrinter::VisitCXXDestructuringExpansionStmt(
-    CXXDestructuringExpansionStmt *Node) {
-  VisitCXXExpansionStmt(Node);
+void StmtPrinter::VisitCXXDestructuringExpansionStmtPattern(
+    CXXDestructuringExpansionStmtPattern *Node) {
+  VisitCXXExpansionStmtPattern(Node);
 }
 
-void StmtPrinter::VisitCXXDependentExpansionStmt(
-    CXXDependentExpansionStmt *Node) {
-  VisitCXXExpansionStmt(Node, Node->getExpansionInitializer());
+void StmtPrinter::VisitCXXDependentExpansionStmtPattern(
+    CXXDependentExpansionStmtPattern *Node) {
+  VisitCXXExpansionStmtPattern(Node, Node->getExpansionInitializer());
 }
 
-void StmtPrinter::VisitCXXExpansionInstantiationStmt(
-    CXXExpansionInstantiationStmt *) {
+void StmtPrinter::VisitCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *) {
   llvm_unreachable("should never be printed");
 }
 

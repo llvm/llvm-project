@@ -1953,7 +1953,7 @@ void Parser::ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
 StmtResult
 Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
                           LabelDecl *PrecedingLabel,
-                          ExpansionStmtDecl *ExpansionStmtDeclaration) {
+                          CXXExpansionStmtDecl *CXXExpansionStmtDecl) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
 
@@ -1988,7 +1988,7 @@ Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   unsigned ScopeFlags = 0;
   if (C99orCXXorObjC)
     ScopeFlags = Scope::DeclScope | Scope::ControlScope;
-  if (ExpansionStmtDeclaration)
+  if (CXXExpansionStmtDecl)
     ScopeFlags |= Scope::TemplateParamScope;
 
   ParseScope ForScope(this, ScopeFlags);
@@ -2004,7 +2004,7 @@ Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   ExprResult Collection;
   ForRangeInfo ForRangeInfo;
   FullExprArg ThirdPart(Actions);
-  ForRangeInfo.ExpansionStmt = ExpansionStmtDeclaration != nullptr;
+  ForRangeInfo.ExpansionStmt = CXXExpansionStmtDecl != nullptr;
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
@@ -2137,7 +2137,7 @@ Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
       // User tried to write the reasonable, but ill-formed, for-range-statement
       //   for (expr : expr) { ... }
       Diag(Tok, diag::err_for_range_expected_decl)
-          << (ExpansionStmtDeclaration != nullptr)
+          << (CXXExpansionStmtDecl != nullptr)
           << FirstPart.get()->getSourceRange();
       SkipUntil(tok::r_paren, StopBeforeMatch);
       SecondPart = Sema::ConditionError();
@@ -2260,9 +2260,9 @@ Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   StmtResult ForRangeStmt;
   StmtResult ForEachStmt;
 
-  if (ExpansionStmtDeclaration) {
-    ForRangeStmt = Actions.ActOnCXXExpansionStmt(
-        ExpansionStmtDeclaration, FirstPart.get(), ForRangeInfo.LoopVar.get(),
+  if (CXXExpansionStmtDecl) {
+    ForRangeStmt = Actions.ActOnCXXExpansionStmtPattern(
+        CXXExpansionStmtDecl, FirstPart.get(), ForRangeInfo.LoopVar.get(),
         ForRangeInfo.RangeExpr.get(), T.getOpenLocation(),
         ForRangeInfo.ColonLoc, T.getCloseLocation(),
         ForRangeInfo.LifetimeExtendTemps);
@@ -2288,7 +2288,7 @@ Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // OpenACC Restricts a for-loop inside of certain construct/clause
   // combinations, so diagnose that here in OpenACC mode.
   SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
-  if (ExpansionStmtDeclaration)
+  if (CXXExpansionStmtDecl)
     ; // Nothing.
   else if (ForRangeInfo.ParsedForRangeDecl())
     getActions().OpenACC().ActOnRangeForStmtBegin(ForLoc, ForRangeStmt.get());
@@ -2344,7 +2344,7 @@ Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
     return Actions.ObjC().FinishObjCForCollectionStmt(ForEachStmt.get(),
                                                       Body.get());
 
-  if (ExpansionStmtDeclaration) {
+  if (CXXExpansionStmtDecl) {
     if (!ForRangeInfo.ParsedForRangeDecl()) {
       Diag(ForLoc, diag::err_expansion_stmt_requires_range);
       return StmtError();
@@ -2718,10 +2718,10 @@ StmtResult Parser::ParseExpansionStatement(SourceLocation *TrailingElseLoc,
   SourceLocation TemplateLoc = ConsumeToken();
   DiagCompat(TemplateLoc, diag_compat::expansion_statements);
 
-  ExpansionStmtDecl *ExpansionDecl =
-      Actions.ActOnExpansionStmtDecl(TemplateParameterDepth, TemplateLoc);
+  CXXExpansionStmtDecl *ExpansionDecl =
+      Actions.ActOnCXXExpansionStmtDecl(TemplateParameterDepth, TemplateLoc);
 
-  CXXExpansionStmt *Expansion;
+  CXXExpansionStmtPattern *Expansion;
   {
     Sema::ContextRAII CtxGuard(Actions, ExpansionDecl, /*NewThis=*/false);
     TemplateParameterDepthRAII TParamDepthGuard(TemplateParameterDepth);
@@ -2732,7 +2732,7 @@ StmtResult Parser::ParseExpansionStatement(SourceLocation *TrailingElseLoc,
     if (SR.isInvalid())
       return SR;
 
-    Expansion = cast<CXXExpansionStmt>(SR.get());
+    Expansion = cast<CXXExpansionStmtPattern>(SR.get());
     ExpansionDecl->setExpansionPattern(Expansion);
   }
 

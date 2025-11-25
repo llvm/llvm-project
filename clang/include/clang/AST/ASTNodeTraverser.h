@@ -959,7 +959,7 @@ public:
     }
   }
 
-  void VisitExpansionStmtDecl(const ExpansionStmtDecl *Node) {
+  void VisitCXXExpansionStmtDecl(const CXXExpansionStmtDecl *Node) {
     Visit(Node->getExpansionPattern());
     if (Traversal != TK_IgnoreUnlessSpelledInSource)
       Visit(Node->getInstantiations());

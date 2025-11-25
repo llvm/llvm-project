@@ -1839,16 +1839,16 @@ enum StmtCode {
   /// A CXXEnumeratedExpansionStmt.
   STMT_CXX_ENUMERATING_EXPANSION,
 
-  /// A CXXIteratingExpansionStmt.
+  /// A CXXIteratingExpansionStmtPattern.
   STMT_CXX_ITERATING_EXPANSION,
 
-  /// A CXXDestructuringExpansionStmt.
+  /// A CXXDestructuringExpansionStmtPattern.
   STMT_CXX_DESTRUCTURING_EXPANSION,
 
-  /// A CXXDependentExpansionStmt,
+  /// A CXXDependentExpansionStmtPattern,
   STMT_CXX_DEPENDENT_EXPANSION,
 
-  /// A CXXExpansionInstantiationStmt.
+  /// A CXXExpansionStmtInstantiation.
   STMT_CXX_EXPANSION_INSTANTIATION,
 
   /// A CXXOperatorCallExpr record.

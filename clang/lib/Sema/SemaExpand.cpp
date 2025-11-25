@@ -56,7 +56,7 @@ static bool CheckExpansionSize(Sema &S, uint64_t NumInstantiations,
 }
 
 // Build a 'DeclRefExpr' designating the template parameter '__N'.
-static DeclRefExpr *BuildIndexDRE(Sema &S, ExpansionStmtDecl *ESD) {
+static DeclRefExpr *BuildIndexDRE(Sema &S, CXXExpansionStmtDecl *ESD) {
   return S.BuildDeclRefExpr(ESD->getIndexTemplateParm(),
                             S.Context.getPointerDiffType(), VK_PRValue,
                             ESD->getBeginLoc());
@@ -183,7 +183,7 @@ TryBuildIterableExpansionStmtInitializer(Sema &S, Expr *ExpansionInitializer,
   return Data;
 }
 
-static StmtResult BuildDestructuringExpansionStmtDecl(
+static StmtResult BuildDestructuringCXXExpansionStmt(
     Sema &S, Expr *ExpansionInitializer, SourceLocation ColonLoc,
     bool VarIsConstexpr,
     ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
@@ -232,8 +232,9 @@ static StmtResult BuildDestructuringExpansionStmtDecl(
   return S.ActOnDeclStmt(S.ConvertDeclToDeclGroup(DD), ColonLoc, ColonLoc);
 }
 
-ExpansionStmtDecl *Sema::ActOnExpansionStmtDecl(unsigned TemplateDepth,
-                                                SourceLocation TemplateKWLoc) {
+CXXExpansionStmtDecl *
+Sema::ActOnCXXExpansionStmtDecl(unsigned TemplateDepth,
+                                SourceLocation TemplateKWLoc) {
   // Create a template parameter '__N'. This will be used to denote the index
   // of the element that we're instantiating. CWG 3044 requires this type to
   // be 'ptrdiff_t' for iterating expansion statements, so use that in all
@@ -248,17 +249,17 @@ ExpansionStmtDecl *Sema::ActOnExpansionStmtDecl(unsigned TemplateDepth,
       TemplateDepth, /*Position=*/0, ParmName, ParmTy, /*ParameterPack=*/false,
       ParmTI);
 
-  return BuildExpansionStmtDecl(CurContext, TemplateKWLoc, TParam);
+  return BuildCXXExpansionStmtDecl(CurContext, TemplateKWLoc, TParam);
 }
 
-ExpansionStmtDecl *Sema::BuildExpansionStmtDecl(DeclContext *Ctx,
-                                                SourceLocation TemplateKWLoc,
-                                                NonTypeTemplateParmDecl *NTTP) {
+CXXExpansionStmtDecl *
+Sema::BuildCXXExpansionStmtDecl(DeclContext *Ctx, SourceLocation TemplateKWLoc,
+                                NonTypeTemplateParmDecl *NTTP) {
   auto *TParamList = TemplateParameterList::Create(
       Context, TemplateKWLoc, TemplateKWLoc, {NTTP}, TemplateKWLoc,
       /*RequiresClause=*/nullptr);
   auto *Result =
-      ExpansionStmtDecl::Create(Context, Ctx, TemplateKWLoc, TParamList);
+      CXXExpansionStmtDecl::Create(Context, Ctx, TemplateKWLoc, TParamList);
   Ctx->addDecl(Result);
   return Result;
 }
@@ -270,8 +271,8 @@ ExprResult Sema::ActOnCXXExpansionInitList(MultiExprArg SubExprs,
                                           RBraceLoc);
 }
 
-StmtResult Sema::ActOnCXXExpansionStmt(
-    ExpansionStmtDecl *ESD, Stmt *Init, Stmt *ExpansionVarStmt,
+StmtResult Sema::ActOnCXXExpansionStmtPattern(
+    CXXExpansionStmtDecl *ESD, Stmt *Init, Stmt *ExpansionVarStmt,
     Expr *ExpansionInitializer, SourceLocation LParenLoc,
     SourceLocation ColonLoc, SourceLocation RParenLoc,
     ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
@@ -300,8 +301,8 @@ StmtResult Sema::ActOnCXXExpansionStmt(
     // Note that lifetime extension only applies to destructurable expansion
     // statements, so we just ignore 'LifetimeExtendedTemps' entirely for other
     // types of expansion statements (this is CWG 3043).
-    return BuildCXXEnumeratingExpansionStmt(ESD, Init, DS, LParenLoc, ColonLoc,
-                                            RParenLoc);
+    return BuildCXXEnumeratingExpansionStmtPattern(ESD, Init, DS, LParenLoc,
+                                                   ColonLoc, RParenLoc);
   }
 
   if (ExpansionInitializer->hasPlaceholderType()) {
@@ -321,23 +322,21 @@ StmtResult Sema::ActOnCXXExpansionStmt(
     return StmtError();
   }
 
-  return BuildNonEnumeratingCXXExpansionStmt(
+  return BuildNonEnumeratingCXXExpansionStmtPattern(
       ESD, Init, DS, ExpansionInitializer, LParenLoc, ColonLoc, RParenLoc,
       LifetimeExtendTemps);
 }
 
-StmtResult Sema::BuildCXXEnumeratingExpansionStmt(Decl *ESD, Stmt *Init,
-                                                  Stmt *ExpansionVar,
-                                                  SourceLocation LParenLoc,
-                                                  SourceLocation ColonLoc,
-                                                  SourceLocation RParenLoc) {
-  return new (Context) CXXEnumeratingExpansionStmt(
-      cast<ExpansionStmtDecl>(ESD), Init, cast<DeclStmt>(ExpansionVar),
+StmtResult Sema::BuildCXXEnumeratingExpansionStmtPattern(
+    Decl *ESD, Stmt *Init, Stmt *ExpansionVar, SourceLocation LParenLoc,
+    SourceLocation ColonLoc, SourceLocation RParenLoc) {
+  return new (Context) CXXEnumeratingExpansionStmtPattern(
+      cast<CXXExpansionStmtDecl>(ESD), Init, cast<DeclStmt>(ExpansionVar),
       LParenLoc, ColonLoc, RParenLoc);
 }
 
-StmtResult Sema::BuildNonEnumeratingCXXExpansionStmt(
-    ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
+StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
+    CXXExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
     Expr *ExpansionInitializer, SourceLocation LParenLoc,
     SourceLocation ColonLoc, SourceLocation RParenLoc,
     ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
@@ -345,7 +344,7 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmt(
 
   if (ExpansionInitializer->isTypeDependent()) {
     ActOnDependentForRangeInitializer(ExpansionVar, BFRK_Build);
-    return new (Context) CXXDependentExpansionStmt(
+    return new (Context) CXXDependentExpansionStmtPattern(
         ESD, Init, ExpansionVarStmt, ExpansionInitializer, LParenLoc, ColonLoc,
         RParenLoc);
   }
@@ -364,13 +363,13 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmt(
     if (FinaliseExpansionVar(*this, ExpansionVar, Data.Initializer))
       return StmtError();
 
-    return new (Context) CXXIteratingExpansionStmt(
+    return new (Context) CXXIteratingExpansionStmtPattern(
         ESD, Init, ExpansionVarStmt, Data.RangeDecl, Data.BeginDecl,
         Data.EndDecl, LParenLoc, ColonLoc, RParenLoc);
   }
 
   // If not, try destructuring.
-  StmtResult DecompDeclStmt = BuildDestructuringExpansionStmtDecl(
+  StmtResult DecompDeclStmt = BuildDestructuringCXXExpansionStmt(
       *this, ExpansionInitializer, ColonLoc, ExpansionVar->isConstexpr(),
       LifetimeExtendTemps);
   if (DecompDeclStmt.isInvalid()) {
@@ -392,7 +391,7 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmt(
   if (FinaliseExpansionVar(*this, ExpansionVar, Select))
     return StmtError();
 
-  return new (Context) CXXDestructuringExpansionStmt(
+  return new (Context) CXXDestructuringExpansionStmtPattern(
       ESD, Init, ExpansionVarStmt, DS, LParenLoc, ColonLoc, RParenLoc);
 }
 
@@ -400,7 +399,7 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
   if (!Exp || !Body)
     return StmtError();
 
-  auto *Expansion = cast<CXXExpansionStmt>(Exp);
+  auto *Expansion = cast<CXXExpansionStmtPattern>(Exp);
   assert(!Expansion->getDecl()->getInstantiations() &&
          "should not rebuild expansion statement after instantiation");
 
@@ -421,22 +420,22 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
   if (Expansion->getInit())
     Shared.push_back(Expansion->getInit());
 
-  if (auto *Iter = dyn_cast<CXXIteratingExpansionStmt>(Expansion)) {
+  if (auto *Iter = dyn_cast<CXXIteratingExpansionStmtPattern>(Expansion)) {
     Shared.push_back(Iter->getRangeVarStmt());
     Shared.push_back(Iter->getBeginVarStmt());
     Shared.push_back(Iter->getEndVarStmt());
   } else if (auto *Destructuring =
-                 dyn_cast<CXXDestructuringExpansionStmt>(Expansion)) {
+                 dyn_cast<CXXDestructuringExpansionStmtPattern>(Expansion)) {
     Shared.push_back(Destructuring->getDecompositionDeclStmt());
   }
 
   // Return an empty statement if the range is empty.
   if (*NumInstantiations == 0) {
     Expansion->getDecl()->setInstantiations(
-        CXXExpansionInstantiationStmt::Create(
+        CXXExpansionStmtInstantiation::Create(
             Context, Expansion->getBeginLoc(), Expansion->getEndLoc(),
             /*Instantiations=*/{}, Shared,
-            isa<CXXDestructuringExpansionStmt>(Expansion)));
+            isa<CXXDestructuringExpansionStmtPattern>(Expansion)));
     return Expansion;
   }
 
@@ -448,7 +447,7 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
 
   // Expand the body for each instantiation.
   SmallVector<Stmt *, 4> Instantiations;
-  ExpansionStmtDecl *ESD = Expansion->getDecl();
+  CXXExpansionStmtDecl *ESD = Expansion->getDecl();
   for (uint64_t I = 0; I < *NumInstantiations; ++I) {
     // Now that we're expanding this, exit the context of the expansion stmt
     // so that we no longer treat this as dependent.
@@ -473,9 +472,9 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
     Instantiations.push_back(Instantiation.get());
   }
 
-  auto *InstantiationsStmt = CXXExpansionInstantiationStmt::Create(
+  auto *InstantiationsStmt = CXXExpansionStmtInstantiation::Create(
       Context, Expansion->getBeginLoc(), Expansion->getEndLoc(), Instantiations,
-      Shared, isa<CXXDestructuringExpansionStmt>(Expansion));
+      Shared, isa<CXXDestructuringExpansionStmtPattern>(Expansion));
 
   Expansion->getDecl()->setInstantiations(InstantiationsStmt);
   return Expansion;
@@ -515,17 +514,18 @@ ExprResult Sema::BuildCXXDestructuringExpansionSelectExpr(DecompositionDecl *DD,
 }
 
 std::optional<uint64_t>
-Sema::ComputeExpansionSize(CXXExpansionStmt *Expansion) {
+Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
   assert(!Expansion->hasDependentSize());
 
-  if (isa<CXXEnumeratingExpansionStmt>(Expansion))
+  if (isa<CXXEnumeratingExpansionStmtPattern>(Expansion))
     return cast<CXXExpansionInitListSelectExpr>(
                Expansion->getExpansionVariable()->getInit())
         ->getRangeExpr()
         ->getExprs()
         .size();
 
-  if (auto *Destructuring = dyn_cast<CXXDestructuringExpansionStmt>(Expansion))
+  if (auto *Destructuring =
+          dyn_cast<CXXDestructuringExpansionStmtPattern>(Expansion))
     return Destructuring->getDecompositionDecl()->bindings().size();
 
   // By [stmt.expand]5.2, N is the result of evaluating the expression
@@ -535,7 +535,7 @@ Sema::ComputeExpansionSize(CXXExpansionStmt *Expansion) {
   //    for (auto i = begin; i != end; ++i) ++result;
   //    return result;
   // }()
-  if (auto *Iterating = dyn_cast<CXXIteratingExpansionStmt>(Expansion)) {
+  if (auto *Iterating = dyn_cast<CXXIteratingExpansionStmtPattern>(Expansion)) {
     EnterExpressionEvaluationContext ExprEvalCtx(
         *this, ExpressionEvaluationContext::ConstantEvaluated);
 

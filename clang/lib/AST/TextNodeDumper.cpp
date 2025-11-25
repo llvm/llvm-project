@@ -1499,8 +1499,8 @@ void clang::TextNodeDumper::VisitCoreturnStmt(const CoreturnStmt *Node) {
     OS << " implicit";
 }
 
-void TextNodeDumper::VisitCXXExpansionInstantiationStmt(
-    const CXXExpansionInstantiationStmt *Node) {
+void TextNodeDumper::VisitCXXExpansionStmtInstantiation(
+    const CXXExpansionStmtInstantiation *Node) {
   if (Node->shouldApplyLifetimeExtensionToSharedStmts())
     OS << " applies_lifetime_extension";
 }
