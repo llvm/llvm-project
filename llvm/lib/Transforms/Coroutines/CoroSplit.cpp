@@ -2073,10 +2073,16 @@ static void enforceDominationByCoroBegin(Function &F,
   }
 }
 
+void coro::SwitchABI::preProcess() {
+  enforceDominationByCoroBegin(this->F, this->Shape);
+}
+
 static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
                              coro::BaseABI &ABI, TargetTransformInfo &TTI,
                              bool OptimizeFrame) {
   PrettyStackTraceFunction prettyStackTrace(F);
+
+  ABI.preProcess();
 
   auto &Shape = ABI.Shape;
   assert(Shape.CoroBegin);
@@ -2324,8 +2330,6 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     coro::Shape Shape(F);
     if (!Shape.CoroBegin)
       continue;
-
-    enforceDominationByCoroBegin(F, Shape);
 
     F.setSplittedCoroutine();
 
