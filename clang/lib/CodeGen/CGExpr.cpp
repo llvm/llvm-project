@@ -2575,25 +2575,6 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
                                              bool isInit) {
   if (!Dst.isSimple()) {
     if (Dst.isVectorElt()) {
-      if (getLangOpts().HLSL) {
-        // In HLSL, storing to individual elements of a vector through
-        // VectorElt LValue needs to be handled as separate store. We need to
-        // avoid the load/modify/store sequence to prevent overwriting other
-        // elements that might be getting updated in parallel.
-        Address DstAddr = Dst.getVectorAddress();
-        llvm::Type *DestAddrTy = DstAddr.getElementType();
-        llvm::Type *ElemTy = DestAddrTy->getScalarType();
-        CharUnits ElemAlign = CharUnits::fromQuantity(CGM.getDataLayout().getPrefTypeAlign(ElemTy));
-
-        llvm::Value *Idx = Dst.getVectorIdx();
-        llvm::Value *Val = Src.getScalarVal();
-        llvm::Value *Zero = llvm::ConstantInt::get(Int32Ty, 0);
-
-        Address DstElemAddr = Builder.CreateGEP(DstAddr, {Zero, Idx}, DestAddrTy, ElemAlign);
-        Builder.CreateStore(Val, DstElemAddr, Dst.isVolatileQualified());
-        return;
-      }
-      
       // Read/modify/write the vector, inserting the new element.
       llvm::Value *Vec = Builder.CreateLoad(Dst.getVectorAddress(),
                                             Dst.isVolatileQualified());
