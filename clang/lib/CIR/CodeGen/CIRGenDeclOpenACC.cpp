@@ -231,16 +231,12 @@ namespace {
 class OpenACCGlobalDeclareClauseEmitter final
     : public OpenACCClauseVisitor<OpenACCGlobalDeclareClauseEmitter> {
   CIRGenModule &cgm;
-  void clauseNotImplemented(const OpenACCClause &c) {
-    cgm.errorNYI(c.getSourceRange(), "OpenACC Global Declare Clause",
-                 c.getClauseKind());
-  }
 
 public:
   OpenACCGlobalDeclareClauseEmitter(CIRGenModule &cgm) : cgm(cgm) {}
 
   void VisitClause(const OpenACCClause &clause) {
-    clauseNotImplemented(clause);
+    llvm_unreachable("Invalid OpenACC clause on global Declare");
   }
 
   void emitClauses(ArrayRef<const OpenACCClause *> clauses) {
@@ -270,6 +266,14 @@ public:
           var, mlir::acc::DataClause::acc_declare_device_resident, {},
           /*structured=*/true,
           /*implicit=*/false, /*requiresDtor=*/true);
+  }
+
+  void VisitLinkClause(const OpenACCLinkClause &clause) {
+    for (const Expr *var : clause.getVarList())
+      cgm.emitGlobalOpenACCDeclareDataOperands<mlir::acc::DeclareLinkOp>(
+          var, mlir::acc::DataClause::acc_declare_link, {},
+          /*structured=*/true,
+          /*implicit=*/false, /*requiresDtor=*/false);
   }
 };
 } // namespace
