@@ -45,8 +45,10 @@ define i64 @load_align4(ptr %a) nounwind {
 define void @store(ptr %a, i64 %b) nounwind {
 ; CHECK-LABEL: store:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sw a1, 0(a1)
-; CHECK-NEXT:    sw a2, 4(a1)
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    sw a2, 4(a0)
+; CHECK-NEXT:    sw a1, 88(a0)
+; CHECK-NEXT:    sw a2, 92(a0)
 ; CHECK-NEXT:    ret
   store i64 %b, ptr %a
   %1 = getelementptr i64, ptr %a, i32 11
@@ -55,23 +57,11 @@ define void @store(ptr %a, i64 %b) nounwind {
 }
 
 define void @store_align4(ptr %a, i64 %b) nounwind {
-; SLOW-LABEL: store_align4:
-; SLOW:       # %bb.0:
-; SLOW-NEXT:    sw a1, 88(a0)
-; SLOW-NEXT:    sw a2, 92(a0)
-; SLOW-NEXT:    ret
-;
-; FAST-LABEL: store_align4:
-; FAST:       # %bb.0:
-; FAST-NEXT:    sw a1, 0(a1)
-; FAST-NEXT:    sw a2, 4(a1)
-; FAST-NEXT:    ret
-;
-; 4BYTEALIGN-LABEL: store_align4:
-; 4BYTEALIGN:       # %bb.0:
-; 4BYTEALIGN-NEXT:    sw a1, 0(a1)
-; 4BYTEALIGN-NEXT:    sw a2, 4(a1)
-; 4BYTEALIGN-NEXT:    ret
+; CHECK-LABEL: store_align4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sw a1, 88(a0)
+; CHECK-NEXT:    sw a2, 92(a0)
+; CHECK-NEXT:    ret
   %1 = getelementptr i64, ptr %a, i32 11
   store i64 %b, ptr %1, align 4
   ret void
@@ -155,8 +145,8 @@ define void @store_unaligned(ptr %p, i64 %v) {
 ;
 ; FAST-LABEL: store_unaligned:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    sw a1, 0(a1)
-; FAST-NEXT:    sw a2, 4(a1)
+; FAST-NEXT:    sw a1, 0(a0)
+; FAST-NEXT:    sw a2, 4(a0)
 ; FAST-NEXT:    ret
 ;
 ; 4BYTEALIGN-LABEL: store_unaligned:
@@ -196,7 +186,8 @@ entry:
 define void @store_g() nounwind {
 ; CHECK-LABEL: store_g:
 ; CHECK:       # %bb.0: # %entyr
-; CHECK-NEXT:    sd zero, 0(zero)
+; CHECK-NEXT:    lui a0, %hi(g)
+; CHECK-NEXT:    sd zero, %lo(g)(a0)
 ; CHECK-NEXT:    ret
 entyr:
   store i64 0, ptr @g
@@ -208,12 +199,13 @@ define void @large_offset(ptr nocapture %p, i64 %d) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, 4
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    ld a0, -384(a0)
-; CHECK-NEXT:    addi a2, a0, 1
-; CHECK-NEXT:    seqz a3, a2
-; CHECK-NEXT:    add a1, a1, a3
-; CHECK-NEXT:    sw a2, 1(a0)
-; CHECK-NEXT:    sw a1, 5(a0)
+; CHECK-NEXT:    lw a1, -384(a0)
+; CHECK-NEXT:    lw a2, -380(a0)
+; CHECK-NEXT:    addi a1, a1, 1
+; CHECK-NEXT:    seqz a3, a1
+; CHECK-NEXT:    add a2, a2, a3
+; CHECK-NEXT:    sw a1, -384(a0)
+; CHECK-NEXT:    sw a2, -380(a0)
 ; CHECK-NEXT:    ret
 entry:
   %add.ptr = getelementptr inbounds i64, ptr %p, i64 2000

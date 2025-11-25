@@ -1856,7 +1856,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     SDValue Base, Offset;
     SDValue Chain = MemNode->getChain();
-    SDValue Addr = MemNode->getBasePtr();
+    SDValue Addr = Node->getOperand(3);
     SelectAddrRegImm(Addr, Base, Offset);
 
     SDValue Lo = Node->getOperand(1);
