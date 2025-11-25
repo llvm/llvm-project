@@ -2923,9 +2923,6 @@ LogicalResult spirv::Deserializer::structurizeControlFlow() {
     return failure();
   }
 
-  // TODO: This loop is non-deterministic. Iteration order may vary between runs
-  // for the same shader as the key to the map is a pointer. See:
-  // https://github.com/llvm/llvm-project/issues/128547
   while (!blockMergeInfo.empty()) {
     Block *headerBlock = blockMergeInfo.begin()->first;
     BlockMergeInfo mergeInfo = blockMergeInfo.begin()->second;
