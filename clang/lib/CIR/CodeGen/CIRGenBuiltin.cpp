@@ -1325,9 +1325,10 @@ static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,
     break;
   }
 
-  cgf->cgm.errorNYI(e->getSourceRange(),
-                "target-specific builtin not implemented on this architecture:  " +
-                    cgf->getContext().BuiltinInfo.getName(builtinID));
+  cgf->cgm.errorNYI(
+      e->getSourceRange(),
+      "target-specific builtin not implemented on this architecture:  " +
+          cgf->getContext().BuiltinInfo.getName(builtinID));
   return {};
 }
 

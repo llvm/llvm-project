@@ -13,10 +13,10 @@
 
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -158,7 +158,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI_mm_prefetch:
   case X86::BI_m_prefetch:
   case X86::BI_m_prefetchw:
-      return emitPrefetch(*this, builtinID, expr, ops);
+    return emitPrefetch(*this, builtinID, expr, ops);
   case X86::BI__rdtsc:
   case X86::BI__builtin_ia32_rdtscp: {
     cgm.errorNYI(expr->getSourceRange(),
