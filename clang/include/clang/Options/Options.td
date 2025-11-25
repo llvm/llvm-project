@@ -1427,6 +1427,16 @@ def fhip_emit_relocatable : Flag<["-"], "fhip-emit-relocatable">,
   HelpText<"Compile HIP source to relocatable">;
 def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
+def use_spirv_backend
+    : Flag<["-"], "use-spirv-backend">,
+      Group<hip_Group>,
+      Flags<[HelpHidden]>,
+      HelpText<"Use the SPIRV backend for compilation ">;
+def no_use_spirv_backend
+    : Flag<["-"], "no-use-spirv-backend">,
+      Group<hip_Group>,
+      Flags<[HelpHidden]>,
+      HelpText<"Do not use the SPIRV backend for compilation ">;
 }
 
 // Clang specific/exclusive options for OpenACC.
@@ -2666,6 +2676,15 @@ defm sanitize_minimal_runtime : BoolOption<"f", "sanitize-minimal-runtime",
   PosFlag<SetTrue>,
   NegFlag<SetFalse>>,
   Group<f_clang_Group>;
+defm sanitize_handler_preserve_all_regs
+    : BoolOption<
+          "f", "sanitize-handler-preserve-all-regs",
+          CodeGenOpts<"SanitizeHandlerPreserveAllRegs">, DefaultFalse,
+          PosFlag<SetTrue, [], [],
+                  "Enable handlers with preserve_all calling convention">,
+          NegFlag<SetFalse, [], [],
+                  "Disable handlers with preserve_all calling convention">>,
+      Group<f_clang_Group>;
 def fsanitize_link_runtime : Flag<["-"], "fsanitize-link-runtime">,
                            Group<f_clang_Group>;
 def fno_sanitize_link_runtime : Flag<["-"], "fno-sanitize-link-runtime">,
