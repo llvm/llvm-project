@@ -748,8 +748,11 @@ Interpreter::Visit(const CastNode *node) {
 
   lldb::ValueObjectSP operand = *operand_or_err;
   // Don't actually do the cast for now -- that code will be added later.
-  // For now just return the original operand, unchanged.
-  return operand;
+  // For now just return an error message.
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr,
+      "Type casting is not supported here.",
+      node->GetLocation());
 }
 
 } // namespace lldb_private::dil

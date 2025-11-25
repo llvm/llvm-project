@@ -15,7 +15,6 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/ValueObject/DILAST.h"
