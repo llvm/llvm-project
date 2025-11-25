@@ -271,15 +271,15 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF4-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF4-NEXT:    [[OFFSET_IDX6:%.*]] = mul i64 [[INDEX]], 16
 ; VF4-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[B]], i64 [[OFFSET_IDX6]]
-; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x double>, ptr [[NEXT_GEP]], align 8
+; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x double>, ptr [[NEXT_GEP]], align 8, !alias.scope [[META4:![0-9]+]]
 ; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; VF4-NEXT:    [[STRIDED_VEC8:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; VF4-NEXT:    [[TMP13:%.*]] = shufflevector <4 x double> [[STRIDED_VEC]], <4 x double> [[STRIDED_VEC8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[TMP13]], <8 x double> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP7]], align 8
+; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP7]], align 8, !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; VF4-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF4-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; VF4-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
@@ -316,8 +316,7 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; VF2-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[OFFSET_IDX]], 0
-; VF2-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET_IDX]]
 ; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[TMP3:%.*]] = add <2 x i64> [[STRIDED_VEC1]], splat (i64 1)
 ; VF2-NEXT:    store <2 x i64> [[TMP3]], ptr [[TMP1]], align 8
@@ -325,8 +324,9 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; VF2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 ; VF2IC2-LABEL: define void @narrow_with_uniform_add_and_gep(
 ; VF2IC2-SAME: ptr noalias [[P:%.*]]) {
@@ -338,10 +338,8 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 2
-; VF2IC2-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[OFFSET_IDX]], 0
-; VF2IC2-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP0]], 0
-; VF2IC2-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP1]]
-; VF2IC2-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP2]]
+; VF2IC2-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET_IDX]]
+; VF2IC2-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP0]]
 ; VF2IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
 ; VF2IC2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP4]], align 8
 ; VF2IC2-NEXT:    [[TMP5:%.*]] = add <2 x i64> [[WIDE_LOAD]], splat (i64 1)
@@ -352,8 +350,9 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; VF2IC2-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
-; VF2IC2-NEXT:    br [[EXIT:label %.*]]
-; VF2IC2:       [[SCALAR_PH:.*:]]
+; VF2IC2-NEXT:    br label %[[EXIT:.*]]
+; VF2IC2:       [[EXIT]]:
+; VF2IC2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @narrow_with_uniform_add_and_gep(
 ; VF4-SAME: ptr noalias [[P:%.*]]) {
@@ -364,8 +363,7 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF4:       [[VECTOR_BODY]]:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; VF4-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[OFFSET_IDX]], 0
-; VF4-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP0]]
+; VF4-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET_IDX]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP1]], align 8
 ; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -376,10 +374,11 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
-; VF4-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF4-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH:.*:]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
 ;
 entry:
   br label %loop
