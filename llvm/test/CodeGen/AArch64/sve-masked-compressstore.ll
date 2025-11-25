@@ -169,24 +169,32 @@ define void @test_compressstore_v8i32(ptr %p, <8 x i32> %vec, <8 x i1> %mask) {
 ; CHECK-BASE-LABEL: test_compressstore_v8i32:
 ; CHECK-BASE:       // %bb.0:
 ; CHECK-BASE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-BASE-NEXT:    zip2 v3.8b, v2.8b, v0.8b
-; CHECK-BASE-NEXT:    zip1 v2.8b, v2.8b, v0.8b
+; CHECK-BASE-NEXT:    zip1 v3.8b, v2.8b, v0.8b
+; CHECK-BASE-NEXT:    adrp x8, .LCPI11_0
+; CHECK-BASE-NEXT:    zip2 v2.8b, v2.8b, v0.8b
+; CHECK-BASE-NEXT:    ldr d5, [x8, :lo12:.LCPI11_0]
+; CHECK-BASE-NEXT:    ptrue p0.s
 ; CHECK-BASE-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-BASE-NEXT:    movi v4.4s, #1
-; CHECK-BASE-NEXT:    ptrue p0.s, vl4
-; CHECK-BASE-NEXT:    ushll v3.4s, v3.4h, #0
+; CHECK-BASE-NEXT:    ptrue p1.s, vl4
+; CHECK-BASE-NEXT:    shl v4.4h, v3.4h, #15
 ; CHECK-BASE-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-BASE-NEXT:    ushll v3.4s, v3.4h, #0
+; CHECK-BASE-NEXT:    cmlt v4.4h, v4.4h, #0
+; CHECK-BASE-NEXT:    shl v2.4s, v2.4s, #31
 ; CHECK-BASE-NEXT:    shl v3.4s, v3.4s, #31
-; CHECK-BASE-NEXT:    shl v5.4s, v2.4s, #31
-; CHECK-BASE-NEXT:    and v2.16b, v2.16b, v4.16b
-; CHECK-BASE-NEXT:    cmpne p1.s, p0/z, z3.s, #0
-; CHECK-BASE-NEXT:    cmpne p0.s, p0/z, z5.s, #0
-; CHECK-BASE-NEXT:    addv s2, v2.4s
-; CHECK-BASE-NEXT:    fmov w10, s2
-; CHECK-BASE-NEXT:    cntp x8, p1, p1.s
-; CHECK-BASE-NEXT:    compact z1.s, p1, z1.s
-; CHECK-BASE-NEXT:    compact z0.s, p0, z0.s
-; CHECK-BASE-NEXT:    cntp x9, p0, p0.s
+; CHECK-BASE-NEXT:    and v4.8b, v4.8b, v5.8b
+; CHECK-BASE-NEXT:    addv h4, v4.4h
+; CHECK-BASE-NEXT:    fmov w8, s4
+; CHECK-BASE-NEXT:    and w8, w8, #0xf
+; CHECK-BASE-NEXT:    fmov s4, w8
+; CHECK-BASE-NEXT:    cnt z4.s, p0/m, z4.s
+; CHECK-BASE-NEXT:    cmpne p0.s, p1/z, z2.s, #0
+; CHECK-BASE-NEXT:    cmpne p1.s, p1/z, z3.s, #0
+; CHECK-BASE-NEXT:    cntp x8, p0, p0.s
+; CHECK-BASE-NEXT:    compact z1.s, p0, z1.s
+; CHECK-BASE-NEXT:    compact z0.s, p1, z0.s
+; CHECK-BASE-NEXT:    cntp x9, p1, p1.s
+; CHECK-BASE-NEXT:    fmov w10, s4
 ; CHECK-BASE-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-BASE-NEXT:    whilelo p1.s, xzr, x9
 ; CHECK-BASE-NEXT:    st1w { z1.s }, p0, [x0, x10, lsl #2]
@@ -219,23 +227,30 @@ define void @test_compressstore_v4i64(ptr %p, <4 x i64> %vec, <4 x i1> %mask) {
 ; CHECK-BASE-LABEL: test_compressstore_v4i64:
 ; CHECK-BASE:       // %bb.0:
 ; CHECK-BASE-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-BASE-NEXT:    movi v5.2s, #1
+; CHECK-BASE-NEXT:    index z4.s, #1, #1
+; CHECK-BASE-NEXT:    ptrue p0.s
+; CHECK-BASE-NEXT:    ptrue p1.d, vl2
 ; CHECK-BASE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-BASE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-BASE-NEXT:    ptrue p0.d, vl2
-; CHECK-BASE-NEXT:    ushll2 v3.2d, v2.4s, #0
-; CHECK-BASE-NEXT:    ushll v4.2d, v2.2s, #0
-; CHECK-BASE-NEXT:    and v2.8b, v2.8b, v5.8b
-; CHECK-BASE-NEXT:    shl v3.2d, v3.2d, #63
-; CHECK-BASE-NEXT:    shl v4.2d, v4.2d, #63
-; CHECK-BASE-NEXT:    addp v2.2s, v2.2s, v2.2s
-; CHECK-BASE-NEXT:    cmpne p1.d, p0/z, z3.d, #0
-; CHECK-BASE-NEXT:    cmpne p0.d, p0/z, z4.d, #0
-; CHECK-BASE-NEXT:    fmov w10, s2
-; CHECK-BASE-NEXT:    cntp x8, p1, p1.d
-; CHECK-BASE-NEXT:    compact z1.d, p1, z1.d
-; CHECK-BASE-NEXT:    compact z0.d, p0, z0.d
-; CHECK-BASE-NEXT:    cntp x9, p0, p0.d
+; CHECK-BASE-NEXT:    shl v3.2s, v2.2s, #31
+; CHECK-BASE-NEXT:    cmlt v3.2s, v3.2s, #0
+; CHECK-BASE-NEXT:    and v3.8b, v3.8b, v4.8b
+; CHECK-BASE-NEXT:    ushll2 v4.2d, v2.4s, #0
+; CHECK-BASE-NEXT:    ushll v2.2d, v2.2s, #0
+; CHECK-BASE-NEXT:    addp v3.2s, v3.2s, v3.2s
+; CHECK-BASE-NEXT:    shl v2.2d, v2.2d, #63
+; CHECK-BASE-NEXT:    fmov w8, s3
+; CHECK-BASE-NEXT:    shl v3.2d, v4.2d, #63
+; CHECK-BASE-NEXT:    and w8, w8, #0x3
+; CHECK-BASE-NEXT:    fmov s4, w8
+; CHECK-BASE-NEXT:    cnt z4.s, p0/m, z4.s
+; CHECK-BASE-NEXT:    cmpne p0.d, p1/z, z3.d, #0
+; CHECK-BASE-NEXT:    cmpne p1.d, p1/z, z2.d, #0
+; CHECK-BASE-NEXT:    cntp x8, p0, p0.d
+; CHECK-BASE-NEXT:    compact z1.d, p0, z1.d
+; CHECK-BASE-NEXT:    compact z0.d, p1, z0.d
+; CHECK-BASE-NEXT:    cntp x9, p1, p1.d
+; CHECK-BASE-NEXT:    fmov w10, s4
 ; CHECK-BASE-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-BASE-NEXT:    whilelo p1.d, xzr, x9
 ; CHECK-BASE-NEXT:    st1d { z1.d }, p0, [x0, x10, lsl #3]
