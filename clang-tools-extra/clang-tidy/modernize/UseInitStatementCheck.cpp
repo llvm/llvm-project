@@ -51,6 +51,7 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
   // Matcher for if statements that use a variable in condition
   Finder->addMatcher(
       ifStmt(unless(isInTemplateInstantiation()),
+             unless(hasInitStatement(anything())),
              hasCondition(expr().bind("condition")))
           .bind("ifStmt"),
       this);
@@ -58,6 +59,7 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
   // Matcher for switch statements that use a variable in condition
   Finder->addMatcher(
       switchStmt(unless(isInTemplateInstantiation()),
+                 unless(hasInitStatement(anything())),
                  hasCondition(expr().bind("condition")))
           .bind("switchStmt"),
       this);

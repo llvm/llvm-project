@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy -std=c++17-or-later %s modernize-use-init-statement %t
 
-void do_some();
+void do_some(int i=0);
 int get_with_possible_side_effects();
 enum class INITIALIZE_STATUS { OK, FAIL, PENDING };
 INITIALIZE_STATUS initialize(int& val);
@@ -21,8 +21,23 @@ void good() {
     ++i2;
 }
 
+void good_already_has_init_stmt() {
+    int i1 = 0;
+    if (int i=0; i1 == 0) {
+// FIXME: should be changed to 'if (int i1=0,i=0; i1 == 0) {'
+        do_some(i);
+    }
+    int i2 = 0;
+    switch (int i=0; i2) {
+// FIXME: should be changed to 'switch (int i2=0,i=0; i2) {'
+        case 0:
+            do_some(i);
+            break;
+    }
+}
+
+
 // TODO: implement structured binding case
-// TODO: implement case for already if-init statement used
 // TODO: implement case for const and constexpr variables
 // TODO: implement case for multiple variables in one line
 // TODO: test for case when unused in condition but used in body (this is for abother check)
