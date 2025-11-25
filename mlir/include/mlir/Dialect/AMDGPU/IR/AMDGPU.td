@@ -1321,6 +1321,18 @@ def AMDGPU_MakeDmaDescriptorOp :
      $global_increment determines how much to increment the starting global memory address per iteration in units of the $base's element type.
      $lds_increment determines how much to increment the starting LDS address per iteration in units of the $base's element type.
      $iterate_count determines how many times to iterate.
+
+     ```mlir
+      // Example of moving a two-dimensional tensor to LDS.
+      %base = amdgpu.make_dma_base %src[0, 0], %dst[0, 0] : memref<64x64xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+      %descriptor = amdgpu.make_dma_descriptor %base globalSize [64, 64] globalStride [64, 1] sharedSize [64, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+      amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
+
+      // Example of moving a two dimension tensor to LDS where padding is applied after every integer.
+      %base = amdgpu.make_dma_base %src[0, 0], %dst[0, 0] : memref<32x32xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+      %descriptor = amdgpu.make_dma_descriptor %base globalSize [32, 32] globalStride [32, 1] sharedSize [64, 64] padding(1 every 1) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+      amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
+     ```
   }];
 
   let assemblyFormat = [{
