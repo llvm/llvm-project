@@ -22,9 +22,9 @@ define void @vector_reg_liverange_split() #0 {
 ; GFX90A-NEXT:    v_writelane_b32 v40, s28, 2
 ; GFX90A-NEXT:    v_writelane_b32 v40, s29, 3
 ; GFX90A-NEXT:    v_writelane_b32 v40, s30, 0
-; GFX90A-NEXT:    ; implicit-def: $vgpr39 : SGPR spill to VGPR lane
 ; GFX90A-NEXT:    s_addk_i32 s32, 0x400
 ; GFX90A-NEXT:    v_writelane_b32 v40, s31, 1
+; GFX90A-NEXT:    ; implicit-def: $vgpr39 : SGPR spill to VGPR lane
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s20
 ; GFX90A-NEXT:    ;;#ASMEND

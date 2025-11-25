@@ -100,62 +100,25 @@ INITIALIZE_PASS_END(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
 
 char &llvm::SILowerSGPRSpillsLegacyID = SILowerSGPRSpillsLegacy::ID;
 
-static bool isLiveIntoMBB(MCRegister Reg, MachineBasicBlock &MBB,
-                          const TargetRegisterInfo *TRI) {
-  for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R) {
-    if (MBB.isLiveIn(*R)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /// Insert spill code for the callee-saved registers used in the function.
-static void insertCSRSaves(MachineBasicBlock &SaveBlock,
+static void insertCSRSaves(const GCNSubtarget &ST, MachineBasicBlock &SaveBlock,
                            ArrayRef<CalleeSavedInfo> CSI, SlotIndexes *Indexes,
                            LiveIntervals *LIS) {
-  MachineFunction &MF = *SaveBlock.getParent();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *RI = ST.getRegisterInfo();
-
+  const TargetFrameLowering *TFI = ST.getFrameLowering();
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   MachineBasicBlock::iterator I = SaveBlock.begin();
-  if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, RI)) {
-    for (const CalleeSavedInfo &CS : CSI) {
-      // Insert the spill to the stack frame.
-      MCRegister Reg = CS.getReg();
+  MachineInstrSpan MIS(I, &SaveBlock);
+  bool Success = TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI);
+  assert(Success && "spillCalleeSavedRegisters should always succeed");
+  (void)Success;
 
-      MachineInstrSpan MIS(I, &SaveBlock);
-      const TargetRegisterClass *RC = RI->getMinimalPhysRegClass(
-          Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
+  // TFI doesn't update Indexes and LIS, so we have to do it separately.
+  if (Indexes)
+    Indexes->repairIndexesInRange(&SaveBlock, SaveBlock.begin(), I);
 
-      // If this value was already livein, we probably have a direct use of the
-      // incoming register value, so don't kill at the spill point. This happens
-      // since we pass some special inputs (workgroup IDs) in the callee saved
-      // range.
-      const bool IsLiveIn = isLiveIntoMBB(Reg, SaveBlock, RI);
-      TII.storeRegToStackSlot(SaveBlock, I, Reg, !IsLiveIn, CS.getFrameIdx(),
-                              RC, Register());
-
-      if (Indexes) {
-        assert(std::distance(MIS.begin(), I) == 1);
-        MachineInstr &Inst = *std::prev(I);
-        Indexes->insertMachineInstrInMaps(Inst);
-      }
-
-      if (LIS)
-        LIS->removeAllRegUnitsForPhysReg(Reg);
-    }
-  } else {
-    // TFI doesn't update Indexes and LIS, so we have to do it separately.
-    if (Indexes)
-      Indexes->repairIndexesInRange(&SaveBlock, SaveBlock.begin(), I);
-
-    if (LIS)
-      for (const CalleeSavedInfo &CS : CSI)
-        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
-  }
+  if (LIS)
+    for (const CalleeSavedInfo &CS : CSI)
+      LIS->removeAllRegUnitsForPhysReg(CS.getReg());
 }
 
 /// Insert restore code for the callee-saved registers used in the function.
@@ -305,7 +268,7 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
 
     if (!CSI.empty()) {
       for (MachineBasicBlock *SaveBlock : SaveBlocks)
-        insertCSRSaves(*SaveBlock, CSI, Indexes, LIS);
+        insertCSRSaves(ST, *SaveBlock, CSI, Indexes, LIS);
 
       // Add live ins to save blocks.
       assert(SaveBlocks.size() == 1 && "shrink wrapping not fully implemented");
