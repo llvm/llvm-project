@@ -3,7 +3,7 @@
 
 struct Flub {
   int a = 123;
-  // COM: Trivial copy constructors/assignments are replaced with cir.copy
+  // Trivial copy constructors/assignments are replaced with cir.copy
   // CIR: cir.copy {{.*}} : !cir.ptr<!rec_Flub>
   // CIR: @_ZN4FlubC1EOS_(%arg0: !cir.ptr<!rec_Flub> loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> loc({{.*}})) special_member<#cir.cxx_ctor<!rec_Flub, move, trivial true>
   // CIR: @_ZN4FlubaSERKS_(%arg0: !cir.ptr<!rec_Flub> loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> loc({{.*}})) -> !cir.ptr<!rec_Flub> special_member<#cir.cxx_assign<!rec_Flub, copy, trivial true>>
