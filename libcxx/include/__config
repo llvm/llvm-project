@@ -495,27 +495,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HAS_ALIGNED_ALLOCATION 1
 #  endif
 
-// It is not yet possible to use aligned_alloc() on all Apple platforms since
-// 10.15 was the first version to ship an implementation of aligned_alloc().
-#  if defined(__APPLE__)
-#    if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                                                     \
-         __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500) ||                                                    \
-        (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) &&                                                    \
-         __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 130000) ||                                                   \
-        (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) &&                                                     \
-         __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 60000) ||                                                     \
-        (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 130000)
-#      define _LIBCPP_HAS_C11_ALIGNED_ALLOC 0
-#    else
-#      define _LIBCPP_HAS_C11_ALIGNED_ALLOC 1
-#    endif
-#  elif defined(__ANDROID__) && __ANDROID_API__ < 28
-// Android only provides aligned_alloc when targeting API 28 or higher.
-#    define _LIBCPP_HAS_C11_ALIGNED_ALLOC 0
-#  else
-#    define _LIBCPP_HAS_C11_ALIGNED_ALLOC 1
-#  endif
-
 #  if defined(__APPLE__) || defined(__FreeBSD__)
 #    define _LIBCPP_WCTYPE_IS_MASK
 #  endif
