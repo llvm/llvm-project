@@ -25018,20 +25018,21 @@ EVT RISCVTargetLowering::getOptimalMemOpType(
   // If Op size is greater than LMUL8 memory operation, we don't support inline
   // of memset. Return EVT based on Op size to avoid redundant splitting and
   // merging operations if Op size is no greater than LMUL8 memory operation.
+
+  MVT PreferredVT = MVT::getIntegerVT(Subtarget.getELen());
+
   if (Op.isMemset()) {
     if (!Op.isZeroMemset())
-      return EVT::getVectorVT(Context, MVT::i8, Op.size());
+      PreferredVT = MVT::i8;
     if (Op.size() >
         Subtarget.getMaxLMULForFixedLengthVectors() * MinVLenInBytes)
       return MVT::Other;
     if (Subtarget.hasVInstructionsI64() && Op.size() % 8 == 0)
-      return EVT::getVectorVT(Context, MVT::i64, Op.size() / 8);
+      PreferredVT = MVT::i64;
     if (Op.size() % 4 == 0)
-      return EVT::getVectorVT(Context, MVT::i32, Op.size() / 4);
-    return EVT::getVectorVT(Context, MVT::i8, Op.size());
+      PreferredVT = MVT::i32;
+    PreferredVT = MVT::i8;
   }
-
-  MVT PreferredVT = MVT::getIntegerVT(Subtarget.getELen());
 
   // Do we have sufficient alignment for our preferred VT?  If not, revert
   // to largest size allowed by our alignment criteria.
@@ -25043,6 +25044,10 @@ EVT RISCVTargetLowering::getOptimalMemOpType(
       RequiredAlign = std::min(RequiredAlign, Op.getSrcAlign());
     PreferredVT = MVT::getIntegerVT(RequiredAlign.value() * 8);
   }
+
+  if (Op.isMemset())
+    return EVT::getVectorVT(Context, PreferredVT, Op.size() / PreferredVT.getStoreSize());
+
   return MVT::getVectorVT(PreferredVT, MinVLenInBytes/PreferredVT.getStoreSize());
 }
 

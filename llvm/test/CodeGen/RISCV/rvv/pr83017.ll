@@ -31,9 +31,10 @@ define void @aliasing(ptr %p) {
 ; CHECK-LABEL: aliasing:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lw a1, 84(a0)
-; CHECK-NEXT:    vsetivli zero, 12, e64, m8, ta, ma
+; CHECK-NEXT:    li a2, 96
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    sw a1, 84(a0)
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i64 84
