@@ -1,0 +1,70 @@
+═══════════════════════════════════════════════════════════════════════════════
+MANUAL INSTALLATION COMMANDS
+Copy and paste these commands one at a time (sudo password: 1786)
+═══════════════════════════════════════════════════════════════════════════════
+
+# Step 1: Mount chroot environment
+sudo mount /dev/nvme0n1p1 /mnt/transplant/boot/efi
+sudo mount -t proc proc /mnt/transplant/proc
+sudo mount -t sysfs sys /mnt/transplant/sys
+sudo mount -o bind /dev /mnt/transplant/dev
+sudo mount -t devpts devpts /mnt/transplant/dev/pts
+sudo cp /etc/resolv.conf /mnt/transplant/etc/resolv.conf
+
+# Step 2: Copy kernel packages
+sudo cp ~/kernel-build/linux-image-6.16.12-ultimate_6.16.12-3_amd64.deb /mnt/transplant/tmp/
+sudo cp ~/kernel-build/linux-headers-6.16.12-ultimate_6.16.12-3_amd64.deb /mnt/transplant/tmp/
+
+# Step 3: Install kernel
+sudo chroot /mnt/transplant dpkg -i /tmp/linux-image-6.16.12-ultimate_6.16.12-3_amd64.deb
+sudo chroot /mnt/transplant dpkg -i /tmp/linux-headers-6.16.12-ultimate_6.16.12-3_amd64.deb
+
+# Step 4: Generate initramfs with ZFS support
+sudo chroot /mnt/transplant update-initramfs -c -k 6.16.12-ultimate
+
+# Step 5: Copy DSMIL AI Framework
+sudo mkdir -p /mnt/transplant/opt/dsmil
+sudo rsync -a /home/john/LAT5150DRVMIL/ /mnt/transplant/opt/dsmil/
+
+# Step 6: Install DSMIL systemd service
+sudo cp /home/john/LAT5150DRVMIL/05-deployment/systemd/dsmil-server.service /mnt/transplant/etc/systemd/system/
+sudo sed -i 's|/home/john/LAT5150DRVMIL|/opt/dsmil|g' /mnt/transplant/etc/systemd/system/dsmil-server.service
+sudo chroot /mnt/transplant systemctl enable dsmil-server
+
+# Step 7: Update GRUB
+sudo chroot /mnt/transplant update-grub
+
+# Step 8: Verify kernel installed
+sudo ls -lh /mnt/transplant/boot/vmlinuz-6.16.12-ultimate
+
+# Step 9: Create snapshot
+sudo zfs snapshot rpool/ROOT/livecd-xen-ai@ready-to-boot-ultimate
+
+# Step 10: Set as default boot
+sudo zpool set bootfs=rpool/ROOT/livecd-xen-ai rpool
+
+# Step 11: Verify bootfs
+sudo zpool get bootfs rpool
+
+# Step 12: Cleanup mounts
+sudo umount /mnt/transplant/boot/efi
+sudo umount /mnt/transplant/proc
+sudo umount /mnt/transplant/sys
+sudo umount /mnt/transplant/dev/pts
+sudo umount /mnt/transplant/dev
+
+# Step 13: Unmount BE
+sudo zfs unmount rpool/ROOT/livecd-xen-ai
+
+# Step 14: Export pool for clean reboot
+sudo zpool export rpool
+
+# Step 15: REBOOT
+sudo reboot
+
+═══════════════════════════════════════════════════════════════════════════════
+AT BOOT:
+  1. Enter password: 1/0523/600260
+  2. Select: livecd-xen-ai
+  3. System boots with Xen + AI + DSMIL + full optimizations!
+═══════════════════════════════════════════════════════════════════════════════

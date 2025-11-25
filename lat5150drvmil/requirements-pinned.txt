@@ -1,0 +1,85 @@
+# AI Framework - Dell Latitude 5450 MIL-SPEC
+# Python 3.10+ required
+# Pinned versions for reproducible builds
+# Generated: 2025-11-21
+
+# Deep Learning & AI
+torch==2.1.1
+transformers==4.35.2
+datasets==2.15.0
+accelerate==0.25.0
+bitsandbytes==0.41.3
+peft==0.7.1
+trl==0.7.4
+intel-extension-for-pytorch==2.1.10
+openvino==2023.2.0
+
+# Scientific Computing
+numpy==1.26.2
+scipy==1.11.4
+pandas==2.1.3
+
+# Visualization & Monitoring
+matplotlib==3.8.2
+seaborn==0.13.0
+tensorboard==2.15.1
+wandb==0.16.0
+
+# RAG System & Vector Databases
+sentence-transformers==2.2.2
+qdrant-client==1.7.0
+faiss-cpu==1.7.4
+chromadb==0.4.18
+langchain==0.0.350
+llama-index==0.9.28
+
+# Screenshot Intelligence System
+paddleocr==2.7.0.3
+paddlepaddle==2.5.2
+pytesseract==0.3.10
+Pillow==10.1.0
+watchdog==3.0.0
+psutil==5.9.6
+mcp==0.1.0
+
+# Telegram Scrapers
+telethon==1.33.1
+python-dotenv==1.0.0
+
+# Web Scraping & APIs
+requests==2.31.0
+beautifulsoup4==4.12.2
+
+# Utilities
+pyyaml==6.0.1
+toml==0.10.2
+click==8.1.7
+
+# Data Management
+dvc==3.35.2  # Data version control
+
+# Testing & Quality
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-timeout==2.2.0
+pytest-asyncio==0.21.1
+black==23.12.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Development
+ipython==8.18.1
+jupyter==1.0.0
+notebook==7.0.6
+
+# Production deployment
+gunicorn==21.2.0
+uvicorn==0.24.0
+fastapi==0.104.1
+
+# Performance & monitoring
+memory-profiler==0.61.0
+
+# Optional: Database
+# psycopg2-binary==2.9.9
+# redis==5.0.1

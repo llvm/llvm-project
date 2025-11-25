@@ -1,0 +1,40 @@
+[package]
+name = "dsmil-rust"
+version = "1.0.0"
+edition = "2021"
+authors = ["DSMIL Development Team"]
+description = "Rust safety layer for DSMIL kernel module"
+license = "GPL-2.0"
+
+[lib]
+name = "dsmil_rust"
+crate-type = ["staticlib"]
+
+[features]
+default = ["kernel"]
+kernel = []
+testing = []
+
+[dependencies]
+# No dependencies for kernel modules (no_std environment)
+
+# Force rebuild of compiler-builtins from source to prevent FMA instructions
+# This is a build-time dependency that will be compiled with our RUSTFLAGS
+[build-dependencies]
+
+# Build configuration to force compiler-builtins rebuild
+[package.metadata.cargo-features]
+build-std = ["core", "compiler_builtins"]
+build-std-features = ["compiler-builtins-mem"]
+
+[profile.release]
+panic = "abort"
+opt-level = 2
+lto = true
+codegen-units = 1
+debug = false
+
+[profile.dev]
+panic = "abort"
+opt-level = 0
+debug = true

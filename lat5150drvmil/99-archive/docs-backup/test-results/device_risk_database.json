@@ -1,0 +1,396 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created": "2025-09-01",
+    "system": "Dell Latitude 5450 MIL-SPEC JRTC1",
+    "total_devices": 84,
+    "classification_method": "NSA + HARDWARE Analysis",
+    "safety_mode": "READ_ONLY"
+  },
+  "risk_categories": {
+    "CRITICAL": {
+      "level": 5,
+      "description": "Devices with confirmed or highly probable destruction capabilities",
+      "action": "NEVER WRITE - QUARANTINE",
+      "color": "red"
+    },
+    "HIGH": {
+      "level": 4,
+      "description": "Devices with potential system damage capabilities",
+      "action": "EXTREME CAUTION - READ ONLY",
+      "color": "orange"
+    },
+    "MODERATE": {
+      "level": 3,
+      "description": "Security and configuration devices",
+      "action": "CAREFUL OBSERVATION",
+      "color": "yellow"
+    },
+    "LOW": {
+      "level": 2,
+      "description": "Monitoring and logging devices",
+      "action": "SAFE TO OBSERVE",
+      "color": "green"
+    },
+    "UNKNOWN": {
+      "level": 1,
+      "description": "Unclassified devices with unknown capabilities",
+      "action": "ASSUME DANGEROUS",
+      "color": "gray"
+    }
+  },
+  "devices": {
+    "0x8000": {
+      "name": "Master Security Controller",
+      "group": 0,
+      "index": 0,
+      "risk_level": "MODERATE",
+      "confidence": 70,
+      "capabilities": ["System lockdown", "Security policy enforcement"],
+      "warnings": ["May control access to other devices"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8001": {
+      "name": "Crypto Engine Control",
+      "group": 0,
+      "index": 1,
+      "risk_level": "MODERATE",
+      "confidence": 65,
+      "capabilities": ["Encryption management", "Key storage"],
+      "warnings": ["Could destroy encryption keys"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8002": {
+      "name": "Secure Storage Manager",
+      "group": 0,
+      "index": 2,
+      "risk_level": "MODERATE",
+      "confidence": 65,
+      "capabilities": ["Secure data storage", "Access control"],
+      "warnings": ["May lock data access"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8003": {
+      "name": "Unknown Security Function",
+      "group": 0,
+      "index": 3,
+      "risk_level": "UNKNOWN",
+      "confidence": 30,
+      "capabilities": ["Unknown"],
+      "warnings": ["Group 0 device - assume dangerous"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8004": {
+      "name": "Audit Logger",
+      "group": 0,
+      "index": 4,
+      "risk_level": "LOW",
+      "confidence": 60,
+      "capabilities": ["Event logging", "Audit trails"],
+      "warnings": ["May contain sensitive data"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8005": {
+      "name": "TPM Interface Controller",
+      "group": 0,
+      "index": 5,
+      "risk_level": "MODERATE",
+      "confidence": 70,
+      "capabilities": ["TPM communication", "Attestation"],
+      "warnings": ["Could reset TPM"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8006": {
+      "name": "Secure Boot Controller",
+      "group": 0,
+      "index": 6,
+      "risk_level": "MODERATE",
+      "confidence": 65,
+      "capabilities": ["Boot security", "Firmware verification"],
+      "warnings": ["Could prevent booting"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8007": {
+      "name": "Unknown Security Device",
+      "group": 0,
+      "index": 7,
+      "risk_level": "UNKNOWN",
+      "confidence": 30,
+      "capabilities": ["Unknown"],
+      "warnings": ["Group 0 device - assume dangerous"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8008": {
+      "name": "Pre-Wipe Controller",
+      "group": 0,
+      "index": 8,
+      "risk_level": "HIGH",
+      "confidence": 75,
+      "capabilities": ["Wipe preparation", "Data staging"],
+      "warnings": ["Adjacent to wipe devices"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8009": {
+      "name": "EMERGENCY WIPE CONTROLLER",
+      "group": 0,
+      "index": 9,
+      "risk_level": "CRITICAL",
+      "confidence": 90,
+      "capabilities": ["DOD 5220.22-M data destruction", "Irreversible wipe"],
+      "warnings": ["WILL DESTROY ALL DATA - NEVER ACTIVATE"],
+      "safe_operations": ["READ_STATUS"],
+      "quarantine": true,
+      "danger_patterns": ["0xDEADBEEF", "0xCAFEBABE", "0x40000000"]
+    },
+    "0x800A": {
+      "name": "SECONDARY WIPE TRIGGER",
+      "group": 0,
+      "index": 10,
+      "risk_level": "CRITICAL",
+      "confidence": 85,
+      "capabilities": ["Cascade wipe", "Firmware destruction"],
+      "warnings": ["WILL TRIGGER CHAIN REACTION - NEVER ACTIVATE"],
+      "safe_operations": ["READ_STATUS"],
+      "quarantine": true,
+      "danger_patterns": ["0xDEADBEEF", "0x20000000"]
+    },
+    "0x800B": {
+      "name": "FINAL SANITIZATION",
+      "group": 0,
+      "index": 11,
+      "risk_level": "CRITICAL",
+      "confidence": 80,
+      "capabilities": ["Hardware destruction", "TPM erasure"],
+      "warnings": ["PERMANENT HARDWARE DAMAGE - NEVER ACTIVATE"],
+      "safe_operations": ["READ_STATUS"],
+      "quarantine": true,
+      "danger_patterns": ["0xDEADBEEF", "0x40000000"]
+    },
+    "0x8010": {
+      "name": "Extended Security Functions",
+      "group": 1,
+      "index": 0,
+      "risk_level": "MODERATE",
+      "confidence": 60,
+      "capabilities": ["Advanced security features"],
+      "warnings": ["Group 1 security device"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8011": {
+      "name": "Unknown Extended Security",
+      "group": 1,
+      "index": 1,
+      "risk_level": "UNKNOWN",
+      "confidence": 30,
+      "capabilities": ["Unknown"],
+      "warnings": ["Assume dangerous"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8012": {
+      "name": "Unknown Extended Security",
+      "group": 1,
+      "index": 2,
+      "risk_level": "UNKNOWN",
+      "confidence": 30,
+      "capabilities": ["Unknown"],
+      "warnings": ["Assume dangerous"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8013": {
+      "name": "Unknown Extended Security",
+      "group": 1,
+      "index": 3,
+      "risk_level": "UNKNOWN",
+      "confidence": 30,
+      "capabilities": ["Unknown"],
+      "warnings": ["Assume dangerous"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8014": {
+      "name": "Unknown Extended Security",
+      "group": 1,
+      "index": 4,
+      "risk_level": "UNKNOWN",
+      "confidence": 30,
+      "capabilities": ["Unknown"],
+      "warnings": ["Assume dangerous"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8015": {
+      "name": "Unknown Extended Security",
+      "group": 1,
+      "index": 5,
+      "risk_level": "UNKNOWN",
+      "confidence": 30,
+      "capabilities": ["Unknown"],
+      "warnings": ["Assume dangerous"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8016": {
+      "name": "Unknown Extended Security",
+      "group": 1,
+      "index": 6,
+      "risk_level": "UNKNOWN",
+      "confidence": 30,
+      "capabilities": ["Unknown"],
+      "warnings": ["Assume dangerous"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8017": {
+      "name": "Unknown Extended Security",
+      "group": 1,
+      "index": 7,
+      "risk_level": "UNKNOWN",
+      "confidence": 30,
+      "capabilities": ["Unknown"],
+      "warnings": ["Assume dangerous"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8018": {
+      "name": "Pre-Network Isolation",
+      "group": 1,
+      "index": 8,
+      "risk_level": "HIGH",
+      "confidence": 70,
+      "capabilities": ["Network preparation"],
+      "warnings": ["Adjacent to isolation device"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8019": {
+      "name": "NETWORK ISOLATION/WIPE",
+      "group": 1,
+      "index": 9,
+      "risk_level": "CRITICAL",
+      "confidence": 75,
+      "capabilities": ["Network destruction", "Communications blackout"],
+      "warnings": ["WILL DESTROY NETWORK CAPABILITY"],
+      "safe_operations": ["READ_STATUS"],
+      "quarantine": true
+    },
+    "0x801A": {
+      "name": "Unknown Extended Security",
+      "group": 1,
+      "index": 10,
+      "risk_level": "UNKNOWN",
+      "confidence": 30,
+      "capabilities": ["Unknown"],
+      "warnings": ["Assume dangerous"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x801B": {
+      "name": "Unknown Extended Security",
+      "group": 1,
+      "index": 11,
+      "risk_level": "UNKNOWN",
+      "confidence": 30,
+      "capabilities": ["Unknown"],
+      "warnings": ["Assume dangerous"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8020": {
+      "name": "Network Security Controller",
+      "group": 2,
+      "index": 0,
+      "risk_level": "MODERATE",
+      "confidence": 60,
+      "capabilities": ["Network security management"],
+      "warnings": ["May isolate network"],
+      "safe_operations": ["READ_STATUS"]
+    },
+    "0x8029": {
+      "name": "COMMUNICATIONS BLACKOUT",
+      "group": 2,
+      "index": 9,
+      "risk_level": "CRITICAL",
+      "confidence": 70,
+      "capabilities": ["Communications destruction", "Radio silence"],
+      "warnings": ["WILL DISABLE ALL COMMUNICATIONS"],
+      "safe_operations": ["READ_STATUS"],
+      "quarantine": true
+    }
+  },
+  "group_analysis": {
+    "0": {
+      "name": "Core Security & Emergency",
+      "risk_assessment": "EXTREME",
+      "devices_total": 12,
+      "critical_devices": 3,
+      "notes": "Contains primary wipe and destruction functions"
+    },
+    "1": {
+      "name": "Extended Security",
+      "risk_assessment": "HIGH",
+      "devices_total": 12,
+      "critical_devices": 1,
+      "notes": "Secondary security and network isolation"
+    },
+    "2": {
+      "name": "Network & Communications",
+      "risk_assessment": "HIGH",
+      "devices_total": 12,
+      "critical_devices": 1,
+      "notes": "Network control and communications"
+    },
+    "3": {
+      "name": "Data Processing",
+      "risk_assessment": "UNKNOWN",
+      "devices_total": 12,
+      "critical_devices": 0,
+      "notes": "Function unknown - assume dangerous"
+    },
+    "4": {
+      "name": "Advanced Functions",
+      "risk_assessment": "UNKNOWN",
+      "devices_total": 12,
+      "critical_devices": 0,
+      "notes": "Function unknown - assume dangerous"
+    },
+    "5": {
+      "name": "Specialized Operations",
+      "risk_assessment": "UNKNOWN",
+      "devices_total": 12,
+      "critical_devices": 0,
+      "notes": "Function unknown - assume dangerous"
+    },
+    "6": {
+      "name": "Extended/Reserved",
+      "risk_assessment": "UNKNOWN",
+      "devices_total": 12,
+      "critical_devices": 0,
+      "notes": "Unexpected extra devices - highly suspicious"
+    }
+  },
+  "quarantine_list": [
+    "0x8009",
+    "0x800A",
+    "0x800B",
+    "0x8019",
+    "0x8029"
+  ],
+  "statistics": {
+    "total_devices": 84,
+    "classified_devices": 25,
+    "unclassified_devices": 59,
+    "critical_risk": 5,
+    "high_risk": 2,
+    "moderate_risk": 7,
+    "low_risk": 1,
+    "unknown_risk": 69
+  },
+  "safety_protocols": {
+    "mandatory_rules": [
+      "NEVER write to any device",
+      "NEVER activate quarantined devices",
+      "ALWAYS use READ_STATUS operations only",
+      "ALWAYS maintain backups before testing",
+      "ALWAYS use emergency stop if anomaly detected"
+    ],
+    "emergency_procedures": [
+      "Press 'e' in dashboard for emergency stop",
+      "Run: sudo python3 dsmil_emergency_stop.py --stop",
+      "Hard power off if software stop fails",
+      "Disconnect all power sources",
+      "Do not attempt recovery without backup"
+    ]
+  }
+}

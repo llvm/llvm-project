@@ -1,0 +1,16 @@
+# Makefile for safe DSMIL probe module
+
+obj-m += dsmil-safe.o
+dsmil-safe-objs := dsmil-72dev-safe.o
+
+KDIR := /lib/modules/$(shell uname -r)/build
+PWD := $(shell pwd)
+
+all:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+	rm -f *.o *.ko *.mod.c *.mod *.symvers *.order
+
+.PHONY: all clean

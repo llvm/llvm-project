@@ -1,0 +1,58 @@
+[package]
+name = "rust_tpm2_debugger"
+version = "1.0.0"
+edition = "2021"
+authors = ["RUST-DEBUGGER Agent <rust-debugger@dsmil.military>"]
+license = "GPL-2.0"
+description = "RUST-DEBUGGER Agent for TPM2 performance analysis and hardware debugging"
+
+[[bin]]
+name = "rust_debugger"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+tokio-util = "0.7"
+
+# System info
+num_cpus = "1.16"
+
+# Serialization for reports
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Timing and metrics
+quanta = "0.12"
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# Performance profiling
+criterion = { version = "0.5", features = ["html_reports"], optional = true }
+
+[features]
+default = ["hardware-detection", "performance-profiling"]
+hardware-detection = []
+performance-profiling = ["criterion"]
+npu-integration = []
+debug-mode = []
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+opt-level = 3
+debug = false
+strip = true
+
+[profile.dev]
+panic = "abort"
+opt-level = 0
+debug = true
+overflow-checks = true

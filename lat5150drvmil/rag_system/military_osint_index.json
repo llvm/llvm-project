@@ -1,0 +1,297 @@
+{
+  "items": {
+    "air_sample_ae4d1a": {
+      "id": "air_sample_ae4d1a",
+      "title": "C-17A Airlift over Persian Gulf",
+      "description": "Reach flight transiting the Persian Gulf at FL310 en route to Al Udeid.",
+      "source": "Curated ADS-B Snapshot",
+      "intel_type": "air_activity",
+      "url": null,
+      "published": "2025-11-08T21:12:00Z",
+      "collected": "2025-11-10T21:41:02.070750",
+      "classification": "UNCLASS",
+      "tags": [
+        "aircraft",
+        "persian_gulf",
+        "strategic_airlift"
+      ],
+      "geolocation": {
+        "latitude": 25.276987,
+        "longitude": 51.520008
+      },
+      "entities": {
+        "aircraft": [
+          "C-17A Globemaster III"
+        ],
+        "operators": [
+          "US Air Force"
+        ],
+        "call_signs": [
+          "RCH482"
+        ],
+        "countries": [
+          "United States"
+        ]
+      },
+      "metadata": {
+        "priority": "MEDIUM",
+        "region": "persian_gulf",
+        "mission": "Strategic airlift",
+        "speed_kts": 440,
+        "altitude_ft": 31000,
+        "departure": "Ramstein AB",
+        "destination": "Al Udeid AB",
+        "timestamp": "2025-11-08T21:12:00Z",
+        "source": "Curated ADS-B Snapshot"
+      }
+    },
+    "air_sample_ae5c45": {
+      "id": "air_sample_ae5c45",
+      "title": "KC-135R Tanker Support near Poland",
+      "description": "KC-135 orbiting over northeastern Poland supporting NATO air policing.",
+      "source": "Curated ADS-B Snapshot",
+      "intel_type": "air_activity",
+      "url": null,
+      "published": "2025-11-09T04:05:00Z",
+      "collected": "2025-11-10T21:41:02.070763",
+      "classification": "UNCLASS",
+      "tags": [
+        "aircraft",
+        "baltic",
+        "air_refueling_orbit"
+      ],
+      "geolocation": {
+        "latitude": 52.784,
+        "longitude": 20.987
+      },
+      "entities": {
+        "aircraft": [
+          "KC-135R Stratotanker"
+        ],
+        "operators": [
+          "US Air Force"
+        ],
+        "call_signs": [
+          "BLOCKED"
+        ],
+        "countries": [
+          "United States"
+        ]
+      },
+      "metadata": {
+        "priority": "HIGH",
+        "region": "baltic",
+        "mission": "Air refueling orbit",
+        "speed_kts": 410,
+        "altitude_ft": 28000,
+        "departure": "RAF Mildenhall",
+        "destination": "Forward Air Refueling Track",
+        "timestamp": "2025-11-09T04:05:00Z",
+        "source": "Curated ADS-B Snapshot"
+      }
+    },
+    "air_sample_780e12": {
+      "id": "air_sample_780e12",
+      "title": "PLAN KQ-200 Patrol in South China Sea",
+      "description": "PLAN KQ-200 observed conducting wide-area maritime patrol in the South China Sea.",
+      "source": "Curated ADS-B Snapshot",
+      "intel_type": "air_activity",
+      "url": null,
+      "published": "2025-11-09T02:40:00Z",
+      "collected": "2025-11-10T21:41:02.070769",
+      "classification": "UNCLASS",
+      "tags": [
+        "aircraft",
+        "south_china_sea",
+        "maritime_patrol"
+      ],
+      "geolocation": {
+        "latitude": 15.912,
+        "longitude": 114.023
+      },
+      "entities": {
+        "aircraft": [
+          "KQ-200 Maritime Patrol"
+        ],
+        "operators": [
+          "People's Liberation Army Navy"
+        ],
+        "call_signs": [
+          "PLAN200"
+        ],
+        "countries": [
+          "China"
+        ]
+      },
+      "metadata": {
+        "priority": "LOW",
+        "region": "south_china_sea",
+        "mission": "Maritime patrol",
+        "speed_kts": 360,
+        "altitude_ft": 22000,
+        "departure": "Lingshui Airbase",
+        "destination": "South China Sea Patrol",
+        "timestamp": "2025-11-09T02:40:00Z",
+        "source": "Curated ADS-B Snapshot"
+      }
+    },
+    "ship_cvn76": {
+      "id": "ship_cvn76",
+      "title": "Naval Activity: USS Ronald Reagan (CVN-76)",
+      "description": "USS Ronald Reagan (CVN-76) (Aircraft Carrier) flagged to United States reported at 23.80, 126.20 heading 90\u00b0.",
+      "source": "Curated AIS Snapshot",
+      "intel_type": "naval_activity",
+      "url": null,
+      "published": null,
+      "collected": "2025-11-10T21:41:02.070918",
+      "classification": "UNCLASS",
+      "tags": [
+        "naval",
+        "taiwan_strait",
+        "carrier_strike_group_5"
+      ],
+      "geolocation": {
+        "latitude": 23.8,
+        "longitude": 126.2
+      },
+      "entities": {
+        "vessels": [
+          "USS Ronald Reagan (CVN-76)"
+        ],
+        "countries": [
+          "United States"
+        ],
+        "task_groups": [
+          "Carrier Strike Group 5"
+        ]
+      },
+      "metadata": {
+        "priority": "HIGH",
+        "region": "taiwan_strait",
+        "speed_kts": 18,
+        "heading": 90,
+        "status": "Underway",
+        "task_group": "Carrier Strike Group 5",
+        "timestamp": "2025-11-08T16:00:00Z",
+        "notes": "Carrier strike group operating near Taiwan conducting presence operations.",
+        "source": "Curated AIS Snapshot"
+      }
+    },
+    "ship_shandong": {
+      "id": "ship_shandong",
+      "title": "Naval Activity: CNS Shandong (CV-17)",
+      "description": "CNS Shandong (CV-17) (Aircraft Carrier) flagged to China reported at 20.50, 114.30 heading 45\u00b0.",
+      "source": "Curated AIS Snapshot",
+      "intel_type": "naval_activity",
+      "url": null,
+      "published": null,
+      "collected": "2025-11-10T21:41:02.070927",
+      "classification": "UNCLASS",
+      "tags": [
+        "naval",
+        "south_china_sea",
+        "plan_carrier_group"
+      ],
+      "geolocation": {
+        "latitude": 20.5,
+        "longitude": 114.3
+      },
+      "entities": {
+        "vessels": [
+          "CNS Shandong (CV-17)"
+        ],
+        "countries": [
+          "China"
+        ],
+        "task_groups": [
+          "PLAN Carrier Group"
+        ]
+      },
+      "metadata": {
+        "priority": "HIGH",
+        "region": "south_china_sea",
+        "speed_kts": 14,
+        "heading": 45,
+        "status": "Underway",
+        "task_group": "PLAN Carrier Group",
+        "timestamp": "2025-11-08T14:30:00Z",
+        "notes": "PLAN carrier group transiting toward Philippine Sea.",
+        "source": "Curated AIS Snapshot"
+      }
+    },
+    "ship_gorshkov": {
+      "id": "ship_gorshkov",
+      "title": "Naval Activity: Admiral Gorshkov",
+      "description": "Admiral Gorshkov (Frigate) flagged to Russia reported at 60.10, 19.70 heading 225\u00b0.",
+      "source": "Curated AIS Snapshot",
+      "intel_type": "naval_activity",
+      "url": null,
+      "published": null,
+      "collected": "2025-11-10T21:41:02.070933",
+      "classification": "UNCLASS",
+      "tags": [
+        "naval",
+        "baltic",
+        "baltic_fleet_escort"
+      ],
+      "geolocation": {
+        "latitude": 60.1,
+        "longitude": 19.7
+      },
+      "entities": {
+        "vessels": [
+          "Admiral Gorshkov"
+        ],
+        "countries": [
+          "Russia"
+        ],
+        "task_groups": [
+          "Baltic Fleet Escort"
+        ]
+      },
+      "metadata": {
+        "priority": "MEDIUM",
+        "region": "baltic",
+        "speed_kts": 16,
+        "heading": 225,
+        "status": "Underway",
+        "task_group": "Baltic Fleet Escort",
+        "timestamp": "2025-11-09T05:20:00Z",
+        "notes": "Russian frigate departing Kaliningrad with escort vessels.",
+        "source": "Curated AIS Snapshot"
+      }
+    }
+  },
+  "last_update": "2025-11-10T21:41:02.071526",
+  "stats": {
+    "total_items": 6,
+    "by_intel_type": {
+      "air_activity": 3,
+      "naval_activity": 3
+    },
+    "by_priority": {
+      "MEDIUM": 2,
+      "HIGH": 3,
+      "LOW": 1
+    },
+    "by_country": {
+      "United States": 3,
+      "China": 2,
+      "Russia": 1
+    },
+    "by_tag": {
+      "aircraft": 3,
+      "persian_gulf": 1,
+      "strategic_airlift": 1,
+      "baltic": 2,
+      "air_refueling_orbit": 1,
+      "south_china_sea": 2,
+      "maritime_patrol": 1,
+      "naval": 3,
+      "taiwan_strait": 1,
+      "carrier_strike_group_5": 1,
+      "plan_carrier_group": 1,
+      "baltic_fleet_escort": 1
+    }
+  }
+}

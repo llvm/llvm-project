@@ -1,0 +1,58 @@
+[package]
+name = "tpm2_compat_tests"
+version = "1.0.0"
+edition = "2021"
+authors = ["RUST-INTERNAL Agent <rust-internal@dsmil.military>"]
+publish = false
+
+[dependencies]
+tpm2_compat_common = { path = "../tpm2_compat_common" }
+tpm2_compat_kernel = { path = "../tpm2_compat_kernel" }
+tpm2_compat_userspace = { path = "../tpm2_compat_userspace" }
+tpm2_compat_crypto = { path = "../tpm2_compat_crypto" }
+tpm2_compat_npu = { path = "../tpm2_compat_npu" }
+tpm2_compat_bindings = { path = "../tpm2_compat_bindings" }
+
+# Testing frameworks
+criterion = { workspace = true, features = ["html_reports"] }
+proptest = { workspace = true }
+quickcheck = { workspace = true }
+
+# Async testing
+tokio-test = "0.4"
+tokio = { workspace = true, features = ["test-util"] }
+
+# Additional testing utilities
+rand = "0.8"
+serde_json = "1.0"
+tempfile = "3.10"
+
+# Fuzzing
+arbitrary = { version = "1.3", features = ["derive"] }
+
+[features]
+default = ["integration-tests", "property-tests", "benchmarks"]
+integration-tests = []
+property-tests = ["proptest", "quickcheck", "arbitrary"]
+benchmarks = ["criterion"]
+stress-tests = []
+
+[[bin]]
+name = "stress_test"
+path = "src/bin/stress_test.rs"
+
+[[bin]]
+name = "integration_test"
+path = "src/bin/integration_test.rs"
+
+[[bench]]
+name = "crypto_benchmarks"
+harness = false
+
+[[bench]]
+name = "npu_benchmarks"
+harness = false
+
+[[bench]]
+name = "end_to_end_benchmarks"
+harness = false

@@ -1,0 +1,59 @@
+# API keys and credentials
+.env.telegram
+.env.cerebras
+telegram_cve_session.session
+rag_system/telegram_cve_session.session
+*.session
+*.session-journal
+
+# CVE scraper data and logs
+rag_system/cve_scraper.log
+rag_system/cve_scraper.pid
+rag_system/*.log
+*.log
+
+# User feedback data
+rag_system/user_feedback.jsonl
+
+# RAG system caches (generated files)
+rag_system/pdf_cache.json
+rag_system/security_index.json
+test_embeddings.npz
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+.code_assistant_cache/
+
+# Code assistant caches
+.code_assistant_cache/
+.local_claude_code/
+rag_system/pdf_cache.json
+
+# Documentation submodules (managed separately)
+00-documentation/General_Knowledge/
+*.o
+*.ko
+*.a
+*.cmd
+*.mod.c
+01-source/kernel/rust/target/

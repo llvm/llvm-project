@@ -1,0 +1,119 @@
+=== Memory Map ===
+00000000-00000fff : Reserved
+00001000-0009efff : System RAM
+0009f000-000fffff : Reserved
+  000a0000-000bffff : PCI Bus 0000:00
+  000f0000-000fffff : System ROM
+00100000-456c5fff : System RAM
+456c6000-456e1fff : Reserved
+456e2000-4d514fff : System RAM
+4d515000-51510fff : Reserved
+51511000-51d71fff : ACPI Non-volatile Storage
+  51ca0000-51ca0fff : USBC000:00
+51d72000-51ffefff : ACPI Tables
+51fff000-51ffffff : System RAM
+52000000-687fffff : Reserved
+70000000-bfffffff : PCI Bus 0000:00
+  70000000-75ffffff : PCI Bus 0000:39
+  76000000-7bffffff : PCI Bus 0000:01
+  7c000000-7cffffff : 0000:00:0e.0
+    7c000000-7cffffff : VMD MEMBAR1
+      7c000000-7c0fffff : PCI Bus 10000:e1
+        7c000000-7c003fff : 10000:e1:00.0
+          7c000000-7c003fff : nvme
+  7d000000-7d01ffff : 0000:00:1f.6
+    7d000000-7d01ffff : e1000e
+  7d020000-7d020fff : 0000:00:1f.5
+    7d020000-7d020fff : 0000:00:1f.5 0000:00:1f.5
+c0000000-cfffffff : pnp 00:05
+  c0000000-cdffffff : PCI ECAM 0000 [bus 00-df]
+e0d10000-e0d1ffff : INTC1083:00
+  e0d10000-e0d1ffff : INTC1083:00 INTC1083:00
+e0d20000-e0d2ffff : INTC1083:00
+  e0d20000-e0d2ffff : INTC1083:00 INTC1083:00
+e0d30000-e0d3ffff : INTC1083:00
+  e0d30000-e0d3ffff : INTC1083:00 INTC1083:00
+e0d40000-e0d4ffff : INTC1083:00
+  e0d40000-e0d4ffff : INTC1083:00 INTC1083:00
+e0d50000-e0d5ffff : INTC1083:00
+  e0d50000-e0d5ffff : INTC1083:00 INTC1083:00
+fc800000-fc800fff : dmar0
+fc801000-fc801fff : dmar1
+fec00000-fec003ff : IOAPIC 0
+fed00000-fed003ff : HPET 0
+  fed00000-fed003ff : PNP0103:00
+fed20000-fed7ffff : Reserved
+  fed40000-fed44fff : tpm_tis
+    fed40000-fed44fff : STM0176:00
+      fed40000-fed44fff : STM0176:00 STM0176:00
+fedc0000-fedc7fff : pnp 00:05
+fee00000-feefffff : pnp 00:05
+100000000-108fffffff : System RAM
+  106e600000-106faf1b0c : Kernel code
+  106fc00000-1070ab2fff : Kernel rodata
+  1070c00000-10710774ff : Kernel data
+  10715ab000-10719fffff : Kernel bss
+4000000000-3ffbfffffff : PCI Bus 0000:00
+  4000000000-400fffffff : 0000:00:02.0
+  4010000000-480fffffff : PCI Bus 0000:01
+  4810000000-500fffffff : PCI Bus 0000:39
+  5010000000-5017ffffff : 0000:00:0b.0
+    5010000000-5017ffffff : 0000:00:0b.0 0000:00:0b.0
+  5018000000-5019ffffff : 0000:00:0e.0
+  501a000000-501affffff : 0000:00:02.0
+  501b000000-501bffffff : 0000:00:0e.0
+    501b002000-501bffffff : VMD MEMBAR2
+  501c000000-501c1fffff : 0000:00:1f.3
+  501c200000-501c23ffff : 0000:00:0d.3
+    501c200000-501c23ffff : thunderbolt
+  501c240000-501c27ffff : 0000:00:0a.0
+    501c246000-501c246253 : telem3
+    501c2462e8-501c246fff : telem1
+    501c249000-501c24900f : intel_vsec.telemetry.0
+    501c249010-501c24901f : intel_vsec.telemetry.0
+    501c249020-501c24902f : intel_vsec.telemetry.0
+    501c249030-501c24903f : intel_vsec.telemetry.0
+    501c256000-501c256083 : telem4
+    501c2560c8-501c256587 : telem2
+  501c280000-501c29ffff : 0000:00:04.0
+    501c280000-501c29ffff : proc_thermal
+  501c2a0000-501c2affff : 0000:00:14.0
+    501c2a0000-501c2affff : xhci-hcd
+  501c2b0000-501c2bffff : 0000:00:12.0
+    501c2b0000-501c2bffff : intel_ish_ipc
+  501c2c0000-501c2cffff : 0000:00:0d.0
+    501c2c0000-501c2cffff : xhci-hcd
+  501c2d0000-501c2d3fff : 0000:00:1f.3
+    501c2d0000-501c2d3fff : ICH HD audio
+  501c2d4000-501c2d7fff : 0000:00:14.3
+    501c2d4000-501c2d7fff : iwlwifi
+  501c2d8000-501c2dbfff : 0000:00:14.2
+  501c2dc000-501c2dc0ff : 0000:00:1f.4
+  501c2dd000-501c2ddfff : 0000:00:16.0
+    501c2dd000-501c2ddfff : mei_me
+  501c2de000-501c2defff : 0000:00:15.0
+    501c2de000-501c2de1ff : lpss_dev
+      501c2de000-501c2de1ff : i2c_designware.0 lpss_dev
+    501c2de200-501c2de2ff : lpss_priv
+    501c2de800-501c2defff : idma64.0
+      501c2de800-501c2defff : idma64.0 idma64.0
+  501c2df000-501c2dffff : 0000:00:15.3
+    501c2df000-501c2df1ff : lpss_dev
+      501c2df000-501c2df1ff : i2c_designware.1 lpss_dev
+    501c2df200-501c2df2ff : lpss_priv
+    501c2df800-501c2dffff : idma64.1
+      501c2df800-501c2dffff : idma64.1 idma64.1
+  501c2e0000-501c2e0fff : 0000:00:14.2
+  501c2e1000-501c2e1fff : 0000:00:0d.3
+  501c2e2000-501c2e2fff : 0000:00:0b.0
+    501c2e2000-501c2e2fff : 0000:00:0b.0 0000:00:0b.0
+  501c2e3000-501c2e3fff : 0000:00:08.0
+  501d000000-5023ffffff : 0000:00:02.0
+
+=== Reserved Regions ===
+00000000-00000fff : Reserved
+0009f000-000fffff : Reserved
+456c6000-456e1fff : Reserved
+4d515000-51510fff : Reserved
+52000000-687fffff : Reserved
+fed20000-fed7ffff : Reserved

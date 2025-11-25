@@ -1,0 +1,22 @@
+{
+  "name": "whatweb",
+  "description": "Website fingerprinting and technology identification",
+  "category": "reconnaissance",
+  "phase": ["reconnaissance"],
+  "command": "whatweb",
+  "required": false,
+  "args": {
+    "basic": "-a 3 {target}",
+    "aggressive": "-a 4 {target}",
+    "stealthy": "-a 1 {target}"
+  },
+  "default_profile": "basic",
+  "timeout": 60,
+  "output_format": "text",
+  "parse_output": true,
+  "severity_keywords": {
+    "high": ["outdated", "vulnerable version", "EOL"],
+    "medium": ["version disclosed", "technology stack"],
+    "info": ["identified", "detected", "found"]
+  }
+}

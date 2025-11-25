@@ -1,0 +1,107 @@
+{
+  "asn": 214775,
+  "ipv6_block": "2a14:7c0:4d00::/40",
+  "organization": "LAT5150DRVMIL Research",
+  "servers": [
+    {
+      "hostname": "vps-us-west-1",
+      "region": "us-west",
+      "provider": "vultr",
+      "user": "root",
+      "host": "us-west.example.com",
+      "ipv4": "192.0.2.1",
+      "ipv6": "2a14:7c0:4d00:1::1",
+      "ipv6_subnet": "2a14:7c0:4d00:1::/64",
+      "bgp_enabled": true,
+      "anycast_enabled": false,
+      "geolocation_country": "US",
+      "notes": "Primary US West Coast node"
+    },
+    {
+      "hostname": "vps-eu-central-1",
+      "region": "eu-central",
+      "provider": "hetzner",
+      "user": "root",
+      "host": "eu-central.example.com",
+      "ipv4": "198.51.100.1",
+      "ipv6": "2a14:7c0:4d00:2::1",
+      "ipv6_subnet": "2a14:7c0:4d00:2::/64",
+      "bgp_enabled": true,
+      "anycast_enabled": true,
+      "geolocation_country": "DE",
+      "notes": "Primary EU Central node with Anycast"
+    },
+    {
+      "hostname": "vps-singapore-1",
+      "region": "singapore",
+      "provider": "digitalocean",
+      "user": "root",
+      "host": "singapore.example.com",
+      "ipv4": "203.0.113.1",
+      "ipv6": "2a14:7c0:4d00:3::1",
+      "ipv6_subnet": "2a14:7c0:4d00:3::/64",
+      "bgp_enabled": true,
+      "anycast_enabled": true,
+      "geolocation_country": "SG",
+      "notes": "Primary APAC node with Anycast"
+    },
+    {
+      "hostname": "vps-us-east-1",
+      "region": "us-east",
+      "provider": "linode",
+      "user": "root",
+      "host": "us-east.example.com",
+      "ipv4": "192.0.2.2",
+      "ipv6": "2a14:7c0:4d00:4::1",
+      "ipv6_subnet": "2a14:7c0:4d00:4::/64",
+      "bgp_enabled": true,
+      "anycast_enabled": false,
+      "geolocation_country": "US",
+      "notes": "Secondary US East Coast node"
+    }
+  ],
+  "bgp_sessions": [
+    {
+      "description": "Hurricane Electric upstream",
+      "local_asn": 214775,
+      "peer_asn": 6939,
+      "peer_ip": "2001:470:0:1::1",
+      "session_type": "upstream"
+    },
+    {
+      "description": "Cloudflare peering",
+      "local_asn": 214775,
+      "peer_asn": 13335,
+      "peer_ip": "2606:4700::1",
+      "session_type": "peer"
+    }
+  ],
+  "anycast_config": {
+    "enabled": true,
+    "shared_ipv6": "2a14:7c0:4d00::1",
+    "regions": ["eu-central", "singapore"]
+  },
+  "wireguard_mesh": {
+    "enabled": true,
+    "network": "10.100.0.0/24",
+    "listen_port": 51820
+  },
+  "firewall": {
+    "block_icmp_ping": true,
+    "rate_limit_connections": true,
+    "rate_limit_threshold": 10,
+    "rate_limit_window": 60,
+    "allowed_ports": [22, 80, 443, 179, 51820]
+  },
+  "geolocation": {
+    "verify_databases": ["ipinfo", "ip-api", "maxmind"],
+    "update_whois": true,
+    "generate_geofeed": true,
+    "geofeed_url": "https://example.com/geofeed.csv"
+  },
+  "monitoring": {
+    "bgp_looking_glass": ["route-views.routeviews.org", "lg.he.net"],
+    "check_interval": 300,
+    "alert_email": "admin@example.com"
+  }
+}

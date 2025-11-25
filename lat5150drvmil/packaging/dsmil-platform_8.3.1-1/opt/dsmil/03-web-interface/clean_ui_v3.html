@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DSMIL AI Platform</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', 'Monaco', monospace;
+            background: #000;
+            color: #0f0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 3-Panel Layout */
+        .container {
+            display: grid;
+            grid-template-rows: 50px 1fr;
+            height: 100vh;
+        }
+
+        /* Header with Menu Bar */
+        .header {
+            background: #001100;
+            border-bottom: 2px solid #0f0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .menu-bar {
+            display: flex;
+            background: #002200;
+            border-bottom: 1px solid #0f0;
+        }
+
+        .menu-item {
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 13px;
+            position: relative;
+        }
+
+        .menu-item:hover {
+            background: #003300;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #001100;
+            border: 1px solid #0f0;
+            min-width: 200px;
+            z-index: 1000;
+        }
+
+        .menu-item:hover .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 12px;
+            border-bottom: 1px solid #003300;
+        }
+
+        .dropdown-item:hover {
+            background: #003300;
+        }
+
+        .header-bar {
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .header-badges {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+        }
+
+        .badge {
+            background: #003300;
+            padding: 4px 10px;
+            border: 1px solid #0f0;
+            border-radius: 3px;
+        }
+
+        .settings-btn {
+            background: #003300;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 5px 15px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .settings-btn:hover {
+            background: #005500;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            height: calc(100vh - 50px);
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #001100;
+            border-right: 2px solid #0f0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            border-bottom: 1px solid #0f0;
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .new-chat-btn {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .new-chat-btn:hover {
+            background: #0ff;
+        }
+
+        .chat-history-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            border-left: 2px solid transparent;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: all 0.2s;
+        }
+
+        .chat-history-item:hover {
+            background: #002200;
+            border-left-color: #0f0;
+        }
+
+        .chat-history-item.active {
+            background: #003300;
+            border-left-color: #0ff;
+            font-weight: bold;
+        }
+
+        .rag-status {
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .rag-count {
+            color: #ff0;
+            font-weight: bold;
+        }
+
+        .tool-btn {
+            background: #003300;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 8px;
+            width: 100%;
+            margin-bottom: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            text-align: left;
+        }
+
+        .tool-btn:hover {
+            background: #005500;
+        }
+
+        /* Chat Area */
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: scroll;  /* Always show scrollbar */
+            padding: 20px;
+            padding-bottom: 150px;  /* Extra space for fixed input box */
+            max-height: calc(100vh - 50px);  /* Full height minus header */
+        }
+
+        .message {
+            margin-bottom: 20px;
+            max-width: 80%;
+        }
+
+        .message-user {
+            margin-left: auto;
+        }
+
+        .message-ai {
+            margin-right: auto;
+        }
+
+        .message-header {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+
+        .message-content {
+            background: #002200;
+            padding: 15px;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+            line-height: 1.6;
+        }
+
+        .message-user .message-content {
+            background: #002233;
+            border-color: #0ff;
+            color: #0ff;
+        }
+
+        .message-meta {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 5px;
+            display: flex;
+            gap: 15px;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: #001100;
+            border: 1px solid #0f0;
+            border-radius: 3px;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .code-header {
+            background: #003300;
+            padding: 5px 10px;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #0f0;
+        }
+
+        .code-content {
+            padding: 15px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            white-space: pre;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 2px 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 10px;
+        }
+
+        .copy-btn:hover {
+            background: #0f0;
+            color: #000;
+        }
+
+        /* Input Area - FIXED at bottom (never scrolls) */
+        .input-area {
+            background: #001100;
+            border-top: 2px solid #0f0;
+            padding: 15px;
+            position: fixed;
+            bottom: 0;
+            left: 200px;  /* Offset for sidebar */
+            right: 0;
+            z-index: 100;
+        }
+
+        .input-box {
+            display: flex;
+            gap: 10px;
+        }
+
+        #userInput {
+            flex: 1;
+            background: #000;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 60px;
+            max-height: 200px;
+        }
+
+        #userInput:focus {
+            outline: none;
+            border-color: #0ff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .send-btn {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .send-btn:hover {
+            background: #0ff;
+        }
+
+        .input-meta {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Settings Panel (Slide-out) */
+        .settings-panel {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            width: 400px;
+            height: 100vh;
+            background: #000;
+            border-left: 2px solid #0f0;
+            transition: right 0.3s;
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .settings-panel.open {
+            right: 0;
+        }
+
+        .settings-header {
+            font-size: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #0f0;
+        }
+
+        .settings-section {
+            margin-bottom: 25px;
+        }
+
+        .settings-section-title {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        /* Scrollbars - ALWAYS VISIBLE */
+        ::-webkit-scrollbar {
+            width: 12px;  /* Wider, more visible */
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #001100;
+            border: 1px solid #0f0;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #0f0;
+            border-radius: 4px;
+            border: 2px solid #001100;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0ff;
+        }
+
+        /* Force scrollbar always visible */
+        .messages-container::-webkit-scrollbar {
+            width: 14px;
+        }
+
+        /* Loading animation */
+        .loading {
+            opacity: 0.5;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header with Menu -->
+        <div class="header">
+            <!-- Menu Bar -->
+            <div class="menu-bar">
+                <div class="menu-item">
+                    FILE
+                    <div class="dropdown-menu">
+                        <div class="dropdown-item" onclick="newChat()">📝 New Chat (Ctrl+N)</div>
+                        <div class="dropdown-item" onclick="exportCurrentChat()">💾 Export Current Chat</div>
+                        <div class="dropdown-item" onclick="exportAllChats()">📦 Export All Chats</div>
+                        <div class="dropdown-item" onclick="importChats()">📥 Import Chats</div>
+                        <div class="dropdown-item" onclick="clearAllChats()">🗑️ Clear All History</div>
+                        <div class="dropdown-item" onclick="toggleSettings()">⚙️ Settings</div>
+                    </div>
+                </div>
+                <div class="menu-item">
+                    EDIT
+                    <div class="dropdown-menu">
+                        <div class="dropdown-item" onclick="document.getElementById('userInput').value = ''">Clear Input</div>
+                        <div class="dropdown-item" onclick="copyLastResponse()">Copy Last Response</div>
+                        <div class="dropdown-item" onclick="editSystemPrompt()">Edit System Prompt</div>
+                    </div>
+                </div>
+                <div class="menu-item">
+                    TOOLS
+                    <div class="dropdown-menu">
+                        <div class="dropdown-item" onclick="editFile()">✏️ Edit File</div>
+                        <div class="dropdown-item" onclick="createFile()">📝 Create File</div>
+                        <div class="dropdown-item" onclick="debugCode()">🐛 Debug Code</div>
+                        <div class="dropdown-item" onclick="refactorCode()">🔄 Refactor</div>
+                        <div class="dropdown-item" onclick="reviewCode()">🔍 Code Review</div>
+                        <div class="dropdown-item" onclick="generateTests()">🧪 Generate Tests</div>
+                        <div class="dropdown-item" onclick="generateDocs()">📄 Generate Docs</div>
+                        <div class="dropdown-item" onclick="launchClaudeCode()">🚀 Launch Claude Code</div>
+                    </div>
+                </div>
+                <div class="menu-item">
+                    RAG
+                    <div class="dropdown-menu">
+                        <div class="dropdown-item" onclick="addFolderToRAG()">📁 Add Folder</div>
+                        <div class="dropdown-item" onclick="searchRAG()">🔍 Search Database</div>
+                        <div class="dropdown-item" onclick="manageRAG()">⚙️ Manage RAG</div>
+                        <div class="dropdown-item" onclick="exportRAG()">📤 Export Database</div>
+                    </div>
+                </div>
+                <div class="menu-item">
+                    HELP
+                    <div class="dropdown-menu">
+                        <div class="dropdown-item" onclick="showHelp()">📖 Documentation</div>
+                        <div class="dropdown-item" onclick="showKeyboardShortcuts()">⌨️ Keyboard Shortcuts</div>
+                        <div class="dropdown-item" onclick="window.open('https://github.com/SWORDIntel/LAT5150DRVMIL')">💻 GitHub</div>
+                        <div class="dropdown-item" onclick="showAbout()">ℹ️ About</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header Bar -->
+            <div class="header-bar">
+                <div class="header-title">DSMIL AI PLATFORM</div>
+                <div class="header-badges">
+                    <span class="badge">🔒 LOCAL</span>
+                    <span class="badge">✓ ATTESTED</span>
+                    <span class="badge" id="rag-badge">📚 222 DOCS</span>
+                </div>
+                <button class="settings-btn" onclick="toggleSettings()">⚙️ SETTINGS</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- New Chat -->
+                <div class="sidebar-section">
+                    <button class="new-chat-btn" onclick="newChat()">+ NEW CHAT</button>
+                </div>
+
+                <!-- Chat History -->
+                <div class="sidebar-section">
+                    <div class="sidebar-title">RECENT</div>
+                    <div id="chatHistory"></div>
+                </div>
+
+                <!-- RAG -->
+                <div class="sidebar-section">
+                    <div class="sidebar-title">KNOWLEDGE BASE</div>
+                    <div class="rag-status">
+                        <div>Docs: <span class="rag-count" id="ragDocs">208</span></div>
+                        <div>Tokens: <span class="rag-count" id="ragTokens">934K</span></div>
+                    </div>
+                    <button class="tool-btn" onclick="addFolderToRAG()">📁 Add Folder</button>
+                    <button class="tool-btn" onclick="searchRAG()">🔍 Search RAG</button>
+                </div>
+
+                <!-- Auto-Coding Tools -->
+                <div class="sidebar-section">
+                    <div class="sidebar-title">AUTO-CODING</div>
+                    <button class="tool-btn" onclick="editFile()">✏️ Edit File</button>
+                    <button class="tool-btn" onclick="createFile()">📝 Create File</button>
+                    <button class="tool-btn" onclick="debugCode()">🐛 Debug Code</button>
+                    <button class="tool-btn" onclick="refactorCode()">🔄 Refactor</button>
+                    <button class="tool-btn" onclick="reviewCode()">🔍 Review</button>
+                    <button class="tool-btn" onclick="generateTests()">🧪 Tests</button>
+                    <button class="tool-btn" onclick="generateDocs()">📄 Docs</button>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="chat-area">
+                <!-- Messages -->
+                <div class="messages-container" id="messagesContainer">
+                    <!-- Welcome Message -->
+                    <div class="message message-ai">
+                        <div class="message-header">SYSTEM</div>
+                        <div class="message-content">
+                            🎯 <strong>DSMIL Unified AI Platform</strong><br><br>
+
+                            <strong>Capabilities:</strong><br>
+                            • Smart Code Generation (DeepSeek Coder + Qwen)<br>
+                            • Web Search (DuckDuckGo integrated)<br>
+                            • Web Scraping (URL→Knowledge Base)<br>
+                            • 208 documents indexed (934K tokens)<br>
+                            • Auto-Coding Tools (Edit, Create, Debug)<br>
+                            • Local-First, No Restrictions, DSMIL-Attested<br><br>
+
+                            <strong>Quick Start:</strong><br>
+                            • Type any question or "write code for..."<br>
+                            • Paste URL to scrape and index<br>
+                            • Use Auto-Coding tools in sidebar<br>
+                            • Everything happens locally with zero cost<br><br>
+
+                            Type your query below to begin!
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="input-area">
+                    <div class="input-box">
+                        <textarea
+                            id="userInput"
+                            placeholder="Ask anything, request code, paste URL to scrape...&#10;&#10;Shift+Enter for new line, Enter to send"
+                        ></textarea>
+                        <button class="send-btn" onclick="sendMessage()">SEND</button>
+                    </div>
+                    <div class="input-meta">
+                        <span id="charCount">0 chars</span>
+                        <span id="modelInfo">Model: Auto (Smart Routing)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Panel (Slide-out) -->
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-header">
+            ⚙️ SETTINGS
+            <button class="settings-btn" style="float: right;" onclick="toggleSettings()">✕</button>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-section-title">GENERAL</div>
+            <label>Theme: <select><option selected>Military Green</option><option>Clean Dark</option></select></label><br>
+            <label><input type="checkbox" checked> Show routing info</label><br>
+            <label><input type="checkbox" checked> Auto web search</label>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-section-title">GUARDRAILS & SAFETY</div>
+            <label>
+                Temperature (Creativity): <span id="tempValue">0.7</span><br>
+                <input type="range" id="tempSlider" min="0" max="2" step="0.1" value="0.7"
+                       style="width: 100%; accent-color: #0f0;"
+                       oninput="updateTemp(this.value)">
+                <small style="opacity: 0.7;">0.0=Focused | 1.0=Balanced | 2.0=Creative</small>
+            </label><br><br>
+
+            <label>
+                Safety Level: <span id="safetyValue">NONE</span><br>
+                <input type="range" id="safetySlider" min="0" max="3" step="1" value="0"
+                       style="width: 100%; accent-color: #0f0;"
+                       oninput="updateSafety(this.value)">
+                <small style="opacity: 0.7;">0=None | 1=Low | 2=Medium | 3=High</small>
+            </label><br><br>
+
+            <label>
+                Max Tokens: <span id="tokensValue">8192</span><br>
+                <input type="range" id="tokensSlider" min="512" max="32768" step="512" value="8192"
+                       style="width: 100%; accent-color: #0f0;"
+                       oninput="updateTokens(this.value)">
+                <small style="opacity: 0.7;">512-32768 tokens</small>
+            </label><br><br>
+
+            <div style="background: #003300; padding: 10px; border: 1px solid #0f0; font-size: 11px;">
+                <strong>💡 TIP:</strong> Local models have NO restrictions by default.
+                Safety level only affects cloud models (Gemini/OpenAI).
+                Temperature affects creativity (higher = more random).
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-section-title">RAG KNOWLEDGE BASE</div>
+            <div>Documents: <span id="settingsRagDocs">208</span></div>
+            <div>Tokens: <span id="settingsRagTokens">934,743</span></div>
+            <button class="tool-btn" onclick="manageRAG()">Manage Database</button>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-section-title">AUTO-CODING</div>
+            <label>Workspace: <input type="text" value="/home/john/LAT5150DRVMIL" style="width: 100%; background: #000; border: 1px solid #0f0; color: #0f0; padding: 5px;"></label><br>
+            <label><input type="checkbox" checked> Create backups (.bak)</label><br>
+            <label><input type="checkbox" checked> Run tests after edits</label>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-section-title">ADVANCED FEATURES</div>
+            <button class="tool-btn" onclick="showFlux()">Flux Network</button>
+            <button class="tool-btn" onclick="showGitHub()">GitHub Integration</button>
+            <button class="tool-btn" onclick="showCollector()">Paper Collector</button>
+            <button class="tool-btn" onclick="showHardware()">Hardware Stats</button>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-section-title">ABOUT</div>
+            <div style="font-size: 11px;">Version: 8.3 (Smart Routing + Web)</div>
+            <div style="font-size: 11px;">Mode: LOCAL-FIRST</div>
+            <div style="font-size: 11px;">DSMIL: Verified</div>
+            <button class="tool-btn" onclick="showLogs()">View Logs</button>
+            <button class="tool-btn" onclick="window.open('https://github.com/SWORDIntel/LAT5150DRVMIL')">GitHub</button>
+        </div>
+    </div>
+
+    <script>
+        let currentChatId = Date.now();
+        let chatHistory = [];
+
+        // Initialize
+        async function init() {
+            loadChatHistory();
+            updateRAGStats();
+            setupInputHandlers();
+        }
+
+        // Message Handling
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // Check if this is a RAG search
+            if (window.nextMessageIsRAGSearch) {
+                window.nextMessageIsRAGSearch = false;
+                input.placeholder = "Ask anything, request code, paste URL to scrape...&#10;&#10;Shift+Enter for new line, Enter to send";
+                performRAGSearch(message);
+                return;
+            }
+
+            // Check for RAG search patterns (intelligent detection)
+            const ragPatterns = [
+                /^\/rag\s+(.+)/i,                           // /rag query
+                /^search\s+(our\s+)?(database|knowledge|rag|docs?)\s+(for\s+)?(.+)/i,  // search database for X
+                /^find\s+in\s+(database|knowledge|rag|docs?)\s+(.+)/i,                 // find in database X
+                /^look\s+up\s+(.+)\s+in\s+(database|knowledge|rag)/i,                  // look up X in database
+                /^what\s+does\s+(our\s+)?(database|knowledge)\s+say\s+about\s+(.+)/i   // what does database say about X
+            ];
+
+            for (const pattern of ragPatterns) {
+                const match = message.match(pattern);
+                if (match) {
+                    // Extract the query (last capture group that's not keywords)
+                    const query = match[match.length - 1] || match[1];
+                    performRAGSearch(query);
+                    return;
+                }
+            }
+
+            // Check for crawl commands
+            const crawlPatterns = [
+                /^crawl\s+(and\s+index\s+)?(.+)/i,                    // crawl https://url
+                /^scrape\s+and\s+index\s+(all\s+of\s+)?(.+)/i,        // scrape and index all of https://url
+                /^index\s+(entire\s+)?site\s+(.+)/i                   // index entire site https://url
+            ];
+
+            for (const pattern of crawlPatterns) {
+                const match = message.match(pattern);
+                if (match) {
+                    const url = match[match.length - 1];
+                    if (url.startsWith('http')) {
+                        crawlAndIndexSite(url);
+                        return;
+                    }
+                }
+            }
+
+            // Check for single URL scraping
+            if (message.startsWith('http://') || message.startsWith('https://')) {
+                // Check if user wants to crawl (mentions "all", "pages", "crawl")
+                if (message.toLowerCase().includes('all') || message.toLowerCase().includes('crawl')) {
+                    crawlAndIndexSite(message.split(' ')[0]);
+                } else {
+                    scrapeAndIndexURL(message);
+                }
+                return;
+            }
+
+            // Normal AI query
+            addMessage('user', message);
+            input.value = '';
+            updateCharCount();
+
+            // Show loading
+            const loadingId = addMessage('ai', '⏳ Processing...');
+
+            try {
+                // Send to backend
+                const response = await fetch(`/ai/chat?msg=${encodeURIComponent(message)}&model=auto`);
+                const data = await response.json();
+
+                // Remove loading message
+                document.getElementById(loadingId).remove();
+
+                if (data.error) {
+                    addMessage('system', `Error: ${data.error}`);
+                } else {
+                    // Add AI response
+                    addAIMessage(data);
+                }
+            } catch (error) {
+                document.getElementById(loadingId).remove();
+                addMessage('system', `Connection error: ${error.message}`);
+            }
+        }
+
+        async function scrapeAndIndexURL(url) {
+            addMessage('user', `🌐 Scrape and index: ${url}`);
+            addMessage('system', '⏳ Scraping webpage...');
+
+            try {
+                const response = await fetch(`/web/scrape?url=${encodeURIComponent(url)}`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    const tokens = data.metadata?.rag_tokens || 0;
+                    addMessage('system', `✓ Scraped: ${data.title}\n✓ Added to knowledge base: ${tokens} tokens\n\nYou can now ask questions about this content!`);
+                    updateRAGStats();
+                } else {
+                    addMessage('system', `Error scraping URL: ${data.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                addMessage('system', `Scraping error: ${error.message}`);
+            }
+        }
+
+        async function crawlAndIndexSite(url) {
+            addMessage('user', `🕷️ Crawl and index site: ${url}`);
+            addMessage('system', '⏳ Starting web crawler... This may take a few minutes for large sites.');
+
+            try {
+                const response = await fetch(`/web/crawl?url=${encodeURIComponent(url)}&max_pages=50&depth=3`);
+                const data = await response.json();
+
+                if (data.pages_indexed !== undefined) {
+                    addMessage('system', `✅ Crawl complete!\n\n` +
+                        `Pages crawled: ${data.pages_crawled}\n` +
+                        `Pages indexed: ${data.pages_indexed}\n` +
+                        `Total tokens: ${data.total_tokens.toLocaleString()}\n` +
+                        `Errors: ${data.errors}\n\n` +
+                        `All content is now searchable in your knowledge base!`);
+                    updateRAGStats();
+                } else {
+                    addMessage('system', `Error: ${data.error || 'Crawl failed'}`);
+                }
+            } catch (error) {
+                addMessage('system', `Crawl error: ${error.message}`);
+            }
+        }
+
+        function addMessage(type, content, shouldSave = true) {
+            const container = document.getElementById('messagesContainer');
+            const msgId = 'msg-' + Date.now() + '-' + Math.random();
+
+            const msgDiv = document.createElement('div');
+            msgDiv.id = msgId;
+            msgDiv.className = `message message-${type}`;
+            msgDiv.dataset.role = type; // Store role for easy access
+
+            const time = new Date().toLocaleTimeString();
+
+            msgDiv.innerHTML = `
+                <div class="message-header">${type.toUpperCase()} - ${time}</div>
+                <div class="message-content message-text">${escapeHtml(content)}</div>
+            `;
+
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+
+            // Auto-save after adding message
+            if (shouldSave) {
+                setTimeout(() => saveCurrentChat(), 100);
+            }
+
+            return msgId;
+        }
+
+        function addAIMessage(data) {
+            const container = document.getElementById('messagesContainer');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message message-ai';
+
+            const time = new Date().toLocaleTimeString();
+
+            // Check for code blocks
+            let content = data.response;
+            content = processCodeBlocks(content);
+
+            // Build routing info
+            let routingInfo = '';
+            if (data.routing) {
+                routingInfo = data.routing.emoji_tag || `Using ${data.model}`;
+            }
+
+            // Build metadata
+            const meta = `
+                ${routingInfo} |
+                ${data.dsmil_attested ? '✓ Attested' : ''} |
+                ${data.inference_time}s |
+                ${data.tokens || 0} tokens
+            `;
+
+            msgDiv.innerHTML = `
+                <div class="message-header">AI - ${time}</div>
+                <div class="message-content">${content}</div>
+                <div class="message-meta">${meta}</div>
+            `;
+
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function processCodeBlocks(text) {
+            // Detect ```language\ncode\n``` blocks
+            const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+            let blockIndex = 0;
+
+            return text.replace(codeBlockRegex, (match, language, code) => {
+                const lang = language || 'text';
+                const codeId = 'code-' + Date.now() + '-' + (blockIndex++);
+                const canRun = lang === 'python' || lang === 'javascript' || lang === 'js';
+
+                // Apply syntax highlighting
+                let highlighted = code;
+                if (window.hljs && lang !== 'text') {
+                    try {
+                        highlighted = hljs.highlight(code, {language: lang}).value;
+                    } catch (e) {
+                        highlighted = hljs.highlightAuto(code).value;
+                    }
+                } else {
+                    highlighted = escapeHtml(code);
+                }
+
+                const runButton = canRun ?
+                    `<button class="copy-btn" onclick="runCode('${codeId}', '${lang}')">▶ Run</button>` : '';
+
+                return `
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span>${lang}</span>
+                            <button class="copy-btn" onclick="copyCode('${codeId}')">📋 Copy</button>
+                            ${runButton}
+                        </div>
+                        <pre class="code-content"><code class="language-${lang}" id="${codeId}">${highlighted}</code></pre>
+                    </div>
+                `;
+            });
+        }
+
+        function copyCode(codeId) {
+            const codeElement = document.getElementById(codeId);
+            navigator.clipboard.writeText(codeElement.textContent);
+
+            // Visual feedback
+            const btn = event.target;
+            btn.textContent = '✓ Copied';
+            setTimeout(() => btn.textContent = '📋 Copy', 2000);
+        }
+
+        async function runCode(codeId, language) {
+            const codeElement = document.getElementById(codeId);
+            const code = codeElement.textContent;
+
+            addMessage('system', `▶ Running ${language} code...`);
+
+            try {
+                let cmd;
+                if (language === 'python') {
+                    cmd = `python3 -c "${code.replace(/"/g, '\\"')}"`;
+                } else if (language === 'javascript' || language === 'js') {
+                    cmd = `node -e "${code.replace(/"/g, '\\"')}"`;
+                }
+
+                const response = await fetch(`/exec?cmd=${encodeURIComponent(cmd)}`);
+                const data = await response.json();
+
+                if (data.stdout) {
+                    addMessage('system', `📤 Output:\n${data.stdout}`);
+                }
+                if (data.stderr) {
+                    addMessage('system', `⚠️ Errors:\n${data.stderr}`);
+                }
+            } catch (error) {
+                addMessage('system', `❌ Error running code: ${error.message}`);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Input Handlers
+        function setupInputHandlers() {
+            const input = document.getElementById('userInput');
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            input.addEventListener('input', updateCharCount);
+        }
+
+        function updateCharCount() {
+            const input = document.getElementById('userInput');
+            document.getElementById('charCount').textContent = `${input.value.length} chars`;
+        }
+
+        // Chat Management - LocalStorage Persistence
+        const STORAGE_KEY = 'dsmil_chat_history';
+        const MAX_CHATS = 50; // Keep last 50 chats
+
+        function saveCurrentChat() {
+            const messages = Array.from(document.querySelectorAll('.message')).map(msg => ({
+                role: msg.dataset.role || 'system',
+                content: msg.querySelector('.message-text')?.textContent || msg.textContent,
+                timestamp: Date.now()
+            }));
+
+            if (messages.length === 0) return; // Don't save empty chats
+
+            const chats = getAllChats();
+
+            // Get first user message for preview
+            const firstUserMsg = messages.find(m => m.role === 'user');
+            const preview = firstUserMsg ? firstUserMsg.content.substring(0, 60) : 'New conversation';
+
+            chats[currentChatId] = {
+                id: currentChatId,
+                preview: preview,
+                messages: messages,
+                lastUpdated: Date.now()
+            };
+
+            // Keep only last MAX_CHATS
+            const sortedChats = Object.values(chats).sort((a, b) => b.lastUpdated - a.lastUpdated);
+            const limitedChats = {};
+            sortedChats.slice(0, MAX_CHATS).forEach(chat => {
+                limitedChats[chat.id] = chat;
+            });
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(limitedChats));
+        }
+
+        function getAllChats() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                return data ? JSON.parse(data) : {};
+            } catch (e) {
+                console.error('Failed to load chats:', e);
+                return {};
+            }
+        }
+
+        function loadChat(chatId) {
+            saveCurrentChat(); // Save current before switching
+
+            const chats = getAllChats();
+            const chat = chats[chatId];
+
+            if (!chat) return;
+
+            currentChatId = chatId;
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '';
+
+            chat.messages.forEach(msg => {
+                addMessage(msg.role, msg.content, false); // false = don't save to storage
+            });
+        }
+
+        function deleteChat(chatId) {
+            const chats = getAllChats();
+            delete chats[chatId];
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
+            loadChatHistory();
+        }
+
+        function newChat() {
+            saveCurrentChat(); // Save current chat first
+            currentChatId = Date.now();
+            document.getElementById('messagesContainer').innerHTML = '';
+            loadChatHistory(); // Refresh sidebar
+        }
+
+        function loadChatHistory() {
+            const chats = getAllChats();
+            const historyDiv = document.getElementById('chatHistory');
+
+            const sortedChats = Object.values(chats).sort((a, b) => b.lastUpdated - a.lastUpdated);
+
+            if (sortedChats.length === 0) {
+                historyDiv.innerHTML = '<div style="padding: 10px; color: #666; font-size: 12px;">No saved chats</div>';
+                return;
+            }
+
+            historyDiv.innerHTML = sortedChats.map(chat => {
+                const date = new Date(chat.lastUpdated).toLocaleDateString();
+                const isActive = chat.id === currentChatId;
+                return `
+                    <div class="chat-history-item ${isActive ? 'active' : ''}"
+                         onclick="loadChat(${chat.id})"
+                         title="${chat.preview}">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1; overflow: hidden;">
+                                <div style="font-size: 13px; margin-bottom: 2px;">${chat.preview}</div>
+                                <div style="font-size: 11px; color: #666;">${date}</div>
+                            </div>
+                            <button onclick="event.stopPropagation(); deleteChat(${chat.id})"
+                                    style="background: none; border: none; color: #ff4444; cursor: pointer; padding: 2px 6px; font-size: 16px;"
+                                    title="Delete chat">×</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function exportAllChats() {
+            const chats = getAllChats();
+            const blob = new Blob([JSON.stringify(chats, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dsmil-chat-export-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportCurrentChat() {
+            saveCurrentChat(); // Ensure current is saved
+            const chats = getAllChats();
+            const currentChat = chats[currentChatId];
+
+            if (!currentChat) {
+                addMessage('system', '⚠️ No chat to export');
+                return;
+            }
+
+            const text = currentChat.messages.map(m =>
+                `${m.role.toUpperCase()}: ${m.content}`
+            ).join('\n\n---\n\n');
+
+            const blob = new Blob([text], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dsmil-chat-${currentChatId}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importChats() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const imported = JSON.parse(event.target.result);
+                        const existing = getAllChats();
+                        const merged = {...existing, ...imported};
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+                        loadChatHistory();
+                        addMessage('system', `✓ Imported ${Object.keys(imported).length} chats`);
+                    } catch (error) {
+                        addMessage('system', `Error importing chats: ${error.message}`);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function clearAllChats() {
+            if (!confirm('Clear all chat history? This cannot be undone!')) return;
+
+            localStorage.removeItem(STORAGE_KEY);
+            document.getElementById('chatHistory').innerHTML = '<div style="padding: 10px; color: #666; font-size: 12px;">No saved chats</div>';
+            addMessage('system', '🗑️ All chat history cleared');
+        }
+
+        // RAG Functions
+        async function updateRAGStats() {
+            try {
+                const response = await fetch('/rag/stats');
+                const data = await response.json();
+
+                document.getElementById('ragDocs').textContent = data.total_documents || 208;
+                document.getElementById('ragTokens').textContent = formatNumber(data.total_unique_tokens || 934743);
+                document.getElementById('rag-badge').textContent = `📚 ${data.total_documents || 208} DOCS`;
+            } catch (error) {
+                console.error('Failed to load RAG stats:', error);
+            }
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(0) + 'K';
+            return num;
+        }
+
+        function addFolderToRAG() {
+            // Create hidden file input for directory selection
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.webkitdirectory = true;  // Enable directory selection
+            input.multiple = true;
+
+            input.onchange = async (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+
+                // Get folder path from first file
+                const folderPath = files[0].webkitRelativePath.split('/')[0];
+                const fullPath = files[0].path || `/home/john/${folderPath}`;
+
+                addMessage('system', `📁 Indexing ${files.length} files from folder...`);
+
+                // Show progress
+                const progressMsg = addMessage('system', `Progress: 0/${files.length} files`);
+
+                try {
+                    // Send folder path to backend
+                    const response = await fetch(`/rag/add-folder?path=${encodeURIComponent(fullPath)}`);
+                    const data = await response.json();
+
+                    // Remove progress message
+                    document.getElementById(progressMsg).remove();
+
+                    if (data.success) {
+                        addMessage('system', `✓ Added ${data.success} documents (${data.total} files scanned)\n${data.success - data.already_indexed} new, ${data.already_indexed} already indexed`);
+                        updateRAGStats();
+                    } else {
+                        addMessage('system', `✓ Indexed ${files.length} files - check RAG stats`);
+                        updateRAGStats();
+                    }
+                } catch (error) {
+                    document.getElementById(progressMsg).remove();
+                    addMessage('system', `Error: ${error.message}`);
+                }
+            };
+
+            // Trigger file browser
+            input.click();
+        }
+
+        function searchRAG() {
+            // Use chat input for search
+            const input = document.getElementById('userInput');
+            const currentQuery = input.value.trim();
+
+            if (currentQuery) {
+                // User already typed something, use it
+                performRAGSearch(currentQuery);
+                input.value = '';
+            } else {
+                // Show RAG search mode
+                input.placeholder = 'Type your search query for the knowledge base (208 docs)...';
+                input.focus();
+                // Set flag to search on next send
+                window.nextMessageIsRAGSearch = true;
+            }
+        }
+
+        async function performRAGSearch(query) {
+            addMessage('user', `🔍 Search RAG: ${query}`);
+
+            try {
+                const response = await fetch(`/rag/search?q=${encodeURIComponent(query)}`);
+                const results = await response.json();
+
+                if (results.length > 0) {
+                    let resultText = `📚 Found ${results.length} results in knowledge base:\n\n`;
+                    results.forEach((r, i) => {
+                        resultText += `${i+1}. **${r.filename}** (relevance: ${r.relevance_score})\n`;
+                        resultText += `   ${r.preview.substring(0, 150)}...\n\n`;
+                    });
+                    addMessage('system', resultText);
+                } else {
+                    addMessage('system', 'No results found in knowledge base');
+                }
+            } catch (err) {
+                addMessage('system', `Search error: ${err.message}`);
+            }
+        }
+
+        // Auto-Coding Tools (FUNCTIONAL)
+        async function editFile() {
+            const filepath = prompt('File path to edit:\n(e.g., /home/john/test.py)');
+            if (!filepath) return;
+
+            const task = prompt('What changes do you want?\n(e.g., Add error handling to main function)');
+            if (!task) return;
+
+            addMessage('user', `✏️ Edit File: ${filepath}\nTask: ${task}`);
+            addMessage('system', '🛠️ Local Claude Code analyzing...');
+
+            // Use AI to generate the edit
+            const editPrompt = `Edit file ${filepath}: ${task}\n\nProvide OLD and NEW code blocks.`;
+
+            try {
+                const response = await fetch(`/ai/chat?msg=${encodeURIComponent(editPrompt)}&model=code`);
+                const data = await response.json();
+
+                if (data.response) {
+                    addMessage('system', '✓ Edit suggestion generated:\n\n' + data.response + '\n\n' +
+                        'To apply: Use Claude Code or manually apply the changes.');
+                } else {
+                    addMessage('system', `Error: ${data.error || 'Failed to generate edit'}`);
+                }
+            } catch (error) {
+                addMessage('system', `Error: ${error.message}`);
+            }
+        }
+
+        async function createFile() {
+            const filepath = prompt('File path to create:\n(e.g., /home/john/new_api.py)');
+            if (!filepath) return;
+
+            const description = prompt('What should this file do?\n(e.g., FastAPI endpoint for user authentication)');
+            if (!description) return;
+
+            addMessage('user', `📝 Create File: ${filepath}\nDescription: ${description}`);
+            addMessage('system', '🛠️ Generating code...');
+
+            const createPrompt = `Create a complete file for: ${description}\n\nProvide production-ready code with documentation.`;
+
+            try {
+                const response = await fetch(`/ai/chat?msg=${encodeURIComponent(createPrompt)}&model=code`);
+                const data = await response.json();
+
+                if (data.response) {
+                    addMessage('system', `✓ Code generated for ${filepath}:\n\n${data.response}\n\n` +
+                        'Copy the code and save to the file, or use Local Claude Code to write it.');
+                } else {
+                    addMessage('system', `Error: ${data.error || 'Failed to generate code'}`);
+                }
+            } catch (error) {
+                addMessage('system', `Error: ${error.message}`);
+            }
+        }
+
+        async function debugCode() {
+            const code = prompt('Paste code to debug:');
+            if (!code) return;
+
+            addMessage('user', `🐛 Debug this code:\n\`\`\`\n${code}\n\`\`\``);
+            addMessage('system', '🔍 Analyzing for bugs...');
+
+            const debugPrompt = `Debug this code and find issues:\n\`\`\`\n${code}\n\`\`\`\n\nProvide:\n1. Bugs found\n2. Security issues\n3. Fixes`;
+
+            try {
+                const response = await fetch(`/ai/chat?msg=${encodeURIComponent(debugPrompt)}&model=code`);
+                const data = await response.json();
+
+                if (data.response) {
+                    addMessage('system', data.response);
+                } else {
+                    addMessage('system', `Error: ${data.error || 'Failed to debug'}`);
+                }
+            } catch (error) {
+                addMessage('system', `Error: ${error.message}`);
+            }
+        }
+
+        async function refactorCode() {
+            const code = prompt('Paste code to refactor:');
+            if (!code) return;
+
+            addMessage('user', `🔄 Refactor this code:\n\`\`\`\n${code}\n\`\`\``);
+            addMessage('system', '♻️ Generating improved version...');
+
+            const refactorPrompt = `Refactor this code for better quality:\n\`\`\`\n${code}\n\`\`\`\n\nProvide improved version with explanations.`;
+
+            try {
+                const response = await fetch(`/ai/chat?msg=${encodeURIComponent(refactorPrompt)}&model=code`);
+                const data = await response.json();
+
+                if (data.response) {
+                    addMessage('system', data.response);
+                } else {
+                    addMessage('system', `Error: ${data.error || 'Failed to refactor'}`);
+                }
+            } catch (error) {
+                addMessage('system', `Error: ${error.message}`);
+            }
+        }
+
+        async function reviewCode() {
+            const code = prompt('Paste code to review:');
+            if (!code) return;
+
+            addMessage('user', `🔍 Code Review:\n\`\`\`\n${code}\n\`\`\``);
+            addMessage('system', '🔍 Performing comprehensive code review...');
+
+            const reviewPrompt = `Perform a comprehensive code review:\n\`\`\`\n${code}\n\`\`\`\n\nAnalyze:\n1. Security vulnerabilities (SQL injection, XSS, auth issues)\n2. Performance bottlenecks\n3. Code quality (readability, maintainability)\n4. Best practices violations\n5. Potential bugs\n6. Suggestions for improvement\n\nProvide detailed review with severity ratings.`;
+
+            try {
+                const response = await fetch(`/ai/chat?msg=${encodeURIComponent(reviewPrompt)}&model=code`);
+                const data = await response.json();
+
+                if (data.response) {
+                    addMessage('system', data.response);
+                } else {
+                    addMessage('system', `Error: ${data.error || 'Failed to review code'}`);
+                }
+            } catch (error) {
+                addMessage('system', `Error: ${error.message}`);
+            }
+        }
+
+        async function generateTests() {
+            const code = prompt('Paste code to generate tests for:');
+            if (!code) return;
+
+            const framework = prompt('Test framework (pytest/unittest/jest/mocha):\n(Press OK for auto-detect)', 'auto');
+
+            addMessage('user', `🧪 Generate Tests:\n\`\`\`\n${code}\n\`\`\``);
+            addMessage('system', '🧪 Generating comprehensive test suite...');
+
+            const testPrompt = `Generate comprehensive unit tests for this code:\n\`\`\`\n${code}\n\`\`\`\n\nTest framework: ${framework}\n\nInclude:\n1. Normal cases\n2. Edge cases\n3. Error cases\n4. Mock external dependencies\n5. Test descriptions\n6. Setup/teardown if needed\n\nProvide complete, runnable test code.`;
+
+            try {
+                const response = await fetch(`/ai/chat?msg=${encodeURIComponent(testPrompt)}&model=code`);
+                const data = await response.json();
+
+                if (data.response) {
+                    addMessage('system', data.response);
+                } else {
+                    addMessage('system', `Error: ${data.error || 'Failed to generate tests'}`);
+                }
+            } catch (error) {
+                addMessage('system', `Error: ${error.message}`);
+            }
+        }
+
+        async function generateDocs() {
+            const code = prompt('Paste code to generate documentation for:');
+            if (!code) return;
+
+            const style = prompt('Documentation style (google/numpy/sphinx/jsdoc):\n(Press OK for auto-detect)', 'auto');
+
+            addMessage('user', `📄 Generate Documentation:\n\`\`\`\n${code}\n\`\`\``);
+            addMessage('system', '📄 Generating comprehensive documentation...');
+
+            const docsPrompt = `Generate comprehensive documentation for this code:\n\`\`\`\n${code}\n\`\`\`\n\nStyle: ${style}\n\nInclude:\n1. Module/class/function descriptions\n2. Parameter documentation\n3. Return value documentation\n4. Example usage\n5. Exceptions/errors\n6. Notes/warnings if applicable\n\nProvide production-ready docstrings.`;
+
+            try {
+                const response = await fetch(`/ai/chat?msg=${encodeURIComponent(docsPrompt)}&model=code`);
+                const data = await response.json();
+
+                if (data.response) {
+                    addMessage('system', data.response);
+                } else {
+                    addMessage('system', `Error: ${data.error || 'Failed to generate documentation'}`);
+                }
+            } catch (error) {
+                addMessage('system', `Error: ${error.message}`);
+            }
+        }
+
+        // Settings
+        function toggleSettings() {
+            const panel = document.getElementById('settingsPanel');
+            panel.classList.toggle('open');
+        }
+
+        // Menu Functions
+        function launchClaudeCode() {
+            addMessage('system', '🚀 Launching Claude Code...');
+            fetch('/exec?cmd=claude%20--dangerously-skip-permissions')
+                .then(r => r.json())
+                .then(data => addMessage('system', 'Claude Code launched in terminal'))
+                .catch(err => addMessage('system', 'Error: ' + err.message));
+        }
+
+        function exportChat() {
+            const messages = document.getElementById('messagesContainer').innerText;
+            const blob = new Blob([messages], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'chat-' + Date.now() + '.txt';
+            a.click();
+        }
+
+        function showHelp() {
+            const helpText = `📖 QUICK HELP
+
+Commands:
+• Type naturally - smart routing handles rest
+• 'write function X' → codes with DeepSeek Coder
+• 'search database for X' → searches RAG
+• Paste URL → scrapes and indexes
+• 'scrape all of URL' → crawls entire site
+
+Auto-Coding: Edit, Create, Debug, Refactor, Review, Tests, Docs
+RAG: 222 docs, 934K tokens
+Models: DeepSeek R1 + Coder + Qwen`;
+            addMessage('system', helpText);
+        }
+
+        function showAbout() {
+            addMessage('system', `ℹ️ DSMIL AI PLATFORM v8.3
+
+LOCAL-FIRST AI Platform
+• Smart routing
+• Web search & crawling
+• Auto-coding tools
+• 222 docs in RAG
+• DSMIL Mode 5 verified
+
+GitHub: https://github.com/SWORDIntel/LAT5150DRVMIL`);
+        }
+
+        function showKeyboardShortcuts() {
+            addMessage('system', `⌨️ KEYBOARD SHORTCUTS
+
+• Enter → Send
+• Shift+Enter → New line
+• Ctrl+N → New chat
+• Escape → Clear input`);
+        }
+
+        function copyLastResponse() {
+            const messages = document.querySelectorAll('.message-ai');
+            if (messages.length > 0) {
+                const lastMsg = messages[messages.length - 1];
+                const text = lastMsg.querySelector('.message-content').textContent;
+                navigator.clipboard.writeText(text);
+                addMessage('system', '✓ Copied last response');
+            }
+        }
+
+        // Guardrail Controls
+        let aiSettings = {
+            temperature: 0.7,
+            safety: 0,  // 0=None, 1=Low, 2=Medium, 3=High
+            maxTokens: 8192
+        };
+
+        function updateTemp(value) {
+            aiSettings.temperature = parseFloat(value);
+            document.getElementById('tempValue').textContent = value;
+        }
+
+        function updateSafety(value) {
+            aiSettings.safety = parseInt(value);
+            const levels = ['NONE', 'LOW', 'MEDIUM', 'HIGH'];
+            document.getElementById('safetyValue').textContent = levels[value];
+        }
+
+        function updateTokens(value) {
+            aiSettings.maxTokens = parseInt(value);
+            document.getElementById('tokensValue').textContent = value;
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>

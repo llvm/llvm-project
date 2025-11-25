@@ -1,0 +1,266 @@
+# Screenshot Analysis System Configuration
+# AI-Driven Screenshot Organization & Analysis System
+
+# System Configuration
+system:
+  name: "ScreenshotIntel"
+  version: "1.0.0"
+  environment: "production"
+  log_level: "INFO"
+
+# Storage Configuration
+storage:
+  # ZFS dataset path for storing screenshots and data
+  zfs_dataset: "/mnt/screenshots"
+
+  # Directories
+  screenshots_dir: "${zfs_dataset}/screenshots"
+  chat_logs_dir: "${zfs_dataset}/chat_logs"
+  metadata_dir: "${zfs_dataset}/metadata"
+  vector_db_dir: "${zfs_dataset}/vector_db"
+  sqlite_db: "${zfs_dataset}/metadata/screenshot_intel.db"
+
+  # Backup and snapshots
+  snapshots_enabled: true
+  snapshot_interval: "6h"  # ZFS snapshot every 6 hours
+  retention_days: 90
+
+# Data Ingestion
+ingestion:
+  # Watch directories for new files
+  watch_enabled: true
+  watch_interval: 60  # seconds
+
+  # File patterns
+  screenshot_patterns:
+    - "*.png"
+    - "*.jpg"
+    - "*.jpeg"
+    - "*.webp"
+
+  # Device identifiers
+  devices:
+    phone1:
+      name: "GrapheneOS Phone 1"
+      path: "${screenshots_dir}/phone1"
+      type: "grapheneos"
+    phone2:
+      name: "GrapheneOS Phone 2"
+      path: "${screenshots_dir}/phone2"
+      type: "grapheneos"
+    laptop:
+      name: "Dell Latitude 5450"
+      path: "${screenshots_dir}/laptop"
+      type: "laptop"
+
+# OCR Configuration
+ocr:
+  engine: "paddleocr"  # Options: tesseract, paddleocr, easyocr
+  languages: ["en"]
+
+  # PaddleOCR settings
+  paddleocr:
+    use_angle_cls: true
+    lang: "en"
+    use_gpu: true
+    show_log: false
+
+  # Tesseract fallback
+  tesseract:
+    config: "--psm 6"
+
+  # Pre-processing
+  preprocessing:
+    enabled: true
+    contrast_enhancement: true
+    grayscale: true
+
+# Embedding Models
+embeddings:
+  # Text embeddings
+  text_model: "sentence-transformers/all-MiniLM-L6-v2"
+  text_dimension: 384
+
+  # Image embeddings (CLIP)
+  image_model: "openai/clip-vit-base-patch32"
+  image_dimension: 512
+
+  # Batch size for embedding
+  batch_size: 32
+  use_gpu: true
+
+# Vector Database (Qdrant)
+vector_db:
+  type: "qdrant"
+  host: "localhost"
+  port: 6333
+
+  # Collections
+  collections:
+    screenshots: "screenshots_collection"
+    chat_messages: "chat_messages_collection"
+
+  # Index settings
+  hnsw_config:
+    m: 16
+    ef_construct: 100
+
+  # Search settings
+  search:
+    limit: 10
+    score_threshold: 0.7
+
+# Full-Text Search
+fulltext_search:
+  enabled: true
+  engine: "sqlite_fts5"  # Options: sqlite_fts5, elasticsearch
+
+  # FTS5 configuration
+  fts5:
+    tokenizer: "unicode61"
+
+# Telegram Integration
+telegram:
+  enabled: false
+  api_id: ""  # Get from https://my.telegram.org/apps
+  api_hash: ""
+  phone_number: ""
+  session_name: "screenshot_intel_session"
+
+  # Chats to monitor (usernames or IDs)
+  monitored_chats: []
+
+  # Sync settings
+  sync_interval: 300  # seconds (5 minutes)
+  max_messages_per_sync: 100
+
+# Signal Integration
+signal:
+  enabled: false
+  signal_cli_path: "/usr/local/bin/signal-cli"
+  phone_number: ""
+
+  # Sync settings
+  sync_interval: 300  # seconds
+  receive_timeout: 5
+
+# Timeline & Correlation
+timeline:
+  # Time window for correlation (in minutes)
+  correlation_window_before: 10
+  correlation_window_after: 30
+
+  # Incident detection
+  incident_detection:
+    enabled: true
+    time_threshold: 300  # seconds - events within 5 min may be related
+    content_similarity_threshold: 0.75
+
+  # Event clustering
+  clustering:
+    algorithm: "dbscan"
+    eps: 300  # seconds
+    min_samples: 2
+
+# AI Analysis
+ai_analysis:
+  # Link discovery
+  link_discovery:
+    enabled: true
+    min_confidence: 0.6
+
+  # Anomaly detection
+  anomaly_detection:
+    enabled: true
+    sensitivity: 0.8
+
+  # Summarization
+  summarization:
+    enabled: true
+    model: "local"  # Options: local, anthropic, openai
+    max_length: 500
+
+# Search Configuration
+search:
+  # Hybrid search weights
+  semantic_weight: 0.7
+  keyword_weight: 0.3
+
+  # Fuzzy matching
+  fuzzy_enabled: true
+  max_edit_distance: 2
+
+  # Result ranking
+  max_results: 50
+  rerank: true
+
+# API Configuration
+api:
+  enabled: true
+  host: "0.0.0.0"
+  port: 5051
+
+  # Security
+  auth_enabled: true
+  api_key: ""  # Will be generated on first run
+  rate_limit: 100  # requests per minute
+
+  # CORS
+  cors_enabled: true
+  cors_origins: ["http://localhost:*"]
+
+# Privacy & Security
+privacy:
+  # Encryption at rest
+  encrypt_database: false  # Requires setup
+  encryption_key_path: ""
+
+  # Access control
+  require_authentication: false
+
+  # Audit logging
+  audit_log: true
+  audit_log_path: "${zfs_dataset}/logs/audit.log"
+
+# Processing
+processing:
+  # Parallel processing
+  num_workers: 4
+
+  # Queue settings
+  queue_max_size: 1000
+
+  # Retry settings
+  max_retries: 3
+  retry_delay: 5  # seconds
+
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # File logging
+  file:
+    enabled: true
+    path: "${zfs_dataset}/logs/screenshot_intel.log"
+    max_bytes: 10485760  # 10MB
+    backup_count: 5
+
+  # Console logging
+  console:
+    enabled: true
+    colorized: true
+
+# Performance
+performance:
+  # Compute resources (130 TOPS available)
+  use_gpu: true
+  gpu_memory_fraction: 0.5
+
+  # Caching
+  cache_embeddings: true
+  cache_ttl: 3600  # seconds
+
+  # Database optimization
+  db_pool_size: 10
+  db_max_overflow: 20

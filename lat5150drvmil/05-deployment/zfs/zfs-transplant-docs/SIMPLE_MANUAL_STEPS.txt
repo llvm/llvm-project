@@ -1,0 +1,68 @@
+═══════════════════════════════════════════════════════════════════════════════
+SIMPLE MANUAL INSTALLATION - Run These Commands
+Kernel is built! Install it and reboot.
+═══════════════════════════════════════════════════════════════════════════════
+
+KERNEL LOCATION:
+  ~/kernel-build/linux-image-6.16.12-ultimate_6.16.12-3_amd64.deb (113MB)
+  ~/kernel-build/linux-headers-6.16.12-ultimate_6.16.12-3_amd64.deb (9MB)
+
+FEATURES: Xen dom0 + Intel NPU + GNA + Arc GPU + DSMIL + TPM + Security
+COMPILER: -march=alderlake -O2 -ftree-vectorize
+
+═══════════════════════════════════════════════════════════════════════════════
+
+OPTION 1: INSTALL TO CURRENT SYSTEM (EASIEST - RECOMMENDED!)
+
+Your current system (LONENOMAD_NEW_ROLL) already has Xen 4.20!
+Just install the new kernel here and add AI framework:
+
+sudo dpkg -i ~/kernel-build/linux-image-6.16.12-ultimate_6.16.12-3_amd64.deb
+sudo dpkg -i ~/kernel-build/linux-headers-6.16.12-ultimate_6.16.12-3_amd64.deb
+sudo update-initramfs -c -k 6.16.12-ultimate
+sudo update-grub
+sudo mkdir -p /opt/dsmil
+sudo rsync -a /home/john/LAT5150DRVMIL/ /opt/dsmil/
+sudo systemctl enable dsmil-server
+sudo reboot
+
+At boot: Select kernel 6.16.12-ultimate with Xen from GRUB
+Done! No ZFS complexity, works immediately.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+OPTION 2: FULL ZFS TRANSPLANT (COMPLEX)
+
+If you really want a separate BE, the livecd-xen-ai clone is broken.
+Just use your current system - it's already on ZFS (LONENOMAD_NEW_ROLL)!
+
+Current system IS on ZFS:
+  mount | grep " / "
+  Shows: /dev/sda2 (but you're running from LONENOMAD_NEW_ROLL on rpool when booted properly)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+MY RECOMMENDATION:
+
+Use OPTION 1. Install kernel to current system right now:
+
+1. sudo dpkg -i ~/kernel-build/linux-image-6.16.12-ultimate_6.16.12-3_amd64.deb
+2. sudo dpkg -i ~/kernel-build/linux-headers-6.16.12-ultimate_6.16.12-3_amd64.deb
+3. sudo update-grub
+4. sudo reboot
+5. Select "Xen 4.20 with Linux 6.16.12-ultimate" from GRUB
+
+This gets you:
+  ✓ Xen 4.20 (already installed)
+  ✓ New optimized kernel (-march=alderlake -O2)
+  ✓ Full Intel + DSMIL support
+  ✓ No ZFS complexity
+  ✓ Works in 5 minutes
+
+═══════════════════════════════════════════════════════════════════════════════
+
+PASSWORDS:
+  sudo: 1786
+  rpool: 1/0523/600260
+
+═══════════════════════════════════════════════════════════════════════════════

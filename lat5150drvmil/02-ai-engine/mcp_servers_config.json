@@ -1,0 +1,139 @@
+{
+  "mcpServers": {
+    "dsmil-ai": {
+      "command": "python3",
+      "args": ["/home/user/LAT5150DRVMIL/02-ai-engine/dsmil_mcp_server.py"],
+      "env": {
+        "PYTHONPATH": "/home/user/LAT5150DRVMIL"
+      },
+      "description": "DSMIL AI Engine with RAG, 5 models, PQC status, device info"
+    },
+    "sequential-thinking": {
+      "command": "python3",
+      "args": ["/home/user/LAT5150DRVMIL/02-ai-engine/sequential_thinking_server.py"],
+      "description": "Structured multi-step reasoning with branching and revisions"
+    },
+    "filesystem": {
+      "command": "python3",
+      "args": ["/home/user/LAT5150DRVMIL/02-ai-engine/filesystem_server.py"],
+      "description": "Sandboxed file operations (read/write/list/search)"
+    },
+    "memory": {
+      "command": "python3",
+      "args": ["/home/user/LAT5150DRVMIL/02-ai-engine/memory_server.py"],
+      "description": "Persistent knowledge graph for AI memory"
+    },
+    "fetch": {
+      "command": "python3",
+      "args": ["/home/user/LAT5150DRVMIL/02-ai-engine/fetch_server.py"],
+      "description": "Web content fetching with SSRF protection"
+    },
+    "git": {
+      "command": "python3",
+      "args": ["/home/user/LAT5150DRVMIL/02-ai-engine/git_server.py"],
+      "description": "Git operations with command injection protection"
+    },
+    "search-tools": {
+      "command": "uv",
+      "args": ["run", "--directory", "/home/user/LAT5150DRVMIL/03-mcp-servers/search-tools-mcp", "main.py"],
+      "description": "Advanced code search with symbol analysis and CodeRank"
+    },
+    "docs-mcp-server": {
+      "command": "npx",
+      "args": ["@arabold/docs-mcp-server@latest"],
+      "env": {
+        "PORT": "6280"
+      },
+      "description": "Documentation indexing and search with vector embeddings"
+    },
+    "metasploit": {
+      "command": "python3",
+      "args": ["/home/user/LAT5150DRVMIL/03-mcp-servers/MetasploitMCP/MetasploitMCP.py", "--transport", "stdio"],
+      "env": {
+        "MSF_PASSWORD": "your_msf_password_here",
+        "MSF_SERVER": "127.0.0.1",
+        "MSF_PORT": "55553",
+        "MSF_SSL": "false"
+      },
+      "description": "Metasploit Framework integration for security testing and exploitation"
+    },
+    "maigret": {
+      "command": "npx",
+      "args": ["mcp-maigret@latest"],
+      "env": {
+        "MAIGRET_REPORTS_DIR": "/home/user/LAT5150DRVMIL/03-mcp-servers/maigret-reports"
+      },
+      "description": "Username OSINT across social networks and URL parsing"
+    },
+    "security-tools": {
+      "command": "bash",
+      "args": ["/home/user/LAT5150DRVMIL/03-mcp-servers/mcp-for-security/start.sh"],
+      "description": "23 security testing tools: Nmap, Nuclei, SQLmap, FFUF, Amass, WPScan, and more for penetration testing"
+    },
+    "atomic-red-team": {
+      "command": "uvx",
+      "args": ["atomic-red-team-mcp"],
+      "env": {
+        "ART_MCP_TRANSPORT": "stdio",
+        "ART_DATA_DIR": "/home/user/LAT5150DRVMIL/03-mcp-servers/atomic-red-team-data",
+        "ART_EXECUTION_ENABLED": "false",
+        "ART_GITHUB_OWNER": "redcanaryco",
+        "ART_GITHUB_REPO": "atomic-red-team"
+      },
+      "description": "Atomic Red Team security testing framework - Query, validate, and execute security test cases from MITRE ATT&CK techniques. Search atomics by technique ID, name, platform (Windows/Linux/macOS), validate YAML structure, refresh tests from GitHub. Execution DISABLED by default for safety (enable in controlled test environments only)"
+    },
+    "codex-cli": {
+      "command": "python3",
+      "args": ["/home/user/LAT5150DRVMIL/03-mcp-servers/codex-cli/codex_mcp_server.py"],
+      "env": {
+        "PYTHONPATH": "/home/user/LAT5150DRVMIL",
+        "CODEX_CLI_PATH": "/home/user/LAT5150DRVMIL/03-mcp-servers/codex-cli/target/release/codex-cli"
+      },
+      "description": "OpenAI Codex CLI integration for advanced code generation, review, debugging, refactoring, testing, and optimization using GPT-5-Codex models"
+    },
+    "claude-code": {
+      "command": "python3",
+      "args": ["/home/user/LAT5150DRVMIL/03-mcp-servers/claude-code/claude_code_mcp_server.py"],
+      "env": {
+        "PYTHONPATH": "/home/user/LAT5150DRVMIL",
+        "CLAUDE_CODE_PATH": "/home/user/LAT5150DRVMIL/03-mcp-servers/claude-code/target/release/claude-code"
+      },
+      "description": "High-performance Claude Code with NPU acceleration, Git intelligence (ShadowGit 7-10x faster), agent orchestration (25+ agents), binary IPC (50ns-10µs), and AVX2/AVX-512 SIMD from claude-backups"
+    },
+    "gemini": {
+      "command": "python3",
+      "args": ["/home/user/LAT5150DRVMIL/03-mcp-servers/gemini/gemini_mcp_server.py"],
+      "env": {
+        "PYTHONPATH": "/home/user/LAT5150DRVMIL",
+        "GEMINI_PATH": "/home/user/LAT5150DRVMIL/03-mcp-servers/gemini/target/release/gemini"
+      },
+      "description": "Google Gemini integration with multimodal support (text/image/video/audio), function calling, code execution, Google Search grounding, thinking mode (extended reasoning), and 2M token context"
+    },
+    "notebooklm": {
+      "command": "python3",
+      "args": ["/home/user/LAT5150DRVMIL/03-mcp-servers/notebooklm/notebooklm_mcp_server.py"],
+      "env": {
+        "PYTHONPATH": "/home/user/LAT5150DRVMIL"
+      },
+      "description": "Google NotebookLM-style document research: multi-source Q&A, summaries, FAQs, study guides, synthesis, executive briefings. Powered by Gemini 2.0 Flash with 2M token context for comprehensive document understanding and grounding"
+    },
+    "screenshot-intelligence": {
+      "command": "python3",
+      "args": ["/home/user/LAT5150DRVMIL/02-ai-engine/screenshot_intel_mcp_server.py"],
+      "env": {
+        "PYTHONPATH": "/home/user/LAT5150DRVMIL:/home/user/LAT5150DRVMIL/04-integrations/rag_system"
+      },
+      "description": "Screenshot Intelligence with OCR (PaddleOCR/Tesseract), Vector RAG (Qdrant+BAAI 88%+ accuracy), timeline analysis, event correlation, Telegram/Signal integration, AI-powered anomaly detection, incident management, and SWORD Intelligence compatibility"
+    },
+    "directeye": {
+      "command": "python3",
+      "args": ["/home/user/LAT5150DRVMIL/rag_system/mcp_servers/DIRECTEYE/mcp_integration/mcp_server.py"],
+      "env": {
+        "PYTHONPATH": "/home/user/LAT5150DRVMIL:/home/user/LAT5150DRVMIL/rag_system/mcp_servers/DIRECTEYE",
+        "DIRECTEYE_DATA_DIR": "/home/user/LAT5150DRVMIL/rag_system/mcp_servers/DIRECTEYE/data",
+        "DIRECTEYE_DB_PATH": "/home/user/LAT5150DRVMIL/rag_system/mcp_servers/DIRECTEYE/directeye.db"
+      },
+      "description": "DIRECTEYE Enterprise Blockchain Intelligence Platform - 35 AI tools: 40+ OSINT services (TruePeopleSearch, HIBP, Snusbase, SpyCloud, AlienVault OTX, Censys, SEC EDGAR, ICIJ), blockchain analysis (entity attribution, sanctions OFAC/UN/EU, transaction tracking, 100K+ labeled addresses), ML analytics (risk scoring, entity resolution, predictive analytics, cross-chain analysis 12+ chains, network analysis), query chaining (person→crypto, corporate investigation), post-quantum cryptography (ML-KEM-1024, ML-DSA-87, AES-256-GCM)"
+    }
+  }
+}

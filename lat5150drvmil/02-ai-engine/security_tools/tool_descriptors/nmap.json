@@ -1,0 +1,26 @@
+{
+  "name": "nmap",
+  "description": "Network mapper for port scanning and service detection",
+  "category": "reconnaissance",
+  "phase": ["reconnaissance"],
+  "command": "nmap",
+  "required": false,
+  "args": {
+    "basic": "-sV -T4 --top-ports 100 {target}",
+    "aggressive": "-A -T4 -p- {target}",
+    "stealth": "-sS -T2 {target}",
+    "udp": "-sU --top-ports 20 {target}",
+    "quick": "-T4 -F {target}"
+  },
+  "default_profile": "basic",
+  "timeout": 300,
+  "output_format": "text",
+  "parse_output": true,
+  "severity_keywords": {
+    "critical": ["backdoor", "shell", "trojan"],
+    "high": ["vulnerable", "unpatched", "exploit", "CVE-"],
+    "medium": ["misconfigured", "weak", "outdated"],
+    "low": ["deprecated", "legacy", "old version"],
+    "info": ["open", "filtered", "version"]
+  }
+}

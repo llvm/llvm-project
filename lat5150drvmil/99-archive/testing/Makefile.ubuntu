@@ -1,0 +1,53 @@
+# Distribution-specific Makefile for DSMIL kernel module
+# Generated for Ubuntu 24.04
+
+KERNEL_VERSION := 6.14.0-29-generic
+KDIR := /lib/modules/$(KERNEL_VERSION)/build
+PWD := $(shell pwd)
+
+# Distribution detection
+DISTRO := Ubuntu
+
+obj-m += dsmil-72dev.o
+
+# Distribution-specific flags
+ifeq ($(DISTRO),Debian)
+    ccflags-y += -DDEBIAN_BUILD
+    ccflags-y += -DTHERMAL_THRESHOLD_DEFAULT=100
+endif
+
+ifeq ($(DISTRO),Ubuntu)
+    ccflags-y += -DUBUNTU_BUILD
+    ccflags-y += -DTHERMAL_THRESHOLD_DEFAULT=100
+endif
+
+# Common flags
+ccflags-y += -DFORCE_JRTC1_MODE
+ccflags-y += -Wall -Wno-unused-function
+
+all:
+	make -C $(KDIR) M=$(PWD) modules
+
+clean:
+	make -C $(KDIR) M=$(PWD) clean
+
+install:
+	make -C $(KDIR) M=$(PWD) modules_install
+
+# Distribution-specific install
+install-ubuntu:
+	sudo insmod dsmil-72dev.ko
+	echo "DSMIL module loaded on Ubuntu"
+
+uninstall:
+	sudo rmmod dsmil-72dev || true
+
+# Compatibility check
+check-compat:
+	@echo "Distribution: Ubuntu 24.04"
+	@echo "Kernel: 6.14.0-29-generic"
+	@echo "Headers: $(KDIR)"
+	@test -d $(KDIR) || echo "ERROR: Kernel headers not found!"
+	@which gcc > /dev/null || echo "ERROR: GCC not found!"
+
+.PHONY: all clean install uninstall check-compat install-ubuntu

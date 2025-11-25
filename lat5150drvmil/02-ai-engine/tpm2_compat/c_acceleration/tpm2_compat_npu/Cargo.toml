@@ -1,0 +1,47 @@
+[package]
+name = "tpm2_compat_npu"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Intel NPU/GNA acceleration for TPM2 compatibility layer"
+
+[dependencies]
+tpm2_compat_common = { path = "../tpm2_compat_common", features = ["std", "serde-support"] }
+log.workspace = true
+thiserror.workspace = true
+cfg-if.workspace = true
+static_assertions.workspace = true
+zerocopy.workspace = true
+bitflags.workspace = true
+zeroize.workspace = true
+
+# Async support
+tokio = { workspace = true, features = ["rt", "sync", "time"] }
+futures = "0.3"
+
+# Neural processing
+ndarray = "0.16"
+rayon = "1.10"
+
+# Hardware interfaces (commented out - not available in crates.io)
+# intel-npu-sys = { version = "0.1", optional = true }
+# intel-gna-sys = { version = "0.1", optional = true }
+
+# SIMD acceleration
+wide = { version = "0.7", optional = true }
+
+# Machine learning acceleration
+candle-core = { version = "0.7", optional = true }
+candle-nn = { version = "0.7", optional = true }
+
+[features]
+default = ["simd", "ml-acceleration"]
+# npu = ["intel-npu-sys"]     # Disabled - dependency not available
+# gna = ["intel-gna-sys"]     # Disabled - dependency not available
+simd = ["wide"]
+ml-acceleration = ["candle-core", "candle-nn"]
+testing = []
+
+[build-dependencies]
+cc = "1.1"

@@ -1,0 +1,11 @@
+{
+  "audit_time": "2025-11-07T15:35:38.773151",
+  "tpm_available": false,
+  "tpm_info": {},
+  "algorithms": {},
+  "properties": {},
+  "pcrs": {},
+  "nvram": {},
+  "capabilities": {},
+  "statistics": {}
+}

@@ -1,0 +1,13 @@
+#pragma once
+
+#define DSMIL_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define DSMIL_VERSION_MINOR @PROJECT_VERSION_MINOR@  
+#define DSMIL_VERSION_PATCH @PROJECT_VERSION_PATCH@
+#define DSMIL_VERSION_STRING "@PROJECT_VERSION@"
+
+namespace dsmil {
+    constexpr int version_major = DSMIL_VERSION_MAJOR;
+    constexpr int version_minor = DSMIL_VERSION_MINOR;
+    constexpr int version_patch = DSMIL_VERSION_PATCH;
+    constexpr const char* version_string = DSMIL_VERSION_STRING;
+}

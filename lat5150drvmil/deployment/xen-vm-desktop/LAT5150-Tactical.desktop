@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=LAT5150 Tactical Interface
+Comment=Military-Grade Self-Coding AI Interface (TEMPEST Compliant)
+Exec=sh -c 'if pgrep -f "ssh.*5001:127.0.0.1:5001" > /dev/null; then firefox http://localhost:5001; else x-terminal-emulator -e "bash -c \"echo Starting SSH tunnel to tactical interface...; ssh -L 5001:127.0.0.1:5001 root@192.168.100.1 -o StrictHostKeyChecking=no; read -p Press Enter to close...\"" & sleep 3 && firefox http://localhost:5001; fi'
+Icon=applications-science
+Terminal=false
+Categories=Development;Science;Network;
+Keywords=AI;Tactical;Military;TEMPEST;Secure;
+StartupNotify=true
+StartupWMClass=Firefox

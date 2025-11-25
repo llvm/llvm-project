@@ -1,0 +1,22 @@
+[Unit]
+Description=DSMIL Unified AI Server
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+User=john
+WorkingDirectory=/home/john
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+ExecStart=/usr/bin/python3 /home/john/dsmil_unified_server.py
+Restart=on-failure
+RestartSec=10s
+StandardOutput=append:/var/log/dsmil-server.log
+StandardError=append:/var/log/dsmil-server.log
+
+# Security hardening
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

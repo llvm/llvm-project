@@ -1,0 +1,53 @@
+# Development dependencies for LAT5150DRVMIL
+# These are NOT needed in production
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.1
+pytest-asyncio>=0.21.1
+pytest-benchmark>=4.0.0
+pytest-watch>=4.2.0
+pytest-timeout>=2.1.0
+pytest-xdist>=3.3.1  # Parallel test execution
+
+# Code Quality
+pylint>=3.0.0
+black>=23.7.0
+isort>=5.12.0
+mypy>=1.5.0
+flake8>=6.1.0
+autopep8>=2.0.4
+
+# Security
+bandit>=1.7.5
+safety>=2.3.5
+
+# Profiling & Performance
+memory-profiler>=0.61.0
+py-spy>=0.3.14
+line-profiler>=4.1.0
+scalene>=1.5.31
+
+# Documentation
+pdoc>=14.1.0
+sphinx>=7.1.2
+sphinx-rtd-theme>=1.3.0
+
+# Build
+build>=1.0.3
+setuptools>=68.0.0
+wheel>=0.41.0
+twine>=4.0.2
+
+# Type Checking
+types-requests>=2.31.0
+types-PyYAML>=6.0.12
+
+# Debugging
+ipdb>=0.13.13
+pdbpp>=0.10.3
+
+# Utilities
+pre-commit>=3.3.3
+watchdog>=3.0.0

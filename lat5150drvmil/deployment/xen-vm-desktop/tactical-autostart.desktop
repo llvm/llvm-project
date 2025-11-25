@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=LAT5150 Tactical Tunnel
+Comment=Auto-start SSH tunnel to tactical interface
+Exec=/usr/local/bin/tactical-tunnel-autostart.sh
+Icon=network-connect
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-after=panel
+X-MATE-Autostart-enabled=true

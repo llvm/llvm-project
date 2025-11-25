@@ -1,0 +1,3 @@
+# Trigger initramfs update when kernel is updated
+interest-noawait /boot
+interest-noawait /lib/modules

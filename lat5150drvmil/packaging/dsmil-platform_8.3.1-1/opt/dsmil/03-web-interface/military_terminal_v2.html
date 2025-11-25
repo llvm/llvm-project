@@ -1,0 +1,1846 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DSMIL TACTICAL SYSTEM v8.0</title>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            overflow: hidden;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 8px;
+            gap: 8px;
+        }
+
+        /* ========== HEADER ========== */
+        .header {
+            background: linear-gradient(180deg, #001100 0%, #003300 100%);
+            border: 2px solid #0f0;
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #0f0;
+            letter-spacing: 2px;
+        }
+
+        .header-metrics {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .metric-compact {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+
+        .metric-value {
+            color: #ff0;
+            font-weight: bold;
+            margin-left: 4px;
+        }
+
+        /* ========== QUICK ACTION BAR ========== */
+        .quick-action-bar {
+            background: linear-gradient(180deg, #002200 0%, #001100 100%);
+            border: 2px solid #0f0;
+            padding: 8px 12px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-shrink: 0;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+        }
+
+        .quick-action-label {
+            color: #ff0;
+            font-size: 11px;
+            font-weight: bold;
+            text-shadow: 0 0 5px #ff0;
+            margin-right: 5px;
+        }
+
+        .quick-action-btn {
+            background: #003300;
+            border: 2px solid #0f0;
+            color: #0f0;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            font-weight: bold;
+            transition: all 0.15s;
+            position: relative;
+        }
+
+        .quick-action-btn:hover {
+            background: #005500;
+            box-shadow: 0 0 12px #0f0;
+            transform: translateY(-1px);
+        }
+
+        .quick-action-btn:active {
+            background: #0f0;
+            color: #000;
+            transform: translateY(0);
+        }
+
+        .quick-action-btn.primary {
+            background: #004400;
+            border-width: 2px;
+            font-size: 12px;
+            padding: 8px 16px;
+        }
+
+        .quick-action-btn.primary:hover {
+            background: #006600;
+            box-shadow: 0 0 15px #0f0;
+        }
+
+        /* ========== MAIN LAYOUT ========== */
+        .main-layout {
+            display: flex;
+            gap: 8px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* ========== CHAT AREA (PRIMARY) ========== */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            gap: 8px;
+        }
+
+        .chat-panel {
+            background: #000;
+            border: 2px solid #0f0;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+        }
+
+        .chat-header {
+            background: linear-gradient(180deg, #002200 0%, #001100 100%);
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #0f0;
+        }
+
+        .chat-title {
+            color: #ff0;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 0 0 8px #ff0;
+        }
+
+        .chat-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-btn {
+            background: #001100;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            transition: all 0.15s;
+            position: relative;
+        }
+
+        .chat-btn:hover {
+            background: #003300;
+            box-shadow: 0 0 8px #0f0;
+        }
+
+        .chat-btn:active {
+            background: #0f0;
+            color: #000;
+        }
+
+        .chat-output {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            min-height: 0;
+            background: #000;
+        }
+
+        /* Message styling */
+        .message-block {
+            margin-bottom: 16px;
+            animation: fadeIn 0.2s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-prompt {
+            color: #ff0;
+            font-weight: bold;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .message-timestamp {
+            color: #0f0;
+            opacity: 0.6;
+            font-size: 11px;
+            font-weight: normal;
+        }
+
+        .message-content {
+            color: #0f0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            padding-left: 12px;
+            border-left: 2px solid #003300;
+            line-height: 1.6;
+        }
+
+        .message-content.user {
+            color: #ff0;
+            border-left-color: #333300;
+        }
+
+        .message-content.error {
+            color: #f33;
+            border-left-color: #330000;
+        }
+
+        .message-content.info {
+            color: #0ff;
+            border-left-color: #003333;
+        }
+
+        .message-content.loading {
+            color: #ff0;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Code blocks in responses */
+        .code-block {
+            background: #001100;
+            border: 1px solid #0f0;
+            padding: 8px;
+            margin: 8px 0;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+
+        /* ========== INPUT AREA ========== */
+        .input-container {
+            background: #001100;
+            border: 2px solid #0f0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .prompt-symbol {
+            color: #0f0;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 8px 0;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        #userInput {
+            flex: 1;
+            background: #000;
+            border: 2px solid #0f0;
+            color: #0f0;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 60px;
+            max-height: 200px;
+            line-height: 1.4;
+        }
+
+        #userInput:focus {
+            outline: none;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+            border-color: #0ff;
+        }
+
+        .input-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .send-btn {
+            background: #003300;
+            border: 2px solid #0f0;
+            color: #0f0;
+            padding: 8px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.15s;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        .send-btn:hover {
+            background: #005500;
+            box-shadow: 0 0 15px #0f0;
+        }
+
+        .send-btn:active {
+            background: #0f0;
+            color: #000;
+        }
+
+        .model-select {
+            background: #001100;
+            border: 2px solid #0f0;
+            color: #0f0;
+            padding: 8px 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .model-select:focus {
+            outline: none;
+            box-shadow: 0 0 10px #0f0;
+        }
+
+        .shortcuts {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 6px;
+        }
+
+        .shortcut-btn {
+            background: #001100;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 6px 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            transition: all 0.1s;
+            text-align: center;
+            position: relative;
+        }
+
+        .shortcut-btn:hover {
+            background: #003300;
+            box-shadow: 0 0 8px #0f0;
+            transform: translateY(-1px);
+        }
+
+        .shortcut-btn:active {
+            background: #0f0;
+            color: #000;
+            transform: translateY(0);
+        }
+
+        /* Dropdown indicator for shortcuts with submenus */
+        .shortcut-btn.has-submenu::after {
+            content: ' ▼';
+            font-size: 8px;
+            opacity: 0.7;
+        }
+
+        /* ========== DROPDOWN MENU ========== */
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #001100;
+            border: 2px solid #0f0;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            z-index: 1000;
+            min-width: 200px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .dropdown-menu.active {
+            display: block;
+            animation: slideDown 0.15s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-item {
+            padding: 8px 12px;
+            color: #0f0;
+            cursor: pointer;
+            border-bottom: 1px solid #002200;
+            transition: all 0.1s;
+            font-size: 11px;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: #003300;
+            box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .dropdown-item-label {
+            font-weight: bold;
+            color: #ff0;
+            display: block;
+        }
+
+        .dropdown-item-desc {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        /* ========== SIDEBAR (STATUS) ========== */
+        .sidebar {
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .status-panel {
+            background: #000;
+            border: 2px solid #0f0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+        }
+
+        .status-header {
+            background: linear-gradient(180deg, #002200 0%, #001100 100%);
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #0f0;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .status-title {
+            color: #ff0;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .collapse-indicator {
+            color: #0f0;
+            font-size: 10px;
+        }
+
+        .status-content {
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .status-content.collapsed {
+            display: none;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            font-size: 11px;
+        }
+
+        .metric-item {
+            padding: 6px 8px;
+            background: #001100;
+            border: 1px solid #0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metric-label {
+            color: #0f0;
+            opacity: 0.8;
+        }
+
+        .metric-val {
+            color: #ff0;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .recent-ops {
+            margin-top: 10px;
+        }
+
+        .ops-title {
+            color: #0f0;
+            opacity: 0.8;
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+
+        .ops-list {
+            font-size: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .op-item {
+            padding: 3px 0;
+            color: #0f0;
+            opacity: 0.7;
+            border-bottom: 1px solid #002200;
+        }
+
+        /* ========== RAG INSTRUCTIONS PANEL ========== */
+        .rag-instructions {
+            background: #001a00;
+            border: 1px solid #0f0;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 2px;
+        }
+
+        .rag-instructions-title {
+            color: #ff0;
+            font-weight: bold;
+            font-size: 11px;
+            margin-bottom: 8px;
+            text-shadow: 0 0 5px #ff0;
+        }
+
+        .rag-instructions-list {
+            font-size: 10px;
+            color: #0f0;
+            line-height: 1.6;
+        }
+
+        .rag-instructions-list li {
+            margin-bottom: 5px;
+            padding-left: 5px;
+        }
+
+        .rag-example {
+            color: #0ff;
+            font-style: italic;
+            margin-top: 5px;
+            font-size: 9px;
+        }
+
+        /* ========== TOOLTIPS ========== */
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #002200;
+            color: #0f0;
+            padding: 6px 10px;
+            border: 1px solid #0f0;
+            border-radius: 2px;
+            white-space: nowrap;
+            font-size: 10px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            margin-bottom: 5px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .tooltip:hover::before {
+            opacity: 1;
+        }
+
+        /* ========== SCROLLBARS ========== */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #000;
+            border: 1px solid #002200;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #0f0 0%, #008800 100%);
+            border: 1px solid #005500;
+            box-shadow: inset 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #0ff 0%, #00aa00 100%);
+        }
+
+        /* ========== UTILITIES ========== */
+        .glow {
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .status-online {
+            background: #0f0;
+            box-shadow: 0 0 8px #0f0;
+        }
+
+        .status-offline {
+            background: #f00;
+            box-shadow: 0 0 8px #f00;
+        }
+
+        .status-warning {
+            background: #ff0;
+            box-shadow: 0 0 8px #ff0;
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 1200px) {
+            .sidebar {
+                width: 280px;
+            }
+        }
+
+        /* ========== ACTION BUTTON GROUPS ========== */
+        .action-group {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .action-group-label {
+            color: #0f0;
+            opacity: 0.8;
+            font-size: 11px;
+            min-width: 80px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .btn-group .chat-btn {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="title glow">DSMIL TACTICAL SYSTEM v8.0</div>
+            <div class="header-metrics">
+                <span class="metric-compact">NPU:<span class="metric-value" id="npu-tops">26.4</span>T</span>
+                <span class="metric-compact">GPU:<span class="metric-value" id="gpu-tops">40</span>T</span>
+                <span class="metric-compact">NCS2:<span class="metric-value" id="ncs2-tops">10</span>T</span>
+                <span class="metric-compact">AVX:<span class="metric-value" id="avx512">ON</span></span>
+                <span class="metric-compact">M5:<span class="metric-value" id="mode5">STD</span></span>
+                <span class="metric-compact">USR:<span class="metric-value" id="presence">ACTIVE</span></span>
+            </div>
+        </div>
+
+        <!-- Quick Action Bar -->
+        <div class="quick-action-bar">
+            <span class="quick-action-label">QUICK ACTIONS:</span>
+            <button class="quick-action-btn primary tooltip" onclick="quickAddFolder()" data-tooltip="Add entire folder to RAG (recursive scan)">
+                ADD FOLDER TO RAG
+            </button>
+            <button class="quick-action-btn tooltip" onclick="quickSearchRAG()" data-tooltip="Search indexed documents">
+                SEARCH RAG
+            </button>
+            <button class="quick-action-btn tooltip" onclick="quickViewIndex()" data-tooltip="View all indexed files">
+                VIEW INDEX
+            </button>
+            <button class="quick-action-btn tooltip" onclick="executeCommand('Analyze the documents in my RAG database')" data-tooltip="Ask AI about RAG contents">
+                ASK AI ABOUT RAG
+            </button>
+            <button class="quick-action-btn tooltip" onclick="showBackendInfo()" data-tooltip="See available AI backends and models">
+                AI BACKENDS
+            </button>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Chat Area (Primary) -->
+            <div class="chat-container">
+                <!-- Chat Panel -->
+                <div class="chat-panel">
+                    <div class="chat-header">
+                        <div class="chat-title">
+                            <span class="status-indicator status-online" id="ai-status"></span>
+                            AI TERMINAL - HARDWARE ATTESTED
+                        </div>
+                        <div class="chat-controls">
+                            <button class="chat-btn tooltip" onclick="clearChat()" data-tooltip="Clear chat history">CLEAR</button>
+                            <button class="chat-btn tooltip" onclick="exportChat()" data-tooltip="Export chat to file">EXPORT</button>
+                            <button class="chat-btn tooltip" onclick="toggleAutoScroll()" data-tooltip="Toggle auto-scroll" id="autoscroll-btn">AUTO</button>
+                        </div>
+                    </div>
+                    <div class="chat-output" id="aiOutput"></div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="input-container">
+                    <div class="input-row">
+                        <div class="prompt-symbol">></div>
+                        <textarea id="userInput" placeholder="Enter command or AI query (multi-line supported)...&#10;&#10;Shift+Enter for new line, Enter to send&#10;Prefix with ! or / for shell commands&#10;&#10;Try: 'Add /home/john/research to RAG' or 'Search RAG for neural networks'" autocomplete="off"></textarea>
+                    </div>
+                    <div class="input-controls">
+                        <button class="send-btn tooltip" onclick="sendCommand()" data-tooltip="Send command [Enter]">SEND [ENTER]</button>
+                        <select class="model-select tooltip" id="modelSelect" title="AI model: AUTO=smart routing, FAST=quick responses, LARGE=complex tasks" data-tooltip="Select AI model tier">
+                            <option value="auto">AUTO (Smart)</option>
+                            <option value="fast">FAST (3B)</option>
+                            <option value="large">LARGE (70B+)</option>
+                        </select>
+                        <span style="color: #0f0; font-size: 11px; opacity: 0.7;" id="char-count">0 chars</span>
+                    </div>
+                    <div class="shortcuts">
+                        <button class="shortcut-btn tooltip" onclick="executeShortcut('status')" data-tooltip="Full system status with all hardware">F1:STATUS</button>
+                        <button class="shortcut-btn has-submenu tooltip" onclick="toggleShortcutMenu('ragdb-menu', event)" data-tooltip="RAG database stats and operations">F2:RAGDB ▼</button>
+                        <button class="shortcut-btn tooltip" onclick="executeShortcut('npu')" data-tooltip="NPU configuration and military mode">F3:NPU</button>
+                        <button class="shortcut-btn has-submenu tooltip" onclick="toggleShortcutMenu('rag-menu', event)" data-tooltip="RAG document operations">F4:RAG ▼</button>
+                        <button class="shortcut-btn has-submenu tooltip" onclick="toggleShortcutMenu('flux-menu', event)" data-tooltip="Flux network operations">F5:FLUX ▼</button>
+                        <button class="shortcut-btn tooltip" onclick="executeShortcut('github')" data-tooltip="GitHub repositories">F6:GITHUB</button>
+                        <button class="shortcut-btn tooltip" onclick="executeShortcut('collect')" data-tooltip="Smart paper collector">F7:COLLECT</button>
+                        <button class="shortcut-btn tooltip" onclick="executeShortcut('prompt')" data-tooltip="View/edit system prompt">F8:PROMPT</button>
+                        <button class="shortcut-btn tooltip" onclick="executeShortcut('help')" data-tooltip="Show help">F9:HELP</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar (Status) -->
+            <div class="sidebar">
+                <!-- System Metrics -->
+                <div class="status-panel">
+                    <div class="status-header tooltip" onclick="togglePanel('metrics')" data-tooltip="Click to collapse/expand">
+                        <div class="status-title">SYSTEM METRICS</div>
+                        <div class="collapse-indicator" id="metrics-indicator">[-]</div>
+                    </div>
+                    <div class="status-content" id="metrics-content">
+                        <div class="metric-grid">
+                            <div class="metric-item">
+                                <span class="metric-label">AI MODEL</span>
+                                <span class="metric-val" id="ai-model">LOADING...</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">INFERENCE</span>
+                                <span class="metric-val" id="inference-time">-- ms</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">TOKENS/SEC</span>
+                                <span class="metric-val" id="tokens-sec">--</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">DSMIL DEV</span>
+                                <span class="metric-val" id="dsmil-device">16</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">ATTESTATION</span>
+                                <span class="metric-val" id="attestation">READY</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">FLUX STATUS</span>
+                                <span class="metric-val" id="flux-status">STANDBY</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">RAG DOCS</span>
+                                <span class="metric-val" id="rag-docs">0</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">TOTAL TOPS</span>
+                                <span class="metric-val" id="total-compute">76.4</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Operations -->
+                <div class="status-panel">
+                    <div class="status-header tooltip" onclick="togglePanel('ops')" data-tooltip="Click to collapse/expand">
+                        <div class="status-title">RECENT OPERATIONS</div>
+                        <div class="collapse-indicator" id="ops-indicator">[-]</div>
+                    </div>
+                    <div class="status-content" id="ops-content">
+                        <div class="ops-list" id="recentOps"></div>
+                    </div>
+                </div>
+
+                <!-- Command History -->
+                <div class="status-panel">
+                    <div class="status-header tooltip" onclick="togglePanel('history')" data-tooltip="Click to collapse/expand - click commands to reuse">
+                        <div class="status-title">COMMAND HISTORY</div>
+                        <div class="collapse-indicator" id="history-indicator">[-]</div>
+                    </div>
+                    <div class="status-content collapsed" id="history-content">
+                        <div class="ops-list" id="commandHistory"></div>
+                    </div>
+                </div>
+
+                <!-- RAG Management -->
+                <div class="status-panel">
+                    <div class="status-header tooltip" onclick="togglePanel('rag')" data-tooltip="Click to expand RAG Intelligence Database controls">
+                        <div class="status-title">RAG INTELLIGENCE DB</div>
+                        <div class="collapse-indicator" id="rag-indicator">[+]</div>
+                    </div>
+                    <div class="status-content collapsed" id="rag-content">
+                        <!-- RAG Instructions -->
+                        <div class="rag-instructions">
+                            <div class="rag-instructions-title">HOW TO USE RAG:</div>
+                            <ul class="rag-instructions-list">
+                                <li><strong>FOLDER:</strong> Adds all files recursively from directory</li>
+                                <li><strong>FILE:</strong> Adds single document to knowledge base</li>
+                                <li><strong>SEARCH:</strong> Find specific content in indexed docs</li>
+                                <li><strong>Supported:</strong> .txt, .md, .pdf, .py, .cpp, .h, .json</li>
+                            </ul>
+                            <div class="rag-example">
+                                Example paths:<br>
+                                /home/john/research/papers<br>
+                                /home/john/Documents/thesis.pdf
+                            </div>
+                        </div>
+
+                        <!-- RAG Stats -->
+                        <div class="metric-grid" style="margin-bottom: 10px;">
+                            <div class="metric-item">
+                                <span class="metric-label">DOCUMENTS</span>
+                                <span class="metric-val" id="rag-doc-count">--</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">TOKENS</span>
+                                <span class="metric-val" id="rag-token-count">--</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">SIZE</span>
+                                <span class="metric-val" id="rag-size">--</span>
+                            </div>
+                        </div>
+
+                        <!-- Add Documents - Improved Layout -->
+                        <div style="margin-bottom: 10px;">
+                            <div class="action-group">
+                                <div class="action-group-label">ADD FOLDER:</div>
+                                <div class="btn-group">
+                                    <input type="text" id="rag-folder-path" placeholder="/path/to/folder"
+                                           class="tooltip" data-tooltip="Enter full path to folder (recursive scan)"
+                                           style="flex: 2; background: #000; border: 1px solid #0f0; color: #0f0; padding: 6px; font-family: 'Courier New', monospace; font-size: 11px;">
+                                    <button class="chat-btn tooltip" onclick="addRAGFolder()" style="padding: 6px 12px;" data-tooltip="Add all files from folder recursively">ADD</button>
+                                </div>
+                            </div>
+                            <div class="action-group">
+                                <div class="action-group-label">ADD FILE:</div>
+                                <div class="btn-group">
+                                    <input type="text" id="rag-file-path" placeholder="/path/to/file.txt"
+                                           class="tooltip" data-tooltip="Enter full path to single file"
+                                           style="flex: 2; background: #000; border: 1px solid #0f0; color: #0f0; padding: 6px; font-family: 'Courier New', monospace; font-size: 11px;">
+                                    <button class="chat-btn tooltip" onclick="addRAGFile()" style="padding: 6px 12px;" data-tooltip="Add single file to database">ADD</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Search Interface -->
+                        <div style="margin-bottom: 10px;">
+                            <div class="action-group">
+                                <div class="action-group-label">SEARCH:</div>
+                                <div class="btn-group">
+                                    <input type="text" id="rag-search-query" placeholder="Search query..."
+                                           class="tooltip" data-tooltip="Enter search terms to find in indexed documents"
+                                           style="flex: 2; background: #000; border: 1px solid #0f0; color: #0f0; padding: 6px; font-family: 'Courier New', monospace; font-size: 11px;">
+                                    <button class="chat-btn tooltip" onclick="searchRAG()" style="padding: 6px 12px;" data-tooltip="Search indexed documents">FIND</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div style="display: flex; gap: 4px; margin-bottom: 10px;">
+                            <button class="chat-btn tooltip" onclick="refreshRAGStats()" style="flex: 1; padding: 6px;" data-tooltip="Refresh RAG statistics">REFRESH STATS</button>
+                            <button class="chat-btn tooltip" onclick="clearRAGDatabase()" style="flex: 1; padding: 6px;" data-tooltip="Clear all indexed documents">CLEAR DB</button>
+                        </div>
+
+                        <!-- Document List -->
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div style="color: #0f0; opacity: 0.8; font-size: 11px;">INDEXED FILES</div>
+                            </div>
+                            <div id="rag-doc-list" class="ops-list" style="max-height: 250px; font-size: 10px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dropdown Menus -->
+    <div id="ragdb-menu" class="dropdown-menu" style="position: fixed;">
+        <div class="dropdown-item" onclick="refreshRAGStats(); closeAllMenus();">
+            <span class="dropdown-item-label">VIEW STATS</span>
+            <span class="dropdown-item-desc">Show database statistics and indexed files</span>
+        </div>
+        <div class="dropdown-item" onclick="quickAddFolder(); closeAllMenus();">
+            <span class="dropdown-item-label">ADD FOLDER</span>
+            <span class="dropdown-item-desc">Add all files from directory recursively</span>
+        </div>
+        <div class="dropdown-item" onclick="quickSearchRAG(); closeAllMenus();">
+            <span class="dropdown-item-label">SEARCH</span>
+            <span class="dropdown-item-desc">Search indexed documents for content</span>
+        </div>
+        <div class="dropdown-item" onclick="quickViewIndex(); closeAllMenus();">
+            <span class="dropdown-item-label">VIEW INDEX</span>
+            <span class="dropdown-item-desc">List all indexed files and sizes</span>
+        </div>
+    </div>
+
+    <div id="rag-menu" class="dropdown-menu" style="position: fixed;">
+        <div class="dropdown-item" onclick="executeCommand('What documents are in the RAG system?'); closeAllMenus();">
+            <span class="dropdown-item-label">LIST DOCUMENTS</span>
+            <span class="dropdown-item-desc">Show all indexed documents</span>
+        </div>
+        <div class="dropdown-item" onclick="quickAddFolder(); closeAllMenus();">
+            <span class="dropdown-item-label">ADD FOLDER</span>
+            <span class="dropdown-item-desc">Index entire folder recursively</span>
+        </div>
+        <div class="dropdown-item" onclick="quickSearchRAG(); closeAllMenus();">
+            <span class="dropdown-item-label">SEARCH RAG</span>
+            <span class="dropdown-item-desc">Find content in indexed documents</span>
+        </div>
+        <div class="dropdown-item" onclick="executeCommand('Summarize the key topics in my RAG database'); closeAllMenus();">
+            <span class="dropdown-item-label">ANALYZE CONTENT</span>
+            <span class="dropdown-item-desc">AI analysis of indexed documents</span>
+        </div>
+    </div>
+
+    <div id="flux-menu" class="dropdown-menu" style="position: fixed;">
+        <div class="dropdown-item" onclick="executeCommand('What is my current Flux network status?'); closeAllMenus();">
+            <span class="dropdown-item-label">STATUS</span>
+            <span class="dropdown-item-desc">Check Flux network connection status</span>
+        </div>
+        <div class="dropdown-item" onclick="executeCommand('What are my Flux earnings?'); closeAllMenus();">
+            <span class="dropdown-item-label">CHECK EARNINGS</span>
+            <span class="dropdown-item-desc">View current and estimated earnings</span>
+        </div>
+        <div class="dropdown-item" onclick="executeCommand('Start Flux provider'); closeAllMenus();">
+            <span class="dropdown-item-label">START PROVIDER</span>
+            <span class="dropdown-item-desc">Begin providing compute resources</span>
+        </div>
+        <div class="dropdown-item" onclick="executeCommand('!systemctl status flux-provider'); closeAllMenus();">
+            <span class="dropdown-item-label">PROVIDER STATUS</span>
+            <span class="dropdown-item-desc">Check provider service status</span>
+        </div>
+    </div>
+
+    <script>
+        // ========== GLOBAL STATE ==========
+        const aiOutput = document.getElementById('aiOutput');
+        const userInput = document.getElementById('userInput');
+        const modelSelect = document.getElementById('modelSelect');
+
+        let commandHistory = [];
+        let historyIndex = -1;
+        let autoScroll = true;
+        let messageCount = 0;
+        let activeMenu = null;
+
+        // ========== DROPDOWN MENU MANAGEMENT ==========
+        function toggleShortcutMenu(menuId, event) {
+            event.stopPropagation();
+            const menu = document.getElementById(menuId);
+            const button = event.target;
+            const rect = button.getBoundingClientRect();
+
+            // Close other menus
+            if (activeMenu && activeMenu !== menu) {
+                activeMenu.classList.remove('active');
+            }
+
+            // Toggle current menu
+            if (menu.classList.contains('active')) {
+                menu.classList.remove('active');
+                activeMenu = null;
+            } else {
+                menu.style.left = rect.left + 'px';
+                menu.style.top = (rect.bottom + 4) + 'px';
+                menu.classList.add('active');
+                activeMenu = menu;
+            }
+        }
+
+        function closeAllMenus() {
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                menu.classList.remove('active');
+            });
+            activeMenu = null;
+        }
+
+        // Close menus when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.dropdown-menu') && !e.target.closest('.shortcut-btn')) {
+                closeAllMenus();
+            }
+        });
+
+        // ========== QUICK ACTIONS ==========
+        function quickAddFolder() {
+            // Focus on RAG panel and expand it
+            const ragPanel = document.getElementById('rag-content');
+            if (ragPanel.classList.contains('collapsed')) {
+                togglePanel('rag');
+            }
+
+            // Focus on folder input
+            setTimeout(() => {
+                const folderInput = document.getElementById('rag-folder-path');
+                folderInput.focus();
+                folderInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+
+            addMessage('Tip: Enter full path like /home/john/research/papers then click ADD', 'info');
+        }
+
+        function quickSearchRAG() {
+            // Focus on RAG panel and expand it
+            const ragPanel = document.getElementById('rag-content');
+            if (ragPanel.classList.contains('collapsed')) {
+                togglePanel('rag');
+            }
+
+            // Focus on search input
+            setTimeout(() => {
+                const searchInput = document.getElementById('rag-search-query');
+                searchInput.focus();
+                searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+
+            addMessage('Tip: Enter keywords to search indexed documents, then click FIND', 'info');
+        }
+
+        function quickViewIndex() {
+            // Expand RAG panel
+            const ragPanel = document.getElementById('rag-content');
+            if (ragPanel.classList.contains('collapsed')) {
+                togglePanel('rag');
+            }
+
+            // Refresh stats to show indexed files
+            refreshRAGStats();
+
+            // Scroll to document list
+            setTimeout(() => {
+                const docList = document.getElementById('rag-doc-list');
+                docList.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+
+        function showBackendInfo() {
+            const info = `
+╔═══════════════════════════════════════════════════════════╗
+║          AI BACKENDS & MODELS                             ║
+╚═══════════════════════════════════════════════════════════╝
+
+CURRENT SETUP:
+  Primary: Ollama (Local Inference)
+  Hardware: NPU + GPU + NCS2 (76.4 TOPS total)
+  Attestation: DSMIL Mode 5 Standard
+
+AVAILABLE MODELS:
+  FAST    - llama3.2:3b-instruct-q4_K_M (3B parameters)
+            Best for: Quick responses, simple queries
+            Speed: ~50-100 tokens/sec
+
+  LARGE   - qwen2.5:72b-instruct-q4_K_M (70B parameters)
+            Best for: Complex reasoning, analysis
+            Speed: ~10-20 tokens/sec
+
+  AUTO    - Smart routing based on query complexity
+            System automatically selects best model
+
+MODEL SELECTION:
+  • AUTO: Recommended for most users
+  • FAST: Use when speed matters most
+  • LARGE: Use for complex analysis, coding, reasoning
+
+RAG INTEGRATION:
+  All models can use RAG database for context
+  Documents are embedded and searchable
+  Supports .txt, .md, .pdf, .py, .cpp, .h, .json
+
+SWITCHING BACKENDS:
+  Use model dropdown or specify in query
+  Changes take effect immediately
+  No restart required
+
+═══════════════════════════════════════════════════════════`;
+            addMessage(info, 'system');
+        }
+
+        // ========== CHAT FUNCTIONS ==========
+        function addMessage(text, type = 'assistant', user = '') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message-block';
+
+            const timestamp = new Date().toLocaleTimeString();
+            const promptDiv = document.createElement('div');
+            promptDiv.className = 'message-prompt';
+
+            if (type === 'user') {
+                promptDiv.innerHTML = `<span style="color: #ff0;">TACTICAL></span> <span class="message-timestamp">${timestamp}</span>`;
+            } else if (type === 'assistant') {
+                promptDiv.innerHTML = `<span style="color: #0f0;">AI></span> <span class="message-timestamp">${timestamp}</span>`;
+            } else if (type === 'system') {
+                promptDiv.innerHTML = `<span style="color: #0ff;">SYSTEM></span> <span class="message-timestamp">${timestamp}</span>`;
+            } else if (type === 'error') {
+                promptDiv.innerHTML = `<span style="color: #f33;">ERROR></span> <span class="message-timestamp">${timestamp}</span>`;
+            } else if (type === 'info') {
+                promptDiv.innerHTML = `<span style="color: #0ff;">INFO></span> <span class="message-timestamp">${timestamp}</span>`;
+            }
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = `message-content ${type}`;
+            contentDiv.textContent = text;
+
+            messageDiv.appendChild(promptDiv);
+            messageDiv.appendChild(contentDiv);
+            aiOutput.appendChild(messageDiv);
+
+            messageCount++;
+            if (autoScroll) {
+                aiOutput.scrollTop = aiOutput.scrollHeight;
+            }
+
+            return contentDiv;
+        }
+
+        function clearChat() {
+            if (confirm('Clear all chat history?')) {
+                aiOutput.innerHTML = '';
+                messageCount = 0;
+                addMessage('Chat cleared. Ready for new commands.', 'system');
+            }
+        }
+
+        function exportChat() {
+            const messages = aiOutput.innerText;
+            const blob = new Blob([messages], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dsmil-chat-${new Date().toISOString().slice(0, 10)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            addMessage('Chat exported successfully.', 'system');
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            const btn = document.getElementById('autoscroll-btn');
+            btn.textContent = autoScroll ? 'AUTO' : 'MANUAL';
+            btn.style.opacity = autoScroll ? '1' : '0.5';
+            addMessage(`Auto-scroll ${autoScroll ? 'enabled' : 'disabled'}.`, 'system');
+        }
+
+        function sendCommand() {
+            const cmd = userInput.value.trim();
+            if (!cmd) return;
+
+            executeCommand(cmd);
+            userInput.value = '';
+            updateCharCount();
+            userInput.style.height = 'auto';
+        }
+
+        // ========== COMMAND EXECUTION ==========
+        async function executeCommand(cmd) {
+            if (!cmd.trim()) return;
+
+            addMessage(cmd, 'user');
+            commandHistory.unshift(cmd);
+            updateCommandHistoryPanel();
+            historyIndex = -1;
+
+            // Check if it's a shell command or AI query
+            if (cmd.startsWith('/') || cmd.startsWith('!')) {
+                await executeShellCommand(cmd.substring(1));
+            } else {
+                await executeAIQuery(cmd);
+            }
+        }
+
+        // ========== AI QUERY ==========
+        async function executeAIQuery(query) {
+            const model = modelSelect.value;
+            const loadingMsg = addMessage('Processing query...', 'assistant');
+            loadingMsg.classList.add('loading');
+
+            try {
+                const startTime = Date.now();
+                const response = await fetch(`/ai/chat?msg=${encodeURIComponent(query)}&model=${model}`);
+                const data = await response.json();
+                const endTime = Date.now();
+
+                // Remove loading message
+                loadingMsg.parentElement.remove();
+
+                if (data.error) {
+                    addMessage(`${data.error}`, 'error');
+                    if (data.suggestion) {
+                        addMessage(`Suggestion: ${data.suggestion}`, 'system');
+                    }
+                } else {
+                    addMessage(data.response, 'assistant');
+
+                    // Update metrics
+                    document.getElementById('ai-model').textContent = data.model_tier.toUpperCase();
+                    document.getElementById('inference-time').textContent = `${data.inference_time}s`;
+                    document.getElementById('tokens-sec').textContent = data.tokens_per_sec;
+                    document.getElementById('attestation').textContent = data.attestation.verified ? 'VALID' : 'FAIL';
+
+                    // Add to recent ops
+                    addRecentOp(`AI Query (${data.model_tier}): ${data.inference_time}s`);
+                }
+            } catch (error) {
+                loadingMsg.parentElement.remove();
+                addMessage(`Connection error: ${error.message}`, 'error');
+                addRecentOp(`AI Query FAILED: ${error.message}`);
+            }
+        }
+
+        // ========== SHELL COMMAND ==========
+        async function executeShellCommand(cmd) {
+            try {
+                const response = await fetch(`/exec?cmd=${encodeURIComponent(cmd)}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    addMessage(data.error, 'error');
+                } else {
+                    if (data.stdout) addMessage(data.stdout, 'system');
+                    if (data.stderr) addMessage(data.stderr, 'error');
+                    addRecentOp(`Shell: ${cmd.substring(0, 30)}...`);
+                }
+            } catch (error) {
+                addMessage(`Execution error: ${error.message}`, 'error');
+            }
+        }
+
+        // ========== SHORTCUTS ==========
+        async function executeShortcut(type) {
+            switch(type) {
+                case 'status':
+                    executeCommand('Give me full system status including NPU, GPU, NCS2, AVX-512, and DSMIL devices');
+                    break;
+                case 'avx512':
+                    // Show RAG stats instead (AVX-512 driver not installed)
+                    refreshRAGStats();
+                    addMessage('=== RAG INTELLIGENCE DATABASE STATUS ===', 'system');
+                    break;
+                case 'npu':
+                    executeCommand('!cat /home/john/.claude/npu-military.env');
+                    break;
+                case 'rag':
+                    executeCommand('What documents are in the RAG system?');
+                    break;
+                case 'flux':
+                    executeCommand('What is my current Flux network allocation and estimated earnings?');
+                    break;
+                case 'github':
+                    executeCommand('!ls -la /home/john/github_repos');
+                    break;
+                case 'collect':
+                    executeCommand('How do I use the smart paper collector?');
+                    break;
+                case 'prompt':
+                    executeCommand('!cat /home/john/.claude/custom_system_prompt.txt');
+                    break;
+                case 'help':
+                    showHelp();
+                    break;
+            }
+        }
+
+        function showHelp() {
+            const helpText = `
+═══════════════════════════════════════════════════════════
+DSMIL TACTICAL SYSTEM v8.0 - COMMAND REFERENCE
+═══════════════════════════════════════════════════════════
+
+NEW FEATURES:
+  • QUICK ACTION BAR: One-click access to common tasks
+  • DROPDOWN MENUS: F2, F4, F5 have submenus (click arrow)
+  • TOOLTIPS: Hover over any button for help
+  • RAG INSTRUCTIONS: Expand RAG panel to see usage guide
+  • BETTER LABELS: Everything clearly labeled with purpose
+
+QUICK ACTIONS (Top Bar):
+  ADD FOLDER TO RAG    - Add entire research folder (recursive)
+  SEARCH RAG          - Search indexed documents
+  VIEW INDEX          - See all indexed files
+  ASK AI ABOUT RAG    - Query AI about indexed content
+  AI BACKENDS         - View available models and how to use
+
+RAG INTELLIGENCE DATABASE:
+  • FOLDER button: Indexes ALL files in directory (recursive)
+  • FILE button: Adds single document to database
+  • SEARCH: Find specific content in indexed documents
+  • Supports: .txt, .md, .pdf, .py, .cpp, .h, .json
+  • Example paths shown in input placeholders
+  • Instructions visible when RAG panel expanded
+
+KEYBOARD SHORTCUTS:
+  F1  - Full system status with all hardware
+  F2  - RAG database (click ▼ for submenu)
+      ├─ View Stats
+      ├─ Add Folder
+      ├─ Search
+      └─ View Index
+  F3  - NPU military mode status
+  F4  - RAG operations (click ▼ for submenu)
+      ├─ List Documents
+      ├─ Add Folder
+      ├─ Search RAG
+      └─ Analyze Content
+  F5  - Flux network (click ▼ for submenu)
+      ├─ Status
+      ├─ Check Earnings
+      ├─ Start Provider
+      └─ Provider Status
+  F6  - GitHub repositories
+  F7  - Smart paper collector
+  F8  - View/edit system prompt
+  F9  - This help
+
+AI QUERIES:
+  Type naturally - system auto-routes to best model
+  Use dropdown to force FAST (3B) or LARGE (70B+)
+  AUTO mode intelligently picks model for your query
+
+SHELL COMMANDS:
+  Prefix with ! or / to execute system commands
+  Example: !ls -la or /cat file.txt
+
+INTERFACE TIPS:
+  • All panels collapse/expand (click header)
+  • All buttons have tooltips (hover to see)
+  • Command history clickable (click to reuse)
+  • Multi-line input: Shift+Enter for new line
+  • Enter key works in all RAG input fields
+
+HARDWARE:
+  76.4 TOPS total (NPU 26.4 + GPU 40 + NCS2 10)
+
+SECURITY:
+  Mode 5 STANDARD with DSMIL attestation
+
+═══════════════════════════════════════════════════════════`;
+            addMessage(helpText, 'system');
+        }
+
+        // ========== PANEL MANAGEMENT ==========
+        function togglePanel(panelName) {
+            const content = document.getElementById(`${panelName}-content`);
+            const indicator = document.getElementById(`${panelName}-indicator`);
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                indicator.textContent = '[-]';
+            } else {
+                content.classList.add('collapsed');
+                indicator.textContent = '[+]';
+            }
+        }
+
+        // ========== RECENT OPERATIONS ==========
+        function addRecentOp(text) {
+            const recentOps = document.getElementById('recentOps');
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = 'op-item';
+            div.textContent = `[${timestamp}] ${text}`;
+            recentOps.insertBefore(div, recentOps.firstChild);
+
+            // Keep only last 50 operations
+            while (recentOps.children.length > 50) {
+                recentOps.removeChild(recentOps.lastChild);
+            }
+        }
+
+        function updateCommandHistoryPanel() {
+            const historyPanel = document.getElementById('commandHistory');
+            historyPanel.innerHTML = '';
+
+            commandHistory.slice(0, 20).forEach((cmd, idx) => {
+                const div = document.createElement('div');
+                div.className = 'op-item';
+                div.style.cursor = 'pointer';
+                div.textContent = `${idx + 1}. ${cmd.substring(0, 40)}${cmd.length > 40 ? '...' : ''}`;
+                div.onclick = () => {
+                    userInput.value = cmd;
+                    userInput.focus();
+                };
+                historyPanel.appendChild(div);
+            });
+        }
+
+        // ========== INPUT HANDLERS ==========
+        userInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendCommand();
+            } else if (e.key === 'ArrowUp' && this.selectionStart === 0) {
+                e.preventDefault();
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    this.value = commandHistory[historyIndex];
+                }
+            } else if (e.key === 'ArrowDown' && this.selectionStart === this.value.length) {
+                e.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    this.value = commandHistory[historyIndex];
+                } else if (historyIndex === 0) {
+                    historyIndex = -1;
+                    this.value = '';
+                }
+            }
+        });
+
+        userInput.addEventListener('input', updateCharCount);
+
+        function updateCharCount() {
+            const count = userInput.value.length;
+            document.getElementById('char-count').textContent = `${count} chars`;
+        }
+
+        // ========== F-KEY HANDLERS ==========
+        document.addEventListener('keydown', function(e) {
+            if (e.key >= 'F1' && e.key <= 'F9') {
+                e.preventDefault();
+                const shortcuts = ['status', 'avx512', 'npu', 'rag', 'flux', 'github', 'collect', 'prompt', 'help'];
+                const index = parseInt(e.key.substring(1)) - 1;
+
+                // For F2, F4, F5 - show menu if not already visible
+                if (index === 1 || index === 3 || index === 4) {
+                    const menuIds = ['', 'ragdb-menu', '', 'rag-menu', 'flux-menu'];
+                    const menuId = menuIds[index];
+                    if (menuId) {
+                        const button = document.querySelector(`[onclick*="${menuId}"]`);
+                        if (button) {
+                            const rect = button.getBoundingClientRect();
+                            const event = { target: button, stopPropagation: () => {} };
+                            toggleShortcutMenu(menuId, event);
+                        }
+                    }
+                } else {
+                    executeShortcut(shortcuts[index]);
+                }
+            }
+        });
+
+        // ========== INITIALIZATION ==========
+        async function init() {
+            addMessage('═══════════════════════════════════════════════════════════', 'system');
+            addMessage('DSMIL TACTICAL SYSTEM v8.0', 'system');
+            addMessage('Hardware-Attested AI with Mode 5 Platform Integrity', 'system');
+            addMessage('Enhanced Interface with Quick Actions & Submenus', 'system');
+            addMessage('═══════════════════════════════════════════════════════════', 'system');
+
+            // Check AI status
+            try {
+                const response = await fetch('/ai/status');
+                const data = await response.json();
+
+                if (data.ollama && data.ollama.connected) {
+                    addMessage('AI Engine: ONLINE', 'system');
+                    addMessage(`Fast Model: ${data.models.fast.available ? 'READY' : 'UNAVAILABLE'}`, 'system');
+                    addMessage(`Large Model: ${data.models.large.available ? 'READY' : 'UNAVAILABLE'}`, 'system');
+                    addMessage(`DSMIL: Mode ${data.dsmil.mode5.mode5_level}`, 'system');
+                    document.getElementById('ai-model').textContent = 'READY';
+                    document.getElementById('ai-status').className = 'status-indicator status-online';
+                } else {
+                    addMessage('AI Engine: OFFLINE', 'error');
+                    addMessage('Run: ollama pull llama3.2:3b-instruct-q4_K_M', 'system');
+                    document.getElementById('ai-model').textContent = 'OFFLINE';
+                    document.getElementById('ai-status').className = 'status-indicator status-offline';
+                }
+            } catch (error) {
+                addMessage('Cannot connect to server', 'error');
+                document.getElementById('ai-status').className = 'status-indicator status-offline';
+            }
+
+            addMessage('═══════════════════════════════════════════════════════════', 'system');
+            addMessage('QUICK START:', 'info');
+            addMessage('1. Click "ADD FOLDER TO RAG" to index research documents', 'info');
+            addMessage('2. Use "SEARCH RAG" to find specific content', 'info');
+            addMessage('3. Click F2/F4/F5 arrows (▼) for dropdown menus', 'info');
+            addMessage('4. Hover over any button to see what it does', 'info');
+            addMessage('5. Press F9 for full help', 'info');
+            addMessage('═══════════════════════════════════════════════════════════', 'system');
+
+            userInput.focus();
+
+            // Load RAG stats on startup
+            refreshRAGStats();
+
+            // Update status metrics every 5 seconds
+            setInterval(updateStatus, 5000);
+        }
+
+        // ========== STATUS UPDATES ==========
+        async function updateStatus() {
+            try {
+                const response = await fetch('/exec?cmd=python3%20/home/john/gna_presence_detector.py');
+                const data = await response.json();
+
+                if (data.stdout && data.stdout.includes('PRESENT')) {
+                    document.getElementById('presence').textContent = 'ACTIVE';
+                    document.getElementById('flux-status').textContent = 'MINIMAL';
+                } else if (data.stdout && data.stdout.includes('IDLE')) {
+                    document.getElementById('presence').textContent = 'IDLE';
+                    document.getElementById('flux-status').textContent = 'MODERATE';
+                } else {
+                    document.getElementById('presence').textContent = 'AWAY';
+                    document.getElementById('flux-status').textContent = 'FULL';
+                }
+            } catch (error) {
+                // Silent fail
+            }
+        }
+
+        // ========== RAG MANAGEMENT ==========
+        async function refreshRAGStats() {
+            try {
+                // Get stats
+                const statsResponse = await fetch('/rag/stats');
+                const stats = await statsResponse.json();
+
+                // Update display
+                if (stats.error) {
+                    document.getElementById('rag-doc-count').textContent = 'ERR';
+                    document.getElementById('rag-token-count').textContent = 'ERR';
+                    document.getElementById('rag-size').textContent = 'ERR';
+                    addMessage(`RAG stats error: ${stats.error}`, 'error');
+                } else {
+                    document.getElementById('rag-doc-count').textContent = stats.document_count || '0';
+                    document.getElementById('rag-token-count').textContent = stats.total_tokens ? stats.total_tokens.toLocaleString() : '0';
+
+                    // Format size
+                    const sizeKB = stats.total_size_bytes ? (stats.total_size_bytes / 1024).toFixed(1) : '0';
+                    document.getElementById('rag-size').textContent = sizeKB + 'KB';
+
+                    // Update header metric
+                    document.getElementById('rag-docs').textContent = stats.document_count || '0';
+                }
+
+                // Get document list
+                const listResponse = await fetch('/rag/list');
+                const listData = await listResponse.json();
+
+                const docList = document.getElementById('rag-doc-list');
+                docList.innerHTML = '';
+
+                if (listData.error) {
+                    docList.innerHTML = '<div class="op-item" style="color: #f33;">Error loading documents</div>';
+                } else if (listData.documents && listData.documents.length > 0) {
+                    listData.documents.forEach(doc => {
+                        const div = document.createElement('div');
+                        div.className = 'op-item';
+                        div.style.paddingRight = '4px';
+
+                        // Extract filename from path
+                        const filename = doc.path.split('/').pop();
+                        const tokens = doc.tokens ? doc.tokens.toLocaleString() : '?';
+
+                        div.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${doc.path}">
+                                    ${filename}
+                                </div>
+                                <div style="color: #ff0; margin-left: 8px; white-space: nowrap;">
+                                    ${tokens}T
+                                </div>
+                            </div>
+                        `;
+                        docList.appendChild(div);
+                    });
+                } else {
+                    docList.innerHTML = '<div class="op-item" style="opacity: 0.5;">No documents indexed - use "ADD FOLDER" above</div>';
+                }
+
+                addRecentOp('RAG stats refreshed');
+            } catch (error) {
+                addMessage(`RAG refresh error: ${error.message}`, 'error');
+                document.getElementById('rag-doc-count').textContent = 'ERR';
+                document.getElementById('rag-token-count').textContent = 'ERR';
+                document.getElementById('rag-size').textContent = 'ERR';
+            }
+        }
+
+        async function addRAGFile() {
+            const pathInput = document.getElementById('rag-file-path');
+            const path = pathInput.value.trim();
+
+            if (!path) {
+                addMessage('Enter file path first', 'error');
+                return;
+            }
+
+            addMessage(`Adding file to RAG: ${path}`, 'system');
+            const loadingMsg = addMessage('Processing file...', 'info');
+            loadingMsg.classList.add('loading');
+
+            try {
+                const response = await fetch(`/rag/add-file?path=${encodeURIComponent(path)}`);
+                const data = await response.json();
+
+                loadingMsg.parentElement.remove();
+
+                if (data.error) {
+                    addMessage(`Failed to add file: ${data.error}`, 'error');
+                } else {
+                    addMessage(`File added successfully: ${data.tokens || '?'} tokens`, 'system');
+                    pathInput.value = '';
+
+                    // Refresh stats after successful add
+                    setTimeout(() => refreshRAGStats(), 500);
+                    addRecentOp(`RAG: Added ${path.split('/').pop()}`);
+                }
+            } catch (error) {
+                loadingMsg.parentElement.remove();
+                addMessage(`Error adding file: ${error.message}`, 'error');
+            }
+        }
+
+        async function addRAGFolder() {
+            const pathInput = document.getElementById('rag-folder-path');
+            const path = pathInput.value.trim();
+
+            if (!path) {
+                addMessage('Enter folder path first', 'error');
+                return;
+            }
+
+            addMessage(`Adding folder to RAG: ${path}`, 'system');
+            const loadingMsg = addMessage('Processing folder (this may take a while)...', 'info');
+            loadingMsg.classList.add('loading');
+
+            try {
+                const response = await fetch(`/rag/add-folder?path=${encodeURIComponent(path)}`);
+                const data = await response.json();
+
+                loadingMsg.parentElement.remove();
+
+                if (data.error) {
+                    addMessage(`Failed to add folder: ${data.error}`, 'error');
+                } else {
+                    const fileCount = data.files_added || 0;
+                    const tokens = data.total_tokens || 0;
+                    addMessage(`Folder processed: ${fileCount} files, ${tokens.toLocaleString()} tokens`, 'system');
+
+                    if (data.files && data.files.length > 0) {
+                        const fileList = data.files.slice(0, 10).join('\n');
+                        const more = data.files.length > 10 ? `\n... and ${data.files.length - 10} more` : '';
+                        addMessage(`Files added:\n${fileList}${more}`, 'info');
+                    }
+
+                    pathInput.value = '';
+
+                    // Refresh stats after successful add
+                    setTimeout(() => refreshRAGStats(), 500);
+                    addRecentOp(`RAG: Added folder with ${fileCount} files`);
+                }
+            } catch (error) {
+                loadingMsg.parentElement.remove();
+                addMessage(`Error adding folder: ${error.message}`, 'error');
+            }
+        }
+
+        async function searchRAG() {
+            const queryInput = document.getElementById('rag-search-query');
+            const query = queryInput.value.trim();
+
+            if (!query) {
+                addMessage('Enter search query first', 'error');
+                return;
+            }
+
+            addMessage(`Searching RAG database: "${query}"`, 'system');
+            const loadingMsg = addMessage('Searching...', 'info');
+            loadingMsg.classList.add('loading');
+
+            try {
+                const response = await fetch(`/rag/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                loadingMsg.parentElement.remove();
+
+                if (data.error) {
+                    addMessage(`Search failed: ${data.error}`, 'error');
+                } else if (data.results && data.results.length > 0) {
+                    addMessage(`Found ${data.results.length} result(s):`, 'system');
+
+                    data.results.forEach((result, idx) => {
+                        const filename = result.source ? result.source.split('/').pop() : 'Unknown';
+                        const score = result.score ? result.score.toFixed(3) : 'N/A';
+                        const content = result.content || result.text || '';
+
+                        // Truncate content if too long
+                        const preview = content.length > 300 ? content.substring(0, 297) + '...' : content;
+
+                        const resultText = `
+[${idx + 1}] ${filename} (score: ${score})
+${preview}
+${'─'.repeat(60)}`;
+                        addMessage(resultText, 'info');
+                    });
+
+                    addRecentOp(`RAG: Search found ${data.results.length} results`);
+                } else {
+                    addMessage('No results found', 'system');
+                }
+            } catch (error) {
+                loadingMsg.parentElement.remove();
+                addMessage(`Search error: ${error.message}`, 'error');
+            }
+        }
+
+        async function clearRAGDatabase() {
+            if (!confirm('Clear entire RAG database? This cannot be undone!')) {
+                return;
+            }
+
+            addMessage('Clearing RAG database...', 'system');
+            const loadingMsg = addMessage('Processing...', 'info');
+            loadingMsg.classList.add('loading');
+
+            try {
+                const response = await fetch('/rag/clear');
+                const data = await response.json();
+
+                loadingMsg.parentElement.remove();
+
+                if (data.error) {
+                    addMessage(`Failed to clear database: ${data.error}`, 'error');
+                } else {
+                    addMessage('RAG database cleared successfully', 'system');
+                    setTimeout(() => refreshRAGStats(), 500);
+                    addRecentOp('RAG: Database cleared');
+                }
+            } catch (error) {
+                loadingMsg.parentElement.remove();
+                addMessage(`Error clearing database: ${error.message}`, 'error');
+            }
+        }
+
+        // Enter key support for RAG inputs
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('rag-search-query');
+            if (searchInput) {
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        searchRAG();
+                    }
+                });
+            }
+
+            const fileInput = document.getElementById('rag-file-path');
+            if (fileInput) {
+                fileInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addRAGFile();
+                    }
+                });
+            }
+
+            const folderInput = document.getElementById('rag-folder-path');
+            if (folderInput) {
+                folderInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addRAGFolder();
+                    }
+                });
+            }
+        });
+
+        // ========== START APPLICATION ==========
+        init();
+    </script>
+</body>
+</html>

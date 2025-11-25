@@ -1,0 +1,650 @@
+/**
+ * LAT5150 TACTICAL THEME REFERENCE
+ * Complete CSS class and variable reference for dynamic page integration
+ * TEMPEST-Compliant Design System
+ *
+ * VERSION: 1.0.0
+ * CLASSIFICATION: UNCLASSIFIED
+ *
+ * Usage: Import this reference to understand available classes
+ * DO NOT include this file directly - classes are provided by the main UI
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES (Variables)
+   Use these for dynamic theming across Comfort/Day/Night modes
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+    /* ──────────────────────────────────────────────────────────────────────
+       BACKGROUNDS - Automatically adapt to tactical mode
+       ────────────────────────────────────────────────────────────────────── */
+    --bg-primary: #1a2228;      /* Main background */
+    --bg-secondary: #232d35;    /* Secondary background (panels) */
+    --bg-tertiary: #2d3942;     /* Tertiary background (cards) */
+    --bg-input: #1f282f;        /* Input fields */
+    --bg-hover: #3a4550;        /* Hover state */
+    --bg-active: #455058;       /* Active/pressed state */
+
+    /* ──────────────────────────────────────────────────────────────────────
+       TEXT COLORS - High contrast in all modes
+       ────────────────────────────────────────────────────────────────────── */
+    --text-primary: #d4e4f0;    /* Primary text (headings, important) */
+    --text-secondary: #a8c0d4;  /* Secondary text (descriptions) */
+    --text-muted: #7a95ab;      /* Muted text (metadata, hints) */
+    --text-inverse: #1a2228;    /* Inverse text (on colored backgrounds) */
+
+    /* ──────────────────────────────────────────────────────────────────────
+       BORDERS - Subtle separation
+       ────────────────────────────────────────────────────────────────────── */
+    --border-primary: #3d5060;     /* Primary borders */
+    --border-secondary: #2d3d4d;   /* Secondary borders */
+    --border-active: #4db8e8;      /* Active/focused borders */
+
+    /* ──────────────────────────────────────────────────────────────────────
+       STATUS COLORS - System state indicators
+       ────────────────────────────────────────────────────────────────────── */
+    --status-success: #5fdc8f;     /* Success (green) */
+    --status-warning: #f4b860;     /* Warning (yellow/orange) */
+    --status-error: #ff6b6b;       /* Error (red) */
+    --status-info: #4db8e8;        /* Info (blue) */
+    --status-processing: #ffa940;  /* Processing/pending (orange) */
+
+    /* ──────────────────────────────────────────────────────────────────────
+       TACTICAL ACCENTS - Primary UI accents
+       ────────────────────────────────────────────────────────────────────── */
+    --tactical-primary: #4db8e8;   /* Primary accent (buttons, links) */
+    --tactical-secondary: #3aa0d0; /* Secondary accent */
+    --tactical-accent: #6fd4ff;    /* Highlight accent */
+
+    /* ──────────────────────────────────────────────────────────────────────
+       EFFECTS - Shadows and glows (minimal for TEMPEST)
+       ────────────────────────────────────────────────────────────────────── */
+    --shadow-tactical: 0 2px 6px rgba(77, 184, 232, 0.15);
+    --glow-tactical: 0 0 8px rgba(77, 184, 232, 0.25);
+
+    /* ──────────────────────────────────────────────────────────────────────
+       SECURITY CLASSIFICATION COLORS
+       ────────────────────────────────────────────────────────────────────── */
+    --classification-unclass: #00ff00;  /* UNCLASSIFIED */
+    --classification-cui: #ffff00;      /* CUI */
+    --classification-secret: #ff0000;   /* SECRET */
+    --classification-ts: #ff00ff;       /* TOP SECRET */
+
+    /* ──────────────────────────────────────────────────────────────────────
+       SPACING - Grid-based system (8px base unit)
+       ────────────────────────────────────────────────────────────────────── */
+    --spacing-xs: 4px;   /* 0.5 grid units */
+    --spacing-sm: 8px;   /* 1 grid unit */
+    --spacing-md: 16px;  /* 2 grid units */
+    --spacing-lg: 24px;  /* 3 grid units */
+    --spacing-xl: 32px;  /* 4 grid units */
+    --grid-unit: 8px;
+
+    /* ──────────────────────────────────────────────────────────────────────
+       TYPOGRAPHY
+       ────────────────────────────────────────────────────────────────────── */
+    --font-mono: 'Courier New', 'Consolas', 'Monaco', monospace;
+    --font-system: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+
+    /* ──────────────────────────────────────────────────────────────────────
+       TEMPEST COMPLIANCE
+       ────────────────────────────────────────────────────────────────────── */
+    --tempest-max-brightness: 0.85;     /* Maximum brightness (85%) */
+    --tempest-animation-duration: 0ms;  /* Animations disabled */
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYOUT CLASSES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * .tactical-container
+ * Main container for page content
+ * Full width, standard padding
+ */
+.tactical-container {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+/**
+ * .tactical-section
+ * Section container with optional header
+ * Use for grouping related content
+ */
+.tactical-section {
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 4px;
+}
+
+/**
+ * .tactical-grid
+ * Responsive grid layout
+ * Automatically adjusts columns based on content
+ */
+.tactical-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-md);
+    margin: var(--spacing-md) 0;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CARD COMPONENTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * .tactical-card
+ * Card container for data display
+ * Includes header, value, footer sections
+ */
+.tactical-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: 4px;
+    padding: var(--spacing-md);
+    box-shadow: var(--shadow-tactical);
+}
+
+.tactical-card:hover {
+    border-color: var(--border-active);
+    box-shadow: var(--glow-tactical);
+}
+
+/**
+ * .tactical-card-header
+ * Card header/title
+ */
+.tactical-card-header {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-sm);
+}
+
+/**
+ * .tactical-card-value
+ * Main value display in card
+ * Large, prominent text
+ */
+.tactical-card-value {
+    font-size: 32px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--tactical-primary);
+    margin: var(--spacing-sm) 0;
+}
+
+/**
+ * .tactical-card-footer
+ * Card footer content
+ */
+.tactical-card-footer {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid var(--border-secondary);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHY CLASSES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * .tactical-section-title
+ * Main section heading (H2)
+ */
+.tactical-section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 var(--spacing-md) 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/**
+ * .tactical-section-subtitle
+ * Subsection heading (H3)
+ */
+.tactical-section-subtitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: var(--spacing-md) 0 var(--spacing-sm) 0;
+}
+
+/**
+ * .tactical-page-title
+ * Main page title (H1)
+ */
+.tactical-page-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--tactical-primary);
+    margin: 0 0 var(--spacing-sm) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+/**
+ * .tactical-page-description
+ * Page description text
+ */
+.tactical-page-description {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0 0 var(--spacing-lg) 0;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STATUS INDICATORS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * .tactical-status
+ * Status badge/indicator
+ * Combine with status type classes
+ */
+.tactical-status {
+    display: inline-block;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: var(--font-mono);
+}
+
+.tactical-status-success {
+    background: var(--status-success);
+    color: var(--text-inverse);
+}
+
+.tactical-status-warning {
+    background: var(--status-warning);
+    color: var(--text-inverse);
+}
+
+.tactical-status-error {
+    background: var(--status-error);
+    color: var(--text-inverse);
+}
+
+.tactical-status-info {
+    background: var(--status-info);
+    color: var(--text-inverse);
+}
+
+.tactical-status-processing {
+    background: var(--status-processing);
+    color: var(--text-inverse);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DATA DISPLAY
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * .tactical-stat
+ * Single statistic display
+ * Label + value + optional unit
+ */
+.tactical-stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm);
+    background: var(--bg-tertiary);
+    border-left: 3px solid var(--tactical-primary);
+}
+
+.tactical-stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+}
+
+.tactical-stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+}
+
+.tactical-stat-unit {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BUTTONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * .tactical-btn
+ * Base button style
+ * Combine with button type classes
+ */
+.tactical-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 2px solid transparent;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: none; /* TEMPEST: No transitions */
+}
+
+.tactical-btn:hover {
+    opacity: 0.9;
+}
+
+.tactical-btn:active {
+    opacity: 0.8;
+}
+
+.tactical-btn-primary {
+    background: var(--tactical-primary);
+    color: var(--text-inverse);
+    border-color: var(--tactical-primary);
+}
+
+.tactical-btn-secondary {
+    background: transparent;
+    color: var(--tactical-primary);
+    border-color: var(--tactical-primary);
+}
+
+.tactical-btn-danger {
+    background: var(--status-error);
+    color: var(--text-inverse);
+    border-color: var(--status-error);
+}
+
+.tactical-btn-success {
+    background: var(--status-success);
+    color: var(--text-inverse);
+    border-color: var(--status-success);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CODE DISPLAY
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * .tactical-code
+ * Code block container
+ * Monospace font, proper spacing
+ */
+.tactical-code {
+    display: block;
+    padding: var(--spacing-md);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    overflow-x: auto;
+    white-space: pre;
+}
+
+/**
+ * .tactical-code-block
+ * Code block with header
+ */
+.tactical-code-block {
+    margin: var(--spacing-md) 0;
+}
+
+.tactical-code-header {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-bottom: none;
+    border-radius: 3px 3px 0 0;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.tactical-code-block .tactical-code {
+    border-radius: 0 0 3px 3px;
+    margin-top: 0;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FORMS & INPUTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * .tactical-input
+ * Text input field
+ */
+.tactical-input {
+    width: 100%;
+    padding: var(--spacing-sm);
+    background: var(--bg-input);
+    border: 1px solid var(--border-primary);
+    border-radius: 3px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+
+.tactical-input:focus {
+    outline: none;
+    border-color: var(--border-active);
+    box-shadow: var(--glow-tactical);
+}
+
+/**
+ * .tactical-select
+ * Select dropdown
+ */
+.tactical-select {
+    width: 100%;
+    padding: var(--spacing-sm);
+    background: var(--bg-input);
+    border: 1px solid var(--border-primary);
+    border-radius: 3px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+
+/**
+ * .tactical-label
+ * Form label
+ */
+.tactical-label {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TABLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * .tactical-table
+ * Data table
+ */
+.tactical-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
+.tactical-table thead {
+    background: var(--bg-tertiary);
+    border-bottom: 2px solid var(--border-primary);
+}
+
+.tactical-table th {
+    padding: var(--spacing-sm);
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+}
+
+.tactical-table td {
+    padding: var(--spacing-sm);
+    border-bottom: 1px solid var(--border-secondary);
+    color: var(--text-primary);
+}
+
+.tactical-table tr:hover {
+    background: var(--bg-hover);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ALERTS & NOTIFICATIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * .tactical-alert
+ * Alert/notification box
+ */
+.tactical-alert {
+    padding: var(--spacing-md);
+    border-left: 4px solid;
+    border-radius: 3px;
+    margin: var(--spacing-md) 0;
+}
+
+.tactical-alert-success {
+    background: rgba(95, 220, 143, 0.1);
+    border-color: var(--status-success);
+    color: var(--status-success);
+}
+
+.tactical-alert-warning {
+    background: rgba(244, 184, 96, 0.1);
+    border-color: var(--status-warning);
+    color: var(--status-warning);
+}
+
+.tactical-alert-error {
+    background: rgba(255, 107, 107, 0.1);
+    border-color: var(--status-error);
+    color: var(--status-error);
+}
+
+.tactical-alert-info {
+    background: rgba(77, 184, 232, 0.1);
+    border-color: var(--status-info);
+    color: var(--status-info);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILITY CLASSES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Text alignment */
+.tactical-text-left { text-align: left; }
+.tactical-text-center { text-align: center; }
+.tactical-text-right { text-align: right; }
+
+/* Text colors */
+.tactical-text-primary { color: var(--text-primary); }
+.tactical-text-secondary { color: var(--text-secondary); }
+.tactical-text-muted { color: var(--text-muted); }
+.tactical-text-success { color: var(--status-success); }
+.tactical-text-warning { color: var(--status-warning); }
+.tactical-text-error { color: var(--status-error); }
+.tactical-text-info { color: var(--status-info); }
+
+/* Spacing utilities */
+.tactical-mt-sm { margin-top: var(--spacing-sm); }
+.tactical-mt-md { margin-top: var(--spacing-md); }
+.tactical-mt-lg { margin-top: var(--spacing-lg); }
+.tactical-mb-sm { margin-bottom: var(--spacing-sm); }
+.tactical-mb-md { margin-bottom: var(--spacing-md); }
+.tactical-mb-lg { margin-bottom: var(--spacing-lg); }
+.tactical-p-sm { padding: var(--spacing-sm); }
+.tactical-p-md { padding: var(--spacing-md); }
+.tactical-p-lg { padding: var(--spacing-lg); }
+
+/* Display utilities */
+.tactical-flex { display: flex; }
+.tactical-flex-col { flex-direction: column; }
+.tactical-flex-center { align-items: center; justify-content: center; }
+.tactical-gap-sm { gap: var(--spacing-sm); }
+.tactical-gap-md { gap: var(--spacing-md); }
+
+/* Width utilities */
+.tactical-full-width { width: 100%; }
+.tactical-half-width { width: 50%; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TEMPEST COMPLIANCE NOTES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/*
+ * TEMPEST GUIDELINES FOR CUSTOM CSS:
+ *
+ * ✅ ALLOWED:
+ * - Instant state changes (no animation duration)
+ * - Opacity changes (instant or max 50ms)
+ * - Color changes (instant)
+ * - Using tactical CSS variables
+ * - Grid/Flexbox layouts
+ * - Static shadows (no animated effects)
+ *
+ * ❌ FORBIDDEN:
+ * - @keyframes animations
+ * - transition: all (increases EMF)
+ * - Long transition durations (>50ms)
+ * - External resources (http://, https://)
+ * - External fonts (@font-face with URLs)
+ * - transform animations
+ * - filter animations
+ *
+ * RATIONALE:
+ * Animations and transitions cause rapid screen updates that increase
+ * electromagnetic emissions, which can be intercepted remotely (TEMPEST attack).
+ * Minimal or instant transitions reduce this attack surface.
+ */

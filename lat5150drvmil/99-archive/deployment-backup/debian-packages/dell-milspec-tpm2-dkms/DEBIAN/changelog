@@ -1,0 +1,10 @@
+tpm2-accel-early-dkms (1.0.0-1) stable; urgency=medium
+
+  * Initial release
+  * Intel NPU acceleration (34.0 TOPS)
+  * Security levels 0-3
+  * Early boot integration
+  * Dell SMBIOS tokens
+  * 40,000+ TPM ops/sec
+
+ -- TPM2 Acceleration Project <tpm2-accel@mil.spec>  Fri, 11 Oct 2025 10:35:00 -0400

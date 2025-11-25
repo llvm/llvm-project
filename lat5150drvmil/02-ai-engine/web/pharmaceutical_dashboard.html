@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAT5150DRVMIL | Pharmaceutical Research Corpus | TEMPEST Class C</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ============================================
+           TEMPEST TACTICAL THEME
+           Class C Compliance
+           ============================================ */
+
+        :root {
+            /* TEMPEST Color Palette */
+            --tempest-bg: #0a0e1a;
+            --tempest-surface: #141824;
+            --tempest-surface-light: #1e2433;
+            --tempest-border: #2a3142;
+            --tempest-grid: rgba(0, 255, 157, 0.05);
+            --tempest-scan: rgba(0, 255, 157, 0.1);
+
+            /* TEMPEST Level Colors */
+            --level-0: #00ff9d;  /* PUBLIC - Cyan */
+            --level-1: #00d4ff;  /* RESTRICTED - Blue */
+            --level-2: #ffa500;  /* CONTROLLED - Orange */
+            --level-3: #ff3366;  /* CLASSIFIED - Red */
+
+            /* Text */
+            --text-primary: #e8edf4;
+            --text-secondary: #9ca8b8;
+            --text-muted: #6b7785;
+
+            /* Status */
+            --success: #00ff9d;
+            --warning: #ffa500;
+            --error: #ff3366;
+            --info: #00d4ff;
+
+            /* Typography */
+            --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-mono);
+            background: var(--tempest-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Grid Overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(var(--tempest-grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--tempest-grid) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Scan Line Effect */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg,
+                transparent,
+                var(--tempest-scan),
+                transparent
+            );
+            animation: scan 3s linear infinite;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(0); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(100vh); opacity: 0; }
+        }
+
+        /* Header */
+        header {
+            position: relative;
+            z-index: 10;
+            background: var(--tempest-surface);
+            border-bottom: 2px solid var(--level-0);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 20px rgba(0, 255, 157, 0.1);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--level-0);
+            text-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
+        }
+
+        .tempest-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            background: var(--tempest-surface-light);
+            border: 1px solid var(--tempest-border);
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* Main Container */
+        main {
+            position: relative;
+            z-index: 10;
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        /* Security Level Selector */
+        .security-selector {
+            background: var(--tempest-surface);
+            border: 1px solid var(--tempest-border);
+            border-radius: 4px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .security-selector h2 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .level-card {
+            background: var(--tempest-surface-light);
+            border: 2px solid var(--tempest-border);
+            border-radius: 4px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .level-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .level-card.active {
+            border-color: currentColor;
+            box-shadow: 0 0 20px currentColor;
+        }
+
+        .level-card.level-0 { color: var(--level-0); }
+        .level-card.level-1 { color: var(--level-1); }
+        .level-card.level-2 { color: var(--level-2); }
+        .level-card.level-3 { color: var(--level-3); }
+
+        .level-number {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .level-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .level-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Analysis Form */
+        .analysis-section {
+            background: var(--tempest-surface);
+            border: 1px solid var(--tempest-border);
+            border-radius: 4px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            color: var(--level-0);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--tempest-border);
+            padding-bottom: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            background: var(--tempest-bg);
+            border: 1px solid var(--tempest-border);
+            color: var(--text-primary);
+            padding: 0.75rem;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--level-0);
+            box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: var(--tempest-surface-light);
+            border: 2px solid var(--level-0);
+            color: var(--level-0);
+            padding: 0.75rem 2rem;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover {
+            background: var(--level-0);
+            color: var(--tempest-bg);
+            box-shadow: 0 0 20px rgba(0, 255, 157, 0.5);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button.secondary {
+            border-color: var(--tempest-border);
+            color: var(--text-secondary);
+        }
+
+        button.secondary:hover {
+            background: var(--tempest-border);
+            color: var(--text-primary);
+            box-shadow: none;
+        }
+
+        /* Results Display */
+        .results-section {
+            background: var(--tempest-surface);
+            border: 1px solid var(--tempest-border);
+            border-radius: 4px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-item {
+            background: var(--tempest-bg);
+            border-left: 3px solid var(--level-0);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .result-key {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .result-value {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Status Indicators */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            background: var(--tempest-surface-light);
+            border-radius: 4px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-success .status-dot { background: var(--success); }
+        .status-warning .status-dot { background: var(--warning); }
+        .status-error .status-dot { background: var(--error); }
+        .status-info .status-dot { background: var(--info); }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--tempest-border);
+            border-top-color: var(--level-0);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Code Display */
+        pre {
+            background: var(--tempest-bg);
+            border: 1px solid var(--tempest-border);
+            border-radius: 4px;
+            padding: 1rem;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        code {
+            font-family: var(--font-mono);
+            color: var(--level-0);
+        }
+
+        /* API Key Input */
+        .api-key-section {
+            background: var(--tempest-surface-light);
+            border: 1px solid var(--tempest-border);
+            border-radius: 4px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .api-key-input {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+        }
+
+        /* Footer */
+        footer {
+            position: relative;
+            z-index: 10;
+            background: var(--tempest-surface);
+            border-top: 1px solid var(--tempest-border);
+            padding: 2rem;
+            margin-top: 4rem;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .level-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <h1>🧬 LAT5150DRVMIL | Pharmaceutical Research Corpus</h1>
+            <div class="tempest-badge">TEMPEST Class C</div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Security Level Selector -->
+        <section class="security-selector">
+            <h2>🔒 Select TEMPEST Security Level</h2>
+            <div class="level-grid">
+                <div class="level-card level-0 active" onclick="selectLevel(0)">
+                    <div class="level-number">0</div>
+                    <div class="level-name">PUBLIC</div>
+                    <div class="level-desc">
+                        Basic molecular properties<br>
+                        No authentication required
+                    </div>
+                </div>
+
+                <div class="level-card level-1" onclick="selectLevel(1)">
+                    <div class="level-number">1</div>
+                    <div class="level-name">RESTRICTED</div>
+                    <div class="level-desc">
+                        ADMET predictions<br>
+                        API key required (1000 req/day)
+                    </div>
+                </div>
+
+                <div class="level-card level-2" onclick="selectLevel(2)">
+                    <div class="level-number">2</div>
+                    <div class="level-name">CONTROLLED</div>
+                    <div class="level-desc">
+                        Docking, abuse potential<br>
+                        MFA + audit logging (500 req/day)
+                    </div>
+                </div>
+
+                <div class="level-card level-3" onclick="selectLevel(3)">
+                    <div class="level-number">3</div>
+                    <div class="level-name">CLASSIFIED</div>
+                    <div class="level-desc">
+                        Patient simulation<br>
+                        Government auth (100 req/day)
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- API Key Section -->
+        <section class="api-key-section" id="apiKeySection" style="display: none;">
+            <label for="apiKey">🔑 API Key</label>
+            <input type="text" id="apiKey" class="api-key-input" placeholder="Enter your API key for authentication">
+            <p style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted);">
+                Demo keys: <code>pk_restricted_demo_1234567890abcdef</code> (Level 1),
+                <code>pk_controlled_mfa_0987654321fedcba</code> (Level 2),
+                <code>pk_classified_gov_abcdef1234567890</code> (Level 3)
+            </p>
+        </section>
+
+        <!-- Analysis Form -->
+        <section class="analysis-section">
+            <h2 class="section-title">🔬 Compound Analysis</h2>
+
+            <div class="form-group">
+                <label for="smiles">SMILES String *</label>
+                <textarea id="smiles" placeholder="Enter SMILES notation (e.g., CCN(CC)C(=O)C1CN(C)CCc2ccccc21 for Fentanyl)"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="compoundName">Compound Name (Optional)</label>
+                <input type="text" id="compoundName" placeholder="e.g., Fentanyl">
+            </div>
+
+            <div class="form-group">
+                <label for="analysisType">Analysis Type</label>
+                <select id="analysisType">
+                    <option value="screen">Screen Compound (Level 1+)</option>
+                    <option value="classify">Classify Therapeutic Potential (Level 1+)</option>
+                    <option value="admet">ADMET Prediction (Level 1+)</option>
+                    <option value="bbb">BBB Penetration (Level 1+)</option>
+                    <option value="docking" disabled>Molecular Docking (Level 2+)</option>
+                    <option value="safety" disabled>Safety Profile (Level 2+)</option>
+                    <option value="abuse" disabled>Abuse Potential (Level 2+)</option>
+                    <option value="simulation" disabled>Patient Simulation (Level 3+)</option>
+                    <option value="dossier" disabled>Regulatory Dossier (Level 3+)</option>
+                </select>
+            </div>
+
+            <div class="button-group">
+                <button onclick="runAnalysis()">▶ Run Analysis</button>
+                <button class="secondary" onclick="clearForm()">✖ Clear</button>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section" id="resultsSection">
+            <h2 class="section-title">📊 Analysis Results</h2>
+            <div id="resultsContent"></div>
+        </section>
+
+        <!-- Example Compounds -->
+        <section class="analysis-section">
+            <h2 class="section-title">🧪 Example Compounds</h2>
+            <div class="button-group">
+                <button class="secondary" onclick="loadExample('ketamine')">Ketamine (Antidepressant)</button>
+                <button class="secondary" onclick="loadExample('fentanyl')">Fentanyl (Opioid)</button>
+                <button class="secondary" onclick="loadExample('mdma')">MDMA (Psychedelic)</button>
+                <button class="secondary" onclick="loadExample('caffeine')">Caffeine (Stimulant)</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>LAT5150DRVMIL Pharmaceutical Research Corpus v1.0.0</p>
+        <p>TEMPEST Class C Compliant | Localhost Only | No External Access</p>
+        <p style="margin-top: 1rem;">
+            API Docs: <a href="http://127.0.0.1:8000/api/docs" style="color: var(--level-0);">http://127.0.0.1:8000/api/docs</a>
+        </p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // State
+        let currentLevel = 0;
+        const API_BASE = 'http://127.0.0.1:8000';
+
+        // Example compounds
+        const examples = {
+            ketamine: {
+                name: 'Ketamine',
+                smiles: 'CC(=O)C(c1ccccc1Cl)N(C)C',
+                description: 'NMDA antagonist antidepressant'
+            },
+            fentanyl: {
+                name: 'Fentanyl',
+                smiles: 'CCN(CC)C(=O)C1CN(C)CCc2ccccc21',
+                description: 'Synthetic opioid analgesic'
+            },
+            mdma: {
+                name: 'MDMA',
+                smiles: 'CC(CC1=CC2=C(C=C1)OCO2)NC',
+                description: 'Psychedelic entactogen'
+            },
+            caffeine: {
+                name: 'Caffeine',
+                smiles: 'CN1C=NC2=C1C(=O)N(C(=O)N2C)C',
+                description: 'Central nervous system stimulant'
+            }
+        };
+
+        // Select TEMPEST level
+        function selectLevel(level) {
+            currentLevel = level;
+
+            // Update UI
+            document.querySelectorAll('.level-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            document.querySelector(`.level-card.level-${level}`).classList.add('active');
+
+            // Show/hide API key section
+            const apiKeySection = document.getElementById('apiKeySection');
+            if (level > 0) {
+                apiKeySection.style.display = 'block';
+            } else {
+                apiKeySection.style.display = 'none';
+            }
+
+            // Enable/disable analysis types
+            const analysisType = document.getElementById('analysisType');
+            Array.from(analysisType.options).forEach(option => {
+                const requiredLevel = getRequiredLevel(option.value);
+                option.disabled = level < requiredLevel;
+            });
+
+            console.log(`TEMPEST Level ${level} selected`);
+        }
+
+        // Get required level for analysis type
+        function getRequiredLevel(analysisType) {
+            const levels = {
+                'screen': 1,
+                'classify': 1,
+                'admet': 1,
+                'bbb': 1,
+                'docking': 2,
+                'safety': 2,
+                'abuse': 2,
+                'simulation': 3,
+                'dossier': 3
+            };
+            return levels[analysisType] || 0;
+        }
+
+        // Load example compound
+        function loadExample(type) {
+            const example = examples[type];
+            document.getElementById('smiles').value = example.smiles;
+            document.getElementById('compoundName').value = example.name;
+            console.log(`Loaded example: ${example.name}`);
+        }
+
+        // Clear form
+        function clearForm() {
+            document.getElementById('smiles').value = '';
+            document.getElementById('compoundName').value = '';
+            document.getElementById('resultsSection').classList.remove('active');
+        }
+
+        // Run analysis
+        async function runAnalysis() {
+            const smiles = document.getElementById('smiles').value.trim();
+            const compoundName = document.getElementById('compoundName').value.trim();
+            const analysisType = document.getElementById('analysisType').value;
+            const apiKey = document.getElementById('apiKey').value.trim();
+
+            // Validation
+            if (!smiles) {
+                alert('Please enter a SMILES string');
+                return;
+            }
+
+            const requiredLevel = getRequiredLevel(analysisType);
+            if (currentLevel < requiredLevel) {
+                alert(`This analysis requires TEMPEST Level ${requiredLevel} or higher`);
+                return;
+            }
+
+            if (currentLevel > 0 && !apiKey) {
+                alert('Please enter an API key');
+                return;
+            }
+
+            // Show loading
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsContent = document.getElementById('resultsContent');
+            resultsSection.classList.add('active');
+            resultsContent.innerHTML = `
+                <div style="text-align: center; padding: 2rem;">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 1rem; color: var(--text-secondary);">Running ${analysisType} analysis...</p>
+                </div>
+            `;
+
+            // Build request
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            if (currentLevel > 0) {
+                headers['X-API-Key'] = apiKey;
+            }
+
+            try {
+                let endpoint, body;
+
+                switch(analysisType) {
+                    case 'screen':
+                        endpoint = '/api/v1/discover/screen';
+                        body = { smiles, name: compoundName || null, analysis_level: 'comprehensive' };
+                        break;
+                    case 'classify':
+                        endpoint = `/api/v1/discover/classify?smiles=${encodeURIComponent(smiles)}`;
+                        break;
+                    case 'admet':
+                        endpoint = '/api/v2/validate/admet';
+                        body = { smiles, use_intel_ai: true, cross_validate: true };
+                        break;
+                    case 'bbb':
+                        endpoint = `/api/v2/validate/bbb?smiles=${encodeURIComponent(smiles)}&cross_validate=true`;
+                        break;
+                    case 'docking':
+                        endpoint = '/api/v2/validate/docking';
+                        body = { smiles, receptors: ['MOR', 'DOR', 'KOR'] };
+                        break;
+                    case 'safety':
+                        endpoint = `/api/v2/safety/profile?smiles=${encodeURIComponent(smiles)}`;
+                        break;
+                    case 'abuse':
+                        endpoint = '/api/v2/safety/abuse-potential';
+                        body = { smiles, comprehensive: currentLevel >= 3 };
+                        break;
+                    default:
+                        throw new Error('Analysis type not implemented in demo');
+                }
+
+                const options = {
+                    method: body ? 'POST' : 'GET',
+                    headers
+                };
+
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+
+                const response = await fetch(API_BASE + endpoint, options);
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    displayResults(result);
+                } else {
+                    displayError(result.error || 'Analysis failed');
+                }
+
+            } catch (error) {
+                displayError(`Error: ${error.message}. Make sure the API server is running on http://127.0.0.1:8000`);
+            }
+        }
+
+        // Display results
+        function displayResults(result) {
+            const resultsContent = document.getElementById('resultsContent');
+            let html = `
+                <div class="status-indicator status-success" style="margin-bottom: 1.5rem;">
+                    <span class="status-dot"></span>
+                    <span>Analysis Complete | TEMPEST Level ${result.tempest_level} | ${result.timestamp}</span>
+                </div>
+            `;
+
+            // Display data
+            if (result.data) {
+                html += '<div style="display: grid; gap: 1rem;">';
+                for (const [key, value] of Object.entries(result.data)) {
+                    html += `
+                        <div class="result-item">
+                            <div class="result-key">${formatKey(key)}</div>
+                            <div class="result-value">${formatValue(value)}</div>
+                        </div>
+                    `;
+                }
+                html += '</div>';
+            }
+
+            // Raw JSON
+            html += `
+                <details style="margin-top: 1.5rem;">
+                    <summary style="cursor: pointer; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                        View Raw JSON
+                    </summary>
+                    <pre><code>${JSON.stringify(result, null, 2)}</code></pre>
+                </details>
+            `;
+
+            resultsContent.innerHTML = html;
+        }
+
+        // Display error
+        function displayError(message) {
+            const resultsContent = document.getElementById('resultsContent');
+            resultsContent.innerHTML = `
+                <div class="status-indicator status-error">
+                    <span class="status-dot"></span>
+                    <span>${message}</span>
+                </div>
+            `;
+        }
+
+        // Format key for display
+        function formatKey(key) {
+            return key
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        // Format value for display
+        function formatValue(value) {
+            if (value === null || value === undefined) return 'N/A';
+            if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+            if (typeof value === 'number') return value.toFixed(3);
+            if (typeof value === 'object') return JSON.stringify(value);
+            return value;
+        }
+
+        // Initialize
+        console.log('LAT5150DRVMIL Pharmaceutical Research Dashboard');
+        console.log('TEMPEST Class C Compliant');
+        console.log('API Base:', API_BASE);
+    </script>
+</body>
+</html>

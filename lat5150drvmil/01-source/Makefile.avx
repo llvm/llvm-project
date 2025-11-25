@@ -1,0 +1,54 @@
+# Makefile for AVX-512/AVX2 accelerated operations
+# Meteor Lake aware - no trust in CPUID
+
+CC = gcc
+CFLAGS = -O3 -march=native -mtune=native -Wall -Wextra
+CFLAGS += -mavx2 -mavx512f -mavx512dq -mavx512cd -mavx512bw -mavx512vl
+CFLAGS += -fPIC -D_GNU_SOURCE
+LDFLAGS = -lpthread
+
+# Python extension flags
+PYTHON = python3
+PYTHON_CONFIG = $(PYTHON)-config
+PY_CFLAGS = $(shell $(PYTHON_CONFIG) --cflags)
+PY_LDFLAGS = $(shell $(PYTHON_CONFIG) --ldflags)
+
+# Targets
+STANDALONE = avx_test
+PYTHON_EXT = avx_operations.so
+
+.PHONY: all clean test standalone python
+
+all: standalone python
+
+# Standalone test binary
+standalone: $(STANDALONE)
+
+$(STANDALONE): avx_operations.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+	@echo "[+] Built standalone test: $(STANDALONE)"
+
+# Python extension module
+python: $(PYTHON_EXT)
+
+$(PYTHON_EXT): avx_operations.c
+	$(CC) $(CFLAGS) $(PY_CFLAGS) -DPYTHON_MODULE -shared -o $@ $< $(PY_LDFLAGS) $(LDFLAGS)
+	@echo "[+] Built Python extension: $(PYTHON_EXT)"
+
+# Test targets
+test: $(STANDALONE)
+	@echo "[*] Running AVX detection test..."
+	./$(STANDALONE)
+
+test-python: $(PYTHON_EXT)
+	@echo "[*] Testing Python extension..."
+	$(PYTHON) -c "import avx_operations; print('Level:', avx_operations.detect_simd())"
+
+# Clean
+clean:
+	rm -f $(STANDALONE) $(PYTHON_EXT) *.o
+
+# Install Python extension
+install-python: $(PYTHON_EXT)
+	$(PYTHON) -c "import shutil, site; shutil.copy('$(PYTHON_EXT)', site.getsitepackages()[0])"
+	@echo "[+] Installed $(PYTHON_EXT) to Python site-packages"

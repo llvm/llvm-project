@@ -1,0 +1,5 @@
+# Extracted Windows tool installers and installed tools
+tools/*.exe
+tools/License.txt
+tools/Readme.txt
+tools/ext_*/

@@ -1,0 +1,162 @@
+================================================================================
+PHASE 2 DEPLOYMENT VALIDATION REPORT
+================================================================================
+Generated: 2025-09-02T05:41:34.338993+00:00
+System: Dell Latitude 5450 MIL-SPEC JRTC1
+Validation Duration: 11.1s
+
+📊 OVERALL DEPLOYMENT HEALTH
+----------------------------------------
+🟡 Overall Score: 75.9%
+✅ Passed Tests: 13/18
+⚠️  Warning Tests: 3
+❌ Failed Tests: 2
+
+🏗️ COMPONENT SCORES
+----------------------------------------
+🟢 Agents: 87.5%
+🟢 Devices: 80.4%
+🟢 ML: 100.0%
+🟢 Performance: 100.0%
+🔴 TPM: 33.3%
+
+🔧 AGENTS VALIDATION RESULTS
+----------------------------------------
+✅ agent_discovery: PASS
+    Score: 100.0%
+    Message: 87 agents discovered (target: 80)
+    Duration: 0.4ms
+    Agents: 87/80 discovered
+
+⚠️  error_handling: WARN
+    Score: 50.0%
+    Message: Partial error handling available
+    Duration: 34.6ms
+
+✅ parallel_execution: PASS
+    Score: 100.0%
+    Message: Parallel execution efficient (7.7x speedup)
+    Duration: 103.8ms
+
+✅ tandem_orchestrator: PASS
+    Score: 100.0%
+    Message: Tandem Orchestrator available and functional
+    Duration: 4.5ms
+
+🔧 DEVICES VALIDATION RESULTS
+----------------------------------------
+⚠️  phase2_discovery: WARN
+    Score: 71.4%
+    Message: 5/7 Phase 2 devices discovered
+    Duration: 0.2ms
+    Discovered: 5/7 Phase 2 devices
+
+✅ quarantine_enforcement: PASS
+    Score: 100.0%
+    Message: All 5 critical devices quarantined
+    Duration: 0.2ms
+
+⚠️  smi_interface: WARN
+    Score: 50.0%
+    Message: SMI interface test inconclusive
+    Duration: 9361.5ms
+
+✅ thermal_monitoring: PASS
+    Score: 100.0%
+    Message: Thermal monitoring responsive (39.7ms)
+    Duration: 56.5ms
+
+🔧 ML VALIDATION RESULTS
+----------------------------------------
+✅ database_connection: PASS
+    Score: 100.0%
+    Message: ML database accessible on port 5433
+    Duration: 13.6ms
+
+✅ learning_connector: PASS
+    Score: 100.0%
+    Message: Learning connector available and importable
+    Duration: 275.9ms
+
+✅ vector_embeddings: PASS
+    Score: 100.0%
+    Message: 512-dim vector embeddings functional
+    Duration: 60.8ms
+
+🔧 PERFORMANCE VALIDATION RESULTS
+----------------------------------------
+✅ agent_response_times: PASS
+    Score: 100.0%
+    Message: Agent response time excellent (61.8ms)
+    Duration: 72.0ms
+
+✅ database_queries: PASS
+    Score: 100.0%
+    Message: Database queries fast (0.3ms avg)
+    Duration: 1.2ms
+
+✅ system_resources: PASS
+    Score: 100.0%
+    Message: System resources healthy (CPU: 2.2%, RAM: 10.0%)
+    Duration: 1000.5ms
+
+✅ xor_sse42: PASS
+    Score: 100.0%
+    Message: XOR/SSE4.2 performance excellent (10,134,772,201 ops/sec)
+    Duration: 3.6ms
+
+🔧 TPM VALIDATION RESULTS
+----------------------------------------
+❌ device_activation: FAIL
+    Score: 0.0%
+    Message: Test failed with exception: name 'tmp_report' is not defined
+    Duration: 0.1ms
+
+❌ ecc_performance: FAIL
+    Score: 0.0%
+    Message: ECC signing failed: b'WARNING:esys:src/tss2-esys/api/Esys_ReadPublic.c:320:Esys_ReadPublic_Finish() Received TPM Error \nERROR:esys:src/tss2-esys/esys_tr.c:278:Esys_TR_FromTPMPublic_Finish() Error ReadPublic ErrorCode (0x0000018b) \nERROR:esys:src/tss2-esys/esys_tr.c:398:Esys_TR_FromTPMPublic() Error TR FromTPMPublic ErrorCode (0x0000018b) \nERROR: Esys_TR_FromTPMPublic(0x18B) - tpm:handle(1):the handle is not correct for the use\nERROR: Invalid key authorization\nERROR: Unable to run tpm2_sign\n'
+    Duration: 96.3ms
+
+✅ pcr_extension: PASS
+    Score: 100.0%
+    Message: PCR 16 extended for DSMIL
+    Duration: 9.3ms
+
+🚨 CRITICAL FAILURES
+----------------------------------------
+❌ TPM.device_activation: Test failed with exception: name 'tmp_report' is not defined
+❌ TPM.ecc_performance: ECC signing failed: b'WARNING:esys:src/tss2-esys/api/Esys_ReadPublic.c:320:Esys_ReadPublic_Finish() Received TPM Error \nERROR:esys:src/tss2-esys/esys_tr.c:278:Esys_TR_FromTPMPublic_Finish() Error ReadPublic ErrorCode (0x0000018b) \nERROR:esys:src/tss2-esys/esys_tr.c:398:Esys_TR_FromTPMPublic() Error TR FromTPMPublic ErrorCode (0x0000018b) \nERROR: Esys_TR_FromTPMPublic(0x18B) - tpm:handle(1):the handle is not correct for the use\nERROR: Invalid key authorization\nERROR: Unable to run tpm2_sign\n'
+
+💡 RECOMMENDATIONS
+----------------------------------------
+1. TPM integration needs attention - verify device 0x8005 activation
+2. 🔧 System needs improvements - resolve critical issues
+
+🎯 PHASE 2 DEVICE STATUS
+----------------------------------------
+✅ Ready 0x8005: TPM Interface Controller
+📡 Monitoring 0x8008: Secure Boot Validator
+📡 Monitoring 0x8011: Encryption Key Management
+📡 Monitoring 0x8013: Unknown Extended Security
+📡 Monitoring 0x8014: Unknown Extended Security
+📡 Monitoring 0x8022: Network Security Filter
+📡 Monitoring 0x8027: Network Authentication Gateway
+
+🛡️  QUARANTINE STATUS
+----------------------------------------
+🚫 0x8009: QUARANTINED (Critical - Never writable)
+🚫 0x800A: QUARANTINED (Critical - Never writable)
+🚫 0x800B: QUARANTINED (Critical - Never writable)
+🚫 0x8019: QUARANTINED (Critical - Never writable)
+🚫 0x8029: QUARANTINED (Critical - Never writable)
+
+🚀 NEXT STEPS
+----------------------------------------
+1. ❌ Resolve critical failures before proceeding
+2. 🔧 System requires maintenance
+3. 🛑 DO NOT deploy until issues resolved
+
+================================================================================
+Validation completed at 2025-09-02T05:41:34.339058+00:00
+Multi-Agent Team: MONITOR + INFRASTRUCTURE + TESTBED + QADIRECTOR
+================================================================================

@@ -1,0 +1,76 @@
+=== Temperature Sensors ===
+ERROR: Can't get value of subfeature temp1_max_alarm: Can't read
+spd5118-i2c-2-50
+Adapter: SMBus I801 adapter at efa0
+temp1:        +46.2°C  (low  =  +0.0°C, high = +55.0°C)
+                       (crit low =  +0.0°C, crit = +85.0°C)
+
+dell_ddv-virtual-0
+Adapter: Virtual device
+CPU Fan:     2610 RPM
+CPU:          +68.0°C  (low  =  +0.0°C, high =  +0.0°C)
+Other:        +32.0°C  (low  =  +0.0°C, high =  +0.0°C)
+Memory:       +40.0°C  (low  =  +0.0°C, high =  +0.0°C)
+Memory:       +47.0°C  (low  =  +0.0°C, high =  +0.0°C)
+Ambient:      +54.0°C  (low  =  +0.0°C, high =  +0.0°C)
+Other:        +45.0°C  (low  =  +0.0°C, high =  +0.0°C)
+Unknown:      +30.0°C  (low  =  +0.0°C, high =  +0.0°C)
+
+ucsi_source_psy_USBC000:002-isa-0000
+Adapter: ISA adapter
+in0:          20.00 V  (min =  +5.00 V, max = +20.00 V)
+curr1:         2.75 A  (max =  +2.75 A)
+
+nvme-pci-e100
+Adapter: PCI adapter
+Composite:    +46.9°C  (low  = -40.1°C, high = +83.8°C)
+                       (crit = +87.8°C)
+Sensor 1:     +57.9°C  (low  = -273.1°C, high = +65261.8°C)
+Sensor 2:     +46.9°C  (low  = -273.1°C, high = +65261.8°C)
+
+coretemp-isa-0000
+Adapter: ISA adapter
+Package id 0:  +70.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 0:        +65.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 1:        +65.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 2:        +65.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 3:        +64.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 4:        +58.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 5:        +58.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 6:        +57.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 7:        +57.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 8:        +75.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 12:       +58.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 16:       +69.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 20:       +58.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 24:       +60.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 32:       +61.0°C  (high = +110.0°C, crit = +110.0°C)
+Core 33:       +61.0°C  (high = +110.0°C, crit = +110.0°C)
+
+iwlwifi_1-virtual-0
+Adapter: Virtual device
+temp1:        +40.0°C  
+
+ucsi_source_psy_USBC000:001-isa-0000
+Adapter: ISA adapter
+in0:           5.00 V  (min =  +5.00 V, max =  +5.00 V)
+curr1:         0.00 A  (max =  +1.50 A)
+
+BAT0-acpi-0
+Adapter: ACPI interface
+in0:          12.69 V  
+curr1:       411.00 mA 
+
+
+=== CPU Temperature ===
+20000
+72000
+32050
+40050
+47050
+54050
+45050
+30050
+66050
+77000
+40000

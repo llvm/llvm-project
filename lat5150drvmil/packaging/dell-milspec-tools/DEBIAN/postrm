@@ -1,0 +1,78 @@
+#!/bin/bash
+set -e
+
+# DEBIAN postrm script for dell-milspec-tools
+# This script runs after package removal
+
+PACKAGE_NAME="dell-milspec-tools"
+CONFIG_DIR="/etc/dell-milspec"
+LOG_DIR="/var/log/dell-milspec"
+RUN_DIR="/var/run/dell-milspec"
+
+case "$1" in
+    purge)
+        echo "Purging $PACKAGE_NAME configuration and data..."
+
+        # Remove configuration files
+        if [ -d "$CONFIG_DIR" ]; then
+            echo "  Removing configuration directory..."
+            rm -rf "$CONFIG_DIR"
+        fi
+
+        # Remove log files
+        if [ -d "$LOG_DIR" ]; then
+            echo "  Removing log directory..."
+            rm -rf "$LOG_DIR"
+        fi
+
+        # Remove runtime directory
+        if [ -d "$RUN_DIR" ]; then
+            echo "  Removing runtime directory..."
+            rm -rf "$RUN_DIR"
+        fi
+
+        # Remove dsmil group
+        if getent group dsmil >/dev/null 2>&1; then
+            echo "  Removing dsmil group..."
+            groupdel dsmil 2>/dev/null || echo "    (Group removal failed - may have active users)"
+        fi
+
+        # Remove convenience symlink
+        rm -f /usr/local/bin/milspec 2>/dev/null || true
+
+        # Clean up any temporary files
+        rm -f /tmp/dsmil_emergency*.log 2>/dev/null || true
+        rm -rf /tmp/dell-milspec-* 2>/dev/null || true
+
+        echo "  Purge complete"
+        ;;
+
+    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        # Cleanup runtime directory on removal (not purge)
+        if [ "$1" = "remove" ]; then
+            rm -rf "$RUN_DIR" 2>/dev/null || true
+
+            echo ""
+            echo "======================================================================"
+            echo " Dell MIL-SPEC Tools Removed"
+            echo "======================================================================"
+            echo ""
+            echo "Configuration files preserved in: $CONFIG_DIR"
+            echo "Log files preserved in: $LOG_DIR"
+            echo ""
+            echo "To completely remove all configuration and data:"
+            echo "  sudo apt-get purge dell-milspec-tools"
+            echo ""
+            echo "======================================================================"
+        fi
+        ;;
+
+    *)
+        echo "postrm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

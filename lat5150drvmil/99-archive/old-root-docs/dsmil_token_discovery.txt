@@ -1,0 +1,108 @@
+DSMIL Token Discovery Results
+Date: 2025-10-13 00:38:10.047272
+
+Group_0:
+  0x8000: SMI_Failed
+  0x8001: SMI_Failed
+  0x8002: SMI_Failed
+  0x8003: SMI_Failed
+  0x8004: SMI_Failed
+  0x8005: SMI_Failed
+  0x8006: SMI_Failed
+  0x8007: SMI_Failed
+  0x8008: SMI_Failed
+  0x8009: SMI_Failed
+  0x800A: SMI_Failed
+  0x800B: SMI_Failed
+  Summary: Active=0, Inactive=0, No Response=12
+
+Group_1:
+  0x8010: SMI_Failed
+  0x8011: SMI_Failed
+  0x8012: SMI_Failed
+  0x8013: SMI_Failed
+  0x8014: SMI_Failed
+  0x8015: SMI_Failed
+  0x8016: SMI_Failed
+  0x8017: SMI_Failed
+  0x8018: SMI_Failed
+  0x8019: SMI_Failed
+  0x801A: SMI_Failed
+  0x801B: SMI_Failed
+  Summary: Active=0, Inactive=0, No Response=12
+
+Group_2:
+  0x8020: SMI_Failed
+  0x8021: SMI_Failed
+  0x8022: SMI_Failed
+  0x8023: SMI_Failed
+  0x8024: SMI_Failed
+  0x8025: SMI_Failed
+  0x8026: SMI_Failed
+  0x8027: SMI_Failed
+  0x8028: SMI_Failed
+  0x8029: SMI_Failed
+  0x802A: SMI_Failed
+  0x802B: SMI_Failed
+  Summary: Active=0, Inactive=0, No Response=12
+
+Group_3:
+  0x8030: SMI_Failed
+  0x8031: SMI_Failed
+  0x8032: SMI_Failed
+  0x8033: SMI_Failed
+  0x8034: SMI_Failed
+  0x8035: SMI_Failed
+  0x8036: SMI_Failed
+  0x8037: SMI_Failed
+  0x8038: SMI_Failed
+  0x8039: SMI_Failed
+  0x803A: SMI_Failed
+  0x803B: SMI_Failed
+  Summary: Active=0, Inactive=0, No Response=12
+
+Group_4:
+  0x8040: SMI_Failed
+  0x8041: SMI_Failed
+  0x8042: SMI_Failed
+  0x8043: SMI_Failed
+  0x8044: SMI_Failed
+  0x8045: SMI_Failed
+  0x8046: SMI_Failed
+  0x8047: SMI_Failed
+  0x8048: SMI_Failed
+  0x8049: SMI_Failed
+  0x804A: SMI_Failed
+  0x804B: SMI_Failed
+  Summary: Active=0, Inactive=0, No Response=12
+
+Group_5:
+  0x8050: SMI_Failed
+  0x8051: SMI_Failed
+  0x8052: SMI_Failed
+  0x8053: SMI_Failed
+  0x8054: SMI_Failed
+  0x8055: SMI_Failed
+  0x8056: SMI_Failed
+  0x8057: SMI_Failed
+  0x8058: SMI_Failed
+  0x8059: SMI_Failed
+  0x805A: SMI_Failed
+  0x805B: SMI_Failed
+  Summary: Active=0, Inactive=0, No Response=12
+
+Extended:
+  0x8060: SMI_Failed
+  0x8061: SMI_Failed
+  0x8062: SMI_Failed
+  0x8063: SMI_Failed
+  0x8064: SMI_Failed
+  0x8065: SMI_Failed
+  0x8066: SMI_Failed
+  0x8067: SMI_Failed
+  0x8068: SMI_Failed
+  0x8069: SMI_Failed
+  0x806A: SMI_Failed
+  0x806B: SMI_Failed
+  Summary: Active=0, Inactive=0, No Response=12
+

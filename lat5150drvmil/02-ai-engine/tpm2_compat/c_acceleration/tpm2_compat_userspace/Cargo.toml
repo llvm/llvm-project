@@ -1,0 +1,50 @@
+[package]
+name = "tpm2_compat_userspace"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Userspace daemon for TPM2 compatibility layer"
+
+[dependencies]
+tpm2_compat_common = { path = "../tpm2_compat_common", features = ["std", "serde-support"] }
+tokio.workspace = true
+tokio-util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
+thiserror.workspace = true
+cfg-if.workspace = true
+zeroize.workspace = true
+
+# Async I/O
+futures = "0.3"
+async-trait = "0.1"
+
+# System interfaces
+libc.workspace = true
+nix = "0.29"
+mio = "1.0"
+
+# Monitoring and metrics
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+metrics = { version = "0.23", optional = true }
+metrics-exporter-prometheus = { version = "0.15", optional = true }
+
+# Configuration
+config = "0.14"
+clap = { version = "4.5", features = ["derive"] }
+
+# System info
+num_cpus = "1.16"
+
+[features]
+default = ["monitoring", "prometheus"]
+monitoring = ["tracing", "tracing-subscriber", "metrics"]
+prometheus = ["metrics-exporter-prometheus"]
+debug-mode = []
+
+[[bin]]
+name = "tpm2-compat-daemon"
+path = "src/bin/daemon.rs"

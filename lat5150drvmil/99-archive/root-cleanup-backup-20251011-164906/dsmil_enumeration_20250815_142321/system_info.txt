@@ -1,0 +1,6 @@
+Kernel: 6.14.0-27-generic
+Service Tag: C6FHC54
+BIOS Version: 1.14.1
+CPU: Intel(R) Core(TM) Ultra 7 165H Intel(R) Core(TM) Ultra 7 165H CPU @ 3.9GHz
+Memory: 62Gi
+Date: Fri Aug 15 14:23:21 UTC 2025

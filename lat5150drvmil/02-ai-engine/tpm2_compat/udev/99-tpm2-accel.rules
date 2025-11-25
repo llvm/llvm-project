@@ -1,0 +1,15 @@
+# TPM2 Acceleration Device udev Rules
+# Allows user access to TPM acceleration devices
+
+# TPM2 acceleration device (early boot module)
+KERNEL=="tpm2_accel_early", MODE="0660", GROUP="tss", TAG+="systemd", SYMLINK+="tpm_accel"
+
+# TPM2 acceleration device (character device)
+KERNEL=="tpm_accel", MODE="0660", GROUP="tss", TAG+="systemd"
+
+# Standard TPM devices (ensure tss group has access)
+KERNEL=="tpm[0-9]*", MODE="0660", GROUP="tss", TAG+="systemd"
+KERNEL=="tpmrm[0-9]*", MODE="0660", GROUP="tss", TAG+="systemd"
+
+# TPM resource manager
+SUBSYSTEM=="tpm", KERNEL=="tpmrm[0-9]*", MODE="0660", GROUP="tss"

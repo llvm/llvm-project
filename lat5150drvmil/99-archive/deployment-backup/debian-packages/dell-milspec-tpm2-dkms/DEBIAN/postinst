@@ -1,0 +1,55 @@
+#!/bin/bash
+set -e
+
+DKMS_NAME="tpm2-accel-early"
+DKMS_VERSION="1.0.0"
+KERNEL_VERSION=$(uname -r)
+
+log() { echo "[tpm2-accel-early] $1"; }
+
+case "$1" in
+    configure)
+        log "Configuring TPM2 early boot acceleration..."
+
+        # DKMS build
+        dkms add -m ${DKMS_NAME} -v ${DKMS_VERSION} || true
+
+        if [ -d "/lib/modules/${KERNEL_VERSION}/build" ]; then
+            log "Building for kernel ${KERNEL_VERSION}..."
+            dkms build -m ${DKMS_NAME} -v ${DKMS_VERSION} -k ${KERNEL_VERSION}
+            dkms install -m ${DKMS_NAME} -v ${DKMS_VERSION} -k ${KERNEL_VERSION}
+            depmod -a
+        fi
+
+        # Create modprobe configuration
+        cat > /etc/modprobe.d/tpm2-acceleration.conf << 'EOFCONF'
+# TPM2 Early Boot Acceleration
+options tpm2_accel_early early_init=1 debug_mode=0 security_level=0
+alias tpm2_accel tpm2_accel_early
+EOFCONF
+
+        # Early boot loading
+        echo "tpm2_accel_early" > /etc/modules-load.d/tpm2-acceleration.conf
+
+        # Enable systemd service
+        systemctl daemon-reload
+        systemctl enable tpm2-acceleration-early.service || true
+
+        # Update initramfs
+        update-initramfs -u || true
+
+        # Load module
+        modprobe tpm2_accel_early || log "Module will load on next boot"
+
+        echo ""
+        echo "═══════════════════════════════════════════════"
+        echo "  TPM2 Acceleration Installed Successfully"
+        echo "═══════════════════════════════════════════════"
+        echo "Device: /dev/tpm2_accel_early"
+        echo "Security Level: UNCLASSIFIED (0)"
+        echo "Documentation: /usr/share/doc/tpm2-accel-early-dkms/"
+        echo ""
+        ;;
+esac
+
+exit 0

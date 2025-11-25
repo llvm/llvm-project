@@ -1,0 +1,24 @@
+{
+  "name": "gobuster",
+  "description": "Directory/file brute-forcing tool",
+  "category": "reconnaissance",
+  "phase": ["reconnaissance", "analysis"],
+  "command": "gobuster",
+  "required": false,
+  "args": {
+    "dir_basic": "dir -u {target} -w /usr/share/wordlists/dirb/common.txt -t 20 -q",
+    "dir_aggressive": "dir -u {target} -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -t 50 -q",
+    "dns": "dns -d {target} -w /usr/share/wordlists/dns/subdomains-top1million-5000.txt -t 20 -q",
+    "vhost": "vhost -u {target} -w /usr/share/wordlists/dns/subdomains-top1million-5000.txt -t 20 -q"
+  },
+  "default_profile": "dir_basic",
+  "timeout": 600,
+  "output_format": "text",
+  "parse_output": true,
+  "severity_keywords": {
+    "high": ["/admin", "/backup", "/.git", "/.env"],
+    "medium": ["/config", "/api", "/test", "/dev"],
+    "low": ["/docs", "/images", "/css"],
+    "info": ["Status: 200", "Status: 301", "Status: 302"]
+  }
+}

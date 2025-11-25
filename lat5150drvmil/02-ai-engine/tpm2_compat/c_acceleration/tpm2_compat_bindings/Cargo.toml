@@ -1,0 +1,45 @@
+[package]
+name = "tpm2_compat_bindings"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "FFI bindings for TPM2 compatibility layer"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+tpm2_compat_common = { path = "../tpm2_compat_common", features = ["std", "serde-support"] }
+tpm2_compat_userspace = { path = "../tpm2_compat_userspace" }
+tpm2_compat_crypto = { path = "../tpm2_compat_crypto" }
+tpm2_compat_npu = { path = "../tpm2_compat_npu" }
+
+libc.workspace = true
+cty.workspace = true
+log.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+zeroize.workspace = true
+
+# Async runtime for C bindings
+tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
+
+# Python bindings
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py38"], optional = true }
+
+# C header generation
+cbindgen = { version = "0.27", optional = true }
+
+[features]
+default = ["c-bindings", "python-bindings"]
+c-bindings = ["cbindgen"]
+python-bindings = ["pyo3"]
+testing = []
+
+[build-dependencies]
+cbindgen = "0.27"
+pyo3-build-config = { version = "0.22", optional = true }
+
+# Examples will be created when needed

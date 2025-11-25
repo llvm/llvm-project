@@ -1,0 +1,19 @@
+{
+  "name": "dsmil-mcp-server",
+  "version": "1.0.0",
+  "description": "DSMIL MCP Server exposing 84 devices and AI capabilities",
+  "type": "module",
+  "main": "server.py",
+  "scripts": {
+    "start": "python3 server.py --stdio",
+    "test": "python3 server.py --test"
+  },
+  "keywords": [
+    "mcp",
+    "dsmil",
+    "ai",
+    "code-mode"
+  ],
+  "author": "DSMIL Integration Framework",
+  "license": "MIT"
+}

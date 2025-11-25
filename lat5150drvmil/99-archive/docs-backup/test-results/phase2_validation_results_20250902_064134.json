@@ -1,0 +1,479 @@
+{
+  "metadata": {
+    "timestamp": "2025-09-02T05:41:23.241963+00:00",
+    "system": "Dell Latitude 5450 MIL-SPEC",
+    "validation_version": "1.0",
+    "phase": "Phase 2 Deployment"
+  },
+  "health_score": {
+    "overall_score": 0.7592261904761906,
+    "component_scores": {
+      "TPM": 0.3333333333333333,
+      "ML": 1.0,
+      "Devices": 0.8035714285714286,
+      "Agents": 0.875,
+      "Performance": 1.0
+    },
+    "total_tests": 18,
+    "passed_tests": 13,
+    "failed_tests": 2,
+    "warning_tests": 3,
+    "critical_failures": [
+      "TPM.device_activation: Test failed with exception: name 'tmp_report' is not defined",
+      "TPM.ecc_performance: ECC signing failed: b'WARNING:esys:src/tss2-esys/api/Esys_ReadPublic.c:320:Esys_ReadPublic_Finish() Received TPM Error \\nERROR:esys:src/tss2-esys/esys_tr.c:278:Esys_TR_FromTPMPublic_Finish() Error ReadPublic ErrorCode (0x0000018b) \\nERROR:esys:src/tss2-esys/esys_tr.c:398:Esys_TR_FromTPMPublic() Error TR FromTPMPublic ErrorCode (0x0000018b) \\nERROR: Esys_TR_FromTPMPublic(0x18B) - tpm:handle(1):the handle is not correct for the use\\nERROR: Invalid key authorization\\nERROR: Unable to run tpm2_sign\\n'"
+    ],
+    "recommendations": [
+      "TPM integration needs attention - verify device 0x8005 activation",
+      "\ud83d\udd27 System needs improvements - resolve critical issues"
+    ]
+  },
+  "detailed_results": [
+    {
+      "component": "TPM",
+      "test_name": "device_activation",
+      "status": "FAIL",
+      "score": 0.0,
+      "message": "Test failed with exception: name 'tmp_report' is not defined",
+      "details": {
+        "exception": "name 'tmp_report' is not defined",
+        "type": "NameError"
+      },
+      "duration_ms": 0.08893013000488281,
+      "timestamp": "2025-09-02T05:41:23.242187+00:00"
+    },
+    {
+      "component": "TPM",
+      "test_name": "pcr_extension",
+      "status": "PASS",
+      "score": 1.0,
+      "message": "PCR 16 extended for DSMIL",
+      "details": {
+        "pcr16_value": "sha256:\n    16: 0xE0813385DD95673CD04CAD4C6739A8C9811FCD4628477D0EED650B2F7FA7A613"
+      },
+      "duration_ms": 9.254932403564453,
+      "timestamp": "2025-09-02T05:41:23.242310+00:00"
+    },
+    {
+      "component": "TPM",
+      "test_name": "ecc_performance",
+      "status": "FAIL",
+      "score": 0.0,
+      "message": "ECC signing failed: b'WARNING:esys:src/tss2-esys/api/Esys_ReadPublic.c:320:Esys_ReadPublic_Finish() Received TPM Error \\nERROR:esys:src/tss2-esys/esys_tr.c:278:Esys_TR_FromTPMPublic_Finish() Error ReadPublic ErrorCode (0x0000018b) \\nERROR:esys:src/tss2-esys/esys_tr.c:398:Esys_TR_FromTPMPublic() Error TR FromTPMPublic ErrorCode (0x0000018b) \\nERROR: Esys_TR_FromTPMPublic(0x18B) - tpm:handle(1):the handle is not correct for the use\\nERROR: Invalid key authorization\\nERROR: Unable to run tpm2_sign\\n'",
+      "details": {
+        "sign_duration_ms": 96.22597694396973,
+        "target_ms": 50.0,
+        "error": "WARNING:esys:src/tss2-esys/api/Esys_ReadPublic.c:320:Esys_ReadPublic_Finish() Received TPM Error \nERROR:esys:src/tss2-esys/esys_tr.c:278:Esys_TR_FromTPMPublic_Finish() Error ReadPublic ErrorCode (0x0000018b) \nERROR:esys:src/tss2-esys/esys_tr.c:398:Esys_TR_FromTPMPublic() Error TR FromTPMPublic ErrorCode (0x0000018b) \nERROR: Esys_TR_FromTPMPublic(0x18B) - tpm:handle(1):the handle is not correct for the use\nERROR: Invalid key authorization\nERROR: Unable to run tpm2_sign\n"
+      },
+      "duration_ms": 96.26030921936035,
+      "timestamp": "2025-09-02T05:41:23.251616+00:00"
+    },
+    {
+      "component": "ML",
+      "test_name": "database_connection",
+      "status": "PASS",
+      "score": 1.0,
+      "message": "ML database accessible on port 5433",
+      "details": {
+        "port_5433": "accessible"
+      },
+      "duration_ms": 13.550758361816406,
+      "timestamp": "2025-09-02T05:41:23.348015+00:00"
+    },
+    {
+      "component": "ML",
+      "test_name": "vector_embeddings",
+      "status": "PASS",
+      "score": 1.0,
+      "message": "512-dim vector embeddings functional",
+      "details": {
+        "embedding_dimension": 512,
+        "embedding_dtype": "float32",
+        "dot_product": 169.9938201904297,
+        "norm": 13.038167953491211
+      },
+      "duration_ms": 60.81652641296387,
+      "timestamp": "2025-09-02T05:41:23.361683+00:00"
+    },
+    {
+      "component": "ML",
+      "test_name": "learning_connector",
+      "status": "PASS",
+      "score": 1.0,
+      "message": "Learning connector available and importable",
+      "details": {
+        "connector_file": "/home/john/LAT5150DRVMIL/infrastructure/learning/enhanced_learning_connector.py",
+        "import_success": true
+      },
+      "duration_ms": 275.8972644805908,
+      "timestamp": "2025-09-02T05:41:23.422675+00:00"
+    },
+    {
+      "component": "Devices",
+      "test_name": "phase2_discovery",
+      "status": "WARN",
+      "score": 0.7142857142857143,
+      "message": "5/7 Phase 2 devices discovered",
+      "details": {
+        "risk_database_loaded": true,
+        "total_devices_in_db": 26,
+        "discovered_devices": [
+          {
+            "device_id": "0x8005",
+            "name": "TPM Interface Controller",
+            "risk_level": "MODERATE",
+            "confidence": 70
+          },
+          {
+            "device_id": "0x8008",
+            "name": "Pre-Wipe Controller",
+            "risk_level": "HIGH",
+            "confidence": 75
+          },
+          {
+            "device_id": "0x8011",
+            "name": "Unknown Extended Security",
+            "risk_level": "UNKNOWN",
+            "confidence": 30
+          },
+          {
+            "device_id": "0x8013",
+            "name": "Unknown Extended Security",
+            "risk_level": "UNKNOWN",
+            "confidence": 30
+          },
+          {
+            "device_id": "0x8014",
+            "name": "Unknown Extended Security",
+            "risk_level": "UNKNOWN",
+            "confidence": 30
+          }
+        ],
+        "discovery_count": 5,
+        "target_count": 7
+      },
+      "duration_ms": 0.17595291137695312,
+      "timestamp": "2025-09-02T05:41:23.698698+00:00"
+    },
+    {
+      "component": "Devices",
+      "test_name": "smi_interface",
+      "status": "WARN",
+      "score": 0.5,
+      "message": "SMI interface test inconclusive",
+      "details": {
+        "dsmil_module_loaded": true,
+        "loaded_modules": [
+          "dsmil_72dev            61440  0",
+          "dell_pc                12288  0",
+          "platform_profile       20480  1 dell_pc",
+          "dell_rbtn              20480  0",
+          "dell_rbu               20480  0",
+          "dell_laptop            40960  0",
+          "dell_wmi               28672  1 dell_laptop",
+          "dell_smbios            36864  3 dell_wmi,dell_pc,dell_laptop",
+          "dell_smm_hwmon         36864  0",
+          "dell_wmi_ddv           24576  0",
+          "dcdbas                 20480  1 dell_smbios",
+          "dell_wmi_sysman        49152  0",
+          "firmware_attributes_class    12288  1 dell_wmi_sysman",
+          "dell_wmi_descriptor    20480  2 dell_wmi,dell_smbios",
+          "sparse_keymap          12288  2 intel_hid,dell_wmi",
+          "video                  77824  4 dell_wmi,dell_laptop,xe,i915",
+          "wmi                    28672  8 dell_wmi_sysman,video,dell_wmi_ddv,dell_wmi,wmi_bmof,dell_smm_hwmon,dell_smbios,dell_wmi_descriptor"
+        ],
+        "smi_test_output": "============================================================\nDIRECT SMI TOKEN ACCESS TESTING\n============================================================\nSince no DSMIL structures were found in memory,\nwe'll try direct SMI commands to control tokens.\n\n\ud83d\udccd Checking mapped memory regions...\nMemory regions found:\n  \u2713 52000000-687fffff : Reserved\nModule info: dsmil_72dev 61440 0 - Live 0xffffffffc266f000 (OE)\n\n\ud83d\udd0d Probing DSMIL memory region directly...\nDSMIL memory at 0x52000000:\n  [0x52000000]: 0xFFFFFFFF\n  [0x52000004]: 0xFFFFFFFF\n  [0x52000008]: 0xFFFFFFFF\n  [0x5200000C]: 0xFFFFFFFF\n  [0x52000010]: 0xFFFFFFFF\n  [0x52000014]: 0xFFFFFFFF\n  [0x52000018]: 0xFFFFFFFF\n  [0x5200001C]: 0xFFFFFFFF\n\n   \ud83d\udccc Memory contains data (not empty/unmapped)\n\n\ud83d\ude80 Testing SMI token control...\n\n\ud83d\udccc Token 0x0480: Power Management (Group 0, Position 0)\n\n\ud83d\udd27 Attempting SMI control of token 0x0480\n   SMI Result: Sending SMI for token 0x0480...\nSMI command sent\n\n\ud83d\udd27 Attempting SMI control of token 0x0480\n   SMI Result: Sending SMI for token 0x0480...\nSMI command sent\n\n\ud83d\udccc Token 0x0481: Thermal Control (Group 0, Position 1)\n\n\ud83d\udd27 Attempting SMI control of token 0x0481\n   SMI Result: Sending SMI for token 0x0481...\nSMI command sent\n\n\ud83d\udd27 Attempting SMI control of token 0x0481\n   SMI Result: Sending SMI for token 0x0481...\nSMI command sent\n\n\ud83d\udccc Token 0x0482: Security Module (Group 0, Position 2)\n\n\ud83d\udd27 Attempting SMI control of token 0x0482\n   SMI Result: Sending SMI for token 0x0482...\nSMI command sent\n\n\ud83d\udd27 Attempting SMI control of token 0x0482\n   SMI Result: Sending SMI for token 0x0482...\nSMI command sent\n\n\ud83d\udccc Token 0x0483: Memory Controller (Group 0, Position 3)\n\n\ud83d\udd27 Attempting SMI control of token 0x0483\n   SMI Result: Sending SMI for token 0x0483...\nSMI command sent\n\n\ud83d\udd27 Attempting SMI control of token 0x0483\n   SMI Result: Sending SMI for token 0x0483...\nSMI command sent\n\n============================================================\nSUMMARY\n============================================================\nToken 0x0480: SMI successful\nToken 0x0481: SMI successful\nToken 0x0482: SMI successful\nToken 0x0483: SMI successful\n\n\ud83d\udca1 Analysis:\nThe kernel module successfully mapped 16MB of memory\nbut found no DSMIL structure signatures.\nThis suggests:\n1. DSMIL devices may use a different protocol\n2. Structures may be encrypted or obfuscated\n3. Tokens may be controlled entirely via SMI\n4. Real structures may be in SMM protected memory\n",
+        "smi_test_error": "",
+        "smi_test_returncode": 0
+      },
+      "duration_ms": 9361.542463302612,
+      "timestamp": "2025-09-02T05:41:23.698905+00:00"
+    },
+    {
+      "component": "Devices",
+      "test_name": "quarantine_enforcement",
+      "status": "PASS",
+      "score": 1.0,
+      "message": "All 5 critical devices quarantined",
+      "details": {
+        "quarantine_list": [
+          "0x8009",
+          "0x800A",
+          "0x800B",
+          "0x8019",
+          "0x8029"
+        ],
+        "expected_quarantine": [
+          "0x8009",
+          "0x800A",
+          "0x800B",
+          "0x8019",
+          "0x8029"
+        ],
+        "quarantined_count": 5,
+        "total_critical": 5
+      },
+      "duration_ms": 0.19502639770507812,
+      "timestamp": "2025-09-02T05:41:33.060564+00:00"
+    },
+    {
+      "component": "Devices",
+      "test_name": "thermal_monitoring",
+      "status": "PASS",
+      "score": 1.0,
+      "message": "Thermal monitoring responsive (39.7ms)",
+      "details": {
+        "thermal_zones": [
+          {
+            "zone": "thermal_zone2",
+            "temp_celsius": 39.05
+          },
+          {
+            "zone": "thermal_zone0",
+            "temp_celsius": 20.0
+          },
+          {
+            "zone": "thermal_zone9",
+            "temp_celsius": 37.0
+          },
+          {
+            "zone": "thermal_zone7",
+            "temp_celsius": 68.05
+          },
+          {
+            "zone": "thermal_zone10",
+            "temp_celsius": 69.0
+          },
+          {
+            "zone": "thermal_zone5",
+            "temp_celsius": 44.05
+          },
+          {
+            "zone": "thermal_zone3",
+            "temp_celsius": 47.05
+          },
+          {
+            "zone": "thermal_zone1",
+            "temp_celsius": 32.05
+          },
+          {
+            "zone": "thermal_zone8",
+            "temp_celsius": 65.0
+          },
+          {
+            "zone": "thermal_zone6",
+            "temp_celsius": 30.05
+          },
+          {
+            "zone": "thermal_zone4",
+            "temp_celsius": 53.05
+          }
+        ],
+        "zone_count": 11,
+        "average_temp": 45.849999999999994,
+        "max_temp": 69.0,
+        "thermal_guardian_available": true,
+        "thermal_response_ms": 39.73817825317383,
+        "target_response_ms": 1000.0
+      },
+      "duration_ms": 56.543588638305664,
+      "timestamp": "2025-09-02T05:41:33.060788+00:00"
+    },
+    {
+      "component": "Agents",
+      "test_name": "agent_discovery",
+      "status": "PASS",
+      "score": 1.0,
+      "message": "87 agents discovered (target: 80)",
+      "details": {
+        "agents_directory": "/home/john/claude-backups/agents",
+        "discovered_agent_count": 87,
+        "target_agent_count": 80,
+        "agent_files": [
+          "BGP-PURPLE-TEAM-AGENT.md",
+          "TYPESCRIPT-INTERNAL-AGENT.md",
+          "SECURITYCHAOSAGENT.md",
+          "CRYPTOEXPERT.md",
+          "AGENTSMITH.md",
+          "CONSTRUCTOR.md",
+          "MONITOR.md",
+          "SECURITYAUDITOR.md",
+          "DATABASE.md",
+          "PYGUI.md"
+        ]
+      },
+      "duration_ms": 0.35071372985839844,
+      "timestamp": "2025-09-02T05:41:33.117469+00:00"
+    },
+    {
+      "component": "Agents",
+      "test_name": "tandem_orchestrator",
+      "status": "PASS",
+      "score": 1.0,
+      "message": "Tandem Orchestrator available and functional",
+      "details": {
+        "orchestrator_files": [
+          "/home/john/LAT5150DRVMIL/infrastructure/coordination/agent_coordinator.py",
+          "/home/john/LAT5150DRVMIL/infrastructure/coordination/agent_orchestrator.py"
+        ],
+        "orchestrator_import": "success"
+      },
+      "duration_ms": 4.534721374511719,
+      "timestamp": "2025-09-02T05:41:33.117855+00:00"
+    },
+    {
+      "component": "Agents",
+      "test_name": "parallel_execution",
+      "status": "PASS",
+      "score": 1.0,
+      "message": "Parallel execution efficient (7.7x speedup)",
+      "details": {
+        "parallel_tasks": 8,
+        "total_duration": 0.10373449325561523,
+        "unique_threads": 8,
+        "task_results": [
+          {
+            "task_id": 0,
+            "duration": 0.10010313987731934,
+            "thread_id": 123917303170752
+          },
+          {
+            "task_id": 1,
+            "duration": 0.10010170936584473,
+            "thread_id": 123917294778048
+          },
+          {
+            "task_id": 2,
+            "duration": 0.1000983715057373,
+            "thread_id": 123917286385344
+          },
+          {
+            "task_id": 3,
+            "duration": 0.10007190704345703,
+            "thread_id": 123917277992640
+          },
+          {
+            "task_id": 4,
+            "duration": 0.10005998611450195,
+            "thread_id": 123917269599936
+          },
+          {
+            "task_id": 5,
+            "duration": 0.10005807876586914,
+            "thread_id": 123916920026816
+          },
+          {
+            "task_id": 6,
+            "duration": 0.10005927085876465,
+            "thread_id": 123916911634112
+          },
+          {
+            "task_id": 7,
+            "duration": 0.10005879402160645,
+            "thread_id": 123916903241408
+          }
+        ],
+        "efficiency_ratio": 7.711996028444428
+      },
+      "duration_ms": 103.81627082824707,
+      "timestamp": "2025-09-02T05:41:33.122473+00:00"
+    },
+    {
+      "component": "Agents",
+      "test_name": "error_handling",
+      "status": "WARN",
+      "score": 0.5,
+      "message": "Partial error handling available",
+      "details": {
+        "emergency_stop_test": {
+          "returncode": 2,
+          "stdout": "",
+          "stderr": "usage: dsmil_emergency_stop.py [-h] [--stop] [--monitor] [--check] [--status]\n                               [--duration DURATION] [--reason REASON]\ndsmil_emergency_stop.py: error: unrecognized arguments: --test\n"
+        },
+        "emergency_stop_available": false,
+        "rollback_scripts": [
+          "/home/john/LAT5150DRVMIL/tpm_rollback.json"
+        ]
+      },
+      "duration_ms": 34.623146057128906,
+      "timestamp": "2025-09-02T05:41:33.226400+00:00"
+    },
+    {
+      "component": "Performance",
+      "test_name": "xor_sse42",
+      "status": "PASS",
+      "score": 1.0,
+      "message": "XOR/SSE4.2 performance excellent (10,134,772,201 ops/sec)",
+      "details": {
+        "simd_test_output": "SIMD XOR Performance Test\n========================\nTest completed successfully\nTotal operations: 10000000\nElapsed time: 0.001 seconds\nPerformance: 10134772201 operations/sec\nVerification: PASSED\n",
+        "simd_test_duration": 0.003415346145629883,
+        "simd_test_returncode": 0,
+        "measured_ops_per_sec": 10134772201,
+        "target_ops_per_sec": 1000000
+      },
+      "duration_ms": 3.6444664001464844,
+      "timestamp": "2025-09-02T05:41:33.261152+00:00"
+    },
+    {
+      "component": "Performance",
+      "test_name": "database_queries",
+      "status": "PASS",
+      "score": 1.0,
+      "message": "Database queries fast (0.3ms avg)",
+      "details": {
+        "database_type": "SQLite",
+        "total_query_time_ms": 1.0173320770263672,
+        "average_query_time_ms": 0.2758502960205078,
+        "individual_query_times": [
+          0.782012939453125,
+          0.030517578125,
+          0.015020370483398438
+        ],
+        "target_query_time_ms": 100.0
+      },
+      "duration_ms": 1.1637210845947266,
+      "timestamp": "2025-09-02T05:41:33.264949+00:00"
+    },
+    {
+      "component": "Performance",
+      "test_name": "agent_response_times",
+      "status": "PASS",
+      "score": 1.0,
+      "message": "Agent response time excellent (61.8ms)",
+      "details": {
+        "simulated_response_ms": 10.149002075195312,
+        "target_response_ms": 500.0,
+        "orchestrator_test_ms": 61.78689002990723,
+        "orchestrator_returncode": 0
+      },
+      "duration_ms": 72.0362663269043,
+      "timestamp": "2025-09-02T05:41:33.266179+00:00"
+    },
+    {
+      "component": "Performance",
+      "test_name": "system_resources",
+      "status": "PASS",
+      "score": 1.0,
+      "message": "System resources healthy (CPU: 2.2%, RAM: 10.0%)",
+      "details": {
+        "cpu_percent": 2.2,
+        "memory_percent": 10.0,
+        "disk_percent": 23.775974406047762,
+        "memory_available_gb": 56.02588653564453,
+        "disk_free_gb": 165.43856048583984,
+        "thresholds": {
+          "cpu_warning": 80.0,
+          "memory_warning": 85.0,
+          "disk_warning": 90.0
+        },
+        "resource_scores": {
+          "cpu_score": 1.0,
+          "memory_score": 1.0,
+          "disk_score": 1.0,
+          "overall_score": 1.0
+        }
+      },
+      "duration_ms": 1000.540018081665,
+      "timestamp": "2025-09-02T05:41:33.338315+00:00"
+    }
+  ]
+}

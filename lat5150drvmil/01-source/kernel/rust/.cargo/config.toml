@@ -1,0 +1,31 @@
+# Cargo configuration for DSMIL Rust kernel module
+# Forces rebuild of std library components (including compiler_builtins)
+# to prevent FMA instructions that objtool cannot decode
+
+[build]
+# Rebuild std library components from source with our target features
+# This ensures compiler_builtins is built without FMA support
+target = "x86_64-unknown-linux-gnu"
+
+[unstable]
+# Enable building std from source (requires nightly or -Z build-std)
+build-std = ["core", "compiler_builtins", "alloc"]
+build-std-features = ["compiler-builtins-mem"]
+
+[target.x86_64-unknown-linux-gnu]
+# Target-specific flags to disable FMA and other incompatible features
+# Use x86-64 baseline (no FMA, AVX, or other modern instructions)
+rustflags = [
+    "-C", "target-cpu=x86-64",
+    "-C", "target-feature=-avx",
+    "-C", "target-feature=-avx2",
+    "-C", "target-feature=-fma",
+    "-C", "target-feature=-f16c",
+    "-C", "target-feature=-xsave",
+    "-C", "target-feature=-xsaveopt",
+    "-C", "llvm-args=--min-jump-table-entries=9999",
+]
+
+# Offline mode configuration (for air-gapped builds)
+[net]
+offline = false  # Set to true for offline builds

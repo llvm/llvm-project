@@ -1,0 +1,52 @@
+[Unit]
+Description=LAT5150 DRVMIL Unified Tactical API with Atomic Red Team
+Documentation=file:///home/user/LAT5150DRVMIL/00-documentation/
+Documentation=file:///home/user/LAT5150DRVMIL/03-web-interface/ATOMIC_RED_TEAM_NL_USAGE.md
+After=network.target network-online.target
+Wants=network-online.target
+ConditionPathExists=/home/user/LAT5150DRVMIL/03-web-interface/unified_tactical_api.py
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/user/LAT5150DRVMIL/03-web-interface
+Environment="PYTHONUNBUFFERED=1"
+Environment="PYTHONPATH=/home/user/LAT5150DRVMIL/01-source:/home/user/LAT5150DRVMIL/02-ai-engine"
+Environment="TACTICAL_PORT=80"
+Environment="ART_MCP_TRANSPORT=stdio"
+Environment="ART_DATA_DIR=/home/user/LAT5150DRVMIL/03-mcp-servers/atomic-red-team-data"
+Environment="ART_EXECUTION_ENABLED=false"
+
+# Start the unified tactical API with Atomic Red Team integration
+ExecStart=/usr/bin/python3 /home/user/LAT5150DRVMIL/03-web-interface/unified_tactical_api.py \
+    --workspace /home/user/LAT5150DRVMIL \
+    --port 80 \
+    --host 0.0.0.0 \
+    --ollama-endpoint http://localhost:11434 \
+    --local-models whiterabbit,llama3.2:latest,codellama:latest
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitInterval=200
+StartLimitBurst=5
+
+# Resource limits
+LimitNOFILE=65536
+Nice=-10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lat5150-unified-api
+
+# Security hardening
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/user/LAT5150DRVMIL
+ReadWritePaths=/opt/lat5150
+NoNewPrivileges=false
+
+[Install]
+WantedBy=multi-user.target

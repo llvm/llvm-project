@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAT5150 DRVMIL - Tactical Self-Coding Interface</title>
+    <meta name="security-classification" content="UNCLASSIFIED">
+    <meta name="tempest-compliant" content="true">
+
+    <style>
+        /* ═══════════════════════════════════════════════════════════
+           TACTICAL MILITARY-GRADE UI FRAMEWORK
+           TEMPEST-Compliant Design System
+           ═══════════════════════════════════════════════════════════ */
+
+        /* ────────────────────────────────────────────────────────────
+           ROOT VARIABLES - TACTICAL COLOR SCHEMES
+           ──────────────────────────────────────────────────────────── */
+
+        :root {
+            /* Typography */
+            --font-mono: 'Courier New', 'Consolas', 'Monaco', monospace;
+            --font-system: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+
+            /* Tactical Spacing */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+
+            /* Grid System */
+            --grid-unit: 8px;
+
+            /* TEMPEST Compliance */
+            --tempest-max-brightness: 0.85;
+            --tempest-animation-duration: 0ms; /* Disabled for EMF reduction */
+
+            /* Security Classification Colors */
+            --classification-unclass: #00ff00;
+            --classification-cui: #ffff00;
+            --classification-secret: #ff0000;
+            --classification-ts: #ff00ff;
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           TACTICAL DISPLAY MODE: COMFORT (DEFAULT - LEVEL C)
+           Eye-friendly for extended operations, unclassified sensitive
+           NATO SDIP-27 Level C: Moderate protection
+           ──────────────────────────────────────────────────────────── */
+
+        [data-tactical-mode="comfort"] {
+            --bg-primary: #1a2228;
+            --bg-secondary: #232d35;
+            --bg-tertiary: #2d3942;
+            --bg-input: #1f282f;
+            --bg-hover: #3a4550;
+            --bg-active: #455058;
+
+            --text-primary: #d4e4f0;
+            --text-secondary: #a8c0d4;
+            --text-muted: #7a95ab;
+            --text-inverse: #1a2228;
+
+            --border-primary: #3d5060;
+            --border-secondary: #2d3d4d;
+            --border-active: #4db8e8;
+
+            --status-success: #5fdc8f;
+            --status-warning: #f4b860;
+            --status-error: #ff6b6b;
+            --status-info: #4db8e8;
+            --status-processing: #ffa940;
+
+            --tactical-primary: #4db8e8;
+            --tactical-secondary: #3aa0d0;
+            --tactical-accent: #6fd4ff;
+
+            --shadow-tactical: 0 2px 6px rgba(77, 184, 232, 0.15);
+            --glow-tactical: 0 0 8px rgba(77, 184, 232, 0.25);
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           TACTICAL DISPLAY MODE: DAY
+           High contrast for outdoor/bright conditions
+           ──────────────────────────────────────────────────────────── */
+
+        [data-tactical-mode="day"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2a2a2a;
+            --bg-tertiary: #3a3a3a;
+            --bg-input: #252525;
+            --bg-hover: #404040;
+            --bg-active: #4a4a4a;
+
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --text-muted: #808080;
+            --text-inverse: #1a1a1a;
+
+            --border-primary: #4a4a4a;
+            --border-secondary: #3a3a3a;
+            --border-active: #00ff00;
+
+            --status-success: #00ff00;
+            --status-warning: #ffff00;
+            --status-error: #ff0000;
+            --status-info: #00ffff;
+            --status-processing: #ff8800;
+
+            --tactical-primary: #00ff00;
+            --tactical-secondary: #00cc00;
+            --tactical-accent: #00ffff;
+
+            --shadow-tactical: 0 2px 4px rgba(0, 255, 0, 0.1);
+            --glow-tactical: 0 0 4px rgba(0, 255, 0, 0.3);
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           TACTICAL DISPLAY MODE: NIGHT
+           Reduced brightness for low-light operations
+           ──────────────────────────────────────────────────────────── */
+
+        [data-tactical-mode="night"] {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #151515;
+            --bg-tertiary: #1a1a1a;
+            --bg-input: #121212;
+            --bg-hover: #202020;
+            --bg-active: #252525;
+
+            --text-primary: #ff6666;
+            --text-secondary: #ff4444;
+            --text-muted: #cc3333;
+            --text-inverse: #0a0a0a;
+
+            --border-primary: #331111;
+            --border-secondary: #221111;
+            --border-active: #ff3333;
+
+            --status-success: #ff6666;
+            --status-warning: #ffaa66;
+            --status-error: #ff3333;
+            --status-info: #ff9999;
+            --status-processing: #ffaa66;
+
+            --tactical-primary: #ff4444;
+            --tactical-secondary: #cc3333;
+            --tactical-accent: #ff6666;
+
+            --shadow-tactical: 0 2px 4px rgba(255, 68, 68, 0.1);
+            --glow-tactical: 0 0 4px rgba(255, 68, 68, 0.2);
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           TACTICAL DISPLAY MODE: NVG (Night Vision Compatible)
+           Monochrome green for night vision goggle compatibility
+           ──────────────────────────────────────────────────────────── */
+
+        [data-tactical-mode="nvg"] {
+            --bg-primary: #001100;
+            --bg-secondary: #002200;
+            --bg-tertiary: #003300;
+            --bg-input: #001a00;
+            --bg-hover: #004400;
+            --bg-active: #005500;
+
+            --text-primary: #00ff00;
+            --text-secondary: #00dd00;
+            --text-muted: #009900;
+            --text-inverse: #001100;
+
+            --border-primary: #004400;
+            --border-secondary: #003300;
+            --border-active: #00ff00;
+
+            --status-success: #00ff00;
+            --status-warning: #88ff88;
+            --status-error: #66ff66;
+            --status-info: #44ff44;
+            --status-processing: #88ff88;
+
+            --tactical-primary: #00ff00;
+            --tactical-secondary: #00cc00;
+            --tactical-accent: #00dd00;
+
+            --shadow-tactical: 0 2px 4px rgba(0, 255, 0, 0.15);
+            --glow-tactical: 0 0 6px rgba(0, 255, 0, 0.4);
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           TACTICAL DISPLAY MODE: OLED BLACK
+           Pure blacks for OLED displays, maximum EMF reduction
+           ──────────────────────────────────────────────────────────── */
+
+        [data-tactical-mode="oled"] {
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #111111;
+            --bg-input: #050505;
+            --bg-hover: #181818;
+            --bg-active: #1a1a1a;
+
+            --text-primary: #00dd00;
+            --text-secondary: #00aa00;
+            --text-muted: #007700;
+            --text-inverse: #000000;
+
+            --border-primary: #003300;
+            --border-secondary: #002200;
+            --border-active: #00ff00;
+
+            --status-success: #00ff00;
+            --status-warning: #ffff00;
+            --status-error: #ff0000;
+            --status-info: #00ffff;
+            --status-processing: #ff8800;
+
+            --tactical-primary: #00dd00;
+            --tactical-secondary: #00aa00;
+            --tactical-accent: #00ffff;
+
+            --shadow-tactical: none;
+            --glow-tactical: 0 0 2px rgba(0, 221, 0, 0.3);
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           TACTICAL DISPLAY MODE: HIGH CONTRAST
+           Maximum contrast for accessibility and harsh lighting
+           ──────────────────────────────────────────────────────────── */
+
+        [data-tactical-mode="contrast"] {
+            --bg-primary: #000000;
+            --bg-secondary: #111111;
+            --bg-tertiary: #222222;
+            --bg-input: #0a0a0a;
+            --bg-hover: #333333;
+            --bg-active: #444444;
+
+            --text-primary: #ffffff;
+            --text-secondary: #dddddd;
+            --text-muted: #aaaaaa;
+            --text-inverse: #000000;
+
+            --border-primary: #ffffff;
+            --border-secondary: #888888;
+            --border-active: #ffffff;
+
+            --status-success: #00ff00;
+            --status-warning: #ffff00;
+            --status-error: #ff0000;
+            --status-info: #00ffff;
+            --status-processing: #ff8800;
+
+            --tactical-primary: #ffffff;
+            --tactical-secondary: #dddddd;
+            --tactical-accent: #00ffff;
+
+            --shadow-tactical: 0 2px 8px rgba(255, 255, 255, 0.2);
+            --glow-tactical: 0 0 4px rgba(255, 255, 255, 0.5);
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           TACTICAL DISPLAY MODE: LEVEL A (MAXIMUM TEMPEST)
+           Maximum EMF reduction for Top Secret operations
+           NATO SDIP-27 Level A: Highest protection
+           ──────────────────────────────────────────────────────────── */
+
+        [data-tactical-mode="level-a"] {
+            --bg-primary: #000000;
+            --bg-secondary: #000000;
+            --bg-tertiary: #050505;
+            --bg-input: #000000;
+            --bg-hover: #0a0a0a;
+            --bg-active: #0f0f0f;
+
+            --text-primary: #008800;
+            --text-secondary: #006600;
+            --text-muted: #004400;
+            --text-inverse: #000000;
+
+            --border-primary: #002200;
+            --border-secondary: #001100;
+            --border-active: #008800;
+
+            --status-success: #008800;
+            --status-warning: #888800;
+            --status-error: #880000;
+            --status-info: #008888;
+            --status-processing: #885500;
+
+            --tactical-primary: #008800;
+            --tactical-secondary: #006600;
+            --tactical-accent: #008888;
+
+            --shadow-tactical: none;
+            --glow-tactical: none;
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           BASE STYLES - TEMPEST COMPLIANT
+           ──────────────────────────────────────────────────────────── */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            font-family: var(--font-mono);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 13px;
+            line-height: 1.4;
+            /* TEMPEST: Reduce brightness */
+            filter: brightness(var(--tempest-max-brightness));
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Disable animations for EMF reduction */
+        *, *::before, *::after {
+            animation-duration: var(--tempest-animation-duration) !important;
+            transition-duration: var(--tempest-animation-duration) !important;
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           CLASSIFICATION BANNER
+           ──────────────────────────────────────────────────────────── */
+
+        .classification-banner {
+            background: var(--bg-secondary);
+            color: var(--classification-unclass);
+            text-align: center;
+            padding: var(--spacing-xs);
+            font-weight: bold;
+            font-size: 11px;
+            letter-spacing: 2px;
+            border-bottom: 2px solid var(--classification-unclass);
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            z-index: 10000;
+        }
+
+        .classification-banner.cui {
+            color: var(--classification-cui);
+            border-color: var(--classification-cui);
+        }
+
+        .classification-banner.secret {
+            color: var(--classification-secret);
+            border-color: var(--classification-secret);
+        }
+
+        .classification-banner.ts {
+            color: var(--classification-ts);
+            border-color: var(--classification-ts);
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           TACTICAL HEADER
+           ──────────────────────────────────────────────────────────── */
+
+        .tactical-header {
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--border-primary);
+            padding: var(--spacing-sm) var(--spacing-md);
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .system-id {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--tactical-primary);
+            letter-spacing: 1px;
+            font-family: var(--font-mono);
+        }
+
+        .system-status {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--status-success);
+            box-shadow: var(--glow-tactical);
+        }
+
+        .status-dot.warning { background: var(--status-warning); }
+        .status-dot.error { background: var(--status-error); }
+        .status-dot.processing { background: var(--status-processing); }
+
+        .tactical-controls {
+            display: flex;
+            gap: var(--spacing-sm);
+            justify-content: flex-end;
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           TACTICAL BUTTONS
+           ──────────────────────────────────────────────────────────── */
+
+        .tactical-btn {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: bold;
+        }
+
+        .tactical-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-active);
+        }
+
+        .tactical-btn:active {
+            background: var(--bg-active);
+        }
+
+        .tactical-btn.primary {
+            background: var(--tactical-primary);
+            color: var(--text-inverse);
+            border-color: var(--tactical-primary);
+        }
+
+        .tactical-btn.primary:hover {
+            background: var(--tactical-secondary);
+            border-color: var(--tactical-secondary);
+        }
+
+        .tactical-btn.small {
+            padding: 2px 6px;
+            font-size: 10px;
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           MAIN LAYOUT
+           ──────────────────────────────────────────────────────────── */
+
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 250px 1fr 300px;
+            gap: 0;
+            overflow: hidden;
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           SIDEBAR - MISSION CONTROLS
+           ──────────────────────────────────────────────────────────── */
+
+        .sidebar {
+            background: var(--bg-secondary);
+            border-right: 2px solid var(--border-primary);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .panel {
+            border-bottom: 1px solid var(--border-secondary);
+        }
+
+        .panel-header {
+            background: var(--bg-tertiary);
+            padding: var(--spacing-sm);
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--tactical-primary);
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .panel-content {
+            padding: var(--spacing-sm);
+        }
+
+        .mode-selector {
+            display: grid;
+            gap: var(--spacing-xs);
+        }
+
+        .mode-btn {
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-secondary);
+            padding: var(--spacing-sm);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            cursor: pointer;
+            text-align: left;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .mode-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-active);
+        }
+
+        .mode-btn.active {
+            background: var(--tactical-primary);
+            color: var(--text-inverse);
+            border-color: var(--tactical-primary);
+            font-weight: bold;
+        }
+
+        .tempest-controls {
+            display: grid;
+            gap: var(--spacing-sm);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        .control-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .control-input {
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 1px solid var(--border-secondary);
+            padding: var(--spacing-xs);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            width: 100%;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: var(--border-active);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-secondary);
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: var(--tactical-primary);
+            cursor: pointer;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--tactical-primary);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           MAIN CHAT AREA
+           ──────────────────────────────────────────────────────────── */
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-primary);
+            overflow: hidden;
+        }
+
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .message {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: var(--spacing-sm);
+            font-family: var(--font-mono);
+        }
+
+        .message-header {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            text-align: right;
+            padding-top: 2px;
+        }
+
+        .message-timestamp {
+            display: block;
+            font-size: 9px;
+            margin-top: 2px;
+        }
+
+        .message-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-secondary);
+            border-left: 3px solid var(--border-secondary);
+            padding: var(--spacing-sm);
+        }
+
+        .message.user .message-content {
+            border-left-color: var(--tactical-accent);
+        }
+
+        .message.assistant .message-content {
+            border-left-color: var(--tactical-primary);
+        }
+
+        .message.system .message-content {
+            border-left-color: var(--status-warning);
+            background: var(--bg-tertiary);
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           EVENT DISPLAY
+           ──────────────────────────────────────────────────────────── */
+
+        .event-display {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-secondary);
+            padding: var(--spacing-sm);
+            margin-top: var(--spacing-sm);
+        }
+
+        .event-item {
+            display: grid;
+            grid-template-columns: 20px 1fr auto;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-xs) 0;
+            font-size: 11px;
+            border-bottom: 1px solid var(--border-secondary);
+        }
+
+        .event-item:last-child {
+            border-bottom: none;
+        }
+
+        .event-icon {
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .event-message {
+            color: var(--text-secondary);
+        }
+
+        .event-progress {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-secondary);
+            margin-top: var(--spacing-xs);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--tactical-primary);
+            width: 0%;
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           INPUT AREA
+           ──────────────────────────────────────────────────────────── */
+
+        .input-area {
+            background: var(--bg-secondary);
+            border-top: 2px solid var(--border-primary);
+            padding: var(--spacing-md);
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: var(--spacing-sm);
+        }
+
+        .message-input {
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 1px solid var(--border-secondary);
+            padding: var(--spacing-sm);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .message-input:focus {
+            outline: none;
+            border-color: var(--border-active);
+            box-shadow: var(--glow-tactical);
+        }
+
+        .send-controls {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           STATUS PANEL
+           ──────────────────────────────────────────────────────────── */
+
+        .status-panel {
+            background: var(--bg-secondary);
+            border-left: 2px solid var(--border-primary);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            gap: var(--spacing-xs);
+            font-size: 11px;
+        }
+
+        .stat-item {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-xs);
+            background: var(--bg-input);
+            border: 1px solid var(--border-secondary);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            color: var(--tactical-primary);
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .system-log {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: 10px;
+            border-bottom: 1px solid var(--border-secondary);
+            display: grid;
+            grid-template-columns: 60px 1fr;
+            gap: var(--spacing-xs);
+        }
+
+        .log-time {
+            color: var(--text-muted);
+        }
+
+        .log-message {
+            color: var(--text-secondary);
+        }
+
+        .log-entry.info .log-message { color: var(--status-info); }
+        .log-entry.success .log-message { color: var(--status-success); }
+        .log-entry.warning .log-message { color: var(--status-warning); }
+        .log-entry.error .log-message { color: var(--status-error); }
+
+        /* ────────────────────────────────────────────────────────────
+           SCROLLBARS - TACTICAL STYLE
+           ──────────────────────────────────────────────────────────── */
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-primary);
+            border: 1px solid var(--bg-tertiary);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--tactical-primary);
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           SCREEN BLANKING (TEMPEST)
+           ──────────────────────────────────────────────────────────── */
+
+        .screen-blank {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000000;
+            z-index: 100000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            color: var(--tactical-primary);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .screen-blank.active {
+            display: flex;
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           RESPONSIVE ADJUSTMENTS
+           ──────────────────────────────────────────────────────────── */
+
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 200px 1fr;
+            }
+
+            .status-panel {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body data-tactical-mode="comfort">
+
+    <!-- ═══════════════════════════════════════════════════════════
+         CLASSIFICATION BANNER (TOP)
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="classification-banner" id="classificationTop">
+        UNCLASSIFIED // FOR OFFICIAL USE ONLY
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         TACTICAL HEADER
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="tactical-header">
+        <div class="system-id">LAT5150 DRVMIL</div>
+
+        <div class="system-status">
+            <div class="status-indicator">
+                <div class="status-dot" id="systemStatusDot"></div>
+                <span id="systemStatusText">OPERATIONAL</span>
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot" id="securityStatusDot"></div>
+                <span id="securityStatusText">SECURE</span>
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot processing" id="tempestStatusDot"></div>
+                <span id="tempestStatusText">TEMPEST-COMPLIANT</span>
+            </div>
+        </div>
+
+        <div class="tactical-controls">
+            <button class="tactical-btn small" onclick="clearMessages()">CLEAR</button>
+            <button class="tactical-btn small" onclick="toggleScreenBlank()">BLANK</button>
+            <button class="tactical-btn small" onclick="exportLog()">EXPORT</button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MAIN LAYOUT
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="main-container">
+
+        <!-- ───────────────────────────────────────────────────────
+             SIDEBAR - MISSION CONTROLS
+             ─────────────────────────────────────────────────────── -->
+        <div class="sidebar">
+
+            <!-- Display Mode Selector -->
+            <div class="panel">
+                <div class="panel-header">█ DISPLAY MODE</div>
+                <div class="panel-content">
+                    <div class="mode-selector">
+                        <button class="mode-btn active" data-mode="comfort" onclick="setTacticalMode('comfort')">
+                            ▸ COMFORT (LEVEL C)
+                        </button>
+                        <button class="mode-btn" data-mode="day" onclick="setTacticalMode('day')">
+                            ▸ DAY MODE
+                        </button>
+                        <button class="mode-btn" data-mode="night" onclick="setTacticalMode('night')">
+                            ▸ NIGHT MODE
+                        </button>
+                        <button class="mode-btn" data-mode="nvg" onclick="setTacticalMode('nvg')">
+                            ▸ NVG MODE
+                        </button>
+                        <button class="mode-btn" data-mode="oled" onclick="setTacticalMode('oled')">
+                            ▸ OLED BLACK
+                        </button>
+                        <button class="mode-btn" data-mode="contrast" onclick="setTacticalMode('contrast')">
+                            ▸ HIGH CONTRAST
+                        </button>
+                        <button class="mode-btn" data-mode="level-a" onclick="setTacticalMode('level-a')">
+                            ▸ LEVEL A (MAX TEMPEST)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TEMPEST Controls -->
+            <div class="panel">
+                <div class="panel-header">█ TEMPEST COMPLIANCE</div>
+                <div class="panel-content tempest-controls">
+                    <div class="control-group">
+                        <label class="control-label">EMF REDUCTION</label>
+                        <div class="checkbox-label">
+                            <input type="checkbox" id="emfReduction" checked onchange="updateTempestSettings()">
+                            <span>ENABLE LOW EMF MODE</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">BRIGHTNESS: <span id="brightnessValue">85</span>%</label>
+                        <input type="range" id="brightness" min="20" max="100" value="85"
+                               oninput="updateBrightness(this.value)">
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">AUTO BLANK (SEC)</label>
+                        <input type="number" id="autoBlank" class="control-input" value="300"
+                               min="0" max="3600" onchange="updateAutoBlank(this.value)">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="checkbox-label">
+                            <input type="checkbox" id="reduceAnimations" checked onchange="updateAnimations()">
+                            <span>DISABLE ANIMATIONS</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="checkbox-label">
+                            <input type="checkbox" id="minimizeBlueLsight" onchange="updateBlueLight()">
+                            <span>REDUCE BLUE LIGHT</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Settings -->
+            <div class="panel">
+                <div class="panel-header">█ SECURITY</div>
+                <div class="panel-content">
+                    <div class="control-group">
+                        <label class="control-label">CLASSIFICATION</label>
+                        <select class="control-input" id="classification" onchange="updateClassification(this.value)">
+                            <option value="unclass">UNCLASSIFIED</option>
+                            <option value="cui">CUI</option>
+                            <option value="secret">SECRET</option>
+                            <option value="ts">TOP SECRET</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="checkbox-label">
+                            <input type="checkbox" id="requireAuth" checked>
+                            <span>REQUIRE TOKEN AUTH</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="checkbox-label">
+                            <input type="checkbox" id="auditLog" checked>
+                            <span>ENABLE AUDIT LOG</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connection Settings -->
+            <div class="panel">
+                <div class="panel-header">█ CONNECTION</div>
+                <div class="panel-content">
+                    <div class="control-group">
+                        <label class="control-label">API ENDPOINT</label>
+                        <input type="text" class="control-input" id="apiEndpoint"
+                               value="http://127.0.0.1:5001">
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">AUTH TOKEN</label>
+                        <input type="password" class="control-input" id="authToken"
+                               placeholder="ENTER TOKEN">
+                    </div>
+
+                    <div class="control-group">
+                        <button class="tactical-btn" onclick="testConnection()">TEST CONNECTION</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Capabilities (Natural Language) -->
+            <div class="panel">
+                <div class="panel-header">█ AI CAPABILITIES</div>
+                <div class="panel-content">
+                    <div class="control-group">
+                        <div class="checkbox-label">
+                            <input type="checkbox" id="nlMode" onchange="toggleNLMode()">
+                            <span>NATURAL LANGUAGE MODE</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <button class="tactical-btn" onclick="loadCapabilities()">LOAD CAPABILITIES</button>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">AVAILABLE CAPABILITIES</label>
+                        <div id="capabilitiesCount" style="color: var(--tactical-primary); font-weight: bold; padding: 4px 0;">
+                            NOT LOADED
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <button class="tactical-btn" onclick="showSelfAwareness()">SELF-AWARENESS REPORT</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ───────────────────────────────────────────────────────
+             MAIN CHAT AREA
+             ─────────────────────────────────────────────────────── -->
+        <div class="chat-container">
+            <div class="messages-area" id="messagesArea">
+                <!-- Messages will be added here -->
+                <div class="message system">
+                    <div class="message-header">
+                        SYSTEM
+                        <span class="message-timestamp" id="systemTime"></span>
+                    </div>
+                    <div class="message-content">
+                        <strong>LAT5150 DRVMIL TACTICAL INTERFACE INITIALIZED</strong><br>
+                        <br>
+                        SYSTEM STATUS: OPERATIONAL<br>
+                        SECURITY LEVEL: HIGH<br>
+                        TEMPEST COMPLIANCE: ENABLED<br>
+                        EMF REDUCTION: ACTIVE<br>
+                        <br>
+                        READY FOR MISSION INPUT.
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-row">
+                    <textarea class="message-input" id="messageInput"
+                              placeholder="ENTER MISSION DIRECTIVE..."
+                              onkeydown="handleInputKeydown(event)"></textarea>
+                    <div class="send-controls">
+                        <button class="tactical-btn primary" id="sendBtn" onclick="sendMessage()">
+                            SEND ►
+                        </button>
+                        <button class="tactical-btn" id="streamBtn" onclick="streamMessage()">
+                            STREAM
+                        </button>
+                        <button class="tactical-btn" id="nlBtn" onclick="sendNLCommand()" style="display: none;">
+                            NL COMMAND
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ───────────────────────────────────────────────────────
+             STATUS PANEL
+             ─────────────────────────────────────────────────────── -->
+        <div class="status-panel">
+
+            <!-- System Statistics -->
+            <div class="panel">
+                <div class="panel-header">█ SYSTEM STATUS</div>
+                <div class="panel-content">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">UPTIME</span>
+                            <span class="stat-value" id="uptime">00:00:00</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">OPERATIONS</span>
+                            <span class="stat-value" id="operations">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">SUCCESS RATE</span>
+                            <span class="stat-value" id="successRate">100%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">SECURITY</span>
+                            <span class="stat-value" id="securityStatus">SECURE</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">TEMPEST</span>
+                            <span class="stat-value" id="tempestStatus">COMPLIANT</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">EMF LEVEL</span>
+                            <span class="stat-value" id="emfLevel">LOW</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Log -->
+            <div class="panel" style="flex: 1; display: flex; flex-direction: column;">
+                <div class="panel-header">█ SYSTEM LOG</div>
+                <div class="system-log" id="systemLog">
+                    <!-- Log entries will be added here -->
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         CLASSIFICATION BANNER (BOTTOM)
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="classification-banner" id="classificationBottom">
+        UNCLASSIFIED // FOR OFFICIAL USE ONLY
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SCREEN BLANK OVERLAY
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="screen-blank" id="screenBlank">
+        <div>SCREEN BLANKED - PRESS ANY KEY TO RESUME</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         JAVASCRIPT - TACTICAL INTERFACE LOGIC
+         ═══════════════════════════════════════════════════════════ -->
+    <script>
+        // ═══════════════════════════════════════════════════════════
+        // GLOBAL STATE
+        // ═══════════════════════════════════════════════════════════
+
+        let startTime = Date.now();
+        let operationCount = 0;
+        let autoBlankTimer = null;
+        let autoBlankTimeout = 300; // seconds
+
+        // ═══════════════════════════════════════════════════════════
+        // INITIALIZATION
+        // ═══════════════════════════════════════════════════════════
+
+        function init() {
+            updateSystemTime();
+            updateUptime();
+            resetAutoBlank();
+            addSystemLog('info', 'TACTICAL INTERFACE INITIALIZED');
+
+            // Start timers
+            setInterval(updateSystemTime, 1000);
+            setInterval(updateUptime, 1000);
+
+            // Activity monitoring for auto-blank
+            document.addEventListener('mousemove', resetAutoBlank);
+            document.addEventListener('keypress', resetAutoBlank);
+
+            // Screen blank deactivation
+            document.addEventListener('keydown', () => {
+                if (document.getElementById('screenBlank').classList.contains('active')) {
+                    toggleScreenBlank();
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // TACTICAL DISPLAY MODES
+        // ═══════════════════════════════════════════════════════════
+
+        function setTacticalMode(mode) {
+            document.body.setAttribute('data-tactical-mode', mode);
+
+            // Update button states
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+
+            // Log mode change
+            addSystemLog('info', `DISPLAY MODE CHANGED TO ${mode.toUpperCase()}`);
+
+            // Handle animations for comfort mode
+            if (mode === 'comfort') {
+                // Enable subtle animations for comfort mode
+                document.documentElement.style.setProperty('--tempest-animation-duration', '100ms');
+                document.getElementById('reduceAnimations').checked = false;
+            } else {
+                // Disable animations for all other modes
+                document.documentElement.style.setProperty('--tempest-animation-duration', '0ms');
+                document.getElementById('reduceAnimations').checked = true;
+            }
+
+            // Handle brightness restrictions for Level A
+            if (mode === 'level-a') {
+                const currentBrightness = parseInt(document.getElementById('brightness').value);
+                if (currentBrightness > 60) {
+                    document.getElementById('brightness').value = 60;
+                    updateBrightness(60);
+                }
+                document.getElementById('brightness').max = 60;
+                addSystemLog('warning', 'LEVEL A: BRIGHTNESS CEILING RESTRICTED TO 60%');
+            } else {
+                document.getElementById('brightness').max = 100;
+            }
+
+            // Update TEMPEST status based on mode
+            if (mode === 'level-a') {
+                document.getElementById('tempestStatusText').textContent = 'LEVEL A MAXIMUM';
+                document.getElementById('emfLevel').textContent = 'ULTRA-LOW';
+            } else if (['nvg', 'oled', 'night'].includes(mode)) {
+                document.getElementById('tempestStatusText').textContent = 'TEMPEST-OPTIMAL';
+                document.getElementById('emfLevel').textContent = 'MINIMAL';
+            } else if (mode === 'comfort') {
+                document.getElementById('tempestStatusText').textContent = 'LEVEL C MODERATE';
+                document.getElementById('emfLevel').textContent = 'MODERATE';
+            } else {
+                document.getElementById('tempestStatusText').textContent = 'TEMPEST-COMPLIANT';
+                document.getElementById('emfLevel').textContent = 'LOW';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // TEMPEST COMPLIANCE CONTROLS
+        // ═══════════════════════════════════════════════════════════
+
+        function updateBrightness(value) {
+            document.getElementById('brightnessValue').textContent = value;
+            document.documentElement.style.setProperty('--tempest-max-brightness', value / 100);
+            addSystemLog('info', `BRIGHTNESS SET TO ${value}%`);
+        }
+
+        function updateTempestSettings() {
+            const enabled = document.getElementById('emfReduction').checked;
+            if (enabled) {
+                document.getElementById('emfLevel').textContent = 'LOW';
+                addSystemLog('success', 'EMF REDUCTION ENABLED');
+            } else {
+                document.getElementById('emfLevel').textContent = 'NORMAL';
+                addSystemLog('warning', 'EMF REDUCTION DISABLED');
+            }
+        }
+
+        function updateAnimations() {
+            const disabled = document.getElementById('reduceAnimations').checked;
+            if (disabled) {
+                document.documentElement.style.setProperty('--tempest-animation-duration', '0ms');
+                addSystemLog('info', 'ANIMATIONS DISABLED FOR EMF REDUCTION');
+            } else {
+                document.documentElement.style.setProperty('--tempest-animation-duration', '150ms');
+                addSystemLog('warning', 'ANIMATIONS ENABLED');
+            }
+        }
+
+        function updateBlueLight() {
+            const reduce = document.getElementById('minimizeBlueLight').checked;
+            if (reduce) {
+                document.body.style.filter = 'sepia(0.2) hue-rotate(-10deg)';
+                addSystemLog('info', 'BLUE LIGHT REDUCTION ENABLED');
+            } else {
+                document.body.style.filter = '';
+                addSystemLog('info', 'BLUE LIGHT REDUCTION DISABLED');
+            }
+        }
+
+        function updateAutoBlank(seconds) {
+            autoBlankTimeout = parseInt(seconds);
+            resetAutoBlank();
+            addSystemLog('info', `AUTO-BLANK SET TO ${seconds} SECONDS`);
+        }
+
+        function resetAutoBlank() {
+            if (autoBlankTimer) {
+                clearTimeout(autoBlankTimer);
+            }
+
+            if (autoBlankTimeout > 0) {
+                autoBlankTimer = setTimeout(() => {
+                    toggleScreenBlank();
+                    addSystemLog('warning', 'AUTO-BLANK ACTIVATED');
+                }, autoBlankTimeout * 1000);
+            }
+        }
+
+        function toggleScreenBlank() {
+            const blank = document.getElementById('screenBlank');
+            blank.classList.toggle('active');
+
+            if (blank.classList.contains('active')) {
+                addSystemLog('warning', 'SCREEN BLANKED');
+            } else {
+                addSystemLog('info', 'SCREEN RESUMED');
+                resetAutoBlank();
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // CLASSIFICATION MANAGEMENT
+        // ═══════════════════════════════════════════════════════════
+
+        function updateClassification(level) {
+            const banners = [
+                document.getElementById('classificationTop'),
+                document.getElementById('classificationBottom')
+            ];
+
+            const texts = {
+                'unclass': 'UNCLASSIFIED // FOR OFFICIAL USE ONLY',
+                'cui': 'CONTROLLED UNCLASSIFIED INFORMATION',
+                'secret': 'SECRET // NOFORN',
+                'ts': 'TOP SECRET // SCI // NOFORN'
+            };
+
+            banners.forEach(banner => {
+                banner.className = 'classification-banner ' + level;
+                banner.textContent = texts[level];
+            });
+
+            addSystemLog('warning', `CLASSIFICATION LEVEL SET TO ${level.toUpperCase()}`);
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // TIME AND STATUS UPDATES
+        // ═══════════════════════════════════════════════════════════
+
+        function updateSystemTime() {
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            const dateStr = now.toISOString().split('T')[0];
+            document.getElementById('systemTime').textContent = `${dateStr} ${timeStr}Z`;
+        }
+
+        function updateUptime() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const hours = Math.floor(elapsed / 3600).toString().padStart(2, '0');
+            const minutes = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
+            const seconds = (elapsed % 60).toString().padStart(2, '0');
+            document.getElementById('uptime').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // SYSTEM LOG
+        // ═══════════════════════════════════════════════════════════
+
+        function addSystemLog(level, message) {
+            const log = document.getElementById('systemLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${level}`;
+
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+
+            entry.innerHTML = `
+                <div class="log-time">${timeStr}</div>
+                <div class="log-message">${message}</div>
+            `;
+
+            log.insertBefore(entry, log.firstChild);
+
+            // Keep only last 100 entries
+            while (log.children.length > 100) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // MESSAGE HANDLING
+        // ═══════════════════════════════════════════════════════════
+
+        function handleInputKeydown(event) {
+            if (event.key === 'Enter' && event.ctrlKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // Add user message
+            addMessage('user', message);
+            input.value = '';
+
+            // Send to API
+            sendToAPI(message, false);
+
+            operationCount++;
+            document.getElementById('operations').textContent = operationCount;
+        }
+
+        function streamMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // Add user message
+            addMessage('user', message);
+            input.value = '';
+
+            // Send to API with streaming
+            sendToAPI(message, true);
+
+            operationCount++;
+            document.getElementById('operations').textContent = operationCount;
+        }
+
+        function addMessage(role, content) {
+            const messagesArea = document.getElementById('messagesArea');
+            const message = document.createElement('div');
+            message.className = `message ${role}`;
+
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            const dateStr = now.toISOString().split('T')[0];
+
+            message.innerHTML = `
+                <div class="message-header">
+                    ${role.toUpperCase()}
+                    <span class="message-timestamp">${dateStr} ${timeStr}Z</span>
+                </div>
+                <div class="message-content">${escapeHtml(content)}</div>
+            `;
+
+            messagesArea.appendChild(message);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+
+            resetAutoBlank();
+        }
+
+        function addMessageWithEvents(role, content, events) {
+            const messagesArea = document.getElementById('messagesArea');
+            const message = document.createElement('div');
+            message.className = `message ${role}`;
+
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            const dateStr = now.toISOString().split('T')[0];
+
+            let eventsHtml = '';
+            if (events && events.length > 0) {
+                eventsHtml = '<div class="event-display">';
+                events.forEach(event => {
+                    const icon = getEventIcon(event.type);
+                    const progress = event.progress !== undefined ? `${Math.round(event.progress * 100)}%` : '';
+                    eventsHtml += `
+                        <div class="event-item">
+                            <div class="event-icon">${icon}</div>
+                            <div class="event-message">${escapeHtml(event.message)}</div>
+                            <div class="event-progress">${progress}</div>
+                        </div>
+                    `;
+                });
+                eventsHtml += '</div>';
+            }
+
+            message.innerHTML = `
+                <div class="message-header">
+                    ${role.toUpperCase()}
+                    <span class="message-timestamp">${dateStr} ${timeStr}Z</span>
+                </div>
+                <div class="message-content">
+                    ${escapeHtml(content)}
+                    ${eventsHtml}
+                </div>
+            `;
+
+            messagesArea.appendChild(message);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+
+            resetAutoBlank();
+        }
+
+        function getEventIcon(type) {
+            const icons = {
+                'thinking': '◆',
+                'planning': '▸',
+                'executing': '►',
+                'reading': '◄',
+                'writing': '►',
+                'analyzing': '◊',
+                'searching': '◈',
+                'validating': '✓',
+                'error': '✗',
+                'warning': '⚠',
+                'success': '✓',
+                'info': 'ℹ',
+                'complete': '■'
+            };
+            return icons[type] || '▪';
+        }
+
+        function clearMessages() {
+            const messagesArea = document.getElementById('messagesArea');
+            messagesArea.innerHTML = '';
+            addSystemLog('warning', 'MESSAGE HISTORY CLEARED');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // API COMMUNICATION
+        // ═══════════════════════════════════════════════════════════
+
+        async function sendToAPI(message, stream) {
+            const endpoint = document.getElementById('apiEndpoint').value;
+            const token = document.getElementById('authToken').value;
+            const requireAuth = document.getElementById('requireAuth').checked;
+
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            if (requireAuth && token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            try {
+                addSystemLog('info', `SENDING REQUEST TO ${endpoint}`);
+                document.getElementById('systemStatusDot').className = 'status-dot processing';
+                document.getElementById('systemStatusText').textContent = 'PROCESSING';
+
+                if (stream) {
+                    // Streaming mode
+                    const response = await fetch(`${endpoint}/api/chat/stream`, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({ message: message })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+                    let events = [];
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop();
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = JSON.parse(line.slice(6));
+
+                                if (data.type === 'done') {
+                                    addMessageWithEvents('assistant', 'OPERATION COMPLETE', events);
+                                    addSystemLog('success', 'OPERATION COMPLETED SUCCESSFULLY');
+                                } else if (data.type !== 'ping' && data.type !== 'pong') {
+                                    events.push(data);
+                                    addSystemLog('info', `EVENT: ${data.type.toUpperCase()}`);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Non-streaming mode
+                    const response = await fetch(`${endpoint}/api/chat`, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({ message: message })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    addMessage('assistant', data.message || 'OPERATION COMPLETE');
+                    addSystemLog('success', 'OPERATION COMPLETED SUCCESSFULLY');
+                }
+
+                document.getElementById('systemStatusDot').className = 'status-dot';
+                document.getElementById('systemStatusText').textContent = 'OPERATIONAL';
+
+            } catch (error) {
+                addMessage('system', `ERROR: ${error.message}`);
+                addSystemLog('error', `API ERROR: ${error.message}`);
+
+                document.getElementById('systemStatusDot').className = 'status-dot error';
+                document.getElementById('systemStatusText').textContent = 'ERROR';
+
+                setTimeout(() => {
+                    document.getElementById('systemStatusDot').className = 'status-dot';
+                    document.getElementById('systemStatusText').textContent = 'OPERATIONAL';
+                }, 5000);
+            }
+        }
+
+        async function testConnection() {
+            const endpoint = document.getElementById('apiEndpoint').value;
+
+            try {
+                addSystemLog('info', 'TESTING CONNECTION...');
+                const response = await fetch(`${endpoint}/api/health`);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addSystemLog('success', `CONNECTION SUCCESSFUL - STATUS: ${data.status.toUpperCase()}`);
+                    document.getElementById('securityStatusDot').className = 'status-dot';
+                    document.getElementById('securityStatusText').textContent = 'SECURE';
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                addSystemLog('error', `CONNECTION FAILED: ${error.message}`);
+                document.getElementById('securityStatusDot').className = 'status-dot error';
+                document.getElementById('securityStatusText').textContent = 'DISCONNECTED';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // NATURAL LANGUAGE INTERFACE
+        // ═══════════════════════════════════════════════════════════
+
+        let nlModeEnabled = false;
+        let systemCapabilities = null;
+
+        function toggleNLMode() {
+            nlModeEnabled = document.getElementById('nlMode').checked;
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const streamBtn = document.getElementById('streamBtn');
+            const nlBtn = document.getElementById('nlBtn');
+
+            if (nlModeEnabled) {
+                input.placeholder = 'ENTER NATURAL LANGUAGE COMMAND (e.g., "Find the NSADeviceReconnaissance class")...';
+                sendBtn.style.display = 'none';
+                streamBtn.style.display = 'none';
+                nlBtn.style.display = 'block';
+                addSystemLog('info', 'NATURAL LANGUAGE MODE ENABLED');
+            } else {
+                input.placeholder = 'ENTER MISSION DIRECTIVE...';
+                sendBtn.style.display = 'block';
+                streamBtn.style.display = 'block';
+                nlBtn.style.display = 'none';
+                addSystemLog('info', 'STANDARD MODE ENABLED');
+            }
+        }
+
+        async function loadCapabilities() {
+            const endpoint = document.getElementById('apiEndpoint').value;
+
+            try {
+                addSystemLog('info', 'LOADING AI CAPABILITIES...');
+                const response = await fetch(`${endpoint}/api/v2/self-awareness`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                systemCapabilities = await response.json();
+
+                const capCount = systemCapabilities.capabilities_summary?.total_capabilities || 0;
+                document.getElementById('capabilitiesCount').textContent = `${capCount} CAPABILITIES LOADED`;
+
+                addSystemLog('success', `LOADED ${capCount} AI CAPABILITIES`);
+                addSystemLog('info', `LOCAL MODELS: ${systemCapabilities.local_models?.join(', ') || 'NONE'}`);
+
+            } catch (error) {
+                document.getElementById('capabilitiesCount').textContent = 'LOAD FAILED';
+                addSystemLog('error', `CAPABILITY LOAD FAILED: ${error.message}`);
+            }
+        }
+
+        async function showSelfAwareness() {
+            if (!systemCapabilities) {
+                await loadCapabilities();
+            }
+
+            if (systemCapabilities) {
+                let report = `AI SELF-AWARENESS REPORT\n\n`;
+                report += `SYSTEM: ${systemCapabilities.system_name}\n`;
+                report += `LOCAL MODELS: ${systemCapabilities.local_models?.join(', ')}\n\n`;
+
+                const summary = systemCapabilities.capabilities_summary;
+                if (summary) {
+                    report += `CAPABILITIES:\n`;
+                    for (const [category, count] of Object.entries(summary.by_category || {})) {
+                        report += `  ${category}: ${count}\n`;
+                    }
+                    report += `\nTOTAL: ${summary.total_capabilities} capabilities\n\n`;
+                }
+
+                report += `EXAMPLE COMMANDS:\n`;
+                (systemCapabilities.example_commands || []).forEach(cmd => {
+                    report += `  • ${cmd}\n`;
+                });
+
+                addMessage('system', report);
+                addSystemLog('info', 'SELF-AWARENESS REPORT GENERATED');
+            }
+        }
+
+        async function sendNLCommand() {
+            const input = document.getElementById('messageInput');
+            const command = input.value.trim();
+
+            if (!command) return;
+
+            // Add user command
+            addMessage('user', `[NL COMMAND] ${command}`);
+            input.value = '';
+
+            const endpoint = document.getElementById('apiEndpoint').value;
+
+            try {
+                addSystemLog('info', `PROCESSING NL COMMAND: ${command}`);
+                document.getElementById('systemStatusDot').className = 'status-dot processing';
+                document.getElementById('systemStatusText').textContent = 'NL PROCESSING';
+
+                const response = await fetch(`${endpoint}/api/v2/nl/command`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ command: command })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    let resultMsg = `NL COMMAND EXECUTED SUCCESSFULLY\n\n`;
+
+                    if (data.result.matched_capability) {
+                        resultMsg += `MATCHED CAPABILITY: ${data.result.matched_capability.name}\n`;
+                        resultMsg += `CONFIDENCE: ${(data.result.confidence * 100).toFixed(1)}%\n\n`;
+                    }
+
+                    if (data.result.result) {
+                        resultMsg += `RESULT:\n${JSON.stringify(data.result.result, null, 2)}`;
+                    }
+
+                    addMessage('assistant', resultMsg);
+                    addSystemLog('success', 'NL COMMAND COMPLETED');
+                } else {
+                    addMessage('system', `NL COMMAND FAILED: ${data.error || 'Unknown error'}`);
+                    addSystemLog('error', `NL COMMAND FAILED: ${data.error || 'Unknown error'}`);
+                }
+
+                document.getElementById('systemStatusDot').className = 'status-dot';
+                document.getElementById('systemStatusText').textContent = 'OPERATIONAL';
+
+                operationCount++;
+                document.getElementById('operations').textContent = operationCount;
+
+            } catch (error) {
+                addMessage('system', `NL COMMAND ERROR: ${error.message}`);
+                addSystemLog('error', `NL COMMAND ERROR: ${error.message}`);
+
+                document.getElementById('systemStatusDot').className = 'status-dot error';
+                document.getElementById('systemStatusText').textContent = 'ERROR';
+
+                setTimeout(() => {
+                    document.getElementById('systemStatusDot').className = 'status-dot';
+                    document.getElementById('systemStatusText').textContent = 'OPERATIONAL';
+                }, 5000);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // UTILITY FUNCTIONS
+        // ═══════════════════════════════════════════════════════════
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function exportLog() {
+            const messages = [];
+            document.querySelectorAll('.message').forEach(msg => {
+                const role = msg.classList[1];
+                const content = msg.querySelector('.message-content').textContent;
+                const time = msg.querySelector('.message-timestamp')?.textContent || '';
+                messages.push({ role, time, content });
+            });
+
+            const logData = JSON.stringify(messages, null, 2);
+            const blob = new Blob([logData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `lat5150_log_${Date.now()}.json`;
+            a.click();
+
+            URL.revokeObjectURL(url);
+            addSystemLog('success', 'LOG EXPORTED');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // INITIALIZE ON LOAD
+        // ═══════════════════════════════════════════════════════════
+
+        window.addEventListener('DOMContentLoaded', init);
+
+    </script>
+
+</body>
+</html>

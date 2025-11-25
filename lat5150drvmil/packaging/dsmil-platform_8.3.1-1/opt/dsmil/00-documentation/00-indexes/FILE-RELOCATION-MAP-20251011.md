@@ -1,0 +1,206 @@
+# File Relocation Map
+## Documentation Reorganization - October 11, 2025
+
+This document shows where each file was moved during the reorganization.
+
+---
+
+## Root → 00-documentation/02-analysis/
+
+### hardware/
+- DSMIL-72-DEVICE-DISCOVERY-COMPLETE.md
+- DSMIL-12-DEVICE-UPDATE-COMPLETE.md
+- DSMIL-DEVICE-FUNCTION-ANALYSIS.md
+- GNA_ACCELERATION_ANALYSIS.md
+- FULL_DEVICE_COVERAGE_ANALYSIS.md
+- DSMIL-CONTROL-MECHANISM-INVESTIGATION.md
+- DSMIL-DEBUG-INFRASTRUCTURE-COMPLETE.md
+
+### architecture/
+- DEVICE_ARCHITECTURE_INSIGHT.md
+
+### security/
+- NSA_DEVICE_IDENTIFICATION_FINAL.md
+- NSA_HARDWARE_THREAT_ASSESSMENT.md
+
+### system/
+- SYSTEM-FREEZE-ANALYSIS.md
+- DEV_RECOVERY_LOG.md
+
+---
+
+## Root → 02-deployment/
+
+### dsmil/
+- INSTALLER_README.md
+
+### root/
+- DEPLOYMENT_README.md → README.md
+
+### reports/
+- DEPLOYMENT_SUMMARY.md
+- DEPLOYMENT_EXECUTION_SUMMARY.md
+- DEPLOYMENT_DEBUGGING_FINAL_REPORT.md
+- DEPLOYMENT_SUCCESS_PHASE2A.md
+- MODULE-LOAD-STATUS.md
+- infrastructure-ready-report.md
+
+### guides/
+- SECURE_DEPLOYMENT_USAGE.md
+
+### thermal-guardian/
+- THERMAL_GUARDIAN_DEPLOYMENT.md
+- README_THERMAL_GUARDIAN.md
+
+### monitoring/
+- DSMIL_MONITORING_SETUP_COMPLETE.md
+- DSMIL_READONLY_MONITOR_COMPLETE.md
+- MONITORING_FRAMEWORK_COMPLETE.md
+- TRANSPARENT_OPERATION_VALIDATION.md
+
+---
+
+## Root → 03-security/
+
+### procedures/
+- DSMIL-SECURITY-SAFETY-MEASURES.md
+- CRITICAL_SAFETY_WARNING.md
+- COMPLETE_SAFETY_PROTOCOL.md
+- emergency-recovery-procedures.md
+- infrastructure-safety-checklist.md
+
+### audit/
+- SECURITY_FIXES_REPORT.md
+
+---
+
+## Root → 00-documentation/04-progress/
+
+### checkpoints/
+- FINAL-PROGRESS-WITH-ORGANIZATION-20250727.md
+- PRODUCTION_GO_LIVE_DECISION.md
+
+### summaries/
+- COMPLETE_PROJECT_RECORD.md
+- PROJECT_COMPLETE_SUMMARY.md
+- EXECUTIVE_SUMMARY.md
+- INTEGRATION_SUMMARY.md
+- TACTICAL-EXECUTION-SUMMARY.md
+
+### phases/
+- PHASE-1-DISCOVERY-ANALYSIS-REPORT.md
+- PHASE-2-FOUNDATION-PROGRESS.md
+- PHASE1_TESTING_COMPLETE_REPORT.md
+- PHASE2_NEXT_STEPS.md
+- PHASE3-TOKEN-TESTING-SUMMARY.md
+- PHASE_2_COMPLETION_SUMMARY.md
+- PHASE_2_COMPREHENSIVE_ENHANCEMENT_PLAN.md
+- PHASE_2_TPM_ENHANCED_PLAN.md
+- PHASE_3_INTEGRATION_COMPLETE.md
+- PHASE2A_TACTICAL_ORCHESTRATION_PLAN.md
+
+### reports/
+- READY_FOR_TESTING.md
+
+---
+
+## Root → 00-documentation/01-planning/
+
+### phase-4-deployment/
+- DSMIL-PRODUCTION-TIMELINE.md
+- STRATEGIC_PATH_FORWARD.md
+- UNIFIED-DSMIL-CONTROL-STRATEGY.md
+
+### agent-coordination/
+- DSMIL-AGENT-COORDINATION-PLAN.md
+- PRODUCTION-DSMIL-AGENT-TEAM-PLAN.md
+
+### production/
+- PRODUCTION_DEPLOYMENT_EXECUTIVE_SUMMARY.md
+- PRODUCTION_INTERFACE_PLAN.md
+- PRODUCTION_UPDATE_POWER_MANAGEMENT.md
+- DEBIAN-COMPATIBILITY-NOTE.md
+
+---
+
+## Root → 00-documentation/03-ai-framework/
+
+### coordination/
+- AGENT_COMMUNICATION_PROTOCOLS.md
+- AGENT_TEAM_COORDINATION_ACTIVATED.md
+
+### strategies/
+- AI-AGENT-NAVIGATION.md
+- ASYNC-DEVELOPMENT-MAP.md
+
+### scaling/
+- 500-AGENT-SCALING-ANALYSIS.md
+- 500-AGENT-TASK-DIVISION.md
+- SCALED-AGENT-TASK-DIVISION.md
+
+### testing/
+- test_cross_project_learning.md
+- test_cross_project_learning_2.md
+
+---
+
+## Root → 00-documentation/00-indexes/
+
+- MASTER-NAVIGATION.md
+- EXECUTION-FLOW.md
+- DIRECTORY-INDEX.md
+- MASTER_DOCUMENTATION_INDEX.md
+- MASTER_EXECUTION_RECORD.md
+- PLANNING-COMPLETENESS-MATRIX.md
+- PROJECT-ARCHITECTURE-FLOWCHART.md
+- DOCUMENTATION-CRAWL-RESULTS.md
+- ORGANIZATION-COMPLETE.md
+- ORGANIZATION_UPDATE.md
+
+---
+
+## Root → tpm2_compat/c_acceleration/package_docs/
+
+- TPM2_COMPATIBILITY_IMPLEMENTATION_SUMMARY.md
+- TPM2_OPERATIONAL_PROCEDURES.md
+- TPM2_PRODUCTION_DEPLOYMENT_REPORT.md
+- TPM2_PRODUCTION_DEPLOYMENT_STATUS.md
+- TRACK_C_IMPLEMENTATION_COMPLETE.md
+
+---
+
+## Root → 00-documentation/05-reference/
+
+### guides/
+- MILITARY_TOKEN_ACTIVATION_COMPLETE.md
+- MILITARY_TOKEN_ACTIVATION_GUIDE.md
+- TESTING_USAGE_INSTRUCTIONS.md
+- TOKEN_CORRELATION_USAGE.md
+
+### operations/
+- QUICK_REFERENCE_OPERATIONS_GUIDE.md
+
+---
+
+## Root → 99-archive/
+
+### organization/
+- REORGANIZATION-COMPLETE.md
+- REORGANIZATION-PLAN.md
+- ORGANIZED_PROJECT_ARCHIVE.md
+
+### legacy-docs/
+- CHANGELOG.md
+
+---
+
+## Files Remaining in Root
+
+- README.md (intentionally kept as main entry point)
+
+---
+
+**Total Files Moved**: 91
+**Date**: October 11, 2025
+**Script**: reorganize-documentation-simple.sh
+**Backup**: documentation_backup_20251011_154911/

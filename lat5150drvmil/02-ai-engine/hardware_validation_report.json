@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-11-07T13:35:16+00:00",
+  "score": {
+    "total": 45,
+    "max": 100,
+    "percentage": 45,
+    "readiness": "FAIR"
+  },
+  "hardware": {
+    "npu": {
+      "found": false,
+      "tops": 0,
+      "device": ""
+    },
+    "gpu": {
+      "found": false,
+      "tops": 0
+    },
+    "cpu": {
+      "cores": 16,
+      "avx2": true,
+      "avx512": true
+    },
+    "memory_gb": 13,
+    "total_tops": 0
+  },
+  "software": {
+    "openvino_installed": false,
+    "redis_running": false,
+    "rust_installed": true
+  }
+}

@@ -1,14 +1,53 @@
-# DSLLVM – DSMIL-Aware LLVM Toolchain
+# DSLLVM - Defense System LLVM Compiler
 
-[![Upstream](https://img.shields.io/badge/LLVM-upstream%20aligned-262D3A?logo=llvm&logoColor=white)](https://llvm.org/)
-[![DSMIL Stack](https://img.shields.io/badge/DSMIL-multi--layer%20architecture-0B8457.svg)](#what-is-dsmil)
-[![Quantum Ready](https://img.shields.io/badge/quantum-Qiskit%20%7C%20hybrid-6C2DC7.svg)](#quantum--ai-integration)
-[![PQC Profile](https://img.shields.io/badge/CNSA%202.0-ML--KEM--1024%20%E2%80%A2%20ML--DSA--87%20%E2%80%A2%20SHA--384-E67E22.svg)](#pqc--security-posture)
-[![AI-Integrated](https://img.shields.io/badge/AI-instrumented%20toolchain-1F7A8C.svg)](#ai--telemetry-hooks)
+**Version**: 1.6.0 (Phase 3: High-Assurance)
+**Repository**: https://github.com/SWORDIntel/DSLLVM
 
 ---
+## 🚀 Quick Links
 
-DSLLVM is a **DSMIL-aware build of LLVM** with a small set of targeted extensions:
+- **[DSLLVM Build Guide](DSLLVM-BUILD-GUIDE.md)**: How to use DSLLVM as your default compiler
+- **[DSMIL Documentation](dsmil/README.md)**: DSMIL compiler features and usage
+- **[TPM2 Algorithms](tpm2_compat/README.md)**: 88 cryptographic algorithms reference
+### Upstream LLVM
+- [Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html)
+- [Contributing to LLVM](https://llvm.org/docs/Contributing.html)
+
+### DSLLVM-Specific
+**Quick Start**:
+```bash
+cd tpm2_compat
+cmake -S . -B build -DENABLE_HARDWARE_ACCEL=ON
+cmake --build build
+```
+
+## 📦 Building DSLLVM
+
+### Prerequisites
+```bash
+sudo apt-get install -y build-essential cmake ninja-build python3 git libssl-dev
+```
+
+### Build LLVM/Clang + DSMIL
+```bash
+cmake -G Ninja -S llvm -B build \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_DSMIL=ON \
+  -DLLVM_TARGETS_TO_BUILD="X86"
+
+ninja -C build
+```
+
+### Build TPM2 Library
+```bash
+cd tpm2_compat
+cmake -S . -B build -DENABLE_HARDWARE_ACCEL=ON
+cmake --build build -j$(nproc)
+```
+
+---
+SLLVM is a **DSMIL-aware build of LLVM** with a small set of targeted extensions:
 
 - keeps the **standard LLVM/Clang toolchain behaviour**;
 - adds **optional hooks** for a multi-layer DSMIL system (devices, clearances, and telemetry);
@@ -51,24 +90,6 @@ If you already know LLVM, you can treat DSLLVM as “LLVM with an opinionated in
     **CNSA 2.0 style suites** (e.g. ML-KEM-1024, ML-DSA-87, SHA-384) without hard-coding any crypto.  
   - DSLLVM does **not** ship cryptography; it exposes knobs and tags so
     downstream toolchains can enforce their own policies.
-
----
-
-## Language Mix (Indicative)
-
-This repository is still “normal LLVM under the hood”:
-
-| Language | Approx. share |
-|---------:|---------------|
-| LLVM IR      | ~41.3% |
-| C++          | ~31.2% |
-| C            | ~13.1% |
-| Assembly     | ~9.9%  |
-| MLIR         | ~1.5%  |
-| Python       | ~0.8%  |
-| Other        | ~2.2%  |
-
-(Actual numbers come from GitHub language stats and may drift over time.)
 
 ---
 
@@ -119,3 +140,17 @@ If you don’t enable any DSMIL/AI options, DSLLVM behaves like a regular LLVM t
 - Downstream integrations (DSMIL runtime, advisory layers): out of scope for this repo
 
 For most users, DSLLVM can be dropped in as **“LLVM with extra metadata channels”** and left at that.
+## 📚 Documentation
+
+
+- **[DSLLVM-BUILD-GUIDE.md](DSLLVM-BUILD-GUIDE.md)**: Default compiler configuration
+- **[dsmil/docs/DSLLVM-DESIGN.md](dsmil/docs/DSLLVM-DESIGN.md)**: DSMIL design specification
+- **[dsmil/docs/MISSION-PROFILES-GUIDE.md](dsmil/docs/MISSION-PROFILES-GUIDE.md)**: Mission profiles
+- **[tpm2_compat/README.md](tpm2_compat/README.md)**: TPM2 algorithms reference
+
+
+[![Upstream](https://img.shields.io/badge/LLVM-upstream%20aligned-262D3A?logo=llvm&logoColor=white)](https://llvm.org/)
+[![DSMIL Stack](https://img.shields.io/badge/DSMIL-multi--layer%20architecture-0B8457.svg)](#what-is-dsmil)
+[![Quantum Ready](https://img.shields.io/badge/quantum-Qiskit%20%7C%20hybrid-6C2DC7.svg)](#quantum--ai-integration)
+[![PQC Profile](https://img.shields.io/badge/CNSA%202.0-ML--KEM--1024%20%E2%80%A2%20ML--DSA--87%20%E2%80%A2%20SHA--384-E67E22.svg)](#pqc--security-posture)
+[![AI-Integrated](https://img.shields.io/badge/AI-instrumented%20toolchain-1F7A8C.svg)](#ai--telemetry-hooks)

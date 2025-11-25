@@ -1,0 +1,67 @@
+{
+  "devices": [
+    {
+      "device_id": "0x8000",
+      "token": "0x00800003",
+      "control": "0x00200000",
+      "descriptor_offset": "0x0000",
+      "next_offset": "unresolved",
+      "leaf_offset": "unresolved",
+      "depth": "0"
+    },
+    {
+      "device_id": "0x8010",
+      "token": "0x00801003",
+      "control": "0x00200000",
+      "descriptor_offset": "0x0000",
+      "next_offset": "unresolved",
+      "leaf_offset": "unresolved",
+      "depth": "0"
+    },
+    {
+      "device_id": "0x8020",
+      "token": "0x00802003",
+      "control": "0x00200000",
+      "descriptor_offset": "0x0000",
+      "next_offset": "unresolved",
+      "leaf_offset": "unresolved",
+      "depth": "0"
+    },
+    {
+      "device_id": "0x8030",
+      "token": "0x00803003",
+      "control": "0x00200000",
+      "descriptor_offset": "0x0000",
+      "next_offset": "unresolved",
+      "leaf_offset": "unresolved",
+      "depth": "0"
+    },
+    {
+      "device_id": "0x8040",
+      "token": "0x00804003",
+      "control": "0x00200000",
+      "descriptor_offset": "0x0000",
+      "next_offset": "unresolved",
+      "leaf_offset": "unresolved",
+      "depth": "0"
+    },
+    {
+      "device_id": "0x8050",
+      "token": "0x00805003",
+      "control": "0x00200000",
+      "descriptor_offset": "0x0000",
+      "next_offset": "unresolved",
+      "leaf_offset": "unresolved",
+      "depth": "0"
+    },
+    {
+      "device_id": "0x8060",
+      "token": "0x00806003",
+      "control": "0x00200000",
+      "descriptor_offset": "0x0000",
+      "next_offset": "unresolved",
+      "leaf_offset": "unresolved",
+      "depth": "0"
+    }
+  ]
+}

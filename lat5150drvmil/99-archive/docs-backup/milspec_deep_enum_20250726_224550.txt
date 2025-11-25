@@ -1,0 +1,29 @@
+
+[0;35m═══ DEEP DMI ENUMERATION ═══[0m
+[0;33mExtracting ALL DMI data...[0m
+
+[0;33mSearching DMI Type 8 for JRTC1...[0m
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0810, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JRTC1 - RTC
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Other
+
+
+[0;33mChecking System Family...[0m
+System Family: 'Latitude'
+
+[0;33mDeep searching DMI for military markers...[0m
+[0;31m[!] Found 'JRTC' in DMI data[0m
+509:	Internal Reference Designator: JRTC1 - RTC
+[0;31m[!] Found 'OUT OF SPEC' in DMI data[0m
+224:	Family: <OUT OF SPEC>
+233:	Upgrade: <OUT OF SPEC>
+
+[0;35m═══ HIDDEN MEMORY ANALYSIS ═══[0m
+[0;33mE820 Memory Map:[0m

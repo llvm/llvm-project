@@ -1,0 +1,149 @@
+{
+  "papers": {
+    "vx_git_0000": {
+      "filename": "An Alternative Method To Enumerate Processes.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/An Alternative Method To Enumerate Processes.pdf",
+      "size": 182530,
+      "hash": "4c2ad3b7d216f4e61354100f764718816df5a8953ed29520e730148c7c0785b3",
+      "category": "General",
+      "title": "An Alternative Method To Enumerate Processes",
+      "description": "Research paper from VX Underground: An Alternative Method To Enumerate Processes",
+      "downloaded_at": "2025-11-09T10:57:32.469406"
+    },
+    "vx_git_0001": {
+      "filename": "From a C project through assembly to shellcode.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/From a C project through assembly to shellcode.pdf",
+      "size": 1398349,
+      "hash": "4c5f88a8df6211238dca7a108420900557b655ae92abdb5d8b2a41308f6f5d43",
+      "category": "General",
+      "title": "From a C project through assembly to shellcode",
+      "description": "Research paper from VX Underground: From a C project through assembly to shellcode",
+      "downloaded_at": "2025-11-09T10:57:32.474094"
+    },
+    "vx_git_0002": {
+      "filename": "CommandeeringContextMenuEntries.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/The Persistence Series/Commandeering Context Menu Entries/CommandeeringContextMenuEntries.pdf",
+      "size": 552118,
+      "hash": "415f8f4a500901240b499009b4abfc847a8e4d477ef331bebdcf43b2a0a52018",
+      "category": "General",
+      "title": "CommandeeringContextMenuEntries",
+      "description": "Research paper from VX Underground: CommandeeringContextMenuEntries",
+      "downloaded_at": "2025-11-09T10:57:32.483680"
+    },
+    "vx_git_0003": {
+      "filename": "MasqueradingtheHKCURunKey.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/The Persistence Series/Masquerading the HKCU Run Key/MasqueradingtheHKCURunKey.pdf",
+      "size": 166701,
+      "hash": "0500e1b0675a21f7e023309ab86ffc95a56f9498bfc95d3b6307c0fd046f4d82",
+      "category": "General",
+      "title": "MasqueradingtheHKCURunKey",
+      "description": "Research paper from VX Underground: MasqueradingtheHKCURunKey",
+      "downloaded_at": "2025-11-09T10:57:32.485170"
+    },
+    "vx_git_0004": {
+      "filename": "Persistence_via_Recycle_Bin.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/The Persistence Series/Persistence via Recycle Bin/Persistence_via_Recycle_Bin.pdf",
+      "size": 164500,
+      "hash": "4a310e68cad4176a3fcb8a1825754bab69879610e4dead1794eeb3926877e3fb",
+      "category": "General",
+      "title": "Persistence via Recycle Bin",
+      "description": "Research paper from VX Underground: Persistence_via_Recycle_Bin",
+      "downloaded_at": "2025-11-09T10:57:32.486639"
+    },
+    "vx_git_0005": {
+      "filename": "Kusarigama.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/The Persistence Series/Kusarigama/Kusarigama.pdf",
+      "size": 310099,
+      "hash": "bceb40336e49b6563d25d4553e46eeee0e264029a10a25c41a437c3faadf0faa",
+      "category": "General",
+      "title": "Kusarigama",
+      "description": "Research paper from VX Underground: Kusarigama",
+      "downloaded_at": "2025-11-09T10:57:32.488338"
+    },
+    "vx_git_0006": {
+      "filename": "Cryogenically Frozen Malware.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/The Persistence Series/Cryogenically Frozen Malware/Cryogenically Frozen Malware.pdf",
+      "size": 350843,
+      "hash": "d59c3b1a282d58222fe6fb54ea912364e7ceb6cc02e56d300916ebd4bf5bceed",
+      "category": "General",
+      "title": "Cryogenically Frozen Malware",
+      "description": "Research paper from VX Underground: Cryogenically Frozen Malware",
+      "downloaded_at": "2025-11-09T10:57:32.490572"
+    },
+    "vx_git_0007": {
+      "filename": "HellsGate.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/Hells Gate/HellsGate.pdf",
+      "size": 381301,
+      "hash": "71f9b7f6f4d138f58138dda8f07346f15ece2b9eba38dc1f6dc2676a676f1b26",
+      "category": "General",
+      "title": "HellsGate",
+      "description": "Research paper from VX Underground: HellsGate",
+      "downloaded_at": "2025-11-09T10:57:32.492456"
+    },
+    "vx_git_0008": {
+      "filename": "IdentifyingAntivirusSoftwarebyenumeratingMinifilterStringNames.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/Identifying Antivirus Software by enumerating Minifilter String Names/IdentifyingAntivirusSoftwarebyenumeratingMinifilterStringNames.pdf",
+      "size": 166433,
+      "hash": "b28d7431d751b016db40a1f26d0cafcf2a35b35f9b0dc250e51f163222cf3a0b",
+      "category": "General",
+      "title": "IdentifyingAntivirusSoftwarebyenumeratingMinifilterStringNames",
+      "description": "Research paper from VX Underground: IdentifyingAntivirusSoftwarebyenumeratingMinifilterStringNames",
+      "downloaded_at": "2025-11-09T10:57:32.496261"
+    },
+    "vx_git_0009": {
+      "filename": "InfectingAndroidApplicationsTheNewWay.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/Infecting Android Applications The New Way/InfectingAndroidApplicationsTheNewWay.pdf",
+      "size": 5169560,
+      "hash": "cf98b3ab7461ce5b631f9a22cb3f285273e4a61c1ed0ff70881cef450a7a0c4c",
+      "category": "General",
+      "title": "InfectingAndroidApplicationsTheNewWay",
+      "description": "Research paper from VX Underground: InfectingAndroidApplicationsTheNewWay",
+      "downloaded_at": "2025-11-09T10:57:32.514823"
+    },
+    "vx_git_0010": {
+      "filename": "WeaponizingWindowsVirtualization.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/Weaponizing Windows Virtualization/WeaponizingWindowsVirtualization.pdf",
+      "size": 249170,
+      "hash": "85b91f26523e6b0446375cadacdf25cdf6fd06a7e69de61ffb2029a62f62cc6d",
+      "category": "General",
+      "title": "WeaponizingWindowsVirtualization",
+      "description": "Research paper from VX Underground: WeaponizingWindowsVirtualization",
+      "downloaded_at": "2025-11-09T10:57:32.519808"
+    },
+    "vx_git_0011": {
+      "filename": "USB Propagation.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/USB Propagation/USB Propagation.pdf",
+      "size": 283684,
+      "hash": "141fc7b9189adac08e026c79feb2f79e4bb9e8b8dedfa5e2bf9353b1516b35aa",
+      "category": "General",
+      "title": "USB Propagation",
+      "description": "Research paper from VX Underground: USB Propagation",
+      "downloaded_at": "2025-11-09T10:57:32.521550"
+    },
+    "vx_git_0012": {
+      "filename": "AbusingtheWindowsPowerManagementAPI.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/Abusing the Windows Power Management API/AbusingtheWindowsPowerManagementAPI.pdf",
+      "size": 179197,
+      "hash": "1c96b08c630bfdda95b504bad78d81f516c068b64ab25aa5580cce5a7a679615",
+      "category": "General",
+      "title": "AbusingtheWindowsPowerManagementAPI",
+      "description": "Research paper from VX Underground: AbusingtheWindowsPowerManagementAPI",
+      "downloaded_at": "2025-11-09T10:57:32.523149"
+    },
+    "vx_git_0013": {
+      "filename": "Wormable SSH.pdf",
+      "path": "00-documentation/Security_Feed/VX_Underground/vxug_git_clone/Wormable SSH/Wormable SSH.pdf",
+      "size": 154397,
+      "hash": "45a453907209f7ec7cd85239c7cc51046d5c68c603c41447e1c9154caca15d71",
+      "category": "General",
+      "title": "Wormable SSH",
+      "description": "Research paper from VX Underground: Wormable SSH",
+      "downloaded_at": "2025-11-09T10:57:32.524680"
+    }
+  },
+  "categories": {},
+  "total_papers": 14,
+  "total_size_bytes": 0,
+  "last_update": "2025-11-09T10:57:32.525976",
+  "download_progress": {}
+}

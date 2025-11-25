@@ -1,0 +1,164 @@
+================================================================================
+PHASE 2 DEPLOYMENT VALIDATION REPORT
+================================================================================
+Generated: 2025-09-02T05:27:03.136424+00:00
+System: Dell Latitude 5450 MIL-SPEC JRTC1
+Validation Duration: 12.3s
+
+📊 OVERALL DEPLOYMENT HEALTH
+----------------------------------------
+🔴 Overall Score: 63.7%
+✅ Passed Tests: 10/18
+⚠️  Warning Tests: 4
+❌ Failed Tests: 4
+
+🏗️ COMPONENT SCORES
+----------------------------------------
+🟡 Agents: 62.5%
+🟢 Devices: 80.4%
+🟡 ML: 76.7%
+🟡 Performance: 75.0%
+🔴 TPM: 33.3%
+
+🔧 AGENTS VALIDATION RESULTS
+----------------------------------------
+❌ agent_discovery: FAIL
+    Score: 0.0%
+    Message: Insufficient agents discovered: 0
+    Duration: 66.8ms
+    Agents: 0/80 discovered
+
+⚠️  error_handling: WARN
+    Score: 50.0%
+    Message: Partial error handling available
+    Duration: 33.4ms
+
+✅ parallel_execution: PASS
+    Score: 100.0%
+    Message: Parallel execution efficient (7.7x speedup)
+    Duration: 103.5ms
+
+✅ tandem_orchestrator: PASS
+    Score: 100.0%
+    Message: Tandem Orchestrator available and functional
+    Duration: 4.1ms
+
+🔧 DEVICES VALIDATION RESULTS
+----------------------------------------
+⚠️  phase2_discovery: WARN
+    Score: 71.4%
+    Message: 5/7 Phase 2 devices discovered
+    Duration: 0.2ms
+    Discovered: 5/7 Phase 2 devices
+
+✅ quarantine_enforcement: PASS
+    Score: 100.0%
+    Message: All 5 critical devices quarantined
+    Duration: 0.3ms
+
+⚠️  smi_interface: WARN
+    Score: 50.0%
+    Message: SMI interface test inconclusive
+    Duration: 9354.6ms
+
+✅ thermal_monitoring: PASS
+    Score: 100.0%
+    Message: Thermal monitoring responsive (44.0ms)
+    Duration: 60.8ms
+
+🔧 ML VALIDATION RESULTS
+----------------------------------------
+⚠️  database_connection: WARN
+    Score: 30.0%
+    Message: Port accessible but connection failed: connection to server at "localhost" (127.0.0.1), port 5433 failed: FATAL:  could not open file "global/pg_filenode.map": Permission denied
+
+    Duration: 10.6ms
+
+✅ learning_connector: PASS
+    Score: 100.0%
+    Message: Learning connector available and importable
+    Duration: 326.7ms
+
+✅ vector_embeddings: PASS
+    Score: 100.0%
+    Message: 512-dim vector embeddings functional
+    Duration: 54.4ms
+
+🔧 PERFORMANCE VALIDATION RESULTS
+----------------------------------------
+✅ agent_response_times: PASS
+    Score: 100.0%
+    Message: Agent response time excellent (70.5ms)
+    Duration: 80.7ms
+
+✅ database_queries: PASS
+    Score: 100.0%
+    Message: Database queries fast (0.2ms avg)
+    Duration: 0.7ms
+
+✅ system_resources: PASS
+    Score: 100.0%
+    Message: System resources healthy (CPU: 7.8%, RAM: 11.6%)
+    Duration: 1000.5ms
+
+❌ xor_sse42: FAIL
+    Score: 0.0%
+    Message: SIMD test execution failed: 
+    Duration: 1081.9ms
+
+🔧 TPM VALIDATION RESULTS
+----------------------------------------
+❌ device_activation: FAIL
+    Score: 0.0%
+    Message: Test failed with exception: name 'tmp_report' is not defined
+    Duration: 0.1ms
+
+❌ ecc_performance: FAIL
+    Score: 0.0%
+    Message: ECC signing failed: b'WARNING:esys:src/tss2-esys/api/Esys_ReadPublic.c:320:Esys_ReadPublic_Finish() Received TPM Error \nERROR:esys:src/tss2-esys/esys_tr.c:278:Esys_TR_FromTPMPublic_Finish() Error ReadPublic ErrorCode (0x0000018b) \nERROR:esys:src/tss2-esys/esys_tr.c:398:Esys_TR_FromTPMPublic() Error TR FromTPMPublic ErrorCode (0x0000018b) \nERROR: Esys_TR_FromTPMPublic(0x18B) - tpm:handle(1):the handle is not correct for the use\nERROR: Invalid key authorization\nERROR: Unable to run tpm2_sign\n'
+    Duration: 99.4ms
+
+✅ pcr_extension: PASS
+    Score: 100.0%
+    Message: PCR 16 extended for DSMIL
+    Duration: 10.8ms
+
+🚨 CRITICAL FAILURES
+----------------------------------------
+❌ TPM.device_activation: Test failed with exception: name 'tmp_report' is not defined
+❌ TPM.ecc_performance: ECC signing failed: b'WARNING:esys:src/tss2-esys/api/Esys_ReadPublic.c:320:Esys_ReadPublic_Finish() Received TPM Error \nERROR:esys:src/tss2-esys/esys_tr.c:278:Esys_TR_FromTPMPublic_Finish() Error ReadPublic ErrorCode (0x0000018b) \nERROR:esys:src/tss2-esys/esys_tr.c:398:Esys_TR_FromTPMPublic() Error TR FromTPMPublic ErrorCode (0x0000018b) \nERROR: Esys_TR_FromTPMPublic(0x18B) - tpm:handle(1):the handle is not correct for the use\nERROR: Invalid key authorization\nERROR: Unable to run tpm2_sign\n'
+
+💡 RECOMMENDATIONS
+----------------------------------------
+1. TPM integration needs attention - verify device 0x8005 activation
+2. Agent coordination problems - check Tandem Orchestrator status
+3. ❌ System not ready for deployment - major issues need resolution
+
+🎯 PHASE 2 DEVICE STATUS
+----------------------------------------
+✅ Ready 0x8005: TPM Interface Controller
+📡 Monitoring 0x8008: Secure Boot Validator
+📡 Monitoring 0x8011: Encryption Key Management
+📡 Monitoring 0x8013: Unknown Extended Security
+📡 Monitoring 0x8014: Unknown Extended Security
+📡 Monitoring 0x8022: Network Security Filter
+📡 Monitoring 0x8027: Network Authentication Gateway
+
+🛡️  QUARANTINE STATUS
+----------------------------------------
+🚫 0x8009: QUARANTINED (Critical - Never writable)
+🚫 0x800A: QUARANTINED (Critical - Never writable)
+🚫 0x800B: QUARANTINED (Critical - Never writable)
+🚫 0x8019: QUARANTINED (Critical - Never writable)
+🚫 0x8029: QUARANTINED (Critical - Never writable)
+
+🚀 NEXT STEPS
+----------------------------------------
+1. ❌ Resolve critical failures before proceeding
+2. 🔧 System requires maintenance
+3. 🛑 DO NOT deploy until issues resolved
+
+================================================================================
+Validation completed at 2025-09-02T05:27:03.136496+00:00
+Multi-Agent Team: MONITOR + INFRASTRUCTURE + TESTBED + QADIRECTOR
+================================================================================

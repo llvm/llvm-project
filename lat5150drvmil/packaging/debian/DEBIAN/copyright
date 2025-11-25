@@ -1,0 +1,50 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: tpm2-accel-early
+Upstream-Contact: Military TPM2 Acceleration Project <noreply@example.com>
+Source: https://github.com/example/tpm2-accel-early
+Classification: UNCLASSIFIED // FOR OFFICIAL USE ONLY
+
+Files: *
+Copyright: 2025 Military TPM2 Acceleration Project
+License: GPL-2.0
+
+Files: debian/*
+Copyright: 2025 Military TPM2 Acceleration Project
+License: GPL-2.0
+
+License: GPL-2.0
+ This package is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; version 2 of the License.
+ .
+ This package is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program. If not, see <https://www.gnu.org/licenses/>
+ .
+ On Debian systems, the complete text of the GNU General
+ Public License version 2 can be found in "/usr/share/common-licenses/GPL-2".
+
+Additional Information:
+ This software is designed for use with Dell MIL-SPEC hardware platforms
+ and Intel Core Ultra processors with integrated NPU, GNA, and Management
+ Engine capabilities.
+ .
+ Hardware Requirements:
+  - Intel Core Ultra 7 165H (Meteor Lake) or compatible
+  - TPM 2.0 hardware module
+  - Dell Latitude 5450 MIL-SPEC or compatible system
+ .
+ Security Notice:
+  This module provides hardware acceleration for cryptographic operations
+  and supports multiple security classification levels (0-3). Proper
+  security procedures must be followed when deploying at elevated
+  classification levels.
+ .
+ Dell SMBIOS Integration:
+  This module integrates with Dell SMBIOS military tokens (0x049e-0x04a3)
+  for hardware authorization. These tokens are specific to Dell MIL-SPEC
+  platforms and provide hardware-level access control.

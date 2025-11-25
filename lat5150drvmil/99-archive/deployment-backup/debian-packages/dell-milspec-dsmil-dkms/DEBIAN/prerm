@@ -1,0 +1,32 @@
+#!/bin/bash
+# Dell MIL-SPEC DSMIL DKMS - Pre-removal script
+
+set -e
+
+DKMS_NAME="dell-milspec-dsmil"
+DKMS_VERSION="2.1.0"
+MODULE_NAME="dsmil-72dev"
+
+log_message() {
+    echo "[dell-milspec-dsmil] $1"
+}
+
+case "$1" in
+    remove|upgrade|deconfigure)
+        log_message "Preparing to remove Dell MIL-SPEC DSMIL driver..."
+
+        # Unload module if loaded
+        if lsmod | grep -q "^${MODULE_NAME}"; then
+            log_message "Unloading ${MODULE_NAME} module..."
+            modprobe -r ${MODULE_NAME} || log_message "WARNING: Could not unload module"
+        fi
+
+        # DKMS operations on removal only
+        if [ "$1" = "remove" ]; then
+            log_message "Removing from DKMS..."
+            dkms remove -m ${DKMS_NAME} -v ${DKMS_VERSION} --all 2>/dev/null || true
+        fi
+        ;;
+esac
+
+exit 0

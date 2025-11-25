@@ -1,0 +1,26 @@
+# DVC Configuration for LAT5150DRVMIL
+# Data Version Control setup for tracking datasets
+
+[core]
+    remote = local
+    autostage = true
+
+[remote "local"]
+    url = .dvc/cache
+
+# Optional: Configure cloud storage remotes
+# [remote "s3"]
+#     url = s3://your-bucket/dvc-storage
+#     region = us-west-2
+
+# [remote "gcs"]
+#     url = gs://your-bucket/dvc-storage
+
+# [remote "azure"]
+#     url = azure://your-container/dvc-storage
+#     connection_string = <connection-string>
+
+# Cache settings
+[cache]
+    type = symlink
+    protected = true
