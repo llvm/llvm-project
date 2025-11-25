@@ -1,7 +1,7 @@
 # DSLLVM - War-Fighting Compiler for C3/JADC2 Systems
 
-**Version**: 1.5.1 (Phase 2: Tactical Integration)
-**Status**: Active Development (v1.5 - Operational Deployment Phase)
+**Version**: 1.6.0 (Phase 3: High-Assurance)
+**Status**: Active Development (v1.6 - High-Assurance Phase)
 **Owner**: SWORDIntel / DSMIL Kernel Team
 
 ---
@@ -33,9 +33,12 @@ DSLLVM is a **war-fighting compiler** specialized for military Command, Control 
 - **Blue Force Tracker** (Feature 3.3): Real-time friendly force tracking (BFT-2), AES-256 encrypted position updates, spoofing detection ✅
 - **Radio Multi-Protocol Bridging** (Feature 3.7): Link-16, SATCOM, MUOS, SINCGARS tactical radio bridging ✅
 - **5G Latency & Throughput Contracts** (Feature 3.9): Compile-time enforcement of 5G JADC2 requirements ✅
-- **Mission Partner Environment** (Feature 3.5): Coalition interoperability, releasability markings (REL NATO, REL FVEY, NOFORN) 🔜
+
+**High-Assurance (v1.6)** - Phase 3 ✅ COMPLETE
+- **Two-Person Integrity** (Feature 3.4): Nuclear surety controls (NC3), ML-DSA-87 dual-signature authorization, DOE Sigma 14 ✅
+- **Mission Partner Environment** (Feature 3.5): Coalition interoperability, releasability markings (REL NATO, REL FVEY, NOFORN) ✅
+- **Edge Security Hardening** (Feature 3.8): HSM crypto, secure enclave (SGX/TrustZone), remote attestation, anti-tampering ✅
 - **EM Spectrum Resilience** (Feature 3.6): BLOS fallback (5G→SATCOM), EMCON modes, jamming detection 🔜
-- **Two-Person Integrity** (Feature 3.4): Nuclear surety controls (NC3), ML-DSA-87 dual-signature authorization 🔜
 
 ### Military Network Support
 
