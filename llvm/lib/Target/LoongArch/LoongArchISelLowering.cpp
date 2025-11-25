@@ -2886,11 +2886,13 @@ static SDValue lowerBUILD_VECTORAsBroadCastLoad(BuildVectorSDNode *BVOp,
 
   if ((ExtType == ISD::EXTLOAD || ExtType == ISD::NON_EXTLOAD) &&
       VT.getScalarSizeInBits() == LN->getMemoryVT().getScalarSizeInBits()) {
-    SDVTList Tys =
-        LN->isIndexed()
-            ? DAG.getVTList(VT, LN->getBasePtr().getValueType(), MVT::Other)
-            : DAG.getVTList(VT, MVT::Other);
-    SDValue Ops[] = {LN->getChain(), LN->getBasePtr(), LN->getOffset()};
+    // Indexed loads and stores are not supported on LoongArch.
+    assert(LN->isUnindexed() && "Unexpected indexed load.");
+
+    SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+    // The offset operand of unindexed load is always undefined, so there is
+    // no need to pass it to VLDREPL.
+    SDValue Ops[] = {LN->getChain(), LN->getBasePtr()};
     SDValue BCast = DAG.getNode(LoongArchISD::VLDREPL, DL, Tys, Ops);
     DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BCast.getValue(1));
     return BCast;

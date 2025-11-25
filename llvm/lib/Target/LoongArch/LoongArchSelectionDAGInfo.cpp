@@ -17,13 +17,3 @@ LoongArchSelectionDAGInfo::LoongArchSelectionDAGInfo()
     : SelectionDAGGenTargetInfo(LoongArchGenSDNodeInfo) {}
 
 LoongArchSelectionDAGInfo::~LoongArchSelectionDAGInfo() = default;
-
-void LoongArchSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
-                                                 const SDNode *N) const {
-  switch (N->getOpcode()) {
-  case LoongArchISD::VLDREPL:
-    // invalid number of operands; expected 2, got 3
-    return;
-  }
-  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
-}
