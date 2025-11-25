@@ -17,6 +17,7 @@
 #include "mlir/IR/ValueRange.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -97,9 +98,17 @@ static mlir::Value emitX86FunnelShift(CIRGenFunction &cgf,
   // Funnel shifts amounts are treated as modulo and types are all power-of-2
   // so we only care about the lowest log2 bits anyway.
   if (amt.getType() != ty) {
-    amt = cgf.getBuilder().createIntCast(
-        amt, mlir::cast<cir::VectorType>(ty).getElementType());
-    amt = cir::VecSplatOp::create(cgf.getBuilder(), location, ty, amt);
+    auto vecTy = mlir::cast<cir::VectorType>(ty);
+
+    auto numElems = vecTy.getSize();
+    cir::IntType vecElemType = mlir::cast<cir::IntType>(vecTy.getElementType());
+    auto signlessType =
+        cir::IntType::get(&cgf.getMLIRContext(), vecElemType.getWidth(), false);
+    amt = cgf.getBuilder().createIntCast(amt, signlessType);
+
+    amt = cir::VecSplatOp::create(cgf.getBuilder(), cgf.getLoc(e->getExprLoc()),
+                                  cir::VectorType::get(signlessType, numElems),
+                                  amt);
   }
 
   const std::string intrinsicName = isRight ? "fshr" : "fshl";
