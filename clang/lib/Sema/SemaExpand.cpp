@@ -69,7 +69,7 @@ StmtResult Sema::ActOnCXXExpansionStmtPattern(
     Expr *ExpansionInitializer, SourceLocation LParenLoc,
     SourceLocation ColonLoc, SourceLocation RParenLoc,
     ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
-  Diag(ColonLoc, diag::err_expansion_stmt_todo);
+  Diag(ESD->getLocation(), diag::err_expansion_statements_todo);
   return StmtError();
 }
 
@@ -77,6 +77,5 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
   if (!Exp || !Body)
     return StmtError();
 
-  Diag(Exp->getBeginLoc(), diag::err_expansion_stmt_todo);
-  return StmtError();
+  llvm_unreachable("TODO");
 }
