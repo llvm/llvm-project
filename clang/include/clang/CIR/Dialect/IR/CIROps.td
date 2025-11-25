@@ -4431,7 +4431,7 @@ def CIR_PrefetchOp : CIR_Op<"prefetch"> {
     $locality is a temporal locality specifier ranging from (0) - no locality,
     to (3) - extremely local, keep in cache. If $locality is not present, the
     default value is 3.
-
+    
     $isWrite specifies whether the prefetch is for a 'read' or 'write'. If
     $isWrite is not specified, it means that prefetch is prepared for 'read'.
   }];

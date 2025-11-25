@@ -1258,11 +1258,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
   // Now see if we can emit a target-specific builtin.
   if (mlir::Value v = emitTargetBuiltinExpr(builtinID, e, returnValue)) {
-    if (mlir::isa<cir::VoidType>(v.getType()))
-      return RValue::get(nullptr);
-
     switch (evalKind) {
     case cir::TEK_Scalar:
+      if (mlir::isa<cir::VoidType>(v.getType()))
+        return RValue::get(nullptr);
       return RValue::get(v);
     case cir::TEK_Aggregate:
       cgm.errorNYI(e->getSourceRange(), "aggregate return value from builtin");
