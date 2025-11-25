@@ -735,9 +735,13 @@ ProfileGeneratorBase::getCalleeNameForAddress(uint64_t TargetAddress) {
   if (!FRange || !FRange->IsFuncEntry)
     return StringRef();
 
-  auto FuncName = Binary->findPseudoProbeName(FRange->Func);
-  if (FuncName.size())
-    return FunctionSamples::getCanonicalFnName(FuncName);
+  // DWARF and symbol table may have mismatching function names. Instead, we'll
+  // try to use its pseudo probe name first.
+  if (Binary->usePseudoProbes()) {
+    auto FuncName = Binary->findPseudoProbeName(FRange->Func);
+    if (FuncName.size())
+      return FunctionSamples::getCanonicalFnName(FuncName);
+  }
 
   return FunctionSamples::getCanonicalFnName(FRange->getFuncName());
 }
