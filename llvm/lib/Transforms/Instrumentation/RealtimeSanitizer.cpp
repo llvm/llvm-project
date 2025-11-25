@@ -61,23 +61,21 @@ static void insertCallAtAllFunctionExitPoints(Function &Fn,
       insertCallBeforeInstruction(Fn, I, InsertFnName, FunctionArgs);
 }
 
-static PreservedAnalyses rtsanPreservedCFGAnalyses() {
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
-}
+static void runSanitizeRealtime(Function &Fn) {
+  if (Fn.empty())
+    return;
 
-static PreservedAnalyses runSanitizeRealtime(Function &Fn) {
   insertCallAtFunctionEntryPoint(Fn, "__rtsan_realtime_enter", {});
   insertCallAtAllFunctionExitPoints(Fn, "__rtsan_realtime_exit", {});
-  return rtsanPreservedCFGAnalyses();
 }
 
-static PreservedAnalyses runSanitizeRealtimeBlocking(Function &Fn) {
+static void runSanitizeRealtimeBlocking(Function &Fn) {
+  if (Fn.empty())
+    return;
+
   IRBuilder<> Builder(&Fn.front().front());
   Value *Name = Builder.CreateGlobalString(demangle(Fn.getName()));
   insertCallAtFunctionEntryPoint(Fn, "__rtsan_notify_blocking_call", {Name});
-  return rtsanPreservedCFGAnalyses();
 }
 
 PreservedAnalyses RealtimeSanitizerPass::run(Module &M,
