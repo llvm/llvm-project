@@ -1590,10 +1590,7 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
     // from the type of the pointer.
     if (I.getSourceElementType() ==
         IntegerType::getInt8Ty(CurrF->getContext())) {
-      Instruction *Result = buildLogicalAccessChainFromGEP(I);
-      if (Result) {
-        return Result;
-      }
+      return buildLogicalAccessChainFromGEP(I);
     }
 
     // Look for the array-to-pointer decay. If this is the pattern
