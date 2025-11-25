@@ -87,8 +87,8 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
   ];
   let options = [Option<"parallelUnordered", "parallel-unordered", "bool",
                         /*default=*/"false",
-                        "Whether to convert `fir.do_loop` with the unordered "
-                        "attribute to `scf.parallel`. Defaults to false.">];
+                        "Allow converting a fir.do_loop with the `unordered` "
+                        "attribute to scf.parallel (experimental).">];
 }
 
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
