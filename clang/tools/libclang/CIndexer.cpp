@@ -16,7 +16,6 @@
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Options/OptionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
@@ -138,7 +137,7 @@ const std::string &CIndexer::getClangResourcesPath() {
 #endif
 
   // Cache our result.
-  ResourcesPath = GetResourcesPath(LibClangPath);
+  ResourcesPath = driver::Driver::GetResourcesPath(LibClangPath);
   return ResourcesPath;
 }
 
