@@ -131,8 +131,8 @@ static const Decl *getDeclareReferencedDecl(const Expr *e) {
   while (const auto *ase = dyn_cast<ArraySectionExpr>(curVarExpr))
     curVarExpr = ase->getBase()->IgnoreParenImpCasts();
 
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(curVarExpr))
-    return DRE->getFoundDecl()->getCanonicalDecl();
+  if (const auto *dre = dyn_cast<DeclRefExpr>(curVarExpr))
+    return dredre->getFoundDecl()->getCanonicalDecl();
 
   // MemberExpr is allowed when it is implicit 'this'.
   return cast<MemberExpr>(curVarExpr)->getMemberDecl()->getCanonicalDecl();
