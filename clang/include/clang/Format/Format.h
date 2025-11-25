@@ -3284,6 +3284,11 @@ struct FormatStyle {
   /// literals in 3 regions, always without separator (up until including
   /// ``xxxMaxDigitsRemove``), maybe with, or without separators (up until
   /// excluding ``xxxMinDigitsInsert``), and finally always with separators.
+  /// \note
+  ///  ``BinaryMinDigits``, ``DecimalMinDigits``, and ``HexMinDigits`` are
+  ///  deprecated and renamed to ``BinaryMinDigitsInsert``,
+  ///  ``DecimalMinDigitsInsert``, and ``HexMinDigitsInsert``, respectively.
+  /// \endnote
   struct IntegerLiteralSeparatorStyle {
     /// Format separators in binary literals.
     /// \code{.text}

@@ -248,13 +248,14 @@ TEST_F(IntegerLiteralSeparatorTest, MaxDigitsRemove) {
   Style.IntegerLiteralSeparator.Decimal = 3;
   Style.IntegerLiteralSeparator.DecimalMaxDigitsRemove = 4;
   Style.IntegerLiteralSeparator.DecimalMinDigitsInsert = 7;
+
+  verifyFormat("d1 = 123456;\n"
+               "d2 = 1234'56;",
+               Style);
+
   verifyFormat("d0 = 2023;\n"
-               "d1 = 123456;\n"
-               "d2 = 1234'56;\n"
                "d3 = 5'000'000;",
                "d0 = 20'2'3;\n"
-               "d1 = 123456;\n"
-               "d2 = 1234'56;\n"
                "d3 = 5000000;",
                Style);
 }

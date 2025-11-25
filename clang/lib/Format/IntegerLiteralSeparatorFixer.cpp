@@ -72,17 +72,14 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
   if (SkipBinary && SkipDecimal && SkipHex)
     return {};
 
-  auto CalcMinAndMax = [](int Digits, int MinDigitsInsert,
+  auto CalcMinAndMax = [](int DigitsPerGroup, int MinDigitsInsert,
                           int MaxDigitsRemove) {
-    std::pair<int, int> Ret;
-    Ret.first = std::max(MinDigitsInsert, Digits + 1);
-    if (Ret.first == 0)
-      Ret.second = 0;
-    else if (MaxDigitsRemove <= 0)
-      Ret.second = Ret.first - 1;
-    else
-      Ret.second = std::min(MaxDigitsRemove, Ret.first - 1);
-    return Ret;
+    MinDigitsInsert = std::max(MinDigitsInsert, DigitsPerGroup + 1);
+    if (MinDigitsInsert < 1)
+      MaxDigitsRemove = 0;
+    else if (MaxDigitsRemove < 1 || MaxDigitsRemove >= MinDigitsInsert)
+      MaxDigitsRemove = MinDigitsInsert - 1;
+    return std::pair(MinDigitsInsert, MaxDigitsRemove);
   };
 
   const auto [BinaryMinDigitsInsert, BinaryMaxDigitsRemove] = CalcMinAndMax(
@@ -165,15 +162,13 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
     }
     const auto SeparatorCount = Text.count(Separator);
     const int DigitCount = Length - SeparatorCount;
+    if (DigitCount > MaxDigitsRemove && DigitCount < MinDigitsInsert)
+      continue;
     const bool RemoveSeparator =
         DigitsPerGroup < 0 || DigitCount <= MaxDigitsRemove;
-    const bool AddSeparator =
-        DigitsPerGroup > 0 && DigitCount >= MinDigitsInsert;
-    if (!RemoveSeparator && !AddSeparator)
-      continue;
     if (RemoveSeparator && SeparatorCount == 0)
       continue;
-    if (AddSeparator && SeparatorCount > 0 &&
+    if (!RemoveSeparator && SeparatorCount > 0 &&
         checkSeparator(Text, DigitsPerGroup)) {
       continue;
     }
