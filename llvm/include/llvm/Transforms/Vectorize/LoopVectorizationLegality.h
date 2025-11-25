@@ -437,8 +437,10 @@ public:
 
   /// Returns true if vector representation of the instruction \p I
   /// requires mask.
-  bool isMaskRequired(const Instruction *I) const {
-    return MaskedOp.contains(I);
+  bool isMaskRequired(const Instruction *I, bool LoopPredicated) const {
+    if (LoopPredicated)
+      return PredMaskedOps.contains(I);
+    return UnpredMaskedOps.contains(I);
   }
 
   /// Returns true if there is at least one function call in the loop which
@@ -714,9 +716,15 @@ private:
   AssumptionCache *AC;
 
   /// While vectorizing these instructions we have to generate a
-  /// call to the appropriate masked intrinsic or drop them in case of
-  /// conditional assumes.
-  SmallPtrSet<const Instruction *, 8> MaskedOp;
+  /// call to the appropriate masked intrinsic or drop them.
+  /// To differentiate between needing masked op because there is a conditional
+  /// executed block or because of predicated loop, we keep two lists:
+  /// 1) UnpredMaskedOp - instructions that need masking if we are
+  ///    in conditionally executed block.
+  /// 2) PredMaskedOp - instructions that need masking if we are in a predicated
+  ///    loop.
+  SmallPtrSet<const Instruction *, 8> UnpredMaskedOps;
+  SmallPtrSet<const Instruction *, 8> PredMaskedOps;
 
   /// Contains all identified histogram operations, which are sequences of
   /// load -> update -> store instructions where multiple lanes in a vector
