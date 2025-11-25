@@ -3464,8 +3464,22 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case AArch64::MOVT_TIZ_PSEUDO:
     return EmitZTInstr(MI, BB, AArch64::MOVT_TIZ, /*Op0IsDef=*/true);
 
+  case AArch64::AUTx16x17:
+    fixupPtrauthDiscriminator(MI, BB, MI.getOperand(1), MI.getOperand(2),
+                              &AArch64::GPR64noipRegClass);
+    return BB;
+  case AArch64::AUTxMxN:
+    fixupPtrauthDiscriminator(MI, BB, MI.getOperand(4), MI.getOperand(5),
+                              &AArch64::GPR64noipRegClass);
+    return BB;
   case AArch64::PAC:
     fixupPtrauthDiscriminator(MI, BB, MI.getOperand(3), MI.getOperand(4),
+                              &AArch64::GPR64noipRegClass);
+    return BB;
+  case AArch64::AUTPAC:
+    fixupPtrauthDiscriminator(MI, BB, MI.getOperand(1), MI.getOperand(2),
+                              &AArch64::GPR64noipRegClass);
+    fixupPtrauthDiscriminator(MI, BB, MI.getOperand(4), MI.getOperand(5),
                               &AArch64::GPR64noipRegClass);
     return BB;
   }
