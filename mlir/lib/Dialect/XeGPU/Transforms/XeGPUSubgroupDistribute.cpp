@@ -177,13 +177,13 @@ static bool requireTranspose(const xegpu::LayoutAttr layout,
 
 /// Given a sequential and distributed vector type, return the list of
 /// dimensions that are distributed.
-static SmallVector<int64_t> getDistributedDims(VectorType sequentialType,
+static SmallVector<int64_t> getDistributedDims(VectorType originalType,
                                                VectorType distributedType) {
-  assert(sequentialType.getRank() == distributedType.getRank() &&
+  assert(originalType.getRank() == distributedType.getRank() &&
          "sequential and distributed vector types must have the same rank");
   SmallVector<int64_t> distributedDims;
-  for (int64_t i = 0; i < sequentialType.getRank(); ++i) {
-    if (distributedType.getDimSize(i) != sequentialType.getDimSize(i)) {
+  for (int64_t i = 0; i < originalType.getRank(); ++i) {
+    if (distributedType.getDimSize(i) != originalType.getDimSize(i)) {
       distributedDims.push_back(i);
     }
   }
@@ -1486,9 +1486,9 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
 };
 
 // Distribute a `vector.extract_strided_slice` op feeding into yield op of an
-// enclosing `gpu.warp_execute_on_lane_0` region. This pattern only handles
-// advanced cases where the distributed is partially extracted and currently not
-// supported by the generic vector distribution patterns.
+// enclosing `gpu.warp_execute_on_lane_0` region. This pattern covers
+// advanced cases where the distributed dimension is partially extracted and
+// currently not supported by the generic vector distribution patterns.
 struct VectorExtractStridedSliceDistribution
     : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
@@ -1503,7 +1503,7 @@ struct VectorExtractStridedSliceDistribution
     unsigned operandIdx = operand->getOperandNumber();
     auto distributedType =
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
-    // Find the distributed dimension. There should be exactly one.
+    // Find the distributed dimensions.
     auto extractResultType = cast<VectorType>(operand->get().getType());
     auto distributedDims =
         getDistributedDims(extractResultType, distributedType);
@@ -1586,7 +1586,7 @@ struct VectorExtractStridedSliceDistribution
 };
 
 /// Distribute a `vector.insert_strided_slice` op feeding into yield op of an
-/// enclosing `gpu.warp_execute_on_lane_0` region. This pattern only handles
+/// enclosing `gpu.warp_execute_on_lane_0` region. This pattern covers
 /// advanced cases where the distributed dimension is partially inserted and
 /// currently not supported by the generic vector distribution patterns.
 struct VectorInsertStridedSliceDistribution
@@ -1603,8 +1603,7 @@ struct VectorInsertStridedSliceDistribution
         operand->get().getDefiningOp<vector::InsertStridedSliceOp>();
     auto distributedType =
         cast<VectorType>(warpOp.getResult(operandNumber).getType());
-    // Find the distributed dimension of the dest vector. There should be
-    // exactly one.
+    // Find the distributed dimensions of the dest vector.
     auto insertResultType = cast<VectorType>(operand->get().getType());
     auto destDistributedDims =
         getDistributedDims(insertResultType, distributedType);
