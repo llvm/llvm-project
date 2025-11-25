@@ -64,14 +64,50 @@ class ARMTTIImpl final : public BasicTTIImplBase<ARMTTIImpl> {
   const ARMTargetLowering *TLI;
 
   // Currently the following features are excluded from InlineFeaturesAllowed.
-  // ModeThumb, FeatureNoARM, ModeSoftFloat, FeatureFP64, FeatureD32
+  // ModeThumb, FeatureNoARM, ModeSoftFloat.
   // Depending on whether they are set or unset, different
   // instructions/registers are available. For example, inlining a callee with
   // -thumb-mode in a caller with +thumb-mode, may cause the assembler to
   // fail if the callee uses ARM only instructions, e.g. in inline asm.
   const FeatureBitset InlineFeaturesAllowed = {
+      ARM::FeatureD32,
+      ARM::FeatureFPRegs64,
+      ARM::FeatureFPRegs16,
+      ARM::FeatureFPRegs,
+      ARM::FeatureAES,
+      ARM::FeatureVFP2_SP,
+      ARM::FeatureSHA2,
+      ARM::HasV5TEOps,
+      ARM::HasV6Ops,
+      ARM::HasV6KOps,
+      ARM::HasV6T2Ops,
+      ARM::HasV7Ops,
+      ARM::HasV5TOps,
+      ARM::HasV6MOps,
+      ARM::HasV8MBaselineOps,
+      ARM::HasV8MMainlineOps,
+      ARM::HasV8_1aOps,
+      ARM::HasV8_2aOps,
+      ARM::HasV8_3aOps,
+      ARM::HasV8_4aOps,
+      ARM::HasV8_5aOps,
+      ARM::HasV8_6aOps,
+      ARM::HasV8_7aOps,
+      ARM::HasV8_8aOps,
+      ARM::HasV8_9aOps,
+      ARM::HasV9_0aOps,
+      ARM::HasV9_1aOps,
+      ARM::HasV9_2aOps,
+      ARM::HasV9_3aOps,
+      ARM::HasV9_4aOps,
+      ARM::HasV9_5aOps,
+      ARM::HasV9_6aOps,
+      ARM::HasV9_7aOps,
+      ARM::HasV8_1MMainlineOps,
       ARM::FeatureDotProd,
       ARM::HasV8Ops,
+      ARM::FeatureSB,
+      ARM::FeatureBF16,
       ARM::FeatureVFP2,
       ARM::FeatureVFP3,
       ARM::FeatureNEON,
