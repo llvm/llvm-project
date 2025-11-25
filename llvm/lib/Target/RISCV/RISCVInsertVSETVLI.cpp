@@ -539,7 +539,7 @@ class VSETVLIInfo {
 public:
   VSETVLIInfo()
       : AVLImm(0), TailAgnostic(false), MaskAgnostic(false),
-        SEWLMULRatioOnly(false) {}
+        SEWLMULRatioOnly(false), AltFmt(false), TWiden(0) {}
 
   static VSETVLIInfo getUnknown() {
     VSETVLIInfo Info;
