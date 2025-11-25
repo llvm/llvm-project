@@ -464,7 +464,7 @@ private:
   SPIRVType *getOpTypeForwardPointer(SPIRV::StorageClass::StorageClass SC,
                                      MachineIRBuilder &MIRBuilder);
 
-  SPIRVType *getOpTypeFunction(SPIRVType *RetType,
+  SPIRVType *getOpTypeFunction(const FunctionType *Ty, SPIRVType *RetType,
                                const SmallVectorImpl<SPIRVType *> &ArgTypes,
                                MachineIRBuilder &MIRBuilder);
 

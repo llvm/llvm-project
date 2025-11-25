@@ -977,6 +977,10 @@ def : WriteRes<WriteCSR, [SMX60_IEU]>;
 def : WriteRes<WriteNop, [SMX60_IEU]>;
 def : WriteRes<WriteRdVLENB, [SMX60_IEUA]>;
 
+// Give COPY instructions an execution resource.
+// FIXME: This could be better modeled by looking at the regclasses of the operands.
+def : InstRW<[WriteIALU], (instrs COPY)>;
+
 //===----------------------------------------------------------------------===//
 // Bypass and advance
 def : ReadAdvance<ReadJmp, 0>;
