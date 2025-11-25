@@ -242,7 +242,7 @@ Upcoming and past meeting agendas, and meeting minutes are published in a dedica
 on the LLVM Discourse forum: `Meeting Agendas and Minutes <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`_ 
 
 Slides used to support discussions during sync-up meetings are stored in a dedicated Google Drive folder: `Link <https://drive.google.com/drive/u/1/folders/1nu3JAanE0gqQDll0S9ofVy4FOFezc6Mm>`_.
-Note: that the naming convention for these slides is YYYYMM_llvm_qual_wg.
+Note that the naming convention for these slides is *YYYYMM*_llvm_qual_wg.
 
 AI Transcription Policy
 =======================
