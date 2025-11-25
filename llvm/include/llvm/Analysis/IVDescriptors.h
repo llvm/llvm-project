@@ -96,16 +96,16 @@ public:
                        Type *RT, bool Signed, bool Ordered,
                        SmallPtrSetImpl<Instruction *> &CI,
                        unsigned MinWidthCastToRecurTy,
-                       bool PhiHasLoopUsesOutsideReductionChain = false)
+                       bool PhiHasUsesOutsideReductionChain = false)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
         IsSigned(Signed), IsOrdered(Ordered),
-        PhiHasLoopUsesOutsideReductionChain(
-            PhiHasLoopUsesOutsideReductionChain),
+        PhiHasUsesOutsideReductionChain(
+            PhiHasUsesOutsideReductionChain),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
     CastInsts.insert_range(CI);
     assert(
-        (!PhiHasLoopUsesOutsideReductionChain || isMinMaxRecurrenceKind(K)) &&
+        (!PhiHasUsesOutsideReductionChain || isMinMaxRecurrenceKind(K)) &&
         "Only min/max recurrences are allowed to have multiple uses currently");
   }
 
@@ -345,10 +345,9 @@ public:
   /// Expose an ordered FP reduction to the instance users.
   bool isOrdered() const { return IsOrdered; }
 
-  /// Returns true if the reduction PHI has multiple in-loop users. This is
-  /// relevant for min/max reductions that are part of a FindLastIV pattern.
-  bool hasLoopUsesOutsideReductionChain() const {
-    return PhiHasLoopUsesOutsideReductionChain;
+  /// Returns true if the reduction PHI has any uses outside the reduction chain. This is relevant for min/max reductions that are part of a FindLastIV pattern.
+  bool hasUsesOutsideReductionChain() const {
+    return PhiHasUsesOutsideReductionChain;
   }
 
   /// Attempts to find a chain of operations from Phi to LoopExitInst that can
@@ -391,7 +390,7 @@ private:
   // True if the reduction PHI has in-loop users outside the reduction chain.
   // This is relevant for min/max reductions that are part of a FindLastIV
   // pattern.
-  bool PhiHasLoopUsesOutsideReductionChain = false;
+  bool PhiHasUsesOutsideReductionChain = false;
   // Instructions used for type-promoting the recurrence.
   SmallPtrSet<Instruction *, 8> CastInsts;
   // The minimum width used by the recurrence.

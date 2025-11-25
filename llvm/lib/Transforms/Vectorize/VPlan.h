@@ -2413,7 +2413,7 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
   /// patterns for argmin/argmax).
   /// TODO: Also support cases where the phi itself has a single use, but its
   /// compare has multiple uses.
-  bool HasLoopUsesOutsideReductionChain;
+  bool HasUsesOutsideReductionChain;
 
   /// When expanding the reduction PHI, the plan's VF element count is divided
   /// by this factor to form the reduction phi's VF.
@@ -2424,10 +2424,10 @@ public:
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
                        bool IsInLoop = false, bool IsOrdered = false,
                        unsigned VFScaleFactor = 1,
-                       bool HasLoopUsesOutsideReductionChain = false)
+                       bool HasUsesOutsideReductionChain = false)
       : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start), Kind(Kind),
         IsInLoop(IsInLoop), IsOrdered(IsOrdered),
-        HasLoopUsesOutsideReductionChain(HasLoopUsesOutsideReductionChain),
+        HasUsesOutsideReductionChain(HasUsesOutsideReductionChain),
         VFScaleFactor(VFScaleFactor) {
     assert((!IsOrdered || IsInLoop) && "IsOrdered requires IsInLoop");
   }
@@ -2438,7 +2438,7 @@ public:
     auto *R = new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
         *getOperand(0), IsInLoop, IsOrdered, VFScaleFactor,
-        HasLoopUsesOutsideReductionChain);
+        HasUsesOutsideReductionChain);
     R->addOperand(getBackedgeValue());
     return R;
   }
@@ -2466,8 +2466,8 @@ public:
   bool isInLoop() const { return IsInLoop; }
 
   /// Returns true, if the phi is part of a multi-use reduction.
-  bool hasLoopUsesOutsideReductionChain() const {
-    return HasLoopUsesOutsideReductionChain;
+  bool hasUsesOutsideReductionChain() const {
+    return HasUsesOutsideReductionChain;
   }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.

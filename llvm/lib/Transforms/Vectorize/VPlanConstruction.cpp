@@ -1011,7 +1011,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
     auto *MinMaxPhiR = dyn_cast<VPReductionPHIRecipe>(&PhiR);
     // TODO: check for multi-uses in VPlan directly.
-    if (!MinMaxPhiR || !MinMaxPhiR->hasLoopUsesOutsideReductionChain())
+    if (!MinMaxPhiR || !MinMaxPhiR->hasUsesOutsideReductionChain())
       continue;
 
     // MinMaxPhiR has users outside the reduction cycle in the loop. Check if
@@ -1040,12 +1040,9 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
              isa<IntrinsicInst>(
                  cast<VPReplicateRecipe>(MinMaxOp)->getUnderlyingValue()))) &&
            "MinMaxOp must be a wide or scalar intrinsic");
-    VPValue *MinMaxOpA = MinMaxOp->getOperand(0);
-    VPValue *MinMaxOpB = MinMaxOp->getOperand(1);
-    if (MinMaxOpA != MinMaxPhiR)
-      std::swap(MinMaxOpA, MinMaxOpB);
-    assert(MinMaxOpA == MinMaxPhiR &&
-           "one of MinMaxOp's operands must be the phi");
+        VPValue *MinMaxOpValue = MinMaxOp->getOperand(0);
+            if (MinMaxOpValue == MinMaxPhiR)
+              MinMaxOpValue= MinMaxOp->getOperand(1);
 
     VPValue *CmpOpA;
     VPValue *CmpOpB;
@@ -1053,7 +1050,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(findUserOf(
         MinMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB))));
     if (!Cmp || Cmp->getNumUsers() != 1 ||
-        (CmpOpA != MinMaxOpB && CmpOpB != MinMaxOpB))
+        (CmpOpA != MinMaxOpValue&& CmpOpB != MinMaxOpValue))
       return false;
 
     // MinMaxPhiR must have exactly 3 users:
@@ -1067,13 +1064,9 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
         findUserOf<VPInstruction::ComputeReductionResult>(MinMaxPhiR);
     assert(is_contained(MinMaxPhiR->users(), MinMaxOp) &&
            "one user must be MinMaxOp");
-    assert(is_contained(MinMaxPhiR->users(), Cmp) && "one user must be Cmp");
-    assert(is_contained(MinMaxPhiR->users(), MinMaxResult) &&
-           "one user must be MinMaxResult");
-    assert(is_contained(MinMaxOp->users(), MinMaxPhiR) &&
-           "one user must be MinMaxPhiR");
+    assert(MinMaxResult && "MinMaxResult must be a user of MinMaxPhiR");
     assert(is_contained(MinMaxOp->users(), MinMaxResult) &&
-           "one user must be MinMaxResult");
+           "MinMaxResult must be a user of MinMaxOp (and of MinMaxPhiR");
 
     // TODO: Strict predicates need to find the first IV value for which the
     // predicate holds, not the last.

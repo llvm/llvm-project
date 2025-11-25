@@ -6590,7 +6590,7 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
 
     // Multi-use reductions (e.g., used in FindLastIV patterns) are handled
     // separately and should not be considered for in-loop reductions.
-    if (RdxDesc.hasLoopUsesOutsideReductionChain())
+    if (RdxDesc.hasUsesOutsideReductionChain())
       continue;
 
     // We don't collect reductions that are type promoted (yet).
@@ -8218,7 +8218,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       PhiRecipe = new VPReductionPHIRecipe(
           Phi, RdxDesc.getRecurrenceKind(), *StartV, CM.isInLoopReduction(Phi),
           CM.useOrderedReductions(RdxDesc), ScaleFactor,
-          RdxDesc.hasLoopUsesOutsideReductionChain());
+          RdxDesc.hasUsesOutsideReductionChain());
     } else {
       // TODO: Currently fixed-order recurrences are modeled as chains of
       // first-order recurrences. If there are no users of the intermediate

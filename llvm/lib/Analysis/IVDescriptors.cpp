@@ -217,9 +217,9 @@ static bool checkOrderedReduction(RecurKind Kind, Instruction *ExactFPMathInst,
 }
 
 /// Returns true if \p Phi is a min/max reduction matching \p Kind where \p Phi
-/// is used in the loop outside the reduction chain. This is common for loops
-/// selecting the index of a minimum/maximum value (argmin/argmax).
-static bool isMinMaxReductionWithLoopUsersOutsideReductionChain(
+/// is used outside the reduction chain. This is common for loops selecting the
+/// index of a minimum/maximum value (argmin/argmax).
+static bool isMinMaxReductionPhiWithUsersOutsideReductionChain(
     PHINode *Phi, RecurKind Kind, Loop *TheLoop, RecurrenceDescriptor &RedDes) {
   BasicBlock *Latch = TheLoop->getLoopLatch();
   if (!Latch)
@@ -274,7 +274,7 @@ bool RecurrenceDescriptor::AddReductionVar(
     return false;
 
   // Check for min/max reduction variables that feed other users in the loop.
-  if (isMinMaxReductionWithLoopUsersOutsideReductionChain(Phi, Kind, TheLoop,
+  if (isMinMaxReductionPhiWithUsersOutsideReductionChain(Phi, Kind, TheLoop,
                                                           RedDes))
     return true;
 
