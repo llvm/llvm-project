@@ -938,9 +938,9 @@ class ProductAsElementalConverter
   using Base = NumericReductionAsElementalConverterBase;
 
 public:
-  ProductAsElementalConverter(hlfir::ProductOp op, mlir::PatternRewriter &rewriter)
+  ProductAsElementalConverter(hlfir::ProductOp op,
+                              mlir::PatternRewriter &rewriter)
       : Base{op, rewriter} {}
-
 
 private:
   virtual llvm::SmallVector<mlir::Value> genReductionInitValues(
@@ -949,7 +949,7 @@ private:
       final {
     return {
         // check element type, and use
-        // fir::factory::create{Integer or Real}Constant 
+        // fir::factory::create{Integer or Real}Constant
         fir::factory::createZeroValue(builder, loc, getResultElementType())};
   }
   virtual llvm::SmallVector<mlir::Value>
@@ -1233,7 +1233,7 @@ mlir::Value SumAsElementalConverter::genScalarAdd(mlir::Value value1,
 }
 
 mlir::Value ProductAsElementalConverter::genScalarMult(mlir::Value value1,
-                                                  mlir::Value value2) {
+                                                       mlir::Value value2) {
   mlir::Type ty = value1.getType();
   assert(ty == value2.getType() && "reduction values' types do not match");
   if (mlir::isa<mlir::FloatType>(ty))
