@@ -283,7 +283,8 @@ TEST(NamedDeclPrinter, NestedNameSpecifierAnonymousTags) {
   const char *Code =
       R"(
         struct Foo {
-          struct {
+          class {
+            public:
             struct {
               void method();
             } i;
@@ -291,5 +292,5 @@ TEST(NamedDeclPrinter, NestedNameSpecifierAnonymousTags) {
         };
 )";
   ASSERT_TRUE(PrintedNestedNameSpecifierMatches(
-      Code, "method", "Foo::(anonymous)::(unnamed)::"));
+      Code, "method", "Foo::(anonymous class)::(unnamed struct)::"));
 }
