@@ -464,3 +464,156 @@ loop:
 exit:
   ret i32 %select.data
 }
+
+;; Add more work to the loop besides the CSA to check cost modelling for NEON.
+define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr readonly %B, ptr noalias %C, i32 %a) {
+; NEON-LABEL: define i32 @int_select_with_extra_arith_payload(
+; NEON-SAME: i64 [[N:%.*]], ptr readonly [[A:%.*]], ptr readonly [[B:%.*]], ptr noalias [[C:%.*]], i32 [[A:%.*]]) {
+; NEON-NEXT:  [[ENTRY:.*]]:
+; NEON-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; NEON-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; NEON:       [[VECTOR_PH]]:
+; NEON-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; NEON-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; NEON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
+; NEON-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; NEON-NEXT:    br label %[[VECTOR_BODY:.*]]
+; NEON:       [[VECTOR_BODY]]:
+; NEON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; NEON-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; NEON-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
+; NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
+; NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; NEON-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[WIDE_LOAD]], splat (i32 13)
+; NEON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
+; NEON-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
+; NEON-NEXT:    [[TMP4:%.*]] = mul <4 x i32> [[WIDE_LOAD1]], splat (i32 5)
+; NEON-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP2]], [[TMP4]]
+; NEON-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDEX]]
+; NEON-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP6]], align 4
+; NEON-NEXT:    [[TMP7:%.*]] = icmp slt <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
+; NEON-NEXT:    [[TMP8:%.*]] = freeze <4 x i1> [[TMP7]]
+; NEON-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP8]])
+; NEON-NEXT:    [[TMP10]] = select i1 [[TMP9]], <4 x i1> [[TMP7]], <4 x i1> [[TMP0]]
+; NEON-NEXT:    [[TMP11]] = select i1 [[TMP9]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
+; NEON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; NEON-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NEON-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; NEON:       [[MIDDLE_BLOCK]]:
+; NEON-NEXT:    [[TMP13:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP11]], <4 x i1> [[TMP10]], i32 -1)
+; NEON-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; NEON-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NEON:       [[SCALAR_PH]]:
+; NEON-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; NEON-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ -1, %[[ENTRY]] ]
+; NEON-NEXT:    br label %[[LOOP:.*]]
+; NEON:       [[LOOP]]:
+; NEON-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; NEON-NEXT:    [[A_PHI:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SELECT_A:%.*]], %[[LOOP]] ]
+; NEON-NEXT:    [[A_ADDR:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; NEON-NEXT:    [[LD_A:%.*]] = load i32, ptr [[A_ADDR]], align 4
+; NEON-NEXT:    [[MUL_A:%.*]] = mul i32 [[LD_A]], 13
+; NEON-NEXT:    [[B_ADDR:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; NEON-NEXT:    [[LD_B:%.*]] = load i32, ptr [[B_ADDR]], align 4
+; NEON-NEXT:    [[MUL_B:%.*]] = mul i32 [[LD_B]], 5
+; NEON-NEXT:    [[ADD:%.*]] = add i32 [[MUL_A]], [[MUL_B]]
+; NEON-NEXT:    [[C_ADDR:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
+; NEON-NEXT:    store i32 [[ADD]], ptr [[C_ADDR]], align 4
+; NEON-NEXT:    [[SELECT_CMP:%.*]] = icmp slt i32 [[A]], [[LD_A]]
+; NEON-NEXT:    [[SELECT_A]] = select i1 [[SELECT_CMP]], i32 [[LD_A]], i32 [[A_PHI]]
+; NEON-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; NEON-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; NEON-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; NEON:       [[EXIT]]:
+; NEON-NEXT:    [[SELECT_A_LCSSA:%.*]] = phi i32 [ [[SELECT_A]], %[[LOOP]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
+; NEON-NEXT:    ret i32 [[SELECT_A_LCSSA]]
+;
+; SVE-LABEL: define i32 @int_select_with_extra_arith_payload(
+; SVE-SAME: i64 [[N:%.*]], ptr readonly [[A:%.*]], ptr readonly [[B:%.*]], ptr noalias [[C:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
+; SVE-NEXT:  [[ENTRY:.*]]:
+; SVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; SVE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
+; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
+; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; SVE:       [[VECTOR_PH]]:
+; SVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; SVE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[A]], i64 0
+; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; SVE:       [[VECTOR_BODY]]:
+; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[VECTOR_BODY]] ]
+; SVE-NEXT:    [[TMP4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
+; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
+; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 4
+; SVE-NEXT:    [[TMP6:%.*]] = mul <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 13)
+; SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
+; SVE-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7]], align 4
+; SVE-NEXT:    [[TMP8:%.*]] = mul <vscale x 4 x i32> [[WIDE_LOAD1]], splat (i32 5)
+; SVE-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> [[TMP6]], [[TMP8]]
+; SVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDEX]]
+; SVE-NEXT:    store <vscale x 4 x i32> [[TMP9]], ptr [[TMP10]], align 4
+; SVE-NEXT:    [[TMP11:%.*]] = icmp slt <vscale x 4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
+; SVE-NEXT:    [[TMP12:%.*]] = freeze <vscale x 4 x i1> [[TMP11]]
+; SVE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP12]])
+; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 4 x i1> [[TMP11]], <vscale x 4 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP15]] = select i1 [[TMP13]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SVE-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; SVE:       [[MIDDLE_BLOCK]]:
+; SVE-NEXT:    [[TMP17:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP15]], <vscale x 4 x i1> [[TMP14]], i32 -1)
+; SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; SVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; SVE:       [[SCALAR_PH]]:
+; SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP17]], %[[MIDDLE_BLOCK]] ], [ -1, %[[ENTRY]] ]
+; SVE-NEXT:    br label %[[LOOP:.*]]
+; SVE:       [[LOOP]]:
+; SVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; SVE-NEXT:    [[A_PHI:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SELECT_A:%.*]], %[[LOOP]] ]
+; SVE-NEXT:    [[A_ADDR:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; SVE-NEXT:    [[LD_A:%.*]] = load i32, ptr [[A_ADDR]], align 4
+; SVE-NEXT:    [[MUL_A:%.*]] = mul i32 [[LD_A]], 13
+; SVE-NEXT:    [[B_ADDR:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; SVE-NEXT:    [[LD_B:%.*]] = load i32, ptr [[B_ADDR]], align 4
+; SVE-NEXT:    [[MUL_B:%.*]] = mul i32 [[LD_B]], 5
+; SVE-NEXT:    [[ADD:%.*]] = add i32 [[MUL_A]], [[MUL_B]]
+; SVE-NEXT:    [[C_ADDR:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
+; SVE-NEXT:    store i32 [[ADD]], ptr [[C_ADDR]], align 4
+; SVE-NEXT:    [[SELECT_CMP:%.*]] = icmp slt i32 [[A]], [[LD_A]]
+; SVE-NEXT:    [[SELECT_A]] = select i1 [[SELECT_CMP]], i32 [[LD_A]], i32 [[A_PHI]]
+; SVE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; SVE-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; SVE-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; SVE:       [[EXIT]]:
+; SVE-NEXT:    [[SELECT_A_LCSSA:%.*]] = phi i32 [ [[SELECT_A]], %[[LOOP]] ], [ [[TMP17]], %[[MIDDLE_BLOCK]] ]
+; SVE-NEXT:    ret i32 [[SELECT_A_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %A.phi = phi i32 [ -1, %entry ], [ %select.A, %loop ]
+  %A.addr = getelementptr inbounds i32, ptr %A, i64 %iv
+  %ld.A = load i32, ptr %A.addr, align 4
+  %mul.A = mul i32 %ld.A, 13
+  %B.addr = getelementptr inbounds i32, ptr %B, i64 %iv
+  %ld.B = load i32, ptr %B.addr, align 4
+  %mul.B = mul i32 %ld.B, 5
+  %add = add i32 %mul.A, %mul.B
+  %C.addr = getelementptr inbounds i32, ptr %C, i64 %iv
+  store i32 %add, ptr %C.addr, align 4
+  %select.cmp = icmp slt i32 %a, %ld.A
+  %select.A = select i1 %select.cmp, i32 %ld.A, i32 %A.phi
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit.cmp = icmp eq i64 %iv.next, %N
+  br i1 %exit.cmp, label %exit, label %loop
+
+exit:
+  ret i32 %select.A
+}
