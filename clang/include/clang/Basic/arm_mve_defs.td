@@ -74,9 +74,9 @@ def immshr: CGHelperFn<"MVEImmediateShr"> {
   let special_params = [IRBuilderIntParam<1, "unsigned">,
                         IRBuilderIntParam<2, "bool">];
 }
-def fadd: IRBuilder<"CreateFAdd">;
-def fmul: IRBuilder<"CreateFMul">;
-def fsub: IRBuilder<"CreateFSub">;
+def fadd_node: IRBuilder<"CreateFAdd">;
+def fmul_node: IRBuilder<"CreateFMul">;
+def fsub_node: IRBuilder<"CreateFSub">;
 def load: IRBuilder<"CreateLoad"> {
   let special_params = [IRBuilderAddrParam<0>];
 }
@@ -211,6 +211,13 @@ def unsignedflag;
 // 'bitsize' also takes a scalar type, and expands into an integer
 // constant giving its size in bits.
 def bitsize;
+
+// strictFPAlt allows a node to have different code generation under strict-fp.
+// TODO: The standard node can be IRBuilderBase or IRIntBase.
+class strictFPAlt<IRBuilderBase standard_, IRIntBase strictfp_> {
+  IRBuilderBase standard = standard_;
+  IRIntBase strictfp = strictfp_;
+}
 
 // If you put CustomCodegen<"foo"> in an intrinsic's codegen field, it
 // indicates that the IR generation for that intrinsic is done by handwritten
@@ -573,6 +580,14 @@ multiclass IntrinsicMXNameOverride<Type rettype, dag arguments, dag cg,
   }
 }
 
+// StrictFP nodes that choose between standard fadd and llvm.arm.mve.fadd nodes
+// depending on whether we are using strict-fp.
+def fadd: strictFPAlt<fadd_node,
+                      IRInt<"vadd", [Vector]>>;
+def fsub: strictFPAlt<fsub_node,
+                      IRInt<"vsub", [Vector]>>;
+def fmul: strictFPAlt<fmul_node,
+                      IRInt<"vmul", [Vector]>>;
 
 // -----------------------------------------------------------------------------
 // Convenience lists of parameter types. 'T' is just a container record, so you
