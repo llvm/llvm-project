@@ -119,4 +119,16 @@ MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_convert_to_int(
   // result to the desired result width.
   return result.getZExtValue();
 }
+
+MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_convert_from_int(
+    int32_t semantics, int32_t inputWidth, bool isUnsigned, uint64_t a) {
+  llvm::APInt val(inputWidth, a, /*isSigned=*/!isUnsigned);
+  const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(semantics));
+  llvm::APFloat result(sem);
+  // TODO: Custom rounding modes are not supported yet.
+  result.convertFromAPInt(val, /*IsSigned=*/!isUnsigned,
+                          llvm::RoundingMode::NearestTiesToEven);
+  return result.bitcastToAPInt().getZExtValue();
+}
 }
