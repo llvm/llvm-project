@@ -276,3 +276,46 @@ define fastcc void @fun4(%Ty4 %A) {
   call void undef(%Ty4 %A)
   ret void
 }
+
+%Ty5 = type {i128, i128}
+declare fastcc %Ty5 @foo5()
+define fastcc void @fun5() {
+; CHECK-LABEL: fun5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    aghi %r15, -192
+; CHECK-NEXT:    .cfi_def_cfa_offset 352
+; CHECK-NEXT:    la %r2, 160(%r15)
+; CHECK-NEXT:    brasl %r14, foo5@PLT
+; CHECK-NEXT:    lg %r0, 176(%r15)
+; CHECK-NEXT:    lg %r1, 184(%r15)
+; CHECK-NEXT:    lg %r2, 160(%r15)
+; CHECK-NEXT:    lg %r3, 168(%r15)
+; CHECK-NEXT:    stg %r0, 16
+; CHECK-NEXT:    stg %r1, 24
+; CHECK-NEXT:    stg %r2, 0
+; CHECK-NEXT:    stg %r3, 8
+; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
+; CHECK-NEXT:    br %r14
+;
+; VECTOR-LABEL: fun5:
+; VECTOR:       # %bb.0:
+; VECTOR-NEXT:    stmg %r14, %r15, 112(%r15)
+; VECTOR-NEXT:    .cfi_offset %r14, -48
+; VECTOR-NEXT:    .cfi_offset %r15, -40
+; VECTOR-NEXT:    aghi %r15, -192
+; VECTOR-NEXT:    .cfi_def_cfa_offset 352
+; VECTOR-NEXT:    la %r2, 160(%r15)
+; VECTOR-NEXT:    brasl %r14, foo5@PLT
+; VECTOR-NEXT:    vl %v0, 160(%r15), 3
+; VECTOR-NEXT:    vl %v1, 176(%r15), 3
+; VECTOR-NEXT:    vst %v1, 16, 3
+; VECTOR-NEXT:    vst %v0, 0, 3
+; VECTOR-NEXT:    lmg %r14, %r15, 304(%r15)
+; VECTOR-NEXT:    br %r14
+  %A = call %Ty5 @foo5()
+  store %Ty5 %A, ptr null
+  ret void
+}
