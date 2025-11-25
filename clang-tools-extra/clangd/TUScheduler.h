@@ -236,9 +236,6 @@ public:
     /// Typically to inject per-file configuration.
     /// If the path is empty, context sholud be "generic".
     std::function<Context(PathRef)> ContextProvider;
-
-    /// Sets an alterante mode of operation. See ClangdServer::Options::StrongWorkspaceMode.
-    bool StrongWorkspaceMode;
   };
 
   TUScheduler(const GlobalCompilationDatabase &CDB, const Options &Opts,

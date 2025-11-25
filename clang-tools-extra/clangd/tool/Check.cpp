@@ -169,6 +169,8 @@ public:
   bool buildCommand(const ThreadsafeFS &TFS) {
     log("Loading compilation database...");
     DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
+    if (Opts.StrongWorkspaceMode)
+      CDBOpts.applyWorkingDirectory(std::move(Opts.WorkspaceRoot));
     CDBOpts.CompileCommandsDir =
         Config::current().CompileFlags.CDBSearch.FixedCDBPath;
     BaseCDB =
@@ -178,8 +180,10 @@ public:
         getSystemIncludeExtractor(llvm::ArrayRef(Opts.QueryDriverGlobs));
     if (Opts.ResourceDir)
       Mangler.ResourceDir = *Opts.ResourceDir;
+
     CDB = std::make_unique<OverlayCDB>(
-        BaseCDB.get(), std::vector<std::string>{}, std::move(Mangler));
+        BaseCDB.get(), std::vector<std::string>{}, std::move(Mangler),
+        CDBOpts.WorkingDirectory);
 
     if (auto TrueCmd = CDB->getCompileCommand(File)) {
       Cmd = std::move(*TrueCmd);
@@ -187,7 +191,7 @@ public:
           Cmd.Heuristic.empty() ? "from CDB" : Cmd.Heuristic, Cmd.Directory,
           printArgv(Cmd.CommandLine));
     } else {
-      Cmd = CDB->getFallbackCommand(File, Opts.StrongWorkspaceMode);
+      Cmd = CDB->getFallbackCommand(File);
       log("Generic fallback command is: [{0}] {1}", Cmd.Directory,
           printArgv(Cmd.CommandLine));
     }

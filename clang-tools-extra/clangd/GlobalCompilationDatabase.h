@@ -35,6 +35,8 @@ struct ProjectInfo {
 /// Provides compilation arguments used for parsing C and C++ files.
 class GlobalCompilationDatabase {
 public:
+  GlobalCompilationDatabase(std::optional<std::string> WorkingDirectory)
+      : WorkingDirectory(WorkingDirectory) {}
   virtual ~GlobalCompilationDatabase() = default;
 
   /// If there are any known-good commands for building this file, returns one.
@@ -55,7 +57,7 @@ public:
   /// Makes a guess at how to build a file.
   /// The default implementation just runs clang on the file.
   /// Clangd should treat the results as unreliable.
-  virtual tooling::CompileCommand getFallbackCommand(PathRef File, bool StrongWorkspaceMode = false) const;
+  virtual tooling::CompileCommand getFallbackCommand(PathRef File) const;
 
   /// If the CDB does any asynchronous work, wait for it to complete.
   /// For use in tests.
@@ -69,14 +71,17 @@ public:
   }
 
 protected:
+  std::optional<std::string> WorkingDirectory;
   mutable CommandChanged OnCommandChanged;
 };
 
 // Helper class for implementing GlobalCompilationDatabases that wrap others.
 class DelegatingCDB : public GlobalCompilationDatabase {
 public:
-  DelegatingCDB(const GlobalCompilationDatabase *Base);
-  DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base);
+  DelegatingCDB(const GlobalCompilationDatabase *Base,
+                std::optional<std::string> WorkingDirectory);
+  DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base,
+                std::optional<std::string> WorkingDirectory);
 
   std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
@@ -86,7 +91,7 @@ public:
   std::unique_ptr<ProjectModules>
   getProjectModules(PathRef File) const override;
 
-  tooling::CompileCommand getFallbackCommand(PathRef File, bool StrongWorkspaceMode = false) const override;
+  tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
   bool blockUntilIdle(Deadline D) const override;
 
@@ -117,6 +122,12 @@ public:
     // Only look for a compilation database in this one fixed directory.
     // FIXME: fold this into config/context mechanism.
     std::optional<Path> CompileCommandsDir;
+    // Working directory for fallback commands
+    // If unset, parent directory of file should be used
+    std::optional<std::string> WorkingDirectory;
+
+    void
+    applyWorkingDirectory(const std::optional<std::string> &&WorkingDirectory);
   };
 
   DirectoryBasedGlobalCompilationDatabase(const Options &Opts);
@@ -196,11 +207,12 @@ public:
   // Adjuster is applied to all commands, fallback or not.
   OverlayCDB(const GlobalCompilationDatabase *Base,
              std::vector<std::string> FallbackFlags = {},
-             CommandMangler Mangler = nullptr);
+             CommandMangler Mangler = nullptr,
+             std::optional<std::string> WorkingDirectory = std::nullopt);
 
   std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
-  tooling::CompileCommand getFallbackCommand(PathRef File, bool StrongWorkspaceMode = false) const override;
+  tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
   /// Sets or clears the compilation command for a particular file.
   /// Returns true if the command was changed (including insertion and removal),

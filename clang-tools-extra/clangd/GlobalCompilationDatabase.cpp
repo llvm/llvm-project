@@ -55,7 +55,7 @@ void actOnAllParentDirectories(PathRef FileName,
 } // namespace
 
 tooling::CompileCommand
-GlobalCompilationDatabase::getFallbackCommand(PathRef File, bool StrongWorkspaceMode) const {
+GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
   std::vector<std::string> Argv = {"clang"};
   // Clang treats .h files as C by default and files without extension as linker
   // input, resulting in unhelpful diagnostics.
@@ -64,14 +64,10 @@ GlobalCompilationDatabase::getFallbackCommand(PathRef File, bool StrongWorkspace
   if (FileExtension.empty() || FileExtension == ".h")
     Argv.push_back("-xobjective-c++-header");
   Argv.push_back(std::string(File));
-  SmallString<256> WorkingDir;
-  if (StrongWorkspaceMode)
-    llvm::sys::fs::current_path(WorkingDir);
-  else
-    WorkingDir = llvm::sys::path::parent_path(File);
-  tooling::CompileCommand Cmd(WorkingDir,
-                              llvm::sys::path::filename(File), std::move(Argv),
-                              /*Output=*/"");
+  tooling::CompileCommand Cmd(
+      WorkingDirectory ? *WorkingDirectory : llvm::sys::path::parent_path(File),
+      llvm::sys::path::filename(File), std::move(Argv),
+      /*Output=*/"");
   Cmd.Heuristic = "clangd fallback";
   return Cmd;
 }
@@ -354,7 +350,8 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
 
 DirectoryBasedGlobalCompilationDatabase::
     DirectoryBasedGlobalCompilationDatabase(const Options &Opts)
-    : Opts(Opts), Broadcaster(std::make_unique<BroadcastThread>(*this)) {
+    : GlobalCompilationDatabase(Opts.WorkingDirectory), Opts(Opts),
+      Broadcaster(std::make_unique<BroadcastThread>(*this)) {
   if (!this->Opts.ContextProvider)
     this->Opts.ContextProvider = [](llvm::StringRef) {
       return Context::current().clone();
@@ -463,6 +460,17 @@ DirectoryBasedGlobalCompilationDatabase::lookupCDB(
   if (ShouldBroadcast)
     broadcastCDB(Result);
   return Result;
+}
+
+void DirectoryBasedGlobalCompilationDatabase::Options::applyWorkingDirectory(
+    const std::optional<std::string> &&WorkingDirectory) {
+  if (WorkingDirectory)
+    this->WorkingDirectory = *WorkingDirectory;
+  else {
+    SmallString<256> CWD;
+    llvm::sys::fs::current_path(CWD);
+    this->WorkingDirectory = std::string(CWD);
+  }
 }
 
 // The broadcast thread announces files with new compile commands to the world.
@@ -764,8 +772,9 @@ DirectoryBasedGlobalCompilationDatabase::getProjectModules(PathRef File) const {
 
 OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
                        std::vector<std::string> FallbackFlags,
-                       CommandMangler Mangler)
-    : DelegatingCDB(Base), Mangler(std::move(Mangler)),
+                       CommandMangler Mangler,
+                       std::optional<std::string> WorkingDirectory)
+    : DelegatingCDB(Base, WorkingDirectory), Mangler(std::move(Mangler)),
       FallbackFlags(std::move(FallbackFlags)) {}
 
 std::optional<tooling::CompileCommand>
@@ -802,8 +811,8 @@ OverlayCDB::getCompileCommand(PathRef File) const {
   return Cmd;
 }
 
-tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File, bool StrongWorkspaceMode) const {
-  auto Cmd = DelegatingCDB::getFallbackCommand(File, StrongWorkspaceMode);
+tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
+  auto Cmd = DelegatingCDB::getFallbackCommand(File);
   std::lock_guard<std::mutex> Lock(Mutex);
   Cmd.CommandLine.insert(Cmd.CommandLine.end(), FallbackFlags.begin(),
                          FallbackFlags.end());
@@ -849,16 +858,18 @@ OverlayCDB::getProjectModules(PathRef File) const {
   return MDB;
 }
 
-DelegatingCDB::DelegatingCDB(const GlobalCompilationDatabase *Base)
-    : Base(Base) {
+DelegatingCDB::DelegatingCDB(const GlobalCompilationDatabase *Base,
+                             std::optional<std::string> WorkingDirectory)
+    : GlobalCompilationDatabase(WorkingDirectory), Base(Base) {
   if (Base)
     BaseChanged = Base->watch([this](const std::vector<std::string> Changes) {
       OnCommandChanged.broadcast(Changes);
     });
 }
 
-DelegatingCDB::DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base)
-    : DelegatingCDB(Base.get()) {
+DelegatingCDB::DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base,
+                             std::optional<std::string> WorkingDirectory)
+    : DelegatingCDB(Base.get(), WorkingDirectory) {
   BaseOwner = std::move(Base);
 }
 
@@ -882,10 +893,10 @@ DelegatingCDB::getProjectModules(PathRef File) const {
   return Base->getProjectModules(File);
 }
 
-tooling::CompileCommand DelegatingCDB::getFallbackCommand(PathRef File, bool StrongWorkspaceMode) const {
+tooling::CompileCommand DelegatingCDB::getFallbackCommand(PathRef File) const {
   if (!Base)
-    return GlobalCompilationDatabase::getFallbackCommand(File, StrongWorkspaceMode);
-  return Base->getFallbackCommand(File, StrongWorkspaceMode);
+    return GlobalCompilationDatabase::getFallbackCommand(File);
+  return Base->getFallbackCommand(File);
 }
 
 bool DelegatingCDB::blockUntilIdle(Deadline D) const {

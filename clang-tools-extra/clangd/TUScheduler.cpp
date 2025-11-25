@@ -841,14 +841,13 @@ ASTWorker::ASTWorker(PathRef FileName, const GlobalCompilationDatabase &CDB,
     : IdleASTs(LRUCache), HeaderIncluders(HeaderIncluders), RunSync(RunSync),
       UpdateDebounce(Opts.UpdateDebounce), FileName(FileName),
       ContextProvider(Opts.ContextProvider), CDB(CDB), Callbacks(Callbacks),
-      StrongWorkspaceMode(Opts.StrongWorkspaceMode),
       Barrier(Barrier), Done(false), Status(FileName, Callbacks),
       PreamblePeer(FileName, Callbacks, Opts.StorePreamblesInMemory, RunSync,
                    Opts.PreambleThrottler, Status, HeaderIncluders, *this) {
   // Set a fallback command because compile command can be accessed before
   // `Inputs` is initialized. Other fields are only used after initialization
   // from client inputs.
-  FileInputs.CompileCommand = CDB.getFallbackCommand(FileName, StrongWorkspaceMode);
+  FileInputs.CompileCommand = CDB.getFallbackCommand(FileName);
 }
 
 ASTWorker::~ASTWorker() {
@@ -890,7 +889,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
     if (Cmd)
       Inputs.CompileCommand = std::move(*Cmd);
     else
-      Inputs.CompileCommand = CDB.getFallbackCommand(FileName, StrongWorkspaceMode);
+      Inputs.CompileCommand = CDB.getFallbackCommand(FileName);
 
     bool InputsAreTheSame =
         std::tie(FileInputs.CompileCommand, FileInputs.Contents) ==
