@@ -1248,6 +1248,31 @@ def AMDGPU_MakeDmaBaseOp :
 
     This operation creates a value corresponding roughly to the descriptor group 0
     found in TensorLoadToLDSOp and TensorStoreFromLDSOp in the rocdl dialect.
+    For example:
+
+    ```mlir
+      %base = amdgpu.make_dma_base %src[%idx0], %dst[%idx1] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+      %descriptor = amdgpu.make_dma_descriptor %base globalSize [2, 2] globalStride [2, 1] sharedSize [2, 2] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+      amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
+    ```
+
+    to
+
+    ```mlir
+       // pseudocode
+       %base_0 = llvm.mlir.undef : !llvm.struct<(ptr, ptr)>
+       %base_1 = llvm.insertvalue %global_addr, %base_0[0] : !llvm.struct<(ptr, ptr)>
+       %base_2 = llvm.insertvalue %lds_addr, %base_1[1] : !llvm.struct(ptr, ptr)>
+       // type(%base_2) = !llvm.struct<(ptr, ptr) roughly corresponds to amdgpu.tdm_base<i32>
+
+       // The base will be used when contructing dgroup0
+       // when lowering amdgpu.make_dma_descriptor
+       %dgroup0_0 = llvm.mlir.undef : !llvm.struct<(....)>
+       %dgroup0_1 = llvm.insertvalue %base2, %dgroup0_0 : ....
+
+       // When lowering amdgpu.tensor_load_to_lds
+       rocdl.tensor.load.to.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+    ```
   }];
 
   let assemblyFormat = [{
