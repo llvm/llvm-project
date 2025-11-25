@@ -26419,7 +26419,7 @@ static SDValue performSETCCCombine(SDNode *N,
     }
   }
   if (Subtarget->hasCSSC() && Cond == ISD::SETNE && isNullConstant(RHS) &&
-      !VT.isVector()) {
+      !VT.isVector() && DCI.getDAGCombineLevel() >= AfterLegalizeTypes) {
     SDValue One = DAG.getConstant(1, DL, LHS.getValueType());
     auto UMin = DAG.getNode(ISD::UMIN, DL, LHS.getValueType(), LHS, One);
     return DAG.getNode(ISD::TRUNCATE, DL, VT, UMin);

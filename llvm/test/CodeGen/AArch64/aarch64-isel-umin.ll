@@ -313,3 +313,24 @@ entry:
   %conv = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %conv
 }
+
+; auto icmpi128(int128 x0) { return x0 != 0; }
+define i1 @icmpi128(i128 noundef %0) {
+; CHECK-SD-LABEL: icmpi128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    orr	x8, x0, x1
+; CHECK-SD-NEXT:    cmp	x8, #0
+; CHECK-SD-NEXT:    cset w0, ne
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-CSSC-LABEL: icmpi128:
+; CHECK-CSSC:       // %bb.0: // %entry
+; CHECK-CSSC-NEXT:    orr	x8, x0, x1
+; CHECK-CSSC-NEXT:    umin	x0, x8, #1
+; CHECK-CSSC-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-CSSC-NEXT:    ret
+;
+entry:
+  %2 = icmp ne i128 %0, 0
+  ret i1 %2
+}
