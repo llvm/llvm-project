@@ -842,12 +842,20 @@ public:
   LLVM_ABI AddressingModeKind
   getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const;
 
+  /// Some targets only support masked load/store with a constant mask.
+  enum MaskKind {
+    VariableOrConstantMask,
+    ConstantMask,
+  };
+
   /// Return true if the target supports masked store.
-  LLVM_ABI bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                                   unsigned AddressSpace) const;
+  LLVM_ABI bool
+  isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddressSpace,
+                     MaskKind MaskKind = VariableOrConstantMask) const;
   /// Return true if the target supports masked load.
-  LLVM_ABI bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                                  unsigned AddressSpace) const;
+  LLVM_ABI bool
+  isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
+                    MaskKind MaskKind = VariableOrConstantMask) const;
 
   /// Return true if the target supports nontemporal store.
   LLVM_ABI bool isLegalNTStore(Type *DataType, Align Alignment) const;
