@@ -178,12 +178,19 @@ define double @select_f64_i1(i1 %cond, double %t, double %f) nounwind {
 ; RV32ZDINX_ZICOND-LABEL: select_f64_i1:
 ; RV32ZDINX_ZICOND:       # %bb.0: # %entry
 ; RV32ZDINX_ZICOND-NEXT:    andi a0, a0, 1
-; RV32ZDINX_ZICOND-NEXT:    czero.nez a3, a3, a0
-; RV32ZDINX_ZICOND-NEXT:    czero.eqz a1, a1, a0
-; RV32ZDINX_ZICOND-NEXT:    czero.nez a4, a4, a0
-; RV32ZDINX_ZICOND-NEXT:    czero.eqz a2, a2, a0
-; RV32ZDINX_ZICOND-NEXT:    or a0, a1, a3
-; RV32ZDINX_ZICOND-NEXT:    or a1, a2, a4
+; RV32ZDINX_ZICOND-NEXT:    bnez a0, .LBB1_2
+; RV32ZDINX_ZICOND-NEXT:  # %bb.1: # %entry
+; RV32ZDINX_ZICOND-NEXT:    mv a7, a4
+; RV32ZDINX_ZICOND-NEXT:    mv a6, a3
+; RV32ZDINX_ZICOND-NEXT:    mv a4, a6
+; RV32ZDINX_ZICOND-NEXT:    mv a5, a7
+; RV32ZDINX_ZICOND-NEXT:    j .LBB1_3
+; RV32ZDINX_ZICOND-NEXT:  .LBB1_2:
+; RV32ZDINX_ZICOND-NEXT:    mv a5, a2
+; RV32ZDINX_ZICOND-NEXT:    mv a4, a1
+; RV32ZDINX_ZICOND-NEXT:  .LBB1_3: # %entry
+; RV32ZDINX_ZICOND-NEXT:    mv a0, a4
+; RV32ZDINX_ZICOND-NEXT:    mv a1, a5
 ; RV32ZDINX_ZICOND-NEXT:    ret
 ;
 ; RV32ZDINX_NOZICOND-LABEL: select_f64_i1:
@@ -319,12 +326,13 @@ define double @select_f64_fcmp(double %a, double %b, double %c, double %d) nounw
 ; RV32ZDINX_ZICOND-LABEL: select_f64_fcmp:
 ; RV32ZDINX_ZICOND:       # %bb.0: # %entry
 ; RV32ZDINX_ZICOND-NEXT:    flt.d a0, a2, a0
-; RV32ZDINX_ZICOND-NEXT:    czero.nez a1, a6, a0
-; RV32ZDINX_ZICOND-NEXT:    czero.eqz a2, a4, a0
-; RV32ZDINX_ZICOND-NEXT:    czero.nez a3, a7, a0
-; RV32ZDINX_ZICOND-NEXT:    czero.eqz a4, a5, a0
-; RV32ZDINX_ZICOND-NEXT:    or a0, a2, a1
-; RV32ZDINX_ZICOND-NEXT:    or a1, a4, a3
+; RV32ZDINX_ZICOND-NEXT:    bnez a0, .LBB2_2
+; RV32ZDINX_ZICOND-NEXT:  # %bb.1: # %entry
+; RV32ZDINX_ZICOND-NEXT:    mv a4, a6
+; RV32ZDINX_ZICOND-NEXT:    mv a5, a7
+; RV32ZDINX_ZICOND-NEXT:  .LBB2_2: # %entry
+; RV32ZDINX_ZICOND-NEXT:    mv a0, a4
+; RV32ZDINX_ZICOND-NEXT:    mv a1, a5
 ; RV32ZDINX_ZICOND-NEXT:    ret
 ;
 ; RV32ZDINX_NOZICOND-LABEL: select_f64_fcmp:
