@@ -21,6 +21,10 @@ using namespace llvm;
 using namespace omp;
 using namespace target;
 
+#ifdef OFFLOAD_ENABLE_EMISSARY_APIS
+#include "Emissary.h"
+#endif
+
 template <uint32_t NumLanes>
 rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
                                  rpc::Server::Port &Port) {
@@ -63,6 +67,63 @@ rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
     });
     break;
   }
+#ifdef OFFLOAD_ENABLE_EMISSARY_APIS
+  case ALT_LIBC_MALLOC: {
+    Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
+      auto PtrOrErr =
+          Device.allocate(Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE);
+      void *Ptr = nullptr;
+      if (!PtrOrErr)
+        consumeError(PtrOrErr.takeError());
+      else
+        Ptr = *PtrOrErr;
+      Buffer->data[0] = reinterpret_cast<uintptr_t>(Ptr);
+    });
+    break;
+  }
+  case ALT_LIBC_FREE: {
+    Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
+      if (auto Error = Device.free(reinterpret_cast<void *>(Buffer->data[0]),
+                                   TARGET_ALLOC_DEVICE)) {
+        consumeError(std::move(Error));
+      }
+    });
+    break;
+  }
+  case EMISSARY_PREMALLOC: {
+    Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
+      size_t sz = (size_t)Buffer->data[0];
+      Buffer->data[0] = reinterpret_cast<uintptr_t>(Device.getFree_ArgBuf(sz));
+    });
+    break;
+  }
+  case EMISSARY_FREE: {
+    void *Args[NumLanes] = {nullptr};
+    Port.recv([&](rpc::Buffer *buffer, uint32_t ID) {
+      Args[ID] = reinterpret_cast<void *>(buffer->data[0]);
+      Device.moveBusyToFree_ArgBuf(Args[ID]);
+    });
+    break;
+  }
+  case OFFLOAD_EMISSARY: {
+    // uint64_t Sizes[NumLanes] = {0};
+    unsigned long long Results[NumLanes] = {0};
+    void *Args[NumLanes] = {nullptr};
+    Port.recv([&](rpc::Buffer *buffer, uint32_t ID) {
+      Args[ID] = reinterpret_cast<void *>(buffer->data[0]);
+      Results[ID] = Emissary((char *)Args[ID]);
+    });
+    Port.send([&](rpc::Buffer *Buffer, uint32_t ID) {
+      Device.moveBusyToFree_ArgBuf(Args[ID]);
+      Buffer->data[0] = static_cast<uint64_t>(Results[ID]);
+    });
+    break;
+  }
+#else
+  case EMISSARY_PREMALLOC:
+  case EMISSARY_FREE:
+  case OFFLOAD_EMISSARY:
+#endif
   default:
     return rpc::RPC_UNHANDLED_OPCODE;
     break;

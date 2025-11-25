@@ -29,7 +29,7 @@
 #undef __OPENMP_AMDGCN__
 #endif // __AMDGCN__
 
-#endif
+#endif //__CLANG_OPENMP_COMPLEX__
 
 // Grab the host header too.
 #include_next <complex>

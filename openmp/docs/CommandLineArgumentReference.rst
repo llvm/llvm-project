@@ -184,3 +184,23 @@ Do not link the device library for CUDA or HIP device compilation.
 ^^^^^^^^^^^^^
 Do not include the default CUDA or HIP headers, and do not add CUDA or HIP
 include paths.
+
+``-fopenmp-target-fast,  -fno-openmp-target-fast``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Enables fast optimization options for OpenMP target offloading:
+-fopenmp-target-ignore-env-vars, -fopenmp-assume-no-thread-state,
+-fopenmp-assume-no-nested-parallelism. Enables -O3 if no -O* level is
+specified.
+
+``-fopenmp-target-ignore-env-vars, -fno-openmp-target-ignore-env-vars``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Generate code assuming that device related environment variables can be ignored.
+
+``-fopenmp-assume-no-thread-state, -fno-openmp-assume-no-thread-state``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Assume that no thread in a parallel region will modify an ICV.
+
+``-fopenmp-assume-no-nested-parallelism, -fno-openmp-assume-no-nested-parallelism``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Assume that no thread in a parallel region will encounter a parallel region.
+

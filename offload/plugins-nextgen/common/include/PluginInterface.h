@@ -36,9 +36,7 @@
 #include "RPC.h"
 #include "omptarget.h"
 
-#ifdef OMPT_SUPPORT
-#include "omp-tools.h"
-#endif
+#include "GenericProfiler.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -50,6 +48,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
+extern std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
+getProfilerToAttach();
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -60,6 +61,7 @@ struct GenericPluginTy;
 struct GenericKernelTy;
 struct GenericDeviceTy;
 struct RecordReplayTy;
+struct KernelRunRecordTy;
 template <typename ResourceRef> class GenericDeviceResourceManagerTy;
 
 namespace Plugin {
@@ -396,14 +398,75 @@ struct GenericKernelTy {
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
     case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
       return true;
+    // AMD-only execution modes
+    case OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP:
+    case OMP_TGT_EXEC_MODE_XTEAM_RED:
+      DP("AMD-only execution mode\n");
+      return true;
     }
+    llvm_unreachable("Unknown execution mode!");
+  }
+
+  /// Indicate whether it is a specialized kernel.
+  bool isSpecializedKernel() const {
+    if (ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_NO_LOOP ||
+        ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP ||
+        ExecutionMode == OMP_TGT_EXEC_MODE_XTEAM_RED)
+      return true;
     return false;
   }
+
+  /// Check if kernel is a multi-device kernel.
+  bool isMultiDeviceKernel() const { return IsMultiDeviceKernel; }
+
+  /// Compute kernel occupancy
+  /// This function computes the max(upperbound) occupancy for a lanuched kernel
+  /// based on the given hardware resources e.g. the number of registers, size
+  /// of the local memory, etc.
+  virtual unsigned computeMaxOccupancy(GenericDeviceTy &Device) const {
+    // This function should be overridden in the derived class.
+    return MaxOccupancy;
+  }
+
+  /// Compute achieved occupancy
+  /// This function computes the achieved occupancy for a launched kernel based
+  /// on the number of threads, number of teams and the max occupancy of this
+  /// kernel. It returns in ratio representing the occupancy for each CU(SM).
+  virtual unsigned computeAchievedOccupancy(GenericDeviceTy &Device,
+                                            uint32_t numThreads,
+                                            uint64_t numTeams) const {
+    // This function should be overridden in the derived class.
+    return AchievedOccupancy;
+  }
+
+  /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
+  bool isGenericSPMDMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC_SPMD;
+  }
+  bool isGenericMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC;
+  }
+  bool isSPMDMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD; }
+  bool isBareMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_BARE; }
+
+  /// AMD-only execution modes
+  bool isBigJumpLoopMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP;
+  }
+  bool isNoLoopMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+  }
+  bool isXTeamReductionsMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_XTEAM_RED;
+  }
+
+  /// Indicate if the input block size is within the limit.
+  virtual bool isValidBlockSize(uint32_t BlockSize) const { return true; }
 
 protected:
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
-    switch (KernelEnvironment.Configuration.ExecMode) {
+    switch (ExecutionMode) {
     case OMP_TGT_EXEC_MODE_BARE:
       return "BARE";
     case OMP_TGT_EXEC_MODE_SPMD:
@@ -412,23 +475,33 @@ protected:
       return "Generic";
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
       return "Generic-SPMD";
+    // AMD-only execution modes
     case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
       return "SPMD-No-Loop";
+    case OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP:
+      return "SPMD-Big-Jump-Loop";
+    case OMP_TGT_EXEC_MODE_XTEAM_RED:
+      return "XTeam-Reductions";
     }
     llvm_unreachable("Unknown execution mode!");
   }
 
+  OMPTgtExecModeFlags getExecutionModeFlags() const { return ExecutionMode; }
+
   /// Prints generic kernel launch information.
   Error printLaunchInfo(GenericDeviceTy &GenericDevice,
                         KernelArgsTy &KernelArgs, uint32_t NumThreads[3],
-                        uint32_t NumBlocks[3]) const;
+                        uint32_t NumBlocks[3], int64_t MultiDeviceLB,
+                        int64_t MultiDeviceUB) const;
 
   /// Prints plugin-specific kernel launch information after generic kernel
   /// launch information
   virtual Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                        KernelArgsTy &KernelArgs,
                                        uint32_t NumThreads[3],
-                                       uint32_t NumBlocks[3]) const;
+                                       uint32_t NumBlocks[3],
+                                       int64_t MultiDeviceLB,
+                                       int64_t MultiDeviceUB) const;
 
 private:
   /// Prepare the arguments before launching the kernel.
@@ -439,41 +512,35 @@ private:
               llvm::SmallVectorImpl<void *> &Ptrs,
               KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
 
+  /// Lower number of threads if tripcount is low.
+  virtual std::pair<bool, uint32_t>
+  adjustNumThreadsForLowTripCount(GenericDeviceTy &GenericDevice,
+                                  uint32_t BlockSize, uint64_t LoopTripCount,
+                                  uint32_t ThreadLimitClause[3]) const {
+    return std::make_pair(false, BlockSize);
+  }
+
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
-  uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
-                         uint32_t ThreadLimitClause[3]) const;
+  virtual uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
+                                 uint32_t ThreadLimitClause[3]) const;
 
   /// The number of threads \p NumThreads can be adjusted by this method.
   /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
   /// thread_limit clause.
+  virtual
   uint32_t getNumBlocks(GenericDeviceTy &GenericDevice,
                         uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
                         uint32_t &NumThreads, bool IsNumThreadsFromUser) const;
 
-  /// Indicate if the kernel works in Generic SPMD, Generic, No-Loop
-  /// or SPMD mode.
-  bool isGenericSPMDMode() const {
-    return KernelEnvironment.Configuration.ExecMode ==
-           OMP_TGT_EXEC_MODE_GENERIC_SPMD;
-  }
-  bool isGenericMode() const {
-    return KernelEnvironment.Configuration.ExecMode ==
-           OMP_TGT_EXEC_MODE_GENERIC;
-  }
-  bool isSPMDMode() const {
-    return KernelEnvironment.Configuration.ExecMode == OMP_TGT_EXEC_MODE_SPMD;
-  }
-  bool isBareMode() const {
-    return KernelEnvironment.Configuration.ExecMode == OMP_TGT_EXEC_MODE_BARE;
-  }
-  bool isNoLoopMode() const {
-    return KernelEnvironment.Configuration.ExecMode ==
-           OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
-  }
-
   /// The kernel name.
   std::string Name;
+
+  /// The execution flags of the kernel.
+  OMPTgtExecModeFlags ExecutionMode;
+
+  /// The multi-device kernel flag.
+  bool IsMultiDeviceKernel;
 
   /// The image that contains this kernel.
   DeviceImageTy *ImagePtr = nullptr;
@@ -490,6 +557,14 @@ protected:
 
   /// The prototype kernel launch environment.
   KernelLaunchEnvironmentTy KernelLaunchEnvironment;
+
+  /// Upper-bound for the launched kernel occupancy.
+  /// 0 indicates an invalid result.
+  mutable unsigned MaxOccupancy = 0;
+
+  /// Achieved occupancy for the launched kernel.
+  /// 0 indications an invalid result.
+  mutable unsigned AchievedOccupancy = 0;
 };
 
 /// Information about an allocation, when it has been allocated, and when/if it
@@ -958,6 +1033,45 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error initAsyncInfo(__tgt_async_info **AsyncInfoPtr);
   virtual Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
+
+  // Switch memory region to coarse grain mode
+  Error setCoarseGrainMemory(void *ptr, int64_t size);
+  virtual Error setCoarseGrainMemoryImpl(void *ptr, int64_t size,
+                                         bool set_attr = true) {
+    return Error::success();
+  }
+
+  // Query if memory region is coarse grained
+  uint32_t queryCoarseGrainMemory(const void *ptr, int64_t size);
+  virtual uint32_t queryCoarseGrainMemoryImpl(const void *ptr, int64_t size) {
+    return 0;
+  }
+
+  // Prepopulate GPU page table
+  Error prepopulatePageTable(void *ptr, int64_t size);
+  virtual Error prepopulatePageTableImpl(void *ptr, int64_t size) {
+    return Error::success();
+  }
+
+  // Returns true if the system is equipped with an APU.
+  // moved in from plugin
+  bool hasAPUDevice();
+  virtual bool hasAPUDeviceImpl() { return false; }
+
+  // Returns true if the device is a gfx90a.
+  bool hasGfx90aDevice();
+  virtual bool hasGfx90aDeviceImpl() { return false; }
+
+  // Returns true if the system supports unified memory.
+  bool supportsUnifiedMemory();
+  virtual bool supportsUnifiedMemoryImpl() { return false; }
+
+  // Returns true if coarse graining of mapped variables is
+  // enabled on MI200 GPUs.
+  // virtual bool IsGfx90aCoarseGrainUsmMapEnabled() { return false; }
+  bool IsGfx90aCoarseGrainUsmMapEnabled();
+  virtual bool IsGfx90aCoarseGrainUsmMapEnabledImpl() { return false; }
+
   /// Enqueue a host call to AsyncInfo
   Error enqueueHostCall(void (*Callback)(void *), void *UserData,
                         __tgt_async_info *AsyncInfo);
@@ -1017,12 +1131,57 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   uint32_t getDefaultNumBlocks() const {
     return GridValues.GV_Default_Num_Teams;
   }
+
+  int32_t getOMPNumTeams() const { return OMP_NumTeams; }
+  int32_t getOMPTeamsThreadLimit() const { return OMP_TeamsThreadLimit; }
+
   uint32_t getDebugKind() const { return OMPX_DebugKind; }
   uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
   virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
 
+  virtual uint32_t getOMPXGenericSpmdTeamsPerCU() const {
+    llvm_unreachable("Unimplemented");
+  }
+  virtual uint32_t getOMPXBigJumpLoopTeamsPerCU() const {
+    llvm_unreachable("Unimplemented");
+  }
+  virtual uint32_t getXTeamRedTeamsPerCU() const {
+    llvm_unreachable("Unimplemented");
+  }
+  virtual uint32_t getOMPXBigJumpLoopMaxTotalTeams() const {
+    llvm_unreachable("Unimplemented");
+  }
+  virtual uint32_t getOMPXLowTripCount() const {
+    llvm_unreachable("Unimplemented");
+  }
+  virtual uint32_t getOMPXSmallBlockSize() const {
+    llvm_unreachable("Unimplemented");
+  }
+  virtual uint32_t
+  getOMPXNumBlocksForLowTripcount(uint64_t LoopTripCount) const {
+    llvm_unreachable("Unimplemented");
+  }
+  virtual uint32_t getOMPXAdjustNumTeamsForSmallBlockSize() const {
+    llvm_unreachable("Unimplemented");
+  }
+  virtual uint32_t getOMPXAdjustNumTeamsForXteamRedSmallBlockSize() const {
+    llvm_unreachable("Unimplemented");
+  }
+  virtual bool getOMPXGenericSpmdUseSmallBlockSize() const {
+    llvm_unreachable("Unimplemented");
+  }
+  virtual uint32_t getOMPXXteamBlockSize() const {
+    llvm_unreachable("Unimplemented");
+  }
+
   /// Get target compute unit kind (e.g., sm_80, or gfx908).
   virtual std::string getComputeUnitKind() const { return "unknown"; }
+
+  /// Get the number of compute units
+  virtual uint32_t getNumComputeUnits() const { return 0; }
+
+  /// Return the device time stamp
+  virtual uint64_t getDeviceTimeStamp() { return 0; }
 
   /// Post processing after jit backend. The ownership of \p MB will be taken.
   virtual Expected<std::unique_ptr<MemoryBuffer>>
@@ -1067,6 +1226,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   virtual Error getDeviceStackSize(uint64_t &V) = 0;
 
+  /// Allocate and construct a kernel object.
+  virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
+
   virtual bool hasDeviceHeapSize() { return false; }
   virtual Error getDeviceHeapSize(uint64_t &V) {
     return Plugin::error(error::ErrorCode::UNSUPPORTED,
@@ -1081,6 +1243,29 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// and unified_shared_memory was not requested by the program.
   bool useAutoZeroCopy();
   virtual bool useAutoZeroCopyImpl() { return false; }
+
+  bool isFastReductionEnabled() const { return IsFastReductionEnabled; }
+
+  /// Performs sanity checks on zero-copy options and prints diagnostic info.
+  Error zeroCopySanityChecksAndDiag(bool isUnifiedSharedMemory,
+                                    bool isAutoZeroCopy, bool isEagerMaps);
+  virtual Error zeroCopySanityChecksAndDiagImpl(bool isUnifiedSharedMemory,
+                                                bool isAutoZeroCopy,
+                                                bool isEagerMaps) {
+    return Error::success();
+  }
+
+  uint32_t getNumMultiDevices() const { return OMPX_NumMultiDevices; }
+
+  bool enableRuntimeAutotuning() const { return OMPX_EnableRuntimeAutotuning; }
+
+  bool getMultiDeviceKernelValue(void *EntryPtr);
+
+  KernelRunRecordTy *getKernelRunRecords() const { return KernelRunRecords; }
+
+  /// Return true if a descriptor of size 'Size' should be allocated using
+  /// shared memory. Default implementation returns 'false',
+  virtual bool useSharedMemForDescriptor(int64_t Size);
 
   /// Returns true if the plugin can guarantee that the associated
   /// storage is accessible
@@ -1100,9 +1285,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                                  interop_spec_t *Prefers) {
     return interop_spec_t{tgt_fr_none, {false, 0}, 0};
   }
-
-  /// Allocate and construct a kernel object.
-  virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
 
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;
@@ -1160,6 +1342,28 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   BoolEnvar OMPX_TrackAllocationTraces =
       BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
 
+  /// An entry to cache a shared memory buffer for Args to emissary APIs
+  struct ArgBufEntryTy {
+    size_t Size; // Size of Buffer
+    void *Addr;  // Pointer to SHARED mem
+    bool is_free;
+  };
+  /// The cache of allocated shared memory buffers for emissary APIs args
+  std::list<ArgBufEntryTy *> ArgBufEntries;
+  /// Get a free shared memory buffer and mark it not free. If none
+  /// free, allocate a new buffer and mark it not free.
+  void *getFree_ArgBuf(size_t sz);
+  /// Change a cached buffer from not free (busy) to free.
+  void moveBusyToFree_ArgBuf(void *ptr);
+  /// Destroy Argbufs and clear the cache. Used as part of device destructor
+  void clear_ArgBufs();
+
+  bool enableKernelDurationTracing() const {
+    return OMPX_KernelDurationTracing;
+  }
+
+  uint32_t getAndIncrementLaunchId() { return LaunchId.fetch_add(1); }
+
   /// Array of images loaded into the device. Images are automatically
   /// deallocated by the allocator.
   llvm::SmallVector<DeviceImageTy *> LoadedImages;
@@ -1204,11 +1408,20 @@ private:
   BoolEnvar OMPX_ReuseBlocksForHighTripCount =
       BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
 
+  /// Variable to track kernel launch for a device.
+  std::atomic<uint32_t> LaunchId = 0;
+
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation
   /// regarding the initial number of streams and events.
   UInt32Envar OMPX_InitialNumStreams;
   UInt32Envar OMPX_InitialNumEvents;
+
+  /// Specify the number of devices used by multi-device kernels.
+  UInt32Envar OMPX_NumMultiDevices;
+
+  /// Envar to enable runtime tuning.
+  BoolEnvar OMPX_EnableRuntimeAutotuning;
 
   /// The identifier of the device within the plugin. Notice this is not a
   /// global device id and is not the device id visible to the OpenMP user.
@@ -1246,18 +1459,133 @@ protected:
   /// This is used to run the RPC server during task synchronization.
   RPCServerTy *RPCServer;
 
-#ifdef OMPT_SUPPORT
-  /// OMPT callback functions
-#define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
-  FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
-#undef defineOmptCallback
+  /// Structs for functions and data used in runtime autotuning.
+  KernelRunRecordTy *KernelRunRecords;
 
-  /// Internal representation for OMPT device (initialize & finalize)
-  std::atomic<bool> OmptInitialized;
-#endif
+  /// Variable to enable kernel duration tracing.
+  BoolEnvar OMPX_KernelDurationTracing;
 
   /// The total per-block native shared memory that a kernel may use.
   size_t MaxBlockSharedMemSize = 0;
+private:
+  /// Return the kernel environment object for kernel \p Name.
+  Expected<KernelEnvironmentTy>
+  getKernelEnvironmentForKernel(StringRef Name, DeviceImageTy &Image);
+
+  bool IsFastReductionEnabled = false;
+};
+
+/// Struct represents the metadata for each kernel run on the device.
+struct KernelRunRecordTy {
+
+  struct KernelRunEntryTy {
+    std::string KernelName;
+    uint32_t NumTeams = 0;
+    uint32_t NumThreads = 0;
+    uint64_t RunDuration = 0;
+  };
+
+  // Metadata used in tuning process.
+  struct TuningMetadataTy {
+    uint32_t IdxThread = 0;
+    uint32_t IdxCUMultiplier = 0;
+    // Run counters.
+    uint32_t RunCounters = 0;
+    // Entry with minimum running time.
+    KernelRunEntryTy MinEntry;
+  };
+
+  // Add a new entry
+  void addEntry(std::string KernelName, uint32_t NumTeams, uint32_t NumThreads,
+                uint64_t RunDuration) {
+    TuningData[KernelName].RunCounters++;
+
+    // Update min entries.
+    uint64_t MinDuration = 0;
+    auto It = TuningData.find(KernelName);
+    if (It != TuningData.end()) {
+      MinDuration = It->second.MinEntry.RunDuration;
+    }
+    if (MinDuration > RunDuration || MinDuration == 0) {
+      TuningData[KernelName].MinEntry = {KernelName, NumTeams, NumThreads,
+                                         RunDuration};
+    }
+  }
+
+  // Get parameters for next kernel launch.
+  std::pair<uint32_t, uint32_t>
+  getLaunchParamsForKernel(const GenericKernelTy &Kernel,
+                           GenericDeviceTy &GenericDevice) {
+    std::string KernelName = Kernel.getName();
+
+    // If the kernel reaches the run limit,
+    // return the current optimal launch parameters.
+    if (reachedRunLimitForKernel(KernelName)) {
+      auto MinEntry = TuningData[KernelName].MinEntry;
+      return {MinEntry.NumTeams, MinEntry.NumThreads};
+    }
+
+    // Pick new launch parameters.
+    uint32_t IdxCUMulti = TuningData[KernelName].IdxCUMultiplier;
+    uint32_t IdxThread = TuningData[KernelName].IdxThread;
+
+    if (IdxCUMulti >= CUMultiplierCandidate.size()) {
+      // No more element to search.
+      // Max run counter to stop further runs.
+      // Return current optimal launch parameters.
+      TuningData[KernelName].RunCounters = RunLimiter + 1;
+
+      return {TuningData[KernelName].MinEntry.NumTeams,
+              TuningData[KernelName].MinEntry.NumThreads};
+    }
+
+    // New team/thread pair for launch parameters.
+    uint32_t NumCU = GenericDevice.getNumComputeUnits();
+    std::pair<uint32_t, uint32_t> NewLaunchParams = {
+        CUMultiplierCandidate[IdxCUMulti] * NumCU, ThreadCandidate[IdxThread]};
+
+    // Update indices.
+    IdxThread++;
+    TuningData[KernelName].IdxThread = IdxThread;
+
+    // Threads should be within the limit.
+    if (IdxThread >= ThreadCandidate.size() ||
+        !Kernel.isValidBlockSize(ThreadCandidate[IdxThread])) {
+      TuningData[KernelName].IdxThread = 0;
+      TuningData[KernelName].IdxCUMultiplier++;
+    }
+
+    return NewLaunchParams;
+  }
+
+  bool reachedRunLimitForKernel(std::string KernelName) {
+    if (TuningData.find(KernelName) == TuningData.end()) {
+      // If no record for this kernel.
+      return false;
+    }
+
+    return TuningData[KernelName].RunCounters > RunLimiter;
+  }
+
+  uint32_t getRunCounterForKernel(std::string KernelName) {
+    if (TuningData.find(KernelName) == TuningData.end()) {
+      return 0;
+    }
+
+    return TuningData[KernelName].RunCounters;
+  }
+
+private:
+  // Candidates for thread and team.
+  std::vector<uint32_t> ThreadCandidate = {32, 64, 128, 256, 512, 1024};
+  std::vector<uint32_t> CUMultiplierCandidate = {4, 8, 16, 32, 64, 128};
+  // The max number of tuning runs for each kernel.
+  uint32_t RunLimiter = ThreadCandidate.size() * CUMultiplierCandidate.size();
+  // Used for keeping track of the metatdata used in tuning for each kernel.
+  std::unordered_map<std::string, TuningMetadataTy> TuningData;
+  /// Internal representation for OMPT device (initialize & finalize)
+  std::atomic<bool> OmptInitialized;
+
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
@@ -1268,7 +1596,7 @@ struct GenericPluginTy {
   /// Construct a plugin instance.
   GenericPluginTy(Triple::ArchType TA)
       : GlobalHandler(nullptr), JIT(TA), RPCServer(nullptr),
-        RecordReplay(nullptr) {}
+        RecordReplay(nullptr), Profiler(getProfilerToAttach()) {}
 
   virtual ~GenericPluginTy() {}
 
@@ -1300,6 +1628,9 @@ struct GenericPluginTy {
 
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
+
+  /// Returns true if the system supports managed memory (SVN in AMD GPUs).
+  virtual bool IsSystemSupportingManagedMemory() { return false; }
 
   /// Get the plugin-specific device identifier.
   int32_t getUserId(int32_t DeviceId) const {
@@ -1375,6 +1706,14 @@ struct GenericPluginTy {
   virtual Expected<bool> isELFCompatible(uint32_t DeviceID,
                                          StringRef Image) const = 0;
 
+  /// Method allows to check why the method isImageCompatibelCheck returned
+  /// 'false' for a specific target image. The method is called from inside
+  /// __tgt_rtl_exists_valid_binary_for_RTL.
+  virtual void checkInvalidImage(__tgt_device_image *TgtImage) {}
+
+  /// Indicate whether the plugin supports empty images.
+  virtual bool supportsEmptyImages() const { return false; }
+
   virtual Error flushQueueImpl(omp_interop_val_t *Interop) {
     return Plugin::success();
   }
@@ -1388,6 +1727,9 @@ struct GenericPluginTy {
     return Plugin::error(error::ErrorCode::UNSUPPORTED,
                          "async_barrier not supported");
   }
+
+  /// Return a pointer to the profiler instance
+  GenericProfilerTy *getProfiler() const { return Profiler.get(); }
 
 protected:
   /// Indicate whether a device id is valid.
@@ -1411,11 +1753,36 @@ public:
   /// Returns non-zero if the plugin device has been initialized.
   int32_t is_device_initialized(int32_t DeviceId) const;
 
+  /// Checks if the image is not supported.
+  void check_invalid_image(__tgt_device_image *InvalidImage);
+
+  /// Unused in current implementation.
+  int32_t supports_empty_images();
+
   /// Initialize the device inside of the plugin.
   int32_t init_device(int32_t DeviceId);
 
   /// Return the number of devices this plugin can support.
   int32_t number_of_devices();
+
+  /// Returns the number of processors available on the device.
+  int number_of_team_procs(int DeviceId);
+
+  /// Returns if this device is an APU.
+  bool has_apu_device(int32_t DeviceId);
+
+  /// Returns if this discrete GPU is a gfx90a.
+  bool is_gfx90a(int32_t DeviceId);
+
+  /// Returns if this device supports USM.
+  bool supports_unified_memory(int32_t DeviceId);
+
+  /// Returns if GFX90A coarse graining of OpenMP mapped
+  /// variables is enabled under unified shared memory.
+  bool is_gfx90a_coarse_grain_usm_map_enabled(int32_t DeviceId);
+
+  /// Returns if managed memory is supported.
+  bool is_system_supporting_managed_memory(int32_t DeviceId);
 
   /// Returns non-zero if the data can be exchanged between the two devices.
   int32_t is_data_exchangable(int32_t SrcDeviceId, int32_t DstDeviceId);
@@ -1478,6 +1845,11 @@ public:
   int32_t data_fence(int32_t DeviceId, __tgt_async_info *AsyncInfo);
 
   /// Begin executing a kernel on the given device.
+  int32_t launch_kernel_sync(int32_t DeviceId, void *TgtEntryPtr,
+                             void **TgtArgs, ptrdiff_t *TgtOffsets,
+                             KernelArgsTy *KernelArgs);
+
+  /// Begin executing a kernel on the given device.
   int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
                         ptrdiff_t *TgtOffsets, KernelArgsTy *KernelArgs,
                         __tgt_async_info *AsyncInfoPtr);
@@ -1508,17 +1880,25 @@ public:
   /// Remove the event from the plugin.
   int32_t destroy_event(int32_t DeviceId, void *EventPtr);
 
-  /// Remove the event from the plugin.
-  void set_info_flag(uint32_t NewInfoLevel);
-
   /// Creates an asynchronous queue for the given plugin.
   int32_t init_async_info(int32_t DeviceId, __tgt_async_info **AsyncInfoPtr);
+
+  /// Sets the region of memory that is considered coarse grained.
+  int set_coarse_grain_mem_region(int32_t DeviceId, void *ptr, int64_t size);
 
   /// Sets the offset into the devices for use by OMPT.
   int32_t set_device_identifier(int32_t UserId, int32_t DeviceId);
 
-  /// Returns if the plugin can support automatic copy.
-  int32_t use_auto_zero_copy(int32_t DeviceId);
+  /// Populates the device page table.
+  int prepopulate_page_table(int32_t DeviceId, void *ptr, int64_t size);
+
+  /// Gets the coarse grained memory region.
+  int32_t query_coarse_grain_mem_region(int32_t DeviceId, const void *ptr,
+                                        int64_t size);
+
+  /// Set coarse_grain memory for omp_register_coarse_grain_mem
+  void set_coarse_grain_mem(int32_t DeviceId, const void *ptr, int64_t size,
+                            bool set_attr);
 
   /// Returns if the associated storage is accessible for a given device.
   int32_t is_accessible_ptr(int32_t DeviceId, const void *Ptr, size_t Size);
@@ -1530,6 +1910,28 @@ public:
   /// Look up a kernel function in the given binary.
   int32_t get_function(__tgt_device_binary Binary, const char *Name,
                        void **KernelPtr);
+
+  /// Returns if we can use automatic zero copy.
+  int32_t use_auto_zero_copy(int32_t DeviceId);
+
+  /// Make sure a pointer can be accessed by all agents.
+  int32_t enable_access_to_all_agents(int32_t DeviceId, void *ptr);
+
+  /// Perform some checks when using automatic zero copy.
+  int32_t zero_copy_sanity_checks_and_diag(int32_t DeviceId,
+                                           bool isUnifiedSharedMemory,
+                                           bool isAutoZeroCopy,
+                                           bool isEagerMaps);
+
+  /// Return number of devices used by multi-device kernels.
+  int32_t get_num_multi_devices(int32_t DeviceId);
+
+  /// Check if kernel is multi-device.
+  bool kernel_is_multi_device(int32_t DeviceId, void *TgtEntryPtr);
+
+  /// Return true if a descriptor of size 'Size' should be allocated using
+  /// shared memory.
+  bool use_shared_mem_for_descriptor(int32_t DeviceId, int64_t Size);
 
   /// Return the interop specification that the plugin supports
   /// It might not be one of the user specified ones.
@@ -1588,6 +1990,9 @@ private:
 
   /// The interface between the plugin and the GPU for host services.
   RecordReplayTy *RecordReplay;
+
+  /// The Profiler instance
+  std::unique_ptr<GenericProfilerTy> Profiler;
 };
 
 /// Auxiliary interface class for GenericDeviceResourceManagerTy. This class

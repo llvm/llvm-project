@@ -1,0 +1,21 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -run-pass none -o - %s | \
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -x=mir -run-pass none -o - | \
+# RUN: FileCheck %s
+
+# Verify we can parse and emit these CFI pseudos.
+
+# CHECK-LABEL: name: test
+# CHECK: CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+# CHECK-NEXT: CFI_INSTRUCTION llvm_vector_registers $sgpr4, $vgpr3, 0, 32
+# CHECK-NEXT: CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62, 0, 32, $vgpr62, 1, 32
+# CHECK-NEXT: CFI_INSTRUCTION llvm_vector_offset $vgpr41, 32, $exec, 64, 100
+# CHECK-NEXT: CFI_INSTRUCTION llvm_vector_register_mask $agpr1, $vgpr1, 32, $exec, 64
+
+name: test
+body: |
+  bb.0:
+    CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    CFI_INSTRUCTION llvm_vector_registers $sgpr4, $vgpr3, 0, 32
+    CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62, 0, 32, $vgpr62, 1, 32
+    CFI_INSTRUCTION llvm_vector_offset $vgpr41, 32, $exec, 64, 100
+    CFI_INSTRUCTION llvm_vector_register_mask $agpr1, $vgpr1, 32, $exec, 64

@@ -518,7 +518,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     return;
   }
 
-  // Allocating on the heap in case the whole reduction/privatization is nested
+  // TODO: Allocate on the heap if the whole reduction/privatization is nested
   // inside of a loop
   auto temp = [&]() {
     if (shouldAllocateTempOnStack())

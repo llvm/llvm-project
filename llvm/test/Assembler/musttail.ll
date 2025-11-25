@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+; RUN: llvm-as  < %s | llvm-dis  | FileCheck %s
 
 ; Check that the ellipsis round trips.
 

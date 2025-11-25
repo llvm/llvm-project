@@ -17,6 +17,7 @@ namespace phases {
   enum ID {
     Preprocess,
     Precompile,
+    FortranFrontend,
     Compile,
     Backend,
     Assemble,

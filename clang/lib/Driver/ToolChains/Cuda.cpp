@@ -8,6 +8,7 @@
 
 #include "Cuda.h"
 #include "clang/Basic/Cuda.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
@@ -399,6 +400,9 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     GPUArchName = JA.getOffloadingArch();
   } else {
     GPUArchName = Args.getLastArgValue(options::OPT_march_EQ);
+    if (GPUArchName.empty())
+      GPUArchName = getProcessorFromTargetID(TC.getTriple(), TC.getTargetID());
+      
     if (GPUArchName.empty()) {
       C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
           << getToolChain().getArchName() << getShortName();
@@ -596,6 +600,10 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-v");
 
   StringRef GPUArch = Args.getLastArgValue(options::OPT_march_EQ);
+  if (GPUArch.empty())
+    GPUArch = getProcessorFromTargetID(getToolChain().getTriple(),
+                                       getToolChain().getTargetID());
+
   if (GPUArch.empty() && !C.getDriver().isUsingLTO()) {
     C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
         << getToolChain().getArchName() << getShortName();
@@ -846,6 +854,11 @@ NVPTXToolChain::getSystemGPUArchs(const ArgList &Args) const {
 /// together object files from the assembler into a single blob.
 
 CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
+                             const ToolChain &HostTC, const ArgList &Args,
+                             const std::string TargetID)
+    : NVPTXToolChain(D, Triple, HostTC.getTriple(), Args), HostTC(HostTC) {}
+
+CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ToolChain &HostTC, const ArgList &Args)
     : NVPTXToolChain(D, Triple, HostTC.getTriple(), Args), HostTC(HostTC) {}
 
@@ -919,6 +932,9 @@ void CudaToolChain::addClangTargetOptions(
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),
                        getTriple(), HostTC);
+    AddStaticDeviceLibsPostLinking(getDriver(), DriverArgs, CC1Args, "nvptx",
+                                   GpuArch, /*isBitCodeSDL=*/true,
+                                   /*postClangLink=*/true);
   }
 }
 

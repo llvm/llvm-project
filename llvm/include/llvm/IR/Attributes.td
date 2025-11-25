@@ -337,6 +337,9 @@ def SanitizeHWAddress : EnumAttr<"sanitize_hwaddress", IntersectPreserve, [FnAtt
 /// MemTagSanitizer is on.
 def SanitizeMemTag : EnumAttr<"sanitize_memtag", IntersectPreserve, [FnAttr]>;
 
+/// Attribute to identify global variables instrumented by Sanitizers.
+def SanitizedPaddedGlobal : EnumAttr<"sanitized_padded_global", IntersectPreserve, [FnAttr]>;
+
 /// NumericalStabilitySanitizer is on.
 def SanitizeNumericalStability : EnumAttr<"sanitize_numerical_stability", IntersectPreserve, [FnAttr]>;
 

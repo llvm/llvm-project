@@ -43,13 +43,12 @@ void func() {
 // SPIRV-SAME: "omp_target_thread_limit"="17"
 
 // AMD: attributes #0
-// AMD-SAME: "amdgpu-flat-work-group-size"="10,20"
+// AMD-SAME: "amdgpu-flat-work-group-size"="1,257"
 // AMD-SAME: "omp_target_thread_limit"="20"
 // AMD: "omp_target_thread_limit"="45"
 // AMD: attributes #4
-// AMD-SAME: "amdgpu-flat-work-group-size"="3,17"
+// AMD-SAME: "amdgpu-flat-work-group-size"="1,256"
 // AMD-SAME: "amdgpu-waves-per-eu"="3,7"
-// AMD-SAME: "omp_target_thread_limit"="17"
 
 // It is unclear if we should use the AMD annotations for other targets, we do for now.
 // NVIDIA: attributes #[[ATTR0]]

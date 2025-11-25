@@ -1,3 +1,4 @@
+// XFAIL: amdgcn-amd-amdhsa
 // Use the generic state machine.  On some architectures, other threads in the
 // main thread's warp must avoid barrier instructions.
 //

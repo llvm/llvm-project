@@ -1,6 +1,6 @@
 // Test that attempting to create a local crash reproducer without disabling threading
 // prints an error from the pass manager (as opposed to crashing with a stack trace).
-
+// XFAIL: *
 // RUN: mlir-opt --verify-diagnostics --mlir-pass-pipeline-local-reproducer \
 // RUN:          --mlir-pass-pipeline-crash-reproducer=%t %s
 

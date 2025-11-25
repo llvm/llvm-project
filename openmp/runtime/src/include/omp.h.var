@@ -121,7 +121,13 @@
         omp_lock_hint_speculative    = omp_sync_hint_speculative,
         kmp_lock_hint_hle            = (1<<16),
         kmp_lock_hint_rtm            = (1<<17),
-        kmp_lock_hint_adaptive       = (1<<18)
+        kmp_lock_hint_adaptive       = (1<<18),
+        AMD_fast_fp_atomics          = (1<<19),
+        AMD_unsafe_fp_atomics        = AMD_fast_fp_atomics,
+        ompx_fast_fp_atomics         = AMD_fast_fp_atomics,
+        ompx_unsafe_fp_atomics       = AMD_fast_fp_atomics,
+        AMD_safe_fp_atomics          = (1<<20),
+        ompx_safe_fp_atomics         = AMD_safe_fp_atomics
     } omp_sync_hint_t;
 
     /* lock hint type for dynamic user lock */
@@ -146,6 +152,7 @@
 
     /* OpenMP 4.5 */
     extern int   __KAI_KMPC_CONVENTION  omp_get_initial_device (void);
+    extern int   __KAI_KMPC_CONVENTION  omp_get_device_num (void);
     extern void* __KAI_KMPC_CONVENTION  omp_target_alloc(size_t, int);
     extern void  __KAI_KMPC_CONVENTION  omp_target_free(void *, int);
     extern int   __KAI_KMPC_CONVENTION  omp_target_is_present(const void *, int);
@@ -153,7 +160,10 @@
     extern int   __KAI_KMPC_CONVENTION  omp_target_memcpy_rect(void *, const void *, size_t, int, const size_t *,
                                             const size_t *, const size_t *, const size_t *, const size_t *, int, int);
     extern int   __KAI_KMPC_CONVENTION  omp_target_associate_ptr(const void *, const void *, size_t, size_t, int);
+
     extern int   __KAI_KMPC_CONVENTION  omp_target_disassociate_ptr(const void *, int);
+    extern int   __KAI_KMPC_CONVENTION  omp_is_coarse_grain_mem_region(void *, size_t);
+    extern void  __KAI_KMPC_CONVENTION  omp_register_coarse_grain_mem(void *, size_t, int);
 
     /* OpenMP 5.0 */
     extern int   __KAI_KMPC_CONVENTION  omp_get_device_num (void);
@@ -162,6 +172,7 @@
     /* OpenMP 5.1 interop */
     typedef intptr_t omp_intptr_t;
 
+    extern int  __KAI_KMPC_CONVENTION  ompx_get_team_procs(int);
     extern void __KAI_KMPC_CONVENTION ompx_dump_mapping_tables(void);
 
     /* 0..omp_get_num_interop_properties()-1 are reserved for implementation-defined properties */
@@ -328,6 +339,14 @@
 
     extern int __KAI_KMPC_CONVENTION omp_control_tool(int, int, void*);
 
+    extern int __KAI_KMPC_CONVENTION omp_ext_get_warp_id (void);
+    extern int __KAI_KMPC_CONVENTION omp_ext_get_lane_id (void);
+    extern int __KAI_KMPC_CONVENTION omp_ext_get_smid (void);
+    extern int __KAI_KMPC_CONVENTION omp_ext_is_spmd_mode (void);
+    extern int __KAI_KMPC_CONVENTION omp_ext_get_master_thread_id (void);
+    extern unsigned long long __KAI_KMPC_CONVENTION omp_ext_get_active_threads_mask (void);
+
+
     /* OpenMP 5.0 Memory Management */
     typedef uintptr_t omp_uintptr_t;
 
@@ -395,6 +414,8 @@
     extern __KMP_IMP omp_allocator_handle_t const llvm_omp_target_host_mem_alloc;
     extern __KMP_IMP omp_allocator_handle_t const llvm_omp_target_shared_mem_alloc;
     extern __KMP_IMP omp_allocator_handle_t const llvm_omp_target_device_mem_alloc;
+    /* Preview of pinned memory support */
+    extern __KMP_IMP omp_allocator_handle_t const ompx_pinned_mem_alloc;
 
     typedef omp_uintptr_t omp_memspace_handle_t;
     extern __KMP_IMP omp_memspace_handle_t const omp_null_mem_space;
@@ -425,6 +446,8 @@
       llvm_omp_target_host_mem_alloc = 100,
       llvm_omp_target_shared_mem_alloc = 101,
       llvm_omp_target_device_mem_alloc = 102,
+      /* Preview of pinned memory support */
+      ompx_pinned_mem_alloc = 120,
       KMP_ALLOCATOR_MAX_HANDLE = UINTPTR_MAX
     } omp_allocator_handle_t;
 #       if __cplusplus >= 201103
@@ -445,6 +468,8 @@
       KMP_MEMSPACE_MAX_HANDLE = UINTPTR_MAX
     } omp_memspace_handle_t;
 #   endif
+    extern omp_memspace_handle_t __KAI_KMPC_CONVENTION omp_get_memory_space(size_t num_devices, int device_ids[], omp_memspace_handle_t base_memory_space);
+    extern void omp_destroy_memory_space(omp_memspace_handle_t ms);
     extern omp_allocator_handle_t __KAI_KMPC_CONVENTION omp_init_allocator(omp_memspace_handle_t m,
                                                        int ntraits, omp_alloctrait_t traits[]);
     extern void __KAI_KMPC_CONVENTION omp_destroy_allocator(omp_allocator_handle_t allocator);

@@ -45,7 +45,7 @@
 //
 // CHECK-NO-UNUSED-ARG-NOT: argument unused during compilation
 //
-// CHECK-NO-PIC-DATA-TEXT-REL: "-mcmodel=medium"
+// CHECK-NO-PIC-DATA-TEXT-REL: "-mrelocation-model"
 // CHECK-PIC-DATA-TEXT-REL-NOT: "-mcmodel=medium"
 // CHECK-NO-PIC-DATA-TEXT-REL-NON-SYSTEMZ: error: unsupported option '-mno-pic-data-is-text-relative' for target 'arm-arm-none-eabi'
 // CHECK-PIC-DATA-TEXT-REL-NON-SYSTEMZ: error: unsupported option '-mpic-data-is-text-relative' for target 'arm-arm-none-eabi'

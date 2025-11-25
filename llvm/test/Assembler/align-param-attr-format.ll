@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
+; RUN: llvm-as  < %s | llvm-dis   | llvm-as  | llvm-dis  | FileCheck %s
 
 ; Test that align(N) is accepted as an alternative syntax to align N
 

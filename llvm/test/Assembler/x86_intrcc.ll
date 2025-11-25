@@ -1,5 +1,5 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
-; RUN: verify-uselistorder %s
+; RUN: llvm-as  < %s | llvm-dis  | FileCheck %s
+; RUN: verify-uselistorder  %s
 
 ; Make sure no arguments is accepted
 ; CHECK: define x86_intrcc void @no_args() {

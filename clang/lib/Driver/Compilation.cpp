@@ -21,8 +21,12 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
+#include <chrono>
+#include <functional>
+#include <mutex>
 #include <string>
 #include <system_error>
+#include <thread>
 #include <utility>
 
 using namespace clang;
@@ -232,6 +236,101 @@ static bool ActionFailed(const Action *A,
   return false;
 }
 
+namespace {
+class JobScheduler {
+public:
+  enum JobState { JS_WAIT, JS_RUN, JS_DONE, JS_FAIL };
+  JobScheduler(const JobList &Jobs, size_t NJobs = 1)
+      : Jobs(Jobs), NumJobs(NJobs) {
+#if !LLVM_ENABLE_THREADS
+    NumJobs = 1;
+#endif
+    for (auto &Job : Jobs) {
+      JState[&Job] = JS_WAIT;
+      for (const auto *AI : Job.getDependentActions()) {
+        for (const auto *CI : ActToCmds[AI]) {
+          DependentCmds[&Job].push_back(CI);
+        }
+      }
+      for (const auto *CI : ActToCmds[&Job.getSource()]) {
+        DependentCmds[&Job].push_back(CI);
+      }
+      ActToCmds[&Job.getSource()].push_back(&Job);
+    }
+  }
+  /// \return true if all jobs are done. Otherwise, \p Next contains the
+  /// the next job ready to be executed if it is not null pointer. Otherwise
+  /// all jobs are running or waiting.
+  bool IsDone(const Command *&Next) {
+    std::lock_guard<std::mutex> lock(Mutex);
+    Next = nullptr;
+    unsigned Done = 0;
+    unsigned Running = 0;
+    for (auto &Cmd : Jobs) {
+      switch (JState[&Cmd]) {
+      case JS_RUN:
+        ++Running;
+        break;
+      case JS_DONE:
+      case JS_FAIL:
+        ++Done;
+        break;
+      case JS_WAIT: {
+        bool InputsReady = true;
+        for (const auto *CI : DependentCmds[&Cmd]) {
+          if (JState[CI] == JS_FAIL) {
+            JState[&Cmd] = JS_FAIL;
+            ++Done;
+            InputsReady = false;
+            break;
+          }
+          if (JState[CI] != JS_DONE) {
+            InputsReady = false;
+            break;
+          }
+        }
+        if (!Next && InputsReady) {
+          Next = &Cmd;
+        }
+        break;
+      }
+      }
+    }
+    if (Running >= NumJobs)
+      Next = nullptr;
+    return Done == Jobs.size();
+  }
+
+  void setJobState(const Command *Cmd, JobState JS) {
+    std::lock_guard<std::mutex> lock(Mutex);
+    JState[Cmd] = JS;
+  }
+
+  void launch(std::function<void()> Work) {
+#if LLVM_ENABLE_THREADS
+    if (NumJobs == 1) {
+      Work();
+      return;
+    }
+    std::thread Th(Work);
+    Th.detach();
+#else
+    Work();
+#endif
+  }
+
+private:
+  std::mutex Mutex;
+  const JobList &Jobs;
+  llvm::DenseMap<const Command *, JobState> JState;
+  llvm::DenseMap<const Action *, llvm::SmallVector<const Command *, 4>>
+      ActToCmds;
+  llvm::DenseMap<const Command *, llvm::SmallVector<const Command *, 4>>
+      DependentCmds;
+  size_t NumJobs; // Number of parallel jobs to run
+};
+} // namespace
+
 void Compilation::ExecuteJobs(const JobList &Jobs,
                               FailingCommandList &FailingCommands,
                               bool LogOnly) const {
@@ -239,16 +338,35 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
   // inputs on the command line even one of them failed.
   // In all but CLMode, execute all the jobs unless the necessary inputs for the
   // job is missing due to previous failures.
-  for (const auto &Job : Jobs) {
-    if (ActionFailed(&Job.getSource(), FailingCommands))
+  JobScheduler JS(Jobs, getDriver().getNumberOfParallelJobs());
+
+  const Command *Next = nullptr;
+  while (!JS.IsDone(Next)) {
+    if (!Next) {
+      // sleep, rather than yield so we do not busy wait.
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
       continue;
-    const Command *FailingCommand = nullptr;
-    if (int Res = ExecuteCommand(Job, FailingCommand, LogOnly)) {
-      FailingCommands.push_back(std::make_pair(Res, FailingCommand));
+    }
+
+    if (ActionFailed(&Next->getSource(), FailingCommands)) {
+      JS.setJobState(Next, JobScheduler::JS_FAIL);
       // Bail as soon as one command fails in cl driver mode.
       if (TheDriver.IsCLMode())
         return;
+      continue;
     }
+
+    JS.setJobState(Next, JobScheduler::JS_RUN);
+    auto Work = [&, Next]() {
+      const Command *FailingCommand = nullptr;
+      if (int Res = ExecuteCommand(*Next, FailingCommand, LogOnly)) {
+        FailingCommands.push_back(std::make_pair(Res, FailingCommand));
+        JS.setJobState(Next, JobScheduler::JS_FAIL);
+      } else {
+        JS.setJobState(Next, JobScheduler::JS_DONE);
+      }
+    };
+    JS.launch(Work);
   }
 }
 

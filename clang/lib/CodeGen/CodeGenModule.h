@@ -344,6 +344,172 @@ public:
 
   typedef std::vector<Structor> CtorList;
 
+  enum NoLoopXteamErr {
+    NxSuccess,
+    NxNonSPMD,
+    NxOptionDisabled,
+    NxOptionDisabledOrHasCall,
+    NxUnsupportedDirective,
+    NxUnsupportedSplitDirective,
+    NxNoStmt,
+    NxUnsupportedTargetClause,
+    NxNotLoopDirective,
+    NxNotCapturedStmt,
+    NxNotExecutableStmt,
+    NxUnsupportedNestedSplitDirective,
+    NxSplitConstructImproperlyNested,
+    NxNestedOmpParallelDirective,
+    NxNestedOmpCall,
+    NxNoSingleForStmt,
+    NxUnsupportedLoopInit,
+    NxUnsupportedLoopStop,
+    NxUnsupportedLoopStep,
+    NxGuidedOrRuntimeSched,
+    NxNonUnitStaticChunk,
+    NxNonConcurrentOrder,
+    NxUnsupportedRedType,
+    NxUnsupportedRedIntSize,
+    NxNotScalarRed,
+    NxNotBinOpRed,
+    NxUnsupportedRedOp,
+    NxNoRedVar,
+    NxMultRedVar,
+    NxUnsupportedRedExpr,
+    NxUnsupportedXteamRedThreadLimit,
+    NxUnsupportedPseudoObject,
+    NxNotRedVarInBinOpRHS,
+    NxNotAddOpInBinOpRHs,
+    NxRhsOfAssignNotBinOpOrCall,
+    NxBinOpNotAddAssignOrAssign,
+    NxNotBinOpOrCallButAccessesRedVar,
+    NxNotArgScalarEval,
+    NxReductionOpNotBinAssign,
+    NxReductionOpRhsNotBinOrCond,
+    NxReductionOpRhsNotMinMaxSum,
+    NxNotBuiltinByNameInHostCompile,
+    NxNotBuiltinByNameInDeviceCompile,
+    NxPOExprCountNotOne,
+    NxPOSemanticExprNotCall,
+    NxChildOfCallIsNull,
+    NxMultiDeviceMinMaxNotSupported,
+    NxFastReductionMinMaxNotSupported,
+    NxScanMinMaxNotSupported,
+    NxAmbiguousRedKind
+  };
+
+  using Stmt2StmtMap = llvm::DenseMap<const Stmt *, const Stmt *>;
+
+  /// Top-level and nested OpenMP directives, used in optimized kernel codegen.
+  using OptKernelNestDirectives =
+      llvm::SmallVector<const OMPExecutableDirective *, 3>;
+  /// Metadata for NoLoop kernel codegen
+  struct NoLoopKernelInfo {
+    NoLoopKernelInfo(int BlkSz, OptKernelNestDirectives Dirs)
+        : BlockSize{BlkSz}, NoLoopNestDirs{Dirs} {}
+
+    int BlockSize; // Cached blocksize
+    OptKernelNestDirectives NoLoopNestDirs;
+  };
+  /// Map construct statement to corresponding metadata for a NoLoop kernel.
+  using NoLoopKernelMap = llvm::DenseMap<const Stmt *, NoLoopKernelInfo>;
+
+  /// Xteam reduction operators supported today.
+  enum XteamRedOpKind {
+    XR_OP_unknown = 0,
+    // Valid values must be power of 2.
+    XR_OP_add = 1,
+    XR_OP_min = 2,
+    XR_OP_max = 4
+  };
+
+  /// Map a reduction variable to the corresponding metadata. The metadata
+  /// contains
+  // the reduction expression, the coorresponding Xteam local aggregator var,
+  // and the start arg position in the offloading function signature.
+  struct XteamRedVarInfo {
+    XteamRedVarInfo(const Expr *E, Address A, size_t Pos)
+        : RedVarExpr(E), RedVarAddr(A), ArgPos(Pos), Opcode(XR_OP_unknown) {}
+    XteamRedVarInfo() = delete;
+
+    /// Reduction variable expression, populated during initial analysis
+    const Expr *RedVarExpr;
+    /// Address of local reduction variable used in device codegen.
+    Address RedVarAddr;
+    /// Argument position for the corresponding metadata in the outlined
+    /// signature, populated during signature generation. Used for device
+    /// codegen only.
+    size_t ArgPos;
+    /// Reduction operator type: currently one of add, min, and max.
+    XteamRedOpKind Opcode;
+  };
+
+  using XteamRedVarMap = llvm::DenseMap<const VarDecl *, XteamRedVarInfo>;
+  using XteamRedVarVecTy = llvm::SmallVector<const VarDecl *>;
+
+  struct XteamRedKernelInfo {
+    XteamRedKernelInfo(llvm::Value *TSI, llvm::Value *NT, int BlkSz,
+                       OptKernelNestDirectives Dirs, XteamRedVarMap RVM,
+                       XteamRedVarVecTy RVV, bool F)
+        : ThreadStartIndex{TSI}, NumTeams{NT}, BlockSize{BlkSz},
+          XteamNestDirs{Dirs}, XteamRedVars{RVM}, XteamOrderedRedVar{RVV},
+          IsFast{F} {}
+
+    /// Start index of every thread used in device codegen.
+    llvm::Value *ThreadStartIndex;
+    /// Number of teams used in device codegen.
+    llvm::Value *NumTeams;
+    /// Number of threads in a block, populated during device codegen.
+    int BlockSize;
+    /// A mask of the reduction operators found in this kernel, populated
+    /// according to XteamRedOpKind.
+    uint8_t OpKindsFound;
+    /// Nested directives, generated during analysis in both host/device
+    /// codegen.
+    OptKernelNestDirectives XteamNestDirs;
+    /// Map from reduction variable to metadata, populated during analysis.
+    XteamRedVarMap XteamRedVars;
+    /// Vector of reduction variables in the same order they appear in the AST
+    XteamRedVarVecTy XteamOrderedRedVar;
+    /// Can a fast-atomic-based-version be generated?
+    bool IsFast;
+  };
+  using XteamRedKernelMap = llvm::DenseMap<const Stmt *, XteamRedKernelInfo>;
+
+  struct XteamRedCollectionInfo {
+    XteamRedCollectionInfo(XteamRedVarMap VarMap, XteamRedVarVecTy VarVec,
+                           uint8_t Ops)
+        : RedVarMap(VarMap), RedVarVector(VarVec), OpKindsFound(Ops) {}
+    XteamRedVarMap RedVarMap;
+    XteamRedVarVecTy RedVarVector;
+    uint8_t OpKindsFound;
+  };
+
+  /// Metadata for multi-device kernel codegen
+  struct MultiDeviceBoundsInfo {
+    MultiDeviceBoundsInfo(VarDecl *LBArg, VarDecl *UBArg)
+        : LBArg{LBArg}, UBArg{UBArg} {}
+    VarDecl *LBArg;
+    VarDecl *UBArg;
+  };
+  using MultiDeviceFunctionBoundsMap =
+      llvm::DenseMap<const llvm::Function *, MultiDeviceBoundsInfo>;
+
+  struct MultiDeviceKernelInfo {
+    MultiDeviceKernelInfo(OptKernelNestDirectives Dirs,
+                          MultiDeviceFunctionBoundsMap FBM,
+                          bool CanBeMultiDevice)
+        : MultiDeviceNestDirs{Dirs}, FunctionBoundsMap{FBM},
+          CanBeMultiDevice{CanBeMultiDevice} {}
+
+    OptKernelNestDirectives MultiDeviceNestDirs;
+    MultiDeviceFunctionBoundsMap FunctionBoundsMap;
+    bool CanBeMultiDevice;
+    bool NewBoundsHaveBeenUsed = false;
+  };
+  /// Map construct statement to corresponding metadata for a NoLoop kernel.
+  using MultiDeviceKernelMap =
+      llvm::DenseMap<const Stmt *, MultiDeviceKernelInfo>;
+
 private:
   ASTContext &Context;
   const LangOptions &LangOpts;
@@ -360,6 +526,12 @@ private:
   std::string ModuleNameHash;
   bool CXX20ModuleInits = false;
   std::unique_ptr<CodeGenTBAA> TBAA;
+
+  /// Used by emitParallelCall
+  bool isSPMDExecutionMode = false;
+
+  /// Used by Xteam Scan Codegen
+  bool isXteamScanCandidate = false;
 
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
 
@@ -383,6 +555,17 @@ private:
   InstrProfStats PGOStats;
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
   StackExhaustionHandler StackHandler;
+
+  /// Statement for which Xteam reduction code is being generated currently
+  const Stmt *CurrentXteamRedStmt = nullptr;
+  // Map associated statement from top-level to innermost level for optimized
+  // kernels.
+  Stmt2StmtMap OptKernelNestMap;
+
+  NoLoopKernelMap NoLoopKernels;
+  NoLoopKernelMap BigJumpLoopKernels;
+  XteamRedKernelMap XteamRedKernels;
+  MultiDeviceKernelMap MultiDeviceKernels;
 
   // A set of references that have only been seen via a weakref so far. This is
   // used to remove the weak of the reference if we ever see a direct reference
@@ -695,6 +878,9 @@ public:
   ~CodeGenModule();
 
   void clear();
+  bool isXteamScanPhaseOne = true;
+  llvm::SmallVector<llvm::Value *, 8> ReductionVars;
+  const OMPExecutableDirective *OMPPresentScanDirective = nullptr;
 
   /// Finalize LLVM code generation.
   void Release();
@@ -718,6 +904,9 @@ public:
   bool hasObjCRuntime() { return !!ObjCRuntime; }
 
   const std::string &getModuleNameHash() const { return ModuleNameHash; }
+
+  void setIsSPMDExecutionMode(bool isSPMD) { isSPMDExecutionMode = isSPMD; }
+  bool IsSPMDExecutionMode() { return isSPMDExecutionMode; }
 
   /// Return a reference to the configured OpenCL runtime.
   CGOpenCLRuntime &getOpenCLRuntime() {
@@ -1721,6 +1910,430 @@ public:
   void printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
                                        const Decl *D) const;
 
+  /// Under debug mode, print status of target teams loop transformation,
+  /// which should be either '#distribute' or '#parallel for'
+  void emitTargetTeamsLoopCodegenStatus(std::string StatusMsg,
+                                        const OMPExecutableDirective &D,
+                                        bool IsDevice);
+
+  /// Add metadata for all nested directives for optimized kernel codegen.
+  void addOptKernelNestMap(const OptKernelNestDirectives &NestDirs);
+
+  /// Given a directive, return the statement key used for maintaining metadata.
+  const Stmt *getOptKernelKey(const OMPExecutableDirective &D);
+
+  /// Given a captured statement, return the nested directives involved in
+  /// optimized kernel codegen.
+  const OptKernelNestDirectives &
+  getOptKernelDirectives(const ForStmt *CapturedForStmt,
+                         llvm::omp::OMPTgtExecModeFlags OptKernelMode);
+
+  // Should be called under debug mode for printing analysis result.
+  void emitNxResult(std::string StatusMsg, const OMPExecutableDirective &D,
+                    NoLoopXteamErr Status);
+
+  /// Given the schedule clause, can No-Loop code be generated?
+  NoLoopXteamErr getNoLoopCompatibleSchedStatus(const OMPLoopDirective &LD);
+
+  /// Given the order clause, can No-Loop code be generated?
+  NoLoopXteamErr getNoLoopCompatibleOrderStatus(const OMPLoopDirective &LD);
+
+  NoLoopXteamErr
+  getXteamRedCompatibleThreadLimitStatus(const OMPLoopDirective &LD);
+
+  /// Helper functions for generating a NoLoop kernel
+  /// For a captured statement, get the single For statement, if it exists,
+  /// otherwise return nullptr.
+  const ForStmt *getSingleForStmt(const Stmt *S);
+
+  /// Does the loop init qualify for a NoLoop kernel?
+  const VarDecl *checkLoopInit(const OMPLoopDirective &LD);
+
+  /// Does the loop increment qualify for a NoLoop kernel?
+  bool checkLoopStep(const Expr *Inc, const VarDecl *VD);
+
+  /// Does the loop condition qualify for a NoLoop kernel?
+  bool checkLoopStop(const OMPLoopDirective &, const ForStmt &);
+
+  /// If the step is a binary expression, extract and return the step.
+  /// If the step is a unary expression, return nullptr.
+  const Expr *getBinaryExprStep(const Expr *Inc, const VarDecl *VD);
+
+  /// Reset optimized kernel metadata.
+  void resetOptKernelMetadata(const Stmt *S);
+  void eraseOptKernelNestElem(const Stmt *S) { OptKernelNestMap.erase(S); }
+
+  /// Used in optimized kernel codegen.
+  const Stmt *getMappedInnermostStmt(const Stmt *S) {
+    auto nest_itr = OptKernelNestMap.find(S);
+    if (nest_itr == OptKernelNestMap.end())
+      return nullptr;
+    return nest_itr->second;
+  }
+
+  bool isFastXteamSumReduction() {
+    return getLangOpts().OpenMPTargetFastReduction;
+  }
+
+  bool isXteamScanKernel() {
+    return (getLangOpts().OpenMPTargetXteamScan ||
+            getLangOpts().OpenMPTargetXteamNoLoopScan) &&
+           isXteamScanCandidate;
+  }
+
+  bool isXteamSegmentedScanKernel() {
+    return isXteamScanKernel() && !getLangOpts().OpenMPTargetXteamNoLoopScan;
+  }
+
+  /// If we are able to generate a NoLoop kernel for this directive, return
+  /// true, otherwise return false. If successful, a map is created from the
+  /// top-level statement to the intermediate statements. For a combined
+  /// construct, there are no intermediate statements. Used for a combined
+  /// construct
+  NoLoopXteamErr checkAndSetNoLoopKernel(const OMPExecutableDirective &D);
+  /// Determine if 'teams loop' can be emitted using 'parallel for'.
+  bool TeamsLoopCanBeParallelFor(const OMPExecutableDirective &D);
+
+  /// Given a top-level target construct for no-loop codegen, get the
+  /// intermediate OpenMP constructs
+  const OptKernelNestDirectives &getNoLoopNestDirs(const Stmt *S) {
+    assert(isNoLoopKernel(S));
+    return NoLoopKernels.find(S)->second.NoLoopNestDirs;
+  }
+
+  /// Get the cached blocksize to be used for this NoLoop kernel.
+  int getNoLoopBlockSize(const Stmt *S) {
+    assert(isNoLoopKernel(S));
+    return NoLoopKernels.find(S)->second.BlockSize;
+  }
+
+  int getNoLoopBlockSize(const OMPExecutableDirective &D) {
+    assert(isNoLoopKernel(D) && "Expected a no-loop kernel");
+    const ForStmt *FStmt = getSingleForStmt(getOptKernelKey(D));
+    return getNoLoopBlockSize(FStmt);
+  }
+
+  /// Erase no-loop related metadata for the input statement
+  void resetNoLoopKernel(const Stmt *S) { NoLoopKernels.erase(S); }
+
+  /// Are we generating no-loop kernel for the input statement
+  bool isNoLoopKernel(const Stmt *S) {
+    return NoLoopKernels.find(S) != NoLoopKernels.end();
+  }
+  bool isNoLoopKernel(const OMPExecutableDirective &D);
+
+  /// Given a top-level target construct for BigJumpLoop codegen, get the
+  /// nested OpenMP constructs.
+  const OptKernelNestDirectives &getBigJumpLoopNestDirs(const Stmt *S) {
+    assert(isBigJumpLoopKernel(S));
+    return BigJumpLoopKernels.find(S)->second.NoLoopNestDirs;
+  }
+
+  void updateNoLoopKernel(const Stmt *S, int BlkSz) {
+    assert(isNoLoopKernel(S));
+    NoLoopKernels.find(S)->second.BlockSize = BlkSz;
+  }
+
+  /// Get the cached blocksize to be used for this BigJumpLoop kernel.
+  int getBigJumpLoopBlockSize(const Stmt *S) {
+    assert(isBigJumpLoopKernel(S));
+    return BigJumpLoopKernels.find(S)->second.BlockSize;
+  }
+
+  int getBigJumpLoopBlockSize(const OMPExecutableDirective &D) {
+    assert(isBigJumpLoopKernel(D) && "Expected a big-jump-loop kernel");
+    const ForStmt *FStmt = getSingleForStmt(getOptKernelKey(D));
+    return getBigJumpLoopBlockSize(FStmt);
+  }
+
+  /// Erase BigJumpLoop related metadata for the input statement.
+  void resetBigJumpLoopKernel(const Stmt *S) { BigJumpLoopKernels.erase(S); }
+  /// Is a BigJumpLoop kernel generated for the input statement?
+  bool isBigJumpLoopKernel(const Stmt *S) {
+    return BigJumpLoopKernels.find(S) != BigJumpLoopKernels.end();
+  }
+  bool isBigJumpLoopKernel(const OMPExecutableDirective &D);
+
+  void updateBigJumpLoopKernel(const Stmt *S, int BlkSz) {
+    assert(isBigJumpLoopKernel(S));
+    BigJumpLoopKernels.find(S)->second.BlockSize = BlkSz;
+  }
+
+  /// If we are able to generate a Xteam reduction kernel for this directive,
+  /// return true, otherwise return false. If successful, metadata for the
+  /// reduction variables are created for subsequent codegen phases to work on.
+  NoLoopXteamErr checkAndSetXteamRedKernel(const OMPExecutableDirective &D);
+
+  /// If we are able to generate a multi-device kernel for this directive,
+  /// return true, otherwise return false. If successful, metadata for the
+  /// argument variables is created for subsequent codegen phases to work on.
+  bool checkAndSetMultiDeviceKernel(const OMPExecutableDirective &D,
+                                    bool CanBeMultiDevice);
+
+  /// Compute the block size to be used for a kernel.
+  int getWorkGroupSizeSPMDHelper(const OMPExecutableDirective &D);
+  /// Used in optimized kernel codegen, compute the block size from the nested
+  /// directives.
+  int getOptKernelWorkGroupSize(const OptKernelNestDirectives &NestDirs,
+                                bool isXteamRed);
+
+  /// Given a ForStmt for which Xteam codegen will be done, return the
+  /// intermediate statements for a split directive.
+  const OptKernelNestDirectives &getXteamRedNestDirs(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.XteamNestDirs;
+  }
+  const OptKernelNestDirectives &
+  getXteamRedNestDirs(const OMPExecutableDirective &D) {
+    assert(isXteamRedKernel(D) && "Expected an Xteam reduction kernel");
+    const ForStmt *FStmt = getSingleForStmt(getOptKernelKey(D));
+    return getXteamRedNestDirs(FStmt);
+  }
+
+  /// Given a ForStmt for which Xteam codegen will be done, return the
+  /// corresponding metadata
+  XteamRedVarMap &getXteamRedVarMap(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.XteamRedVars;
+  }
+
+  XteamRedVarVecTy &getXteamOrderedRedVar(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.XteamOrderedRedVar;
+  }
+
+  llvm::Value *getXteamRedThreadStartIndex(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.ThreadStartIndex;
+  }
+
+  /// Used during kernel codegen to retrieve the cached NumTeams.
+  llvm::Value *getXteamRedNumTeams(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.NumTeams;
+  }
+
+  /// Used during host codegen to compute the number of teams from num_teams
+  /// clause.
+  int64_t getXteamRedNumTeamsFromClause(const OMPExecutableDirective &D);
+
+  /// Used during host codegen for traversing nested directives, looking for
+  /// num_teams clause.
+  int64_t
+  getXteamRedNumTeamsFromClause(const OptKernelNestDirectives &NestDirs);
+
+  bool isXteamRedFast(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.IsFast;
+  }
+
+  /// Given a ForStmt for which Xteam codegen will be done, update the metadata.
+  /// \p VD is the reduction variable for which metadata is updated.
+  void updateXteamRedVarMap(const Stmt *S, const VarDecl *VD, const Expr *RVE,
+                            Address AggVarAddr) {
+    assert(isXteamRedKernel(S));
+    XteamRedVarMap &RVM = getXteamRedVarMap(S);
+    assert(RVM.find(VD) != RVM.end() && "Expected reduction variable in map");
+    RVM.find(VD)->second.RedVarExpr = RVE;
+    RVM.find(VD)->second.RedVarAddr = AggVarAddr;
+    // Another API is used to set ArgPos
+  }
+
+  void updateXteamRedVarArgPos(XteamRedVarInfo *RVInfo, size_t ArgP) {
+    assert(RVInfo);
+    RVInfo->ArgPos = ArgP;
+  }
+
+  void updateXteamRedVarOpcode(const CallExpr *Call, const VarDecl *VD,
+                               XteamRedVarMap *RedMap) {
+    XteamRedOpKind Opcode;
+    if (isOptKernelAMDGCNMax(Call))
+      Opcode = XR_OP_max;
+    else if (isOptKernelAMDGCNMin(Call))
+      Opcode = XR_OP_min;
+    else
+      llvm_unreachable("Expected either min or max");
+    updateXteamRedVarOpcode(VD, RedMap, Opcode);
+  }
+
+  void updateXteamRedVarOpcode(const VarDecl *VD, XteamRedVarMap *RedMap,
+                               XteamRedOpKind Opcode) {
+    assert(RedMap->contains(VD) && "Expected reduction variable in map");
+    RedMap->find(VD)->second.Opcode = Opcode;
+  }
+
+  void updateXteamRedKernel(const Stmt *S, llvm::Value *ThdIndex,
+                            llvm::Value *NTeams) {
+    assert(isXteamRedKernel(S));
+    auto &KernelInfo = XteamRedKernels.find(S)->second;
+    KernelInfo.ThreadStartIndex = ThdIndex;
+    KernelInfo.NumTeams = NTeams;
+  }
+
+  void updateXteamRedKernel(const Stmt *S, int BlkSz) {
+    assert(isXteamRedKernel(S));
+    XteamRedKernels.find(S)->second.BlockSize = BlkSz;
+  }
+
+  // Get the cached block size used by Xteam reduction
+  int getXteamRedBlockSize(const ForStmt *FStmt) {
+    assert(isXteamRedKernel(FStmt));
+    return XteamRedKernels.find(FStmt)->second.BlockSize;
+  }
+
+  int getXteamRedBlockSize(const OMPExecutableDirective &D) {
+    assert(isXteamRedKernel(D) && "Expected an Xteam reduction kernel");
+    const ForStmt *FStmt = getSingleForStmt(getOptKernelKey(D));
+    return getXteamRedBlockSize(FStmt);
+  }
+
+  /// Erase spec-red related metadata for the input statement
+  void resetXteamRedKernel(const Stmt *S) { XteamRedKernels.erase(S); }
+  /// Are we generating xteam reduction kernel for the statement
+  bool isXteamRedKernel(const Stmt *S) {
+    return XteamRedKernels.find(S) != XteamRedKernels.end();
+  }
+  bool isXteamRedKernel(const OMPExecutableDirective &D);
+
+  void setCurrentXteamRedStmt(const Stmt *S) { CurrentXteamRedStmt = S; }
+  const Stmt *getCurrentXteamRedStmt() { return CurrentXteamRedStmt; }
+
+  /// Return true if the provided expression accesses a variable in the provided
+  /// map, otherwise return false.
+  bool hasXteamRedVar(const Expr *E, const XteamRedVarMap &RedMap) const;
+
+  /// If present in the provided map, return the reduction variable accessed by
+  /// the provided expression, otherwise return nullptr.
+  const VarDecl *getXteamRedVarDecl(const Expr *E,
+                                    const XteamRedVarMap &RedMap) const;
+
+  /// Return true if the provided expression accesses the provided variable,
+  /// otherwise return false.
+  bool isXteamRedVarExpr(const Expr *E, const VarDecl *VD) const;
+
+  /// Return status indicating whether the call is an Xteam-supported host
+  /// builtin.
+  CodeGenModule::NoLoopXteamErr
+  getStatusOptKernelHostBuiltin(const CallExpr *C) const;
+
+  /// Is the callee in std namespace?
+  bool isStdNameSpace(const CallExpr *Call) const;
+
+  /// Is the function name recognized as a min builtin by the host compile?
+  bool isOptKernelHostMin(const CallExpr *Call) const {
+    std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
+    if (isStdNameSpace(Call) && !CallName.compare("min"))
+      return true;
+    return (!CallName.compare("fmin") || !CallName.compare("fminf") ||
+            !CallName.compare("fminl") || !CallName.compare("__builtin_fmin") ||
+            !CallName.compare("__builtin_fminf") ||
+            !CallName.compare("__builtin_fminl"));
+  }
+
+  /// Is the function name recognized as a max builtin by the host compile?
+  bool isOptKernelHostMax(const CallExpr *Call) const {
+    std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
+    if (isStdNameSpace(Call) && !CallName.compare("max"))
+      return true;
+    return (!CallName.compare("fmax") || !CallName.compare("fmaxf") ||
+            !CallName.compare("fmaxl") || !CallName.compare("__builtin_fmax") ||
+            !CallName.compare("__builtin_fmaxf") ||
+            !CallName.compare("__builtin_fmaxl"));
+  }
+
+  /// Return status indicating whether the amdgcn device function is supported
+  /// by Xteam.
+  CodeGenModule::NoLoopXteamErr
+  getStatusOptKernelAMDGCNBuiltin(const CallExpr *C) const;
+
+  /// Is the function name recognized as a min builtin by the device compile?
+  bool isOptKernelAMDGCNMin(const CallExpr *Call) const {
+    std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
+    if (isStdNameSpace(Call) && !CallName.compare("min"))
+      return true;
+    return (!CallName.compare("fmin[device={arch(amdgcn)}]") ||
+            !CallName.compare("fminf[device={arch(amdgcn)}]") ||
+            !CallName.compare("fminl[device={arch(amdgcn)}]") ||
+            !CallName.compare("fmin") || !CallName.compare("fminf") ||
+            !CallName.compare("fminl") || !CallName.compare("__builtin_fmin") ||
+            !CallName.compare("__builtin_fminf") ||
+            !CallName.compare("__builtin_fminl"));
+  }
+
+  // Is the function name recognized as a max builtin by the device compile?
+  bool isOptKernelAMDGCNMax(const CallExpr *Call) const {
+    std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
+    if (isStdNameSpace(Call) && !CallName.compare("max"))
+      return true;
+    return (!CallName.compare("fmax[device={arch(amdgcn)}]") ||
+            !CallName.compare("fmaxf[device={arch(amdgcn)}]") ||
+            !CallName.compare("fmaxl[device={arch(amdgcn)}]") ||
+            !CallName.compare("fmax") || !CallName.compare("fmaxf") ||
+            !CallName.compare("fmaxl") || !CallName.compare("__builtin_fmax") ||
+            !CallName.compare("__builtin_fmaxf") ||
+            !CallName.compare("__builtin_fmaxl"));
+  }
+
+  /// Return status indicating whether the call expression is supported by Xteam
+  /// as a builtin
+  CodeGenModule::NoLoopXteamErr getStatusOptKernelBuiltin(const CallExpr *C);
+
+  /// Return status indicating if the pseudo-object expression is supported by
+  /// Xteam
+  std::pair<CodeGenModule::NoLoopXteamErr, const Expr *>
+  getStatusXteamSupportedPseudoObject(const PseudoObjectExpr *PO);
+
+  /// Are we generating multi-device kernel for the statement
+  bool multiDeviceFStmtEntryExists(const Stmt *S) {
+    return MultiDeviceKernels.find(S) != MultiDeviceKernels.end();
+  }
+  bool isMultiDeviceKernel(const Stmt *S) {
+    if (MultiDeviceKernels.find(S) == MultiDeviceKernels.end())
+      return false;
+    MultiDeviceKernelInfo MDInfo = MultiDeviceKernels.find(S)->second;
+    return MDInfo.CanBeMultiDevice;
+  }
+  bool isMultiDeviceKernel(const OMPExecutableDirective &D);
+
+  /// Given a ForStmt for which Multi Device codegen will be done, save the
+  /// metadata for the LB and UB args.
+  void saveMultiDeviceArgs(const OMPExecutableDirective &D,
+                           const llvm::Function *F, VarDecl *LBDecl,
+                           VarDecl *UBDecl) {
+    assert(isMultiDeviceKernel(getSingleForStmt(getOptKernelKey(D))) &&
+           "Must be a multi-device kernel");
+    const ForStmt *FStmt = getSingleForStmt(getOptKernelKey(D));
+    assert((MultiDeviceKernels.find(FStmt) != MultiDeviceKernels.end()) &&
+           "FStmt not found");
+    MultiDeviceKernelInfo &MDInfo = MultiDeviceKernels.find(FStmt)->second;
+    MDInfo.FunctionBoundsMap.insert(
+        std::make_pair(F, MultiDeviceBoundsInfo(LBDecl, UBDecl)));
+  }
+
+  /// Retrieve the metadata for the LB arg.
+  MultiDeviceBoundsInfo getMultiDeviceBounds(const OMPExecutableDirective &D,
+                                             const llvm::Function *F) {
+    const ForStmt *FStmt = getSingleForStmt(getOptKernelKey(D));
+    assert((MultiDeviceKernels.find(FStmt) != MultiDeviceKernels.end()) &&
+           "FStmt not found");
+    MultiDeviceKernelInfo MDInfo = MultiDeviceKernels.find(FStmt)->second;
+    assert(MDInfo.FunctionBoundsMap.find(F) != MDInfo.FunctionBoundsMap.end() &&
+           "Function must exist");
+    return MDInfo.FunctionBoundsMap.find(F)->second;
+  }
+
+  /// Retrieve the metadata for the LB arg.
+  VarDecl *getMultiDeviceLBArg(const OMPExecutableDirective &D,
+                               const llvm::Function *F) {
+    return getMultiDeviceBounds(D, F).LBArg;
+  }
+
+  /// Retrieve the metadata for the LB arg.
+  VarDecl *getMultiDeviceUBArg(const OMPExecutableDirective &D,
+                               const llvm::Function *F) {
+    return getMultiDeviceBounds(D, F).UBArg;
+  }
+
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
   /// because we'll lose all important information after each repl.
@@ -2042,6 +2655,52 @@ private:
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
                                                StringRef Suffix);
+
+  /// Return success if the directives are nested in a way appropriate for
+  /// specialized kernel generation. Track the component directives in
+  /// a vector. Otherwise return an error code.
+  NoLoopXteamErr checkNest(const OMPExecutableDirective &D,
+                           OptKernelNestDirectives *NestDirs);
+  NoLoopXteamErr checkTargetNest(const OMPExecutableDirective &D,
+                                 OptKernelNestDirectives *NestDirs);
+  NoLoopXteamErr checkTargetTeamsNest(const OMPExecutableDirective &D,
+                                      OptKernelNestDirectives *NestDirs);
+
+  /// Top level checker for no-loop on the for statement
+  std::pair<NoLoopXteamErr, bool>
+  getNoLoopForStmtStatus(const OMPExecutableDirective &, const Stmt *);
+
+  // Compute the block size used by optimized kernels.
+  int computeOptKernelBlockSize(const OptKernelNestDirectives &NestDirs,
+                                bool isXteamRed);
+
+  /// Top level checker for xteam reduction of the loop
+  std::pair<NoLoopXteamErr, bool>
+  getXteamRedForStmtStatus(const OMPExecutableDirective &, const Stmt *,
+                           XteamRedVarMap *);
+
+  /// Are clauses on a combined OpenMP construct compatible with no-loop
+  /// codegen?
+  NoLoopXteamErr
+  getNoLoopStatusForClauses(const OptKernelNestDirectives &NestDirs);
+
+  /// Are clauses on a combined OpenMP construct compatible with xteam
+  /// reduction codegen?
+  NoLoopXteamErr
+  getXteamRedStatusForClauses(const OptKernelNestDirectives &NestDirs);
+
+  /// Collect the reduction variables that may satisfy Xteam criteria
+  std::pair<NoLoopXteamErr, XteamRedCollectionInfo>
+  collectXteamRedVars(const OptKernelNestDirectives &NestDirs);
+
+  /// Top level checker for multi device of the loop
+  NoLoopXteamErr getMultiDeviceForStmtStatus(const OMPExecutableDirective &,
+                                             const Stmt *);
+
+  /// Are clauses on a combined OpenMP construct compatible with multi-device
+  /// codegen?
+  NoLoopXteamErr
+  getMultiDeviceStatusForClauses(const OptKernelNestDirectives &NestDirs);
 };
 
 }  // end namespace CodeGen

@@ -953,7 +953,7 @@ Error handleOverrideImages(
 /// output directly without wrapping or host linking.
 Expected<SmallVector<StringRef>>
 linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
-                       const InputArgList &Args, char **Argv, int Argc,
+                       InputArgList &Args, char **Argv, int Argc,
                        bool NeedsWrapping) {
   llvm::TimeTraceScope TimeScope("Handle all device input");
 
@@ -964,6 +964,9 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
   if (Args.hasArg(OPT_override_image))
     if (Error Err = handleOverrideImages(Args, Images))
       return std::move(Err);
+
+  bool ExcludeNVPTX = Args.hasArg(OPT_no_nvptx_whole_archive);
+  bool ExcludeAMDGPU = Args.hasArg(OPT_no_amdgpu_whole_archive);
 
   auto Err = parallelForEachError(LinkerInputFiles, [&](auto &Input) -> Error {
     llvm::TimeTraceScope TimeScope("Link device input");
@@ -978,6 +981,13 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
           reportError(createStringError(Err));
         });
     auto LinkerArgs = getLinkerArgs(Input, BaseArgs);
+
+    const llvm::Triple Triple(LinkerArgs.getLastArgValue(OPT_triple_EQ));
+    if (Triple.isNVPTX() && ExcludeNVPTX)
+      return Error::success();
+
+    if (Triple.isAMDGPU() && ExcludeAMDGPU)
+      return Error::success();
 
     uint16_t ActiveOffloadKindMask = 0u;
     for (const auto &File : Input)
@@ -1041,6 +1051,13 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
   });
   if (Err)
     return std::move(Err);
+
+  // This option is specific to this link phase and the preceding link tools
+  // do not understand this option so we remove it now that we're done with it.
+  if (ExcludeNVPTX)
+    Args.eraseArg(OPT_no_nvptx_whole_archive);
+  if (ExcludeAMDGPU)
+    Args.eraseArg(OPT_no_amdgpu_whole_archive);
 
   // Create a binary image of each offloading image and either embed it into a
   // new object file, or if all inputs were direct offload binaries, emit the

@@ -109,6 +109,7 @@ define amdgpu_kernel void @kernel_calls_no_stack() {
   ret void
 }
 
+; One VGPR was left free (VGPR0) for whole-wave register allocation.
 define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; GCN-LABEL: test:
 ; GCN:       ; %bb.0:

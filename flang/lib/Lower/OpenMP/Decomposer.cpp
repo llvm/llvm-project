@@ -12,7 +12,7 @@
 
 #include "Decomposer.h"
 
-#include "Utils.h"
+#include "flang/Lower/OpenMP/Utils.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Semantics/semantics.h"

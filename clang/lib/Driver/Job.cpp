@@ -41,9 +41,12 @@ Command::Command(const Action &Source, const Tool &Creator,
                  const char *PrependArg)
     : Source(Source), Creator(Creator), ResponseSupport(ResponseSupport),
       Executable(Executable), PrependArg(PrependArg), Arguments(Arguments) {
-  for (const auto &II : Inputs)
-    if (II.isFilename())
+  for (const auto &II : Inputs) {
+    if (II.isFilename()) {
       InputInfoList.push_back(II);
+      DependentActions.push_back(II.getAction());
+    }
+  }
   for (const auto &II : Outputs)
     if (II.isFilename())
       OutputFilenames.push_back(II.getFilename());

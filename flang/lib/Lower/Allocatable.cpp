@@ -37,6 +37,7 @@
 #include "flang/Runtime/pointer.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "llvm/Support/CommandLine.h"
 
 /// By default fir memory operation fir::AllocMemOp/fir::FreeMemOp are used.
@@ -172,6 +173,50 @@ static void genRuntimeInitCharacter(fir::FirOpBuilder &builder,
   const auto convertedArgs = fir::runtime::createArguments(
       builder, loc, callee.getFunctionType(), args);
   fir::CallOp::create(builder, loc, callee, convertedArgs);
+}
+
+/// Check if region is nested in omp.target or
+/// region nested in function with declare target
+bool isRegionNestedInOmpTarget(mlir::Region &region) {
+  mlir::Operation *parentOp = region.getParentOp();
+  while (parentOp) {
+    if (auto declareTargetOp =
+            llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(parentOp)) {
+      if (declareTargetOp.isDeclareTarget())
+        return true;
+    }
+    if (llvm::isa<mlir::omp::TargetOp>(parentOp))
+      return true;
+    mlir::Region *parentRegion = parentOp->getParentRegion();
+    if (!parentRegion)
+      break;
+    parentOp = parentRegion->getParentOp();
+  }
+
+  return false;
+}
+
+/// Generate a runtime call to set allocator idx of descriptor for target amd.
+static void genAMDRuntimeDescriptorSetAllocIdx(fir::FirOpBuilder &builder,
+                                               mlir::Location loc,
+                                               const fir::MutableBoxValue &box,
+                                               int allocatorId) {
+  if (isRegionNestedInOmpTarget(builder.getRegion()))
+    return;
+  auto *context = builder.getContext();
+  mlir::Type descriptorTy = box.getAddr().getType();
+  mlir::IntegerType posTy = builder.getI32Type();
+  mlir::func::FuncOp callee = builder.createFunction(
+      loc, RTNAME_STRING(AMDAllocatableSetAllocIdx),
+      mlir::FunctionType::get(context, {descriptorTy, posTy}, {}));
+  llvm::SmallVector<mlir::Value> args{box.getAddr()};
+  args.push_back(
+      builder.createIntegerConstant(loc, builder.getI32Type(), allocatorId));
+  llvm::SmallVector<mlir::Value> operands;
+  for (auto [fst, snd] : llvm::zip(args, callee.getFunctionType().getInputs()))
+    operands.emplace_back(builder.createConvert(loc, snd, fst));
+  builder.create<fir::CallOp>(loc, callee, operands);
+  return;
 }
 
 /// Generate a sequence of runtime calls to allocate memory.
@@ -476,6 +521,9 @@ private:
                             !alloc.hasCoarraySpec() && !useAllocateRuntime &&
                             !box.isPointer();
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
+    const auto &langFeatures = converter.getFoldingContext().languageFeatures();
+    bool isAMDMemoryAllocatorEnabled = langFeatures.IsEnabled(
+        Fortran::common::LanguageFeature::AmdMemoryAllocator);
 
     if (inlineAllocation &&
         ((isCudaAllocate && isCudaDeviceContext) || !isCudaAllocate)) {
@@ -508,6 +556,8 @@ private:
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
     if (!isCudaAllocate) {
+      if (isAMDMemoryAllocatorEnabled)
+        genAMDRuntimeDescriptorSetAllocIdx(builder, loc, box, 1);
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
       setPinnedToFalse();
     } else {
@@ -628,6 +678,9 @@ private:
                                const fir::MutableBoxValue &box, bool isSource) {
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
+    const auto &langFeatures = converter.getFoldingContext().languageFeatures();
+    bool isAMDMemoryAllocatorEnabled = langFeatures.IsEnabled(
+        Fortran::common::LanguageFeature::AmdMemoryAllocator);
 
     if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
       if (Fortran::semantics::IsCUDADevice(*sym))
@@ -655,6 +708,8 @@ private:
       stat =
           genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
     } else {
+      if (isAMDMemoryAllocatorEnabled)
+        genAMDRuntimeDescriptorSetAllocIdx(builder, loc, box, 1);
       if (isSource)
         stat = genRuntimeAllocateSource(builder, loc, box, exv, errorManager);
       else

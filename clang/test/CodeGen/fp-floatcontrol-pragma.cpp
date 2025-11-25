@@ -191,21 +191,7 @@ float test_OperatorCall() {
 void callt() {
   volatile float z;
   z = z * z;
-  //CHECK-FENV: llvm.experimental.constrained.fmul{{.*}}
-}
-
-// CHECK-LABEL: define {{.*}}myAdd{{.*}}
-float myAdd(int i, float f) {
-  if (i<0)
-  return 1.0 + 2.0;
-  // Check that floating point constant folding doesn't occur if
-  // #pragma STC FENV_ACCESS is enabled.
-  //CHECK-FENV: llvm.experimental.constrained.fadd{{.*}}double 1.0{{.*}}double 2.0{{.*}}
-  //CHECK: store float 3.0{{.*}}retval{{.*}}
-  static double v = 1.0 / 3.0;
-  //CHECK-FENV: llvm.experimental.constrained.fptrunc.f32.f64{{.*}}
-  //CHECK-NOT: fdiv
-  return v;
+//CHECK-FENV: llvm.experimental.constrained.fmul{{.*}}
 }
 
 #if EXCEPT

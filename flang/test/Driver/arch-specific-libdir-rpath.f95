@@ -32,8 +32,7 @@
 !
 !
 ! RESDIR: "-resource-dir" "[[RESDIR:[^"]*]]"
-!
 ! LIBPATH-X86_64: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}
-! RPATH-X86_64:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"
 !
-! NO-RPATH-X86_64-NOT:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"
+! RPATH-X86_64:   "-rpath" "{{[^"]*(/|\\\\)resource_dir_with_arch_subdir(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"
+! NO-RPATH-X86_64-NOT:   "-rpath" "{{[^"]*(/|\\\\)resource_dir_with_arch_subdir(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"

@@ -1224,6 +1224,22 @@ program main
   !$omp end target teams
 
   ! ----------------------------------------------------------------------------
+  ! TARGET UPDATE
+  ! ----------------------------------------------------------------------------
+
+  ! CHECK:      omp.target_update
+  ! CHECK-NOT:  if({{.*}})
+  !$omp target update to(i)
+
+  ! CHECK:      omp.target_update
+  ! CHECK-SAME: if({{.*}})
+  !$omp target update to(i) if(.true.)
+
+  ! CHECK:      omp.target_update
+  ! CHECK-SAME: if({{.*}})
+  !$omp target update to(i) if(target update: .true.)
+
+  ! ----------------------------------------------------------------------------
   ! TASK
   ! ----------------------------------------------------------------------------
   ! CHECK:      omp.task

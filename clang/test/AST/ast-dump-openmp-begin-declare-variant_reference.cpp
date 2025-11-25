@@ -23,7 +23,7 @@ int also_before(float &&) {
 }
 
 #pragma omp begin declare variant match(implementation = {vendor(score(100) \
-                                                                 : llvm)})
+                                                                 : amd)})
 int also_after(void) {
   return 1;
 }
@@ -45,7 +45,7 @@ int also_after(short &&) {
 }
 #pragma omp end declare variant
 #pragma omp begin declare variant match(implementation = {vendor(score(0) \
-                                                                 : llvm)})
+                                                                 : amd)})
 // This one does overload the int&(*)(void) version!
 int &also_before() {
   return Good;
@@ -224,74 +224,74 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: | |-CompoundStmt [[ADDR_65:0x[a-z0-9]*]] <col:20, line:20:1>
 // CHECK-NEXT: | | `-ReturnStmt [[ADDR_66:0x[a-z0-9]*]] <line:19:3, col:10>
 // CHECK-NEXT: | |   `-DeclRefExpr [[ADDR_67:0x[a-z0-9]*]] <col:10> 'int' {{.*}}Var [[ADDR_63]] 'Bad' 'int'
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_68:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(0): llvm)}
-// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_69:0x[a-z0-9]*]] <line:50:1> 'int &({{.*}})' {{.*}}Function [[ADDR_70:0x[a-z0-9]*]] 'also_before[implementation={vendor(llvm)}]' 'int &({{.*}})'
+// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_68:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(0): amd)}
+// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_69:0x[a-z0-9]*]] <line:50:1> 'int &({{.*}})' {{.*}}Function [[ADDR_70:0x[a-z0-9]*]] 'also_before[implementation={vendor(amd)}]' 'int &({{.*}})'
 // CHECK-NEXT: |-FunctionDecl [[ADDR_71:0x[a-z0-9]*]] <line:21:1, line:23:1> line:21:5 used also_before 'int (float &&)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_72:0x[a-z0-9]*]] <col:17, col:23> col:25 'float &&'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_73:0x[a-z0-9]*]] <col:27, line:23:1>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_74:0x[a-z0-9]*]] <line:22:3, col:10>
 // CHECK-NEXT: |     `-IntegerLiteral [[ADDR_75:0x[a-z0-9]*]] <col:10> 'int' 0
 // CHECK-NEXT: |-FunctionDecl [[ADDR_76:0x[a-z0-9]*]] <line:27:1, col:20> col:5 implicit also_after 'int ({{.*}})'
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_77:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(100): llvm)}
-// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_78:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' {{.*}}Function [[ADDR_79:0x[a-z0-9]*]] 'also_after[implementation={vendor(llvm)}]' 'int ({{.*}})'
-// CHECK-NEXT: |-FunctionDecl [[ADDR_79]] <col:1, line:29:1> line:27:1 also_after[implementation={vendor(llvm)}] 'int ({{.*}})'
+// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_77:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(100): amd)}
+// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_78:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' {{.*}}Function [[ADDR_79:0x[a-z0-9]*]] 'also_after[implementation={vendor(amd)}]' 'int ({{.*}})'
+// CHECK-NEXT: |-FunctionDecl [[ADDR_79]] <col:1, line:29:1> line:27:1 also_after[implementation={vendor(amd)}] 'int ({{.*}})'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_80:0x[a-z0-9]*]] <col:22, line:29:1>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_81:0x[a-z0-9]*]] <line:28:3, col:10>
 // CHECK-NEXT: |     `-IntegerLiteral [[ADDR_82:0x[a-z0-9]*]] <col:10> 'int' 1
 // CHECK-NEXT: |-FunctionDecl [[ADDR_83:0x[a-z0-9]*]] <line:30:1, col:21> col:5 implicit also_after 'int (int &)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_84:0x[a-z0-9]*]] <col:16, col:20> col:21 'int &'
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_85:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(100): llvm)}
-// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_86:0x[a-z0-9]*]] <col:1> 'int (int &)' {{.*}}Function [[ADDR_87:0x[a-z0-9]*]] 'also_after[implementation={vendor(llvm)}]' 'int (int &)'
-// CHECK-NEXT: |-FunctionDecl [[ADDR_87]] <col:1, line:32:1> line:30:1 also_after[implementation={vendor(llvm)}] 'int (int &)'
+// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_85:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(100): amd)}
+// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_86:0x[a-z0-9]*]] <col:1> 'int (int &)' {{.*}}Function [[ADDR_87:0x[a-z0-9]*]] 'also_after[implementation={vendor(amd)}]' 'int (int &)'
+// CHECK-NEXT: |-FunctionDecl [[ADDR_87]] <col:1, line:32:1> line:30:1 also_after[implementation={vendor(amd)}] 'int (int &)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_84]] <col:16, col:20> col:21 'int &'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_88:0x[a-z0-9]*]] <col:23, line:32:1>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_89:0x[a-z0-9]*]] <line:31:3, col:10>
 // CHECK-NEXT: |     `-IntegerLiteral [[ADDR_90:0x[a-z0-9]*]] <col:10> 'int' 2
 // CHECK-NEXT: |-FunctionDecl [[ADDR_91:0x[a-z0-9]*]] <line:34:1, col:24> col:5 implicit used also_after 'int (double &)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_92:0x[a-z0-9]*]] <col:16, col:23> col:24 'double &'
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_93:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(100): llvm)}
-// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_94:0x[a-z0-9]*]] <col:1> 'int (double &)' {{.*}}Function [[ADDR_95:0x[a-z0-9]*]] 'also_after[implementation={vendor(llvm)}]' 'int (double &)'
-// CHECK-NEXT: |-FunctionDecl [[ADDR_95]] <col:1, line:36:1> line:34:1 also_after[implementation={vendor(llvm)}] 'int (double &)'
+// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_93:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(100): amd)}
+// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_94:0x[a-z0-9]*]] <col:1> 'int (double &)' {{.*}}Function [[ADDR_95:0x[a-z0-9]*]] 'also_after[implementation={vendor(amd)}]' 'int (double &)'
+// CHECK-NEXT: |-FunctionDecl [[ADDR_95]] <col:1, line:36:1> line:34:1 also_after[implementation={vendor(amd)}] 'int (double &)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_92]] <col:16, col:23> col:24 'double &'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_96:0x[a-z0-9]*]] <col:26, line:36:1>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_97:0x[a-z0-9]*]] <line:35:3, col:10>
 // CHECK-NEXT: |     `-IntegerLiteral [[ADDR_98:0x[a-z0-9]*]] <col:10> 'int' 0
 // CHECK-NEXT: |-FunctionDecl [[ADDR_99:0x[a-z0-9]*]] <line:37:1, col:25> col:5 implicit also_after 'int (double &&)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_100:0x[a-z0-9]*]] <col:16, col:23> col:25 'double &&'
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_101:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(100): llvm)}
-// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_102:0x[a-z0-9]*]] <col:1> 'int (double &&)' {{.*}}Function [[ADDR_103:0x[a-z0-9]*]] 'also_after[implementation={vendor(llvm)}]' 'int (double &&)'
-// CHECK-NEXT: |-FunctionDecl [[ADDR_103]] <col:1, line:39:1> line:37:1 also_after[implementation={vendor(llvm)}] 'int (double &&)'
+// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_101:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(100): amd)}
+// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_102:0x[a-z0-9]*]] <col:1> 'int (double &&)' {{.*}}Function [[ADDR_103:0x[a-z0-9]*]] 'also_after[implementation={vendor(amd)}]' 'int (double &&)'
+// CHECK-NEXT: |-FunctionDecl [[ADDR_103]] <col:1, line:39:1> line:37:1 also_after[implementation={vendor(amd)}] 'int (double &&)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_100]] <col:16, col:23> col:25 'double &&'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_104:0x[a-z0-9]*]] <col:27, line:39:1>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_105:0x[a-z0-9]*]] <line:38:3, col:10>
 // CHECK-NEXT: |     `-IntegerLiteral [[ADDR_106:0x[a-z0-9]*]] <col:10> 'int' 3
 // CHECK-NEXT: |-FunctionDecl [[ADDR_107:0x[a-z0-9]*]] <line:40:1, col:23> col:5 implicit also_after 'int (short &)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_108:0x[a-z0-9]*]] <col:16, col:22> col:23 'short &'
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_109:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(100): llvm)}
-// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_110:0x[a-z0-9]*]] <col:1> 'int (short &)' {{.*}}Function [[ADDR_111:0x[a-z0-9]*]] 'also_after[implementation={vendor(llvm)}]' 'int (short &)'
-// CHECK-NEXT: |-FunctionDecl [[ADDR_111]] <col:1, line:42:1> line:40:1 also_after[implementation={vendor(llvm)}] 'int (short &)'
+// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_109:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(100): amd)}
+// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_110:0x[a-z0-9]*]] <col:1> 'int (short &)' {{.*}}Function [[ADDR_111:0x[a-z0-9]*]] 'also_after[implementation={vendor(amd)}]' 'int (short &)'
+// CHECK-NEXT: |-FunctionDecl [[ADDR_111]] <col:1, line:42:1> line:40:1 also_after[implementation={vendor(amd)}] 'int (short &)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_108]] <col:16, col:22> col:23 'short &'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_112:0x[a-z0-9]*]] <col:25, line:42:1>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_113:0x[a-z0-9]*]] <line:41:3, col:10>
 // CHECK-NEXT: |     `-IntegerLiteral [[ADDR_114:0x[a-z0-9]*]] <col:10> 'int' 5
 // CHECK-NEXT: |-FunctionDecl [[ADDR_115:0x[a-z0-9]*]] <line:43:1, col:24> col:5 implicit used also_after 'int (short &&)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_116:0x[a-z0-9]*]] <col:16, col:22> col:24 'short &&'
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_117:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(100): llvm)}
-// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_118:0x[a-z0-9]*]] <col:1> 'int (short &&)' {{.*}}Function [[ADDR_119:0x[a-z0-9]*]] 'also_after[implementation={vendor(llvm)}]' 'int (short &&)'
-// CHECK-NEXT: |-FunctionDecl [[ADDR_119]] <col:1, line:45:1> line:43:1 also_after[implementation={vendor(llvm)}] 'int (short &&)'
+// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_117:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(100): amd)}
+// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_118:0x[a-z0-9]*]] <col:1> 'int (short &&)' {{.*}}Function [[ADDR_119:0x[a-z0-9]*]] 'also_after[implementation={vendor(amd)}]' 'int (short &&)'
+// CHECK-NEXT: |-FunctionDecl [[ADDR_119]] <col:1, line:45:1> line:43:1 also_after[implementation={vendor(amd)}] 'int (short &&)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_116]] <col:16, col:22> col:24 'short &&'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_120:0x[a-z0-9]*]] <col:26, line:45:1>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_121:0x[a-z0-9]*]] <line:44:3, col:10>
 // CHECK-NEXT: |     `-IntegerLiteral [[ADDR_122:0x[a-z0-9]*]] <col:10> 'int' 0
-// CHECK-NEXT: |-FunctionDecl [[ADDR_70]] <line:50:1, line:52:1> line:50:1 also_before[implementation={vendor(llvm)}] 'int &({{.*}})'
+// CHECK-NEXT: |-FunctionDecl [[ADDR_70]] <line:50:1, line:52:1> line:50:1 also_before[implementation={vendor(amd)}] 'int &({{.*}})'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_123:0x[a-z0-9]*]] <col:20, line:52:1>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_124:0x[a-z0-9]*]] <line:51:3, col:10>
 // CHECK-NEXT: |     `-DeclRefExpr [[ADDR_125:0x[a-z0-9]*]] <col:10> 'int' {{.*}}Var [[ADDR_62]] 'Good' 'int'
 // CHECK-NEXT: |-FunctionDecl [[ADDR_126:0x[a-z0-9]*]] <line:54:1, col:24> col:5 implicit also_before 'int (float &)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_127:0x[a-z0-9]*]] <col:17, col:23> col:24 'float &'
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_128:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(0): llvm)}
-// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_129:0x[a-z0-9]*]] <col:1> 'int (float &)' {{.*}}Function [[ADDR_130:0x[a-z0-9]*]] 'also_before[implementation={vendor(llvm)}]' 'int (float &)'
-// CHECK-NEXT: |-FunctionDecl [[ADDR_130]] <col:1, line:56:1> line:54:1 also_before[implementation={vendor(llvm)}] 'int (float &)'
+// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_128:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(score(0): amd)}
+// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_129:0x[a-z0-9]*]] <col:1> 'int (float &)' {{.*}}Function [[ADDR_130:0x[a-z0-9]*]] 'also_before[implementation={vendor(amd)}]' 'int (float &)'
+// CHECK-NEXT: |-FunctionDecl [[ADDR_130]] <col:1, line:56:1> line:54:1 also_before[implementation={vendor(amd)}] 'int (float &)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_127]] <col:17, col:23> col:24 'float &'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_131:0x[a-z0-9]*]] <col:26, line:56:1>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_132:0x[a-z0-9]*]] <line:55:3, col:10>
@@ -300,8 +300,8 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: | |-CompoundStmt [[ADDR_135:0x[a-z0-9]*]] <col:22, line:61:1>
 // CHECK-NEXT: | | `-ReturnStmt [[ADDR_136:0x[a-z0-9]*]] <line:60:3, col:10>
 // CHECK-NEXT: | |   `-IntegerLiteral [[ADDR_137:0x[a-z0-9]*]] <col:10> 'int' 7
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_138:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(score(100): llvm)}
-// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_78]] <line:27:1> 'int ({{.*}})' {{.*}}Function [[ADDR_79]] 'also_after[implementation={vendor(llvm)}]' 'int ({{.*}})'
+// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_138:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(score(100): amd)}
+// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_78]] <line:27:1> 'int ({{.*}})' {{.*}}Function [[ADDR_79]] 'also_after[implementation={vendor(amd)}]' 'int ({{.*}})'
 // CHECK-NEXT: |-FunctionDecl [[ADDR_139:0x[a-z0-9]*]] <line:62:1, line:64:1> line:62:5 also_after 'int (int)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_140:0x[a-z0-9]*]] <col:16> col:19 'int'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_141:0x[a-z0-9]*]] <col:21, line:64:1>
@@ -312,15 +312,15 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: | |-CompoundStmt [[ADDR_146:0x[a-z0-9]*]] <col:26, line:67:1>
 // CHECK-NEXT: | | `-ReturnStmt [[ADDR_147:0x[a-z0-9]*]] <line:66:3, col:10>
 // CHECK-NEXT: | |   `-IntegerLiteral [[ADDR_148:0x[a-z0-9]*]] <col:10> 'int' 9
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_149:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(score(100): llvm)}
-// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_94]] <line:34:1> 'int (double &)' {{.*}}Function [[ADDR_95]] 'also_after[implementation={vendor(llvm)}]' 'int (double &)'
+// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_149:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(score(100): amd)}
+// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_94]] <line:34:1> 'int (double &)' {{.*}}Function [[ADDR_95]] 'also_after[implementation={vendor(amd)}]' 'int (double &)'
 // CHECK-NEXT: |-FunctionDecl [[ADDR_150:0x[a-z0-9]*]] prev [[ADDR_115]] <line:68:1, line:70:1> line:68:5 used also_after 'int (short &&)'
 // CHECK-NEXT: | |-ParmVarDecl [[ADDR_151:0x[a-z0-9]*]] <col:16, col:22> col:24 'short &&'
 // CHECK-NEXT: | |-CompoundStmt [[ADDR_152:0x[a-z0-9]*]] <col:26, line:70:1>
 // CHECK-NEXT: | | `-ReturnStmt [[ADDR_153:0x[a-z0-9]*]] <line:69:3, col:10>
 // CHECK-NEXT: | |   `-IntegerLiteral [[ADDR_154:0x[a-z0-9]*]] <col:10> 'int' 10
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_155:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(score(100): llvm)}
-// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_118]] <line:43:1> 'int (short &&)' {{.*}}Function [[ADDR_119]] 'also_after[implementation={vendor(llvm)}]' 'int (short &&)'
+// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_155:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(score(100): amd)}
+// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_118]] <line:43:1> 'int (short &&)' {{.*}}Function [[ADDR_119]] 'also_after[implementation={vendor(amd)}]' 'int (short &&)'
 // CHECK-NEXT: |-FunctionDecl [[ADDR_156:0x[a-z0-9]*]] <line:72:1, line:76:1> line:72:5 used test1 'int ({{.*}})'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_157:0x[a-z0-9]*]] <col:13, line:76:1>
 // CHECK-NEXT: |   |-DeclStmt [[ADDR_158:0x[a-z0-9]*]] <line:74:3, col:11>
@@ -333,7 +333,7 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: |       | `-DeclRefExpr [[ADDR_165:0x[a-z0-9]*]] <col:21> 'double' {{.*}}Var [[ADDR_159]] 'd' 'double'
 // CHECK-NEXT: |       `-CallExpr [[ADDR_166:0x[a-z0-9]*]] <line:34:1, line:75:22> 'int'
 // CHECK-NEXT: |         |-ImplicitCastExpr [[ADDR_167:0x[a-z0-9]*]] <line:34:1> 'int (*)(double &)' <FunctionToPointerDecay>
-// CHECK-NEXT: |         | `-DeclRefExpr [[ADDR_94]] <col:1> 'int (double &)' {{.*}}Function [[ADDR_95]] 'also_after[implementation={vendor(llvm)}]' 'int (double &)'
+// CHECK-NEXT: |         | `-DeclRefExpr [[ADDR_94]] <col:1> 'int (double &)' {{.*}}Function [[ADDR_95]] 'also_after[implementation={vendor(amd)}]' 'int (double &)'
 // CHECK-NEXT: |         `-DeclRefExpr [[ADDR_165]] <line:75:21> 'double' {{.*}}Var [[ADDR_159]] 'd' 'double'
 // CHECK-NEXT: |-FunctionDecl [[ADDR_168:0x[a-z0-9]*]] <line:78:1, line:81:1> line:78:5 used test2 'int ({{.*}})'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_169:0x[a-z0-9]*]] <col:13, line:81:1>
@@ -347,7 +347,7 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: |         |   |   `-DeclRefExpr [[ADDR_177:0x[a-z0-9]*]] <col:11> 'int &({{.*}})' {{.*}}Function [[ADDR_64]] 'also_before' 'int &({{.*}})'
 // CHECK-NEXT: |         |   `-CallExpr [[ADDR_178:0x[a-z0-9]*]] <line:50:1, line:80:23> 'int' lvalue
 // CHECK-NEXT: |         |     `-ImplicitCastExpr [[ADDR_179:0x[a-z0-9]*]] <line:50:1> 'int &(*)({{.*}})' <FunctionToPointerDecay>
-// CHECK-NEXT: |         |       `-DeclRefExpr [[ADDR_69]] <col:1> 'int &({{.*}})' {{.*}}Function [[ADDR_70]] 'also_before[implementation={vendor(llvm)}]' 'int &({{.*}})'
+// CHECK-NEXT: |         |       `-DeclRefExpr [[ADDR_69]] <col:1> 'int &({{.*}})' {{.*}}Function [[ADDR_70]] 'also_before[implementation={vendor(amd)}]' 'int &({{.*}})'
 // CHECK-NEXT: |         `-UnaryOperator [[ADDR_180:0x[a-z0-9]*]] <line:80:28, col:29> 'int *' prefix '&' cannot overflow
 // CHECK-NEXT: |           `-DeclRefExpr [[ADDR_181:0x[a-z0-9]*]] <col:29> 'int' {{.*}}Var [[ADDR_62]] 'Good' 'int'
 // CHECK-NEXT: |-FunctionDecl [[ADDR_182:0x[a-z0-9]*]] <line:83:1, line:86:1> line:83:5 used test3 'int (float &&)'
@@ -375,7 +375,7 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: |       |   `-DeclRefExpr [[ADDR_204:0x[a-z0-9]*]] <col:26> 'short' {{.*}}ParmVar [[ADDR_194]] 's' 'short &&'
 // CHECK-NEXT: |       `-CallExpr [[ADDR_205:0x[a-z0-9]*]] <line:43:1, line:90:28> 'int'
 // CHECK-NEXT: |         |-ImplicitCastExpr [[ADDR_206:0x[a-z0-9]*]] <line:43:1> 'int (*)(short &&)' <FunctionToPointerDecay>
-// CHECK-NEXT: |         | `-DeclRefExpr [[ADDR_118]] <col:1> 'int (short &&)' {{.*}}Function [[ADDR_119]] 'also_after[implementation={vendor(llvm)}]' 'int (short &&)'
+// CHECK-NEXT: |         | `-DeclRefExpr [[ADDR_118]] <col:1> 'int (short &&)' {{.*}}Function [[ADDR_119]] 'also_after[implementation={vendor(amd)}]' 'int (short &&)'
 // CHECK-NEXT: |         `-CallExpr [[ADDR_201]] <line:90:21, col:27> 'typename remove_reference<short &>::type':'short' xvalue
 // CHECK-NEXT: |           |-ImplicitCastExpr [[ADDR_202]] <col:21> 'typename remove_reference<short &>::type &&(*)(short &)' <FunctionToPointerDecay>
 // CHECK-NEXT: |           | `-DeclRefExpr [[ADDR_203]] <col:21> 'typename remove_reference<short &>::type &&(short &)' {{.*}}Function [[ADDR_52]] 'move' 'typename remove_reference<short &>::type &&(short &)' (FunctionTemplate [[ADDR_31]] 'move')

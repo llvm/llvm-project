@@ -14,6 +14,7 @@
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Multilib.h"
+#include "clang/Driver/Tool.h"
 #include "clang/Driver/Types.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -54,10 +55,10 @@ class ObjCRuntime;
 
 namespace driver {
 
+class Compilation;
 class Driver;
 class InputInfo;
 class SanitizerArgs;
-class Tool;
 class XRayArgs;
 
 /// Helper structure used to pass information extracted from clang executable
@@ -196,6 +197,8 @@ private:
   mutable std::optional<UnwindLibType> unwindLibType;
 
 protected:
+  // OpenMP creates a toolchain for each target arch. eg - gfx908
+  std::string TargetID;
   MultilibSet Multilibs;
   llvm::SmallVector<Multilib> SelectedMultilibs;
 
@@ -288,6 +291,8 @@ public:
   bool hasEffectiveTriple() const {
     return !EffectiveTriple.getTriple().empty();
   }
+
+  StringRef getTargetID() const { return TargetID; }
 
   path_list &getLibraryPaths() { return LibraryPaths; }
   const path_list &getLibraryPaths() const { return LibraryPaths; }
@@ -695,6 +700,22 @@ public:
   virtual void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const;
+
+  /// \brief Add the flang arguments for system include paths.
+  ///
+  /// This routine is responsible for adding the -stdinc argument to
+  /// include headers and module files from standard system header directories.
+  virtual void
+  AddFlangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &Flang1Args) const {}
+
+  /// Add options that need to be passed to cc1 for this target that could add
+  /// commands to the compilation to transform an input.
+  virtual void
+  addActionsFromClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                                   llvm::opt::ArgStringList &CC1Args,
+                                   const JobAction &JA, Compilation &C,
+                                   const InputInfoList &Inputs) const;
 
   /// Add options that need to be passed to cc1 for this target.
   virtual void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,

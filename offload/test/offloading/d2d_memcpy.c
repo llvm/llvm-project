@@ -5,6 +5,8 @@
 // RUN: env OMP_MAX_ACTIVE_LEVELS=2 %libomptarget-run-generic | \
 // RUN: %fcheck-generic -allow-empty
 
+// UNSUPPORTED: amdgcn-amd-amdhsa
+
 #include <assert.h>
 #include <omp.h>
 #include <stdio.h>

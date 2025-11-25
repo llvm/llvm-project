@@ -7,6 +7,8 @@ define amdgpu_kernel void @gws_barrier_offset0(i32 %val) #0 {
   ; MIR: bb.0 (%ir-block.0):
   ; MIR-NEXT:   liveins: $sgpr8_sgpr9
   ; MIR-NEXT: {{  $}}
+  ; MIR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; MIR-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; MIR-NEXT:   renamable $sgpr4 = S_LOAD_DWORD_IMM killed renamable $sgpr8_sgpr9, 0, 0 :: (dereferenceable invariant load (s32) from %ir.val.kernarg.offset, align 16, addrspace 4)
   ; MIR-NEXT:   $m0 = S_MOV_B32 0
   ; MIR-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr4, implicit $exec, implicit $exec

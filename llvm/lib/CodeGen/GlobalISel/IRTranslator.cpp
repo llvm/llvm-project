@@ -2278,6 +2278,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                        DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
     return true;
   }
+  case Intrinsic::dbg_def:
+  case Intrinsic::dbg_kill:
+    report_fatal_error("unsupported DIExpr-based metadata");
   case Intrinsic::uadd_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_UADDO, MIRBuilder);
   case Intrinsic::sadd_with_overflow:

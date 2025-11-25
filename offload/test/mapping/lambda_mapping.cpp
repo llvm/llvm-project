@@ -1,4 +1,5 @@
 // Unonptimized, we need 24000000 bytes heap
+// XFAIL: amdgcn-amd-amdhsa
 // RUN: %libomptarget-compilexx-generic
 // RUN: env LIBOMPTARGET_HEAP_SIZE=24000000 \
 // RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic

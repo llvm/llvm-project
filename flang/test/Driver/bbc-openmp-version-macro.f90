@@ -9,7 +9,7 @@
 ! RUN: bbc -fopenmp -fopenmp-version=52 -o - %s | FileCheck %s --check-prefix=OPENMP-VERSION-52
 ! RUN: bbc -fopenmp -fopenmp-version=60 -o - %s | FileCheck %s --check-prefix=OPENMP-VERSION-60
 
-! DEFAULT-OPENMP-VERSION: {{.*}} = arith.constant 201107 : i32
+! DEFAULT-OPENMP-VERSION: {{.*}} = arith.constant 202111 : i32
 ! OPENMP-VERSION-31: {{.*}} = arith.constant 201107 : i32
 ! OPENMP-VERSION-40: {{.*}} = arith.constant 201307 : i32
 ! OPENMP-VERSION-45: {{.*}} = arith.constant 201511 : i32

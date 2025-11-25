@@ -2,6 +2,10 @@
 /// Perform several driver tests for OpenMP offloading
 ///
 
+// REQUIRES: x86-registered-target
+// REQUIRES: nvptx-registered-target
+// REQUIRES: amdgpu-registered-target
+
 /// ###########################################################################
 
 /// Check -Xopenmp-target uses one of the archs provided when several archs are used.

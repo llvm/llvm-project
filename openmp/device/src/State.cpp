@@ -15,11 +15,22 @@
 #include "Debug.h"
 #include "DeviceTypes.h"
 #include "DeviceUtils.h"
+#include "EmissaryIds.h"
 #include "Interface.h"
 #include "LibC.h"
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
+
+extern "C" {
+__attribute__((noinline)) void *__alt_libc_malloc(size_t sz);
+__attribute__((noinline)) void __alt_libc_free(void *ptr);
+__attribute__((noinline)) void *__llvm_omp_emissary_premalloc64(size_t sz);
+__attribute__((noinline)) void *__llvm_omp_emissary_premalloc(uint32_t sz32);
+__attribute__((noinline)) void __llvm_omp_emissary_free(void *ptr);
+__attribute__((noinline)) void *internal_malloc(uint64_t Size);
+__attribute__((noinline)) void internal_free(void *Ptr);
+}
 
 using namespace ompx;
 
@@ -46,12 +57,13 @@ namespace {
 
 /// A "smart" stack in shared memory.
 ///
-/// The stack exposes a malloc/free interface but works like a stack internally.
-/// In fact, it is a separate stack *per warp*. That means, each warp must push
-/// and pop symmetrically or this breaks, badly. The implementation will (aim
-/// to) detect non-lock-step warps and fallback to malloc/free. The same will
-/// happen if a warp runs out of memory. The master warp in generic memory is
-/// special and is given more memory than the rest.
+/// The stack exposes a malloc/free interface but works like a stack
+/// internally. In fact, it is a separate stack *per warp*. That means, each
+/// warp must push and pop symmetrically or this breaks, badly. The
+/// implementation will (aim to) detect non-lock-step warps and fallback to
+/// malloc/free. The same will happen if a warp runs out of memory. The
+/// master warp in generic memory is special and is given more memory than
+/// the rest.
 ///
 struct SharedMemorySmartStackTy {
   /// Initialize the stack. Must be called by all threads.
@@ -284,6 +296,7 @@ void state::exitDataEnvironment() {
 void state::resetStateForThread(uint32_t TId) {
   if (!config::mayUseThreadStates())
     return;
+
   if (OMP_LIKELY(!TeamState.HasThreadState || !ThreadStates[TId]))
     return;
 
@@ -459,4 +472,11 @@ void __kmpc_end_sharing_variables() {
 void __kmpc_get_shared_variables(void ***GlobalArgs) {
   *GlobalArgs = SharedMemVariableSharingSpacePtr;
 }
+}
+
+extern "C" {
+__attribute__((leaf)) void *__kmpc_impl_malloc(uint64_t t) {
+  return allocator::alloc(t);
+}
+__attribute__((leaf)) void __kmpc_impl_free(void *ptr) { allocator::free(ptr); }
 }

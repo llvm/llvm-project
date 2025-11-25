@@ -38,7 +38,17 @@ enum OpenMPOffloadingRequiresDirFlags : int64_t {
   /// when running on an APU, the GPU plugin may decide to
   /// run in zero-copy even though the user did not program
   /// their application with unified_shared_memory requirement.
-  OMPX_REQ_AUTO_ZERO_COPY = 0x020
+  OMPX_REQ_AUTO_ZERO_COPY = 0x020,
+  /// Eager Maps is an extension of auto zero-copy and
+  /// unified shared memory. Selected using an environment
+  /// varible OMPX_EAGER_ZERO_COPY_MAPS, it makes memory mapping
+  /// issue a GPU TLB prefaulting action. This allows applications
+  /// using unified memory to run with unified memory support disabled
+  /// (if possible on the target device).
+  OMPX_REQ_EAGER_ZERO_COPY_MAPS = 0x040,
+  /// Flag which signals whether Multi-Device kernels are enabled in
+  /// the runtime.
+  OMPX_REQ_MULTI_DEVICE_ENABLED = 0x080
 };
 
 class RequirementCollection {
@@ -70,11 +80,30 @@ public:
       return;
     }
 
-    // Auto zero-copy is only valid when no other requirement has been set
-    // and it is computed at device initialization time, after the requirement
-    // flag has already been set to OMP_REQ_NONE.
-    if (SetFlags == OMP_REQ_NONE && NewFlags == OMPX_REQ_AUTO_ZERO_COPY) {
-      SetFlags = NewFlags;
+    // Eager maps can happen on top of previous requirements:
+    if (NewFlags == OMPX_REQ_EAGER_ZERO_COPY_MAPS) {
+      if (SetFlags == OMP_REQ_NONE)
+        SetFlags = NewFlags;
+      else
+        SetFlags |= OMPX_REQ_EAGER_ZERO_COPY_MAPS;
+      return;
+    }
+
+    // Auto zero-copy is only valid when either no other requirement has been
+    // set or eager maps mode has been enabled. It is computed at device
+    // initialization time, after the requirement flag has already been set to
+    // OMP_REQ_NONE.
+    if (NewFlags == OMPX_REQ_AUTO_ZERO_COPY) {
+      if (SetFlags == OMP_REQ_NONE)
+        SetFlags = NewFlags;
+      else if (SetFlags == OMPX_REQ_EAGER_ZERO_COPY_MAPS)
+        SetFlags |= OMPX_REQ_AUTO_ZERO_COPY;
+      return;
+    }
+
+    // Ensure that the Multi-device mode is activated.
+    if (NewFlags == OMPX_REQ_MULTI_DEVICE_ENABLED) {
+      SetFlags |= OMPX_REQ_MULTI_DEVICE_ENABLED;
       return;
     }
 

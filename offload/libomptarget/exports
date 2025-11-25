@@ -35,6 +35,7 @@ VERS1.0 {
     __tgt_push_mapper_component;
     __kmpc_push_target_tripcount;
     __kmpc_push_target_tripcount_mapper;
+    ompx_get_team_procs;
     ompx_dump_mapping_tables;
     ompx_interop_add_completion_callback;
     omp_get_mapped_ptr;
@@ -53,9 +54,22 @@ VERS1.0 {
     omp_target_memset_async;
     omp_target_associate_ptr;
     omp_target_disassociate_ptr;
+    __kmpc_push_target_tripcount;
+    printf_allocate;
+    printf_execute;
+    global_allocate;
+    global_free;
+    f90print*;
+    __ockl_dm_alloc;
+    __ockl_dm_dealloc;
+    __ockl_devmem_request;
     llvm_omp_target_alloc_host;
     llvm_omp_target_alloc_shared;
     llvm_omp_target_alloc_device;
+    llvm_omp_target_alloc_multi_devices;
+    llvm_omp_target_lock_mem;
+    llvm_omp_target_unlock_mem;
+    llvm_omp_get_dynamic_shared;
     llvm_omp_target_free_host;
     llvm_omp_target_free_shared;
     llvm_omp_target_free_device;
@@ -64,6 +78,16 @@ VERS1.0 {
     llvm_omp_target_unlock_mem;
     __tgt_set_info_flag;
     __tgt_print_device_info;
+    omp_is_coarse_grain_mem_region;
+    omp_register_coarse_grain_mem;
+    libomptarget_ompt_set_trace_ompt;
+    libomptarget_ompt_start_trace;
+    libomptarget_ompt_flush_trace;
+    libomptarget_ompt_stop_trace;
+    libomptarget_ompt_set_granted_teams;
+    libomptarget_ompt_set_timestamp;
+    libomptarget_ompt_advance_buffer_cursor;
+    libomptarget_ompt_get_record_type;
     omp_get_interop_ptr;
     omp_get_interop_str;
     omp_get_interop_int;
@@ -79,6 +103,10 @@ VERS1.0 {
     __llvmPushCallConfiguration;
     __llvmPopCallConfiguration;
     llvmLaunchKernel;
+    EmissaryBuildVargs;
+    EmissaryHDF5;
+    EmissaryReserve;
+    EmissaryMPI;
   local:
     *;
 };

@@ -1,3 +1,4 @@
+// REQUIRES: garbage
 /*
  * parallel-reduction-nowait.c -- Archer testcase
  */

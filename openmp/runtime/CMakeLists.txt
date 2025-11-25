@@ -152,7 +152,7 @@ endif()
 # Turning this to FALSE aids parallel builds to not interfere with each other.
 # Currently, the testsuite module expects the just built OpenMP library to be located inside the exports/
 # directory.  TODO: have testsuite run under llvm-lit directly.  We can then get rid of copying to exports/
-set(LIBOMP_COPY_EXPORTS FALSE CACHE STRING
+set(LIBOMP_COPY_EXPORTS TRUE CACHE STRING
   "Should exports be copied into source exports/ directory?")
 
 # HWLOC-support
@@ -361,7 +361,7 @@ if ((LIBOMP_HAVE_OMPT_SUPPORT) AND (NOT WIN32))
 endif()
 set(LIBOMP_OMPT_SUPPORT ${OMPT_DEFAULT} CACHE BOOL
   "OMPT-support?")
-
+set(LIBOMP_OMPD_SUPPORT FALSE CACHE BOOL "OMPD-support?")
 set(LIBOMP_OMPT_DEBUG FALSE CACHE BOOL
   "Trace OMPT initialization?")
 set(LIBOMP_OMPT_OPTIONAL TRUE CACHE BOOL
@@ -464,7 +464,7 @@ endif()
 add_subdirectory(src)
 add_subdirectory(test)
 
-# make these variables available for tools:
+# make these variables available for tools
 set(LIBOMP_LIBRARY_DIR ${LIBOMP_LIBRARY_DIR} PARENT_SCOPE)
 set(LIBOMP_INCLUDE_DIR ${LIBOMP_INCLUDE_DIR} PARENT_SCOPE)
 set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_OMP_TOOLS_INCLUDE_DIR} PARENT_SCOPE)

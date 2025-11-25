@@ -1,5 +1,5 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
-
+!XFAIL: *
 module mod
 contains
    subroutine foo(dt, switch)

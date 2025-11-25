@@ -1,11 +1,11 @@
 ; Test to ensure that @llvm[.compiler].used is cloned to the split module for
 ; any globals whose defs were cloned to that module.
 
-; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
-; RUN: llvm-modextract -b -n 0 -o %t0.bc %t
-; RUN: llvm-modextract -b -n 1 -o %t1.bc %t
-; RUN: llvm-dis -o - %t0.bc | FileCheck --check-prefix=M0 %s
-; RUN: llvm-dis -o - %t1.bc | FileCheck --check-prefix=M1 %s
+; RUN: opt  -thinlto-bc -thinlto-split-lto-unit -o %t %s
+; RUN: llvm-modextract  -b -n 0 -o %t0.bc %t
+; RUN: llvm-modextract  -b -n 1 -o %t1.bc %t
+; RUN: llvm-dis  -o - %t0.bc | FileCheck --check-prefix=M0 %s
+; RUN: llvm-dis  -o - %t1.bc | FileCheck --check-prefix=M1 %s
 
 ; M0: @g1 = external global i8
 ; M0: @g2 = external global i8

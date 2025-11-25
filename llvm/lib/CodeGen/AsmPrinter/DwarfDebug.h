@@ -145,14 +145,24 @@ class Multi {
   /// DW_OP_LLVM_tag_offset value from DebugLocs.
   std::optional<uint8_t> DebugLocListTagOffset;
 
+  /// In DIOp-DIExpressions, if this variable has pointer type and all entries
+  /// in the loclist produce the same divergent address space, this is set to be
+  /// the that address space.
+  std::optional<unsigned> CommonAddrSpace;
+
 public:
   explicit Multi(unsigned DebugLocListIndex,
-                 std::optional<uint8_t> DebugLocListTagOffset)
+                 std::optional<uint8_t> DebugLocListTagOffset,
+                 std::optional<unsigned> CommonAddrSpace = std::nullopt)
       : DebugLocListIndex(DebugLocListIndex),
-        DebugLocListTagOffset(DebugLocListTagOffset) {}
+        DebugLocListTagOffset(DebugLocListTagOffset),
+        CommonAddrSpace(CommonAddrSpace) {}
   unsigned getDebugLocListIndex() const { return DebugLocListIndex; }
   std::optional<uint8_t> getDebugLocListTagOffset() const {
     return DebugLocListTagOffset;
+  }
+  std::optional<unsigned> getCommonDivergentAddrSpace() const {
+    return CommonAddrSpace;
   }
 };
 /// Single location defined by (potentially multiple) MMI entries.
@@ -276,6 +286,9 @@ public:
   }
 
   const DIType *getType() const;
+
+  bool isDivergentAddrSpaceCompatible() const;
+  std::optional<unsigned> getCommonDivergentAddrSpace() const;
 
   static bool classof(const DbgEntity *N) {
     return N->getDbgEntityID() == DbgVariableKind;
@@ -476,6 +489,9 @@ private:
   AccelTableKind TheAccelTableKind;
   bool HasAppleExtensionAttributes;
   bool HasSplitDwarf;
+  // Enables extensions defined at
+  // https://llvm.org/docs/AMDGPUDwarfProposalForHeterogeneousDebugging.html
+  bool HasHeterogeneousExtensionAttributes;
 
   /// Whether to generate the DWARF v5 string offsets table.
   /// It consists of a series of contributions, each preceded by a header.
@@ -817,6 +833,13 @@ public:
 
   bool useAppleExtensionAttributes() const {
     return HasAppleExtensionAttributes;
+  }
+
+  /// Returns whether extensions defined at
+  /// https://llvm.org/docs/AMDGPUDwarfProposalForHeterogeneousDebugging.html
+  /// are enabled.
+  bool useHeterogeneousExtensionAttributes() const {
+    return HasHeterogeneousExtensionAttributes;
   }
 
   /// Returns whether or not to change the current debug info for the

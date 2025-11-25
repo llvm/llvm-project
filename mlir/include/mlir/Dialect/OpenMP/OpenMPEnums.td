@@ -128,6 +128,7 @@ def ClauseMapFlagsAttachAuto : I32BitEnumAttrCaseBit<"attach_auto", 15>;
 def ClauseMapFlagsRefPtr : I32BitEnumAttrCaseBit<"ref_ptr", 16>;
 def ClauseMapFlagsRefPtee : I32BitEnumAttrCaseBit<"ref_ptee", 17>;
 def ClauseMapFlagsRefPtrPtee : I32BitEnumAttrCaseBit<"ref_ptr_ptee", 18>;
+def ClauseMapFlagsDescriptor : I32BitEnumAttrCaseBit<"descriptor", 19>;
 
 def ClauseMapFlags : OpenMP_BitEnumAttr<
     "ClauseMapFlags",
@@ -151,7 +152,8 @@ def ClauseMapFlags : OpenMP_BitEnumAttr<
       ClauseMapFlagsAttachAuto,
       ClauseMapFlagsRefPtr,
       ClauseMapFlagsRefPtee,
-      ClauseMapFlagsRefPtrPtee
+      ClauseMapFlagsRefPtrPtee,
+      ClauseMapFlagsDescriptor
     ]>;
 
 def ClauseMapFlagsAttr : OpenMP_EnumAttr<ClauseMapFlags,
@@ -279,31 +281,21 @@ def ScheduleModifier : OpenMP_I32EnumAttr<
 def ScheduleModifierAttr : OpenMP_EnumAttr<ScheduleModifier, "sched_mod">;
 
 //===----------------------------------------------------------------------===//
-// target_region_flags enum.
+// target_exec_mode enum.
 //===----------------------------------------------------------------------===//
 
-def TargetRegionFlagsNone : I32BitEnumAttrCaseNone<"none">;
-def TargetRegionFlagsGeneric : I32BitEnumAttrCaseBit<"generic", 0>;
-def TargetRegionFlagsSpmd : I32BitEnumAttrCaseBit<"spmd", 1>;
-def TargetRegionFlagsTripCount : I32BitEnumAttrCaseBit<"trip_count", 2>;
-def TargetRegionFlagsNoLoop : I32BitEnumAttrCaseBit<"no_loop", 3>;
+def TargetExecModeBare : I32EnumAttrCase<"bare", 0>;
+def TargetExecModeGeneric : I32EnumAttrCase<"generic", 1>;
+def TargetExecModeSpmd : I32EnumAttrCase<"spmd", 2>;
+def TargetExecModeSpmdNoLoop : I32EnumAttrCase<"no_loop", 3>;
 
-def TargetRegionFlags : OpenMP_BitEnumAttr<
-    "TargetRegionFlags",
-    "These flags describe properties of the target kernel. "
-    "TargetRegionFlagsGeneric - denotes generic kernel. "
-    "TargetRegionFlagsSpmd - denotes SPMD kernel. "
-    "TargetRegionFlagsNoLoop - denotes kernel where "
-    "num_teams * num_threads >= loop_trip_count. It allows the conversion "
-    "of loops into sequential code by ensuring that each team/thread "
-    "executes at most one iteration. "
-    "TargetRegionFlagsTripCount - checks if the loop trip count should be "
-    "calculated.", [
-      TargetRegionFlagsNone,
-      TargetRegionFlagsGeneric,
-      TargetRegionFlagsSpmd,
-      TargetRegionFlagsTripCount,
-      TargetRegionFlagsNoLoop
+def TargetExecMode : OpenMP_I32EnumAttr<
+    "TargetExecMode",
+    "target execution mode, mirroring the `OMPTgtExecModeFlags` LLVM enum", [
+      TargetExecModeBare,
+      TargetExecModeGeneric,
+      TargetExecModeSpmd,
+      TargetExecModeSpmdNoLoop,
     ]>;
 
 //===----------------------------------------------------------------------===//

@@ -449,9 +449,8 @@ static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
   if (!IsLocal)
     return errc::not_supported;
 
-  // The file is on a local drive, we can safely set FILE_DISPOSITION_INFO's
-  // flag.
-  Disposition.DeleteFile = true;
+  // The file is on a local drive, set the DeleteFile to true.
+  Disposition.DeleteFile = Delete;
   if (!SetFileInformationByHandle(Handle, FileDispositionInfo, &Disposition,
                                   sizeof(Disposition)))
     return mapWindowsError(::GetLastError());

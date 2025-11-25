@@ -1,0 +1,6 @@
+#!/bin/sh
+
+. git-sh-setup
+test -x "$GIT_DIR/hooks/llvm-main-revision" &&
+    exec "$GIT_DIR/hooks/llvm-main-revision" "pre-commit"
+:

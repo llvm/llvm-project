@@ -1,5 +1,5 @@
 /*
- * omp-debug.h
+ * ompd_intel.h
  *
  *  Created on: Jan 14, 2015
  *      Author: Ignacio Laguna
@@ -7,14 +7,6 @@
  *     Contact: ilaguna@llnl.gov
  *              protze@llnl.gov
  */
-//===----------------------------------------------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 #ifndef SRC_OMP_DEBUG_H_
 #define SRC_OMP_DEBUG_H_
 
@@ -38,8 +30,8 @@ extern "C" {
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 
-#include "omp-tools.h"
 #include "ompd-types.h"
+#include "omp-tools.h"
 
 #ifdef __cplusplus
 }
@@ -47,9 +39,10 @@ extern "C" {
 /******************************************************************************
  * General helper functions
  ******************************************************************************/
-ompd_rc_t initTypeSizes(ompd_address_space_context_t *context);
+  ompd_rc_t initTypeSizes(ompd_address_space_context_t *context);
 
-// NOLINTNEXTLINE "Used in below Macro:OMPD_CALLBACK."
+
+
 static const ompd_callbacks_t *callbacks = nullptr;
 
 // Invoke callback function and return if it fails
@@ -93,12 +86,12 @@ typedef struct _ompd_task_handle {
   ompd_address_space_handle_t *ah;
   ompd_address_t th;  /* target handle */
   ompd_address_t lwt; /* lwt handle */
-  _ompd_task_handle() {
-    ah = NULL;
-    th.segment = OMPD_SEGMENT_UNSPECIFIED;
-    lwt.segment = OMPD_SEGMENT_UNSPECIFIED;
-    th.address = 0;
-    lwt.address = 0;
+  _ompd_task_handle(){
+    ah=NULL;
+    th.segment=OMPD_SEGMENT_UNSPECIFIED;
+    lwt.segment=OMPD_SEGMENT_UNSPECIFIED;
+    th.address=0;
+    lwt.address=0;
   }
 } ompd_task_handle_t;
 

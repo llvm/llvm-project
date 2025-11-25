@@ -5,6 +5,7 @@
 // We use an x86_64-apple-darwin target to avoid host-dependent behaviour in
 // the driver. Platforms without an integrated assembler have different commands
 // REQUIRES: x86-registered-target
+// REQUIRES: jenkins-permissions-issue
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
@@ -133,7 +134,7 @@
 // CHECK-NEXT:           "{{.*}}tu_save_temps_module.o"
 // CHECK:                "{{.*}}tu_save_temps_module.s"
 // CHECK:              ]
-// CHECK-NEXT:         "executable": "clang_tool"
+// CHECK-NEXT:         "executable": [[CLANG:"[^"]*clang"]]
 // CHECK:              "input-file": "[[PREFIX]]{{.}}tu_save_temps_module.c"
 // CHECK-NEXT:       }
 // CHECK-NEXT:     ]

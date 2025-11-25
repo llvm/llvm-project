@@ -4,10 +4,12 @@ set(LLVM_LINK_COMPONENTS
   DebugInfoDWARFLowLevel
   AllTargetsDescs
   AllTargetsInfos
+  BinaryFormat
   MC
   Object
   Support
   TargetParser
+  BinaryFormat
   )
 
 add_llvm_tool(llvm-dwarfdump

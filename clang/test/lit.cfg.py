@@ -433,6 +433,10 @@ if "system-aix" in config.available_features:
 # default configs for the test runs.
 config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
 
+if config.enable_amdclang:
+    config.available_features.add("amdclang")
+    llvm_config.add_tool_substitutions(["amdclang"], tool_dirs)
+
 if lit_config.update_tests:
     import sys
     import os

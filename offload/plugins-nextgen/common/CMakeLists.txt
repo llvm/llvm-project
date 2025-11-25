@@ -7,6 +7,14 @@ tablegen(OFFLOAD include/OffloadErrcodes.inc -gen-errcodes -I ${CMAKE_CURRENT_SO
 tablegen(OFFLOAD include/OffloadInfo.inc -gen-info -I ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API)
 add_public_tablegen_target(PluginErrcodes)
 
+if(OFFLOAD_ENABLE_EMISSARY_APIS)
+  set(emissary_sources
+    src/Emissary.cpp
+    src/EmissaryFortrt.cpp
+    src/EmissaryPrint.cpp
+  )
+endif()
+
 # NOTE: Don't try to build `PluginInterface` using `add_llvm_library` because we
 # don't want to export `PluginInterface` while `add_llvm_library` requires that.
 add_library(PluginCommon OBJECT
@@ -16,6 +24,8 @@ add_library(PluginCommon OBJECT
   src/RPC.cpp
   src/OffloadError.cpp
   src/Utils/ELF.cpp
+  src/GenericProfiler.cpp
+  ${emissary_sources}
 )
 add_dependencies(PluginCommon intrinsics_gen PluginErrcodes)
 
@@ -34,6 +44,30 @@ endif()
 # Include the RPC server from the `libc` project.
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
+if(OFFLOAD_ENABLE_EMISSARY_APIS AND LIBOMPTARGET_BUILD_DEVICE_FORTRT)
+  target_link_libraries(PluginCommon PRIVATE flang_rt.runtime
+  -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
+endif()
+
+if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
+  add_library(PluginOmpt STATIC OMPT/OmptTracing.cpp OMPT/OmptProfiler.cpp)
+  target_include_directories(PluginOmpt PUBLIC
+    OMPT
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
+    ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
+    ${LIBOMPTARGET_INCLUDE_DIR}
+  )
+  target_compile_options(PluginOmpt PUBLIC ${offload_compile_flags} -fPIC )
+  target_link_options(PluginOmpt PUBLIC ${offload_link_flags})
+  target_compile_definitions(PluginOmpt PRIVATE
+    TARGET_NAME="Profiler"
+    DEBUG_PREFIX="OMPT"
+  )
+  add_dependencies(PluginOmpt PluginErrcodes)
+
+endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginCommon PRIVATE
@@ -43,6 +77,11 @@ target_compile_definitions(PluginCommon PRIVATE
 
 target_compile_options(PluginCommon PUBLIC ${offload_compile_flags})
 target_link_options(PluginCommon PUBLIC ${offload_link_flags})
+if (LLVM_LINK_LLVM_DYLIB)
+  target_link_libraries(PluginCommon PRIVATE LLVM)
+else()
+  target_link_libraries(PluginCommon PRIVATE LLVMProfileData)
+endif()
 
 target_include_directories(PluginCommon PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include

@@ -10,6 +10,8 @@
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sme -target-feature +sve -target-feature +sme2 -target-feature +sme-f64f64 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
+// REQUIRES: aarch64-registered-target
+
 #include <arm_sve.h>
 
 #if defined(__ARM_FEATURE_SME) && defined(__ARM_FEATURE_SVE)

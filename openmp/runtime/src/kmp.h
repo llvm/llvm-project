@@ -1076,6 +1076,7 @@ extern omp_memspace_handle_t const llvm_omp_target_host_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_shared_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_device_mem_space;
 extern omp_memspace_handle_t const kmp_max_mem_space;
+extern omp_memspace_handle_t __kmp_def_mem_space;
 
 typedef struct {
   omp_alloctrait_key_t key;
@@ -1095,6 +1096,8 @@ extern omp_allocator_handle_t const omp_thread_mem_alloc;
 extern omp_allocator_handle_t const llvm_omp_target_host_mem_alloc;
 extern omp_allocator_handle_t const llvm_omp_target_shared_mem_alloc;
 extern omp_allocator_handle_t const llvm_omp_target_device_mem_alloc;
+// Preview of pinned memory support
+extern omp_allocator_handle_t const ompx_pinned_mem_alloc;
 extern omp_allocator_handle_t const kmp_max_mem_alloc;
 extern omp_allocator_handle_t __kmp_def_allocator;
 
@@ -1107,6 +1110,8 @@ extern bool __kmp_hwloc_available;
 /// Memory space informaition is shared with offload runtime.
 typedef struct kmp_memspace_t {
   omp_memspace_handle_t memspace; // predefined input memory space
+  int num_devs;
+  int *devids;
   int num_resources = 0; // number of available resources
   int *resources = nullptr; // available resources
   kmp_memspace_t *next = nullptr; // next memory space handle
@@ -1133,6 +1138,10 @@ typedef struct kmp_allocator_t {
 #endif // KMP_HWLOC_ENABLED
 } kmp_allocator_t;
 
+extern omp_memspace_handle_t
+__kmpc_get_memory_space(size_t num_devices, int device_ids[],
+                        omp_memspace_handle_t base_memory_space);
+void __kmpc_destroy_memory_space(omp_memspace_handle_t ms);
 extern omp_allocator_handle_t __kmpc_init_allocator(int gtid,
                                                     omp_memspace_handle_t,
                                                     int ntraits,
@@ -1358,6 +1367,9 @@ extern kmp_uint64 __kmp_now_nsec();
 #if KMP_OS_WINDOWS
 #define KMP_INIT_WAIT 64U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 32U /* susequent number of spin-tests */
+#elif KMP_OS_CNK
+#define KMP_INIT_WAIT 16U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 8U /* susequent number of spin-tests */
 #elif KMP_OS_LINUX
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
@@ -4072,7 +4084,13 @@ enum fork_context_e {
 extern int __kmp_fork_call(ident_t *loc, int gtid,
                            enum fork_context_e fork_context, kmp_int32 argc,
                            microtask_t microtask, launch_t invoker,
-                           kmp_va_list ap);
+/* TODO: revert workaround for Intel(R) 64 tracker #96 */
+#if (KMP_ARCH_ARM || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64) && KMP_OS_LINUX
+                           va_list *ap
+#else
+                           va_list ap
+#endif
+                           );
 
 extern void __kmp_join_call(ident_t *loc, int gtid
 #if OMPT_SUPPORT
@@ -4120,6 +4138,8 @@ extern kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                                     size_t sizeof_kmp_task_t,
                                     size_t sizeof_shareds,
                                     kmp_routine_entry_t task_entry);
+extern int __kmpc_omp_task_alloc_with_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task,
+                                           int ndeps, int nargs, ...); //AOCC
 extern void __kmp_init_implicit_task(ident_t *loc_ref, kmp_info_t *this_thr,
                                      kmp_team_t *team, int tid,
                                      int set_curr_task);

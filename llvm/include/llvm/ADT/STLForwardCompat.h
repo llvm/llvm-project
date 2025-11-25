@@ -17,6 +17,7 @@
 #ifndef LLVM_ADT_STLFORWARDCOMPAT_H
 #define LLVM_ADT_STLFORWARDCOMPAT_H
 
+#include <array>
 #include <optional>
 #include <type_traits>
 #include <utility>

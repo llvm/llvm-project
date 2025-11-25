@@ -306,6 +306,9 @@ public:
   /// Return the FPClassTest for nofpclass
   LLVM_ABI FPClassTest getNoFPClass() const;
 
+  /// Return if global variable is instrumented by AddrSanitizer.
+  bool isSanitizedPaddedGlobal() const;
+
   /// Returns the value of the range attribute.
   LLVM_ABI const ConstantRange &getRange() const;
 

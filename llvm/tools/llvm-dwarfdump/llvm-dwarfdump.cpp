@@ -419,15 +419,24 @@ static bool filterArch(ObjectFile &Obj) {
   return false;
 }
 
+struct TargetCallbacks {
+  std::unique_ptr<const MCRegisterInfo> MCRegInfo;
+  std::function<llvm::StringRef(uint64_t DwarfRegNum, bool IsEH)>
+      GetNameForDWARFReg;
+  std::function<llvm::StringRef(uint64_t AS)> GetNameForDWARFAddressSpace;
+};
+
 using HandlerFn = std::function<bool(ObjectFile &, DWARFContext &DICtx,
                                      const Twine &, raw_ostream &)>;
 
 /// Print only DIEs that have a certain name.
-static bool filterByName(
-    const StringSet<> &Names, DWARFDie Die, StringRef NameRef, raw_ostream &OS,
-    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
+static bool filterByName(const StringSet<> &Names, DWARFDie Die,
+                         StringRef NameRef, raw_ostream &OS,
+                         TargetCallbacks &Callbacks) {
   DIDumpOptions DumpOpts = getDumpOpts(Die.getDwarfUnit()->getContext());
-  DumpOpts.GetNameForDWARFReg = GetNameForDWARFReg;
+  DumpOpts.GetNameForDWARFReg = Callbacks.GetNameForDWARFReg;
+  DumpOpts.GetNameForDWARFAddressSpace = Callbacks.GetNameForDWARFAddressSpace;
+
   std::string Name =
       (IgnoreCase && !UseRegex) ? NameRef.lower() : NameRef.str();
   if (UseRegex) {
@@ -453,18 +462,17 @@ static bool filterByName(
 }
 
 /// Print only DIEs that have a certain name.
-static void filterByName(
-    const StringSet<> &Names, DWARFContext::unit_iterator_range CUs,
-    raw_ostream &OS,
-    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
+static void filterByName(const StringSet<> &Names,
+                         DWARFContext::unit_iterator_range CUs, raw_ostream &OS,
+                         TargetCallbacks &Callbacks) {
   auto filterDieNames = [&](DWARFUnit *Unit) {
     for (const auto &Entry : Unit->dies()) {
       DWARFDie Die = {Unit, &Entry};
       if (const char *Name = Die.getName(DINameKind::ShortName))
-        if (filterByName(Names, Die, Name, OS, GetNameForDWARFReg))
+        if (filterByName(Names, Die, Name, OS, Callbacks))
           continue;
       if (const char *Name = Die.getName(DINameKind::LinkageName))
-        filterByName(Names, Die, Name, OS, GetNameForDWARFReg);
+        filterByName(Names, Die, Name, OS, Callbacks);
     }
   };
   for (const auto &CU : CUs) {
@@ -520,9 +528,8 @@ static void getDies(DWARFContext &DICtx, const DWARFDebugNames &Accel,
 }
 
 /// Print only DIEs that have a certain name.
-static void filterByAccelName(
-    ArrayRef<std::string> Names, DWARFContext &DICtx, raw_ostream &OS,
-    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
+static void filterByAccelName(ArrayRef<std::string> Names, DWARFContext &DICtx,
+                              raw_ostream &OS, TargetCallbacks &Callbacks) {
   SmallVector<DWARFDie, 4> Dies;
   for (const auto &Name : Names) {
     getDies(DICtx, DICtx.getAppleNames(), Name, Dies);
@@ -534,15 +541,15 @@ static void filterByAccelName(
   Dies.erase(llvm::unique(Dies), Dies.end());
 
   DIDumpOptions DumpOpts = getDumpOpts(DICtx);
-  DumpOpts.GetNameForDWARFReg = GetNameForDWARFReg;
+  DumpOpts.GetNameForDWARFReg = Callbacks.GetNameForDWARFReg;
+  DumpOpts.GetNameForDWARFAddressSpace = Callbacks.GetNameForDWARFAddressSpace;
   for (DWARFDie Die : Dies)
     Die.dump(OS, 0, DumpOpts);
 }
 
 /// Print all DIEs in apple accelerator tables
-static void findAllApple(
-    DWARFContext &DICtx, raw_ostream &OS,
-    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
+static void findAllApple(DWARFContext &DICtx, raw_ostream &OS,
+                         const TargetCallbacks &Callbacks) {
   MapVector<StringRef, llvm::SmallSet<DWARFDie, 2>> NameToDies;
 
   auto PushDIEs = [&](const AppleAcceleratorTable &Accel) {
@@ -561,7 +568,7 @@ static void findAllApple(
   PushDIEs(DICtx.getAppleTypes());
 
   DIDumpOptions DumpOpts = getDumpOpts(DICtx);
-  DumpOpts.GetNameForDWARFReg = GetNameForDWARFReg;
+  DumpOpts.GetNameForDWARFReg = Callbacks.GetNameForDWARFReg;
   for (const auto &[Name, Dies] : NameToDies) {
     OS << llvm::formatv("\nApple accelerator entries with name = \"{0}\":\n",
                         Name);
@@ -701,24 +708,46 @@ createRegInfo(const object::ObjectFile &Obj) {
   return MCRegInfo;
 }
 
-static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
-                           const Twine &Filename, raw_ostream &OS) {
+static TargetCallbacks getCallbacks(ObjectFile &Obj, const Twine &Filename) {
+  Triple TT = Obj.makeTriple();
 
-  auto MCRegInfo = createRegInfo(Obj);
-  if (!MCRegInfo)
+  std::string TargetLookupError;
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, TargetLookupError);
+  if (!TargetLookupError.empty()) {
+    logAllUnhandledErrors(
+        createStringError(inconvertibleErrorCode(), "Error in creating Target"),
+        errs(), Filename.str() + ": ");
+
+    return {};
+  }
+
+  const MCRegisterInfo *MCRI = TheTarget->createMCRegInfo(TT);
+  if (!MCRI) {
     logAllUnhandledErrors(createStringError(inconvertibleErrorCode(),
-                                            "Error in creating MCRegInfo"),
+                                            "Error in creating MCRegisterInfo"),
                           errs(), Filename.str() + ": ");
-
-  auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
-    if (!MCRegInfo)
-      return {};
+    return {};
+  }
+  TargetCallbacks Callbacks;
+  Callbacks.MCRegInfo.reset(MCRI);
+  Callbacks.GetNameForDWARFReg = [MCRI](uint64_t DwarfRegNum,
+                                        bool IsEH) -> StringRef {
     if (std::optional<MCRegister> LLVMRegNum =
-            MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH))
-      if (const char *RegName = MCRegInfo->getName(*LLVMRegNum))
+            MCRI->getLLVMRegNum(DwarfRegNum, IsEH))
+      if (const char *RegName = MCRI->getName(*LLVMRegNum))
         return StringRef(RegName);
     return {};
   };
+  Callbacks.GetNameForDWARFAddressSpace = [TT](uint64_t AS) {
+    return dwarf::AddressSpaceString(AS, TT);
+  };
+
+  return Callbacks;
+}
+
+static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
+                           const Twine &Filename, raw_ostream &OS) {
+  TargetCallbacks Callbacks = getCallbacks(Obj, Filename);
 
   // The UUID dump already contains all the same information.
   if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
@@ -734,26 +763,27 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
     for (const auto &name : Name)
       Names.insert((IgnoreCase && !UseRegex) ? StringRef(name).lower() : name);
 
-    filterByName(Names, DICtx.normal_units(), OS, GetRegName);
-    filterByName(Names, DICtx.dwo_units(), OS, GetRegName);
+    filterByName(Names, DICtx.normal_units(), OS, Callbacks);
+    filterByName(Names, DICtx.dwo_units(), OS, Callbacks);
     return true;
   }
 
   // Handle the --find option and lower it to --debug-info=<offset>.
   if (!Find.empty()) {
-    filterByAccelName(Find, DICtx, OS, GetRegName);
+    filterByAccelName(Find, DICtx, OS, Callbacks);
     return true;
   }
 
   // Handle the --find-all-apple option and lower it to --debug-info=<offset>.
   if (FindAllApple) {
-    findAllApple(DICtx, OS, GetRegName);
+    findAllApple(DICtx, OS, Callbacks);
     return true;
   }
 
   // Dump the complete DWARF structure.
   auto DumpOpts = getDumpOpts(DICtx);
-  DumpOpts.GetNameForDWARFReg = GetRegName;
+  DumpOpts.GetNameForDWARFReg = Callbacks.GetNameForDWARFReg;
+  DumpOpts.GetNameForDWARFAddressSpace = Callbacks.GetNameForDWARFAddressSpace;
   DICtx.dump(OS, DumpOpts, DumpOffsets);
   return true;
 }

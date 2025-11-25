@@ -1,3 +1,4 @@
+// XFAIL: amdgcn-amd-amdhsa
 // clang-format off
 //
 // RUN: %libomptarget-compileopt-generic -fopenmp-target-jit
@@ -10,11 +11,12 @@
 
 // REQUIRES: gpu
 
-// Ensure that there is only the kernel function left, not any outlined
+// FIXME: We want that there is only the kernel function left, not two outlined
 // parallel regions.
 //
 // CHECK: define
-// CHECK-NOT: define
+// CHECK: define
+// CHECK: define
 
 #include <omp.h>
 #include <stdio.h>

@@ -2,9 +2,9 @@
 ; This test checks to make sure that constant exprs fold in some simple
 ; situations
 
-; RUN: opt -S < %s | FileCheck %s
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
-; RUN: verify-uselistorder %s
+; RUN: opt  -S < %s | FileCheck %s
+; RUN: llvm-as  < %s | llvm-dis  | FileCheck %s
+; RUN: verify-uselistorder  %s
 
 @A = global i64 0
 

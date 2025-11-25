@@ -2,6 +2,7 @@
 // RUN: env HSA_XNACK=1 \
 // RUN: %libomptarget-run-generic | %fcheck-generic
 // XFAIL: nvptx64-nvidia-cuda
+// XFAIL: nvptx64-nvidia-cuda-oldDriver
 // XFAIL: nvptx64-nvidia-cuda-LTO
 
 // REQUIRES: unified_shared_memory

@@ -1,6 +1,5 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
-// REQUIRES: gpu
 
 #include <cassert>
 #include <iostream>

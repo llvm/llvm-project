@@ -17,7 +17,7 @@
 !CHECK: %[[val_10:.*]] = fir.load %[[val_5]]#0 : !fir.ref<i32>
 !CHECK: %[[val_11:.*]] = arith.addi %[[val_c8]], %[[val_10]] : i32
 !CHECK: %[[val_12:.*]] = hlfir.no_reassoc %[[val_11]] : i32
-!CHECK: omp.atomic.update %[[val_9]] : !fir.ref<i32> {
+!CHECK: omp.atomic.update memory_order(relaxed) %[[val_9]] : !fir.ref<i32> {
 !CHECK:   ^bb0(%[[ARG:.*]]: i32):
 !CHECK:     %[[val_18:.*]] = arith.muli %[[val_12]], %[[ARG]] : i32
 !CHECK:     omp.yield(%[[val_18]] : i32)
@@ -25,7 +25,7 @@
 !CHECK: %[[val_c2_0:.*]] = arith.constant 2 : index
 !CHECK: %[[val_13:.*]] = hlfir.designate %[[val_8]]#0 (%[[val_c2_0]])  : (!fir.ref<!fir.array<5xi32>>, index) -> !fir.ref<i32>
 !CHECK: %[[val_c8_1:.*]] = arith.constant 8 : i32
-!CHECK: omp.atomic.update %[[val_13:.*]] : !fir.ref<i32> {
+!CHECK: omp.atomic.update memory_order(relaxed)  %[[val_13:.*]] : !fir.ref<i32> {
 !CHECK:   ^bb0(%[[ARG:.*]]: i32):
 !CHECK:     %[[val_18:.*]] = arith.divsi %[[ARG]], %[[val_c8_1]] : i32
 !CHECK:     omp.yield(%[[val_18]] : i32)
@@ -36,13 +36,13 @@
 !CHECK: %[[val_15:.*]] = fir.load %[[val_14]] : !fir.ref<i32>
 !CHECK: %[[val_16:.*]] = arith.addi %[[val_c8_2]], %[[val_15]] : i32
 !CHECK: %[[val_17:.*]] = hlfir.no_reassoc %[[val_16]] : i32
-!CHECK: omp.atomic.update %[[val_5]]#0 : !fir.ref<i32> {
+!CHECK: omp.atomic.update memory_order(relaxed)  %[[val_5]]#0 : !fir.ref<i32> {
 !CHECK:   ^bb0(%[[ARG:.*]]: i32):
 !CHECK:      %[[val_18:.*]] = arith.addi %[[val_17]], %[[ARG]] : i32
 !CHECK:      omp.yield(%[[val_18]] : i32)
 !CHECK: }
 !CHECK: %[[val_c8_3:.*]] = arith.constant 8 : i32
-!CHECK: omp.atomic.update %[[val_5]]#0 : !fir.ref<i32> {
+!CHECK: omp.atomic.update memory_order(relaxed) %[[val_5]]#0 : !fir.ref<i32> {
 !CHECK:   ^bb0(%[[ARG]]: i32):
 !CHECK:     %[[val_18:.*]] = arith.subi %[[val_c8_3]], %[[ARG]] : i32
 !CHECK:     omp.yield(%[[val_18]] : i32)

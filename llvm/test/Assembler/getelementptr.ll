@@ -1,5 +1,5 @@
-; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
-; RUN: verify-uselistorder %s
+; RUN: llvm-as  < %s | llvm-dis  | llvm-as  | llvm-dis  | FileCheck %s
+; RUN: verify-uselistorder  %s
 
 @A = external global [2 x [3 x [5 x [7 x i32]]]]
 @B = global ptr getelementptr ([2 x [3 x [5 x [7 x i32]]]], ptr @A, i64 0, i64 0, i64 2, i64 1, i64 7523)

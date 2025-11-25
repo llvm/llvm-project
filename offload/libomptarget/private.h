@@ -24,7 +24,8 @@
 #include <cstdint>
 
 extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-                  KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
+                  KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo,
+                  bool InMultiDeviceMode, bool &IsMultiDeviceKernel);
 
 extern int target_activate_rr(DeviceTy &Device, uint64_t MemorySize,
                               void *ReqAddr, bool isRecord, bool SaveOutput,
@@ -37,6 +38,7 @@ extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                          uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo);
 
 extern void handleTargetOutcome(bool Success, ident_t *Loc);
+extern bool checkDevice(int64_t &DeviceID, ident_t *Loc);
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Print out the names and properties of the arguments to each kernel

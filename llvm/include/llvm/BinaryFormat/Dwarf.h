@@ -149,6 +149,7 @@ enum LocationAtom {
   DW_OP_LLVM_arg = 0x1005,               ///< Only used in LLVM metadata.
   DW_OP_LLVM_extract_bits_sext = 0x1006, ///< Only used in LLVM metadata.
   DW_OP_LLVM_extract_bits_zext = 0x1007, ///< Only used in LLVM metadata.
+  DW_OP_LLVM_poisoned = 0x1008,          ///< Only used in LLVM metadata.
 };
 
 enum LlvmUserLocationAtom {
@@ -765,6 +766,13 @@ enum CallingConvention {
   DW_CC_hi_user = 0xff
 };
 
+enum MemorySpace {
+#define HANDLE_DW_MSPACE(ID, NAME) DW_MSPACE_LLVM_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+  DW_MSPACE_LLVM_lo_user = 0x8000,
+  DW_MSPACE_LLVM_hi_user = 0xffff
+};
+
 enum AddressSpace {
 #define HANDLE_DW_ASPACE(ID, NAME) DW_ASPACE_LLVM_##NAME = ID,
 #define HANDLE_DW_ASPACE_PRED(ID, NAME, PRED) DW_ASPACE_LLVM_##NAME = ID,
@@ -1026,6 +1034,7 @@ LLVM_ABI StringRef IndexString(unsigned Idx);
 LLVM_ABI StringRef FormatString(DwarfFormat Format);
 LLVM_ABI StringRef FormatString(bool IsDWARF64);
 LLVM_ABI StringRef RLEString(unsigned RLE);
+LLVM_ABI StringRef MemorySpaceString(unsigned MS);
 LLVM_ABI StringRef AddressSpaceString(unsigned AS, const llvm::Triple &TT);
 /// @}
 
@@ -1046,8 +1055,10 @@ LLVM_ABI unsigned getSubOperationEncoding(unsigned OpEncoding,
 LLVM_ABI unsigned getVirtuality(StringRef VirtualityString);
 LLVM_ABI unsigned getEnumKind(StringRef EnumKindString);
 LLVM_ABI unsigned getLanguage(StringRef LanguageString);
+LLVM_ABI unsigned getMemorySpace(StringRef LanguageString);
 LLVM_ABI unsigned getSourceLanguageName(StringRef SourceLanguageNameString);
 LLVM_ABI unsigned getCallingConvention(StringRef LanguageString);
+LLVM_ABI unsigned getMemorySpace(StringRef LanguageString);
 LLVM_ABI unsigned getAttributeEncoding(StringRef EncodingString);
 LLVM_ABI unsigned getMacinfo(StringRef MacinfoString);
 LLVM_ABI unsigned getMacro(StringRef MacroString);

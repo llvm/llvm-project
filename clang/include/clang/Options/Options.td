@@ -857,6 +857,8 @@ def P : Flag<["-"], "P">,
   Group<Preprocessor_Group>,
   HelpText<"Disable linemarker output in -E mode">,
   MarshallingInfoNegativeFlag<PreprocessorOutputOpts<"ShowLineMarkers">>;
+def parallel_jobs_EQ : Joined<["-"], "parallel-jobs=">, Flags<[NoXarchOption]>,
+  HelpText<"Number of parallel jobs">;
 def Qy : Flag<["-"], "Qy">, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Emit metadata containing compiler name and version">;
 def Qn : Flag<["-"], "Qn">, Visibility<[ClangOption, CC1Option]>,
@@ -1595,11 +1597,15 @@ defm xl_pragma_pack : BoolFOption<"xl-pragma-pack",
           "Enable IBM XL #pragma pack handling">,
   NegFlag<SetFalse>>;
 def shared_libsan : Flag<["-"], "shared-libsan">,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Dynamically link the sanitizer runtime">;
 def static_libsan : Flag<["-"], "static-libsan">,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Statically link the sanitizer runtime (Not supported for ASan, TSan or UBSan on darwin)">;
-def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>;
-def : Flag<["-"], "static-libasan">, Alias<static_libsan>;
+def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def : Flag<["-"], "static-libasan">, Alias<static_libsan>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
 
 defm assume_unique_vtables : BoolFOption<"assume-unique-vtables",
@@ -2386,7 +2392,7 @@ def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.
-let Visibility = [ClangOption, CC1Option, CLOption] in {
+let Visibility = [ClangOption, CC1Option, CLOption, FlangOption, FC1Option] in {
 
 def fsanitize_EQ : CommaJoined<["-"], "fsanitize=">, Group<f_clang_Group>,
                    MetaVarName<"<check>">,
@@ -3771,6 +3777,9 @@ defm disable_block_signature_string : BoolFOption<"disable-block-signature-strin
   NegFlag<SetFalse, [], [ClangOption], "Don't disable">,
   BothFlags<[], [CC1Option], " block signature string)">>;
 
+def ffast_amd_memory_allocator : Flag<["-"], "ffast-amd-memory-allocator">, Group<f_Group>,
+  Flags<[HelpHidden]>, Visibility<[FlangOption,FC1Option]>,
+  HelpText<"Enable optimized memory allocator for AMD Instinct(tm) APUs (experimental)">;
 def fomit_frame_pointer : Flag<["-"], "fomit-frame-pointer">, Group<f_Group>,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Omit the frame pointer from functions that don't need it. "
@@ -3840,6 +3849,93 @@ def fopenmp_cuda_blocks_per_sm_EQ : Joined<["-"], "fopenmp-cuda-blocks-per-sm=">
 def fopenmp_cuda_teams_reduction_recs_num_EQ : Joined<["-"], "fopenmp-cuda-teams-reduction-recs-num=">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 
+// AMD OpenMP
+def fno_openmp_allow_kernel_io : Flag<["-"], "fno-openmp-allow-kernel-io">, Group<f_Group>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable OpenMP host-exec device I/O">,
+  MarshallingInfoFlag<LangOpts<"OpenMPKernelIO">>;
+def fopenmp_allow_kernel_io : Flag<["-"], "fopenmp-allow-kernel-io">, Group<f_Group>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable OpenMP host-exec device I/O">,
+  MarshallingInfoFlag<LangOpts<"OpenMPKernelIO">>;
+def fenable_host_devmem : Flag<["-"], "fenable-host-devmem">, Group<f_Group>,
+  HelpText<"Enable host-assisted dynamic device memory management (Default)">;
+def fdisable_host_devmem : Flag<["-"], "fdisable-host-devmem">, Group<f_Group>,
+  HelpText<"Disable host-assisted dynamic device memory management">;
+def fopenmp_runtimelib_EQ : Joined<["-"], "fopenmp-runtimelib=">, Group<f_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>, Flags<[NoArgumentUnused]>,
+  HelpText<"Select lib, lib-perf, or lib-debug openmp runtime"
+           " <arg> must be: lib, lib-perf or lib-debug.">;
+def fopenmp_gpu_threads_per_team_EQ : Joined<["-"], "fopenmp-gpu-threads-per-team=">, Group<f_Group>,
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
+def fopenmp_target_xteam_reduction_blocksize_EQ : Joined<["-"], "fopenmp-target-xteam-reduction-blocksize=">, Group<f_Group>,
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>;
+def fopenmp_target_fast : Flag<["-"], "fopenmp-target-fast">, Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>;
+def fno_openmp_target_fast : Flag<["-"], "fno-openmp-target-fast">, Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>;
+def fopenmp_target_ignore_env_vars : Flag<["-"], "fopenmp-target-ignore-env-vars">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
+  HelpText<"Assert that device related environment variables can be ignored while generating code">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetIgnoreEnvVars">>;
+def fno_openmp_target_ignore_env_vars : Flag<["-"], "fno-openmp-target-ignore-env-vars">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
+  HelpText<"Assert that device related environment variables cannot be ignored while generating code">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetIgnoreEnvVars">>;
+def fopenmp_target_big_jump_loop : Flag<["-"], "fopenmp-target-big-jump-loop">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
+  HelpText<"Use the big-jump-loop code generation technique if possible">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetBigJumpLoop">>;
+def fno_openmp_target_big_jump_loop : Flag<["-"], "fno-openmp-target-big-jump-loop">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
+  HelpText<"Do not use the big-jump-loop code generation technique">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetBigJumpLoop">>;
+def fopenmp_target_no_loop : Flag<["-"], "fopenmp-target-no-loop">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
+  HelpText<"Use the no-loop code generation technique if possible">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetNoLoop">>;
+def fno_openmp_target_no_loop : Flag<["-"], "fno-openmp-target-no-loop">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
+  HelpText<"Do not use the no-loop code generation technique">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetNoLoop">>;
+def fopenmp_target_xteam_reduction : Flag<["-"], "fopenmp-target-xteam-reduction">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
+  HelpText<"Use the cross-team code generation technique if possible">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamReduction">>;
+def fno_openmp_target_xteam_reduction : Flag<["-"], "fno-openmp-target-xteam-reduction">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
+  HelpText<"Do not use the cross-team reduction code generation technique">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamReduction">>;
+def fopenmp_target_fast_reduction : Flag<["-"], "fopenmp-target-fast-reduction">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
+  HelpText<"Use the fast reduction code generation technique if possible">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetFastReduction">>;
+def fno_openmp_target_fast_reduction : Flag<["-"], "fno-openmp-target-fast-reduction">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
+  HelpText<"Do not use the fast reduction code generation technique">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetFastReduction">>;
+def fopenmp_target_xteam_scan : Flag<["-"], "fopenmp-target-xteam-scan">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Use the cross-team specialized kernel code generation for 'scan' directive.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamScan">>;
+def fno_openmp_target_xteam_scan : Flag<["-"], "fno-openmp-target-xteam-scan">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Do not use the cross-team specialized kernel code generation for 'scan' directive.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamScan">>;
+def fopenmp_target_xteam_no_loop_scan : Flag<["-"], "fopenmp-target-xteam-no-loop-scan">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Use the no-loop variant of the cross-team specialized kernel code generation for 'scan' directive.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamNoLoopScan">>;
+def fno_openmp_target_xteam_no_loop_scan : Flag<["-"], "fno-openmp-target-xteam-no-loop-scan">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Do not use the no-loop variant of the cross-team specialized kernel code generation for 'scan' directive.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamNoLoopScan">>;
+def fopenmp_target_multi_device : Flag<["-"], "fopenmp-target-multi-device">, Group<f_Group>,
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
+  HelpText<"Enable code generation to emit support for multi device target region execution">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetMultiDevice">>;
+def fno_openmp_target_multi_device : Flag<["-"], "fno-openmp-target-multi-device">, Group<f_Group>,
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option,FlangOption]>,
+  HelpText<"Do not use code generation to emit support for multi target offloading">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetMultiDevice">>;
+
 //===----------------------------------------------------------------------===//
 // Shared cc1 + fc1 OpenMP Target Options
 //===----------------------------------------------------------------------===//
@@ -3859,10 +3955,11 @@ def fno_openmp_target_debug : Flag<["-"], "fno-openmp-target-debug">;
 //===----------------------------------------------------------------------===//
 // FlangOption + FC1 + ClangOption + CC1Option
 //===----------------------------------------------------------------------===//
+// Unsupported on AMD downstream
 let Visibility = [FC1Option, FlangOption, CC1Option, ClangOption] in {
-def fopenacc : Flag<["-"], "fopenacc">, Group<f_Group>,
+def fopenacc : Flag<["-"], "fopenacc">, Group<f_Group>, Visibility<[]>,
   HelpText<"Enable OpenACC">;
-} // let Visibility = [FC1Option, FlangOption, CC1Option, ClangOption]
+}
 
 //===----------------------------------------------------------------------===//
 // Optimisation remark options
@@ -3910,11 +4007,19 @@ def fno_openmp_assume_teams_oversubscription : Flag<["-"], "fno-openmp-assume-te
   HelpText<"Do not assume teams oversubscription.">;
 def fno_openmp_assume_threads_oversubscription : Flag<["-"], "fno-openmp-assume-threads-oversubscription">,
   HelpText<"Do not assume threads oversubscription.">;
+def fno_openmp_assume_no_thread_state : Flag<["-"], "fno-openmp-assume-no-thread-state">, Group<f_Group>,
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Assert that a thread in a parallel region may modify an ICV">,
+  MarshallingInfoFlag<LangOpts<"OpenMPNoThreadState">>;
 def fopenmp_assume_no_thread_state : Flag<["-"], "fopenmp-assume-no-thread-state">,
   HelpText<"Assert no thread in a parallel region modifies an ICV">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoThreadState">>;
 def fopenmp_assume_no_nested_parallelism : Flag<["-"], "fopenmp-assume-no-nested-parallelism">,
   HelpText<"Assert no nested parallel regions in the GPU">,
+  MarshallingInfoFlag<LangOpts<"OpenMPNoNestedParallelism">>;
+def fno_openmp_assume_no_nested_parallelism : Flag<["-"], "fno-openmp-assume-no-nested-parallelism">, Group<f_Group>,
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Assert that a nested parallel region may be used in the GPU">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoNestedParallelism">>;
 
 } // let Group = f_Group
@@ -3922,7 +4027,7 @@ def fopenmp_assume_no_nested_parallelism : Flag<["-"], "fopenmp-assume-no-nested
 } // let Flags = [NoArgumentUnused, HelpHidden]
 
 def fopenmp_offload_mandatory : Flag<["-"], "fopenmp-offload-mandatory">, Group<f_Group>,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
   HelpText<"Do not create a host fallback if offloading to the device fails.">,
   MarshallingInfoFlag<LangOpts<"OpenMPOffloadMandatory">>;
 def fopenmp_force_usm : Flag<["-"], "fopenmp-force-usm">, Group<f_Group>,
@@ -4783,6 +4888,23 @@ def gdwarf32 : Flag<["-"], "gdwarf32">, Group<g_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"Enables DWARF32 format for ELF binaries, if debug information emission is enabled.">;
 
+def gheterogeneous_dwarf_EQ : Joined<["-"], "gheterogeneous-dwarf=">,
+  Group<g_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Control DWARF extensions for heterogeneous debugging">,
+  Values<"disabled,diexpression">,
+  NormalizedValuesScope<"CodeGenOptions::HeterogeneousDwarfOpts">,
+  NormalizedValues<["Disabled","DIExpression"]>,
+  MarshallingInfoEnum<CodeGenOpts<"HeterogeneousDwarfMode">, "Disabled">;
+def gheterogeneous_dwarf : Flag<["-"], "gheterogeneous-dwarf">, Group<g_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable DIExpression-based DWARF extensions for heterogeneous debugging">,
+  Alias<gheterogeneous_dwarf_EQ>, AliasArgs<["diexpression"]>;
+def gno_heterogeneous_dwarf : Flag<["-"], "gno-heterogeneous-dwarf">,
+  Visibility<[ClangOption, CC1Option]>,
+  Group<g_Group>,
+  HelpText<"Disable DWARF extensions for heterogeneous debugging">,
+  Alias<gheterogeneous_dwarf_EQ>, AliasArgs<["disabled"]>;
+
 def gcodeview : Flag<["-"], "gcodeview">,
   HelpText<"Generate CodeView debug information">,
   Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption, DXCOption]>,
@@ -4868,8 +4990,10 @@ def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
            " or precompiled headers">;
 def gno_modules : Flag <["-"], "gno-modules">, Group<g_flags_Group>;
 def gz_EQ : Joined<["-"], "gz=">, Group<g_flags_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
     HelpText<"DWARF debug sections compression type">;
-def gz : Flag<["-"], "gz">, Alias<gz_EQ>, AliasArgs<["zlib"]>, Group<g_flags_Group>;
+def gz : Flag<["-"], "gz">, Alias<gz_EQ>, AliasArgs<["zlib"]>, Group<g_flags_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def gembed_source : Flag<["-"], "gembed-source">, Group<g_flags_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Embed source text in DWARF debug sections">,
@@ -5512,6 +5636,8 @@ def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Gr
 defm cumode : SimpleMFlag<"cumode",
   "Specify CU wavefront", "Specify WGP wavefront",
   " execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
+defm sram_ecc_legacy : SimpleMFlag<"sram-ecc", "", "",
+  "Legacy option to specify SRAM ECC mode (AMDGPU only)">;
 defm tgsplit : SimpleMFlag<"tgsplit", "Enable", "Disable",
   " threadgroup split execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
 defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
@@ -5525,6 +5651,11 @@ def munsafe_fp_atomics : Flag<["-"], "munsafe-fp-atomics">,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>, Alias<fatomic_ignore_denormal_mode>;
 def mno_unsafe_fp_atomics : Flag<["-"], "mno-unsafe-fp-atomics">,
   Visibility<[ClangOption, FlangOption]>, Alias<fno_atomic_ignore_denormal_mode>;
+
+// TODO: Remove during upstreaming target id.
+def mxnack : Flag<["-"], "mxnack">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Legacy option to specify XNACK mode (AMDGPU only)">;
+def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>;
@@ -6190,6 +6321,13 @@ def no_offload_add_rpath: Flag<["--"], "no-offload-add-rpath">,
   Alias<frtlib_add_rpath>;
 def r : Flag<["-"], "r">, Flags<[LinkerInput, NoArgumentUnused]>,
         Group<Link_Group>;
+defm openmp_implicit_rpath: BoolFOption<"openmp-implicit-rpath",
+  LangOpts<"OpenMP">,
+  DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  "Set rpath on OpenMP executables">,
+  NegFlag<SetFalse>,
+  BothFlags<[NoArgumentUnused]>>;
 def regcall4 : Flag<["-"], "regcall4">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set __regcall4 as a default calling convention to respect __regcall ABI v.4">,
@@ -7165,6 +7303,22 @@ defm second_underscore : BooleanFFlag<"second-underscore">, Group<gfortran_Group
 defm sign_zero : BooleanFFlag<"sign-zero">, Group<gfortran_Group>;
 defm whole_file : BooleanFFlag<"whole-file">, Group<gfortran_Group>;
 
+//Suspicious fortran entries
+def flang_rt_Group : OptionGroup<"Flang runtime library Group">;
+def pgi_fortran_Group : OptionGroup<"PGI Fortran compatibility Group">,
+  Visibility<[FlangOption]>;
+def mp: Flag<["-"], "mp">, Group<pgi_fortran_Group>,
+  HelpText<"Enable OpenMP">;
+def nomp: Flag<["-"], "nomp">, Group<pgi_fortran_Group>,
+  HelpText<"Do not link with OpenMP library libomp">;
+def staticFlangLibs: Flag<["-"], "static-flang-libs">, Group<flang_rt_Group>,
+  HelpText<"Link using static Flang libraries">;
+def noFlangLibs: Flag<["-"], "no-flang-libs">, Group<flang_rt_Group>,
+  HelpText<"Do not link against Flang libraries">;
+def Mnomain: Flag<["-"], "Mnomain">, Group<pgi_fortran_Group>,
+  HelpText<"Don't link in Fortran main">;
+// end suspicious
+
 // -W <arg> options unsupported by the flang compiler
 // If any of these options are passed into flang's compiler driver,
 // a warning will be raised and the argument will be claimed
@@ -7303,6 +7457,7 @@ defm logical_abbreviations : OptInFC1FFlag<"logical-abbreviations", "Enable logi
 defm implicit_none : OptInFC1FFlag<"implicit-none", "No implicit typing allowed unless overridden by IMPLICIT statements">;
 defm implicit_none_ext : OptInFC1FFlag<"implicit-none-ext", "No implicit externals allowed">;
 defm underscoring : OptInFC1FFlag<"underscoring", "Appends one trailing underscore to external names">;
+defm offload_global_filtering : OptInFC1FFlag<"offload-global-filtering", "Enable/disable OpenMP global filtering pass">;
 defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-vector-element-order",
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,
   NegFlag<SetFalse, [], [ClangOption], "Specifies PowerPC non-native vector element order">>;
@@ -7392,6 +7547,15 @@ def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Grou
 def fdo_concurrent_to_openmp_EQ : Joined<["-"], "fdo-concurrent-to-openmp=">,
   HelpText<"Try to map `do concurrent` loops to OpenMP [none|host|device]">,
       Values<"none, host, device">;
+
+def fdefer_desc_map : Flag<["-"], "fdefer-desc-map">, Group<f_Group>,
+  HelpText<"Enable deferred descriptor mapping, which puts off top-level descriptor "
+    "mapping until target regions, this is the default behaviour">;
+
+def fno_defer_desc_map : Flag<["-"], "fno-defer-desc-map">, Group<f_Group>,
+  HelpText<"Disable deferred deferred descriptor mapping, which puts off top-level "
+          " descriptor mapping till target regions">;
+
 } // let Visibility = [FC1Option, FlangOption]
 
 def J : JoinedOrSeparate<["-"], "J">,
@@ -8492,10 +8656,6 @@ def aligned_alloc_unavailable : Flag<["-"], "faligned-alloc-unavailable">,
   MarshallingInfoFlag<LangOpts<"AlignedAllocationUnavailable">>,
   ShouldParseIf<faligned_allocation.KeyPath>;
 
-def finitial_counter_value_EQ : Joined<["-"], "finitial-counter-value=">,
-  HelpText<"Sets the initial value for __COUNTER__, defaults to 0.">,
-  MarshallingInfoInt<PreprocessorOpts<"InitialCounterValue">, "0">;
-
 } // let Visibility = [CC1Option]
 
 //===----------------------------------------------------------------------===//
@@ -8690,6 +8850,10 @@ def fnative_half_arguments_and_returns : Flag<["-"], "fnative-half-arguments-and
   HelpText<"Use the native __fp16 type for arguments and returns (and skip ABI-specific lowering)">,
   MarshallingInfoFlag<LangOpts<"NativeHalfArgsAndReturns">>,
   ImpliedByAnyOf<[open_cl.KeyPath, hlsl.KeyPath, hip.KeyPath]>;
+def fallow_half_arguments_and_returns : Flag<["-"], "fallow-half-arguments-and-returns">,
+  HelpText<"Allow function arguments and returns of type half">,
+  MarshallingInfoFlag<LangOpts<"HalfArgsAndReturns">>,
+  ImpliedByAnyOf<[open_cl.KeyPath, hlsl.KeyPath, hip.KeyPath]>;
 def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
   HelpText<"Set default calling convention">,
   Values<"cdecl,fastcall,stdcall,vectorcall,regcall,rtdcall">,
@@ -8817,7 +8981,7 @@ def source_date_epoch : Separate<["-"], "source-date-epoch">,
 // CUDA Options
 //===----------------------------------------------------------------------===//
 
-let Visibility = [CC1Option] in {
+let Visibility = [CC1Option, FC1Option] in {
 
 def fcuda_is_device : Flag<["-"], "fcuda-is-device">,
   HelpText<"Generate code for CUDA device">,
@@ -9527,6 +9691,117 @@ def _SLASH_Ze : CLFlag<"Ze">;
 def _SLASH_Zg : CLFlag<"Zg">;
 def _SLASH_ZI : CLFlag<"ZI">;
 def _SLASH_ZW : CLJoined<"ZW">;
+
+
+
+//===----------------------------------------------------------------------===//
+// AOCC Optimization Options
+//===----------------------------------------------------------------------===//
+
+let Visibility = [ClangOption, CLOption, FlangOption] in {
+def famd_opt : Flag<["-"], "famd-opt">, Group<f_Group>,
+  HelpText<"Enable \"All\" [AMD] proprietary Optimizations">;
+def fno_amd_opt : Flag<["-"], "fno-amd-opt">, Group<f_Group>;
+}
+def famd_allow_threadprivate_equivalence : Flag<["-"], "famd-allow-threadprivate-equivalence">,
+  Flags<[HelpHidden]>, Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Allow to use veriables in EQUIVALENCE statements with THREADPRIVATE">;
+let Visibility = [ClangOption, CLOption] in {
+def floop_unswitch_aggressive : Flag<["-"], "floop-unswitch-aggressive">, Group<f_Group>,
+  HelpText<"Aggressively unswitch loops.">;
+def fno_loop_unswitch_aggressive: Flag<["-"], "fno-loop-unswitch-aggressive">, Group<f_Group>;
+def fsimplify_pow : Flag<["-"], "fsimplify-pow">, Group<f_Group>,
+  HelpText<"Enable SimplifyPowLibCalls pass">;
+def fno_simplify_pow : Flag<["-"], "fno-simplify-pow">, Group<f_Group>;
+
+def fitodcalls : Flag<["-"], "fitodcalls">, Group<f_Group>,
+  HelpText<"Enable indirect to direct call promotion">;
+def fno_itodcalls : Flag<["-"], "fno-itodcalls">, Group<f_Group>;
+def fitodcallsbyclone : Flag<["-"], "fitodcallsbyclone">, Group<f_Group>,
+  HelpText<"Enable indirect to direct call promotion by funnction cloning">;
+def fno_itodcallsbyclone : Flag<["-"], "fno-itodcallsbyclone">, Group<f_Group>;
+
+def fproactive_loop_fusion : Flag<["-"], "fproactive-loop-fusion">, Group<f_Group>,
+  HelpText<"Enable the loop fusion passes">;
+def fno_proactive_loop_fusion : Flag<["-"], "fno-proactive-loop-fusion">, Group<f_Group>;
+def fproactive_loop_fusion_analysis : Flag<["-"], "fproactive-loop-fusion-analysis">, Group<f_Group>,
+  HelpText<"Enable the loop fusion analysis passes">;
+def fno_proactive_loop_fusion_analysis : Flag<["-"], "fno-proactive-loop-fusion analysis">, Group<f_Group>;
+
+def finline_aggressive : Flag<["-"], "finline-aggressive">, Group<f_Group>,
+  HelpText<"Enable aggresive Inlining during LTO">;
+def fno_inline_aggressive : Flag<["-"], "fno-inline-aggressive">, Group<f_Group>;
+
+def floop_splitting : Flag<["-"], "floop-splitting">, Group<f_Group>,
+  HelpText<"Enable the inter procedural loop splitting pass">;
+def fno_loop_splitting : Flag<["-"], "fno-loop-splitting">, Group<f_Group>;
+
+def fremove_unused_array_ops : Flag<["-"], "fremove-unused-array-ops">, Group<f_Group>,
+  HelpText<"Enable the Dead Array op elimination passes">;
+def fnoremove_unused_array_ops : Flag<["-"], "fno-remove-unused-array-ops">, Group<f_Group>;
+
+def finline_recursion_EQ : Joined<["-"], "finline-recursion=">, Group<f_Group>,
+  HelpText<"Enable the Inline Recursive Pass">;
+
+def fno_branch_combine : Flag<["-"], "fno-branch-combine">, Group<f_Group>,
+  HelpText<"Disable Branch Combine pass">;
+
+def flv_function_specialization : Flag<["-"], "flv-function-specialization">, Group<f_Group>,
+  HelpText<"Enable Function Specialization For Vectorization">;
+def fno_lv_function_specialization : Flag<["-"], "fno-lv-function-specialization">, Group<f_Group>;
+
+def farray_remap : Flag<["-"], "fremap-arrays">, Group<f_Group>,
+  HelpText<"Enable the Array Remapping passes">;
+def fno_array_remap : Flag<["-"], "fno-remap-arrays">, Group<f_Group>;
+
+def fstruct_layout_EQ : Joined<["-"], "fstruct-layout=">, Group<f_Group>,
+  HelpText<"Enable the Structure Peeling passes">;
+
+def fstruct_peel_ptr_size_EQ : Joined<["-"], "fstruct-peel-ptr-size=">, Group<f_Group>,
+  Flags<[HelpHidden]>,
+  HelpText<"Enable aggresive self referential pointer compression during structure-peeling">;
+
+def fstruct_peel_mem_block_size_EQ : Joined<["-"], "fstruct-peel-mem-block-size=">, Group<f_Group>,
+  Flags<[HelpHidden]>,
+  HelpText<"Enable to change unit memory block size used by structure peeling">;
+
+def fnt_store_EQ : Joined<["-"], "fnt-store=">, Visibility<[CC1Option]>, Group<f_Group>,
+  HelpText<"Enable Nontemporal store instruction generation. Options: never, auto, aggressive.">, Values<"never,auto,aggressive">;
+
+def fnt_store : Flag<["-"], "fnt-store">, Group<f_Group>, Visibility<[CC1Option]>,
+  Alias<fnt_store_EQ>, AliasArgs<["auto"]>,
+  HelpText<"Enable Nontemporal store instruction generation">;
+
+}
+
+
+def inline_aggressive : Flag<["-"], "inline-aggressive">,
+  HelpText<"Enable aggresive Inlining during LTO">;
+def array_remap : Flag<["-"], "remap-arrays">,
+  HelpText<"Run the Array Remapping passes">;
+def struct_layout_EQ : Joined<["-"], "struct-layout=">,
+  HelpText<"Run the Structure Peeling passes">;
+def struct_peel_ptr_size_EQ : Joined<["-"], "struct-peel-ptr-size=">,
+  HelpText<"Enable aggresive self referential pointer compression during structure-peeling">;
+def struct_peel_mem_block_size_EQ : Joined<["-"], "struct-peel-mem-block-size=">,
+  HelpText<"Enable to change unit memory block size used by structure peeling">;
+def remove_unused_array_ops : Flag<["-"], "remove-unused-array-ops">,
+  HelpText<"Enable the Dead Array op elimination passes">;
+def inline_recursion_EQ : Joined<["-"], "inline-recursion=">,
+  HelpText<"Run the Inline Recursion Pass">;
+def lv_function_specialization : Flag<["-"], "lv-function-specialization">,
+  HelpText<"Enable Function Specialization For Vectorization">;
+def simplify_pow : Flag<["-"], "simplify-pow">,
+  HelpText<"Enable SimplifyPowLibCalls pass">;
+def itodcalls : Flag<["-"], "itodcalls">,
+  HelpText<"Enable indirect to direct call promotion">;
+def no_itodcalls : Flag<["-"], "disable-itodcalls">,
+  HelpText<"Disable indirect to direct call promotion">;
+def itodcallsbyclone : Flag<["-"], "itodcallsbyclone">,
+  HelpText<"Enable indirect to direct call promotion by function cloning">;
+def no_itodcallsbyclone : Flag<["-"], "disable-itodcallsbyclone">,
+  HelpText<"Disable indirect to direct call promotion by function cloning">;
+// AOCC END
 
 //===----------------------------------------------------------------------===//
 // clang-dxc Options

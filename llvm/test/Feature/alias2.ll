@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+; RUN: llvm-as  < %s | llvm-dis  | FileCheck %s
 
 @v1 = global i32 0
 ; CHECK: @v1 = global i32 0

@@ -1,3 +1,4 @@
+
 //===----- CGOpenMPRuntime.h - Interface to OpenMP Runtimes -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -955,9 +956,15 @@ public:
     bool IVSigned = false;
     /// true if loop is ordered, false otherwise.
     bool Ordered = false;
-    /// Address of the output variable in which the flag of the last iteration
-    /// is returned.
+    /// true if kernel is multi-device
+    bool IsMultiDevice = false;
     Address IL = Address::invalid();
+    /// Address of the output variable in which the lower iteration number is
+    /// returned.
+    Address MultiDeviceLB = Address::invalid();
+    /// Address of the output variable in which the upper iteration number is
+    /// returned.
+    Address MultiDeviceUB = Address::invalid();
     /// Address of the output variable in which the lower iteration number is
     /// returned.
     Address LB = Address::invalid();
@@ -975,6 +982,11 @@ public:
                   llvm::Value *Chunk = nullptr)
         : IVSize(IVSize), IVSigned(IVSigned), Ordered(Ordered), IL(IL), LB(LB),
           UB(UB), ST(ST), Chunk(Chunk) {}
+    void setMultiDeviceLBUB(Address LB, Address UB) {
+      MultiDeviceLB = LB;
+      MultiDeviceUB = UB;
+      IsMultiDevice = true;
+    }
   };
   /// Call the appropriate runtime routine to initialize it before start
   /// of loop.
@@ -1005,7 +1017,8 @@ public:
   virtual void emitDistributeStaticInit(CodeGenFunction &CGF,
                                         SourceLocation Loc,
                                         OpenMPDistScheduleClauseKind SchedKind,
-                                        const StaticRTInput &Values);
+                                        const StaticRTInput &Values,
+                                        bool IsMultiDeviceKernel);
 
   /// Call the appropriate runtime routine to notify that we finished
   /// iteration of the ordered loop with the dynamic scheduling.
@@ -1695,6 +1708,30 @@ public:
 
   /// Returns true if the variable is a local variable in untied task.
   bool isLocalVarInUntiedTask(CodeGenFunction &CGF, const VarDecl *VD) const;
+
+  // Returns whether the hint expressions for an architecture should be
+  // evaluated to decide which kind of atomic ops should be generated.
+  virtual bool needsHintsForFastFPAtomics() { return false; }
+
+  /// Returns whether the current architecture supports fast FP atomics
+  virtual bool supportFastFPAtomics() { return false; }
+
+  /// Used for AMDGPU architectures where certain fast FP atomics are defined as
+  /// instrinsic functions.
+  virtual std::pair<bool, RValue> emitFastFPAtomicCall(CodeGenFunction &CGF,
+                                                       LValue X, RValue Update,
+                                                       BinaryOperatorKind BO,
+                                                       bool IsXBinopExpr) {
+    return std::make_pair(false, RValue::get(nullptr));
+  }
+
+  /// Used for AMDGPU architectures where certain atomics must be lowered
+  /// to a CAS loop.
+  virtual std::pair<bool, RValue> emitAtomicCASLoop(CodeGenFunction &CGF,
+                                                    LValue X, RValue Update,
+                                                    BinaryOperatorKind BO) {
+    return std::make_pair(false, RValue::get(nullptr));
+  }
 };
 
 /// Class supports emissionof SIMD-only code.
@@ -1903,7 +1940,8 @@ public:
   ///
   void emitDistributeStaticInit(CodeGenFunction &CGF, SourceLocation Loc,
                                 OpenMPDistScheduleClauseKind SchedKind,
-                                const StaticRTInput &Values) override;
+                                const StaticRTInput &Values,
+                                bool IsMultiDeviceKernel) override;
 
   /// Call the appropriate runtime routine to notify that we finished
   /// iteration of the ordered loop with the dynamic scheduling.
@@ -2333,6 +2371,29 @@ public:
                                     const VarDecl *VD) override {
     return Address::invalid();
   }
+};
+
+class HintClause {
+public:
+  /// Hint enum values for atomic and critical constructs (these enumerators are
+  /// taken from the enum omp_sync_hint_t in omp.h).
+  enum OpenMPSyncHintExpr {
+    OMP_sync_hint_none = 0,
+    OMP_lock_hint_none = OMP_sync_hint_none,
+    OMP_sync_hint_uncontended = 1,
+    OMP_lock_hint_uncontended = OMP_sync_hint_uncontended,
+    OMP_sync_hint_contended = (1 << 1),
+    OMP_lock_hint_contended = OMP_sync_hint_contended,
+    OMP_sync_hint_nonspeculative = (1 << 2),
+    OMP_lock_hint_nonspeculative = OMP_sync_hint_nonspeculative,
+    OMP_sync_hint_speculative = (1 << 3),
+    OMP_lock_hint_speculative = OMP_sync_hint_speculative,
+    kmp_lock_hint_hle = (1 << 16),
+    kmp_lock_hint_rtm = (1 << 17),
+    kmp_lock_hint_adaptive = (1 << 18),
+    AMD_fast_fp_atomics = (1 << 19),
+    AMD_safe_fp_atomics = (1 << 20)
+  };
 };
 
 } // namespace CodeGen

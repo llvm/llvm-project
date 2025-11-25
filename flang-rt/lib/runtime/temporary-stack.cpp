@@ -228,6 +228,7 @@ void RTNAME(DescriptorAt)(void *opaquePtr, uint64_t i, Descriptor &value) {
 void RTNAME(DestroyDescriptorStack)(void *opaquePtr) {
   DescriptorStack::destroy(getDescriptorStorage(opaquePtr));
 }
+
 RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

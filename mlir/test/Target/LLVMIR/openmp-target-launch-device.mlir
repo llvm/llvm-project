@@ -12,6 +12,13 @@
 // CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE2:1]], i32 [[MIN_THREADS2:1]], i32 [[MAX_THREADS2:30]], i32 [[MIN_TEAMS2:40]], i32 [[MAX_TEAMS2:40]], i32 0, i32 0 },
 // CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
 
+// CHECK:      @[[EXEC_MODE3:.*]] = weak protected constant i8 1
+// CHECK:      @llvm.compiler.used{{.*}} = appending global [1 x ptr] [ptr @[[EXEC_MODE3]]], section "llvm.metadata"
+// CHECK:      @[[KERNEL3_ENV:.*_kernel_environment]] = weak_odr protected constant %struct.KernelEnvironmentTy {
+// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE3:1]], i32 [[MIN_THREADS3:1]], i32 [[MAX_THREADS3:[0-9]+]], i32 [[MIN_TEAMS3:50]], i32 [[MAX_TEAMS3:50]], i32 0, i32 0 },
+// CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
+               
+
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
   llvm.func @main(%num_teams : !llvm.ptr) {
     // CHECK: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_main_l{{[0-9]+}}(ptr %[[KERNEL_ARGS:.*]], ptr %[[NUM_TEAMS_ARG:.*]]) #[[ATTRS1:[0-9]+]]
@@ -37,9 +44,21 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
       }
       omp.terminator
     }
+
+    // CHECK: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_main_l{{[0-9]+}}(ptr %[[KERNEL_ARGS:.*]]) #[[ATTRS3:[0-9]+]]
+    // CHECK: %{{.*}} = call i32 @__kmpc_target_init(ptr @[[KERNEL3_ENV]], ptr %[[KERNEL_ARGS]])
+    omp.target {
+      %num_teams3 = llvm.mlir.constant(50) : i32
+      omp.teams num_teams(to %num_teams3 : i32) {
+        omp.terminator
+      }
+      omp.terminator
+    }
+
     llvm.return
   }
 }
 
 // CHECK: attributes #[[ATTRS1]] = { "amdgpu-flat-work-group-size"="[[MIN_THREADS1]],[[MAX_THREADS1]]" "omp_target_thread_limit"="[[MAX_THREADS1]]" }
 // CHECK: attributes #[[ATTRS2]] = { "amdgpu-flat-work-group-size"="[[MIN_THREADS2]],[[MAX_THREADS2]]" "amdgpu-max-num-workgroups"="[[MIN_TEAMS2]],1,1" "omp_target_num_teams"="[[MIN_TEAMS2]]" "omp_target_thread_limit"="[[MAX_THREADS2]]" }
+// CHECK: attributes #[[ATTRS3]] = { "amdgpu-flat-work-group-size"="[[MIN_THREADS3]],[[MAX_THREADS3]]" "amdgpu-max-num-workgroups"="[[MIN_TEAMS3]],1,1" "omp_target_num_teams"="[[MIN_TEAMS3]]" "omp_target_thread_limit"="[[MAX_THREADS3]]" }

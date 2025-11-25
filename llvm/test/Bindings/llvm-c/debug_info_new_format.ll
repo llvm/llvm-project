@@ -3,7 +3,7 @@
 
 ; CHECK: ; ModuleID = 'debuginfo.c'
 ; CHECK-NEXT: source_filename = "debuginfo.c"
-
+ 
 ; CHECK:      define i64 @foo(i64 %0, i64 %1, <10 x i64> %2) !dbg !45 {
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:     #dbg_declare(i64 0, !50, !DIExpression(), !59)
@@ -67,7 +67,7 @@
 ; CHECK-NEXT: !31 = !{!32, !33}
 ; CHECK-NEXT: !32 = !DIMacro(type: DW_MACINFO_define, name: "SIMPLE_DEFINE")
 ; CHECK-NEXT: !33 = !DIMacro(type: DW_MACINFO_define, name: "VALUE_DEFINE", value: "1")
-; CHECK-NEXT: !34 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !35, size: 192, dwarfAddressSpace: 0)
+; CHECK-NEXT: !34 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !35, size: 192, addressSpace: 0)
 ; CHECK-NEXT: !35 = !DICompositeType(tag: DW_TAG_structure_type, name: "MyStruct", scope: !4, file: !1, size: 192, elements: !36, runtimeLang: DW_LANG_C89, identifier: "MyStruct")
 ; CHECK-NEXT: !36 = !{!6, !6, !6}
 ; CHECK-NEXT: !37 = !DISubrangeType(name: "foo", scope: !1, file: !1, line: 42, size: 64, baseType: !6, lowerBound: i64 0, upperBound: i64 1, stride: i64 8, bias: i64 4)

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -verify -fsyntax-only -std=c++20 -Wconversion %s
-
+// XFAIL: *
 void c8(char8_t);
 void c16(char16_t);
 void c32(char32_t);

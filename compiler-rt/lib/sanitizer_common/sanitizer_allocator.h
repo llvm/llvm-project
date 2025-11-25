@@ -24,6 +24,11 @@
 #include "sanitizer_procmaps.h"
 #include "sanitizer_type_traits.h"
 
+#if SANITIZER_AMDGPU
+#include <hsa.h>
+#include <hsa_ext_amd.h>
+#endif
+
 namespace __sanitizer {
 
 // Allows the tools to name their allocations appropriately.
@@ -75,6 +80,7 @@ struct NoOpMapUnmapCallback {
 #include "sanitizer_allocator_primary32.h"
 #include "sanitizer_allocator_local_cache.h"
 #include "sanitizer_allocator_secondary.h"
+#include "sanitizer_allocator_device.h"
 #include "sanitizer_allocator_combined.h"
 
 bool IsRssLimitExceeded();

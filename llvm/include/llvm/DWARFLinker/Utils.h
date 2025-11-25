@@ -39,6 +39,7 @@ inline Error finiteLoop(function_ref<Expected<bool>()> Iteration,
 /// Make a best effort to guess the
 /// Xcode.app/Contents/Developer path from an SDK path.
 inline StringRef guessDeveloperDir(StringRef SysRoot) {
+  SmallString<128> Result;
   // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
   auto it = sys::path::rbegin(SysRoot);
   auto end = sys::path::rend(SysRoot);

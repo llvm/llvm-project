@@ -203,6 +203,13 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
   DiagClient->setPrefix(std::string(ExeBasename));
 }
 
+static void PopulateArgsOpts(ArrayRef<const char *> argv,
+                             InputArgList &Args) {
+  unsigned MissingArgIndex, MissingArgCount;
+  Args = getDriverOptTable().ParseArgs(argv.slice(1), MissingArgIndex,
+                                       MissingArgCount);
+}
+
 static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
                           const llvm::ToolContext &ToolContext,
                           IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
@@ -325,6 +332,9 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                            .Case("-fintegrated-cc1", false)
                            .Default(UseNewCC1Process);
 
+  InputArgList ArgList;
+  PopulateArgsOpts(Args, ArgList);
+
   std::unique_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(Args);
   // Driver's diagnostics don't use suppression mappings, so don't bother
   // parsing them. CC1 still receives full args, so this doesn't impact other
@@ -336,6 +346,13 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   FixupDiagPrefixExeName(DiagClient, ProgName);
 
   DiagnosticsEngine Diags(DiagnosticIDs::create(), *DiagOpts, DiagClient);
+
+  unsigned NumParallelJobs =
+      getLastArgIntValue(ArgList, options::OPT_parallel_jobs_EQ, 1, Diags);
+  UseNewCC1Process =
+      ArgList.hasFlag(clang::options::OPT_fno_integrated_cc1,
+                      clang::options::OPT_fintegrated_cc1,
+                      /*Default=*/NumParallelJobs > 1 ? true : CLANG_SPAWN_CC1);
 
   if (!DiagOpts->DiagnosticSerializationFile.empty()) {
     auto SerializedConsumer =

@@ -715,9 +715,9 @@ TEST_F(PatternMatchTest, CheckedInt) {
     CRes = nullptr;
     EXPECT_EQ(CheckPow2(APVal), m_CheckedInt(CheckPow2).match(C));
     EXPECT_EQ(CheckPow2(APVal), m_CheckedInt(CRes, CheckPow2).match(C));
-    if (CheckPow2(APVal))
+    if (CheckPow2(APVal)) {
       EXPECT_EQ(CRes, C);
-
+    }
   };
 
   DoScalarCheck(0);

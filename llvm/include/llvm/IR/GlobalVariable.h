@@ -35,6 +35,7 @@ class Constant;
 class Module;
 
 template <typename ValueSubClass, typename... Args> class SymbolTableListTraits;
+class DIGlobalVariable;
 class DIGlobalVariableExpression;
 
 class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {
@@ -208,6 +209,12 @@ public:
   /// Fill the vector with all debug info attachements.
   LLVM_ABI void
   getDebugInfo(SmallVectorImpl<DIGlobalVariableExpression *> &GVs) const;
+
+  /// Attach a DIGlobalVariable.
+  void addDebugInfo(DIGlobalVariable *GV);
+
+  /// Fill the vector with all debug info attachements.
+  void getDebugInfo(SmallVectorImpl<DIGlobalVariable *> &GVs) const;
 
   /// Add attribute to this global.
   void addAttribute(Attribute::AttrKind Kind) {

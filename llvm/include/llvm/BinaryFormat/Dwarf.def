@@ -26,6 +26,7 @@
       defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                 \
       defined HANDLE_DW_END || defined HANDLE_DW_SECT ||                       \
       defined HANDLE_DW_APPLE_ENUM_KIND ||                                     \
+      defined HANDLE_DW_MSPACE ||                                              \
       ( defined HANDLE_DW_ASPACE && defined HANDLE_DW_ASPACE_PRED) )
 #error "Missing macro definition of HANDLE_DW*"
 #endif
@@ -150,6 +151,10 @@
 
 #ifndef HANDLE_DW_APPLE_ENUM_KIND
 #define HANDLE_DW_APPLE_ENUM_KIND(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_MSPACE
+#define HANDLE_DW_MSPACE(ID, NAME)
 #endif
 
 #ifndef HANDLE_DW_ASPACE
@@ -647,6 +652,13 @@ HANDLE_DW_AT(0x3e10, LLVM_address_space, 0, LLVM)
 HANDLE_DW_AT(0x3e11, LLVM_lanes, 0, LLVM)
 HANDLE_DW_AT(0x3e12, LLVM_lane_pc, 0, LLVM)
 HANDLE_DW_AT(0x3e13, LLVM_vector_size, 0, LLVM)
+
+// https://www.llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#a-7-15-memory-space-encodings
+HANDLE_DW_MSPACE(0x0, none)
+HANDLE_DW_MSPACE(0x1, global)
+HANDLE_DW_MSPACE(0x2, constant)
+HANDLE_DW_MSPACE(0x3, group)
+HANDLE_DW_MSPACE(0x4, private)
 
 // https://llvm.org/docs/AMDGPUUsage.html#address-space-identifier
 HANDLE_DW_ASPACE(0x0, none)
@@ -1425,5 +1437,6 @@ HANDLE_DW_SECT(8, RNGLISTS)
 #undef HANDLE_DW_END
 #undef HANDLE_DW_SECT
 #undef HANDLE_DW_APPLE_ENUM_KIND
+#undef HANDLE_DW_MSPACE
 #undef HANDLE_DW_ASPACE
 #undef HANDLE_DW_ASPACE_PRED

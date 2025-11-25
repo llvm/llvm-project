@@ -157,6 +157,7 @@ class DebugLocStream::ListBuilder {
   DbgVariable &V;
   size_t ListIndex;
   std::optional<uint8_t> TagOffset;
+  std::optional<unsigned> CommonAddrSpace;
 
 public:
   ListBuilder(DebugLocStream &Locs, DwarfCompileUnit &CU, AsmPrinter &Asm,
@@ -166,6 +167,11 @@ public:
 
   void setTagOffset(uint8_t TO) {
     TagOffset = TO;
+  }
+
+  void setCommonDivergentAddrSpace(unsigned AS) { CommonAddrSpace = AS; }
+  bool hasCommonDivergentAddrSpace() const {
+    return CommonAddrSpace != std::nullopt;
   }
 
   /// Finalize the list.

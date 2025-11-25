@@ -71,8 +71,9 @@ inline LLVM_GET_TYPE_NAME_CONSTEXPR StringRef getTypeName() {
   LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view Key = "getTypeName<";
   LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view GetTypeNameStart =
       Name.substr(Name.find(Key));
-  static_assert(!GetTypeNameStart.empty(),
-                "Unable to find the template parameter!");
+  // TODO: SWDEV-517818 - Changed from static_assert to assert to ensure
+  // compiler compatibility
+  assert(!GetTypeNameStart.empty() && "Unable to find the template parameter!");
   LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view SubstitutionKey =
       GetTypeNameStart.substr(Key.size());
 
@@ -95,8 +96,10 @@ inline LLVM_GET_TYPE_NAME_CONSTEXPR StringRef getTypeName() {
           : RmPrefixUnion;
 
   LLVM_GET_TYPE_NAME_CONSTEXPR auto AnglePos = RmPrefixEnum.rfind('>');
-  static_assert(AnglePos != std::string_view::npos,
-                "Unable to find the closing '>'!");
+  // TODO: SWDEV-517818 - Changed from static_assert to assert to ensure
+  // compiler compatibility
+  assert(AnglePos != std::string_view::npos &&
+         "Unable to find the closing '>'!");
   return RmPrefixEnum.substr(0, AnglePos);
 #else
   // No known technique for statically extracting a type name on this compiler.

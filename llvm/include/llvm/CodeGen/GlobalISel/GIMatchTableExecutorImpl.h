@@ -768,6 +768,15 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       break;
     }
+    case GIM_CheckMachineOperandType: {
+      uint64_t InsnID = readULEB();
+      uint64_t OpIdx = readULEB();
+      uint64_t MOTy = readULEB();
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+      if (MO.getType() != MOTy)
+        return false;
+      break;
+    }
     case GIM_RecordNamedOperand: {
       uint64_t InsnID = readULEB();
       uint64_t OpIdx = readULEB();

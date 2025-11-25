@@ -798,7 +798,6 @@ The following table provides the additional attributes.
    Attribute                    Usage
    ============================ ====================================
    ``DW_AT_LLVM_active_lane``   SIMT active lanes (see :ref:`amdgpu-dwarf-low-level-information`)
-   ``DW_AT_LLVM_augmentation``  Compilation unit augmentation string (see :ref:`amdgpu-dwarf-full-and-partial-compilation-unit-entries`)
    ``DW_AT_LLVM_lane_pc``       SIMT lane program location (see :ref:`amdgpu-dwarf-low-level-information`)
    ``DW_AT_LLVM_lanes``         SIMT lane count (see :ref:`amdgpu-dwarf-low-level-information`)
    ``DW_AT_LLVM_iterations``    Concurrent iteration count (see :ref:`amdgpu-dwarf-low-level-information`)
@@ -3303,38 +3302,6 @@ are defined in :ref:`amdgpu-dwarf-language-names-table`.
 The HIP language [:ref:`HIP <amdgpu-dwarf-HIP>`] can be supported by extending
 the C++ language.
 
-.. note::
-
-  The following new attribute is added.
-
-1.  A ``DW_TAG_compile_unit`` debugger information entry for a compilation unit
-    may have a ``DW_AT_LLVM_augmentation`` attribute, whose value is an
-    augmentation string.
-
-    *The augmentation string allows producers to indicate that there is
-    additional vendor or target specific information in the debugging
-    information entries. For example, this might be information about the
-    version of vendor specific extensions that are being used.*
-
-    If not present, or if the string is empty, then the compilation unit has no
-    augmentation string.
-
-    The format for the augmentation string is:
-
-      | ``[``\ *vendor*\ ``:v``\ *X*\ ``.``\ *Y*\ [\ ``:``\ *options*\ ]\ ``]``\ *
-
-    Where *vendor* is the producer, ``vX.Y`` specifies the major X and minor Y
-    version number of the extensions used, and *options* is an optional string
-    providing additional information about the extensions. The version number
-    must conform to semantic versioning [:ref:`SEMVER <amdgpu-dwarf-SEMVER>`].
-    The *options* string must not contain the "\ ``]``\ " character.
-
-    For example:
-
-      ::
-
-        [abc:v0.0][def:v1.2:feature-a=on,feature-b=3]
-
 A.3.3 Subroutine and Entry Point Entries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -3740,9 +3707,9 @@ constant may have the following attributes:
 
 3.  ``DW_AT_LLVM_memory_space``
 
-    A ``DW_AT_memory_space`` attribute with a constant value representing a source
+    A ``DW_AT_LLVM_memory_space`` attribute with a constant value representing a source
     language specific DWARF memory space (see 2.14 "Memory Spaces"). If omitted,
-    defaults to ``DW_MSPACE_none``.
+    defaults to ``DW_MSPACE_LLVM_none``.
 
 
 A.4.2 Common Block Entries
@@ -4018,45 +3985,6 @@ following rules:
   or ``DW_OP_form_tls_address`` operation are included; otherwise, they are
   excluded.
 
-A.6.1.1.4 Data Representation of the Name Index
-###############################################
-
-.. _amdgpu-dwarf-name-index-section-header:
-
-
-A.6.1.1.4.1 Section Header
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. note::
-
-  The following provides an addition to DWARF Version 5 section 6.1.1.4.1 item
-  14 ``augmentation_string``.
-
-A null-terminated UTF-8 vendor specific augmentation string, which provides
-additional information about the contents of this index. If provided, the
-recommended format for augmentation string is:
-
-  | ``[``\ *vendor*\ ``:v``\ *X*\ ``.``\ *Y*\ [\ ``:``\ *options*\ ]\ ``]``\ *
-
-Where *vendor* is the producer, ``vX.Y`` specifies the major X and minor Y
-version number of the extensions used in the DWARF of the compilation unit, and
-*options* is an optional string providing additional information about the
-extensions. The version number must conform to semantic versioning [:ref:`SEMVER
-<amdgpu-dwarf-SEMVER>`]. The *options* string must not contain the "\ ``]``\ "
-character.
-
-For example:
-
-  ::
-
-    [abc:v0.0][def:v1.2:feature-a=on,feature-b=3]
-
-.. note::
-
-  This is different to the definition in DWARF Version 5 but is consistent with
-  the other augmentation strings and allows multiple vendor extensions to be
-  supported.
-
 .. _amdgpu-dwarf-line-number-information:
 
 A.6.2 Line Number Information
@@ -4292,68 +4220,31 @@ Frame Description Entries (FDE). There is at least one CIE in every non-empty
 
       Would this be increased to 5 to reflect the changes in these extensions?
 
-4.  ``augmentation`` (sequence of UTF-8 characters)
-
-    A null-terminated UTF-8 string that identifies the augmentation to this CIE
-    or to the FDEs that use it. If a reader encounters an augmentation string
-    that is unexpected, then only the following fields can be read:
-
-    * CIE: length, CIE_id, version, augmentation
-    * FDE: length, CIE_pointer, initial_location, address_range
-
-    If there is no augmentation, this value is a zero byte.
-
-    *The augmentation string allows users to indicate that there is additional
-    vendor and target architecture specific information in the CIE or FDE which
-    is needed to virtually unwind a stack frame. For example, this might be
-    information about dynamically allocated data which needs to be freed on exit
-    from the routine.*
-
-    *Because the* ``.debug_frame`` *section is useful independently of any*
-    ``.debug_info`` *section, the augmentation string always uses UTF-8
-    encoding.*
-
-    The recommended format for the augmentation string is:
-
-      | ``[``\ *vendor*\ ``:v``\ *X*\ ``.``\ *Y*\ [\ ``:``\ *options*\ ]\ ``]``\ *
-
-    Where *vendor* is the producer, ``vX.Y`` specifies the major X and minor Y
-    version number of the extensions used, and *options* is an optional string
-    providing additional information about the extensions. The version number
-    must conform to semantic versioning [:ref:`SEMVER <amdgpu-dwarf-SEMVER>`].
-    The *options* string must not contain the "\ ``]``\ " character.
-
-    For example:
-
-      ::
-
-        [abc:v0.0][def:v1.2:feature-a=on,feature-b=3]
-
-5.  ``address_size`` (ubyte)
+4.  ``address_size`` (ubyte)
 
     The size of a target address in this CIE and any FDEs that use it, in bytes.
     If a compilation unit exists for this frame, its address size must match the
     address size here.
 
-6.  ``segment_selector_size`` (ubyte)
+5.  ``segment_selector_size`` (ubyte)
 
     The size of a segment selector in this CIE and any FDEs that use it, in
     bytes.
 
-7.  ``code_alignment_factor`` (unsigned LEB128)
+6.  ``code_alignment_factor`` (unsigned LEB128)
 
     A constant that is factored out of all advance location instructions (see
     :ref:`amdgpu-dwarf-row-creation-instructions`). The resulting value is
     ``(operand * code_alignment_factor)``.
 
-8.  ``data_alignment_factor`` (signed LEB128)
+7.  ``data_alignment_factor`` (signed LEB128)
 
     A constant that is factored out of certain offset instructions (see
     :ref:`amdgpu-dwarf-cfa-definition-instructions` and
     :ref:`amdgpu-dwarf-register-rule-instructions`). The resulting value is
     ``(operand * data_alignment_factor)``.
 
-9.  ``return_address_register`` (unsigned LEB128)
+8.  ``return_address_register`` (unsigned LEB128)
 
     An unsigned LEB128 constant that indicates which column in the rule table
     represents the return address of the subprogram. Note that this column might
@@ -4363,7 +4254,7 @@ Frame Description Entries (FDE). There is at least one CIE in every non-empty
     location of the caller frame. The program location of the top frame is the
     target architecture program counter value of the current thread.
 
-10. ``initial_instructions`` (array of ubyte)
+9.  ``initial_instructions`` (array of ubyte)
 
     A sequence of rules that are interpreted to create the initial setting of
     each column in the table.
@@ -4373,7 +4264,7 @@ Frame Description Entries (FDE). There is at least one CIE in every non-empty
     compilation system authoring body may specify an alternate default value for
     any or all columns.
 
-11. ``padding`` (array of ubyte)
+10. ``padding`` (array of ubyte)
 
     Enough ``DW_CFA_nop`` instructions to make the size of this entry match the
     length value above.
@@ -4775,14 +4666,13 @@ entry attributes.
    ================================== ====== ===================================
    Attribute Name                     Value  Classes
    ================================== ====== ===================================
-   ``DW_AT_LLVM_active_lane``         0x3e08 exprloc, loclist
-   ``DW_AT_LLVM_augmentation``        0x3e09 string
    ``DW_AT_LLVM_lanes``               0x3e0a constant
    ``DW_AT_LLVM_lane_pc``             0x3e0b exprloc, loclist
    ``DW_AT_LLVM_vector_size``         0x3e0c constant
    ``DW_AT_LLVM_iterations``          0x3e0a constant, exprloc, loclist
    ``DW_AT_LLVM_address_space``       TBA    constant
    ``DW_AT_LLVM_memory_space``        TBA    constant
+   ``DW_AT_LLVM_active_lane``         TBA    exprloc, loclist
    ================================== ====== ===================================
 
 .. _amdgpu-dwarf-classes-and-forms:
@@ -5040,7 +4930,6 @@ debugger information entries.
    ``DW_TAG_variable``                * ``DW_AT_LLVM_memory_space``
    ``DW_TAG_formal_parameter``        * ``DW_AT_LLVM_memory_space``
    ``DW_TAG_constant``                * ``DW_AT_LLVM_memory_space``
-   ``DW_TAG_compile_unit``            * ``DW_AT_LLVM_augmentation``
    ``DW_TAG_entry_point``             * ``DW_AT_LLVM_active_lane``
                                       * ``DW_AT_LLVM_lane_pc``
                                       * ``DW_AT_LLVM_lanes``

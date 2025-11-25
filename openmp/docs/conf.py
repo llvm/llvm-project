@@ -246,3 +246,10 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 # texinfo_show_urls = 'footnote'
+
+# -- Options for rocm-docs-core ------------------------------------------------
+html_theme = "rocm_docs_theme"
+html_theme_options = {"flavor": "rocm-docs-home"}
+
+extensions = ["rocm_docs"]
+external_toc_path = "./sphinx/_toc.yml"

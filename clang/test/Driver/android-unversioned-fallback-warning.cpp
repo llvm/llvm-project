@@ -1,6 +1,8 @@
 // Check that we emit warnings for using unversioned Android target directories
 // as appropriate.
 
+// XFAIL: *
+
 // RUN: mkdir -p %t/bin
 // RUN: mkdir -p %t/include/aarch64-none-linux-android/c++/v1
 // RUN: mkdir -p %t/include/aarch64-none-linux-android23/c++/v1

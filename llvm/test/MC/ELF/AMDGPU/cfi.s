@@ -16,14 +16,15 @@ f:
 
 # READELF: Section Headers:
 # READELF: Name              Type            Address          Off    Size   ES Flg Lk Inf Al
-# READELF: .debug_frame      PROGBITS        0000000000000000 000048 000028 00      0   0  8
+# READELF: .debug_frame      PROGBITS        0000000000000000 000048 000038 00      0   0  8
 
-# READELF: Relocation section '.rela.debug_frame' at offset 0xd0 contains 2 entries:
+# READELF: Relocation section '.rela.debug_frame' at offset 0xe0 contains 2 entries:
 # READELF-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
-# READELF-NEXT: 0000000000000014  0000000300000006 R_AMDGPU_ABS32         0000000000000000 .debug_frame + 0
-# READELF-NEXT: 0000000000000018  0000000100000003 R_AMDGPU_ABS64         0000000000000000 .text + 0
+# READELF-NEXT: 0000000000000024  0000000300000006 R_AMDGPU_ABS32         0000000000000000 .debug_frame + 0
+# READELF-NEXT: 0000000000000028  0000000100000003 R_AMDGPU_ABS64         0000000000000000 .text + 0
 
 # READELF: Hex dump of section '.debug_frame':
-# READELF-NEXT: 0x00000000 0c000000 ffffffff 04000800 04041000 ................
-# READELF-NEXT: 0x00000010 14000000 00000000 00000000 00000000 ................
-# READELF-NEXT: 0x00000020 04000000 00000000                   ........
+# READELF-NEXT: 0x00000000 1c000000 ffffffff 045b6c6c 766d3a76 .........[llvm:v
+# READELF-NEXT: 0x00000010 302e305d 00080004 04100000 00000000 0.0]............
+# READELF-NEXT: 0x00000020 14000000 00000000 00000000 00000000 ................
+# READELF-NEXT: 0x00000030 04000000 00000000                   ........

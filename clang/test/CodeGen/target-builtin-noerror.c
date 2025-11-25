@@ -194,7 +194,6 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("rocketlake");
   (void)__builtin_cpu_is("sandybridge");
   (void)__builtin_cpu_is("shanghai");
-  (void)__builtin_cpu_is("sierraforest");
   (void)__builtin_cpu_is("silvermont");
   (void)__builtin_cpu_is("skylake");
   (void)__builtin_cpu_is("skylake-avx512");
@@ -202,7 +201,6 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("tigerlake");
   (void)__builtin_cpu_is("sapphirerapids");
   (void)__builtin_cpu_is("tremont");
-  (void)__builtin_cpu_is("gracemont");
   (void)__builtin_cpu_is("westmere");
   (void)__builtin_cpu_is("znver1");
   (void)__builtin_cpu_is("znver2");

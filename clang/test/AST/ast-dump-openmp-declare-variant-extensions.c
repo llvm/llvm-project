@@ -37,8 +37,8 @@ int base6(void) { return 0; }
 #pragma omp declare variant(not_picked2) match(implementation={extension(match_none)}, device={kind(gpu, cpu)})
 int base7(void) { return 0; }
 
-#pragma omp declare variant(not_picked3) match(implementation={vendor(llvm), extension(match_any)}, device={kind(fpga, gpu)})
-int base8(void) { return 0; }
+#pragma omp declare variant(not_picked3) match(implementation={vendor(amd), extension(match_any)}, device={kind(fpga, gpu)})
+int base8() { return 0; }
 
 #pragma omp declare variant(not_picked4) match(user={condition(1)}, implementation={extension(match_none)}, device={kind(gpu, fpga)})
 int base9(void) { return 0; }
@@ -162,11 +162,11 @@ int test(void) {
 // CHECK-NEXT: | |   `-IntegerLiteral [[ADDR_73:0x[a-z0-9]*]] <col:26> 'int' 0
 // CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_74:0x[a-z0-9]*]] <line:37:1, col:112> Implicit implementation={extension(match_none)}, device={kind(gpu, cpu)}
 // CHECK-NEXT: |   `-DeclRefExpr [[ADDR_75:0x[a-z0-9]*]] <col:29> 'int ({{.*}})' {{.*}}Function [[ADDR_26]] 'not_picked2' 'int ({{.*}})' non_odr_use_unevaluated
-// CHECK-NEXT: |-FunctionDecl [[ADDR_76:0x[a-z0-9]*]] <line:41:1, col:29> col:5 used base8 'int ({{.*}})'
-// CHECK-NEXT: | |-CompoundStmt [[ADDR_77:0x[a-z0-9]*]] <col:17, col:29>
-// CHECK-NEXT: | | `-ReturnStmt [[ADDR_78:0x[a-z0-9]*]] <col:19, col:26>
-// CHECK-NEXT: | |   `-IntegerLiteral [[ADDR_79:0x[a-z0-9]*]] <col:26> 'int' 0
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_80:0x[a-z0-9]*]] <line:40:1, col:126> Implicit implementation={vendor(llvm), extension(match_any)}, device={kind(fpga, gpu)}
+// CHECK-NEXT: |-FunctionDecl [[ADDR_76:0x[a-z0-9]*]] <line:41:1, col:25> col:5 used base8 'int ({{.*}})'
+// CHECK-NEXT: | |-CompoundStmt [[ADDR_77:0x[a-z0-9]*]] <col:13, col:25>
+// CHECK-NEXT: | | `-ReturnStmt [[ADDR_78:0x[a-z0-9]*]] <col:15, col:22>
+// CHECK-NEXT: | |   `-IntegerLiteral [[ADDR_79:0x[a-z0-9]*]] <col:22> 'int' 0
+// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_80:0x[a-z0-9]*]] <line:40:1, col:125> Implicit implementation={vendor(amd), extension(match_any)}, device={kind(fpga, gpu)}
 // CHECK-NEXT: |   `-DeclRefExpr [[ADDR_81:0x[a-z0-9]*]] <col:29> 'int ({{.*}})' {{.*}}Function [[ADDR_30]] 'not_picked3' 'int ({{.*}})' non_odr_use_unevaluated
 // CHECK-NEXT: |-FunctionDecl [[ADDR_82:0x[a-z0-9]*]] <line:44:1, col:29> col:5 used base9 'int ({{.*}})'
 // CHECK-NEXT: | |-CompoundStmt [[ADDR_83:0x[a-z0-9]*]] <col:17, col:29>

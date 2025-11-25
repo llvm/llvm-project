@@ -216,6 +216,7 @@ LANGOPT(OpenCLGenericAddressSpace, 1, 0, NotCompatible, "OpenCL generic keyword"
 LANGOPT(OpenCLPipes              , 1, 0, NotCompatible, "OpenCL pipes language constructs and built-ins")
 LANGOPT(NativeHalfType    , 1, 0, NotCompatible, "Native half type support")
 LANGOPT(NativeHalfArgsAndReturns, 1, 0, NotCompatible, "Native half args and returns")
+LANGOPT(HalfArgsAndReturns, 1, 0, NotCompatible, "half args and returns")
 LANGOPT(NativeInt16Type   , 1, 1, NotCompatible, "Native int 16 type support")
 LANGOPT(CUDA              , 1, 0, NotCompatible, "CUDA")
 LANGOPT(HIP               , 1, 0, NotCompatible, "HIP")
@@ -229,7 +230,19 @@ LANGOPT(OpenMPIRBuilder   , 1, 0, NotCompatible, "Use the experimental OpenMP-IR
 LANGOPT(OpenMPCUDANumSMs  , 32, 0, NotCompatible, "Number of SMs for CUDA devices.")
 LANGOPT(OpenMPCUDABlocksPerSM  , 32, 0, NotCompatible, "Number of blocks per SM for CUDA devices.")
 LANGOPT(OpenMPCUDAReductionBufNum , 32, 1024, NotCompatible, "Number of the reduction records in the intermediate reduction buffer used for the teams reductions.")
+LANGOPT(OpenMPGPUThreadsPerTeam, 32, 256, NotCompatible, "Number of threads per team for GPUs.")
+LANGOPT(OpenMPTargetXteamReductionBlockSize, 32, 512, NotCompatible, "Number of threads in a block used by cross-team reduction.")
 LANGOPT(OpenMPTargetDebug , 32, 0, NotCompatible, "Enable debugging in the OpenMP offloading device RTL")
+LANGOPT(OpenMPTargetIgnoreEnvVars , 1, 0, NotCompatible, "Generate code assuming that device related environment variables can be ignored.")
+LANGOPT(OpenMPTargetBigJumpLoop , 1, 1, NotCompatible, "Use big jump loop code generation technique.")
+LANGOPT(OpenMPTargetNoLoop , 1, 1, NotCompatible, "Use no-loop code generation technique.")
+LANGOPT(OpenMPTargetXteamReduction , 1, 1, NotCompatible, "Use cross-team code generation technique.")
+LANGOPT(OpenMPTargetFastReduction , 1, 0, NotCompatible, "Use fast reduction code generation technique.")
+LANGOPT(OpenMPTargetMultiDevice , 1, 0, NotCompatible, "Offload the iteration space of a single target region across multiple GPU devices.")
+
+// The flag '-fopenmp-target-xteam-scan' triggers the 'Segmented Cross Team Scan' variant by default. To use the no-loop variant, please use the flag '-fopenmp-target-no-loop-scan' instead. 
+LANGOPT(OpenMPTargetXteamScan , 1, 0, NotCompatible, "Use the cross-team specialized kernel code generation for 'scan' directive.")
+LANGOPT(OpenMPTargetXteamNoLoopScan , 1, 0, NotCompatible, "Use the no-loop variant of the cross-team specialized kernel code generation for 'scan' directive.")
 LANGOPT(OpenMPOptimisticCollapse  , 1, 0, NotCompatible, "Use at most 32 bits to represent the collapsed loop nest counter.")
 LANGOPT(OpenMPThreadSubscription  , 1, 0, NotCompatible, "Assume work-shared loops do not have more iterations than participating threads.")
 LANGOPT(OpenMPTeamSubscription  , 1, 0, NotCompatible, "Assume distributed loops do not have more iterations than participating teams.")
@@ -237,6 +250,8 @@ LANGOPT(OpenMPNoThreadState  , 1, 0, NotCompatible, "Assume that no thread in a 
 LANGOPT(OpenMPNoNestedParallelism  , 1, 0, NotCompatible, "Assume that no thread in a parallel region will encounter a parallel region")
 LANGOPT(OpenMPOffloadMandatory  , 1, 0, NotCompatible, "Assert that offloading is mandatory and do not create a host fallback.")
 LANGOPT(OpenMPForceUSM     , 1, 0, NotCompatible, "Enable OpenMP unified shared memory mode via compiler.")
+LANGOPT(OpenMPKernelIO , 1, 1, NotCompatible, "Enable OpenMP host-exec Device IO.")
+
 LANGOPT(NoGPULib  , 1, 0, NotCompatible, "Indicate a build without the standard GPU libraries.")
 
 LANGOPT(HLSL, 1, 0, NotCompatible, "HLSL")

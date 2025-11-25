@@ -11,6 +11,8 @@
 // RUN:   --rocm-path=%S/Inputs/rocm /Wall -x hip -- %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=HIP
 
+// REQUIRES: windows
+
 // CUDA: "-cc1" "-triple" "nvptx64-nvidia-cuda" "-aux-triple" "x86_64-pc-windows-msvc"
 // CUDA-SAME: "-Weverything"
 // CUDA: ptxas

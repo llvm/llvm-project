@@ -7,5 +7,5 @@ end
 
 ! ALL-LABEL: func.func @main
 ! ALL: fir.call @_FortranAProgramStart
-! COARRAY: mif.init -> i32
-! NOCOARRAY-NOT: mif.init
+! COARRAY: fir.call @_QQmain() fastmath<contract> : () -> ()
+! NOCOARRAY-NOT: fir.call @_QMprifPprif_init(%[[ARG:.*]]) fastmath<contract> : (!fir.ref<i32>) -> ()

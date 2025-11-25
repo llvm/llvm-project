@@ -643,7 +643,7 @@ static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
 
 constexpr const char *saveTempsValues[] = {
     "resolution", "preopt",     "promote", "internalize",  "import",
-    "opt",        "precodegen", "prelink", "combinedindex"};
+    "opt",        "precodegen", "prelink", "combinedindex", "asm" };
 
 LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
 
@@ -1536,12 +1536,25 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     // --save-temps implies saving all temps.
     ctx.arg.saveTempsArgs.insert_range(saveTempsValues);
   } else {
+    llvm::DenseSet<llvm::StringRef> toRemove;
     for (auto *arg : args.filtered(OPT_save_temps_eq)) {
+      llvm::DenseSet<llvm::StringRef> *set = &ctx.arg.saveTempsArgs;
       StringRef s = arg->getValue();
+      if (s.consume_front("no-")) {
+        set = &toRemove;
+      }
       if (llvm::is_contained(saveTempsValues, s))
-        ctx.arg.saveTempsArgs.insert(s);
+        set->insert(s);
       else
         ErrAlways(ctx) << "unknown --save-temps value: " << s;
+    }
+    // All subtractive values implies starting with all temps
+    if (ctx.arg.saveTempsArgs.empty() && !toRemove.empty()) {
+      for (const char *s : saveTempsValues)
+        ctx.arg.saveTempsArgs.insert(s);
+    }
+    for (auto rm : toRemove) {
+      ctx.arg.saveTempsArgs.erase(rm);
     }
   }
 
@@ -1602,7 +1615,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.trace = args.hasArg(OPT_trace);
   ctx.arg.undefined = args::getStrings(args, OPT_undefined);
   ctx.arg.undefinedVersion =
-      args.hasFlag(OPT_undefined_version, OPT_no_undefined_version, false);
+      args.hasFlag(OPT_undefined_version, OPT_no_undefined_version, true);
   ctx.arg.unique = args.hasArg(OPT_unique);
   ctx.arg.useAndroidRelrTags = args.hasFlag(
       OPT_use_android_relr_tags, OPT_no_use_android_relr_tags, false);

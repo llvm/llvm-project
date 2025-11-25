@@ -1,6 +1,6 @@
-; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
-; RUN: llvm-modextract -n 0 -o - %t | llvm-dis | FileCheck --check-prefix=CHECK0 %s
-; RUN: llvm-modextract -n 1 -o - %t | llvm-dis | FileCheck --check-prefix=CHECK1 %s
+; RUN: opt  -thinlto-bc -thinlto-split-lto-unit -o %t %s
+; RUN: llvm-modextract  -n 0 -o - %t | llvm-dis  | FileCheck --check-prefix=CHECK0 %s
+; RUN: llvm-modextract  -n 1 -o - %t | llvm-dis  | FileCheck --check-prefix=CHECK1 %s
 ; CHECK0-NOT: @{{.*}}anon{{.*}}=
 ; CHECK0: @al = external global ptr
 ; CHECK0-NOT: @{{.*}}anon{{.*}}=

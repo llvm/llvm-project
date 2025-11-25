@@ -6,7 +6,7 @@ include(GNUInstallDirs)
 option(CLANG_TIDY_ENABLE_STATIC_ANALYZER
   "Include static analyzer checks in clang-tidy" ON)
 option(CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
-  "Enable query-based custom checks in clang-tidy" ON)
+  "Enable query-based custom checks in clang-tidy" OFF)
 
 if(CLANG_INCLUDE_TESTS)
   umbrella_lit_testsuite_begin(check-clang-tools)
@@ -31,6 +31,12 @@ add_subdirectory(include-cleaner)
 add_subdirectory(pp-trace)
 add_subdirectory(tool-template)
 
+# Add the common testsuite after all the tools.
+if(CLANG_INCLUDE_TESTS)
+add_subdirectory(test)
+add_subdirectory(unittests)
+endif()
+
 option(CLANG_TOOLS_EXTRA_INCLUDE_DOCS "Generate build targets for the Clang Extra Tools docs."
   ${LLVM_INCLUDE_DOCS})
 if( CLANG_TOOLS_EXTRA_INCLUDE_DOCS )
@@ -42,11 +48,4 @@ CMAKE_DEPENDENT_OPTION(CLANG_ENABLE_CLANGD "Build clangd language server" ON
                        "LLVM_ENABLE_THREADS" OFF)
 if (CLANG_ENABLE_CLANGD)
   add_subdirectory(clangd)
-endif()
-
-# Add the common testsuite after all the tools.
-if(CLANG_INCLUDE_TESTS)
-  add_subdirectory(test)
-  add_subdirectory(unittests)
-  umbrella_lit_testsuite_end(check-clang-tools)
 endif()

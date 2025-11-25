@@ -1,5 +1,5 @@
 ; REQUIRES: x86_64-linux
-;
+
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
 ;

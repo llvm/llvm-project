@@ -15,7 +15,7 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_gpu =
 }
 
 // CHECK: @.offload_sizes = private unnamed_addr constant [4 x i64] [i64 0, i64 0, i64 0, i64 4]
-// CHECK: @.offload_maptypes = private unnamed_addr constant [4 x i64] [i64 32, i64 281474976710657, i64 281474976710657, i64 281474976710659]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [4 x i64] [i64 32, i64 281474976710657, i64 281474976710657, i64 844424930131971]
 
 // CHECK: %[[ALLOCA:.*]] = alloca %_QFTdtype, i64 1, align 8
 // CHECK: %[[ELEMENT_ACC:.*]] = getelementptr %_QFTdtype, ptr %[[ALLOCA]], i32 0, i32 1

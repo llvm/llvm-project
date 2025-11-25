@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+; RUN: llvm-as  < %s | llvm-dis  | FileCheck %s
 
 @0 = private constant i32 0
 ; CHECK: @0 = private constant i32 0

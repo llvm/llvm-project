@@ -10,6 +10,8 @@ config.apple_platform = "@ASAN_TEST_APPLE_PLATFORM@"
 config.apple_platform_min_deployment_target_flag = "@ASAN_TEST_MIN_DEPLOYMENT_TARGET_FLAG@"
 config.asan_dynamic = @ASAN_TEST_DYNAMIC@
 config.target_arch = "@ASAN_TEST_TARGET_ARCH@"
+config.support_amd_offload_tests = "@SUPPORT_OFFLOAD_TESTS@"
+config.llvm_install_dir = "@CMAKE_INSTALL_PREFIX@"
 
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")

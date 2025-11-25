@@ -109,7 +109,7 @@ static llvm::cl::opt<string> OutputLanguage(llvm::cl::Required,
 	llvm::cl::value_desc("name"));
 
 static const char *ResourceDir =
-	CLANG_PREFIX "/lib/clang/" CLANG_VERSION_STRING;
+    CLANG_PREFIX "/lib/clang/" CLANG_VERSION_MAJOR_STRING;
 
 /* Does decl have an attribute of the following form?
  *

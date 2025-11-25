@@ -1735,19 +1735,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       Diag(getLastFPEvalPragmaLocation(), diag::note_pragma_entered_here);
     }
   } else if (II == Ident__COUNTER__) {
-    Diag(Tok.getLocation(),
-         getLangOpts().C2y ? diag::warn_counter : diag::ext_counter);
-    // __COUNTER__ expands to a simple numeric value that must be less than
-    // 2147483647.
-    constexpr uint32_t MaxPosValue = std::numeric_limits<int32_t>::max();
-    if (CounterValue > MaxPosValue) {
-      Diag(Tok.getLocation(), diag::err_counter_overflow);
-      // Retain the maximal value so we don't issue conversion-related
-      // diagnostics by overflowing into a long long. While this does produce
-      // a duplicate value, there's no way to ignore this error so there's no
-      // translation anyway.
-      CounterValue = MaxPosValue;
-    }
+    // __COUNTER__ expands to a simple numeric value.
     OS << CounterValue++;
     Tok.setKind(tok::numeric_constant);
   } else if (II == Ident__has_feature) {
@@ -1772,8 +1760,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               Tok, *this, diag::err_feature_check_malformed);
           if (!II)
             return false;
-          unsigned BuiltinID = II->getBuiltinID();
-          if (BuiltinID != 0) {
+          else if (II->getBuiltinID() != 0) {
             switch (II->getBuiltinID()) {
             case Builtin::BI__builtin_cpu_is:
               return getTargetInfo().supportsCpuIs();
@@ -1787,11 +1774,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               // usual allocation and deallocation functions. Required by libc++
               return 201802;
             default:
-              // __has_builtin should return false for aux builtins.
-              if (getBuiltinInfo().isAuxBuiltinID(BuiltinID))
-                return false;
               return Builtin::evaluateRequiredTargetFeatures(
-                  getBuiltinInfo().getRequiredFeatures(BuiltinID),
+                  getBuiltinInfo().getRequiredFeatures(II->getBuiltinID()),
                   getTargetInfo().getTargetOpts().FeatureMap);
             }
             return true;

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
 #include "omptarget.h"
 #include "private.h"
 
@@ -180,6 +181,10 @@ EXTERN int __tgt_target_teams_nowait_mapper(
 EXTERN void __kmpc_push_target_tripcount_mapper(ident_t *Loc, int64_t DeviceId,
                                                 uint64_t LoopTripcount) {
   TIMESCOPE_WITH_IDENT(Loc);
+  if (checkDevice(DeviceId, Loc)) {
+    DP("Not offloading to device %" PRId64 "\n", DeviceId);
+    return;
+  }
   DP("WARNING: __kmpc_push_target_tripcount has been deprecated and is a noop");
 }
 

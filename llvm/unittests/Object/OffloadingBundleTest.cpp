@@ -51,6 +51,10 @@ toBinary(SmallVectorImpl<char> &Storage, StringRef Yaml) {
 }
 
 TEST(OffloadingBundleTest, checkExtractOffloadBundleFatBinary) {
+
+  // create a Memory Buffer with a fatbin offloading section
+  MemoryBufferRef mbuf;
+  StringRef FileName;
   SmallVector<OffloadBundleEntry>();
   SmallString<0> Storage;
   // Expected<ELFObjectFile<ELF64LE>> ObjOrErr = toBinary<ELF64LE>(Storage, R"(
@@ -64,6 +68,8 @@ TEST(OffloadingBundleTest, checkExtractOffloadBundleFatBinary) {
 }
 
 TEST(OffloadingBundleTest, checkExtractCodeObject) {
+  // create a Memory Buffer with a fatbin offloading section
+  MemoryBufferRef mbuf;
   SmallVector<OffloadBundleEntry>();
   SmallString<0> Storage;
   // Expected<ELFObjectFile<ELF64LE>> ObjOrErr = toBinary<ELF64LE>(Storage, R"(

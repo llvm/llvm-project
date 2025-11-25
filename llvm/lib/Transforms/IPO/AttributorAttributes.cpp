@@ -10674,14 +10674,24 @@ struct AACallEdgesCallSite : public AACallEdgesImpl {
       }
       return Change;
     }
-
+#ifndef  AAIndirectCallInfo_nolonger_breaks_snap_miteams
+    // Process callee metadata if available.
+    if (auto *MD = getCtxI()->getMetadata(LLVMContext::MD_callees)) {
+      for (const auto &Op : MD->operands()) {
+        Function *Callee = mdconst::dyn_extract_or_null<Function>(Op);
+        if (Callee)
+          addCalledFunction(Callee, Change);
+      }
+      return Change;
+    }
+#else
     if (CB->isIndirectCall())
       if (auto *IndirectCallAA = A.getAAFor<AAIndirectCallInfo>(
               *this, getIRPosition(), DepClassTy::OPTIONAL))
         if (IndirectCallAA->foreachCallee(
                 [&](Function *Fn) { return VisitValue(*Fn, CB); }))
           return Change;
-
+#endif
     // The most simple case.
     ProcessCalledOperand(CB->getCalledOperand(), CB);
 

@@ -45,6 +45,19 @@
 // The number of devices in this plugin.
 #define NUM_DEVICES 4
 
+// The ELF ID should be defined at compile-time by the build system.
+#ifndef TARGET_ELF_ID
+#define TARGET_ELF_ID EM_NONE
+#endif
+
+// The target triple should be defined at compile-time by the build system.
+#ifndef LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE
+#define LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE ""
+#endif
+
+extern std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
+getProfilerToAttach();
+
 namespace llvm {
 namespace omp {
 namespace target {

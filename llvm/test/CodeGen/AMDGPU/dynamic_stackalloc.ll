@@ -1034,12 +1034,12 @@ define void @test_dynamic_stackalloc_device_uniform(i32 %n) {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_uniform:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-SDAG-NEXT:    s_mov_b32 s9, s33
+; GFX9-SDAG-NEXT:    s_mov_b32 s33, s32
+; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, 0
-; GFX9-SDAG-NEXT:    s_mov_b32 s33, s32
 ; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-SDAG-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-SDAG-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -1063,12 +1063,12 @@ define void @test_dynamic_stackalloc_device_uniform(i32 %n) {
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_device_uniform:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-GISEL-NEXT:    s_mov_b32 s9, s33
+; GFX9-GISEL-NEXT:    s_mov_b32 s33, s32
+; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-GISEL-NEXT:    s_mov_b32 s6, 0
-; GFX9-GISEL-NEXT:    s_mov_b32 s33, s32
 ; GFX9-GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-GISEL-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -1092,13 +1092,14 @@ define void @test_dynamic_stackalloc_device_uniform(i32 %n) {
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_uniform:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s33
+; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
-; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
-; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-SDAG-NEXT:    s_add_i32 s32, s32, 16
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-SDAG-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-SDAG-NEXT:    s_ctz_i32_b32 s2, s1
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
@@ -1121,13 +1122,14 @@ define void @test_dynamic_stackalloc_device_uniform(i32 %n) {
 ; GFX11-GISEL-LABEL: test_dynamic_stackalloc_device_uniform:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    s_mov_b32 s4, s33
+; GFX11-GISEL-NEXT:    s_mov_b32 s33, s32
+; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX11-GISEL-NEXT:    s_mov_b32 s33, s32
-; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-GISEL-NEXT:    s_add_i32 s32, s32, 16
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_ctz_i32_b32 s2, s1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
@@ -1159,6 +1161,7 @@ define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) {
 ; GFX9-SDAG-NEXT:    s_mov_b32 s10, s33
 ; GFX9-SDAG-NEXT:    s_add_i32 s33, s32, 0x1fc0
 ; GFX9-SDAG-NEXT:    s_mov_b32 s11, s34
+; GFX9-SDAG-NEXT:    s_and_b32 s33, s33, 0xffffe000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s34, s32
 ; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x4000
 ; GFX9-SDAG-NEXT:    s_add_i32 s4, s32, 0x1fff
@@ -1167,7 +1170,6 @@ define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) {
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-SDAG-NEXT:    s_mov_b32 s7, 0
-; GFX9-SDAG-NEXT:    s_and_b32 s33, s33, 0xffffe000
 ; GFX9-SDAG-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-SDAG-NEXT:    s_ff1_i32_b64 s8, s[4:5]
 ; GFX9-SDAG-NEXT:    v_readlane_b32 s9, v0, s8
@@ -1190,15 +1192,15 @@ define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) {
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_device_uniform_over_aligned:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-GISEL-NEXT:    s_mov_b32 s9, s33
 ; GFX9-GISEL-NEXT:    s_add_i32 s33, s32, 0x1fc0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s10, s34
+; GFX9-GISEL-NEXT:    s_and_b32 s33, s33, 0xffffe000
+; GFX9-GISEL-NEXT:    s_mov_b32 s34, s32
+; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-GISEL-NEXT:    s_mov_b32 s6, 0
-; GFX9-GISEL-NEXT:    s_and_b32 s33, s33, 0xffffe000
-; GFX9-GISEL-NEXT:    s_mov_b32 s34, s32
 ; GFX9-GISEL-NEXT:    s_addk_i32 s32, 0x4000
 ; GFX9-GISEL-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-GISEL-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -1224,21 +1226,21 @@ define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) {
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_uniform_over_aligned:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    s_mov_b32 s5, s33
 ; GFX11-SDAG-NEXT:    s_add_i32 s33, s32, 0x7f
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, s34
-; GFX11-SDAG-NEXT:    s_mov_b32 s34, s32
-; GFX11-SDAG-NEXT:    s_addk_i32 s32, 0x100
-; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
-; GFX11-SDAG-NEXT:    s_add_i32 s0, s32, 0xfff
-; GFX11-SDAG-NEXT:    s_mov_b32 s2, exec_lo
-; GFX11-SDAG-NEXT:    s_and_b32 s0, s0, 0xfffff000
-; GFX11-SDAG-NEXT:    s_mov_b32 s1, 0
 ; GFX11-SDAG-NEXT:    s_and_b32 s33, s33, 0xffffff80
+; GFX11-SDAG-NEXT:    s_mov_b32 s34, s32
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; GFX11-SDAG-NEXT:    s_addk_i32 s32, 0x100
+; GFX11-SDAG-NEXT:    s_mov_b32 s2, exec_lo
+; GFX11-SDAG-NEXT:    s_add_i32 s0, s32, 0xfff
+; GFX11-SDAG-NEXT:    s_mov_b32 s1, 0
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
+; GFX11-SDAG-NEXT:    s_and_b32 s0, s0, 0xfffff000
 ; GFX11-SDAG-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-SDAG-NEXT:    s_ctz_i32_b32 s3, s2
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s4, v0, s3
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s2, s3
 ; GFX11-SDAG-NEXT:    s_max_u32 s1, s1, s4
@@ -1247,31 +1249,32 @@ define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) {
 ; GFX11-SDAG-NEXT:  ; %bb.2:
 ; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, s1, 5, s0
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, 10
-; GFX11-SDAG-NEXT:    s_mov_b32 s33, s5
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s32, v0
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v1, s0 dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s32, s34
 ; GFX11-SDAG-NEXT:    s_mov_b32 s34, s6
+; GFX11-SDAG-NEXT:    s_mov_b32 s33, s5
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-LABEL: test_dynamic_stackalloc_device_uniform_over_aligned:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    s_mov_b32 s4, s33
 ; GFX11-GISEL-NEXT:    s_add_i32 s33, s32, 0x7f
 ; GFX11-GISEL-NEXT:    s_mov_b32 s5, s34
-; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
-; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
-; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX11-GISEL-NEXT:    s_and_b32 s33, s33, 0xffffff80
 ; GFX11-GISEL-NEXT:    s_mov_b32 s34, s32
+; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX11-GISEL-NEXT:    s_addk_i32 s32, 0x100
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-GISEL-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_ctz_i32_b32 s2, s1
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s1, s2
 ; GFX11-GISEL-NEXT:    s_max_u32 s0, s0, s3
@@ -1282,12 +1285,13 @@ define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) {
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, 10
 ; GFX11-GISEL-NEXT:    s_lshl_b32 s0, s0, 5
 ; GFX11-GISEL-NEXT:    s_and_b32 s1, s1, 0xfffff000
-; GFX11-GISEL-NEXT:    s_mov_b32 s33, s4
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_add_u32 s32, s1, s0
 ; GFX11-GISEL-NEXT:    scratch_store_b32 off, v0, s1 dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s32, s34
 ; GFX11-GISEL-NEXT:    s_mov_b32 s34, s5
+; GFX11-GISEL-NEXT:    s_mov_b32 s33, s4
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, i32 %n, align 128, addrspace(5)
   store volatile i32 10, ptr addrspace(5) %alloca
@@ -1298,12 +1302,12 @@ define void @test_dynamic_stackalloc_device_uniform_under_aligned(i32 %n) {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_uniform_under_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-SDAG-NEXT:    s_mov_b32 s9, s33
+; GFX9-SDAG-NEXT:    s_mov_b32 s33, s32
+; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, 0
-; GFX9-SDAG-NEXT:    s_mov_b32 s33, s32
 ; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-SDAG-NEXT:  .LBB10_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-SDAG-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -1327,12 +1331,12 @@ define void @test_dynamic_stackalloc_device_uniform_under_aligned(i32 %n) {
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_device_uniform_under_aligned:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-GISEL-NEXT:    s_mov_b32 s9, s33
+; GFX9-GISEL-NEXT:    s_mov_b32 s33, s32
+; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-GISEL-NEXT:    s_mov_b32 s6, 0
-; GFX9-GISEL-NEXT:    s_mov_b32 s33, s32
 ; GFX9-GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:  .LBB10_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-GISEL-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -1356,13 +1360,14 @@ define void @test_dynamic_stackalloc_device_uniform_under_aligned(i32 %n) {
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_uniform_under_aligned:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s33
+; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
-; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
-; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-SDAG-NEXT:    s_add_i32 s32, s32, 16
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-SDAG-NEXT:  .LBB10_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-SDAG-NEXT:    s_ctz_i32_b32 s2, s1
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
@@ -1385,13 +1390,14 @@ define void @test_dynamic_stackalloc_device_uniform_under_aligned(i32 %n) {
 ; GFX11-GISEL-LABEL: test_dynamic_stackalloc_device_uniform_under_aligned:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    s_mov_b32 s4, s33
+; GFX11-GISEL-NEXT:    s_mov_b32 s33, s32
+; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX11-GISEL-NEXT:    s_mov_b32 s33, s32
-; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-GISEL-NEXT:    s_add_i32 s32, s32, 16
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-GISEL-NEXT:  .LBB10_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_ctz_i32_b32 s2, s1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
@@ -1420,13 +1426,13 @@ define void @test_dynamic_stackalloc_device_divergent() {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_mov_b32 s9, s33
+; GFX9-SDAG-NEXT:    s_mov_b32 s33, s32
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
-; GFX9-SDAG-NEXT:    s_mov_b32 s9, s33
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff0, v0
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, 0
-; GFX9-SDAG-NEXT:    s_mov_b32 s33, s32
 ; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-SDAG-NEXT:  .LBB11_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-SDAG-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -1450,13 +1456,13 @@ define void @test_dynamic_stackalloc_device_divergent() {
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_device_divergent:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s9, s33
+; GFX9-GISEL-NEXT:    s_mov_b32 s33, s32
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
-; GFX9-GISEL-NEXT:    s_mov_b32 s9, s33
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-GISEL-NEXT:    s_mov_b32 s6, 0
-; GFX9-GISEL-NEXT:    s_mov_b32 s33, s32
 ; GFX9-GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:  .LBB11_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-GISEL-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -1480,14 +1486,14 @@ define void @test_dynamic_stackalloc_device_divergent() {
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_divergent:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s33
+; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
-; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
-; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    s_add_i32 s32, s32, 16
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff0, v0
 ; GFX11-SDAG-NEXT:  .LBB11_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-SDAG-NEXT:    s_ctz_i32_b32 s2, s1
@@ -1511,14 +1517,14 @@ define void @test_dynamic_stackalloc_device_divergent() {
 ; GFX11-GISEL-LABEL: test_dynamic_stackalloc_device_divergent:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX11-GISEL-NEXT:    s_mov_b32 s4, s33
+; GFX11-GISEL-NEXT:    s_mov_b32 s33, s32
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX11-GISEL-NEXT:    s_mov_b32 s33, s32
-; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    s_add_i32 s32, s32, 16
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-GISEL-NEXT:  .LBB11_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_ctz_i32_b32 s2, s1
@@ -1552,6 +1558,7 @@ define void @test_dynamic_stackalloc_device_divergent_over_aligned() {
 ; GFX9-SDAG-NEXT:    s_mov_b32 s10, s33
 ; GFX9-SDAG-NEXT:    s_add_i32 s33, s32, 0x1fc0
 ; GFX9-SDAG-NEXT:    s_mov_b32 s11, s34
+; GFX9-SDAG-NEXT:    s_and_b32 s33, s33, 0xffffe000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s34, s32
 ; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x4000
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
@@ -1561,7 +1568,6 @@ define void @test_dynamic_stackalloc_device_divergent_over_aligned() {
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff0, v0
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-SDAG-NEXT:    s_mov_b32 s7, 0
-; GFX9-SDAG-NEXT:    s_and_b32 s33, s33, 0xffffe000
 ; GFX9-SDAG-NEXT:  .LBB12_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-SDAG-NEXT:    s_ff1_i32_b64 s8, s[4:5]
 ; GFX9-SDAG-NEXT:    v_readlane_b32 s9, v0, s8
@@ -1584,16 +1590,16 @@ define void @test_dynamic_stackalloc_device_divergent_over_aligned() {
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_device_divergent_over_aligned:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
-; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-GISEL-NEXT:    s_mov_b32 s9, s33
 ; GFX9-GISEL-NEXT:    s_add_i32 s33, s32, 0x1fc0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s10, s34
+; GFX9-GISEL-NEXT:    s_and_b32 s33, s33, 0xffffe000
+; GFX9-GISEL-NEXT:    s_mov_b32 s34, s32
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
+; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-GISEL-NEXT:    s_mov_b32 s6, 0
-; GFX9-GISEL-NEXT:    s_and_b32 s33, s33, 0xffffe000
-; GFX9-GISEL-NEXT:    s_mov_b32 s34, s32
 ; GFX9-GISEL-NEXT:    s_addk_i32 s32, 0x4000
 ; GFX9-GISEL-NEXT:  .LBB12_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-GISEL-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -1619,19 +1625,20 @@ define void @test_dynamic_stackalloc_device_divergent_over_aligned() {
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_over_aligned:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX11-SDAG-NEXT:    s_mov_b32 s5, s33
 ; GFX11-SDAG-NEXT:    s_add_i32 s33, s32, 0x7f
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, s34
+; GFX11-SDAG-NEXT:    s_and_b32 s33, s33, 0xffffff80
 ; GFX11-SDAG-NEXT:    s_mov_b32 s34, s32
-; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX11-SDAG-NEXT:    s_addk_i32 s32, 0x100
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX11-SDAG-NEXT:    s_add_i32 s0, s32, 0xfff
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, 0
-; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff0, v0
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    s_and_b32 s0, s0, 0xfffff000
-; GFX11-SDAG-NEXT:    s_and_b32 s33, s33, 0xffffff80
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff0, v0
 ; GFX11-SDAG-NEXT:  .LBB12_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-SDAG-NEXT:    s_ctz_i32_b32 s3, s2
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
@@ -1643,28 +1650,29 @@ define void @test_dynamic_stackalloc_device_divergent_over_aligned() {
 ; GFX11-SDAG-NEXT:  ; %bb.2:
 ; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, s1, 5, s0
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, 0x1bc
-; GFX11-SDAG-NEXT:    s_mov_b32 s33, s5
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s32, v0
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v1, s0 dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s32, s34
 ; GFX11-SDAG-NEXT:    s_mov_b32 s34, s6
+; GFX11-SDAG-NEXT:    s_mov_b32 s33, s5
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-LABEL: test_dynamic_stackalloc_device_divergent_over_aligned:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX11-GISEL-NEXT:    s_mov_b32 s4, s33
 ; GFX11-GISEL-NEXT:    s_add_i32 s33, s32, 0x7f
 ; GFX11-GISEL-NEXT:    s_mov_b32 s5, s34
-; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
-; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
-; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX11-GISEL-NEXT:    s_and_b32 s33, s33, 0xffffff80
 ; GFX11-GISEL-NEXT:    s_mov_b32 s34, s32
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX11-GISEL-NEXT:    s_addk_i32 s32, 0x100
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-GISEL-NEXT:  .LBB12_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_ctz_i32_b32 s2, s1
@@ -1679,12 +1687,13 @@ define void @test_dynamic_stackalloc_device_divergent_over_aligned() {
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, 0x1bc
 ; GFX11-GISEL-NEXT:    s_lshl_b32 s0, s0, 5
 ; GFX11-GISEL-NEXT:    s_and_b32 s1, s1, 0xfffff000
-; GFX11-GISEL-NEXT:    s_mov_b32 s33, s4
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_add_u32 s32, s1, s0
 ; GFX11-GISEL-NEXT:    scratch_store_b32 off, v0, s1 dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s32, s34
 ; GFX11-GISEL-NEXT:    s_mov_b32 s34, s5
+; GFX11-GISEL-NEXT:    s_mov_b32 s33, s4
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
   %alloca = alloca i32, i32 %idx, align 128, addrspace(5)
@@ -1696,13 +1705,13 @@ define void @test_dynamic_stackalloc_device_divergent_under_aligned() {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_under_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_mov_b32 s9, s33
+; GFX9-SDAG-NEXT:    s_mov_b32 s33, s32
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
-; GFX9-SDAG-NEXT:    s_mov_b32 s9, s33
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff0, v0
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, 0
-; GFX9-SDAG-NEXT:    s_mov_b32 s33, s32
 ; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-SDAG-NEXT:  .LBB13_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-SDAG-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -1726,13 +1735,13 @@ define void @test_dynamic_stackalloc_device_divergent_under_aligned() {
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_device_divergent_under_aligned:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s9, s33
+; GFX9-GISEL-NEXT:    s_mov_b32 s33, s32
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
-; GFX9-GISEL-NEXT:    s_mov_b32 s9, s33
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-GISEL-NEXT:    s_mov_b32 s6, 0
-; GFX9-GISEL-NEXT:    s_mov_b32 s33, s32
 ; GFX9-GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:  .LBB13_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-GISEL-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -1756,14 +1765,14 @@ define void @test_dynamic_stackalloc_device_divergent_under_aligned() {
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_under_aligned:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s33
+; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
-; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
-; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    s_add_i32 s32, s32, 16
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff0, v0
 ; GFX11-SDAG-NEXT:  .LBB13_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-SDAG-NEXT:    s_ctz_i32_b32 s2, s1
@@ -1787,14 +1796,14 @@ define void @test_dynamic_stackalloc_device_divergent_under_aligned() {
 ; GFX11-GISEL-LABEL: test_dynamic_stackalloc_device_divergent_under_aligned:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX11-GISEL-NEXT:    s_mov_b32 s4, s33
+; GFX11-GISEL-NEXT:    s_mov_b32 s33, s32
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX11-GISEL-NEXT:    s_mov_b32 s33, s32
-; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    s_add_i32 s32, s32, 16
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-GISEL-NEXT:  .LBB13_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_ctz_i32_b32 s2, s1
@@ -1828,10 +1837,10 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX9-SDAG-NEXT:    s_mov_b32 s13, s33
 ; GFX9-SDAG-NEXT:    s_add_i32 s33, s32, 0xfc0
 ; GFX9-SDAG-NEXT:    s_mov_b32 s14, s34
-; GFX9-SDAG-NEXT:    s_mov_b32 s8, 0
-; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    s_and_b32 s33, s33, 0xfffff000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s34, s32
+; GFX9-SDAG-NEXT:    s_mov_b32 s8, 0
+; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x3000
 ; GFX9-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-SDAG-NEXT:    s_cbranch_execz .LBB14_6
@@ -1911,10 +1920,10 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX9-GISEL-NEXT:    s_mov_b32 s13, s33
 ; GFX9-GISEL-NEXT:    s_add_i32 s33, s32, 0xfc0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s14, s34
-; GFX9-GISEL-NEXT:    s_mov_b32 s8, 0
-; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-GISEL-NEXT:    s_and_b32 s33, s33, 0xfffff000
 ; GFX9-GISEL-NEXT:    s_mov_b32 s34, s32
+; GFX9-GISEL-NEXT:    s_mov_b32 s8, 0
+; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-GISEL-NEXT:    s_addk_i32 s32, 0x3000
 ; GFX9-GISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-GISEL-NEXT:    s_cbranch_execz .LBB14_6
@@ -1993,10 +2002,10 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, s33
 ; GFX11-SDAG-NEXT:    s_add_i32 s33, s32, 63
 ; GFX11-SDAG-NEXT:    s_mov_b32 s8, s34
-; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
-; GFX11-SDAG-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 s33, s33, 63
 ; GFX11-SDAG-NEXT:    s_mov_b32 s34, s32
+; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
+; GFX11-SDAG-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-SDAG-NEXT:    s_addk_i32 s32, 0xc0
 ; GFX11-SDAG-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX11-SDAG-NEXT:    s_cbranch_execz .LBB14_6
@@ -2064,10 +2073,10 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v2, s1 dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-SDAG-NEXT:    s_mov_b32 s33, s7
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s32, v0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s32, s34
 ; GFX11-SDAG-NEXT:    s_mov_b32 s34, s8
+; GFX11-SDAG-NEXT:    s_mov_b32 s33, s7
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-LABEL: test_dynamic_stackalloc_device_multiple_allocas:
@@ -2076,10 +2085,10 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX11-GISEL-NEXT:    s_mov_b32 s7, s33
 ; GFX11-GISEL-NEXT:    s_add_i32 s33, s32, 63
 ; GFX11-GISEL-NEXT:    s_mov_b32 s8, s34
-; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 s33, s33, 63
 ; GFX11-GISEL-NEXT:    s_mov_b32 s34, s32
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-GISEL-NEXT:    s_addk_i32 s32, 0xc0
 ; GFX11-GISEL-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX11-GISEL-NEXT:    s_cbranch_execz .LBB14_6
@@ -2176,10 +2185,10 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX9-SDAG-NEXT:    s_mov_b32 s12, s33
 ; GFX9-SDAG-NEXT:    s_add_i32 s33, s32, 0xfc0
 ; GFX9-SDAG-NEXT:    s_mov_b32 s13, s34
-; GFX9-SDAG-NEXT:    s_mov_b32 s8, 0
-; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    s_and_b32 s33, s33, 0xfffff000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s34, s32
+; GFX9-SDAG-NEXT:    s_mov_b32 s8, 0
+; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x2000
 ; GFX9-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-SDAG-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -2242,10 +2251,10 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX9-GISEL-NEXT:    s_mov_b32 s11, s33
 ; GFX9-GISEL-NEXT:    s_add_i32 s33, s32, 0xfc0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s12, s34
-; GFX9-GISEL-NEXT:    s_mov_b32 s8, 0
-; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX9-GISEL-NEXT:    s_and_b32 s33, s33, 0xfffff000
 ; GFX9-GISEL-NEXT:    s_mov_b32 s34, s32
+; GFX9-GISEL-NEXT:    s_mov_b32 s8, 0
+; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX9-GISEL-NEXT:    s_addk_i32 s32, 0x2000
 ; GFX9-GISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -2308,10 +2317,10 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, s33
 ; GFX11-SDAG-NEXT:    s_add_i32 s33, s32, 63
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, s34
-; GFX11-SDAG-NEXT:    s_mov_b32 s1, 0
-; GFX11-SDAG-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 s33, s33, 63
 ; GFX11-SDAG-NEXT:    s_mov_b32 s34, s32
+; GFX11-SDAG-NEXT:    s_mov_b32 s1, 0
+; GFX11-SDAG-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-SDAG-NEXT:    s_addk_i32 s32, 0x80
 ; GFX11-SDAG-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; GFX11-SDAG-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -2377,10 +2386,10 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX11-GISEL-NEXT:    s_mov_b32 s5, s33
 ; GFX11-GISEL-NEXT:    s_add_i32 s33, s32, 63
 ; GFX11-GISEL-NEXT:    s_mov_b32 s6, s34
-; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0
-; GFX11-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 s33, s33, 63
 ; GFX11-GISEL-NEXT:    s_mov_b32 s34, s32
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-GISEL-NEXT:    s_addk_i32 s32, 0x80
 ; GFX11-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; GFX11-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -2460,13 +2469,13 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i16:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_mov_b32 s9, s33
+; GFX9-SDAG-NEXT:    s_mov_b32 s33, s32
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
-; GFX9-SDAG-NEXT:    s_mov_b32 s9, s33
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0x7fff0, v0
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, 0
-; GFX9-SDAG-NEXT:    s_mov_b32 s33, s32
 ; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-SDAG-NEXT:  .LBB16_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-SDAG-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -2490,13 +2499,13 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i16:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s9, s33
+; GFX9-GISEL-NEXT:    s_mov_b32 s33, s32
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
-; GFX9-GISEL-NEXT:    s_mov_b32 s9, s33
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-GISEL-NEXT:    s_mov_b32 s6, 0
-; GFX9-GISEL-NEXT:    s_mov_b32 s33, s32
 ; GFX9-GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:  .LBB16_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-GISEL-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -2520,15 +2529,15 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i16:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_mov_b32 s4, s33
+; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
 ; GFX11-SDAG-NEXT:    v_mov_b16_e32 v1.h, 0
 ; GFX11-SDAG-NEXT:    v_mov_b16_e32 v1.l, v0.l
-; GFX11-SDAG-NEXT:    s_mov_b32 s4, s33
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
-; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
-; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v1, 2, 15
 ; GFX11-SDAG-NEXT:    s_add_i32 s32, s32, 16
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v1, 2, 15
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x7fff0, v0
 ; GFX11-SDAG-NEXT:  .LBB16_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-SDAG-NEXT:    s_ctz_i32_b32 s2, s1
@@ -2552,14 +2561,14 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 
 ; GFX11-GISEL-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i16:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s4, s33
+; GFX11-GISEL-NEXT:    s_mov_b32 s33, s32
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX11-GISEL-NEXT:    s_mov_b32 s33, s32
-; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    s_add_i32 s32, s32, 16
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-GISEL-NEXT:  .LBB16_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_ctz_i32_b32 s2, s1
@@ -2589,12 +2598,12 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i64(i64 
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i64:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-SDAG-NEXT:    s_mov_b32 s9, s33
+; GFX9-SDAG-NEXT:    s_mov_b32 s33, s32
+; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, 0
-; GFX9-SDAG-NEXT:    s_mov_b32 s33, s32
 ; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-SDAG-NEXT:  .LBB17_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-SDAG-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -2618,12 +2627,12 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i64(i64 
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i64:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-GISEL-NEXT:    s_mov_b32 s9, s33
+; GFX9-GISEL-NEXT:    s_mov_b32 s33, s32
+; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-GISEL-NEXT:    s_mov_b32 s6, 0
-; GFX9-GISEL-NEXT:    s_mov_b32 s33, s32
 ; GFX9-GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:  .LBB17_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-GISEL-NEXT:    s_ff1_i32_b64 s7, s[4:5]
@@ -2647,13 +2656,14 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i64(i64 
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i64:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s33
+; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
-; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
-; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-SDAG-NEXT:    s_add_i32 s32, s32, 16
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-SDAG-NEXT:  .LBB17_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-SDAG-NEXT:    s_ctz_i32_b32 s2, s1
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
@@ -2676,13 +2686,14 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i64(i64 
 ; GFX11-GISEL-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i64:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    s_mov_b32 s4, s33
+; GFX11-GISEL-NEXT:    s_mov_b32 s33, s32
+; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX11-GISEL-NEXT:    s_mov_b32 s33, s32
-; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-GISEL-NEXT:    s_add_i32 s32, s32, 16
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-GISEL-NEXT:  .LBB17_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_ctz_i32_b32 s2, s1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)

@@ -1,3 +1,4 @@
+
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
 cmake_minimum_required(VERSION 3.20.0)
 
@@ -1005,6 +1006,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "BSD|Linux|OS390|AIX")
 else()
   set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
 endif()
+set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
 set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default} CACHE BOOL
   "Enable per-target runtimes directory")
 
@@ -1169,9 +1171,9 @@ configure_file(
   )
 
 # They are not referenced. See set_output_directory().
-set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_TOOLS_BINARY_DIR} )
-set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_LIBRARY_DIR} )
-set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_DIR} )
+set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/bin )
+set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
+set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
 
 # For up-to-date instructions for installing the TFLite dependency, refer to
 # the bot setup script: https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh
@@ -1535,6 +1537,18 @@ endif()
 
 if (LLVM_INCLUDE_UTILS AND LLVM_INCLUDE_TOOLS)
   add_subdirectory(utils/llvm-locstats)
+endif()
+
+# Following variables are required for ROCM backwards compatibility,
+# and should be removed in ROCM 7.0 release.
+set(ROCM_LLVM_BACKWARD_COMPAT_LINK "" CACHE STRING "Old rocm-llvm install path")
+set(ROCM_LLVM_BACKWARD_COMPAT_LINK_TARGET "" CACHE STRING "New rocm-llvm install path")
+if (NOT ROCM_LLVM_BACKWARD_COMPAT_LINK STREQUAL "" AND
+    NOT ROCM_LLVM_BACKWARD_COMPAT_LINK_TARGET STREQUAL "")
+  install(CODE "execute_process(\
+                COMMAND ${CMAKE_COMMAND} -E create_symlink \
+                ${ROCM_LLVM_BACKWARD_COMPAT_LINK_TARGET} \
+                ${ROCM_LLVM_BACKWARD_COMPAT_LINK})")
 endif()
 
 if (XCODE)

@@ -1,3 +1,4 @@
+// REQUIRES: garbage
 /*
  * critical-unrelated.c -- Archer testcase
  */

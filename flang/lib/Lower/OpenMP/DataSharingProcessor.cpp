@@ -12,8 +12,8 @@
 
 #include "DataSharingProcessor.h"
 
-#include "Utils.h"
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Lower/OpenMP/Utils.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Lower/Support/Utils.h"
@@ -89,20 +89,25 @@ DataSharingProcessor::DataSharingProcessor(lower::AbstractConverter &converter,
                            useDelayedPrivatization, symTable,
                            isTargetPrivatization) {}
 
-void DataSharingProcessor::processStep1(
-    mlir::omp::PrivateClauseOps *clauseOps,
-    std::optional<llvm::omp::Directive> dir) {
+void DataSharingProcessor::processStep1() {
   collectSymbolsForPrivatization();
   collectDefaultSymbols();
   collectImplicitSymbols();
   collectPreDeterminedSymbols();
-
-  privatize(clauseOps, dir);
-
-  insertBarrier(clauseOps);
 }
 
-void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
+void DataSharingProcessor::processStep2(
+    mlir::omp::PrivateClauseOps *clauseOps,
+    std::optional<llvm::omp::Directive> dir) {
+  if (privatizationDone)
+    return;
+
+  privatize(clauseOps, dir);
+  insertBarrier(clauseOps);
+  privatizationDone = true;
+}
+
+void DataSharingProcessor::processStep3(mlir::Operation *op, bool isLoop) {
   // 'sections' lastprivate is handled by genOMP()
   if (mlir::isa<mlir::omp::SectionOp>(op))
     return;
@@ -295,7 +300,7 @@ bool DataSharingProcessor::needBarrier() {
   // Emit implicit barrier to synchronize threads and avoid data races on
   // initialization of firstprivate variables and post-update of lastprivate
   // variables.
-  // Emit implicit barrier for linear clause in the OpenMPIRBuilder.
+  // Emit implicit barrier for linear clause. Maybe on somewhere else.
   for (const semantics::Symbol *sym : allPrivatizedSymbols) {
     if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
         (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) ||

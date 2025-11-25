@@ -146,6 +146,13 @@ void populateVectorTransferFullPartialPatterns(
 void populateDropInnerMostUnitDimsXferOpPatterns(RewritePatternSet &patterns,
                                                  PatternBenefit benefit = 1);
 
+/// Collect a set of patterns to reduce the rank of the operands of vector
+/// transfer ops to operate on the largest contigious vector.
+/// These patterns are useful when lowering to dialects with 1d vector type
+/// such as llvm and it will result fewer memory reads.
+void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit = 1);
+
 /// Patterns that remove redundant Vector Ops by re-ordering them with
 /// e.g. elementwise Ops:
 /// ```

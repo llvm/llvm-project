@@ -1,0 +1,17 @@
+# Merge files created by git.
+*.orig
+# Reject files created by patch.
+*.rej
+
+# Nested build directory.
+/build*
+
+# documentation artifacts
+build/
+_build/
+_images/
+_static/
+_templates/
+_toc.yml
+docBin/
+_doxygen/

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OpenMP/OMPT/OmptCommonDefs.h"
 #include "PluginManager.h"
 #include "device.h"
 #include "omptarget.h"
@@ -28,6 +29,16 @@
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
+
+EXTERN int ompx_get_team_procs(int DeviceNum) {
+  TIMESCOPE();
+  auto DeviceOrErr = PM->getDevice(DeviceNum);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
+  int TeamProcs = DeviceOrErr->getTeamProcs();
+  DP("Call to ompx_get_team_procs returning %d\n", TeamProcs);
+  return TeamProcs;
+}
 
 EXTERN void ompx_dump_mapping_tables() {
   ident_t Loc = {0, 0, 0, 0, ";libomptarget;libomptarget;0;0;;"};
@@ -58,12 +69,12 @@ EXTERN int omp_get_num_devices(void) {
   return NumDevices;
 }
 
-EXTERN int omp_get_device_num(void) {
+EXTERN int omp_get_DeviceNum(void) {
   TIMESCOPE();
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   int HostDevice = omp_get_initial_device();
 
-  DP("Call to omp_get_device_num returning %d\n", HostDevice);
+  DP("Call to omp_get_DeviceNum returning %d\n", HostDevice);
 
   return HostDevice;
 }
@@ -96,6 +107,25 @@ EXTERN void *llvm_omp_target_alloc_host(size_t Size, int DeviceNum) {
 EXTERN void *llvm_omp_target_alloc_shared(size_t Size, int DeviceNum) {
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   return targetAllocExplicit(Size, DeviceNum, TARGET_ALLOC_SHARED, __func__);
+}
+
+EXTERN void *llvm_omp_target_alloc_multi_devices(size_t size, int num_devices,
+                                                 int DeviceNums[]) {
+  if (num_devices < 1)
+    return nullptr;
+
+  DeviceTy &Device = *PM->getDevice(DeviceNums[0]);
+  if (!Device.RTL->is_system_supporting_managed_memory(Device.DeviceID))
+    return nullptr;
+
+  // disregard device ids for now and allocate shared memory that can be
+  // accessed by any device and host under xnack+ mode
+  void *ptr =
+      targetAllocExplicit(size, DeviceNums[0], TARGET_ALLOC_DEFAULT, __func__);
+  // TODO: not implemented yet
+  // if (Device.RTL->enable_access_to_all_agents)
+  //   Device.RTL->enable_access_to_all_agents(DeviceNums[0], ptr);
+  return ptr;
 }
 
 EXTERN void omp_target_free(void *Ptr, int DeviceNum) {
@@ -585,7 +615,7 @@ EXTERN int omp_target_associate_ptr(const void *HostPtr, const void *DevicePtr,
   TIMESCOPE();
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   DP("Call to omp_target_associate_ptr with host_ptr " DPxMOD ", "
-     "device_ptr " DPxMOD ", size %zu, device_offset %zu, device_num %d\n",
+     "device_ptr " DPxMOD ", size %zu, device_offset %zu, DeviceNum %d\n",
      DPxPTR(HostPtr), DPxPTR(DevicePtr), Size, DeviceOffset, DeviceNum);
 
   if (!HostPtr || !DevicePtr || Size <= 0) {
@@ -619,7 +649,7 @@ EXTERN int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum) {
   TIMESCOPE();
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   DP("Call to omp_target_disassociate_ptr with host_ptr " DPxMOD ", "
-     "device_num %d\n",
+     "DeviceNum %d\n",
      DPxPTR(HostPtr), DeviceNum);
 
   if (!HostPtr) {
@@ -648,10 +678,45 @@ EXTERN int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum) {
   return Rc;
 }
 
+EXTERN int omp_is_coarse_grain_mem_region(void *ptr, size_t size) {
+  if (!(PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY))
+    return 0;
+  auto DeviceOrErr = PM->getDevice(omp_get_default_device());
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(omp_get_default_device(), "%s",
+                  toString(DeviceOrErr.takeError()).c_str());
+
+  return DeviceOrErr->RTL->query_coarse_grain_mem_region(
+      omp_get_default_device(), ptr, size);
+}
+
+// This user-callable function allows host overlays of HIP mem alloc functions
+// to register memory as coarse grain in the openmp runtime. This will
+// prevent duplicate HSA memory registration when OpenMP sees same memory
+// in map clauses.
+EXTERN void omp_register_coarse_grain_mem(void *ptr, size_t size, int setattr) {
+  if (!(PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY))
+    return;
+  auto DeviceOrErr = PM->getDevice(omp_get_default_device());
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(omp_get_default_device(), "%s",
+                  toString(DeviceOrErr.takeError()).c_str());
+
+  if (!(DeviceOrErr->RTL->is_gfx90a(omp_get_default_device()) &&
+        DeviceOrErr->RTL->is_gfx90a_coarse_grain_usm_map_enabled(
+            omp_get_default_device())))
+    return;
+
+  bool set_attr = (setattr == 1) ? true : false;
+  DeviceOrErr->RTL->set_coarse_grain_mem(omp_get_default_device(), ptr, size,
+                                         set_attr);
+  return;
+}
+
 EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
   TIMESCOPE();
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  DP("Call to omp_get_mapped_ptr with ptr " DPxMOD ", device_num %d.\n",
+  DP("Call to omp_get_mapped_ptr with ptr " DPxMOD ", DeviceNum %d.\n",
      DPxPTR(Ptr), DeviceNum);
 
   if (!Ptr) {

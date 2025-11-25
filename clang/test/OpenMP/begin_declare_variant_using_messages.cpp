@@ -23,7 +23,7 @@ void test_before() {
   before_1_and_2();
 }
 
-#pragma omp begin declare variant match(implementation = {vendor(llvm)})
+#pragma omp begin declare variant match(implementation = {vendor(amd)})
 using BEFORE_1_AND_2::before_1_and_2;
 using BEFORE_AND_1::before_and_1;
 using ONLY_1::only_1;
@@ -35,7 +35,7 @@ void test_1() {
 }
 #pragma omp end declare variant
 
-#pragma omp begin declare variant match(implementation = {vendor(llvm)})
+#pragma omp begin declare variant match(implementation = {vendor(amd)})
 using AFTER_AND_2::after_and_2;
 using BEFORE_1_AND_2::before_1_and_2;
 void test_2() {

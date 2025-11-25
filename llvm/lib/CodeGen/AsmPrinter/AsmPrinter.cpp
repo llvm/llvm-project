@@ -812,6 +812,19 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // sections and expected to be contiguous (e.g. ObjC metadata).
   const Align Alignment = getGVAlignment(GV, DL);
 
+  // Identify globals with "SanitizedPaddedGlobal" attribute and extract
+  // the actual global variable size.
+  uint64_t ActualSize = 0;
+  if (GV->hasAttribute(Attribute::SanitizedPaddedGlobal)) {
+    StructType *ST = dyn_cast<StructType>(GV->getValueType());
+    if (ST && ST->getNumElements() == 2) {
+      auto *ET0 = ST->getElementType(0);
+      if (ET0 && isa<ArrayType>(ST->getElementType(1))) {
+        ActualSize = DL.getTypeAllocSize(ET0);
+      }
+    }
+  }
+
   for (auto &Handler : Handlers)
     Handler->setSymbolSize(GVSym, Size);
 
@@ -917,6 +930,18 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   MCSymbol *EmittedInitSym = GVSym;
 
+  if (GV->hasAttribute(Attribute::SanitizedPaddedGlobal)) {
+    OutStreamer->switchSection(TheSection);
+    emitLinkage(GV, EmittedInitSym);
+    OutStreamer->emitLabel(EmittedInitSym);
+    if (MAI->hasDotTypeDotSizeDirective())
+      OutStreamer->emitELFSize(EmittedInitSym,
+                               MCConstantExpr::create(ActualSize, OutContext));
+    EmittedInitSym = OutContext.getOrCreateSymbol(
+        GVSym->getName() + Twine("__sanitized_padded_global"));
+    emitVisibility(EmittedInitSym, GV->getVisibility(), !GV->isDeclaration());
+  }
+
   OutStreamer->switchSection(TheSection);
 
   emitLinkage(GV, EmittedInitSym);
@@ -924,7 +949,8 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   OutStreamer->emitLabel(EmittedInitSym);
   MCSymbol *LocalAlias = getSymbolPreferLocal(*GV);
-  if (LocalAlias != EmittedInitSym)
+  if ((LocalAlias != EmittedInitSym) &&
+      !GV->hasAttribute(Attribute::SanitizedPaddedGlobal))
     OutStreamer->emitLabel(LocalAlias);
 
   emitGlobalConstant(GV->getDataLayout(), GV->getInitializer());
@@ -1327,6 +1353,27 @@ static bool emitDebugLabelComment(const MachineInstr *MI, AsmPrinter &AP) {
   // NOTE: Want this comment at start of line, don't emit with AddComment.
   AP.OutStreamer->emitRawComment(OS.str());
   return true;
+}
+
+/// This method handles the target-independent form
+/// of DBG_DEF, returning true if it was able to do so.  A false return
+/// means the target will need to handle MI in EmitInstruction.
+bool AsmPrinter::emitDebugComment(const MachineInstr *MI) {
+  assert(MI->isDebugInstr());
+
+  if (!isVerbose())
+    return true;
+
+  switch(MI->getOpcode()) {
+      case TargetOpcode::DBG_VALUE:
+      case TargetOpcode::DBG_VALUE_LIST:
+        return emitDebugValueComment(MI, *this);
+      case TargetOpcode::DBG_LABEL:
+        return emitDebugLabelComment(MI, *this);
+      default:
+        break;
+  }
+  return false;
 }
 
 AsmPrinter::CFISection
@@ -2039,9 +2086,9 @@ void AsmPrinter::emitFunctionBody() {
         break;
       case TargetOpcode::DBG_VALUE:
       case TargetOpcode::DBG_VALUE_LIST:
-        if (isVerbose()) {
-          if (!emitDebugValueComment(&MI, *this))
-            emitInstruction(&MI);
+      case TargetOpcode::DBG_LABEL:
+        if(!emitDebugComment(&MI)) {
+          emitInstruction(&MI);
         }
         break;
       case TargetOpcode::DBG_INSTR_REF:
@@ -2052,12 +2099,6 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::DBG_PHI:
         // This instruction is only used to label a program point, it's purely
         // meta information.
-        break;
-      case TargetOpcode::DBG_LABEL:
-        if (isVerbose()) {
-          if (!emitDebugLabelComment(&MI, *this))
-            emitInstruction(&MI);
-        }
         break;
       case TargetOpcode::IMPLICIT_DEF:
         if (isVerbose()) emitImplicitDef(&MI);

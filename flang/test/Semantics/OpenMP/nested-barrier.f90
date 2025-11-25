@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp  -fopenmp-version=50
 ! OpenMP Version 4.5
 ! Various checks with the nesting of BARRIER construct
 

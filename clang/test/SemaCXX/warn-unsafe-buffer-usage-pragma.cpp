@@ -1,6 +1,11 @@
+<<<<<<< HEAD
 // RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage \
 // RUN:            -fsafe-buffer-usage-suggestions \
 // RUN:            -Wno-unused-value -verify %s
+// XFAIL: *
+=======
+// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -Wno-unused-value -verify %s
+>>>>>>> 991d7848b740 ([SafeBufferUsage] restore safe buffer usage warnings for MIOpen GTest)
 
 void basic(int * x) {    // expected-warning{{'x' is an unsafe pointer used for buffer access}}
   int *p1 = new int[10]; // not to warn

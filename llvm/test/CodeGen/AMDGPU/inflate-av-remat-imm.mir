@@ -19,6 +19,8 @@ body:             |
     ; CHECK-LABEL: name: av_mov_b32_split
     ; CHECK: liveins: $agpr3, $agpr4, $vgpr0, $sgpr4_sgpr5
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; CHECK-NEXT: renamable $agpr0 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
     ; CHECK-NEXT: renamable $agpr1 = V_ACCVGPR_WRITE_B32_e64 1, implicit $exec
     ; CHECK-NEXT: renamable $agpr2 = V_ACCVGPR_WRITE_B32_e64 2, implicit $exec
@@ -68,6 +70,8 @@ body:             |
     ; CHECK-LABEL: name: v_mov_b32_split
     ; CHECK: liveins: $agpr3, $agpr4, $vgpr0, $sgpr4_sgpr5
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: renamable $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     ; CHECK-NEXT: renamable $vgpr2 = V_MOV_B32_e32 2, implicit $exec
@@ -120,6 +124,8 @@ body:             |
     ; CHECK-LABEL: name: av_mov_b64_split
     ; CHECK: liveins: $agpr6, $agpr7, $agpr8, $agpr9, $vgpr0, $sgpr4_sgpr5
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; CHECK-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec, implicit-def $agpr0_agpr1
     ; CHECK-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec, implicit-def $agpr0_agpr1
     ; CHECK-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 1, implicit $exec, implicit-def $agpr2_agpr3

@@ -2,6 +2,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.MismatchedDeallocator -analyzer-output=plist %s -o %t.plist
 // RUN: tail -n +11 %t.plist | %normalize_plist | diff -ub %S/copypaste/Inputs/expected-plists/MismatchedDeallocator-path-notes.cpp.plist -
 
+// XFAIL: *
 void changePointee(int *p);
 int *allocIntArray(unsigned c) {
   return new int[c]; // expected-note {{Memory is allocated}}

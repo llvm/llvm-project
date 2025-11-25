@@ -54,6 +54,11 @@ static cl::opt<bool>
                   cl::desc("Write extracted files to a static archive"),
                   cl::cat(OffloadBinaryCategory));
 
+static cl::opt<bool> AllowMissingPackages(
+    "allow-missing-packages",
+    cl::desc("Create empty files if packages are missing when unpackaging.\n"),
+    cl::init(false), cl::cat(OffloadBinaryCategory));
+
 /// Path of the current binary.
 static const char *PackagerExecutable;
 
@@ -138,6 +143,7 @@ static Error bundleImages() {
 static Error unbundleImages() {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFile);
+
   if (std::error_code EC = BufferOrErr.getError())
     return createFileError(InputFile, EC);
   std::unique_ptr<MemoryBuffer> Buffer = std::move(*BufferOrErr);
@@ -161,6 +167,16 @@ static Error unbundleImages() {
     SmallVector<const OffloadBinary *> Extracted;
     for (const OffloadFile &File : Binaries) {
       const auto *Binary = File.getBinary();
+      // If the user lists a .so file on the command line for the program
+      // that invokes this one (probably clang), it may contain offload
+      // binary sections that resemble those in an object file.  However,
+      // there is no late binding/shared object support on the target side
+      // (i.e. you cannot define a target function in a shared object and
+      // call it from a target region in the main program), and we don't want
+      // to *early* bind target regions in a shared object either.  So,
+      // ignore shared objects here.
+      if (identify_magic(Binary->getImage()) == file_magic::elf_shared_object)
+        continue;
       // We handle the 'file' and 'kind' identifiers differently.
       bool Match = llvm::all_of(Args, [&](auto &Arg) {
         const auto [Key, Value] = Arg;
@@ -174,8 +190,13 @@ static Error unbundleImages() {
         Extracted.push_back(Binary);
     }
 
-    if (Extracted.empty())
+    if (Extracted.empty()) {
+      if (AllowMissingPackages)
+        if (Error E = writeFile(Args["file"], StringRef()))
+          return E;
+
       continue;
+    }
 
     if (CreateArchive) {
       if (!Args.count("file"))

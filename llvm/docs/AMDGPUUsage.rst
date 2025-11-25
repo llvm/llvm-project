@@ -28,6 +28,7 @@ User Guide for AMDGPU Backend
    AMDGPUInstructionSyntax
    AMDGPUInstructionNotation
    AMDGPUDwarfExtensionsForHeterogeneousDebugging
+   AMDGPULLVMExtensionsForHeterogeneousDebugging
    AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
 
 Introduction
@@ -1601,6 +1602,86 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    * 1 - Data cache.
 
                                                    Instruction cache prefetches are unsafe on invalid address.
+
+  llvm.amdgcn.global.load.b128                 This intrinsic is supported on gfx942, gfx950.
+  
+                                                   Signature:
+                                                   
+                                                   .. code-block:: llvm
+                                                      
+                                                      <4 x i32> @llvm.amdgcn.raw.load.store.b128(
+                                                          ptr addrspace(1), ; source
+                                                          metadata)         ; scope    - e.g. '!0' where '!0 = !{!"wavegroup"}'
+
+                                                   Reads the value from the source address with cache behavior
+                                                   specified by the scope.
+
+                                                   For gfc942 and gfx950 devices, this emits a
+                                                   ``global_load_dwordx4`` instruction with the appropriate
+                                                   ``SC0`` and ``SC1`` bits set.
+
+                                                   Valid values for scope are
+                                                   
+                                                   ===================== =============================================================
+                                                   scope                 architecture name
+                                                   ===================== =============================================================
+                                                   ``"wavefront"``       wave
+                                                   
+                                                   ``"workgroup"``       group
+                                                   
+                                                   ``"agent"``           device
+                                                   
+                                                   ``""`` (empty string) system
+                                                   ===================== =============================================================
+ 
+                                                   For semantics on gfx942, see Table 47 in section 9.1.10
+                                                   "Memory Scope and Temporal Controls" of the "AMD Instinct
+                                                   MI300" Instruction Set Architecture Reference.
+                                                   
+                                                   For semantics on gfx950, see Table 49 in section 9.1.10
+                                                   "Memory Scope and Temporal Controls" of the CDNA4
+                                                   Instruction Set Architecture Reference.
+                                                                                                      
+  llvm.amdgcn.global.store.b128                This intrinsic is supported on gfx942, gfx950.
+  
+                                                   Signature:
+                                                   
+                                                   .. code-block:: llvm
+                                                      
+                                                      void @llvm.amdgcn.global.store.b128(
+                                                          ptr addrspace(1), ; destination
+                                                          <4 x i32>,        ; value
+                                                          metadata)         ; scope    - e.g. '!0' where '!0 = !{!"wavegroup"}'
+
+                                                   Writes the value to the destination address with cache
+                                                   behavior specified by the scope.
+
+                                                   For gfc942 and gfx950 devices, this emits a
+                                                   ``global_store_dwordx4`` instruction with the appropriate
+                                                   ``SC0`` and ``SC1`` bits set.
+
+                                                   Valid values for scope are
+                                                   
+                                                   ===================== =============================================================
+                                                   scope                 architecture name
+                                                   ===================== =============================================================
+                                                   ``"wavefront"``       wave
+                                                   
+                                                   ``"workgroup"``       group
+                                                   
+                                                   ``"agent"``           device
+                                                   
+                                                   ``""`` (empty string) system
+                                                   ===================== =============================================================
+ 
+                                                   For semantics on gfx942, see Table 48 in section 9.1.10
+                                                   "Memory Scope and Temporal Controls" of the "AMD Instinct
+                                                   MI300" Instruction Set Architecture Reference.
+                                                   
+                                                   For semantics on gfx950, see Table 50 in section 9.1.10
+                                                   "Memory Scope and Temporal Controls" of the CDNA4
+                                                   Instruction Set Architecture Reference.
+                                                                                                      
   ==============================================   ==========================================================
 
 .. TODO::
@@ -3063,6 +3144,10 @@ used by tools such as debuggers and profilers. It uses features defined in
 :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging` that are made available in
 DWARF Version 4 and DWARF Version 5 as an LLVM vendor extension.
 
+AMDGPU uses LLVM features defined in
+:doc:`AMDGPULLVMExtensionsForHeterogeneousDebugging` to implement the generation
+of DWARF.
+
 This section defines the AMDGPU target architecture specific DWARF mappings.
 
 .. _amdgpu-dwarf-register-identifier:
@@ -3712,20 +3797,6 @@ temporarily updated. The location list expression created for this artificial
 variable is used to define the value of the ``DW_AT_LLVM_active_lane``
 attribute.
 
-``DW_AT_LLVM_augmentation``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-For AMDGPU, the ``DW_AT_LLVM_augmentation`` attribute of a compilation unit
-debugger information entry has the following value for the augmentation string:
-
-::
-
-  [amdgpu:v0.0]
-
-The "vX.Y" specifies the major X and minor Y version number of the AMDGPU
-extensions used in the DWARF of the compilation unit. The version number
-conforms to [SEMVER]_.
-
 Call Frame Information
 ----------------------
 
@@ -3781,37 +3852,6 @@ Accelerated Access
 ------------------
 
 See DWARF Version 5 section 6.1.
-
-Lookup By Name Section Header
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-See DWARF Version 5 section 6.1.1.4.1 and :ref:`amdgpu-dwarf-lookup-by-name`.
-
-For AMDGPU the lookup by name section header table:
-
-``augmentation_string_size`` (uword)
-
-  Set to the length of the ``augmentation_string`` value which is always a
-  multiple of 4.
-
-``augmentation_string`` (sequence of UTF-8 characters)
-
-  Contains the following UTF-8 string null padded to a multiple of 4 bytes:
-
-  ::
-
-    [amdgpu:v0.0]
-
-  The "vX.Y" specifies the major X and minor Y version number of the AMDGPU
-  extensions used in the DWARF of this index. The version number conforms to
-  [SEMVER]_.
-
-  .. note::
-
-    This is different to the DWARF Version 5 definition that requires the first
-    4 characters to be the vendor ID. But this is consistent with the other
-    augmentation strings and does allow multiple vendor contributions. However,
-    backwards compatibility may be more desirable.
 
 Lookup By Address Section Header
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

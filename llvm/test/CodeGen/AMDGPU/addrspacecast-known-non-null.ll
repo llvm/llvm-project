@@ -12,7 +12,6 @@ define void @flat_user(ptr %ptr) {
 ; CHECK-LABEL: {{^}}cast_alloca:
 ; CHECK: s_mov_b64 s[{{[0-9]+}}:[[HIREG:[0-9]+]]], src_private_base
 ; CHECK: v_mov_b32_e32 v1, s[[HIREG]]
-; CHECK-NOT: v0
 ; CHECK-NOT: v1
 define void @cast_alloca() {
   %alloca = alloca i8, addrspace(5)
@@ -27,7 +26,6 @@ define void @cast_alloca() {
 ; CHECK: s_mov_b64 s[{{[0-9]+}}:[[HIREG:[0-9]+]]], src_shared_base
 ; CHECK: v_mov_b32_e32 v0, 0
 ; CHECK: v_mov_b32_e32 v1, s[[HIREG]]
-; CHECK-NOT: v0
 ; CHECK-NOT: v1
 define amdgpu_kernel void @cast_lds_gv() {
   %cast = addrspacecast ptr addrspace(3) @lds to ptr

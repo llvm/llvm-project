@@ -16,14 +16,21 @@
 // Only provide functionality if target OMPT support is enabled
 #ifdef OMPT_SUPPORT
 #include "Callback.h"
+#include "OmptEventInfoTy.h"
+#include "Shared/APITypes.h"
+#include "Shared/Debug.h"
 #include "omp-tools.h"
+
+#include "GenericProfiler.h"
 
 #include "llvm/Support/ErrorHandling.h"
 
 #include <functional>
 #include <tuple>
 
-#define OMPT_IF_BUILT(stmt) stmt
+#pragma push_macro("DEBUG_PREFIX")
+#undef DEBUG_PREFIX
+#define DEBUG_PREFIX "OMPT"
 
 /// Callbacks for target regions require task_data representing the
 /// encountering task.
@@ -31,6 +38,7 @@
 /// target_task_data representing the target task region.
 typedef ompt_data_t *(*ompt_get_task_data_t)();
 typedef ompt_data_t *(*ompt_get_target_task_data_t)();
+typedef int (*ompt_set_frame_enter_t)(void *Address, int Flags, int State);
 
 namespace llvm {
 namespace omp {
@@ -41,10 +49,19 @@ namespace ompt {
 /// target_task_data.
 static ompt_get_task_data_t ompt_get_task_data_fn;
 static ompt_get_target_task_data_t ompt_get_target_task_data_fn;
+static ompt_set_frame_enter_t ompt_set_frame_enter_fn;
+
+/// OMPT global tracing status. Indicates if at least one device is traced.
+extern bool TracingActive;
+
+/// Check if this device traces the given event type
+extern bool isTracingEnabled(int DeviceId, unsigned int EventTy);
 
 /// Used to maintain execution state for this thread
 class Interface {
 public:
+  // Target data callbacks
+
   /// Top-level function for invoking callback before device data allocation
   void beginTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
                             void **TgtPtrBegin, size_t Size, void *Code);
@@ -134,6 +151,85 @@ public:
   /// Top-level function for invoking callback after target construct
   void endTarget(int64_t DeviceId, void *Code);
 
+  // Target data tracing
+
+  /// Top-level function for starting trace before device data allocation
+  void startTargetDataAllocTrace(int64_t DeviceId, void *HstPtrBegin,
+                                 void **TgtPtrBegin, size_t Size, void *Code);
+
+  /// Top-level function for stopping trace after device data allocation
+  ompt_record_ompt_t *stopTargetDataAllocTrace(int64_t DeviceId,
+                                               void *HstPtrBegin,
+                                               void **TgtPtrBegin, size_t Size,
+                                               void *Code);
+
+  /// Top-level function for starting trace before data submit
+  ompt_record_ompt_t *startTargetDataSubmitTrace(int64_t SrcDeviceId,
+                                                 void *SrcPtrBegin,
+                                                 int64_t DstDeviceId,
+                                                 void *DstPtrBegin, size_t Size,
+                                                 void *Code);
+
+  /// Top-level function for starting trace before device data deallocation
+  void startTargetDataDeleteTrace(int64_t DeviceId, void *TgtPtrBegin,
+                                  void *Code);
+
+  /// Top-level function for stopping trace after device data deallocation
+  ompt_record_ompt_t *stopTargetDataDeleteTrace(int64_t DeviceId,
+                                                void *TgtPtrBegin, void *Code);
+
+  /// Top-level function for starting trace before data retrieve
+  ompt_record_ompt_t *startTargetDataRetrieveTrace(int64_t SrcDeviceId,
+                                                   void *SrcPtrBegin,
+                                                   int64_t DstDeviceId,
+                                                   void *DstPtrBegin,
+                                                   size_t Size, void *Code);
+
+  ompt_record_ompt_t *
+  stopTargetDataMovementTraceAsync(ompt_record_ompt_t *DataPtr,
+                                   uint64_t NanosStart, uint64_t NanosEnd);
+
+  /// Top-level function for starting trace before kernel dispatch
+  ompt_record_ompt_t *startTargetSubmitTrace(int64_t DeviceId,
+                                             unsigned int NumTeams = 1);
+
+  ompt_record_ompt_t *stopTargetSubmitTraceAsync(ompt_record_ompt_t *DataPtr,
+                                                 unsigned int NumTeams,
+                                                 uint64_t NanosStart,
+                                                 uint64_t NanosStop);
+
+  // Target region tracing
+
+  /// Top-level function for starting trace before target enter data
+  /// construct
+  ompt_record_ompt_t *startTargetDataEnterTrace(int64_t DeviceId, void *Code);
+
+  /// Top-level function for stopping trace after target enter data
+  /// construct
+  ompt_record_ompt_t *stopTargetDataEnterTrace(int64_t DeviceId, void *Code);
+
+  /// Top-level function for starting trace before target exit data
+  /// construct
+  ompt_record_ompt_t *startTargetDataExitTrace(int64_t DeviceId, void *Code);
+
+  /// Top-level function for stopping trace after target exit data
+  /// construct
+  ompt_record_ompt_t *stopTargetDataExitTrace(int64_t DeviceId, void *Code);
+
+  /// Top-level function for starting trace before target update construct
+  ompt_record_ompt_t *startTargetUpdateTrace(int64_t DeviceId, void *Code);
+
+  /// Top-level function for stopping trace after target update construct
+  ompt_record_ompt_t *stopTargetUpdateTrace(int64_t DeviceId, void *Code);
+
+  // Target kernel tracing
+
+  /// Top-level function for starting trace before target construct
+  ompt_record_ompt_t *startTargetTrace(int64_t DeviceId, void *Code);
+
+  /// Top-level function for stopping trace after target construct
+  ompt_record_ompt_t *stopTargetTrace(int64_t DeviceId, void *Code);
+
   // Callback getter: Target data operations
   template <ompt_target_data_op_t OpType> auto getCallbacks() {
     if constexpr (OpType == ompt_target_data_alloc ||
@@ -204,6 +300,69 @@ public:
     llvm_unreachable("Unhandled target operation!");
   }
 
+  // Callback getter: Target data operations
+  template <ompt_target_data_op_t OpType> auto getTraceGenerators() {
+    if constexpr (OpType == ompt_target_data_alloc ||
+                  OpType == ompt_target_data_alloc_async)
+      return std::make_pair(std::mem_fn(&Interface::startTargetDataAllocTrace),
+                            std::mem_fn(&Interface::stopTargetDataAllocTrace));
+
+    if constexpr (OpType == ompt_target_data_delete ||
+                  OpType == ompt_target_data_delete_async)
+      return std::make_pair(std::mem_fn(&Interface::startTargetDataDeleteTrace),
+                            std::mem_fn(&Interface::stopTargetDataDeleteTrace));
+
+    if constexpr (OpType == ompt_target_data_transfer_to_device ||
+                  OpType == ompt_target_data_transfer_to_device_async)
+      return std::make_pair(
+          std::mem_fn(&Interface::startTargetDataSubmitTrace),
+          std::mem_fn(&Interface::stopTargetDataMovementTraceAsync));
+
+    if constexpr (OpType == ompt_target_data_transfer_from_device ||
+                  OpType == ompt_target_data_transfer_from_device_async)
+      return std::make_pair(
+          std::mem_fn(&Interface::startTargetDataRetrieveTrace),
+          std::mem_fn(&Interface::stopTargetDataMovementTraceAsync));
+
+    llvm_unreachable("Unhandled target data operation type!");
+  }
+
+  // Callback getter: Target region operations
+  template <ompt_target_t OpType> auto getTraceGenerators() {
+    if constexpr (OpType == ompt_target_enter_data ||
+                  OpType == ompt_target_enter_data_nowait)
+      return std::make_pair(std::mem_fn(&Interface::startTargetDataEnterTrace),
+                            std::mem_fn(&Interface::stopTargetDataEnterTrace));
+
+    if constexpr (OpType == ompt_target_exit_data ||
+                  OpType == ompt_target_exit_data_nowait)
+      return std::make_pair(std::mem_fn(&Interface::startTargetDataExitTrace),
+                            std::mem_fn(&Interface::stopTargetDataExitTrace));
+
+    if constexpr (OpType == ompt_target_update ||
+                  OpType == ompt_target_update_nowait)
+      return std::make_pair(std::mem_fn(&Interface::startTargetUpdateTrace),
+                            std::mem_fn(&Interface::stopTargetUpdateTrace));
+
+    if constexpr (OpType == ompt_target || OpType == ompt_target_nowait)
+      return std::make_pair(std::mem_fn(&Interface::startTargetTrace),
+                            std::mem_fn(&Interface::stopTargetTrace));
+
+    llvm_unreachable("Unknown target region operation type!");
+  }
+
+  // Callback getter: Kernel launch operation
+  template <ompt_callbacks_t OpType> auto getTraceGenerators() {
+    // We use 'ompt_callbacks_t', because no other enum is currently available
+    // to model a kernel launch / target submit operation.
+    if constexpr (OpType == ompt_callback_target_submit)
+      return std::make_pair(
+          std::mem_fn(&Interface::startTargetSubmitTrace),
+          std::mem_fn(&Interface::stopTargetSubmitTraceAsync));
+
+    llvm_unreachable("Unhandled target operation!");
+  }
+
   /// Setters for target region and target operation correlation ids
   void setTargetDataValue(uint64_t DataValue) { TargetData.value = DataValue; }
   void setTargetDataPtr(void *DataPtr) { TargetData.ptr = DataPtr; }
@@ -228,6 +387,9 @@ private:
   ompt_data_t *TargetTaskData = nullptr;
 
   /// Used for marking begin of a data operation
+  void announceTargetRegion(const char *RegionName);
+
+  /// Used for marking begin of a data operation
   void beginTargetDataOperation();
 
   /// Used for marking end of a data operation
@@ -238,6 +400,23 @@ private:
 
   /// Used for marking end of a target region
   void endTargetRegion();
+
+  // Called by all trace generation routines
+  void setTraceRecordCommon(ompt_record_ompt_t *DataPtr,
+                            ompt_callbacks_t CallbackType);
+  // Type specific helpers
+  void setTraceRecordTargetDataOp(ompt_record_target_data_op_t *Record,
+                                  ompt_target_data_op_t DataOpType,
+                                  void *SrcAddr, int64_t SrcDeviceNum,
+                                  void *DstAddr, int64_t DstDeviceNum,
+                                  size_t Bytes, void *CodePtr);
+
+  void setTraceRecordTargetKernel(ompt_record_target_kernel_t *Record,
+                                  unsigned int NumTeams);
+
+  void setTraceRecordTarget(ompt_record_target_t *Record, int64_t DeviceId,
+                            ompt_target_t TargetKind,
+                            ompt_scope_endpoint_t Endpoint, void *CodePtr);
 };
 
 /// Thread local state for target region and associated metadata
@@ -249,14 +428,14 @@ extern thread_local Interface RegionInterface;
 extern thread_local void *ReturnAddress;
 
 template <typename FuncTy, typename ArgsTy, size_t... IndexSeq>
-void InvokeInterfaceFunction(FuncTy Func, ArgsTy Args,
+auto InvokeInterfaceFunction(FuncTy Func, ArgsTy Args,
                              std::index_sequence<IndexSeq...>) {
-  std::invoke(Func, RegionInterface, std::get<IndexSeq>(Args)...);
+  return std::invoke(Func, RegionInterface, std::get<IndexSeq>(Args)...);
 }
 
-template <typename CallbackPairTy, typename... ArgsTy> class InterfaceRAII {
+template <typename FunctionPairTy, typename... ArgsTy> class InterfaceRAII {
 public:
-  InterfaceRAII(CallbackPairTy Callbacks, ArgsTy... Args)
+  InterfaceRAII(FunctionPairTy Callbacks, ArgsTy... Args)
       : Arguments(Args...), beginFunction(std::get<0>(Callbacks)),
         endFunction(std::get<1>(Callbacks)) {
     performIfOmptInitialized(begin());
@@ -277,14 +456,66 @@ private:
   }
 
   std::tuple<ArgsTy...> Arguments;
-  typename CallbackPairTy::first_type beginFunction;
-  typename CallbackPairTy::second_type endFunction;
+  typename FunctionPairTy::first_type beginFunction;
+  typename FunctionPairTy::second_type endFunction;
 };
 
 // InterfaceRAII's class template argument deduction guide
-template <typename CallbackPairTy, typename... ArgsTy>
-InterfaceRAII(CallbackPairTy Callbacks, ArgsTy... Args)
-    -> InterfaceRAII<CallbackPairTy, ArgsTy...>;
+template <typename FunctionPairTy, typename... ArgsTy>
+InterfaceRAII(FunctionPairTy Callbacks, ArgsTy... Args)
+    -> InterfaceRAII<FunctionPairTy, ArgsTy...>;
+
+/// Similar to the original InterfaceRAII this class is used for tracing and
+/// extends the original with async capabilities. That is: It takes an
+/// additional AsyncInfo reference as argument to populate the relevant fields.
+/// The AsyncInfoTy propagates the info into the RTL / plugins.
+/// TracedDeviceId represents the trace record's device affinity. EventType is
+/// the callback type that needs to be enabled via ompt_set_trace_ompt.
+template <typename FunctionPairTy, typename AsyncInfoTy, typename... ArgsTy>
+class TracerInterfaceRAII {
+public:
+  TracerInterfaceRAII(FunctionPairTy Callbacks, AsyncInfoTy &AsyncInfo,
+                      plugin::GenericProfilerTy *Prof, int TracedDeviceId,
+                      ompt_callbacks_t EventType, ArgsTy... Args)
+      : Arguments(Args...), beginFunction(std::get<0>(Callbacks)) {
+    __tgt_async_info *AI = AsyncInfo;
+    if (isTracingEnabled(TracedDeviceId, EventType)) {
+      auto Record = begin();
+
+      // The Profiler can allocate specific data to be used to pass information
+      // from here to lower parts of the runtime system.
+      // NOTE: It is the responsibility of the programmer to ensure type
+      // compatibility and correct usage of the data. The profiler, however,
+      // OWNS the pointer and frees it at an appropriate time.
+      OmptEventInfoTy *ProfilerData =
+          reinterpret_cast<OmptEventInfoTy *>(Prof->getProfilerSpecificData());
+      ProfilerData->TraceRecord = Record;
+      ProfilerData->NumTeams = 0;
+
+      // Allows to pass down into the plugins via AsyncInfoTy
+      AI->ProfilerData = ProfilerData;
+    } else {
+      // Actively prevent further tracing of this event
+      AI->ProfilerData = nullptr;
+    }
+  }
+
+private:
+  auto begin() {
+    auto IndexSequence =
+        std::make_index_sequence<std::tuple_size_v<decltype(Arguments)>>{};
+    return InvokeInterfaceFunction(beginFunction, Arguments, IndexSequence);
+  }
+
+  std::tuple<ArgsTy...> Arguments;
+  typename FunctionPairTy::first_type beginFunction;
+  /// No end-function here, since the end is called asynchronously from the
+  /// plugins, once the operation has completed.
+};
+
+template <typename FunctionPairTy, typename... ArgsTy>
+TracerInterfaceRAII(FunctionPairTy Callbacks, ArgsTy... Args)
+    -> TracerInterfaceRAII<FunctionPairTy, ArgsTy...>;
 
 /// Used to set and reset the thread-local return address. The RAII is expected
 /// to be created at a runtime entry point when the return address should be
@@ -322,8 +553,8 @@ private:
 // The getter returns the address stored in the thread local variable.
 #define OMPT_GET_RETURN_ADDRESS llvm::omp::target::ompt::ReturnAddress
 
-#else
-#define OMPT_IF_BUILT(stmt)
-#endif
+#pragma pop_macro("DEBUG_PREFIX")
+
+#endif // OMPT_SUPPORT
 
 #endif // OFFLOAD_INCLUDE_OPENMP_OMPT_INTERFACE_H

@@ -1144,7 +1144,7 @@ transformed and loaded back into the JIT pipeline via
 .. _libomptarget_jit_post_opt_ir_module:
 
 LIBOMPTARGET_JIT_POST_OPT_IR_MODULE
-"""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""
 
 This environment variable can be used to extract the embedded device code after
 the device JIT runs additional IR optimizations on it (see
@@ -1196,7 +1196,7 @@ plugins' implementation. Currently, these plugins have support for the NVIDIA
 and AMDGPU devices as well as the GenericELF64bit host-simulated device.
 
 The source code of the common infrastructure and the vendor-specific plugins is
-in the ``openmp/libomptarget/nextgen-plugins`` directory in the LLVM project
+in the ``offload/nextgen-plugins`` directory in the LLVM project
 repository. The plugin infrastructure aims at unifying the plugin code and logic
 into a generic interface using object-oriented C++. There is a plugin interface
 composed by multiple generic C++ classes which implement the common logic that
@@ -1341,14 +1341,6 @@ its GPUs can be offloaded to with the appropriate device number. If the
 server is running on the same host, each device may be identified twice:
 once through the device plugins and once through the device plugins that the
 server application has access to.
-
-This plugin consists of ``libomptarget.rtl.rpc.so`` and
-``openmp-offloading-server`` which should be running on the (remote) host. The
-server application does not have to be running on a remote host, and can
-instead be used on the same host in order to debug memory mapping during offloading.
-These are implemented via gRPC/protobuf so these libraries are required to
-build and use this plugin. The server must also have access to the necessary
-target-specific plugins in order to perform the offloading.
 
 Due to the experimental nature of this plugin, the CMake variable
 ``LIBOMPTARGET_ENABLE_EXPERIMENTAL_REMOTE_PLUGIN`` must be set in order to

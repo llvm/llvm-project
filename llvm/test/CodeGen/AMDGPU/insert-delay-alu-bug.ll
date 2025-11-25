@@ -25,18 +25,17 @@ define void @f0() {
 ; GFX11-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v4, s33 ; 4-byte Folded Spill
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11-NEXT:    v_writelane_b32 v4, s30, 0
 ; GFX11-NEXT:    s_add_i32 s32, s32, 16
+; GFX11-NEXT:    v_writelane_b32 v4, s31, 1
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
 ; GFX11-NEXT:    s_add_u32 s0, s0, f1@gotpcrel32@lo+4
 ; GFX11-NEXT:    s_addc_u32 s1, s1, f1@gotpcrel32@hi+12
-; GFX11-NEXT:    v_writelane_b32 v4, s30, 0
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11-NEXT:    v_writelane_b32 v4, s31, 1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readlane_b32 s31, v4, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v4, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v4, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_load_b32 v4, off, s33 ; 4-byte Folded Reload

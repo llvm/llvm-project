@@ -21,8 +21,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     %1 = llvm.mlir.constant(0 : index) : i64
     %2 = llvm.mlir.constant(11 : index) : i64
     %3 = llvm.mlir.addressof @_QMtest_0Ezii : !llvm.ptr
-    %4 = omp.map.bounds lower_bound(%1 : i64) upper_bound(%2 : i64) extent(%2 : i64) stride(%0 : i64) start_idx(%1 : i64) {stride_in_bytes = true}
-    %5 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.array<11 x f32>) map_clauses(tofrom) capture(ByRef) bounds(%4) -> !llvm.ptr
+    %5 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.array<11 x f32>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     omp.target map_entries(%5 -> %arg0 : !llvm.ptr) {
       %6 = llvm.mlir.constant(1.0 : f32) : f32
       %7 = llvm.mlir.constant(0 : i64) : i64

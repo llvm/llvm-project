@@ -1498,6 +1498,12 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
                                         llvm_metadata_ty]>;
   def int_dbg_label        : DefaultAttrsIntrinsic<[],
                                        [llvm_metadata_ty]>;
+  def int_dbg_def          : DefaultAttrsIntrinsic<[],
+                                       [llvm_metadata_ty,
+                                        llvm_metadata_ty]>;
+  def int_dbg_kill         : DefaultAttrsIntrinsic<[],
+                                        [llvm_metadata_ty]>;
+
 }
 
 //===------------------ Exception Handling Intrinsics----------------------===//

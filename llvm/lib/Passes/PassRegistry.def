@@ -261,6 +261,13 @@ MODULE_PASS_WITH_PARAMS(
     },
     parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
 MODULE_PASS_WITH_PARAMS(
+    "default-post-link", "", [&](OptimizationLevel L) {
+      setupOptionsForPipelineAlias(PTO, L);
+      return buildPerModuleDefaultPipeline(
+          L, ThinOrFullLTOPhase::CustomLTOPostLink);
+    },
+    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+MODULE_PASS_WITH_PARAMS(
     "thinlto-pre-link", "", [&](OptimizationLevel L) {
       setupOptionsForPipelineAlias(PTO, L);
       return buildThinLTOPreLinkDefaultPipeline(L);

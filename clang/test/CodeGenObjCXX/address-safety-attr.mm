@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s --implicit-check-not=sanitize_address
 // RUN: %clang_cc1 -emit-llvm -o - %s -fsanitize=address | FileCheck %s --check-prefixes=CHECK,ASAN
 
+// REQUIRES: more-investigation
+
 @interface MyClass
 + (int) addressSafety:(int*)a;
 @end

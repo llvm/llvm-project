@@ -11,6 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginManager.h"
+#include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
+#include "OpenMP/OMPT/OmptTracing.h"
 #include "OffloadPolicy.h"
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
@@ -46,12 +49,32 @@ void PluginManager::init() {
   } while (false);
 #include "Shared/Targets.def"
 
+// At this point, we don't know whether OMPT tracing will be turned ON.
+// So we create the top-level tracing manager as long as OMPT is built in --
+// the construction itself is inexpensive.
+#ifdef OMPT_SUPPORT
+  assert(TraceRecordManager == nullptr &&
+         "Expected trace record manager to be null");
+  TraceRecordManager = new OmptTracingBufferMgr();
+#endif
+
   DP("RTLs loaded!\n");
 }
 
 void PluginManager::deinit() {
   TIMESCOPE();
+  if (OffloadPolicy::isOffloadDisabled()) {
+    DP("Offload is disabled. Skipping plugin deinitialization\n");
+    return;
+  }
   DP("Unloading RTLs...\n");
+
+#ifdef OMPT_SUPPORT
+  assert(TraceRecordManager != nullptr &&
+         "Trace record manager should have been non-null");
+  delete TraceRecordManager;
+  TraceRecordManager = nullptr;
+#endif
 
   for (auto &Plugin : Plugins) {
     if (!Plugin->is_initialized())
@@ -209,6 +232,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
     PM->addDeviceImage(*Desc, Desc->DeviceImages[i]);
 
   // Register the images with the RTLs that understand them, if any.
+  bool FoundCompatibleImage = false;
   llvm::DenseMap<GenericPluginTy *, llvm::DenseSet<int32_t>> UsedDevices;
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i) {
     // Obtain the image and information that was previously extracted.
@@ -285,19 +309,39 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
         TT.TargetsTable[UserId] = nullptr;
 
         UsedDevices[&R].insert(DeviceId);
-        PM->UsedImages.insert(Img);
-        FoundRTL = &R;
-
         PM->TrlTblMtx.unlock();
+        FoundRTL = &R;
+      }
+
+      if (FoundRTL) {
+        PM->UsedImages.insert(Img);
+        break;
       }
     }
-    if (!FoundRTL)
+    if (!FoundRTL) {
       DP("No RTL found for image " DPxMOD "!\n", DPxPTR(Img->ImageStart));
+    } else {
+      FoundCompatibleImage = true;
+    }
   }
+
+  // Check if I can report any XNACK related image failures. The report
+  // should happen only when we have not found a compatible RTL with
+  // matching XNACK and we were expecting to have a match (i.e. the
+  // image was hoping to find an RTL for an AMD GPU with XNACK support).
+  if (!FoundCompatibleImage) {
+    for (DeviceImageTy &DI : PM->deviceImages()) {
+      __tgt_device_image *Img = &DI.getExecutableImage();
+      for (auto &R : PM->plugins())
+        R.check_invalid_image(Img);
+    }
+  }
+
   PM->RTLsMtx.unlock();
 
-  bool UseAutoZeroCopy = false;
+  bool IsAPU = Plugins.size() > 0;
 
+  bool UseAutoZeroCopy = false;
   auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
   // APUs are homogeneous set of GPUs. Check the first device for
   // configuring Auto Zero-Copy.
@@ -309,15 +353,53 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   if (UseAutoZeroCopy)
     addRequirements(OMPX_REQ_AUTO_ZERO_COPY);
 
+  bool EagerMapsRequested = BoolEnvar("OMPX_EAGER_ZERO_COPY_MAPS", false).get();
+
+  // Eager Zero-Copy Maps makes a "copy" execution turn into
+  // an automatic zero-copy. It also applies to unified_shared_memory.
+  // It is only available on APUs.
+  if (IsAPU && EagerMapsRequested) {
+    addRequirements(OMPX_REQ_EAGER_ZERO_COPY_MAPS);
+    if (!(getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY))
+      addRequirements(OMPX_REQ_AUTO_ZERO_COPY);
+  }
+
+  // Sanity checks for zero-copy depend on specific devices: request it here
+  if ((ExclusiveDevicesAccessor->size() > 0) &&
+      ((getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
+       (getRequirements() & OMPX_REQ_AUTO_ZERO_COPY))) {
+    // APUs are assumed to be a homogeneous set of GPUs: ask
+    // the first device in the system to run a sanity check.
+    auto &Device = *(*ExclusiveDevicesAccessor)[0];
+    // just skip checks if no devices are found in the system
+    Device.zeroCopySanityChecksAndDiag(
+        (getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY),
+        (getRequirements() & OMPX_REQ_AUTO_ZERO_COPY),
+        (getRequirements() & OMPX_REQ_EAGER_ZERO_COPY_MAPS));
+  }
+
+  // Add the flag for multi-device.
+  if (ExclusiveDevicesAccessor->size() > 0) {
+    auto &Device = *(*ExclusiveDevicesAccessor)[0];
+    if (Device.getNumMultiDevices() > 0)
+      addRequirements(OMPX_REQ_MULTI_DEVICE_ENABLED);
+  }
+
   DP("Done registering entries!\n");
 }
 
 // Temporary forward declaration, old style CTor/DTor handling is going away.
 int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-           KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
+           KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo,
+           bool InMultiDeviceMode, bool &IsMultiDeviceKernel);
 
 void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   DP("Unloading target library!\n");
+
+  // Flush in-process OMPT trace records and shut down helper threads
+  // before unloading the library.
+  OMPT_IF_TRACING_ENABLED(
+      PM->getTraceRecordManager()->flushAndShutdownHelperThreads(););
 
   Desc = upgradeLegacyEntries(Desc);
 
@@ -520,8 +602,8 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
                 CurrHostEntry->Size /*HstPtrEnd*/,
             (uintptr_t)CurrDeviceEntryAddr /*TgtAllocBegin*/,
             (uintptr_t)CurrDeviceEntryAddr /*TgtPtrBegin*/,
-            false /*UseHoldRefCount*/, CurrHostEntry->SymbolName,
-            true /*IsRefCountINF*/));
+            false /*UseHoldRefCount*/, TARGET_ALLOC_DEFAULT /*AllocKind*/,
+            CurrHostEntry->SymbolName, true /*IsRefCountINF*/));
 
         // Notify about the new mapping.
         if (Device.notifyDataMapped(CurrHostEntry->Address,
@@ -564,3 +646,21 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
                                        DeviceNo);
   return *DevicePtr;
 }
+
+#ifdef OMPT_SUPPORT
+
+#include "OmptProfiler.h"
+
+std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
+getProfilerToAttach() {
+  return std::make_unique<llvm::omp::target::ompt::OmptProfilerTy>();
+}
+
+#else
+
+std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
+getProfilerToAttach() {
+  return std::make_unique<llvm::omp::target::plugin::GenericProfilerTy>();
+}
+
+#endif

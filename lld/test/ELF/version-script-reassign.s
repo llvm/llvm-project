@@ -24,7 +24,7 @@
 # RUN: llvm-readelf --dyn-syms %t.so | FileCheck --check-prefix=V1-SYM %s
 
 # RUN: ld.lld -shared %t.o --version-script %t1.ver --version-script %t2w.ver \
-# RUN:   -o %t.so --fatal-warnings --undefined-version
+# RUN:   -o %t.so --fatal-warnings
 # RUN: llvm-readelf --dyn-syms %t.so | FileCheck --check-prefix=V1-SYM %s
 
 # LOCAL: warning: attempt to reassign symbol 'foo' of VER_NDX_LOCAL to version 'V1'

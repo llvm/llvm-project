@@ -21,7 +21,9 @@
 #include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/terminator.h"
+RT_OFFLOAD_VAR_GROUP_BEGIN
 #include "flang/Common/constexpr-bitset.h"
+RT_OFFLOAD_VAR_GROUP_END
 #include "flang/Common/optional.h"
 #include <cstdlib>
 #include <cstring>

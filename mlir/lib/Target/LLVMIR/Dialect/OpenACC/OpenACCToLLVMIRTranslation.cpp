@@ -31,7 +31,7 @@ using OpenACCIRBuilder = llvm::OpenMPIRBuilder;
 // Utility functions
 //===----------------------------------------------------------------------===//
 
-/// Flag values are extracted from openmp/libomptarget/include/omptarget.h and
+/// Flag values are extracted from offload/include/omptarget.h and
 /// mapped to corresponding OpenACC flags.
 static constexpr uint64_t kCreateFlag = 0x000;
 static constexpr uint64_t kDeviceCopyinFlag = 0x001;
@@ -151,7 +151,8 @@ processDataOperands(llvm::IRBuilderBase &builder,
   // Copyin operands are handled as `to` call.
   llvm::SmallVector<mlir::Value> create, copyin;
   for (mlir::Value dataOp : op.getDataClauseOperands()) {
-    if (auto createOp = dataOp.getDefiningOp<acc::CreateOp>()) {
+    if (auto createOp =
+            mlir::dyn_cast_or_null<acc::CreateOp>(dataOp.getDefiningOp())) {
       create.push_back(createOp.getVarPtr());
     } else if (auto copyinOp = mlir::dyn_cast_or_null<acc::CopyinOp>(
                    dataOp.getDefiningOp())) {

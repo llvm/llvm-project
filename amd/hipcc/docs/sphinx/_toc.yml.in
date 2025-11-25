@@ -1,0 +1,20 @@
+# Anywhere {branch} is used, the branch name will be substituted.
+# These comments will also be removed.
+defaults:
+  numbered: False
+  maxdepth: 6
+root: index
+subtrees:
+
+- caption: Install
+  entries:
+  - file: build
+  - file: env
+
+- caption: How to
+  entries:
+  - file: usage
+
+- caption: About
+  entries:
+  - file: license.md

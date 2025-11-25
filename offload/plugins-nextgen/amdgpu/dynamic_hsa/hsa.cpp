@@ -75,7 +75,7 @@ DLWRAP(hsa_executable_load_agent_code_object, 5)
 DLWRAP_FINALIZE()
 
 #ifndef DYNAMIC_HSA_PATH
-#define DYNAMIC_HSA_PATH "libhsa-runtime64.so"
+#define DYNAMIC_HSA_PATH "libhsa-runtime64.so.1"
 #endif
 
 #ifndef TARGET_NAME

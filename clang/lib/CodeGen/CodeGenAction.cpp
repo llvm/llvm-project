@@ -44,6 +44,7 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -963,10 +964,81 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   if (BA != Backend_EmitNothing && !OS)
     return nullptr;
 
-  // Load bitcode modules to link with, if we need to.
   if (loadLinkModules(CI))
     return nullptr;
+  // Load bitcode modules to link with, if we need to.
+  if (LinkModules.empty())
+    for (const CodeGenOptions::BitcodeFileToLink &F :
+         CI.getCodeGenOpts().LinkBitcodeFiles) {
+      auto BCBuf = CI.getFileManager().getBufferForFile(F.Filename);
+      if (!BCBuf) {
+        CI.getDiagnostics().Report(diag::err_cannot_open_file)
+            << F.Filename << BCBuf.getError().message();
+        LinkModules.clear();
+        return nullptr;
+      }
 
+      if (StringRef(F.Filename).ends_with(".a")) {
+        // Handle Archive file
+        Error Err = Error::success();
+        llvm::object::Archive Archive(BCBuf.get()->getMemBufferRef(), Err);
+        llvm::object::Archive *ArchivePtr = &Archive;
+
+        if (Err) {
+          auto EC = errorToErrorCode(std::move(Err));
+          CI.getDiagnostics().Report(diag::err_cannot_open_file)
+              << F.Filename << EC.message();
+          LinkModules.clear();
+          return nullptr;
+        }
+
+        for (auto &C : ArchivePtr->children(Err)) {
+          Expected<MemoryBufferRef> MemBufRef = C.getMemoryBufferRef();
+          if (MemBufRef.takeError()) {
+            CI.getDiagnostics().Report(diag::err_cannot_open_file)
+                << F.Filename;
+            LinkModules.clear();
+            return nullptr;
+          }
+
+          auto ChildBuf = llvm::MemoryBuffer::getMemBufferCopy(
+              MemBufRef.get().getBuffer(),
+              MemBufRef.get().getBufferIdentifier());
+          Expected<std::unique_ptr<llvm::Module>> ModuleOrErr =
+              getOwningLazyBitcodeModule(std::move(ChildBuf), *VMContext);
+          if (!ModuleOrErr) {
+            handleAllErrors(ModuleOrErr.takeError(), [&](ErrorInfoBase &EIB) {
+              CI.getDiagnostics().Report(diag::err_cannot_open_file)
+                  << F.Filename << EIB.message();
+            });
+            LinkModules.clear();
+            return nullptr;
+          }
+          LinkModules.push_back({std::move(ModuleOrErr.get()), F.PropagateAttrs,
+                                 F.Internalize, F.LinkFlags});
+        } // end for each child
+
+        if (std::move(Err)) {
+          CI.getDiagnostics().Report(diag::err_cannot_open_file) << F.Filename;
+          LinkModules.clear();
+          return nullptr;
+        }
+      } else {
+        // Single .bc file
+        Expected<std::unique_ptr<llvm::Module>> ModuleOrErr =
+            getOwningLazyBitcodeModule(std::move(*BCBuf), *VMContext);
+        if (!ModuleOrErr) {
+          handleAllErrors(ModuleOrErr.takeError(), [&](ErrorInfoBase &EIB) {
+            CI.getDiagnostics().Report(diag::err_cannot_open_file)
+                << F.Filename << EIB.message();
+          });
+          LinkModules.clear();
+          return nullptr;
+        }
+        LinkModules.push_back({std::move(ModuleOrErr.get()), F.PropagateAttrs,
+                               F.Internalize, F.LinkFlags});
+      }
+    }
   CoverageSourceInfo *CoverageInfo = nullptr;
   // Add the preprocessor callback only when the coverage mapping is generated.
   if (CI.getCodeGenOpts().CoverageMapping)

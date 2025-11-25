@@ -698,9 +698,13 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
-//===----------------------------------------------------------------------===//
-// Deserialization (from args)
-//===----------------------------------------------------------------------===//
+/// Assume no thread state at -Ofast
+static bool isOFastUsed(const ArgList &Args) {
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group))
+    if (A->getOption().matches(options::OPT_Ofast))
+      return true;
+  return false;
+}
 
 static void GenerateArg(ArgumentConsumer Consumer,
                         llvm::opt::OptSpecifier OptSpecifier) {
@@ -3849,11 +3853,66 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Consumer, OPT_fopenmp_version_EQ, Twine(Opts.OpenMP));
   }
 
+  if (Opts.OpenMPTargetIgnoreEnvVars)
+    GenerateArg(Consumer, OPT_fopenmp_target_ignore_env_vars);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_target_ignore_env_vars);
+
+  if (Opts.OpenMPTargetBigJumpLoop)
+    GenerateArg(Consumer, OPT_fopenmp_target_big_jump_loop);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_target_big_jump_loop);
+
+  if (Opts.OpenMPTargetNoLoop)
+    GenerateArg(Consumer, OPT_fopenmp_target_no_loop);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_target_no_loop);
+
+  if (Opts.OpenMPTargetXteamReduction)
+    GenerateArg(Consumer, OPT_fopenmp_target_xteam_reduction);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_target_xteam_reduction);
+
+  if (Opts.OpenMPTargetFastReduction)
+    GenerateArg(Consumer, OPT_fopenmp_target_fast_reduction);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_target_fast_reduction);
+
+  if (Opts.OpenMPTargetMultiDevice)
+    GenerateArg(Consumer, OPT_fopenmp_target_multi_device);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_target_multi_device);
+
+  if (Opts.OpenMPTargetXteamScan)
+    GenerateArg(Consumer, OPT_fopenmp_target_xteam_scan);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_target_xteam_scan);
+
+  if (Opts.OpenMPTargetXteamNoLoopScan)
+    GenerateArg(Consumer, OPT_fopenmp_target_xteam_no_loop_scan);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_target_xteam_no_loop_scan);
+
   if (Opts.OpenMPThreadSubscription)
     GenerateArg(Consumer, OPT_fopenmp_assume_threads_oversubscription);
 
   if (Opts.OpenMPTeamSubscription)
     GenerateArg(Consumer, OPT_fopenmp_assume_teams_oversubscription);
+
+  if (Opts.OpenMPNoThreadState)
+    GenerateArg(Consumer, OPT_fopenmp_assume_no_thread_state);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_assume_no_thread_state);
+
+  if (Opts.OpenMPNoNestedParallelism)
+    GenerateArg(Consumer, OPT_fopenmp_assume_no_nested_parallelism);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_assume_no_nested_parallelism);
+
+  if (Opts.OpenMPKernelIO)
+    GenerateArg(Consumer, OPT_fopenmp_allow_kernel_io);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_allow_kernel_io);
 
   if (Opts.OpenMPTargetDebug != 0)
     GenerateArg(Consumer, OPT_fopenmp_target_debug_EQ,
@@ -3870,6 +3929,14 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   if (Opts.OpenMPCUDAReductionBufNum != 1024)
     GenerateArg(Consumer, OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
                 Twine(Opts.OpenMPCUDAReductionBufNum));
+
+  if (Opts.OpenMPGPUThreadsPerTeam != 256)
+    GenerateArg(Consumer, OPT_fopenmp_gpu_threads_per_team_EQ,
+                Twine(Opts.OpenMPGPUThreadsPerTeam));
+
+  if (Opts.OpenMPTargetXteamReductionBlockSize != 1024)
+    GenerateArg(Consumer, OPT_fopenmp_target_xteam_reduction_blocksize_EQ,
+                Twine(Opts.OpenMPTargetXteamReductionBlockSize));
 
   if (!Opts.OMPTargetTriples.empty()) {
     std::string Targets;
@@ -4318,6 +4385,54 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Opts.OpenMPCUDAReductionBufNum, Diags);
   }
 
+  Opts.OpenMPGPUThreadsPerTeam =
+      getLastArgIntValue(Args, options::OPT_fopenmp_gpu_threads_per_team_EQ,
+                         Opts.OpenMPGPUThreadsPerTeam, Diags);
+
+  Opts.OpenMPTargetXteamReductionBlockSize = getLastArgIntValue(
+      Args, options::OPT_fopenmp_target_xteam_reduction_blocksize_EQ,
+      Opts.OpenMPTargetXteamReductionBlockSize, Diags);
+
+  Opts.OpenMPTargetIgnoreEnvVars =
+      Args.hasFlag(options::OPT_fopenmp_target_ignore_env_vars,
+                   options::OPT_fno_openmp_target_ignore_env_vars, false);
+
+  Opts.OpenMPTargetBigJumpLoop =
+      Args.hasFlag(options::OPT_fopenmp_target_big_jump_loop,
+                   options::OPT_fno_openmp_target_big_jump_loop, true);
+
+  Opts.OpenMPTargetNoLoop =
+      Args.hasFlag(options::OPT_fopenmp_target_no_loop,
+                   options::OPT_fno_openmp_target_no_loop, true);
+
+  Opts.OpenMPTargetXteamReduction =
+      Args.hasFlag(options::OPT_fopenmp_target_xteam_reduction,
+                   options::OPT_fno_openmp_target_xteam_reduction, true);
+
+  Opts.OpenMPTargetFastReduction =
+      Args.hasFlag(options::OPT_fopenmp_target_fast_reduction,
+                   options::OPT_fno_openmp_target_fast_reduction, false);
+
+  Opts.OpenMPTargetMultiDevice =
+      Args.hasFlag(options::OPT_fopenmp_target_multi_device,
+                   options::OPT_fno_openmp_target_multi_device, false);
+
+  // Multi-device kernels always run in fast xteam reduction mode:
+  if (Opts.OpenMPTargetMultiDevice)
+    Opts.OpenMPTargetFastReduction = true;
+
+  Opts.OpenMPTargetXteamScan =
+      Args.hasFlag(options::OPT_fopenmp_target_xteam_scan,
+                   options::OPT_fno_openmp_target_xteam_scan, false);
+
+  Opts.OpenMPTargetXteamNoLoopScan =
+      Args.hasFlag(options::OPT_fopenmp_target_xteam_no_loop_scan,
+                   options::OPT_fno_openmp_target_xteam_no_loop_scan, false);
+
+  Opts.OpenMPKernelIO =
+      Args.hasFlag(options::OPT_fopenmp_allow_kernel_io,
+                   options::OPT_fno_openmp_allow_kernel_io, true);
+
   // Set the value of the debugging flag used in the new offloading device RTL.
   // Set either by a specific value or to a default if not specified.
   if (Opts.OpenMPIsTargetDevice && (Args.hasArg(OPT_fopenmp_target_debug) ||
@@ -4334,6 +4449,16 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     if (Args.hasArg(OPT_fopenmp_assume_threads_oversubscription))
       Opts.OpenMPThreadSubscription = true;
   }
+
+  // Turn ON at -Ofast
+  Opts.OpenMPNoThreadState = Args.hasFlag(
+      options::OPT_fopenmp_assume_no_thread_state,
+      options::OPT_fno_openmp_assume_no_thread_state, isOFastUsed(Args));
+
+  // Turn ON at -Ofast
+  Opts.OpenMPNoNestedParallelism = Args.hasFlag(
+      options::OPT_fopenmp_assume_no_nested_parallelism,
+      options::OPT_fno_openmp_assume_no_nested_parallelism, isOFastUsed(Args));
 
   // Get the OpenMP target triples if any.
   if (Arg *A = Args.getLastArg(options::OPT_offload_targets_EQ)) {

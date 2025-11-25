@@ -2153,6 +2153,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NullPointerIsValid;
   case bitc::ATTR_KIND_OPTIMIZE_FOR_DEBUGGING:
     return Attribute::OptimizeForDebugging;
+  case bitc::ATTR_KIND_SANITIZED_PADDED_GLOBAL:
+    return Attribute::SanitizedPaddedGlobal;
   case bitc::ATTR_KIND_OPT_FOR_FUZZING:
     return Attribute::OptForFuzzing;
   case bitc::ATTR_KIND_OPTIMIZE_FOR_SIZE:
@@ -6725,8 +6727,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         DIExpression *AddrExpr =
             cast<DIExpression>(getFnMetadataByID(Record[Slot++]));
         Metadata *Addr = getFnMetadataByID(Record[Slot++]);
-        DVR = new DbgVariableRecord(RawLocation, Var, Expr, ID, Addr, AddrExpr,
-                                    DIL);
+        DVR = new DbgVariableRecord(RawLocation, Var, Expr, ID, Addr, AddrExpr, DIL);
         break;
       }
       default:

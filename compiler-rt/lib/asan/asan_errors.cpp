@@ -18,6 +18,7 @@
 #include "asan_poisoning.h"
 #include "asan_report.h"
 #include "asan_stack.h"
+#include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __asan {
@@ -412,13 +413,10 @@ static bool AdjacentShadowValuesAreFullyPoisoned(u8 *s) {
   return s[-1] > 127 && s[1] > 127;
 }
 
-ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
-                           bool is_write_, uptr access_size_)
+ErrorGenericBase::ErrorGenericBase(u32 tid, uptr addr, bool is_write_,
+                                   uptr access_size_)
     : ErrorBase(tid),
       addr_description(addr, access_size_, /*shouldLockThreadRegistry=*/false),
-      pc(pc_),
-      bp(bp_),
-      sp(sp_),
       access_size(access_size_),
       is_write(is_write_),
       shadow_val(0) {
@@ -512,6 +510,13 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
     }
   }
 }
+
+ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
+                           bool is_write_, uptr access_size_)
+    : ErrorGenericBase(tid, addr, is_write_, access_size_),
+      pc(pc_),
+      bp(bp_),
+      sp(sp_) {}
 
 static void PrintContainerOverflowHint() {
   Printf(
@@ -672,4 +677,179 @@ void ErrorGeneric::Print() {
   CheckPoisonRecords(addr);
 }
 
+ErrorNonSelfGeneric::ErrorNonSelfGeneric(uptr *callstack_, u32 n_callstack,
+                                         uptr *addrs, u32 n_addrs,
+                                         u64 *threadids, u32 n_threads,
+                                         bool is_write, u32 access_size,
+                                         int fd_, s64 vm_adj, u64 off_, u64 sz_)
+    : ErrorGenericBase(kInvalidTid, addrs[0], is_write, access_size),
+      cb_loc(fd_, vm_adj, off_, sz_) {
+  for (u64 i = 0; i < Min(addr_count, n_addrs); i++) addresses[i] = addrs[i];
+  for (u64 i = 0; i < Min(threads_count, n_threads); i++)
+    thread_id[i] = threadids[i];
+  for (u64 i = 0; i < Min(maxcs_depth, n_callstack); i++)
+    callstack[i] = callstack_[i];
+}
+
+void ErrorNonSelfGeneric::Print() {
+  Decorator d;
+  Printf("%s", d.Error());
+  Report("ERROR: AddressSanitizer: %s on address %p at pc %p\n", bug_descr,
+         (void *)addresses[0], (void *)callstack[0]);
+
+  Printf("%s%s of size %zu at %p thread id %zu\n", d.Access(),
+         access_size ? (is_write ? "WRITE" : "READ") : "ACCESS", access_size,
+         (void *)addresses[0], (usize)thread_id[0]);
+
+  // todo: perform symbolization for the given callstack
+  // can be done by creating in-memory object file or by writing
+  // data to a temporary file or by findng the filepath by following
+  // /proc/PID/fd
+  Printf("%s", d.Default());
+  Printf("AddressSanitizer cannot provide additional information!\n");
+  PrintShadowMemoryForAddress(addresses[0]);
+}
+
+ErrorNonSelfAMDGPU::ErrorNonSelfAMDGPU(uptr *dev_callstack, u32 n_callstack,
+                                       uptr *dev_address, u32 n_addrs,
+                                       u64 *wi_ids, u32 n_wi, bool is_write_,
+                                       u32 access_size_, int fd_, s64 vm_adj,
+                                       u64 file_start_, u64 file_size_)
+    : ErrorGenericBase(kInvalidTid, dev_address[0], is_write_, access_size_),
+      cb_loc(fd_, vm_adj, file_start_, file_size_),
+      wg(),
+      nactive_threads(n_addrs),
+      device_id(0) {
+  if (nactive_threads > wavesize)
+    nactive_threads = wavesize;
+
+  callstack[0] = dev_callstack[0];
+  device_id = wi_ids[0];
+  wg.idx = wi_ids[1];
+  wg.idy = wi_ids[2];
+  wg.idz = wi_ids[3];
+  wi_ids += 4;
+  for (u64 i = 0; i < nactive_threads; i++) {
+    device_address[i] = dev_address[i];
+    workitem_ids[i] = wi_ids[i];
+  }
+}
+
+void ErrorNonSelfAMDGPU::PrintStack() {
+  InternalScopedString source_location;
+  source_location.AppendF("  #0 %p", (void *)callstack[0]);
+#if SANITIZER_AMDGPU
+  source_location.Append(" in ");
+  __sanitizer::AMDGPUCodeObjectSymbolizer symbolizer;
+  symbolizer.Init(cb_loc.fd, cb_loc.offset, cb_loc.size);
+  symbolizer.SymbolizePC(callstack[0] - cb_loc.vma_adjust, source_location);
+  // release all allocated comgr objects.
+  symbolizer.Release();
+#endif
+  Printf("%s", source_location.data());
+}
+
+void ErrorNonSelfAMDGPU::PrintThreadsAndAddresses() {
+  InternalScopedString str;
+  str.Append("Thread ids and accessed addresses:\n");
+  for (u32 idx = 0, per_row_count = 0; idx < nactive_threads; idx++) {
+    // print 8 threads per row.
+    if (per_row_count == 8) {
+      str.Append("\n");
+      per_row_count = 0;
+    }
+    str.AppendF("%02d : %p ", (int)workitem_ids[idx],
+                (void *)device_address[idx]);
+    per_row_count++;
+  }
+  str.Append("\n");
+  Printf("%s\n", str.data());
+}
+
+static uptr ScanForMagicDown(uptr start, uptr lo, uptr magic0, uptr magic1) {
+  for (uptr p = start; p >= lo; p -= sizeof(uptr)) {
+    if (((uptr*)p)[0] == magic0 && ((uptr*)p)[1] == magic1)
+      return p;
+  }
+  return 0;
+}
+
+static uptr ScanForMagicUp(uptr start, uptr hi, uptr magic0, uptr magic1) {
+  for (uptr p = start; p < hi; p += sizeof(uptr)) {
+    if (((uptr*)p)[0] == magic0 && ((uptr*)p)[1] == magic1)
+      return p;
+  }
+  return 0;
+}
+
+void ErrorNonSelfAMDGPU::PrintMallocStack() {
+  // Facts about asan malloc on device
+  const uptr magic = static_cast<uptr>(0xfedcba1ee1abcdefULL);
+  const uptr offset = 32;
+  const uptr min_chunk_size = 96;
+  const uptr min_alloc_size = 48;
+
+  Decorator d;
+  HeapAddressDescription addr_description;
+
+  if (GetHeapAddressInformation(device_address[0], access_size,
+              &addr_description) &&
+      addr_description.chunk_access.chunk_size >= min_chunk_size) {
+    uptr lo = addr_description.chunk_access.chunk_begin;
+    uptr hi = lo + addr_description.chunk_access.chunk_size - min_alloc_size;
+    uptr start = RoundDownTo(device_address[0], sizeof(uptr));
+
+    uptr plo = ScanForMagicDown(start, lo, magic, lo);
+    if (plo) {
+      callstack[0] = ((uptr*)plo)[2];
+      Printf(
+          "%s%p is %u bytes above an address from a %sdevice malloc "
+          "(or free) call of size %u from%s\n",
+          d.Location(), (void *)device_address[0],
+          (u32)(device_address[0] - (plo + offset)), d.Allocation(),
+          ((u32*)plo)[7], d.Default());
+      // TODO: The code object with the malloc call may not be the same
+      // code object trying the illegal access.  A mechanism is needed
+      // to obtain the former.
+      PrintStack();
+    }
+
+    uptr phi = ScanForMagicUp(start, hi, magic, lo);
+    if (phi) {
+      callstack[0] = ((uptr*)phi)[2];
+      Printf(
+          "%s%p is %u bytes below an address from a %sdevice malloc "
+          "(or free) call of size %u from%s\n",
+          d.Location(), (void *)device_address[0],
+          (u32)((phi + offset) - device_address[0]),
+
+          d.Allocation(), ((u32*)phi)[7], d.Default());
+      PrintStack();
+    }
+  }
+}
+
+void ErrorNonSelfAMDGPU::Print() {
+  Decorator d;
+  Printf("%s", d.Error());
+  Report("ERROR: AddressSanitizer: %s on amdgpu device %d at pc %p\n",
+         bug_descr, device_id, (void *)callstack[0]);
+  Printf("%s%s of size %zu in workgroup id (%llu,%llu,%llu)\n", d.Access(),
+         (is_write ? "WRITE" : "READ"), access_size, wg.idx,
+         wg.idy, wg.idz);
+  Printf("%s", d.Default());
+  PrintStack();
+  Printf("%s", d.Location());
+  PrintThreadsAndAddresses();
+  Printf("%s", d.Default());
+  if (shadow_val == kAsanHeapFreeMagic ||
+      shadow_val == kAsanHeapLeftRedzoneMagic ||
+      shadow_val == kAsanArrayCookieMagic) {
+    PrintMallocStack();
+  }
+  addr_description.Print(bug_descr, true);
+  Printf("%s", d.Default());
+  // print shadow memory region for single address
+  PrintShadowMemoryForAddress(device_address[0]);
+}
 }  // namespace __asan

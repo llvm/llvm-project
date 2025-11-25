@@ -23,9 +23,6 @@ end subroutine
 ! CHECK-LABEL:   } combiner {
 ! [...]
 ! CHECK:           omp.yield
-! CHECK-LABEL:   }  cleanup {
-! [...]
-! CHECK:           omp.yield
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QPsectionsreduction(

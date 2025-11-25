@@ -185,6 +185,8 @@ static bool isInertIntrinsic(unsigned ID) {
   case Intrinsic::dbg_declare:
   case Intrinsic::dbg_value:
   case Intrinsic::dbg_label:
+  case Intrinsic::dbg_def:
+  case Intrinsic::dbg_kill:
     // Short cut: Some intrinsics obviously don't use ObjC pointers.
     return true;
   default:

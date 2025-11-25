@@ -1915,7 +1915,7 @@ llvm::SmallVector<mlir::Value> fir::factory::updateRuntimeExtentsForEmptyArrays(
   mlir::Type i1Type = builder.getI1Type();
   mlir::Value isEmpty = createZeroValue(builder, loc, i1Type);
 
-  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> zeroes;
+  llvm::SmallVector<mlir::Value> zeroes;
   for (mlir::Value extent : extents) {
     mlir::Type type = extent.getType();
     mlir::Value zero = createZeroValue(builder, loc, type);

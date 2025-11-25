@@ -1,5 +1,5 @@
-; RUN: llvm-as < %s | llvm-dis
-; RUN: verify-uselistorder %s
+; RUN: llvm-as  < %s | llvm-dis 
+; RUN: verify-uselistorder  %s
 ; PR1645
 
 @__gthread_active_ptr.5335 = internal constant ptr @__gthrw_pthread_cancel    

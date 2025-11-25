@@ -1,3 +1,5 @@
+! Fails until we update the pass to use the `fir.do_concurrent` op.
+
 ! Tests mapping of a `do concurrent` loop with multiple iteration ranges.
 
 ! RUN: split-file %s %t

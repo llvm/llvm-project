@@ -2338,7 +2338,8 @@ template <typename... Refs> struct enumerator_result<std::size_t, Refs...> {
   /// Returns the value at index `I`. This case covers references to the
   /// iteratees.
   template <std::size_t I, typename = std::enable_if_t<I != 0>>
-  friend decltype(auto) get(const enumerator_result &Result) {
+  friend decltype(auto)
+  get(const enumerator_result &Result) {
     // Note: This is a separate function from the other `get`, instead of an
     // `if constexpr` case, to work around an MSVC 19.31.31XXX compiler
     // (Visual Studio 2022 17.1) return type deduction bug.
@@ -2474,7 +2475,9 @@ auto enumerate(FirstRange &&First, RestRanges &&...Rest) {
 #ifndef NDEBUG
     // Note: Create an array instead of an initializer list to work around an
     // Apple clang 14 compiler bug.
-    size_t sizes[] = {range_size(First), range_size(Rest)...};
+    size_t sizes[] = {
+        static_cast<size_t>(std::distance(adl_begin(First), adl_end(First))),
+        static_cast<size_t>(std::distance(adl_begin(Rest), adl_end(Rest)))...};
     assert(all_equal(sizes) && "Ranges have different length");
 #endif
   }

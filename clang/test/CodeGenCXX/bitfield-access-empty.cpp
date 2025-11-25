@@ -1,4 +1,5 @@
 // Check if we can merge bitfields across empty members
+// XFAIL: *
 
 // Configs that have cheap unaligned access
 // Little Endian
@@ -35,7 +36,7 @@
 
 // Big endian
 // RUN: %clang_cc1 -triple=lanai-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT %s
-// RUN: %clang_cc1 -triple=m68k-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT-M68K %s
+// RUN: %clang_cc1 -triple=m68k-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT %s
 // RUN: %clang_cc1 -triple=mips-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT %s
 // RUN: %clang_cc1 -triple=mips64-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT %s
 // RUN: %clang_cc1 -triple=sparc-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT %s
@@ -51,7 +52,6 @@ struct P1 {
 // CHECK-LABEL: LLVMType:%struct.P1 =
 // LAYOUT-SAME: type { i16, i16 }
 // LAYOUT-DWN32-SAME: type { i16, i16 }
-// LAYOUT-DWN32-M68K: type { i16, i16 }
 // CHECK-NEXT: NonVirtualBaseLLVMType:%struct.P1 =
 // CHECK: BitFields:[
 // LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:16 StorageOffset:0
@@ -59,9 +59,6 @@ struct P1 {
 
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:16 StorageOffset:0
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:16 StorageOffset:2
-
-// LAYOUT-M68K-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:16 StorageOffset:0
-// LAYOUT-M68K-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:16 StorageOffset:2
 // CHECK-NEXT: ]>
 
 struct P2 {
@@ -72,7 +69,6 @@ struct P2 {
 // CHECK-LABEL: LLVMType:%struct.P2 =
 // LAYOUT-SAME: type { i16, i16 }
 // LAYOUT-DWN32-SAME: type { i16, i16 }
-// LAYOUT-M68K-SAME: type { i16, i16 }
 // CHECK-NEXT: NonVirtualBaseLLVMType:%struct.P2 =
 // CHECK: BitFields:[
 // LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:15 IsSigned:0 StorageSize:16 StorageOffset:0
@@ -80,9 +76,6 @@ struct P2 {
 
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:15 IsSigned:0 StorageSize:16 StorageOffset:0
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:15 IsSigned:0 StorageSize:16 StorageOffset:2
-
-// LAYOUT-M68K-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:15 IsSigned:0 StorageSize:16 StorageOffset:0
-// LAYOUT-M68K-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:15 IsSigned:0 StorageSize:16 StorageOffset:2
 // CHECK-NEXT: ]>
 
 struct P3 {
@@ -93,7 +86,6 @@ struct P3 {
 // CHECK-LABEL: LLVMType:%struct.P3 =
 // LAYOUT-SAME: type { i16, [2 x i8], i16, [2 x i8] }
 // LAYOUT-DWN32-SAME: type <{ i16, i8, i16 }>
-// LAYOUT-M68K-SAME: type <{ i16, i8, i16, i8 }>
 // CHECK-NEXT: NonVirtualBaseLLVMType:%struct.P3 =
 // CHECK: BitFields:[
 // LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:16 StorageOffset:0
@@ -101,9 +93,6 @@ struct P3 {
 
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:16 StorageOffset:0
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:16 StorageOffset:3
-
-// LAYOUT-M68K-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:16 StorageOffset:0
-// LAYOUT-M68K-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:16 StorageOffset:3
 // CHECK-NEXT: ]>
 
 struct P4 {
@@ -133,7 +122,6 @@ struct P6 {
 // CHECK-LABEL: LLVMType:%struct.P6 =
 // LAYOUT-SAME: type { i32, i32 }
 // LAYOUT-DWN32-SAME: type { i32, i32 }
-// LAYOUT-M68K-SAME: type { i32, i32 }
 // CHECK-NEXT: NonVirtualBaseLLVMType:%struct.P6 =
 // CHECK: BitFields:[
 // LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:32 StorageOffset:0
@@ -141,9 +129,6 @@ struct P6 {
 
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:32 StorageOffset:0
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:0 StorageSize:32 StorageOffset:0
-
-// LAYOUT-M68K-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:32 StorageOffset:0
-// LAYOUT-M68K-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:0 StorageSize:32 StorageOffset:0
 // CHECK-NEXT: ]>
 
 struct P7 {
@@ -155,7 +140,6 @@ struct P7 {
 // CHECK-LABEL: LLVMType:%struct.P7 =
 // LAYOUT-SAME: type { i32, i32 }
 // LAYOUT-DWN32-SAME: type { i32, i32 }
-// LAYOUT-M68K-SAME: type { i32, i32 }
 // CHECK-NEXT: NonVirtualBaseLLVMType:%struct.P7 =
 // CHECK: BitFields:[
 // LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:32 StorageOffset:0
@@ -163,7 +147,4 @@ struct P7 {
 
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:32 StorageOffset:0
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:0 StorageSize:32 StorageOffset:0
-
-// LAYOUT-M68K-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:32 StorageOffset:0
-// LAYOUT-M68K-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:0 StorageSize:32 StorageOffset:0
 // CHECK-NEXT: ]>

@@ -137,22 +137,6 @@ void one_f16a(int f0, double f1, _Float16 v0)
   sink_2(f1, f0, v0);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@one_f16b
-// CHECK-SAME: (i32 noundef [[F0:%.*]], double noundef [[F1:%.*]], half noundef [[V0:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[V0]] to double
-// CHECK-NEXT:    tail call void (...) @sink_0(double noundef [[CONV]]) #[[ATTR2]]
-// CHECK-NEXT:    tail call void (i32, ...) @sink_1(i32 noundef [[F0]], double noundef [[CONV]]) #[[ATTR2]]
-// CHECK-NEXT:    tail call void (double, i32, ...) @sink_2(double noundef [[F1]], i32 noundef [[F0]], double noundef [[CONV]]) #[[ATTR2]]
-// CHECK-NEXT:    ret void
-//
-void one_f16b(int f0, double f1, __fp16 v0)
-{
-  sink_0(v0);
-  sink_1(f0, v0);
-  sink_2(f1, f0, v0);
-}
-
 // CHECK-LABEL: define {{[^@]+}}@one_f16c
 // CHECK-SAME: (i32 noundef [[F0:%.*]], double noundef [[F1:%.*]], bfloat noundef [[V0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:

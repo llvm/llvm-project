@@ -27,7 +27,7 @@ entry:
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     File Auxiliary Entry {
 ; CHECK-NEXT:       Index: 2
-; CHECK-NEXT:       Name: LLVM
+; CHECK-NEXT:       Name: {{.*}}LLVM
 ; CHECK-NEXT:       Type: XFT_CV (0x2)
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   }

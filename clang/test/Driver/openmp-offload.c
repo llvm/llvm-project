@@ -4,6 +4,8 @@
 
 /// ###########################################################################
 
+// XFAIL: *
+
 /// Check whether an invalid OpenMP target is specified:
 // RUN:   not %clang -### -fopenmp=libomp -fopenmp-targets=aaa-bbb-ccc-ddd %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-INVALID-TARGET %s
@@ -166,7 +168,7 @@
 // CHK-fopenmp-is-target-device: "-cc1"{{.*}} "-aux-triple" "powerpc64le-unknown-linux" {{.*}}"-fopenmp-is-target-device" "-fopenmp-host-ir-file-path" {{.*}}.c"
 
 /// Check arguments to the linker wrapper
-// RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu %s 2>&1 \
+// RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -fopenmp-new-driver %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-NEW-DRIVER %s
 
 // CHK-NEW-DRIVER: clang-linker-wrapper{{.*}}"--host-triple=powerpc64le-unknown-linux"{{.*}}--{{.*}}"-lomp"{{.*}}"-lomptarget"

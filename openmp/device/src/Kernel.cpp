@@ -158,5 +158,7 @@ void __kmpc_target_deinit() {
   }
 }
 
+void __kmpc_specialized_kernel_init() { mapping::init(/*IsSPMD=*/true); }
+
 int8_t __kmpc_is_spmd_exec_mode() { return mapping::isSPMDMode(); }
 }

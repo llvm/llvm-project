@@ -4,10 +4,10 @@
 ;
 ; rdar://13727199
 
-; RUN: llvm-as -disable-verify < %s | \
-; RUN: llvm-dis | \
-; RUN: llvm-as -disable-verify | \
-; RUN: llvm-dis | \
+; RUN: llvm-as  -disable-verify < %s | \
+; RUN: llvm-dis  | \
+; RUN: llvm-as  -disable-verify | \
+; RUN: llvm-dis  | \
 ; RUN: FileCheck -check-prefix=CHECK-ASSEMBLES %s
 
 ; CHECK-ASSEMBLES: declare ptr @foo(ptr) [[NOBUILTIN:#[0-9]+]]

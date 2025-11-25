@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fopenacc -ast-print %s -o - | FileCheck %s
-
+// REQUIRES: OSStability
 auto Lambda = [](){};
 // CHECK: auto Lambda = []() {
 #pragma acc routine(Lambda) worker bind(identifier)

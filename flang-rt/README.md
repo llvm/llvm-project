@@ -164,6 +164,11 @@ CMake itself provide.
    [CUDA Toolkit installation](https://cmake.org/cmake/help/latest/module/FindCUDAToolkit.html)
    (no `CMAKE_CUDA_COMPILER`).
 
+ * `FLANG_RT_INCLUDE_AMD` (bool, default: `OFF`)
+
+   Compiles the `libflang_rt.a/.so` library with special support for AMD
+   Instinct(tm) Accelerators.
+
 
 ### Experimental CUDA Support
 

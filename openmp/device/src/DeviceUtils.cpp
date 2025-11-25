@@ -18,6 +18,18 @@
 
 using namespace ompx;
 
+extern "C" [[gnu::weak]] int IsSPMDMode;
+
+/// Helper to keep code alive without introducing a performance penalty.
+extern "C" __attribute__((weak, optnone, cold, used, retain)) void
+__keep_alive() {
+  __kmpc_get_hardware_thread_id_in_block();
+  __kmpc_get_hardware_num_threads_in_block();
+  __kmpc_get_warp_size();
+  __kmpc_barrier_simple_spmd(nullptr, IsSPMDMode);
+  __kmpc_barrier_simple_generic(nullptr, IsSPMDMode);
+}
+
 uint64_t utils::pack(uint32_t LowBits, uint32_t HighBits) {
   return (((uint64_t)HighBits) << 32) | (uint64_t)LowBits;
 }
