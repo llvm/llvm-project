@@ -29,7 +29,6 @@
 #include <optional>
 #include <string>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -532,47 +531,67 @@ public:
     OpValOffset,
   };
 
-  // Held in ExtraFields for most common OpTypes, exceptions follow.
-  struct CommonFields {
-    unsigned Register = std::numeric_limits<unsigned>::max();
-    int64_t Offset = 0;
-    unsigned Register2 = std::numeric_limits<unsigned>::max();
-    unsigned AddressSpace = 0;
-  };
-  // Held in ExtraFields when OpEscape.
-  struct EscapeFields {
-    std::vector<char> Values;
-    std::string Comment;
-  };
-  // Held in ExtraFields when OpLabel.
-  struct LabelFields {
-    MCSymbol *CfiLabel = nullptr;
-  };
-
 private:
   MCSymbol *Label;
-  std::variant<CommonFields, EscapeFields, LabelFields> ExtraFields;
+  union {
+    struct {
+      unsigned Register;
+      int64_t Offset;
+    } RI;
+    struct {
+      unsigned Register;
+      int64_t Offset;
+      unsigned AddressSpace;
+    } RIA;
+    struct {
+      unsigned Register;
+      unsigned Register2;
+    } RR;
+    MCSymbol *CfiLabel;
+  } U;
   OpType Operation;
   SMLoc Loc;
+  std::vector<char> Values;
+  std::string Comment;
 
-  template <class FieldsType>
-  MCCFIInstruction(OpType Op, MCSymbol *L, FieldsType &&EF, SMLoc Loc)
-      : Label(L), ExtraFields(std::forward<FieldsType>(EF)), Operation(Op),
-        Loc(Loc) {}
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int64_t O, SMLoc Loc,
+                   StringRef V = "", StringRef Comment = "")
+      : Label(L), Operation(Op), Loc(Loc), Values(V.begin(), V.end()),
+        Comment(Comment) {
+    assert(Op != OpRegister && Op != OpLLVMDefAspaceCfa);
+    U.RI = {R, O};
+  }
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R1, unsigned R2, SMLoc Loc)
+      : Label(L), Operation(Op), Loc(Loc) {
+    assert(Op == OpRegister);
+    U.RR = {R1, R2};
+  }
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int64_t O, unsigned AS,
+                   SMLoc Loc)
+      : Label(L), Operation(Op), Loc(Loc) {
+    assert(Op == OpLLVMDefAspaceCfa);
+    U.RIA = {R, O, AS};
+  }
+
+  MCCFIInstruction(OpType Op, MCSymbol *L, MCSymbol *CfiLabel, SMLoc Loc)
+      : Label(L), Operation(Op), Loc(Loc) {
+    assert(Op == OpLabel);
+    U.CfiLabel = CfiLabel;
+  }
 
 public:
   /// .cfi_def_cfa defines a rule for computing CFA as: take address from
   /// Register and add Offset to it.
   static MCCFIInstruction cfiDefCfa(MCSymbol *L, unsigned Register,
                                     int64_t Offset, SMLoc Loc = {}) {
-    return {OpDefCfa, L, CommonFields{Register, Offset}, Loc};
+    return MCCFIInstruction(OpDefCfa, L, Register, Offset, Loc);
   }
 
   /// .cfi_def_cfa_register modifies a rule for computing CFA. From now
   /// on Register will be used instead of the old one. Offset remains the same.
   static MCCFIInstruction createDefCfaRegister(MCSymbol *L, unsigned Register,
                                                SMLoc Loc = {}) {
-    return {OpDefCfaRegister, L, CommonFields{Register}, Loc};
+    return MCCFIInstruction(OpDefCfaRegister, L, Register, INT64_C(0), Loc);
   }
 
   /// .cfi_def_cfa_offset modifies a rule for computing CFA. Register
@@ -580,7 +599,7 @@ public:
   /// that will be added to a defined register to the compute CFA address.
   static MCCFIInstruction cfiDefCfaOffset(MCSymbol *L, int64_t Offset,
                                           SMLoc Loc = {}) {
-    return {OpDefCfaOffset, L, CommonFields{0, Offset}, Loc};
+    return MCCFIInstruction(OpDefCfaOffset, L, 0, Offset, Loc);
   }
 
   /// .cfi_adjust_cfa_offset Same as .cfi_def_cfa_offset, but
@@ -588,7 +607,7 @@ public:
   /// offset.
   static MCCFIInstruction createAdjustCfaOffset(MCSymbol *L, int64_t Adjustment,
                                                 SMLoc Loc = {}) {
-    return {OpAdjustCfaOffset, L, CommonFields{0, Adjustment}, Loc};
+    return MCCFIInstruction(OpAdjustCfaOffset, L, 0, Adjustment, Loc);
   }
 
   // FIXME: Update the remaining docs to use the new proposal wording.
@@ -599,15 +618,15 @@ public:
                                                  int64_t Offset,
                                                  unsigned AddressSpace,
                                                  SMLoc Loc) {
-    return {OpLLVMDefAspaceCfa, L,
-            CommonFields{Register, Offset, 0, AddressSpace}, Loc};
+    return MCCFIInstruction(OpLLVMDefAspaceCfa, L, Register, Offset,
+                            AddressSpace, Loc);
   }
 
   /// .cfi_offset Previous value of Register is saved at offset Offset
   /// from CFA.
   static MCCFIInstruction createOffset(MCSymbol *L, unsigned Register,
                                        int64_t Offset, SMLoc Loc = {}) {
-    return {OpOffset, L, CommonFields{Register, Offset}, Loc};
+    return MCCFIInstruction(OpOffset, L, Register, Offset, Loc);
   }
 
   /// .cfi_rel_offset Previous value of Register is saved at offset
@@ -615,30 +634,30 @@ public:
   /// using the known displacement of the CFA register from the CFA.
   static MCCFIInstruction createRelOffset(MCSymbol *L, unsigned Register,
                                           int64_t Offset, SMLoc Loc = {}) {
-    return {OpRelOffset, L, CommonFields{Register, Offset}, Loc};
+    return MCCFIInstruction(OpRelOffset, L, Register, Offset, Loc);
   }
 
   /// .cfi_register Previous value of Register1 is saved in
   /// register Register2.
   static MCCFIInstruction createRegister(MCSymbol *L, unsigned Register1,
                                          unsigned Register2, SMLoc Loc = {}) {
-    return {OpRegister, L, CommonFields{Register1, 0, Register2}, Loc};
+    return MCCFIInstruction(OpRegister, L, Register1, Register2, Loc);
   }
 
   /// .cfi_window_save SPARC register window is saved.
   static MCCFIInstruction createWindowSave(MCSymbol *L, SMLoc Loc = {}) {
-    return {OpWindowSave, L, CommonFields{}, Loc};
+    return MCCFIInstruction(OpWindowSave, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_negate_ra_state AArch64 negate RA state.
   static MCCFIInstruction createNegateRAState(MCSymbol *L, SMLoc Loc = {}) {
-    return {OpNegateRAState, L, CommonFields{}, Loc};
+    return MCCFIInstruction(OpNegateRAState, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_negate_ra_state_with_pc AArch64 negate RA state with PC.
   static MCCFIInstruction createNegateRAStateWithPC(MCSymbol *L,
                                                     SMLoc Loc = {}) {
-    return {OpNegateRAStateWithPC, L, CommonFields{}, Loc};
+    return MCCFIInstruction(OpNegateRAStateWithPC, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_restore says that the rule for Register is now the same as it
@@ -646,106 +665,104 @@ public:
   /// by .cfi_startproc were executed.
   static MCCFIInstruction createRestore(MCSymbol *L, unsigned Register,
                                         SMLoc Loc = {}) {
-    return {OpRestore, L, CommonFields{Register}, Loc};
+    return MCCFIInstruction(OpRestore, L, Register, INT64_C(0), Loc);
   }
 
   /// .cfi_undefined From now on the previous value of Register can't be
   /// restored anymore.
   static MCCFIInstruction createUndefined(MCSymbol *L, unsigned Register,
                                           SMLoc Loc = {}) {
-    return {OpUndefined, L, CommonFields{Register}, Loc};
+    return MCCFIInstruction(OpUndefined, L, Register, INT64_C(0), Loc);
   }
 
   /// .cfi_same_value Current value of Register is the same as in the
   /// previous frame. I.e., no restoration is needed.
   static MCCFIInstruction createSameValue(MCSymbol *L, unsigned Register,
                                           SMLoc Loc = {}) {
-    return {OpSameValue, L, CommonFields{Register}, Loc};
+    return MCCFIInstruction(OpSameValue, L, Register, INT64_C(0), Loc);
   }
 
   /// .cfi_remember_state Save all current rules for all registers.
   static MCCFIInstruction createRememberState(MCSymbol *L, SMLoc Loc = {}) {
-    return {OpRememberState, L, CommonFields{}, Loc};
+    return MCCFIInstruction(OpRememberState, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_restore_state Restore the previously saved state.
   static MCCFIInstruction createRestoreState(MCSymbol *L, SMLoc Loc = {}) {
-    return {OpRestoreState, L, CommonFields{}, Loc};
+    return MCCFIInstruction(OpRestoreState, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_escape Allows the user to add arbitrary bytes to the unwind
   /// info.
   static MCCFIInstruction createEscape(MCSymbol *L, StringRef Vals,
                                        SMLoc Loc = {}, StringRef Comment = "") {
-    return {OpEscape, L,
-            EscapeFields{std::vector<char>(Vals.begin(), Vals.end()),
-                         Comment.str()},
-            Loc};
+    return MCCFIInstruction(OpEscape, L, 0, 0, Loc, Vals, Comment);
   }
 
   /// A special wrapper for .cfi_escape that indicates GNU_ARGS_SIZE
   static MCCFIInstruction createGnuArgsSize(MCSymbol *L, int64_t Size,
                                             SMLoc Loc = {}) {
-    return {OpGnuArgsSize, L, CommonFields{0, Size}, Loc};
+    return MCCFIInstruction(OpGnuArgsSize, L, 0, Size, Loc);
   }
 
   static MCCFIInstruction createLabel(MCSymbol *L, MCSymbol *CfiLabel,
                                       SMLoc Loc) {
-    return {OpLabel, L, LabelFields{CfiLabel}, Loc};
+    return MCCFIInstruction(OpLabel, L, CfiLabel, Loc);
   }
 
   /// .cfi_val_offset Previous value of Register is offset Offset from the
   /// current CFA register.
   static MCCFIInstruction createValOffset(MCSymbol *L, unsigned Register,
                                           int64_t Offset, SMLoc Loc = {}) {
-    return {OpValOffset, L, CommonFields{Register, Offset}, Loc};
+    return MCCFIInstruction(OpValOffset, L, Register, Offset, Loc);
   }
 
   OpType getOperation() const { return Operation; }
   MCSymbol *getLabel() const { return Label; }
 
   unsigned getRegister() const {
+    if (Operation == OpRegister)
+      return U.RR.Register;
+    if (Operation == OpLLVMDefAspaceCfa)
+      return U.RIA.Register;
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRestore || Operation == OpUndefined ||
            Operation == OpSameValue || Operation == OpDefCfaRegister ||
-           Operation == OpRelOffset || Operation == OpValOffset ||
-           Operation == OpRegister || Operation == OpLLVMDefAspaceCfa);
-    return std::get<CommonFields>(ExtraFields).Register;
+           Operation == OpRelOffset || Operation == OpValOffset);
+    return U.RI.Register;
   }
 
   unsigned getRegister2() const {
     assert(Operation == OpRegister);
-    return std::get<CommonFields>(ExtraFields).Register2;
+    return U.RR.Register2;
   }
 
   unsigned getAddressSpace() const {
     assert(Operation == OpLLVMDefAspaceCfa);
-    return std::get<CommonFields>(ExtraFields).AddressSpace;
+    return U.RIA.AddressSpace;
   }
 
   int64_t getOffset() const {
+    if (Operation == OpLLVMDefAspaceCfa)
+      return U.RIA.Offset;
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRelOffset || Operation == OpDefCfaOffset ||
            Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||
-           Operation == OpValOffset || Operation == OpLLVMDefAspaceCfa);
-    return std::get<CommonFields>(ExtraFields).Offset;
+           Operation == OpValOffset);
+    return U.RI.Offset;
   }
 
   MCSymbol *getCfiLabel() const {
     assert(Operation == OpLabel);
-    return std::get<LabelFields>(ExtraFields).CfiLabel;
+    return U.CfiLabel;
   }
 
   StringRef getValues() const {
     assert(Operation == OpEscape);
-    auto &Values = std::get<EscapeFields>(ExtraFields).Values;
     return StringRef(&Values[0], Values.size());
   }
 
-  StringRef getComment() const {
-    assert(Operation == OpEscape);
-    return std::get<EscapeFields>(ExtraFields).Comment;
-  }
+  StringRef getComment() const { return Comment; }
   SMLoc getLoc() const { return Loc; }
 };
 
