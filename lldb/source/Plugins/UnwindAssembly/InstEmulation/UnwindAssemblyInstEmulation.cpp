@@ -212,7 +212,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     if (m_curr_row_modified) {
       // Save the modified row if we don't already have a CFI row in the
       // current address
-      auto next_inst_offset = current_offset + inst->GetOpcode().GetByteSize();
+      const lldb::addr_t next_inst_offset =
+          current_offset + inst->GetOpcode().GetByteSize();
       if (saved_unwind_states.count(next_inst_offset) == 0) {
         m_state.row.SetOffset(next_inst_offset);
         saved_unwind_states.emplace(next_inst_offset, m_state);
