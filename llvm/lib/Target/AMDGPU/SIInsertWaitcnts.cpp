@@ -224,21 +224,6 @@ VmemType getVmemType(const MachineInstr &Inst) {
   return VMEM_NOSAMPLER;
 }
 
-// Return an optional WaitEventType value if Inst is a cache invalidate
-// or WB instruction.
-std::optional<WaitEventType> getInvOrWBWaitEventType(const MachineInstr &Inst) {
-  switch (Inst.getOpcode()) {
-  // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
-  case AMDGPU::GLOBAL_INV:
-    return VMEM_READ_ACCESS; // tracked using loadcnt
-  case AMDGPU::GLOBAL_WB:
-  case AMDGPU::GLOBAL_WBINV:
-    return VMEM_WRITE_ACCESS; // tracked using storecnt
-  default:
-    return {};
-  }
-}
-
 unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
   switch (T) {
   case LOAD_CNT:
@@ -546,6 +531,16 @@ public:
   // instruction that is not an invalidate or WB instruction, which are
   // checked for using getInvOrWBWaitEventType().
   WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
+    switch (Inst.getOpcode()) {
+    // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
+    case AMDGPU::GLOBAL_INV:
+      return VMEM_READ_ACCESS; // tracked using loadcnt
+    case AMDGPU::GLOBAL_WB:
+    case AMDGPU::GLOBAL_WBINV:
+      return VMEM_WRITE_ACCESS; // tracked using storecnt
+    default:
+      break;
+    }
     // Maps VMEM access types to their corresponding WaitEventType.
     static const WaitEventType VmemReadMapping[NUM_VMEM_TYPES] = {
         VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS};
@@ -2193,7 +2188,8 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
 }
 
 bool SIInsertWaitcnts::isVmemAccess(const MachineInstr &MI) const {
-  return (TII->isFLAT(MI) && TII->mayAccessVMEMThroughFlat(MI)) ||
+  return (TII->isFLAT(MI) && SIInstrInfo::usesVM_CNT(MI) &&
+          TII->mayAccessVMEMThroughFlat(MI)) ||
          (TII->isVMEM(MI) && !AMDGPU::getMUBUFIsBufferInv(MI.getOpcode()));
 }
 
@@ -2276,19 +2272,14 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(LDS_ACCESS, Inst);
     }
   } else if (TII->isFLAT(Inst)) {
-    if (std::optional<WaitEventType> ET = getInvOrWBWaitEventType(Inst)) {
-      ScoreBrackets->updateByEvent(*ET, Inst);
-      return;
-    }
-
-    assert(Inst.mayLoadOrStore());
-
     int FlatASCount = 0;
 
-    if (TII->mayAccessVMEMThroughFlat(Inst)) {
-      ++FlatASCount;
-      IsVMEMAccess = true;
+    if (SIInstrInfo::usesVM_CNT(Inst)) {
       ScoreBrackets->updateByEvent(getVmemWaitEventType(Inst), Inst);
+      if (TII->mayAccessVMEMThroughFlat(Inst)) {
+        ++FlatASCount;
+        IsVMEMAccess = true;
+      }
     }
 
     if (TII->mayAccessLDSThroughFlat(Inst)) {
@@ -2636,7 +2627,7 @@ bool SIInsertWaitcnts::isPreheaderToFlush(
 
 bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
   if (SIInstrInfo::isFLAT(MI))
-    return TII->mayAccessVMEMThroughFlat(MI);
+    return SIInstrInfo::usesVM_CNT(MI) && TII->mayAccessVMEMThroughFlat(MI);
   return SIInstrInfo::isVMEM(MI);
 }
 
