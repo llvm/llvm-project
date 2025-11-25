@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
-extern void *malloc(unsigned long);
-extern void free(void *);
+extern "C" void *malloc(unsigned long);
+extern "C" void free(void *);
 
 double *data;
 double *data1;
