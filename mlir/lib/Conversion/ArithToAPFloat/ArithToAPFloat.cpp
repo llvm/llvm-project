@@ -49,7 +49,7 @@ lookupOrCreateApFloatFn(OpBuilder &b, SymbolOpInterface symTable,
   auto i64Type = IntegerType::get(symTable->getContext(), 64);
 
   std::string funcName = (llvm::Twine("_mlir_apfloat_") + name).str();
-  FunctionType funcT = FunctionType::get(b.getContext(), paramTypes, {i64Type});
+  auto funcT = FunctionType::get(b.getContext(), paramTypes, {i64Type});
   FailureOr<FuncOp> func =
       lookupFnDecl(symTable, funcName, funcT, symbolTables);
   // Failed due to type mismatch.
@@ -142,7 +142,7 @@ template <typename OpTy>
 struct FpToFpConversion final : OpRewritePattern<OpTy> {
   FpToFpConversion(MLIRContext *context, SymbolOpInterface symTable,
                    PatternBenefit benefit = 1)
-      : OpRewritePattern<OpTy>(context, benefit), symTable(symTable){};
+      : OpRewritePattern<OpTy>(context, benefit), symTable(symTable) {}
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
@@ -168,7 +168,7 @@ struct FpToFpConversion final : OpRewritePattern<OpTy> {
     Value inSemValue = getSemanticsValue(rewriter, loc, inFloatTy);
     auto outFloatTy = cast<FloatType>(op.getType());
     Value outSemValue = getSemanticsValue(rewriter, loc, outFloatTy);
-    SmallVector<Value> params = {inSemValue, outSemValue, operandBits};
+    std::array<Value, 3> params = {inSemValue, outSemValue, operandBits};
     auto resultOp =
         func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
                              SymbolRefAttr::get(*fn), params);
@@ -206,8 +206,9 @@ void ArithToAPFloatConversionPass::runOnOperation() {
       context, "divide", getOperation());
   patterns.add<BinaryArithOpToAPFloatConversion<arith::RemFOp>>(
       context, "remainder", getOperation());
-  patterns.add<FpToFpConversion<arith::ExtFOp>>(context, getOperation());
-  patterns.add<FpToFpConversion<arith::TruncFOp>>(context, getOperation());
+  patterns
+      .add<FpToFpConversion<arith::ExtFOp>, FpToFpConversion<arith::TruncFOp>>(
+          context, getOperation());
   LogicalResult result = success();
   ScopedDiagnosticHandler scopedHandler(context, [&result](Diagnostic &diag) {
     if (diag.getSeverity() == DiagnosticSeverity::Error) {
