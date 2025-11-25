@@ -2099,15 +2099,20 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
                                 ValueLatticeElement::getRange(Result));
     }
     if (II->getIntrinsicID() == Intrinsic::experimental_get_vector_length) {
-      unsigned BitWidth = CB.getType()->getScalarSizeInBits();
       Value *CountArg = II->getArgOperand(0);
       Value *VF = II->getArgOperand(1);
       bool Scalable = cast<ConstantInt>(II->getArgOperand(2))->isOne();
+
+      // Computation happens in the larger type.
+      unsigned BitWidth = std::max(CountArg->getType()->getScalarSizeInBits(),
+                                   VF->getType()->getScalarSizeInBits());
+
       ConstantRange Count = getValueState(CountArg)
                                 .asConstantRange(CountArg->getType(), false)
                                 .zextOrTrunc(BitWidth);
-      ConstantRange MaxLanes =
-          getValueState(VF).asConstantRange(BitWidth, false);
+      ConstantRange MaxLanes = getValueState(VF)
+                                   .asConstantRange(VF->getType(), false)
+                                   .zextOrTrunc(BitWidth);
       if (Scalable)
         MaxLanes =
             MaxLanes.multiply(getVScaleRange(II->getFunction(), BitWidth));
@@ -2121,6 +2126,7 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
       if (Count.icmp(CmpInst::ICMP_ULE, MaxLanes))
         Result = Count;
 
+      Result = Result.zextOrTrunc(II->getType()->getScalarSizeInBits());
       return (void)mergeInValue(ValueState[II], II,
                                 ValueLatticeElement::getRange(Result));
     }

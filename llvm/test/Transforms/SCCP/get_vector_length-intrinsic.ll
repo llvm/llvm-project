@@ -134,3 +134,14 @@ loop:
 exit:
   ret i32 %x
 }
+
+define i1 @result_le_overflow() {
+; CHECK-LABEL: define i1 @result_le_overflow() {
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 4294967296, i32 4, i1 false)
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i32 [[X]], 3
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %x = call i32 @llvm.experimental.get.vector.length(i64 u0x100000000, i32 4, i1 false)
+  %res = icmp ule i32 %x, 3
+  ret i1 %res
+}
