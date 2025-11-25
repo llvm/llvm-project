@@ -1258,10 +1258,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
   // Now see if we can emit a target-specific builtin.
   if (mlir::Value v = emitTargetBuiltinExpr(builtinID, e, returnValue)) {
+    if (mlir::isa<cir::VoidType>(v.getType()))
+      return RValue::get(nullptr);
+
     switch (evalKind) {
     case cir::TEK_Scalar:
-      if (mlir::isa<cir::VoidType>(v.getType()))
-        return RValue::get(nullptr);
       return RValue::get(v);
     case cir::TEK_Aggregate:
       cgm.errorNYI(e->getSourceRange(), "aggregate return value from builtin");
@@ -1272,9 +1273,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
   }
 
-  cgm.errorNYI(e->getSourceRange(),
-               std::string("unimplemented builtin call: ") +
-                   getContext().BuiltinInfo.getName(builtinID));
   return getUndefRValue(e->getType());
 }
 
@@ -1303,9 +1301,7 @@ static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,
   case llvm::Triple::aarch64_be:
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
-    // These are actually NYI, but that will be reported by emitBuiltinExpr.
-    // At this point, we don't even know that the builtin is target-specific.
-    return nullptr;
+    break;
 
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
@@ -1325,12 +1321,14 @@ static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,
   case llvm::Triple::hexagon:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
-    // These are actually NYI, but that will be reported by emitBuiltinExpr.
-    // At this point, we don't even know that the builtin is target-specific.
-    return {};
   default:
-    return {};
+    break;
   }
+
+  cgf->cgm.errorNYI(e->getSourceRange(),
+                "target-specific builtin not implemented on this architecture:  " +
+                    cgf->getContext().BuiltinInfo.getName(builtinID));
+  return {};
 }
 
 mlir::Value

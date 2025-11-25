@@ -16,9 +16,15 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
+
+/// Get integer from a mlir::Value that is an int constant or a constant op.
+static int64_t getIntValueFromConstOp(mlir::Value val) {
+  return val.getDefiningOp<cir::ConstantOp>().getIntValue().getSExtValue();
+}
 
 template <typename... Operands>
 static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
@@ -68,6 +74,33 @@ static mlir::Value emitVectorFCmp(CIRGenBuilderTy &builder,
   return bitCast;
 }
 
+static mlir::Value emitPrefetch(CIRGenFunction &cgf, unsigned builtinID,
+                                const CallExpr *e,
+                                const llvm::SmallVector<mlir::Value> &ops) {
+
+  assert(builtinID == X86::BI_mm_prefetch || builtinID == X86::BI_m_prefetchw ||
+         builtinID == X86::BI_m_prefetch && "Expected prefetch builtin");
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location location = cgf.getLoc(e->getExprLoc());
+  mlir::Type voidTy = builder.getVoidTy();
+  mlir::Value addr = ops[0];
+  mlir::Value address = builder.createPtrBitcast(addr, voidTy);
+  bool isWrite{};
+  int locality{};
+
+  if (builtinID == X86::BI_mm_prefetch) {
+    int64_t hint = getIntValueFromConstOp(ops[1]);
+    isWrite = (hint >> 2) & 0x1;
+    locality = hint & 0x3;
+  } else {
+    isWrite = (builtinID == X86::BI_m_prefetchw);
+    locality = 0x3;
+  }
+
+  cir::PrefetchOp::create(builder, location, address, locality, isWrite);
+  return {};
+}
+
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
                                                const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
@@ -108,6 +141,9 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
 
   switch (builtinID) {
   default:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
     return {};
   case X86::BI_mm_clflush:
     return emitIntrinsicCallOp(*this, expr, "x86.sse2.clflush", voidTy, ops[0]);
@@ -120,6 +156,9 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI_mm_sfence:
     return emitIntrinsicCallOp(*this, expr, "x86.sse.sfence", voidTy);
   case X86::BI_mm_prefetch:
+  case X86::BI_m_prefetch:
+  case X86::BI_m_prefetchw:
+      return emitPrefetch(*this, builtinID, expr, ops);
   case X86::BI__rdtsc:
   case X86::BI__builtin_ia32_rdtscp: {
     cgm.errorNYI(expr->getSourceRange(),
