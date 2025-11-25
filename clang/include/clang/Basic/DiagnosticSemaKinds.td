@@ -4358,7 +4358,7 @@ def warn_unknown_sanitizer_ignored : Warning<
 
 def warn_impcast_matrix_scalar : Warning<
   "implicit conversion turns matrix to scalar: %0 to %1">,
-  InGroup<MatrixConversion>, DefaultIgnore;
+  InGroup<MatrixConversion>;
 def warn_impcast_vector_scalar : Warning<
   "implicit conversion turns vector to scalar: %0 to %1">,
   InGroup<Conversion>, DefaultIgnore;
