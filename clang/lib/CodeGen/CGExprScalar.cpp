@@ -2426,17 +2426,26 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
     assert(LoadList.size() >= MatTy->getNumElementsFlattened() &&
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
+
     llvm::Value *V =
         CGF.Builder.CreateLoad(CGF.CreateIRTemp(DestTy, "flatcast.tmp"));
     // write to V.
-    for (unsigned I = 0, E = MatTy->getNumElementsFlattened(); I < E; I++) {
-      RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
-      assert(RVal.isScalar() &&
-             "All flattened source values should be scalars.");
-      llvm::Value *Cast =
-          CGF.EmitScalarConversion(RVal.getScalarVal(), LoadList[I].getType(),
-                                   MatTy->getElementType(), Loc);
-      V = CGF.Builder.CreateInsertElement(V, Cast, I);
+    unsigned NumCols = MatTy->getNumColumns();
+    unsigned NumRows = MatTy->getNumRows();
+    unsigned ColOffset = NumCols;
+    if (auto *SrcMatTy = SrcVal.getType()->getAs<ConstantMatrixType>())
+      ColOffset = SrcMatTy->getNumColumns();
+    for (unsigned R = 0; R < NumRows; R++) {
+      for (unsigned C = 0; C < NumCols; C++) {
+        unsigned I = R * ColOffset + C;
+        RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
+        assert(RVal.isScalar() &&
+               "All flattened source values should be scalars.");
+        llvm::Value *Cast =
+            CGF.EmitScalarConversion(RVal.getScalarVal(), LoadList[I].getType(),
+                                     MatTy->getElementType(), Loc);
+        V = CGF.Builder.CreateInsertElement(V, Cast, I);
+      }
     }
     return V;
   }
@@ -2978,9 +2987,17 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     Value *Mat = Visit(E);
     if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
       SmallVector<int> Mask;
-      unsigned NumElts = MatTy->getNumElementsFlattened();
-      for (unsigned I = 0; I != NumElts; ++I)
-        Mask.push_back(I);
+      unsigned NumCols = MatTy->getNumColumns();
+      unsigned NumRows = MatTy->getNumRows();
+      unsigned ColOffset = NumCols;
+      if (auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>())
+        ColOffset = SrcMatTy->getNumColumns();
+      for (unsigned R = 0; R < NumRows; R++) {
+        for (unsigned C = 0; C < NumCols; C++) {
+          unsigned I = R * ColOffset + C;
+          Mask.push_back(I);
+        }
+      }
 
       return Builder.CreateShuffleVector(Mat, Mask, "trunc");
     }
@@ -2991,11 +3008,20 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     RValue RV = CGF.EmitAnyExpr(E);
     SourceLocation Loc = CE->getExprLoc();
 
-    assert(RV.isAggregate() && "Not a valid HLSL Elementwise Cast.");
-    // RHS is an aggregate
-    LValue SrcVal = CGF.MakeAddrLValue(RV.getAggregateAddress(), E->getType());
+    Address SrcAddr = Address::invalid();
+
+    if (RV.isAggregate()) {
+      SrcAddr = RV.getAggregateAddress();
+    } else {
+      SrcAddr = CGF.CreateMemTemp(E->getType(), "hlsl.ewcast.src");
+      LValue TmpLV = CGF.MakeAddrLValue(SrcAddr, E->getType());
+      CGF.EmitStoreThroughLValue(RV, TmpLV);
+    }
+
+    LValue SrcVal = CGF.MakeAddrLValue(SrcAddr, E->getType());
     return EmitHLSLElementwiseCast(CGF, SrcVal, DestTy, Loc);
   }
+
   } // end of switch
 
   llvm_unreachable("unknown scalar cast");

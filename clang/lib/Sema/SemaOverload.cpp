@@ -2114,7 +2114,7 @@ static bool IsMatrixConversion(Sema &S, QualType FromType, QualType ToType,
                                ImplicitConversionKind &ICK,
                                ImplicitConversionKind &ElConv, Expr *From,
                                bool InOverloadResolution, bool CStyle) {
-  // The non HLSL Matrix conversion rules are not clear.
+  // Implicit conversions for matrices are an HLSL feature not present in C/C++.
   if (!S.getLangOpts().HLSL)
     return false;
 
