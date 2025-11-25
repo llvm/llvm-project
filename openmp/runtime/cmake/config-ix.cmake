@@ -16,6 +16,7 @@ include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CheckIncludeFiles)
 include(CheckSymbolExists)
+include(LibompCheckFortranFlag)
 include(LLVMCheckCompilerLinkerFlag)
 
 # Check for versioned symbols
@@ -95,6 +96,9 @@ if(WIN32)
       )
     endforeach()
   endforeach()
+endif()
+if(${LIBOMP_FORTRAN_MODULES})
+  libomp_check_fortran_flag(-m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)
 endif()
 
 # Check non-posix pthread API here before CMAKE_REQUIRED_DEFINITIONS gets messed up

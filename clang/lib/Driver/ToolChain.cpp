@@ -1022,12 +1022,6 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   return {};
 }
 
-std::optional<std::string> ToolChain::getDefaultIntrinsicModuleDir() const {
-  SmallString<128> P(D.ResourceDir);
-  llvm::sys::path::append(P, "finclude", "flang");
-  return getTargetSubDirPath(P);
-}
-
 std::optional<std::string> ToolChain::getRuntimePath() const {
   SmallString<128> P(D.ResourceDir);
   llvm::sys::path::append(P, "lib");

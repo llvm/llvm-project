@@ -8,7 +8,6 @@ config.test_compiler_has_omp_h = @OPENMP_TEST_COMPILER_HAS_OMP_H@
 config.test_filecheck = "@OPENMP_FILECHECK_EXECUTABLE@"
 config.test_not = "@OPENMP_NOT_EXECUTABLE@"
 config.test_openmp_flags = "@OPENMP_TEST_OPENMP_FLAGS@"
-config.test_fortran_flags = "@OPENMP_TEST_Fortran_FLAGS@"
 config.test_extra_flags = "@OPENMP_TEST_FLAGS@"
 config.libomp_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
 config.library_dir = "@LIBOMP_LIBRARY_DIR@"

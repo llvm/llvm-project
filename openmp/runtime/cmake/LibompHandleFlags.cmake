@@ -156,6 +156,17 @@ function(libomp_get_libflags libflags)
   set(${libflags} ${libflags_local_list} PARENT_SCOPE)
 endfunction()
 
+# Fortran flags
+function(libomp_get_fflags fflags)
+  set(fflags_local)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    libomp_append(fflags_local -m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)
+  endif()
+  set(fflags_local ${fflags_local} ${LIBOMP_FFLAGS})
+  libomp_setup_flags(fflags_local)
+  set(${fflags} ${fflags_local} PARENT_SCOPE)
+endfunction()
+
 # Python generate-defs.py flags (For Windows only)
 function(libomp_get_gdflags gdflags)
   set(gdflags_local)

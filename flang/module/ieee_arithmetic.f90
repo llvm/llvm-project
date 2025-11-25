@@ -8,7 +8,7 @@
 
 ! Fortran 2018 Clause 17
 
-#include '../../../flang/include/flang/Runtime/magic-numbers.h'
+#include '../include/flang/Runtime/magic-numbers.h'
 
 module ieee_arithmetic
   ! F18 Clause 17.1p1:
