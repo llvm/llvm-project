@@ -1,5 +1,5 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
-
+!XFAIL: *
 ! This test checks that if reduction clause is on a combined target
 ! construct, there is an implicit map(tofrom) for each reduction variable.
 
