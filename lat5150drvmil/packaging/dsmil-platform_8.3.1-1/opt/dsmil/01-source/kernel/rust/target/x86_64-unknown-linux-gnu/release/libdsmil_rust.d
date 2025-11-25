@@ -1,1 +1,0 @@
-/home/john/LAT5150DRVMIL/01-source/kernel/rust/target/x86_64-unknown-linux-gnu/release/libdsmil_rust.a: /home/john/LAT5150DRVMIL/01-source/kernel/rust/src/ffi.rs /home/john/LAT5150DRVMIL/01-source/kernel/rust/src/lib.rs /home/john/LAT5150DRVMIL/01-source/kernel/rust/src/memory.rs /home/john/LAT5150DRVMIL/01-source/kernel/rust/src/smi.rs

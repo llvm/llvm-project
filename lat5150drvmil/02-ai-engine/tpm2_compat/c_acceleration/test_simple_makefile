@@ -1,9 +1,0 @@
-obj-m += tpm2_accel_early.o
-
-all:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
-
-clean:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
-	rm -f *.o *.ko *.mod.c *.mod.o *.order *.symvers
-	rm -rf .tmp_versions

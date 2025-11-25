@@ -1,1 +1,0 @@
-metric_id,test_id,session_id,metric_timestamp,cpu_percent,memory_percent,memory_available_gb,disk_usage_percent,system_load_1min,system_load_5min,system_load_15min,uptime_hours,process_count

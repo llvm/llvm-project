@@ -1,2 +1,0 @@
-# Gemini MCP Server Dependencies
-# Minimal requirements (uses standard library for most functionality)

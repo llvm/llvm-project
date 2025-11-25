@@ -1,7 +1,0 @@
-0xbb9902d3	dsmil_mfa_init	dsmil-84dev	EXPORT_SYMBOL	
-0x07feab7f	dsmil_mfa_cleanup	dsmil-84dev	EXPORT_SYMBOL	
-0x43bc5570	dsmil_mfa_create_auth_context	dsmil-84dev	EXPORT_SYMBOL	
-0xfa7fca82	dsmil_mfa_authorize_operation	dsmil-84dev	EXPORT_SYMBOL	
-0xf7ff9d3f	dsmil_mfa_request_dual_authorization	dsmil-84dev	EXPORT_SYMBOL	
-0xb5775832	dsmil_mfa_get_statistics	dsmil-84dev	EXPORT_SYMBOL	
-0x3ba1888f	dsmil_mfa_get_user_profile	dsmil-84dev	EXPORT_SYMBOL	

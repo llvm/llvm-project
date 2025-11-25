@@ -1,8 +1,0 @@
-dell-milspec-meta (1.0.0-1) unstable; urgency=medium
-
-  * Initial release of Dell MIL-SPEC meta-package
-  * Pulls in complete hardware acceleration suite
-  * Dependencies: DSMIL and TPM2 kernel modules
-  * Recommends: tools, docs, and examples packages
-
- -- Dell MIL-SPEC Team <milspec-dev@dell.com>  Fri, 11 Oct 2025 16:00:00 +0000
