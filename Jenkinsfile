@@ -1,5 +1,5 @@
 pipeline {
-  agent { label 'cpp-ec2-al2' }
+  agent { label 'cpp-ec2-al2-candidate' }
 
   options {
     timestamps()
