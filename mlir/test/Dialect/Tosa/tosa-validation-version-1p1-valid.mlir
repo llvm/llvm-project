@@ -54,14 +54,6 @@ func.func @test_const_fp6e3m2() -> tensor<4xf6E3M2FN> {
 
 // -----
 
-// CHECK-LABEL: test_cast_f4e2m1
-func.func @test_cast_f4e2m1(%arg0: tensor<13x21x3xf4E2M1FN>) -> tensor<13x21x3xbf16> {
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xf4E2M1FN>) -> tensor<13x21x3xbf16>
-  return %0 : tensor<13x21x3xbf16>
-}
-
-// -----
-
 // CHECK-LABEL: test_cast_from_block_scaled_fp8e5m2_fp32
 func.func @test_cast_from_block_scaled_fp8e5m2_fp32(%arg0: tensor<4x32xf8E5M2>, %arg1: tensor<4x1xf8E8M0FNU>) -> tensor<4x32xf32> {
   %0 = tosa.cast_from_block_scaled %arg0, %arg1 {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<4x32xf8E5M2>, tensor<4x1xf8E8M0FNU>) -> tensor<4x32xf32>
@@ -106,14 +98,6 @@ func.func @test_const_fp6e3m2() -> tensor<4xf6E3M2FN> {
 func.func @test_const_mxint8() -> tensor<2x!tosa.mxint8> {
     %0 = "tosa.const"() {values = dense<["0x00", "0x7F"]> : tensor<2x!tosa.mxint8>} : () -> tensor<2x!tosa.mxint8>
     return %0 : tensor<2x!tosa.mxint8>
-}
-
-// -----
-
-// CHECK-LABEL: test_cast_f4e2m1
-func.func @test_cast_f4e2m1(%arg0: tensor<13x21x3xf4E2M1FN>) -> tensor<13x21x3xbf16> {
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xf4E2M1FN>) -> tensor<13x21x3xbf16>
-  return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
