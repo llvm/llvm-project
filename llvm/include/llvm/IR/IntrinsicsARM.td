@@ -1138,6 +1138,18 @@ def int_arm_mve_vshlc_predicated: DefaultAttrsIntrinsic<
    [llvm_i32_ty /* bits shifted out */, llvm_anyvector_ty],
    [LLVMMatchType<0>, llvm_i32_ty /* bits shifted in */,
     llvm_i32_ty /* shift count */, llvm_anyvector_ty], [IntrNoMem]>;
+def int_arm_mve_vadd: DefaultAttrsIntrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_vsub: DefaultAttrsIntrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_vmul: DefaultAttrsIntrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+   [IntrNoMem]>;
 def int_arm_mve_vmulh: DefaultAttrsIntrinsic<
    [llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty /* unsigned */],

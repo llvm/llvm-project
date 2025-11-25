@@ -677,10 +677,10 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
           }
         }
       }
-        // std::vector is used here to accomodate large number of elements that
-        // exceed SmallVector capacity.
-        std::vector<llvm::Constant *> constants(numElements, child);
-        return llvm::ConstantArray::get(arrayType, constants);
+      // std::vector is used here to accomodate large number of elements that
+      // exceed SmallVector capacity.
+      std::vector<llvm::Constant *> constants(numElements, child);
+      return llvm::ConstantArray::get(arrayType, constants);
     }
   }
 
@@ -2131,8 +2131,16 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
   //    LLVM metadata instances.
   AttrTypeWalker walker;
   walker.addWalk([&](TBAARootAttr root) {
-    tbaaMetadataMapping.insert(
-        {root, llvm::MDNode::get(ctx, llvm::MDString::get(ctx, root.getId()))});
+    llvm::MDNode *node;
+    if (StringAttr id = root.getId()) {
+      node = llvm::MDNode::get(ctx, llvm::MDString::get(ctx, id));
+    } else {
+      // Anonymous root nodes are self-referencing.
+      auto selfRef = llvm::MDNode::getTemporary(ctx, {});
+      node = llvm::MDNode::get(ctx, {selfRef.get()});
+      node->replaceOperandWith(0, node);
+    }
+    tbaaMetadataMapping.insert({root, node});
   });
 
   walker.addWalk([&](TBAATypeDescriptorAttr descriptor) {
