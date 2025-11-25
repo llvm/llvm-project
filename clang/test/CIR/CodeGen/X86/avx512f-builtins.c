@@ -77,3 +77,33 @@ __m512i test_mm512_undefined_epi32(void) {
   // OGCG: ret <8 x i64> zeroinitializer
   return _mm512_undefined_epi32();
 }
+
+__mmask16 test_mm512_kunpackb(__mmask16 A, __mmask16 B) {
+  // CIR-LABEL: test_mm512_kunpackb
+  // CIR: [[A_VEC:%.*]] = cir.cast bitcast %{{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[B_VEC:%.*]] = cir.cast bitcast %{{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[A_HALF:%.*]] = cir.vec.shuffle([[A_VEC]], [[A_VEC]] : !cir.vector<16 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: [[B_HALF:%.*]] = cir.vec.shuffle([[B_VEC]], [[B_VEC]] : !cir.vector<16 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: [[RES:%.*]] = cir.vec.shuffle([[B_HALF]], [[A_HALF]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: %{{.*}} = cir.cast bitcast [[RES]] : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+  // CIR: cir.return %{{.*}} : !u16i
+
+  // LLVM-LABEL: test_mm512_kunpackb
+  // LLVM: [[A_VEC:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[B_VEC:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[A_HALF:%.*]] = shufflevector <16 x i1> [[A_VEC]], <16 x i1> [[A_VEC]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // LLVM: [[B_HALF:%.*]] = shufflevector <16 x i1> [[B_VEC]], <16 x i1> [[B_VEC]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // LLVM: [[RES:%.*]] = shufflevector <8 x i1> [[B_HALF]], <8 x i1> [[A_HALF]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // LLVM: %{{.*}} = bitcast <16 x i1> [[RES]] to i16
+  // LLVM: ret i16 %{{.*}}
+
+  // OGCG-LABEL: test_mm512_kunpackb
+  // OGCG: [[A_VEC:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: [[B_VEC:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: [[A_HALF:%.*]] = shufflevector <16 x i1> [[A_VEC]], <16 x i1> [[A_VEC]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // OGCG: [[B_HALF:%.*]] = shufflevector <16 x i1> [[B_VEC]], <16 x i1> [[B_VEC]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // OGCG: [[RES:%.*]] = shufflevector <8 x i1> [[B_HALF]], <8 x i1> [[A_HALF]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // OGCG: %{{.*}} = bitcast <16 x i1> [[RES]] to i16
+  // OGCG: ret i16 %{{.*}}
+  return _mm512_kunpackb(A, B);
+}
