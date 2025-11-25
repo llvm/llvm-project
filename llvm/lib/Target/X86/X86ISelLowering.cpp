@@ -23636,9 +23636,7 @@ static SDValue EmitTest(SDValue Op, X86::CondCode X86CC, const SDLoc &dl,
 
     // If optimising for size and can guarantee the shift amt is never zero
     // the test.
-    bool OptForSize = DAG.getMachineFunction().getFunction().hasOptSize();
-
-    if (!OptForSize)
+    if (!DAG.getMachineFunction().getFunction().hasOptSize())
       break;
 
     if (!DAG.isKnownNeverZero(Amt))
@@ -35223,6 +35221,9 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(OR)
   NODE_NAME_CASE(XOR)
   NODE_NAME_CASE(AND)
+  NODE_NAME_CASE(SHL)
+  NODE_NAME_CASE(SRL)
+  NODE_NAME_CASE(SRA)
   NODE_NAME_CASE(BEXTR)
   NODE_NAME_CASE(BEXTRI)
   NODE_NAME_CASE(BZHI)
@@ -35521,9 +35522,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CVTTP2UIS)
   NODE_NAME_CASE(MCVTTP2UIS)
   NODE_NAME_CASE(POP_FROM_X87_REG)
-  NODE_NAME_CASE(SHL)
-  NODE_NAME_CASE(SRL)
-  NODE_NAME_CASE(SRA)
   }
   return nullptr;
 #undef NODE_NAME_CASE
