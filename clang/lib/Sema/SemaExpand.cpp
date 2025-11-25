@@ -28,13 +28,33 @@ using namespace sema;
 CXXExpansionStmtDecl *
 Sema::ActOnCXXExpansionStmtDecl(unsigned TemplateDepth,
                                 SourceLocation TemplateKWLoc) {
-  llvm_unreachable("TODO");
+  // Create a template parameter '__N'. This will be used to denote the index
+  // of the element that we're instantiating. CWG 3044 requires this type to
+  // be 'ptrdiff_t' for iterating expansion statements, so use that in all
+  // cases.
+  IdentifierInfo *ParmName = &Context.Idents.get("__N");
+  QualType ParmTy = Context.getPointerDiffType();
+  TypeSourceInfo *ParmTI =
+      Context.getTrivialTypeSourceInfo(ParmTy, TemplateKWLoc);
+
+  auto *TParam = NonTypeTemplateParmDecl::Create(
+      Context, Context.getTranslationUnitDecl(), TemplateKWLoc, TemplateKWLoc,
+      TemplateDepth, /*Position=*/0, ParmName, ParmTy, /*ParameterPack=*/false,
+      ParmTI);
+
+  return BuildCXXExpansionStmtDecl(CurContext, TemplateKWLoc, TParam);
 }
 
 CXXExpansionStmtDecl *
 Sema::BuildCXXExpansionStmtDecl(DeclContext *Ctx, SourceLocation TemplateKWLoc,
                                 NonTypeTemplateParmDecl *NTTP) {
-  llvm_unreachable("TODO");
+  auto *TParamList = TemplateParameterList::Create(
+      Context, TemplateKWLoc, TemplateKWLoc, {NTTP}, TemplateKWLoc,
+      /*RequiresClause=*/nullptr);
+  auto *Result =
+      CXXExpansionStmtDecl::Create(Context, Ctx, TemplateKWLoc, TParamList);
+  Ctx->addDecl(Result);
+  return Result;
 }
 
 ExprResult Sema::ActOnCXXExpansionInitList(MultiExprArg SubExprs,
@@ -49,9 +69,14 @@ StmtResult Sema::ActOnCXXExpansionStmtPattern(
     Expr *ExpansionInitializer, SourceLocation LParenLoc,
     SourceLocation ColonLoc, SourceLocation RParenLoc,
     ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
-  llvm_unreachable("TODO");
+  Diag(ColonLoc, diag::err_expansion_stmt_todo);
+  return StmtError();
 }
 
 StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
-  llvm_unreachable("TODO");
+  if (!Exp || !Body)
+    return StmtError();
+
+  Diag(Exp->getBeginLoc(), diag::err_expansion_stmt_todo);
+  return StmtError();
 }
