@@ -1245,7 +1245,7 @@ void RewriteScheduleStage::findReachingDefs(
   Visited.insert(UseMI->getParent());
 
   // Mark the predecessor blocks for traversal
-  for (auto PredMBB : UseMI->getParent()->predecessors()) {
+  for (auto *PredMBB : UseMI->getParent()->predecessors()) {
     Worklist.push_back(PredMBB);
     Visited.insert(PredMBB);
   }
@@ -1266,7 +1266,7 @@ void RewriteScheduleStage::findReachingDefs(
       continue;
     }
 
-    for (auto PredMBB : DefMBB->predecessors()) {
+    for (auto *PredMBB : DefMBB->predecessors()) {
       if (Visited.insert(PredMBB).second)
         Worklist.push_back(PredMBB);
     }
@@ -1966,8 +1966,7 @@ bool RewriteScheduleStage::initHeuristics(
         continue;
 
       int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode());
-      if (ReplacementOp == -1)
-        continue;
+      assert(ReplacementOp != -1)
 
       RewriteCands.push_back({&MI, MI.getOpcode()});
       MI.setDesc(TII->get(ReplacementOp));
@@ -2238,9 +2237,9 @@ bool RewriteScheduleStage::rewrite(
       }
 
       if (!Src2DefsReplace.empty()) {
-        if (RedefMap.contains(Src2Reg))
+        if (RedefMap.contains(Src2Reg)) {
           MappedReg = RedefMap[Src2Reg];
-        else {
+        } else {
           assert(!ReachingDefCopyMap.contains(Src2Reg));
           const TargetRegisterClass *Src2RC = DAG.MRI.getRegClass(Src2Reg);
           const TargetRegisterClass *VGPRRC =
@@ -2399,7 +2398,7 @@ bool RewriteScheduleStage::rewrite(
       SlotIndex InstPt = DAG.LIS->getInstructionIndex(*OpBegin->getParent());
 
       // Find the earliest use in this block.
-      for (auto User : RUDst.second) {
+      for (auto *User : RUDst.second) {
         SlotIndex NewInstPt = DAG.LIS->getInstructionIndex(*User->getParent());
         if (SlotIndex::isEarlierInstr(NewInstPt, InstPt))
           InstPt = NewInstPt;
@@ -2426,7 +2425,7 @@ bool RewriteScheduleStage::rewrite(
       }
 
       // Replace the operand for all users.
-      for (auto User : RUDst.second) {
+      for (auto *User : RUDst.second) {
         User->setReg(NewUseReg);
       }
 
@@ -2443,9 +2442,8 @@ bool RewriteScheduleStage::rewrite(
     Register NewReg = NewDef.second;
 
     // Replace the register for any associated operand in the MFMA chain.
-    for (MachineOperand *ReplaceOp : ReplaceMap[OldReg]) {
+    for (MachineOperand *ReplaceOp : ReplaceMap[OldReg])
       ReplaceOp->setReg(NewReg);
-    }
   }
 
   // Finally, do the reclassification of the MFMA registers.

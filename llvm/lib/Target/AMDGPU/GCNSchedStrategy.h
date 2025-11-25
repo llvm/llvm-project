@@ -429,7 +429,7 @@ private:
   const SIRegisterInfo *SRI;
 
   /// Do a speculative rewrite and collect copy locations. The speculative
-  /// rewrite allows us to calulcate the RP of the code after the rewrite, and
+  /// rewrite allows us to calculate the RP of the code after the rewrite, and
   /// the copy locations allow us to calculate the total cost of copies required
   /// for the rewrite. Stores the rewritten instructions in \p RewriteCands ,
   /// the copy locations for uses (of the MFMA result) in \p CopyForUse and the
