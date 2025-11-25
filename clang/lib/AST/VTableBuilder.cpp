@@ -2317,6 +2317,8 @@ VTableLayout::VTableLayout(VTableIndicesTy VTableIndices,
           MakeAddressPointIndices(AddressPoints, this->VTableIndices.size())) {
   assert(!this->VTableIndices.empty() &&
          "VTableLayout requires at least one index.");
+  assert(this->VTableIndices.front() == 0 &&
+         "VTableLayout requires the first index is 0.");
   llvm::sort(this->VTableThunks, [](const VTableLayout::VTableThunkTy &LHS,
                                     const VTableLayout::VTableThunkTy &RHS) {
     assert((LHS.first != RHS.first || LHS.second == RHS.second) &&

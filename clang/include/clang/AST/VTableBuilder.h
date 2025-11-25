@@ -265,7 +265,7 @@ private:
   AddressPointsIndexMapTy AddressPointIndices;
 
 public:
-  // Requires `!VTableIndicies.empty()`
+  // Requires `VTableIndices.front() == 0`
   VTableLayout(VTableIndicesTy VTableIndices,
                ArrayRef<VTableComponent> VTableComponents,
                ArrayRef<VTableThunkTy> VTableThunks,
