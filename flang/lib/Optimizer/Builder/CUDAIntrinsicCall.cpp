@@ -906,7 +906,7 @@ CUDAIntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
   return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier)
-      .getResult();
+      .getResult(0);
 }
 
 // BARRIER_ARRIBVE_CNT

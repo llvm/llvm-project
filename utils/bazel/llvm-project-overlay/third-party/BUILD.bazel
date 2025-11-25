@@ -51,7 +51,6 @@ cc_library_wrapper(
         ],
         "//conditions:default": [],
     }),
-    visibility = ["//visibility:public"],
     deps = select({
         ":llvm_zlib_enabled": [
             "@llvm_zlib//:zlib-ng",
