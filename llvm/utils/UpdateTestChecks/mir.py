@@ -11,8 +11,10 @@ from UpdateTestChecks.common import (
 
 class _ConflictMarker:
     """Sentinel indicating conflicting output for the same prefix across different RUN lines."""
+
     def __bool__(self):
         return False  # Behaves like None in boolean context
+
     def __repr__(self):
         return "CONFLICT"
 
