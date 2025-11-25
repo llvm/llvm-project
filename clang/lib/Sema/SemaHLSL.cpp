@@ -771,8 +771,9 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   }
 }
 
-static bool isPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
-                              HLSLAppliedSemanticAttr *Semantic) {
+static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
+                                HLSLAppliedSemanticAttr *Semantic,
+                                bool IsInput) {
   if (AstContext.getTargetInfo().getTriple().getOS() != llvm::Triple::Vulkan)
     return false;
 
@@ -781,8 +782,13 @@ static bool isPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
   llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
   auto SemanticName = Semantic->getSemanticName().upper();
 
-  if (ST == llvm::Triple::Pixel && SemanticName == "SV_POSITION")
-    return true;
+  // The SV_Position semantic is lowered to:
+  //  - Position built-in for vertex output.
+  //  - FragCoord built-in for fragment input.
+  if (SemanticName == "SV_POSITION") {
+    return (ST == llvm::Triple::Vertex && !IsInput) ||
+           (ST == llvm::Triple::Pixel && IsInput);
+  }
 
   return false;
 }
@@ -816,7 +822,7 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
 
   unsigned Location = ActiveSemantic.Index.value_or(0);
 
-  if (!isPipelineBuiltin(getASTContext(), FD, A)) {
+  if (!isVkPipelineBuiltin(getASTContext(), FD, A, IsInput)) {
     bool HasVkLocation = false;
     if (auto *A = D->getAttr<HLSLVkLocationAttr>()) {
       HasVkLocation = true;
