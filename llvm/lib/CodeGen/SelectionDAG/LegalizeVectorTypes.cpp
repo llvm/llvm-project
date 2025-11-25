@@ -407,8 +407,15 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
   SDValue SourceValue = N->getOperand(0);
   SDValue SinkValue = N->getOperand(1);
   SDValue EltSize = N->getOperand(2);
+  SDValue Offset = N->getOperand(3);
   EVT PtrVT = SourceValue->getValueType(0);
   SDLoc DL(N);
+
+  // Increment the source pointer by the lane offset multiplied by the element
+  // size. A non-zero offset is normally used when a larger-than-legal mask has
+  // been split.
+  Offset = DAG.getNode(ISD::MUL, DL, PtrVT, Offset, EltSize);
+  SourceValue = DAG.getNode(ISD::ADD, DL, PtrVT, SourceValue, Offset);
 
   SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
   EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
@@ -1711,23 +1718,13 @@ void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
   std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
   SDValue PtrA = N->getOperand(0);
   SDValue PtrB = N->getOperand(1);
-  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB, N->getOperand(2));
 
-  unsigned EltSize = N->getConstantOperandVal(2);
-  unsigned Offset = EltSize * HiVT.getVectorMinNumElements();
-  SDValue Addend = HiVT.isScalableVT()
-                       ? DAG.getVScale(DL, MVT::i64, APInt(64, Offset))
-                       : DAG.getConstant(Offset, DL, MVT::i64);
-
-  PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, Addend);
-  EVT CmpVT = MVT::i1;
-  SDValue Cmp = DAG.getSetCC(DL, CmpVT, PtrA, PtrB, ISD::CondCode::SETUGE);
-  Cmp = DAG.getSplat(EVT::getVectorVT(*DAG.getContext(), CmpVT,
-                                      HiVT.getVectorMinNumElements(),
-                                      HiVT.isScalableVT()),
-                     DL, Cmp);
-  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB, N->getOperand(2));
-  Hi = DAG.getSelect(DL, HiVT, Cmp, DAG.getConstant(0, DL, HiVT), Hi);
+  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB, N->getOperand(2),
+                   N->getOperand(3));
+  unsigned Offset =
+      N->getConstantOperandVal(3) + LoVT.getVectorMinNumElements();
+  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB, N->getOperand(2),
+                   DAG.getConstant(Offset, DL, MVT::i64));
 }
 
 void DAGTypeLegalizer::SplitVecRes_BUILD_VECTOR(SDNode *N, SDValue &Lo,
@@ -6071,7 +6068,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
   return DAG.getNode(
       N->getOpcode(), SDLoc(N),
       TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0)),
-      N->getOperand(0), N->getOperand(1), N->getOperand(2));
+      N->getOperand(0), N->getOperand(1), N->getOperand(2), N->getOperand(3));
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_BUILD_VECTOR(SDNode *N) {
