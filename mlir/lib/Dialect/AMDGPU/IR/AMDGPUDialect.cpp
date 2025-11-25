@@ -744,7 +744,7 @@ LogicalResult TransposeLoadOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult MakeDmaDescriptorOp::verify() {
-  if (getGlobalStaticStrides()->size() == 0) {
+  if (getGlobalStaticStrides()->empty()) {
     return emitOpError("strides must not be empty.");
   }
   if (getGlobalStaticStrides()->back() != 1) {
