@@ -1057,35 +1057,65 @@ LogicalResult mlir::linalg::detail::verifyConvolutionInterface(Operation *op) {
 // FillOpInterface implementation
 //===----------------------------------------------------------------------===//
 
+namespace mlir::linalg::detail {
 enum class MatchFillResult {
   Success = 0,
   NotLinalgOp,
   WrongNumOperands,
-  NotScalarInput
+  NotScalarInput,
+  TypeMismatch
 };
 
-static MatchFillResult isFillInterfaceImpl(Operation *op) {
+struct FillInterfaceResult {
+  MatchFillResult result = MatchFillResult::Success;
+  Type scalarType;
+  Type outputElementType;
+};
+static FillInterfaceResult isFillInterfaceImpl(Operation *op) {
+  FillInterfaceResult fillResult = {};
   auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
-  if (!linalgOp)
-    return MatchFillResult::NotLinalgOp;
-  if (linalgOp.getNumDpsInputs() != 1 || linalgOp.getNumDpsInits() != 1)
-    return MatchFillResult::WrongNumOperands;
+  if (!linalgOp) {
+    fillResult.result = MatchFillResult::NotLinalgOp;
+    return fillResult;
+  }
+  if (linalgOp.getNumDpsInputs() != 1 || linalgOp.getNumDpsInits() != 1) {
+    fillResult.result = MatchFillResult::WrongNumOperands;
+    return fillResult;
+  }
 
   OpOperand *value = linalgOp.getDpsInputOperand(0);
-  if (!linalgOp.isScalar(value))
-    return MatchFillResult::NotScalarInput;
+  if (!linalgOp.isScalar(value)) {
+    fillResult.result = MatchFillResult::NotScalarInput;
+    return fillResult;
+  }
 
-  return MatchFillResult::Success;
+  // Check that the scalar input type matches the output element type.
+  OpOperand *output = linalgOp.getDpsInitOperand(0);
+  Type scalarType = value->get().getType();
+  Type outputElementType = getElementTypeOrSelf(output->get().getType());
+  if (scalarType != outputElementType) {
+    fillResult.result = MatchFillResult::TypeMismatch;
+    fillResult.scalarType = scalarType;
+    fillResult.outputElementType = outputElementType;
+    return fillResult;
+  }
+
+  return fillResult;
 }
+} // namespace mlir::linalg::detail
 
 LogicalResult mlir::linalg::detail::verifyFillInterface(Operation *op) {
-  auto res = isFillInterfaceImpl(op);
-  if (res == MatchFillResult::NotLinalgOp)
+  auto [result, scalarType, outputElementType] = isFillInterfaceImpl(op);
+  if (result == MatchFillResult::NotLinalgOp)
     return op->emitError("expected a LinalgOp");
-  if (res == MatchFillResult::WrongNumOperands)
+  if (result == MatchFillResult::WrongNumOperands)
     return op->emitError("expected op with 1 input and 1 output");
-  if (res == MatchFillResult::NotScalarInput)
+  if (result == MatchFillResult::NotScalarInput)
     return op->emitError("expected op with scalar input");
+  if (result == MatchFillResult::TypeMismatch)
+    return op->emitOpError("expected fill value type (")
+           << scalarType << ") to match output element type ("
+           << outputElementType << ")";
 
   return success();
 }
