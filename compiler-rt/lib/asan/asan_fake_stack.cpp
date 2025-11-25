@@ -225,23 +225,23 @@ static void SetTLSFakeStack(FakeStack*) {}
 void ResetTLSFakeStack() {}
 #endif  // (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
 
-static void DisableFakeStack() {
+static void SuppressFakeStack() {
   AsanThread* t = GetCurrentThread();
   if (t) {
-    t->SetFakeStackEnabled(false);
+    t->SuppressFakeStack();
   }
 }
 
-static void EnableFakeStack() {
+static void UnsuppressFakeStack() {
   AsanThread* t = GetCurrentThread();
   if (t) {
-    t->SetFakeStackEnabled(true);
+    t->UnsuppressFakeStack();
   }
 }
 
 static FakeStack* GetFakeStack() {
   AsanThread* t = GetCurrentThread();
-  if (!t || !t->IsFakeStackEnabled())
+  if (!t || t->IsFakeStackSuppressed())
     return nullptr;
   return t->get_or_create_fake_stack();
 }
@@ -378,7 +378,7 @@ void __asan_allocas_unpoison(uptr top, uptr bottom) {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __asan_disable_fake_stack() { return DisableFakeStack(); }
+void __asan_suppress_fake_stack() { return SuppressFakeStack(); }
 SANITIZER_INTERFACE_ATTRIBUTE
-void __asan_enable_fake_stack() { return EnableFakeStack(); }
+void __asan_unsuppress_fake_stack() { return UnsuppressFakeStack(); }
 }  // extern "C"

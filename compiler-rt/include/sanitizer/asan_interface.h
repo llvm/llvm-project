@@ -333,12 +333,13 @@ void SANITIZER_CDECL __asan_handle_no_return(void);
 /// trace. Returns 1 if successful, 0 if not.
 int SANITIZER_CDECL __asan_update_allocation_context(void *addr);
 
-/// Disables fake stack for the current thread.
+/// Suppresses fake stack for the current thread.
 /// Temporarily disables use-after-return detection for current thread.
-void SANITIZER_CDECL __asan_disable_fake_stack(void);
+void SANITIZER_CDECL __asan_suppress_fake_stack(void);
 
-/// (Re)enables fake stack for the current thread.
-void SANITIZER_CDECL __asan_enable_fake_stack(void);
+/// Unsupresses fake stack for the current thread.
+/// Should be paired with a previous __asan_suppress_fake_stack() call.
+void SANITIZER_CDECL __asan_unsuppress_fake_stack(void);
 
 #ifdef __cplusplus
 } // extern "C"

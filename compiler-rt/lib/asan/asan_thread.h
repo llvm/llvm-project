@@ -144,11 +144,9 @@ class AsanThread {
     GetStartData(&data, sizeof(data));
   }
 
-  bool IsFakeStackEnabled() const { return fake_stack_enabled_; }
-  void SetFakeStackEnabled(bool enabled) {
-    fake_stack_enabled_ = enabled;
-    ResetTLSFakeStack();
-  }
+  bool IsFakeStackSuppressed() const { return fake_stack_suppression_counter_ > 0; }
+  void SuppressFakeStack();
+  void UnsuppressFakeStack();
 
  private:
   // NOTE: There is no AsanThread constructor. It is allocated
@@ -185,7 +183,7 @@ class AsanThread {
   DTLS *dtls_;
 
   FakeStack *fake_stack_;
-  bool fake_stack_enabled_;
+  int fake_stack_suppression_counter_;
   AsanThreadLocalMallocStorage malloc_storage_;
   AsanStats stats_;
   bool unwinding_;

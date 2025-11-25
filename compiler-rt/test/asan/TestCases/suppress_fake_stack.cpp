@@ -1,5 +1,6 @@
-// RUN: %clangxx_asan %s -mllvm -asan-use-after-return=never -o %t && %run %t
-// RUN: %clangxx_asan %s -mllvm -asan-use-after-return=runtime -o %t && env ASAN_OPTIONS=detect_stack_use_after_return=0 %run %t
+// RUN: %clangxx_asan %s -o %t && %run %t
+// RUN: %clangxx_asan %s -mllvm -asan-use-after-return=runtime -o %t && env ASAN_OPTIONS=detect_stack_use_after_return=1 %run %t
+// RUN: %clangxx_asan %s -mllvm -asan-use-after-return=always -o %t && %run %t
 
 #include "defines.h"
 
@@ -21,13 +22,13 @@ ATTRIBUTE_NOINLINE bool IsOnStack() {
 }
 
 int main(int argc, char *argv[]) {
+  assert(!IsOnStack());
+
+  __asan_suppress_fake_stack();
   assert(IsOnStack());
 
-  __asan_disable_fake_stack();
-  assert(IsOnStack());
-
-  __asan_enable_fake_stack();
-  assert(IsOnStack());
+  __asan_unsuppress_fake_stack();
+  assert(!IsOnStack());
 
   return 0;
 }
