@@ -2338,6 +2338,24 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
       }
 
       if (evaluateExtent) {
+        if (e->isArgumentType()) {
+          // sizeof(type) - make sure to emit the VLA size.
+          cgf.emitVariablyModifiedType(typeToSize);
+        } else {
+          // C99 6.5.3.4p2: If the argument is an expression of type
+          // VLA, it is evaluated.
+          cgf.getCIRGenModule().errorNYI(
+              e->getSourceRange(),
+              "sizeof operator for VariableArrayType & evaluateExtent "
+              "ignoredExpr",
+              e->getStmtClassName());
+          return {};
+        }
+
+        // For _Countof, we just want to return the size of a single dimension.
+        if (kind == UETT_CountOf)
+          return cgf.getVLAElements1D(vat).numElts;
+
         cgf.getCIRGenModule().errorNYI(
             e->getSourceRange(),
             "sizeof operator for VariableArrayType & evaluateExtent",
