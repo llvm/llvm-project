@@ -55,9 +55,7 @@ parseDynamicIndex(OpAsmParser &parser,
                   std::optional<OpAsmParser::UnresolvedOperand> &dynamicSize,
                   IntegerAttr &staticSize) {
 
-  int64_t staticVal;
-  OptionalParseResult parseResult = parser.parseOptionalInteger(staticVal);
-  if (parseResult.has_value()) {
+  if (int64_t staticVal; parser.parseOptionalInteger(staticVal).has_value()) {
     staticSize = parser.getBuilder().getIndexAttr(staticVal);
     return success();
   }
