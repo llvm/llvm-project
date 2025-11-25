@@ -217,11 +217,10 @@ define ptr @both(ptr %p, i32 %k)  {
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; INTERLEAVE-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[BASE]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
-; INTERLEAVE-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], i64 0
-; INTERLEAVE-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, ptr [[VECTOR_GEP]], i64 4
+; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 4
+; INTERLEAVE-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP8]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; INTERLEAVE-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 8
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
@@ -231,7 +230,7 @@ define ptr @both(ptr %p, i32 %k)  {
 ; INTERLEAVE:       [[SCALAR_PH]]:
 ; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[NEXT_GEP]], %[[MIDDLE_BLOCK]] ], [ [[BASE]], %[[ENTRY]] ]
-; INTERLEAVE-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi ptr [ [[STEP_ADD]], %[[MIDDLE_BLOCK]] ], [ [[BASE]], %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi ptr [ [[NEXT_GEP1]], %[[MIDDLE_BLOCK]] ], [ [[BASE]], %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[FOR_BODY:.*]]
 ; INTERLEAVE:       [[FOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
