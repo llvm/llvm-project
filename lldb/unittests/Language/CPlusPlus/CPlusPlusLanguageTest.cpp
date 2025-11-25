@@ -341,7 +341,7 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
   llvm::StringRef context, basename;
   for (const auto &test : test_cases) {
     EXPECT_TRUE(CPlusPlusLanguage::ExtractContextAndIdentifier(
-        test.input.c_str(), context, basename));
+        test.input, context, basename));
     EXPECT_EQ(test.context, context.str());
     EXPECT_EQ(test.basename, basename.str());
   }
