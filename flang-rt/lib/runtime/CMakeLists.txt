@@ -87,7 +87,6 @@ set(host_sources
   ieee_exceptions.f90
   ieee_features.f90
   iso_c_binding.f90
-  iso_fortran_env_impl.f90
   iso_fortran_env.f90
 
   command.cpp
