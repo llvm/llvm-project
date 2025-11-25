@@ -1291,9 +1291,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
         .addImm((Alignment - 1) * ST.getScratchScaleFactor())
         .setMIFlag(MachineInstr::FrameSetup);
     auto And = BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_AND_B32), FramePtrReg)
-        .addReg(FramePtrReg, RegState::Kill)
-        .addImm(-Alignment * ST.getScratchScaleFactor())
-        .setMIFlag(MachineInstr::FrameSetup);
+                   .addReg(FramePtrReg, RegState::Kill)
+                   .addImm(-Alignment * ST.getScratchScaleFactor())
+                   .setMIFlag(MachineInstr::FrameSetup);
     And->getOperand(3).setIsDead(); // Mark SCC as dead.
     FuncInfo->setIsStackRealigned(true);
   } else if ((HasFP = hasFP(MF))) {
@@ -1322,9 +1322,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (HasFP && RoundedSize != 0) {
     auto Add = BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_I32), StackPtrReg)
-        .addReg(StackPtrReg)
-        .addImm(RoundedSize * ST.getScratchScaleFactor())
-        .setMIFlag(MachineInstr::FrameSetup);
+                   .addReg(StackPtrReg)
+                   .addImm(RoundedSize * ST.getScratchScaleFactor())
+                   .setMIFlag(MachineInstr::FrameSetup);
     Add->getOperand(3).setIsDead(); // Mark SCC as dead.
   }
 
