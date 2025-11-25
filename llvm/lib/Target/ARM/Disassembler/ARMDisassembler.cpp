@@ -6259,8 +6259,6 @@ ARMDisassembler::checkThumbPredicate(MCInst &MI) const {
 
   const FeatureBitset &FeatureBits = getSubtargetInfo().getFeatureBits();
 
-  // A few instructions actually have predicates encoded in them.  Don't
-  // try to overwrite it if we're seeing one of those.
   switch (MI.getOpcode()) {
     case ARM::tBcc:
     case ARM::t2Bcc:
