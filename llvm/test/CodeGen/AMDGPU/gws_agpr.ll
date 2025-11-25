@@ -3,128 +3,72 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck -check-prefixes=CHECK,GISEL %s
 
 define void @gws_init_offset0() #0 {
-; SDAG-LABEL: gws_init_offset0:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    ;;#ASMSTART
-; SDAG-NEXT:    ; def a0
-; SDAG-NEXT:    ;;#ASMEND
-; SDAG-NEXT:    s_mov_b32 m0, 0
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    ds_gws_init a0 gds
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-LABEL: gws_init_offset0:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    ;;#ASMSTART
-; GISEL-NEXT:    ; def a0
-; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
-; GISEL-NEXT:    s_mov_b32 m0, 0
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    ds_gws_init v0 gds
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-LABEL: gws_init_offset0:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def a0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_mov_b32 m0, 0
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    ds_gws_init a0 gds
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %val = call i32 asm "; def $0", "=a"()
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 0)
   ret void
 }
 
 define void @gws_init_offset63() #0 {
-; SDAG-LABEL: gws_init_offset63:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    ;;#ASMSTART
-; SDAG-NEXT:    ; def a0
-; SDAG-NEXT:    ;;#ASMEND
-; SDAG-NEXT:    s_mov_b32 m0, 0
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    ds_gws_init a0 offset:63 gds
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-LABEL: gws_init_offset63:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    ;;#ASMSTART
-; GISEL-NEXT:    ; def a0
-; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
-; GISEL-NEXT:    s_mov_b32 m0, 0
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    ds_gws_init v0 offset:63 gds
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-LABEL: gws_init_offset63:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def a0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_mov_b32 m0, 0
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    ds_gws_init a0 offset:63 gds
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %val = call i32 asm "; def $0", "=a"()
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 63)
   ret void
 }
 
 define void @gws_init_sgpr_offset(i32 inreg %offset) #0 {
-; SDAG-LABEL: gws_init_sgpr_offset:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    ;;#ASMSTART
-; SDAG-NEXT:    ; def a0
-; SDAG-NEXT:    ;;#ASMEND
-; SDAG-NEXT:    s_lshl_b32 m0, s16, 16
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    ds_gws_init a0 gds
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-LABEL: gws_init_sgpr_offset:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    ;;#ASMSTART
-; GISEL-NEXT:    ; def a0
-; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
-; GISEL-NEXT:    s_lshl_b32 m0, s16, 16
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    ds_gws_init v0 gds
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-LABEL: gws_init_sgpr_offset:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def a0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_lshl_b32 m0, s16, 16
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    ds_gws_init a0 gds
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %val = call i32 asm "; def $0", "=a"()
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 %offset)
   ret void
 }
 
 define amdgpu_kernel void @gws_init_agpr_offset() #0 {
-; SDAG-LABEL: gws_init_agpr_offset:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    ;;#ASMSTART
-; SDAG-NEXT:    ; def a1
-; SDAG-NEXT:    ;;#ASMEND
-; SDAG-NEXT:    v_accvgpr_read_b32 v0, a1
-; SDAG-NEXT:    v_readfirstlane_b32 s0, v0
-; SDAG-NEXT:    ;;#ASMSTART
-; SDAG-NEXT:    ; def a0
-; SDAG-NEXT:    ;;#ASMEND
-; SDAG-NEXT:    s_lshl_b32 m0, s0, 16
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    ds_gws_init a0 gds
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: gws_init_agpr_offset:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    ;;#ASMSTART
-; GISEL-NEXT:    ; def a1
-; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    v_accvgpr_read_b32 v0, a1
-; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GISEL-NEXT:    ;;#ASMSTART
-; GISEL-NEXT:    ; def a0
-; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    v_accvgpr_read_b32 v2, a0
-; GISEL-NEXT:    s_lshl_b32 m0, s0, 16
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    ds_gws_init v2 gds
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_endpgm
+; CHECK-LABEL: gws_init_agpr_offset:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def a1
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_accvgpr_read_b32 v0, a1
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def a0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_lshl_b32 m0, s0, 16
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    ds_gws_init a0 gds
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_endpgm
   %val = call i32 asm "; def $0", "=a"()
   %offset = call i32 asm "; def $0", "=a"()
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 %offset)
@@ -132,40 +76,22 @@ define amdgpu_kernel void @gws_init_agpr_offset() #0 {
 }
 
 define void @gws_init_agpr_offset_add1() #0 {
-; SDAG-LABEL: gws_init_agpr_offset_add1:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    ;;#ASMSTART
-; SDAG-NEXT:    ; def a1
-; SDAG-NEXT:    ;;#ASMEND
-; SDAG-NEXT:    v_accvgpr_read_b32 v0, a1
-; SDAG-NEXT:    v_readfirstlane_b32 s4, v0
-; SDAG-NEXT:    ;;#ASMSTART
-; SDAG-NEXT:    ; def a0
-; SDAG-NEXT:    ;;#ASMEND
-; SDAG-NEXT:    s_lshl_b32 m0, s4, 16
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    ds_gws_init a0 offset:1 gds
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-LABEL: gws_init_agpr_offset_add1:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    ;;#ASMSTART
-; GISEL-NEXT:    ; def a1
-; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    v_accvgpr_read_b32 v0, a1
-; GISEL-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-NEXT:    ;;#ASMSTART
-; GISEL-NEXT:    ; def a0
-; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    v_accvgpr_read_b32 v2, a0
-; GISEL-NEXT:    s_lshl_b32 m0, s4, 16
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    ds_gws_init v2 offset:1 gds
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-LABEL: gws_init_agpr_offset_add1:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def a1
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_accvgpr_read_b32 v0, a1
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def a0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_lshl_b32 m0, s4, 16
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    ds_gws_init a0 offset:1 gds
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %val = call i32 asm "; def $0", "=a"()
   %offset.base = call i32 asm "; def $0", "=a"()
   %offset = add i32 %offset.base, 1
@@ -195,90 +121,51 @@ define amdgpu_kernel void @gws_init_vgpr_offset_add(i32 %val) #0 {
 }
 
 define void @gws_barrier_offset0() #0 {
-; SDAG-LABEL: gws_barrier_offset0:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    ;;#ASMSTART
-; SDAG-NEXT:    ; def a0
-; SDAG-NEXT:    ;;#ASMEND
-; SDAG-NEXT:    s_mov_b32 m0, 0
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    ds_gws_barrier a0 gds
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-LABEL: gws_barrier_offset0:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    ;;#ASMSTART
-; GISEL-NEXT:    ; def a0
-; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
-; GISEL-NEXT:    s_mov_b32 m0, 0
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    ds_gws_barrier v0 gds
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-LABEL: gws_barrier_offset0:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def a0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_mov_b32 m0, 0
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    ds_gws_barrier a0 gds
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %val = call i32 asm "; def $0", "=a"()
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 0)
   ret void
 }
 
 define void @gws_barrier_offset63() #0 {
-; SDAG-LABEL: gws_barrier_offset63:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    ;;#ASMSTART
-; SDAG-NEXT:    ; def a0
-; SDAG-NEXT:    ;;#ASMEND
-; SDAG-NEXT:    s_mov_b32 m0, 0
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    ds_gws_barrier a0 offset:63 gds
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-LABEL: gws_barrier_offset63:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    ;;#ASMSTART
-; GISEL-NEXT:    ; def a0
-; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
-; GISEL-NEXT:    s_mov_b32 m0, 0
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    ds_gws_barrier v0 offset:63 gds
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-LABEL: gws_barrier_offset63:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def a0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_mov_b32 m0, 0
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    ds_gws_barrier a0 offset:63 gds
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %val = call i32 asm "; def $0", "=a"()
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 63)
   ret void
 }
 
 define void @gws_barrier_sgpr_offset(i32 inreg %offset) #0 {
-; SDAG-LABEL: gws_barrier_sgpr_offset:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    ;;#ASMSTART
-; SDAG-NEXT:    ; def a0
-; SDAG-NEXT:    ;;#ASMEND
-; SDAG-NEXT:    s_lshl_b32 m0, s16, 16
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    ds_gws_barrier a0 gds
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-LABEL: gws_barrier_sgpr_offset:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    ;;#ASMSTART
-; GISEL-NEXT:    ; def a0
-; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
-; GISEL-NEXT:    s_lshl_b32 m0, s16, 16
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    ds_gws_barrier v0 gds
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-LABEL: gws_barrier_sgpr_offset:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def a0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_lshl_b32 m0, s16, 16
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    ds_gws_barrier a0 gds
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %val = call i32 asm "; def $0", "=a"()
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 %offset)
   ret void
@@ -311,30 +198,17 @@ define void @gws_sema_v_offset0() #0 {
 }
 
 define void @gws_sema_br_offset0() #0 {
-; SDAG-LABEL: gws_sema_br_offset0:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    ;;#ASMSTART
-; SDAG-NEXT:    ; def a0
-; SDAG-NEXT:    ;;#ASMEND
-; SDAG-NEXT:    s_mov_b32 m0, 0
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    ds_gws_sema_br a0 gds
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-LABEL: gws_sema_br_offset0:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    ;;#ASMSTART
-; GISEL-NEXT:    ; def a0
-; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
-; GISEL-NEXT:    s_mov_b32 m0, 0
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    ds_gws_sema_br v0 gds
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-LABEL: gws_sema_br_offset0:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def a0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_mov_b32 m0, 0
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    ds_gws_sema_br a0 gds
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %val = call i32 asm "; def $0", "=a"()
   call void @llvm.amdgcn.ds.gws.sema.br(i32 %val, i32 0)
   ret void
