@@ -206,6 +206,8 @@ bool tryToFindPtrOrigin(
         if (isSafePtrType(Method->getReturnType()))
           return callback(E, true);
       }
+      if (ObjCMsgExpr->isClassMessage())
+        return callback(E, true);
       auto Selector = ObjCMsgExpr->getSelector();
       auto NameForFirstSlot = Selector.getNameForSlot(0);
       if ((NameForFirstSlot == "class" || NameForFirstSlot == "superclass") &&
