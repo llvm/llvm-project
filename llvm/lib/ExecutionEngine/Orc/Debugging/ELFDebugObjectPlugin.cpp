@@ -200,6 +200,8 @@ static bool isDwarfSection(StringRef SectionName) {
 void ELFDebugObjectPlugin::notifyMaterializing(
     MaterializationResponsibility &MR, LinkGraph &G, JITLinkContext &Ctx,
     MemoryBufferRef InputObj) {
+  if (InputObj.getBufferSize() == 0)
+    return;
   if (G.getTargetTriple().getObjectFormat() != Triple::ELF)
     return;
 
