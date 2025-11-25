@@ -210,6 +210,12 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
       else
         addRegisterClass(MVT::f64, &Mips::AFGR64RegClass);
     }
+
+    for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                    ISD::STRICT_FDIV, ISD::STRICT_FSQRT}) {
+      setOperationAction(Op, MVT::f32, Legal);
+      setOperationAction(Op, MVT::f64, Legal);
+    }
   }
 
   // Targets with 64bits integer registers, but no 64bit floating point register
