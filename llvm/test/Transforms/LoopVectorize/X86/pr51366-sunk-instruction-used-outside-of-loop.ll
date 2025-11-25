@@ -11,9 +11,8 @@ define ptr @test(ptr noalias %src, ptr noalias %dst) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x ptr> [[TMP16]], ptr [[TMP2]], i32 1
@@ -35,7 +34,7 @@ define ptr @test(ptr noalias %src, ptr noalias %dst) {
 ; CHECK:       [[PRED_LOAD_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = phi <2 x i32> [ [[TMP9]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP12]], %[[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP4]], <2 x i32> [[TMP15]], <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <2 x i64> [[VEC_IND]], splat (i64 2)

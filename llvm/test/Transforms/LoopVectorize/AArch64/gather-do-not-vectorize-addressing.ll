@@ -20,10 +20,9 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ <double 0.000000e+00, double -0.000000e+00>, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[OFFSET:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[OFFSET]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[OFFSET:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[OFFSET]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP4]] to i64

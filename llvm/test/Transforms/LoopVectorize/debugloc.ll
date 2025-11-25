@@ -173,11 +173,10 @@ define void @test_scalar_steps(ptr nocapture %a, ptr noalias %b, i64 %size) !dbg
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 0, !dbg [[LOC8:!.+]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 2, !dbg [[LOC8]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 2, !dbg [[LOC8:!.+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP9]], align 4

@@ -110,9 +110,8 @@ define void @geps_feeding_interleave_groups_with_reuse(ptr %arg, i64 %arg1, ptr 
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = add i64 [[INDEX1]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX1]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[INDEX1]], 5
 ; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[TMP10]], 5
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 [[TMP12]]
@@ -120,7 +119,7 @@ define void @geps_feeding_interleave_groups_with_reuse(ptr %arg, i64 %arg1, ptr 
 ; CHECK-NEXT:    [[TMP15:%.*]] = or disjoint i64 [[TMP12]], 16
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[ARG]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[ARG]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[INDEX1]], 4
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, ptr [[ARG2]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = load float, ptr [[TMP26]], align 4, !alias.scope [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = load float, ptr [[TMP13]], align 4, !alias.scope [[META3]]

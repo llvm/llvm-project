@@ -16,7 +16,6 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 24
@@ -32,7 +31,7 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], 104
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], 112
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 120
-; CHECK-NEXT:    [[NEXT_GEP12:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP0]]
+; CHECK-NEXT:    [[NEXT_GEP12:%.*]] = getelementptr i8, ptr [[M]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP3]]
