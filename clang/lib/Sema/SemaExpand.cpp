@@ -285,7 +285,7 @@ StmtResult Sema::ActOnCXXExpansionStmt(
     return StmtError();
   }
 
-  VarDecl *ExpansionVar = cast<VarDecl>(DS->getSingleDecl());
+  VarDecl *ExpansionVar = dyn_cast<VarDecl>(DS->getSingleDecl());
   if (!ExpansionVar || ExpansionVar->isInvalidDecl() ||
       ExpansionInitializer->containsErrors())
     return StmtError();

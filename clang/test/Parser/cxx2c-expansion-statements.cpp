@@ -38,8 +38,10 @@ void bad() {
   template for (int x; constinit auto y : {1, 2}); // expected-error {{local variable cannot be declared 'constinit'}}
   template for (int x; consteval auto y : {1, 2});  // expected-error {{consteval can only be used in function declarations}}
   template for (auto y : {abc, -+, }); // expected-error {{use of undeclared identifier 'abc'}} expected-error {{expected expression}}
+  template for (3 : "error") // expected-error {{expansion statement declaration must declare a variable}} \
+                                expected-error {{expansion statement must be a range-based for loop}}
+    ;
   template while (true) {} // expected-error {{expected '<' after 'template'}}
-  template for (auto y : {{1}, {2}, {3, {4}}, {{{5}}}});
 }
 
 void good() {

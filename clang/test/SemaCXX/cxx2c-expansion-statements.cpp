@@ -1187,3 +1187,13 @@ constexpr int generic_lambda() {
 }
 
 static_assert(generic_lambda() == 21);
+
+void for_range_decl_must_be_var() {
+  template for (void q() : "error") // expected-error {{expansion statement declaration must declare a variable}}
+    ;
+}
+
+void init_list_bad() {
+  template for (auto y : {{1}, {2}, {3, {4}}, {{{5}}}}); // expected-error {{cannot deduce actual type for variable 'y' with type 'auto' from initializer list}} \
+                                                            expected-note {{in instantiation of expansion statement requested here}}
+}
