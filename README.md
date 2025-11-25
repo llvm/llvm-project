@@ -1,44 +1,61 @@
-# The LLVM Compiler Infrastructure
+SLLVM: A DSMIL‑Focused LLVM Fork
+<!-- Language distribution badges --> <div align="center">
 
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8273/badge)](https://www.bestpractices.dev/projects/8273)
-[![libc++](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule)](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml?query=event%3Aschedule)
 
-Welcome to the LLVM project!
 
-This repository contains the source code for LLVM, a toolkit for the
-construction of highly optimized compilers, optimizers, and run-time
-environments.
 
-The LLVM project has multiple components. The core of the project is
-itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process intermediate representations and convert them into
-object files. Tools include an assembler, disassembler, bitcode analyzer, and
-bitcode optimizer.
 
-C-like languages use the [Clang](https://clang.llvm.org/) frontend. This
-component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
--- and from there into object files, using LLVM.
 
-Other components include:
-the [libc++ C++ standard library](https://libcxx.llvm.org),
-the [LLD linker](https://lld.llvm.org), and more.
 
-## Getting the Source Code and Building LLVM
 
-Consult the
-[Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
-page for information on building and running LLVM.
 
-For information on how to contribute to the LLVM project, please take a look at
-the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
 
-## Getting in touch
 
-Join the [LLVM Discourse forums](https://discourse.llvm.org/), [Discord
-chat](https://discord.gg/xS7Z362),
-[LLVM Office Hours](https://llvm.org/docs/GettingInvolved.html#office-hours) or
-[Regular sync-ups](https://llvm.org/docs/GettingInvolved.html#online-sync-ups).
 
-The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
-participants to all modes of communication within the project.
+
+
+</div>
+
+Welcome to DSLLVM, a specialized variant of the LLVM Compiler Infrastructure tailored for use within DSMIL environments. If you’re familiar with standard LLVM, you’ll find the core remains the same, but DSLLVM adds enhancements optimized for multi‑layer secure systems and AI‑integrated operations.
+
+What is DSLLVM?
+
+DSLLVM builds upon upstream LLVM to support the unique requirements of DSMIL systems, where distributed computing, classification‑aware memory models, and mission‑critical workloads converge. You won’t find the exact details here, but DSLLVM introduces:
+
+Specialized target support for emerging heterogeneous hardware found in DSMIL deployments.
+
+Metadata and pass extensions to encode clearance levels, layers, and roles directly into the intermediate representation.
+
+Infrastructure hooks that enable context‑aware optimization and policy enforcement across layers.
+
+Integration points for AI‑powered advisors that help guide compilation decisions without modifying code semantics.
+
+Why DSMIL?
+
+DSMIL refers to a multi‑layer architecture employed in certain secure computing contexts. DSLLVM exists because those environments demand a compiler that understands their unique constraints. While much of that knowledge is beyond the scope of this README, the components included here reflect the philosophy of building tools that are secure by design, policy‑driven, and aware of the hardware they run on.
+
+Getting Started
+
+If you’re already comfortable building LLVM, DSLLVM should feel familiar. You can use the same CMake‑based workflow described in the Getting Started with LLVM
+ guide. Be aware that DSLLVM may require additional configuration to enable DSMIL‑specific targets and passes.
+
+In general:
+
+Clone this repository and its submodules.
+
+Create a build directory and run cmake with your preferred options.
+
+Build DSLLVM using your chosen generator (e.g. Ninja or Make).
+
+Refer to internal build documentation (or contact your DSMIL representative) for guidance on enabling device‑specific optimizations and DSMIL layers.
+
+Contributing
+
+Contributions to DSLLVM are welcome from authorized participants. If you have ideas to improve its capabilities within the DSMIL context, reach out through the appropriate channels.
+
+Further Information
+
+This repository intentionally omits deeper explanations of DSMIL. If you’re working in an environment that requires DSLLVM, consult your internal DSMIL documentation or point of contact for details. For general LLVM questions, the standard LLVM Documentation
+ remains your best resource.
+
+This README provides a high‑level overview of DSLLVM without revealing sensitive details about DSMIL systems. If you need to understand those details, ensure you have the appropriate clearance and access to the relevant documentation.
