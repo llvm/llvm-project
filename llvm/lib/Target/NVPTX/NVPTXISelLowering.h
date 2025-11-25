@@ -235,6 +235,7 @@ private:
   SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTOREi1(SDValue Op, SelectionDAG &DAG) const;
 

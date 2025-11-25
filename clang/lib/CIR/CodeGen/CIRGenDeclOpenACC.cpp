@@ -262,6 +262,15 @@ public:
           /*structured=*/true,
           /*implicit=*/false, /*requiresDtor=*/true);
   }
+
+  void VisitDeviceResidentClause(const OpenACCDeviceResidentClause &clause) {
+    for (const Expr *var : clause.getVarList())
+      cgm.emitGlobalOpenACCDeclareDataOperands<
+          mlir::acc::DeclareDeviceResidentOp>(
+          var, mlir::acc::DataClause::acc_declare_device_resident, {},
+          /*structured=*/true,
+          /*implicit=*/false, /*requiresDtor=*/true);
+  }
 };
 } // namespace
 
