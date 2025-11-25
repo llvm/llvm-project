@@ -3508,12 +3508,22 @@ def WasmSystemLibrary
            __stack_chk_fail, __stack_chk_guard)>;
 
 //===----------------------------------------------------------------------===//
+// BPF Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def isBPF : RuntimeLibcallPredicate<"TT.isBPF()">;
+
+// Only memops
+def BPFSystemLibrary : SystemRuntimeLibrary<isBPF, (add memcpy, memmove,
+                                                        memset)>;
+
+//===----------------------------------------------------------------------===//
 // Legacy Default Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
 // TODO: Should make every target explicit.
 def isDefaultLibcallArch : RuntimeLibcallPredicate<[{
-  TT.isMIPS() || TT.isLoongArch() || TT.isVE() || TT.isBPF() ||
+  TT.isMIPS() || TT.isLoongArch() || TT.isVE() ||
   TT.getArch() == Triple::csky || TT.getArch() == Triple::arc ||
   TT.getArch() == Triple::m68k ||  TT.getArch() == Triple::xtensa ||
   (TT.isSystemZ() && !TT.isOSzOS())
