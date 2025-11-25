@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 
 using namespace llvm;
 
 LibcallLoweringInfo::LibcallLoweringInfo(
-    const RTLIB::RuntimeLibcallsInfo &RTLCI)
+    const RTLIB::RuntimeLibcallsInfo &RTLCI,
+    const TargetSubtargetInfo &Subtarget)
     : RTLCI(RTLCI) {
   // TODO: This should be generated with lowering predicates, and assert the
   // call is available.
@@ -23,4 +25,6 @@ LibcallLoweringInfo::LibcallLoweringInfo(
         LibcallImpls[LC] = Impl;
     }
   }
+
+  Subtarget.initLibcallLoweringInfo(*this);
 }

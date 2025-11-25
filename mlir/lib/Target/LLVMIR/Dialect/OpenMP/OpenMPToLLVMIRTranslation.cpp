@@ -1170,6 +1170,7 @@ allocReductionVars(T loop, ArrayRef<BlockArgument> reductionArgs,
 template <typename T>
 static void
 mapInitializationArgs(T loop, LLVM::ModuleTranslation &moduleTranslation,
+                      llvm::IRBuilderBase &builder,
                       SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls,
                       DenseMap<Value, llvm::Value *> &reductionVariableMap,
                       unsigned i) {
@@ -1180,8 +1181,17 @@ mapInitializationArgs(T loop, LLVM::ModuleTranslation &moduleTranslation,
 
   mlir::Value mlirSource = loop.getReductionVars()[i];
   llvm::Value *llvmSource = moduleTranslation.lookupValue(mlirSource);
-  assert(llvmSource && "lookup reduction var");
-  moduleTranslation.mapValue(reduction.getInitializerMoldArg(), llvmSource);
+  llvm::Value *origVal = llvmSource;
+  // If a non-pointer value is expected, load the value from the source pointer.
+  if (!isa<LLVM::LLVMPointerType>(
+          reduction.getInitializerMoldArg().getType()) &&
+      isa<LLVM::LLVMPointerType>(mlirSource.getType())) {
+    origVal =
+        builder.CreateLoad(moduleTranslation.convertType(
+                               reduction.getInitializerMoldArg().getType()),
+                           llvmSource, "omp_orig");
+  }
+  moduleTranslation.mapValue(reduction.getInitializerMoldArg(), origVal);
 
   if (entry.getNumArguments() > 1) {
     llvm::Value *allocation =
@@ -1254,7 +1264,7 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     SmallVector<llvm::Value *, 1> phis;
 
     // map block argument to initializer region
-    mapInitializationArgs(op, moduleTranslation, reductionDecls,
+    mapInitializationArgs(op, moduleTranslation, builder, reductionDecls,
                           reductionVariableMap, i);
 
     // TODO In some cases (specially on the GPU), the init regions may
@@ -4085,6 +4095,12 @@ static void sortMapIndices(llvm::SmallVectorImpl<size_t> &indices,
   llvm::SmallVector<size_t> occludedChildren;
   llvm::sort(
       indices.begin(), indices.end(), [&](const size_t a, const size_t b) {
+        // Bail early if we are asked to look at the same index. If we do not
+        // bail early, we can end up mistakenly adding indices to
+        // occludedChildren. This can occur with some types of libc++ hardening.
+        if (a == b)
+          return false;
+
         auto memberIndicesA = cast<ArrayAttr>(indexAttr[a]);
         auto memberIndicesB = cast<ArrayAttr>(indexAttr[b]);
 
