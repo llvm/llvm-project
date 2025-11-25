@@ -467,3 +467,86 @@ entry:
   %sel = select i1 %cond, half %a, half %b
   ret half %sel
 }
+
+; -----------------------------------------------------------------------------
+; Test select with i1 condition and zero ret val (cond ? a : 0), Zfinx
+; -----------------------------------------------------------------------------
+define dso_local noundef float @select_i1_f32_0(i1 %cond, float %t) nounwind {
+; RV64ZDINX_ZICOND-LABEL: select_i1_f32_0:
+; RV64ZDINX_ZICOND:       # %bb.0: # %entry
+; RV64ZDINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV64ZDINX_ZICOND-NEXT:    andi a0, a0, 1
+; RV64ZDINX_ZICOND-NEXT:    czero.nez a2, zero, a0
+; RV64ZDINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV64ZDINX_ZICOND-NEXT:    or a0, a0, a2
+; RV64ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZDINX_ZICOND-NEXT:    ret
+;
+; RV64ZDINX_NOZICOND-LABEL: select_i1_f32_0:
+; RV64ZDINX_NOZICOND:       # %bb.0: # %entry
+; RV64ZDINX_NOZICOND-NEXT:    andi a2, a0, 1
+; RV64ZDINX_NOZICOND-NEXT:    mv a0, a1
+; RV64ZDINX_NOZICOND-NEXT:    bnez a2, .LBB4_2
+; RV64ZDINX_NOZICOND-NEXT:  # %bb.1: # %entry
+; RV64ZDINX_NOZICOND-NEXT:    li a0, 0
+; RV64ZDINX_NOZICOND-NEXT:  .LBB4_2: # %entry
+; RV64ZDINX_NOZICOND-NEXT:    ret
+;
+; RV64ZHINX_ZICOND-LABEL: select_i1_f32_0:
+; RV64ZHINX_ZICOND:       # %bb.0: # %entry
+; RV64ZHINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV64ZHINX_ZICOND-NEXT:    andi a0, a0, 1
+; RV64ZHINX_ZICOND-NEXT:    czero.nez a2, zero, a0
+; RV64ZHINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV64ZHINX_ZICOND-NEXT:    or a0, a0, a2
+; RV64ZHINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZHINX_ZICOND-NEXT:    ret
+;
+; RV64FD-LABEL: select_i1_f32_0:
+; RV64FD:       # %bb.0: # %entry
+; RV64FD-NEXT:    andi a0, a0, 1
+; RV64FD-NEXT:    bnez a0, .LBB4_2
+; RV64FD-NEXT:  # %bb.1: # %entry
+; RV64FD-NEXT:    fmv.w.x fa0, zero
+; RV64FD-NEXT:  .LBB4_2: # %entry
+; RV64FD-NEXT:    ret
+;
+; RV32ZFINX_ZICOND-LABEL: select_i1_f32_0:
+; RV32ZFINX_ZICOND:       # %bb.0: # %entry
+; RV32ZFINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV32ZFINX_ZICOND-NEXT:    andi a0, a0, 1
+; RV32ZFINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV32ZFINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZFINX_ZICOND-NEXT:    ret
+;
+; RV32ZFINX_NOZICOND-LABEL: select_i1_f32_0:
+; RV32ZFINX_NOZICOND:       # %bb.0: # %entry
+; RV32ZFINX_NOZICOND-NEXT:    andi a2, a0, 1
+; RV32ZFINX_NOZICOND-NEXT:    mv a0, a1
+; RV32ZFINX_NOZICOND-NEXT:    bnez a2, .LBB4_2
+; RV32ZFINX_NOZICOND-NEXT:  # %bb.1: # %entry
+; RV32ZFINX_NOZICOND-NEXT:    li a0, 0
+; RV32ZFINX_NOZICOND-NEXT:  .LBB4_2: # %entry
+; RV32ZFINX_NOZICOND-NEXT:    ret
+;
+; RV32ZDINX_ZICOND-LABEL: select_i1_f32_0:
+; RV32ZDINX_ZICOND:       # %bb.0: # %entry
+; RV32ZDINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV32ZDINX_ZICOND-NEXT:    andi a0, a0, 1
+; RV32ZDINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV32ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZDINX_ZICOND-NEXT:    ret
+;
+; RV32ZDINX_NOZICOND-LABEL: select_i1_f32_0:
+; RV32ZDINX_NOZICOND:       # %bb.0: # %entry
+; RV32ZDINX_NOZICOND-NEXT:    andi a2, a0, 1
+; RV32ZDINX_NOZICOND-NEXT:    mv a0, a1
+; RV32ZDINX_NOZICOND-NEXT:    bnez a2, .LBB4_2
+; RV32ZDINX_NOZICOND-NEXT:  # %bb.1: # %entry
+; RV32ZDINX_NOZICOND-NEXT:    li a0, 0
+; RV32ZDINX_NOZICOND-NEXT:  .LBB4_2: # %entry
+; RV32ZDINX_NOZICOND-NEXT:    ret
+entry:
+  %sel = select i1 %cond, float %t, float 0.000000e+00
+  ret float %sel
+}
