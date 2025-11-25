@@ -31,8 +31,8 @@ template <> struct lld::BPOrdererTraits<struct BPOrdererMachO> {
 namespace {
 struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
   static uint64_t getSize(const Section &sec) { return sec.getSize(); }
-  static bool isCodeSection(const Section &sec) {
-    return macho::isCodeSection(&sec);
+  static std::string getSectionName(const Section &sec) {
+    return (sec.getSegName() + sec.getName()).str();
   }
   static ArrayRef<Defined *> getSymbols(const Section &sec) {
     return sec.symbols;
@@ -107,7 +107,7 @@ private:
 } // namespace
 
 DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
-    StringRef profilePath, bool forFunctionCompression, bool forDataCompression,
+    StringRef profilePath, ArrayRef<GlobPattern> compressionSortSectionGlobs,
     bool compressionSortStartupFunctions, bool verbose) {
   // Collect candidate sections and associated symbols.
   SmallVector<InputSection *> sections;
@@ -140,8 +140,7 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     }
   }
 
-  return BPOrdererMachO().computeOrder(profilePath, forFunctionCompression,
-                                       forDataCompression,
+  return BPOrdererMachO().computeOrder(profilePath, compressionSortSectionGlobs,
                                        compressionSortStartupFunctions, verbose,
                                        sections, rootSymbolToSectionIdxs);
 }

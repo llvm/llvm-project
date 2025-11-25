@@ -2034,20 +2034,32 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   if (config->irpgoProfilePath.empty() && config->bpStartupFunctionSort)
     error("--bp-startup-sort=function must be used with "
           "--irpgo-profile");
+  config->bpCompressionSortSections =
+      args.getAllArgValues(OPT_bp_compression_sort_section);
+  auto addCompressionSectionGlob = [&](StringRef s) {
+    auto patOrErr = GlobPattern::create(s);
+    if (patOrErr) {
+      config->bpCompressionSortSectionGlobs.push_back(std::move(*patOrErr));
+    } else {
+      error("--bp-compression-sort-sections: " +
+            toString(patOrErr.takeError()));
+    }
+  };
+  for (StringRef s : config->bpCompressionSortSections)
+    addCompressionSectionGlob(s);
   if (const Arg *arg = args.getLastArg(OPT_bp_compression_sort)) {
     StringRef compressionSortStr = arg->getValue();
     if (compressionSortStr == "function") {
-      config->bpFunctionOrderForCompression = true;
+      addCompressionSectionGlob("__TEXT*");
     } else if (compressionSortStr == "data") {
-      config->bpDataOrderForCompression = true;
+      addCompressionSectionGlob("__DATA*");
     } else if (compressionSortStr == "both") {
-      config->bpFunctionOrderForCompression = true;
-      config->bpDataOrderForCompression = true;
+      addCompressionSectionGlob("*");
     } else if (compressionSortStr != "none") {
       error("unknown value `" + compressionSortStr + "` for " +
             arg->getSpelling());
     }
-    if (compressionSortStr != "none")
+    if (!config->bpCompressionSortSectionGlobs.empty())
       IncompatWithCGSort(arg->getSpelling());
   }
   config->bpVerboseSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
