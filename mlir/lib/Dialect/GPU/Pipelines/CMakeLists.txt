@@ -21,6 +21,7 @@ add_mlir_dialect_library(MLIRGPUPipelines
   MLIRNVVMToLLVM
   MLIRReconcileUnrealizedCasts
   MLIRSCFToControlFlow
+  MLIRVectorToLLVMPass
   MLIRVectorToSCF
   MLIRXeGPUTransforms
   MLIRXeGPUToXeVM

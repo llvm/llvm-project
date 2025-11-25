@@ -594,8 +594,8 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
         // FIXME This logic was written around x86_64 behavior -- ARM64 doesn't
         // have pcrel section relocations. We may want to factor this out into
         // the arch-specific .cpp file.
-        assert(target->hasAttr(r.type, RelocAttrBits::BYTE4));
-        referentOffset = sec.addr + relInfo.r_address + 4 + totalAddend -
+        referentOffset = sec.addr + relInfo.r_address +
+                         (1ull << relInfo.r_length) + totalAddend -
                          referentSecHead.addr;
       } else {
         // The addend for a non-pcrel relocation is its absolute address.

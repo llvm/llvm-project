@@ -15673,7 +15673,8 @@ static SDValue ConvertSETCCToXori(SDNode *N, SelectionDAG &DAG) {
   SDValue RHS = N->getOperand(1);
   SDLoc DL(N);
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  [[maybe_unused]] ISD::CondCode CC =
+      cast<CondCodeSDNode>(N->getOperand(2))->get();
   assert((CC == ISD::SETEQ) && "CC must be ISD::SETEQ.");
   // Rewrite it as XORI (and X, 1), 1.
   auto MakeXor1 = [&](SDValue V) {

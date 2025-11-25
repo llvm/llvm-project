@@ -1,0 +1,32 @@
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -filetype=null %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire -filetype=null %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx908 -filetype=null %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx90a -filetype=null %s 2>&1 | FileCheck %s
+
+// CHECK: :[[@LINE+1]]:13: error: invalid operand for instruction
+ds_gws_init s0 offset:65535 gds
+
+// CHECK: :[[@LINE+1]]:13: error: invalid operand for instruction
+ds_gws_init s[0:1] offset:65535 gds
+
+// CHECK: :[[@LINE+1]]:13: error: invalid operand for instruction
+ds_gws_init s1 offset:65535 gds
+
+// CHECK: :[[@LINE+1]]:16: error: invalid operand for instruction
+ds_gws_barrier s1 gds
+
+// CHECK: :[[@LINE+1]]:16: error: invalid operand for instruction
+ds_gws_barrier s2 gds
+
+// CHECK: :[[@LINE+1]]:15: error: invalid operand for instruction
+ds_gws_sema_v s1 gds
+
+// CHECK: :[[@LINE+1]]:15: error: invalid operand for instruction
+ds_gws_sema_v s2 gds
+
+// CHECK: :[[@LINE+1]]:16: error: invalid operand for instruction
+ds_gws_sema_br s1 gds
+
+// CHECK: :[[@LINE+1]]:16: error: invalid operand for instruction
+ds_gws_sema_br s2 gds
+
