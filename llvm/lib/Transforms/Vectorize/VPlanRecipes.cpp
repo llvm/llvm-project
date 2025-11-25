@@ -2388,14 +2388,17 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     EndLane = StartLane + 1;
   }
   Value *StartIdx0;
-  if (getNumOperands() == 3) {
+  if (getNumOperands() == 3)
     StartIdx0 = getSignedIntOrFpConstant(BaseIVTy, 0);
-  } else
+  else
     StartIdx0 = State.get(getOperand(3), true);
 
   for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
-    Value *StartIdx = Builder.CreateBinOp(
-        AddOp, StartIdx0, getSignedIntOrFpConstant(BaseIVTy, Lane));
+    Value *StartIdx = StartIdx0;
+    if (Lane != 0) {
+      StartIdx = Builder.CreateBinOp(AddOp, StartIdx0,
+                                     getSignedIntOrFpConstant(BaseIVTy, Lane));
+    }
     // The step returned by `createStepForVF` is a runtime-evaluated value
     // when VF is scalable. Otherwise, it should be folded into a Constant.
     assert((State.VF.isScalable() || isa<Constant>(StartIdx)) &&
@@ -2403,7 +2406,10 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
            "scalable");
     auto *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
     auto *Add = Builder.CreateBinOp(AddOp, BaseIV, Mul);
-    State.set(this, Add, VPLane(Lane));
+    if (State.Lane)
+      State.set(this, Add, VPLane(Lane));
+    else
+      State.set(this, Add, VPLane(0));
   }
 }
 

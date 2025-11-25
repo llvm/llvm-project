@@ -3809,10 +3809,13 @@ public:
   ~VPScalarIVStepsRecipe() override = default;
 
   VPScalarIVStepsRecipe *clone() override {
-    return new VPScalarIVStepsRecipe(
+    auto *NewR = new VPScalarIVStepsRecipe(
         getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
         hasFastMathFlags() ? getFastMathFlags() : FastMathFlags(),
         getDebugLoc());
+    if (getNumOperands() == 4)
+      NewR->addOperand(getOperand(3));
+    return NewR;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPScalarIVStepsSC)

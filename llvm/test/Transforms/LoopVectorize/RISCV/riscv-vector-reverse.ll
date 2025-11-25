@@ -849,11 +849,10 @@ define void @vector_reverse_irregular_type(ptr noalias %A, ptr noalias %B) {
 ; RV64:       [[VECTOR_BODY]]:
 ; RV64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
-; RV64-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; RV64-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; RV64-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], -2
 ; RV64-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], -3
-; RV64-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP0]], -1
+; RV64-NEXT:    [[TMP4:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; RV64-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP1]], -1
 ; RV64-NEXT:    [[TMP6:%.*]] = add nsw i64 [[TMP2]], -1
 ; RV64-NEXT:    [[TMP7:%.*]] = add nsw i64 [[TMP3]], -1
@@ -900,11 +899,10 @@ define void @vector_reverse_irregular_type(ptr noalias %A, ptr noalias %B) {
 ; RV32:       [[VECTOR_BODY]]:
 ; RV32-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
-; RV32-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; RV32-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; RV32-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], -2
 ; RV32-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], -3
-; RV32-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP0]], -1
+; RV32-NEXT:    [[TMP4:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; RV32-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP1]], -1
 ; RV32-NEXT:    [[TMP6:%.*]] = add nsw i64 [[TMP2]], -1
 ; RV32-NEXT:    [[TMP7:%.*]] = add nsw i64 [[TMP3]], -1
@@ -951,7 +949,6 @@ define void @vector_reverse_irregular_type(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2:       [[VECTOR_BODY]]:
 ; RV64-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-UF2-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
-; RV64-UF2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; RV64-UF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; RV64-UF2-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], -2
 ; RV64-UF2-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], -3
@@ -959,7 +956,7 @@ define void @vector_reverse_irregular_type(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], -5
 ; RV64-UF2-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], -6
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], -7
-; RV64-UF2-NEXT:    [[TMP8:%.*]] = add nsw i64 [[TMP0]], -1
+; RV64-UF2-NEXT:    [[TMP8:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; RV64-UF2-NEXT:    [[TMP9:%.*]] = add nsw i64 [[TMP1]], -1
 ; RV64-UF2-NEXT:    [[TMP10:%.*]] = add nsw i64 [[TMP2]], -1
 ; RV64-UF2-NEXT:    [[TMP11:%.*]] = add nsw i64 [[TMP3]], -1

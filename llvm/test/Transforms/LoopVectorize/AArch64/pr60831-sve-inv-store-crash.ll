@@ -360,7 +360,6 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
@@ -376,7 +375,7 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 13
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 14
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 15
-; CHECK-NEXT:    [[TMP16:%.*]] = sub nsw i64 [[N:%.*]], [[TMP0]]
+; CHECK-NEXT:    [[TMP16:%.*]] = sub nsw i64 [[N:%.*]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = sub nsw i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = sub nsw i64 [[N]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = sub nsw i64 [[N]], [[TMP3]]
@@ -409,7 +408,7 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[TMP46:%.*]] = insertelement <16 x i64> [[TMP45]], i64 [[TMP30]], i32 14
 ; CHECK-NEXT:    [[TMP47:%.*]] = insertelement <16 x i64> [[TMP46]], i64 [[TMP31]], i32 15
 ; CHECK-NEXT:    [[TMP48:%.*]] = trunc <16 x i64> [[TMP47]] to <16 x i8>
-; CHECK-NEXT:    [[TMP49:%.*]] = add i64 [[TMP0]], [[TMP16]]
+; CHECK-NEXT:    [[TMP49:%.*]] = add i64 [[INDEX]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[TMP49]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <16 x i8> [[TMP48]], i32 15
 ; CHECK-NEXT:    store i8 [[TMP51]], ptr [[TMP50]], align 1
@@ -425,7 +424,6 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX2:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT3:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP53:%.*]] = add i64 [[INDEX2]], 0
 ; CHECK-NEXT:    [[TMP54:%.*]] = add i64 [[INDEX2]], 1
 ; CHECK-NEXT:    [[TMP55:%.*]] = add i64 [[INDEX2]], 2
 ; CHECK-NEXT:    [[TMP56:%.*]] = add i64 [[INDEX2]], 3
@@ -433,7 +431,7 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[TMP58:%.*]] = add i64 [[INDEX2]], 5
 ; CHECK-NEXT:    [[TMP59:%.*]] = add i64 [[INDEX2]], 6
 ; CHECK-NEXT:    [[TMP60:%.*]] = add i64 [[INDEX2]], 7
-; CHECK-NEXT:    [[TMP61:%.*]] = sub nsw i64 [[N]], [[TMP53]]
+; CHECK-NEXT:    [[TMP61:%.*]] = sub nsw i64 [[N]], [[INDEX2]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = sub nsw i64 [[N]], [[TMP54]]
 ; CHECK-NEXT:    [[TMP63:%.*]] = sub nsw i64 [[N]], [[TMP55]]
 ; CHECK-NEXT:    [[TMP64:%.*]] = sub nsw i64 [[N]], [[TMP56]]
@@ -450,7 +448,7 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[TMP75:%.*]] = insertelement <8 x i64> [[TMP74]], i64 [[TMP67]], i32 6
 ; CHECK-NEXT:    [[TMP76:%.*]] = insertelement <8 x i64> [[TMP75]], i64 [[TMP68]], i32 7
 ; CHECK-NEXT:    [[TMP77:%.*]] = trunc <8 x i64> [[TMP76]] to <8 x i8>
-; CHECK-NEXT:    [[TMP78:%.*]] = add i64 [[TMP53]], [[TMP61]]
+; CHECK-NEXT:    [[TMP78:%.*]] = add i64 [[INDEX2]], [[TMP61]]
 ; CHECK-NEXT:    [[TMP79:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP78]]
 ; CHECK-NEXT:    [[TMP80:%.*]] = extractelement <8 x i8> [[TMP77]], i32 7
 ; CHECK-NEXT:    store i8 [[TMP80]], ptr [[TMP79]], align 1
@@ -484,7 +482,6 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IC2:       vector.body:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; IC2-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; IC2-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
@@ -516,7 +513,7 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; IC2-NEXT:    [[TMP29:%.*]] = add i64 [[INDEX]], 29
 ; IC2-NEXT:    [[TMP30:%.*]] = add i64 [[INDEX]], 30
 ; IC2-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 31
-; IC2-NEXT:    [[TMP32:%.*]] = sub nsw i64 [[N:%.*]], [[TMP0]]
+; IC2-NEXT:    [[TMP32:%.*]] = sub nsw i64 [[N:%.*]], [[INDEX]]
 ; IC2-NEXT:    [[TMP33:%.*]] = sub nsw i64 [[N]], [[TMP1]]
 ; IC2-NEXT:    [[TMP34:%.*]] = sub nsw i64 [[N]], [[TMP2]]
 ; IC2-NEXT:    [[TMP35:%.*]] = sub nsw i64 [[N]], [[TMP3]]
@@ -582,7 +579,7 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; IC2-NEXT:    [[TMP95:%.*]] = insertelement <16 x i64> [[TMP94]], i64 [[TMP79]], i32 15
 ; IC2-NEXT:    [[TMP96:%.*]] = trunc <16 x i64> [[TMP63]] to <16 x i8>
 ; IC2-NEXT:    [[TMP97:%.*]] = trunc <16 x i64> [[TMP95]] to <16 x i8>
-; IC2-NEXT:    [[TMP98:%.*]] = add i64 [[TMP0]], [[TMP32]]
+; IC2-NEXT:    [[TMP98:%.*]] = add i64 [[INDEX]], [[TMP32]]
 ; IC2-NEXT:    [[TMP99:%.*]] = add i64 [[TMP16]], [[TMP64]]
 ; IC2-NEXT:    [[TMP100:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[TMP98]]
 ; IC2-NEXT:    [[TMP101:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP99]]
@@ -602,7 +599,6 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; IC2-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; IC2:       vec.epilog.vector.body:
 ; IC2-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; IC2-NEXT:    [[TMP105:%.*]] = add i64 [[INDEX1]], 0
 ; IC2-NEXT:    [[TMP106:%.*]] = add i64 [[INDEX1]], 1
 ; IC2-NEXT:    [[TMP107:%.*]] = add i64 [[INDEX1]], 2
 ; IC2-NEXT:    [[TMP108:%.*]] = add i64 [[INDEX1]], 3
@@ -610,7 +606,7 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; IC2-NEXT:    [[TMP110:%.*]] = add i64 [[INDEX1]], 5
 ; IC2-NEXT:    [[TMP111:%.*]] = add i64 [[INDEX1]], 6
 ; IC2-NEXT:    [[TMP112:%.*]] = add i64 [[INDEX1]], 7
-; IC2-NEXT:    [[TMP113:%.*]] = sub nsw i64 [[N]], [[TMP105]]
+; IC2-NEXT:    [[TMP113:%.*]] = sub nsw i64 [[N]], [[INDEX1]]
 ; IC2-NEXT:    [[TMP114:%.*]] = sub nsw i64 [[N]], [[TMP106]]
 ; IC2-NEXT:    [[TMP115:%.*]] = sub nsw i64 [[N]], [[TMP107]]
 ; IC2-NEXT:    [[TMP116:%.*]] = sub nsw i64 [[N]], [[TMP108]]
@@ -627,7 +623,7 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; IC2-NEXT:    [[TMP127:%.*]] = insertelement <8 x i64> [[TMP126]], i64 [[TMP119]], i32 6
 ; IC2-NEXT:    [[TMP128:%.*]] = insertelement <8 x i64> [[TMP127]], i64 [[TMP120]], i32 7
 ; IC2-NEXT:    [[TMP129:%.*]] = trunc <8 x i64> [[TMP128]] to <8 x i8>
-; IC2-NEXT:    [[TMP130:%.*]] = add i64 [[TMP105]], [[TMP113]]
+; IC2-NEXT:    [[TMP130:%.*]] = add i64 [[INDEX1]], [[TMP113]]
 ; IC2-NEXT:    [[TMP131:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP130]]
 ; IC2-NEXT:    [[TMP132:%.*]] = extractelement <8 x i8> [[TMP129]], i32 7
 ; IC2-NEXT:    store i8 [[TMP132]], ptr [[TMP131]], align 1

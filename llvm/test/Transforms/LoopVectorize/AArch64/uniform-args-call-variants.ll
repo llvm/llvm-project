@@ -188,7 +188,7 @@ define void @test_uniform_not_invariant(ptr noalias %dst, ptr readonly %src, i64
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[GEPSRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[DATA:%.*]] = load double, ptr [[GEPSRC]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call double @foo(double [[DATA]], i64 [[INDVARS_IV]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call double @foo(double [[DATA]], i64 [[INDVARS_IV]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    [[GEPDST:%.*]] = getelementptr inbounds nuw double, ptr [[DST]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store double [[CALL]], ptr [[GEPDST]], align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -212,7 +212,7 @@ define void @test_uniform_not_invariant(ptr noalias %dst, ptr readonly %src, i64
 ; INTERLEAVE:       pred.store.if:
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP1]], align 8
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = call double @foo(double [[TMP2]], i64 [[INDEX]]) #[[ATTR4:[0-9]+]]
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = call double @foo(double [[TMP2]], i64 [[INDEX]]) #[[ATTR5:[0-9]+]]
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    store double [[TMP3]], ptr [[TMP4]], align 8
 ; INTERLEAVE-NEXT:    br label [[PRED_STORE_CONTINUE]]
@@ -222,7 +222,7 @@ define void @test_uniform_not_invariant(ptr noalias %dst, ptr readonly %src, i64
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[INDEX]], 1
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[SRC]], i64 [[TMP5]]
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = load double, ptr [[TMP6]], align 8
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = call double @foo(double [[TMP7]], i64 [[TMP5]]) #[[ATTR4]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = call double @foo(double [[TMP7]], i64 [[TMP5]]) #[[ATTR5]]
 ; INTERLEAVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[TMP5]]
 ; INTERLEAVE-NEXT:    store double [[TMP8]], ptr [[TMP9]], align 8
 ; INTERLEAVE-NEXT:    br label [[PRED_STORE_CONTINUE4]]

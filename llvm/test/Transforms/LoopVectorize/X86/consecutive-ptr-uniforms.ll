@@ -66,7 +66,6 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; FORCE:       [[VECTOR_BODY]]:
 ; FORCE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCE-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 5
-; FORCE-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; FORCE-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 5
 ; FORCE-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 10
 ; FORCE-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 15
@@ -74,7 +73,7 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; FORCE-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 25
 ; FORCE-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 30
 ; FORCE-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 35
-; FORCE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[DATA:%.*]], ptr [[D]], i64 0, i32 3, i64 [[TMP0]]
+; FORCE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[DATA:%.*]], ptr [[D]], i64 0, i32 3, i64 [[OFFSET_IDX]]
 ; FORCE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 3, i64 [[TMP2]]
 ; FORCE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 3, i64 [[TMP4]]
 ; FORCE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 3, i64 [[TMP6]]
@@ -90,7 +89,7 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; FORCE-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC2]]
 ; FORCE-NEXT:    [[TMP14:%.*]] = fmul <2 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC4]]
 ; FORCE-NEXT:    [[TMP15:%.*]] = fmul <2 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC6]]
-; FORCE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[TMP0]]
+; FORCE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[OFFSET_IDX]]
 ; FORCE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[TMP1]]
 ; FORCE-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[TMP2]]
 ; FORCE-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[TMP3]]

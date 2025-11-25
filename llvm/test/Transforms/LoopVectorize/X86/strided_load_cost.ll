@@ -26,7 +26,6 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP145:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP146:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP147:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
@@ -58,15 +57,15 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i64 [[INDEX]], 29
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i64 [[INDEX]], 30
 ; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 31
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 8
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 16
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 24
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 8
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 16
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 24
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP32]], align 4, !tbaa [[INT_TBAA1:![0-9]+]]
-; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i32>, ptr [[TMP33]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i32>, ptr [[TMP34]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i32>, ptr [[TMP35]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP0]], i64 [[IDXPROM5]]
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i32>, ptr [[TMP37]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i32>, ptr [[TMP38]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i32>, ptr [[TMP39]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[INDEX]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP1]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP2]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP3]], i64 [[IDXPROM5]]
@@ -98,7 +97,7 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP29]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP30]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP31]], i64 [[IDXPROM5]]
-; CHECK-NEXT:    [[TMP72:%.*]] = load i32, ptr [[TMP40]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[TMP72:%.*]] = load i32, ptr [[TMP35]], align 4, !tbaa [[INT_TBAA1]]
 ; CHECK-NEXT:    [[TMP73:%.*]] = load i32, ptr [[TMP41]], align 4, !tbaa [[INT_TBAA1]]
 ; CHECK-NEXT:    [[TMP74:%.*]] = load i32, ptr [[TMP42]], align 4, !tbaa [[INT_TBAA1]]
 ; CHECK-NEXT:    [[TMP75:%.*]] = load i32, ptr [[TMP43]], align 4, !tbaa [[INT_TBAA1]]
@@ -193,17 +192,16 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI10:%.*]] = phi <4 x i32> [ [[TMP171]], %[[VEC_EPILOG_PH]] ], [ [[TMP168:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP172:%.*]] = add i64 [[INDEX9]], 0
 ; CHECK-NEXT:    [[TMP173:%.*]] = add i64 [[INDEX9]], 1
 ; CHECK-NEXT:    [[TMP174:%.*]] = add i64 [[INDEX9]], 2
 ; CHECK-NEXT:    [[TMP175:%.*]] = add i64 [[INDEX9]], 3
-; CHECK-NEXT:    [[TMP152:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[TMP172]]
+; CHECK-NEXT:    [[TMP152:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[INDEX9]]
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i32>, ptr [[TMP152]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP154:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP172]], i64 [[IDXPROM5]]
+; CHECK-NEXT:    [[TMP153:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[INDEX9]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP155:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP173]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP156:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP174]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP157:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP175]], i64 [[IDXPROM5]]
-; CHECK-NEXT:    [[TMP158:%.*]] = load i32, ptr [[TMP154]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[TMP158:%.*]] = load i32, ptr [[TMP153]], align 4, !tbaa [[INT_TBAA1]]
 ; CHECK-NEXT:    [[TMP159:%.*]] = load i32, ptr [[TMP155]], align 4, !tbaa [[INT_TBAA1]]
 ; CHECK-NEXT:    [[TMP160:%.*]] = load i32, ptr [[TMP156]], align 4, !tbaa [[INT_TBAA1]]
 ; CHECK-NEXT:    [[TMP161:%.*]] = load i32, ptr [[TMP157]], align 4, !tbaa [[INT_TBAA1]]
@@ -257,7 +255,6 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP145:%.*]], %[[VECTOR_BODY]] ]
 ; MAX-BW-NEXT:    [[VEC_PHI2:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP146:%.*]], %[[VECTOR_BODY]] ]
 ; MAX-BW-NEXT:    [[VEC_PHI3:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP147:%.*]], %[[VECTOR_BODY]] ]
-; MAX-BW-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; MAX-BW-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; MAX-BW-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; MAX-BW-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
@@ -289,15 +286,15 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[TMP29:%.*]] = add i64 [[INDEX]], 29
 ; MAX-BW-NEXT:    [[TMP30:%.*]] = add i64 [[INDEX]], 30
 ; MAX-BW-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 31
-; MAX-BW-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[TMP0]]
-; MAX-BW-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 8
-; MAX-BW-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 16
-; MAX-BW-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 24
+; MAX-BW-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[INDEX]]
+; MAX-BW-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 8
+; MAX-BW-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 16
+; MAX-BW-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 24
 ; MAX-BW-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP32]], align 4, !tbaa [[INT_TBAA1:![0-9]+]]
-; MAX-BW-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i32>, ptr [[TMP33]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i32>, ptr [[TMP34]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i32>, ptr [[TMP35]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP0]], i64 [[IDXPROM5]]
+; MAX-BW-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i32>, ptr [[TMP37]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i32>, ptr [[TMP38]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i32>, ptr [[TMP39]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[INDEX]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP1]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP2]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP3]], i64 [[IDXPROM5]]
@@ -329,7 +326,7 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP29]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP30]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP31]], i64 [[IDXPROM5]]
-; MAX-BW-NEXT:    [[TMP72:%.*]] = load i32, ptr [[TMP40]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[TMP72:%.*]] = load i32, ptr [[TMP35]], align 4, !tbaa [[INT_TBAA1]]
 ; MAX-BW-NEXT:    [[TMP73:%.*]] = load i32, ptr [[TMP41]], align 4, !tbaa [[INT_TBAA1]]
 ; MAX-BW-NEXT:    [[TMP74:%.*]] = load i32, ptr [[TMP42]], align 4, !tbaa [[INT_TBAA1]]
 ; MAX-BW-NEXT:    [[TMP75:%.*]] = load i32, ptr [[TMP43]], align 4, !tbaa [[INT_TBAA1]]
@@ -424,17 +421,16 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; MAX-BW-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; MAX-BW-NEXT:    [[VEC_PHI10:%.*]] = phi <4 x i32> [ [[TMP171]], %[[VEC_EPILOG_PH]] ], [ [[TMP168:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; MAX-BW-NEXT:    [[TMP172:%.*]] = add i64 [[INDEX9]], 0
 ; MAX-BW-NEXT:    [[TMP173:%.*]] = add i64 [[INDEX9]], 1
 ; MAX-BW-NEXT:    [[TMP174:%.*]] = add i64 [[INDEX9]], 2
 ; MAX-BW-NEXT:    [[TMP175:%.*]] = add i64 [[INDEX9]], 3
-; MAX-BW-NEXT:    [[TMP152:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[TMP172]]
+; MAX-BW-NEXT:    [[TMP152:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[INDEX9]]
 ; MAX-BW-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i32>, ptr [[TMP152]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP154:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP172]], i64 [[IDXPROM5]]
+; MAX-BW-NEXT:    [[TMP153:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[INDEX9]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP155:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP173]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP156:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP174]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP157:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP175]], i64 [[IDXPROM5]]
-; MAX-BW-NEXT:    [[TMP158:%.*]] = load i32, ptr [[TMP154]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[TMP158:%.*]] = load i32, ptr [[TMP153]], align 4, !tbaa [[INT_TBAA1]]
 ; MAX-BW-NEXT:    [[TMP159:%.*]] = load i32, ptr [[TMP155]], align 4, !tbaa [[INT_TBAA1]]
 ; MAX-BW-NEXT:    [[TMP160:%.*]] = load i32, ptr [[TMP156]], align 4, !tbaa [[INT_TBAA1]]
 ; MAX-BW-NEXT:    [[TMP161:%.*]] = load i32, ptr [[TMP157]], align 4, !tbaa [[INT_TBAA1]]
@@ -507,7 +503,6 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -515,7 +510,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 10
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 12
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 14
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i64 0, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP16]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
@@ -529,7 +524,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i8> [[TMP19]], i32 5
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i8> [[TMP19]], i32 6
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <8 x i8> [[TMP19]], i32 7
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP3]]
@@ -562,7 +557,6 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW:       [[VECTOR_BODY]]:
 ; MAX-BW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; MAX-BW-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; MAX-BW-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; MAX-BW-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; MAX-BW-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; MAX-BW-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -578,7 +572,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], 26
 ; MAX-BW-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], 28
 ; MAX-BW-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 30
-; MAX-BW-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i64 0, i64 [[TMP0]]
+; MAX-BW-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i64 0, i64 [[OFFSET_IDX]]
 ; MAX-BW-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i32>, ptr [[TMP32]], align 4
 ; MAX-BW-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i32> [[WIDE_VEC]], <32 x i32> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
 ; MAX-BW-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <32 x i32> [[WIDE_VEC]], <32 x i32> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
@@ -600,7 +594,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW-NEXT:    [[TMP65:%.*]] = extractelement <16 x i8> [[TMP35]], i32 13
 ; MAX-BW-NEXT:    [[TMP66:%.*]] = extractelement <16 x i8> [[TMP35]], i32 14
 ; MAX-BW-NEXT:    [[TMP67:%.*]] = extractelement <16 x i8> [[TMP35]], i32 15
-; MAX-BW-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP0]]
+; MAX-BW-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[OFFSET_IDX]]
 ; MAX-BW-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP1]]
 ; MAX-BW-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP2]]
 ; MAX-BW-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP3]]

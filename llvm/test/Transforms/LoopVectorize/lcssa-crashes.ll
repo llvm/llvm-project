@@ -89,11 +89,10 @@ define void @test3(ptr %p) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY1:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[POS_337:%.*]] = add i32 [[ADD41]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ADD41]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[ADD41]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[ADD41]], 3
-; CHECK-NEXT:    [[INC46:%.*]] = add i32 [[POS_337]], 1
+; CHECK-NEXT:    [[INC46:%.*]] = add i32 [[ADD41]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP3]], 1

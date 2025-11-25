@@ -22,9 +22,8 @@ define void @int_iv_based_on_pointer_iv(ptr %A) {
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
-; VF2-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF2-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 4
-; VF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP3]]
+; VF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[OFFSET_IDX]]
 ; VF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP4]]
 ; VF2-NEXT:    store i8 0, ptr [[TMP9]], align 1
 ; VF2-NEXT:    store i8 0, ptr [[TMP10]], align 1
