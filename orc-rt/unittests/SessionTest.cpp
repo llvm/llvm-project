@@ -20,8 +20,6 @@
 #include <future>
 #include <optional>
 
-#include <iostream>
-
 using namespace orc_rt;
 using ::testing::Eq;
 using ::testing::Optional;
@@ -170,7 +168,6 @@ TEST(SessionTest, ExpectedShutdownSequence) {
   Session S(std::make_unique<EnqueueingDispatcher>(
                 Tasks,
                 [&]() {
-                  std::cerr << "Running dispatcher shutdown.\n";
                   EXPECT_TRUE(ShutdownOpIdx);
                   EXPECT_EQ(*ShutdownOpIdx, 0);
                   EXPECT_FALSE(SessionShutdownComplete);
@@ -182,7 +179,6 @@ TEST(SessionTest, ExpectedShutdownSequence) {
 
   S.shutdown([&]() {
     EXPECT_TRUE(DispatcherShutDown);
-    std::cerr << "Running shutdown callback.\n";
     SessionShutdownComplete = true;
   });
   S.waitForShutdown();
