@@ -177,8 +177,7 @@ void AMDGPUPreLegalizerCombinerImpl::applyClampI64ToI16(
     MachineInstr &MI, const ClampI64ToI16MatchInfo &MatchInfo) const {
 
   Register Src = MatchInfo.Origin;
-  assert(MI.getParent()->getParent()->getRegInfo().getType(Src) ==
-         LLT::scalar(64));
+  assert(MI.getMF()->getRegInfo().getType(Src) == LLT::scalar(64));
   const LLT S32 = LLT::scalar(32);
 
   auto Unmerge = B.buildUnmerge(S32, Src);
@@ -253,8 +252,7 @@ AMDGPUPreLegalizerCombiner::AMDGPUPreLegalizerCombiner(bool IsOptNone)
 }
 
 bool AMDGPUPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();

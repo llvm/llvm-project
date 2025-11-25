@@ -60,7 +60,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_InputIterator, _Random
     for (; __first != __last; ++__first)
       if (std::__invoke(__comp, std::__invoke(__proj1, *__first), std::__invoke(__proj2, *__result_first))) {
         *__result_first = *__first;
-        std::__sift_down<_AlgPolicy>(__result_first, __projected_comp, __len, __result_first);
+        std::__sift_down<_AlgPolicy, false>(__result_first, __projected_comp, __len, 0);
       }
     std::__sort_heap<_AlgPolicy>(__result_first, __r, __projected_comp);
   }

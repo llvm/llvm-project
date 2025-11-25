@@ -289,7 +289,7 @@ void Symtab::InitNameIndexes() {
     std::vector<Language *> languages;
     Language::ForEach([&languages](Language *l) {
       languages.push_back(l);
-      return true;
+      return IterationAction::Continue;
     });
 
     auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
@@ -638,7 +638,7 @@ void Symtab::SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
   std::vector<lldb::addr_t> addr_cache(m_symbols.size(), LLDB_INVALID_ADDRESS);
 
   SymbolIndexComparator comparator(m_symbols, addr_cache);
-  std::stable_sort(indexes.begin(), indexes.end(), comparator);
+  llvm::stable_sort(indexes, comparator);
 
   // Remove any duplicates if requested
   if (remove_duplicates) {
@@ -654,8 +654,8 @@ uint32_t Symtab::GetNameIndexes(ConstString symbol_name,
   if (count)
     return count;
   // Synthetic symbol names are not added to the name indexes, but they start
-  // with a prefix and end with a the symbol UserID. This allows users to find
-  // these symbols without having to add them to the name indexes. These
+  // with a prefix and end with the symbol file address. This allows users to
+  // find these symbols without having to add them to the name indexes. These
   // queries will not happen very often since the names don't mean anything, so
   // performance is not paramount in this case.
   llvm::StringRef name = symbol_name.GetStringRef();
@@ -663,11 +663,12 @@ uint32_t Symtab::GetNameIndexes(ConstString symbol_name,
   if (!name.consume_front(Symbol::GetSyntheticSymbolPrefix()))
     return 0; // Not a synthetic symbol name
 
-  // Extract the user ID from the symbol name
-  unsigned long long uid = 0;
-  if (getAsUnsignedInteger(name, /*Radix=*/10, uid))
+  // Extract the file address from the symbol name
+  unsigned long long file_address = 0;
+  if (getAsUnsignedInteger(name, /*Radix=*/16, file_address))
     return 0; // Failed to extract the user ID as an integer
-  Symbol *symbol = FindSymbolByID(uid);
+
+  Symbol *symbol = FindSymbolAtFileAddress(static_cast<addr_t>(file_address));
   if (symbol == nullptr)
     return 0;
   const uint32_t symbol_idx = GetIndexForSymbol(symbol);
@@ -721,15 +722,11 @@ Symtab::AppendSymbolIndexesWithNameAndType(ConstString symbol_name,
                                            std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  if (AppendSymbolIndexesWithName(symbol_name, indexes) > 0) {
-    std::vector<uint32_t>::iterator pos = indexes.begin();
-    while (pos != indexes.end()) {
-      if (symbol_type == eSymbolTypeAny ||
-          m_symbols[*pos].GetType() == symbol_type)
-        ++pos;
-      else
-        pos = indexes.erase(pos);
-    }
+  if (AppendSymbolIndexesWithName(symbol_name, indexes) > 0 &&
+      symbol_type != eSymbolTypeAny) {
+    llvm::erase_if(indexes, [this, symbol_type](uint32_t index) {
+      return m_symbols[index].GetType() != symbol_type;
+    });
   }
   return indexes.size();
 }
@@ -741,15 +738,11 @@ uint32_t Symtab::AppendSymbolIndexesWithNameAndType(
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   if (AppendSymbolIndexesWithName(symbol_name, symbol_debug_type,
-                                  symbol_visibility, indexes) > 0) {
-    std::vector<uint32_t>::iterator pos = indexes.begin();
-    while (pos != indexes.end()) {
-      if (symbol_type == eSymbolTypeAny ||
-          m_symbols[*pos].GetType() == symbol_type)
-        ++pos;
-      else
-        pos = indexes.erase(pos);
-    }
+                                  symbol_visibility, indexes) > 0 &&
+      symbol_type != eSymbolTypeAny) {
+    llvm::erase_if(indexes, [this, symbol_type](uint32_t index) {
+      return m_symbols[index].GetType() != symbol_type;
+    });
   }
   return indexes.size();
 }

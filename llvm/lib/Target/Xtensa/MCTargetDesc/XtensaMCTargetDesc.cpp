@@ -75,22 +75,160 @@ bool Xtensa::isValidAddrOffsetForOpcode(unsigned Opcode, int64_t Offset) {
 }
 
 // Verify Special Register
-bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits) {
+bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits,
+                           RegisterAccessType RAType) {
   switch (RegNo) {
   case Xtensa::BREG:
     return FeatureBits[Xtensa::FeatureBoolean];
+  case Xtensa::CCOUNT:
+  case Xtensa::CCOMPARE0:
+    if (FeatureBits[Xtensa::FeatureTimers1])
+      return true;
+    [[fallthrough]];
+  case Xtensa::CCOMPARE1:
+    if (FeatureBits[Xtensa::FeatureTimers2])
+      return true;
+    [[fallthrough]];
+  case Xtensa::CCOMPARE2:
+    if (FeatureBits[Xtensa::FeatureTimers3])
+      return true;
+    return false;
+  case Xtensa::CONFIGID0:
+    return RAType != Xtensa::REGISTER_EXCHANGE;
+  case Xtensa::CONFIGID1:
+    return RAType == Xtensa::REGISTER_READ;
+  case Xtensa::CPENABLE:
+    return FeatureBits[Xtensa::FeatureCoprocessor];
+  case Xtensa::DEBUGCAUSE:
+    return RAType == Xtensa::REGISTER_READ && FeatureBits[Xtensa::FeatureDebug];
+  case Xtensa::DEPC:
+  case Xtensa::EPC1:
+  case Xtensa::EXCCAUSE:
+  case Xtensa::EXCSAVE1:
+  case Xtensa::EXCVADDR:
+    return FeatureBits[Xtensa::FeatureException];
+    [[fallthrough]];
+  case Xtensa::EPC2:
+  case Xtensa::EPS2:
+  case Xtensa::EXCSAVE2:
+    if (FeatureBits[Xtensa::FeatureHighPriInterrupts])
+      return true;
+    [[fallthrough]];
+  case Xtensa::EPC3:
+  case Xtensa::EPS3:
+  case Xtensa::EXCSAVE3:
+    if (FeatureBits[Xtensa::FeatureHighPriInterruptsLevel3])
+      return true;
+    [[fallthrough]];
+  case Xtensa::EPC4:
+  case Xtensa::EPS4:
+  case Xtensa::EXCSAVE4:
+    if (FeatureBits[Xtensa::FeatureHighPriInterruptsLevel4])
+      return true;
+    [[fallthrough]];
+  case Xtensa::EPC5:
+  case Xtensa::EPS5:
+  case Xtensa::EXCSAVE5:
+    if (FeatureBits[Xtensa::FeatureHighPriInterruptsLevel5])
+      return true;
+    [[fallthrough]];
+  case Xtensa::EPC6:
+  case Xtensa::EPS6:
+  case Xtensa::EXCSAVE6:
+    if (FeatureBits[Xtensa::FeatureHighPriInterruptsLevel6])
+      return true;
+    [[fallthrough]];
+  case Xtensa::EPC7:
+  case Xtensa::EPS7:
+  case Xtensa::EXCSAVE7:
+    if (FeatureBits[Xtensa::FeatureHighPriInterruptsLevel7])
+      return true;
+    return false;
+  case Xtensa::INTENABLE:
+    return FeatureBits[Xtensa::FeatureInterrupt];
+  case Xtensa::INTERRUPT:
+    return RAType == Xtensa::REGISTER_READ &&
+           FeatureBits[Xtensa::FeatureInterrupt];
+  case Xtensa::INTSET:
+  case Xtensa::INTCLEAR:
+    return RAType == Xtensa::REGISTER_WRITE &&
+           FeatureBits[Xtensa::FeatureInterrupt];
+  case Xtensa::ICOUNT:
+  case Xtensa::ICOUNTLEVEL:
+  case Xtensa::IBREAKENABLE:
+  case Xtensa::DDR:
+  case Xtensa::IBREAKA0:
+  case Xtensa::IBREAKA1:
+  case Xtensa::DBREAKA0:
+  case Xtensa::DBREAKA1:
+  case Xtensa::DBREAKC0:
+  case Xtensa::DBREAKC1:
+    return FeatureBits[Xtensa::FeatureDebug];
   case Xtensa::LBEG:
   case Xtensa::LEND:
   case Xtensa::LCOUNT:
     return FeatureBits[Xtensa::FeatureLoop];
+  case Xtensa::LITBASE:
+    return FeatureBits[Xtensa::FeatureExtendedL32R];
+  case Xtensa::MEMCTL:
+    return FeatureBits[Xtensa::FeatureDataCache];
+  case Xtensa::ACCLO:
+  case Xtensa::ACCHI:
+  case Xtensa::M0:
+  case Xtensa::M1:
+  case Xtensa::M2:
+  case Xtensa::M3:
+    return FeatureBits[Xtensa::FeatureMAC16];
+  case Xtensa::MISC0:
+  case Xtensa::MISC1:
+  case Xtensa::MISC2:
+  case Xtensa::MISC3:
+    return FeatureBits[Xtensa::FeatureMiscSR];
+  case Xtensa::PRID:
+    return RAType == Xtensa::REGISTER_READ && FeatureBits[Xtensa::FeaturePRID];
+  case Xtensa::THREADPTR:
+    return FeatureBits[FeatureTHREADPTR];
+  case Xtensa::VECBASE:
+    return FeatureBits[Xtensa::FeatureRelocatableVector];
+  case Xtensa::FCR:
+  case Xtensa::FSR:
+    return FeatureBits[FeatureSingleFloat];
+  case Xtensa::F64R_LO:
+  case Xtensa::F64R_HI:
+  case Xtensa::F64S:
+    return FeatureBits[FeatureDFPAccel];
   case Xtensa::WINDOWBASE:
   case Xtensa::WINDOWSTART:
     return FeatureBits[Xtensa::FeatureWindowed];
+  case Xtensa::ATOMCTL:
+  case Xtensa::SCOMPARE1:
+    return FeatureBits[Xtensa::FeatureS32C1I];
   case Xtensa::NoRegister:
     return false;
   }
 
   return true;
+}
+
+// Get Xtensa User Register by encoding value.
+MCRegister Xtensa::getUserRegister(unsigned Code, const MCRegisterInfo &MRI) {
+  MCRegister UserReg = Xtensa::NoRegister;
+
+  if (MRI.getEncodingValue(Xtensa::FCR) == Code) {
+    UserReg = Xtensa::FCR;
+  } else if (MRI.getEncodingValue(Xtensa::FSR) == Code) {
+    UserReg = Xtensa::FSR;
+  } else if (MRI.getEncodingValue(Xtensa::F64R_LO) == Code) {
+    UserReg = Xtensa::F64R_LO;
+  } else if (MRI.getEncodingValue(Xtensa::F64R_HI) == Code) {
+    UserReg = Xtensa::F64R_HI;
+  } else if (MRI.getEncodingValue(Xtensa::F64S) == Code) {
+    UserReg = Xtensa::F64S;
+  } else if (MRI.getEncodingValue(Xtensa::THREADPTR) == Code) {
+    UserReg = Xtensa::THREADPTR;
+  }
+
+  return UserReg;
 }
 
 static MCAsmInfo *createXtensaMCAsmInfo(const MCRegisterInfo &MRI,
@@ -163,7 +301,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTargetMC() {
 
   // Register the MCAsmBackend.
   TargetRegistry::RegisterMCAsmBackend(getTheXtensaTarget(),
-                                       createXtensaMCAsmBackend);
+                                       createXtensaAsmBackend);
 
   // Register the asm target streamer.
   TargetRegistry::RegisterAsmTargetStreamer(getTheXtensaTarget(),

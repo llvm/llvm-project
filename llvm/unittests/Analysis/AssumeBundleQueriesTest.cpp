@@ -13,6 +13,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
@@ -22,7 +23,7 @@
 using namespace llvm;
 
 namespace llvm {
-extern cl::opt<bool> ShouldPreserveAllAttributes;
+LLVM_ABI extern cl::opt<bool> ShouldPreserveAllAttributes;
 } // namespace llvm
 
 static void RunTest(
@@ -73,18 +74,18 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
   EnableKnowledgeRetention.setValue(true);
   StringRef Head =
       "declare void @llvm.assume(i1)\n"
-      "declare void @func(i32*, i32*, i32*)\n"
-      "declare void @func1(i32*, i32*, i32*, i32*)\n"
-      "declare void @func_many(i32*) \"no-jump-tables\" nounwind "
+      "declare void @func(ptr, ptr, ptr)\n"
+      "declare void @func1(ptr, ptr, ptr, ptr)\n"
+      "declare void @func_many(ptr) \"no-jump-tables\" nounwind "
       "\"less-precise-fpmad\" willreturn norecurse\n"
-      "define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {\n";
+      "define void @test(ptr %P, ptr %P1, ptr %P2, ptr %P3) {\n";
   StringRef Tail = "ret void\n"
                    "}";
   std::vector<std::pair<StringRef, llvm::function_ref<void(Instruction *)>>>
       Tests;
   Tests.push_back(std::make_pair(
-      "call void @func(i32* nonnull align 4 dereferenceable(16) %P, i32* align "
-      "8 noalias %P1, i32* align 8 noundef %P2)\n",
+      "call void @func(ptr nonnull align 4 dereferenceable(16) %P, ptr align "
+      "8 noalias %P1, ptr align 8 noundef %P2)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I->getIterator());
@@ -102,11 +103,11 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
                                      Attribute::AttrKind::Alignment, 4));
       }));
   Tests.push_back(std::make_pair(
-      "call void @func1(i32* nonnull align 32 dereferenceable(48) %P, i32* "
+      "call void @func1(ptr nonnull align 32 dereferenceable(48) %P, ptr "
       "nonnull "
-      "align 8 dereferenceable(28) %P, i32* nonnull align 64 "
+      "align 8 dereferenceable(28) %P, ptr nonnull align 64 "
       "dereferenceable(4) "
-      "%P, i32* nonnull align 16 dereferenceable(12) %P)\n",
+      "%P, ptr nonnull align 16 dereferenceable(12) %P)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I->getIterator());
@@ -126,7 +127,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
                                      Attribute::AttrKind::Alignment, 64));
       }));
   Tests.push_back(std::make_pair(
-      "call void @func_many(i32* align 8 noundef %P1) cold\n", [](Instruction *I) {
+      "call void @func_many(ptr align 8 noundef %P1) cold\n", [](Instruction *I) {
         ShouldPreserveAllAttributes.setValue(true);
         auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I->getIterator());
@@ -141,11 +142,11 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
         ASSERT_TRUE(hasMatchesExactlyAttributes(Assume, nullptr, ""));
       }));
   Tests.push_back(std::make_pair(
-      "call void @func1(i32* readnone align 32 "
-      "dereferenceable(48) noalias %P, i32* "
-      "align 8 dereferenceable(28) %P1, i32* align 64 "
+      "call void @func1(ptr readnone align 32 "
+      "dereferenceable(48) noalias %P, ptr "
+      "align 8 dereferenceable(28) %P1, ptr align 64 "
       "dereferenceable(4) "
-      "%P2, i32* nonnull align 16 dereferenceable(12) %P3)\n",
+      "%P2, ptr nonnull align 16 dereferenceable(12) %P3)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I->getIterator());
@@ -177,11 +178,11 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
       }));
 
   Tests.push_back(std::make_pair(
-      "call void @func1(i32* readnone align 32 "
-      "dereferenceable(48) noalias %P, i32* "
-      "align 8 dereferenceable(28) %P1, i32* align 64 "
+      "call void @func1(ptr readnone align 32 "
+      "dereferenceable(48) noalias %P, ptr "
+      "align 8 dereferenceable(28) %P1, ptr align 64 "
       "dereferenceable(4) "
-      "%P2, i32* nonnull align 16 dereferenceable(12) %P3)\n",
+      "%P2, ptr nonnull align 16 dereferenceable(12) %P3)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I->getIterator());
@@ -203,8 +204,8 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
                                      Attribute::AttrKind::Dereferenceable, 48));
       }));
   Tests.push_back(std::make_pair(
-      "call void @func(i32* nonnull align 4 dereferenceable(16) %P, i32* align "
-      "8 noalias %P1, i32* %P1)\n",
+      "call void @func(ptr nonnull align 4 dereferenceable(16) %P, ptr align "
+      "8 noalias %P1, ptr %P1)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I->getIterator());
@@ -250,18 +251,18 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
   EnableKnowledgeRetention.setValue(true);
   StringRef Head =
       "declare void @llvm.assume(i1)\n"
-      "declare void @func(i32*, i32*, i32*)\n"
-      "declare void @func1(i32*, i32*, i32*, i32*)\n"
-      "declare void @func_many(i32*) \"no-jump-tables\" nounwind "
+      "declare void @func(ptr, ptr, ptr)\n"
+      "declare void @func1(ptr, ptr, ptr, ptr)\n"
+      "declare void @func_many(ptr) \"no-jump-tables\" nounwind "
       "\"less-precise-fpmad\" willreturn norecurse\n"
-      "define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {\n";
+      "define void @test(ptr %P, ptr %P1, ptr %P2, ptr %P3) {\n";
   StringRef Tail = "ret void\n"
                    "}";
   std::vector<std::pair<StringRef, llvm::function_ref<void(Instruction *)>>>
       Tests;
   Tests.push_back(std::make_pair(
-      "call void @func(i32* nonnull align 4 dereferenceable(16) %P, i32* align "
-      "8 noalias %P1, i32* align 8 dereferenceable(8) %P2)\n",
+      "call void @func(ptr nonnull align 4 dereferenceable(16) %P, ptr align "
+      "8 noalias %P1, ptr align 8 dereferenceable(8) %P2)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I->getIterator());
@@ -282,11 +283,11 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
                                {4, 4}));
       }));
   Tests.push_back(std::make_pair(
-      "call void @func1(i32* nonnull align 32 dereferenceable(48) %P, i32* "
+      "call void @func1(ptr nonnull align 32 dereferenceable(48) %P, ptr "
       "nonnull "
-      "align 8 dereferenceable(28) %P, i32* nonnull align 64 "
+      "align 8 dereferenceable(28) %P, ptr nonnull align 64 "
       "dereferenceable(4) "
-      "%P, i32* nonnull align 16 dereferenceable(12) %P)\n",
+      "%P, ptr nonnull align 16 dereferenceable(12) %P)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I->getIterator());
@@ -309,7 +310,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
             Map, Assume, {I->getOperand(0), Attribute::Alignment}, {64, 64}));
       }));
   Tests.push_back(std::make_pair(
-      "call void @func_many(i32* align 8 %P1) cold\n", [](Instruction *I) {
+      "call void @func_many(ptr align 8 %P1) cold\n", [](Instruction *I) {
         ShouldPreserveAllAttributes.setValue(true);
         auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I->getIterator());
@@ -330,11 +331,11 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
         ASSERT_TRUE(Map.empty());
       }));
   Tests.push_back(std::make_pair(
-      "call void @func1(i32* readnone align 32 "
-      "dereferenceable(48) noalias %P, i32* "
-      "align 8 dereferenceable(28) %P1, i32* align 64 "
+      "call void @func1(ptr readnone align 32 "
+      "dereferenceable(48) noalias %P, ptr "
+      "align 8 dereferenceable(28) %P1, ptr align 64 "
       "dereferenceable(4) "
-      "%P2, i32* nonnull align 16 dereferenceable(12) %P3)\n",
+      "%P2, ptr nonnull align 16 dereferenceable(12) %P3)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I->getIterator());
@@ -370,8 +371,8 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
 
   /// Keep this test last as it modifies the function.
   Tests.push_back(std::make_pair(
-      "call void @func(i32* nonnull align 4 dereferenceable(16) %P, i32* align "
-      "8 noalias %P1, i32* %P2)\n",
+      "call void @func(ptr nonnull align 4 dereferenceable(16) %P, ptr align "
+      "8 noalias %P1, ptr %P2)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I->getIterator());
@@ -506,11 +507,11 @@ TEST(AssumeQueryAPI, AssumptionCache) {
   SMDiagnostic Err;
   std::unique_ptr<Module> Mod = parseAssemblyString(
       "declare void @llvm.assume(i1)\n"
-      "define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3, i1 %B) {\n"
-      "call void @llvm.assume(i1 true) [\"nonnull\"(i32* %P), \"align\"(i32* "
-      "%P2, i32 4), \"align\"(i32* %P, i32 8)]\n"
-      "call void @llvm.assume(i1 %B) [\"test\"(i32* %P1), "
-      "\"dereferenceable\"(i32* %P, i32 4)]\n"
+      "define void @test(ptr %P, ptr %P1, ptr %P2, ptr %P3, i1 %B) {\n"
+      "call void @llvm.assume(i1 true) [\"nonnull\"(ptr %P), \"align\"(ptr "
+      "%P2, i32 4), \"align\"(ptr %P, i32 8)]\n"
+      "call void @llvm.assume(i1 %B) [\"test\"(ptr %P1), "
+      "\"dereferenceable\"(ptr %P, i32 4)]\n"
       "ret void\n}\n",
       Err, C);
   if (!Mod)
@@ -568,11 +569,11 @@ TEST(AssumeQueryAPI, Alignment) {
   SMDiagnostic Err;
   std::unique_ptr<Module> Mod = parseAssemblyString(
       "declare void @llvm.assume(i1)\n"
-      "define void @test(i32* %P, i32* %P1, i32* %P2, i32 %I3, i1 %B) {\n"
-      "call void @llvm.assume(i1 true) [\"align\"(i32* %P, i32 8, i32 %I3)]\n"
-      "call void @llvm.assume(i1 true) [\"align\"(i32* %P1, i32 %I3, i32 "
+      "define void @test(ptr %P, ptr %P1, ptr %P2, i32 %I3, i1 %B) {\n"
+      "call void @llvm.assume(i1 true) [\"align\"(ptr %P, i32 8, i32 %I3)]\n"
+      "call void @llvm.assume(i1 true) [\"align\"(ptr %P1, i32 %I3, i32 "
       "%I3)]\n"
-      "call void @llvm.assume(i1 true) [\"align\"(i32* %P2, i32 16, i32 8)]\n"
+      "call void @llvm.assume(i1 true) [\"align\"(ptr %P2, i32 16, i32 8)]\n"
       "ret void\n}\n",
       Err, C);
   if (!Mod)

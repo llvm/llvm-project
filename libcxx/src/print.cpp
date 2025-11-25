@@ -22,10 +22,17 @@
 #  include <windows.h>
 #elif __has_include(<unistd.h>)
 #  include <unistd.h>
+#  if defined(_NEWLIB_VERSION)
+#    if defined(_POSIX_C_SOURCE) && __has_include(<stdio.h>)
+#      include <stdio.h>
+#      define HAS_FILENO_AND_ISATTY
+#    endif
+#  else
+#    define HAS_FILENO_AND_ISATTY
+#  endif
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #if defined(_LIBCPP_WIN32API)
 
@@ -57,10 +64,9 @@ __write_to_windows_console([[maybe_unused]] FILE* __stream, [[maybe_unused]] wst
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-#elif __has_include(<unistd.h>) // !_LIBCPP_WIN32API
+#elif defined(HAS_FILENO_AND_ISATTY) // !_LIBCPP_WIN32API
 
 _LIBCPP_EXPORTED_FROM_ABI bool __is_posix_terminal(FILE* __stream) { return isatty(fileno(__stream)); }
 #endif
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

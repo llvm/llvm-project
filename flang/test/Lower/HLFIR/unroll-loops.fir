@@ -11,7 +11,7 @@
 // RUN: %if x86-registered-target %{ %{check-nounroll} %}
 
 // CHECK-LABEL: @unroll
-// CHECK-SAME: (ptr writeonly captures(none) %[[ARG0:.*]])
+// CHECK-SAME: (ptr {{[^%]*}}%[[ARG0:.*]])
 func.func @unroll(%arg0: !fir.ref<!fir.array<1000 x index>> {fir.bindc_name = "a"}) {
   %scope = fir.dummy_scope : !fir.dscope
   %c1000 = arith.constant 1000 : index
@@ -27,7 +27,7 @@ func.func @unroll(%arg0: !fir.ref<!fir.array<1000 x index>> {fir.bindc_name = "a
     // NO-UNROLL-NEXT: %[[GEP:.*]] = getelementptr i64, ptr %[[ARG0]], i64 %[[IND]]
     // NO-UNROLL-NEXT: store <2 x i64> %[[VIND]], ptr %[[GEP]]
     // NO-UNROLL-NEXT: %[[NIV:.*]] = add nuw i64 %{{.*}}, 2
-    // NO-UNROLL-NEXT: %[[NVIND]] = add <2 x i64> %[[VIND]], splat (i64 2)
+    // NO-UNROLL-NEXT: %[[NVIND]] = add nuw nsw <2 x i64> %[[VIND]], splat (i64 2)
 
     // UNROLL-NEXT: %[[VIND1:.*]] = add <2 x i64> %[[VIND]], splat (i64 2)
     // UNROLL-NEXT: %[[GEP0:.*]] = getelementptr i64, ptr %[[ARG0]], i64 %[[IND]]

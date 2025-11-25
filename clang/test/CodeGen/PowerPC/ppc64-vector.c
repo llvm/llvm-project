@@ -39,7 +39,7 @@ v8i16 test_v8i16(v8i16 x)
   return x;
 }
 
-// CHECK: define{{.*}} void @test_v16i16(ptr dead_on_unwind noalias writable sret(<16 x i16>) align 32 %agg.result, ptr noundef %0)
+// CHECK: define{{.*}} void @test_v16i16(ptr dead_on_unwind noalias writable sret(<16 x i16>) align 32 %agg.result, ptr dead_on_return noundef %0)
 v16i16 test_v16i16(v16i16 x)
 {
   return x;

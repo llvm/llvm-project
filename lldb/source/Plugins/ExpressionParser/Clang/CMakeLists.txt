@@ -5,7 +5,6 @@ add_lldb_library(lldbPluginExpressionParserClang
   ClangASTImporter.cpp
   ClangASTMetadata.cpp
   ClangASTSource.cpp
-  ClangDeclVendor.cpp
   ClangExpressionDeclMap.cpp
   ClangExpressionHelper.cpp
   ClangExpressionParser.cpp
@@ -29,6 +28,13 @@ add_lldb_library(lldbPluginExpressionParserClang
   DEPENDS
   intrinsics_gen
 
+  LINK_COMPONENTS
+    Core
+    ExecutionEngine
+    ipo
+    MCJIT
+    Support
+    TargetParser
   LINK_LIBS
     lldbCore
     lldbExpression
@@ -54,11 +60,4 @@ add_lldb_library(lldbPluginExpressionParserClang
     clangRewriteFrontend
     clangSema
     clangSerialization
-  LINK_COMPONENTS
-    Core
-    ExecutionEngine
-    ipo
-    MCJIT
-    Support
-    TargetParser
   )

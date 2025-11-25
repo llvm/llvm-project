@@ -174,40 +174,17 @@ struct __set_node_handle_specifics {
   _LIBCPP_HIDE_FROM_ABI value_type& value() const { return static_cast<_Derived const*>(this)->__ptr_->__get_value(); }
 };
 
-template <class, class>
-struct __hash_value_type;
-
 template <class _NodeType, class _Derived>
 struct __map_node_handle_specifics {
-  template <class _Tp>
-  struct __get_type {
-    using key_type    = __remove_const_t<typename _Tp::first_type>;
-    using mapped_type = typename _Tp::second_type;
-  };
-
-  template <class _Key, class _Mapped>
-  struct __get_type<__hash_value_type<_Key, _Mapped> > {
-    using key_type    = _Key;
-    using mapped_type = _Mapped;
-  };
-
-  using key_type    = typename __get_type<typename _NodeType::__node_value_type>::key_type;
-  using mapped_type = typename __get_type<typename _NodeType::__node_value_type>::mapped_type;
+  using key_type    = __remove_const_t<typename _NodeType::__node_value_type::first_type>;
+  using mapped_type = typename _NodeType::__node_value_type::second_type;
 
   _LIBCPP_HIDE_FROM_ABI key_type& key() const {
-    if constexpr (__is_specialization_v<typename _NodeType::__node_value_type, __hash_value_type>) {
-      return static_cast<_Derived const*>(this)->__ptr_->__get_value().__ref().first;
-    } else {
-      return const_cast<key_type&>(static_cast<_Derived const*>(this)->__ptr_->__get_value().first);
-    }
+    return const_cast<key_type&>(static_cast<_Derived const*>(this)->__ptr_->__get_value().first);
   }
 
   _LIBCPP_HIDE_FROM_ABI mapped_type& mapped() const {
-    if constexpr (__is_specialization_v<typename _NodeType::__node_value_type, __hash_value_type>) {
-      return static_cast<_Derived const*>(this)->__ptr_->__get_value().__ref().second;
-    } else {
-      return static_cast<_Derived const*>(this)->__ptr_->__get_value().second;
-    }
+    return static_cast<_Derived const*>(this)->__ptr_->__get_value().second;
   }
 };
 

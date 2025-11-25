@@ -35,7 +35,7 @@ OwningPtr<Descriptor> CreateDescriptor(const std::vector<SubscriptValue> &shape,
   for (int j{0}; j < rank; ++j) {
     descriptor->GetDimension(j).SetBounds(2, shape[j] + 1);
   }
-  if (descriptor->Allocate(kNoAsyncId) != 0) {
+  if (descriptor->Allocate(kNoAsyncObject) != 0) {
     return nullptr;
   }
 

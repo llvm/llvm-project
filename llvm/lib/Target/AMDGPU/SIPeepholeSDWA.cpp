@@ -118,7 +118,7 @@ public:
   MachineInstr *getParentInst() const { return Target->getParent(); }
 
   MachineRegisterInfo *getMRI() const {
-    return &getParentInst()->getParent()->getParent()->getRegInfo();
+    return &getParentInst()->getMF()->getRegInfo();
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -291,21 +291,7 @@ static MachineOperand *findSingleRegUse(const MachineOperand *Reg,
   if (!Reg->isReg() || !Reg->isDef())
     return nullptr;
 
-  MachineOperand *ResMO = nullptr;
-  for (MachineOperand &UseMO : MRI->use_nodbg_operands(Reg->getReg())) {
-    // If there exist use of subreg of Reg then return nullptr
-    if (!isSameReg(UseMO, *Reg))
-      return nullptr;
-
-    // Check that there is only one instruction that uses Reg
-    if (!ResMO) {
-      ResMO = &UseMO;
-    } else if (ResMO->getParent() != UseMO.getParent()) {
-      return nullptr;
-    }
-  }
-
-  return ResMO;
+  return MRI->getOneNonDBGUse(Reg->getReg());
 }
 
 static MachineOperand *findSingleRegDef(const MachineOperand *Reg,
@@ -313,17 +299,7 @@ static MachineOperand *findSingleRegDef(const MachineOperand *Reg,
   if (!Reg->isReg())
     return nullptr;
 
-  MachineInstr *DefInstr = MRI->getUniqueVRegDef(Reg->getReg());
-  if (!DefInstr)
-    return nullptr;
-
-  for (auto &DefMO : DefInstr->defs()) {
-    if (DefMO.isReg() && DefMO.getReg() == Reg->getReg())
-      return &DefMO;
-  }
-
-  // Ignore implicit defs.
-  return nullptr;
+  return MRI->getOneDef(Reg->getReg());
 }
 
 /// Combine an SDWA instruction's existing SDWA selection \p Sel with
@@ -430,6 +406,21 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   case AMDGPU::V_CVT_PK_F32_BF8_sdwa:
     // Does not support input modifiers: noabs, noneg, nosext.
     return false;
+  case AMDGPU::V_CNDMASK_B32_sdwa:
+    // SISrcMods uses the same bitmask for SEXT and NEG modifiers and
+    // hence the compiler can only support one type of modifier for
+    // each SDWA instruction.  For V_CNDMASK_B32_sdwa, this is NEG
+    // since its operands get printed using
+    // AMDGPUInstPrinter::printOperandAndFPInputMods which produces
+    // the output intended for NEG if SEXT is set.
+    //
+    // The ISA does actually support both modifiers on most SDWA
+    // instructions.
+    //
+    // FIXME Accept SEXT here after fixing this issue.
+    if (Sext)
+      return false;
+    break;
   }
 
   // Find operand in instruction that matches source operand and replace it with
@@ -720,7 +711,9 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
   case AMDGPU::V_ASHRREV_I16_e32:
   case AMDGPU::V_LSHLREV_B16_e32:
   case AMDGPU::V_LSHRREV_B16_e64:
+  case AMDGPU::V_LSHRREV_B16_opsel_e64:
   case AMDGPU::V_ASHRREV_I16_e64:
+  case AMDGPU::V_LSHLREV_B16_opsel_e64:
   case AMDGPU::V_LSHLREV_B16_e64: {
     // from: v_lshrrev_b16_e32 v1, 8, v0
     // to SDWA src:v0 src_sel:BYTE_1
@@ -743,11 +736,13 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
       break;
 
     if (Opcode == AMDGPU::V_LSHLREV_B16_e32 ||
+        Opcode == AMDGPU::V_LSHLREV_B16_opsel_e64 ||
         Opcode == AMDGPU::V_LSHLREV_B16_e64)
       return std::make_unique<SDWADstOperand>(Dst, Src1, BYTE_1, UNUSED_PAD);
     return std::make_unique<SDWASrcOperand>(
         Src1, Dst, BYTE_1, false, false,
         Opcode != AMDGPU::V_LSHRREV_B16_e32 &&
+            Opcode != AMDGPU::V_LSHRREV_B16_opsel_e64 &&
             Opcode != AMDGPU::V_LSHRREV_B16_e64);
     break;
   }
@@ -1034,7 +1029,8 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
   MachineOperand *CarryOut = TII->getNamedOperand(MISucc, AMDGPU::OpName::sdst);
   if (!CarryOut)
     return;
-  if (!MRI->hasOneUse(CarryIn->getReg()) || !MRI->use_empty(CarryOut->getReg()))
+  if (!MRI->hasOneNonDBGUse(CarryIn->getReg()) ||
+      !MRI->use_nodbg_empty(CarryOut->getReg()))
     return;
   // Make sure VCC or its subregs are dead before MI.
   MachineBasicBlock &MBB = *MI.getParent();
@@ -1258,65 +1254,22 @@ MachineInstr *SIPeepholeSDWA::createSDWAVersion(MachineInstr &MI) {
     }
   }
 
-  // Copy dst_sel if present, initialize otherwise if needed
-  if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_sel)) {
-    MachineOperand *DstSel = TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel);
-    if (DstSel) {
-      SDWAInst.add(*DstSel);
-    } else {
-      SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
-    }
-  }
+  // Initialize SDWA specific operands
+  if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_sel))
+    SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
 
-  // Copy dst_unused if present, initialize otherwise if needed
-  if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_unused)) {
-    MachineOperand *DstUnused = TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
-    if (DstUnused) {
-      SDWAInst.add(*DstUnused);
-    } else {
-      SDWAInst.addImm(AMDGPU::SDWA::DstUnused::UNUSED_PAD);
-    }
-  }
+  if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_unused))
+    SDWAInst.addImm(AMDGPU::SDWA::DstUnused::UNUSED_PAD);
 
-  // Copy src0_sel if present, initialize otherwise
   assert(AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src0_sel));
-  MachineOperand *Src0Sel = TII->getNamedOperand(MI, AMDGPU::OpName::src0_sel);
-  if (Src0Sel) {
-    SDWAInst.add(*Src0Sel);
-  } else {
+  SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
+
+  if (Src1) {
+    assert(AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src1_sel));
     SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
   }
 
-  // Copy src1_sel if present, initialize otherwise if needed
-  if (Src1) {
-    assert(AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src1_sel));
-    MachineOperand *Src1Sel = TII->getNamedOperand(MI, AMDGPU::OpName::src1_sel);
-    if (Src1Sel) {
-      SDWAInst.add(*Src1Sel);
-    } else {
-      SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
-    }
-  }
-
   // Check for a preserved register that needs to be copied.
-  auto *DstUnused = TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
-  if (DstUnused &&
-      DstUnused->getImm() == AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE) {
-    // We expect, if we are here, that the instruction was already in it's SDWA form,
-    // with a tied operand.
-    assert(Dst && Dst->isTied());
-    assert(Opcode == static_cast<unsigned int>(SDWAOpcode));
-    // We also expect a vdst, since sdst can't preserve.
-    auto PreserveDstIdx = AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::vdst);
-    assert(PreserveDstIdx != -1);
-
-    auto TiedIdx = MI.findTiedOperandIdx(PreserveDstIdx);
-    auto Tied = MI.getOperand(TiedIdx);
-
-    SDWAInst.add(Tied);
-    SDWAInst->tieOperands(PreserveDstIdx, SDWAInst->getNumOperands() - 1);
-  }
-
   MachineInstr *Ret = SDWAInst.getInstr();
   TII->fixImplicitOperands(*Ret);
   return Ret;
@@ -1331,7 +1284,7 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     // Clone the instruction to allow revoking changes
     // made to MI during the processing of the operands
     // if the conversion fails.
-    SDWAInst = MI.getParent()->getParent()->CloneMachineInstr(&MI);
+    SDWAInst = MI.getMF()->CloneMachineInstr(&MI);
     MI.getParent()->insert(MI.getIterator(), SDWAInst);
   } else {
     SDWAInst = createSDWAVersion(MI);
@@ -1381,19 +1334,21 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
   const MCInstrDesc &Desc = TII->get(MI.getOpcode());
   unsigned ConstantBusCount = 0;
   for (MachineOperand &Op : MI.explicit_uses()) {
-    if (!Op.isImm() && !(Op.isReg() && !TRI->isVGPR(*MRI, Op.getReg())))
+    if (Op.isReg()) {
+      if (TRI->isVGPR(*MRI, Op.getReg()))
+        continue;
+
+      if (ST.hasSDWAScalar() && ConstantBusCount == 0) {
+        ++ConstantBusCount;
+        continue;
+      }
+    } else if (!Op.isImm())
       continue;
 
     unsigned I = Op.getOperandNo();
-    if (Desc.operands()[I].RegClass == -1 ||
-        !TRI->isVSSuperClass(TRI->getRegClass(Desc.operands()[I].RegClass)))
+    const TargetRegisterClass *OpRC = TII->getRegClass(Desc, I);
+    if (!OpRC || !TRI->isVSSuperClass(OpRC))
       continue;
-
-    if (ST.hasSDWAScalar() && ConstantBusCount == 0 && Op.isReg() &&
-        TRI->isSGPRReg(*MRI, Op.getReg())) {
-      ++ConstantBusCount;
-      continue;
-    }
 
     Register VGPR = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     auto Copy = BuildMI(*MI.getParent(), MI.getIterator(), MI.getDebugLoc(),

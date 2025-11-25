@@ -46,7 +46,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 #ifndef _LIBCPP_CXX03_LANG
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 struct _FilesystemClock {
 #  if _LIBCPP_HAS_INT128
   typedef __int128_t rep;
@@ -61,7 +60,7 @@ struct _FilesystemClock {
 
   _LIBCPP_EXPORTED_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX14 const bool is_steady = false;
 
-  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_EXPORTED_FROM_ABI static time_point now() noexcept;
+  _LIBCPP_EXPORTED_FROM_ABI static time_point now() noexcept;
 
 #  if _LIBCPP_STD_VER >= 20
   template <class _Duration>
@@ -75,7 +74,6 @@ struct _FilesystemClock {
   }
 #  endif // _LIBCPP_STD_VER >= 20
 };
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 #endif // !_LIBCPP_CXX03_LANG
 

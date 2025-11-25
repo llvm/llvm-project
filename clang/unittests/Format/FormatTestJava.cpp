@@ -236,7 +236,7 @@ TEST_F(FormatTestJava, ArrayInitializers) {
                "};");
 
   FormatStyle Style = getStyleWithColumns(65);
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat(
       "expected = new int[] { 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,\n"
       "  100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };",
@@ -631,17 +631,17 @@ TEST_F(FormatTestJava, SwitchExpression) {
                "});",
                Style);
 
-  constexpr StringRef Code1{"i = switch (day) {\n"
+  constexpr StringRef Code1("i = switch (day) {\n"
                             "  case THURSDAY, SATURDAY -> 8;\n"
                             "  case WEDNESDAY -> 9;\n"
                             "  default -> 0;\n"
-                            "};"};
+                            "};");
   verifyFormat(Code1, Style);
 
   Style.IndentCaseLabels = true;
   verifyFormat(Code1, Style);
 
-  constexpr StringRef Code2{"i = switch (day) {\n"
+  constexpr StringRef Code2("i = switch (day) {\n"
                             "  case THURSDAY, SATURDAY -> {\n"
                             "    foo();\n"
                             "    yield 8;\n"
@@ -653,17 +653,17 @@ TEST_F(FormatTestJava, SwitchExpression) {
                             "  default -> {\n"
                             "    yield 0;\n"
                             "  }\n"
-                            "};"};
+                            "};");
   verifyFormat(Code2, Style);
 
   Style.IndentCaseLabels = false;
   verifyFormat(Code2, Style);
 
-  constexpr StringRef Code3{"switch (day) {\n"
+  constexpr StringRef Code3("switch (day) {\n"
                             "case THURSDAY, SATURDAY -> i = 8;\n"
                             "case WEDNESDAY -> i = 9;\n"
                             "default -> i = 0;\n"
-                            "};"};
+                            "};");
   verifyFormat(Code3, Style);
 
   Style.IndentCaseLabels = true;
@@ -789,6 +789,76 @@ TEST_F(FormatTestJava, AlignCaseArrows) {
                "default                 -> i = 0;\n"
                "};",
                Style);
+}
+
+TEST_F(FormatTestJava, TextBlock) {
+  verifyNoChange("String myStr = \"\"\"\n"
+                 "hello\n"
+                 "there\n"
+                 "\"\"\";");
+
+  verifyNoChange("String tb = \"\"\"\n"
+                 "            the new\"\"\";");
+
+  verifyNoChange("System.out.println(\"\"\"\n"
+                 "    This is the first line\n"
+                 "    This is the second line\n"
+                 "    \"\"\");");
+
+  verifyNoChange("void writeHTML() {\n"
+                 "  String html = \"\"\" \n"
+                 "                <html>\n"
+                 "                    <p>Hello World.</p>\n"
+                 "                </html>\n"
+                 "\"\"\";\n"
+                 "  writeOutput(html);\n"
+                 "}");
+
+  verifyNoChange("String colors = \"\"\"\t\n"
+                 "    red\n"
+                 "    green\n"
+                 "    blue\"\"\".indent(4);");
+
+  verifyNoChange("String code = \"\"\"\n"
+                 "    String source = \\\"\"\"\n"
+                 "        String message = \"Hello, World!\";\n"
+                 "        System.out.println(message);\n"
+                 "        \\\"\"\";\n"
+                 "    \"\"\";");
+
+  verifyNoChange(
+      "class Outer {\n"
+      "  void printPoetry() {\n"
+      "    String lilacs = \"\"\"\n"
+      "Passing the apple-tree blows of white and pink in the orchards\n"
+      "\"\"\";\n"
+      "    System.out.println(lilacs);\n"
+      "  }\n"
+      "}");
+
+  verifyNoChange("String name = \"\"\"\r\n"
+                 "        red\n"
+                 "        green\n"
+                 "        blue\\\n"
+                 "    \"\"\";");
+
+  verifyFormat("String name = \"\"\"Pat Q. Smith\"\"\";");
+
+  verifyNoChange("String name = \"\"\"\n"
+                 "              Pat Q. Smith");
+}
+
+TEST_F(FormatTestJava, BreakAfterRecord) {
+  auto Style = getLLVMStyle(FormatStyle::LK_Java);
+  Style.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_Never;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = true;
+  Style.BraceWrapping.SplitEmptyRecord = true;
+
+  verifyFormat("public record Foo(int i)\n"
+               "{\n"
+               "}",
+               "public record Foo(int i) {}", Style);
 }
 
 } // namespace

@@ -95,21 +95,8 @@ static Expected<uint64_t> parseStrTabSize(StringRef &Buf) {
   return StrTabSize;
 }
 
-static Expected<ParsedStringTable> parseStrTab(StringRef &Buf,
-                                               uint64_t StrTabSize) {
-  if (Buf.size() < StrTabSize)
-    return createStringError(std::errc::illegal_byte_sequence,
-                             "Expecting string table.");
-
-  // Attach the string table to the parser.
-  ParsedStringTable Result(StringRef(Buf.data(), StrTabSize));
-  Buf = Buf.drop_front(StrTabSize);
-  return Expected<ParsedStringTable>(std::move(Result));
-}
-
 Expected<std::unique_ptr<YAMLRemarkParser>> remarks::createYAMLParserFromMeta(
-    StringRef Buf, std::optional<ParsedStringTable> StrTab,
-    std::optional<StringRef> ExternalFilePrependPath) {
+    StringRef Buf, std::optional<StringRef> ExternalFilePrependPath) {
   // We now have a magic number. The metadata has to be correct.
   Expected<bool> isMeta = parseMagic(Buf);
   if (!isMeta)
@@ -125,15 +112,9 @@ Expected<std::unique_ptr<YAMLRemarkParser>> remarks::createYAMLParserFromMeta(
     if (!StrTabSize)
       return StrTabSize.takeError();
 
-    // If the size of string table is not 0, try to build one.
     if (*StrTabSize != 0) {
-      if (StrTab)
-        return createStringError(std::errc::illegal_byte_sequence,
-                                 "String table already provided.");
-      Expected<ParsedStringTable> MaybeStrTab = parseStrTab(Buf, *StrTabSize);
-      if (!MaybeStrTab)
-        return MaybeStrTab.takeError();
-      StrTab = std::move(*MaybeStrTab);
+      return createStringError(std::errc::illegal_byte_sequence,
+                               "String table unsupported for YAML format.");
     }
     // If it starts with "---", there is no external file.
     if (!Buf.starts_with("---")) {
@@ -157,21 +138,15 @@ Expected<std::unique_ptr<YAMLRemarkParser>> remarks::createYAMLParserFromMeta(
   }
 
   std::unique_ptr<YAMLRemarkParser> Result =
-      StrTab
-          ? std::make_unique<YAMLStrTabRemarkParser>(Buf, std::move(*StrTab))
-          : std::make_unique<YAMLRemarkParser>(Buf);
+      std::make_unique<YAMLRemarkParser>(Buf);
   if (SeparateBuf)
     Result->SeparateBuf = std::move(SeparateBuf);
   return std::move(Result);
 }
 
 YAMLRemarkParser::YAMLRemarkParser(StringRef Buf)
-    : YAMLRemarkParser(Buf, std::nullopt) {}
-
-YAMLRemarkParser::YAMLRemarkParser(StringRef Buf,
-                                   std::optional<ParsedStringTable> StrTab)
-    : RemarkParser{Format::YAML}, StrTab(std::move(StrTab)),
-      SM(setupSM(LastErrorMessage)), Stream(Buf, SM), YAMLIt(Stream.begin()) {}
+    : RemarkParser{Format::YAML}, SM(setupSM(LastErrorMessage)),
+      Stream(Buf, SM), YAMLIt(Stream.begin()) {}
 
 Error YAMLRemarkParser::error(StringRef Message, yaml::Node &Node) {
   return make_error<YAMLParseError>(Message, SM, Stream, Node);
@@ -208,8 +183,8 @@ YAMLRemarkParser::parseRemark(yaml::Document &RemarkEntry) {
   Expected<Type> T = parseType(*Root);
   if (!T)
     return T.takeError();
-  else
-    TheRemark.RemarkType = *T;
+
+  TheRemark.RemarkType = *T;
 
   // Then, parse the fields, one by one.
   for (yaml::KeyValueNode &RemarkField : *Root) {
@@ -410,7 +385,11 @@ Expected<Argument> YAMLRemarkParser::parseArg(yaml::Node &Node) {
   if (!ValueStr)
     return error("argument value is missing.", *ArgMap);
 
-  return Argument{*KeyStr, *ValueStr, Loc};
+  Argument Arg;
+  Arg.Key = *KeyStr;
+  Arg.Val = *ValueStr;
+  Arg.Loc = Loc;
+  return Arg;
 }
 
 Expected<std::unique_ptr<Remark>> YAMLRemarkParser::next() {
@@ -427,34 +406,4 @@ Expected<std::unique_ptr<Remark>> YAMLRemarkParser::next() {
   ++YAMLIt;
 
   return std::move(*MaybeResult);
-}
-
-Expected<StringRef> YAMLStrTabRemarkParser::parseStr(yaml::KeyValueNode &Node) {
-  auto *Value = dyn_cast<yaml::ScalarNode>(Node.getValue());
-  yaml::BlockScalarNode *ValueBlock;
-  StringRef Result;
-  if (!Value) {
-    // Try to parse the value as a block node.
-    ValueBlock = dyn_cast<yaml::BlockScalarNode>(Node.getValue());
-    if (!ValueBlock)
-      return error("expected a value of scalar type.", Node);
-    Result = ValueBlock->getValue();
-  } else
-    Result = Value->getRawValue();
-  // If we have a string table, parse it as an unsigned.
-  unsigned StrID = 0;
-  if (Expected<unsigned> MaybeStrID = parseUnsigned(Node))
-    StrID = *MaybeStrID;
-  else
-    return MaybeStrID.takeError();
-
-  if (Expected<StringRef> Str = (*StrTab)[StrID])
-    Result = *Str;
-  else
-    return Str.takeError();
-
-  Result.consume_front("\'");
-  Result.consume_back("\'");
-
-  return Result;
 }

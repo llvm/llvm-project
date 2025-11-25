@@ -15,11 +15,13 @@ Currently the following heuristics feature such integration:
 
 This document is an outline of the tooling and APIs facilitating MLGO.
 
-Note that tools for orchestrating ML training are not part of LLVM, as they are
-dependency-heavy - both on the ML infrastructure choice, as well as choices of
-distrubuted computing. For the training scenario, LLVM only contains facilities
-enabling it, such as corpus extraction, training data extraction, and evaluation
-of models during training.
+.. note::
+    
+  The tools for orchestrating ML training are not part of LLVM, as they are
+  dependency-heavy - both on the ML infrastructure choice, as well as choices of
+  distributed computing. For the training scenario, LLVM only contains facilities
+  enabling it, such as corpus extraction, training data extraction, and evaluation
+  of models during training.
 
 
 .. contents::
@@ -27,7 +29,7 @@ of models during training.
 Corpus Tooling
 ==============
 
-Within the LLVM monorepo, there is the ``mlgo-utils`` python packages that
+Within the LLVM monorepo, there is the ``mlgo-utils`` Python package that
 lives at ``llvm/utils/mlgo-utils``. This package primarily contains tooling
 for working with corpora, or collections of LLVM bitcode. We use these corpora
 to train and evaluate ML models. Corpora consist of a description in JSON
@@ -80,7 +82,7 @@ Options
 
 .. option:: --cmd_filter
 
-  Allows filtering of modules by command line. If set, only modules that much
+  Allows filtering of modules by command line. If set, only modules that match
   the filter will be extracted into the corpus. Regular expressions are
   supported in some instances.
 
@@ -212,7 +214,7 @@ decisions.
 For a specific optimization problem - i.e. inlining, or regalloc eviction - we
 first separate correctness - preserving decisions from optimization decisions.
 For example, not inlining functions marked "no inline" is an example of the
-former. Same is not evicting an unevictable live range. An exmple of the latter
+former. Same is not evicting an unevictable live range. An example of the latter
 is deciding to inline a function that will bloat the caller size, just because
 we have reason to believe that later, the effect will be some constant
 propagation that will actually reduce the size (or dynamic instruction count).
@@ -314,7 +316,7 @@ features.
 ``MLModelRunner`` implementations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We currently feature 3 implementations:
+We currently feature 4 implementations:
 
 - ``ModelUnderTrainingRunner``. This requires the compiler be built with TFLite
   support. It allows loading a TFLite model dynamically and is primarily
@@ -329,8 +331,10 @@ We currently feature 3 implementations:
   the neural network, together with its weights (essentially, loops performing
   matrix multiplications)
 
-NOTE: we are actively working on replacing this with an EmitC implementation
-requiring no out of tree build-time dependencies.
+.. note::
+    
+  we are actively working on replacing this with an EmitC implementation
+  requiring no out of tree build-time dependencies.
 
 - ``InteractiveModelRunner``. This is intended for training scenarios where the
   training algorithm drives compilation. This model runner has no special
@@ -338,12 +342,403 @@ requiring no out of tree build-time dependencies.
   presumably a python training algorithm. We do not envision using this in a
   production environment.
 
+- ``NoInferenceModelRunner``. This serves as a store for feature values, and its
+  ``evaluate`` should never be called. It's used for training scenarios, when we
+  want to capture the behavior of the default (non-ML) heuristic.
+
 Note that training leaves it to the training infrastructure to handle
 distributed computing. The assumed architecture has python processes
 communicating remotely between themselves, but managing local communication with
 clang.
 
-..
-    TODO(mtrofin): 
-        - logging, and the use in interactive mode.
-        - discuss an example (like the inliner)
+Logging Facility
+----------------
+
+When training models, we need to expose the features we will want to use during
+inference, as well as outcomes, to guide reward-based learning techniques. This
+can happen in 2 forms:
+
+- when running the compiler on some input, as a capture of the features and
+  actions taken by some policy or a model currently being used.
+  For example, see ``DevelopmentModeInlineAdvisor`` or ``DevelopmentModeEvictAdvisor``
+  in ``MLRegallocEvictAdvisor.cpp``. In more detail, in the former case, if
+  ``-training-log`` is specified, the features and actions (inline/no inline)
+  from each inlining decision are saved to the specified file. Since
+  ``MLModelRunner`` implementations hold on to feature values (they don't get
+  cleared by ``evaluate``), logging is easily supported by just looping over the
+  model runner's features and passing the tensor buffers to the logger. Note how
+  we use the ``NoInferenceModelRunner`` to capture the features observed when
+  using the default policy.
+
+- as a serialization mechanism for the ``InteractiveModelRunner``. Here, we need
+  to pass the observed features over IPC (a file descriptor, likely a named
+  pipe).
+
+Both cases require serializing the same kind of data and we support both with
+``Analysis/Utils/TrainingLogger``.
+
+The goal of the logger design was avoiding any new dependency, and optimizing
+for the tensor scenario - i.e. exchanging potentially large buffers of fixed
+size, containing scalars. We explicitly assume the reader of the format has the
+same endianness as the compiler host, and we further expect the reader and the
+compiler run on the same host. This is because we expect the training scenarios
+have a (typically python) process managing the compiler process, and we leave to
+the training side to handle remoting.
+
+The logger produces the following sequence:
+
+- a header describing the structure of the log. This is a one-line textual JSON
+  dictionary with the following elements:
+  
+  - ``features``: a list of JSON-serialized ``TensorSpec`` values. The position
+    in the list matters, as it will be the order in which values will be
+    subsequently recorded. If we are just logging (i.e. not using the
+    ``InteractiveModelRunner``), the last feature should be that of the action
+    (e.g. "inline/no inline", or "index of evicted live range")
+  - (optional) ``score``: a ``TensorSpec`` describing a value we will include to
+    help formulate a reward. This could be a size estimate or a latency estimate.
+  - (optional) ``advice``: a ``TensorSpec`` describing the action. This is used
+    for the ``InteractiveModelRunner``, in which case it shouldn't be in the 
+    ``features`` list.
+- a sequence of ``contexts``. Contexts are independent traces of the optimization
+  problem. For module passes, there is only one context, for function passes,
+  there is a context per function. The start of a context is marked with a
+  one-line JSON dictionary of the form ``{"context": <context name, a string>}``
+  
+  Each context has a sequence of:
+
+  - ``observations``. An observation is:
+    
+    - one-line JSON ``{"observation": <observation number. 0-indexed>}``
+    - a binary dump of the tensor buffers, in the order in which they were
+      specified in the header.
+    - a new line character
+    - if ``score`` was specified in the header:
+    
+      - a one-line JSON object ``{"outcome": <value>}``, where the ``value``
+        conforms to the ``TensorSpec`` in defined for the ``score`` in the header.
+      - the outcome value, as a binary dump
+      - a new line character.
+
+The format uses a mix of textual JSON (for headers) and binary dumps (for tensors)
+because the headers are not expected to dominate the payload - the tensor values
+are. We wanted to avoid overburdening the log reader - likely python - from
+additional dependencies; and the one-line JSON makes it rudimentarily possible
+to inspect a log without additional tooling.
+
+A python utility for reading logs, used for tests, is available at
+``Analysis/models/log_reader.py``. A utility showcasing the ``InteractiveModelRunner``,
+which uses this reader as well, is at ``Analysis/models/interactive_host.py``.
+The latter is also used in tests.
+
+There is no C++ implementation of a log reader. We do not have a scenario
+motivating one.
+
+Embeddings
+==========
+
+LLVM provides embedding frameworks to generate vector representations of code
+at different abstraction levels. These embeddings capture syntactic, semantic,
+and structural properties of the code and can be used as features for machine
+learning models in various compiler optimization tasks.
+
+Two embedding frameworks are available:
+
+- **IR2Vec**: Generates embeddings for LLVM IR
+- **MIR2Vec**: Generates embeddings for Machine IR
+
+Both frameworks follow a similar architecture with vocabulary-based embedding
+generation, where a vocabulary maps code entities to n-dimensional floating
+point vectors. These embeddings can be computed at multiple granularity levels
+(instruction, basic block, and function) and used for ML-guided compiler
+optimizations.
+
+IR2Vec
+------
+
+IR2Vec is a program embedding approach designed specifically for LLVM IR. It
+is implemented as a function analysis pass in LLVM. The IR2Vec embeddings
+capture syntactic, semantic, and structural properties of the IR through 
+learned representations. These representations are obtained as a JSON 
+vocabulary that maps the entities of the IR (opcodes, types, operands) to 
+n-dimensional floating point vectors (embeddings). 
+
+With IR2Vec, representation at different granularities of IR, such as
+instructions, functions, and basic blocks, can be obtained. Representations 
+of loops and regions can be derived from these representations, which can be
+useful in different scenarios. The representations can be useful for various
+downstream tasks, including ML-guided compiler optimizations.
+
+The core components are:
+  - **Vocabulary**: A mapping from IR entities (opcodes, types, etc.) to their
+    vector representations. This is managed by ``IR2VecVocabAnalysis``. The 
+    vocabulary (.json file) contains three sections -- Opcodes, Types, and 
+    Arguments, each containing the representations of the corresponding 
+    entities.
+
+    .. note::
+      
+      It is mandatory to have these three sections present in the vocabulary file 
+      for it to be valid; order in which they appear does not matter.
+
+  - **Embedder**: A class (``ir2vec::Embedder``) that uses the vocabulary to
+    compute embeddings for instructions, basic blocks, and functions.
+
+Using IR2Vec
+^^^^^^^^^^^^
+
+.. note::
+
+   This section describes how to use IR2Vec within LLVM passes. A standalone 
+   tool :doc:`CommandGuide/llvm-ir2vec` is available for generating the
+   embeddings and triplets from LLVM IR files, which can be useful for
+   training vocabularies and generating embeddings outside of compiler passes.
+
+For generating embeddings, first the vocabulary should be obtained. Then, the 
+embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
+
+1. **Get the Vocabulary**:
+   In a ModulePass, get the vocabulary analysis result:
+
+   .. code-block:: c++
+
+      auto &VocabRes = MAM.getResult<IR2VecVocabAnalysis>(M);
+      if (!VocabRes.isValid()) {
+        // Handle error: vocabulary is not available or invalid
+        return;
+      }
+      const ir2vec::Vocab &Vocabulary = VocabRes.getVocabulary();
+
+   Note that ``IR2VecVocabAnalysis`` pass is immutable.
+
+2. **Create Embedder instance**:
+   With the vocabulary, create an embedder for a specific function:
+
+   .. code-block:: c++
+
+      // Assuming F is an llvm::Function&
+      // For example, using IR2VecKind::Symbolic:
+      std::unique_ptr<ir2vec::Embedder> Emb =
+          ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
+
+
+3. **Compute and Access Embeddings**:
+   Call ``getFunctionVector()`` to get the embedding for the function. 
+
+   .. code-block:: c++
+
+    ir2vec::Embedding FuncVector = Emb->getFunctionVector();
+
+   Currently, ``Embedder`` can generate embeddings at three levels: Instructions,
+   Basic Blocks, and Functions. Appropriate getters are provided to access the
+   embeddings at these levels.
+
+   .. note::
+
+    The validity of ``Embedder`` instance (and the embeddings it generates) is
+    tied to the function it is associated with remains unchanged. If the function
+    is modified, the embeddings may become stale and should be recomputed accordingly.
+
+4. **Working with Embeddings:**
+   Embeddings are represented as ``std::vector<double>``. These
+   vectors as features for machine learning models, compute similarity scores
+   between different code snippets, or perform other analyses as needed.
+
+Further Details
+^^^^^^^^^^^^^^^
+
+For more detailed information about the IR2Vec algorithm, its parameters, and
+advanced usage, please refer to the original paper:
+`IR2Vec: LLVM IR Based Scalable Program Embeddings <https://doi.org/10.1145/3418463>`_.
+
+For information about using IR2Vec tool for generating embeddings and
+triplets from LLVM IR, see :doc:`CommandGuide/llvm-ir2vec`.
+
+The LLVM source code for ``IR2Vec`` can also be explored to understand the 
+implementation details.
+
+MIR2Vec
+-------
+
+MIR2Vec is an extension of IR2Vec designed specifically for LLVM Machine IR 
+(MIR). It generates embeddings for machine-level instructions, basic blocks, 
+and functions. MIR2Vec operates on the target-specific machine representation,
+capturing machine instruction semantics including opcodes, operands, and 
+register information at the machine level.
+
+MIR2Vec extends the vocabulary to include:
+
+- **Machine Opcodes**: Target-specific instruction opcodes derived from the
+  TargetInstrInfo, grouped by instruction semantics.
+
+- **Common Operands**: All common operand types (excluding register operands),
+  defined by the ``MachineOperand::MachineOperandType`` enum.
+
+- **Physical Register Classes**: Register classes defined by the target,
+  specialized for physical registers.
+
+- **Virtual Register Classes**: Register classes defined by the target,
+  specialized for virtual registers.
+
+The core components are:
+
+- **Vocabulary**: A mapping from machine IR entities (opcodes, operands, register
+  classes) to their vector representations. This is managed by 
+  ``MIR2VecVocabLegacyAnalysis`` for the legacy pass manager, with a 
+  ``MIR2VecVocabProvider`` that can be used standalone or wrapped by pass 
+  managers. The vocabulary (.json file) contains sections for opcodes, common 
+  operands, physical register classes, and virtual register classes.
+
+  .. note::
+    
+    The vocabulary file should contain these sections for it to be valid.
+
+- **Embedder**: A class (``mir2vec::MIREmbedder``) that uses the vocabulary to
+  compute embeddings for machine instructions, machine basic blocks, and 
+  machine functions. Currently, ``SymbolicMIREmbedder`` is the available 
+  implementation.
+
+Using MIR2Vec
+^^^^^^^^^^^^^
+
+.. note::
+
+   This section describes how to use MIR2Vec within LLVM passes. `llvm-ir2vec`
+   tool ` :doc:`CommandGuide/llvm-ir2vec` can be used for generating MIR2Vec
+   embeddings from Machine IR files (.mir), which can be useful for generating
+   embeddings outside of compiler passes.
+
+To generate MIR2Vec embeddings in a compiler pass, first obtain the vocabulary,
+then create an embedder instance to compute and access embeddings.
+
+1. **Get the Vocabulary**:
+   In a MachineFunctionPass, get the vocabulary from the analysis:
+
+   .. code-block:: c++
+
+      auto &VocabAnalysis = getAnalysis<MIR2VecVocabLegacyAnalysis>();
+      auto VocabOrErr = VocabAnalysis.getMIR2VecVocabulary(*MF.getFunction().getParent());
+      if (!VocabOrErr) {
+        // Handle error: vocabulary is not available or invalid
+        return;
+      }
+      const mir2vec::MIRVocabulary &Vocabulary = *VocabOrErr;
+
+   Note that ``MIR2VecVocabLegacyAnalysis`` is an immutable pass.
+
+2. **Create Embedder instance**:
+   With the vocabulary, create an embedder for a specific machine function:
+
+   .. code-block:: c++
+
+      // Assuming MF is a MachineFunction&
+      // For example, using MIR2VecKind::Symbolic:
+      std::unique_ptr<mir2vec::MIREmbedder> Emb =
+          mir2vec::MIREmbedder::create(MIR2VecKind::Symbolic, MF, Vocabulary);
+
+
+3. **Compute and Access Embeddings**:
+   Call ``getMFunctionVector()`` to get the embedding for the machine function.
+
+   .. code-block:: c++
+
+    mir2vec::Embedding FuncVector = Emb->getMFunctionVector();
+
+   Currently, ``MIREmbedder`` can generate embeddings at three levels: Machine
+   Instructions, Machine Basic Blocks, and Machine Functions. Appropriate 
+   getters are provided to access the embeddings at these levels.
+
+   .. note::
+
+    The validity of the ``MIREmbedder`` instance (and the embeddings it 
+    generates) is tied to the machine function it is associated with. If the 
+    machine function is modified, the embeddings may become stale and should 
+    be recomputed accordingly.
+
+4. **Working with Embeddings:**
+   Embeddings are represented as ``std::vector<double>``. These vectors can be
+   used as features for machine learning models, compute similarity scores
+   between different code snippets, or perform other analyses as needed.
+
+Further Details
+^^^^^^^^^^^^^^^
+
+For more detailed information about the MIR2Vec algorithm, its parameters, and
+advanced usage, please refer to the original paper:
+`RL4ReAl: Reinforcement Learning for Register Allocation <https://doi.org/10.1145/3578360.3580273>`_.
+
+For information about using MIR2Vec tool for generating embeddings from
+Machine IR, see :doc:`CommandGuide/llvm-ir2vec`.
+
+The LLVM source code for ``MIR2Vec`` can be explored to understand the 
+implementation details. See ``llvm/include/llvm/CodeGen/MIR2Vec.h`` and 
+``llvm/lib/CodeGen/MIR2Vec.cpp``.
+
+Building with ML support
+========================
+
+.. note::
+  
+  For up to date information on custom builds, see the ``ml-*``
+  `build bots <http://lab.llvm.org>`_. They are set up using 
+  `like this <https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh>`_.
+
+Embed pre-trained models (aka "release" mode)
+---------------------------------------------
+
+This supports the ``ReleaseModeModelRunner`` model runners.
+
+You need a tensorflow pip package for the AOT (ahead-of-time) Saved Model compiler
+and a thin wrapper for the native function generated by it. We currently support
+TF 2.15. We recommend using a Python virtual env (in which case, remember to
+pass ``-DPython3_ROOT_DIR`` to ``cmake``).
+
+Once you install the pip package, find where it was installed:
+
+.. code-block:: console
+
+  TF_PIP=$(sudo -u buildbot python3 -c "import tensorflow as tf; import os; print(os.path.dirname(tf.__file__))")``
+
+Then build LLVM:
+
+.. code-block:: console
+
+  cmake -DTENSORFLOW_AOT_PATH=$TF_PIP \
+    -DLLVM_INLINER_MODEL_PATH=<path to inliner saved model dir> \
+    -DLLVM_RAEVICT_MODEL_PATH=<path to regalloc eviction saved model dir> \
+    <...other options...> 
+
+The example shows the flags for both inlining and regalloc, but either may be
+omitted.
+
+You can also specify a URL for the path, and it is also possible to pre-compile
+the header and object and then just point to the precompiled artifacts. See for
+example ``LLVM_OVERRIDE_MODEL_HEADER_INLINERSIZEMODEL``.
+
+.. note::
+
+  We are transitioning away from the AOT compiler shipping with the
+  tensorflow package, and to a EmitC, in-tree solution, so these details will
+  change soon.
+
+Using TFLite (aka "development" mode)
+-------------------------------------
+
+This supports the ``ModelUnderTrainingRunner`` model runners.
+
+Build the TFLite package using `this script <https://raw.githubusercontent.com/google/ml-compiler-opt/refs/heads/main/buildbot/build_tflite.sh>`_.
+Then, assuming you ran that script in ``/tmp/tflitebuild``, just pass
+``-C /tmp/tflitebuild/tflite.cmake`` to the ``cmake`` for LLVM.
+
+Interactive Mode (for training / research)
+------------------------------------------ 
+
+The ``InteractiveModelRunner`` is available with no extra dependencies. For the
+optimizations that are currently MLGO-enabled, it may be used as follows:
+
+- for inlining: ``-mllvm -enable-ml-inliner=release -mllvm -inliner-interactive-channel-base=<name>``
+- for regalloc eviction: ``-mllvm -regalloc-evict-advisor=release -mllvm -regalloc-evict-interactive-channel-base=<name>``
+
+where the ``name`` is a path fragment. We will expect to find 2 files,
+``<name>.in`` (readable, data incoming from the managing process) and
+``<name>.out`` (writable, the model runner sends data to the managing process)

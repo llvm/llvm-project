@@ -22,7 +22,7 @@ void PythonTestSuite::SetUp() {
   // test suite.
   Py_InitializeEx(0);
   m_gil_state = PyGILState_Ensure();
-  PyRun_SimpleString("import sys");
+  python::RunSimpleString("import sys");
 }
 
 void PythonTestSuite::TearDown() {
@@ -80,20 +80,6 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonCreateCommandObject(
   return python::PythonObject();
 }
 
-python::PythonObject lldb_private::python::SWIGBridge::
-    LLDBSwigPythonCreateScriptedBreakpointResolver(
-        const char *python_class_name, const char *session_dictionary_name,
-        const StructuredDataImpl &args, const lldb::BreakpointSP &bkpt_sp) {
-  return python::PythonObject();
-}
-
-unsigned int
-lldb_private::python::SWIGBridge::LLDBSwigPythonCallBreakpointResolver(
-    void *implementor, const char *method_name,
-    lldb_private::SymbolContext *sym_ctx) {
-  return 0;
-}
-
 size_t lldb_private::python::SWIGBridge::LLDBSwigPython_CalculateNumChildren(
     PyObject *implementor, uint32_t max) {
   return 0;
@@ -104,7 +90,8 @@ PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetChildAtIndex(
   return nullptr;
 }
 
-int lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
+uint32_t
+lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
     PyObject *implementor, const char *child_name) {
   return 0;
 }
@@ -115,6 +102,11 @@ lldb_private::python::LLDBSWIGPython_CastPyObjectToSBData(PyObject *data) {
 }
 
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBBreakpoint(
+    PyObject *data) {
+  return nullptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBBreakpointLocation(
     PyObject *data) {
   return nullptr;
 }
@@ -145,6 +137,16 @@ lldb_private::python::LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data) {
 }
 
 void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrame(PyObject *data) {
+  return nullptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(
+    PyObject *data) {
+  return nullptr;
+}
+
+void *
 lldb_private::python::LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data) {
   return nullptr;
 }
@@ -156,6 +158,11 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(
 
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(
     PyObject *data) {
+  return nullptr;
+}
+
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data) {
   return nullptr;
 }
 
@@ -324,6 +331,11 @@ lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ThreadPlanSP) {
 
 python::PythonObject
 lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ProcessSP) {
+  return python::PythonObject();
+}
+
+python::PythonObject
+lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::StackFrameListSP) {
   return python::PythonObject();
 }
 

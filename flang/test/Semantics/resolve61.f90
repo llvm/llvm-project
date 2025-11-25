@@ -114,7 +114,7 @@ subroutine p12
   type(t2) :: x2
   type(t3) :: x3
   pointer(a, x1)
-  !WARNING: Type of Cray pointee 'x2' is a derived type that is neither SEQUENCE nor BIND(C)
+  !WARNING: Type of Cray pointee 'x2' is a derived type that is neither SEQUENCE nor BIND(C) [-Wnon-sequence-cray-pointee]
   pointer(b, x2)
   pointer(c, x3)
 end

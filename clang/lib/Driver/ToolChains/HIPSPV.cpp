@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPSPV.h"
-#include "CommonArgs.h"
 #include "HIPUtility.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -22,17 +21,6 @@ using namespace clang::driver::toolchains;
 using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
-
-// Convenience function for creating temporary file for both modes of
-// isSaveTempsEnabled().
-static const char *getTempFile(Compilation &C, StringRef Prefix,
-                               StringRef Extension) {
-  if (C.getDriver().isSaveTempsEnabled()) {
-    return C.getArgs().MakeArgString(Prefix + "." + Extension);
-  }
-  auto TmpFile = C.getDriver().GetTemporaryPath(Prefix, Extension);
-  return C.addTempFile(C.getArgs().MakeArgString(TmpFile));
-}
 
 // Locates HIP pass plugin.
 static std::string findPassPlugin(const Driver &D,
@@ -66,12 +54,21 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
 
   assert(!Inputs.empty() && "Must have at least one input.");
   std::string Name = std::string(llvm::sys::path::stem(Output.getFilename()));
-  const char *TempFile = getTempFile(C, Name + "-link", "bc");
+  const char *TempFile = HIP::getTempFile(C, Name + "-link", "bc");
 
   // Link LLVM bitcode.
   ArgStringList LinkArgs{};
+
   for (auto Input : Inputs)
     LinkArgs.push_back(Input.getFilename());
+
+  // Add static device libraries using the common helper function.
+  // This handles unbundling archives (.a) containing bitcode bundles.
+  StringRef Arch = getToolChain().getTriple().getArchName();
+  StringRef Target =
+      "generic"; // SPIR-V is generic, no specific target ID like -mcpu
+  tools::AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkArgs, Arch,
+                                    Target, /*IsBitCodeSDL=*/true);
   LinkArgs.append({"-o", TempFile});
   const char *LlvmLink =
       Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));
@@ -85,7 +82,7 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   auto PassPluginPath = findPassPlugin(C.getDriver(), Args);
   if (!PassPluginPath.empty()) {
     const char *PassPathCStr = C.getArgs().MakeArgString(PassPluginPath);
-    const char *OptOutput = getTempFile(C, Name + "-lower", "bc");
+    const char *OptOutput = HIP::getTempFile(C, Name + "-lower", "bc");
     ArgStringList OptArgs{TempFile,     "-load-pass-plugin",
                           PassPathCStr, "-passes=hip-post-link-passes",
                           "-o",         OptOutput};
@@ -150,11 +147,10 @@ void HIPSPVToolChain::addClangTargetOptions(
     CC1Args.append(
         {"-fvisibility=hidden", "-fapply-global-visibility-to-externs"});
 
-  llvm::for_each(getDeviceLibs(DriverArgs),
-                 [&](const BitCodeLibraryInfo &BCFile) {
-                   CC1Args.append({"-mlink-builtin-bitcode",
-                                   DriverArgs.MakeArgString(BCFile.Path)});
-                 });
+  for (const BitCodeLibraryInfo &BCFile :
+       getDeviceLibs(DriverArgs, DeviceOffloadingKind))
+    CC1Args.append(
+        {"-mlink-builtin-bitcode", DriverArgs.MakeArgString(BCFile.Path)});
 }
 
 Tool *HIPSPVToolChain::buildLinker() const {
@@ -188,7 +184,8 @@ void HIPSPVToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
 
 void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nogpuinc))
+  if (!DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                          true))
     return;
 
   StringRef hipPath = DriverArgs.getLastArgValue(options::OPT_hip_path_EQ);
@@ -202,7 +199,9 @@ void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 }
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-HIPSPVToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
+HIPSPVToolChain::getDeviceLibs(
+    const llvm::opt::ArgList &DriverArgs,
+    const Action::OffloadKind DeviceOffloadingKind) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true))
@@ -212,7 +211,7 @@ HIPSPVToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   // Find device libraries in --hip-device-lib-path and HIP_DEVICE_LIB_PATH.
   auto HipDeviceLibPathArgs = DriverArgs.getAllArgValues(
       // --hip-device-lib-path is alias to this option.
-      clang::driver::options::OPT_rocm_device_lib_path_EQ);
+      options::OPT_rocm_device_lib_path_EQ);
   for (auto Path : HipDeviceLibPathArgs)
     LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
 
@@ -228,7 +227,8 @@ HIPSPVToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   // Maintain compatability with --hip-device-lib.
   auto BCLibArgs = DriverArgs.getAllArgValues(options::OPT_hip_device_lib_EQ);
   if (!BCLibArgs.empty()) {
-    llvm::for_each(BCLibArgs, [&](StringRef BCName) {
+    bool Found = false;
+    for (StringRef BCName : BCLibArgs) {
       StringRef FullName;
       for (std::string LibraryPath : LibraryPaths) {
         SmallString<128> Path(LibraryPath);
@@ -236,11 +236,13 @@ HIPSPVToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
         FullName = Path;
         if (llvm::sys::fs::exists(FullName)) {
           BCLibs.emplace_back(FullName.str());
-          return;
+          Found = true;
+          break;
         }
       }
-      getDriver().Diag(diag::err_drv_no_such_file) << BCName;
-    });
+      if (!Found)
+        getDriver().Diag(diag::err_drv_no_such_file) << BCName;
+    }
   } else {
     // Search device library named as 'hipspv-<triple>.bc'.
     auto TT = getTriple().normalize();

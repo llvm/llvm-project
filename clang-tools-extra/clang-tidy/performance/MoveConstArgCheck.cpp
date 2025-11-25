@@ -1,4 +1,4 @@
-//===--- MoveConstArgCheck.cpp - clang-tidy -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,10 +19,10 @@ static void replaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
                                const LangOptions &LangOpts) {
   const Expr *Arg = Call->getArg(0);
 
-  CharSourceRange BeforeArgumentsRange = Lexer::makeFileCharRange(
+  const CharSourceRange BeforeArgumentsRange = Lexer::makeFileCharRange(
       CharSourceRange::getCharRange(Call->getBeginLoc(), Arg->getBeginLoc()),
       SM, LangOpts);
-  CharSourceRange AfterArgumentsRange = Lexer::makeFileCharRange(
+  const CharSourceRange AfterArgumentsRange = Lexer::makeFileCharRange(
       CharSourceRange::getCharRange(Call->getEndLoc(),
                                     Call->getEndLoc().getLocWithOffset(1)),
       SM, LangOpts);
@@ -78,9 +78,9 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-bool isRValueReferenceParam(const Expr *Invocation,
-                            const QualType *InvocationParmType,
-                            const Expr *Arg) {
+static bool isRValueReferenceParam(const Expr *Invocation,
+                                   const QualType *InvocationParmType,
+                                   const Expr *Arg) {
   if (Invocation && (*InvocationParmType)->isRValueReferenceType() &&
       Arg->isLValue()) {
     if (!Invocation->getType()->isRecordType())
@@ -114,17 +114,18 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
 
   const Expr *Arg = CallMove->getArg(0);
   const QualType ArgType = Arg->getType().getCanonicalType();
-  SourceManager &SM = Result.Context->getSourceManager();
+  const SourceManager &SM = Result.Context->getSourceManager();
 
-  CharSourceRange MoveRange =
+  const CharSourceRange MoveRange =
       CharSourceRange::getCharRange(CallMove->getSourceRange());
-  CharSourceRange FileMoveRange =
+  const CharSourceRange FileMoveRange =
       Lexer::makeFileCharRange(MoveRange, SM, getLangOpts());
   if (!FileMoveRange.isValid())
     return;
 
-  bool IsConstArg = ArgType.isConstQualified();
-  bool IsTriviallyCopyable = ArgType.isTriviallyCopyableType(*Result.Context);
+  const bool IsConstArg = ArgType.isConstQualified();
+  const bool IsTriviallyCopyable =
+      ArgType.isTriviallyCopyableType(*Result.Context);
 
   if (IsConstArg || IsTriviallyCopyable) {
     if (const CXXRecordDecl *R = ArgType->getAsCXXRecordDecl()) {
@@ -143,10 +144,10 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
     if (!IsConstArg && IsTriviallyCopyable && !CheckTriviallyCopyableMove)
       return;
 
-    bool IsVariable = isa<DeclRefExpr>(Arg);
+    const bool IsVariable = isa<DeclRefExpr>(Arg);
     // std::move shouldn't be removed when an lvalue wrapped by std::move is
     // passed to the function with an rvalue reference parameter.
-    bool IsRVRefParam =
+    const bool IsRVRefParam =
         isRValueReferenceParam(ReceivingExpr, InvocationParmType, Arg);
     const auto *Var =
         IsVariable ? dyn_cast<DeclRefExpr>(Arg)->getDecl() : nullptr;

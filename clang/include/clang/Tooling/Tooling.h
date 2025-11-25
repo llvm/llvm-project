@@ -32,6 +32,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
@@ -239,7 +240,8 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     const FileContentMappings &VirtualMappedFiles = FileContentMappings(),
     DiagnosticConsumer *DiagConsumer = nullptr,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS =
-        llvm::vfs::getRealFileSystem());
+        llvm::vfs::getRealFileSystem(),
+    CaptureDiagsKind CaptureKind = CaptureDiagsKind::None);
 
 /// Utility to run a FrontendAction in a single clang invocation.
 class ToolInvocation {

@@ -100,9 +100,8 @@ define i32 @foo7(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    subs w8, w0, w1
 ; CHECK-NEXT:    cneg w9, w8, mi
 ; CHECK-NEXT:    cmn w8, #1
-; CHECK-NEXT:    csel w10, w9, w0, lt
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csel w0, w10, w9, ge
+; CHECK-NEXT:    csel w8, w9, w0, lt
+; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
 entry:
   %sub = sub nsw i32 %a, %b

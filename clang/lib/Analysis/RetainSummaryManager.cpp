@@ -12,13 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Analysis/RetainSummaryManager.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/ParentMap.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include <optional>
 
 using namespace clang;
@@ -148,8 +147,7 @@ static bool isSubclass(const Decl *D,
 
 static bool isExactClass(const Decl *D, StringRef ClassName) {
   using namespace ast_matchers;
-  DeclarationMatcher sameClassM =
-      cxxRecordDecl(hasName(std::string(ClassName)));
+  DeclarationMatcher sameClassM = cxxRecordDecl(hasName(ClassName));
   return !(match(sameClassM, *D, D->getASTContext()).empty());
 }
 

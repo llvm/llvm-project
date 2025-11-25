@@ -133,17 +133,17 @@ void RTDEF(AllocatableApplyMold)(
   }
 }
 
-int RTDEF(AllocatableAllocate)(Descriptor &descriptor, std::int64_t asyncId,
-    bool hasStat, const Descriptor *errMsg, const char *sourceFile,
-    int sourceLine) {
+int RTDEF(AllocatableAllocate)(Descriptor &descriptor,
+    std::int64_t *asyncObject, bool hasStat, const Descriptor *errMsg,
+    const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   if (!descriptor.IsAllocatable()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
   } else if (descriptor.IsAllocated()) {
     return ReturnError(terminator, StatBaseNotNull, errMsg, hasStat);
   } else {
-    int stat{
-        ReturnError(terminator, descriptor.Allocate(asyncId), errMsg, hasStat)};
+    int stat{ReturnError(
+        terminator, descriptor.Allocate(asyncObject), errMsg, hasStat)};
     if (stat == StatOk) {
       if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
         if (const auto *derived{addendum->derivedType()}) {
@@ -162,9 +162,29 @@ int RTDEF(AllocatableAllocateSource)(Descriptor &alloc,
     const Descriptor &source, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
   int stat{RTNAME(AllocatableAllocate)(
-      alloc, /*asyncId=*/-1, hasStat, errMsg, sourceFile, sourceLine)};
+      alloc, /*asyncObject=*/nullptr, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
+    if (alloc.rank() != source.rank() && source.rank() != 0) {
+      terminator.Crash("ALLOCATE object has rank %d while SOURCE= has rank %d",
+          alloc.rank(), source.rank());
+    }
+    if (int rank{source.rank()}; rank > 0) {
+      SubscriptValue allocExtent[maxRank], sourceExtent[maxRank];
+      alloc.GetShape(allocExtent);
+      source.GetShape(sourceExtent);
+      for (int j{0}; j < rank; ++j) {
+        if (allocExtent[j] != sourceExtent[j]) {
+          if (!hasStat) {
+            terminator.Crash("ALLOCATE object has extent %jd on dimension %d, "
+                             "but SOURCE= has extent %jd",
+                static_cast<std::intmax_t>(allocExtent[j]), j + 1,
+                static_cast<std::intmax_t>(sourceExtent[j]));
+          }
+          return StatInvalidExtent;
+        }
+      }
+    }
     DoFromSourceAssign(alloc, source, terminator);
   }
   return stat;

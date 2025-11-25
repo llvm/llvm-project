@@ -20,9 +20,11 @@
 #include "llvm/IR/VFABIDemangler.h"
 #include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/CheckedArithmetic.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class TargetLibraryInfo;
+class IntrinsicInst;
 
 /// The Vector Function Database.
 ///
@@ -134,7 +136,7 @@ typedef unsigned ID;
 /// isVectorIntrinsicWithScalarOpAtArg) for the vector form of the intrinsic.
 ///
 /// Note: isTriviallyVectorizable implies isTriviallyScalarizable.
-bool isTriviallyVectorizable(Intrinsic::ID ID);
+LLVM_ABI bool isTriviallyVectorizable(Intrinsic::ID ID);
 
 /// Identify if the intrinsic is trivially scalarizable.
 /// This method returns true following the same predicates of
@@ -143,49 +145,62 @@ bool isTriviallyVectorizable(Intrinsic::ID ID);
 /// Note: There are intrinsics where implementing vectorization for the
 /// intrinsic is redundant, but we want to implement scalarization of the
 /// vector. To prevent the requirement that an intrinsic also implements
-/// vectorization we provide this seperate function.
-bool isTriviallyScalarizable(Intrinsic::ID ID, const TargetTransformInfo *TTI);
+/// vectorization we provide this separate function.
+LLVM_ABI bool isTriviallyScalarizable(Intrinsic::ID ID,
+                                      const TargetTransformInfo *TTI);
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 /// \p TTI is used to consider target specific intrinsics, if no target specific
 /// intrinsics will be considered then it is appropriate to pass in nullptr.
-bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID, unsigned ScalarOpdIdx,
-                                        const TargetTransformInfo *TTI);
+LLVM_ABI bool
+isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID, unsigned ScalarOpdIdx,
+                                   const TargetTransformInfo *TTI);
 
 /// Identifies if the vector form of the intrinsic is overloaded on the type of
 /// the operand at index \p OpdIdx, or on the return type if \p OpdIdx is -1.
 /// \p TTI is used to consider target specific intrinsics, if no target specific
 /// intrinsics will be considered then it is appropriate to pass in nullptr.
-bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
-                                            const TargetTransformInfo *TTI);
+LLVM_ABI bool
+isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
+                                       const TargetTransformInfo *TTI);
 
 /// Identifies if the vector form of the intrinsic that returns a struct is
 /// overloaded at the struct element index \p RetIdx. /// \p TTI is used to
 /// consider target specific intrinsics, if no target specific intrinsics
 /// will be considered then it is appropriate to pass in nullptr.
-bool isVectorIntrinsicWithStructReturnOverloadAtField(
+LLVM_ABI bool isVectorIntrinsicWithStructReturnOverloadAtField(
     Intrinsic::ID ID, int RetIdx, const TargetTransformInfo *TTI);
 
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
 /// its intrinsic ID, in case it does not found it return not_intrinsic.
-Intrinsic::ID getVectorIntrinsicIDForCall(const CallInst *CI,
-                                          const TargetLibraryInfo *TLI);
+LLVM_ABI Intrinsic::ID
+getVectorIntrinsicIDForCall(const CallInst *CI, const TargetLibraryInfo *TLI);
+
+/// Returns the corresponding factor of llvm.vector.interleaveN intrinsics.
+LLVM_ABI unsigned getInterleaveIntrinsicFactor(Intrinsic::ID ID);
+
+/// Returns the corresponding factor of llvm.vector.deinterleaveN intrinsics.
+LLVM_ABI unsigned getDeinterleaveIntrinsicFactor(Intrinsic::ID ID);
+
+/// Given a deinterleaveN intrinsic, return the (narrow) vector type of each
+/// factor.
+LLVM_ABI VectorType *getDeinterleavedVectorType(IntrinsicInst *DI);
 
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
 /// from the vector.
-Value *findScalarElement(Value *V, unsigned EltNo);
+LLVM_ABI Value *findScalarElement(Value *V, unsigned EltNo);
 
 /// If all non-negative \p Mask elements are the same value, return that value.
 /// If all elements are negative (undefined) or \p Mask contains different
 /// non-negative values, return -1.
-int getSplatIndex(ArrayRef<int> Mask);
+LLVM_ABI int getSplatIndex(ArrayRef<int> Mask);
 
 /// Get splat value if the input is a splat vector or return nullptr.
 /// The value may be extracted from a splat constants vector or from
 /// a sequence of instructions that broadcast a single value into a vector.
-Value *getSplatValue(const Value *V);
+LLVM_ABI Value *getSplatValue(const Value *V);
 
 /// Return true if each element of the vector value \p V is poisoned or equal to
 /// every other non-poisoned element. If an index element is specified, either
@@ -193,15 +208,16 @@ Value *getSplatValue(const Value *V);
 /// poisoned and equal to every other non-poisoned element.
 /// This may be more powerful than the related getSplatValue() because it is
 /// not limited by finding a scalar source value to a splatted vector.
-bool isSplatValue(const Value *V, int Index = -1, unsigned Depth = 0);
+LLVM_ABI bool isSplatValue(const Value *V, int Index = -1, unsigned Depth = 0);
 
 /// Transform a shuffle mask's output demanded element mask into demanded
 /// element masks for the 2 operands, returns false if the mask isn't valid.
 /// Both \p DemandedLHS and \p DemandedRHS are initialised to [SrcWidth].
 /// \p AllowUndefElts permits "-1" indices to be treated as undef.
-bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
-                            const APInt &DemandedElts, APInt &DemandedLHS,
-                            APInt &DemandedRHS, bool AllowUndefElts = false);
+LLVM_ABI bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
+                                     const APInt &DemandedElts,
+                                     APInt &DemandedLHS, APInt &DemandedRHS,
+                                     bool AllowUndefElts = false);
 
 /// Does this shuffle mask represent either one slide shuffle or a pair of
 /// two slide shuffles, combined with a select on some constant vector mask?
@@ -209,8 +225,8 @@ bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
 /// the vector, with all other elements being undefined.  An identity shuffle
 /// will be matched a slide by 0.  The output parameter provides the source
 /// (-1 means no source), and slide direction for each slide.
-bool isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
-                       std::array<std::pair<int, int>, 2> &SrcInfo);
+LLVM_ABI bool isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
+                                std::array<std::pair<int, int>, 2> &SrcInfo);
 
 /// Replace each shuffle mask index with the scaled sequential indices for an
 /// equivalent mask of narrowed elements. Mask elements that are less than 0
@@ -223,8 +239,8 @@ bool isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
 /// This is the reverse process of widening shuffle mask elements, but it always
 /// succeeds because the indexes can always be multiplied (scaled up) to map to
 /// narrower vector elements.
-void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
-                           SmallVectorImpl<int> &ScaledMask);
+LLVM_ABI void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
+                                    SmallVectorImpl<int> &ScaledMask);
 
 /// Try to transform a shuffle mask by replacing elements with the scaled index
 /// for an equivalent mask of widened elements. If all mask elements that would
@@ -241,27 +257,28 @@ void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 /// This is the reverse process of narrowing shuffle mask elements if it
 /// succeeds. This transform is not always possible because indexes may not
 /// divide evenly (scale down) to map to wider vector elements.
-bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
-                          SmallVectorImpl<int> &ScaledMask);
+LLVM_ABI bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
+                                   SmallVectorImpl<int> &ScaledMask);
 
 /// A variant of the previous method which is specialized for Scale=2, and
 /// treats -1 as undef and allows widening when a wider element is partially
 /// undef in the narrow form of the mask.  This transformation discards
 /// information about which bytes in the original shuffle were undef.
-bool widenShuffleMaskElts(ArrayRef<int> M, SmallVectorImpl<int> &NewMask);
+LLVM_ABI bool widenShuffleMaskElts(ArrayRef<int> M,
+                                   SmallVectorImpl<int> &NewMask);
 
 /// Attempt to narrow/widen the \p Mask shuffle mask to the \p NumDstElts target
 /// width. Internally this will call narrowShuffleMaskElts/widenShuffleMaskElts.
 /// This will assert unless NumDstElts is a multiple of Mask.size (or
 /// vice-versa). Returns false on failure, and ScaledMask will be in an
 /// undefined state.
-bool scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
-                          SmallVectorImpl<int> &ScaledMask);
+LLVM_ABI bool scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
+                                   SmallVectorImpl<int> &ScaledMask);
 
 /// Repetitively apply `widenShuffleMaskElts()` for as long as it succeeds,
 /// to get the shuffle mask with widest possible elements.
-void getShuffleMaskWithWidestElts(ArrayRef<int> Mask,
-                                  SmallVectorImpl<int> &ScaledMask);
+LLVM_ABI void getShuffleMaskWithWidestElts(ArrayRef<int> Mask,
+                                           SmallVectorImpl<int> &ScaledMask);
 
 /// Splits and processes shuffle mask depending on the number of input and
 /// output registers. The function does 2 main things: 1) splits the
@@ -275,7 +292,7 @@ void getShuffleMaskWithWidestElts(ArrayRef<int> Mask,
 /// \param NumOfSrcRegs Number of source registers.
 /// \param NumOfDestRegs Number of destination registers.
 /// \param NumOfUsedRegs Number of actually used destination registers.
-void processShuffleMasks(
+LLVM_ABI void processShuffleMasks(
     ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
@@ -294,10 +311,10 @@ void processShuffleMasks(
 /// \param DemandedElts   the demanded elements mask for the operation
 /// \param DemandedLHS    the demanded elements mask for the left operand
 /// \param DemandedRHS    the demanded elements mask for the right operand
-void getHorizDemandedEltsForFirstOperand(unsigned VectorBitWidth,
-                                         const APInt &DemandedElts,
-                                         APInt &DemandedLHS,
-                                         APInt &DemandedRHS);
+LLVM_ABI void getHorizDemandedEltsForFirstOperand(unsigned VectorBitWidth,
+                                                  const APInt &DemandedElts,
+                                                  APInt &DemandedLHS,
+                                                  APInt &DemandedRHS);
 
 /// Compute a map of integer instructions to their minimum legal type
 /// size.
@@ -333,16 +350,15 @@ void getHorizDemandedEltsForFirstOperand(unsigned VectorBitWidth,
 ///
 /// If the optional TargetTransformInfo is provided, this function tries harder
 /// to do less work by only looking at illegal types.
-MapVector<Instruction*, uint64_t>
-computeMinimumValueSizes(ArrayRef<BasicBlock*> Blocks,
-                         DemandedBits &DB,
-                         const TargetTransformInfo *TTI=nullptr);
+LLVM_ABI MapVector<Instruction *, uint64_t>
+computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
+                         const TargetTransformInfo *TTI = nullptr);
 
 /// Compute the union of two access-group lists.
 ///
 /// If the list contains just one access group, it is returned directly. If the
 /// list is empty, returns nullptr.
-MDNode *uniteAccessGroups(MDNode *AccGroups1, MDNode *AccGroups2);
+LLVM_ABI MDNode *uniteAccessGroups(MDNode *AccGroups1, MDNode *AccGroups2);
 
 /// Compute the access-group list of access groups that @p Inst1 and @p Inst2
 /// are both in. If either instruction does not access memory at all, it is
@@ -350,14 +366,14 @@ MDNode *uniteAccessGroups(MDNode *AccGroups1, MDNode *AccGroups2);
 ///
 /// If the list contains just one access group, it is returned directly. If the
 /// list is empty, returns nullptr.
-MDNode *intersectAccessGroups(const Instruction *Inst1,
-                              const Instruction *Inst2);
+LLVM_ABI MDNode *intersectAccessGroups(const Instruction *Inst1,
+                                       const Instruction *Inst2);
 
 /// Add metadata from \p Inst to \p Metadata, if it can be preserved after
 /// vectorization. It can be preserved after vectorization if the kind is one of
 /// [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath, MD_nontemporal,
 /// MD_access_group, MD_mmra].
-void getMetadataToPropagate(
+LLVM_ABI void getMetadataToPropagate(
     Instruction *Inst,
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata);
 
@@ -369,7 +385,7 @@ void getMetadataToPropagate(
 /// metadata for M equal to the intersection value.
 ///
 /// This function always sets a (possibly null) value for each K in Kinds.
-Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
+LLVM_ABI Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
 
 /// Create a mask that filters the members of an interleave group where there
 /// are gaps.
@@ -382,8 +398,9 @@ Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
 /// Note: The result is a mask of 0's and 1's, as opposed to the other
 /// create[*]Mask() utilities which create a shuffle mask (mask that
 /// consists of indices).
-Constant *createBitMaskForGaps(IRBuilderBase &Builder, unsigned VF,
-                               const InterleaveGroup<Instruction> &Group);
+LLVM_ABI Constant *
+createBitMaskForGaps(IRBuilderBase &Builder, unsigned VF,
+                     const InterleaveGroup<Instruction> &Group);
 
 /// Create a mask with replicated elements.
 ///
@@ -397,8 +414,8 @@ Constant *createBitMaskForGaps(IRBuilderBase &Builder, unsigned VF,
 /// For example, the mask for \p ReplicationFactor=3 and \p VF=4 is:
 ///
 ///   <0,0,0,1,1,1,2,2,2,3,3,3>
-llvm::SmallVector<int, 16> createReplicatedMask(unsigned ReplicationFactor,
-                                                unsigned VF);
+LLVM_ABI llvm::SmallVector<int, 16>
+createReplicatedMask(unsigned ReplicationFactor, unsigned VF);
 
 /// Create an interleave shuffle mask.
 ///
@@ -411,7 +428,8 @@ llvm::SmallVector<int, 16> createReplicatedMask(unsigned ReplicationFactor,
 /// For example, the mask for VF = 4 and NumVecs = 2 is:
 ///
 ///   <0, 4, 1, 5, 2, 6, 3, 7>.
-llvm::SmallVector<int, 16> createInterleaveMask(unsigned VF, unsigned NumVecs);
+LLVM_ABI llvm::SmallVector<int, 16> createInterleaveMask(unsigned VF,
+                                                         unsigned NumVecs);
 
 /// Create a stride shuffle mask.
 ///
@@ -425,8 +443,8 @@ llvm::SmallVector<int, 16> createInterleaveMask(unsigned VF, unsigned NumVecs);
 /// For example, the mask for Start = 0, Stride = 2, and VF = 4 is:
 ///
 ///   <0, 2, 4, 6>
-llvm::SmallVector<int, 16> createStrideMask(unsigned Start, unsigned Stride,
-                                            unsigned VF);
+LLVM_ABI llvm::SmallVector<int, 16>
+createStrideMask(unsigned Start, unsigned Stride, unsigned VF);
 
 /// Create a sequential shuffle mask.
 ///
@@ -439,14 +457,14 @@ llvm::SmallVector<int, 16> createStrideMask(unsigned Start, unsigned Stride,
 /// For example, the mask for Start = 0, NumInsts = 4, and NumUndefs = 4 is:
 ///
 ///   <0, 1, 2, 3, undef, undef, undef, undef>
-llvm::SmallVector<int, 16>
+LLVM_ABI llvm::SmallVector<int, 16>
 createSequentialMask(unsigned Start, unsigned NumInts, unsigned NumUndefs);
 
 /// Given a shuffle mask for a binary shuffle, create the equivalent shuffle
 /// mask assuming both operands are identical. This assumes that the unary
 /// shuffle will use elements from operand 0 (operand 1 will be unused).
-llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
-                                           unsigned NumElts);
+LLVM_ABI llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
+                                                    unsigned NumElts);
 
 /// Concatenate a list of vectors.
 ///
@@ -455,26 +473,27 @@ llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
 /// their element types should be the same. The number of elements in the
 /// vectors should also be the same; however, if the last vector has fewer
 /// elements, it will be padded with undefs.
-Value *concatenateVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vecs);
+LLVM_ABI Value *concatenateVectors(IRBuilderBase &Builder,
+                                   ArrayRef<Value *> Vecs);
 
 /// Given a mask vector of i1, Return true if all of the elements of this
 /// predicate mask are known to be false or undef.  That is, return true if all
 /// lanes can be assumed inactive.
-bool maskIsAllZeroOrUndef(Value *Mask);
+LLVM_ABI bool maskIsAllZeroOrUndef(Value *Mask);
 
 /// Given a mask vector of i1, Return true if all of the elements of this
 /// predicate mask are known to be true or undef.  That is, return true if all
 /// lanes can be assumed active.
-bool maskIsAllOneOrUndef(Value *Mask);
+LLVM_ABI bool maskIsAllOneOrUndef(Value *Mask);
 
 /// Given a mask vector of i1, Return true if any of the elements of this
 /// predicate mask are known to be true or undef.  That is, return true if at
 /// least one lane can be assumed active.
-bool maskContainsAllOneOrUndef(Value *Mask);
+LLVM_ABI bool maskContainsAllOneOrUndef(Value *Mask);
 
 /// Given a mask vector of the form <Y x i1>, return an APInt (of bitwidth Y)
 /// for each lane which may be active.
-APInt possiblyDemandedEltsInMask(Value *Mask);
+LLVM_ABI APInt possiblyDemandedEltsInMask(Value *Mask);
 
 /// The group of interleaved loads/stores sharing the same stride and
 /// close to each other.
@@ -614,6 +633,9 @@ public:
     return true;
   }
 
+  /// Return true if this group is full, i.e. it has no gaps.
+  bool isFull() const { return getNumMembers() == getFactor(); }
+
 private:
   uint32_t Factor; // Interleave Factor.
   bool Reverse;
@@ -657,7 +679,7 @@ public:
   /// groups. Substitute symbolic strides using \p Strides.
   /// Consider also predicated loads/stores in the analysis if
   /// \p EnableMaskedInterleavedGroup is true.
-  void analyzeInterleaving(bool EnableMaskedInterleavedGroup);
+  LLVM_ABI void analyzeInterleaving(bool EnableMaskedInterleavedGroup);
 
   /// Invalidate groups, e.g., in case all blocks in loop will be predicated
   /// contrary to original assumption. Although we currently prevent group
@@ -705,7 +727,7 @@ public:
   /// Invalidate groups that require a scalar epilogue (due to gaps). This can
   /// happen when optimizing for size forbids a scalar epilogue, and the gap
   /// cannot be filtered by masking the load/store.
-  void invalidateGroupsRequiringScalarEpilogue();
+  LLVM_ABI void invalidateGroupsRequiringScalarEpilogue();
 
   /// Returns true if we have any interleave groups.
   bool hasGroups() const { return !InterleaveGroups.empty(); }
@@ -794,7 +816,7 @@ private:
       const DenseMap<Value *, const SCEV *> &Strides);
 
   /// Returns true if \p Stride is allowed in an interleaved group.
-  static bool isStrided(int Stride);
+  LLVM_ABI static bool isStrided(int Stride);
 
   /// Returns true if \p BB is a predicated block.
   bool isPredicated(BasicBlock *BB) const {

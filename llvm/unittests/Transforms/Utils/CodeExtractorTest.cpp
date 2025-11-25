@@ -154,13 +154,13 @@ TEST(CodeExtractor, ExitBlockOrderingPhis) {
       %0 = alloca i32, align 4
       br label %test0
     test0:
-      %c = load i32, i32* %0, align 4
+      %c = load i32, ptr %0, align 4
       br label %test1
     test1:
-      %e = load i32, i32* %0, align 4
+      %e = load i32, ptr %0, align 4
       br i1 true, label %first, label %test
     test:
-      %d = load i32, i32* %0, align 4
+      %d = load i32, ptr %0, align 4
       br i1 true, label %first, label %next
     first:
       %1 = phi i32 [ %c, %test ], [ %e, %test1 ]
@@ -212,13 +212,13 @@ TEST(CodeExtractor, ExitBlockOrdering) {
       %0 = alloca i32, align 4
       br label %test0
     test0:
-      %c = load i32, i32* %0, align 4
+      %c = load i32, ptr %0, align 4
       br label %test1
     test1:
-      %e = load i32, i32* %0, align 4
+      %e = load i32, ptr %0, align 4
       br i1 true, label %first, label %test
     test:
-      %d = load i32, i32* %0, align 4
+      %d = load i32, ptr %0, align 4
       br i1 true, label %first, label %next
     first:
       ret void
@@ -317,7 +317,7 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
   std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
     declare i8 @hoge()
 
-    define i32 @foo() personality i8* null {
+    define i32 @foo() personality ptr null {
       entry:
         %call = invoke i8 @hoge()
                 to label %invoke.cont unwind label %lpad
@@ -326,8 +326,8 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
         unreachable
 
       lpad:                                             ; preds = %entry
-        %0 = landingpad { i8*, i32 }
-                catch i8* null
+        %0 = landingpad { ptr, i32 }
+                catch ptr null
         br i1 undef, label %catch, label %finally.catchall
 
       catch:                                            ; preds = %lpad
@@ -342,13 +342,13 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
         unreachable
 
       lpad2:                                           ; preds = %invoke.cont2, %catch
-        %ex.1 = phi i8* [ undef, %invoke.cont2 ], [ null, %catch ]
-        %1 = landingpad { i8*, i32 }
-                catch i8* null
+        %ex.1 = phi ptr [ undef, %invoke.cont2 ], [ null, %catch ]
+        %1 = landingpad { ptr, i32 }
+                catch ptr null
         br label %finally.catchall
 
       finally.catchall:                                 ; preds = %lpad33, %lpad
-        %ex.2 = phi i8* [ %ex.1, %lpad2 ], [ null, %lpad ]
+        %ex.2 = phi ptr [ %ex.1, %lpad2 ], [ null, %lpad ]
         unreachable
     }
   )invalid", Err, Ctx));
@@ -384,7 +384,7 @@ TEST(CodeExtractor, StoreOutputInvokeResultInExitStub) {
   std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
     declare i32 @bar()
 
-    define i32 @foo() personality i8* null {
+    define i32 @foo() personality ptr null {
     entry:
       %0 = invoke i32 @bar() to label %exit unwind label %lpad
 
@@ -392,9 +392,9 @@ TEST(CodeExtractor, StoreOutputInvokeResultInExitStub) {
       ret i32 %0
 
     lpad:
-      %1 = landingpad { i8*, i32 }
+      %1 = landingpad { ptr, i32 }
               cleanup
-      resume { i8*, i32 } %1
+      resume { ptr, i32 } %1
     }
   )invalid",
                                                 Err, Ctx));
@@ -421,7 +421,7 @@ TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
         target triple = "aarch64"
 
         %b = type { i64 }
-        declare void @g(i8*)
+        declare void @g(ptr)
 
         declare void @llvm.assume(i1) #0
 
@@ -430,9 +430,9 @@ TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
           br label %label
 
         label:
-          %0 = load %b*, %b** inttoptr (i64 8 to %b**), align 8
-          %1 = getelementptr inbounds %b, %b* %0, i64 undef, i32 0
-          %2 = load i64, i64* %1, align 8
+          %0 = load ptr, ptr inttoptr (i64 8 to ptr), align 8
+          %1 = getelementptr inbounds %b, ptr %0, i64 undef, i32 0
+          %2 = load i64, ptr %1, align 8
           %3 = icmp ugt i64 %2, 1
           br i1 %3, label %if.then, label %if.else
 
@@ -440,8 +440,8 @@ TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
           unreachable
 
         if.else:
-          call void @g(i8* undef)
-          store i64 undef, i64* null, align 536870912
+          call void @g(ptr undef)
+          store i64 undef, ptr null, align 536870912
           %4 = icmp eq i64 %2, 0
           call void @llvm.assume(i1 %4)
           unreachable
@@ -473,9 +473,9 @@ TEST(CodeExtractor, RemoveBitcastUsesFromOuterLifetimeMarkers) {
     target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
     target triple = "x86_64-unknown-linux-gnu"
 
-    declare void @use(i32*)
-    declare void @llvm.lifetime.start.p0i8(i64, i8*)
-    declare void @llvm.lifetime.end.p0i8(i64, i8*)
+    declare void @use(ptr)
+    declare void @llvm.lifetime.start.p0i8(i64, ptr)
+    declare void @llvm.lifetime.end.p0i8(i64, ptr)
 
     define void @foo() {
     entry:
@@ -483,14 +483,14 @@ TEST(CodeExtractor, RemoveBitcastUsesFromOuterLifetimeMarkers) {
       br label %extract
 
     extract:
-      %1 = bitcast i32* %0 to i8*
-      call void @llvm.lifetime.start.p0i8(i64 4, i8* %1)
-      call void @use(i32* %0)
+      %1 = bitcast ptr %0 to ptr
+      call void @llvm.lifetime.start.p0i8(i64 4, ptr %1)
+      call void @use(ptr %0)
       br label %exit
 
     exit:
-      call void @use(i32* %0)
-      call void @llvm.lifetime.end.p0i8(i64 4, i8* %1)
+      call void @use(ptr %0)
+      call void @llvm.lifetime.end.p0i8(i64 4, ptr %1)
       ret void
     }
   )ir",
@@ -677,7 +677,7 @@ TEST(CodeExtractor, OpenMPAggregateArgs) {
   LLVMContext Ctx;
   SMDiagnostic Err;
   std::unique_ptr<Module> M(parseAssemblyString(R"ir(
-    target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
+    target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
     target triple = "amdgcn-amd-amdhsa"
 
     define void @foo(ptr %0) {

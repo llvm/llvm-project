@@ -19,6 +19,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
 
@@ -27,7 +28,7 @@ namespace llvm {
 class MCRegisterInfo;
 class Triple;
 
-class MCInstrAnalysis {
+class LLVM_ABI MCInstrAnalysis {
 protected:
   friend class Target;
 
@@ -78,6 +79,10 @@ public:
 
   virtual bool isTerminator(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).isTerminator();
+  }
+
+  virtual bool isBarrier(const MCInst &Inst) const {
+    return Info->get(Inst.getOpcode()).isBarrier();
   }
 
   virtual bool mayAffectControlFlow(const MCInst &Inst,

@@ -53,8 +53,8 @@ define i32 @shfl_down4(i32 %in, i32 %width, i32 %mask) {
 ; Try shfl.down with floating-point params.
 ; CHECK-LABEL: .func{{.*}}shfl_down_float
 define float @shfl_down_float(float %in) {
-  ; CHECK: ld.param.b32 [[IN:%f[0-9]+]]
-  ; CHECK: shfl.down.b32 [[OUT:%f[0-9]+]], [[IN]], 5, 6;
+  ; CHECK: ld.param.b32 [[IN:%r[0-9]+]]
+  ; CHECK: shfl.down.b32 [[OUT:%r[0-9]+]], [[IN]], 5, 6;
   ; CHECK: st.param.{{.}}32 {{.*}}, [[OUT]]
   %out = call float @llvm.nvvm.shfl.down.f32(float %in, i32 5, i32 6)
   ret float %out
@@ -67,7 +67,7 @@ define void @shfl_rest(i32 %in_i32, float %in_float, ptr %out_i32, ptr %out_floa
   %up_i32 = call i32 @llvm.nvvm.shfl.up.i32(i32 %in_i32, i32 1, i32 2)
   store i32 %up_i32, ptr %out_i32
 
-  ; CHECK: shfl.up.b32 %f{{[0-9]+}}, %f{{[0-9]+}}, 3, 4;
+  ; CHECK: shfl.up.b32 %r{{[0-9]+}}, %r{{[0-9]+}}, 3, 4;
   %up_float = call float @llvm.nvvm.shfl.up.f32(float %in_float, i32 3, i32 4)
   store float %up_float, ptr %out_float
 
@@ -75,7 +75,7 @@ define void @shfl_rest(i32 %in_i32, float %in_float, ptr %out_i32, ptr %out_floa
   %bfly_i32 = call i32 @llvm.nvvm.shfl.bfly.i32(i32 %in_i32, i32 5, i32 6)
   store i32 %bfly_i32, ptr %out_i32
 
-  ; CHECK: shfl.bfly.b32 %f{{[0-9]+}}, %f{{[0-9]+}}, 7, 8;
+  ; CHECK: shfl.bfly.b32 %r{{[0-9]+}}, %r{{[0-9]+}}, 7, 8;
   %bfly_float = call float @llvm.nvvm.shfl.bfly.f32(float %in_float, i32 7, i32 8)
   store float %bfly_float, ptr %out_float
 
@@ -83,7 +83,7 @@ define void @shfl_rest(i32 %in_i32, float %in_float, ptr %out_i32, ptr %out_floa
   %idx_i32 = call i32 @llvm.nvvm.shfl.idx.i32(i32 %in_i32, i32 9, i32 10)
   store i32 %idx_i32, ptr %out_i32
 
-  ; CHECK: shfl.idx.b32 %f{{[0-9]+}}, %f{{[0-9]+}}, 11, 12;
+  ; CHECK: shfl.idx.b32 %r{{[0-9]+}}, %r{{[0-9]+}}, 11, 12;
   %idx_float = call float @llvm.nvvm.shfl.idx.f32(float %in_float, i32 11, i32 12)
   store float %idx_float, ptr %out_float
 

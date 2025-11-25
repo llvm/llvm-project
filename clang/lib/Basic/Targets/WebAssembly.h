@@ -45,6 +45,7 @@ static const unsigned WebAssemblyAddrSpaceMap[] = {
     0,  // hlsl_constant
     0,  // hlsl_private
     0,  // hlsl_device
+    0,  // hlsl_input
     20, // wasm_funcref
 };
 
@@ -63,6 +64,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
+  bool HasGC = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
@@ -86,12 +88,23 @@ public:
     LongDoubleWidth = LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
-    // size_t being unsigned long for both wasm32 and wasm64 makes mangled names
-    // more consistent between the two.
-    SizeType = UnsignedLong;
-    PtrDiffType = SignedLong;
-    IntPtrType = SignedLong;
     HasUnalignedAccess = true;
+    if (T.isWALI()) {
+      // The WALI ABI is documented here:
+      // https://doc.rust-lang.org/rustc/platform-support/wasm32-wali-linux.html
+      // Currently, this ABI only applies to wasm32 targets and notably requires
+      // 64-bit longs
+      LongAlign = LongWidth = 64;
+      SizeType = UnsignedInt;
+      PtrDiffType = SignedInt;
+      IntPtrType = SignedInt;
+    } else {
+      // size_t being unsigned long for both wasm32 and wasm64 makes mangled
+      // names more consistent between the two.
+      SizeType = UnsignedLong;
+      PtrDiffType = SignedLong;
+      IntPtrType = SignedLong;
+    }
   }
 
   StringRef getABI() const override;
@@ -175,7 +188,8 @@ private:
 
   bool hasProtectedVisibility() const override { return false; }
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
 };
 
 class LLVM_LIBRARY_VISIBILITY WebAssembly32TargetInfo

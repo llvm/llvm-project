@@ -4,6 +4,8 @@
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for test_bitcastv2f32tov1f64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_bitcastv1f64tov2f32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_concat_v1i32_undef
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_concat_diff_v1i32_v1i32
 
 define <16 x i8> @ins16bw(<16 x i8> %tmp1, i8 %tmp2) {
 ; CHECK-LABEL: ins16bw:
@@ -807,46 +809,28 @@ define <2 x i64> @test_vdupq_lane_s64(<1 x i64> %v1) #0 {
 }
 
 define <8 x i8> @test_vdup_laneq_s8(<16 x i8> %v1) #0 {
-; CHECK-SD-LABEL: test_vdup_laneq_s8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    dup v0.8b, v0.b[5]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vdup_laneq_s8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    dup v0.16b, v0.b[5]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vdup_laneq_s8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.8b, v0.b[5]
+; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i8> %v1, <16 x i8> undef, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
   ret <8 x i8> %shuffle
 }
 
 define <4 x i16> @test_vdup_laneq_s16(<8 x i16> %v1) #0 {
-; CHECK-SD-LABEL: test_vdup_laneq_s16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    dup v0.4h, v0.h[2]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vdup_laneq_s16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    dup v0.8h, v0.h[2]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vdup_laneq_s16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.4h, v0.h[2]
+; CHECK-NEXT:    ret
   %shuffle = shufflevector <8 x i16> %v1, <8 x i16> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   ret <4 x i16> %shuffle
 }
 
 define <2 x i32> @test_vdup_laneq_s32(<4 x i32> %v1) #0 {
-; CHECK-SD-LABEL: test_vdup_laneq_s32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    dup v0.2s, v0.s[1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vdup_laneq_s32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    dup v0.4s, v0.s[1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vdup_laneq_s32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.2s, v0.s[1]
+; CHECK-NEXT:    ret
   %shuffle = shufflevector <4 x i32> %v1, <4 x i32> undef, <2 x i32> <i32 1, i32 1>
   ret <2 x i32> %shuffle
 }
@@ -996,12 +980,18 @@ define <1 x double> @test_bitcasti64tov1f64(i64 %in) {
 }
 
 define <1 x i64> @test_bitcastv8i8tov1f64(<8 x i8> %a) #0 {
-; CHECK-LABEL: test_bitcastv8i8tov1f64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v0.8b, v0.8b
-; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_bitcastv8i8tov1f64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    neg v0.8b, v0.8b
+; CHECK-SD-NEXT:    fcvtzs x8, d0
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_bitcastv8i8tov1f64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    neg v0.8b, v0.8b
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ret
   %sub.i = sub <8 x i8> zeroinitializer, %a
   %1 = bitcast <8 x i8> %sub.i to <1 x double>
   %vcvt.i = fptosi <1 x double> %1 to <1 x i64>
@@ -1009,12 +999,18 @@ define <1 x i64> @test_bitcastv8i8tov1f64(<8 x i8> %a) #0 {
 }
 
 define <1 x i64> @test_bitcastv4i16tov1f64(<4 x i16> %a) #0 {
-; CHECK-LABEL: test_bitcastv4i16tov1f64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v0.4h, v0.4h
-; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_bitcastv4i16tov1f64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    neg v0.4h, v0.4h
+; CHECK-SD-NEXT:    fcvtzs x8, d0
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_bitcastv4i16tov1f64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    neg v0.4h, v0.4h
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ret
   %sub.i = sub <4 x i16> zeroinitializer, %a
   %1 = bitcast <4 x i16> %sub.i to <1 x double>
   %vcvt.i = fptosi <1 x double> %1 to <1 x i64>
@@ -1022,12 +1018,18 @@ define <1 x i64> @test_bitcastv4i16tov1f64(<4 x i16> %a) #0 {
 }
 
 define <1 x i64> @test_bitcastv2i32tov1f64(<2 x i32> %a) #0 {
-; CHECK-LABEL: test_bitcastv2i32tov1f64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_bitcastv2i32tov1f64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    neg v0.2s, v0.2s
+; CHECK-SD-NEXT:    fcvtzs x8, d0
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_bitcastv2i32tov1f64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    neg v0.2s, v0.2s
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ret
   %sub.i = sub <2 x i32> zeroinitializer, %a
   %1 = bitcast <2 x i32> %sub.i to <1 x double>
   %vcvt.i = fptosi <1 x double> %1 to <1 x i64>
@@ -1047,8 +1049,7 @@ define <1 x i64> @test_bitcastv1i64tov1f64(<1 x i64> %a) #0 {
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    neg x8, x8
 ; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    fcvtzs x8, d0
-; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    fcvtzs d0, d0
 ; CHECK-GI-NEXT:    ret
   %sub.i = sub <1 x i64> zeroinitializer, %a
   %1 = bitcast <1 x i64> %sub.i to <1 x double>
@@ -1198,44 +1199,28 @@ define <8 x i16> @scalar_to_vector.v8i16(i16 %a) {
 }
 
 define <2 x i32> @scalar_to_vector.v2i32(i32 %a) {
-; CHECK-SD-LABEL: scalar_to_vector.v2i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: scalar_to_vector.v2i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov v0.s[0], w0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: scalar_to_vector.v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    ret
   %b = insertelement <2 x i32> undef, i32 %a, i32 0
   ret <2 x i32> %b
 }
 
 define <4 x i32> @scalar_to_vector.v4i32(i32 %a) {
-; CHECK-SD-LABEL: scalar_to_vector.v4i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: scalar_to_vector.v4i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov v0.s[0], w0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: scalar_to_vector.v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    ret
   %b = insertelement <4 x i32> undef, i32 %a, i32 0
   ret <4 x i32> %b
 }
 
 define <2 x i64> @scalar_to_vector.v2i64(i64 %a) {
-; CHECK-SD-LABEL: scalar_to_vector.v2i64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov d0, x0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: scalar_to_vector.v2i64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov v0.d[0], x0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: scalar_to_vector.v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    ret
   %b = insertelement <2 x i64> undef, i64 %a, i32 0
   ret <2 x i64> %b
 }

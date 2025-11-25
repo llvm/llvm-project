@@ -137,7 +137,7 @@ public:
   /// Get the Basic Block containing this remark.
   ///
   /// @return The Basic Block containing this remark.
-  virtual const Value *getRemarkBB() const = 0;
+  virtual const BasicBlock *getRemarkBB() const = 0;
 
   /// Generate a reasonable diagnostic message describing this error.
   ///
@@ -219,7 +219,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   const DebugLoc &getDebugLoc() const override;
   //@}
@@ -243,7 +243,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   std::string getEndUserMessage() const override;
   const DebugLoc &getDebugLoc() const override;
@@ -269,7 +269,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   std::string getEndUserMessage() const override;
   const DebugLoc &getDebugLoc() const override;
@@ -295,7 +295,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   std::string getEndUserMessage() const override;
   const DebugLoc &getDebugLoc() const override;
@@ -344,7 +344,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   //@}
 };
@@ -369,7 +369,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   //@}
 };
@@ -392,7 +392,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   //@}
 };
@@ -426,7 +426,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   //@}
 };
@@ -446,7 +446,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   //@}
 };
@@ -466,7 +466,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   //@}
 };
@@ -490,7 +490,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   std::string getEndUserMessage() const override;
   //@}
@@ -521,7 +521,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   std::string getEndUserMessage() const override;
   //@}
@@ -546,7 +546,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   std::string getEndUserMessage() const override;
   //@}
@@ -577,7 +577,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   const DebugLoc &getDebugLoc() const override;
   std::string getEndUserMessage() const override;
@@ -605,7 +605,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   const DebugLoc &getDebugLoc() const override;
   std::string getEndUserMessage() const override;
@@ -633,7 +633,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   const DebugLoc &getDebugLoc() const override;
   std::string getEndUserMessage() const override;
@@ -661,7 +661,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   const DebugLoc &getDebugLoc() const override;
   std::string getEndUserMessage() const override;
@@ -685,7 +685,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   const DebugLoc &getDebugLoc() const override;
   std::string getEndUserMessage() const override;
@@ -724,7 +724,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   const DebugLoc &getDebugLoc() const override;
   std::string getEndUserMessage() const override;
@@ -766,7 +766,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   const DebugLoc &getDebugLoc() const override;
   //@}
@@ -788,7 +788,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   const DebugLoc &getDebugLoc() const override;
   //@}
@@ -810,7 +810,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   const DebugLoc &getDebugLoc() const override;
   //@}
@@ -832,7 +832,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   std::string getEndUserMessage() const override;
   const DebugLoc &getDebugLoc() const override;
@@ -855,7 +855,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   std::string getEndUserMessage() const override;
   const DebugLoc &getDebugLoc() const override;
@@ -879,7 +879,7 @@ public:
   /// @name RejectReason interface
   //@{
   std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
+  const BasicBlock *getRemarkBB() const override;
   std::string getMessage() const override;
   const DebugLoc &getDebugLoc() const override;
   std::string getEndUserMessage() const override;

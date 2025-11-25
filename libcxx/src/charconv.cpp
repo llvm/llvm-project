@@ -13,7 +13,6 @@
 #include "include/to_chars_floating_point.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #ifndef _LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10
 
@@ -87,6 +86,4 @@ template __from_chars_result<float> __from_chars_floating_point(
 
 template __from_chars_result<double> __from_chars_floating_point(
     _LIBCPP_NOESCAPE const char* __first, _LIBCPP_NOESCAPE const char* __last, chars_format __fmt);
-
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-pch -o %t %s
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -x hlsl -include-pch %t -ast-dump-all %S/Inputs/empty.hlsl | FileCheck  %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-pch -o %t %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -include-pch %t -ast-dump-all %S/Inputs/empty.hlsl | FileCheck  %s
 
 cbuffer A {
   float a;

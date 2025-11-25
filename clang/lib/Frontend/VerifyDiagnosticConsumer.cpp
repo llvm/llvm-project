@@ -13,13 +13,12 @@
 #include "clang/Frontend/VerifyDiagnosticConsumer.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Lexer.h"
@@ -812,7 +811,7 @@ bool VerifyDiagnosticConsumer::HandleComment(Preprocessor &PP,
     C2 += C.substr(last, loc-last);
     last = loc + 1;
 
-    if (C[last] == '\n' || C[last] == '\r') {
+    if (last < C.size() && (C[last] == '\n' || C[last] == '\r')) {
       ++last;
 
       // Escape \r\n  or \n\r, but not \n\n.

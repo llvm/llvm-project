@@ -54,6 +54,11 @@ TEST_F(HostInfoTest, GetHostname) {
   EXPECT_TRUE(HostInfo::GetHostname(s));
 }
 
+TEST_F(HostInfoTest, GetProgramFileSpec) {
+  FileSpec filespec = HostInfo::GetProgramFileSpec();
+  EXPECT_TRUE(FileSystem::Instance().Exists(filespec));
+}
+
 #if defined(__APPLE__)
 TEST_F(HostInfoTest, GetXcodeSDK) {
   auto get_sdk = [](std::string sdk, bool error = false) -> llvm::StringRef {

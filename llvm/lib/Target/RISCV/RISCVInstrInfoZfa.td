@@ -144,7 +144,7 @@ let mayRaiseFPException = 0 in {
 def FMVH_X_D : FPUnaryOp_r<0b1110001, 0b00001, 0b000, GPR, FPR64, "fmvh.x.d">,
                Sched<[WriteFMovF64ToI64, ReadFMovF64ToI64]>;
 def FMVP_D_X : FPBinaryOp_rr<0b1011001, 0b000, FPR64, GPR, "fmvp.d.x">,
-               Sched<[WriteFMovI64ToF64, ReadFMovI64ToF64]>;
+               Sched<[WriteFMovI64ToF64, ReadFMovI64ToF64, ReadFMovI64ToF64]>;
 }
 
 let isCodeGenOnly = 1, mayRaiseFPException = 0 in

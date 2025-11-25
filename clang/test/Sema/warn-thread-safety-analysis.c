@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -fexperimental-late-parse-attributes -DLATE_PARSING %s
 
 #define LOCKABLE            __attribute__ ((lockable))
+#define REENTRANT_CAPABILITY __attribute__ ((reentrant_capability))
 #define SCOPED_LOCKABLE     __attribute__ ((scoped_lockable))
 #define GUARDED_BY(...)     __attribute__ ((guarded_by(__VA_ARGS__)))
 #define GUARDED_VAR         __attribute__ ((guarded_var))
@@ -183,8 +184,12 @@ int main(void) {
   /// Cleanup functions
   {
     struct Mutex* const __attribute__((cleanup(unlock_scope))) scope = &mu1;
-    mutex_exclusive_lock(scope);  // Note that we have to lock through scope, because no alias analysis!
+    mutex_exclusive_lock(scope);  // Lock through scope works.
     // Cleanup happens automatically -> no warning.
+  }
+  {
+    struct Mutex* const __attribute__((unused, cleanup(unlock_scope))) scope = &mu1;
+    mutex_exclusive_lock(&mu1);  // With basic alias analysis lock through mu1 also works.
   }
 
   foo_.a_value = 0; // expected-warning {{writing variable 'a_value' requires holding mutex 'mu_' exclusively}}
@@ -214,6 +219,25 @@ int main(void) {
 #endif
 
   return 0;
+}
+
+/*** Reentrancy test ***/
+struct LOCKABLE REENTRANT_CAPABILITY ReentrantMutex {};
+void reentrant_mutex_lock(struct ReentrantMutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
+void reentrant_mutex_unlock(struct ReentrantMutex *mu) UNLOCK_FUNCTION(mu);
+
+struct ReentrantMutex rmu;
+int r_ GUARDED_BY(&rmu);
+
+void test_reentrant(void) {
+  reentrant_mutex_lock(&rmu);
+  r_ = 1;
+  reentrant_mutex_lock(&rmu);
+  r_ = 1;
+  reentrant_mutex_unlock(&rmu);
+  r_ = 1;
+  reentrant_mutex_unlock(&rmu);
+  r_ = 1; // expected-warning{{writing variable 'r_' requires holding mutex 'rmu' exclusively}}
 }
 
 // We had a problem where we'd skip all attributes that follow a late-parsed

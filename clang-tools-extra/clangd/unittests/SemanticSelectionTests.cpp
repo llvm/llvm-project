@@ -371,6 +371,61 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
         //[[ foo
         /* bar */]]
       )cpp",
+      R"cpp(
+        //Ignore non-conditional directives
+        #define A 1
+
+        void func() {[[
+          int Variable = 100;
+
+          #ifdef FOO[[
+            Variable = 1;
+            #if 1[[
+                Variable = 4;
+            ]]#endif
+          ]]#else[[
+            Variable = 2;
+            //handle nested directives
+            #if 1[[
+              Variable = 3;
+            ]]#endif
+          ]]#endif
+
+
+          ]]}
+      )cpp",
+      R"cpp(
+        int Variable = 0;
+        #if defined(WALDO)
+            Variable = 1;
+        #
+      )cpp",
+      R"cpp(
+        int Variable = 0;
+        #if defined(WALDO)[[
+            Variable = 1;
+        ]]#elif 1[[
+            Variable = 2;
+        ]]#else
+            Variable = 3;
+        #
+      )cpp",
+      R"cpp(
+        #pragma region R1[[
+        
+        #pragma region R2[[
+         constexpr int a = 2;
+        ]]#pragma endregion
+        
+        ]]#pragma endregion
+      )cpp",
+      R"cpp(
+        #pragma region[[
+        ]]#pragma endregion
+
+        #pragma /*comment1*/ region /*comment2*/name[[
+        ]]#pragma endregion
+      )cpp",
   };
   for (const char *Test : Tests) {
     auto T = Annotations(Test);
@@ -430,6 +485,12 @@ TEST(FoldingRanges, PseudoParserLineFoldingsOnly) {
 
         //[[ foo
         /* bar */]]
+      )cpp",
+      R"cpp(
+        #pragma region abc[[
+        constexpr int a = 2;
+        ]]
+        #pragma endregion
       )cpp",
       // FIXME: Support folding template arguments.
       // R"cpp(

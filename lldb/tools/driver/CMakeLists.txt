@@ -11,7 +11,7 @@ if(APPLE)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_BINARY_DIR}/lldb-Info.plist")
 endif()
 
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")                               
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   remove_definitions("-D_XOPEN_SOURCE=700")                                    
   add_definitions("-D_ALL_SOURCE")                                             
 endif()
@@ -20,20 +20,26 @@ add_lldb_tool(lldb
   Driver.cpp
   Platform.cpp
 
+  LINK_COMPONENTS
+    Option
+    Support
   LINK_LIBS
     liblldb
     lldbHost
     lldbUtility
-
-  LINK_COMPONENTS
-    Option
-    Support
   )
 
 add_dependencies(lldb
   LLDBOptionsTableGen
   ${tablegen_deps}
 )
+
+if(DEFINED LLDB_PYTHON_DLL_RELATIVE_PATH)
+  target_compile_definitions(lldb PRIVATE LLDB_PYTHON_DLL_RELATIVE_PATH="${LLDB_PYTHON_DLL_RELATIVE_PATH}")
+endif()
+if(DEFINED LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME)
+  target_compile_definitions(lldb PRIVATE LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME="${LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME}")
+endif()
 
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.

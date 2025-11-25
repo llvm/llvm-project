@@ -50,12 +50,14 @@
 #  include <__format/formatter.h>
 #  include <__format/parser_std_format_spec.h>
 #  include <__format/write_escaped.h>
+#  include <__iterator/istreambuf_iterator.h>
+#  include <__iterator/ostreambuf_iterator.h>
+#  include <__locale_dir/time.h>
 #  include <__memory/addressof.h>
 #  include <__type_traits/is_specialization.h>
 #  include <cmath>
 #  include <ctime>
 #  include <limits>
-#  include <locale>
 #  include <sstream>
 #  include <string_view>
 

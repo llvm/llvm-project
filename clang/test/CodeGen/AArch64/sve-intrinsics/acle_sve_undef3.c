@@ -2,8 +2,8 @@
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -O2 -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -O2 -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 #include <arm_sve.h>
 
@@ -168,4 +168,17 @@ svfloat64x3_t test_svundef3_f64(void) MODE_ATTR
 svmfloat8x3_t test_svundef3_mf8(void) MODE_ATTR
 {
   return svundef3_mf8();
+}
+
+// CHECK-LABEL: @test_svundef3_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } undef
+//
+// CPP-CHECK-LABEL: @_Z18test_svundef3_bf16v(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } undef
+//
+svbfloat16x3_t test_svundef3_bf16(void) MODE_ATTR
+{
+  return svundef3_bf16();
 }

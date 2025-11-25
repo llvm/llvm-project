@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -std=c++98 -verify -fsyntax-only -Wno-c++11-extensions -Wno-c++1y-extensions %s -DPRECXX11
-// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only -Wno-c++1y-extensions %s
-// RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only %s
+// RUN: %clang_cc1 -std=c++98 -verify -fsyntax-only -Wno-unused-value -Wno-c++11-extensions -Wno-c++1y-extensions %s -DPRECXX11
+// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only -Wno-unused-value -Wno-c++1y-extensions %s
+// RUN: %clang_cc1 -std=c++17 -verify -fsyntax-only -Wno-unused-value %s
+// RUN: %clang_cc1 -std=c++2c -verify -fsyntax-only -Wno-unused-value %s
+
 
 #ifdef PRECXX11
   #define CONST const
@@ -509,4 +511,33 @@ auto b<I, I * 2, 5> = b<I, I * 2, 5l>; // expected-error {{variable template par
 template <> auto b<0, 0, 0> = b<0, 0, 0>; // expected-error {{variable template explicit specialization 'b<0, 0, 0>' declared with deduced type 'auto' cannot appear in its own initializer}}
 }
 
+#endif
+
+#if __cplusplus > 201702L
+namespace GH140622 {
+template <typename> struct S {};
+
+struct Outer {
+    template <typename T>
+    static constexpr S<T> g;
+};
+
+template <typename T>
+struct OuterTpl {
+    static constexpr S<T> f;
+    template <typename U>
+    static constexpr S<U> g;
+};
+
+template <typename T>
+constexpr S<T> g;
+
+void test() {
+    constexpr auto x = 42;
+    x, g<int>,
+    Outer::g<int>,
+    OuterTpl<int>::f,
+    OuterTpl<int>::g<int>;
+}
+}
 #endif

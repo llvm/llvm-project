@@ -4,8 +4,8 @@
 
 define i16 @or_disjoint_both(i16 %a, i16 %b) {
 ; CHECK-LABEL: @or_disjoint_both(
-; CHECK-NEXT:    [[OR_1:%.*]] = or i16 [[A:%.*]], 1
-; CHECK-NEXT:    [[OR_2:%.*]] = or i16 [[OR_1]], [[B:%.*]]
+; CHECK-NEXT:    [[OR_1:%.*]] = or disjoint i16 [[A:%.*]], 1
+; CHECK-NEXT:    [[OR_2:%.*]] = or disjoint i16 [[OR_1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i16 [[OR_2]]
 ;
   %or.1 = or disjoint i16 %b, %a

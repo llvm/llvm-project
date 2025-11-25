@@ -50,6 +50,11 @@ BUILTIN(__builtin_arm_wfi, "v", "")
 BUILTIN(__builtin_arm_sev, "v", "")
 BUILTIN(__builtin_arm_sevl, "v", "")
 BUILTIN(__builtin_arm_chkfeat, "WUiWUi", "")
+TARGET_HEADER_BUILTIN(__yield, "v", "h", ARMACLE_H, ALL_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__wfe,   "v", "h", ARMACLE_H, ALL_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__wfi,   "v", "h", ARMACLE_H, ALL_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__sev,   "v", "h", ARMACLE_H, ALL_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__sevl,  "v", "h", ARMACLE_H, ALL_LANGUAGES, "")
 
 // Like __builtin_trap but provide an 16-bit immediate reason code (which goes into `brk #N`).
 BUILTIN(__builtin_arm_trap, "vUIs", "nr")
@@ -82,6 +87,9 @@ TARGET_BUILTIN(__builtin_arm_mops_memset_tag, "v*v*iz", "", "mte,mops")
 BUILTIN(__builtin_arm_dmb, "vUi", "nc")
 BUILTIN(__builtin_arm_dsb, "vUi", "nc")
 BUILTIN(__builtin_arm_isb, "vUi", "nc")
+TARGET_HEADER_BUILTIN(__dmb, "vUi", "nch", ARMACLE_H, ALL_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__dsb, "vUi", "nch", ARMACLE_H, ALL_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__isb, "vUi", "nch", ARMACLE_H, ALL_LANGUAGES, "")
 
 TARGET_BUILTIN(__builtin_arm_jcvt, "Zid", "nc", "v8.3a")
 
@@ -98,24 +106,8 @@ BUILTIN(__builtin_arm_wsr64, "vcC*WUi", "nc")
 TARGET_BUILTIN(__builtin_arm_wsr128, "vcC*LLLUi", "nc", "d128")
 BUILTIN(__builtin_arm_wsrp, "vcC*vC*", "nc")
 
-// MSVC
-LANGBUILTIN(__dmb, "vUi", "nc", ALL_MS_LANGUAGES)
-LANGBUILTIN(__dsb, "vUi", "nc", ALL_MS_LANGUAGES)
-LANGBUILTIN(__isb, "vUi", "nc", ALL_MS_LANGUAGES)
-LANGBUILTIN(__yield, "v", "",   ALL_MS_LANGUAGES)
-LANGBUILTIN(__wfe,   "v", "",   ALL_MS_LANGUAGES)
-LANGBUILTIN(__wfi,   "v", "",   ALL_MS_LANGUAGES)
-LANGBUILTIN(__sev,   "v", "",   ALL_MS_LANGUAGES)
-LANGBUILTIN(__sevl,  "v", "",   ALL_MS_LANGUAGES)
-
 // Misc
 BUILTIN(__builtin_sponentry, "v*", "c")
-
-// Transactional Memory Extension
-BUILTIN(__builtin_arm_tstart, "WUi", "nj")
-BUILTIN(__builtin_arm_tcommit, "v", "n")
-BUILTIN(__builtin_arm_tcancel, "vWUIi", "n")
-BUILTIN(__builtin_arm_ttest, "WUi", "nc")
 
 // Armv8.5-A FP rounding intrinsics
 TARGET_BUILTIN(__builtin_arm_rint32zf, "ff", "", "v8.5a")
@@ -156,6 +148,13 @@ TARGET_HEADER_BUILTIN(_InterlockedExchangeSub64, "LLiLLiD*LLi", "nh", INTRIN_H, 
 TARGET_HEADER_BUILTIN(_InterlockedIncrement64,   "LLiLLiD*",    "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedOr64,          "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedXor64,         "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(_InterlockedAdd_acq,       "NiNiD*Ni",    "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedAdd_rel,       "NiNiD*Ni",    "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedAdd_nf,        "NiNiD*Ni",    "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedAdd64_acq,     "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedAdd64_rel,     "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedAdd64_nf,      "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(_InterlockedExchangeAdd_acq, "NiNiD*Ni", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedExchangeAdd_rel, "NiNiD*Ni", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
@@ -269,6 +268,7 @@ TARGET_HEADER_BUILTIN(_ReadWriteBarrier, "v", "nh", INTRIN_H, ALL_MS_LANGUAGES, 
 TARGET_HEADER_BUILTIN(__getReg, "ULLii", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_ReadStatusReg,  "LLii",  "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_WriteStatusReg, "viLLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__sys, "UiiLLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_AddressOfReturnAddress, "v*", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(__mulh,  "SLLiSLLiSLLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")

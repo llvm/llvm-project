@@ -8,16 +8,10 @@
 #include "../Target.h"
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 
 #if defined(__aarch64__) && defined(__linux__)
-#include <linux/prctl.h> // For PR_PAC_* constants
-#include <sys/prctl.h>
-#ifndef PR_PAC_SET_ENABLED_KEYS
-#define PR_PAC_SET_ENABLED_KEYS 60
-#endif
-#ifndef PR_PAC_GET_ENABLED_KEYS
-#define PR_PAC_GET_ENABLED_KEYS 61
-#endif
+#include <sys/prctl.h> // For PR_PAC_* constants
 #ifndef PR_PAC_APIAKEY
 #define PR_PAC_APIAKEY (1UL << 0)
 #endif
@@ -37,47 +31,6 @@
 
 namespace llvm {
 namespace exegesis {
-
-bool isPointerAuth(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    return false;
-
-  // FIXME: Pointer Authentication instructions.
-  // We would like to measure these instructions, but they can behave
-  // differently on different platforms, and maybe the snippets need to look
-  // different for these instructions,
-  // Platform-specific handling:  On Linux, we disable authentication, may
-  // interfere with measurements. On non-Linux platforms, disable opcodes for
-  // now.
-  case AArch64::AUTDA:
-  case AArch64::AUTDB:
-  case AArch64::AUTDZA:
-  case AArch64::AUTDZB:
-  case AArch64::AUTIA:
-  case AArch64::AUTIA1716:
-  case AArch64::AUTIASP:
-  case AArch64::AUTIAZ:
-  case AArch64::AUTIB:
-  case AArch64::AUTIB1716:
-  case AArch64::AUTIBSP:
-  case AArch64::AUTIBZ:
-  case AArch64::AUTIZA:
-  case AArch64::AUTIZB:
-    return true;
-  }
-}
-
-bool isLoadTagMultiple(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    return false;
-
-  // Load tag multiple instruction
-  case AArch64::LDGM:
-    return true;
-  }
-}
 
 static unsigned getLoadImmediateOpcode(unsigned RegBitWidth) {
   switch (RegBitWidth) {
@@ -157,10 +110,18 @@ static MCInst loadFPImmediate(MCRegister Reg, unsigned RegBitWidth,
 
 namespace {
 
+// Use X19 as the loop counter register since it's a callee-saved register
+// that's available for temporary use.
+constexpr MCPhysReg kDefaultLoopCounterReg = AArch64::X19;
+
 class ExegesisAArch64Target : public ExegesisTarget {
 public:
   ExegesisAArch64Target()
       : ExegesisTarget(AArch64CpuPfmCounters, AArch64_MC::isOpcodeAvailable) {}
+
+  Error randomizeTargetMCOperand(const Instruction &Instr, const Variable &Var,
+                                 MCOperand &AssignedValue,
+                                 const BitVector &ForbiddenRegs) const override;
 
 private:
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, MCRegister Reg,
@@ -189,6 +150,31 @@ private:
     errs() << "setRegTo is not implemented, results will be unreliable\n";
     return {};
   }
+  MCRegister getDefaultLoopCounterRegister(const Triple &) const override {
+    return kDefaultLoopCounterReg;
+  }
+
+  void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
+                                   MachineBasicBlock &TargetMBB,
+                                   const MCInstrInfo &MII,
+                                   MCRegister LoopRegister) const override {
+    // subs LoopRegister, LoopRegister, #1
+    BuildMI(&MBB, DebugLoc(), MII.get(AArch64::SUBSXri))
+        .addDef(LoopRegister)
+        .addUse(LoopRegister)
+        .addImm(1)  // Subtract 1
+        .addImm(0); // No shift amount
+    // b.ne TargetMBB
+    BuildMI(&MBB, DebugLoc(), MII.get(AArch64::Bcc))
+        .addImm(AArch64CC::NE)
+        .addMBB(&TargetMBB);
+  }
+
+  // Registers that should not be selected for use in snippets.
+  const MCPhysReg UnavailableRegisters[1] = {kDefaultLoopCounterReg};
+  ArrayRef<MCPhysReg> getUnavailableRegisters() const override {
+    return UnavailableRegisters;
+  }
 
   bool matchesArch(Triple::ArchType Arch) const override {
     return Arch == Triple::aarch64 || Arch == Triple::aarch64_be;
@@ -198,36 +184,57 @@ private:
     // Function return is a pseudo-instruction that needs to be expanded
     PM.add(createAArch64ExpandPseudoPass());
   }
-
-  const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
-                                           unsigned Opcode) const override {
-    if (const char *Reason =
-            ExegesisTarget::getIgnoredOpcodeReasonOrNull(State, Opcode))
-      return Reason;
-
-    if (isPointerAuth(Opcode)) {
-#if defined(__aarch64__) && defined(__linux__)
-      // Disable all PAC keys. Note that while we expect the measurements to
-      // be the same with PAC keys disabled, they could potentially be lower
-      // since authentication checks are bypassed.
-      if (prctl(PR_PAC_SET_ENABLED_KEYS,
-                PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
-                    PR_PAC_APDBKEY, // all keys
-                0,                  // disable all
-                0, 0) < 0) {
-        return "Failed to disable PAC keys";
-      }
-#else
-      return "Unsupported opcode: isPointerAuth";
-#endif
-    }
-
-    if (isLoadTagMultiple(Opcode))
-      return "Unsupported opcode: load tag multiple";
-
-    return nullptr;
-  }
 };
+
+Error ExegesisAArch64Target::randomizeTargetMCOperand(
+    const Instruction &Instr, const Variable &Var, MCOperand &AssignedValue,
+    const BitVector &ForbiddenRegs) const {
+  const Operand &Op = Instr.getPrimaryOperand(Var);
+  const auto OperandType = Op.getExplicitOperandInfo().OperandType;
+  // NOTE: To resolve "Not all operands were initialized by snippet generator"
+  // Requires OperandType to be defined for such opcode's operands in AArch64
+  // tablegen files. And omit introduced OperandType(s).
+
+  // Hacky Fix: Defaulting all OPERAND_UNKNOWN to immediate value 0 works with a
+  // limitation that it introduces illegal instruction error for system
+  // instructions. System instructions will need to be omitted with OperandType
+  // or opcode specific values to avoid generating invalid encodings or
+  // unreliable benchmark results for these system-level instructions.
+  //  Implement opcode-specific immediate value handling for system instrs:
+  //   - MRS/MSR: Use valid system register encodings (e.g., NZCV, FPCR, FPSR)
+  //   - MSRpstatesvcrImm1: Use valid PSTATE field encodings (e.g., SPSel,
+  //   DAIFSet)
+  //   - SYSLxt/SYSxt: Use valid system instruction encodings with proper
+  //   CRn/CRm/op values
+  //   - UDF: Use valid undefined instruction immediate ranges (0-65535)
+
+  switch (OperandType) {
+  // MSL (Masking Shift Left) imm operand for 32-bit splatted SIMD constants
+  // Correspond to AArch64InstructionSelector::tryAdvSIMDModImm321s()
+  case llvm::AArch64::OPERAND_SHIFT_MSL: {
+    // There are two valid encodings:
+    //   - Type 7: imm at [15:8], [47:40], shift = 264 (0x108) → msl #8
+    //   - Type 8: imm at [23:16], [55:48], shift = 272 (0x110) → msl #16
+    //     Corresponds AArch64_AM::encodeAdvSIMDModImmType7()
+    // But, v2s_msl and v4s_msl instructions accept either form,
+    // Thus, Arbitrarily chosing 264 (msl #8) for simplicity.
+    AssignedValue = MCOperand::createImm(264);
+    return Error::success();
+  }
+  case llvm::AArch64::OPERAND_IMPLICIT_IMM_0:
+    AssignedValue = MCOperand::createImm(0);
+    return Error::success();
+  case MCOI::OperandType::OPERAND_PCREL:
+    AssignedValue = MCOperand::createImm(8);
+    return Error::success();
+  default:
+    break;
+  }
+
+  return make_error<Failure>(
+      Twine("Unimplemented operand type: MCOI::OperandType:")
+          .concat(Twine(static_cast<int>(OperandType))));
+}
 
 } // namespace
 

@@ -60,7 +60,7 @@ TEST_F(SBCommandInterpreterTest, SingleWordCommand) {
     SBCommandReturnObject result;
     interp.HandleCommand("", result);
     EXPECT_FALSE(result.Succeeded());
-    EXPECT_STREQ(result.GetError(), "error: No auto repeat.\n");
+    EXPECT_STREQ(result.GetError(), "error: no auto repeat\n");
   }
 
   // Now we test a command with autorepeat
@@ -98,7 +98,7 @@ TEST_F(SBCommandInterpreterTest, MultiWordCommand) {
     SBCommandReturnObject result;
     interp.HandleCommand("", result);
     EXPECT_FALSE(result.Succeeded());
-    EXPECT_STREQ(result.GetError(), "error: No auto repeat.\n");
+    EXPECT_STREQ(result.GetError(), "error: no auto repeat\n");
   }
 
   // We first test a subcommand with autorepeat

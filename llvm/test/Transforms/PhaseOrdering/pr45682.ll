@@ -5,8 +5,6 @@
 define void @PR45682(i32 %x, i32 %y) {
 ; CHECK-LABEL: @PR45682(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[Y:%.*]], 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

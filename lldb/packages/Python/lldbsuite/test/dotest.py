@@ -43,6 +43,7 @@ from . import lldbtest_config
 from . import test_categories
 from . import test_result
 from ..support import seven
+from ..support import temp_file
 
 
 def is_exe(fpath):
@@ -294,9 +295,12 @@ def parseOptionsAndInitTestdirs():
                 "Custom libc++ requires both --libcxx-include-dir and --libcxx-library-dir"
             )
             sys.exit(-1)
-    configuration.libcxx_include_dir = args.libcxx_include_dir
-    configuration.libcxx_include_target_dir = args.libcxx_include_target_dir
-    configuration.libcxx_library_dir = args.libcxx_library_dir
+        else:
+            configuration.libcxx_include_dir = args.libcxx_include_dir
+            configuration.libcxx_include_target_dir = args.libcxx_include_target_dir
+            configuration.libcxx_library_dir = args.libcxx_library_dir
+
+    configuration.cmake_build_type = args.cmake_build_type.lower()
 
     if args.channels:
         lldbtest_config.channels = args.channels
@@ -318,8 +322,13 @@ def parseOptionsAndInitTestdirs():
             logging.error("No SDK found with the name %s; aborting...", args.apple_sdk)
             sys.exit(-1)
 
+    if args.triple:
+        configuration.triple = args.triple
+
     if args.arch:
         configuration.arch = args.arch
+    elif args.triple:
+        configuration.arch = args.triple.split("-")[0]
     else:
         configuration.arch = platform_machine
 
@@ -551,6 +560,8 @@ def setupSysPath():
     if is_exe(lldbDAPExec):
         os.environ["LLDBDAP_EXEC"] = lldbDAPExec
 
+    configuration.yaml2macho_core = shutil.which("yaml2macho-core", path=lldbDir)
+
     lldbPythonDir = None  # The directory that contains 'lldb/__init__.py'
 
     # If our lldb supports the -P option, use it to find the python path:
@@ -777,8 +788,12 @@ def canRunLibcxxTests():
         return True, "libc++ always present"
 
     if platform == "linux":
-        with tempfile.NamedTemporaryFile() as f:
-            cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.name, "-"]
+        if not configuration.libcxx_include_dir or not configuration.libcxx_library_dir:
+            return False, "API tests require a locally built libc++."
+
+        # Make sure -stdlib=libc++ works since that's how the tests will be built.
+        with temp_file.OnDiskTempFile() as f:
+            cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.path, "-"]
             p = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE,
@@ -828,6 +843,46 @@ def checkLibstdcxxSupport():
     if configuration.verbose:
         print("libstdcxx tests will not be run because: " + reason)
     configuration.skip_categories.append("libstdcxx")
+
+
+def canRunMsvcStlTests():
+    from lldbsuite.test import lldbplatformutil
+
+    platform = lldbplatformutil.getPlatform()
+    if platform != "windows":
+        return False, f"Don't know how to build with MSVC's STL on {platform}"
+
+    with temp_file.OnDiskTempFile() as f:
+        cmd = [configuration.compiler, "-xc++", "-o", f.path, "-E", "-"]
+        p = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+        _, stderr = p.communicate(
+            """
+            #include <yvals_core.h>
+            #ifndef _MSVC_STL_VERSION
+            #error _MSVC_STL_VERSION not defined
+            #endif
+            """
+        )
+        if not p.returncode:
+            return True, "Compiling with MSVC STL"
+        return (False, f"Not compiling with MSVC STL: {stderr}")
+
+
+def checkMsvcStlSupport():
+    result, reason = canRunMsvcStlTests()
+    if result:
+        return  # msvcstl supported
+    if "msvcstl" in configuration.categories_list:
+        return  # msvcstl category explicitly requested, let it run.
+    if configuration.verbose:
+        print(f"msvcstl tests will not be run because: {reason}")
+    configuration.skip_categories.append("msvcstl")
 
 
 def canRunWatchpointTests():
@@ -1043,6 +1098,7 @@ def run_suite():
 
     checkLibcxxSupport()
     checkLibstdcxxSupport()
+    checkMsvcStlSupport()
     checkWatchpointSupport()
     checkDebugInfoSupport()
     checkDebugServerSupport()

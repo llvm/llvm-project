@@ -45,6 +45,7 @@ static const unsigned DirectXAddrSpaceMap[] = {
     2, // hlsl_constant
     0, // hlsl_private
     0, // hlsl_device
+    0, // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -58,13 +59,16 @@ public:
     VLASupported = false;
     AddrSpaceMap = &DirectXAddrSpaceMap;
     UseAddrSpaceMapMangling = true;
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
     HasFloat16 = true;
     NoAsmVariants = true;
     PlatformMinVersion = Triple.getOSVersion();
     PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());
+    // TODO: We need to align vectors on the element size generally, but for now
+    // we hard code this for 3-element 32- and 64-bit vectors as a workaround.
+    // See https://github.com/llvm/llvm-project/issues/123968
     resetDataLayout("e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:"
-                    "32-f64:64-n8:16:32:64");
+                    "32-f64:64-n8:16:32:64-v48:16:16-v96:32:32-v192:64:64");
     TheCXXABI.set(TargetCXXABI::GenericItanium);
   }
   bool useFP16ConversionIntrinsics() const override { return false; }
@@ -94,8 +98,9 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    TargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
     // The static values this addresses do not apply outside of the same thread
     // This protection is neither available nor needed
     Opts.ThreadsafeStatics = false;

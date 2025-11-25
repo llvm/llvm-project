@@ -20,29 +20,14 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <climits>
 #include <cstdint>
-#include <optional>
 
 #define DEBUG_TYPE "dxil-resource"
 
 using namespace llvm;
 using namespace dxil;
-
-static StringRef getResourceClassName(ResourceClass RC) {
-  switch (RC) {
-  case ResourceClass::SRV:
-    return "SRV";
-  case ResourceClass::UAV:
-    return "UAV";
-  case ResourceClass::CBuffer:
-    return "CBuffer";
-  case ResourceClass::Sampler:
-    return "Sampler";
-  }
-  llvm_unreachable("Unhandled ResourceClass");
-}
 
 static StringRef getResourceKindName(ResourceKind RK) {
   switch (RK) {
@@ -65,7 +50,7 @@ static StringRef getResourceKindName(ResourceKind RK) {
   case ResourceKind::TextureCubeArray:
     return "TextureCubeArray";
   case ResourceKind::TypedBuffer:
-    return "TypedBuffer";
+    return "Buffer";
   case ResourceKind::RawBuffer:
     return "RawBuffer";
   case ResourceKind::StructuredBuffer:
@@ -133,6 +118,44 @@ static StringRef getElementTypeName(ElementType ET) {
   llvm_unreachable("Unhandled ElementType");
 }
 
+static StringRef getElementTypeNameForTemplate(ElementType ET) {
+  switch (ET) {
+  case ElementType::I1:
+    return "bool";
+  case ElementType::I16:
+    return "int16_t";
+  case ElementType::U16:
+    return "uint16_t";
+  case ElementType::I32:
+    return "int32_t";
+  case ElementType::U32:
+    return "uint32_t";
+  case ElementType::I64:
+    return "int64_t";
+  case ElementType::U64:
+    return "uint32_t";
+  case ElementType::F16:
+  case ElementType::SNormF16:
+  case ElementType::UNormF16:
+    return "half";
+  case ElementType::F32:
+  case ElementType::SNormF32:
+  case ElementType::UNormF32:
+    return "float";
+  case ElementType::F64:
+  case ElementType::SNormF64:
+  case ElementType::UNormF64:
+    return "double";
+  case ElementType::PackedS8x32:
+    return "int8_t4_packed";
+  case ElementType::PackedU8x32:
+    return "uint8_t4_packed";
+  case ElementType::Invalid:
+    return "<invalid>";
+  }
+  llvm_unreachable("Unhandled ElementType");
+}
+
 static StringRef getSamplerTypeName(SamplerType ST) {
   switch (ST) {
   case SamplerType::Default:
@@ -182,6 +205,14 @@ static dxil::ElementType toDXILElementType(Type *Ty, bool IsSigned) {
   return ElementType::Invalid;
 }
 
+static dxil::ElementType toDXILStorageType(dxil::ElementType ET) {
+  if (ET == dxil::ElementType::U64 || ET == dxil::ElementType::F64 ||
+      ET == dxil::ElementType::I64 || ET == dxil::ElementType::SNormF64 ||
+      ET == dxil::ElementType::UNormF64)
+    return dxil::ElementType::U32;
+  return ET;
+}
+
 ResourceTypeInfo::ResourceTypeInfo(TargetExtType *HandleTy,
                                    const dxil::ResourceClass RC_,
                                    const dxil::ResourceKind Kind_)
@@ -220,12 +251,84 @@ ResourceTypeInfo::ResourceTypeInfo(TargetExtType *HandleTy,
 }
 
 static void formatTypeName(SmallString<64> &Dest, StringRef Name,
-                           bool isWriteable, bool isROV) {
-  Dest = isWriteable ? (isROV ? "RasterizerOrdered" : "RW") : "";
-  Dest += Name;
+                           bool IsWriteable, bool IsROV,
+                           Type *ContainedType = nullptr,
+                           bool IsSigned = true) {
+  raw_svector_ostream DestStream(Dest);
+  if (IsWriteable)
+    DestStream << (IsROV ? "RasterizerOrdered" : "RW");
+  DestStream << Name;
+
+  if (!ContainedType)
+    return;
+
+  SmallVector<uint64_t> ArrayDimensions;
+  while (ArrayType *AT = dyn_cast<ArrayType>(ContainedType)) {
+    ArrayDimensions.push_back(AT->getNumElements());
+    ContainedType = AT->getElementType();
+  }
+
+  StringRef ElementName;
+  ElementType ET = toDXILElementType(ContainedType, IsSigned);
+  if (ET != ElementType::Invalid) {
+    ElementName = getElementTypeNameForTemplate(ET);
+  } else {
+    assert(isa<StructType>(ContainedType) &&
+           "invalid element type for raw buffer");
+    StructType *ST = cast<StructType>(ContainedType);
+    if (!ST->hasName())
+      return;
+    ElementName = ST->getStructName();
+  }
+
+  DestStream << "<" << ElementName;
+  if (const FixedVectorType *VTy = dyn_cast<FixedVectorType>(ContainedType))
+    DestStream << VTy->getNumElements();
+  for (uint64_t Dim : ArrayDimensions)
+    DestStream << "[" << Dim << "]";
+  DestStream << ">";
 }
 
-StructType *ResourceTypeInfo::createElementStruct() {
+static StructType *getOrCreateElementStruct(Type *ElemType, StringRef Name) {
+  StructType *Ty = StructType::getTypeByName(ElemType->getContext(), Name);
+  if (Ty && Ty->getNumElements() == 1 && Ty->getElementType(0) == ElemType)
+    return Ty;
+  return StructType::create(ElemType, Name);
+}
+
+static Type *getTypeWithoutPadding(Type *Ty) {
+  // Recursively remove padding from structures.
+  if (auto *ST = dyn_cast<StructType>(Ty)) {
+    LLVMContext &Ctx = Ty->getContext();
+    SmallVector<Type *> ElementTypes;
+    ElementTypes.reserve(ST->getNumElements());
+    for (Type *ElTy : ST->elements()) {
+      if (isa<PaddingExtType>(ElTy))
+        continue;
+      ElementTypes.push_back(getTypeWithoutPadding(ElTy));
+    }
+
+    // Handle explicitly padded cbuffer arrays like { [ n x paddedty ], ty }
+    if (ElementTypes.size() == 2)
+      if (auto *AT = dyn_cast<ArrayType>(ElementTypes[0]))
+        if (ElementTypes[1] == AT->getElementType())
+          return ArrayType::get(ElementTypes[1], AT->getNumElements() + 1);
+
+    // If we only have a single element, don't wrap it in a struct.
+    if (ElementTypes.size() == 1)
+      return ElementTypes[0];
+
+    return StructType::get(Ctx, ElementTypes, /*IsPacked=*/false);
+  }
+  // Arrays just need to have their element type adjusted.
+  if (auto *AT = dyn_cast<ArrayType>(Ty))
+    return ArrayType::get(getTypeWithoutPadding(AT->getElementType()),
+                          AT->getNumElements());
+  // Anything else should be good as is.
+  return Ty;
+}
+
+StructType *ResourceTypeInfo::createElementStruct(StringRef CBufferName) {
   SmallString<64> TypeName;
 
   switch (Kind) {
@@ -238,51 +341,68 @@ StructType *ResourceTypeInfo::createElementStruct() {
   case ResourceKind::TextureCubeArray: {
     auto *RTy = cast<TextureExtType>(HandleTy);
     formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
-                   RTy->isROV());
-    return StructType::create(RTy->getResourceType(), TypeName);
+                   RTy->isROV(), RTy->getResourceType(), RTy->isSigned());
+    return getOrCreateElementStruct(RTy->getResourceType(), TypeName);
   }
   case ResourceKind::Texture2DMS:
   case ResourceKind::Texture2DMSArray: {
     auto *RTy = cast<MSTextureExtType>(HandleTy);
     formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
-                   /*IsROV=*/false);
-    return StructType::create(RTy->getResourceType(), TypeName);
+                   /*IsROV=*/false, RTy->getResourceType(), RTy->isSigned());
+    return getOrCreateElementStruct(RTy->getResourceType(), TypeName);
   }
   case ResourceKind::TypedBuffer: {
     auto *RTy = cast<TypedBufferExtType>(HandleTy);
     formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
-                   RTy->isROV());
-    return StructType::create(RTy->getResourceType(), TypeName);
+                   RTy->isROV(), RTy->getResourceType(), RTy->isSigned());
+    return getOrCreateElementStruct(RTy->getResourceType(), TypeName);
   }
   case ResourceKind::RawBuffer: {
     auto *RTy = cast<RawBufferExtType>(HandleTy);
     formatTypeName(TypeName, "ByteAddressBuffer", RTy->isWriteable(),
                    RTy->isROV());
-    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
-                              TypeName);
+    return getOrCreateElementStruct(Type::getInt32Ty(HandleTy->getContext()),
+                                    TypeName);
   }
   case ResourceKind::StructuredBuffer: {
     auto *RTy = cast<RawBufferExtType>(HandleTy);
+    Type *Ty = RTy->getResourceType();
     formatTypeName(TypeName, "StructuredBuffer", RTy->isWriteable(),
-                   RTy->isROV());
-    return StructType::create(RTy->getResourceType(), TypeName);
+                   RTy->isROV(), RTy->getResourceType(), true);
+    return getOrCreateElementStruct(Ty, TypeName);
   }
   case ResourceKind::FeedbackTexture2D:
   case ResourceKind::FeedbackTexture2DArray: {
     auto *RTy = cast<FeedbackTextureExtType>(HandleTy);
     TypeName = formatv("{0}<{1}>", getResourceKindName(Kind),
                        llvm::to_underlying(RTy->getFeedbackType()));
-    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
-                              TypeName);
+    return getOrCreateElementStruct(Type::getInt32Ty(HandleTy->getContext()),
+                                    TypeName);
   }
-  case ResourceKind::CBuffer:
-    return StructType::create(HandleTy->getContext(), "cbuffer");
+  case ResourceKind::CBuffer: {
+    auto *RTy = cast<CBufferExtType>(HandleTy);
+    SmallString<64> Name = getResourceKindName(Kind);
+    if (!CBufferName.empty()) {
+      Name.append(".");
+      Name.append(CBufferName);
+    }
+
+    // TODO: Remove this when we update the frontend to use explicit padding.
+    if (LayoutExtType *LayoutType =
+            dyn_cast<LayoutExtType>(RTy->getResourceType())) {
+      StructType *Ty = cast<StructType>(LayoutType->getWrappedType());
+      return StructType::create(Ty->elements(), Name);
+    }
+
+    return getOrCreateElementStruct(
+        getTypeWithoutPadding(RTy->getResourceType()), Name);
+  }
   case ResourceKind::Sampler: {
     auto *RTy = cast<SamplerExtType>(HandleTy);
     TypeName = formatv("SamplerState<{0}>",
                        llvm::to_underlying(RTy->getSamplerType()));
-    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
-                              TypeName);
+    return getOrCreateElementStruct(Type::getInt32Ty(HandleTy->getContext()),
+                                    TypeName);
   }
   case ResourceKind::TBuffer:
   case ResourceKind::RTAccelerationStructure:
@@ -388,10 +508,10 @@ uint32_t ResourceTypeInfo::getCBufferSize(const DataLayout &DL) const {
 
   Type *ElTy = cast<CBufferExtType>(HandleTy)->getResourceType();
 
+  // TODO: Remove this when we update the frontend to use explicit padding.
   if (auto *LayoutTy = dyn_cast<LayoutExtType>(ElTy))
     return LayoutTy->getSize();
 
-  // TODO: What should we do with unannotated arrays?
   return DL.getTypeAllocSize(ElTy);
 }
 
@@ -456,10 +576,11 @@ ResourceTypeInfo::TypedInfo ResourceTypeInfo::getTyped() const {
 
   auto [ElTy, IsSigned] = getTypedElementType(Kind, HandleTy);
   dxil::ElementType ET = toDXILElementType(ElTy, IsSigned);
+  dxil::ElementType DXILStorageTy = toDXILStorageType(ET);
   uint32_t Count = 1;
   if (auto *VTy = dyn_cast<FixedVectorType>(ElTy))
     Count = VTy->getNumElements();
-  return {ET, Count};
+  return {ET, DXILStorageTy, Count};
 }
 
 dxil::SamplerFeedbackType ResourceTypeInfo::getFeedbackType() const {
@@ -523,7 +644,10 @@ void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
       OS << "  Alignment: " << Struct.AlignLog2 << "\n";
     } else if (isTyped()) {
       TypedInfo Typed = getTyped();
-      OS << "  Element Type: " << getElementTypeName(Typed.ElementTy) << "\n"
+      OS << "  Element Type: " << getElementTypeName(Typed.ElementTy);
+      if (Typed.ElementTy != Typed.DXILStorageTy)
+        OS << " (stored as " << getElementTypeName(Typed.DXILStorageTy) << ")";
+      OS << "\n"
          << "  Element Count: " << Typed.ElementCount << "\n";
     } else if (isFeedback())
       OS << "  Feedback Type: " << getSamplerFeedbackTypeName(getFeedbackType())
@@ -531,10 +655,14 @@ void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
   }
 }
 
-GlobalVariable *ResourceInfo::createSymbol(Module &M, StructType *Ty,
-                                           StringRef Name) {
+GlobalVariable *ResourceInfo::createSymbol(Module &M, StructType *Ty) {
   assert(!Symbol && "Symbol has already been created");
-  Symbol = new GlobalVariable(M, Ty, /*isConstant=*/true,
+  Type *ResTy = Ty;
+  int64_t Size = Binding.Size;
+  if (Size != 1)
+    // unbounded arrays are represented as zero-sized arrays in LLVM IR
+    ResTy = ArrayType::get(Ty, Size == ~0u ? 0 : Size);
+  Symbol = new GlobalVariable(M, ResTy, /*isConstant=*/true,
                               GlobalValue::ExternalLinkage,
                               /*Initializer=*/nullptr, Name);
   return Symbol;
@@ -561,7 +689,7 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M,
   MDVals.push_back(getIntMD(Binding.RecordID));
   assert(Symbol && "Cannot yet create useful resource metadata without symbol");
   MDVals.push_back(ValueAsMetadata::get(Symbol));
-  MDVals.push_back(MDString::get(Ctx, Symbol->getName()));
+  MDVals.push_back(MDString::get(Ctx, Name));
   MDVals.push_back(getIntMD(Binding.Space));
   MDVals.push_back(getIntMD(Binding.LowerBound));
   MDVals.push_back(getIntMD(Binding.Size));
@@ -597,7 +725,8 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M,
       Tags.push_back(getIntMD(RTI.getStruct(DL).Stride));
     } else if (RTI.isTyped()) {
       Tags.push_back(getIntMD(llvm::to_underlying(ExtPropTags::ElementType)));
-      Tags.push_back(getIntMD(llvm::to_underlying(RTI.getTyped().ElementTy)));
+      Tags.push_back(
+          getIntMD(llvm::to_underlying(RTI.getTyped().DXILStorageTy)));
     } else if (RTI.isFeedback()) {
       Tags.push_back(
           getIntMD(llvm::to_underlying(ExtPropTags::SamplerFeedbackKind)));
@@ -659,6 +788,9 @@ ResourceInfo::getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const {
 
 void ResourceInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
                          const DataLayout &DL) const {
+  if (!Name.empty())
+    OS << "  Name: " << Name << "\n";
+
   if (Symbol) {
     OS << "  Symbol: ";
     Symbol->printAsOperand(OS);
@@ -706,6 +838,30 @@ static bool isUpdateCounterIntrinsic(Function &F) {
   return F.getIntrinsicID() == Intrinsic::dx_resource_updatecounter;
 }
 
+StringRef dxil::getResourceNameFromBindingCall(CallInst *CI) {
+  Value *Op = nullptr;
+  switch (CI->getCalledFunction()->getIntrinsicID()) {
+  default:
+    llvm_unreachable("unexpected handle creation intrinsic");
+  case Intrinsic::dx_resource_handlefrombinding:
+  case Intrinsic::dx_resource_handlefromimplicitbinding:
+    Op = CI->getArgOperand(4);
+    break;
+  }
+
+  auto *GV = dyn_cast<llvm::GlobalVariable>(Op);
+  if (!GV)
+    return "";
+
+  auto *CA = dyn_cast<ConstantDataArray>(GV->getInitializer());
+  assert(CA && CA->isString() && "expected constant string");
+  StringRef Name = CA->getAsString();
+  // strip trailing 0
+  if (Name.ends_with('\0'))
+    Name = Name.drop_back(1);
+  return Name;
+}
+
 void DXILResourceMap::populateResourceInfos(Module &M,
                                             DXILResourceTypeMap &DRTM) {
   SmallVector<std::tuple<CallInst *, ResourceInfo, ResourceTypeInfo>> CIToInfos;
@@ -731,8 +887,11 @@ void DXILResourceMap::populateResourceInfos(Module &M,
               cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
           uint32_t Size =
               cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+          StringRef Name = getResourceNameFromBindingCall(CI);
+
           ResourceInfo RI =
-              ResourceInfo{/*RecordID=*/0, Space, LowerBound, Size, HandleTy};
+              ResourceInfo{/*RecordID=*/0, Space,    LowerBound,
+                           Size,           HandleTy, Name};
 
           CIToInfos.emplace_back(CI, RI, RTI);
         }
@@ -887,17 +1046,7 @@ SmallVector<dxil::ResourceInfo *> DXILResourceMap::findByUse(const Value *Key) {
 //===----------------------------------------------------------------------===//
 
 void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
-  struct Binding {
-    ResourceClass RC;
-    uint32_t Space;
-    uint32_t LowerBound;
-    uint32_t UpperBound;
-    Binding(ResourceClass RC, uint32_t Space, uint32_t LowerBound,
-            uint32_t UpperBound)
-        : RC(RC), Space(Space), LowerBound(LowerBound), UpperBound(UpperBound) {
-    }
-  };
-  SmallVector<Binding> Bindings;
+  hlsl::BindingInfoBuilder Builder;
 
   // collect all of the llvm.dx.resource.handlefrombinding calls;
   // make a note if there is llvm.dx.resource.handlefromimplicitbinding
@@ -920,139 +1069,27 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
               cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
           int32_t Size =
               cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+          Value *Name = CI->getArgOperand(4);
 
           // negative size means unbounded resource array;
           // upper bound register overflow should be detected in Sema
           assert((Size < 0 || (unsigned)LowerBound + Size - 1 <= UINT32_MAX) &&
                  "upper bound register overflow");
           uint32_t UpperBound = Size < 0 ? UINT32_MAX : LowerBound + Size - 1;
-          Bindings.emplace_back(RTI.getResourceClass(), Space, LowerBound,
-                                UpperBound);
+          Builder.trackBinding(RTI.getResourceClass(), Space, LowerBound,
+                               UpperBound, Name);
         }
       break;
     }
     case Intrinsic::dx_resource_handlefromimplicitbinding: {
-      ImplicitBinding = true;
+      HasImplicitBinding = true;
       break;
     }
     }
   }
 
-  // sort all the collected bindings
-  llvm::stable_sort(Bindings, [](auto &LHS, auto &RHS) {
-    return std::tie(LHS.RC, LHS.Space, LHS.LowerBound) <
-           std::tie(RHS.RC, RHS.Space, RHS.LowerBound);
-  });
-
-  // remove duplicates
-  Binding *NewEnd = llvm::unique(Bindings, [](auto &LHS, auto &RHS) {
-    return std::tie(LHS.RC, LHS.Space, LHS.LowerBound, LHS.UpperBound) ==
-           std::tie(RHS.RC, RHS.Space, RHS.LowerBound, RHS.UpperBound);
-  });
-  if (NewEnd != Bindings.end())
-    Bindings.erase(NewEnd);
-
-  // Go over the sorted bindings and build up lists of free register ranges
-  // for each binding type and used spaces. Bindings are sorted by resource
-  // class, space, and lower bound register slot.
-  BindingSpaces *BS = &SRVSpaces;
-  for (const Binding &B : Bindings) {
-    if (BS->RC != B.RC)
-      // move to the next resource class spaces
-      BS = &getBindingSpaces(B.RC);
-
-    RegisterSpace *S = BS->Spaces.empty() ? &BS->Spaces.emplace_back(B.Space)
-                                          : &BS->Spaces.back();
-    assert(S->Space <= B.Space && "bindings not sorted correctly?");
-    if (B.Space != S->Space)
-      // add new space
-      S = &BS->Spaces.emplace_back(B.Space);
-
-    // the space is full - set flag to report overlapping binding later
-    if (S->FreeRanges.empty()) {
-      OverlappingBinding = true;
-      continue;
-    }
-
-    // adjust the last free range lower bound, split it in two, or remove it
-    BindingRange &LastFreeRange = S->FreeRanges.back();
-    assert(LastFreeRange.UpperBound == UINT32_MAX);
-    if (LastFreeRange.LowerBound == B.LowerBound) {
-      if (B.UpperBound < UINT32_MAX)
-        LastFreeRange.LowerBound = B.UpperBound + 1;
-      else
-        S->FreeRanges.pop_back();
-    } else if (LastFreeRange.LowerBound < B.LowerBound) {
-      LastFreeRange.UpperBound = B.LowerBound - 1;
-      if (B.UpperBound < UINT32_MAX)
-        S->FreeRanges.emplace_back(B.UpperBound + 1, UINT32_MAX);
-    } else {
-      // FIXME: This only detects overlapping bindings that are not an exact
-      // match (llvm/llvm-project#110723)
-      OverlappingBinding = true;
-      if (B.UpperBound < UINT32_MAX)
-        LastFreeRange.LowerBound =
-            std::max(LastFreeRange.LowerBound, B.UpperBound + 1);
-      else
-        S->FreeRanges.pop_back();
-    }
-  }
-}
-
-// returns std::nulopt if binding could not be found in given space
-std::optional<uint32_t>
-DXILResourceBindingInfo::findAvailableBinding(dxil::ResourceClass RC,
-                                              uint32_t Space, int32_t Size) {
-  BindingSpaces &BS = getBindingSpaces(RC);
-  RegisterSpace &RS = BS.getOrInsertSpace(Space);
-  return RS.findAvailableBinding(Size);
-}
-
-DXILResourceBindingInfo::RegisterSpace &
-DXILResourceBindingInfo::BindingSpaces::getOrInsertSpace(uint32_t Space) {
-  for (auto *I = Spaces.begin(); I != Spaces.end(); ++I) {
-    if (I->Space == Space)
-      return *I;
-    if (I->Space < Space)
-      continue;
-    return *Spaces.insert(I, Space);
-  }
-  return Spaces.emplace_back(Space);
-}
-
-std::optional<uint32_t>
-DXILResourceBindingInfo::RegisterSpace::findAvailableBinding(int32_t Size) {
-  assert((Size == -1 || Size > 0) && "invalid size");
-
-  if (FreeRanges.empty())
-    return std::nullopt;
-
-  // unbounded array
-  if (Size == -1) {
-    BindingRange &Last = FreeRanges.back();
-    if (Last.UpperBound != UINT32_MAX)
-      // this space is already occupied by an unbounded array
-      return std::nullopt;
-    uint32_t RegSlot = Last.LowerBound;
-    FreeRanges.pop_back();
-    return RegSlot;
-  }
-
-  // single resource or fixed-size array
-  for (BindingRange &R : FreeRanges) {
-    // compare the size as uint64_t to prevent overflow for range (0,
-    // UINT32_MAX)
-    if ((uint64_t)R.UpperBound - R.LowerBound + 1 < (uint64_t)Size)
-      continue;
-    uint32_t RegSlot = R.LowerBound;
-    // This might create a range where (LowerBound == UpperBound + 1). When
-    // that happens, the next time this function is called the range will
-    // skipped over by the check above (at this point Size is always > 0).
-    R.LowerBound += Size;
-    return RegSlot;
-  }
-
-  return std::nullopt;
+  Bindings = Builder.calculateBindingInfo(
+      [this](auto, auto) { this->HasOverlappingBinding = true; });
 }
 
 //===----------------------------------------------------------------------===//

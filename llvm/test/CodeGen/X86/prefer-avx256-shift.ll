@@ -302,10 +302,10 @@ define <32 x i8> @var_ashr_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX256-NEXT:    vpsraw $4, %ymm3, %ymm4
 ; AVX256-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm3
 ; AVX256-NEXT:    vpsraw $2, %ymm3, %ymm4
-; AVX256-NEXT:    vpaddw %ymm2, %ymm2, %ymm2
-; AVX256-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm3
+; AVX256-NEXT:    vpaddw %ymm2, %ymm2, %ymm5
+; AVX256-NEXT:    vpblendvb %ymm5, %ymm4, %ymm3, %ymm3
 ; AVX256-NEXT:    vpsraw $1, %ymm3, %ymm4
-; AVX256-NEXT:    vpaddw %ymm2, %ymm2, %ymm2
+; AVX256-NEXT:    vpsllw $2, %ymm2, %ymm2
 ; AVX256-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm2
 ; AVX256-NEXT:    vpsrlw $8, %ymm2, %ymm2
 ; AVX256-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
@@ -313,10 +313,10 @@ define <32 x i8> @var_ashr_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX256-NEXT:    vpsraw $4, %ymm0, %ymm3
 ; AVX256-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; AVX256-NEXT:    vpsraw $2, %ymm0, %ymm3
-; AVX256-NEXT:    vpaddw %ymm1, %ymm1, %ymm1
-; AVX256-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
+; AVX256-NEXT:    vpaddw %ymm1, %ymm1, %ymm4
+; AVX256-NEXT:    vpblendvb %ymm4, %ymm3, %ymm0, %ymm0
 ; AVX256-NEXT:    vpsraw $1, %ymm0, %ymm3
-; AVX256-NEXT:    vpaddw %ymm1, %ymm1, %ymm1
+; AVX256-NEXT:    vpsllw $2, %ymm1, %ymm1
 ; AVX256-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; AVX256-NEXT:    vpsrlw $8, %ymm0, %ymm0
 ; AVX256-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
@@ -338,10 +338,10 @@ define <32 x i8> @var_ashr_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX512VL-NEXT:    vpsraw $4, %ymm3, %ymm4
 ; AVX512VL-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm3
 ; AVX512VL-NEXT:    vpsraw $2, %ymm3, %ymm4
-; AVX512VL-NEXT:    vpaddw %ymm2, %ymm2, %ymm2
-; AVX512VL-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm3
+; AVX512VL-NEXT:    vpaddw %ymm2, %ymm2, %ymm5
+; AVX512VL-NEXT:    vpblendvb %ymm5, %ymm4, %ymm3, %ymm3
 ; AVX512VL-NEXT:    vpsraw $1, %ymm3, %ymm4
-; AVX512VL-NEXT:    vpaddw %ymm2, %ymm2, %ymm2
+; AVX512VL-NEXT:    vpsllw $2, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm2
 ; AVX512VL-NEXT:    vpsrlw $8, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
@@ -349,10 +349,10 @@ define <32 x i8> @var_ashr_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX512VL-NEXT:    vpsraw $4, %ymm0, %ymm3
 ; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpsraw $2, %ymm0, %ymm3
-; AVX512VL-NEXT:    vpaddw %ymm1, %ymm1, %ymm1
-; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddw %ymm1, %ymm1, %ymm4
+; AVX512VL-NEXT:    vpblendvb %ymm4, %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpsraw $1, %ymm0, %ymm3
-; AVX512VL-NEXT:    vpaddw %ymm1, %ymm1, %ymm1
+; AVX512VL-NEXT:    vpsllw $2, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpsrlw $8, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
@@ -432,10 +432,10 @@ define <16 x i8> @var_ashr_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; AVX256VL-NEXT:    vpsraw $4, %xmm3, %xmm4
 ; AVX256VL-NEXT:    vpblendvb %xmm2, %xmm4, %xmm3, %xmm3
 ; AVX256VL-NEXT:    vpsraw $2, %xmm3, %xmm4
-; AVX256VL-NEXT:    vpaddw %xmm2, %xmm2, %xmm2
-; AVX256VL-NEXT:    vpblendvb %xmm2, %xmm4, %xmm3, %xmm3
+; AVX256VL-NEXT:    vpaddw %xmm2, %xmm2, %xmm5
+; AVX256VL-NEXT:    vpblendvb %xmm5, %xmm4, %xmm3, %xmm3
 ; AVX256VL-NEXT:    vpsraw $1, %xmm3, %xmm4
-; AVX256VL-NEXT:    vpaddw %xmm2, %xmm2, %xmm2
+; AVX256VL-NEXT:    vpsllw $2, %xmm2, %xmm2
 ; AVX256VL-NEXT:    vpblendvb %xmm2, %xmm4, %xmm3, %xmm2
 ; AVX256VL-NEXT:    vpsrlw $8, %xmm2, %xmm2
 ; AVX256VL-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
@@ -443,10 +443,10 @@ define <16 x i8> @var_ashr_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; AVX256VL-NEXT:    vpsraw $4, %xmm0, %xmm3
 ; AVX256VL-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
 ; AVX256VL-NEXT:    vpsraw $2, %xmm0, %xmm3
-; AVX256VL-NEXT:    vpaddw %xmm1, %xmm1, %xmm1
-; AVX256VL-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
+; AVX256VL-NEXT:    vpaddw %xmm1, %xmm1, %xmm4
+; AVX256VL-NEXT:    vpblendvb %xmm4, %xmm3, %xmm0, %xmm0
 ; AVX256VL-NEXT:    vpsraw $1, %xmm0, %xmm3
-; AVX256VL-NEXT:    vpaddw %xmm1, %xmm1, %xmm1
+; AVX256VL-NEXT:    vpsllw $2, %xmm1, %xmm1
 ; AVX256VL-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
 ; AVX256VL-NEXT:    vpsrlw $8, %xmm0, %xmm0
 ; AVX256VL-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0

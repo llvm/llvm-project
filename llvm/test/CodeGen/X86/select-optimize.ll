@@ -229,10 +229,11 @@ define i32 @expensive_val_operand4(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
 }
 
 ; Expensive cold value operand with unsafe-to-sink (due to lifetime-end marker) load (partial slice sinking).
-define i32 @expensive_val_operand5(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
+define i32 @expensive_val_operand5(i32 %b, i32 %y, i1 %cmp) {
 ; CHECK-LABEL: @expensive_val_operand5(
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr nonnull [[A]])
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[A]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]], !prof [[PROF18]]
 ; CHECK:       select.true.sink:
@@ -242,8 +243,9 @@ define i32 @expensive_val_operand5(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
 ; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[X]], [[SELECT_TRUE_SINK]] ], [ [[Y:%.*]], [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
+  %a = alloca i32
   %load = load i32, ptr %a, align 8
-  call void @llvm.lifetime.end.p0(i64 2, ptr nonnull %a)
+  call void @llvm.lifetime.end.p0(ptr nonnull %a)
   %x = add i32 %load, %b
   %sel = select i1 %cmp, i32 %x, i32 %y, !prof !17
   ret i32 %sel
@@ -518,7 +520,7 @@ for.body:                                         ; preds = %for.body.preheader,
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 declare void @free(ptr nocapture)
 

@@ -88,7 +88,7 @@ define <2 x double> @select_olt_load_cmp(<2 x double> %a, ptr %src) {
 ; CHECK-SD-NEXT:    ldr d1, [x0]
 ; CHECK-SD-NEXT:    fcmgt v1.2s, v1.2s, #0.0
 ; CHECK-SD-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: select_olt_load_cmp:
@@ -98,7 +98,7 @@ define <2 x double> @select_olt_load_cmp(<2 x double> %a, ptr %src) {
 ; CHECK-GI-NEXT:    fcmgt v1.2s, v1.2s, #0.0
 ; CHECK-GI-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-GI-NEXT:    shl v1.2d, v1.2d, #63
-; CHECK-GI-NEXT:    sshr v1.2d, v1.2d, #63
+; CHECK-GI-NEXT:    cmlt v1.2d, v1.2d, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -129,14 +129,14 @@ define <4 x i32> @select_icmp_sgt(<4 x i32> %a, <4 x i8> %b) {
 ; CHECK-GI-NEXT:    cmgt v1.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    umov w8, v1.b[0]
 ; CHECK-GI-NEXT:    umov w9, v1.b[1]
-; CHECK-GI-NEXT:    mov v2.s[0], w8
+; CHECK-GI-NEXT:    fmov s2, w8
 ; CHECK-GI-NEXT:    umov w8, v1.b[2]
 ; CHECK-GI-NEXT:    mov v2.s[1], w9
 ; CHECK-GI-NEXT:    umov w9, v1.b[3]
 ; CHECK-GI-NEXT:    mov v2.s[2], w8
 ; CHECK-GI-NEXT:    mov v2.s[3], w9
 ; CHECK-GI-NEXT:    shl v1.4s, v2.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-GI-NEXT:    bic v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:

@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaAMDGPU.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include <cstdint>
 
@@ -36,6 +38,8 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
 
   switch (BuiltinID) {
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_struct_ptr_buffer_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_load_to_lds:
   case AMDGPU::BI__builtin_amdgcn_global_load_lds: {
     constexpr const int SizeIdx = 2;
     llvm::APSInt Size;
@@ -55,9 +59,11 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       [[fallthrough]];
     }
     default:
-      Diag(ArgExpr->getExprLoc(), diag::err_amdgcn_load_lds_size_invalid_value)
+      SemaRef.targetDiag(ArgExpr->getExprLoc(),
+                         diag::err_amdgcn_load_lds_size_invalid_value)
           << ArgExpr->getSourceRange();
-      Diag(ArgExpr->getExprLoc(), diag::note_amdgcn_load_lds_size_valid_value)
+      SemaRef.targetDiag(ArgExpr->getExprLoc(),
+                         diag::note_amdgcn_load_lds_size_valid_value)
           << HasGFX950Insts << ArgExpr->getSourceRange();
       return true;
     }
@@ -80,8 +86,174 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     return checkMovDPPFunctionCall(TheCall, 5, 1);
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
     return checkMovDPPFunctionCall(TheCall, 2, 1);
-  case AMDGPU::BI__builtin_amdgcn_update_dpp: {
+  case AMDGPU::BI__builtin_amdgcn_update_dpp:
     return checkMovDPPFunctionCall(TheCall, 6, 2);
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_fp8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_fp8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_bf8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_bf8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_fp4:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_fp4:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_fp8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_bf8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_fp4:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f16_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_bf16_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f16_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_bf16_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_bf6:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 15);
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x8B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_8x16B:
+    return checkCoopAtomicFunctionCall(TheCall, /*IsStore=*/false);
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x4B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B:
+    return checkCoopAtomicFunctionCall(TheCall, /*IsStore=*/true);
+  case AMDGPU::BI__builtin_amdgcn_image_load_1d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_1darray_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_1d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_1darray_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_2d_f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_2d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_2d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_2darray_f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_2darray_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_2darray_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_3d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_3d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_cube_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_cube_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_1d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_1d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_1darray_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_1darray_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_2d_f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_2d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_2d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_2darray_f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_2darray_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_2darray_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_3d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_3d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_cube_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_cube_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_1d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_1darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_1d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_1darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_2d_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_2d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_2d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_2darray_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_2darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_2darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_3d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_3d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_cube_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_cube_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_1d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_1d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_1darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_1darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_2d_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_2d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_2d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_2darray_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_2darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_2darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_3d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_3d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_cube_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_cube_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_1d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_1d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_1darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_1darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_2d_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_2d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_2d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_2darray_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_2darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_2darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_3d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_3d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_cube_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_cube_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_1d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_1d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_1darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_1darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_2d_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_2d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_2d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_2darray_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_2darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_2darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32: {
+    StringRef FeatureList(
+        getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
+    if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
+                                                 CallerFeatureMap)) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
+          << FD->getDeclName() << FeatureList;
+      return false;
+    }
+
+    unsigned ArgCount = TheCall->getNumArgs() - 1;
+    llvm::APSInt Result;
+
+    return (SemaRef.BuiltinConstantArg(TheCall, 0, Result)) ||
+           (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
+           (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result));
+  }
+  case AMDGPU::BI__builtin_amdgcn_image_store_1d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_1darray_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_1d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_1darray_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_2d_f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_2d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_2d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_2darray_f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_2darray_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_2darray_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_3d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_3d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_cube_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_cube_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_1d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_1d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_1darray_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_1darray_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f16_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f16_i32: {
+    StringRef FeatureList(
+        getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
+    if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
+                                                 CallerFeatureMap)) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
+          << FD->getDeclName() << FeatureList;
+      return false;
+    }
+
+    unsigned ArgCount = TheCall->getNumArgs() - 1;
+    llvm::APSInt Result;
+
+    return (SemaRef.BuiltinConstantArg(TheCall, 1, Result)) ||
+           (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
+           (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result));
   }
   default:
     return false;
@@ -96,7 +268,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
            << ArgExpr->getType();
   auto Ord = ArgResult.Val.getInt().getZExtValue();
 
-  // Check validity of memory ordering as per C11 / C++11's memody model.
+  // Check validity of memory ordering as per C11 / C++11's memory model.
   // Only fence needs check. Atomic dec/inc allow all memory orders.
   if (!llvm::isValidAtomicOrderingCABI(Ord))
     return Diag(ArgExpr->getBeginLoc(),
@@ -126,6 +298,50 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
            << ArgExpr->getType();
 
   return false;
+}
+
+bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
+  bool Fail = false;
+
+  // First argument is a global or generic pointer.
+  Expr *PtrArg = TheCall->getArg(0);
+  QualType PtrTy = PtrArg->getType()->getPointeeType();
+  unsigned AS = getASTContext().getTargetAddressSpace(PtrTy.getAddressSpace());
+  if (AS != llvm::AMDGPUAS::FLAT_ADDRESS &&
+      AS != llvm::AMDGPUAS::GLOBAL_ADDRESS) {
+    Fail = true;
+    Diag(TheCall->getBeginLoc(), diag::err_amdgcn_coop_atomic_invalid_as)
+        << PtrArg->getSourceRange();
+  }
+
+  // Check atomic ordering
+  Expr *AtomicOrdArg = TheCall->getArg(IsStore ? 2 : 1);
+  Expr::EvalResult AtomicOrdArgRes;
+  if (!AtomicOrdArg->EvaluateAsInt(AtomicOrdArgRes, getASTContext()))
+    llvm_unreachable("Intrinsic requires imm for atomic ordering argument!");
+  auto Ord =
+      llvm::AtomicOrderingCABI(AtomicOrdArgRes.Val.getInt().getZExtValue());
+
+  // Atomic ordering cannot be acq_rel in any case, acquire for stores or
+  // release for loads.
+  if (!llvm::isValidAtomicOrderingCABI((unsigned)Ord) ||
+      (Ord == llvm::AtomicOrderingCABI::acq_rel) ||
+      Ord == (IsStore ? llvm::AtomicOrderingCABI::acquire
+                      : llvm::AtomicOrderingCABI::release)) {
+    return Diag(AtomicOrdArg->getBeginLoc(),
+                diag::warn_atomic_op_has_invalid_memory_order)
+           << 0 << AtomicOrdArg->getSourceRange();
+  }
+
+  // Last argument is a string literal
+  Expr *Arg = TheCall->getArg(TheCall->getNumArgs() - 1);
+  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts())) {
+    Fail = true;
+    Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
+        << Arg->getSourceRange();
+  }
+
+  return Fail;
 }
 
 bool SemaAMDGPU::checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
@@ -342,6 +558,8 @@ AMDGPUMaxNumWorkGroupsAttr *SemaAMDGPU::CreateAMDGPUMaxNumWorkGroupsAttr(
     const AttributeCommonInfo &CI, Expr *XExpr, Expr *YExpr, Expr *ZExpr) {
   ASTContext &Context = getASTContext();
   AMDGPUMaxNumWorkGroupsAttr TmpAttr(Context, CI, XExpr, YExpr, ZExpr);
+  assert(!SemaRef.isSFINAEContext() &&
+         "Can't produce SFINAE diagnostic pointing to temporary attribute");
 
   if (checkAMDGPUMaxNumWorkGroupsArguments(SemaRef, XExpr, YExpr, ZExpr,
                                            TmpAttr))

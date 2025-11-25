@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11
-// RUN: %clang_cc1 -fsyntax-only -verify %s -triple x86_64-windows-msvc -std=c++11
-// RUN: %clang_cc1 -fsyntax-only -verify %s -triple x86_64-scei-ps4 -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,itanium %s -triple x86_64-unknown-linux -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,windows %s -triple x86_64-windows-msvc -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,scei %s -triple x86_64-scei-ps4 -std=c++11
 
 
 void __attribute__((trivial_abi)) foo(); // expected-warning {{'trivial_abi' attribute only applies to classes}}
@@ -165,7 +165,10 @@ static_assert(!__builtin_is_cpp_trivially_relocatable(CopyMoveDeleted), "");
 
 #endif
 
-struct __attribute__((trivial_abi)) S18 { // expected-warning {{'trivial_abi' cannot be applied to 'S18'}} expected-note {{copy constructors and move constructors are all deleted}}
+struct __attribute__((trivial_abi)) S18 { // expected-warning {{'trivial_abi' cannot be applied to 'S18'}} \
+                                          // itanium-note {{'trivial_abi' is disallowed on 'S18' because it has a field of a non-trivial class type}} \
+                                          // windows-note {{'trivial_abi' is disallowed on 'S18' because it has a field of a non-trivial class type}} \
+                                          // scei-note {{'trivial_abi' is disallowed on 'S18' because its copy constructors and move constructors are all deleted}}
   CopyMoveDeleted a;
 };
 #ifdef __ORBIS__
@@ -195,7 +198,10 @@ struct __attribute__((trivial_abi)) MoveDeleted {
 };
 static_assert(__is_trivially_relocatable(MoveDeleted), ""); // expected-warning{{deprecated}}
 static_assert(!__builtin_is_cpp_trivially_relocatable(MoveDeleted), "");
-struct __attribute__((trivial_abi)) S19 { // expected-warning {{'trivial_abi' cannot be applied to 'S19'}} expected-note {{copy constructors and move constructors are all deleted}}
+struct __attribute__((trivial_abi)) S19 { // expected-warning {{'trivial_abi' cannot be applied to 'S19'}} \
+                                          // itanium-note {{'trivial_abi' is disallowed on 'S19' because its copy constructors and move constructors are all deleted}} \
+                                          // windows-note {{'trivial_abi' is disallowed on 'S19' because it has a field of a non-trivial class type}} \
+                                          // scei-note {{'trivial_abi' is disallowed on 'S19' because its copy constructors and move constructors are all deleted}}
   CopyDeleted a;
   MoveDeleted b;
 };

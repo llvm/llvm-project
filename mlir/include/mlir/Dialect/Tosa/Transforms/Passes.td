@@ -65,14 +65,6 @@ def TosaOptionalDecompositionsPass
   }];
 }
 
-def TosaLevelType : I32EnumAttr<"TosaLevelEnum", "Tosa level",
-    [
-      I32EnumAttrCase<"None", 0, "none">,
-      I32EnumAttrCase<"EightK", 1, "8k">,
-    ]>{
-  let cppNamespace = "mlir::tosa";
-}
-
 def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
   let summary = "Validates TOSA dialect";
   let description = [{
@@ -81,10 +73,6 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
   }];
 
   let options = [
-      ListOption<"profile", "profile", "std::string",
-             "Validate if operations match for the given profile set">,
-      ListOption<"extension", "extension", "std::string",
-             "Validate if operations match for the given extension set">,
       Option<"strictOpSpecAlignment", "strict-op-spec-alignment", "bool",
              /*default=*/"false",
              "Verify if the properties of certain operations align the spec requirement">,
@@ -92,17 +80,7 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
              /*default=*/"false",
              "Disable checks for operations that are determined to be invalid due to their "
              "operand/result datatypes not aligning with the 'Supported Data Types' "
-             "sections of the specifciation">,
-      Option<"level", "level", "mlir::tosa::TosaLevelEnum",
-             /*default=*/"mlir::tosa::TosaLevelEnum::EightK",
-             "Validate if operator parameters are within specfication for the given level",
-             [{::llvm::cl::values(
-               clEnumValN(mlir::tosa::TosaLevelEnum::EightK, "8k",
-                "Ranges are expected to be sufficient for applications with frame sizes up to 8K."),
-               clEnumValN(mlir::tosa::TosaLevelEnum::None, "none",
-                "Allows the full range of arguments specified by the operations according "
-                "to the operation data types.")
-              )}]>
+             "sections of the specifciation">
    ];
 }
 
@@ -125,6 +103,90 @@ def TosaReduceTransposes : Pass<"tosa-reduce-transposes", "func::FuncOp"> {
     that introduce a lot of data-layout transformations when legalizing to TOSA,
     a common one being transformations between NHWC and NCHW layouts.
   }];
+}
+
+def TosaConvertIntegerTypeToSignless : Pass<"tosa-convert-integer-type-to-signless", "func::FuncOp"> {
+  let summary = "Convert integer types to signless";
+  let description = [{
+    This pass converts signed or unsigned integer types to signless. It
+    currently does this greedily for all operators and can also change the
+    signature of the function. Should the signature of the entrypoint
+    function change, it will be the responsibility of the user to carry
+    signedness information of the inputs and outputs independently.
+
+    This can be a useful transformation for conversion to other formats
+    that require strict adherence to the TOSA specification.
+  }];
+}
+
+def TosaAttachTarget : Pass<"tosa-attach-target", "ModuleOp"> {
+  let summary = "Attach tosa.target_env information to the given module.";
+
+  let description = [{
+    This pass allows the user to specify a TOSA target environment consisting of
+    the following components: level, profiles and extensions.
+
+    The target environment is attached to the module as an attribute, allowing other
+    transformations to query the selected target and adapt their behaviour based on
+    this information.
+  }];
+
+  let dependentDialects = [
+    "func::FuncDialect",
+    "tosa::TosaDialect",
+  ];
+
+  let options = [
+    Option<"specificationVersion", "specification_version", "mlir::tosa::SpecificationVersion",
+              /*default=*/"mlir::tosa::SpecificationVersion::V_1_0",
+              "The specification version that TOSA operators should conform to.",
+              [{::llvm::cl::values(
+                clEnumValN(mlir::tosa::SpecificationVersion::V_1_0, "1.0", "TOSA Specification version 1.0"),
+                clEnumValN(mlir::tosa::SpecificationVersion::V_1_1_DRAFT, "1.1.draft", "TOSA Specification version 1.1.draft")
+              )}]>,
+    Option<"level", "level", "mlir::tosa::Level",
+              /*default=*/"mlir::tosa::Level::eightK",
+              "The TOSA level that operators should conform to. A TOSA level defines "
+              "operator argument ranges that an implementation shall support.",
+              [{::llvm::cl::values(
+                clEnumValN(mlir::tosa::Level::eightK, "8k",
+                  "Ranges are expected to be sufficient for applications with frame "
+                  "sizes up to 8K."),
+                clEnumValN(mlir::tosa::Level::none, "none",
+                  "Allows the full range of arguments specified by the operations according "
+                  "to the operation data types.")
+                )}]>,
+    ListOption<"profiles", "profiles", "std::string",
+              "The TOSA profile(s) that operators should conform to. TOSA profiles "
+              "enable efficient implementation on different classes of device. Each "
+              "profile is an independent set of operations and data type combinations.">,
+    ListOption<"extensions", "extensions", "std::string",
+            "The TOSA extension(s) that operators should conform to. TOSA profile "
+            "extensions define optional operation and data type combinations.">
+  ];
+}
+
+def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
+  let summary = "Narrow I64 TOSA operations to I32";
+  let description = [{
+    This pass narrows TOSA operations with 64-bit integer tensor types to
+    32-bit integer tensor types. This can be useful for backends that do not
+    support the EXT-INT64 extension of TOSA.
+  }];
+
+  let options = [
+    Option<"aggressiveRewrite", "aggressive-rewrite", "bool", "false",
+      "If enabled, all TOSA operations are rewritten, regardless or whether the narrowing"
+      "is safe. This option may lead to data loss if not used carefully.">,
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool", "false",
+      "If enabled, the pass will convert function I/O types as well. Otherwise casts will"
+      "be inserted at the I/O boundaries.">
+  ];
+
+  let dependentDialects = [
+    "func::FuncDialect",
+    "tosa::TosaDialect",
+  ];
 }
 
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_PASSES
