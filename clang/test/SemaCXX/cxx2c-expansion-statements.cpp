@@ -1174,3 +1174,16 @@ void invalid() {
                                                   expected-note {{in implicit initialization of binding declaration}}
 }
 } // namespace std
+
+constexpr int generic_lambda() {
+  static constexpr int arr[]{1, 2, 3};
+  int sum = 0;
+  [n = 5, &sum]<class = void>() {
+    template for (constexpr auto x : arr) {
+      sum += n + x;
+    }
+  }();
+  return sum;
+}
+
+static_assert(generic_lambda() == 21);
