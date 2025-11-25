@@ -2576,15 +2576,17 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
   if (!Dst.isSimple()) {
     if (Dst.isVectorElt()) {
       if (getLangOpts().HLSL) {
-        // In HLSL, storing to individual elements of a vector through
-        // VectorElt LValue needs to be handled as separate store. We need to
-        // avoid the load/modify/store sequence to prevent overwriting other
-        // elements that might be getting updated in parallel.
+        // HLSL allows direct access to vector elements, so storing to
+        // individual elements of a vector through VectorElt is handled as
+        // separate store instructions.
         Address DstAddr = Dst.getVectorAddress();
         llvm::Type *DestAddrTy = DstAddr.getElementType();
         llvm::Type *ElemTy = DestAddrTy->getScalarType();
         CharUnits ElemAlign = CharUnits::fromQuantity(
             CGM.getDataLayout().getPrefTypeAlign(ElemTy));
+
+        assert(ElemTy->getScalarSizeInBits() >= 8 &&
+               "vector element type must be at least byte-sized");
 
         llvm::Value *Val = Src.getScalarVal();
         if (Val->getType()->getPrimitiveSizeInBits() <
