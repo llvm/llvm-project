@@ -4945,7 +4945,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
                   Modifier == "fb_nullify" ? OMPC_NEED_DEVICE_PTR_fb_nullify
                                            : OMPC_NEED_DEVICE_PTR_fb_preserve;
             } else {
-              Diag(Tok, diag::err_omp_unknown_need_device_ptr_modifier);
+              Diag(Tok, diag::err_omp_unknown_need_device_ptr_kind);
               SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end,
                         StopBeforeMatch);
               return false;
