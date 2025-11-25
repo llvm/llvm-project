@@ -3457,7 +3457,7 @@ convertMLOADToLoadWithUsedBytesMask(MemSDNode *N, SelectionDAG &DAG) {
   SDValue Chain = N->getOperand(0);
   SDValue BasePtr = N->getOperand(1);
   SDValue Mask = N->getOperand(3);
-  SDValue Passthru = N->getOperand(4);
+  [[maybe_unused]] SDValue Passthru = N->getOperand(4);
 
   SDLoc DL(N);
   EVT ResVT = N->getValueType(0);
