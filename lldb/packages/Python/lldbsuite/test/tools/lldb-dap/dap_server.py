@@ -987,7 +987,14 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
+    def request_evaluate(
+        self,
+        expression,
+        frameIndex=0,
+        threadId=None,
+        context=None,
+        is_hex: Optional[bool] = None,
+    ):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
             return []
@@ -997,6 +1004,8 @@ class DebugCommunication(object):
         }
         if context:
             args_dict["context"] = context
+        if is_hex is not None:
+            args_dict["format"] = {"hex": is_hex}
         command_dict = {
             "command": "evaluate",
             "type": "request",
