@@ -4012,13 +4012,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     ConstantRange MaxLanes = cast<ConstantInt>(II->getArgOperand(1))
                                  ->getValue()
                                  .zext(Cnt.getBitWidth());
-    if (cast<ConstantInt>(II->getArgOperand(2))->getZExtValue())
+    if (cast<ConstantInt>(II->getArgOperand(2))->isOne())
       MaxLanes = MaxLanes.multiply(
           getVScaleRange(II->getFunction(), Cnt.getBitWidth()));
 
     if (Cnt.icmp(CmpInst::ICMP_ULE, MaxLanes))
       return replaceInstUsesWith(
-          *II, Builder.CreateTrunc(II->getArgOperand(0), II->getType()));
+          *II, Builder.CreateZExtOrTrunc(II->getArgOperand(0), II->getType()));
     return nullptr;
   }
   default: {
