@@ -571,13 +571,12 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
     InVals.push_back(ArgValue);
 
     unsigned ArgIndex = Ins[InIdx].OrigArgIndex;
-    unsigned ArgPartOffset = Ins[InIdx].PartOffset;
-    assert(ArgPartOffset == 0);
+    assert(Ins[InIdx].PartOffset == 0);
     while (i + 1 != e && Ins[InIdx + 1].OrigArgIndex == ArgIndex) {
       CCValAssign &PartVA = ArgLocs[i + 1];
       unsigned PartOffset = Ins[InIdx + 1].PartOffset;
-      SDValue Offset = DAG.getIntPtrConstant(PartOffset, dl);
-      SDValue Address = DAG.getNode(ISD::ADD, dl, PtrVT, ArgValue, Offset);
+      SDValue Address = DAG.getMemBasePlusOffset(
+          ArgValue, TypeSize::getFixed(PartOffset), dl);
       InVals.push_back(DAG.getLoad(PartVA.getValVT(), dl, Chain, Address,
                                    MachinePointerInfo()));
       ++i;
@@ -1033,8 +1032,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
     if (VA.getLocInfo() == CCValAssign::Indirect) {
       // Store the argument in a stack slot and pass its address.
       unsigned ArgIndex = Outs[realArgIdx].OrigArgIndex;
-      unsigned ArgPartOffset = Outs[realArgIdx].PartOffset;
-      assert(ArgPartOffset == 0);
+      assert(Outs[realArgIdx].PartOffset == 0);
 
       EVT SlotVT;
       if (i + 1 != e && Outs[realArgIdx + 1].OrigArgIndex == ArgIndex) {
@@ -1059,8 +1057,8 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
       while (i + 1 != e && Outs[realArgIdx + 1].OrigArgIndex == ArgIndex) {
         SDValue PartValue = OutVals[realArgIdx + 1];
         unsigned PartOffset = Outs[realArgIdx + 1].PartOffset;
-        SDValue Address = DAG.getNode(ISD::ADD, dl, PtrVT, SpillSlot,
-                                      DAG.getIntPtrConstant(PartOffset, dl));
+        SDValue Address = DAG.getMemBasePlusOffset(
+            DAG.getFrameIndex(FI, PtrVT), TypeSize::getFixed(PartOffset), dl);
         MemOpChains.push_back(
             DAG.getStore(Chain, dl, PartValue, Address,
                          MachinePointerInfo::getFixedStack(MF, FI)));

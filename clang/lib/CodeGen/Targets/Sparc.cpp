@@ -44,7 +44,8 @@ ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
                         : ABIArgInfo::getDirect();
 
   if (IsLongDouble)
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
 
   return DefaultABIInfo::classifyReturnType(Ty);
 }
