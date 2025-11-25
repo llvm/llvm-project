@@ -92,10 +92,11 @@ def FIRToCoreMLIRPass : Pass<"fir-to-core-mlir", "mlir::ModuleOp"> {
   let description = [{
     Convert the FIR dialect module to core MLIR dialects.
   }];
-  let dependentDialects = [
-    "fir::FIROpsDialect", "fir::FIRCodeGenDialect", "mlir::scf::SCFDialect",
-    "mlir::memref::MemRefDialect", "mlir::affine::AffineDialect"
-  ];
+  let dependentDialects = ["fir::FIROpsDialect", "fir::FIRCodeGenDialect",
+                           "mlir::scf::SCFDialect",
+                           "mlir::cf::ControlFlowDialect",
+                           "mlir::memref::MemRefDialect",
+                           "mlir::affine::AffineDialect"];
 }
 
 def AnnotateConstantOperands : Pass<"annotate-constant"> {

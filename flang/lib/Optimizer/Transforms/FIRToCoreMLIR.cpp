@@ -10,6 +10,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -185,6 +186,72 @@ public:
   }
 };
 
+class FIRSelectCaseOpLowering
+    : public mlir::OpConversionPattern<fir::SelectCaseOp> {
+
+public:
+  using mlir::OpConversionPattern<fir::SelectCaseOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::SelectCaseOp caseOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto ty = caseOp.getSelector().getType();
+    if (!ty.isIntOrIndex())
+      return mlir::failure();
+
+    unsigned conds = caseOp.getNumConditions();
+    llvm::ArrayRef<mlir::Attribute> cases = caseOp.getCases().getValue();
+    mlir::Value selector = caseOp.getSelector(adaptor.getOperands());
+    auto loc = caseOp.getLoc();
+    for (unsigned t = 0; t < conds; ++t) {
+      mlir::Block *dest = caseOp.getSuccessor(t);
+      mlir::ValueRange destOps =
+          caseOp.getSuccessorOperands(t).getForwardedOperands();
+      mlir::Attribute attr = cases[t];
+
+      if (mlir::isa<mlir::UnitAttr>(attr)) {
+        assert((t + 1 == conds) && "unit must be last");
+        rewriter.replaceOpWithNewOp<mlir::cf::BranchOp>(caseOp, dest, destOps);
+        continue;
+      }
+
+      std::optional<mlir::ValueRange> cmpOps = caseOp.getCompareOperands(t);
+      mlir::Value cond;
+
+      if (mlir::isa<fir::PointIntervalAttr>(attr)) {
+        cond = mlir::arith::CmpIOp::create(rewriter, loc,
+                                           mlir::arith::CmpIPredicate::eq,
+                                           selector, cmpOps->front());
+      } else if (mlir::isa<fir::LowerBoundAttr>(attr)) {
+        cond = mlir::arith::CmpIOp::create(rewriter, loc,
+                                           mlir::arith::CmpIPredicate::sge,
+                                           selector, cmpOps->front());
+      } else if (mlir::isa<fir::UpperBoundAttr>(attr)) {
+        cond = mlir::arith::CmpIOp::create(rewriter, loc,
+                                           mlir::arith::CmpIPredicate::sle,
+                                           selector, cmpOps->front());
+      } else {
+        assert(mlir::isa<fir::ClosedIntervalAttr>(attr));
+        mlir::Value caseArg0 = *cmpOps->begin();
+        mlir::Value caseArg1 = *(cmpOps->begin() + 1);
+        auto cond0 = mlir::arith::CmpIOp::create(
+            rewriter, loc, mlir::arith::CmpIPredicate::sge, selector, caseArg0);
+        auto cond1 = mlir::arith::CmpIOp::create(
+            rewriter, loc, mlir::arith::CmpIPredicate::sle, selector, caseArg1);
+        cond = mlir::arith::AndIOp::create(rewriter, loc, cond0, cond1);
+      }
+
+      mlir::Block *curBlock = rewriter.getInsertionBlock();
+      mlir::Block *nextBlock = rewriter.splitBlock(curBlock, curBlock->end());
+      rewriter.setInsertionPointToEnd(curBlock);
+      mlir::cf::CondBranchOp::create(rewriter, loc, cond, dest, destOps,
+                                     nextBlock, mlir::ValueRange());
+      rewriter.setInsertionPointToEnd(nextBlock);
+    }
+    return mlir::success();
+  }
+};
+
 } // namespace
 
 static mlir::TypeConverter prepareTypeConverter() {
@@ -228,12 +295,14 @@ void FIRToCoreMLIRPass::runOnOperation() {
   mlir::RewritePatternSet patterns(ctx);
 
   patterns.add<FIRAllocOpLowering, FIRLoadOpLowering, FIRStoreOpLowering,
-               FIRConvertOpLowering, FIRXArrayCoorOpLowering>(converter, ctx);
+               FIRConvertOpLowering, FIRXArrayCoorOpLowering,
+               FIRSelectCaseOpLowering>(converter, ctx);
 
   mlir::ConversionTarget target(getContext());
 
   target.addLegalDialect<mlir::arith::ArithDialect, mlir::affine::AffineDialect,
-                         mlir::memref::MemRefDialect, mlir::scf::SCFDialect>();
+                         mlir::memref::MemRefDialect, mlir::scf::SCFDialect,
+                         mlir::cf::ControlFlowDialect>();
 
   if (mlir::failed(mlir::applyPartialConversion(theModule, target,
                                                 std::move(patterns)))) {
