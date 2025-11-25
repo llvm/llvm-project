@@ -1,25 +1,47 @@
-# DSLLVM - DSMIL-Optimized LLVM Toolchain
+# DSLLVM - War-Fighting Compiler for C3/JADC2 Systems
 
-**Version**: 1.4 (Feature 2.1 - Stealth Mode)
-**Status**: Active Development (v1.4 - Security Depth Phase)
+**Version**: 1.5.0 (Phase 1: Foundation - C3/JADC2 Integration)
+**Status**: Active Development (v1.5 - Operational Deployment Phase)
 **Owner**: SWORDIntel / DSMIL Kernel Team
 
 ---
 
 ## Overview
 
-DSLLVM is a hardened LLVM/Clang toolchain specialized for the DSMIL kernel and userland stack on Intel Meteor Lake hardware (CPU + NPU + Arc GPU). It extends LLVM with:
+DSLLVM is a **war-fighting compiler** specialized for military Command, Control & Communications (C3) and Joint All-Domain Command & Control (JADC2) systems. Built on LLVM/Clang, it extends the toolchain with classification-aware cross-domain security, 5G/MEC optimization, and operational features for contested environments.
 
-- **DSMIL-aware hardware targeting** optimized for Meteor Lake
+### Core Capabilities
+
+**Foundation (v1.0-v1.3)**
+- **DSMIL-aware hardware targeting** optimized for Intel Meteor Lake (CPU + NPU + Arc GPU)
 - **Semantic metadata** for 9-layer/104-device architecture
 - **Bandwidth & memory-aware optimization**
 - **MLOps stage-awareness** for AI/LLM workloads
 - **CNSA 2.0 provenance** (SHA-384, ML-DSA-87, ML-KEM-1024)
 - **Quantum optimization hooks** (Device 46)
-- **Mission-aware compilation** (border_ops, cyber_defence, covert_ops)
+- **Mission-aware compilation** with configurable profiles
 - **AI-assisted compilation** (Layer 5/7/8 integration)
-- **Operational stealth modes** for hostile environments (NEW in v1.4)
-- **Complete tooling** and pass pipelines
+
+**Security Depth (v1.4)** ✅ COMPLETE
+- **Operational Stealth Modes** (Feature 2.1): Telemetry suppression, constant-rate execution, network fingerprint reduction
+- **Threat Signature Embedding** (Feature 2.2): CFG fingerprinting, supply chain verification, forensics-ready binaries
+- **Blue vs Red Simulation** (Feature 2.3): Dual-build adversarial testing, scenario-based vulnerability injection
+
+**Operational Deployment (v1.5)** 🚧 IN PROGRESS
+- **Cross-Domain Guards & Classification** (Feature 3.1): DoD classification levels (U/C/S/TS/TS-SCI), cross-domain security policies
+- **JADC2 & 5G/Edge Integration** (Feature 3.2): 5G/MEC optimization, latency budgets (5ms), bandwidth contracts (10Gbps)
+- **Blue Force Tracker** (Feature 3.3): Real-time friendly force tracking (BFT-2), AES-256 encrypted position updates
+- **Mission Partner Environment** (Feature 3.5): Coalition interoperability, releasability markings (REL NATO, REL FVEY, NOFORN)
+- **EM Spectrum Resilience** (Feature 3.6): BLOS fallback (5G→SATCOM), EMCON modes, jamming detection
+- **Two-Person Integrity** (Feature 3.4): Nuclear surety controls (NC3), ML-DSA-87 dual-signature authorization
+
+### Military Network Support
+
+- **NIPRNet**: UNCLASSIFIED operations, coalition sharing
+- **SIPRNet**: SECRET operations (U/C/S), cross-domain guards
+- **JWICS**: TOP SECRET/SCI operations, NOFORN enforcement
+- **5G/MEC**: Edge computing for JADC2 (99.999% reliability, 5ms latency)
+- **Tactical Radios**: Link-16, SATCOM, MUOS, SINCGARS multi-protocol bridging
 
 ---
 

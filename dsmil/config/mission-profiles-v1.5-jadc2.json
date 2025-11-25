@@ -1,0 +1,319 @@
+{
+  "version": "1.5.0",
+  "description": "DSLLVM v1.5 C3/JADC2 Mission Profiles",
+  "profiles": {
+    "jadc2_sensor_fusion": {
+      "description": "Multi-domain sensor fusion for JADC2",
+      "classification": {
+        "network_level": "S",
+        "allowed_classifications": ["U", "C", "S"],
+        "cross_domain_guards_required": true
+      },
+      "jadc2_config": {
+        "profile": "sensor_fusion",
+        "deployment_target": "5g_mec",
+        "latency_budget_ms": 5,
+        "bandwidth_contract_gbps": 10,
+        "domains": ["air", "land", "sea", "space", "cyber"],
+        "sensor_types": ["radar", "eo_ir", "sigint", "cyber"],
+        "edge_offload": true,
+        "power_mode": "performance"
+      },
+      "telemetry": {
+        "level": "standard",
+        "performance_metrics": true,
+        "security_events": true
+      },
+      "pipeline": "hardened",
+      "ai_mode": "hybrid"
+    },
+
+    "jadc2_c2_processing": {
+      "description": "Command & control processing on 5G/MEC",
+      "classification": {
+        "network_level": "TS",
+        "allowed_classifications": ["U", "C", "S", "TS"],
+        "cross_domain_guards_required": true
+      },
+      "jadc2_config": {
+        "profile": "c2_processing",
+        "deployment_target": "5g_mec",
+        "latency_budget_ms": 5,
+        "bandwidth_contract_gbps": 5,
+        "domains": ["air", "land", "sea"],
+        "edge_offload": true,
+        "power_mode": "balanced"
+      },
+      "blue_red_config": {
+        "build_role": "blue",
+        "red_testing_enabled": false
+      },
+      "telemetry": {
+        "level": "full",
+        "audit_all_decisions": true
+      },
+      "pipeline": "enhanced",
+      "ai_mode": "hybrid"
+    },
+
+    "jadc2_targeting": {
+      "description": "AI-assisted targeting coordination",
+      "classification": {
+        "network_level": "TS",
+        "allowed_classifications": ["TS"],
+        "cross_domain_guards_required": true
+      },
+      "jadc2_config": {
+        "profile": "targeting",
+        "deployment_target": "5g_mec",
+        "latency_budget_ms": 5,
+        "bandwidth_contract_gbps": 1,
+        "transport_priority": 200,
+        "domains": ["air"],
+        "edge_offload": true,
+        "power_mode": "performance"
+      },
+      "roe_enforcement": {
+        "human_in_loop_required": true,
+        "authorization_levels": 2,
+        "audit_all_targeting": true
+      },
+      "telemetry": {
+        "level": "full",
+        "audit_all_decisions": true,
+        "targeting_decisions_logged": true
+      },
+      "pipeline": "hardened",
+      "ai_mode": "local"
+    },
+
+    "mpe_coalition_ops": {
+      "description": "Mission Partner Environment for coalition operations",
+      "classification": {
+        "network_level": "C",
+        "allowed_classifications": ["U", "C"],
+        "cross_domain_guards_required": true,
+        "releasability": "REL NATO"
+      },
+      "mpe_config": {
+        "partners": ["NATO", "FVEY", "AUS", "UK"],
+        "us_only_forbidden": true,
+        "sanitization_required": true
+      },
+      "jadc2_config": {
+        "profile": "situational_awareness",
+        "deployment_target": "5g_mec",
+        "latency_budget_ms": 10,
+        "bandwidth_contract_gbps": 5,
+        "domains": ["land", "sea"]
+      },
+      "telemetry": {
+        "level": "standard",
+        "mpe_transfers_logged": true
+      },
+      "pipeline": "standard",
+      "ai_mode": "hybrid"
+    },
+
+    "siprnet_ops": {
+      "description": "SECRET network operations (SIPRNET)",
+      "classification": {
+        "network_level": "S",
+        "allowed_classifications": ["U", "C", "S"],
+        "cross_domain_guards_required": true,
+        "network": "SIPRNET"
+      },
+      "jadc2_config": {
+        "profile": "c2_processing",
+        "deployment_target": "5g_mec",
+        "latency_budget_ms": 10,
+        "bandwidth_contract_gbps": 10
+      },
+      "bft_config": {
+        "enabled": true,
+        "update_rate_seconds": 10,
+        "encryption": "AES-256",
+        "authentication_required": true
+      },
+      "stealth_config": {
+        "mode": "standard",
+        "constant_rate_execution": false,
+        "jitter_suppression": false,
+        "network_fingerprint_reduction": true
+      },
+      "telemetry": {
+        "level": "standard"
+      },
+      "pipeline": "hardened",
+      "ai_mode": "local"
+    },
+
+    "jwics_ops": {
+      "description": "TOP SECRET/SCI network operations (JWICS)",
+      "classification": {
+        "network_level": "TS/SCI",
+        "allowed_classifications": ["TS", "TS/SCI"],
+        "cross_domain_guards_required": true,
+        "network": "JWICS",
+        "releasability": "NOFORN"
+      },
+      "jadc2_config": {
+        "profile": "c2_processing",
+        "deployment_target": "secure_enclave",
+        "latency_budget_ms": 20,
+        "bandwidth_contract_gbps": 1
+      },
+      "stealth_config": {
+        "mode": "aggressive",
+        "constant_rate_execution": true,
+        "jitter_suppression": true,
+        "network_fingerprint_reduction": true
+      },
+      "telemetry": {
+        "level": "full",
+        "classification": "TS/SCI",
+        "audit_trail_tamper_proof": true
+      },
+      "pipeline": "hardened",
+      "ai_mode": "local"
+    },
+
+    "covert_ops_jadc2": {
+      "description": "Covert operations with JADC2 support",
+      "classification": {
+        "network_level": "S",
+        "allowed_classifications": ["S"],
+        "cross_domain_guards_required": true
+      },
+      "jadc2_config": {
+        "profile": "c2_processing",
+        "deployment_target": "5g_mec",
+        "latency_budget_ms": 100,
+        "bandwidth_contract_gbps": 1
+      },
+      "blos_config": {
+        "primary_transport": "5g",
+        "fallback_transport": "satcom",
+        "fallback_latency_ms": 500,
+        "jamming_detection": true
+      },
+      "emcon_config": {
+        "level": 3,
+        "batch_transmissions": true,
+        "delay_ms": 5000,
+        "jitter_ms": 2000
+      },
+      "stealth_config": {
+        "mode": "aggressive",
+        "constant_rate_execution": true,
+        "constant_rate_target_ms": 100,
+        "jitter_suppression": true,
+        "network_fingerprint_reduction": true
+      },
+      "threat_signature_config": {
+        "embed_signatures": true,
+        "cfg_fingerprint": true,
+        "crypto_patterns": true
+      },
+      "telemetry": {
+        "level": "minimal",
+        "safety_critical_only": true
+      },
+      "pipeline": "hardened",
+      "ai_mode": "local"
+    },
+
+    "contested_spectrum": {
+      "description": "Operations in contested electromagnetic spectrum",
+      "classification": {
+        "network_level": "S",
+        "allowed_classifications": ["S"],
+        "cross_domain_guards_required": false
+      },
+      "jadc2_config": {
+        "profile": "c2_processing",
+        "deployment_target": "mobile_node",
+        "latency_budget_ms": 500,
+        "bandwidth_contract_gbps": 0.1
+      },
+      "blos_config": {
+        "primary_transport": "5g",
+        "fallback_transport": "satcom",
+        "tertiary_transport": "hf",
+        "fallback_latency_ms": 500,
+        "jamming_detection": true,
+        "auto_fallback": true
+      },
+      "radio_config": {
+        "protocols": ["link16", "satcom", "muos", "sincgars"],
+        "bridge_enabled": true,
+        "error_correction": "fec_aggressive"
+      },
+      "emcon_config": {
+        "level": 4,
+        "rf_silent_mode": true,
+        "emergency_only": true
+      },
+      "stealth_config": {
+        "mode": "aggressive",
+        "constant_rate_execution": true,
+        "jitter_suppression": true,
+        "network_fingerprint_reduction": true
+      },
+      "telemetry": {
+        "level": "minimal"
+      },
+      "pipeline": "hardened",
+      "ai_mode": "local"
+    },
+
+    "nuclear_surety": {
+      "description": "Nuclear command & control (NC3) operations",
+      "classification": {
+        "network_level": "TS/SCI",
+        "allowed_classifications": ["TS/SCI"],
+        "cross_domain_guards_required": true,
+        "releasability": "NOFORN"
+      },
+      "nuclear_config": {
+        "two_person_integrity": true,
+        "nc3_isolated": true,
+        "network_forbidden": true,
+        "approval_authorities": ["officer1", "officer2"],
+        "signature_algorithm": "ML-DSA-87"
+      },
+      "telemetry": {
+        "level": "full",
+        "tamper_proof_audit": true,
+        "all_executions_logged": true
+      },
+      "pipeline": "hardened",
+      "ai_mode": "local"
+    }
+  },
+
+  "deployment_restrictions": {
+    "jadc2_sensor_fusion": {
+      "approved_networks": ["SIPRNET", "JWICS"],
+      "requires_5g_mec": true,
+      "coalition_release": false
+    },
+    "jadc2_targeting": {
+      "approved_networks": ["JWICS"],
+      "human_in_loop": true,
+      "roe_enforcement": true,
+      "coalition_release": false
+    },
+    "mpe_coalition_ops": {
+      "approved_networks": ["NIPRNet", "allied_networks"],
+      "coalition_release": true,
+      "us_only_forbidden": true
+    },
+    "nuclear_surety": {
+      "approved_networks": ["NC3_secure"],
+      "air_gapped": true,
+      "two_person_required": true,
+      "network_forbidden": true
+    }
+  }
+}

@@ -513,6 +513,601 @@
 /** @} */
 
 /**
+ * @defgroup DSMIL_CLASSIFICATION Cross-Domain & Classification (v1.5)
+ * @{
+ */
+
+/**
+ * @brief Assign classification level to function or data
+ * @param level Classification level: "U", "C", "S", "TS", "TS/SCI"
+ *
+ * Classification levels enforce cross-domain security policies. Functions
+ * at different classification levels cannot call each other unless mediated
+ * by an approved cross-domain gateway.
+ *
+ * Standard DoD classification levels:
+ * - "U": UNCLASSIFIED
+ * - "C": CONFIDENTIAL
+ * - "S": SECRET (e.g., SIPRNET)
+ * - "TS": TOP SECRET (e.g., JWICS)
+ * - "TS/SCI": TOP SECRET / Sensitive Compartmented Information
+ *
+ * Example:
+ * @code
+ * DSMIL_CLASSIFICATION("S")
+ * DSMIL_LAYER(7)
+ * void process_secret_intel(const uint8_t *data, size_t len) {
+ *     // SECRET classification
+ *     // Cannot call CONFIDENTIAL or UNCLASS functions directly
+ *     analyze_intelligence(data, len);
+ * }
+ * @endcode
+ *
+ * @warning Cross-domain calls require DSMIL_CROSS_DOMAIN_GATEWAY
+ * @note Compile-time error if unsafe cross-domain call detected
+ * @note Classification metadata embedded in provenance
+ */
+#define DSMIL_CLASSIFICATION(level) \
+    __attribute__((dsmil_classification(level)))
+
+/**
+ * @brief Mark function as cross-domain gateway mediator
+ * @param from_level Source classification level
+ * @param to_level Destination classification level
+ *
+ * Cross-domain gateways mediate data flow between different classification
+ * levels. Gateways must implement approved sanitization, filtering, or
+ * manual review procedures.
+ *
+ * Common transitions:
+ * - "S" → "C": SECRET to CONFIDENTIAL downgrade
+ * - "C" → "U": CONFIDENTIAL to UNCLASSIFIED release
+ * - "TS" → "S": TOP SECRET to SECRET downgrade
+ *
+ * Example:
+ * @code
+ * DSMIL_CROSS_DOMAIN_GATEWAY("S", "C")
+ * DSMIL_GUARD_APPROVED
+ * int sanitize_and_downgrade(const uint8_t *secret_data, size_t len,
+ *                             uint8_t *confidential_output, size_t *out_len) {
+ *     // Implement sanitization logic
+ *     // Apply guard policy (manual review, automated filtering, etc.)
+ *     return dsmil_cross_domain_guard(secret_data, len, "S", "C", "manual_review");
+ * }
+ * @endcode
+ *
+ * @warning Gateways must be approved by security authority
+ * @warning All transitions logged to Layer 62 (Forensics)
+ * @note Replaces simple DSMIL_GATEWAY for classification-aware systems
+ */
+#define DSMIL_CROSS_DOMAIN_GATEWAY(from_level, to_level) \
+    __attribute__((dsmil_cross_domain_gateway(from_level, to_level)))
+
+/**
+ * @brief Mark function as approved cross-domain guard routine
+ *
+ * Guard routines implement sanitization, filtering, or review procedures
+ * for cross-domain data transfers. Must be approved by security authority.
+ *
+ * Example:
+ * @code
+ * DSMIL_GUARD_APPROVED
+ * DSMIL_LAYER(8)  // Security AI layer
+ * int automated_sanitization_guard(const void *input, size_t len, void *output) {
+ *     // AI-assisted sanitization and filtering
+ *     // Layer 8 Security AI validates safety of downgrade
+ *     return sanitize_for_lower_classification(input, len, output);
+ * }
+ * @endcode
+ */
+#define DSMIL_GUARD_APPROVED \
+    __attribute__((dsmil_guard_approved))
+
+/**
+ * @brief Mark data as requiring cross-domain audit trail
+ *
+ * All accesses to this data are logged to Layer 62 (Forensics) for
+ * cross-domain compliance auditing.
+ *
+ * Example:
+ * @code
+ * DSMIL_CROSS_DOMAIN_AUDIT
+ * DSMIL_CLASSIFICATION("TS")
+ * struct intelligence_report {
+ *     char source[256];
+ *     uint8_t data[4096];
+ *     uint64_t timestamp;
+ * } top_secret_report;
+ * @endcode
+ */
+#define DSMIL_CROSS_DOMAIN_AUDIT \
+    __attribute__((dsmil_cross_domain_audit))
+
+/** @} */
+
+/**
+ * @defgroup DSMIL_JADC2 JADC2 & 5G/Edge Integration (v1.5)
+ * @{
+ */
+
+/**
+ * @brief Assign function to JADC2 operational profile
+ * @param profile_name JADC2 profile identifier
+ *
+ * JADC2 (Joint All-Domain Command & Control) profiles define operational
+ * context for multi-domain operations. Functions are optimized for 5G/MEC
+ * deployment with low latency and high reliability.
+ *
+ * Standard JADC2 profiles:
+ * - "sensor_fusion": Multi-sensor data aggregation
+ * - "c2_processing": Command & control decision-making
+ * - "targeting": Automated targeting coordination
+ * - "situational_awareness": Real-time SA dashboard
+ *
+ * Example:
+ * @code
+ * DSMIL_JADC2_PROFILE("sensor_fusion")
+ * DSMIL_LATENCY_BUDGET(5)  // 5ms JADC2 requirement
+ * DSMIL_LAYER(7)
+ * void fuse_sensor_data(const sensor_input_t *inputs, size_t count,
+ *                        fusion_output_t *output) {
+ *     // Optimized for 5G/MEC deployment
+ *     // Low-latency sensor→C2→shooter pipeline
+ *     aggregate_and_correlate(inputs, count, output);
+ * }
+ * @endcode
+ *
+ * @note Layer 5 AI optimizes for 5G latency/bandwidth constraints
+ * @note Mission profile must enable JADC2 integration
+ */
+#define DSMIL_JADC2_PROFILE(profile_name) \
+    __attribute__((dsmil_jadc2_profile(profile_name)))
+
+/**
+ * @brief Mark function for 5G Multi-Access Edge Computing (MEC) deployment
+ *
+ * 5G MEC functions are optimized for edge nodes with 99.999% reliability,
+ * 5ms latency, and 10Gbps throughput. Compiler selects low-latency code
+ * paths and power-efficient back-ends.
+ *
+ * Example:
+ * @code
+ * DSMIL_5G_EDGE
+ * DSMIL_JADC2_PROFILE("c2_processing")
+ * DSMIL_LATENCY_BUDGET(5)
+ * void edge_decision_loop(void) {
+ *     // Runs on 5G MEC node
+ *     // Low-latency, high-reliability requirements
+ *     process_sensor_data();
+ *     make_c2_decision();
+ *     send_shooter_command();
+ * }
+ * @endcode
+ *
+ * @note Layer 5/6 AI manages MEC node allocation
+ * @note Automatic offload suggestions for latency-sensitive kernels
+ */
+#define DSMIL_5G_EDGE \
+    __attribute__((dsmil_5g_edge))
+
+/**
+ * @brief Specify JADC2 data transport priority
+ * @param priority Priority level (0-255, higher = more urgent)
+ *
+ * JADC2 transport layer prioritizes messages for sensor→C2→shooter pipeline.
+ * High-priority messages (e.g., targeting data) bypass lower-priority traffic.
+ *
+ * Priority levels:
+ * - 0-63: Routine (SA updates, status reports)
+ * - 64-127: Priority (sensor fusion, C2 decisions)
+ * - 128-191: Immediate (targeting, threat detection)
+ * - 192-255: Flash (time-critical shooter commands)
+ *
+ * Example:
+ * @code
+ * DSMIL_JADC2_TRANSPORT(200)  // Flash priority for targeting
+ * void send_targeting_solution(const target_t *target) {
+ *     // High-priority JADC2 message
+ *     dsmil_jadc2_send(target, sizeof(*target), 200, "air");
+ * }
+ * @endcode
+ */
+#define DSMIL_JADC2_TRANSPORT(priority) \
+    __attribute__((dsmil_jadc2_transport(priority)))
+
+/**
+ * @brief Specify 5G latency budget in milliseconds
+ * @param ms Latency budget in milliseconds
+ *
+ * Latency budgets enforce 5G JADC2 requirements (typically 5ms end-to-end).
+ * Compiler performs static analysis; functions exceeding budget are rejected
+ * or refactored by Layer 5 AI.
+ *
+ * Example:
+ * @code
+ * DSMIL_LATENCY_BUDGET(5)
+ * DSMIL_5G_EDGE
+ * void time_critical_function(void) {
+ *     // Must complete in ≤5ms
+ *     // Compiler optimizes for low latency
+ *     fast_operation();
+ * }
+ * @endcode
+ *
+ * @warning Compile-time error if static analysis predicts budget violation
+ * @note Layer 5 AI provides refactoring suggestions
+ */
+#define DSMIL_LATENCY_BUDGET(ms) \
+    __attribute__((dsmil_latency_budget(ms)))
+
+/**
+ * @brief Specify bandwidth contract in Gbps
+ * @param gbps Bandwidth limit in Gbps
+ *
+ * Bandwidth contracts enforce 5G throughput limits (typically 10Gbps).
+ * Compiler estimates message sizes; violations trigger warnings.
+ *
+ * Example:
+ * @code
+ * DSMIL_BANDWIDTH_CONTRACT(10)
+ * void stream_video_feed(const uint8_t *frames, size_t count) {
+ *     // Must stay within 10Gbps bandwidth
+ *     compress_and_send(frames, count);
+ * }
+ * @endcode
+ */
+#define DSMIL_BANDWIDTH_CONTRACT(gbps) \
+    __attribute__((dsmil_bandwidth_contract(gbps)))
+
+/**
+ * @brief Mark function for Blue Force Tracker (BFT) integration
+ * @param update_type Type of BFT update: "position", "status", "friendly"
+ *
+ * BFT integration automatically instruments position-reporting functions
+ * with BFT API calls for real-time friendly force tracking.
+ *
+ * Update types:
+ * - "position": GPS position updates
+ * - "status": Unit status (fuel, ammo, readiness)
+ * - "friendly": Friend/foe identification
+ *
+ * Example:
+ * @code
+ * DSMIL_BFT_HOOK("position")
+ * DSMIL_BFT_AUTHORIZED
+ * void report_position(double lat, double lon, double alt) {
+ *     // Compiler inserts BFT API call
+ *     dsmil_bft_send_position(lat, lon, alt, dsmil_timestamp_ns());
+ * }
+ * @endcode
+ *
+ * @note BFT data encrypted with AES-256
+ * @note Layer 8 Security AI validates BFT authenticity
+ */
+#define DSMIL_BFT_HOOK(update_type) \
+    __attribute__((dsmil_bft_hook(update_type)))
+
+/**
+ * @brief Mark function authorized to broadcast BFT data
+ *
+ * Only authorized functions can send BFT updates to prevent spoofing.
+ * Authorization based on clearance and mission profile.
+ *
+ * Example:
+ * @code
+ * DSMIL_BFT_AUTHORIZED
+ * DSMIL_CLASSIFICATION("S")
+ * DSMIL_CLEARANCE(0x07000000)
+ * void authorized_bft_sender(void) {
+ *     // Can send BFT updates
+ * }
+ * @endcode
+ */
+#define DSMIL_BFT_AUTHORIZED \
+    __attribute__((dsmil_bft_authorized))
+
+/**
+ * @brief Mark function for electromagnetic emission control (EMCON)
+ * @param level EMCON level (1-4, higher = more restrictive)
+ *
+ * EMCON mode reduces RF emissions for operations in contested spectrum.
+ * Compiler suppresses telemetry and minimizes transmissions.
+ *
+ * EMCON levels:
+ * - 1: Normal operations
+ * - 2: Reduced emissions (minimize non-essential transmissions)
+ * - 3: Low signature (batch and delay all transmissions)
+ * - 4: RF silent (no transmissions except emergency)
+ *
+ * Example:
+ * @code
+ * DSMIL_EMCON_MODE(3)
+ * DSMIL_LOW_SIGNATURE("aggressive")
+ * void covert_transmission(const uint8_t *data, size_t len) {
+ *     // Low RF signature, batched transmission
+ *     dsmil_emcon_send(data, len);
+ * }
+ * @endcode
+ *
+ * @note Integrates with v1.4 stealth modes
+ * @note Layer 8 Security AI triggers EMCON escalation
+ */
+#define DSMIL_EMCON_MODE(level) \
+    __attribute__((dsmil_emcon_mode(level)))
+
+/**
+ * @brief Specify BLOS (Beyond Line-of-Sight) fallback transports
+ * @param primary Primary transport: "5g", "link16", "satcom", "muos"
+ * @param secondary Fallback transport
+ *
+ * BLOS fallback enables resilient communications when primary link jammed.
+ * Compiler generates alternate code paths for high-latency SATCOM links.
+ *
+ * Example:
+ * @code
+ * DSMIL_BLOS_FALLBACK("5g", "satcom")
+ * void resilient_send(const uint8_t *msg, size_t len) {
+ *     // Try 5G first, fallback to SATCOM if jammed
+ *     if (!dsmil_5g_edge_available()) {
+ *         dsmil_resilient_send(msg, len);  // Auto-fallback
+ *     }
+ * }
+ * @endcode
+ *
+ * @note Layer 8 Security AI detects jamming
+ * @note Latency compensation for SATCOM (100-500ms)
+ */
+#define DSMIL_BLOS_FALLBACK(primary, secondary) \
+    __attribute__((dsmil_blos_fallback(primary, secondary)))
+
+/**
+ * @brief Specify tactical radio protocol
+ * @param protocol Radio protocol: "link16", "satcom", "muos", "sincgars", "eplrs"
+ *
+ * Radio protocol specification generates appropriate framing, error correction,
+ * and encryption for military tactical networks.
+ *
+ * Example:
+ * @code
+ * DSMIL_RADIO_PROFILE("link16")
+ * void send_j_series_message(const link16_msg_t *msg) {
+ *     // Compiler inserts Link-16 J-series framing
+ *     send_tactical_message(msg);
+ * }
+ * @endcode
+ */
+#define DSMIL_RADIO_PROFILE(protocol) \
+    __attribute__((dsmil_radio_profile(protocol)))
+
+/**
+ * @brief Mark function as multi-protocol radio bridge
+ *
+ * Bridge functions unify multiple tactical radio protocols (like TraX).
+ * Compiler generates protocol-specific adapters.
+ *
+ * Example:
+ * @code
+ * DSMIL_RADIO_BRIDGE
+ * int unified_send(const void *msg, size_t len, const char *protocol) {
+ *     // Bridges Link-16, SATCOM, MUOS, etc.
+ *     return protocol_specific_send(protocol, msg, len);
+ * }
+ * @endcode
+ */
+#define DSMIL_RADIO_BRIDGE \
+    __attribute__((dsmil_radio_bridge))
+
+/**
+ * @brief Mark function for edge trusted execution zone
+ *
+ * Edge trusted zones run on hardened MEC nodes with enhanced security:
+ * - Constant-time enforcement
+ * - Memory safety instrumentation
+ * - Tamper detection
+ *
+ * Example:
+ * @code
+ * DSMIL_EDGE_TRUSTED_ZONE
+ * DSMIL_5G_EDGE
+ * DSMIL_SECRET
+ * void process_classified_data(const uint8_t *data, size_t len) {
+ *     // Runs in secure edge enclave
+ *     // Enhanced security checks
+ * }
+ * @endcode
+ */
+#define DSMIL_EDGE_TRUSTED_ZONE \
+    __attribute__((dsmil_edge_trusted_zone))
+
+/**
+ * @brief Enable edge intrusion hardening
+ *
+ * Edge intrusion hardening instruments code with runtime monitors and
+ * tamper-response routines for detecting physical/cyber intrusion.
+ *
+ * Example:
+ * @code
+ * DSMIL_EDGE_HARDEN
+ * DSMIL_EDGE_TRUSTED_ZONE
+ * void critical_edge_function(void) {
+ *     // Runtime monitors active
+ *     // Tamper detection enabled
+ * }
+ * @endcode
+ */
+#define DSMIL_EDGE_HARDEN \
+    __attribute__((dsmil_edge_harden))
+
+/**
+ * @brief Mark function for sensor fusion aggregation
+ *
+ * Sensor fusion functions aggregate multi-sensor data (radar, EO/IR, SIGINT,
+ * cyber) for JADC2 situational awareness.
+ *
+ * Example:
+ * @code
+ * DSMIL_SENSOR_FUSION
+ * DSMIL_JADC2_PROFILE("sensor_fusion")
+ * DSMIL_LATENCY_BUDGET(5)
+ * void fuse_multi_sensor(const sensor_input_t *inputs, size_t count) {
+ *     // Aggregate radar, EO/IR, SIGINT
+ *     // Layer 9 Campaign AI coordinates fusion
+ * }
+ * @endcode
+ *
+ * @note Layer 9 Campaign AI manages sensor prioritization
+ * @note All fusion decisions logged (Layer 62 Forensics)
+ */
+#define DSMIL_SENSOR_FUSION \
+    __attribute__((dsmil_sensor_fusion))
+
+/**
+ * @brief Mark function as AI-assisted auto-targeting hook
+ *
+ * Auto-targeting functions coordinate sensor→C2→shooter pipeline for
+ * automated target engagement. Must enforce ROE and human-in-loop.
+ *
+ * Example:
+ * @code
+ * DSMIL_AUTOTARGET
+ * DSMIL_JADC2_TRANSPORT(200)  // Flash priority
+ * DSMIL_ROE("LIVE_CONTROL")
+ * void autotarget_engage(const target_t *target, float confidence) {
+ *     // AI-assisted targeting
+ *     // ROE compliance required
+ *     // Human verification for lethal engagement
+ *     if (confidence > 0.95 && roe_check(target)) {
+ *         send_targeting_solution(target);
+ *     }
+ * }
+ * @endcode
+ *
+ * @warning All targeting decisions logged to Layer 62 (Forensics)
+ * @warning Human-in-loop verification required for lethal decisions
+ */
+#define DSMIL_AUTOTARGET \
+    __attribute__((dsmil_autotarget))
+
+/** @} */
+
+/**
+ * @defgroup DSMIL_MPE_NUCLEAR Mission Partner & Nuclear Surety (v1.6)
+ * @{
+ */
+
+/**
+ * @brief Mark code for Mission Partner Environment (MPE) release
+ * @param partner_id Coalition partner identifier (e.g., "NATO", "FVEY", "AUS")
+ *
+ * MPE partner code is safe for release to allied networks. Must not call
+ * U.S.-only functions without cross-domain gateway.
+ *
+ * Example:
+ * @code
+ * DSMIL_MPE_PARTNER("NATO")
+ * DSMIL_RELEASABILITY("REL NATO")
+ * void coalition_sharable_function(void) {
+ *     // Safe for NATO partners
+ * }
+ * @endcode
+ */
+#define DSMIL_MPE_PARTNER(partner_id) \
+    __attribute__((dsmil_mpe_partner(partner_id)))
+
+/**
+ * @brief Mark code as U.S.-only (not releasable to coalition)
+ *
+ * U.S.-only code cannot be called from MPE partner functions.
+ *
+ * Example:
+ * @code
+ * DSMIL_US_ONLY
+ * DSMIL_CLASSIFICATION("TS")
+ * void us_only_intelligence(void) {
+ *     // Not releasable to coalition
+ * }
+ * @endcode
+ */
+#define DSMIL_US_ONLY \
+    __attribute__((dsmil_us_only))
+
+/**
+ * @brief Specify releasability marking
+ * @param marking Releasability (e.g., "REL NATO", "REL FVEY", "NOFORN")
+ *
+ * Example:
+ * @code
+ * DSMIL_RELEASABILITY("REL FVEY")
+ * DSMIL_CLASSIFICATION("S")
+ * void five_eyes_function(void) {
+ *     // Releasable to Five Eyes partners
+ * }
+ * @endcode
+ */
+#define DSMIL_RELEASABILITY(marking) \
+    __attribute__((dsmil_releasability(marking)))
+
+/**
+ * @brief Require two-person integrity control
+ *
+ * Two-person integrity (2PI) requires two independent approvals before
+ * execution. Used for nuclear surety and critical operations.
+ *
+ * Example:
+ * @code
+ * DSMIL_TWO_PERSON
+ * DSMIL_NC3_ISOLATED
+ * DSMIL_APPROVAL_AUTHORITY("officer1")
+ * DSMIL_APPROVAL_AUTHORITY("officer2")
+ * void arm_weapon_system(void) {
+ *     // Requires two ML-DSA-87 signatures
+ *     // Nuclear surety compliance
+ * }
+ * @endcode
+ *
+ * @warning Compile-time error if 2PI function calls unauthorized code
+ * @warning All executions logged to tamper-proof audit trail
+ */
+#define DSMIL_TWO_PERSON \
+    __attribute__((dsmil_two_person))
+
+/**
+ * @brief Mark function for nuclear command & control (NC3) isolation
+ *
+ * NC3 functions cannot call network APIs or untrusted code. Enforced
+ * at compile time for nuclear surety.
+ *
+ * Example:
+ * @code
+ * DSMIL_NC3_ISOLATED
+ * DSMIL_TWO_PERSON
+ * void nuclear_authorization_sequence(void) {
+ *     // No network calls allowed
+ *     // No untrusted code execution
+ * }
+ * @endcode
+ */
+#define DSMIL_NC3_ISOLATED \
+    __attribute__((dsmil_nc3_isolated))
+
+/**
+ * @brief Specify approval authority for 2PI
+ * @param key_id ML-DSA-87 key identifier
+ *
+ * Example:
+ * @code
+ * DSMIL_APPROVAL_AUTHORITY("launch_officer_1")
+ * void authorize_with_key1(void) {
+ *     // Provides one half of 2PI
+ * }
+ * @endcode
+ */
+#define DSMIL_APPROVAL_AUTHORITY(key_id) \
+    __attribute__((dsmil_approval_authority(key_id)))
+
+/** @} */
+
+/**
  * @defgroup DSMIL_MISSION Mission Profile Attributes (v1.3)
  * @{
  */
