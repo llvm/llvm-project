@@ -158,23 +158,19 @@ Error DebugObject::visitSections(GetLoadAddressFn Callback) {
       return visitSectionLoadAddresses<ELF32LE>(std::move(Callback));
     if (Endian == ELF::ELFDATA2MSB)
       return visitSectionLoadAddresses<ELF32BE>(std::move(Callback));
-    return createStringError(object_error::invalid_file_type,
-                             "Invalid endian in 32-bit ELF object file: %x",
-                             Endian);
+    break;
 
   case ELF::ELFCLASS64:
     if (Endian == ELF::ELFDATA2LSB)
       return visitSectionLoadAddresses<ELF64LE>(std::move(Callback));
     if (Endian == ELF::ELFDATA2MSB)
       return visitSectionLoadAddresses<ELF64BE>(std::move(Callback));
-    return createStringError(object_error::invalid_file_type,
-                             "Invalid endian in 64-bit ELF object file: %x",
-                             Endian);
+    break;
 
   default:
-    return createStringError(object_error::invalid_file_type,
-                             "Invalid arch in ELF object file: %x", Class);
+    break;
   }
+  llvm_unreachable("Checked class and endian in notifyMaterializing()");
 }
 
 ELFDebugObjectPlugin::ELFDebugObjectPlugin(ExecutionSession &ES,
@@ -206,6 +202,21 @@ void ELFDebugObjectPlugin::notifyMaterializing(
     MemoryBufferRef InputObj) {
   if (G.getTargetTriple().getObjectFormat() != Triple::ELF)
     return;
+
+  unsigned char Class, Endian;
+  std::tie(Class, Endian) = getElfArchType(InputObj.getBuffer());
+  if (Class != ELF::ELFCLASS64 && Class != ELF::ELFCLASS32)
+    return ES.reportError(
+        createStringError(object_error::invalid_file_type,
+                          "Skipping debug object registration: Invalid arch "
+                          "0x%02x in ELF LinkGraph %s",
+                          Class, G.getName().c_str()));
+  if (Endian != ELF::ELFDATA2LSB && Endian != ELF::ELFDATA2MSB)
+    return ES.reportError(
+        createStringError(object_error::invalid_file_type,
+                          "Skipping debug object registration: Invalid endian "
+                          "0x%02x in ELF LinkGraph %s",
+                          Endian, G.getName().c_str()));
 
   // Step 1: We copy the raw input object into the working memory of a
   // single-segment read-only allocation
