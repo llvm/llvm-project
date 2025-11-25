@@ -179,12 +179,12 @@ define dso_local double @fld_fsd_constant(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fld_fsd_constant:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    lui a2, 912092
-; RV32IZFINXZDINX-NEXT:    lw a4, -273(a2)
-; RV32IZFINXZDINX-NEXT:    lw a5, -269(a2)
-; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, a4
-; RV32IZFINXZDINX-NEXT:    sw a0, -273(a2)
-; RV32IZFINXZDINX-NEXT:    sw a1, -269(a2)
+; RV32IZFINXZDINX-NEXT:    lui a4, 912092
+; RV32IZFINXZDINX-NEXT:    lw a2, -273(a4)
+; RV32IZFINXZDINX-NEXT:    lw a3, -269(a4)
+; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, a2
+; RV32IZFINXZDINX-NEXT:    sw a0, -273(a4)
+; RV32IZFINXZDINX-NEXT:    sw a1, -269(a4)
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fld_fsd_constant:
@@ -198,10 +198,10 @@ define dso_local double @fld_fsd_constant(double %a) nounwind {
 ;
 ; RV32IZFINXZDINXZILSD-LABEL: fld_fsd_constant:
 ; RV32IZFINXZDINXZILSD:       # %bb.0:
-; RV32IZFINXZDINXZILSD-NEXT:    lui a2, 912092
-; RV32IZFINXZDINXZILSD-NEXT:    ld a4, -273(a2)
-; RV32IZFINXZDINXZILSD-NEXT:    fadd.d a0, a0, a4
-; RV32IZFINXZDINXZILSD-NEXT:    sd a0, -273(a2)
+; RV32IZFINXZDINXZILSD-NEXT:    lui a4, 912092
+; RV32IZFINXZDINXZILSD-NEXT:    ld a2, -273(a4)
+; RV32IZFINXZDINXZILSD-NEXT:    fadd.d a0, a0, a2
+; RV32IZFINXZDINXZILSD-NEXT:    sd a0, -273(a4)
 ; RV32IZFINXZDINXZILSD-NEXT:    ret
   %1 = inttoptr i32 3735928559 to ptr
   %2 = load volatile double, ptr %1
