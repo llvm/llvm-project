@@ -971,6 +971,109 @@ def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
 def OpBitwiseFunctionINTEL: Op<6242, (outs ID:$res), (ins TYPE:$type, ID:$a, ID:$b, ID:$c, ID:$lut_index),
                   "$res = OpBitwiseFunctionINTEL $type $a $b $c $lut_index">;
 
+// SPV_ALTERA_arbitrary_precision_floating_point
+def OpArbitraryFloatGTALTERA: Op<5850, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb), 
+                  "$res = OpArbitraryFloatGTALTERA $type $A $Ma $B $Mb">;
+def OpArbitraryFloatGEALTERA: Op<5851, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb), 
+                  "$res = OpArbitraryFloatGEALTERA $type $A $Ma $B $Mb">;
+def OpArbitraryFloatLTALTERA: Op<5852, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb), 
+                  "$res = OpArbitraryFloatLTALTERA $type $A $Ma $B $Mb">;
+def OpArbitraryFloatLEALTERA: Op<5853, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb), 
+                  "$res = OpArbitraryFloatLEALTERA $type $A $Ma $B $Mb">;
+def OpArbitraryFloatEQALTERA: Op<5854, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb), 
+                  "$res = OpArbitraryFloatEQALTERA $type $A $Ma $B $Mb">;
+def OpArbitraryFloatRecipALTERA: Op<5855, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatRecipALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatCbrtALTERA: Op<5857, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatCbrtALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatHypotALTERA: Op<5858, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, ID:$B, i32imm:$Mb, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatHypotALTERA $type $A $Ma $B $Mb $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatSqrtALTERA: Op<5859, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatSqrtALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatLogALTERA: Op<5860, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatLogALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatLog2ALTERA: Op<5861, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatLog2ALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatLog10ALTERA: Op<5862, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatLog10ALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatLog1pALTERA: Op<5863, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatLog1pALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatExpALTERA: Op<5864, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatExpALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatExp2ALTERA: Op<5865, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatExp2ALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatExp10ALTERA: Op<5866, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatExp10ALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatExpm1ALTERA: Op<5867, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatExpm1ALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatSinALTERA: Op<5868, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatSinALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatCosALTERA: Op<5869, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatCosALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatSinCosALTERA: Op<5870, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatSinCosALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatSinPiALTERA: Op<5871, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatSinPiALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatCosPiALTERA: Op<5872, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatCosPiALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatSinCosPiALTERA: Op<5840, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
+                  "$res = OpArbitraryFloatSinCosPiALTERA $type $A $Ma $Mresult $subnormalMode $RoundingMode $RoundingAccuracy">;
+def OpArbitraryFloatAddALTERA: Op<5846, (outs ID:$res),
+                  (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, ID:$src2, i32imm:$src2_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatAddALTERA $type $src $src_mwidth $src2 $src2_mwidth $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatSubALTERA: Op<5847, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, ID:$src2, i32imm:$src2_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatSubALTERA $type $src $src_mwidth $src2 $src2_mwidth $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatMulALTERA: Op<5848, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, ID:$src2, i32imm:$src2_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatMulALTERA $type $src $src_mwidth $src2 $src2_mwidth $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatDivALTERA: Op<5849, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, ID:$src2, i32imm:$src2_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatDivALTERA $type $src $src_mwidth $src2 $src2_mwidth $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatRSqrtALTERA: Op<5856, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatRSqrtALTERA $type $src $src_mwidth $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatASinALTERA: Op<5873, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatASinALTERA $type $src $src_mwidth $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatASinPiALTERA: Op<5874, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatASinPiALTERA $type $src $src_mwidth $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatACosALTERA : Op<5875, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatACosALTERA $type $src $src_mwidth $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatACosPiALTERA: Op<5876, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatACosPiALTERA $type $src $src_mwidth $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatATanALTERA: Op<5877, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatATanALTERA $type $src $src_mwidth $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatATanPiALTERA: Op<5878, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatATanPiALTERA $type $src $src_mwidth $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatATan2ALTERA: Op<5879, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, ID:$src2, i32imm:$src2_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatATan2ALTERA $type $src $src_mwidth $src2 $src2_mwidth $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatPowALTERA: Op<5880, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, ID:$src2, i32imm:$src2_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatPowALTERA $type $src $src_mwidth $src2 $src2_mwidth $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatPowRALTERA: Op<5881, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, ID:$src2, i1imm:$src2_sign, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatPowRALTERA $type $src $src_mwidth $src2 $src2_sign $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatPowNALTERA: Op<5882, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, ID:$src2, i1imm:$src2_sign, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundaccuracymode),
+                  "$res = OpArbitraryFloatPowNALTERA $type $src $src_mwidth $src2 $src2_sign $res_mwidth $subnorm $fproundingmode $roundaccuracymode">;
+def OpArbitraryFloatCastALTERA: Op<5841, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$src_mwidth, i32imm:$res_mwidth, i32imm:$subnorm, i32imm:$fproundingmode, i32imm:$roundignAccuracy),
+                  "$res = OpArbitraryFloatCastALTERA $type $src $src_mwidth $res_mwidth $subnorm $fproundingmode $roundignAccuracy">;
+def OpArbitraryFloatCastFromIntALTERA: Op<5842, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$res_mwidth, i32imm:$fromsign, i32imm:$subnormalmode, i32imm:$fproundingmode, i32imm:$roundignAccuracy),
+                  "$res = OpArbitraryFloatCastFromIntALTERA $type $src $res_mwidth $fromsign $subnormalmode $fproundingmode $roundignAccuracy">;
+def OpArbitraryFloatCastToIntALTERA: Op<5838, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$res_mwidth, i32imm:$tosign, i32imm:$subnormalmode, i32imm:$fproundingmode, i32imm:$roundignAccuracy),
+                  "$res = OpArbitraryFloatCastToIntALTERA $type $src $res_mwidth $tosign $subnormalmode $fproundingmode $roundignAccuracy">;
+
 // SPV_INTEL_2d_block_io
 def OpSubgroup2DBlockLoadINTEL: Op<6231, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
                   ID:$block_count, ID:$src_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord, ID:$dst_ptr),
