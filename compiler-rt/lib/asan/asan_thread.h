@@ -144,7 +144,9 @@ class AsanThread {
     GetStartData(&data, sizeof(data));
   }
 
-  bool IsFakeStackSuppressed() const { return fake_stack_suppression_counter_ > 0; }
+  bool IsFakeStackSuppressed() const {
+    return fake_stack_suppression_counter_ > 0;
+  }
   void SuppressFakeStack();
   void UnsuppressFakeStack();
 
