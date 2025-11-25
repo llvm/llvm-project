@@ -30,6 +30,7 @@ const char *NVPTXSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::LoadV2)
     MAKE_CASE(NVPTXISD::LoadV4)
     MAKE_CASE(NVPTXISD::LoadV8)
+    MAKE_CASE(NVPTXISD::MLoad)
     MAKE_CASE(NVPTXISD::LDUV2)
     MAKE_CASE(NVPTXISD::LDUV4)
     MAKE_CASE(NVPTXISD::StoreV2)
