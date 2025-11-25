@@ -52,8 +52,8 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v44, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v44, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -109,8 +109,8 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX10-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:4
 ; GFX10-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:8
 ; GFX10-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:12
-; GFX10-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX10-NEXT:    v_readlane_b32 s30, v44, 0
+; GFX10-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX10-NEXT:    s_mov_b32 s32, s33
 ; GFX10-NEXT:    v_readlane_b32 s4, v44, 2
 ; GFX10-NEXT:    s_or_saveexec_b32 s5, -1
@@ -163,8 +163,8 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX11-NEXT:    scratch_load_b32 v42, off, s33 offset:4
 ; GFX11-NEXT:    scratch_load_b32 v41, off, s33 offset:8
 ; GFX11-NEXT:    scratch_load_b32 v40, off, s33 offset:12
-; GFX11-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v44, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v44, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -236,8 +236,8 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:16 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v45, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v45, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -286,8 +286,8 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX10-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:8
 ; GFX10-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:12
 ; GFX10-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:16
-; GFX10-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX10-NEXT:    v_readlane_b32 s30, v45, 0
+; GFX10-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX10-NEXT:    s_mov_b32 s32, s33
 ; GFX10-NEXT:    v_readlane_b32 s4, v45, 2
 ; GFX10-NEXT:    s_or_saveexec_b32 s5, -1
@@ -335,8 +335,8 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX11-NEXT:    scratch_load_b32 v42, off, s33 offset:8
 ; GFX11-NEXT:    scratch_load_b32 v41, off, s33 offset:12
 ; GFX11-NEXT:    scratch_load_b32 v40, off, s33 offset:16
-; GFX11-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v45, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v45, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1

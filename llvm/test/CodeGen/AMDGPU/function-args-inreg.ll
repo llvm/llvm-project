@@ -1740,8 +1740,8 @@ define void @caller_void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inr
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[20:21]
-; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -1770,8 +1770,8 @@ define void @caller_void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inr
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2159,8 +2159,8 @@ define void @void_func_a13i32_inreg([13  x i32] inreg %arg0, ptr addrspace(1) %p
 ; GFX9-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -2201,8 +2201,8 @@ define void @void_func_a13i32_inreg([13  x i32] inreg %arg0, ptr addrspace(1) %p
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1

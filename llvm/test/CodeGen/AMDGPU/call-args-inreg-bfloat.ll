@@ -26,8 +26,8 @@ define void @test_call_external_void_func_bf16_inreg(bfloat inreg %arg) #0 {
 ; GFX9-NEXT:    s_mov_b32 s0, s16
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[18:19]
-; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -54,8 +54,8 @@ define void @test_call_external_void_func_bf16_inreg(bfloat inreg %arg) #0 {
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -86,8 +86,8 @@ define void @test_call_external_void_func_v2bf16_inreg(<2 x bfloat> inreg %arg) 
 ; GFX9-NEXT:    s_mov_b32 s0, s16
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[18:19]
-; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -114,8 +114,8 @@ define void @test_call_external_void_func_v2bf16_inreg(<2 x bfloat> inreg %arg) 
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
