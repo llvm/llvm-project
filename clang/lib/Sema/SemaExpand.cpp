@@ -272,7 +272,7 @@ ExprResult Sema::ActOnCXXExpansionInitList(MultiExprArg SubExprs,
 
 StmtResult Sema::ActOnCXXExpansionStmt(
     ExpansionStmtDecl *ESD, Stmt *Init, Stmt *ExpansionVarStmt,
-    Expr *ExpansionInitializer, SourceLocation ForLoc, SourceLocation LParenLoc,
+    Expr *ExpansionInitializer, SourceLocation LParenLoc,
     SourceLocation ColonLoc, SourceLocation RParenLoc,
     ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
   if (!ExpansionInitializer || !ExpansionVarStmt)
@@ -300,8 +300,8 @@ StmtResult Sema::ActOnCXXExpansionStmt(
     // Note that lifetime extension only applies to destructurable expansion
     // statements, so we just ignore 'LifetimeExtendedTemps' entirely for other
     // types of expansion statements (this is CWG 3043).
-    return BuildCXXEnumeratingExpansionStmt(ESD, Init, DS, ForLoc, LParenLoc,
-                                            ColonLoc, RParenLoc);
+    return BuildCXXEnumeratingExpansionStmt(ESD, Init, DS, LParenLoc, ColonLoc,
+                                            RParenLoc);
   }
 
   if (ExpansionInitializer->hasPlaceholderType()) {
@@ -322,24 +322,23 @@ StmtResult Sema::ActOnCXXExpansionStmt(
   }
 
   return BuildNonEnumeratingCXXExpansionStmt(
-      ESD, Init, DS, ExpansionInitializer, ForLoc, LParenLoc, ColonLoc,
-      RParenLoc, LifetimeExtendTemps);
+      ESD, Init, DS, ExpansionInitializer, LParenLoc, ColonLoc, RParenLoc,
+      LifetimeExtendTemps);
 }
 
 StmtResult Sema::BuildCXXEnumeratingExpansionStmt(Decl *ESD, Stmt *Init,
                                                   Stmt *ExpansionVar,
-                                                  SourceLocation ForLoc,
                                                   SourceLocation LParenLoc,
                                                   SourceLocation ColonLoc,
                                                   SourceLocation RParenLoc) {
   return new (Context) CXXEnumeratingExpansionStmt(
-      cast<ExpansionStmtDecl>(ESD), Init, cast<DeclStmt>(ExpansionVar), ForLoc,
+      cast<ExpansionStmtDecl>(ESD), Init, cast<DeclStmt>(ExpansionVar),
       LParenLoc, ColonLoc, RParenLoc);
 }
 
 StmtResult Sema::BuildNonEnumeratingCXXExpansionStmt(
     ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
-    Expr *ExpansionInitializer, SourceLocation ForLoc, SourceLocation LParenLoc,
+    Expr *ExpansionInitializer, SourceLocation LParenLoc,
     SourceLocation ColonLoc, SourceLocation RParenLoc,
     ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
   VarDecl *ExpansionVar = cast<VarDecl>(ExpansionVarStmt->getSingleDecl());
@@ -347,8 +346,8 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmt(
   if (ExpansionInitializer->isTypeDependent()) {
     ActOnDependentForRangeInitializer(ExpansionVar, BFRK_Build);
     return new (Context) CXXDependentExpansionStmt(
-        ESD, Init, ExpansionVarStmt, ExpansionInitializer, ForLoc, LParenLoc,
-        ColonLoc, RParenLoc);
+        ESD, Init, ExpansionVarStmt, ExpansionInitializer, LParenLoc, ColonLoc,
+        RParenLoc);
   }
 
   // Otherwise, if it can be an iterating expansion statement, it is one.
@@ -367,7 +366,7 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmt(
 
     return new (Context) CXXIteratingExpansionStmt(
         ESD, Init, ExpansionVarStmt, Data.RangeDecl, Data.BeginDecl,
-        Data.EndDecl, ForLoc, LParenLoc, ColonLoc, RParenLoc);
+        Data.EndDecl, LParenLoc, ColonLoc, RParenLoc);
   }
 
   // If not, try destructuring.
@@ -394,7 +393,7 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmt(
     return StmtError();
 
   return new (Context) CXXDestructuringExpansionStmt(
-      ESD, Init, ExpansionVarStmt, DS, ForLoc, LParenLoc, ColonLoc, RParenLoc);
+      ESD, Init, ExpansionVarStmt, DS, LParenLoc, ColonLoc, RParenLoc);
 }
 
 StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {

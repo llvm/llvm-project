@@ -9331,7 +9331,7 @@ StmtResult TreeTransform<Derived>::TransformCXXEnumeratingExpansionStmt(
     return StmtError();
 
   auto *Expansion = new (SemaRef.Context) CXXEnumeratingExpansionStmt(
-      Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl, S->getForLoc(),
+      Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl,
       S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc());
 
   StmtResult Body = getDerived().TransformStmt(S->getBody());
@@ -9361,7 +9361,7 @@ StmtResult TreeTransform<Derived>::TransformCXXIteratingExpansionStmt(
   auto *Expansion = new (SemaRef.Context) CXXIteratingExpansionStmt(
       Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl,
       Range.getAs<DeclStmt>(), Begin.getAs<DeclStmt>(), End.getAs<DeclStmt>(),
-      S->getForLoc(), S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc());
+      S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc());
 
   StmtResult Body = getDerived().TransformStmt(S->getBody());
   if (Body.isInvalid())
@@ -9400,8 +9400,8 @@ StmtResult TreeTransform<Derived>::TransformCXXDependentExpansionStmt(
 
   StmtResult Expansion = SemaRef.BuildNonEnumeratingCXXExpansionStmt(
       Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl,
-      ExpansionInitializer.get(), S->getForLoc(), S->getLParenLoc(),
-      S->getColonLoc(), S->getRParenLoc(), LifetimeExtendTemps);
+      ExpansionInitializer.get(), S->getLParenLoc(), S->getColonLoc(),
+      S->getRParenLoc(), LifetimeExtendTemps);
   if (Expansion.isInvalid())
     return StmtError();
 

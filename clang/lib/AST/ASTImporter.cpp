@@ -7468,16 +7468,14 @@ ExpectedStmt ASTNodeImporter::VisitCXXEnumeratingExpansionStmt(
   auto ToESD = importChecked(Err, S->getDecl());
   auto ToInit = importChecked(Err, S->getInit());
   auto ToExpansionVar = importChecked(Err, S->getExpansionVarStmt());
-  auto ToForLoc = importChecked(Err, S->getForLoc());
   auto ToLParenLoc = importChecked(Err, S->getLParenLoc());
   auto ToColonLoc = importChecked(Err, S->getColonLoc());
   auto ToRParenLoc = importChecked(Err, S->getRParenLoc());
   if (Err)
     return std::move(Err);
 
-  return new (Importer.getToContext())
-      CXXEnumeratingExpansionStmt(ToESD, ToInit, ToExpansionVar, ToForLoc,
-                                  ToLParenLoc, ToColonLoc, ToRParenLoc);
+  return new (Importer.getToContext()) CXXEnumeratingExpansionStmt(
+      ToESD, ToInit, ToExpansionVar, ToLParenLoc, ToColonLoc, ToRParenLoc);
 }
 ExpectedStmt
 ASTNodeImporter::VisitCXXIteratingExpansionStmt(CXXIteratingExpansionStmt *S) {
@@ -7488,16 +7486,15 @@ ASTNodeImporter::VisitCXXIteratingExpansionStmt(CXXIteratingExpansionStmt *S) {
   auto ToRange = importChecked(Err, S->getRangeVarStmt());
   auto ToBegin = importChecked(Err, S->getBeginVarStmt());
   auto ToEnd = importChecked(Err, S->getEndVarStmt());
-  auto ToForLoc = importChecked(Err, S->getForLoc());
   auto ToLParenLoc = importChecked(Err, S->getLParenLoc());
   auto ToColonLoc = importChecked(Err, S->getColonLoc());
   auto ToRParenLoc = importChecked(Err, S->getRParenLoc());
   if (Err)
     return std::move(Err);
 
-  return new (Importer.getToContext()) CXXIteratingExpansionStmt(
-      ToESD, ToInit, ToExpansionVar, ToRange, ToBegin, ToEnd, ToForLoc,
-      ToLParenLoc, ToColonLoc, ToRParenLoc);
+  return new (Importer.getToContext())
+      CXXIteratingExpansionStmt(ToESD, ToInit, ToExpansionVar, ToRange, ToBegin,
+                                ToEnd, ToLParenLoc, ToColonLoc, ToRParenLoc);
 }
 ExpectedStmt ASTNodeImporter::VisitCXXDestructuringExpansionStmt(
     CXXDestructuringExpansionStmt *S) {
@@ -7507,7 +7504,6 @@ ExpectedStmt ASTNodeImporter::VisitCXXDestructuringExpansionStmt(
   auto ToExpansionVar = importChecked(Err, S->getExpansionVarStmt());
   auto ToDecompositionDeclStmt =
       importChecked(Err, S->getDecompositionDeclStmt());
-  auto ToForLoc = importChecked(Err, S->getForLoc());
   auto ToLParenLoc = importChecked(Err, S->getLParenLoc());
   auto ToColonLoc = importChecked(Err, S->getColonLoc());
   auto ToRParenLoc = importChecked(Err, S->getRParenLoc());
@@ -7515,8 +7511,8 @@ ExpectedStmt ASTNodeImporter::VisitCXXDestructuringExpansionStmt(
     return std::move(Err);
 
   return new (Importer.getToContext()) CXXDestructuringExpansionStmt(
-      ToESD, ToInit, ToExpansionVar, ToDecompositionDeclStmt, ToForLoc,
-      ToLParenLoc, ToColonLoc, ToRParenLoc);
+      ToESD, ToInit, ToExpansionVar, ToDecompositionDeclStmt, ToLParenLoc,
+      ToColonLoc, ToRParenLoc);
 }
 ExpectedStmt
 ASTNodeImporter::VisitCXXDependentExpansionStmt(CXXDependentExpansionStmt *S) {
@@ -7526,7 +7522,6 @@ ASTNodeImporter::VisitCXXDependentExpansionStmt(CXXDependentExpansionStmt *S) {
   auto ToExpansionVar = importChecked(Err, S->getExpansionVarStmt());
   auto ToExpansionInitializer =
       importChecked(Err, S->getExpansionInitializer());
-  auto ToForLoc = importChecked(Err, S->getForLoc());
   auto ToLParenLoc = importChecked(Err, S->getLParenLoc());
   auto ToColonLoc = importChecked(Err, S->getColonLoc());
   auto ToRParenLoc = importChecked(Err, S->getRParenLoc());
@@ -7534,8 +7529,8 @@ ASTNodeImporter::VisitCXXDependentExpansionStmt(CXXDependentExpansionStmt *S) {
     return std::move(Err);
 
   return new (Importer.getToContext()) CXXDependentExpansionStmt(
-      ToESD, ToInit, ToExpansionVar, ToExpansionInitializer, ToForLoc,
-      ToLParenLoc, ToColonLoc, ToRParenLoc);
+      ToESD, ToInit, ToExpansionVar, ToExpansionInitializer, ToLParenLoc,
+      ToColonLoc, ToRParenLoc);
 }
 ExpectedStmt ASTNodeImporter::VisitCXXExpansionInstantiationStmt(
     CXXExpansionInstantiationStmt *S) {

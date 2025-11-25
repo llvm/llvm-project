@@ -2263,7 +2263,7 @@ Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   if (ExpansionStmtDeclaration) {
     ForRangeStmt = Actions.ActOnCXXExpansionStmt(
         ExpansionStmtDeclaration, FirstPart.get(), ForRangeInfo.LoopVar.get(),
-        ForRangeInfo.RangeExpr.get(), ForLoc, T.getOpenLocation(),
+        ForRangeInfo.RangeExpr.get(), T.getOpenLocation(),
         ForRangeInfo.ColonLoc, T.getCloseLocation(),
         ForRangeInfo.LifetimeExtendTemps);
   } else if (ForRangeInfo.ParsedForRangeDecl()) {

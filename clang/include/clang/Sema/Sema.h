@@ -15664,9 +15664,8 @@ public:
 
   StmtResult ActOnCXXExpansionStmt(
       ExpansionStmtDecl *ESD, Stmt *Init, Stmt *ExpansionVarStmt,
-      Expr *ExpansionInitializer, SourceLocation ForLoc,
-      SourceLocation LParenLoc, SourceLocation ColonLoc,
-      SourceLocation RParenLoc,
+      Expr *ExpansionInitializer, SourceLocation LParenLoc,
+      SourceLocation ColonLoc, SourceLocation RParenLoc,
       ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps);
 
   StmtResult FinishCXXExpansionStmt(Stmt *Expansion, Stmt *Body);
@@ -15676,7 +15675,7 @@ public:
 
   StmtResult BuildCXXEnumeratingExpansionStmt(Decl *ESD, Stmt *Init,
                                               Stmt *ExpansionVar,
-                                              SourceLocation ForLoc,
+
                                               SourceLocation LParenLoc,
                                               SourceLocation ColonLoc,
                                               SourceLocation RParenLoc);
@@ -15690,9 +15689,8 @@ public:
 
   StmtResult BuildNonEnumeratingCXXExpansionStmt(
       ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
-      Expr *ExpansionInitializer, SourceLocation ForLoc,
-      SourceLocation LParenLoc, SourceLocation ColonLoc,
-      SourceLocation RParenLoc,
+      Expr *ExpansionInitializer, SourceLocation LParenLoc,
+      SourceLocation ColonLoc, SourceLocation RParenLoc,
       ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
 
   std::optional<uint64_t> ComputeExpansionSize(CXXExpansionStmt *Expansion);

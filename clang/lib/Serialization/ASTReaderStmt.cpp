@@ -1732,7 +1732,6 @@ void ASTStmtReader::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
 
 void ASTStmtReader::VisitCXXExpansionStmt(CXXExpansionStmt *S) {
   VisitStmt(S);
-  S->ForLoc = readSourceLocation();
   S->LParenLoc = readSourceLocation();
   S->ColonLoc = readSourceLocation();
   S->RParenLoc = readSourceLocation();

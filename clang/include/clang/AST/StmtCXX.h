@@ -541,7 +541,6 @@ class CXXExpansionStmt : public Stmt {
   friend class ASTStmtReader;
 
   ExpansionStmtDecl *ParentDecl;
-  SourceLocation ForLoc;
   SourceLocation LParenLoc;
   SourceLocation ColonLoc;
   SourceLocation RParenLoc;
@@ -577,12 +576,10 @@ protected:
 
   CXXExpansionStmt(StmtClass SC, EmptyShell Empty);
   CXXExpansionStmt(StmtClass SC, ExpansionStmtDecl *ESD, Stmt *Init,
-                   DeclStmt *ExpansionVar, SourceLocation ForLoc,
-                   SourceLocation LParenLoc, SourceLocation ColonLoc,
-                   SourceLocation RParenLoc);
+                   DeclStmt *ExpansionVar, SourceLocation LParenLoc,
+                   SourceLocation ColonLoc, SourceLocation RParenLoc);
 
 public:
-  SourceLocation getForLoc() const { return ForLoc; }
   SourceLocation getLParenLoc() const { return LParenLoc; }
   SourceLocation getColonLoc() const { return ColonLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
@@ -668,8 +665,8 @@ class CXXEnumeratingExpansionStmt : public CXXExpansionStmt {
 public:
   CXXEnumeratingExpansionStmt(EmptyShell Empty);
   CXXEnumeratingExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
-                              DeclStmt *ExpansionVar, SourceLocation ForLoc,
-                              SourceLocation LParenLoc, SourceLocation ColonLoc,
+                              DeclStmt *ExpansionVar, SourceLocation LParenLoc,
+                              SourceLocation ColonLoc,
                               SourceLocation RParenLoc);
 
   static bool classof(const Stmt *T) {
@@ -702,8 +699,8 @@ public:
   CXXDependentExpansionStmt(EmptyShell Empty);
   CXXDependentExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
                             DeclStmt *ExpansionVar, Expr *ExpansionInitializer,
-                            SourceLocation ForLoc, SourceLocation LParenLoc,
-                            SourceLocation ColonLoc, SourceLocation RParenLoc);
+                            SourceLocation LParenLoc, SourceLocation ColonLoc,
+                            SourceLocation RParenLoc);
 
   Expr *getExpansionInitializer() {
     return cast<Expr>(SubStmts[EXPANSION_INITIALIZER]);
@@ -752,8 +749,8 @@ public:
   CXXIteratingExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
                             DeclStmt *ExpansionVar, DeclStmt *Range,
                             DeclStmt *Begin, DeclStmt *End,
-                            SourceLocation ForLoc, SourceLocation LParenLoc,
-                            SourceLocation ColonLoc, SourceLocation RParenLoc);
+                            SourceLocation LParenLoc, SourceLocation ColonLoc,
+                            SourceLocation RParenLoc);
 
   const DeclStmt *getRangeVarStmt() const {
     return cast<DeclStmt>(SubStmts[RANGE]);
@@ -842,7 +839,7 @@ public:
   CXXDestructuringExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
                                 DeclStmt *ExpansionVar,
                                 Stmt *DecompositionDeclStmt,
-                                SourceLocation ForLoc, SourceLocation LParenLoc,
+                                SourceLocation LParenLoc,
                                 SourceLocation ColonLoc,
                                 SourceLocation RParenLoc);
 

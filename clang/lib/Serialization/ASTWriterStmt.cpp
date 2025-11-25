@@ -1706,7 +1706,6 @@ void ASTStmtWriter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
 
 void ASTStmtWriter::VisitCXXExpansionStmt(CXXExpansionStmt *S) {
   VisitStmt(S);
-  Record.AddSourceLocation(S->getForLoc());
   Record.AddSourceLocation(S->getLParenLoc());
   Record.AddSourceLocation(S->getColonLoc());
   Record.AddSourceLocation(S->getRParenLoc());
