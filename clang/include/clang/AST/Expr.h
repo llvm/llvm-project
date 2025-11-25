@@ -23,7 +23,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SyncScope.h"
@@ -40,6 +40,7 @@
 #include <optional>
 
 namespace clang {
+  class AllocSizeAttr;
   class APValue;
   class ASTContext;
   class BlockDecl;
@@ -633,8 +634,8 @@ public:
 
     EvalStatus() = default;
 
-    // hasSideEffects - Return true if the evaluated expression has
-    // side effects.
+    /// Return true if the evaluated expression has
+    /// side effects.
     bool hasSideEffects() const {
       return HasSideEffects;
     }
@@ -645,8 +646,8 @@ public:
     /// Val - This is the value the expression can be folded to.
     APValue Val;
 
-    // isGlobalLValue - Return true if the evaluated lvalue expression
-    // is global.
+    /// Return true if the evaluated lvalue expression
+    /// is global.
     bool isGlobalLValue() const;
   };
 
@@ -714,9 +715,7 @@ public:
   /// EvaluateKnownConstInt - Call EvaluateAsRValue and return the folded
   /// integer. This must be called on an expression that constant folds to an
   /// integer.
-  llvm::APSInt EvaluateKnownConstInt(
-      const ASTContext &Ctx,
-      SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr) const;
+  llvm::APSInt EvaluateKnownConstInt(const ASTContext &Ctx) const;
 
   llvm::APSInt EvaluateKnownConstIntCheckOverflow(
       const ASTContext &Ctx,
@@ -1037,7 +1036,7 @@ public:
 // PointerLikeTypeTraits is specialized so it can be used with a forward-decl of
 // Expr. Verify that we got it right.
 static_assert(llvm::PointerLikeTypeTraits<Expr *>::NumLowBitsAvailable <=
-                  llvm::detail::ConstantLog2<alignof(Expr)>::value,
+                  llvm::ConstantLog2<alignof(Expr)>(),
               "PointerLikeTypeTraits<Expr*> assumes too much alignment.");
 
 using ConstantExprKind = Expr::ConstantExprKind;
@@ -1369,7 +1368,7 @@ public:
 
   /// If the name was qualified, retrieves the nested-name-specifier
   /// that precedes the name. Otherwise, returns NULL.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return getQualifierLoc().getNestedNameSpecifier();
   }
 
@@ -3261,6 +3260,15 @@ public:
     setDependence(getDependence() | ExprDependence::TypeValueInstantiation);
   }
 
+  /// Try to get the alloc_size attribute of the callee. May return null.
+  const AllocSizeAttr *getCalleeAllocSizeAttr() const;
+
+  /// Evaluates the total size in bytes allocated by calling a function
+  /// decorated with alloc_size. Returns std::nullopt if the the result cannot
+  /// be evaluated.
+  std::optional<llvm::APInt>
+  evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const;
+
   bool isCallToStdMove() const;
 
   static bool classof(const Stmt *T) {
@@ -3398,7 +3406,7 @@ public:
   /// If the member name was qualified, retrieves the
   /// nested-name-specifier that precedes the member name. Otherwise, returns
   /// NULL.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return getQualifierLoc().getNestedNameSpecifier();
   }
 
@@ -3548,6 +3556,7 @@ public:
                       QualType T, ExprValueKind VK, Expr *init, bool fileScope)
       : Expr(CompoundLiteralExprClass, T, VK, OK_Ordinary),
         LParenLoc(lparenloc), TInfoAndScope(tinfo, fileScope), Init(init) {
+    assert(Init && "Init is a nullptr");
     setDependence(computeDependence(this));
   }
 
@@ -3577,19 +3586,11 @@ public:
   APValue &getStaticValue() const;
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
-    // FIXME: Init should never be null.
-    if (!Init)
-      return SourceLocation();
     if (LParenLoc.isInvalid())
       return Init->getBeginLoc();
     return LParenLoc;
   }
-  SourceLocation getEndLoc() const LLVM_READONLY {
-    // FIXME: Init should never be null.
-    if (!Init)
-      return SourceLocation();
-    return Init->getEndLoc();
-  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Init->getEndLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CompoundLiteralExprClass;
@@ -5110,9 +5111,9 @@ public:
              "trying to dereference an invalid iterator");
       IntegerLiteral *N = EExpr->FakeChildNode;
       N->setValue(*EExpr->Ctx,
-                  llvm::APInt(N->getValue().getBitWidth(),
+                  llvm::APInt(N->getBitWidth(),
                               EExpr->Data->BinaryData->getCodeUnit(CurOffset),
-                              N->getType()->isSignedIntegerType()));
+                              /*Signed=*/true));
       // We want to return a reference to the fake child node in the
       // EmbedExpr, not the local variable N.
       return const_cast<typename BaseTy::reference>(EExpr->FakeChildNode);
@@ -6907,6 +6908,21 @@ public:
            getOp() == AO__scoped_atomic_compare_exchange_n;
   }
 
+  bool hasVal1Operand() const {
+    switch (getOp()) {
+    case AO__atomic_load_n:
+    case AO__scoped_atomic_load_n:
+    case AO__c11_atomic_load:
+    case AO__opencl_atomic_load:
+    case AO__hip_atomic_load:
+    case AO__atomic_test_and_set:
+    case AO__atomic_clear:
+      return false;
+    default:
+      return true;
+    }
+  }
+
   bool isOpenCL() const {
     return getOp() >= AO__opencl_atomic_compare_exchange_strong &&
            getOp() <= AO__opencl_atomic_store;
@@ -7143,6 +7159,18 @@ public:
 
   /// Return original type of the base expression for array section.
   static QualType getBaseOriginalType(const Expr *Base);
+
+  /// Return the effective 'element' type of this array section. As the array
+  /// section itself returns a collection of elements (closer to its `getBase`
+  /// type), this is only useful for figuring out the effective type of this if
+  /// it were a normal Array subscript expr.
+  QualType getElementType() const;
+
+  /// Returns the effective 'type' of the base of this array section.  This
+  /// should be the array/pointer type that this operates on.  Just
+  /// getBase->getType isn't sufficient, since it doesn't look through existing
+  /// Array sections to figure out the actual 'base' of this.
+  QualType getBaseType() const;
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ArraySectionExprClass;

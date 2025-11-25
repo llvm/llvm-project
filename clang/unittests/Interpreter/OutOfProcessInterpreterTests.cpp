@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterpreterTestFixture.h"
-
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Mangle.h"
@@ -21,31 +20,73 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Interpreter/Interpreter.h"
-#include "clang/Interpreter/RemoteJITUtils.h"
 #include "clang/Interpreter/Value.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Host.h"
-
-#include "llvm/TargetParser/Host.h"
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <memory>
+#include <signal.h>
+#include <sstream>
+#include <unistd.h>
 
 using namespace clang;
 
 llvm::ExitOnError ExitOnError;
 
-#ifdef _WIN32
-#define STDIN_FILENO 0
-#define STDOUT_FILENO 1
-#define STDERR_FILENO 2
-#endif
-
 namespace {
 
 using Args = std::vector<const char *>;
+
+struct FileDeleter {
+  void operator()(FILE *f) {
+    if (f)
+      fclose(f);
+  }
+};
+
+struct IOContext {
+  std::unique_ptr<FILE, FileDeleter> stdin_file;
+  std::unique_ptr<FILE, FileDeleter> stdout_file;
+  std::unique_ptr<FILE, FileDeleter> stderr_file;
+
+  bool initializeTempFiles() {
+    stdin_file.reset(tmpfile());
+    stdout_file.reset(tmpfile());
+    stderr_file.reset(tmpfile());
+    return stdin_file && stdout_file && stderr_file;
+  }
+
+  std::string readStdoutContent() {
+    if (!stdout_file)
+      return "";
+    rewind(stdout_file.get());
+    std::ostringstream content;
+    char buffer[1024];
+    size_t bytes_read;
+    while ((bytes_read = fread(buffer, 1, sizeof(buffer), stdout_file.get())) >
+           0) {
+      content.write(buffer, bytes_read);
+    }
+    return content.str();
+  }
+
+  std::string readStderrContent() {
+    if (!stderr_file)
+      return "";
+    rewind(stderr_file.get());
+    std::ostringstream content;
+    char buffer[1024];
+    size_t bytes_read;
+    while ((bytes_read = fread(buffer, 1, sizeof(buffer), stderr_file.get())) >
+           0) {
+      content.write(buffer, bytes_read);
+    }
+    return content.str();
+  }
+};
 
 static void removePathComponent(unsigned N, llvm::SmallString<256> &Path) {
   for (unsigned i = 0; i < N; ++i)
@@ -74,56 +115,53 @@ static std::string getOrcRuntimePath() {
     llvm::sys::path::append(RuntimePath, "x86_64-unknown-linux-gnu",
                             "liborc_rt.a");
   }
-
   return RuntimePath.str().str();
 }
 
 static std::unique_ptr<Interpreter>
-createInterpreterWithRemoteExecution(const Args &ExtraArgs = {},
-                                     DiagnosticConsumer *Client = nullptr) {
+createInterpreterWithRemoteExecution(std::shared_ptr<IOContext> io_ctx,
+                                     const Args &ExtraArgs = {}) {
   Args ClangArgs = {"-Xclang", "-emit-llvm-only"};
   llvm::append_range(ClangArgs, ExtraArgs);
   auto CB = clang::IncrementalCompilerBuilder();
   CB.SetCompilerArgs(ClangArgs);
   auto CI = cantFail(CB.CreateCpp());
-  if (Client)
-    CI->getDiagnostics().setClient(Client, /*ShouldOwnClient=*/false);
 
-  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
-
+  clang::Interpreter::JITConfig Config;
   llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
 
-  if ((SystemTriple.isOSBinFormatELF() || SystemTriple.isOSBinFormatMachO())) {
-    std::string OOPExecutor = getExecutorPath();
-    std::string OrcRuntimePath = getOrcRuntimePath();
-    bool UseSharedMemory = false;
-    std::string SlabAllocateSizeString = "";
-    std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
-    EPC = ExitOnError(launchExecutor(OOPExecutor, UseSharedMemory,
-                                     SlabAllocateSizeString,
-                                     [=] { // Lambda defined inline
-                                       auto redirect = [](int from, int to) {
-                                         if (from != to) {
-                                           dup2(from, to);
-                                           close(from);
-                                         }
-                                       };
+  if (SystemTriple.isOSBinFormatELF() || SystemTriple.isOSBinFormatMachO()) {
+    Config.IsOutOfProcess = true;
+    Config.OOPExecutor = getExecutorPath();
+    Config.UseSharedMemory = false;
+    Config.SlabAllocateSize = 0;
+    Config.OrcRuntimePath = getOrcRuntimePath();
 
-                                       redirect(0, STDIN_FILENO);
-                                       redirect(1, STDOUT_FILENO);
-                                       redirect(2, STDERR_FILENO);
+    int stdin_fd = fileno(io_ctx->stdin_file.get());
+    int stdout_fd = fileno(io_ctx->stdout_file.get());
+    int stderr_fd = fileno(io_ctx->stderr_file.get());
 
-                                       setvbuf(stdout, nullptr, _IONBF, 0);
-                                       setvbuf(stderr, nullptr, _IONBF, 0);
-                                     }));
-    if (EPC) {
-      CB.SetTargetTriple(EPC->getTargetTriple().getTriple());
-      JB = ExitOnError(clang::Interpreter::createLLJITBuilder(std::move(EPC),
-                                                              OrcRuntimePath));
-    }
+    Config.CustomizeFork = [=] {
+      auto redirect = [](int from, int to) {
+        if (from != to) {
+          dup2(from, to);
+          close(from);
+        }
+      };
+
+      redirect(stdin_fd, STDIN_FILENO);
+      redirect(stdout_fd, STDOUT_FILENO);
+      redirect(stderr_fd, STDERR_FILENO);
+
+      setvbuf(stdout, nullptr, _IONBF, 0);
+      setvbuf(stderr, nullptr, _IONBF, 0);
+
+      printf("CustomizeFork executed\n");
+      fflush(stdout);
+    };
   }
 
-  return cantFail(clang::Interpreter::create(std::move(CI), std::move(JB)));
+  return cantFail(clang::Interpreter::create(std::move(CI), Config));
 }
 
 static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
@@ -134,15 +172,32 @@ TEST_F(InterpreterTestBase, SanityWithRemoteExecution) {
   if (!HostSupportsJIT())
     GTEST_SKIP();
 
-  std::unique_ptr<Interpreter> Interp = createInterpreterWithRemoteExecution();
+  std::string OrcRuntimePath = getOrcRuntimePath();
+  std::string ExecutorPath = getExecutorPath();
+
+  if (!llvm::sys::fs::exists(OrcRuntimePath) ||
+      !llvm::sys::fs::exists(ExecutorPath))
+    GTEST_SKIP();
+
+  auto io_ctx = std::make_shared<IOContext>();
+  ASSERT_TRUE(io_ctx->initializeTempFiles());
+
+  std::unique_ptr<Interpreter> Interp =
+      createInterpreterWithRemoteExecution(io_ctx);
+  ASSERT_TRUE(Interp);
 
   using PTU = PartialTranslationUnit;
-
   PTU &R1(cantFail(Interp->Parse("void g(); void g() {}")));
   EXPECT_EQ(2U, DeclsSize(R1.TUPart));
 
-  PTU &R2(cantFail(Interp->Parse("int i;")));
+  PTU &R2(cantFail(Interp->Parse("int i = 42;")));
   EXPECT_EQ(1U, DeclsSize(R2.TUPart));
+
+  std::string captured_stdout = io_ctx->readStdoutContent();
+  std::string captured_stderr = io_ctx->readStderrContent();
+
+  EXPECT_TRUE(captured_stdout.find("CustomizeFork executed") !=
+              std::string::npos);
 }
 
 } // end anonymous namespace

@@ -101,8 +101,8 @@ static Value::Kind ConvertQualTypeToKind(const ASTContext &Ctx, QualType QT) {
   if (Ctx.hasSameType(QT, Ctx.VoidTy))
     return Value::K_Void;
 
-  if (const auto *ET = QT->getAs<EnumType>())
-    QT = ET->getDecl()->getIntegerType();
+  if (const auto *ED = QT->getAsEnumDecl())
+    QT = ED->getIntegerType();
 
   const auto *BT = QT->getAs<BuiltinType>();
   if (!BT || BT->isNullPtrType())
@@ -147,15 +147,12 @@ Value::Value(const Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
         } while (ArrTy);
         ElementsSize = static_cast<size_t>(ArrSize.getZExtValue());
       }
-      if (const auto *RT = DtorTy->getAs<RecordType>()) {
-        if (CXXRecordDecl *CXXRD =
-                llvm::dyn_cast<CXXRecordDecl>(RT->getDecl())) {
-          if (llvm::Expected<llvm::orc::ExecutorAddr> Addr =
-                  Interp.CompileDtorCall(CXXRD))
-            DtorF = reinterpret_cast<void *>(Addr->getValue());
-          else
-            llvm::logAllUnhandledErrors(Addr.takeError(), llvm::errs());
-        }
+      if (auto *CXXRD = DtorTy->getAsCXXRecordDecl()) {
+        if (llvm::Expected<llvm::orc::ExecutorAddr> Addr =
+                Interp.CompileDtorCall(CXXRD))
+          DtorF = reinterpret_cast<void *>(Addr->getValue());
+        else
+          llvm::logAllUnhandledErrors(Addr.takeError(), llvm::errs());
       }
 
       size_t AllocSize =

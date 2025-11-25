@@ -1,4 +1,4 @@
-//===--- UseUsingCheck.cpp - clang-tidy------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,7 +34,7 @@ static constexpr llvm::StringLiteral DeclStmtName = "decl-stmt";
 
 UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)),
+      IgnoreMacros(Options.get("IgnoreMacros", true)),
       IgnoreExternC(Options.get("IgnoreExternC", false)) {}
 
 void UseUsingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -114,7 +114,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   if (ExternCDecl && IgnoreExternC)
     return;
 
-  SourceLocation StartLoc = MatchedDecl->getBeginLoc();
+  const SourceLocation StartLoc = MatchedDecl->getBeginLoc();
 
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;
@@ -172,7 +172,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
             .str(),
         ExtraReference.str()};
   }();
-  StringRef Name = MatchedDecl->getName();
+  const StringRef Name = MatchedDecl->getName();
   SourceRange ReplaceRange = MatchedDecl->getSourceRange();
 
   // typedefs with multiple comma-separated definitions produce multiple
@@ -223,7 +223,8 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
       return;
   }
 
-  std::string Replacement = (Using + Name + " = " + Type + QualifierStr).str();
+  const std::string Replacement =
+      (Using + Name + " = " + Type + QualifierStr).str();
   Diag << FixItHint::CreateReplacement(ReplaceRange, Replacement);
 }
 } // namespace clang::tidy::modernize

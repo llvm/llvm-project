@@ -1,16 +1,16 @@
 ; REQUIRES: asserts
 
-; RUN: llc -verify-machineinstrs=0 -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -o /dev/null %s 2>&1 | FileCheck -check-prefix=DEFAULT %s
-; RUN: llc -verify-machineinstrs=0 -sgpr-regalloc=greedy -wwm-regalloc=greedy -vgpr-regalloc=greedy -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -o /dev/null %s 2>&1 | FileCheck -check-prefix=DEFAULT %s
+; RUN: llc -verify-machineinstrs=0 -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=DEFAULT %s
+; RUN: llc -verify-machineinstrs=0 -sgpr-regalloc=greedy -wwm-regalloc=greedy -vgpr-regalloc=greedy -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=DEFAULT %s
 
-; RUN: llc -verify-machineinstrs=0 -O0 -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -o /dev/null %s 2>&1 | FileCheck -check-prefix=O0 %s
+; RUN: llc -verify-machineinstrs=0 -O0 -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=O0 %s
 
-; RUN: llc -verify-machineinstrs=0 -wwm-regalloc=basic -vgpr-regalloc=basic -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -o /dev/null %s 2>&1 | FileCheck -check-prefix=DEFAULT-BASIC %s
-; RUN: llc -verify-machineinstrs=0 -sgpr-regalloc=basic -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -o /dev/null %s 2>&1 | FileCheck -check-prefix=BASIC-DEFAULT %s
-; RUN: llc -verify-machineinstrs=0 -sgpr-regalloc=basic -wwm-regalloc=basic -vgpr-regalloc=basic -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -o /dev/null %s 2>&1 | FileCheck -check-prefix=BASIC-BASIC %s
+; RUN: llc -verify-machineinstrs=0 -wwm-regalloc=basic -vgpr-regalloc=basic -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=DEFAULT-BASIC %s
+; RUN: llc -verify-machineinstrs=0 -sgpr-regalloc=basic -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=BASIC-DEFAULT %s
+; RUN: llc -verify-machineinstrs=0 -sgpr-regalloc=basic -wwm-regalloc=basic -vgpr-regalloc=basic -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=BASIC-BASIC %s
 
-; RUN: not llc -verify-machineinstrs=0 -regalloc=basic -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -o /dev/null %s 2>&1 | FileCheck -check-prefix=REGALLOC %s
-; RUN: not llc -verify-machineinstrs=0 -regalloc=fast -O0 -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -o /dev/null %s 2>&1 | FileCheck -check-prefix=REGALLOC %s
+; RUN: not llc -verify-machineinstrs=0 -regalloc=basic -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=REGALLOC %s
+; RUN: not llc -verify-machineinstrs=0 -regalloc=fast -O0 -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=REGALLOC %s
 
 
 ; REGALLOC: -regalloc not supported with amdgcn. Use -sgpr-regalloc, -wwm-regalloc, and -vgpr-regalloc

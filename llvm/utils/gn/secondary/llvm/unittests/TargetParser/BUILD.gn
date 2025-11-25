@@ -4,7 +4,6 @@ unittest("TargetParserTests") {
   deps = [
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
-    "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [

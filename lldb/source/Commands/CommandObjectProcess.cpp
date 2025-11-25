@@ -259,7 +259,7 @@ protected:
         if (!exe_module_sp)
           exe_module_sp = target->GetExecutableModule();
         if (!exe_module_sp) {
-          result.AppendWarning("Could not get executable module after launch.");
+          result.AppendWarning("could not get executable module after launch");
         } else {
 
           const char *archname =
@@ -1603,8 +1603,8 @@ public:
   Options *GetOptions() override { return &m_options; }
 
   void PrintSignalHeader(Stream &str) {
-    str.Printf("NAME         PASS   STOP   NOTIFY\n");
-    str.Printf("===========  =====  =====  ======\n");
+    str.Printf("NAME         PASS   STOP   NOTIFY  DESCRIPTION\n");
+    str.Printf("===========  =====  =====  ======  ===================\n");
   }
 
   void PrintSignal(Stream &str, int32_t signo, llvm::StringRef sig_name,
@@ -1615,9 +1615,16 @@ public:
 
     str.Format("{0, -11}  ", sig_name);
     if (signals_sp->GetSignalInfo(signo, suppress, stop, notify)) {
-      bool pass = !suppress;
+      const bool pass = !suppress;
       str.Printf("%s  %s  %s", (pass ? "true " : "false"),
                  (stop ? "true " : "false"), (notify ? "true " : "false"));
+
+      const llvm::StringRef sig_description =
+          signals_sp->GetSignalNumberDescription(signo);
+      if (!sig_description.empty()) {
+        str.PutCString("   ");
+        str.PutCString(sig_description);
+      }
     }
     str.Printf("\n");
   }

@@ -36,8 +36,6 @@ namespace llvm {
 
 class AAResults;
 class AssumptionCache;
-class BlockFrequencyInfo;
-class BranchProbabilityInfo;
 class DominatorTree;
 class Function;
 class Loop;
@@ -59,8 +57,6 @@ struct LoopStandardAnalysisResults {
   ScalarEvolution &SE;
   TargetLibraryInfo &TLI;
   TargetTransformInfo &TTI;
-  BlockFrequencyInfo *BFI;
-  BranchProbabilityInfo *BPI;
   MemorySSA *MSSA;
 };
 

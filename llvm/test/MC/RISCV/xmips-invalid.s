@@ -1,5 +1,14 @@
 # RUN: not llvm-mc -triple=riscv64 < %s 2>&1 | FileCheck %s -check-prefixes=CHECK-FEATURE
-# RUN: not llvm-mc -triple=riscv64 -mattr=+xmipslsp,+xmipscmov,+Xmipscbop < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=riscv64 -mattr=+xmipslsp,+xmipscmov,+xmipscbop,+xmipsexectl < %s 2>&1 | FileCheck %s
+
+mips.pause 10
+# CHECK: error: invalid operand for instruction
+
+mips.ehb 10
+# CHECK: error: invalid operand for instruction 
+
+mips.ihb 10
+# CHECK: error: invalid operand for instruction
 
 mips.pref   8, 512(a0)
 # CHECK: error: immediate offset must be in the range [0, 511]

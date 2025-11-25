@@ -13,6 +13,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/FormatString.h"
@@ -182,18 +183,22 @@ public:
     return DynamicRecursiveASTVisitor::TraverseUnaryExprOrTypeTraitExpr(Node);
   }
 
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) override {
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node,
+                                 bool TraverseQualifier) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(
+        Node, TraverseQualifier);
   }
 
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) override {
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node,
+                               bool TraverseQualifier) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(
+        Node, TraverseQualifier);
   }
 
   bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {
@@ -776,9 +781,25 @@ struct LibcFunNamePrefixSuffixParser {
   }
 };
 
+// Constant fold a conditional expression 'cond ? A : B' to
+// - 'A', if 'cond' has constant true value;
+// - 'B', if 'cond' has constant false value.
+static const Expr *tryConstantFoldConditionalExpr(const Expr *E,
+                                                  const ASTContext &Ctx) {
+  // FIXME: more places can use this function
+  if (const auto *CE = dyn_cast<ConditionalOperator>(E)) {
+    bool CondEval;
+
+    if (CE->getCond()->EvaluateAsBooleanCondition(CondEval, Ctx))
+      return CondEval ? CE->getLHS() : CE->getRHS();
+  }
+  return E;
+}
+
 // A pointer type expression is known to be null-terminated, if it has the
 // form: E.c_str(), for any expression E of `std::string` type.
-static bool isNullTermPointer(const Expr *Ptr) {
+static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
+  Ptr = tryConstantFoldConditionalExpr(Ptr, Ctx);
   if (isa<clang::StringLiteral>(Ptr->IgnoreParenImpCasts()))
     return true;
   if (isa<PredefinedExpr>(Ptr->IgnoreParenImpCasts()))
@@ -869,7 +890,7 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
 
       const Expr *Arg = Call->getArg(ArgIdx);
 
-      if (isNullTermPointer(Arg))
+      if (isNullTermPointer(Arg, Ctx))
         // If Arg is a null-terminated pointer, it is safe anyway.
         return true; // continue parsing
 
@@ -896,29 +917,29 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
   const Expr *Fmt = Call->getArg(FmtArgIdx);
 
   if (auto *SL = dyn_cast<clang::StringLiteral>(Fmt->IgnoreParenImpCasts())) {
-    StringRef FmtStr;
+    if (SL->getCharByteWidth() == 1) {
+      StringRef FmtStr = SL->getString();
+      StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
 
-    if (SL->getCharByteWidth() == 1)
-      FmtStr = SL->getString();
-    else if (auto EvaledFmtStr = SL->tryEvaluateString(Ctx))
-      FmtStr = *EvaledFmtStr;
-    else
-      goto CHECK_UNSAFE_PTR;
+      return analyze_format_string::ParsePrintfString(
+          Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
+          Ctx.getTargetInfo(), isKprintf);
+    }
 
-    StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
-
-    return analyze_format_string::ParsePrintfString(
-        Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
-        Ctx.getTargetInfo(), isKprintf);
+    if (auto FmtStr = SL->tryEvaluateString(Ctx)) {
+      StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
+      return analyze_format_string::ParsePrintfString(
+          Handler, FmtStr->data(), FmtStr->data() + FmtStr->size(),
+          Ctx.getLangOpts(), Ctx.getTargetInfo(), isKprintf);
+    }
   }
-CHECK_UNSAFE_PTR:
   // If format is not a string literal, we cannot analyze the format string.
   // In this case, this call is considered unsafe if at least one argument
   // (including the format argument) is unsafe pointer.
   return llvm::any_of(
       llvm::make_range(Call->arg_begin() + FmtArgIdx, Call->arg_end()),
-      [&UnsafeArg](const Expr *Arg) -> bool {
-        if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
+      [&UnsafeArg, &Ctx](const Expr *Arg) -> bool {
+        if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg, Ctx)) {
           UnsafeArg = Arg;
           return true;
         }
@@ -1170,7 +1191,7 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
   // We don't really recognize this "normal" printf, the only thing we
   // can do is to require all pointers to be null-terminated:
   for (const auto *Arg : Node.arguments())
-    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
+    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg, Ctx)) {
       Result.addNode(Tag, DynTypedNode::create(*Arg));
       return true;
     }
@@ -1313,6 +1334,97 @@ static bool isSupportedVariable(const DeclRefExpr &Node) {
   const Decl *D = Node.getDecl();
   return D != nullptr && isa<VarDecl>(D);
 }
+
+// Returns true for RecordDecl of type std::unique_ptr<T[]>
+static bool isUniquePtrArray(const CXXRecordDecl *RecordDecl) {
+  if (!RecordDecl || !RecordDecl->isInStdNamespace() ||
+      RecordDecl->getNameAsString() != "unique_ptr")
+    return false;
+
+  const ClassTemplateSpecializationDecl *class_template_specialization_decl =
+      dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
+  if (!class_template_specialization_decl)
+    return false;
+
+  const TemplateArgumentList &template_args =
+      class_template_specialization_decl->getTemplateArgs();
+  if (template_args.size() == 0)
+    return false;
+
+  const TemplateArgument &first_arg = template_args[0];
+  if (first_arg.getKind() != TemplateArgument::Type)
+    return false;
+
+  QualType referred_type = first_arg.getAsType();
+  return referred_type->isArrayType();
+}
+
+class UniquePtrArrayAccessGadget : public WarningGadget {
+private:
+  static constexpr const char *const AccessorTag = "unique_ptr_array_access";
+  const CXXOperatorCallExpr *AccessorExpr;
+
+public:
+  UniquePtrArrayAccessGadget(const MatchResult &Result)
+      : WarningGadget(Kind::UniquePtrArrayAccess),
+        AccessorExpr(Result.getNodeAs<CXXOperatorCallExpr>(AccessorTag)) {
+    assert(AccessorExpr &&
+           "UniquePtrArrayAccessGadget requires a matched CXXOperatorCallExpr");
+  }
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::UniquePtrArrayAccess;
+  }
+
+  static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      MatchResult &Result) {
+
+    const CXXOperatorCallExpr *OpCall = dyn_cast<CXXOperatorCallExpr>(S);
+    if (!OpCall || OpCall->getOperator() != OO_Subscript)
+      return false;
+
+    const Expr *Callee = OpCall->getCallee()->IgnoreParenImpCasts();
+    if (!Callee)
+      return false;
+
+    const CXXMethodDecl *Method =
+        dyn_cast_or_null<CXXMethodDecl>(OpCall->getDirectCallee());
+    if (!Method)
+      return false;
+
+    if (Method->getOverloadedOperator() != OO_Subscript)
+      return false;
+
+    const CXXRecordDecl *RecordDecl = Method->getParent();
+    if (!isUniquePtrArray(RecordDecl))
+      return false;
+
+    const Expr *IndexExpr = OpCall->getArg(1);
+    clang::Expr::EvalResult Eval;
+
+    // Allow [0]
+    if (IndexExpr->EvaluateAsInt(Eval, Ctx) && Eval.Val.getInt().isZero())
+      return false;
+
+    Result.addNode(AccessorTag, DynTypedNode::create(*OpCall));
+    return true;
+  }
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    Handler.handleUnsafeUniquePtrArrayAccess(
+        DynTypedNode::create(*AccessorExpr), IsRelatedToDecl, Ctx);
+  }
+
+  SourceLocation getSourceLoc() const override {
+    if (AccessorExpr)
+      return AccessorExpr->getOperatorLoc();
+    return SourceLocation();
+  }
+
+  DeclUseList getClaimedVarUseSites() const override { return {}; }
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
+};
 
 using FixableGadgetList = std::vector<std::unique_ptr<FixableGadget>>;
 using WarningGadgetList = std::vector<std::unique_ptr<WarningGadget>>;
@@ -2252,7 +2364,7 @@ namespace {
 // declarations to its uses and make sure we've covered all uses with our
 // analysis before we try to fix the declaration.
 class DeclUseTracker {
-  using UseSetTy = llvm::SmallSet<const DeclRefExpr *, 16>;
+  using UseSetTy = llvm::SmallPtrSet<const DeclRefExpr *, 16>;
   using DefMapTy = llvm::DenseMap<const VarDecl *, const DeclStmt *>;
 
   // Allocate on the heap for easier move.
@@ -2628,10 +2740,13 @@ std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
                                    const VariableGroupsManager &, FixItList &&,
                                    const Decl *,
                                    const FixitStrategy &) override {}
-    bool isSafeBufferOptOut(const SourceLocation &) const override {
+    void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
+                                          bool IsRelatedToDecl,
+                                          ASTContext &Ctx) override {}
+    bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
       return false;
     }
-    bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
+    bool isSafeBufferOptOut(const SourceLocation &) const override {
       return false;
     }
     bool ignoreUnsafeBufferInLibcCall(const SourceLocation &) const override {

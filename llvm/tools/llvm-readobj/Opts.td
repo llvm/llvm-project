@@ -32,6 +32,7 @@ def file_header : FF<"file-header", "Display file header">;
 def headers : FF<"headers", "Equivalent to setting: --file-header, --program-headers, --section-headers">;
 defm hex_dump : Eq<"hex-dump", "Display the specified section(s) as hexadecimal bytes">, MetaVarName<"<name or index>">;
 def pretty_print : FF<"pretty-print", "Pretty print JSON output">;
+def offloading : FF<"offloading", "Display the content of the offloading section">;
 def relocs : FF<"relocs", "Display the relocation entries in the file">;
 def section_data : FF<"section-data", "Display section data for each section shown. This option has no effect for GNU style output">;
 def section_details : FF<"section-details", "Display the section details">;
@@ -87,6 +88,10 @@ def coff_directives : FF<"coff-directives", "Display .drectve section">, Group<g
 def coff_exports : FF<"coff-exports", "Display export table">, Group<grp_coff>;
 def coff_imports : FF<"coff-imports", "Display import table">, Group<grp_coff>;
 def coff_load_config : FF<"coff-load-config", "Display load config">, Group<grp_coff>;
+def coff_pseudoreloc
+    : FF<"coff-pseudoreloc",
+         "Display runtime pseudo-relocations (Cygwin/MinGW specific)">,
+      Group<grp_coff>;
 def coff_resources : FF<"coff-resources", "Display .rsrc section">, Group<grp_coff>;
 def coff_tls_directory : FF<"coff-tls-directory", "Display TLS directory">, Group<grp_coff>;
 

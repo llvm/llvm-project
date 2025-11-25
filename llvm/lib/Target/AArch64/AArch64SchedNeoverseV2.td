@@ -2251,13 +2251,13 @@ def : InstRW<[V2Write_20c_1V0], (instregex "^[SU]DIVR?_ZPmZ_D",
                                            "^[SU]DIV_ZPZZ_D")>;
 
 // Dot product, 8 bit
-def : InstRW<[V2Wr_ZDOTB, V2Rd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_S")>;
+def : InstRW<[V2Wr_ZDOTB, V2Rd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_BtoS")>;
 
 // Dot product, 8 bit, using signed and unsigned integers
 def : InstRW<[V2Wr_ZDOTB, V2Rd_ZDOTB], (instrs SUDOT_ZZZI, USDOT_ZZZI, USDOT_ZZZ)>;
 
 // Dot product, 16 bit
-def : InstRW<[V2Wr_ZDOTH, V2Rd_ZDOTH], (instregex "^[SU]DOT_ZZZI?_D")>;
+def : InstRW<[V2Wr_ZDOTH, V2Rd_ZDOTH], (instregex "^[SU]DOT_ZZZI?_HtoD")>;
 
 // Duplicate, immediate and indexed form
 def : InstRW<[V2Write_2c_1V], (instregex "^DUP_ZI_[BHSD]",
@@ -2272,7 +2272,7 @@ def : InstRW<[V2Write_2c_1V13], (instregex "^[SU]XTB_ZPmZ_[HSD]",
                                            "^[SU]XTW_ZPmZ_[D]")>;
 
 // Extract
-def : InstRW<[V2Write_2c_1V], (instrs EXT_ZZI, EXT_ZZI_B)>;
+def : InstRW<[V2Write_2c_1V], (instrs EXT_ZZI, EXT_ZZI_CONSTRUCTIVE, EXT_ZZI_B)>;
 
 // Extract narrow saturating
 def : InstRW<[V2Write_4c_1V13], (instregex "^[SU]QXTN[BT]_ZZ_[BHS]",
@@ -2614,7 +2614,7 @@ def : InstRW<[V2Write_4c_1V02], (instrs BFCVT_ZPmZ, BFCVTNT_ZPmZ)>;
 def : InstRW<[V2Wr_ZBFDOT, V2Rd_ZBFDOT], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 
 // Matrix multiply accumulate
-def : InstRW<[V2Wr_ZBFMMA, V2Rd_ZBFMMA], (instrs BFMMLA_ZZZ)>;
+def : InstRW<[V2Wr_ZBFMMA, V2Rd_ZBFMMA], (instrs BFMMLA_ZZZ_HtoS)>;
 
 // Multiply accumulate long
 def : InstRW<[V2Wr_ZBFMAL, V2Rd_ZBFMAL], (instregex "^BFMLAL[BT]_ZZZI?")>;
@@ -2762,11 +2762,11 @@ def : InstRW<[V2Write_11c_18L01_18V01], (instregex "^ST4[BHWD]_IMM$")>;
 def : InstRW<[V2Write_11c_18L01_18S_18V01], (instregex "^ST4[BHWD]$")>;
 
 // Non temporal store, scalar + imm
-def : InstRW<[V2Write_2c_1L01_1V], (instregex "^STNT1[BHWD]_ZRI$")>;
+def : InstRW<[V2Write_2c_1L01_1V01], (instregex "^STNT1[BHWD]_ZRI$")>;
 
 // Non temporal store, scalar + scalar
-def : InstRW<[V2Write_2c_1L01_1S_1V], (instrs STNT1H_ZRR)>;
-def : InstRW<[V2Write_2c_1L01_1V], (instregex "^STNT1[BWD]_ZRR$")>;
+def : InstRW<[V2Write_2c_1L01_1S_1V01], (instrs STNT1H_ZRR)>;
+def : InstRW<[V2Write_2c_1L01_1V01], (instregex "^STNT1[BWD]_ZRR$")>;
 
 // Scatter non temporal store, vector + scalar 32-bit element size
 def : InstRW<[V2Write_4c_4L01_4V01], (instregex "^STNT1[BHW]_ZZR_S")>;

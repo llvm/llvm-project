@@ -112,14 +112,14 @@ QuasiPolynomial QuasiPolynomial::simplify() {
     // A term is zero if its coefficient is zero, or
     if (coefficients[i] == Fraction(0, 1))
       continue;
-    bool product_is_zero =
+    bool productIsZero =
         // if any of the affine functions in the product
-        llvm::any_of(affine[i], [](const SmallVector<Fraction> &affine_ij) {
+        llvm::any_of(affine[i], [](const SmallVector<Fraction> &affineIj) {
           // has all its coefficients as zero.
-          return llvm::all_of(affine_ij,
+          return llvm::all_of(affineIj,
                               [](const Fraction &f) { return f == 0; });
         });
-    if (product_is_zero)
+    if (productIsZero)
       continue;
 
     // Now, we know the term is nonzero.

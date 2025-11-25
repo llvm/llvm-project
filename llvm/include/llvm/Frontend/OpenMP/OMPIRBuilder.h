@@ -17,6 +17,7 @@
 #include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
@@ -38,6 +39,10 @@ class OpenMPIRBuilder;
 class Loop;
 class LoopAnalysis;
 class LoopInfo;
+
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 
 /// Move the instruction after an InsertPoint to the beginning of another
 /// BasicBlock.
@@ -121,15 +126,20 @@ public:
 
   /// First separator used between the initial two parts of a name.
   std::optional<StringRef> FirstSeparator;
-  /// Separator used between all of the rest consecutive parts of s name
+  /// Separator used between all of the rest consecutive parts of s name.
   std::optional<StringRef> Separator;
 
-  // Grid Value for the GPU target
+  // Grid Value for the GPU target.
   std::optional<omp::GV> GridValue;
 
   /// When compilation is being done for the OpenMP host (i.e. `IsTargetDevice =
   /// false`), this contains the list of offloading triples associated, if any.
   SmallVector<Triple> TargetTriples;
+
+  // Default address space for the target.
+  unsigned DefaultTargetAS = 0;
+
+  CallingConv::ID RuntimeCC = llvm::CallingConv::C;
 
   LLVM_ABI OpenMPIRBuilderConfig();
   LLVM_ABI OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
@@ -160,6 +170,10 @@ public:
     assert(GridValue.has_value() && "GridValue is not set");
     return *GridValue;
   }
+
+  unsigned getDefaultTargetAS() const { return DefaultTargetAS; }
+
+  CallingConv::ID getRuntimeCC() const { return RuntimeCC; }
 
   bool hasRequiresFlags() const { return RequiresFlags; }
   LLVM_ABI bool hasRequiresReverseOffload() const;
@@ -198,6 +212,8 @@ public:
   void setFirstSeparator(StringRef FS) { FirstSeparator = FS; }
   void setSeparator(StringRef S) { Separator = S; }
   void setGridValue(omp::GV G) { GridValue = G; }
+  void setDefaultTargetAS(unsigned AS) { DefaultTargetAS = AS; }
+  void setRuntimeCC(CallingConv::ID CC) { RuntimeCC = CC; }
 
   LLVM_ABI void setHasRequiresReverseOffload(bool Value);
   LLVM_ABI void setHasRequiresUnifiedAddress(bool Value);
@@ -709,7 +725,7 @@ public:
       const LocationDescription &Loc, omp::Directive CanceledDirective);
 
   /// Creates a ScanInfo object, allocates and returns the pointer.
-  Expected<ScanInfo *> scanInfoInitialize();
+  LLVM_ABI Expected<ScanInfo *> scanInfoInitialize();
 
   /// Generator for '#omp parallel'
   ///
@@ -785,10 +801,12 @@ public:
   ///                  `ScanInfoInitialize`.
   ///
   /// \returns A vector containing Loop Info of Input Loop and Scan Loop.
-  Expected<SmallVector<llvm::CanonicalLoopInfo *>> createCanonicalScanLoops(
-      const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
-      Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop,
-      InsertPointTy ComputeIP, const Twine &Name, ScanInfo *ScanRedInfo);
+  LLVM_ABI Expected<SmallVector<llvm::CanonicalLoopInfo *>>
+  createCanonicalScanLoops(const LocationDescription &Loc,
+                           LoopBodyGenCallbackTy BodyGenCB, Value *Start,
+                           Value *Stop, Value *Step, bool IsSigned,
+                           bool InclusiveStop, InsertPointTy ComputeIP,
+                           const Twine &Name, ScanInfo *ScanRedInfo);
 
   /// Calculate the trip count of a canonical loop.
   ///
@@ -1073,11 +1091,13 @@ private:
   ///                 preheader of the loop.
   /// \param LoopType Information about type of loop worksharing.
   ///                 It corresponds to type of loop workshare OpenMP pragma.
+  /// \param NoLoop   If true, no-loop code is generated.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
                                          InsertPointTy AllocaIP,
-                                         omp::WorksharingLoopType LoopType);
+                                         omp::WorksharingLoopType LoopType,
+                                         bool NoLoop);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
@@ -1197,6 +1217,7 @@ public:
   ///                         present.
   /// \param LoopType Information about type of loop worksharing.
   ///                 It corresponds to type of loop workshare OpenMP pragma.
+  /// \param NoLoop If true, no-loop code is generated.
   ///
   /// \returns Point where to insert code after the workshare construct.
   LLVM_ABI InsertPointOrErrorTy applyWorkshareLoop(
@@ -1207,7 +1228,8 @@ public:
       bool HasMonotonicModifier = false, bool HasNonmonotonicModifier = false,
       bool HasOrderedClause = false,
       omp::WorksharingLoopType LoopType =
-          omp::WorksharingLoopType::ForStaticLoop);
+          omp::WorksharingLoopType::ForStaticLoop,
+      bool NoLoop = false);
 
   /// Tile a loop nest.
   ///
@@ -1390,7 +1412,7 @@ public:
   /// any.
   LLVM_ABI static TargetRegionEntryInfo
   getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
-                           StringRef ParentName = "");
+                           vfs::FileSystem &VFS, StringRef ParentName = "");
 
   /// Enum class for the RedctionGen CallBack type to be used.
   enum class ReductionGenCBKind { Clang, MLIR };
@@ -2116,6 +2138,10 @@ public:
 
   LLVM_ABI Function *getOrCreateRuntimeFunctionPtr(omp::RuntimeFunction FnID);
 
+  CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
+                                      ArrayRef<Value *> Args,
+                                      StringRef Name = "");
+
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
   LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef LocStr,
                                           uint32_t &SrcLocStrSize);
@@ -2367,7 +2393,7 @@ public:
     /// runtime library for debugging
     Value *MapNamesArray = nullptr;
 
-    explicit TargetDataRTArgs() {}
+    explicit TargetDataRTArgs() = default;
     explicit TargetDataRTArgs(Value *BasePointersArray, Value *PointersArray,
                               Value *SizesArray, Value *MapTypesArray,
                               Value *MapTypesArrayEnd, Value *MappersArray,
@@ -2430,20 +2456,24 @@ public:
     /// The number of threads.
     ArrayRef<Value *> NumThreads;
     /// The size of the dynamic shared memory.
-    Value *DynCGGroupMem = nullptr;
+    Value *DynCGroupMem = nullptr;
     /// True if the kernel has 'no wait' clause.
     bool HasNoWait = false;
+    /// The fallback mechanism for the shared memory.
+    omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
+        omp::OMPDynGroupprivateFallbackType::Abort;
 
     // Constructors for TargetKernelArgs.
-    TargetKernelArgs() {}
+    TargetKernelArgs() = default;
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
                      Value *NumIterations, ArrayRef<Value *> NumTeams,
-                     ArrayRef<Value *> NumThreads, Value *DynCGGroupMem,
-                     bool HasNoWait)
+                     ArrayRef<Value *> NumThreads, Value *DynCGroupMem,
+                     bool HasNoWait,
+                     omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
           NumIterations(NumIterations), NumTeams(NumTeams),
-          NumThreads(NumThreads), DynCGGroupMem(DynCGGroupMem),
-          HasNoWait(HasNoWait) {}
+          NumThreads(NumThreads), DynCGroupMem(DynCGroupMem),
+          HasNoWait(HasNoWait), DynCGroupMemFallback(DynCGroupMemFallback) {}
   };
 
   /// Create the kernel args vector used by emitTargetKernel. This function
@@ -2478,7 +2508,7 @@ public:
     /// Whether the `target ... data` directive has a `nowait` clause.
     bool HasNoWait = false;
 
-    explicit TargetDataInfo() {}
+    explicit TargetDataInfo() = default;
     explicit TargetDataInfo(bool RequiresDevicePointerInfo,
                             bool SeparateBeginEndCalls)
         : RequiresDevicePointerInfo(RequiresDevicePointerInfo),
@@ -2745,7 +2775,7 @@ public:
   ///                       `ScanInfoInitialize`.
   ///
   /// \returns The insertion position *after* the masked.
-  InsertPointOrErrorTy emitScanReduction(
+  LLVM_ABI InsertPointOrErrorTy emitScanReduction(
       const LocationDescription &Loc,
       ArrayRef<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos,
       ScanInfo *ScanRedInfo);
@@ -2763,11 +2793,12 @@ public:
   ///                    `ScanInfoInitialize`.
   ///
   /// \returns The insertion position *after* the scan.
-  InsertPointOrErrorTy createScan(const LocationDescription &Loc,
-                                  InsertPointTy AllocaIP,
-                                  ArrayRef<llvm::Value *> ScanVars,
-                                  ArrayRef<llvm::Type *> ScanVarsType,
-                                  bool IsInclusive, ScanInfo *ScanRedInfo);
+  LLVM_ABI InsertPointOrErrorTy createScan(const LocationDescription &Loc,
+                                           InsertPointTy AllocaIP,
+                                           ArrayRef<llvm::Value *> ScanVars,
+                                           ArrayRef<llvm::Type *> ScanVarsType,
+                                           bool IsInclusive,
+                                           ScanInfo *ScanRedInfo);
 
   /// Generator for '#omp critical'
   ///
@@ -3227,6 +3258,10 @@ public:
   ///        dependency information as passed in the depend clause
   /// \param HasNowait Whether the target construct has a `nowait` clause or
   ///        not.
+  /// \param DynCGroupMem The size of the dynamic groupprivate memory for each
+  /// cgroup.
+  /// \param DynCGroupMem The fallback mechanism to execute if the requested
+  /// cgroup memory cannot be provided.
   LLVM_ABI InsertPointOrErrorTy createTarget(
       const LocationDescription &Loc, bool IsOffloadEntry,
       OpenMPIRBuilder::InsertPointTy AllocaIP,
@@ -3238,7 +3273,10 @@ public:
       TargetBodyGenCallbackTy BodyGenCB,
       TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
       CustomMapperCallbackTy CustomMapperCB,
-      const SmallVector<DependData> &Dependencies, bool HasNowait = false);
+      const SmallVector<DependData> &Dependencies, bool HasNowait = false,
+      Value *DynCGroupMem = nullptr,
+      omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
+          omp::OMPDynGroupprivateFallbackType::Abort);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call
@@ -3626,7 +3664,8 @@ public:
   /// \param HostFilePath The path to the host IR file,
   /// used to load in offload metadata for the device, allowing host and device
   /// to maintain the same metadata mapping.
-  LLVM_ABI void loadOffloadInfoMetadata(StringRef HostFilePath);
+  LLVM_ABI void loadOffloadInfoMetadata(vfs::FileSystem &VFS,
+                                        StringRef HostFilePath);
 
   /// Gets (if variable with the given name already exist) or creates
   /// internal global variable with the specified Name. The created variable has
@@ -3636,7 +3675,7 @@ public:
   /// \param Name Name of the variable.
   LLVM_ABI GlobalVariable *
   getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
-                              unsigned AddressSpace = 0);
+                              std::optional<unsigned> AddressSpace = {});
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.
@@ -3983,15 +4022,17 @@ public:
 
   /// Keeps track of value of iteration variable for input/scan loop to be
   /// used for Scan directive lowering
-  llvm::Value *IV;
+  llvm::Value *IV = nullptr;
 
   /// Stores the span of canonical loop being lowered to be used for temporary
   /// buffer allocation or Finalization.
-  llvm::Value *Span;
+  llvm::Value *Span = nullptr;
 
   ScanInfo() {
     ScanBuffPtrs = new llvm::SmallDenseMap<llvm::Value *, llvm::Value *>();
   }
+  ScanInfo(ScanInfo &) = delete;
+  ScanInfo &operator=(const ScanInfo &) = delete;
 
   ~ScanInfo() { delete (ScanBuffPtrs); }
 };

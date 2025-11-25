@@ -430,12 +430,12 @@ declare i32 @foo()
 
 ; Test case distilled from 126.gcc.
 ; The phi in sw.bb.i.i gets multiple operands for the %entry predecessor.
-define void @build_modify_expr() nounwind ssp {
+define void @build_modify_expr(i32 %cond) nounwind ssp {
 ; CHECK-LABEL: build_modify_expr:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ret
 entry:
-  switch i32 undef, label %sw.bb.i.i [
+  switch i32 %cond, label %sw.bb.i.i [
     i32 69, label %if.end85
     i32 70, label %if.end85
     i32 71, label %if.end85
@@ -600,7 +600,7 @@ define i64 @select_noccmp1(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; CHECK-SD-LABEL: select_noccmp1:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    cmp x0, #0
-; CHECK-SD-NEXT:    ccmp x0, #13, #4, lt
+; CHECK-SD-NEXT:    ccmp x0, #13, #4, mi
 ; CHECK-SD-NEXT:    cset w8, gt
 ; CHECK-SD-NEXT:    cmp x2, #2
 ; CHECK-SD-NEXT:    ccmp x2, #4, #4, lt
@@ -630,13 +630,13 @@ define i64 @select_noccmp2(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; CHECK-SD-LABEL: select_noccmp2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    cmp x0, #0
-; CHECK-SD-NEXT:    ccmp x0, #13, #0, ge
+; CHECK-SD-NEXT:    ccmp x0, #13, #0, pl
 ; CHECK-SD-NEXT:    cset w8, gt
+; CHECK-SD-NEXT:    csetm w9, gt
 ; CHECK-SD-NEXT:    cmp w8, #0
 ; CHECK-SD-NEXT:    csel x0, xzr, x3, ne
-; CHECK-SD-NEXT:    sbfx w8, w8, #0, #1
-; CHECK-SD-NEXT:    adrp x9, _g@PAGE
-; CHECK-SD-NEXT:    str w8, [x9, _g@PAGEOFF]
+; CHECK-SD-NEXT:    adrp x8, _g@PAGE
+; CHECK-SD-NEXT:    str w9, [x8, _g@PAGEOFF]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: select_noccmp2:
@@ -664,7 +664,7 @@ define i32 @select_noccmp3(i32 %v0, i32 %v1, i32 %v2) {
 ; CHECK-SD-LABEL: select_noccmp3:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ccmp w0, #13, #0, ge
+; CHECK-SD-NEXT:    ccmp w0, #13, #0, pl
 ; CHECK-SD-NEXT:    cset w8, gt
 ; CHECK-SD-NEXT:    cmp w0, #22
 ; CHECK-SD-NEXT:    mov w9, #44 ; =0x2c
@@ -937,11 +937,11 @@ define i32 @f128_select_and_olt_oge(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, 
 ; CHECK-SD-NEXT:    stp q2, q3, [sp] ; 32-byte Folded Spill
 ; CHECK-SD-NEXT:    bl ___lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    cset w21, lt
+; CHECK-SD-NEXT:    cset w21, mi
 ; CHECK-SD-NEXT:    ldp q0, q1, [sp] ; 32-byte Folded Reload
 ; CHECK-SD-NEXT:    bl ___getf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    cset w8, ge
+; CHECK-SD-NEXT:    cset w8, pl
 ; CHECK-SD-NEXT:    tst w8, w21
 ; CHECK-SD-NEXT:    csel w0, w20, w19, ne
 ; CHECK-SD-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
@@ -964,8 +964,8 @@ define i32 @f128_select_and_olt_oge(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, 
 ; CHECK-GI-NEXT:    ldp q1, q0, [sp] ; 32-byte Folded Reload
 ; CHECK-GI-NEXT:    bl ___getf2
 ; CHECK-GI-NEXT:    cmp w21, #0
-; CHECK-GI-NEXT:    ccmp w0, #0, #8, lt
-; CHECK-GI-NEXT:    csel w0, w19, w20, ge
+; CHECK-GI-NEXT:    ccmp w0, #0, #8, mi
+; CHECK-GI-NEXT:    csel w0, w19, w20, pl
 ; CHECK-GI-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #48] ; 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp x22, x21, [sp, #32] ; 16-byte Folded Reload

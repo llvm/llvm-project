@@ -18,6 +18,15 @@ TEST_P(olDestroyQueueTest, Success) {
   Queue = nullptr;
 }
 
+TEST_P(olDestroyQueueTest, SuccessDelayedResolution) {
+  ManuallyTriggeredTask Manual;
+  ASSERT_SUCCESS(Manual.enqueue(Queue));
+  ASSERT_SUCCESS(olDestroyQueue(Queue));
+  Queue = nullptr;
+
+  ASSERT_SUCCESS(Manual.trigger());
+}
+
 TEST_P(olDestroyQueueTest, InvalidNullHandle) {
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olDestroyQueue(nullptr));
 }

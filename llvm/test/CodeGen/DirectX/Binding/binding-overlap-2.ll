@@ -13,7 +13,7 @@
 
 define void @test_overlapping() {
 entry:
-  %h1 = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 10, i32 5, i32 1, i32 0, i1 false, ptr @R.str)
-  %h2 = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 10, i32 5, i32 1, i32 0, i1 false, ptr @S.str)
+  %h1 = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 10, i32 5, i32 1, i32 0, ptr @R.str)
+  %h2 = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 10, i32 5, i32 1, i32 0, ptr @S.str)
   ret void
 }

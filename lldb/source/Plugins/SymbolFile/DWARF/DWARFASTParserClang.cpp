@@ -252,7 +252,7 @@ static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
 }
 
 static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
-  char const *name = die.GetMangledName(/*substitute_name_allowed*/ false);
+  const char *name = die.GetMangledName(/*substitute_name_allowed*/ false);
   if (!name)
     return {};
 
@@ -286,7 +286,9 @@ static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   if (die_id == LLDB_INVALID_UID)
     return {};
 
-  return FunctionCallLabel{/*module_id=*/module_id,
+  // Note, discriminator is added by Clang during mangling.
+  return FunctionCallLabel{/*discriminator=*/{},
+                           /*module_id=*/module_id,
                            /*symbol_id=*/die_id,
                            /*.lookup_name=*/name}
       .toString();
@@ -446,6 +448,10 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
 
     case DW_AT_byte_size:
       byte_size = form_value.Unsigned();
+      break;
+
+    case DW_AT_bit_size:
+      data_bit_size = form_value.Unsigned();
       break;
 
     case DW_AT_alignment:
@@ -808,13 +814,18 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     // there...
     [[fallthrough]];
 
-  case DW_TAG_base_type:
+  case DW_TAG_base_type: {
     resolve_state = Type::ResolveState::Full;
+    // If a builtin type's size isn't a multiple of a byte, DWARF producers may
+    // add a precise bit-size to the type. Use the most precise bit-size
+    // possible.
+    const uint64_t bit_size = attrs.data_bit_size
+                                  ? *attrs.data_bit_size
+                                  : attrs.byte_size.value_or(0) * 8;
     clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
-        attrs.name.GetStringRef(), attrs.encoding,
-        attrs.byte_size.value_or(0) * 8);
+        attrs.name.GetStringRef(), attrs.encoding, bit_size);
     break;
-
+  }
   case DW_TAG_pointer_type:
     encoding_data_type = Type::eEncodingIsPointerUID;
     break;
@@ -1694,8 +1705,11 @@ void DWARFASTParserClang::GetUniqueTypeNameAndDeclaration(
   // For C++, we rely solely upon the one definition rule that says
   // only one thing can exist at a given decl context. We ignore the
   // file and line that things are declared on.
-  if (!die.IsValid() || !Language::LanguageIsCPlusPlus(language) ||
-      unique_typename.IsEmpty())
+  // FIXME: Rust pretends to be C++ for now, so use C++ name qualification rules
+  if (!Language::LanguageIsCPlusPlus(language) &&
+      language != lldb::eLanguageTypeRust)
+    return;
+  if (!die.IsValid() || unique_typename.IsEmpty())
     return;
   decl_declaration.Clear();
   std::string qualified_name;
@@ -1899,6 +1913,17 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         m_ast.CreateClassTemplateSpecializationDecl(
             containing_decl_ctx, GetOwningClangModule(die), class_template_decl,
             tag_decl_kind, template_param_infos);
+    if (!class_specialization_decl) {
+      if (log) {
+        dwarf->GetObjectFile()->GetModule()->LogMessage(
+            log,
+            "SymbolFileDWARF({0:p}) - Failed to create specialization for "
+            "clang::ClassTemplateDecl({1}, {2:p}).",
+            this, llvm::StringRef(attrs.name), class_template_decl);
+      }
+      return TypeSP();
+    }
+
     clang_type =
         m_ast.CreateClassTemplateSpecializationType(class_specialization_decl);
 
@@ -2030,11 +2055,10 @@ static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
   if (is_integral)
     return clang::APValue(apint);
 
-  uint32_t count;
   bool is_complex;
   // FIXME: we currently support a limited set of floating point types.
   // E.g., 16-bit floats are not supported.
-  if (!clang_type.IsFloatingPointType(count, is_complex))
+  if (!clang_type.IsFloatingPointType(is_complex))
     return std::nullopt;
 
   return clang::APValue(llvm::APFloat(
@@ -2230,6 +2254,18 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
       for (DelayedAddObjCClassProperty &property : delayed_properties)
         property.Finalize();
     }
+  } else if (Language::LanguageIsObjC(
+                 static_cast<LanguageType>(die.GetAttributeValueAsUnsigned(
+                     DW_AT_APPLE_runtime_class, eLanguageTypeUnknown)))) {
+    /// The forward declaration was C++ but the definition is Objective-C.
+    /// We currently don't handle such situations. In such cases, keep the
+    /// forward declaration without a definition to avoid violating Clang AST
+    /// invariants.
+    LLDB_LOG(GetLog(LLDBLog::Expressions),
+             "WARNING: Type completion aborted because forward declaration for "
+             "'{0}' is C++ while definition is Objective-C.",
+             llvm::StringRef(die.GetName()));
+    return {};
   }
 
   if (!bases.empty()) {
@@ -3111,39 +3147,6 @@ void DWARFASTParserClang::ParseSingleMember(
 
   if (!member_clang_type.IsCompleteType())
     member_clang_type.GetCompleteType();
-
-  {
-    // Older versions of clang emit the same DWARF for array[0] and array[1]. If
-    // the current field is at the end of the structure, then there is
-    // definitely no room for extra elements and we override the type to
-    // array[0]. This was fixed by f454dfb6b5af.
-    CompilerType member_array_element_type;
-    uint64_t member_array_size;
-    bool member_array_is_incomplete;
-
-    if (member_clang_type.IsArrayType(&member_array_element_type,
-                                      &member_array_size,
-                                      &member_array_is_incomplete) &&
-        !member_array_is_incomplete) {
-      uint64_t parent_byte_size =
-          parent_die.GetAttributeValueAsUnsigned(DW_AT_byte_size, UINT64_MAX);
-
-      if (attrs.member_byte_offset >= parent_byte_size) {
-        if (member_array_size != 1 &&
-            (member_array_size != 0 ||
-             attrs.member_byte_offset > parent_byte_size)) {
-          module_sp->ReportError(
-              "{0:x8}: DW_TAG_member '{1}' refers to type {2:x16}"
-              " which extends beyond the bounds of {3:x8}",
-              die.GetID(), attrs.name,
-              attrs.encoding_form.Reference().GetOffset(), parent_die.GetID());
-        }
-
-        member_clang_type =
-            m_ast.CreateArrayType(member_array_element_type, 0, false);
-      }
-    }
-  }
 
   TypeSystemClang::RequireCompleteType(member_clang_type);
 

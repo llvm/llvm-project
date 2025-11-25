@@ -14,18 +14,16 @@ add_llvm_component_library(LLVMOrcJIT
   CompileOnDemandLayer.cpp
   CompileUtils.cpp
   Core.cpp
-  DebugObjectManagerPlugin.cpp
   DebugUtils.cpp
   EHFrameRegistrationPlugin.cpp
   EPCDynamicLibrarySearchGenerator.cpp
-  EPCDebugObjectRegistrar.cpp
   EPCGenericDylibManager.cpp
   EPCGenericJITLinkMemoryManager.cpp
   EPCGenericRTDyldMemoryManager.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
+  ExecutorResolutionGenerator.cpp
   ObjectFileInterface.cpp
-  GetDylibInterface.cpp
   IndirectionUtils.cpp
   InProcessMemoryAccess.cpp
   IRCompileLayer.cpp
@@ -55,6 +53,7 @@ add_llvm_component_library(LLVMOrcJIT
   SectCreate.cpp
   SelfExecutorProcessControl.cpp
   SimpleRemoteEPC.cpp
+  SimpleRemoteMemoryMapper.cpp
   Speculation.cpp
   SpeculateAnalyses.cpp
   ExecutorProcessControl.cpp

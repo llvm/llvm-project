@@ -205,7 +205,13 @@ TEST(NativeMemRefJit, SKIP_WITHOUT_JIT(BasicMemref)) {
   };
   int64_t shape[] = {k, m};
   int64_t shapeAlloc[] = {k + 1, m + 1};
-  OwningMemRef<float, 2> a(shape, shapeAlloc, init);
+  // Use a large alignment to stress the case where the memref data/basePtr are
+  // disjoint.
+  int alignment = 8192;
+  OwningMemRef<float, 2> a(shape, shapeAlloc, init, alignment);
+  ASSERT_EQ(
+      (void *)(((uintptr_t)a->basePtr + alignment - 1) & ~(alignment - 1)),
+      a->data);
   ASSERT_EQ(a->sizes[0], k);
   ASSERT_EQ(a->sizes[1], m);
   ASSERT_EQ(a->strides[0], m + 1);
@@ -243,6 +249,24 @@ TEST(NativeMemRefJit, SKIP_WITHOUT_JIT(BasicMemref)) {
   ASSERT_TRUE(!error);
   EXPECT_EQ(((*a)[1][2]), 42.);
   EXPECT_EQ((a[{2, 1}]), 42.);
+}
+
+TEST(NativeMemRefJit, SKIP_WITHOUT_JIT(OwningMemrefZeroInit)) {
+  constexpr int k = 3;
+  constexpr int m = 7;
+  int64_t shape[] = {k, m};
+  // Use a large alignment to stress the case where the memref data/basePtr are
+  // disjoint.
+  int alignment = 8192;
+  OwningMemRef<float, 2> a(shape, {}, {}, alignment);
+  ASSERT_EQ(
+      (void *)(((uintptr_t)a->basePtr + alignment - 1) & ~(alignment - 1)),
+      a->data);
+  for (int i = 0; i < k; ++i) {
+    for (int j = 0; j < m; ++j) {
+      EXPECT_EQ((a[{i, j}]), 0.);
+    }
+  }
 }
 
 // A helper function that will be called from the JIT
@@ -314,6 +338,57 @@ TEST(NativeMemRefJit, MAYBE_JITCallback) {
   count = 1;
   for (float elt : *a)
     ASSERT_EQ(elt, coefficient * count++);
+}
+
+static int initCnt = 0;
+// A helper function that will be called during the JIT's initialization.
+static void initCallback() { initCnt += 1; }
+
+TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(CallbackInGlobalCtor)) {
+  auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
+  ASSERT_TRUE(!!tmBuilderOrError);
+  if (tmBuilderOrError->getTargetTriple().isAArch64()) {
+    GTEST_SKIP() << "Skipping global ctor initialization test on Aarch64 "
+                    "because of bug #71963";
+    return;
+  }
+  std::string moduleStr = R"mlir(
+  llvm.mlir.global_ctors ctors = [@ctor], priorities = [0 : i32], data = [#llvm.zero]
+  llvm.func @ctor() {
+    func.call @init_callback() : () -> ()
+    llvm.return
+  }
+  func.func private @init_callback() attributes { llvm.emit_c_interface }
+  )mlir";
+
+  DialectRegistry registry;
+  registerAllDialects(registry);
+  registerBuiltinDialectTranslation(registry);
+  registerLLVMDialectTranslation(registry);
+  MLIRContext context(registry);
+  auto module = parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+  ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
+  ExecutionEngineOptions jitOptions;
+  auto jitOrError = ExecutionEngine::create(*module, jitOptions);
+  ASSERT_TRUE(!!jitOrError);
+  // validate initialization is not run on construction
+  ASSERT_EQ(initCnt, 0);
+  auto jit = std::move(jitOrError.get());
+  // Define any extra symbols so they're available at initialization.
+  jit->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
+    llvm::orc::SymbolMap symbolMap;
+    symbolMap[interner("_mlir_ciface_init_callback")] = {
+        llvm::orc::ExecutorAddr::fromPtr(initCallback),
+        llvm::JITSymbolFlags::Exported};
+    return symbolMap;
+  });
+  jit->initialize();
+  // validate the side effect of initialization
+  ASSERT_EQ(initCnt, 1);
+  // next initialization should be noop
+  jit->initialize();
+  ASSERT_EQ(initCnt, 1);
 }
 
 #endif // _WIN32

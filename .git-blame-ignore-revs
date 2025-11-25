@@ -144,5 +144,11 @@ b7e332d3f59f567b1999fbcc660d7837cba8e406
 6056f942abe83b05406df8b04e95ec37a3d160b5
 906295b8a31c8dac5aa845864c0bca9f02f86184
 
-# [mlir][tensor][linalg] Move Pack/UnPack Ops to Linalg
-517800e37e8d3a4ee84214bef65e227612c2a98b
+# [clang-tidy][NFC] Remove trailing whitespaces in documentation
+8f2b167de4a1268160c06512d08863a9e8f43290
+
+# [clang-tidy][NFC] Enforce 80 characters limit in docs
+5edf70c41c5d69f3751b4199f642f4585599dade
+c73870dbe89a8219130e21a0b3f13df76d299352
+74c40293c309dbd142bf1f0ebfbfde6be8d30655
+a7ba8dcad76476478100c228a31d9c48391b1e03

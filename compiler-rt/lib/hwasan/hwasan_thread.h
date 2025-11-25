@@ -41,9 +41,9 @@ class Thread {
 
   void Destroy();
 
-  uptr stack_top() { return stack_top_; }
-  uptr stack_bottom() { return stack_bottom_; }
-  uptr stack_size() { return stack_top() - stack_bottom(); }
+  uptr stack_top();
+  uptr stack_bottom();
+  uptr stack_size();
   uptr tls_begin() { return tls_begin_; }
   uptr tls_end() { return tls_end_; }
   DTLS *dtls() { return dtls_; }
@@ -52,6 +52,9 @@ class Thread {
   bool AddrIsInStack(uptr addr) {
     return addr >= stack_bottom_ && addr < stack_top_;
   }
+
+  void StartSwitchFiber(uptr bottom, uptr size);
+  void FinishSwitchFiber(uptr *bottom_old, uptr *size_old);
 
   AllocatorCache *allocator_cache() { return &allocator_cache_; }
   HeapAllocationsRingBuffer *heap_allocations() { return heap_allocations_; }
@@ -80,9 +83,22 @@ class Thread {
   void ClearShadowForThreadStackAndTLS();
   void Print(const char *prefix);
   void InitRandomState();
+
+  struct StackBounds {
+    uptr bottom;
+    uptr top;
+  };
+  StackBounds GetStackBounds() const;
+
   uptr vfork_spill_;
   uptr stack_top_;
   uptr stack_bottom_;
+  // these variables are used when the thread is about to switch stack
+  uptr next_stack_top_;
+  uptr next_stack_bottom_;
+  // true if switching is in progress
+  atomic_uint8_t stack_switching_;
+
   uptr tls_begin_;
   uptr tls_end_;
   DTLS *dtls_;

@@ -68,15 +68,15 @@ int main(int argc, char** argv) {
         return real_data;
       };
       auto name = [variant](std::string op) { return op + " (" + variant + ")"; };
-      bm.operator()<std::vector<int>>(name("std::partial_sort(vector<int>"), std_partial_sort, generate);
+      bm.operator()<std::vector<int>>(name("std::partial_sort(vector<int>)"), std_partial_sort, generate);
       bm.operator()<std::vector<support::NonIntegral>>(
-          name("std::partial_sort(vector<NonIntegral>"), std_partial_sort, gen2);
-      bm.operator()<std::deque<int>>(name("std::partial_sort(deque<int>"), std_partial_sort, generate);
+          name("std::partial_sort(vector<NonIntegral>)"), std_partial_sort, gen2);
+      bm.operator()<std::deque<int>>(name("std::partial_sort(deque<int>)"), std_partial_sort, generate);
 
-      bm.operator()<std::vector<int>>(name("rng::partial_sort(vector<int>"), std::ranges::partial_sort, generate);
+      bm.operator()<std::vector<int>>(name("rng::partial_sort(vector<int>)"), std::ranges::partial_sort, generate);
       bm.operator()<std::vector<support::NonIntegral>>(
-          name("rng::partial_sort(vector<NonIntegral>"), std::ranges::partial_sort, gen2);
-      bm.operator()<std::deque<int>>(name("rng::partial_sort(deque<int>"), std::ranges::partial_sort, generate);
+          name("rng::partial_sort(vector<NonIntegral>)"), std::ranges::partial_sort, gen2);
+      bm.operator()<std::deque<int>>(name("rng::partial_sort(deque<int>)"), std::ranges::partial_sort, generate);
     };
 
     register_bm(support::quicksort_adversarial_data<int>, "qsort adversarial");

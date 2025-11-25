@@ -1,4 +1,4 @@
-//===--- InvalidEnumDefaultInitializationCheck.cpp - clang-tidy -----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "InvalidEnumDefaultInitializationCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -18,6 +20,8 @@ namespace clang::tidy::bugprone {
 
 namespace {
 
+// Preserve same name as AST_MATCHER(isCompleteAndHasNoZeroValue)
+// NOLINTNEXTLINE(llvm-prefer-static-over-anonymous-namespace)
 bool isCompleteAndHasNoZeroValue(const EnumDecl *D) {
   const EnumDecl *Definition = D->getDefinition();
   return Definition && Definition->isComplete() &&
@@ -74,8 +78,8 @@ public:
     return false;
   }
   bool VisitRecordType(const RecordType *T) {
-    const RecordDecl *RD = T->getDecl();
-    if (RD->isUnion())
+    const RecordDecl *RD = T->getDecl()->getDefinition();
+    if (!RD || RD->isUnion())
       return false;
     auto VisitField = [this](const FieldDecl *F) {
       return Visit(F->getType().getTypePtr());
@@ -88,12 +92,24 @@ public:
 
 InvalidEnumDefaultInitializationCheck::InvalidEnumDefaultInitializationCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {}
+    : ClangTidyCheck(Name, Context),
+      IgnoredEnums(
+          utils::options::parseStringList(Options.get("IgnoredEnums", ""))) {
+  IgnoredEnums.emplace_back("::std::errc");
+}
+
+void InvalidEnumDefaultInitializationCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoredEnums",
+                utils::options::serializeStringList(IgnoredEnums));
+}
 
 void InvalidEnumDefaultInitializationCheck::registerMatchers(
     MatchFinder *Finder) {
-  auto EnumWithoutZeroValue = enumType(
-      hasDeclaration(enumDecl(isCompleteAndHasNoZeroValue()).bind("enum")));
+  auto EnumWithoutZeroValue = enumType(hasDeclaration(
+      enumDecl(isCompleteAndHasNoZeroValue(),
+               unless(matchers::matchesAnyListedName(IgnoredEnums)))
+          .bind("enum")));
   auto EnumOrArrayOfEnum = qualType(hasUnqualifiedDesugaredType(
       anyOf(EnumWithoutZeroValue,
             arrayType(hasElementType(qualType(
@@ -135,7 +151,7 @@ void InvalidEnumDefaultInitializationCheck::check(
   SourceLocation Loc = InitExpr->getExprLoc();
   if (Loc.isInvalid()) {
     if (isa<ImplicitValueInitExpr, InitListExpr>(InitExpr)) {
-      DynTypedNodeList Parents = ACtx.getParents(*InitExpr);
+      const DynTypedNodeList Parents = ACtx.getParents(*InitExpr);
       if (Parents.empty())
         return;
 
@@ -154,7 +170,7 @@ void InvalidEnumDefaultInitializationCheck::check(
         // The expression may be implicitly generated for an initialization.
         // Search for a parent initialization list with valid source location.
         while (InitList->getExprLoc().isInvalid()) {
-          DynTypedNodeList Parents = ACtx.getParents(*InitList);
+          const DynTypedNodeList Parents = ACtx.getParents(*InitList);
           if (Parents.empty())
             return;
           InitList = Parents[0].get<InitListExpr>();

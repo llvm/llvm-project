@@ -80,16 +80,10 @@ static bool isMatchingStartStopPair(const MachineInstr *MI1,
   if (MI1->getOperand(4).getRegMask() != MI2->getOperand(4).getRegMask())
     return false;
 
-  // This optimisation is unlikely to happen in practice for conditional
-  // smstart/smstop pairs as the virtual registers for pstate.sm will always
-  // be different.
-  // TODO: For this optimisation to apply to conditional smstart/smstop,
-  // this pass will need to do more work to remove redundant calls to
-  // __arm_sme_state.
-
   // Only consider conditional start/stop pairs which read the same register
-  // holding the original value of pstate.sm, as some conditional start/stops
-  // require the state on entry to the function.
+  // holding the original value of pstate.sm. This is somewhat over conservative
+  // as all conditional streaming mode changes only look at the state on entry
+  // to the function.
   if (MI1->getOperand(3).isReg() && MI2->getOperand(3).isReg()) {
     Register Reg1 = MI1->getOperand(3).getReg();
     Register Reg2 = MI2->getOperand(3).getReg();
@@ -134,13 +128,6 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
 
   bool Changed = false;
   MachineInstr *Prev = nullptr;
-  SmallVector<MachineInstr *, 4> ToBeRemoved;
-
-  // Convenience function to reset the matching of a sequence.
-  auto Reset = [&]() {
-    Prev = nullptr;
-    ToBeRemoved.clear();
-  };
 
   // Walk through instructions in the block trying to find pairs of smstart
   // and smstop nodes that cancel each other out. We only permit a limited
@@ -162,14 +149,10 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
         // that we marked for deletion in between.
         Prev->eraseFromParent();
         MI.eraseFromParent();
-        for (MachineInstr *TBR : ToBeRemoved)
-          TBR->eraseFromParent();
-        ToBeRemoved.clear();
         Prev = nullptr;
         Changed = true;
         NumSMChangesRemoved += 2;
       } else {
-        Reset();
         Prev = &MI;
       }
       continue;
@@ -185,7 +168,7 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
     // of streaming mode. If not, the algorithm should reset.
     switch (MI.getOpcode()) {
     default:
-      Reset();
+      Prev = nullptr;
       break;
     case AArch64::COALESCER_BARRIER_FPR16:
     case AArch64::COALESCER_BARRIER_FPR32:
@@ -199,19 +182,24 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
       // concrete example/test-case.
       if (isSVERegOp(TRI, MRI, MI.getOperand(0)) ||
           isSVERegOp(TRI, MRI, MI.getOperand(1)))
-        Reset();
+        Prev = nullptr;
+      break;
+    case AArch64::RestoreZAPseudo:
+    case AArch64::InOutZAUsePseudo:
+    case AArch64::CommitZASavePseudo:
+    case AArch64::SMEStateAllocPseudo:
+    case AArch64::RequiresZASavePseudo:
+      // These instructions only depend on the ZA state, not the streaming mode,
+      // so if the pair of smstart/stop is only changing the streaming mode, we
+      // can permit these instructions.
+      if (Prev->getOperand(0).getImm() != AArch64SVCR::SVCRSM)
+        Prev = nullptr;
       break;
     case AArch64::ADJCALLSTACKDOWN:
     case AArch64::ADJCALLSTACKUP:
     case AArch64::ANDXri:
     case AArch64::ADDXri:
       // We permit these as they don't generate SVE/NEON instructions.
-      break;
-    case AArch64::VGRestorePseudo:
-    case AArch64::VGSavePseudo:
-      // When the smstart/smstop are removed, we should also remove
-      // the pseudos that save/restore the VG value for CFI info.
-      ToBeRemoved.push_back(&MI);
       break;
     case AArch64::MSRpstatesvcrImm1:
     case AArch64::MSRpstatePseudo:

@@ -32,7 +32,6 @@
 #include <cstdint>
 #include <limits>
 #include <string>
-#include <utility>
 
 using namespace llvm;
 
@@ -100,7 +99,7 @@ DwarfUnit::~DwarfUnit() {
 }
 
 int64_t DwarfUnit::getDefaultLowerBound() const {
-  switch (getLanguage()) {
+  switch (getSourceLanguage()) {
   default:
     break;
 
@@ -442,6 +441,15 @@ void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute,
   addBlock(Die, Attribute, Block->BestForm(), Block);
 }
 
+void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute,
+                         const DIExpression *Expr) {
+  DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+  DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
+  DwarfExpr.setMemoryLocationKind();
+  DwarfExpr.addExpression(Expr);
+  addBlock(Die, Attribute, DwarfExpr.finalize());
+}
+
 void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, unsigned Column,
                               const DIFile *File) {
   if (Line == 0)
@@ -573,7 +581,7 @@ DIE *DwarfUnit::getOrCreateContextDIE(const DIScope *Context) {
   if (auto *NS = dyn_cast<DINamespace>(Context))
     return getOrCreateNameSpace(NS);
   if (auto *SP = dyn_cast<DISubprogram>(Context))
-    return getOrCreateSubprogramDIE(SP);
+    return getOrCreateSubprogramDIE(SP, nullptr);
   if (auto *M = dyn_cast<DIModule>(Context))
     return getOrCreateModule(M);
   return getDIE(Context);
@@ -704,12 +712,25 @@ void DwarfUnit::addType(DIE &Entity, const DIType *Ty,
   addDIEEntry(Entity, Attribute, DIEEntry(*getOrCreateTypeDIE(Ty)));
 }
 
+// FIXME: change callsites to use the new DW_LNAME_ language codes.
+llvm::dwarf::SourceLanguage DwarfUnit::getSourceLanguage() const {
+  const auto &Lang = getLanguage();
+
+  if (!Lang.hasVersionedName())
+    return static_cast<llvm::dwarf::SourceLanguage>(Lang.getName());
+
+  return llvm::dwarf::toDW_LANG(
+             static_cast<llvm::dwarf::SourceLanguageName>(Lang.getName()),
+             Lang.getVersion())
+      .value_or(llvm::dwarf::DW_LANG_hi_user);
+}
+
 std::string DwarfUnit::getParentContextString(const DIScope *Context) const {
   if (!Context)
     return "";
 
   // FIXME: Decide whether to implement this for non-C++ languages.
-  if (!dwarf::isCPlusPlus((dwarf::SourceLanguage)getLanguage()))
+  if (!dwarf::isCPlusPlus(getSourceLanguage()))
     return "";
 
   std::string CS;
@@ -753,8 +774,19 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
     addUInt(Buffer, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,
             BTy->getEncoding());
 
-  uint64_t Size = BTy->getSizeInBits() >> 3;
-  addUInt(Buffer, dwarf::DW_AT_byte_size, std::nullopt, Size);
+  uint64_t SizeInBytes = divideCeil(BTy->getSizeInBits(), 8);
+  addUInt(Buffer, dwarf::DW_AT_byte_size, std::nullopt, SizeInBytes);
+  if (BTy->getTag() == dwarf::Tag::DW_TAG_base_type) {
+    // DW_TAG_base_type:
+    // If the value of an object of the given type does not fully occupy the
+    // storage described by a byte size attribute, the base type entry may also
+    // have a DW_AT_bit_size [...] attribute.
+    // TODO: Do big endian targets need DW_AT_data_bit_offset? See discussion in
+    // pull request #164372.
+    if (uint64_t DataSizeInBits = BTy->getDataSizeInBits();
+        DataSizeInBits && DataSizeInBits != SizeInBytes * 8)
+      addUInt(Buffer, dwarf::DW_AT_bit_size, std::nullopt, DataSizeInBits);
+  }
 
   if (BTy->isBigEndian())
     addUInt(Buffer, dwarf::DW_AT_endianity, std::nullopt, dwarf::DW_END_big);
@@ -801,27 +833,14 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIStringType *STy) {
     if (auto *VarDIE = getDIE(Var))
       addDIEEntry(Buffer, dwarf::DW_AT_string_length, *VarDIE);
   } else if (DIExpression *Expr = STy->getStringLengthExp()) {
-    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-    DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
-    // This is to describe the memory location of the
-    // length of a Fortran deferred length string, so
-    // lock it down as such.
-    DwarfExpr.setMemoryLocationKind();
-    DwarfExpr.addExpression(Expr);
-    addBlock(Buffer, dwarf::DW_AT_string_length, DwarfExpr.finalize());
+    addBlock(Buffer, dwarf::DW_AT_string_length, Expr);
   } else {
     uint64_t Size = STy->getSizeInBits() >> 3;
     addUInt(Buffer, dwarf::DW_AT_byte_size, std::nullopt, Size);
   }
 
   if (DIExpression *Expr = STy->getStringLocationExp()) {
-    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-    DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
-    // This is to describe the memory location of the
-    // string, so lock it down as such.
-    DwarfExpr.setMemoryLocationKind();
-    DwarfExpr.addExpression(Expr);
-    addBlock(Buffer, dwarf::DW_AT_data_location, DwarfExpr.finalize());
+    addBlock(Buffer, dwarf::DW_AT_data_location, Expr);
   }
 
   if (STy->getEncoding()) {
@@ -940,7 +959,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy) {
 
   // Add prototype flag if we're dealing with a C language and the function has
   // been prototyped.
-  if (isPrototyped && dwarf::isC((dwarf::SourceLanguage)getLanguage()))
+  if (isPrototyped && dwarf::isC(getSourceLanguage()))
     addFlag(Buffer, dwarf::DW_AT_prototyped);
 
   // Add a DW_AT_calling_convention if this has an explicit convention.
@@ -1066,7 +1085,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       if (!Element)
         continue;
       if (auto *SP = dyn_cast<DISubprogram>(Element))
-        getOrCreateSubprogramDIE(SP);
+        getOrCreateSubprogramDIE(SP, nullptr);
       else if (auto *DDTy = dyn_cast<DIDerivedType>(Element)) {
         if (DDTy->getTag() == dwarf::DW_TAG_friend) {
           DIE &ElemDie = createAndAddDIE(dwarf::DW_TAG_friend, Buffer);
@@ -1096,7 +1115,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           constructMemberDIE(Buffer, DDTy);
         }
       } else if (auto *Property = dyn_cast<DIObjCProperty>(Element)) {
-        DIE &ElemDie = createAndAddDIE(Property->getTag(), Buffer);
+        DIE &ElemDie = createAndAddDIE(Property->getTag(), Buffer, Property);
         StringRef PropertyName = Property->getName();
         addString(ElemDie, dwarf::DW_AT_APPLE_property_name, PropertyName);
         if (Property->getType())
@@ -1184,11 +1203,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
         addDIEEntry(Buffer, dwarf::DW_AT_bit_size, *VarDIE);
     } else if (auto *Exp =
                    dyn_cast_or_null<DIExpression>(CTy->getRawSizeInBits())) {
-      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-      DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
-      DwarfExpr.setMemoryLocationKind();
-      DwarfExpr.addExpression(Exp);
-      addBlock(Buffer, dwarf::DW_AT_bit_size, DwarfExpr.finalize());
+      addBlock(Buffer, dwarf::DW_AT_bit_size, Exp);
     } else {
       uint64_t Size = CTy->getSizeInBits() >> 3;
       // Add size if non-zero (derived types might be zero-sized.)
@@ -1335,22 +1350,28 @@ DIE *DwarfUnit::getOrCreateModule(const DIModule *M) {
   return &MDie;
 }
 
-DIE *DwarfUnit::getOrCreateSubprogramDIE(const DISubprogram *SP, bool Minimal) {
+DIE *DwarfUnit::getOrCreateSubprogramDIE(const DISubprogram *SP,
+                                         const Function *FnHint, bool Minimal) {
   // Construct the context before querying for the existence of the DIE in case
   // such construction creates the DIE (as is the case for member function
   // declarations).
   DIE *ContextDIE =
-      Minimal ? &getUnitDie() : getOrCreateContextDIE(SP->getScope());
+      getOrCreateSubprogramContextDIE(SP, shouldPlaceInUnitDIE(SP, Minimal));
 
   if (DIE *SPDie = getDIE(SP))
     return SPDie;
 
   if (auto *SPDecl = SP->getDeclaration()) {
     if (!Minimal) {
-      // Add subprogram definitions to the CU die directly.
-      ContextDIE = &getUnitDie();
       // Build the decl now to ensure it precedes the definition.
-      getOrCreateSubprogramDIE(SPDecl);
+      getOrCreateSubprogramDIE(SPDecl, nullptr);
+      // Check whether the DIE for SP has already been created after the call
+      // above.
+      // FIXME: Should the creation of definition subprogram DIE during
+      // the creation of declaration subprogram DIE be allowed?
+      // See https://github.com/llvm/llvm-project/pull/154636.
+      if (DIE *SPDie = getDIE(SP))
+        return SPDie;
     }
   }
 
@@ -1403,11 +1424,8 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
 
   // Add the linkage name if we have one and it isn't in the Decl.
   StringRef LinkageName = SP->getLinkageName();
-  assert(((LinkageName.empty() || DeclLinkageName.empty()) ||
-          LinkageName == DeclLinkageName) &&
-         "decl has a linkage name and it is different");
-  if (DeclLinkageName.empty() &&
-      // Always emit it for abstract subprograms.
+  // Always emit linkage name for abstract subprograms.
+  if (DeclLinkageName != LinkageName &&
       (DD->useAllLinkageNames() || DU->getAbstractScopeDIEs().lookup(SP)))
     addLinkageName(SPDie, LinkageName);
 
@@ -1445,7 +1463,7 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   // Add the prototype if we have a prototype and we have a C like
   // language.
-  if (SP->isPrototyped() && dwarf::isC((dwarf::SourceLanguage)getLanguage()))
+  if (SP->isPrototyped() && dwarf::isC(getSourceLanguage()))
     addFlag(SPDie, dwarf::DW_AT_prototyped);
 
   if (SP->isObjCDirect())
@@ -1581,11 +1599,7 @@ void DwarfUnit::constructSubrangeDIE(DIE &DW_Subrange, const DISubrangeType *SR,
       if (auto *VarDIE = getDIE(BV))
         addDIEEntry(DW_Subrange, Attr, *VarDIE);
     } else if (auto *BE = dyn_cast_if_present<DIExpression *>(Bound)) {
-      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-      DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
-      DwarfExpr.setMemoryLocationKind();
-      DwarfExpr.addExpression(BE);
-      addBlock(DW_Subrange, Attr, DwarfExpr.finalize());
+      addBlock(DW_Subrange, Attr, BE);
     } else if (auto *BI = dyn_cast_if_present<ConstantInt *>(Bound)) {
       if (Attr == dwarf::DW_AT_GNU_bias) {
         if (BI->getSExtValue() != 0)
@@ -1623,11 +1637,7 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR) {
       if (auto *VarDIE = getDIE(BV))
         addDIEEntry(DW_Subrange, Attr, *VarDIE);
     } else if (auto *BE = dyn_cast_if_present<DIExpression *>(Bound)) {
-      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-      DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
-      DwarfExpr.setMemoryLocationKind();
-      DwarfExpr.addExpression(BE);
-      addBlock(DW_Subrange, Attr, DwarfExpr.finalize());
+      addBlock(DW_Subrange, Attr, BE);
     } else if (auto *BI = dyn_cast_if_present<ConstantInt *>(Bound)) {
       if (Attr == dwarf::DW_AT_count) {
         if (BI->getSExtValue() != -1)
@@ -1673,11 +1683,7 @@ void DwarfUnit::constructGenericSubrangeDIE(DIE &Buffer,
           addSInt(DwGenericSubrange, Attr, dwarf::DW_FORM_sdata,
                   BE->getElement(1));
       } else {
-        DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-        DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
-        DwarfExpr.setMemoryLocationKind();
-        DwarfExpr.addExpression(BE);
-        addBlock(DwGenericSubrange, Attr, DwarfExpr.finalize());
+        addBlock(DwGenericSubrange, Attr, BE);
       }
     }
   };
@@ -1697,8 +1703,7 @@ DIE *DwarfUnit::getIndexTyDie() {
   addString(*IndexTyDie, dwarf::DW_AT_name, Name);
   addUInt(*IndexTyDie, dwarf::DW_AT_byte_size, std::nullopt, sizeof(int64_t));
   addUInt(*IndexTyDie, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,
-          dwarf::getArrayIndexTypeEncoding(
-              (dwarf::SourceLanguage)getLanguage()));
+          dwarf::getArrayIndexTypeEncoding(getSourceLanguage()));
   DD->addAccelType(*this, CUNode->getNameTableKind(), Name, *IndexTyDie,
                    /*Flags*/ 0);
   return IndexTyDie;
@@ -1745,44 +1750,28 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     if (auto *VarDIE = getDIE(Var))
       addDIEEntry(Buffer, dwarf::DW_AT_data_location, *VarDIE);
   } else if (DIExpression *Expr = CTy->getDataLocationExp()) {
-    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-    DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
-    DwarfExpr.setMemoryLocationKind();
-    DwarfExpr.addExpression(Expr);
-    addBlock(Buffer, dwarf::DW_AT_data_location, DwarfExpr.finalize());
+    addBlock(Buffer, dwarf::DW_AT_data_location, Expr);
   }
 
   if (DIVariable *Var = CTy->getAssociated()) {
     if (auto *VarDIE = getDIE(Var))
       addDIEEntry(Buffer, dwarf::DW_AT_associated, *VarDIE);
   } else if (DIExpression *Expr = CTy->getAssociatedExp()) {
-    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-    DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
-    DwarfExpr.setMemoryLocationKind();
-    DwarfExpr.addExpression(Expr);
-    addBlock(Buffer, dwarf::DW_AT_associated, DwarfExpr.finalize());
+    addBlock(Buffer, dwarf::DW_AT_associated, Expr);
   }
 
   if (DIVariable *Var = CTy->getAllocated()) {
     if (auto *VarDIE = getDIE(Var))
       addDIEEntry(Buffer, dwarf::DW_AT_allocated, *VarDIE);
   } else if (DIExpression *Expr = CTy->getAllocatedExp()) {
-    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-    DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
-    DwarfExpr.setMemoryLocationKind();
-    DwarfExpr.addExpression(Expr);
-    addBlock(Buffer, dwarf::DW_AT_allocated, DwarfExpr.finalize());
+    addBlock(Buffer, dwarf::DW_AT_allocated, Expr);
   }
 
   if (auto *RankConst = CTy->getRankConst()) {
     addSInt(Buffer, dwarf::DW_AT_rank, dwarf::DW_FORM_sdata,
             RankConst->getSExtValue());
   } else if (auto *RankExpr = CTy->getRankExp()) {
-    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-    DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
-    DwarfExpr.setMemoryLocationKind();
-    DwarfExpr.addExpression(RankExpr);
-    addBlock(Buffer, dwarf::DW_AT_rank, DwarfExpr.finalize());
+    addBlock(Buffer, dwarf::DW_AT_rank, RankExpr);
   }
 
   if (auto *BitStride = CTy->getBitStrideConst()) {
@@ -1886,16 +1875,13 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
     bool IsBitfield = DT->isBitField();
 
     // Handle the size.
-    if (auto *Var = dyn_cast_or_null<DIVariable>(DT->getRawSizeInBits())) {
+    if (DT->getRawSizeInBits() == nullptr) {
+      // No size, just ignore.
+    } else if (auto *Var = dyn_cast<DIVariable>(DT->getRawSizeInBits())) {
       if (auto *VarDIE = getDIE(Var))
         addDIEEntry(MemberDie, dwarf::DW_AT_bit_size, *VarDIE);
-    } else if (auto *Exp =
-                   dyn_cast_or_null<DIExpression>(DT->getRawSizeInBits())) {
-      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-      DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
-      DwarfExpr.setMemoryLocationKind();
-      DwarfExpr.addExpression(Exp);
-      addBlock(MemberDie, dwarf::DW_AT_bit_size, DwarfExpr.finalize());
+    } else if (auto *Exp = dyn_cast<DIExpression>(DT->getRawSizeInBits())) {
+      addBlock(MemberDie, dwarf::DW_AT_bit_size, Exp);
     } else {
       Size = DT->getSizeInBits();
       FieldSize = DD->getBaseTypeSize(DT);
@@ -1919,11 +1905,7 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
     } else if (auto *Expr =
                    dyn_cast_or_null<DIExpression>(DT->getRawOffsetInBits())) {
       if (!Asm->TM.Options.DebugStrictDwarf || DD->getDwarfVersion() >= 6) {
-        DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-        DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
-        DwarfExpr.setMemoryLocationKind();
-        DwarfExpr.addExpression(Expr);
-        addBlock(MemberDie, dwarf::DW_AT_data_bit_offset, DwarfExpr.finalize());
+        addBlock(MemberDie, dwarf::DW_AT_data_bit_offset, Expr);
       }
     } else {
       uint32_t AlignInBytes = DT->getAlignInBytes();

@@ -68,7 +68,6 @@ add_optional_dependency(LLDB_ENABLE_FBSDVMCORE "Enable libfbsdvmcore support in 
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
 option(LLDB_ENABLE_PROTOCOL_SERVERS "Enable protocol servers (e.g. MCP) in LLDB" ON)
-option(LLDB_ENABLE_PYTHON_LIMITED_API "Force LLDB to only use the Python Limited API (requires SWIG 4.2 or later)" OFF)
 option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
 option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Darwin only)." OFF)
 option(LLDB_SKIP_STRIP "Whether to skip stripping of binaries when installing lldb." OFF)
@@ -174,10 +173,54 @@ if (LLDB_ENABLE_PYTHON)
     ${default_embed_python_home})
 
   include_directories(${Python3_INCLUDE_DIRS})
+
   if (LLDB_EMBED_PYTHON_HOME)
     get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
     set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
+  endif()
+
+  # Enable targeting the Python Limited C API.
+  set(PYTHON_LIMITED_API_MIN_SWIG_VERSION "4.2")
+  if (SWIG_VERSION VERSION_EQUAL "4.4.0" AND Python3_VERSION VERSION_GREATER_EQUAL "3.13")
+    set(AFFECTED_BY_SWIG_BUG TRUE)
+  else()
+    set(AFFECTED_BY_SWIG_BUG FALSE)
+  endif()
+
+  if (SWIG_VERSION VERSION_GREATER_EQUAL PYTHON_LIMITED_API_MIN_SWIG_VERSION
+      AND NOT LLDB_EMBED_PYTHON_HOME AND NOT AFFECTED_BY_SWIG_BUG)
+    set(default_enable_python_limited_api ON)
+  else()
+    set(default_enable_python_limited_api OFF)
+  endif()
+
+  option(LLDB_ENABLE_PYTHON_LIMITED_API "Force LLDB to only use the Python Limited API (requires SWIG 4.2 or later)"
+    ${default_enable_python_limited_api})
+
+  # Diagnose unsupported configurations.
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND AFFECTED_BY_SWIG_BUG)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with SWIG 4.4.0 and Python >= 3.13 due to a bug in SWIG: https://github.com/swig/swig/issues/3283")
+  endif()
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND LLDB_EMBED_PYTHON_HOME)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with LLDB_EMBED_PYTHON_HOME")
+  endif()
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND SWIG_VERSION VERSION_LESS PYTHON_LIMITED_API_MIN_SWIG_VERSION)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with SWIG ${SWIG_VERSION} (requires SWIG ${PYTHON_LIMITED_API_MIN_SWIG_VERSION})")
+  endif()
+
+else()
+  # Even if Python scripting is disabled, we still need a Python interpreter to
+  # build, for example to generate SBLanguages.h.
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+  # Remove lldb-python-scripts from distribution components.
+  # LLVM_DISTRIBUTION_COMPONENTS is set in a cache where LLDB_ENABLE_PYTHON does
+  # not yet have a value. We have to touch up LLVM_DISTRIBUTION_COMPONENTS after
+  # the fact.
+  if(LLVM_DISTRIBUTION_COMPONENTS)
+    list(REMOVE_ITEM LLVM_DISTRIBUTION_COMPONENTS lldb-python-scripts)
+    set(LLVM_DISTRIBUTION_COMPONENTS ${LLVM_DISTRIBUTION_COMPONENTS} CACHE STRING "" FORCE)
   endif()
 endif()
 

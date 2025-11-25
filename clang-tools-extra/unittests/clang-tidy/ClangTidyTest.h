@@ -94,7 +94,8 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
   ClangTidyOptions Options = ExtraOptions;
   Options.Checks = "*";
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
-      ClangTidyGlobalOptions(), Options));
+                               ClangTidyGlobalOptions(), Options),
+                           false, false, false);
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
   auto DiagOpts = std::make_unique<DiagnosticOptions>();
   DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
