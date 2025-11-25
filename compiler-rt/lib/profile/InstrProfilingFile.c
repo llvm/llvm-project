@@ -885,18 +885,27 @@ static void parseAndSetFilename(const char *FilenamePat,
                                 ProfileNameSpecifier PNS,
                                 unsigned CopyFilenamePat) {
 
-  const char *OldFilenamePat = lprofCurFilename.FilenamePat;
+  char *OldFilenamePat = lprofCurFilename.FilenamePat
+                             ? strdup(lprofCurFilename.FilenamePat)
+                             : NULL;
   ProfileNameSpecifier OldPNS = lprofCurFilename.PNS;
 
   /* The old profile name specifier takes precedence over the old one. */
-  if (PNS < OldPNS)
+  if (PNS < OldPNS) {
+    if (OldFilenamePat) {
+      free(OldFilenamePat);
+      OldFilenamePat = NULL;
+    }
     return;
+  }
 
   if (!FilenamePat)
     FilenamePat = DefaultProfileName;
 
   if (OldFilenamePat && !strcmp(OldFilenamePat, FilenamePat)) {
     lprofCurFilename.PNS = PNS;
+    free(OldFilenamePat);
+    OldFilenamePat = NULL;
     return;
   }
 
@@ -914,6 +923,9 @@ static void parseAndSetFilename(const char *FilenamePat,
       PROF_NOTE("Override old profile path \"%s\" via %s to \"%s\" via %s.\n",
                 OldFilenamePat, getPNSStr(OldPNS), lprofCurFilename.FilenamePat,
                 getPNSStr(PNS));
+
+    free(OldFilenamePat);
+    OldFilenamePat = NULL;
   }
 
   truncateCurrentFile();
