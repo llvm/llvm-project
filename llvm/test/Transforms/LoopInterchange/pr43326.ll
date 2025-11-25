@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
-; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa -stats 2>&1
+; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa -loop-interchange-profitabilities=ignore -stats 2>&1
 ; RUN: FileCheck --input-file=%t --check-prefix=REMARKS %s
 
 @a = global i32 0

@@ -387,7 +387,7 @@ extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
 
 AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                              const AArch64Subtarget &STI)
-    : TargetLowering(TM), Subtarget(&STI) {
+    : TargetLowering(TM, STI), Subtarget(&STI) {
   // AArch64 doesn't have comparisons which set GPRs or setcc instructions, so
   // we have to make something up. Arbitrarily, choose ZeroOrOne.
   setBooleanContents(ZeroOrOneBooleanContent);
@@ -1786,14 +1786,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
       if (Subtarget->hasSVEB16B16() &&
           Subtarget->isNonStreamingSVEorSME2Available()) {
-        setOperationAction(ISD::FADD, VT, Legal);
+        setOperationAction(ISD::FADD, VT, Custom);
         setOperationAction(ISD::FMA, VT, Custom);
         setOperationAction(ISD::FMAXIMUM, VT, Custom);
         setOperationAction(ISD::FMAXNUM, VT, Custom);
         setOperationAction(ISD::FMINIMUM, VT, Custom);
         setOperationAction(ISD::FMINNUM, VT, Custom);
-        setOperationAction(ISD::FMUL, VT, Legal);
-        setOperationAction(ISD::FSUB, VT, Legal);
+        setOperationAction(ISD::FMUL, VT, Custom);
+        setOperationAction(ISD::FSUB, VT, Custom);
       }
     }
 
@@ -1809,11 +1809,20 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     if (!Subtarget->hasSVEB16B16() ||
         !Subtarget->isNonStreamingSVEorSME2Available()) {
-      for (auto Opcode : {ISD::FADD, ISD::FMA, ISD::FMAXIMUM, ISD::FMAXNUM,
-                          ISD::FMINIMUM, ISD::FMINNUM, ISD::FMUL, ISD::FSUB}) {
-        setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
-        setOperationPromotedToType(Opcode, MVT::nxv4bf16, MVT::nxv4f32);
-        setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
+      for (MVT VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
+        MVT PromotedVT = VT.changeVectorElementType(MVT::f32);
+        setOperationPromotedToType(ISD::FADD, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMA, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMAXIMUM, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMAXNUM, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMINIMUM, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMINNUM, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FSUB, VT, PromotedVT);
+
+        if (VT != MVT::nxv2bf16 && Subtarget->hasBF16())
+          setOperationAction(ISD::FMUL, VT, Custom);
+        else
+          setOperationPromotedToType(ISD::FMUL, VT, PromotedVT);
       }
     }
 
@@ -7348,6 +7357,37 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
   return SDValue();
 }
 
+// Convert to ContainerVT with no-op casts where possible.
+static SDValue convertToSVEContainerType(SDLoc DL, SDValue Vec, EVT ContainerVT,
+                                         SelectionDAG &DAG) {
+  EVT VecVT = Vec.getValueType();
+  if (VecVT.isFloatingPoint()) {
+    // Use no-op casts for floating-point types.
+    EVT PackedVT = getPackedSVEVectorVT(VecVT.getScalarType());
+    Vec = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, PackedVT, Vec);
+    Vec = DAG.getNode(AArch64ISD::NVCAST, DL, ContainerVT, Vec);
+  } else {
+    // Extend integers (may not be a no-op).
+    Vec = DAG.getNode(ISD::ANY_EXTEND, DL, ContainerVT, Vec);
+  }
+  return Vec;
+}
+
+// Convert to VecVT with no-op casts where possible.
+static SDValue convertFromSVEContainerType(SDLoc DL, SDValue Vec, EVT VecVT,
+                                           SelectionDAG &DAG) {
+  if (VecVT.isFloatingPoint()) {
+    // Use no-op casts for floating-point types.
+    EVT PackedVT = getPackedSVEVectorVT(VecVT.getScalarType());
+    Vec = DAG.getNode(AArch64ISD::NVCAST, DL, PackedVT, Vec);
+    Vec = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VecVT, Vec);
+  } else {
+    // Truncate integers (may not be a no-op).
+    Vec = DAG.getNode(ISD::TRUNCATE, DL, VecVT, Vec);
+  }
+  return Vec;
+}
+
 SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
                                                     SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -7399,14 +7439,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
 
   // Get legal type for compact instruction
   EVT ContainerVT = getSVEContainerType(VecVT);
-  EVT CastVT = VecVT.changeVectorElementTypeToInteger();
 
-  // Convert to i32 or i64 for smaller types, as these are the only supported
+  // Convert to 32 or 64 bits for smaller types, as these are the only supported
   // sizes for compact.
-  if (ContainerVT != VecVT) {
-    Vec = DAG.getBitcast(CastVT, Vec);
-    Vec = DAG.getNode(ISD::ANY_EXTEND, DL, ContainerVT, Vec);
-  }
+  Vec = convertToSVEContainerType(DL, Vec, ContainerVT, DAG);
 
   SDValue Compressed = DAG.getNode(
       ISD::INTRINSIC_WO_CHAIN, DL, Vec.getValueType(),
@@ -7429,21 +7465,23 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
         DAG.getNode(ISD::VSELECT, DL, VecVT, IndexMask, Compressed, Passthru);
   }
 
+  // If we changed the element type before, we need to convert it back.
+  if (ElmtVT.isFloatingPoint())
+    Compressed = convertFromSVEContainerType(DL, Compressed, VecVT, DAG);
+
   // Extracting from a legal SVE type before truncating produces better code.
   if (IsFixedLength) {
-    Compressed = DAG.getNode(
-        ISD::EXTRACT_SUBVECTOR, DL,
-        FixedVecVT.changeVectorElementType(ContainerVT.getVectorElementType()),
-        Compressed, DAG.getConstant(0, DL, MVT::i64));
-    CastVT = FixedVecVT.changeVectorElementTypeToInteger();
+    EVT FixedSubVector = VecVT.isInteger()
+                             ? FixedVecVT.changeVectorElementType(
+                                   ContainerVT.getVectorElementType())
+                             : FixedVecVT;
+    Compressed = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, FixedSubVector,
+                             Compressed, DAG.getConstant(0, DL, MVT::i64));
     VecVT = FixedVecVT;
   }
 
-  // If we changed the element type before, we need to convert it back.
-  if (ContainerVT != VecVT) {
-    Compressed = DAG.getNode(ISD::TRUNCATE, DL, CastVT, Compressed);
-    Compressed = DAG.getBitcast(VecVT, Compressed);
-  }
+  if (VecVT.isInteger())
+    Compressed = DAG.getNode(ISD::TRUNCATE, DL, VecVT, Compressed);
 
   return Compressed;
 }
@@ -7641,6 +7679,57 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
                      EndOfTrmp);
 }
 
+SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  if (VT.getScalarType() != MVT::bf16 ||
+      (Subtarget->hasSVEB16B16() &&
+       Subtarget->isNonStreamingSVEorSME2Available()))
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMUL_PRED);
+
+  assert(Subtarget->hasBF16() && "Expected +bf16 for custom FMUL lowering");
+  assert((VT == MVT::nxv4bf16 || VT == MVT::nxv8bf16) && "Unexpected FMUL VT");
+
+  auto MakeGetIntrinsic = [&](Intrinsic::ID IID) {
+    return [&, IID](EVT VT, auto... Ops) {
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
+                         DAG.getConstant(IID, DL, MVT::i32), Ops...);
+    };
+  };
+
+  auto ReinterpretCast = [&](SDValue Value, EVT VT) {
+    if (VT == Value.getValueType())
+      return Value;
+    return DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Value);
+  };
+
+  // Create helpers for building intrinsic calls.
+  auto BFMLALB = MakeGetIntrinsic(Intrinsic::aarch64_sve_bfmlalb);
+  auto BFMLALT = MakeGetIntrinsic(Intrinsic::aarch64_sve_bfmlalt);
+  auto FCVT = MakeGetIntrinsic(Intrinsic::aarch64_sve_fcvt_bf16f32_v2);
+  auto FCVTNT = MakeGetIntrinsic(Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2);
+
+  // All intrinsics expect to operate on full bf16 vector types.
+  SDValue LHS = ReinterpretCast(Op.getOperand(0), MVT::nxv8bf16);
+  SDValue RHS = ReinterpretCast(Op.getOperand(1), MVT::nxv8bf16);
+
+  SDValue Zero =
+      DAG.getNeutralElement(ISD::FADD, DL, MVT::nxv4f32, Op->getFlags());
+  SDValue Pg = DAG.getConstant(1, DL, MVT::nxv4i1);
+
+  // Lower bf16 FMUL as a pair (VT == nxv8bf16) of BFMLAL top/bottom
+  // instructions. These result in two f32 vectors, which can be converted back
+  // to bf16 with FCVT and FCVTNT.
+  SDValue BottomF32 = BFMLALB(MVT::nxv4f32, Zero, LHS, RHS);
+  SDValue BottomBF16 =
+      FCVT(MVT::nxv8bf16, DAG.getPOISON(MVT::nxv8bf16), Pg, BottomF32);
+  // Note: nxv4bf16 only uses even lanes.
+  if (VT == MVT::nxv4bf16)
+    return ReinterpretCast(BottomBF16, VT);
+  SDValue TopF32 = BFMLALT(MVT::nxv4f32, Zero, LHS, RHS);
+  return FCVTNT(VT, BottomBF16, Pg, TopF32);
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -7715,7 +7804,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::FSUB:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FSUB_PRED);
   case ISD::FMUL:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMUL_PRED);
+    return LowerFMUL(Op, DAG);
   case ISD::FMA:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
   case ISD::FDIV:
@@ -19443,20 +19532,37 @@ AArch64TargetLowering::BuildSREMPow2(SDNode *N, const APInt &Divisor,
   return CSNeg;
 }
 
-static std::optional<unsigned> IsSVECntIntrinsic(SDValue S) {
+static bool IsSVECntIntrinsic(SDValue S) {
   switch(getIntrinsicID(S.getNode())) {
   default:
     break;
   case Intrinsic::aarch64_sve_cntb:
-    return 8;
   case Intrinsic::aarch64_sve_cnth:
-    return 16;
   case Intrinsic::aarch64_sve_cntw:
-    return 32;
   case Intrinsic::aarch64_sve_cntd:
-    return 64;
+    return true;
   }
-  return {};
+  return false;
+}
+
+// Returns the maximum (scalable) value that can be returned by an SVE count
+// intrinsic. Returns std::nullopt if \p Op is not aarch64_sve_cnt*.
+static std::optional<ElementCount> getMaxValueForSVECntIntrinsic(SDValue Op) {
+  Intrinsic::ID IID = getIntrinsicID(Op.getNode());
+  if (IID == Intrinsic::aarch64_sve_cntp)
+    return Op.getOperand(1).getValueType().getVectorElementCount();
+  switch (IID) {
+  case Intrinsic::aarch64_sve_cntd:
+    return ElementCount::getScalable(2);
+  case Intrinsic::aarch64_sve_cntw:
+    return ElementCount::getScalable(4);
+  case Intrinsic::aarch64_sve_cnth:
+    return ElementCount::getScalable(8);
+  case Intrinsic::aarch64_sve_cntb:
+    return ElementCount::getScalable(16);
+  default:
+    return std::nullopt;
+  }
 }
 
 /// Calculates what the pre-extend type is, based on the extension
@@ -20100,7 +20206,9 @@ static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
     return Res;
 
   EVT VT = N->getValueType(0);
-  if (VT != MVT::f32 && VT != MVT::f64)
+  if (VT != MVT::f16 && VT != MVT::f32 && VT != MVT::f64)
+    return SDValue();
+  if (VT == MVT::f16 && !Subtarget->hasFullFP16())
     return SDValue();
 
   // Only optimize when the source and destination types have the same width.
@@ -31666,22 +31774,24 @@ bool AArch64TargetLowering::SimplifyDemandedBitsForTargetNode(
     return false;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
-    if (auto ElementSize = IsSVECntIntrinsic(Op)) {
-      unsigned MaxSVEVectorSizeInBits = Subtarget->getMaxSVEVectorSizeInBits();
-      if (!MaxSVEVectorSizeInBits)
-        MaxSVEVectorSizeInBits = AArch64::SVEMaxBitsPerVector;
-      unsigned MaxElements = MaxSVEVectorSizeInBits / *ElementSize;
-      // The SVE count intrinsics don't support the multiplier immediate so we
-      // don't have to account for that here. The value returned may be slightly
-      // over the true required bits, as this is based on the "ALL" pattern. The
-      // other patterns are also exposed by these intrinsics, but they all
-      // return a value that's strictly less than "ALL".
-      unsigned RequiredBits = llvm::bit_width(MaxElements);
-      unsigned BitWidth = Known.Zero.getBitWidth();
-      if (RequiredBits < BitWidth)
-        Known.Zero.setHighBits(BitWidth - RequiredBits);
+    std::optional<ElementCount> MaxCount = getMaxValueForSVECntIntrinsic(Op);
+    if (!MaxCount)
       return false;
-    }
+    unsigned MaxSVEVectorSizeInBits = Subtarget->getMaxSVEVectorSizeInBits();
+    if (!MaxSVEVectorSizeInBits)
+      MaxSVEVectorSizeInBits = AArch64::SVEMaxBitsPerVector;
+    unsigned VscaleMax = MaxSVEVectorSizeInBits / 128;
+    unsigned MaxValue = MaxCount->getKnownMinValue() * VscaleMax;
+    // The SVE count intrinsics don't support the multiplier immediate so we
+    // don't have to account for that here. The value returned may be slightly
+    // over the true required bits, as this is based on the "ALL" pattern. The
+    // other patterns are also exposed by these intrinsics, but they all
+    // return a value that's strictly less than "ALL".
+    unsigned RequiredBits = llvm::bit_width(MaxValue);
+    unsigned BitWidth = Known.Zero.getBitWidth();
+    if (RequiredBits < BitWidth)
+      Known.Zero.setHighBits(BitWidth - RequiredBits);
+    return false;
   }
   }
 
