@@ -1,17 +1,35 @@
-# TPM2 Full Native Algorithm Support
+# TPM2 Compatibility Layer for DSLLVM
 
-**Complete Cryptographic Algorithm Support for TPM 2.0**
-**88 Comprehensive Algorithms Implemented**
+**Userspace C Library for TPM 2.0 Cryptographic Operations**
+**88 Comprehensive Algorithms Supported**
 
 Classification: UNCLASSIFIED // FOR OFFICIAL USE ONLY
 Date: 2025-11-25
-Version: 2.0.0
+Version: 2.0.1
 
 ---
 
 ## 🎯 Overview
 
-This directory contains the complete native TPM 2.0 algorithm support for the DSLLVM framework, providing **88 cryptographic algorithms** across all categories:
+This directory contains a **portable userspace C library** for TPM 2.0 cryptographic operations, providing **88 algorithms** across all categories. Built on OpenSSL for maximum compatibility with DSLLVM-compiled applications.
+
+### 🔗 Full System Implementation
+
+**For the complete system with kernel modules and hardware acceleration**, see:
+**[LAT5150DRVMIL/02-ai-engine/tpm2_compat](https://github.com/SWORDIntel/LAT5150DRVMIL) →**
+
+This DSLLVM library provides a **simplified userspace API**. The LAT5150DRVMIL implementation adds:
+- ✅ Kernel module for early boot TPM2 acceleration
+- ✅ Hardware NPU acceleration (10-50× speedup)
+- ✅ Dell military token authorization (0x049e-0x04a3)
+- ✅ Rust safety with aws-lc backend
+- ✅ Python management tools
+
+**See [INTEGRATION.md](INTEGRATION.md) for detailed comparison.**
+
+---
+
+This library provides **88 cryptographic algorithms** across all categories:
 
 - **10** Hash algorithms (SHA family, SHA-3, SM3, SHAKE)
 - **16** Symmetric encryption modes (AES, 3DES, Camellia, SM4, ChaCha20)
