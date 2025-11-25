@@ -2776,7 +2776,7 @@ def falloc_token_max_EQ : Joined<["-"], "falloc-token-max=">,
   HelpText<"Limit to maximum N allocation tokens (0 = target SIZE_MAX)">;
 
 def falloc_token_mode_EQ : Joined<["-"], "falloc-token-mode=">,
-  Group<f_Group>, Visibility<[CC1Option]>,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Flags<[HelpHidden]>,
   HelpText<"Set the allocation token mode (experimental)">;
 
 def fallow_runtime_check_skip_hot_cutoff_EQ
