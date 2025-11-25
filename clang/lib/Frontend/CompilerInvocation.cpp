@@ -14,6 +14,7 @@
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
@@ -29,7 +30,6 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
@@ -96,7 +96,6 @@
 #include <vector>
 
 using namespace clang;
-using namespace driver;
 using namespace options;
 using namespace llvm::opt;
 
@@ -852,10 +851,9 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
   // Compares two lists of arguments.
   auto Equal = [](const ArrayRef<const char *> A,
                   const ArrayRef<const char *> B) {
-    return std::equal(A.begin(), A.end(), B.begin(), B.end(),
-                      [](const char *AElem, const char *BElem) {
-                        return StringRef(AElem) == StringRef(BElem);
-                      });
+    return llvm::equal(A, B, [](const char *AElem, const char *BElem) {
+      return StringRef(AElem) == StringRef(BElem);
+    });
   };
 
   // If we generated different arguments from what we assume are two
@@ -3279,7 +3277,7 @@ std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
                                                  void *MainAddr) {
   std::string ClangExecutable =
       llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
-  return Driver::GetResourcesPath(ClangExecutable);
+  return driver::Driver::GetResourcesPath(ClangExecutable);
 }
 
 static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
@@ -4303,8 +4301,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   // Set the flag to prevent the implementation from emitting device exception
   // handling code for those requiring so.
-  if ((Opts.OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN())) ||
-      Opts.OpenCLCPlusPlus) {
+  if ((Opts.OpenMPIsTargetDevice && T.isGPU()) || Opts.OpenCLCPlusPlus) {
 
     Opts.Exceptions = 0;
     Opts.CXXExceptions = 0;

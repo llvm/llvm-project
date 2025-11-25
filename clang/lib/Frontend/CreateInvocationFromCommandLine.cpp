@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
@@ -78,7 +78,7 @@ clang::createInvocation(ArrayRef<const char *> ArgList,
   const driver::JobList &Jobs = C->getJobs();
   bool OffloadCompilation = false;
   if (Jobs.size() > 1) {
-    for (auto &A : C->getActions()){
+    for (auto &A : C->getActions()) {
       // On MacOSX real actions may end up being wrapped in BindArchAction
       if (isa<driver::BindArchAction>(A))
         A = *A->input_begin();
