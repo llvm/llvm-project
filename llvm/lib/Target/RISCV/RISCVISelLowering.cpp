@@ -9593,6 +9593,26 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (UseZicondForFPSel) {
     MVT XLenIntVT = Subtarget.getXLenVT();
 
+    // Handle RV32 with f64 (Zdinx): Split into two 32-bit integer selects.
+    if (VT == MVT::f64 && !Subtarget.is64Bit()) {
+      SDValue TrueSplit = DAG.getNode(RISCVISD::SplitF64, DL,
+                                      DAG.getVTList(MVT::i32, MVT::i32), TrueV);
+      SDValue FalseSplit = DAG.getNode(
+          RISCVISD::SplitF64, DL, DAG.getVTList(MVT::i32, MVT::i32), FalseV);
+
+      SDValue TrueLo = TrueSplit.getValue(0);
+      SDValue TrueHi = TrueSplit.getValue(1);
+      SDValue FalseLo = FalseSplit.getValue(0);
+      SDValue FalseHi = FalseSplit.getValue(1);
+
+      SDValue ResLo =
+          DAG.getNode(ISD::SELECT, DL, MVT::i32, CondV, TrueLo, FalseLo);
+      SDValue ResHi =
+          DAG.getNode(ISD::SELECT, DL, MVT::i32, CondV, TrueHi, FalseHi);
+
+      return DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, ResLo, ResHi);
+    }
+
     auto CastToInt = [&](SDValue V) -> SDValue {
       if (VT == MVT::f16)
         return DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenIntVT, V);
