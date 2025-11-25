@@ -343,7 +343,8 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   const TargetSubtargetInfo &Subtarget = MF.getSubtarget();
 
   const LibcallLoweringInfo &Libcalls =
-      getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(Subtarget);
+      getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+          *MF.getFunction().getParent(), Subtarget);
 
   // This allows Known Bits Analysis in the legalizer.
   GISelValueTracking *VT =
