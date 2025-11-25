@@ -42,7 +42,7 @@ subroutine test_scalar_volatile()
   ! Deferred-length characters
   allocate(character(20) :: c1)
   c1 = "volatile character"
-  
+
   ! Allocation with components
   allocate(v3)
   deallocate(v1, v2, v3, c1)
@@ -53,24 +53,24 @@ subroutine test_volatile_asynchronous()
   use derived_types
   class(base_type), allocatable, volatile, asynchronous :: v1(:)
   integer, allocatable, volatile, asynchronous :: i1(:)
-  
+
   allocate(v1(4))
   allocate(i1(4), source=[1, 2, 3, 4])
-  
+
   deallocate(v1, i1)
 end subroutine
 
 subroutine test_select_base_type_volatile()
   use derived_types
   class(base_type), allocatable, volatile :: v(:)
-  
+
   allocate(v(2))
-  
+
   select type(v)
   class is (base_type)
     v(1)%i = 100
   end select
-  
+
   deallocate(v)
 end subroutine
 
@@ -79,12 +79,12 @@ subroutine test_mold_allocation()
   use derived_types
   type(comp_type) :: template
   type(comp_type), allocatable, volatile :: v(:)
-  
+
   template%str = "mold test"
   template%arr = [5, 6]
-  
+
   allocate(v(3), mold=template)
-  
+
   deallocate(v)
 end subroutine
 
@@ -93,28 +93,28 @@ subroutine test_unlimited_polymorphic()
   use derived_types
   class(*), allocatable, volatile :: up
   class(*), allocatable, volatile :: upa(:)
-  
+
   ! Scalar allocation
   allocate(integer :: up)
   select type(up)
     type is (integer)
       up = 123
   end select
-  
+
   ! Array allocation with source
   allocate(character(10) :: up)
   select type(up)
     type is (character(*))
       up = "class(*)"
   end select
-  
+
   ! Array allocation
   allocate(real :: upa(3))
   select type(upa)
     type is (real)
       upa = [1.1, 2.2, 3.3]
   end select
-  
+
   deallocate(up, upa)
 end subroutine
 
