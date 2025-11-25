@@ -508,10 +508,8 @@ void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
     DL.print(O);
   }
 
-  if (auto *Metadata = dyn_cast<VPIRMetadata>(this)) {
-    if (const VPBasicBlock *Parent = getParent())
-      Metadata->print(O, Parent->getPlan());
-  }
+  if (auto *Metadata = dyn_cast<VPIRMetadata>(this))
+    Metadata->print(O, SlotTracker);
 }
 #endif
 
@@ -1712,22 +1710,19 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPIRMetadata::print(raw_ostream &O, const VPlan *Plan) const {
-  if (Metadata.empty() || !Plan)
+void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
+  const Module *M = SlotTracker.getModule();
+  if (Metadata.empty() || !M)
     return;
 
-  const Module &M = Plan->getModule();
-  SmallVector<StringRef, 8> MDNames;
-  M.getContext().getMDKindNames(MDNames);
-
+  ArrayRef<StringRef> MDNames = SlotTracker.getMDNames();
   O << " (";
   interleaveComma(Metadata, O, [&](const auto &KindNodePair) {
     auto [Kind, Node] = KindNodePair;
-    assert(Kind != 0 && "Debug metadata should not be managed by VPIRMetadata");
     assert(Kind < MDNames.size() && !MDNames[Kind].empty() &&
            "Unexpected unnamed metadata kind");
     O << "!" << MDNames[Kind] << " ";
-    Node->printAsOperand(O, &M);
+    Node->printAsOperand(O, M);
   });
   O << ")";
 }

@@ -1023,7 +1023,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print metadata with node IDs.
-  void print(raw_ostream &O, const VPlan *Plan) const;
+  void print(raw_ostream &O, VPSlotTracker &SlotTracker) const;
 #endif
 };
 
@@ -4437,11 +4437,6 @@ public:
 
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
   VPIRBasicBlock *getScalarHeader() const { return ScalarHeader; }
-
-  /// Return the Module from the scalar header.
-  const Module &getModule() const {
-    return *ScalarHeader->getIRBasicBlock()->getModule();
-  }
 
   /// Return an ArrayRef containing VPIRBasicBlocks wrapping the exit blocks of
   /// the original scalar loop.
