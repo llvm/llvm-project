@@ -227,6 +227,11 @@ struct MemrefGlobalVariableModel
     auto globalOp = cast<memref::GlobalOp>(op);
     return globalOp.getConstant();
   }
+
+  Region *getInitRegion(Operation *op) const {
+    // GlobalOp uses attributes for initialization, not regions
+    return nullptr;
+  }
 };
 
 /// Helper function for any of the times we need to modify an ArrayAttr based on
