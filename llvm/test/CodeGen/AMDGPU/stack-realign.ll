@@ -32,7 +32,6 @@ define void @needs_align16_default_stack_align(i32 %idx) #0 {
 ; GCN-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 144
   %alloca.align16 = alloca [8 x <4 x i32>], align 16, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 16
@@ -71,7 +70,6 @@ define void @needs_align16_stack_align4(i32 %idx) #2 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 160
   %alloca.align16 = alloca [8 x <4 x i32>], align 16, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 16
@@ -111,7 +109,6 @@ define void @needs_align32(i32 %idx) #0 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 192
   %alloca.align16 = alloca [8 x <4 x i32>], align 32, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 32
@@ -138,7 +135,6 @@ define void @force_realign4(i32 %idx) #1 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 52
   %alloca.align16 = alloca [8 x i32], align 4, addrspace(5)
   %gep0 = getelementptr inbounds [8 x i32], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile i32 3, ptr addrspace(5) %gep0, align 4
@@ -178,7 +174,7 @@ define amdgpu_kernel void @kernel_call_align16_from_8() #0 {
 }
 
 ; The call sequence should keep the stack on call aligned to 4
-define amdgpu_kernel void @kernel_call_align16_from_5() {
+define amdgpu_kernel void @kernel_call_align16_from_5() #6 {
 ; GCN-LABEL: kernel_call_align16_from_5:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_i32 s12, s12, s17
@@ -211,7 +207,7 @@ define amdgpu_kernel void @kernel_call_align16_from_5() {
   ret void
 }
 
-define amdgpu_kernel void @kernel_call_align4_from_5() {
+define amdgpu_kernel void @kernel_call_align4_from_5() #6 {
 ; GCN-LABEL: kernel_call_align4_from_5:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_i32 s12, s12, s17
@@ -695,3 +691,4 @@ attributes #2 = { noinline nounwind alignstack=4 }
 attributes #3 = { noinline nounwind "no-realign-stack" }
 attributes #4 = { noinline nounwind "frame-pointer"="all"}
 attributes #5 = { noinline nounwind "amdgpu-waves-per-eu"="6,6" }
+attributes #6 = { nounwind }

@@ -16,7 +16,7 @@
 ; so eliminateFrameIndex would not adjust the access to use the
 ; correct FP offset.
 
-define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) {
+define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) #1 {
 ; MUBUF-LABEL: local_stack_offset_uses_sp:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s17
@@ -103,7 +103,7 @@ entry:
   ret void
 }
 
-define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
+define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) #1 {
 ; MUBUF-LABEL: func_local_stack_offset_uses_sp:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -206,7 +206,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out) {
+define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out) #1 {
 ; MUBUF-LABEL: local_stack_offset_uses_sp_flat:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s17
@@ -347,3 +347,4 @@ entry:
 declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, i1 immarg) #0
 
 attributes #0 = { argmemonly nounwind willreturn writeonly }
+attributes #1 = { nounwind }

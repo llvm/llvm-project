@@ -4,7 +4,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-GISEL %s
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_uniform:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x0
@@ -82,7 +82,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) {
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_over_aligned(i32 %n) {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_over_aligned(i32 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_uniform_over_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x0
@@ -165,7 +165,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_over_aligned(i
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_under_aligned(i32 %n) {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_under_aligned(i32 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_uniform_under_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x0
@@ -243,7 +243,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_under_aligned(
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent() {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent() #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_divergent:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, s17
@@ -358,7 +358,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent() {
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_over_aligned() {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_over_aligned() #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_divergent_over_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_movk_i32 s32, 0x2000
@@ -478,7 +478,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_over_aligned
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_under_aligned() {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_under_aligned() #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_divergent_under_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, s17
@@ -590,7 +590,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_under_aligne
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_multiple_allocas(i32 %n, i32 %m) {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_multiple_allocas(i32 %n, i32 %m) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_multiple_allocas:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
@@ -820,7 +820,7 @@ bb.1:
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i32 %m) {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i32 %m) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_control_flow:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
@@ -1030,7 +1030,7 @@ bb.2:
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_uniform(i32 %n) {
+define void @test_dynamic_stackalloc_device_uniform(i32 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_uniform:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1152,7 +1152,7 @@ define void @test_dynamic_stackalloc_device_uniform(i32 %n) {
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) {
+define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_uniform_over_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1294,7 +1294,7 @@ define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) {
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_uniform_under_aligned(i32 %n) {
+define void @test_dynamic_stackalloc_device_uniform_under_aligned(i32 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_uniform_under_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1416,7 +1416,7 @@ define void @test_dynamic_stackalloc_device_uniform_under_aligned(i32 %n) {
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_divergent() {
+define void @test_dynamic_stackalloc_device_divergent() #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1545,7 +1545,7 @@ define void @test_dynamic_stackalloc_device_divergent() {
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_divergent_over_aligned() {
+define void @test_dynamic_stackalloc_device_divergent_over_aligned() #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_over_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1692,7 +1692,7 @@ define void @test_dynamic_stackalloc_device_divergent_over_aligned() {
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_divergent_under_aligned() {
+define void @test_dynamic_stackalloc_device_divergent_under_aligned() #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_under_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1821,7 +1821,7 @@ define void @test_dynamic_stackalloc_device_divergent_under_aligned() {
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
+define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_multiple_allocas:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2169,7 +2169,7 @@ bb.1:
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
+define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_control_flow:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2456,7 +2456,7 @@ bb.2:
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 %n) {
+define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i16:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2585,7 +2585,7 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i64(i64 %n) {
+define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i64(i64 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i64:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2706,3 +2706,5 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i64(i64 
   store volatile i32 666, ptr addrspace(5) %alloca
   ret void
 }
+
+attributes #0 = { nounwind }

@@ -555,4 +555,4 @@ declare <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(<2 x float
 declare <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f32(<3 x float>, metadata, metadata) #0
 declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float>, metadata, metadata) #0
 
-attributes #0 = { strictfp }
+attributes #0 = { strictfp nounwind }
