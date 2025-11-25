@@ -14852,8 +14852,7 @@ Syntax:
 ::
 
       declare <ret_type>
-      @llvm.structured.gep(<basetype> poison,
-                           ptr <source>
+      @llvm.structured.gep(ptr elementtype(<basetype>) <source>
                            {, [i32/i64] <index> }*)
 
 Overview:
@@ -14868,10 +14867,6 @@ Arguments:
 """"""""""
 
 ``<ty> basetype``:
-The type of the element pointed by the pointer source. This type will be
-used along with the provided indices and source operands to compute a new
-pointer representing the result of a logical indexing into a basetype
-pointed by source.
 The actual value passed is ignored, and should be ``poison``.
 
 ``ptr <source>``:
@@ -14881,6 +14876,13 @@ target dependent, and is not always known at compile time.
 The assumption this instruction makes on the memory location is only relevant
 to this particular call. A frontend could possibly emit multiple structured
 GEP with the same source pointer but a different ``basetype``.
+
+The ``source`` argument must be annotated with an :ref:`elementtype
+<attr_elementtype>` attribute at the call-site. This attribute specifies the
+type of the element pointed by the pointer source. This type will be
+used along with the provided indices and source operands to compute a new
+pointer representing the result of a logical indexing into a basetype
+pointed by source.
 
 ``[i32/i64] index, ...``:
 Indices used to traverse into the basetype and determine the target element
