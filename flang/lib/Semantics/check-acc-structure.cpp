@@ -714,13 +714,14 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
                       parser::GetDesignatorNameIfDataRef(designator)) {
                 if (!name->symbol) {
                   context_.Say(GetContext().clauseSource,
-                    "'%s' is not an appropriate symbol for %s clause"_err_en_US,
-                    name->ToString().c_str(),
-                    parser::ToUpperCaseLetters(
-                            llvm::acc::getOpenACCClauseName(clause).str()));
+                      "'%s' is not an appropriate symbol for %s clause"_err_en_US,
+                      name->ToString().c_str(),
+                      parser::ToUpperCaseLetters(
+                          llvm::acc::getOpenACCClauseName(clause).str()));
                 } else {
                   if (declareSymbols.contains(&name->symbol->GetUltimate())) {
-                    if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
+                    if (declareSymbols[&name->symbol->GetUltimate()] ==
+                        clause) {
                       context_.Warn(common::UsageWarning::OpenAccUsage,
                           GetContext().clauseSource,
                           "'%s' in the %s clause is already present in the same clause in this module"_warn_en_US,
