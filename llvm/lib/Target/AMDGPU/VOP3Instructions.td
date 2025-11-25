@@ -185,7 +185,8 @@ defm V_FMA_LEGACY_F32 : VOP3Inst <"v_fma_legacy_f32",
 defm V_MAD_I32_I24 : VOP3Inst <"v_mad_i32_i24", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
 defm V_MAD_U32_U24 : VOP3Inst <"v_mad_u32_u24", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
 defm V_FMA_F32 : VOP3Inst <"v_fma_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_fma>, VOPD_Component<0x13, "v_fma_f32">;
-defm V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_lerp>;
+let SubtargetPredicate = HasLerpInst in
+  defm V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_lerp>;
 
 let SchedRW = [WriteIntMul] in {
   let SubtargetPredicate = HasMadU32Inst in
@@ -258,12 +259,12 @@ defm V_DIV_FMAS_F64 : VOP3Inst <"v_div_fmas_f64", VOP_F64_F64_F64_F64_VCC>;
 } // End isCommutable = 1
 
 let isReMaterializable = 1 in {
-let mayRaiseFPException = 0 in {
+let mayRaiseFPException = 0, SubtargetPredicate = HasCubeInsts in {
 defm V_CUBEID_F32 : VOP3Inst <"v_cubeid_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, int_amdgcn_cubeid>;
 defm V_CUBESC_F32 : VOP3Inst <"v_cubesc_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, int_amdgcn_cubesc>;
 defm V_CUBETC_F32 : VOP3Inst <"v_cubetc_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, int_amdgcn_cubetc>;
 defm V_CUBEMA_F32 : VOP3Inst <"v_cubema_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, int_amdgcn_cubema>;
-} // End mayRaiseFPException
+} // mayRaiseFPException = 0, SubtargetPredicate = HasCubeInsts
 
 defm V_BFE_U32 : VOP3Inst <"v_bfe_u32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMDGPUbfe_u32>;
 defm V_BFE_I32 : VOP3Inst <"v_bfe_i32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMDGPUbfe_i32>;
@@ -306,12 +307,12 @@ let SubtargetPredicate = HasMinimum3Maximum3F32, ReadsModeReg = 0 in {
   defm V_MAXIMUM3_F32 : VOP3Inst <"v_maximum3_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, AMDGPUfmaximum3>;
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
 
-let isCommutable = 1 in {
+let isCommutable = 1, SubtargetPredicate = HasSadInsts in {
   defm V_SAD_U8 : VOP3Inst <"v_sad_u8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
   defm V_SAD_HI_U8 : VOP3Inst <"v_sad_hi_u8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
   defm V_SAD_U16 : VOP3Inst <"v_sad_u16", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
   defm V_SAD_U32 : VOP3Inst <"v_sad_u32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
-} // End isCommutable = 1
+} // End isCommutable = 1, SubtargetPredicate = HasSadInsts
 defm V_CVT_PK_U8_F32 : VOP3Inst<"v_cvt_pk_u8_f32", VOP3_Profile<VOP_I32_F32_I32_I32>, int_amdgcn_cvt_pk_u8_f32>;
 
 defm V_DIV_FIXUP_F32 : VOP3Inst <"v_div_fixup_f32", DIV_FIXUP_F32_PROF, AMDGPUdiv_fixup>;
@@ -424,7 +425,8 @@ def VOPProfileMQSAD : VOP3_Profile<VOP_V4I32_I64_I32_V4I32, VOP3_CLAMP> {
 
 let SubtargetPredicate = isGFX7Plus in {
 let Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32] in {
-defm V_QSAD_PK_U16_U8 : VOP3Inst <"v_qsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
+let SubtargetPredicate = HasQsadInsts in
+  defm V_QSAD_PK_U16_U8 : VOP3Inst <"v_qsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
 defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOPProfileMQSAD>;
 } // End Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32]
 } // End SubtargetPredicate = isGFX7Plus
@@ -775,10 +777,10 @@ let SubtargetPredicate = HasMinimum3Maximum3F16, ReadsModeReg = 0 in {
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
 
 let SubtargetPredicate = HasAddMinMaxInsts, isCommutable = 1, isReMaterializable = 1 in {
-  defm V_ADD_MAX_I32 : VOP3Inst <"v_add_max_i32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
-  defm V_ADD_MAX_U32 : VOP3Inst <"v_add_max_u32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
-  defm V_ADD_MIN_I32 : VOP3Inst <"v_add_min_i32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
-  defm V_ADD_MIN_U32 : VOP3Inst <"v_add_min_u32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
+  defm V_ADD_MAX_I32 : VOP3Inst <"v_add_max_i32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>, int_amdgcn_add_max_i32>;
+  defm V_ADD_MAX_U32 : VOP3Inst <"v_add_max_u32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>, int_amdgcn_add_max_u32>;
+  defm V_ADD_MIN_I32 : VOP3Inst <"v_add_min_i32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>, int_amdgcn_add_min_i32>;
+  defm V_ADD_MIN_U32 : VOP3Inst <"v_add_min_u32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>, int_amdgcn_add_min_u32>;
 }
 
 defm V_ADD_I16 : VOP3Inst_t16 <"v_add_i16", VOP_I16_I16_I16>;
@@ -788,9 +790,6 @@ let isCommutable = 1 in {
   defm V_MAD_U32_U16 : VOP3Inst_t16 <"v_mad_u32_u16", VOP_I32_I16_I16_I32>;
   defm V_MAD_I32_I16 : VOP3Inst_t16 <"v_mad_i32_i16", VOP_I32_I16_I16_I32>;
 } // End isCommutable = 1
-
-defm V_CVT_PKNORM_I16_F16 : VOP3Inst_t16 <"v_cvt_pknorm_i16_f16", VOP_B32_F16_F16>;
-defm V_CVT_PKNORM_U16_F16 : VOP3Inst_t16 <"v_cvt_pknorm_u16_f16", VOP_B32_F16_F16>;
 
 defm V_PACK_B32_F16 : VOP3Inst_t16 <"v_pack_b32_f16", VOP_B32_F16_F16>;
 
@@ -976,10 +975,10 @@ def : GCNPat <
 } // End SubtargetPredicate = HasLshlAddU64Inst
 
 let SubtargetPredicate = HasAddMinMaxInsts in {
-def : ThreeOp_i32_Pats<add, smax, V_ADD_MAX_I32_e64>;
-def : ThreeOp_i32_Pats<add, umax, V_ADD_MAX_U32_e64>;
-def : ThreeOp_i32_Pats<add, smin, V_ADD_MIN_I32_e64>;
-def : ThreeOp_i32_Pats<add, umin, V_ADD_MIN_U32_e64>;
+def : ThreeOp_i32_Pats<saddsat, smax, V_ADD_MAX_I32_e64>;
+def : ThreeOp_i32_Pats<uaddsat, umax, V_ADD_MAX_U32_e64>;
+def : ThreeOp_i32_Pats<saddsat, smin, V_ADD_MIN_I32_e64>;
+def : ThreeOp_i32_Pats<uaddsat, umin, V_ADD_MIN_U32_e64>;
 }
 
 def : VOPBinOpClampPat<saddsat, V_ADD_I32_e64, i32>;
@@ -995,6 +994,11 @@ def : GCNPat<(DivergentBinFrag<or> (or_oneuse i64:$src0, i64:$src1), i64:$src2),
                               (i32 (EXTRACT_SUBREG $src2, sub1))), sub1)>;
 
 } // End SubtargetPredicate = isGFX9Plus
+
+let SubtargetPredicate = HasCvtPkNormVOP3Insts in {
+  defm V_CVT_PKNORM_I16_F16 : VOP3Inst_t16 <"v_cvt_pknorm_i16_f16", VOP_B32_F16_F16>;
+  defm V_CVT_PKNORM_U16_F16 : VOP3Inst_t16 <"v_cvt_pknorm_u16_f16", VOP_B32_F16_F16>;
+} // end SubtargetPredicate = HasCvtPkNormVOP3Insts
 
 // FIXME: Probably should hardcode clamp bit in pseudo and avoid this.
 class OpSelBinOpClampPat<SDPatternOperator node,

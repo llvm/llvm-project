@@ -13,6 +13,7 @@
 
 #include "R600ISelLowering.h"
 #include "AMDGPU.h"
+#include "AMDGPUSelectionDAGInfo.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
 #include "R600MachineFunctionInfo.h"
@@ -29,7 +30,8 @@ using namespace llvm;
 
 R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
                                        const R600Subtarget &STI)
-    : AMDGPUTargetLowering(TM, STI), Subtarget(&STI), Gen(STI.getGeneration()) {
+    : AMDGPUTargetLowering(TM, STI, STI), Subtarget(&STI),
+      Gen(STI.getGeneration()) {
   addRegisterClass(MVT::f32, &R600::R600_Reg32RegClass);
   addRegisterClass(MVT::i32, &R600::R600_Reg32RegClass);
   addRegisterClass(MVT::v2f32, &R600::R600_Reg64RegClass);
@@ -44,9 +46,6 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
 
   // Legalize loads and stores to the private address space.
   setOperationAction(ISD::LOAD, {MVT::i32, MVT::v2i32, MVT::v4i32}, Custom);
-
-  // 32-bit ABS is legal for AMDGPU except for R600
-  setOperationAction(ISD::ABS, MVT::i32, Expand);
 
   // EXTLOAD should be the same as ZEXTLOAD. It is legal for some address
   // spaces, so it is custom lowered to handle those where it isn't.
@@ -1132,12 +1131,9 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     if ((AS == AMDGPUAS::PRIVATE_ADDRESS) && TruncatingStore) {
       // Add an extra level of chain to isolate this vector
       SDValue NewChain = DAG.getNode(AMDGPUISD::DUMMY_CHAIN, DL, MVT::Other, Chain);
-      // TODO: can the chain be replaced without creating a new store?
-      SDValue NewStore = DAG.getTruncStore(
-          NewChain, DL, Value, Ptr, StoreNode->getPointerInfo(), MemVT,
-          StoreNode->getAlign(), StoreNode->getMemOperand()->getFlags(),
-          StoreNode->getAAInfo());
-      StoreNode = cast<StoreSDNode>(NewStore);
+      SmallVector<SDValue, 4> NewOps(StoreNode->ops());
+      NewOps[0] = NewChain;
+      StoreNode = cast<StoreSDNode>(DAG.UpdateNodeOperands(StoreNode, NewOps));
     }
 
     return scalarizeVectorStore(StoreNode, DAG);

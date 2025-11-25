@@ -58,14 +58,17 @@ void FactsGenerator::run() {
   // initializations and destructions are processed in the correct sequence.
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
     CurrentBlockFacts.clear();
+    EscapesInCurrentBlock.clear();
     for (unsigned I = 0; I < Block->size(); ++I) {
       const CFGElement &Element = Block->Elements[I];
       if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
         Visit(CS->getStmt());
-      else if (std::optional<CFGAutomaticObjDtor> DtorOpt =
-                   Element.getAs<CFGAutomaticObjDtor>())
-        handleDestructor(*DtorOpt);
+      else if (std::optional<CFGLifetimeEnds> LifetimeEnds =
+                   Element.getAs<CFGLifetimeEnds>())
+        handleLifetimeEnds(*LifetimeEnds);
     }
+    CurrentBlockFacts.append(EscapesInCurrentBlock.begin(),
+                             EscapesInCurrentBlock.end());
     FactMgr.addBlockFacts(Block, CurrentBlockFacts);
   }
 }
@@ -166,7 +169,8 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
   if (const Expr *RetExpr = RS->getRetValue()) {
     if (hasOrigin(RetExpr)) {
       OriginID OID = FactMgr.getOriginMgr().getOrCreate(*RetExpr);
-      CurrentBlockFacts.push_back(FactMgr.createFact<ReturnOfOriginFact>(OID));
+      EscapesInCurrentBlock.push_back(
+          FactMgr.createFact<OriginEscapesFact>(OID, RetExpr));
     }
   }
 }
@@ -174,6 +178,15 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
   if (BO->isAssignmentOp())
     handleAssignment(BO->getLHS(), BO->getRHS());
+}
+
+void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
+  if (hasOrigin(CO)) {
+    // Merge origins from both branches of the conditional operator.
+    // We kill to clear the initial state and merge both origins into it.
+    killAndFlowOrigin(*CO, *CO->getTrueExpr());
+    flowOrigin(*CO, *CO->getFalseExpr());
+  }
 }
 
 void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
@@ -216,25 +229,19 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   killAndFlowOrigin(*MTE, *MTE->getSubExpr());
 }
 
-void FactsGenerator::handleDestructor(const CFGAutomaticObjDtor &DtorOpt) {
-  /// TODO: Also handle trivial destructors (e.g., for `int`
-  /// variables) which will never have a CFGAutomaticObjDtor node.
+void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   /// TODO: Handle loans to temporaries.
-  /// TODO: Consider using clang::CFG::BuildOptions::AddLifetime to reuse the
-  /// lifetime ends.
-  const VarDecl *DestructedVD = DtorOpt.getVarDecl();
-  if (!DestructedVD)
+  const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
+  if (!LifetimeEndsVD)
     return;
   // Iterate through all loans to see if any expire.
-  /// TODO(opt): Do better than a linear search to find loans associated with
-  /// 'DestructedVD'.
-  for (const Loan &L : FactMgr.getLoanMgr().getLoans()) {
-    const AccessPath &LoanPath = L.Path;
+  for (const auto &Loan : FactMgr.getLoanMgr().getLoans()) {
+    const AccessPath &LoanPath = Loan.Path;
     // Check if the loan is for a stack variable and if that variable
     // is the one being destructed.
-    if (LoanPath.D == DestructedVD)
+    if (LoanPath.D == LifetimeEndsVD)
       CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-          L.ID, DtorOpt.getTriggerStmt()->getEndLoc()));
+          Loan.ID, LifetimeEnds.getTriggerStmt()->getEndLoc()));
   }
 }
 
@@ -333,7 +340,7 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
 // (e.g. on the left-hand side of an assignment).
 void FactsGenerator::handleUse(const DeclRefExpr *DRE) {
   if (isPointerType(DRE->getType())) {
-    UseFact *UF = FactMgr.createFact<UseFact>(DRE);
+    UseFact *UF = FactMgr.createFact<UseFact>(DRE, FactMgr.getOriginMgr());
     CurrentBlockFacts.push_back(UF);
     assert(!UseFacts.contains(DRE));
     UseFacts[DRE] = UF;

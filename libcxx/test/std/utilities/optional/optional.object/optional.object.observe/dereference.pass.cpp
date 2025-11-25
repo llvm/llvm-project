@@ -50,7 +50,19 @@ int main(int, char**)
         optional<X> opt(X{});
         assert((*opt).test() == 4);
     }
+#if TEST_STD_VER >= 26
+    {
+      X x{};
+      optional<X&> opt(x);
+      ASSERT_SAME_TYPE(decltype(*opt), X&);
+      ASSERT_NOEXCEPT(*opt);
+    }
+    {
+      X x{};
+      optional<X&> opt(x);
+      assert((*opt).test() == 4);
+    }
+#endif
     static_assert(test() == 7, "");
-
     return 0;
 }

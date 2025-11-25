@@ -1531,7 +1531,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_BASIC_TYPE: {
-    if (Record.size() < 6 || Record.size() > 8)
+    if (Record.size() < 6 || Record.size() > 9)
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
@@ -1540,13 +1540,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                                 ? static_cast<DINode::DIFlags>(Record[6])
                                 : DINode::FlagZero;
     uint32_t NumExtraInhabitants = (Record.size() > 7) ? Record[7] : 0;
-
+    uint32_t DataSizeInBits = (Record.size() > 8) ? Record[8] : 0;
     Metadata *SizeInBits = getMetadataOrConstant(SizeIsMetadata, Record[3]);
-
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIBasicType,
                         (Context, Record[1], getMDString(Record[2]), SizeInBits,
-                         Record[4], Record[5], NumExtraInhabitants, Flags)),
+                         Record[4], Record[5], NumExtraInhabitants,
+                         DataSizeInBits, Flags)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -2323,8 +2323,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         GET_OR_DISTINCT(DIObjCProperty,
                         (Context, getMDString(Record[1]),
                          getMDOrNull(Record[2]), Record[3],
-                         getMDString(Record[4]), getMDString(Record[5]),
-                         Record[6], getDITypeRefOrNull(Record[7]))),
+                         /*GetterName=*/getMDString(Record[5]),
+                         /*SetterName=*/getMDString(Record[4]), Record[6],
+                         getDITypeRefOrNull(Record[7]))),
         NextMetadataNo);
     NextMetadataNo++;
     break;

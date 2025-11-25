@@ -4,18 +4,8 @@
 """Script to generate a build report for Github."""
 
 import argparse
-import platform
 
 import generate_test_report_lib
-
-def compute_platform_title() -> str:
-    logo = ":window:" if platform.system() == "Windows" else ":penguin:"
-    # On Linux the machine value is x86_64 on Windows it is AMD64.
-    if platform.machine() == "x86_64" or platform.machine() == "AMD64":
-        arch = "x64"
-    else:
-        arch = platform.machine()
-    return f"{logo} {platform.system()} {arch} Test Results"
 
 
 if __name__ == "__main__":
@@ -27,7 +17,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     report = generate_test_report_lib.generate_report_from_files(
-        compute_platform_title(), args.return_code, args.build_test_logs
+        generate_test_report_lib.compute_platform_title(),
+        args.return_code,
+        args.build_test_logs,
     )
 
     print(report)

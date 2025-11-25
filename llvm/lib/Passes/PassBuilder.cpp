@@ -45,7 +45,6 @@
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/IVUsers.h"
 #include "llvm/Analysis/InlineAdvisor.h"
-#include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
 #include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
@@ -67,6 +66,7 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionDivision.h"
@@ -669,7 +669,14 @@ void PassBuilder::registerFunctionAnalyses(FunctionAnalysisManager &FAM) {
   FAM.registerPass([&] { return buildDefaultAAPipeline(); });
 
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
-  FAM.registerPass([&] { return CREATE_PASS; });
+  if constexpr (std::is_constructible_v<                                       \
+                    std::remove_reference_t<decltype(CREATE_PASS)>,            \
+                    const TargetMachine &>) {                                  \
+    if (TM)                                                                    \
+      FAM.registerPass([&] { return CREATE_PASS; });                           \
+  } else {                                                                     \
+    FAM.registerPass([&] { return CREATE_PASS; });                             \
+  }
 #include "PassRegistry.def"
 
   for (auto &C : FunctionAnalysisRegistrationCallbacks)
@@ -890,6 +897,11 @@ Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {
 Expected<bool> parseEntryExitInstrumenterPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "post-inline",
                                             "EntryExitInstrumenter");
+}
+
+Expected<bool> parseDropUnnecessaryAssumesPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "drop-deref",
+                                            "DropUnnecessaryAssumes");
 }
 
 Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {
@@ -2038,6 +2050,14 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
   }
 #define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
   if (Name == NAME) {                                                          \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CREATE_PASS)>,          \
+                      const TargetMachine &>) {                                \
+      if (!TM)                                                                 \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+    }                                                                          \
     MPM.addPass(createModuleToFunctionPassAdaptor(CREATE_PASS));               \
     return Error::success();                                                   \
   }
@@ -2046,6 +2066,18 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
     auto Params = parsePassParameters(PARSER, Name, NAME);                     \
     if (!Params)                                                               \
       return Params.takeError();                                               \
+    auto CreatePass = CREATE_PASS;                                             \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CreatePass(             \
+                          Params.get()))>,                                     \
+                      const TargetMachine &,                                   \
+                      std::remove_reference_t<decltype(Params.get())>>) {      \
+      if (!TM) {                                                               \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+      }                                                                        \
+    }                                                                          \
     MPM.addPass(createModuleToFunctionPassAdaptor(CREATE_PASS(Params.get()))); \
     return Error::success();                                                   \
   }
@@ -2152,6 +2184,14 @@ Error PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
   }
 #define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
   if (Name == NAME) {                                                          \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CREATE_PASS)>,          \
+                      const TargetMachine &>) {                                \
+      if (!TM)                                                                 \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+    }                                                                          \
     CGPM.addPass(createCGSCCToFunctionPassAdaptor(CREATE_PASS));               \
     return Error::success();                                                   \
   }
@@ -2160,6 +2200,18 @@ Error PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
     auto Params = parsePassParameters(PARSER, Name, NAME);                     \
     if (!Params)                                                               \
       return Params.takeError();                                               \
+    auto CreatePass = CREATE_PASS;                                             \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CreatePass(             \
+                          Params.get()))>,                                     \
+                      const TargetMachine &,                                   \
+                      std::remove_reference_t<decltype(Params.get())>>) {      \
+      if (!TM) {                                                               \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+      }                                                                        \
+    }                                                                          \
     CGPM.addPass(createCGSCCToFunctionPassAdaptor(CREATE_PASS(Params.get()))); \
     return Error::success();                                                   \
   }
@@ -2239,6 +2291,14 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
 // Now expand the basic registered passes from the .inc file.
 #define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
   if (Name == NAME) {                                                          \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CREATE_PASS)>,          \
+                      const TargetMachine &>) {                                \
+      if (!TM)                                                                 \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+    }                                                                          \
     FPM.addPass(CREATE_PASS);                                                  \
     return Error::success();                                                   \
   }
@@ -2247,14 +2307,34 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
     auto Params = parsePassParameters(PARSER, Name, NAME);                     \
     if (!Params)                                                               \
       return Params.takeError();                                               \
+    auto CreatePass = CREATE_PASS;                                             \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CreatePass(             \
+                          Params.get()))>,                                     \
+                      const TargetMachine &,                                   \
+                      std::remove_reference_t<decltype(Params.get())>>) {      \
+      if (!TM) {                                                               \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+      }                                                                        \
+    }                                                                          \
     FPM.addPass(CREATE_PASS(Params.get()));                                    \
     return Error::success();                                                   \
   }
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
   if (Name == "require<" NAME ">") {                                           \
+    if constexpr (std::is_constructible_v<                                     \
+                      std::remove_reference_t<decltype(CREATE_PASS)>,          \
+                      const TargetMachine &>) {                                \
+      if (!TM)                                                                 \
+        return make_error<StringError>(                                        \
+            formatv("pass '{0}' requires TargetMachine", Name).str(),          \
+            inconvertibleErrorCode());                                         \
+    }                                                                          \
     FPM.addPass(                                                               \
-        RequireAnalysisPass<                                                   \
-            std::remove_reference_t<decltype(CREATE_PASS)>, Function>());      \
+        RequireAnalysisPass<std::remove_reference_t<decltype(CREATE_PASS)>,    \
+                            Function>());                                      \
     return Error::success();                                                   \
   }                                                                            \
   if (Name == "invalidate<" NAME ">") {                                        \
