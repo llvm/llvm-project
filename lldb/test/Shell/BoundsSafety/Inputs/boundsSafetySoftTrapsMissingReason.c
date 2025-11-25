@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ptrcheck.h>
 
 int bad_call(int *__counted_by(count) ptr, int count) {}
 
