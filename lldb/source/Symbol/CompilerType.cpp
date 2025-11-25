@@ -370,30 +370,10 @@ bool CompilerType::IsScalarOrUnscopedEnumerationType() const {
 }
 
 bool CompilerType::IsPromotableIntegerType() const {
-  // Unscoped enums are always considered as promotable, even if their
-  // underlying type does not need to be promoted (e.g. "int").
-  if (IsUnscopedEnumerationType())
-    return true;
-
-  switch (GetBasicTypeEnumeration()) {
-  case lldb::eBasicTypeBool:
-  case lldb::eBasicTypeChar:
-  case lldb::eBasicTypeSignedChar:
-  case lldb::eBasicTypeUnsignedChar:
-  case lldb::eBasicTypeShort:
-  case lldb::eBasicTypeUnsignedShort:
-  case lldb::eBasicTypeWChar:
-  case lldb::eBasicTypeSignedWChar:
-  case lldb::eBasicTypeUnsignedWChar:
-  case lldb::eBasicTypeChar16:
-  case lldb::eBasicTypeChar32:
-    return true;
-
-  default:
-    return false;
-  }
-
-  llvm_unreachable("All cases handled above.");
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsPromotableIntegerType(m_type);
+  return false;
 }
 
 bool CompilerType::IsPointerToVoid() const {
