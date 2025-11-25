@@ -155,22 +155,20 @@ private:
     }
 
     template <typename Pred> void remove(Pred &&Remove) {
+      std::vector<hash_code> HashesToErase;
       for (auto &[Hash, SNs] : CanonicalSNs) {
-        bool Found = false;
-        for (size_t I = 0; I != SNs.size(); ++I) {
+        for (size_t I = 0; I != SNs.size();) {
           if (Remove(SNs[I])) {
             std::swap(SNs[I], SNs.back());
             SNs.pop_back();
-            Found = true;
-            break;
-          }
+          } else
+            ++I;
         }
-        if (Found) {
-          if (SNs.empty())
-            CanonicalSNs.erase(Hash);
-          break;
-        }
+        if (SNs.empty())
+          HashesToErase.push_back(Hash);
       }
+      for (auto Hash : HashesToErase)
+        CanonicalSNs.erase(Hash);
     }
 
   private:
@@ -396,9 +394,14 @@ public:
         ++I;
     }
 
+    CoalesceToPendingSNs.remove([&](SuperNode *SN) {
+      for (auto &E : FailedSNs)
+        if (E.get() == SN)
+          return true;
+      return false;
+    });
+
     for (auto &SN : FailedSNs) {
-      CoalesceToPendingSNs.remove(
-          [&](SuperNode *SNC) { return SNC == SN.get(); });
       for (auto &[Container, Elems] : SN->Defs) {
         assert(ElemToPendingSN.count(Container));
         auto &CElems = ElemToPendingSN[Container];
