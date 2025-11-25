@@ -633,7 +633,7 @@ implementation.
 |                                                             |                           |                           | RT: @abhinavgaba (https://github.com/llvm/llvm-project/pull/149036,      |
 |                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/158370)                        |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| need_device_ptr modifier for adjust_args clause             | :part:`unclaimed`         | :none:`unclaimed`         | Clang Parsing/Sema: https://github.com/llvm/llvm-project/pull/168905     |
+| need_device_ptr modifier for adjust_args clause             | :part:`partial`           | :none:`unclaimed`         | Clang Parsing/Sema: https://github.com/llvm/llvm-project/pull/168905     |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 
 OpenMP Extensions
