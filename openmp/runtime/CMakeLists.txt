@@ -109,7 +109,7 @@ set(LIBOMP_MIC_ARCH knc CACHE STRING
 if("${LIBOMP_ARCH}" STREQUAL "mic")
   libomp_check_variable(LIBOMP_MIC_ARCH knf knc)
 endif()
-set(LIBOMP_FORTRAN_MODULES FALSE CACHE BOOL
+set(LIBOMP_FORTRAN_MODULES "${RUNTIMES_FLANG_MODULES_ENABLED}" CACHE BOOL
   "Create Fortran module files? (requires fortran compiler)")
 
 # - Support for universal fat binary builds on Mac
@@ -147,8 +147,6 @@ else()
   set(LIBOMP_LIBFLAGS "" CACHE STRING
     "Appended user specified linked libs flags. (e.g., -lm)")
 endif()
-set(LIBOMP_FFLAGS "" CACHE STRING
-  "Appended user specified Fortran compiler flags.  These are only used if LIBOMP_FORTRAN_MODULES==TRUE.")
 
 # Should the libomp library and generated headers be copied into the original source exports/ directory
 # Turning this to FALSE aids parallel builds to not interfere with each other.
@@ -272,10 +270,6 @@ set(LIBOMP_TOOLS_DIR ${LIBOMP_BASE_DIR}/tools)
 set(LIBOMP_INC_DIR ${LIBOMP_SRC_DIR}/include)
 set(LIBOMP_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-# Enabling Fortran if it is needed
-if(${LIBOMP_FORTRAN_MODULES})
-  enable_language(Fortran)
-endif()
 # Enable MASM Compiler if it is needed (Windows only)
 if(WIN32)
   enable_language(ASM_MASM)
