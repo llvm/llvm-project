@@ -148,3 +148,29 @@ func.func @truncf(%arg0: bf16) {
   %0 = arith.truncf %arg0 : bf16 to f4E2M1FN
   return
 }
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_convert_to_int(i32, i32, i1, i64) -> i64
+// CHECK: %[[sem_in:.*]] = arith.constant 0 : i32
+// CHECK: %[[out_width:.*]] = arith.constant 4 : i32
+// CHECK: %[[is_unsigned:.*]] = arith.constant false
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_convert_to_int(%[[sem_in]], %[[out_width]], %[[is_unsigned]], %{{.*}}) : (i32, i32, i1, i64) -> i64
+// CHECK: arith.trunci %[[res]] : i64 to i4
+func.func @fptosi(%arg0: f16) {
+  %0 = arith.fptosi %arg0 : f16 to i4
+  return
+}
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_convert_to_int(i32, i32, i1, i64) -> i64
+// CHECK: %[[sem_in:.*]] = arith.constant 0 : i32
+// CHECK: %[[out_width:.*]] = arith.constant 4 : i32
+// CHECK: %[[is_unsigned:.*]] = arith.constant true
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_convert_to_int(%[[sem_in]], %[[out_width]], %[[is_unsigned]], %{{.*}}) : (i32, i32, i1, i64) -> i64
+// CHECK: arith.trunci %[[res]] : i64 to i4
+func.func @fptoui(%arg0: f16) {
+  %0 = arith.fptoui %arg0 : f16 to i4
+  return
+}

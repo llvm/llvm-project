@@ -43,5 +43,15 @@ func.func @entry() {
   %cvt = arith.truncf %b2 : f32 to f8E4M3FN
   vector.print %cvt : f8E4M3FN
 
+  // CHECK-NEXT: 1
+  // Bit pattern: 01, interpreted as signed integer: 1
+  %cvt_int_signed = arith.fptosi %cvt : f8E4M3FN to i2
+  vector.print %cvt_int_signed : i2
+
+  // CHECK-NEXT: -2
+  // Bit pattern: 10, interpreted as signed integer: -2
+  %cvt_int_unsigned = arith.fptoui %cvt : f8E4M3FN to i2
+  vector.print %cvt_int_unsigned : i2
+
   return
 }
