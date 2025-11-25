@@ -107,7 +107,6 @@ define <4 x float> @ldexp_v4f32(<4 x float> %val, <4 x i32> %exp) nounwind {
 ; CHECK-NEXT:    extsw r4, r3
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxmrghd vs0, vs1, v29
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    vextuwrx r3, r3, v31
@@ -124,7 +123,6 @@ define <4 x float> @ldexp_v4f32(<4 x float> %val, <4 x i32> %exp) nounwind {
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxmrghd vs0, vs1, v29
 ; CHECK-NEXT:    lxv v31, 80(r1) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv v30, 64(r1) # 16-byte Folded Reload

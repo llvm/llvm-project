@@ -448,7 +448,7 @@ void SplitEditor::addDeadDef(LiveInterval &LI, VNInfo *VNI, bool Original) {
     const MachineInstr *DefMI = LIS.getInstructionFromIndex(Def);
     assert(DefMI != nullptr);
     LaneBitmask LM;
-    for (const MachineOperand &DefOp : DefMI->all_defs()) {
+    for (const MachineOperand &DefOp : DefMI->defs()) {
       Register R = DefOp.getReg();
       if (R != LI.reg())
         continue;
