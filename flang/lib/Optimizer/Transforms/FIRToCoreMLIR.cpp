@@ -75,27 +75,32 @@ public:
 
     if (srcType == dstType) {
       rewriter.replaceOp(op, mlir::ValueRange{srcVal});
-    } else if (srcType.isIntOrIndex() && dstType.isIntOrIndex()) {
-      if (srcType.isIndex() || dstType.isIndex()) {
-        rewriter.replaceOpWithNewOp<mlir::arith::IndexCastOp>(op, dstType,
-                                                              srcVal);
-      } else if (srcType.getIntOrFloatBitWidth() <
-                 dstType.getIntOrFloatBitWidth()) {
-        rewriter.replaceOpWithNewOp<mlir::arith::ExtSIOp>(op, dstType, srcVal);
-      } else {
-        rewriter.replaceOpWithNewOp<mlir::arith::TruncIOp>(op, dstType, srcVal);
-      }
-    } else if (srcType.isFloat() && dstType.isFloat()) {
-      if (srcType.getIntOrFloatBitWidth() < dstType.getIntOrFloatBitWidth()) {
-        rewriter.replaceOpWithNewOp<mlir::arith::ExtFOp>(op, dstType, srcVal);
-      } else {
-        rewriter.replaceOpWithNewOp<mlir::arith::TruncFOp>(op, dstType, srcVal);
-      }
-    } else {
-      return mlir::failure();
+      return mlir::success();
     }
 
-    return mlir::success();
+    if (srcType.isIntOrIndex() && dstType.isIntOrIndex()) {
+      if (srcType.isIndex() || dstType.isIndex())
+        rewriter.replaceOpWithNewOp<mlir::arith::IndexCastOp>(op, dstType,
+                                                              srcVal);
+      else if (srcType.getIntOrFloatBitWidth() <
+               dstType.getIntOrFloatBitWidth())
+        rewriter.replaceOpWithNewOp<mlir::arith::ExtSIOp>(op, dstType, srcVal);
+      else
+        rewriter.replaceOpWithNewOp<mlir::arith::TruncIOp>(op, dstType, srcVal);
+
+      return mlir::success();
+    }
+
+    if (srcType.isFloat() && dstType.isFloat()) {
+      if (srcType.getIntOrFloatBitWidth() < dstType.getIntOrFloatBitWidth())
+        rewriter.replaceOpWithNewOp<mlir::arith::ExtFOp>(op, dstType, srcVal);
+      else
+        rewriter.replaceOpWithNewOp<mlir::arith::TruncFOp>(op, dstType, srcVal);
+
+      return mlir::success();
+    }
+
+    return mlir::failure();
   }
 };
 

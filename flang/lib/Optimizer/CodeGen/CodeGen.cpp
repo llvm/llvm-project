@@ -3523,10 +3523,10 @@ struct SelectCaseOpConversion : public fir::FIROpConversion<fir::SelectCaseOp> {
       mlir::Block *dest = caseOp.getSuccessor(t);
       std::optional<mlir::TypeConverter::SignatureConversion> conversion =
           getTypeConverter()->convertBlockSignature(dest);
-      if (!conversion) {
+      if (!conversion)
         return rewriter.notifyMatchFailure(caseOp,
                                            "could not compute block signature");
-      }
+
       dest = rewriter.applySignatureConversion(dest, *conversion);
       std::optional<mlir::ValueRange> destOps =
           caseOp.getSuccessorOperands(adaptor.getOperands(), t);
@@ -4401,10 +4401,9 @@ public:
           });
     }
 
-    if (options.LowerThroughCoreMLIR) {
+    if (options.LowerThroughCoreMLIR)
       pattern.insert<UnrealizedConversionCastOpConversion>(typeConverter,
                                                            options);
-    }
 
     // apply the patterns
     if (mlir::failed(mlir::applyFullConversion(getModule(), target,
