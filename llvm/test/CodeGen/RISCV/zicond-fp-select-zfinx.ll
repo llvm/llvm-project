@@ -476,9 +476,7 @@ define dso_local noundef float @select_i1_f32_0(i1 %cond, float %t) nounwind {
 ; RV64ZDINX_ZICOND:       # %bb.0: # %entry
 ; RV64ZDINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
 ; RV64ZDINX_ZICOND-NEXT:    andi a0, a0, 1
-; RV64ZDINX_ZICOND-NEXT:    czero.nez a2, zero, a0
 ; RV64ZDINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV64ZDINX_ZICOND-NEXT:    or a0, a0, a2
 ; RV64ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV64ZDINX_ZICOND-NEXT:    ret
 ;
@@ -496,9 +494,7 @@ define dso_local noundef float @select_i1_f32_0(i1 %cond, float %t) nounwind {
 ; RV64ZHINX_ZICOND:       # %bb.0: # %entry
 ; RV64ZHINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
 ; RV64ZHINX_ZICOND-NEXT:    andi a0, a0, 1
-; RV64ZHINX_ZICOND-NEXT:    czero.nez a2, zero, a0
 ; RV64ZHINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV64ZHINX_ZICOND-NEXT:    or a0, a0, a2
 ; RV64ZHINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV64ZHINX_ZICOND-NEXT:    ret
 ;
