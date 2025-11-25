@@ -1065,58 +1065,46 @@ enum class MatchFillResult {
   NotScalarInput,
   TypeMismatch
 };
-
-struct FillInterfaceResult {
-  MatchFillResult result = MatchFillResult::Success;
-  Type scalarType;
-  Type outputElementType;
-};
 } // namespace
 
-static FillInterfaceResult isFillInterfaceImpl(Operation *op) {
-  FillInterfaceResult fillResult = {};
+static MatchFillResult isFillInterfaceImpl(Operation *op) {
   auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
-  if (!linalgOp) {
-    fillResult.result = MatchFillResult::NotLinalgOp;
-    return fillResult;
-  }
-  if (linalgOp.getNumDpsInputs() != 1 || linalgOp.getNumDpsInits() != 1) {
-    fillResult.result = MatchFillResult::WrongNumOperands;
-    return fillResult;
-  }
+  if (!linalgOp)
+    return MatchFillResult::NotLinalgOp;
+  if (linalgOp.getNumDpsInputs() != 1 || linalgOp.getNumDpsInits() != 1)
+    return MatchFillResult::WrongNumOperands;
 
   OpOperand *value = linalgOp.getDpsInputOperand(0);
-  if (!linalgOp.isScalar(value)) {
-    fillResult.result = MatchFillResult::NotScalarInput;
-    return fillResult;
-  }
+  if (!linalgOp.isScalar(value))
+    return MatchFillResult::NotScalarInput;
 
   // Check that the scalar input type matches the output element type.
   OpOperand *output = linalgOp.getDpsInitOperand(0);
   Type scalarType = value->get().getType();
   Type outputElementType = getElementTypeOrSelf(output->get().getType());
-  if (scalarType != outputElementType) {
-    fillResult.result = MatchFillResult::TypeMismatch;
-    fillResult.scalarType = scalarType;
-    fillResult.outputElementType = outputElementType;
-    return fillResult;
-  }
+  if (scalarType != outputElementType)
+    return MatchFillResult::TypeMismatch;
 
-  return fillResult;
+  return MatchFillResult::Success;
 }
 
 LogicalResult mlir::linalg::detail::verifyFillInterface(Operation *op) {
-  auto [result, scalarType, outputElementType] = isFillInterfaceImpl(op);
-  if (result == MatchFillResult::NotLinalgOp)
+  MatchFillResult res = isFillInterfaceImpl(op);
+  if (res == MatchFillResult::NotLinalgOp)
     return op->emitError("expected a LinalgOp");
-  if (result == MatchFillResult::WrongNumOperands)
+  if (res == MatchFillResult::WrongNumOperands)
     return op->emitError("expected op with 1 input and 1 output");
-  if (result == MatchFillResult::NotScalarInput)
+  if (res == MatchFillResult::NotScalarInput)
     return op->emitError("expected op with scalar input");
-  if (result == MatchFillResult::TypeMismatch)
+  if (res == MatchFillResult::TypeMismatch) {
+    auto linalgOp = cast<linalg::LinalgOp>(op);
+    Type scalarType = linalgOp.getDpsInputOperand(0)->get().getType();
+    Type outputElementType =
+        getElementTypeOrSelf(linalgOp.getDpsInitOperand(0)->get().getType());
     return op->emitOpError("expected fill value type (")
            << scalarType << ") to match output element type ("
            << outputElementType << ")";
+  }
 
   return success();
 }
