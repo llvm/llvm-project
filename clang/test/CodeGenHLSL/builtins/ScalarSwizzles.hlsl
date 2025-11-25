@@ -259,9 +259,8 @@ bool AssignBool(bool V) {
 // CHECK-NEXT: [[B:%.*]] = load i32, ptr [[VAddr]], align 4
 // CHECK-NEXT: [[LV1:%.*]] = trunc i32 [[B]] to i1
 // CHECK-NEXT: [[D:%.*]] = zext i1 [[LV1]] to i32
-// CHECK-NEXT: [[C:%.*]] = load <2 x i32>, ptr [[X]], align 8
-// CHECK-NEXT: [[E:%.*]] = insertelement <2 x i32> [[C]], i32 [[D]], i32 1
-// CHECK-NEXT: store <2 x i32> [[E]], ptr [[X]], align 8
+// CHECK-NEXT: [[C:%.*]] = getelementptr <2 x i32>, ptr [[X]], i32 0, i32 1
+// CHECK-NEXT: store i32 [[D]], ptr [[C]], align 4
 // CHECK-NEXT: ret void
 void AssignBool2(bool V) {
   bool2 X = true.xx;
@@ -277,10 +276,13 @@ void AssignBool2(bool V) {
 // CHECK-NEXT: [[Z:%.*]] = load <2 x i32>, ptr [[VAddr]], align 8
 // CHECK-NEXT: [[LV:%.*]] = trunc <2 x i32> [[Z]] to <2 x i1>
 // CHECK-NEXT: [[B:%.*]] = zext <2 x i1> [[LV]] to <2 x i32>
-// CHECK-NEXT: [[A:%.*]] = load <2 x i32>, ptr [[X]], align 8
-// CHECK-NEXT: [[C:%.*]] = shufflevector <2 x i32> [[B]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
-// CHECK-NEXT: store <2 x i32> [[C]], ptr [[X]], align 8
+// CHECK-NEXT: [[V1:%.*]] = extractelement <2 x i32> [[B]], i32 0
+// CHECK-NEXT: store i32 [[V1]], ptr [[X]], align 4
+// CHECK-NEXT: [[V2:%.*]] = extractelement <2 x i32> [[B]], i32 1
+// CHECK-NEXT: [[X2:%.*]] = getelementptr <2 x i32>, ptr [[X]], i32 0, i32 1
+// CHECK-NEXT: store i32 [[V2]], ptr [[X2]], align 4
 // CHECK-NEXT: ret void
+
 void AssignBool3(bool2 V) {
   bool2 X = {true,true};
   X.xy = V;
@@ -313,10 +315,13 @@ bool2 AccessBools() {
 // CHECK-NEXT: [[L1:%.*]] = shufflevector <1 x i32> [[L0]], <1 x i32> poison, <3 x i32> zeroinitializer
 // CHECK-NEXT: [[TruncV:%.*]] = trunc <3 x i32> [[L1]] to <3 x i1>
 // CHECK-NEXT: [[L2:%.*]] = zext <3 x i1> [[TruncV]] to <3 x i32>
-// CHECK-NEXT: [[L3:%.*]] = load <4 x i32>, ptr [[B]], align 16
-// CHECK-NEXT: [[L4:%.*]] = shufflevector <3 x i32> [[L2]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
-// CHECK-NEXT: [[L5:%.*]] = shufflevector <4 x i32> [[L3]], <4 x i32> [[L4]], <4 x i32> <i32 4, i32 5, i32 6, i32 3>
-// CHECK-NEXT: store <4 x i32> [[L5]], ptr [[B]], align 16
+// CHECK-NEXT: [[V1:%.*]] = extractelement <3 x i32> [[L2]], i32 0
+// CHECK-NEXT: store i32 [[V1]], ptr %B, align 4
+// CHECK-NEXT: [[V2:%.*]] = extractelement <3 x i32> [[L2]], i32 1
+// CHECK-NEXT: [[B2:%.*]] = getelementptr <4 x i32>, ptr %B, i32 0, i32 1
+// CHECK-NEXT: store i32 [[V2]], ptr [[B2]], align 4
+// CHECK-NEXT: [[V3:%.*]] = extractelement <3 x i32> [[L2]], i32 2
+// CHECK-NEXT: [[B3:%.*]] = getelementptr <4 x i32>, ptr %B, i32 0, i32 2
 void BoolSizeMismatch() {
   bool4 B = {true,true,true,true};
   B.xyz = false.xxx;
