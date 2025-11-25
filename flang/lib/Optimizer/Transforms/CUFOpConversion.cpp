@@ -331,6 +331,11 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
         std::size_t structSize = dl->getTypeSizeInBits(structTy) / 8;
         bytes = builder.createIntegerConstant(loc, builder.getIndexType(),
                                               structSize);
+      } else if (fir::isa_char(op.getInType())) {
+        mlir::Type charTy = typeConverter->convertType(op.getInType());
+        std::size_t charSize = dl->getTypeSizeInBits(charTy) / 8;
+        bytes = builder.createIntegerConstant(loc, builder.getIndexType(),
+                                              charSize);
       } else {
         mlir::emitError(loc, "unsupported type in cuf.alloc\n");
       }
