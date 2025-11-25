@@ -368,6 +368,7 @@ def MEMCMP : RuntimeLibcall;
 def MEMCPY : RuntimeLibcall;
 def MEMMOVE : RuntimeLibcall;
 def MEMSET : RuntimeLibcall;
+def MEMCHR : RuntimeLibcall;
 def CALLOC : RuntimeLibcall;
 def BZERO : RuntimeLibcall;
 def STRLEN : RuntimeLibcall;
@@ -1050,6 +1051,7 @@ def fesetmode : RuntimeLibcallImpl<FESETMODE>;
 def memcpy : RuntimeLibcallImpl<MEMCPY>;
 def memmove : RuntimeLibcallImpl<MEMMOVE>;
 def memset : RuntimeLibcallImpl<MEMSET>;
+def memchr : RuntimeLibcallImpl<MEMCHR>;
 
 // DSEPass can emit calloc if it finds a pair of malloc/memset
 def calloc : RuntimeLibcallImpl<CALLOC>;
