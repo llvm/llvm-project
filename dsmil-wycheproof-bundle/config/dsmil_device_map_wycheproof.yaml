@@ -1,0 +1,43 @@
+# DSMIL Device Map Slice – Wycheproof Subsystem
+
+version: 1
+scope: "crypto_assurance"
+
+devices:
+  - id: 15
+    layer: 3
+    name: "CRYPTO"
+    role: "Wycheproof Execution Engine"
+    services:
+      - "wycheproof_campaign_runner"
+      - "extended_vector_executor"
+
+  - id: 46
+    layer: 7
+    name: "Quantum Integration"
+    role: "Quantum/QAOA-based test vector generator"
+    services:
+      - "quantum_vector_search"
+      - "qubo_problem_solver"
+
+  - id: 47
+    layer: 7
+    name: "Advanced AI/ML"
+    role: "Failure clustering, pattern mining, test family suggestion"
+    services:
+      - "result_clusterer"
+      - "assurance_reporter"
+
+  - id: 52
+    layer: 8
+    name: "Security Correlator"
+    role: "Fuse Wycheproof anomalies with live security context"
+    services:
+      - "crypto_anomaly_correlator"
+
+  - id: 59
+    layer: 9
+    name: "Executive Command"
+    role: "Crypto posture dashboard"
+    services:
+      - "crypto_assurance_briefings"

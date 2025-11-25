@@ -1,0 +1,90 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: CryptoTestResult
+type: object
+
+properties:
+  campaign_id:
+    type: string
+  result_id:
+    type: string
+  lib_id:
+    type: string
+  lib_version:
+    type: string
+  lib_build_id:
+    type: string
+  primitive:
+    type: string
+  primitive_class:
+    type: string
+  operation:
+    type: string
+  test_vector_id:
+    type: string
+  vector_origin:
+    type: string
+    enum: [ "stock_wycheproof", "ai_extended", "quantum_extended", "manual", "fuzz" ]
+  status:
+    type: string
+    enum: [ "pass", "fail", "error", "unsupported", "flaky" ]
+  expected_status:
+    type: string
+    enum: [ "pass", "fail" ]
+  verdict:
+    type: string
+    enum: [ "ok", "regression", "suspect_impl_bug", "suspect_sidechannel", "invalid_vector" ]
+  error_class:
+    type: [ "string", "null" ]
+  error_message:
+    type: [ "string", "null" ]
+  mismatch_detail:
+    type: [ "object", "null" ]
+    properties:
+      field:
+        type: [ "string", "null" ]
+      expected_hex:
+        type: [ "string", "null" ]
+      actual_hex:
+        type: [ "string", "null" ]
+  metrics:
+    type: object
+    properties:
+      wall_time_ns: { type: [ "integer", "null" ] }
+      cpu_cycles:   { type: [ "integer", "null" ] }
+      instructions: { type: [ "integer", "null" ] }
+      cache_misses: { type: [ "integer", "null" ] }
+      branch_mispredictions: { type: [ "integer", "null" ] }
+      max_rss_bytes: { type: [ "integer", "null" ] }
+  compiler:
+    type: object
+    properties:
+      name: { type: string }
+      version: { type: string }
+      flags:
+        type: array
+        items: { type: string }
+  hardware_profile:
+    type: object
+    properties:
+      layer: { type: integer }
+      device_id: { type: integer }
+      hw_features:
+        type: array
+        items: { type: string }
+  timestamp:
+    type: string
+    format: date-time
+
+required:
+  - campaign_id
+  - result_id
+  - lib_id
+  - lib_version
+  - primitive
+  - operation
+  - test_vector_id
+  - vector_origin
+  - status
+  - expected_status
+  - verdict
+  - timestamp

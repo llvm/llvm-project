@@ -1,0 +1,86 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: CryptoTestVectorClassical
+type: object
+
+properties:
+  vector_id:
+    type: string
+  suite_id:
+    type: string
+  version:
+    type: string
+  description:
+    type: string
+  primitive:
+    type: object
+    properties:
+      class:
+        type: string
+        enum: [ "aead", "block_cipher", "stream_cipher", "signature", "kex", "mac", "hash", "rng" ]
+      name:
+        type: string
+      variant:
+        type: [ "string", "null" ]
+      operation:
+        type: string
+      security_level:
+        type: [ "string", "null" ]
+  origin:
+    type: object
+    properties:
+      type:
+        type: string
+        enum: [ "stock_wycheproof", "ai_generated", "quantum_generated", "manual", "fuzz" ]
+      source_suite:
+        type: [ "string", "null" ]
+      device_id:
+        type: [ "integer", "null" ]
+      generation_seed:
+        type: [ "string", "null" ]
+      fitness_score:
+        type: [ "number", "null" ]
+  inputs:
+    type: object
+    properties:
+      key_hex: { type: [ "string", "null" ] }
+      iv_hex: { type: [ "string", "null" ] }
+      nonce_hex: { type: [ "string", "null" ] }
+      aad_hex: { type: [ "string", "null" ] }
+      plaintext_hex: { type: [ "string", "null" ] }
+      ciphertext_hex: { type: [ "string", "null" ] }
+      tag_hex: { type: [ "string", "null" ] }
+      message_hex: { type: [ "string", "null" ] }
+      public_key_der_hex: { type: [ "string", "null" ] }
+      private_key_der_hex: { type: [ "string", "null" ] }
+  expected:
+    type: object
+    properties:
+      valid:
+        type: boolean
+      should_pass_reason:
+        type: [ "string", "null" ]
+      should_fail_reason:
+        type: [ "string", "null" ]
+      acceptable_ambiguity:
+        type: [ "boolean", "null" ]
+      spec_reference:
+        type: [ "string", "null" ]
+  edge_profile:
+    type: object
+    properties:
+      category:
+        type: [ "string", "null" ]
+      near_subgroup_boundary:
+        type: [ "boolean", "null" ]
+      near_modulus_boundary:
+        type: [ "boolean", "null" ]
+      encoding_weirdness:
+        type: [ "object", "null" ]
+
+required:
+  - vector_id
+  - suite_id
+  - version
+  - primitive
+  - origin
+  - expected

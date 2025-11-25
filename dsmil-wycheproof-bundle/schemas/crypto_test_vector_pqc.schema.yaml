@@ -1,0 +1,74 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: CryptoTestVectorPQC
+type: object
+
+properties:
+  vector_id:
+    type: string
+  suite_id:
+    type: string
+  version:
+    type: string
+  description:
+    type: string
+  primitive:
+    type: object
+    properties:
+      class:
+        type: string
+        enum: [ "pqc_kem", "pqc_sig" ]
+      name:
+        type: string
+      variant:
+        type: [ "string", "null" ]
+      operation:
+        type: string
+      security_level:
+        type: [ "string", "null" ]
+  origin:
+    type: object
+    properties:
+      type:
+        type: string
+        enum: [ "stock_pqc", "ai_generated", "quantum_generated", "manual", "fuzz" ]
+      source_suite:
+        type: [ "string", "null" ]
+      device_id:
+        type: [ "integer", "null" ]
+      generation_seed:
+        type: [ "string", "null" ]
+      fitness_score:
+        type: [ "number", "null" ]
+  key_material:
+    type: object
+    properties:
+      pk_hex: { type: [ "string", "null" ] }
+      sk_hex: { type: [ "string", "null" ] }
+      seed_hex: { type: [ "string", "null" ] }
+      malformed: { type: [ "boolean", "null" ] }
+      malformed_reason: { type: [ "string", "null" ] }
+  artifact:
+    type: object
+    properties:
+      ciphertext_hex: { type: [ "string", "null" ] }
+      signature_hex: { type: [ "string", "null" ] }
+      message_hex: { type: [ "string", "null" ] }
+      compression_profile: { type: [ "string", "null" ] }
+      malformed: { type: [ "boolean", "null" ] }
+      malformed_reason: { type: [ "string", "null" ] }
+  expected:
+    type: object
+    properties:
+      valid: { type: [ "boolean", "null" ] }
+      expected_decapsulates: { type: [ "boolean", "null" ] }
+      expected_verifies: { type: [ "boolean", "null" ] }
+      failure_mode: { type: [ "string", "null" ] }
+      spec_reference: { type: [ "string", "null" ] }
+
+required:
+  - vector_id
+  - suite_id
+  - version
+  - primitive
+  - origin
+  - expected

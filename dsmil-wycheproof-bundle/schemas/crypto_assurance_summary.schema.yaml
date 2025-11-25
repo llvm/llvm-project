@@ -1,0 +1,62 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: CryptoAssuranceSummary
+type: object
+
+properties:
+  lib_id:
+    type: string
+  lib_version:
+    type: string
+  build_id:
+    type: string
+  tested_primitives:
+    type: array
+    items:
+      type: object
+      properties:
+        primitive:
+          type: string
+        coverage:
+          type: object
+          properties:
+            stock_vectors: { type: [ "integer", "null" ] }
+            extended_vectors: { type: [ "integer", "null" ] }
+            pqc_vectors: { type: [ "integer", "null" ] }
+        outcomes:
+          type: object
+          properties:
+            passed: { type: [ "integer", "null" ] }
+            failed: { type: [ "integer", "null" ] }
+            errors: { type: [ "integer", "null" ] }
+        risk_rating:
+          type: string
+          enum: [ "green", "amber", "red" ]
+        notable_findings:
+          type: array
+          items: { type: string }
+  environment:
+    type: object
+    properties:
+      layers_involved:
+        type: array
+        items: { type: integer }
+      devices_involved:
+        type: array
+        items: { type: integer }
+  overall_risk:
+    type: string
+    enum: [ "green", "amber", "red" ]
+  recommendations:
+    type: array
+    items: { type: string }
+  last_updated:
+    type: string
+    format: date-time
+
+required:
+  - lib_id
+  - lib_version
+  - build_id
+  - tested_primitives
+  - overall_risk
+  - last_updated

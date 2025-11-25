@@ -1,0 +1,36 @@
+# DBE Message Types – Crypto Subsystem Slice
+
+version: 1
+namespace: dsmil.crypto
+
+message_types:
+  - name: CRYPTO_TEST_REQ
+    description: "Request to run a Wycheproof campaign on Device 15 (CRYPTO)."
+    producers: [ "L4_ENGINEERING", "L7_ROUTER" ]
+    consumers: [ "DEVICE_15" ]
+    payload_schema: "CryptoTestRequest"
+    fields:
+      - { name: campaign_id, type: string, required: true }
+      - { name: lib_id, type: string, required: true }
+      - { name: lib_version, type: string, required: true }
+      - { name: primitives, type: "string[]", required: true }
+      - { name: test_suites, type: "string[]", required: true }
+      - { name: options, type: "map<string,any>", required: false }
+
+  - name: CRYPTO_TEST_RESULT
+    description: "Batched results from Wycheproof executions."
+    producers: [ "DEVICE_15" ]
+    consumers: [ "DEVICE_47", "L8_SECURITY", "EXERCISE_RECORDER" ]
+    payload_schema: "crypto_test_result.schema.yaml"
+
+  - name: CRYPTO_TEST_VECTOR_EXT
+    description: "Extended test vectors (AI/Quantum/manual)."
+    producers: [ "DEVICE_46", "DEVICE_47", "ENGINEERING" ]
+    consumers: [ "DEVICE_15" ]
+    payload_schema: "crypto_test_vector_classical.schema.yaml | crypto_test_vector_pqc.schema.yaml"
+
+  - name: CRYPTO_ASSURANCE_SUMMARY
+    description: "Aggregated crypto posture summary sent to Layer 9."
+    producers: [ "DEVICE_47", "L8_SECURITY" ]
+    consumers: [ "DEVICE_59", "DEVICE_60" ]
+    payload_schema: "crypto_assurance_summary.schema.yaml"
