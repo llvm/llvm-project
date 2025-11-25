@@ -35,7 +35,7 @@ template <typename ObjectType> class PerThread {
   }
 
 public:
-  // define default constructors, disable copy and move constructors
+  // Define default constructors, disable copy and move constructors.
   PerThread() = default;
   PerThread(const PerThread &) = delete;
   PerThread(PerThread &&) = delete;
@@ -153,7 +153,7 @@ protected:
   }
 
 public:
-  // define default constructors, disable copy and move constructors
+  // define default constructors, disable copy and move constructors.
   PerThreadTable() = default;
   PerThreadTable(const PerThreadTable &) = delete;
   PerThreadTable(PerThreadTable &&) = delete;
@@ -182,7 +182,7 @@ public:
   size_t size() { return getThreadSize(); }
 
   // Iterators to traverse objects owned by
-  // the current thread
+  // the current thread.
   iterator begin() {
     ContainerType &Entry = getThreadEntry();
     return Entry.begin();
@@ -245,18 +245,18 @@ class PerThreadContainer
   using ObjectType = typename ContainerConcepts<ContainerType>::value_type;
 
 public:
-  // Get the object for the given index in the current thread
+  // Get the object for the given index in the current thread.
   ObjectType &get(IndexType Index) {
     ContainerType &Entry = this->getThreadEntry();
 
-    // specialized code for vector-like containers
+    // Specialized code for vector-like containers.
     if constexpr (ContainerConcepts<ContainerType>::hasResize) {
       if (Index >= Entry.size()) {
         if constexpr (ContainerConcepts<ContainerType>::hasReserve &&
                       ReserveSize > 0)
           Entry.reserve(ReserveSize);
 
-        // If the index is out of bounds, try resize the container
+        // If the index is out of bounds, try resize the container.
         Entry.resize(Index + 1);
       }
     }
