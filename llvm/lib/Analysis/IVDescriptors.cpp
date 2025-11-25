@@ -270,10 +270,12 @@ bool RecurrenceDescriptor::AddReductionVar(
   // resulting from the type promotion performed by InstCombine.  Vector
   // operations are not limited to the legal integer widths, so we may be able
   // to evaluate the reduction in the narrower width.
-  if (RecurrenceType->isFloatingPointTy()) {
+  // Check the scalar type to handle both scalar and vector types.
+  Type *ScalarTy = RecurrenceType->getScalarType();
+  if (ScalarTy->isFloatingPointTy()) {
     if (!isFloatingPointRecurrenceKind(Kind))
       return false;
-  } else if (RecurrenceType->isIntegerTy()) {
+  } else if (ScalarTy->isIntegerTy()) {
     if (!isIntegerRecurrenceKind(Kind))
       return false;
     if (!isMinMaxRecurrenceKind(Kind))
@@ -1220,11 +1222,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::Add;
   case RecurKind::Mul:
     return Instruction::Mul;
-  case RecurKind::AnyOf:
-  case RecurKind::FindFirstIVSMin:
-  case RecurKind::FindFirstIVUMin:
-  case RecurKind::FindLastIVSMax:
-  case RecurKind::FindLastIVUMax:
   case RecurKind::Or:
     return Instruction::Or;
   case RecurKind::And:
@@ -1248,6 +1245,13 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMaximumNum:
   case RecurKind::FMinimumNum:
     return Instruction::FCmp;
+  case RecurKind::AnyOf:
+  case RecurKind::FindFirstIVSMin:
+  case RecurKind::FindFirstIVUMin:
+  case RecurKind::FindLastIVSMax:
+  case RecurKind::FindLastIVUMax:
+    // TODO: Set AnyOf and FindIV to Instruction::Select once in-loop reductions
+    // are supported.
   default:
     llvm_unreachable("Unknown recurrence operation");
   }

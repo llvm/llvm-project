@@ -15,6 +15,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXISelDAGToDAG.h"
+#include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
@@ -513,7 +514,7 @@ VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
 // NVPTXTargetLowering Constructor.
 NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                          const NVPTXSubtarget &STI)
-    : TargetLowering(TM), nvTM(&TM), STI(STI), GlobalUniqueCallSite(0) {
+    : TargetLowering(TM, STI), nvTM(&TM), STI(STI), GlobalUniqueCallSite(0) {
   // always lower memset, memcpy, and memmove intrinsics to load/store
   // instructions, rather
   // then generating calls to memset, mempcy or memmove.
@@ -711,8 +712,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction({ISD::ROTL, ISD::ROTR, ISD::FSHL, ISD::FSHR}, MVT::i64,
                        Custom);
   }
-
-  setOperationAction(ISD::BSWAP, MVT::i16, Expand);
 
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
   setOperationAction(ISD::BRIND, MVT::Other, Expand);
@@ -1105,97 +1104,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   //   * MVT::Other - internal.addrspace.wrap
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::i32, MVT::i128, MVT::v4f32, MVT::Other}, Custom);
-}
 
-const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
-
-#define MAKE_CASE(V)                                                           \
-  case V:                                                                      \
-    return #V;
-
-  switch ((NVPTXISD::NodeType)Opcode) {
-  case NVPTXISD::FIRST_NUMBER:
-    break;
-
-    MAKE_CASE(NVPTXISD::ATOMIC_CMP_SWAP_B128)
-    MAKE_CASE(NVPTXISD::ATOMIC_SWAP_B128)
-    MAKE_CASE(NVPTXISD::RET_GLUE)
-    MAKE_CASE(NVPTXISD::DeclareArrayParam)
-    MAKE_CASE(NVPTXISD::DeclareScalarParam)
-    MAKE_CASE(NVPTXISD::CALL)
-    MAKE_CASE(NVPTXISD::MoveParam)
-    MAKE_CASE(NVPTXISD::UNPACK_VECTOR)
-    MAKE_CASE(NVPTXISD::BUILD_VECTOR)
-    MAKE_CASE(NVPTXISD::CallPrototype)
-    MAKE_CASE(NVPTXISD::ProxyReg)
-    MAKE_CASE(NVPTXISD::LoadV2)
-    MAKE_CASE(NVPTXISD::LoadV4)
-    MAKE_CASE(NVPTXISD::LoadV8)
-    MAKE_CASE(NVPTXISD::LDUV2)
-    MAKE_CASE(NVPTXISD::LDUV4)
-    MAKE_CASE(NVPTXISD::StoreV2)
-    MAKE_CASE(NVPTXISD::StoreV4)
-    MAKE_CASE(NVPTXISD::StoreV8)
-    MAKE_CASE(NVPTXISD::FSHL_CLAMP)
-    MAKE_CASE(NVPTXISD::FSHR_CLAMP)
-    MAKE_CASE(NVPTXISD::BFI)
-    MAKE_CASE(NVPTXISD::PRMT)
-    MAKE_CASE(NVPTXISD::FCOPYSIGN)
-    MAKE_CASE(NVPTXISD::FMAXNUM3)
-    MAKE_CASE(NVPTXISD::FMINNUM3)
-    MAKE_CASE(NVPTXISD::FMAXIMUM3)
-    MAKE_CASE(NVPTXISD::FMINIMUM3)
-    MAKE_CASE(NVPTXISD::DYNAMIC_STACKALLOC)
-    MAKE_CASE(NVPTXISD::STACKRESTORE)
-    MAKE_CASE(NVPTXISD::STACKSAVE)
-    MAKE_CASE(NVPTXISD::SETP_F16X2)
-    MAKE_CASE(NVPTXISD::SETP_BF16X2)
-    MAKE_CASE(NVPTXISD::MUL_WIDE_SIGNED)
-    MAKE_CASE(NVPTXISD::MUL_WIDE_UNSIGNED)
-    MAKE_CASE(NVPTXISD::BrxEnd)
-    MAKE_CASE(NVPTXISD::BrxItem)
-    MAKE_CASE(NVPTXISD::BrxStart)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
-    MAKE_CASE(
-        NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
-    MAKE_CASE(
-        NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(
-        NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
-    MAKE_CASE(
-        NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
-    MAKE_CASE(NVPTXISD::CVT_E4M3X4_F32X4_RS_SF)
-    MAKE_CASE(NVPTXISD::CVT_E5M2X4_F32X4_RS_SF)
-    MAKE_CASE(NVPTXISD::CVT_E2M3X4_F32X4_RS_SF)
-    MAKE_CASE(NVPTXISD::CVT_E3M2X4_F32X4_RS_SF)
-    MAKE_CASE(NVPTXISD::CVT_E2M1X4_F32X4_RS_SF)
-  }
-  return nullptr;
-
-#undef MAKE_CASE
+  // Custom lowering for bswap
+  setOperationAction(ISD::BSWAP, {MVT::i16, MVT::i32, MVT::i64, MVT::v2i16},
+                     Custom);
 }
 
 TargetLoweringBase::LegalizeTypeAction
@@ -2032,7 +1944,7 @@ static ISD::NodeType getScalarOpcodeForReduction(unsigned ReductionOpcode) {
 }
 
 /// Get 3-input scalar reduction opcode
-static std::optional<NVPTXISD::NodeType>
+static std::optional<unsigned>
 getScalar3OpcodeForReduction(unsigned ReductionOpcode) {
   switch (ReductionOpcode) {
   case ISD::VECREDUCE_FMAX:
@@ -2660,6 +2572,44 @@ static SDValue lowerTcgen05St(SDValue Op, SelectionDAG &DAG) {
   return Tcgen05StNode;
 }
 
+static SDValue lowerBSWAP(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT VT = Op.getValueType();
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::i16: {
+    SDValue Extended = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Src);
+    SDValue Swapped =
+        getPRMT(Extended, DAG.getConstant(0, DL, MVT::i32), 0x7701, DL, DAG);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Swapped);
+  }
+  case MVT::i32: {
+    return getPRMT(Src, DAG.getConstant(0, DL, MVT::i32), 0x0123, DL, DAG);
+  }
+  case MVT::v2i16: {
+    SDValue Converted = DAG.getBitcast(MVT::i32, Src);
+    SDValue Swapped =
+        getPRMT(Converted, DAG.getConstant(0, DL, MVT::i32), 0x2301, DL, DAG);
+    return DAG.getNode(ISD::BITCAST, DL, MVT::v2i16, Swapped);
+  }
+  case MVT::i64: {
+    SDValue UnpackSrc =
+        DAG.getNode(NVPTXISD::UNPACK_VECTOR, DL, {MVT::i32, MVT::i32}, Src);
+    SDValue SwappedLow =
+        getPRMT(UnpackSrc.getValue(0), DAG.getConstant(0, DL, MVT::i32), 0x0123,
+                DL, DAG);
+    SDValue SwappedHigh =
+        getPRMT(UnpackSrc.getValue(1), DAG.getConstant(0, DL, MVT::i32), 0x0123,
+                DL, DAG);
+    return DAG.getNode(NVPTXISD::BUILD_VECTOR, DL, MVT::i64,
+                       {SwappedHigh, SwappedLow});
+  }
+  default:
+    llvm_unreachable("unsupported type for bswap");
+  }
+}
+
 static unsigned getTcgen05MMADisableOutputLane(unsigned IID) {
   switch (IID) {
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
@@ -2931,7 +2881,7 @@ static SDValue lowerCvtRSIntrinsics(SDValue Op, SelectionDAG &DAG) {
   using NVPTX::PTXCvtMode::CvtMode;
 
   auto [OpCode, RetTy, CvtModeFlag] =
-      [&]() -> std::tuple<NVPTXISD::NodeType, MVT::SimpleValueType, uint32_t> {
+      [&]() -> std::tuple<unsigned, MVT::SimpleValueType, uint32_t> {
     switch (IntrinsicID) {
     case Intrinsic::nvvm_f32x4_to_e4m3x4_rs_relu_satfinite:
       return {NVPTXISD::CVT_E4M3X4_F32X4_RS_SF, MVT::v4i8,
@@ -3283,7 +3233,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerCTLZCTPOP(Op, DAG);
   case ISD::FREM:
     return lowerFREM(Op, DAG);
-
+  case ISD::BSWAP:
+    return lowerBSWAP(Op, DAG);
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
@@ -3314,7 +3265,7 @@ SDValue NVPTXTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
   // Generate BrxEnd nodes
   SDValue EndOps[] = {Chain.getValue(0), DAG.getBasicBlock(MBBs.back()), Index,
                       IdV, Chain.getValue(1)};
-  SDValue BrxEnd = DAG.getNode(NVPTXISD::BrxEnd, DL, VTs, EndOps);
+  SDValue BrxEnd = DAG.getNode(NVPTXISD::BrxEnd, DL, MVT::Other, EndOps);
 
   return BrxEnd;
 }
@@ -5457,7 +5408,7 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   SDLoc DL(LD);
 
   // the new opcode after we double the number of operands
-  NVPTXISD::NodeType Opcode;
+  unsigned Opcode;
   SmallVector<SDValue> Operands(LD->ops());
   unsigned OldNumOutputs; // non-glue, non-chain outputs
   switch (LD->getOpcode()) {
@@ -5540,7 +5491,7 @@ static SDValue combinePackingMovIntoStore(SDNode *N,
   auto *ST = cast<MemSDNode>(N);
 
   // The new opcode after we double the number of operands.
-  NVPTXISD::NodeType Opcode;
+  unsigned Opcode;
   switch (N->getOpcode()) {
   case ISD::STORE:
     // Any packed type is legal, so the legalizer will not have lowered
@@ -5675,7 +5626,7 @@ static SDValue PerformFADDCombine(SDNode *N,
 }
 
 /// Get 3-input version of a 2-input min/max opcode
-static NVPTXISD::NodeType getMinMax3Opcode(unsigned MinMax2Opcode) {
+static unsigned getMinMax3Opcode(unsigned MinMax2Opcode) {
   switch (MinMax2Opcode) {
   case ISD::FMAXNUM:
   case ISD::FMAXIMUMNUM:
@@ -5706,7 +5657,7 @@ static SDValue PerformFMinMaxCombine(SDNode *N,
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   unsigned MinMaxOp2 = N->getOpcode();
-  NVPTXISD::NodeType MinMaxOp3 = getMinMax3Opcode(MinMaxOp2);
+  unsigned MinMaxOp3 = getMinMax3Opcode(MinMaxOp2);
 
   if (Op0.getOpcode() == MinMaxOp2 && Op0.hasOneUse()) {
     // (maxnum (maxnum a, b), c) -> (maxnum3 a, b, c)

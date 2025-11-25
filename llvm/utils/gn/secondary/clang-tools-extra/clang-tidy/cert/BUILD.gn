@@ -14,9 +14,5 @@ static_library("cert") {
     "//clang/lib/Lex",
     "//llvm/lib/Support",
   ]
-  sources = [
-    "CERTTidyModule.cpp",
-    "LimitedRandomnessCheck.cpp",
-    "ProperlySeededRandomGeneratorCheck.cpp",
-  ]
+  sources = [ "CERTTidyModule.cpp" ]
 }

@@ -69,7 +69,6 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::safestack;

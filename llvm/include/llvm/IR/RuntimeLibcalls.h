@@ -23,6 +23,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/SystemLibraries.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -83,16 +84,8 @@ public:
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::None,
       FloatABI::ABIType FloatABI = FloatABI::Default,
-      EABI EABIVersion = EABI::Default, StringRef ABIName = "") {
-    // FIXME: The ExceptionModel parameter is to handle the field in
-    // TargetOptions. This interface fails to distinguish the forced disable
-    // case for targets which support exceptions by default. This should
-    // probably be a module flag and removed from TargetOptions.
-    if (ExceptionModel == ExceptionHandling::None)
-      ExceptionModel = TT.getDefaultExceptionHandling();
-
-    initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
-  }
+      EABI EABIVersion = EABI::Default, StringRef ABIName = "",
+      VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
   explicit RuntimeLibcallsInfo(const Module &M);
 
@@ -169,6 +162,10 @@ public:
   std::pair<FunctionType *, AttributeList>
   getFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
                 RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// Returns true if the function has a vector mask argument, which is assumed
+  /// to be the last argument.
+  static bool hasVectorMaskArgument(RTLIB::LibcallImpl Impl);
 
 private:
   LLVM_ABI static iota_range<RTLIB::LibcallImpl>

@@ -2578,6 +2578,50 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "X86VectorTransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "X86VectorTransformOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.cpp.inc": ["-gen-op-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.td",
+    deps = [
+        ":X86VectorTransformOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "X86VectorTransformOps",
+    srcs = glob(["lib/Dialect/X86Vector/TransformOps/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/X86Vector/TransformOps/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":VectorDialect",
+        ":X86VectorDialect",
+        ":X86VectorTransformOpsIncGen",
+        ":X86VectorTransforms",
+    ],
+)
+
 cc_library(
     name = "X86VectorTransforms",
     srcs = glob(["lib/Dialect/X86Vector/Transforms/*.cpp"]),
@@ -2588,6 +2632,10 @@ cc_library(
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":LinalgDialect",
+        ":LinalgInterfaces",
+        ":Pass",
+        ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
         ":X86VectorDialect",
@@ -3881,13 +3929,16 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DialectUtils",
+        ":GPUDialect",
         ":IR",
         ":SCFDialect",
+        ":SCFUtils",
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":XeGPUDialect",
         ":XeGPUTransformOpsIncGen",
         ":XeGPUUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -4232,6 +4283,7 @@ cc_library(
         ":AMDGPUToROCDL",
         ":AffineToStandard",
         ":ArithToAMDGPU",
+        ":ArithToAPFloat",
         ":ArithToArmSME",
         ":ArithToEmitC",
         ":ArithToLLVM",
@@ -8413,6 +8465,25 @@ cc_library(
 )
 
 cc_library(
+    name = "ArithToAPFloat",
+    srcs = glob(["lib/Conversion/ArithToAPFloat/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArithToAPFloat/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ArithTransforms",
+        ":ArithUtils",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":FuncDialect",
+        ":FuncUtils",
+        ":IR",
+        ":Pass",
+        ":TransformUtils",
+    ],
+)
+
+cc_library(
     name = "ArithToArmSME",
     srcs = glob([
         "lib/Conversion/ArithToArmSME/*.cpp",
@@ -9548,6 +9619,7 @@ cc_library(
         ":UBToLLVM",
         ":VectorToLLVM",
         ":VectorTransformOps",
+        ":X86VectorTransformOps",
         ":XeGPUTransformOps",
         ":XeVMToLLVM",
         ":XeVMToLLVMIRTranslation",
@@ -9771,6 +9843,29 @@ cc_binary(
     deps = [":mlir_float16_utils"],
 )
 
+cc_library(
+    name = "_mlir_apfloat_utils",
+    srcs = ["lib/ExecutionEngine/APFloatWrappers.cpp"],
+    defines = ["mlir_apfloat_wrappers_EXPORTS"],
+    includes = ["include"],
+    deps = [
+        "//llvm:Support",
+    ],
+)
+
+# Indirection to avoid 'libmlir_apfloat_utils.so' filename clash.
+alias(
+    name = "mlir_apfloat_utils",
+    actual = "_mlir_apfloat_utils",
+)
+
+cc_binary(
+    name = "libmlir_apfloat_utils.so",
+    linkshared = True,
+    linkstatic = False,
+    deps = [":mlir_apfloat_utils"],
+)
+
 # Unlike mlir_float16_utils, mlir_c_runner_utils, etc, we do *not* make
 # this a shared library: because on the CMake side, doing so causes issues
 # when building on Windows.  In particular, various functions take/return
@@ -9814,6 +9909,7 @@ cc_library(
     deps = [
         ":SparseTensorEnums",
         ":SparseTensorRuntime",
+        ":mlir_apfloat_utils",
         ":mlir_float16_utils",
         "//llvm:Support",
     ],
@@ -10271,6 +10367,8 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":FunctionInterfaces",
+        ":IR",
         ":OpenACCDialect",
         ":OpenACCOpsIncGen",
         ":OpenACCPassIncGen",
@@ -10278,6 +10376,7 @@ cc_library(
         ":Support",
         ":ViewLikeInterface",
         "//llvm:Support",
+        "//llvm:ir_headers",
     ],
 )
 
@@ -13058,6 +13157,7 @@ cc_library(
         ":RuntimeVerifiableOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",

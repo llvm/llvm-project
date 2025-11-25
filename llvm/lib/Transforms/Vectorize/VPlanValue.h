@@ -150,6 +150,13 @@ public:
 
   bool hasOneUse() const { return getNumUsers() == 1; }
 
+  /// Return the single user of this value, or nullptr if there is not exactly
+  /// one user.
+  VPUser *getSingleUser() { return hasOneUse() ? *user_begin() : nullptr; }
+  const VPUser *getSingleUser() const {
+    return hasOneUse() ? *user_begin() : nullptr;
+  }
+
   void replaceAllUsesWith(VPValue *New);
 
   /// Go through the uses list for this VPValue and make each use point to \p
@@ -192,7 +199,8 @@ public:
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
 typedef DenseMap<VPValue *, Value *> VPValue2ValueTy;
 
-raw_ostream &operator<<(raw_ostream &OS, const VPRecipeBase &R);
+LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
+                                          const VPRecipeBase &R);
 
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
@@ -430,7 +438,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump the VPDef to stderr (for debugging).
-  void dump() const;
+  LLVM_ABI_FOR_TEST void dump() const;
 
   /// Each concrete VPDef prints itself.
   virtual void print(raw_ostream &O, const Twine &Indent,

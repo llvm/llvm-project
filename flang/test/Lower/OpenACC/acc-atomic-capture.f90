@@ -36,7 +36,7 @@ program acc_atomic_capture_test
 !CHECK: }
 
     !$acc atomic capture
-        y = x * y 
+        y = x * y
         x = y
     !$acc end atomic
 
@@ -53,8 +53,8 @@ program acc_atomic_capture_test
 
     !$acc atomic capture
         x = y
-        y = 2 * 10 + (8 - x) 
-    !$acc end atomic 
+        y = 2 * 10 + (8 - x)
+    !$acc end atomic
 end program
 
 
@@ -123,8 +123,8 @@ end subroutine
 ! CHECK: }
 
 subroutine capture_with_convert_i32_to_f64()
-  real(8) :: x 
-  integer :: v, u 
+  real(8) :: x
+  integer :: v, u
   x = 1.0
   v = 0
   u = 1
