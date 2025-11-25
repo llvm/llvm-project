@@ -909,8 +909,10 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
     LiveIntervals *LIS) const {
-  assert(MI.getOpcode() == RISCV::PseudoCCMOVGPR &&
-         "Unknown select instruction");
+  // For now, only handle RISCV::PseudoCCMOVGPR.
+  if (MI.getOpcode() != RISCV::PseudoCCMOVGPR)
+    return nullptr;
+
   if (!STI.hasShortForwardBranchILoad() ||
       (LoadMI.getOpcode() != RISCV::LB && LoadMI.getOpcode() != RISCV::LBU &&
        LoadMI.getOpcode() != RISCV::LH && LoadMI.getOpcode() != RISCV::LHU &&
