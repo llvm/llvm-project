@@ -26,6 +26,7 @@ add_clang_library(clangFrontend
   CompileJobCacheResult.cpp
   CompilerInstance.cpp
   CompilerInvocation.cpp
+  CreateInvocationFromCommandLine.cpp
   DependencyFile.cpp
   DependencyGraph.cpp
   DiagnosticRenderer.cpp
@@ -45,7 +46,6 @@ add_clang_library(clangFrontend
   SARIFDiagnosticPrinter.cpp
   SerializedDiagnosticPrinter.cpp
   SerializedDiagnosticReader.cpp
-  StandaloneDiagnostic.cpp
   TestModuleFileExtension.cpp
   TextDiagnostic.cpp
   TextDiagnosticBuffer.cpp
@@ -61,6 +61,7 @@ add_clang_library(clangFrontend
   clangAPINotes
   clangAST
   clangBasic
+  clangDriver
   clangOptions
   clangEdit
   clangLex
