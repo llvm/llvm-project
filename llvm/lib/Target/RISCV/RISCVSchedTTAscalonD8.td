@@ -486,12 +486,12 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
   }
 }
 
-// VLD*R is LMUL aware
+// VLD*R is not LMUL aware
 def : WriteRes<WriteVLD1R,  [AscalonLS]>;
 def : WriteRes<WriteVLD2R,  [AscalonLS]>;
 def : WriteRes<WriteVLD4R,  [AscalonLS]>;
 def : WriteRes<WriteVLD8R,  [AscalonLS]>;
-// VST*R is LMUL aware
+// VST*R is not LMUL aware
 def : WriteRes<WriteVST1R,   [AscalonLS]>;
 def : WriteRes<WriteVST2R,   [AscalonLS]>;
 def : WriteRes<WriteVST4R,   [AscalonLS]>;
@@ -881,7 +881,7 @@ foreach mx = SchedMxList in {
   }
 }
 
-// Whole vector register move, vmv<N>.v, LMUL aware
+// Whole vector register move, vmv<N>.v, not LMUL aware
 let Latency = 1, ReleaseAtCycles = [1] in
   def : WriteRes<WriteVMov1V,     [AscalonV]>;
 let Latency = 2, ReleaseAtCycles = [2] in
