@@ -855,7 +855,7 @@ public:
       OS << "AVLVLMAX";
       break;
     }
-    if (State != Uninitialized && State != Unknown) {
+    if (isValid() && !isUnknown()) {
       OS << ", ";
 
       unsigned LMul;
