@@ -11,7 +11,7 @@
 #
 #   $vgpr1 = SI_SPILL_S32_TO_VGPR $sgpr5, 1, killed $vgpr1(tied-def 0), implicit $sgpr4_sgpr5
 #
-# The SI_SPILL_S32_TO_VGPR will be converted in postrapesudos to:
+# The SI_SPILL_S32_TO_VGPR will be converted in postrapseudos to:
 #
 #   $vgpr1 = V_WRITELANE_B32 undef $sgpr5, 1, killed $vgpr1(tied-def 0)
 #
@@ -21,122 +21,12 @@
 # GCN-LABEL: name: bitcast_v32i16_to_v64i8_scalar
 ---
 name:            bitcast_v32i16_to_v64i8_scalar
-alignment:       1
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-failedISel:      false
 tracksRegLiveness: true
-hasWinCFI:       false
-noPhis:          true
-isSSA:           false
-noVRegs:         true
-hasFakeUses:     false
-callsEHReturn:   false
-callsUnwindInit: false
-hasEHContTarget: false
-hasEHScopes:     false
-hasEHFunclets:   false
-isOutlined:      false
-debugInstrRef:   false
-failsVerification: false
-tracksDebugUserValues: true
-registers:       []
-liveins:         []
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    4
-  adjustsStack:    false
-  hasCalls:        false
-  stackProtector:  ''
-  functionContext: ''
-  maxCallFrameSize: 4294967295
-  cvBytesOfCalleeSavedRegisters: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
-  hasTailCall:     false
-  isCalleeSavedInfoValid: false
-  localFrameSize:  0
-fixedStack:      []
-stack:
-  - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 1, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 2, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-entry_values:    []
-callSites:       []
-debugValueSubstitutions: []
-constants:       []
 machineFunctionInfo:
-  explicitKernArgSize: 0
-  maxKernArgAlign: 1
-  ldsSize:         0
-  gdsSize:         0
-  dynLDSAlign:     1
-  isEntryFunction: false
-  isChainFunction: false
-  noSignedZerosFPMath: false
-  memoryBound:     false
-  waveLimiter:     false
-  hasSpilledSGPRs: true
-  hasSpilledVGPRs: true
-  numWaveDispatchSGPRs: 30
-  numWaveDispatchVGPRs: 20
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
-  frameOffsetReg:  '$sgpr33'
   stackPtrOffsetReg: '$sgpr32'
-  bytesInStackArgArea: 0
-  returnsVoid:     true
-  argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-    queuePtr:        { reg: '$sgpr6_sgpr7' }
-    dispatchID:      { reg: '$sgpr10_sgpr11' }
-    workGroupIDX:    { reg: '$sgpr12' }
-    workGroupIDY:    { reg: '$sgpr13' }
-    workGroupIDZ:    { reg: '$sgpr14' }
-    LDSKernelId:     { reg: '$sgpr15' }
-    implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
-    workItemIDX:     { reg: '$vgpr31', mask: 1023 }
-    workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
-    workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
-  psInputAddr:     0
-  psInputEnable:   0
-  maxMemoryClusterDWords: 8
-  mode:
-    ieee:            true
-    dx10-clamp:      true
-    fp32-input-denormals: true
-    fp32-output-denormals: true
-    fp64-fp16-input-denormals: true
-    fp64-fp16-output-denormals: true
-  highBitsOf32BitAddress: 0
-  occupancy:       3
-  spillPhysVGPRs:
-    - '$vgpr63'
   wwmReservedRegs:
-    - '$vgpr63'
     - '$vgpr62'
-  vgprForAGPRCopy: ''
-  sgprForEXECCopy: '$sgpr100_sgpr101'
-  longBranchReservedReg: ''
-  hasInitWholeWave: false
-  dynamicVGPRBlockSize: 0
-  scratchReservedForDynamicVGPRs: 0
-  numKernargPreloadSGPRs: 0
-  isWholeWaveFunction: false
 body:             |
   bb.0:
     successors: %bb.3(0x40000000), %bb.1(0x40000000)
