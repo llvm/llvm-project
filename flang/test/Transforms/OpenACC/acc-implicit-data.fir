@@ -11,7 +11,7 @@ func.func @test_fir_scalar_in_serial() {
   return
 }
 
-// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<i64>) -> !fir.ref<i64> {implicit = true, name = "scalarvar"}
+// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<i64>) recipe({{.*}}) -> !fir.ref<i64> {implicit = true, name = "scalarvar"}
 
 // -----
 
@@ -24,7 +24,7 @@ func.func @test_fir_scalar_in_parallel() {
   return
 }
 
-// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
+// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) recipe({{.*}}) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
 
 // -----
 
@@ -189,7 +189,7 @@ func.func @test_fir_scalar_in_parallel_defaultpresent() {
   return
 }
 
-// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
+// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) recipe({{.*}}) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
 
 // -----
 

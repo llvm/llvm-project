@@ -529,14 +529,14 @@ TriviallyDestructedClass* trivial_class_uar () {
   return ptr;     // expected-note {{returned here}}
 }
 
-// FIXME: No lifetime warning for this as no expire facts are generated for parameters
 const int& return_parameter(int a) { 
-  return a; 
+  return a; // expected-warning {{address of stack memory is returned later}}
+            // expected-note@-1 {{returned here}}
 }
 
-// FIXME: No lifetime warning for this as no expire facts are generated for parameters
 int* return_pointer_to_parameter(int a) {
-    return &a;
+    return &a;  // expected-warning {{address of stack memory is returned later}}
+                // expected-note@-1 {{returned here}}
 }
 
 const int& return_reference_to_parameter(int a)
@@ -788,9 +788,52 @@ const MyObj& lifetimebound_return_ref_to_local() {
                              // expected-note@-1 {{returned here}}
 }
 
-// FIXME: Fails to diagnose UAR when a reference to a by-value param escapes via the return value.
-View lifetimebound_return_of_by_value_param(MyObj stack_param) {
-  return Identity(stack_param); 
+View lifetimebound_return_by_value_param(MyObj stack_param) {
+  return Identity(stack_param); // expected-warning {{address of stack memory is returned later}}
+                                // expected-note@-1 {{returned here}}
+}
+
+View lifetimebound_return_by_value_multiple_param(int cond, MyObj a, MyObj b, MyObj c) {
+  if (cond == 1) 
+    return Identity(a); // expected-warning {{address of stack memory is returned later}}
+                        // expected-note@-1 {{returned here}}
+  if (cond == 2) 
+    return Identity(b); // expected-warning {{address of stack memory is returned later}}
+                        // expected-note@-1 {{returned here}}
+  return Identity(c); // expected-warning {{address of stack memory is returned later}}
+                      // expected-note@-1 {{returned here}}
+}
+
+template<class T>
+View lifetimebound_return_by_value_param_template(T t) {
+  return Identity(t); // expected-warning {{address of stack memory is returned later}}
+                      // expected-note@-1 {{returned here}}
+}
+void use_lifetimebound_return_by_value_param_template() { 
+  lifetimebound_return_by_value_param_template(MyObj{}); // expected-note {{in instantiation of}}
+}
+
+void lambda_uar_param() {
+  auto lambda = [](MyObj stack_param) {
+    return Identity(stack_param); // expected-warning {{address of stack memory is returned later}}
+                                  // expected-note@-1 {{returned here}}
+  };
+  lambda(MyObj{});
+}
+
+// FIXME: This should be detected. We see correct destructors but origin flow breaks somewhere.
+namespace VariadicTemplatedParamsUAR{
+
+template<typename... Args>
+View Max(Args... args [[clang::lifetimebound]]);
+
+template<typename... Args>
+View lifetimebound_return_of_variadic_param(Args... args) {
+  return Max(args...);
+}
+void test_variadic() {
+  lifetimebound_return_of_variadic_param(MyObj{1}, MyObj{2}, MyObj{3});
+}
 }
 
 // FIXME: Fails to diagnose UAF when a reference to a by-value param escapes via an out-param.

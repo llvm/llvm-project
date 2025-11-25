@@ -20822,7 +20822,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // Undo this and sink the fneg so we match more fmsub/fnmadd patterns.
     if (sd_match(N, m_FMul(m_Value(X), m_OneUse(m_FNeg(m_Value(Y))))))
       return DAG.getNode(ISD::FNEG, DL, VT,
-                         DAG.getNode(ISD::FMUL, DL, VT, X, Y));
+                         DAG.getNode(ISD::FMUL, DL, VT, X, Y, N->getFlags()),
+                         N->getFlags());
 
     // fmul X, (copysign 1.0, Y) -> fsgnjx X, Y
     SDValue N0 = N->getOperand(0);
