@@ -1032,8 +1032,6 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
   if (From == ZAState::ENTRY && To == ZAState::OFF)
     return;
 
-  [[maybe_unused]] SMEAttrs SMEFnAttrs = AFI->getSMEFnAttrs();
-
   // TODO: Avoid setting up the save buffer if there's no transition to
   // LOCAL_SAVED.
   if (From == ZAState::ENTRY) {
@@ -1049,6 +1047,7 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
     From = ZAState::ACTIVE;
   }
 
+  SMEAttrs SMEFnAttrs = AFI->getSMEFnAttrs();
   bool IsAgnosticZA = SMEFnAttrs.hasAgnosticZAInterface();
   bool HasZT0State = SMEFnAttrs.hasZT0State();
   bool HasZAState = IsAgnosticZA || SMEFnAttrs.hasZAState();
