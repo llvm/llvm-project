@@ -1471,7 +1471,7 @@ TEST_F(SymbolCollectorTest, NamelessSymbols) {
   )";
   runSymbolCollector(Header, /*Main=*/"");
   EXPECT_THAT(Symbols, UnorderedElementsAre(qName("Foo"),
-                                            qName("(anonymous struct)::a")));
+                                            qName("(unnamed struct)::a")));
 }
 
 TEST_F(SymbolCollectorTest, SymbolFormedFromRegisteredSchemeFromMacro) {
