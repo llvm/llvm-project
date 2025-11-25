@@ -1232,9 +1232,11 @@ def AMDGPU_MakeDmaBaseOp :
     AMDGPU_Op<"make_dma_base", [Pure, AttrSizedOperandSegments]>,
     Arguments<(ins
                    Arg<AnyMemRef, "buffer to read from">:$src,
-                   Variadic<Index>:$srcIndices,
+                   Variadic<Index>:$src_indices,
+                   OptionalAttr<DenseI64ArrayAttr>: $src_indices_const,
                    Arg<AnyMemRef, "buffer to write to">:$dst,
-                   Variadic<Index>:$dstIndices)>,
+                   Variadic<Index>:$dst_indices,
+                   OptionalAttr<DenseI64ArrayAttr>: $dst_indices_const)>,
     Results<(outs AMDGPU_TDMBaseType: $base)> {
 
   // TODO:
@@ -1275,8 +1277,10 @@ def AMDGPU_MakeDmaBaseOp :
     ```
   }];
 
+  // TODO: Define a custom printer, parser to avoid space between $src/%dst and indices.
   let assemblyFormat = [{
-    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` type($src) `,` type($dst) `->` type(results)
+    $src custom<DynamicIndexList>($src_indices, $src_indices_const) `,`
+    $dst custom<DynamicIndexList>($dst_indices, $dst_indices_const) attr-dict `:` type($src) `,` type($dst) `->` type(results)
   }];
 }
 
