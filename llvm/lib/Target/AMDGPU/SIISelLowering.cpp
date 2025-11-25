@@ -5480,15 +5480,15 @@ static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
     return std::numeric_limits<uint32_t>::min();
   case AMDGPU::S_MAX_I32:
     return std::numeric_limits<int32_t>::min();
+  case AMDGPU::V_ADD_F32_e64: // -0.0
+    return 0x80000000;
   case AMDGPU::V_SUB_F32_e64: // +0.0
-    return __builtin_bit_cast(uint32_t, +0.0f);
+    return 0x0;
   case AMDGPU::S_ADD_I32:
   case AMDGPU::S_SUB_I32:
   case AMDGPU::S_OR_B32:
   case AMDGPU::S_XOR_B32:
     return std::numeric_limits<uint32_t>::min();
-  case AMDGPU::V_ADD_F32_e64: // -0.0
-    return __builtin_bit_cast(uint32_t, -0.0f);
   case AMDGPU::S_AND_B32:
     return std::numeric_limits<uint32_t>::max();
   case AMDGPU::V_MIN_F32_e64:
@@ -11980,7 +11980,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
       (AS == AMDGPUAS::GLOBAL_ADDRESS &&
        Subtarget->getScalarizeGlobalBehavior() && Load->isSimple() &&
-       isMemOpHasNoClobberedMemOperand(Load))) {
+       (Load->isInvariant() || isMemOpHasNoClobberedMemOperand(Load)))) {
     if ((!Op->isDivergent() || AMDGPU::isUniformMMO(MMO)) &&
         Alignment >= Align(4) && NumElements < 32) {
       if (MemVT.isPow2VectorType() ||

@@ -1641,6 +1641,82 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// BinOpOverflowOp
+//===----------------------------------------------------------------------===//
+
+def CIR_BinOpOverflowKind : CIR_I32EnumAttr<
+  "BinOpOverflowKind", "checked binary arithmetic operation kind", [
+    I32EnumAttrCase<"Add", 0, "add">,
+    I32EnumAttrCase<"Sub", 1, "sub">,
+    I32EnumAttrCase<"Mul", 2, "mul">
+]>;
+
+def CIR_BinOpOverflowOp : CIR_Op<"binop.overflow", [Pure, SameTypeOperands]> {
+  let summary = "Perform binary integral arithmetic with overflow checking";
+  let description = [{
+    `cir.binop.overflow` performs binary arithmetic operations with overflow
+    checking on integral operands.
+
+    The `kind` argument specifies the kind of arithmetic operation to perform.
+    It can be either `add`, `sub`, or `mul`. The `lhs` and `rhs` arguments
+    specify the input operands of the arithmetic operation. The types of `lhs`
+    and `rhs` must be the same.
+
+    `cir.binop.overflow` produces two SSA values. `result` is the result of the
+    arithmetic operation truncated to its specified type. `overflow` is a
+    boolean value indicating whether overflow happens during the operation.
+
+    The exact semantic of this operation is as follows:
+
+      - `lhs` and `rhs` are promoted to an imaginary integral type that has
+        infinite precision.
+      - The arithmetic operation is performed on the promoted operands.
+      - The infinite-precision result is truncated to the type of `result`. The
+        truncated result is assigned to `result`.
+      - If the truncated result is equal to the un-truncated result, `overflow`
+        is assigned to false. Otherwise, `overflow` is assigned to true.
+  }];
+
+  let arguments = (ins
+    CIR_BinOpOverflowKind:$kind,
+    CIR_IntType:$lhs,
+    CIR_IntType:$rhs
+  );
+
+  let results = (outs CIR_IntType:$result, CIR_BoolType:$overflow);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
+    `(` qualified(type($result)) `,` qualified(type($overflow)) `)`
+    attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "cir::IntType":$resultTy,
+                   "cir::BinOpOverflowKind":$kind,
+                   "mlir::Value":$lhs,
+                   "mlir::Value":$rhs), [{
+      auto overflowTy = cir::BoolType::get($_builder.getContext());
+      build($_builder, $_state, resultTy, overflowTy, kind, lhs, rhs);
+    }]>
+  ];
+
+  let extraLLVMLoweringPatternDecl = [{
+    static std::string getLLVMIntrinName(cir::BinOpOverflowKind opKind,
+                                         bool isSigned, unsigned width);
+
+    struct EncompassedTypeInfo {
+      bool sign;
+      unsigned width;
+    };
+
+    static EncompassedTypeInfo computeEncompassedTypeWidth(cir::IntType operandTy,
+                                                           cir::IntType resultTy);
+  }];
+}
+
+
+//===----------------------------------------------------------------------===//
 // BinOp
 //===----------------------------------------------------------------------===//
 
