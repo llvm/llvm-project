@@ -364,6 +364,37 @@ void StmtProfiler::VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
   VisitStmt(S);
 }
 
+void StmtProfiler::VisitCXXExpansionStmtPattern(
+    const CXXExpansionStmtPattern *S) {
+  VisitStmt(S);
+}
+
+void StmtProfiler::VisitCXXEnumeratingExpansionStmtPattern(
+    const CXXEnumeratingExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
+}
+
+void StmtProfiler::VisitCXXIteratingExpansionStmtPattern(
+    const CXXIteratingExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
+}
+
+void StmtProfiler::VisitCXXDestructuringExpansionStmtPattern(
+    const CXXDestructuringExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
+}
+
+void StmtProfiler::VisitCXXDependentExpansionStmtPattern(
+    const CXXDependentExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
+}
+
+void StmtProfiler::VisitCXXExpansionStmtInstantiation(
+    const CXXExpansionStmtInstantiation *S) {
+  VisitStmt(S);
+  ID.AddBoolean(S->shouldApplyLifetimeExtensionToSharedStmts());
+}
+
 void StmtProfiler::VisitMSDependentExistsStmt(const MSDependentExistsStmt *S) {
   VisitStmt(S);
   ID.AddBoolean(S->isIfExists());
@@ -2399,6 +2430,22 @@ void StmtProfiler::VisitSourceLocExpr(const SourceLocExpr *E) {
 }
 
 void StmtProfiler::VisitEmbedExpr(const EmbedExpr *E) { VisitExpr(E); }
+
+void StmtProfiler::VisitCXXExpansionInitListExpr(
+    const CXXExpansionInitListExpr *E) {
+  VisitExpr(E);
+}
+
+void StmtProfiler::VisitCXXExpansionInitListSelectExpr(
+    const CXXExpansionInitListSelectExpr *E) {
+  VisitExpr(E);
+}
+
+void StmtProfiler::VisitCXXDestructuringExpansionSelectExpr(
+    const CXXDestructuringExpansionSelectExpr *E) {
+  VisitExpr(E);
+  VisitDecl(E->getDecompositionDecl());
+}
 
 void StmtProfiler::VisitRecoveryExpr(const RecoveryExpr *E) { VisitExpr(E); }
 

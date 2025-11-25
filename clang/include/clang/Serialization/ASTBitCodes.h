@@ -1460,6 +1460,9 @@ enum DeclCode {
   /// \brief A StaticAssertDecl record.
   DECL_STATIC_ASSERT,
 
+  /// A C++ expansion statement.
+  DECL_EXPANSION_STMT,
+
   /// A record containing CXXBaseSpecifiers.
   DECL_CXX_BASE_SPECIFIERS,
 
@@ -1833,6 +1836,21 @@ enum StmtCode {
 
   STMT_CXX_FOR_RANGE,
 
+  /// A CXXEnumeratedExpansionStmt.
+  STMT_CXX_ENUMERATING_EXPANSION,
+
+  /// A CXXIteratingExpansionStmtPattern.
+  STMT_CXX_ITERATING_EXPANSION,
+
+  /// A CXXDestructuringExpansionStmtPattern.
+  STMT_CXX_DESTRUCTURING_EXPANSION,
+
+  /// A CXXDependentExpansionStmtPattern,
+  STMT_CXX_DEPENDENT_EXPANSION,
+
+  /// A CXXExpansionStmtInstantiation.
+  STMT_CXX_EXPANSION_INSTANTIATION,
+
   /// A CXXOperatorCallExpr record.
   EXPR_CXX_OPERATOR_CALL,
 
@@ -1914,16 +1932,19 @@ enum StmtCode {
   EXPR_TYPE_TRAIT,                  // TypeTraitExpr
   EXPR_ARRAY_TYPE_TRAIT,            // ArrayTypeTraitIntExpr
 
-  EXPR_PACK_EXPANSION,                    // PackExpansionExpr
-  EXPR_PACK_INDEXING,                     // PackIndexingExpr
-  EXPR_SIZEOF_PACK,                       // SizeOfPackExpr
-  EXPR_SUBST_NON_TYPE_TEMPLATE_PARM,      // SubstNonTypeTemplateParmExpr
-  EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK, // SubstNonTypeTemplateParmPackExpr
-  EXPR_FUNCTION_PARM_PACK,                // FunctionParmPackExpr
-  EXPR_MATERIALIZE_TEMPORARY,             // MaterializeTemporaryExpr
-  EXPR_CXX_FOLD,                          // CXXFoldExpr
-  EXPR_CONCEPT_SPECIALIZATION,            // ConceptSpecializationExpr
-  EXPR_REQUIRES,                          // RequiresExpr
+  EXPR_PACK_EXPANSION,                     // PackExpansionExpr
+  EXPR_PACK_INDEXING,                      // PackIndexingExpr
+  EXPR_SIZEOF_PACK,                        // SizeOfPackExpr
+  EXPR_SUBST_NON_TYPE_TEMPLATE_PARM,       // SubstNonTypeTemplateParmExpr
+  EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK,  // SubstNonTypeTemplateParmPackExpr
+  EXPR_FUNCTION_PARM_PACK,                 // FunctionParmPackExpr
+  EXPR_MATERIALIZE_TEMPORARY,              // MaterializeTemporaryExpr
+  EXPR_CXX_FOLD,                           // CXXFoldExpr
+  EXPR_CONCEPT_SPECIALIZATION,             // ConceptSpecializationExpr
+  EXPR_REQUIRES,                           // RequiresExpr
+  EXPR_CXX_EXPANSION_INIT_LIST,            // CXXExpansionInitListExpr
+  EXPR_CXX_EXPANSION_INIT_LIST_SELECT,     // CXXExpansionInitListSelectExpr
+  EXPR_CXX_DESTRUCTURING_EXPANSION_SELECT, // CXXDestructuringExpansionSelectExpr
 
   // CUDA
   EXPR_CUDA_KERNEL_CALL, // CUDAKernelCallExpr

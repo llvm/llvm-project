@@ -1704,6 +1704,85 @@ void ASTStmtWriter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   Code = serialization::STMT_CXX_FOR_RANGE;
 }
 
+void ASTStmtWriter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
+  VisitStmt(S);
+  Record.AddSourceLocation(S->getLParenLoc());
+  Record.AddSourceLocation(S->getColonLoc());
+  Record.AddSourceLocation(S->getRParenLoc());
+  Record.AddDeclRef(S->getDecl());
+  Record.AddStmt(S->getInit());
+  Record.AddStmt(S->getExpansionVarStmt());
+  Record.AddStmt(S->getBody());
+}
+
+void ASTStmtWriter::VisitCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *S) {
+  VisitStmt(S);
+  Record.push_back(S->getInstantiations().size());
+  Record.push_back(S->getSharedStmts().size());
+  Record.AddSourceLocation(S->getBeginLoc());
+  Record.AddSourceLocation(S->getEndLoc());
+  for (Stmt *St : S->getAllSubStmts())
+    Record.AddStmt(St);
+  Record.push_back(S->shouldApplyLifetimeExtensionToSharedStmts());
+  Code = serialization::STMT_CXX_EXPANSION_INSTANTIATION;
+}
+
+void ASTStmtWriter::VisitCXXEnumeratingExpansionStmtPattern(
+    CXXEnumeratingExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
+  Code = serialization::STMT_CXX_ENUMERATING_EXPANSION;
+}
+
+void ASTStmtWriter::VisitCXXIteratingExpansionStmtPattern(
+    CXXIteratingExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
+  Record.AddStmt(S->getRangeVarStmt());
+  Record.AddStmt(S->getBeginVarStmt());
+  Record.AddStmt(S->getEndVarStmt());
+  Code = serialization::STMT_CXX_ITERATING_EXPANSION;
+}
+
+void ASTStmtWriter::VisitCXXDestructuringExpansionStmtPattern(
+    CXXDestructuringExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
+  Record.AddStmt(S->getDecompositionDeclStmt());
+  Code = serialization::STMT_CXX_DESTRUCTURING_EXPANSION;
+}
+
+void ASTStmtWriter::VisitCXXDependentExpansionStmtPattern(
+    CXXDependentExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
+  Record.AddStmt(S->getExpansionInitializer());
+  Code = serialization::STMT_CXX_DEPENDENT_EXPANSION;
+}
+
+void ASTStmtWriter::VisitCXXExpansionInitListExpr(CXXExpansionInitListExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->getNumExprs());
+  Record.AddSourceLocation(E->getLBraceLoc());
+  Record.AddSourceLocation(E->getRBraceLoc());
+  for (Expr *SubExpr : E->getExprs())
+    Record.AddStmt(SubExpr);
+  Code = serialization::EXPR_CXX_EXPANSION_INIT_LIST;
+}
+
+void ASTStmtWriter::VisitCXXExpansionInitListSelectExpr(
+    CXXExpansionInitListSelectExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getRangeExpr());
+  Record.AddStmt(E->getIndexExpr());
+  Code = serialization::EXPR_CXX_EXPANSION_INIT_LIST_SELECT;
+}
+
+void ASTStmtWriter::VisitCXXDestructuringExpansionSelectExpr(
+    CXXDestructuringExpansionSelectExpr *E) {
+  VisitExpr(E);
+  Record.AddDeclRef(E->getDecompositionDecl());
+  Record.AddStmt(E->getIndexExpr());
+  Code = serialization::EXPR_CXX_DESTRUCTURING_EXPANSION_SELECT;
+}
+
 void ASTStmtWriter::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
   VisitStmt(S);
   Record.AddSourceLocation(S->getKeywordLoc());

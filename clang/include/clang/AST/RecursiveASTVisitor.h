@@ -1881,6 +1881,14 @@ DEF_TRAVERSE_DECL(UsingShadowDecl, {})
 
 DEF_TRAVERSE_DECL(ConstructorUsingShadowDecl, {})
 
+DEF_TRAVERSE_DECL(CXXExpansionStmtDecl, {
+  if (D->getInstantiations() &&
+      getDerived().shouldVisitTemplateInstantiations())
+    TRY_TO(TraverseStmt(D->getInstantiations()));
+
+  TRY_TO(TraverseStmt(D->getExpansionPattern()));
+})
+
 DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
   for (auto *I : D->varlist()) {
     TRY_TO(TraverseStmt(I));
@@ -3116,6 +3124,15 @@ DEF_TRAVERSE_STMT(RequiresExpr, {
   for (concepts::Requirement *Req : S->getRequirements())
     TRY_TO(TraverseConceptRequirement(Req));
 })
+
+DEF_TRAVERSE_STMT(CXXEnumeratingExpansionStmtPattern, {})
+DEF_TRAVERSE_STMT(CXXIteratingExpansionStmtPattern, {})
+DEF_TRAVERSE_STMT(CXXDestructuringExpansionStmtPattern, {})
+DEF_TRAVERSE_STMT(CXXDependentExpansionStmtPattern, {})
+DEF_TRAVERSE_STMT(CXXExpansionStmtInstantiation, {})
+DEF_TRAVERSE_STMT(CXXExpansionInitListExpr, {})
+DEF_TRAVERSE_STMT(CXXExpansionInitListSelectExpr, {})
+DEF_TRAVERSE_STMT(CXXDestructuringExpansionSelectExpr, {})
 
 // These literals (all of them) do not need any action.
 DEF_TRAVERSE_STMT(IntegerLiteral, {})

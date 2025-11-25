@@ -1730,6 +1730,77 @@ void ASTStmtReader::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   S->setBody(Record.readSubStmt());
 }
 
+void ASTStmtReader::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
+  VisitStmt(S);
+  S->LParenLoc = readSourceLocation();
+  S->ColonLoc = readSourceLocation();
+  S->RParenLoc = readSourceLocation();
+  S->ParentDecl = cast<CXXExpansionStmtDecl>(Record.readDeclRef());
+  S->setInit(Record.readSubStmt());
+  S->setExpansionVarStmt(Record.readSubStmt());
+  S->setBody(Record.readSubStmt());
+}
+
+void ASTStmtReader::VisitCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *S) {
+  VisitStmt(S);
+  Record.skipInts(2);
+  S->BeginLoc = readSourceLocation();
+  S->EndLoc = readSourceLocation();
+  for (unsigned I = 0; I < S->getNumSubStmts(); ++I)
+    S->getAllSubStmts()[I] = Record.readSubStmt();
+  S->setShouldApplyLifetimeExtensionToSharedStmts(Record.readBool());
+}
+
+void ASTStmtReader::VisitCXXEnumeratingExpansionStmtPattern(
+    CXXEnumeratingExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
+}
+
+void ASTStmtReader::VisitCXXIteratingExpansionStmtPattern(
+    CXXIteratingExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
+  S->setRangeVarStmt(cast<DeclStmt>(Record.readSubStmt()));
+  S->setBeginVarStmt(cast<DeclStmt>(Record.readSubStmt()));
+  S->setEndVarStmt(cast<DeclStmt>(Record.readSubStmt()));
+}
+
+void ASTStmtReader::VisitCXXDestructuringExpansionStmtPattern(
+    CXXDestructuringExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
+  S->setDecompositionDeclStmt(Record.readSubStmt());
+}
+
+void ASTStmtReader::VisitCXXDependentExpansionStmtPattern(
+    CXXDependentExpansionStmtPattern *S) {
+  VisitCXXExpansionStmtPattern(S);
+  S->setExpansionInitializer(Record.readSubExpr());
+}
+
+void ASTStmtReader::VisitCXXExpansionInitListExpr(CXXExpansionInitListExpr *E) {
+  VisitExpr(E);
+  assert(Record.peekInt() == E->getNumExprs() && "NumExprFields is wrong ?");
+  Record.skipInts(1);
+  E->LBraceLoc = readSourceLocation();
+  E->RBraceLoc = readSourceLocation();
+  for (unsigned I = 0; I < E->getNumExprs(); ++I)
+    E->getExprs()[I] = Record.readSubExpr();
+}
+
+void ASTStmtReader::VisitCXXExpansionInitListSelectExpr(
+    CXXExpansionInitListSelectExpr *E) {
+  VisitExpr(E);
+  E->setRangeExpr(cast<CXXExpansionInitListExpr>(Record.readSubExpr()));
+  E->setIndexExpr(Record.readSubExpr());
+}
+
+void ASTStmtReader::VisitCXXDestructuringExpansionSelectExpr(
+    CXXDestructuringExpansionSelectExpr *E) {
+  VisitExpr(E);
+  E->setDecompositionDecl(cast<DecompositionDecl>(Record.readDeclRef()));
+  E->setIndexExpr(Record.readSubExpr());
+}
+
 void ASTStmtReader::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
   VisitStmt(S);
   S->KeywordLoc = readSourceLocation();
@@ -3566,6 +3637,28 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
              /*numHandlers=*/Record[ASTStmtReader::NumStmtFields]);
       break;
 
+    case STMT_CXX_ENUMERATING_EXPANSION:
+      S = new (Context) CXXEnumeratingExpansionStmtPattern(Empty);
+      break;
+
+    case STMT_CXX_ITERATING_EXPANSION:
+      S = new (Context) CXXIteratingExpansionStmtPattern(Empty);
+      break;
+
+    case STMT_CXX_DESTRUCTURING_EXPANSION:
+      S = new (Context) CXXDestructuringExpansionStmtPattern(Empty);
+      break;
+
+    case STMT_CXX_DEPENDENT_EXPANSION:
+      S = new (Context) CXXDependentExpansionStmtPattern(Empty);
+      break;
+
+    case STMT_CXX_EXPANSION_INSTANTIATION:
+      S = CXXExpansionStmtInstantiation::CreateEmpty(
+          Context, Empty, Record[ASTStmtReader::NumStmtFields],
+          Record[ASTStmtReader::NumStmtFields + 1]);
+      break;
+
     case STMT_CXX_FOR_RANGE:
       S = new (Context) CXXForRangeStmt(Empty);
       break;
@@ -4443,6 +4536,20 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) ConceptSpecializationExpr(Empty);
       break;
     }
+
+    case EXPR_CXX_EXPANSION_INIT_LIST:
+      S = CXXExpansionInitListExpr::CreateEmpty(
+          Context, Empty, Record[ASTStmtReader::NumExprFields]);
+      break;
+
+    case EXPR_CXX_EXPANSION_INIT_LIST_SELECT:
+      S = new (Context) CXXExpansionInitListSelectExpr(Empty);
+      break;
+
+    case EXPR_CXX_DESTRUCTURING_EXPANSION_SELECT:
+      S = new (Context) CXXDestructuringExpansionSelectExpr(Empty);
+      break;
+
     case STMT_OPENACC_COMPUTE_CONSTRUCT: {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
       S = OpenACCComputeConstruct::CreateEmpty(Context, NumClauses);

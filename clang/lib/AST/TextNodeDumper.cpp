@@ -954,7 +954,11 @@ void TextNodeDumper::dumpBareDeclRef(const Decl *D) {
       switch (ND->getKind()) {
       case Decl::Decomposition: {
         auto *DD = cast<DecompositionDecl>(ND);
-        OS << " first_binding '" << DD->bindings()[0]->getDeclName() << '\'';
+
+        // Empty decomposition decls can occur in destructuring expansion
+        // statements.
+        if (!DD->bindings().empty())
+          OS << " first_binding '" << DD->bindings()[0]->getDeclName() << '\'';
         break;
       }
       case Decl::Field: {
@@ -1498,6 +1502,12 @@ void clang::TextNodeDumper::VisitCoreturnStmt(const CoreturnStmt *Node) {
     OS << " implicit";
 }
 
+void TextNodeDumper::VisitCXXExpansionStmtInstantiation(
+    const CXXExpansionStmtInstantiation *Node) {
+  if (Node->shouldApplyLifetimeExtensionToSharedStmts())
+    OS << " applies_lifetime_extension";
+}
+
 void TextNodeDumper::VisitConstantExpr(const ConstantExpr *Node) {
   if (Node->hasAPValueResult())
     AddChild("value",
@@ -1827,6 +1837,17 @@ void TextNodeDumper::VisitSizeOfPackExpr(const SizeOfPackExpr *Node) {
 void TextNodeDumper::VisitCXXDependentScopeMemberExpr(
     const CXXDependentScopeMemberExpr *Node) {
   OS << " " << (Node->isArrow() ? "->" : ".") << Node->getMember();
+}
+
+void TextNodeDumper::VisitCXXExpansionInitListExpr(
+    const CXXExpansionInitListExpr *Node) {
+  if (Node->containsPackExpansion())
+    OS << " contains_pack";
+}
+
+void TextNodeDumper::VisitCXXDestructuringExpansionSelectExpr(
+    const CXXDestructuringExpansionSelectExpr *Node) {
+  dumpDeclRef(Node->getDecompositionDecl());
 }
 
 void TextNodeDumper::VisitObjCMessageExpr(const ObjCMessageExpr *Node) {
