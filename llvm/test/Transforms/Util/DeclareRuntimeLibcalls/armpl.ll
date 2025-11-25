@@ -26,4 +26,4 @@
 ; CHECK: declare aarch64_vector_pcs void @armpl_vsincosq_f64(<2 x double>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS]]
 
 
-; CHECK: attributes [[ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; CHECK: attributes [[ATTRS]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: write) }

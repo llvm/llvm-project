@@ -135,8 +135,8 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                                    const DataLayout &DL,
                                    RTLIB::LibcallImpl LibcallImpl) const {
   static constexpr Attribute::AttrKind CommonFnAttrs[] = {
-      Attribute::NoCallback, Attribute::NoFree, Attribute::NoSync,
-      Attribute::NoUnwind, Attribute::WillReturn};
+      Attribute::MustProgress, Attribute::NoCallback, Attribute::NoFree,
+      Attribute::NoSync,       Attribute::NoUnwind,   Attribute::WillReturn};
   static constexpr Attribute::AttrKind CommonPtrArgAttrs[] = {
       Attribute::NoAlias, Attribute::WriteOnly, Attribute::NonNull};
 

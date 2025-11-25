@@ -1622,16 +1622,18 @@ static bool isSupportedReductionType(mlir::Type ty) {
   return fir::isa_trivial(ty);
 }
 
-static void
-genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
-              Fortran::lower::AbstractConverter &converter,
-              Fortran::semantics::SemanticsContext &semanticsContext,
-              Fortran::lower::StatementContext &stmtCtx,
-              llvm::SmallVectorImpl<mlir::Value> &reductionOperands,
-              llvm::SmallVector<mlir::Attribute> &reductionRecipes,
-              llvm::ArrayRef<mlir::Value> async,
-              llvm::ArrayRef<mlir::Attribute> asyncDeviceTypes,
-              llvm::ArrayRef<mlir::Attribute> asyncOnlyDeviceTypes) {
+static void genReductions(
+    const Fortran::parser::AccObjectListWithReduction &objectList,
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semanticsContext,
+    Fortran::lower::StatementContext &stmtCtx,
+    llvm::SmallVectorImpl<mlir::Value> &reductionOperands,
+    llvm::SmallVector<mlir::Attribute> &reductionRecipes,
+    llvm::ArrayRef<mlir::Value> async,
+    llvm::ArrayRef<mlir::Attribute> asyncDeviceTypes,
+    llvm::ArrayRef<mlir::Attribute> asyncOnlyDeviceTypes,
+    llvm::SmallVectorImpl<std::pair<mlir::Value, Fortran::semantics::SymbolRef>>
+        *symbolPairs = nullptr) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const auto &objects = std::get<Fortran::parser::AccObjectList>(objectList.t);
   const auto &op = std::get<Fortran::parser::ReductionOperator>(objectList.t);
@@ -1644,6 +1646,8 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
+    bool isWholeSymbol =
+        !designator || Fortran::evaluate::UnwrapWholeSymbolDataRef(*designator);
     fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
@@ -1680,6 +1684,11 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     reductionRecipes.push_back(mlir::SymbolRefAttr::get(
         builder.getContext(), recipe.getSymName().str()));
     reductionOperands.push_back(op.getAccVar());
+    // Track the symbol and its corresponding mlir::Value if requested so that
+    // accesses inside the compute/loop regions use the acc.reduction variable.
+    if (symbolPairs && isWholeSymbol)
+      symbolPairs->emplace_back(op.getAccVar(),
+                                Fortran::semantics::SymbolRef(symbol));
   }
 }
 
@@ -2545,7 +2554,8 @@ static mlir::acc::LoopOp createLoopOp(
                        &clause.u)) {
       genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
                     reductionOperands, reductionRecipes, /*async=*/{},
-                    /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+                    /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
+                    &dataOperandSymbolPairs);
     } else if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
       for (auto crtDeviceTypeAttr : crtDeviceTypes)
         seqDeviceTypes.push_back(crtDeviceTypeAttr);
@@ -2995,7 +3005,8 @@ static Op createComputeOp(
       if (!combinedConstructs) {
         genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
                       reductionOperands, reductionRecipes, async,
-                      asyncDeviceTypes, asyncOnlyDeviceTypes);
+                      asyncDeviceTypes, asyncOnlyDeviceTypes,
+                      &dataOperandSymbolPairs);
       } else {
         auto crtDataStart = dataClauseOperands.size();
         genDataOperandOperations<mlir::acc::CopyinOp>(
