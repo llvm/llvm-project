@@ -89,7 +89,6 @@ define i32 @pcmpestri_reg_diff_i8(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, 
 ; X64-NEXT:    jne .LBB2_2
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB2_2: # %compare
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
@@ -222,7 +221,6 @@ define i32 @pcmpestri_mem_diff_i8(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32 
 ; X64-NEXT:    jne .LBB5_2
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB5_2: # %compare
 ; X64-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
@@ -552,7 +550,6 @@ define i32 @pcmpistri_reg_diff_i8(<16 x i8> %lhs, <16 x i8> %rhs) nounwind {
 ; X86-NEXT:    jne .LBB14_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB14_2: # %compare
 ; X86-NEXT:    pushl %ebp
@@ -577,7 +574,6 @@ define i32 @pcmpistri_reg_diff_i8(<16 x i8> %lhs, <16 x i8> %rhs) nounwind {
 ; X64-NEXT:    jne .LBB14_2
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB14_2: # %compare
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
@@ -690,7 +686,6 @@ define i32 @pcmpistri_mem_diff_i8(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X64-NEXT:    jne .LBB17_2
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB17_2: # %compare
 ; X64-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
