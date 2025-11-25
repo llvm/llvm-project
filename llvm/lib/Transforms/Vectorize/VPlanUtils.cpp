@@ -197,7 +197,8 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
   if (isa<VPPartialReductionRecipe>(VPV))
     return false;
-  if (isa<VPReductionRecipe>(VPV))
+  if (isa<VPReductionRecipe, VPVectorPointerRecipe, VPVectorEndPointerRecipe>(
+          VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isSingleScalar();
