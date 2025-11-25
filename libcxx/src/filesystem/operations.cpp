@@ -50,7 +50,10 @@
 #    define _LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE
 #  endif
 #elif defined(__FreeBSD__)
-#  define _LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE
+#  include <sys/param.h>
+#  if __FreeBSD_version >= 1300000
+#    define _LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE
+#  endif
 #endif
 #if __has_include(<sys/sendfile.h>)
 #  include <sys/sendfile.h>
