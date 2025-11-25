@@ -5230,12 +5230,28 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     SliceTy = ArrayType::get(Type::getInt8Ty(*C), P.size());
   assert(DL.getTypeAllocSize(SliceTy).getFixedValue() >= P.size());
 
-  bool IsIntegerPromotable = isIntegerWideningViable(P, SliceTy, DL);
+  // Prefer vector promotion over integer widening for floating-point vectors
+  // because it is more likely the user is just accessing whole vector elements
+  // and not doing bitsise arithmetic.
+  bool PreferVectorPromotion = false;
+  if (auto *FixedVecSliceTy = dyn_cast<FixedVectorType>(SliceTy))
+    PreferVectorPromotion = FixedVecSliceTy->getElementType()->isFloatingPointTy();
 
-  VectorType *VecTy =
-      IsIntegerPromotable ? nullptr : isVectorPromotionViable(P, DL, VScale);
-  if (VecTy)
-    SliceTy = VecTy;
+  bool IsIntegerPromotable = false;
+  VectorType *VecTy = nullptr;
+
+  if (PreferVectorPromotion) {
+    // For float vectors, try vector promotion first
+    VecTy = isVectorPromotionViable(P, DL, VScale);
+    if (!VecTy)
+      IsIntegerPromotable = isIntegerWideningViable(P, SliceTy, DL);
+  } else {
+    // For integer vectors (especially small integers like i8), try integer
+    // widening first as InstCombine can optimize the resulting operations
+    IsIntegerPromotable = isIntegerWideningViable(P, SliceTy, DL);
+    if (!IsIntegerPromotable)
+      VecTy = isVectorPromotionViable(P, DL, VScale);
+  }
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
