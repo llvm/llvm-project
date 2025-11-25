@@ -1,0 +1,331 @@
+--- dsmil-72dev.c.orig	2025-09-02 10:00:00.000000000 -0500
++++ dsmil-72dev.c	2025-09-02 11:00:00.000000000 -0500
+@@ -180,6 +180,14 @@
+ #define MILDEV_IOC_READ_DEVICE  _IOWR(MILDEV_IOC_MAGIC, 4, struct mildev_read_request)
+ #define MILDEV_IOC_GET_THERMAL  _IOR(MILDEV_IOC_MAGIC, 5, int)
+ 
++/* Chunked IOCTL commands for large structures */
++#define MILDEV_IOC_SCAN_START    _IO(MILDEV_IOC_MAGIC, 6)
++#define MILDEV_IOC_SCAN_CHUNK    _IOR(MILDEV_IOC_MAGIC, 7, struct scan_chunk)
++#define MILDEV_IOC_SCAN_COMPLETE _IO(MILDEV_IOC_MAGIC, 8)
++#define MILDEV_IOC_READ_START    _IOW(MILDEV_IOC_MAGIC, 9, u32)
++#define MILDEV_IOC_READ_CHUNK    _IOR(MILDEV_IOC_MAGIC, 10, struct read_chunk)
++#define MILDEV_IOC_READ_COMPLETE _IO(MILDEV_IOC_MAGIC, 11)
++
+ /* DSMIL Group definitions */
+ #define DSMIL_GROUP_COUNT        12
+ #define DSMIL_DEVICES_PER_GROUP  12
+@@ -360,6 +368,67 @@
+ 
+ static struct dsmil_driver_state *dsmil_state;
+ 
++/* Chunked transfer session state */
++struct chunked_session {
++	u64 session_id;
++	u32 current_chunk;
++	u32 total_chunks;
++	union {
++		struct {
++			u32 device_count;
++			struct mildev_device_info *devices;
++		} scan;
++		struct {
++			u16 token;
++			void *data;
++			size_t data_size;
++		} read;
++	};
++	bool active;
++	ktime_t start_time;
++};
++
++static struct chunked_session scan_session = { .active = false };
++static struct chunked_session read_session = { .active = false };
++static DEFINE_MUTEX(session_lock);
++
++/* Chunk structures for userspace communication */
++struct scan_chunk_header {
++	u32 chunk_index;
++	u32 total_chunks;
++	u32 devices_in_chunk;
++	u32 chunk_size;
++	u64 session_id;
++	u8 _reserved[8];
++} __packed;
++
++struct scan_chunk {
++	struct scan_chunk_header header;
++	struct mildev_device_info devices[5];  /* 5 * 40 = 200 bytes */
++	u8 _padding[24];                       /* Pad to 256 bytes */
++} __packed;
++
++struct read_chunk_header {
++	u16 token;
++	u16 chunk_index;
++	u32 total_chunks;
++	u32 data_offset;
++	u32 chunk_size;
++	u64 session_id;
++	u8 _reserved[8];
++} __packed;
++
++struct read_chunk {
++	struct read_chunk_header header;
++	u8 data[224];                          /* 224 bytes of device data */
++} __packed;
++
++/* Ensure structures are exactly 256 bytes */
++static_assert(sizeof(struct scan_chunk) == 256, "scan_chunk must be 256 bytes");
++static_assert(sizeof(struct read_chunk) == 256, "read_chunk must be 256 bytes");
++
++/* Maximum chunk payload sizes */
++#define MAX_DEVICES_PER_CHUNK 5
++#define MAX_DATA_PER_CHUNK 224
++
+ /* Base address candidates for discovery */
+ static const u64 dsmil_base_candidates[DSMIL_MAX_BASE_ADDRESSES] = {
+ 	DSMIL_PRIMARY_BASE,    /* 0x52000000 - Original assumption */
+@@ -2450,6 +2519,236 @@ static long dsmil_ioctl(struct file *fi
+ 		return 0;
+ 	}
+ 
++	/* Chunked scan operations */
++	case MILDEV_IOC_SCAN_START: {
++		mutex_lock(&session_lock);
++		
++		/* Clean up any existing scan session */
++		if (scan_session.active && scan_session.scan.devices) {
++			kfree(scan_session.scan.devices);
++			scan_session.scan.devices = NULL;
++		}
++		
++		/* Start new scan session */
++		scan_session.session_id = ktime_get_real_ns();
++		scan_session.current_chunk = 0;
++		scan_session.scan.device_count = 0;
++		scan_session.start_time = ktime_get();
++		
++		/* Allocate buffer for all devices */
++		scan_session.scan.devices = kzalloc(
++			sizeof(struct mildev_device_info) * DSMIL_TOTAL_DEVICES,
++			GFP_KERNEL);
++		if (!scan_session.scan.devices) {
++			mutex_unlock(&session_lock);
++			return -ENOMEM;
++		}
++		
++		/* Populate device information */
++		for (group = 0; group < DSMIL_GROUP_COUNT; group++) {
++			for (device = 0; device < DSMIL_DEVICES_PER_GROUP; device++) {
++				struct dsmil_device *dev = &dsmil_state->groups[group].devices[device];
++				struct mildev_device_info *info = 
++					&scan_session.scan.devices[scan_session.scan.device_count];
++				
++				if (dev->token == 0)
++					continue;
++					
++				info->token = dev->token;
++				info->active = dev->active;
++				info->access_level = dev->access_level;
++				info->group_id = group;
++				info->device_index = device;
++				info->last_value = dev->last_value;
++				info->access_count = dev->access_count;
++				info->last_access_time = ktime_to_ns(dev->last_access_time);
++				info->capabilities = dev->capabilities;
++				info->flags = dev->flags;
++				
++				scan_session.scan.device_count++;
++			}
++		}
++		
++		/* Calculate total chunks needed */
++		scan_session.total_chunks = (scan_session.scan.device_count + 
++			MAX_DEVICES_PER_CHUNK - 1) / MAX_DEVICES_PER_CHUNK;
++		if (scan_session.total_chunks == 0)
++			scan_session.total_chunks = 1;  /* At least one chunk */
++			
++		scan_session.active = true;
++		
++		pr_debug(DRIVER_NAME ": Started scan session %llu with %u devices in %u chunks\n",
++			scan_session.session_id, scan_session.scan.device_count,
++			scan_session.total_chunks);
++		
++		mutex_unlock(&session_lock);
++		return 0;
++	}
++	
++	case MILDEV_IOC_SCAN_CHUNK: {
++		struct scan_chunk chunk;
++		u32 start_idx, end_idx, devices_in_chunk;
++		
++		mutex_lock(&session_lock);
++		
++		if (!scan_session.active) {
++			mutex_unlock(&session_lock);
++			return -EINVAL;
++		}
++		
++		if (scan_session.current_chunk >= scan_session.total_chunks) {
++			mutex_unlock(&session_lock);
++			return -EINVAL;  /* No more chunks */
++		}
++		
++		memset(&chunk, 0, sizeof(chunk));
++		
++		/* Fill header */
++		chunk.header.chunk_index = scan_session.current_chunk;
++		chunk.header.total_chunks = scan_session.total_chunks;
++		chunk.header.session_id = scan_session.session_id;
++		
++		/* Calculate device range for this chunk */
++		start_idx = scan_session.current_chunk * MAX_DEVICES_PER_CHUNK;
++		end_idx = min(start_idx + MAX_DEVICES_PER_CHUNK, 
++			scan_session.scan.device_count);
++		devices_in_chunk = end_idx - start_idx;
++		
++		chunk.header.devices_in_chunk = devices_in_chunk;
++		chunk.header.chunk_size = sizeof(struct scan_chunk_header) + 
++			devices_in_chunk * sizeof(struct mildev_device_info);
++		
++		/* Copy device data */
++		if (devices_in_chunk > 0 && scan_session.scan.devices) {
++			memcpy(chunk.devices, 
++				&scan_session.scan.devices[start_idx],
++				devices_in_chunk * sizeof(struct mildev_device_info));
++		}
++		
++		/* Copy to userspace */
++		if (copy_to_user((void __user *)arg, &chunk, sizeof(chunk))) {
++			mutex_unlock(&session_lock);
++			return -EFAULT;
++		}
++		
++		scan_session.current_chunk++;
++		
++		pr_debug(DRIVER_NAME ": Sent scan chunk %u/%u with %u devices\n",
++			chunk.header.chunk_index, chunk.header.total_chunks,
++			devices_in_chunk);
++		
++		mutex_unlock(&session_lock);
++		return 0;
++	}
++	
++	case MILDEV_IOC_SCAN_COMPLETE: {
++		mutex_lock(&session_lock);
++		
++		if (scan_session.active && scan_session.scan.devices) {
++			kfree(scan_session.scan.devices);
++			scan_session.scan.devices = NULL;
++		}
++		
++		scan_session.active = false;
++		pr_debug(DRIVER_NAME ": Completed scan session %llu\n",
++			scan_session.session_id);
++		
++		mutex_unlock(&session_lock);
++		return 0;
++	}
++	
++	case MILDEV_IOC_READ_START: {
++		u32 token;
++		
++		if (copy_from_user(&token, (void __user *)arg, sizeof(token)))
++			return -EFAULT;
++			
++		mutex_lock(&session_lock);
++		
++		/* Clean up any existing read session */
++		if (read_session.active && read_session.read.data) {
++			kfree(read_session.read.data);
++			read_session.read.data = NULL;
++		}
++		
++		/* Validate token and allocate test data */
++		read_session.read.token = (u16)token;
++		read_session.read.data_size = 512;  /* Test with 512 bytes */
++		read_session.read.data = kzalloc(read_session.read.data_size, GFP_KERNEL);
++		if (!read_session.read.data) {
++			mutex_unlock(&session_lock);
++			return -ENOMEM;
++		}
++		
++		/* Fill with test pattern */
++		memset(read_session.read.data, 0xAA, read_session.read.data_size);
++		
++		/* Start session */
++		read_session.session_id = ktime_get_real_ns();
++		read_session.current_chunk = 0;
++		read_session.total_chunks = (read_session.read.data_size + 
++			MAX_DATA_PER_CHUNK - 1) / MAX_DATA_PER_CHUNK;
++		read_session.active = true;
++		read_session.start_time = ktime_get();
++		
++		pr_debug(DRIVER_NAME ": Started read session for token 0x%04X\n", token);
++		
++		mutex_unlock(&session_lock);
++		return 0;
++	}
++	
++	case MILDEV_IOC_READ_CHUNK: {
++		struct read_chunk chunk;
++		u32 offset, chunk_size;
++		
++		mutex_lock(&session_lock);
++		
++		if (!read_session.active) {
++			mutex_unlock(&session_lock);
++			return -EINVAL;
++		}
++		
++		if (read_session.current_chunk >= read_session.total_chunks) {
++			mutex_unlock(&session_lock);
++			return -EINVAL;  /* No more chunks */
++		}
++		
++		memset(&chunk, 0, sizeof(chunk));
++		
++		/* Fill header */
++		chunk.header.token = read_session.read.token;
++		chunk.header.chunk_index = read_session.current_chunk;
++		chunk.header.total_chunks = read_session.total_chunks;
++		chunk.header.session_id = read_session.session_id;
++		
++		/* Calculate data range */
++		offset = read_session.current_chunk * MAX_DATA_PER_CHUNK;
++		chunk_size = min((size_t)MAX_DATA_PER_CHUNK, 
++			read_session.read.data_size - offset);
++		
++		chunk.header.data_offset = offset;
++		chunk.header.chunk_size = chunk_size;
++		
++		/* Copy data */
++		if (chunk_size > 0 && read_session.read.data) {
++			memcpy(chunk.data, 
++				(u8 *)read_session.read.data + offset,
++				chunk_size);
++		}
++		
++		/* Copy to userspace */
++		if (copy_to_user((void __user *)arg, &chunk, sizeof(chunk))) {
++			mutex_unlock(&session_lock);
++			return -EFAULT;
++		}
++		
++		read_session.current_chunk++;
++		
++		pr_debug(DRIVER_NAME ": Sent read chunk %u/%u\n",
++			chunk.header.chunk_index, chunk.header.total_chunks);
++		
++		mutex_unlock(&session_lock);
++		return 0;
++	}
++	
++	case MILDEV_IOC_READ_COMPLETE: {
++		/* Cleanup read session */
++		mutex_lock(&session_lock);
++		
++		if (read_session.active && read_session.read.data) {
+ 	default:
+ 		pr_warn(DRIVER_NAME ": Unknown IOCTL command 0x%x\n", cmd);
+ 		return -ENOTTY;

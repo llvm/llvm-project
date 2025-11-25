@@ -1,0 +1,71 @@
+#!/bin/bash
+set -e
+
+# Post-installation script for DSMIL Platform
+
+echo "═══════════════════════════════════════════════════════════════"
+echo "  DSMIL Platform v8.3.1 - Post-Installation"
+echo "═══════════════════════════════════════════════════════════════"
+
+# Install Python dependencies
+echo "Installing Python dependencies..."
+pip3 install --break-system-packages \
+    requests \
+    anthropic \
+    google-generativeai \
+    openai \
+    flask \
+    flask-cors \
+    beautifulsoup4 \
+    lxml \
+    numpy \
+    sentence-transformers \
+    faiss-cpu || {
+    echo "Warning: Some Python packages may have failed to install"
+    echo "You can install them manually later"
+}
+
+# Check for Ollama
+if ! command -v ollama >/dev/null 2>&1; then
+    echo ""
+    echo "Ollama not found. To install:"
+    echo "  curl -fsSL https://ollama.com/install.sh | sh"
+    echo "  ollama pull deepseek-r1:1.5b"
+    echo "  ollama pull qwen2.5-coder:1.5b"
+fi
+
+# Enable and start service
+if [ -f /etc/systemd/system/dsmil-server.service ]; then
+    systemctl daemon-reload
+    systemctl enable dsmil-server.service
+
+    echo ""
+    echo "To start DSMIL now:"
+    echo "  sudo systemctl start dsmil-server"
+fi
+
+# Create user config directory
+for user in $(ls /home); do
+    if [ -d "/home/$user" ]; then
+        mkdir -p "/home/$user/.config/dsmil"
+        mkdir -p "/home/$user/.local/share/dsmil/rag_index"
+        chown -R "$user:$user" "/home/$user/.config/dsmil" "/home/$user/.local/share/dsmil" 2>/dev/null || true
+    fi
+done
+
+echo ""
+echo "═══════════════════════════════════════════════════════════════"
+echo "  Installation Complete!"
+echo "═══════════════════════════════════════════════════════════════"
+echo ""
+echo "Access the interface: http://localhost:9876"
+echo ""
+echo "Commands:"
+echo "  Start:  sudo systemctl start dsmil-server"
+echo "  Stop:   sudo systemctl stop dsmil-server"
+echo "  Status: sudo systemctl status dsmil-server"
+echo ""
+echo "Documentation: /opt/dsmil/README.md"
+echo ""
+
+exit 0

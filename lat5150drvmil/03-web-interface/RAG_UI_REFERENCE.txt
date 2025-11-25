@@ -1,0 +1,196 @@
+═══════════════════════════════════════════════════════════════════════════════
+RAG INTELLIGENCE DB - UI REFERENCE
+DSMIL TACTICAL SYSTEM v8.0
+═══════════════════════════════════════════════════════════════════════════════
+
+PANEL LOCATION: Right Sidebar (below Command History)
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║ [RAG INTELLIGENCE DB]                                            [+]/[-] ║
+╠═══════════════════════════════════════════════════════════════════════════╣
+║                                                                           ║
+║ ┌─────────────────────────────────────────────────────────────────────┐ ║
+║ │ STATISTICS                                                          │ ║
+║ ├─────────────────────────────────────────────────────────────────────┤ ║
+║ │ DOCUMENTS        │ 3                                                │ ║
+║ │ TOKENS           │ 5,264                                            │ ║
+║ │ SIZE             │ 42.3KB                                           │ ║
+║ └─────────────────────────────────────────────────────────────────────┘ ║
+║                                                                           ║
+║ ADD DOCUMENTS                                                             ║
+║ ┌──────────────────────────────────────────────────────────┬─────────┐  ║
+║ │ /path/to/file.txt                                        │  FILE   │  ║
+║ └──────────────────────────────────────────────────────────┴─────────┘  ║
+║ ┌──────────────────────────────────────────────────────────┬─────────┐  ║
+║ │ /path/to/folder                                          │ FOLDER  │  ║
+║ └──────────────────────────────────────────────────────────┴─────────┘  ║
+║                                                                           ║
+║ SEARCH DATABASE                                                           ║
+║ ┌──────────────────────────────────────────────────────────┬─────────┐  ║
+║ │ Search query...                                          │  FIND   │  ║
+║ └──────────────────────────────────────────────────────────┴─────────┘  ║
+║                                                                           ║
+║ INDEXED FILES                                         [REFRESH]          ║
+║ ┌─────────────────────────────────────────────────────────────────────┐ ║
+║ │ apt_tradecraft.txt                                      5,264T      │ ║
+║ │ lateral_movement.md                                     1,832T      │ ║
+║ │ persistence_techniques.pdf                              3,401T      │ ║
+║ │ ...                                                                 │ ║
+║ └─────────────────────────────────────────────────────────────────────┘ ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════
+COLOR SCHEME
+═══════════════════════════════════════════════════════════════════════════════
+
+Background:       #000 (Pure Black)
+Primary Text:     #0f0 (Phosphor Green)
+Labels:           #0f0 at 80% opacity
+Values:           #ff0 (Yellow)
+Borders:          #0f0 with glow effects
+Buttons:          #001100 background, #0f0 border and text
+Error Text:       #f33 (Red)
+Info Text:        #0ff (Cyan)
+Loading:          Pulsing yellow animation
+
+═══════════════════════════════════════════════════════════════════════════════
+INTERACTIVE ELEMENTS
+═══════════════════════════════════════════════════════════════════════════════
+
+HEADER CLICK:
+  • Toggle panel expand/collapse
+  • Indicator changes: [+] ↔ [-]
+
+INPUT FIELDS:
+  • Click to focus
+  • Type file/folder path or search query
+  • Press Enter to submit
+  • Auto-clear on success (file/folder inputs)
+
+BUTTONS:
+  • FILE:    Add single file to RAG
+  • FOLDER:  Add all files in folder to RAG
+  • FIND:    Search RAG database
+  • REFRESH: Reload stats and document list
+
+═══════════════════════════════════════════════════════════════════════════════
+CHAT AREA FEEDBACK
+═══════════════════════════════════════════════════════════════════════════════
+
+When you add a file:
+┌───────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM> [14:32:05]                                                        │
+│   Adding file to RAG: /home/john/research/apt-report.txt                 │
+│                                                                            │
+│ INFO> [14:32:05]                                                          │
+│   Processing file...  [PULSING]                                           │
+│                                                                            │
+│ SYSTEM> [14:32:07]                                                        │
+│   File added successfully: 1,423 tokens                                   │
+└───────────────────────────────────────────────────────────────────────────┘
+
+When you search:
+┌───────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM> [14:35:12]                                                        │
+│   Searching RAG database: "lateral movement techniques"                   │
+│                                                                            │
+│ INFO> [14:35:12]                                                          │
+│   Searching...  [PULSING]                                                 │
+│                                                                            │
+│ SYSTEM> [14:35:13]                                                        │
+│   Found 3 result(s):                                                      │
+│                                                                            │
+│ INFO> [14:35:13]                                                          │
+│   [1] lateral_movement.md (score: 0.923)                                  │
+│   Pass-the-Hash (PtH) is a technique where an attacker uses a password   │
+│   hash instead of the plain text password for authentication. This is... │
+│   ────────────────────────────────────────────────────────────────────   │
+│                                                                            │
+│ INFO> [14:35:13]                                                          │
+│   [2] apt_tradecraft.txt (score: 0.847)                                   │
+│   Lateral movement techniques commonly used by APT groups include...     │
+│   ────────────────────────────────────────────────────────────────────   │
+└───────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+KEYBOARD SHORTCUTS
+═══════════════════════════════════════════════════════════════════════════════
+
+F4           Trigger RAG query in chat: "What documents are in the RAG system?"
+Enter        Submit any RAG input field (file/folder/search)
+Click Header Expand/collapse panel
+
+═══════════════════════════════════════════════════════════════════════════════
+WORKFLOW EXAMPLES
+═══════════════════════════════════════════════════════════════════════════════
+
+DAILY RESEARCH WORKFLOW:
+1. Open terminal interface
+2. Panel shows existing docs (e.g., "apt_tradecraft.txt - 5,264T")
+3. Download new paper to /home/john/research/new_paper.pdf
+4. Type path in file input: /home/john/research/new_paper.pdf
+5. Press Enter
+6. See "File added successfully: 2,341 tokens"
+7. Stats update: DOCUMENTS: 4, TOKENS: 7,605
+8. Paper now searchable
+
+TECHNIQUE LOOKUP:
+1. Type in search: "persistence mechanisms"
+2. Press Enter
+3. See ranked results from all indexed papers
+4. Read content previews to find what you need
+5. Reference original files if you need full context
+
+BATCH IMPORT:
+1. Organize papers in /home/john/research/apt_papers/
+2. Type folder path in folder input
+3. Press Enter
+4. Wait for processing (may take 30s-2min for large folders)
+5. See detailed summary: "Folder processed: 15 files, 23,412 tokens"
+6. View list of added files
+7. Stats show all new content
+
+═══════════════════════════════════════════════════════════════════════════════
+TECHNICAL DETAILS
+═══════════════════════════════════════════════════════════════════════════════
+
+Panel Dimensions:
+  • Width: 320px (matches sidebar)
+  • Max scroll height (doc list): 250px
+  • Font size: 10-11px (compact)
+
+Input Styling:
+  • Background: #000
+  • Border: 1px solid #0f0
+  • Padding: 6px
+  • Font: Courier New, 11px
+
+Button Styling:
+  • Inherits from .chat-btn class
+  • Hover: #003300 background, green glow
+  • Active: #0f0 background, black text
+
+Auto-refresh Delay:
+  • 500ms after successful file/folder add
+  • Allows server to complete indexing
+
+═══════════════════════════════════════════════════════════════════════════════
+STATUS INDICATORS
+═══════════════════════════════════════════════════════════════════════════════
+
+Loading:  Yellow pulsing text (1.5s cycle, 40%-100% opacity)
+Success:  Green system message with checkmark details
+Error:    Red error message with clear description
+Info:     Cyan informational message for results/details
+
+═══════════════════════════════════════════════════════════════════════════════
+INTEGRATION WITH HEADER
+═══════════════════════════════════════════════════════════════════════════════
+
+Top header shows compact metric:
+  RAG DOCS: 3  (updates automatically with refreshRAGStats())
+
+This provides at-a-glance awareness of indexed content without opening panel.
+
+═══════════════════════════════════════════════════════════════════════════════

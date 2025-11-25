@@ -1,0 +1,48 @@
+#!/bin/bash
+set -e
+
+# DEBIAN prerm script for dell-milspec-tools
+# This script runs before package removal
+
+PACKAGE_NAME="dell-milspec-tools"
+
+case "$1" in
+    remove|upgrade|deconfigure)
+        echo "Preparing to remove $PACKAGE_NAME..."
+
+        # Stop any running monitoring services
+        echo "  Stopping monitoring processes..."
+        pkill -f milspec-monitor 2>/dev/null || true
+        pkill -f dsmil_comprehensive_monitor 2>/dev/null || true
+        pkill -f safe_token_tester 2>/dev/null || true
+
+        # Give processes time to terminate gracefully
+        sleep 2
+
+        # Force kill any remaining processes
+        pkill -9 -f milspec-monitor 2>/dev/null || true
+        pkill -9 -f dsmil_comprehensive_monitor 2>/dev/null || true
+
+        # Remove PID files if they exist
+        rm -f /var/run/dell-milspec/*.pid 2>/dev/null || true
+
+        # Log the removal
+        if [ -d /var/log/dell-milspec ]; then
+            echo "[$(date -Iseconds)] Package removal initiated" >> /var/log/dell-milspec/system.log 2>/dev/null || true
+        fi
+
+        echo "  Monitoring processes stopped"
+        ;;
+
+    failed-upgrade)
+        ;;
+
+    *)
+        echo "prerm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

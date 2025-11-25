@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Military TPM2 Security Dashboard</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --military-dark: #1a1a1a;
+            --military-green: #2d5a27;
+            --military-yellow: #ffd700;
+            --military-red: #dc3545;
+            --military-blue: #0d6efd;
+        }
+
+        body {
+            background-color: var(--military-dark);
+            color: #ffffff;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .navbar {
+            background-color: var(--military-green) !important;
+            border-bottom: 2px solid var(--military-yellow);
+        }
+
+        .navbar-brand {
+            color: var(--military-yellow) !important;
+            font-weight: bold;
+        }
+
+        .card {
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background-color: var(--military-green);
+            color: var(--military-yellow);
+            font-weight: bold;
+        }
+
+        .status-healthy {
+            color: #28a745;
+        }
+
+        .status-warning {
+            color: #ffc107;
+        }
+
+        .status-critical {
+            color: #dc3545;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #2a2a2a, #3a3a3a);
+            border-left: 4px solid var(--military-green);
+        }
+
+        .alert-banner {
+            position: fixed;
+            top: 56px;
+            left: 0;
+            right: 0;
+            z-index: 1050;
+            display: none;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .widget {
+            min-height: 300px;
+        }
+
+        .real-time-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #28a745;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .classification-banner {
+            background-color: var(--military-yellow);
+            color: var(--military-dark);
+            text-align: center;
+            font-weight: bold;
+            padding: 5px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1060;
+        }
+
+        .sidebar {
+            background-color: #1e1e1e;
+            border-right: 1px solid #444;
+            height: calc(100vh - 56px);
+            position: fixed;
+            left: 0;
+            top: 56px;
+            width: 250px;
+            overflow-y: auto;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .nav-pills .nav-link {
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+
+        .nav-pills .nav-link.active {
+            background-color: var(--military-green);
+        }
+
+        .nav-pills .nav-link:hover {
+            background-color: #444;
+        }
+    </style>
+</head>
+<body>
+    <!-- Classification Banner -->
+    <div class="classification-banner">
+        UNCLASSIFIED // FOR OFFICIAL USE ONLY
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="margin-top: 30px;">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-shield-alt me-2"></i>
+                Military TPM2 Security Dashboard
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item">
+                    <span class="navbar-text">
+                        <span class="real-time-indicator"></span>
+                        Live Monitoring
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Alert Banner -->
+    <div id="alertBanner" class="alert-banner">
+        <div class="alert alert-danger alert-dismissible">
+            <strong>Security Alert:</strong> <span id="alertMessage"></span>
+            <button type="button" class="btn-close" aria-label="Close" onclick="hideAlert()"></button>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="sidebar">
+                <div class="p-3">
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" onclick="switchDashboard('security_overview')">
+                                <i class="fas fa-shield-alt me-2"></i>Security Overview
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="switchDashboard('performance_metrics')">
+                                <i class="fas fa-tachometer-alt me-2"></i>Performance Metrics
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="switchDashboard('compliance_status')">
+                                <i class="fas fa-clipboard-check me-2"></i>Compliance Status
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="switchDashboard('incident_response')">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Incident Response
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="switchDashboard('hardware_health')">
+                                <i class="fas fa-microchip me-2"></i>Hardware Health
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="switchDashboard('threat_intelligence')">
+                                <i class="fas fa-search me-2"></i>Threat Intelligence
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <div id="dashboardContent">
+                    <!-- Dashboard content will be loaded here -->
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Global variables
+        let socket;
+        let currentDashboard = 'security_overview';
+        let dashboardData = {};
+        let updateIntervals = {};
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSocket();
+            loadDashboard('security_overview');
+        });
+
+        // Initialize WebSocket connection
+        function initializeSocket() {
+            socket = io();
+
+            socket.on('connect', function() {
+                console.log('Connected to dashboard server');
+            });
+
+            socket.on('disconnect', function() {
+                console.log('Disconnected from dashboard server');
+            });
+
+            socket.on('security_alert', function(alert) {
+                showAlert(alert.message, alert.severity);
+            });
+
+            socket.on('security_update', function(data) {
+                if (currentDashboard === 'security_overview') {
+                    updateSecurityOverview(data);
+                }
+            });
+
+            socket.on('performance_update', function(data) {
+                if (currentDashboard === 'performance_metrics') {
+                    updatePerformanceMetrics(data);
+                }
+            });
+
+            socket.on('compliance_update', function(data) {
+                if (currentDashboard === 'compliance_status') {
+                    updateComplianceStatus(data);
+                }
+            });
+
+            socket.on('metrics_update', function(data) {
+                updateRealTimeMetrics(data);
+            });
+        }
+
+        // Switch dashboard
+        function switchDashboard(dashboardType) {
+            // Update active nav item
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            currentDashboard = dashboardType;
+            loadDashboard(dashboardType);
+        }
+
+        // Load dashboard content
+        function loadDashboard(dashboardType) {
+            const endpoint = `/api/${dashboardType.replace('_', '-')}`;
+
+            fetch(endpoint)
+                .then(response => response.json())
+                .then(data => {
+                    dashboardData[dashboardType] = data;
+                    renderDashboard(dashboardType, data);
+                })
+                .catch(error => {
+                    console.error('Error loading dashboard:', error);
+                    showError('Failed to load dashboard data');
+                });
+        }
+
+        // Render dashboard content
+        function renderDashboard(dashboardType, data) {
+            const content = document.getElementById('dashboardContent');
+
+            switch(dashboardType) {
+                case 'security_overview':
+                    content.innerHTML = renderSecurityOverview(data);
+                    break;
+                case 'performance_metrics':
+                    content.innerHTML = renderPerformanceMetrics(data);
+                    break;
+                case 'compliance_status':
+                    content.innerHTML = renderComplianceStatus(data);
+                    break;
+                case 'incident_response':
+                    content.innerHTML = renderIncidentResponse(data);
+                    break;
+                case 'hardware_health':
+                    content.innerHTML = renderHardwareHealth(data);
+                    break;
+                case 'threat_intelligence':
+                    content.innerHTML = renderThreatIntelligence(data);
+                    break;
+            }
+
+            // Initialize charts after content is rendered
+            setTimeout(() => {
+                initializeCharts(dashboardType, data);
+            }, 100);
+        }
+
+        // Render security overview
+        function renderSecurityOverview(data) {
+            const threatLevelClass = getThreatLevelClass(data.threat_level);
+            const systemStatusClass = getStatusClass(data.system_status);
+
+            return `
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">System Status</h5>
+                                <h2 class="${systemStatusClass}">
+                                    <i class="fas fa-circle"></i> ${data.system_status}
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Threat Level</h5>
+                                <h2 class="${threatLevelClass}">
+                                    <i class="fas fa-exclamation-triangle"></i> ${data.threat_level}
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Active Incidents</h5>
+                                <h2 class="status-warning">
+                                    <i class="fas fa-bell"></i> ${data.active_incidents.total}
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Compliance Score</h5>
+                                <h2 class="status-healthy">
+                                    <i class="fas fa-check-circle"></i> ${data.compliance_status.overall_score}%
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card widget">
+                            <div class="card-header">
+                                <i class="fas fa-chart-line me-2"></i>Security Metrics Trend
+                            </div>
+                            <div class="card-body">
+                                <div id="securityTrendChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card widget">
+                            <div class="card-header">
+                                <i class="fas fa-shield-alt me-2"></i>Threat Detection Summary
+                            </div>
+                            <div class="card-body">
+                                <div id="threatDetectionChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-list me-2"></i>Recent Security Events
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-dark table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Timestamp</th>
+                                                <th>Severity</th>
+                                                <th>Event Type</th>
+                                                <th>Description</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="securityEventsTable">
+                                            ${renderSecurityEventsTable(data.recent_alerts)}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render performance metrics
+        function renderPerformanceMetrics(data) {
+            return `
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">TPM Operations/sec</h5>
+                                <h2 class="status-healthy">
+                                    <i class="fas fa-tachometer-alt"></i> ${data.tpm_performance.operations_per_second}
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Average Latency</h5>
+                                <h2 class="status-healthy">
+                                    <i class="fas fa-clock"></i> ${data.latency_analysis.average_ms}ms
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Error Rate</h5>
+                                <h2 class="status-healthy">
+                                    <i class="fas fa-exclamation"></i> ${data.error_rates.current_rate}%
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Hardware Utilization</h5>
+                                <h2 class="status-warning">
+                                    <i class="fas fa-microchip"></i> ${data.hardware_utilization.average}%
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card widget">
+                            <div class="card-header">
+                                <i class="fas fa-chart-area me-2"></i>Performance Trends
+                            </div>
+                            <div class="card-body">
+                                <div id="performanceTrendChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card widget">
+                            <div class="card-header">
+                                <i class="fas fa-chart-pie me-2"></i>Hardware Acceleration
+                            </div>
+                            <div class="card-body">
+                                <div id="accelerationChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Initialize charts
+        function initializeCharts(dashboardType, data) {
+            if (dashboardType === 'security_overview') {
+                initializeSecurityCharts(data);
+            } else if (dashboardType === 'performance_metrics') {
+                initializePerformanceCharts(data);
+            }
+        }
+
+        // Initialize security charts
+        function initializeSecurityCharts(data) {
+            // Security trend chart
+            const securityTrend = {
+                x: data.security_metrics.timestamps || [],
+                y: data.security_metrics.threat_scores || [],
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Threat Score',
+                line: { color: '#dc3545' }
+            };
+
+            Plotly.newPlot('securityTrendChart', [securityTrend], {
+                title: 'Security Threat Level Over Time',
+                plot_bgcolor: '#2a2a2a',
+                paper_bgcolor: '#2a2a2a',
+                font: { color: '#ffffff' },
+                xaxis: { gridcolor: '#444' },
+                yaxis: { gridcolor: '#444' }
+            });
+
+            // Threat detection chart
+            const threatData = [{
+                values: Object.values(data.active_incidents.by_category || {}),
+                labels: Object.keys(data.active_incidents.by_category || {}),
+                type: 'pie',
+                marker: {
+                    colors: ['#28a745', '#ffc107', '#dc3545', '#6f42c1', '#20c997']
+                }
+            }];
+
+            Plotly.newPlot('threatDetectionChart', threatData, {
+                title: 'Incidents by Category',
+                plot_bgcolor: '#2a2a2a',
+                paper_bgcolor: '#2a2a2a',
+                font: { color: '#ffffff' }
+            });
+        }
+
+        // Initialize performance charts
+        function initializePerformanceCharts(data) {
+            // Performance trend chart
+            const traces = [];
+
+            if (data.throughput_trends) {
+                traces.push({
+                    x: data.throughput_trends.timestamps,
+                    y: data.throughput_trends.values,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Throughput',
+                    line: { color: '#28a745' }
+                });
+            }
+
+            if (data.latency_analysis && data.latency_analysis.trend) {
+                traces.push({
+                    x: data.latency_analysis.trend.timestamps,
+                    y: data.latency_analysis.trend.values,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Latency',
+                    yaxis: 'y2',
+                    line: { color: '#ffc107' }
+                });
+            }
+
+            Plotly.newPlot('performanceTrendChart', traces, {
+                title: 'Performance Metrics Over Time',
+                plot_bgcolor: '#2a2a2a',
+                paper_bgcolor: '#2a2a2a',
+                font: { color: '#ffffff' },
+                xaxis: { gridcolor: '#444' },
+                yaxis: {
+                    gridcolor: '#444',
+                    title: 'Throughput (ops/sec)'
+                },
+                yaxis2: {
+                    title: 'Latency (ms)',
+                    overlaying: 'y',
+                    side: 'right'
+                }
+            });
+
+            // Hardware acceleration chart
+            if (data.acceleration_metrics) {
+                const accelerationData = [{
+                    values: Object.values(data.acceleration_metrics.utilization || {}),
+                    labels: Object.keys(data.acceleration_metrics.utilization || {}),
+                    type: 'pie',
+                    marker: {
+                        colors: ['#0d6efd', '#6610f2', '#6f42c1', '#e83e8c']
+                    }
+                }];
+
+                Plotly.newPlot('accelerationChart', accelerationData, {
+                    title: 'Hardware Acceleration Usage',
+                    plot_bgcolor: '#2a2a2a',
+                    paper_bgcolor: '#2a2a2a',
+                    font: { color: '#ffffff' }
+                });
+            }
+        }
+
+        // Utility functions
+        function getThreatLevelClass(level) {
+            if (level <= 2) return 'status-healthy';
+            if (level <= 4) return 'status-warning';
+            return 'status-critical';
+        }
+
+        function getStatusClass(status) {
+            const statusLower = status.toLowerCase();
+            if (statusLower.includes('healthy') || statusLower.includes('good')) return 'status-healthy';
+            if (statusLower.includes('warning') || statusLower.includes('degraded')) return 'status-warning';
+            return 'status-critical';
+        }
+
+        function renderSecurityEventsTable(events) {
+            if (!events || events.length === 0) {
+                return '<tr><td colspan="5" class="text-center">No recent events</td></tr>';
+            }
+
+            return events.map(event => `
+                <tr>
+                    <td>${new Date(event.timestamp * 1000).toLocaleString()}</td>
+                    <td><span class="badge bg-${getSeverityBadgeClass(event.severity)}">${event.severity}</span></td>
+                    <td>${event.type}</td>
+                    <td>${event.description}</td>
+                    <td><span class="badge bg-${getStatusBadgeClass(event.status)}">${event.status}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function getSeverityBadgeClass(severity) {
+            const severityLower = severity.toLowerCase();
+            if (severityLower.includes('low')) return 'success';
+            if (severityLower.includes('medium')) return 'warning';
+            if (severityLower.includes('high')) return 'danger';
+            return 'secondary';
+        }
+
+        function getStatusBadgeClass(status) {
+            const statusLower = status.toLowerCase();
+            if (statusLower.includes('resolved') || statusLower.includes('ok')) return 'success';
+            if (statusLower.includes('pending') || statusLower.includes('investigating')) return 'warning';
+            if (statusLower.includes('critical') || statusLower.includes('failed')) return 'danger';
+            return 'secondary';
+        }
+
+        function showAlert(message, severity) {
+            const alertBanner = document.getElementById('alertBanner');
+            const alertMessage = document.getElementById('alertMessage');
+
+            alertMessage.textContent = message;
+            alertBanner.style.display = 'block';
+
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+                hideAlert();
+            }, 10000);
+        }
+
+        function hideAlert() {
+            const alertBanner = document.getElementById('alertBanner');
+            alertBanner.style.display = 'none';
+        }
+
+        function showError(message) {
+            console.error(message);
+            showAlert(`Error: ${message}`, 'error');
+        }
+
+        // Real-time metric updates
+        function updateRealTimeMetrics(data) {
+            // Update metric displays in current dashboard
+            // This would update specific elements based on the current dashboard
+        }
+
+        // Auto-refresh current dashboard
+        setInterval(() => {
+            if (currentDashboard) {
+                loadDashboard(currentDashboard);
+            }
+        }, 30000); // Refresh every 30 seconds
+    </script>
+</body>
+</html>

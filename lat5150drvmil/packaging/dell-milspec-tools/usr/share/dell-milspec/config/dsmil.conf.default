@@ -1,0 +1,168 @@
+# Dell MIL-SPEC DSMIL Configuration
+# Default configuration file for DSMIL device access and management
+#
+# This file is part of dell-milspec-tools package
+# Location: /etc/dell-milspec/dsmil.conf
+
+# ========================================================================
+# DEVICE CONFIGURATION
+# ========================================================================
+
+# DSMIL device node path
+DSMIL_DEVICE="/dev/dsmil0"
+
+# Device access mode (permissions)
+DEVICE_MODE="0660"
+
+# Device owner group
+DEVICE_GROUP="dsmil"
+
+# ========================================================================
+# MODULE CONFIGURATION
+# ========================================================================
+
+# DSMIL kernel module name
+MODULE_NAME="dsmil_72dev"
+
+# Module parameters (space-separated)
+# Example: "debug=1 timeout=5000"
+MODULE_PARAMS=""
+
+# Auto-load module on boot
+# Set to "yes" to load module automatically
+AUTO_LOAD="no"
+
+# ========================================================================
+# TOKEN RANGE CONFIGURATION
+# ========================================================================
+
+# Primary token range for testing
+PRIMARY_RANGE="Range_0480"
+
+# Token ranges to monitor
+# Comma-separated list of range names
+MONITORED_RANGES="Range_0400,Range_0480,Range_0500"
+
+# ========================================================================
+# SAFETY LIMITS
+# ========================================================================
+
+# Maximum temperature (Celsius) before emergency stop
+MAX_TEMPERATURE=95
+
+# Maximum CPU usage (percent) before throttling
+MAX_CPU_USAGE=90
+
+# Maximum memory usage (percent) before throttling
+MAX_MEMORY_USAGE=90
+
+# Maximum test duration (seconds)
+MAX_TEST_DURATION=30
+
+# ========================================================================
+# LOGGING CONFIGURATION
+# ========================================================================
+
+# Log directory
+LOG_DIR="/var/log/dell-milspec"
+
+# Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+LOG_LEVEL="INFO"
+
+# Maximum log file size (bytes)
+LOG_MAX_SIZE=10485760
+
+# Number of log backups to keep
+LOG_BACKUP_COUNT=5
+
+# ========================================================================
+# MONITORING CONFIGURATION
+# ========================================================================
+
+# Monitoring update interval (seconds)
+UPDATE_INTERVAL=0.5
+
+# Enable thermal monitoring
+ENABLE_THERMAL_MONITORING="yes"
+
+# Enable resource monitoring
+ENABLE_RESOURCE_MONITORING="yes"
+
+# Enable token monitoring
+ENABLE_TOKEN_MONITORING="yes"
+
+# ========================================================================
+# ALERT CONFIGURATION
+# ========================================================================
+
+# Enable alerts
+ENABLE_ALERTS="yes"
+
+# Alert cooldown period (seconds)
+ALERT_COOLDOWN=30
+
+# Maximum alerts to store in memory
+MAX_ALERTS=100
+
+# ========================================================================
+# EMERGENCY STOP CONFIGURATION
+# ========================================================================
+
+# Enable emergency stop mechanism
+ENABLE_EMERGENCY_STOP="yes"
+
+# Emergency stop timeout (milliseconds)
+# Target: <85ms for MIL-SPEC compliance
+EMERGENCY_TIMEOUT=85
+
+# Emergency log directory
+EMERGENCY_LOG_DIR="/var/log/dell-milspec"
+
+# ========================================================================
+# HARDWARE SPECIFIC
+# ========================================================================
+
+# Platform identifier
+PLATFORM="Dell Latitude 5450"
+
+# Thermal zone paths (comma-separated)
+THERMAL_ZONES="/sys/class/thermal/thermal_zone0/temp,/sys/class/thermal/thermal_zone1/temp"
+
+# CPU core count (0 = auto-detect)
+CPU_CORES=0
+
+# Total system memory (MB) (0 = auto-detect)
+TOTAL_MEMORY=0
+
+# ========================================================================
+# INTEGRATION
+# ========================================================================
+
+# Enable TPM2 acceleration integration
+ENABLE_TPM2_INTEGRATION="yes"
+
+# TPM2 device path
+TPM2_DEVICE="/dev/tpm2_accel_early"
+
+# Enable SMBIOS integration
+ENABLE_SMBIOS_INTEGRATION="yes"
+
+# ========================================================================
+# ADVANCED OPTIONS
+# ========================================================================
+
+# Enable debug mode
+DEBUG_MODE="no"
+
+# Enable performance profiling
+ENABLE_PROFILING="no"
+
+# Enable dry-run mode by default (no actual token writes)
+DEFAULT_DRY_RUN="yes"
+
+# Require confirmation for live operations
+REQUIRE_CONFIRMATION="yes"
+
+# ========================================================================
+# END OF CONFIGURATION
+# ========================================================================

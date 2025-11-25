@@ -1,0 +1,1155 @@
+# dmidecode 3.6
+Getting SMBIOS data from sysfs.
+SMBIOS 3.6 present.
+99 structures occupying 6430 bytes.
+Table at 0x4DC1A000.
+
+Handle 0xDA00, DMI type 218, 251 bytes
+OEM-specific Type
+	Header and Data:
+		DA FB 00 DA B2 00 7C FF 9F B6 54 1E 00 1E 00 00
+		00 22 00 22 00 01 00 23 00 23 00 00 00 28 00 28
+		00 00 00 29 00 29 00 01 00 2A 00 2A 00 02 00 2B
+		00 2B 00 FF FF 2C 00 2C 00 FF FF 2D 00 2D 00 02
+		00 2E 00 2E 00 00 00 50 00 50 00 01 00 55 00 55
+		00 00 00 6D 00 6D 00 05 00 6E 00 6E 00 01 00 7D
+		00 7D 00 FF FF 90 00 90 00 01 00 91 00 91 00 00
+		00 92 00 92 00 02 00 9B 00 9B 00 01 00 9C 00 9C
+		00 00 00 9F 00 9F 00 00 00 A0 00 A0 00 01 00 A1
+		00 A1 00 00 00 A3 00 A3 00 01 00 D1 00 D1 00 01
+		00 D2 00 D2 00 00 00 ED 00 ED 00 00 00 F0 00 F0
+		00 01 00 09 01 09 01 00 00 0E 01 0E 01 01 00 0F
+		01 0F 01 00 00 27 01 27 01 03 00 2B 01 2B 01 01
+		00 2C 01 2C 01 00 00 35 01 35 01 FF 00 38 01 38
+		01 01 00 39 01 39 01 02 00 44 01 44 01 00 00 45
+		01 45 01 01 00 FF FF FF FF 00 00
+
+Handle 0xDA01, DMI type 218, 251 bytes
+OEM-specific Type
+	Header and Data:
+		DA FB 01 DA B2 00 7C FF 9F B6 54 4A 01 4A 01 00
+		00 4B 01 4B 01 01 00 4C 01 4C 01 01 00 52 01 52
+		01 01 00 53 01 53 01 00 00 7F 01 7F 01 00 00 80
+		01 80 01 01 00 89 01 89 01 00 00 8A 01 8A 01 01
+		00 9B 01 9B 01 00 00 9C 01 9C 01 01 00 DE 01 DE
+		01 00 00 DF 01 DF 01 01 00 E1 01 E1 01 00 00 EA
+		01 EA 01 00 00 EB 01 EB 01 01 00 02 02 02 02 00
+		00 03 02 03 02 01 00 04 02 04 02 00 00 05 02 05
+		02 01 00 35 02 35 02 01 00 36 02 36 02 00 00 4B
+		02 4B 02 01 00 4C 02 4C 02 00 00 64 02 64 02 01
+		00 65 02 65 02 00 00 66 02 66 02 01 00 67 02 67
+		02 00 00 68 02 68 02 01 00 69 02 69 02 00 00 6C
+		02 6C 02 01 00 6D 02 6D 02 00 00 85 02 85 02 01
+		00 86 02 86 02 00 00 A7 02 A7 02 01 00 A8 02 A8
+		02 00 00 BD 02 BD 02 01 00 BE 02 BE 02 00 00 E3
+		02 E3 02 01 00 FF FF FF FF 00 00
+
+Handle 0xDA02, DMI type 218, 251 bytes
+OEM-specific Type
+	Header and Data:
+		DA FB 02 DA B2 00 7C FF 9F B6 54 E4 02 E4 02 00
+		00 E5 02 E5 02 01 00 EB 02 EB 02 06 00 F6 02 F6
+		02 08 00 12 03 12 03 03 00 13 03 13 03 01 00 14
+		03 14 03 00 00 15 03 15 03 01 00 16 03 16 03 00
+		00 17 03 17 03 01 00 18 03 18 03 00 00 19 03 19
+		03 01 00 1A 03 1A 03 00 00 1B 03 1B 03 01 00 1C
+		03 1C 03 00 00 1D 03 1D 03 01 00 1E 03 1E 03 00
+		00 1F 03 1F 03 01 00 20 03 20 03 00 00 26 03 26
+		03 01 00 2B 03 2B 03 01 00 2C 03 2C 03 00 00 41
+		03 41 03 03 00 42 03 42 03 04 00 43 03 43 03 05
+		00 46 03 46 03 01 00 47 03 47 03 02 00 48 03 48
+		03 05 00 49 03 49 03 FF FF 4A 03 4A 03 FF FF 4D
+		03 4D 03 01 00 4E 03 4E 03 00 00 4F 03 4F 03 01
+		00 50 03 50 03 00 00 61 03 61 03 01 00 62 03 62
+		03 00 00 64 03 64 03 01 00 65 03 65 03 00 00 67
+		03 67 03 FF FF FF FF FF FF 00 00
+
+Handle 0xDA03, DMI type 218, 251 bytes
+OEM-specific Type
+	Header and Data:
+		DA FB 03 DA B2 00 7C FF 9F B6 54 6C 03 6C 03 00
+		00 6D 03 6D 03 01 00 6E 03 6E 03 FF FF 74 03 74
+		03 00 00 75 03 75 03 01 00 78 03 78 03 01 00 79
+		03 79 03 00 00 97 03 97 03 01 00 98 03 98 03 00
+		00 A2 03 A2 03 01 00 A3 03 A3 03 00 00 BE 03 BE
+		03 FF FF C6 03 C6 03 00 00 C7 03 C7 03 01 00 C8
+		03 C8 03 02 00 C9 03 C9 03 01 00 CA 03 CA 03 00
+		00 CB 03 CB 03 FF FF CD 03 CD 03 01 00 CE 03 CE
+		03 00 00 D3 03 D3 03 FF FF D6 03 D6 03 01 00 D7
+		03 D7 03 00 00 F6 03 F6 03 01 00 F7 03 F7 03 00
+		00 01 04 01 04 01 00 02 04 02 04 00 00 03 04 03
+		04 01 00 04 04 04 04 00 00 31 04 31 04 FF FF 32
+		04 32 04 01 00 33 04 33 04 00 00 36 04 36 04 01
+		00 37 04 37 04 00 00 40 04 40 04 01 00 41 04 41
+		04 00 00 42 04 42 04 01 00 43 04 43 04 00 00 46
+		04 46 04 01 00 FF FF FF FF 00 00
+
+Handle 0xDA04, DMI type 218, 251 bytes
+OEM-specific Type
+	Header and Data:
+		DA FB 04 DA B2 00 7C FF 9F B6 54 47 04 47 04 00
+		00 4B 04 4B 04 01 00 4C 04 4C 04 00 00 4D 04 4D
+		04 00 00 4E 04 4E 04 01 00 4F 04 4F 04 02 00 51
+		04 51 04 FF FF 52 04 52 04 FF FF 53 04 53 04 01
+		00 54 04 54 04 00 00 61 04 61 04 01 00 62 04 62
+		04 00 00 7B 04 7B 04 01 00 7C 04 7C 04 00 00 80
+		04 80 04 01 00 81 04 81 04 00 00 87 04 87 04 01
+		00 88 04 88 04 00 00 89 04 89 04 FF FF 98 04 98
+		04 FF FF 99 04 99 04 00 00 9A 04 9A 04 01 00 9B
+		04 9B 04 02 00 9C 04 9C 04 01 00 9D 04 9D 04 00
+		00 9E 04 9E 04 01 00 9F 04 9F 04 00 00 A0 04 A0
+		04 01 00 A1 04 A1 04 00 00 A2 04 A2 04 01 00 A3
+		04 A3 04 00 00 AE 04 AE 04 01 00 AF 04 AF 04 00
+		00 DC 04 DC 04 FF FF E6 04 E6 04 01 00 E7 04 E7
+		04 00 00 EC 04 EC 04 01 00 ED 04 ED 04 00 00 00
+		05 00 05 FF FF FF FF FF FF 00 00
+
+Handle 0xDA05, DMI type 218, 251 bytes
+OEM-specific Type
+	Header and Data:
+		DA FB 05 DA B2 00 7C FF 9F B6 54 12 05 12 05 00
+		00 13 05 13 05 01 00 14 05 14 05 02 00 1A 05 1A
+		05 01 00 1B 05 1B 05 00 00 37 05 37 05 00 00 38
+		05 38 05 01 00 43 05 43 05 01 00 44 05 44 05 00
+		00 47 05 47 05 00 00 48 05 48 05 01 00 58 05 58
+		05 01 00 59 05 59 05 00 00 5A 05 5A 05 01 00 5B
+		05 5B 05 00 00 5C 05 5C 05 01 00 5D 05 5D 05 00
+		00 5E 05 5E 05 01 00 5F 05 5F 05 00 00 60 05 60
+		05 FF FF 65 05 65 05 FF FF 6D 05 6D 05 01 00 6E
+		05 6E 05 00 00 72 05 72 05 00 00 73 05 73 05 01
+		00 74 05 74 05 02 00 75 05 75 05 01 00 76 05 76
+		05 00 00 77 05 77 05 FF FF 80 05 80 05 FF FF 87
+		05 87 05 00 00 88 05 88 05 01 00 89 05 89 05 02
+		00 91 05 91 05 03 00 92 05 92 05 04 00 4A 40 4A
+		40 01 00 4B 40 4B 40 00 00 4C 40 4C 40 FF FF 4F
+		40 4F 40 01 00 FF FF FF FF 00 00
+
+Handle 0xDA06, DMI type 218, 83 bytes
+OEM-specific Type
+	Header and Data:
+		DA 53 06 DA B2 00 7C FF 9F B6 54 50 40 50 40 00
+		00 00 80 00 80 00 00 02 80 02 80 02 00 03 80 03
+		80 03 00 0E 80 0E 80 01 00 0F 80 0F 80 FF FF 12
+		80 12 80 FF FF 13 80 13 80 00 00 14 80 14 80 00
+		00 00 A0 00 A0 01 00 04 A0 04 A0 01 00 FF FF FF
+		FF 00 00
+
+Handle 0xDA07, DMI type 218, 101 bytes
+OEM-specific Type
+	Header and Data:
+		DA 65 07 DA B2 00 7C FF 9F B6 54 00 F1 00 F1 01
+		00 02 F1 02 F1 01 00 10 F1 10 F1 01 00 12 F1 12
+		F1 01 00 20 F1 20 F1 01 00 22 F1 22 F1 01 00 30
+		F1 30 F1 01 00 32 F1 32 F1 01 00 40 F1 40 F1 01
+		00 42 F1 42 F1 01 00 50 F1 50 F1 01 00 52 F1 52
+		F1 01 00 00 F6 00 F6 01 00 01 F6 01 F6 01 00 FF
+		FF FF FF 00 00
+
+Handle 0x0001, DMI type 0, 26 bytes
+BIOS Information
+	Vendor: Dell Inc.
+	Version: 1.14.1
+	Release Date: 04/10/2025
+	ROM Size: 64 MB
+	Characteristics:
+		PCI is supported
+		PNP is supported
+		BIOS is upgradeable
+		BIOS shadowing is allowed
+		Boot from CD is supported
+		Selectable boot is supported
+		EDD is supported
+		Print screen service is supported (int 5h)
+		8042 keyboard services are supported (int 9h)
+		Serial services are supported (int 14h)
+		Printer services are supported (int 17h)
+		ACPI is supported
+		USB legacy is supported
+		Smart battery is supported
+		BIOS boot specification is supported
+		Function key-initiated network boot is supported
+		Targeted content distribution is supported
+		UEFI is supported
+	BIOS Revision: 1.14
+	Firmware Revision: 1.17
+
+Handle 0x0100, DMI type 1, 27 bytes
+System Information
+	Manufacturer: Dell Inc.
+	Product Name: Latitude 5450
+	Version: Not Specified
+	Serial Number: C6FHC54
+	UUID: 4c4c4544-0036-4610-8048-c3c04f433534
+	Wake-up Type: Power Switch
+	SKU Number: 0CB2
+	Family: Latitude
+
+Handle 0x0200, DMI type 2, 17 bytes
+Base Board Information
+	Manufacturer: Dell Inc.
+	Product Name: 0M5NJ4
+	Version: A00
+	Serial Number: /C6FHC54/CNCMK0048C0059/
+	Asset Tag: Not Specified
+	Features:
+		Board is a hosting board
+		Board is replaceable
+	Location In Chassis: Not Specified
+	Chassis Handle: 0x0300
+	Type: Motherboard
+	Contained Object Handles: 0
+
+Handle 0x0300, DMI type 3, 22 bytes
+Chassis Information
+	Manufacturer: Dell Inc.
+	Type: Notebook
+	Lock: Not Present
+	Version: Not Specified
+	Serial Number: C6FHC54
+	Asset Tag: 69420BLAZEITSTOLENLAPTOP4LIFE--FUCKTHEPOLICE
+	Boot-up State: Safe
+	Power Supply State: Safe
+	Thermal State: Safe
+	Security Status: None
+	OEM Information: 0x00000000
+	Height: Unspecified
+	Number Of Power Cords: 1
+	Contained Elements: 0
+	SKU Number: Notebook
+
+Handle 0x0400, DMI type 4, 50 bytes
+Processor Information
+	Socket Designation: U3E1
+	Type: Central Processor
+	Family: <OUT OF SPEC>
+	Manufacturer: Intel(R) Corporation
+	ID: A4 06 0A 00 FF FB EB BF
+	Version: Intel(R) Core(TM) Ultra 7 165H
+	Voltage: 0.9 V
+	External Clock: 100 MHz
+	Max Speed: 5000 MHz
+	Current Speed: 4059 MHz
+	Status: Populated, Enabled
+	Upgrade: <OUT OF SPEC>
+	L1 Cache Handle: 0x0705
+	L2 Cache Handle: 0x0706
+	L3 Cache Handle: 0x0707
+	Serial Number:  
+	Asset Tag:  
+	Part Number:  
+	Core Count: 16
+	Core Enabled: 16
+	Thread Count: 22
+	Characteristics:
+		64-bit capable
+		Multi-Core
+		Hardware Thread
+		Execute Protection
+		Enhanced Virtualization
+		Power/Performance Control
+
+Handle 0x0700, DMI type 7, 27 bytes
+Cache Information
+	Socket Designation: L1 Cache
+	Configuration: Enabled, Not Socketed, Level 1
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 288 kB
+	Maximum Size: 288 kB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Parity
+	System Type: Data
+	Associativity: 12-way Set-associative
+
+Handle 0x0701, DMI type 7, 27 bytes
+Cache Information
+	Socket Designation: L1 Cache
+	Configuration: Enabled, Not Socketed, Level 1
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 384 kB
+	Maximum Size: 384 kB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Parity
+	System Type: Instruction
+	Associativity: 16-way Set-associative
+
+Handle 0x0702, DMI type 7, 27 bytes
+Cache Information
+	Socket Designation: L2 Cache
+	Configuration: Enabled, Not Socketed, Level 2
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 12 MB
+	Maximum Size: 12 MB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Single-bit ECC
+	System Type: Unified
+	Associativity: 16-way Set-associative
+
+Handle 0x0703, DMI type 7, 27 bytes
+Cache Information
+	Socket Designation: L3 Cache
+	Configuration: Enabled, Not Socketed, Level 3
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 24 MB
+	Maximum Size: 24 MB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Multi-bit ECC
+	System Type: Unified
+	Associativity: 12-way Set-associative
+
+Handle 0x0704, DMI type 7, 27 bytes
+Cache Information
+	Socket Designation: L1 Cache
+	Configuration: Enabled, Not Socketed, Level 1
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 320 kB
+	Maximum Size: 320 kB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Parity
+	System Type: Data
+	Associativity: 8-way Set-associative
+
+Handle 0x0705, DMI type 7, 27 bytes
+Cache Information
+	Socket Designation: L1 Cache
+	Configuration: Enabled, Not Socketed, Level 1
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 640 kB
+	Maximum Size: 640 kB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Parity
+	System Type: Instruction
+	Associativity: 8-way Set-associative
+
+Handle 0x0706, DMI type 7, 27 bytes
+Cache Information
+	Socket Designation: L2 Cache
+	Configuration: Enabled, Not Socketed, Level 2
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 6 MB
+	Maximum Size: 6 MB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Single-bit ECC
+	System Type: Unified
+	Associativity: 16-way Set-associative
+
+Handle 0x0707, DMI type 7, 27 bytes
+Cache Information
+	Socket Designation: L3 Cache
+	Configuration: Enabled, Not Socketed, Level 3
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 24 MB
+	Maximum Size: 24 MB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Multi-bit ECC
+	System Type: Unified
+	Associativity: 12-way Set-associative
+
+Handle 0x0800, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JHDMI1
+	Internal Connector Type: None
+	External Reference Designator: HDMI
+	External Connector Type: Other
+	Port Type: Video Port
+
+Handle 0x0801, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JTYPEC1
+	Internal Connector Type: None
+	External Reference Designator: USBC1
+	External Connector Type: USB Type-C Receptacle
+	Port Type: Thunderbolt
+
+Handle 0x0802, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JTYPEC2
+	Internal Connector Type: None
+	External Reference Designator: USBC2
+	External Connector Type: USB Type-C Receptacle
+	Port Type: Thunderbolt
+
+Handle 0x0803, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JUSB1
+	Internal Connector Type: None
+	External Reference Designator: USB1
+	External Connector Type: Access Bus (USB)
+	Port Type: USB
+
+Handle 0x0804, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JUSB2
+	Internal Connector Type: None
+	External Reference Designator: USB2
+	External Connector Type: Access Bus (USB)
+	Port Type: USB
+
+Handle 0x0805, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JHP1
+	Internal Connector Type: None
+	External Reference Designator: Audio Jack
+	External Connector Type: Mini Jack (headphones)
+	Port Type: Audio Port
+
+Handle 0x0806, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JSPK1 - Speaker
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Audio Port
+
+Handle 0x0807, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JEDP1 - EDP+Camera
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0808, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JIR1 - IR Camera
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0809, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JFPBTN1 - Finger Print Sensor
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x080A, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JUSH1 - USH
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x080B, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JNGFF2 - WLAN+BT/CNVi
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x080C, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JNGFF3 - SSD
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x080D, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JSENTS1 - Touch Screen+Sensor
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x080E, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JKBTP1 - Keyboard Port+Touch Pad
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Keyboard Port
+
+Handle 0x080F, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JFAN1 - CPU FAN
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0810, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JRTC1 - RTC
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0811, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JRJ451
+	Internal Connector Type: Other
+	External Reference Designator: Network
+	External Connector Type: RJ-45
+	Port Type: Network Port
+
+Handle 0x0812, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: PBATT1 - Battery
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0813, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JDIMM1 - DIMM B
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0814, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: JDIMM2 - DIMM A
+	Internal Connector Type: Other
+	External Reference Designator: None
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0900, DMI type 9, 24 bytes
+System Slot Information
+	Designation: WWAN
+	Type: PCI Express x1
+	Data Bus Width: 1x or x1
+	Current Usage: Available
+	Length: Short
+	ID: 1
+	Characteristics:
+		3.3 V is provided
+		PME signal is supported
+		Hot-plug devices are supported
+	Bus Address: 00ff:ff:1f.7
+	Data Bus Width (Base): 0
+	Peer Devices: 0
+	Height: Not applicable
+
+Handle 0x0901, DMI type 9, 24 bytes
+System Slot Information
+	Designation: WLAN
+	Type: PCI Express x1
+	Data Bus Width: 1x or x1
+	Current Usage: In Use
+	Length: Short
+	ID: 2
+	Characteristics:
+		3.3 V is provided
+		PME signal is supported
+		Hot-plug devices are supported
+	Bus Address: 00ff:ff:1f.7
+	Data Bus Width (Base): 0
+	Peer Devices: 0
+	Height: Not applicable
+
+Handle 0x0902, DMI type 9, 24 bytes
+System Slot Information
+	Designation: M.2 2230 Key M SSD conn
+	Type: PCI Express x4
+	Data Bus Width: 4x or x4
+	Current Usage: In Use
+	Length: Short
+	ID: 3
+	Characteristics:
+		3.3 V is provided
+		PME signal is supported
+		Hot-plug devices are supported
+	Bus Address: 00ff:ff:1f.7
+	Data Bus Width (Base): 0
+	Peer Devices: 0
+	Height: Not applicable
+
+Handle 0x0B00, DMI type 11, 5 bytes
+OEM Strings
+	String 1: Dell System
+	String 2: 1[0CB2]
+	String 3: 3[1.0]
+	String 4: 12[www.dell.com]
+	String 5: 14[1]
+	String 6: 15[0]
+	String 7: 27[26510188216]
+	String 8: 34[Feature - 000]
+
+Handle 0x0C00, DMI type 12, 5 bytes
+System Configuration Options
+	Option 1: J6H1:1-X Boot with Default; J8H1:1-X BIOS RECOVERY
+
+Handle 0x0D00, DMI type 13, 22 bytes
+BIOS Language Information
+	Language Description Format: Abbreviated
+	Installable Languages: 1
+		enUS
+	Currently Installed Language: enUS
+
+Handle 0x0E00, DMI type 14, 8 bytes
+Group Associations
+	Name: $MEI
+	Items: 1
+		0x0000 (OEM-specific)
+
+Handle 0x0E01, DMI type 14, 26 bytes
+Group Associations
+	Name: Firmware Version Info
+	Items: 7
+		0xCD00 (OEM-specific)
+		0xCD01 (OEM-specific)
+		0xCD02 (OEM-specific)
+		0xCD03 (OEM-specific)
+		0xCD04 (OEM-specific)
+		0xCD05 (OEM-specific)
+		0xCD06 (OEM-specific)
+
+Handle 0x1000, DMI type 16, 23 bytes
+Physical Memory Array
+	Location: System Board Or Motherboard
+	Use: System Memory
+	Error Correction Type: None
+	Maximum Capacity: 64 GB
+	Error Information Handle: Not Provided
+	Number Of Devices: 2
+
+Handle 0x1102, DMI type 17, 92 bytes
+Memory Device
+	Array Handle: 0x1000
+	Error Information Handle: Not Provided
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 32 GB
+	Form Factor: SODIMM
+	Set: None
+	Locator: DIMM A
+	Bank Locator: Not Specified
+	Type: DDR5
+	Type Detail: Synchronous
+	Speed: 5600 MT/s
+	Manufacturer: 802C00000000
+	Serial Number: EB590CA9
+	Asset Tag: 00251700
+	Part Number: CT32G56C46S5.M16B2  
+	Rank: 2
+	Configured Memory Speed: 5600 MT/s
+	Minimum Voltage: Unknown
+	Maximum Voltage: Unknown
+	Configured Voltage: 1.1 V
+	Memory Technology: DRAM
+	Memory Operating Mode Capability: Volatile memory
+	Firmware Version: Not Specified
+	Module Manufacturer ID: Bank 1, Hex 0x2C
+	Module Product ID: Unknown
+	Memory Subsystem Controller Manufacturer ID: Unknown
+	Memory Subsystem Controller Product ID: Unknown
+	Non-Volatile Size: None
+	Volatile Size: 32 GB
+	Cache Size: None
+	Logical Size: None
+
+Handle 0x1103, DMI type 17, 92 bytes
+Memory Device
+	Array Handle: 0x1000
+	Error Information Handle: Not Provided
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 32 GB
+	Form Factor: SODIMM
+	Set: None
+	Locator: DIMM B
+	Bank Locator: Not Specified
+	Type: DDR5
+	Type Detail: Synchronous
+	Speed: 5600 MT/s
+	Manufacturer: 80AD00000000
+	Serial Number: 98249C34
+	Asset Tag: 01242700
+	Part Number: HMCG88AGBSA095N     
+	Rank: 2
+	Configured Memory Speed: 5600 MT/s
+	Minimum Voltage: Unknown
+	Maximum Voltage: Unknown
+	Configured Voltage: 1.1 V
+	Memory Technology: DRAM
+	Memory Operating Mode Capability: Volatile memory
+	Firmware Version: Not Specified
+	Module Manufacturer ID: Bank 1, Hex 0xAD
+	Module Product ID: Unknown
+	Memory Subsystem Controller Manufacturer ID: Unknown
+	Memory Subsystem Controller Product ID: Unknown
+	Non-Volatile Size: None
+	Volatile Size: 32 GB
+	Cache Size: None
+	Logical Size: None
+
+Handle 0x1300, DMI type 19, 31 bytes
+Memory Array Mapped Address
+	Starting Address: 0x00000000000
+	Ending Address: 0x00FFFFFFFFF
+	Range Size: 64 GB
+	Physical Array Handle: 0x1000
+	Partition Width: 2
+
+Handle 0x1500, DMI type 21, 7 bytes
+Built-in Pointing Device
+	Type: Touch Pad
+	Interface: Bus Mouse
+	Buttons: 2
+
+Handle 0x1600, DMI type 22, 26 bytes
+Portable Battery
+	Location: Sys. Battery Bay
+	Manufacturer: SMP
+	Manufacture Date: 07/02/2024
+	Serial Number: 0363
+	Name: DELL 9HKT5472
+	Design Capacity: 54000 mWh
+	Design Voltage: 11400 mV
+	SBDS Version: 1.0
+	Maximum Error: 0%
+	SBDS Chemistry: LiP
+	OEM-specific Information: 0x00000801
+
+Handle 0x1900, DMI type 25, 9 bytes
+System Power Controls
+	Next Scheduled Power-on: *-* 00:00:00
+
+Handle 0x1B00, DMI type 27, 15 bytes
+Cooling Device
+	Type: Fan
+	Status: OK
+	OEM-specific Information: 0x0000DD00
+	Nominal Speed: 4200 rpm
+	Description: Processor Fan
+
+Handle 0x1C00, DMI type 28, 22 bytes
+Temperature Probe
+	Description: CPU
+	Location: Processor Module
+	Status: OK
+	Maximum Value: 127.0 deg C
+	Minimum Value: -127.0 deg C
+	Resolution: 1.000 deg C
+	Tolerance: Unknown
+	Accuracy: Unknown
+	OEM-specific Information: 0x0000DC00
+	Nominal Value: 10.0 deg C
+
+Handle 0x1C01, DMI type 28, 22 bytes
+Temperature Probe
+	Description: OTHER
+	Location: Other
+	Status: OK
+	Maximum Value: 127.0 deg C
+	Minimum Value: -127.0 deg C
+	Resolution: 1.000 deg C
+	Tolerance: Unknown
+	Accuracy: Unknown
+	OEM-specific Information: 0x0000DC01
+	Nominal Value: 10.0 deg C
+
+Handle 0x1C02, DMI type 28, 22 bytes
+Temperature Probe
+	Description: DIMM
+	Location: Memory Module
+	Status: OK
+	Maximum Value: 127.0 deg C
+	Minimum Value: -127.0 deg C
+	Resolution: 1.000 deg C
+	Tolerance: Unknown
+	Accuracy: Unknown
+	OEM-specific Information: 0x0000DC02
+	Nominal Value: 10.0 deg C
+
+Handle 0x1C03, DMI type 28, 22 bytes
+Temperature Probe
+	Description: DIMM
+	Location: Memory Module
+	Status: OK
+	Maximum Value: 127.0 deg C
+	Minimum Value: -127.0 deg C
+	Resolution: 1.000 deg C
+	Tolerance: Unknown
+	Accuracy: Unknown
+	OEM-specific Information: 0x0000DC03
+	Nominal Value: 10.0 deg C
+
+Handle 0x1C04, DMI type 28, 22 bytes
+Temperature Probe
+	Description: SKIN
+	Location: Motherboard
+	Status: OK
+	Maximum Value: 127.0 deg C
+	Minimum Value: -127.0 deg C
+	Resolution: 1.000 deg C
+	Tolerance: Unknown
+	Accuracy: Unknown
+	OEM-specific Information: 0x0000DC04
+	Nominal Value: 10.0 deg C
+
+Handle 0x1C05, DMI type 28, 22 bytes
+Temperature Probe
+	Description: OTHER
+	Location: Other
+	Status: OK
+	Maximum Value: 127.0 deg C
+	Minimum Value: -127.0 deg C
+	Resolution: 1.000 deg C
+	Tolerance: Unknown
+	Accuracy: Unknown
+	OEM-specific Information: 0x0000DC05
+	Nominal Value: 10.0 deg C
+
+Handle 0x2000, DMI type 32, 11 bytes
+System Boot Information
+	Status: No errors detected
+
+Handle 0x2700, DMI type 39, 22 bytes
+System Power Supply
+	Power Unit Group: 1
+	Location:  
+	Name:  
+	Manufacturer:  
+	Serial Number:  
+	Asset Tag:  
+	Model Part Number:  
+	Revision:  
+	Max Power Capacity: Unknown
+	Status: Present, Unknown
+	Type: Unknown
+	Input Voltage Range Switching: Unknown
+	Plugged: Yes
+	Hot Replaceable: No
+	Input Voltage Probe Handle: 0x0000
+	Cooling Device Handle: 0x000A
+	Input Current Probe Handle: 0x0000
+
+Handle 0x2900, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation:  
+	Type: Video
+	Status: Enabled
+	Type Instance: 0
+	Bus Address: 0000:00:02.0
+
+Handle 0x2901, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation:  
+	Type: Ethernet
+	Status: Disabled
+	Type Instance: 0
+	Bus Address: 0000:00:1f.6
+
+Handle 0x2902, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation:  
+	Type: Sound
+	Status: Disabled
+	Type Instance: 0
+	Bus Address: 0000:00:1f.3
+
+Handle 0x2903, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation:  
+	Type: SATA Controller
+	Status: Disabled
+	Type Instance: 0
+	Bus Address: 0000:00:17.0
+
+Handle 0x2B00, DMI type 43, 31 bytes
+TPM Device
+	Vendor ID: STM
+	Specification Version: 2.0
+	Firmware Revision: 1.769
+	Description: TPM 2.0, ManufacturerID: STM , Firmware Version: 0x00010301.0x0
+	Characteristics:
+		TPM Device characteristics not supported
+	OEM-specific Information: 0x00000000
+
+Handle 0x8200, DMI type 130, 24 bytes
+OEM-specific Type
+	Header and Data:
+		82 18 00 82 24 41 4D 54 00 00 00 00 00 A5 EF 03
+		80 00 00 00 00 00 00 00
+
+Handle 0x8300, DMI type 131, 64 bytes
+OEM-specific Type
+	Header and Data:
+		83 40 00 83 3F 00 00 00 00 00 00 00 00 00 00 00
+		F8 00 02 7E 00 00 00 00 21 20 00 00 00 00 12 00
+		2F 09 0A 00 00 00 00 00 FE 00 0A 55 00 00 00 00
+		00 00 00 00 26 00 00 00 76 50 72 6F 00 00 00 00
+
+Handle 0x8500, DMI type 133, 44 bytes
+OEM-specific Type
+	Header and Data:
+		85 2C 00 85 F9 B4 95 78 4D 92 0A 41 96 39 12 38
+		62 B2 8A 63 00 86 80 08 16 12 20 26 12 86 80 01
+		00 00 00 61 72 57 18 03 00 00 00 00
+
+Handle 0x8800, DMI type 136, 8 bytes
+OEM-specific Type
+	Header and Data:
+		88 08 00 88 00 00 00 00
+
+Handle 0xB100, DMI type 177, 12 bytes
+OEM-specific Type
+	Header and Data:
+		B1 0C 00 B1 1E 00 00 00 00 00 00 00
+
+Handle 0xB200, DMI type 178, 80 bytes
+OEM-specific Type
+	Header and Data:
+		B2 50 00 B2 0A 01 12 00 3B 00 0B 00 3C 00 0A 00
+		3D 00 0C 00 3E 00 26 00 3F 00 16 00 40 00 13 00
+		41 00 14 00 42 00 18 00 10 00 FF 00 11 00 FF 00
+		12 00 FF 00 13 00 FF 00 14 00 FF 00 1E 00 FF 00
+		1F 00 FF 00 20 00 FF 00 21 00 FF 00 22 00 FF 00
+	Strings:
+		                                            
+
+Handle 0xB300, DMI type 179, 5 bytes
+OEM-specific Type
+	Header and Data:
+		B3 05 00 B3 02
+	Strings:
+		1[F65CD98101EA340D362D5FDA17A8061361C739B7A08ED4C284C606B5598A818B]
+		2[39D926AED9CB845B525799127C180E1DB3B00AB172787E8FE5A3D4269F3DBF79]
+
+Handle 0xCB00, DMI type 203, 106 bytes
+OEM-specific Type
+	Header and Data:
+		CB 6A 00 CB 01 04 01 45 02 00 90 00 01 00 60 20
+		00 00 00 00 00 00 00 03 1F F6 02 00 00 20 40 02
+		00 00 00 80 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00 00 00 00 00 00 03 00 00 00 80 00 00 00
+		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00 00 00 00 00 00 00 00
+	Strings:
+		MEI1
+		MEI2
+		MEI3
+		MEI4
+
+Handle 0xCD00, DMI type 205, 12 bytes
+OEM-specific Type
+	Header and Data:
+		CD 0C 00 CD 01 01 00 02 01 00 CA 03
+	Strings:
+		BIOS Guard
+
+Handle 0xCD01, DMI type 205, 12 bytes
+OEM-specific Type
+	Header and Data:
+		CD 0C 01 CD 01 01 02 FF FF FF FF FF
+	Strings:
+		FSP Binary Version
+		0D.00.00B5.0030
+
+Handle 0xCD02, DMI type 205, 26 bytes
+OEM-specific Type
+	Header and Data:
+		CD 1A 02 CD 03 01 00 0D 00 B5 30 00 02 00 00 00
+		00 1C 00 03 00 01 13 14 00 00
+	Strings:
+		Reference Code - CPU
+		uCode Version
+		TXT ACM version
+
+Handle 0xCD03, DMI type 205, 26 bytes
+OEM-specific Type
+	Header and Data:
+		CD 1A 03 CD 03 01 00 0D 00 B5 30 00 02 03 12 00
+		0A 2F 09 04 05 FF FF FF FF FF
+	Strings:
+		Reference Code - ME
+		ME Firmware Version
+		Consumer SKU
+		ISSE Version
+		03E8.0000.0005.0808
+
+Handle 0xCD04, DMI type 205, 47 bytes
+OEM-specific Type
+	Header and Data:
+		CD 2F 04 CD 06 01 00 0D 00 B5 30 00 02 03 FF FF
+		FF FF FF 04 00 FF FF FF 20 00 05 00 FF FF FF 20
+		00 06 00 02 46 00 00 00 07 00 04 00 00 00 00
+	Strings:
+		Reference Code - PCH
+		PCH-CRID Status
+		Disabled
+		PCH-CRID Original Value
+		PCH-CRID New Value
+		OPROM - RST - RAID
+		PCH Hsio Version
+
+Handle 0xCD05, DMI type 205, 82 bytes
+OEM-specific Type
+	Header and Data:
+		CD 52 05 CD 0B 01 00 0D 00 B5 30 00 02 00 01 04
+		02 01 00 03 00 0D 00 B5 30 00 04 05 FF FF FF FF
+		FF 06 00 00 00 00 04 00 07 00 00 00 00 04 00 08
+		00 FF FF FF FF FF 09 00 30 01 0A 00 00 0A 00 00
+		00 00 65 1B 0B 00 0D 01 00 00 00 0C 00 FF FF FF
+		FF FF
+	Strings:
+		Reference Code - SA - System Agent
+		Reference Code - MRC
+		SA - PCIe Version
+		SA-CRID Status
+		Disabled
+		SA-CRID Original Value
+		SA-CRID New Value
+		OPROM - VBIOS
+		IO Manageability Engine FW Version
+		PHY Build Version
+		Thunderbolt(TM) FW Version
+		System Agent Manageability Engine FW Version
+
+Handle 0xCD06, DMI type 205, 117 bytes
+OEM-specific Type
+	Header and Data:
+		CD 75 06 CD 10 01 00 00 00 00 A6 00 02 00 FF FF
+		FF FF FF 03 04 FF FF FF FF FF 05 06 FF FF FF FF
+		FF 07 08 FF FF FF FF FF 09 00 FF FF FF FF FF 0A
+		00 FF FF FF FF FF 0B 00 01 11 00 00 00 0C 00 00
+		22 01 35 10 0D 00 FF FF FF FF FF 0E 00 00 07 00
+		00 00 0F 00 FF FF FF FF FF 10 00 FF FF FF FF FF
+		11 00 FF FF FF FF FF 12 00 FF FF FF FF FF 13 00
+		FF FF FF FF FF
+	Strings:
+		Lan Phy Version
+		Sensor Firmware Version
+		Debug Mode Status
+		Disabled
+		Performance Mode Status
+		Disabled
+		Debug Use USB(Disabled:Serial)
+		Disabled
+		ICC Overclocking Version
+		UNDI Version
+		EC FW Version
+		GOP Version
+		Royal Park Version
+		Platform Version
+		TCSS PD0 Version
+		TCSS PD1 Version
+		TCSS Retimer0 Version
+		TCSS Retimer1 Version
+		TCSS Retimer2 Version
+
+Handle 0xD000, DMI type 208, 16 bytes
+OEM-specific Type
+	Header and Data:
+		D0 10 00 D0 03 19 FE 00 B2 0C 01 02 00 00 00 00
+	Strings:
+		20240816
+		20240826
+
+Handle 0xD800, DMI type 216, 9 bytes
+OEM-specific Type
+	Header and Data:
+		D8 09 00 D8 01 02 01 88 00
+	Strings:
+		"Intel Corp."
+		"2089"
+
+Handle 0xD900, DMI type 217, 8 bytes
+OEM-specific Type
+	Header and Data:
+		D9 08 00 D9 01 02 01 03
+	Strings:
+		US-101
+		Proprietary
+
+Handle 0xDC00, DMI type 220, 20 bytes
+OEM-specific Type
+	Header and Data:
+		DC 14 00 DC 00 F1 00 00 02 F1 00 00 00 00 00 00
+		00 00 00 00
+
+Handle 0xDC01, DMI type 220, 20 bytes
+OEM-specific Type
+	Header and Data:
+		DC 14 01 DC 10 F1 00 00 12 F1 00 00 00 00 00 00
+		00 00 00 00
+
+Handle 0xDC02, DMI type 220, 20 bytes
+OEM-specific Type
+	Header and Data:
+		DC 14 02 DC 20 F1 00 00 22 F1 00 00 00 00 00 00
+		00 00 00 00
+
+Handle 0xDC03, DMI type 220, 20 bytes
+OEM-specific Type
+	Header and Data:
+		DC 14 03 DC 30 F1 00 00 32 F1 00 00 00 00 00 00
+		00 00 00 00
+
+Handle 0xDC04, DMI type 220, 20 bytes
+OEM-specific Type
+	Header and Data:
+		DC 14 04 DC 40 F1 00 00 42 F1 00 00 00 00 00 00
+		00 00 00 00
+
+Handle 0xDC05, DMI type 220, 20 bytes
+OEM-specific Type
+	Header and Data:
+		DC 14 05 DC 50 F1 00 00 52 F1 00 00 00 00 00 00
+		00 00 00 00
+
+Handle 0xDD00, DMI type 221, 19 bytes
+OEM-specific Type
+	Header and Data:
+		DD 13 00 DD 03 01 00 00 F6 01 F6 00 00 00 00 00
+		00 00 00
+
+Handle 0xDE00, DMI type 222, 16 bytes
+OEM-specific Type
+	Header and Data:
+		DE 10 00 DE 01 04 00 00 25 05 18 00 33 01 00 00
+
+Handle 0x0000, DMI type 255, 6 bytes
+OEM-specific Type
+	Header and Data:
+		FF 06 00 00 01 02
+	Strings:
+		_SIDOhLvQyOuEFCF
+		0CB2
+
+Handle 0xFEFF, DMI type 127, 4 bytes
+End Of Table
+

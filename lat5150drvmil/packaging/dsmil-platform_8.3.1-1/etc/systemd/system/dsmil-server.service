@@ -1,0 +1,21 @@
+[Unit]
+Description=DSMIL Unified AI Server
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+User=john
+WorkingDirectory=/opt/dsmil/03-web-interface
+ExecStart=/usr/bin/python3 /opt/dsmil/03-web-interface/dsmil_unified_server.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

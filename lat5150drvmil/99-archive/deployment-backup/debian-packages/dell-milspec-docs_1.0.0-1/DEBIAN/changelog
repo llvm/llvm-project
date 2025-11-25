@@ -1,0 +1,10 @@
+dell-milspec-docs (1.0.0-1) unstable; urgency=medium
+
+  * Initial release of Dell MIL-SPEC documentation package
+  * Complete documentation suite with 91+ organized files
+  * Operational runbooks for system administration
+  * Man pages for all user tools and kernel modules
+  * Covers DSMIL (84 devices) and TPM2 acceleration
+  * Comprehensive technical reference materials
+
+ -- Dell MIL-SPEC Team <milspec-dev@dell.com>  Fri, 11 Oct 2025 16:00:00 +0000

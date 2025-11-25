@@ -1,0 +1,9 @@
+=== SELinux Status ===
+SELinux not available
+
+=== AppArmor Status ===
+AppArmor not available
+
+=== Secure Boot Status ===
+SecureBoot disabled
+Platform is in Setup Mode

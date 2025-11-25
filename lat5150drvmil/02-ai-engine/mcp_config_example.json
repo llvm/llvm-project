@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "dsmil-ai": {
+      "command": "python3",
+      "args": [
+        "/home/user/LAT5150DRVMIL/02-ai-engine/dsmil_mcp_server.py"
+      ],
+      "env": {
+        "PYTHONPATH": "/home/user/LAT5150DRVMIL"
+      }
+    }
+  }
+}

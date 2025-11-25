@@ -1,0 +1,14 @@
+# MCP Server Requirements for DSMIL AI Engine Suite
+# Install with: pip3 install -r mcp_requirements.txt
+
+# Model Context Protocol server library
+mcp>=0.9.0
+
+# Web fetching (for fetch_server.py)
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+html2text>=2020.1.16
+
+# Already required by DSMIL AI Engine:
+# - pycryptodome (for security)
+# - ollama (optional, for local AI)

@@ -1,0 +1,23 @@
+Package: dell-milspec-docs
+Version: 1.0.0-1
+Architecture: all
+Section: doc
+Priority: optional
+Maintainer: Dell MIL-SPEC Team <milspec-dev@dell.com>
+Description: Documentation for Dell Latitude 5450 MIL-SPEC platform
+ Complete documentation suite for Dell MIL-SPEC hardware acceleration
+ platform including guides, runbooks, man pages, and technical reference
+ materials.
+ .
+ This package contains:
+  - 91+ organized documentation files covering planning, analysis, and
+    technical reference materials
+  - 7 operational runbooks for incident response, hotfix deployment,
+    kernel compatibility, and system maintenance
+  - Man pages for all user-facing tools (dsmil-status, tpm2-accel-status,
+    milspec-control) and kernel modules
+  - Complete project documentation and README
+ .
+ The documentation covers the complete Dell MIL-SPEC suite including
+ DSMIL hardware acceleration (84 devices), TPM2 early boot acceleration,
+ and comprehensive system integration guides.

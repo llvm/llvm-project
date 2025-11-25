@@ -1,0 +1,101 @@
+=== Last 100 Kernel Messages ===
+[   23.465593] systemd-journald[562]: Compressed data object 532 -> 435 using ZSTD
+[   23.625335] Initializing XFRM netlink socket
+[   24.164845] FAT-fs (nvme0n1p1): Volume was not properly unmounted. Some data may be corrupt. Please run fsck.
+[   24.346718] br-aa1b05a07b4a: port 1(veth00453fc) entered blocking state
+[   24.346723] br-aa1b05a07b4a: port 1(veth00453fc) entered disabled state
+[   24.346730] veth00453fc: entered allmulticast mode
+[   24.346780] veth00453fc: entered promiscuous mode
+[   24.347070] docker0: port 1(veth48aa885) entered blocking state
+[   24.347076] docker0: port 1(veth48aa885) entered disabled state
+[   24.347086] veth48aa885: entered allmulticast mode
+[   24.347175] veth48aa885: entered promiscuous mode
+[   24.567815] eth0: renamed from veth0782ed0
+[   24.568704] docker0: port 1(veth48aa885) entered blocking state
+[   24.568710] docker0: port 1(veth48aa885) entered forwarding state
+[   24.590210] eth0: renamed from veth8a9f698
+[   24.591372] br-aa1b05a07b4a: port 1(veth00453fc) entered blocking state
+[   24.591379] br-aa1b05a07b4a: port 1(veth00453fc) entered forwarding state
+[   24.879544] FAT-fs (nvme0n1p1): Volume was not properly unmounted. Some data may be corrupt. Please run fsck.
+[   25.601599] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   25.907382] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   25.912197] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   28.198932] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   28.206600] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   28.266352] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   28.266395] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   32.860482] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   32.868534] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   32.919414] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   33.112767] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   33.120798] wlp0s20f3: deauthenticating from d8:0d:17:da:4d:80 by local choice (Reason: 3=DEAUTH_LEAVING)
+[   33.334566] wlp0s20f3: authenticate with 3c:37:86:72:35:fe (local address=98:5f:41:a4:43:90)
+[   33.335019] wlp0s20f3: send auth to 3c:37:86:72:35:fe (try 1/3)
+[   33.364348] wlp0s20f3: authenticated
+[   33.365061] wlp0s20f3: associate with 3c:37:86:72:35:fe (try 1/3)
+[   33.366281] wlp0s20f3: RX AssocResp from 3c:37:86:72:35:fe (capab=0x1011 status=0 aid=1)
+[   33.368375] wlp0s20f3: associated
+[   33.433132] wlp0s20f3: Limiting TX power to 28 (28 - 0) dBm as advertised by 3c:37:86:72:35:fe
+[   36.966417] e1000e 0000:00:1f.6 enp0s31f6: NIC Link is Up 100 Mbps Full Duplex, Flow Control: Rx/Tx
+[   37.735309] e1000e 0000:00:1f.6 enp0s31f6: NIC Link is Down
+[   40.553917] e1000e 0000:00:1f.6 enp0s31f6: NIC Link is Up 100 Mbps Full Duplex, Flow Control: Rx/Tx
+[   42.502563] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   42.512895] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   43.121448] warning: `ThreadPoolForeg' uses wireless extensions which will stop working for Wi-Fi 7 hardware; use nl80211
+[   43.255479] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   58.094939] EXT4-fs (sdc1): recovery complete
+[   58.099816] EXT4-fs (sdc1): mounted filesystem da6e8102-4018-48c6-ac37-cc377947678b r/w with ordered data mode. Quota mode: none.
+[   82.168482] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   82.168509] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   82.169672] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   82.171008] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   82.171154] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   82.171942] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[   86.232725] systemd-journald[562]: Compressed data object 540 -> 264 using ZSTD
+[   86.232905] systemd-journald[562]: Compressed data object 548 -> 270 using ZSTD
+[   86.398961] systemd-journald[562]: Compressed data object 530 -> 257 using ZSTD
+[   86.399267] systemd-journald[562]: Compressed data object 538 -> 263 using ZSTD
+[   86.469783] systemd-journald[562]: Compressed data object 540 -> 266 using ZSTD
+[   86.469869] systemd-journald[562]: Compressed data object 548 -> 273 using ZSTD
+[   86.483536] systemd-journald[562]: Compressed data object 530 -> 260 using ZSTD
+[   86.483706] systemd-journald[562]: Compressed data object 538 -> 268 using ZSTD
+[   86.549161] systemd-journald[562]: Compressed data object 540 -> 269 using ZSTD
+[   86.549264] systemd-journald[562]: Compressed data object 548 -> 275 using ZSTD
+[   86.562531] systemd-journald[562]: Compressed data object 530 -> 262 using ZSTD
+[   86.562688] systemd-journald[562]: Compressed data object 538 -> 269 using ZSTD
+[   86.624745] systemd-journald[562]: Compressed data object 540 -> 267 using ZSTD
+[   86.624967] systemd-journald[562]: Compressed data object 548 -> 274 using ZSTD
+[   86.638100] systemd-journald[562]: Compressed data object 530 -> 260 using ZSTD
+[   86.638198] systemd-journald[562]: Compressed data object 538 -> 267 using ZSTD
+[   99.407103] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[  142.222358] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[  142.222432] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[  142.223942] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[  184.096524] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[  190.658256] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[  196.433132] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[  262.229196] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[  262.229258] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[  281.303972] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[  309.907496] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[  313.177190] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[  341.873602] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[  371.304283] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[  458.136283] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[  509.183123] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[  551.226453] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[  641.308251] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[  731.307359] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[  783.928416] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[  821.306957] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[  909.402358] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[  909.418449] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[ 1001.287900] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[ 1087.401015] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[ 1181.304611] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[ 1268.527558] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[ 1333.924986] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[ 1361.244285] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[ 1384.245716] systemd-journald[562]: Successfully sent stream file descriptor to service manager.
+[ 1451.302685] systemd-journald[562]: Sent WATCHDOG=1 notification.
+[ 1541.301959] systemd-journald[562]: Sent WATCHDOG=1 notification.

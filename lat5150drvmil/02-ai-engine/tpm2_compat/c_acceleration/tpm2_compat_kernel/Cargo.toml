@@ -1,0 +1,29 @@
+[package]
+name = "tpm2_compat_kernel"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Kernel module for TPM2 compatibility layer"
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+tpm2_compat_common = { path = "../tpm2_compat_common", default-features = false, features = ["no-std"] }
+log.workspace = true
+cfg-if.workspace = true
+static_assertions.workspace = true
+zerocopy.workspace = true
+bitflags.workspace = true
+zeroize = { workspace = true, default-features = false }
+
+# Kernel-specific dependencies
+kernel = { git = "https://github.com/Rust-for-Linux/linux", branch = "rust-next", optional = true }
+
+[features]
+default = ["kernel-module"]
+kernel-module = ["kernel"]
+testing = []
+
+# Profile moved to workspace root

@@ -1,0 +1,37 @@
+Package: tpm2-accel-early-dkms
+Version: 1.0.0-1
+Section: kernel
+Priority: optional
+Architecture: all
+Depends: dkms (>= 2.8.0), linux-headers-generic | linux-headers-amd64, make, gcc, systemd
+Recommends: tpm2-tools (>= 5.0), dell-milspec-dsmil-dkms
+Suggests: intel-npu-driver
+Maintainer: TPM2 Acceleration Project <tpm2-accel@mil.spec>
+Homepage: https://github.com/SWORDIntel/LAT5150DRVMIL
+Description: TPM2 Early Boot Hardware Acceleration (DKMS)
+ Kernel module providing TPM2 hardware acceleration during early boot
+ with Intel NPU, GNA 3.5, and Management Engine integration.
+ .
+ Features:
+  * Intel NPU acceleration (34.0 TOPS on Core Ultra 7 165H)
+  * Intel GNA 3.5 security monitoring
+  * Intel ME hardware attestation
+  * Dell SMBIOS military token integration (0x049e-0x04a3)
+  * 4 security levels (UNCLASSIFIED through TOP SECRET)
+  * Fixes TPM CRB buffer mismatch (-22 EINVAL error)
+  * Early boot via subsys_initcall_sync
+  * Character device: /dev/tpm2_accel_early
+ .
+ Performance:
+  * 40,000+ TPM operations/sec
+  * 2.2M+ cryptographic operations/sec
+  * 14× AES-256-GCM speedup with NPU
+  * 12× SHA3-512 speedup with NPU
+ .
+ Hardware Requirements:
+  * Intel Core Ultra 7 155H/165H (Meteor Lake)
+  * TPM 2.0 hardware module
+  * Dell Latitude 5450 MIL-SPEC (recommended)
+  * Linux kernel 6.14.0+
+ .
+ Classification: UNCLASSIFIED // FOR OFFICIAL USE ONLY

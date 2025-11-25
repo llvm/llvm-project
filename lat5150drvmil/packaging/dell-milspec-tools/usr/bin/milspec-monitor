@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""
+milspec-monitor - Monitoring dashboard wrapper
+Part of dell-milspec-tools package
+"""
+
+import os
+import sys
+import argparse
+
+# Add monitoring scripts to path
+sys.path.insert(0, '/usr/share/dell-milspec/monitoring')
+
+try:
+    from dsmil_comprehensive_monitor import main as monitor_main
+    from dsmil_comprehensive_monitor import MonitoringMode
+except ImportError:
+    print("ERROR: Cannot import monitoring module")
+    print("Please ensure dell-milspec-tools is properly installed")
+    sys.exit(1)
+
+
+if __name__ == '__main__':
+    # Set up argument parser
+    parser = argparse.ArgumentParser(
+        description='Dell MIL-SPEC Monitoring Dashboard',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+Monitoring Modes:
+  dashboard   - Comprehensive overview (default)
+  alerts      - Alert history view
+  resources   - System resources view
+  tokens      - DSMIL token monitoring view
+
+Examples:
+  milspec-monitor                     Start dashboard mode
+  milspec-monitor --mode alerts       Alert monitoring
+  milspec-monitor --mode resources    Resource monitoring
+  milspec-monitor --json-output       JSON output for scripts
+        '''
+    )
+
+    parser.add_argument('--mode',
+                       choices=['dashboard', 'alerts', 'resources', 'tokens'],
+                       default='dashboard',
+                       help='Monitoring display mode')
+    parser.add_argument('--json-output', action='store_true',
+                       help='Output JSON data instead of interactive display')
+    parser.add_argument('--duration', type=int, default=0,
+                       help='Run for specified seconds (0 = infinite)')
+
+    # Parse arguments and update sys.argv for the monitoring module
+    args = parser.parse_args()
+
+    # Reconstruct sys.argv for the monitoring module
+    sys.argv = [sys.argv[0], '--mode', args.mode]
+    if args.json_output:
+        sys.argv.append('--json-output')
+    if args.duration > 0:
+        sys.argv.extend(['--duration', str(args.duration)])
+
+    # Check prerequisites
+    if not args.json_output:
+        print("Checking system prerequisites...")
+
+        # Check if modules are loaded
+        issues = []
+
+        if not os.path.exists('/dev/dsmil0'):
+            issues.append("DSMIL device /dev/dsmil0 not found")
+            issues.append("  Hint: Load module with 'sudo modprobe dsmil_72dev'")
+
+        if issues:
+            print()
+            print("WARNING: Some prerequisites not met:")
+            for issue in issues:
+                print(f"  {issue}")
+            print()
+            print("Monitoring will continue but functionality may be limited.")
+            print()
+
+            response = input("Continue anyway? [y/N]: ")
+            if response.lower() != 'y':
+                print("Aborted by user")
+                sys.exit(0)
+
+    # Run the monitoring dashboard
+    try:
+        monitor_main()
+    except KeyboardInterrupt:
+        print()
+        print("Monitoring stopped by user")
+        sys.exit(0)

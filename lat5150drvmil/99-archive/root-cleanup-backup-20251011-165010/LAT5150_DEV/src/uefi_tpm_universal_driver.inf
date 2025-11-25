@@ -1,0 +1,72 @@
+## @file
+#  Universal UEFI TPM 2.0 Driver INF File
+#  Dell Latitude 5450 MIL-SPEC (JRTC1) - STMicroelectronics ST33TPHF2XSP
+#
+#  This driver provides universal TPM access across all operating systems
+#  by fixing the STMicroelectronics firmware bug at UEFI level through
+#  Intel ME coordination and standard EFI_TPM2_PROTOCOL interface.
+#
+#  Multi-Agent Development:
+#  - NSA: Nation-state level UEFI firmware manipulation techniques
+#  - HARDWARE-INTEL: Intel ME HAP mode coordination and Meteor Lake integration
+#  - ARCHITECT: Universal EFI_TPM2_PROTOCOL design for cross-OS compatibility
+#
+#  Copyright (c) 2025, Multi-Agent Coordination. All rights reserved.
+#  Classification: MIL-SPEC Implementation
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = UniversalTpmDriver
+  MODULE_UNI_FILE                = UniversalTpmDriver.uni
+  FILE_GUID                      = 91c1677a-e57c-4191-8b8e-eb7711a03839
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = UniversalTpmDriverEntry
+  UNLOAD_IMAGE                   = UniversalTpmDriverUnload
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64 IPF EBC ARM AARCH64
+#
+
+[Sources]
+  uefi_tpm_universal_driver.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  SecurityPkg/SecurityPkg.dec
+  IntelSiliconPkg/IntelSiliconPkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  MemoryAllocationLib
+  BaseMemoryLib
+  DebugLib
+  PrintLib
+  IoLib
+  TimerLib
+  UefiLib
+
+[Protocols]
+  gEfiTpm2ProtocolGuid                    ## PRODUCES
+  gHeciProtocolGuid                       ## CONSUMES
+
+[Guids]
+  gEfiTpm2DeviceSelectedGuid              ## CONSUMES
+
+[Pcd]
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpmBaseAddress                    ## SOMETIMES_CONSUMES
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpmInstanceGuid                   ## CONSUMES
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2CommandBufferSize             ## CONSUMES
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2ResponseBufferSize            ## CONSUMES
+
+[Depex]
+  gHeciProtocolGuid
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  UniversalTpmDriverExtra.uni

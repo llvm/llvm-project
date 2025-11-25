@@ -1,0 +1,24 @@
+[Unit]
+Description=LAT5150 AI Self-Improvement Timer
+Documentation=file:///home/user/LAT5150DRVMIL/deployment/AUTO_IMPROVEMENT_README.md
+Requires=lat5150-self-improvement.service
+
+[Timer]
+# Run daily at 2 AM
+OnCalendar=daily
+OnCalendar=02:00
+
+# Run 5 minutes after boot (if system was off during scheduled time)
+OnBootSec=5min
+
+# Randomize start time by up to 30 minutes to avoid resource spikes
+RandomizedDelaySec=30min
+
+# Persistent: if system was off during scheduled time, run on next boot
+Persistent=true
+
+# Accuracy (how close to scheduled time)
+AccuracySec=1h
+
+[Install]
+WantedBy=timers.target

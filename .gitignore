@@ -78,3 +78,8 @@ pythonenv*
 /clang/utils/analyzer/projects/*/RefScanBuildResults
 # automodapi puts generated documentation files here.
 /lldb/docs/python_api/
+
+# LAT5150DRVMIL reference copy - exclude build artifacts
+lat5150drvmil/02-ai-engine/tpm2_compat/c_acceleration/target/
+lat5150drvmil/.cache/
+lat5150drvmil/Upgrades.zip

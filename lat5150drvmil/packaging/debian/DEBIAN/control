@@ -1,0 +1,32 @@
+Package: tpm2-accel-early-dkms
+Version: 1.0.0-1
+Section: kernel
+Priority: optional
+Architecture: amd64
+Depends: dkms (>= 2.1.0.0), linux-headers-generic | linux-headers-$(shell uname -r)
+Recommends: tpm2-tools, systemd
+Suggests: tpm2-abrmd
+Maintainer: Military TPM2 Acceleration Project <noreply@example.com>
+Homepage: https://github.com/example/tpm2-accel-early
+Description: TPM2 early boot hardware acceleration with Intel NPU support
+ This package provides a DKMS kernel module for TPM2 hardware acceleration
+ during early system boot, specifically designed for Dell MIL-SPEC systems
+ with Intel Core Ultra processors.
+ .
+ Features:
+  - Intel NPU acceleration (34.0 TOPS)
+  - Intel GNA 3.5 security monitoring
+  - Intel Management Engine integration
+  - Early boot initialization via subsys_initcall_sync
+  - Security levels 0-3 (UNCLASSIFIED to TOP SECRET)
+  - Dell SMBIOS military token integration (0x049e-0x04a3)
+  - Character device interface at /dev/tpm2_accel_early
+ .
+ Hardware Requirements:
+  - Intel Core Ultra 7 processors (Meteor Lake)
+  - TPM 2.0 hardware module
+  - Dell Latitude 5450 MIL-SPEC or compatible system
+ .
+ The module is automatically built for the currently running kernel
+ using DKMS and loaded during early boot for maximum security.
+Classification: UNCLASSIFIED // FOR OFFICIAL USE ONLY

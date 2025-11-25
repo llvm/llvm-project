@@ -1,0 +1,107 @@
+.TH TPM2-ACCEL-STATUS 1 "2025-10-11" "TPM2 Acceleration Tools 1.0.0" "User Commands"
+.SH NAME
+tpm2-accel-status \- Query TPM2 hardware acceleration status
+
+.SH SYNOPSIS
+.B tpm2-accel-status
+.RI [ OPTIONS ]
+
+.SH DESCRIPTION
+.B tpm2-accel-status
+queries and displays the status of TPM2 hardware acceleration, including
+Intel NPU utilization, GNA security monitoring, and Management Engine
+integration.
+
+.SH OPTIONS
+.TP
+.BR \-v ", " \-\-verbose
+Show detailed hardware information
+.TP
+.BR \-j ", " \-\-json
+Output in JSON format
+.TP
+.BR \-p ", " \-\-performance
+Display performance metrics and benchmarks
+.TP
+.BR \-s ", " \-\-security
+Show security level and token status
+.TP
+.BR \-h ", " \-\-help
+Display help message
+
+.SH OUTPUT
+Default output shows:
+.IP \[bu] 2
+Security level (0-3: UNCLASSIFIED - TOP SECRET)
+.IP \[bu]
+Hardware status (NPU, GNA, ME, TPM)
+.IP \[bu]
+NPU utilization percentage
+.IP \[bu]
+Operations per second
+.IP \[bu]
+Total operations and errors
+.IP \[bu]
+Dell SMBIOS token validation status
+
+.SH SECURITY LEVELS
+.TP
+.B Level 0: UNCLASSIFIED
+Basic crypto, standard operations
+.TP
+.B Level 1: CONFIDENTIAL
+Enhanced security, GNA monitoring
+.TP
+.B Level 2: SECRET
+AES-256-GCM, SHA3-512, memory encryption, 14× performance
+.TP
+.B Level 3: TOP SECRET
+Maximum security, real-time monitoring
+
+.SH EXAMPLES
+.PP
+Display status:
+.RS
+tpm2-accel-status
+.RE
+
+.PP
+Show performance metrics:
+.RS
+tpm2-accel-status --performance
+.RE
+
+.PP
+Check security level:
+.RS
+tpm2-accel-status --security
+.RE
+
+.SH EXIT STATUS
+.TP
+.B 0
+Success - acceleration active
+.TP
+.B 1
+Module not loaded
+.TP
+.B 2
+Hardware not available
+
+.SH FILES
+.TP
+.B /dev/tpm2_accel_early
+TPM2 acceleration device
+.TP
+.B /sys/module/tpm2_accel_early/parameters/
+Module parameter interface
+
+.SH SEE ALSO
+.BR tpm2_accel_early (8),
+.BR tpm2_pcrread (1),
+.BR dsmil-status (1)
+
+.SH COPYRIGHT
+Copyright 2024-2025 Intel Corporation
+.br
+Licensed under GPL-2.0+

@@ -1,0 +1,108 @@
+DSMIL Token Discovery Results
+Date: 2025-09-01 17:50:26.385676
+
+Group_0:
+  0x8000: SMI_Active
+  0x8001: SMI_Active
+  0x8002: SMI_Active
+  0x8003: SMI_Active
+  0x8004: SMI_Active
+  0x8005: SMI_Active
+  0x8006: SMI_Active
+  0x8007: SMI_Active
+  0x8008: SMI_Active
+  0x8009: SMI_Active
+  0x800A: SMI_Active
+  0x800B: SMI_Active
+  Summary: Active=12, Inactive=0, No Response=0
+
+Group_1:
+  0x8010: SMI_Active
+  0x8011: SMI_Active
+  0x8012: SMI_Active
+  0x8013: SMI_Active
+  0x8014: SMI_Active
+  0x8015: SMI_Active
+  0x8016: SMI_Active
+  0x8017: SMI_Active
+  0x8018: SMI_Active
+  0x8019: SMI_Active
+  0x801A: SMI_Active
+  0x801B: SMI_Active
+  Summary: Active=12, Inactive=0, No Response=0
+
+Group_2:
+  0x8020: SMI_Active
+  0x8021: SMI_Active
+  0x8022: SMI_Active
+  0x8023: SMI_Active
+  0x8024: SMI_Active
+  0x8025: SMI_Active
+  0x8026: SMI_Active
+  0x8027: SMI_Active
+  0x8028: SMI_Active
+  0x8029: SMI_Active
+  0x802A: SMI_Active
+  0x802B: SMI_Active
+  Summary: Active=12, Inactive=0, No Response=0
+
+Group_3:
+  0x8030: SMI_Active
+  0x8031: SMI_Active
+  0x8032: SMI_Active
+  0x8033: SMI_Active
+  0x8034: SMI_Active
+  0x8035: SMI_Active
+  0x8036: SMI_Active
+  0x8037: SMI_Active
+  0x8038: SMI_Active
+  0x8039: SMI_Active
+  0x803A: SMI_Active
+  0x803B: SMI_Active
+  Summary: Active=12, Inactive=0, No Response=0
+
+Group_4:
+  0x8040: SMI_Active
+  0x8041: SMI_Active
+  0x8042: SMI_Active
+  0x8043: SMI_Active
+  0x8044: SMI_Active
+  0x8045: SMI_Active
+  0x8046: SMI_Active
+  0x8047: SMI_Active
+  0x8048: SMI_Active
+  0x8049: SMI_Active
+  0x804A: SMI_Active
+  0x804B: SMI_Active
+  Summary: Active=12, Inactive=0, No Response=0
+
+Group_5:
+  0x8050: SMI_Active
+  0x8051: SMI_Active
+  0x8052: SMI_Active
+  0x8053: SMI_Active
+  0x8054: SMI_Active
+  0x8055: SMI_Active
+  0x8056: SMI_Active
+  0x8057: SMI_Active
+  0x8058: SMI_Active
+  0x8059: SMI_Active
+  0x805A: SMI_Active
+  0x805B: SMI_Active
+  Summary: Active=12, Inactive=0, No Response=0
+
+Extended:
+  0x8060: SMI_Active
+  0x8061: SMI_Active
+  0x8062: SMI_Active
+  0x8063: SMI_Active
+  0x8064: SMI_Active
+  0x8065: SMI_Active
+  0x8066: SMI_Active
+  0x8067: SMI_Active
+  0x8068: SMI_Active
+  0x8069: SMI_Active
+  0x806A: SMI_Active
+  0x806B: SMI_Active
+  Summary: Active=12, Inactive=0, No Response=0
+

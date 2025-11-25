@@ -1,0 +1,45 @@
+tpm2-accel-early-dkms (1.0.0-1) stable; urgency=medium
+
+  * Initial release of TPM2 Early Boot Hardware Acceleration
+  * Features:
+    - Intel NPU acceleration support (34.0 TOPS)
+    - Intel GNA 3.5 security monitoring integration
+    - Intel Management Engine integration
+    - Early boot initialization via subsys_initcall_sync
+    - Security levels 0-3 (UNCLASSIFIED to TOP SECRET)
+    - Dell SMBIOS military token integration (0x049e-0x04a3)
+    - Character device interface at /dev/tpm2_accel_early
+    - DKMS automatic kernel module building
+    - Systemd service for early boot loading
+    - Initramfs integration for pre-boot security
+  * Hardware Support:
+    - Dell Latitude 5450 MIL-SPEC platform
+    - Intel Core Ultra 7 165H (Meteor Lake)
+    - TPM 2.0 hardware modules
+  * Security:
+    - Hardware-level access control via Dell tokens
+    - Multi-level security classification support
+    - Dell SMBIOS integration for platform validation
+    - Kernel-userspace bridge with IOCTL interface
+    - Performance monitoring and security event logging
+  * Performance:
+    - Ring buffer architecture for efficient communication
+    - Shared memory for high-throughput data transfer
+    - Concurrent operation support (up to 256 operations)
+    - Hardware-accelerated cryptographic operations
+  * Developer Features:
+    - DebugFS interface for runtime diagnostics
+    - Comprehensive error handling and fallback mechanisms
+    - Software fallback when hardware unavailable
+    - Extensive logging and monitoring capabilities
+
+ -- Military TPM2 Acceleration Project <noreply@example.com>  Sat, 11 Oct 2025 00:00:00 +0000
+
+tpm2-accel-early-dkms (0.9.0-1) experimental; urgency=low
+
+  * Pre-release testing version
+  * Basic hardware detection implemented
+  * Initial DKMS configuration
+  * Proof-of-concept character device interface
+
+ -- Military TPM2 Acceleration Project <noreply@example.com>  Fri, 01 Sep 2025 00:00:00 +0000

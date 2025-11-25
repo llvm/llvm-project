@@ -1,0 +1,21 @@
+#!/bin/bash
+# Dell MIL-SPEC DSMIL DKMS - Post-removal script
+
+set -e
+
+case "$1" in
+    remove)
+        depmod -a 2>/dev/null || true
+        update-initramfs -u 2>/dev/null || true
+        ;;
+    purge)
+        rm -f /etc/modprobe.d/dell-milspec.conf
+        rm -f /etc/modules-load.d/dell-milspec.conf
+        rm -rf /usr/src/dell-milspec-dsmil-2.1.0
+        rm -rf /var/lib/dkms/dell-milspec-dsmil
+        depmod -a 2>/dev/null || true
+        update-initramfs -u 2>/dev/null || true
+        ;;
+esac
+
+exit 0

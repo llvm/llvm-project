@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-09-02T20:28:59.992658",
+  "tests": {
+    "structure_sizes": true,
+    "chunk_capacity": true,
+    "kernel_compatibility": true,
+    "performance_impact": true,
+    "health_calculation": true
+  },
+  "metrics": {
+    "devices_per_chunk": 5,
+    "chunks_for_all_devices": 22,
+    "size_reduction": 6.84375,
+    "chunking_overhead_us": 220,
+    "performance_vs_smi": 41891.89189189189
+  },
+  "health_improvement": {
+    "original": 60.0,
+    "chunked": 100.0,
+    "improvement": 40.0
+  }
+}

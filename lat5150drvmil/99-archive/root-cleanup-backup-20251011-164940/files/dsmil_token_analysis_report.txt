@@ -1,0 +1,191 @@
+================================================================================
+SMBIOS TOKEN TO DSMIL DEVICE CORRELATION ANALYSIS
+================================================================================
+Analysis Date: 2025-09-01 03:48:50
+System: Dell Inc. Latitude 5450
+BIOS: 1.14.1 (04/10/2025)
+Mode: DRY RUN
+
+ANALYSIS SUMMARY
+----------------------------------------
+Total Tokens Analyzed: 72
+Token Range: 0x480-0x4c7
+Average Confidence: 0.58
+Accessibility Ratio: 66.67%
+High Confidence Tokens: 6
+Identified Functions: 11
+Current Max Temperature: 79.0°C
+
+DSMIL GROUP ANALYSIS
+----------------------------------------
+
+Group 0: DSMIL Group 0: power_management cluster
+  Token Range: 0x480-0x48b
+  Primary Function: power_management
+  Devices: 12
+  Accessible Tokens: 8/12
+  Top Confidence Devices:
+    0x480: power_management (0.90)
+    0x481: thermal_control (0.90)
+    0x482: security_module (0.80)
+
+Group 1: DSMIL Group 1: thermal_control cluster
+  Token Range: 0x48c-0x497
+  Primary Function: thermal_control
+  Devices: 12
+  Accessible Tokens: 8/12
+  Top Confidence Devices:
+    0x48c: thermal_control (0.80)
+    0x48d: power_management (0.80)
+    0x48e: memory_control (0.70)
+
+Group 2: DSMIL Group 2: power_management cluster
+  Token Range: 0x498-0x4a3
+  Primary Function: power_management
+  Devices: 12
+  Accessible Tokens: 8/12
+  Top Confidence Devices:
+    0x498: power_management (0.70)
+    0x499: thermal_control (0.70)
+    0x49a: memory_control (0.70)
+
+Group 3: DSMIL Group 3: power_management cluster
+  Token Range: 0x4a4-0x4af
+  Primary Function: power_management
+  Devices: 12
+  Accessible Tokens: 8/12
+  Top Confidence Devices:
+    0x4a4: power_management (0.60)
+    0x4a5: thermal_control (0.60)
+    0x4a6: memory_control (0.60)
+
+Group 4: DSMIL Group 4: power_management cluster
+  Token Range: 0x4b0-0x4bb
+  Primary Function: power_management
+  Devices: 12
+  Accessible Tokens: 8/12
+  Top Confidence Devices:
+    0x4b0: power_management (0.50)
+    0x4b1: thermal_control (0.50)
+    0x4b2: memory_control (0.50)
+
+Group 5: DSMIL Group 5: power_management cluster
+  Token Range: 0x4bc-0x4c7
+  Primary Function: power_management
+  Devices: 12
+  Accessible Tokens: 8/12
+  Top Confidence Devices:
+    0x4bc: power_management (0.40)
+    0x4bd: thermal_control (0.40)
+    0x4be: memory_control (0.40)
+
+DETAILED TOKEN MAPPING
+----------------------------------------
+
+--- Group 0 Details ---
+0x480 [✗] G0D00: power_management     (conf: 0.90)
+0x481 [✓] G0D01: thermal_control      (conf: 0.90)
+0x482 [✓] G0D02: security_module      (conf: 0.80)
+0x483 [✗] G0D03: memory_control       (conf: 0.80)
+0x484 [✓] G0D04: io_controller        (conf: 0.70)
+0x485 [✓] G0D05: network_interface    (conf: 0.70)
+0x486 [✗] G0D06: storage_control      (conf: 0.70)
+0x487 [✓] G0D07: display_control      (conf: 0.60)
+0x488 [✓] G0D08: audio_control        (conf: 0.60)
+0x489 [✗] G0D09: sensor_hub           (conf: 0.60)
+0x48a [✓] G0D10: accelerometer        (conf: 0.50)
+0x48b [✓] G0D11: unknown              (conf: 0.30)
+
+--- Group 1 Details ---
+0x48c [✗] G1D00: thermal_control      (conf: 0.80)
+0x48d [✓] G1D01: power_management     (conf: 0.80)
+0x48e [✓] G1D02: memory_control       (conf: 0.70)
+0x48f [✗] G1D03: io_controller        (conf: 0.70)
+0x490 [✓] G1D04: network_interface    (conf: 0.60)
+0x491 [✓] G1D05: storage_control      (conf: 0.60)
+0x492 [✗] G1D06: security_module      (conf: 0.60)
+0x493 [✓] G1D07: display_control      (conf: 0.50)
+0x494 [✓] G1D08: audio_control        (conf: 0.50)
+0x495 [✗] G1D09: sensor_hub           (conf: 0.50)
+0x496 [✓] G1D10: accelerometer        (conf: 0.40)
+0x497 [✓] G1D11: unknown              (conf: 0.30)
+
+--- Group 2 Details ---
+0x498 [✗] G2D00: power_management     (conf: 0.70)
+0x499 [✓] G2D01: thermal_control      (conf: 0.70)
+0x49a [✓] G2D02: memory_control       (conf: 0.70)
+0x49b [✗] G2D03: io_controller        (conf: 0.70)
+0x49c [✓] G2D04: network_interface    (conf: 0.70)
+0x49d [✓] G2D05: storage_control      (conf: 0.70)
+0x49e [✗] G2D06: security_module      (conf: 0.70)
+0x49f [✓] G2D07: display_control      (conf: 0.70)
+0x4a0 [✓] G2D08: audio_control        (conf: 0.70)
+0x4a1 [✗] G2D09: sensor_hub           (conf: 0.70)
+0x4a2 [✓] G2D10: accelerometer        (conf: 0.70)
+0x4a3 [✓] G2D11: unknown              (conf: 0.70)
+
+--- Group 3 Details ---
+0x4a4 [✗] G3D00: power_management     (conf: 0.60)
+0x4a5 [✓] G3D01: thermal_control      (conf: 0.60)
+0x4a6 [✓] G3D02: memory_control       (conf: 0.60)
+0x4a7 [✗] G3D03: io_controller        (conf: 0.60)
+0x4a8 [✓] G3D04: network_interface    (conf: 0.60)
+0x4a9 [✓] G3D05: storage_control      (conf: 0.60)
+0x4aa [✗] G3D06: security_module      (conf: 0.60)
+0x4ab [✓] G3D07: display_control      (conf: 0.60)
+0x4ac [✓] G3D08: audio_control        (conf: 0.60)
+0x4ad [✗] G3D09: sensor_hub           (conf: 0.60)
+0x4ae [✓] G3D10: accelerometer        (conf: 0.60)
+0x4af [✓] G3D11: unknown              (conf: 0.60)
+
+--- Group 4 Details ---
+0x4b0 [✗] G4D00: power_management     (conf: 0.50)
+0x4b1 [✓] G4D01: thermal_control      (conf: 0.50)
+0x4b2 [✓] G4D02: memory_control       (conf: 0.50)
+0x4b3 [✗] G4D03: io_controller        (conf: 0.50)
+0x4b4 [✓] G4D04: network_interface    (conf: 0.50)
+0x4b5 [✓] G4D05: storage_control      (conf: 0.50)
+0x4b6 [✗] G4D06: security_module      (conf: 0.50)
+0x4b7 [✓] G4D07: display_control      (conf: 0.50)
+0x4b8 [✓] G4D08: audio_control        (conf: 0.50)
+0x4b9 [✗] G4D09: sensor_hub           (conf: 0.50)
+0x4ba [✓] G4D10: accelerometer        (conf: 0.50)
+0x4bb [✓] G4D11: unknown              (conf: 0.50)
+
+--- Group 5 Details ---
+0x4bc [✗] G5D00: power_management     (conf: 0.40)
+0x4bd [✓] G5D01: thermal_control      (conf: 0.40)
+0x4be [✓] G5D02: memory_control       (conf: 0.40)
+0x4bf [✗] G5D03: io_controller        (conf: 0.40)
+0x4c0 [✓] G5D04: network_interface    (conf: 0.40)
+0x4c1 [✓] G5D05: storage_control      (conf: 0.40)
+0x4c2 [✗] G5D06: security_module      (conf: 0.40)
+0x4c3 [✓] G5D07: display_control      (conf: 0.40)
+0x4c4 [✓] G5D08: audio_control        (conf: 0.40)
+0x4c5 [✗] G5D09: sensor_hub           (conf: 0.40)
+0x4c6 [✓] G5D10: accelerometer        (conf: 0.40)
+0x4c7 [✓] G5D11: unknown              (conf: 0.40)
+
+SAFETY RECOMMENDATIONS
+----------------------------------------
+1. Always run thermal monitoring during token activation
+2. Test tokens individually, never in batch
+3. Focus on high-confidence, accessible tokens first
+4. Monitor system stability after each token change
+5. Have thermal throttling and emergency shutdown ready
+6. Back up current BIOS settings before modification
+
+RECOMMENDED NEXT STEPS
+----------------------------------------
+High-priority tokens for testing:
+  0x481: thermal_control (confidence: 0.90)
+  0x482: security_module (confidence: 0.80)
+  0x48d: power_management (confidence: 0.80)
+
+1. Start with Group 0 power management tokens
+2. Validate thermal control tokens in controlled environment
+3. Test security module tokens with caution
+4. Map memory control tokens to actual memory regions
+5. Correlate findings with actual DSMIL device behavior
+
+================================================================================

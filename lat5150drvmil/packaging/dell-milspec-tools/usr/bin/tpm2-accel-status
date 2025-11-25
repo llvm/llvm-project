@@ -1,0 +1,158 @@
+#!/bin/bash
+#
+# tpm2-accel-status - Query TPM2 acceleration device status
+# Part of dell-milspec-tools package
+#
+
+set -e
+
+# Color definitions
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Device paths
+TPM2_DEVICE="/dev/tpm2_accel_early"
+TPM2_MODULE="tpm2_accel_early"
+SYSFS_PATH="/sys/class/misc/tpm2_accel_early"
+
+echo "======================================================================"
+echo " TPM2 Hardware Acceleration Status"
+echo "======================================================================"
+echo ""
+
+# Check if module is loaded
+echo -n "Kernel Module: "
+if lsmod | grep -q "^${TPM2_MODULE}"; then
+    echo -e "${GREEN}Loaded${NC}"
+    MODULE_VERSION=$(modinfo "$TPM2_MODULE" 2>/dev/null | grep "^version:" | awk '{print $2}' || echo "unknown")
+    echo "  Version: $MODULE_VERSION"
+
+    # Get module parameters
+    if [ -d "/sys/module/$TPM2_MODULE/parameters" ]; then
+        echo "  Parameters:"
+        for param in /sys/module/$TPM2_MODULE/parameters/*; do
+            if [ -f "$param" ]; then
+                PARAM_NAME=$(basename "$param")
+                PARAM_VALUE=$(cat "$param" 2>/dev/null || echo "N/A")
+                echo "    ${PARAM_NAME}: ${PARAM_VALUE}"
+            fi
+        done
+    fi
+else
+    echo -e "${RED}Not Loaded${NC}"
+    echo ""
+    echo "The TPM2 acceleration module is not loaded."
+    echo "To load the module:"
+    echo "  sudo modprobe $TPM2_MODULE"
+    echo ""
+    echo "Or install the DKMS package:"
+    echo "  sudo apt-get install tpm2-accel-early-dkms"
+    exit 1
+fi
+
+# Check device node
+echo -n "Device Node: "
+if [ -e "$TPM2_DEVICE" ]; then
+    echo -e "${GREEN}${TPM2_DEVICE}${NC}"
+
+    # Show device permissions
+    DEVICE_PERMS=$(stat -c "%a %U:%G" "$TPM2_DEVICE" 2>/dev/null || echo "unknown")
+    echo "  Permissions: $DEVICE_PERMS"
+
+    # Check if current user has access
+    if [ -r "$TPM2_DEVICE" ] && [ -w "$TPM2_DEVICE" ]; then
+        echo -e "  Access: ${GREEN}Read/Write${NC}"
+    elif [ -r "$TPM2_DEVICE" ]; then
+        echo -e "  Access: ${YELLOW}Read Only${NC}"
+    else
+        echo -e "  Access: ${RED}No Access${NC}"
+        echo "  Hint: Add your user to 'dsmil' group:"
+        echo "        sudo usermod -a -G dsmil \$USER"
+    fi
+else
+    echo -e "${RED}Not Found${NC}"
+    echo "  Expected: $TPM2_DEVICE"
+fi
+
+# Check sysfs interface
+echo -n "Sysfs Interface: "
+if [ -d "$SYSFS_PATH" ]; then
+    echo -e "${GREEN}Available${NC}"
+    echo "  Path: $SYSFS_PATH"
+
+    # Show sysfs attributes
+    if [ -d "$SYSFS_PATH" ]; then
+        for attr in "$SYSFS_PATH"/*; do
+            if [ -f "$attr" ]; then
+                ATTR_NAME=$(basename "$attr")
+                ATTR_VALUE=$(cat "$attr" 2>/dev/null || echo "N/A")
+                echo "    ${ATTR_NAME}: ${ATTR_VALUE}"
+            fi
+        done
+    fi
+else
+    echo -e "${YELLOW}Not Available${NC}"
+fi
+
+# Check for TPM device
+echo ""
+echo "TPM Device Information:"
+if [ -e /dev/tpm0 ]; then
+    echo -e "  TPM Device: ${GREEN}/dev/tpm0${NC}"
+
+    # Check TPM version
+    if command -v tpm2_getcap >/dev/null 2>&1; then
+        echo "  Checking TPM capabilities..."
+        TPM_VERSION=$(tpm2_getcap properties-fixed 2>/dev/null | grep TPM2_PT_FAMILY_INDICATOR | awk '{print $2}' || echo "unknown")
+        echo "    Family: $TPM_VERSION"
+    else
+        echo "  (Install tpm2-tools for detailed TPM information)"
+    fi
+else
+    echo -e "  TPM Device: ${YELLOW}Not Found${NC}"
+    echo "  Note: TPM acceleration can work without /dev/tpm0"
+fi
+
+# Check kernel messages for TPM activity
+echo ""
+echo "Recent Kernel Messages (TPM-related):"
+dmesg | grep -i -E "(tpm|tpm2_accel)" | tail -5 | while read line; do
+    echo "  $line"
+done || echo "  No recent TPM-related messages"
+
+# Performance information
+echo ""
+echo "Hardware Acceleration Features:"
+echo "  - AES encryption/decryption"
+echo "  - SHA-256 hashing"
+echo "  - HMAC operations"
+echo "  - Random number generation"
+echo "  - PCR extend operations"
+echo "  - Early boot support"
+
+# System information
+echo ""
+echo "System Information:"
+TEMP=$(cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null | head -1 | awk '{printf "%.1f", $1/1000}' || echo "N/A")
+echo "  Temperature: ${TEMP}°C"
+
+# Check if system is MIL-SPEC
+DMI_PRODUCT=$(cat /sys/class/dmi/id/product_name 2>/dev/null || echo "Unknown")
+echo "  System: $DMI_PRODUCT"
+
+if [[ "$DMI_PRODUCT" == *"5450"* ]] || [[ "$DMI_PRODUCT" == *"Latitude"* ]]; then
+    echo -e "  Platform: ${GREEN}Dell Latitude (MIL-SPEC compatible)${NC}"
+else
+    echo -e "  Platform: ${YELLOW}Non-standard (may have limited support)${NC}"
+fi
+
+echo ""
+echo "Available Commands:"
+echo "  dsmil-status          - Check DSMIL device status"
+echo "  milspec-monitor       - Start monitoring dashboard"
+echo "  milspec-control       - Main control utility"
+echo ""
+echo "======================================================================"

@@ -1,0 +1,35 @@
+[Unit]
+Description=TPM2 Hardware Acceleration Early Boot Service
+Documentation=man:modprobe(8)
+Documentation=file:///usr/share/doc/tpm2-accel-early-dkms/README.md
+DefaultDependencies=no
+Before=sysinit.target shutdown.target
+After=systemd-modules-load.service
+Conflicts=shutdown.target
+ConditionPathExists=/dev/tpm0
+ConditionKernelCommandLine=!tpm2_accel_early.disable
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/bin/sh -c 'test -e /sys/module/tpm2_accel_early || exit 0'
+ExecStart=/sbin/modprobe -v tpm2_accel_early early_init=1 security_level=0
+ExecStop=/sbin/modprobe -r -v tpm2_accel_early
+StandardOutput=journal
+StandardError=journal
+TimeoutSec=30s
+
+# Security hardening
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ReadWritePaths=/dev
+ReadOnlyPaths=/sys /proc
+
+# Resource limits
+MemoryLimit=64M
+TasksMax=10
+
+[Install]
+WantedBy=sysinit.target

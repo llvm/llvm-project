@@ -1,0 +1,90 @@
+# SPDX-License-Identifier: GPL-2.0
+
+config DELL_MILSPEC
+	tristate "Dell Military Specification Subsystem Support"
+	depends on X86 && X86_64
+	depends on ACPI
+	depends on DMI
+	depends on DELL_SMBIOS
+	select ACPI_WMI
+	select GPIO_INTEL
+	select CRC16
+	help
+	  This driver provides support for Dell military specification
+	  features found on certain Dell Latitude models (such as the
+	  5450 MIL-SPEC JRTC1 variant).
+
+	  Features include:
+	  - Mode 5 security levels (Standard/Enhanced/Paranoid)
+	  - DSMIL subsystem activation (12 military devices)
+	  - Hardware intrusion detection
+	  - Secure wipe capabilities
+	  - Integration with TPM for attestation
+	  - Hardware crypto support (ATECC608B)
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called dell-milspec.
+
+config DELL_MILSPEC_CRYPTO
+	bool "Dell MIL-SPEC Hardware Crypto Support"
+	depends on DELL_MILSPEC
+	depends on I2C
+	default y
+	help
+	  Enable support for the ATECC608B hardware crypto chip found
+	  on some Dell military specification systems. This provides
+	  hardware-accelerated cryptographic operations and secure
+	  key storage.
+
+	  If unsure, say Y.
+
+config DELL_MILSPEC_TPM
+	bool "Dell MIL-SPEC TPM Integration"
+	depends on DELL_MILSPEC
+	depends on TCG_TPM
+	default y
+	help
+	  Enable TPM integration for Dell military specification
+	  features. This allows Mode 5 configurations and DSMIL
+	  states to be measured into TPM PCRs for attestation.
+
+	  If unsure, say Y.
+
+config DELL_MILSPEC_DEBUG
+	bool "Dell MIL-SPEC Debug Support"
+	depends on DELL_MILSPEC
+	depends on DEBUG_FS
+	default n
+	help
+	  Enable debug support for the Dell military specification
+	  driver. This creates debugfs entries for monitoring internal
+	  state and events. This should only be enabled for debugging
+	  and development.
+
+	  If unsure, say N.
+
+config DELL_MILSPEC_FORCE_LOAD
+	bool "Force Dell MIL-SPEC Driver Load"
+	depends on DELL_MILSPEC
+	depends on EXPERT
+	default n
+	help
+	  Force the Dell military specification driver to load even
+	  on non-Dell systems or systems without proper DMI strings.
+	  This is only for development and testing purposes.
+
+	  WARNING: Enabling this on non-compatible hardware may cause
+	  system instability.
+
+	  If unsure, say N.
+
+config DELL_MILSPEC_EARLY_INIT
+	bool "Dell MIL-SPEC Early Initialization"
+	depends on DELL_MILSPEC
+	default y
+	help
+	  Enable early initialization of Dell military specification
+	  features during boot. This allows features to be activated
+	  before the main system is fully initialized.
+
+	  If unsure, say Y.

@@ -1,0 +1,1242 @@
+[sudo] password for john: ================================================================================
+  Token: 0x001e - Speaker (Disable)
+  value: bool = false
+   Desc: Disable the built-in speaker.
+================================================================================
+  Token: 0x0022 - Sound Device (Enable)
+  value: bool = true
+   Desc: Enable the system's built-in sound device
+================================================================================
+  Token: 0x0023 - Sound Device (Disable)
+  value: bool = false
+   Desc: Disable the system's built-in sound device
+================================================================================
+  Token: 0x0028 - Auto-on (Disable)
+  value: bool = true
+   Desc: Disable the system's auto-on capabilities
+================================================================================
+  Token: 0x0029 - Auto-on (Every Day)
+  value: bool = false
+   Desc: Enable the system's auto-on capabilities every day of the week
+================================================================================
+  Token: 0x002a - Auto-on (Weekdays)
+  value: bool = false
+   Desc: Enable the system's auto-on capabilities for the weekdays (Monday throu
+         gh Friday) only.
+================================================================================
+  Token: 0x002b - Auto-on Hour (n/a)
+  value: bool = false
+   Desc: Sets the hour at which the system is to power on, if enabled. The value
+          is specified in 24-hour BCD, i.e. if the system is to power on at 11:5
+         9pm this attribute is set to 23h
+================================================================================
+  Token: 0x002c - Auto-on Minute (n/a)
+  value: bool = false
+   Desc: Sets the minute at which the system is to power on, if enabled. The val
+         ue is specified in BCD, i.e. if the system is to power on at 11:59pm th
+         is attribute is set to 59h.
+================================================================================
+  Token: 0x002d - Embedded NIC1 (Enable with PXE)
+  value: bool = true
+   Desc: Enable the system's primary embedded network interface controller (full
+         -function), including its PXE boot-ROM.
+================================================================================
+  Token: 0x002e - Embedded NIC1 (Disable)
+  value: bool = false
+   Desc: Disable the system's primary embedded network interface controller.
+================================================================================
+  Token: 0x0050 - Speaker (Enable)
+  value: bool = true
+   Desc: Enable the built-in speaker. The speaker is enabled at the single syste
+         m-supported volume.
+================================================================================
+  Token: 0x0055 - Wake-on-LAN (Disabled)
+  value: bool = true
+   Desc: The system will not respond to magic packets or other means of wake-on-
+         LAN. The NIC chip section that looks for packets will not be powered.
+================================================================================
+  Token: 0x006d - Wake-on-LAN (Enabled)
+  value: bool = false
+   Desc: The system wake-on-LAN feature is enabled; either an onboard or an add-
+         in NIC can wake the system up.
+================================================================================
+  Token: 0x006e - Embedded NIC1 (Enable without Boot Support)
+  value: bool = false
+   Desc: Enable the system's primary embedded network interface controller, but 
+         don't enable the NIC's associated PXE or RPL boot-ROM.
+================================================================================
+  Token: 0x007d - LCD Brightness (Value)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: When Mobile Power Management is Enabled, the system will force the LCD 
+         brightness to the value specified in this field. This attribute require
+         s special handling.
+================================================================================
+  Token: 0x0090 - Chassis Intrusion Reporting (Enabled)
+  value: bool = false
+   Desc: Enables the system to detect and report Chassis Intrusion events to the
+          system display on boot-up.
+================================================================================
+  Token: 0x0091 - Chassis Intrusion Reporting (Disabled)
+  value: bool = true
+   Desc: Disables the system's detection and reporting of Chassis Intrusion even
+         ts.
+================================================================================
+  Token: 0x0092 - Chassis Intrusion Reporting (Enabled, Silent)
+  value: bool = false
+   Desc: Enables the system to detect Chassis Intrusion events, but suppresses t
+         he reporting of these events on the system boot-up display.
+================================================================================
+  Token: 0x009b - USB Emulation, USB Boot Capable (Enabled)
+  value: bool = true
+   Desc: Enables BIOS emulation of all supported USB devices (currently keyboard
+         , mouse, hub, floppy, and USB flash).
+================================================================================
+  Token: 0x009c - USB Emulation (Disabled)
+  value: bool = false
+   Desc: Disables BIOS emulation of all USB devices after POST. USB emulation is
+          on during POST to allow USB keyboards to be used to enter Setup.
+================================================================================
+  Token: 0x009f - Password Status Lock (Locked)
+  value: bool = false
+   Desc: Locks the current state of the System password. If a system password ha
+         s been set, it cannot be removed. If a system password has not been set
+         , it cannot be set.
+================================================================================
+  Token: 0x00a0 - Password Status Lock (Unlocked)
+  value: bool = true
+   Desc: Allows normal operation of the system password.
+================================================================================
+  Token: 0x00a1 - AC Power Recovery Mode (Off)
+  value: bool = true
+   Desc: After an AC power loss, when AC power is restored, the system will stay
+          off.
+================================================================================
+  Token: 0x00a3 - AC Power Recovery Mode (On)
+  value: bool = false
+   Desc: After an AC power loss, when AC power is restored, the system will powe
+         r on.
+================================================================================
+  Token: 0x00d1 - CPU HyperThreading (Enabled)
+  value: bool = true
+   Desc: Enables Hyper Threading on all 'Jackson Technology' CPU's.
+================================================================================
+  Token: 0x00d2 - CPU HyperThreading (Disabled)
+  value: bool = false
+   Desc: Disables Hyper Threading on all 'Jackson Technology' CPU's.
+================================================================================
+  Token: 0x00ed - SpeedStep (Disabled)
+  value: bool = false
+   Desc: Disables SpeedStep dynamic clock changes.
+================================================================================
+  Token: 0x00f0 - SpeedStep (Automatic)
+  value: bool = true
+   Desc: Allows the BIOS to set either Max Performance, or Max Battery, based on
+          AC presence.
+================================================================================
+  Token: 0x0109 - USB Emulation On, No USB Boot (Enabled)
+  value: bool = false
+   Desc: Enables BIOS emulation of all supported USB devices except for bootable
+          devices (floppy, USB flash, etc.). This is a security feature that wil
+         l prevent users from inserting a USB boot device and booting an OS from
+          it. Non-bootable devices (keyboard, mouse, hub) are still emulated.
+================================================================================
+  Token: 0x010e - Power Warning (Enable)
+  value: bool = true
+   Desc: Enable messages about performance limitations based on power supply cap
+         acity.
+================================================================================
+  Token: 0x010f - Power Warning (Disable)
+  value: bool = false
+   Desc: Disable messages about performance limitations based on power supply ca
+         pacity.
+================================================================================
+  Token: 0x0127 - Embedded NIC1 (Enable with RPL Boot)
+  value: bool = false
+   Desc: Enable the system's primary embedded network interface controller (full
+         -function), including its RPL boot-ROM. Implementation note: See 3.7.2.
+         12 Using the Network Interface Card Tokens on page 1 for more formation
+         .
+================================================================================
+  Token: 0x012b - SMART Errors (Enable)
+  value: bool = true
+   Desc: Display HD SMART errors at POST.
+================================================================================
+  Token: 0x012c - SMART Errors (Disable)
+  value: bool = false
+   Desc: Do NOT display HD SMART errors at POST.
+================================================================================
+  Token: 0x0135 - SATA Controller (OFF)
+  value: bool = false
+   Desc: Disable the SATA controller. The token applies to the first on-board SA
+         TA controller.
+================================================================================
+  Token: 0x0138 - SATA Controller (AHCI)
+  value: bool = false
+   Desc: Enables the SATA controller. Sets the device class code as SATA and set
+         s up the AHCI BARs and registers. This token applies to the first on-bo
+         ard SATA controller.
+================================================================================
+  Token: 0x0139 - SATA Controller (RAID)
+  value: bool = true
+   Desc: Enables the SATA controller. Sets the device class code as RAID and exe
+         cutes the RAID Option ROM. This token applies to the first on-board SAT
+         A controller.
+================================================================================
+  Token: 0x0144 - TPM Enable (Off)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: Hide the Trusted Platform Module (TPM) from the operating system on the
+          following boot. There is no change in the TPM or its contents when it 
+         is disabled. Disabling the TPM simply causes it to be invisible to the 
+         OS until it is made visible again.NOTE: These tokens are distinct from 
+         the TPM Enable and Disable tokens, A002 and A003 respectively, which ar
+         e used to expose/hide the TPM hardware at the lowest level. That is, un
+         til the TPM is enabled using A002, there effectively is no TPM, so the 
+         OS enable and disable tokens would do nothing at all.
+================================================================================
+  Token: 0x0145 - TPM Enable (Enabled)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: Unhide Trusted Platform Module (TPM) from the operating system on the f
+         ollowing boot.
+================================================================================
+  Token: 0x014a - CPU Virtualization (Disabled)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: This feature will allow the users to disable the VT technology in appli
+         cable CPUs. If disabled, the VT feature is unusable in any OS.
+================================================================================
+  Token: 0x014b - CPU Virtualization (Enabled)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: This feature will allow the users to enable the VT technology in applic
+         able CPUs.
+================================================================================
+  Token: 0x014c - Multiple CPU cores (Disable)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: This feature will allow the users to disable Multiple CPU Cores if need
+         ed. If disabled, this would prevent the OS from seeing additional cores
+          present on a single CPU package.
+================================================================================
+  Token: 0x0152 - Bluetooth Devices (Enabled)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: This feature will allow users to enable Bluetooth devices so that they 
+         will function within the operating system.
+================================================================================
+  Token: 0x0153 - Bluetooth Devices (Disabled)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: This feature will allow users to disable Bluetooth devices so that they
+          will not function within the operating system.
+================================================================================
+  Token: 0x017f - Wireless LAN (Disable)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: Disable wireless LAN module.
+================================================================================
+  Token: 0x0180 - Wireless LAN (Enable)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: Enable wireless LAN module.
+================================================================================
+  Token: 0x0189 - External USB Ports (Disabled)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: Will enable/disable all external USB ports. If the system supports a do
+         ck, all USB to the dock is also enabled/disabled, so that USB in the do
+         ck can be totally disabled—all ports on the dock as well as any USB dev
+         ices inside the dock.
+================================================================================
+  Token: 0x018a - External USB Ports (Enabled)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: Will enable/disable all external USB ports. If the system supports a do
+         ck, all USB to the dock is also enabled/disabled, so that USB in the do
+         ck can be totally disabled—all ports on the dock as well as any USB dev
+         ices inside the dock.
+================================================================================
+  Token: 0x019b - Password Bypass (Off)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: This feature will allow users to skip the entry of the System password,
+          internal Hard Disk password, fingerprint scan or smartcard on either/b
+         oth Reboot (warm boot) or S3 resume (resume from standby).
+================================================================================
+  Token: 0x019c - Password Bypass (Reboot Bypass)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: This feature will allow users to skip the entry of the System password,
+          internal Hard Disk password, fingerprint scan or smartcard on either/b
+         oth Reboot (warm boot) or S3 resume (resume from standby).
+================================================================================
+  Token: 0x01de - Microphone (Disabled)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: These tokens are used to enable/disable Dell notebook internal/external
+          microphone.
+================================================================================
+  Token: 0x01df - Microphone (Enabled)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: These tokens are used to enable/disable Dell notebook internal/external
+          microphone.
+================================================================================
+  Token: 0x01e1 - Keyboard Illumination (Off)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: These tokens are used to change the Setup option for the keyboard illum
+         ination mode. The options are Auto (illumination set based on ambient l
+         ight level), Off (illumination always off), and On (illumination always
+          on).
+================================================================================
+  Token: 0x01ea - Core-Based Turbo Mode (Off)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: Allows one processor core to increase it's frequency by one bin wheneve
+         r the other core has gone into an idle state (C3). Only available on ce
+         rtain processors.
+================================================================================
+  Token: 0x01eb - Core-Based Turbo Mode (Enabled)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: Allows one processor core to increase it's frequency by one bin wheneve
+         r the other core has gone into an idle state (C3). Only available on ce
+         rtain processors.
+================================================================================
+  Token: 0x0202 - Trusted Execution (Off)
+  value: bool = false
+   Desc: Intel Trusted Execution Technology (TxT) – new processor execution mode
+          and BIOS hooks to enable a protected execution environment and main me
+         mory protection.
+================================================================================
+  Token: 0x0203 - Trusted Execution (On)
+  value: bool = true
+   Desc: Intel Trusted Execution Technology (TxT) – new processor execution mode
+          and BIOS hooks to enable a protected execution environment and main me
+         mory protection.
+================================================================================
+  Token: 0x0204 - VT for Direct I/O (Off)
+  value: bool = false
+   Desc: Intel Virtualization Technology for Direct I/O (VT-d) – new chipset fea
+         ture that enhances I/O support (DMA) when running a Virtual Machine Mon
+         itor.
+================================================================================
+  Token: 0x0205 - VT for Direct I/O (On)
+  value: bool = true
+   Desc: Intel Virtualization Technology for Direct I/O (VT-d) – new chipset fea
+         ture that enhances I/O support (DMA) when running a Virtual Machine Mon
+         itor.
+================================================================================
+  Token: 0x0235 - USB PowerShare (Enabled)
+  value: bool = true
+   Desc: Enable the USB PowerShare feature.
+================================================================================
+  Token: 0x0236 - USB PowerShare (Disabled)
+  value: bool = false
+   Desc: Disable the USB PowerShare feature.
+================================================================================
+  Token: 0x024b - C States Control (Enabled)
+  value: bool = true
+   Desc: When set to Enabled, the processor can operate in all available Power C
+          States
+================================================================================
+  Token: 0x024c - C States Control (Disabled)
+  value: bool = false
+   Desc: When set to Disabled, there are no C states available for the processor
+         
+================================================================================
+  Token: 0x0264 - Password Length Restriction (ON)
+  value: bool = false
+   Desc: *Special token for Panasonic. 1.Restrict the number of characters in BI
+         OS Password. ( 6 digits ¨C 15 digits ) 2.Do not allow user to disable p
+         assword via setup once it is set
+================================================================================
+  Token: 0x0265 - Password Length Restriction (OFF)
+  value: bool = true
+   Desc: *Special token for Panasonic go back from the special restriction to no
+         rmal
+================================================================================
+  Token: 0x0266 - Boot Menu Restriction (ON)
+  value: bool = false
+   Desc: *Special token for Panasonic Do not allow user enter Boot menu if there
+          is no Setup or System password
+================================================================================
+  Token: 0x0267 - Boot Menu Restriction (OFF)
+  value: bool = true
+   Desc: *Special token for Panasonic go back from the special restriction to no
+         rmal
+================================================================================
+  Token: 0x0268 - Flash Restriction (ON)
+  value: bool = false
+   Desc: *Special token for Panasonic Ignore admin password prompt during BIOS f
+         lash update
+================================================================================
+  Token: 0x0269 - Flash Restriction (OFF)
+  value: bool = true
+   Desc: *Special token for Panasonic go back from the special restriction to no
+         rmal
+================================================================================
+  Token: 0x026c - Alt System Name (ON)
+  value: bool = false
+   Desc: Special token for BNPP(BNP Parisbas).BIOS will load an alternate system
+          name to SMBIOS type1 'Product Name' field.
+================================================================================
+  Token: 0x026d - Alt System Name (OFF)
+  value: bool = true
+   Desc: Special token for BNPP(BNP Parisbas).BIOS will not load any alternate s
+         ystem name.
+================================================================================
+  Token: 0x0285 - Camera (Enable)
+  value: bool = true
+   Desc: To enable Camera
+================================================================================
+  Token: 0x0286 - Camera (Disable)
+  value: bool = false
+   Desc: To disable Camera
+================================================================================
+  Token: 0x02a7 - Strong Password (Enabled)
+  value: bool = false
+   Desc: Enforce Strong Password
+================================================================================
+  Token: 0x02a8 - Strong Password (Disabled)
+  value: bool = true
+   Desc: Do not enforce Strong Password
+================================================================================
+  Token: 0x02bd - Admin Setup Lockout (Enabled)
+  value: bool = false
+   Desc: When the value of Admin Setup Lockout is Enabled and the Admin Password
+          is set, users will not be allowed to see any part of the Setup screens
+          unless they enter the correct Admin Password. When the Admin password 
+         is NOT set and Admin Setup Lockout is Enabled, users will be able to ac
+         cess Setup normally.
+================================================================================
+  Token: 0x02be - Admin Setup Lockout (Disabled)
+  value: bool = true
+   Desc: When the value of Admin Setup Lockout is Disabled and the Admin Passwor
+         d is or is not set, users will be allowed to enter Setup normally. Howe
+         ver, many fields may still be inaccessible, depending on how other Setu
+         p security settings are configured.
+================================================================================
+  Token: 0x02e4 - BlockS3 (Disable)
+  value: bool = false
+   Desc: If this option is disabled, the system BIOS will support OSPM/ACPI S3 (
+         Suspend to RAM) operation. This will move system authentication into th
+         e OS and bypass any Preboot Authentication on resume
+================================================================================
+  Token: 0x02e5 - BlockS3 (Enable)
+  value: bool = true
+   Desc: If this option is enabled, the system BIOS will block all OSPM/ACPI S3 
+         (Suspend to RAM) requests and enforce Preboot Authentication on all non
+         -S3 resumes
+================================================================================
+  Token: 0x02eb - Keyboard Backlight Level (50)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: Set Light level to 50 percentage for keyboard backlighting
+================================================================================
+  Token: 0x02f6 - Keyboard Backlight Level (100)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: Light level percentage for keyboard backlighting
+================================================================================
+  Token: 0x0312 - Auto-on (DayControl)
+  value: bool = false
+   Desc: Enable the auto-on tokens that control individual days to be evaluated
+================================================================================
+  Token: 0x0313 - Auto-on Sunday (Enable)
+  value: bool = false
+   Desc: If the Auto-On Day Control is enabled, will wake the system at the spec
+         ified time on Sundays
+================================================================================
+  Token: 0x0314 - Auto-on Sunday (Disable)
+  value: bool = true
+   Desc: If the Auto-On Day Control is enabled, will not auto-wake the system on
+          Sundays
+================================================================================
+  Token: 0x0315 - Auto-on Monday (Enable)
+  value: bool = false
+   Desc: If the Auto-On Day Control is enabled, will wake the system at the spec
+         ified time on Mondays
+================================================================================
+  Token: 0x0316 - Auto-on Monday (Disable)
+  value: bool = true
+   Desc: If the Auto-On Day Control is enabled, will not auto-wake the system on
+          Mondays
+================================================================================
+  Token: 0x0317 - Auto-on Tuesday (Enable)
+  value: bool = false
+   Desc: If the Auto-On Day Control is enabled, will wake the system at the spec
+         ified time on Tuesdays
+================================================================================
+  Token: 0x0318 - Auto-on Tuesday (Disable)
+  value: bool = true
+   Desc: If the Auto-On Day Control is enabled, will not auto-wake the system on
+          Tuesdays
+================================================================================
+  Token: 0x0319 - Auto-on Wednesday (Enable)
+  value: bool = false
+   Desc: If the Auto-On Day Control is enabled, will wake the system at the spec
+         ified time on Wednesdays
+================================================================================
+  Token: 0x031a - Auto-on Wednesday (Disable)
+  value: bool = true
+   Desc: If the Auto-On Day Control is enabled, will not auto-wake the system on
+          Wednesdays
+================================================================================
+  Token: 0x031b - Auto-on Thursday (Enable)
+  value: bool = false
+   Desc: If the Auto-On Day Control is enabled, will wake the system at the spec
+         ified time on Thursdays
+================================================================================
+  Token: 0x031c - Auto-on Thursday (Disable)
+  value: bool = true
+   Desc: If the Auto-On Day Control is enabled, will not auto-wake the system on
+          Thursdays
+================================================================================
+  Token: 0x031d - Auto-on Friday (Enable)
+  value: bool = false
+   Desc: If the Auto-On Day Control is enabled, will wake the system at the spec
+         ified time on Fridays
+================================================================================
+  Token: 0x031e - Auto-on Friday (Disable)
+  value: bool = true
+   Desc: If the Auto-On Day Control is enabled, will not auto-wake the system on
+          Fridays
+================================================================================
+  Token: 0x031f - Auto-on Saturday (Enable)
+  value: bool = false
+   Desc: If the Auto-On Day Control is enabled, will wake the system at the spec
+         ified time on Saturdays
+================================================================================
+  Token: 0x0320 - Auto-on Saturday (Disable)
+  value: bool = true
+   Desc: If the Auto-On Day Control is enabled, will not auto-wake the system on
+          Saturdays
+================================================================================
+  Token: 0x032b - WLAN Control Auto Sense (Enable)
+  value: bool = false
+   Desc: When the wireless WLAN device is enabled, this token will enable the fe
+         ature that automatically turns off the wireless WLAN when the wired WLA
+         N is connected to the network
+================================================================================
+  Token: 0x032c - WLAN Control Auto Sense (Disable)
+  value: bool = true
+   Desc: When the wireless WLAN device is enabled, this token will enable the fe
+         ature that automatically turns off the wireless WLAN when the wired WLA
+         N is connected to the network
+================================================================================
+  Token: 0x0341 - Primary Battery Charge Configuration (Primarily AC Use)
+  value: bool = true
+   Desc: Recommended setting for a user who primarily operates battery while plu
+         gged in
+================================================================================
+  Token: 0x0342 - Primary Battery Charge Configuration (Adaptive Charge)
+  value: bool = false
+   Desc: The battery will place itself in a mode based on periodic evaluation of
+          customer usage to deliver the best balance of capacity
+================================================================================
+  Token: 0x0343 - Primary Battery Charge Configuration (Custom Charge)
+  value: bool = false
+   Desc: The battery will start and stop charging based on user input
+================================================================================
+  Token: 0x0346 - Primary Battery Charge Configuration (Standard Charge)
+  value: bool = false
+   Desc: Battery is charged over a longer period of time
+================================================================================
+  Token: 0x0347 - Primary Battery Charge Configuration (Express Charge)
+  value: bool = false
+   Desc: Dell fast charging technology. Switches the primary battery to Express 
+         Charge mode using the express charging algorithm
+================================================================================
+  Token: 0x0348 - Primary Battery Charge Configuration (Custom Charge)
+  value: bool = false
+   Desc: This token is deprecated. The battery will start and stop charging base
+         d on user input
+================================================================================
+  Token: 0x0349 - Primary Battery Custom Charge Start (NA)
+  value: bool = false
+   Desc: Sets the percentage value at which the battery charging will start Impl
+         ementation Note: This field must be in the range [50, 95] with a step v
+         alue of 1 and at least 5% less than Primary Custom Charge End
+================================================================================
+  Token: 0x034a - Primary Battery Custom Charge End (NA)
+  value: bool = false
+   Desc: Sets the percentage value at which the custom battery charging will sto
+         p Implementation Note: This field must be in the range [55,100] with a 
+         step value of 1 and at least 5% greater than Primary Custom Charge Star
+         t
+================================================================================
+  Token: 0x034d - Unobtrusive Mode (Enable)
+  value: bool = true
+   Desc: When enabled, pressing Fn+B will toggle light emissions from the system
+         
+================================================================================
+  Token: 0x034e - Unobtrusive Mode (Disable)
+  value: bool = false
+   Desc: When disabled, the hotkey Fn+B is disabled and will not toggle light em
+         issions from the system
+================================================================================
+  Token: 0x034f - Secure Boot (Enable)
+  value: bool = false
+   Desc: When enabled, BIOS should perform Secure Boot authentication while atte
+         mpting to boot from a UEFI partition. BIOS would also refer to this set
+         ting to decide on the POST behavior; when Enabled, BIOS should only per
+         form Secure Boot and boot in UEFI mode without loading the CSM
+================================================================================
+  Token: 0x0350 - Secure Boot (Disable)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: Disables Secure Boot. This option is only available locally on the syst
+         em or when certain security criteria is met
+================================================================================
+  Token: 0x0361 - UEFI Network Stack (Enable)
+  value: bool = false
+   Desc: UEFI networking protocols are available permitting pre-OS isage pf the 
+         network, including PXE
+================================================================================
+  Token: 0x0362 - UEFI Network Stack (Disable)
+  value: bool = false
+   Desc: UEFI networking protocols are not available in the pre-OS environment a
+         nd network boot by PXE is disabled. This setting will improve boot time
+         s
+================================================================================
+  Token: 0x0364 - Global Mic Mute (Enable)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: This setting will mute all onboard sound devices
+================================================================================
+  Token: 0x0365 - Global Mic Mute (Disable)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: This setting will unmute all onboard sound devices
+================================================================================
+  Token: 0x0367 - Long Life Cycle Primary Battery (Enable)
+  value: bool = false
+   Desc: BIOS shall change the attached battery in the primary interface into Pe
+         rmanent Long Life mode
+================================================================================
+  Token: 0x036c - Peak Shift (Disable)
+  value: bool = true
+   Desc: Peak Shift mode is disabled. Peak Shift allows portable computers to ru
+         n on battery during the peak power usage portion of the day
+================================================================================
+  Token: 0x036d - Peak Shift (Enable)
+  value: bool = false
+   Desc: Peak Shift mode is enabled. Peak Shift allows portable computers to run
+          on battery during the peak power usage portion of the day. Note: Peak 
+         Shift Start, Peak Shift End, Peak Shift Charge Start and Peak Shift bat
+         tery threshold values are needed to program the system to use Peak Shif
+         t mode
+================================================================================
+  Token: 0x036e - Peak Shift Battery Threshold (Value)
+  value: bool = false
+   Desc: When this Peak Shift battery threshold, which is measured in single per
+         centage points of full charge, is reached switch to AC power. A value o
+         f '0' means do not switch to AC Power between Peak Shift Start Time and
+          Peak shift End Time. Example: 40% is represented as 0x00000028
+================================================================================
+  Token: 0x0374 - Advanced Battery Charging Mode (Disable)
+  value: bool = true
+   Desc: Advanced battery charge mode is disabled. Note: When disabled, battery 
+         charging mode will be based onPrimary Battery Charge Configuration, Bat
+         tery Slice Charge Configuration, Primary Battery Custom Charge Start, P
+         rimary Battery Custom Charge End
+================================================================================
+  Token: 0x0375 - Advanced Battery Charging Mode (Enable)
+  value: bool = false
+   Desc: All batteries (primary, slice and module bay) placed in advanced chargi
+         ng mode to maximize battery life
+================================================================================
+  Token: 0x0378 - Peak Power (Enable)
+  value: bool = false
+   Desc: Enable the Peak Power function, which supplements AC adapter with batte
+         ry power to meet CPU burst demands.
+================================================================================
+  Token: 0x0379 - Peak Power (Disable)
+  value: bool = true
+   Desc: Disable the Peak Power function
+================================================================================
+  Token: 0x0397 - Near Field Computing (Enabled)
+  value: bool = true
+   Desc: Enable the Near Field Computing (NFC) device.
+================================================================================
+  Token: 0x0398 - Near Field Computing (Disabled)
+  value: bool = false
+   Desc: Disable the Near Field Computing (NFC) device
+================================================================================
+  Token: 0x03a2 - Thunderbolt (Enabled)
+  value: bool = true
+   Desc: Enable Thunderbolt support
+================================================================================
+  Token: 0x03a3 - Thunderbolt (Disabled)
+  value: bool = false
+   Desc: Disable Thunderbolt support
+================================================================================
+  Token: 0x03be - Processor Core Count (Value)
+  value: bool = false
+   Desc: This field controls the number of enabled cores in each processor. 0 me
+         ans enable all cores. Another value specifies that n cores are enabled.
+          This token can be used to replace the token suite 'Number of Cores per
+          Processor' and is scalable for more configurations. Only one of the to
+         kens should be present in one system.
+================================================================================
+  Token: 0x03c6 - Extend Post Time (0s)
+  value: bool = false
+   Desc: No delay inserted at the moment when pressing special keys will be dete
+         cted and acted upon as approrpriate
+================================================================================
+  Token: 0x03c7 - Extend Post Time (5s)
+  value: bool = true
+   Desc: 5 second delay inserted at the moment when pressing special keys will b
+         e detected and acted upon as approrpriate
+================================================================================
+  Token: 0x03c8 - Extend Post Time (10s)
+  value: bool = false
+   Desc: 10 second delay inserted at the moment when pressing special keys will 
+         be detected and acted upon as approrpriate
+================================================================================
+  Token: 0x03c9 - Allow BIOS Downgrade (Enabled)
+  value: bool = true
+   Desc: Allow downgrading system firmware.  Limited to special conditions
+================================================================================
+  Token: 0x03ca - Allow BIOS Downgrade (Disabled)
+  value: bool = false
+   Desc: Do not allow downgrading system firmware
+================================================================================
+  Token: 0x03cb - Common System Identifier (Value)
+  value: bool = false
+   Desc: 16 bit value to use as system ID for platforms that support it
+================================================================================
+  Token: 0x03cd - BIOS Setup Advanced Mode (Enabled)
+  value: bool = true
+   Desc: Advanced mode permits a user access to all settings in BIOS setup
+================================================================================
+  Token: 0x03ce - BIOS Setup Advanced Mode (Disabled)
+  value: bool = false
+   Desc: Advanced mode permits a user access to all settings in BIOS setup
+================================================================================
+  Token: 0x03d3 - Boot Fail Threshold (Value)
+  value: bool = false
+   Desc: When OS fails to boot greater than this threshold, recovery is started
+================================================================================
+  Token: 0x03d6 - Service OS (Enabled)
+  value: bool = true
+   Desc: Service OS is enabled
+================================================================================
+  Token: 0x03d7 - Service OS (Disabled)
+  value: bool = false
+   Desc: Service OS is disabled
+================================================================================
+  Token: 0x0401 - Fn Lock (Enabled)
+  value: bool = true
+   Desc: Permits the user to boot with the F1-F12 keys controlling their special
+          features. The user will need to press <Fn> to make these keys act as F
+         1-F12 when needed by software. The function of the <Fn> key is therefor
+         e inverted
+================================================================================
+  Token: 0x0402 - Fn Lock (Disabled)
+  value: bool = false
+   Desc: Permits the user to boot with the F1-F12 behaving as F1-F12 keys respec
+         tively. The user will need to press <Fn> to make them control their ass
+         ociated special features
+================================================================================
+  Token: 0x0403 - Fn Lock Mode (Enabled)
+  value: bool = false
+   Desc: Without holding <Fn>, the dual function keys behave as normally labeled
+         . Holding <Fn> is required to access the Secondary functions
+================================================================================
+  Token: 0x0404 - Fn Lock Mode (Disabled)
+  value: bool = true
+   Desc: The dual function keys control the Secondary functions. <Fn> is require
+         d to access the standard functions
+================================================================================
+  Token: 0x0431 - WLAN Country Code (Value)
+  value: bool = false
+   Desc: 2 Byte WLAN country ID as defined in ISO/IEC 3166-1
+================================================================================
+  Token: 0x0432 - BIOS Recovery from HDD (Enabled)
+  value: bool = true
+   Desc: Enables BIOS to save recovery image to HDD
+================================================================================
+  Token: 0x0433 - BIOS Recovery from HDD (Disabled)
+  value: bool = false
+   Desc: Disables BIOS to save recovery image to HDD
+================================================================================
+  Token: 0x0436 - Data Wipe (Enabled)
+  value: bool = false
+   Desc: Enables system BIOS to perform secure wipe of storage devices
+================================================================================
+  Token: 0x0437 - Data Wipe (Disabled)
+  value: bool = true
+   Desc: Disables system BIOS to perform secure wipe of storage devices
+================================================================================
+  Token: 0x0440 - Thunderbolt Boot Support (Enabled)
+  value: bool = true
+   Desc: Enables the ability to boot from thunderbolt devices
+================================================================================
+  Token: 0x0441 - Thunderbolt Boot Support (Disabled)
+  value: bool = false
+   Desc: Disables the ability to boot from thunderbolt devices
+================================================================================
+  Token: 0x0442 - Thunderbolt preboot modules (Enabled)
+  value: bool = false
+   Desc: Enables OROMs and pre-boot UEFI drivers from thunderbolt devices
+================================================================================
+  Token: 0x0443 - Thunderbolt preboot modules (Disabled)
+  value: bool = true
+   Desc: Disables OROMs and pre-boot UEFI drivers from thunderbolt devices
+================================================================================
+  Token: 0x0446 - Wake on dock (Enabled)
+  value: bool = true
+   Desc: Enables waking system when docking connection made
+================================================================================
+  Token: 0x0447 - Wake on dock (Disabled)
+  value: bool = false
+   Desc: Disables waking system when docking connection made
+================================================================================
+  Token: 0x044b - SFP WOL (Enabled)
+  value: bool = false
+   Desc: Enables wake on small form factor pluggable network devices
+================================================================================
+  Token: 0x044c - SFP WOL (Disabled)
+  value: bool = true
+   Desc: Disables wake on small form factor pluggable network devices
+================================================================================
+  Token: 0x044d - Warnings and Errors (Prompt)
+  value: bool = true
+   Desc: POST will be stopped to have warnings and errors prompted by user input
+         
+================================================================================
+  Token: 0x044e - Warnings and Errors (ContinueWarnings)
+  value: bool = false
+   Desc: POST will continue on warnings and errors prompted by user input
+================================================================================
+  Token: 0x044f - Warnings and Errors (ContinueAll)
+  value: bool = false
+   Desc: POST will continue on warnings and errors
+================================================================================
+  Token: 0x0451 - Keyboard Backlight with AC (Value)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: Defines timeout value for keyboard backlight when AC plugged into syste
+         m
+================================================================================
+  Token: 0x0452 - Keyboard Backlight with Battery (Value)
+  value: bool = false
+   Desc: Defines timeout value for keyboard backlight when on battery
+================================================================================
+  Token: 0x0453 - Lid Switch (Enabled)
+  value: bool = false
+   Desc: Lid switch function will be enabled.  OS setting determines behavior wh
+         en lid is closed
+================================================================================
+  Token: 0x0454 - Lid Switch (Disabled)
+  value: bool = true
+   Desc: Lid switch function will be disabled.  Display not affected when lid is
+          closed
+================================================================================
+  Token: 0x0461 - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x0462 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x047b - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x047c - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0480 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0481 - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x0487 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0488 - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x0489 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0498 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0499 - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x049a - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x049b - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x049c - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x049d - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x049e - unknown (unknown)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: unknown
+================================================================================
+  Token: 0x049f - unknown (unknown)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: unknown
+================================================================================
+  Token: 0x04a0 - unknown (unknown)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: unknown
+================================================================================
+  Token: 0x04a1 - unknown (unknown)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: unknown
+================================================================================
+  Token: 0x04a2 - unknown (unknown)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: unknown
+================================================================================
+  Token: 0x04a3 - unknown (unknown)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: unknown
+================================================================================
+  Token: 0x04ae - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x04af - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x04dc - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x04e6 - unknown (unknown)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: unknown
+================================================================================
+  Token: 0x04e7 - unknown (unknown)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: unknown
+================================================================================
+  Token: 0x04ec - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x04ed - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x0500 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0512 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0513 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0514 - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x051a - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x051b - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0537 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0538 - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x0543 - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x0544 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0547 - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x0548 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0558 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0559 - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x055a - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x055b - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x055c - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x055d - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x055e - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x055f - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x0560 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0565 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x056d - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x056e - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x0572 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0573 - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x0574 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0575 - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x0576 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0577 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0580 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0587 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0588 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0589 - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x0591 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x0592 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x404a - unknown (unknown)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: unknown
+================================================================================
+  Token: 0x404b - unknown (unknown)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: unknown
+================================================================================
+  Token: 0x404c - unknown (unknown)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: unknown
+================================================================================
+  Token: 0x404f - unknown (unknown)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: unknown
+================================================================================
+  Token: 0x4050 - unknown (unknown)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: unknown
+================================================================================
+  Token: 0x8000 - Chassis Intrusion (Tripped)
+  value: bool = true
+   Desc: Read-only The intrusion sensor detected that the chassis door was opene
+         d since the last time the sensor-detection logic was reset. This status
+          is reset via the Trip Reset token. If the token's read returns the tok
+         en-table defined value, the intrusion sensor has been tripped; otherwis
+         e, the sensor has not been tripped.
+================================================================================
+  Token: 0x8002 - Chassis Intrusion (Door Open)
+  value: bool = false
+   Desc: Read-only The chassis door is currently open.
+================================================================================
+  Token: 0x8003 - Chassis Intrusion (Door Closed)
+  value: bool = false
+   Desc: Read-only The chassis door is currently closed.
+================================================================================
+  Token: 0x800e - Trusted Platform Module (Owned)
+  value: bool = false
+   Desc: Reports true if TPM owned, false if TPM not owned
+================================================================================
+  Token: 0x800f - Support Assist (MajorMinorVersion)
+  value: bool = false
+   Desc: Reports major version in byte 1, minor version in byte0
+================================================================================
+  Token: 0x8012 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0x8013 - unknown (unknown)
+  value: bool = true
+   Desc: unknown
+================================================================================
+  Token: 0x8014 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xa000 - Chassis Intrusion (Trip Reset)
+  value: token query failed: Low level SMI call failed.
+ ;`d{
+   Desc: Write-only Resets the sensor-detection logic to detect the next closed-
+         to-open transition on the chassis door.
+================================================================================
+  Token: 0xf100 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xf102 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xf110 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xf112 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xf120 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xf122 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xf130 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xf132 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xf140 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xf142 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xf150 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xf152 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xf600 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+================================================================================
+  Token: 0xf601 - unknown (unknown)
+  value: bool = false
+   Desc: unknown
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/libsmbios_c/smbios_token.py", line 134, in __iter__
+    raise StopIteration
+StopIteration
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/sbin/smbios-token-ctl", line 475, in <module>
+    sys.exit( main() )
+              ^^^^^^
+  File "/usr/sbin/smbios-token-ctl", line 380, in main
+    dumpTokens(tokenTable, tokenXlator, options)
+  File "/usr/sbin/smbios-token-ctl", line 214, in dumpTokens
+    for token in tokenTable:
+RuntimeError: generator raised StopIteration

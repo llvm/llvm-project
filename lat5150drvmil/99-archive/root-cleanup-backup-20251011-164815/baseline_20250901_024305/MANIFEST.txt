@@ -1,0 +1,22 @@
+Baseline Snapshot Manifest
+=========================
+Created: 20250901_024305
+System: johnbox
+Kernel: 6.14.0-29-generic
+Dell Model: Latitude 5450
+BIOS Version: 1.14.1
+
+Files in this baseline:
+total 172
+drwxr-xr-x  2 root root  4096 Sep  1 02:43 .
+drwxrwxr-x 14 john john  4096 Sep  1 02:43 ..
+-rw-r--r--  1 root root  8401 Sep  1 02:43 kernel_messages.txt
+-rw-r--r--  1 root root 12837 Sep  1 02:43 kernel_modules.txt
+-rw-r--r--  1 root root   192 Sep  1 02:43 MANIFEST.txt
+-rw-r--r--  1 root root  4416 Sep  1 02:43 memory_map.txt
+-rw-r--r--  1 root root 16676 Sep  1 02:43 pci_devices.txt
+-rw-r--r--  1 root root 53330 Sep  1 02:43 process_state.txt
+-rw-r--r--  1 root root  7184 Sep  1 02:43 security_state.txt
+-rw-r--r--  1 root root 31323 Sep  1 02:43 smbios_baseline.txt
+-rw-r--r--  1 root root  1980 Sep  1 02:43 system_info.txt
+-rw-r--r--  1 root root  2597 Sep  1 02:43 thermal_baseline.txt

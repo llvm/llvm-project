@@ -1,0 +1,95 @@
+[workspace]
+resolver = "2"
+members = [
+    "tpm2_compat_userspace",
+    "tpm2_compat_crypto",
+    "tpm2_compat_bindings",
+    "tpm2_compat_npu",
+    "tpm2_compat_common"
+]
+exclude = [
+    "tpm2_compat_kernel"  # Requires kernel build environment
+]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2021"
+authors = ["RUST-INTERNAL Agent <rust-internal@dsmil.military>"]
+license = "GPL-2.0"
+repository = "https://github.com/dsmil/tpm2-compat-rust"
+documentation = "https://docs.rs/tpm2-compat-rust"
+description = "Military-grade Rust TPM2 compatibility layer with hardware acceleration"
+keywords = ["tpm", "security", "hardware", "military", "acceleration"]
+categories = ["hardware-support", "cryptography", "no-std"]
+
+[workspace.dependencies]
+# Common dependencies for all crates
+thiserror = "2.0"
+log = "0.4"
+cfg-if = "1.0"
+static_assertions = "1.1"
+zerocopy = { version = "0.8", features = ["derive"] }
+bitflags = "2.6"
+
+# Async runtime for userspace
+tokio = { version = "1.40", features = ["full"] }
+tokio-util = "0.7"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3"
+
+# Cryptography
+ring = "0.17"
+aes = "0.8"
+sha2 = "0.10"
+rand = "0.8"
+zeroize = { version = "1.8", features = ["zeroize_derive"] }
+
+# Hardware acceleration (placeholder dependencies)
+# intel-accel = "0.3"  # Not available in crates.io
+# npu-sys = "0.1"      # Not available in crates.io
+
+# Testing
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.5"
+quickcheck = "1.0"
+
+# FFI
+libc = "0.2"
+cty = "0.2"
+
+# Proc macros
+paste = "1.0"
+quote = "1.0"
+syn = { version = "2.0", features = ["full"] }
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+opt-level = 3
+debug = false
+strip = true
+
+[profile.kernel]
+inherits = "release"
+panic = "abort"
+opt-level = "s"  # Optimize for size in kernel
+debug = false
+overflow-checks = false
+lto = "fat"
+
+[profile.dev]
+panic = "abort"
+opt-level = 0
+debug = true
+overflow-checks = true
+
+[profile.test]
+opt-level = 1
+debug = true
+overflow-checks = true
+
+# Features will be defined in individual crate manifests

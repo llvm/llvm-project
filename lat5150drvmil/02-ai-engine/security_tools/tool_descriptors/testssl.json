@@ -1,0 +1,26 @@
+{
+  "name": "testssl",
+  "description": "SSL/TLS vulnerability scanner",
+  "category": "vulnerability_scanning",
+  "phase": ["analysis"],
+  "command": "testssl.sh",
+  "required": false,
+  "args": {
+    "basic": "--fast {target}",
+    "full": "--full {target}",
+    "vulnerabilities": "--vulnerable {target}",
+    "protocols": "--protocols {target}",
+    "cipher": "--cipher {target}"
+  },
+  "default_profile": "basic",
+  "timeout": 300,
+  "output_format": "text",
+  "parse_output": true,
+  "severity_keywords": {
+    "critical": ["VULNERABLE", "CRITICAL", "Heartbleed", "POODLE", "DROWN"],
+    "high": ["vulnerable", "weak", "MEDIUM", "not offered", "insecure"],
+    "medium": ["deprecated", "TLS 1.0", "TLS 1.1", "RC4"],
+    "low": ["certificate", "hostname", "mismatch"],
+    "info": ["TLS 1.2", "TLS 1.3", "offered", "OK"]
+  }
+}

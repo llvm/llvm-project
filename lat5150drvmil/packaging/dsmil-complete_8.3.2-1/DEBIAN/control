@@ -1,0 +1,27 @@
+Package: dsmil-complete
+Version: 8.3.2-1
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: dsmil-platform (>= 8.3.1), dell-milspec-tools (>= 1.0.0), tpm2-accel-examples (>= 1.0.0)
+Recommends: dell-milspec-dsmil-dkms, tpm2-accel-early-dkms
+Maintainer: DSMIL Project <noreply@dsmil.local>
+Description: DSMIL Complete Platform - Framework + AI System (Meta-package)
+ Complete DSMIL installation including framework, tools, and AI platform.
+ .
+ This meta-package installs:
+  * DSMIL Platform v8.3.1 - AI interface and server
+  * Dell MIL-SPEC Tools - Hardware monitoring and management
+  * TPM2 Acceleration Examples - Hardware acceleration tools
+  * All required dependencies and services
+ .
+ Features:
+  * Hardware-attested AI responses (TPM 2.0)
+  * 7 auto-coding tools
+  * Smart routing and web search
+  * Chat history persistence
+  * Model management UI
+  * 76.4 TOPS compute (NPU + GPU + NCS2)
+  * DSMIL Mode 5 security
+ .
+ After installation, access the interface at http://localhost:9876

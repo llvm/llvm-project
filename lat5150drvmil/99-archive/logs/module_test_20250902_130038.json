@@ -1,0 +1,181 @@
+{
+  "timestamp": "2025-09-02T13:00:28.339352",
+  "module_loaded": true,
+  "tests": [
+    {
+      "name": "power",
+      "token": "0x0480",
+      "timestamp": "2025-09-02T13:00:28.359288",
+      "thermal_before": 72.0,
+      "smbios": {
+        "accessible": false,
+        "error": "Not accessible",
+        "method": "SMBIOS"
+      },
+      "smi": {
+        "accessible": false,
+        "error": "No SMI interface found",
+        "method": "SMI"
+      },
+      "kernel_activity": [
+        "[111365.384511] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384512] dsmil-72dev: Invalid device ID 0x9000 (outside range 0x8000-0x806b)",
+        "[111365.384514] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384514] dsmil-72dev: Thermal limit exceeded - device access suspended",
+        "[111365.384516] dsmil-72dev: Device released"
+      ],
+      "thermal_after": 77.0,
+      "thermal_change": 5.0
+    },
+    {
+      "name": "thermal",
+      "token": "0x0481",
+      "timestamp": "2025-09-02T13:00:29.461286",
+      "thermal_before": 74.05,
+      "smbios": {
+        "accessible": false,
+        "error": "Not accessible",
+        "method": "SMBIOS"
+      },
+      "smi": {
+        "accessible": false,
+        "error": "No SMI interface found",
+        "method": "SMI"
+      },
+      "kernel_activity": [
+        "[111365.384511] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384512] dsmil-72dev: Invalid device ID 0x9000 (outside range 0x8000-0x806b)",
+        "[111365.384514] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384514] dsmil-72dev: Thermal limit exceeded - device access suspended",
+        "[111365.384516] dsmil-72dev: Device released"
+      ],
+      "thermal_after": 74.05,
+      "thermal_change": 0.0
+    },
+    {
+      "name": "security",
+      "token": "0x0482",
+      "timestamp": "2025-09-02T13:00:30.565017",
+      "thermal_before": 75.05,
+      "smbios": {
+        "accessible": false,
+        "error": "Not accessible",
+        "method": "SMBIOS"
+      },
+      "smi": {
+        "accessible": false,
+        "error": "No SMI interface found",
+        "method": "SMI"
+      },
+      "kernel_activity": [
+        "[111365.384511] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384512] dsmil-72dev: Invalid device ID 0x9000 (outside range 0x8000-0x806b)",
+        "[111365.384514] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384514] dsmil-72dev: Thermal limit exceeded - device access suspended",
+        "[111365.384516] dsmil-72dev: Device released"
+      ],
+      "thermal_after": 83.05,
+      "thermal_change": 8.0
+    },
+    {
+      "name": "memory",
+      "token": "0x0483",
+      "timestamp": "2025-09-02T13:00:32.297158",
+      "thermal_before": 74.0,
+      "smbios": {
+        "accessible": false,
+        "error": "Not accessible",
+        "method": "SMBIOS"
+      },
+      "smi": {
+        "accessible": false,
+        "error": "No SMI interface found",
+        "method": "SMI"
+      },
+      "kernel_activity": [
+        "[111365.384511] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384512] dsmil-72dev: Invalid device ID 0x9000 (outside range 0x8000-0x806b)",
+        "[111365.384514] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384514] dsmil-72dev: Thermal limit exceeded - device access suspended",
+        "[111365.384516] dsmil-72dev: Device released"
+      ],
+      "thermal_after": 95.05,
+      "thermal_change": 21.049999999999997
+    },
+    {
+      "name": "io",
+      "token": "0x0484",
+      "timestamp": "2025-09-02T13:00:34.033125",
+      "thermal_before": 82.0,
+      "smbios": {
+        "accessible": false,
+        "error": "Not accessible",
+        "method": "SMBIOS"
+      },
+      "smi": {
+        "accessible": false,
+        "error": "No SMI interface found",
+        "method": "SMI"
+      },
+      "kernel_activity": [
+        "[111365.384511] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384512] dsmil-72dev: Invalid device ID 0x9000 (outside range 0x8000-0x806b)",
+        "[111365.384514] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384514] dsmil-72dev: Thermal limit exceeded - device access suspended",
+        "[111365.384516] dsmil-72dev: Device released"
+      ],
+      "thermal_after": 70.05,
+      "thermal_change": -11.950000000000003
+    },
+    {
+      "name": "storage",
+      "token": "0x0486",
+      "timestamp": "2025-09-02T13:00:35.764348",
+      "thermal_before": 85.05,
+      "smbios": {
+        "accessible": false,
+        "error": "Not accessible",
+        "method": "SMBIOS"
+      },
+      "smi": {
+        "accessible": false,
+        "error": "No SMI interface found",
+        "method": "SMI"
+      },
+      "kernel_activity": [
+        "[111365.384511] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384512] dsmil-72dev: Invalid device ID 0x9000 (outside range 0x8000-0x806b)",
+        "[111365.384514] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384514] dsmil-72dev: Thermal limit exceeded - device access suspended",
+        "[111365.384516] dsmil-72dev: Device released"
+      ],
+      "thermal_after": 81.0,
+      "thermal_change": -4.049999999999997
+    },
+    {
+      "name": "sensor",
+      "token": "0x0489",
+      "timestamp": "2025-09-02T13:00:37.498213",
+      "thermal_before": 79.05,
+      "smbios": {
+        "accessible": false,
+        "error": "Not accessible",
+        "method": "SMBIOS"
+      },
+      "smi": {
+        "accessible": false,
+        "error": "No SMI interface found",
+        "method": "SMI"
+      },
+      "kernel_activity": [
+        "[111365.384511] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384512] dsmil-72dev: Invalid device ID 0x9000 (outside range 0x8000-0x806b)",
+        "[111365.384514] dsmil-72dev: IOCTL command 0xc0284d04 received",
+        "[111365.384514] dsmil-72dev: Thermal limit exceeded - device access suspended",
+        "[111365.384516] dsmil-72dev: Device released"
+      ],
+      "thermal_after": 79.05,
+      "thermal_change": 0.0
+    }
+  ]
+}

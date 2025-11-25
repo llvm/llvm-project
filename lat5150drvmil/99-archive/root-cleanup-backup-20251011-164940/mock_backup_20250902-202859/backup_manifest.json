@@ -1,0 +1,12 @@
+{
+  "deployment_id": "phase2a_prod_1756841339",
+  "timestamp": "2025-09-02T20:28:59.933195",
+  "backup_dir": "/home/john/LAT5150DRVMIL/mock_backup_20250902-202859",
+  "components": {
+    "kernel_module": "/home/john/LAT5150DRVMIL/mock_backup_20250902-202859/kernel_module_dsmil-72dev.c",
+    "installer": "/home/john/LAT5150DRVMIL/mock_backup_20250902-202859/installer_install_dsmil_phase2a_integrated.sh",
+    "orchestrator": "/home/john/LAT5150DRVMIL/mock_backup_20250902-202859/orchestrator_deployment_orchestrator.py",
+    "config": "/home/john/LAT5150DRVMIL/mock_backup_20250902-202859/config_secure_deployment_config.env",
+    "tests": "/home/john/LAT5150DRVMIL/mock_backup_20250902-202859/tests_test_chunked_ioctl.py"
+  }
+}

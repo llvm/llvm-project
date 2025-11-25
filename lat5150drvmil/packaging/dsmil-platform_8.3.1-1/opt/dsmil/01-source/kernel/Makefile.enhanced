@@ -1,0 +1,308 @@
+# Dell MIL-SPEC Enhanced DSMIL System Makefile - Track A
+# Copyright (C) 2025 JRTC1 Educational Development
+#
+# This Makefile builds the complete Track A enhanced DSMIL system
+# with 84-device support, comprehensive safety layers, and debugging.
+
+# Kernel module names
+ENHANCED_MODULE := dsmil_enhanced
+HAL_MODULE := dsmil_hal
+SAFETY_MODULE := dsmil_safety  
+ACCESS_CONTROL_MODULE := dsmil_access_control
+RUST_SAFETY_MODULE := dsmil_rust_safety
+DEBUG_MODULE := dsmil_debug
+
+# Object files for each module
+obj-m += $(ENHANCED_MODULE).o
+obj-m += $(HAL_MODULE).o
+obj-m += $(SAFETY_MODULE).o
+obj-m += $(ACCESS_CONTROL_MODULE).o
+obj-m += $(RUST_SAFETY_MODULE).o
+obj-m += $(DEBUG_MODULE).o
+
+# Source dependencies
+$(ENHANCED_MODULE)-objs := dsmil_enhanced.o
+$(HAL_MODULE)-objs := dsmil_hal.o
+$(SAFETY_MODULE)-objs := dsmil_safety.o
+$(ACCESS_CONTROL_MODULE)-objs := dsmil_access_control.o
+$(RUST_SAFETY_MODULE)-objs := dsmil_rust_safety.o
+$(DEBUG_MODULE)-objs := dsmil_debug.o
+
+# Kernel build directory
+KERNEL_DIR := /lib/modules/$(shell uname -r)/build
+
+# Build flags
+EXTRA_CFLAGS += -DDSMIL_ENHANCED_BUILD
+EXTRA_CFLAGS += -DDSMIL_TRACK_A_DEVELOPMENT
+EXTRA_CFLAGS += -DDSMIL_84_DEVICE_SUPPORT
+EXTRA_CFLAGS += -DDSMIL_QUARANTINE_PROTECTION
+EXTRA_CFLAGS += -DDSMIL_RUST_SAFETY_LAYER
+EXTRA_CFLAGS += -DDSMIL_COMPREHENSIVE_LOGGING
+EXTRA_CFLAGS += -Wall -Wextra -Werror
+EXTRA_CFLAGS += -O2
+EXTRA_CFLAGS += -g
+
+# Debug build option
+ifdef DEBUG
+EXTRA_CFLAGS += -DDSMIL_DEBUG_BUILD
+EXTRA_CFLAGS += -DDEBUG
+endif
+
+# Default target
+all: modules
+
+# Build all kernel modules
+modules:
+	@echo "Building DSMIL Enhanced System - Track A"
+	@echo "=========================================="
+	@echo "Target: 84-device support with comprehensive safety"
+	@echo "Modules: $(ENHANCED_MODULE), $(HAL_MODULE), $(SAFETY_MODULE), $(ACCESS_CONTROL_MODULE), $(RUST_SAFETY_MODULE), $(DEBUG_MODULE)"
+	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) modules
+	@echo ""
+	@echo "Build complete. Modules ready for loading."
+
+# Clean build artifacts
+clean:
+	@echo "Cleaning DSMIL Enhanced System build artifacts..."
+	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) clean
+	rm -f *.o *.ko *.mod *.mod.c *.order *.symvers *.markers
+	rm -f .*.cmd .*.o.cmd .*.ko.cmd .*.mod.cmd
+	rm -rf .tmp_versions/
+	@echo "Clean complete."
+
+# Install modules (requires root)
+install: modules
+	@echo "Installing DSMIL Enhanced System modules..."
+	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) modules_install
+	depmod -a
+	@echo "Modules installed successfully."
+
+# Load all modules in correct order
+load: modules
+	@echo "Loading DSMIL Enhanced System modules..."
+	@echo "Loading in dependency order for safety..."
+	
+	# Load debug system first for logging
+	@if lsmod | grep -q "$(DEBUG_MODULE)"; then \
+		echo "$(DEBUG_MODULE) already loaded"; \
+	else \
+		echo "Loading $(DEBUG_MODULE)..."; \
+		sudo insmod $(DEBUG_MODULE).ko; \
+	fi
+	
+	# Load safety and access control layers
+	@if lsmod | grep -q "$(SAFETY_MODULE)"; then \
+		echo "$(SAFETY_MODULE) already loaded"; \
+	else \
+		echo "Loading $(SAFETY_MODULE)..."; \
+		sudo insmod $(SAFETY_MODULE).ko; \
+	fi
+	
+	@if lsmod | grep -q "$(ACCESS_CONTROL_MODULE)"; then \
+		echo "$(ACCESS_CONTROL_MODULE) already loaded"; \
+	else \
+		echo "Loading $(ACCESS_CONTROL_MODULE)..."; \
+		sudo insmod $(ACCESS_CONTROL_MODULE).ko; \
+	fi
+	
+	# Load Rust safety layer
+	@if lsmod | grep -q "$(RUST_SAFETY_MODULE)"; then \
+		echo "$(RUST_SAFETY_MODULE) already loaded"; \
+	else \
+		echo "Loading $(RUST_SAFETY_MODULE)..."; \
+		sudo insmod $(RUST_SAFETY_MODULE).ko; \
+	fi
+	
+	# Load HAL layer
+	@if lsmod | grep -q "$(HAL_MODULE)"; then \
+		echo "$(HAL_MODULE) already loaded"; \
+	else \
+		echo "Loading $(HAL_MODULE)..."; \
+		sudo insmod $(HAL_MODULE).ko; \
+	fi
+	
+	# Finally load the main enhanced module
+	@if lsmod | grep -q "$(ENHANCED_MODULE)"; then \
+		echo "$(ENHANCED_MODULE) already loaded"; \
+	else \
+		echo "Loading $(ENHANCED_MODULE)..."; \
+		sudo insmod $(ENHANCED_MODULE).ko enforce_quarantine=1 enable_safety_monitoring=1 debug_mode=0; \
+	fi
+	
+	@echo ""
+	@echo "All modules loaded successfully!"
+	@echo "CRITICAL SAFETY: 5 devices are quarantined (0,1,12,24,83)"
+	@echo "Check dmesg for initialization messages and any warnings."
+
+# Unload all modules in reverse order
+unload:
+	@echo "Unloading DSMIL Enhanced System modules..."
+	@echo "Unloading in reverse dependency order..."
+	
+	# Unload main module first
+	@if lsmod | grep -q "$(ENHANCED_MODULE)"; then \
+		echo "Unloading $(ENHANCED_MODULE)..."; \
+		sudo rmmod $(ENHANCED_MODULE); \
+	fi
+	
+	# Unload HAL
+	@if lsmod | grep -q "$(HAL_MODULE)"; then \
+		echo "Unloading $(HAL_MODULE)..."; \
+		sudo rmmod $(HAL_MODULE); \
+	fi
+	
+	# Unload Rust safety layer
+	@if lsmod | grep -q "$(RUST_SAFETY_MODULE)"; then \
+		echo "Unloading $(RUST_SAFETY_MODULE)..."; \
+		sudo rmmod $(RUST_SAFETY_MODULE); \
+	fi
+	
+	# Unload access control and safety
+	@if lsmod | grep -q "$(ACCESS_CONTROL_MODULE)"; then \
+		echo "Unloading $(ACCESS_CONTROL_MODULE)..."; \
+		sudo rmmod $(ACCESS_CONTROL_MODULE); \
+	fi
+	
+	@if lsmod | grep -q "$(SAFETY_MODULE)"; then \
+		echo "Unloading $(SAFETY_MODULE)..."; \
+		sudo rmmod $(SAFETY_MODULE); \
+	fi
+	
+	# Unload debug system last
+	@if lsmod | grep -q "$(DEBUG_MODULE)"; then \
+		echo "Unloading $(DEBUG_MODULE)..."; \
+		sudo rmmod $(DEBUG_MODULE); \
+	fi
+	
+	@echo "All modules unloaded successfully!"
+
+# Reload all modules (unload then load)
+reload: unload load
+
+# Check module status
+status:
+	@echo "DSMIL Enhanced System Module Status"
+	@echo "===================================="
+	@echo ""
+	@echo "Loaded modules:"
+	@lsmod | head -1
+	@lsmod | grep -E "($(DEBUG_MODULE)|$(SAFETY_MODULE)|$(ACCESS_CONTROL_MODULE)|$(RUST_SAFETY_MODULE)|$(HAL_MODULE)|$(ENHANCED_MODULE))" || echo "No DSMIL modules loaded"
+	@echo ""
+	@echo "DebugFS entries:"
+	@if [ -d "/sys/kernel/debug/dsmil" ]; then \
+		echo "  /sys/kernel/debug/dsmil/ - Available"; \
+		ls -la /sys/kernel/debug/dsmil/ 2>/dev/null || true; \
+	else \
+		echo "  /sys/kernel/debug/dsmil/ - Not available"; \
+	fi
+	@echo ""
+	@echo "ProcFS entries:"
+	@ls -la /proc/dsmil* 2>/dev/null || echo "  No ProcFS entries found"
+
+# Show comprehensive system information
+info:
+	@echo "DSMIL Enhanced System Information - Track A"
+	@echo "==========================================="
+	@echo "System: Dell MIL-SPEC 84-Device DSMIL Driver"
+	@echo "Architecture: 7 groups × 12 devices = 84 total devices"
+	@echo "Safety: 5 devices quarantined (ABSOLUTE write protection)"
+	@echo ""
+	@echo "Quarantined devices (NEVER writable):"
+	@echo "  Device 0  (Group 0, Dev 0): Master Control"
+	@echo "  Device 1  (Group 0, Dev 1): Security Platform" 
+	@echo "  Device 12 (Group 1, Dev 0): Power Controller"
+	@echo "  Device 24 (Group 2, Dev 0): Memory Controller"
+	@echo "  Device 83 (Group 6, Dev 11): Emergency Stop"
+	@echo ""
+	@echo "Safety layers:"
+	@echo "  1. Enhanced kernel module with device validation"
+	@echo "  2. Hardware Abstraction Layer (HAL) with access control"
+	@echo "  3. Comprehensive safety validation system"
+	@echo "  4. Access control system with quarantine enforcement"
+	@echo "  5. Rust safety layer for memory protection"  
+	@echo "  6. Debug and logging system for monitoring"
+	@echo ""
+	@echo "Build configuration:"
+	@echo "  Kernel: $(shell uname -r)"
+	@echo "  Architecture: $(shell uname -m)"
+	@echo "  Build flags: $(EXTRA_CFLAGS)"
+
+# Test basic functionality (requires modules to be loaded)
+test:
+	@echo "Testing DSMIL Enhanced System functionality..."
+	@echo "============================================="
+	@echo ""
+	@echo "1. Checking module status..."
+	@$(MAKE) status
+	@echo ""
+	@echo "2. Testing DebugFS interfaces..."
+	@if [ -f "/sys/kernel/debug/dsmil/statistics" ]; then \
+		echo "Reading debug statistics:"; \
+		cat /sys/kernel/debug/dsmil/statistics 2>/dev/null || echo "Cannot read statistics"; \
+	else \
+		echo "DebugFS statistics not available"; \
+	fi
+	@echo ""
+	@echo "3. Testing ProcFS interfaces..."
+	@if [ -f "/proc/dsmil_safety" ]; then \
+		echo "Reading safety status:"; \
+		head -20 /proc/dsmil_safety 2>/dev/null || echo "Cannot read safety status"; \
+	else \
+		echo "ProcFS safety interface not available"; \
+	fi
+	@echo ""
+	@echo "4. Checking kernel log for recent DSMIL messages..."
+	@dmesg | grep -i dsmil | tail -10 || echo "No recent DSMIL kernel messages"
+	@echo ""
+	@echo "Test complete. Check output above for any errors."
+
+# Validate build environment
+check-env:
+	@echo "Validating build environment..."
+	@echo "==============================="
+	@echo "Kernel version: $(shell uname -r)"
+	@echo "Kernel build directory: $(KERNEL_DIR)"
+	@if [ -d "$(KERNEL_DIR)" ]; then \
+		echo "✓ Kernel build directory exists"; \
+	else \
+		echo "✗ Kernel build directory missing"; \
+		echo "  Please install kernel headers: sudo apt install linux-headers-$(shell uname -r)"; \
+		exit 1; \
+	fi
+	@if [ -f "$(KERNEL_DIR)/Makefile" ]; then \
+		echo "✓ Kernel build system available"; \
+	else \
+		echo "✗ Kernel build system not found"; \
+		exit 1; \
+	fi
+	@echo "✓ Build environment validated"
+
+# Help target
+help:
+	@echo "DSMIL Enhanced System Makefile - Track A"
+	@echo "========================================="
+	@echo ""
+	@echo "Available targets:"
+	@echo "  all (default)  - Build all kernel modules"
+	@echo "  modules        - Build all kernel modules"
+	@echo "  clean          - Clean build artifacts"
+	@echo "  install        - Install modules to system (requires root)"
+	@echo "  load           - Load all modules in correct order"
+	@echo "  unload         - Unload all modules in reverse order"
+	@echo "  reload         - Unload then reload all modules"
+	@echo "  status         - Show module and interface status"
+	@echo "  info           - Show system information"
+	@echo "  test           - Test basic functionality"
+	@echo "  check-env      - Validate build environment"
+	@echo "  help           - Show this help message"
+	@echo ""
+	@echo "Debug build:"
+	@echo "  make DEBUG=1   - Build with debug symbols and verbose logging"
+	@echo ""
+	@echo "SAFETY NOTICE:"
+	@echo "  This system protects 5 quarantined devices from write operations."
+	@echo "  Devices 0,1,12,24,83 are NEVER writable for system safety."
+	@echo "  Always check 'make status' and kernel logs after loading modules."
+
+# Phony targets
+.PHONY: all modules clean install load unload reload status info test check-env help

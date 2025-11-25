@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSMIL Tactical Interface - Yubikey Enabled</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Color schemes for different modes */
+        :root[data-mode="day"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2a2a2a;
+            --bg-tertiary: #3a3a3a;
+            --text-primary: #00ff00;
+            --text-secondary: #00cc00;
+            --text-dim: #009900;
+            --border-color: #00ff00;
+            --accent: #00ff00;
+            --error: #ff0000;
+            --warning: #ffaa00;
+        }
+
+        :root[data-mode="night"] {
+            --bg-primary: #0a0000;
+            --bg-secondary: #1a0000;
+            --bg-tertiary: #2a0000;
+            --text-primary: #ff0000;
+            --text-secondary: #cc0000;
+            --text-dim: #990000;
+            --border-color: #ff0000;
+            --accent: #ff0000;
+            --error: #ff0000;
+            --warning: #ffaa00;
+        }
+
+        :root[data-mode="nvg"] {
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a00;
+            --bg-tertiary: #1a1a00;
+            --text-primary: #33ff33;
+            --text-secondary: #22cc22;
+            --text-dim: #119911;
+            --border-color: #33ff33;
+            --accent: #33ff33;
+            --error: #ff0000;
+            --warning: #ffaa00;
+        }
+
+        :root[data-mode="oled"] {
+            --bg-primary: #000000;
+            --bg-secondary: #000000;
+            --bg-tertiary: #000000;
+            --text-primary: #00ff00;
+            --text-secondary: #00cc00;
+            --text-dim: #009900;
+            --border-color: #00ff00;
+            --accent: #00ff00;
+            --error: #ff0000;
+            --warning: #ffaa00;
+        }
+
+        :root[data-mode="contrast"] {
+            --bg-primary: #000000;
+            --bg-secondary: #000000;
+            --bg-tertiary: #111111;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --text-dim: #999999;
+            --border-color: #ffffff;
+            --accent: #ffffff;
+            --error: #ff0000;
+            --warning: #ffaa00;
+        }
+
+        body {
+            font-family: 'Courier New', 'Monaco', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+        }
+
+        /* Layout */
+        .container {
+            display: grid;
+            grid-template-rows: 40px 40px 1fr 40px;
+            height: 100vh;
+        }
+
+        /* Classification Banners */
+        .classification-banner {
+            background: green;
+            color: black;
+            text-align: center;
+            font-weight: bold;
+            line-height: 40px;
+            letter-spacing: 4px;
+            font-size: 16px;
+        }
+
+        .classification-banner.cui {
+            background: yellow;
+        }
+
+        .classification-banner.secret {
+            background: red;
+            color: white;
+        }
+
+        .classification-banner.top-secret {
+            background: magenta;
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 250px 1fr 300px;
+            gap: 8px;
+            padding: 8px;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .sidebar-section {
+            margin-bottom: 20px;
+        }
+
+        .sidebar-title {
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        .mode-button {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+
+        .mode-button:hover {
+            background: var(--border-color);
+            color: var(--bg-primary);
+        }
+
+        .mode-button.active {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            font-weight: bold;
+        }
+
+        /* Chat Area */
+        .chat-area {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-left: 3px solid var(--border-color);
+            background: var(--bg-tertiary);
+        }
+
+        .message-role {
+            font-weight: bold;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .message-content {
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .chat-input {
+            border-top: 1px solid var(--border-color);
+            padding: 15px;
+        }
+
+        textarea {
+            width: 100%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: inherit;
+            padding: 10px;
+            resize: none;
+        }
+
+        button {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: inherit;
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background: var(--border-color);
+            color: var(--bg-primary);
+        }
+
+        /* Status Panel */
+        .status-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .status-item {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .status-label {
+            font-weight: bold;
+            color: var(--text-dim);
+            font-size: 10px;
+            letter-spacing: 1px;
+        }
+
+        .status-value {
+            color: var(--text-primary);
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* Yubikey Authentication */
+        .yubikey-auth {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .yubikey-auth.active {
+            display: flex;
+        }
+
+        .yubikey-dialog {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            padding: 30px;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .yubikey-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .yubikey-title {
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+        }
+
+        .yubikey-message {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .yubikey-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        /* Settings Modal */
+        .settings-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9998;
+        }
+
+        .settings-modal.active {
+            display: flex;
+        }
+
+        .settings-content {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            padding: 30px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .settings-section {
+            margin-bottom: 25px;
+        }
+
+        .settings-title {
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .device-list {
+            list-style: none;
+        }
+
+        .device-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .device-name {
+            font-weight: bold;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .device-status {
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .device-status.active {
+            color: var(--success);
+        }
+
+        .device-status.revoked {
+            color: var(--error);
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-family: inherit;
+            padding: 8px;
+            margin: 10px 0;
+        }
+
+        label {
+            display: block;
+            color: var(--text-dim);
+            margin-bottom: 5px;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+
+        .success-message {
+            background: var(--success);
+            color: black;
+            padding: 10px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .error-message {
+            background: var(--error);
+            color: white;
+            padding: 10px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Top Classification Banner -->
+        <div class="classification-banner" id="topBanner">
+            UNCLASSIFIED // FOR OFFICIAL USE ONLY
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Sidebar - Mission Controls -->
+            <div class="sidebar">
+                <div class="sidebar-section">
+                    <div class="sidebar-title">DISPLAY MODE</div>
+                    <button class="mode-button active" onclick="setDisplayMode('day')">DAY MODE</button>
+                    <button class="mode-button" onclick="setDisplayMode('night')">NIGHT MODE</button>
+                    <button class="mode-button" onclick="setDisplayMode('nvg')">NVG MODE</button>
+                    <button class="mode-button" onclick="setDisplayMode('oled')">OLED BLACK</button>
+                    <button class="mode-button" onclick="setDisplayMode('contrast')">HIGH CONTRAST</button>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-title">SECURITY</div>
+                    <button class="mode-button" onclick="showYubikeySettings()">⚿ YUBIKEY SETTINGS</button>
+                    <button class="mode-button" onclick="registerYubikey()">⚿ REGISTER NEW KEY</button>
+                    <button class="mode-button" onclick="testAuthentication()">⚿ TEST AUTH</button>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-title">SYSTEM</div>
+                    <button class="mode-button" onclick="clearMessages()">CLEAR HISTORY</button>
+                    <button class="mode-button" onclick="exportLog()">EXPORT LOG</button>
+                </div>
+            </div>
+
+            <!-- Center - Chat Area -->
+            <div class="chat-area">
+                <div class="chat-messages" id="messages">
+                    <div class="message">
+                        <div class="message-role">SYSTEM</div>
+                        <div class="message-content">DSMIL TACTICAL INTERFACE v2.1 - YUBIKEY ENABLED<br>Classification: UNCLASSIFIED<br>Security: LOCALHOST ONLY<br>Authentication: YUBIKEY REQUIRED</div>
+                    </div>
+                </div>
+
+                <div class="chat-input">
+                    <textarea id="messageInput" rows="3" placeholder="ENTER DIRECTIVE..."></textarea>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="sendMessage()">SEND</button>
+                        <button onclick="sendStreamMessage()">STREAM</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar - Status Panel -->
+            <div class="status-panel">
+                <div class="status-item">
+                    <div class="status-label">UPTIME</div>
+                    <div class="status-value" id="uptime">00:00:00</div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-label">SECURITY STATUS</div>
+                    <div class="status-value" id="securityStatus">AUTHENTICATING...</div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-label">YUBIKEY STATUS</div>
+                    <div class="status-value" id="yubikeyStatus">NOT AUTHENTICATED</div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-label">OPERATIONS</div>
+                    <div class="status-value" id="operations">0</div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-label">TEMPEST MODE</div>
+                    <div class="status-value" id="tempestMode">DAY</div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-label">EM REDUCTION</div>
+                    <div class="status-value" id="emReduction">35%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Classification Banner -->
+        <div class="classification-banner" id="bottomBanner">
+            UNCLASSIFIED // FOR OFFICIAL USE ONLY
+        </div>
+    </div>
+
+    <!-- Yubikey Authentication Dialog -->
+    <div class="yubikey-auth" id="yubikeyAuth">
+        <div class="yubikey-dialog">
+            <div class="yubikey-icon">🔑</div>
+            <div class="yubikey-title">YUBIKEY AUTHENTICATION REQUIRED</div>
+            <div class="yubikey-message" id="authMessage">
+                Insert your Yubikey and touch the sensor to authenticate.
+            </div>
+            <div class="yubikey-actions">
+                <button onclick="startFIDO2Auth()">AUTHENTICATE</button>
+                <button onclick="cancelAuth()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="settings-modal" id="settingsModal">
+        <div class="settings-content">
+            <div class="settings-title">YUBIKEY SETTINGS</div>
+
+            <div class="settings-section">
+                <h3 style="color: var(--text-primary); margin-bottom: 10px;">REGISTERED DEVICES</h3>
+                <ul class="device-list" id="deviceList">
+                    <li class="device-item">
+                        <div class="device-name">No devices registered</div>
+                        <div class="device-status">Register a Yubikey to continue</div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="settings-section">
+                <h3 style="color: var(--text-primary); margin-bottom: 10px;">AUTHENTICATION LOG</h3>
+                <div id="authLog" style="background: var(--bg-tertiary); padding: 10px; max-height: 200px; overflow-y: auto; font-size: 11px;">
+                    <div>System initialized - awaiting authentication</div>
+                </div>
+            </div>
+
+            <button onclick="closeSettings()" style="width: 100%;">CLOSE</button>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let authenticated = false;
+        let currentMode = 'day';
+        let operations = 0;
+        let startTime = Date.now();
+        let devices = [];
+        let authLog = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateUptime();
+            setInterval(updateUptime, 1000);
+            loadDevices();
+            checkAuthentication();
+        });
+
+        // Display Mode
+        function setDisplayMode(mode) {
+            currentMode = mode;
+            document.documentElement.setAttribute('data-mode', mode);
+            document.getElementById('tempestMode').textContent = mode.toUpperCase();
+
+            // Update EM reduction based on mode
+            const emReduction = {
+                'day': '35%',
+                'night': '50%',
+                'nvg': '55%',
+                'oled': '70%',
+                'contrast': '40%'
+            };
+            document.getElementById('emReduction').textContent = emReduction[mode];
+
+            // Update button states
+            document.querySelectorAll('.mode-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            addAuthLog(`Display mode changed to ${mode.toUpperCase()}`);
+        }
+
+        // Uptime
+        function updateUptime() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('uptime').textContent = 
+                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        // WebAuthn/FIDO2 Support
+        async function checkAuthentication() {
+            if (!window.PublicKeyCredential) {
+                document.getElementById('securityStatus').textContent = 'WEBAUTHN NOT SUPPORTED';
+                document.getElementById('yubikeyStatus').textContent = 'BROWSER INCOMPATIBLE';
+                addMessage('SYSTEM', 'ERROR: Browser does not support WebAuthn/FIDO2', 'error');
+                return;
+            }
+
+            // Check if user has registered devices
+            loadDevices();
+
+            if (devices.length === 0) {
+                document.getElementById('yubikeyStatus').textContent = 'NO DEVICES REGISTERED';
+                addMessage('SYSTEM', 'No Yubikey devices registered. Please register a device in Yubikey Settings.', 'warning');
+                return;
+            }
+
+            // Prompt for authentication on startup
+            setTimeout(() => {
+                showYubikeyAuth();
+            }, 1000);
+        }
+
+        function showYubikeyAuth() {
+            document.getElementById('yubikeyAuth').classList.add('active');
+            document.getElementById('authMessage').textContent = 'Insert your Yubikey and touch the sensor to authenticate.';
+        }
+
+        function cancelAuth() {
+            document.getElementById('yubikeyAuth').classList.remove('active');
+            addAuthLog('Authentication cancelled by user');
+        }
+
+        async function startFIDO2Auth() {
+            if (!window.PublicKeyCredential) {
+                alert('WebAuthn not supported in this browser');
+                return;
+            }
+
+            try {
+                document.getElementById('authMessage').textContent = 'Contacting server...';
+
+                // Get challenge from server
+                const response = await fetch('http://127.0.0.1:5001/api/yubikey/auth/begin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'tactical_user'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to initiate authentication');
+                }
+
+                const options = await response.json();
+                
+                document.getElementById('authMessage').textContent = 'Touch your Yubikey now...';
+
+                // Perform WebAuthn authentication
+                const credential = await navigator.credentials.get({
+                    publicKey: options.publicKey
+                });
+
+                document.getElementById('authMessage').textContent = 'Verifying...';
+
+                // Send credential to server for verification
+                const verifyResponse = await fetch('http://127.0.0.1:5001/api/yubikey/auth/complete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'tactical_user',
+                        credential: {
+                            id: credential.id,
+                            rawId: arrayBufferToBase64(credential.rawId),
+                            response: {
+                                authenticatorData: arrayBufferToBase64(credential.response.authenticatorData),
+                                clientDataJSON: arrayBufferToBase64(credential.response.clientDataJSON),
+                                signature: arrayBufferToBase64(credential.response.signature),
+                                userHandle: credential.response.userHandle ? arrayBufferToBase64(credential.response.userHandle) : null
+                            },
+                            type: credential.type
+                        }
+                    })
+                });
+
+                if (!verifyResponse.ok) {
+                    throw new Error('Authentication verification failed');
+                }
+
+                // Success
+                authenticated = true;
+                document.getElementById('yubikeyAuth').classList.remove('active');
+                document.getElementById('securityStatus').textContent = 'AUTHENTICATED';
+                document.getElementById('yubikeyStatus').textContent = 'YUBIKEY VERIFIED';
+                addMessage('SYSTEM', 'Authentication successful. Access granted.', 'success');
+                addAuthLog('Successfully authenticated with Yubikey');
+
+            } catch (error) {
+                console.error('Authentication error:', error);
+                document.getElementById('authMessage').textContent = `Authentication failed: ${error.message}`;
+                addAuthLog(`Authentication failed: ${error.message}`);
+                setTimeout(() => {
+                    document.getElementById('authMessage').textContent = 'Insert your Yubikey and touch the sensor to authenticate.';
+                }, 3000);
+            }
+        }
+
+        async function registerYubikey() {
+            if (!window.PublicKeyCredential) {
+                alert('WebAuthn not supported in this browser');
+                return;
+            }
+
+            const deviceName = prompt('Enter a name for this Yubikey (e.g., "Yubikey 5 NFC"):');
+            if (!deviceName) return;
+
+            try {
+                addMessage('SYSTEM', 'Starting Yubikey registration...', 'info');
+
+                // Get registration options from server
+                const response = await fetch('http://127.0.0.1:5001/api/yubikey/register/begin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'tactical_user',
+                        displayName: 'Tactical User'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to initiate registration');
+                }
+
+                const options = await response.json();
+                
+                addMessage('SYSTEM', 'Touch your Yubikey to complete registration...', 'info');
+
+                // Create credential
+                const credential = await navigator.credentials.create({
+                    publicKey: options.publicKey
+                });
+
+                addMessage('SYSTEM', 'Finalizing registration...', 'info');
+
+                // Complete registration on server
+                const completeResponse = await fetch('http://127.0.0.1:5001/api/yubikey/register/complete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'tactical_user',
+                        deviceName: deviceName,
+                        credential: {
+                            id: credential.id,
+                            rawId: arrayBufferToBase64(credential.rawId),
+                            response: {
+                                attestationObject: arrayBufferToBase64(credential.response.attestationObject),
+                                clientDataJSON: arrayBufferToBase64(credential.response.clientDataJSON)
+                            },
+                            type: credential.type
+                        }
+                    })
+                });
+
+                if (!completeResponse.ok) {
+                    throw new Error('Failed to complete registration');
+                }
+
+                const result = await completeResponse.json();
+
+                addMessage('SYSTEM', `Yubikey "${deviceName}" registered successfully! Device ID: ${result.device_id}`, 'success');
+                addAuthLog(`Registered new Yubikey: ${deviceName}`);
+                loadDevices();
+
+            } catch (error) {
+                console.error('Registration error:', error);
+                addMessage('SYSTEM', `Registration failed: ${error.message}`, 'error');
+                addAuthLog(`Registration failed: ${error.message}`);
+            }
+        }
+
+        async function testAuthentication() {
+            if (!authenticated) {
+                showYubikeyAuth();
+            } else {
+                addMessage('SYSTEM', 'Already authenticated. Status: VERIFIED', 'success');
+            }
+        }
+
+        // Device Management
+        async function loadDevices() {
+            try {
+                const response = await fetch('http://127.0.0.1:5001/api/yubikey/devices');
+                if (response.ok) {
+                    devices = await response.json();
+                    updateDeviceList();
+                }
+            } catch (error) {
+                console.error('Failed to load devices:', error);
+            }
+        }
+
+        function updateDeviceList() {
+            const deviceList = document.getElementById('deviceList');
+            deviceList.innerHTML = '';
+
+            if (devices.length === 0) {
+                deviceList.innerHTML = '<li class="device-item"><div class="device-name">No devices registered</div><div class="device-status">Register a Yubikey to continue</div></li>';
+                return;
+            }
+
+            devices.forEach(device => {
+                const li = document.createElement('li');
+                li.className = 'device-item';
+                li.innerHTML = `
+                    <div class="device-name">${device.device_name}</div>
+                    <div class="device-status ${device.status}">${device.status.toUpperCase()}</div>
+                    <div style="font-size: 10px; color: var(--text-dim); margin-top: 5px;">
+                        Device ID: ${device.device_id}<br>
+                        Credentials: ${device.credentials.length}<br>
+                        Last Used: ${device.last_used || 'Never'}
+                    </div>
+                `;
+                deviceList.appendChild(li);
+            });
+        }
+
+        // Settings
+        function showYubikeySettings() {
+            document.getElementById('settingsModal').classList.add('active');
+            loadDevices();
+            updateAuthLog();
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        function addAuthLog(message) {
+            const timestamp = new Date().toISOString();
+            authLog.push(`[${timestamp}] ${message}`);
+            if (authLog.length > 50) authLog.shift();
+            updateAuthLog();
+        }
+
+        function updateAuthLog() {
+            const logDiv = document.getElementById('authLog');
+            logDiv.innerHTML = authLog.map(entry => `<div>${entry}</div>`).join('');
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // Messages
+        function addMessage(role, content, type = 'info') {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            let roleColor = 'var(--text-primary)';
+            if (type === 'error') roleColor = 'var(--error)';
+            if (type === 'success') roleColor = 'var(--success)';
+            if (type === 'warning') roleColor = 'var(--warning)';
+            
+            messageDiv.innerHTML = `
+                <div class="message-role" style="color: ${roleColor}">${role}</div>
+                <div class="message-content">${content}</div>
+            `;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            if (!authenticated) {
+                addMessage('SYSTEM', 'ERROR: Authentication required. Please authenticate with your Yubikey.', 'error');
+                showYubikeyAuth();
+                return;
+            }
+
+            addMessage('USER', message);
+            input.value = '';
+            operations++;
+            document.getElementById('operations').textContent = operations;
+
+            // Send to backend (implementation depends on your backend)
+            try {
+                const response = await fetch('http://127.0.0.1:5001/api/message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addMessage('ASSISTANT', data.response);
+                }
+            } catch (error) {
+                addMessage('SYSTEM', `ERROR: ${error.message}`, 'error');
+            }
+        }
+
+        async function sendStreamMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            if (!authenticated) {
+                addMessage('SYSTEM', 'ERROR: Authentication required. Please authenticate with your Yubikey.', 'error');
+                showYubikeyAuth();
+                return;
+            }
+
+            addMessage('USER', message);
+            input.value = '';
+            operations++;
+            document.getElementById('operations').textContent = operations;
+
+            // Streaming implementation
+            addMessage('ASSISTANT', 'Streaming response...', 'info');
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+            addMessage('SYSTEM', 'Message history cleared.');
+        }
+
+        function exportLog() {
+            const messages = document.getElementById('messages').innerText;
+            const blob = new Blob([messages], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tactical-log-${Date.now()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            addMessage('SYSTEM', 'Log exported successfully.');
+        }
+
+        // Utility functions
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
