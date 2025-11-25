@@ -53,5 +53,18 @@ func.func @entry() {
   %cvt_int_unsigned = arith.fptoui %cvt : f8E4M3FN to i2
   vector.print %cvt_int_unsigned : i2
 
+  // CHECK-NEXT: -6
+  // Bit pattern: 1...11110111, interpreted as signed: -9
+  // Closest f4E2M1FN value: -6.0
+  %c9 = arith.constant -9 : i16
+  %cvt_from_signed_int = arith.sitofp %c9 : i16 to f4E2M1FN
+  vector.print %cvt_from_signed_int : f4E2M1FN
+
+  // CHECK-NEXT: 6
+  // Bit pattern: 1...11110111, interpreted as unsigned: 65527
+  // Closest f4E2M1FN value: 6.0
+  %cvt_from_unsigned_int = arith.uitofp %c9 : i16 to f4E2M1FN
+  vector.print %cvt_from_unsigned_int : f4E2M1FN
+
   return
 }
