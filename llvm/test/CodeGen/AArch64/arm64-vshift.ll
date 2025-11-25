@@ -2,27 +2,7 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=0 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=1 -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:  warning: Instruction selection used fallback path for uqshl1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshl1d_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshl_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshl_scalar_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srshl1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srshl1d_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srshl_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srshl_scalar_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for urshl1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for urshl1d_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for urshl_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for urshl_scalar_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshl1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshl1d_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshl_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshl_scalar_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshl1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshl1d_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshl_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshl_scalar_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for urshr1d
+; CHECK-GI:  warning: Instruction selection used fallback path for urshr1d
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for urshr_scalar
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srshr1d
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srshr_scalar
@@ -371,24 +351,42 @@ define <1 x i64> @uqshl1d(ptr %A, ptr %B) nounwind {
 }
 
 define <1 x i64> @uqshl1d_constant(ptr %A) nounwind {
-; CHECK-LABEL: uqshl1d_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    uqshl d0, d0, #1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uqshl1d_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    uqshl d0, d0, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uqshl1d_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    uqshl d0, d0, d1
+; CHECK-GI-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.uqshl.v1i64(<1 x i64> %tmp1, <1 x i64> <i64 1>)
   ret <1 x i64> %tmp3
 }
 
 define i64 @uqshl_scalar(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: uqshl_scalar:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    uqshl d0, d0, d1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uqshl_scalar:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr x8, [x0]
+; CHECK-SD-NEXT:    ldr x9, [x1]
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    fmov d1, x9
+; CHECK-SD-NEXT:    uqshl d0, d0, d1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uqshl_scalar:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    ldr d1, [x1]
+; CHECK-GI-NEXT:    uqshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp2 = load i64, ptr %B
   %tmp3 = call i64 @llvm.aarch64.neon.uqshl.i64(i64 %tmp1, i64 %tmp2)
@@ -396,12 +394,21 @@ define i64 @uqshl_scalar(ptr %A, ptr %B) nounwind {
 }
 
 define i64 @uqshl_scalar_constant(ptr %A) nounwind {
-; CHECK-LABEL: uqshl_scalar_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    uqshl d0, d0, #1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uqshl_scalar_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    uqshl d0, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uqshl_scalar_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    uqshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.uqshl.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
@@ -905,13 +912,23 @@ define <1 x i64> @sqrshl1d_constant(ptr %A) nounwind {
 }
 
 define i64 @sqrshl_scalar(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: sqrshl_scalar:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    sqrshl d0, d0, d1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqrshl_scalar:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr x8, [x0]
+; CHECK-SD-NEXT:    ldr x9, [x1]
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    fmov d1, x9
+; CHECK-SD-NEXT:    sqrshl d0, d0, d1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqrshl_scalar:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    ldr d1, [x1]
+; CHECK-GI-NEXT:    sqrshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp2 = load i64, ptr %B
   %tmp3 = call i64 @llvm.aarch64.neon.sqrshl.i64(i64 %tmp1, i64 %tmp2)
@@ -919,14 +936,24 @@ define i64 @sqrshl_scalar(ptr %A, ptr %B) nounwind {
 }
 
 define i64 @sqrshl_scalar_constant(ptr %A) nounwind {
-; CHECK-LABEL: sqrshl_scalar_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #1 // =0x1
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    sqrshl d0, d0, d1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqrshl_scalar_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr x9, [x0]
+; CHECK-SD-NEXT:    mov w8, #1 // =0x1
+; CHECK-SD-NEXT:    fmov d1, x8
+; CHECK-SD-NEXT:    fmov d0, x9
+; CHECK-SD-NEXT:    sqrshl d0, d0, d1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqrshl_scalar_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    sqrshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.sqrshl.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
@@ -1011,13 +1038,23 @@ define <1 x i64> @uqrshl1d_constant(ptr %A) nounwind {
 }
 
 define i64 @uqrshl_scalar(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: uqrshl_scalar:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    uqrshl d0, d0, d1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uqrshl_scalar:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr x8, [x0]
+; CHECK-SD-NEXT:    ldr x9, [x1]
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    fmov d1, x9
+; CHECK-SD-NEXT:    uqrshl d0, d0, d1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uqrshl_scalar:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    ldr d1, [x1]
+; CHECK-GI-NEXT:    uqrshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp2 = load i64, ptr %B
   %tmp3 = call i64 @llvm.aarch64.neon.uqrshl.i64(i64 %tmp1, i64 %tmp2)
@@ -1025,14 +1062,24 @@ define i64 @uqrshl_scalar(ptr %A, ptr %B) nounwind {
 }
 
 define i64 @uqrshl_scalar_constant(ptr %A) nounwind {
-; CHECK-LABEL: uqrshl_scalar_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #1 // =0x1
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    uqrshl d0, d0, d1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uqrshl_scalar_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr x9, [x0]
+; CHECK-SD-NEXT:    mov w8, #1 // =0x1
+; CHECK-SD-NEXT:    fmov d1, x8
+; CHECK-SD-NEXT:    fmov d0, x9
+; CHECK-SD-NEXT:    uqrshl d0, d0, d1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uqrshl_scalar_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    uqrshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.uqrshl.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
