@@ -5584,7 +5584,8 @@ class t2LOL<dag oops, dag iops, string asm, string ops>
 // Setup for the iteration count of a WLS. See t2WhileLoopSetup.
 def arm_wlssetup
     : SDNode<"ARMISD::WLSSETUP",
-             SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<1, 0>]>>;
+             SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<1, 0>]>,
+             [SDNPSideEffect]>;
 
 // Low-overhead loops, While Loop Start branch. See t2WhileLoopStart
 def arm_wls : SDNode<"ARMISD::WLS",
@@ -5668,6 +5669,7 @@ def t2DoLoopStartTP :
 // t2WhileLoopSetup to setup LR and t2WhileLoopStart to perform the branch. Not
 // valid after reg alloc, as it should be lowered during MVETPAndVPTOptimisations
 // into a t2WhileLoopStartLR (or expanded).
+let hasSideEffects = 1 in
 def t2WhileLoopSetup :
     t2PseudoInst<(outs GPRlr:$lr), (ins rGPR:$tc), 4, IIC_Br,
                  [(set i32:$lr, (arm_wlssetup i32:$tc))]>;

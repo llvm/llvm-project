@@ -333,11 +333,14 @@ added in the future:
     (e.g., by passing things in registers). This calling convention
     allows the target to use whatever tricks it wants to produce fast
     code for the target, without having to conform to an externally
-    specified ABI (Application Binary Interface). `Tail calls can only
-    be optimized when this, the tailcc, the GHC or the HiPE convention is
-    used. <CodeGenerator.html#tail-call-optimization>`_ This calling
-    convention does not support varargs and requires the prototype of all
-    callees to exactly match the prototype of the function definition.
+    specified ABI (Application Binary Interface). Targets may use different
+    implementations according to different features. In this case, a
+    TTI interface ``useFastCCForInternalCall`` must return false when
+    any caller functions and the callee belong to different implementations.
+    `Tail calls can only be optimized when this, the tailcc, the GHC or the
+    HiPE convention is used. <CodeGenerator.html#tail-call-optimization>`_
+    This calling convention does not support varargs and requires the prototype
+    of all callees to exactly match the prototype of the function definition.
 "``coldcc``" - The cold calling convention
     This calling convention attempts to make code in the caller as
     efficient as possible under the assumption that the call is not
@@ -20466,6 +20469,9 @@ contraction can be leveraged to implement the reduction, which may result in
 variations to the results due to reordering or by lowering to different
 instructions (including combining multiple instructions into a single one).
 
+Vector Manipulation Intrinsics
+------------------------------
+
 '``llvm.vector.insert``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -20665,45 +20671,6 @@ Arguments:
 All arguments must be vectors of the same type whereby their logical
 concatenation matches the result type.
 
-'``llvm.experimental.cttz.elts``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ```llvm.experimental.cttz.elts```
-on any vector of integer elements, both fixed width and scalable.
-
-::
-
-      declare i8 @llvm.experimental.cttz.elts.i8.v8i1(<8 x i1> <src>, i1 <is_zero_poison>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.cttz.elts``' intrinsic counts the number of trailing
-zero elements of a vector.
-
-Arguments:
-""""""""""
-
-The first argument is the vector to be counted. This argument must be a vector
-with integer element type. The return type must also be an integer type which is
-wide enough to hold the maximum number of elements of the source vector. The
-behavior of this intrinsic is undefined if the return type is not wide enough
-for the number of elements in the input vector.
-
-The second argument is a constant flag that indicates whether the intrinsic
-returns a valid result if the first argument is all zero. If the first argument
-is all zero and the second argument is true, the result is poison.
-
-Semantics:
-""""""""""
-
-The '``llvm.experimental.cttz.elts``' intrinsic counts the trailing (least
-significant) zero elements in a vector. If ``src == 0`` the result is the
-number of elements in the input vector.
-
 '``llvm.vector.splice``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -20779,6 +20746,48 @@ Arguments:
 """"""""""
 
 None.
+
+Experimental Vector Intrinsics
+------------------------------
+
+'``llvm.experimental.cttz.elts``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ```llvm.experimental.cttz.elts```
+on any vector of integer elements, both fixed width and scalable.
+
+::
+
+      declare i8 @llvm.experimental.cttz.elts.i8.v8i1(<8 x i1> <src>, i1 <is_zero_poison>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.cttz.elts``' intrinsic counts the number of trailing
+zero elements of a vector.
+
+Arguments:
+""""""""""
+
+The first argument is the vector to be counted. This argument must be a vector
+with integer element type. The return type must also be an integer type which is
+wide enough to hold the maximum number of elements of the source vector. The
+behavior of this intrinsic is undefined if the return type is not wide enough
+for the number of elements in the input vector.
+
+The second argument is a constant flag that indicates whether the intrinsic
+returns a valid result if the first argument is all zero. If the first argument
+is all zero and the second argument is true, the result is poison.
+
+Semantics:
+""""""""""
+
+The '``llvm.experimental.cttz.elts``' intrinsic counts the trailing (least
+significant) zero elements in a vector. If ``src == 0`` the result is the
+number of elements in the input vector.
 
 
 '``llvm.experimental.get.vector.length``' Intrinsic
