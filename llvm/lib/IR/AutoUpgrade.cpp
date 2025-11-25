@@ -125,6 +125,24 @@ static bool upgradeX86MultiplyAddBytes(Function *F, Intrinsic::ID IID,
   return true;
 }
 
+// Upgrade the declaration of multipy and add words intrinsics whose input
+// arguments' types have changed to vectors of i32 to vectors of i16
+static bool upgradeX86MultiplyAddWords(Function *F, Intrinsic::ID IID,
+                                       Function *&NewFn) {
+  // check if input argument type is a vector of i16
+  Type *Arg1Type = F->getFunctionType()->getParamType(1);
+  Type *Arg2Type = F->getFunctionType()->getParamType(2);
+  if (Arg1Type->isVectorTy() &&
+      cast<VectorType>(Arg1Type)->getElementType()->isIntegerTy(16) &&
+      Arg2Type->isVectorTy() &&
+      cast<VectorType>(Arg2Type)->getElementType()->isIntegerTy(16))
+    return false;
+
+  rename(F);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+  return true;
+}
+
 static bool upgradeX86BF16Intrinsic(Function *F, Intrinsic::ID IID,
                                     Function *&NewFn) {
   if (F->getReturnType()->getScalarType()->isBFloatTy())
@@ -590,6 +608,19 @@ static bool upgradeX86IntrinsicFunction(Function *F, StringRef Name,
                .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic)
         return upgradeX86MultiplyAddBytes(F, ID, NewFn);
+    } else if (Name.starts_with("vpdpwssd.") ||
+               Name.starts_with("vpdpwssds.")) {
+      // Added in 21.1
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .Case("vpdpwssd.128", Intrinsic::x86_avx512_vpdpwssd_128)
+               .Case("vpdpwssd.256", Intrinsic::x86_avx512_vpdpwssd_256)
+               .Case("vpdpwssd.512", Intrinsic::x86_avx512_vpdpwssd_512)
+               .Case("vpdpwssds.128", Intrinsic::x86_avx512_vpdpwssds_128)
+               .Case("vpdpwssds.256", Intrinsic::x86_avx512_vpdpwssds_256)
+               .Case("vpdpwssds.512", Intrinsic::x86_avx512_vpdpwssds_512)
+               .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic)
+        return upgradeX86MultiplyAddWords(F, ID, NewFn);
     }
     return false; // No other 'x86.avx512.*'.
   }
@@ -4307,6 +4338,32 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
+
+    // Input arguments types were incorrectly set to vectors of i32 before but
+    // they should be vectors of i16. Insert bit cast when encountering the old
+    // types
+    if (Args[1]->getType()->isVectorTy() &&
+        cast<VectorType>(Args[1]->getType())
+            ->getElementType()
+            ->isIntegerTy(32) &&
+        Args[2]->getType()->isVectorTy() &&
+        cast<VectorType>(Args[2]->getType())
+            ->getElementType()
+            ->isIntegerTy(32)) {
+      Type *NewArgType = nullptr;
+      if (VecWidth == 128)
+        NewArgType = VectorType::get(Builder.getInt16Ty(), 8, false);
+      else if (VecWidth == 256)
+        NewArgType = VectorType::get(Builder.getInt16Ty(), 16, false);
+      else if (VecWidth == 512)
+        NewArgType = VectorType::get(Builder.getInt16Ty(), 32, false);
+      else
+        llvm_unreachable("Unexpected vector bit width");
+
+      Args[1] = Builder.CreateBitCast(Args[1], NewArgType);
+      Args[2] = Builder.CreateBitCast(Args[2], NewArgType);
+    }
+
     Rep = Builder.CreateIntrinsic(IID, Args);
     Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
                                : CI->getArgOperand(0);
@@ -5382,6 +5439,21 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
+  case Intrinsic::x86_avx512_vpdpwssd_128:
+  case Intrinsic::x86_avx512_vpdpwssd_256:
+  case Intrinsic::x86_avx512_vpdpwssd_512:
+  case Intrinsic::x86_avx512_vpdpwssds_128:
+  case Intrinsic::x86_avx512_vpdpwssds_256:
+  case Intrinsic::x86_avx512_vpdpwssds_512:
+    unsigned NumElts = CI->getType()->getPrimitiveSizeInBits() / 16;
+    Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
+                     CI->getArgOperand(2)};
+    Type *NewArgType = VectorType::get(Builder.getInt16Ty(), NumElts, false);
+    Args[1] = Builder.CreateBitCast(Args[1], NewArgType);
+    Args[2] = Builder.CreateBitCast(Args[2], NewArgType);
+
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
   }
   assert(NewCall && "Should have either set this variable or returned through "
                     "the default case");
