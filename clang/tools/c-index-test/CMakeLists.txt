@@ -38,6 +38,7 @@ else()
     clangBasic
     clangDependencyScanning
     clangDirectoryWatcher
+    clangDriver
     clangFrontend
     clangIndex
     clangSerialization
