@@ -269,12 +269,6 @@ bool APFloatBase::isRepresentableBy(const fltSemantics &A,
          A.precision <= B.precision;
 }
 
-constexpr RoundingMode APFloatBase::rmNearestTiesToEven;
-constexpr RoundingMode APFloatBase::rmTowardPositive;
-constexpr RoundingMode APFloatBase::rmTowardNegative;
-constexpr RoundingMode APFloatBase::rmTowardZero;
-constexpr RoundingMode APFloatBase::rmNearestTiesToAway;
-
 /* A tight upper bound on number of parts required to hold the value
    pow(5, power) is
 
@@ -5354,7 +5348,7 @@ APInt DoubleAPFloat::bitcastToAPInt() const {
       Floats[0].bitcastToAPInt().getRawData()[0],
       Floats[1].bitcastToAPInt().getRawData()[0],
   };
-  return APInt(128, 2, Data);
+  return APInt(128, Data);
 }
 
 Expected<APFloat::opStatus> DoubleAPFloat::convertFromString(StringRef S,
@@ -5643,8 +5637,7 @@ APFloat::opStatus DoubleAPFloat::convertFromUnsignedParts(
 
   // Create a minimally-sized APInt to represent the source value.
   const unsigned SrcBitWidth = SrcMSB + 1;
-  APSInt SrcInt{APInt{/*numBits=*/SrcBitWidth,
-                      /*numWords=*/SrcCount, Src},
+  APSInt SrcInt{APInt{/*numBits=*/SrcBitWidth, ArrayRef(Src, SrcCount)},
                 /*isUnsigned=*/true};
 
   // Stage 1: Initial Approximation.

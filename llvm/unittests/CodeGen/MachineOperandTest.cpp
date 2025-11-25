@@ -424,4 +424,24 @@ TEST(MachineOperandTest, HashValue) {
   ASSERT_TRUE(MO1.isIdenticalTo(MO2));
 }
 
+TEST(MachineOperandTest, RegisterLiveOutHashValue) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  MachineBasicBlock *MBB = MF->CreateMachineBasicBlock();
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  auto *MI1 = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto *MI2 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->begin(), MI1);
+  MBB->insert(MBB->begin(), MI2);
+  uint32_t Mask1 = 0;
+  uint32_t Mask2 = 0;
+  MI1->addOperand(*MF, MachineOperand::CreateRegLiveOut(&Mask1));
+  MI2->addOperand(*MF, MachineOperand::CreateRegLiveOut(&Mask2));
+  auto MO1 = MI1->getOperand(0);
+  auto MO2 = MI2->getOperand(0);
+  EXPECT_EQ(hash_value(MO1), hash_value(MO2));
+  EXPECT_TRUE(MO1.isIdenticalTo(MO2));
+}
+
 } // end namespace

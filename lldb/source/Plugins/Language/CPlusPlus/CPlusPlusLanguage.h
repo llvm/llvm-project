@@ -92,7 +92,7 @@ public:
 
   static llvm::StringRef GetPluginNameStatic() { return "cplusplus"; }
 
-  bool SymbolNameFitsToLanguage(Mangled mangled) const override;
+  bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
 
   bool DemangledNameContainsPath(llvm::StringRef path,
                                  ConstString demangled) const override;
@@ -154,7 +154,7 @@ public:
   // C/C++ identifier, then it will return false
   // and identifier and context will be unchanged.
 
-  static bool ExtractContextAndIdentifier(const char *name,
+  static bool ExtractContextAndIdentifier(llvm::StringRef name,
                                           llvm::StringRef &context,
                                           llvm::StringRef &identifier);
 

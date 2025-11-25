@@ -1541,6 +1541,7 @@ filegroup(
         ":TransformSMTExtensionOpsPyGen",
         ":VectorTransformEnumPyGen",
         ":VectorTransformOpsPyGen",
+        ":XeGPUTransformOpsPyGen",
     ],
 )
 
@@ -1624,5 +1625,23 @@ filegroup(
         "mlir/dialects/vector.py",
         ":VectorAttributesPyGen",
         ":VectorOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# XEGPU dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "XeGPUTransformOpsPyGen",
+    tbl_outs = {"mlir/dialects/_xegpu_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=xegpu_transform",
+    ]},
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/XeGPUTransformOps.td",
+    deps = [
+        "//mlir:XeGPUTransformOpsTdFiles",
     ],
 )

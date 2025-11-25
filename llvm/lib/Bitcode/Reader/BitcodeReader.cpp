@@ -2257,6 +2257,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::Captures;
   case bitc::ATTR_KIND_DEAD_ON_RETURN:
     return Attribute::DeadOnReturn;
+  case bitc::ATTR_KIND_NO_CREATE_UNDEF_OR_POISON:
+    return Attribute::NoCreateUndefOrPoison;
   }
 }
 
@@ -6428,7 +6430,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
     case bitc::FUNC_CODE_INST_CMPXCHG_OLD: {
-      // CMPXCHG_OLD: [ptrty, ptr, cmp, val, vol, ordering, synchscope,
+      // CMPXCHG_OLD: [ptrty, ptr, cmp, val, vol, ordering, syncscope,
       // failure_ordering?, weak?]
       const size_t NumRecords = Record.size();
       unsigned OpNum = 0;
@@ -6496,7 +6498,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
     case bitc::FUNC_CODE_INST_CMPXCHG: {
-      // CMPXCHG: [ptrty, ptr, cmp, val, vol, success_ordering, synchscope,
+      // CMPXCHG: [ptrty, ptr, cmp, val, vol, success_ordering, syncscope,
       // failure_ordering, weak, align?]
       const size_t NumRecords = Record.size();
       unsigned OpNum = 0;
@@ -6653,6 +6655,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     case bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE:
     case bitc::FUNC_CODE_DEBUG_RECORD_VALUE:
     case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE:
+    case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE_VALUE:
     case bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN: {
       // DbgVariableRecords are placed after the Instructions that they are
       // attached to.
@@ -6668,6 +6671,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       // dbg_value (FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE - abbrev'd)
       //   ..., Value
       // dbg_declare (FUNC_CODE_DEBUG_RECORD_DECLARE)
+      //   ..., LocationMetadata
+      // dbg_declare_value (FUNC_CODE_DEBUG_RECORD_DECLARE_VALUE)
       //   ..., LocationMetadata
       // dbg_assign (FUNC_CODE_DEBUG_RECORD_ASSIGN)
       //   ..., LocationMetadata, DIAssignID, DIExpression, LocationMetadata
@@ -6709,6 +6714,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE:
         DVR = new DbgVariableRecord(RawLocation, Var, Expr, DIL,
                                     DbgVariableRecord::LocationType::Declare);
+        break;
+      case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE_VALUE:
+        DVR = new DbgVariableRecord(
+            RawLocation, Var, Expr, DIL,
+            DbgVariableRecord::LocationType::DeclareValue);
         break;
       case bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN: {
         DIAssignID *ID = cast<DIAssignID>(getFnMetadataByID(Record[Slot++]));
@@ -8566,16 +8576,13 @@ Expected<std::unique_ptr<ModuleSummaryIndex>> BitcodeModule::getSummary() {
 }
 
 static Expected<std::pair<bool, bool>>
-getEnableSplitLTOUnitAndUnifiedFlag(BitstreamCursor &Stream,
-                                                 unsigned ID,
-                                                 BitcodeLTOInfo &LTOInfo) {
+getEnableSplitLTOUnitAndUnifiedFlag(BitstreamCursor &Stream, unsigned ID) {
   if (Error Err = Stream.EnterSubBlock(ID))
     return std::move(Err);
-  SmallVector<uint64_t, 64> Record;
 
+  SmallVector<uint64_t, 64> Record;
   while (true) {
     BitstreamEntry Entry;
-    std::pair<bool, bool> Result = {false,false};
     if (Error E = Stream.advanceSkippingSubblocks().moveInto(Entry))
       return std::move(E);
 
@@ -8584,8 +8591,8 @@ getEnableSplitLTOUnitAndUnifiedFlag(BitstreamCursor &Stream,
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock: {
-      // If no flags record found, set both flags to false.
-      return Result;
+      // If no flags record found, return both flags as false.
+      return std::make_pair(false, false);
     }
     case BitstreamEntry::Record:
       // The interesting case.
@@ -8607,9 +8614,7 @@ getEnableSplitLTOUnitAndUnifiedFlag(BitstreamCursor &Stream,
 
       bool EnableSplitLTOUnit = Flags & 0x8;
       bool UnifiedLTO = Flags & 0x200;
-      Result = {EnableSplitLTOUnit, UnifiedLTO};
-
-      return Result;
+      return std::make_pair(EnableSplitLTOUnit, UnifiedLTO);
     }
     }
   }
@@ -8638,26 +8643,15 @@ Expected<BitcodeLTOInfo> BitcodeModule::getLTOInfo() {
                             /*EnableSplitLTOUnit=*/false, /*UnifiedLTO=*/false};
 
     case BitstreamEntry::SubBlock:
-      if (Entry.ID == bitc::GLOBALVAL_SUMMARY_BLOCK_ID) {
-        BitcodeLTOInfo LTOInfo;
+      if (Entry.ID == bitc::GLOBALVAL_SUMMARY_BLOCK_ID ||
+          Entry.ID == bitc::FULL_LTO_GLOBALVAL_SUMMARY_BLOCK_ID) {
         Expected<std::pair<bool, bool>> Flags =
-            getEnableSplitLTOUnitAndUnifiedFlag(Stream, Entry.ID, LTOInfo);
+            getEnableSplitLTOUnitAndUnifiedFlag(Stream, Entry.ID);
         if (!Flags)
           return Flags.takeError();
-        std::tie(LTOInfo.EnableSplitLTOUnit, LTOInfo.UnifiedLTO) = Flags.get();
-        LTOInfo.IsThinLTO = true;
-        LTOInfo.HasSummary = true;
-        return LTOInfo;
-      }
-
-      if (Entry.ID == bitc::FULL_LTO_GLOBALVAL_SUMMARY_BLOCK_ID) {
         BitcodeLTOInfo LTOInfo;
-        Expected<std::pair<bool, bool>> Flags =
-            getEnableSplitLTOUnitAndUnifiedFlag(Stream, Entry.ID, LTOInfo);
-        if (!Flags)
-          return Flags.takeError();
         std::tie(LTOInfo.EnableSplitLTOUnit, LTOInfo.UnifiedLTO) = Flags.get();
-        LTOInfo.IsThinLTO = false;
+        LTOInfo.IsThinLTO = (Entry.ID == bitc::GLOBALVAL_SUMMARY_BLOCK_ID);
         LTOInfo.HasSummary = true;
         return LTOInfo;
       }

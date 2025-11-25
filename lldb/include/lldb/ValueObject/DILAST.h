@@ -34,6 +34,8 @@ enum class NodeKind {
 enum class UnaryOpKind {
   AddrOf, // "&"
   Deref,  // "*"
+  Minus,  // "-"
+  Plus,   // "+"
 };
 
 /// The type casts allowed by DIL.

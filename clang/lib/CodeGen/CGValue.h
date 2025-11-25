@@ -64,6 +64,7 @@ public:
   bool isScalar() const { return Flavor == Scalar; }
   bool isComplex() const { return Flavor == Complex; }
   bool isAggregate() const { return Flavor == Aggregate; }
+  bool isIgnored() const { return isScalar() && !getScalarVal(); }
 
   bool isVolatileQualified() const { return IsVolatile; }
 
