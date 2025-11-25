@@ -173,14 +173,9 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
     const DeclStmt *PrevDecl = findPreviousDeclStmt(Statement, VD, Result.Context);
     if (!PrevDecl) continue;
     
-    // Check that the variable is NOT used in the body (only in condition)
-    const Stmt *Body = If ? If->getThen() : Switch->getBody();
-    bool usedInBody = Body ? isVariableUsedInStmt(VD, Body) : false;
-    
     // Check that variable is NOT used after the statement
     bool usedAfter = isVariableUsedAfterStmt(VD, Statement, Result.Context);
-    
-    if (!usedInBody && !usedAfter) {
+    if (!usedAfter) {
       // Perfect candidate - variable used only in condition
       std::string VarName = VD->getNameAsString();
       std::string InitExpr = Lexer::getSourceText(
