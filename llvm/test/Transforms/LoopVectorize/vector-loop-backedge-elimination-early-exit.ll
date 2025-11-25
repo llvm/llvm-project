@@ -162,10 +162,9 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF8UF2-NEXT:    [[TMP9:%.*]] = add i64 0, [[TMP8]]
 ; VF8UF2-NEXT:    [[TMP10:%.*]] = icmp ne i64 [[TMP8]], 8
 ; VF8UF2-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i64 [[TMP9]], i64 [[TMP7]]
-; VF8UF2-NEXT:    [[TMP12:%.*]] = add i64 0, [[TMP11]]
 ; VF8UF2-NEXT:    br label %[[EXIT]]
 ; VF8UF2:       [[EXIT]]:
-; VF8UF2-NEXT:    [[RES:%.*]] = phi i64 [ 1, %[[MIDDLE_BLOCK]] ], [ [[TMP12]], %[[VECTOR_EARLY_EXIT]] ]
+; VF8UF2-NEXT:    [[RES:%.*]] = phi i64 [ 1, %[[MIDDLE_BLOCK]] ], [ [[TMP11]], %[[VECTOR_EARLY_EXIT]] ]
 ; VF8UF2-NEXT:    ret i64 [[RES]]
 ;
 ; VF16UF1-LABEL: define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(
@@ -186,10 +185,9 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF16UF1-NEXT:    br label %[[EXIT:.*]]
 ; VF16UF1:       [[VECTOR_EARLY_EXIT]]:
 ; VF16UF1-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> [[TMP3]], i1 false)
-; VF16UF1-NEXT:    [[TMP5:%.*]] = add i64 0, [[FIRST_ACTIVE_LANE]]
 ; VF16UF1-NEXT:    br label %[[EXIT]]
 ; VF16UF1:       [[EXIT]]:
-; VF16UF1-NEXT:    [[RES:%.*]] = phi i64 [ 1, %[[MIDDLE_BLOCK]] ], [ [[TMP5]], %[[VECTOR_EARLY_EXIT]] ]
+; VF16UF1-NEXT:    [[RES:%.*]] = phi i64 [ 1, %[[MIDDLE_BLOCK]] ], [ [[FIRST_ACTIVE_LANE]], %[[VECTOR_EARLY_EXIT]] ]
 ; VF16UF1-NEXT:    ret i64 [[RES]]
 ;
 entry:

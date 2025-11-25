@@ -65,7 +65,6 @@ set(LIBS
   clangFrontend
   clangIndex
   clangLex
-  clangOptions
   clangRewrite
   clangSema
   clangSerialization
