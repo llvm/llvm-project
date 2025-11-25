@@ -1430,9 +1430,6 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
     // many cases.
     addPass(createAMDGPULowerBufferFatPointersPass());
     addPass(createAMDGPULowerIntrinsicsLegacyPass());
-    // In accordance with the above FIXME, manually force all the
-    // function-level passes into a CGSCCPassManager.
-    addPass(new DummyCGSCCPass());
   }
 
   // LowerSwitch pass may introduce unreachable blocks that can
