@@ -15,6 +15,8 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/DebugLoc.h"
 
 #define DEBUG_TYPE "si-shrink-instructions"
 
@@ -23,7 +25,15 @@ STATISTIC(NumInstructionsShrunk,
 STATISTIC(NumLiteralConstantsFolded,
           "Number of literal constants folded into 32-bit instructions.");
 
+STATISTIC(NumReadFirstLaneShrunk,
+          "Number of v_readfirstlane shrunk");
+
 using namespace llvm;
+
+static cl::opt<bool> EnableShrinkReadFirstLane(
+    "amdgpu-enable-shrink-readfirstlane", cl::Hidden,
+    cl::desc("Enable shrink read first lane "),
+    cl::init(false));
 
 namespace {
 
@@ -45,6 +55,7 @@ class SIShrinkInstructions {
   void shrinkMIMG(MachineInstr &MI) const;
   void shrinkMadFma(MachineInstr &MI) const;
   bool shrinkScalarLogicOp(MachineInstr &MI) const;
+  bool shrinkReadFirstLaneOp(MachineRegisterInfo &MRI, MachineInstr &MI) const;
   bool tryReplaceDeadSDST(MachineInstr &MI) const;
   bool instAccessReg(iterator_range<MachineInstr::const_mop_iterator> &&R,
                      Register Reg, unsigned SubReg) const;
@@ -529,6 +540,137 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
   }
 }
 
+/// The effect looks like:
+/// bb.0:
+///   %24:vgpr_32 = V_MUL_U32_U24_e64 %12, %862, 0, implicit $exec
+///
+/// bb.3:
+///   %360:sreg_32 = S_ADD_I32 %359, %1461, implicit-def dead $scc
+///   %1462:vgpr_32 = V_ADD_U32_e64 %360, %24, 0, implicit $exec
+///   %4802:sgpr_32 = V_READFIRSTLANE_B32 %1462, implicit $exec,
+///
+/// --->
+///
+/// bb.0:
+///   %24:vgpr_32 = V_MUL_U32_U24_e64 %12, %862, 0, implicit $exec
+///   %NewTempSReg = V_READFIRSTLANE_B32 %1462, implicit $exec
+///
+/// bb.3:
+///   %360:sreg_32 = S_ADD_I32 %359, %1461, implicit-def dead $scc
+///   %4802:sgpr_32 = S_ADD_U32_e64 %NewTempSReg, %360
+///
+/// The change is safe if our checks pass because
+/// we do this before RegAlloc, IR is in machine-SSA.
+/// PredMBB `bb.0` hosts def-op and MBB `bb.3` hosts user-op,
+/// so PredMBB dominates MBB, he new created v_readfirstlane will dominate new created scalar op.
+bool SIShrinkInstructions::shrinkReadFirstLaneOp(MachineRegisterInfo &MRI, MachineInstr &MI) const {
+  MachineOperand *Src0 = &MI.getOperand(1);
+  Register Reg = Src0->getReg();
+  if (!Register::isVirtualRegister(Reg)) {
+    LLVM_DEBUG(dbgs() << "SIShrinkInstruction: vector register in "
+                         "readfirstlane is not virtual.\n");
+    return false;
+  }
+
+  MachineInstr *DefMI = MRI.getVRegDef(Reg);
+  assert (DefMI && "SIShrinkInstruction: No defining MI for the source of readfirstlane.\n");
+
+  // We do this shrink locally.
+  MachineBasicBlock *MBB = DefMI->getParent();
+  if (MBB != MI.getParent()) {
+    LLVM_DEBUG(dbgs() << "SIShrinkInstruction: The defining MI is not in the same MBB of readfirstlane.\n");
+    return false;
+  }
+
+  // The change will be applied if only one operand is vreg and all other operands are sreg or imm.
+  // If there are multiple, i.e. `n`, vregs, at most we would create `n`
+  // v_readfirstlane insts.
+  // On MI350, cycles of v_readfirstlane are 12-16 and cycles of vector arith is 4,
+  // so we need to tune a more fine cost model to balance between more cycles
+  // from new readfirstlane and less cycles once these new instructions are hoisted out of the loop.
+  // we will add it in the future if needed.
+  SmallVector<MachineOperand, 4> VRegOpnds, OtherOpnds;
+  // Skip the dest operand and only explicit operands are checked.
+  for (auto Opnd : DefMI->explicit_uses()) {
+    Opnd.isReg() && TRI->isVGPR(MRI, Opnd.getReg()) ? VRegOpnds.push_back(Opnd) : OtherOpnds.push_back(Opnd);
+  }
+
+  if (VRegOpnds.size() != 1) {
+    LLVM_DEBUG(dbgs() << "SIShrinkInstruction: There are multiple vreg operands in the DefineOp of readfirstlane.\n");
+    return false;
+  }
+
+  auto VReg = VRegOpnds.front().getReg();
+  auto MIDefVReg = MRI.getUniqueVRegDef(VReg);
+  // If MIDefVReg is in the MBB, it is not correct to put it out of MBB.
+  auto PredMBB = MIDefVReg->getParent();
+  if (PredMBB == MBB) {
+      LLVM_DEBUG(dbgs() << "SIShrinkInstruction: vreg is defined locally.\n");
+      return false;
+  }
+
+  // Since a new scalar register will be created and we dont want to the life
+  // range of this new sclar register is too long.
+  if (PredMBB->getSingleSuccessor() != MBB) {
+    LLVM_DEBUG(dbgs() << "SIShrinkInstruction: Not immediate dominant .\n");
+    return false;
+  }
+
+  // I dont find a better way to do it so I have hard coded the ones we could
+  // run into here and it will be extended in the future if needed.
+  static const llvm::DenseMap<unsigned, unsigned> VectorToScalarOpcodeMap = {
+      // Integer arithmetic (32-bit)
+      {AMDGPU::V_ADD_U32_e32, AMDGPU::S_ADD_U32},
+      {AMDGPU::V_SUB_U32_e32, AMDGPU::S_SUB_U32},
+      {AMDGPU::V_MUL_HI_U32_e64, AMDGPU::S_MUL_HI_U32},
+      {AMDGPU::V_MUL_HI_I32_e64, AMDGPU::S_MUL_HI_I32},
+
+      // Bitwise logical ops
+      {AMDGPU::V_AND_B32_e32, AMDGPU::S_AND_B32},
+      {AMDGPU::V_OR_B32_e32, AMDGPU::S_OR_B32},
+      {AMDGPU::V_XOR_B32_e32, AMDGPU::S_XOR_B32},
+
+      // Min/Max, compare, etc. (optional)
+      {AMDGPU::V_MIN_I32_e32, AMDGPU::S_MIN_I32},
+      {AMDGPU::V_MIN_U32_e32, AMDGPU::S_MIN_U32},
+      {AMDGPU::V_MAX_I32_e32, AMDGPU::S_MAX_I32},
+      {AMDGPU::V_MAX_U32_e32, AMDGPU::S_MAX_U32},
+  };
+  auto Opc = DefMI->getOpcode();
+  auto It = VectorToScalarOpcodeMap.find(Opc);
+  if (It == VectorToScalarOpcodeMap.end()) {
+      LLVM_DEBUG(dbgs() << "SIShrinkInstruction: No Corresponding opcode in vector version, please consider extend ScalarToVectorOpcodeMap .\n");
+      return false;
+  }
+
+  // Now to start the transform
+  std::string TmpName = "TmpDestSReg32_" + std::to_string(NumInstructionsShrunk++);
+  Register TmpDestSReg32 =
+      MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass, TmpName);
+  auto Terminator = PredMBB->getFirstTerminator();
+  auto DL = Terminator != PredMBB->end() ?  Terminator->getDebugLoc() : DebugLoc();
+  BuildMI(*PredMBB, Terminator, DL,
+                   TII->get(AMDGPU::V_READFIRSTLANE_B32), TmpDestSReg32)
+               .addReg(VReg);
+
+  TmpName = "NewResultSReg32_" + std::to_string(NumInstructionsShrunk);
+  Register NewResultSReg32 =
+      MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass, TmpName);
+
+  auto MIB = BuildMI(*MBB, MI, MI.getDebugLoc(),
+                             TII->get(It->second), NewResultSReg32)
+                         .addReg(TmpDestSReg32);
+  for (auto Opnd : OtherOpnds) {
+    Opnd.isImm() ? MIB.addImm(Opnd.getImm()) : MIB.addReg(Opnd.getReg());
+  }
+
+  MRI.replaceRegWith(MI.getOperand(0).getReg(), NewResultSReg32);
+
+  MI.eraseFromParent();
+  DefMI->eraseFromParent();
+  return true;
+}
+
 /// Attempt to shrink AND/OR/XOR operations requiring non-inlineable literals.
 /// For AND or OR, try using S_BITSET{0,1} to clear or set bits.
 /// If the inverse of the immediate is legal, use ANDN2, ORN2 or
@@ -958,6 +1100,11 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::S_OR_B32 ||
           MI.getOpcode() == AMDGPU::S_XOR_B32) {
         if (shrinkScalarLogicOp(MI))
+          continue;
+      }
+
+      if (EnableShrinkReadFirstLane && !IsPostRA && MI.getOpcode() == AMDGPU::V_READFIRSTLANE_B32) {
+        if (shrinkReadFirstLaneOp(*MRI, MI))
           continue;
       }
 
