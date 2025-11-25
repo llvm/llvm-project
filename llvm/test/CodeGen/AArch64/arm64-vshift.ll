@@ -137,23 +137,13 @@ define <1 x i64> @sqshl1d_constant(ptr %A) nounwind {
 }
 
 define i64 @sqshl_scalar(ptr %A, ptr %B) nounwind {
-; CHECK-SD-LABEL: sqshl_scalar:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr x8, [x0]
-; CHECK-SD-NEXT:    ldr x9, [x1]
-; CHECK-SD-NEXT:    fmov d0, x8
-; CHECK-SD-NEXT:    fmov d1, x9
-; CHECK-SD-NEXT:    sqshl d0, d0, d1
-; CHECK-SD-NEXT:    fmov x0, d0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sqshl_scalar:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr d0, [x0]
-; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    sqshl d0, d0, d1
-; CHECK-GI-NEXT:    fmov x0, d0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sqshl_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    sqshl d0, d0, d1
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp2 = load i64, ptr %B
   %tmp3 = call i64 @llvm.aarch64.neon.sqshl.i64(i64 %tmp1, i64 %tmp2)
@@ -2728,6 +2718,7 @@ define <4 x i32> @neon_sshl4s_wrong_ext_constant_shift(ptr %A) nounwind {
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <4 x i8>, ptr %A
   %tmp2 = sext <4 x i8> %tmp1 to <4 x i32>
+  %tmp3 = call <4 x i32> @llvm.aarch64.neon.sshl.v4i32(<4 x i32> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
   ret <4 x i32> %tmp3
 }
 
