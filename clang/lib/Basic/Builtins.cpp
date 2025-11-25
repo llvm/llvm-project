@@ -313,14 +313,22 @@ static void parseCommaSeparatedIndices(const char *CurrPos,
   assert(*EndPos == '>' && "Index list must end with '>'");
 }
 
-bool Builtin::Context::isNonNull(unsigned ID,
-                                 llvm::SmallVectorImpl<int> &Indxs) const {
+bool Builtin::Context::isNonNull(unsigned ID, llvm::SmallVectorImpl<int> &Indxs,
+                                 Info::NonNullMode &Mode) const {
 
   const char *AttrPos = ::strchr(getAttributesString(ID), 'N');
   if (!AttrPos)
     return false;
 
-  ++AttrPos;
+  AttrPos += 2; // skip 'N' and ':'
+  if (*AttrPos == '0')
+    Mode = Info::NonNullMode::NonOptimizing;
+  else if (*AttrPos == '1')
+    Mode = Info::NonNullMode::Optimizing;
+  else
+    llvm_unreachable("Unrecognized NonNull optimization mode");
+  AttrPos += 2; // skip mode and ':'
+
   parseCommaSeparatedIndices(AttrPos, Indxs);
 
   return true;

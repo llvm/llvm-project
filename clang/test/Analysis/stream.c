@@ -52,13 +52,13 @@ void check_fputs(void) {
 
 void check_fprintf(void) {
   FILE *fp = tmpfile();
-  fprintf(fp, "ABC"); // expected-warning {{Null pointer passed to 1st parameter expecting 'nonnull'}}
+  fprintf(fp, "ABC"); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
 void check_fscanf(void) {
   FILE *fp = tmpfile();
-  fscanf(fp, "ABC"); // expected-warning {{Null pointer passed to 1st parameter expecting 'nonnull'}}
+  fscanf(fp, "ABC"); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
@@ -152,13 +152,13 @@ void f_dopen(int fd) {
 
 void f_vfprintf(int fd, va_list args) {
   FILE *F = fdopen(fd, "r");
-  vfprintf(F, "%d", args); // expected-warning {{Null pointer passed to 1st parameter expecting 'nonnull'}}
+  vfprintf(F, "%d", args); // expected-warning {{Stream pointer might be NULL}}
   fclose(F);
 }
 
 void f_vfscanf(int fd, va_list args) {
   FILE *F = fdopen(fd, "r");
-  vfscanf(F, "%u", args); // expected-warning {{Null pointer passed to 1st parameter expecting 'nonnull'}}
+  vfscanf(F, "%u", args); // expected-warning {{Stream pointer might be NULL}}
   fclose(F);
 }
 

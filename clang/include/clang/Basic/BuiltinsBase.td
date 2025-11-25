@@ -33,6 +33,18 @@ def NoThrow : Attribute<"n">;
 def Pure : Attribute<"U">;
 def ReturnsTwice : Attribute<"j">;
 
+class NonNullOptMode {
+  int value;
+}
+
+def NonOptimizing : NonNullOptMode { let value = 0; }
+def Optimizing    : NonNullOptMode { let value = 1; }
+
+class NonNull<NonNullOptMode Mode, list<int> Is> : MultiIndexAttribute<"N", Is> {
+  int optMode = Mode.value;
+  let Mangling = "N:" # Mode.value # ":";
+}
+
 // builtin-specific attributes
 // ---------------------------
 
@@ -84,7 +96,6 @@ def Consteval : Attribute<"EG">;
 // Callback behavior: the first index argument is called with the arguments
 // indicated by the remaining indices.
 class Callback<list<int> ArgIndices> : MultiIndexAttribute<"C", ArgIndices>;
-class NonNull<list<int> ArgIndices> : MultiIndexAttribute<"N", ArgIndices>;
 
 // Prefixes
 // ========
