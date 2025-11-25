@@ -433,6 +433,7 @@ struct Config {
   SortSectionPolicy sortSection;
   StripPolicy strip;
   UnresolvedPolicy unresolvedSymbols;
+  llvm::SmallVector<std::string> unresolvedSymbolsList;
   UnresolvedPolicy unresolvedSymbolsInShlib;
   Target2Policy target2;
   GcsPolicy zGcs;
