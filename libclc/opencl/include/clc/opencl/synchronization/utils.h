@@ -11,7 +11,6 @@
 
 #include <clc/internal/clc.h>
 #include <clc/mem_fence/clc_mem_semantic.h>
-#include <clc/opencl/synchronization/cl_mem_fence_flags.h>
 
 _CLC_INLINE int __opencl_get_memory_scope(cl_mem_fence_flags flag) {
   int memory_scope = 0;

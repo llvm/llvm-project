@@ -10,7 +10,6 @@
 #define __CLC_OPENCL_ATOMIC_ATOMIC_FETCH_OR_H__
 
 #include <clc/opencl/opencl-base.h>
-#include <clc/opencl/types.h>
 
 #define __CLC_FUNCTION atomic_fetch_or
 

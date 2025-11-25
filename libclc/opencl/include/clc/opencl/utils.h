@@ -10,7 +10,6 @@
 #define __CLC_OPENCL_UTILS_H__
 
 #include <clc/internal/clc.h>
-#include <clc/opencl/types.h>
 
 static _CLC_INLINE int __opencl_get_clang_memory_scope(memory_scope scope) {
   switch (scope) {
