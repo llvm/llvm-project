@@ -3106,7 +3106,7 @@ define i64 @test_vector_reduce_umax_v2i64(<2 x i64> %v) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -3235,11 +3235,11 @@ define i64 @test_vector_reduce_umax_v3i64(<3 x i64> %v) {
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v1, v3, v1 :: v_dual_cndmask_b32 v0, v2, v0
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v0, v4, v0 :: v_dual_cndmask_b32 v1, v5, v1
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3251,11 +3251,11 @@ define i64 @test_vector_reduce_umax_v3i64(<3 x i64> %v) {
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v0, v4, v0 :: v_dual_cndmask_b32 v1, v5, v1
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -3417,14 +3417,14 @@ define i64 @test_vector_reduce_umax_v4i64(<4 x i64> %v) {
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[2:3], v[6:7]
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s0, v[0:1], v[4:5]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v3, v7, v3 :: v_dual_cndmask_b32 v2, v6, v2
-; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v1, v5, v1, s0
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v0, v4, v0, s0
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3437,14 +3437,14 @@ define i64 @test_vector_reduce_umax_v4i64(<4 x i64> %v) {
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e64 s0, v[2:3], v[6:7]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v0, v4, v0 :: v_dual_cndmask_b32 v1, v5, v1
-; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v2, v6, v2, s0
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v3, v7, v3, s0
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -3735,27 +3735,27 @@ define i64 @test_vector_reduce_umax_v8i64(<8 x i64> %v) {
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[4:5], v[12:13]
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s0, v[6:7], v[14:15]
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s1, v[2:3], v[10:11]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v5, v13, v5 :: v_dual_cndmask_b32 v4, v12, v4
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[8:9]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v7, v15, v7, s0
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v6, v14, v6, s0
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v3, v11, v3, s1
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v2, v10, v2, s1
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v1, v9, v1 :: v_dual_cndmask_b32 v0, v8, v0
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[2:3], v[6:7]
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s0, v[0:1], v[4:5]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v3, v7, v3 :: v_dual_cndmask_b32 v2, v6, v2
-; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v1, v5, v1, s0
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v0, v4, v0, s0
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3769,27 +3769,27 @@ define i64 @test_vector_reduce_umax_v8i64(<8 x i64> %v) {
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[8:9]
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e64 s0, v[2:3], v[10:11]
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e64 s1, v[4:5], v[12:13]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v0, v8, v0 :: v_dual_cndmask_b32 v1, v9, v1
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[6:7], v[14:15]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v2, v10, v2, s0
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v3, v11, v3, s0
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v4, v12, v4, s1
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v5, v13, v5, s1
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v6, v14, v6 :: v_dual_cndmask_b32 v7, v15, v7
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e64 s0, v[2:3], v[6:7]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v0, v4, v0 :: v_dual_cndmask_b32 v1, v5, v1
-; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v2, v6, v2, s0
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v3, v7, v3, s0
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -4336,9 +4336,9 @@ define i64 @test_vector_reduce_umax_v16i64(<16 x i64> %v) {
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s0, v[0:1], v[16:17]
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s1, v[12:13], v[28:29]
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s2, v[6:7], v[22:23]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v9, v25, v9 :: v_dual_cndmask_b32 v8, v24, v8
-; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v1, v17, v1, s0
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v0, v16, v0, s0
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[10:11], v[26:27]
@@ -4347,9 +4347,9 @@ define i64 @test_vector_reduce_umax_v16i64(<16 x i64> %v) {
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v12, v28, v12, s1
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s1, v[4:5], v[20:21]
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v7, v23, v7, s2
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v11, v27, v11 :: v_dual_cndmask_b32 v10, v26, v10
-; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v3, v19, v3, s0
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v2, v18, v2, s0
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v5, v21, v5, s1
@@ -4357,7 +4357,7 @@ define i64 @test_vector_reduce_umax_v16i64(<16 x i64> %v) {
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v6, v22, v6, s2
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s1, v[0:1], v[8:9]
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s0, v[2:3], v[10:11]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v1, v9, v1, s1
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v3, v11, v3, s0
@@ -4365,27 +4365,27 @@ define i64 @test_vector_reduce_umax_v16i64(<16 x i64> %v) {
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v0, v8, v0, s1
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[14:15], v[30:31]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v15, v31, v15 :: v_dual_cndmask_b32 v14, v30, v14
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[4:5], v[12:13]
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s0, v[6:7], v[14:15]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v5, v13, v5 :: v_dual_cndmask_b32 v4, v12, v4
-; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v7, v15, v7, s0
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v6, v14, v6, s0
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s0, v[2:3], v[6:7]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v1, v5, v1 :: v_dual_cndmask_b32 v0, v4, v0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v2, v6, v2, s0
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v3, v7, v3, s0
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4400,60 +4400,60 @@ define i64 @test_vector_reduce_umax_v16i64(<16 x i64> %v) {
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[16:17]
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e64 s0, v[2:3], v[18:19]
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e64 s1, v[4:5], v[20:21]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v0, v16, v0 :: v_dual_cndmask_b32 v1, v17, v1
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[6:7], v[22:23]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v2, v18, v2, s0
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v3, v19, v3, s0
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e64 s0, v[8:9], v[24:25]
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v4, v20, v4, s1
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v5, v21, v5, s1
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v6, v22, v6 :: v_dual_cndmask_b32 v7, v23, v7
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[10:11], v[26:27]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v8, v24, v8, s0
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e64 s1, v[12:13], v[28:29]
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v9, v25, v9, s0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v10, v26, v10 :: v_dual_cndmask_b32 v11, v27, v11
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[8:9]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v12, v28, v12, s1
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v13, v29, v13, s1
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v0, v8, v0 :: v_dual_cndmask_b32 v1, v9, v1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e64 s1, v[4:5], v[12:13]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v4, v12, v4, s1
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v5, v13, v5, s1
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e64 s0, v[14:15], v[30:31]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v14, v30, v14, s0
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v15, v31, v15, s0
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e64 s0, v[2:3], v[10:11]
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[6:7], v[14:15]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v2, v10, v2, s0
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v3, v11, v3, s0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v6, v14, v6 :: v_dual_cndmask_b32 v7, v15, v7
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e64 s0, v[2:3], v[6:7]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v0, v4, v0 :: v_dual_cndmask_b32 v1, v5, v1
-; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v2, v6, v2, s0
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v3, v7, v3, s0
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:

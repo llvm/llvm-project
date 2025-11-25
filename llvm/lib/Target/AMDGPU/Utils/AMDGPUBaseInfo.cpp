@@ -2052,56 +2052,63 @@ unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
   return packBits(VmVsrc, Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
 }
 
-unsigned encodeFieldVmVsrc(unsigned VmVsrc) {
-  return encodeFieldVmVsrc(0xffff, VmVsrc);
+unsigned encodeFieldVmVsrc(unsigned VmVsrc, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVmVsrc(Encoded, VmVsrc);
 }
 
 unsigned encodeFieldVaVdst(unsigned Encoded, unsigned VaVdst) {
   return packBits(VaVdst, Encoded, getVaVdstBitShift(), getVaVdstBitWidth());
 }
 
-unsigned encodeFieldVaVdst(unsigned VaVdst) {
-  return encodeFieldVaVdst(0xffff, VaVdst);
+unsigned encodeFieldVaVdst(unsigned VaVdst, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVaVdst(Encoded, VaVdst);
 }
 
 unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst) {
   return packBits(SaSdst, Encoded, getSaSdstBitShift(), getSaSdstBitWidth());
 }
 
-unsigned encodeFieldSaSdst(unsigned SaSdst) {
-  return encodeFieldSaSdst(0xffff, SaSdst);
+unsigned encodeFieldSaSdst(unsigned SaSdst, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldSaSdst(Encoded, SaSdst);
 }
 
 unsigned encodeFieldVaSdst(unsigned Encoded, unsigned VaSdst) {
   return packBits(VaSdst, Encoded, getVaSdstBitShift(), getVaSdstBitWidth());
 }
 
-unsigned encodeFieldVaSdst(unsigned VaSdst) {
-  return encodeFieldVaSdst(0xffff, VaSdst);
+unsigned encodeFieldVaSdst(unsigned VaSdst, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVaSdst(Encoded, VaSdst);
 }
 
 unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc) {
   return packBits(VaVcc, Encoded, getVaVccBitShift(), getVaVccBitWidth());
 }
 
-unsigned encodeFieldVaVcc(unsigned VaVcc) {
-  return encodeFieldVaVcc(0xffff, VaVcc);
+unsigned encodeFieldVaVcc(unsigned VaVcc, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVaVcc(Encoded, VaVcc);
 }
 
 unsigned encodeFieldVaSsrc(unsigned Encoded, unsigned VaSsrc) {
   return packBits(VaSsrc, Encoded, getVaSsrcBitShift(), getVaSsrcBitWidth());
 }
 
-unsigned encodeFieldVaSsrc(unsigned VaSsrc) {
-  return encodeFieldVaSsrc(0xffff, VaSsrc);
+unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVaSsrc(Encoded, VaSsrc);
 }
 
 unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt) {
   return packBits(HoldCnt, Encoded, getHoldCntBitShift(), getHoldCntWidth());
 }
 
-unsigned encodeFieldHoldCnt(unsigned HoldCnt) {
-  return encodeFieldHoldCnt(0xffff, HoldCnt);
+unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldHoldCnt(Encoded, HoldCnt);
 }
 
 } // namespace DepCtr

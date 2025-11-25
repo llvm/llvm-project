@@ -2934,7 +2934,7 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   auto ApplyHazardWorkarounds = [this, &MBB, &I, &DL, FlushSGPRWrites]() {
     if (FlushSGPRWrites)
       BuildMI(MBB, I, DL, get(AMDGPU::S_WAITCNT_DEPCTR))
-          .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
+          .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0, ST));
   };
 
   // We need to compute the offset relative to the instruction immediately after
