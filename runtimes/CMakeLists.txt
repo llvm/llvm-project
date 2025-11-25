@@ -109,7 +109,7 @@ if (CMAKE_VERSION VERSION_LESS "3.24" AND CMAKE_Fortran_COMPILER)
     set(CMAKE_Fortran_FORMAT_FIXED_FLAG "-ffixed-form")
     set(CMAKE_Fortran_FORMAT_FREE_FLAG "-ffree-form")
 
-    set(CMAKE_Fortran_MODDIR_FLAG "-module-dir")
+    set(CMAKE_Fortran_MODDIR_FLAG "-J")
 
     set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_ON "-cpp")
     set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_OFF "-nocpp")
