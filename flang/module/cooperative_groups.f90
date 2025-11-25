@@ -14,6 +14,12 @@ use, intrinsic :: __fortran_builtins, only: c_devptr => __builtin_c_devptr
 
 implicit none
 
+type :: cluster_group
+  type(c_devptr), private :: handle
+  integer(4) :: size
+  integer(4) :: rank
+end type cluster_group
+
 type :: grid_group
   type(c_devptr), private :: handle
   integer(4) :: size
@@ -31,6 +37,13 @@ type :: thread_group
   integer(4) :: size
   integer(4) :: rank
 end type thread_group
+
+interface
+  attributes(device) function this_cluster()
+    import
+    type(cluster_group) :: this_cluster
+  end function
+end interface
 
 interface
   attributes(device) function this_grid()

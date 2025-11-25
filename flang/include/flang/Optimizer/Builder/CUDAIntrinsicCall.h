@@ -60,6 +60,7 @@ struct CUDAIntrinsicLibrary : IntrinsicLibrary {
   mlir::Value genSyncThreadsCount(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSyncThreadsOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genSyncWarp(llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genThisCluster(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genThisGrid(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genThisThreadBlock(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genThisWarp(mlir::Type, llvm::ArrayRef<mlir::Value>);
