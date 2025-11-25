@@ -35,6 +35,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -1795,7 +1796,9 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       if (TypedefNameDecl *TD = RD->getTypedefNameForAnonDecl())
         OS << *TD;
       else if (!RD->getIdentifier())
-        OS << "(anonymous " << RD->getKindName() << ')';
+        printAnonymousTagDecl(OS, llvm::cast<TagDecl>(RD), P,
+                              /*PrintKindDecoration=*/true,
+                              /*AllowSourceLocations=*/false);
       else
         OS << *RD;
     } else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {

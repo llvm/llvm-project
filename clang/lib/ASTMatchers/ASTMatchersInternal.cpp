@@ -18,6 +18,7 @@
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/Lexer.h"
@@ -514,7 +515,14 @@ static StringRef getNodeName(const RecordDecl &Node,
     return Node.getName();
   }
   Scratch.clear();
-  return ("(anonymous " + Node.getKindName() + ")").toStringRef(Scratch);
+
+  llvm::raw_svector_ostream OS(Scratch);
+
+  printAnonymousTagDecl(
+      OS, llvm::cast<TagDecl>(&Node), Node.getASTContext().getPrintingPolicy(),
+      /*PrintKindDecoration=*/true, /*PrintTagLocations=*/false);
+
+  return OS.str();
 }
 
 static StringRef getNodeName(const NamespaceDecl &Node,
