@@ -49,6 +49,7 @@ config.suffixes = [".ll", ".c", ".test", ".txt", ".s", ".mir", ".yaml", ".spv"]
 config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
 
 if config.enable_profcheck:
+    config.available_features.add("profcheck")
     # Exclude llvm-reduce tests for profcheck because we substitute the FileCheck
     # binary with a no-op command for profcheck, but llvm-reduce tests have RUN
     # commands of the form llvm-reduce --test FileCheck, which explode if we
@@ -57,8 +58,17 @@ if config.enable_profcheck:
     # so we just exclude llvm-reduce tests from this config altogether. This should
     # be fine though as profcheck config tests are mostly concerned with opt.
     config.excludes.append("llvm-reduce")
+    # Exclude llvm-objcopy tests - not the target of this effort, and some use
+    # cat in ways that conflict with how profcheck uses it.
+    config.excludes.append("llvm-objcopy")
     # (Issue #161235) Temporarily exclude LoopVectorize.
     config.excludes.append("LoopVectorize")
+    # exclude UpdateTestChecks - they fail because of inserted prof annotations
+    config.excludes.append("UpdateTestChecks")
+    # TODO(#166655): Reenable Instrumentation tests
+    config.excludes.append("Instrumentation")
+    # profiling doesn't work quite well on GPU, excluding
+    config.excludes.append("AMDGPU")
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -224,6 +234,7 @@ tools.extend(
         "llvm-addr2line",
         "llvm-bcanalyzer",
         "llvm-bitcode-strip",
+        "llvm-cas",
         "llvm-cgdata",
         "llvm-config",
         "llvm-cov",
@@ -579,7 +590,7 @@ def have_cxx_shared_library():
         print("could not exec llvm-readobj")
         return False
 
-    readobj_out = readobj_cmd.stdout.read().decode("ascii")
+    readobj_out = readobj_cmd.stdout.read().decode("utf-8")
     readobj_cmd.wait()
 
     regex = re.compile(r"(libc\+\+|libstdc\+\+|msvcp).*\.(so|dylib|dll)")
@@ -787,9 +798,18 @@ if config.have_opt_viewer_modules:
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
 
+if config.have_ondisk_cas:
+    config.available_features.add("ondisk_cas")
+
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
 
+
+# Restrict the size of the on-disk CAS for tests. This allows testing in
+# constrained environments (e.g. small TMPDIR). It also prevents leaving
+# behind large files on file systems that do not support sparse files if a test
+# crashes before resizing the file.
+config.environment["LLVM_CAS_MAX_MAPPING_SIZE"] = "%d" % (100 * 1024 * 1024)
 
 # Some tools support an environment variable "OBJECT_MODE" on AIX OS, which
 # controls the kind of objects they will support. If there is no "OBJECT_MODE"

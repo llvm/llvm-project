@@ -19,7 +19,6 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
-#include <memory>
 #include <set>
 #include <string>
 

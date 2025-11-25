@@ -13,10 +13,12 @@
 #include "ClauseProcessor.h"
 #include "Utils.h"
 
+#include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Utils/OpenMP.h"
@@ -401,9 +403,73 @@ bool ClauseProcessor::processInclusive(
   return false;
 }
 
+bool ClauseProcessor::processInitializer(
+    lower::SymMap &symMap, const parser::OmpClause::Initializer &inp,
+    ReductionProcessor::GenInitValueCBTy &genInitValueCB) const {
+  if (auto *clause = findUniqueClause<omp::clause::Initializer>()) {
+    genInitValueCB = [&, clause](fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Type type, mlir::Value ompOrig) {
+      lower::SymMapScope scope(symMap);
+      const parser::OmpInitializerExpression &iexpr = inp.v.v;
+      const parser::OmpStylizedInstance &styleInstance = iexpr.v.front();
+      const std::list<parser::OmpStylizedDeclaration> &declList =
+          std::get<std::list<parser::OmpStylizedDeclaration>>(styleInstance.t);
+      mlir::Value ompPrivVar;
+      for (const parser::OmpStylizedDeclaration &decl : declList) {
+        auto &name = std::get<parser::ObjectName>(decl.var.t);
+        assert(name.symbol && "Name does not have a symbol");
+        mlir::Value addr = builder.createTemporary(loc, ompOrig.getType());
+        fir::StoreOp::create(builder, loc, ompOrig, addr);
+        fir::FortranVariableFlagsEnum extraFlags = {};
+        fir::FortranVariableFlagsAttr attributes =
+            Fortran::lower::translateSymbolAttributes(builder.getContext(),
+                                                      *name.symbol, extraFlags);
+        auto declareOp = hlfir::DeclareOp::create(
+            builder, loc, addr, name.ToString(), nullptr, {}, nullptr, nullptr,
+            0, attributes);
+        if (name.ToString() == "omp_priv")
+          ompPrivVar = declareOp.getResult(0);
+        symMap.addVariableDefinition(*name.symbol, declareOp);
+      }
+      // Lower the expression/function call
+      lower::StatementContext stmtCtx;
+      mlir::Value result = common::visit(
+          common::visitors{
+              [&](const evaluate::ProcedureRef &procRef) -> mlir::Value {
+                convertCallToHLFIR(loc, converter, procRef, std::nullopt,
+                                   symMap, stmtCtx);
+                auto privVal = fir::LoadOp::create(builder, loc, ompPrivVar);
+                return privVal;
+              },
+              [&](const auto &expr) -> mlir::Value {
+                mlir::Value exprResult = fir::getBase(convertExprToValue(
+                    loc, converter, clause->v, symMap, stmtCtx));
+                // Conversion can either give a value or a refrence to a value,
+                // we need to return the reduction type, so an optional load may
+                // be generated.
+                if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
+                        exprResult.getType()))
+                  if (ompPrivVar.getType() == refType)
+                    exprResult = fir::LoadOp::create(builder, loc, exprResult);
+                return exprResult;
+              }},
+          clause->v.u);
+      stmtCtx.finalizeAndPop();
+      return result;
+    };
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processMergeable(
     mlir::omp::MergeableClauseOps &result) const {
   return markClauseOccurrence<omp::clause::Mergeable>(result.mergeable);
+}
+
+bool ClauseProcessor::processNogroup(
+    mlir::omp::NogroupClauseOps &result) const {
+  return markClauseOccurrence<omp::clause::Nogroup>(result.nogroup);
 }
 
 bool ClauseProcessor::processNowait(mlir::omp::NowaitClauseOps &result) const {
@@ -1223,26 +1289,67 @@ void ClauseProcessor::processMapObjects(
     llvm::StringRef mapperIdNameRef) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  auto getDefaultMapperID = [&](const omp::Object &object,
-                                std::string &mapperIdName) {
-    if (!mlir::isa<mlir::omp::DeclareMapperOp>(
-            firOpBuilder.getRegion().getParentOp())) {
-      const semantics::DerivedTypeSpec *typeSpec = nullptr;
+  auto getSymbolDerivedType = [](const semantics::Symbol &symbol)
+      -> const semantics::DerivedTypeSpec * {
+    const semantics::Symbol &ultimate = symbol.GetUltimate();
+    if (const semantics::DeclTypeSpec *declType = ultimate.GetType())
+      if (const auto *derived = declType->AsDerived())
+        return derived;
+    return nullptr;
+  };
 
-      if (object.sym()->owner().IsDerivedType())
-        typeSpec = object.sym()->owner().derivedTypeSpec();
-      else if (object.sym()->GetType() &&
-               object.sym()->GetType()->category() ==
-                   semantics::DeclTypeSpec::TypeDerived)
-        typeSpec = &object.sym()->GetType()->derivedTypeSpec();
+  auto addImplicitMapper = [&](const omp::Object &object,
+                               std::string &mapperIdName,
+                               bool allowGenerate) -> mlir::FlatSymbolRefAttr {
+    if (mapperIdName.empty())
+      return mlir::FlatSymbolRefAttr();
 
-      if (typeSpec) {
-        mapperIdName =
-            typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
-        if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
-          mapperIdName = converter.mangleName(mapperIdName, sym->owner());
-      }
+    if (converter.getModuleOp().lookupSymbol(mapperIdName))
+      return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
+                                          mapperIdName);
+
+    if (!allowGenerate)
+      return mlir::FlatSymbolRefAttr();
+
+    const semantics::DerivedTypeSpec *typeSpec =
+        getSymbolDerivedType(*object.sym());
+    if (!typeSpec && object.sym()->owner().IsDerivedType())
+      typeSpec = object.sym()->owner().derivedTypeSpec();
+
+    if (!typeSpec)
+      return mlir::FlatSymbolRefAttr();
+
+    mlir::Type type = converter.genType(*typeSpec);
+    auto recordType = mlir::dyn_cast<fir::RecordType>(type);
+    if (!recordType)
+      return mlir::FlatSymbolRefAttr();
+
+    return getOrGenImplicitDefaultDeclareMapper(converter, clauseLocation,
+                                                recordType, mapperIdName);
+  };
+
+  auto getDefaultMapperID =
+      [&](const semantics::DerivedTypeSpec *typeSpec) -> std::string {
+    if (mlir::isa<mlir::omp::DeclareMapperOp>(
+            firOpBuilder.getRegion().getParentOp()) ||
+        !typeSpec)
+      return {};
+
+    std::string mapperIdName =
+        typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+    if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName)) {
+      mapperIdName =
+          converter.mangleName(mapperIdName, sym->GetUltimate().owner());
+    } else {
+      mapperIdName = converter.mangleName(mapperIdName, *typeSpec->GetScope());
     }
+
+    // Make sure we don't return a mapper to self.
+    if (auto declMapOp = mlir::dyn_cast<mlir::omp::DeclareMapperOp>(
+            firOpBuilder.getRegion().getParentOp()))
+      if (mapperIdName == declMapOp.getSymName())
+        return {};
+    return mapperIdName;
   };
 
   // Create the mapper symbol from its name, if specified.
@@ -1251,8 +1358,13 @@ void ClauseProcessor::processMapObjects(
       mapperIdNameRef != "__implicit_mapper") {
     std::string mapperIdName = mapperIdNameRef.str();
     const omp::Object &object = objects.front();
-    if (mapperIdNameRef == "default")
-      getDefaultMapperID(object, mapperIdName);
+    if (mapperIdNameRef == "default") {
+      const semantics::DerivedTypeSpec *typeSpec =
+          getSymbolDerivedType(*object.sym());
+      if (!typeSpec && object.sym()->owner().IsDerivedType())
+        typeSpec = object.sym()->owner().derivedTypeSpec();
+      mapperIdName = getDefaultMapperID(typeSpec);
+    }
     assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
            "mapper not found");
     mapperId =
@@ -1290,13 +1402,25 @@ void ClauseProcessor::processMapObjects(
       }
     }
 
+    const semantics::DerivedTypeSpec *objectTypeSpec =
+        getSymbolDerivedType(*object.sym());
+
     if (mapperIdNameRef == "__implicit_mapper") {
-      std::string mapperIdName;
-      getDefaultMapperID(object, mapperIdName);
-      mapperId = converter.getModuleOp().lookupSymbol(mapperIdName)
-                     ? mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                                    mapperIdName)
-                     : mlir::FlatSymbolRefAttr();
+      if (parentObj.has_value()) {
+        mapperId = mlir::FlatSymbolRefAttr();
+      } else if (objectTypeSpec) {
+        std::string mapperIdName = getDefaultMapperID(objectTypeSpec);
+        bool needsDefaultMapper =
+            semantics::IsAllocatableOrObjectPointer(object.sym()) ||
+            requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
+        if (!mapperIdName.empty())
+          mapperId = addImplicitMapper(object, mapperIdName,
+                                       /*allowGenerate=*/needsDefaultMapper);
+        else
+          mapperId = mlir::FlatSymbolRefAttr();
+      } else {
+        mapperId = mlir::FlatSymbolRefAttr();
+      }
     }
 
     // Explicit map captures are captured ByRef by default,
@@ -1392,10 +1516,14 @@ bool ClauseProcessor::processMap(
     }
     if (mappers) {
       assert(mappers->size() == 1 && "more than one mapper");
-      mapperIdName = mappers->front().v.id().symbol->name().ToString();
-      if (mapperIdName != "default")
-        mapperIdName = converter.mangleName(
-            mapperIdName, mappers->front().v.id().symbol->owner());
+      const semantics::Symbol *mapperSym = mappers->front().v.id().symbol;
+      mapperIdName = mapperSym->name().ToString();
+      if (mapperIdName != "default") {
+        // Mangle with the ultimate owner so that use-associated mapper
+        // identifiers resolve to the same symbol as their defining scope.
+        const semantics::Symbol &ultimate = mapperSym->GetUltimate();
+        mapperIdName = converter.mangleName(mapperIdName, ultimate.owner());
+      }
     }
 
     processMapObjects(stmtCtx, clauseLocation,

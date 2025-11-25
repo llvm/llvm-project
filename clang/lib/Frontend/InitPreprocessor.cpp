@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/MacroBuilder.h"
@@ -17,7 +18,6 @@
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -1515,6 +1515,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
   if (LangOpts.PointerAuthIntrinsics)
     Builder.defineMacro("__PTRAUTH__");
+
+  if (CGOpts.Dwarf2CFIAsm)
+    Builder.defineMacro("__GCC_HAVE_DWARF2_CFI_ASM");
 
   // Get other target #defines.
   TI.getTargetDefines(LangOpts, Builder);

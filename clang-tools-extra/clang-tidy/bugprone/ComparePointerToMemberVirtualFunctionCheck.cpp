@@ -34,7 +34,6 @@ static constexpr llvm::StringLiteral ErrorMsg =
 
 void ComparePointerToMemberVirtualFunctionCheck::registerMatchers(
     MatchFinder *Finder) {
-
   auto DirectMemberVirtualFunctionPointer = unaryOperator(
       allOf(hasOperatorName("&"),
             hasUnaryOperand(declRefExpr(to(cxxMethodDecl(isVirtual()))))));

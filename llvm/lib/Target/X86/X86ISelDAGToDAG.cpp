@@ -1004,7 +1004,9 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     if ((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
         N->getSimpleValueType(0).isVector() && !mayPreventLoadFold()) {
       APInt SplatVal;
-      if (X86::isConstantSplat(N->getOperand(1), SplatVal) &&
+      if (!ISD::isBuildVectorOfConstantSDNodes(
+              peekThroughBitcasts(N->getOperand(0)).getNode()) &&
+          X86::isConstantSplat(N->getOperand(1), SplatVal) &&
           SplatVal.isOne()) {
         SDLoc DL(N);
 
@@ -4728,9 +4730,9 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   auto tryPeelOuterNotWrappingLogic = [&](SDNode *Op) {
     if (Op->getOpcode() == ISD::XOR && Op->hasOneUse() &&
         ISD::isBuildVectorAllOnes(Op->getOperand(1).getNode())) {
-      SDValue InnerOp = Op->getOperand(0);
+      SDValue InnerOp = getFoldableLogicOp(Op->getOperand(0));
 
-      if (!getFoldableLogicOp(InnerOp))
+      if (!InnerOp)
         return SDValue();
 
       N0 = InnerOp.getOperand(0);

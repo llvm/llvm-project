@@ -279,6 +279,7 @@ bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
         DummyReturnBB = createDummyReturnBlock(F, ReturningBlocks);
 
       handleNBranch(F, BB, CBI, DummyReturnBB, Updates);
+      Changed = true;
     } else {
       llvm_unreachable("unsupported block terminator");
     }

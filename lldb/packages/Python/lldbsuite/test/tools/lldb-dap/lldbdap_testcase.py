@@ -39,6 +39,7 @@ class DAPTestCaseBase(TestBase):
             log_file=log_file_path,
             env=lldbDAPEnv,
             additional_args=additional_args or [],
+            spawn_helper=self.spawnSubprocess,
         )
 
     def build_and_create_debug_adapter(

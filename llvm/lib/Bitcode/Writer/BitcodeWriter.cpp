@@ -956,6 +956,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_CAPTURES;
   case Attribute::DeadOnReturn:
     return bitc::ATTR_KIND_DEAD_ON_RETURN;
+  case Attribute::NoCreateUndefOrPoison:
+    return bitc::ATTR_KIND_NO_CREATE_UNDEF_OR_POISON;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -3842,6 +3844,9 @@ void ModuleBitcodeWriter::writeFunction(
           } else if (DVR.isDbgDeclare()) {
             Vals.push_back(VE.getMetadataID(DVR.getRawLocation()));
             Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_DECLARE, Vals);
+          } else if (DVR.isDbgDeclareValue()) {
+            Vals.push_back(VE.getMetadataID(DVR.getRawLocation()));
+            Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_DECLARE_VALUE, Vals);
           } else {
             assert(DVR.isDbgAssign() && "Unexpected DbgRecord kind");
             Vals.push_back(VE.getMetadataID(DVR.getRawLocation()));

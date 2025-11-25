@@ -41,6 +41,8 @@ namespace llvm {
 ///   .Cases({"violet", "purple"}, Violet)
 ///   .Default(UnknownColor);
 /// \endcode
+///
+/// When multiple matches are found, the value of the first match is returned.
 template<typename T, typename R = T>
 class StringSwitch {
   /// The string we are matching.
@@ -156,7 +158,7 @@ public:
 
   StringSwitch &EndsWithLower(StringLiteral S, T Value) {
     if (!Result && Str.ends_with_insensitive(S))
-      Result = Value;
+      Result = std::move(Value);
 
     return *this;
   }
@@ -213,23 +215,30 @@ public:
   [[nodiscard]] operator R() { return DefaultUnreachable(); }
 
 private:
-  // Returns true when `Str` matches the `S` argument, and stores the result.
+  // Returns true when a match is found. If `Str` matches the `S` argument,
+  // stores the result.
   bool CaseImpl(StringLiteral S, T &Value) {
-    if (!Result && Str == S) {
-      Result = std::move(Value);
+    if (Result)
       return true;
-    }
-    return false;
+
+    if (Str != S)
+      return false;
+
+    Result = std::move(Value);
+    return true;
   }
 
-  // Returns true when `Str` matches the `S` argument (case-insensitive), and
-  // stores the result.
+  // Returns true when a match is found. If `Str` matches the `S` argument
+  // (case-insensitive), stores the result.
   bool CaseLowerImpl(StringLiteral S, T &Value) {
-    if (!Result && Str.equals_insensitive(S)) {
-      Result = std::move(Value);
+    if (Result)
       return true;
-    }
-    return false;
+
+    if (!Str.equals_insensitive(S))
+      return false;
+
+    Result = std::move(Value);
+    return true;
   }
 
   StringSwitch &CasesImpl(std::initializer_list<StringLiteral> Cases,

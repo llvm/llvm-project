@@ -459,7 +459,7 @@ template <class BlockT, class LoopT>
 static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
                                   LoopInfoBase<BlockT, LoopT> *LI,
                                   const DomTreeBase<BlockT> &DomTree) {
-  typedef GraphTraits<Inverse<BlockT *>> InvBlockTraits;
+  using InvBlockTraits = GraphTraits<Inverse<BlockT *>>;
 
   unsigned NumBlocks = 0;
   unsigned NumSubloops = 0;
@@ -513,8 +513,8 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
 
 /// Populate all loop data in a stable order during a single forward DFS.
 template <class BlockT, class LoopT> class PopulateLoopsDFS {
-  typedef GraphTraits<BlockT *> BlockTraits;
-  typedef typename BlockTraits::ChildIteratorType SuccIterTy;
+  using BlockTraits = GraphTraits<BlockT *>;
+  using SuccIterTy = typename BlockTraits::ChildIteratorType;
 
   LoopInfoBase<BlockT, LoopT> *LI;
 

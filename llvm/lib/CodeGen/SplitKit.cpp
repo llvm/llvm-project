@@ -448,7 +448,7 @@ void SplitEditor::addDeadDef(LiveInterval &LI, VNInfo *VNI, bool Original) {
     const MachineInstr *DefMI = LIS.getInstructionFromIndex(Def);
     assert(DefMI != nullptr);
     LaneBitmask LM;
-    for (const MachineOperand &DefOp : DefMI->defs()) {
+    for (const MachineOperand &DefOp : DefMI->all_defs()) {
       Register R = DefOp.getReg();
       if (R != LI.reg())
         continue;
@@ -1509,10 +1509,9 @@ void SplitEditor::forceRecomputeVNI(const VNInfo &ParentVNI) {
   }
 
   // Trace value through phis.
-  SmallPtrSet<const VNInfo *, 8> Visited; ///< whether VNI was/is in worklist.
-  SmallVector<const VNInfo *, 4> WorkList;
-  Visited.insert(&ParentVNI);
-  WorkList.push_back(&ParentVNI);
+  ///< whether VNI was/is in worklist.
+  SmallPtrSet<const VNInfo *, 8> Visited = {&ParentVNI};
+  SmallVector<const VNInfo *, 4> WorkList = {&ParentVNI};
 
   const LiveInterval &ParentLI = Edit->getParent();
   const SlotIndexes &Indexes = *LIS.getSlotIndexes();

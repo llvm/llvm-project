@@ -40,13 +40,13 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -1512,6 +1512,9 @@ void CodeGenModule::Release() {
   case CodeGenOptions::FramePointerKind::Reserved:
     getModule().setFramePointer(llvm::FramePointerKind::Reserved);
     break;
+  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+    getModule().setFramePointer(llvm::FramePointerKind::NonLeafNoReserve);
+    break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     getModule().setFramePointer(llvm::FramePointerKind::NonLeaf);
     break;
@@ -2368,9 +2371,8 @@ static QualType GeneralizeTransparentUnion(QualType Ty) {
   const RecordDecl *UD = UT->getDecl()->getDefinitionOrSelf();
   if (!UD->hasAttr<TransparentUnionAttr>())
     return Ty;
-  for (const auto *it : UD->fields()) {
-    return it->getType();
-  }
+  if (!UD->fields().empty())
+    return UD->fields().begin()->getType();
   return Ty;
 }
 
@@ -3331,18 +3333,18 @@ static void emitUsed(CodeGenModule &CGM, StringRef Name,
   if (List.empty())
     return;
 
-  llvm::PointerType *UnqualPtr =
-      llvm::PointerType::getUnqual(CGM.getLLVMContext());
-
   // Convert List to what ConstantArray needs.
   SmallVector<llvm::Constant*, 8> UsedArray;
   UsedArray.resize(List.size());
   for (unsigned i = 0, e = List.size(); i != e; ++i) {
-    UsedArray[i] = llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-        cast<llvm::Constant>(&*List[i]), UnqualPtr);
+    UsedArray[i] =
+        llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+            cast<llvm::Constant>(&*List[i]), CGM.Int8PtrTy);
   }
 
-  llvm::ArrayType *ATy = llvm::ArrayType::get(UnqualPtr, UsedArray.size());
+  if (UsedArray.empty())
+    return;
+  llvm::ArrayType *ATy = llvm::ArrayType::get(CGM.Int8PtrTy, UsedArray.size());
 
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), ATy, false, llvm::GlobalValue::AppendingLinkage,
@@ -4935,6 +4937,11 @@ void CodeGenModule::setMultiVersionResolverAttributes(llvm::Function *Resolver,
   setGlobalVisibility(Resolver, D);
 
   setDSOLocal(Resolver);
+
+  // The resolver must be exempt from sanitizer instrumentation, as it can run
+  // before the sanitizer is initialized.
+  // (https://github.com/llvm/llvm-project/issues/163369)
+  Resolver->addFnAttr(llvm::Attribute::DisableSanitizerInstrumentation);
 
   // Set the default target-specific attributes, such as PAC and BTI ones on
   // AArch64. Not passing Decl to prevent setting unrelated attributes,
