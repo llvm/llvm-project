@@ -585,7 +585,8 @@ DeclareRedType ReductionProcessor::createDeclareReductionHelper(
   } else
     type = valTy;
 
-  decl = DeclareRedType::create(modBuilder, loc, reductionOpName, type, boxedTyAttr);
+  decl = DeclareRedType::create(modBuilder, loc, reductionOpName, type,
+                                boxedTyAttr);
   createReductionAllocAndInitRegions(converter, loc, decl, genInitValueCB, type,
                                      isByRef);
   builder.createBlock(&decl.getReductionRegion(),
