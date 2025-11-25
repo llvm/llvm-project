@@ -633,6 +633,13 @@ def TENSTORRENT_ASCALON_D8 : RISCVProcessorModel<"tt-ascalon-d8",
                                                   FeatureUnalignedVectorMem]),
                                                  [TuneNoDefaultUnroll,
                                                   TuneNLogNVRGather,
+                                                  TuneOptimizedNF2SegmentLoadStore,
+                                                  TuneOptimizedNF3SegmentLoadStore,
+                                                  TuneOptimizedNF4SegmentLoadStore,
+                                                  TuneOptimizedNF5SegmentLoadStore,
+                                                  TuneOptimizedNF6SegmentLoadStore,
+                                                  TuneOptimizedNF7SegmentLoadStore,
+                                                  TuneOptimizedNF8SegmentLoadStore,
                                                   TuneOptimizedZeroStrideLoad,
                                                   TunePostRAScheduler]>;
 
