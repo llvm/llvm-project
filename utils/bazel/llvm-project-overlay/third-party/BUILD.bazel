@@ -4,6 +4,8 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load(":cc_library_wrapper.bzl", "cc_library_wrapper")
 
+package(default_visibility = ["//visibility:public"])
+
 bool_flag(
     name = "llvm_enable_zstd",
     build_setting_default = True,
@@ -23,7 +25,6 @@ cc_library_wrapper(
         ],
         "//conditions:default": [],
     }),
-    visibility = ["//visibility:public"],
     deps = select({
         ":llvm_zstd_enabled": [
             "@llvm_zstd//:zstd",
