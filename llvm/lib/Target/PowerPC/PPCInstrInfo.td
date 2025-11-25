@@ -1879,6 +1879,12 @@ def LWAT_PSEUDO : PPCCustomInserterPseudo<
     "#LWAT_PSEUDO",
     []>;
 
+def LWAT_COND_PSEUDO : PPCCustomInserterPseudo <
+    (outs gprc:$dst),
+    (ins ptr_rc_nor0:$ptr, u5imm:$fc),
+    "#LWAT_COND_PSEUDO",
+    []>;
+
 let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
 def STBCX : XForm_1_memOp<31, 694, (outs), (ins gprc:$RST, (memrr $RA, $RB):$addr),
                     "stbcx. $RST, $addr", IIC_LdStSTWCX, []>,

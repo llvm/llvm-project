@@ -340,6 +340,12 @@ def LDAT_PSEUDO : PPCCustomInserterPseudo<
     "#LDAT_PSEUDO",
     []>;
 
+def LDAT_COND_PSEUDO : PPCCustomInserterPseudo <
+    (outs g8rc:$dst),
+    (ins ptr_rc_nor0:$ptr, u5imm:$fc),
+    "#LDAT_COND_PSEUDO",
+    []>;
+
 let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
 def STDCX : XForm_1_memOp<31, 214, (outs), (ins g8rc:$RST, (memrr $RA, $RB):$addr),
                           "stdcx. $RST, $addr", IIC_LdStSTDCX, []>, isRecordForm;
