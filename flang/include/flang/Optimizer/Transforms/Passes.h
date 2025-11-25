@@ -55,6 +55,9 @@ std::unique_ptr<mlir::Pass> createVScaleAttrPass();
 std::unique_ptr<mlir::Pass>
 createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
 
+void populateFIRToSCFRewrites(mlir::RewritePatternSet &patterns,
+                              bool parallelUnordered = false);
+
 void populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
                                    bool forceLoopToExecuteOnce = false,
                                    bool setNSW = true);

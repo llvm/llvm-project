@@ -14,6 +14,7 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
+#include "CIRGenOpenACCHelpers.h"
 #include "CIRGenOpenACCRecipe.h"
 
 #include "clang/AST/ExprCXX.h"
@@ -182,33 +183,6 @@ class OpenACCClauseCIREmitter final
     dataOperands.append(computeEmitter.dataOperands);
   }
 
-  mlir::acc::DataClauseModifier
-  convertModifiers(OpenACCModifierKind modifiers) {
-    using namespace mlir::acc;
-    static_assert(static_cast<int>(OpenACCModifierKind::Zero) ==
-                      static_cast<int>(DataClauseModifier::zero) &&
-                  static_cast<int>(OpenACCModifierKind::Readonly) ==
-                      static_cast<int>(DataClauseModifier::readonly) &&
-                  static_cast<int>(OpenACCModifierKind::AlwaysIn) ==
-                      static_cast<int>(DataClauseModifier::alwaysin) &&
-                  static_cast<int>(OpenACCModifierKind::AlwaysOut) ==
-                      static_cast<int>(DataClauseModifier::alwaysout) &&
-                  static_cast<int>(OpenACCModifierKind::Capture) ==
-                      static_cast<int>(DataClauseModifier::capture));
-
-    DataClauseModifier mlirModifiers{};
-
-    // The MLIR representation of this represents `always` as `alwaysin` +
-    // `alwaysout`.  So do a small fixup here.
-    if (isOpenACCModifierBitSet(modifiers, OpenACCModifierKind::Always)) {
-      mlirModifiers = mlirModifiers | DataClauseModifier::always;
-      modifiers &= ~OpenACCModifierKind::Always;
-    }
-
-    mlirModifiers = mlirModifiers | static_cast<DataClauseModifier>(modifiers);
-    return mlirModifiers;
-  }
-
   template <typename BeforeOpTy, typename AfterOpTy>
   void addDataOperand(const Expr *varOperand, mlir::acc::DataClause dataClause,
                       OpenACCModifierKind modifiers, bool structured,
@@ -243,8 +217,8 @@ class OpenACCClauseCIREmitter final
     // Set the 'rest' of the info for both operations.
     beforeOp.setDataClause(dataClause);
     afterOp.setDataClause(dataClause);
-    beforeOp.setModifiers(convertModifiers(modifiers));
-    afterOp.setModifiers(convertModifiers(modifiers));
+    beforeOp.setModifiers(convertOpenACCModifiers(modifiers));
+    afterOp.setModifiers(convertOpenACCModifiers(modifiers));
 
     // Make sure we record these, so 'async' values can be updated later.
     dataOperands.push_back(beforeOp.getOperation());
@@ -264,7 +238,7 @@ class OpenACCClauseCIREmitter final
 
     // Set the 'rest' of the info for the operation.
     beforeOp.setDataClause(dataClause);
-    beforeOp.setModifiers(convertModifiers(modifiers));
+    beforeOp.setModifiers(convertOpenACCModifiers(modifiers));
 
     // Make sure we record these, so 'async' values can be updated later.
     dataOperands.push_back(beforeOp.getOperation());

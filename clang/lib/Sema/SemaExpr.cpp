@@ -4190,6 +4190,14 @@ static bool CheckVectorElementsTraitOperandType(Sema &S, QualType T,
            << ""
            << "__builtin_vectorelements" << T << ArgRange;
 
+  if (auto *FD = dyn_cast<FunctionDecl>(S.CurContext)) {
+    if (T->isSVESizelessBuiltinType()) {
+      llvm::StringMap<bool> CallerFeatureMap;
+      S.Context.getFunctionFeatureMap(CallerFeatureMap, FD);
+      return S.ARM().checkSVETypeSupport(T, Loc, FD, CallerFeatureMap);
+    }
+  }
+
   return false;
 }
 

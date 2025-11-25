@@ -4198,8 +4198,14 @@ static void sortMapIndices(llvm::SmallVector<size_t> &indices,
 
   llvm::sort(
       indices.begin(), indices.end(), [&](const size_t a, const size_t b) {
-        auto memberIndicesA = mlir::cast<mlir::ArrayAttr>(indexAttr[a]);
-        auto memberIndicesB = mlir::cast<mlir::ArrayAttr>(indexAttr[b]);
+        // Bail early if we are asked to look at the same index. If we do not
+        // bail early, we can end up mistakenly adding indices to
+        // occludedChildren. This can occur with some types of libc++ hardening.
+        if (a == b)
+          return false;
+
+        auto memberIndicesA = cast<ArrayAttr>(indexAttr[a]);
+        auto memberIndicesB = cast<ArrayAttr>(indexAttr[b]);
 
         size_t smallestMember = memberIndicesA.size() < memberIndicesB.size()
                                     ? memberIndicesA.size()
