@@ -1921,8 +1921,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   }
 
   if (auto *NewCI = dyn_cast_or_null<Instruction>(NewCall))
-    if (MDNode *MD = CI->getMetadata(LLVMContext::MD_alloc_token))
-      NewCI->setMetadata(LLVMContext::MD_alloc_token, MD);
+    NewCI->copyMetadata(*CI);
 
   return NewCall;
 }
