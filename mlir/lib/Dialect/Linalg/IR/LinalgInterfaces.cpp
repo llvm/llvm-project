@@ -1057,7 +1057,7 @@ LogicalResult mlir::linalg::detail::verifyConvolutionInterface(Operation *op) {
 // FillOpInterface implementation
 //===----------------------------------------------------------------------===//
 
-namespace mlir::linalg::detail {
+namespace {
 enum class MatchFillResult {
   Success = 0,
   NotLinalgOp,
@@ -1071,6 +1071,8 @@ struct FillInterfaceResult {
   Type scalarType;
   Type outputElementType;
 };
+} // namespace
+
 static FillInterfaceResult isFillInterfaceImpl(Operation *op) {
   FillInterfaceResult fillResult = {};
   auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
@@ -1102,7 +1104,6 @@ static FillInterfaceResult isFillInterfaceImpl(Operation *op) {
 
   return fillResult;
 }
-} // namespace mlir::linalg::detail
 
 LogicalResult mlir::linalg::detail::verifyFillInterface(Operation *op) {
   auto [result, scalarType, outputElementType] = isFillInterfaceImpl(op);
