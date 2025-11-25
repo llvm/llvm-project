@@ -441,6 +441,7 @@ cc_library(
         ":Utility",
         ":Version",
         "//clang:codegen",
+        "//clang:driver",
         "//clang:frontend",
         "//clang:serialization",
         "//llvm:Support",

@@ -838,16 +838,23 @@ public:
   /// @{
   void print(raw_ostream &OS) const {
     OS << "{";
-    if (!isValid())
+    switch (State) {
+    case Uninitialized:
       OS << "Uninitialized";
-    if (isUnknown())
+      break;
+    case Unknown:
       OS << "unknown";
-    if (hasAVLReg())
+      break;
+    case AVLIsReg:
       OS << "AVLReg=" << llvm::printReg(getAVLReg());
-    if (hasAVLImm())
+      break;
+    case AVLIsImm:
       OS << "AVLImm=" << (unsigned)AVLImm;
-    if (hasAVLVLMAX())
+      break;
+    case AVLIsVLMAX:
       OS << "AVLVLMAX";
+      break;
+    }
     OS << ", ";
 
     unsigned LMul;

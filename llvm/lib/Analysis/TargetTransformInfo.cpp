@@ -609,6 +609,10 @@ bool TargetTransformInfo::useColdCCForColdCall(Function &F) const {
   return TTIImpl->useColdCCForColdCall(F);
 }
 
+bool TargetTransformInfo::useFastCCForInternalCall(Function &F) const {
+  return TTIImpl->useFastCCForInternalCall(F);
+}
+
 bool TargetTransformInfo::isTargetIntrinsicTriviallyScalarizable(
     Intrinsic::ID ID) const {
   return TTIImpl->isTargetIntrinsicTriviallyScalarizable(ID);

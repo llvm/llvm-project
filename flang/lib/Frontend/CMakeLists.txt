@@ -75,6 +75,7 @@ add_flang_library(flangFrontend
 
   CLANG_LIBS
   clangBasic
+  clangDriver
   clangOptions
 )
 

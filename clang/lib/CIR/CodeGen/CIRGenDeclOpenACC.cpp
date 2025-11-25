@@ -23,14 +23,75 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
 
   OpenACCDeclareCleanup(mlir::acc::DeclareEnterOp enterOp) : enterOp(enterOp) {}
 
-  void emit(CIRGenFunction &cgf) override {
-    mlir::acc::DeclareExitOp::create(cgf.getBuilder(), enterOp.getLoc(),
-                                     enterOp, {});
+  template <typename OutTy, typename InTy>
+  void createOutOp(CIRGenFunction &cgf, InTy inOp) {
+    if constexpr (std::is_same_v<OutTy, mlir::acc::DeleteOp>) {
+      auto outOp =
+          OutTy::create(cgf.getBuilder(), inOp.getLoc(), inOp,
+                        inOp.getStructured(), inOp.getImplicit(),
+                        llvm::Twine(inOp.getNameAttr()), inOp.getBounds());
+      outOp.setDataClause(inOp.getDataClause());
+      outOp.setModifiers(inOp.getModifiers());
+    } else {
+      auto outOp =
+          OutTy::create(cgf.getBuilder(), inOp.getLoc(), inOp, inOp.getVarPtr(),
+                        inOp.getStructured(), inOp.getImplicit(),
+                        llvm::Twine(inOp.getNameAttr()), inOp.getBounds());
+      outOp.setDataClause(inOp.getDataClause());
+      outOp.setModifiers(inOp.getModifiers());
+    }
+  }
 
-    // TODO(OpenACC): Some clauses require that we add info about them to the
-    // DeclareExitOp.  However, we don't have any of those implemented yet, so
-    // we should add infrastructure here to do that once we have one
-    // implemented.
+  void emit(CIRGenFunction &cgf) override {
+    auto exitOp = mlir::acc::DeclareExitOp::create(
+        cgf.getBuilder(), enterOp.getLoc(), enterOp, {});
+
+    // Some data clauses need to be referenced in 'exit', AND need to have an
+    // operation after the exit.  Copy these from the enter operation.
+    for (mlir::Value val : enterOp.getDataClauseOperands()) {
+      if (auto copyin = val.getDefiningOp<mlir::acc::CopyinOp>()) {
+        switch (copyin.getDataClause()) {
+        default:
+          llvm_unreachable(
+              "OpenACC local declare clause copyin unexpected data clause");
+          break;
+        case mlir::acc::DataClause::acc_copy:
+          createOutOp<mlir::acc::CopyoutOp>(cgf, copyin);
+          break;
+        case mlir::acc::DataClause::acc_copyin:
+          createOutOp<mlir::acc::DeleteOp>(cgf, copyin);
+          break;
+        }
+      } else if (auto create = val.getDefiningOp<mlir::acc::CreateOp>()) {
+        switch (create.getDataClause()) {
+        default:
+          llvm_unreachable(
+              "OpenACC local declare clause create unexpected data clause");
+          break;
+        case mlir::acc::DataClause::acc_copyout:
+          createOutOp<mlir::acc::CopyoutOp>(cgf, create);
+          break;
+        case mlir::acc::DataClause::acc_create:
+          createOutOp<mlir::acc::DeleteOp>(cgf, create);
+          break;
+        }
+      } else if (auto present = val.getDefiningOp<mlir::acc::PresentOp>()) {
+        createOutOp<mlir::acc::DeleteOp>(cgf, present);
+      } else if (auto dev_res =
+                     val.getDefiningOp<mlir::acc::DeclareDeviceResidentOp>()) {
+        createOutOp<mlir::acc::DeleteOp>(cgf, dev_res);
+      } else if (val.getDefiningOp<mlir::acc::DeclareLinkOp>()) {
+        // Link has no exit clauses, and shouldn't be copied.
+        continue;
+      } else if (val.getDefiningOp<mlir::acc::DevicePtrOp>()) {
+        // DevicePtr has no exit clauses, and shouldn't be copied.
+        continue;
+      } else {
+        llvm_unreachable("OpenACC local declare clause unexpected defining op");
+        continue;
+      }
+      exitOp.getDataClauseOperandsMutable().append(val);
+    }
   }
 };
 } // namespace
