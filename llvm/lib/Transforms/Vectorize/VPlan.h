@@ -2398,10 +2398,9 @@ protected:
 struct RdxOrdered {};
 // This reduction is in-loop.
 struct RdxInLoop {};
-// This reduction is normal with a >= 1 factor that the vector length is
-// scaled down by.
+// This reduction is unordered with the partial result scaled down by some
+// factor.
 struct RdxUnordered {
-  // The factor by which the output is scaled down from the VF.
   unsigned VFScaleFactor;
 };
 using ReductionStyle = std::variant<RdxOrdered, RdxInLoop, RdxUnordered>;
@@ -2879,7 +2878,7 @@ public:
             R.getFastMathFlags(),
             cast_or_null<Instruction>(R.getUnderlyingValue()),
             ArrayRef<VPValue *>({R.getChainOp(), R.getVecOp(), &EVL}), CondOp,
-            getReductionStyle(true, R.isOrdered(), 1), DL) {}
+            getReductionStyle(/*InLoop=*/true, R.isOrdered(), 1), DL) {}
 
   ~VPReductionEVLRecipe() override = default;
 

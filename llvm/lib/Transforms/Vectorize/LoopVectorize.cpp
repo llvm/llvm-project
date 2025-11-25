@@ -8802,8 +8802,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (CM.blockNeedsPredicationForAnyReason(CurrentLinkI->getParent()))
         CondOp = RecipeBuilder.getBlockInMask(CurrentLink->getParent());
 
-      bool UseOrderedReductions = PhiR->isOrdered();
-      ReductionStyle Style = getReductionStyle(true, UseOrderedReductions, 1);
+      ReductionStyle Style = getReductionStyle(true, PhiR->isOrdered(), 1);
       auto *RedRecipe =
           new VPReductionRecipe(Kind, FMFs, CurrentLinkI, PreviousLink, VecOp,
                                 CondOp, Style, CurrentLinkI->getDebugLoc());

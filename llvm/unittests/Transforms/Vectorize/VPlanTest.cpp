@@ -1322,7 +1322,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
     VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
-                             CondOp, RdxNormal{});
+                             CondOp, RdxUnordered{});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1334,7 +1334,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
     VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
-                             CondOp, RdxNormal{});
+                             CondOp, RdxUnordered{});
     VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 4));
     VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
     EXPECT_FALSE(EVLRecipe.mayHaveSideEffects());
@@ -1687,7 +1687,7 @@ TEST_F(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
   VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
-                           CondOp, RdxNormal{});
+                           CondOp, RdxUnordered{});
   checkVPRecipeCastImpl<VPReductionRecipe, VPUser>(&Recipe);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
@@ -1700,7 +1700,7 @@ TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
   VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
   VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
-                           CondOp, RdxNormal{});
+                           CondOp, RdxUnordered{});
   VPValue *EVL = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 0));
   VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
   checkVPRecipeCastImpl<VPReductionEVLRecipe, VPUser>(&EVLRecipe);
