@@ -149,6 +149,8 @@ foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
   def ATAN_#FPTy : RuntimeLibcall;
   def ATAN2_#FPTy : RuntimeLibcall;
   def SINCOS_#FPTy : RuntimeLibcall;
+  def REMQUO_#FPTy : RuntimeLibcall;
+  def FDIM_#FPTy : RuntimeLibcall;
 }
 
 foreach FPTy = [ "F32", "F64" ] in {
@@ -180,6 +182,12 @@ foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
   def FREXP_#FPTy : RuntimeLibcall;
   def SINCOSPI_#FPTy : RuntimeLibcall;
   def MODF_#FPTy : RuntimeLibcall;
+  def NAN_#FPTy : RuntimeLibcall;
+  def NEXTTOWARD_#FPTy : RuntimeLibcall;
+  def REMAINDER_#FPTy : RuntimeLibcall;
+  def SCALBLN_#FPTy : RuntimeLibcall;
+  def SCALBN_#FPTy : RuntimeLibcall;
+  def TGAMMA_#FPTy : RuntimeLibcall;
 }
 
 defvar F32VectorSuffixes = ["V2F32", "V4F32", "V8F32", "V16F32", "NXV4F32"];
@@ -1033,6 +1041,38 @@ defm frexpl : LibmLongDoubleLibCall;
 def modff : RuntimeLibcallImpl<MODF_F32>;
 def modf : RuntimeLibcallImpl<MODF_F64>;
 defm modfl : LibmLongDoubleLibCall;
+
+def nanf : RuntimeLibcallImpl<NAN_F32>;
+def nan : RuntimeLibcallImpl<NAN_F64>;
+defm nanl : LibmLongDoubleLibCall;
+
+def nexttowardf : RuntimeLibcallImpl<NEXTTOWARD_F32>;
+def nexttoward : RuntimeLibcallImpl<NEXTTOWARD_F64>;
+defm nexttowardl : LibmLongDoubleLibCall;
+
+def remainderf : RuntimeLibcallImpl<REMAINDER_F32>;
+def remainder : RuntimeLibcallImpl<REMAINDER_F64>;
+defm remainderl : LibmLongDoubleLibCall;
+
+def remquof : RuntimeLibcallImpl<REMQUO_F32>;
+def remquo : RuntimeLibcallImpl<REMQUO_F64>;
+defm remquol : LibmLongDoubleLibCall;
+
+def fdimf : RuntimeLibcallImpl<FDIM_F32>;
+def fdim : RuntimeLibcallImpl<FDIM_F64>;
+defm fdiml : LibmLongDoubleLibCall;
+
+def scalbnf : RuntimeLibcallImpl<SCALBN_F32>;
+def scalbn : RuntimeLibcallImpl<SCALBN_F64>;
+defm scalbnl : LibmLongDoubleLibCall;
+
+def scalblnf : RuntimeLibcallImpl<SCALBLN_F32>;
+def scalbln : RuntimeLibcallImpl<SCALBLN_F64>;
+defm scalblnl : LibmLongDoubleLibCall;
+
+def tgammaf : RuntimeLibcallImpl<TGAMMA_F32>;
+def tgamma : RuntimeLibcallImpl<TGAMMA_F64>;
+defm tgammal : LibmLongDoubleLibCall;
 
 // Floating point environment
 def fegetenv : RuntimeLibcallImpl<FEGETENV>;
