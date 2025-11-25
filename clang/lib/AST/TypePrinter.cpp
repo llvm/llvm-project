@@ -23,6 +23,7 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
@@ -1518,11 +1519,11 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
     return;
   }
 
-  bool HasKindDecoration = false;
+  bool PrintKindDecoration = Policy.AnonymousTagLocations;
 
   if (T->isCanonicalUnqualified()) {
     if (!Policy.SuppressTagKeyword && !D->getTypedefNameForAnonDecl()) {
-      HasKindDecoration = true;
+      PrintKindDecoration = false;
       OS << D->getKindName();
       OS << ' ';
     }
@@ -1546,51 +1547,10 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
   else if (TypedefNameDecl *Typedef = D->getTypedefNameForAnonDecl()) {
     assert(Typedef->getIdentifier() && "Typedef without identifier?");
     OS << Typedef->getIdentifier()->getName();
-  } else {
-    // Make an unambiguous representation for anonymous types, e.g.
-    //   (anonymous enum at /usr/include/string.h:120:9)
-    OS << (Policy.MSVCFormatting ? '`' : '(');
-
-    if (isa<CXXRecordDecl>(D) && cast<CXXRecordDecl>(D)->isLambda()) {
-      OS << "lambda";
-      HasKindDecoration = true;
-    } else if ((isa<RecordDecl>(D) && cast<RecordDecl>(D)->isAnonymousStructOrUnion())) {
-      OS << "anonymous";
-    } else {
-      OS << "unnamed";
-    }
-
-    if (Policy.AnonymousTagLocations) {
-      // Suppress the redundant tag keyword if we just printed one.
-      // We don't have to worry about ElaboratedTypes here because you can't
-      // refer to an anonymous type with one.
-      if (!HasKindDecoration)
-        OS << " " << D->getKindName();
-
-      PresumedLoc PLoc = D->getASTContext().getSourceManager().getPresumedLoc(
-          D->getLocation());
-      if (PLoc.isValid()) {
-        OS << " at ";
-        StringRef File = PLoc.getFilename();
-        llvm::SmallString<1024> WrittenFile(File);
-        if (auto *Callbacks = Policy.Callbacks)
-          WrittenFile = Callbacks->remapPath(File);
-        // Fix inconsistent path separator created by
-        // clang::DirectoryLookup::LookupFile when the file path is relative
-        // path.
-        llvm::sys::path::Style Style =
-            llvm::sys::path::is_absolute(WrittenFile)
-                ? llvm::sys::path::Style::native
-                : (Policy.MSVCFormatting
-                       ? llvm::sys::path::Style::windows_backslash
-                       : llvm::sys::path::Style::posix);
-        llvm::sys::path::native(WrittenFile, Style);
-        OS << WrittenFile << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
-      }
-    }
-
-    OS << (Policy.MSVCFormatting ? '\'' : ')');
-  }
+  } else
+    printAnonymousTagDecl(OS, D, Policy,
+                          /*PrintKindDecoration=*/PrintKindDecoration,
+                          /*PrintTagLocations=*/Policy.AnonymousTagLocations);
 
   // If this is a class template specialization, print the template
   // arguments.
@@ -2467,6 +2427,58 @@ static bool isSubstitutedTemplateArgument(ASTContext &Ctx, TemplateArgument Arg,
 
   // FIXME: Handle more cases.
   return false;
+}
+
+void clang::printAnonymousTagDecl(llvm::raw_ostream &OS, const TagDecl *D,
+                                  const PrintingPolicy &Policy,
+                                  bool PrintKindDecoration,
+                                  bool PrintTagLocations) {
+  assert(D);
+
+  // Make an unambiguous representation for anonymous types, e.g.
+  //   (anonymous enum at /usr/include/string.h:120:9)
+  OS << (Policy.MSVCFormatting ? '`' : '(');
+
+  if (isa<CXXRecordDecl>(D) && cast<CXXRecordDecl>(D)->isLambda()) {
+    PrintKindDecoration = false;
+    OS << "lambda";
+  } else if ((isa<RecordDecl>(D) &&
+              cast<RecordDecl>(D)->isAnonymousStructOrUnion())) {
+    OS << "anonymous";
+  } else {
+    OS << "unnamed";
+  }
+
+  // Suppress the redundant tag keyword if we just printed one.
+  // We don't have to worry about ElaboratedTypes here because you can't
+  // refer to an anonymous type with one.
+  if (PrintKindDecoration)
+    OS << " " << D->getKindName();
+
+  if (PrintTagLocations) {
+    PresumedLoc PLoc =
+        D->getASTContext().getSourceManager().getPresumedLoc(D->getLocation());
+    if (PLoc.isValid()) {
+      OS << " at ";
+      StringRef File = PLoc.getFilename();
+      llvm::SmallString<1024> WrittenFile(File);
+      if (auto *Callbacks = Policy.Callbacks)
+        WrittenFile = Callbacks->remapPath(File);
+      // Fix inconsistent path separator created by
+      // clang::DirectoryLookup::LookupFile when the file path is relative
+      // path.
+      llvm::sys::path::Style Style =
+          llvm::sys::path::is_absolute(WrittenFile)
+              ? llvm::sys::path::Style::native
+              : (Policy.MSVCFormatting
+                     ? llvm::sys::path::Style::windows_backslash
+                     : llvm::sys::path::Style::posix);
+      llvm::sys::path::native(WrittenFile, Style);
+      OS << WrittenFile << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
+    }
+  }
+
+  OS << (Policy.MSVCFormatting ? '\'' : ')');
 }
 
 bool clang::isSubstitutedDefaultArgument(ASTContext &Ctx, TemplateArgument Arg,

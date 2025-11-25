@@ -7374,6 +7374,10 @@ bool isSubstitutedDefaultArgument(ASTContext &Ctx, TemplateArgument Arg,
                                   ArrayRef<TemplateArgument> Args,
                                   unsigned Depth);
 
+void printAnonymousTagDecl(llvm::raw_ostream &OS, const TagDecl *D,
+                           const PrintingPolicy &Policy,
+                           bool PrintKindDecoration, bool PrintTagLocations);
+
 /// Represents a qualified type name for which the type name is
 /// dependent.
 ///
