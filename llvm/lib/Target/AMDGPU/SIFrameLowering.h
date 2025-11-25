@@ -37,13 +37,14 @@ public:
   void determinePrologEpilogSGPRSaves(MachineFunction &MF, BitVector &SavedRegs,
                                       bool NeedExecCopyReservedReg) const;
   void emitCSRSpillStores(MachineFunction &MF, MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI, DebugLoc &DL,
+                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                           LiveRegUnits &LiveUnits, Register FrameReg,
                           Register FramePtrRegScratchCopy,
                           const bool NeedsFrameMoves) const;
   void emitCSRSpillRestores(MachineFunction &MF, MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, DebugLoc &DL,
-                            LiveRegUnits &LiveUnits, Register FrameReg,
+                            MachineBasicBlock::iterator MBBI,
+                            const DebugLoc &DL, LiveRegUnits &LiveUnits,
+                            Register FrameReg,
                             Register FramePtrRegScratchCopy) const;
   bool
   assignCalleeSavedSpillSlots(MachineFunction &MF,
