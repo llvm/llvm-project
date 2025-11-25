@@ -2666,6 +2666,15 @@ defm sanitize_minimal_runtime : BoolOption<"f", "sanitize-minimal-runtime",
   PosFlag<SetTrue>,
   NegFlag<SetFalse>>,
   Group<f_clang_Group>;
+defm sanitize_handler_preserve_all_regs
+    : BoolOption<
+          "f", "sanitize-handler-preserve-all-regs",
+          CodeGenOpts<"SanitizeHandlerPreserveAllRegs">, DefaultFalse,
+          PosFlag<SetTrue, [], [],
+                  "Enable handlers with preserve_all calling convention">,
+          NegFlag<SetFalse, [], [],
+                  "Disable handlers with preserve_all calling convention">>,
+      Group<f_clang_Group>;
 def fsanitize_link_runtime : Flag<["-"], "fsanitize-link-runtime">,
                            Group<f_clang_Group>;
 def fno_sanitize_link_runtime : Flag<["-"], "fno-sanitize-link-runtime">,
@@ -2788,6 +2797,9 @@ def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">
   Group<f_Group>;
 def fassociative_math : Flag<["-"], "fassociative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
 def fno_associative_math : Flag<["-"], "fno-associative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
+def ffast_real_mod : Flag<["-"], "ffast-real-mod">,
+  Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Enable optimization of MOD for REAL types">;
 def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">,
   Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
@@ -6070,7 +6082,7 @@ def prebind : Flag<["-"], "prebind">;
 def preload : Flag<["-"], "preload">;
 def print_file_name_EQ : Joined<["-", "--"], "print-file-name=">,
   HelpText<"Print the full library path of <file>">, MetaVarName<"<file>">,
-  Visibility<[ClangOption, CLOption]>;
+  Visibility<[ClangOption, FlangOption, CLOption]>;
 def print_ivar_layout : Flag<["-"], "print-ivar-layout">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable Objective-C Ivar layout bitmap print trace">,

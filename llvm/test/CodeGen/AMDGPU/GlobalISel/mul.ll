@@ -3142,8 +3142,8 @@ define amdgpu_ps void @s_mul_u64_sext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v4, v6, 0
 ; GFX7-NEXT:    v_ashrrev_i32_e32 v7, 31, v4
-; GFX7-NEXT:    v_mov_b32_e32 v5, v3
-; GFX7-NEXT:    v_mad_u64_u32 v[3:4], s[4:5], v7, v6, v[5:6]
+; GFX7-NEXT:    v_mad_u64_u32 v[4:5], s[4:5], v7, v6, v[3:4]
+; GFX7-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX7-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -3154,8 +3154,8 @@ define amdgpu_ps void @s_mul_u64_sext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v4, v6, 0
 ; GFX8-NEXT:    v_ashrrev_i32_e32 v7, 31, v4
-; GFX8-NEXT:    v_mov_b32_e32 v5, v3
-; GFX8-NEXT:    v_mad_u64_u32 v[3:4], s[0:1], v7, v6, v[5:6]
+; GFX8-NEXT:    v_mad_u64_u32 v[4:5], s[0:1], v7, v6, v[3:4]
+; GFX8-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX8-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX8-NEXT:    s_endpgm
 ;
@@ -3166,8 +3166,8 @@ define amdgpu_ps void @s_mul_u64_sext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v4, v6, 0
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v7, 31, v4
-; GFX9-NEXT:    v_mov_b32_e32 v5, v3
-; GFX9-NEXT:    v_mad_u64_u32 v[3:4], s[0:1], v7, v6, v[5:6]
+; GFX9-NEXT:    v_mad_u64_u32 v[4:5], s[0:1], v7, v6, v[3:4]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -3187,8 +3187,8 @@ define amdgpu_ps void @s_mul_u64_sext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, 0x50, v4, 0
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v6, 31, v4
-; GFX11-NEXT:    v_mov_b32_e32 v5, v3
-; GFX11-NEXT:    v_mad_u64_u32 v[3:4], null, 0x50, v6, v[5:6]
+; GFX11-NEXT:    v_mad_u64_u32 v[4:5], null, 0x50, v6, v[3:4]
+; GFX11-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX11-NEXT:    s_endpgm
 ;
