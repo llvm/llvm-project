@@ -258,12 +258,8 @@ define i8 @multiple_inductions_start_at_0() {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <32 x i8> [ zeroinitializer, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <32 x i8> [[VEC_IND]], zeroinitializer
-; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <32 x i8> [[STEP_ADD]], zeroinitializer
-; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <32 x i8> [[STEP_ADD_2]], zeroinitializer
+; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = phi <32 x i8> [ zeroinitializer, [[VECTOR_PH]] ], [ [[STEP_ADD_3]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 128
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <32 x i8> [[STEP_ADD_3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
