@@ -1,8 +1,105 @@
-# The LLVM Compiler Infrastructure
+# DSLLVM - Defense System LLVM Compiler
 
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8273/badge)](https://www.bestpractices.dev/projects/8273)
-[![libc++](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule)](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml?query=event%3Aschedule)
+**Version**: 1.6.0 (Phase 3: High-Assurance)
+**Repository**: https://github.com/SWORDIntel/DSLLVM
+
+---
+
+## 🎯 Overview
+
+Welcome to **DSLLVM** - a specialized LLVM-based compiler infrastructure for military Command, Control & Communications (C3) and Joint All-Domain Command & Control (JADC2) systems. This repository extends the standard LLVM project with:
+
+- **DSMIL Compiler** (`dsmil/`): War-fighting compiler with classification-aware security
+- **TPM2 Compatibility Layer** (`tpm2_compat/`): 88 cryptographic algorithms with hardware acceleration
+- **Mission-Aware Compilation**: Optimized for contested operational environments
+
+---
+
+## 🚀 Quick Links
+
+- **[DSLLVM Build Guide](DSLLVM-BUILD-GUIDE.md)**: How to use DSLLVM as your default compiler
+- **[DSMIL Documentation](dsmil/README.md)**: DSMIL compiler features and usage
+- **[TPM2 Algorithms](tpm2_compat/README.md)**: 88 cryptographic algorithms reference
+
+---
+
+## ⭐ Key Components
+
+### 1. DSMIL Compiler (`dsmil/`)
+
+War-fighting compiler with operational capabilities:
+- 9-layer/104-device architecture awareness
+- CNSA 2.0 cryptographic provenance (SHA-384, ML-DSA-87, ML-KEM-1024)
+- Cross-domain security (DoD classification levels)
+- JADC2 & 5G/MEC integration
+- Operational stealth modes
+- Mission profiles (border_ops, cyber_defence, covert_ops)
+
+**Quick Start**:
+```bash
+export CC=/home/user/DSLLVM/build/bin/dsmil-clang
+dsmil-clang -O3 -fpass-pipeline=dsmil-default -o output input.c
+```
+
+### 2. TPM2 Compatibility Layer (`tpm2_compat/`)
+
+Complete TPM 2.0 cryptographic algorithm support (88 algorithms):
+- 10 Hash algorithms (SHA-256/384/512, SHA3, SM3, SHAKE)
+- 22 Symmetric ciphers (AES modes, ChaCha20, Camellia, SM4)
+- 17 Asymmetric algorithms (RSA, ECC/NIST P-curves, Ed25519/448)
+- 11 Key derivation functions (HKDF, PBKDF2, scrypt, Argon2)
+- 8 Post-quantum algorithms (Kyber, Dilithium, Falcon)
+- Hardware acceleration (Intel NPU, AES-NI, SHA-NI, AVX-512)
+
+**Quick Start**:
+```bash
+cd tpm2_compat
+cmake -S . -B build -DENABLE_HARDWARE_ACCEL=ON
+cmake --build build
+```
+
+---
+
+## 📦 Building DSLLVM
+
+### Prerequisites
+```bash
+sudo apt-get install -y build-essential cmake ninja-build python3 git libssl-dev
+```
+
+### Build LLVM/Clang + DSMIL
+```bash
+cmake -G Ninja -S llvm -B build \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_DSMIL=ON \
+  -DLLVM_TARGETS_TO_BUILD="X86"
+
+ninja -C build
+```
+
+### Build TPM2 Library
+```bash
+cd tpm2_compat
+cmake -S . -B build -DENABLE_HARDWARE_ACCEL=ON
+cmake --build build -j$(nproc)
+```
+
+---
+
+## 📚 Documentation
+
+### DSLLVM-Specific
+- **[DSLLVM-BUILD-GUIDE.md](DSLLVM-BUILD-GUIDE.md)**: Default compiler configuration
+- **[dsmil/docs/DSLLVM-DESIGN.md](dsmil/docs/DSLLVM-DESIGN.md)**: DSMIL design specification
+- **[dsmil/docs/MISSION-PROFILES-GUIDE.md](dsmil/docs/MISSION-PROFILES-GUIDE.md)**: Mission profiles
+- **[tpm2_compat/README.md](tpm2_compat/README.md)**: TPM2 algorithms reference
+
+### Upstream LLVM
+- [Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html)
+- [Contributing to LLVM](https://llvm.org/docs/Contributing.html)
+
+---
 
 Welcome to the LLVM project!
 
