@@ -151,7 +151,7 @@ class getInterp16Ins <bit HasSrc2, bit HasOMod,
 
 class VOP3_INTERP16 <list<ValueType> ArgVT, bit OpSel = 0> : VOPProfile<ArgVT> {
   let IsSingle = 1;
-  let HasOMod = !ne(DstVT.Value, f16.Value);
+  let HasOMod = !ne(DstVT, f16);
   let HasHigh = 1;
   let HasOpSel = OpSel;
 

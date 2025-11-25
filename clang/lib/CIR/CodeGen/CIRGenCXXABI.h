@@ -192,6 +192,9 @@ public:
                                        QualType elementType,
                                        const CXXDestructorDecl *dtor) = 0;
 
+  virtual size_t getSrcArgforCopyCtor(const CXXConstructorDecl *,
+                                      FunctionArgList &args) const = 0;
+
   /// Checks if ABI requires extra virtual offset for vtable field.
   virtual bool
   isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,
