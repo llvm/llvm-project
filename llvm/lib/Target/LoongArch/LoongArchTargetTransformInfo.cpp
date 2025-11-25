@@ -17,6 +17,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/InstructionCost.h"
 #include <optional>
 
@@ -556,8 +557,75 @@ InstructionCost LoongArchTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   }
 }
 
-bool LoongArchTTIImpl::prefersVectorizedAddressing() const {
-  return false;
+InstructionCost LoongArchTTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, const Instruction *I) const {
+
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  MVT MTy = LT.second;
+
+  InstructionCost ExtraCost = 0;
+
+  // [x]vsl{t/e}[i] needs extra cost
+  if (MTy.isVector() && MTy.getScalarSizeInBits() == 64 &&
+      CostKind == TTI::TCK_Latency)
+    if (VecPred != CmpInst::ICMP_EQ && VecPred != CmpInst::ICMP_NE)
+      ExtraCost = 1;
+
+  static const CostKindTblEntry LSXCostTable[] = {
+      {ISD::SETCC, MVT::v16i8, {1, 1}}, // veq.b/...
+      {ISD::SETCC, MVT::v8i16, {1, 1}}, // veq.h/...
+      {ISD::SETCC, MVT::v4i32, {1, 1}}, // veq.w/...
+      {ISD::SETCC, MVT::v2i64, {1, 1}}, // veq.d/...
+
+      {ISD::SETCC, MVT::v4f32, {2, 1}}, // vfcmp.cond.s
+      {ISD::SETCC, MVT::v2f64, {2, 1}}, // vfcmp.cond.d
+
+      {ISD::SELECT, MVT::v16i8, {1, 2}}, // vbitsel.v
+      {ISD::SELECT, MVT::v8i16, {1, 2}}, // vbitsel.v
+      {ISD::SELECT, MVT::v4i32, {1, 2}}, // vbitsel.v
+      {ISD::SELECT, MVT::v2i64, {1, 2}}, // vbitsel.v
+
+      {ISD::SELECT, MVT::v4f32, {1, 2}}, // vbitsel.v
+      {ISD::SELECT, MVT::v2f64, {1, 2}}, // vbitsel.v
+  };
+
+  static const CostKindTblEntry LASXCostTable[] = {
+      {ISD::SETCC, MVT::v32i8, {1, 1}},  // xveq.b/...
+      {ISD::SETCC, MVT::v16i16, {1, 1}}, // xveq.h/...
+      {ISD::SETCC, MVT::v8i32, {1, 1}},  // xveq.w/...
+      {ISD::SETCC, MVT::v4i64, {1, 1}},  // xveq.d/...
+
+      {ISD::SETCC, MVT::v2f32, {2, 1}}, // xvfcmp.cond.s
+      {ISD::SETCC, MVT::v4f64, {2, 1}}, // xvfcmp.cond.d
+
+      {ISD::SELECT, MVT::v32i8, {1, 2}},  // xvbitsel.v
+      {ISD::SELECT, MVT::v16i16, {1, 2}}, // xvbitsel.v
+      {ISD::SELECT, MVT::v8i32, {1, 2}},  // xvbitsel.v
+      {ISD::SELECT, MVT::v4i64, {1, 2}},  // xvbitsel.v
+
+      {ISD::SELECT, MVT::v8f32, {1, 2}}, // xvbitsel.v
+      {ISD::SELECT, MVT::v4f64, {1, 2}}, // xvbitsel.v
+  };
+
+  if (ST->hasExtLSX()) {
+    if (const auto *Entry = CostTableLookup(LSXCostTable, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * (ExtraCost + *KindCost);
+  }
+
+  if (ST->hasExtLASX()) {
+    if (const auto *Entry = CostTableLookup(LASXCostTable, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * (ExtraCost + *KindCost);
+  }
+
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   Op1Info, Op2Info, I);
 }
+
+bool LoongArchTTIImpl::prefersVectorizedAddressing() const { return false; }
 
 // TODO: Implement more hooks to provide TTI machinery for LoongArch.
