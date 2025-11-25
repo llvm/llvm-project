@@ -283,7 +283,7 @@ define amdgpu_gfx void @amdgpu_gfx() #0 {
 ; CHECK-TRUE16-NEXT:    s_mov_b32 s33, s32
 ; CHECK-TRUE16-NEXT:    s_or_saveexec_b32 s1, -1
 ; CHECK-TRUE16-NEXT:    scratch_store_b32 off, v40, s33 offset:4 ; 4-byte Folded Spill
-; CHECK-TRUE16-NEXT:    s_wait_alu 0xfffe
+; CHECK-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-TRUE16-NEXT:    s_mov_b32 exec_lo, s1
 ; CHECK-TRUE16-NEXT:    v_writelane_b32 v40, s0, 2
 ; CHECK-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 15
@@ -296,7 +296,7 @@ define amdgpu_gfx void @amdgpu_gfx() #0 {
 ; CHECK-TRUE16-NEXT:    s_wait_storecnt 0x0
 ; CHECK-TRUE16-NEXT:    v_mov_b32_e32 v0, 0x47
 ; CHECK-TRUE16-NEXT:    v_writelane_b32 v40, s31, 1
-; CHECK-TRUE16-NEXT:    s_wait_alu 0xfffe
+; CHECK-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-TRUE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-TRUE16-NEXT:    v_readlane_b32 s31, v40, 1
@@ -305,11 +305,11 @@ define amdgpu_gfx void @amdgpu_gfx() #0 {
 ; CHECK-TRUE16-NEXT:    v_readlane_b32 s0, v40, 2
 ; CHECK-TRUE16-NEXT:    s_or_saveexec_b32 s1, -1
 ; CHECK-TRUE16-NEXT:    scratch_load_b32 v40, off, s33 offset:4 ; 4-byte Folded Reload
-; CHECK-TRUE16-NEXT:    s_wait_alu 0xfffe
+; CHECK-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-TRUE16-NEXT:    s_mov_b32 exec_lo, s1
 ; CHECK-TRUE16-NEXT:    s_mov_b32 s33, s0
 ; CHECK-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; CHECK-TRUE16-NEXT:    s_wait_alu 0xfffe
+; CHECK-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; CHECK-FAKE16-LABEL: amdgpu_gfx:
@@ -323,7 +323,7 @@ define amdgpu_gfx void @amdgpu_gfx() #0 {
 ; CHECK-FAKE16-NEXT:    s_mov_b32 s33, s32
 ; CHECK-FAKE16-NEXT:    s_or_saveexec_b32 s1, -1
 ; CHECK-FAKE16-NEXT:    scratch_store_b32 off, v40, s33 offset:4 ; 4-byte Folded Spill
-; CHECK-FAKE16-NEXT:    s_wait_alu 0xfffe
+; CHECK-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-FAKE16-NEXT:    s_mov_b32 exec_lo, s1
 ; CHECK-FAKE16-NEXT:    v_writelane_b32 v40, s0, 2
 ; CHECK-FAKE16-NEXT:    v_mov_b32_e32 v0, 15
@@ -336,7 +336,7 @@ define amdgpu_gfx void @amdgpu_gfx() #0 {
 ; CHECK-FAKE16-NEXT:    s_wait_storecnt 0x0
 ; CHECK-FAKE16-NEXT:    v_mov_b32_e32 v0, 0x47
 ; CHECK-FAKE16-NEXT:    v_writelane_b32 v40, s31, 1
-; CHECK-FAKE16-NEXT:    s_wait_alu 0xfffe
+; CHECK-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-FAKE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-FAKE16-NEXT:    v_readlane_b32 s31, v40, 1
@@ -345,11 +345,11 @@ define amdgpu_gfx void @amdgpu_gfx() #0 {
 ; CHECK-FAKE16-NEXT:    v_readlane_b32 s0, v40, 2
 ; CHECK-FAKE16-NEXT:    s_or_saveexec_b32 s1, -1
 ; CHECK-FAKE16-NEXT:    scratch_load_b32 v40, off, s33 offset:4 ; 4-byte Folded Reload
-; CHECK-FAKE16-NEXT:    s_wait_alu 0xfffe
+; CHECK-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-FAKE16-NEXT:    s_mov_b32 exec_lo, s1
 ; CHECK-FAKE16-NEXT:    s_mov_b32 s33, s0
 ; CHECK-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; CHECK-FAKE16-NEXT:    s_wait_alu 0xfffe
+; CHECK-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %local = alloca i32, addrspace(5)
   store volatile i8 15, ptr addrspace(5) %local

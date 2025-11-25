@@ -112,7 +112,7 @@ define amdgpu_cs void @loop_with_1break(ptr addrspace(1) %x, ptr addrspace(1) %a
 ; GFX10-NEXT:    s_branch .LBB2_2
 ; GFX10-NEXT:  .LBB2_1: ; %Flow
 ; GFX10-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX10-NEXT:    s_and_b32 s1, exec_lo, s5
 ; GFX10-NEXT:    s_or_b32 s4, s1, s4
@@ -186,7 +186,7 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; GFX10-NEXT:    s_branch .LBB3_3
 ; GFX10-NEXT:  .LBB3_1: ; %Flow3
 ; GFX10-NEXT:    ; in Loop: Header=BB3_3 Depth=1
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s7
 ; GFX10-NEXT:    s_andn2_b32 s2, s5, exec_lo
 ; GFX10-NEXT:    s_and_b32 s3, exec_lo, s6
@@ -284,7 +284,7 @@ define amdgpu_cs void @loop_with_3breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; GFX10-NEXT:    s_branch .LBB4_4
 ; GFX10-NEXT:  .LBB4_1: ; %Flow5
 ; GFX10-NEXT:    ; in Loop: Header=BB4_4 Depth=1
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s9
 ; GFX10-NEXT:    s_andn2_b32 s2, s6, exec_lo
 ; GFX10-NEXT:    s_and_b32 s3, exec_lo, s8
@@ -412,7 +412,7 @@ define amdgpu_cs void @loop_with_div_break_with_body(ptr addrspace(1) %x, ptr ad
 ; GFX10-NEXT:    s_branch .LBB5_2
 ; GFX10-NEXT:  .LBB5_1: ; %Flow
 ; GFX10-NEXT:    ; in Loop: Header=BB5_2 Depth=1
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX10-NEXT:    s_and_b32 s1, exec_lo, s6
 ; GFX10-NEXT:    s_or_b32 s4, s1, s4

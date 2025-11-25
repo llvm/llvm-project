@@ -171,7 +171,7 @@ define amdgpu_kernel void @sub_i1_cf(ptr addrspace(1) %out, ptr addrspace(1) %a,
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_ubyte v0, v0, s[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_andn2_b32 s2, s4, exec_lo
 ; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0

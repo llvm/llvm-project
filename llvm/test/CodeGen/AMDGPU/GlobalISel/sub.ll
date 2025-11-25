@@ -50,7 +50,7 @@ define i16 @s_sub_i16(i16 inreg %a, i16 inreg %b) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_sub_co_i32 s0, s0, s1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %c = sub i16 %a, %b
@@ -145,7 +145,7 @@ define i32 @s_sub_i32(i32 inreg %a, i32 inreg %b) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_sub_co_i32 s0, s0, s1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %c = sub i32 %a, %b
@@ -299,7 +299,7 @@ define i64 @s_sub_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[0:1], s[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %c = sub i64 %a, %b
@@ -350,7 +350,7 @@ define i64 @v_sub_i64(i64 %a, i64 %b) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v2
-; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %c = sub i64 %a, %b
@@ -438,7 +438,7 @@ define void @s_usubo_usube(i64 inreg %a, i64 inreg %b, ptr addrspace(1) %res, pt
 ; GFX12-NEXT:    s_sub_co_u32 s0, s0, s2
 ; GFX12-NEXT:    s_sub_co_ci_u32 s1, s1, s3
 ; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v6, s2
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[4:5], off
@@ -518,9 +518,9 @@ define void @v_usubo_usube(i64 %a, i64 %b, ptr addrspace(1) %res, ptr addrspace(
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v2
-; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
-; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX12-NEXT:    global_store_b64 v[4:5], v[0:1], off
 ; GFX12-NEXT:    global_store_b32 v[6:7], v2, off

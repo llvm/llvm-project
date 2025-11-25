@@ -627,7 +627,7 @@ define amdgpu_ps half @fneg_fadd_0_safe_f16(half inreg %tmp2, half inreg %tmp6, 
 ; GFX11-LABEL: fneg_fadd_0_safe_f16:
 ; GFX11:       ; %bb.0: ; %.entry
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, s1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, 0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_f16_e32 v0, 0, v0
@@ -682,7 +682,7 @@ define amdgpu_ps half @fneg_fadd_0_nsz_f16(half inreg %tmp2, half inreg %tmp6, <
 ; GFX11-LABEL: fneg_fadd_0_nsz_f16:
 ; GFX11:       ; %bb.0: ; %.entry
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, s1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_nlt_f16_e64 s1, -v0, s0

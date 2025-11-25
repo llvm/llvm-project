@@ -8,7 +8,7 @@ define i32 @test(i32 %val, i32 %cond) {
 ; GCN-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GCN-NEXT:    s_waitcnt_depctr 0xffe3
+; GCN-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GCN-NEXT:    s_mov_b32 exec_lo, s4
 ; GCN-NEXT:    s_or_saveexec_b32 s4, -1
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
@@ -30,10 +30,10 @@ define i32 @test(i32 %val, i32 %cond) {
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GCN-NEXT:    v_add_nc_u32_e32 v0, v4, v5
 ; GCN-NEXT:    s_xor_saveexec_b32 s4, -1
-; GCN-NEXT:    s_clause 0x1
+; GCN-NEXT:    s_clause 0x1 ; 8-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v2, off, s[0:3], s32
 ; GCN-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:4
-; GCN-NEXT:    s_waitcnt_depctr 0xffe3
+; GCN-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GCN-NEXT:    s_mov_b32 exec_lo, s4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]

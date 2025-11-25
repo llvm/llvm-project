@@ -192,7 +192,7 @@ define amdgpu_cs void @sgpr_inverse_ballot(i64 inreg %input, ptr addrspace(1) %o
 ; SDAG_W64:       ; %bb.0: ; %entry
 ; SDAG_W64-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
 ; SDAG_W64-NEXT:    s_mov_b32 s0, 0
-; SDAG_W64-NEXT:    s_waitcnt_depctr 0xfffe
+; SDAG_W64-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; SDAG_W64-NEXT:    v_mov_b32_e32 v3, s0
 ; SDAG_W64-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; SDAG_W64-NEXT:    s_endpgm

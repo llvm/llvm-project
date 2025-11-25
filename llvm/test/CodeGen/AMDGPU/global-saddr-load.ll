@@ -4743,7 +4743,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX10-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX10-NEXT:  .LBB132_1: ; %bb3
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_add_u32 s4, s2, s0
 ; GFX10-NEXT:    s_addc_u32 s5, s3, s1
 ; GFX10-NEXT:    s_add_u32 s0, s0, 4
@@ -4800,10 +4800,10 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v4, vcc, v0, v2
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v1, v3, vcc
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc, v2, 4
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc
 ; GFX12-GISEL-NEXT:    global_load_b32 v4, v[4:5], off scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
@@ -4856,7 +4856,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX10-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX10-NEXT:  .LBB133_1: ; %bb3
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_add_u32 s4, s2, s0
 ; GFX10-NEXT:    s_addc_u32 s5, s3, s1
 ; GFX10-NEXT:    s_add_u32 s0, s0, 4
@@ -4920,10 +4920,10 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v4, vcc, v0, v2
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v1, v3, vcc
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc, v2, 4
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc
 ; GFX12-GISEL-NEXT:    global_load_b32 v6, v[4:5], off scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0

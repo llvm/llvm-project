@@ -22,7 +22,7 @@ define amdgpu_gs void @main(ptr addrspace(8) %arg, i32 %arg1) {
 ; GFX10-NEXT:    buffer_load_format_d16_xyz v[5:6], v4, s[4:7], 0 idxen
 ; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX10-NEXT:    ; implicit-def: $vgpr4
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX10-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX10-NEXT:  ; %bb.2:

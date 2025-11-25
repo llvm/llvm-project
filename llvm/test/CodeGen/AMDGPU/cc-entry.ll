@@ -30,16 +30,16 @@ define void @caller() {
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_or_saveexec_b32 s1, -1
 ; CHECK-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s1
 ; CHECK-NEXT:    s_add_co_i32 s32, s32, 16
 ; CHECK-NEXT:    v_writelane_b32 v40, s0, 2
 ; CHECK-NEXT:    s_mov_b64 s[0:1], s[4:5]
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_sext_i32_i16 s5, s5
 ; CHECK-NEXT:    s_add_co_u32 s4, s4, entry_fn@gotpcrel32@lo+12
-; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_add_co_ci_u32 s5, s5, entry_fn@gotpcrel32@hi+24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v31
 ; CHECK-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
@@ -48,7 +48,7 @@ define void @caller() {
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[10:11]
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
@@ -57,11 +57,11 @@ define void @caller() {
 ; CHECK-NEXT:    v_readlane_b32 s0, v40, 2
 ; CHECK-NEXT:    s_or_saveexec_b32 s1, -1
 ; CHECK-NEXT:    scratch_load_b32 v40, off, s33 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s1
 ; CHECK-NEXT:    s_mov_b32 s33, s0
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   call void @entry_fn()

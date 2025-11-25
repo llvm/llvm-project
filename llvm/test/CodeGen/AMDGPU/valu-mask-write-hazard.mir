@@ -66,7 +66,7 @@ body:            |
     ; GCN-LABEL: name: mask_hazard_getpc1
     ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
     ; GCN-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
@@ -83,7 +83,7 @@ body:            |
     ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $sgpr0_sgpr1 {
     ; GCN-NEXT:   $sgpr0_sgpr1 = S_GETPC_B64
-    ; GCN-NEXT:   S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT:   S_WAITCNT_DEPCTR 65438
     ; GCN-NEXT:   $sgpr0 = S_ADD_U32 $sgpr0, target-flags(amdgpu-rel32-lo) @mem + 8, implicit-def $scc
     ; GCN-NEXT:   $sgpr1 = S_ADDC_U32 $sgpr1, target-flags(amdgpu-rel32-lo) @mem + 16, implicit-def $scc, implicit $scc
     ; GCN-NEXT: }
@@ -104,7 +104,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_vcc1
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, implicit $exec
     ; GFX11-NEXT: $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_vcc1
@@ -123,7 +123,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_vcc2
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     ; GFX11-NEXT: $vcc = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_vcc2
@@ -142,7 +142,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_cndmask_dpp1
     ; GFX11: $vgpr0 = V_CNDMASK_B32_dpp $vgpr0, 0, $vgpr1, 0, $vgpr2, 1, 15, 15, 1, implicit $vcc, implicit $exec
     ; GFX11-NEXT: $vcc = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_cndmask_dpp1
@@ -161,7 +161,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_cndmask_dpp2
     ; GFX11: $vgpr0 = V_CNDMASK_B32_e64_dpp $vgpr0, 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, 1, 15, 15, 1, implicit $exec
     ; GFX11-NEXT: $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_cndmask_dpp2
@@ -180,7 +180,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_cndmask_dpp3
     ; GFX11: $vgpr0 = V_CNDMASK_B16_fake16_e64_dpp $vgpr0, 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, 1, 15, 15, 1, implicit $exec
     ; GFX11-NEXT: $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_cndmask_dpp3
@@ -199,7 +199,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_addc1
     ; GFX11: $vgpr1, $vcc = V_ADDC_U32_e64 0, $vgpr1, $sgpr2_sgpr3, 0, implicit $exec
     ; GFX11-NEXT: $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_addc1
@@ -218,7 +218,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_addc2
     ; GFX11: $vgpr1 = V_ADDC_U32_e32 0, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
     ; GFX11-NEXT: $vcc = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_addc2
@@ -237,7 +237,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_addc3
     ; GFX11: $vgpr0 = V_ADDC_U32_dpp $vgpr0, $vgpr1, $vgpr2, 1, 15, 15, 1, implicit-def $vcc, implicit $vcc, implicit $exec
     ; GFX11-NEXT: $vcc = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_addc3
@@ -256,7 +256,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_addc4
     ; GFX11: $vgpr0, $sgpr2_sgpr3 = V_ADDC_U32_e64_dpp $vgpr0, $vgpr1, $vgpr2, $sgpr2_sgpr3, 0, 1, 15, 15, 1, implicit $exec
     ; GFX11-NEXT: $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_addc4
@@ -275,7 +275,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_subb1
     ; GFX11: $vgpr1, $vcc = V_SUBB_U32_e64 0, $vgpr1, $sgpr2_sgpr3, 0, implicit $exec
     ; GFX11-NEXT: $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_subb1
@@ -294,7 +294,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_subb2
     ; GFX11: $vgpr1 = V_SUBB_U32_e32 0, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
     ; GFX11-NEXT: $vcc = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_subb2
@@ -313,7 +313,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_subb3
     ; GFX11: $vgpr0 = V_SUBB_U32_dpp $vgpr0, $vgpr1, $vgpr2, 1, 15, 15, 1, implicit-def $vcc, implicit $vcc, implicit $exec
     ; GFX11-NEXT: $vcc = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_subb3
@@ -332,7 +332,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_subb4
     ; GFX11: $vgpr0, $sgpr2_sgpr3 = V_SUBB_U32_e64_dpp $vgpr0, $vgpr1, $vgpr2, $sgpr2_sgpr3, 0, 1, 15, 15, 1, implicit $exec
     ; GFX11-NEXT: $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_subb4
@@ -351,7 +351,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_subbrev1
     ; GFX11: $vgpr1, $vcc = V_SUBBREV_U32_e64 0, $vgpr1, $sgpr2_sgpr3, 0, implicit $exec
     ; GFX11-NEXT: $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_subbrev1
@@ -370,7 +370,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_subbrev2
     ; GFX11: $vgpr1 = V_SUBBREV_U32_e32 0, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
     ; GFX11-NEXT: $vcc = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_subbrev2
@@ -389,7 +389,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_subbrev3
     ; GFX11: $vgpr0 = V_SUBBREV_U32_dpp $vgpr0, $vgpr1, $vgpr2, 1, 15, 15, 1, implicit-def $vcc, implicit $vcc, implicit $exec
     ; GFX11-NEXT: $vcc = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_subbrev3
@@ -408,7 +408,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_subbrev4
     ; GFX11: $vgpr0, $sgpr2_sgpr3 = V_SUBBREV_U32_e64_dpp $vgpr0, $vgpr1, $vgpr2, $sgpr2_sgpr3, 0, 1, 15, 15, 1, implicit $exec
     ; GFX11-NEXT: $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_subbrev4
@@ -427,7 +427,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_div_fmas_f32
     ; GFX11: $vgpr0 = V_DIV_FMAS_F32_e64 0, $vgpr1, 0, $vgpr2, 0, $vgpr3, 0, 0, implicit $mode, implicit $vcc, implicit $exec
     ; GFX11-NEXT: $vcc = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_div_fmas_f32
@@ -446,7 +446,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_div_fmas_f64
     ; GFX11: $vgpr0_vgpr1 = V_DIV_FMAS_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, $vgpr4_vgpr5, 0, 0, implicit $mode, implicit $vcc, implicit $exec
     ; GFX11-NEXT: $vcc = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_div_fmas_f64
@@ -466,7 +466,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_subreg1
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, implicit $exec
     ; GFX11-NEXT: $sgpr2 = S_MOV_B32 0
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_subreg1
@@ -486,7 +486,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_subreg2
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, implicit $exec
     ; GFX11-NEXT: $sgpr3 = S_MOV_B32 0
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_subreg2
@@ -507,7 +507,7 @@ body:            |
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, implicit $exec
     ; GFX11-NEXT: $sgpr2 = S_MOV_B32 0
     ; GFX11-NEXT: $sgpr3 = S_MOV_B32 0
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_subreg3
@@ -529,7 +529,7 @@ body:            |
     ; GCN-LABEL: name: mask_hazard_subreg4
     ; GCN: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     ; GCN-NEXT: $vcc_lo = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
     ; GCN-NEXT: $sgpr2 = S_MOV_B32 $vcc_lo
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
@@ -546,7 +546,7 @@ body:            |
     ; GCN-LABEL: name: mask_hazard_subreg5
     ; GCN: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     ; GCN-NEXT: $vcc_hi = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
     ; GCN-NEXT: $sgpr2 = S_MOV_B32 $vcc_hi
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
@@ -564,7 +564,7 @@ body:            |
     ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GCN-NEXT: S_WAITCNT 0
     ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
     ; GCN-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
@@ -584,7 +584,7 @@ body:            |
     ; GCN-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
     ; GCN-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
@@ -604,7 +604,7 @@ body:            |
     ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GCN-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec, implicit $mode
     ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
     ; GCN-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
@@ -623,7 +623,7 @@ body:            |
     ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GCN-NEXT: $vgpr2 = V_WRITELANE_B32 $exec_lo, 0, $vgpr2
     ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
     ; GCN-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
@@ -683,7 +683,7 @@ body:            |
     ; GCN: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     ; GCN-NEXT: $vcc_lo = S_MOV_B32 0
     ; GCN-NEXT: $vcc_hi = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
     ; GCN-NEXT: $sgpr0 = S_MOV_B32 $vcc_lo
     ; GCN-NEXT: $vcc = S_MOV_B64 1
     ; GCN-NEXT: S_ENDPGM 0
@@ -702,7 +702,7 @@ body:            |
     ; GCN-LABEL: name: mask_hazard_cancel_hazard2
     ; GCN: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     ; GCN-NEXT: $vcc = S_MOV_B64 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
     ; GCN-NEXT: $sgpr0 = S_MOV_B32 $vcc_lo
     ; GCN-NEXT: $vcc = S_MOV_B64 1
     ; GCN-NEXT: S_ENDPGM 0
@@ -720,7 +720,7 @@ body:            |
     ; GCN-LABEL: name: mask_hazard_cancel_hazard3
     ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GCN-NEXT: $sgpr0_sgpr1 = S_MOV_B64 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
     ; GCN-NEXT: $sgpr4 = S_MOV_B32 $sgpr0
     ; GCN-NEXT: $sgpr0_sgpr1 = S_MOV_B64 1
     ; GCN-NEXT: S_ENDPGM 0
@@ -739,7 +739,7 @@ body:            |
     ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GCN-NEXT: $sgpr0 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr1 = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
     ; GCN-NEXT: $sgpr4 = S_MOV_B32 $sgpr0
     ; GCN-NEXT: $sgpr0_sgpr1 = S_MOV_B64 1
     ; GCN-NEXT: S_ENDPGM 0
@@ -758,16 +758,16 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_partial_cancel1
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     ; GFX11-NEXT: $vcc_lo = S_MOV_B32 0
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: $sgpr0 = S_MOV_B32 $vcc_lo
     ; GFX11-NEXT: $vcc = S_MOV_B64 1
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_partial_cancel1
     ; GFX12: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     ; GFX12-NEXT: $vcc_lo = S_MOV_B32 0
-    ; GFX12-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX12-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX12-NEXT: $sgpr0 = S_MOV_B32 $vcc_lo
     ; GFX12-NEXT: $vcc = S_MOV_B64 1
     ; GFX12-NEXT: S_ENDPGM 0
@@ -785,16 +785,16 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_partial_cancel2
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     ; GFX11-NEXT: $vcc_hi = S_MOV_B32 0
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: $sgpr0 = S_MOV_B32 $vcc_lo
     ; GFX11-NEXT: $vcc = S_MOV_B64 1
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_partial_cancel2
     ; GFX12: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     ; GFX12-NEXT: $vcc_hi = S_MOV_B32 0
-    ; GFX12-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX12-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX12-NEXT: $sgpr0 = S_MOV_B32 $vcc_lo
     ; GFX12-NEXT: $vcc = S_MOV_B64 1
     ; GFX12-NEXT: S_ENDPGM 0
@@ -812,16 +812,16 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_partial_cancel3
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GFX11-NEXT: $sgpr0 = S_MOV_B32 0
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: $sgpr3 = S_MOV_B32 $sgpr0
     ; GFX11-NEXT: $sgpr0_sgpr1 = S_MOV_B64 1
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_partial_cancel3
     ; GFX12: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GFX12-NEXT: $sgpr0 = S_MOV_B32 0
-    ; GFX12-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX12-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX12-NEXT: $sgpr3 = S_MOV_B32 $sgpr0
     ; GFX12-NEXT: $sgpr0_sgpr1 = S_MOV_B64 1
     ; GFX12-NEXT: S_ENDPGM 0
@@ -839,16 +839,16 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_partial_cancel4
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GFX11-NEXT: $sgpr1 = S_MOV_B32 0
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: $sgpr3 = S_MOV_B32 $sgpr1
     ; GFX11-NEXT: $sgpr0_sgpr1 = S_MOV_B64 1
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_partial_cancel4
     ; GFX12: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GFX12-NEXT: $sgpr1 = S_MOV_B32 0
-    ; GFX12-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GFX12-NEXT: S_WAITCNT_DEPCTR 65438
     ; GFX12-NEXT: $sgpr3 = S_MOV_B32 $sgpr1
     ; GFX12-NEXT: $sgpr0_sgpr1 = S_MOV_B64 1
     ; GFX12-NEXT: S_ENDPGM 0
@@ -866,7 +866,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_valu_readlane1
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, implicit $exec
     ; GFX11-NEXT: $sgpr2 = V_READLANE_B32 $vgpr3, 0
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61951
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61855
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_valu_readlane1
@@ -885,7 +885,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_valu_readlane2
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, implicit $exec
     ; GFX11-NEXT: $sgpr3 = V_READLANE_B32 $vgpr3, 1
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61951
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61855
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_valu_readlane2
@@ -905,7 +905,7 @@ body:            |
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, implicit $exec
     ; GFX11-NEXT: $sgpr2 = V_READLANE_B32 $vgpr3, 0
     ; GFX11-NEXT: $sgpr3 = V_READLANE_B32 $vgpr3, 1
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61951
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61855
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_valu_readlane3
@@ -926,7 +926,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_valu_readfirstlane
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, implicit $exec
     ; GFX11-NEXT: $sgpr2 = V_READFIRSTLANE_B32 $vgpr3, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61951
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61855
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_valu_readfirstlane
@@ -945,7 +945,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_valu_vcmp_vcc
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     ; GFX11-NEXT: V_CMP_NE_U32_e32 0, $vgpr5, implicit-def $vcc, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65533
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65437
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_valu_vcmp_vcc
@@ -964,7 +964,7 @@ body:            |
     ; GFX11-LABEL: name: mask_hazard_valu_vcmp_sgpr
     ; GFX11: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, implicit $exec
     ; GFX11-NEXT: $sgpr2_sgpr3 = V_CMP_EQ_U32_e64 3, $vgpr5, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61951
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61855
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_valu_vcmp_sgpr
@@ -988,7 +988,7 @@ body:            |
     ; GFX11-NEXT: $sgpr0 = S_MOV_B32 0
     ; GFX11-NEXT: $sgpr1 = S_MOV_B32 0
     ; GFX11-NEXT: $sgpr2_sgpr3 = V_CMP_EQ_U32_e64 3, $vgpr5, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61948
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61852
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_combine1
@@ -1020,10 +1020,10 @@ body:            |
     ; GFX11-NEXT: $vgpr5 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, implicit $exec
     ; GFX11-NEXT: V_CMP_NE_U32_e32 0, $vgpr5, implicit-def $vcc, implicit $exec
     ; GFX11-NEXT: $sgpr0 = S_MOV_B32 0
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65532
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65436
     ; GFX11-NEXT: $sgpr1 = S_MOV_B32 $sgpr4
     ; GFX11-NEXT: $sgpr2_sgpr3 = V_CMP_EQ_U32_e64 3, $vgpr5, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61854
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_combine2
@@ -1054,11 +1054,11 @@ body:            |
     ; GFX11-NEXT: $vgpr4 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GFX11-NEXT: $vgpr5 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, implicit $exec
     ; GFX11-NEXT: V_CMP_NE_U32_e32 0, $vgpr5, implicit-def $vcc, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65533
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65437
     ; GFX11-NEXT: $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 2, $sgpr10, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61951
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61855
     ; GFX11-NEXT: $sgpr2_sgpr3 = V_CMP_EQ_U32_e64 3, $sgpr10, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61951
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61855
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_combine3
@@ -1087,12 +1087,12 @@ body:            |
     ; GFX11-NEXT: $vgpr4 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GFX11-NEXT: $vgpr5 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, implicit $exec
     ; GFX11-NEXT: V_CMP_NE_U32_e32 0, $vgpr5, implicit-def $vcc, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65533
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65437
     ; GFX11-NEXT: $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 2, $sgpr10, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61951
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61855
     ; GFX11-NEXT: $sgpr4_sgpr5 = S_MOV_B64 $vcc
     ; GFX11-NEXT: $sgpr2_sgpr3 = V_CMP_EQ_U32_e64 3, $sgpr10, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61951
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61855
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_combine4
@@ -1123,12 +1123,12 @@ body:            |
     ; GFX11-NEXT: $vgpr4 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
     ; GFX11-NEXT: $vgpr5 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr2_sgpr3, implicit $exec
     ; GFX11-NEXT: V_CMP_NE_U32_e32 0, $vgpr5, implicit-def $vcc, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65533
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 65437
     ; GFX11-NEXT: $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 2, $sgpr10, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61951
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61855
     ; GFX11-NEXT: $sgpr5 = S_MOV_B32 $sgpr1
     ; GFX11-NEXT: $sgpr2_sgpr3 = V_CMP_EQ_U32_e64 3, $sgpr10, implicit $exec
-    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61951
+    ; GFX11-NEXT: S_WAITCNT_DEPCTR 61855
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: mask_hazard_combine5

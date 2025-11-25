@@ -23,6 +23,8 @@ using namespace clang;
 using namespace ento;
 using namespace clang::ast_matchers;
 
+using ast_matchers::internal::Matcher;
+
 static const int MAXIMUM_STEP_UNROLLED = 128;
 
 namespace {
@@ -69,6 +71,11 @@ public:
 REGISTER_LIST_WITH_PROGRAMSTATE(LoopStack, LoopState)
 
 namespace clang {
+namespace {
+AST_MATCHER(QualType, isIntegralOrEnumerationType) {
+  return Node->isIntegralOrEnumerationType();
+}
+} // namespace
 namespace ento {
 
 static bool isLoopStmt(const Stmt *S) {
@@ -82,22 +89,23 @@ ProgramStateRef processLoopEnd(const Stmt *LoopStmt, ProgramStateRef State) {
   return State;
 }
 
-static internal::Matcher<Stmt> simpleCondition(StringRef BindName,
-                                               StringRef RefName) {
+static Matcher<Stmt> simpleCondition(StringRef BindName, StringRef RefName) {
+  auto LoopVariable = ignoringParenImpCasts(
+      declRefExpr(to(varDecl(hasType(isInteger())).bind(BindName)))
+          .bind(RefName));
+  auto UpperBound = ignoringParenImpCasts(
+      expr(hasType(isIntegralOrEnumerationType())).bind("boundNum"));
+
   return binaryOperator(
              anyOf(hasOperatorName("<"), hasOperatorName(">"),
                    hasOperatorName("<="), hasOperatorName(">="),
                    hasOperatorName("!=")),
-             hasEitherOperand(ignoringParenImpCasts(
-                 declRefExpr(to(varDecl(hasType(isInteger())).bind(BindName)))
-                     .bind(RefName))),
-             hasEitherOperand(
-                 ignoringParenImpCasts(integerLiteral().bind("boundNum"))))
+             anyOf(binaryOperator(hasLHS(LoopVariable), hasRHS(UpperBound)),
+                   binaryOperator(hasRHS(LoopVariable), hasLHS(UpperBound))))
       .bind("conditionOperator");
 }
 
-static internal::Matcher<Stmt>
-changeIntBoundNode(internal::Matcher<Decl> VarNodeMatcher) {
+static Matcher<Stmt> changeIntBoundNode(Matcher<Decl> VarNodeMatcher) {
   return anyOf(
       unaryOperator(anyOf(hasOperatorName("--"), hasOperatorName("++")),
                     hasUnaryOperand(ignoringParenImpCasts(
@@ -107,15 +115,13 @@ changeIntBoundNode(internal::Matcher<Decl> VarNodeMatcher) {
                          declRefExpr(to(varDecl(VarNodeMatcher)))))));
 }
 
-static internal::Matcher<Stmt>
-callByRef(internal::Matcher<Decl> VarNodeMatcher) {
+static Matcher<Stmt> callByRef(Matcher<Decl> VarNodeMatcher) {
   return callExpr(forEachArgumentWithParam(
       declRefExpr(to(varDecl(VarNodeMatcher))),
       parmVarDecl(hasType(references(qualType(unless(isConstQualified())))))));
 }
 
-static internal::Matcher<Stmt>
-assignedToRef(internal::Matcher<Decl> VarNodeMatcher) {
+static Matcher<Stmt> assignedToRef(Matcher<Decl> VarNodeMatcher) {
   return declStmt(hasDescendant(varDecl(
       allOf(hasType(referenceType()),
             hasInitializer(anyOf(
@@ -123,14 +129,13 @@ assignedToRef(internal::Matcher<Decl> VarNodeMatcher) {
                 declRefExpr(to(varDecl(VarNodeMatcher)))))))));
 }
 
-static internal::Matcher<Stmt>
-getAddrTo(internal::Matcher<Decl> VarNodeMatcher) {
+static Matcher<Stmt> getAddrTo(Matcher<Decl> VarNodeMatcher) {
   return unaryOperator(
       hasOperatorName("&"),
       hasUnaryOperand(declRefExpr(hasDeclaration(VarNodeMatcher))));
 }
 
-static internal::Matcher<Stmt> hasSuspiciousStmt(StringRef NodeName) {
+static Matcher<Stmt> hasSuspiciousStmt(StringRef NodeName) {
   return hasDescendant(stmt(
       anyOf(gotoStmt(), switchStmt(), returnStmt(),
             // Escaping and not known mutation of the loop counter is handled
@@ -142,7 +147,7 @@ static internal::Matcher<Stmt> hasSuspiciousStmt(StringRef NodeName) {
             assignedToRef(equalsBoundNode(std::string(NodeName))))));
 }
 
-static internal::Matcher<Stmt> forLoopMatcher() {
+static Matcher<Stmt> forLoopMatcher() {
   return forStmt(
              hasCondition(simpleCondition("initVarName", "initVarRef")),
              // Initialization should match the form: 'int i = 6' or 'i = 42'.
@@ -271,23 +276,26 @@ static bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
   if (!isLoopStmt(LoopStmt))
     return false;
 
-  // TODO: Match the cases where the bound is not a concrete literal but an
-  // integer with known value
   auto Matches = match(forLoopMatcher(), *LoopStmt, ASTCtx);
   if (Matches.empty())
     return false;
 
   const auto *CounterVarRef = Matches[0].getNodeAs<DeclRefExpr>("initVarRef");
-  llvm::APInt BoundNum =
-      Matches[0].getNodeAs<IntegerLiteral>("boundNum")->getValue();
+  const Expr *BoundNumExpr = Matches[0].getNodeAs<Expr>("boundNum");
+
+  Expr::EvalResult BoundNumResult;
+  if (!BoundNumExpr || !BoundNumExpr->EvaluateAsInt(BoundNumResult, ASTCtx,
+                                                    Expr::SE_NoSideEffects)) {
+    return false;
+  }
   llvm::APInt InitNum =
       Matches[0].getNodeAs<IntegerLiteral>("initNum")->getValue();
   auto CondOp = Matches[0].getNodeAs<BinaryOperator>("conditionOperator");
-  unsigned MaxWidth = std::max(InitNum.getBitWidth(), BoundNum.getBitWidth());
+  unsigned MaxWidth = std::max(InitNum.getBitWidth(),
+                               BoundNumResult.Val.getInt().getBitWidth());
 
   InitNum = InitNum.zext(MaxWidth);
-  BoundNum = BoundNum.zext(MaxWidth);
-
+  llvm::APInt BoundNum = BoundNumResult.Val.getInt().zext(MaxWidth);
   if (CondOp->getOpcode() == BO_GE || CondOp->getOpcode() == BO_LE)
     maxStep = (BoundNum - InitNum + 1).abs().getZExtValue();
   else
