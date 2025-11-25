@@ -813,7 +813,8 @@ Error RewriteInstance::run() {
   if (opts::Instrument && !BC->IsStaticExecutable) {
     if (Error E = updateRtInitReloc())
       return E;
-    updateRtFiniReloc();
+    if (Error E = updateRtFiniReloc())
+      return E;
   }
 
   if (opts::OutputFilename == "/dev/null") {
@@ -1592,26 +1593,29 @@ Error RewriteInstance::updateRtInitReloc() {
   return Error::success();
 }
 
-void RewriteInstance::updateRtFiniReloc() {
+Error RewriteInstance::updateRtFiniReloc() {
   // Updating DT_FINI is handled by patchELFDynamic.
   if (BC->FiniAddress)
-    return;
+    return Error::success();
 
   const RuntimeLibrary *RT = BC->getRuntimeLibrary();
   if (!RT || !RT->getRuntimeFiniAddress())
-    return;
+    return Error::success();
 
-  assert(BC->FiniArrayAddress && BC->FiniArraySize &&
-         "inconsistent .fini_array state");
+  if (!BC->FiniArrayAddress || !BC->FiniArraySize)
+    return createStringError(std::errc::not_supported,
+                             "inconsistent .fini_array state");
 
   ErrorOr<BinarySection &> FiniArraySection =
       BC->getSectionForAddress(*BC->FiniArrayAddress);
-  assert(FiniArraySection && ".fini_array removed");
+  if (!FiniArraySection)
+    return createStringError(std::errc::not_supported, ".fini_array removed");
 
   if (std::optional<Relocation> Reloc =
           FiniArraySection->takeDynamicRelocationAt(0)) {
-    assert(Reloc->Addend == BC->FiniFunctionAddress &&
-           "inconsistent .fini_array dynamic relocation");
+    if (Reloc->Addend != BC->FiniFunctionAddress)
+      return createStringError(std::errc::not_supported,
+                               "inconsistent .fini_array dynamic relocation");
     Reloc->Addend = RT->getRuntimeFiniAddress();
     FiniArraySection->addDynamicRelocation(*Reloc);
   }
@@ -1624,6 +1628,7 @@ void RewriteInstance::updateRtFiniReloc() {
   FiniArraySection->addPendingRelocation(Relocation{
       /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
       /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
+  return Error::success();
 }
 
 void RewriteInstance::registerFragments() {
