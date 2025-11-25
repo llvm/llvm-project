@@ -166,7 +166,7 @@ static std::string getAddrFilteredContent(FILE *fin) {
   char buffer[1024];
   size_t bytes_read;
   while ((bytes_read = fread(buffer, 1, sizeof(buffer), fin)) > 0) {
-      content.write(buffer, bytes_read);
+    content.write(buffer, bytes_read);
   }
   return std::regex_replace(
       content.str(), std::regex("(0x[0-9a-fA-F]*)"), "[address]");
@@ -181,7 +181,7 @@ TEST(Descriptor, Dump) {
   TypeCode integer{TypeCategory::Integer, four};
   // Scalar
   descriptor.Establish(integer, four, data, 0);
-  FILE* tmpf = tmpfile();
+  FILE *tmpf = tmpfile();
   ASSERT_TRUE(tmpf) << "tmpfile returned NULL";
   auto resetTmpFile = [tmpf]() {
     rewind(tmpf);
