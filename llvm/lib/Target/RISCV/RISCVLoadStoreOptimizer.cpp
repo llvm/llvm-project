@@ -509,8 +509,7 @@ void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
         FirstReg != SecondReg &&
         "First register and second register is impossible to be same register");
     MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-               .addReg(FirstReg,
-                       getKillRegState(FirstOp.isKill() && FirstReg != BaseReg))
+               .addReg(FirstReg, getKillRegState(FirstOp.isKill()))
                .addReg(BaseReg);
 
     MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
