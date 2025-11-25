@@ -154,8 +154,8 @@ public:
   bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
                           int64_t Offset) const override;
 
-  const TargetRegisterClass *getPointerRegClass(
-    const MachineFunction &MF, unsigned Kind = 0) const override;
+  const TargetRegisterClass *
+  getPointerRegClass(unsigned Kind = 0) const override;
 
   /// Returns a legal register class to copy a register in the specified class
   /// to or from. If it is possible to copy the register directly without using
@@ -200,12 +200,13 @@ public:
   StringRef getRegAsmName(MCRegister Reg) const override;
 
   // Pseudo regs are not allowed
-  unsigned getHWRegIndex(MCRegister Reg) const {
-    return getEncodingValue(Reg) & 0xff;
-  }
+  unsigned getHWRegIndex(MCRegister Reg) const;
 
   LLVM_READONLY
   const TargetRegisterClass *getVGPRClassForBitWidth(unsigned BitWidth) const;
+
+  LLVM_READONLY const TargetRegisterClass *
+  getAlignedLo256VGPRClassForBitWidth(unsigned BitWidth) const;
 
   LLVM_READONLY
   const TargetRegisterClass *getAGPRClassForBitWidth(unsigned BitWidth) const;
@@ -213,6 +214,10 @@ public:
   LLVM_READONLY
   const TargetRegisterClass *
   getVectorSuperClassForBitWidth(unsigned BitWidth) const;
+
+  LLVM_READONLY
+  const TargetRegisterClass *
+  getDefaultVectorSuperClassForBitWidth(unsigned BitWidth) const;
 
   LLVM_READONLY
   static const TargetRegisterClass *getSGPRClassForBitWidth(unsigned BitWidth);
@@ -284,6 +289,10 @@ public:
   const TargetRegisterClass *
   getEquivalentAGPRClass(const TargetRegisterClass *SRC) const;
 
+  /// \returns An AGPR+VGPR super reg class with the same width as \p SRC
+  const TargetRegisterClass *
+  getEquivalentAVClass(const TargetRegisterClass *SRC) const;
+
   /// \returns A SGPR reg class with the same width as \p SRC
   const TargetRegisterClass *
   getEquivalentSGPRClass(const TargetRegisterClass *VRC) const;
@@ -337,14 +346,6 @@ public:
   ArrayRef<int16_t> getRegSplitParts(const TargetRegisterClass *RC,
                                      unsigned EltSize) const;
 
-  bool shouldCoalesce(MachineInstr *MI,
-                      const TargetRegisterClass *SrcRC,
-                      unsigned SubReg,
-                      const TargetRegisterClass *DstRC,
-                      unsigned DstSubReg,
-                      const TargetRegisterClass *NewRC,
-                      LiveIntervals &LIS) const override;
-
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
 
@@ -356,7 +357,7 @@ public:
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
-  const int *getRegUnitPressureSets(unsigned RegUnit) const override;
+  const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override;
 
   MCRegister getReturnAddressReg(const MachineFunction &MF) const;
 
@@ -389,8 +390,6 @@ public:
   MCRegister getVCC() const;
 
   MCRegister getExec() const;
-
-  const TargetRegisterClass *getRegClass(unsigned RCID) const;
 
   // Find reaching register definition
   MachineInstr *findReachingDef(Register Reg, unsigned SubReg,
@@ -431,11 +430,6 @@ public:
   // Returns true if a given register class is properly aligned for
   // the subtarget.
   bool isProperlyAlignedRC(const TargetRegisterClass &RC) const;
-
-  // Given \p RC returns corresponding aligned register class if required
-  // by the subtarget.
-  const TargetRegisterClass *
-  getProperlyAlignedRC(const TargetRegisterClass *RC) const;
 
   /// Return all SGPR128 which satisfy the waves per execution unit requirement
   /// of the subtarget.
@@ -494,6 +488,17 @@ public:
 
   SmallVector<StringLiteral>
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const override;
+
+  float
+  getSpillWeightScaleFactor(const TargetRegisterClass *RC) const override {
+    // Prioritize VGPR_32_Lo256 over other classes which may occupy registers
+    // beyond v256.
+    return AMDGPUGenRegisterInfo::getSpillWeightScaleFactor(RC) *
+           ((RC == &AMDGPU::VGPR_32_Lo256RegClass ||
+             RC == &AMDGPU::VReg_64_Lo256_Align2RegClass)
+                ? 2.0
+                : 1.0);
+  }
 };
 
 namespace AMDGPU {

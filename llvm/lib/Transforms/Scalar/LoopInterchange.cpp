@@ -43,6 +43,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <cassert>
 #include <utility>
@@ -258,6 +259,17 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
 
         while (Dep.size() != Level) {
           Dep.push_back('I');
+        }
+
+        // If all the elements of any direction vector have only '*', legality
+        // can't be proven. Exit early to save compile time.
+        if (all_of(Dep, [](char C) { return C == '*'; })) {
+          ORE->emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE, "Dependence",
+                                            L->getStartLoc(), L->getHeader())
+                   << "All loops have dependencies in all directions.";
+          });
+          return false;
         }
 
         // Test whether the dependency is forward or not.
@@ -1450,6 +1462,24 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
 bool LoopInterchangeProfitability::isProfitable(
     const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
     unsigned OuterLoopId, CharMatrix &DepMatrix, CacheCostManager &CCM) {
+  // Do not consider loops with a backedge that isn't taken, e.g. an
+  // unconditional branch true/false, as candidates for interchange.
+  // TODO: when interchange is forced, we should probably also allow
+  // interchange for these loops, and thus this logic should be moved just
+  // below the cost-model ignore check below. But this check is done first
+  // to avoid the issue in #163954.
+  const SCEV *InnerBTC = SE->getBackedgeTakenCount(InnerLoop);
+  const SCEV *OuterBTC = SE->getBackedgeTakenCount(OuterLoop);
+  if (InnerBTC && InnerBTC->isZero()) {
+    LLVM_DEBUG(dbgs() << "Inner loop back-edge isn't taken, rejecting "
+                         "single iteration loop\n");
+    return false;
+  }
+  if (OuterBTC && OuterBTC->isZero()) {
+    LLVM_DEBUG(dbgs() << "Outer loop back-edge isn't taken, rejecting "
+                         "single iteration loop\n");
+    return false;
+  }
 
   // Return true if interchange is forced and the cost-model ignored.
   if (Profitabilities.size() == 1 && Profitabilities[0] == RuleTy::Ignore)
@@ -1861,6 +1891,51 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
   InnerLatch->replacePhiUsesWith(InnerLatch, OuterLatch);
 }
 
+/// This deals with a corner case when a LCSSA phi node appears in a non-exit
+/// block: the outer loop latch block does not need to be exit block of the
+/// inner loop. Consider a loop that was in LCSSA form, but then some
+/// transformation like loop-unswitch comes along and creates an empty block,
+/// where BB5 in this example is the outer loop latch block:
+///
+///   BB4:
+///     br label %BB5
+///   BB5:
+///     %old.cond.lcssa = phi i16 [ %cond, %BB4 ]
+///     br outer.header
+///
+/// Interchange then brings it in LCSSA form again resulting in this chain of
+/// single-input phi nodes:
+///
+///   BB4:
+///     %new.cond.lcssa = phi i16 [ %cond, %BB3 ]
+///     br label %BB5
+///   BB5:
+///     %old.cond.lcssa = phi i16 [ %new.cond.lcssa, %BB4 ]
+///
+/// The problem is that interchange can reoder blocks BB4 and BB5 placing the
+/// use before the def if we don't check this. The solution is to simplify
+/// lcssa phi nodes (remove) if they appear in non-exit blocks.
+///
+static void simplifyLCSSAPhis(Loop *OuterLoop, Loop *InnerLoop) {
+  BasicBlock *InnerLoopExit = InnerLoop->getExitBlock();
+  BasicBlock *OuterLoopLatch = OuterLoop->getLoopLatch();
+
+  // Do not modify lcssa phis where they actually belong, i.e. in exit blocks.
+  if (OuterLoopLatch == InnerLoopExit)
+    return;
+
+  // Collect and remove phis in non-exit blocks if they have 1 input.
+  SmallVector<PHINode *, 8> Phis(
+      llvm::make_pointer_range(OuterLoopLatch->phis()));
+  for (PHINode *Phi : Phis) {
+    assert(Phi->getNumIncomingValues() == 1 && "Single input phi expected");
+    LLVM_DEBUG(dbgs() << "Removing 1-input phi in non-exit block: " << *Phi
+                      << "\n");
+    Phi->replaceAllUsesWith(Phi->getIncomingValue(0));
+    Phi->eraseFromParent();
+  }
+}
+
 bool LoopInterchangeTransform::adjustLoopBranches() {
   LLVM_DEBUG(dbgs() << "adjustLoopBranches called\n");
   std::vector<DominatorTree::UpdateType> DTUpdates;
@@ -1871,6 +1946,9 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   assert(OuterLoopPreHeader != OuterLoop->getHeader() &&
          InnerLoopPreHeader != InnerLoop->getHeader() && OuterLoopPreHeader &&
          InnerLoopPreHeader && "Guaranteed by loop-simplify form");
+
+  simplifyLCSSAPhis(OuterLoop, InnerLoop);
+
   // Ensure that both preheaders do not contain PHI nodes and have single
   // predecessors. This allows us to move them easily. We use
   // InsertPreHeaderForLoop to create an 'extra' preheader, if the existing

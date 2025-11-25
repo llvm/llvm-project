@@ -1,3 +1,4 @@
+; REQUIRES: aarch64-registered-target
 ; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Make sure we attach DW_AT_linkage_name on function declarations but only

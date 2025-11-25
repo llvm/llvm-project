@@ -14,7 +14,7 @@ define i32 @csr_d8_allocnxv4i32i32f64(double %d) "aarch64_pstate_sm_compatible" 
 ; CHECK-COMMON-LABEL: csr_d8_allocnxv4i32i32f64:
 ; CHECK-COMMON:       // %bb.0: // %entry
 ; CHECK-COMMON-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-COMMON-NEXT:    str x29, [sp, #8] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    str x29, [sp, #8] // 8-byte Spill
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #-1
 ; CHECK-COMMON-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x20, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 32 + 8 * VG
@@ -30,7 +30,7 @@ define i32 @csr_d8_allocnxv4i32i32f64(double %d) "aarch64_pstate_sm_compatible" 
 ; CHECK-COMMON-NEXT:    str z1, [x8]
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #1
 ; CHECK-COMMON-NEXT:    add sp, sp, #16
-; CHECK-COMMON-NEXT:    ldr x29, [sp, #8] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr x29, [sp, #8] // 8-byte Reload
 ; CHECK-COMMON-NEXT:    ldr d8, [sp], #16 // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ret
 ; CHECK-COMMON-NE
@@ -158,7 +158,7 @@ define i32 @csr_d8_allocnxv4i32i32f64_vla(double %d, i32 %i) "aarch64_pstate_sm_
 ; CHECK-COMMON-NEXT:    str d8, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #8] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    add x29, sp, #8
-; CHECK-COMMON-NEXT:    str x19, [sp, #24] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    str x19, [sp, #24] // 8-byte Spill
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #-1
 ; CHECK-COMMON-NEXT:    mov x19, sp
@@ -188,7 +188,7 @@ define i32 @csr_d8_allocnxv4i32i32f64_vla(double %d, i32 %i) "aarch64_pstate_sm_
 ; CHECK-COMMON-NEXT:    str z1, [x8, #-1, mul vl]
 ; CHECK-COMMON-NEXT:    sub sp, x29, #8
 ; CHECK-COMMON-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr x19, [sp, #24] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr x19, [sp, #24] // 8-byte Reload
 ; CHECK-COMMON-NEXT:    ldr d8, [sp], #32 // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ret
 entry:
@@ -218,7 +218,7 @@ define i32 @csr_d8_allocnxv4i32i32f64_stackargsi32f64(double %d0, double %d1, do
 ; CHECK-COMMON-LABEL: csr_d8_allocnxv4i32i32f64_stackargsi32f64:
 ; CHECK-COMMON:       // %bb.0: // %entry
 ; CHECK-COMMON-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-COMMON-NEXT:    str x29, [sp, #8] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    str x29, [sp, #8] // 8-byte Spill
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #-1
 ; CHECK-COMMON-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x20, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 32 + 8 * VG
@@ -234,7 +234,7 @@ define i32 @csr_d8_allocnxv4i32i32f64_stackargsi32f64(double %d0, double %d1, do
 ; CHECK-COMMON-NEXT:    str z1, [x8]
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #1
 ; CHECK-COMMON-NEXT:    add sp, sp, #16
-; CHECK-COMMON-NEXT:    ldr x29, [sp, #8] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr x29, [sp, #8] // 8-byte Reload
 ; CHECK-COMMON-NEXT:    ldr d8, [sp], #16 // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ret
 entry:
@@ -379,7 +379,7 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-COMMON-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-COMMON-NEXT:    cntd x9
 ; CHECK-COMMON-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    str x9, [sp, #16] // 8-byte Spill
 ; CHECK-COMMON-NEXT:    stp x26, x19, [sp, #48] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    mov x29, sp
 ; CHECK-COMMON-NEXT:    .cfi_def_cfa w29, 64
@@ -391,18 +391,18 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-COMMON-NEXT:    .cfi_offset w30, -56
 ; CHECK-COMMON-NEXT:    .cfi_offset w29, -64
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #-18
-; CHECK-COMMON-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-COMMON-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-COMMON-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-COMMON-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-COMMON-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; CHECK-COMMON-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; CHECK-COMMON-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; CHECK-COMMON-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; CHECK-COMMON-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; CHECK-COMMON-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; CHECK-COMMON-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; CHECK-COMMON-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; CHECK-COMMON-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-COMMON-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-COMMON-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-COMMON-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; CHECK-COMMON-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK-COMMON-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK-COMMON-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK-COMMON-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; CHECK-COMMON-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK-COMMON-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK-COMMON-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK-COMMON-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; CHECK-COMMON-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
@@ -462,18 +462,18 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-COMMON-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; CHECK-COMMON-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-COMMON-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; CHECK-COMMON-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-COMMON-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK-COMMON-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK-COMMON-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK-COMMON-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK-COMMON-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK-COMMON-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK-COMMON-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK-COMMON-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #18
 ; CHECK-COMMON-NEXT:    .cfi_restore z8
 ; CHECK-COMMON-NEXT:    .cfi_restore z9
@@ -533,7 +533,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #64
 ; CHECK-NEXT:    .cfi_def_cfa w29, 48
@@ -604,7 +604,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEWLOWERING-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEWLOWERING-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEWLOWERING-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    str x9, [sp, #80] // 8-byte Spill
 ; CHECK-NEWLOWERING-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
 ; CHECK-NEWLOWERING-NEXT:    add x29, sp, #64
 ; CHECK-NEWLOWERING-NEXT:    .cfi_def_cfa w29, 48
@@ -672,5 +672,3 @@ entry:
   ret i32 %x
 }
 declare void @other()
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK-FRAMELAYOUT: {{.*}}

@@ -45,6 +45,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.atan();
   case Operation::Atanh:
     return mpfrInput.atanh();
+  case Operation::Atanpi:
+    return mpfrInput.atanpi();
   case Operation::Cbrt:
     return mpfrInput.cbrt();
   case Operation::Ceil:
@@ -89,6 +91,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.round();
   case Operation::RoundEven:
     return mpfrInput.roundeven();
+  case Operation::Rsqrt:
+    return mpfrInput.rsqrt();
   case Operation::Sin:
     return mpfrInput.sin();
   case Operation::Sinpi:
@@ -271,6 +275,10 @@ template void explain_unary_operation_single_output_error(Operation op,
                                                           float128, long double,
                                                           double, RoundingMode);
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+
+template void explain_unary_operation_single_output_error(Operation op,
+                                                          bfloat16, bfloat16,
+                                                          double, RoundingMode);
 
 template <typename T>
 void explain_unary_operation_two_outputs_error(
@@ -559,6 +567,9 @@ template bool compare_unary_operation_single_output(Operation, float128,
                                                     long double, double,
                                                     RoundingMode);
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+template bool compare_unary_operation_single_output(Operation, bfloat16,
+                                                    bfloat16, double,
+                                                    RoundingMode);
 
 template <typename T>
 bool compare_unary_operation_two_outputs(Operation op, T input,

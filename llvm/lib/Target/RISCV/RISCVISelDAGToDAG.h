@@ -45,6 +45,8 @@ public:
                                     InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
+  bool areOffsetsWithinAlignment(SDValue Addr, Align Alignment);
+
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm9(SDValue Addr, SDValue &Base, SDValue &Offset);
@@ -74,9 +76,6 @@ public:
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
   bool trySignedBitfieldInsertInSign(SDNode *Node);
-  bool trySignedBitfieldInsertInMask(SDNode *Node);
-  bool tryBitfieldInsertOpFromXor(SDNode *Node);
-  bool tryBitfieldInsertOpFromOrAndImm(SDNode *Node);
   bool tryUnsignedBitfieldExtract(SDNode *Node, const SDLoc &DL, MVT VT,
                                   SDValue X, unsigned Msb, unsigned Lsb);
   bool tryUnsignedBitfieldInsertInZero(SDNode *Node, const SDLoc &DL, MVT VT,
@@ -166,6 +165,7 @@ public:
   void selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked, bool IsOrdered);
 
   void selectVSETVLI(SDNode *Node);
+  void selectXSfmmVSET(SDNode *Node);
 
   void selectSF_VC_X_SE(SDNode *Node);
 

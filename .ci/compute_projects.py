@@ -150,6 +150,7 @@ PROJECT_CHECK_TARGETS = {
     "mlir": "check-mlir",
     "openmp": "check-openmp",
     "polly": "check-polly",
+    "lit": "check-lit",
 }
 
 RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc", "flang-rt"}
@@ -166,7 +167,11 @@ META_PROJECTS = {
     ("llvm", "utils", "gn"): "gn",
     (".github", "workflows", "premerge.yaml"): ".ci",
     ("third-party",): ".ci",
+    ("llvm", "utils", "lit"): "lit",
 }
+
+# Projects that should run tests but cannot be explicitly built.
+SKIP_BUILD_PROJECTS = ["CIR", "lit"]
 
 # Projects that should not run any tests. These need to be metaprojects.
 SKIP_PROJECTS = ["docs", "gn"]
@@ -315,7 +320,9 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     # clang build, but it requires an explicit option to enable. We set that
     # option here, and remove it from the projects_to_build list.
     enable_cir = "ON" if "CIR" in projects_to_build else "OFF"
-    projects_to_build.discard("CIR")
+    # Remove any metaprojects from the list of projects to build.
+    for project in SKIP_BUILD_PROJECTS:
+        projects_to_build.discard(project)
 
     # We use a semicolon to separate the projects/runtimes as they get passed
     # to the CMake invocation and thus we need to use the CMake list separator

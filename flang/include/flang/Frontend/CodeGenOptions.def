@@ -35,6 +35,7 @@ CODEGENOPT(InstrumentFunctions, 1, 0) ///< Set when -finstrument_functions is
 
 CODEGENOPT(IsPIE, 1, 0) ///< PIE level is the same as PIC Level.
 CODEGENOPT(PICLevel, 2, 0) ///< PIC level of the LLVM module.
+CODEGENOPT(PrepareForFatLTO , 1, 0) ///<  Set when -ffat-lto-objects is enabled.
 CODEGENOPT(PrepareForFullLTO , 1, 0) ///< Set when -flto is enabled on the
                                      ///< compile step.
 CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the
@@ -43,15 +44,17 @@ CODEGENOPT(StackArrays, 1, 0) ///< -fstack-arrays (enable the stack-arrays pass)
 CODEGENOPT(VectorizeLoop, 1, 0) ///< Enable loop vectorization.
 CODEGENOPT(VectorizeSLP, 1, 0) ///< Enable SLP vectorization.
 CODEGENOPT(InterchangeLoops, 1, 0) ///< Enable loop interchange.
+CODEGENOPT(FuseLoops, 1, 0) ///< Enable loop fusion.
 CODEGENOPT(LoopVersioning, 1, 0) ///< Enable loop versioning.
 CODEGENOPT(UnrollLoops, 1, 0) ///< Enable loop unrolling
 CODEGENOPT(AliasAnalysis, 1, 0) ///< Enable alias analysis pass
+CODEGENOPT(DwarfVersion, 3, 0) ///< Dwarf version
 
 CODEGENOPT(Underscoring, 1, 1)
 ENUM_CODEGENOPT(RelocationModel, llvm::Reloc::Model, 3, llvm::Reloc::PIC_) ///< Name of the relocation model to use.
 ENUM_CODEGENOPT(DebugInfo,  llvm::codegenoptions::DebugInfoKind, 4,  llvm::codegenoptions::NoDebugInfo) ///< Level of debug info to generate
 ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 4, llvm::driver::VectorLibrary::NoLibrary) ///< Vector functions library to use
-ENUM_CODEGENOPT(FramePointer, llvm::FramePointerKind, 2, llvm::FramePointerKind::None) ///< Enable the usage of frame pointers
+ENUM_CODEGENOPT(FramePointer, llvm::FramePointerKind, 3, llvm::FramePointerKind::None) ///< Enable the usage of frame pointers
 ENUM_CODEGENOPT(ComplexRange, ComplexRangeKind, 3, ComplexRangeKind::CX_Full) ///< Method for calculating complex number division
 
 ENUM_CODEGENOPT(DoConcurrentMapping, DoConcurrentMappingKind, 2, DoConcurrentMappingKind::DCMK_None) ///< Map `do concurrent` to OpenMP

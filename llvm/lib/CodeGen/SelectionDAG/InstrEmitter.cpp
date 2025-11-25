@@ -125,7 +125,7 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
           const TargetRegisterClass *RC = nullptr;
           if (i + II.getNumDefs() < II.getNumOperands()) {
             RC = TRI->getAllocatableClass(
-                TII->getRegClass(II, i + II.getNumDefs(), TRI, *MF));
+                TII->getRegClass(II, i + II.getNumDefs()));
           }
           if (!UseRC)
             UseRC = RC;
@@ -160,7 +160,7 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
 
   // If all uses are reading from the src physical register and copying the
   // register is either impossible or very expensive, then don't create a copy.
-  if (MatchReg && SrcRC->getCopyCost() < 0) {
+  if (MatchReg && SrcRC->expensiveOrImpossibleToCopy()) {
     VRBase = SrcReg;
   } else {
     // Create the reg, emit the copy.
@@ -197,7 +197,7 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
     // register instead of creating a new vreg.
     Register VRBase;
     const TargetRegisterClass *RC =
-      TRI->getAllocatableClass(TII->getRegClass(II, i, TRI, *MF));
+        TRI->getAllocatableClass(TII->getRegClass(II, i));
     // Always let the value type influence the used register class. The
     // constraints on the instruction may be too lax to represent the value
     // type correctly. For example, a 64-bit float (X86::FR64) can't live in
@@ -330,7 +330,7 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
   if (II) {
     const TargetRegisterClass *OpRC = nullptr;
     if (IIOpNum < II->getNumOperands())
-      OpRC = TII->getRegClass(*II, IIOpNum, TRI, *MF);
+      OpRC = TII->getRegClass(*II, IIOpNum);
 
     if (OpRC) {
       unsigned MinNumRegs = MinRCSize;
@@ -409,8 +409,7 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB, SDValue Op,
     Register VReg = R->getReg();
     MVT OpVT = Op.getSimpleValueType();
     const TargetRegisterClass *IIRC =
-        II ? TRI->getAllocatableClass(TII->getRegClass(*II, IIOpNum, TRI, *MF))
-           : nullptr;
+        II ? TRI->getAllocatableClass(TII->getRegClass(*II, IIOpNum)) : nullptr;
     const TargetRegisterClass *OpRC =
         TLI->isTypeLegal(OpVT)
             ? TLI->getRegClassFor(OpVT,
@@ -733,6 +732,8 @@ MachineOperand GetMOForConstDbgOp(const SDDbgOperand &Op) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
     if (CI->getBitWidth() > 64)
       return MachineOperand::CreateCImm(CI);
+    if (CI->getBitWidth() == 1)
+      return MachineOperand::CreateImm(CI->getZExtValue());
     return MachineOperand::CreateImm(CI->getSExtValue());
   }
   if (const ConstantFP *CF = dyn_cast<ConstantFP>(V))
@@ -1415,13 +1416,6 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
       }
     }
 
-    // Add rounding control registers as implicit def for inline asm.
-    if (MF->getFunction().hasFnAttribute(Attribute::StrictFP)) {
-      ArrayRef<MCPhysReg> RCRegs = TLI->getRoundingControlRegisters();
-      for (MCPhysReg Reg : RCRegs)
-        MIB.addReg(Reg, RegState::ImplicitDefine);
-    }
-
     // GCC inline assembly allows input operands to also be early-clobber
     // output operands (so long as the operand is written only after it's
     // used), but this does not match the semantics of our early-clobber flag.
@@ -1441,6 +1435,13 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     const MDNode *MD = cast<MDNodeSDNode>(MDV)->getMD();
     if (MD)
       MIB.addMetadata(MD);
+
+    // Add rounding control registers as implicit def for inline asm.
+    if (MF->getFunction().hasFnAttribute(Attribute::StrictFP)) {
+      ArrayRef<MCPhysReg> RCRegs = TLI->getRoundingControlRegisters();
+      for (MCPhysReg Reg : RCRegs)
+        MIB.addReg(Reg, RegState::ImplicitDefine);
+    }
 
     MBB->insert(InsertPos, MIB);
     break;

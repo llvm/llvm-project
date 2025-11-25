@@ -175,7 +175,8 @@ public:
 
   const CIRGenFunctionInfo &arrangeCXXConstructorCall(
       const CallArgList &args, const clang::CXXConstructorDecl *d,
-      clang::CXXCtorType ctorKind, bool passProtoArgs = true);
+      clang::CXXCtorType ctorKind, unsigned extraPrefixArgs,
+      unsigned extraSuffixArgs, bool passProtoArgs = true);
 
   const CIRGenFunctionInfo &
   arrangeCXXMethodCall(const CallArgList &args,

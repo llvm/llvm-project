@@ -21,8 +21,14 @@ typedef __bf16 __m512bh_u __attribute__((__vector_size__(64), __aligned__(1)));
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS512                                                  \
-  __attribute__((__always_inline__, __nodebug__, __target__("avx10.2-512"),    \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx10.2"),        \
                  __min_vector_width__(512)))
+
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS512_CONSTEXPR __DEFAULT_FN_ATTRS512 constexpr
+#else
+#define __DEFAULT_FN_ATTRS512_CONSTEXPR __DEFAULT_FN_ATTRS512
+#endif
 
 static __inline __m512bh __DEFAULT_FN_ATTRS512 _mm512_setzero_pbh(void) {
   return __builtin_bit_cast(__m512bh, _mm512_setzero_ps());
@@ -167,13 +173,13 @@ _mm512_mask_blend_pbh(__mmask32 __U, __m512bh __A, __m512bh __W) {
                                                 (__v32bf)__A);
 }
 
-static __inline__ __m512bh __DEFAULT_FN_ATTRS512
+static __inline__ __m512bh __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_permutex2var_pbh(__m512bh __A, __m512i __I, __m512bh __B) {
   return (__m512bh)__builtin_ia32_vpermi2varhi512((__v32hi)__A, (__v32hi)__I,
                                                   (__v32hi)__B);
 }
 
-static __inline__ __m512bh __DEFAULT_FN_ATTRS512
+static __inline__ __m512bh __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_permutexvar_pbh(__m512i __A, __m512bh __B) {
   return (__m512bh)__builtin_ia32_permvarhi512((__v32hi)__B, (__v32hi)__A);
 }
@@ -555,6 +561,7 @@ static __inline__ __m512bh __DEFAULT_FN_ATTRS512 _mm512_maskz_fnmsub_pbh(
       (__v32bf)_mm512_setzero_pbh());
 }
 
+#undef __DEFAULT_FN_ATTRS512_CONSTEXPR
 #undef __DEFAULT_FN_ATTRS512
 
 #endif

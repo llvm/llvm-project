@@ -98,6 +98,11 @@ static llvm::cl::alias
                           llvm::cl::desc("intrinsic module directory"),
                           llvm::cl::aliasopt(intrinsicIncludeDirs));
 
+static llvm::cl::alias
+    intrinsicModulePath("fintrinsic-modules-path",
+                        llvm::cl::desc("intrinsic module search paths"),
+                        llvm::cl::aliasopt(intrinsicIncludeDirs));
+
 static llvm::cl::opt<std::string>
     moduleDir("module", llvm::cl::desc("module output directory (default .)"),
               llvm::cl::init("."));
@@ -316,13 +321,14 @@ createTargetMachine(llvm::StringRef targetTriple, std::string &error) {
   std::string triple{targetTriple};
   if (triple.empty())
     triple = llvm::sys::getDefaultTargetTriple();
+  llvm::Triple parsedTriple(triple);
 
   const llvm::Target *theTarget =
-      llvm::TargetRegistry::lookupTarget(triple, error);
+      llvm::TargetRegistry::lookupTarget(parsedTriple, error);
   if (!theTarget)
     return nullptr;
   return std::unique_ptr<llvm::TargetMachine>{
-      theTarget->createTargetMachine(llvm::Triple(triple), /*CPU=*/"",
+      theTarget->createTargetMachine(parsedTriple, /*CPU=*/"",
                                      /*Features=*/"", llvm::TargetOptions(),
                                      /*Reloc::Model=*/std::nullopt)};
 }
@@ -538,6 +544,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     // Add O2 optimizer pass pipeline.
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
     if (enableOpenMP)
       config.EnableOpenMP = true;
     config.NSWOnLoopVarInc = !integerWrapAround;
@@ -572,14 +579,6 @@ int main(int argc, char **argv) {
 
   if (includeDirs.size() == 0) {
     includeDirs.push_back(".");
-    // Default Fortran modules should be installed in include/flang (a sibling
-    // to the bin) directory.
-    intrinsicIncludeDirs.push_back(
-        llvm::sys::path::parent_path(
-            llvm::sys::path::parent_path(
-                llvm::sys::fs::getMainExecutable(argv[0], nullptr)))
-            .str() +
-        "/include/flang");
   }
 
   Fortran::parser::Options options;

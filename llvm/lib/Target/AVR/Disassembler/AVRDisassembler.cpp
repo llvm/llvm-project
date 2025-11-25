@@ -40,7 +40,7 @@ class AVRDisassembler : public MCDisassembler {
 public:
   AVRDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
       : MCDisassembler(STI, Ctx) {}
-  virtual ~AVRDisassembler() = default;
+  ~AVRDisassembler() override = default;
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -61,12 +61,19 @@ LLVMInitializeAVRDisassembler() {
                                          createAVRDisassembler);
 }
 
-static const uint16_t GPRDecoderTable[] = {
+static constexpr MCRegister GPRDecoderTable[] = {
     AVR::R0,  AVR::R1,  AVR::R2,  AVR::R3,  AVR::R4,  AVR::R5,  AVR::R6,
     AVR::R7,  AVR::R8,  AVR::R9,  AVR::R10, AVR::R11, AVR::R12, AVR::R13,
     AVR::R14, AVR::R15, AVR::R16, AVR::R17, AVR::R18, AVR::R19, AVR::R20,
     AVR::R21, AVR::R22, AVR::R23, AVR::R24, AVR::R25, AVR::R26, AVR::R27,
     AVR::R28, AVR::R29, AVR::R30, AVR::R31,
+};
+
+static constexpr MCRegister GPRPairDecoderTable[] = {
+    AVR::R1R0,   AVR::R3R2,   AVR::R5R4,   AVR::R7R6,
+    AVR::R9R8,   AVR::R11R10, AVR::R13R12, AVR::R15R14,
+    AVR::R17R16, AVR::R19R18, AVR::R21R20, AVR::R23R22,
+    AVR::R25R24, AVR::R27R26, AVR::R29R28, AVR::R31R30,
 };
 
 static DecodeStatus DecodeGPR8RegisterClass(MCInst &Inst, unsigned RegNo,
@@ -75,7 +82,7 @@ static DecodeStatus DecodeGPR8RegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 31)
     return MCDisassembler::Fail;
 
-  unsigned Register = GPRDecoderTable[RegNo];
+  MCRegister Register = GPRDecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Register));
   return MCDisassembler::Success;
 }
@@ -83,46 +90,41 @@ static DecodeStatus DecodeGPR8RegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeLD8RegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
-  if (RegNo > 15)
-    return MCDisassembler::Fail;
-
-  unsigned Register = GPRDecoderTable[RegNo + 16];
-  Inst.addOperand(MCOperand::createReg(Register));
+  assert(isUInt<4>(RegNo));
+  // Only r16...r31 are legal.
+  Inst.addOperand(MCOperand::createReg(GPRDecoderTable[16 + RegNo]));
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeFIOARr(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                 const MCDisassembler *Decoder) {
-  unsigned addr = 0;
-  addr |= fieldFromInstruction(Insn, 0, 4);
-  addr |= fieldFromInstruction(Insn, 9, 2) << 4;
-  unsigned reg = fieldFromInstruction(Insn, 4, 5);
-  Inst.addOperand(MCOperand::createImm(addr));
-  if (DecodeGPR8RegisterClass(Inst, reg, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
+static DecodeStatus DecodeLD8loRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  assert(isUInt<3>(RegNo));
+  // Only r16...r23 are legal.
+  Inst.addOperand(MCOperand::createReg(GPRDecoderTable[16 + RegNo]));
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeFIORdA(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                 const MCDisassembler *Decoder) {
-  unsigned addr = 0;
-  addr |= fieldFromInstruction(Insn, 0, 4);
-  addr |= fieldFromInstruction(Insn, 9, 2) << 4;
-  unsigned reg = fieldFromInstruction(Insn, 4, 5);
-  if (DecodeGPR8RegisterClass(Inst, reg, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  Inst.addOperand(MCOperand::createImm(addr));
+static DecodeStatus DecodeDREGSRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  assert(isUInt<4>(RegNo));
+  Inst.addOperand(MCOperand::createReg(GPRPairDecoderTable[RegNo]));
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeFIOBIT(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                 const MCDisassembler *Decoder) {
-  unsigned addr = fieldFromInstruction(Insn, 3, 5);
-  unsigned b = fieldFromInstruction(Insn, 0, 3);
-  Inst.addOperand(MCOperand::createImm(addr));
-  Inst.addOperand(MCOperand::createImm(b));
+static DecodeStatus DecodeIWREGSRegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  assert(isUInt<2>(RegNo));
+  // Only AVR::R25R24, AVR::R27R26, AVR::R29R28, AVR::R31R30 are legal.
+  Inst.addOperand(MCOperand::createReg(GPRPairDecoderTable[12 + RegNo]));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeZREGRegisterClass(MCInst &Inst,
+                                            const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(AVR::R31R30));
   return MCDisassembler::Success;
 }
 
@@ -135,78 +137,19 @@ static DecodeStatus decodeCallTarget(MCInst &Inst, unsigned Field,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeFRd(MCInst &Inst, unsigned Insn, uint64_t Address,
-                              const MCDisassembler *Decoder) {
-  unsigned d = fieldFromInstruction(Insn, 4, 5);
-  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
+static DecodeStatus decodeRelCondBrTarget7(MCInst &Inst, unsigned Field,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder) {
+  // The legal range is [-128, 126] (in bytes).
+  Inst.addOperand(MCOperand::createImm(SignExtend32(Field, 7) * 2));
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeFLPMX(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                const MCDisassembler *Decoder) {
-  if (decodeFRd(Inst, Insn, Address, Decoder) == MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  Inst.addOperand(MCOperand::createReg(AVR::R31R30));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeFFMULRdRr(MCInst &Inst, unsigned Insn,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder) {
-  unsigned d = fieldFromInstruction(Insn, 4, 3) + 16;
-  unsigned r = fieldFromInstruction(Insn, 0, 3) + 16;
-  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  if (DecodeGPR8RegisterClass(Inst, r, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeFMOVWRdRr(MCInst &Inst, unsigned Insn,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder) {
-  unsigned r = fieldFromInstruction(Insn, 4, 4) * 2;
-  unsigned d = fieldFromInstruction(Insn, 0, 4) * 2;
-  if (DecodeGPR8RegisterClass(Inst, r, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeFWRdK(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                const MCDisassembler *Decoder) {
-  unsigned d = fieldFromInstruction(Insn, 4, 2) * 2 + 24; // starts at r24:r25
-  unsigned k = 0;
-  k |= fieldFromInstruction(Insn, 0, 4);
-  k |= fieldFromInstruction(Insn, 6, 2) << 4;
-  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  Inst.addOperand(MCOperand::createImm(k));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeFMUL2RdRr(MCInst &Inst, unsigned Insn,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder) {
-  unsigned rd = fieldFromInstruction(Insn, 4, 4) + 16;
-  unsigned rr = fieldFromInstruction(Insn, 0, 4) + 16;
-  if (DecodeGPR8RegisterClass(Inst, rd, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  if (DecodeGPR8RegisterClass(Inst, rr, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
+static DecodeStatus decodeRelCondBrTarget13(MCInst &Inst, unsigned Field,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  // The legal range is [-4096, 4094] (in bytes).
+  Inst.addOperand(MCOperand::createImm(SignExtend32(Field, 12) * 2));
   return MCDisassembler::Success;
 }
 
@@ -227,64 +170,11 @@ static DecodeStatus decodeMemri(MCInst &Inst, unsigned Insn, uint64_t Address,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeFBRk(MCInst &Inst, unsigned Insn, uint64_t Address,
-                               const MCDisassembler *Decoder) {
-  // Decode the opcode.
-  switch (Insn & 0xf000) {
-  case 0xc000:
-    Inst.setOpcode(AVR::RJMPk);
-    break;
-  case 0xd000:
-    Inst.setOpcode(AVR::RCALLk);
-    break;
-  default: // Unknown relative branch instruction.
-    return MCDisassembler::Fail;
-  }
-  // Decode the relative offset.
-  int16_t Offset = ((int16_t)((Insn & 0xfff) << 4)) >> 3;
-  Inst.addOperand(MCOperand::createImm(Offset));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeCondBranch(MCInst &Inst, unsigned Insn,
-                                     uint64_t Address,
-                                     const MCDisassembler *Decoder) {
-  // These 8 instructions are not defined as aliases of BRBS/BRBC.
-  DenseMap<unsigned, unsigned> brInsts = {
-      {0x000, AVR::BRLOk}, {0x400, AVR::BRSHk}, {0x001, AVR::BREQk},
-      {0x401, AVR::BRNEk}, {0x002, AVR::BRMIk}, {0x402, AVR::BRPLk},
-      {0x004, AVR::BRLTk}, {0x404, AVR::BRGEk}};
-
-  // Get the relative offset.
-  int16_t Offset = ((int16_t)((Insn & 0x3f8) << 6)) >> 8;
-
-  // Search the instruction pattern.
-  auto NotAlias = [&Insn](const std::pair<unsigned, unsigned> &I) {
-    return (Insn & 0x407) != I.first;
-  };
-  llvm::partition(brInsts, NotAlias);
-  auto It = llvm::partition_point(brInsts, NotAlias);
-
-  // Decode the instruction.
-  if (It != brInsts.end()) {
-    // This instruction is not an alias of BRBC/BRBS.
-    Inst.setOpcode(It->second);
-    Inst.addOperand(MCOperand::createImm(Offset));
-  } else {
-    // Fall back to an ordinary BRBS/BRBC.
-    Inst.setOpcode(Insn & 0x400 ? AVR::BRBCsk : AVR::BRBSsk);
-    Inst.addOperand(MCOperand::createImm(Insn & 7));
-    Inst.addOperand(MCOperand::createImm(Offset));
-  }
-
-  return MCDisassembler::Success;
-}
-
 static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder) {
   // Get the register will be loaded or stored.
-  unsigned RegVal = GPRDecoderTable[(Insn >> 4) & 0x1f];
+  MCRegister RegVal = GPRDecoderTable[(Insn >> 4) & 0x1f];
 
   // Decode LDD/STD with offset less than 8.
   if ((Insn & 0xf000) == 0x8000) {

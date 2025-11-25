@@ -84,7 +84,7 @@ llvm::Expected<uint32_t> lldb_private::formatters::
     LibcxxStdVectorSyntheticFrontEnd::CalculateNumChildren() {
   if (!m_start || !m_finish)
     return llvm::createStringError(
-        "Failed to determine start/end of vector data.");
+        "failed to determine start/end of vector data");
 
   uint64_t start_val = m_start->GetValueAsUnsigned(0);
   uint64_t finish_val = m_finish->GetValueAsUnsigned(0);
@@ -94,18 +94,18 @@ llvm::Expected<uint32_t> lldb_private::formatters::
     return 0;
 
   if (start_val == 0)
-    return llvm::createStringError("Invalid value for start of vector.");
+    return llvm::createStringError("invalid value for start of vector");
 
   if (finish_val == 0)
-    return llvm::createStringError("Invalid value for end of vector.");
+    return llvm::createStringError("invalid value for end of vector");
 
   if (start_val > finish_val)
     return llvm::createStringError(
-        "Start of vector data begins after end pointer.");
+        "start of vector data begins after end pointer");
 
   size_t num_children = (finish_val - start_val);
   if (num_children % m_element_size)
-    return llvm::createStringError("Size not multiple of element size.");
+    return llvm::createStringError("size not multiple of element size");
 
   return num_children / m_element_size;
 }

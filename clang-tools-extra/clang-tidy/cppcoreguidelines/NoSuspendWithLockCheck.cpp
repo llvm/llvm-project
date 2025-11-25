@@ -1,4 +1,4 @@
-//===--- NoSuspendWithLockCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,7 @@ void NoSuspendWithLockCheck::registerMatchers(MatchFinder *Finder) {
       hasDeclaration(namedDecl(matchers::matchesAnyListedName(
           utils::options::parseStringList(LockGuards)))));
 
-  StatementMatcher Lock =
+  const StatementMatcher Lock =
       declStmt(has(varDecl(hasType(LockType)).bind("lock-decl")))
           .bind("lock-decl-stmt");
   Finder->addMatcher(
@@ -55,12 +55,12 @@ void NoSuspendWithLockCheck::check(const MatchFinder::MatchResult &Result) {
   Options.AddImplicitDtors = true;
   Options.AddTemporaryDtors = true;
 
-  std::unique_ptr<CFG> TheCFG = CFG::buildCFG(
+  const std::unique_ptr<CFG> TheCFG = CFG::buildCFG(
       nullptr, const_cast<clang::CompoundStmt *>(Block), &Context, Options);
   if (!TheCFG)
     return;
 
-  utils::ExprSequence Sequence(TheCFG.get(), Block, &Context);
+  const utils::ExprSequence Sequence(TheCFG.get(), Block, &Context);
   const Stmt *LastBlockStmt = Block->body_back();
   if (Sequence.inSequence(LockStmt, Suspend) &&
       (Suspend == LastBlockStmt ||

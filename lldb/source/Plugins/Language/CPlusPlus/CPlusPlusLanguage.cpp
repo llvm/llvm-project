@@ -103,11 +103,11 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
     return {func_name_type, ConstString(basename)};
 }
 
-bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
-  const char *mangled_name = mangled.GetMangledName().GetCString();
-  auto mangling_scheme = Mangled::GetManglingScheme(mangled_name);
-  return mangled_name && (mangling_scheme == Mangled::eManglingSchemeItanium ||
-                          mangling_scheme == Mangled::eManglingSchemeMSVC);
+bool CPlusPlusLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
+  auto mangling_scheme =
+      Mangled::GetManglingScheme(mangled.GetMangledName().GetStringRef());
+  return mangling_scheme == Mangled::eManglingSchemeItanium ||
+         mangling_scheme == Mangled::eManglingSchemeMSVC;
 }
 
 ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
@@ -190,14 +190,16 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
   if (basename.size() <= idx)
     return false; // Empty string or "~"
 
-  if (!std::isalpha(basename[idx]) && basename[idx] != '_')
+  if (!std::isalpha(static_cast<unsigned char>(basename[idx])) &&
+      basename[idx] != '_')
     return false; // First character (after removing the possible '~'') isn't in
                   // [A-Za-z_]
 
   // Read all characters matching [A-Za-z_0-9]
   ++idx;
   while (idx < basename.size()) {
-    if (!std::isalnum(basename[idx]) && basename[idx] != '_')
+    if (!std::isalnum(static_cast<unsigned char>(basename[idx])) &&
+        basename[idx] != '_')
       break;
     ++idx;
   }
@@ -749,31 +751,27 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::LibcxxStringSummaryProviderASCII,
                 "std::string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<char, "
-                "std::__[[:alnum:]]+::char_traits<char>, "
-                "std::__[[:alnum:]]+::allocator<char> >$",
+                "std::__[[:alnum:]]+::char_traits<char>,.*>$",
                 stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderASCII,
                 "std::string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<unsigned char, "
-                "std::__[[:alnum:]]+::char_traits<unsigned char>, "
-                "std::__[[:alnum:]]+::allocator<unsigned char> >$",
+                "std::__[[:alnum:]]+::char_traits<unsigned char>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderUTF16,
                 "std::u16string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<char16_t, "
-                "std::__[[:alnum:]]+::char_traits<char16_t>, "
-                "std::__[[:alnum:]]+::allocator<char16_t> >$",
+                "std::__[[:alnum:]]+::char_traits<char16_t>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderUTF32,
                 "std::u32string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<char32_t, "
-                "std::__[[:alnum:]]+::char_traits<char32_t>, "
-                "std::__[[:alnum:]]+::allocator<char32_t> >$",
+                "std::__[[:alnum:]]+::char_traits<char32_t>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
@@ -784,8 +782,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::LibcxxWStringSummaryProvider,
                 "std::wstring summary provider",
                 "^std::__[[:alnum:]]+::basic_string<wchar_t, "
-                "std::__[[:alnum:]]+::char_traits<wchar_t>, "
-                "std::__[[:alnum:]]+::allocator<wchar_t> >$",
+                "std::__[[:alnum:]]+::char_traits<wchar_t>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
@@ -902,11 +899,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "libc++ std::unordered containers synthetic children",
       "^std::__[[:alnum:]]+::unordered_(multi)?(map|set)<.+> >$",
       stl_synth_flags, true);
-  AddCXXSynthetic(
-      cpp_category_sp,
-      lldb_private::formatters::LibcxxInitializerListSyntheticFrontEndCreator,
-      "libc++ std::initializer_list synthetic children",
-      "^std::initializer_list<.+>$", stl_synth_flags, true);
   AddCXXSynthetic(cpp_category_sp, LibcxxQueueFrontEndCreator,
                   "libc++ std::queue synthetic children",
                   "^std::__[[:alnum:]]+::queue<.+>$", stl_synth_flags, true);
@@ -1301,24 +1293,16 @@ static void RegisterStdStringSummaryProvider(
 
   category_sp->AddTypeSummary(makeSpecifier(string_ty), summary_sp);
 
-  // std::basic_string<char>
   category_sp->AddTypeSummary(
       makeSpecifier(llvm::formatv("std::basic_string<{}>", char_ty).str()),
       summary_sp);
-  // std::basic_string<char,std::char_traits<char>,std::allocator<char> >
+
   category_sp->AddTypeSummary(
-      makeSpecifier(llvm::formatv("std::basic_string<{0},std::char_traits<{0}>,"
-                                  "std::allocator<{0}> >",
-                                  char_ty)
-                        .str()),
-      summary_sp);
-  // std::basic_string<char, std::char_traits<char>, std::allocator<char> >
-  category_sp->AddTypeSummary(
-      makeSpecifier(
-          llvm::formatv("std::basic_string<{0}, std::char_traits<{0}>, "
-                        "std::allocator<{0}> >",
+      std::make_shared<lldb_private::TypeNameSpecifierImpl>(
+          llvm::formatv("^std::basic_string<{0}, ?std::char_traits<{0}>,.*>$",
                         char_ty)
-              .str()),
+              .str(),
+          eFormatterMatchRegex),
       summary_sp);
 }
 
@@ -1363,20 +1347,17 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   cpp_category_sp->AddTypeSummary("std::__cxx11::string", eFormatterMatchExact,
                                   string_summary_sp);
   cpp_category_sp->AddTypeSummary(
-      "std::__cxx11::basic_string<char, std::char_traits<char>, "
-      "std::allocator<char> >",
-      eFormatterMatchExact, string_summary_sp);
-  cpp_category_sp->AddTypeSummary("std::__cxx11::basic_string<unsigned char, "
-                                  "std::char_traits<unsigned char>, "
-                                  "std::allocator<unsigned char> >",
-                                  eFormatterMatchExact, string_summary_sp);
+      "^std::__cxx11::basic_string<char, std::char_traits<char>,.*>$",
+      eFormatterMatchRegex, string_summary_sp);
+  cpp_category_sp->AddTypeSummary("^std::__cxx11::basic_string<unsigned char, "
+                                  "std::char_traits<unsigned char>,.*>$",
+                                  eFormatterMatchRegex, string_summary_sp);
 
   cpp_category_sp->AddTypeSummary("std::__cxx11::wstring", eFormatterMatchExact,
                                   string_summary_sp);
   cpp_category_sp->AddTypeSummary(
-      "std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, "
-      "std::allocator<wchar_t> >",
-      eFormatterMatchExact, string_summary_sp);
+      "^std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>,.*>$",
+      eFormatterMatchRegex, string_summary_sp);
 
   SyntheticChildren::Flags stl_synth_flags;
   stl_synth_flags.SetCascades(true).SetSkipPointers(false).SetSkipReferences(
@@ -1719,6 +1700,14 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           },
           "MSVC STL/libstdc++ std::wstring summary provider"));
 
+  // NOTE: it is loaded as a common formatter because the libc++ version is not
+  // in the `__1` namespace, hence we need to dispatch based on the class
+  // layout.
+  AddCXXSynthetic(cpp_category_sp,
+                  GenericInitializerListSyntheticFrontEndCreator,
+                  "std::initializer_list synthetic children",
+                  "^std::initializer_list<.+>$", stl_synth_flags, true);
+
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
 
@@ -1762,6 +1751,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "^std::(multi)?(map|set)<.+>(( )?&)?$", stl_synth_flags,
                   true);
 
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "std::initializer_list summary provider",
+                "^std::initializer_list<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
                 "MSVC STL/libstdc++ std::shared_ptr summary provider",
                 "^std::shared_ptr<.+>(( )?&)?$", stl_summary_flags, true);
@@ -2213,6 +2205,7 @@ bool CPlusPlusLanguage::GetFunctionDisplayName(
   case FunctionNameRepresentation::eName:
     return false;
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 bool CPlusPlusLanguage::HandleFrameFormatVariable(

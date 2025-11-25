@@ -29,9 +29,9 @@ RUN: llvm-cgdata --convert %t_emptyheader.cgdata --format text | count 0
 #   uint64_t OutlinedHashTreeOffset;
 #   uint64_t StableFunctionMapOffset;
 # }
-RUN: printf '\xffcgdata\x81' > %t_header.cgdata
-RUN: printf '\x04\x00\x00\x00' >> %t_header.cgdata
-RUN: printf '\x00\x00\x00\x00' >> %t_header.cgdata
-RUN: printf '\x20\x00\x00\x00\x00\x00\x00\x00' >> %t_header.cgdata
-RUN: printf '\x20\x00\x00\x00\x00\x00\x00\x00' >> %t_header.cgdata
+RUN: printf '\377cgdata\201' > %t_header.cgdata
+RUN: printf '\004\000\000\000' >> %t_header.cgdata
+RUN: printf '\000\000\000\000' >> %t_header.cgdata
+RUN: printf '\040\000\000\000\000\000\000\000' >> %t_header.cgdata
+RUN: printf '\040\000\000\000\000\000\000\000' >> %t_header.cgdata
 RUN: diff %t_header.cgdata %t_emptyheader.cgdata

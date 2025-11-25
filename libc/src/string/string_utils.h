@@ -19,18 +19,22 @@
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/CPP/type_traits.h" // cpp::is_same_v
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/string/memory_utils/inline_memcpy.h"
 
 #if defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
-#if defined(LIBC_TARGET_ARCH_IS_X86)
+#if LIBC_HAS_VECTOR_TYPE
+#include "src/string/memory_utils/generic/inline_strlen.h"
+#elif defined(LIBC_TARGET_ARCH_IS_X86)
 #include "src/string/memory_utils/x86_64/inline_strlen.h"
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_NEON)
 #include "src/string/memory_utils/aarch64/inline_strlen.h"
 #else
 namespace string_length_impl = LIBC_NAMESPACE::wide_read;
 #endif
-#endif
+#endif // defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -116,15 +120,15 @@ template <typename T> LIBC_INLINE size_t string_length(const T *src) {
 }
 
 template <typename Word>
-[[gnu::no_sanitize_address]] LIBC_INLINE void *
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE void *
 find_first_character_wide_read(const unsigned char *src, unsigned char ch,
                                size_t n) {
   const unsigned char *char_ptr = src;
   size_t cur = 0;
 
   // Step 1: read 1 byte at a time to align to block size
-  for (; reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0 && cur < n;
-       ++char_ptr, ++cur) {
+  for (; cur < n && reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0;
+       ++cur, ++char_ptr) {
     if (*char_ptr == ch)
       return const_cast<unsigned char *>(char_ptr);
   }
@@ -132,18 +136,18 @@ find_first_character_wide_read(const unsigned char *src, unsigned char ch,
   const Word ch_mask = repeat_byte<Word>(ch);
 
   // Step 2: read blocks
-  for (const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
-       !has_zeroes<Word>((*block_ptr) ^ ch_mask) && cur < n;
-       ++block_ptr, cur += sizeof(Word)) {
-    char_ptr = reinterpret_cast<const unsigned char *>(block_ptr);
-  }
+  const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
+  for (; cur < n && !has_zeroes<Word>((*block_ptr) ^ ch_mask);
+       cur += sizeof(Word), ++block_ptr)
+    ;
+  char_ptr = reinterpret_cast<const unsigned char *>(block_ptr);
 
   // Step 3: find the match in the block
-  for (; *char_ptr != ch && cur < n; ++char_ptr, ++cur) {
+  for (; cur < n && *char_ptr != ch; ++cur, ++char_ptr) {
     ;
   }
 
-  if (*char_ptr != ch || cur >= n)
+  if (cur >= n || *char_ptr != ch)
     return static_cast<void *>(nullptr);
 
   return const_cast<unsigned char *>(char_ptr);
@@ -210,28 +214,28 @@ LIBC_INLINE char *string_token(char *__restrict src,
   static_assert(CHAR_BIT == 8, "bitset of 256 assumes char is 8 bits");
   cpp::bitset<256> delims;
   for (; *delimiter_string != '\0'; ++delimiter_string)
-    delims.set(static_cast<size_t>(*delimiter_string));
+    delims.set(*reinterpret_cast<const unsigned char *>(delimiter_string));
 
-  char *tok_start = src;
+  unsigned char *tok_start = reinterpret_cast<unsigned char *>(src);
   if constexpr (SkipDelim)
-    while (*tok_start != '\0' && delims.test(static_cast<size_t>(*tok_start)))
+    while (*tok_start != '\0' && delims.test(*tok_start))
       ++tok_start;
   if (*tok_start == '\0' && SkipDelim) {
     *context = nullptr;
     return nullptr;
   }
 
-  char *tok_end = tok_start;
-  while (*tok_end != '\0' && !delims.test(static_cast<size_t>(*tok_end)))
+  unsigned char *tok_end = tok_start;
+  while (*tok_end != '\0' && !delims.test(*tok_end))
     ++tok_end;
 
   if (*tok_end == '\0') {
     *context = nullptr;
   } else {
     *tok_end = '\0';
-    *context = tok_end + 1;
+    *context = reinterpret_cast<char *>(tok_end + 1);
   }
-  return tok_start;
+  return reinterpret_cast<char *>(tok_start);
 }
 
 LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
@@ -240,7 +244,7 @@ LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
   if (!size)
     return len;
   size_t n = len < size - 1 ? len : size - 1;
-  __builtin_memcpy(dst, src, n);
+  inline_memcpy(dst, src, n);
   dst[n] = '\0';
   return len;
 }

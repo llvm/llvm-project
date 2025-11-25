@@ -37,6 +37,13 @@ std::string Record::getName() const {
   return Ret;
 }
 
+bool Record::hasTrivialDtor() const {
+  if (isAnonymousUnion())
+    return true;
+  const CXXDestructorDecl *Dtor = getDestructor();
+  return !Dtor || Dtor->isTrivial();
+}
+
 const Record::Field *Record::getField(const FieldDecl *FD) const {
   auto It = FieldMap.find(FD->getFirstDecl());
   assert(It != FieldMap.end() && "Missing field");

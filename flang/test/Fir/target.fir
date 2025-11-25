@@ -1,4 +1,4 @@
-// RUN: tco --target=i386-unknown-linux-gnu --force-no-alias %s | FileCheck %s --check-prefix=I32
+// RUN: tco --target=i386-unknown-linux-gnu %s | FileCheck %s --check-prefix=I32
 // RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s --check-prefix=X64
 // RUN: tco --target=aarch64-unknown-linux-gnu %s | FileCheck %s --check-prefix=AARCH64
 // RUN: tco --target=powerpc64le-unknown-linux-gnu %s | FileCheck %s --check-prefix=PPC

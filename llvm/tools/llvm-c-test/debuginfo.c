@@ -43,6 +43,9 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef File = LLVMDIBuilderCreateFile(DIB, Filename,
     strlen(Filename), ".", 1);
 
+  LLVMMetadataRef FileCS = LLVMDIBuilderCreateFileWithChecksum(
+      DIB, Filename, strlen(Filename), ".", 1, CSK_MD5, "1234", 4, "source", 6);
+
   LLVMMetadataRef CompileUnit = LLVMDIBuilderCreateCompileUnit(
       DIB, LLVMDWARFSourceLanguageC, File, "llvm-c-test", 11, 0, NULL, 0, 0,
       NULL, 0, LLVMDWARFEmissionFull, 0, 0, 0, "/", 1, "", 0);
@@ -61,7 +64,7 @@ int llvm_test_dibuilder(void) {
                               "/test/include/llvm-c-test-import.h", 34,
                               "", 0);
   LLVMMetadataRef ImportedModule = LLVMDIBuilderCreateImportedModuleFromModule(
-      DIB, Module, OtherModule, File, 42, NULL, 0);
+      DIB, Module, OtherModule, FileCS, 42, NULL, 0);
   LLVMDIBuilderCreateImportedModuleFromAlias(DIB, Module, ImportedModule, File,
                                              42, NULL, 0);
 
@@ -325,6 +328,15 @@ int llvm_test_dibuilder(void) {
   LLVMValueRef Phi2 = LLVMBuildPhi(Builder, I64, "p2");
   LLVMAddIncoming(Phi2, &Zero, &FooEntryBlock, 1);
 
+  // Test that LLVMGetFirstDbgRecord and LLVMGetLastDbgRecord return NULL for
+  // instructions without debug info.
+  LLVMDbgRecordRef Phi1FirstDbgRecord = LLVMGetFirstDbgRecord(Phi1);
+  (void)Phi1FirstDbgRecord;
+  assert(Phi1FirstDbgRecord == NULL);
+  LLVMDbgRecordRef Phi1LastDbgRecord = LLVMGetLastDbgRecord(Phi1);
+  (void)Phi1LastDbgRecord;
+  assert(Phi1LastDbgRecord == NULL);
+
   // Insert a non-phi before the `ret` but not before the debug records to
   // test that works as expected.
   LLVMPositionBuilder(Builder, FooVarBlock, Ret);
@@ -351,6 +363,43 @@ int llvm_test_dibuilder(void) {
       LLVMGetPreviousDbgRecord(AddDbgRecordFirstPrev);
   assert(AddDbgRecordUnderTheRange == NULL);
   (void)AddDbgRecordUnderTheRange;
+
+  // Test that we can read the first debug record.
+  LLVMMetadataRef AddDbgRecordFirstDebugLoc =
+      LLVMDbgRecordGetDebugLoc(AddDbgRecordFirst);
+  (void)AddDbgRecordFirstDebugLoc;
+  assert(LLVMDILocationGetLine(AddDbgRecordFirstDebugLoc) == 43);
+  assert(LLVMDbgRecordGetKind(AddDbgRecordFirst) == LLVMDbgRecordValue);
+  LLVMValueRef AddDbgRecordFirstValue =
+      LLVMDbgVariableRecordGetValue(AddDbgRecordFirst, 0);
+  (void)AddDbgRecordFirstValue;
+  assert(LLVMGetValueKind(AddDbgRecordFirstValue) == LLVMConstantIntValueKind);
+  assert(LLVMConstIntGetZExtValue(AddDbgRecordFirstValue) == 0);
+  LLVMMetadataRef AddDbgRecordFirstVariable =
+      LLVMDbgVariableRecordGetVariable(AddDbgRecordFirst);
+  (void)AddDbgRecordFirstVariable;
+  assert(LLVMGetMetadataKind(AddDbgRecordFirstVariable) ==
+         LLVMDILocalVariableMetadataKind);
+  // TODO: For now, there is no way to get the name.
+  LLVMMetadataRef AddDbgRecordFirstVariableScope =
+      LLVMDIVariableGetScope(AddDbgRecordFirstVariable);
+  (void)AddDbgRecordFirstVariableScope;
+  assert(LLVMGetMetadataKind(AddDbgRecordFirstVariableScope) ==
+         LLVMDILexicalBlockMetadataKind);
+  LLVMMetadataRef AddDbgRecordFirstVariableFile =
+      LLVMDIScopeGetFile(AddDbgRecordFirstVariableScope);
+  (void)AddDbgRecordFirstVariableFile;
+  assert(LLVMGetMetadataKind(AddDbgRecordFirstVariableFile) ==
+         LLVMDIFileMetadataKind);
+  unsigned FileLen = 0;
+  assert(strcmp(LLVMDIFileGetFilename(AddDbgRecordFirstVariableFile, &FileLen),
+                "debuginfo.c") == 0);
+  (void)FileLen;
+  LLVMMetadataRef AddDbgRecordFirstExpr =
+      LLVMDbgVariableRecordGetExpression(AddDbgRecordFirst);
+  assert(LLVMGetMetadataKind(AddDbgRecordFirstExpr) ==
+         LLVMDIExpressionMetadataKind);
+  (void)AddDbgRecordFirstExpr;
 
   char *MStr = LLVMPrintModuleToString(M);
   puts(MStr);

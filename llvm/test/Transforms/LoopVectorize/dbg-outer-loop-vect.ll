@@ -6,9 +6,9 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 define void @foo(ptr %h) !dbg !4 {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr [[H:%.*]]) !dbg [[DBG4:![0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:      #dbg_value(i64 0, [[META11:![0-9]+]], !DIExpression(), [[META20:![0-9]+]])
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !dbg [[DBG21:![0-9]+]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]], !dbg [[DBG21:![0-9]+]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG21]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -17,13 +17,13 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK:       [[FOR_COND5_PREHEADER1]]:
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[FOR_COND5_PREHEADER1]] ], !dbg [[DBG23:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[H]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> [[TMP0]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG24:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true)), !dbg [[DBG24:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, <4 x ptr> [[TMP0]], i64 1, !dbg [[DBG26:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 1), <4 x ptr> [[TMP2]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG24]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 1), <4 x ptr> align 4 [[TMP2]], <4 x i1> splat (i1 true)), !dbg [[DBG24]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, <4 x ptr> [[TMP0]], i64 2, !dbg [[DBG26]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 2), <4 x ptr> [[TMP3]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG24]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 2), <4 x ptr> align 4 [[TMP3]], <4 x i1> splat (i1 true)), !dbg [[DBG24]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, <4 x ptr> [[TMP0]], i64 3, !dbg [[DBG26]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 3), <4 x ptr> [[TMP4]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG24]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 3), <4 x ptr> align 4 [[TMP4]], <4 x i1> splat (i1 true)), !dbg [[DBG24]]
 ; CHECK-NEXT:    [[TMP5]] = add nuw nsw <4 x i64> [[VEC_PHI]], splat (i64 1), !dbg [[DBG27:![0-9]+]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP5]], splat (i64 5), !dbg [[DBG28:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0, !dbg [[DBG29:![0-9]+]]
@@ -33,12 +33,11 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20, !dbg [[DBG21]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG21]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]], !dbg [[DBG21]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH:.*]], !dbg [[DBG21]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 20, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]], !dbg [[DBG21]]
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
-; CHECK-NEXT:    [[I_023:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC13:%.*]], %[[FOR_COND_CLEANUP3:.*]] ]
+; CHECK-NEXT:    [[I_023:%.*]] = phi i64 [ 20, %[[SCALAR_PH]] ], [ [[INC13:%.*]], %[[FOR_COND_CLEANUP3:.*]] ]
 ; CHECK-NEXT:      #dbg_value(i64 [[I_023]], [[META11]], !DIExpression(), [[META20]])
 ; CHECK-NEXT:    br label %[[FOR_COND5_PREHEADER:.*]], !dbg [[DBG29]]
 ; CHECK:       [[FOR_COND5_PREHEADER]]:
@@ -57,10 +56,10 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK:       [[FOR_COND_CLEANUP3]]:
 ; CHECK-NEXT:    [[INC13]] = add nuw nsw i64 [[I_023]], 1, !dbg [[DBG22]]
 ; CHECK-NEXT:      #dbg_value(i64 [[INC13]], [[META11]], !DIExpression(), [[META20]])
-; CHECK-NEXT:    [[EXITCOND24_NOT:%.*]] = icmp eq i64 [[INC13]], 23, !dbg [[DBG34:![0-9]+]]
-; CHECK-NEXT:    br i1 [[EXITCOND24_NOT]], label %[[EXIT]], label %[[FOR_COND1_PREHEADER]], !dbg [[DBG21]], !llvm.loop [[LOOP35:![0-9]+]]
+; CHECK-NEXT:    [[EXITCOND24_NOT:%.*]] = icmp eq i64 [[INC13]], 23, !dbg [[DBG33:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND24_NOT]], label %[[EXIT]], label %[[FOR_COND1_PREHEADER]], !dbg [[DBG21]], !llvm.loop [[LOOP34:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void, !dbg [[DBG36:![0-9]+]]
+; CHECK-NEXT:    ret void, !dbg [[DBG35:![0-9]+]]
 ;
 entry:
   call void @llvm.dbg.value(metadata i64 0, metadata !11, metadata !DIExpression()), !dbg !20
@@ -164,11 +163,10 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; CHECK: [[DBG27]] = !DILocation(line: 11, column: 32, scope: [[META19]])
 ; CHECK: [[DBG28]] = !DILocation(line: 11, column: 26, scope: [[META19]])
 ; CHECK: [[DBG29]] = !DILocation(line: 11, column: 5, scope: [[META15]])
-; CHECK: [[LOOP30]] = distinct !{[[LOOP30]], [[DBG21]], [[META31:![0-9]+]], [[META32:![0-9]+]], [[META33:![0-9]+]]}
-; CHECK: [[META31]] = !DILocation(line: 13, column: 13, scope: [[META12]])
-; CHECK: [[META32]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META33]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[DBG34]] = !DILocation(line: 10, column: 24, scope: [[META16]])
-; CHECK: [[LOOP35]] = distinct !{[[LOOP35]], [[DBG21]], [[META31]], [[META32]]}
-; CHECK: [[DBG36]] = !DILocation(line: 14, column: 1, scope: [[DBG4]])
+; CHECK: [[LOOP30]] = distinct !{[[LOOP30]], [[META31:![0-9]+]], [[META32:![0-9]+]]}
+; CHECK: [[META31]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META32]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[DBG33]] = !DILocation(line: 10, column: 24, scope: [[META16]])
+; CHECK: [[LOOP34]] = distinct !{[[LOOP34]], [[META32]], [[META31]]}
+; CHECK: [[DBG35]] = !DILocation(line: 14, column: 1, scope: [[DBG4]])
 ;.

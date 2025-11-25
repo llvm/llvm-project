@@ -1,4 +1,4 @@
-//===---------- Matchers.cpp - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,6 @@ MatchesAnyListedTypeNameMatcher::~MatchesAnyListedTypeNameMatcher() = default;
 bool MatchesAnyListedTypeNameMatcher::matches(
     const QualType &Node, ast_matchers::internal::ASTMatchFinder *Finder,
     ast_matchers::internal::BoundNodesTreeBuilder *Builder) const {
-
   if (NameMatchers.empty())
     return false;
 

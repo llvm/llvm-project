@@ -1,4 +1,4 @@
-//===--- OverloadedOperatorCheck.h - clang-tidy------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_OVERLOADED_OPERATOR_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_OVERLOADED_OPERATOR_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_OVERLOADEDOPERATORCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_OVERLOADEDOPERATORCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,7 +16,7 @@ namespace clang::tidy::fuchsia {
 /// Overloading operators is disallowed by the Fuchsia coding standard.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia/overloaded-operator.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/fuchsia/overloaded-operator.html
 class OverloadedOperatorCheck : public ClangTidyCheck {
 public:
   OverloadedOperatorCheck(StringRef Name, ClangTidyContext *Context)
@@ -30,4 +30,4 @@ public:
 
 } // namespace clang::tidy::fuchsia
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_OVERLOADED_OPERATOR_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_OVERLOADEDOPERATORCHECK_H

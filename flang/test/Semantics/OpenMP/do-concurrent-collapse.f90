@@ -1,6 +1,7 @@
 !RUN: %python %S/../test_errors.py %s %flang -fopenmp
 
 integer :: i, j
+! ERROR: DO CONCURRENT loops cannot be used with the COLLAPSE clause.
 !$omp parallel do collapse(2)
 do i = 1, 1
   ! ERROR: DO CONCURRENT loops cannot form part of a loop nest.

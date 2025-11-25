@@ -42,6 +42,7 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.compiler
 )
 
 add_header_library(

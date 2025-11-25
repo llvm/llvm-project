@@ -15,11 +15,12 @@
 
 #include "Plugins/Process/Utility/RegisterContextMemory.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
-#include "lldb/Target//DynamicRegisterInfo.h"
+#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/Thread.h"
 
 namespace lldb_private {
 class ScriptedProcess;
+class ScriptedFrame;
 }
 
 namespace lldb_private {
@@ -61,6 +62,8 @@ public:
   StructuredData::ObjectSP FetchThreadExtendedInfo() override;
 
 private:
+  friend class ScriptedFrame;
+
   void CheckInterpreterAndScriptObject() const;
   lldb::ScriptedThreadInterfaceSP GetInterface() const;
 

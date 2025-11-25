@@ -18,7 +18,7 @@ define <vscale x 4 x i32> @intrinsic_vaeskf1_vi_nxv4i32_i32(<vscale x 4 x i32> %
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vaeskf1.nxv4i32.i32(
-    <vscale x 4 x i32> undef,
+    <vscale x 4 x i32> poison,
     <vscale x 4 x i32> %0,
     iXLen 2,
     iXLen %1)
@@ -40,7 +40,7 @@ define <vscale x 8 x i32> @intrinsic_vaeskf1_vi_nxv8i32_i32(<vscale x 8 x i32> %
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vaeskf1.nxv8i32.i32(
-    <vscale x 8 x i32> undef,
+    <vscale x 8 x i32> poison,
     <vscale x 8 x i32> %0,
     iXLen 2,
     iXLen %1)
@@ -62,7 +62,7 @@ define <vscale x 16 x i32> @intrinsic_vaeskf1_vi_nxv16i32_i32(<vscale x 16 x i32
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vaeskf1.nxv16i32.i32(
-    <vscale x 16 x i32> undef,
+    <vscale x 16 x i32> poison,
     <vscale x 16 x i32> %0,
     iXLen 2,
     iXLen %1)

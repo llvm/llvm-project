@@ -36,9 +36,6 @@ using mlir::LLVM::detail::createIntrinsicCall;
 static llvm::Intrinsic::ID getReduxIntrinsicId(llvm::Type *resultType,
                                                NVVM::ReduxKind kind,
                                                bool hasAbs, bool hasNaN) {
-  if (!(resultType->isIntegerTy(32) || resultType->isFloatTy()))
-    llvm_unreachable("unsupported data type for redux");
-
   switch (kind) {
   case NVVM::ReduxKind::ADD:
     return llvm::Intrinsic::nvvm_redux_sync_add;
@@ -253,8 +250,8 @@ getStMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
 /// Return the intrinsic ID associated with st.bulk for the given address type.
 static llvm::Intrinsic::ID
 getStBulkIntrinsicId(LLVM::LLVMPointerType addrType) {
-  bool isSharedMemory =
-      addrType.getAddressSpace() == NVVM::NVVMMemorySpace::kSharedMemorySpace;
+  bool isSharedMemory = addrType.getAddressSpace() ==
+                        static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
   return isSharedMemory ? llvm::Intrinsic::nvvm_st_bulk_shared_cta
                         : llvm::Intrinsic::nvvm_st_bulk;
 }
@@ -292,6 +289,20 @@ static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
     llvm_unreachable("Unknown scope for uni-directional fence.proxy operation");
   }
   llvm_unreachable("Unsupported proxy kinds");
+}
+
+static unsigned getMembarIntrinsicID(NVVM::MemScopeKind scope) {
+  switch (scope) {
+  case NVVM::MemScopeKind::CTA:
+    return llvm::Intrinsic::nvvm_membar_cta;
+  case NVVM::MemScopeKind::CLUSTER:
+    return llvm::Intrinsic::nvvm_fence_sc_cluster;
+  case NVVM::MemScopeKind::GPU:
+    return llvm::Intrinsic::nvvm_membar_gl;
+  case NVVM::MemScopeKind::SYS:
+    return llvm::Intrinsic::nvvm_membar_sys;
+  }
+  llvm_unreachable("Unknown scope for memory barrier");
 }
 
 #define TCGEN05LD(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_ld_##SHAPE##_##NUM

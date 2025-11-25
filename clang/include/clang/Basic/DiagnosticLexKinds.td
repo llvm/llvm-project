@@ -90,6 +90,14 @@ def err_unterminated___pragma : Error<"missing terminating ')' character">;
 
 def err_conflict_marker : Error<"version control conflict marker in file">;
 
+def err_counter_overflow : Error<
+  "'__COUNTER__' value cannot exceed 2'147'483'647">;
+def ext_counter : Extension<
+  "'__COUNTER__' is a C2y extension">, InGroup<C2y>;
+def warn_counter : Warning<
+  "'__COUNTER__' is incompatible with standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
+
 def err_raw_delim_too_long : Error<
   "raw string delimiter longer than 16 characters"
   "; use PREFIX( )PREFIX to delimit raw string">;
@@ -912,11 +920,6 @@ def err_mmap_nested_submodule_id : Error<
   "qualified module name can only be used to define modules at the top level">;
 def err_mmap_expected_feature : Error<"expected a feature name">;
 def err_mmap_expected_attribute : Error<"expected an attribute name">;
-def warn_mmap_link_redeclaration : Warning<"redeclaration of link library '%0'">,
-  InGroup<DiagGroup<"module-link-redeclaration">>, DefaultError;
-def note_mmap_prev_link_declaration : Note<"previously declared here">;
-def err_mmap_submodule_link_decl
-    : Error<"link declaration is not allowed in submodules">;
 def warn_mmap_unknown_attribute : Warning<"unknown attribute '%0'">,
   InGroup<IgnoredAttributes>;
 def warn_mmap_mismatched_private_submodule : Warning<

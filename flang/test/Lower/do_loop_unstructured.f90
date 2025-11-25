@@ -215,9 +215,8 @@ end subroutine
 ! CHECK: ^[[BODY]]:
 ! CHECK:   %{{.*}} = fir.do_loop %[[J_INDEX:[^ ]*]] =
 ! CHECK-SAME: %{{.*}} to %{{.*}} step %[[ST:[^ ]*]]
-! CHECK-SAME: iter_args(%[[J_IV:.*]] = %{{.*}}) -> (index, i32) {
+! CHECK-SAME: iter_args(%[[J_IV:.*]] = %{{.*}}) -> (i32) {
 ! CHECK:     fir.store %[[J_IV]] to %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
-! CHECK:     %[[J_INDEX_NEXT:.*]] = arith.addi %[[J_INDEX]], %[[ST]] overflow<nsw> : index
 ! CHECK:     %[[LOOP_VAR_J:.*]] = fir.load %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
 ! CHECK:     %[[LOOP_VAR_J_NEXT:.*]] = arith.addi %[[LOOP_VAR_J]], %{{[^ ]*}} overflow<nsw> : i32
 ! CHECK:   }
@@ -236,6 +235,7 @@ end subroutine
 subroutine unstructured_do_concurrent
   logical :: success
   do concurrent (i=1:10) local(success)
+    success = .false.
     error stop "fail"
   enddo
 end

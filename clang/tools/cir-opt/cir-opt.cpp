@@ -58,6 +58,10 @@ int main(int argc, char **argv) {
     return mlir::createHoistAllocasPass();
   });
 
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createGotoSolverPass();
+  });
+
   mlir::registerTransformsPasses();
 
   return mlir::asMainReturnCode(MlirOptMain(

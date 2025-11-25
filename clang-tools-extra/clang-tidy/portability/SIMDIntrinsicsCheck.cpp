@@ -1,4 +1,4 @@
-//===--- SIMDIntrinsicsCheck.cpp - clang-tidy------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -104,9 +104,9 @@ void SIMDIntrinsicsCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Callee)
     return;
 
-  StringRef Old = Callee->getName();
+  const StringRef Old = Callee->getName();
   StringRef New;
-  llvm::Triple::ArchType Arch =
+  const llvm::Triple::ArchType Arch =
       Result.Context->getTargetInfo().getTriple().getArch();
 
   // We warn or suggest if this SIMD intrinsic function has a std::simd

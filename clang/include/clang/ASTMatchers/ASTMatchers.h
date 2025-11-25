@@ -2478,6 +2478,21 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, NullStmt> nullStmt;
 ///   matches '__asm("mov al, 2")'
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, AsmStmt> asmStmt;
 
+/// Matches top level asm declarations.
+///
+/// Given
+/// \code
+///    __asm("nop");
+///    void f() {
+///      __asm("mov al, 2");
+///    }
+/// \endcode
+/// fileScopeAsmDecl()
+///   matches '__asm("nop")',
+///   but not '__asm("mov al, 2")'.
+extern const internal::VariadicDynCastAllOfMatcher<Decl, FileScopeAsmDecl>
+    fileScopeAsmDecl;
+
 /// Matches bool literals.
 ///
 /// Example matches true
@@ -2762,6 +2777,20 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDynamicCastExpr>
 /// \endcode
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstCastExpr>
     cxxConstCastExpr;
+
+/// Matches any named cast expression.
+///
+/// Example: Matches all four of the casts in
+/// \code
+///   struct S { virtual void f(); };
+///   S* p = nullptr;
+///   S* ptr1 = static_cast<S*>(p);
+///   S* ptr2 = reinterpret_cast<S*>(p);
+///   S* ptr3 = dynamic_cast<S*>(p);
+///   S* ptr4 = const_cast<S*>(p);
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNamedCastExpr>
+    cxxNamedCastExpr;
 
 /// Matches a C-style cast expression.
 ///
@@ -7711,18 +7740,6 @@ AST_MATCHER_P(DecayedType, hasDecayedType, internal::Matcher<QualType>,
 ///  };
 /// \endcode
 extern const AstTypeMatcher<DependentNameType> dependentNameType;
-
-/// Matches a dependent template specialization type
-///
-/// Example matches A<T>::template B<T>
-/// \code
-///   template<typename T> struct A;
-///   template<typename T> struct declToImport {
-///     typename A<T>::template B<T> a;
-///   };
-/// \endcode
-extern const AstTypeMatcher<DependentTemplateSpecializationType>
-    dependentTemplateSpecializationType;
 
 /// Matches declarations whose declaration context, interpreted as a
 /// Decl, matches \c InnerMatcher.

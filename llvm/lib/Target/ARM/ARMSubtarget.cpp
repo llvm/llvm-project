@@ -88,18 +88,16 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
                            const ARMBaseTargetMachine &TM, bool IsLittle,
-                           bool MinSize)
+                           bool MinSize, DenormalMode DM)
     : ARMGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       UseMulOps(UseFusedMulOps), CPUString(CPU), OptMinSize(MinSize),
-      IsLittle(IsLittle), TargetTriple(TT), Options(TM.Options), TM(TM),
+      IsLittle(IsLittle), DM(DM), TargetTriple(TT), Options(TM.Options), TM(TM),
       FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
-      InstrInfo(isThumb1Only()
-                    ? (ARMBaseInstrInfo *)new Thumb1InstrInfo(*this)
-                    : !isThumb()
-                          ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
-                          : (ARMBaseInstrInfo *)new Thumb2InstrInfo(*this)),
+      InstrInfo(isThumb1Only() ? (ARMBaseInstrInfo *)new Thumb1InstrInfo(*this)
+                : !isThumb()   ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
+                             : (ARMBaseInstrInfo *)new Thumb2InstrInfo(*this)),
       TLInfo(TM, *this) {
 
   CallLoweringInfo.reset(new ARMCallLowering(*getTargetLowering()));
@@ -224,10 +222,14 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   // NEON f32 ops are non-IEEE 754 compliant. Darwin is ok with it by default.
   const FeatureBitset &Bits = getFeatureBits();
   if ((Bits[ARM::ProcA5] || Bits[ARM::ProcA8]) && // Where this matters
-      (Options.UnsafeFPMath || isTargetDarwin()))
+      (isTargetDarwin() || DM == DenormalMode::getPreserveSign()))
     HasNEONForFP = true;
 
-  if (isRWPI())
+  const ARM::ArchKind Arch = ARM::parseArch(TargetTriple.getArchName());
+  if (isRWPI() ||
+      (isTargetIOS() &&
+       (Arch == ARM::ArchKind::ARMV6K || Arch == ARM::ArchKind::ARMV6) &&
+       TargetTriple.isOSVersionLT(3, 0)))
     ReserveR9 = true;
 
   // If MVEVectorCostFactor is still 0 (has not been set to anything else), default it to 2
@@ -316,17 +318,7 @@ bool ARMSubtarget::isRWPI() const {
 }
 
 bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
-  if (!TM.shouldAssumeDSOLocal(GV))
-    return true;
-
-  // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
-  // the section that is being relocated. This means we have to use o load even
-  // for GVs that are known to be local to the dso.
-  if (isTargetMachO() && TM.isPositionIndependent() &&
-      (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
-    return true;
-
-  return false;
+  return TM.isGVIndirectSymbol(GV);
 }
 
 bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {

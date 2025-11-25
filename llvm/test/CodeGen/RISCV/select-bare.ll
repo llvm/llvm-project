@@ -3,6 +3,8 @@
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 ; RUN: llc -mtriple=riscv64 -mattr=+xmipscmov -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I-CCMOV %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-opt,+conditional-cmv-fusion -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 
 define i32 @bare_select(i1 %a, i32 %b, i32 %c) nounwind {
 ; RV32I-LABEL: bare_select:
@@ -20,6 +22,13 @@ define i32 @bare_select(i1 %a, i32 %b, i32 %c) nounwind {
 ; RV64I-CCMOV-NEXT:    andi a0, a0, 1
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a0, a1, a2
 ; RV64I-CCMOV-NEXT:    ret
+;
+; RV32IXQCI-LABEL: bare_select:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    andi a0, a0, 1
+; RV32IXQCI-NEXT:    qc.mveqi a1, a0, 0, a2
+; RV32IXQCI-NEXT:    mv a0, a1
+; RV32IXQCI-NEXT:    ret
   %1 = select i1 %a, i32 %b, i32 %c
   ret i32 %1
 }
@@ -40,6 +49,13 @@ define float @bare_select_float(i1 %a, float %b, float %c) nounwind {
 ; RV64I-CCMOV-NEXT:    andi a0, a0, 1
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a0, a1, a2
 ; RV64I-CCMOV-NEXT:    ret
+;
+; RV32IXQCI-LABEL: bare_select_float:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    andi a0, a0, 1
+; RV32IXQCI-NEXT:    qc.mveqi a1, a0, 0, a2
+; RV32IXQCI-NEXT:    mv a0, a1
+; RV32IXQCI-NEXT:    ret
   %1 = select i1 %a, float %b, float %c
   ret float %1
 }

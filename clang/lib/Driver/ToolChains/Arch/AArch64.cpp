@@ -9,7 +9,7 @@
 #include "AArch64.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/Host.h"
@@ -57,6 +57,9 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
     // iOS 26 only runs on apple-a12 and later CPUs.
     if (!Triple.isOSVersionLT(26))
       return "apple-a12";
+    // arm64 (non-e) iOS 18 only runs on apple-a10 and later CPUs.
+    if (!Triple.isOSVersionLT(18) && !Triple.isArm64e())
+      return "apple-a10";
   }
 
   if (Triple.isWatchOS()) {
@@ -64,8 +67,8 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
     // arm64_32/arm64e watchOS requires S4 before watchOS 26, S6 after.
     if (Triple.getArch() == llvm::Triple::aarch64_32 || Triple.isArm64e())
       return Triple.isOSVersionLT(26) ? "apple-s4" : "apple-s6";
-    // arm64 (non-e, non-32) watchOS comes later, and requires S6 anyway.
-    return "apple-s6";
+    // arm64 (non-e, non-32) watchOS comes later, and requires S9 anyway.
+    return "apple-s9";
   }
 
   if (Triple.isXROS()) {
@@ -219,7 +222,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     // Default to 'A' profile if the architecture is not specified.
     success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions);
 
-  if (success && (A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)))
+  if (success && (A = Args.getLastArg(options::OPT_mtune_EQ)))
     success =
         getAArch64MicroArchFeaturesFromMtune(D, A->getValue(), Args, Features);
   else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))
@@ -461,27 +464,6 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
 
   if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))
     Features.push_back("+no-bti-at-return-twice");
-}
-
-void aarch64::setPAuthABIInTriple(const Driver &D, const ArgList &Args,
-                                  llvm::Triple &Triple) {
-  Arg *ABIArg = Args.getLastArg(options::OPT_mabi_EQ);
-  bool HasPAuthABI =
-      ABIArg ? (StringRef(ABIArg->getValue()) == "pauthtest") : false;
-
-  switch (Triple.getEnvironment()) {
-  case llvm::Triple::UnknownEnvironment:
-    if (HasPAuthABI)
-      Triple.setEnvironment(llvm::Triple::PAuthTest);
-    break;
-  case llvm::Triple::PAuthTest:
-    break;
-  default:
-    if (HasPAuthABI)
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << ABIArg->getAsString(Args) << Triple.getTriple();
-    break;
-  }
 }
 
 /// Is the triple {aarch64.aarch64_be}-none-elf?

@@ -190,6 +190,12 @@ function (add_flangrt_library name)
     endif ()
   endif ()
 
+  if (build_object)
+    add_library(${name}.compile ALIAS "${name_object}")
+  else ()
+    add_library(${name}.compile ALIAS "${default_target}")
+  endif ()
+
   foreach (tgtname IN LISTS libtargets)
     if (NOT WIN32)
       # Use same stem name for .a and .so. Common in UNIX environments.
@@ -219,6 +225,17 @@ function (add_flangrt_library name)
     # Minimum required C++ version for Flang-RT, even if CMAKE_CXX_STANDARD is defined to something else.
     target_compile_features(${tgtname} PRIVATE cxx_std_17)
 
+    target_compile_options(${tgtname} PRIVATE
+      # Always enable preprocessor regardless of file extention
+      "$<$<COMPILE_LANGUAGE:Fortran>:-cpp>"
+
+      # Missing type descriptors are expected for intrinsic modules 
+      "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-mmlir;SHELL:-ignore-missing-type-desc>"
+
+      # Flang bug workaround: Reformating of cooked token buffer causes identifier to be split between lines
+      "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-Xflang;SHELL:-fno-reformat>"
+    )
+
     # When building the flang runtime if LTO is enabled the archive file
     # contains LLVM IR rather than object code. Currently flang is not
     # LTO aware so cannot link this file to compiled Fortran code.
@@ -226,11 +243,36 @@ function (add_flangrt_library name)
       target_compile_options(${tgtname} PRIVATE -fno-lto)
     endif ()
 
+    if (FORTRAN_SUPPORTS_REAL16)
+      target_compile_definitions(${tgtname} PRIVATE FLANG_SUPPORT_R16=1)
+    endif ()
+
     # Use compiler-specific options to disable exceptions and RTTI.
     if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
+
+      # We define our own _GLIBCXX_THROW_OR_ABORT here because, as of
+      # GCC 15.1, the libstdc++ header file <bits/c++config> uses
+      # (void)_EXC in its definition of _GLIBCXX_THROW_OR_ABORT to
+      # silence a warning.
+      #
+      # This is a problem for us because some compilers, specifically
+      # clang, do not always optimize away that (void)_EXC even though
+      # it is unreachable since it occurs after a call to
+      # _builtin_abort().  Because _EXC is typically an object derived
+      # from std::exception, (void)_EXC, when not optimized away,
+      # calls std::exception methods defined in the libstdc++ shared
+      # library.  We shouldn't link against that library since our
+      # build version may conflict with the version used by a hybrid
+      # Fortran/C++ application.
+      #
+      # Redefining _GLIBCXX_THROW_OR_ABORT in this manner is not
+      # supported by the maintainers of libstdc++, so future changes
+      # to libstdc++ may require future changes to this build script
+      # and/or future changes to the Fortran runtime source code.
+      target_compile_options(${tgtname} PUBLIC "-D_GLIBCXX_THROW_OR_ABORT(_EXC)=(__builtin_abort())")
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
@@ -251,8 +293,15 @@ function (add_flangrt_library name)
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
         )
     elseif (APPLE)
+      # Clang on Darwin enables non-POSIX extensions by default.
+      # This causes some macros to leak, such as HUGE from <math.h>, which
+      # causes some conflicts with Flang symbols (but not with Flang-RT, for
+      # now).
+      # It also causes some Flang-RT extensions to be disabled, such as fdate,
+      # that checks for _POSIX_C_SOURCE.
+      # Setting _POSIX_C_SOURCE avoids these issues.
       target_compile_options(${tgtname} PRIVATE
-          $<$<COMPILE_LANGUAGE:CXX>:${DARWIN_osx_BUILTIN_MIN_VER_FLAG}>
+          $<$<COMPILE_LANGUAGE:CXX>:${DARWIN_osx_BUILTIN_MIN_VER_FLAG} -D_POSIX_C_SOURCE=200809>
         )
     endif ()
 
@@ -283,8 +332,10 @@ function (add_flangrt_library name)
     # build, to avoid an unwanted dependency on libstdc++/libc++.so.
     target_compile_definitions(${tgtname} PUBLIC _GLIBCXX_NO_ASSERTIONS)
     if (FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
-      target_compile_options(${tgtname} PUBLIC -U_GLIBCXX_ASSERTIONS)
-      target_compile_options(${tgtname} PUBLIC -U_LIBCPP_ENABLE_ASSERTIONS)
+      target_compile_options(${tgtname} PUBLIC
+          "$<$<COMPILE_LANGUAGE:CXX>:-Wp,-U_GLIBCXX_ASSERTIONS>")
+      target_compile_options(${tgtname} PUBLIC
+          "$<$<COMPILE_LANGUAGE:CXX>:-Wp,-U_LIBCPP_ENABLE_ASSERTIONS>")
     endif ()
 
     # Non-GTest unittests depend on LLVMSupport
@@ -314,13 +365,13 @@ function (add_flangrt_library name)
     if (ARG_INSTALL_WITH_TOOLCHAIN)
       set_target_properties(${tgtname}
         PROPERTIES
-          ARCHIVE_OUTPUT_DIRECTORY "${FLANG_RT_OUTPUT_RESOURCE_LIB_DIR}"
-          LIBRARY_OUTPUT_DIRECTORY "${FLANG_RT_OUTPUT_RESOURCE_LIB_DIR}"
+          ARCHIVE_OUTPUT_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}"
+          LIBRARY_OUTPUT_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}"
         )
 
       install(TARGETS ${tgtname}
-          ARCHIVE DESTINATION "${FLANG_RT_INSTALL_RESOURCE_LIB_PATH}"
-          LIBRARY DESTINATION "${FLANG_RT_INSTALL_RESOURCE_LIB_PATH}"
+          ARCHIVE DESTINATION "${RUNTIMES_INSTALL_RESOURCE_LIB_PATH}"
+          LIBRARY DESTINATION "${RUNTIMES_INSTALL_RESOURCE_LIB_PATH}"
         )
     endif ()
 
