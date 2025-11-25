@@ -17212,6 +17212,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
     Res = ActOnOpenMPThreadsetClause(static_cast<OpenMPThreadsetKind>(Argument),
                                      ArgumentLoc, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_transparent:
+    Res = ActOnOpenMPTransparentClause(
+        static_cast<OpenMPTransparentKind>(Argument), ArgumentLoc, StartLoc,
+        LParenLoc, EndLoc);
+    break;
   case OMPC_if:
   case OMPC_final:
   case OMPC_num_threads:
@@ -17422,6 +17427,23 @@ OMPClause *SemaOpenMP::ActOnOpenMPThreadsetClause(OpenMPThreadsetKind Kind,
 
   return new (getASTContext())
       OMPThreadsetClause(Kind, KindLoc, StartLoc, LParenLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPTransparentClause(OpenMPTransparentKind Kind,
+                                                    SourceLocation KindLoc,
+                                                    SourceLocation StartLoc,
+                                                    SourceLocation LParenLoc,
+                                                    SourceLocation EndLoc) {
+  if (Kind == OMPC_TRANSPARENT_unknown) {
+    Diag(KindLoc, diag::err_omp_unexpected_clause_value)
+        << getListOfPossibleValues(OMPC_transparent, /*First=*/0,
+                                   /*Last=*/unsigned(OMPC_TRANSPARENT_unknown))
+        << getOpenMPClauseName(OMPC_transparent);
+    return nullptr;
+  }
+
+  return new (getASTContext())
+      OMPTransparentClause(Kind, KindLoc, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPProcBindClause(ProcBindKind Kind,

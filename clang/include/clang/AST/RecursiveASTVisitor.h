@@ -3530,6 +3530,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPThreadsetClause(
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPTransparentClause(
+    OMPTransparentClause *) {
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPProcBindClause(OMPProcBindClause *) {
   return true;
 }

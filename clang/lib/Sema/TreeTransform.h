@@ -10639,6 +10639,12 @@ TreeTransform<Derived>::TransformOMPThreadsetClause(OMPThreadsetClause *C) {
 
 template <typename Derived>
 OMPClause *
+TreeTransform<Derived>::TransformOMPTransparentClause(OMPTransparentClause *C) {
+  return C;
+}
+
+template <typename Derived>
+OMPClause *
 TreeTransform<Derived>::TransformOMPProcBindClause(OMPProcBindClause *C) {
   return getDerived().RebuildOMPProcBindClause(
       C->getProcBindKind(), C->getProcBindKindKwLoc(), C->getBeginLoc(),
