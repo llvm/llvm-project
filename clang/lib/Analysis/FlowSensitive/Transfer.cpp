@@ -783,12 +783,12 @@ public:
         // and joining the values right away, handling only case (a).
         // Otherwise, the dataflow framework needs to be updated be able to
         // represent alias sets and weak updates (for the "may").
-        StorageLocation &Loc = Env.createStorageLocation(*S);
-        Env.setStorageLocation(*S, Loc);
         if (Value *Val = Environment::joinValues(
                 S->getType(), TrueEnv->getValue(*S->getTrueExpr()), *TrueEnv,
                 FalseEnv->getValue(*S->getFalseExpr()), *FalseEnv, Env,
                 Model)) {
+          StorageLocation &Loc = Env.createStorageLocation(*S);
+          Env.setStorageLocation(*S, Loc);
           Env.setValue(Loc, *Val);
         }
       }

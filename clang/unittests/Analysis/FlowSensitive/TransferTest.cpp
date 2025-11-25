@@ -6185,6 +6185,45 @@ TEST(TransferTest, ConditionalOperatorValue) {
       });
 }
 
+TEST(TransferTest, ConditionalOperatorValuesTested) {
+  // We should be able to show that the result of the conditional operator,
+  // JoinResultMustBeB1, must be equal to B1, because the condition is checking
+  // `B1 == B2` and selecting B1 on the false branch, or B2 on the true branch.
+  // Similarly, for JoinResultMustBeB2 == B2.
+  // Note that the conditional operator involves a join of two *different*
+  // glvalues, before casting the lvalue to an rvalue, which may affect the
+  // implementation of the transfer function, and thus affect whether or not we
+  // can prove that IsB1 == B1.
+  std::string Code = R"(
+    void target(bool B1, bool B2) {
+      bool JoinResultMustBeB1 = (B1 == B2) ? B2 : B1;
+      bool JoinResultMustBeB2 = (B1 == B2) ? B1 : B2;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
+
+        auto &B1 = getValueForDecl<BoolValue>(ASTCtx, Env, "B1");
+        auto &B2 = getValueForDecl<BoolValue>(ASTCtx, Env, "B2");
+        auto &JoinResultMustBeB1 =
+            getValueForDecl<BoolValue>(ASTCtx, Env, "JoinResultMustBeB1");
+        auto &JoinResultMustBeB2 =
+            getValueForDecl<BoolValue>(ASTCtx, Env, "JoinResultMustBeB2");
+
+        const Formula &MustBeB1_Eq_B1 =
+            Env.arena().makeEquals(JoinResultMustBeB1.formula(), B1.formula());
+        EXPECT_TRUE(Env.proves(MustBeB1_Eq_B1));
+
+        const Formula &MustBeB2_Eq_B2 =
+            Env.arena().makeEquals(JoinResultMustBeB2.formula(), B2.formula());
+        EXPECT_TRUE(Env.proves(MustBeB2_Eq_B2));
+      });
+}
+
 TEST(TransferTest, ConditionalOperatorLocation) {
   std::string Code = R"(
     void target(bool Cond, int I1, int I2) {
@@ -6209,42 +6248,6 @@ TEST(TransferTest, ConditionalOperatorLocation) {
 
         EXPECT_NE(&JoinDifferent, &I1);
         EXPECT_NE(&JoinDifferent, &I2);
-      });
-}
-
-TEST(TransferTest, ConditionalOperatorValuesTested) {
-  // Even though the LHS and the RHS of the conditional operator have different
-  // StorageLocations, we get constraints from the condition that the values
-  // must be equal to B1 for JoinDifferentIsB1, or B2 for JoinDifferentIsB2.
-  std::string Code = R"(
-    void target(bool B1, bool B2) {
-      bool JoinDifferentIsB1 = (B1 == B2) ? B2 : B1;
-      bool JoinDifferentIsB2 = (B1 == B2) ? B1 : B2;
-      // [[p]]
-    }
-  )";
-  runDataflow(
-      Code,
-      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
-         ASTContext &ASTCtx) {
-        Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
-
-        auto &B1 = getValueForDecl<BoolValue>(ASTCtx, Env, "B1");
-        auto &B2 = getValueForDecl<BoolValue>(ASTCtx, Env, "B2");
-        auto &JoinDifferentIsB1 =
-            getValueForDecl<BoolValue>(ASTCtx, Env, "JoinDifferentIsB1");
-        auto &JoinDifferentIsB2 =
-            getValueForDecl<BoolValue>(ASTCtx, Env, "JoinDifferentIsB2");
-
-        const Formula &JoinDifferentIsB1EqB1 =
-            Env.arena().makeEquals(JoinDifferentIsB1.formula(), B1.formula());
-        EXPECT_TRUE(Env.allows(JoinDifferentIsB1EqB1));
-        EXPECT_TRUE(Env.proves(JoinDifferentIsB1EqB1));
-
-        const Formula &JoinDifferentIsB2EqB2 =
-            Env.arena().makeEquals(JoinDifferentIsB2.formula(), B2.formula());
-        EXPECT_TRUE(Env.allows(JoinDifferentIsB2EqB2));
-        EXPECT_TRUE(Env.proves(JoinDifferentIsB2EqB2));
       });
 }
 
@@ -6296,11 +6299,11 @@ TEST(TransferTest, ConditionalOperatorLocationUpdatedAfter) {
         EXPECT_TRUE(AfterSameEnv.allows(B1ChangedForSame));
         EXPECT_TRUE(AfterSameEnv.proves(B1ChangedForSame));
 
-        // FIXME: It should be possible that B1 *may* be updated, so it may be
-        // that AfterSameB1 != AfterDiffB1 or AfterSameB1 == AfterDiffB1.
         const Formula &B1ChangedForDiff =
             AfterDiffEnv.arena().makeNot(AfterDiffEnv.arena().makeEquals(
                 AfterDiffB1.formula(), AfterSameB1.formula()));
+        // FIXME: It should be possible that B1 *may* be updated, so it may be
+        // that AfterSameB1 != AfterDiffB1 or AfterSameB1 == AfterDiffB1.
         EXPECT_FALSE(AfterSameEnv.allows(B1ChangedForDiff));
         // proves() should be false, since B1 may or may not have changed
         // depending on `Cond`.
