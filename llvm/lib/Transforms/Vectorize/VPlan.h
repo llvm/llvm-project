@@ -2055,8 +2055,10 @@ class LLVM_ABI_FOR_TEST VPHeaderPHIRecipe : public VPSingleDefRecipe,
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
                     VPValue *Start, DebugLoc DL = DebugLoc::getUnknown())
-      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}),
-                          UnderlyingInstr, DL) {}
+      : VPSingleDefRecipe(VPDefID, {}, UnderlyingInstr, DL) {
+    if (Start)
+      addOperand(Start);
+  }
 
   const VPRecipeBase *getAsRecipe() const override { return this; }
 
@@ -2327,24 +2329,28 @@ protected:
 /// recipe is placed in an entry block to a (non-replicate) region, it must have
 /// exactly 2 incoming values, the first from the predecessor of the region and
 /// the second from the exiting block of the region.
-class LLVM_ABI_FOR_TEST VPWidenPHIRecipe : public VPSingleDefRecipe,
-                                           public VPPhiAccessors {
+class LLVM_ABI_FOR_TEST VPWidenPHIRecipe : public VPHeaderPHIRecipe {
   /// Name to use for the generated IR instruction for the widened phi.
   std::string Name;
+
+protected:
+  /// Constructor for the VPActiveLaneMaskPHIRecipe subclass.
+  VPWidenPHIRecipe(unsigned SC, VPValue *Start,
+                   DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
+      : VPHeaderPHIRecipe(SC, nullptr, Start, DL), Name(Name.str()) {}
 
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
   /// debug location \p DL.
   VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr,
                    DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, {}, Phi, DL), Name(Name.str()) {
-    if (Start)
-      addOperand(Start);
-  }
+      : VPHeaderPHIRecipe(VPDef::VPWidenPHISC, Phi, Start, DL),
+        Name(Name.str()) {}
 
   VPWidenPHIRecipe *clone() override {
-    auto *C = new VPWidenPHIRecipe(cast<PHINode>(getUnderlyingValue()),
-                                   getOperand(0), getDebugLoc(), Name);
+    auto *C =
+        new VPWidenPHIRecipe(cast_if_present<PHINode>(getUnderlyingValue()),
+                             getOperand(0), getDebugLoc(), Name);
     for (VPValue *Op : llvm::drop_begin(operands()))
       C->addOperand(Op);
     return C;
@@ -3605,27 +3611,22 @@ protected:
 
 /// A recipe for generating the active lane mask for the vector loop that is
 /// used to predicate the vector operations.
-/// TODO: It would be good to use the existing VPWidenPHIRecipe instead and
-/// remove VPActiveLaneMaskPHIRecipe.
-class VPActiveLaneMaskPHIRecipe : public VPHeaderPHIRecipe {
+class VPActiveLaneMaskPHIRecipe : public VPWidenPHIRecipe {
 public:
   VPActiveLaneMaskPHIRecipe(VPValue *StartMask, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPDef::VPActiveLaneMaskPHISC, nullptr, StartMask,
-                          DL) {}
+      : VPWidenPHIRecipe(VPDef::VPActiveLaneMaskPHISC, StartMask, DL,
+                         "active.lane.mask") {}
 
   ~VPActiveLaneMaskPHIRecipe() override = default;
 
   VPActiveLaneMaskPHIRecipe *clone() override {
-    auto *R = new VPActiveLaneMaskPHIRecipe(getOperand(0), getDebugLoc());
-    if (getNumOperands() == 2)
-      R->addOperand(getOperand(1));
-    return R;
+    auto *C = new VPActiveLaneMaskPHIRecipe(getOperand(0), getDebugLoc());
+    for (VPValue *Op : llvm::drop_begin(operands()))
+      C->addOperand(Op);
+    return C;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPActiveLaneMaskPHISC)
-
-  /// Generate the active lane mask phi of the vector loop.
-  void execute(VPTransformState &State) override;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

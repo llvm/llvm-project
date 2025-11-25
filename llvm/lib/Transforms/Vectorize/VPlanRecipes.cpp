@@ -4372,9 +4372,12 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
   Value *Op0 = State.get(getOperand(0));
   Type *VecTy = Op0->getType();
-  Instruction *VecPhi = State.Builder.CreatePHI(VecTy, 2, Name);
+  PHINode *VecPhi = State.Builder.CreatePHI(VecTy, 2, Name);
+  VecPhi->addIncoming(Op0, VectorPH);
   State.set(this, VecPhi);
 }
 
@@ -4388,18 +4391,6 @@ void VPWidenPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printPhiOperands(O, SlotTracker);
 }
 #endif
-
-// TODO: It would be good to use the existing VPWidenPHIRecipe instead and
-// remove VPActiveLaneMaskPHIRecipe.
-void VPActiveLaneMaskPHIRecipe::execute(VPTransformState &State) {
-  BasicBlock *VectorPH =
-      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
-  Value *StartMask = State.get(getOperand(0));
-  PHINode *Phi =
-      State.Builder.CreatePHI(StartMask->getType(), 2, "active.lane.mask");
-  Phi->addIncoming(StartMask, VectorPH);
-  State.set(this, Phi);
-}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPActiveLaneMaskPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
