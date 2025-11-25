@@ -199,13 +199,13 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
                         "variable %0 declaration before if statement could be moved into if init statement")
                     << VD
                     << FixItHint::CreateRemoval(PrevDecl->getSourceRange())
-                    << FixItHint::CreateInsertion(If->getBeginLoc(), NewInitStmt);
+                    << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);
       } else if (Switch) {
         auto Diag = diag(PrevDecl->getBeginLoc(),
                         "variable %0 declaration before switch statement could be moved into switch init statement")  
                     << VD
                     << FixItHint::CreateRemoval(PrevDecl->getSourceRange())
-                    << FixItHint::CreateInsertion(Switch->getBeginLoc(), NewInitStmt);
+                    << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);
       }
     }
   }

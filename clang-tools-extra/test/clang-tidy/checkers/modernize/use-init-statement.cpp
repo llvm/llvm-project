@@ -18,9 +18,10 @@ void normal() {
     ++i2;
 }
 
-// TODO: implement fixit
+// TODO: fix fixit
 // TODO: implement structured binding case
 // TODO: implement case for already if-init statement used
+// TODO: implement case for const and constexpr variables
 void bad1() {
     int i1 = 0;
     if (i1 == 0) {
