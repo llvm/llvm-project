@@ -535,8 +535,8 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       // On RV32_Zdinx, FMV.D will move a pair of registers to another pair of
       // registers, in one instruction.
       BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_D_IN32X), DstReg)
-        .addReg(SrcReg, getRenamableRegState(RenamableSrc))
-        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
+          .addReg(SrcReg, getRenamableRegState(RenamableSrc))
+          .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
       return;
     }
 
