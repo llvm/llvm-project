@@ -789,3 +789,6 @@
 // CHECK-SMEF8F16: __ARM_FEATURE_FP8 1
 // CHECK-SMEF8F16: __ARM_FEATURE_SME2 1
 // CHECK-SMEF8F16: __ARM_FEATURE_SME_F8F16 1
+
+// RUN: %clang --target=aarch64 -march=armv8-a+rprfm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-RPRFM %s
+// CHECK-RPRFM: __ARM_FEATURE_RPRFM 1

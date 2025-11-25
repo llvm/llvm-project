@@ -6161,6 +6161,29 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getNode(AArch64ISD::PREFETCH, DL, MVT::Other, Chain,
                        DAG.getTargetConstant(PrfOp, DL, MVT::i32), Addr);
   }
+  case Intrinsic::aarch64_range_prefetch: {
+    SDValue Chain = Op.getOperand(0);
+    SDValue Addr = Op.getOperand(2);
+
+    unsigned IsWrite = Op.getConstantOperandVal(3);
+    unsigned IsStream = Op.getConstantOperandVal(4);
+    unsigned PrfOp = (IsStream << 2) | IsWrite;
+
+    uint64_t Distance = Op.getConstantOperandVal(5);
+    int64_t Stride = Op.getConstantOperandVal(6);
+    uint64_t Count = Op.getConstantOperandVal(7);
+    int64_t Length = Op.getConstantOperandVal(8);
+    uint64_t Mask22 = (1ULL << 22) - 1;
+    uint64_t Mask16 = (1ULL << 16) - 1;
+    uint64_t Metadata = (Distance << 60) |
+                        ((Stride & Mask22) << 38) |
+                        ((Count & Mask16) << 22) |
+                        (Length & Mask22);
+
+    return DAG.getNode(AArch64ISD::RANGE_PREFETCH, DL, MVT::Other, Chain,
+                       DAG.getTargetConstant(PrfOp, DL, MVT::i32), Addr,
+                       DAG.getConstant(Metadata, DL, MVT::i64));
+  }
   case Intrinsic::aarch64_sme_str:
   case Intrinsic::aarch64_sme_ldr: {
     return LowerSMELdrStr(Op, DAG, IntNo == Intrinsic::aarch64_sme_ldr);

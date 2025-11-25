@@ -6701,6 +6701,27 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "isdata argument to llvm.aarch64.prefetch must be 0 or 1", Call);
     break;
   }
+  case Intrinsic::aarch64_range_prefetch: {
+    Check(cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue() < 2,
+          "write argument to llvm.aarch64.range.prefetch must be 0 or 1", Call);
+    Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 2,
+          "stream argument to llvm.aarch64.range.prefetch must be 0 or 1",
+          Call);
+    Check(cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue() < 16,
+          "reuse distance argument to llvm.aarch64.range.prefetch must be < 16",
+          Call);
+    int Stride = cast<ConstantInt>(Call.getArgOperand(4))->getZExtValue();
+    Check(Stride > -2049 && Stride < 2041,
+          "stride argument to llvm.aarch64.range.prefetch must be -2048 - 2040",
+          Call);
+    Check(cast<ConstantInt>(Call.getArgOperand(5))->getZExtValue() < 65536,
+          "count argument to llvm.aarch64.range.prefetch must be < 65536");
+    int Length = cast<ConstantInt>(Call.getArgOperand(6))->getZExtValue();
+    Check(Length > -2049 && Length < 2041,
+          "length argument to llvm.aarch64.range.prefetch must be -2048 -"
+          "2040");
+    break;
+  }
   case Intrinsic::callbr_landingpad: {
     const auto *CBR = dyn_cast<CallBrInst>(Call.getOperand(0));
     Check(CBR, "intrinstic requires callbr operand", &Call);

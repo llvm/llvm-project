@@ -164,6 +164,19 @@ void test_pld() {
   __pld(0);
 }
 
+#if defined(__ARM_64BIT_STATE)
+
+// AArch64-LABEL: @test_rpld(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call void @llvm.aarch64.range.prefetch(ptr null, i32 1, i32 1, i32 15, i32 -2048, i32 65535, i32 2040)
+// AArch64-NEXT:    ret void
+//
+void test_rpld() {
+  __rpld(1, 1, 15, -2048, 65535, 2040, 0);
+}
+
+#endif
+
 // AArch32-LABEL: @test_pldx(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    call void @llvm.prefetch.p0(ptr null, i32 1, i32 3, i32 1)

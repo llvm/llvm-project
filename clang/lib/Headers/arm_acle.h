@@ -98,6 +98,10 @@ __swp(uint32_t __x, volatile uint32_t *__p) {
 #else
 #define __pldx(access_kind, cache_level, retention_policy, addr) \
   __builtin_arm_prefetch(addr, access_kind, cache_level, retention_policy, 1)
+#define __rpld(access_kind, retention_policy, reuse_distance, stride, count,   \
+               length, addr)                                                   \
+  __builtin_arm_range_prefetch(addr, access_kind, retention_policy,            \
+                               reuse_distance, stride, count, length)
 #endif
 
 /* 7.6.2 Instruction prefetch */
