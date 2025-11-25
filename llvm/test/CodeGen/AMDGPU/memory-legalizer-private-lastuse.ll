@@ -92,6 +92,7 @@ define amdgpu_kernel void @private_last_use_and_volatile_load(ptr addrspace(5) %
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_load_b32 v1, off, s2 th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0

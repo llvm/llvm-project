@@ -7409,8 +7409,10 @@ define i32 @v_multi_use_mul_chain_add_other_use_all(i32 %arg, i32 %arg1, i32 %ar
 ; GFX1250-SDAG-NEXT:    v_mul_lo_u32 v3, v1, v0
 ; GFX1250-SDAG-NEXT:    global_store_b32 v[4:5], v2, off scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_store_b32 v[4:5], v1, off scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_store_b32 v[4:5], v3, off scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-SDAG-NEXT:    v_add_nc_u32_e32 v0, v3, v0
@@ -7431,8 +7433,10 @@ define i32 @v_multi_use_mul_chain_add_other_use_all(i32 %arg, i32 %arg1, i32 %ar
 ; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v5, v1, v0
 ; GFX1250-GISEL-NEXT:    global_store_b32 v[2:3], v4, off scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_store_b32 v[2:3], v1, off scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_store_b32 v[2:3], v5, off scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    v_add_nc_u32_e32 v0, v5, v0
@@ -7686,6 +7690,7 @@ define i32 @v_multi_use_mul_chain_add_other_use_some(i32 %arg, i32 %arg1, i32 %a
 ; GFX1250-SDAG-NEXT:    v_mul_lo_u32 v3, v0, v1
 ; GFX1250-SDAG-NEXT:    global_store_b32 v[4:5], v2, off scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_store_b32 v[4:5], v3, off scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-SDAG-NEXT:    v_add_nc_u32_e32 v0, v3, v1
@@ -7706,6 +7711,7 @@ define i32 @v_multi_use_mul_chain_add_other_use_some(i32 %arg, i32 %arg1, i32 %a
 ; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v5, v0, v1
 ; GFX1250-GISEL-NEXT:    global_store_b32 v[2:3], v4, off scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_store_b32 v[2:3], v5, off scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    v_add_nc_u32_e32 v0, v5, v1

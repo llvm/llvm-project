@@ -6082,7 +6082,7 @@ def prebind : Flag<["-"], "prebind">;
 def preload : Flag<["-"], "preload">;
 def print_file_name_EQ : Joined<["-", "--"], "print-file-name=">,
   HelpText<"Print the full library path of <file>">, MetaVarName<"<file>">,
-  Visibility<[ClangOption, CLOption]>;
+  Visibility<[ClangOption, FlangOption, CLOption]>;
 def print_ivar_layout : Flag<["-"], "print-ivar-layout">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable Objective-C Ivar layout bitmap print trace">,

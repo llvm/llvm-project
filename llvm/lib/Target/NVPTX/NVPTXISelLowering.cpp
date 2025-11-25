@@ -766,7 +766,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Register custom handling for illegal type loads/stores. We'll try to custom
   // lower almost all illegal types and logic in the lowering will discard cases
   // we can't handle.
-  setOperationAction({ISD::LOAD, ISD::STORE}, {MVT::i128, MVT::f128}, Custom);
+  setOperationAction({ISD::LOAD, ISD::STORE}, {MVT::i128, MVT::i256, MVT::f128},
+                     Custom);
   for (MVT VT : MVT::fixedlen_vector_valuetypes())
     if (!isTypeLegal(VT) && VT.getStoreSizeInBits() <= 256)
       setOperationAction({ISD::STORE, ISD::LOAD}, VT, Custom);

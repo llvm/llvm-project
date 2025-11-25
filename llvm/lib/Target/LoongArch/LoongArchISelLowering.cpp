@@ -615,6 +615,59 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
   return SDValue();
 }
 
+// Helper to attempt to return a cheaper, bit-inverted version of \p V.
+static SDValue isNOT(SDValue V, SelectionDAG &DAG) {
+  // TODO: don't always ignore oneuse constraints.
+  V = peekThroughBitcasts(V);
+  EVT VT = V.getValueType();
+
+  // Match not(xor X, -1) -> X.
+  if (V.getOpcode() == ISD::XOR &&
+      (ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()) ||
+       isAllOnesConstant(V.getOperand(1))))
+    return V.getOperand(0);
+
+  // Match not(extract_subvector(not(X)) -> extract_subvector(X).
+  if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      (isNullConstant(V.getOperand(1)) || V.getOperand(0).hasOneUse())) {
+    if (SDValue Not = isNOT(V.getOperand(0), DAG)) {
+      Not = DAG.getBitcast(V.getOperand(0).getValueType(), Not);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Not), VT, Not,
+                         V.getOperand(1));
+    }
+  }
+
+  // Match not(SplatVector(not(X)) -> SplatVector(X).
+  if (V.getOpcode() == ISD::BUILD_VECTOR) {
+    if (SDValue SplatValue =
+            cast<BuildVectorSDNode>(V.getNode())->getSplatValue()) {
+      if (!V->isOnlyUserOf(SplatValue.getNode()))
+        return SDValue();
+
+      if (SDValue Not = isNOT(SplatValue, DAG)) {
+        Not = DAG.getBitcast(V.getOperand(0).getValueType(), Not);
+        return DAG.getSplat(VT, SDLoc(Not), Not);
+      }
+    }
+  }
+
+  // Match not(or(not(X),not(Y))) -> and(X, Y).
+  if (V.getOpcode() == ISD::OR && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
+      V.getOperand(0).hasOneUse() && V.getOperand(1).hasOneUse()) {
+    // TODO: Handle cases with single NOT operand -> VANDN
+    if (SDValue Op1 = isNOT(V.getOperand(1), DAG))
+      if (SDValue Op0 = isNOT(V.getOperand(0), DAG))
+        return DAG.getNode(ISD::AND, SDLoc(V), VT, DAG.getBitcast(VT, Op0),
+                           DAG.getBitcast(VT, Op1));
+  }
+
+  // TODO: Add more matching patterns. Such as,
+  // not(concat_vectors(not(X), not(Y))) -> concat_vectors(X, Y).
+  // not(slt(C, X)) -> slt(X - 1, C)
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -5057,6 +5110,33 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   }
 }
 
+/// Try to fold: (and (xor X, -1), Y) -> (vandn X, Y).
+static SDValue combineAndNotIntoVANDN(SDNode *N, const SDLoc &DL,
+                                      SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::AND && "Unexpected opcode combine into ANDN");
+
+  MVT VT = N->getSimpleValueType(0);
+  if (!VT.is128BitVector() && !VT.is256BitVector())
+    return SDValue();
+
+  SDValue X, Y;
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  if (SDValue Not = isNOT(N0, DAG)) {
+    X = Not;
+    Y = N1;
+  } else if (SDValue Not = isNOT(N1, DAG)) {
+    X = Not;
+    Y = N0;
+  } else
+    return SDValue();
+
+  X = DAG.getBitcast(VT, X);
+  Y = DAG.getBitcast(VT, Y);
+  return DAG.getNode(LoongArchISD::VANDN, DL, VT, X, Y);
+}
+
 static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const LoongArchSubtarget &Subtarget) {
@@ -5073,6 +5153,9 @@ static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
   ConstantSDNode *CN;
   SDValue NewOperand;
   MVT GRLenVT = Subtarget.getGRLenVT();
+
+  if (SDValue R = combineAndNotIntoVANDN(N, DL, DAG))
+    return R;
 
   // BSTRPICK requires the 32S feature.
   if (!Subtarget.has32S())
@@ -6751,6 +6834,69 @@ performEXTRACT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+/// Do target-specific dag combines on LoongArchISD::VANDN nodes.
+static SDValue performVANDNCombine(SDNode *N, SelectionDAG &DAG,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const LoongArchSubtarget &Subtarget) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  MVT VT = N->getSimpleValueType(0);
+  SDLoc DL(N);
+
+  // VANDN(undef, x) -> 0
+  // VANDN(x, undef) -> 0
+  if (N0.isUndef() || N1.isUndef())
+    return DAG.getConstant(0, DL, VT);
+
+  // VANDN(0, x) -> x
+  if (ISD::isBuildVectorAllZeros(N0.getNode()))
+    return N1;
+
+  // VANDN(x, 0) -> 0
+  if (ISD::isBuildVectorAllZeros(N1.getNode()))
+    return DAG.getConstant(0, DL, VT);
+
+  // VANDN(x, -1) -> NOT(x) -> XOR(x, -1)
+  if (ISD::isBuildVectorAllOnes(N1.getNode()))
+    return DAG.getNOT(DL, N0, VT);
+
+  // Turn VANDN back to AND if input is inverted.
+  if (SDValue Not = isNOT(N0, DAG))
+    return DAG.getNode(ISD::AND, DL, VT, DAG.getBitcast(VT, Not), N1);
+
+  // Folds for better commutativity:
+  if (N1->hasOneUse()) {
+    // VANDN(x,NOT(y)) -> AND(NOT(x),NOT(y)) -> NOT(OR(X,Y)).
+    if (SDValue Not = isNOT(N1, DAG))
+      return DAG.getNOT(
+          DL, DAG.getNode(ISD::OR, DL, VT, N0, DAG.getBitcast(VT, Not)), VT);
+
+    // VANDN(x, SplatVector(Imm)) -> AND(NOT(x), NOT(SplatVector(~Imm)))
+    // -> NOT(OR(x, SplatVector(-Imm))
+    // Combination is performed only when VT is v16i8/v32i8, using `vnori.b` to
+    // gain benefits.
+    if (!DCI.isBeforeLegalizeOps() && (VT == MVT::v16i8 || VT == MVT::v32i8) &&
+        N1.getOpcode() == ISD::BUILD_VECTOR) {
+      if (SDValue SplatValue =
+              cast<BuildVectorSDNode>(N1.getNode())->getSplatValue()) {
+        if (!N1->isOnlyUserOf(SplatValue.getNode()))
+          return SDValue();
+
+        if (auto *C = dyn_cast<ConstantSDNode>(SplatValue)) {
+          uint8_t NCVal = static_cast<uint8_t>(~(C->getSExtValue()));
+          SDValue Not =
+              DAG.getSplat(VT, DL, DAG.getTargetConstant(NCVal, DL, MVT::i8));
+          return DAG.getNOT(
+              DL, DAG.getNode(ISD::OR, DL, VT, N0, DAG.getBitcast(VT, Not)),
+              VT);
+        }
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -6786,6 +6932,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performSPLIT_PAIR_F64Combine(N, DAG, DCI, Subtarget);
   case ISD::EXTRACT_VECTOR_ELT:
     return performEXTRACT_VECTOR_ELTCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::VANDN:
+    return performVANDNCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
 }
