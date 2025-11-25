@@ -356,6 +356,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FCOPYSIGN,          MVT::f32,   Custom);
   setOperationAction(ISD::FCOPYSIGN,          MVT::f64,   Custom);
   setOperationAction(ISD::FP_TO_SINT,         MVT::i32,   Custom);
+  setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::i32,   Custom);
+  setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::i32,   Custom);
 
   if (Subtarget.hasMips32r2() ||
       getTargetMachine().getTargetTriple().isOSLinux())
@@ -395,6 +397,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
       setOperationAction(ISD::STORE,              MVT::i64,   Custom);
     }
     setOperationAction(ISD::FP_TO_SINT,         MVT::i64,   Custom);
+    setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::i64,   Custom);
+    setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::i64,   Custom);
     setOperationAction(ISD::SHL_PARTS,          MVT::i64,   Custom);
     setOperationAction(ISD::SRA_PARTS,          MVT::i64,   Custom);
     setOperationAction(ISD::SRL_PARTS,          MVT::i64,   Custom);
@@ -433,6 +437,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FP_TO_UINT,        MVT::i32,   Expand);
   setOperationAction(ISD::FP_TO_UINT,        MVT::i64,   Expand);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1,    Expand);
+
   if (Subtarget.hasCnMips()) {
     setOperationAction(ISD::CTPOP,           MVT::i32,   Legal);
     setOperationAction(ISD::CTPOP,           MVT::i64,   Legal);
@@ -1354,6 +1359,9 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::LOAD:               return lowerLOAD(Op, DAG);
   case ISD::STORE:              return lowerSTORE(Op, DAG);
   case ISD::EH_DWARF_CFA:       return lowerEH_DWARF_CFA(Op, DAG);
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
+    return lowerSTRICT_FP_TO_INT(Op, DAG);
   case ISD::FP_TO_SINT:         return lowerFP_TO_SINT(Op, DAG);
   case ISD::READCYCLECOUNTER:
     return lowerREADCYCLECOUNTER(Op, DAG);
@@ -3009,6 +3017,20 @@ SDValue MipsTargetLowering::lowerFP_TO_SINT(SDValue Op,
   SDValue Trunc = DAG.getNode(MipsISD::TruncIntFP, SDLoc(Op), FPTy,
                               Op.getOperand(0));
   return DAG.getNode(ISD::BITCAST, SDLoc(Op), Op.getValueType(), Trunc);
+}
+
+SDValue MipsTargetLowering::lowerSTRICT_FP_TO_INT(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  assert(Op->isStrictFPOpcode());
+  SDValue SrcVal = Op.getOperand(1);
+  SDLoc Loc(Op);
+
+  SDValue Result =
+      DAG.getNode(Op.getOpcode() == ISD::STRICT_FP_TO_SINT ? ISD::FP_TO_SINT
+                                                           : ISD::FP_TO_UINT,
+                  Loc, Op.getValueType(), SrcVal);
+
+  return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
 }
 
 //===----------------------------------------------------------------------===//
