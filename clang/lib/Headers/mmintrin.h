@@ -54,9 +54,6 @@ typedef char __v16qi __attribute__((__vector_size__(16)));
 #define __zext128(x)                                                           \
   (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
                                     1, 2, 3)
-#define __anyext128(x)                                                         \
-  (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
-                                    1, -1, -1)
 
 /// Clears the MMX state by setting the state of the x87 stack registers
 ///    to empty.
