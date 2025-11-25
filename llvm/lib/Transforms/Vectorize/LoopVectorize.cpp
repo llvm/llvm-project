@@ -8558,6 +8558,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                                 *Plan))
     return nullptr;
 
+  // Create whole-vector selects for find-last recurrences.
+  if (!VPlanTransforms::runPass(VPlanTransforms::handleFindLastReductions,
+                                *Plan, RecipeBuilder))
+    return nullptr;
+
   // Transform recipes to abstract recipes if it is legal and beneficial and
   // clamp the range for better cost estimation.
   // TODO: Enable following transform when the EVL-version of extended-reduction
@@ -8595,10 +8600,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   if (!VPlanTransforms::runPass(VPlanTransforms::adjustFixedOrderRecurrences,
                                 *Plan, Builder))
     return nullptr;
-
-  // Create whole-vector selects for find-last recurrences.
-  VPlanTransforms::runPass(VPlanTransforms::convertFindLastRecurrences, *Plan,
-                           RecipeBuilder);
 
   if (useActiveLaneMask(Style)) {
     // TODO: Move checks to VPlanTransforms::addActiveLaneMask once

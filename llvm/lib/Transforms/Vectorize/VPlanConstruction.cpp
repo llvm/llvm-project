@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopVectorizationPlanner.h"
+#include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
@@ -1002,10 +1003,10 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   return true;
 }
 
-void VPlanTransforms::convertFindLastRecurrences(
-    VPlan &Plan, VPRecipeBuilder &RecipeBuilder) {
+bool VPlanTransforms::handleFindLastReductions(VPlan &Plan,
+                                               VPRecipeBuilder &RecipeBuilder) {
   if (Plan.hasScalarVFOnly())
-    return;
+    return false;
 
   // We want to create the following nodes:
   // vec.body:
@@ -1029,8 +1030,20 @@ void VPlanTransforms::convertFindLastRecurrences(
       continue;
 
     // Find the condition for the select
-    auto *SR = cast<VPWidenSelectRecipe>(&PhiR->getBackedgeRecipe());
-    VPValue *Cond = SR->getCond();
+    auto *SelectR = cast<VPSingleDefRecipe>(&PhiR->getBackedgeRecipe());
+    VPValue *Cond = nullptr;
+    if (auto *WidenR = dyn_cast<VPWidenSelectRecipe>(SelectR))
+      Cond = WidenR->getCond();
+    else if (auto *RepR = dyn_cast<VPReplicateRecipe>(SelectR)) {
+      auto *SI = dyn_cast<SelectInst>(RepR->getUnderlyingInstr());
+      if (!SI)
+        return false;
+      auto *CmpI = dyn_cast<Instruction>(SI->getCondition());
+      if (!CmpI)
+        return false;
+      Cond = RecipeBuilder.getRecipe(CmpI)->getVPSingleValue();
+    } else
+      return false;
 
     // Add mask phi
     VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
@@ -1040,21 +1053,23 @@ void VPlanTransforms::convertFindLastRecurrences(
     Builder.insert(MaskPHI);
 
     // Add select for mask
-    Builder.setInsertPoint(SR);
+    Builder.setInsertPoint(SelectR);
     VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
     VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
     MaskPHI->addOperand(MaskSelect);
 
     // Replace select for data
-    VPValue *DataSelect = Builder.createSelect(
-        AnyOf, SR->getOperand(1), SR->getOperand(2), SR->getDebugLoc());
-    SR->replaceAllUsesWith(DataSelect);
-    SR->eraseFromParent();
+    VPValue *DataSelect =
+        Builder.createSelect(AnyOf, SelectR->getOperand(1),
+                             SelectR->getOperand(2), SelectR->getDebugLoc());
+    SelectR->replaceAllUsesWith(DataSelect);
+    SelectR->eraseFromParent();
 
     // Find final reduction computation and replace it with an
     // extract.last.active intrinsic.
     VPInstruction *RdxResult = findComputeReductionResult(PhiR);
-    assert(RdxResult && "Unable to find Reduction Result Recipe");
+    if (!RdxResult)
+      return false;
     Builder.setInsertPoint(RdxResult);
     auto *ExtractLastActive =
         Builder.createNaryOp(VPInstruction::ExtractLastActive,
@@ -1063,4 +1078,6 @@ void VPlanTransforms::convertFindLastRecurrences(
     RdxResult->replaceAllUsesWith(ExtractLastActive);
     RdxResult->eraseFromParent();
   }
+
+  return true;
 }
