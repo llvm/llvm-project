@@ -177,18 +177,11 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
     bool usedAfter = isVariableUsedAfterStmt(VD, Statement, Result.Context);
     if (!usedAfter) {
       // Perfect candidate - variable used only in condition
-      std::string VarName = VD->getNameAsString();
-      std::string InitExpr = Lexer::getSourceText(
-          CharSourceRange::getTokenRange(VD->getInit()->getSourceRange()),
+      std::string Var = Lexer::getSourceText(
+          CharSourceRange::getTokenRange(VD->getSourceRange()),
           *Result.SourceManager, getLangOpts()).str();
-      
-      std::string NewInitStmt;
-      if (VD->isConstexpr() || VD->getType().isConstQualified()) {
-        NewInitStmt = "const auto " + VarName + " = " + InitExpr + "; ";
-      } else {
-        NewInitStmt = "auto " + VarName + " = " + InitExpr + "; ";
-      }
-      
+      const std::string NewInitStmt = std::move(Var) + "; ";
+
       if (If) {
         auto Diag = diag(PrevDecl->getBeginLoc(), 
                         "variable %0 declaration before if statement could be moved into if init statement")
