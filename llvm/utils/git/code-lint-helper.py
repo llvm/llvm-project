@@ -104,18 +104,8 @@ View the output from {self.name} here.
 
     # TODO: Refactor this
     def find_comment(self, pr: Any) -> Any:
-        all_linter_names = list(map(attrgetter("name"), ALL_LINTERS))
-        other_linter_names = [name for name in all_linter_names if name != self.name]
-
-        other_tags = [
-            self.COMMENT_TAG.format(linter=name) for name in other_linter_names
-        ]
-
         for comment in pr.as_issue().get_comments():
-            body = comment.body
-            if self.comment_tag in body and not any(
-                other_tag in body for other_tag in other_tags
-            ):
+            if comment.body.startswith(self.comment_tag):
                 return comment
         return None
 
