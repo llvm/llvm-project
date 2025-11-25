@@ -15790,7 +15790,7 @@ static bool canConvertSETCCToXori(SDNode *N) {
   // Check the `SDValue &V` is from `and` with `1`.
   auto IsAndWithOne = [](SDValue &V) {
     if (V.getOpcode() == ISD::AND) {
-      for (const SDValue &Op : V.getNode()->ops())
+      for (const SDValue &Op : V->ops())
         if (auto *C = dyn_cast<ConstantSDNode>(Op))
           if (C->isOne())
             return true;
