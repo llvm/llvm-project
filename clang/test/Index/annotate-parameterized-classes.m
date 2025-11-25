@@ -22,7 +22,7 @@ typedef A<id<NSObject>, NSObject *> ASpecialization1;
 // CHECK-INTERFACE-DECL: Identifier: "NSObject" [7:26 - 7:34] ObjCClassRef=NSObject:4:12
 
 // RUN: c-index-test -test-annotate-tokens=%s:10:1:12:1 %s -target x86_64-apple-macosx10.7.0 | FileCheck -check-prefix=CHECK-CATEGORY-DECL %s
-// CHECK-CATEGORY-DECL: Identifier: "T" [10:14 - 10:15] TemplateTypeParameter=T:10:14 
+// CHECK-CATEGORY-DECL: Identifier: "T" [10:14 - 10:15] TemplateTypeParameter=T:10:14
 // CHECK-CATEGORY-DECL: Identifier: "id" [10:18 - 10:20] TypeRef=id:0:0
 // CHECK-CATEGORY-DECL: Identifier: "U" [10:22 - 10:23] TemplateTypeParameter=U:10:22
 // CHECK-CATEGORY-DECL: Identifier: "NSObject" [10:26 - 10:34] ObjCClassRef=NSObject:4:12
@@ -34,5 +34,5 @@ typedef A<id<NSObject>, NSObject *> ASpecialization1;
 
 // RUN: c-index-test -test-annotate-tokens=%s:15:1:16:1 %s -target x86_64-apple-macosx10.7.0 | FileCheck -check-prefix=CHECK-SUPER %s
 // CHECK-SUPER: Identifier: "A" [15:40 - 15:41] ObjCSuperClassRef=A:7:12
-// CHECK-SUPER: Identifier: "T" [15:42 - 15:43] TypeRef=T:15:14
-// CHECK-SUPER: Identifier: "U" [15:45 - 15:46] TypeRef=U:15:22
+// CHECK-SUPER: Identifier: "T" [15:42 - 15:43] TypeRef=B::T:15:14
+// CHECK-SUPER: Identifier: "U" [15:45 - 15:46] TypeRef=B::U:15:22
