@@ -1522,6 +1522,7 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       }
 
       rvVendor = "";
+      assert((type.v < 256) && "Out of range relocation detected!");
       type.v |= VendorFlag;
     }
 
