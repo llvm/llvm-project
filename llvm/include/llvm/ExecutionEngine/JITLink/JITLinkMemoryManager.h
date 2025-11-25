@@ -348,6 +348,16 @@ public:
     return Alloc->finalize();
   }
 
+  /// Free allocated memory if finalize won't be called.
+  Error abandon() {
+    Error Err = Error::success();
+    Alloc->abandon([&Err](Error E) {
+      ErrorAsOutParameter _(&Err);
+      Err = std::move(E);
+    });
+    return Err;
+  }
+
 private:
   SimpleSegmentAlloc(
       std::unique_ptr<LinkGraph> G,

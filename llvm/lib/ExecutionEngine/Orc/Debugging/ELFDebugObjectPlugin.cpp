@@ -51,15 +51,17 @@ public:
   DebugObject(StringRef Name, SimpleSegmentAlloc Alloc, JITLinkContext &Ctx,
               ExecutionSession &ES)
       : Name(Name), WorkingMem(std::move(Alloc)),
-        MemMgr(Ctx.getMemoryManager()), ES(ES) {
-    FinalizeFuture = FinalizePromise.get_future();
-  }
+        MemMgr(Ctx.getMemoryManager()), ES(ES) {}
 
   ~DebugObject() {
     if (Alloc) {
       std::vector<FinalizedAlloc> Allocs;
       Allocs.push_back(std::move(Alloc));
       if (Error Err = MemMgr.deallocate(std::move(Allocs)))
+        ES.reportError(std::move(Err));
+    } else if (!FinalizeFuture.valid()) {
+      // WorkingMem was not finalized
+      if (Error Err = WorkingMem.abandon())
         ES.reportError(std::move(Err));
     }
   }
@@ -76,7 +78,10 @@ public:
     return SegInfo.WorkingMem;
   }
 
-  SimpleSegmentAlloc &getTargetAlloc() { return WorkingMem; }
+  SimpleSegmentAlloc takeTargetAlloc() {
+    FinalizeFuture = FinalizePromise.get_future();
+    return std::move(WorkingMem);
+  }
 
   void trackFinalizedAlloc(FinalizedAlloc FA) { Alloc = std::move(FA); }
 
@@ -278,7 +283,7 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     }
 
     // Step 3: We start copying the debug object into target memory
-    auto &Alloc = DebugObj->getTargetAlloc();
+    SimpleSegmentAlloc Alloc = DebugObj->takeTargetAlloc();
 
     // FIXME: FA->getAddress() below is supposed to be the address of the memory
     // range on the target, but InProcessMemoryManager returns the address of a
