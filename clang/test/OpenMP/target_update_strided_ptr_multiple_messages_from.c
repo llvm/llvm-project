@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
+#include <stdlib.h>
+
 double *data;
 double *data1;
 double *data2;
