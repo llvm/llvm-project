@@ -32,36 +32,32 @@ import os
 import re
 import sys
 from typing import (
+    DefaultDict,
+    Final,
+    Iterable,
     List,
+    NamedTuple,
     Optional,
     Sequence,
     Tuple,
-    NamedTuple,
-    DefaultDict,
-    Final,
-    Pattern,
 )
 
 # Matches a :doc:`label <path>` or :doc:`label` reference anywhere in text and
 # captures the label. Used to sort bullet items alphabetically in ReleaseNotes
 # items by their label.
-DOC_LABEL_RN_RE: Final[Pattern[str]] = re.compile(
-    r":doc:`(?P<label>[^`<]+)\s*(?:<[^>]+>)?`"
-)
+DOC_LABEL_RN_RE: Final = re.compile(r":doc:`(?P<label>[^`<]+)\s*(?:<[^>]+>)?`")
 
 # Matches a single csv-table row line in list.rst that begins with a :doc:
 # reference, capturing the label. Used to extract the sort key per row.
-DOC_LINE_RE: Final[Pattern[str]] = re.compile(
-    r"^\s*:doc:`(?P<label>[^`<]+?)\s*<[^>]+>`.*$"
-)
+DOC_LINE_RE: Final = re.compile(r"^\s*:doc:`(?P<label>[^`<]+?)\s*<[^>]+>`.*$")
 
 
-EXTRA_DIR: Final[str] = os.path.join(os.path.dirname(__file__), "../..")
-DOCS_DIR: Final[str] = os.path.join(EXTRA_DIR, "docs")
-CLANG_TIDY_DOCS_DIR: Final[str] = os.path.join(DOCS_DIR, "clang-tidy")
-CHECKS_DOCS_DIR: Final[str] = os.path.join(CLANG_TIDY_DOCS_DIR, "checks")
-LIST_DOC: Final[str] = os.path.join(CHECKS_DOCS_DIR, "list.rst")
-RELEASE_NOTES_DOC: Final[str] = os.path.join(DOCS_DIR, "ReleaseNotes.rst")
+EXTRA_DIR: Final = os.path.join(os.path.dirname(__file__), "../..")
+DOCS_DIR: Final = os.path.join(EXTRA_DIR, "docs")
+CLANG_TIDY_DOCS_DIR: Final = os.path.join(DOCS_DIR, "clang-tidy")
+CHECKS_DOCS_DIR: Final = os.path.join(CLANG_TIDY_DOCS_DIR, "checks")
+LIST_DOC: Final = os.path.join(CHECKS_DOCS_DIR, "list.rst")
+RELEASE_NOTES_DOC: Final = os.path.join(DOCS_DIR, "ReleaseNotes.rst")
 
 
 # Label extracted from :doc:`...`.
@@ -232,7 +228,7 @@ def _parse_bullet_blocks(lines: Sequence[str], start: int, end: int) -> BulletBl
     return BulletBlocks(prefix, blocks, suffix)
 
 
-def sort_blocks(blocks: List[BulletItem]) -> List[BulletBlock]:
+def sort_blocks(blocks: Iterable[BulletItem]) -> List[BulletBlock]:
     """Return blocks sorted deterministically by their extracted label.
 
     Duplicates are preserved; merging is left to authors to handle manually.
