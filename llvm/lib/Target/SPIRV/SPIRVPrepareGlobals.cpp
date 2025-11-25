@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVUtils.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Module.h"
 
 using namespace llvm;
@@ -43,6 +45,38 @@ bool tryExtendLLVMBitcodeMarker(GlobalVariable &Bitcode) {
   return true;
 }
 
+// In HIP, dynamic LDS variables are represented using 0-element global arrays
+// in the __shared__ language address-space.
+//
+//  extern __shared__ int LDS[];
+//
+// These are not representable in SPIRV directly.
+// To represent them, for AMD, we use an array with UINT32_MAX-elements.
+// These are reverse translated to 0-element arrays.
+bool tryExtendDynamicLDSGlobal(GlobalVariable &GV) {
+  constexpr unsigned WorkgroupAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Workgroup);
+  const bool IsWorkgroupExternal =
+      GV.hasExternalLinkage() && GV.getAddressSpace() == WorkgroupAS;
+  if (!IsWorkgroupExternal)
+    return false;
+
+  const ArrayType *AT = dyn_cast<ArrayType>(GV.getValueType());
+  if (!AT || AT->getNumElements() != 0)
+    return false;
+
+  constexpr auto UInt32Max = std::numeric_limits<uint32_t>::max();
+  ArrayType *NewAT = ArrayType::get(AT->getElementType(), UInt32Max);
+  GlobalVariable *NewGV = new GlobalVariable(
+      *GV.getParent(), NewAT, GV.isConstant(), GV.getLinkage(), nullptr, "",
+      &GV, GV.getThreadLocalMode(), WorkgroupAS, GV.isExternallyInitialized());
+  NewGV->takeName(&GV);
+  GV.replaceAllUsesWith(NewGV);
+  GV.eraseFromParent();
+
+  return true;
+}
+
 bool SPIRVPrepareGlobals::runOnModule(Module &M) {
   const bool IsAMD = M.getTargetTriple().getVendor() == Triple::AMD;
   if (!IsAMD)
@@ -51,6 +85,9 @@ bool SPIRVPrepareGlobals::runOnModule(Module &M) {
   bool Changed = false;
   if (GlobalVariable *Bitcode = M.getNamedGlobal("llvm.embedded.module"))
     Changed |= tryExtendLLVMBitcodeMarker(*Bitcode);
+
+  for (GlobalVariable &GV : make_early_inc_range(M.globals()))
+    Changed |= tryExtendDynamicLDSGlobal(GV);
 
   return Changed;
 }

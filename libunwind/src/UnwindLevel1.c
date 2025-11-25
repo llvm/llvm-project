@@ -82,7 +82,7 @@
     void *shstkRegContext = __libunwind_shstk_get_registers((cursor));         \
     void *shstkJumpAddress = __libunwind_shstk_get_jump_target();              \
     __asm__ volatile("mov x0, %0\n\t"                                          \
-                     "mov x1, wzr\n\t"                                         \
+                     "mov x1, #0\n\t"                                         \
                      "br %1\n\t"                                               \
                      :                                                         \
                      : "r"(shstkRegContext), "r"(shstkJumpAddress)             \

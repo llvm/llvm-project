@@ -205,6 +205,15 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
+  /// Check for post-frame ptr elimination stack locations as well.  This uses a
+  /// heuristic so it isn't reliable for correctness.
+  Register isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                    int &FrameIndex) const override;
+  /// Check for post-frame ptr elimination stack locations as well.  This uses a
+  /// heuristic so it isn't reliable for correctness.
+  Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                     int &FrameIndex) const override;
+
   /// Does this instruction set its full destination register to zero?
   static bool isGPRZero(const MachineInstr &MI);
 
@@ -711,6 +720,8 @@ static inline bool isCondBranchOpcode(int Opc) {
   case AArch64::TBNZX:
   case AArch64::CBWPri:
   case AArch64::CBXPri:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     return true;

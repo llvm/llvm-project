@@ -41,7 +41,7 @@ subroutine all_arguments(path, status)
     !CHECK:        %[[unlink_result:.*]] = fir.call @_FortranAUnlink(%[[path]], %[[path_len]], %[[src_path]], %[[line]])
     !CHECK-SAME:   : (!fir.ref<i8>, i64, !fir.ref<i8>, i32)
     !CHECK-SAME:   -> i32
-  
+
     !CHECK-DAG:    %[[status_i64:.*]] = fir.convert %[[status_decl]]#0 : (!fir.ref<i32>) -> i64
     !CHECK-DAG:    %[[c_null:.*]] = arith.constant 0 : i64
     !CHECK-DAG:    %[[cmp_result:.*]] = arith.cmpi ne, %[[status_i64]], %[[c_null]] : i64
