@@ -80,15 +80,7 @@ define <4 x i8> @bitcast_i32_v4i8(i32 %a, i32 %b){
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add w8, w0, w1
 ; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov b2, v0.b[2]
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov b1, v0.b[3]
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.h[3], w8
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %c = add i32 %a, %b
@@ -132,9 +124,7 @@ define <2 x i16> @bitcast_i32_v2i16(i32 %a, i32 %b){
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add w8, w0, w1
 ; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %c = add i32 %a, %b
