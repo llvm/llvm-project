@@ -80,16 +80,6 @@ def _llvm_repos_extension_impl(module_ctx):
     )
 
     http_archive(
-        name = "llvm_zstd",
-        build_file = "@llvm-raw//utils/bazel/third_party_build:zstd.BUILD",
-        sha256 = "7c42d56fac126929a6a85dbc73ff1db2411d04f104fae9bdea51305663a83fd0",
-        strip_prefix = "zstd-1.5.2",
-        urls = [
-            "https://github.com/facebook/zstd/releases/download/v1.5.2/zstd-1.5.2.tar.gz",
-        ],
-    )
-
-    http_archive(
         name = "pybind11",
         url = "https://github.com/pybind/pybind11/archive/v2.10.3.zip",
         sha256 = "201966a61dc826f1b1879a24a3317a1ec9214a918c8eb035be2f30c3e9cfbdcb",
