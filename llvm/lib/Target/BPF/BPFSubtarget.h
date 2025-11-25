@@ -70,6 +70,8 @@ protected:
   bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm,
       HasLoadAcqStoreRel, HasGotox;
 
+  bool AllowBuiltinCalls;
+
   std::unique_ptr<CallLowering> CallLoweringInfo;
   std::unique_ptr<InstructionSelector> InstSelector;
   std::unique_ptr<LegalizerInfo> Legalizer;
@@ -101,6 +103,7 @@ public:
   bool hasStoreImm() const { return HasStoreImm; }
   bool hasLoadAcqStoreRel() const { return HasLoadAcqStoreRel; }
   bool hasGotox() const { return HasGotox; }
+  bool getAllowBuiltinCalls() const { return AllowBuiltinCalls; }
 
   bool isLittleEndian() const { return IsLittleEndian; }
 
