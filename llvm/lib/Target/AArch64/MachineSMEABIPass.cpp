@@ -949,7 +949,7 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
   if (From == ZAState::ENTRY && To == ZAState::OFF)
     return;
 
-  SMEAttrs SMEFnAttrs = AFI->getSMEFnAttrs();
+  [[maybe_unused]] SMEAttrs SMEFnAttrs = AFI->getSMEFnAttrs();
 
   // TODO: Avoid setting up the save buffer if there's no transition to
   // LOCAL_SAVED.
