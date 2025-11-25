@@ -202,6 +202,22 @@ public:
     return convertType(getContext().getTypeDeclType(t));
   }
 
+  /// Get integer from a mlir::Value that is an int constant or a constant op.
+  static int64_t getSExtIntValueFromConstOp(mlir::Value val) {
+    auto constOp = val.getDefiningOp<cir::ConstantOp>();
+    assert(constOp && "getIntValueFromConstOp call with non ConstantOp");
+    return constOp.getIntValue().getSExtValue();
+  }
+
+  /// Get zero-extended integer from a mlir::Value that is an int constant or a
+  /// constant op.
+  static int64_t getZExtIntValueFromConstOp(mlir::Value val) {
+    auto constOp = val.getDefiningOp<cir::ConstantOp>();
+    assert(constOp &&
+           "getZeroExtendedIntValueFromConstOp call with non ConstantOp");
+    return constOp.getIntValue().getZExtValue();
+  }
+
   ///  Return the cir::TypeEvaluationKind of QualType \c type.
   static cir::TypeEvaluationKind getEvaluationKind(clang::QualType type);
 
@@ -1348,28 +1364,6 @@ public:
   mlir::Value emitBuiltinObjectSize(const clang::Expr *e, unsigned type,
                                     cir::IntType resType, mlir::Value emittedE,
                                     bool isDynamic);
-
-  /// Get integer from a mlir::Value that is an int constant or a constant op.
-  static int64_t getSExtIntValueFromConstOp(mlir::Value val) {
-    auto constOp = val.getDefiningOp<cir::ConstantOp>();
-    assert(constOp && "getIntValueFromConstOp call with non ConstantOp");
-    return constOp.getIntValue().getSExtValue();
-  }
-
-  /// Get zero-extended integer from a mlir::Value that is an int constant or a
-  /// constant op.
-  static int64_t getZExtIntValueFromConstOp(mlir::Value val) {
-    auto constOp = val.getDefiningOp<cir::ConstantOp>();
-    assert(constOp &&
-           "getZeroExtendedIntValueFromConstOp call with non ConstantOp");
-    return constOp.getIntValue().getZExtValue();
-  }
-
-  /// Get size of type in bits using SizedTypeInterface
-  llvm::TypeSize getTypeSizeInBits(mlir::Type ty) const {
-    assert(cir::isSized(ty) && "Type must implement SizedTypeInterface");
-    return cgm.getDataLayout().getTypeSizeInBits(ty);
-  }
 
   mlir::Value evaluateOrEmitBuiltinObjectSize(const clang::Expr *e,
                                               unsigned type,
