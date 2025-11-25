@@ -13,6 +13,8 @@
 
 namespace llvm {
 
+class TargetSubtargetInfo;
+
 class LibcallLoweringInfo {
 private:
   const RTLIB::RuntimeLibcallsInfo &RTLCI;
@@ -21,7 +23,12 @@ private:
       RTLIB::Unsupported};
 
 public:
-  LLVM_ABI LibcallLoweringInfo(const RTLIB::RuntimeLibcallsInfo &RTLCI);
+  LLVM_ABI LibcallLoweringInfo(const RTLIB::RuntimeLibcallsInfo &RTLCI,
+                               const TargetSubtargetInfo &Subtarget);
+
+  const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallsInfo() const {
+    return RTLCI;
+  }
 
   /// Get the libcall routine name for the specified libcall.
   // FIXME: This should be removed. Only LibcallImpl should have a name.
