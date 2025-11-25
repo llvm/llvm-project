@@ -96,6 +96,7 @@ add_clang_library(clangCodeGen
   CGRecordLayoutBuilder.cpp
   CGStmt.cpp
   CGStmtOpenMP.cpp
+  CGStmtRipple.cpp
   CGVTT.cpp
   CGVTables.cpp
   CodeGenABITypes.cpp
