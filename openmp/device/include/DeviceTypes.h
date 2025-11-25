@@ -128,7 +128,13 @@ struct IdentTy {
 
 using __kmpc_impl_lanemask_t = LaneMaskTy;
 
-using ParallelRegionFnTy = void *;
+#ifdef __SPIRV__
+using FnPtrTy = __attribute__((address_space(9))) void *;
+#else
+using FnPtrTy = void *;
+#endif
+
+using ParallelRegionFnTy = FnPtrTy;
 
 using CriticalNameTy = int32_t[8];
 

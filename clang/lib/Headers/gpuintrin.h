@@ -18,7 +18,7 @@
 #define __GPUINTRIN_H
 
 #if !defined(_DEFAULT_FN_ATTRS)
-#if defined(__HIP__) || defined(__CUDA__)
+#if defined(__HIP__) || defined(__CUDA__) || defined(__SPIRV__)
 #define _DEFAULT_FN_ATTRS __attribute__((device))
 #else
 #define _DEFAULT_FN_ATTRS
@@ -56,7 +56,9 @@ __gpu_match_all_u64_impl(uint64_t __lane_mask, uint64_t __x);
 _Pragma("omp end declare variant");
 _Pragma("omp end declare target");
 
-#if defined(__NVPTX__)
+#if defined(__SPIRV__)
+#include <spirvintrin.h>
+#elif defined(__NVPTX__)
 #include <nvptxintrin.h>
 #elif defined(__AMDGPU__)
 #include <amdgpuintrin.h>

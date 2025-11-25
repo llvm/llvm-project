@@ -16,7 +16,14 @@
 
 namespace ompx {
 
+#if defined(__SPIRV__)
+template <size_t N, typename... Args>
+int printf(const char (&Format)[N], Args... args) {
+  return __spirv_ocl_printf(Format, args...);
+}
+#else    
 int printf(const char *Format, ...);
+#endif
 
 } // namespace ompx
 
