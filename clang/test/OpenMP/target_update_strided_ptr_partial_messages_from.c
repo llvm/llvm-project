@@ -1,8 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
-typedef unsigned long long __size_t;
-extern void *malloc(__size_t);
+extern void *malloc(__SIZE_TYPE__);
 extern void free(void *);
 
 
