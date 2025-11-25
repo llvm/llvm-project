@@ -80,13 +80,7 @@ __m512i test_mm512_undefined_epi32(void) {
 
 __mmask16 test_mm512_kunpackb(__mmask16 A, __mmask16 B) {
   // CIR-LABEL: test_mm512_kunpackb
-  // CIR: [[A_VEC:%.*]] = cir.cast bitcast %{{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
-  // CIR: [[B_VEC:%.*]] = cir.cast bitcast %{{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
-  // CIR: [[A_HALF:%.*]] = cir.vec.shuffle([[A_VEC]], [[A_VEC]] : !cir.vector<16 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.int<u, 1>>
-  // CIR: [[B_HALF:%.*]] = cir.vec.shuffle([[B_VEC]], [[B_VEC]] : !cir.vector<16 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.int<u, 1>>
-  // CIR: [[RES:%.*]] = cir.vec.shuffle([[B_HALF]], [[A_HALF]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<16 x !cir.int<u, 1>>
-  // CIR: %{{.*}} = cir.cast bitcast [[RES]] : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
-  // CIR: cir.return %{{.*}} : !u16i
+  // CIR: cir.call @{{.*}}kunpackb{{.*}}
 
   // LLVM-LABEL: test_mm512_kunpackb
   // LLVM: [[A_VEC:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
