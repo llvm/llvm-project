@@ -1808,6 +1808,20 @@ bool HexagonInstrInfo::isPredicable(const MachineInstr &MI) const {
   return true;
 }
 
+bool HexagonInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
+                                                   bool Invert) const {
+  if (Invert)
+    return false;
+
+  switch (Inst.getOpcode()) {
+  // TODO: Add more instructions to be handled by MachineCombiner.
+  case Hexagon::F2_sfadd:
+    return Inst.getFlag(MachineInstr::MIFlag::FmReassoc);
+  default:
+    return false;
+  }
+}
+
 bool HexagonInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
                                             const MachineBasicBlock *MBB,
                                             const MachineFunction &MF) const {
