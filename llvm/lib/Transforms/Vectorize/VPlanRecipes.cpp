@@ -162,8 +162,12 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPPredInstPHISC:
   case VPVectorEndPointerSC:
     return false;
-  case VPInstructionSC:
-    return mayWriteToMemory();
+  case VPInstructionSC: {
+    auto *VPI = cast<VPInstruction>(this);
+    return mayWriteToMemory() ||
+           VPI->getOpcode() == VPInstruction::BranchOnCount ||
+           VPI->getOpcode() == VPInstruction::BranchOnCond;
+  }
   case VPWidenCallSC: {
     Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
     return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
@@ -490,10 +494,10 @@ template class VPUnrollPartAccessor<3>;
 }
 
 VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                             const VPIRFlags &Flags, DebugLoc DL,
-                             const Twine &Name)
+                             const VPIRFlags &Flags, const VPIRMetadata &MD,
+                             DebugLoc DL, const Twine &Name)
     : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, Flags, DL),
-      VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {
+      VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
   assert((getNumOperandsForOpcode(Opcode) == -1u ||
@@ -655,7 +659,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case Instruction::Select: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-    Value *Cond = State.get(getOperand(0), OnlyFirstLaneUsed);
+    Value *Cond =
+        State.get(getOperand(0),
+                  OnlyFirstLaneUsed || vputils::isSingleScalar(getOperand(0)));
     Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
     Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
     return Builder.CreateSelect(Cond, Op1, Op2, Name);
@@ -1241,6 +1247,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case Instruction::Select:
   case Instruction::PHI:
   case VPInstruction::AnyOf:
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnCount:
   case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
@@ -1268,7 +1276,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   }
 }
 
-bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
+bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return vputils::onlyFirstLaneUsed(this);
@@ -1317,7 +1325,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   llvm_unreachable("switch should return");
 }
 
-bool VPInstruction::onlyFirstPartUsed(const VPValue *Op) const {
+bool VPInstruction::usesFirstPartOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   if (Instruction::isBinaryOp(getOpcode()))
     return vputils::onlyFirstPartUsed(this);
@@ -1684,7 +1692,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     if (!VFTy->getParamType(I.index())->isVectorTy())
       Arg = State.get(I.value(), VPLane(0));
     else
-      Arg = State.get(I.value(), onlyFirstLaneUsed(I.value()));
+      Arg = State.get(I.value(), usesFirstLaneOnly(I.value()));
     Args.push_back(Arg);
   }
 
@@ -1753,7 +1761,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
                                            State.TTI))
       Arg = State.get(I.value(), VPLane(0));
     else
-      Arg = State.get(I.value(), onlyFirstLaneUsed(I.value()));
+      Arg = State.get(I.value(), usesFirstLaneOnly(I.value()));
     if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index(),
                                                State.TTI))
       TysForDecl.push_back(Arg->getType());
@@ -1835,7 +1843,7 @@ StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
   return Intrinsic::getBaseName(VectorIntrinsicID);
 }
 
-bool VPWidenIntrinsicRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
+bool VPWidenIntrinsicRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   return all_of(enumerate(operands()), [this, &Op](const auto &X) {
     auto [Idx, V] = X;
@@ -1962,16 +1970,13 @@ void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
   getOperand(1)->printAsOperand(O, SlotTracker);
   O << ", ";
   getOperand(2)->printAsOperand(O, SlotTracker);
-  O << (isInvariantCond() ? " (condition is loop invariant)" : "");
+  O << (vputils::isSingleScalar(getCond()) ? " (condition is single-scalar)"
+                                           : "");
 }
 #endif
 
 void VPWidenSelectRecipe::execute(VPTransformState &State) {
-  // The condition can be loop invariant but still defined inside the
-  // loop. This means that we can't just use the original 'cond' value.
-  // We have to take the 'vectorized' value and pick the first lane.
-  // Instcombine will make this a no-op.
-  Value *Cond = State.get(getCond(), isInvariantCond());
+  Value *Cond = State.get(getCond(), vputils::isSingleScalar(getCond()));
 
   Value *Op0 = State.get(getOperand(1));
   Value *Op1 = State.get(getOperand(2));
@@ -2372,9 +2377,8 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
     return false;
   auto *StepC = dyn_cast<ConstantInt>(getStepValue()->getLiveInIRValue());
   auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
-  auto *CanIV = getRegion()->getCanonicalIV();
   return StartC && StartC->isZero() && StepC && StepC->isOne() &&
-         getScalarType() == CanIV->getScalarType();
+         getScalarType() == getRegion()->getCanonicalIVType();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3167,26 +3171,30 @@ bool VPReplicateRecipe::shouldPack() const {
   });
 }
 
-/// Returns true if \p Ptr is a pointer computation for which the legacy cost
-/// model computes a SCEV expression when computing the address cost.
-static bool shouldUseAddressAccessSCEV(const VPValue *Ptr) {
+/// Returns a SCEV expression for \p Ptr if it is a pointer computation for
+/// which the legacy cost model computes a SCEV expression when computing the
+/// address cost. Computing SCEVs for VPValues is incomplete and returns
+/// SCEVCouldNotCompute in cases the legacy cost model can compute SCEVs. In
+/// those cases we fall back to the legacy cost model. Otherwise return nullptr.
+static const SCEV *getAddressAccessSCEV(const VPValue *Ptr, ScalarEvolution &SE,
+                                        const Loop *L) {
   auto *PtrR = Ptr->getDefiningRecipe();
   if (!PtrR || !((isa<VPReplicateRecipe>(PtrR) &&
                   cast<VPReplicateRecipe>(PtrR)->getOpcode() ==
                       Instruction::GetElementPtr) ||
                  isa<VPWidenGEPRecipe>(PtrR) ||
                  match(Ptr, m_GetElementPtr(m_VPValue(), m_VPValue()))))
-    return false;
+    return nullptr;
 
   // We are looking for a GEP where all indices are either loop invariant or
   // inductions.
   for (VPValue *Opd : drop_begin(PtrR->operands())) {
     if (!Opd->isDefinedOutsideLoopRegions() &&
         !isa<VPScalarIVStepsRecipe, VPWidenIntOrFpInductionRecipe>(Opd))
-      return false;
+      return nullptr;
   }
 
-  return true;
+  return vputils::getSCEVExprForVPValue(Ptr, SE, L);
 }
 
 /// Returns true if \p V is used as part of the address of another load or
@@ -3341,7 +3349,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // Scale the cost by the probability of executing the predicated blocks.
     // This assumes the predicated block for each vector lane is equally
     // likely.
-    ScalarCost /= getPredBlockCostDivisor(Ctx.CostKind);
+    ScalarCost /= Ctx.getPredBlockCostDivisor(UI->getParent());
     return ScalarCost;
   }
   case Instruction::Load:
@@ -3354,9 +3362,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     bool IsLoad = UI->getOpcode() == Instruction::Load;
     const VPValue *PtrOp = getOperand(!IsLoad);
-    // TODO: Handle cases where we need to pass a SCEV to
-    // getAddressComputationCost.
-    if (shouldUseAddressAccessSCEV(PtrOp))
+    const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.SE, Ctx.L);
+    if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV))
       break;
 
     Type *ValTy = Ctx.Types.inferScalarType(IsLoad ? this : getOperand(0));
@@ -3374,7 +3381,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     InstructionCost ScalarCost =
         ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(
                               PtrTy, UsedByLoadStoreAddress ? nullptr : &Ctx.SE,
-                              nullptr, Ctx.CostKind);
+                              PtrSCEV, Ctx.CostKind);
     if (isSingleScalar())
       return ScalarCost;
 

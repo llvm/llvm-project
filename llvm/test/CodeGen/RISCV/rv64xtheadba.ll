@@ -205,12 +205,19 @@ define i64 @addmul20(i64 %a, i64 %b) {
 }
 
 define i64 @addmul22(i64 %a, i64 %b) {
-; CHECK-LABEL: addmul22:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 22
-; CHECK-NEXT:    mul a0, a0, a2
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: addmul22:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a2, 22
+; RV64I-NEXT:    mul a0, a0, a2
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: addmul22:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a2, a0, a0, 2
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a2, 1
+; RV64XTHEADBA-NEXT:    th.addsl a0, a1, a0, 1
+; RV64XTHEADBA-NEXT:    ret
   %c = mul i64 %a, 22
   %d = add i64 %c, %b
   ret i64 %d

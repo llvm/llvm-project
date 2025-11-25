@@ -532,6 +532,7 @@ public:
   }
 
   MCInst getNop() const override;
+  bool isQFPMul(const MachineInstr *MF) const;
 };
 
 /// \brief Create RegSubRegPair from a register MachineOperand

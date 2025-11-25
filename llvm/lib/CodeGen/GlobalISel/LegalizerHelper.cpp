@@ -776,7 +776,7 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
     break;
   case TargetOpcode::G_MEMCPY:
     RTLibcall = RTLIB::MEMCPY;
-    Name = TLI.getMemcpyName();
+    Name = TLI.getLibcallImplName(TLI.getMemcpyImpl()).data();
     Args[0].Flags[0].setReturned();
     break;
   case TargetOpcode::G_MEMMOVE:

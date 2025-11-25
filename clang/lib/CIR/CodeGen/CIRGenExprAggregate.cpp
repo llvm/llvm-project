@@ -343,8 +343,8 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitNoInitExpr");
   }
   void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *dae) {
-    cgf.cgm.errorNYI(dae->getSourceRange(),
-                     "AggExprEmitter: VisitCXXDefaultArgExpr");
+    CIRGenFunction::CXXDefaultArgExprScope scope(cgf, dae);
+    Visit(dae->getExpr());
   }
   void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),

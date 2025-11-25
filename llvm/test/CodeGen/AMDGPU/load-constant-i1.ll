@@ -10386,7 +10386,8 @@ define amdgpu_kernel void @constant_sextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX8-NEXT:    s_add_u32 s2, s0, 0x150
 ; GFX8-NEXT:    s_addc_u32 s3, s1, 0
 ; GFX8-NEXT:    flat_store_dwordx4 v[44:45], v[12:15]
-; GFX8-NEXT:    flat_store_dwordx4 v[42:43], v[4:7]
+; GFX8-NEXT:    flat_store_dwordx4 v[48:49], v[8:11]
+; GFX8-NEXT:    flat_store_dwordx4 v[50:51], v[16:19]
 ; GFX8-NEXT:    v_mov_b32_e32 v13, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v12, s2
 ; GFX8-NEXT:    s_add_u32 s2, s0, 0x140
@@ -10395,10 +10396,6 @@ define amdgpu_kernel void @constant_sextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX8-NEXT:    v_mov_b32_e32 v14, s2
 ; GFX8-NEXT:    s_add_u32 s2, s0, 0x130
 ; GFX8-NEXT:    s_addc_u32 s3, s1, 0
-; GFX8-NEXT:    flat_store_dwordx4 v[46:47], v[0:3]
-; GFX8-NEXT:    flat_store_dwordx4 v[48:49], v[8:11]
-; GFX8-NEXT:    flat_store_dwordx4 v[50:51], v[16:19]
-; GFX8-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v17, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v16, s2
 ; GFX8-NEXT:    s_add_u32 s2, s0, 0x120
@@ -10406,20 +10403,21 @@ define amdgpu_kernel void @constant_sextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX8-NEXT:    v_mov_b32_e32 v19, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v18, s2
 ; GFX8-NEXT:    s_add_u32 s2, s0, 0x110
-; GFX8-NEXT:    v_mov_b32_e32 v5, s7
+; GFX8-NEXT:    flat_store_dwordx4 v[42:43], v[4:7]
 ; GFX8-NEXT:    s_addc_u32 s3, s1, 0
+; GFX8-NEXT:    v_mov_b32_e32 v4, s6
+; GFX8-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX8-NEXT:    v_mov_b32_e32 v42, vcc_lo
 ; GFX8-NEXT:    v_mov_b32_e32 v43, vcc_hi
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s5
+; GFX8-NEXT:    flat_store_dwordx4 v[46:47], v[0:3]
+; GFX8-NEXT:    v_mov_b32_e32 v8, s12
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s9
-; GFX8-NEXT:    v_mov_b32_e32 v8, s12
-; GFX8-NEXT:    flat_store_dwordx4 v[52:53], v[20:23]
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s11
 ; GFX8-NEXT:    v_mov_b32_e32 v9, s13
-; GFX8-NEXT:    flat_store_dwordx4 v[54:55], v[24:27]
 ; GFX8-NEXT:    v_mov_b32_e32 v10, s14
 ; GFX8-NEXT:    v_mov_b32_e32 v11, s15
 ; GFX8-NEXT:    flat_store_dwordx4 v[56:57], v[28:31]
@@ -10588,6 +10586,8 @@ define amdgpu_kernel void @constant_sextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
+; GFX8-NEXT:    flat_store_dwordx4 v[52:53], v[20:23]
+; GFX8-NEXT:    flat_store_dwordx4 v[54:55], v[24:27]
 ; GFX8-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX8-NEXT:    s_endpgm
 ;

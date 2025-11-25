@@ -81,6 +81,14 @@ public:
   SBThreadCollection
   GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type);
 
+  /// Gets a human-readable description of why the thread stopped.
+  ///
+  /// \param stream Output stream to receive the stop description text
+  /// \return
+  ///   true if obtained and written to the stream,
+  //    false if there was an error retrieving the description.
+  bool GetStopDescription(lldb::SBStream &stream) const;
+
   size_t GetStopDescription(char *dst_or_null, size_t dst_len);
 
   SBValue GetStopReturnValue();
@@ -178,6 +186,8 @@ public:
 
   lldb::SBFrame GetFrameAtIndex(uint32_t idx);
 
+  lldb::SBFrameList GetFrames();
+
   lldb::SBFrame GetSelectedFrame();
 
   lldb::SBFrame SetSelectedFrame(uint32_t frame_idx);
@@ -236,6 +246,7 @@ private:
   friend class SBSaveCoreOptions;
   friend class SBExecutionContext;
   friend class SBFrame;
+  friend class SBFrameList;
   friend class SBProcess;
   friend class SBDebugger;
   friend class SBValue;

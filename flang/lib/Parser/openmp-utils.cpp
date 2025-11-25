@@ -22,6 +22,25 @@
 
 namespace Fortran::parser::omp {
 
+const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x) {
+  if (auto *y = std::get_if<SpecificationConstruct>(&x.u)) {
+    if (auto *z{std::get_if<common::Indirection<OpenMPDeclarativeConstruct>>(
+            &y->u)}) {
+      return &z->value();
+    }
+  }
+  return nullptr;
+}
+
+const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x) {
+  if (auto *y{std::get_if<ExecutableConstruct>(&x.u)}) {
+    if (auto *z{std::get_if<common::Indirection<OpenMPConstruct>>(&y->u)}) {
+      return &z->value();
+    }
+  }
+  return nullptr;
+}
+
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause) {
   // Clauses with OmpObjectList as its data member
   using MemberObjectListClauses = std::tuple<OmpClause::Copyin,
@@ -84,6 +103,26 @@ const OmpInitializerExpression *GetInitializerExpr(const OmpClause &init) {
     return &wrapped->v.v;
   }
   return nullptr;
+}
+
+static void SplitOmpAllocateHelper(
+    OmpAllocateInfo &n, const OmpAllocateDirective &x) {
+  n.dirs.push_back(&x);
+  const Block &body{std::get<Block>(x.t)};
+  if (!body.empty()) {
+    if (auto *omp{GetOmp(body.front())}) {
+      if (auto *ad{std::get_if<OmpAllocateDirective>(&omp->u)}) {
+        return SplitOmpAllocateHelper(n, *ad);
+      }
+    }
+    n.body = &body.front();
+  }
+}
+
+OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x) {
+  OmpAllocateInfo info;
+  SplitOmpAllocateHelper(info, x);
+  return info;
 }
 
 } // namespace Fortran::parser::omp

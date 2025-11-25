@@ -198,7 +198,7 @@ bool HexagonOptAddrMode::canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN,
     // Reaching Def to an offset register can't be a phi.
     if ((OffsetRegDN.Addr->getFlags() & NodeAttrs::PhiRef) &&
         MI.getParent() != UseMI.getParent())
-    return false;
+      return false;
 
     const MCInstrDesc &UseMID = UseMI.getDesc();
     if ((!UseMID.mayLoad() && !UseMID.mayStore()) ||

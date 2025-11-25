@@ -35,6 +35,7 @@ MODULE_ANALYSIS("no-op-module", NoOpModuleAnalysis())
 MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 MODULE_ANALYSIS("profile-summary", ProfileSummaryAnalysis())
 MODULE_ANALYSIS("reg-usage", PhysicalRegisterUsageAnalysis())
+MODULE_ANALYSIS("runtime-libcall-info", RuntimeLibraryAnalysis())
 MODULE_ANALYSIS("stack-safety", StackSafetyGlobalAnalysis())
 MODULE_ANALYSIS("verify", VerifierAnalysis())
 
@@ -431,7 +432,6 @@ FUNCTION_PASS("dot-post-dom", PostDomPrinter())
 FUNCTION_PASS("dot-post-dom-only", PostDomOnlyPrinter())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass(*TM))
-FUNCTION_PASS("drop-unnecessary-assumes", DropUnnecessaryAssumesPass())
 FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(*TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(*TM))
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass())
@@ -583,6 +583,10 @@ FUNCTION_PASS_WITH_PARAMS(
     "early-cse", "EarlyCSEPass",
     [](bool UseMemorySSA) { return EarlyCSEPass(UseMemorySSA); },
     parseEarlyCSEPassOptions, "memssa")
+FUNCTION_PASS_WITH_PARAMS(
+    "drop-unnecessary-assumes", "DropUnnecessaryAssumesPass",
+    [](bool DropDereferenceable) { return DropUnnecessaryAssumesPass(DropDereferenceable); },
+    parseDropUnnecessaryAssumesPassOptions, "drop-deref")
 FUNCTION_PASS_WITH_PARAMS(
     "ee-instrument", "EntryExitInstrumenterPass",
     [](bool PostInlining) { return EntryExitInstrumenterPass(PostInlining); },

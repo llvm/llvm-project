@@ -1334,20 +1334,21 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
   const MCInstrDesc &Desc = TII->get(MI.getOpcode());
   unsigned ConstantBusCount = 0;
   for (MachineOperand &Op : MI.explicit_uses()) {
-    if (!Op.isImm() && !(Op.isReg() && !TRI->isVGPR(*MRI, Op.getReg())))
+    if (Op.isReg()) {
+      if (TRI->isVGPR(*MRI, Op.getReg()))
+        continue;
+
+      if (ST.hasSDWAScalar() && ConstantBusCount == 0) {
+        ++ConstantBusCount;
+        continue;
+      }
+    } else if (!Op.isImm())
       continue;
 
     unsigned I = Op.getOperandNo();
-
-    int16_t RegClass = TII->getOpRegClassID(Desc.operands()[I]);
-    if (RegClass == -1 || !TRI->isVSSuperClass(TRI->getRegClass(RegClass)))
+    const TargetRegisterClass *OpRC = TII->getRegClass(Desc, I, TRI);
+    if (!OpRC || !TRI->isVSSuperClass(OpRC))
       continue;
-
-    if (ST.hasSDWAScalar() && ConstantBusCount == 0 && Op.isReg() &&
-        TRI->isSGPRReg(*MRI, Op.getReg())) {
-      ++ConstantBusCount;
-      continue;
-    }
 
     Register VGPR = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     auto Copy = BuildMI(*MI.getParent(), MI.getIterator(), MI.getDebugLoc(),

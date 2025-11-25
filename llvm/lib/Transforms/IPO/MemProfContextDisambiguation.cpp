@@ -1034,11 +1034,11 @@ private:
 } // namespace
 
 template <>
-struct llvm::DenseMapInfo<typename CallsiteContextGraph<
+struct llvm::DenseMapInfo<CallsiteContextGraph<
     ModuleCallsiteContextGraph, Function, Instruction *>::CallInfo>
     : public DenseMapInfo<std::pair<Instruction *, unsigned>> {};
 template <>
-struct llvm::DenseMapInfo<typename CallsiteContextGraph<
+struct llvm::DenseMapInfo<CallsiteContextGraph<
     IndexCallsiteContextGraph, FunctionSummary, IndexCall>::CallInfo>
     : public DenseMapInfo<std::pair<IndexCall, unsigned>> {};
 template <>

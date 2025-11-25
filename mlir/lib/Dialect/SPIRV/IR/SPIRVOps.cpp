@@ -346,7 +346,7 @@ LogicalResult spirv::CompositeConstructOp::verify() {
       llvm::TypeSwitch<Type, Type>(getType())
           .Case<spirv::CooperativeMatrixType>(
               [](auto coopType) { return coopType.getElementType(); })
-          .Default([](Type) { return nullptr; });
+          .Default(nullptr);
 
   // Case 1. -- matrices.
   if (coopElementType) {
@@ -1708,7 +1708,7 @@ LogicalResult spirv::MatrixTimesScalarOp::verify() {
       llvm::TypeSwitch<Type, Type>(getMatrix().getType())
           .Case<spirv::CooperativeMatrixType, spirv::MatrixType>(
               [](auto matrixType) { return matrixType.getElementType(); })
-          .Default([](Type) { return nullptr; });
+          .Default(nullptr);
 
   assert(elementType && "Unhandled type");
 

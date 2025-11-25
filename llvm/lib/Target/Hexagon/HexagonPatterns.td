@@ -3434,6 +3434,19 @@ let AddedComplexity = 100 in {
            (C2_not (S4_stored_locked I32:$Rs, I64:$Rt))>;
 }
 
+multiclass FloatClass<SDPatternOperator IntOp, InstHexagon MI,
+                      PatFrag RegPred> {
+  let AddedComplexity = 100 in {
+    def: Pat<(i1 (seteq (IntOp RegPred:$Rs, u5_0ImmPred_timm:$u5), 0)),
+             (C2_not (MI RegPred:$Rs, u5_0ImmPred_timm:$u5))>;
+    def: Pat<(i1 (setne (IntOp RegPred:$Rs, u5_0ImmPred_timm:$u5), 0)),
+             (MI RegPred:$Rs, u5_0ImmPred_timm:$u5)>;
+  }
+}
+
+defm : FloatClass<int_hexagon_F2_sfclass, F2_sfclass, F32>;
+defm : FloatClass<int_hexagon_F2_dfclass, F2_dfclass, F64>;
+
 def: Pat<(int_hexagon_instrprof_custom (HexagonAtPcrel tglobaladdr:$addr), u32_0ImmPred:$I),
          (PS_call_instrprof_custom tglobaladdr:$addr, imm:$I)>;
 

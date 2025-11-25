@@ -160,6 +160,8 @@ public:
 
   bool allowTruncateForTailCall(Type *Ty1, Type *Ty2) const override;
 
+  bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
+
   /// Return true if an FMA operation is faster than a pair of mul and add
   /// instructions. fmuladd intrinsics will be expanded to FMAs when this
   /// method returns true (and FMAs are legal), otherwise fmuladd is

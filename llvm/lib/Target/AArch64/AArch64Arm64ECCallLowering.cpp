@@ -655,16 +655,10 @@ Function *AArch64Arm64ECCallLowering::buildGuestExitThunk(Function *F) {
   BasicBlock *BB = BasicBlock::Create(M->getContext(), "", GuestExit);
   IRBuilder<> B(BB);
 
-  // Load the global symbol as a pointer to the check function.
-  Value *GuardFn;
-  if (cfguard_module_flag == 2 && !F->hasFnAttribute("guard_nocf"))
-    GuardFn = GuardFnCFGlobal;
-  else
-    GuardFn = GuardFnGlobal;
-  LoadInst *GuardCheckLoad = B.CreateLoad(PtrTy, GuardFn);
-
-  // Create new call instruction. The CFGuard check should always be a call,
-  // even if the original CallBase is an Invoke or CallBr instruction.
+  // Create new call instruction. The call check should always be a call,
+  // even if the original CallBase is an Invoke or CallBr instructio.
+  // This is treated as a direct call, so do not use GuardFnCFGlobal.
+  LoadInst *GuardCheckLoad = B.CreateLoad(PtrTy, GuardFnGlobal);
   Function *Thunk = buildExitThunk(F->getFunctionType(), F->getAttributes());
   CallInst *GuardCheck = B.CreateCall(
       GuardFnType, GuardCheckLoad, {F, Thunk});

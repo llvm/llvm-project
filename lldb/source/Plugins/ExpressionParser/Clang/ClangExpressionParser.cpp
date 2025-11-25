@@ -115,6 +115,7 @@ class ClangExpressionParser::LLDBPreprocessorCallbacks : public PPCallbacks {
   ClangModulesDeclVendor &m_decl_vendor;
   ClangPersistentVariables &m_persistent_vars;
   clang::SourceManager &m_source_mgr;
+  /// Accumulates error messages across all moduleImport calls.
   StreamString m_error_stream;
   bool m_has_errors = false;
 
@@ -140,11 +141,12 @@ public:
       module.path.push_back(
           ConstString(component.getIdentifierInfo()->getName()));
 
-    StreamString error_stream;
-
     ClangModulesDeclVendor::ModuleVector exported_modules;
-    if (!m_decl_vendor.AddModule(module, &exported_modules, m_error_stream))
+    if (auto err = m_decl_vendor.AddModule(module, &exported_modules)) {
       m_has_errors = true;
+      m_error_stream.PutCString(llvm::toString(std::move(err)));
+      m_error_stream.PutChar('\n');
+    }
 
     for (ClangModulesDeclVendor::ModuleID module : exported_modules)
       m_persistent_vars.AddHandLoadedClangModule(module);
@@ -1502,7 +1504,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
     LLDB_LOGF(log, "%s - Current expression language is %s\n", __FUNCTION__,
               lang.GetDescription().data());
     lldb::ProcessSP process_sp = exe_ctx.GetProcessSP();
-    if (process_sp && lang != lldb::eLanguageTypeUnknown) {
+    if (process_sp && lang) {
       auto runtime = process_sp->GetLanguageRuntime(lang.AsLanguageType());
       if (runtime)
         runtime->GetIRPasses(custom_passes);

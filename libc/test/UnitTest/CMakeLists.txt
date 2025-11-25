@@ -204,5 +204,6 @@ add_header_library(
     ErrnoCheckingTest.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.macros.properties.architectures
     libc.src.errno.errno
 )

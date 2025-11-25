@@ -716,7 +716,7 @@ lowerReductionWithStartValue(ConversionPatternRewriter &rewriter, Location loc,
   accumulator = getOrCreateAccumulator<ReductionNeutral>(rewriter, loc,
                                                          llvmType, accumulator);
   return LLVMRedIntrinOp::create(rewriter, loc, llvmType,
-                                 /*startValue=*/accumulator, vectorOperand,
+                                 /*start_value=*/accumulator, vectorOperand,
                                  fmf);
 }
 
@@ -743,7 +743,7 @@ static Value lowerPredicatedReductionWithStartValue(
   Value vectorLength =
       createVectorLengthValue(rewriter, loc, vectorOperand.getType());
   return LLVMVPRedIntrinOp::create(rewriter, loc, llvmType,
-                                   /*startValue=*/accumulator, vectorOperand,
+                                   /*satrt_value=*/accumulator, vectorOperand,
                                    mask, vectorLength);
 }
 

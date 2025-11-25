@@ -412,7 +412,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
                              *OutStreamer);
 
     if (isVerbose() && MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
-      unsigned V = MI->getOperand(0).getImm();
+      unsigned V = MI->getOperand(0).getImm() & 0xff;
       OutStreamer->AddComment(
           " msbs: dst=" + Twine(V >> 6) + " src0=" + Twine(V & 3) +
           " src1=" + Twine((V >> 2) & 3) + " src2=" + Twine((V >> 4) & 3));

@@ -68,10 +68,9 @@ class UnrollState {
   void unrollWidenInductionByUF(VPWidenInductionRecipe *IV,
                                 VPBasicBlock::iterator InsertPtForPhi);
 
-  VPValue *getConstantVPV(unsigned Part) {
-    Type *CanIVIntTy =
-        Plan.getVectorLoopRegion()->getCanonicalIV()->getScalarType();
-    return Plan.getOrAddLiveIn(ConstantInt::get(CanIVIntTy, Part));
+  VPValue *getConstantInt(unsigned Part) {
+    Type *CanIVIntTy = Plan.getVectorLoopRegion()->getCanonicalIVType();
+    return Plan.getConstantInt(CanIVIntTy, Part);
   }
 
 public:
@@ -138,7 +137,7 @@ void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
       for (const auto &[PartIR, Part0R] : zip(*PartIVPBB, *Part0VPBB)) {
         remapOperands(&PartIR, Part);
         if (auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(&PartIR)) {
-          ScalarIVSteps->addOperand(getConstantVPV(Part));
+          ScalarIVSteps->addOperand(getConstantInt(Part));
         }
 
         addRecipeForPart(&Part0R, &PartIR, Part);
@@ -250,7 +249,7 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
         for (unsigned Part = 1; Part != UF; ++Part)
           VPV2Parts[VPI][Part - 1] = StartV;
       }
-      Copy->addOperand(getConstantVPV(Part));
+      Copy->addOperand(getConstantInt(Part));
     } else {
       assert(isa<VPActiveLaneMaskPHIRecipe>(R) &&
              "unexpected header phi recipe not needing unrolled part");
@@ -319,7 +318,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
             VPVectorPointerRecipe, VPVectorEndPointerRecipe>(Copy) ||
         match(Copy,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
-      Copy->addOperand(getConstantVPV(Part));
+      Copy->addOperand(getConstantInt(Part));
 
     if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))
       Copy->setOperand(0, R.getOperand(0));
@@ -475,8 +474,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     if (LaneDefs != Def2LaneDefs.end())
       return LaneDefs->second[Lane.getKnownLane()];
 
-    VPValue *Idx =
-        Plan.getOrAddLiveIn(ConstantInt::get(IdxTy, Lane.getKnownLane()));
+    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
     return Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
   }
 
@@ -510,8 +508,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
           cast<VPInstruction>(Op)->getOperand(Lane.getKnownLane()));
       continue;
     }
-    VPValue *Idx =
-        Plan.getOrAddLiveIn(ConstantInt::get(IdxTy, Lane.getKnownLane()));
+    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
     VPValue *Ext = Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
     NewOps.push_back(Ext);
   }
@@ -585,7 +582,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
       DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
-        return U.onlyFirstLaneUsed(DefR);
+        return U.usesFirstLaneOnly(DefR);
       });
 
       // Update each build vector user that currently has DefR as its only

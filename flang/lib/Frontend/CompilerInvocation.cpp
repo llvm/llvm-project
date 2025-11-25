@@ -595,9 +595,15 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   // -cc1` does accept multiple action options, but will only consider the
   // rightmost one.
   if (args.hasMultipleArgs(clang::driver::options::OPT_Action_Group)) {
-    const unsigned diagID = diags.getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Only one action option is allowed");
-    diags.Report(diagID);
+    llvm::SmallString<32> buf;
+    llvm::raw_svector_ostream os(buf);
+    for (const llvm::opt::Arg *arg :
+         args.filtered(clang::driver::options::OPT_Action_Group)) {
+      if (buf.size())
+        os << ", ";
+      os << "'" << arg->getSpelling() << "'";
+    }
+    diags.Report(clang::diag::err_drv_too_many_actions) << buf;
     return false;
   }
 

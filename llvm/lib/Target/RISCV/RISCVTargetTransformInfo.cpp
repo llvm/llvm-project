@@ -1683,7 +1683,8 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       !TypeSize::isKnownLE(DL.getTypeSizeInBits(Src),
                            SrcLT.second.getSizeInBits()) ||
       !TypeSize::isKnownLE(DL.getTypeSizeInBits(Dst),
-                           DstLT.second.getSizeInBits()))
+                           DstLT.second.getSizeInBits()) ||
+      SrcLT.first > 1 || DstLT.first > 1)
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
   // The split cost is handled by the base getCastInstrCost
@@ -2140,7 +2141,8 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // Assume memory ops cost scale with the number of vector registers
   // possible accessed by the instruction.  Note that BasicTTI already
   // handles the LT.first term for us.
-  if (LT.second.isVector() && CostKind != TTI::TCK_CodeSize)
+  if (ST->hasVInstructions() && LT.second.isVector() &&
+      CostKind != TTI::TCK_CodeSize)
     BaseCost *= TLI->getLMULCost(LT.second);
   return Cost + BaseCost;
 }

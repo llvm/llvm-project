@@ -29,6 +29,7 @@ def ol_device_info_t : Enum {
     TaggedEtor<"PLATFORM", "ol_platform_handle_t", "the platform associated with the device">,
     TaggedEtor<"NAME", "char[]", "Device name">,
     TaggedEtor<"PRODUCT_NAME", "char[]", "Device user-facing marketing name">,
+    TaggedEtor<"UID", "char[]", "Device UID">,
     TaggedEtor<"VENDOR", "char[]", "Device vendor">,
     TaggedEtor<"DRIVER_VERSION", "char[]", "Driver version">,
     TaggedEtor<"MAX_WORK_GROUP_SIZE", "uint32_t", "Maximum total work group size in work items">,

@@ -1129,12 +1129,9 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     if ((AS == AMDGPUAS::PRIVATE_ADDRESS) && TruncatingStore) {
       // Add an extra level of chain to isolate this vector
       SDValue NewChain = DAG.getNode(AMDGPUISD::DUMMY_CHAIN, DL, MVT::Other, Chain);
-      // TODO: can the chain be replaced without creating a new store?
-      SDValue NewStore = DAG.getTruncStore(
-          NewChain, DL, Value, Ptr, StoreNode->getPointerInfo(), MemVT,
-          StoreNode->getAlign(), StoreNode->getMemOperand()->getFlags(),
-          StoreNode->getAAInfo());
-      StoreNode = cast<StoreSDNode>(NewStore);
+      SmallVector<SDValue, 4> NewOps(StoreNode->ops());
+      NewOps[0] = NewChain;
+      StoreNode = cast<StoreSDNode>(DAG.UpdateNodeOperands(StoreNode, NewOps));
     }
 
     return scalarizeVectorStore(StoreNode, DAG);

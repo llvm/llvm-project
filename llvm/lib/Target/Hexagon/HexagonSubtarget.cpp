@@ -28,7 +28,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
-#include <map>
 #include <optional>
 
 using namespace llvm;
@@ -544,7 +543,7 @@ int HexagonSubtarget::updateLatency(MachineInstr &SrcInst,
   if (!hasV60Ops())
     return Latency;
 
-  auto &QII = static_cast<const HexagonInstrInfo &>(*getInstrInfo());
+  const HexagonInstrInfo &QII = *getInstrInfo();
   // BSB scheduling.
   if (QII.isHVXVec(SrcInst) || useBSBScheduling())
     Latency = (Latency + 1) >> 1;

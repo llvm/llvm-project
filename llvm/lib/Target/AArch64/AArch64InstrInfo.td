@@ -1805,14 +1805,22 @@ def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v8i16>;
 def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v4i32>;
 def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v2i64>;
 
-class EOR3_pattern<ValueType VecTy>
-  : Pat<(xor (xor (VecTy V128:$Vn), (VecTy V128:$Vm)), (VecTy V128:$Va)),
-        (EOR3 (VecTy V128:$Vn), (VecTy V128:$Vm), (VecTy V128:$Va))>;
+multiclass EOR3_pattern<ValueType Vec128Ty, ValueType Vec64Ty>{
+  def : Pat<(xor (xor (Vec128Ty V128:$Vn), (Vec128Ty V128:$Vm)), (Vec128Ty V128:$Va)),
+        (EOR3 (Vec128Ty V128:$Vn), (Vec128Ty V128:$Vm), (Vec128Ty V128:$Va))>;
+  def : Pat<(xor (xor (Vec64Ty V64:$Vn), (Vec64Ty V64:$Vm)), (Vec64Ty V64:$Va)),
+            (EXTRACT_SUBREG
+              (EOR3
+                (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vn, dsub),
+                (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vm, dsub),
+                (INSERT_SUBREG (IMPLICIT_DEF), V64:$Va, dsub)),
+              dsub)>;
+}
 
-def : EOR3_pattern<v16i8>;
-def : EOR3_pattern<v8i16>;
-def : EOR3_pattern<v4i32>;
-def : EOR3_pattern<v2i64>;
+defm : EOR3_pattern<v16i8, v8i8>;
+defm : EOR3_pattern<v8i16, v4i16>;
+defm : EOR3_pattern<v4i32, v2i32>;
+defm : EOR3_pattern<v2i64, v1i64>;
 
 class BCAX_pattern<ValueType VecTy>
   : Pat<(xor (VecTy V128:$Vn), (and (VecTy V128:$Vm), (vnot (VecTy V128:$Va)))),
@@ -4436,6 +4444,11 @@ defm PRFUM : PrefetchUnscaled<0b11, 0, 0b10, "prfum",
                   [(AArch64Prefetch timm:$Rt,
                                   (am_unscaled64 GPR64sp:$Rn, simm9:$offset))]>;
 
+// PRFM falls back to PRFUM for negative or unaligned offsets (not a multiple
+// of 8).
+def : InstAlias<"prfm $Rt, [$Rn, $offset]",
+                (PRFUMi prfop:$Rt, GPR64sp:$Rn, simm9_offset_fb64:$offset), 0>;
+
 //---
 // (unscaled immediate, unprivileged)
 defm LDTRX : LoadUnprivileged<0b11, 0, 0b01, GPR64, "ldtr">;
@@ -5658,6 +5671,8 @@ let isPseudo = 1 in {
   def SEH_EpilogStart : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_PACSignLR : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_SaveAnyRegI : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveAnyRegIP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveAnyRegQP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveAnyRegQPX : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_AllocZ : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
@@ -11407,7 +11422,7 @@ let Predicates = [HasF16F32MM] in
   defm FMMLA : SIMDThreeSameVectorFMLAWiden<"fmmla">;
 
 let Uses = [FPMR, FPCR] in
-  defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla">;
+  defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla", int_aarch64_neon_fmmla>;
 
 //===----------------------------------------------------------------------===//
 // Contention Management Hints (FEAT_CMH)

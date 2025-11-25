@@ -7788,19 +7788,18 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i64(ptr addrspace(1) %out
 ; GCN-NOHSA-VI-NEXT:    v_bfe_u32 v29, v13, 16, 8
 ; GCN-NOHSA-VI-NEXT:    v_bfe_u32 v35, v14, 8, 8
 ; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v33, 0xff, v14
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v11, v53
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v13, v53
+; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[36:39], off, s[0:3], 0 offset:144
 ; GCN-NOHSA-VI-NEXT:    v_bfe_u32 v16, v17, 8, 8
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v36, v53
 ; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v14, 0xff, v17
 ; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v54, 24, v17
 ; GCN-NOHSA-VI-NEXT:    v_bfe_u32 v52, v17, 16, 8
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v11, v53
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v13, v53
+; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[29:32], off, s[0:3], 0 offset:112
+; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[10:13], off, s[0:3], 0 offset:48
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v15, v53
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v17, v53
-; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[36:39], off, s[0:3], 0 offset:144
-; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[29:32], off, s[0:3], 0 offset:112
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v36, v53
-; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[10:13], off, s[0:3], 0 offset:48
-; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[14:17], off, s[0:3], 0 offset:224
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v29, v53
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v10, v53
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[33:36], off, s[0:3], 0 offset:128
@@ -7810,7 +7809,7 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i64(ptr addrspace(1) %out
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[18:21], off, s[0:3], 0 offset:64
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[7:10], off, s[0:3], 0 offset:32
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[3:6], off, s[0:3], 0 offset:16
-; GCN-NOHSA-VI-NEXT:    s_nop 0
+; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[14:17], off, s[0:3], 0 offset:224
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, v53
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GCN-NOHSA-VI-NEXT:    s_endpgm

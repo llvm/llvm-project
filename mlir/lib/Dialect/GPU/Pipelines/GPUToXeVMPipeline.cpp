@@ -63,13 +63,20 @@ void buildGPUPassPipeline(OpPassManager &pm,
   if (options.xegpuOpLevel == "workgroup") {
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUWgToSgDistribute());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+    xegpu::XeGPUPropagateLayoutOptions layoutOptions;
+    layoutOptions.layoutKind = "inst";
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        xegpu::createXeGPUPropagateLayout(layoutOptions));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUBlocking());
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   }
   if (options.xegpuOpLevel == "subgroup" ||
       options.xegpuOpLevel == "workgroup") {
-    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUPropagateLayout());
+    xegpu::XeGPUPropagateLayoutOptions layoutOptions;
+    layoutOptions.layoutKind = "lane";
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        xegpu::createXeGPUPropagateLayout(layoutOptions));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSubgroupDistribute());
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());

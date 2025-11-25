@@ -106,6 +106,11 @@ def PseudoCCSRA : SFBALU_rr;
 def PseudoCCAND : SFBALU_rr;
 def PseudoCCOR  : SFBALU_rr;
 def PseudoCCXOR : SFBALU_rr;
+def PseudoCCMAX : SFBALU_rr;
+def PseudoCCMIN : SFBALU_rr;
+def PseudoCCMAXU : SFBALU_rr;
+def PseudoCCMINU : SFBALU_rr;
+def PseudoCCMUL : SFBALU_rr;
 
 def PseudoCCADDI : SFBALU_ri;
 def PseudoCCANDI : SFBALU_ri;

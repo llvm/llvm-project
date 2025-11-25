@@ -194,10 +194,11 @@ LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I,
 /// Like setExplicitlyUnknownBranchWeights(...), but only sets unknown branch
 /// weights in the new instruction if the parent function of the original
 /// instruction has an entry count. This is to not confuse users by injecting
-/// profile data into non-profiled functions.
-LLVM_ABI void setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I,
-                                                          Function &F,
-                                                          StringRef PassName);
+/// profile data into non-profiled functions. If \p F is nullptr, we will fetch
+/// the function from \p I.
+LLVM_ABI void
+setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I, StringRef PassName,
+                                            const Function *F = nullptr);
 
 /// Analogous to setExplicitlyUnknownBranchWeights, but for functions and their
 /// entry counts.

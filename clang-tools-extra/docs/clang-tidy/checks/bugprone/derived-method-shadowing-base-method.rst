@@ -7,7 +7,7 @@ Finds derived class methods that shadow a (non-virtual) base class method.
 
 In order to be considered "shadowing", methods must have the same signature
 (i.e. the same name, same number of parameters, same parameter types, etc).
-Only checks public, non-templated methods. 
+Only checks public, non-templated methods.
 
 The below example is bugprone because consumers of the ``Derived`` class will
 expect the ``reset`` method to do the work of ``Base::reset()`` in addition to extra

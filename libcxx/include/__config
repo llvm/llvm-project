@@ -1050,8 +1050,7 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
 #  endif
 
-// TODO(LLVM 22): Remove the workaround
-#  if defined(__OBJC__) && (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER < 2001)
+#  if defined(__OBJC__) && defined(_LIBCPP_APPLE_CLANG_VER)
 #    define _LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS
 #  endif
 
@@ -1253,14 +1252,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DIAGNOSE_NULLPTR _Nonnull
 #  else
 #    define _LIBCPP_DIAGNOSE_NULLPTR
-#  endif
-
-// TODO(LLVM 22): Remove this macro once LLVM19 support ends. __cpp_explicit_this_parameter has been set in LLVM20.
-// Clang-18 has support for deducing this, but it does not set the FTM.
-#  if defined(__cpp_explicit_this_parameter) || (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1800)
-#    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER 1
-#  else
-#    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER 0
 #  endif
 
 #endif // __cplusplus

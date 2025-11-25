@@ -549,6 +549,16 @@ static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
   GV->addMetadata("spirv.Decorations", *Decoration);
 }
 
+static void addLocationDecoration(llvm::GlobalVariable *GV, unsigned Location) {
+  LLVMContext &Ctx = GV->getContext();
+  IRBuilder<> B(GV->getContext());
+  MDNode *Operands =
+      MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(/* Location */ 30)),
+                        ConstantAsMetadata::get(B.getInt32(Location))});
+  MDNode *Decoration = MDNode::get(Ctx, {Operands});
+  GV->addMetadata("spirv.Decorations", *Decoration);
+}
+
 static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
                                            llvm::Type *Ty, const Twine &Name,
                                            unsigned BuiltInID) {
@@ -560,6 +570,69 @@ static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
   addSPIRVBuiltinDecoration(GV, BuiltInID);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   return B.CreateLoad(Ty, GV);
+}
+
+static llvm::Value *createSPIRVLocationLoad(IRBuilder<> &B, llvm::Module &M,
+                                            llvm::Type *Ty, unsigned Location,
+                                            StringRef Name) {
+  auto *GV = new llvm::GlobalVariable(
+      M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
+      /* Initializer= */ nullptr, /* Name= */ Name, /* insertBefore= */ nullptr,
+      llvm::GlobalVariable::GeneralDynamicTLSModel,
+      /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  addLocationDecoration(GV, Location);
+  return B.CreateLoad(Ty, GV);
+}
+
+llvm::Value *
+CGHLSLRuntime::emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                         HLSLSemanticAttr *Semantic,
+                                         std::optional<unsigned> Index) {
+  Twine BaseName = Twine(Semantic->getAttrName()->getName());
+  Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
+
+  unsigned Location = SPIRVLastAssignedInputSemanticLocation;
+
+  // DXC completely ignores the semantic/index pair. Location are assigned from
+  // the first semantic to the last.
+  llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Type);
+  unsigned ElementCount = AT ? AT->getNumElements() : 1;
+  SPIRVLastAssignedInputSemanticLocation += ElementCount;
+  return createSPIRVLocationLoad(B, CGM.getModule(), Type, Location,
+                                 VariableName.str());
+}
+
+llvm::Value *
+CGHLSLRuntime::emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        HLSLSemanticAttr *Semantic,
+                                        std::optional<unsigned> Index) {
+  Twine BaseName = Twine(Semantic->getAttrName()->getName());
+  Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
+
+  // DXIL packing rules etc shall be handled here.
+  // FIXME: generate proper sigpoint, index, col, row values.
+  // FIXME: also DXIL loads vectors element by element.
+  SmallVector<Value *> Args{B.getInt32(4), B.getInt32(0), B.getInt32(0),
+                            B.getInt8(0),
+                            llvm::PoisonValue::get(B.getInt32Ty())};
+
+  llvm::Intrinsic::ID IntrinsicID = llvm::Intrinsic::dx_load_input;
+  llvm::Value *Value = B.CreateIntrinsic(/*ReturnType=*/Type, IntrinsicID, Args,
+                                         nullptr, VariableName);
+  return Value;
+}
+
+llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
+    IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+    HLSLSemanticAttr *Semantic, std::optional<unsigned> Index) {
+  if (CGM.getTarget().getTriple().isSPIRV())
+    return emitSPIRVUserSemanticLoad(B, Type, Semantic, Index);
+
+  if (CGM.getTarget().getTriple().isDXIL())
+    return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
+
+  llvm_unreachable("Unsupported target for user-semantic load.");
 }
 
 llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
@@ -626,6 +699,9 @@ CGHLSLRuntime::handleScalarSemanticLoad(IRBuilder<> &B, const FunctionDecl *FD,
   std::optional<unsigned> Index = std::nullopt;
   if (Semantic->isSemanticIndexExplicit())
     Index = Semantic->getSemanticIndex();
+
+  if (isa<HLSLUserSemanticAttr>(Semantic))
+    return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
   return emitSystemSemanticLoad(B, Type, Decl, Semantic, Index);
 }
 

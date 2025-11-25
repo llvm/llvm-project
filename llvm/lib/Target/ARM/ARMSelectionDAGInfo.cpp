@@ -47,9 +47,7 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
 
   // Only use a specialized AEABI function if the default version of this
   // Libcall is an AEABI function.
-  if (std::strncmp(TLI->getLibcallName(LC), "__aeabi", 7) != 0)
-    return SDValue();
-
+  //
   // Translate RTLIB::Libcall to AEABILibcall. We only do this in order to be
   // able to translate memset to memclr and use the value to index the function
   // name array.
@@ -61,12 +59,21 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
   } AEABILibcall;
   switch (LC) {
   case RTLIB::MEMCPY:
+    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memcpy)
+      return SDValue();
+
     AEABILibcall = AEABI_MEMCPY;
     break;
   case RTLIB::MEMMOVE:
+    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memmove)
+      return SDValue();
+
     AEABILibcall = AEABI_MEMMOVE;
     break;
   case RTLIB::MEMSET:
+    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memset)
+      return SDValue();
+
     AEABILibcall = AEABI_MEMSET;
     if (isNullConstant(Src))
       AEABILibcall = AEABI_MEMCLR;

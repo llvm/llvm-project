@@ -54,6 +54,10 @@ struct FunctionPathAndClusterInfo {
   DenseMap<UniqueBBID, uint64_t> NodeCounts;
   // Edge counts for each edge, stored as a nested map.
   DenseMap<UniqueBBID, DenseMap<UniqueBBID, uint64_t>> EdgeCounts;
+  // Hash for each basic block. The Hashes are stored for every original block
+  // (not cloned blocks), hence the map key being unsigned instead of
+  // UniqueBBID.
+  DenseMap<unsigned, uint64_t> BBHashes;
 };
 
 class BasicBlockSectionsProfileReader {
@@ -62,7 +66,7 @@ public:
   BasicBlockSectionsProfileReader(const MemoryBuffer *Buf)
       : MBuf(Buf), LineIt(*Buf, /*SkipBlanks=*/true, /*CommentMarker=*/'#'){};
 
-  BasicBlockSectionsProfileReader(){};
+  BasicBlockSectionsProfileReader() = default;
 
   // Returns true if basic block sections profile exist for function \p
   // FuncName.

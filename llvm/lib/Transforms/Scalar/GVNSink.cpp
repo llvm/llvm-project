@@ -514,7 +514,7 @@ public:
 
 class GVNSink {
 public:
-  GVNSink() {}
+  GVNSink() = default;
 
   bool run(Function &F) {
     LLVM_DEBUG(dbgs() << "GVNSink: running on function @" << F.getName()

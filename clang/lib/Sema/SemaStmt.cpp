@@ -3362,6 +3362,9 @@ static Scope *FindLabeledBreakContinueScope(Sema &S, Scope *CurScope,
                                             SourceLocation LabelLoc,
                                             bool IsContinue) {
   assert(Target && "not a named break/continue?");
+
+  Target->markUsed(S.Context);
+
   Scope *Found = nullptr;
   for (Scope *Scope = CurScope; Scope; Scope = Scope->getParent()) {
     if (Scope->isFunctionScope())

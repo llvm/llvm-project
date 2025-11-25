@@ -1353,9 +1353,9 @@ TargetTransformInfo::getInlineCallPenalty(const Function *F,
   return TTIImpl->getInlineCallPenalty(F, Call, DefaultCallPenalty);
 }
 
-bool TargetTransformInfo::areTypesABICompatible(
-    const Function *Caller, const Function *Callee,
-    const ArrayRef<Type *> &Types) const {
+bool TargetTransformInfo::areTypesABICompatible(const Function *Caller,
+                                                const Function *Callee,
+                                                ArrayRef<Type *> Types) const {
   return TTIImpl->areTypesABICompatible(Caller, Callee, Types);
 }
 

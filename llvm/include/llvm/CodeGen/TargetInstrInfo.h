@@ -436,7 +436,10 @@ public:
   /// MachineSink determines on its own whether the instruction is safe to sink;
   /// this gives the target a hook to override the default behavior with regards
   /// to which instructions should be sunk.
+  ///
+  /// shouldPostRASink() is used by PostRAMachineSink.
   virtual bool shouldSink(const MachineInstr &MI) const { return true; }
+  virtual bool shouldPostRASink(const MachineInstr &MI) const { return true; }
 
   /// Return false if the instruction should not be hoisted by MachineLICM.
   ///
@@ -1758,6 +1761,17 @@ public:
   /// Return true if it's safe to move a machine
   /// instruction that defines the specified register class.
   virtual bool isSafeToMoveRegClassDefs(const TargetRegisterClass *RC) const {
+    return true;
+  }
+
+  /// Return true if it's safe to move a machine instruction.
+  /// This allows the backend to prevent certain special instruction
+  /// sequences from being broken by instruction motion in optimization
+  /// passes.
+  /// By default, this returns true for every instruction.
+  virtual bool isSafeToMove(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const {
     return true;
   }
 

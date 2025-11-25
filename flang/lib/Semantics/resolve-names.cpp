@@ -1700,12 +1700,12 @@ public:
   void Post(const parser::OpenMPDeclareTargetConstruct &) {
     SkipImplicitTyping(false);
   }
-  bool Pre(const parser::OpenMPDeclarativeAllocate &x) {
+  bool Pre(const parser::OmpAllocateDirective &x) {
     AddOmpSourceRange(x.source);
     SkipImplicitTyping(true);
     return true;
   }
-  void Post(const parser::OpenMPDeclarativeAllocate &) {
+  void Post(const parser::OmpAllocateDirective &) {
     SkipImplicitTyping(false);
     messageHandler().set_currStmtSource(std::nullopt);
   }
@@ -9435,13 +9435,18 @@ bool ResolveNamesVisitor::SetProcFlag(
     SayWithDecl(name, symbol,
         "Implicit declaration of function '%s' has a different result type than in previous declaration"_err_en_US);
     return false;
-  } else if (symbol.has<ProcEntityDetails>()) {
-    symbol.set(flag); // in case it hasn't been set yet
-    if (flag == Symbol::Flag::Function) {
-      ApplyImplicitRules(symbol);
-    }
-    if (symbol.attrs().test(Attr::INTRINSIC)) {
-      AcquireIntrinsicProcedureFlags(symbol);
+  } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
+    if (IsPointer(symbol) && !proc->type() && !proc->procInterface()) {
+      // PROCEDURE(), POINTER -- errors will be emitted later about a lack
+      // of known characteristics if used as a function
+    } else {
+      symbol.set(flag); // in case it hasn't been set yet
+      if (flag == Symbol::Flag::Function) {
+        ApplyImplicitRules(symbol);
+      }
+      if (symbol.attrs().test(Attr::INTRINSIC)) {
+        AcquireIntrinsicProcedureFlags(symbol);
+      }
     }
   } else if (symbol.GetType() && flag == Symbol::Flag::Subroutine) {
     SayWithDecl(
@@ -10060,6 +10065,7 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::ForceInline>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Inline>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::Prefetch>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoInline>(x.u)) {
     return;
   }
@@ -10108,6 +10114,9 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
                 break;
               case 'c':
                 set.set(common::IgnoreTKR::Contiguous);
+                break;
+              case 'p':
+                set.set(common::IgnoreTKR::Pointer);
                 break;
               case 'a':
                 set = common::ignoreTKRAll;

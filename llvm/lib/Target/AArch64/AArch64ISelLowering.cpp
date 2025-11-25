@@ -50,6 +50,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -104,7 +105,6 @@
 #include <vector>
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "aarch64-lower"
 
@@ -1052,15 +1052,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // Lower READCYCLECOUNTER using an mrs from CNTVCT_EL0.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
 
-  if (getLibcallName(RTLIB::SINCOS_STRET_F32) != nullptr &&
-      getLibcallName(RTLIB::SINCOS_STRET_F64) != nullptr) {
-    // Issue __sincos_stret if available.
-    setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
-    setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
-  } else {
-    setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
-    setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
-  }
+  // Issue __sincos_stret if available.
+  setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
+  setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
   // Make floating-point constants legal for the large code model, so they don't
   // become loads from the constant pool.
@@ -1180,6 +1174,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine(ISD::SHL);
   setTargetDAGCombine(ISD::VECTOR_DEINTERLEAVE);
+  setTargetDAGCombine(ISD::CTPOP);
 
   // In case of strict alignment, avoid an excessive number of byte wide stores.
   MaxStoresPerMemsetOptSize = 8;
@@ -1921,6 +1916,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::nxv4i32, MVT::nxv8i16, Legal);
       setPartialReduceMLAAction(MLAOps, MVT::nxv8i16, MVT::nxv16i8, Legal);
     }
+
+    // Handle floating-point partial reduction
+    if (Subtarget->hasSVE2p1() || Subtarget->hasSME2()) {
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
+                                MVT::nxv8f16, Legal);
+    }
   }
 
   // Handle non-aliasing elements mask
@@ -2286,6 +2287,11 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
     else if (VT.getVectorElementType() == MVT::i64)
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, VT,
                                 MVT::getVectorVT(MVT::i8, NumElts * 8), Custom);
+  }
+
+  if (Subtarget->hasSVE2p1() && VT.getVectorElementType() == MVT::f32) {
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, VT,
+                              MVT::getVectorVT(MVT::f16, NumElts * 2), Custom);
   }
 
   // Lower fixed length vector operations to scalable equivalents.
@@ -5346,35 +5352,6 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
   return SDValue();
 }
 
-SDValue AArch64TargetLowering::LowerFSINCOS(SDValue Op,
-                                            SelectionDAG &DAG) const {
-  // For iOS, we want to call an alternative entry point: __sincos_stret,
-  // which returns the values in two S / D registers.
-  SDLoc DL(Op);
-  SDValue Arg = Op.getOperand(0);
-  EVT ArgVT = Arg.getValueType();
-  Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-
-  ArgListTy Args;
-  Args.emplace_back(Arg, ArgTy);
-
-  RTLIB::Libcall LC = ArgVT == MVT::f64 ? RTLIB::SINCOS_STRET_F64
-                                        : RTLIB::SINCOS_STRET_F32;
-  const char *LibcallName = getLibcallName(LC);
-  SDValue Callee =
-      DAG.getExternalSymbol(LibcallName, getPointerTy(DAG.getDataLayout()));
-
-  StructType *RetTy = StructType::get(ArgTy, ArgTy);
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CallingConv::ID CC = getLibcallCallingConv(LC);
-  CLI.setDebugLoc(DL)
-      .setChain(DAG.getEntryNode())
-      .setLibCallee(CC, RetTy, Callee, std::move(Args));
-
-  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
-  return CallResult.first;
-}
-
 static MVT getSVEContainerType(EVT ContentTy);
 
 SDValue
@@ -7723,8 +7700,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     return LowerFP_TO_INT_SAT(Op, DAG);
-  case ISD::FSINCOS:
-    return LowerFSINCOS(Op, DAG);
   case ISD::GET_ROUNDING:
     return LowerGET_ROUNDING(Op, DAG);
   case ISD::SET_ROUNDING:
@@ -7911,6 +7886,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_FMLA:
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }
@@ -11367,9 +11343,10 @@ SDValue AArch64TargetLowering::LowerMinMax(SDValue Op,
     break;
   }
 
+  // Note: This lowering only overrides NEON for v1i64 and v2i64, where we
+  // prefer using SVE if available.
   if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(
-          VT, /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors())) {
+      useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true)) {
     switch (Opcode) {
     default:
       llvm_unreachable("Wrong instruction");
@@ -17591,6 +17568,7 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     // udot instruction.
     if (SrcWidth * 4 <= DstWidth) {
       if (all_of(I->users(), [&](auto *U) {
+            using namespace llvm::PatternMatch;
             auto *SingleUser = cast<Instruction>(&*U);
             if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))))
               return true;
@@ -17862,6 +17840,7 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   // into shift / and masks. For the moment we do this just for uitofp (not
   // zext) to avoid issues with widening instructions.
   if (Shuffles.size() == 4 && all_of(Shuffles, [](ShuffleVectorInst *SI) {
+        using namespace llvm::PatternMatch;
         return SI->hasOneUse() && match(SI->user_back(), m_UIToFP(m_Value())) &&
                SI->getType()->getScalarSizeInBits() * 4 ==
                    SI->user_back()->getType()->getScalarSizeInBits();
@@ -22329,6 +22308,37 @@ static SDValue performExtBinopLoadFold(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(N->getOpcode(), DL, VT, Ext0, NShift);
 }
 
+// Attempt to combine the following patterns:
+//   SUB x, (CSET LO, (CMP a, b)) -> SBC x, 0, (CMP a, b)
+//   SUB (SUB x, y), (CSET LO, (CMP a, b)) -> SBC x, y, (CMP a, b)
+// The CSET may be preceded by a ZEXT.
+static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::SUB)
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  SDValue N1 = N->getOperand(1);
+  if (N1.getOpcode() == ISD::ZERO_EXTEND && N1.hasOneUse())
+    N1 = N1.getOperand(0);
+  if (!N1.hasOneUse() || getCSETCondCode(N1) != AArch64CC::LO)
+    return SDValue();
+
+  SDValue Flags = N1.getOperand(3);
+  if (Flags.getOpcode() != AArch64ISD::SUBS)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  if (N0->getOpcode() == ISD::SUB)
+    return DAG.getNode(AArch64ISD::SBC, DL, VT, N0.getOperand(0),
+                       N0.getOperand(1), Flags);
+  return DAG.getNode(AArch64ISD::SBC, DL, VT, N0, DAG.getConstant(0, DL, VT),
+                     Flags);
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
@@ -22349,6 +22359,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performSVEMulAddSubCombine(N, DCI))
     return Val;
   if (SDValue Val = performAddSubIntoVectorOp(N, DCI.DAG))
+    return Val;
+  if (SDValue Val = performSubWithBorrowCombine(N, DCI.DAG))
     return Val;
 
   if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
@@ -26071,7 +26083,7 @@ static SDValue performCSELCombine(SDNode *N,
   // CSEL 0, cttz(X), eq(X, 0) -> AND cttz bitwidth-1
   // CSEL cttz(X), 0, ne(X, 0) -> AND cttz bitwidth-1
   if (SDValue Folded = foldCSELofCTTZ(N, DAG))
-		return Folded;
+    return Folded;
 
   // CSEL a, b, cc, SUBS(x, y) -> CSEL a, b, swapped(cc), SUBS(y, x)
   // if SUB(y, x) already exists and we can produce a swapped predicate for cc.
@@ -27878,6 +27890,35 @@ static SDValue performRNDRCombine(SDNode *N, SelectionDAG &DAG) {
       {A, DAG.getZExtOrTrunc(B, DL, MVT::i1), A.getValue(2)}, DL);
 }
 
+static SDValue performCTPOPCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  // ctpop(zext(bitcast(vector_mask))) -> neg(signed_reduce_add(vector_mask))
+  SDValue Mask;
+  if (!sd_match(N->getOperand(0), m_ZExt(m_BitCast(m_Value(Mask)))))
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  EVT MaskVT = Mask.getValueType();
+
+  if (VT.isVector() || !MaskVT.isFixedLengthVector() ||
+      MaskVT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  EVT ReduceInVT =
+      EVT::getVectorVT(*DAG.getContext(), VT, MaskVT.getVectorElementCount());
+
+  SDLoc DL(N);
+  // Sign extend to best fit ZeroOrNegativeOneBooleanContent.
+  SDValue ExtMask = DAG.getNode(ISD::SIGN_EXTEND, DL, ReduceInVT, Mask);
+  SDValue NegPopCount = DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, ExtMask);
+  return DAG.getNegative(NegPopCount, DL, VT);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -28223,6 +28264,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performScalarToVectorCombine(N, DCI, DAG);
   case ISD::SHL:
     return performSHLCombine(N, DCI, DAG);
+  case ISD::CTPOP:
+    return performCTPOPCombine(N, DCI, DAG);
   }
   return SDValue();
 }

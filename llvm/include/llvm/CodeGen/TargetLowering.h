@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
@@ -1678,7 +1679,7 @@ public:
   LegalizeAction getPartialReduceMLAAction(unsigned Opc, EVT AccVT,
                                            EVT InputVT) const {
     assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
-           Opc == ISD::PARTIAL_REDUCE_SUMLA);
+           Opc == ISD::PARTIAL_REDUCE_SUMLA || Opc == ISD::PARTIAL_REDUCE_FMLA);
     PartialReduceActionTypes Key = {Opc, AccVT.getSimpleVT().SimpleTy,
                                     InputVT.getSimpleVT().SimpleTy};
     auto It = PartialReduceMLAActions.find(Key);
@@ -2792,7 +2793,7 @@ protected:
   void setPartialReduceMLAAction(unsigned Opc, MVT AccVT, MVT InputVT,
                                  LegalizeAction Action) {
     assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
-           Opc == ISD::PARTIAL_REDUCE_SUMLA);
+           Opc == ISD::PARTIAL_REDUCE_SUMLA || Opc == ISD::PARTIAL_REDUCE_FMLA);
     assert(AccVT.isValid() && InputVT.isValid() &&
            "setPartialReduceMLAAction types aren't valid");
     PartialReduceActionTypes Key = {Opc, AccVT.SimpleTy, InputVT.SimpleTy};
@@ -3597,7 +3598,7 @@ public:
   }
 
   const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallsInfo() const {
-    return Libcalls;
+    return RuntimeLibcallInfo;
   }
 
   void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
@@ -3610,9 +3611,9 @@ public:
   }
 
   /// Get the libcall routine name for the specified libcall.
+  // FIXME: This should be removed. Only LibcallImpl should have a name.
   const char *getLibcallName(RTLIB::Libcall Call) const {
-    // FIXME: Return StringRef
-    return Libcalls.getLibcallName(Call).data();
+    return Libcalls.getLibcallName(Call);
   }
 
   /// Get the libcall routine name for the specified libcall implementation
@@ -3620,26 +3621,18 @@ public:
     return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Call);
   }
 
-  const char *getMemcpyName() const {
-    // FIXME: Return StringRef
-    return Libcalls.getMemcpyName().data();
-  }
+  RTLIB::LibcallImpl getMemcpyImpl() const { return Libcalls.getMemcpyImpl(); }
 
   /// Check if this is valid libcall for the current module, otherwise
   /// RTLIB::Unsupported.
   RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
-    return Libcalls.getSupportedLibcallImpl(FuncName);
+    return RuntimeLibcallInfo.getSupportedLibcallImpl(FuncName);
   }
 
   /// Get the comparison predicate that's to be used to test the result of the
   /// comparison libcall against zero. This should only be used with
   /// floating-point compare libcalls.
   ISD::CondCode getSoftFloatCmpLibcallPredicate(RTLIB::LibcallImpl Call) const;
-
-  /// Set the CallingConv that should be used for the specified libcall.
-  void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
-    Libcalls.setLibcallImplCallingConv(Call, CC);
-  }
 
   /// Get the CallingConv that should be used for the specified libcall
   /// implementation.
@@ -3837,8 +3830,11 @@ private:
   std::map<std::pair<unsigned, MVT::SimpleValueType>, MVT::SimpleValueType>
     PromoteToType;
 
+  /// FIXME: This should not live here; it should come from an analysis.
+  const RTLIB::RuntimeLibcallsInfo RuntimeLibcallInfo;
+
   /// The list of libcalls that the target will use.
-  RTLIB::RuntimeLibcallsInfo Libcalls;
+  LibcallLoweringInfo Libcalls;
 
   /// The bits of IndexedModeActions used to store the legalisation actions
   /// We store the data as   | ML | MS |  L |  S | each taking 4 bits.
@@ -5649,17 +5645,35 @@ public:
   /// Get a pointer to vector element \p Idx located in memory for a vector of
   /// type \p VecVT starting at a base address of \p VecPtr. If \p Idx is out of
   /// bounds the returned pointer is unspecified, but will be within the vector
-  /// bounds.
-  SDValue getVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
-                                  SDValue Index) const;
+  /// bounds. \p PtrArithFlags can be used to mark that arithmetic within the
+  /// vector in memory is known to not wrap or to be inbounds.
+  SDValue getVectorElementPointer(
+      SelectionDAG &DAG, SDValue VecPtr, EVT VecVT, SDValue Index,
+      const SDNodeFlags PtrArithFlags = SDNodeFlags()) const;
+
+  /// Get a pointer to vector element \p Idx located in memory for a vector of
+  /// type \p VecVT starting at a base address of \p VecPtr. If \p Idx is out of
+  /// bounds the returned pointer is unspecified, but will be within the vector
+  /// bounds. \p VecPtr is guaranteed to point to the beginning of a memory
+  /// location large enough for the vector.
+  SDValue getInboundsVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr,
+                                          EVT VecVT, SDValue Index) const {
+    return getVectorElementPointer(DAG, VecPtr, VecVT, Index,
+                                   SDNodeFlags::NoUnsignedWrap |
+                                       SDNodeFlags::InBounds);
+  }
 
   /// Get a pointer to a sub-vector of type \p SubVecVT at index \p Idx located
   /// in memory for a vector of type \p VecVT starting at a base address of
   /// \p VecPtr. If \p Idx plus the size of \p SubVecVT is out of bounds the
   /// returned pointer is unspecified, but the value returned will be such that
-  /// the entire subvector would be within the vector bounds.
-  SDValue getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
-                                 EVT SubVecVT, SDValue Index) const;
+  /// the entire subvector would be within the vector bounds. \p PtrArithFlags
+  /// can be used to mark that arithmetic within the vector in memory is known
+  /// to not wrap or to be inbounds.
+  SDValue
+  getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
+                         EVT SubVecVT, SDValue Index,
+                         const SDNodeFlags PtrArithFlags = SDNodeFlags()) const;
 
   /// Method for building the DAG expansion of ISD::[US][MIN|MAX]. This
   /// method accepts integers as its arguments.
