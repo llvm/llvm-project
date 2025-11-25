@@ -132,7 +132,8 @@ std::optional<std::string> detectSysroot() {
 
 std::string detectStandardResourceDir() {
   static int StaticForMainAddr; // Just an address in this process.
-  return GetResourcesPath("clangd", (void *)&StaticForMainAddr);
+  return CompilerInvocation::GetResourcesPath("clangd",
+                                              (void *)&StaticForMainAddr);
 }
 
 // The path passed to argv[0] is important:
