@@ -52,6 +52,13 @@ enum ImageKind : uint16_t {
   IMG_LAST,
 };
 
+/// Flags associated with the Entry.
+enum OffloadEntryFlags : uint32_t {
+  OIF_None = 0,
+  // Entry doesn't contain image. Used to keep metadata only entries.
+  OIF_NoImage = (1 << 0),
+};
+
 /// A simple binary serialization of an offloading file. We use this format to
 /// embed the offloading image into the host executable so it can be extracted
 /// and used by the linker.
@@ -110,17 +117,14 @@ public:
     uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
     uint32_t Version = OffloadBinary::Version;   // Version identifier.
     uint64_t Size;          // Size in bytes of this entire binary.
-    uint64_t EntriesCount;  // Number of metadata entries in the binary.
     uint64_t EntriesOffset; // Offset in bytes to the start of entries block.
-    uint64_t EntriesSize;   // Size of the entries block in bytes.
-    uint64_t StringOffset;  // Offset in bytes to the global string map
-    uint64_t NumStrings;    // Number of entries in the global string map.
+    uint64_t EntriesCount;  // Number of metadata entries in the binary.
   };
 
   struct Entry {
     ImageKind TheImageKind;     // The kind of the image stored.
     OffloadKind TheOffloadKind; // The producer of this image.
-    uint32_t Flags;             // Additional flags associated with the image.
+    uint32_t Flags;             // Additional flags associated with the entry.
     uint64_t StringOffset;      // Offset in bytes to the string map.
     uint64_t NumStrings;        // Number of entries in the string map.
     uint64_t ImageOffset;       // Offset in bytes of the actual binary image.
