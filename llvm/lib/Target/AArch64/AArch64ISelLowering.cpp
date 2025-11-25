@@ -1170,8 +1170,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::VECTOR_DEINTERLEAVE);
   setTargetDAGCombine(ISD::CTPOP);
 
-  setTargetDAGCombine(ISD::FMA);
-
   // In case of strict alignment, avoid an excessive number of byte wide stores.
   MaxStoresPerMemsetOptSize = 8;
   MaxStoresPerMemset =
@@ -1526,6 +1524,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     for (auto VT : {MVT::v16i8, MVT::v8i8, MVT::v4i16, MVT::v2i32})
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Custom);
+
+    for (auto VT : {MVT::v8f16, MVT::v4f32, MVT::v2f64}) {
+      setOperationAction(ISD::FMA, VT, Custom);
+    }
   }
 
   if (Subtarget->isSVEorStreamingSVEAvailable()) {
@@ -7732,6 +7734,37 @@ SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
   return FCVTNT(VT, BottomBF16, Pg, TopF32);
 }
 
+SDValue AArch64TargetLowering::LowerFMA(SDValue Op, SelectionDAG &DAG) const {
+  SDValue OpA = Op->getOperand(0);
+  SDValue OpB = Op->getOperand(1);
+  SDValue OpC = Op->getOperand(2);
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+
+  // Bail early if we're definitely not looking to merge FNEGs into the FMA.
+  if (!VT.isFixedLengthVector() || OpC.getOpcode() != ISD::FNEG) {
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
+  }
+
+  // Convert FMA/FNEG nodes to SVE to enable the following patterns:
+  // fma(a, b, neg(c)) -> fnmls(a, b, c)
+  // fma(neg(a), b, neg(c)) -> fnmla(a, b, c)
+  // fma(a, neg(b), neg(c)) -> fnmla(a, b, c)
+  SDValue Pg = getPredicateForVector(DAG, DL, VT);
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+
+  for (SDValue *Op : {&OpA, &OpB, &OpC}) {
+    // Reuse `LowerToPredicatedOp` but drop the subsequent `extract_subvector`
+    *Op = Op->getOpcode() == ISD::FNEG
+              ? LowerToPredicatedOp(*Op, DAG, AArch64ISD::FNEG_MERGE_PASSTHRU)
+                    ->getOperand(0)
+              : convertToScalableVector(DAG, ContainerVT, *Op);
+  }
+  SDValue ScalableRes =
+      DAG.getNode(AArch64ISD::FMA_PRED, DL, ContainerVT, Pg, OpA, OpB, OpC);
+  return convertFromScalableVector(DAG, VT, ScalableRes);
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -7808,7 +7841,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::FMUL:
     return LowerFMUL(Op, DAG);
   case ISD::FMA:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
+    return LowerFMA(Op, DAG);
   case ISD::FDIV:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FDIV_PRED);
   case ISD::FNEG:
@@ -20694,47 +20727,6 @@ static SDValue performFADDCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue performFMACombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 const AArch64Subtarget *Subtarget) {
-  SelectionDAG &DAG = DCI.DAG;
-  SDValue OpA = N->getOperand(0);
-  SDValue OpB = N->getOperand(1);
-  SDValue OpC = N->getOperand(2);
-  EVT VT = N->getValueType(0);
-  SDLoc DL(N);
-
-  // Convert FMA/FNEG nodes to SVE to enable the following patterns:
-  // fma(a, b, neg(c)) -> fnmls(a, b, c)
-  // fma(neg(a), b, neg(c)) -> fnmla(a, b, c)
-  // fma(a, neg(b), neg(c)) -> fnmla(a, b, c)
-  if (!VT.isFixedLengthVector() ||
-      !DAG.getTargetLoweringInfo().isTypeLegal(VT) ||
-      !Subtarget->isSVEorStreamingSVEAvailable() ||
-      OpC.getOpcode() != ISD::FNEG) {
-    return SDValue();
-  }
-
-  SDValue Pg = getPredicateForVector(DAG, DL, VT);
-  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
-  OpC =
-      DAG.getNode(AArch64ISD::FNEG_MERGE_PASSTHRU, DL, ContainerVT, Pg,
-                  convertToScalableVector(DAG, ContainerVT, OpC.getOperand(0)),
-                  DAG.getUNDEF(ContainerVT));
-
-  OpA = OpA.getOpcode() == ISD::FNEG
-            ? DAG.getNode(
-                  AArch64ISD::FNEG_MERGE_PASSTHRU, DL, ContainerVT, Pg,
-                  convertToScalableVector(DAG, ContainerVT, OpA.getOperand(0)),
-                  DAG.getUNDEF(ContainerVT))
-            : convertToScalableVector(DAG, ContainerVT, OpA);
-
-  OpB = convertToScalableVector(DAG, ContainerVT, OpB);
-  SDValue ScalableRes =
-      DAG.getNode(AArch64ISD::FMA_PRED, DL, ContainerVT, Pg, OpA, OpB, OpC);
-  return convertFromScalableVector(DAG, VT, ScalableRes);
-}
-
 static bool hasPairwiseAdd(unsigned Opcode, EVT VT, bool FullFP16) {
   switch (Opcode) {
   case ISD::STRICT_FADD:
@@ -28266,8 +28258,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performANDCombine(N, DCI);
   case ISD::FADD:
     return performFADDCombine(N, DCI);
-  case ISD::FMA:
-    return performFMACombine(N, DCI, Subtarget);
   case ISD::INTRINSIC_WO_CHAIN:
     return performIntrinsicCombine(N, DCI, Subtarget);
   case ISD::ANY_EXTEND:
