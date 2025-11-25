@@ -315,7 +315,7 @@ struct FusionCandidate {
   /// Determine if a fusion candidate (representing a loop) is eligible for
   /// fusion. Note that this only checks whether a single loop can be fused - it
   /// does not check whether it is *legal* to fuse two loops together.
-  bool isEligibleForFusion(ScalarEvolution &SE) const {
+  bool isEligibleForFusion(ScalarEvolution &SE, bool VerifySCEV = true) const {
     if (!isValid()) {
       LLVM_DEBUG(dbgs() << "FC has invalid CFG requirements!\n");
       if (!Preheader)
@@ -335,7 +335,7 @@ struct FusionCandidate {
     }
 
     // Require ScalarEvolution to be able to determine a trip count.
-    if (!SE.hasLoopInvariantBackedgeTakenCount(L)) {
+    if (VerifySCEV && !SE.hasLoopInvariantBackedgeTakenCount(L)) {
       LLVM_DEBUG(dbgs() << "Loop " << L->getName()
                         << " trip count not computable!\n");
       return reportInvalidCandidate(UnknownTripCount);
@@ -640,7 +640,6 @@ public:
     assert(DT.verify());
     assert(PDT.verify());
     LI.verify(DT);
-    SE.verify();
 #endif
 
     LLVM_DEBUG(dbgs() << "Loop Fusion complete\n");
@@ -1037,7 +1036,7 @@ private:
               performFusion((Peel ? FC0Copy : *FC0), *FC1), DT, &PDT, ORE,
               FC0Copy.PP);
           FusedCand.verify();
-          assert(FusedCand.isEligibleForFusion(SE) &&
+          assert(FusedCand.isEligibleForFusion(SE, false) &&
                  "Fused candidate should be eligible for fusion!");
 
           // Notify the loop-depth-tree that these loops are not valid objects
@@ -1830,7 +1829,6 @@ private:
     assert(DT.verify(DominatorTree::VerificationLevel::Fast));
     assert(PDT.verify());
     LI.verify(DT);
-    SE.verify();
 #endif
 
     LLVM_DEBUG(dbgs() << "Fusion done:\n");
@@ -2128,7 +2126,6 @@ private:
     assert(DT.verify(DominatorTree::VerificationLevel::Fast));
     assert(PDT.verify());
     LI.verify(DT);
-    SE.verify();
 #endif
 
     LLVM_DEBUG(dbgs() << "Fusion done:\n");
@@ -2168,7 +2165,6 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<PostDominatorTreeAnalysis>();
-  PA.preserve<ScalarEvolutionAnalysis>();
   PA.preserve<LoopAnalysis>();
   return PA;
 }
