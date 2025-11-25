@@ -442,18 +442,39 @@ public:
   bool runWaitMerging(MachineFunction &MF) {
     // Perform per-block merging of existing s_waitcnt_depctr instructions.
     // Track set of SGPR writes before a given wait instruction, and search
-    // for reads of these SGPRs prior to the next wait.
-    // If no reads occur then the 1st wait can be merged into the 2nd.
+    // for reads of these SGPRs.
+    // Move the wait to just before the read to improve pipelining.
+    // If no related reads occur before subsequent wait then merged waits.
     const unsigned ConstantMaskBits = AMDGPU::DepCtr::encodeFieldSaSdst(
         AMDGPU::DepCtr::encodeFieldVaSdst(
             AMDGPU::DepCtr::encodeFieldVaVcc(0, *ST), 0),
         0);
-
+    const unsigned VccLoIdx = *sgprNumber(AMDGPU::VCC_LO, *TRI);
+    const unsigned VccHiIdx = *sgprNumber(AMDGPU::VCC_HI, *TRI);
     bool Changed = false;
     for (auto &MBB : MF) {
-      std::bitset<128> WriteSet, NextWriteSet;
+      std::bitset<128> WriteSet, PendingSALUWriteSet, PendingVALUWriteSet;
       MachineInstr *PrevWait = nullptr;
-      bool ReadWriteDep = false;
+
+      auto CommitWrites = [&](unsigned Mask) {
+        if (!AMDGPU::DepCtr::decodeFieldSaSdst(Mask))
+          WriteSet |= PendingSALUWriteSet;
+        bool VccLoBit = WriteSet[VccLoIdx];
+        bool VccHiBit = WriteSet[VccHiIdx];
+        if (!AMDGPU::DepCtr::decodeFieldVaSdst(Mask)) {
+          WriteSet |= PendingVALUWriteSet;
+          WriteSet.set(VccLoIdx, VccLoBit);
+          WriteSet.set(VccLoIdx, VccHiBit);
+        }
+        if (!AMDGPU::DepCtr::decodeFieldVaVcc(Mask)) {
+          WriteSet.set(VccLoIdx, VccLoBit | PendingVALUWriteSet[VccLoIdx]);
+          WriteSet.set(VccHiIdx, VccHiBit | PendingVALUWriteSet[VccHiIdx]);
+        }
+        // Clear all pending writes
+        PendingSALUWriteSet.reset();
+        PendingVALUWriteSet.reset();
+      };
+
       for (MachineBasicBlock::instr_iterator MI = MBB.instr_begin(),
                                              E = MBB.instr_end();
            MI != E; ++MI) {
@@ -463,22 +484,27 @@ public:
         if (MI->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR && !MI->isBundled() &&
             (MI->getOperand(0).getImm() & ConstantMaskBits) ==
                 ConstantMaskBits) {
-          if (PrevWait && !ReadWriteDep) {
-            // Merge previous wait into this one and merge write sets.
+          if (PrevWait) {
+            // Merge previous wait into this one.
             MachineOperand &MaskOp = MI->getOperand(0);
             MaskOp.setImm(
                 mergeMasks(PrevWait->getOperand(0).getImm(), MaskOp.getImm()));
             PrevWait->eraseFromParent();
-            WriteSet |= NextWriteSet;
+            Changed = true;
           } else {
-            // Start a new merging region using fresh write set.
-            WriteSet = NextWriteSet;
+            // Starting a new region using fresh write set.
+            WriteSet.reset();
           }
-          NextWriteSet.reset();
+          CommitWrites(MI->getOperand(0).getImm());
           PrevWait = &*MI;
-          ReadWriteDep = false;
-          Changed = true;
           continue;
+        }
+
+        // Do not optimize over branches
+        if (PrevWait && (MI->isCall() || MI->isReturn() || MI->isBranch())) {
+          PrevWait->moveBefore(&*MI);
+          PrevWait = nullptr;
+          Changed = true;
         }
 
         const bool IsVALU = SIInstrInfo::isVALU(*MI);
@@ -502,17 +528,22 @@ public:
               AMDGPU::getRegBitWidth(*TRI->getRegClassForReg(*MRI, Reg)) / 32;
 
           if (Op.isDef()) {
-            for (uint8_t RegIdx = 0; RegIdx < SGPRCount; ++RegIdx)
-              NextWriteSet.set(RegN + RegIdx);
-          } else {
-            if (ReadWriteDep)
-              continue;
             for (uint8_t RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
-              if (WriteSet[RegN + RegIdx]) {
-                ReadWriteDep = true;
-                break;
-              }
+              if (IsSALU)
+                PendingSALUWriteSet.set(RegN + RegIdx);
+              else
+                PendingVALUWriteSet.set(RegN + RegIdx);
             }
+            continue;
+          }
+
+          for (uint8_t RegIdx = 0; RegIdx < SGPRCount && PrevWait; ++RegIdx) {
+            if (!WriteSet[RegN + RegIdx])
+              continue;
+            // Move the wait to here, the last point it can be valid
+            PrevWait->moveBefore(&*MI);
+            PrevWait = nullptr;
+            Changed = true;
           }
         }
       }
