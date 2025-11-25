@@ -39,6 +39,13 @@ type :: thread_group
 end type thread_group
 
 interface
+  attributes(device) function cluster_block_index()
+    import
+    type(dim3) :: cluster_block_index
+  end function
+end interface
+
+interface
   attributes(device) function cluster_dim_blocks()
     import
     type(dim3) :: cluster_dim_blocks

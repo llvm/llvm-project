@@ -9,6 +9,8 @@ atomic/clc_atomic_fetch_min.cl
 atomic/clc_atomic_fetch_or.cl
 atomic/clc_atomic_fetch_sub.cl
 atomic/clc_atomic_fetch_xor.cl
+atomic/clc_atomic_flag_clear.cl
+atomic/clc_atomic_flag_test_and_set.cl
 atomic/clc_atomic_inc.cl
 atomic/clc_atomic_load.cl
 atomic/clc_atomic_store.cl

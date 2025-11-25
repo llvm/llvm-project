@@ -210,6 +210,95 @@ Host Code Compilation
 - These relocatable objects are then linked together.
 - Host code within a TU can call host functions and launch kernels from another TU.
 
+HIP Fat Binary Registration and Unregistration
+==============================================
+
+When compiling HIP for AMD GPUs, Clang embeds device code into HIP "fat
+binaries" and generates host-side helper functions that register these
+fat binaries with the HIP runtime at program start and unregister them at
+program exit. In non-RDC mode (``-fno-gpu-rdc``), each compilation unit
+typically produces its own HIP fat binary: a container that holds, for every
+enabled GPU architecture, a fully linked offloading device image (for example,
+a GPU code object) that can be loaded directly by the HIP runtime. In RDC mode
+(``-fgpu-rdc``), each compilation unit contributes device code in a relocatable
+form (for example, GPU object files or LLVM IR). A later device-link step links
+those relocatable inputs into fully linked device images per GPU architecture
+and then packages those images into a HIP fat binary container.
+
+Registering a HIP fat binary allows the runtime to discover the kernels and
+device variables defined in that container and to associate host-side addresses
+and symbols with the corresponding GPU-side entities. For example, when a
+host-side kernel launch stub is called, the HIP runtime uses information
+established during registration (and the fat binary handle it returned) to
+identify which GPU kernel symbol to launch from which device image.
+
+At the LLVM IR level, Clang/LLVM typically create an internal module
+constructor (for example ``__hip_module_ctor`` or a ``.hip.fatbin_reg``
+function) and add it to ``@llvm.global_ctors``. This constructor is called by
+the C runtime before ``main`` and it:
+
+* calls ``__hipRegisterFatBinary`` with a pointer to an internal wrapper
+  object that describes the HIP fat binary;
+* stores the returned handle in an internal global variable;
+* calls an internal helper such as ``__hip_register_globals`` to register
+  kernels, device variables and other metadata associated with the fat binary;
+* registers a corresponding module destructor with ``atexit`` so it will run
+  during program termination and use the stored handle to unregister the fat
+  binary from the HIP runtime.
+
+The module destructor (for example ``__hip_module_dtor`` or a
+``.hip.fatbin_unreg`` function) loads the stored handle, checks that it is
+non-null, calls ``__hipUnregisterFatBinary`` to unregister the fat binary from
+the HIP runtime, and then clears the handle. This ensures that the HIP runtime
+sees each fat binary registered exactly once and that it is unregistered once
+at exit, even when multiple translation units contribute HIP kernels to the
+same host program.
+
+These registration/unregistration helpers are implementation details of Clang's
+HIP code generation; user code should not call ``__hipRegisterFatBinary`` or
+``__hipUnregisterFatBinary`` directly.
+
+Implications for HIP Application Developers
+-------------------------------------------
+
+From the point of view of HIP application code, Clang and the HIP runtime
+provide the following guarantees:
+
+* Kernels and device variables defined in HIP code will be registered with the
+  HIP runtime before ``main`` begins execution.
+* Fat binaries will be unregistered via an ``atexit``-registered module
+  destructor after ``main`` returns (or after ``exit`` is called).
+
+Beyond these points, the detailed ordering of fat binary registration and
+unregistration relative to user-defined global constructors, destructors and
+other ``atexit`` handlers is not specified and should not be relied upon.
+Applications should avoid depending on HIP kernels or device variables being
+usable from global constructors or destructors, and instead perform HIP
+initialization and teardown that touches device state in ``main`` (or in
+functions called from ``main``).
+
+Implications for HIP Runtime Developers
+---------------------------------------
+
+HIP runtime implementations that are linked with Clang-generated host code
+must handle registration and unregistration in the presence of uncertain
+global ctor/dtor ordering:
+
+* ``__hipRegisterFatBinary`` must accept a pointer to the compiler-generated
+  wrapper object and return an opaque handle that remains valid for as long as
+  the fat binary may be used.
+* ``__hipUnregisterFatBinary`` must accept the handle previously returned by
+  ``__hipRegisterFatBinary`` and perform any necessary cleanup. It may be
+  called late in process teardown, after other parts of the runtime have
+  started shutting down, so it should be robust in the presence of partially
+  torn-down state.
+* Runtimes should use appropriate synchronization and guards so that fat
+  binary registration does not observe uninitialized resources and
+  unregistration does not release resources that are still required by other
+  runtime components. In particular, registration and unregistration routines
+  should be written to be safe under repeated calls and in the presence of
+  concurrent or overlapping initialization/teardown logic.
+
 Syntax Difference with CUDA
 ===========================
 

@@ -862,6 +862,7 @@ TargetInfo *TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
 
   Target->setSupportedOpenCLOpts();
   Target->setCommandLineOpenCLOpts();
+  Target->setDependentOpenCLOpts();
   Target->setMaxAtomicWidth();
 
   if (!Opts->DarwinTargetVariantTriple.empty())

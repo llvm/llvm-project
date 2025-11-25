@@ -2468,38 +2468,6 @@ let Predicates = [hasPTX<73>, hasSM<52>] in {
 
 include "NVPTXIntrinsics.td"
 
-//-----------------------------------
-// Notes
-//-----------------------------------
-// BSWAP is currently expanded. The following is a more efficient
-// - for < sm_20, use vector scalar mov, as tesla support native 16-bit register
-// - for sm_20, use pmpt (use vector scalar mov to get the pack and
-//   unpack). sm_20 supports native 32-bit register, but not native 16-bit
-// register.
-
-def : Pat <
-  (i32 (bswap i32:$a)),
-  (PRMT_B32rii $a, (i32 0), (i32 0x0123), PrmtNONE)>;
-
-def : Pat <
-  (v2i16 (bswap v2i16:$a)),
-  (PRMT_B32rii $a, (i32 0), (i32 0x2301), PrmtNONE)>;
-
-def : Pat <
-  (i64 (bswap i64:$a)),
-  (V2I32toI64
-    (PRMT_B32rii (I64toI32H_Sink $a), (i32 0), (i32 0x0123), PrmtNONE),
-    (PRMT_B32rii (I64toI32L_Sink $a), (i32 0), (i32 0x0123), PrmtNONE))>,
-  Requires<[hasPTX<71>]>;
-
-// Fall back to the old way if we don't have PTX 7.1.
-def : Pat <
-  (i64 (bswap i64:$a)),
-  (V2I32toI64
-    (PRMT_B32rii (I64toI32H $a), (i32 0), (i32 0x0123), PrmtNONE),
-    (PRMT_B32rii (I64toI32L $a), (i32 0), (i32 0x0123), PrmtNONE))>;
-
-
 ////////////////////////////////////////////////////////////////////////////////
 // PTX Fence instructions
 ////////////////////////////////////////////////////////////////////////////////
