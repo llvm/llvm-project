@@ -84,6 +84,14 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
   }
   return maskVec;
 }
+static mlir::Value emitX86CompressExpand(CIRGenFunction &cgf, const CallExpr *expr,ArrayRef<mlir::Value> ops, bool IsCompress, const std::string &ID){
+  auto ResultTy = cast<cir::VectorType>(ops[1].getType());
+  mlir::Value MaskValue = getMaskVecValue(cgf, expr, ops[2],  cast<cir::VectorType>(ResultTy).getSize());
+  llvm::SmallVector<mlir::Value, 4> op{ops[0], ops[1], MaskValue};
+  
+  return emitIntrinsicCallOp(cgf,expr, ID, ResultTy, op);
+
+}
 
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
                                                const CallExpr *expr) {
@@ -456,7 +464,9 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_compresshi512_mask:
   case X86::BI__builtin_ia32_compressqi128_mask:
   case X86::BI__builtin_ia32_compressqi256_mask:
-  case X86::BI__builtin_ia32_compressqi512_mask:
+  case X86::BI__builtin_ia32_compressqi512_mask:{
+    return emitX86CompressExpand(*this, expr, ops, true, "x86_avx512_mask_compress");
+  }
   case X86::BI__builtin_ia32_gather3div2df:
   case X86::BI__builtin_ia32_gather3div2di:
   case X86::BI__builtin_ia32_gather3div4df:
