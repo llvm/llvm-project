@@ -163,7 +163,7 @@ def N3Write_6c_2L : SchedWriteRes<[N3UnitL, N3UnitL]> {
 
 def N3Write_6c_2GL : SchedWriteRes<[N3UnitL, N3UnitGL]> {
   let Latency     = 6;
-  let NumMicroOps = 2;
+  let NumMicroOps = 4;
   let ReleaseAtCycles = [3, 5];
 }
 
