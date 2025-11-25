@@ -42,7 +42,8 @@ struct BadBase { operator BadDerived&(); };
 struct BadDerived : BadBase {};
 
 struct Fields {
-  int i1, i2, b1 : 3, b2 : 3;
+  int i1, i2, b1 : 3, b2 : 3; // expected-note 2 {{bit-field is declared here}}
+  unsigned u1: 1;
 };
 struct MixedFields {
   int i;
@@ -201,6 +202,9 @@ void test()
   (void)&(i1 ? flds.b1 : flds.i1); // expected-error {{address of bit-field requested}}
   (void)&(i1 ? flds.i1 : flds.b1); // expected-error {{address of bit-field requested}}
   
+  // shouldn't be considered narrowing
+  unsigned char uc1{0 ? throw 0 : flds.u1};
+  unsigned char uc2{1 ? flds.u1 : flds.u1};
 
   unsigned long test0 = 5;
   test0 = test0 ? (long) test0 : test0; // expected-warning {{operand of ? changes signedness: 'long' to 'unsigned long'}}

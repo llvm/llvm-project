@@ -4247,6 +4247,13 @@ FieldDecl *Expr::getSourceBitField() {
     if (UnOp->isPrefix() && UnOp->isIncrementDecrementOp())
       return UnOp->getSubExpr()->getSourceBitField();
 
+  if (const ConditionalOperator *Cond = dyn_cast<ConditionalOperator>(E)) {
+    if (FieldDecl *FD = Cond->getTrueExpr()->getSourceBitField())
+      return FD;
+    if (FieldDecl *FD = Cond->getFalseExpr()->getSourceBitField())
+      return FD;
+  }
+
   return nullptr;
 }
 
