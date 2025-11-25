@@ -463,6 +463,7 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
         Expansion->getDecl()->getIndexTemplateParm()->getDepth());
 
     LocalInstantiationScope LIScope(*this, /*CombineWithOuterScope=*/true);
+    NonSFINAEContext _(*this);
     InstantiatingTemplate Inst(*this, Body->getBeginLoc(), Expansion, Arg,
                                Body->getSourceRange());
 
