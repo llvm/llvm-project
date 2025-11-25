@@ -951,7 +951,6 @@ private:
   void doPRE(MachineBasicBlock &MBB);
   void insertReadVL(MachineBasicBlock &MBB);
 
-  bool isVLPreserving(const MachineInstr &PrevMI, const MachineInstr &MI) const;
   bool canMutatePriorConfig(const MachineInstr &PrevMI, const MachineInstr &MI,
                             const DemandedFields &Used) const;
   void coalesceVSETVLIs(MachineBasicBlock &MBB) const;
@@ -1737,12 +1736,13 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
                 AvailableInfo, OldExit);
 }
 
-bool RISCVInsertVSETVLI::isVLPreserving(const MachineInstr &PrevMI,
-                                        const MachineInstr &MI) const {
-  return MI.getOpcode() == RISCV::PseudoVSETIVLI &&
-         PrevMI.getOpcode() == RISCV::PseudoVSETIVLI &&
-         getInfoForVSETVLI(PrevMI).getAVLImm() ==
-             getInfoForVSETVLI(MI).getAVLImm();
+// If the VL is preserved between PrevMI and NextMI.
+static bool isVLPreserved(const MachineInstr &PrevMI,
+                          const MachineInstr &NextMI) {
+  return RISCVInstrInfo::isVLPreservingConfig(NextMI) ||
+         (PrevMI.getOpcode() == RISCV::PseudoVSETIVLI &&
+          NextMI.getOpcode() == RISCV::PseudoVSETIVLI &&
+          PrevMI.getOperand(1).getImm() == NextMI.getOperand(1).getImm());
 }
 
 // Return true if we can mutate PrevMI to match MI without changing any the
@@ -1753,8 +1753,7 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
   // If the VL values aren't equal, return false if either a) the former is
   // demanded, or b) we can't rewrite the former to be the later for
   // implementation reasons.
-  if (!RISCVInstrInfo::isVLPreservingConfig(MI) &&
-      !isVLPreserving(PrevMI, MI)) {
+  if (!isVLPreserved(PrevMI, MI)) {
     if (Used.VLAny)
       return false;
 
@@ -1848,8 +1847,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
       }
 
       if (canMutatePriorConfig(MI, *NextMI, Used)) {
-        if (!RISCVInstrInfo::isVLPreservingConfig(*NextMI) &&
-            !isVLPreserving(MI, *NextMI)) {
+        if (!isVLPreserved(MI, *NextMI)) {
           Register DefReg = NextMI->getOperand(0).getReg();
 
           MI.getOperand(0).setReg(DefReg);
