@@ -120,8 +120,8 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
   %pc = acc.present varPtr(%c : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
   %pd = acc.present varPtr(%d : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
   acc.data dataOperands(%pa, %pb, %pc, %pd: memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>) {
-    %private = acc.private varPtr(%c : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
-    acc.parallel num_gangs({%numGangs: i64}) num_workers(%numWorkers: i64 [#acc.device_type<nvidia>]) private(@privatization_memref_10_f32 -> %private : memref<10xf32>) {
+    %private = acc.private varPtr(%c : memref<10xf32>) varType(tensor<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+    acc.parallel num_gangs({%numGangs: i64}) num_workers(%numWorkers: i64 [#acc.device_type<nvidia>]) private(%private : memref<10xf32>) {
       acc.loop gang control(%x : index) = (%lb : index) to (%c10 : index) step (%st : index) {
         acc.loop worker control(%y : index) = (%lb : index) to (%c10 : index) step (%st : index) {
           %axy = memref.load %a[%x, %y] : memref<10x10xf32>
@@ -157,8 +157,8 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 // CHECK-NEXT:   [[NUMGANG:%.*]] = arith.constant 10 : i64
 // CHECK-NEXT:   [[NUMWORKERS:%.*]] = arith.constant 10 : i64
 // CHECK:        acc.data dataOperands(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT:     %[[P_ARG2:.*]] = acc.private varPtr([[ARG2]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> 
-// CHECK-NEXT:     acc.parallel num_gangs({[[NUMGANG]] : i64}) num_workers([[NUMWORKERS]] : i64 [#acc.device_type<nvidia>]) private(@privatization_memref_10_f32 -> %[[P_ARG2]] : memref<10xf32>) {
+// CHECK-NEXT:     %[[P_ARG2:.*]] = acc.private varPtr([[ARG2]] : memref<10xf32>) varType(tensor<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+// CHECK-NEXT:     acc.parallel num_gangs({[[NUMGANG]] : i64}) num_workers([[NUMWORKERS]] : i64 [#acc.device_type<nvidia>]) private(%[[P_ARG2]] : memref<10xf32>) {
 // CHECK-NEXT:       acc.loop gang control(%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
 // CHECK-NEXT:         acc.loop worker control(%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
 // CHECK-NEXT:           %{{.*}} = memref.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
@@ -375,8 +375,8 @@ func.func @testloopfirstprivate(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
   %c1 = arith.constant 1 : index
-  %firstprivate = acc.firstprivate varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
-  acc.loop firstprivate(@firstprivatization_memref_10xf32 -> %firstprivate : memref<10xf32>) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
+  %firstprivate = acc.firstprivate varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) recipe(@firstprivatization_memref_10xf32) -> memref<10xf32>
+  acc.loop firstprivate(%firstprivate : memref<10xf32>) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
@@ -385,8 +385,8 @@ func.func @testloopfirstprivate(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // CHECK-LABEL: func.func @testloopfirstprivate(
 // CHECK-SAME:    %[[ARG0:.*]]: memref<10xf32>, %[[ARG1:.*]]: memref<10xf32>)
-// CHECK:         %[[FIRSTPRIVATE:.*]] = acc.firstprivate varPtr(%[[ARG0]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
-// CHECK:         acc.loop firstprivate(@firstprivatization_memref_10xf32 -> %[[FIRSTPRIVATE]] : memref<10xf32>) control(%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
+// CHECK:         %[[FIRSTPRIVATE:.*]] = acc.firstprivate varPtr(%[[ARG0]] : memref<10xf32>) varType(tensor<10xf32>) recipe(@firstprivatization_memref_10xf32) -> memref<10xf32>
+// CHECK:         acc.loop firstprivate(%[[FIRSTPRIVATE]] : memref<10xf32>) control(%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
 // CHECK:           "test.openacc_dummy_op"() : () -> ()
 // CHECK:           acc.yield
 // CHECK:         } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
@@ -464,7 +464,10 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   }
   acc.parallel vector_length(%idxValue: index) {
   }
-  acc.parallel private(@privatization_memref_10_f32 -> %a : memref<10xf32>, @privatization_memref_10_10_f32 -> %c : memref<10x10xf32>) firstprivate(@privatization_memref_10xf32 -> %b: memref<10xf32>) {
+  %private_a = acc.private varPtr(%a : memref<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+  %private_c = acc.private varPtr(%c : memref<10x10xf32>) recipe(@privatization_memref_10_10_f32) -> memref<10x10xf32>
+  %firstprivate_b = acc.firstprivate varPtr(%b : memref<10xf32>) recipe(@privatization_memref_10xf32) -> memref<10xf32>
+  acc.parallel private(%private_a, %private_c : memref<10xf32>, memref<10x10xf32>) firstprivate(%firstprivate_b : memref<10xf32>) {
   }
   acc.parallel {
   } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -517,7 +520,10 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK-NEXT: }
 // CHECK:      acc.parallel vector_length([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel firstprivate(@privatization_memref_10xf32 -> [[ARGB]] : memref<10xf32>) private(@privatization_memref_10_f32 -> [[ARGA]] : memref<10xf32>, @privatization_memref_10_10_f32 -> [[ARGC]] : memref<10x10xf32>) {
+// CHECK:      %[[PRIVATE_A:.*]] = acc.private varPtr([[ARGA]] : memref<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+// CHECK-NEXT: %[[PRIVATE_C:.*]] = acc.private varPtr([[ARGC]] : memref<10x10xf32>) recipe(@privatization_memref_10_10_f32) -> memref<10x10xf32>
+// CHECK-NEXT: %[[FIRSTPRIVATE_B:.*]] = acc.firstprivate varPtr([[ARGB]] : memref<10xf32>) recipe(@privatization_memref_10xf32) -> memref<10xf32>
+// CHECK-NEXT: acc.parallel firstprivate(%[[FIRSTPRIVATE_B]] : memref<10xf32>) private(%[[PRIVATE_A]], %[[PRIVATE_C]] : memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -596,8 +602,10 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   }
   acc.serial wait({%i64value : i64, %i32value : i32, %idxValue : index}) {
   }
-  %firstprivate = acc.firstprivate varPtr(%b : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
-  acc.serial private(@privatization_memref_10_f32 -> %a : memref<10xf32>, @privatization_memref_10_10_f32 -> %c : memref<10x10xf32>) firstprivate(@firstprivatization_memref_10xf32 -> %firstprivate : memref<10xf32>) {
+  %private_a = acc.private varPtr(%a : memref<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+  %private_c = acc.private varPtr(%c : memref<10x10xf32>) recipe(@privatization_memref_10_10_f32) -> memref<10x10xf32>
+  %firstprivate = acc.firstprivate varPtr(%b : memref<10xf32>) varType(tensor<10xf32>) recipe(@firstprivatization_memref_10xf32) -> memref<10xf32>
+  acc.serial private(%private_a, %private_c : memref<10xf32>, memref<10x10xf32>) firstprivate(%firstprivate : memref<10xf32>) {
   }
   acc.serial {
   } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -633,8 +641,10 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK-NEXT: }
 // CHECK:      acc.serial wait({[[I64VALUE]] : i64, [[I32VALUE]] : i32, [[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
-// CHECK:      %[[FIRSTP:.*]] = acc.firstprivate varPtr([[ARGB]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
-// CHECK:      acc.serial firstprivate(@firstprivatization_memref_10xf32 -> %[[FIRSTP]] : memref<10xf32>) private(@privatization_memref_10_f32 -> [[ARGA]] : memref<10xf32>, @privatization_memref_10_10_f32 -> [[ARGC]] : memref<10x10xf32>) {
+// CHECK:      %[[PRIVATE_A:.*]] = acc.private varPtr([[ARGA]] : memref<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+// CHECK-NEXT: %[[PRIVATE_C:.*]] = acc.private varPtr([[ARGC]] : memref<10x10xf32>) recipe(@privatization_memref_10_10_f32) -> memref<10x10xf32>
+// CHECK-NEXT: %[[FIRSTP:.*]] = acc.firstprivate varPtr([[ARGB]] : memref<10xf32>) varType(tensor<10xf32>) recipe(@firstprivatization_memref_10xf32) -> memref<10xf32>
+// CHECK-NEXT: acc.serial firstprivate(%[[FIRSTP]] : memref<10xf32>) private(%[[PRIVATE_A]], %[[PRIVATE_C]] : memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.serial {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -1511,32 +1521,43 @@ acc.private.recipe @privatization_struct_i32_i64 : !llvm.struct<(i32, i32)> init
 
 // -----
 
-acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator<add> init {
-^bb0(%arg0: i64):
-  %0 = arith.constant 0 : i64
-  acc.yield %0 : i64
+acc.reduction.recipe @reduction_add_memref_i64 : memref<i64> reduction_operator <add> init {
+^bb0(%arg0: memref<i64>):
+  %c0_i64 = arith.constant 0 : i64
+  %alloca = memref.alloca() : memref<i64>
+  memref.store %c0_i64, %alloca[] : memref<i64>
+  acc.yield %alloca : memref<i64>
 } combiner {
-^bb0(%arg0: i64, %arg1: i64):
-  %0 = arith.addi %arg0, %arg1 : i64
-  acc.yield %0 : i64
+^bb0(%arg0: memref<i64>, %arg1: memref<i64>):
+  %0 = memref.load %arg0[] : memref<i64>
+  %1 = memref.load %arg1[] : memref<i64>
+  %2 = arith.addi %0, %1 : i64
+  memref.store %2, %arg0[] : memref<i64>
+  acc.yield %arg0 : memref<i64>
 }
 
-// CHECK-LABEL: acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator <add> init {
-// CHECK:       ^bb0(%{{.*}}: i64):
+// CHECK-LABEL: acc.reduction.recipe @reduction_add_memref_i64 : memref<i64> reduction_operator <add> init {
+// CHECK:       ^bb0(%{{.*}}: memref<i64>):
 // CHECK:         %[[C0:.*]] = arith.constant 0 : i64
-// CHECK:         acc.yield %[[C0]] : i64
+// CHECK:         %[[ALLOCA:.*]] = memref.alloca() : memref<i64>
+// CHECK:         memref.store %[[C0]], %[[ALLOCA]][] : memref<i64>
+// CHECK:         acc.yield %[[ALLOCA]] : memref<i64>
 // CHECK:       } combiner {
-// CHECK:       ^bb0(%[[ARG0:.*]]: i64, %[[ARG1:.*]]: i64):
-// CHECK:         %[[RES:.*]] = arith.addi %[[ARG0]], %[[ARG1]] : i64
-// CHECK:         acc.yield %[[RES]] : i64
+// CHECK:       ^bb0(%[[ARG0:.*]]: memref<i64>, %[[ARG1:.*]]: memref<i64>):
+// CHECK:         %[[LOAD0:.*]] = memref.load %[[ARG0]][] : memref<i64>
+// CHECK:         %[[LOAD1:.*]] = memref.load %[[ARG1]][] : memref<i64>
+// CHECK:         %[[RES:.*]] = arith.addi %[[LOAD0]], %[[LOAD1]] : i64
+// CHECK:         memref.store %[[RES]], %[[ARG0]][] : memref<i64>
+// CHECK:         acc.yield %[[ARG0]] : memref<i64>
 // CHECK:       }
 
-func.func @acc_reduc_test(%a : i64) -> () {
+func.func @acc_reduc_test(%a : memref<i64>) -> () {
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
   %c1 = arith.constant 1 : index
-  acc.parallel reduction(@reduction_add_i64 -> %a : i64) {
-    acc.loop reduction(@reduction_add_i64 -> %a : i64) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
+  %reduction_a = acc.reduction varPtr(%a : memref<i64>) recipe(@reduction_add_memref_i64) ->  memref<i64>
+  acc.parallel reduction(%reduction_a :  memref<i64>) {
+    acc.loop reduction(%reduction_a :  memref<i64>) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
     } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
     acc.yield
@@ -1545,31 +1566,39 @@ func.func @acc_reduc_test(%a : i64) -> () {
 }
 
 // CHECK-LABEL: func.func @acc_reduc_test(
-// CHECK-SAME:    %[[ARG0:.*]]: i64)
-// CHECK:         acc.parallel reduction(@reduction_add_i64 -> %[[ARG0]] : i64)
-// CHECK:           acc.loop reduction(@reduction_add_i64 -> %[[ARG0]] : i64)
+// CHECK-SAME:    %[[ARG0:.*]]: memref<i64>)
+// CHECK:         %[[REDUCTION_A:.*]] = acc.reduction varPtr(%[[ARG0]] : memref<i64>) recipe(@reduction_add_memref_i64) -> memref<i64>
+// CHECK-NEXT:    acc.parallel reduction(%[[REDUCTION_A]] : memref<i64>)
+// CHECK:           acc.loop reduction(%[[REDUCTION_A]] : memref<i64>)
 
 // -----
 
-acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator<add> init {
-^bb0(%0: i64):
-  %1 = arith.constant 0 : i64
-  acc.yield %1 : i64
+acc.reduction.recipe @reduction_add_memref_i64 : memref<i64> reduction_operator <add> init {
+^bb0(%arg0: memref<i64>):
+  %c0_i64 = arith.constant 0 : i64
+  %alloca = memref.alloca() : memref<i64>
+  memref.store %c0_i64, %alloca[] : memref<i64>
+  acc.yield %alloca : memref<i64>
 } combiner {
-^bb0(%0: i64, %1: i64):
+^bb0(%arg0: memref<i64>, %arg1: memref<i64>):
+  %0 = memref.load %arg0[] : memref<i64>
+  %1 = memref.load %arg1[] : memref<i64>
   %2 = arith.addi %0, %1 : i64
-  acc.yield %2 : i64
+  memref.store %2, %arg0[] : memref<i64>
+  acc.yield %arg0 : memref<i64>
 }
 
-func.func @acc_reduc_test(%a : i64) -> () {
-  acc.serial reduction(@reduction_add_i64 -> %a : i64) {
+func.func @acc_reduc_test(%a : memref<i64>) -> () {
+  %reduction_a = acc.reduction varPtr(%a : memref<i64>) recipe(@reduction_add_memref_i64) -> memref<i64>
+  acc.serial reduction(%reduction_a : memref<i64>) {
   }
   return
 }
 
 // CHECK-LABEL: func.func @acc_reduc_test(
-// CHECK-SAME:    %[[ARG0:.*]]: i64)
-// CHECK:         acc.serial reduction(@reduction_add_i64 -> %[[ARG0]] : i64)
+// CHECK-SAME:    %[[ARG0:.*]]: memref<i64>)
+// CHECK:         %[[REDUCTION_A:.*]] = acc.reduction varPtr(%[[ARG0]] : memref<i64>) recipe(@reduction_add_memref_i64) -> memref<i64>
+// CHECK-NEXT:    acc.serial reduction(%[[REDUCTION_A]] : memref<i64>)
 
 // -----
 
