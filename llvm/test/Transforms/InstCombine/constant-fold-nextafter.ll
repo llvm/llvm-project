@@ -90,8 +90,7 @@ define double @nextafter_nan_with_payload() {
 ; CHECK-LABEL: define double @nextafter_nan_with_payload() {
 ; CHECK-NEXT:    ret double 0x7FF8000000000001
 ;
-  %nan = load double, double* @dbl_nan
-  %tmp1 = bitcast double %nan to i64
+  %tmp1 = load i64, ptr @dbl_nan
   %tmp2 = or i64 %tmp1, 1
   %nan_with_payload = bitcast i64 %tmp2 to double
   %next = call double @nextafter(double %nan_with_payload, double 1.0)
@@ -103,8 +102,7 @@ define float @nextafterf_nan_with_payload() {
 ; CHECK-LABEL: define float @nextafterf_nan_with_payload() {
 ; CHECK-NEXT:    ret float 0x7FF8000020000000
 ;
-  %nan = load float, float* @flt_nan
-  %tmp1 = bitcast float %nan to i32
+  %tmp1 = load i32, ptr @flt_nan
   %tmp2 = or i32 %tmp1, 1
   %nan_with_payload = bitcast i32 %tmp2 to float
   %next = call float @nextafterf(float %nan_with_payload, float 1.0)
@@ -116,8 +114,8 @@ define double @nextafter_pos_overflow () {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nextafter(double 0x7FEFFFFFFFFFFFFF, double 0x7FF0000000000000)
 ; CHECK-NEXT:    ret double [[NEXT]]
 ;
-  %arg1 = load double, double* @dbl_pos_max
-  %arg2 = load double, double* @dbl_pos_infinity
+  %arg1 = load double, ptr @dbl_pos_max
+  %arg2 = load double, ptr @dbl_pos_infinity
   %next = call double @nextafter(double %arg1, double %arg2)
   ret double %next
 }
@@ -127,8 +125,8 @@ define float @nextafterf_pos_overflow() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nextafterf(float 0x47EFFFFFE0000000, float 0x7FF0000000000000)
 ; CHECK-NEXT:    ret float [[NEXT]]
 ;
-  %arg1 = load float, float* @flt_pos_max
-  %arg2 = load float, float* @flt_pos_infinity
+  %arg1 = load float, ptr @flt_pos_max
+  %arg2 = load float, ptr @flt_pos_infinity
   %next = call float @nextafterf(float %arg1, float %arg2)
   ret float %next
 }
@@ -138,8 +136,8 @@ define double @nextafter_neg_overflow() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nextafter(double 0xFFEFFFFFFFFFFFFF, double 0xFFF0000000000000)
 ; CHECK-NEXT:    ret double [[NEXT]]
 ;
-  %arg1 = load double, double* @dbl_neg_max
-  %arg2 = load double, double* @dbl_neg_infinity
+  %arg1 = load double, ptr @dbl_neg_max
+  %arg2 = load double, ptr @dbl_neg_infinity
   %next = call double @nextafter(double %arg1, double %arg2)
   ret double %next
 }
@@ -149,8 +147,8 @@ define float @nextafterf_neg_overflow() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nextafterf(float 0xC7EFFFFFE0000000, float 0xFFF0000000000000)
 ; CHECK-NEXT:    ret float [[NEXT]]
 ;
-  %arg1 = load float, float* @flt_neg_max
-  %arg2 = load float, float* @flt_neg_infinity
+  %arg1 = load float, ptr @flt_neg_max
+  %arg2 = load float, ptr @flt_neg_infinity
   %next = call float @nextafterf(float %arg1, float %arg2)
   ret float %next
 }
@@ -160,7 +158,7 @@ define double @nextafter_zero_from_above() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nextafter(double 4.940660e-324, double 0.000000e+00)
 ; CHECK-NEXT:    ret double [[NEXT]]
 ;
-  %arg = load double, double* @dbl_pos_min_subnormal
+  %arg = load double, ptr @dbl_pos_min_subnormal
   %next = call double @nextafter(double %arg, double 0.0)
   ret double %next
 }
@@ -170,7 +168,7 @@ define float @nextafterf_zero_from_above() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nextafterf(float 0x36A0000000000000, float 0.000000e+00)
 ; CHECK-NEXT:    ret float [[NEXT]]
 ;
-  %arg = load float, float* @flt_pos_min_subnormal
+  %arg = load float, ptr @flt_pos_min_subnormal
   %next = call float @nextafterf(float %arg, float 0.0)
   ret float %next
 }
@@ -180,7 +178,7 @@ define double @nextafter_zero_from_below() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nextafter(double -4.940660e-324, double 0.000000e+00)
 ; CHECK-NEXT:    ret double [[NEXT]]
 ;
-  %arg = load double, double* @dbl_neg_min_subnormal
+  %arg = load double, ptr @dbl_neg_min_subnormal
   %next = call double @nextafter(double %arg, double 0.0)
   ret double %next
 }
@@ -190,7 +188,7 @@ define float @nextafterf_zero_from_below() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nextafterf(float 0xB6A0000000000000, float 0.000000e+00)
 ; CHECK-NEXT:    ret float [[NEXT]]
 ;
-  %arg = load float, float* @flt_neg_min_subnormal
+  %arg = load float, ptr @flt_neg_min_subnormal
   %next = call float @nextafterf(float %arg, float 0.0)
   ret float %next
 }
@@ -200,8 +198,8 @@ define double @nextafter_subnormal() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nextafter(double 4.940660e-324, double 0x7FF0000000000000)
 ; CHECK-NEXT:    ret double [[NEXT]]
 ;
-  %subnormal = load double, double* @dbl_pos_min_subnormal
-  %infinity = load double, double* @dbl_pos_infinity
+  %subnormal = load double, ptr @dbl_pos_min_subnormal
+  %infinity = load double, ptr @dbl_pos_infinity
   %next = call double @nextafter(double %subnormal, double %infinity)
   ret double %next
 }
@@ -211,8 +209,8 @@ define float @nextafterf_subnormal() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nextafterf(float 0x36A0000000000000, float 0x7FF0000000000000)
 ; CHECK-NEXT:    ret float [[NEXT]]
 ;
-  %subnormal = load float, float* @flt_pos_min_subnormal
-  %infinity = load float, float* @flt_pos_infinity
+  %subnormal = load float, ptr @flt_pos_min_subnormal
+  %infinity = load float, ptr @flt_pos_infinity
   %next = call float @nextafterf(float %subnormal, float %infinity)
   ret float %next
 }
@@ -240,8 +238,8 @@ define double @nextafter_subnormal_readnone() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nextafter(double 4.940660e-324, double 0x7FF0000000000000) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret double [[NEXT]]
 ;
-  %subnormal = load double, double* @dbl_pos_min_subnormal
-  %infinity = load double, double* @dbl_pos_infinity
+  %subnormal = load double, ptr @dbl_pos_min_subnormal
+  %infinity = load double, ptr @dbl_pos_infinity
   %next = call double @nextafter(double %subnormal, double %infinity) readnone
   ret double %next
 }
@@ -251,8 +249,8 @@ define float @nextafterf_subnormal_readnone() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nextafterf(float 0x36A0000000000000, float 0x7FF0000000000000) #[[ATTR1]]
 ; CHECK-NEXT:    ret float [[NEXT]]
 ;
-  %subnormal = load float, float* @flt_pos_min_subnormal
-  %infinity = load float, float* @flt_pos_infinity
+  %subnormal = load float, ptr @flt_pos_min_subnormal
+  %infinity = load float, ptr @flt_pos_infinity
   %next = call float @nextafterf(float %subnormal, float %infinity) readnone
   ret float %next
 }
