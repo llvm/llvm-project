@@ -455,6 +455,8 @@ def err_expected_parentheses_around_typename : Error<
   "expected parentheses around type name in %0 expression">;
 def err_expansion_stmt_requires_range : Error<
   "expansion statement must be a range-based for loop">;
+def err_expansion_stmt_requires_cxx2c : Error<
+  "expansion statements are only supported in C++2c">;
 
 def err_expected_case_before_expression: Error<
   "expected 'case' keyword before expression">;

@@ -260,8 +260,19 @@ Retry:
   }
 
   case tok::kw_template: {
-    if (NextToken().is(tok::kw_for))
+    if (NextToken().is(tok::kw_for)) {
+      // Expansion statements are not backported for now.
+      if (!getLangOpts().CPlusPlus26) {
+        Diag(Tok.getLocation(), diag::err_expansion_stmt_requires_cxx2c);
+
+        // Trying to parse this as a regular 'for' statement instead yields
+        // better error recovery.
+        ConsumeToken();
+        return ParseForStatement(TrailingElseLoc, PrecedingLabel);
+      }
+
       return ParseExpansionStatement(TrailingElseLoc, PrecedingLabel);
+    }
 
     SourceLocation DeclEnd;
     ParseTemplateDeclarationOrSpecialization(DeclaratorContext::Block, DeclEnd,
