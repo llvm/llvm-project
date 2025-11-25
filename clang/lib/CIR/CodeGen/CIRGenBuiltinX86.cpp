@@ -101,7 +101,7 @@ static mlir::Value emitX86FunnelShift(CIRGenFunction &cgf,
     auto vecTy = mlir::cast<cir::VectorType>(ty);
 
     auto numElems = vecTy.getSize();
-    cir::IntType vecElemType = mlir::cast<cir::IntType>(vecTy.getElementType());
+    auto vecElemType = mlir::cast<cir::IntType>(vecTy.getElementType());
     auto signlessType =
         cir::IntType::get(&cgf.getMLIRContext(), vecElemType.getWidth(), false);
     amt = cgf.getBuilder().createIntCast(amt, signlessType);
