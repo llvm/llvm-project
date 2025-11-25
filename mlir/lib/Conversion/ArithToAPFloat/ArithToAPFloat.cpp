@@ -159,9 +159,8 @@ struct FpToFpConversion final : OpRewritePattern<OpTy> {
     Location loc = op.getLoc();
     auto inFloatTy = cast<FloatType>(op.getOperand().getType());
     auto inIntWType = rewriter.getIntegerType(inFloatTy.getWidth());
-    auto int64Type = rewriter.getI64Type();
     Value operandBits = arith::ExtUIOp::create(
-        rewriter, loc, int64Type,
+        rewriter, loc, i64Type,
         arith::BitcastOp::create(rewriter, loc, inIntWType, op.getOperand()));
 
     // Call APFloat function.
@@ -190,10 +189,14 @@ struct FpToIntConversion final : OpRewritePattern<OpTy> {
   FpToIntConversion(MLIRContext *context, SymbolOpInterface symTable,
                     bool isUnsigned, PatternBenefit benefit = 1)
       : OpRewritePattern<OpTy>(context, benefit), symTable(symTable),
-        isUnsigned(isUnsigned){};
+        isUnsigned(isUnsigned) {}
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
+    if (op.getType().getIntOrFloatBitWidth() > 64)
+      return rewriter.notifyMatchFailure(
+          op, "result type > 64 bits is not supported");
+
     // Get APFloat function from runtime library.
     auto i1Type = IntegerType::get(symTable->getContext(), 1);
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
@@ -209,9 +212,8 @@ struct FpToIntConversion final : OpRewritePattern<OpTy> {
     Location loc = op.getLoc();
     auto inFloatTy = cast<FloatType>(op.getOperand().getType());
     auto inIntWType = rewriter.getIntegerType(inFloatTy.getWidth());
-    auto int64Type = rewriter.getI64Type();
     Value operandBits = arith::ExtUIOp::create(
-        rewriter, loc, int64Type,
+        rewriter, loc, i64Type,
         arith::BitcastOp::create(rewriter, loc, inIntWType, op.getOperand()));
 
     // Call APFloat function.

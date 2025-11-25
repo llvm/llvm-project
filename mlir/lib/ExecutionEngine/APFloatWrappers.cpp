@@ -113,6 +113,10 @@ MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_convert_to_int(
   bool isExact;
   // TODO: Custom rounding modes are not supported yet.
   val.convertToInteger(result, llvm::RoundingMode::NearestTiesToEven, &isExact);
+  // This function always returns uint64_t, regardless of the desired result
+  // width. It does not matter whether we zero-extend or sign-extend the APSInt
+  // to 64 bits because the generated IR in arith-to-apfloat will truncate the
+  // result to the desired result width.
   return result.getZExtValue();
 }
 }
