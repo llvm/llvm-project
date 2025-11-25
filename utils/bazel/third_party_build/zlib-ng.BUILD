@@ -96,3 +96,8 @@ cc_library(
     strip_include_prefix = ".",
     visibility = ["//visibility:public"],
 )
+
+alias(
+    name = "zlib-ng",
+    actual = ":zlib",
+)

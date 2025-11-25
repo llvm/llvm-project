@@ -235,9 +235,9 @@ public:
 #  endif
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
-  _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
-  _LIBCPP_HIDE_FROM_ABI reference top() { return c.back(); }
-  _LIBCPP_HIDE_FROM_ABI const_reference top() const { return c.back(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI reference top() { return c.back(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_reference top() const { return c.back(); }
 
   _LIBCPP_HIDE_FROM_ABI void push(const value_type& __v) { c.push_back(__v); }
 #  ifndef _LIBCPP_CXX03_LANG

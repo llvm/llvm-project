@@ -5,14 +5,10 @@ struct HasSideEffects {
   ~HasSideEffects();
 };
 
-// TODO: OpenACC: Implement 'global', NS lowering.
-
 struct Struct {
   static const HasSideEffects StaticMemHSE;
   static const HasSideEffects StaticMemHSEArr[5];
   static const int StaticMemInt;
-
-  // TODO: OpenACC: Implement static-local lowering.
 
   void MemFunc1(HasSideEffects *ArgHSE, int *ArgInt) {
     // CHECK: cir.func {{.*}}MemFunc1{{.*}}(%{{.*}}: !cir.ptr<!rec_Struct>{{.*}}, %[[ARG_HSE:.*]]: !cir.ptr<!rec_HasSideEffects>{{.*}}, %[[ARG_INT:.*]]: !cir.ptr<!s32i> {{.*}})

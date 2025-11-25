@@ -1,0 +1,199 @@
+# RUN: llc -verify-machineinstrs -O0 -mtriple spirv-vulkan1.3-unknown -run-pass=spirv-prelegalizer-combiner %s -o - | FileCheck %s
+# REQUIRES: asserts
+---
+name:            faceforward_instcombine_float
+tracksRegLiveness: true
+legalized: true
+body:             |
+  bb.1.entry:
+    ; CHECK-LABEL: name: faceforward_instcombine_float
+    ; CHECK-NOT: %9:_(s32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NOT: %8:_(s32) = G_FMUL %1:fid, %2:fid
+    ; CHECK-NOT: %10:_(s1) = G_FCMP floatpred(olt), %8:_(s32), %9:_
+    ; CHECK-NOT: %11:_(s32) = G_FNEG %0:fid
+    ; CHECK-NOT: %12:id(s32) = G_SELECT %10:_(s1), %0:fid, %11:_
+    ; CHECK: %10:id(s32) = G_INTRINSIC intrinsic(@llvm.spv.faceforward), %2(s32), %3(s32), %4(s32)
+    ; CHECK: OpReturnValue %10(s32)
+    %3:type(s64) = OpTypeFloat 32
+    %5:type(s64) = OpTypeFunction %3:type(s64), %3:type(s64), %3:type(s64), %3:type(s64)
+    OpName %0:fid(s32), 97
+    OpName %1:fid(s32), 98
+    OpName %2:fid(s32), 99
+    %4:iid(s64) = OpFunction %3:type(s64), 0, %5:type(s64)
+    %0:fid(s32) = OpFunctionParameter %3:type(s64)
+    %1:fid(s32) = OpFunctionParameter %3:type(s64)
+    %2:fid(s32) = OpFunctionParameter %3:type(s64)
+    OpName %4:iid(s64), 1701011814, 2003988326, 1600418401, 1953721961, 1651339107, 1600482921, 1634692198, 116
+    %9:_(s32) = G_FCONSTANT float 0.000000e+00
+    %8:_(s32) = G_FMUL %1:fid, %2:fid
+    %10:_(s1) = G_FCMP floatpred(olt), %8:_(s32), %9:_
+    %11:_(s32) = G_FNEG %0:fid
+    %12:id(s32) = G_SELECT %10:_(s1), %0:fid, %11:_
+    OpReturnValue %12:id(s32)
+---
+name:            faceforward_instcombine_float4
+tracksRegLiveness: true
+legalized: true
+body:             |
+  bb.1.entry:
+    ; CHECK-LABEL: name: faceforward_instcombine_float4
+    ; CHECK-NOT: %10:_(s32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NOT: %9:_(s32) = G_INTRINSIC intrinsic(@llvm.spv.fdot), %1:vfid(<4 x s32>), %2:vfid(<4 x s32>)
+    ; CHECK-NOT: %11:_(s1) = G_FCMP floatpred(olt), %9:_(s32), %10:_
+    ; CHECK-NOT: %12:_(<4 x s32>) = G_FNEG %0:vfid
+    ; CHECK-NOT: %13:id(<4 x s32>) = G_SELECT %11:_(s1), %0:vfid, %12:_
+    ; CHECK: %11:id(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.spv.faceforward), %3(<4 x s32>), %4(<4 x s32>), %5(<4 x s32>)
+    ; CHECK: OpReturnValue %11(<4 x s32>)
+    %4:type(s64) = OpTypeVector %3:type(s64), 4
+    %6:type(s64) = OpTypeFunction %4:type(s64), %4:type(s64), %4:type(s64), %4:type(s64)
+    %3:type(s64) = OpTypeFloat 32
+    OpName %0:vfid(<4 x s32>), 97
+    OpName %1:vfid(<4 x s32>), 98
+    OpName %2:vfid(<4 x s32>), 99
+    %5:iid(s64) = OpFunction %4:type(s64), 0, %6:type(s64)
+    %0:vfid(<4 x s32>) = OpFunctionParameter %4:type(s64)
+    %1:vfid(<4 x s32>) = OpFunctionParameter %4:type(s64)
+    %2:vfid(<4 x s32>) = OpFunctionParameter %4:type(s64)
+    OpName %5:iid(s64), 1701011814, 2003988326, 1600418401, 1953721961, 1651339107, 1600482921, 1634692198, 13428
+    %10:_(s32) = G_FCONSTANT float 0.000000e+00
+    %9:_(s32) = G_INTRINSIC intrinsic(@llvm.spv.fdot), %1:vfid(<4 x s32>), %2:vfid(<4 x s32>)
+    %11:_(s1) = G_FCMP floatpred(olt), %9:_(s32), %10:_
+    %12:_(<4 x s32>) = G_FNEG %0:vfid
+    %13:id(<4 x s32>) = G_SELECT %11:_(s1), %0:vfid, %12:_
+    OpReturnValue %13:id(<4 x s32>)
+---
+name:            faceforward_instcombine_float_constants
+tracksRegLiveness: true
+legalized: true
+body:             |
+  bb.1.entry:
+    ; CHECK-LABEL: name: faceforward_instcombine_float_constants
+    ; CHECK-NOT: %9:_(s32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NOT: %13:_(s32) = G_FCONSTANT float -1.000000e+00
+    ; CHECK-NOT: %8:_(s32) = G_FMUL %1:fid, %2:fid
+    ; CHECK-NOT: %10:_(s1) = G_FCMP floatpred(olt), %8:_(s32), %9:_
+    ; CHECK-NOT: %11:id(s32) = G_SELECT %10:_(s1), %12:_, %13:_
+    ; CHECK: %7:_(s32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK: %11:id(s32) = G_INTRINSIC intrinsic(@llvm.spv.faceforward), %7(s32), %3(s32), %4(s32)
+    ; CHECK: OpReturnValue %11(s32)
+    %3:type(s64) = OpTypeFloat 32
+    %5:type(s64) = OpTypeFunction %3:type(s64), %3:type(s64), %3:type(s64), %3:type(s64)
+    OpName %0:fid(s32), 97
+    OpName %1:fid(s32), 98
+    OpName %2:fid(s32), 99
+    %4:iid(s64) = OpFunction %3:type(s64), 0, %5:type(s64)
+    %0:fid(s32) = OpFunctionParameter %3:type(s64)
+    %1:fid(s32) = OpFunctionParameter %3:type(s64)
+    %2:fid(s32) = OpFunctionParameter %3:type(s64)
+    OpName %4:iid(s64), 1701011814, 2003988326, 1600418401, 1953721961, 1651339107, 1600482921, 1634692198, 1868783476, 1635021678, 7566446
+    %9:_(s32) = G_FCONSTANT float 0.000000e+00
+    %12:_(s32) = G_FCONSTANT float 1.000000e+00
+    %13:_(s32) = G_FCONSTANT float -1.000000e+00
+    %8:_(s32) = G_FMUL %1:fid, %2:fid
+    %10:_(s1) = G_FCMP floatpred(olt), %8:_(s32), %9:_
+    %11:id(s32) = G_SELECT %10:_(s1), %12:_, %13:_
+    OpReturnValue %11:id(s32)
+---
+name:            faceforward_instcombine_float4_constants
+tracksRegLiveness: true
+legalized: true
+body:             |
+  bb.1.entry:
+    ; CHECK-LABEL: name: faceforward_instcombine_float4_constants
+    ; CHECK-NOT: %10:_(s32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NOT: %16:_(s32) = G_FCONSTANT float -1.000000e+00
+    ; CHECK-NOT: %15:_(<4 x s32>) = G_BUILD_VECTOR %16:_(s32), %16:_(s32), %16:_(s32), %16:_(s32)
+    ; CHECK-NOT: %9:_(s32) = G_INTRINSIC intrinsic(@llvm.spv.fdot), %1:vfid(<4 x s32>), %2:vfid(<4 x s32>)
+    ; CHECK-NOT: %11:_(s1) = G_FCMP floatpred(olt), %9:_(s32), %10:_
+    ; CHECK-NOT: %12:id(<4 x s32>) = G_SELECT %11:_(s1), %13:_, %15:_
+    ; CHECK: %8:_(s32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK: %9:_(<4 x s32>) = G_BUILD_VECTOR %8(s32), %8(s32), %8(s32), %8(s32)
+    ; CHECK: %14:id(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.spv.faceforward), %9(<4 x s32>), %4(<4 x s32>), %5(<4 x s32>)
+    ; CHECK: OpReturnValue %14(<4 x s32>)
+    %4:type(s64) = OpTypeVector %3:type(s64), 4
+    %6:type(s64) = OpTypeFunction %4:type(s64), %4:type(s64), %4:type(s64), %4:type(s64)
+    %3:type(s64) = OpTypeFloat 32
+    OpName %0:vfid(<4 x s32>), 97
+    OpName %1:vfid(<4 x s32>), 98
+    OpName %2:vfid(<4 x s32>), 99
+    %5:iid(s64) = OpFunction %4:type(s64), 0, %6:type(s64)
+    %0:vfid(<4 x s32>) = OpFunctionParameter %4:type(s64)
+    %1:vfid(<4 x s32>) = OpFunctionParameter %4:type(s64)
+    %2:vfid(<4 x s32>) = OpFunctionParameter %4:type(s64)
+    OpName %5:iid(s64), 1701011814, 2003988326, 1600418401, 1953721961, 1651339107, 1600482921, 1634692198, 1667183732, 1953721967, 1937010273, 0
+    %10:_(s32) = G_FCONSTANT float 0.000000e+00
+    %14:_(s32) = G_FCONSTANT float 1.000000e+00
+    %13:_(<4 x s32>) = G_BUILD_VECTOR %14:_(s32), %14:_(s32), %14:_(s32), %14:_(s32)
+    %16:_(s32) = G_FCONSTANT float -1.000000e+00
+    %15:_(<4 x s32>) = G_BUILD_VECTOR %16:_(s32), %16:_(s32), %16:_(s32), %16:_(s32)
+    %9:_(s32) = G_INTRINSIC intrinsic(@llvm.spv.fdot), %1:vfid(<4 x s32>), %2:vfid(<4 x s32>)
+    %11:_(s1) = G_FCMP floatpred(olt), %9:_(s32), %10:_
+    %12:id(<4 x s32>) = G_SELECT %11:_(s1), %13:_, %15:_
+    OpReturnValue %12:id(<4 x s32>)
+---
+name:            faceforward_instcombine_float4_false_fmul
+tracksRegLiveness: true
+legalized: true
+body:             |
+  bb.1.entry:
+    ; CHECK-LABEL: name: faceforward_instcombine_float4_false_fmul
+    ; CHECK-NOT: %10:_(s32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NOT: %13:_(s32) = G_FCONSTANT float -1.000000e+00
+    ; CHECK-NOT: %12:_(<4 x s32>) = G_BUILD_VECTOR %13:_(s32), %13:_(s32), %13:_(s32), %13:_(s32)
+    ; CHECK-NOT: %9:_(s32) = G_INTRINSIC intrinsic(@llvm.spv.fdot), %1:vfid(<4 x s32>), %2:vfid(<4 x s32>)
+    ; CHECK-NOT: %11:_(s1) = G_FCMP floatpred(olt), %9:_(s32), %10:_
+    ; CHECK-NOT: %14:_(<4 x s32>) = G_FMUL %0:vfid, %12:_
+    ; CHECK-NOT: %15:id(<4 x s32>) = G_SELECT %11:_(s1), %0:vfid, %14:_
+    ; CHECK: %13:id(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.spv.faceforward), %3(<4 x s32>), %4(<4 x s32>), %5(<4 x s32>)
+    ; CHECK: OpReturnValue %13(<4 x s32>)
+    %4:type(s64) = OpTypeVector %3:type(s64), 4
+    %6:type(s64) = OpTypeFunction %4:type(s64), %4:type(s64), %4:type(s64), %4:type(s64)
+    %3:type(s64) = OpTypeFloat 32
+    OpName %0:vfid(<4 x s32>), 97
+    OpName %1:vfid(<4 x s32>), 98
+    OpName %2:vfid(<4 x s32>), 99
+    %5:iid(s64) = OpFunction %4:type(s64), 0, %6:type(s64)
+    %0:vfid(<4 x s32>) = OpFunctionParameter %4:type(s64)
+    %1:vfid(<4 x s32>) = OpFunctionParameter %4:type(s64)
+    %2:vfid(<4 x s32>) = OpFunctionParameter %4:type(s64)
+    OpName %5:iid(s64), 1701011814, 2003988326, 1600418401, 1953721961, 1651339107, 1600482921, 1634692198, 1717515380, 1702063201, 1970103903, 108
+    %10:_(s32) = G_FCONSTANT float 0.000000e+00
+    %13:_(s32) = G_FCONSTANT float -1.000000e+00
+    %12:_(<4 x s32>) = G_BUILD_VECTOR %13:_(s32), %13:_(s32), %13:_(s32), %13:_(s32)
+    %9:_(s32) = G_INTRINSIC intrinsic(@llvm.spv.fdot), %1:vfid(<4 x s32>), %2:vfid(<4 x s32>)
+    %11:_(s1) = G_FCMP floatpred(olt), %9:_(s32), %10:_
+    %14:_(<4 x s32>) = G_FMUL %0:vfid, %12:_
+    %15:id(<4 x s32>) = G_SELECT %11:_(s1), %0:vfid, %14:_
+    OpReturnValue %15:id(<4 x s32>)
+---
+name:            faceforward_instcombine_float4_ogt
+tracksRegLiveness: true
+legalized: true
+body:             |
+  bb.1.entry:
+    ; CHECK-LABEL: name: faceforward_instcombine_float4
+    ; CHECK-NOT: %10:_(s32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NOT: %9:_(s32) = G_INTRINSIC intrinsic(@llvm.spv.fdot), %1:vfid(<4 x s32>), %2:vfid(<4 x s32>)
+    ; CHECK-NOT: %11:_(s1) = G_FCMP floatpred(ogt), %10:_(s32), %9:_
+    ; CHECK-NOT: %12:_(<4 x s32>) = G_FNEG %0:vfid
+    ; CHECK-NOT: %13:id(<4 x s32>) =  G_SELECT %11:_(s1), %12:_, %0:vfid
+    ; CHECK: %11:id(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.spv.faceforward), %3(<4 x s32>), %4(<4 x s32>), %5(<4 x s32>)
+    ; CHECK: OpReturnValue %11(<4 x s32>)
+    %4:type(s64) = OpTypeVector %3:type(s64), 4
+    %6:type(s64) = OpTypeFunction %4:type(s64), %4:type(s64), %4:type(s64), %4:type(s64)
+    %3:type(s64) = OpTypeFloat 32
+    OpName %0:vfid(<4 x s32>), 97
+    OpName %1:vfid(<4 x s32>), 98
+    OpName %2:vfid(<4 x s32>), 99
+    %5:iid(s64) = OpFunction %4:type(s64), 0, %6:type(s64)
+    %0:vfid(<4 x s32>) = OpFunctionParameter %4:type(s64)
+    %1:vfid(<4 x s32>) = OpFunctionParameter %4:type(s64)
+    %2:vfid(<4 x s32>) = OpFunctionParameter %4:type(s64)
+    OpName %5:iid(s64), 1701011814, 2003988326, 1600418401, 1953721961, 1651339107, 1600482921, 1634692198, 1868510324, 29799
+    %10:_(s32) = G_FCONSTANT float 0.000000e+00
+    %9:_(s32) = G_INTRINSIC intrinsic(@llvm.spv.fdot), %1:vfid(<4 x s32>), %2:vfid(<4 x s32>)
+    %11:_(s1) = G_FCMP floatpred(ogt), %10:_(s32), %9:_
+    %12:_(<4 x s32>) = G_FNEG %0:vfid
+    %13:id(<4 x s32>) = G_SELECT %11:_(s1), %12:_, %0:vfid
+    OpReturnValue %13:id(<4 x s32>)
+
