@@ -109,7 +109,7 @@ private:
 
   /// If DT_FINI_ARRAY is used for instrumentation, update the relocation of its
   /// first entry to point to the instrumentation library's fini address.
-  void updateRtFiniReloc();
+  Error updateRtFiniReloc();
 
   /// Create and initialize metadata rewriters for this instance.
   void initializeMetadataManager();
