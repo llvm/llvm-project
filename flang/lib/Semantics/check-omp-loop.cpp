@@ -267,7 +267,7 @@ void OmpStructureChecker::CheckNestedBlock(const parser::OpenMPLoopConstruct &x,
   for (auto &stmt : body) {
     if (auto *dir{parser::Unwrap<parser::CompilerDirective>(stmt)}) {
       context_.Say(dir->source,
-          "Compiler directives are not allowed inside OpenMP loop constructs"_err_en_US);
+          "Compiler directives are not allowed inside OpenMP loop constructs"_warn_en_US);
     } else if (parser::Unwrap<parser::DoConstruct>(stmt)) {
       ++nestedCount;
     } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(stmt)}) {

@@ -33,10 +33,9 @@
   END DO outer
 
   ! Accept directives between parallel do and actual loop.
-  !ERROR: A DO loop must follow the PARALLEL DO directive
   !$OMP PARALLEL DO
   !WARNING: Unrecognized compiler directive was ignored [-Wignored-directive]
-  !ERROR: Compiler directives are not allowed inside OpenMP loop constructs
+  !WARNING: Compiler directives are not allowed inside OpenMP loop constructs
   !DIR$ VECTOR ALIGNED
   DO 20 i=1,N
      a = a + 0.5
