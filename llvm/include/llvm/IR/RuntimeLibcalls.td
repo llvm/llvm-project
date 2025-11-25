@@ -3516,12 +3516,22 @@ def WasmSystemLibrary
            __stack_chk_fail, __stack_chk_guard)>;
 
 //===----------------------------------------------------------------------===//
+// BPF Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def isBPF : RuntimeLibcallAvailability<(all_of IsBPF)>;
+
+// Only memops
+def BPFSystemLibrary : SystemRuntimeLibrary<isBPF, (add memcpy, memmove,
+                                                        memset)>;
+
+//===----------------------------------------------------------------------===//
 // Legacy Default Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
 // TODO: Should make every target explicit.
 def isDefaultLibcallArch : RuntimeLibcallAvailability<
-  (any_of IsMIPS, IsLoongArch, IsVE, IsBPF, IsArchCSKY, IsArchArc, IsArchM68k,
+  (any_of IsMIPS, IsLoongArch, IsVE, IsArchCSKY, IsArchArc, IsArchM68k,
           IsArchXtensa, (all_of IsSystemZ, (not IsOSzOS)))>;
 
 
