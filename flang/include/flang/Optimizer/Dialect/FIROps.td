@@ -3753,7 +3753,7 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
     duplication at the moment. TODO Combine both ops into one. See:
     https://discourse.llvm.org/t/dialect-for-data-locality-sharing-specifiers-clauses-in-openmp-openacc-and-do-concurrent/86108.
 
-    Declares a `do concurrent` reduction. This requires two mandatory and three
+    Declares a `do concurrent` reduction. This requires two mandatory and four 
     optional regions.
 
       1. The optional alloc region specifies how to allocate the thread-local
@@ -3784,7 +3784,7 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
          be executed after the reduction has completed.
       6. The DataPtrPtr region specifies how to access the base address of a
          boxed-value. This is used, in particular, for GPU reductions in order
-         know where partial reduction resutls are stored in remote lanes.
+         know where partial reduction results are stored in remote lanes.
 
     Note that the MLIR type system does not allow for type-polymorphic
     reductions. Separate reduction declarations should be created for different
@@ -3792,6 +3792,10 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
 
     For initializer and reduction regions, the operand to `fir.yield` must
     match the parent operation's results.
+
+    * `$byref_element_type`: For by-ref reductions, we want to keep track of the
+      boxed/allocated type.  For example, for a `real, allocatable` variable, 
+      `real` should be stored in this attribute.
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,

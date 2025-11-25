@@ -1972,7 +1972,7 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
                                                          Symbol]> {
   let summary = "declares a reduction kind";
   let description = [{
-    Declares an OpenMP reduction kind. This requires two mandatory and three
+    Declares an OpenMP reduction kind. This requires two mandatory and four
     optional regions.
 
       1. The optional alloc region specifies how to allocate the thread-local
@@ -2003,7 +2003,7 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
          be executed after the reduction has completed.
       6. The DataPtrPtr region specifies how to access the base address of a
          descriptor. This is used, in particular, for GPU reductions in order
-         know where partial reduction resutls are stored in remote lanes.
+         know where partial reduction results are stored in remote lanes.
 
     Note that the MLIR type system does not allow for type-polymorphic
     reductions. Separate reduction declarations should be created for different
@@ -2011,6 +2011,11 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
 
     For initializer and reduction regions, the operand to `omp.yield` must
     match the parent operation's results.
+
+    * `$byref_element_type`: For by-ref reductions, we want to keep track of the
+      boxed/allocated type.  For example, for a `real, allocatable` variable, 
+      `real` should be stored in this attribute.
+ 
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,

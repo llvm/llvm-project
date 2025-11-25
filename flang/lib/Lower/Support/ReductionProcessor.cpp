@@ -574,7 +574,7 @@ DeclareRedType ReductionProcessor::createDeclareReductionHelper(
   mlir::Type valTy = fir::unwrapRefType(type);
 
   // For by-ref reductions, we want to keep track of the
-  // boxed/referenced/allocated type. For example, a for `real, allocatable`
+  // boxed/referenced/allocated type. For example, for a `real, allocatable`
   // variable, `real` should be stored.
   mlir::TypeAttr boxedTyAttr{};
   mlir::Type boxedTy;

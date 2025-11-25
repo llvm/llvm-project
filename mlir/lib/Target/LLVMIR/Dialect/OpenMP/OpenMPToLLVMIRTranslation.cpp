@@ -1020,6 +1020,10 @@ makeAtomicReductionGen(omp::DeclareReductionOp decl,
   return atomicGen;
 }
 
+/// Create an OpenMPIRBuilder-compatible `data_ptr_ptr` reduction generator for
+/// the given reduction declaration. The generator uses `builder` but ignores
+/// its insertion point. Returns null if there is no `data_ptr_ptr` region
+/// available in the reduction declaration.
 static OwningDataPtrPtrReductionGen
 makeRefDataPtrGen(omp::DeclareReductionOp decl, llvm::IRBuilderBase &builder,
                   LLVM::ModuleTranslation &moduleTranslation, bool isByRef) {
