@@ -61,9 +61,6 @@ struct SinkVectorProducerOps final : public OpRewritePattern<producerOp> {
       nextFirstUser = nextFirstUser->getNextNode();
     }
 
-    if (llvm::is_contained(users, nextFirstUser))
-      return failure();
-
     // Find the nearest user by scanning forward.
     while (nextOp) {
       if (llvm::is_contained(users, nextOp))
@@ -75,7 +72,12 @@ struct SinkVectorProducerOps final : public OpRewritePattern<producerOp> {
     if (!nextOp)
       return failure();
 
-    // // Both ops must be in the same block to safely move.
+    // The Op first user and next Op first user are same. Break here to
+    // to avoid the shift cycle looping.
+    if (nextOp == nextFirstUser)
+      return failure();
+
+    // Both ops must be in the same block to safely move.
     if (op->getBlock() != nextOp->getBlock())
       return failure();
 
