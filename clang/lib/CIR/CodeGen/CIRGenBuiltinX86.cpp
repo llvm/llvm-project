@@ -563,7 +563,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
         std::min(cast<cir::VectorType>(ops[0].getType()).getSize(),
                  cast<cir::VectorType>(ops[2].getType()).getSize());
     ops[3] =
-        getMaskVecValue(*this, ops[3], minElts, getLoc(expr->getExprLoc()));
+        getMaskVecValue(*this, expr, ops[3], minElts);
     return emitIntrinsicCallOp(*this, expr, intrinsicName.str(),
                                convertType(expr->getType()), ops);
   }
