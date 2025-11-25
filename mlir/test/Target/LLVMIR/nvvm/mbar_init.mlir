@@ -55,46 +55,6 @@ llvm.func @mbarrier_inval_shared(%barrier: !llvm.ptr<3>) {
   llvm.return
 }
 
-llvm.func @mbarrier_arrive(%barrier: !llvm.ptr) {
-  // CHECK-LABEL: define void @mbarrier_arrive(ptr %0) {
-  // CHECK-NEXT: %2 = call i64 @llvm.nvvm.mbarrier.arrive(ptr %0)
-  // CHECK-NEXT: ret void
-  // CHECK-NEXT: }
-  %0 = nvvm.mbarrier.arrive %barrier : !llvm.ptr  -> i64
-  llvm.return
-}
-
-llvm.func @mbarrier_arrive_shared(%barrier: !llvm.ptr<3>) {
-  // CHECK-LABEL: define void @mbarrier_arrive_shared(ptr addrspace(3) %0) {
-  // CHECK-NEXT: %2 = call i64 @llvm.nvvm.mbarrier.arrive.shared(ptr addrspace(3) %0)
-  // CHECK-NEXT: ret void
-  // CHECK-NEXT: }
-  %0 = nvvm.mbarrier.arrive %barrier : !llvm.ptr<3> -> i64
-  llvm.return
-}
-
-llvm.func @mbarrier_arrive_nocomplete(%barrier: !llvm.ptr) {
-  // CHECK-LABEL: define void @mbarrier_arrive_nocomplete(ptr %0) {
-  // CHECK-NEXT: %2 = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-  // CHECK-NEXT: %3 = call i64 @llvm.nvvm.mbarrier.arrive.noComplete(ptr %0, i32 %2)
-  // CHECK-NEXT: ret void
-  // CHECK-NEXT: }
-  %count = nvvm.read.ptx.sreg.ntid.x : i32
-  %0 = nvvm.mbarrier.arrive.nocomplete %barrier, %count : !llvm.ptr, i32 -> i64
-  llvm.return
-}
-
-llvm.func @mbarrier_arrive_nocomplete_shared(%barrier: !llvm.ptr<3>) {
-  // CHECK-LABEL: define void @mbarrier_arrive_nocomplete_shared(ptr addrspace(3) %0) {
-  // CHECK-NEXT: %2 = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-  // CHECK-NEXT: %3 = call i64 @llvm.nvvm.mbarrier.arrive.noComplete.shared(ptr addrspace(3) %0, i32 %2)
-  // CHECK-NEXT: ret void
-  // CHECK-NEXT: }
-  %count = nvvm.read.ptx.sreg.ntid.x : i32
-  %0 = nvvm.mbarrier.arrive.nocomplete %barrier, %count : !llvm.ptr<3>, i32  -> i64
-  llvm.return
-}
-
 llvm.func @mbarrier_test_wait(%barrier: !llvm.ptr, %token : i64) -> i1 {
   // CHECK-LABEL: define i1 @mbarrier_test_wait(ptr %0, i64 %1) {
   // CHECK-NEXT: %3 = call i1 @llvm.nvvm.mbarrier.test.wait(ptr %0, i64 %1)
