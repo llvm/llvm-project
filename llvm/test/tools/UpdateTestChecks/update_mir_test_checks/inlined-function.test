@@ -1,0 +1,7 @@
+# REQUIRES: amdgpu-registered-target
+## Check that update_mir_test_checks handles inlined functions correctly
+## by generating CHECK-NOT for functions that are missing from some RUN lines
+## (e.g., when a whole-wave function gets inlined by the machine-level inliner)
+
+# RUN: cp -f %S/Inputs/inlined-function.mir %t.mir && %update_mir_test_checks %t.mir
+# RUN: diff -u %S/Inputs/inlined-function.mir.expected %t.mir
