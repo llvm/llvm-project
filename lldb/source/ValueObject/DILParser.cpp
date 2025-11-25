@@ -12,11 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/ValueObject/DILParser.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Host/common/DiagnosticsRendering.h"
-#include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILEval.h"
 #include "llvm/ADT/StringRef.h"
@@ -124,8 +123,8 @@ ASTNodeUP DILParser::ParseCastExpression() {
     m_dil_lexer.Advance();
     auto rhs = ParseCastExpression();
 
-    return std::make_unique<CastNode>(
-        loc, type_id.value(), std::move(rhs), CastKind::eNone);
+    return std::make_unique<CastNode>(loc, type_id.value(), std::move(rhs),
+                                      CastKind::eNone);
   }
 
   // Failed to parse the contents of the parentheses as a type declaration.

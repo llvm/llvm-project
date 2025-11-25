@@ -740,8 +740,7 @@ Interpreter::Visit(const BooleanLiteralNode *node) {
   return ValueObject::CreateValueObjectFromBool(m_target, value, "result");
 }
 
-llvm::Expected<lldb::ValueObjectSP>
-Interpreter::Visit(const CastNode *node) {
+llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
   auto operand_or_err = Evaluate(node->GetOperand());
   if (!operand_or_err)
     return operand_or_err;
@@ -750,9 +749,7 @@ Interpreter::Visit(const CastNode *node) {
   // Don't actually do the cast for now -- that code will be added later.
   // For now just return an error message.
   return llvm::make_error<DILDiagnosticError>(
-      m_expr,
-      "Type casting is not supported here.",
-      node->GetLocation());
+      m_expr, "Type casting is not supported here.", node->GetLocation());
 }
 
 } // namespace lldb_private::dil

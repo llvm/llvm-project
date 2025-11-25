@@ -258,7 +258,7 @@ private:
 class CastNode : public ASTNode {
 public:
   CastNode(uint32_t location, CompilerType type, ASTNodeUP operand,
-                 CastKind kind)
+           CastKind kind)
       : ASTNode(location, NodeKind::eCastNode), m_type(type),
         m_operand(std::move(operand)), m_cast_kind(kind) {}
 
@@ -301,8 +301,7 @@ public:
   Visit(const FloatLiteralNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode *node) = 0;
-  virtual llvm::Expected<lldb::ValueObjectSP>
-  Visit(const CastNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode *node) = 0;
 };
 
 } // namespace lldb_private::dil
