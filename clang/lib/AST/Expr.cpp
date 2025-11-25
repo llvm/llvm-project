@@ -3711,6 +3711,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case FunctionParmPackExprClass:
   case RecoveryExprClass:
   case CXXFoldExprClass:
+  case CXXExpansionSelectExprClass:
     // Make a conservative assumption for dependent nodes.
     return IncludePossibleEffects;
 

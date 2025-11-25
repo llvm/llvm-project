@@ -968,7 +968,11 @@ void TextNodeDumper::dumpBareDeclRef(const Decl *D) {
       switch (ND->getKind()) {
       case Decl::Decomposition: {
         auto *DD = cast<DecompositionDecl>(ND);
-        OS << " first_binding '" << DD->bindings()[0]->getDeclName() << '\'';
+
+        // Empty decomposition decls can occur in destructuring expansion
+        // statements.
+        if (!DD->bindings().empty())
+          OS << " first_binding '" << DD->bindings()[0]->getDeclName() << '\'';
         break;
       }
       case Decl::Field: {
@@ -1510,6 +1514,32 @@ void clang::TextNodeDumper::VisitCoawaitExpr(const CoawaitExpr *Node) {
 void clang::TextNodeDumper::VisitCoreturnStmt(const CoreturnStmt *Node) {
   if (Node->isImplicit())
     OS << " implicit";
+}
+
+void TextNodeDumper::VisitCXXExpansionStmtPattern(
+    const CXXExpansionStmtPattern *Node) {
+  switch (Node->getKind()) {
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Enumerating:
+    OS << " enumerating";
+    return;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Iterating:
+    OS << " iterating";
+    return;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Destructuring:
+    OS << " destructuring";
+    return;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Dependent:
+    OS << " dependent";
+    return;
+  }
+
+  llvm_unreachable("invalid expansion statement kind");
+}
+
+void TextNodeDumper::VisitCXXExpansionStmtInstantiation(
+    const CXXExpansionStmtInstantiation *Node) {
+  if (Node->shouldApplyLifetimeExtensionToPreamble())
+    OS << " applies_lifetime_extension";
 }
 
 void TextNodeDumper::VisitConstantExpr(const ConstantExpr *Node) {
