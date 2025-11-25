@@ -329,8 +329,8 @@ def HasNEONandIsStreamingSafe
     : Predicate<"Subtarget->hasNEON()">,
       AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
 // A subset of NEON instructions are legal in Streaming SVE mode only with +sme2p2.
-def HasNEONandIsSME2p2StreamingSafe
-                     : Predicate<"Subtarget->isNeonAvailable() || (Subtarget->hasNEON() && Subtarget->hasSME2p2())">,
+def HasNEONandFPRCVTIsStreamingSafe
+                      : Predicate<"Subtarget->isNeonAvailable() || (Subtarget->hasNEON() && Subtarget->isFPRCVTStreamingSafe())">,
                                  AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRCPC), "rcpc">;
@@ -6952,7 +6952,7 @@ let HasOneUse = 1 in {
 def any_fp_to_sint_oneuse: PatFrag<(ops node:$src0), (any_fp_to_sint $src0)>;
 def any_fp_to_uint_oneuse: PatFrag<(ops node:$src0), (any_fp_to_uint $src0)>;
 }
-let Predicates = [HasNEONandIsSME2p2StreamingSafe] in {
+let Predicates = [HasNEONandFPRCVTIsStreamingSafe] in {
 def : Pat<(f64 (any_sint_to_fp (i64 (any_fp_to_sint_oneuse f64:$Rn)))),
           (SCVTFv1i64 (i64 (FCVTZSv1i64 f64:$Rn)))>;
 def : Pat<(f32 (any_sint_to_fp (i32 (any_fp_to_sint_oneuse f32:$Rn)))),
@@ -6962,7 +6962,7 @@ def : Pat<(f64 (any_uint_to_fp (i64 (any_fp_to_uint_oneuse f64:$Rn)))),
 def : Pat<(f32 (any_uint_to_fp (i32 (any_fp_to_uint_oneuse f32:$Rn)))),
           (UCVTFv1i32 (i32 (FCVTZUv1i32 f32:$Rn)))>;
 
-let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
+let Predicates = [HasNEONandFPRCVTIsStreamingSafe, HasFullFP16] in {
 def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint_oneuse f16:$Rn)))),
           (SCVTFv1i16 (f16 (FCVTZSv1f16 f16:$Rn)))>;
 def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint_oneuse f16:$Rn)))),
@@ -6994,7 +6994,7 @@ def : Pat<(f64 (uint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
 
 // fp16: integer extraction from vector must be at least 32-bits to be legal.
 // Actual extraction result is then an in-reg sign-extension of lower 16-bits.
-let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
+let Predicates = [HasNEONandFPRCVTIsStreamingSafe, HasFullFP16] in {
 def : Pat<(f16 (sint_to_fp (i32 (sext_inreg (i32 (vector_extract
                 (v8i16 FPR128:$Rn), (i64 0))), i16)))),
           (SCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
@@ -7028,7 +7028,7 @@ multiclass UIntToFPROLoadPat<ValueType DstTy, ValueType SrcTy,
                                  sub))>;
 }
 
-let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
+let Predicates = [HasNEONandFPRCVTIsStreamingSafe, HasFullFP16] in {
 defm : UIntToFPROLoadPat<f16, i32, zextloadi8,
                          UCVTFv1i16, ro8, LDRBroW, LDRBroX, bsub>;
 def : Pat <(f16 (uint_to_fp (i32
