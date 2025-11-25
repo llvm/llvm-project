@@ -782,12 +782,12 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     break;
   case MCCFIInstruction::OpLLVMRegisterPair: {
     const auto &Fields =
-        CFI.getExtraFields<MCCFIInstruction::RegisterPairExtraFields>();
+        CFI.getExtraFields<MCCFIInstruction::RegisterPairFields>();
 
     OS << "llvm_register_pair ";
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
-    printCFIRegister(CFI.getRegister(), OS, TRI);
+    printCFIRegister(Fields.Register, OS, TRI);
     OS << ", ";
     printCFIRegister(Fields.Reg1, OS, TRI);
     OS << ", " << Fields.Reg1SizeInBits << ", ";
@@ -797,12 +797,12 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
   }
   case MCCFIInstruction::OpLLVMVectorRegisters: {
     const auto &Fields =
-        CFI.getExtraFields<MCCFIInstruction::VectorRegistersExtraFields>();
+        CFI.getExtraFields<MCCFIInstruction::VectorRegistersFields>();
 
     OS << "llvm_vector_registers ";
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
-    printCFIRegister(CFI.getRegister(), OS, TRI);
+    printCFIRegister(Fields.Register, OS, TRI);
     for (auto [Reg, Lane, Size] : Fields.VectorRegisters) {
       OS << ", ";
       printCFIRegister(Reg, OS, TRI);
@@ -812,25 +812,25 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
   }
   case MCCFIInstruction::OpLLVMVectorOffset: {
     const auto &Fields =
-        CFI.getExtraFields<MCCFIInstruction::VectorOffsetExtraFields>();
+        CFI.getExtraFields<MCCFIInstruction::VectorOffsetFields>();
 
     OS << "llvm_vector_offset ";
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
-    printCFIRegister(CFI.getRegister(), OS, TRI);
+    printCFIRegister(Fields.Register, OS, TRI);
     OS << ", " << Fields.RegisterSizeInBits << ", ";
     printCFIRegister(Fields.MaskRegister, OS, TRI);
-    OS << ", " << Fields.MaskRegisterSizeInBits << ", " << CFI.getOffset();
+    OS << ", " << Fields.MaskRegisterSizeInBits << ", " << Fields.Offset;
     break;
   }
   case MCCFIInstruction::OpLLVMVectorRegisterMask: {
     const auto &Fields =
-        CFI.getExtraFields<MCCFIInstruction::VectorRegisterMaskExtraFields>();
+        CFI.getExtraFields<MCCFIInstruction::VectorRegisterMaskFields>();
 
     OS << "llvm_vector_register_mask ";
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
-    printCFIRegister(CFI.getRegister(), OS, TRI);
+    printCFIRegister(Fields.Register, OS, TRI);
     OS << ", ";
     printCFIRegister(Fields.SpillRegister, OS, TRI);
     OS << ", " << Fields.SpillRegisterLaneSizeInBits << ", ";
