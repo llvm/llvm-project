@@ -74,3 +74,27 @@ __m256i test_mm256_undefined_si256(void) {
   // OGCG: ret <4 x i64> zeroinitializer
   return _mm256_undefined_si256();
 }
+
+__m256d test_mm256_shuffle_pd(__m256d A, __m256d B) {
+  // CIR-LABEL: test_mm256_shuffle_pd
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.double>) [#cir.int<0> : !s32i, #cir.int<4> : !s32i, #cir.int<2> : !s32i, #cir.int<6> : !s32i] : !cir.vector<4 x !cir.double>
+
+  // CHECK-LABEL: test_mm256_shuffle_pd
+  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+
+  // OGCG-LABEL: test_mm256_shuffle_pd
+  // OGCG: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+  return _mm256_shuffle_pd(A, B, 0);
+}
+
+__m256 test_mm256_shuffle_ps(__m256 A, __m256 B) {
+  // CIR-LABEL: test_mm256_shuffle_ps
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.float>) [#cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<8> : !s32i, #cir.int<8> : !s32i, #cir.int<4> : !s32i, #cir.int<4> : !s32i, #cir.int<12> : !s32i, #cir.int<12> : !s32i] : !cir.vector<8 x !cir.float>
+
+  // CHECK-LABEL: test_mm256_shuffle_ps
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 0, i32 8, i32 8, i32 4, i32 4, i32 12, i32 12>
+
+  // OGCG-LABEL: test_mm256_shuffle_ps
+  // OGCG: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 0, i32 8, i32 8, i32 4, i32 4, i32 12, i32 12>
+  return _mm256_shuffle_ps(A, B, 0);
+}

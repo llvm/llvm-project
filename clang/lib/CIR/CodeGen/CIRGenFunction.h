@@ -1349,6 +1349,28 @@ public:
                                     cir::IntType resType, mlir::Value emittedE,
                                     bool isDynamic);
 
+  /// Get integer from a mlir::Value that is an int constant or a constant op.
+  static int64_t getSExtIntValueFromConstOp(mlir::Value val) {
+    auto constOp = val.getDefiningOp<cir::ConstantOp>();
+    assert(constOp && "getIntValueFromConstOp call with non ConstantOp");
+    return constOp.getIntValue().getSExtValue();
+  }
+
+  /// Get zero-extended integer from a mlir::Value that is an int constant or a
+  /// constant op.
+  static int64_t getZExtIntValueFromConstOp(mlir::Value val) {
+    auto constOp = val.getDefiningOp<cir::ConstantOp>();
+    assert(constOp &&
+           "getZeroExtendedIntValueFromConstOp call with non ConstantOp");
+    return constOp.getIntValue().getZExtValue();
+  }
+
+  /// Get size of type in bits using SizedTypeInterface
+  llvm::TypeSize getTypeSizeInBits(mlir::Type ty) const {
+    assert(cir::isSized(ty) && "Type must implement SizedTypeInterface");
+    return cgm.getDataLayout().getTypeSizeInBits(ty);
+  }
+
   mlir::Value evaluateOrEmitBuiltinObjectSize(const clang::Expr *e,
                                               unsigned type,
                                               cir::IntType resType,
@@ -1804,7 +1826,7 @@ public:
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
-  mlir::Value emitX86BuiltinExpr(unsigned builtinID, const CallExpr *e);
+  mlir::Value emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr);
 
   /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
   /// nonnull, if 1\p LHS is marked _Nonnull.
