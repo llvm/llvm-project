@@ -61,17 +61,21 @@ class LintHelper:
     def comment_tag(self) -> str:
         return self.COMMENT_TAG.format(linter=self.name)
 
-    def instructions(self) -> str:
+    def instructions(self, files_to_lint: List[str], args: LintArgs) -> str:
         raise NotImplementedError()
 
-    def filter_changed_files(self) -> List[str]:
+    def filter_changed_files(self, changed_files: List[str]) -> List[str]:
         raise NotImplementedError()
 
-    def run_linter_tool(self) -> Optional[str]:
+    def run_linter_tool(
+        self, files_to_lint: List[str], args: LintArgs
+    ) -> Optional[str]:
         raise NotImplementedError()
 
-    def create_comment_text(self, linter_output: str) -> str:
-        instructions = self.instructions()
+    def create_comment_text(
+        self, linter_output: str, files_to_lint: List[str], args: LintArgs
+    ) -> str:
+        instructions = self.instructions(files_to_lint, args)
         return f"""
 :warning: {self.friendly_name}, {self.name} found issues in your code. :warning:
 
@@ -134,7 +138,7 @@ View the output from {self.name} here.
         if args.verbose:
             print(f"got changed files: {changed_files}")
 
-        files_to_lint = self.filter_changed_files()
+        files_to_lint = self.filter_changed_files(changed_files)
 
         if not files_to_lint and args.verbose:
             print("no modified files found")
@@ -143,7 +147,7 @@ View the output from {self.name} here.
         linter_output = None
 
         if files_to_lint:
-            linter_output = self.run_linter_tool()
+            linter_output = self.run_linter_tool(files_to_lint, args)
             if linter_output:
                 is_success = False
 
@@ -160,7 +164,9 @@ View the output from {self.name} here.
         else:
             if should_update_gh:
                 if linter_output:
-                    comment_text = self.create_comment_text(linter_output)
+                    comment_text = self.create_comment_text(
+                        linter_output, files_to_lint, args
+                    )
                     self.update_pr(comment_text, args, create_new=True)
                 else:
                     # The linter failed but didn't output a result (e.g. some sort of
