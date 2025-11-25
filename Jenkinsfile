@@ -14,6 +14,9 @@ pipeline {
     // Use GCC 10 toolchain installed on the AMI
     CC  = 'gcc10-gcc'
     CXX = 'gcc10-g++'
+
+    // Python 3.8 installed by the AMI (amazon-linux-extras python3.8)
+    PYTHON3_EXE = '/usr/bin/python3.8'
   }
 
   stages {
@@ -35,7 +38,8 @@ pipeline {
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
             -DLLVM_ENABLE_PROJECTS="${LLVM_PROJECTS}" \
             -DCMAKE_C_COMPILER="${CC}" \
-            -DCMAKE_CXX_COMPILER="${CXX}"
+            -DCMAKE_CXX_COMPILER="${CXX}" \
+            -DPython3_EXECUTABLE="${PYTHON3_EXE}"
         '''
       }
     }
