@@ -24,6 +24,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <functional>
@@ -41,7 +42,7 @@ struct MachinePointerInfo;
 class MachineRegisterInfo;
 class TargetLowering;
 
-class CallLowering {
+class LLVM_ABI CallLowering {
   const TargetLowering *TLI;
 
   virtual void anchor();
@@ -49,14 +50,12 @@ public:
   struct BaseArgInfo {
     Type *Ty;
     SmallVector<ISD::ArgFlagsTy, 4> Flags;
-    bool IsFixed;
 
     BaseArgInfo(Type *Ty,
-                ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
-                bool IsFixed = true)
-        : Ty(Ty), Flags(Flags), IsFixed(IsFixed) {}
+                ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>())
+        : Ty(Ty), Flags(Flags) {}
 
-    BaseArgInfo() : Ty(nullptr), IsFixed(false) {}
+    BaseArgInfo() : Ty(nullptr) {}
   };
 
   struct ArgInfo : public BaseArgInfo {
@@ -80,8 +79,8 @@ public:
 
     ArgInfo(ArrayRef<Register> Regs, Type *Ty, unsigned OrigIndex,
             ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
-            bool IsFixed = true, const Value *OrigValue = nullptr)
-        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs), OrigValue(OrigValue),
+            const Value *OrigValue = nullptr)
+        : BaseArgInfo(Ty, Flags), Regs(Regs), OrigValue(OrigValue),
           OrigArgIndex(OrigIndex) {
       if (!Regs.empty() && Flags.empty())
         this->Flags.push_back(ISD::ArgFlagsTy());
@@ -92,9 +91,8 @@ public:
     }
 
     ArgInfo(ArrayRef<Register> Regs, const Value &OrigValue, unsigned OrigIndex,
-            ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
-            bool IsFixed = true)
-      : ArgInfo(Regs, OrigValue.getType(), OrigIndex, Flags, IsFixed, &OrigValue) {}
+            ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>())
+        : ArgInfo(Regs, OrigValue.getType(), OrigIndex, Flags, &OrigValue) {}
 
     ArgInfo() = default;
   };
@@ -172,7 +170,7 @@ public:
   ///
   /// ValueAssigner should not depend on any specific function state, and
   /// only determine the types and locations for arguments.
-  struct ValueAssigner {
+  struct LLVM_ABI ValueAssigner {
     ValueAssigner(bool IsIncoming, CCAssignFn *AssignFn_,
                   CCAssignFn *AssignFnVarArg_ = nullptr)
         : AssignFn(AssignFn_), AssignFnVarArg(AssignFnVarArg_),
@@ -200,7 +198,7 @@ public:
                            CCValAssign::LocInfo LocInfo, const ArgInfo &Info,
                            ISD::ArgFlagsTy Flags, CCState &State) {
       if (getAssignFn(State.isVarArg())(ValNo, ValVT, LocVT, LocInfo, Flags,
-                                        State))
+                                        Info.Ty, State))
         return true;
       StackSize = State.getStackSize();
       return false;
@@ -239,7 +237,7 @@ public:
         : ValueAssigner(false, AssignFn_, AssignFnVarArg_) {}
   };
 
-  struct ValueHandler {
+  struct LLVM_ABI ValueHandler {
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
     const bool IsIncomingArgumentHandler;
@@ -328,7 +326,7 @@ public:
 
   /// Base class for ValueHandlers used for arguments coming into the current
   /// function, or for return values received from a call.
-  struct IncomingValueHandler : public ValueHandler {
+  struct LLVM_ABI IncomingValueHandler : public ValueHandler {
     IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
         : ValueHandler(/*IsIncoming*/ true, MIRBuilder, MRI) {}
 
@@ -608,6 +606,15 @@ public:
   virtual bool isTypeIsValidForThisReturn(EVT Ty) const { return false; }
 };
 
+extern template LLVM_ABI void
+CallLowering::setArgFlags<Function>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
+                                    const DataLayout &DL,
+                                    const Function &FuncInfo) const;
+
+extern template LLVM_ABI void
+CallLowering::setArgFlags<CallBase>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
+                                    const DataLayout &DL,
+                                    const CallBase &FuncInfo) const;
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_CALLLOWERING_H

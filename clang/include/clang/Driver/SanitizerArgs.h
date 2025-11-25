@@ -27,6 +27,7 @@ class SanitizerArgs {
   SanitizerSet TrapSanitizers;
   SanitizerSet MergeHandlers;
   SanitizerMaskCutoffs SkipHotCutoffs;
+  SanitizerSet AnnotateDebugInfo;
 
   std::vector<std::string> UserIgnorelistFiles;
   std::vector<std::string> SystemIgnorelistFiles;
@@ -34,6 +35,7 @@ class SanitizerArgs {
   std::vector<std::string> CoverageIgnorelistFiles;
   std::vector<std::string> BinaryMetadataIgnorelistFiles;
   int CoverageFeatures = 0;
+  int CoverageStackDepthCallbackMin = 0;
   int BinaryMetadataFeatures = 0;
   int OverflowPatternExclusions = 0;
   int MsanTrackOrigins = 0;
@@ -65,6 +67,8 @@ class SanitizerArgs {
   bool TsanFuncEntryExit = true;
   bool TsanAtomics = true;
   bool MinimalRuntime = false;
+  bool TysanOutlineInstrumentation = true;
+  bool HandlerPreserveAllRegs = false;
   // True if cross-dso CFI support if provided by the system (i.e. Android).
   bool ImplicitCfiRuntime = false;
   bool NeedsMemProfRt = false;
@@ -73,6 +77,8 @@ class SanitizerArgs {
       llvm::AsanDetectStackUseAfterReturnMode::Invalid;
 
   std::string MemtagMode;
+  bool AllocTokenFastABI = false;
+  bool AllocTokenExtended = false;
 
 public:
   /// Parses the sanitizer arguments from an argument list.
@@ -105,8 +111,8 @@ public:
   bool requiresMinimalRuntime() const { return MinimalRuntime; }
   bool needsDfsanRt() const { return Sanitizers.has(SanitizerKind::DataFlow); }
   bool needsSafeStackRt() const { return SafeStackRuntime; }
-  bool needsCfiRt() const;
-  bool needsCfiDiagRt() const;
+  bool needsCfiCrossDsoRt() const;
+  bool needsCfiCrossDsoDiagRt() const;
   bool needsStatsRt() const { return Stats; }
   bool needsScudoRt() const { return Sanitizers.has(SanitizerKind::Scudo); }
   bool needsNsanRt() const {

@@ -1,4 +1,4 @@
-//===--- UseRangesCheck.cpp - clang-tidy ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -135,7 +135,6 @@ class StdNumericReplacer : public StdReplacer {
 } // namespace
 
 utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
-
   utils::UseRangesCheck::ReplacerMap Result;
 
   // template<typename Iter> Func(Iter first, Iter last,...).

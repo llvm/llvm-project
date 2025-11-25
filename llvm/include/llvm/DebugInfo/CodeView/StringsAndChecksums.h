@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -23,21 +24,22 @@ class DebugStringTableSubsectionRef;
 class StringsAndChecksumsRef {
 public:
   // If no subsections are known about initially, we find as much as we can.
-  StringsAndChecksumsRef();
+  LLVM_ABI StringsAndChecksumsRef();
 
   // If only a string table subsection is given, we find a checksums subsection.
-  explicit StringsAndChecksumsRef(const DebugStringTableSubsectionRef &Strings);
+  LLVM_ABI explicit StringsAndChecksumsRef(
+      const DebugStringTableSubsectionRef &Strings);
 
   // If both subsections are given, we don't need to find anything.
-  StringsAndChecksumsRef(const DebugStringTableSubsectionRef &Strings,
-                         const DebugChecksumsSubsectionRef &Checksums);
+  LLVM_ABI StringsAndChecksumsRef(const DebugStringTableSubsectionRef &Strings,
+                                  const DebugChecksumsSubsectionRef &Checksums);
 
-  void setStrings(const DebugStringTableSubsectionRef &Strings);
-  void setChecksums(const DebugChecksumsSubsectionRef &CS);
+  LLVM_ABI void setStrings(const DebugStringTableSubsectionRef &Strings);
+  LLVM_ABI void setChecksums(const DebugChecksumsSubsectionRef &CS);
 
-  void reset();
-  void resetStrings();
-  void resetChecksums();
+  LLVM_ABI void reset();
+  LLVM_ABI void resetStrings();
+  LLVM_ABI void resetChecksums();
 
   template <typename T> void initialize(T &&FragmentRange) {
     for (const DebugSubsectionRecord &R : FragmentRange) {
@@ -70,8 +72,8 @@ public:
   bool hasChecksums() const { return Checksums != nullptr; }
 
 private:
-  void initializeStrings(const DebugSubsectionRecord &SR);
-  void initializeChecksums(const DebugSubsectionRecord &FCR);
+  LLVM_ABI void initializeStrings(const DebugSubsectionRecord &SR);
+  LLVM_ABI void initializeChecksums(const DebugSubsectionRecord &FCR);
 
   std::shared_ptr<DebugStringTableSubsectionRef> OwnedStrings;
   std::shared_ptr<DebugChecksumsSubsectionRef> OwnedChecksums;

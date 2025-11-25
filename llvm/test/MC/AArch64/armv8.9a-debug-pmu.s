@@ -1,485 +1,1785 @@
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding               -mattr=+ite < %s | FileCheck %s
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.8a -mattr=+ite < %s | FileCheck %s
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.9a -mattr=+ite < %s | FileCheck %s
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v9.3a -mattr=+ite < %s | FileCheck %s
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v9.4a -mattr=+ite < %s | FileCheck %s
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+v8.8a,+ite < %s \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+v8.9a,+ite < %s \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+v9.3a,+ite < %s \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+v9.4a,+ite < %s \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+ite < %s \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+// RUN: not llvm-mc -triple=aarch64 -show-encoding < %s 2>&1 \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ERROR
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+ite < %s \
+// RUN:        | llvm-objdump -d --mattr=+ite --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+ite < %s \
+// RUN:   | llvm-objdump -d --mattr=-ite --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// Disassemble encoding and check the re-encoding (-show-encoding) matches.
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+ite < %s \
+// RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
+// RUN:        | llvm-mc -triple=aarch64 -mattr=+ite -disassemble -show-encoding \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding               < %s 2>&1 | FileCheck --check-prefix=ERROR-NO-ITE %s
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.8a < %s 2>&1 | FileCheck --check-prefix=ERROR-NO-ITE %s
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.9a < %s 2>&1 | FileCheck --check-prefix=ERROR-NO-ITE %s
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v9.3a < %s 2>&1 | FileCheck --check-prefix=ERROR-NO-ITE %s
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v9.4a < %s 2>&1 | FileCheck --check-prefix=ERROR-NO-ITE %s
+
+mrs x3, DBGBVR0_EL1
+// CHECK-INST: mrs x3, DBGBVR0_EL1
+// CHECK-ENCODING: encoding: [0x83,0x00,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300083 mrs x3, DBGBVR0_EL1
+
+msr DBGBVR0_EL1, x1
+// CHECK-INST: msr DBGBVR0_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x00,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100081 msr DBGBVR0_EL1, x1
+
+mrs x3, DBGBVR1_EL1
+// CHECK-INST: mrs x3, DBGBVR1_EL1
+// CHECK-ENCODING: encoding: [0x83,0x01,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300183 mrs x3, DBGBVR1_EL1
+
+msr DBGBVR1_EL1, x1
+// CHECK-INST: msr DBGBVR1_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x01,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100181 msr DBGBVR1_EL1, x1
+
+mrs x3, DBGBVR2_EL1
+// CHECK-INST: mrs x3, DBGBVR2_EL1
+// CHECK-ENCODING: encoding: [0x83,0x02,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300283 mrs x3, DBGBVR2_EL1
+
+msr DBGBVR2_EL1, x1
+// CHECK-INST: msr DBGBVR2_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x02,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100281 msr DBGBVR2_EL1, x1
+
+mrs x3, DBGBVR3_EL1
+// CHECK-INST: mrs x3, DBGBVR3_EL1
+// CHECK-ENCODING: encoding: [0x83,0x03,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300383 mrs x3, DBGBVR3_EL1
+
+msr DBGBVR3_EL1, x1
+// CHECK-INST: msr DBGBVR3_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x03,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100381 msr DBGBVR3_EL1, x1
+
+mrs x3, DBGBVR4_EL1
+// CHECK-INST: mrs x3, DBGBVR4_EL1
+// CHECK-ENCODING: encoding: [0x83,0x04,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300483 mrs x3, DBGBVR4_EL1
+
+msr DBGBVR4_EL1, x1
+// CHECK-INST: msr DBGBVR4_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x04,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100481 msr DBGBVR4_EL1, x1
+
+mrs x3, DBGBVR5_EL1
+// CHECK-INST: mrs x3, DBGBVR5_EL1
+// CHECK-ENCODING: encoding: [0x83,0x05,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300583 mrs x3, DBGBVR5_EL1
+
+msr DBGBVR5_EL1, x1
+// CHECK-INST: msr DBGBVR5_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x05,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100581 msr DBGBVR5_EL1, x1
+
+mrs x3, DBGBVR6_EL1
+// CHECK-INST: mrs x3, DBGBVR6_EL1
+// CHECK-ENCODING: encoding: [0x83,0x06,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300683 mrs x3, DBGBVR6_EL1
+
+msr DBGBVR6_EL1, x1
+// CHECK-INST: msr DBGBVR6_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x06,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100681 msr DBGBVR6_EL1, x1
+
+mrs x3, DBGBVR7_EL1
+// CHECK-INST: mrs x3, DBGBVR7_EL1
+// CHECK-ENCODING: encoding: [0x83,0x07,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300783 mrs x3, DBGBVR7_EL1
+
+msr DBGBVR7_EL1, x1
+// CHECK-INST: msr DBGBVR7_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x07,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100781 msr DBGBVR7_EL1, x1
+
+mrs x3, DBGBVR8_EL1
+// CHECK-INST: mrs x3, DBGBVR8_EL1
+// CHECK-ENCODING: encoding: [0x83,0x08,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300883 mrs x3, DBGBVR8_EL1
+
+msr DBGBVR8_EL1, x1
+// CHECK-INST: msr DBGBVR8_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x08,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100881 msr DBGBVR8_EL1, x1
+
+mrs x3, DBGBVR9_EL1
+// CHECK-INST: mrs x3, DBGBVR9_EL1
+// CHECK-ENCODING: encoding: [0x83,0x09,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300983 mrs x3, DBGBVR9_EL1
+
+msr DBGBVR9_EL1, x1
+// CHECK-INST: msr DBGBVR9_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x09,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100981 msr DBGBVR9_EL1, x1
+
+mrs x3, DBGBVR10_EL1
+// CHECK-INST: mrs x3, DBGBVR10_EL1
+// CHECK-ENCODING: encoding: [0x83,0x0a,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300a83 mrs x3, DBGBVR10_EL1
+
+msr DBGBVR10_EL1, x1
+// CHECK-INST: msr DBGBVR10_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x0a,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100a81 msr DBGBVR10_EL1, x1
+
+mrs x3, DBGBVR11_EL1
+// CHECK-INST: mrs x3, DBGBVR11_EL1
+// CHECK-ENCODING: encoding: [0x83,0x0b,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300b83 mrs x3, DBGBVR11_EL1
+
+msr DBGBVR11_EL1, x1
+// CHECK-INST: msr DBGBVR11_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x0b,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100b81 msr DBGBVR11_EL1, x1
+
+mrs x3, DBGBVR12_EL1
+// CHECK-INST: mrs x3, DBGBVR12_EL1
+// CHECK-ENCODING: encoding: [0x83,0x0c,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300c83 mrs x3, DBGBVR12_EL1
+
+msr DBGBVR12_EL1, x1
+// CHECK-INST: msr DBGBVR12_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x0c,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100c81 msr DBGBVR12_EL1, x1
+
+mrs x3, DBGBVR13_EL1
+// CHECK-INST: mrs x3, DBGBVR13_EL1
+// CHECK-ENCODING: encoding: [0x83,0x0d,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300d83 mrs x3, DBGBVR13_EL1
+
+msr DBGBVR13_EL1, x1
+// CHECK-INST: msr DBGBVR13_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x0d,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100d81 msr DBGBVR13_EL1, x1
+
+mrs x3, DBGBVR14_EL1
+// CHECK-INST: mrs x3, DBGBVR14_EL1
+// CHECK-ENCODING: encoding: [0x83,0x0e,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300e83 mrs x3, DBGBVR14_EL1
+
+msr DBGBVR14_EL1, x1
+// CHECK-INST: msr DBGBVR14_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x0e,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100e81 msr DBGBVR14_EL1, x1
+
+mrs x3, DBGBVR15_EL1
+// CHECK-INST: mrs x3, DBGBVR15_EL1
+// CHECK-ENCODING: encoding: [0x83,0x0f,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300f83 mrs x3, DBGBVR15_EL1
+
+msr DBGBVR15_EL1, x1
+// CHECK-INST: msr DBGBVR15_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x0f,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100f81 msr DBGBVR15_EL1, x1
+
+mrs x3, DBGBCR0_EL1
+// CHECK-INST: mrs x3, DBGBCR0_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x00,0x30,0xd5]
+// CHECK-UNKNOWN:  d53000a3 mrs x3, DBGBCR0_EL1
+
+msr DBGBCR0_EL1, x1
+// CHECK-INST: msr DBGBCR0_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x00,0x10,0xd5]
+// CHECK-UNKNOWN:  d51000a1 msr DBGBCR0_EL1, x1
+
+mrs x3, DBGBCR1_EL1
+// CHECK-INST: mrs x3, DBGBCR1_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x01,0x30,0xd5]
+// CHECK-UNKNOWN:  d53001a3 mrs x3, DBGBCR1_EL1
+
+msr DBGBCR1_EL1, x1
+// CHECK-INST: msr DBGBCR1_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x01,0x10,0xd5]
+// CHECK-UNKNOWN:  d51001a1 msr DBGBCR1_EL1, x1
+
+mrs x3, DBGBCR2_EL1
+// CHECK-INST: mrs x3, DBGBCR2_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x02,0x30,0xd5]
+// CHECK-UNKNOWN:  d53002a3 mrs x3, DBGBCR2_EL1
+
+msr DBGBCR2_EL1, x1
+// CHECK-INST: msr DBGBCR2_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x02,0x10,0xd5]
+// CHECK-UNKNOWN:  d51002a1 msr DBGBCR2_EL1, x1
+
+mrs x3, DBGBCR3_EL1
+// CHECK-INST: mrs x3, DBGBCR3_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x03,0x30,0xd5]
+// CHECK-UNKNOWN:  d53003a3 mrs x3, DBGBCR3_EL1
+
+msr DBGBCR3_EL1, x1
+// CHECK-INST: msr DBGBCR3_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x03,0x10,0xd5]
+// CHECK-UNKNOWN:  d51003a1 msr DBGBCR3_EL1, x1
+
+mrs x3, DBGBCR4_EL1
+// CHECK-INST: mrs x3, DBGBCR4_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x04,0x30,0xd5]
+// CHECK-UNKNOWN:  d53004a3 mrs x3, DBGBCR4_EL1
+
+msr DBGBCR4_EL1, x1
+// CHECK-INST: msr DBGBCR4_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x04,0x10,0xd5]
+// CHECK-UNKNOWN:  d51004a1 msr DBGBCR4_EL1, x1
+
+mrs x3, DBGBCR5_EL1
+// CHECK-INST: mrs x3, DBGBCR5_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x05,0x30,0xd5]
+// CHECK-UNKNOWN:  d53005a3 mrs x3, DBGBCR5_EL1
+
+msr DBGBCR5_EL1, x1
+// CHECK-INST: msr DBGBCR5_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x05,0x10,0xd5]
+// CHECK-UNKNOWN:  d51005a1 msr DBGBCR5_EL1, x1
+
+mrs x3, DBGBCR6_EL1
+// CHECK-INST: mrs x3, DBGBCR6_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x06,0x30,0xd5]
+// CHECK-UNKNOWN:  d53006a3 mrs x3, DBGBCR6_EL1
+
+msr DBGBCR6_EL1, x1
+// CHECK-INST: msr DBGBCR6_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x06,0x10,0xd5]
+// CHECK-UNKNOWN:  d51006a1 msr DBGBCR6_EL1, x1
+
+mrs x3, DBGBCR7_EL1
+// CHECK-INST: mrs x3, DBGBCR7_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x07,0x30,0xd5]
+// CHECK-UNKNOWN:  d53007a3 mrs x3, DBGBCR7_EL1
+
+msr DBGBCR7_EL1, x1
+// CHECK-INST: msr DBGBCR7_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x07,0x10,0xd5]
+// CHECK-UNKNOWN:  d51007a1 msr DBGBCR7_EL1, x1
+
+mrs x3, DBGBCR8_EL1
+// CHECK-INST: mrs x3, DBGBCR8_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x08,0x30,0xd5]
+// CHECK-UNKNOWN:  d53008a3 mrs x3, DBGBCR8_EL1
+
+msr DBGBCR8_EL1, x1
+// CHECK-INST: msr DBGBCR8_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x08,0x10,0xd5]
+// CHECK-UNKNOWN:  d51008a1 msr DBGBCR8_EL1, x1
+
+mrs x3, DBGBCR9_EL1
+// CHECK-INST: mrs x3, DBGBCR9_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x09,0x30,0xd5]
+// CHECK-UNKNOWN:  d53009a3 mrs x3, DBGBCR9_EL1
+
+msr DBGBCR9_EL1, x1
+// CHECK-INST: msr DBGBCR9_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x09,0x10,0xd5]
+// CHECK-UNKNOWN:  d51009a1 msr DBGBCR9_EL1, x1
+
+mrs x3, DBGBCR10_EL1
+// CHECK-INST: mrs x3, DBGBCR10_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x0a,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300aa3 mrs x3, DBGBCR10_EL1
+
+msr DBGBCR10_EL1, x1
+// CHECK-INST: msr DBGBCR10_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x0a,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100aa1 msr DBGBCR10_EL1, x1
+
+mrs x3, DBGBCR11_EL1
+// CHECK-INST: mrs x3, DBGBCR11_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x0b,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300ba3 mrs x3, DBGBCR11_EL1
+
+msr DBGBCR11_EL1, x1
+// CHECK-INST: msr DBGBCR11_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x0b,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100ba1 msr DBGBCR11_EL1, x1
+
+mrs x3, DBGBCR12_EL1
+// CHECK-INST: mrs x3, DBGBCR12_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x0c,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300ca3 mrs x3, DBGBCR12_EL1
+
+msr DBGBCR12_EL1, x1
+// CHECK-INST: msr DBGBCR12_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x0c,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100ca1 msr DBGBCR12_EL1, x1
+
+mrs x3, DBGBCR13_EL1
+// CHECK-INST: mrs x3, DBGBCR13_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x0d,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300da3 mrs x3, DBGBCR13_EL1
+
+msr DBGBCR13_EL1, x1
+// CHECK-INST: msr DBGBCR13_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x0d,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100da1 msr DBGBCR13_EL1, x1
+
+mrs x3, DBGBCR14_EL1
+// CHECK-INST: mrs x3, DBGBCR14_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x0e,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300ea3 mrs x3, DBGBCR14_EL1
+
+msr DBGBCR14_EL1, x1
+// CHECK-INST: msr DBGBCR14_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x0e,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100ea1 msr DBGBCR14_EL1, x1
+
+mrs x3, DBGBCR15_EL1
+// CHECK-INST: mrs x3, DBGBCR15_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x0f,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300fa3 mrs x3, DBGBCR15_EL1
+
+msr DBGBCR15_EL1, x1
+// CHECK-INST: msr DBGBCR15_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x0f,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100fa1 msr DBGBCR15_EL1, x1
+
+mrs x3, DBGWVR0_EL1
+// CHECK-INST: mrs x3, DBGWVR0_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x00,0x30,0xd5]
+// CHECK-UNKNOWN:  d53000c3 mrs x3, DBGWVR0_EL1
+
+msr DBGWVR0_EL1, x1
+// CHECK-INST: msr DBGWVR0_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x00,0x10,0xd5]
+// CHECK-UNKNOWN:  d51000c1 msr DBGWVR0_EL1, x1
+
+mrs x3, DBGWVR1_EL1
+// CHECK-INST: mrs x3, DBGWVR1_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x01,0x30,0xd5]
+// CHECK-UNKNOWN:  d53001c3 mrs x3, DBGWVR1_EL1
+
+msr DBGWVR1_EL1, x1
+// CHECK-INST: msr DBGWVR1_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x01,0x10,0xd5]
+// CHECK-UNKNOWN:  d51001c1 msr DBGWVR1_EL1, x1
+
+mrs x3, DBGWVR2_EL1
+// CHECK-INST: mrs x3, DBGWVR2_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x02,0x30,0xd5]
+// CHECK-UNKNOWN:  d53002c3 mrs x3, DBGWVR2_EL1
+
+msr DBGWVR2_EL1, x1
+// CHECK-INST: msr DBGWVR2_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x02,0x10,0xd5]
+// CHECK-UNKNOWN:  d51002c1 msr DBGWVR2_EL1, x1
+
+mrs x3, DBGWVR3_EL1
+// CHECK-INST: mrs x3, DBGWVR3_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x03,0x30,0xd5]
+// CHECK-UNKNOWN:  d53003c3 mrs x3, DBGWVR3_EL1
+
+msr DBGWVR3_EL1, x1
+// CHECK-INST: msr DBGWVR3_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x03,0x10,0xd5]
+// CHECK-UNKNOWN:  d51003c1 msr DBGWVR3_EL1, x1
+
+mrs x3, DBGWVR4_EL1
+// CHECK-INST: mrs x3, DBGWVR4_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x04,0x30,0xd5]
+// CHECK-UNKNOWN:  d53004c3 mrs x3, DBGWVR4_EL1
+
+msr DBGWVR4_EL1, x1
+// CHECK-INST: msr DBGWVR4_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x04,0x10,0xd5]
+// CHECK-UNKNOWN:  d51004c1 msr DBGWVR4_EL1, x1
+
+mrs x3, DBGWVR5_EL1
+// CHECK-INST: mrs x3, DBGWVR5_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x05,0x30,0xd5]
+// CHECK-UNKNOWN:  d53005c3 mrs x3, DBGWVR5_EL1
+
+msr DBGWVR5_EL1, x1
+// CHECK-INST: msr DBGWVR5_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x05,0x10,0xd5]
+// CHECK-UNKNOWN:  d51005c1 msr DBGWVR5_EL1, x1
+
+mrs x3, DBGWVR6_EL1
+// CHECK-INST: mrs x3, DBGWVR6_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x06,0x30,0xd5]
+// CHECK-UNKNOWN:  d53006c3 mrs x3, DBGWVR6_EL1
+
+msr DBGWVR6_EL1, x1
+// CHECK-INST: msr DBGWVR6_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x06,0x10,0xd5]
+// CHECK-UNKNOWN:  d51006c1 msr DBGWVR6_EL1, x1
+
+mrs x3, DBGWVR7_EL1
+// CHECK-INST: mrs x3, DBGWVR7_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x07,0x30,0xd5]
+// CHECK-UNKNOWN:  d53007c3 mrs x3, DBGWVR7_EL1
+
+msr DBGWVR7_EL1, x1
+// CHECK-INST: msr DBGWVR7_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x07,0x10,0xd5]
+// CHECK-UNKNOWN:  d51007c1 msr DBGWVR7_EL1, x1
+
+mrs x3, DBGWVR8_EL1
+// CHECK-INST: mrs x3, DBGWVR8_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x08,0x30,0xd5]
+// CHECK-UNKNOWN:  d53008c3 mrs x3, DBGWVR8_EL1
+
+msr DBGWVR8_EL1, x1
+// CHECK-INST: msr DBGWVR8_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x08,0x10,0xd5]
+// CHECK-UNKNOWN:  d51008c1 msr DBGWVR8_EL1, x1
+
+mrs x3, DBGWVR9_EL1
+// CHECK-INST: mrs x3, DBGWVR9_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x09,0x30,0xd5]
+// CHECK-UNKNOWN:  d53009c3 mrs x3, DBGWVR9_EL1
+
+msr DBGWVR9_EL1, x1
+// CHECK-INST: msr DBGWVR9_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x09,0x10,0xd5]
+// CHECK-UNKNOWN:  d51009c1 msr DBGWVR9_EL1, x1
+
+mrs x3, DBGWVR10_EL1
+// CHECK-INST: mrs x3, DBGWVR10_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x0a,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300ac3 mrs x3, DBGWVR10_EL1
+
+msr DBGWVR10_EL1, x1
+// CHECK-INST: msr DBGWVR10_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x0a,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100ac1 msr DBGWVR10_EL1, x1
+
+mrs x3, DBGWVR11_EL1
+// CHECK-INST: mrs x3, DBGWVR11_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x0b,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300bc3 mrs x3, DBGWVR11_EL1
+
+msr DBGWVR11_EL1, x1
+// CHECK-INST: msr DBGWVR11_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x0b,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100bc1 msr DBGWVR11_EL1, x1
+
+mrs x3, DBGWVR12_EL1
+// CHECK-INST: mrs x3, DBGWVR12_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x0c,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300cc3 mrs x3, DBGWVR12_EL1
+
+msr DBGWVR12_EL1, x1
+// CHECK-INST: msr DBGWVR12_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x0c,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100cc1 msr DBGWVR12_EL1, x1
+
+mrs x3, DBGWVR13_EL1
+// CHECK-INST: mrs x3, DBGWVR13_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x0d,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300dc3 mrs x3, DBGWVR13_EL1
+
+msr DBGWVR13_EL1, x1
+// CHECK-INST: msr DBGWVR13_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x0d,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100dc1 msr DBGWVR13_EL1, x1
+
+mrs x3, DBGWVR14_EL1
+// CHECK-INST: mrs x3, DBGWVR14_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x0e,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300ec3 mrs x3, DBGWVR14_EL1
+
+msr DBGWVR14_EL1, x1
+// CHECK-INST: msr DBGWVR14_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x0e,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100ec1 msr DBGWVR14_EL1, x1
+
+mrs x3, DBGWVR15_EL1
+// CHECK-INST: mrs x3, DBGWVR15_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x0f,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300fc3 mrs x3, DBGWVR15_EL1
+
+msr DBGWVR15_EL1, x1
+// CHECK-INST: msr DBGWVR15_EL1, x1
+// CHECK-ENCODING: encoding: [0xc1,0x0f,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100fc1 msr DBGWVR15_EL1, x1
+
+mrs x3, DBGWCR0_EL1
+// CHECK-INST: mrs x3, DBGWCR0_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x00,0x30,0xd5]
+// CHECK-UNKNOWN:  d53000e3 mrs x3, DBGWCR0_EL1
+
+msr DBGWCR0_EL1, x1
+// CHECK-INST: msr DBGWCR0_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x00,0x10,0xd5]
+// CHECK-UNKNOWN:  d51000e1 msr DBGWCR0_EL1, x1
+
+mrs x3, DBGWCR1_EL1
+// CHECK-INST: mrs x3, DBGWCR1_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x01,0x30,0xd5]
+// CHECK-UNKNOWN:  d53001e3 mrs x3, DBGWCR1_EL1
+
+msr DBGWCR1_EL1, x1
+// CHECK-INST: msr DBGWCR1_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x01,0x10,0xd5]
+// CHECK-UNKNOWN:  d51001e1 msr DBGWCR1_EL1, x1
+
+mrs x3, DBGWCR2_EL1
+// CHECK-INST: mrs x3, DBGWCR2_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x02,0x30,0xd5]
+// CHECK-UNKNOWN:  d53002e3 mrs x3, DBGWCR2_EL1
+
+msr DBGWCR2_EL1, x1
+// CHECK-INST: msr DBGWCR2_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x02,0x10,0xd5]
+// CHECK-UNKNOWN:  d51002e1 msr DBGWCR2_EL1, x1
+
+mrs x3, DBGWCR3_EL1
+// CHECK-INST: mrs x3, DBGWCR3_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x03,0x30,0xd5]
+// CHECK-UNKNOWN:  d53003e3 mrs x3, DBGWCR3_EL1
+
+msr DBGWCR3_EL1, x1
+// CHECK-INST: msr DBGWCR3_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x03,0x10,0xd5]
+// CHECK-UNKNOWN:  d51003e1 msr DBGWCR3_EL1, x1
+
+mrs x3, DBGWCR4_EL1
+// CHECK-INST: mrs x3, DBGWCR4_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x04,0x30,0xd5]
+// CHECK-UNKNOWN:  d53004e3 mrs x3, DBGWCR4_EL1
+
+msr DBGWCR4_EL1, x1
+// CHECK-INST: msr DBGWCR4_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x04,0x10,0xd5]
+// CHECK-UNKNOWN:  d51004e1 msr DBGWCR4_EL1, x1
+
+mrs x3, DBGWCR5_EL1
+// CHECK-INST: mrs x3, DBGWCR5_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x05,0x30,0xd5]
+// CHECK-UNKNOWN:  d53005e3 mrs x3, DBGWCR5_EL1
+
+msr DBGWCR5_EL1, x1
+// CHECK-INST: msr DBGWCR5_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x05,0x10,0xd5]
+// CHECK-UNKNOWN:  d51005e1 msr DBGWCR5_EL1, x1
+
+mrs x3, DBGWCR6_EL1
+// CHECK-INST: mrs x3, DBGWCR6_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x06,0x30,0xd5]
+// CHECK-UNKNOWN:  d53006e3 mrs x3, DBGWCR6_EL1
+
+msr DBGWCR6_EL1, x1
+// CHECK-INST: msr DBGWCR6_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x06,0x10,0xd5]
+// CHECK-UNKNOWN:  d51006e1 msr DBGWCR6_EL1, x1
+
+mrs x3, DBGWCR7_EL1
+// CHECK-INST: mrs x3, DBGWCR7_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x07,0x30,0xd5]
+// CHECK-UNKNOWN:  d53007e3 mrs x3, DBGWCR7_EL1
+
+msr DBGWCR7_EL1, x1
+// CHECK-INST: msr DBGWCR7_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x07,0x10,0xd5]
+// CHECK-UNKNOWN:  d51007e1 msr DBGWCR7_EL1, x1
+
+mrs x3, DBGWCR8_EL1
+// CHECK-INST: mrs x3, DBGWCR8_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x08,0x30,0xd5]
+// CHECK-UNKNOWN:  d53008e3 mrs x3, DBGWCR8_EL1
+
+msr DBGWCR8_EL1, x1
+// CHECK-INST: msr DBGWCR8_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x08,0x10,0xd5]
+// CHECK-UNKNOWN:  d51008e1 msr DBGWCR8_EL1, x1
+
+mrs x3, DBGWCR9_EL1
+// CHECK-INST: mrs x3, DBGWCR9_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x09,0x30,0xd5]
+// CHECK-UNKNOWN:  d53009e3 mrs x3, DBGWCR9_EL1
+
+msr DBGWCR9_EL1, x1
+// CHECK-INST: msr DBGWCR9_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x09,0x10,0xd5]
+// CHECK-UNKNOWN:  d51009e1 msr DBGWCR9_EL1, x1
+
+mrs x3, DBGWCR10_EL1
+// CHECK-INST: mrs x3, DBGWCR10_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x0a,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300ae3 mrs x3, DBGWCR10_EL1
+
+msr DBGWCR10_EL1, x1
+// CHECK-INST: msr DBGWCR10_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x0a,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100ae1 msr DBGWCR10_EL1, x1
+
+mrs x3, DBGWCR11_EL1
+// CHECK-INST: mrs x3, DBGWCR11_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x0b,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300be3 mrs x3, DBGWCR11_EL1
+
+msr DBGWCR11_EL1, x1
+// CHECK-INST: msr DBGWCR11_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x0b,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100be1 msr DBGWCR11_EL1, x1
+
+mrs x3, DBGWCR12_EL1
+// CHECK-INST: mrs x3, DBGWCR12_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x0c,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300ce3 mrs x3, DBGWCR12_EL1
+
+msr DBGWCR12_EL1, x1
+// CHECK-INST: msr DBGWCR12_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x0c,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100ce1 msr DBGWCR12_EL1, x1
+
+mrs x3, DBGWCR13_EL1
+// CHECK-INST: mrs x3, DBGWCR13_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x0d,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300de3 mrs x3, DBGWCR13_EL1
+
+msr DBGWCR13_EL1, x1
+// CHECK-INST: msr DBGWCR13_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x0d,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100de1 msr DBGWCR13_EL1, x1
+
+mrs x3, DBGWCR14_EL1
+// CHECK-INST: mrs x3, DBGWCR14_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x0e,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300ee3 mrs x3, DBGWCR14_EL1
+
+msr DBGWCR14_EL1, x1
+// CHECK-INST: msr DBGWCR14_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x0e,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100ee1 msr DBGWCR14_EL1, x1
+
+mrs x3, DBGWCR15_EL1
+// CHECK-INST: mrs x3, DBGWCR15_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x0f,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300fe3 mrs x3, DBGWCR15_EL1
+
+msr DBGWCR15_EL1, x1
+// CHECK-INST: msr DBGWCR15_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x0f,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100fe1 msr DBGWCR15_EL1, x1
 
 // FEAT_DEBUGv8p9
-            mrs	x3, MDSELR_EL1
-// CHECK:   mrs	x3, MDSELR_EL1                  // encoding: [0x43,0x04,0x30,0xd5]
-            msr MDSELR_EL1, x1
-// CHECK:   msr	MDSELR_EL1, x1                  // encoding: [0x41,0x04,0x10,0xd5]
+mrs x3, MDSELR_EL1
+// CHECK-INST: mrs x3, MDSELR_EL1
+// CHECK-ENCODING: encoding: [0x43,0x04,0x30,0xd5]
+// CHECK-UNKNOWN:  d5300443      mrs x3, MDSELR_EL1
+
+msr MDSELR_EL1, x1
+// CHECK-INST: msr MDSELR_EL1, x1
+// CHECK-ENCODING: encoding: [0x41,0x04,0x10,0xd5]
+// CHECK-UNKNOWN:  d5100441      msr MDSELR_EL1, x1
 
 // FEAT_PMUv3p9
-            mrs	x3, PMUACR_EL1
-// CHECK:   mrs	x3, PMUACR_EL1                  // encoding: [0x83,0x9e,0x38,0xd5]
-            msr	PMUACR_EL1, x1
-// CHECK:   msr	PMUACR_EL1, x1                  // encoding: [0x81,0x9e,0x18,0xd5]
+mrs x3, PMUACR_EL1
+// CHECK-INST: mrs x3, PMUACR_EL1
+// CHECK-ENCODING: encoding: [0x83,0x9e,0x38,0xd5]
+// CHECK-UNKNOWN:  d5389e83      mrs x3, PMUACR_EL1
+
+msr PMUACR_EL1, x1
+// CHECK-INST: msr PMUACR_EL1, x1
+// CHECK-ENCODING: encoding: [0x81,0x9e,0x18,0xd5]
+// CHECK-UNKNOWN:  d5189e81      msr PMUACR_EL1, x1
 
 // FEAT_PMUv3_SS
-            mrs	x3, PMCCNTSVR_EL1
-// CHECK:   mrs	x3, PMCCNTSVR_EL1               // encoding: [0xe3,0xeb,0x30,0xd5]
-            mrs	x3, PMICNTSVR_EL1
-// CHECK:   mrs	x3, PMICNTSVR_EL1               // encoding: [0x03,0xec,0x30,0xd5]
-            mrs	x3, PMSSCR_EL1
-// CHECK:   mrs	x3, PMSSCR_EL1                  // encoding: [0x63,0x9d,0x38,0xd5]
-            msr	PMSSCR_EL1, x1
-// CHECK:   msr	PMSSCR_EL1, x1                  // encoding: [0x61,0x9d,0x18,0xd5]
-            mrs	x3, PMEVCNTSVR0_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR0_EL1             // encoding: [0x03,0xe8,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR1_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR1_EL1             // encoding: [0x23,0xe8,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR2_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR2_EL1             // encoding: [0x43,0xe8,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR3_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR3_EL1             // encoding: [0x63,0xe8,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR4_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR4_EL1             // encoding: [0x83,0xe8,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR5_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR5_EL1             // encoding: [0xa3,0xe8,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR6_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR6_EL1             // encoding: [0xc3,0xe8,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR7_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR7_EL1             // encoding: [0xe3,0xe8,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR8_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR8_EL1             // encoding: [0x03,0xe9,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR9_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR9_EL1             // encoding: [0x23,0xe9,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR10_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR10_EL1            // encoding: [0x43,0xe9,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR11_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR11_EL1            // encoding: [0x63,0xe9,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR12_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR12_EL1            // encoding: [0x83,0xe9,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR13_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR13_EL1            // encoding: [0xa3,0xe9,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR14_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR14_EL1            // encoding: [0xc3,0xe9,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR15_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR15_EL1            // encoding: [0xe3,0xe9,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR16_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR16_EL1            // encoding: [0x03,0xea,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR17_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR17_EL1            // encoding: [0x23,0xea,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR18_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR18_EL1            // encoding: [0x43,0xea,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR19_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR19_EL1            // encoding: [0x63,0xea,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR20_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR20_EL1            // encoding: [0x83,0xea,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR21_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR21_EL1            // encoding: [0xa3,0xea,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR22_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR22_EL1            // encoding: [0xc3,0xea,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR23_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR23_EL1            // encoding: [0xe3,0xea,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR24_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR24_EL1            // encoding: [0x03,0xeb,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR25_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR25_EL1            // encoding: [0x23,0xeb,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR26_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR26_EL1            // encoding: [0x43,0xeb,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR27_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR27_EL1            // encoding: [0x63,0xeb,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR28_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR28_EL1            // encoding: [0x83,0xeb,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR29_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR29_EL1            // encoding: [0xa3,0xeb,0x30,0xd5]
-            mrs	x3, PMEVCNTSVR30_EL1
-// CHECK:   mrs	x3, PMEVCNTSVR30_EL1            // encoding: [0xc3,0xeb,0x30,0xd5]
+mrs x3, PMCCNTSVR_EL1
+// CHECK-INST: mrs x3, PMCCNTSVR_EL1
+// CHECK-ENCODING: encoding: [0xe3,0xeb,0x30,0xd5]
+// CHECK-UNKNOWN:  d530ebe3      mrs x3, PMCCNTSVR_EL1
+
+mrs x3, PMICNTSVR_EL1
+// CHECK-INST: mrs x3, PMICNTSVR_EL1
+// CHECK-ENCODING: encoding: [0x03,0xec,0x30,0xd5]
+// CHECK-UNKNOWN:  d530ec03      mrs x3, PMICNTSVR_EL1
+
+mrs x3, PMSSCR_EL1
+// CHECK-INST: mrs x3, PMSSCR_EL1
+// CHECK-ENCODING: encoding: [0x63,0x9d,0x38,0xd5]
+// CHECK-UNKNOWN:  d5389d63      mrs x3, PMSSCR_EL1
+
+msr PMSSCR_EL1, x1
+// CHECK-INST: msr PMSSCR_EL1, x1
+// CHECK-ENCODING: encoding: [0x61,0x9d,0x18,0xd5]
+// CHECK-UNKNOWN:  d5189d61      msr PMSSCR_EL1, x1
+
+mrs x3, PMEVCNTSVR0_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR0_EL1
+// CHECK-ENCODING: encoding: [0x03,0xe8,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e803      mrs x3, PMEVCNTSVR0_EL1
+
+mrs x3, PMEVCNTSVR1_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR1_EL1
+// CHECK-ENCODING: encoding: [0x23,0xe8,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e823      mrs x3, PMEVCNTSVR1_EL1
+
+mrs x3, PMEVCNTSVR2_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR2_EL1
+// CHECK-ENCODING: encoding: [0x43,0xe8,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e843      mrs x3, PMEVCNTSVR2_EL1
+
+mrs x3, PMEVCNTSVR3_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR3_EL1
+// CHECK-ENCODING: encoding: [0x63,0xe8,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e863      mrs x3, PMEVCNTSVR3_EL1
+
+mrs x3, PMEVCNTSVR4_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR4_EL1
+// CHECK-ENCODING: encoding: [0x83,0xe8,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e883      mrs x3, PMEVCNTSVR4_EL1
+
+mrs x3, PMEVCNTSVR5_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR5_EL1
+// CHECK-ENCODING: encoding: [0xa3,0xe8,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e8a3      mrs x3, PMEVCNTSVR5_EL1
+
+mrs x3, PMEVCNTSVR6_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR6_EL1
+// CHECK-ENCODING: encoding: [0xc3,0xe8,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e8c3      mrs x3, PMEVCNTSVR6_EL1
+
+mrs x3, PMEVCNTSVR7_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR7_EL1
+// CHECK-ENCODING: encoding: [0xe3,0xe8,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e8e3      mrs x3, PMEVCNTSVR7_EL1
+
+mrs x3, PMEVCNTSVR8_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR8_EL1
+// CHECK-ENCODING: encoding: [0x03,0xe9,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e903      mrs x3, PMEVCNTSVR8_EL1
+
+mrs x3, PMEVCNTSVR9_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR9_EL1
+// CHECK-ENCODING: encoding: [0x23,0xe9,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e923      mrs x3, PMEVCNTSVR9_EL1
+
+mrs x3, PMEVCNTSVR10_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR10_EL1
+// CHECK-ENCODING: encoding: [0x43,0xe9,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e943      mrs x3, PMEVCNTSVR10_EL1
+
+mrs x3, PMEVCNTSVR11_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR11_EL1
+// CHECK-ENCODING: encoding: [0x63,0xe9,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e963      mrs x3, PMEVCNTSVR11_EL1
+
+mrs x3, PMEVCNTSVR12_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR12_EL1
+// CHECK-ENCODING: encoding: [0x83,0xe9,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e983      mrs x3, PMEVCNTSVR12_EL1
+
+mrs x3, PMEVCNTSVR13_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR13_EL1
+// CHECK-ENCODING: encoding: [0xa3,0xe9,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e9a3      mrs x3, PMEVCNTSVR13_EL1
+
+mrs x3, PMEVCNTSVR14_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR14_EL1
+// CHECK-ENCODING: encoding: [0xc3,0xe9,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e9c3      mrs x3, PMEVCNTSVR14_EL1
+
+mrs x3, PMEVCNTSVR15_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR15_EL1
+// CHECK-ENCODING: encoding: [0xe3,0xe9,0x30,0xd5]
+// CHECK-UNKNOWN:  d530e9e3      mrs x3, PMEVCNTSVR15_EL1
+
+mrs x3, PMEVCNTSVR16_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR16_EL1
+// CHECK-ENCODING: encoding: [0x03,0xea,0x30,0xd5]
+// CHECK-UNKNOWN:  d530ea03      mrs x3, PMEVCNTSVR16_EL1
+
+mrs x3, PMEVCNTSVR17_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR17_EL1
+// CHECK-ENCODING: encoding: [0x23,0xea,0x30,0xd5]
+// CHECK-UNKNOWN:  d530ea23      mrs x3, PMEVCNTSVR17_EL1
+
+mrs x3, PMEVCNTSVR18_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR18_EL1
+// CHECK-ENCODING: encoding: [0x43,0xea,0x30,0xd5]
+// CHECK-UNKNOWN:  d530ea43      mrs x3, PMEVCNTSVR18_EL1
+
+mrs x3, PMEVCNTSVR19_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR19_EL1
+// CHECK-ENCODING: encoding: [0x63,0xea,0x30,0xd5]
+// CHECK-UNKNOWN:  d530ea63      mrs x3, PMEVCNTSVR19_EL1
+
+mrs x3, PMEVCNTSVR20_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR20_EL1
+// CHECK-ENCODING: encoding: [0x83,0xea,0x30,0xd5]
+// CHECK-UNKNOWN:  d530ea83      mrs x3, PMEVCNTSVR20_EL1
+
+mrs x3, PMEVCNTSVR21_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR21_EL1
+// CHECK-ENCODING: encoding: [0xa3,0xea,0x30,0xd5]
+// CHECK-UNKNOWN:  d530eaa3      mrs x3, PMEVCNTSVR21_EL1
+
+mrs x3, PMEVCNTSVR22_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR22_EL1
+// CHECK-ENCODING: encoding: [0xc3,0xea,0x30,0xd5]
+// CHECK-UNKNOWN:  d530eac3      mrs x3, PMEVCNTSVR22_EL1
+
+mrs x3, PMEVCNTSVR23_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR23_EL1
+// CHECK-ENCODING: encoding: [0xe3,0xea,0x30,0xd5]
+// CHECK-UNKNOWN:  d530eae3      mrs x3, PMEVCNTSVR23_EL1
+
+mrs x3, PMEVCNTSVR24_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR24_EL1
+// CHECK-ENCODING: encoding: [0x03,0xeb,0x30,0xd5]
+// CHECK-UNKNOWN:  d530eb03      mrs x3, PMEVCNTSVR24_EL1
+
+mrs x3, PMEVCNTSVR25_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR25_EL1
+// CHECK-ENCODING: encoding: [0x23,0xeb,0x30,0xd5]
+// CHECK-UNKNOWN:  d530eb23      mrs x3, PMEVCNTSVR25_EL1
+
+mrs x3, PMEVCNTSVR26_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR26_EL1
+// CHECK-ENCODING: encoding: [0x43,0xeb,0x30,0xd5]
+// CHECK-UNKNOWN:  d530eb43      mrs x3, PMEVCNTSVR26_EL1
+
+mrs x3, PMEVCNTSVR27_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR27_EL1
+// CHECK-ENCODING: encoding: [0x63,0xeb,0x30,0xd5]
+// CHECK-UNKNOWN:  d530eb63      mrs x3, PMEVCNTSVR27_EL1
+
+mrs x3, PMEVCNTSVR28_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR28_EL1
+// CHECK-ENCODING: encoding: [0x83,0xeb,0x30,0xd5]
+// CHECK-UNKNOWN:  d530eb83      mrs x3, PMEVCNTSVR28_EL1
+
+mrs x3, PMEVCNTSVR29_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR29_EL1
+// CHECK-ENCODING: encoding: [0xa3,0xeb,0x30,0xd5]
+// CHECK-UNKNOWN:  d530eba3      mrs x3, PMEVCNTSVR29_EL1
+
+mrs x3, PMEVCNTSVR30_EL1
+// CHECK-INST: mrs x3, PMEVCNTSVR30_EL1
+// CHECK-ENCODING: encoding: [0xc3,0xeb,0x30,0xd5]
+// CHECK-UNKNOWN:  d530ebc3      mrs x3, PMEVCNTSVR30_EL1
 
 // FEAT_PMUv3_ICNTR
-            mrs x3, PMICNTR_EL0
-// CHECK:   mrs x3, PMICNTR_EL0                 // encoding: [0x03,0x94,0x3b,0xd5]
-            msr PMICNTR_EL0, x3
-// CHECK:   msr PMICNTR_EL0, x3                 // encoding: [0x03,0x94,0x1b,0xd5]
-            mrs x3, PMICFILTR_EL0
-// CHECK:   mrs x3, PMICFILTR_EL0               // encoding: [0x03,0x96,0x3b,0xd5]
-            msr PMICFILTR_EL0, x3
-// CHECK:   msr PMICFILTR_EL0, x3               // encoding: [0x03,0x96,0x1b,0xd5]
+mrs x3, PMICNTR_EL0
+// CHECK-INST: mrs x3, PMICNTR_EL0
+// CHECK-ENCODING: encoding: [0x03,0x94,0x3b,0xd5]
+// CHECK-UNKNOWN:  d53b9403      mrs x3, PMICNTR_EL0
+
+msr PMICNTR_EL0, x3
+// CHECK-INST: msr PMICNTR_EL0, x3
+// CHECK-ENCODING: encoding: [0x03,0x94,0x1b,0xd5]
+// CHECK-UNKNOWN:  d51b9403      msr PMICNTR_EL0, x3
+
+mrs x3, PMICFILTR_EL0
+// CHECK-INST: mrs x3, PMICFILTR_EL0
+// CHECK-ENCODING: encoding: [0x03,0x96,0x3b,0xd5]
+// CHECK-UNKNOWN:  d53b9603      mrs x3, PMICFILTR_EL0
+
+msr PMICFILTR_EL0, x3
+// CHECK-INST: msr PMICFILTR_EL0, x3
+// CHECK-ENCODING: encoding: [0x03,0x96,0x1b,0xd5]
+// CHECK-UNKNOWN:  d51b9603      msr PMICFILTR_EL0, x3
 
 // FEAT_PMUv3p9/FEAT_PMUV3_ICNTR
-            msr PMZR_EL0, x3
-// CHECK:   msr PMZR_EL0, x3                    // encoding: [0x83,0x9d,0x1b,0xd5]
+msr PMZR_EL0, x3
+// CHECK-INST: msr PMZR_EL0, x3
+// CHECK-ENCODING: encoding: [0x83,0x9d,0x1b,0xd5]
+// CHECK-UNKNOWN:  d51b9d83      msr PMZR_EL0, x3
 
 // FEAT_SEBEP
-            mrs	x3, PMECR_EL1
-// CHECK:   mrs	x3, PMECR_EL1                   // encoding: [0xa3,0x9e,0x38,0xd5]
-            msr	PMECR_EL1, x1
-// CHECK:   msr	PMECR_EL1, x1                   // encoding: [0xa1,0x9e,0x18,0xd5]
-            mrs	x3, PMIAR_EL1
-// CHECK:   mrs	x3, PMIAR_EL1                   // encoding: [0xe3,0x9e,0x38,0xd5]
-            msr	PMIAR_EL1, x1
-// CHECK:   msr	PMIAR_EL1, x1                   // encoding: [0xe1,0x9e,0x18,0xd5]
+mrs x3, PMECR_EL1
+// CHECK-INST: mrs x3, PMECR_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x9e,0x38,0xd5]
+// CHECK-UNKNOWN:  d5389ea3      mrs x3, PMECR_EL1
+
+msr PMECR_EL1, x1
+// CHECK-INST: msr PMECR_EL1, x1
+// CHECK-ENCODING: encoding: [0xa1,0x9e,0x18,0xd5]
+// CHECK-UNKNOWN:  d5189ea1      msr PMECR_EL1, x1
+
+mrs x3, PMIAR_EL1
+// CHECK-INST: mrs x3, PMIAR_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x9e,0x38,0xd5]
+// CHECK-UNKNOWN:  d5389ee3      mrs x3, PMIAR_EL1
+
+msr PMIAR_EL1, x1
+// CHECK-INST: msr PMIAR_EL1, x1
+// CHECK-ENCODING: encoding: [0xe1,0x9e,0x18,0xd5]
+// CHECK-UNKNOWN:  d5189ee1      msr PMIAR_EL1, x1
 
 // FEAT_SPMU
-            mrs	x3, SPMACCESSR_EL1
-// CHECK:   mrs	x3, SPMACCESSR_EL1              // encoding: [0x63,0x9d,0x30,0xd5]
-            msr	SPMACCESSR_EL1, x1
-// CHECK:   msr	SPMACCESSR_EL1, x1              // encoding: [0x61,0x9d,0x10,0xd5]
-            mrs	x3, SPMACCESSR_EL12
-// CHECK:   mrs	x3, SPMACCESSR_EL12             // encoding: [0x63,0x9d,0x35,0xd5]
-            msr	SPMACCESSR_EL12, x1
-// CHECK:   msr	SPMACCESSR_EL12, x1             // encoding: [0x61,0x9d,0x15,0xd5]
-            mrs	x3, SPMACCESSR_EL2
-// CHECK:   mrs	x3, SPMACCESSR_EL2              // encoding: [0x63,0x9d,0x34,0xd5]
-            msr	SPMACCESSR_EL2, x1
-// CHECK:   msr	SPMACCESSR_EL2, x1              // encoding: [0x61,0x9d,0x14,0xd5]
-            mrs	x3, SPMACCESSR_EL3
-// CHECK:   mrs	x3, SPMACCESSR_EL3              // encoding: [0x63,0x9d,0x36,0xd5]
-            msr	SPMACCESSR_EL3, x1
-// CHECK:   msr	SPMACCESSR_EL3, x1              // encoding: [0x61,0x9d,0x16,0xd5]
-            mrs	x3, SPMCNTENCLR_EL0
-// CHECK:   mrs	x3, SPMCNTENCLR_EL0             // encoding: [0x43,0x9c,0x33,0xd5]
-            msr	SPMCNTENCLR_EL0, x1
-// CHECK:   msr	SPMCNTENCLR_EL0, x1             // encoding: [0x41,0x9c,0x13,0xd5]
-            mrs	x3, SPMCNTENSET_EL0
-// CHECK:   mrs	x3, SPMCNTENSET_EL0             // encoding: [0x23,0x9c,0x33,0xd5]
-            msr	SPMCNTENSET_EL0, x1
-// CHECK:   msr	SPMCNTENSET_EL0, x1             // encoding: [0x21,0x9c,0x13,0xd5]
-            mrs	x3, SPMCR_EL0
-// CHECK:   mrs	x3, SPMCR_EL0                   // encoding: [0x03,0x9c,0x33,0xd5]
-            msr	SPMCR_EL0, x1
-// CHECK:   msr	SPMCR_EL0, x1                   // encoding: [0x01,0x9c,0x13,0xd5]
-            mrs	x3, SPMDEVAFF_EL1
-// CHECK:   mrs	x3, SPMDEVAFF_EL1               // encoding: [0xc3,0x9d,0x30,0xd5]
-            mrs	x3, SPMDEVARCH_EL1
-// CHECK:   mrs	x3, SPMDEVARCH_EL1              // encoding: [0xa3,0x9d,0x30,0xd5]
+mrs x3, SPMACCESSR_EL1
+// CHECK-INST: mrs x3, SPMACCESSR_EL1
+// CHECK-ENCODING: encoding: [0x63,0x9d,0x30,0xd5]
+// CHECK-UNKNOWN:  d5309d63      mrs x3, SPMACCESSR_EL1
 
-            mrs	x3, SPMEVCNTR0_EL0
-// CHECK:   mrs	x3, SPMEVCNTR0_EL0              // encoding: [0x03,0xe0,0x33,0xd5]
-            msr	SPMEVCNTR0_EL0, x1
-// CHECK:   msr	SPMEVCNTR0_EL0, x1              // encoding: [0x01,0xe0,0x13,0xd5]
-            mrs	x3, SPMEVCNTR1_EL0
-// CHECK:   mrs	x3, SPMEVCNTR1_EL0              // encoding: [0x23,0xe0,0x33,0xd5]
-            msr	SPMEVCNTR1_EL0, x1
-// CHECK:   msr	SPMEVCNTR1_EL0, x1              // encoding: [0x21,0xe0,0x13,0xd5]
-            mrs	x3, SPMEVCNTR2_EL0
-// CHECK:   mrs	x3, SPMEVCNTR2_EL0              // encoding: [0x43,0xe0,0x33,0xd5]
-            msr	SPMEVCNTR2_EL0, x1
-// CHECK:   msr	SPMEVCNTR2_EL0, x1              // encoding: [0x41,0xe0,0x13,0xd5]
-            mrs	x3, SPMEVCNTR3_EL0
-// CHECK:   mrs	x3, SPMEVCNTR3_EL0              // encoding: [0x63,0xe0,0x33,0xd5]
-            msr	SPMEVCNTR3_EL0, x1
-// CHECK:   msr	SPMEVCNTR3_EL0, x1              // encoding: [0x61,0xe0,0x13,0xd5]
-            mrs	x3, SPMEVCNTR4_EL0
-// CHECK:   mrs	x3, SPMEVCNTR4_EL0              // encoding: [0x83,0xe0,0x33,0xd5]
-            msr	SPMEVCNTR4_EL0, x1
-// CHECK:   msr	SPMEVCNTR4_EL0, x1              // encoding: [0x81,0xe0,0x13,0xd5]
-            mrs	x3, SPMEVCNTR5_EL0
-// CHECK:   mrs	x3, SPMEVCNTR5_EL0              // encoding: [0xa3,0xe0,0x33,0xd5]
-            msr	SPMEVCNTR5_EL0, x1
-// CHECK:   msr	SPMEVCNTR5_EL0, x1              // encoding: [0xa1,0xe0,0x13,0xd5]
-            mrs	x3, SPMEVCNTR6_EL0
-// CHECK:   mrs	x3, SPMEVCNTR6_EL0              // encoding: [0xc3,0xe0,0x33,0xd5]
-            msr	SPMEVCNTR6_EL0, x1
-// CHECK:   msr	SPMEVCNTR6_EL0, x1              // encoding: [0xc1,0xe0,0x13,0xd5]
-            mrs	x3, SPMEVCNTR7_EL0
-// CHECK:   mrs	x3, SPMEVCNTR7_EL0              // encoding: [0xe3,0xe0,0x33,0xd5]
-            msr	SPMEVCNTR7_EL0, x1
-// CHECK:   msr	SPMEVCNTR7_EL0, x1              // encoding: [0xe1,0xe0,0x13,0xd5]
-            mrs	x3, SPMEVCNTR8_EL0
-// CHECK:   mrs	x3, SPMEVCNTR8_EL0              // encoding: [0x03,0xe1,0x33,0xd5]
-            msr	SPMEVCNTR8_EL0, x1
-// CHECK:   msr	SPMEVCNTR8_EL0, x1              // encoding: [0x01,0xe1,0x13,0xd5]
-            mrs	x3, SPMEVCNTR9_EL0
-// CHECK:   mrs	x3, SPMEVCNTR9_EL0              // encoding: [0x23,0xe1,0x33,0xd5]
-            msr	SPMEVCNTR9_EL0, x1
-// CHECK:   msr	SPMEVCNTR9_EL0, x1              // encoding: [0x21,0xe1,0x13,0xd5]
-            mrs	x3, SPMEVCNTR10_EL0
-// CHECK:   mrs	x3, SPMEVCNTR10_EL0             // encoding: [0x43,0xe1,0x33,0xd5]
-            msr	SPMEVCNTR10_EL0, x1
-// CHECK:   msr	SPMEVCNTR10_EL0, x1             // encoding: [0x41,0xe1,0x13,0xd5]
-            mrs	x3, SPMEVCNTR11_EL0
-// CHECK:   mrs	x3, SPMEVCNTR11_EL0             // encoding: [0x63,0xe1,0x33,0xd5]
-            msr	SPMEVCNTR11_EL0, x1
-// CHECK:   msr	SPMEVCNTR11_EL0, x1             // encoding: [0x61,0xe1,0x13,0xd5]
-            mrs	x3, SPMEVCNTR12_EL0
-// CHECK:   mrs	x3, SPMEVCNTR12_EL0             // encoding: [0x83,0xe1,0x33,0xd5]
-            msr	SPMEVCNTR12_EL0, x1
-// CHECK:   msr	SPMEVCNTR12_EL0, x1             // encoding: [0x81,0xe1,0x13,0xd5]
-            mrs	x3, SPMEVCNTR13_EL0
-// CHECK:   mrs	x3, SPMEVCNTR13_EL0             // encoding: [0xa3,0xe1,0x33,0xd5]
-            msr	SPMEVCNTR13_EL0, x1
-// CHECK:   msr	SPMEVCNTR13_EL0, x1             // encoding: [0xa1,0xe1,0x13,0xd5]
-            mrs	x3, SPMEVCNTR14_EL0
-// CHECK:   mrs	x3, SPMEVCNTR14_EL0             // encoding: [0xc3,0xe1,0x33,0xd5]
-            msr	SPMEVCNTR14_EL0, x1
-// CHECK:   msr	SPMEVCNTR14_EL0, x1             // encoding: [0xc1,0xe1,0x13,0xd5]
-            mrs	x3, SPMEVCNTR15_EL0
-// CHECK:   mrs	x3, SPMEVCNTR15_EL0             // encoding: [0xe3,0xe1,0x33,0xd5]
-            msr	SPMEVCNTR15_EL0, x1
-// CHECK:   msr	SPMEVCNTR15_EL0, x1             // encoding: [0xe1,0xe1,0x13,0xd5]
+msr SPMACCESSR_EL1, x1
+// CHECK-INST: msr SPMACCESSR_EL1, x1
+// CHECK-ENCODING: encoding: [0x61,0x9d,0x10,0xd5]
+// CHECK-UNKNOWN:  d5109d61      msr SPMACCESSR_EL1, x1
 
-            mrs	x3, SPMEVFILT2R0_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R0_EL0            // encoding: [0x03,0xe6,0x33,0xd5]
-            msr	SPMEVFILT2R0_EL0, x1
-// CHECK:   msr	SPMEVFILT2R0_EL0, x1            // encoding: [0x01,0xe6,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R1_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R1_EL0            // encoding: [0x23,0xe6,0x33,0xd5]
-            msr	SPMEVFILT2R1_EL0, x1
-// CHECK:   msr	SPMEVFILT2R1_EL0, x1            // encoding: [0x21,0xe6,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R2_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R2_EL0            // encoding: [0x43,0xe6,0x33,0xd5]
-            msr	SPMEVFILT2R2_EL0, x1
-// CHECK:   msr	SPMEVFILT2R2_EL0, x1            // encoding: [0x41,0xe6,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R3_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R3_EL0            // encoding: [0x63,0xe6,0x33,0xd5]
-            msr	SPMEVFILT2R3_EL0, x1
-// CHECK:   msr	SPMEVFILT2R3_EL0, x1            // encoding: [0x61,0xe6,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R4_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R4_EL0            // encoding: [0x83,0xe6,0x33,0xd5]
-            msr	SPMEVFILT2R4_EL0, x1
-// CHECK:   msr	SPMEVFILT2R4_EL0, x1            // encoding: [0x81,0xe6,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R5_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R5_EL0            // encoding: [0xa3,0xe6,0x33,0xd5]
-            msr	SPMEVFILT2R5_EL0, x1
-// CHECK:   msr	SPMEVFILT2R5_EL0, x1            // encoding: [0xa1,0xe6,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R6_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R6_EL0            // encoding: [0xc3,0xe6,0x33,0xd5]
-            msr	SPMEVFILT2R6_EL0, x1
-// CHECK:   msr	SPMEVFILT2R6_EL0, x1            // encoding: [0xc1,0xe6,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R7_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R7_EL0            // encoding: [0xe3,0xe6,0x33,0xd5]
-            msr	SPMEVFILT2R7_EL0, x1
-// CHECK:   msr	SPMEVFILT2R7_EL0, x1            // encoding: [0xe1,0xe6,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R8_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R8_EL0            // encoding: [0x03,0xe7,0x33,0xd5]
-            msr	SPMEVFILT2R8_EL0, x1
-// CHECK:   msr	SPMEVFILT2R8_EL0, x1            // encoding: [0x01,0xe7,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R9_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R9_EL0            // encoding: [0x23,0xe7,0x33,0xd5]
-            msr	SPMEVFILT2R9_EL0, x1
-// CHECK:   msr	SPMEVFILT2R9_EL0, x1            // encoding: [0x21,0xe7,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R10_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R10_EL0           // encoding: [0x43,0xe7,0x33,0xd5]
-            msr	SPMEVFILT2R10_EL0, x1
-// CHECK:   msr	SPMEVFILT2R10_EL0, x1           // encoding: [0x41,0xe7,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R11_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R11_EL0           // encoding: [0x63,0xe7,0x33,0xd5]
-            msr	SPMEVFILT2R11_EL0, x1
-// CHECK:   msr	SPMEVFILT2R11_EL0, x1           // encoding: [0x61,0xe7,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R12_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R12_EL0           // encoding: [0x83,0xe7,0x33,0xd5]
-            msr	SPMEVFILT2R12_EL0, x1
-// CHECK:   msr	SPMEVFILT2R12_EL0, x1           // encoding: [0x81,0xe7,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R13_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R13_EL0           // encoding: [0xa3,0xe7,0x33,0xd5]
-            msr	SPMEVFILT2R13_EL0, x1
-// CHECK:   msr	SPMEVFILT2R13_EL0, x1           // encoding: [0xa1,0xe7,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R14_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R14_EL0           // encoding: [0xc3,0xe7,0x33,0xd5]
-            msr	SPMEVFILT2R14_EL0, x1
-// CHECK:   msr	SPMEVFILT2R14_EL0, x1           // encoding: [0xc1,0xe7,0x13,0xd5]
-            mrs	x3, SPMEVFILT2R15_EL0
-// CHECK:   mrs	x3, SPMEVFILT2R15_EL0           // encoding: [0xe3,0xe7,0x33,0xd5]
-            msr	SPMEVFILT2R15_EL0, x1
-// CHECK:   msr	SPMEVFILT2R15_EL0, x1           // encoding: [0xe1,0xe7,0x13,0xd5]
+mrs x3, SPMACCESSR_EL12
+// CHECK-INST: mrs x3, SPMACCESSR_EL12
+// CHECK-ENCODING: encoding: [0x63,0x9d,0x35,0xd5]
+// CHECK-UNKNOWN:  d5359d63      mrs x3, SPMACCESSR_EL12
 
-            mrs	x3, SPMEVFILTR0_EL0
-// CHECK:   mrs	x3, SPMEVFILTR0_EL0             // encoding: [0x03,0xe4,0x33,0xd5]
-            msr	SPMEVFILTR0_EL0, x1
-// CHECK:   msr	SPMEVFILTR0_EL0, x1             // encoding: [0x01,0xe4,0x13,0xd5]
-            mrs	x3, SPMEVFILTR1_EL0
-// CHECK:   mrs	x3, SPMEVFILTR1_EL0             // encoding: [0x23,0xe4,0x33,0xd5]
-            msr	SPMEVFILTR1_EL0, x1
-// CHECK:   msr	SPMEVFILTR1_EL0, x1             // encoding: [0x21,0xe4,0x13,0xd5]
-            mrs	x3, SPMEVFILTR2_EL0
-// CHECK:   mrs	x3, SPMEVFILTR2_EL0             // encoding: [0x43,0xe4,0x33,0xd5]
-            msr	SPMEVFILTR2_EL0, x1
-// CHECK:   msr	SPMEVFILTR2_EL0, x1             // encoding: [0x41,0xe4,0x13,0xd5]
-            mrs	x3, SPMEVFILTR3_EL0
-// CHECK:   mrs	x3, SPMEVFILTR3_EL0             // encoding: [0x63,0xe4,0x33,0xd5]
-            msr	SPMEVFILTR3_EL0, x1
-// CHECK:   msr	SPMEVFILTR3_EL0, x1             // encoding: [0x61,0xe4,0x13,0xd5]
-            mrs	x3, SPMEVFILTR4_EL0
-// CHECK:   mrs	x3, SPMEVFILTR4_EL0             // encoding: [0x83,0xe4,0x33,0xd5]
-            msr	SPMEVFILTR4_EL0, x1
-// CHECK:   msr	SPMEVFILTR4_EL0, x1             // encoding: [0x81,0xe4,0x13,0xd5]
-            mrs	x3, SPMEVFILTR5_EL0
-// CHECK:   mrs	x3, SPMEVFILTR5_EL0             // encoding: [0xa3,0xe4,0x33,0xd5]
-            msr	SPMEVFILTR5_EL0, x1
-// CHECK:   msr	SPMEVFILTR5_EL0, x1             // encoding: [0xa1,0xe4,0x13,0xd5]
-            mrs	x3, SPMEVFILTR6_EL0
-// CHECK:   mrs	x3, SPMEVFILTR6_EL0             // encoding: [0xc3,0xe4,0x33,0xd5]
-            msr	SPMEVFILTR6_EL0, x1
-// CHECK:   msr	SPMEVFILTR6_EL0, x1             // encoding: [0xc1,0xe4,0x13,0xd5]
-            mrs	x3, SPMEVFILTR7_EL0
-// CHECK:   mrs	x3, SPMEVFILTR7_EL0             // encoding: [0xe3,0xe4,0x33,0xd5]
-            msr	SPMEVFILTR7_EL0, x1
-// CHECK:   msr	SPMEVFILTR7_EL0, x1             // encoding: [0xe1,0xe4,0x13,0xd5]
-            mrs	x3, SPMEVFILTR8_EL0
-// CHECK:   mrs	x3, SPMEVFILTR8_EL0             // encoding: [0x03,0xe5,0x33,0xd5]
-            msr	SPMEVFILTR8_EL0, x1
-// CHECK:   msr	SPMEVFILTR8_EL0, x1             // encoding: [0x01,0xe5,0x13,0xd5]
-            mrs	x3, SPMEVFILTR9_EL0
-// CHECK:   mrs	x3, SPMEVFILTR9_EL0             // encoding: [0x23,0xe5,0x33,0xd5]
-            msr	SPMEVFILTR9_EL0, x1
-// CHECK:   msr	SPMEVFILTR9_EL0, x1             // encoding: [0x21,0xe5,0x13,0xd5]
-            mrs	x3, SPMEVFILTR10_EL0
-// CHECK:   mrs	x3, SPMEVFILTR10_EL0            // encoding: [0x43,0xe5,0x33,0xd5]
-            msr	SPMEVFILTR10_EL0, x1
-// CHECK:   msr	SPMEVFILTR10_EL0, x1            // encoding: [0x41,0xe5,0x13,0xd5]
-            mrs	x3, SPMEVFILTR11_EL0
-// CHECK:   mrs	x3, SPMEVFILTR11_EL0            // encoding: [0x63,0xe5,0x33,0xd5]
-            msr	SPMEVFILTR11_EL0, x1
-// CHECK:   msr	SPMEVFILTR11_EL0, x1            // encoding: [0x61,0xe5,0x13,0xd5]
-            mrs	x3, SPMEVFILTR12_EL0
-// CHECK:   mrs	x3, SPMEVFILTR12_EL0            // encoding: [0x83,0xe5,0x33,0xd5]
-            msr	SPMEVFILTR12_EL0, x1
-// CHECK:   msr	SPMEVFILTR12_EL0, x1            // encoding: [0x81,0xe5,0x13,0xd5]
-            mrs	x3, SPMEVFILTR13_EL0
-// CHECK:   mrs	x3, SPMEVFILTR13_EL0            // encoding: [0xa3,0xe5,0x33,0xd5]
-            msr	SPMEVFILTR13_EL0, x1
-// CHECK:   msr	SPMEVFILTR13_EL0, x1            // encoding: [0xa1,0xe5,0x13,0xd5]
-            mrs	x3, SPMEVFILTR14_EL0
-// CHECK:   mrs	x3, SPMEVFILTR14_EL0            // encoding: [0xc3,0xe5,0x33,0xd5]
-            msr	SPMEVFILTR14_EL0, x1
-// CHECK:   msr	SPMEVFILTR14_EL0, x1            // encoding: [0xc1,0xe5,0x13,0xd5]
-            mrs	x3, SPMEVFILTR15_EL0
-// CHECK:   mrs	x3, SPMEVFILTR15_EL0            // encoding: [0xe3,0xe5,0x33,0xd5]
-            msr	SPMEVFILTR15_EL0, x1
-// CHECK:   msr	SPMEVFILTR15_EL0, x1            // encoding: [0xe1,0xe5,0x13,0xd5]
+msr SPMACCESSR_EL12, x1
+// CHECK-INST: msr SPMACCESSR_EL12, x1
+// CHECK-ENCODING: encoding: [0x61,0x9d,0x15,0xd5]
+// CHECK-UNKNOWN:  d5159d61      msr SPMACCESSR_EL12, x1
 
-            mrs	x3, SPMEVTYPER0_EL0
-// CHECK:   mrs	x3, SPMEVTYPER0_EL0             // encoding: [0x03,0xe2,0x33,0xd5]
-            msr	SPMEVTYPER0_EL0, x1
-// CHECK:   msr	SPMEVTYPER0_EL0, x1             // encoding: [0x01,0xe2,0x13,0xd5]
-            mrs	x3, SPMEVTYPER1_EL0
-// CHECK:   mrs	x3, SPMEVTYPER1_EL0             // encoding: [0x23,0xe2,0x33,0xd5]
-            msr	SPMEVTYPER1_EL0, x1
-// CHECK:   msr	SPMEVTYPER1_EL0, x1             // encoding: [0x21,0xe2,0x13,0xd5]
-            mrs	x3, SPMEVTYPER2_EL0
-// CHECK:   mrs	x3, SPMEVTYPER2_EL0             // encoding: [0x43,0xe2,0x33,0xd5]
-            msr	SPMEVTYPER2_EL0, x1
-// CHECK:   msr	SPMEVTYPER2_EL0, x1             // encoding: [0x41,0xe2,0x13,0xd5]
-            mrs	x3, SPMEVTYPER3_EL0
-// CHECK:   mrs	x3, SPMEVTYPER3_EL0             // encoding: [0x63,0xe2,0x33,0xd5]
-            msr	SPMEVTYPER3_EL0, x1
-// CHECK:   msr	SPMEVTYPER3_EL0, x1             // encoding: [0x61,0xe2,0x13,0xd5]
-            mrs	x3, SPMEVTYPER4_EL0
-// CHECK:   mrs	x3, SPMEVTYPER4_EL0             // encoding: [0x83,0xe2,0x33,0xd5]
-            msr	SPMEVTYPER4_EL0, x1
-// CHECK:   msr	SPMEVTYPER4_EL0, x1             // encoding: [0x81,0xe2,0x13,0xd5]
-            mrs	x3, SPMEVTYPER5_EL0
-// CHECK:   mrs	x3, SPMEVTYPER5_EL0             // encoding: [0xa3,0xe2,0x33,0xd5]
-            msr	SPMEVTYPER5_EL0, x1
-// CHECK:   msr	SPMEVTYPER5_EL0, x1             // encoding: [0xa1,0xe2,0x13,0xd5]
-            mrs	x3, SPMEVTYPER6_EL0
-// CHECK:   mrs	x3, SPMEVTYPER6_EL0             // encoding: [0xc3,0xe2,0x33,0xd5]
-            msr	SPMEVTYPER6_EL0, x1
-// CHECK:   msr	SPMEVTYPER6_EL0, x1             // encoding: [0xc1,0xe2,0x13,0xd5]
-            mrs	x3, SPMEVTYPER7_EL0
-// CHECK:   mrs	x3, SPMEVTYPER7_EL0             // encoding: [0xe3,0xe2,0x33,0xd5]
-            msr	SPMEVTYPER7_EL0, x1
-// CHECK:   msr	SPMEVTYPER7_EL0, x1             // encoding: [0xe1,0xe2,0x13,0xd5]
-            mrs	x3, SPMEVTYPER8_EL0
-// CHECK:   mrs	x3, SPMEVTYPER8_EL0             // encoding: [0x03,0xe3,0x33,0xd5]
-            msr	SPMEVTYPER8_EL0, x1
-// CHECK:   msr	SPMEVTYPER8_EL0, x1             // encoding: [0x01,0xe3,0x13,0xd5]
-            mrs	x3, SPMEVTYPER9_EL0
-// CHECK:   mrs	x3, SPMEVTYPER9_EL0             // encoding: [0x23,0xe3,0x33,0xd5]
-            msr	SPMEVTYPER9_EL0, x1
-// CHECK:   msr	SPMEVTYPER9_EL0, x1             // encoding: [0x21,0xe3,0x13,0xd5]
-            mrs	x3, SPMEVTYPER10_EL0
-// CHECK:   mrs	x3, SPMEVTYPER10_EL0            // encoding: [0x43,0xe3,0x33,0xd5]
-            msr	SPMEVTYPER10_EL0, x1
-// CHECK:   msr	SPMEVTYPER10_EL0, x1            // encoding: [0x41,0xe3,0x13,0xd5]
-            mrs	x3, SPMEVTYPER11_EL0
-// CHECK:   mrs	x3, SPMEVTYPER11_EL0            // encoding: [0x63,0xe3,0x33,0xd5]
-            msr	SPMEVTYPER11_EL0, x1
-// CHECK:   msr	SPMEVTYPER11_EL0, x1            // encoding: [0x61,0xe3,0x13,0xd5]
-            mrs	x3, SPMEVTYPER12_EL0
-// CHECK:   mrs	x3, SPMEVTYPER12_EL0            // encoding: [0x83,0xe3,0x33,0xd5]
-            msr	SPMEVTYPER12_EL0, x1
-// CHECK:   msr	SPMEVTYPER12_EL0, x1            // encoding: [0x81,0xe3,0x13,0xd5]
-            mrs	x3, SPMEVTYPER13_EL0
-// CHECK:   mrs	x3, SPMEVTYPER13_EL0            // encoding: [0xa3,0xe3,0x33,0xd5]
-            msr	SPMEVTYPER13_EL0, x1
-// CHECK:   msr	SPMEVTYPER13_EL0, x1            // encoding: [0xa1,0xe3,0x13,0xd5]
-            mrs	x3, SPMEVTYPER14_EL0
-// CHECK:   mrs	x3, SPMEVTYPER14_EL0            // encoding: [0xc3,0xe3,0x33,0xd5]
-            msr	SPMEVTYPER14_EL0, x1
-// CHECK:   msr	SPMEVTYPER14_EL0, x1            // encoding: [0xc1,0xe3,0x13,0xd5]
-            mrs	x3, SPMEVTYPER15_EL0
-// CHECK:   mrs	x3, SPMEVTYPER15_EL0            // encoding: [0xe3,0xe3,0x33,0xd5]
-            msr	SPMEVTYPER15_EL0, x1
-// CHECK:   msr	SPMEVTYPER15_EL0, x1            // encoding: [0xe1,0xe3,0x13,0xd5]
+mrs x3, SPMACCESSR_EL2
+// CHECK-INST: mrs x3, SPMACCESSR_EL2
+// CHECK-ENCODING: encoding: [0x63,0x9d,0x34,0xd5]
+// CHECK-UNKNOWN:  d5349d63      mrs x3, SPMACCESSR_EL2
 
-            mrs	x3, SPMIIDR_EL1
-// CHECK:   mrs	x3, SPMIIDR_EL1                 // encoding: [0x83,0x9d,0x30,0xd5]
-            mrs	x3, SPMINTENCLR_EL1
-// CHECK:   mrs	x3, SPMINTENCLR_EL1             // encoding: [0x43,0x9e,0x30,0xd5]
-            msr	SPMINTENCLR_EL1, x1
-// CHECK:   msr	SPMINTENCLR_EL1, x1             // encoding: [0x41,0x9e,0x10,0xd5]
-            mrs	x3, SPMINTENSET_EL1
-// CHECK:   mrs	x3, SPMINTENSET_EL1             // encoding: [0x23,0x9e,0x30,0xd5]
-            msr	SPMINTENSET_EL1, x1
-// CHECK:   msr	SPMINTENSET_EL1, x1             // encoding: [0x21,0x9e,0x10,0xd5]
-            mrs	x3, SPMOVSCLR_EL0
-// CHECK:   mrs	x3, SPMOVSCLR_EL0               // encoding: [0x63,0x9c,0x33,0xd5]
-            msr	SPMOVSCLR_EL0, x1
-// CHECK:   msr	SPMOVSCLR_EL0, x1               // encoding: [0x61,0x9c,0x13,0xd5]
-            mrs	x3, SPMOVSSET_EL0
-// CHECK:   mrs	x3, SPMOVSSET_EL0               // encoding: [0x63,0x9e,0x33,0xd5]
-            msr	SPMOVSSET_EL0, x1
-// CHECK:   msr	SPMOVSSET_EL0, x1               // encoding: [0x61,0x9e,0x13,0xd5]
-            mrs	x3, SPMSELR_EL0
-// CHECK:   mrs	x3, SPMSELR_EL0                 // encoding: [0xa3,0x9c,0x33,0xd5]
-            msr	SPMSELR_EL0, x1
-// CHECK:   msr	SPMSELR_EL0, x1                 // encoding: [0xa1,0x9c,0x13,0xd5]
-            mrs x3, SPMCGCR0_EL1
-// CHECK:   mrs x3, SPMCGCR0_EL1                // encoding: [0x03,0x9d,0x30,0xd5]
-            mrs x3, SPMCGCR1_EL1
-// CHECK:   mrs x3, SPMCGCR1_EL1                // encoding: [0x23,0x9d,0x30,0xd5]
-            mrs x3, SPMCFGR_EL1
-// CHECK:   mrs x3, SPMCFGR_EL1                 // encoding: [0xe3,0x9d,0x30,0xd5]
-            mrs x3, SPMROOTCR_EL3
-// CHECK:   mrs x3, SPMROOTCR_EL3               // encoding: [0xe3,0x9e,0x36,0xd5]
-            msr SPMROOTCR_EL3, x3
-// CHECK:   msr SPMROOTCR_EL3, x3               // encoding: [0xe3,0x9e,0x16,0xd5]
-            mrs x3, SPMSCR_EL1
-// CHECK:   mrs x3, SPMSCR_EL1                  // encoding: [0xe3,0x9e,0x37,0xd5]
-            msr SPMSCR_EL1, x3
-// CHECK:   msr SPMSCR_EL1, x3                  // encoding: [0xe3,0x9e,0x17,0xd5]
+msr SPMACCESSR_EL2, x1
+// CHECK-INST: msr SPMACCESSR_EL2, x1
+// CHECK-ENCODING: encoding: [0x61,0x9d,0x14,0xd5]
+// CHECK-UNKNOWN:  d5149d61      msr SPMACCESSR_EL2, x1
+
+mrs x3, SPMACCESSR_EL3
+// CHECK-INST: mrs x3, SPMACCESSR_EL3
+// CHECK-ENCODING: encoding: [0x63,0x9d,0x36,0xd5]
+// CHECK-UNKNOWN:  d5369d63      mrs x3, SPMACCESSR_EL3
+
+msr SPMACCESSR_EL3, x1
+// CHECK-INST: msr SPMACCESSR_EL3, x1
+// CHECK-ENCODING: encoding: [0x61,0x9d,0x16,0xd5]
+// CHECK-UNKNOWN:  d5169d61      msr SPMACCESSR_EL3, x1
+
+mrs x3, SPMCNTENCLR_EL0
+// CHECK-INST: mrs x3, SPMCNTENCLR_EL0
+// CHECK-ENCODING: encoding: [0x43,0x9c,0x33,0xd5]
+// CHECK-UNKNOWN:  d5339c43      mrs x3, SPMCNTENCLR_EL0
+
+msr SPMCNTENCLR_EL0, x1
+// CHECK-INST: msr SPMCNTENCLR_EL0, x1
+// CHECK-ENCODING: encoding: [0x41,0x9c,0x13,0xd5]
+// CHECK-UNKNOWN:  d5139c41      msr SPMCNTENCLR_EL0, x1
+
+mrs x3, SPMCNTENSET_EL0
+// CHECK-INST: mrs x3, SPMCNTENSET_EL0
+// CHECK-ENCODING: encoding: [0x23,0x9c,0x33,0xd5]
+// CHECK-UNKNOWN:  d5339c23      mrs x3, SPMCNTENSET_EL0
+
+msr SPMCNTENSET_EL0, x1
+// CHECK-INST: msr SPMCNTENSET_EL0, x1
+// CHECK-ENCODING: encoding: [0x21,0x9c,0x13,0xd5]
+// CHECK-UNKNOWN:  d5139c21      msr SPMCNTENSET_EL0, x1
+
+mrs x3, SPMCR_EL0
+// CHECK-INST: mrs x3, SPMCR_EL0
+// CHECK-ENCODING: encoding: [0x03,0x9c,0x33,0xd5]
+// CHECK-UNKNOWN:  d5339c03      mrs x3, SPMCR_EL0
+
+msr SPMCR_EL0, x1
+// CHECK-INST: msr SPMCR_EL0, x1
+// CHECK-ENCODING: encoding: [0x01,0x9c,0x13,0xd5]
+// CHECK-UNKNOWN:  d5139c01      msr SPMCR_EL0, x1
+
+mrs x3, SPMDEVAFF_EL1
+// CHECK-INST: mrs x3, SPMDEVAFF_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x9d,0x30,0xd5]
+// CHECK-UNKNOWN:  d5309dc3      mrs x3, SPMDEVAFF_EL1
+
+mrs x3, SPMDEVARCH_EL1
+// CHECK-INST: mrs x3, SPMDEVARCH_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x9d,0x30,0xd5]
+// CHECK-UNKNOWN:  d5309da3      mrs x3, SPMDEVARCH_EL1
+
+mrs x3, SPMEVCNTR0_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR0_EL0
+// CHECK-ENCODING: encoding: [0x03,0xe0,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e003      mrs x3, SPMEVCNTR0_EL0
+
+msr SPMEVCNTR0_EL0, x1
+// CHECK-INST: msr SPMEVCNTR0_EL0, x1
+// CHECK-ENCODING: encoding: [0x01,0xe0,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e001      msr SPMEVCNTR0_EL0, x1
+
+mrs x3, SPMEVCNTR1_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR1_EL0
+// CHECK-ENCODING: encoding: [0x23,0xe0,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e023      mrs x3, SPMEVCNTR1_EL0
+
+msr SPMEVCNTR1_EL0, x1
+// CHECK-INST: msr SPMEVCNTR1_EL0, x1
+// CHECK-ENCODING: encoding: [0x21,0xe0,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e021      msr SPMEVCNTR1_EL0, x1
+
+mrs x3, SPMEVCNTR2_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR2_EL0
+// CHECK-ENCODING: encoding: [0x43,0xe0,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e043      mrs x3, SPMEVCNTR2_EL0
+
+msr SPMEVCNTR2_EL0, x1
+// CHECK-INST: msr SPMEVCNTR2_EL0, x1
+// CHECK-ENCODING: encoding: [0x41,0xe0,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e041      msr SPMEVCNTR2_EL0, x1
+
+mrs x3, SPMEVCNTR3_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR3_EL0
+// CHECK-ENCODING: encoding: [0x63,0xe0,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e063      mrs x3, SPMEVCNTR3_EL0
+
+msr SPMEVCNTR3_EL0, x1
+// CHECK-INST: msr SPMEVCNTR3_EL0, x1
+// CHECK-ENCODING: encoding: [0x61,0xe0,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e061      msr SPMEVCNTR3_EL0, x1
+
+mrs x3, SPMEVCNTR4_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR4_EL0
+// CHECK-ENCODING: encoding: [0x83,0xe0,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e083      mrs x3, SPMEVCNTR4_EL0
+
+msr SPMEVCNTR4_EL0, x1
+// CHECK-INST: msr SPMEVCNTR4_EL0, x1
+// CHECK-ENCODING: encoding: [0x81,0xe0,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e081      msr SPMEVCNTR4_EL0, x1
+
+mrs x3, SPMEVCNTR5_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR5_EL0
+// CHECK-ENCODING: encoding: [0xa3,0xe0,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e0a3      mrs x3, SPMEVCNTR5_EL0
+
+msr SPMEVCNTR5_EL0, x1
+// CHECK-INST: msr SPMEVCNTR5_EL0, x1
+// CHECK-ENCODING: encoding: [0xa1,0xe0,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e0a1      msr SPMEVCNTR5_EL0, x1
+
+mrs x3, SPMEVCNTR6_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR6_EL0
+// CHECK-ENCODING: encoding: [0xc3,0xe0,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e0c3      mrs x3, SPMEVCNTR6_EL0
+
+msr SPMEVCNTR6_EL0, x1
+// CHECK-INST: msr SPMEVCNTR6_EL0, x1
+// CHECK-ENCODING: encoding: [0xc1,0xe0,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e0c1      msr SPMEVCNTR6_EL0, x1
+
+mrs x3, SPMEVCNTR7_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR7_EL0
+// CHECK-ENCODING: encoding: [0xe3,0xe0,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e0e3      mrs x3, SPMEVCNTR7_EL0
+
+msr SPMEVCNTR7_EL0, x1
+// CHECK-INST: msr SPMEVCNTR7_EL0, x1
+// CHECK-ENCODING: encoding: [0xe1,0xe0,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e0e1      msr SPMEVCNTR7_EL0, x1
+
+mrs x3, SPMEVCNTR8_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR8_EL0
+// CHECK-ENCODING: encoding: [0x03,0xe1,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e103      mrs x3, SPMEVCNTR8_EL0
+
+msr SPMEVCNTR8_EL0, x1
+// CHECK-INST: msr SPMEVCNTR8_EL0, x1
+// CHECK-ENCODING: encoding: [0x01,0xe1,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e101      msr SPMEVCNTR8_EL0, x1
+
+mrs x3, SPMEVCNTR9_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR9_EL0
+// CHECK-ENCODING: encoding: [0x23,0xe1,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e123      mrs x3, SPMEVCNTR9_EL0
+
+msr SPMEVCNTR9_EL0, x1
+// CHECK-INST: msr SPMEVCNTR9_EL0, x1
+// CHECK-ENCODING: encoding: [0x21,0xe1,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e121      msr SPMEVCNTR9_EL0, x1
+
+mrs x3, SPMEVCNTR10_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR10_EL0
+// CHECK-ENCODING: encoding: [0x43,0xe1,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e143      mrs x3, SPMEVCNTR10_EL0
+
+msr SPMEVCNTR10_EL0, x1
+// CHECK-INST: msr SPMEVCNTR10_EL0, x1
+// CHECK-ENCODING: encoding: [0x41,0xe1,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e141      msr SPMEVCNTR10_EL0, x1
+
+mrs x3, SPMEVCNTR11_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR11_EL0
+// CHECK-ENCODING: encoding: [0x63,0xe1,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e163      mrs x3, SPMEVCNTR11_EL0
+
+msr SPMEVCNTR11_EL0, x1
+// CHECK-INST: msr SPMEVCNTR11_EL0, x1
+// CHECK-ENCODING: encoding: [0x61,0xe1,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e161      msr SPMEVCNTR11_EL0, x1
+
+mrs x3, SPMEVCNTR12_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR12_EL0
+// CHECK-ENCODING: encoding: [0x83,0xe1,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e183      mrs x3, SPMEVCNTR12_EL0
+
+msr SPMEVCNTR12_EL0, x1
+// CHECK-INST: msr SPMEVCNTR12_EL0, x1
+// CHECK-ENCODING: encoding: [0x81,0xe1,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e181      msr SPMEVCNTR12_EL0, x1
+
+mrs x3, SPMEVCNTR13_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR13_EL0
+// CHECK-ENCODING: encoding: [0xa3,0xe1,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e1a3      mrs x3, SPMEVCNTR13_EL0
+
+msr SPMEVCNTR13_EL0, x1
+// CHECK-INST: msr SPMEVCNTR13_EL0, x1
+// CHECK-ENCODING: encoding: [0xa1,0xe1,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e1a1      msr SPMEVCNTR13_EL0, x1
+
+mrs x3, SPMEVCNTR14_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR14_EL0
+// CHECK-ENCODING: encoding: [0xc3,0xe1,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e1c3      mrs x3, SPMEVCNTR14_EL0
+
+msr SPMEVCNTR14_EL0, x1
+// CHECK-INST: msr SPMEVCNTR14_EL0, x1
+// CHECK-ENCODING: encoding: [0xc1,0xe1,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e1c1      msr SPMEVCNTR14_EL0, x1
+
+mrs x3, SPMEVCNTR15_EL0
+// CHECK-INST: mrs x3, SPMEVCNTR15_EL0
+// CHECK-ENCODING: encoding: [0xe3,0xe1,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e1e3      mrs x3, SPMEVCNTR15_EL0
+
+msr SPMEVCNTR15_EL0, x1
+// CHECK-INST: msr SPMEVCNTR15_EL0, x1
+// CHECK-ENCODING: encoding: [0xe1,0xe1,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e1e1      msr SPMEVCNTR15_EL0, x1
+
+mrs x3, SPMEVFILT2R0_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R0_EL0
+// CHECK-ENCODING: encoding: [0x03,0xe6,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e603      mrs x3, SPMEVFILT2R0_EL0
+
+msr SPMEVFILT2R0_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R0_EL0, x1
+// CHECK-ENCODING: encoding: [0x01,0xe6,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e601      msr SPMEVFILT2R0_EL0, x1
+
+mrs x3, SPMEVFILT2R1_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R1_EL0
+// CHECK-ENCODING: encoding: [0x23,0xe6,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e623      mrs x3, SPMEVFILT2R1_EL0
+
+msr SPMEVFILT2R1_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R1_EL0, x1
+// CHECK-ENCODING: encoding: [0x21,0xe6,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e621      msr SPMEVFILT2R1_EL0, x1
+
+mrs x3, SPMEVFILT2R2_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R2_EL0
+// CHECK-ENCODING: encoding: [0x43,0xe6,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e643      mrs x3, SPMEVFILT2R2_EL0
+
+msr SPMEVFILT2R2_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R2_EL0, x1
+// CHECK-ENCODING: encoding: [0x41,0xe6,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e641      msr SPMEVFILT2R2_EL0, x1
+
+mrs x3, SPMEVFILT2R3_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R3_EL0
+// CHECK-ENCODING: encoding: [0x63,0xe6,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e663      mrs x3, SPMEVFILT2R3_EL0
+
+msr SPMEVFILT2R3_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R3_EL0, x1
+// CHECK-ENCODING: encoding: [0x61,0xe6,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e661      msr SPMEVFILT2R3_EL0, x1
+
+mrs x3, SPMEVFILT2R4_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R4_EL0
+// CHECK-ENCODING: encoding: [0x83,0xe6,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e683      mrs x3, SPMEVFILT2R4_EL0
+
+msr SPMEVFILT2R4_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R4_EL0, x1
+// CHECK-ENCODING: encoding: [0x81,0xe6,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e681      msr SPMEVFILT2R4_EL0, x1
+
+mrs x3, SPMEVFILT2R5_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R5_EL0
+// CHECK-ENCODING: encoding: [0xa3,0xe6,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e6a3      mrs x3, SPMEVFILT2R5_EL0
+
+msr SPMEVFILT2R5_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R5_EL0, x1
+// CHECK-ENCODING: encoding: [0xa1,0xe6,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e6a1      msr SPMEVFILT2R5_EL0, x1
+
+mrs x3, SPMEVFILT2R6_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R6_EL0
+// CHECK-ENCODING: encoding: [0xc3,0xe6,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e6c3      mrs x3, SPMEVFILT2R6_EL0
+
+msr SPMEVFILT2R6_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R6_EL0, x1
+// CHECK-ENCODING: encoding: [0xc1,0xe6,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e6c1      msr SPMEVFILT2R6_EL0, x1
+
+mrs x3, SPMEVFILT2R7_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R7_EL0
+// CHECK-ENCODING: encoding: [0xe3,0xe6,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e6e3      mrs x3, SPMEVFILT2R7_EL0
+
+msr SPMEVFILT2R7_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R7_EL0, x1
+// CHECK-ENCODING: encoding: [0xe1,0xe6,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e6e1      msr SPMEVFILT2R7_EL0, x1
+
+mrs x3, SPMEVFILT2R8_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R8_EL0
+// CHECK-ENCODING: encoding: [0x03,0xe7,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e703      mrs x3, SPMEVFILT2R8_EL0
+
+msr SPMEVFILT2R8_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R8_EL0, x1
+// CHECK-ENCODING: encoding: [0x01,0xe7,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e701      msr SPMEVFILT2R8_EL0, x1
+
+mrs x3, SPMEVFILT2R9_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R9_EL0
+// CHECK-ENCODING: encoding: [0x23,0xe7,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e723      mrs x3, SPMEVFILT2R9_EL0
+
+msr SPMEVFILT2R9_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R9_EL0, x1
+// CHECK-ENCODING: encoding: [0x21,0xe7,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e721      msr SPMEVFILT2R9_EL0, x1
+
+mrs x3, SPMEVFILT2R10_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R10_EL0
+// CHECK-ENCODING: encoding: [0x43,0xe7,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e743      mrs x3, SPMEVFILT2R10_EL0
+
+msr SPMEVFILT2R10_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R10_EL0, x1
+// CHECK-ENCODING: encoding: [0x41,0xe7,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e741      msr SPMEVFILT2R10_EL0, x1
+
+mrs x3, SPMEVFILT2R11_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R11_EL0
+// CHECK-ENCODING: encoding: [0x63,0xe7,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e763      mrs x3, SPMEVFILT2R11_EL0
+
+msr SPMEVFILT2R11_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R11_EL0, x1
+// CHECK-ENCODING: encoding: [0x61,0xe7,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e761      msr SPMEVFILT2R11_EL0, x1
+
+mrs x3, SPMEVFILT2R12_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R12_EL0
+// CHECK-ENCODING: encoding: [0x83,0xe7,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e783      mrs x3, SPMEVFILT2R12_EL0
+
+msr SPMEVFILT2R12_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R12_EL0, x1
+// CHECK-ENCODING: encoding: [0x81,0xe7,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e781      msr SPMEVFILT2R12_EL0, x1
+
+mrs x3, SPMEVFILT2R13_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R13_EL0
+// CHECK-ENCODING: encoding: [0xa3,0xe7,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e7a3      mrs x3, SPMEVFILT2R13_EL0
+
+msr SPMEVFILT2R13_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R13_EL0, x1
+// CHECK-ENCODING: encoding: [0xa1,0xe7,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e7a1      msr SPMEVFILT2R13_EL0, x1
+
+mrs x3, SPMEVFILT2R14_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R14_EL0
+// CHECK-ENCODING: encoding: [0xc3,0xe7,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e7c3      mrs x3, SPMEVFILT2R14_EL0
+
+msr SPMEVFILT2R14_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R14_EL0, x1
+// CHECK-ENCODING: encoding: [0xc1,0xe7,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e7c1      msr SPMEVFILT2R14_EL0, x1
+
+mrs x3, SPMEVFILT2R15_EL0
+// CHECK-INST: mrs x3, SPMEVFILT2R15_EL0
+// CHECK-ENCODING: encoding: [0xe3,0xe7,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e7e3      mrs x3, SPMEVFILT2R15_EL0
+
+msr SPMEVFILT2R15_EL0, x1
+// CHECK-INST: msr SPMEVFILT2R15_EL0, x1
+// CHECK-ENCODING: encoding: [0xe1,0xe7,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e7e1      msr SPMEVFILT2R15_EL0, x1
+
+mrs x3, SPMEVFILTR0_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR0_EL0
+// CHECK-ENCODING: encoding: [0x03,0xe4,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e403      mrs x3, SPMEVFILTR0_EL0
+
+msr SPMEVFILTR0_EL0, x1
+// CHECK-INST: msr SPMEVFILTR0_EL0, x1
+// CHECK-ENCODING: encoding: [0x01,0xe4,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e401      msr SPMEVFILTR0_EL0, x1
+
+mrs x3, SPMEVFILTR1_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR1_EL0
+// CHECK-ENCODING: encoding: [0x23,0xe4,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e423      mrs x3, SPMEVFILTR1_EL0
+
+msr SPMEVFILTR1_EL0, x1
+// CHECK-INST: msr SPMEVFILTR1_EL0, x1
+// CHECK-ENCODING: encoding: [0x21,0xe4,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e421      msr SPMEVFILTR1_EL0, x1
+
+mrs x3, SPMEVFILTR2_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR2_EL0
+// CHECK-ENCODING: encoding: [0x43,0xe4,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e443      mrs x3, SPMEVFILTR2_EL0
+
+msr SPMEVFILTR2_EL0, x1
+// CHECK-INST: msr SPMEVFILTR2_EL0, x1
+// CHECK-ENCODING: encoding: [0x41,0xe4,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e441      msr SPMEVFILTR2_EL0, x1
+
+mrs x3, SPMEVFILTR3_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR3_EL0
+// CHECK-ENCODING: encoding: [0x63,0xe4,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e463      mrs x3, SPMEVFILTR3_EL0
+
+msr SPMEVFILTR3_EL0, x1
+// CHECK-INST: msr SPMEVFILTR3_EL0, x1
+// CHECK-ENCODING: encoding: [0x61,0xe4,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e461      msr SPMEVFILTR3_EL0, x1
+
+mrs x3, SPMEVFILTR4_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR4_EL0
+// CHECK-ENCODING: encoding: [0x83,0xe4,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e483      mrs x3, SPMEVFILTR4_EL0
+
+msr SPMEVFILTR4_EL0, x1
+// CHECK-INST: msr SPMEVFILTR4_EL0, x1
+// CHECK-ENCODING: encoding: [0x81,0xe4,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e481      msr SPMEVFILTR4_EL0, x1
+
+mrs x3, SPMEVFILTR5_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR5_EL0
+// CHECK-ENCODING: encoding: [0xa3,0xe4,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e4a3      mrs x3, SPMEVFILTR5_EL0
+
+msr SPMEVFILTR5_EL0, x1
+// CHECK-INST: msr SPMEVFILTR5_EL0, x1
+// CHECK-ENCODING: encoding: [0xa1,0xe4,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e4a1      msr SPMEVFILTR5_EL0, x1
+
+mrs x3, SPMEVFILTR6_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR6_EL0
+// CHECK-ENCODING: encoding: [0xc3,0xe4,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e4c3      mrs x3, SPMEVFILTR6_EL0
+
+msr SPMEVFILTR6_EL0, x1
+// CHECK-INST: msr SPMEVFILTR6_EL0, x1
+// CHECK-ENCODING: encoding: [0xc1,0xe4,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e4c1      msr SPMEVFILTR6_EL0, x1
+
+mrs x3, SPMEVFILTR7_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR7_EL0
+// CHECK-ENCODING: encoding: [0xe3,0xe4,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e4e3      mrs x3, SPMEVFILTR7_EL0
+
+msr SPMEVFILTR7_EL0, x1
+// CHECK-INST: msr SPMEVFILTR7_EL0, x1
+// CHECK-ENCODING: encoding: [0xe1,0xe4,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e4e1      msr SPMEVFILTR7_EL0, x1
+
+mrs x3, SPMEVFILTR8_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR8_EL0
+// CHECK-ENCODING: encoding: [0x03,0xe5,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e503      mrs x3, SPMEVFILTR8_EL0
+
+msr SPMEVFILTR8_EL0, x1
+// CHECK-INST: msr SPMEVFILTR8_EL0, x1
+// CHECK-ENCODING: encoding: [0x01,0xe5,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e501      msr SPMEVFILTR8_EL0, x1
+
+mrs x3, SPMEVFILTR9_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR9_EL0
+// CHECK-ENCODING: encoding: [0x23,0xe5,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e523      mrs x3, SPMEVFILTR9_EL0
+
+msr SPMEVFILTR9_EL0, x1
+// CHECK-INST: msr SPMEVFILTR9_EL0, x1
+// CHECK-ENCODING: encoding: [0x21,0xe5,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e521      msr SPMEVFILTR9_EL0, x1
+
+mrs x3, SPMEVFILTR10_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR10_EL0
+// CHECK-ENCODING: encoding: [0x43,0xe5,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e543      mrs x3, SPMEVFILTR10_EL0
+
+msr SPMEVFILTR10_EL0, x1
+// CHECK-INST: msr SPMEVFILTR10_EL0, x1
+// CHECK-ENCODING: encoding: [0x41,0xe5,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e541      msr SPMEVFILTR10_EL0, x1
+
+mrs x3, SPMEVFILTR11_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR11_EL0
+// CHECK-ENCODING: encoding: [0x63,0xe5,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e563      mrs x3, SPMEVFILTR11_EL0
+
+msr SPMEVFILTR11_EL0, x1
+// CHECK-INST: msr SPMEVFILTR11_EL0, x1
+// CHECK-ENCODING: encoding: [0x61,0xe5,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e561      msr SPMEVFILTR11_EL0, x1
+
+mrs x3, SPMEVFILTR12_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR12_EL0
+// CHECK-ENCODING: encoding: [0x83,0xe5,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e583      mrs x3, SPMEVFILTR12_EL0
+
+msr SPMEVFILTR12_EL0, x1
+// CHECK-INST: msr SPMEVFILTR12_EL0, x1
+// CHECK-ENCODING: encoding: [0x81,0xe5,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e581      msr SPMEVFILTR12_EL0, x1
+
+mrs x3, SPMEVFILTR13_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR13_EL0
+// CHECK-ENCODING: encoding: [0xa3,0xe5,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e5a3      mrs x3, SPMEVFILTR13_EL0
+
+msr SPMEVFILTR13_EL0, x1
+// CHECK-INST: msr SPMEVFILTR13_EL0, x1
+// CHECK-ENCODING: encoding: [0xa1,0xe5,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e5a1      msr SPMEVFILTR13_EL0, x1
+
+mrs x3, SPMEVFILTR14_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR14_EL0
+// CHECK-ENCODING: encoding: [0xc3,0xe5,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e5c3      mrs x3, SPMEVFILTR14_EL0
+
+msr SPMEVFILTR14_EL0, x1
+// CHECK-INST: msr SPMEVFILTR14_EL0, x1
+// CHECK-ENCODING: encoding: [0xc1,0xe5,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e5c1      msr SPMEVFILTR14_EL0, x1
+
+mrs x3, SPMEVFILTR15_EL0
+// CHECK-INST: mrs x3, SPMEVFILTR15_EL0
+// CHECK-ENCODING: encoding: [0xe3,0xe5,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e5e3      mrs x3, SPMEVFILTR15_EL0
+
+msr SPMEVFILTR15_EL0, x1
+// CHECK-INST: msr SPMEVFILTR15_EL0, x1
+// CHECK-ENCODING: encoding: [0xe1,0xe5,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e5e1      msr SPMEVFILTR15_EL0, x1
+
+mrs x3, SPMEVTYPER0_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER0_EL0
+// CHECK-ENCODING: encoding: [0x03,0xe2,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e203      mrs x3, SPMEVTYPER0_EL0
+
+msr SPMEVTYPER0_EL0, x1
+// CHECK-INST: msr SPMEVTYPER0_EL0, x1
+// CHECK-ENCODING: encoding: [0x01,0xe2,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e201      msr SPMEVTYPER0_EL0, x1
+
+mrs x3, SPMEVTYPER1_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER1_EL0
+// CHECK-ENCODING: encoding: [0x23,0xe2,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e223      mrs x3, SPMEVTYPER1_EL0
+
+msr SPMEVTYPER1_EL0, x1
+// CHECK-INST: msr SPMEVTYPER1_EL0, x1
+// CHECK-ENCODING: encoding: [0x21,0xe2,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e221      msr SPMEVTYPER1_EL0, x1
+
+mrs x3, SPMEVTYPER2_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER2_EL0
+// CHECK-ENCODING: encoding: [0x43,0xe2,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e243      mrs x3, SPMEVTYPER2_EL0
+
+msr SPMEVTYPER2_EL0, x1
+// CHECK-INST: msr SPMEVTYPER2_EL0, x1
+// CHECK-ENCODING: encoding: [0x41,0xe2,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e241      msr SPMEVTYPER2_EL0, x1
+
+mrs x3, SPMEVTYPER3_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER3_EL0
+// CHECK-ENCODING: encoding: [0x63,0xe2,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e263      mrs x3, SPMEVTYPER3_EL0
+
+msr SPMEVTYPER3_EL0, x1
+// CHECK-INST: msr SPMEVTYPER3_EL0, x1
+// CHECK-ENCODING: encoding: [0x61,0xe2,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e261      msr SPMEVTYPER3_EL0, x1
+
+mrs x3, SPMEVTYPER4_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER4_EL0
+// CHECK-ENCODING: encoding: [0x83,0xe2,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e283      mrs x3, SPMEVTYPER4_EL0
+
+msr SPMEVTYPER4_EL0, x1
+// CHECK-INST: msr SPMEVTYPER4_EL0, x1
+// CHECK-ENCODING: encoding: [0x81,0xe2,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e281      msr SPMEVTYPER4_EL0, x1
+
+mrs x3, SPMEVTYPER5_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER5_EL0
+// CHECK-ENCODING: encoding: [0xa3,0xe2,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e2a3      mrs x3, SPMEVTYPER5_EL0
+
+msr SPMEVTYPER5_EL0, x1
+// CHECK-INST: msr SPMEVTYPER5_EL0, x1
+// CHECK-ENCODING: encoding: [0xa1,0xe2,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e2a1      msr SPMEVTYPER5_EL0, x1
+
+mrs x3, SPMEVTYPER6_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER6_EL0
+// CHECK-ENCODING: encoding: [0xc3,0xe2,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e2c3      mrs x3, SPMEVTYPER6_EL0
+
+msr SPMEVTYPER6_EL0, x1
+// CHECK-INST: msr SPMEVTYPER6_EL0, x1
+// CHECK-ENCODING: encoding: [0xc1,0xe2,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e2c1      msr SPMEVTYPER6_EL0, x1
+
+mrs x3, SPMEVTYPER7_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER7_EL0
+// CHECK-ENCODING: encoding: [0xe3,0xe2,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e2e3      mrs x3, SPMEVTYPER7_EL0
+
+msr SPMEVTYPER7_EL0, x1
+// CHECK-INST: msr SPMEVTYPER7_EL0, x1
+// CHECK-ENCODING: encoding: [0xe1,0xe2,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e2e1      msr SPMEVTYPER7_EL0, x1
+
+mrs x3, SPMEVTYPER8_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER8_EL0
+// CHECK-ENCODING: encoding: [0x03,0xe3,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e303      mrs x3, SPMEVTYPER8_EL0
+
+msr SPMEVTYPER8_EL0, x1
+// CHECK-INST: msr SPMEVTYPER8_EL0, x1
+// CHECK-ENCODING: encoding: [0x01,0xe3,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e301      msr SPMEVTYPER8_EL0, x1
+
+mrs x3, SPMEVTYPER9_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER9_EL0
+// CHECK-ENCODING: encoding: [0x23,0xe3,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e323      mrs x3, SPMEVTYPER9_EL0
+
+msr SPMEVTYPER9_EL0, x1
+// CHECK-INST: msr SPMEVTYPER9_EL0, x1
+// CHECK-ENCODING: encoding: [0x21,0xe3,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e321      msr SPMEVTYPER9_EL0, x1
+
+mrs x3, SPMEVTYPER10_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER10_EL0
+// CHECK-ENCODING: encoding: [0x43,0xe3,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e343      mrs x3, SPMEVTYPER10_EL0
+
+msr SPMEVTYPER10_EL0, x1
+// CHECK-INST: msr SPMEVTYPER10_EL0, x1
+// CHECK-ENCODING: encoding: [0x41,0xe3,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e341      msr SPMEVTYPER10_EL0, x1
+
+mrs x3, SPMEVTYPER11_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER11_EL0
+// CHECK-ENCODING: encoding: [0x63,0xe3,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e363      mrs x3, SPMEVTYPER11_EL0
+
+msr SPMEVTYPER11_EL0, x1
+// CHECK-INST: msr SPMEVTYPER11_EL0, x1
+// CHECK-ENCODING: encoding: [0x61,0xe3,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e361      msr SPMEVTYPER11_EL0, x1
+
+mrs x3, SPMEVTYPER12_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER12_EL0
+// CHECK-ENCODING: encoding: [0x83,0xe3,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e383      mrs x3, SPMEVTYPER12_EL0
+
+msr SPMEVTYPER12_EL0, x1
+// CHECK-INST: msr SPMEVTYPER12_EL0, x1
+// CHECK-ENCODING: encoding: [0x81,0xe3,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e381      msr SPMEVTYPER12_EL0, x1
+
+mrs x3, SPMEVTYPER13_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER13_EL0
+// CHECK-ENCODING: encoding: [0xa3,0xe3,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e3a3      mrs x3, SPMEVTYPER13_EL0
+
+msr SPMEVTYPER13_EL0, x1
+// CHECK-INST: msr SPMEVTYPER13_EL0, x1
+// CHECK-ENCODING: encoding: [0xa1,0xe3,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e3a1      msr SPMEVTYPER13_EL0, x1
+
+mrs x3, SPMEVTYPER14_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER14_EL0
+// CHECK-ENCODING: encoding: [0xc3,0xe3,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e3c3      mrs x3, SPMEVTYPER14_EL0
+
+msr SPMEVTYPER14_EL0, x1
+// CHECK-INST: msr SPMEVTYPER14_EL0, x1
+// CHECK-ENCODING: encoding: [0xc1,0xe3,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e3c1      msr SPMEVTYPER14_EL0, x1
+
+mrs x3, SPMEVTYPER15_EL0
+// CHECK-INST: mrs x3, SPMEVTYPER15_EL0
+// CHECK-ENCODING: encoding: [0xe3,0xe3,0x33,0xd5]
+// CHECK-UNKNOWN:  d533e3e3      mrs x3, SPMEVTYPER15_EL0
+
+msr SPMEVTYPER15_EL0, x1
+// CHECK-INST: msr SPMEVTYPER15_EL0, x1
+// CHECK-ENCODING: encoding: [0xe1,0xe3,0x13,0xd5]
+// CHECK-UNKNOWN:  d513e3e1      msr SPMEVTYPER15_EL0, x1
+
+mrs x3, SPMIIDR_EL1
+// CHECK-INST: mrs x3, SPMIIDR_EL1
+// CHECK-ENCODING: encoding: [0x83,0x9d,0x30,0xd5]
+// CHECK-UNKNOWN:  d5309d83      mrs x3, SPMIIDR_EL1
+
+mrs x3, SPMINTENCLR_EL1
+// CHECK-INST: mrs x3, SPMINTENCLR_EL1
+// CHECK-ENCODING: encoding: [0x43,0x9e,0x30,0xd5]
+// CHECK-UNKNOWN:  d5309e43      mrs x3, SPMINTENCLR_EL1
+
+msr SPMINTENCLR_EL1, x1
+// CHECK-INST: msr SPMINTENCLR_EL1, x1
+// CHECK-ENCODING: encoding: [0x41,0x9e,0x10,0xd5]
+// CHECK-UNKNOWN:  d5109e41      msr SPMINTENCLR_EL1, x1
+
+mrs x3, SPMINTENSET_EL1
+// CHECK-INST: mrs x3, SPMINTENSET_EL1
+// CHECK-ENCODING: encoding: [0x23,0x9e,0x30,0xd5]
+// CHECK-UNKNOWN:  d5309e23      mrs x3, SPMINTENSET_EL1
+
+msr SPMINTENSET_EL1, x1
+// CHECK-INST: msr SPMINTENSET_EL1, x1
+// CHECK-ENCODING: encoding: [0x21,0x9e,0x10,0xd5]
+// CHECK-UNKNOWN:  d5109e21      msr SPMINTENSET_EL1, x1
+
+mrs x3, SPMOVSCLR_EL0
+// CHECK-INST: mrs x3, SPMOVSCLR_EL0
+// CHECK-ENCODING: encoding: [0x63,0x9c,0x33,0xd5]
+// CHECK-UNKNOWN:  d5339c63      mrs x3, SPMOVSCLR_EL0
+
+msr SPMOVSCLR_EL0, x1
+// CHECK-INST: msr SPMOVSCLR_EL0, x1
+// CHECK-ENCODING: encoding: [0x61,0x9c,0x13,0xd5]
+// CHECK-UNKNOWN:  d5139c61      msr SPMOVSCLR_EL0, x1
+
+mrs x3, SPMOVSSET_EL0
+// CHECK-INST: mrs x3, SPMOVSSET_EL0
+// CHECK-ENCODING: encoding: [0x63,0x9e,0x33,0xd5]
+// CHECK-UNKNOWN:  d5339e63      mrs x3, SPMOVSSET_EL0
+
+msr SPMOVSSET_EL0, x1
+// CHECK-INST: msr SPMOVSSET_EL0, x1
+// CHECK-ENCODING: encoding: [0x61,0x9e,0x13,0xd5]
+// CHECK-UNKNOWN:  d5139e61      msr SPMOVSSET_EL0, x1
+
+mrs x3, SPMSELR_EL0
+// CHECK-INST: mrs x3, SPMSELR_EL0
+// CHECK-ENCODING: encoding: [0xa3,0x9c,0x33,0xd5]
+// CHECK-UNKNOWN:  d5339ca3      mrs x3, SPMSELR_EL0
+
+msr SPMSELR_EL0, x1
+// CHECK-INST: msr SPMSELR_EL0, x1
+// CHECK-ENCODING: encoding: [0xa1,0x9c,0x13,0xd5]
+// CHECK-UNKNOWN:  d5139ca1      msr SPMSELR_EL0, x1
+
+mrs x3, SPMCGCR0_EL1
+// CHECK-INST: mrs x3, SPMCGCR0_EL1
+// CHECK-ENCODING: encoding: [0x03,0x9d,0x30,0xd5]
+// CHECK-UNKNOWN:  d5309d03      mrs x3, SPMCGCR0_EL1
+
+mrs x3, SPMCGCR1_EL1
+// CHECK-INST: mrs x3, SPMCGCR1_EL1
+// CHECK-ENCODING: encoding: [0x23,0x9d,0x30,0xd5]
+// CHECK-UNKNOWN:  d5309d23      mrs x3, SPMCGCR1_EL1
+
+mrs x3, SPMCFGR_EL1
+// CHECK-INST: mrs x3, SPMCFGR_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x9d,0x30,0xd5]
+// CHECK-UNKNOWN:  d5309de3      mrs x3, SPMCFGR_EL1
+
+mrs x3, SPMROOTCR_EL3
+// CHECK-INST: mrs x3, SPMROOTCR_EL3
+// CHECK-ENCODING: encoding: [0xe3,0x9e,0x36,0xd5]
+// CHECK-UNKNOWN:  d5369ee3      mrs x3, SPMROOTCR_EL3
+
+msr SPMROOTCR_EL3, x3
+// CHECK-INST: msr SPMROOTCR_EL3, x3
+// CHECK-ENCODING: encoding: [0xe3,0x9e,0x16,0xd5]
+// CHECK-UNKNOWN:  d5169ee3      msr SPMROOTCR_EL3, x3
+
+mrs x3, SPMSCR_EL1
+// CHECK-INST: mrs x3, SPMSCR_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x9e,0x37,0xd5]
+// CHECK-UNKNOWN:  d5379ee3      mrs x3, SPMSCR_EL1
+
+msr SPMSCR_EL1, x3
+// CHECK-INST: msr SPMSCR_EL1, x3
+// CHECK-ENCODING: encoding: [0xe3,0x9e,0x17,0xd5]
+// CHECK-UNKNOWN:  d5179ee3      msr SPMSCR_EL1, x3
 
 // FEAT_ITE
-            mrs x3, TRCITEEDCR
-// CHECK:   mrs x3, TRCITEEDCR                  // encoding: [0x23,0x02,0x31,0xd5]
-// ERROR-NO-ITE: [[@LINE-2]]:21: error: expected readable system register
-            msr TRCITEEDCR, x3
-// CHECK:   msr TRCITEEDCR, x3                  // encoding: [0x23,0x02,0x11,0xd5]
-// ERROR-NO-ITE: [[@LINE-2]]:17: error: expected writable system register
-            mrs	x3, TRCITECR_EL1
-// CHECK:   mrs	x3, TRCITECR_EL1                // encoding: [0x63,0x12,0x38,0xd5]
-// ERROR-NO-ITE: [[@LINE-2]]:21: error: expected readable system register
-            msr	TRCITECR_EL1, x1
-// CHECK:   msr	TRCITECR_EL1, x1                // encoding: [0x61,0x12,0x18,0xd5]
-// ERROR-NO-ITE: [[@LINE-2]]:17: error: expected writable system register or pstate
-            mrs	x3, TRCITECR_EL12
-// CHECK:   mrs	x3, TRCITECR_EL12               // encoding: [0x63,0x12,0x3d,0xd5]
-// ERROR-NO-ITE: [[@LINE-2]]:21: error: expected readable system register
-            msr	TRCITECR_EL12, x1
-// CHECK:   msr	TRCITECR_EL12, x1               // encoding: [0x61,0x12,0x1d,0xd5]
-// ERROR-NO-ITE: [[@LINE-2]]:17: error: expected writable system register or pstate
-            mrs	x3, TRCITECR_EL2
-// CHECK:   mrs	x3, TRCITECR_EL2                // encoding: [0x63,0x12,0x3c,0xd5]
-// ERROR-NO-ITE: [[@LINE-2]]:21: error: expected readable system register
-            msr	TRCITECR_EL2, x1
-// CHECK:   msr	TRCITECR_EL2, x1                // encoding: [0x61,0x12,0x1c,0xd5]
-// ERROR-NO-ITE: [[@LINE-2]]:17: error: expected writable system register or pstate
-            trcit x1
-// CHECK:   trcit x1                            // encoding: [0xe1,0x72,0x0b,0xd5]
-// ERROR-NO-ITE: [[@LINE-2]]:13: error: instruction requires: ite
+mrs x3, TRCITEEDCR
+// CHECK-INST: mrs x3, TRCITEEDCR
+// CHECK-ENCODING: encoding: [0x23,0x02,0x31,0xd5]
+// CHECK-ERROR: error: expected readable system register
+// CHECK-UNKNOWN:  d5310223      mrs x3, S2_1_C0_C2_1
+
+msr TRCITEEDCR, x3
+// CHECK-INST: msr TRCITEEDCR, x3
+// CHECK-ENCODING: encoding: [0x23,0x02,0x11,0xd5]
+// CHECK-ERROR: error: expected writable system register or pstate
+// CHECK-UNKNOWN:  d5110223      msr S2_1_C0_C2_1, x3
+
+mrs x3, TRCITECR_EL1
+// CHECK-INST: mrs x3, TRCITECR_EL1
+// CHECK-ENCODING: encoding: [0x63,0x12,0x38,0xd5]
+// CHECK-ERROR: error: expected readable system register
+// CHECK-UNKNOWN:  d5381263      mrs x3, S3_0_C1_C2_3
+
+msr TRCITECR_EL1, x1
+// CHECK-INST: msr TRCITECR_EL1, x1
+// CHECK-ENCODING: encoding: [0x61,0x12,0x18,0xd5]
+// CHECK-ERROR: error: expected writable system register or pstate
+// CHECK-UNKNOWN:  d5181261      msr S3_0_C1_C2_3, x1
+
+mrs x3, TRCITECR_EL12
+// CHECK-INST: mrs x3, TRCITECR_EL12
+// CHECK-ENCODING: encoding: [0x63,0x12,0x3d,0xd5]
+// CHECK-ERROR: error: expected readable system register
+// CHECK-UNKNOWN:  d53d1263      mrs x3, S3_5_C1_C2_3
+
+msr TRCITECR_EL12, x1
+// CHECK-INST: msr TRCITECR_EL12, x1
+// CHECK-ENCODING: encoding: [0x61,0x12,0x1d,0xd5]
+// CHECK-ERROR: error: expected writable system register or pstate
+// CHECK-UNKNOWN:  d51d1261      msr S3_5_C1_C2_3, x1
+
+mrs x3, TRCITECR_EL2
+// CHECK-INST: mrs x3, TRCITECR_EL2
+// CHECK-ENCODING: encoding: [0x63,0x12,0x3c,0xd5]
+// CHECK-ERROR: error: expected readable system register
+// CHECK-UNKNOWN:  d53c1263      mrs x3, S3_4_C1_C2_3
+
+msr TRCITECR_EL2, x1
+// CHECK-INST: msr TRCITECR_EL2, x1
+// CHECK-ENCODING: encoding: [0x61,0x12,0x1c,0xd5]
+// CHECK-ERROR: error: expected writable system register or pstate
+// CHECK-UNKNOWN:  d51c1261      msr S3_4_C1_C2_3, x1
+
+trcit x1
+// CHECK-INST: trcit x1
+// CHECK-ENCODING: encoding: [0xe1,0x72,0x0b,0xd5]
+// CHECK-ERROR: error: instruction requires: ite
+// CHECK-UNKNOWN:  d50b72e1      sys #3, c7, c2, #7, x1
 
 // FEAT_SPE_FDS
-            mrs x3, PMSDSFR_EL1
-// CHECK:   mrs x3, PMSDSFR_EL1                 // encoding: [0x83,0x9a,0x38,0xd5]
-            msr PMSDSFR_EL1, x3
-// CHECK:   msr PMSDSFR_EL1, x3                 // encoding: [0x83,0x9a,0x18,0xd5]
+mrs x3, PMSDSFR_EL1
+// CHECK-INST: mrs x3, PMSDSFR_EL1
+// CHECK-ENCODING: encoding: [0x83,0x9a,0x38,0xd5]
+// CHECK-UNKNOWN:  d5389a83      mrs x3, PMSDSFR_EL1
+
+msr PMSDSFR_EL1, x3
+// CHECK-INST: msr PMSDSFR_EL1, x3
+// CHECK-ENCODING: encoding: [0x83,0x9a,0x18,0xd5]
+// CHECK-UNKNOWN:  d5189a83      msr PMSDSFR_EL1, x3

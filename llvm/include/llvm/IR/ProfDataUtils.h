@@ -16,57 +16,74 @@
 #define LLVM_IR_PROFDATAUTILS_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Compiler.h"
+#include <cstddef>
+#include <type_traits>
 
 namespace llvm {
+struct MDProfLabels {
+  LLVM_ABI static const char *BranchWeights;
+  LLVM_ABI static const char *ValueProfile;
+  LLVM_ABI static const char *FunctionEntryCount;
+  LLVM_ABI static const char *SyntheticFunctionEntryCount;
+  LLVM_ABI static const char *ExpectedBranchWeights;
+  LLVM_ABI static const char *UnknownBranchWeightsMarker;
+};
+
+/// Profile-based loop metadata that should be accessed only by using
+/// \c llvm::getLoopEstimatedTripCount and \c llvm::setLoopEstimatedTripCount.
+LLVM_ABI extern const char *LLVMLoopEstimatedTripCount;
 
 /// Checks if an Instruction has MD_prof Metadata
-bool hasProfMD(const Instruction &I);
+LLVM_ABI bool hasProfMD(const Instruction &I);
 
 /// Checks if an MDNode contains Branch Weight Metadata
-bool isBranchWeightMD(const MDNode *ProfileData);
+LLVM_ABI bool isBranchWeightMD(const MDNode *ProfileData);
+
+/// Checks if an MDNode contains value profiling Metadata
+LLVM_ABI bool isValueProfileMD(const MDNode *ProfileData);
 
 /// Checks if an instructions has Branch Weight Metadata
 ///
 /// \param I The instruction to check
 /// \returns True if I has an MD_prof node containing Branch Weights. False
 /// otherwise.
-bool hasBranchWeightMD(const Instruction &I);
+LLVM_ABI bool hasBranchWeightMD(const Instruction &I);
 
 /// Checks if an instructions has valid Branch Weight Metadata
 ///
 /// \param I The instruction to check
 /// \returns True if I has an MD_prof node containing valid Branch Weights,
 /// i.e., one weight for each successor. False otherwise.
-bool hasValidBranchWeightMD(const Instruction &I);
+LLVM_ABI bool hasValidBranchWeightMD(const Instruction &I);
 
 /// Get the branch weights metadata node
 ///
 /// \param I The Instruction to get the weights from.
 /// \returns A pointer to I's branch weights metadata node, if it exists.
 /// Nullptr otherwise.
-MDNode *getBranchWeightMDNode(const Instruction &I);
+LLVM_ABI MDNode *getBranchWeightMDNode(const Instruction &I);
 
 /// Get the valid branch weights metadata node
 ///
 /// \param I The Instruction to get the weights from.
 /// \returns A pointer to I's valid branch weights metadata node, if it exists.
 /// Nullptr otherwise.
-MDNode *getValidBranchWeightMDNode(const Instruction &I);
+LLVM_ABI MDNode *getValidBranchWeightMDNode(const Instruction &I);
 
 /// Check if Branch Weight Metadata has an "expected" field from an llvm.expect*
 /// intrinsic
-bool hasBranchWeightOrigin(const Instruction &I);
+LLVM_ABI bool hasBranchWeightOrigin(const Instruction &I);
 
 /// Check if Branch Weight Metadata has an "expected" field from an llvm.expect*
 /// intrinsic
-bool hasBranchWeightOrigin(const MDNode *ProfileData);
+LLVM_ABI bool hasBranchWeightOrigin(const MDNode *ProfileData);
 
 /// Return the offset to the first branch weight data
-unsigned getBranchWeightOffset(const MDNode *ProfileData);
+LLVM_ABI unsigned getBranchWeightOffset(const MDNode *ProfileData);
 
-unsigned getNumBranchWeights(const MDNode &ProfileData);
+LLVM_ABI unsigned getNumBranchWeights(const MDNode &ProfileData);
 
 /// Extract branch weights from MD_prof metadata
 ///
@@ -74,18 +91,18 @@ unsigned getNumBranchWeights(const MDNode &ProfileData);
 /// \param [out] Weights An output vector to fill with branch weights
 /// \returns True if weights were extracted, False otherwise. When false Weights
 /// will be cleared.
-bool extractBranchWeights(const MDNode *ProfileData,
-                          SmallVectorImpl<uint32_t> &Weights);
+LLVM_ABI bool extractBranchWeights(const MDNode *ProfileData,
+                                   SmallVectorImpl<uint32_t> &Weights);
 
 /// Faster version of extractBranchWeights() that skips checks and must only
 /// be called with "branch_weights" metadata nodes. Supports uint32_t.
-void extractFromBranchWeightMD32(const MDNode *ProfileData,
-                                 SmallVectorImpl<uint32_t> &Weights);
+LLVM_ABI void extractFromBranchWeightMD32(const MDNode *ProfileData,
+                                          SmallVectorImpl<uint32_t> &Weights);
 
 /// Faster version of extractBranchWeights() that skips checks and must only
 /// be called with "branch_weights" metadata nodes. Supports uint64_t.
-void extractFromBranchWeightMD64(const MDNode *ProfileData,
-                                 SmallVectorImpl<uint64_t> &Weights);
+LLVM_ABI void extractFromBranchWeightMD64(const MDNode *ProfileData,
+                                          SmallVectorImpl<uint64_t> &Weights);
 
 /// Extract branch weights attatched to an Instruction
 ///
@@ -93,8 +110,8 @@ void extractFromBranchWeightMD64(const MDNode *ProfileData,
 /// \param [out] Weights An output vector to fill with branch weights
 /// \returns True if weights were extracted, False otherwise. When false Weights
 /// will be cleared.
-bool extractBranchWeights(const Instruction &I,
-                          SmallVectorImpl<uint32_t> &Weights);
+LLVM_ABI bool extractBranchWeights(const Instruction &I,
+                                   SmallVectorImpl<uint32_t> &Weights);
 
 /// Extract branch weights from a conditional branch or select Instruction.
 ///
@@ -103,8 +120,8 @@ bool extractBranchWeights(const Instruction &I,
 /// \param [out] FalseVal will contain the branch weight for the False branch
 /// \returns True on success with profile weights filled in. False if no
 /// metadata or invalid metadata was found.
-bool extractBranchWeights(const Instruction &I, uint64_t &TrueVal,
-                          uint64_t &FalseVal);
+LLVM_ABI bool extractBranchWeights(const Instruction &I, uint64_t &TrueVal,
+                                   uint64_t &FalseVal);
 
 /// Retrieve the total of all weights from MD_prof data.
 ///
@@ -112,7 +129,8 @@ bool extractBranchWeights(const Instruction &I, uint64_t &TrueVal,
 /// \param [out] TotalWeights input variable to fill with total weights
 /// \returns True on success with profile total weights filled in. False if no
 /// metadata was found.
-bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalWeights);
+LLVM_ABI bool extractProfTotalWeight(const MDNode *ProfileData,
+                                     uint64_t &TotalWeights);
 
 /// Retrieve the total of all weights from an instruction.
 ///
@@ -120,18 +138,115 @@ bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalWeights);
 /// \param [out] TotalWeights input variable to fill with total weights
 /// \returns True on success with profile total weights filled in. False if no
 /// metadata was found.
-bool extractProfTotalWeight(const Instruction &I, uint64_t &TotalWeights);
+LLVM_ABI bool extractProfTotalWeight(const Instruction &I,
+                                     uint64_t &TotalWeights);
 
 /// Create a new `branch_weights` metadata node and add or overwrite
 /// a `prof` metadata reference to instruction `I`.
 /// \param I the Instruction to set branch weights on.
 /// \param Weights an array of weights to set on instruction I.
 /// \param IsExpected were these weights added from an llvm.expect* intrinsic.
-void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
-                      bool IsExpected);
+LLVM_ABI void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
+                               bool IsExpected, bool ElideAllZero = false);
+
+/// Push the weights right to fit in uint32_t.
+LLVM_ABI SmallVector<uint32_t> fitWeights(ArrayRef<uint64_t> Weights);
+
+/// Variant of `setBranchWeights` where the `Weights` will be fit first to
+/// uint32_t by shifting right.
+LLVM_ABI void setFittedBranchWeights(Instruction &I, ArrayRef<uint64_t> Weights,
+                                     bool IsExpected,
+                                     bool ElideAllZero = false);
+
+/// downscale the given weights preserving the ratio. If the maximum value is
+/// not already known and not provided via \param KnownMaxCount , it will be
+/// obtained from \param Weights.
+LLVM_ABI SmallVector<uint32_t>
+downscaleWeights(ArrayRef<uint64_t> Weights,
+                 std::optional<uint64_t> KnownMaxCount = std::nullopt);
+
+/// Calculate what to divide by to scale counts.
+///
+/// Given the maximum count, calculate a divisor that will scale all the
+/// weights to strictly less than std::numeric_limits<uint32_t>::max().
+inline uint64_t calculateCountScale(uint64_t MaxCount) {
+  return MaxCount < std::numeric_limits<uint32_t>::max()
+             ? 1
+             : MaxCount / std::numeric_limits<uint32_t>::max() + 1;
+}
+
+/// Scale an individual branch count.
+///
+/// Scale a 64-bit weight down to 32-bits using \c Scale.
+///
+inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
+  uint64_t Scaled = Count / Scale;
+  assert(Scaled <= std::numeric_limits<uint32_t>::max() && "overflow 32-bits");
+  return Scaled;
+}
+
+/// Specify that the branch weights for this terminator cannot be known at
+/// compile time. This should only be called by passes, and never as a default
+/// behavior in e.g. MDBuilder. The goal is to use this info to validate passes
+/// do not accidentally drop profile info, and this API is called in cases where
+/// the pass explicitly cannot provide that info. Defaulting it in would hide
+/// bugs where the pass forgets to transfer over or otherwise specify profile
+/// info. Use `PassName` to capture the pass name (i.e. DEBUG_TYPE) for
+/// debuggability.
+LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I,
+                                                StringRef PassName);
+
+/// Like setExplicitlyUnknownBranchWeights(...), but only sets unknown branch
+/// weights in the new instruction if the parent function of the original
+/// instruction has an entry count. This is to not confuse users by injecting
+/// profile data into non-profiled functions. If \p F is nullptr, we will fetch
+/// the function from \p I.
+LLVM_ABI void
+setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I, StringRef PassName,
+                                            const Function *F = nullptr);
+
+/// Analogous to setExplicitlyUnknownBranchWeights, but for functions and their
+/// entry counts.
+LLVM_ABI void setExplicitlyUnknownFunctionEntryCount(Function &F,
+                                                     StringRef PassName);
+
+LLVM_ABI bool isExplicitlyUnknownProfileMetadata(const MDNode &MD);
+LLVM_ABI bool hasExplicitlyUnknownBranchWeights(const Instruction &I);
 
 /// Scaling the profile data attached to 'I' using the ratio of S/T.
-void scaleProfData(Instruction &I, uint64_t S, uint64_t T);
+LLVM_ABI void scaleProfData(Instruction &I, uint64_t S, uint64_t T);
 
+/// Get the branch weights of a branch conditioned on b1 || b2, where b1 and b2
+/// are 2 booleans that are the conditions of 2 branches for which we have the
+/// branch weights B1 and B2, respectively. In both B1 and B2, the first
+/// position (index 0) is for the 'true' branch, and the second position (index
+/// 1) is for the 'false' branch.
+template <typename T1, typename T2,
+          typename = typename std::enable_if<
+              std::is_arithmetic_v<T1> && std::is_arithmetic_v<T2> &&
+              sizeof(T1) <= sizeof(uint64_t) && sizeof(T2) <= sizeof(uint64_t)>>
+inline SmallVector<uint64_t, 2>
+getDisjunctionWeights(const SmallVector<T1, 2> &B1,
+                      const SmallVector<T2, 2> &B2) {
+  // For the first conditional branch, the probability the "true" case is taken
+  // is p(b1) = B1[0] / (B1[0] + B1[1]). The "false" case's probability is
+  // p(not b1) = B1[1] / (B1[0] + B1[1]).
+  // Similarly for the second conditional branch and B2.
+  //
+  // The probability of the new branch NOT being taken is:
+  // not P = p((not b1) and (not b2)) =
+  //       = B1[1] / (B1[0]+B1[1]) * B2[1] / (B2[0]+B2[1]) =
+  //       = B1[1] * B2[1] / (B1[0] + B1[1]) * (B2[0] + B2[1])
+  // Then the probability of it being taken is: P = 1 - (not P).
+  // The denominator will be the same as above, and the numerator of P will be:
+  // (B1[0] + B1[1]) * (B2[0] + B2[1]) - B1[1]*B2[1]
+  // Which then reduces to what's shown below (out of the 4 terms coming out of
+  // the product of sums, the subtracted one cancels out).
+  assert(B1.size() == 2);
+  assert(B2.size() == 2);
+  uint64_t FalseWeight = B1[1] * B2[1];
+  uint64_t TrueWeight = B1[0] * (B2[0] + B2[1]) + B1[1] * B2[0];
+  return {TrueWeight, FalseWeight};
+}
 } // namespace llvm
 #endif

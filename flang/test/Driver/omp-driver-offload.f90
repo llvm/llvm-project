@@ -1,9 +1,9 @@
-! Test that flang OpenMP and OpenMP offload related 
-! commands forward or expand to the appropriate commands 
+! Test that flang OpenMP and OpenMP offload related
+! commands forward or expand to the appropriate commands
 ! for flang -fc1 as expected. Assumes a gfx90a, aarch64,
-! and sm_70 architecture, but doesn't require one to be 
-! installed or compiled for, just testing the appropriate 
-! generation of jobs are created with the correct 
+! and sm_70 architecture, but doesn't require one to be
+! installed or compiled for, just testing the appropriate
+! generation of jobs are created with the correct
 ! corresponding arguments.
 
 ! Test regular -fopenmp with no offload
@@ -47,7 +47,7 @@
 ! OFFLOAD-DEVICE-NEXT: "{{[^"]*}}flang" "-fc1" "-triple" "nvptx64-nvidia-cuda"
 ! OFFLOAD-DEVICE-NOT: "{{[^"]*}}flang" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 
-! Test regular -fopenmp with offload for basic fopenmp-is-target-device flag addition and correct fopenmp 
+! Test regular -fopenmp with offload for basic fopenmp-is-target-device flag addition and correct fopenmp
 ! RUN: %flang -### -fopenmp --offload-arch=gfx90a -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib %s 2>&1 | FileCheck --check-prefixes=CHECK-OPENMP-IS-TARGET-DEVICE %s
 ! CHECK-OPENMP-IS-TARGET-DEVICE: "{{[^"]*}}flang" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" {{.*}}.f90"
 
@@ -61,7 +61,7 @@
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp"
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp-host-ir-file-path" "{{.*}}.bc" "-fopenmp-is-target-device"
 ! OPENMP-OFFLOAD-ARGS-SAME:  {{.*}}.f90"
-! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}clang-offload-packager{{.*}}" {{.*}} "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
+! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}llvm-offload-binary{{.*}}" {{.*}} "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
 ! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp"
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fembed-offload-object={{.*}}.out" {{.*}}.bc"
@@ -169,7 +169,7 @@
 ! RUN: | FileCheck %s --check-prefixes=CHECK-OPENMP-VERSION
 ! CHECK-OPENMP-VERSION: "{{[^"]*}}flang" "-fc1" {{.*}} "-fopenmp" "-fopenmp-version=45" {{.*}}.f90"
 
-! Test diagnostic error when host IR file is non-existent 
+! Test diagnostic error when host IR file is non-existent
 ! RUN: not %flang_fc1 %s -o %t 2>&1 -fopenmp -fopenmp-is-target-device \
 ! RUN: -fopenmp-host-ir-file-path non-existant-file.bc \
 ! RUN: | FileCheck %s --check-prefix=HOST-IR-MISSING
@@ -180,6 +180,11 @@
 ! RUN:      --rocm-path=%S/Inputs/rocm %s 2>&1 \
 ! RUN:   | FileCheck --check-prefix=ROCM-PATH %s
 ! ROCM-PATH: Found HIP installation: {{.*Inputs.*rocm}}, version 3.6.20214-a2917cd
+
+! RUN: %flang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx900 \
+! RUN:      --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode %s  2>&1 | \
+! RUN: FileCheck %s --check-prefix=ROCM-DEVICE-LIB
+! ROCM-DEVICE-LIB: "-fc1" {{.*}}ocml.bc"{{.*}}oclc_daz_opt_off.bc"{{.*}}oclc_unsafe_math_off.bc"{{.*}}oclc_finite_only_off.bc"{{.*}}oclc_correctly_rounded_sqrt_on.bc"{{.*}}oclc_wavefrontsize64_on.bc"{{.*}}oclc_isa_version_900.bc"
 
 ! Test -fopenmp-force-usm option without offload
 ! RUN: %flang -S -### %s -o %t 2>&1 \
@@ -220,8 +225,8 @@
 ! RUN: | FileCheck %s --check-prefix=OFFLOAD-TARGETS
 
 ! OFFLOAD-TARGETS: "{{[^"]*}}flang" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
-! OFFLOAD-TARGETS-SAME: "-fopenmp-targets=amdgcn-amd-amdhsa"
+! OFFLOAD-TARGETS-SAME: "--offload-targets=amdgcn-amd-amdhsa"
 ! OFFLOAD-TARGETS-NEXT: "{{[^"]*}}flang" "-fc1" "-triple" "amdgcn-amd-amdhsa"
-! OFFLOAD-TARGETS-NOT: -fopenmp-targets
+! OFFLOAD-TARGETS-NOT: --offload-targets
 ! OFFLOAD-TARGETS: "{{[^"]*}}flang" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
-! OFFLOAD-TARGETS-SAME: "-fopenmp-targets=amdgcn-amd-amdhsa"
+! OFFLOAD-TARGETS-SAME: "--offload-targets=amdgcn-amd-amdhsa"

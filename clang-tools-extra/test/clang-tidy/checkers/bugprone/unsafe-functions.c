@@ -5,14 +5,14 @@
 // parsing and preprocessor state will not have that case.
 // UNSUPPORTED: target={{.*-(ps4|ps5)}}
 //
-// RUN: %check_clang_tidy -check-suffix=WITH-ANNEX-K            %s bugprone-unsafe-functions %t -- -- -D__STDC_LIB_EXT1__=1 -D__STDC_WANT_LIB_EXT1__=1
-// RUN: %check_clang_tidy -check-suffix=WITHOUT-ANNEX-K         %s bugprone-unsafe-functions %t -- -- -U__STDC_LIB_EXT1__   -U__STDC_WANT_LIB_EXT1__
-// RUN: %check_clang_tidy -check-suffix=WITHOUT-ANNEX-K         %s bugprone-unsafe-functions %t -- -- -D__STDC_LIB_EXT1__=1 -U__STDC_WANT_LIB_EXT1__
-// RUN: %check_clang_tidy -check-suffix=WITHOUT-ANNEX-K         %s bugprone-unsafe-functions %t -- -- -U__STDC_LIB_EXT1__   -D__STDC_WANT_LIB_EXT1__=1
-// RUN: %check_clang_tidy -check-suffix=WITH-ANNEX-K-CERT-ONLY  %s bugprone-unsafe-functions %t -- \
+// RUN: %check_clang_tidy -std=c11-or-later -check-suffix=WITH-ANNEX-K %s bugprone-unsafe-functions %t -- -- -D__STDC_LIB_EXT1__=1 -D__STDC_WANT_LIB_EXT1__=1
+// RUN: %check_clang_tidy -check-suffix=WITHOUT-ANNEX-K %s bugprone-unsafe-functions %t -- -- -U__STDC_LIB_EXT1__   -U__STDC_WANT_LIB_EXT1__
+// RUN: %check_clang_tidy -check-suffix=WITHOUT-ANNEX-K %s bugprone-unsafe-functions %t -- -- -D__STDC_LIB_EXT1__=1 -U__STDC_WANT_LIB_EXT1__
+// RUN: %check_clang_tidy -check-suffix=WITHOUT-ANNEX-K %s bugprone-unsafe-functions %t -- -- -U__STDC_LIB_EXT1__   -D__STDC_WANT_LIB_EXT1__=1
+// RUN: %check_clang_tidy -std=c11-or-later -check-suffix=WITH-ANNEX-K-CERT-ONLY  %s bugprone-unsafe-functions %t -- \
 // RUN:   -config="{CheckOptions: {bugprone-unsafe-functions.ReportMoreUnsafeFunctions: false}}" \
 // RUN:                                                                                            -- -D__STDC_LIB_EXT1__=1 -D__STDC_WANT_LIB_EXT1__=1
-// RUN: %check_clang_tidy -check-suffix=WITH-NONE-ENABLED       %s bugprone-unsafe-functions %t --\
+// RUN: %check_clang_tidy -check-suffix=WITH-NONE-ENABLED %s bugprone-unsafe-functions %t --\
 // RUN:   -config="{CheckOptions: {bugprone-unsafe-functions.ReportDefaultFunctions: false}}" \
 // RUN:                                                                                            -- -D__STDC_LIB_EXT1__=1 -D__STDC_WANT_LIB_EXT1__=1
 

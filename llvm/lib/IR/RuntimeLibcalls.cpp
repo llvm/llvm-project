@@ -7,250 +7,329 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/RuntimeLibcalls.h"
+#include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/StringTable.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/SystemLibraries.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/xxhash.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
+
+#define DEBUG_TYPE "runtime-libcalls-info"
 
 using namespace llvm;
 using namespace RTLIB;
 
+#define GET_RUNTIME_LIBCALLS_INFO
+#define GET_INIT_RUNTIME_LIBCALL_NAMES
+#define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
+#define DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
+#include "llvm/IR/RuntimeLibcalls.inc"
+
+RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
+                                         ExceptionHandling ExceptionModel,
+                                         FloatABI::ABIType FloatABI,
+                                         EABI EABIVersion, StringRef ABIName,
+                                         VectorLibrary VecLib) {
+  // FIXME: The ExceptionModel parameter is to handle the field in
+  // TargetOptions. This interface fails to distinguish the forced disable
+  // case for targets which support exceptions by default. This should
+  // probably be a module flag and removed from TargetOptions.
+  if (ExceptionModel == ExceptionHandling::None)
+    ExceptionModel = TT.getDefaultExceptionHandling();
+
+  initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
+
+  // TODO: Tablegen should generate these sets
+  switch (VecLib) {
+  case VectorLibrary::SLEEFGNUABI:
+    for (RTLIB::LibcallImpl Impl :
+         {RTLIB::impl__ZGVnN2vl8_modf, RTLIB::impl__ZGVnN4vl4_modff,
+          RTLIB::impl__ZGVsNxvl8_modf, RTLIB::impl__ZGVsNxvl4_modff,
+          RTLIB::impl__ZGVnN2vl8l8_sincos, RTLIB::impl__ZGVnN4vl4l4_sincosf,
+          RTLIB::impl__ZGVsNxvl8l8_sincos, RTLIB::impl__ZGVsNxvl4l4_sincosf,
+          RTLIB::impl__ZGVnN4vl4l4_sincospif, RTLIB::impl__ZGVnN2vl8l8_sincospi,
+          RTLIB::impl__ZGVsNxvl4l4_sincospif,
+          RTLIB::impl__ZGVsNxvl8l8_sincospi})
+      setAvailable(Impl);
+    break;
+  case VectorLibrary::ArmPL:
+    for (RTLIB::LibcallImpl Impl :
+         {RTLIB::impl_armpl_vmodfq_f64, RTLIB::impl_armpl_vmodfq_f32,
+          RTLIB::impl_armpl_svmodf_f64_x, RTLIB::impl_armpl_svmodf_f32_x,
+          RTLIB::impl_armpl_vsincosq_f64, RTLIB::impl_armpl_vsincosq_f32,
+          RTLIB::impl_armpl_svsincos_f64_x, RTLIB::impl_armpl_svsincos_f32_x,
+          RTLIB::impl_armpl_vsincospiq_f32, RTLIB::impl_armpl_vsincospiq_f64,
+          RTLIB::impl_armpl_svsincospi_f32_x,
+          RTLIB::impl_armpl_svsincospi_f64_x})
+      setAvailable(Impl);
+
+    for (RTLIB::LibcallImpl Impl :
+         {RTLIB::impl_armpl_vsincosq_f64, RTLIB::impl_armpl_vsincosq_f32})
+      setLibcallImplCallingConv(Impl, CallingConv::AArch64_VectorCall);
+
+    break;
+  default:
+    break;
+  }
+}
+
+RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M)
+    : RuntimeLibcallsInfo(M.getTargetTriple()) {
+  // TODO: Consider module flags
+}
+
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
-void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
-  std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames),
-            nullptr);
+void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
+                                       ExceptionHandling ExceptionModel,
+                                       FloatABI::ABIType FloatABI,
+                                       EABI EABIVersion, StringRef ABIName) {
+  setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, EABIVersion,
+                              ABIName);
+}
 
-#define HANDLE_LIBCALL(code, name) setLibcallName(RTLIB::code, name);
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-
-  // Initialize calling conventions to their default.
-  for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
-    setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
-
-  // Use the f128 variants of math functions on x86_64
-  if (TT.getArch() == Triple::ArchType::x86_64 && TT.isGNUEnvironment()) {
-    setLibcallName(RTLIB::REM_F128, "fmodf128");
-    setLibcallName(RTLIB::FMA_F128, "fmaf128");
-    setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
-    setLibcallName(RTLIB::CBRT_F128, "cbrtf128");
-    setLibcallName(RTLIB::LOG_F128, "logf128");
-    setLibcallName(RTLIB::LOG_FINITE_F128, "__logf128_finite");
-    setLibcallName(RTLIB::LOG2_F128, "log2f128");
-    setLibcallName(RTLIB::LOG2_FINITE_F128, "__log2f128_finite");
-    setLibcallName(RTLIB::LOG10_F128, "log10f128");
-    setLibcallName(RTLIB::LOG10_FINITE_F128, "__log10f128_finite");
-    setLibcallName(RTLIB::EXP_F128, "expf128");
-    setLibcallName(RTLIB::EXP_FINITE_F128, "__expf128_finite");
-    setLibcallName(RTLIB::EXP2_F128, "exp2f128");
-    setLibcallName(RTLIB::EXP2_FINITE_F128, "__exp2f128_finite");
-    setLibcallName(RTLIB::EXP10_F128, "exp10f128");
-    setLibcallName(RTLIB::SIN_F128, "sinf128");
-    setLibcallName(RTLIB::COS_F128, "cosf128");
-    setLibcallName(RTLIB::TAN_F128, "tanf128");
-    setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
-    setLibcallName(RTLIB::ASIN_F128, "asinf128");
-    setLibcallName(RTLIB::ACOS_F128, "acosf128");
-    setLibcallName(RTLIB::ATAN_F128, "atanf128");
-    setLibcallName(RTLIB::ATAN2_F128, "atan2f128");
-    setLibcallName(RTLIB::SINH_F128, "sinhf128");
-    setLibcallName(RTLIB::COSH_F128, "coshf128");
-    setLibcallName(RTLIB::TANH_F128, "tanhf128");
-    setLibcallName(RTLIB::POW_F128, "powf128");
-    setLibcallName(RTLIB::POW_FINITE_F128, "__powf128_finite");
-    setLibcallName(RTLIB::CEIL_F128, "ceilf128");
-    setLibcallName(RTLIB::TRUNC_F128, "truncf128");
-    setLibcallName(RTLIB::RINT_F128, "rintf128");
-    setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
-    setLibcallName(RTLIB::ROUND_F128, "roundf128");
-    setLibcallName(RTLIB::ROUNDEVEN_F128, "roundevenf128");
-    setLibcallName(RTLIB::FLOOR_F128, "floorf128");
-    setLibcallName(RTLIB::COPYSIGN_F128, "copysignf128");
-    setLibcallName(RTLIB::FMIN_F128, "fminf128");
-    setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
-    setLibcallName(RTLIB::LROUND_F128, "lroundf128");
-    setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
-    setLibcallName(RTLIB::LRINT_F128, "lrintf128");
-    setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
-    setLibcallName(RTLIB::LDEXP_F128, "ldexpf128");
-    setLibcallName(RTLIB::FREXP_F128, "frexpf128");
+LLVM_ATTRIBUTE_ALWAYS_INLINE
+iota_range<RTLIB::LibcallImpl>
+RuntimeLibcallsInfo::libcallImplNameHit(uint16_t NameOffsetEntry,
+                                        uint16_t StrOffset) {
+  int NumAliases = 1;
+  for (uint16_t Entry : ArrayRef(RuntimeLibcallNameOffsetTable)
+                            .drop_front(NameOffsetEntry + 1)) {
+    if (Entry != StrOffset)
+      break;
+    ++NumAliases;
   }
 
-  // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".
-  if (TT.isPPC()) {
-    setLibcallName(RTLIB::ADD_F128, "__addkf3");
-    setLibcallName(RTLIB::SUB_F128, "__subkf3");
-    setLibcallName(RTLIB::MUL_F128, "__mulkf3");
-    setLibcallName(RTLIB::DIV_F128, "__divkf3");
-    setLibcallName(RTLIB::POWI_F128, "__powikf2");
-    setLibcallName(RTLIB::FPEXT_F32_F128, "__extendsfkf2");
-    setLibcallName(RTLIB::FPEXT_F64_F128, "__extenddfkf2");
-    setLibcallName(RTLIB::FPROUND_F128_F16, "__trunckfhf2");
-    setLibcallName(RTLIB::FPROUND_F128_F32, "__trunckfsf2");
-    setLibcallName(RTLIB::FPROUND_F128_F64, "__trunckfdf2");
-    setLibcallName(RTLIB::FPTOSINT_F128_I32, "__fixkfsi");
-    setLibcallName(RTLIB::FPTOSINT_F128_I64, "__fixkfdi");
-    setLibcallName(RTLIB::FPTOSINT_F128_I128, "__fixkfti");
-    setLibcallName(RTLIB::FPTOUINT_F128_I32, "__fixunskfsi");
-    setLibcallName(RTLIB::FPTOUINT_F128_I64, "__fixunskfdi");
-    setLibcallName(RTLIB::FPTOUINT_F128_I128, "__fixunskfti");
-    setLibcallName(RTLIB::SINTTOFP_I32_F128, "__floatsikf");
-    setLibcallName(RTLIB::SINTTOFP_I64_F128, "__floatdikf");
-    setLibcallName(RTLIB::SINTTOFP_I128_F128, "__floattikf");
-    setLibcallName(RTLIB::UINTTOFP_I32_F128, "__floatunsikf");
-    setLibcallName(RTLIB::UINTTOFP_I64_F128, "__floatundikf");
-    setLibcallName(RTLIB::UINTTOFP_I128_F128, "__floatuntikf");
-    setLibcallName(RTLIB::OEQ_F128, "__eqkf2");
-    setLibcallName(RTLIB::UNE_F128, "__nekf2");
-    setLibcallName(RTLIB::OGE_F128, "__gekf2");
-    setLibcallName(RTLIB::OLT_F128, "__ltkf2");
-    setLibcallName(RTLIB::OLE_F128, "__lekf2");
-    setLibcallName(RTLIB::OGT_F128, "__gtkf2");
-    setLibcallName(RTLIB::UO_F128, "__unordkf2");
+  RTLIB::LibcallImpl ImplStart = static_cast<RTLIB::LibcallImpl>(
+      &RuntimeLibcallNameOffsetTable[NameOffsetEntry] -
+      &RuntimeLibcallNameOffsetTable[0]);
+  return enum_seq(ImplStart,
+                  static_cast<RTLIB::LibcallImpl>(ImplStart + NumAliases));
+}
+
+bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
+  const ARM::ARMABI TargetABI = ARM::computeTargetABI(TT, ABIName);
+  return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
+}
+
+bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
+  switch (TT.getOS()) {
+  case Triple::MacOSX:
+    return !TT.isMacOSXVersionLT(10, 9);
+  case Triple::IOS:
+    return !TT.isOSVersionLT(7, 0);
+  case Triple::DriverKit:
+  case Triple::TvOS:
+  case Triple::WatchOS:
+  case Triple::XROS:
+  case Triple::BridgeOS:
+    return true;
+  default:
+    return false;
   }
+}
 
-  // A few names are different on particular architectures or environments.
-  if (TT.isOSDarwin()) {
-    // For f16/f32 conversions, Darwin uses the standard naming scheme,
-    // instead of the gnueabi-style __gnu_*_ieee.
-    // FIXME: What about other targets?
-    setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
-    setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
+std::pair<FunctionType *, AttributeList>
+RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
+                                   const DataLayout &DL,
+                                   RTLIB::LibcallImpl LibcallImpl) const {
+  static constexpr Attribute::AttrKind CommonFnAttrs[] = {
+      Attribute::NoCallback, Attribute::NoFree, Attribute::NoSync,
+      Attribute::NoUnwind, Attribute::WillReturn};
+  static constexpr Attribute::AttrKind CommonPtrArgAttrs[] = {
+      Attribute::NoAlias, Attribute::WriteOnly, Attribute::NonNull};
 
-    // Some darwins have an optimized __bzero/bzero function.
-    switch (TT.getArch()) {
-    case Triple::x86:
-    case Triple::x86_64:
-      if (TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6))
-        setLibcallName(RTLIB::BZERO, "__bzero");
-      break;
-    case Triple::aarch64:
-    case Triple::aarch64_32:
-      setLibcallName(RTLIB::BZERO, "bzero");
-      break;
-    default:
-      break;
+  switch (LibcallImpl) {
+  case RTLIB::impl___sincos_stret:
+  case RTLIB::impl___sincosf_stret: {
+    if (!darwinHasSinCosStret(TT)) // Non-darwin currently unexpected
+      return {};
+
+    Type *ScalarTy = LibcallImpl == RTLIB::impl___sincosf_stret
+                         ? Type::getFloatTy(Ctx)
+                         : Type::getDoubleTy(Ctx);
+
+    AttrBuilder FuncAttrBuilder(Ctx);
+    for (Attribute::AttrKind Attr : CommonFnAttrs)
+      FuncAttrBuilder.addAttribute(Attr);
+
+    const bool UseSret =
+        TT.isX86_32() || ((TT.isARM() || TT.isThumb()) &&
+                          ARM::computeTargetABI(TT) == ARM::ARM_ABI_APCS);
+
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argumentOrErrnoMemOnly(
+        UseSret ? ModRefInfo::Mod : ModRefInfo::NoModRef, ModRefInfo::Mod));
+
+    AttributeList Attrs;
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+
+    if (UseSret) {
+      AttrBuilder AttrBuilder(Ctx);
+      StructType *StructTy = StructType::get(ScalarTy, ScalarTy);
+      AttrBuilder.addStructRetAttr(StructTy);
+      AttrBuilder.addAlignmentAttr(DL.getABITypeAlign(StructTy));
+      FunctionType *FuncTy = FunctionType::get(
+          Type::getVoidTy(Ctx), {DL.getAllocaPtrType(Ctx), ScalarTy}, false);
+
+      return {FuncTy, Attrs.addParamAttributes(Ctx, 0, AttrBuilder)};
     }
 
-    if (darwinHasSinCos(TT)) {
-      setLibcallName(RTLIB::SINCOS_STRET_F32, "__sincosf_stret");
-      setLibcallName(RTLIB::SINCOS_STRET_F64, "__sincos_stret");
-      if (TT.isWatchABI()) {
-        setLibcallCallingConv(RTLIB::SINCOS_STRET_F32,
-                              CallingConv::ARM_AAPCS_VFP);
-        setLibcallCallingConv(RTLIB::SINCOS_STRET_F64,
-                              CallingConv::ARM_AAPCS_VFP);
-      }
+    Type *RetTy =
+        LibcallImpl == RTLIB::impl___sincosf_stret && TT.isX86_64()
+            ? static_cast<Type *>(FixedVectorType::get(ScalarTy, 2))
+            : static_cast<Type *>(StructType::get(ScalarTy, ScalarTy));
+
+    return {FunctionType::get(RetTy, {ScalarTy}, false), Attrs};
+  }
+  case RTLIB::impl_sqrtf:
+  case RTLIB::impl_sqrt: {
+    AttrBuilder FuncAttrBuilder(Ctx);
+
+    for (Attribute::AttrKind Attr : CommonFnAttrs)
+      FuncAttrBuilder.addAttribute(Attr);
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::errnoMemOnly(ModRefInfo::Mod));
+
+    AttributeList Attrs;
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+
+    Type *ScalarTy = LibcallImpl == RTLIB::impl_sqrtf ? Type::getFloatTy(Ctx)
+                                                      : Type::getDoubleTy(Ctx);
+    FunctionType *FuncTy = FunctionType::get(ScalarTy, {ScalarTy}, false);
+
+    Attrs = Attrs.addRetAttribute(
+        Ctx, Attribute::getWithNoFPClass(Ctx, fcNegInf | fcNegSubnormal |
+                                                  fcNegNormal));
+    return {FuncTy, Attrs};
+  }
+  case RTLIB::impl__ZGVnN2vl8_modf:
+  case RTLIB::impl__ZGVnN4vl4_modff:
+  case RTLIB::impl__ZGVsNxvl8_modf:
+  case RTLIB::impl__ZGVsNxvl4_modff:
+  case RTLIB::impl_armpl_vmodfq_f64:
+  case RTLIB::impl_armpl_vmodfq_f32:
+  case RTLIB::impl_armpl_svmodf_f64_x:
+  case RTLIB::impl_armpl_svmodf_f32_x: {
+    AttrBuilder FuncAttrBuilder(Ctx);
+
+    bool IsF32 = LibcallImpl == RTLIB::impl__ZGVnN4vl4_modff ||
+                 LibcallImpl == RTLIB::impl__ZGVsNxvl4_modff ||
+                 LibcallImpl == RTLIB::impl_armpl_vmodfq_f32 ||
+                 LibcallImpl == RTLIB::impl_armpl_svmodf_f32_x;
+
+    bool IsScalable = LibcallImpl == RTLIB::impl__ZGVsNxvl8_modf ||
+                      LibcallImpl == RTLIB::impl__ZGVsNxvl4_modff ||
+                      LibcallImpl == RTLIB::impl_armpl_svmodf_f64_x ||
+                      LibcallImpl == RTLIB::impl_armpl_svmodf_f32_x;
+
+    Type *ScalarTy = IsF32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
+    unsigned EC = IsF32 ? 4 : 2;
+    VectorType *VecTy = VectorType::get(ScalarTy, EC, IsScalable);
+
+    for (Attribute::AttrKind Attr : CommonFnAttrs)
+      FuncAttrBuilder.addAttribute(Attr);
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argMemOnly(ModRefInfo::Mod));
+
+    AttributeList Attrs;
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+
+    {
+      AttrBuilder ArgAttrBuilder(Ctx);
+      for (Attribute::AttrKind AK : CommonPtrArgAttrs)
+        ArgAttrBuilder.addAttribute(AK);
+      ArgAttrBuilder.addAlignmentAttr(DL.getABITypeAlign(VecTy));
+      Attrs = Attrs.addParamAttributes(Ctx, 1, ArgAttrBuilder);
     }
 
-    switch (TT.getOS()) {
-    case Triple::MacOSX:
-      if (TT.isMacOSXVersionLT(10, 9)) {
-        setLibcallName(RTLIB::EXP10_F32, nullptr);
-        setLibcallName(RTLIB::EXP10_F64, nullptr);
-      } else {
-        setLibcallName(RTLIB::EXP10_F32, "__exp10f");
-        setLibcallName(RTLIB::EXP10_F64, "__exp10");
-      }
-      break;
-    case Triple::IOS:
-      if (TT.isOSVersionLT(7, 0)) {
-        setLibcallName(RTLIB::EXP10_F32, nullptr);
-        setLibcallName(RTLIB::EXP10_F64, nullptr);
-        break;
-      }
-      [[fallthrough]];
-    case Triple::DriverKit:
-    case Triple::TvOS:
-    case Triple::WatchOS:
-    case Triple::XROS:
-      setLibcallName(RTLIB::EXP10_F32, "__exp10f");
-      setLibcallName(RTLIB::EXP10_F64, "__exp10");
-      break;
-    default:
-      break;
+    PointerType *PtrTy = PointerType::get(Ctx, 0);
+    SmallVector<Type *, 4> ArgTys = {VecTy, PtrTy};
+    if (hasVectorMaskArgument(LibcallImpl))
+      ArgTys.push_back(VectorType::get(Type::getInt1Ty(Ctx), EC, IsScalable));
+
+    return {FunctionType::get(VecTy, ArgTys, false), Attrs};
+  }
+  case RTLIB::impl__ZGVnN2vl8l8_sincos:
+  case RTLIB::impl__ZGVnN4vl4l4_sincosf:
+  case RTLIB::impl__ZGVsNxvl8l8_sincos:
+  case RTLIB::impl__ZGVsNxvl4l4_sincosf:
+  case RTLIB::impl_armpl_vsincosq_f64:
+  case RTLIB::impl_armpl_vsincosq_f32:
+  case RTLIB::impl_armpl_svsincos_f64_x:
+  case RTLIB::impl_armpl_svsincos_f32_x:
+  case RTLIB::impl__ZGVnN4vl4l4_sincospif:
+  case RTLIB::impl__ZGVnN2vl8l8_sincospi:
+  case RTLIB::impl__ZGVsNxvl4l4_sincospif:
+  case RTLIB::impl__ZGVsNxvl8l8_sincospi:
+  case RTLIB::impl_armpl_vsincospiq_f32:
+  case RTLIB::impl_armpl_vsincospiq_f64:
+  case RTLIB::impl_armpl_svsincospi_f32_x:
+  case RTLIB::impl_armpl_svsincospi_f64_x: {
+    AttrBuilder FuncAttrBuilder(Ctx);
+
+    bool IsF32 = LibcallImpl == RTLIB::impl__ZGVnN4vl4l4_sincospif ||
+                 LibcallImpl == RTLIB::impl__ZGVsNxvl4l4_sincospif ||
+                 LibcallImpl == RTLIB::impl_armpl_vsincospiq_f32 ||
+                 LibcallImpl == RTLIB::impl_armpl_svsincospi_f32_x ||
+                 LibcallImpl == RTLIB::impl__ZGVnN4vl4l4_sincosf ||
+                 LibcallImpl == RTLIB::impl__ZGVsNxvl4l4_sincosf ||
+                 LibcallImpl == RTLIB::impl_armpl_vsincosq_f32 ||
+                 LibcallImpl == RTLIB::impl_armpl_svsincos_f32_x;
+
+    Type *ScalarTy = IsF32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
+    unsigned EC = IsF32 ? 4 : 2;
+
+    bool IsScalable = LibcallImpl == RTLIB::impl__ZGVsNxvl8l8_sincos ||
+                      LibcallImpl == RTLIB::impl__ZGVsNxvl4l4_sincosf ||
+                      LibcallImpl == RTLIB::impl_armpl_svsincos_f32_x ||
+                      LibcallImpl == RTLIB::impl_armpl_svsincos_f64_x ||
+                      LibcallImpl == RTLIB::impl__ZGVsNxvl4l4_sincospif ||
+                      LibcallImpl == RTLIB::impl__ZGVsNxvl8l8_sincospi ||
+                      LibcallImpl == RTLIB::impl_armpl_svsincospi_f32_x ||
+                      LibcallImpl == RTLIB::impl_armpl_svsincospi_f64_x;
+    VectorType *VecTy = VectorType::get(ScalarTy, EC, IsScalable);
+
+    for (Attribute::AttrKind Attr : CommonFnAttrs)
+      FuncAttrBuilder.addAttribute(Attr);
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argMemOnly(ModRefInfo::Mod));
+
+    AttributeList Attrs;
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+
+    {
+      AttrBuilder ArgAttrBuilder(Ctx);
+      for (Attribute::AttrKind AK : CommonPtrArgAttrs)
+        ArgAttrBuilder.addAttribute(AK);
+      ArgAttrBuilder.addAlignmentAttr(DL.getABITypeAlign(VecTy));
+      Attrs = Attrs.addParamAttributes(Ctx, 1, ArgAttrBuilder);
+      Attrs = Attrs.addParamAttributes(Ctx, 2, ArgAttrBuilder);
     }
-  } else if (TT.getOS() == Triple::BridgeOS) {
-    // TODO: BridgeOS should be included in isOSDarwin.
-    setLibcallName(RTLIB::EXP10_F32, "__exp10f");
-    setLibcallName(RTLIB::EXP10_F64, "__exp10");
+
+    PointerType *PtrTy = PointerType::get(Ctx, 0);
+    SmallVector<Type *, 4> ArgTys = {VecTy, PtrTy, PtrTy};
+    if (hasVectorMaskArgument(LibcallImpl))
+      ArgTys.push_back(VectorType::get(Type::getInt1Ty(Ctx), EC, IsScalable));
+
+    return {FunctionType::get(Type::getVoidTy(Ctx), ArgTys, false), Attrs};
+  }
+  default:
+    return {};
   }
 
-  if (TT.isGNUEnvironment() || TT.isOSFuchsia() ||
-      (TT.isAndroid() && !TT.isAndroidVersionLT(9))) {
-    setLibcallName(RTLIB::SINCOS_F32, "sincosf");
-    setLibcallName(RTLIB::SINCOS_F64, "sincos");
-    setLibcallName(RTLIB::SINCOS_F80, "sincosl");
-    setLibcallName(RTLIB::SINCOS_F128, "sincosl");
-    setLibcallName(RTLIB::SINCOS_PPCF128, "sincosl");
-  }
+  return {};
+}
 
-  if (TT.isPS()) {
-    setLibcallName(RTLIB::SINCOS_F32, "sincosf");
-    setLibcallName(RTLIB::SINCOS_F64, "sincos");
-  }
-
-  if (TT.isOSOpenBSD()) {
-    setLibcallName(RTLIB::STACKPROTECTOR_CHECK_FAIL, nullptr);
-  }
-
-  if (TT.isOSWindows() && !TT.isOSCygMing()) {
-    setLibcallName(RTLIB::LDEXP_F32, nullptr);
-    setLibcallName(RTLIB::LDEXP_F80, nullptr);
-    setLibcallName(RTLIB::LDEXP_F128, nullptr);
-    setLibcallName(RTLIB::LDEXP_PPCF128, nullptr);
-
-    setLibcallName(RTLIB::FREXP_F32, nullptr);
-    setLibcallName(RTLIB::FREXP_F80, nullptr);
-    setLibcallName(RTLIB::FREXP_F128, nullptr);
-    setLibcallName(RTLIB::FREXP_PPCF128, nullptr);
-  }
-
-  // Disable most libcalls on AMDGPU.
-  if (TT.isAMDGPU()) {
-    for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
-      if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
-        setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
-    }
-  }
-
-  // Disable most libcalls on NVPTX.
-  if (TT.isNVPTX()) {
-    for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I)
-      if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
-        setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
-  }
-
-  if (TT.isOSMSVCRT()) {
-    // MSVCRT doesn't have powi; fall back to pow
-    setLibcallName(RTLIB::POWI_F32, nullptr);
-    setLibcallName(RTLIB::POWI_F64, nullptr);
-  }
-
-  if (TT.getArch() == Triple::ArchType::avr) {
-    // Division rtlib functions (not supported), use divmod functions instead
-    setLibcallName(RTLIB::SDIV_I8, nullptr);
-    setLibcallName(RTLIB::SDIV_I16, nullptr);
-    setLibcallName(RTLIB::SDIV_I32, nullptr);
-    setLibcallName(RTLIB::UDIV_I8, nullptr);
-    setLibcallName(RTLIB::UDIV_I16, nullptr);
-    setLibcallName(RTLIB::UDIV_I32, nullptr);
-
-    // Modulus rtlib functions (not supported), use divmod functions instead
-    setLibcallName(RTLIB::SREM_I8, nullptr);
-    setLibcallName(RTLIB::SREM_I16, nullptr);
-    setLibcallName(RTLIB::SREM_I32, nullptr);
-    setLibcallName(RTLIB::UREM_I8, nullptr);
-    setLibcallName(RTLIB::UREM_I16, nullptr);
-    setLibcallName(RTLIB::UREM_I32, nullptr);
-  }
-
-  if (!TT.isWasm()) {
-    // These libcalls are only available in compiler-rt, not libgcc.
-    if (TT.isArch32Bit()) {
-      setLibcallName(RTLIB::SHL_I128, nullptr);
-      setLibcallName(RTLIB::SRL_I128, nullptr);
-      setLibcallName(RTLIB::SRA_I128, nullptr);
-      setLibcallName(RTLIB::MUL_I128, nullptr);
-      setLibcallName(RTLIB::MULO_I64, nullptr);
-    }
-    setLibcallName(RTLIB::MULO_I128, nullptr);
+bool RuntimeLibcallsInfo::hasVectorMaskArgument(RTLIB::LibcallImpl Impl) {
+  /// FIXME: This should be generated by tablegen and support the argument at an
+  /// arbitrary position
+  switch (Impl) {
+  case RTLIB::impl_armpl_svmodf_f64_x:
+  case RTLIB::impl_armpl_svmodf_f32_x:
+  case RTLIB::impl_armpl_svsincos_f32_x:
+  case RTLIB::impl_armpl_svsincos_f64_x:
+  case RTLIB::impl_armpl_svsincospi_f32_x:
+  case RTLIB::impl_armpl_svsincospi_f64_x:
+    return true;
+  default:
+    return false;
   }
 }

@@ -227,30 +227,6 @@ func.func @nvvm_mma_m16n8k16_f16_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
   llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
 }
 
-// CHECK-LABEL: @nvvm_mma_m16n8k16_f32_f16
-func.func @nvvm_mma_m16n8k16_f32_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
-                                %a2 : vector<2xf16>, %a3 : vector<2xf16>,
-                                %b0 : vector<2xf16>, %b1 : vector<2xf16>,
-                                %c0 : vector<2xf16>, %c1 : vector<2xf16>) {
-  // CHECK: nvvm.mma.sync A[{{.*}}, {{.*}}, {{.*}}, {{.*}}] B[{{.*}}, {{.*}}] C[{{.*}}, {{.*}}] {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)>
-  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1]
-    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
-     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>,vector<2xf16>,vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)>
-  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32)>
-}
-
-// CHECK-LABEL: @nvvm_mma_m16n8k16_f16_f32
-func.func @nvvm_mma_m16n8k16_f16_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
-                                %a2 : vector<2xf16>, %a3 : vector<2xf16>,
-                                %b0 : vector<2xf16>, %b1 : vector<2xf16>,
-                                %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) {
-  // CHECK: nvvm.mma.sync A[{{.*}}, {{.*}}, {{.*}}, {{.*}}] B[{{.*}}, {{.*}}] C[{{.*}}, {{.*}}, {{.*}}, {{.*}}] {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
-  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1, %c2, %c3]
-    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
-     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
-  llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
-}
-
 // CHECK-LABEL: @nvvm_mma_m16n8k16_f32_f32
 func.func @nvvm_mma_m16n8k16_f32_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                                 %a2 : vector<2xf16>, %a3 : vector<2xf16>,
@@ -385,17 +361,6 @@ llvm.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
   llvm.return
 }
 
-// CHECK-LABEL: llvm.func @ld_matrix
-llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
-  // CHECK: nvvm.ldmatrix %{{.*}} {layout = #nvvm.mma_layout<row>, num = 1 : i32} : (!llvm.ptr<3>) -> i32
-  %l1 = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> i32
-  // CHECK: nvvm.ldmatrix %{{.*}} {layout = #nvvm.mma_layout<row>, num = 2 : i32} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
-  %l2 = nvvm.ldmatrix %arg0 {num = 2 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
-  // CHECK: nvvm.ldmatrix %{{.*}} {layout = #nvvm.mma_layout<row>, num = 4 : i32} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
-  %l4 = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
-  llvm.return
-}
-
 // CHECK-LABEL: llvm.func @redux_sync
 llvm.func @redux_sync(%value : i32, %offset : i32) -> i32 {
   // CHECK: nvvm.redux.sync  add %{{.*}}
@@ -454,8 +419,8 @@ llvm.func private @mbarrier_init_generic(%barrier: !llvm.ptr) {
 
 llvm.func private @mbarrier_init_shared(%barrier: !llvm.ptr<3>) {
   %count = nvvm.read.ptx.sreg.ntid.x : i32
-  // CHECK:   nvvm.mbarrier.init.shared %{{.*}}, %{{.*}} : !llvm.ptr<3>, i32
-  nvvm.mbarrier.init.shared %barrier, %count : !llvm.ptr<3>, i32
+  // CHECK:   nvvm.mbarrier.init %{{.*}}, %{{.*}} : !llvm.ptr<3>, i32
+  nvvm.mbarrier.init %barrier, %count : !llvm.ptr<3>, i32
   llvm.return
 }
 
@@ -468,8 +433,8 @@ llvm.func private @mbarrier_inval_generic(%barrier: !llvm.ptr) {
 
 
 llvm.func private @mbarrier_inval_shared(%barrier: !llvm.ptr<3>) {
-  // CHECK:   nvvm.mbarrier.inval.shared %{{.*}} : !llvm.ptr<3>
-  nvvm.mbarrier.inval.shared %barrier : !llvm.ptr<3>
+  // CHECK:   nvvm.mbarrier.inval %{{.*}} : !llvm.ptr<3>
+  nvvm.mbarrier.inval %barrier : !llvm.ptr<3>
   llvm.return
 }
 
@@ -480,8 +445,8 @@ llvm.func private @mbarrier_arrive(%barrier: !llvm.ptr) {
 }
 
 llvm.func private @mbarrier_arrive_shared(%barrier: !llvm.ptr<3>) {
-  // CHECK:   nvvm.mbarrier.arrive.shared %{{.*}} : !llvm.ptr<3>
-  %0 = nvvm.mbarrier.arrive.shared %barrier : !llvm.ptr<3> -> i64
+  // CHECK:   nvvm.mbarrier.arrive %{{.*}} : !llvm.ptr<3>
+  %0 = nvvm.mbarrier.arrive %barrier : !llvm.ptr<3> -> i64
   llvm.return
 }
 
@@ -494,8 +459,8 @@ llvm.func private @mbarrier_arrive_nocomplete(%barrier: !llvm.ptr) {
 
 llvm.func private @mbarrier_arrive_nocomplete_shared(%barrier: !llvm.ptr<3>) {
   %count = nvvm.read.ptx.sreg.ntid.x : i32
-  // CHECK:   nvvm.mbarrier.arrive.nocomplete.shared %{{.*}} : !llvm.ptr<3>
-  %0 = nvvm.mbarrier.arrive.nocomplete.shared %barrier, %count : !llvm.ptr<3>, i32  -> i64
+  // CHECK:   nvvm.mbarrier.arrive.nocomplete %{{.*}} : !llvm.ptr<3>
+  %0 = nvvm.mbarrier.arrive.nocomplete %barrier, %count : !llvm.ptr<3>, i32  -> i64
   llvm.return
 }
 
@@ -507,8 +472,8 @@ llvm.func private @mbarrier_test_wait(%barrier: !llvm.ptr, %token : i64) -> i1 {
 
 llvm.func private @mbarrier_test_wait_shared(%barrier: !llvm.ptr<3>, %token : i64) {
   %count = nvvm.read.ptx.sreg.ntid.x : i32
-  // CHECK:   nvvm.mbarrier.test.wait.shared %{{.*}}
-  %isComplete = nvvm.mbarrier.test.wait.shared %barrier, %token : !llvm.ptr<3>, i64 -> i1
+  // CHECK:   nvvm.mbarrier.test.wait %{{.*}}
+  %isComplete = nvvm.mbarrier.test.wait %barrier, %token : !llvm.ptr<3>, i64 -> i1
   llvm.return
 }
 
@@ -535,15 +500,15 @@ func.func @wgmma_wait_group_sync_aligned() {
 }
 
 func.func @griddepcontrol_wait() {
-  // CHECK: nvvm.griddepcontrol.wait
-  nvvm.griddepcontrol.wait
+  // CHECK: nvvm.griddepcontrol wait
+  nvvm.griddepcontrol wait
   return
 }
 
 func.func @griddepcontrol_launch_dependents()
 {
-  // CHECK: nvvm.griddepcontrol.launch.dependents
-  nvvm.griddepcontrol.launch.dependents
+  // CHECK: nvvm.griddepcontrol launch_dependents
+  nvvm.griddepcontrol launch_dependents
   return
 }
 
@@ -552,7 +517,7 @@ func.func @mapa(%a: !llvm.ptr, %a_shared: !llvm.ptr<3>, %b : i32) {
   // CHECK:   nvvm.mapa %{{.*}}
   %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr
   // CHECK:   nvvm.mapa %{{.*}}
-  %1 = nvvm.mapa %a_shared, %b: !llvm.ptr<3> -> !llvm.ptr<3>
+  %1 = nvvm.mapa %a_shared, %b: !llvm.ptr<3> -> !llvm.ptr<7>
   return
 }
 
@@ -577,6 +542,69 @@ func.func @st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size: i64)
   nvvm.st.bulk %addr_shared, size = %size, init = 0 : !llvm.ptr<3>
   return
 }
+
+// CHECK-LABEL: @dot_accumulate_4way
+func.func @dot_accumulate_4way(%a_vec: vector<4xi8>, %b_vec: vector<4xi8>, %c: i32) {
+  // CHECK:   nvvm.dot.accumulate.4way %{{.*}}, %{{.*}}, %{{.*}} : vector<4xi8>, vector<4xi8>
+  %1 = nvvm.dot.accumulate.4way %a_vec <unsigned>, %b_vec <unsigned>, %c: vector<4xi8>, vector<4xi8>
+  // CHECK:   nvvm.dot.accumulate.4way %{{.*}}, %{{.*}}, %{{.*}} : vector<4xi8>, vector<4xi8>
+  %3 = nvvm.dot.accumulate.4way %a_vec <signed>, %b_vec <signed>, %c: vector<4xi8>, vector<4xi8>
+  return
+}
+
+// CHECK-LABEL: @dot_accumulate_2way
+func.func @dot_accumulate_2way(%a_vec: vector<2xi16>, %b_vec: vector<4xi8>, %c: i32) {
+  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} {b_hi = false} : vector<2xi16>, vector<4xi8>
+  %1 = nvvm.dot.accumulate.2way %a_vec <unsigned>, %b_vec <unsigned>, %c {b_hi = false}: vector<2xi16>, vector<4xi8>
+  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} {b_hi = true} : vector<2xi16>, vector<4xi8>
+  %3 = nvvm.dot.accumulate.2way %a_vec <signed>, %b_vec <signed>, %c {b_hi = true}: vector<2xi16>, vector<4xi8>
+  return
+}
+
+// CHECK-LABEL: @prefetch
+func.func @prefetch(%gen_ptr: !llvm.ptr, %local_ptr: !llvm.ptr<5>, %global_ptr: !llvm.ptr<1>, %const_ptr: !llvm.ptr<4>) {
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %gen_ptr : !llvm.ptr<0>
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %local_ptr : !llvm.ptr<5>
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %global_ptr : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %gen_ptr : !llvm.ptr<0>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %local_ptr : !llvm.ptr<5>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %global_ptr : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, evict_priority = evict_last, %{{.*}}
+  nvvm.prefetch level = L2, evict_priority = evict_last, %global_ptr :
+  !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, evict_priority = evict_normal, %{{.*}}
+  nvvm.prefetch level = L2, evict_priority = evict_normal, %global_ptr : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L1 uniform, %{{.*}}
+  nvvm.prefetch level = L1 uniform, %gen_ptr : !llvm.ptr
+  // CHECK:   nvvm.prefetch tensormap, %{{.*}}
+  nvvm.prefetch tensormap, %gen_ptr : !llvm.ptr
+  // CHECK:   nvvm.prefetch tensormap, %{{.*}}
+  nvvm.prefetch tensormap, %const_ptr : !llvm.ptr<4>
+  // CHECK:   nvvm.prefetch tensormap in_param_space, %{{.*}}
+  nvvm.prefetch tensormap in_param_space, %gen_ptr : !llvm.ptr
+  return
+}
+
+// CHECK-LABEL: @prefetch_tensormap
+func.func @prefetch_tensormap(%gen_ptr: !llvm.ptr, %const_ptr: !llvm.ptr<4>) {
+  return
+}
+
+// CHECK-LABEL: @nvvm_address_space
+func.func private @nvvm_address_space(
+    !ptr.ptr<#nvvm.memory_space<global>>,
+    !ptr.ptr<#nvvm.memory_space<shared>>,
+    !ptr.ptr<#nvvm.memory_space<constant>>,
+    !ptr.ptr<#nvvm.memory_space<local>>,
+    !ptr.ptr<#nvvm.memory_space<tensor>>,
+    !ptr.ptr<#nvvm.memory_space<shared_cluster>>
+  ) -> !ptr.ptr<#nvvm.memory_space<generic>>
 
 // -----
 

@@ -1,0 +1,11 @@
+# Disabling until the lldb-rpc-gen tool lands.
+XFAIL: *
+RUN: mkdir -p %t/server
+RUN: mkdir -p %t/lib
+RUN: %lldb-rpc-gen --output-dir=%t %S/../../Inputs/CheckConstCharPointer.h
+
+RUN: cat %t/lib/CheckConstCharPointer.cpp | FileCheck %s
+
+# const char * pointers must be decoded as rpc_common::ConstCharPointer objects
+# in server side source files.
+CHECK: rpc_common::ConstCharPointer string

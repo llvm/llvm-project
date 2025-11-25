@@ -7,7 +7,7 @@ declare void @llvm.trap() #0
 ; DOORBELL-NEXT:     .amdhsa_group_segment_fixed_size 0
 ; DOORBELL-NEXT:     .amdhsa_private_segment_fixed_size 0
 ; DOORBELL-NEXT:     .amdhsa_kernarg_size 8
-; DOORBELL-NEXT:     .amdhsa_user_sgpr_count 12
+; DOORBELL-NEXT:     .amdhsa_user_sgpr_count 14
 ; DOORBELL-NEXT:     .amdhsa_user_sgpr_private_segment_buffer 1
 ; DOORBELL:      .end_amdhsa_kernel
 

@@ -109,7 +109,7 @@ set(LIBOMP_MIC_ARCH knc CACHE STRING
 if("${LIBOMP_ARCH}" STREQUAL "mic")
   libomp_check_variable(LIBOMP_MIC_ARCH knf knc)
 endif()
-set(LIBOMP_FORTRAN_MODULES FALSE CACHE BOOL
+set(LIBOMP_FORTRAN_MODULES "${RUNTIMES_FLANG_MODULES_ENABLED}" CACHE BOOL
   "Create Fortran module files? (requires fortran compiler)")
 
 # - Support for universal fat binary builds on Mac
@@ -136,7 +136,7 @@ set(LIBOMP_ASMFLAGS "" CACHE STRING
   "Appended user specified assembler flags.")
 set(LIBOMP_LDFLAGS "" CACHE STRING
   "Appended user specified linker flags.")
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(LIBOMP_LIBFLAGS "-lperfstat" CACHE STRING
     "Appended user specified linked libs flags. (e.g., -lm)")
   if("${LIBOMP_ARCH}" STREQUAL "ppc")
@@ -147,8 +147,6 @@ else()
   set(LIBOMP_LIBFLAGS "" CACHE STRING
     "Appended user specified linked libs flags. (e.g., -lm)")
 endif()
-set(LIBOMP_FFLAGS "" CACHE STRING
-  "Appended user specified Fortran compiler flags.  These are only used if LIBOMP_FORTRAN_MODULES==TRUE.")
 
 # Should the libomp library and generated headers be copied into the original source exports/ directory
 # Turning this to FALSE aids parallel builds to not interfere with each other.
@@ -190,6 +188,8 @@ set(VE FALSE)
 set(S390X FALSE)
 set(WASM FALSE)
 set(PPC FALSE)
+set(SPARC FALSE)
+set(SPARCV9 FALSE)
 if("${LIBOMP_ARCH}" STREQUAL "i386" OR "${LIBOMP_ARCH}" STREQUAL "32")    # IA-32 architecture
   set(IA32 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "x86_64" OR "${LIBOMP_ARCH}" STREQUAL "32e") # Intel(R) 64 architecture
@@ -226,6 +226,10 @@ elseif("${LIBOMP_ARCH}" STREQUAL "s390x") # S390x (Z) architecture
     set(S390X TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "wasm32") # WebAssembly architecture
     set(WASM TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "sparc") # SPARC architecture
+    set(SPARC TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "sparcv9") # SPARC V9 architecture
+    set(SPARCV9 TRUE)
 endif()
 
 # Set some flags based on build_type
@@ -266,10 +270,6 @@ set(LIBOMP_TOOLS_DIR ${LIBOMP_BASE_DIR}/tools)
 set(LIBOMP_INC_DIR ${LIBOMP_SRC_DIR}/include)
 set(LIBOMP_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-# Enabling Fortran if it is needed
-if(${LIBOMP_FORTRAN_MODULES})
-  enable_language(Fortran)
-endif()
 # Enable MASM Compiler if it is needed (Windows only)
 if(WIN32)
   enable_language(ASM_MASM)

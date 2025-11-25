@@ -91,13 +91,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-
-  FunctionPass *createHexagonEarlyIfConversion();
-  void initializeHexagonEarlyIfConversionPass(PassRegistry& Registry);
-
-} // end namespace llvm
-
 static cl::opt<bool> EnableHexagonBP("enable-hexagon-br-prob", cl::Hidden,
   cl::init(true), cl::desc("Enable branch probability info"));
 static cl::opt<unsigned> SizeLimit("eif-limit", cl::init(6), cl::Hidden,
@@ -139,8 +132,7 @@ namespace {
     const TargetRegisterInfo &TRI;
     friend raw_ostream &operator<< (raw_ostream &OS, const PrintFP &P);
   };
-  raw_ostream &operator<<(raw_ostream &OS,
-                          const PrintFP &P) LLVM_ATTRIBUTE_UNUSED;
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS, const PrintFP &P);
   raw_ostream &operator<<(raw_ostream &OS, const PrintFP &P) {
     OS << "{ SplitB:" << PrintMB(P.FP.SplitB)
        << ", PredR:" << printReg(P.FP.PredR, &P.TRI)

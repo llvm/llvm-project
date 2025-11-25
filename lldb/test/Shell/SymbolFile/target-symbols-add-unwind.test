@@ -41,7 +41,7 @@ image show-unwind -n private_fn --cached true
 # CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.
 # CHECK-NEXT: This UnwindPlan is valid at all instruction locations: no.
 # CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
-# CHECK-NEXT: Address range of this UnwindPlan: [a.stripped.PT_LOAD[1]..text + 16-0x0000000000000013)
+# CHECK-NEXT: Address range of this UnwindPlan: [a.stripped.PT_LOAD[1]..text + 16-19)
 
 
 #--- a.s

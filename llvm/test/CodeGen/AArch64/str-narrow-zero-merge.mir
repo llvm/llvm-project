@@ -29,8 +29,7 @@ name:  merge_scaled_str_with_unscaled_8
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_8
-    ; CHECK: STRBBui $wzr, $x0, 4 :: (store (s8))
-    ; CHECK-NEXT: STURBBi $wzr, $x0, 5 :: (store (s8))
+    ; CHECK: STRHHui $wzr, $x0, 2 :: (store (s8))
     ; CHECK-NEXT: RET undef $lr
     STRBBui $wzr, $x0, 4 :: (store (s8))
     STURBBi $wzr, $x0, 5 :: (store (s8))
@@ -41,13 +40,55 @@ name:  merge_unscaled_str_with_scaled_8
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_8
-    ; CHECK: STURBBi $wzr, $x0, 4 :: (store (s8))
-    ; CHECK-NEXT: STRBBui $wzr, $x0, 5 :: (store (s8))
+    ; CHECK: STURHHi $wzr, $x0, 4 :: (store (s8))
     ; CHECK-NEXT: RET undef $lr
     STURBBi $wzr, $x0, 4 :: (store (s8))
     STRBBui $wzr, $x0, 5 :: (store (s8))
     RET undef $lr
 ...
+---
+name:  merge_unscaled_str_with_scaled_8_lower_address_second
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_8_lower_address_second
+    ; CHECK: STURHHi $wzr, $x0, 0 :: (store (s8))
+    ; CHECK-NEXT: RET undef $lr
+    STURBBi $wzr, $x0, 1 :: (store (s8))
+    STRBBui $wzr, $x0, 0 :: (store (s8))
+    RET undef $lr
+...
+---
+name:  merge_scaled_str_with_unscaled_8_lower_address_second
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_8_lower_address_second
+    ; CHECK: STRHHui $wzr, $x0, 0 :: (store (s8))
+    ; CHECK-NEXT: RET undef $lr
+    STRBBui $wzr, $x0, 1 :: (store (s8))
+    STURBBi $wzr, $x0, 0 :: (store (s8))
+    RET undef $lr
+...
+---
+name:  merge_unscaled_str_with_scaled_8_limits
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_8_limits
+    ; CHECK: STURHHi $wzr, $x0, 255 :: (store (s8))
+    ; CHECK-NEXT: RET undef $lr
+    STURBBi $wzr, $x0, 255 :: (store (s8))
+    STRBBui $wzr, $x0, 256 :: (store (s8))
+    RET undef $lr
+---
+---
+name:  merge_scaled_str_with_unscaled_8_limits
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_8_limits
+    ; CHECK: STRHHui $wzr, $x0, 127 :: (store (s8))
+    ; CHECK-NEXT: RET undef $lr
+    STRBBui $wzr, $x0, 254 :: (store (s8))
+    STURBBi $wzr, $x0, 255 :: (store (s8))
+    RET undef $lr
 ---
 name:  merge_unscaled_str_with_unscaled_str_16
 body:             |
@@ -75,8 +116,7 @@ name:  merge_scaled_str_with_unscaled_16
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_16
-    ; CHECK: STRHHui $wzr, $x0, 2 :: (store (s16))
-    ; CHECK-NEXT: STURHHi $wzr, $x0, 6 :: (store (s16))
+    ; CHECK: STRWui $wzr, $x0, 1 :: (store (s16))
     ; CHECK-NEXT: RET undef $lr
     STRHHui $wzr, $x0, 2 :: (store (s16))
     STURHHi $wzr, $x0, 6 :: (store (s16))
@@ -87,13 +127,55 @@ name:  merge_unscaled_str_with_scaled_16
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_16
-    ; CHECK: STURHHi $wzr, $x0, 4 :: (store (s16))
-    ; CHECK-NEXT: STRHHui $wzr, $x0, 3 :: (store (s16))
+    ; CHECK: STURWi $wzr, $x0, 4 :: (store (s16))
     ; CHECK-NEXT: RET undef $lr
     STURHHi $wzr, $x0, 4 :: (store (s16))
     STRHHui $wzr, $x0, 3 :: (store (s16))
     RET undef $lr
 ...
+---
+name:  merge_unscaled_str_with_scaled_16_lower_address_second
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_16_lower_address_second
+    ; CHECK: STURWi $wzr, $x0, 2 :: (store (s16))
+    ; CHECK-NEXT: RET undef $lr
+    STURHHi $wzr, $x0, 4 :: (store (s16))
+    STRHHui $wzr, $x0, 1 :: (store (s16))
+    RET undef $lr
+...
+---
+name:  merge_scaled_str_with_unscaled_16_lower_address_second
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_16_lower_address_second
+    ; CHECK: STRWui $wzr, $x0, 0 :: (store (s16))
+    ; CHECK-NEXT: RET undef $lr
+    STRHHui $wzr, $x0, 1 :: (store (s16))
+    STURHHi $wzr, $x0, 0 :: (store (s16))
+    RET undef $lr
+...
+---
+name:  merge_unscaled_str_with_scaled_16_limits
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_16_limits
+    ; CHECK: STURWi $wzr, $x0, 254 :: (store (s16))
+    ; CHECK-NEXT: RET undef $lr
+    STURHHi $wzr, $x0, 254 :: (store (s16))
+    STRHHui $wzr, $x0, 128 :: (store (s16))
+    RET undef $lr
+---
+---
+name:  merge_scaled_str_with_unscaled_16_limits
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_16_limits
+    ; CHECK: STRWui $wzr, $x0, 63 :: (store (s16))
+    ; CHECK-NEXT: RET undef $lr
+    STRHHui $wzr, $x0, 126 :: (store (s16))
+    STURHHi $wzr, $x0, 254 :: (store (s16))
+    RET undef $lr
 ---
 name:  merge_unscaled_str_with_unscaled_32
 body:             |

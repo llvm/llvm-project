@@ -3,9 +3,12 @@ add_header_library(
   HDRS
     timing.h
   DEPENDS
-    libc.src.__support.common
+    libc.hdr.stdint_proxy
     libc.src.__support.macros.config
     libc.src.__support.macros.attributes
-    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.array
+    libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.GPU.utils
 )

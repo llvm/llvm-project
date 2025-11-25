@@ -15,7 +15,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/DialectInterface.h"
-#include "mlir/IR/OpDefinition.h"
 #include "mlir/Reducer/Passes.h"
 #include "mlir/Reducer/ReductionNode.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
@@ -24,12 +23,10 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/ManagedStatic.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_REDUCTIONTREE
+#define GEN_PASS_DEF_REDUCTIONTREEPASS
 #include "mlir/Reducer/Passes.h.inc"
 } // namespace mlir
 
@@ -62,11 +59,11 @@ static void applyPatterns(Region &region,
   // before that transform.
   for (Operation *op : opsInRange) {
     // `applyOpPatternsGreedily` with folding returns whether the op is
-    // convered. Omit it because we don't have expectation this reduction will
+    // converted. Omit it because we don't have expectation this reduction will
     // be success or not.
-    GreedyRewriteConfig config;
-    config.strictMode = GreedyRewriteStrictness::ExistingOps;
-    (void)applyOpPatternsGreedily(op, patterns, config);
+    (void)applyOpPatternsGreedily(op, patterns,
+                                  GreedyRewriteConfig().setStrictness(
+                                      GreedyRewriteStrictness::ExistingOps));
   }
 
   if (eraseOpNotInRange)
@@ -178,9 +175,12 @@ public:
   using Base::Base;
 
   // Collect the reduce patterns defined by each dialect.
-  void populateReductionPatterns(RewritePatternSet &pattern) const {
-    for (const DialectReductionPatternInterface &interface : *this)
+  void populateReductionPatterns(RewritePatternSet &pattern,
+                                 Tester &tester) const {
+    for (const DialectReductionPatternInterface &interface : *this) {
       interface.populateReductionPatterns(pattern);
+      interface.populateReductionPatternsWithTester(pattern, tester);
+    }
   }
 };
 
@@ -191,10 +191,10 @@ public:
 /// This class defines the Reduction Tree Pass. It provides a framework to
 /// to implement a reduction pass using a tree structure to keep track of the
 /// generated reduced variants.
-class ReductionTreePass : public impl::ReductionTreeBase<ReductionTreePass> {
+class ReductionTreePass
+    : public impl::ReductionTreePassBase<ReductionTreePass> {
 public:
-  ReductionTreePass() = default;
-  ReductionTreePass(const ReductionTreePass &pass) = default;
+  using Base::Base;
 
   LogicalResult initialize(MLIRContext *context) override;
 
@@ -204,15 +204,21 @@ public:
 private:
   LogicalResult reduceOp(ModuleOp module, Region &region);
 
+  Tester tester;
   FrozenRewritePatternSet reducerPatterns;
 };
 
 } // namespace
 
 LogicalResult ReductionTreePass::initialize(MLIRContext *context) {
+  tester.setTestScript(testerName);
+  tester.setTestScriptArgs(testerArgs);
+
   RewritePatternSet patterns(context);
+
   ReductionPatternInterfaceCollection reducePatternCollection(context);
-  reducePatternCollection.populateReductionPatterns(patterns);
+  reducePatternCollection.populateReductionPatterns(patterns, tester);
+
   reducerPatterns = std::move(patterns);
   return success();
 }
@@ -247,16 +253,11 @@ void ReductionTreePass::runOnOperation() {
 }
 
 LogicalResult ReductionTreePass::reduceOp(ModuleOp module, Region &region) {
-  Tester test(testerName, testerArgs);
   switch (traversalModeId) {
   case TraversalMode::SinglePath:
     return findOptimal<ReductionNode::iterator<TraversalMode::SinglePath>>(
-        module, region, reducerPatterns, test);
+        module, region, reducerPatterns, tester);
   default:
     return module.emitError() << "unsupported traversal mode detected";
   }
-}
-
-std::unique_ptr<Pass> mlir::createReductionTreePass() {
-  return std::make_unique<ReductionTreePass>();
 }

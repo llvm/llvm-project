@@ -46,7 +46,6 @@ static int SelectDigraphErrorMessage(tok::TokenKind Kind) {
   }
 }
 
-// Are the two tokens adjacent in the same source file?
 bool Parser::areTokensAdjacent(const Token &First, const Token &Second) {
   SourceManager &SM = PP.getSourceManager();
   SourceLocation FirstLoc = SM.getSpellingLoc(First.getLocation());
@@ -82,8 +81,6 @@ static void FixDigraph(Parser &P, Preprocessor &PP, Token &DigraphToken,
     PP.EnterToken(DigraphToken, /*IsReinject*/ true);
 }
 
-// Check for '<::' which should be '< ::' instead of '[:' when following
-// a template name.
 void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
                                         bool EnteringContext,
                                         IdentifierInfo &II, CXXScopeSpec &SS) {
@@ -107,55 +104,6 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
              /*AtDigraph*/false);
 }
 
-/// Parse global scope or nested-name-specifier if present.
-///
-/// Parses a C++ global scope specifier ('::') or nested-name-specifier (which
-/// may be preceded by '::'). Note that this routine will not parse ::new or
-/// ::delete; it will just leave them in the token stream.
-///
-///       '::'[opt] nested-name-specifier
-///       '::'
-///
-///       nested-name-specifier:
-///         type-name '::'
-///         namespace-name '::'
-///         nested-name-specifier identifier '::'
-///         nested-name-specifier 'template'[opt] simple-template-id '::'
-///
-///
-/// \param SS the scope specifier that will be set to the parsed
-/// nested-name-specifier (or empty)
-///
-/// \param ObjectType if this nested-name-specifier is being parsed following
-/// the "." or "->" of a member access expression, this parameter provides the
-/// type of the object whose members are being accessed.
-///
-/// \param ObjectHadErrors if this unqualified-id occurs within a member access
-/// expression, indicates whether the original subexpressions had any errors.
-/// When true, diagnostics for missing 'template' keyword will be supressed.
-///
-/// \param EnteringContext whether we will be entering into the context of
-/// the nested-name-specifier after parsing it.
-///
-/// \param MayBePseudoDestructor When non-NULL, points to a flag that
-/// indicates whether this nested-name-specifier may be part of a
-/// pseudo-destructor name. In this case, the flag will be set false
-/// if we don't actually end up parsing a destructor name. Moreover,
-/// if we do end up determining that we are parsing a destructor name,
-/// the last component of the nested-name-specifier is not parsed as
-/// part of the scope specifier.
-///
-/// \param IsTypename If \c true, this nested-name-specifier is known to be
-/// part of a type name. This is used to improve error recovery.
-///
-/// \param LastII When non-NULL, points to an IdentifierInfo* that will be
-/// filled in with the leading identifier in the last component of the
-/// nested-name-specifier, if any.
-///
-/// \param OnlyNamespace If true, only considers namespaces in lookup.
-///
-///
-/// \returns true if there was an error parsing a scope specifier
 bool Parser::ParseOptionalCXXScopeSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
@@ -247,9 +195,10 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     if (DS.getTypeSpecType() == DeclSpec::TST_error)
       return false;
 
-    QualType Type = Actions.ActOnPackIndexingType(
-        DS.getRepAsType().get(), DS.getPackIndexingExpr(), DS.getBeginLoc(),
-        DS.getEllipsisLoc());
+    QualType Pattern = Sema::GetTypeFromParser(DS.getRepAsType());
+    QualType Type =
+        Actions.ActOnPackIndexingType(Pattern, DS.getPackIndexingExpr(),
+                                      DS.getBeginLoc(), DS.getEllipsisLoc());
 
     if (Type.isNull())
       return false;
@@ -473,8 +422,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       // like we never saw it.
       Token Identifier = Tok; // Stash away the identifier.
       ConsumeToken();         // Eat the identifier, current token is now '::'.
-      Diag(PP.getLocForEndOfToken(ConsumeToken()), diag::err_expected)
-          << tok::identifier;
+      ConsumeToken();
+      Diag(getEndOfPreviousToken(), diag::err_expected) << tok::identifier;
       UnconsumeToken(Identifier); // Stick the identifier back.
       Next = NextToken();         // Point Next at the '{' token.
     }
@@ -707,48 +656,6 @@ Parser::tryParseCXXPackIndexingExpression(ExprResult PackIdExpression) {
   return E;
 }
 
-/// ParseCXXIdExpression - Handle id-expression.
-///
-///       id-expression:
-///         unqualified-id
-///         qualified-id
-///
-///       qualified-id:
-///         '::'[opt] nested-name-specifier 'template'[opt] unqualified-id
-///         '::' identifier
-///         '::' operator-function-id
-///         '::' template-id
-///
-/// NOTE: The standard specifies that, for qualified-id, the parser does not
-/// expect:
-///
-///   '::' conversion-function-id
-///   '::' '~' class-name
-///
-/// This may cause a slight inconsistency on diagnostics:
-///
-/// class C {};
-/// namespace A {}
-/// void f() {
-///   :: A :: ~ C(); // Some Sema error about using destructor with a
-///                  // namespace.
-///   :: ~ C(); // Some Parser error like 'unexpected ~'.
-/// }
-///
-/// We simplify the parser a bit and make it work like:
-///
-///       qualified-id:
-///         '::'[opt] nested-name-specifier 'template'[opt] unqualified-id
-///         '::' unqualified-id
-///
-/// That way Sema can handle and report similar errors for namespaces and the
-/// global scope.
-///
-/// The isAddressOfOperand parameter indicates that this id-expression is a
-/// direct operand of the address-of operator. This is, besides member contexts,
-/// the only place where a qualified-id naming a non-static class member may
-/// appear.
-///
 ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
   // qualified-id:
   //   '::'[opt] nested-name-specifier 'template'[opt] unqualified-id
@@ -773,51 +680,6 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
   return Result;
 }
 
-/// ParseLambdaExpression - Parse a C++11 lambda expression.
-///
-///       lambda-expression:
-///         lambda-introducer lambda-declarator compound-statement
-///         lambda-introducer '<' template-parameter-list '>'
-///             requires-clause[opt] lambda-declarator compound-statement
-///
-///       lambda-introducer:
-///         '[' lambda-capture[opt] ']'
-///
-///       lambda-capture:
-///         capture-default
-///         capture-list
-///         capture-default ',' capture-list
-///
-///       capture-default:
-///         '&'
-///         '='
-///
-///       capture-list:
-///         capture
-///         capture-list ',' capture
-///
-///       capture:
-///         simple-capture
-///         init-capture     [C++1y]
-///
-///       simple-capture:
-///         identifier
-///         '&' identifier
-///         'this'
-///
-///       init-capture:      [C++1y]
-///         identifier initializer
-///         '&' identifier initializer
-///
-///       lambda-declarator:
-///         lambda-specifiers     [C++23]
-///         '(' parameter-declaration-clause ')' lambda-specifiers
-///             requires-clause[opt]
-///
-///       lambda-specifiers:
-///         decl-specifier-seq[opt] noexcept-specifier[opt]
-///             attribute-specifier-seq[opt] trailing-return-type[opt]
-///
 ExprResult Parser::ParseLambdaExpression() {
   // Parse lambda-introducer.
   LambdaIntroducer Intro;
@@ -831,10 +693,6 @@ ExprResult Parser::ParseLambdaExpression() {
   return ParseLambdaExpressionAfterIntroducer(Intro);
 }
 
-/// Use lookahead and potentially tentative parsing to determine if we are
-/// looking at a C++11 lambda expression, and parse it if we are.
-///
-/// If we are not looking at a lambda expression, returns ExprError().
 ExprResult Parser::TryParseLambdaExpression() {
   assert(getLangOpts().CPlusPlus && Tok.is(tok::l_square) &&
          "Not at the start of a possible lambda expression.");
@@ -899,15 +757,6 @@ ExprResult Parser::TryParseLambdaExpression() {
   return ParseLambdaExpressionAfterIntroducer(Intro);
 }
 
-/// Parse a lambda introducer.
-/// \param Intro A LambdaIntroducer filled in with information about the
-///        contents of the lambda-introducer.
-/// \param Tentative If non-null, we are disambiguating between a
-///        lambda-introducer and some other construct. In this mode, we do not
-///        produce any diagnostics or take any other irreversible action unless
-///        we're sure that this is a lambda-expression.
-/// \return \c true if parsing (or disambiguation) failed with a diagnostic and
-///         the caller should bail out / recover.
 bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
                                    LambdaIntroducerTentativeParse *Tentative) {
   if (Tentative)
@@ -923,9 +772,11 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 
   // Produce a diagnostic if we're not tentatively parsing; otherwise track
   // that our parse has failed.
-  auto Invalid = [&](llvm::function_ref<void()> Action) {
+  auto Result = [&](llvm::function_ref<void()> Action,
+                    LambdaIntroducerTentativeParse State =
+                        LambdaIntroducerTentativeParse::Invalid) {
     if (Tentative) {
-      *Tentative = LambdaIntroducerTentativeParse::Invalid;
+      *Tentative = State;
       return false;
     }
     Action();
@@ -975,7 +826,7 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
           break;
         }
 
-        return Invalid([&] {
+        return Result([&] {
           Diag(Tok.getLocation(), diag::err_expected_comma_or_rsquare);
         });
       }
@@ -1012,7 +863,7 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         ConsumeToken();
         Kind = LCK_StarThis;
       } else {
-        return Invalid([&] {
+        return Result([&] {
           Diag(Tok.getLocation(), diag::err_expected_star_this_capture);
         });
       }
@@ -1026,8 +877,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
       // or the start of a capture (in the "&" case) with the rest of the
       // capture missing. Both are an error but a misplaced capture-default
       // is more likely if we don't already have a capture default.
-      return Invalid(
-          [&] { Diag(Tok.getLocation(), diag::err_capture_default_first); });
+      return Result(
+          [&] { Diag(Tok.getLocation(), diag::err_capture_default_first); },
+          LambdaIntroducerTentativeParse::Incomplete);
     } else {
       TryConsumeToken(tok::ellipsis, EllipsisLocs[0]);
 
@@ -1050,14 +902,13 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         Id = Tok.getIdentifierInfo();
         Loc = ConsumeToken();
       } else if (Tok.is(tok::kw_this)) {
-        return Invalid([&] {
+        return Result([&] {
           // FIXME: Suggest a fixit here.
           Diag(Tok.getLocation(), diag::err_this_captured_by_reference);
         });
       } else {
-        return Invalid([&] {
-          Diag(Tok.getLocation(), diag::err_expected_capture);
-        });
+        return Result(
+            [&] { Diag(Tok.getLocation(), diag::err_expected_capture); });
       }
 
       TryConsumeToken(tok::ellipsis, EllipsisLocs[2]);
@@ -1124,8 +975,6 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
           SourceLocation StartLoc = Tok.getLocation();
           InMessageExpressionRAIIObject MaybeInMessageExpression(*this, true);
           Init = ParseInitializer();
-          if (!Init.isInvalid())
-            Init = Actions.CorrectDelayedTyposInExpr(Init.get());
 
           if (Tok.getLocation() != StartLoc) {
             // Back out the lexing of the token after the initializer.
@@ -1217,8 +1066,6 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
     // enclosing the lambda-expression, rather than in the context of the
     // lambda-expression itself.
     ParsedType InitCaptureType;
-    if (Init.isUsable())
-      Init = Actions.CorrectDelayedTyposInExpr(Init.get());
     if (Init.isUsable()) {
       NonTentativeAction([&] {
         // Get the pointer and store it in an lvalue, so we can use it as an
@@ -1353,8 +1200,6 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
   }
 }
 
-/// ParseLambdaExpressionAfterIntroducer - Parse the rest of a lambda
-/// expression.
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                      LambdaIntroducer &Intro) {
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
@@ -1392,8 +1237,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       if (Tok.is(tok::kw___noinline__)) {
         IdentifierInfo *AttrName = Tok.getIdentifierInfo();
         SourceLocation AttrNameLoc = ConsumeToken();
-        Attributes.addNew(AttrName, AttrNameLoc, /*ScopeName=*/nullptr,
-                          AttrNameLoc, /*ArgsUnion=*/nullptr,
+        Attributes.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(),
+                          /*ArgsUnion=*/nullptr,
                           /*numArgs=*/0, tok::kw___noinline__);
       } else if (Tok.is(tok::kw___attribute))
         ParseGNUAttributes(Attributes, /*LatePArsedAttrList=*/nullptr, &D);
@@ -1401,7 +1246,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
         break;
     }
 
-    D.takeAttributes(Attributes);
+    D.takeAttributesAppending(Attributes);
   }
 
   MultiParseScope TemplateParamScope(*this);
@@ -1451,11 +1296,12 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   // lambda declarator and applies them to the corresponding function operator
   // or operator template declaration. We accept this as a conforming extension
   // in all language modes that support lambdas.
-  if (isCXX11AttributeSpecifier()) {
+  if (isCXX11AttributeSpecifier() !=
+      CXX11AttributeKind::NotAttributeSpecifier) {
     Diag(Tok, getLangOpts().CPlusPlus23
                   ? diag::warn_cxx20_compat_decl_attrs_on_lambda
                   : diag::ext_decl_attrs_on_lambda)
-        << Tok.getIdentifierInfo() << Tok.isRegularKeywordAttribute();
+        << Tok.isRegularKeywordAttribute() << Tok.getIdentifierInfo();
     MaybeParseCXX11Attributes(D);
   }
 
@@ -1647,17 +1493,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   return ExprError();
 }
 
-/// ParseCXXCasts - This handles the various ways to cast expressions to another
-/// type.
-///
-///       postfix-expression: [C++ 5.2p1]
-///         'dynamic_cast' '<' type-name '>' '(' expression ')'
-///         'static_cast' '<' type-name '>' '(' expression ')'
-///         'reinterpret_cast' '<' type-name '>' '(' expression ')'
-///         'const_cast' '<' type-name '>' '(' expression ')'
-///
-/// C++ for OpenCL s2.3.1 adds:
-///         'addrspace_cast' '<' type-name '>' '(' expression ')'
 ExprResult Parser::ParseCXXCasts() {
   tok::TokenKind Kind = Tok.getKind();
   const char *CastName = nullptr; // For error messages
@@ -1720,12 +1555,6 @@ ExprResult Parser::ParseCXXCasts() {
   return Result;
 }
 
-/// ParseCXXTypeid - This handles the C++ typeid expression.
-///
-///       postfix-expression: [C++ 5.2p1]
-///         'typeid' '(' expression ')'
-///         'typeid' '(' type-id ')'
-///
 ExprResult Parser::ParseCXXTypeid() {
   assert(Tok.is(tok::kw_typeid) && "Not 'typeid'!");
 
@@ -1788,11 +1617,6 @@ ExprResult Parser::ParseCXXTypeid() {
   return Result;
 }
 
-/// ParseCXXUuidof - This handles the Microsoft C++ __uuidof expression.
-///
-///         '__uuidof' '(' expression ')'
-///         '__uuidof' '(' type-id ')'
-///
 ExprResult Parser::ParseCXXUuidof() {
   assert(Tok.is(tok::kw___uuidof) && "Not '__uuidof'!");
 
@@ -1837,37 +1661,6 @@ ExprResult Parser::ParseCXXUuidof() {
   return Result;
 }
 
-/// Parse a C++ pseudo-destructor expression after the base,
-/// . or -> operator, and nested-name-specifier have already been
-/// parsed. We're handling this fragment of the grammar:
-///
-///       postfix-expression: [C++2a expr.post]
-///         postfix-expression . template[opt] id-expression
-///         postfix-expression -> template[opt] id-expression
-///
-///       id-expression:
-///         qualified-id
-///         unqualified-id
-///
-///       qualified-id:
-///         nested-name-specifier template[opt] unqualified-id
-///
-///       nested-name-specifier:
-///         type-name ::
-///         decltype-specifier ::    FIXME: not implemented, but probably only
-///                                         allowed in C++ grammar by accident
-///         nested-name-specifier identifier ::
-///         nested-name-specifier template[opt] simple-template-id ::
-///         [...]
-///
-///       unqualified-id:
-///         ~ type-name
-///         ~ decltype-specifier
-///         [...]
-///
-/// ... where the all but the last component of the nested-name-specifier
-/// has already been parsed, and the base expression is not of a non-dependent
-/// class type.
 ExprResult
 Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
                                  tok::TokenKind OpKind,
@@ -1949,20 +1742,11 @@ Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
                                            SecondTypeName);
 }
 
-/// ParseCXXBoolLiteral - This handles the C++ Boolean literals.
-///
-///       boolean-literal: [C++ 2.13.5]
-///         'true'
-///         'false'
 ExprResult Parser::ParseCXXBoolLiteral() {
   tok::TokenKind Kind = Tok.getKind();
   return Actions.ActOnCXXBoolLiteral(ConsumeToken(), Kind);
 }
 
-/// ParseThrowExpression - This handles the C++ throw expression.
-///
-///       throw-expression: [C++ 15]
-///         'throw' assignment-expression[opt]
 ExprResult Parser::ParseThrowExpression() {
   assert(Tok.is(tok::kw_throw) && "Not throw!");
   SourceLocation ThrowLoc = ConsumeToken();           // Eat the throw token.
@@ -1986,10 +1770,6 @@ ExprResult Parser::ParseThrowExpression() {
   }
 }
 
-/// Parse the C++ Coroutines co_yield expression.
-///
-///       co_yield-expression:
-///         'co_yield' assignment-expression[opt]
 ExprResult Parser::ParseCoyieldExpression() {
   assert(Tok.is(tok::kw_co_yield) && "Not co_yield!");
 
@@ -2001,30 +1781,12 @@ ExprResult Parser::ParseCoyieldExpression() {
   return Expr;
 }
 
-/// ParseCXXThis - This handles the C++ 'this' pointer.
-///
-/// C++ 9.3.2: In the body of a non-static member function, the keyword this is
-/// a non-lvalue expression whose value is the address of the object for which
-/// the function is called.
 ExprResult Parser::ParseCXXThis() {
   assert(Tok.is(tok::kw_this) && "Not 'this'!");
   SourceLocation ThisLoc = ConsumeToken();
   return Actions.ActOnCXXThis(ThisLoc);
 }
 
-/// ParseCXXTypeConstructExpression - Parse construction of a specified type.
-/// Can be interpreted either as function-style casting ("int(x)")
-/// or class type construction ("ClassType(x,y,z)")
-/// or creation of a value-initialized type ("int()").
-/// See [C++ 5.2.3].
-///
-///       postfix-expression: [C++ 5.2p1]
-///         simple-type-specifier '(' expression-list[opt] ')'
-/// [C++0x] simple-type-specifier braced-init-list
-///         typename-specifier '(' expression-list[opt] ')'
-/// [C++0x] typename-specifier braced-init-list
-///
-/// In C++1z onwards, the type specifier can also be a template-name.
 ExprResult
 Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
   Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
@@ -2110,37 +1872,6 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
   return DG;
 }
 
-/// ParseCXXCondition - if/switch/while condition expression.
-///
-///       condition:
-///         expression
-///         type-specifier-seq declarator '=' assignment-expression
-/// [C++11] type-specifier-seq declarator '=' initializer-clause
-/// [C++11] type-specifier-seq declarator braced-init-list
-/// [Clang] type-specifier-seq ref-qualifier[opt] '[' identifier-list ']'
-///             brace-or-equal-initializer
-/// [GNU]   type-specifier-seq declarator simple-asm-expr[opt] attributes[opt]
-///             '=' assignment-expression
-///
-/// In C++1z, a condition may in some contexts be preceded by an
-/// optional init-statement. This function will parse that too.
-///
-/// \param InitStmt If non-null, an init-statement is permitted, and if present
-/// will be parsed and stored here.
-///
-/// \param Loc The location of the start of the statement that requires this
-/// condition, e.g., the "for" in a for loop.
-///
-/// \param MissingOK Whether an empty condition is acceptable here. Otherwise
-/// it is considered an error to be recovered from.
-///
-/// \param FRI If non-null, a for range declaration is permitted, and if
-/// present will be parsed and stored here, and a null result will be returned.
-///
-/// \param EnterForConditionScope If true, enter a continue/break scope at the
-/// appropriate moment for a 'for' loop.
-///
-/// \returns The parsed condition.
 Sema::ConditionResult
 Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
                           Sema::ConditionKind CK, bool MissingOK,
@@ -2203,15 +1934,13 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
     }
 
-    ExprResult Expr = [&] {
-      EnterExpressionEvaluationContext Eval(
-          Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-          /*LambdaContextDecl=*/nullptr,
-          /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_Other,
-          /*ShouldEnter=*/CK == Sema::ConditionKind::ConstexprIf);
-      // Parse the expression.
-      return ParseExpression(); // expression
-    }();
+    EnterExpressionEvaluationContext Eval(
+        Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+        /*LambdaContextDecl=*/nullptr,
+        /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_Other,
+        /*ShouldEnter=*/CK == Sema::ConditionKind::ConstexprIf);
+
+    ExprResult Expr = ParseExpression();
 
     if (Expr.isInvalid())
       return Sema::ConditionError();
@@ -2329,32 +2058,6 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
   return Actions.ActOnConditionVariable(DeclOut, Loc, CK);
 }
 
-/// ParseCXXSimpleTypeSpecifier - [C++ 7.1.5.2] Simple type specifiers.
-/// This should only be called when the current token is known to be part of
-/// simple-type-specifier.
-///
-///       simple-type-specifier:
-///         '::'[opt] nested-name-specifier[opt] type-name
-///         '::'[opt] nested-name-specifier 'template' simple-template-id [TODO]
-///         char
-///         wchar_t
-///         bool
-///         short
-///         int
-///         long
-///         signed
-///         unsigned
-///         float
-///         double
-///         void
-/// [GNU]   typeof-specifier
-/// [C++0x] auto               [TODO]
-///
-///       type-name:
-///         class-name
-///         enum-name
-///         typedef-name
-///
 void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
   DS.SetRangeStart(Tok.getLocation());
   const char *PrevSpec;
@@ -2506,17 +2209,6 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
   DS.Finish(Actions, Policy);
 }
 
-/// ParseCXXTypeSpecifierSeq - Parse a C++ type-specifier-seq (C++
-/// [dcl.name]), which is a non-empty sequence of type-specifiers,
-/// e.g., "const short int". Note that the DeclSpec is *not* finished
-/// by parsing the type-specifier-seq, because these sequences are
-/// typically followed by some form of declarator. Returns true and
-/// emits diagnostics if this is not a type-specifier-seq, false
-/// otherwise.
-///
-///   type-specifier-seq: [C++ 8.1]
-///     type-specifier type-specifier-seq[opt]
-///
 bool Parser::ParseCXXTypeSpecifierSeq(DeclSpec &DS, DeclaratorContext Context) {
   ParseSpecifierQualifierList(DS, AS_none,
                               getDeclSpecContextFromDeclaratorContext(Context));
@@ -2524,41 +2216,6 @@ bool Parser::ParseCXXTypeSpecifierSeq(DeclSpec &DS, DeclaratorContext Context) {
   return false;
 }
 
-/// Finish parsing a C++ unqualified-id that is a template-id of
-/// some form.
-///
-/// This routine is invoked when a '<' is encountered after an identifier or
-/// operator-function-id is parsed by \c ParseUnqualifiedId() to determine
-/// whether the unqualified-id is actually a template-id. This routine will
-/// then parse the template arguments and form the appropriate template-id to
-/// return to the caller.
-///
-/// \param SS the nested-name-specifier that precedes this template-id, if
-/// we're actually parsing a qualified-id.
-///
-/// \param ObjectType if this unqualified-id occurs within a member access
-/// expression, the type of the base object whose member is being accessed.
-///
-/// \param ObjectHadErrors this unqualified-id occurs within a member access
-/// expression, indicates whether the original subexpressions had any errors.
-///
-/// \param Name for constructor and destructor names, this is the actual
-/// identifier that may be a template-name.
-///
-/// \param NameLoc the location of the class-name in a constructor or
-/// destructor.
-///
-/// \param EnteringContext whether we're entering the scope of the
-/// nested-name-specifier.
-///
-/// \param Id as input, describes the template-name or operator-function-id
-/// that precedes the '<'. If template arguments were parsed successfully,
-/// will be updated with the template-id.
-///
-/// \param AssumeTemplateId When true, this routine will assume that the name
-/// refers to a template without performing name lookup to verify.
-///
-/// \returns true if a parse error occurred, false otherwise.
 bool Parser::ParseUnqualifiedIdTemplateId(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     SourceLocation TemplateKWLoc, IdentifierInfo *Name, SourceLocation NameLoc,
@@ -2701,8 +2358,10 @@ bool Parser::ParseUnqualifiedIdTemplateId(
 
   // Constructor and destructor names.
   TypeResult Type = Actions.ActOnTemplateIdType(
-      getCurScope(), SS, TemplateKWLoc, Template, Name, NameLoc, LAngleLoc,
-      TemplateArgsPtr, RAngleLoc, /*IsCtorOrDtorName=*/true);
+      getCurScope(), ElaboratedTypeKeyword::None,
+      /*ElaboratedKeywordLoc=*/SourceLocation(), SS, TemplateKWLoc, Template,
+      Name, NameLoc, LAngleLoc, TemplateArgsPtr, RAngleLoc,
+      /*IsCtorOrDtorName=*/true);
   if (Type.isInvalid())
     return true;
 
@@ -2714,46 +2373,6 @@ bool Parser::ParseUnqualifiedIdTemplateId(
   return false;
 }
 
-/// Parse an operator-function-id or conversion-function-id as part
-/// of a C++ unqualified-id.
-///
-/// This routine is responsible only for parsing the operator-function-id or
-/// conversion-function-id; it does not handle template arguments in any way.
-///
-/// \code
-///       operator-function-id: [C++ 13.5]
-///         'operator' operator
-///
-///       operator: one of
-///            new   delete  new[]   delete[]
-///            +     -    *  /    %  ^    &   |   ~
-///            !     =    <  >    += -=   *=  /=  %=
-///            ^=    &=   |= <<   >> >>= <<=  ==  !=
-///            <=    >=   && ||   ++ --   ,   ->* ->
-///            ()    []   <=>
-///
-///       conversion-function-id: [C++ 12.3.2]
-///         operator conversion-type-id
-///
-///       conversion-type-id:
-///         type-specifier-seq conversion-declarator[opt]
-///
-///       conversion-declarator:
-///         ptr-operator conversion-declarator[opt]
-/// \endcode
-///
-/// \param SS The nested-name-specifier that preceded this unqualified-id. If
-/// non-empty, then we are parsing the unqualified-id of a qualified-id.
-///
-/// \param EnteringContext whether we are entering the scope of the
-/// nested-name-specifier.
-///
-/// \param ObjectType if this unqualified-id occurs within a member access
-/// expression, the type of the base object whose member is being accessed.
-///
-/// \param Result on a successful parse, contains the parsed unqualified-id.
-///
-/// \returns true if parsing fails, false otherwise.
 bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
                                         ParsedType ObjectType,
                                         UnqualifiedId &Result) {
@@ -2956,42 +2575,6 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
   return false;
 }
 
-/// Parse a C++ unqualified-id (or a C identifier), which describes the
-/// name of an entity.
-///
-/// \code
-///       unqualified-id: [C++ expr.prim.general]
-///         identifier
-///         operator-function-id
-///         conversion-function-id
-/// [C++0x] literal-operator-id [TODO]
-///         ~ class-name
-///         template-id
-///
-/// \endcode
-///
-/// \param SS The nested-name-specifier that preceded this unqualified-id. If
-/// non-empty, then we are parsing the unqualified-id of a qualified-id.
-///
-/// \param ObjectType if this unqualified-id occurs within a member access
-/// expression, the type of the base object whose member is being accessed.
-///
-/// \param ObjectHadErrors if this unqualified-id occurs within a member access
-/// expression, indicates whether the original subexpressions had any errors.
-/// When true, diagnostics for missing 'template' keyword will be supressed.
-///
-/// \param EnteringContext whether we are entering the scope of the
-/// nested-name-specifier.
-///
-/// \param AllowDestructorName whether we allow parsing of a destructor name.
-///
-/// \param AllowConstructorName whether we allow parsing a constructor name.
-///
-/// \param AllowDeductionGuide whether we allow parsing a deduction guide name.
-///
-/// \param Result on a successful parse, contains the parsed unqualified-id.
-///
-/// \returns true if parsing fails, false otherwise.
 bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
                                 bool ObjectHadErrors, bool EnteringContext,
                                 bool AllowDestructorName,
@@ -3280,34 +2863,6 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
   }
 }
 
-/// ParseCXXNewExpression - Parse a C++ new-expression. New is used to allocate
-/// memory in a typesafe manner and call constructors.
-///
-/// This method is called to parse the new expression after the optional :: has
-/// been already parsed.  If the :: was present, "UseGlobal" is true and "Start"
-/// is its location.  Otherwise, "Start" is the location of the 'new' token.
-///
-///        new-expression:
-///                   '::'[opt] 'new' new-placement[opt] new-type-id
-///                                     new-initializer[opt]
-///                   '::'[opt] 'new' new-placement[opt] '(' type-id ')'
-///                                     new-initializer[opt]
-///
-///        new-placement:
-///                   '(' expression-list ')'
-///
-///        new-type-id:
-///                   type-specifier-seq new-declarator[opt]
-/// [GNU]             attributes type-specifier-seq new-declarator[opt]
-///
-///        new-declarator:
-///                   ptr-operator new-declarator[opt]
-///                   direct-new-declarator
-///
-///        new-initializer:
-///                   '(' expression-list[opt] ')'
-/// [C++0x]           braced-init-list
-///
 ExprResult
 Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
   assert(Tok.is(tok::kw_new) && "expected 'new' token");
@@ -3440,13 +2995,6 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
                              TypeIdParens, DeclaratorInfo, Initializer.get());
 }
 
-/// ParseDirectNewDeclarator - Parses a direct-new-declarator. Intended to be
-/// passed to ParseDeclaratorInternal.
-///
-///        direct-new-declarator:
-///                   '[' expression[opt] ']'
-///                   direct-new-declarator '[' constant-expression ']'
-///
 void Parser::ParseDirectNewDeclarator(Declarator &D) {
   // Parse the array dimensions.
   bool First = true;
@@ -3485,16 +3033,6 @@ void Parser::ParseDirectNewDeclarator(Declarator &D) {
   }
 }
 
-/// ParseExpressionListOrTypeId - Parse either an expression-list or a type-id.
-/// This ambiguity appears in the syntax of the C++ new operator.
-///
-///        new-expression:
-///                   '::'[opt] 'new' new-placement[opt] '(' type-id ')'
-///                                     new-initializer[opt]
-///
-///        new-placement:
-///                   '(' expression-list ')'
-///
 bool Parser::ParseExpressionListOrTypeId(
                                    SmallVectorImpl<Expr*> &PlacementArgs,
                                          Declarator &D) {
@@ -3510,17 +3048,6 @@ bool Parser::ParseExpressionListOrTypeId(
   return ParseExpressionList(PlacementArgs);
 }
 
-/// ParseCXXDeleteExpression - Parse a C++ delete-expression. Delete is used
-/// to free memory allocated by new.
-///
-/// This method is called to parse the 'delete' expression after the optional
-/// '::' has been already parsed.  If the '::' was present, "UseGlobal" is true
-/// and "Start" is its location.  Otherwise, "Start" is the location of the
-/// 'delete' token.
-///
-///        delete-expression:
-///                   '::'[opt] 'delete' cast-expression
-///                   '::'[opt] 'delete' '[' ']' cast-expression
 ExprResult
 Parser::ParseCXXDeleteExpression(bool UseGlobal, SourceLocation Start) {
   assert(Tok.is(tok::kw_delete) && "Expected 'delete' keyword");
@@ -3597,37 +3124,13 @@ Parser::ParseCXXDeleteExpression(bool UseGlobal, SourceLocation Start) {
       return ExprError();
   }
 
-  ExprResult Operand(ParseCastExpression(AnyCastExpr));
+  ExprResult Operand(ParseCastExpression(CastParseKind::AnyCastExpr));
   if (Operand.isInvalid())
     return Operand;
 
   return Actions.ActOnCXXDelete(Start, UseGlobal, ArrayDelete, Operand.get());
 }
 
-/// ParseRequiresExpression - Parse a C++2a requires-expression.
-/// C++2a [expr.prim.req]p1
-///     A requires-expression provides a concise way to express requirements on
-///     template arguments. A requirement is one that can be checked by name
-///     lookup (6.4) or by checking properties of types and expressions.
-///
-///     requires-expression:
-///         'requires' requirement-parameter-list[opt] requirement-body
-///
-///     requirement-parameter-list:
-///         '(' parameter-declaration-clause[opt] ')'
-///
-///     requirement-body:
-///         '{' requirement-seq '}'
-///
-///     requirement-seq:
-///         requirement
-///         requirement-seq requirement
-///
-///     requirement:
-///         simple-requirement
-///         type-requirement
-///         compound-requirement
-///         nested-requirement
 ExprResult Parser::ParseRequiresExpression() {
   assert(Tok.is(tok::kw_requires) && "Expected 'requires' keyword");
   SourceLocation RequiresKWLoc = ConsumeToken(); // Consume 'requires'
@@ -3698,15 +3201,18 @@ ExprResult Parser::ParseRequiresExpression() {
         //             cv-qualifier-seq[opt] abstract-declarator[opt]
         BalancedDelimiterTracker ExprBraces(*this, tok::l_brace);
         ExprBraces.consumeOpen();
-        ExprResult Expression =
-            Actions.CorrectDelayedTyposInExpr(ParseExpression());
+        ExprResult Expression = ParseExpression();
+        if (Expression.isUsable())
+          Expression = Actions.CheckPlaceholderExpr(Expression.get());
         if (!Expression.isUsable()) {
           ExprBraces.skipToEnd();
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
           break;
         }
+        // If there's an error consuming the closing bracket, consumeClose()
+        // will handle skipping to the nearest recovery point for us.
         if (ExprBraces.consumeClose())
-          ExprBraces.skipToEnd();
+          break;
 
         concepts::Requirement *Req = nullptr;
         SourceLocation NoexceptLoc;
@@ -3800,8 +3306,7 @@ ExprResult Parser::ParseRequiresExpression() {
             // C++ [expr.prim.req.nested]
             //     nested-requirement:
             //         'requires' constraint-expression ';'
-            ExprResult ConstraintExpr =
-                Actions.CorrectDelayedTyposInExpr(ParseConstraintExpression());
+            ExprResult ConstraintExpr = ParseConstraintExpression();
             if (ConstraintExpr.isInvalid() || !ConstraintExpr.isUsable()) {
               SkipUntil(tok::semi, tok::r_brace,
                         SkipUntilFlags::StopBeforeMatch);
@@ -3867,8 +3372,9 @@ ExprResult Parser::ParseRequiresExpression() {
         //     simple-requirement:
         //         expression ';'
         SourceLocation StartLoc = Tok.getLocation();
-        ExprResult Expression =
-            Actions.CorrectDelayedTyposInExpr(ParseExpression());
+        ExprResult Expression = ParseExpression();
+        if (Expression.isUsable())
+          Expression = Actions.CheckPlaceholderExpr(Expression.get());
         if (!Expression.isUsable()) {
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
           break;
@@ -3952,17 +3458,6 @@ static ExpressionTrait ExpressionTraitFromTokKind(tok::TokenKind kind) {
   }
 }
 
-/// Parse the built-in type-trait pseudo-functions that allow
-/// implementation of the TR1/C++11 type traits templates.
-///
-///       primary-expression:
-///          unary-type-trait '(' type-id ')'
-///          binary-type-trait '(' type-id ',' type-id ')'
-///          type-trait '(' type-id-seq ')'
-///
-///       type-id-seq:
-///          type-id ...[opt] type-id-seq[opt]
-///
 ExprResult Parser::ParseTypeTrait() {
   tok::TokenKind Kind = Tok.getKind();
 
@@ -4005,13 +3500,6 @@ ExprResult Parser::ParseTypeTrait() {
   return Actions.ActOnTypeTrait(TypeTraitFromTokKind(Kind), Loc, Args, EndLoc);
 }
 
-/// ParseArrayTypeTrait - Parse the built-in array type-trait
-/// pseudo-functions.
-///
-///       primary-expression:
-/// [Embarcadero]     '__array_rank' '(' type-id ')'
-/// [Embarcadero]     '__array_extent' '(' type-id ',' expression ')'
-///
 ExprResult Parser::ParseArrayTypeTrait() {
   ArrayTypeTrait ATT = ArrayTypeTraitFromTokKind(Tok.getKind());
   SourceLocation Loc = ConsumeToken();
@@ -4053,12 +3541,6 @@ ExprResult Parser::ParseArrayTypeTrait() {
   llvm_unreachable("Invalid ArrayTypeTrait!");
 }
 
-/// ParseExpressionTrait - Parse built-in expression-trait
-/// pseudo-functions like __is_lvalue_expr( xxx ).
-///
-///       primary-expression:
-/// [Embarcadero]     expression-trait '(' expression ')'
-///
 ExprResult Parser::ParseExpressionTrait() {
   ExpressionTrait ET = ExpressionTraitFromTokKind(Tok.getKind());
   SourceLocation Loc = ConsumeToken();
@@ -4075,17 +3557,14 @@ ExprResult Parser::ParseExpressionTrait() {
                                       T.getCloseLocation());
 }
 
-
-/// ParseCXXAmbiguousParenExpression - We have parsed the left paren of a
-/// parenthesized ambiguous type-id. This uses tentative parsing to disambiguate
-/// based on the context past the parens.
 ExprResult
 Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
                                          ParsedType &CastTy,
                                          BalancedDelimiterTracker &Tracker,
                                          ColonProtectionRAIIObject &ColonProt) {
   assert(getLangOpts().CPlusPlus && "Should only be called for C++!");
-  assert(ExprType == CastExpr && "Compound literals are not ambiguous!");
+  assert(ExprType == ParenParseOption::CastExpr &&
+         "Compound literals are not ambiguous!");
   assert(isTypeIdInParens() && "Not a type-id!");
 
   ExprResult Result(true);
@@ -4122,7 +3601,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
   }
 
   if (Tok.is(tok::l_brace)) {
-    ParseAs = CompoundLiteral;
+    ParseAs = ParenParseOption::CompoundLiteral;
   } else {
     bool NotCastExpr;
     if (Tok.is(tok::l_paren) && NextToken().is(tok::r_paren)) {
@@ -4132,16 +3611,16 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
       // If it is not a cast-expression, NotCastExpr will be true and no token
       // will be consumed.
       ColonProt.restore();
-      Result = ParseCastExpression(AnyCastExpr,
-                                   false/*isAddressofOperand*/,
-                                   NotCastExpr,
+      Result = ParseCastExpression(CastParseKind::AnyCastExpr,
+                                   false /*isAddressofOperand*/, NotCastExpr,
                                    // type-id has priority.
-                                   IsTypeCast);
+                                   TypoCorrectionTypeBehavior::AllowTypes);
     }
 
     // If we parsed a cast-expression, it's really a type-id, otherwise it's
     // an expression.
-    ParseAs = NotCastExpr ? SimpleExpr : CastExpr;
+    ParseAs =
+        NotCastExpr ? ParenParseOption::SimpleExpr : ParenParseOption::CastExpr;
   }
 
   // Create a fake EOF to mark end of Toks buffer.
@@ -4162,7 +3641,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
   // as when we entered this function.
   ConsumeAnyToken();
 
-  if (ParseAs >= CompoundLiteral) {
+  if (ParseAs >= ParenParseOption::CompoundLiteral) {
     // Parse the type declarator.
     DeclSpec DS(AttrFactory);
     Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
@@ -4181,8 +3660,8 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
     assert(Tok.is(tok::eof) && Tok.getEofData() == AttrEnd.getEofData());
     ConsumeAnyToken();
 
-    if (ParseAs == CompoundLiteral) {
-      ExprType = CompoundLiteral;
+    if (ParseAs == ParenParseOption::CompoundLiteral) {
+      ExprType = ParenParseOption::CompoundLiteral;
       if (DeclaratorInfo.isInvalidType())
         return ExprError();
 
@@ -4193,7 +3672,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
     }
 
     // We parsed '(' type-id ')' and the thing after it wasn't a '{'.
-    assert(ParseAs == CastExpr);
+    assert(ParseAs == ParenParseOption::CastExpr);
 
     if (DeclaratorInfo.isInvalidType())
       return ExprError();
@@ -4207,9 +3686,9 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
   }
 
   // Not a compound literal, and not followed by a cast-expression.
-  assert(ParseAs == SimpleExpr);
+  assert(ParseAs == ParenParseOption::SimpleExpr);
 
-  ExprType = SimpleExpr;
+  ExprType = ParenParseOption::SimpleExpr;
   Result = ParseExpression();
   if (!Result.isInvalid() && Tok.is(tok::r_paren))
     Result = Actions.ActOnParenExpr(Tracker.getOpenLocation(),
@@ -4231,7 +3710,6 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
   return Result;
 }
 
-/// Parse a __builtin_bit_cast(T, E).
 ExprResult Parser::ParseBuiltinBitCast() {
   SourceLocation KWLoc = ConsumeToken();
 

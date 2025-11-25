@@ -1,0 +1,2 @@
+# RUN: llvm-lto2 print-guid foo | FileCheck %s
+# CHECK: 6699318081062747564

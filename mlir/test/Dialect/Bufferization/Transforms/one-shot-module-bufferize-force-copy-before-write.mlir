@@ -1,7 +1,7 @@
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 no-analysis-func-filter=contains_to_memref_op" -drop-equivalent-buffer-results --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 no-analysis-func-filter=contains_to_buffer_op" -drop-equivalent-buffer-results --split-input-file | FileCheck %s
 
 // ToMemref ops do not pass analysis step. CopyBeforeWrite will be true only for the
-// FuncOp "contains_to_memref_op" since it is specified in no-analysis-func-filter.
+// FuncOp "contains_to_buffer_op" since it is specified in no-analysis-func-filter.
 
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 copy-before-write=1" -drop-equivalent-buffer-results --split-input-file | FileCheck %s --check-prefix=CHECK_COPY
 
@@ -21,14 +21,14 @@ module {
     return %inserted : tensor<?xf32>
   }
 
-  // CHECK-LABEL:   func.func @contains_to_memref_op(
+  // CHECK-LABEL:   func.func @contains_to_buffer_op(
   // CHECK:           memref.copy
 
-  // CHECK_COPY-LABEL:   func.func @contains_to_memref_op(
+  // CHECK_COPY-LABEL:   func.func @contains_to_buffer_op(
   // CHECK_COPY:           memref.copy
 
-  func.func @contains_to_memref_op(%arg0: tensor<?xf32> {bufferization.writable = true}, %arg1: index) -> vector<5xf32> {
-    %0 = bufferization.to_memref %arg0 : tensor<?xf32> to memref<?xf32>
+  func.func @contains_to_buffer_op(%arg0: tensor<?xf32> {bufferization.writable = true}, %arg1: index) -> vector<5xf32> {
+    %0 = bufferization.to_buffer %arg0 : tensor<?xf32> to memref<?xf32>
     %cst = arith.constant 0.000000e+00 : f32
     %1 = vector.transfer_read %0[%arg1], %cst : memref<?xf32>, vector<5xf32>
     return %1 : vector<5xf32>

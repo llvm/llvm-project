@@ -16,7 +16,7 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT: Live-in ir<20001> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -49,6 +49,8 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT: loop.0:
 ; CHECK-NEXT:   WIDEN-CAST ir<%conv> = sext vp<[[PRED1]]> to i32
 ; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%0>, ir<%conv>
+; CHECK-NEXT:   WIDEN ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
+; CHECK-NEXT:   WIDEN ir<%add> = add ir<%conv>, ir<%rem>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
@@ -57,9 +59,7 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
 ; CHECK-NEXT:     REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[STEPS]]>
-; CHECK-NEXT:     REPLICATE ir<%add> = add ir<%conv>, ir<%rem>
 ; CHECK-NEXT:     REPLICATE store ir<%add>, ir<%gep.dst>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
@@ -80,7 +80,6 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
-; CHECK-NEXT: }
 ;
 entry:
   br label %loop
@@ -103,7 +102,7 @@ exit:
   ret void
 }
 
-define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr) optsize {
+define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr, i32 %z) optsize {
 ; CHECK-LABEL: sink_replicate_region_2
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
@@ -113,7 +112,7 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT: Live-in ir<20001> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
@@ -126,16 +125,18 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%recur>, ir<%recur.next>
+; CHECK-NEXT:   WIDEN ir<%cond> = icmp eq ir<%iv>, ir<%z>
+; CHECK-NEXT:   EMIT vp<[[AND:%.+]]> = logical-and vp<[[MASK]]>, ir<%cond>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:  pred.store.entry:
-; CHECK-NEXT:    BRANCH-ON-MASK vp<[[MASK]]>
+; CHECK-NEXT:    BRANCH-ON-MASK vp<[[AND]]>
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE ir<%add> = add ir<%rem>, ir<%recur.next>
 ; CHECK-NEXT:     REPLICATE store ir<%add>, ir<%gep>
@@ -144,9 +145,9 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT:   pred.store.continue:
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): loop.0
+; CHECK-NEXT: Successor(s): if.1
 ; CHECK-EMPTY:
-; CHECK-NEXT: loop.0:
+; CHECK-NEXT: if.1:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
@@ -158,19 +159,25 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
-; CHECK-NEXT: }
 ;
 entry:
   br label %loop
 
 loop:
-  %recur = phi i32 [ 0, %entry ], [ %recur.next, %loop ]
-  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-  %rem = srem i32 %recur, %x
+  %recur = phi i32 [ 0, %entry ], [ %recur.next, %latch ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
   %recur.next = sext i8 %y to i32
+  %cond = icmp eq i32 %iv, %z
+  br i1 %cond, label %if, label %latch
+
+if:
+  %rem = srem i32 %recur, %x
   %add = add i32 %rem, %recur.next
   %gep = getelementptr i32, ptr %ptr, i32 %iv
   store i32 %add, ptr %gep
+  br label %latch
+
+latch:
   %iv.next = add nsw i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 20001
   br i1 %ec, label %exit, label %loop
@@ -188,9 +195,10 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT: Live-in ir<20001> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   EMIT vp<[[RDX_START:%.+]]> = reduction-start-vector ir<1234>, ir<-1>, ir<1>
 ; CHECK-NEXT:   WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -198,7 +206,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
-; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%and.red> = phi ir<1234>, ir<%and.red.next>
+; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%and.red> = phi vp<[[RDX_START]]>, ir<%and.red.next>
 ; CHECK-NEXT:   EMIT vp<[[WIDEN_CAN:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDEN_CAN]]>, vp<[[BTC]]>
 ; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%recur>, ir<%recur.next>
@@ -214,13 +222,11 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:  EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result ir<%and.red>, vp<[[SEL]]>
-; CHECK-NEXT:  EMIT vp<[[RED_EX:%.+]]> = extract-from-end vp<[[RED_RES]]>, ir<1>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
-; CHECK-NEXT:   IR %res = phi i32 [ %and.red.next, %loop ] (extra operand: vp<[[RED_EX]]> from middle.block)
+; CHECK-NEXT:   IR %res = phi i32 [ %and.red.next, %loop ] (extra operand: vp<[[RED_RES]]> from middle.block)
 ; CHECK-NEXT: No successors
-; CHECK-NEXT: }
 ;
 entry:
   br label %loop
@@ -254,7 +260,7 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-NEXT: Live-in ir<20001> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -287,27 +293,44 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-NEXT: loop.0:
 ; CHECK-NEXT:   WIDEN-CAST ir<%conv> = sext vp<[[PRED]]> to i32
 ; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%0>, ir<%conv>
-; CHECK-NEXT: Successor(s): pred.store
+; CHECK-NEXT:   WIDEN ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
+; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
-; CHECK:      <xVFxUF> pred.store: {
-; CHECK-NEXT:   pred.store.entry:
+; CHECK:      <xVFxUF> pred.load: {
+; CHECK-NEXT:   pred.load.entry:
 ; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
-; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
+; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
-; CHECK:        pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%lv.2> = load ir<%gep>
-; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
-; CHECK-NEXT:     REPLICATE ir<%conv.lv.2> = sext ir<%lv.2>
-; CHECK-NEXT:     REPLICATE ir<%add.1> = add ir<%conv>, ir<%rem>
-; CHECK-NEXT:     REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[STEPS]]>
-; CHECK-NEXT:     REPLICATE ir<%add> = add ir<%add.1>, ir<%conv.lv.2>
-; CHECK-NEXT:     REPLICATE store ir<%add>, ir<%gep.dst>
-; CHECK-NEXT:   Successor(s): pred.store.continue
+; CHECK:        pred.load.if:
+; CHECK-NEXT:     REPLICATE ir<%lv.2> = load ir<%gep> (S->V)
+; CHECK-NEXT:   Successor(s): pred.load.continue
 ; CHECK-EMPTY:
-; CHECK:        pred.store.continue:
+; CHECK:        pred.load.continue:
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%9> = ir<%lv.2>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT:   Successor(s): loop.2
+; CHECK-NEXT:   Successor(s): loop.1
+; CHECK-EMPTY:
+; CHECK-NEXT:  loop.1:
+; CHECK-NEXT:    WIDEN ir<%add.1> = add ir<%conv>, ir<%rem>
+; CHECK-NEXT:    WIDEN-CAST ir<%conv.lv.2> = sext vp<%9> to i32
+; CHECK-NEXT:    WIDEN ir<%add> = add ir<%add.1>, ir<%conv.lv.2>
+; CHECK-NEXT:  Successor(s): pred.store
+; CHECK-EMPTY:
+; CHECK-NEXT:  <xVFxUF> pred.store: {
+; CHECK-NEXT:    pred.store.entry:
+; CHECK-NEXT:      BRANCH-ON-MASK vp<[[MASK]]>
+; CHECK-NEXT:    Successor(s): pred.store.if, pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:    pred.store.if:
+; CHECK-NEXT:      REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[STEPS]]>
+; CHECK-NEXT:      REPLICATE store ir<%add>, ir<%gep.dst>
+; CHECK-NEXT:    Successor(s): pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:    pred.store.continue:
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): loop.2
 ; CHECK-EMPTY:
 ; CHECK:      loop.2:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
@@ -321,7 +344,6 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
-; CHECK-NEXT: }
 ;
 entry:
   br label %loop
@@ -359,7 +381,7 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1 smax (1 + (sext i8 %y to i32))<nsw>)
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
@@ -372,6 +394,7 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%recur>, ir<%recur.next>
+; CHECK-NEXT:   WIDEN ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
@@ -381,7 +404,6 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
 ; CHECK-NEXT:     REPLICATE ir<%rem.div> = sdiv ir<20>, ir<%rem>
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%rem.div>, ir<%gep>
@@ -406,7 +428,6 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
-; CHECK-NEXT: }
 ;
 entry:
   br label %loop
@@ -439,7 +460,7 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, ptr %src, ptr noalias 
 ; CHECK-NEXT: Live-in ir<3> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -453,6 +474,7 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, ptr %src, ptr noalias 
 ; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp ule vp<[[WIDE_IV]]>, vp<[[BTC]]>
 ; CHECK-NEXT:     CLONE ir<[[L]]> = load ir<%src>
 ; CHECK-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%.pn>, ir<[[L]]>
+; CHECK-NEXT:     WIDEN ir<%val> = sdiv vp<[[SPLICE]]>, ir<%x>
 ; CHECK-NEXT:  Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   <xVFxUF> pred.store: {
@@ -463,7 +485,6 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, ptr %src, ptr noalias 
 ; CHECK-NEXT:     pred.store.if:
 ; CHECK-NEXT:       vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:       REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[SCALAR_STEPS]]>
-; CHECK-NEXT:       REPLICATE ir<%val> = sdiv vp<[[SPLICE]]>, ir<%x>
 ; CHECK-NEXT:       REPLICATE store ir<%val>, ir<%gep.dst>
 ; CHECK-NEXT:     Successor(s): pred.store.continue
 ; CHECK-EMPTY:
@@ -484,7 +505,6 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, ptr %src, ptr noalias 
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
-; CHECK-NEXT: }
 ;
 entry:
   br label %loop

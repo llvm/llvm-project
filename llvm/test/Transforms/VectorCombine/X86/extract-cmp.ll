@@ -130,7 +130,7 @@ define i1 @cmp10_v2f64(<2 x double> %x, <2 x double> %y) {
 ; AVX-LABEL: @cmp10_v2f64(
 ; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x double> [[X:%.*]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
 ; AVX-NEXT:    [[TMP1:%.*]] = fcmp ule <2 x double> [[SHIFT]], [[Y:%.*]]
-; AVX-NEXT:    [[CMP:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
+; AVX-NEXT:    [[CMP:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; AVX-NEXT:    ret i1 [[CMP]]
 ;
   %x1 = extractelement <2 x double> %x, i32 1

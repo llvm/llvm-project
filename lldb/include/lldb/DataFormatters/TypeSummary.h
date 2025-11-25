@@ -253,6 +253,10 @@ public:
 
   void SetOptions(uint32_t value) { m_flags.SetValue(value); }
 
+  uint32_t GetPtrMatchDepth() { return m_ptr_match_depth; }
+
+  void SetPtrMatchDepth(uint32_t value) { m_ptr_match_depth = value; }
+
   // we are using a ValueObject* instead of a ValueObjectSP because we do not
   // need to hold on to this for extended periods of time and we trust the
   // ValueObject to stay around for as long as it is required for us to
@@ -278,10 +282,12 @@ protected:
   uint32_t m_my_revision = 0;
   Flags m_flags;
 
-  TypeSummaryImpl(Kind kind, const TypeSummaryImpl::Flags &flags);
+  TypeSummaryImpl(Kind kind, const TypeSummaryImpl::Flags &flags,
+                  uint32_t ptr_match_depth = 1);
 
 private:
   Kind m_kind;
+  uint32_t m_ptr_match_depth = 1;
   TypeSummaryImpl(const TypeSummaryImpl &) = delete;
   const TypeSummaryImpl &operator=(const TypeSummaryImpl &) = delete;
 };
@@ -292,7 +298,8 @@ struct StringSummaryFormat : public TypeSummaryImpl {
   FormatEntity::Entry m_format;
   Status m_error;
 
-  StringSummaryFormat(const TypeSummaryImpl::Flags &flags, const char *f);
+  StringSummaryFormat(const TypeSummaryImpl::Flags &flags, const char *f,
+                      uint32_t ptr_match_depth = 1);
 
   ~StringSummaryFormat() override = default;
 
@@ -328,7 +335,8 @@ struct CXXFunctionSummaryFormat : public TypeSummaryImpl {
   std::string m_description;
 
   CXXFunctionSummaryFormat(const TypeSummaryImpl::Flags &flags, Callback impl,
-                           const char *description);
+                           const char *description,
+                           uint32_t ptr_match_depth = 1);
 
   ~CXXFunctionSummaryFormat() override = default;
 
@@ -373,7 +381,8 @@ struct ScriptSummaryFormat : public TypeSummaryImpl {
 
   ScriptSummaryFormat(const TypeSummaryImpl::Flags &flags,
                       const char *function_name,
-                      const char *python_script = nullptr);
+                      const char *python_script = nullptr,
+                      uint32_t ptr_match_depth = 1);
 
   ~ScriptSummaryFormat() override = default;
 

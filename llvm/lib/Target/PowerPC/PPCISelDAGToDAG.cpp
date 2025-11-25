@@ -16,6 +16,7 @@
 #include "PPC.h"
 #include "PPCISelLowering.h"
 #include "PPCMachineFunctionInfo.h"
+#include "PPCSelectionDAGInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/APInt.h"
@@ -401,7 +402,7 @@ namespace {
         // We need to make sure that this one operand does not end up in r0
         // (because we might end up lowering this as 0(%op)).
         const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-        const TargetRegisterClass *TRC = TRI->getPointerRegClass(*MF, /*Kind=*/1);
+        const TargetRegisterClass *TRC = TRI->getPointerRegClass(/*Kind=*/1);
         SDLoc dl(Op);
         SDValue RC = CurDAG->getTargetConstant(TRC->getID(), dl, MVT::i32);
         SDValue NewOp =
@@ -2975,7 +2976,6 @@ SDNode *IntegerCompareEliminator::tryEXTEND(SDNode *N) {
   if (!WideRes)
     return nullptr;
 
-  SDLoc dl(N);
   bool Input32Bit = WideRes.getValueType() == MVT::i32;
   bool Output32Bit = N->getValueType(0) == MVT::i32;
 
@@ -4962,6 +4962,21 @@ bool PPCDAGToDAGISel::tryAsSingleRLWINM(SDNode *N) {
   // If this is just a masked value where the input is not handled, and
   // is not a rotate-left (handled by a pattern in the .td file), emit rlwinm
   if (isRunOfOnes(Imm, MB, ME) && Val.getOpcode() != ISD::ROTL) {
+    // The result of LBARX/LHARX do not need to be cleared as the instructions
+    // implicitly clear the upper bits.
+    unsigned AlreadyCleared = 0;
+    if (Val.getOpcode() == ISD::INTRINSIC_W_CHAIN) {
+      auto IntrinsicID = Val.getConstantOperandVal(1);
+      if (IntrinsicID == Intrinsic::ppc_lbarx)
+        AlreadyCleared = 24;
+      else if (IntrinsicID == Intrinsic::ppc_lharx)
+        AlreadyCleared = 16;
+      if (AlreadyCleared != 0 && AlreadyCleared == MB && ME == 31) {
+        ReplaceUses(SDValue(N, 0), N->getOperand(0));
+        return true;
+      }
+    }
+
     SDValue Ops[] = {Val, getI32Imm(0, dl), getI32Imm(MB, dl),
                      getI32Imm(ME, dl)};
     CurDAG->SelectNodeTo(N, PPC::RLWINM, MVT::i32, Ops);
@@ -7859,8 +7874,8 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         if (!isInt<16>(Offset))
           continue;
 
-        ImmOpnd = CurDAG->getTargetConstant(Offset, SDLoc(ImmOpnd),
-                                            ImmOpnd.getValueType());
+        ImmOpnd = CurDAG->getSignedTargetConstant(Offset, SDLoc(ImmOpnd),
+                                                  ImmOpnd.getValueType());
       } else if (Offset != 0) {
         // This optimization is performed for non-TOC-based local-[exec|dynamic]
         // accesses.

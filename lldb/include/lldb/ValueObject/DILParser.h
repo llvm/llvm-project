@@ -9,8 +9,8 @@
 #ifndef LLDB_VALUEOBJECT_DILPARSER_H
 #define LLDB_VALUEOBJECT_DILPARSER_H
 
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Target/ExecutionContextScope.h"
-#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILLexer.h"
@@ -43,14 +43,14 @@ public:
         m_detail(std::move(detail)) {}
 
   DILDiagnosticError(llvm::StringRef expr, const std::string &message,
-                     uint32_t loc, uint16_t err_len);
+                     uint32_t loc, uint16_t err_len = 1);
 
   std::unique_ptr<CloneableError> Clone() const override {
     return std::make_unique<DILDiagnosticError>(m_detail);
   }
 
   llvm::ArrayRef<DiagnosticDetail> GetDetails() const override {
-    return {m_detail};
+    return m_detail;
   }
 
   std::string message() const override { return m_detail.rendered; }
@@ -71,6 +71,10 @@ public:
 
   bool UseSynthetic() { return m_use_synthetic; }
 
+  bool UseFragileIvar() { return m_fragile_ivar; }
+
+  bool CheckPtrVsMember() { return m_check_ptr_vs_member; }
+
   lldb::DynamicValueType UseDynamic() { return m_use_dynamic; }
 
 private:
@@ -83,16 +87,25 @@ private:
   ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
+  ASTNodeUP ParseUnaryExpression();
+  ASTNodeUP ParsePostfixExpression();
   ASTNodeUP ParsePrimaryExpression();
 
   std::string ParseNestedNameSpecifier();
 
   std::string ParseIdExpression();
   std::string ParseUnqualifiedId();
+  std::optional<int64_t> ParseIntegerConstant();
+  ASTNodeUP ParseNumericLiteral();
+  ASTNodeUP ParseIntegerLiteral();
+  ASTNodeUP ParseFloatingPointLiteral();
+  ASTNodeUP ParseBooleanLiteral();
 
   void BailOut(const std::string &error, uint32_t loc, uint16_t err_len);
 
   void Expect(Token::Kind kind);
+
+  void ExpectOneOf(std::vector<Token::Kind> kinds_vec);
 
   void TentativeParsingRollback(uint32_t saved_idx) {
     if (m_error)

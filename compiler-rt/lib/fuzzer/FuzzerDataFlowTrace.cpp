@@ -265,8 +265,6 @@ int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,
     // we then request tags in [0,Size/2) and [Size/2, Size), and so on.
     // Function number => DFT.
     auto OutPath = DirPlusFile(DirPath, Hash(FileToVector(F.File)));
-    std::unordered_map<size_t, std::vector<uint8_t>> DFTMap;
-    std::unordered_set<std::string> Cov;
     Command Cmd;
     Cmd.addArgument(DFTBinary);
     Cmd.addArgument(F.File);

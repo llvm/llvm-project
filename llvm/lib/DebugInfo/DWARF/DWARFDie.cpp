@@ -15,11 +15,12 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
@@ -30,7 +31,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <string>
-#include <utility>
 
 using namespace llvm;
 using namespace dwarf;
@@ -98,12 +98,53 @@ static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
   ArrayRef<uint8_t> Expr = *FormValue.getAsBlock();
   DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
                      Ctx.isLittleEndian(), 0);
-  DWARFExpression(Data, U->getAddressByteSize(), U->getFormParams().Format)
-      .print(OS, DumpOpts, U);
+  DWARFExpression DE(Data, U->getAddressByteSize(), U->getFormParams().Format);
+  printDwarfExpression(&DE, OS, DumpOpts, U);
 }
 
 static DWARFDie resolveReferencedType(DWARFDie D, DWARFFormValue F) {
   return D.getAttributeValueAsReferencedDie(F).resolveTypeUnitReference();
+}
+
+static llvm::StringRef
+prettyLanguageVersionString(const DWARFAttribute &AttrValue,
+                            const DWARFDie &Die) {
+  if (AttrValue.Attr != DW_AT_language_version)
+    return {};
+
+  auto NameForm = Die.find(DW_AT_language_name);
+  if (!NameForm)
+    return {};
+
+  auto LName = NameForm->getAsUnsignedConstant();
+  if (!LName)
+    return {};
+
+  auto LVersion = AttrValue.Value.getAsUnsignedConstant();
+  if (!LVersion)
+    return {};
+
+  return llvm::dwarf::LanguageDescription(
+      static_cast<SourceLanguageName>(*LName), *LVersion);
+}
+
+static llvm::Expected<llvm::StringRef>
+getApplePropertyName(const DWARFDie &PropDIE) {
+  if (!PropDIE)
+    return llvm::createStringError("invalid DIE");
+
+  if (PropDIE.getTag() != DW_TAG_APPLE_property)
+    return llvm::createStringError("not referencing a DW_TAG_APPLE_property");
+
+  auto PropNameForm = PropDIE.find(DW_AT_APPLE_property_name);
+  if (!PropNameForm)
+    return "";
+
+  auto NameOrErr = PropNameForm->getAsCString();
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+
+  return *NameOrErr;
 }
 
 static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
@@ -145,14 +186,28 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   } else if (std::optional<uint64_t> Val = FormValue.getAsUnsignedConstant())
     Name = AttributeValueString(Attr, *Val);
 
-  if (!Name.empty())
-    WithColor(OS, Color) << Name;
-  else if (Attr == DW_AT_decl_line || Attr == DW_AT_decl_column ||
-           Attr == DW_AT_call_line || Attr == DW_AT_call_column) {
+  auto DumpUnsignedConstant = [&OS,
+                               &DumpOpts](const DWARFFormValue &FormValue) {
     if (std::optional<uint64_t> Val = FormValue.getAsUnsignedConstant())
       OS << *Val;
     else
       FormValue.dump(OS, DumpOpts);
+  };
+
+  llvm::StringRef PrettyVersionName =
+      prettyLanguageVersionString(AttrValue, Die);
+  bool ShouldDumpRawLanguageVersion =
+      Attr == DW_AT_language_version &&
+      (DumpOpts.Verbose || PrettyVersionName.empty());
+
+  if (!Name.empty())
+    WithColor(OS, Color) << Name;
+  else if (Attr == DW_AT_decl_line || Attr == DW_AT_decl_column ||
+           Attr == DW_AT_call_line || Attr == DW_AT_call_column) {
+    DumpUnsignedConstant(FormValue);
+  } else if (Attr == DW_AT_language_version) {
+    if (ShouldDumpRawLanguageVersion)
+      DumpUnsignedConstant(FormValue);
   } else if (Attr == DW_AT_low_pc &&
              (FormValue.getAsAddress() ==
               dwarf::computeTombstoneAddress(U->getAddressByteSize()))) {
@@ -196,6 +251,15 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
             Die.getAttributeValueAsReferencedDie(FormValue).getName(
                 DINameKind::LinkageName))
       OS << Space << "\"" << Name << '\"';
+  } else if (Attr == DW_AT_APPLE_property) {
+    auto PropDIE = Die.getAttributeValueAsReferencedDie(FormValue);
+    if (auto PropNameOrErr = getApplePropertyName(PropDIE))
+      OS << Space << "\"" << *PropNameOrErr << '\"';
+    else
+      DumpOpts.RecoverableErrorHandler(createStringError(
+          errc::invalid_argument,
+          llvm::formatv("decoding DW_AT_APPLE_property_name: {}",
+                        toString(PropNameOrErr.takeError()))));
   } else if (Attr == DW_AT_type || Attr == DW_AT_containing_type) {
     DWARFDie D = resolveReferencedType(Die, FormValue);
     if (D && !D.isNULL()) {
@@ -224,6 +288,10 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
       DumpOpts.RecoverableErrorHandler(createStringError(
           errc::invalid_argument, "decoding address ranges: %s",
           toString(RangesOrError.takeError()).c_str()));
+  } else if (Attr == DW_AT_language_version) {
+    if (!PrettyVersionName.empty())
+      WithColor(OS, Color) << (ShouldDumpRawLanguageVersion ? " " : "")
+                           << PrettyVersionName;
   }
 
   OS << ")\n";
@@ -635,7 +703,9 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
           DIDumpOptions ChildDumpOpts = DumpOpts;
           ChildDumpOpts.ShowParents = false;
           while (Child) {
-            Child.dump(OS, Indent + 2, ChildDumpOpts);
+            if (DumpOpts.FilterChildTag.empty() ||
+                llvm::is_contained(DumpOpts.FilterChildTag, Child.getTag()))
+              Child.dump(OS, Indent + 2, ChildDumpOpts);
             Child = Child.getSibling();
           }
         }

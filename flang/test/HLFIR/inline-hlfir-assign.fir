@@ -145,18 +145,16 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"})
 // CHECK:           %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_10]]#1, %[[VAL_1]] : index
 // CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_12]], %[[VAL_14]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_16:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_2]]:%[[VAL_9]]#1:%[[VAL_2]], %[[VAL_2]]:%[[VAL_10]]#1:%[[VAL_2]])  shape %[[VAL_15]] : (!fir.box<!fir.array<?x?xf32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
-// CHECK:           fir.do_loop %[[VAL_17:.*]] = %[[VAL_2]] to %[[VAL_14]] step %[[VAL_2]] unordered {
-// CHECK:             fir.do_loop %[[VAL_18:.*]] = %[[VAL_2]] to %[[VAL_12]] step %[[VAL_2]] unordered {
+// CHECK:           fir.do_loop %[[VAL_17:.*]] = %[[VAL_2]] to %[[VAL_3]] step %[[VAL_2]] unordered {
+// CHECK:             fir.do_loop %[[VAL_18:.*]] = %[[VAL_2]] to %[[VAL_3]] step %[[VAL_2]] unordered {
 // CHECK:               %[[VAL_19:.*]] = hlfir.designate %[[VAL_8]] (%[[VAL_18]], %[[VAL_17]])  : (!fir.ref<!fir.array<3x3xf32>>, index, index) -> !fir.ref<f32>
 // CHECK:               %[[VAL_20:.*]] = fir.load %[[VAL_19]] : !fir.ref<f32>
 // CHECK:               %[[VAL_21:.*]] = hlfir.designate %[[VAL_16]] (%[[VAL_18]], %[[VAL_17]])  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
 // CHECK:               hlfir.assign %[[VAL_20]] to %[[VAL_21]] : f32, !fir.ref<f32>
 // CHECK:             }
 // CHECK:           }
-// CHECK:           %[[VAL_22:.*]]:3 = fir.box_dims %[[VAL_4]]#0, %[[VAL_1]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
-// CHECK:           %[[VAL_23:.*]]:3 = fir.box_dims %[[VAL_4]]#0, %[[VAL_2]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
-// CHECK:           fir.do_loop %[[VAL_24:.*]] = %[[VAL_2]] to %[[VAL_23]]#1 step %[[VAL_2]] unordered {
-// CHECK:             fir.do_loop %[[VAL_25:.*]] = %[[VAL_2]] to %[[VAL_22]]#1 step %[[VAL_2]] unordered {
+// CHECK:           fir.do_loop %[[VAL_24:.*]] = %[[VAL_2]] to %[[VAL_3]] step %[[VAL_2]] unordered {
+// CHECK:             fir.do_loop %[[VAL_25:.*]] = %[[VAL_2]] to %[[VAL_3]] step %[[VAL_2]] unordered {
 // CHECK:               %[[VAL_26:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_25]], %[[VAL_24]])  : (!fir.ref<!fir.array<3x3xf32>>, index, index) -> !fir.ref<f32>
 // CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_26]] : !fir.ref<f32>
 // CHECK:               %[[VAL_28:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_25]], %[[VAL_24]])  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>

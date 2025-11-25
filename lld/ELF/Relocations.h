@@ -17,7 +17,9 @@
 
 namespace lld::elf {
 struct Ctx;
+struct ELFSyncStream;
 class Defined;
+class Undefined;
 class Symbol;
 class InputSection;
 class InputSectionBase;
@@ -110,6 +112,7 @@ enum RelExpr {
   RE_MIPS_GOT_LOCAL_PAGE,
   RE_MIPS_GOT_OFF,
   RE_MIPS_GOT_OFF32,
+  RE_MIPS_OSEC_LOCAL_PAGE,
   RE_MIPS_TLSGD,
   RE_MIPS_TLSLD,
   RE_PPC32_PLTREL,
@@ -131,6 +134,7 @@ enum RelExpr {
   RE_LOONGARCH_GOT_PAGE_PC,
   RE_LOONGARCH_TLSGD_PAGE_PC,
   RE_LOONGARCH_TLSDESC_PAGE_PC,
+  RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC,
 };
 
 // Architecture-neutral representation of relocation.
@@ -151,17 +155,24 @@ struct JumpInstrMod {
   unsigned size;
 };
 
+void printLocation(ELFSyncStream &s, InputSectionBase &sec, const Symbol &sym,
+                   uint64_t off);
+
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
 template <class ELFT> void scanRelocations(Ctx &ctx);
 template <class ELFT> void checkNoCrossRefs(Ctx &ctx);
 void reportUndefinedSymbols(Ctx &);
+bool maybeReportUndefined(Ctx &, Undefined &sym, InputSectionBase &sec,
+                          uint64_t offset);
 void postScanRelocations(Ctx &ctx);
 void addGotEntry(Ctx &ctx, Symbol &sym);
 
 void hexagonTLSSymbolUpdate(Ctx &ctx);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
+
+bool isAbsolute(const Symbol &sym);
 
 class ThunkSection;
 class Thunk;

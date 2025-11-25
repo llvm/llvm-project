@@ -59,8 +59,14 @@
 #pragma omp begin assumes ext // expected-warning {{valid begin assumes clauses start with 'ext_', 'absent', 'contains', 'holds', 'no_openmp', 'no_openmp_routines', 'no_openmp_constructs', 'no_parallelism'; token will be ignored}}
 #pragma omp end assumes
 
-#pragma omp assumes ext_123(not allowed) // expected-warning {{'ext_123' clause should not be followed by arguments; tokens will be ignored}} expected-note {{the ignored tokens spans until here}}
-#pragma omp begin assumes ext_123(not allowed) // expected-warning {{'ext_123' clause should not be followed by arguments; tokens will be ignored}} expected-note {{the ignored tokens spans until here}}
+// FIXME: We should be getting an expected note about where the span of ignored
+// tokens ends. However, error recovery ends up lexing the 'not' token,
+// emitting a (silenced) diagnostic about use of a C++ keyword in C, and the
+// note gets associated with *that* (silenced) diagnostic. This is an existing
+// issue that also happens with error recovery of reserved identifiers or
+// extension tokens, but is unfortunate nonetheless.
+#pragma omp assumes ext_123(not allowed) // expected-warning {{'ext_123' clause should not be followed by arguments; tokens will be ignored}}
+#pragma omp begin assumes ext_123(not allowed) // expected-warning {{'ext_123' clause should not be followed by arguments; tokens will be ignored}}
 #pragma omp end assumes
 
 #pragma omp end assumes // expected-error {{'#pragma omp end assumes' with no matching '#pragma omp begin assumes'}}

@@ -39,7 +39,7 @@ class ModulePass;
   FunctionPass *createPPCLoopInstrFormPrepPass(PPCTargetMachine &TM);
   FunctionPass *createPPCTOCRegDepsPass();
   FunctionPass *createPPCEarlyReturnPass();
-  FunctionPass *createPPCVSXCopyPass();
+  FunctionPass *createPPCVSXWACCCopyPass();
   FunctionPass *createPPCVSXFMAMutatePass();
   FunctionPass *createPPCVSXSwapRemovalPass();
   FunctionPass *createPPCReduceCRLogicalsPass();
@@ -64,7 +64,7 @@ class ModulePass;
   void initializePPCLoopInstrFormPrepPass(PassRegistry&);
   void initializePPCTOCRegDepsPass(PassRegistry&);
   void initializePPCEarlyReturnPass(PassRegistry&);
-  void initializePPCVSXCopyPass(PassRegistry&);
+  void initializePPCVSXWACCCopyPass(PassRegistry &);
   void initializePPCVSXFMAMutatePass(PassRegistry&);
   void initializePPCVSXSwapRemovalPass(PassRegistry&);
   void initializePPCReduceCRLogicalsPass(PassRegistry&);
@@ -78,6 +78,8 @@ class ModulePass;
   void initializePPCExpandAtomicPseudoPass(PassRegistry &);
   void initializePPCCTRLoopsPass(PassRegistry &);
   void initializePPCDAGToDAGISelLegacyPass(PassRegistry &);
+  void initializePPCLinuxAsmPrinterPass(PassRegistry &);
+  void initializePPCAIXAsmPrinterPass(PassRegistry &);
 
   extern char &PPCVSXFMAMutateID;
 

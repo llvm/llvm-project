@@ -62,7 +62,7 @@ class TrieSubtrie final
 public:
   using Slot = LazyAtomicPointer<TrieNode>;
 
-  Slot &get(size_t I) { return getTrailingObjects<Slot>()[I]; }
+  Slot &get(size_t I) { return getTrailingObjects()[I]; }
   TrieNode *load(size_t I) { return get(I).load(); }
 
   unsigned size() const { return Size; }
@@ -190,7 +190,7 @@ public:
   }
 
   // Get the root which is the trailing object.
-  TrieSubtrie *getRoot() { return getTrailingObjects<TrieSubtrie>(); }
+  TrieSubtrie *getRoot() { return getTrailingObjects(); }
 
   static void *operator new(size_t Size) { return ::operator new(Size); }
   void operator delete(void *Ptr) { ::operator delete(Ptr); }
@@ -333,8 +333,8 @@ ThreadSafeTrieRawHashMapBase::ThreadSafeTrieRawHashMapBase(
     std::optional<size_t> NumRootBits, std::optional<size_t> NumSubtrieBits)
     : ContentAllocSize(ContentAllocSize), ContentAllocAlign(ContentAllocAlign),
       ContentOffset(ContentOffset),
-      NumRootBits(NumRootBits ? *NumRootBits : DefaultNumRootBits),
-      NumSubtrieBits(NumSubtrieBits ? *NumSubtrieBits : DefaultNumSubtrieBits),
+      NumRootBits(NumRootBits.value_or(DefaultNumRootBits)),
+      NumSubtrieBits(NumSubtrieBits.value_or(DefaultNumSubtrieBits)),
       ImplPtr(nullptr) {
   // Assertion checks for reasonable configuration. The settings below are not
   // hard limits on most platforms, but a reasonable configuration should fall

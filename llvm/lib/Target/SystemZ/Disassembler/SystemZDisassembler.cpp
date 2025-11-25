@@ -8,16 +8,19 @@
 
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "TargetInfo/SystemZTargetInfo.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "systemz-disassembler"
 
@@ -45,7 +48,8 @@ static MCDisassembler *createSystemZDisassembler(const Target &T,
 }
 
 // NOLINTNEXTLINE(readability-identifier-naming)
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheSystemZTarget(),
                                          createSystemZDisassembler);
@@ -280,9 +284,9 @@ static DecodeStatus decodePCDBLOperand(MCInst &Inst, uint64_t Imm,
                                        uint64_t Address, bool isBranch,
                                        const MCDisassembler *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid PC-relative offset");
-  uint64_t Value = SignExtend64<N>(Imm) * 2 + Address;
+  uint64_t Value = SignExtend64<N>(Imm) * 2;
 
-  if (!tryAddingSymbolicOperand(Value, isBranch, Address, 2, N / 8,
+  if (!tryAddingSymbolicOperand(Value + Address, isBranch, Address, 2, N / 8,
                                 Inst, Decoder))
     Inst.addOperand(MCOperand::createImm(Value));
 
@@ -325,6 +329,8 @@ DecodeStatus SystemZDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
                                                  raw_ostream &CS) const {
+  CommentStream = &CS;
+
   // Get the first two bytes of the instruction.
   Size = 0;
   if (Bytes.size() < 2)

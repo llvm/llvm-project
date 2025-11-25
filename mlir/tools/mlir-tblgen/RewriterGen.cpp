@@ -125,6 +125,11 @@ private:
   void emitAttributeMatch(DagNode tree, StringRef castedName, int argIndex,
                           int depth);
 
+  // Emits C++ statements for matching the `argIndex`-th argument of the given
+  // DAG `tree` as a property.
+  void emitPropertyMatch(DagNode tree, StringRef castedName, int argIndex,
+                         int depth);
+
   // Emits C++ for checking a match with a corresponding match failure
   // diagnostic.
   void emitMatchCheck(StringRef opName, const FmtObjectBase &matchFmt,
@@ -338,7 +343,7 @@ private:
   // for each DagNode.
   int staticMatcherCounter = 0;
 
-  // The DagLeaf which contains type or attr constraint.
+  // The DagLeaf which contains type, attr, or prop constraint.
   SetVector<DagLeaf> constraints;
 
   // Static type/attribute verification function emitter.
@@ -487,6 +492,19 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
       auto leaf = tree.getArgAsLeaf(i);
       if (leaf.isAttrMatcher() || leaf.isConstantAttr()) {
         os << "::mlir::Attribute " << argName << ";\n";
+      } else if (leaf.isPropMatcher()) {
+        StringRef interfaceType = leaf.getAsPropConstraint().getInterfaceType();
+        if (interfaceType.empty())
+          PrintFatalError(loc, "NativeCodeCall cannot have a property operand "
+                               "with unspecified interface type");
+        os << interfaceType << " " << argName;
+        if (leaf.isPropDefinition()) {
+          Property propDef = leaf.getAsProperty();
+          // Ensure properties that aren't zero-arg-constructable still work.
+          if (propDef.hasDefaultValue())
+            os << " = " << propDef.getDefaultValue();
+        }
+        os << ";\n";
       } else {
         os << "::mlir::Value " << argName << ";\n";
       }
@@ -539,7 +557,7 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
     auto constraint = leaf.getAsConstraint();
 
     std::string self;
-    if (leaf.isAttrMatcher() || leaf.isConstantAttr())
+    if (leaf.isAttrMatcher() || leaf.isConstantAttr() || leaf.isPropMatcher())
       self = argName;
     else
       self = formatv("{0}.getType()", argName);
@@ -614,7 +632,8 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
         ++opArgIdx;
         continue;
       }
-      if (auto *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(opArg)) {
+      if (auto *operand =
+              llvm::dyn_cast_if_present<NamedTypeConstraint *>(opArg)) {
         if (argTree.isVariadic()) {
           if (!operand->isVariadic()) {
             auto error = formatv("variadic DAG construct can't match op {0}'s "
@@ -658,13 +677,15 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
     if (isa<NamedTypeConstraint *>(opArg)) {
       auto operandName =
           formatv("{0}.getODSOperands({1})", castedName, nextOperand);
-      emitOperandMatch(tree, castedName, operandName.str(), opArgIdx,
+      emitOperandMatch(tree, castedName, operandName.str(), nextOperand,
                        /*operandMatcher=*/tree.getArgAsLeaf(i),
                        /*argName=*/tree.getArgName(i), opArgIdx,
                        /*variadicSubIndex=*/std::nullopt);
       ++nextOperand;
     } else if (isa<NamedAttribute *>(opArg)) {
       emitAttributeMatch(tree, castedName, opArgIdx, depth);
+    } else if (isa<NamedProperty *>(opArg)) {
+      emitPropertyMatch(tree, castedName, opArgIdx, depth);
     } else {
       PrintFatalError(loc, "unhandled case when matching op");
     }
@@ -680,7 +701,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
                                       int argIndex,
                                       std::optional<int> variadicSubIndex) {
   Operator &op = tree.getDialectOp(opMap);
-  auto *operand = cast<NamedTypeConstraint *>(op.getArg(operandIndex));
+  NamedTypeConstraint operand = op.getOperand(operandIndex);
 
   // If a constraint is specified, we need to generate C++ statements to
   // check the constraint.
@@ -693,8 +714,8 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
     // Only need to verify if the matcher's type is different from the one
     // of op definition.
     Constraint constraint = operandMatcher.getAsConstraint();
-    if (operand->constraint != constraint) {
-      if (operand->isVariableLength()) {
+    if (operand.constraint != constraint) {
+      if (operand.isVariableLength()) {
         auto error = formatv(
             "further constrain op {0}'s variadic operand #{1} unsupported now",
             op.getOperationName(), argIndex);
@@ -706,7 +727,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
           verifier, opName, self.str(),
           formatv(
               "\"operand {0} of op '{1}' failed to satisfy constraint: '{2}'\"",
-              operand - op.operand_begin(), op.getOperationName(),
+              operandIndex, op.getOperationName(),
               escapeString(constraint.getSummary()))
               .str());
     }
@@ -715,7 +736,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
   // Capture the value
   // `$_` is a special symbol to ignore op argument matching.
   if (!argName.empty() && argName != "_") {
-    auto res = symbolInfoMap.findBoundSymbol(argName, tree, op, operandIndex,
+    auto res = symbolInfoMap.findBoundSymbol(argName, tree, op, argIndex,
                                              variadicSubIndex);
     if (res == symbolInfoMap.end())
       PrintFatalError(loc, formatv("symbol not found: {0}", argName));
@@ -821,7 +842,7 @@ void PatternEmitter::emitVariadicOperandMatch(DagNode tree,
   StringRef variadicTreeName = variadicArgTree.getSymbol();
   if (!variadicTreeName.empty()) {
     auto res =
-        symbolInfoMap.findBoundSymbol(variadicTreeName, tree, op, operandIndex,
+        symbolInfoMap.findBoundSymbol(variadicTreeName, tree, op, argIndex,
                                       /*variadicSubIndex=*/std::nullopt);
     if (res == symbolInfoMap.end())
       PrintFatalError(loc, formatv("symbol not found: {0}", variadicTreeName));
@@ -942,6 +963,46 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef castedName,
   os.unindent() << "}\n";
 }
 
+void PatternEmitter::emitPropertyMatch(DagNode tree, StringRef castedName,
+                                       int argIndex, int depth) {
+  Operator &op = tree.getDialectOp(opMap);
+  auto *namedProp = cast<NamedProperty *>(op.getArg(argIndex));
+
+  os << "{\n";
+  os.indent() << formatv(
+      "[[maybe_unused]] auto tblgen_prop = {0}.getProperties().{1}();\n",
+      castedName, op.getGetterName(namedProp->name));
+
+  auto matcher = tree.getArgAsLeaf(argIndex);
+  if (!matcher.isUnspecified()) {
+    if (!matcher.isPropMatcher()) {
+      PrintFatalError(
+          loc, formatv("the {1}-th argument of op '{0}' should be a property",
+                       op.getOperationName(), argIndex + 1));
+    }
+
+    // If a constraint is specified, we need to generate function call to its
+    // static verifier.
+    StringRef verifier = staticMatcherHelper.getVerifierName(matcher);
+    emitStaticVerifierCall(
+        verifier, castedName, "tblgen_prop",
+        formatv("\"op '{0}' property '{1}' failed to satisfy constraint: "
+                "'{2}'\"",
+                op.getOperationName(), namedProp->name,
+                escapeString(matcher.getAsConstraint().getSummary()))
+            .str());
+  }
+
+  // Capture the value
+  auto name = tree.getArgName(argIndex);
+  // `$_` is a special symbol to ignore op argument matching.
+  if (!name.empty() && name != "_") {
+    os << formatv("{0} = tblgen_prop;\n", name);
+  }
+
+  os.unindent() << "}\n";
+}
+
 void PatternEmitter::emitMatchCheck(
     StringRef opName, const FmtObjectBase &matchFmt,
     const llvm::formatv_object_base &failureFmt) {
@@ -962,6 +1023,32 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
   LLVM_DEBUG(llvm::dbgs() << "--- start emitting match logic ---\n");
   int depth = 0;
   emitMatch(tree, opName, depth);
+
+  // Some of the operands could be bound to the same symbol name, we need
+  // to enforce equality constraint on those.
+  // This has to happen before user provided constraints, which may assume the
+  // same name checks are already performed, since in the pattern source code
+  // the user provided constraints appear later.
+  // TODO: we should be able to emit equality checks early
+  // and short circuit unnecessary work if vars are not equal.
+  for (auto symbolInfoIt = symbolInfoMap.begin();
+       symbolInfoIt != symbolInfoMap.end();) {
+    auto range = symbolInfoMap.getRangeOfEqualElements(symbolInfoIt->first);
+    auto startRange = range.first;
+    auto endRange = range.second;
+
+    auto firstOperand = symbolInfoIt->second.getVarName(symbolInfoIt->first);
+    for (++startRange; startRange != endRange; ++startRange) {
+      auto secondOperand = startRange->second.getVarName(symbolInfoIt->first);
+      emitMatchCheck(
+          opName,
+          formatv("*{0}.begin() == *{1}.begin()", firstOperand, secondOperand),
+          formatv("\"Operands '{0}' and '{1}' must be equal\"", firstOperand,
+                  secondOperand));
+    }
+
+    symbolInfoIt = endRange;
+  }
 
   for (auto &appliedConstraint : pattern.getConstraints()) {
     auto &constraint = appliedConstraint.constraint;
@@ -1005,29 +1092,6 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
                              llvm::join(entities, ", "),
                              escapeString(constraint.getSummary())));
     }
-  }
-
-  // Some of the operands could be bound to the same symbol name, we need
-  // to enforce equality constraint on those.
-  // TODO: we should be able to emit equality checks early
-  // and short circuit unnecessary work if vars are not equal.
-  for (auto symbolInfoIt = symbolInfoMap.begin();
-       symbolInfoIt != symbolInfoMap.end();) {
-    auto range = symbolInfoMap.getRangeOfEqualElements(symbolInfoIt->first);
-    auto startRange = range.first;
-    auto endRange = range.second;
-
-    auto firstOperand = symbolInfoIt->second.getVarName(symbolInfoIt->first);
-    for (++startRange; startRange != endRange; ++startRange) {
-      auto secondOperand = startRange->second.getVarName(symbolInfoIt->first);
-      emitMatchCheck(
-          opName,
-          formatv("*{0}.begin() == *{1}.begin()", firstOperand, secondOperand),
-          formatv("\"Operands '{0}' and '{1}' must be equal\"", firstOperand,
-                  secondOperand));
-    }
-
-    symbolInfoIt = endRange;
   }
 
   LLVM_DEBUG(llvm::dbgs() << "--- done emitting match logic ---\n");
@@ -1384,6 +1448,10 @@ std::string PatternEmitter::handleOpArgument(DagLeaf leaf,
     std::string val = std::to_string(enumCase.getValue());
     return handleConstantAttr(Attribute(&enumCase.getDef()), val);
   }
+  if (leaf.isConstantProp()) {
+    auto constantProp = leaf.getAsConstantProp();
+    return constantProp.getValue().str();
+  }
 
   LLVM_DEBUG(llvm::dbgs() << "handle argument '" << patArgName << "'\n");
   auto argName = symbolInfoMap.getValueAndRangeUse(patArgName);
@@ -1631,7 +1699,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
 
     // Then create the op.
     os.scope("", "\n}\n").os
-        << formatv("{0} = rewriter.create<{1}>({2}, tblgen_values, {3});",
+        << formatv("{0} = {1}::create(rewriter, {2}, tblgen_values, {3});",
                    valuePackName, resultOp.getQualCppClassName(), locToUse,
                    useProperties ? "tblgen_props" : "tblgen_attrs");
     return resultValue;
@@ -1650,7 +1718,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
     // aggregate-parameter builders.
     createSeparateLocalVarsForOpArgs(tree, childNodeNames);
 
-    os.scope().os << formatv("{0} = rewriter.create<{1}>({2}", valuePackName,
+    os.scope().os << formatv("{0} = {1}::create(rewriter, {2}", valuePackName,
                              resultOp.getQualCppClassName(), locToUse);
     supplyValuesForOpArgs(tree, childNodeNames, depth);
     os << "\n  );\n}\n";
@@ -1689,7 +1757,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
                       resultIndex + i);
     }
   }
-  os << formatv("{0} = rewriter.create<{1}>({2}, tblgen_types, "
+  os << formatv("{0} = {1}::create(rewriter, {2}, tblgen_types, "
                 "tblgen_values, {3});\n",
                 valuePackName, resultOp.getQualCppClassName(), locToUse,
                 useProperties ? "tblgen_props" : "tblgen_attrs");
@@ -1708,9 +1776,9 @@ void PatternEmitter::createSeparateLocalVarsForOpArgs(
 
   int valueIndex = 0; // An index for uniquing local variable names.
   for (int argIndex = 0, e = resultOp.getNumArgs(); argIndex < e; ++argIndex) {
-    const auto *operand =
-        llvm::dyn_cast_if_present<NamedTypeConstraint *>(resultOp.getArg(argIndex));
-    // We do not need special handling for attributes.
+    const auto *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(
+        resultOp.getArg(argIndex));
+    // We do not need special handling for attributes or properties.
     if (!operand)
       continue;
 
@@ -1764,7 +1832,8 @@ void PatternEmitter::supplyValuesForOpArgs(
 
     Argument opArg = resultOp.getArg(argIndex);
     // Handle the case of operand first.
-    if (auto *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(opArg)) {
+    if (auto *operand =
+            llvm::dyn_cast_if_present<NamedTypeConstraint *>(opArg)) {
       if (!operand->name.empty())
         os << "/*" << operand->name << "=*/";
       os << childNodeNames.lookup(argIndex);
@@ -1776,7 +1845,7 @@ void PatternEmitter::supplyValuesForOpArgs(
     if (auto subTree = node.getArgAsNestedDag(argIndex)) {
       if (!subTree.isNativeCodeCall())
         PrintFatalError(loc, "only NativeCodeCall allowed in nested dag node "
-                             "for creating attribute");
+                             "for creating attributes and properties");
       os << formatv("/*{0}=*/{1}", opArgName, childNodeNames.lookup(argIndex));
     } else {
       auto leaf = node.getArgAsLeaf(argIndex);
@@ -1786,6 +1855,11 @@ void PatternEmitter::supplyValuesForOpArgs(
         // TODO: Refactor out into map to avoid recomputing these.
         if (!isa<NamedAttribute *>(opArg))
           PrintFatalError(loc, Twine("expected attribute ") + Twine(argIndex));
+        if (!patArgName.empty())
+          os << "/*" << patArgName << "=*/";
+      } else if (leaf.isConstantProp()) {
+        if (!isa<NamedProperty *>(opArg))
+          PrintFatalError(loc, Twine("expected property ") + Twine(argIndex));
         if (!patArgName.empty())
           os << "/*" << patArgName << "=*/";
       } else {
@@ -1820,6 +1894,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
       "  tblgen_attrs.emplace_back(rewriter.getStringAttr(\"{0}\"), "
       "tmpAttr);\n}\n";
   const char *setterCmd = (useProperties) ? setPropCmd : addAttrCmd;
+  const char *propSetterCmd = "tblgen_props.{0}({1});\n";
 
   int numVariadic = 0;
   bool hasOperandSegmentSizes = false;
@@ -1845,9 +1920,30 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
       continue;
     }
 
+    if (isa<NamedProperty *>(resultOp.getArg(argIndex))) {
+      // The argument in the op definition.
+      auto opArgName = resultOp.getArgName(argIndex);
+      auto setterName = resultOp.getSetterName(opArgName);
+      if (auto subTree = node.getArgAsNestedDag(argIndex)) {
+        if (!subTree.isNativeCodeCall())
+          PrintFatalError(loc, "only NativeCodeCall allowed in nested dag node "
+                               "for creating property");
+
+        os << formatv(propSetterCmd, setterName,
+                      childNodeNames.lookup(argIndex));
+      } else {
+        auto leaf = node.getArgAsLeaf(argIndex);
+        // The argument in the result DAG pattern.
+        auto patArgName = node.getArgName(argIndex);
+        // The argument in the result DAG pattern.
+        os << formatv(propSetterCmd, setterName,
+                      handleOpArgument(leaf, patArgName));
+      }
+      continue;
+    }
+
     const auto *operand =
         cast<NamedTypeConstraint *>(resultOp.getArg(argIndex));
-    std::string varName;
     if (operand->isVariadic()) {
       ++numVariadic;
       std::string range;
@@ -1974,6 +2070,12 @@ StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
     assert(constraint && "attribute constraint was not uniqued");
     return *constraint;
   }
+  if (leaf.isPropMatcher()) {
+    std::optional<StringRef> constraint =
+        staticVerifierEmitter.getPropConstraintFn(leaf.getAsConstraint());
+    assert(constraint && "prop constraint was not uniqued");
+    return *constraint;
+  }
   assert(leaf.isOperandMatcher());
   return staticVerifierEmitter.getTypeConstraintFn(leaf.getAsConstraint());
 }
@@ -2018,7 +2120,7 @@ static void emitRewriters(const RecordKeeper &records, raw_ostream &os) {
   }
 
   // Emit function to add the generated matchers to the pattern list.
-  os << "void LLVM_ATTRIBUTE_UNUSED populateWithGenerated("
+  os << "[[maybe_unused]] void populateWithGenerated("
         "::mlir::RewritePatternSet &patterns) {\n";
   for (const auto &name : rewriterNames) {
     os << "  patterns.add<" << name << ">(patterns.getContext());\n";

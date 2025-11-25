@@ -9,6 +9,7 @@ add_libc_test(
   DEPENDS
     libc.src.errno.errno
     libc.src.stdlib.atof
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_header_library(
@@ -64,6 +65,7 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.stdlib.strtod
     libc.src.__support.FPUtil.fenv_impl
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_fp_unittest(
@@ -76,6 +78,7 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.stdlib.strtof
     libc.src.__support.FPUtil.fenv_impl
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_header_library(
@@ -86,6 +89,7 @@ add_header_library(
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -95,6 +99,7 @@ add_libc_test(
   SRCS
     strtoint32_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.str_to_integer
     libc.src.errno.errno
     .strtol_test_support
@@ -107,6 +112,7 @@ add_libc_test(
   SRCS
     strtoint64_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.str_to_integer
     libc.src.errno.errno
     .strtol_test_support
@@ -133,6 +139,7 @@ add_libc_test(
     libc.src.errno.errno
     libc.src.__support.uint128
     libc.src.stdlib.strtold
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -180,6 +187,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.architectures
 )
 
 add_libc_test(
@@ -375,8 +383,59 @@ add_libc_test(
   SRCS
     memalignment_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.stdlib
     libc.src.stdlib.memalignment
+)
+
+add_libc_test(
+  mbtowc_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    mbtowc_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.stdlib.mbtowc
+    libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  mbstowcs_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    mbstowcs_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.stdlib.mbstowcs
+    libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  wctomb_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    wctomb_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.stdlib.wctomb
+    libc.hdr.types.wchar_t
+)
+
+add_libc_test(
+  wcstombs_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    wcstombs_test.cpp
+  DEPENDS
+    libc.src.stdlib.wcstombs
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.hdr.types.wchar_t
 )
 
 if(LLVM_LIBC_FULL_BUILD)

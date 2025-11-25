@@ -18,11 +18,12 @@ body:             |
 
     ; CHECK-LABEL: name: fold_ror_eor
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[EXTRWrri:%[0-9]+]]:gpr32 = EXTRWrri [[COPY]], [[COPY]], 11
-    ; CHECK: [[EORWrs:%[0-9]+]]:gpr32 = EORWrs [[EXTRWrri]], [[COPY]], 198
-    ; CHECK: $w0 = COPY [[EORWrs]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[EXTRWrri:%[0-9]+]]:gpr32 = EXTRWrri [[COPY]], [[COPY]], 11
+    ; CHECK-NEXT: [[EORWrs:%[0-9]+]]:gpr32 = EORWrs [[EXTRWrri]], [[COPY]], 198
+    ; CHECK-NEXT: $w0 = COPY [[EORWrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %13:gpr(s64) = G_CONSTANT i64 6
     %2:gpr(s32) = G_ROTR %0, %13(s64)
@@ -51,11 +52,12 @@ body:             |
 
     ; CHECK-LABEL: name: fold_ror_eor_rhs_only
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[EORWrs:%[0-9]+]]:gpr32 = EORWrs [[COPY1]], [[COPY]], 198
-    ; CHECK: $w0 = COPY [[EORWrs]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[EORWrs:%[0-9]+]]:gpr32 = EORWrs [[COPY1]], [[COPY]], 198
+    ; CHECK-NEXT: $w0 = COPY [[EORWrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = COPY $w1
     %9:gpr(s64) = G_CONSTANT i64 6

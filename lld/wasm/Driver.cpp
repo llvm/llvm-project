@@ -23,7 +23,6 @@
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
@@ -70,6 +69,7 @@ void Ctx::reset() {
   isPic = false;
   legacyFunctionTable = false;
   emitBssSegments = false;
+  sym = WasmSym{};
 }
 
 namespace {
@@ -157,7 +157,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 static constexpr opt::OptTable::Info optInfo[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
                VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES)                                                         \
+               VALUES, SUBCOMMANDIDS_OFFSET)                                   \
   {PREFIX,                                                                     \
    NAME,                                                                       \
    HELPTEXT,                                                                   \
@@ -171,7 +171,8 @@ static constexpr opt::OptTable::Info optInfo[] = {
    OPT_##GROUP,                                                                \
    OPT_##ALIAS,                                                                \
    ALIASARGS,                                                                  \
-   VALUES},
+   VALUES,                                                                     \
+   SUBCOMMANDIDS_OFFSET},
 #include "Options.inc"
 #undef OPTION
 };
@@ -317,10 +318,6 @@ void LinkerDriver::addFile(StringRef path) {
     if (inWholeArchive) {
       for (const auto &[m, offset] : members) {
         auto *object = createObjectFile(m, path, offset);
-        // Mark object as live; object members are normally not
-        // live by default but -whole-archive is designed to treat
-        // them as such.
-        object->markLive();
         files.push_back(object);
       }
 
@@ -410,7 +407,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       ctx.arg.isStatic = true;
       break;
     case OPT_Bdynamic:
-      ctx.arg.isStatic = false;
+      if (!ctx.arg.relocatable)
+        ctx.arg.isStatic = false;
       break;
     case OPT_whole_archive:
       inWholeArchive = true;
@@ -545,22 +543,19 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.noinhibitExec = args.hasArg(OPT_noinhibit_exec);
 
   if (args.hasArg(OPT_import_memory_with_name)) {
-    ctx.arg.memoryImport =
-        args.getLastArgValue(OPT_import_memory_with_name).split(",");
+    auto argValue = args.getLastArgValue(OPT_import_memory_with_name);
+    if (argValue.contains(','))
+      ctx.arg.memoryImport = argValue.split(",");
+    else
+      ctx.arg.memoryImport = {defaultModule, argValue};
   } else if (args.hasArg(OPT_import_memory)) {
-    ctx.arg.memoryImport =
-        std::pair<llvm::StringRef, llvm::StringRef>(defaultModule, memoryName);
-  } else {
-    ctx.arg.memoryImport =
-        std::optional<std::pair<llvm::StringRef, llvm::StringRef>>();
+    ctx.arg.memoryImport = {defaultModule, memoryName};
   }
 
   if (args.hasArg(OPT_export_memory_with_name)) {
     ctx.arg.memoryExport = args.getLastArgValue(OPT_export_memory_with_name);
   } else if (args.hasArg(OPT_export_memory)) {
     ctx.arg.memoryExport = memoryName;
-  } else {
-    ctx.arg.memoryExport = std::optional<llvm::StringRef>();
   }
 
   ctx.arg.sharedMemory = args.hasArg(OPT_shared_memory);
@@ -600,7 +595,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.shlibSigCheck = !args.hasArg(OPT_no_shlib_sigcheck);
   ctx.arg.stripAll = args.hasArg(OPT_strip_all);
   ctx.arg.stripDebug = args.hasArg(OPT_strip_debug);
-  ctx.arg.stackFirst = args.hasArg(OPT_stack_first);
+  ctx.arg.stackFirst = args.hasFlag(OPT_stack_first, OPT_no_stack_first, true);
   ctx.arg.trace = args.hasArg(OPT_trace);
   ctx.arg.thinLTOCacheDir = args.getLastArgValue(OPT_thinlto_cache_dir);
   ctx.arg.thinLTOCachePolicy = CHECK(
@@ -751,8 +746,7 @@ static void setConfigs() {
       error("--export-memory is incompatible with --shared");
     }
     if (!ctx.arg.memoryImport.has_value()) {
-      ctx.arg.memoryImport = std::pair<llvm::StringRef, llvm::StringRef>(
-          defaultModule, memoryName);
+      ctx.arg.memoryImport = {defaultModule, memoryName};
     }
   }
 
@@ -921,9 +915,10 @@ static InputGlobal *createGlobal(StringRef name, bool isMutable) {
   return make<InputGlobal>(wasmGlobal, nullptr);
 }
 
-static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable) {
+static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable,
+                                          uint32_t flags = 0) {
   InputGlobal *g = createGlobal(name, isMutable);
-  return symtab->addSyntheticGlobal(name, WASM_SYMBOL_VISIBILITY_HIDDEN, g);
+  return symtab->addSyntheticGlobal(name, flags, g);
 }
 
 static GlobalSymbol *createOptionalGlobal(StringRef name, bool isMutable) {
@@ -945,14 +940,14 @@ static void createSyntheticSymbols() {
                                                             true};
   static llvm::wasm::WasmGlobalType mutableGlobalTypeI64 = {WASM_TYPE_I64,
                                                             true};
-  WasmSym::callCtors = symtab->addSyntheticFunction(
+  ctx.sym.callCtors = symtab->addSyntheticFunction(
       "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
       make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
 
   bool is64 = ctx.arg.is64.value_or(false);
 
   if (ctx.isPic) {
-    WasmSym::stackPointer =
+    ctx.sym.stackPointer =
         createUndefinedGlobal("__stack_pointer", ctx.arg.is64.value_or(false)
                                                      ? &mutableGlobalTypeI64
                                                      : &mutableGlobalTypeI32);
@@ -962,25 +957,28 @@ static void createSyntheticSymbols() {
     // See:
     // https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md
     auto *globalType = is64 ? &globalTypeI64 : &globalTypeI32;
-    WasmSym::memoryBase = createUndefinedGlobal("__memory_base", globalType);
-    WasmSym::tableBase = createUndefinedGlobal("__table_base", globalType);
-    WasmSym::memoryBase->markLive();
-    WasmSym::tableBase->markLive();
+    ctx.sym.memoryBase = createUndefinedGlobal("__memory_base", globalType);
+    ctx.sym.tableBase = createUndefinedGlobal("__table_base", globalType);
+    ctx.sym.memoryBase->markLive();
+    ctx.sym.tableBase->markLive();
   } else {
     // For non-PIC code
-    WasmSym::stackPointer = createGlobalVariable("__stack_pointer", true);
-    WasmSym::stackPointer->markLive();
+    ctx.sym.stackPointer = createGlobalVariable("__stack_pointer", true);
+    ctx.sym.stackPointer->markLive();
   }
 
   if (ctx.arg.sharedMemory) {
-    WasmSym::tlsBase = createGlobalVariable("__tls_base", true);
-    WasmSym::tlsSize = createGlobalVariable("__tls_size", false);
-    WasmSym::tlsAlign = createGlobalVariable("__tls_align", false);
-    WasmSym::initTLS = symtab->addSyntheticFunction(
+    // TLS symbols are all hidden/dso-local
+    ctx.sym.tlsBase =
+        createGlobalVariable("__tls_base", true, WASM_SYMBOL_VISIBILITY_HIDDEN);
+    ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
+                                           WASM_SYMBOL_VISIBILITY_HIDDEN);
+    ctx.sym.tlsAlign = createGlobalVariable("__tls_align", false,
+                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
+    ctx.sym.initTLS = symtab->addSyntheticFunction(
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(
-            is64 ? i64ArgSignature : i32ArgSignature,
-            "__wasm_init_tls"));
+        make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,
+                                "__wasm_init_tls"));
   }
 }
 
@@ -988,25 +986,24 @@ static void createOptionalSymbols() {
   if (ctx.arg.relocatable)
     return;
 
-  WasmSym::dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
+  ctx.sym.dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
 
   if (!ctx.arg.shared)
-    WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
+    ctx.sym.dataEnd = symtab->addOptionalDataSymbol("__data_end");
 
   if (!ctx.isPic) {
-    WasmSym::stackLow = symtab->addOptionalDataSymbol("__stack_low");
-    WasmSym::stackHigh = symtab->addOptionalDataSymbol("__stack_high");
-    WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
-    WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");
-    WasmSym::heapEnd = symtab->addOptionalDataSymbol("__heap_end");
-    WasmSym::definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
-    WasmSym::definedTableBase = symtab->addOptionalDataSymbol("__table_base");
+    ctx.sym.stackLow = symtab->addOptionalDataSymbol("__stack_low");
+    ctx.sym.stackHigh = symtab->addOptionalDataSymbol("__stack_high");
+    ctx.sym.globalBase = symtab->addOptionalDataSymbol("__global_base");
+    ctx.sym.heapBase = symtab->addOptionalDataSymbol("__heap_base");
+    ctx.sym.heapEnd = symtab->addOptionalDataSymbol("__heap_end");
+    ctx.sym.definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
+    ctx.sym.definedTableBase = symtab->addOptionalDataSymbol("__table_base");
   }
 
-  WasmSym::firstPageEnd =
-      symtab->addOptionalDataSymbol("__wasm_first_page_end");
-  if (WasmSym::firstPageEnd)
-    WasmSym::firstPageEnd->setVA(ctx.arg.pageSize);
+  ctx.sym.firstPageEnd = symtab->addOptionalDataSymbol("__wasm_first_page_end");
+  if (ctx.sym.firstPageEnd)
+    ctx.sym.firstPageEnd->setVA(ctx.arg.pageSize);
 
   // For non-shared memory programs we still need to define __tls_base since we
   // allow object files built with TLS to be linked into single threaded
@@ -1018,7 +1015,7 @@ static void createOptionalSymbols() {
   // __tls_size and __tls_align are not needed in this case since they are only
   // needed for __wasm_init_tls (which we do not create in this case).
   if (!ctx.arg.sharedMemory)
-    WasmSym::tlsBase = createOptionalGlobal("__tls_base", false);
+    ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
 }
 
 static void processStubLibrariesPreLTO() {
@@ -1232,9 +1229,9 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
   // Update pointers in input files.
   parallelForEach(ctx.objectFiles, [&](InputFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
-    for (size_t i = 0, e = syms.size(); i != e; ++i)
-      if (Symbol *s = map.lookup(syms[i]))
-        syms[i] = s;
+    for (Symbol *&sym : syms)
+      if (Symbol *s = map.lookup(sym))
+        sym = s;
   });
 
   // Update pointers in the symbol table.
@@ -1393,9 +1390,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // by libc/etc., because destructors are registered dynamically with
   // `__cxa_atexit` and friends.
   if (!ctx.arg.relocatable && !ctx.arg.shared &&
-      !WasmSym::callCtors->isUsedInRegularObj &&
-      WasmSym::callCtors->getName() != ctx.arg.entry &&
-      !ctx.arg.exportedSymbols.count(WasmSym::callCtors->getName())) {
+      !ctx.sym.callCtors->isUsedInRegularObj &&
+      ctx.sym.callCtors->getName() != ctx.arg.entry &&
+      !ctx.arg.exportedSymbols.count(ctx.sym.callCtors->getName())) {
     if (Symbol *callDtors =
             handleUndefined("__wasm_call_dtors", "<internal>")) {
       if (auto *callDtorsFunc = dyn_cast<DefinedFunction>(callDtors)) {
@@ -1404,7 +1401,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
              !callDtorsFunc->signature->Returns.empty())) {
           error("__wasm_call_dtors must have no argument or return values");
         }
-        WasmSym::callDtors = callDtorsFunc;
+        ctx.sym.callDtors = callDtorsFunc;
       } else {
         error("__wasm_call_dtors must be a function");
       }
@@ -1497,7 +1494,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   markLive();
 
   // Provide the indirect function table if needed.
-  WasmSym::indirectFunctionTable =
+  ctx.sym.indirectFunctionTable =
       symtab->resolveIndirectFunctionTable(/*required =*/false);
 
   if (errorCount())

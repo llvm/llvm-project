@@ -14,7 +14,6 @@
 
 #include <clc/math/gentype.inc>
 
-#undef __CLC_BODY
 #undef __CLC_FUNCTION
 
 #endif // __CLC_INTERNAL_MATH_CLC_SW_FMA_H__

@@ -1,4 +1,4 @@
-//===--- AvoidUnderscoreInGoogletestNameCheck.h - clang-tidy ----*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,10 +17,13 @@ namespace clang::tidy::google::readability {
 // https://google.github.io/googletest/faq.html#why-should-test-suite-names-and-test-names-not-contain-underscore
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google/readability-avoid-underscore-in-googletest-name.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/google/readability-avoid-underscore-in-googletest-name.html
 class AvoidUnderscoreInGoogletestNameCheck : public ClangTidyCheck {
 public:
   using ClangTidyCheck::ClangTidyCheck;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;

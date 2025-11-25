@@ -18,9 +18,11 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: sextload_s32_from_s16
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[T0:%[0-9]+]]:gpr32 = LDRSHWui [[COPY]], 0 :: (load (s16) from %ir.addr)
-    ; CHECK: $w0 = COPY [[T0]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDRSHWui:%[0-9]+]]:gpr32 = LDRSHWui [[COPY]], 0 :: (load (s16) from %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[LDRSHWui]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = G_SEXTLOAD %0 :: (load (s16) from %ir.addr)
     $w0 = COPY %1(s32)
@@ -36,10 +38,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: sextload_s32_from_s16_not_combined
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[T0:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load (s16) from %ir.addr)
-    ; CHECK: [[T1:%[0-9]+]]:gpr32 = SBFMWri [[T0]], 0, 15
-    ; CHECK: $w0 = COPY [[T1]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load (s16) from %ir.addr)
+    ; CHECK-NEXT: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[LDRHHui]], 0, 15
+    ; CHECK-NEXT: $w0 = COPY [[SBFMWri]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s16) = G_LOAD %0 :: (load (s16) from %ir.addr)
     %2:gpr(s32) = G_SEXT %1

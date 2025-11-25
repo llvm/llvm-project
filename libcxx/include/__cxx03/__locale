@@ -84,9 +84,7 @@ public:
   // locale operations:
   string name() const;
   bool operator==(const locale&) const;
-#if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const locale& __y) const { return !(*this == __y); }
-#endif
   template <class _CharT, class _Traits, class _Allocator>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS bool
   operator()(const basic_string<_CharT, _Traits, _Allocator>&, const basic_string<_CharT, _Traits, _Allocator>&) const;
@@ -134,7 +132,7 @@ class _LIBCPP_EXPORTED_FROM_ABI locale::id {
   static int32_t __next_id;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR id() : __id_(0) {}
+  _LIBCPP_HIDE_FROM_ABI id() : __id_(0) {}
   void operator=(const id&) = delete;
   id(const id&)             = delete;
 
@@ -580,22 +578,10 @@ public:
 #ifdef _CACHED_RUNES
   static const size_t table_size = _CACHED_RUNES;
 #else
-  static const size_t table_size = 256; // FIXME: Don't hardcode this.
+  static const size_t table_size = 256;
 #endif
   _LIBCPP_HIDE_FROM_ABI const mask* table() const _NOEXCEPT { return __tab_; }
   static const mask* classic_table() _NOEXCEPT;
-#if defined(__GLIBC__) || defined(__EMSCRIPTEN__)
-  static const int* __classic_upper_table() _NOEXCEPT;
-  static const int* __classic_lower_table() _NOEXCEPT;
-#endif
-#if defined(__NetBSD__)
-  static const short* __classic_upper_table() _NOEXCEPT;
-  static const short* __classic_lower_table() _NOEXCEPT;
-#endif
-#if defined(__MVS__)
-  static const unsigned short* __classic_upper_table() _NOEXCEPT;
-  static const unsigned short* __classic_lower_table() _NOEXCEPT;
-#endif
 
 protected:
   ~ctype() override;
@@ -905,8 +891,7 @@ protected:
 // template <> class codecvt<char16_t, char, mbstate_t> // deprecated in C++20
 
 template <>
-class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXPORTED_FROM_ABI codecvt<char16_t, char, mbstate_t>
-    : public locale::facet, public codecvt_base {
+class _LIBCPP_EXPORTED_FROM_ABI codecvt<char16_t, char, mbstate_t> : public locale::facet, public codecvt_base {
 public:
   typedef char16_t intern_type;
   typedef char extern_type;
@@ -1068,8 +1053,7 @@ protected:
 // template <> class codecvt<char32_t, char, mbstate_t> // deprecated in C++20
 
 template <>
-class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXPORTED_FROM_ABI codecvt<char32_t, char, mbstate_t>
-    : public locale::facet, public codecvt_base {
+class _LIBCPP_EXPORTED_FROM_ABI codecvt<char32_t, char, mbstate_t> : public locale::facet, public codecvt_base {
 public:
   typedef char32_t intern_type;
   typedef char extern_type;
@@ -1251,10 +1235,8 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char, char
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<wchar_t, char, mbstate_t>;
 #endif
-extern template class _LIBCPP_DEPRECATED_IN_CXX20
-_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>; // deprecated in C++20
-extern template class _LIBCPP_DEPRECATED_IN_CXX20
-_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>; // deprecated in C++20
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>; // deprecated in C++20
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>; // deprecated in C++20
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char8_t, mbstate_t>; // C++20
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char8_t, mbstate_t>; // C++20

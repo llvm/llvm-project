@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-signal-handler %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy -std=c99,c11,c17 -check-suffixes=,BEFORE-23 %s bugprone-signal-handler %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy -std=c23-or-later %s bugprone-signal-handler %t -- -- -isystem %clang_tidy_headers
 
 #include "signal.h"
 #include "stdlib.h"
@@ -174,8 +175,10 @@ void test_other(void) {
   signal(SIGINT, handler_signal);
 
   signal(SIGINT, _Exit);
+#if __STDC_VERSION__ < 202311L
   signal(SIGINT, other_call);
-  // CHECK-NOTES: :[[@LINE-1]]:18: warning: standard function 'other_call' may not be asynchronous-safe; using it as a signal handler may be dangerous [bugprone-signal-handler]
+  // CHECK-NOTES-BEFORE-23: :[[@LINE-1]]:18: warning: standard function 'other_call' may not be asynchronous-safe; using it as a signal handler may be dangerous [bugprone-signal-handler]
+#endif
   signal(SIGINT, f_extern_handler);
   // CHECK-NOTES: :[[@LINE-1]]:18: warning: cannot verify that external function 'f_extern_handler' is asynchronous-safe; using it as a signal handler may be dangerous [bugprone-signal-handler]
 

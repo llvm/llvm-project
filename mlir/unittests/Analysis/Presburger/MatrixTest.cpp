@@ -390,7 +390,7 @@ TEST(MatrixTest, gramSchmidt) {
   EXPECT_EQ_FRAC_MATRIX(gs, FracMatrix::identity(10));
 }
 
-void checkReducedBasis(FracMatrix mat, Fraction delta) {
+static void checkReducedBasis(FracMatrix mat, Fraction delta) {
   FracMatrix gsOrth = mat.gramSchmidt();
 
   // Size-reduced check.

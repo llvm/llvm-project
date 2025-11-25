@@ -23,6 +23,7 @@ tablegen(LLVM AArch64GenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM AArch64GenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM AArch64GenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM AArch64GenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM AArch64GenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM AArch64GenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM AArch64GenSystemOperands.inc -gen-searchable-tables)
 tablegen(LLVM AArch64GenExegesis.inc -gen-exegesis)
@@ -75,6 +76,7 @@ add_llvm_target(AArch64CodeGen
   AArch64PromoteConstant.cpp
   AArch64PBQPRegAlloc.cpp
   AArch64RegisterInfo.cpp
+  AArch64SMEAttributes.cpp
   AArch64SLSHardening.cpp
   AArch64SelectionDAGInfo.cpp
   AArch64SpeculationHardening.cpp
@@ -88,7 +90,9 @@ add_llvm_target(AArch64CodeGen
   SMEABIPass.cpp
   SMEPeepholeOpt.cpp
   SVEIntrinsicOpts.cpp
+  MachineSMEABIPass.cpp
   AArch64SIMDInstrOpt.cpp
+  AArch64PrologueEpilogue.cpp
 
   DEPENDS
   intrinsics_gen
@@ -105,6 +109,7 @@ add_llvm_target(AArch64CodeGen
   Core
   GlobalISel
   MC
+  Passes
   Scalar
   SelectionDAG
   Support

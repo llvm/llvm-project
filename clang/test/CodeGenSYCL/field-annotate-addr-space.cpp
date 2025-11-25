@@ -9,7 +9,7 @@ struct HasField {
   int *a;
 };
 
-void foo(int *b) {
+[[clang::sycl_external]] void foo(int *b) {
   struct HasField f;
   // CHECK: %[[A:.+]] = getelementptr inbounds nuw %struct.HasField, ptr addrspace(4) %{{.+}}
   // CHECK: %[[CALL:.+]] = call ptr addrspace(4) @llvm.ptr.annotation.p4.p1(ptr addrspace(4) %[[A]], ptr addrspace(1) [[ANNOT]]

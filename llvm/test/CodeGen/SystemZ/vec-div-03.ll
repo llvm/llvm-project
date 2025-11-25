@@ -1,6 +1,6 @@
-; Test vector division on arch15.
+; Test vector division on z17.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch15 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z17 | FileCheck %s
 
 ; Test a v4i32 signed division.
 define <4 x i32> @f1(<4 x i32> %dummy, <4 x i32> %val1, <4 x i32> %val2) {

@@ -16,7 +16,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 
-namespace llvm {
+using namespace llvm;
 
 static bool isExpandableUser(User *U) {
   return isa<ConstantExpr>(U) || isa<ConstantAggregate>(U);
@@ -49,13 +49,16 @@ static SmallVector<Instruction *, 4> expandUser(BasicBlock::iterator InsertPt,
   return NewInsts;
 }
 
-bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
-                                           Function *RestrictToFunc,
-                                           bool RemoveDeadConstants,
-                                           bool IncludeSelf) {
+bool llvm::convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
+                                                 Function *RestrictToFunc,
+                                                 bool RemoveDeadConstants,
+                                                 bool IncludeSelf) {
   // Find all expandable direct users of Consts.
   SmallVector<Constant *> Stack;
   for (Constant *C : Consts) {
+    assert(!isa<ConstantData>(C) &&
+           "should not be expanding trivial constant users");
+
     if (IncludeSelf) {
       assert(isExpandableUser(C) && "One of the constants is not expandable");
       Stack.push_back(C);
@@ -118,5 +121,3 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
 
   return Changed;
 }
-
-} // namespace llvm

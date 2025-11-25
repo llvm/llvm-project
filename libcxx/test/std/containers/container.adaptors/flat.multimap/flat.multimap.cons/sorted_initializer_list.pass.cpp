@@ -19,9 +19,11 @@
 //   flat_multimap(sorted_equivalent_t, initializer_list<value_type> il,
 //            const key_compare& comp, const Alloc& a);
 
+#include <algorithm>
 #include <deque>
 #include <flat_map>
 #include <functional>
+#include <type_traits>
 #include <vector>
 
 #include "min_allocator.h"
@@ -31,13 +33,86 @@
 #include "../../../test_compare.h"
 
 template <class T, class U>
-std::initializer_list<std::pair<T, U>> il = {{1, 1}, {4, 2}, {4, 4}, {5, 5}};
+constexpr std::initializer_list<std::pair<T, U>> il = {{1, 4}, {4, 2}, {4, 4}, {5, 5}};
 
-const auto il1 = il<int, int>;
-const auto il2 = il<int, short>;
-const auto il3 = il<short, int>;
+constexpr auto il1 = il<int, int>;
+constexpr auto il2 = il<int, short>;
+constexpr auto il3 = il<short, int>;
 
-int main(int, char**) {
+template <template <class...> class KeyContainer, template <class...> class ValueContainer>
+constexpr void test() {
+  {
+    // flat_multimap(sorted_equivalent_t, initializer_list<value_type>);
+    using M = std::flat_multimap<int, int, std::less<int>, KeyContainer<int>, ValueContainer<int>>;
+    auto m  = M(std::sorted_equivalent, il1);
+    assert(std::ranges::equal(m, std::vector<std::pair<int, int>>{{1, 4}, {4, 2}, {4, 4}, {5, 5}}));
+
+    // explicit(false)
+    M m2 = {std::sorted_equivalent, il1};
+    assert(m2 == m);
+  }
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    // flat_multimap(sorted_equivalent_t, initializer_list<value_type>, const key_compare&);
+    using M = std::flat_multimap<int, int, std::function<bool(int, int)>, KeyContainer<int>, ValueContainer<int>>;
+    auto m  = M(std::sorted_equivalent, il1, std::less<int>());
+    assert(std::ranges::equal(m, std::vector<std::pair<int, int>>{{1, 4}, {4, 2}, {4, 4}, {5, 5}}));
+    assert(m.key_comp()(1, 2) == true);
+
+    // explicit(false)
+    M m2 = {std::sorted_equivalent, il1, std::less<int>()};
+    assert(m2 == m);
+  }
+  {
+    // flat_multimap(sorted_equivalent_t, initializer_list<value_type>, const key_compare&);
+    // greater
+    using M =
+        std::flat_multimap<int, int, std::greater<int>, KeyContainer<int, min_allocator<int>>, ValueContainer<int>>;
+    std::initializer_list<std::pair<int, int>> il4{{5, 5}, {4, 5}, {4, 2}, {1, 1}};
+    auto m = M(std::sorted_equivalent, il4, std::greater<int>());
+    assert(std::ranges::equal(m, std::vector<std::pair<int, int>>{{5, 5}, {4, 5}, {4, 2}, {1, 1}}));
+  }
+  {
+    // flat_multimap(sorted_equivalent_t, initializer_list<value_type>,  const Allocator&)
+    using A1 = test_allocator<int>;
+    using A2 = test_allocator<short>;
+    using M  = std::flat_multimap<int, short, std::less<int>, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    auto m   = M(std::sorted_equivalent, il2, A1(5));
+    assert(std::ranges::equal(m, std::vector<std::pair<int, short>>{{1, 4}, {4, 2}, {4, 4}, {5, 5}}));
+    assert(m.keys().get_allocator() == A1(5));
+    assert(m.values().get_allocator() == A2(5));
+
+    // explicit(false)
+    M m2 = {std::sorted_equivalent, il2, A1(5)};
+    assert(m2 == m);
+    assert(m2.keys().get_allocator() == A1(5));
+    assert(m2.values().get_allocator() == A2(5));
+  }
+  {
+    // flat_multimap(sorted_equivalent_t, initializer_list<value_type>, const key_compare&, const Allocator&);
+    using C  = test_less<int>;
+    using A1 = test_allocator<int>;
+    using A2 = test_allocator<short>;
+    using M  = std::flat_multimap<int, short, C, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    auto m   = M(std::sorted_equivalent, il2, C(3), A1(5));
+    assert(std::ranges::equal(m, std::vector<std::pair<int, short>>{{1, 4}, {4, 2}, {4, 4}, {5, 5}}));
+    assert(m.key_comp() == C(3));
+    assert(m.keys().get_allocator() == A1(5));
+    assert(m.values().get_allocator() == A2(5));
+  }
+  {
+    // flat_multimap(sorted_equivalent_t, initializer_list<value_type>, const key_compare&, const Allocator&);
+    // explicit(false)
+    using A1 = test_allocator<short>;
+    using A2 = test_allocator<int>;
+    using M  = std::flat_multimap<short, int, std::less<int>, KeyContainer<short, A1>, ValueContainer<int, A2>>;
+    M m      = {std::sorted_equivalent, il3, {}, A1(5)}; // implicit ctor
+    assert(std::ranges::equal(m, std::vector<std::pair<short, int>>{{1, 4}, {4, 2}, {4, 4}, {5, 5}}));
+    assert(m.keys().get_allocator() == A1(5));
+    assert(m.values().get_allocator() == A2(5));
+  }
+}
+
+constexpr bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<key_container_type, Alloc> is true
@@ -108,76 +183,23 @@ int main(int, char**) {
                                            std::allocator<int>>);
   }
 
-  {
-    // flat_multimap(sorted_equivalent_t, initializer_list<value_type>);
-    using M       = std::flat_multimap<int, int>;
-    auto m        = M(std::sorted_equivalent, il1);
-    auto expected = M{{1, 1}, {4, 2}, {4, 4}, {5, 5}};
-    assert(m == expected);
+  test<std::vector, std::vector>();
 
-    // explicit(false)
-    M m2 = {std::sorted_equivalent, il1};
-    assert(m2 == m);
-  }
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
   {
-    // flat_multimap(sorted_equivalent_t, initializer_list<value_type>, const key_compare&);
-    using M = std::flat_multimap<int, int, std::function<bool(int, int)>>;
-    auto m  = M(std::sorted_equivalent, il1, std::less<int>());
-    assert(m == M({{1, 1}, {4, 2}, {4, 4}, {5, 5}}, std::less<>()));
-    assert(m.key_comp()(1, 2) == true);
+    test<std::deque, std::deque>();
+  }
 
-    // explicit(false)
-    M m2 = {std::sorted_equivalent, il1, std::less<int>()};
-    assert(m2 == m);
-  }
-  {
-    // flat_multimap(sorted_equivalent_t, initializer_list<value_type>, const key_compare&);
-    // greater
-    using M = std::flat_multimap<int, int, std::greater<int>, std::deque<int, min_allocator<int>>, std::vector<int>>;
-    std::initializer_list<std::pair<int, int>> il4{{5, 5}, {4, 4}, {1, 2}, {1, 1}};
-    auto m = M(std::sorted_equivalent, il4, std::greater<int>());
-    assert((m == M{{5, 5}, {4, 4}, {1, 2}, {1, 1}}));
-  }
-  {
-    // flat_multimap(sorted_equivalent_t, initializer_list<value_type>,  const Allocator&)
-    using A1      = test_allocator<int>;
-    using A2      = test_allocator<short>;
-    using M       = std::flat_multimap<int, short, std::less<int>, std::vector<int, A1>, std::deque<short, A2>>;
-    auto m        = M(std::sorted_equivalent, il2, A1(5));
-    auto expected = M{{1, 1}, {4, 2}, {4, 4}, {5, 5}};
-    assert(m == expected);
-    assert(m.keys().get_allocator() == A1(5));
-    assert(m.values().get_allocator() == A2(5));
+  return true;
+}
 
-    // explicit(false)
-    M m2 = {std::sorted_equivalent, il2, A1(5)};
-    assert(m2 == m);
-    assert(m2.keys().get_allocator() == A1(5));
-    assert(m2.values().get_allocator() == A2(5));
-  }
-  {
-    // flat_multimap(sorted_equivalent_t, initializer_list<value_type>, const key_compare&, const Allocator&);
-    using C  = test_less<int>;
-    using A1 = test_allocator<int>;
-    using A2 = test_allocator<short>;
-    using M  = std::flat_multimap<int, short, C, std::vector<int, A1>, std::deque<short, A2>>;
-    auto m   = M(std::sorted_equivalent, il2, C(3), A1(5));
-    assert((m == M{{1, 1}, {4, 2}, {4, 4}, {5, 5}}));
-    assert(m.key_comp() == C(3));
-    assert(m.keys().get_allocator() == A1(5));
-    assert(m.values().get_allocator() == A2(5));
-  }
-  {
-    // flat_multimap(sorted_equivalent_t, initializer_list<value_type>, const key_compare&, const Allocator&);
-    // explicit(false)
-    using A1 = test_allocator<short>;
-    using A2 = test_allocator<int>;
-    using M  = std::flat_multimap<short, int, std::less<int>, std::deque<short, A1>, std::vector<int, A2>>;
-    M m      = {std::sorted_equivalent, il3, {}, A1(5)}; // implicit ctor
-    assert((m == M{{1, 1}, {4, 2}, {4, 4}, {5, 5}}));
-    assert(m.keys().get_allocator() == A1(5));
-    assert(m.values().get_allocator() == A2(5));
-  }
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

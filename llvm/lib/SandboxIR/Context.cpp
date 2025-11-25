@@ -54,7 +54,7 @@ Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
 }
 
 Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
-  auto Pair = LLVMValueToValueMap.insert({LLVMV, nullptr});
+  auto Pair = LLVMValueToValueMap.try_emplace(LLVMV);
   auto It = Pair.first;
   if (!Pair.second)
     return It->second.get();
@@ -256,6 +256,7 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Instruction::FPToUI:
     case llvm::Instruction::FPToSI:
     case llvm::Instruction::FPExt:
+    case llvm::Instruction::PtrToAddr:
     case llvm::Instruction::PtrToInt:
     case llvm::Instruction::IntToPtr:
     case llvm::Instruction::SIToFP:
@@ -360,6 +361,14 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
       It->second = std::unique_ptr<ConstantVector>(
           new ConstantVector(cast<llvm::ConstantVector>(LLVMC), *this));
       break;
+    case llvm::Value::ConstantDataArrayVal:
+      It->second = std::unique_ptr<ConstantDataArray>(
+          new ConstantDataArray(cast<llvm::ConstantDataArray>(LLVMC), *this));
+      break;
+    case llvm::Value::ConstantDataVectorVal:
+      It->second = std::unique_ptr<ConstantDataVector>(
+          new ConstantDataVector(cast<llvm::ConstantDataVector>(LLVMC), *this));
+      break;
     case llvm::Value::FunctionVal:
       It->second = std::unique_ptr<Function>(
           new Function(cast<llvm::Function>(LLVMC), *this));
@@ -424,7 +433,7 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
 }
 
 Argument *Context::getOrCreateArgument(llvm::Argument *LLVMArg) {
-  auto Pair = LLVMValueToValueMap.insert({LLVMArg, nullptr});
+  auto Pair = LLVMValueToValueMap.try_emplace(LLVMArg);
   auto It = Pair.first;
   if (Pair.second) {
     It->second = std::unique_ptr<Argument>(new Argument(LLVMArg, *this));
@@ -434,7 +443,7 @@ Argument *Context::getOrCreateArgument(llvm::Argument *LLVMArg) {
 }
 
 Constant *Context::getOrCreateConstant(llvm::Constant *LLVMC) {
-  return cast<Constant>(getOrCreateValueInternal(LLVMC, 0));
+  return cast<Constant>(getOrCreateValueInternal(LLVMC, nullptr));
 }
 
 BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
@@ -628,7 +637,7 @@ Context::Context(LLVMContext &LLVMCtx)
     : LLVMCtx(LLVMCtx), IRTracker(*this),
       LLVMIRBuilder(LLVMCtx, ConstantFolder()) {}
 
-Context::~Context() {}
+Context::~Context() = default;
 
 void Context::clear() {
   // TODO: Ideally we should clear only function-scope objects, and keep global
@@ -644,7 +653,7 @@ Module *Context::getModule(llvm::Module *LLVMM) const {
 }
 
 Module *Context::getOrCreateModule(llvm::Module *LLVMM) {
-  auto Pair = LLVMModuleToModuleMap.insert({LLVMM, nullptr});
+  auto Pair = LLVMModuleToModuleMap.try_emplace(LLVMM);
   auto It = Pair.first;
   if (!Pair.second)
     return It->second.get();

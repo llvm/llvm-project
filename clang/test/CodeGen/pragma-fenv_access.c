@@ -251,3 +251,39 @@ vector4float func_21(vector4double x) {
 }
 // CHECK-LABEL: @func_21
 // STRICT: call <4 x float> @llvm.experimental.constrained.fptrunc.v4f32.v4f64(<4 x double> {{.*}}, metadata !"round.upward", metadata !"fpexcept.strict")
+
+typedef short vector8short __attribute__((__vector_size__(16)));
+typedef double vector8double __attribute__((__vector_size__(64)));
+vector8double func_24(vector8short x) {
+  #pragma STDC FENV_ROUND FE_TOWARDZERO
+  return __builtin_convertvector(x, vector8double);
+}
+// CHECK-LABEL: @func_24
+// STRICT: call <8 x double> @llvm.experimental.constrained.sitofp.v8f64.v8i16(<8 x i16> {{.*}}, metadata !"round.towardzero", metadata !"fpexcept.strict")
+
+typedef unsigned int vector16uint __attribute__((__vector_size__(64)));
+typedef double vector16double __attribute__((__vector_size__(128)));
+vector16double func_25(vector16uint x) {
+  #pragma STDC FENV_ROUND FE_DOWNWARD
+  return __builtin_convertvector(x, vector16double);
+}
+// CHECK-LABEL: @func_25
+// STRICT: call <16 x double> @llvm.experimental.constrained.uitofp.v16f64.v16i32(<16 x i32> {{.*}}, metadata !"round.downward", metadata !"fpexcept.strict")
+
+typedef float vector2float __attribute__((__vector_size__(8)));
+typedef char vector2char __attribute__((__vector_size__(2)));
+vector2char func_22(vector2float x) {
+  #pragma float_control(except, off)
+  return __builtin_convertvector(x, vector2char);
+}
+// CHECK-LABEL: @func_22
+// STRICT: call <2 x i8> @llvm.experimental.constrained.fptosi.v2i8.v2f32(<2 x float> {{.*}}, metadata !"fpexcept.ignore")
+
+typedef float vector3float __attribute__((__vector_size__(12)));
+typedef unsigned long long vector3ulong __attribute__((__vector_size__(24)));
+vector3ulong func_23(vector3float x) {
+  #pragma float_control(except, off)
+  return __builtin_convertvector(x, vector3ulong);
+}
+// CHECK-LABEL: @func_23
+// STRICT: call <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f32(<3 x float> {{.*}}, metadata !"fpexcept.ignore")

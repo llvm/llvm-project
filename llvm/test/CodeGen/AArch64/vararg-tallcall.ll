@@ -37,12 +37,16 @@ attributes #1 = { noinline optnone "thunk" }
 ; CHECK: ldr     x9, [x9]
 ; CHECK: mov     v0.16b, v16.16b
 ; CHECK: br      x9
-; CHECK-EC: mov     v7.16b, v0.16b
-; CHECK-EC: ldr     x9, [x0]
-; CHECK-EC: ldr     x11, [x9]
-; CHECH-EC: add     x4, sp, #96
-; CHECK-EC: mov     v0.16b, v7.16b
-; CHECK-EC: add     x4, sp, #96
-; CHECK-EC: ldr     x30, [sp, #48]
-; CHECK-EC: add     sp, sp, #96
-; CHECK-EC: br      x11
+; CHECK-EC:      mov     v7.16b, v0.16b
+; CHECK-EC:      ldr     x9, [x0]
+; CHECK-EC:      ldr     x11, [x9]
+; CHECK-EC:      blr     x9
+; CHECK-EC-NEXT: mov     v0.16b, v7.16b
+; CHECK-EC-NEXT: ldr     q7, [sp]
+; CHECK-EC-NEXT: .seh_startepilogue
+; CHECK-EC-NEXT: ldr     x30, [sp, #48]
+; CHECK-EC-NEXT: .seh_save_reg x30, 48
+; CHECK-EC-NEXT: add     sp, sp, #96
+; CHECK-EC-NEXT: .seh_stackalloc 96
+; CHECK-EC-NEXT: .seh_endepilogue
+; CHECK-EC-NEXT: br      x11

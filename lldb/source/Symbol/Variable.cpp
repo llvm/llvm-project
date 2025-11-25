@@ -290,28 +290,9 @@ bool Variable::IsInScope(StackFrame *frame) {
       // this variable was defined in is currently
       Block *deepest_frame_block =
           frame->GetSymbolContext(eSymbolContextBlock).block;
-      if (deepest_frame_block) {
-        SymbolContext variable_sc;
-        CalculateSymbolContext(&variable_sc);
-
-        // Check for static or global variable defined at the compile unit
-        // level that wasn't defined in a block
-        if (variable_sc.block == nullptr)
-          return true;
-
-        // Check if the variable is valid in the current block
-        if (variable_sc.block != deepest_frame_block &&
-            !variable_sc.block->Contains(deepest_frame_block))
-          return false;
-
-        // If no scope range is specified then it means that the scope is the
-        // same as the scope of the enclosing lexical block.
-        if (m_scope_range.IsEmpty())
-          return true;
-
-        addr_t file_address = frame->GetFrameCodeAddress().GetFileAddress();
-        return m_scope_range.FindEntryThatContains(file_address) != nullptr;
-      }
+      Address frame_addr = frame->GetFrameCodeAddress();
+      if (deepest_frame_block)
+        return IsInScope(*deepest_frame_block, frame_addr);
     }
     break;
 
@@ -319,6 +300,27 @@ bool Variable::IsInScope(StackFrame *frame) {
     break;
   }
   return false;
+}
+
+bool Variable::IsInScope(const Block &block, const Address &addr) {
+  SymbolContext variable_sc;
+  CalculateSymbolContext(&variable_sc);
+
+  // Check for static or global variable defined at the compile unit
+  // level that wasn't defined in a block
+  if (variable_sc.block == nullptr)
+    return true;
+
+  // Check if the variable is valid in the current block
+  if (variable_sc.block != &block && !variable_sc.block->Contains(&block))
+    return false;
+
+  // If no scope range is specified then it means that the scope is the
+  // same as the scope of the enclosing lexical block.
+  if (m_scope_range.IsEmpty())
+    return true;
+
+  return m_scope_range.FindEntryThatContains(addr.GetFileAddress()) != nullptr;
 }
 
 Status Variable::GetValuesForVariableExpressionPath(

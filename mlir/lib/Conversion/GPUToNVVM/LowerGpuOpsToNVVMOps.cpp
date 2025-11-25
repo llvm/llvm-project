@@ -19,7 +19,6 @@
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -28,6 +27,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -119,10 +119,10 @@ struct GPUSubgroupReduceOpLowering
 
     Location loc = op->getLoc();
     auto int32Type = IntegerType::get(rewriter.getContext(), 32);
-    Value offset = rewriter.create<LLVM::ConstantOp>(loc, int32Type, -1);
+    Value offset = LLVM::ConstantOp::create(rewriter, loc, int32Type, -1);
 
-    auto reduxOp = rewriter.create<NVVM::ReduxOp>(loc, int32Type, op.getValue(),
-                                                  mode.value(), offset);
+    auto reduxOp = NVVM::ReduxOp::create(rewriter, loc, int32Type,
+                                         op.getValue(), mode.value(), offset);
 
     rewriter.replaceOp(op, reduxOp->getResult(0));
     return success();
@@ -159,22 +159,22 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     auto int32Type = IntegerType::get(rewriter.getContext(), 32);
     auto predTy = IntegerType::get(rewriter.getContext(), 1);
 
-    Value one = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 1);
-    Value minusOne = rewriter.create<LLVM::ConstantOp>(loc, int32Type, -1);
-    Value thirtyTwo = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 32);
-    Value numLeadInactiveLane = rewriter.create<LLVM::SubOp>(
-        loc, int32Type, thirtyTwo, adaptor.getWidth());
+    Value one = LLVM::ConstantOp::create(rewriter, loc, int32Type, 1);
+    Value minusOne = LLVM::ConstantOp::create(rewriter, loc, int32Type, -1);
+    Value thirtyTwo = LLVM::ConstantOp::create(rewriter, loc, int32Type, 32);
+    Value numLeadInactiveLane = LLVM::SubOp::create(
+        rewriter, loc, int32Type, thirtyTwo, adaptor.getWidth());
     // Bit mask of active lanes: `(-1) >> (32 - activeWidth)`.
-    Value activeMask = rewriter.create<LLVM::LShrOp>(loc, int32Type, minusOne,
-                                                     numLeadInactiveLane);
+    Value activeMask = LLVM::LShrOp::create(rewriter, loc, int32Type, minusOne,
+                                            numLeadInactiveLane);
     Value maskAndClamp;
     if (op.getMode() == gpu::ShuffleMode::UP) {
       // Clamp lane: `32 - activeWidth`
       maskAndClamp = numLeadInactiveLane;
     } else {
       // Clamp lane: `activeWidth - 1`
-      maskAndClamp =
-          rewriter.create<LLVM::SubOp>(loc, int32Type, adaptor.getWidth(), one);
+      maskAndClamp = LLVM::SubOp::create(rewriter, loc, int32Type,
+                                         adaptor.getWidth(), one);
     }
 
     bool predIsUsed = !op->getResult(1).use_empty();
@@ -185,13 +185,14 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
       resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
                                                   {valueTy, predTy});
     }
-    Value shfl = rewriter.create<NVVM::ShflOp>(
-        loc, resultTy, activeMask, adaptor.getValue(), adaptor.getOffset(),
-        maskAndClamp, convertShflKind(op.getMode()), returnValueAndIsValidAttr);
+    Value shfl = NVVM::ShflOp::create(
+        rewriter, loc, resultTy, activeMask, adaptor.getValue(),
+        adaptor.getOffset(), maskAndClamp, convertShflKind(op.getMode()),
+        returnValueAndIsValidAttr);
     if (predIsUsed) {
-      Value shflValue = rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 0);
+      Value shflValue = LLVM::ExtractValueOp::create(rewriter, loc, shfl, 0);
       Value isActiveSrcLane =
-          rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 1);
+          LLVM::ExtractValueOp::create(rewriter, loc, shfl, 1);
       rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
     } else {
       rewriter.replaceOp(op, {shfl, nullptr});
@@ -216,16 +217,16 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
       bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
           /*bitWidth=*/32, /*lower=*/0, /*upper=*/kWarpSize);
     Value newOp =
-        rewriter.create<NVVM::LaneIdOp>(loc, rewriter.getI32Type(), bounds);
+        NVVM::LaneIdOp::create(rewriter, loc, rewriter.getI32Type(), bounds);
     // Truncate or extend the result depending on the index bitwidth specified
     // by the LLVMTypeConverter options.
     const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
     if (indexBitwidth > 32) {
-      newOp = rewriter.create<LLVM::SExtOp>(
-          loc, IntegerType::get(context, indexBitwidth), newOp);
+      newOp = LLVM::SExtOp::create(
+          rewriter, loc, IntegerType::get(context, indexBitwidth), newOp);
     } else if (indexBitwidth < 32) {
-      newOp = rewriter.create<LLVM::TruncOp>(
-          loc, IntegerType::get(context, indexBitwidth), newOp);
+      newOp = LLVM::TruncOp::create(
+          rewriter, loc, IntegerType::get(context, indexBitwidth), newOp);
     }
     rewriter.replaceOp(op, {newOp});
     return success();
@@ -272,10 +273,10 @@ struct AssertOpToAssertfailLowering
     Block *afterBlock =
         rewriter.splitBlock(assertBlock, ++assertOp->getIterator());
     rewriter.setInsertionPointToEnd(beforeBlock);
-    rewriter.create<cf::CondBranchOp>(loc, adaptor.getArg(), afterBlock,
-                                      assertBlock);
+    cf::CondBranchOp::create(rewriter, loc, adaptor.getArg(), afterBlock,
+                             assertBlock);
     rewriter.setInsertionPointToEnd(assertBlock);
-    rewriter.create<cf::BranchOp>(loc, afterBlock);
+    cf::BranchOp::create(rewriter, loc, afterBlock);
 
     // Continue cf.assert lowering.
     rewriter.setInsertionPoint(assertOp);
@@ -302,12 +303,12 @@ struct AssertOpToAssertfailLowering
     // Create constants.
     auto getGlobal = [&](LLVM::GlobalOp global) {
       // Get a pointer to the format string's first element.
-      Value globalPtr = rewriter.create<LLVM::AddressOfOp>(
-          loc, LLVM::LLVMPointerType::get(ctx, global.getAddrSpace()),
+      Value globalPtr = LLVM::AddressOfOp::create(
+          rewriter, loc, LLVM::LLVMPointerType::get(ctx, global.getAddrSpace()),
           global.getSymNameAttr());
       Value start =
-          rewriter.create<LLVM::GEPOp>(loc, ptrType, global.getGlobalType(),
-                                       globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
+          LLVM::GEPOp::create(rewriter, loc, ptrType, global.getGlobalType(),
+                              globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
       return start;
     };
     Value assertMessage = getGlobal(getOrCreateStringConstant(
@@ -317,8 +318,8 @@ struct AssertOpToAssertfailLowering
     Value assertFunc = getGlobal(getOrCreateStringConstant(
         rewriter, loc, moduleOp, i8Type, "assert_func_", funcName));
     Value assertLine =
-        rewriter.create<LLVM::ConstantOp>(loc, i32Type, fileLine);
-    Value c1 = rewriter.create<LLVM::ConstantOp>(loc, i64Type, 1);
+        LLVM::ConstantOp::create(rewriter, loc, i32Type, fileLine);
+    Value c1 = LLVM::ConstantOp::create(rewriter, loc, i64Type, 1);
 
     // Insert function call to __assertfail.
     SmallVector<Value> arguments{assertMessage, assertFile, assertLine,
@@ -369,6 +370,9 @@ struct LowerGpuOpsToNVVMOpsPass final
     {
       RewritePatternSet patterns(m.getContext());
       populateGpuRewritePatterns(patterns);
+      // Transform N-D vector.from_elements to 1-D vector.from_elements before
+      // conversion.
+      vector::populateVectorFromElementsUnrollPatterns(patterns);
       if (failed(applyPatternsGreedily(m, std::move(patterns))))
         return signalPassFailure();
     }
@@ -394,7 +398,7 @@ struct LowerGpuOpsToNVVMOpsPass final
       if (!allowedDialectsSet.empty() && !allowed)
         continue;
 
-      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+      auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
       if (!iface) {
         // Error out if dialect was explicily specified but doesn't implement
         // conversion interface.
@@ -415,7 +419,10 @@ struct LowerGpuOpsToNVVMOpsPass final
     if (this->hasRedux)
       populateGpuSubgroupReduceOpLoweringPattern(converter, llvmPatterns);
     configureGpuToNVVMConversionLegality(target);
-    if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
+    ConversionConfig config;
+    config.allowPatternRollback = allowPatternRollback;
+    if (failed(
+            applyPartialConversion(m, target, std::move(llvmPatterns), config)))
       signalPassFailure();
   }
 };
@@ -429,10 +436,10 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
   target.addIllegalOp<LLVM::CopySignOp, LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op,
-                      LLVM::FAbsOp, LLVM::FCeilOp, LLVM::FFloorOp, LLVM::FMAOp,
-                      LLVM::FRemOp, LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op,
-                      LLVM::PowOp, LLVM::RoundEvenOp, LLVM::RoundOp,
-                      LLVM::SinOp, LLVM::SqrtOp>();
+                      LLVM::FAbsOp, LLVM::FCeilOp, LLVM::FFloorOp, LLVM::FRemOp,
+                      LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op, LLVM::PowOp,
+                      LLVM::RoundEvenOp, LLVM::RoundOp, LLVM::SinOp,
+                      LLVM::SincosOp, LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp>();
@@ -447,22 +454,115 @@ void mlir::configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter) {
       converter, [](gpu::AddressSpace space) -> unsigned {
         switch (space) {
         case gpu::AddressSpace::Global:
-          return static_cast<unsigned>(
-              NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
         case gpu::AddressSpace::Workgroup:
-          return static_cast<unsigned>(
-              NVVM::NVVMMemorySpace::kSharedMemorySpace);
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
         case gpu::AddressSpace::Private:
           return 0;
         }
         llvm_unreachable("unknown address space enum value");
-        return 0;
+        return static_cast<unsigned>(NVVM::NVVMMemorySpace::Generic);
       });
   // Lowering for MMAMatrixType.
   converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
     return convertMMAToLLVMType(type);
   });
 }
+
+struct SincosOpLowering : public ConvertOpToLLVMPattern<math::SincosOp> {
+  using ConvertOpToLLVMPattern<math::SincosOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(math::SincosOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Value input = adaptor.getOperand();
+    Type inputType = input.getType();
+    auto convertedInput = maybeExt(input, rewriter);
+    auto computeType = convertedInput.getType();
+
+    StringRef sincosFunc;
+    if (isa<Float32Type>(computeType)) {
+      const arith::FastMathFlags flag = op.getFastmath();
+      const bool useApprox =
+          mlir::arith::bitEnumContainsAny(flag, arith::FastMathFlags::afn);
+      sincosFunc = useApprox ? "__nv_fast_sincosf" : "__nv_sincosf";
+    } else if (isa<Float64Type>(computeType)) {
+      sincosFunc = "__nv_sincos";
+    } else {
+      return rewriter.notifyMatchFailure(op,
+                                         "unsupported operand type for sincos");
+    }
+
+    auto ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
+
+    Value sinPtr, cosPtr;
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      auto *scope =
+          op->getParentWithTrait<mlir::OpTrait::AutomaticAllocationScope>();
+      assert(scope && "Expected op to be inside automatic allocation scope");
+      rewriter.setInsertionPointToStart(&scope->getRegion(0).front());
+      auto one = LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
+                                          rewriter.getI32IntegerAttr(1));
+      sinPtr =
+          LLVM::AllocaOp::create(rewriter, loc, ptrType, computeType, one, 0);
+      cosPtr =
+          LLVM::AllocaOp::create(rewriter, loc, ptrType, computeType, one, 0);
+    }
+
+    createSincosCall(rewriter, loc, sincosFunc, convertedInput, sinPtr, cosPtr,
+                     op);
+
+    auto sinResult = LLVM::LoadOp::create(rewriter, loc, computeType, sinPtr);
+    auto cosResult = LLVM::LoadOp::create(rewriter, loc, computeType, cosPtr);
+
+    rewriter.replaceOp(op, {maybeTrunc(sinResult, inputType, rewriter),
+                            maybeTrunc(cosResult, inputType, rewriter)});
+    return success();
+  }
+
+private:
+  Value maybeExt(Value operand, PatternRewriter &rewriter) const {
+    if (isa<Float16Type, BFloat16Type>(operand.getType()))
+      return LLVM::FPExtOp::create(rewriter, operand.getLoc(),
+                                   Float32Type::get(rewriter.getContext()),
+                                   operand);
+    return operand;
+  }
+
+  Value maybeTrunc(Value operand, Type type, PatternRewriter &rewriter) const {
+    if (operand.getType() != type)
+      return LLVM::FPTruncOp::create(rewriter, operand.getLoc(), type, operand);
+    return operand;
+  }
+
+  void createSincosCall(ConversionPatternRewriter &rewriter, Location loc,
+                        StringRef funcName, Value input, Value sinPtr,
+                        Value cosPtr, Operation *op) const {
+    auto voidType = LLVM::LLVMVoidType::get(rewriter.getContext());
+    auto ptrType = sinPtr.getType();
+
+    SmallVector<Type> operandTypes = {input.getType(), ptrType, ptrType};
+    auto funcType = LLVM::LLVMFunctionType::get(voidType, operandTypes);
+
+    auto funcAttr = StringAttr::get(op->getContext(), funcName);
+    auto funcOp =
+        SymbolTable::lookupNearestSymbolFrom<LLVM::LLVMFuncOp>(op, funcAttr);
+
+    if (!funcOp) {
+      auto parentFunc = op->getParentOfType<FunctionOpInterface>();
+      assert(parentFunc && "expected there to be a parent function");
+      OpBuilder b(parentFunc);
+
+      auto globalloc = loc->findInstanceOfOrUnknown<FileLineColLoc>();
+      funcOp = LLVM::LLVMFuncOp::create(b, globalloc, funcName, funcType);
+    }
+
+    SmallVector<Value> callOperands = {input, sinPtr, cosPtr};
+    LLVM::CallOp::create(rewriter, loc, funcOp, callOperands);
+  }
+};
 
 template <typename OpTy>
 static void populateOpPatterns(const LLVMTypeConverter &converter,
@@ -587,6 +687,9 @@ void mlir::populateLibDeviceConversionPatterns(
                                   "__nv_tan", "__nv_fast_tanf");
   populateOpPatterns<math::TanhOp>(converter, patterns, benefit, "__nv_tanhf",
                                    "__nv_tanh");
+
+  // Custom pattern for sincos since it returns two values
+  patterns.add<SincosOpLowering>(converter, benefit);
 }
 
 void mlir::populateGpuToNVVMConversionPatterns(
@@ -644,7 +747,7 @@ void mlir::populateGpuToNVVMConversionPatterns(
       GPUFuncOpLoweringOptions{
           /*allocaAddrSpace=*/0,
           /*workgroupAddrSpace=*/
-          static_cast<unsigned>(NVVM::NVVMMemorySpace::kSharedMemorySpace),
+          static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared),
           StringAttr::get(&converter.getContext(),
                           NVVM::NVVMDialect::getKernelFuncAttrName()),
           StringAttr::get(&converter.getContext(),

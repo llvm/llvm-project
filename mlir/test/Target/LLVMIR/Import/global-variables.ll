@@ -186,19 +186,16 @@
 ; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.array<2 x f32>
 @array_constant = internal constant [2 x float] [float 1., float 2.]
 
-; CHECK: llvm.mlir.global internal constant @nested_array_constant
-; CHECK-SAME-LITERAL:  (dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>)
-; CHECK-SAME-LITERAL:  {addr_space = 0 : i32, dso_local} : !llvm.array<2 x array<2 x i32>>
+; CHECK{LITERAL}: llvm.mlir.global internal constant @nested_array_constant(dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>)
+; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.array<2 x array<2 x i32>>
 @nested_array_constant = internal constant [2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]]
 
-; CHECK: llvm.mlir.global internal constant @nested_array_constant3
-; CHECK-SAME-LITERAL:  (dense<[[[1, 2], [3, 4]]]> : tensor<1x2x2xi32>)
-; CHECK-SAME-LITERAL:  {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x array<2 x i32>>>
+; CHECK{LITERAL}: llvm.mlir.global internal constant @nested_array_constant3(dense<[[[1, 2], [3, 4]]]> : tensor<1x2x2xi32>)
+; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x array<2 x i32>>>
 @nested_array_constant3 = internal constant [1 x [2 x [2 x i32]]] [[2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]]]
 
-; CHECK: llvm.mlir.global internal constant @nested_array_vector
-; CHECK-SAME-LITERAL:  (dense<[[[1, 2], [3, 4]]]> : vector<1x2x2xi32>)
-; CHECK-SAME-LITERAL:  {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x vector<2xi32>>>
+; CHECK{LITERAL}: llvm.mlir.global internal constant @nested_array_vector(dense<[[[1, 2], [3, 4]]]> : vector<1x2x2xi32>)
+; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x vector<2xi32>>>
 @nested_array_vector = internal constant [1 x [2 x <2 x i32>]] [[2 x <2 x i32>] [<2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>]]
 
 ; CHECK:  llvm.mlir.global internal constant @vector_constant_zero
@@ -221,9 +218,8 @@
 ; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x vector<2xi32>>>
 @nested_array_vector_zero = internal constant [1 x [2 x <2 x i32>]] zeroinitializer
 
-; CHECK: llvm.mlir.global internal constant @nested_bool_array_constant
-; CHECK-SAME-LITERAL:  (dense<[[true, false]]> : tensor<1x2xi1>)
-; CHECK-SAME-LITERAL:  {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x i1>>
+; CHECK{LITERAL}: llvm.mlir.global internal constant @nested_bool_array_constant(dense<[[true, false]]> : tensor<1x2xi1>)
+; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x i1>>
 @nested_bool_array_constant = internal constant [1 x [2 x i1]] [[2 x i1] [i1 1, i1 0]]
 
 ; CHECK: llvm.mlir.global internal constant @quad_float_constant
@@ -358,3 +354,18 @@ declare void @"mlir.llvm.nameless_global_2"()
 
 ; CHECK:  llvm.mlir.global private unnamed_addr constant @mlir.llvm.nameless_global_0("0\00")
 @0 = private unnamed_addr constant [2 x i8] c"0\00"
+
+; // -----
+
+; CHECK-LABEL: llvm.mlir.global external @target_specific_attrs_only
+; CHECK-SAME: target_specific_attrs = {{\[\[}}"memory", "0"], ["int-attr", "4"], "no-enum-attr", ["string-attr", "string"]]}
+@target_specific_attrs_only = external global double #0
+attributes #0 = { readnone "int-attr"="4" "no-enum-attr" "string-attr"="string" }
+
+; // -----
+
+; CHECK-LABEL: llvm.mlir.global external @target_specific_attrs_combined
+; CHECK-SAME: alignment = 4 : i64, section = "mysection",
+; CHECK-SAME: target_specific_attrs = ["norecurse", ["bss-section", "my_bss.1"]]}
+@target_specific_attrs_combined = global i32 2, align 4, section "mysection" #0
+attributes #0 = { norecurse "bss-section"="my_bss.1" }

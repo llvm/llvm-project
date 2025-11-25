@@ -2,21 +2,22 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 < %s | FileCheck %s
 
-define dso_local void @test_no_inc(i32 signext %a) local_unnamed_addr nounwind align 2 {
+define dso_local void @test_no_inc(i32 signext %a, ptr %p) local_unnamed_addr nounwind align 2 {
 ; CHECK-LABEL: test_no_inc:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    srawi 4, 3, 31
+; CHECK-NEXT:    srawi 5, 3, 31
 ; CHECK-NEXT:    cmpwi 3, 0
 ; CHECK-NEXT:    li 6, 1
 ; CHECK-NEXT:    li 7, 0
-; CHECK-NEXT:    andc 4, 3, 4
-; CHECK-NEXT:    addi 5, 4, 1
+; CHECK-NEXT:    andc 5, 3, 5
+; CHECK-NEXT:    add 4, 5, 4
+; CHECK-NEXT:    addi 4, 4, 1
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_1: # %for.cond.cleanup
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    stb 7, 0(5)
-; CHECK-NEXT:    add 5, 5, 4
+; CHECK-NEXT:    stb 7, 0(4)
+; CHECK-NEXT:    add 4, 4, 5
 ; CHECK-NEXT:  .LBB0_2: # %for.cond
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    bc 4, 1, .LBB0_1
@@ -38,7 +39,7 @@ for.body.preheader:                               ; preds = %for.cond
 
 for.cond.cleanup:                                 ; preds = %for.body.preheader, %for.cond
   %g.1.lcssa = phi i32 [ %g.0, %for.cond ], [ %0, %for.body.preheader ]
-  %arrayidx5 = getelementptr inbounds i8, ptr null, i32 %g.1.lcssa
+  %arrayidx5 = getelementptr inbounds i8, ptr %p, i32 %g.1.lcssa
   store i8 0, ptr %arrayidx5, align 1
   br label %for.cond
 }

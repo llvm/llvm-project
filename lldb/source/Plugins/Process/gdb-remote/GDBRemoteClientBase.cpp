@@ -180,7 +180,7 @@ bool GDBRemoteClientBase::Interrupt(std::chrono::seconds interrupt_timeout) {
 GDBRemoteCommunication::PacketResult
 GDBRemoteClientBase::SendPacketAndWaitForResponse(
     llvm::StringRef payload, StringExtractorGDBRemote &response,
-    std::chrono::seconds interrupt_timeout) {
+    std::chrono::seconds interrupt_timeout, bool sync_on_timeout) {
   Lock lock(*this, interrupt_timeout);
   if (!lock) {
     if (Log *log = GetLog(GDBRLog::Process))
@@ -191,7 +191,7 @@ GDBRemoteClientBase::SendPacketAndWaitForResponse(
     return PacketResult::ErrorSendFailed;
   }
 
-  return SendPacketAndWaitForResponseNoLock(payload, response);
+  return SendPacketAndWaitForResponseNoLock(payload, response, sync_on_timeout);
 }
 
 GDBRemoteCommunication::PacketResult
@@ -236,14 +236,15 @@ GDBRemoteClientBase::SendPacketAndReceiveResponseWithOutputSupport(
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteClientBase::SendPacketAndWaitForResponseNoLock(
-    llvm::StringRef payload, StringExtractorGDBRemote &response) {
+    llvm::StringRef payload, StringExtractorGDBRemote &response,
+    bool sync_on_timeout) {
   PacketResult packet_result = SendPacketNoLock(payload);
   if (packet_result != PacketResult::Success)
     return packet_result;
 
   const size_t max_response_retries = 3;
   for (size_t i = 0; i < max_response_retries; ++i) {
-    packet_result = ReadPacket(response, GetPacketTimeout(), true);
+    packet_result = ReadPacket(response, GetPacketTimeout(), sync_on_timeout);
     // Make sure we received a response
     if (packet_result != PacketResult::Success)
       return packet_result;

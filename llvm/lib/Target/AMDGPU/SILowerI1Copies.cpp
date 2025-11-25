@@ -75,7 +75,7 @@ Vreg1LoweringHelper::Vreg1LoweringHelper(MachineFunction *MF,
 bool Vreg1LoweringHelper::cleanConstrainRegs(bool Changed) {
   assert(Changed || ConstrainRegs.empty());
   for (Register Reg : ConstrainRegs)
-    MRI->constrainRegClass(Reg, &AMDGPU::SReg_1_XEXECRegClass);
+    MRI->constrainRegClass(Reg, TII->getRegisterInfo().getWaveMaskRegClass());
   ConstrainRegs.clear();
 
   return Changed;
@@ -859,8 +859,7 @@ void Vreg1LoweringHelper::constrainAsLaneMask(Incoming &In) {}
 static bool runFixI1Copies(MachineFunction &MF, MachineDominatorTree &MDT,
                            MachinePostDominatorTree &MPDT) {
   // Only need to run this in SelectionDAG path.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::Selected))
+  if (MF.getProperties().hasSelected())
     return false;
 
   Vreg1LoweringHelper Helper(&MF, &MDT, &MPDT);

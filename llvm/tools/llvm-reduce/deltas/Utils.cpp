@@ -14,6 +14,8 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalIFunc.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -42,8 +44,39 @@ bool llvm::hasAliasUse(Function &F) {
     });
 }
 
-bool llvm::hasAliasOrBlockAddressUse(Function &F) {
-  return any_of(F.users(), [](User *U) {
-    return isa<GlobalAlias, GlobalIFunc, BlockAddress>(U);
-  });
+void llvm::simpleSimplifyCFG(Function &F, ArrayRef<BasicBlock *> BBs,
+                             bool FoldBlockIntoPredecessor) {
+
+  for (BasicBlock *BB : BBs) {
+    ConstantFoldTerminator(BB);
+    if (FoldBlockIntoPredecessor)
+      MergeBlockIntoPredecessor(BB);
+  }
+
+  // Remove unreachable blocks
+  //
+  // removeUnreachableBlocks can't be used here, it will turn various undefined
+  // behavior into unreachables, but llvm-reduce was the thing that generated
+  // the undefined behavior, and we don't want it to kill the entire program.
+  SmallPtrSet<BasicBlock *, 16> Visited(llvm::from_range,
+                                        depth_first(&F.getEntryBlock()));
+
+  SmallVector<BasicBlock *, 16> Unreachable;
+  for (BasicBlock &BB : F) {
+    if (!Visited.count(&BB))
+      Unreachable.push_back(&BB);
+  }
+
+  // The dead BB's may be in a dead cycle or otherwise have references to each
+  // other.  Because of this, we have to drop all references first, then delete
+  // them all at once.
+  for (BasicBlock *BB : Unreachable) {
+    for (BasicBlock *Successor : successors(&*BB))
+      if (Visited.count(Successor))
+        Successor->removePredecessor(&*BB, /*KeepOneInputPHIs=*/true);
+    BB->dropAllReferences();
+  }
+
+  for (BasicBlock *BB : Unreachable)
+    BB->eraseFromParent();
 }

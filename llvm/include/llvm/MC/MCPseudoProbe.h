@@ -62,6 +62,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 #include <functional>
 #include <memory>
@@ -92,7 +93,7 @@ struct MCPseudoProbeFuncDesc {
   MCPseudoProbeFuncDesc(uint64_t GUID, uint64_t Hash, StringRef Name)
       : FuncGUID(GUID), FuncHash(Hash), FuncName(Name){};
 
-  void print(raw_ostream &OS);
+  LLVM_ABI void print(raw_ostream &OS);
 };
 
 class MCDecodedPseudoProbe;
@@ -178,7 +179,8 @@ public:
 
   uint64_t getGuid() const { return Guid; };
   MCSymbol *getLabel() const { return Label; }
-  void emit(MCObjectStreamer *MCOS, const MCPseudoProbe *LastProbe) const;
+  LLVM_ABI void emit(MCObjectStreamer *MCOS,
+                     const MCPseudoProbe *LastProbe) const;
 };
 
 // Represents a callsite with caller function name and probe id
@@ -193,7 +195,7 @@ public:
                        uint32_t D, MCDecodedPseudoProbeInlineTree *Tree)
       : MCPseudoProbeBase(I, At, static_cast<uint8_t>(K), D), Address(Ad),
         InlineTree(Tree){};
-  uint64_t getGuid() const;
+  LLVM_ABI uint64_t getGuid() const;
 
   uint64_t getAddress() const { return Address; }
 
@@ -206,17 +208,17 @@ public:
   // Get the inlined context by traversing current inline tree backwards,
   // each tree node has its InlineSite which is taken as the context.
   // \p ContextStack is populated in root to leaf order
-  void
+  LLVM_ABI void
   getInlineContext(SmallVectorImpl<MCPseudoProbeFrameLocation> &ContextStack,
                    const GUIDProbeFunctionMap &GUID2FuncMAP) const;
 
   // Helper function to get the string from context stack
-  std::string
+  LLVM_ABI std::string
   getInlineContextStr(const GUIDProbeFunctionMap &GUID2FuncMAP) const;
 
   // Print pseudo probe while disassembling
-  void print(raw_ostream &OS, const GUIDProbeFunctionMap &GUID2FuncMAP,
-             bool ShowName) const;
+  LLVM_ABI void print(raw_ostream &OS, const GUIDProbeFunctionMap &GUID2FuncMAP,
+                      bool ShowName) const;
 };
 
 // Address to pseudo probes map.
@@ -302,9 +304,9 @@ public:
   }
 
   // MCPseudoProbeInlineTree method based on Inlinees
-  void addPseudoProbe(const MCPseudoProbe &Probe,
-                      const MCPseudoProbeInlineStack &InlineStack);
-  void emit(MCObjectStreamer *MCOS, const MCPseudoProbe *&LastProbe);
+  LLVM_ABI void addPseudoProbe(const MCPseudoProbe &Probe,
+                               const MCPseudoProbeInlineStack &InlineStack);
+  LLVM_ABI void emit(MCObjectStreamer *MCOS, const MCPseudoProbe *&LastProbe);
 };
 
 // inline tree node for the decoded pseudo probe
@@ -360,7 +362,7 @@ public:
 
   bool empty() const { return MCProbeDivisions.empty(); }
 
-  void emit(MCObjectStreamer *MCOS);
+  LLVM_ABI void emit(MCObjectStreamer *MCOS);
 };
 
 class MCPseudoProbeTable {
@@ -373,7 +375,7 @@ class MCPseudoProbeTable {
   MCPseudoProbeSections MCProbeSections;
 
 public:
-  static void emit(MCObjectStreamer *MCOS);
+  LLVM_ABI static void emit(MCObjectStreamer *MCOS);
 
   MCPseudoProbeSections &getProbeSections() { return MCProbeSections; }
 
@@ -433,8 +435,8 @@ public:
   // Decode pseudo_probe_desc section to build GUID to PseudoProbeFuncDesc map.
   // If pseudo_probe_desc section is mapped to memory and \p IsMMapped is true,
   // uses StringRefs pointing to the section.
-  bool buildGUID2FuncDescMap(const uint8_t *Start, std::size_t Size,
-                             bool IsMMapped = false);
+  LLVM_ABI bool buildGUID2FuncDescMap(const uint8_t *Start, std::size_t Size,
+                                      bool IsMMapped = false);
 
   // Decode pseudo_probe section to count the number of probes and inlined
   // function records for each function record.
@@ -444,23 +446,24 @@ public:
 
   // Decode pseudo_probe section to build address to probes map for specifed
   // functions only.
-  bool buildAddress2ProbeMap(const uint8_t *Start, std::size_t Size,
-                             const Uint64Set &GuildFilter,
-                             const Uint64Map &FuncStartAddrs);
+  LLVM_ABI bool buildAddress2ProbeMap(const uint8_t *Start, std::size_t Size,
+                                      const Uint64Set &GuildFilter,
+                                      const Uint64Map &FuncStartAddrs);
 
   // Print pseudo_probe_desc section info
-  void printGUID2FuncDescMap(raw_ostream &OS);
+  LLVM_ABI void printGUID2FuncDescMap(raw_ostream &OS);
 
   // Print pseudo_probe section info, used along with show-disassembly
-  void printProbeForAddress(raw_ostream &OS, uint64_t Address);
+  LLVM_ABI void printProbeForAddress(raw_ostream &OS, uint64_t Address);
 
   // do printProbeForAddress for all addresses
-  void printProbesForAllAddresses(raw_ostream &OS);
+  LLVM_ABI void printProbesForAllAddresses(raw_ostream &OS);
 
   // Look up the probe of a call for the input address
-  const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const;
+  LLVM_ABI const MCDecodedPseudoProbe *
+  getCallProbeForAddr(uint64_t Address) const;
 
-  const MCPseudoProbeFuncDesc *getFuncDescForGUID(uint64_t GUID) const;
+  LLVM_ABI const MCPseudoProbeFuncDesc *getFuncDescForGUID(uint64_t GUID) const;
 
   // Helper function to populate one probe's inline stack into
   // \p InlineContextStack.
@@ -469,7 +472,7 @@ public:
   //  Current probe(bar:3) inlined at foo:2 then inlined at main:1
   //  IncludeLeaf = true,  Output: [main:1, foo:2, bar:3]
   //  IncludeLeaf = false, Output: [main:1, foo:2]
-  void getInlineContextForProbe(
+  LLVM_ABI void getInlineContextForProbe(
       const MCDecodedPseudoProbe *Probe,
       SmallVectorImpl<MCPseudoProbeFrameLocation> &InlineContextStack,
       bool IncludeLeaf) const;
@@ -484,7 +487,7 @@ public:
     return GUID2FuncDescMap;
   }
 
-  const MCPseudoProbeFuncDesc *
+  LLVM_ABI const MCPseudoProbeFuncDesc *
   getInlinerDescForProbe(const MCDecodedPseudoProbe *Probe) const;
 
   const MCDecodedPseudoProbeInlineTree &getDummyInlineRoot() const {
@@ -510,7 +513,7 @@ public:
     return iterator_range(It->second);
   }
 
-  const ArrayRef<MCDecodedPseudoProbeInlineTree> getInlineTreeVec() const {
+  ArrayRef<MCDecodedPseudoProbeInlineTree> getInlineTreeVec() const {
     return InlineTreeVec;
   }
 

@@ -29,6 +29,7 @@ class MLIRContext;
 class Operation;
 class OperationName;
 class OpPrintingFlags;
+class OpWithFlags;
 class Type;
 class Value;
 
@@ -199,6 +200,7 @@ public:
 
   /// Stream in an Operation.
   Diagnostic &operator<<(Operation &op);
+  Diagnostic &operator<<(OpWithFlags op);
   Diagnostic &operator<<(Operation *op) { return *this << *op; }
   /// Append an operation with the given printing flags.
   Diagnostic &appendOp(Operation &op, const OpPrintingFlags &flags);
@@ -626,9 +628,12 @@ struct SourceMgrDiagnosticVerifierHandlerImpl;
 /// corresponding line of the source file.
 class SourceMgrDiagnosticVerifierHandler : public SourceMgrDiagnosticHandler {
 public:
+  enum class Level { None = 0, All, OnlyExpected };
   SourceMgrDiagnosticVerifierHandler(llvm::SourceMgr &srcMgr, MLIRContext *ctx,
-                                     raw_ostream &out);
-  SourceMgrDiagnosticVerifierHandler(llvm::SourceMgr &srcMgr, MLIRContext *ctx);
+                                     raw_ostream &out,
+                                     Level level = Level::All);
+  SourceMgrDiagnosticVerifierHandler(llvm::SourceMgr &srcMgr, MLIRContext *ctx,
+                                     Level level = Level::All);
   ~SourceMgrDiagnosticVerifierHandler();
 
   /// Returns the status of the handler and verifies that all expected
@@ -636,12 +641,16 @@ public:
   /// verified correctly, failure otherwise.
   LogicalResult verify();
 
+  /// Register this handler with the given context. This is intended for use
+  /// with the splitAndProcessBuffer function.
+  void registerInContext(MLIRContext *ctx);
+
 private:
   /// Process a single diagnostic.
   void process(Diagnostic &diag);
 
-  /// Process a FileLineColLoc diagnostic.
-  void process(FileLineColLoc loc, StringRef msg, DiagnosticSeverity kind);
+  /// Process a LocationAttr diagnostic.
+  void process(LocationAttr loc, StringRef msg, DiagnosticSeverity kind);
 
   std::unique_ptr<detail::SourceMgrDiagnosticVerifierHandlerImpl> impl;
 };

@@ -30,13 +30,13 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatCommon.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadicDetails.h"
 #include "llvm/Support/raw_ostream.h"
 #include <array>
 #include <cstddef>
-#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -97,7 +97,7 @@ public:
   }
 
   // Parse and optionally validate format string (in debug builds).
-  static SmallVector<ReplacementItem, 2>
+  LLVM_ABI static SmallVector<ReplacementItem, 2>
   parseFormatString(StringRef Fmt, size_t NumArgs, bool Validate);
 
   std::string str() const {
