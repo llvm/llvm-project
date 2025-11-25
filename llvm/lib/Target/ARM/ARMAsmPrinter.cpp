@@ -679,14 +679,14 @@ void ARMAsmPrinter::emitAttributes() {
   if (isPositionIndependent()) {
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_RW_data,
                       ARMBuildAttrs::AddressRWPCRel);
-  } else if (getTM().isRWPI()) {
+  } else if (STI.isRWPI()) {
     // RWPI specific attributes.
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_RW_data,
                       ARMBuildAttrs::AddressRWSBRel);
   }
 
   // RO data addressing.
-  if (isPositionIndependent() || getTM().isROPI()) {
+  if (isPositionIndependent() || STI.isROPI()) {
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_RO_data,
                       ARMBuildAttrs::AddressROPCRel);
   }
@@ -832,7 +832,7 @@ void ARMAsmPrinter::emitAttributes() {
   }
 
   // We currently do not support using R9 as the TLS pointer.
-  if (getTM().isRWPI())
+  if (STI.isRWPI())
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_R9_use,
                       ARMBuildAttrs::R9IsSB);
   else if (STI.isR9Reserved())
@@ -1047,7 +1047,8 @@ void ARMAsmPrinter::emitJumpTableAddrs(const MachineInstr *MI) {
     //    .word (LBB1 - LJTI_0_0)
     const MCExpr *Expr = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
 
-    if (isPositionIndependent() || getTM().isROPI())
+    const ARMSubtarget &STI = MF->getSubtarget<ARMSubtarget>();
+    if (isPositionIndependent() || STI.isROPI())
       Expr = MCBinaryExpr::createSub(Expr, MCSymbolRefExpr::create(JTISymbol,
                                                                    OutContext),
                                      OutContext);

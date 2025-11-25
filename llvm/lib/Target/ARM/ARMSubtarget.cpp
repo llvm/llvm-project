@@ -308,8 +308,19 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   }
 }
 
-bool ARMSubtarget::isROPI() const { return TM.isROPI(); }
-bool ARMSubtarget::isRWPI() const { return TM.isRWPI(); }
+bool ARMSubtarget::isROPI() const {
+  // FIXME: This should ideally come from a function attribute, to work
+  // correctly with LTO.
+  return TM.getRelocationModel() == Reloc::ROPI ||
+         TM.getRelocationModel() == Reloc::ROPI_RWPI;
+}
+
+bool ARMSubtarget::isRWPI() const {
+  // FIXME: This should ideally come from a function attribute, to work
+  // correctly with LTO.
+  return TM.getRelocationModel() == Reloc::RWPI ||
+         TM.getRelocationModel() == Reloc::ROPI_RWPI;
+}
 
 bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   return TM.isGVIndirectSymbol(GV);
