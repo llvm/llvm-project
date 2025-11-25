@@ -5136,6 +5136,7 @@ define void @test_call_v3bf16(<3 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
 ; GFX1250-NEXT:    scratch_store_b16 v4, v1, off offset:4 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 v4, v0, off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
@@ -6215,6 +6216,7 @@ define void @test_call_v16bf16(<16 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
 ; GFX1250-NEXT:    scratch_store_b128 v8, v[4:7], off offset:16 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b128 v8, v[0:3], off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v9, 1
