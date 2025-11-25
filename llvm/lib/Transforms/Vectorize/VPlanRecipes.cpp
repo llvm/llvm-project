@@ -50,8 +50,13 @@ bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
-  case VPInstructionSC:
-    return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
+  case VPInstructionSC: {
+    auto *VPI = cast<VPInstruction>(this);
+    // Loads read from memory but don't write to memory.
+    if (VPI->getOpcode() == Instruction::Load)
+      return false;
+    return VPI->opcodeMayReadOrWriteFromMemory();
+  }
   case VPInterleaveEVLSC:
   case VPInterleaveSC:
     return cast<VPInterleaveBase>(this)->getNumStoreOperands() > 0;
@@ -277,9 +282,14 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     RecipeCost = 0;
   } else {
     RecipeCost = computeCost(VF, Ctx);
-    if (UI && ForceTargetInstructionCost.getNumOccurrences() > 0 &&
-        RecipeCost.isValid())
-      RecipeCost = InstructionCost(ForceTargetInstructionCost);
+    RecipeCost = computeCost(VF, Ctx);
+    if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
+        RecipeCost.isValid()) {
+      if (UI)
+        RecipeCost = InstructionCost(ForceTargetInstructionCost);
+      else
+        RecipeCost = InstructionCost(0);
+    }
   }
 
   LLVM_DEBUG({
@@ -453,8 +463,12 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
     GEPFlags &= Other.GEPFlags;
     break;
   case OperationType::FPMathOp:
-    FMFs.NoNaNs &= Other.FMFs.NoNaNs;
-    FMFs.NoInfs &= Other.FMFs.NoInfs;
+  case OperationType::FCmp:
+    assert((OpType != OperationType::FCmp ||
+            FCmpFlags.Pred == Other.FCmpFlags.Pred) &&
+           "Cannot drop CmpPredicate");
+    getFMFsRef().NoNaNs &= Other.getFMFsRef().NoNaNs;
+    getFMFsRef().NoInfs &= Other.getFMFsRef().NoInfs;
     break;
   case OperationType::NonNegOp:
     NonNegFlags.NonNeg &= Other.NonNegFlags.NonNeg;
@@ -469,16 +483,17 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
 }
 
 FastMathFlags VPIRFlags::getFastMathFlags() const {
-  assert(OpType == OperationType::FPMathOp &&
+  assert((OpType == OperationType::FPMathOp || OpType == OperationType::FCmp) &&
          "recipe doesn't have fast math flags");
+  const FastMathFlagsTy &F = getFMFsRef();
   FastMathFlags Res;
-  Res.setAllowReassoc(FMFs.AllowReassoc);
-  Res.setNoNaNs(FMFs.NoNaNs);
-  Res.setNoInfs(FMFs.NoInfs);
-  Res.setNoSignedZeros(FMFs.NoSignedZeros);
-  Res.setAllowReciprocal(FMFs.AllowReciprocal);
-  Res.setAllowContract(FMFs.AllowContract);
-  Res.setApproxFunc(FMFs.ApproxFunc);
+  Res.setAllowReassoc(F.AllowReassoc);
+  Res.setNoNaNs(F.NoNaNs);
+  Res.setNoInfs(F.NoInfs);
+  Res.setNoSignedZeros(F.NoSignedZeros);
+  Res.setAllowReciprocal(F.AllowReciprocal);
+  Res.setAllowContract(F.AllowContract);
+  Res.setApproxFunc(F.ApproxFunc);
   return Res;
 }
 
@@ -488,6 +503,10 @@ void VPSingleDefRecipe::dump() const { VPDef::dump(); }
 void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
                          VPSlotTracker &SlotTracker) const {
   printRecipe(O, Indent, SlotTracker);
+  if (auto DL = getDebugLoc()) {
+    O << ", !dbg ";
+    DL.print(O);
+  }
 }
 #endif
 
@@ -540,7 +559,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::ExtractValue:
   case Instruction::Freeze:
   case Instruction::Load:
-  case VPInstruction::AnyOf:
   case VPInstruction::BranchOnCond:
   case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
@@ -580,6 +598,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::GetElementPtr:
   case Instruction::PHI:
   case Instruction::Switch:
+  case VPInstruction::AnyOf:
   case VPInstruction::SLPLoad:
   case VPInstruction::SLPStore:
     // Cannot determine the number of operands from the opcode.
@@ -996,7 +1015,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (getNumOperands() == 1) {
       Value *Mask = State.get(getOperand(0));
       return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
-                                                  true, Name);
+                                                  /*ZeroIsPoison=*/false, Name);
     }
     // If there are multiple operands, create a chain of selects to pick the
     // first operand with an active lane and add the number of lanes of the
@@ -1012,9 +1031,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
                     Builder.CreateICmpEQ(State.get(getOperand(Idx)),
                                          Builder.getFalse()),
                     Builder.getInt64Ty())
-              : Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(),
-                                                     State.get(getOperand(Idx)),
-                                                     true, Name);
+              : Builder.CreateCountTrailingZeroElems(
+                    Builder.getInt64Ty(), State.get(getOperand(Idx)),
+                    /*ZeroIsPoison=*/false, Name);
       Value *Current = Builder.CreateAdd(
           Builder.CreateMul(RuntimeVF, Builder.getInt64(Idx)), TrailingZeros);
       if (Res) {
@@ -1264,6 +1283,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return false;
   switch (getOpcode()) {
+  case Instruction::GetElementPtr:
   case Instruction::ExtractElement:
   case Instruction::Freeze:
   case Instruction::FCmp:
@@ -1476,11 +1496,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
 
   printFlags(O);
   printOperands(O, SlotTracker);
-
-  if (auto DL = getDebugLoc()) {
-    O << ", !dbg ";
-    DL.print(O);
-  }
 }
 #endif
 
@@ -2056,27 +2071,30 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   switch (OpType) {
   case OperationType::OverflowingBinOp:
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
-           Opcode == Instruction::Mul ||
+           Opcode == Instruction::Mul || Opcode == Instruction::Shl ||
            Opcode == VPInstruction::VPInstruction::CanonicalIVIncrementForPart;
   case OperationType::Trunc:
     return Opcode == Instruction::Trunc;
   case OperationType::DisjointOp:
     return Opcode == Instruction::Or;
   case OperationType::PossiblyExactOp:
-    return Opcode == Instruction::AShr;
+    return Opcode == Instruction::AShr || Opcode == Instruction::LShr ||
+           Opcode == Instruction::UDiv || Opcode == Instruction::SDiv;
   case OperationType::GEPOp:
     return Opcode == Instruction::GetElementPtr ||
            Opcode == VPInstruction::PtrAdd ||
            Opcode == VPInstruction::WidePtrAdd;
   case OperationType::FPMathOp:
-    return Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
-           Opcode == Instruction::FSub || Opcode == Instruction::FNeg ||
-           Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
-           Opcode == Instruction::FPExt || Opcode == Instruction::FPTrunc ||
-           Opcode == Instruction::FCmp || Opcode == Instruction::Select ||
+    return Opcode == Instruction::Call || Opcode == Instruction::FAdd ||
+           Opcode == Instruction::FMul || Opcode == Instruction::FSub ||
+           Opcode == Instruction::FNeg || Opcode == Instruction::FDiv ||
+           Opcode == Instruction::FRem || Opcode == Instruction::FPExt ||
+           Opcode == Instruction::FPTrunc || Opcode == Instruction::Select ||
            Opcode == VPInstruction::WideIVStep ||
            Opcode == VPInstruction::ReductionStartVector ||
            Opcode == VPInstruction::ComputeReductionResult;
+  case OperationType::FCmp:
+    return Opcode == Instruction::FCmp;
   case OperationType::NonNegOp:
     return Opcode == Instruction::ZExt || Opcode == Instruction::UIToFP;
   case OperationType::Cmp:
@@ -2093,6 +2111,10 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
   switch (OpType) {
   case OperationType::Cmp:
     O << " " << CmpInst::getPredicateName(getPredicate());
+    break;
+  case OperationType::FCmp:
+    O << " " << CmpInst::getPredicateName(getPredicate());
+    getFastMathFlags().print(O);
     break;
   case OperationType::DisjointOp:
     if (DisjointFlags.IsDisjoint)
@@ -2202,15 +2224,14 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     Value *B = State.get(getOperand(1));
     Value *C = nullptr;
     if (FCmp) {
-      // Propagate fast math flags.
-      C = Builder.CreateFCmpFMF(
-          getPredicate(), A, B,
-          dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+      C = Builder.CreateFCmp(getPredicate(), A, B);
     } else {
       C = Builder.CreateICmp(getPredicate(), A, B);
     }
-    if (auto *I = dyn_cast<Instruction>(C))
+    if (auto *I = dyn_cast<Instruction>(C)) {
+      applyFlags(*I);
       applyMetadata(*I);
+    }
     State.set(this, C);
     break;
   }
@@ -2515,6 +2536,11 @@ void VPScalarIVStepsRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+bool VPWidenGEPRecipe::usesFirstLaneOnly(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  return vputils::isSingleScalar(Op);
+}
+
 void VPWidenGEPRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
   // Construct a vector GEP by widening the operands of the scalar GEP as
@@ -2523,51 +2549,32 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
   // is vector-typed. Thus, to keep the representation compact, we only use
   // vector-typed operands for loop-varying values.
 
-  if (areAllOperandsInvariant()) {
-    // If we are vectorizing, but the GEP has only loop-invariant operands,
-    // the GEP we build (by only using vector-typed operands for
-    // loop-varying values) would be a scalar pointer. Thus, to ensure we
-    // produce a vector of pointers, we need to either arbitrarily pick an
-    // operand to broadcast, or broadcast a clone of the original GEP.
-    // Here, we broadcast a clone of the original.
-    //
-    // TODO: If at some point we decide to scalarize instructions having
-    //       loop-invariant operands, this special case will no longer be
-    //       required. We would add the scalarization decision to
-    //       collectLoopScalars() and teach getVectorValue() to broadcast
-    //       the lane-zero scalar value.
-    SmallVector<Value *> Ops;
-    for (unsigned I = 0, E = getNumOperands(); I != E; I++)
-      Ops.push_back(State.get(getOperand(I), VPLane(0)));
+  assert(
+      any_of(operands(),
+             [](VPValue *Op) { return !Op->isDefinedOutsideLoopRegions(); }) &&
+      "Expected at least one loop-variant operand");
 
-    auto *NewGEP =
-        State.Builder.CreateGEP(getSourceElementType(), Ops[0], drop_begin(Ops),
-                                "", getGEPNoWrapFlags());
-    Value *Splat = State.Builder.CreateVectorSplat(State.VF, NewGEP);
-    State.set(this, Splat);
-  } else {
-    // If the GEP has at least one loop-varying operand, we are sure to
-    // produce a vector of pointers unless VF is scalar.
-    // The pointer operand of the new GEP. If it's loop-invariant, we
-    // won't broadcast it.
-    auto *Ptr = State.get(getOperand(0), isPointerLoopInvariant());
+  // If the GEP has at least one loop-varying operand, we are sure to
+  // produce a vector of pointers unless VF is scalar.
+  // The pointer operand of the new GEP. If it's loop-invariant, we
+  // won't broadcast it.
+  auto *Ptr = State.get(getOperand(0), isPointerLoopInvariant());
 
-    // Collect all the indices for the new GEP. If any index is
-    // loop-invariant, we won't broadcast it.
-    SmallVector<Value *, 4> Indices;
-    for (unsigned I = 1, E = getNumOperands(); I < E; I++) {
-      VPValue *Operand = getOperand(I);
-      Indices.push_back(State.get(Operand, isIndexLoopInvariant(I - 1)));
-    }
-
-    // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
-    // but it should be a vector, otherwise.
-    auto *NewGEP = State.Builder.CreateGEP(getSourceElementType(), Ptr, Indices,
-                                           "", getGEPNoWrapFlags());
-    assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
-           "NewGEP is not a pointer vector");
-    State.set(this, NewGEP);
+  // Collect all the indices for the new GEP. If any index is
+  // loop-invariant, we won't broadcast it.
+  SmallVector<Value *, 4> Indices;
+  for (unsigned I = 1, E = getNumOperands(); I < E; I++) {
+    VPValue *Operand = getOperand(I);
+    Indices.push_back(State.get(Operand, isIndexLoopInvariant(I - 1)));
   }
+
+  // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
+  // but it should be a vector, otherwise.
+  auto *NewGEP = State.Builder.CreateGEP(getSourceElementType(), Ptr, Indices,
+                                         "", getGEPNoWrapFlags());
+  assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
+         "NewGEP is not a pointer vector");
+  State.set(this, NewGEP);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2654,7 +2661,7 @@ void VPVectorPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent;
   printAsOperand(O, SlotTracker);
   O << " = vector-pointer ";
-
+  printFlags(O);
   printOperands(O, SlotTracker);
 }
 #endif
@@ -3581,8 +3588,10 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 
   InstructionCost Cost = 0;
   if (IsMasked) {
+    unsigned IID = isa<VPWidenLoadRecipe>(this) ? Intrinsic::masked_load
+                                                : Intrinsic::masked_store;
     Cost +=
-        Ctx.TTI.getMaskedMemoryOpCost(Opcode, Ty, Alignment, AS, Ctx.CostKind);
+        Ctx.TTI.getMaskedMemoryOpCost({IID, Ty, Alignment, AS}, Ctx.CostKind);
   } else {
     TTI::OperandValueInfo OpInfo = Ctx.getOperandInfo(
         isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this) ? getOperand(0)
@@ -3700,8 +3709,10 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
+  // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
+  // After migrating to getMemIntrinsicInstrCost, switch this to vp_load.
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      Instruction::Load, Ty, Alignment, AS, Ctx.CostKind);
+      {Intrinsic::masked_load, Ty, Alignment, AS}, Ctx.CostKind);
   if (!Reverse)
     return Cost;
 
@@ -3809,8 +3820,10 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
+  // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
+  // After migrating to getMemIntrinsicInstrCost, switch this to vp_store.
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      Instruction::Store, Ty, Alignment, AS, Ctx.CostKind);
+      {Intrinsic::masked_store, Ty, Alignment, AS}, Ctx.CostKind);
   if (!Reverse)
     return Cost;
 
@@ -4311,7 +4324,7 @@ void VPCanonicalIVPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
-  return IsScalarAfterVectorization &&
+  return vputils::onlyScalarValuesUsed(this) &&
          (!IsScalable || vputils::onlyFirstLaneUsed(this));
 }
 

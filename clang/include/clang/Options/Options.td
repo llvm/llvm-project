@@ -2463,6 +2463,12 @@ def fsanitize_address_outline_instrumentation : Flag<["-"], "fsanitize-address-o
 def fno_sanitize_address_outline_instrumentation : Flag<["-"], "fno-sanitize-address-outline-instrumentation">,
                                                    Group<f_clang_Group>,
                                                    HelpText<"Use default code inlining logic for the address sanitizer">;
+def fsanitize_type_outline_instrumentation : Flag<["-"], "fsanitize-type-outline-instrumentation">,
+                                                Group<f_clang_Group>,
+                                                HelpText<"Always generate function calls for type sanitizer instrumentation">;
+def fno_sanitize_type_outline_instrumentation : Flag<["-"], "fno-sanitize-type-outline-instrumentation">,
+                                                   Group<f_clang_Group>,
+                                                   HelpText<"Use code inlining logic for the type sanitizer">;
 defm sanitize_stable_abi
   : OptInCC1FFlag<"sanitize-stable-abi", "Stable  ", "Conventional ",
     "ABI instrumentation for sanitizer runtime. Default: Conventional">;
@@ -2660,6 +2666,15 @@ defm sanitize_minimal_runtime : BoolOption<"f", "sanitize-minimal-runtime",
   PosFlag<SetTrue>,
   NegFlag<SetFalse>>,
   Group<f_clang_Group>;
+defm sanitize_handler_preserve_all_regs
+    : BoolOption<
+          "f", "sanitize-handler-preserve-all-regs",
+          CodeGenOpts<"SanitizeHandlerPreserveAllRegs">, DefaultFalse,
+          PosFlag<SetTrue, [], [],
+                  "Enable handlers with preserve_all calling convention">,
+          NegFlag<SetFalse, [], [],
+                  "Disable handlers with preserve_all calling convention">>,
+      Group<f_clang_Group>;
 def fsanitize_link_runtime : Flag<["-"], "fsanitize-link-runtime">,
                            Group<f_clang_Group>;
 def fno_sanitize_link_runtime : Flag<["-"], "fno-sanitize-link-runtime">,
@@ -2758,7 +2773,7 @@ defm sanitize_alloc_token_extended : BoolOption<"f", "sanitize-alloc-token-exten
 def falloc_token_max_EQ : Joined<["-"], "falloc-token-max=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<N>">,
-  HelpText<"Limit to maximum N allocation tokens (0 = no max)">;
+  HelpText<"Limit to maximum N allocation tokens (0 = target SIZE_MAX)">;
 
 def falloc_token_mode_EQ : Joined<["-"], "falloc-token-mode=">,
   Group<f_Group>, Visibility<[CC1Option]>,
@@ -2782,6 +2797,9 @@ def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">
   Group<f_Group>;
 def fassociative_math : Flag<["-"], "fassociative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
 def fno_associative_math : Flag<["-"], "fno-associative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
+def ffast_real_mod : Flag<["-"], "ffast-real-mod">,
+  Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Enable optimization of MOD for REAL types">;
 def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">,
   Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
