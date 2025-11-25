@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
+typedef unsigned long long __size_t;
+extern void *malloc(__size_t);
+extern void free(void *);
+
 int main(int argc, char **argv) {
   int len = 16;
   double *data = (double *)malloc(len * sizeof(double));
