@@ -59,5 +59,6 @@ add_flang_library(FortranSupport
 
   MLIR_LIBS
   MLIRIR
+  HLFIRDialect
   MLIRSupport
 )
