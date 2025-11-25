@@ -226,6 +226,11 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`modernize-use-init-statement
+  <clang-tidy/checks/modernize/use-init-statement>` check.
+
+  FIXME: Write a short description.
+
 - New :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check.
 
