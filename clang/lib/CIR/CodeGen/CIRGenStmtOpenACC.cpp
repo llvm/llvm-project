@@ -24,15 +24,14 @@ using namespace mlir::acc;
 template <typename Op, typename TermOp>
 mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
     mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
-    SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
-    const Stmt *associatedStmt) {
+    llvm::ArrayRef<const OpenACCClause *> clauses, const Stmt *associatedStmt) {
   mlir::LogicalResult res = mlir::success();
 
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
   auto op = Op::create(builder, start, retTy, operands);
 
-  emitOpenACCClauses(op, dirKind, dirLoc, clauses);
+  emitOpenACCClauses(op, dirKind, clauses);
 
   {
     mlir::Block &block = op.getRegion().emplaceBlock();
@@ -66,8 +65,7 @@ template <> struct CombinedType<KernelsOp> {
 template <typename Op, typename TermOp>
 mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
     mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
-    SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
-    const Stmt *loopStmt) {
+    llvm::ArrayRef<const OpenACCClause *> clauses, const Stmt *loopStmt) {
   mlir::LogicalResult res = mlir::success();
 
   llvm::SmallVector<mlir::Type> retTy;
@@ -102,7 +100,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
       mlir::acc::YieldOp::create(builder, end);
     }
 
-    emitOpenACCClauses(computeOp, loopOp, dirKind, dirLoc, clauses);
+    emitOpenACCClauses(computeOp, loopOp, dirKind, clauses);
 
     updateLoopOpParallelism(loopOp, /*isOrphan=*/false, dirKind);
 
@@ -114,13 +112,13 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
 
 template <typename Op>
 Op CIRGenFunction::emitOpenACCOp(
-    mlir::Location start, OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
+    mlir::Location start, OpenACCDirectiveKind dirKind,
     llvm::ArrayRef<const OpenACCClause *> clauses) {
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
   auto op = Op::create(builder, start, retTy, operands);
 
-  emitOpenACCClauses(op, dirKind, dirLoc, clauses);
+  emitOpenACCClauses(op, dirKind, clauses);
   return op;
 }
 
@@ -132,16 +130,13 @@ CIRGenFunction::emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s) {
   switch (s.getDirectiveKind()) {
   case OpenACCDirectiveKind::Parallel:
     return emitOpenACCOpAssociatedStmt<ParallelOp, mlir::acc::YieldOp>(
-        start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
-        s.getStructuredBlock());
+        start, end, s.getDirectiveKind(), s.clauses(), s.getStructuredBlock());
   case OpenACCDirectiveKind::Serial:
     return emitOpenACCOpAssociatedStmt<SerialOp, mlir::acc::YieldOp>(
-        start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
-        s.getStructuredBlock());
+        start, end, s.getDirectiveKind(), s.clauses(), s.getStructuredBlock());
   case OpenACCDirectiveKind::Kernels:
     return emitOpenACCOpAssociatedStmt<KernelsOp, mlir::acc::TerminatorOp>(
-        start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
-        s.getStructuredBlock());
+        start, end, s.getDirectiveKind(), s.clauses(), s.getStructuredBlock());
   default:
     llvm_unreachable("invalid compute construct kind");
   }
@@ -153,39 +148,34 @@ CIRGenFunction::emitOpenACCDataConstruct(const OpenACCDataConstruct &s) {
   mlir::Location end = getLoc(s.getSourceRange().getEnd());
 
   return emitOpenACCOpAssociatedStmt<DataOp, mlir::acc::TerminatorOp>(
-      start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
-      s.getStructuredBlock());
+      start, end, s.getDirectiveKind(), s.clauses(), s.getStructuredBlock());
 }
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCInitConstruct(const OpenACCInitConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  emitOpenACCOp<InitOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
-                               s.clauses());
+  emitOpenACCOp<InitOp>(start, s.getDirectiveKind(), s.clauses());
   return mlir::success();
 }
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCSetConstruct(const OpenACCSetConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  emitOpenACCOp<SetOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
-                              s.clauses());
+  emitOpenACCOp<SetOp>(start, s.getDirectiveKind(), s.clauses());
   return mlir::success();
 }
 
 mlir::LogicalResult CIRGenFunction::emitOpenACCShutdownConstruct(
     const OpenACCShutdownConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  emitOpenACCOp<ShutdownOp>(start, s.getDirectiveKind(),
-                                   s.getDirectiveLoc(), s.clauses());
+  emitOpenACCOp<ShutdownOp>(start, s.getDirectiveKind(), s.clauses());
   return mlir::success();
 }
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  auto waitOp = emitOpenACCOp<WaitOp>(start, s.getDirectiveKind(),
-                                   s.getDirectiveLoc(), s.clauses());
+  auto waitOp = emitOpenACCOp<WaitOp>(start, s.getDirectiveKind(), s.clauses());
 
   auto createIntExpr = [this](const Expr *intExpr) {
     mlir::Value expr = emitScalarExpr(intExpr);
@@ -225,16 +215,13 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCCombinedConstruct(
   switch (s.getDirectiveKind()) {
   case OpenACCDirectiveKind::ParallelLoop:
     return emitOpenACCOpCombinedConstruct<ParallelOp, mlir::acc::YieldOp>(
-        start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
-        s.getLoop());
+        start, end, s.getDirectiveKind(), s.clauses(), s.getLoop());
   case OpenACCDirectiveKind::SerialLoop:
     return emitOpenACCOpCombinedConstruct<SerialOp, mlir::acc::YieldOp>(
-        start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
-        s.getLoop());
+        start, end, s.getDirectiveKind(), s.clauses(), s.getLoop());
   case OpenACCDirectiveKind::KernelsLoop:
     return emitOpenACCOpCombinedConstruct<KernelsOp, mlir::acc::TerminatorOp>(
-        start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
-        s.getLoop());
+        start, end, s.getDirectiveKind(), s.clauses(), s.getLoop());
   default:
     llvm_unreachable("invalid compute construct kind");
   }
@@ -246,31 +233,27 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
   mlir::Location end = getLoc(s.getSourceRange().getEnd());
 
   return emitOpenACCOpAssociatedStmt<HostDataOp, mlir::acc::TerminatorOp>(
-      start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
-      s.getStructuredBlock());
+      start, end, s.getDirectiveKind(), s.clauses(), s.getStructuredBlock());
 }
 
 mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
     const OpenACCEnterDataConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  emitOpenACCOp<EnterDataOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
-                             s.clauses());
+  emitOpenACCOp<EnterDataOp>(start, s.getDirectiveKind(), s.clauses());
   return mlir::success();
 }
 
 mlir::LogicalResult CIRGenFunction::emitOpenACCExitDataConstruct(
     const OpenACCExitDataConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  emitOpenACCOp<ExitDataOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
-                            s.clauses());
+  emitOpenACCOp<ExitDataOp>(start, s.getDirectiveKind(), s.clauses());
   return mlir::success();
 }
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  emitOpenACCOp<UpdateOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
-                          s.clauses());
+  emitOpenACCOp<UpdateOp>(start, s.getDirectiveKind(), s.clauses());
   return mlir::success();
 }
 
@@ -400,23 +383,20 @@ CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
     assert(inf.Form == OpenACCAtomicConstruct::StmtInfo::StmtForm::Read);
     mlir::acc::AtomicReadOp op =
         emitAtomicRead(*this, builder, start, inf.First);
-    emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
-                       s.clauses());
+    emitOpenACCClauses(op, s.getDirectiveKind(), s.clauses());
     return mlir::success();
   }
   case OpenACCAtomicKind::Write: {
     assert(inf.Form == OpenACCAtomicConstruct::StmtInfo::StmtForm::Write);
     auto op = emitAtomicWrite(*this, builder, start, inf.First);
-    emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
-                       s.clauses());
+    emitOpenACCClauses(op, s.getDirectiveKind(), s.clauses());
     return mlir::success();
   }
   case OpenACCAtomicKind::None:
   case OpenACCAtomicKind::Update: {
     assert(inf.Form == OpenACCAtomicConstruct::StmtInfo::StmtForm::Update);
     auto [res, op] = emitAtomicUpdate(*this, builder, start, end, inf.First);
-    emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
-                       s.clauses());
+    emitOpenACCClauses(op, s.getDirectiveKind(), s.clauses());
     return res;
   }
   case OpenACCAtomicKind::Capture: {
@@ -424,8 +404,7 @@ CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
     // read + update, or read + write.  As a result, the IR represents the
     // capture region as having those two 'inside' of it.
     auto op = mlir::acc::AtomicCaptureOp::create(builder, start, /*ifCond=*/{});
-    emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
-                       s.clauses());
+    emitOpenACCClauses(op, s.getDirectiveKind(), s.clauses());
     mlir::LogicalResult res = mlir::success();
     {
       mlir::OpBuilder::InsertionGuard guardCase(builder);

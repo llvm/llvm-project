@@ -112,8 +112,7 @@ void CIRGenFunction::emitOpenACCDeclare(const OpenACCDeclareDecl &d) {
       builder, exprLoc, mlir::acc::DeclareTokenType::get(&cgm.getMLIRContext()),
       {});
 
-  emitOpenACCClauses(enterOp, OpenACCDirectiveKind::Declare, d.getBeginLoc(),
-                     d.clauses());
+  emitOpenACCClauses(enterOp, OpenACCDirectiveKind::Declare, d.clauses());
 
   ehStack.pushCleanup<OpenACCDeclareCleanup>(CleanupKind::NormalCleanup,
                                              enterOp);
