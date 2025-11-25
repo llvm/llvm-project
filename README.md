@@ -1,61 +1,121 @@
-SLLVM: A DSMIL‑Focused LLVM Fork
-<!-- Language distribution badges --> <div align="center">
+# DSLLVM – DSMIL-Aware LLVM Toolchain
 
+[![Upstream](https://img.shields.io/badge/LLVM-upstream%20aligned-262D3A?logo=llvm&logoColor=white)](https://llvm.org/)
+[![DSMIL Stack](https://img.shields.io/badge/DSMIL-multi--layer%20architecture-0B8457.svg)](#what-is-dsmil)
+[![Quantum Ready](https://img.shields.io/badge/quantum-Qiskit%20%7C%20hybrid-6C2DC7.svg)](#quantum--ai-integration)
+[![PQC Profile](https://img.shields.io/badge/CNSA%202.0-ML--KEM--1024%20%E2%80%A2%20ML--DSA--87%20%E2%80%A2%20SHA--384-E67E22.svg)](#pqc--security-posture)
+[![AI-Integrated](https://img.shields.io/badge/AI-instrumented%20toolchain-1F7A8C.svg)](#ai--telemetry-hooks)
 
+---
 
+DSLLVM is a **DSMIL-aware build of LLVM** with a small set of targeted extensions:
 
+- keeps the **standard LLVM/Clang toolchain behaviour**;
+- adds **optional hooks** for a multi-layer DSMIL system (devices, clearances, and telemetry);
+- exposes **AI and quantum-related metadata** to higher layers without changing normal compiler workflows.
 
+If you already know LLVM, you can treat DSLLVM as “LLVM with an opinionated integration layer” rather than a new compiler.
 
+> **Note**  
+> This repository is intentionally vague about downstream systems.  
 
+---
 
+## Highlights
 
+- ✅ **LLVM-first design**  
+  - Tracks upstream LLVM closely; core passes and IR semantics are unchanged.  
+  - Can be used as a regular `clang`/`lld` toolchain for non-DSMIL builds.
 
+- 🛰️ **DSMIL integration points (optional)**  
+  - Lightweight annotations and metadata channels to describe:
+    - logical device / layer routing,
+    - clearance tags,
+    - build-time provenance and audit hints.  
+  - All of this is **opt-in** and encoded as normal IR / object metadata.
 
+- 🧠 **AI & telemetry hooks**  
+  - Build artefacts can carry compact feature metadata for:
+    - performance/size profiles,
+    - security posture markers,
+    - deployment hints to external AI advisors.  
+  - No runtime is mandated; DSLLVM just **emits signals** higher layers may consume.
 
+- ⚛️ **Quantum-aware, not quantum-dependent**  
+  - Optional metadata path for handing small optimisation / search problems
+    to external **Qiskit-based workflows**.  
+  - From the compiler’s point of view, this is just structured metadata attached to IR.
 
+- 🔐 **PQC-aligned security profile**  
+  - Compiler options and metadata profiles intended to coexist with
+    **CNSA 2.0 style suites** (e.g. ML-KEM-1024, ML-DSA-87, SHA-384) without hard-coding any crypto.  
+  - DSLLVM does **not** ship cryptography; it exposes knobs and tags so
+    downstream toolchains can enforce their own policies.
 
-</div>
+---
 
-Welcome to DSLLVM, a specialized variant of the LLVM Compiler Infrastructure tailored for use within DSMIL environments. If you’re familiar with standard LLVM, you’ll find the core remains the same, but DSLLVM adds enhancements optimized for multi‑layer secure systems and AI‑integrated operations.
+## Language Mix (Indicative)
 
-What is DSLLVM?
+This repository is still “normal LLVM under the hood”:
 
-DSLLVM builds upon upstream LLVM to support the unique requirements of DSMIL systems, where distributed computing, classification‑aware memory models, and mission‑critical workloads converge. You won’t find the exact details here, but DSLLVM introduces:
+| Language | Approx. share |
+|---------:|---------------|
+| LLVM IR      | ~41.3% |
+| C++          | ~31.2% |
+| C            | ~13.1% |
+| Assembly     | ~9.9%  |
+| MLIR         | ~1.5%  |
+| Python       | ~0.8%  |
+| Other        | ~2.2%  |
 
-Specialized target support for emerging heterogeneous hardware found in DSMIL deployments.
+(Actual numbers come from GitHub language stats and may drift over time.)
 
-Metadata and pass extensions to encode clearance levels, layers, and roles directly into the intermediate representation.
+---
 
-Infrastructure hooks that enable context‑aware optimization and policy enforcement across layers.
+## What DSLLVM Is (and Is Not)
 
-Integration points for AI‑powered advisors that help guide compilation decisions without modifying code semantics.
+**Is:**
 
-Why DSMIL?
+- A **minimally invasive** extension layer on top of LLVM/Clang/LLD.
+- A way to **tag and describe** builds for a DSMIL-style multi-layer system.
+- A place to keep **AI / quantum / PQC-relevant metadata** close to the code that produced the binaries.
 
-DSMIL refers to a multi‑layer architecture employed in certain secure computing contexts. DSLLVM exists because those environments demand a compiler that understands their unique constraints. While much of that knowledge is beyond the scope of this README, the components included here reflect the philosophy of building tools that are secure by design, policy‑driven, and aware of the hardware they run on.
+**Is *not*:**
 
-Getting Started
+- Not a new IR or language.  
+- Not a replacement for upstream security guidance or crypto libraries.  
+- Not a mandatory runtime or kernel – it’s “just” the compiler side.
 
-If you’re already comfortable building LLVM, DSLLVM should feel familiar. You can use the same CMake‑based workflow described in the Getting Started with LLVM
- guide. Be aware that DSLLVM may require additional configuration to enable DSMIL‑specific targets and passes.
+---
 
-In general:
+## Quantum & AI Integration
 
-Clone this repository and its submodules.
+DSLLVM does **not** execute quantum workloads itself. Instead, it:
 
-Create a build directory and run cmake with your preferred options.
+- lets you attach **“quantum candidate”** hints to selected optimisation or search problems;
+- keeps those hints in IR / object metadata so an external Qiskit pipeline can pick them up;
+- allows AI advisors to see **compiler-level features** (size, structure, call-graphs, annotations) without changing the generated machine code.
 
-Build DSLLVM using your chosen generator (e.g. Ninja or Make).
+These features are entirely optional; standard builds can ignore them.
 
-Refer to internal build documentation (or contact your DSMIL representative) for guidance on enabling device‑specific optimizations and DSMIL layers.
+---
 
-Contributing
+## Building & Using DSLLVM
 
-Contributions to DSLLVM are welcome from authorized participants. If you have ideas to improve its capabilities within the DSMIL context, reach out through the appropriate channels.
+DSLLVM follows the **standard LLVM build flow**:
 
-Further Information
+1. Configure with CMake (out-of-tree build directory).
+2. Build with Ninja or Make.
+3. Use `clang`/`clang++`/`lld` as usual.
 
-This repository intentionally omits deeper explanations of DSMIL. If you’re working in an environment that requires DSLLVM, consult your internal DSMIL documentation or point of contact for details. For general LLVM questions, the standard LLVM Documentation
- remains your best resource.
+If you don’t enable any DSMIL/AI options, DSLLVM behaves like a regular LLVM toolchain.
 
-This README provides a high‑level overview of DSLLVM without revealing sensitive details about DSMIL systems. If you need to understand those details, ensure you have the appropriate clearance and access to the relevant documentation.
+---
+
+## Status
+
+- Core compiler functionality: ✅ usable
+- DSMIL / AI / quantum metadata hooks: 🧪 experimental, evolving
+- Downstream integrations (DSMIL runtime, advisory layers): out of scope for this repo
+
+For most users, DSLLVM can be dropped in as **“LLVM with extra metadata channels”** and left at that.
