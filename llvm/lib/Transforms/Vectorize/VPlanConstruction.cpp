@@ -1047,9 +1047,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan,
 
     // Add mask phi
     VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
-    VPValue *False = Plan.getOrAddLiveIn(
-        ConstantInt::getFalse(PhiR->getUnderlyingValue()->getContext()));
-    auto *MaskPHI = new VPWidenPHIRecipe(nullptr, False, DebugLoc());
+    auto *MaskPHI = new VPWidenPHIRecipe(nullptr, Plan.getFalse());
     Builder.insert(MaskPHI);
 
     // Add select for mask
