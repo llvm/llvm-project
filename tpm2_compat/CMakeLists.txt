@@ -39,8 +39,19 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     endif()
 endif()
 
-# Find OpenSSL (required for cryptographic implementations)
-find_package(OpenSSL 1.1.1 REQUIRED)
+# Find DSSSL (DSMIL-Grade OpenSSL fork with PQC support)
+# Fallback to OpenSSL if DSSSL is not available
+find_package(DSSSL 3.0 QUIET)
+if(NOT DSSSL_FOUND)
+    message(STATUS "DSSSL not found, falling back to OpenSSL 3.x")
+    find_package(OpenSSL 3.0 REQUIRED)
+    set(CRYPTO_LIB OpenSSL::Crypto)
+    set(CRYPTO_NAME "OpenSSL")
+else()
+    set(CRYPTO_LIB DSSSL::Crypto)
+    set(CRYPTO_NAME "DSSSL")
+    message(STATUS "Using DSSSL (hardened OpenSSL fork) for cryptography")
+endif()
 
 # Optional: liboqs for post-quantum cryptography
 if(ENABLE_POST_QUANTUM)
@@ -97,7 +108,7 @@ target_include_directories(tpm2_compat PUBLIC
 
 target_link_libraries(tpm2_compat
     PUBLIC
-        OpenSSL::Crypto
+        ${CRYPTO_LIB}
 )
 
 if(ENABLE_POST_QUANTUM AND liboqs_FOUND)
@@ -132,8 +143,8 @@ endif()
 # Print configuration summary
 message(STATUS "TPM2 Compatibility Layer Configuration:")
 message(STATUS "  Version: ${PROJECT_VERSION}")
+message(STATUS "  Crypto Library: ${CRYPTO_NAME}")
 message(STATUS "  Hardware Acceleration: ${ENABLE_HARDWARE_ACCEL}")
 message(STATUS "  Post-Quantum Crypto: ${ENABLE_POST_QUANTUM}")
 message(STATUS "  Build Tests: ${BUILD_TPM2_TESTS}")
 message(STATUS "  Build Benchmarks: ${BUILD_TPM2_BENCHMARKS}")
-message(STATUS "  OpenSSL Version: ${OPENSSL_VERSION}")

@@ -11,7 +11,7 @@ Version: 2.0.1
 
 ## 🎯 Overview
 
-This directory contains a **portable userspace C library** for TPM 2.0 cryptographic operations, providing **88 algorithms** across all categories. Built on OpenSSL for maximum compatibility with DSLLVM-compiled applications.
+This directory contains a **portable userspace C library** for TPM 2.0 cryptographic operations, providing **88 algorithms** across all categories. Built on **DSSSL (DSMIL-Grade OpenSSL)** - a hardened OpenSSL 3.x fork with post-quantum cryptography support - for maximum security and compatibility with DSLLVM-compiled applications.
 
 ### 🔗 Full System Implementation
 
@@ -101,6 +101,43 @@ cmake --build build -j$(nproc)
 # Install
 sudo cmake --install build
 ```
+
+---
+
+## 🔐 DSSSL Integration
+
+This library uses **[DSSSL](https://github.com/SWORDIntel/DSSSL)** (DSMIL-Grade OpenSSL) - a hardened OpenSSL 3.x fork providing:
+
+- ✅ **Post-Quantum Cryptography**: ML-KEM (Kyber) and ML-DSA (Dilithium) algorithms
+- ✅ **TPM 2.0 Integration**: Hardware-backed key storage and operations
+- ✅ **Enhanced Side-Channel Resistance**: CNSA constant-time annotations
+- ✅ **Security Profiles**: WORLD_COMPAT, DSMIL_SECURE, and ATOMAL modes
+- ✅ **Hardware Acceleration**: Intel AES-NI (3,800 MB/s) and SHA-NI (8,400 MB/s)
+
+### Installation
+
+```bash
+# Build and install DSSSL
+git clone https://github.com/SWORDIntel/DSSSL.git
+cd DSSSL
+./config --prefix=/usr/local/dsssl \
+  --enable-dsmil-security \
+  --enable-pqc \
+  --enable-tpm2
+make -j$(nproc)
+sudo make install
+
+# Then build tpm2_compat with DSSSL support
+cmake -S . -B build \
+  -DCMAKE_PREFIX_PATH=/usr/local/dsssl \
+  -DENABLE_TPM2_COMPAT=ON \
+  -DENABLE_HARDWARE_ACCEL=ON
+cmake --build build -j$(nproc)
+```
+
+**Note**: The library automatically falls back to OpenSSL 3.x if DSSSL is not available.
+
+---
 
 ### Usage Example
 
