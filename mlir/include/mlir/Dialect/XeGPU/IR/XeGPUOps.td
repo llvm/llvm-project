@@ -236,7 +236,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
       return static_cast<unsigned>(MemorySpace::Global);
     }
 
-    xegpu::DistributeLayoutAttr getLayoutAttr() {
+    xegpu::DistributeLayoutAttr getDescLayoutAttr() {
       return dyn_cast_if_present<xegpu::DistributeLayoutAttr>(getType().getLayout());
     }
 
@@ -267,7 +267,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] An cache-hint attribute
       indicating the desired behavior at the L1, L2, and L3 cache levels.
 
-    - `anchor_layout`: [optional] Describes the expected layout of the `tensor_desc` operand.
+    - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand.
        Only valid at the workgroup and subgroup levels.
 
     Example (Workgroup level):
@@ -277,7 +277,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
       xegpu.prefetch_nd %tdesc[%c0, %c1] {l1_hint = #xegpu.cache_hint<cached>,
                                 l2_hint = #xegpu.cache_hint<cached>,
                                 l3_hint = #xegpu.cache_hint<cached>,
-                                anchor_layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 32]> }
+                                layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 32]> }
         : !xegpu.tensor_desc<32x256xf16>
     ```
 
@@ -289,7 +289,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint,
-                       OptionalAttr<DistributeLayoutAttr>:$anchor_layout);
+                       OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     xegpu::TensorDescType getTensorDescType() {
@@ -304,7 +304,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
       return getMixedValues(statics, dynamics, getContext());
     }
 
-    xegpu::DistributeLayoutAttr getLayoutAttr() {
+    xegpu::DistributeLayoutAttr getDescLayoutAttr() {
       return dyn_cast_if_present<xegpu::DistributeLayoutAttr>(getTensorDescType().getLayout());
     }
 
@@ -376,7 +376,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] Cache-hint attributes indicating the
       desired behavior at the L1, L2, and L3 cache levels.
 
-    - `anchor_layout`: [optional] Describes the expected layout of the `tensor_desc` operand as well as the result of the load (they are identical). Only valid at workgroup and subgroup levels.
+    - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand as well as the result of the load (they are identical). Only valid at workgroup and subgroup levels.
 
     Example 1 (Workgroup level):
     ```mlir
@@ -384,7 +384,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
                         l1_hint = #xegpu.cache_hint<cached>,
                         l2_hint = #xegpu.cache_hint<uncached>,
                         l3_hint = #xegpu.cache_hint<streaming>,
-                        anchor_layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 32]>}
+                        layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 32]>}
               : !xegpu.tensor_desc<32x256xf32> -> vector<32x256xf32>
     ```
     Example 2 (lane level):
@@ -405,7 +405,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint, 
-                       OptionalAttr<DistributeLayoutAttr>:$anchor_layout);
+                       OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let results = (outs XeGPU_ValueType: $value);
 
@@ -426,7 +426,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
       return getMixedValues(statics, dynamics, getContext());
     }
 
-    xegpu::DistributeLayoutAttr getLayoutAttr() {
+    xegpu::DistributeLayoutAttr getDescLayoutAttr() {
       return dyn_cast_if_present<xegpu::DistributeLayoutAttr>(getTensorDescType().getLayout());
     }
 
@@ -490,7 +490,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] Cache-hint attributes indicating the
       desired behavior at the L1, L2, and L3 cache levels.
 
-    - `anchor_layout`: [optional] Describes the expected layout of the `tensor_desc` operand as well as
+    - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand as well as
       the value to be stored (they are identical). Only valid at workgroup and subgroup levels.
 
     Example 1 (Workgroup level):
@@ -498,7 +498,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
       xegpu.store_nd %3, %2 {l1_hint = #xegpu.cache_hint<uncached>,
                              l2_hint = #xegpu.cache_hint<write_back>,
                              l3_hint = #xegpu.cache_hint<write_through>,
-                             anchor_layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 32]>}
+                             layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 32]>}
                              : vector<32x256xf16>, !xegpu.tensor_desc<32x256xf16>
     ```
     Example 2 (lane level):
@@ -519,7 +519,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint,
-                       OptionalAttr<DistributeLayoutAttr>:$anchor_layout);
+                       OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     VectorType getValueType() {
@@ -538,7 +538,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
       return getMixedValues(statics, dynamics, getContext());
     }
 
-    xegpu::DistributeLayoutAttr getLayoutAttr() {
+    xegpu::DistributeLayoutAttr getDescLayoutAttr() {
       return dyn_cast_if_present<xegpu::DistributeLayoutAttr>(getTensorDescType().getLayout());
     }
 
@@ -749,7 +749,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
     - `offset_align_byte`: [optional] required if `source` is a pointer. If `source` is not a pointer,
         it is not allowed. Represents the alignment in bytes of each offset in offsets.
 
-    - `anchor_layout`: [optional] Describes the expected layout of the `tensor_desc` or `offsets`
+    - `layout`: [optional] Describes the expected layout of the `tensor_desc` or `offsets`
       operand. Only valid at workgroup and subgroup levels.
 
     Example 1 (Workgroup level):
@@ -757,7 +757,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
       xegpu.prefetch %tdesc {l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<cached>,
                              l3_hint = #xegpu.cache_hint<cached>, 
-                             anchor_layout = #xegpu.layout<sg_layout = [8], sg_data = [32]>
+                             layout = #xegpu.layout<sg_layout = [8], sg_data = [32]>
                              }
         : !xegpu.tensor_desc<256xf16>
     ```
@@ -803,7 +803,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
       OptionalAttr<I64Attr>:$offset_align_byte,
-      OptionalAttr<DistributeLayoutAttr>:$anchor_layout);
+      OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     Type getSourceType() {
@@ -876,7 +876,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
 
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
-    - `anchor_layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the result 
+    - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the result 
       of load. Only valid at workgroup and subgroup levels.
 
     Results:
@@ -888,7 +888,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
     %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<uncached>,
                              l3_hint = #xegpu.cache_hint<uncached>}, 
-                             anchor_layout = #xegpu.layout<sg_layout = [8], sg_data = [32]>>
+                             layout = #xegpu.layout<sg_layout = [8], sg_data = [32]>>
           : !xegpu.tensor_desc<256xf32, #xegpu.scatter_tdesc_attr<memory_space=global>>,
             vector<256xi1> -> vector<256xf32>
   ```
@@ -898,7 +898,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
     %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<uncached>,
                              l3_hint = #xegpu.cache_hint<uncached>},
-                             anchor_layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8]>>
+                             layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8]>>
           : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>,
             vector<16xi1> -> vector<16x8xf32>
   ```
@@ -915,7 +915,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
     %val = xegpu.load %a[%offsets], %mask {l1_hint = #xegpu.cache_hint<cached>,
                            l2_hint = #xegpu.cache_hint<cached>,
                            l3_hint = #xegpu.cache_hint<cached>, 
-                           anchor_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+                           layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
       : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
   ```
 
@@ -937,7 +937,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
-      OptionalAttr<DistributeLayoutAttr>:$anchor_layout);
+      OptionalAttr<DistributeLayoutAttr>:$layout);
   let results = (outs AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$value);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -1039,7 +1039,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
 
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
-    - `anchor_layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the value
+    - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the value
       to be stored. Only valid at workgroup and subgroup levels.
 
 
@@ -1048,7 +1048,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
     xegpu.store %0, %1, %2 <{l1_hint = #xegpu.cache_hint<uncached>,
                              l2_hint = #xegpu.cache_hint<write_back>,
                              l3_hint = #xegpu.cache_hint<write_through>,
-                             anchor_layout = #xegpu.layout<sg_layout = [8], sg_data = [16]>}>
+                             layout = #xegpu.layout<sg_layout = [8], sg_data = [16]>}>
           : vector<256xf32>, !xegpu.tensor_desc<256xf32, #xegpu.scattered_tdesc_attr<>>, vector<256xi1>
   ```
 
@@ -1057,7 +1057,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
     xegpu.store %0, %1, %2 <{l1_hint = #xegpu.cache_hint<uncached>,
                              l2_hint = #xegpu.cache_hint<write_back>,
                              l3_hint = #xegpu.cache_hint<write_through>,
-                             anchor_layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8]>}>
+                             layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8]>}>
           : vector<16x8xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>>, vector<16xi1>
   ```
 
@@ -1074,7 +1074,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
     xegpu.store %val, %a[%offsets], %mask {l1_hint = #xegpu.cache_hint<cached>,
                            l2_hint = #xegpu.cache_hint<cached>,
                            l3_hint = #xegpu.cache_hint<cached>,
-                           anchor_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+                           layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
       : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
   ```
 
@@ -1097,7 +1097,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
-      OptionalAttr<DistributeLayoutAttr>:$anchor_layout);
+      OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
     Type getDestType() {
@@ -1241,7 +1241,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
     - `acc`: [optional] A vector value representing the accumulator matrix tile (C). When present, the
       result is computed as `lhs * rhs + acc`; otherwise, the accumulator is implicitly assumed to be zero.
 
-    - `anchor_layout_a`, `anchor_layout_b`, `anchor_layout_cd`: [optional] Attributes that identify this
+    - `layout_a`, `layout_b`, `layout_cd`: [optional] Attributes that identify this
       operation as anchor for operands A, B, and the accumulator/result, enabling users to assign layouts
       that govern distribution at the subgroup and/or lane level. Only valid at workgroup and subgroup
       level.
@@ -1250,9 +1250,9 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
 
     ```mlir
       %d = xegpu.dpas %a, %b, %c <{
-          anchor_layout_a = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 128]>,
-          anchor_layout_b = #xegpu.layout<sg_layout = [4, 8], sg_data = [128, 16]>,
-          anchor_layout_cd = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 16]>}
+          layout_a = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 128]>,
+          layout_b = #xegpu.layout<sg_layout = [4, 8], sg_data = [128, 16]>,
+          layout_cd = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 16]>}
           : vector<64x128xf16>, vector<128x128xf16>, vector<64x128xf32> -> vector<64x128xf32>
     ```
 
@@ -1268,9 +1268,9 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
     XeGPU_DpasOprType : $lhs,
     XeGPU_DpasOprType : $rhs,
     Optional<XeGPU_DpasResType>: $acc, 
-    OptionalAttr<DistributeLayoutAttr>:$anchor_layout_a,
-    OptionalAttr<DistributeLayoutAttr>:$anchor_layout_b,
-    OptionalAttr<DistributeLayoutAttr>:$anchor_layout_cd
+    OptionalAttr<DistributeLayoutAttr>:$layout_a,
+    OptionalAttr<DistributeLayoutAttr>:$layout_b,
+    OptionalAttr<DistributeLayoutAttr>:$layout_cd
   );
   let results = (outs XeGPU_DpasResType: $result);
 
@@ -1336,7 +1336,7 @@ def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
     - `value`: The input values used by the atomic operation. It must have the same
       shape and element type as `tensorDesc` and `result`.
 
-    - `anchor_layout`: [optional] An attribute that identifies the operation as an anchor,
+    - `layout`: [optional] An attribute that identifies the operation as an anchor,
       enabling users to assign a layout that governs distribution at the subgroup
       and/or lane level. Only valid at workgroup and subgroup levels.
   }];
@@ -1346,7 +1346,7 @@ def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
     XeGPU_TensorDesc:$tensorDesc,
     XeGPU_MaskType:$mask,
     XeGPU_ValueType:$value,
-    OptionalAttr<DistributeLayoutAttr>:$anchor_layout);
+    OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let results = (outs XeGPU_ValueType:$result);
 
@@ -1507,7 +1507,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
     OptionalAttr<UnitAttr>:$subgroup_block_io,
-    OptionalAttr<DistributeLayoutAttr>:$anchor_layout
+    OptionalAttr<DistributeLayoutAttr>:$layout
   );
   let results = (outs AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$res);  
   let assemblyFormat = [{
@@ -1529,7 +1529,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
      - `subgroup_block_io`: [optional] An attribute indicating that the operation can be lowered
         to a subgroup block load. When this attribute is present, the offsets are subgroup-uniform
         across all lanes. Only used on subgroup and lane level.
-     - `anchor_layout`: [optional] Describes the expected layout of the `mem_desc` operand as well as
+     - `layout`: [optional] Describes the expected layout of the `mem_desc` operand as well as
       the result of load (they are identical).
         Only valid at workgroup and subgroup levels.
 
@@ -1540,7 +1540,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     ```mlir
         %c0 = arith.constant 0 : index
         %1 = xegpu.load_matrix %0[%c0, %c0] <{
-                anchor_layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [32, 16]> }>
+                layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [32, 16]> }>
           : !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128], block = [16, 16]>>
           , index, index -> vector<128x128xf16>
     ```
@@ -1574,7 +1574,7 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
     OptionalAttr<UnitAttr>:$subgroup_block_io,
-    OptionalAttr<DistributeLayoutAttr>:$anchor_layout
+    OptionalAttr<DistributeLayoutAttr>:$layout
   );
   let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
                           prop-dict attr-dict `` `:` type(operands)}];
@@ -1593,14 +1593,14 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
      - `subgroup_block_io`: [optional] An attribute indicating that the operation can be lowered
         to a subgroup block load. When this attribute is present, the offsets are subgroup-uniform
         across all lanes. Only used on subgroup and lane level.
-     - `anchor_layout`: [optional] Describes the expected layout of the `tensor_desc` operand as well as
+     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand as well as
         the value to be stored (they are identical). Only valid at workgroup and subgroup levels.
 
     Example (Workgroup level):
     ```mlir
         %c0 = arith.constant 0 : index
         xegpu.store_matrix %1, %0[%c0, %c0] <{
-                anchor_layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [32, 16]> }>
+                layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [32, 16]> }>
           : vector<128x128xf16>, !xegpu.mem_desc<128x128xf16>>, index, index
     ```
   }];

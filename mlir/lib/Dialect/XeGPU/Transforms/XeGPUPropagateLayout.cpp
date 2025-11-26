@@ -496,7 +496,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
     ArrayRef<const LayoutInfoLattice *> results) {
 
   LayoutInfo prefetchLayout;
-  xegpu::DistributeLayoutAttr anchorLayout = prefetch.getAnchorLayoutAttr();
+  xegpu::DistributeLayoutAttr anchorLayout = prefetch.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
     prefetchLayout = LayoutInfo(anchorLayout);
   } else {
@@ -540,7 +540,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
       prefetchLayout = getDefaultSIMTLayoutInfo(
           tdescTy, uArch, uArchInstruction->getPackedFormatBitSize());
 
-    prefetch.setAnchorLayoutAttr(
+    prefetch.setLayoutAttr(
         dyn_cast<xegpu::DistributeLayoutAttr>(prefetchLayout.get()));
   }
   // Propagate the layout to the source tensor descriptor.
@@ -647,10 +647,10 @@ void LayoutInfoPropagation::visitDpasOp(
   LayoutInfo dpasBLayout;
   LayoutInfo dpasCDLayout;
 
-  xegpu::DistributeLayoutAttr anchorLayoutCD = dpas.getAnchorLayoutCdAttr();
+  xegpu::DistributeLayoutAttr anchorLayoutCD = dpas.getLayoutCdAttr();
   if (hasParamsOfLayoutKind(anchorLayoutCD)) {
-    xegpu::DistributeLayoutAttr anchorLayoutA = dpas.getAnchorLayoutAAttr();
-    xegpu::DistributeLayoutAttr anchorLayoutB = dpas.getAnchorLayoutBAttr();
+    xegpu::DistributeLayoutAttr anchorLayoutA = dpas.getLayoutAAttr();
+    xegpu::DistributeLayoutAttr anchorLayoutB = dpas.getLayoutBAttr();
     assert(hasParamsOfLayoutKind(anchorLayoutA) &&
            "Expected anchor layout for DPAS A operand.");
     assert(hasParamsOfLayoutKind(anchorLayoutB) &&
@@ -720,12 +720,12 @@ void LayoutInfoPropagation::visitDpasOp(
         dpasCDLayout = getSIMTLayoutInfoForDPASOperand(
             cTy, 2, uArch, uArchInstruction->getPackedFormatBitSizeB());
 
-      dpas.setAnchorLayoutCdAttr(
+      dpas.setLayoutCdAttr(
           dyn_cast<xegpu::DistributeLayoutAttr>(dpasCDLayout.get()));
     }
-    dpas.setAnchorLayoutAAttr(
+    dpas.setLayoutAAttr(
         dyn_cast<xegpu::DistributeLayoutAttr>(dpasALayout.get()));
-    dpas.setAnchorLayoutBAttr(
+    dpas.setLayoutBAttr(
         dyn_cast<xegpu::DistributeLayoutAttr>(dpasBLayout.get()));
   }
 
@@ -742,7 +742,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
     ArrayRef<const LayoutInfoLattice *> results) {
 
   LayoutInfo storeLayout;
-  xegpu::DistributeLayoutAttr anchorLayout = store.getAnchorLayoutAttr();
+  xegpu::DistributeLayoutAttr anchorLayout = store.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
     storeLayout = LayoutInfo(anchorLayout);
   } else {
@@ -782,7 +782,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
       storeLayout =
           getDefaultSIMTLayoutInfo(store.getValueType(), uArch,
                                    uArchInstruction->getPackedFormatBitSize());
-    store.setAnchorLayoutAttr(
+    store.setLayoutAttr(
         dyn_cast<xegpu::DistributeLayoutAttr>(storeLayout.get()));
   }
   // Propagate the layout to the value operand.
@@ -798,7 +798,7 @@ void LayoutInfoPropagation::visitLoadNdOp(
     ArrayRef<const LayoutInfoLattice *> results) {
 
   LayoutInfo loadLayout;
-  xegpu::DistributeLayoutAttr anchorLayout = load.getAnchorLayoutAttr();
+  xegpu::DistributeLayoutAttr anchorLayout = load.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
     loadLayout = LayoutInfo(anchorLayout);
   } else {
@@ -816,8 +816,7 @@ void LayoutInfoPropagation::visitLoadNdOp(
                        "LayoutInfoPropagation stage.");
       loadLayout = valueLayout.transpose(transpose.value());
     }
-    load.setAnchorLayoutAttr(
-        dyn_cast<xegpu::DistributeLayoutAttr>(loadLayout.get()));
+    load.setLayoutAttr(dyn_cast<xegpu::DistributeLayoutAttr>(loadLayout.get()));
   }
   // Propagate the new layout to the tensor descriptor operand.
   propagateIfChanged(operands[0], operands[0]->meet(loadLayout));
@@ -913,7 +912,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
 
   LayoutInfo loadLayout;
   LayoutInfo maskLayout;
-  xegpu::DistributeLayoutAttr anchorLayout = load.getAnchorLayoutAttr();
+  xegpu::DistributeLayoutAttr anchorLayout = load.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
     loadLayout = LayoutInfo(anchorLayout);
     maskLayout = loadLayout;
@@ -947,8 +946,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     // Mask operand should have 1D default layout.
     maskLayout = getDefaultSIMTLayoutInfo(load->getContext(), 1, subgroupSize);
 
-    load.setAnchorLayoutAttr(
-        dyn_cast<xegpu::DistributeLayoutAttr>(loadLayout.get()));
+    load.setLayoutAttr(dyn_cast<xegpu::DistributeLayoutAttr>(loadLayout.get()));
   }
   // Propagate the new layout to the tensor descriptor operand.
   if (isa<xegpu::TensorDescType>(load.getSourceType()))
@@ -983,7 +981,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
 
   LayoutInfo payloadLayout;
   LayoutInfo maskLayout;
-  xegpu::DistributeLayoutAttr anchorLayout = storeScatter.getAnchorLayoutAttr();
+  xegpu::DistributeLayoutAttr anchorLayout = storeScatter.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
     payloadLayout = LayoutInfo(anchorLayout);
     maskLayout = payloadLayout;
@@ -1027,7 +1025,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     maskLayout =
         getDefaultSIMTLayoutInfo(storeScatter->getContext(), 1, subgroupSize);
 
-    storeScatter.setAnchorLayoutAttr(
+    storeScatter.setLayoutAttr(
         dyn_cast<xegpu::DistributeLayoutAttr>(payloadLayout.get()));
   }
   // Propagate the payload operand layout

@@ -135,11 +135,11 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
 
     // for LoadMatrixOp, the layout is attached to the property of the op
     if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(defOp))
-      return loadOp.getAnchorLayoutAttr();
+      return loadOp.getLayoutAttr();
 
     // for StoreMatrixOp, the layout is attached to the property of the op
     if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(defOp))
-      return storeOp.getAnchorLayoutAttr();
+      return storeOp.getLayoutAttr();
     std::string layoutName = getLayoutName(result);
     if (defOp->hasAttr(layoutName))
       return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
@@ -147,7 +147,7 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     // check for "permament" layout only after "temporary" layout name lookup
     // for backward compatibility
     if (auto loadGatherOp = dyn_cast<xegpu::LoadGatherOp>(defOp))
-      return loadGatherOp.getAnchorLayoutAttr();
+      return loadGatherOp.getLayoutAttr();
   }
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
@@ -167,10 +167,10 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();
 
   if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(op))
-    return loadOp.getAnchorLayoutAttr();
+    return loadOp.getLayoutAttr();
 
   if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(op))
-    return storeOp.getAnchorLayoutAttr();
+    return storeOp.getLayoutAttr();
 
   std::string layoutName = xegpu::getLayoutName(opr);
   if (op->hasAttr(layoutName))
@@ -178,7 +178,7 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
 
   // check for "permament" layout only after "temporary" layout name lookup
   if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
-    if (auto layout = storeScatterOp.getAnchorLayoutAttr())
+    if (auto layout = storeScatterOp.getLayoutAttr())
       return layout;
 
   return getDistributeLayoutAttr(opr.get());
@@ -193,7 +193,7 @@ maybePickPermanentLayout(xegpu::DistributeLayoutAttr layout,
   xegpu::DistributeLayoutAttr candidate = layout;
 
   if (auto loadOp = dyn_cast<xegpu::LoadGatherOp>(owner)) {
-    if (auto perm = loadOp.getAnchorLayoutAttr())
+    if (auto perm = loadOp.getLayoutAttr())
       candidate = perm;
   }
 
@@ -211,7 +211,7 @@ maybePickPermanentLayout(xegpu::DistributeLayoutAttr layout,
 
   if (auto storeOp = dyn_cast<xegpu::StoreScatterOp>(owner)) {
     if (idx == 0) {
-      if (auto perm = storeOp.getAnchorLayoutAttr())
+      if (auto perm = storeOp.getLayoutAttr())
         candidate = perm;
     }
   }

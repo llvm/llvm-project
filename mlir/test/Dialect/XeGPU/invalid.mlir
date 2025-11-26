@@ -894,7 +894,7 @@ func.func @store_mem_desc_invalid_rank(%arg0: !xegpu.mem_desc<64xf16>, %arg1: ve
 // -----
 func.func @simt_store_matrix_vector_nonlinear(%arg0: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [32, 1]>>, %arg1: vector<2x16xf32>) {
   // expected-error@+1 {{With subgroup_block_io, accessed data must be contiguous and coalesced}}
-  xegpu.store_matrix %arg1, %arg0[0, 0] {subgroup_block_io, anchor_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} :
+  xegpu.store_matrix %arg1, %arg0[0, 0] {subgroup_block_io, layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} :
         vector<2x16xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [32, 1]>>
   return
 }
@@ -902,7 +902,7 @@ func.func @simt_store_matrix_vector_nonlinear(%arg0: !xegpu.mem_desc<32x32xf32, 
 // -----
 func.func @simt_store_matrix_vector_noncoalesced(%arg0: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [1, 32], block = [1, 16]>>, %arg1: vector<16x2xf32>) {
   // expected-error@+1 {{With subgroup_block_io, the distributed dimensions must be contiguous}}
-  xegpu.store_matrix %arg1, %arg0[0, 0] {subgroup_block_io, anchor_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>} :
+  xegpu.store_matrix %arg1, %arg0[0, 0] {subgroup_block_io, layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>} :
         vector<16x2xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [1, 32], block = [1, 16]>>
   return
 }
@@ -910,7 +910,7 @@ func.func @simt_store_matrix_vector_noncoalesced(%arg0: !xegpu.mem_desc<32x32xf3
 // -----
 func.func @simt_store_matrix_vector_noncoalesced(%arg0: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [32, 1], block = [1, 17]>>, %arg1: vector<16x2xf32>) {
   // expected-error@+1 {{With subgroup_block_io, the block shape must match the lane layout}}
-  xegpu.store_matrix %arg1, %arg0[0, 0] {subgroup_block_io, anchor_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
+  xegpu.store_matrix %arg1, %arg0[0, 0] {subgroup_block_io, layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
         vector<16x2xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [32, 1], block = [1, 17]>>
   return
 }

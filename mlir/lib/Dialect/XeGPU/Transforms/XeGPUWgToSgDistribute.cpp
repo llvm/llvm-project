@@ -86,13 +86,13 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
   if (origOffsets.empty())
     return failure();
 
-  // if op is xegpu::CreateNdDescOp, call op.getLayoutAttr()
+  // if op is xegpu::CreateNdDescOp, call op.getDescLayoutAttr()
   xegpu::DistributeLayoutAttr layout;
   if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp> ||
                 std::is_same_v<OpType, xegpu::StoreMatrixOp>) {
-    layout = op.getAnchorLayoutAttr();
-  } else {
     layout = op.getLayoutAttr();
+  } else {
+    layout = op.getDescLayoutAttr();
   }
 
   // not applicable to ops without workgroup layout attributes
@@ -1007,7 +1007,7 @@ struct WgToSgLoadMatrixOp : public OpConversionPattern<xegpu::LoadMatrixOp> {
     assert(valueTy && "the value type must be vector type!");
     Type elemTy = valueTy.getElementType();
 
-    xegpu::DistributeLayoutAttr layout = op.getAnchorLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType newResTy = VectorType::get(sgShape, elemTy);
     SmallVector<Value> newOps;
@@ -1033,7 +1033,7 @@ struct WgToSgStoreMatrixOp : public OpConversionPattern<xegpu::StoreMatrixOp> {
     if (failed(genOffsetsList(rewriter, op, offsetsList)))
       return failure();
 
-    xegpu::DistributeLayoutAttr layout = op.getAnchorLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
     for (auto [v, offsets] : llvm::zip(adaptor.getData(), offsetsList))
       xegpu::StoreMatrixOp::create(rewriter, op.getLoc(), v, op.getMemDesc(),
                                    offsets, layout.dropSgLayoutAndData());
@@ -1417,12 +1417,12 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<xegpu::LoadMatrixOp>(
       [=](xegpu::LoadMatrixOp op) -> bool {
-        return isLegal(op.getAnchorLayoutAttr());
+        return isLegal(op.getLayoutAttr());
       });
 
   target.addDynamicallyLegalOp<xegpu::StoreMatrixOp>(
       [=](xegpu::StoreMatrixOp op) -> bool {
-        return isLegal(op.getAnchorLayoutAttr());
+        return isLegal(op.getLayoutAttr());
       });
 
   target.addDynamicallyLegalOp<arith::ConstantOp>(

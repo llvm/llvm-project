@@ -965,7 +965,7 @@ struct LoadMatrixDistribution final : public gpu::WarpDistributionPattern {
     SmallVector<Value> offsetsAsValues =
         vector::getAsValues(rewriter, matrixOp.getLoc(), offsets);
 
-    auto layout = matrixOp.getAnchorLayoutAttr();
+    auto layout = matrixOp.getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           matrixOp, "the matrix operation lacks layout attribute");
@@ -1041,7 +1041,7 @@ struct StoreMatrixDistribution final : public gpu::WarpDistributionPattern {
     SmallVector<Value> offsetsAsValues =
         vector::getAsValues(rewriter, matrixOp.getLoc(), offsets);
 
-    auto layout = matrixOp.getAnchorLayoutAttr();
+    auto layout = matrixOp.getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           matrixOp, "the matrix operation lacks layout attribute");
