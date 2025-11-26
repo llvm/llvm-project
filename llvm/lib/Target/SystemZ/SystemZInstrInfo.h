@@ -71,13 +71,10 @@ enum {
   MO_GOT = (1 << 0),
 
   // @INDNTPOFF
-  MO_INDNTPOFF = (2 << 0)
-};
+  MO_INDNTPOFF = (2 << 0),
 
-// z/OS XPLink specific: classifies the types of
-// accesses to the ADA (Associated Data Area).
-// These enum values should not overlap with the above MO_ enums.
-enum {
+  // z/OS XPLink specific: classifies the types of
+  // accesses to the ADA (Associated Data Area).
   MO_ADA_DATA_SYMBOL_ADDR = (1 << 2),
   MO_ADA_INDIRECT_FUNC_DESC = (2 << 2),
   MO_ADA_DIRECT_FUNC_DESC = (3 << 2),
