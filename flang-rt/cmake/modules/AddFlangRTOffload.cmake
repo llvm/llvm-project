@@ -106,7 +106,8 @@ macro(enable_omp_offload_compilation name files)
         PROPERTIES COMPILE_DEFINITIONS OMP_OFFLOAD_BUILD
         )
 
-     # If building flang-rt together with libomp, ensure that libomp is built first and found because -fopenmp will try to link it.
+     # If building flang-rt together with libomp, ensure that libomp is built
+     # first and found because -fopenmp will try to link it.
      if (TARGET omp)
        add_dependencies(${name} omp)
        target_link_options(${name}.static PUBLIC "-L$<TARGET_FILE_DIR:omp>")

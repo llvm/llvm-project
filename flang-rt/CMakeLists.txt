@@ -43,7 +43,7 @@ include(CMakePushCheckState)
 ############################
 
 # Path to LLVM development tools (FileCheck, llvm-lit, not, ...)
-set(LLVM_TOOLS_DIR "${LLVM_TOOLS_BINARY_DIR}")
+set(LLVM_TOOLS_DIR "${LLVM_BINARY_DIR}/bin")
 
 # Fortran compiler not optional for building Flang-RT
 enable_language(Fortran)
@@ -113,14 +113,8 @@ elseif (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   option(FLANG_RT_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS "Do not compile global variables' definitions when producing PTX library" OFF)
 elseif (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
   # Support for OpenMP offloading
-else ()
-  message(FATAL_ERROR "Invalid value '${FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT}' for FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT; must be empty, 'CUDA', or 'OpenMP'")
-endif ()
-
-
-if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP" OR LLVM_TARGET_TRIPLE MATCHES "^nvptx")
-  set(FLANG_RT_DEVICE_ARCHITECTURES "all" CACHE STRING
-      "List of offload device architectures to be used to compile the Fortran runtime (e.g. 'gfx1103;sm_90')"
+  set(FLANG_RT_DEVICE_ARCHITECTURES "${RUNTIMES_DEVICE_ARCHITECTURES}" CACHE STRING
+      "List of OpenMP device architectures to be used to compile the Fortran runtime (e.g. 'gfx1103;sm_90')"
     )
 
   if (FLANG_RT_DEVICE_ARCHITECTURES STREQUAL "all")
@@ -139,6 +133,8 @@ if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP" OR LLVM_TARGET_TRIPL
       set(FLANG_RT_DEVICE_ARCHITECTURES ${all_gpu_architectures})
   endif()
   list(REMOVE_DUPLICATES FLANG_RT_DEVICE_ARCHITECTURES)
+else ()
+  message(FATAL_ERROR "Invalid value '${FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT}' for FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT; must be empty, 'CUDA', or 'OpenMP'")
 endif ()
 
 

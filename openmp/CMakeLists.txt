@@ -95,6 +95,24 @@ endif()
 # Check and set up common compiler flags.
 include(config-ix)
 include(HandleOpenMPOptions)
+include(LibompUtils)
+
+
+# Set libomp version
+set(LIBOMP_VERSION_MAJOR 5)
+set(LIBOMP_VERSION_MINOR 0)
+
+# Set the OpenMP Year and Month associated with version
+set(LIBOMP_OMP_YEAR_MONTH 201611)
+
+# Get the build number from kmp_version.cpp
+libomp_get_build_number("${CMAKE_CURRENT_SOURCE_DIR}/runtime" LIBOMP_VERSION_BUILD)
+math(EXPR LIBOMP_VERSION_BUILD_YEAR "${LIBOMP_VERSION_BUILD}/10000")
+math(EXPR LIBOMP_VERSION_BUILD_MONTH_DAY "${LIBOMP_VERSION_BUILD}%10000")
+
+# Currently don't record any timestamps
+set(LIBOMP_BUILD_DATE "No_Timestamp")
+
 
 # Check for flang
 set(OPENMP_TEST_Fortran_COMPILER_default "")
@@ -103,6 +121,13 @@ if (CMAKE_Fortran_COMPILER)
 endif ()
 set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
   "Fortran compiler to use for testing OpenMP runtime libraries.")
+
+if (LLVM_RUNTIMES_BUILD)
+  set(LIBOMP_FORTRAN_MODULES "${RUNTIMES_FLANG_MODULES_ENABLED}" CACHE BOOL
+    "Create Fortran module files? (requires fortran compiler)")
+else ()
+  set(LIBOMP_FORTRAN_MODULES OFF)
+endif ()
 
 # Set up testing infrastructure.
 include(OpenMPTesting)
@@ -134,6 +159,10 @@ if(NOT LLVM_TREE_AVAILABLE)
 else()
   include(GetClangResourceDir)
   get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
+endif()
+
+if(LIBOMP_FORTRAN_MODULES)
+  add_subdirectory(module)
 endif()
 
 # Use the current compiler target to determine the appropriate runtime to build.

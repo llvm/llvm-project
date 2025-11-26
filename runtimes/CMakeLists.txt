@@ -88,9 +88,6 @@ include(CheckCXXCompilerFlag)
 include(GetToolchainDirs)
 include(ExtendPath)
 
-
-
-
 # Check whether the Fortran compiler already access to builtin modules. Sets
 # HAVE_FORTRAN_INTRINSIC_MODS when returning.
 #
@@ -160,10 +157,21 @@ function (flang_module_target tgtname)
     return ()
   endif ()
 
-  # Let it find the other public module files
   target_compile_options(${tgtname} PRIVATE
+      # Let non-public modules find the public module files
       "$<$<COMPILE_LANGUAGE:Fortran>:-fintrinsic-modules-path=${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}>"
+
+      # Flang bug workaround: Reformating of cooked token buffer causes identifier to be split between lines
+      "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-Xflang;SHELL:-fno-reformat>"
     )
+
+  if (LLVM_RUNTIMES_TARGET MATCHES "^nvptx")
+    foreach (_arch IN LISTS RUNTIMES_DEVICE_ARCHITECTURES)
+      target_compile_options(${tgtname} PRIVATE
+       "$<$<COMPILE_LANGUAGE:Fortran>:-march=${_arch}>"
+      )
+    endforeach()
+  endif ()
 
   if (ARG_PUBLIC)
     set_target_properties(${tgtname}
@@ -181,13 +189,13 @@ endfunction ()
 # Check whether the build environment supports building Fortran modules
 # flang-rt and openmp are the only runtimes that contain Fortran modules.
 set(FORTRAN_MODULE_DEPS "")
-if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
-  # CMake 3.24 is the first version of CMake that directly recognizes Flang.
-  # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
-  if (CMAKE_VERSION VERSION_LESS "3.24" AND CMAKE_Fortran_COMPILER)
-    cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
-    if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR
-        _Fortran_COMPILER_STEM STREQUAL "flang")
+if (CMAKE_Fortran_COMPILER AND ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "openmp" IN_LIST LLVM_ENABLE_RUNTIMES))
+  cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
+
+  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
+    # CMake 3.24 is the first version of CMake that directly recognizes Flang.
+    # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
+    if (CMAKE_VERSION VERSION_LESS "3.24")
       include(CMakeForceCompiler)
       CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
 
@@ -209,10 +217,27 @@ if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "openmp" IN_LIST LLVM_ENABLE_RUNT
       set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_OFF "-nocpp")
       set(CMAKE_Fortran_POSTPROCESS_FLAG "-ffixed-line-length-72")
 
-      set(CMAKE_Fortran_COMPILE_OPTIONS_TARGET "--target=")
-
       set(CMAKE_Fortran_LINKER_WRAPPER_FLAG "-Wl,")
       set(CMAKE_Fortran_LINKER_WRAPPER_FLAG_SEP ",")
+
+      set(CMAKE_Fortran_VERBOSE_FLAG "-v")
+
+      set(CMAKE_Fortran_LINK_MODE DRIVER)
+    endif ()
+
+    # Optimization flags are only passed after CMake 3.27
+    # https://gitlab.kitware.com/cmake/cmake/-/commit/1140087adea98bd8d8974e4c18979f4949b52c34
+    if (CMAKE_VERSION VERSION_LESS "3.27")
+      string(APPEND CMAKE_Fortran_FLAGS_DEBUG_INIT " -O0 -g")
+      string(APPEND CMAKE_Fortran_FLAGS_RELWITHDEBINFO_INIT " -O2 -g")
+      string(APPEND CMAKE_Fortran_FLAGS_RELEASE_INIT " -O3")
+    endif ()
+
+    # Only CMake 3.28+ pass --target= to Flang. But for cross-compiling, including
+    # to nvptx amd amdgpu targets, passing the target triple is essential.
+    # https://gitlab.kitware.com/cmake/cmake/-/commit/e9af7b968756e72553296ecdcde6f36606a0babf
+    if (CMAKE_VERSION VERSION_LESS "3.28")
+      set(CMAKE_Fortran_COMPILE_OPTIONS_TARGET "--target=")
     endif ()
   endif ()
 
@@ -466,6 +491,31 @@ if (RUNTIMES_FLANG_MODULES_ENABLED)
       DESTINATION "${destination}"
     )
 endif ()
+
+
+if (RUNTIMES_FLANG_MODULES_ENABLED)
+  set(RUNTIMES_DEVICE_ARCHITECTURES "all" CACHE STRING
+      "List of offload device architectures to be used to compile the Fortran offload code (e.g. 'gfx1103;sm_90')"
+    )
+
+  if (RUNTIMES_DEVICE_ARCHITECTURES STREQUAL "all")
+    # TODO: support auto detection on the build system.
+    set(all_amdgpu_architectures
+      "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
+      "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
+      "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
+      "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151"
+      "gfx1152;gfx1153")
+    set(all_nvptx_architectures
+      "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
+      "sm_70;sm_72;sm_75;sm_80;sm_86;sm_89;sm_90")
+    set(all_gpu_architectures
+      "${all_amdgpu_architectures};${all_nvptx_architectures}")
+      set(RUNTIMES_DEVICE_ARCHITECTURES ${all_gpu_architectures})
+  endif()
+  list(REMOVE_DUPLICATES RUNTIMES_DEVICE_ARCHITECTURES)
+endif ()
+
 
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)

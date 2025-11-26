@@ -234,14 +234,11 @@ function (add_flangrt_library name)
     target_compile_features(${tgtname} PRIVATE cxx_std_17)
 
     target_compile_options(${tgtname} PRIVATE
-      # Always enable preprocessor regardless of file extention
+      # Always enable preprocessor regardless of file extension
       "$<$<COMPILE_LANGUAGE:Fortran>:-cpp>"
 
-      # Missing type descriptors are expected for intrinsic modules 
+      # Missing type descriptors are expected for intrinsic modules
       "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-mmlir;SHELL:-ignore-missing-type-desc>"
-
-      # Flang bug workaround: Reformating of cooked token buffer causes identifier to be split between lines
-      "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-Xflang;SHELL:-fno-reformat>"
     )
 
     # When building the flang runtime if LTO is enabled the archive file
@@ -300,11 +297,6 @@ function (add_flangrt_library name)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
         )
-      foreach (_arch IN LISTS FLANG_RT_DEVICE_ARCHITECTURES)
-        target_compile_options(${tgtname} PRIVATE
-         -march=${_arch}
-        )
-       endforeach()
     elseif (APPLE)
       # Clang on Darwin enables non-POSIX extensions by default.
       # This causes some macros to leak, such as HUGE from <math.h>, which
