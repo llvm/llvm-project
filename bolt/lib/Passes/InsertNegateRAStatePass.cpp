@@ -152,7 +152,7 @@ void InsertNegateRAState::fillUnknownStateInBB(BinaryContext &BC,
   // At this point we know the RAState of the first instruction,
   // so we can propagate the RAStates to all subsequent unknown instructions.
   MCInst Prev = *First;
-  for (auto It = BB.begin() + 1; It != BB.end(); ++It) {
+  for (auto It = First + 1; It != BB.end(); ++It) {
     MCInst &Inst = *It;
     if (BC.MIB->isCFI(Inst))
       continue;
