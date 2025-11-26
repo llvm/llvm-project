@@ -2330,7 +2330,8 @@ static void emitAddress(MCStreamer &Streamer, MCRegister Reg,
             .addImm(0),
         STI);
   } else {
-    auto *SymRef = MCSymbolRefExpr::create(Val.getAddSym(), Streamer.getContext());
+    auto *SymRef =
+        MCSymbolRefExpr::create(Val.getAddSym(), Streamer.getContext());
     Streamer.emitInstruction(
         MCInstBuilder(AArch64::ADRP)
             .addReg(Reg)
