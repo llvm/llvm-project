@@ -3,8 +3,8 @@
 ; RUN: | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "thumbv8m.main-arm-none-eabi"
 
+;; A[*][m][o]
 ;;  for (int i = 0; i < n; i++)
 ;;   for (int j = 0; j < m; j++)
 ;;    for (int k = 0; k < o; k++)
@@ -70,6 +70,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
   ret void
 }
 
+;; A[*][m][o]
 ;;  for (int i = 0; i < n; i++)
 ;;   for (int j = 0; j < m; j++)
 ;;    for (int k = 0; k < o; k++)
@@ -83,6 +84,8 @@ define void @t2(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - output [* * *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body8> slt) %o
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
@@ -137,6 +140,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
   ret void
 }
 
+;; A[*][m][o]
 ;;  for (int i = 0; i < n; i++)
 ;;   for (int j = 0; j < m; j++)
 ;;    for (int k = 0; k < o; k++)
@@ -150,6 +154,8 @@ define void @t3(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - output [* * *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {-1,+,1}<nsw><%for.body8> sge) 0
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
@@ -204,6 +210,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
   ret void
 }
 
+;; A[*][m][o]
 ;;  for (int i = 0; i < n; i++)
 ;;   for (int j = 0; j < m; j++)
 ;;    for (int k = 0; k < o; k++)
@@ -217,6 +224,8 @@ define void @t4(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - output [* * *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.cond5.preheader> slt) %m
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
@@ -284,6 +293,9 @@ define void @t5(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - output [* * *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {-1,+,1}<%for.cond5.preheader> sge) 0
+; CHECK-NEXT:    Compare predicate: {-1,+,1}<%for.cond5.preheader> slt) %m
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
@@ -548,8 +560,13 @@ define double @test_sizes(i16 %h, i16 %N, ptr nocapture %array) {
 ; CHECK-NEXT:    da analyze - consistent input [0 S]!
 ; CHECK-NEXT:  Src: %2 = load i16, ptr %arrayidx, align 4 --> Dst: store i16 %add6, ptr %arrayidx8, align 4
 ; CHECK-NEXT:    da analyze - anti [* *|<]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body> slt) (sext i16 %h to i32)
 ; CHECK-NEXT:  Src: store i16 %add6, ptr %arrayidx8, align 4 --> Dst: store i16 %add6, ptr %arrayidx8, align 4
 ; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {(sext i16 {2,+,(1 + %h)}<%for.body> to i32),+,1}<nsw><%for.body5> sge) 0
+; CHECK-NEXT:    Compare predicate: {(sext i16 {2,+,(1 + %h)}<%for.body> to i32),+,1}<nsw><%for.body5> slt) (sext i16 %h to i32)
 ;
 entry:
   %cmp28 = icmp sgt i16 %N, 1
@@ -599,10 +616,16 @@ define void @nonnegative(ptr nocapture %A, i32 %N) {
 ; CHECK-LABEL: 'nonnegative'
 ; CHECK-NEXT:  Src: store i32 1, ptr %arrayidx, align 4 --> Dst: store i32 1, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><%for.inner> slt) %N
 ; CHECK-NEXT:  Src: store i32 1, ptr %arrayidx, align 4 --> Dst: store i32 2, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - output [* *|<]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><%for.inner> slt) %N
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 4 --> Dst: store i32 2, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><%for.inner> slt) %N
 ;
 entry:
   %cmp44 = icmp eq i32 %N, 0
@@ -648,12 +671,16 @@ define void @coeff_may_negative(ptr %a, i32 %k) {
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.0, align 1
 ; CHECK-NEXT:    da analyze - consistent output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: 0 slt) %k
 ; CHECK-NEXT:    Compare predicate: %k ne) 0
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - output [*|<]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: 0 slt) %k
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - consistent output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: 0 slt) %k
 ; CHECK-NEXT:    Compare predicate: %k ne) 0
 ;
 entry:
@@ -691,12 +718,16 @@ define void @coeff_positive(ptr %a, i32 %k) {
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.0, align 1
 ; CHECK-NEXT:    da analyze - consistent output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: 0 slt) %k
 ; CHECK-NEXT:    Compare predicate: %k ne) 0
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - output [*|<]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: 0 slt) %k
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - consistent output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: 0 slt) %k
 ; CHECK-NEXT:    Compare predicate: %k ne) 0
 ;
 entry:

@@ -26,6 +26,7 @@ class GetElementPtrInst;
 class Instruction;
 class ScalarEvolution;
 class SCEV;
+class SCEVPredicate;
 
 /// Compute the array dimensions Sizes from the set of Terms extracted from
 /// the memory access function of this SCEVAddRecExpr (second step of
@@ -144,11 +145,13 @@ bool delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
 /// Check that each subscript in \p Subscripts is within the corresponding size
 /// in \p Sizes. For the outermost dimension, the subscript being negative is
 /// allowed. If \p Ptr is not nullptr, it may be used to get information from
-/// the IR pointer value, which may help in the validation.
-bool validateDelinearizationResult(ScalarEvolution &SE,
-                                   ArrayRef<const SCEV *> Sizes,
-                                   ArrayRef<const SCEV *> Subscripts,
-                                   const Value *Ptr = nullptr);
+/// the IR pointer value, which may help in the validation. If \p Assume is not
+/// nullptr and a compile-time check fails, runtime predicates are added to
+/// \p Assume instead of returning false.
+bool validateDelinearizationResult(
+    ScalarEvolution &SE, ArrayRef<const SCEV *> Sizes,
+    ArrayRef<const SCEV *> Subscripts, const Value *Ptr = nullptr,
+    SmallVectorImpl<const SCEVPredicate *> *Assume = nullptr);
 
 /// Gathers the individual index expressions from a GEP instruction.
 ///

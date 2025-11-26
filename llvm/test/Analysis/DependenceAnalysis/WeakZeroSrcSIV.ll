@@ -96,6 +96,7 @@ define void @weakzerosrc1(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx1, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - consistent input [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: 10 slt) %n
 ; CHECK-NEXT:    Compare predicate: (4 * %n) ne) 0
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx1, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!

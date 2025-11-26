@@ -60,12 +60,21 @@ define void @p2(i64 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'p2'
 ; CHECK-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: store i64 %i.011, ptr %arrayidx8, align 8
 ; CHECK-NEXT:    da analyze - output [* * *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond4.preheader> slt) 100
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body6> slt) 100
 ; CHECK-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: %0 = load i64, ptr %arrayidx17, align 8
 ; CHECK-NEXT:    da analyze - flow [* *|<]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond4.preheader> slt) 100
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body6> slt) 100
 ; CHECK-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i64, ptr %arrayidx17, align 8 --> Dst: %0 = load i64, ptr %arrayidx17, align 8
 ; CHECK-NEXT:    da analyze - input [* * *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {2,+,1}<nuw><%for.cond4.preheader> slt) 100
+; CHECK-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body12> slt) 100
 ; CHECK-NEXT:  Src: %0 = load i64, ptr %arrayidx17, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i64 %0, ptr %B.addr.24, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8

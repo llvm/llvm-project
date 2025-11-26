@@ -753,24 +753,34 @@ static bool isKnownLessThan(ScalarEvolution *SE, const SCEV *S,
   return SE->isKnownNegative(LimitedBound);
 }
 
-bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
-                                         ArrayRef<const SCEV *> Sizes,
-                                         ArrayRef<const SCEV *> Subscripts,
-                                         const Value *Ptr) {
+bool llvm::validateDelinearizationResult(
+    ScalarEvolution &SE, ArrayRef<const SCEV *> Sizes,
+    ArrayRef<const SCEV *> Subscripts, const Value *Ptr,
+    SmallVectorImpl<const SCEVPredicate *> *Assume) {
   // Sizes and Subscripts are as follows:
-  //
   //   Sizes:      [UNK][S_2]...[S_n]
   //   Subscripts: [I_1][I_2]...[I_n]
   //
   // where the size of the outermost dimension is unknown (UNK).
 
+  // Unify types of two SCEVs to the wider type.
+  auto UnifyTypes =
+      [&](const SCEV *&A,
+          const SCEV *&B) -> std::pair<const SCEV *, const SCEV *> {
+    Type *WiderType = SE.getWiderType(A->getType(), B->getType());
+    return {SE.getNoopOrSignExtend(A, WiderType),
+            SE.getNoopOrSignExtend(B, WiderType)};
+  };
+
   auto AddOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
+    std::tie(A, B) = UnifyTypes(A, B);
     if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/true, A, B))
       return nullptr;
     return SE.getAddExpr(A, B);
   };
 
   auto MulOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
+    std::tie(A, B) = UnifyTypes(A, B);
     if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/true, A, B))
       return nullptr;
     return SE.getMulExpr(A, B);
@@ -780,10 +790,28 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
   for (size_t I = 1; I < Sizes.size(); ++I) {
     const SCEV *Size = Sizes[I - 1];
     const SCEV *Subscript = Subscripts[I];
-    if (!isKnownNonNegative(&SE, Subscript, Ptr))
-      return false;
-    if (!isKnownLessThan(&SE, Subscript, Size))
-      return false;
+
+    // Check Subscript >= 0.
+    if (!isKnownNonNegative(&SE, Subscript, Ptr)) {
+      if (!Assume)
+        return false;
+      const SCEVPredicate *Pred = SE.getComparePredicate(
+          ICmpInst::ICMP_SGE, Subscript, SE.getZero(Subscript->getType()));
+      Assume->push_back(Pred);
+    }
+
+    // Check Subscript < Size.
+    if (!isKnownLessThan(&SE, Subscript, Size)) {
+      if (!Assume)
+        return false;
+      // Need to unify types before creating the predicate.
+      Type *WiderType = SE.getWiderType(Subscript->getType(), Size->getType());
+      const SCEV *SubscriptExt = SE.getNoopOrSignExtend(Subscript, WiderType);
+      const SCEV *SizeExt = SE.getNoopOrSignExtend(Size, WiderType);
+      const SCEVPredicate *Pred =
+          SE.getComparePredicate(ICmpInst::ICMP_SLT, SubscriptExt, SizeExt);
+      Assume->push_back(Pred);
+    }
   }
 
   // The offset computation is as follows:

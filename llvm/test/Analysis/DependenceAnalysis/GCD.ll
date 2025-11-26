@@ -15,13 +15,19 @@ target triple = "x86_64-apple-macosx10.6.0"
 define void @gcd0(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'gcd0'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - consistent output [0 0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,2}<nuw><nsw><%for.cond1.preheader> slt) 4
+; CHECK-NEXT:    Compare predicate: {0,+,2}<nuw><nsw><%for.cond1.preheader> slt) 4
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
 ; CHECK-NEXT:    da analyze - flow [=> *|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - input [* *]!
+; CHECK-NEXT:    da analyze - consistent input [0 0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,6}<nuw><nsw><%for.cond1.preheader> slt) 8
+; CHECK-NEXT:    Compare predicate: {0,+,6}<nuw><nsw><%for.cond1.preheader> slt) 8
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
@@ -74,13 +80,19 @@ for.end10:                                        ; preds = %for.inc8
 define void @gcd1(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'gcd1'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - consistent output [0 0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,2}<nuw><nsw><%for.cond1.preheader> slt) 4
+; CHECK-NEXT:    Compare predicate: {0,+,2}<nuw><nsw><%for.cond1.preheader> slt) 4
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx8, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx8, align 4 --> Dst: %0 = load i32, ptr %arrayidx8, align 4
-; CHECK-NEXT:    da analyze - input [* *]!
+; CHECK-NEXT:    da analyze - consistent input [0 0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {1,+,6}<nuw><nsw><%for.cond1.preheader> slt) 8
+; CHECK-NEXT:    Compare predicate: {1,+,6}<nuw><nsw><%for.cond1.preheader> slt) 8
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx8, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
@@ -134,13 +146,19 @@ for.end11:                                        ; preds = %for.inc9
 define void @gcd2(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'gcd2'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - consistent output [0 0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {1,+,2}<nuw><nsw><%for.cond1.preheader> slt) 4
+; CHECK-NEXT:    Compare predicate: {1,+,2}<nuw><nsw><%for.cond1.preheader> slt) 4
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx8, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx8, align 4 --> Dst: %0 = load i32, ptr %arrayidx8, align 4
-; CHECK-NEXT:    da analyze - input [* *]!
+; CHECK-NEXT:    da analyze - consistent input [0 0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,6}<nuw><nsw><%for.cond1.preheader> slt) 8
+; CHECK-NEXT:    Compare predicate: {0,+,6}<nuw><nsw><%for.cond1.preheader> slt) 8
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx8, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
@@ -194,13 +212,25 @@ for.end11:                                        ; preds = %for.inc9
 define void @gcd3(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'gcd3'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - consistent output [0 0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond1.preheader> slt) 2
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond1.preheader> slt) 2
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx6, align 4
-; CHECK-NEXT:    da analyze - flow [<> *]!
+; CHECK-NEXT:    da analyze - consistent flow [1 0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond1.preheader> slt) 2
+; CHECK-NEXT:    Compare predicate: {-1,+,1}<nsw><%for.cond1.preheader> sge) 0
+; CHECK-NEXT:    Compare predicate: {-1,+,1}<nsw><%for.cond1.preheader> slt) 2
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx6, align 4 --> Dst: %0 = load i32, ptr %arrayidx6, align 4
-; CHECK-NEXT:    da analyze - input [* *]!
+; CHECK-NEXT:    da analyze - consistent input [0 0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {-1,+,1}<nsw><%for.cond1.preheader> sge) 0
+; CHECK-NEXT:    Compare predicate: {-1,+,1}<nsw><%for.cond1.preheader> slt) 2
+; CHECK-NEXT:    Compare predicate: {-1,+,1}<nsw><%for.cond1.preheader> sge) 0
+; CHECK-NEXT:    Compare predicate: {-1,+,1}<nsw><%for.cond1.preheader> slt) 2
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx6, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
@@ -253,12 +283,18 @@ define void @gcd4(ptr %A, ptr %B, i64 %M, i64 %N) nounwind uwtable ssp {
 ; CHECK-LABEL: 'gcd4'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,5}<nuw><nsw><%for.cond1.preheader> slt) %M
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx16, align 4
 ; CHECK-NEXT:    da analyze - flow [* *|<]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,5}<nuw><nsw><%for.cond1.preheader> slt) %M
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx16, align 4 --> Dst: %0 = load i32, ptr %arrayidx16, align 4
 ; CHECK-NEXT:    da analyze - input [* *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {4,+,15}<nw><%for.cond1.preheader> slt) %M
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx16, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
@@ -321,12 +357,18 @@ define void @gcd5(ptr %A, ptr %B, i64 %M, i64 %N) nounwind uwtable ssp {
 ; CHECK-LABEL: 'gcd5'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,5}<nuw><nsw><%for.cond1.preheader> slt) %M
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx16, align 4
 ; CHECK-NEXT:    da analyze - flow [* *|<]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,5}<nuw><nsw><%for.cond1.preheader> slt) %M
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx16, align 4 --> Dst: %0 = load i32, ptr %arrayidx16, align 4
 ; CHECK-NEXT:    da analyze - input [* *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {5,+,15}<nw><%for.cond1.preheader> slt) %M
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx16, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
@@ -389,12 +431,18 @@ define void @gcd6(i64 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'gcd6'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx5, align 4 --> Dst: store i32 %conv, ptr %arrayidx5, align 4
 ; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,4}<nuw><nsw><%for.body3> slt) %n
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx5, align 4 --> Dst: %2 = load i32, ptr %arrayidx9, align 4
 ; CHECK-NEXT:    da analyze - flow [* *|<]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,4}<nuw><nsw><%for.body3> slt) %n
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx5, align 4 --> Dst: store i32 %2, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx9, align 4 --> Dst: %2 = load i32, ptr %arrayidx9, align 4
 ; CHECK-NEXT:    da analyze - input [* *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {1,+,6}<nuw><nsw><%for.body3> slt) %n
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx9, align 4 --> Dst: store i32 %2, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %2, ptr %B.addr.12, align 4 --> Dst: store i32 %2, ptr %B.addr.12, align 4

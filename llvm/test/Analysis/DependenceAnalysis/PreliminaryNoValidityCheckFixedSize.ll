@@ -33,12 +33,21 @@ define void @p2(i64 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; LIN-LABEL: 'p2'
 ; LIN-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: store i64 %i.011, ptr %arrayidx8, align 8
 ; LIN-NEXT:    da analyze - output [* * *]!
+; LIN-NEXT:    Runtime Assumptions:
+; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond4.preheader> slt) 100
+; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body6> slt) 100
 ; LIN-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: %0 = load i64, ptr %arrayidx17, align 8
 ; LIN-NEXT:    da analyze - flow [* *|<]!
+; LIN-NEXT:    Runtime Assumptions:
+; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond4.preheader> slt) 100
+; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body6> slt) 100
 ; LIN-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
 ; LIN-NEXT:    da analyze - confused!
 ; LIN-NEXT:  Src: %0 = load i64, ptr %arrayidx17, align 8 --> Dst: %0 = load i64, ptr %arrayidx17, align 8
 ; LIN-NEXT:    da analyze - input [* * *]!
+; LIN-NEXT:    Runtime Assumptions:
+; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><%for.cond4.preheader> slt) 100
+; LIN-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body12> slt) 100
 ; LIN-NEXT:  Src: %0 = load i64, ptr %arrayidx17, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
 ; LIN-NEXT:    da analyze - confused!
 ; LIN-NEXT:  Src: store i64 %0, ptr %B.addr.24, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8

@@ -264,6 +264,8 @@ define void @nested_loop_step(ptr %a, i64 %n, i64 %m, i64 %step) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%loop.i.header> slt) %step
 ;
 entry:
   %guard.i = icmp sgt i64 %n, 0

@@ -2,7 +2,6 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1 \
 ; RUN: | FileCheck %s
 
-; XFAIL: *
 ; Currently fails since delinearization doesn't work as expected, due to the
 ; inconsistency in the estimated array sizes between `rr[i][j]` and `rr[j][j]`.
 ; The latter is now regarded as an access to a 1D array.
@@ -26,7 +25,7 @@ define float @foo(float %g, ptr %rr) nounwind {
 ; CHECK-NEXT:  Src: %0 = load float, ptr %arrayidx4, align 4 --> Dst: %0 = load float, ptr %arrayidx4, align 4
 ; CHECK-NEXT:    da analyze - consistent input [S 0]!
 ; CHECK-NEXT:  Src: %0 = load float, ptr %arrayidx4, align 4 --> Dst: %1 = load float, ptr %arrayidx6, align 4
-; CHECK-NEXT:    da analyze - input [* 0|<]!
+; CHECK-NEXT:    da analyze - input [* *|<]!
 ; CHECK-NEXT:  Src: %1 = load float, ptr %arrayidx6, align 4 --> Dst: %1 = load float, ptr %arrayidx6, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;

@@ -26,17 +26,24 @@ define void @gcdmiv_coef_ovfl(ptr %A, i64 %m) {
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - consistent output [0]!
 ; CHECK-ALL-NEXT:    Runtime Assumptions:
+; CHECK-ALL-NEXT:    Compare predicate: 4 slt) %m
 ; CHECK-ALL-NEXT:    Compare predicate: (3 * %m) ne) 0
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - output [*|<]!
+; CHECK-ALL-NEXT:    Runtime Assumptions:
+; CHECK-ALL-NEXT:    Compare predicate: 4 slt) %m
 ; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;
 ; CHECK-GCD-MIV-LABEL: 'gcdmiv_coef_ovfl'
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-GCD-MIV-NEXT:    Runtime Assumptions:
+; CHECK-GCD-MIV-NEXT:    Compare predicate: 4 slt) %m
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*|<]!
+; CHECK-GCD-MIV-NEXT:    Runtime Assumptions:
+; CHECK-GCD-MIV-NEXT:    Compare predicate: 4 slt) %m
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
 ;
