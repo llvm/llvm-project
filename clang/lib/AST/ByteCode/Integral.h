@@ -217,10 +217,6 @@ public:
     return Integral(Value.V);
   }
 
-  static bool inRange(int64_t Value, unsigned NumBits) {
-    return CheckRange<ReprT, Min, Max>(Value);
-  }
-
   static bool increment(Integral A, Integral *R) {
     return add(A, Integral(ReprT(1)), A.bitWidth(), R);
   }
@@ -321,13 +317,6 @@ private:
     } else {
       R = A * B;
       return false;
-    }
-  }
-  template <typename T, T Min, T Max> static bool CheckRange(int64_t V) {
-    if constexpr (std::is_signed_v<T>) {
-      return Min <= V && V <= Max;
-    } else {
-      return V >= 0 && static_cast<uint64_t>(V) <= Max;
     }
   }
 };
