@@ -490,17 +490,13 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
 
     /// An extract_slice result type can be inferred, when it is not
     /// rank-reduced, from the source type and the static representation of
-    /// offsets, sizes and strides. Special sentinels encode the dynamic case.
+    /// sizes. Special sentinels encode the dynamic case.
     static RankedTensorType inferResultType(
       RankedTensorType sourceTensorType,
-      ArrayRef<int64_t> staticOffsets,
-      ArrayRef<int64_t> staticSizes,
-      ArrayRef<int64_t> staticStrides);
+      ArrayRef<int64_t> staticSizes);
     static RankedTensorType inferResultType(
       RankedTensorType sourceTensorType,
-      ArrayRef<OpFoldResult> staticOffsets,
-      ArrayRef<OpFoldResult> staticSizes,
-      ArrayRef<OpFoldResult> staticStrides);
+      ArrayRef<OpFoldResult> staticSizes);
 
     /// If the rank is reduced (i.e. the desiredResultRank is smaller than the
     /// number of sizes), drop as many size 1 as needed to produce an inferred type
@@ -513,15 +509,11 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     static RankedTensorType inferCanonicalRankReducedResultType(
       unsigned resultRank,
       RankedTensorType sourceRankedTensorType,
-      ArrayRef<int64_t> staticOffsets,
-      ArrayRef<int64_t> staticSizes,
-      ArrayRef<int64_t> staticStrides);
+      ArrayRef<int64_t> staticSizes);
     static RankedTensorType inferCanonicalRankReducedResultType(
       unsigned resultRank,
       RankedTensorType sourceRankedTensorType,
-      ArrayRef<OpFoldResult> staticOffsets,
-      ArrayRef<OpFoldResult> staticSizes,
-      ArrayRef<OpFoldResult> staticStrides);
+      ArrayRef<OpFoldResult> staticSizes);
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
