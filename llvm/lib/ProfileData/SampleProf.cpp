@@ -403,7 +403,7 @@ std::error_code ProfileSymbolList::read(const uint8_t *Data,
   uint64_t StrNum = 0;
   uint64_t ExpectedCount = 0;
 
-  Scan forward to see how many elements we expect.
+  // Scan forward to see how many elements we expect.
   while (Offset < ListSize) {
     if (ListStart[Offset] == '\0') ExpectedCount++;
     Offset++;
