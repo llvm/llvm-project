@@ -322,9 +322,6 @@ static void collectGlobalsFromDeviceRegion(mlir::Region &region,
 // Adds the declare attribute to the operation `op`.
 static void addDeclareAttr(MLIRContext *context, Operation *op,
                            acc::DataClause clause) {
-  if (!op)
-    return;
-
   op->setAttr(acc::getDeclareAttrName(),
               acc::DeclareAttr::get(context,
                                     acc::DataClauseAttr::get(context, clause)));
