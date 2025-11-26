@@ -30,7 +30,6 @@
 #include "clang/CAS/IncludeTree.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/BoundsSafetyArgs.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Frontend/CompileJobCacheResult.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
@@ -3532,13 +3531,6 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.DashX = DashX;
 
   return Diags.getNumErrors() == NumErrorsBefore;
-}
-
-std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
-                                                 void *MainAddr) {
-  std::string ClangExecutable =
-      llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
-  return driver::Driver::GetResourcesPath(ClangExecutable);
 }
 
 static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
