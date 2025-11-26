@@ -5,16 +5,16 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,GFX8,GFX8-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,GFX8,GFX8-GISEL %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10,GFX10-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11-SDAG-TRUE16 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11-SDAG-FAKE16 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11-GISEL,GFX11-GISEL-TRUE16 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11-GISEL,GFX11-GISEL-FAKE16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-SDAG-TRUE16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-SDAG-FAKE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-TRUE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-FAKE16 %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 
 ; FIXME: promotion not handled without f16 insts
 
@@ -25,17 +25,11 @@ define half @v_constained_fsub_f16_fpexcept_strict(half %x, half %y) #0 {
 ; GCN-NEXT:    v_sub_f16_e32 v0, v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-SDAG-LABEL: v_constained_fsub_f16_fpexcept_strict:
-; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-GISEL-LABEL: v_constained_fsub_f16_fpexcept_strict:
-; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constained_fsub_f16_fpexcept_strict:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_sub_f16_e32 v0, v0, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: v_constained_fsub_f16_fpexcept_strict:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
@@ -61,25 +55,15 @@ define half @v_constained_fsub_f16_fpexcept_strict(half %x, half %y) #0 {
 ; GFX11-GISEL-FAKE16-NEXT:    v_sub_f16_e32 v0, v0, v1
 ; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-SDAG-LABEL: v_constained_fsub_f16_fpexcept_strict:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GISEL-LABEL: v_constained_fsub_f16_fpexcept_strict:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-LABEL: v_constained_fsub_f16_fpexcept_strict:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_sub_f16_e32 v0, v0, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fsub.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %val
 }
@@ -91,17 +75,11 @@ define half @v_constained_fsub_f16_fpexcept_ignore(half %x, half %y) #0 {
 ; GCN-NEXT:    v_sub_f16_e32 v0, v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-SDAG-LABEL: v_constained_fsub_f16_fpexcept_ignore:
-; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-GISEL-LABEL: v_constained_fsub_f16_fpexcept_ignore:
-; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constained_fsub_f16_fpexcept_ignore:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_sub_f16_e32 v0, v0, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: v_constained_fsub_f16_fpexcept_ignore:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
@@ -127,25 +105,15 @@ define half @v_constained_fsub_f16_fpexcept_ignore(half %x, half %y) #0 {
 ; GFX11-GISEL-FAKE16-NEXT:    v_sub_f16_e32 v0, v0, v1
 ; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-SDAG-LABEL: v_constained_fsub_f16_fpexcept_ignore:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GISEL-LABEL: v_constained_fsub_f16_fpexcept_ignore:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-LABEL: v_constained_fsub_f16_fpexcept_ignore:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_sub_f16_e32 v0, v0, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fsub.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret half %val
 }
@@ -157,17 +125,11 @@ define half @v_constained_fsub_f16_fpexcept_maytrap(half %x, half %y) #0 {
 ; GCN-NEXT:    v_sub_f16_e32 v0, v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-SDAG-LABEL: v_constained_fsub_f16_fpexcept_maytrap:
-; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-GISEL-LABEL: v_constained_fsub_f16_fpexcept_maytrap:
-; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constained_fsub_f16_fpexcept_maytrap:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_sub_f16_e32 v0, v0, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: v_constained_fsub_f16_fpexcept_maytrap:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
@@ -193,25 +155,15 @@ define half @v_constained_fsub_f16_fpexcept_maytrap(half %x, half %y) #0 {
 ; GFX11-GISEL-FAKE16-NEXT:    v_sub_f16_e32 v0, v0, v1
 ; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-SDAG-LABEL: v_constained_fsub_f16_fpexcept_maytrap:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GISEL-LABEL: v_constained_fsub_f16_fpexcept_maytrap:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-LABEL: v_constained_fsub_f16_fpexcept_maytrap:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_sub_f16_e32 v0, v0, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fsub.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret half %val
 }
@@ -912,15 +864,10 @@ define amdgpu_ps half @s_constained_fsub_f16_fpexcept_strict(half inreg %x, half
 ; GCN-NEXT:    v_sub_f16_e32 v0, s2, v0
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10-SDAG-LABEL: s_constained_fsub_f16_fpexcept_strict:
-; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    v_sub_f16_e64 v0, s2, s3
-; GFX10-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX10-GISEL-LABEL: s_constained_fsub_f16_fpexcept_strict:
-; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    v_sub_f16_e64 v0, s2, s3
-; GFX10-GISEL-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: s_constained_fsub_f16_fpexcept_strict:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_sub_f16_e64 v0, s2, s3
+; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-TRUE16-LABEL: s_constained_fsub_f16_fpexcept_strict:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
@@ -942,19 +889,12 @@ define amdgpu_ps half @s_constained_fsub_f16_fpexcept_strict(half inreg %x, half
 ; GFX11-GISEL-FAKE16-NEXT:    v_sub_f16_e64 v0, s2, s3
 ; GFX11-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
-; GFX12-SDAG-LABEL: s_constained_fsub_f16_fpexcept_strict:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_sub_f16 s0, s2, s3
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: s_constained_fsub_f16_fpexcept_strict:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_sub_f16 s0, s2, s3
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: s_constained_fsub_f16_fpexcept_strict:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_sub_f16 s0, s2, s3
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
   %val = call half @llvm.experimental.constrained.fsub.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %val
 }
@@ -1081,5 +1021,6 @@ declare <4 x half> @llvm.experimental.constrained.fsub.v4f16(<4 x half>, <4 x ha
 attributes #0 = { strictfp }
 attributes #1 = { inaccessiblememonly nounwind willreturn }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX11: {{.*}}
 ; GFX8: {{.*}}
 ; GFX9: {{.*}}
