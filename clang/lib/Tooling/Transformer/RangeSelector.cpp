@@ -187,43 +187,50 @@ RangeSelector transformer::merge(RangeSelector First, RangeSelector Second) {
     Expected<CharSourceRange> SecondRange = Second(Result);
     if (!SecondRange)
       return SecondRange.takeError();
+
+    SourceLocation FirstB = FirstRange->getBegin();
+    SourceLocation FirstE = FirstRange->getEnd();
+    SourceLocation SecondB = SecondRange->getBegin();
+    SourceLocation SecondE = SecondRange->getEnd();
     // Result begin loc is the minimum of the begin locs of the two ranges.
-    SourceLocation B = FirstRange->getBegin() < SecondRange->getBegin()
-                           ? FirstRange->getBegin()
-                           : SecondRange->getBegin();
+    SourceLocation B =
+        Result.SourceManager->isBeforeInTranslationUnit(FirstB, SecondB)
+            ? FirstB
+            : SecondB;
     if (FirstRange->isTokenRange() && SecondRange->isTokenRange()) {
       // Both ranges are token ranges. Just take the maximum of their end locs.
-      SourceLocation E = FirstRange->getEnd() > SecondRange->getEnd()
-                             ? FirstRange->getEnd()
-                             : SecondRange->getEnd();
+      SourceLocation E =
+          Result.SourceManager->isBeforeInTranslationUnit(FirstE, SecondE)
+              ? SecondE
+              : FirstE;
       return CharSourceRange::getTokenRange(B, E);
     }
-    SourceLocation FirstE = FirstRange->getEnd();
+
     if (FirstRange->isTokenRange()) {
       // The end of the first range is a token. Need to resolve the token to a
       // char range.
-      CharSourceRange EndRange = Lexer::makeFileCharRange(
-          CharSourceRange::getTokenRange(FirstRange->getEnd()),
-          *Result.SourceManager, Result.Context->getLangOpts());
-      if (EndRange.isInvalid())
+      FirstE = Lexer::getLocForEndOfToken(FirstE, /*Offset=*/0,
+                                          *Result.SourceManager,
+                                          Result.Context->getLangOpts());
+      if (FirstE.isInvalid())
         return invalidArgumentError(
             "merge: can't resolve first token range to valid source range");
-      FirstE = EndRange.getEnd();
     }
-    SourceLocation SecondE = SecondRange->getEnd();
     if (SecondRange->isTokenRange()) {
       // The end of the second range is a token. Need to resolve the token to a
       // char range.
-      CharSourceRange EndRange = Lexer::makeFileCharRange(
-          CharSourceRange::getTokenRange(SecondRange->getEnd()),
-          *Result.SourceManager, Result.Context->getLangOpts());
-      if (EndRange.isInvalid())
+      SecondE = Lexer::getLocForEndOfToken(SecondE, /*Offset=*/0,
+                                           *Result.SourceManager,
+                                           Result.Context->getLangOpts());
+      if (SecondE.isInvalid())
         return invalidArgumentError(
             "merge: can't resolve second token range to valid source range");
-      SecondE = EndRange.getEnd();
     }
     // Result end loc is the maximum of the end locs of the two ranges.
-    SourceLocation E = FirstE > SecondE ? FirstE : SecondE;
+    SourceLocation E =
+        Result.SourceManager->isBeforeInTranslationUnit(FirstE, SecondE)
+            ? SecondE
+            : FirstE;
     return CharSourceRange::getCharRange(B, E);
   };
 }
