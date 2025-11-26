@@ -419,45 +419,6 @@ using __has_exactly_bidirectional_iterator_category _LIBCPP_NODEBUG =
                       __has_iterator_category_convertible_to<_Tp, bidirectional_iterator_tag>::value &&
                           !__has_iterator_category_convertible_to<_Tp, random_access_iterator_tag>::value>;
 
-template <class _InputIterator>
-using __iterator_value_type _LIBCPP_NODEBUG = typename iterator_traits<_InputIterator>::value_type;
-
-#if _LIBCPP_STD_VER >= 23
-template <class _InputIterator>
-using __iter_key_type _LIBCPP_NODEBUG = remove_const_t<tuple_element_t<0, __iterator_value_type<_InputIterator>>>;
-
-template <class _InputIterator>
-using __iter_mapped_type _LIBCPP_NODEBUG = tuple_element_t<1, __iterator_value_type<_InputIterator>>;
-
-template <class _InputIterator>
-using __iter_to_alloc_type _LIBCPP_NODEBUG =
-    pair<const tuple_element_t<0, __iterator_value_type<_InputIterator>>,
-         tuple_element_t<1, __iterator_value_type<_InputIterator>>>;
-#else
-template <class _InputIterator>
-using __iter_key_type _LIBCPP_NODEBUG = __remove_const_t<typename __iterator_value_type<_InputIterator>::first_type>;
-
-template <class _InputIterator>
-using __iter_mapped_type _LIBCPP_NODEBUG = typename __iterator_value_type<_InputIterator>::second_type;
-
-template <class _InputIterator>
-using __iter_to_alloc_type _LIBCPP_NODEBUG =
-    pair<const typename __iterator_value_type<_InputIterator>::first_type,
-         typename __iterator_value_type<_InputIterator>::second_type>;
-#endif // _LIBCPP_STD_VER >= 23
-
-template <class _Iter>
-using __iterator_iterator_category _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::iterator_category;
-
-template <class _Iter>
-using __iterator_pointer _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::pointer;
-
-template <class _Iter>
-using __iterator_difference_type _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::difference_type;
-
-template <class _Iter>
-using __iterator_reference _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::reference;
-
 #if _LIBCPP_STD_VER >= 20
 
 // [readable.traits]
@@ -472,7 +433,59 @@ using iter_value_t =
                            indirectly_readable_traits<remove_cvref_t<_Ip> >,
                            iterator_traits<remove_cvref_t<_Ip> > >::value_type;
 
+template <class _Iter>
+using __iter_value_t _LIBCPP_NODEBUG = iter_value_t<_Iter>;
+
+template <class _Iter>
+using __iter_difference_t _LIBCPP_NODEBUG = iter_difference_t<_Iter>;
+
+template <class _Iter>
+using __iter_reference_t _LIBCPP_NODEBUG = iter_reference_t<_Iter>;
+
+template <class _Iter>
+using __iter_reference_t _LIBCPP_NODEBUG = iter_reference_t<_Iter>;
+
+#else
+
+template <class _Iter>
+using __iter_value_t _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::value_type;
+
+template <class _Iter>
+using __iter_difference_t _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::difference_type;
+
+template <class _Iter>
+using __iter_reference_t _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::reference;
+
 #endif // _LIBCPP_STD_VER >= 20
+
+#if _LIBCPP_STD_VER >= 23
+template <class _InputIterator>
+using __iter_key_type _LIBCPP_NODEBUG = remove_const_t<tuple_element_t<0, __iter_value_t<_InputIterator>>>;
+
+template <class _InputIterator>
+using __iter_mapped_type _LIBCPP_NODEBUG = tuple_element_t<1, __iter_value_t<_InputIterator>>;
+
+template <class _InputIterator>
+using __iter_to_alloc_type _LIBCPP_NODEBUG =
+    pair<const tuple_element_t<0, __iter_value_t<_InputIterator>>, tuple_element_t<1, __iter_value_t<_InputIterator>>>;
+#else
+template <class _InputIterator>
+using __iter_key_type _LIBCPP_NODEBUG = __remove_const_t<typename __iter_value_t<_InputIterator>::first_type>;
+
+template <class _InputIterator>
+using __iter_mapped_type _LIBCPP_NODEBUG = typename __iter_value_t<_InputIterator>::second_type;
+
+template <class _InputIterator>
+using __iter_to_alloc_type _LIBCPP_NODEBUG =
+    pair<const typename __iter_value_t<_InputIterator>::first_type,
+         typename __iter_value_t<_InputIterator>::second_type>;
+#endif // _LIBCPP_STD_VER >= 23
+
+template <class _Iter>
+using __iterator_iterator_category _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::iterator_category;
+
+template <class _Iter>
+using __iterator_pointer _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::pointer;
 
 _LIBCPP_END_NAMESPACE_STD
 
