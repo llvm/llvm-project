@@ -2248,11 +2248,25 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
       Flags |= DWARF2_FLAG_IS_STMT;
   }
 
-  RecordSourceLine(DL, Flags);
+  // Call the hook that allows targets to customize source line recording
+  recordSourceLineHook(*MI, DL, Flags);
 
   // If we're not at line 0, remember this location.
   if (DL.getLine())
     PrevInstLoc = DL;
+}
+
+// Default implementation of target-specific hook for custom source line
+// recording
+void DwarfDebug::recordSourceLineHook(const MachineInstr &MI,
+                                      const DebugLoc &DL, unsigned Flags) {
+  SmallString<128> LocationString;
+  if (Asm->OutStreamer->isVerboseAsm()) {
+    raw_svector_ostream OS(LocationString);
+    DL.print(OS);
+  }
+  recordSourceLine(DL.getLine(), DL.getCol(), DL.getScope(), Flags,
+                   LocationString);
 }
 
 // Returns the position where we should place prologue_end, potentially nullptr,
@@ -2748,6 +2762,9 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
 
   Asm->OutStreamer->getContext().setDwarfCompileUnitID(
       getDwarfCompileUnitIDForLineTable(CU));
+
+  // Call target-specific hook for custom initialization
+  beginFunctionHook(*MF);
 
   // Record beginning of function.
   PrologEndLoc = emitInitialLocDirective(

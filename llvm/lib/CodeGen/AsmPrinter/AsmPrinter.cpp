@@ -482,6 +482,8 @@ const MCSection *AsmPrinter::getCurrentSection() const {
   return OutStreamer->getCurrentSectionOnly();
 }
 
+DwarfDebug *AsmPrinter::createDwarfDebug() { return new DwarfDebug(this); }
+
 void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -603,7 +605,7 @@ bool AsmPrinter::doInitialization(Module &M) {
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
-        DD = new DwarfDebug(this);
+        DD = createDwarfDebug();
         Handlers.push_back(std::unique_ptr<DwarfDebug>(DD));
       }
     }
