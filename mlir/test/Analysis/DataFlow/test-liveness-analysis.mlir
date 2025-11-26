@@ -192,6 +192,7 @@ func.func private @private0(%0 : i32) -> i32 {
 // CHECK-NEXT:  operand #4: not live
 // CHECK-NEXT:  result #0: live
 // CHECK-NEXT:  result #1: not live
+// CHECK-NEXT:  region: #0:
 // CHECK-NEXT:  argument: #0: live
 // CHECK-NEXT:  argument: #1: not live
 // CHECK-NEXT:  argument: #2: not live
