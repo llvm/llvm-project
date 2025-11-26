@@ -518,29 +518,8 @@ static bool expandProtectedFieldPtr(Function &Intr) {
     OperandBundleDef DSBundle("deactivation-symbol", DS);
 
     for (Use &U : llvm::make_early_inc_range(Call->uses())) {
-      if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
-        if (isa<PointerType>(LI->getType())) {
-          IRBuilder<> B(LI);
-          auto *NewLI = cast<LoadInst>(LI->clone());
-          NewLI->setOperand(0, Pointer);
-          B.Insert(NewLI);
-          auto *LIInt = B.CreatePtrToInt(NewLI, B.getInt64Ty());
-          Value *Auth;
-          if (UseHWEncoding) {
-            Auth = CreateAuth(B, LIInt, Disc, DSBundle);
-          } else {
-            // FIXME: These don't have deactivation symbol attachments, we'll
-            // need to figure out how to add them.
-            Auth = B.CreateAdd(LIInt, Disc);
-            Auth = B.CreateIntrinsic(
-                Auth->getType(), Intrinsic::fshr,
-                {Auth, Auth, ConstantInt::get(Auth->getType(), 16)});
-          }
-          LI->replaceAllUsesWith(B.CreateIntToPtr(Auth, B.getPtrTy()));
-          LI->eraseFromParent();
-          continue;
-        }
-      }
+      // Insert code to encode each pointer stored to the pointer returned by
+      // the intrinsic.
       if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
         if (U.getOperandNo() == 1 &&
             isa<PointerType>(SI->getValueOperand()->getType())) {
@@ -565,6 +544,32 @@ static bool expandProtectedFieldPtr(Function &Intr) {
         }
       }
 
+      // Insert code to decode each pointer loaded from the pointer returned by
+      // the intrinsic. This is the inverse of the encode operation implemented
+      // above.
+      if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
+        if (isa<PointerType>(LI->getType())) {
+          IRBuilder<> B(LI);
+          auto *NewLI = cast<LoadInst>(LI->clone());
+          NewLI->setOperand(0, Pointer);
+          B.Insert(NewLI);
+          auto *LIInt = B.CreatePtrToInt(NewLI, B.getInt64Ty());
+          Value *Auth;
+          if (UseHWEncoding) {
+            Auth = CreateAuth(B, LIInt, Disc, DSBundle);
+          } else {
+            // FIXME: These don't have deactivation symbol attachments, we'll
+            // need to figure out how to add them.
+            Auth = B.CreateAdd(LIInt, Disc);
+            Auth = B.CreateIntrinsic(
+                Auth->getType(), Intrinsic::fshr,
+                {Auth, Auth, ConstantInt::get(Auth->getType(), 16)});
+          }
+          LI->replaceAllUsesWith(B.CreateIntToPtr(Auth, B.getPtrTy()));
+          LI->eraseFromParent();
+          continue;
+        }
+      }
       // Comparisons against null cannot be used to recover the original
       // pointer so we replace them with comparisons against the original
       // pointer.
@@ -603,11 +608,9 @@ static bool expandProtectedFieldPtr(Function &Intr) {
       GlobalValue *DS = GlobalAlias::create(
           Int8Ty, 0, GlobalValue::ExternalLinkage, OldDS->getName(), Nop, &M);
       DS->setVisibility(GlobalValue::HiddenVisibility);
-      if (OldDS) {
-        DS->takeName(OldDS);
-        OldDS->replaceAllUsesWith(DS);
-        OldDS->eraseFromParent();
-      }
+      DS->takeName(OldDS);
+      OldDS->replaceAllUsesWith(DS);
+      OldDS->eraseFromParent();
     }
   }
   return true;
