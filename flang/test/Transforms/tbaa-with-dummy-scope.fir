@@ -24,21 +24,18 @@
 // CHECK: #[[TARGETDATA:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[TEST1ANYDATA]], 0>}>
 // CHECK: #[[$ATTR_6:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[$ATTR_4]], 0>}>
 // CHECK: #[[$ATTR_7:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[$ATTR_5]], 0>}>
-// CHECK: #[[TEST_Y:.+]] = #llvm.tbaa_type_desc<id = "target data/_QFtestEy", members = {<#[[TARGETDATA]], 0>}>
-// CHECK: #[[TEST_X:.+]] = #llvm.tbaa_type_desc<id = "target data/_QFtestEx", members = {<#[[TARGETDATA]], 0>}>
+// CHECK: #[[TARGETDATA_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[TARGETDATA]], access_type = #[[TARGETDATA]], offset = 0>
 // CHECK: #[[$ATTR_8:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtestFinnerEy", members = {<#[[$ATTR_6]], 0>}>
 // CHECK: #[[$ATTR_9:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtestFinnerEx", members = {<#[[$ATTR_6]], 0>}>
 // CHECK: #[[$ATTR_10:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtestFinnerEy", members = {<#[[$ATTR_7]], 0>}>
 // CHECK: #[[$ATTR_11:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtestFinnerEx", members = {<#[[$ATTR_7]], 0>}>
-// CHECK: #[[TEST_Y_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[TEST_Y]], access_type = #[[TEST_Y]], offset = 0>
-// CHECK: #[[TEST_X_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[TEST_X]], access_type = #[[TEST_X]], offset = 0>
 // CHECK: #[[$ATTR_12:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_8]], access_type = #[[$ATTR_8]], offset = 0>
 // CHECK: #[[$ATTR_13:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_9]], access_type = #[[$ATTR_9]], offset = 0>
 // CHECK: #[[$ATTR_14:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_10]], access_type = #[[$ATTR_10]], offset = 0>
 // CHECK: #[[$ATTR_15:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_11]], access_type = #[[$ATTR_11]], offset = 0>
 // CHECK:   func.func @test1(
-// CHECK:           %[[VAL_5:.*]] = fir.load %{{.*}} {tbaa = [#[[TEST_Y_TAG]]]} : !fir.ref<f32>
-// CHECK:           fir.store %{{.*}} {tbaa = [#[[TEST_X_TAG]]]} : !fir.ref<f32>
+// CHECK:           %[[VAL_5:.*]] = fir.load %{{.*}} {tbaa = [#[[TARGETDATA_TAG]]]} : !fir.ref<f32>
+// CHECK:           fir.store %{{.*}} {tbaa = [#[[TARGETDATA_TAG]]]} : !fir.ref<f32>
 // CHECK:           %[[VAL_6:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_9:.*]] = fir.load %{{.*}} {tbaa = [#[[$ATTR_12]]]} : !fir.ref<f32>
 // CHECK:           fir.store %{{.*}} {tbaa = [#[[$ATTR_13]]]} : !fir.ref<f32>

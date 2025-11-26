@@ -692,13 +692,11 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to dummy argument at " << *op << "\n");
     std::string name = getFuncArgName(llvm::cast<mlir::Value>(source.origin.u));
-    // If it is a TARGET or POINTER, then we do not care about the name,
-    // because the tag points to the root of the subtree currently.
-    if (source.isPointer()) {
+    // POINTERS can alias with any POINTER or TARGET. Assume that TARGET dummy
+    // arguments might alias with each other (because of the "TARGET" hole for
+    // dummy arguments). See flang/docs/Aliasing.md.
+    if (source.isTargetOrPointer()) {
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
-    } else if (source.isTarget()) {
-      tag =
-          state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag(name);
     } else if (!name.empty()) {
       tag = state.getFuncTreeWithScope(func, scopeOp)
                 .dummyArgDataTree.getTag(name);
@@ -722,7 +720,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       // Pointers can alias with any pointer or target.
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
     } else if (source.isTarget()) {
-      // Targets could alias with any pointer but not with eachother.
+      // Targets could alias with any pointer but not with each other.
       tag = state.getFuncTreeWithScope(func, scopeOp)
                 .targetDataTree.getTag(globalName);
     } else {
@@ -787,8 +785,8 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       // Pointer can alias with any pointer or target so that gets the root.
       if (source.isPointer())
         tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
-      // Targets could alias with any pointer but not with eachother so they get
-      // their own node inside of the target data tree.
+      // Targets could alias with any pointer but not with each other so they
+      // get their own node inside of the target data tree.
       else if (source.isTarget())
         tag = state.getFuncTreeWithScope(func, scopeOp)
                   .targetDataTree.getTag(name);

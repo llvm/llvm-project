@@ -55,7 +55,7 @@
 //    |  |- "dummy arg data/_QFtest1Edummyas"
 //    |  |- "dummy arg data/_QFtest1Edummya"
 //    |
-//    |- "target data" <--- pointers would go here
+//    |- "target data" <--- all pointers and target dummy arguments go here
 //    |  |- "target data/_QMdataEglobt"
 //    |  |- "target data/_QMdataEglobat"
 //    |  |- "target data/_QFtest1Elocalt"
@@ -88,11 +88,8 @@
 // ALL: #[[GLOBAVAR:.+]] = #llvm.tbaa_type_desc<id = "direct data/_QMdataEgloba", members = {<#[[DIRECTDATA]], 0>}>
 // ALL: #[[GLOBATVAR:.+]] = #llvm.tbaa_type_desc<id = "target data/_QMdataEglobat", members = {<#[[TARGETDATA]], 0>}>
 // ALL: #[[DUMMYFVAR:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtest1Edummyf", members = {<#[[DUMMYDATA]], 0>}>
-// ALL: #[[DUMMYFTVAR:.+]] = #llvm.tbaa_type_desc<id = "target data/_QFtest1Edummyft", members = {<#[[TARGETDATA]], 0>}>
 // ALL: #[[DUMMYASVAR:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtest1Edummyas", members = {<#[[DUMMYDATA]], 0>}>
-// ALL: #[[DUMMYASTVAR:.+]] = #llvm.tbaa_type_desc<id = "target data/_QFtest1Edummyast", members = {<#[[TARGETDATA]], 0>}>
 // ALL: #[[DUMMYAVAR:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtest1Edummya", members = {<#[[DUMMYDATA]], 0>}>
-// ALL: #[[DUMMYATVAR:.+]] = #llvm.tbaa_type_desc<id = "target data/_QFtest1Edummyat", members = {<#[[TARGETDATA]], 0>}>
 // ALL: #[[LOCALVAR:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFtest1Elocal", members = {<#[[LOCALDATA]], 0>}>
 // ALL: #[[LOCALTVAR:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFtest1Elocalt", members = {<#[[LOCALDATA]], 0>}>
 // ALL: #[[LOCALAVAR:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFtest1Elocala", members = {<#[[LOCALDATA]], 0>}>
@@ -103,11 +100,8 @@
 // ALL: #[[GLOBATAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLOBAVAR]], access_type = #[[GLOBAVAR]], offset = 0>
 // ALL: #[[GLOBATTAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLOBATVAR]], access_type = #[[GLOBATVAR]], offset = 0>
 // ALL: #[[DUMMYFTAG:.+]] = #llvm.tbaa_tag<base_type = #[[DUMMYFVAR]], access_type = #[[DUMMYFVAR]], offset = 0>
-// ALL: #[[DUMMYFTTAG:.+]] = #llvm.tbaa_tag<base_type = #[[DUMMYFTVAR]], access_type = #[[DUMMYFTVAR]], offset = 0>
 // ALL: #[[DUMMYASTAG:.+]] = #llvm.tbaa_tag<base_type = #[[DUMMYASVAR]], access_type = #[[DUMMYASVAR]], offset = 0>
-// ALL: #[[DUMMYASTTAG:.+]] = #llvm.tbaa_tag<base_type = #[[DUMMYASTVAR]], access_type = #[[DUMMYASTVAR]], offset = 0>
 // ALL: #[[DUMMYATAG:.+]] = #llvm.tbaa_tag<base_type = #[[DUMMYAVAR]], access_type = #[[DUMMYAVAR]], offset = 0>
-// ALL: #[[DUMMYATTAG:.+]] = #llvm.tbaa_tag<base_type = #[[DUMMYATVAR]], access_type = #[[DUMMYATVAR]], offset = 0>
 // ALL: #[[LOCALTAG:.+]] = #llvm.tbaa_tag<base_type = #[[LOCALVAR]], access_type = #[[LOCALVAR]], offset = 0>
 // ALL: #[[LOCALTTAG:.+]] = #llvm.tbaa_tag<base_type = #[[LOCALTVAR]], access_type = #[[LOCALTVAR]], offset = 0>
 // ALL: #[[LOCALATAG:.+]] = #llvm.tbaa_tag<base_type = #[[LOCALAVAR]], access_type = #[[LOCALAVAR]], offset = 0>
@@ -231,7 +225,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     fir.store %cst to %50 : !fir.ref<f32>
     %51 = fir.array_coor %7(%5) %c1 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
 // real, target :: dummyft(10)
-// ALL: fir.store{{.*}}{tbaa = [#[[DUMMYFTTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}{tbaa = [#[[TARGETTAG]]]} : !fir.ref<f32>
     fir.store %cst to %51 : !fir.ref<f32>
     %52 = fir.array_coor %2 %c1 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // real :: dummyas(:)
@@ -239,7 +233,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     fir.store %cst to %52 : !fir.ref<f32>
     %53 = fir.array_coor %3 %c1 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // real, target :: dummyast(:)
-// ALL: fir.store{{.*}}{tbaa = [#[[DUMMYASTTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}{tbaa = [#[[TARGETTAG]]]} : !fir.ref<f32>
     fir.store %cst to %53 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
     %54 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -257,7 +251,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %62 = fir.shape_shift %61#0, %61#1 : (index, index) -> !fir.shapeshift<1>
     %63 = fir.array_coor %60(%62) %c1 : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
 // real, allocatable, target :: dummyat(:)
-// ALL: fir.store{{.*}}{tbaa = [#[[DUMMYATTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}{tbaa = [#[[TARGETTAG]]]} : !fir.ref<f32>
     fir.store %cst to %63 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
     %64 = fir.load %8 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>

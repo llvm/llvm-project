@@ -102,9 +102,9 @@ struct TBAATree {
   //        |
   //        |- <dummy arg name 1>
   //        |- <dummy arg name 2>
-  //      |- "target data" <-- Any POINTER variable goes here
+  //      |- "target data" <-- Any POINTER variable or TARGET dummy arg
   //        |
-  //        |- <target name 1> <--- any TARGET variable goes here
+  //        |- <target name 1> <--- any TARGET variable which isn't a dummy arg
   //        |- <target name 2>
   //      |- "allocated data"
   //        |
