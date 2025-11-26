@@ -4860,7 +4860,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     const auto *VecT = VecQT->castAs<VectorType>();
     unsigned NumElems = VecT->getNumElements();
     unsigned ElemBits = S.getASTContext().getTypeSize(VecT->getElementType());
-    constexpr unsigned LaneBits = 128u;
+    unsigned LaneBits = 128u;
     unsigned NumLanes = (NumElems * ElemBits) / LaneBits;
     unsigned NumElemsPerLane = LaneBits / ElemBits;
 

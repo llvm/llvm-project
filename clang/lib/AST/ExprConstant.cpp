@@ -50,7 +50,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
-#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -13540,7 +13539,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
     QualType ElemQT = VT->getElementType();
     unsigned ElemBits = Info.Ctx.getTypeSize(ElemQT);
-    constexpr unsigned LaneBits = 128u;
+    unsigned LaneBits = 128u;
     unsigned NumLanes = (NumElems * ElemBits) / LaneBits;
     unsigned NumElemsPerLane = LaneBits / ElemBits;
 
