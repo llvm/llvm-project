@@ -73,6 +73,7 @@
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Instrumentation/AllocToken.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
@@ -1451,6 +1452,7 @@ ModulePassManager
 PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
                                              ThinOrFullLTOPhase LTOPhase) {
   const bool LTOPreLink = isLTOPreLink(LTOPhase);
+  const bool LTOPostLink = isLTOPostLink(LTOPhase);
   ModulePassManager MPM;
 
   // Run partial inlining pass to partially inline functions that have
@@ -1614,6 +1616,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Add the core optimizing pipeline.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM),
                                                 PTO.EagerlyInvalidateAnalyses));
+
+  if (LTOPostLink)
+    MPM.addPass(AllocTokenPass());
 
   invokeOptimizerLastEPCallbacks(MPM, Level, LTOPhase);
 
@@ -1853,6 +1858,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
                                    lowertypetests::DropTestKind::Assume));
     MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::ThinLTOPostLink));
+    MPM.addPass(AllocTokenPass());
     // Drop available_externally and unreferenced globals. This is necessary
     // with ThinLTO in order to avoid leaving undefined references to dead
     // globals in the object file.
@@ -1913,6 +1919,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                    lowertypetests::DropTestKind::Assume));
 
     MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::FullLTOPostLink));
+    MPM.addPass(AllocTokenPass());
 
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
@@ -2000,6 +2007,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                    lowertypetests::DropTestKind::Assume));
 
     MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::FullLTOPostLink));
+    MPM.addPass(AllocTokenPass());
 
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
@@ -2234,6 +2242,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(CGProfilePass(/*InLTOPostLink=*/true));
 
   MPM.addPass(CoroCleanupPass());
+  MPM.addPass(AllocTokenPass());
 
   invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
@@ -2350,6 +2359,9 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   }
 
   MPM.addPass(buildCoroWrapper(Phase));
+
+  if (isLTOPostLink(Phase))
+    MPM.addPass(AllocTokenPass());
 
   invokeOptimizerLastEPCallbacks(MPM, Level, Phase);
 

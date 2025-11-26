@@ -234,12 +234,31 @@ public:
   }
 };
 
-// Apply opt overrides.
-AllocTokenOptions transformOptionsFromCl(AllocTokenOptions Opts) {
+// Apply opt overrides and module flags.
+static AllocTokenOptions resolveOptions(AllocTokenOptions Opts,
+                                        const Module &M) {
   if (!Opts.MaxTokens.has_value())
     Opts.MaxTokens = ClMaxTokens;
   Opts.FastABI |= ClFastABI;
   Opts.Extended |= ClExtended;
+
+  auto IntModuleFlagOrNull = [&](StringRef Key) {
+    return mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key));
+  };
+
+  if (auto *S = dyn_cast_or_null<MDString>(M.getModuleFlag("alloc-token-mode")))
+    if (auto Mode = getAllocTokenModeFromString(S->getString()))
+      Opts.Mode = *Mode;
+
+  if (auto *Val = IntModuleFlagOrNull("alloc-token-max"))
+    Opts.MaxTokens = Val->getZExtValue();
+
+  if (auto *Val = IntModuleFlagOrNull("alloc-token-fast-abi"))
+    Opts.FastABI |= Val->isOne();
+
+  if (auto *Val = IntModuleFlagOrNull("alloc-token-extended"))
+    Opts.Extended |= Val->isOne();
+
   return Opts;
 }
 
@@ -247,7 +266,7 @@ class AllocToken {
 public:
   explicit AllocToken(AllocTokenOptions Opts, Module &M,
                       ModuleAnalysisManager &MAM)
-      : Options(transformOptionsFromCl(std::move(Opts))), Mod(M),
+      : Options(resolveOptions(std::move(Opts), M)), Mod(M),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
         Mode(IncrementMode(*IntPtrTy, *Options.MaxTokens)) {
     switch (Options.Mode) {
