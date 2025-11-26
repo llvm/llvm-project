@@ -30,8 +30,9 @@ jobs:
           - windows-11-arm
     steps:
       - name: Setup crlf
+        shell: bash
         run: |
-          cat  C:/hostedtoolcache/windows/Python/3.9.13/x64/pyconfig.h
+          cat  /c/hostedtoolcache/windows/Python/3.9.13/x64/pyconfig.h
           git config --global core.autocrlf false
 #      - name: Setup Python
 #        id: setup-python
