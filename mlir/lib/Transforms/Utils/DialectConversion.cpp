@@ -1205,17 +1205,14 @@ void BlockTypeConversionRewrite::rollback() {
   getNewBlock()->replaceAllUsesWith(getOrigBlock());
 }
 
-/// Replace all uses of `from` with `repl`.
-static void
-performReplaceValue(RewriterBase &rewriter, Value from, Value repl,
-                    function_ref<bool(OpOperand &)> functor = nullptr) {
+void ReplaceValueRewrite::commit(RewriterBase &rewriter) {
+  Value repl = rewriterImpl.findOrBuildReplacementValue(value, converter);
+  if (!repl)
+    return;
+
   if (isa<BlockArgument>(repl)) {
     // `repl` is a block argument. Directly replace all uses.
-    if (functor) {
-      rewriter.replaceUsesWithIf(from, repl, functor);
-    } else {
-      rewriter.replaceAllUsesWith(from, repl);
-    }
+    rewriter.replaceAllUsesWith(value, repl);
     return;
   }
 
@@ -1244,21 +1241,12 @@ performReplaceValue(RewriterBase &rewriter, Value from, Value repl,
   // `ConversionPatternRewriter` API with the normal `RewriterBase` API.
   Operation *replOp = repl.getDefiningOp();
   Block *replBlock = replOp->getBlock();
-  rewriter.replaceUsesWithIf(from, repl, [&](OpOperand &operand) {
+  rewriter.replaceUsesWithIf(value, repl, [&](OpOperand &operand) {
     Operation *user = operand.getOwner();
     bool result =
         user->getBlock() != replBlock || replOp->isBeforeInBlock(user);
-    if (functor)
-      result &= functor(operand);
     return result;
   });
-}
-
-void ReplaceValueRewrite::commit(RewriterBase &rewriter) {
-  Value repl = rewriterImpl.findOrBuildReplacementValue(value, converter);
-  if (!repl)
-    return;
-  performReplaceValue(rewriter, value, repl);
 }
 
 void ReplaceValueRewrite::rollback() {
@@ -2000,8 +1988,11 @@ void ConversionPatternRewriterImpl::replaceValueUses(
     Value repl = repls.front();
     if (!repl)
       return;
-
-    performReplaceValue(r, from, repl, functor);
+    if (functor) {
+      r.replaceUsesWithIf(from, repl, functor);
+    } else {
+      r.replaceAllUsesWith(from, repl);
+    }
     return;
   }
 
