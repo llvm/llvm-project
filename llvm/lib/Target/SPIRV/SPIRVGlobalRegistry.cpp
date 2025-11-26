@@ -21,6 +21,7 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
@@ -970,8 +971,15 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeForwardPointer(
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeFunction(
-    SPIRVType *RetType, const SmallVectorImpl<SPIRVType *> &ArgTypes,
+    const FunctionType *Ty, SPIRVType *RetType,
+    const SmallVectorImpl<SPIRVType *> &ArgTypes,
     MachineIRBuilder &MIRBuilder) {
+  if (Ty->isVarArg()) {
+    Function &Fn = MIRBuilder.getMF().getFunction();
+    Ty->getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "SPIR-V does not support variadic functions",
+        MIRBuilder.getDebugLoc()));
+  }
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeFunction)
                    .addDef(createTypeVReg(MIRBuilder))
@@ -988,7 +996,8 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeFunctionWithArgs(
     MachineIRBuilder &MIRBuilder) {
   if (const MachineInstr *MI = findMI(Ty, false, &MIRBuilder.getMF()))
     return MI;
-  const MachineInstr *NewMI = getOpTypeFunction(RetType, ArgTypes, MIRBuilder);
+  const MachineInstr *NewMI =
+      getOpTypeFunction(cast<FunctionType>(Ty), RetType, ArgTypes, MIRBuilder);
   add(Ty, false, NewMI);
   return finishCreatingSPIRVType(Ty, NewMI);
 }
@@ -1097,7 +1106,7 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     for (const auto &ParamTy : FType->params())
       ParamTypes.push_back(findSPIRVType(ParamTy, MIRBuilder, AccQual,
                                          ExplicitLayoutRequired, EmitIR));
-    return getOpTypeFunction(RetTy, ParamTypes, MIRBuilder);
+    return getOpTypeFunction(FType, RetTy, ParamTypes, MIRBuilder);
   }
 
   unsigned AddrSpace = typeToAddressSpace(Ty);
@@ -1697,11 +1706,16 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(unsigned BitWidth,
   MachineIRBuilder MIRBuilder(DepMBB, DepMBB.getFirstNonPHI());
   const MachineInstr *NewMI =
       createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        return BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
-                       MIRBuilder.getDL(), TII.get(SPIRVOPcode))
-            .addDef(createTypeVReg(CurMF->getRegInfo()))
-            .addImm(BitWidth)
-            .addImm(0);
+        auto NewTypeMI = BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
+                                 MIRBuilder.getDL(), TII.get(SPIRVOPcode))
+                             .addDef(createTypeVReg(CurMF->getRegInfo()))
+                             .addImm(BitWidth);
+        // Don't add Encoding to FP type
+        if (!Ty->isFloatTy()) {
+          return NewTypeMI.addImm(0);
+        } else {
+          return NewTypeMI;
+        }
       });
   add(Ty, false, NewMI);
   return finishCreatingSPIRVType(Ty, NewMI);

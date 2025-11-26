@@ -57,7 +57,7 @@ end
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareMapperConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare mapper
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpMapperSpecifier
-!PARSE-TREE: | | string = 't.omp.default.mapper'
+!PARSE-TREE: | | string = 't_omp_default_mapper'
 !PARSE-TREE: | | TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 't'
 !PARSE-TREE: | | Name = 'v'

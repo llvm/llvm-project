@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/ValueObject/DILParser.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Target/ExecutionContextScope.h"
-#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILEval.h"
 #include "llvm/ADT/StringRef.h"
@@ -93,9 +93,12 @@ ASTNodeUP DILParser::ParseExpression() { return ParseUnaryExpression(); }
 //  unary_operator:
 //    "&"
 //    "*"
+//    "+"
+//    "-"
 //
 ASTNodeUP DILParser::ParseUnaryExpression() {
-  if (CurToken().IsOneOf({Token::amp, Token::star})) {
+  if (CurToken().IsOneOf(
+          {Token::amp, Token::star, Token::minus, Token::plus})) {
     Token token = CurToken();
     uint32_t loc = token.GetLocation();
     m_dil_lexer.Advance();
@@ -107,7 +110,12 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
     case Token::amp:
       return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::AddrOf,
                                            std::move(rhs));
-
+    case Token::minus:
+      return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Minus,
+                                           std::move(rhs));
+    case Token::plus:
+      return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Plus,
+                                           std::move(rhs));
     default:
       llvm_unreachable("invalid token kind");
     }
