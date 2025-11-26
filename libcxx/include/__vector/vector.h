@@ -83,7 +83,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
-class vector {
+class _LIBCPP_PFP vector {
   template <class _Up, class _Alloc>
   using __split_buffer _LIBCPP_NODEBUG = std::__split_buffer<_Up, _Alloc, __split_buffer_pointer_layout>;
 
