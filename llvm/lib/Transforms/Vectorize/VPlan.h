@@ -2405,7 +2405,7 @@ struct RdxUnordered {
 };
 using ReductionStyle = std::variant<RdxOrdered, RdxInLoop, RdxUnordered>;
 
-static ReductionStyle getReductionStyle(bool InLoop, bool Ordered,
+inline ReductionStyle getReductionStyle(bool InLoop, bool Ordered,
                                         unsigned ScaleFactor) {
   assert((!Ordered || InLoop) && "Ordered implies in-loop");
   if (Ordered)
