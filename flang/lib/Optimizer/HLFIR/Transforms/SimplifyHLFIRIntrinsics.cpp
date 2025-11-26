@@ -948,9 +948,7 @@ private:
       [[maybe_unused]] const llvm::SmallVectorImpl<mlir::Value> &extents)
       final {
     return {
-        // check element type, and use
-        // fir::factory::create{Integer or Real}Constant
-        fir::factory::createZeroValue(builder, loc, getResultElementType())};
+        fir::factory::createOneValue(builder, loc, getResultElementType())};
   }
   virtual llvm::SmallVector<mlir::Value>
   reduceOneElement(const llvm::SmallVectorImpl<mlir::Value> &currentValue,
