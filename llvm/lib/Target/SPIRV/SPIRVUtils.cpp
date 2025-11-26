@@ -87,8 +87,7 @@ FunctionType *getOriginalFunctionType(const Function &F) {
 
 FunctionType *getOriginalFunctionType(const CallBase &CB) {
   return extractFunctionTypeFromMetadata(
-      CB.getParent()->getParent()->getParent()->getNamedMetadata(
-          "spv.mutated_callsites"),
+      CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
       CB.getFunctionType(), CB.getName());
 }
 } // Namespace SPIRV
