@@ -900,15 +900,14 @@ bool StackFrameList::IsPreviousFrameHidden(lldb_private::StackFrame &frame) {
 
 std::wstring StackFrameList::FrameMarker(lldb::StackFrameSP frame_sp,
                                          lldb::StackFrameSP selected_frame_sp) {
-  if (frame_sp == selected_frame_sp) {
+  if (frame_sp == selected_frame_sp)
     return Terminal::SupportsUnicode() ? L" * " : L"* ";
-  } else if (!Terminal::SupportsUnicode()) {
+  else if (!Terminal::SupportsUnicode())
     return L"  ";
-  } else if (IsPreviousFrameHidden(*frame_sp)) {
+  else if (IsPreviousFrameHidden(*frame_sp))
     return L" ﹉";
-  } else if (IsNextFrameHidden(*frame_sp)) {
+  else if (IsNextFrameHidden(*frame_sp))
     return L" ﹍";
-  }
   return L" 　";
 }
 
