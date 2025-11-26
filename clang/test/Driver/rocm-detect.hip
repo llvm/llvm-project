@@ -94,6 +94,20 @@
 // RUN:   --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-REL %s
 
+// Test detecting ROCm installation from clang installed in /opt/rocm/lib/llvm/bin.
+// This exercises the RocmInstallationDetector logic that backs up from
+// /opt/rocm/lib/llvm/bin to the ROCm root, while avoiding dependence on any
+// real /opt/rocm installation by using a synthetic sysroot under %t.
+// RUN: rm -rf %t/*
+// RUN: mkdir -p %t/sysroot/opt/rocm/lib/llvm/bin
+// Copy the built clang binary so that its InstalledDir and the real path used
+// by the driver both reside under /opt/rocm/lib/llvm/bin, which is what the
+// detection logic inspects.
+// RUN: cp %clang %t/sysroot/opt/rocm/lib/llvm/bin/clang
+// RUN: %t/sysroot/opt/rocm/lib/llvm/bin/clang -### --target=x86_64-linux-gnu \
+// RUN:   --offload-arch=gfx1010 --print-rocm-search-dirs %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=ROCM-LIB-LLVM %s
+
 // GFX902-DEFAULTLIBS: error: cannot find ROCm device library for gfx902; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
 
 // NODEFAULTLIBS-NOT: error: cannot find
@@ -118,3 +132,6 @@
 
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm-3.10.0
+
+// ROCM-LIB-LLVM: ROCm installation search path: {{.*sysroot/opt/rocm$}}
+// ROCM-LIB-LLVM-NOT: ROCm installation search path: {{.*sysroot/opt/rocm/lib$}}
