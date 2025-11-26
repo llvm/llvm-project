@@ -184,9 +184,7 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   }
 
   case Intrinsic::arm_neon_vtbl1:
-    if (Value *V = ARMCommon::simplifyNeonTbl1(II, IC.Builder))
-      return IC.replaceInstUsesWith(II, V);
-    break;
+    return ARMCommon::simplifyNeonTbl1(II, IC);
 
   case Intrinsic::arm_neon_vmulls:
   case Intrinsic::arm_neon_vmullu: {

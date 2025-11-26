@@ -32,8 +32,7 @@ namespace ARMCommon {
 /// This could benefit tbl1 if the mask is { 7,6,5,4,3,2,1,0 }, in
 /// which case we could lower the shufflevector with rev64 instructions
 /// as it's actually a byte reverse.
-Value *simplifyNeonTbl1(const IntrinsicInst &II,
-                        InstCombiner::BuilderTy &Builder) {
+Instruction *simplifyNeonTbl1(IntrinsicInst &II, InstCombiner &IC) {
   // Bail out if the mask is not a constant.
   auto *C = dyn_cast<Constant>(II.getArgOperand(1));
   if (!C)
@@ -63,7 +62,8 @@ Value *simplifyNeonTbl1(const IntrinsicInst &II,
 
   auto *V1 = II.getArgOperand(0);
   auto *V2 = Constant::getNullValue(V1->getType());
-  return Builder.CreateShuffleVector(V1, V2, ArrayRef(Indexes));
+  Value *Shuf = IC.Builder.CreateShuffleVector(V1, V2, ArrayRef(Indexes));
+  return IC.replaceInstUsesWith(II, Shuf);
 }
 
 /// Simplify NEON multiply-long intrinsics (smull, umull).

@@ -31,8 +31,7 @@ namespace ARMCommon {
 /// This could benefit tbl1 if the mask is { 7,6,5,4,3,2,1,0 }, in
 /// which case we could lower the shufflevector with rev64 instructions
 /// as it's actually a byte reverse.
-Value *simplifyNeonTbl1(const IntrinsicInst &II,
-                        InstCombiner::BuilderTy &Builder);
+Instruction *simplifyNeonTbl1(IntrinsicInst &II, InstCombiner &IC);
 
 /// Simplify NEON multiply-long intrinsics (smull, umull).
 /// These intrinsics perform widening multiplies: they multiply two vectors of

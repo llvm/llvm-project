@@ -2858,9 +2858,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_neon_fminnm:
     return instCombineMaxMinNM(IC, II);
   case Intrinsic::aarch64_neon_tbl1:
-    if (Value *V = ARMCommon::simplifyNeonTbl1(II, IC.Builder))
-      return IC.replaceInstUsesWith(II, V);
-    break;
+    return ARMCommon::simplifyNeonTbl1(II, IC);
   case Intrinsic::aarch64_neon_smull:
   case Intrinsic::aarch64_neon_umull: {
     bool IsSigned = IID == Intrinsic::aarch64_neon_smull;
