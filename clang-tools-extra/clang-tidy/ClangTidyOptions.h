@@ -171,7 +171,7 @@ public:
   static const char OptionsSourceTypeCheckCommandLineOption[];
   static const char OptionsSourceTypeConfigCommandLineOption[];
 
-  virtual ~ClangTidyOptionsProvider() {}
+  virtual ~ClangTidyOptionsProvider() = default;
 
   /// Returns global options, which are independent of the file.
   virtual const ClangTidyGlobalOptions &getGlobalOptions() = 0;

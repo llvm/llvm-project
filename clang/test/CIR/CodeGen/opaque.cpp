@@ -154,3 +154,166 @@ void foo3() {
 // OGCG: [[COND_END]]:
 // OGCG:  %[[RESULT:.*]] = phi i32 [ %[[TMP_A]], %[[COND_TRUE]] ], [ %[[TMP_B]], %[[COND_FALSE]] ]
 // OGCG:  store i32 %[[RESULT]], ptr %[[C_ADDR]], align 4
+
+void test_gnu_binary_lvalue_assign() {
+  int a = 5;
+  int b = 10;
+  (a ?: b) = 42;
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z29test_gnu_binary_lvalue_assignv(
+// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR: %[[A_VAL:.*]] = cir.load{{.*}} %[[A]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[A_BOOL:.*]] = cir.cast int_to_bool %[[A_VAL]] : !s32i -> !cir.bool
+// CIR: %[[TERNARY_PTR:.*]] = cir.ternary(%[[A_BOOL]], true {
+// CIR:   cir.yield %[[A]] : !cir.ptr<!s32i>
+// CIR: }, false {
+// CIR:   cir.yield %[[B]] : !cir.ptr<!s32i>
+// CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %{{.*}}, %[[TERNARY_PTR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM-LABEL: define{{.*}} void @_Z29test_gnu_binary_lvalue_assignv(
+// LLVM: %[[A:.*]] = alloca i32
+// LLVM: %[[B:.*]] = alloca i32
+// LLVM: %[[A_VAL:.*]] = load i32, ptr %[[A]]
+// LLVM: %[[COND:.*]] = icmp ne i32 %[[A_VAL]], 0
+// LLVM: br i1 %[[COND]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[TRUE_BB]]:
+// LLVM:   br label %[[MERGE_BB:.*]]
+// LLVM: [[FALSE_BB]]:
+// LLVM:   br label %[[MERGE_BB]]
+// LLVM: [[MERGE_BB]]:
+// LLVM:   %[[PHI_PTR:.*]] = phi ptr [ %[[B]], %[[FALSE_BB]] ], [ %[[A]], %[[TRUE_BB]] ]
+// LLVM:   br label %[[CONT_BB:.*]]
+// LLVM: [[CONT_BB]]:
+// LLVM:   store i32 42, ptr %[[PHI_PTR]]
+
+// OGCG-LABEL: define{{.*}} void @_Z29test_gnu_binary_lvalue_assignv(
+// OGCG: %[[A:.*]] = alloca i32
+// OGCG: %[[B:.*]] = alloca i32
+// OGCG: %[[A_VAL:.*]] = load i32, ptr %[[A]]
+// OGCG: %[[COND:.*]] = icmp ne i32 %[[A_VAL]], 0
+// OGCG: br i1 %[[COND]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// OGCG: [[TRUE_BB]]:
+// OGCG:   br label %[[MERGE_BB:.*]]
+// OGCG: [[FALSE_BB]]:
+// OGCG:   br label %[[MERGE_BB]]
+// OGCG: [[MERGE_BB]]:
+// OGCG:   %[[PHI_PTR:.*]] = phi ptr [ %[[A]], %[[TRUE_BB]] ], [ %[[B]], %[[FALSE_BB]] ]
+// OGCG:   store i32 42, ptr %[[PHI_PTR]]
+
+void test_gnu_binary_lvalue_compound() {
+  int a = 7;
+  int b = 14;
+  (a ?: b) += 5;
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z31test_gnu_binary_lvalue_compoundv(
+// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR: %[[A_VAL:.*]] = cir.load{{.*}} %[[A]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[A_BOOL:.*]] = cir.cast int_to_bool %[[A_VAL]] : !s32i -> !cir.bool
+// CIR: %[[LVAL_PTR:.*]] = cir.ternary(%[[A_BOOL]], true {
+// CIR:   cir.yield %[[A]] : !cir.ptr<!s32i>
+// CIR: }, false {
+// CIR:   cir.yield %[[B]] : !cir.ptr<!s32i>
+// CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
+// CIR: %[[OLD_VAL:.*]] = cir.load{{.*}} %[[LVAL_PTR]]
+// CIR: %[[NEW_VAL:.*]] = cir.binop(add, %[[OLD_VAL]], %{{.*}})
+// CIR: cir.store{{.*}} %[[NEW_VAL]], %[[LVAL_PTR]]
+
+// LLVM-LABEL: define{{.*}} void @_Z31test_gnu_binary_lvalue_compoundv(
+// LLVM: %[[A:.*]] = alloca i32
+// LLVM: %[[B:.*]] = alloca i32
+// LLVM: %[[A_VAL:.*]] = load i32, ptr %[[A]]
+// LLVM: %[[COND:.*]] = icmp ne i32 %[[A_VAL]], 0
+// LLVM: br i1 %[[COND]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[TRUE_BB]]:
+// LLVM:   br label %[[MERGE_BB:.*]]
+// LLVM: [[FALSE_BB]]:
+// LLVM:   br label %[[MERGE_BB]]
+// LLVM: [[MERGE_BB]]:
+// LLVM:   %[[PTR:.*]] = phi ptr [ %[[B]], %[[FALSE_BB]] ], [ %[[A]], %[[TRUE_BB]] ]
+// LLVM:   br label %[[CONT:.*]]
+// LLVM: [[CONT]]:
+// LLVM:   %[[OLD:.*]] = load i32, ptr %[[PTR]]
+// LLVM:   %[[NEW:.*]] = add{{.*}} i32 %[[OLD]], 5
+// LLVM:   store i32 %[[NEW]], ptr %[[PTR]]
+
+// OGCG-LABEL: define{{.*}} void @_Z31test_gnu_binary_lvalue_compoundv(
+// OGCG: %[[A:.*]] = alloca i32
+// OGCG: %[[B:.*]] = alloca i32
+// OGCG: %[[A_VAL:.*]] = load i32, ptr %[[A]]
+// OGCG: %[[COND:.*]] = icmp ne i32 %[[A_VAL]], 0
+// OGCG: br i1 %[[COND]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// OGCG: [[TRUE_BB]]:
+// OGCG:   br label %[[MERGE_BB:.*]]
+// OGCG: [[FALSE_BB]]:
+// OGCG:   br label %[[MERGE_BB]]
+// OGCG: [[MERGE_BB]]:
+// OGCG:   %[[PTR:.*]] = phi ptr [ %[[A]], %[[TRUE_BB]] ], [ %[[B]], %[[FALSE_BB]] ]
+// OGCG:   %[[OLD:.*]] = load i32, ptr %[[PTR]]
+// OGCG:   %[[NEW:.*]] = add{{.*}} i32 %[[OLD]], 5
+// OGCG:   store i32 %[[NEW]], ptr %[[PTR]]
+
+void test_gnu_binary_lvalue_ptr() {
+  int x = 1, y = 2;
+  int *p = &x;
+  int *q = nullptr;
+  *(p ?: q) = 99;
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z26test_gnu_binary_lvalue_ptrv(
+// CIR: %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
+// CIR: %[[Y:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
+// CIR: %[[P:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p", init]
+// CIR: %[[Q:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["q", init]
+// CIR: %[[P_VAL:.*]] = cir.load{{.*}} %[[P]]
+// CIR: %[[P_BOOL:.*]] = cir.cast ptr_to_bool %[[P_VAL]]
+// CIR: %[[PTR_RESULT:.*]] = cir.ternary(%[[P_BOOL]], true {
+// CIR:   %[[P_LOAD:.*]] = cir.load{{.*}} %[[P]]
+// CIR:   cir.yield %[[P_LOAD]] : !cir.ptr<!s32i>
+// CIR: }, false {
+// CIR:   %[[Q_LOAD:.*]] = cir.load{{.*}} %[[Q]]
+// CIR:   cir.yield %[[Q_LOAD]] : !cir.ptr<!s32i>
+// CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %{{.*}}, %[[PTR_RESULT]]
+
+// LLVM-LABEL: define{{.*}} void @_Z26test_gnu_binary_lvalue_ptrv(
+// LLVM: %[[X:.*]] = alloca i32
+// LLVM: %[[Y:.*]] = alloca i32
+// LLVM: %[[P:.*]] = alloca ptr
+// LLVM: %[[Q:.*]] = alloca ptr
+// LLVM: %[[P_VAL:.*]] = load ptr, ptr %[[P]]
+// LLVM: %[[COND:.*]] = icmp ne ptr %[[P_VAL]], null
+// LLVM: br i1 %[[COND]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[TRUE_BB]]:
+// LLVM:   %[[P_LOAD:.*]] = load ptr, ptr %[[P]]
+// LLVM:   br label %[[MERGE_BB:.*]]
+// LLVM: [[FALSE_BB]]:
+// LLVM:   %[[Q_LOAD:.*]] = load ptr, ptr %[[Q]]
+// LLVM:   br label %[[MERGE_BB]]
+// LLVM: [[MERGE_BB]]:
+// LLVM:   %[[PHI:.*]] = phi ptr [ %[[Q_LOAD]], %[[FALSE_BB]] ], [ %[[P_LOAD]], %[[TRUE_BB]] ]
+// LLVM:   br label %[[CONT:.*]]
+// LLVM: [[CONT]]:
+// LLVM:   store i32 99, ptr %[[PHI]]
+
+// OGCG-LABEL: define{{.*}} void @_Z26test_gnu_binary_lvalue_ptrv(
+// OGCG: %[[X:.*]] = alloca i32
+// OGCG: %[[Y:.*]] = alloca i32
+// OGCG: %[[P:.*]] = alloca ptr
+// OGCG: %[[Q:.*]] = alloca ptr
+// OGCG: %[[P_VAL:.*]] = load ptr, ptr %[[P]]
+// OGCG: %[[COND:.*]] = icmp ne ptr %[[P_VAL]], null
+// OGCG: br i1 %[[COND]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// OGCG: [[TRUE_BB]]:
+// OGCG:   %[[P_LOAD:.*]] = load ptr, ptr %[[P]]
+// OGCG:   br label %[[MERGE_BB:.*]]
+// OGCG: [[FALSE_BB]]:
+// OGCG:   %[[Q_LOAD:.*]] = load ptr, ptr %[[Q]]
+// OGCG:   br label %[[MERGE_BB]]
+// OGCG: [[MERGE_BB]]:
+// OGCG:   %[[PHI:.*]] = phi ptr [ %[[P_LOAD]], %[[TRUE_BB]] ], [ %[[Q_LOAD]], %[[FALSE_BB]] ]
+// OGCG:   store i32 99, ptr %[[PHI]]

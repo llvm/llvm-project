@@ -526,7 +526,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
   // Recognize the canonical representation of an unsimplifed urem.
   const SCEV *URemLHS = nullptr;
   const SCEV *URemRHS = nullptr;
-  if (SE.matchURem(S, URemLHS, URemRHS)) {
+  if (match(S, m_scev_URem(m_SCEV(URemLHS), m_SCEV(URemRHS), SE))) {
     Value *LHS = expand(URemLHS);
     Value *RHS = expand(URemRHS);
     return InsertBinop(Instruction::URem, LHS, RHS, SCEV::FlagAnyWrap,
@@ -2208,17 +2208,6 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   // negative. If Step is known to be positive or negative, only create
   // either 1. or 2.
   auto ComputeEndCheck = [&]() -> Value * {
-    // Checking <u 0 is always false, if (Step * trunc ExitCount) does not wrap.
-    // TODO: Predicates that can be proven true/false should be discarded when
-    // the predicates are created, not late during expansion.
-    if (!Signed && Start->isZero() && SE.isKnownPositive(Step) &&
-        DstBits < SrcBits &&
-        ExitCount == SE.getZeroExtendExpr(SE.getTruncateExpr(ExitCount, ARTy),
-                                          ExitCount->getType()) &&
-        SE.willNotOverflow(Instruction::Mul, Signed, Step,
-                           SE.getTruncateExpr(ExitCount, ARTy)))
-      return ConstantInt::getFalse(Loc->getContext());
-
     // Get the backedge taken count and truncate or extended to the AR type.
     Value *TruncTripCount = Builder.CreateZExtOrTrunc(TripCountVal, Ty);
 

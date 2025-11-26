@@ -325,3 +325,28 @@ bar:
   %c = call <vscale x 4 x i32> @llvm.riscv.vadd(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 2, iXLen 2)
   ret <vscale x 4 x i32> %c
 }
+
+; The vsmul.vx ends up dead, but doesn't get deleted before RISCVVLOptimizer. Make
+; sure we don't crash when we handle it.
+; TODO: DeadMachineInstructionElim should remove the dead vsmul.vx.
+define <vscale x 2 x i64> @dead_vsmul() {
+; CHECK-LABEL: dead_vsmul:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 0, e16, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vsetivli zero, 0, e64, m2, tu, ma
+; CHECK-NEXT:    vmv.v.v v8, v8
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, ma
+; CHECK-NEXT:    vsmul.vx v10, v10, zero
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <vscale x 2 x i16> @llvm.riscv.vsmul(<vscale x 2 x i16> zeroinitializer, <vscale x 2 x i16> zeroinitializer, i16 0, iXLen 0, iXLen 0)
+  %1 = call <vscale x 2 x i32> @llvm.riscv.vwmacc(<vscale x 2 x i32> zeroinitializer, i16 0, <vscale x 2 x i16> %0, iXLen 0, iXLen 0)
+  %2 = call <vscale x 2 x i64> @llvm.riscv.vwmul(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> %1, <vscale x 2 x i32> zeroinitializer, iXLen 0)
+  %3 = call <vscale x 2 x i64> @llvm.riscv.vmerge(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> %2, <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), iXLen 0)
+
+  ret <vscale x 2 x i64> %3
+}

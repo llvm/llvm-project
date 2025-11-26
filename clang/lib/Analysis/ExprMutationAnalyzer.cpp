@@ -140,7 +140,8 @@ class ExprPointeeResolve {
       // explicit cast will be checked in `findPointeeToNonConst`
       const CastKind kind = ICE->getCastKind();
       if (kind == CK_LValueToRValue || kind == CK_DerivedToBase ||
-          kind == CK_UncheckedDerivedToBase)
+          kind == CK_UncheckedDerivedToBase ||
+          (kind == CK_NoOp && (ICE->getType() == ICE->getSubExpr()->getType())))
         return resolveExpr(ICE->getSubExpr());
       return false;
     }
@@ -237,10 +238,12 @@ const auto isMoveOnly = [] {
 };
 
 template <class T> struct NodeID;
-template <> struct NodeID<Expr> { static constexpr StringRef value = "expr"; };
-template <> struct NodeID<Decl> { static constexpr StringRef value = "decl"; };
-constexpr StringRef NodeID<Expr>::value;
-constexpr StringRef NodeID<Decl>::value;
+template <> struct NodeID<Expr> {
+  static constexpr StringRef value = "expr";
+};
+template <> struct NodeID<Decl> {
+  static constexpr StringRef value = "decl";
+};
 
 template <class T,
           class F = const Stmt *(ExprMutationAnalyzer::Analyzer::*)(const T *)>
@@ -745,11 +748,14 @@ ExprMutationAnalyzer::Analyzer::findPointeeMemberMutation(const Expr *Exp) {
                     Stm, Context));
   if (MemberCallExpr)
     return MemberCallExpr;
-  const auto Matches =
-      match(stmt(forEachDescendant(
-                memberExpr(hasObjectExpression(canResolveToExprPointee(Exp)))
-                    .bind(NodeID<Expr>::value))),
-            Stm, Context);
+  const auto Matches = match(
+      stmt(forEachDescendant(
+          expr(anyOf(memberExpr(
+                         hasObjectExpression(canResolveToExprPointee(Exp))),
+                     binaryOperator(hasOperatorName("->*"),
+                                    hasLHS(canResolveToExprPointee(Exp)))))
+              .bind(NodeID<Expr>::value))),
+      Stm, Context);
   return findExprMutation(Matches);
 }
 
@@ -788,13 +794,16 @@ ExprMutationAnalyzer::Analyzer::findPointeeToNonConst(const Expr *Exp) {
   // FIXME: false positive if the pointee does not change in lambda
   const auto CaptureNoConst = lambdaExpr(hasCaptureInit(Exp));
 
-  const auto Matches =
-      match(stmt(anyOf(forEachDescendant(
-                           stmt(anyOf(AssignToNonConst, PassAsNonConstArg,
-                                      CastToNonConst, CaptureNoConst))
-                               .bind("stmt")),
-                       forEachDescendant(InitToNonConst))),
-            Stm, Context);
+  const auto ReturnNoConst =
+      returnStmt(hasReturnValue(canResolveToExprPointee(Exp)));
+
+  const auto Matches = match(
+      stmt(anyOf(forEachDescendant(
+                     stmt(anyOf(AssignToNonConst, PassAsNonConstArg,
+                                CastToNonConst, CaptureNoConst, ReturnNoConst))
+                         .bind("stmt")),
+                 forEachDescendant(InitToNonConst))),
+      Stm, Context);
   return selectFirst<Stmt>("stmt", Matches);
 }
 

@@ -173,11 +173,11 @@ Documentation extractDocumentation(const RecordKeeper &Records,
 // Get the first and successive separators to use for an OptionKind.
 std::pair<StringRef,StringRef> getSeparatorsForKind(const Record *OptionKind) {
   return StringSwitch<std::pair<StringRef, StringRef>>(OptionKind->getName())
-    .Cases("KIND_JOINED", "KIND_JOINED_OR_SEPARATE",
-           "KIND_JOINED_AND_SEPARATE",
-           "KIND_REMAINING_ARGS_JOINED", {"", " "})
-    .Case("KIND_COMMAJOINED", {"", ","})
-    .Default({" ", " "});
+      .Cases({"KIND_JOINED", "KIND_JOINED_OR_SEPARATE",
+              "KIND_JOINED_AND_SEPARATE", "KIND_REMAINING_ARGS_JOINED"},
+             {"", " "})
+      .Case("KIND_COMMAJOINED", {"", ","})
+      .Default({" ", " "});
 }
 
 const unsigned UnlimitedArgs = unsigned(-1);
@@ -186,12 +186,13 @@ const unsigned UnlimitedArgs = unsigned(-1);
 // arguments are accepted.
 unsigned getNumArgsForKind(const Record *OptionKind, const Record *Option) {
   return StringSwitch<unsigned>(OptionKind->getName())
-    .Cases("KIND_JOINED", "KIND_JOINED_OR_SEPARATE", "KIND_SEPARATE", 1)
-    .Cases("KIND_REMAINING_ARGS", "KIND_REMAINING_ARGS_JOINED",
-           "KIND_COMMAJOINED", UnlimitedArgs)
-    .Case("KIND_JOINED_AND_SEPARATE", 2)
-    .Case("KIND_MULTIARG", Option->getValueAsInt("NumArgs"))
-    .Default(0);
+      .Cases({"KIND_JOINED", "KIND_JOINED_OR_SEPARATE", "KIND_SEPARATE"}, 1)
+      .Cases({"KIND_REMAINING_ARGS", "KIND_REMAINING_ARGS_JOINED",
+              "KIND_COMMAJOINED"},
+             UnlimitedArgs)
+      .Case("KIND_JOINED_AND_SEPARATE", 2)
+      .Case("KIND_MULTIARG", Option->getValueAsInt("NumArgs"))
+      .Default(0);
 }
 
 std::string escapeRST(StringRef Str) {

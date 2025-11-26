@@ -63,9 +63,14 @@ protected:
   // whether we should enable MCAsmInfo DwarfUsesRelocationsAcrossSections
   bool UseDwarfRIS;
 
+  // whether we allows misaligned memory access
+  bool AllowsMisalignedMemAccess;
+
   // whether cpu v4 insns are enabled.
   bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm,
       HasLoadAcqStoreRel, HasGotox;
+
+  bool AllowBuiltinCalls;
 
   std::unique_ptr<CallLowering> CallLoweringInfo;
   std::unique_ptr<InstructionSelector> InstSelector;
@@ -87,6 +92,9 @@ public:
   bool getHasJmp32() const { return HasJmp32; }
   bool getHasAlu32() const { return HasAlu32; }
   bool getUseDwarfRIS() const { return UseDwarfRIS; }
+  bool getAllowsMisalignedMemAccess() const {
+    return AllowsMisalignedMemAccess;
+  }
   bool hasLdsx() const { return HasLdsx; }
   bool hasMovsx() const { return HasMovsx; }
   bool hasBswap() const { return HasBswap; }
@@ -95,6 +103,7 @@ public:
   bool hasStoreImm() const { return HasStoreImm; }
   bool hasLoadAcqStoreRel() const { return HasLoadAcqStoreRel; }
   bool hasGotox() const { return HasGotox; }
+  bool getAllowBuiltinCalls() const { return AllowBuiltinCalls; }
 
   bool isLittleEndian() const { return IsLittleEndian; }
 
