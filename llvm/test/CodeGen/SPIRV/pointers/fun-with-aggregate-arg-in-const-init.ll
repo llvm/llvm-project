@@ -73,7 +73,7 @@ entry:
   %f = getelementptr inbounds [3 x ptr], ptr addrspace(1) @fnptr, i64 0
   %g = getelementptr inbounds [3 x ptr], ptr addrspace(1) @fnptr, i64 1
   %h = getelementptr inbounds [3 x ptr], ptr addrspace(1) @fnptr, i64 2
-  %0 = call spir_func addrspace(1) %t_half %f(ptr addrspace(1) %p, %t_half undef)
+  %0 = call spir_func addrspace(1) %t_half %f(ptr addrspace(1) %p, %t_half poison)
   %1 = call spir_func addrspace(1) %t_half %g(ptr addrspace(1) %p, %t_half %0)
   %2 = call spir_func addrspace(1) %t_half %h(ptr addrspace(1) %p, %t_half %1)
 
@@ -99,7 +99,7 @@ entry:
   %f = load ptr, ptr addrspace(1) @fnstruct
   %g = load ptr, ptr addrspace(1) getelementptr inbounds (%struct.anon, ptr addrspace(1) @fnstruct, i32 0, i32 1)
   %h = load ptr, ptr addrspace(1) getelementptr inbounds (%struct.anon, ptr addrspace(1) @fnstruct, i32 0, i32 2)
-  %0 = call spir_func noundef %t_half %f(ptr addrspace(1) %p, %t_half undef)
+  %0 = call spir_func noundef %t_half %f(ptr addrspace(1) %p, %t_half poison)
   %1 = call spir_func noundef %t_half %g(ptr addrspace(1) %p, %t_half %0)
   %2 = call spir_func noundef %t_half %h(ptr addrspace(1) %p, %t_half %1)
 
