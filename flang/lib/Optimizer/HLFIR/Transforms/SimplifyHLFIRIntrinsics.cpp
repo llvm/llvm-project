@@ -959,7 +959,7 @@ private:
     return {genScalarMult(currentValue[0], elementValue)};
   }
 
-  // Generate scalar addition of the two values (of the same data type).
+  // Generate scalar multiplication of the two values (of the same data type).
   mlir::Value genScalarMult(mlir::Value value1, mlir::Value value2);
 };
 

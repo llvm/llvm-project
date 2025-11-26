@@ -1686,7 +1686,7 @@ mlir::Value fir::factory::createOneValue(fir::FirOpBuilder &builder,
     mlir::Value onePart = builder.createRealOneConstant(loc, partType);
     return complexHelper.createComplex(type, onePart, onePart);
   }
-  fir::emitFatalError(loc, "internal: trying to generate zero value of non "
+  fir::emitFatalError(loc, "internal: trying to generate one value of non "
                            "numeric or logical type");
 }
 
