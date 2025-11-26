@@ -2752,6 +2752,11 @@ def : Pat<(AArch64sub_flag GPR64:$Rn, neg_addsub_shifted_imm64:$imm),
           (ADDSXri GPR64:$Rn, neg_addsub_shifted_imm64:$imm)>;
 }
 
+let AddedComplexity = 1 in {
+def : Pat<(add copyFromSP:$R2, (add_uxtx GPR64:$R3, arith_extendlsl64:$imm)),
+          (ADDXrx64 GPR64sp:$R2, GPR64:$R3, arith_extendlsl64:$imm)>;
+}
+
 def : InstAlias<"neg $dst, $src",
                 (SUBWrs GPR32:$dst, WZR,
                         (arith_shifted_reg32 GPR32:$src, 0)), 3>;

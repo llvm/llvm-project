@@ -853,10 +853,6 @@ public:
                    ArrayRef(Ops, Glue.getNode() ? 3 : 2));
   }
 
-  SDValue getAddToReg(const SDLoc &dl, Register Reg, EVT VT, SDValue Delta) {
-    return getNode(ISD::ADD, dl, VT, getRegister(Reg, VT), Delta);
-  }
-
   LLVM_ABI SDValue getCondCode(ISD::CondCode Cond);
 
   /// Return an ISD::VECTOR_SHUFFLE node. The number of elements in VT,

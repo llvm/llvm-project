@@ -2502,9 +2502,10 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       !Subtarget.getTargetLowering()
            ->getTargetMachine()
            .Options.EnableGlobalISel) {
-    BuildMI(MBB, MI, DL, get(AArch64::SUBXrr), Reg)
+    BuildMI(MBB, MI, DL, get(AArch64::SUBXrx64), Reg)
         .addReg(AArch64::SP)
-        .addReg(Reg, RegState::Kill);
+        .addReg(Reg, RegState::Kill)
+        .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0));
   }
 
   MBB.erase(MI);

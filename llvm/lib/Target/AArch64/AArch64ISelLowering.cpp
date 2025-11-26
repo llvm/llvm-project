@@ -29252,10 +29252,12 @@ SDValue AArch64TargetLowering::emitStackGuardMixCookie(SelectionDAG &DAG,
                                                        SDValue Val,
                                                        const SDLoc &DL,
                                                        bool FailureBB) const {
-  if (FailureBB) {
-    return DAG.getAddToReg(DL, getStackPointerRegisterToSaveRestore(), MVT::i64,
-                           Val);
-  }
+  if (FailureBB)
+    return DAG.getNode(
+        ISD::ADD, DL, Val.getValueType(),
+        DAG.getCopyFromReg(DAG.getEntryNode(), DL,
+                           getStackPointerRegisterToSaveRestore(), MVT::i64),
+        Val);
   return Val;
 }
 
