@@ -91,11 +91,11 @@ define float @test_pow_fast_f32__integral_y(float %x, i32 %y.i) {
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; CHECK-NEXT:    v_sub_f32_e32 v2, v3, v2
 ; CHECK-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; CHECK-NEXT:    v_mul_f32_e32 v3, v2, v4
-; CHECK-NEXT:    v_mov_b32_e32 v5, 0x42800000
-; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v3
-; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v5, vcc
-; CHECK-NEXT:    v_fma_f32 v2, v2, v4, v3
+; CHECK-NEXT:    v_mul_f32_e32 v2, v2, v4
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0x42800000
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v2
+; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-NEXT:    v_add_f32_e32 v2, v2, v3
 ; CHECK-NEXT:    v_exp_f32_e32 v2, v2
 ; CHECK-NEXT:    v_not_b32_e32 v3, 63
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
@@ -234,11 +234,11 @@ define float @test_powr_fast_f32(float %x, float %y) {
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; CHECK-NEXT:    s_mov_b32 s4, 0xc2fc0000
 ; CHECK-NEXT:    v_sub_f32_e32 v0, v0, v2
-; CHECK-NEXT:    v_mul_f32_e32 v2, v1, v0
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0x42800000
-; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v2
-; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v3, vcc
-; CHECK-NEXT:    v_fma_f32 v0, v1, v0, v2
+; CHECK-NEXT:    v_mul_f32_e32 v0, v1, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-NEXT:    v_add_f32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_exp_f32_e32 v0, v0
 ; CHECK-NEXT:    v_not_b32_e32 v1, 63
 ; CHECK-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
@@ -373,12 +373,12 @@ define float @test_pown_fast_f32(float %x, i32 %y) {
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x42000000
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; CHECK-NEXT:    v_sub_f32_e32 v2, v3, v2
-; CHECK-NEXT:    v_mul_f32_e32 v3, v2, v4
+; CHECK-NEXT:    v_mul_f32_e32 v2, v2, v4
 ; CHECK-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; CHECK-NEXT:    v_mov_b32_e32 v5, 0x42800000
-; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v3
-; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v5, vcc
-; CHECK-NEXT:    v_fma_f32 v2, v2, v4, v3
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0x42800000
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v2
+; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-NEXT:    v_add_f32_e32 v2, v2, v3
 ; CHECK-NEXT:    v_exp_f32_e32 v2, v2
 ; CHECK-NEXT:    v_not_b32_e32 v3, 63
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
@@ -516,12 +516,12 @@ define float @test_pown_fast_f32_known_even(float %x, i32 %y.arg) {
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x42000000
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; CHECK-NEXT:    v_sub_f32_e32 v0, v0, v2
-; CHECK-NEXT:    v_mul_f32_e32 v2, v0, v1
+; CHECK-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; CHECK-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0x42800000
-; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v2
-; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v3, vcc
-; CHECK-NEXT:    v_fma_f32 v0, v0, v1, v2
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-NEXT:    v_add_f32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_exp_f32_e32 v0, v0
 ; CHECK-NEXT:    v_not_b32_e32 v1, 63
 ; CHECK-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
@@ -655,12 +655,12 @@ define float @test_pown_fast_f32_known_odd(float %x, i32 %y.arg) {
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x42000000
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; CHECK-NEXT:    v_sub_f32_e32 v2, v3, v2
-; CHECK-NEXT:    v_mul_f32_e32 v3, v2, v1
+; CHECK-NEXT:    v_mul_f32_e32 v1, v2, v1
 ; CHECK-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; CHECK-NEXT:    v_mov_b32_e32 v4, 0x42800000
-; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v3
-; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v4, vcc
-; CHECK-NEXT:    v_fma_f32 v1, v2, v1, v3
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v1
+; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; CHECK-NEXT:    v_add_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_exp_f32_e32 v1, v1
 ; CHECK-NEXT:    v_not_b32_e32 v2, 63
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
