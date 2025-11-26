@@ -119,8 +119,7 @@ bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
   return true;
 }
 
-void MCGOFFStreamer::emitExterns() {
-}
+void MCGOFFStreamer::emitExterns() {}
 
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> &&MAB,

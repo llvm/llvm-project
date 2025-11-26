@@ -348,8 +348,8 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
 }
 
 void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
-  GOFFSymbol ER(Symbol.getName(), Symbol.getIndex(),
-                RootSD->getOrdinal(), Symbol.getERAttributes());
+  GOFFSymbol ER(Symbol.getName(), Symbol.getIndex(), RootSD->getOrdinal(),
+                Symbol.getERAttributes());
   writeSymbol(ER);
 }
 
