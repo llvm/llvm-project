@@ -2596,9 +2596,8 @@ void VPWidenGEPRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
-  Value *Ptr = State.get(getOperand(0), VPLane(0));
   const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  Type *IndexTy = DL.getIndexType(Ptr->getType());
+  Type *IndexTy = DL.getIndexType(State.TypeAnalysis.inferScalarType(this));
 
   // The wide store needs to start at the last vector element.
   Value *RunTimeVF = State.get(getVFValue(), VPLane(0));
@@ -2611,6 +2610,7 @@ void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   Value *LastLane = Builder.CreateSub(RunTimeVF, ConstantInt::get(IndexTy, 1));
   if (Stride != 1)
     LastLane = Builder.CreateMul(ConstantInt::get(IndexTy, Stride), LastLane);
+  Value *Ptr = State.get(getOperand(0), VPLane(0));
   Value *ResultPtr =
       Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", getGEPNoWrapFlags());
   ResultPtr = Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "",
@@ -2633,9 +2633,9 @@ void VPVectorEndPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
-  Value *Ptr = State.get(getOperand(0), VPLane(0));
   const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  Type *IndexTy = DL.getIndexType(Ptr->getType());
+  Type *IndexTy = DL.getIndexType(State.TypeAnalysis.inferScalarType(this));
+  Value *Ptr = State.get(getOperand(0), VPLane(0));
 
   Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
   Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Increment,
