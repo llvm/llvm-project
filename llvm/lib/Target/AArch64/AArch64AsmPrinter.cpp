@@ -176,7 +176,12 @@ public:
                              const MachineOperand *AUTAddrDisc,
                              Register Scratch,
                              std::optional<AArch64PACKey::ID> PACKey,
-                             uint64_t PACDisc, Register PACAddrDisc);
+                             uint64_t PACDisc, Register PACAddrDisc, Value *DS);
+
+  // Emit R_AARCH64_PATCHINST, the deactivation symbol relocation. Returns true
+  // if no instruction should be emitted because the deactivation symbol is
+  // defined in the current module so this function emitted a NOP instead.
+  bool emitDeactivationSymbolRelocation(Value *DS);
 
   // Emit the sequence for PAC.
   void emitPtrauthSign(const MachineInstr *MI);
@@ -2113,11 +2118,31 @@ void AArch64AsmPrinter::emitPtrauthTailCallHardening(const MachineInstr *TC) {
                                      LRCheckMethod);
 }
 
+bool AArch64AsmPrinter::emitDeactivationSymbolRelocation(Value *DS) {
+  if (!DS)
+    return false;
+
+  if (isa<GlobalAlias>(DS)) {
+    // Just emit the nop directly.
+    EmitToStreamer(MCInstBuilder(AArch64::HINT).addImm(0));
+    return true;
+  }
+  MCSymbol *Dot = OutContext.createTempSymbol();
+  OutStreamer->emitLabel(Dot);
+  const MCExpr *DeactDotExpr = MCSymbolRefExpr::create(Dot, OutContext);
+
+  const MCExpr *DSExpr = MCSymbolRefExpr::create(
+      OutContext.getOrCreateSymbol(DS->getName()), OutContext);
+  OutStreamer->emitRelocDirective(*DeactDotExpr, "R_AARCH64_PATCHINST", DSExpr,
+                                  SMLoc());
+  return false;
+}
+
 void AArch64AsmPrinter::emitPtrauthAuthResign(
     Register AUTVal, AArch64PACKey::ID AUTKey, uint64_t AUTDisc,
     const MachineOperand *AUTAddrDisc, Register Scratch,
     std::optional<AArch64PACKey::ID> PACKey, uint64_t PACDisc,
-    Register PACAddrDisc) {
+    Register PACAddrDisc, Value *DS) {
   const bool IsAUTPAC = PACKey.has_value();
 
   // We expand AUT/AUTPAC into a sequence of the form
@@ -2164,15 +2189,17 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   bool AUTZero = AUTDiscReg == AArch64::XZR;
   unsigned AUTOpc = getAUTOpcodeForKey(AUTKey, AUTZero);
 
-  //  autiza x16      ; if  AUTZero
-  //  autia x16, x17  ; if !AUTZero
-  MCInst AUTInst;
-  AUTInst.setOpcode(AUTOpc);
-  AUTInst.addOperand(MCOperand::createReg(AUTVal));
-  AUTInst.addOperand(MCOperand::createReg(AUTVal));
-  if (!AUTZero)
-    AUTInst.addOperand(MCOperand::createReg(AUTDiscReg));
-  EmitToStreamer(*OutStreamer, AUTInst);
+  if (!emitDeactivationSymbolRelocation(DS)) {
+    //  autiza x16      ; if  AUTZero
+    //  autia x16, x17  ; if !AUTZero
+    MCInst AUTInst;
+    AUTInst.setOpcode(AUTOpc);
+    AUTInst.addOperand(MCOperand::createReg(AUTVal));
+    AUTInst.addOperand(MCOperand::createReg(AUTVal));
+    if (!AUTZero)
+      AUTInst.addOperand(MCOperand::createReg(AUTDiscReg));
+    EmitToStreamer(*OutStreamer, AUTInst);
+  }
 
   // Unchecked or checked-but-non-trapping AUT is just an "AUT": we're done.
   if (!IsAUTPAC && (!ShouldCheck || !ShouldTrap))
@@ -2235,6 +2262,9 @@ void AArch64AsmPrinter::emitPtrauthSign(const MachineInstr *MI) {
       Disc, AddrDisc, ScratchReg, /*MayUseAddrAsScratch=*/AddrDiscKilled);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
   unsigned Opc = getPACOpcodeForKey(Key, IsZeroDisc);
+
+  if (emitDeactivationSymbolRelocation(MI->getDeactivationSymbol()))
+    return;
 
   //  paciza x16      ; if  IsZeroDisc
   //  pacia x16, x17  ; if !IsZeroDisc
@@ -3136,17 +3166,18 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   case AArch64::AUTx16x17:
-    emitPtrauthAuthResign(AArch64::X16,
-                          (AArch64PACKey::ID)MI->getOperand(0).getImm(),
-                          MI->getOperand(1).getImm(), &MI->getOperand(2),
-                          AArch64::X17, std::nullopt, 0, 0);
+    emitPtrauthAuthResign(
+        AArch64::X16, (AArch64PACKey::ID)MI->getOperand(0).getImm(),
+        MI->getOperand(1).getImm(), &MI->getOperand(2), AArch64::X17,
+        std::nullopt, 0, 0, MI->getDeactivationSymbol());
     return;
 
   case AArch64::AUTxMxN:
     emitPtrauthAuthResign(MI->getOperand(0).getReg(),
                           (AArch64PACKey::ID)MI->getOperand(3).getImm(),
                           MI->getOperand(4).getImm(), &MI->getOperand(5),
-                          MI->getOperand(1).getReg(), std::nullopt, 0, 0);
+                          MI->getOperand(1).getReg(), std::nullopt, 0, 0,
+                          MI->getDeactivationSymbol());
     return;
 
   case AArch64::AUTPAC:
@@ -3154,7 +3185,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
         AArch64::X16, (AArch64PACKey::ID)MI->getOperand(0).getImm(),
         MI->getOperand(1).getImm(), &MI->getOperand(2), AArch64::X17,
         (AArch64PACKey::ID)MI->getOperand(3).getImm(),
-        MI->getOperand(4).getImm(), MI->getOperand(5).getReg());
+        MI->getOperand(4).getImm(), MI->getOperand(5).getReg(),
+        MI->getDeactivationSymbol());
     return;
 
   case AArch64::PAC:
@@ -3634,6 +3666,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     emitCBPseudoExpansion(MI);
     return;
   }
+
+  if (emitDeactivationSymbolRelocation(MI->getDeactivationSymbol()))
+    return;
 
   // Finally, do the automated lowerings for everything else.
   MCInst TmpInst;
