@@ -126,6 +126,10 @@ static cl::opt<bool>
 AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
                 cl::desc("Allow widening of indvars to eliminate s/zext"));
 
+static cl::opt<unsigned> MaxTripCountIterations(
+    "indvars-fp-tripcount-max-iters", cl::Hidden, cl::init(1000),
+    cl::desc("Max number of iterations to brute force integer trip count"));
+
 namespace {
 
 class IndVarSimplify {
@@ -418,6 +422,91 @@ tryConvertToIntegerIV(const FloatingPointIV &FPIV) {
   return IntegerIV{InitValue, IncrValue, ExitValue, NewPred};
 }
 
+/// Simulate floating-point loop execution to determine exact trip count.
+///
+/// Returns an IntegerIV representation if successful, std::nullopt otherwise.
+static std::optional<IntegerIV>
+simulateFPIVTripCount(Loop *L, const FloatingPointIV &FPIV) {
+  auto EvaluateFCmpPred = [](FCmpInst::Predicate Pred,
+                             APFloat::cmpResult CmpRes) -> std::optional<bool> {
+    switch (Pred) {
+    case FCmpInst::FCMP_OLT:
+    case FCmpInst::FCMP_ULT:
+      return CmpRes == APFloat::cmpLessThan;
+    case FCmpInst::FCMP_OLE:
+    case FCmpInst::FCMP_ULE:
+      return CmpRes == APFloat::cmpLessThan || CmpRes == APFloat::cmpEqual;
+    case FCmpInst::FCMP_OGT:
+    case FCmpInst::FCMP_UGT:
+      return CmpRes == APFloat::cmpGreaterThan;
+    case FCmpInst::FCMP_OGE:
+    case FCmpInst::FCMP_UGE:
+      return CmpRes == APFloat::cmpGreaterThan || CmpRes == APFloat::cmpEqual;
+    case FCmpInst::FCMP_OEQ:
+    case FCmpInst::FCMP_UEQ:
+      return CmpRes == APFloat::cmpEqual;
+    case FCmpInst::FCMP_ONE:
+    case FCmpInst::FCMP_UNE:
+      return CmpRes != APFloat::cmpEqual;
+    default:
+      return std::nullopt;
+    }
+  };
+
+  // Conservatively bail out if fast-math flags are present.
+  // TODO: Should possibly reject only specific flags.
+  if (FPIV.Add->getFastMathFlags().any() ||
+      FPIV.Compare->getFastMathFlags().any())
+    return std::nullopt;
+
+  APFloat Current = FPIV.InitValue;
+  const APFloat &Increment = FPIV.IncrValue;
+  const APFloat &Limit = FPIV.ExitValue;
+  // Do not continue if handling non-finite values or zero increment.
+  if (!Current.isFinite() || !Increment.isFinite() || !Limit.isFinite() ||
+      Increment.isZero())
+    return std::nullopt;
+
+  FCmpInst::Predicate FPred = FPIV.Compare->getPredicate();
+  auto *BI = cast<BranchInst>(FPIV.Compare->user_back());
+  bool ExitOnTrue = !L->contains(BI->getSuccessor(0));
+  if (ExitOnTrue)
+    FPred = FPIV.Compare->getInversePredicate();
+
+  int64_t TripCount = 0;
+  for (; TripCount < MaxTripCountIterations; ++TripCount) {
+    auto Res = EvaluateFCmpPred(FPred, Current.compare(Limit));
+    if (!Res)
+      return std::nullopt;
+
+    // If comparison turns out to be false, we found an exact trip count.
+    if (!*Res)
+      break;
+
+    APFloat Next = Current;
+    APFloat::opStatus Status =
+        Next.add(Increment, APFloat::rmNearestTiesToEven);
+    if (!Next.isFinite() ||
+        (Status != APFloat::opOK && Status != APFloat::opInexact))
+      return std::nullopt;
+
+    Current = std::move(Next);
+  }
+
+  if (TripCount == MaxTripCountIterations)
+    return std::nullopt;
+
+  LLVM_DEBUG(dbgs() << "INDVARS: Simulated FP loop, found trip count: "
+                    << TripCount << "\n");
+
+  // Stride always fixed to 1, the trip count is our exit value. If the loop
+  // exits immediately (i.e., trip count zero), the loop body still executes
+  // once, as per the PN recurrence we handle. Account for the inversion as
+  // well, the new integer predicate depends on the exit branch.
+  return IntegerIV{0, 1, TripCount ? TripCount : 1,
+                   ExitOnTrue ? CmpInst::ICMP_SGE : CmpInst::ICMP_SLT};
+}
+
 /// Rewrite the floating-point IV as an integer IV.
 static void canonicalizeToIntegerIV(Loop *L, PHINode *PN,
                                     const FloatingPointIV &FPIV,
@@ -503,8 +592,12 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
 
   // Can we safely convert the floating-point values to integer ones?
   auto IIV = tryConvertToIntegerIV(*FPIV);
-  if (!IIV)
-    return false;
+  if (!IIV) {
+    // As a last try, brute force the integer trip count by running the loop.
+    IIV = simulateFPIVTripCount(L, *FPIV);
+    if (!IIV)
+      return false;
+  }
 
   // Perform the rewriting.
   canonicalizeToIntegerIV(L, PN, *FPIV, *IIV, TLI, MSSAU);

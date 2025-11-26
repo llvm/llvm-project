@@ -560,15 +560,9 @@ define i32 @test_fp_simulate_tc_rounded_fadd() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[RV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RV_NEXT]] = add i32 [[RV]], 1
-; CHECK-NEXT:    [[NEXT]] = fadd float [[I]], 0x3FDFFFD600000000
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[NEXT]], 4.990000e+02
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[RV_NEXT]], [[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    ret i32 999
 ;
 entry:
   br label %loop
@@ -592,15 +586,9 @@ define i32 @test_fp_simulate_tc_exact_fadd_via_double() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[RV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RV_NEXT]] = add i32 [[RV]], 1
-; CHECK-NEXT:    [[NEXT]] = fadd double [[I]], 0x3FDFFFD600000000
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[NEXT]], 4.990000e+02
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[RV_NEXT]], [[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    ret i32 999
 ;
 entry:
   br label %loop
@@ -653,15 +641,9 @@ define i32 @test_fp_simulate_tc_rounded_fadd_inverted_pred_exit() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[RV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RV_NEXT]] = add i32 [[RV]], 1
-; CHECK-NEXT:    [[NEXT]] = fadd float [[I]], 0x3FDFFFD600000000
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[NEXT]], 4.990000e+02
-; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[RV_NEXT]], [[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    ret i32 999
 ;
 entry:
   br label %loop
@@ -686,10 +668,10 @@ define i32 @test_fp_simulate_tc_exact_fadd_pred_ult() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_INT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_INT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    call void @opaque()
-; CHECK-NEXT:    [[ADD]] = fadd float [[I]], 1.255000e+02
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[ADD]], 4.990000e+02
+; CHECK-NEXT:    [[ADD_INT]] = add nuw nsw i32 [[I_INT]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[ADD_INT]], 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
