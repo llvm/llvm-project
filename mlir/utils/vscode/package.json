@@ -2,7 +2,7 @@
   "name": "vscode-mlir",
   "displayName": "MLIR",
   "description": "MLIR Language Extension",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://mlir.llvm.org/",
   "icon": "icon.png",
@@ -25,7 +25,8 @@
     "onCustomEditor:mlir.bytecode",
     "onLanguage:mlir",
     "onLanguage:pdll",
-    "onLanguage:tablegen"
+    "onLanguage:tablegen",
+    "onTestingStart"
   ],
   "main": "./out/extension",
   "scripts": {
@@ -108,6 +109,14 @@
         "configuration": "./tablegen-language-configuration.json"
       }
     ],
+    "testing": {
+      "controllers": [
+        {
+          "id": "litTestController",
+          "label": "LIT Tests"
+        }
+      ]
+    },
     "grammars": [
       {
         "language": "mlir",
@@ -152,6 +161,16 @@
       "type": "object",
       "title": "MLIR",
       "properties": {
+        "lit.lit_path": {
+          "type": "string",
+          "default": "lit.py",
+          "description": "Path to the lit.py script."
+        },
+        "lit.test_root_folder": {
+          "type": "string",
+          "default": ".",
+          "description": "Path to the folder containing lit tests."
+        },
         "mlir.server_path": {
           "scope": "resource",
           "type": "string",
@@ -210,6 +229,10 @@
       }
     },
     "commands": [
+      {
+        "command": "lit.reconfigure",
+        "title": "Reconfigure LIT Test Settings"
+      },
       {
         "command": "mlir.restart",
         "title": "mlir: Restart language server"
