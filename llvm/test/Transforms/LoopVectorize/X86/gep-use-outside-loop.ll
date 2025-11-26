@@ -15,7 +15,7 @@ define void @gep_use_in_dead_block(ptr noalias %dst, ptr %src) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP4]], align 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <4 x i16> [[WIDE_LOAD]], splat (i16 10)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP0]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i16.p0(<4 x i16> zeroinitializer, ptr [[TMP8]], i32 2, <4 x i1> [[TMP7]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i16.p0(<4 x i16> zeroinitializer, ptr align 2 [[TMP8]], <4 x i1> [[TMP7]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -82,11 +82,11 @@ define void @gep_use_outside_loop(ptr noalias %dst, ptr %src) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[DST]], <4 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP2]], align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i16> [[WIDE_LOAD]], splat (i16 10)
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[TMP1]], i32 0
-; CHECK-NEXT:    call void @llvm.masked.store.v4i16.p0(<4 x i16> zeroinitializer, ptr [[TMP6]], i32 2, <4 x i1> [[TMP5]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i16.p0(<4 x i16> zeroinitializer, ptr align 2 [[TMP6]], <4 x i1> [[TMP5]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
