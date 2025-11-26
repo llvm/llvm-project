@@ -10,7 +10,7 @@ define void @test() {
 ; CHECK-NEXT:    [[SUB4_I_I65_US:%.*]] = or i64 0, 1
 ; CHECK-NEXT:    br label [[BODY:%.*]]
 ; CHECK:       body:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> getelementptr ([[CLASS_A:%.*]], <2 x ptr> zeroinitializer, <2 x i64> <i64 0, i64 1>), i32 4, <2 x i1> splat (i1 true), <2 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 getelementptr ([[CLASS_A:%.*]], <2 x ptr> zeroinitializer, <2 x i64> <i64 0, i64 1>), <2 x i1> splat (i1 true), <2 x i32> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[CMP_I_I_I_I67_US:%.*]] = icmp slt i32 [[TMP1]], [[TMP2]]

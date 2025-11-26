@@ -152,3 +152,16 @@ namespace GH60778 {
     ClassTemplate<>::Nested<int> instantiation;
   }
 }
+#if __cplusplus >= 201103L
+namespace GH162855 {
+  template <class...> using A = int;
+  template <class, int> struct B;
+  template <class...> struct C;
+  template <template <class, int...> class TT, long... X>
+  struct C<TT<int, X...>> {
+    template <class... Y> using l = A<B<Y, X>...>;
+  };
+  template <class> struct D;
+  template struct C<D<int>>;
+} // namespace GH162855
+#endif
