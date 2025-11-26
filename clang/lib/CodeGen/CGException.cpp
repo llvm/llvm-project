@@ -45,12 +45,6 @@ static llvm::FunctionCallee getSehTryBeginFn(CodeGenModule &CGM) {
   return CGM.CreateRuntimeFunction(FTy, "llvm.seh.try.begin");
 }
 
-static llvm::FunctionCallee getSehTryEndFn(CodeGenModule &CGM) {
-  llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-  return CGM.CreateRuntimeFunction(FTy, "llvm.seh.try.end");
-}
-
 static llvm::FunctionCallee getUnexpectedFn(CodeGenModule &CGM) {
   // void __cxa_call_unexpected(void *thrown_exception);
 
@@ -635,6 +629,13 @@ void CodeGenFunction::EmitCXXTryStmt(const CXXTryStmt &S) {
     ExitCXXTryStmt(S);
 }
 
+struct TerminateTryScope final : EHScopeStack::Cleanup {
+  TerminateTryScope() {}
+
+  // this is a noop scope that triggers the scope end emission in CGCleanup
+  void Emit(CodeGenFunction &CGF, Flags flags) override {}
+};
+
 void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   unsigned NumHandlers = S.getNumHandlers();
   EHCatchScope *CatchScope = EHStack.pushCatch(NumHandlers);
@@ -666,8 +667,11 @@ void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
       CatchScope->setHandler(I, CGM.getCXXABI().getCatchAllTypeInfo(), Handler);
       // Under async exceptions, catch(...) need to catch HW exception too
       // Mark scope with SehTryBegin as a SEH __try scope
-      if (getLangOpts().EHAsynch)
+      if (getLangOpts().EHAsynch) {
         EmitSehTryScopeBegin();
+        // Push cleanup to emit the end of the scope
+        EHStack.pushCleanup<TerminateTryScope>(NormalCleanup);
+      }
     }
   }
 }
@@ -1211,6 +1215,11 @@ void CodeGenFunction::popCatchScope() {
 }
 
 void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
+  // For EHa we have a cleanup block for the try end if there was a
+  // catch(...) handler.
+  if (getLangOpts().EHAsynch && EHStack.begin()->getKind() == EHScope::Cleanup)
+    PopCleanupBlock();
+
   unsigned NumHandlers = S.getNumHandlers();
   EHCatchScope &CatchScope = cast<EHCatchScope>(*EHStack.begin());
   assert(CatchScope.getNumHandlers() == NumHandlers);
@@ -2187,6 +2196,11 @@ void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {
   const SEHExceptStmt *Except = S.getExceptHandler();
   assert(Except);
   EHCatchScope *CatchScope = EHStack.pushCatch(1);
+
+  if (getLangOpts().EHAsynch) {
+    EHStack.pushCleanup<TerminateTryScope>(NormalCleanup);
+  }
+
   SEHCodeSlotStack.push_back(
       CreateMemTemp(getContext().IntTy, "__exception_code"));
 
@@ -2217,9 +2231,8 @@ void CodeGenFunction::ExitSEHTryStmt(const SEHTryStmt &S) {
   }
 
   // IsEHa: emit an invoke _seh_try_end() to mark end of FT flow
-  if (getLangOpts().EHAsynch && Builder.GetInsertBlock()) {
-    llvm::FunctionCallee SehTryEnd = getSehTryEndFn(CGM);
-    EmitRuntimeCallOrInvoke(SehTryEnd);
+  if (getLangOpts().EHAsynch) {
+    PopCleanupBlock();
   }
 
   // Otherwise, we must have an __except block.
