@@ -708,7 +708,7 @@ void StraightLineStrengthReduce::setBasisAndDeltaFor(Candidate &C) {
 
       if (!Delta)
         return false;
-      
+
       // If there is a Delta that we can reuse Basis to rewrite C,
       // drop the poison-generating instructions of Basis to avoid
       // introducing poison.
