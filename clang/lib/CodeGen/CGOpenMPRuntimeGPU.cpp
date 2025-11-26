@@ -1258,9 +1258,12 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
     // TODO: Is that needed?
     CodeGenFunction::OMPPrivateScope PrivateArgScope(CGF);
 
+    llvm::Type *CapturedVarsAddrType =
+        CapturedVars.size() ? cast<llvm::Type>(llvm::ArrayType::get(
+                                  CGM.VoidPtrTy, CapturedVars.size()))
+                            : CGM.VoidPtrTy;
     Address CapturedVarsAddrs = CGF.CreateDefaultAlignTempAlloca(
-        llvm::ArrayType::get(CGM.VoidPtrTy, CapturedVars.size()),
-        "captured_vars_addrs");
+        CapturedVarsAddrType, "captured_vars_addrs");
     // There's something to share.
     if (!CapturedVars.empty()) {
       // Prepare for parallel region. Indicate the outlined function.
