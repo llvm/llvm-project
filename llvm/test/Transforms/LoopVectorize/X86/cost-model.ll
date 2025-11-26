@@ -385,7 +385,7 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i64, ptr [[SRC_3]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i64, ptr [[TMP24]], i32 2
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i64, ptr [[TMP24]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP25]], align 8, !alias.scope [[META9:![0-9]+]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq <2 x i64> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP27:%.*]] = and <2 x i1> [[TMP23]], [[TMP26]]

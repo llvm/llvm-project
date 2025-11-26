@@ -20,6 +20,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.def"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/Utils.h"

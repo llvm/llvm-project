@@ -62,7 +62,7 @@ define void @test_2xi64_with_wide_load(ptr noalias %data, ptr noalias %factor) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[INDEX]], 1

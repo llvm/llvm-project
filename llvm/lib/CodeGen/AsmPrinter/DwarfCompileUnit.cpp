@@ -493,10 +493,12 @@ void DwarfCompileUnit::attachLowHighPC(DIE &D, const MCSymbol *Begin,
   assert(End->isDefined() && "Invalid end label");
 
   addLabelAddress(D, dwarf::DW_AT_low_pc, Begin);
-  if (DD->getDwarfVersion() < 4)
-    addLabelAddress(D, dwarf::DW_AT_high_pc, End);
-  else
+  if (DD->getDwarfVersion() >= 4 &&
+      (!isDwoUnit() || !llvm::isRangeRelaxable(Begin, End))) {
     addLabelDelta(D, dwarf::DW_AT_high_pc, End, Begin);
+    return;
+  }
+  addLabelAddress(D, dwarf::DW_AT_high_pc, End);
 }
 
 // Add info for Wasm-global-based relocation.

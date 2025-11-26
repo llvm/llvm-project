@@ -84,6 +84,8 @@ Potentially Breaking Changes
 - Downstream projects that previously linked only against ``clangDriver`` may
   now (also) need to link against the new ``clangOptions`` library, since
   options-related code has been moved out of the Driver into a separate library.
+- The ``clangFrontend`` library no longer depends on ``clangDriver``, which may
+  break downstream projects that relied on this transitive dependency.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------

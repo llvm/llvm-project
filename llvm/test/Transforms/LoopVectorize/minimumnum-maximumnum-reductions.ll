@@ -14,7 +14,7 @@ define float @maximumnum_intrinsic(ptr readonly %x) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[GEP]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[GEP]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[VEC_PHI]], <2 x float> [[WIDE_LOAD]])
@@ -58,7 +58,7 @@ define float @maximumnum_intrinsic_fast(ptr readonly %x) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[GEP]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[GEP]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3]] = call fast <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[VEC_PHI]], <2 x float> [[WIDE_LOAD]])
@@ -102,7 +102,7 @@ define float @minimumnum_intrinsic(ptr readonly %x) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[GEP]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[GEP]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3]] = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[VEC_PHI]], <2 x float> [[WIDE_LOAD]])
@@ -146,7 +146,7 @@ define float @minimumnum_intrinsic_fast(ptr readonly %x) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[GEP]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[GEP]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3]] = call fast <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[VEC_PHI]], <2 x float> [[WIDE_LOAD]])

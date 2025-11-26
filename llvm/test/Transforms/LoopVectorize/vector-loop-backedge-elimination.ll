@@ -512,10 +512,10 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF8UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
+; VF8UF2-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
-; VF8UF2-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i32 8
+; VF8UF2-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i64 8
 ; VF8UF2-NEXT:    store <8 x i8> [[WIDE_LOAD]], ptr [[DST]], align 1
 ; VF8UF2-NEXT:    store <8 x i8> [[WIDE_LOAD1]], ptr [[TMP5]], align 1
 ; VF8UF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -1140,7 +1140,7 @@ define void @test_vector_tc_eq_16(ptr %A) {
 ; VF8UF2-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 16
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i32 8
+; VF8UF2-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 8
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[A]], align 1
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP1]], align 1
 ; VF8UF2-NEXT:    [[TMP2:%.*]] = add nsw <8 x i8> [[WIDE_LOAD]], splat (i8 10)

@@ -20,7 +20,7 @@ define void @epilogue_vectorization_fix_scalar_resume_values(ptr %dst, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 16
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP0]], align 1
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32

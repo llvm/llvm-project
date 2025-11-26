@@ -125,13 +125,13 @@ define void @multiple_truncated_ivs_with_wide_uses(i1 %c, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], <4 x i16> [[VEC_IND]], <4 x i16> splat (i16 10)
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C]], <4 x i16> [[STEP_ADD]], <4 x i16> splat (i16 10)
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[TMP4]], i32 4
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[TMP4]], i64 4
 ; CHECK-NEXT:    store <4 x i16> [[TMP1]], ptr [[TMP4]], align 2, !alias.scope [[META6:![0-9]+]], !noalias [[META9:![0-9]+]]
-; CHECK-NEXT:    store <4 x i16> [[TMP2]], ptr [[TMP7]], align 2, !alias.scope [[META6]], !noalias [[META9]]
+; CHECK-NEXT:    store <4 x i16> [[TMP2]], ptr [[TMP3]], align 2, !alias.scope [[META6]], !noalias [[META9]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP8]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP8]], i64 4
 ; CHECK-NEXT:    store <4 x i32> [[VEC_IND3]], ptr [[TMP8]], align 4, !alias.scope [[META9]]
-; CHECK-NEXT:    store <4 x i32> [[STEP_ADD4]], ptr [[TMP11]], align 4, !alias.scope [[META9]]
+; CHECK-NEXT:    store <4 x i32> [[STEP_ADD4]], ptr [[TMP5]], align 4, !alias.scope [[META9]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[STEP_ADD]], splat (i16 4)
 ; CHECK-NEXT:    [[VEC_IND_NEXT6]] = add <4 x i32> [[STEP_ADD4]], splat (i32 4)
@@ -192,7 +192,7 @@ define void @truncated_ivs_with_wide_and_scalar_uses(i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[DST]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[C]], <8 x i16> [[VEC_IND]], <8 x i16> splat (i16 10)
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C]], <8 x i16> [[STEP_ADD]], <8 x i16> splat (i16 10)
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[TMP3]], i32 8
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[TMP3]], i64 8
 ; CHECK-NEXT:    store <8 x i16> [[TMP5]], ptr [[TMP3]], align 2
 ; CHECK-NEXT:    store <8 x i16> [[TMP6]], ptr [[TMP8]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
@@ -477,9 +477,9 @@ define i32 @test_scalar_predicated_cost(i64 %x, i64 %y, ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc <8 x i64> [[TMP13]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP22:%.*]] = trunc <8 x i64> [[TMP14]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP23:%.*]] = trunc <8 x i64> [[TMP15]] to <8 x i32>
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[TMP16]], i32 8
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i32, ptr [[TMP16]], i32 16
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[TMP16]], i32 24
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[TMP16]], i64 8
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i32, ptr [[TMP16]], i64 16
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[TMP16]], i64 24
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[TMP20]], ptr align 4 [[TMP16]], <8 x i1> [[TMP8]])
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[TMP21]], ptr align 4 [[TMP25]], <8 x i1> [[TMP9]])
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[TMP22]], ptr align 4 [[TMP26]], <8 x i1> [[TMP10]])
