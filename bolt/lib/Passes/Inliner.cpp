@@ -511,6 +511,9 @@ bool Inliner::inlineCallsInFunction(BinaryFunction &Function) {
       if (BC.isAArch64() && BC.usesBTI() &&
           HasIndirectTailCall(*TargetFunction)) {
         ++InstIt;
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Skipping inlining block with tailcall"
+                          << " in " << Function << " : " << BB->getName()
+                          << " to keep BTIs consistent.\n");
         continue;
       }
 
